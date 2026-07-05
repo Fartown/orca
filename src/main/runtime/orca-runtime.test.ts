@@ -12106,6 +12106,217 @@ describe('OrcaRuntimeService', () => {
     await expect(runtime.isTerminalRunningAgent(terminal.handle)).resolves.toBe(false)
   })
 
+  it('accepts fresh renderer mobile tab structure after main-side live version bumps', async () => {
+    const runtime = new OrcaRuntimeService(store)
+    runtime.attachWindow(1)
+    runtime.syncWindowGraph(1, {
+      tabs: [],
+      leaves: [],
+      mobileSessionTabs: [
+        {
+          worktree: TEST_WORKTREE_ID,
+          publicationEpoch: 'renderer-epoch',
+          snapshotVersion: 1,
+          activeGroupId: 'group-1',
+          activeTabId: 'tab-1::pane:1',
+          activeTabType: 'terminal',
+          tabGroups: [
+            {
+              id: 'group-1',
+              activeTabId: 'tab-1',
+              tabOrder: ['tab-1']
+            }
+          ],
+          tabs: [
+            {
+              type: 'terminal',
+              id: 'tab-1::pane:1',
+              parentTabId: 'tab-1',
+              leafId: 'pane:1',
+              ptyId: 'pty-1',
+              title: 'Terminal 1',
+              isActive: true
+            }
+          ]
+        }
+      ]
+    })
+
+    const touchSnapshot = runtime as unknown as {
+      touchMobileSessionSnapshotsForPty: (ptyId: string) => void
+    }
+    for (let index = 0; index < 5; index += 1) {
+      touchSnapshot.touchMobileSessionSnapshotsForPty('pty-1')
+    }
+    const bumped = await runtime.listMobileSessionTabs(`id:${TEST_WORKTREE_ID}`)
+    expect(bumped.snapshotVersion).toBe(6)
+    expect(bumped.tabs.map((tab) => tab.type === 'terminal' && tab.parentTabId)).toEqual(['tab-1'])
+
+    runtime.syncWindowGraph(1, {
+      tabs: [],
+      leaves: [],
+      mobileSessionTabs: [
+        {
+          worktree: TEST_WORKTREE_ID,
+          publicationEpoch: 'renderer-epoch',
+          snapshotVersion: 1,
+          activeGroupId: 'group-1',
+          activeTabId: 'tab-1::pane:1',
+          activeTabType: 'terminal',
+          tabGroups: [
+            {
+              id: 'group-1',
+              activeTabId: 'tab-1',
+              tabOrder: ['tab-1']
+            }
+          ],
+          tabs: [
+            {
+              type: 'terminal',
+              id: 'tab-1::pane:1',
+              parentTabId: 'tab-1',
+              leafId: 'pane:1',
+              ptyId: 'pty-1',
+              title: 'Terminal 1',
+              isActive: true
+            }
+          ]
+        }
+      ]
+    })
+    const duplicate = await runtime.listMobileSessionTabs(`id:${TEST_WORKTREE_ID}`)
+    expect(duplicate.snapshotVersion).toBe(6)
+    expect(duplicate.tabs.map((tab) => tab.type === 'terminal' && tab.parentTabId)).toEqual([
+      'tab-1'
+    ])
+
+    runtime.syncWindowGraph(1, {
+      tabs: [],
+      leaves: [],
+      mobileSessionTabs: [
+        {
+          worktree: TEST_WORKTREE_ID,
+          publicationEpoch: 'renderer-epoch',
+          snapshotVersion: 2,
+          activeGroupId: 'group-1',
+          activeTabId: 'tab-2::pane:2',
+          activeTabType: 'terminal',
+          tabGroups: [
+            {
+              id: 'group-1',
+              activeTabId: 'tab-2',
+              tabOrder: ['tab-1', 'tab-2'],
+              recentTabIds: ['tab-1', 'tab-2']
+            }
+          ],
+          tabs: [
+            {
+              type: 'terminal',
+              id: 'tab-1::pane:1',
+              parentTabId: 'tab-1',
+              leafId: 'pane:1',
+              ptyId: 'pty-1',
+              title: 'Terminal 1',
+              isActive: false
+            },
+            {
+              type: 'terminal',
+              id: 'tab-2::pane:2',
+              parentTabId: 'tab-2',
+              leafId: 'pane:2',
+              ptyId: 'pty-2',
+              title: 'Terminal 2',
+              isActive: true
+            }
+          ]
+        }
+      ]
+    })
+
+    const listed = await runtime.listMobileSessionTabs(`id:${TEST_WORKTREE_ID}`)
+    expect(listed.publicationEpoch).toBe('renderer-epoch')
+    expect(listed.snapshotVersion).toBe(7)
+    expect(listed.tabs.map((tab) => tab.type === 'terminal' && tab.parentTabId)).toEqual([
+      'tab-1',
+      'tab-2'
+    ])
+    expect(listed.tabGroups?.[0]?.tabOrder).toEqual(['tab-1', 'tab-2'])
+  })
+
+  it('rejects stale renderer mobile tab structure within the same publication epoch', async () => {
+    const runtime = new OrcaRuntimeService(store)
+    runtime.attachWindow(1)
+    runtime.syncWindowGraph(1, {
+      tabs: [],
+      leaves: [],
+      mobileSessionTabs: [
+        {
+          worktree: TEST_WORKTREE_ID,
+          publicationEpoch: 'renderer-epoch',
+          snapshotVersion: 2,
+          activeGroupId: 'group-1',
+          activeTabId: 'tab-2::pane:2',
+          activeTabType: 'terminal',
+          tabGroups: [{ id: 'group-1', activeTabId: 'tab-2', tabOrder: ['tab-1', 'tab-2'] }],
+          tabs: [
+            {
+              type: 'terminal',
+              id: 'tab-1::pane:1',
+              parentTabId: 'tab-1',
+              leafId: 'pane:1',
+              ptyId: 'pty-1',
+              title: 'Terminal 1',
+              isActive: false
+            },
+            {
+              type: 'terminal',
+              id: 'tab-2::pane:2',
+              parentTabId: 'tab-2',
+              leafId: 'pane:2',
+              ptyId: 'pty-2',
+              title: 'Terminal 2',
+              isActive: true
+            }
+          ]
+        }
+      ]
+    })
+
+    runtime.syncWindowGraph(1, {
+      tabs: [],
+      leaves: [],
+      mobileSessionTabs: [
+        {
+          worktree: TEST_WORKTREE_ID,
+          publicationEpoch: 'renderer-epoch',
+          snapshotVersion: 1,
+          activeGroupId: 'group-1',
+          activeTabId: 'tab-1::pane:1',
+          activeTabType: 'terminal',
+          tabGroups: [{ id: 'group-1', activeTabId: 'tab-1', tabOrder: ['tab-1'] }],
+          tabs: [
+            {
+              type: 'terminal',
+              id: 'tab-1::pane:1',
+              parentTabId: 'tab-1',
+              leafId: 'pane:1',
+              ptyId: 'pty-1',
+              title: 'Terminal 1',
+              isActive: true
+            }
+          ]
+        }
+      ]
+    })
+
+    const listed = await runtime.listMobileSessionTabs(`id:${TEST_WORKTREE_ID}`)
+    expect(listed.tabs.map((tab) => tab.type === 'terminal' && tab.parentTabId)).toEqual([
+      'tab-1',
+      'tab-2'
+    ])
+    expect(listed.tabGroups?.[0]?.tabOrder).toEqual(['tab-1', 'tab-2'])
+  })
+
   it('keeps mobile terminal surfaces visible while their leaf handle is pending', async () => {
     const runtime = new OrcaRuntimeService(store)
     runtime.attachWindow(1)

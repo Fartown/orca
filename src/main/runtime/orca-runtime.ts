@@ -1995,6 +1995,10 @@ export class OrcaRuntimeService {
   private authoritativeWindowId: number | null = null
   private tabs = new Map<string, RuntimeSyncedTab>()
   private mobileSessionTabsByWorktree = new Map<string, RuntimeMobileSessionTabsSnapshot>()
+  private rendererMobileSessionSnapshotFreshnessByWorktree = new Map<
+    string,
+    { publicationEpoch: string; snapshotVersion: number }
+  >()
   // Why: idempotency map for mobile terminal creation — a retried create with the
   // same clientMutationId returns the in-flight operation instead of duplicating.
   private mobileTerminalCreateByMutationId = new Map<
@@ -18281,6 +18285,45 @@ export class OrcaRuntimeService {
     }
   }
 
+  private acceptRendererMobileSessionSnapshot(snapshot: RuntimeMobileSessionTabsSnapshot): boolean {
+    // Why (#7400): mobileSessionTabsByWorktree snapshotVersion is also a
+    // main-bumped delivery watermark; keep renderer tab-graph freshness separate
+    // so delivery bumps cannot mask newer renderer-owned structure.
+    const current = this.rendererMobileSessionSnapshotFreshnessByWorktree.get(snapshot.worktree)
+    if (
+      current &&
+      current.publicationEpoch === snapshot.publicationEpoch &&
+      snapshot.snapshotVersion <= current.snapshotVersion
+    ) {
+      return false
+    }
+
+    this.rendererMobileSessionSnapshotFreshnessByWorktree.set(snapshot.worktree, {
+      publicationEpoch: snapshot.publicationEpoch,
+      snapshotVersion: snapshot.snapshotVersion
+    })
+    return true
+  }
+
+  private withMonotonicMobileSessionSnapshotVersion(
+    snapshot: RuntimeMobileSessionTabsSnapshot,
+    existing: RuntimeMobileSessionTabsSnapshot | undefined
+  ): RuntimeMobileSessionTabsSnapshot {
+    if (
+      !existing ||
+      snapshot.publicationEpoch !== existing.publicationEpoch ||
+      snapshot.snapshotVersion > existing.snapshotVersion
+    ) {
+      return snapshot
+    }
+
+    // Why: clients still use snapshotVersion as the delivery freshness gate,
+    // but main-side PTY/title touches can bump that delivery version without
+    // changing renderer-owned tab structure. Preserve client monotonicity while
+    // allowing a fresh renderer structural snapshot to replace old content.
+    return { ...snapshot, snapshotVersion: existing.snapshotVersion + 1 }
+  }
+
   private syncMobileSessionTabs(snapshots: RuntimeMobileSessionTabsSnapshot[] | undefined): void {
     if (snapshots === undefined) {
       return
@@ -18294,15 +18337,15 @@ export class OrcaRuntimeService {
     const nextWorktrees = new Set<string>()
     for (const snapshot of snapshots) {
       nextWorktrees.add(snapshot.worktree)
-      const existing = this.mobileSessionTabsByWorktree.get(snapshot.worktree)
-      const nextSnapshot = this.mergePreservedHeadlessMobileSessionTabs(snapshot, existing)
-      if (
-        !existing ||
-        nextSnapshot.publicationEpoch !== existing.publicationEpoch ||
-        nextSnapshot.snapshotVersion >= existing.snapshotVersion
-      ) {
-        this.mobileSessionTabsByWorktree.set(snapshot.worktree, nextSnapshot)
+      if (!this.acceptRendererMobileSessionSnapshot(snapshot)) {
+        continue
       }
+      const existing = this.mobileSessionTabsByWorktree.get(snapshot.worktree)
+      const nextSnapshot = this.withMonotonicMobileSessionSnapshotVersion(
+        this.mergePreservedHeadlessMobileSessionTabs(snapshot, existing),
+        existing
+      )
+      this.mobileSessionTabsByWorktree.set(snapshot.worktree, nextSnapshot)
     }
     for (const [worktreeId, existing] of [...this.mobileSessionTabsByWorktree.entries()]) {
       if (!nextWorktrees.has(worktreeId)) {
@@ -18312,6 +18355,7 @@ export class OrcaRuntimeService {
           nextWorktrees.add(worktreeId)
         } else {
           this.mobileSessionTabsByWorktree.delete(worktreeId)
+          this.rendererMobileSessionSnapshotFreshnessByWorktree.delete(worktreeId)
           this.notifyMobileSessionTabsRemoved(worktreeId)
         }
       }
