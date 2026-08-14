@@ -393,6 +393,7 @@
       </div>
       <div class="muted" id="status-facts" style="margin-top: 6px"></div>
       <div class="muted" id="status-reason"></div>
+      <div class="muted" id="stale" hidden></div>
       <div class="muted clamp" id="status-objective" style="margin-top: 8px"></div>
     </div>
 
@@ -456,10 +457,21 @@
       var seq = 0
       var pending = {}
 
+      // 宿主在面板会话被替换时会直接不回消息(plugin-panel-bridge-host 的 respond 有这条早退),
+      // 没有超时的话这个 Promise 永远悬着、pending 每 4 秒漏一条,界面则一直停在旧数据上不吭声。
+      var CALL_TIMEOUT_MS = 12000
+
       function call(action, params) {
         return new Promise(function (resolve) {
           var requestId = 'req-' + ++seq
-          pending[requestId] = resolve
+          var timer = setTimeout(function () {
+            delete pending[requestId]
+            resolve({ ok: false, errorCode: 'no_response' })
+          }, CALL_TIMEOUT_MS)
+          pending[requestId] = function (data) {
+            clearTimeout(timer)
+            resolve(data)
+          }
           // 面板是 opaque origin,targetOrigin 只能用 '*';宿主改为校验发送方窗口。
           window.parent.postMessage(
             { type: 'orca-panel-action', requestId: requestId, action: action, params: params },
@@ -480,7 +492,7 @@
       var el = {}
       ;[
         'blocker-sec', 'blocker', 'status-sec', 'status-dot', 'status-text', 'status-facts',
-        'status-reason', 'status-objective', 'actions', 'gate-sec', 'gate-list', 'rounds-sec',
+        'status-reason', 'stale', 'status-objective', 'actions', 'gate-sec', 'gate-list', 'rounds-sec',
         'rounds', 'empty', 'judge', 'form-region'
       ].forEach(function (id) {
         el[id] = document.getElementById(id)
@@ -694,11 +706,26 @@
         // storage.get 返回 { value: <存进去的东西> },面板桥又包一层 value,要剥两层。
         call('storage.get', { key: 'goals' }).then(function (result) {
           if (!result.ok) {
-            el.blocker.innerHTML =
-              '<b>面板读不到数据。</b>宿主拒绝了 <code>storage.get</code>(<code>' +
-              (result.errorCode || '?') +
-              '</code>)。把 <code>plugin-host-api.ts</code> 里 <code>storage.get</code> 的 ' +
-              '<code>panel</code> 改成 <code>true</code>。'
+            // 分开说:没人回复和被拒绝的处理方式完全不同,笼统一句「改 panel: true」会把人带偏。
+            el.blocker.textContent = ''
+            var b = node('b', null, '面板读不到数据。')
+            el.blocker.appendChild(b)
+            if (result.errorCode === 'no_response') {
+              b.textContent = '面板暂时收不到宿主回复。'
+              el.blocker.appendChild(
+                document.createTextNode('插件可能正在重载或已被停用,恢复后会自动接上。')
+              )
+            } else if (result.errorCode === 'panel_forbidden') {
+              el.blocker.appendChild(
+                document.createTextNode(
+                  '宿主不允许面板调 storage.get(panel_forbidden)—— 需要 plugin-host-api.ts 里那处 panel: true。'
+                )
+              )
+            } else {
+              el.blocker.appendChild(
+                document.createTextNode('宿主拒绝了 storage.get(' + (result.errorCode || '未说明') + ')。')
+              )
+            }
             el['blocker-sec'].hidden = false
             return
           }
@@ -713,6 +740,19 @@
 
           if (shown) {
             renderGoal(shown)
+            // worker 每分钟至少心跳一次,面板又没有任何叫醒它的办法(能调的只有 storage.get)。
+            // 连丢三次心跳基本只剩「worker 没了」一种解释 —— 但这里只陈述观察到的事实,
+            // 不替用户断定原因:说错原因比不说更误导。
+            var age = payload && payload.updatedAt ? Date.now() - payload.updatedAt : 0
+            // 只在面板正宣称「进行中」时才提示 —— 显示「中断了」时它自己已经把话说清楚了,
+            // 再叠一条陈旧警告纯属噪音。
+            var stale = viewOf(shown) === VIEW.active && age > 180000
+            el.stale.hidden = !stale
+            if (stale) {
+              el.stale.textContent =
+                '⚠ 后台已经 ' + Math.round(age / 60000) + ' 分钟没有回报状态,下面显示的是那时的快照。' +
+                '目标可能仍在跑 —— 用 orca-goal status 看当前进度。'
+            }
             el.empty.hidden = true
           } else {
             el['status-sec'].hidden = true

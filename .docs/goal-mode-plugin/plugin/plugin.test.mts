@@ -198,6 +198,69 @@ describe('panel 行为', () => {
     expect(document.getElementById('status-sec')!.hidden).toBe(true)
   })
 
+  it('宿主不回消息时给出提示,而不是一直显示旧数据', async () => {
+    // 宿主的 respond() 在面板会话被替换时会直接不回。装一个只吞不回的 parent。
+    Object.defineProperty(window, 'parent', {
+      configurable: true,
+      value: { postMessage() {} }
+    })
+    mountPanel()
+    await flush()
+    expect(document.getElementById('blocker-sec')!.hidden).toBe(true) // 还在等,先不吓人
+    await vi.advanceTimersByTimeAsync(12_500)
+    await flush()
+    expect(document.getElementById('blocker-sec')!.hidden).toBe(false)
+    expect(document.getElementById('blocker')!.textContent).toContain('收不到宿主回复')
+  })
+
+  it('镜像很久没更新时说明数据是旧的 —— worker 会被宿主回收', async () => {
+    results.set('storage.get', {
+      ok: true,
+      value: { value: { updatedAt: Date.now() - 8 * 60_000, goals: [goal] } }
+    })
+    mountPanel()
+    await flush()
+    const stale = document.getElementById('stale')!
+    expect(stale.hidden).toBe(false)
+    expect(stale.textContent).toContain('8 分钟没有回报状态')
+  })
+
+  it('陈旧阈值要留够几个心跳,不然正常运行也会误报', () => {
+    const heartbeat = Number(
+      read('worker.mjs')
+        .match(/HEARTBEAT_MS = (\d+)/)![1]
+        .replace(/_/g, '')
+    )
+    const threshold = Number(read('panel.html').match(/age > (\d+)/)![1])
+    expect(threshold).toBeGreaterThanOrEqual(heartbeat * 3)
+  })
+
+  it('已经显示「中断了」时不再叠加陈旧提示', async () => {
+    results.set('storage.get', {
+      ok: true,
+      value: {
+        value: {
+          updatedAt: Date.now() - 20 * 60_000,
+          goals: [{ ...goal, driverAlive: false }]
+        }
+      }
+    })
+    mountPanel()
+    await flush()
+    expect(document.getElementById('status-text')!.textContent).toContain('中断了')
+    expect(document.getElementById('stale')!.hidden).toBe(true)
+  })
+
+  it('镜像是新的就不提示陈旧', async () => {
+    results.set('storage.get', {
+      ok: true,
+      value: { value: { updatedAt: Date.now(), goals: [goal] } }
+    })
+    mountPanel()
+    await flush()
+    expect(document.getElementById('stale')!.hidden).toBe(true)
+  })
+
   it('裁判分段控件可切换', async () => {
     results.set('storage.get', { ok: true, value: { value: { goals: [] } } })
     mountPanel()
@@ -343,6 +406,129 @@ describe('worker 行为', () => {
     await events.get('agent.status.changed')!(null)
     await new Promise((r) => setTimeout(r, 50))
     expect(calls.filter((c) => c.method === 'storage.set').length).toBe(before)
+  })
+
+  it('storage.set 写挂时不记成已写 —— 宿主是抛异常,不是返回 ok:false', async () => {
+    await writeGoal({ key: 'a', state: 'active', turns: 1, updatedAt: 2 })
+    const mod = await loadWorker()
+    const logs: string[] = []
+    await mod.default({
+      ...fakeOrca(),
+      host: {
+        call: async (method: string, params: Record<string, unknown>) => {
+          calls.push({ method, params })
+          // 照抄宿主:plugin-host-method-bindings 里 storage.set 超限直接 throw。
+          if (method === 'storage.set') {
+            throw new Error('value exceeds 262144 bytes')
+          }
+          return { ok: true }
+        }
+      },
+      log: (m: string) => logs.push(m)
+    })
+    const first = calls.filter((c) => c.method === 'storage.set').length
+    expect(first).toBe(1)
+    expect(logs.some((l) => l.includes('value exceeds'))).toBe(true)
+    // 没写进去就不能当成已写:下一次镜像必须重试,否则面板永远等不到这份数据。
+    await commands.get('goal.status')!({})
+    expect(calls.filter((c) => c.method === 'storage.set').length).toBeGreaterThan(first)
+  })
+
+  it('目标多、轮次长时把镜像裁进 storage 的单值上限', async () => {
+    // 每个终端一条记录,用户几十个终端很正常;全量带逐轮日志会直接顶穿 256 KiB。
+    const files = Array.from(
+      { length: 20 },
+      (_, i) => `src/renderer/components/module-${i}/index.tsx`
+    )
+    const rounds = Array.from({ length: 20 }, (_, t) => ({
+      turn: t,
+      at: new Date().toISOString(),
+      changed: { source: files, test: files },
+      findings: ['断言被删掉了'.repeat(20)]
+    }))
+    for (let i = 0; i < 40; i++) {
+      await writeGoal(
+        { key: `g${i}`, state: i === 0 ? 'active' : 'complete', turns: 20, updatedAt: 100 - i },
+        rounds
+      )
+    }
+    const mod = await loadWorker()
+    await mod.default(fakeOrca())
+    const written = calls.find((c) => c.method === 'storage.set')!
+    const bytes = Buffer.byteLength(JSON.stringify(written.params.value), 'utf8')
+    expect(bytes).toBeLessThanOrEqual(200 * 1024)
+    // 裁剪不能把要显示的那个目标裁没:进行中的仍要带着时间线。
+    const value = written.params.value as { goals: { state: string; rounds: unknown[] }[] }
+    const active = value.goals.find((g) => g.state === 'active')!
+    expect(active.rounds.length).toBeGreaterThan(0)
+  })
+
+  it('目标进行中时按心跳重写,updatedAt 才代表 worker 还活着', async () => {
+    await writeGoal({ key: 'a', state: 'active', turns: 1, updatedAt: 2 })
+    const mod = await loadWorker()
+    await mod.default(fakeOrca())
+    const writes = () => calls.filter((c) => c.method === 'storage.set')
+    expect(writes().length).toBe(1)
+
+    // 内容一个字没变:不到心跳就不该再写。
+    await commands.get('goal.status')!({})
+    expect(writes().length).toBe(1)
+
+    // 过了心跳窗口,即便内容没变也要写 —— 面板靠这个判断后台还在不在。
+    vi.setSystemTime(Date.now() + 61_000)
+    await commands.get('goal.status')!({})
+    expect(writes().length).toBe(2)
+    const [a, b] = writes().map((c) => (c.params.value as { updatedAt: number }).updatedAt)
+    expect(b).toBeGreaterThan(a)
+    vi.useRealTimers()
+  })
+
+  it('没有目标在跑时不心跳 —— 该让宿主回收就回收', async () => {
+    await writeGoal({ key: 'a', state: 'complete', turns: 1, updatedAt: 2 })
+    const mod = await loadWorker()
+    await mod.default(fakeOrca())
+    expect(calls.filter((c) => c.method === 'storage.set').length).toBe(1)
+    vi.setSystemTime(Date.now() + 10 * 60_000)
+    await commands.get('goal.status')!({})
+    expect(calls.filter((c) => c.method === 'storage.set').length).toBe(1)
+    vi.useRealTimers()
+  })
+
+  it('只给要显示的那个目标读日志 —— 面板一次只显示一个', async () => {
+    const rounds = [{ turn: 1, at: new Date().toISOString(), state: 'active' }]
+    await writeGoal({ key: 'old', state: 'complete', turns: 9, updatedAt: 1 }, rounds)
+    await writeGoal({ key: 'now', state: 'active', turns: 2, updatedAt: 9 }, rounds)
+    const mod = await loadWorker()
+    await mod.default(fakeOrca())
+    const value = calls.find((c) => c.method === 'storage.set')!.params.value as {
+      goals: { key: string; rounds: unknown[] }[]
+    }
+    expect(value.goals.find((g) => g.key === 'now')!.rounds.length).toBe(1)
+    expect(value.goals.find((g) => g.key === 'old')!.rounds.length).toBe(0)
+  })
+
+  it('日志很大时只读尾部,不整份读进来', async () => {
+    // 跑久了的目标日志能到几 MB,而时间线只要最后 20 行。
+    const fat = Array.from({ length: 4000 }, (_, i) =>
+      JSON.stringify({ turn: i, at: new Date().toISOString(), pad: 'x'.repeat(400) })
+    ).join('\n')
+    await mkdir(path.join(home, 'goals'), { recursive: true })
+    await mkdir(path.join(home, 'log'), { recursive: true })
+    await writeFile(
+      path.join(home, 'goals', 'big.json'),
+      JSON.stringify({ key: 'big', state: 'active', turns: 4000, updatedAt: 5 })
+    )
+    await writeFile(path.join(home, 'log', 'big.jsonl'), fat)
+    expect(fat.length).toBeGreaterThan(1_000_000)
+    const mod = await loadWorker()
+    await mod.default(fakeOrca())
+    const value = calls.find((c) => c.method === 'storage.set')!.params.value as {
+      goals: { rounds: { turn: number }[] }[]
+    }
+    const got = value.goals[0].rounds
+    expect(got.length).toBeGreaterThan(0)
+    // 读的是尾部,所以拿到的必须是最后那些轮,不是开头的。
+    expect(got.at(-1)!.turn).toBe(3999)
   })
 
   it('goal.status 返回统计,并发通知', async () => {

@@ -15,10 +15,21 @@ const MIRROR_KEY = 'goals' // 面板读这个 key
 const ACTIVE_POLL_MS = 5_000 // 有目标在跑时的刷新节奏
 const CLI_TIMEOUT_MS = 20_000 // 必须明显小于命令处理器的 30 秒上限
 const ROUND_TAIL = 20 // 时间线只要最近这些轮
+// storage 单值上限 256 KiB(PLUGIN_STORAGE_VALUE_MAX_BYTES),留出余量。
+// 超了宿主会抛(plugin-host-method-bindings 里 storage.set 直接 throw),整份写不进去,
+// 面板就一直停在旧数据上 —— 所以宁可自己先裁到装得下。
+const PAYLOAD_BUDGET = 200 * 1024
+// 内容没变也至少这么久写一次。没有心跳的话 updatedAt 只代表「上次有新进展」,
+// 面板就分不清「这一轮还没跑完」和「worker 已经被回收」—— 而这两种情况该说的话完全不同。
+const HEARTBEAT_MS = 60_000
+// 只读日志尾部这么多字节。跑久了的目标日志能到几 MB,而时间线只要最后 20 行 ——
+// 每 5 秒把整份读进来再扔掉 99% 是纯浪费。
+const LOG_TAIL_BYTES = 128 * 1024
 
 let api = null
 let pollTimer = null
 let lastMirrored = ''
+let lastWriteAt = 0
 
 export default async function activate(orca) {
   api = orca
@@ -85,8 +96,9 @@ function stopPolling() {
 
 /**
  * 只在有目标进行中时才轮询。
- * 每次 host.call 都会刷新宿主记的 lastActivityAt,持续轮询等于让空闲回收永远不触发;
- * 没活干还占着一个进程是不对的。没有活动目标就停表,靠 agent.status.changed 唤醒。
+ * 每次 host.call 都会刷新宿主记的 lastActivityAt,所以「轮询 + 心跳」会让空闲回收不触发 ——
+ * 这是有意的:有目标在跑的插件不该被当成闲着,面板得能一直看到进度。
+ * 没有活动目标就停表,让宿主正常回收,之后靠 agent.status.changed 唤醒。
  */
 function schedulePolling(hasActive) {
   if (hasActive && !pollTimer) {
@@ -99,21 +111,55 @@ function schedulePolling(hasActive) {
   }
 }
 
+/** 面板显示哪一个:优先进行中的,否则最近更新的(readGoals 已按 updatedAt 排好)。 */
+function primaryIndexOf(goals) {
+  const active = goals.findIndex((g) => g.state === 'active')
+  return active === -1 ? 0 : active
+}
+
+/** 逐轮日志再长也要塞进 storage 的单值上限。宁可少显示几轮,也不要整份写不进去。 */
+function fitToBudget(goals) {
+  for (let tail = ROUND_TAIL; tail > 0; tail = Math.floor(tail / 2)) {
+    const candidate = goals.map((g) => ({ ...g, rounds: (g.rounds || []).slice(-tail) }))
+    if (Buffer.byteLength(JSON.stringify(candidate), 'utf8') <= PAYLOAD_BUDGET) {
+      return candidate
+    }
+  }
+  return goals.map((g) => ({ ...g, rounds: [] }))
+}
+
 /** 把 ~/.orca-goal 下的状态与逐轮日志汇总,写进 plugin storage 供面板读取。 */
 async function mirror() {
   if (!api) {
     return
   }
   try {
-    const goals = await Promise.all((await readGoals()).map(withRounds))
-    schedulePolling(goals.some((g) => g.state === 'active' && g.driverAlive))
-
-    const encoded = JSON.stringify(goals)
-    if (encoded === lastMirrored) {
-      return // 没变就不写,省一次 host 调用
+    const records = await readGoals()
+    // 存活探测对每个目标都要做(轮询开不开看它),但逐轮日志只有要显示的那个才读 ——
+    // 面板一次只显示一个目标,给几十个目标各读一份日志纯属白读。
+    const all = await Promise.all(
+      records.map(async (g) => ({ ...g, rounds: [], driverAlive: await driverAlive(g) }))
+    )
+    schedulePolling(all.some((g) => g.state === 'active' && g.driverAlive))
+    const primary = all[primaryIndexOf(all)]
+    if (primary) {
+      primary.rounds = await readRounds(primary)
     }
+
+    const goals = fitToBudget(all)
+    const encoded = JSON.stringify(goals)
+    const now = Date.now()
+    // 有目标在跑时,心跳到点就得写 —— 让 updatedAt 保持「worker 还活着」的含义。
+    // 顺带把宿主的空闲回收挡住:目标进行中的插件本来就不该被当成闲着。
+    const due = goals.some((g) => g.state === 'active') && now - lastWriteAt >= HEARTBEAT_MS
+    if (encoded === lastMirrored && !due) {
+      return // 没变又不到心跳,省一次 host 调用
+    }
+    await api.host.call('storage.set', { key: MIRROR_KEY, value: { updatedAt: now, goals } })
+    // 只有写成功才记账:写挂了(超限、磁盘满)必须让下一轮重试,
+    // 否则 dedup 会把这份从没落盘的内容当成已写,面板永远等不到它。
     lastMirrored = encoded
-    await api.host.call('storage.set', { key: MIRROR_KEY, value: { updatedAt: Date.now(), goals } })
+    lastWriteAt = now
   } catch (err) {
     api?.log(`镜像目标状态失败:${err?.message || err}`)
   }
@@ -157,21 +203,30 @@ async function driverAlive(goal) {
   }
 }
 
-/** 逐轮日志是 JSONL,只取最近若干轮供时间线渲染。 */
-async function withRounds(goal) {
+/** 逐轮日志是 JSONL,只读文件尾部再取最近若干轮供时间线渲染。 */
+async function readRounds(goal) {
+  let handle
   try {
-    const raw = await fs.readFile(path.join(GOAL_HOME, 'log', `${goal.key}.jsonl`), 'utf8')
+    handle = await fs.open(path.join(GOAL_HOME, 'log', `${goal.key}.jsonl`), 'r')
+    const { size } = await handle.stat()
+    const start = Math.max(0, size - LOG_TAIL_BYTES)
+    const buf = Buffer.alloc(size - start)
+    await handle.read(buf, 0, buf.length, start)
     const rounds = []
-    for (const line of raw.split('\n').filter(Boolean).slice(-ROUND_TAIL)) {
+    const lines = buf.toString('utf8').split('\n').filter(Boolean)
+    // 从中间截断的话第一行是残句,直接跳过(下面的 try 也会兜住)。
+    for (const line of lines.slice(-ROUND_TAIL)) {
       try {
         rounds.push(JSON.parse(line))
       } catch {
         // 半行,跳过
       }
     }
-    return { ...goal, rounds, driverAlive: await driverAlive(goal) }
+    return rounds
   } catch {
-    return { ...goal, rounds: [], driverAlive: await driverAlive(goal) }
+    return [] // 还没有日志
+  } finally {
+    await handle?.close().catch(() => {})
   }
 }
 
