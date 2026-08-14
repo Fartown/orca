@@ -1,239 +1,588 @@
 <!doctype html>
 <html lang="zh-CN">
-<head>
-<meta charset="utf-8" />
-<style>
-  :root {
-    --background:#0a0a0a; --foreground:#fafafa; --card:#171717; --primary:#e5e5e5;
-    --primary-foreground:#171717; --muted:#262626; --muted-foreground:#a1a1a1; --accent:#404040;
-    --destructive:#ff6568; --border:rgb(255 255 255 / 0.07); --radius:0.625rem;
-    --radius-sm:calc(var(--radius) * 0.6); --ok:#4ade80; --warn:#fbbf24;
-  }
-  *{box-sizing:border-box}
-  body{margin:0;background:#171717;color:var(--foreground);
-    font:13px/1.55 -apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif;-webkit-font-smoothing:antialiased}
-  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
-  .wrap{padding:12px;display:flex;flex-direction:column;gap:12px}
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      /* 宿主把 Orca 的设计 token 注进 :root,并给 <html> 挂 light/dark class
+         (src/shared/plugins/plugin-panel-shell.ts)。只用白名单里那 20 个,并且都带兜底值 ——
+         照 examples/plugins/hello-orca 的写法。自己定义同名变量会覆盖宿主的值,
+         浅色宿主里就显示成暗色。
 
-  .blocker{background:rgb(255 101 104 /.08);border:1px solid rgb(255 101 104 /.3);
-    border-radius:var(--radius-sm);padding:9px 10px;font-size:11.5px;line-height:1.6;color:#ffb3b5}
-  .blocker b{color:#ffd0d1}
-  .blocker code{font-family:ui-monospace,Menlo,monospace;font-size:10.5px;
-    background:rgb(255 255 255/.07);padding:1px 4px;border-radius:3px}
+         版式照 Orca 内置右侧栏面板(checks-panel-content):12px 分区、border 分隔、
+         11px 次要文字、bg-accent/20 信息块、到处 min-width:0。 */
+      :root {
+        --ok: #16a34a;
+        --warn: #b45309;
+        --r: calc(var(--radius, 0.625rem) * 0.6);
+        --block: color-mix(in srgb, var(--accent, #eee) 20%, transparent);
+      }
+      html.dark {
+        --ok: #4ade80;
+        --warn: #fbbf24;
+      }
 
-  .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:12px}
-  .card.run{border-color:rgb(255 255 255/.14)}
-  .card.wait{border-color:rgb(251 191 36/.45);background:rgb(251 191 36/.06)}
-  .card.ok{border-color:rgb(74 222 128/.4);background:rgb(74 222 128/.06)}
-  .card.bad{border-color:rgb(255 101 104/.4);background:rgb(255 101 104/.06)}
-  .row{display:flex;align-items:center;gap:8px}
-  .grow{flex:1}
-  .status{font-weight:600;font-size:13px;display:flex;align-items:center;gap:7px}
-  .dot{width:7px;height:7px;border-radius:999px;background:var(--muted-foreground);flex:none}
-  .dot.run{background:var(--ok);animation:pulse 1.6s ease-in-out infinite}
-  .dot.bad{background:var(--destructive)} .dot.warn{background:var(--warn)}
-  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
-  .meta{color:var(--muted-foreground);font-size:12px;margin-top:6px}
-  .objective{margin-top:10px;padding-top:10px;border-top:1px solid var(--border);
-    color:var(--muted-foreground);font-size:12px;line-height:1.6;
-    display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+      * {
+        box-sizing: border-box;
+        min-width: 0;
+      }
+      html,
+      body {
+        height: 100%;
+      }
+      body {
+        margin: 0;
+        background: var(--background, transparent);
+        color: var(--foreground, #ddd);
+        font: 12px/1.5 system-ui, -apple-system, "PingFang SC", sans-serif;
+        -webkit-font-smoothing: antialiased;
+        overflow-y: auto; /* iframe 是 h-full,面板文档自己滚 */
+        overflow-x: hidden; /* 面板很窄,横向一律折行适配,不给滚动条 */
+        overscroll-behavior: contain;
+      }
 
-  .btn{font:inherit;font-size:12px;padding:6px 12px;border-radius:var(--radius-sm);
-    border:1px solid var(--border);background:var(--muted);color:var(--foreground);cursor:pointer}
-  .btn:hover{background:var(--accent)}
-  .btn.primary{background:var(--primary);color:var(--primary-foreground);border-color:transparent;font-weight:500}
-  .btn.ghost{background:transparent}
-  .btn.block{width:100%}
-  .btn[disabled]{opacity:.45;cursor:not-allowed}
+      .sec {
+        padding: 12px;
+        border-bottom: 1px solid var(--border, #333);
+      }
+      .sec:last-child {
+        border-bottom: 0;
+      }
+      .sec[hidden] {
+        display: none;
+      }
+      .sec-label {
+        font-size: 11px;
+        color: var(--muted-foreground, #999);
+        margin-bottom: 8px;
+      }
 
-  label.f{display:block;font-size:12px;color:var(--muted-foreground);margin-bottom:5px}
-  textarea,input.f{width:100%;font:inherit;font-size:12px;color:var(--foreground);background:var(--background);
-    border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 10px;resize:vertical}
-  textarea:focus,input.f:focus{outline:none;border-color:rgb(255 255 255/.22)}
-  .hint{font-size:11px;color:#6b6b6b;margin-top:5px;line-height:1.5}
-  .sec{font-size:11px;color:#6b6b6b;margin:2px 0 -4px}
-  .seg{display:inline-flex;background:var(--background);border:1px solid var(--border);
-    border-radius:var(--radius-sm);padding:2px;gap:2px}
-  .seg button{font:inherit;font-size:11.5px;padding:3px 12px;border:none;border-radius:4px;
-    background:transparent;color:var(--muted-foreground);cursor:pointer}
-  .seg button.on{background:var(--primary);color:var(--primary-foreground);font-weight:500}
-  .fold{border:1px solid var(--border);border-radius:var(--radius);padding:9px 11px;background:var(--card)}
-  .fold>summary{cursor:pointer;font-size:12px;color:var(--muted-foreground);list-style:none;display:flex;gap:7px;align-items:center}
-  .fold>summary::-webkit-details-marker{display:none}
-  .fold>summary::before{content:"▸";font-size:10px}
-  .fold[open]>summary::before{content:"▾"}
+      .row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .grow {
+        flex: 1;
+      }
+      .stack {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
 
-  .tl{display:flex;flex-direction:column}
-  .tl-item{display:grid;grid-template-columns:18px 1fr;gap:8px;padding-bottom:12px;position:relative}
-  .tl-item:not(:last-child)::before{content:"";position:absolute;left:8px;top:16px;bottom:0;width:1px;background:var(--border)}
-  .tl-dot{width:17px;height:17px;border-radius:999px;display:grid;place-items:center;background:var(--muted);
-    border:1px solid var(--border);font-size:9px;color:var(--muted-foreground);z-index:1}
-  .tl-dot.ok{background:rgb(74 222 128/.18);border-color:rgb(74 222 128/.5);color:var(--ok)}
-  .tl-dot.bad{background:rgb(255 101 104/.18);border-color:rgb(255 101 104/.5);color:var(--destructive)}
-  .tl-dot.warn{background:rgb(251 191 36/.18);border-color:rgb(251 191 36/.5);color:var(--warn)}
-  .tl-head{display:flex;align-items:baseline;gap:7px}
-  .tl-turn{font-size:12px;font-weight:500}
-  .tl-time{font-size:11px;color:#5f5f5f;margin-left:auto}
-  .tl-note{font-size:11.5px;color:var(--muted-foreground);margin-top:3px;line-height:1.55}
-  .flag{margin-top:6px;padding:7px 9px;border-radius:var(--radius-sm);font-size:11.5px;line-height:1.55;
-    background:rgb(251 191 36/.08);border:1px solid rgb(251 191 36/.3);color:#e8c887}
-  .empty{text-align:center;color:#5f5f5f;font-size:12px;padding:22px 10px}
-  .empty .big{font-size:26px;display:block;margin-bottom:8px;opacity:.5}
-</style>
-</head>
-<body>
-<div class="wrap" id="root"><div class="empty">载入中…</div></div>
+      .block {
+        border-radius: var(--r);
+        border: 1px solid var(--border, #333);
+        background: var(--block);
+        padding: 6px 10px;
+      }
+      .mono {
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 11px;
+        line-height: 1.45;
+        word-break: break-all;
+      }
 
-<script>
-// —— 面板 ↔ 宿主的桥。协议见 src/shared/plugins/plugin-panel-bridge.ts ——
-const pending = new Map()
-let seq = 0
-window.addEventListener('message', (e) => {
-  const d = e.data
-  if (!d || d.type !== 'orca-panel-action-result') return
-  const p = pending.get(d.requestId)
-  if (!p) return
-  pending.delete(d.requestId)
-  d.ok ? p.resolve(d.value) : p.reject(Object.assign(new Error(d.error || '失败'), { code: d.errorCode }))
-})
-function call(action, params) {
-  const requestId = `r${++seq}`
-  return new Promise((resolve, reject) => {
-    pending.set(requestId, { resolve, reject })
-    window.parent.postMessage({ type: 'orca-panel-action', requestId, action, params }, '*')
-    setTimeout(() => {
-      if (pending.delete(requestId)) reject(Object.assign(new Error('宿主没有回应'), { code: 'timeout' }))
-    }, 8000)
-  })
-}
+      .title {
+        font-size: 12px;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: 7px;
+      }
+      .muted {
+        font-size: 11px;
+        color: var(--muted-foreground, #999);
+        word-break: break-word;
+      }
+      .clamp {
+        display: -webkit-box;
+        -webkit-line-clamp: 3;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
 
-const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c])
-const ago = (ts) => {
-  if (!ts) return ''
-  const m = Math.round((Date.now() - ts) / 60000)
-  return m < 1 ? '刚刚' : m < 60 ? `${m} 分钟前` : `${Math.round(m / 60)} 小时前`
-}
-const LABEL = { active: '进行中', complete: '目标达成', blocked: '受阻',
-  budget_exhausted: '预算耗尽', stalled: '空转', aborted: '人为中断' }
-const TONE = { active: 'run', complete: 'ok', blocked: 'bad', budget_exhausted: 'warn', stalled: 'warn', aborted: '' }
+      .dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 999px;
+        background: var(--muted-foreground, #999);
+        flex: none;
+      }
+      .dot.run {
+        background: var(--ok);
+        animation: pulse 1.6s ease-in-out infinite;
+      }
+      .dot.bad {
+        background: var(--destructive, #e5484d);
+      }
+      .dot.warn {
+        background: var(--warn);
+      }
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.35;
+        }
+      }
 
-function roundItem(r) {
-  const claim = r.claim?.kind
-  const cls = r.acceptancePassed === false ? 'bad' : r.acceptancePassed === true ? 'ok' : claim ? 'warn' : ''
-  const icon = r.acceptancePassed === false ? '✕' : r.acceptancePassed === true ? '✓' : ''
-  const notes = []
-  if (claim === 'complete') notes.push(r.acceptancePassed === false ? '声称完成 → 验收未通过' : '声称完成')
-  if (claim === 'blocked') notes.push('声称受阻')
-  if (r.prompt === 'tamper-challenge') notes.push('收到篡改质证')
-  if (r.prompt === 'rejected-completion') notes.push('收到验收驳回')
-  const flags = (r.findings || []).filter((f) => f.challenge)
-  return `<div class="tl-item">
-    <div class="tl-dot ${cls}">${icon}</div>
-    <div>
-      <div class="tl-head"><span class="tl-turn">第 ${r.turn} 轮</span>
-        <span class="tl-time">${esc(ago(Date.parse(r.at)))}</span></div>
-      ${notes.length ? `<div class="tl-note">${esc(notes.join(' · '))}</div>` : ''}
-      ${flags.map((f) => `<div class="flag">⚑ ${esc(f.label)}:${esc(f.detail)}</div>`).join('')}
-    </div></div>`
-}
+      button.btn {
+        font: inherit;
+        font-size: 11px;
+        padding: 3px 9px;
+        border-radius: var(--r);
+        border: 1px solid var(--border, #555);
+        background: transparent;
+        color: var(--foreground, #ddd);
+        cursor: pointer;
+        flex: none;
+      }
+      button.btn:hover:not([disabled]) {
+        background: var(--accent, #333);
+        color: var(--accent-foreground, #fff);
+      }
+      button.btn.primary {
+        background: var(--primary, #ddd);
+        color: var(--primary-foreground, #111);
+        border-color: transparent;
+        font-weight: 500;
+      }
+      button.btn.wide {
+        width: 100%;
+        padding: 6px 9px;
+        font-size: 12px;
+      }
+      button.btn[disabled] {
+        opacity: 0.45;
+        cursor: not-allowed;
+      }
 
-function goalCard(g) {
-  const mins = Math.round((Date.now() - g.startedAt) / 60000)
-  const budget = g.budget || {}
-  const checks = g.acceptance?.commands || []
-  return `
-  <div class="card ${TONE[g.state] || ''}">
-    <div class="row">
-      <div class="status"><span class="dot ${TONE[g.state] || ''}"></span>${esc(LABEL[g.state] || g.state)}</div>
-      <div class="grow"></div>
-      ${g.state === 'active' ? '<button class="btn" data-stop="1">停止</button>' : ''}
+      label.f {
+        display: block;
+        font-size: 11px;
+        color: var(--muted-foreground, #999);
+        margin-bottom: 5px;
+      }
+      textarea,
+      input.f {
+        display: block;
+        width: 100%;
+        max-width: 100%;
+        font: inherit;
+        font-size: 11px;
+        color: var(--foreground, #ddd);
+        background: var(--background, transparent);
+        border: 1px solid var(--input, var(--border, #555));
+        border-radius: var(--r);
+        padding: 6px 8px;
+        resize: vertical;
+      }
+      textarea:focus,
+      input.f:focus {
+        outline: none;
+        border-color: var(--ring, var(--border, #777));
+      }
+      .hint {
+        font-size: 11px;
+        color: var(--muted-foreground, #999);
+        margin-top: 5px;
+        line-height: 1.45;
+        word-break: break-word;
+      }
+
+      .seg {
+        display: inline-flex;
+        border: 1px solid var(--border, #555);
+        border-radius: var(--r);
+        padding: 2px;
+        gap: 2px;
+        flex: none;
+      }
+      .seg button {
+        font: inherit;
+        font-size: 11px;
+        padding: 2px 10px;
+        border: none;
+        border-radius: 4px;
+        background: transparent;
+        color: var(--muted-foreground, #999);
+        cursor: pointer;
+      }
+      .seg button.on {
+        background: var(--primary, #ddd);
+        color: var(--primary-foreground, #111);
+        font-weight: 500;
+      }
+
+      details > summary {
+        cursor: pointer;
+        font-size: 11px;
+        color: var(--muted-foreground, #999);
+        list-style: none;
+        display: flex;
+        gap: 6px;
+        align-items: center;
+      }
+      details > summary::-webkit-details-marker {
+        display: none;
+      }
+      details > summary::before {
+        content: "▸";
+        font-size: 9px;
+      }
+      details[open] > summary::before {
+        content: "▾";
+      }
+
+      .tl-item {
+        display: grid;
+        grid-template-columns: 15px minmax(0, 1fr);
+        gap: 8px;
+        padding-bottom: 10px;
+        position: relative;
+      }
+      .tl-item:last-child {
+        padding-bottom: 0;
+      }
+      .tl-item:not(:last-child)::before {
+        content: "";
+        position: absolute;
+        left: 7px;
+        top: 15px;
+        bottom: 0;
+        width: 1px;
+        background: var(--border, #333);
+      }
+      .tl-dot {
+        width: 15px;
+        height: 15px;
+        border-radius: 999px;
+        display: grid;
+        place-items: center;
+        border: 1px solid var(--border, #333);
+        background: var(--background, transparent);
+        font-size: 8px;
+        color: var(--muted-foreground, #999);
+        z-index: 1;
+      }
+      .tl-dot.ok {
+        border-color: color-mix(in srgb, var(--ok) 55%, transparent);
+        color: var(--ok);
+      }
+      .tl-dot.bad {
+        border-color: color-mix(in srgb, var(--destructive, #e5484d) 55%, transparent);
+        color: var(--destructive, #e5484d);
+      }
+      .tl-dot.warn {
+        border-color: color-mix(in srgb, var(--warn) 55%, transparent);
+        color: var(--warn);
+      }
+      .tl-head {
+        display: flex;
+        align-items: baseline;
+        gap: 7px;
+      }
+      .tl-turn {
+        font-size: 11px;
+        font-weight: 500;
+      }
+      .tl-time {
+        font-size: 11px;
+        color: var(--muted-foreground, #999);
+        margin-left: auto;
+        flex: none;
+      }
+
+      .flag {
+        margin-top: 5px;
+        padding: 5px 8px;
+        border-radius: var(--r);
+        font-size: 11px;
+        line-height: 1.45;
+        border: 1px solid color-mix(in srgb, var(--warn) 35%, transparent);
+        background: color-mix(in srgb, var(--warn) 8%, transparent);
+        color: var(--warn);
+        word-break: break-word;
+      }
+      .blocker {
+        padding: 6px 10px;
+        border-radius: var(--r);
+        font-size: 11px;
+        line-height: 1.5;
+        border: 1px solid color-mix(in srgb, var(--destructive, #e5484d) 40%, transparent);
+        background: color-mix(in srgb, var(--destructive, #e5484d) 8%, transparent);
+        color: var(--destructive, #e5484d);
+        word-break: break-word;
+      }
+      .blocker code {
+        font-family: ui-monospace, Menlo, monospace;
+        font-size: 10px;
+        word-break: break-all;
+      }
+
+      .empty {
+        padding: 24px 12px;
+        text-align: center;
+        font-size: 11px;
+        color: var(--muted-foreground, #999);
+      }
+    </style>
+  </head>
+  <body>
+    <!-- 骨架是静态的。刷新只改下面这几个具名区域的内容,绝不重建整页 ——
+         整页重建会把用户正在输入的目标和验收标准一起冲掉。 -->
+    <div class="sec" id="blocker-sec" hidden>
+      <p class="blocker" id="blocker"></p>
     </div>
-    <div class="meta">第 ${g.turns} 轮${budget.maxTurns ? ` / ${budget.maxTurns}` : ''} ·
-      已跑 ${mins} 分钟${budget.maxMinutes ? ` / ${budget.maxMinutes}` : ''}
-      ${g.falseClaims ? ` · 假完成 ${g.falseClaims} 次` : ''}
-      ${g.tamperChallenges ? ` · 挡回 ${g.tamperChallenges} 次` : ''}</div>
-    ${g.finishReason ? `<div class="meta">${esc(g.finishReason)}</div>` : ''}
-    <div class="objective">${esc(g.objective)}</div>
-  </div>
-  <div class="card" style="padding:10px">
-    <div class="row"><b style="font-size:12px">验收</b><span class="grow"></span></div>
-    <div class="hint" style="margin-top:6px">${checks.length
-      ? checks.map((c) => `<div class="mono" style="color:#b5b5b5">${esc(c)}</div>`).join('')
-      : '没有配验收 —— 它说做完了就是做完了'}</div>
-  </div>
-  ${(g.rounds || []).length ? `<div class="sec">逐轮记录</div><div class="tl">${
-    g.rounds.slice().reverse().map(roundItem).join('')}</div>` : ''}`
-}
 
-const FORM = `
-  <div class="sec">新目标</div>
-  <div>
-    <label class="f">目标</label>
-    <textarea rows="4" placeholder="想让 agent 完成什么?写清楚「做完」是什么样子。"></textarea>
-    <div class="hint">这段话每一轮都会原样重发,防止它把目标悄悄缩小。</div>
-  </div>
-  <div class="card" style="padding:11px">
-    <div class="row" style="margin-bottom:9px">
-      <label class="f" style="margin:0;flex:1">验收标准</label>
-      <button class="btn ghost" style="font-size:11px" disabled>✨ 从目标生成</button>
+    <div class="sec" id="status-sec" hidden>
+      <div class="row">
+        <div class="title"><span class="dot" id="status-dot"></span><span id="status-text"></span></div>
+        <div class="grow"></div>
+        <button class="btn" id="stop" hidden>停止</button>
+      </div>
+      <div class="muted" id="status-facts" style="margin-top: 6px"></div>
+      <div class="muted" id="status-reason"></div>
+      <div class="muted clamp" id="status-objective" style="margin-top: 8px"></div>
     </div>
-    <textarea rows="6" class="mono" style="font-size:11.5px" placeholder="什么算「做到了」?写具体到文件和行为。"></textarea>
-    <div class="row" style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
-      <label class="f" style="margin:0">裁判</label><span class="grow"></span>
-      <div class="seg"><button>claude</button><button class="on">codex</button></div>
+
+    <div class="sec" id="gate-sec" hidden>
+      <div class="sec-label">验收</div>
+      <div class="stack" id="gate-list"></div>
     </div>
-  </div>
-  <details class="fold"><summary>另外还要跑的命令</summary>
-    <div class="hint" style="margin:6px 0 8px">这些只证明「没弄坏」,证明不了「做到了」。</div>
-    <input class="f mono" placeholder="pnpm test" />
-  </details>
-  <button class="btn primary block" disabled>在当前终端上开始</button>`
 
-async function render() {
-  const root = document.getElementById('root')
-  let mirror = null
-  let blocker = null
-  try {
-    // storage.get 的返回是 { value: <存进去的东西> },而面板桥又包了一层 value,
-    // 所以这里要剥两层才拿到 worker 写的 payload。
-    const raw = await call('storage.get', { key: 'goals' })
-    mirror = raw && typeof raw === 'object' && 'value' in raw ? raw.value : raw
-  } catch (err) {
-    blocker = err
-  }
+    <div class="sec" id="rounds-sec" hidden>
+      <div class="sec-label">逐轮记录</div>
+      <div id="rounds"></div>
+    </div>
 
-  const parts = []
-  if (blocker) {
-    parts.push(`<div class="blocker">
-      <b>面板读不到数据。</b>宿主拒绝了 <code>storage.get</code>(<code>${esc(blocker.code || '?')}</code>)。<br />
-      插件的 <code>storage.*</code> 在宿主 API 表里标着 <code>panel: false</code>,
-      面板与 worker 之间没有通道 —— 进度卡和逐轮记录今天渲染不出来。<br />
-      <b>最小修法:</b>把 <code>plugin-host-api.ts</code> 里 <code>storage.get</code> 的
-      <code>panel</code> 改成 <code>true</code>(一行)。
-    </div>`)
-  }
+    <p class="empty" id="empty" hidden>这个工作区还没有目标</p>
 
-  const goals = mirror?.goals || []
-  const active = goals.find((g) => g.state === 'active')
-  if (active) parts.push(goalCard(active))
-  else if (goals.length) parts.push(goalCard(goals[0]))
-  else if (!blocker) parts.push(`<div class="empty"><span class="big">🎯</span>这个工作区还没有目标</div>`)
+    <div class="sec">
+      <div class="sec-label">新目标</div>
+      <label class="f" for="objective">目标</label>
+      <textarea id="objective" rows="4" placeholder="想让 agent 完成什么?写清楚「做完」是什么样子。"></textarea>
+      <p class="hint">这段话每一轮都会原样重发,防止它把目标悄悄缩小。</p>
+    </div>
 
-  parts.push(FORM)
-  parts.push(`<div class="hint" style="text-align:center">
-    「开始」按钮今天点不了 —— 面板起不了后台循环,命令又不能带参数。<br />
-    现在请用 <span class="mono">orca-goal start</span>。</div>`)
-  root.innerHTML = parts.join('')
+    <div class="sec">
+      <div class="row" style="margin-bottom: 6px">
+        <label class="f" for="criteria" style="margin: 0">验收标准</label>
+        <div class="grow"></div>
+        <button class="btn" id="draft" disabled>✨ 从目标生成</button>
+      </div>
+      <textarea id="criteria" class="mono" rows="5" placeholder="什么算「做到了」?写具体到文件和行为。"></textarea>
+      <div class="row" style="margin-top: 8px">
+        <label class="f" style="margin: 0">裁判</label>
+        <div class="grow"></div>
+        <div class="seg" id="judge">
+          <button data-agent="claude">claude</button>
+          <button data-agent="codex" class="on">codex</button>
+        </div>
+      </div>
+      <p class="hint">选一个和干活那个不同家族的模型 —— 同门的盲点是相关的。</p>
+    </div>
 
-  root.querySelector('[data-stop]')?.addEventListener('click', async () => {
-    try {
-      await call('notifications.show', { title: '目标模式', body: '面板还不能停止目标,请用 orca-goal stop' })
-    } catch { /* 通知失败不影响面板 */ }
-  })
-}
+    <div class="sec">
+      <details>
+        <summary>另外还要跑的命令</summary>
+        <p class="hint">这些只证明「没弄坏」,证明不了「做到了」。</p>
+        <input class="f mono" id="checks" placeholder="pnpm test" />
+      </details>
+    </div>
 
-render()
-setInterval(render, 4000)
-</script>
-</body>
+    <div class="sec">
+      <button class="btn primary wide" id="start" disabled>在当前终端上开始</button>
+      <p class="hint">面板起不了后台循环,命令又不能带参数 —— 现在请用 <span class="mono">orca-goal start</span>。</p>
+    </div>
+
+    <script>
+      'use strict'
+      // —— 面板 ↔ 宿主的桥。协议见 src/shared/plugins/plugin-panel-bridge.ts ——
+      // 照 hello-orca 的契约:永远 resolve,返回 { ok, value, errorCode, error },
+      // 调用方查 ok。这样不会产生未处理的 rejection。
+      var seq = 0
+      var pending = {}
+
+      function call(action, params) {
+        return new Promise(function (resolve) {
+          var requestId = 'req-' + ++seq
+          pending[requestId] = resolve
+          // 面板是 opaque origin,targetOrigin 只能用 '*';宿主改为校验发送方窗口。
+          window.parent.postMessage(
+            { type: 'orca-panel-action', requestId: requestId, action: action, params: params },
+            '*'
+          )
+        })
+      }
+
+      window.addEventListener('message', function (event) {
+        var data = event.data
+        if (!data || data.type !== 'orca-panel-action-result') return
+        var resolve = pending[data.requestId]
+        if (!resolve) return
+        delete pending[data.requestId]
+        resolve(data)
+      })
+
+      var el = {}
+      ;[
+        'blocker-sec', 'blocker', 'status-sec', 'status-dot', 'status-text', 'status-facts',
+        'status-reason', 'status-objective', 'stop', 'gate-sec', 'gate-list', 'rounds-sec',
+        'rounds', 'empty', 'judge'
+      ].forEach(function (id) {
+        el[id] = document.getElementById(id)
+      })
+
+      var LABEL = {
+        active: '进行中', complete: '目标达成', blocked: '受阻',
+        budget_exhausted: '预算耗尽', stalled: '空转', aborted: '人为中断'
+      }
+      var TONE = {
+        active: 'run', complete: 'ok', blocked: 'bad',
+        budget_exhausted: 'warn', stalled: 'warn', aborted: ''
+      }
+
+      function ago(ts) {
+        if (!ts) return ''
+        var m = Math.round((Date.now() - ts) / 60000)
+        if (m < 1) return '刚刚'
+        return m < 60 ? m + ' 分钟前' : Math.round(m / 60) + ' 小时前'
+      }
+
+      function node(tag, cls, text) {
+        var n = document.createElement(tag)
+        if (cls) n.className = cls
+        if (text != null) n.textContent = text
+        return n
+      }
+
+      function renderGate(commands) {
+        el['gate-list'].textContent = ''
+        if (!commands.length) {
+          el['gate-list'].appendChild(node('div', 'muted', '没有配验收 —— 它说做完了就是做完了'))
+          return
+        }
+        commands.forEach(function (c) {
+          el['gate-list'].appendChild(node('div', 'block mono', c))
+        })
+      }
+
+      function renderRounds(rounds) {
+        el.rounds.textContent = ''
+        rounds
+          .slice()
+          .reverse()
+          .forEach(function (r) {
+            var claim = r.claim && r.claim.kind
+            var tone =
+              r.acceptancePassed === false ? 'bad' : r.acceptancePassed === true ? 'ok' : claim ? 'warn' : ''
+            var item = node('div', 'tl-item')
+            item.appendChild(
+              node('div', 'tl-dot ' + tone, r.acceptancePassed === false ? '✕' : r.acceptancePassed === true ? '✓' : '')
+            )
+            var main = node('div')
+            var head = node('div', 'tl-head')
+            head.appendChild(node('span', 'tl-turn', '第 ' + r.turn + ' 轮'))
+            head.appendChild(node('span', 'tl-time', ago(Date.parse(r.at))))
+            main.appendChild(head)
+
+            var notes = []
+            if (claim === 'complete') notes.push(r.acceptancePassed === false ? '声称完成 → 验收未通过' : '声称完成')
+            if (claim === 'blocked') notes.push('声称受阻')
+            if (r.prompt === 'tamper-challenge') notes.push('收到篡改质证')
+            if (r.prompt === 'rejected-completion') notes.push('收到验收驳回')
+            if (notes.length) main.appendChild(node('div', 'muted', notes.join(' · ')))
+            ;(r.findings || [])
+              .filter(function (f) { return f.challenge })
+              .forEach(function (f) {
+                main.appendChild(node('div', 'flag', '⚑ ' + f.label + ':' + f.detail))
+              })
+
+            item.appendChild(main)
+            el.rounds.appendChild(item)
+          })
+      }
+
+      function renderGoal(g) {
+        var b = g.budget || {}
+        var mins = Math.round((Date.now() - g.startedAt) / 60000)
+        var facts = [
+          '第 ' + g.turns + ' 轮' + (b.maxTurns ? ' / ' + b.maxTurns : ''),
+          mins + ' 分钟' + (b.maxMinutes ? ' / ' + b.maxMinutes : '')
+        ]
+        if (g.falseClaims) facts.push('假完成 ' + g.falseClaims + ' 次')
+        if (g.tamperChallenges) facts.push('挡回 ' + g.tamperChallenges + ' 次')
+
+        el['status-dot'].className = 'dot ' + (TONE[g.state] || '')
+        el['status-text'].textContent = LABEL[g.state] || g.state
+        el['status-facts'].textContent = facts.join(' · ')
+        el['status-reason'].textContent = g.finishReason || ''
+        el['status-objective'].textContent = g.objective
+        el.stop.hidden = g.state !== 'active'
+        el['status-sec'].hidden = false
+
+        renderGate((g.acceptance && g.acceptance.commands) || [])
+        el['gate-sec'].hidden = false
+
+        var rounds = g.rounds || []
+        renderRounds(rounds)
+        el['rounds-sec'].hidden = rounds.length === 0
+      }
+
+      function refresh() {
+        // storage.get 返回 { value: <存进去的东西> },面板桥又包一层 value,要剥两层。
+        call('storage.get', { key: 'goals' }).then(function (result) {
+          if (!result.ok) {
+            el.blocker.innerHTML =
+              '<b>面板读不到数据。</b>宿主拒绝了 <code>storage.get</code>(<code>' +
+              (result.errorCode || '?') +
+              '</code>)。把 <code>plugin-host-api.ts</code> 里 <code>storage.get</code> 的 ' +
+              '<code>panel</code> 改成 <code>true</code>。'
+            el['blocker-sec'].hidden = false
+            return
+          }
+          el['blocker-sec'].hidden = true
+          var payload = result.value && result.value.value ? result.value.value : result.value
+          var goals = (payload && payload.goals) || []
+          var shown = null
+          for (var i = 0; i < goals.length; i++) {
+            if (goals[i].state === 'active') { shown = goals[i]; break }
+          }
+          if (!shown) shown = goals[0]
+
+          if (shown) {
+            renderGoal(shown)
+            el.empty.hidden = true
+          } else {
+            el['status-sec'].hidden = true
+            el['gate-sec'].hidden = true
+            el['rounds-sec'].hidden = true
+            el.empty.hidden = false
+          }
+        })
+      }
+
+      el.stop.addEventListener('click', function () {
+        call('notifications.show', {
+          title: '目标模式',
+          body: '面板还不能停止目标,请用 orca-goal stop'
+        })
+      })
+
+      el.judge.addEventListener('click', function (event) {
+        var btn = event.target.closest('button[data-agent]')
+        if (!btn) return
+        Array.prototype.forEach.call(el.judge.querySelectorAll('button'), function (b) {
+          b.classList.toggle('on', b === btn)
+        })
+      })
+
+      refresh()
+      setInterval(refresh, 4000)
+    </script>
+  </body>
 </html>
