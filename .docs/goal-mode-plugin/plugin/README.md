@@ -65,7 +65,25 @@ node ../verify/panel-check.mjs                  # 真机:浅色暗色都量一�
 
 ## 面板今天做不到的事
 
-- **起不了目标**:面板没法拉起后台循环,Cmd-J 命令又不能带参数(没有输入框 API)
-- **停不了目标**:同上,只能发通知让你去 CLI
+面板执行不了任何目标操作:没有 panel→worker 的通道,Cmd-J 命令也不能带参数。
+所以它改为**把命令拼好给你**——表单填完点「生成启动命令」,操作按钮点了直接显示对应
+命令,都在面板里可选中复制。
 
-这两条要么等宿主开个「命令带参数」的口子,要么让面板能触发 worker 的长任务。
+`terminal.sendText` 确实是面板可调的,但 `workspace.readContext` 只返回终端 id、
+没有标题,面板只能盲选一个窗格——正是宿主注释里警告的「把延迟写入送进别的窗格」。
+CLI 自己的终端选择器信息比面板全,所以选终端这件事留给它。
+
+要让按钮真能执行,需要宿主开一个「命令带参数」的口子,或者让面板能触发 worker 的长任务。
+
+## 宿主的硬限制(都实测过)
+
+- `storage` 单值 256 KiB,超了 `storage.set` **抛异常**(不是返回 `ok:false`),
+  整份写不进去。镜像自己按 200 KiB 裁剪,且只有写成功才更新去重缓存。
+- worker 空闲 5 分钟被回收,而面板**没有任何叫醒它的办法**(能调的只有
+  `storage.get` / `workspace.readContext` / `terminal.sendText` / `notifications.show`)。
+  所以有目标在跑时每 60 秒心跳写一次,`updatedAt` 才代表「worker 还活着」;
+  面板据此在丢三次心跳后提示数据是快照。
+- 宿主的 `respond()` 在面板会话被替换时**故意不回消息**,所以面板侧的调用必须自带超时,
+  否则 Promise 永久悬着、pending 每 4 秒漏一条,界面还一声不吭。
+- 面板不用管 ping/pong:宿主注入的 srcdoc prelude 自己回(`plugin-panel-shell.ts`)。
+- `notifications.show` 返回 `{ delivered }`——系统静音时是 `false`。别把它当成唯一反馈。
