@@ -394,6 +394,10 @@
       <div class="muted" id="status-facts" style="margin-top: 6px"></div>
       <div class="muted" id="status-reason"></div>
       <div class="muted" id="stale" hidden></div>
+      <div id="hint" hidden style="margin-top: 8px">
+        <div class="muted" id="hint-label"></div>
+        <div class="mono block" id="hint-cmd" style="margin-top: 4px; user-select: text"></div>
+      </div>
       <div class="muted clamp" id="status-objective" style="margin-top: 8px"></div>
     </div>
 
@@ -489,10 +493,11 @@
         resolve(data)
       })
 
+      var lastIdentity = null // 上次渲染的是哪个目标的哪个状态
       var el = {}
       ;[
         'blocker-sec', 'blocker', 'status-sec', 'status-dot', 'status-text', 'status-facts',
-        'status-reason', 'stale', 'status-objective', 'actions', 'gate-sec', 'gate-list', 'rounds-sec',
+        'status-reason', 'stale', 'hint', 'hint-label', 'hint-cmd', 'status-objective', 'actions', 'gate-sec', 'gate-list', 'rounds-sec',
         'rounds', 'empty', 'judge', 'form-region'
       ].forEach(function (id) {
         el[id] = document.getElementById(id)
@@ -685,6 +690,13 @@
         el['status-sec'].hidden = false
 
         el.actions.textContent = ''
+        // 只在展示的目标或状态真变了时才清命令提示。每次刷新都清的话,
+        // 4 秒一到就把用户刚点出来的那行冲掉了 —— 和刷新冲掉输入框是同一个错。
+        var identity = g.key + '|' + g.state + '|' + g.driverAlive
+        if (identity !== lastIdentity) {
+          el.hint.hidden = true
+          lastIdentity = identity
+        }
         view.actions.forEach(function (name) {
           var btn = node('button', 'btn', ACTION_LABEL[name])
           btn.dataset.action = name
@@ -767,7 +779,21 @@
       el.actions.addEventListener('click', function (event) {
         var btn = event.target.closest('button[data-action]')
         if (!btn) return
-        call('notifications.show', { title: '目标模式', body: '面板还做不了这个,请跑:' + btn.title })
+        // 命令直接摆在面板里:通知可能被系统静音,而这是用户唯一能照着敲的东西。
+        el['hint-label'].textContent = '面板还执行不了,在终端跑:'
+        el['hint-cmd'].textContent = btn.title
+        el.hint.hidden = false
+        // 通知只是顺手提醒。宿主会回 delivered 告诉我们到底发出去没有,
+        // 没发出去就别装作提醒过了 —— 面板里那行才是真正的出口。
+        call('notifications.show', {
+          title: '目标模式',
+          body: '面板还做不了这个,请在终端跑:' + btn.title
+        }).then(function (r) {
+          var delivered = r && r.ok && r.value && r.value.delivered
+          el['hint-label'].textContent = delivered
+            ? '面板还执行不了,在终端跑:'
+            : '面板还执行不了,通知也没发出来 —— 照这行敲:'
+        })
       })
 
       el.judge.addEventListener('click', function (event) {

@@ -266,11 +266,14 @@ function runCli(args) {
 }
 
 async function notify(body) {
+  const text = String(body).slice(0, 240)
   try {
-    await api?.host.call('notifications.show', {
-      title: '目标模式',
-      body: String(body).slice(0, 240)
-    })
+    const result = await api?.host.call('notifications.show', { title: '目标模式', body: text })
+    // 宿主会回 delivered:系统静音了通知就是 false。命令的反馈只有这一条路
+    // (worker 只有 notifications:show 这一个出口),发不出去至少要在插件日志里留个底。
+    if (result && result.delivered === false) {
+      api?.log(`通知没送达(系统可能静音了),内容:${text}`)
+    }
   } catch (err) {
     api?.log(`通知失败:${err?.message || err}`)
   }

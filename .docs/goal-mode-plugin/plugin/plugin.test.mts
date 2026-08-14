@@ -125,6 +125,7 @@ describe('panel 行为', () => {
 
   const goal = {
     key: 'k',
+    terminalHandle: 'term_abc',
     state: 'active',
     turns: 7,
     startedAt: Date.now() - 42 * 60_000,
@@ -259,6 +260,73 @@ describe('panel 行为', () => {
     mountPanel()
     await flush()
     expect(document.getElementById('stale')!.hidden).toBe(true)
+  })
+
+  it('点操作按钮时命令直接显示在面板里 —— 通知可能被系统静音', async () => {
+    results.set('storage.get', {
+      ok: true,
+      value: { value: { updatedAt: Date.now(), goals: [goal] } }
+    })
+    results.set('notifications.show', { ok: true, value: { delivered: true } })
+    mountPanel()
+    await flush()
+    const btn = document.querySelector('#actions button[data-action]') as HTMLButtonElement
+    btn.click()
+    await flush()
+    const hint = document.getElementById('hint')!
+    expect(hint.hidden).toBe(false)
+    expect(hint.textContent).toContain('orca-goal')
+    expect(hint.textContent).toContain(goal.terminalHandle)
+  })
+
+  it('刷新不冲掉刚点出来的命令提示 —— 和不冲掉输入框是同一个道理', async () => {
+    results.set('storage.get', {
+      ok: true,
+      value: { value: { updatedAt: Date.now(), goals: [goal] } }
+    })
+    results.set('notifications.show', { ok: true, value: { delivered: true } })
+    mountPanel()
+    await flush()
+    ;(document.querySelector('#actions button[data-action]') as HTMLButtonElement).click()
+    await flush()
+    expect(document.getElementById('hint')!.hidden).toBe(false)
+    await vi.advanceTimersByTimeAsync(9_000) // 跨过两次刷新
+    await flush()
+    expect(document.getElementById('hint')!.hidden).toBe(false)
+  })
+
+  it('目标状态变了才清掉命令提示', async () => {
+    results.set('storage.get', {
+      ok: true,
+      value: { value: { updatedAt: Date.now(), goals: [goal] } }
+    })
+    results.set('notifications.show', { ok: true, value: { delivered: true } })
+    mountPanel()
+    await flush()
+    ;(document.querySelector('#actions button[data-action]') as HTMLButtonElement).click()
+    await flush()
+    expect(document.getElementById('hint')!.hidden).toBe(false)
+    results.set('storage.get', {
+      ok: true,
+      value: { value: { updatedAt: Date.now(), goals: [{ ...goal, state: 'complete' }] } }
+    })
+    await vi.advanceTimersByTimeAsync(4_500)
+    await flush()
+    expect(document.getElementById('hint')!.hidden).toBe(true)
+  })
+
+  it('通知没发出去时说明白,别让用户以为提醒过了', async () => {
+    results.set('storage.get', {
+      ok: true,
+      value: { value: { updatedAt: Date.now(), goals: [goal] } }
+    })
+    results.set('notifications.show', { ok: true, value: { delivered: false } })
+    mountPanel()
+    await flush()
+    ;(document.querySelector('#actions button[data-action]') as HTMLButtonElement).click()
+    await flush()
+    expect(document.getElementById('hint-label')!.textContent).toContain('通知也没发出来')
+    expect(document.getElementById('hint-cmd')!.textContent).toContain('orca-goal')
   })
 
   it('裁判分段控件可切换', async () => {
@@ -539,6 +607,24 @@ describe('worker 行为', () => {
     expect(result.active).toBe(1)
     expect(result.text).toContain('第 4 轮')
     expect(calls.some((c) => c.method === 'notifications.show')).toBe(true)
+  })
+
+  it('通知没送达时留在插件日志里 —— 命令就这一个反馈出口', async () => {
+    await writeGoal({ key: 'a', state: 'active', turns: 1, updatedAt: 2 })
+    const mod = await loadWorker()
+    const logs: string[] = []
+    await mod.default({
+      ...fakeOrca(),
+      host: {
+        call: async (method: string, params: Record<string, unknown>) => {
+          calls.push({ method, params })
+          return method === 'notifications.show' ? { delivered: false } : { ok: true }
+        }
+      },
+      log: (m: string) => logs.push(m)
+    })
+    await commands.get('goal.status')!({})
+    expect(logs.some((l) => l.includes('通知没送达'))).toBe(true)
   })
 
   it('多个目标在跑时,goal.stop 拒绝猜停哪个', async () => {
