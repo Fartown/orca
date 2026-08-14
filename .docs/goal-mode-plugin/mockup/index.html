@@ -1,0 +1,491 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Orca 目标模式面板 · 界面演示</title>
+<style>
+  /* 取自 src/renderer/src/assets/main.css 的暗色 token */
+  :root {
+    --background: #0a0a0a;
+    --foreground: #fafafa;
+    --card: #171717;
+    --primary: #e5e5e5;
+    --primary-foreground: #171717;
+    --muted: #262626;
+    --muted-foreground: #a1a1a1;
+    --accent: #404040;
+    --destructive: #ff6568;
+    --border: rgb(255 255 255 / 0.07);
+    --sidebar: #171717;
+    --radius: 0.625rem;
+    --radius-md: calc(var(--radius) * 0.8);
+    --radius-sm: calc(var(--radius) * 0.6);
+    --ok: #4ade80;
+    --warn: #fbbf24;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--background); color: var(--foreground);
+    font: 13px/1.55 -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  code, .mono { font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace; }
+
+  /* 演示外壳:不是设计的一部分 */
+  .demo-bar {
+    position: sticky; top: 0; z-index: 10; display: flex; gap: 6px; align-items: center;
+    padding: 10px 16px; background: #000; border-bottom: 1px solid var(--border);
+  }
+  .demo-bar b { font-size: 12px; color: var(--muted-foreground); font-weight: 500; margin-right: 6px; }
+  .demo-bar button {
+    font: inherit; font-size: 12px; padding: 4px 10px; border-radius: var(--radius-sm);
+    border: 1px solid var(--border); background: transparent; color: var(--muted-foreground); cursor: pointer;
+  }
+  .demo-bar button:hover { background: var(--muted); color: var(--foreground); }
+  .demo-bar button[aria-pressed="true"] { background: var(--primary); color: var(--primary-foreground); border-color: transparent; }
+
+  .app { display: grid; grid-template-columns: 1fr 360px; height: calc(100vh - 45px); }
+
+  /* 左边:Orca 主区,只是给个上下文 */
+  .stage { padding: 24px; overflow: hidden; }
+  .stage-hint { color: #4a4a4a; font-size: 12px; margin-bottom: 12px; }
+  .term {
+    background: #0d0d0d; border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 14px 16px; height: calc(100% - 30px); overflow: hidden;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; color: #7a7a7a;
+  }
+  .term .u { color: #cfcfcf; }
+  .term .g { color: var(--ok); }
+
+  /* 右边:目标面板 —— 这才是要设计的东西 */
+  .panel { background: var(--sidebar); border-left: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
+  .panel-head {
+    display: flex; align-items: center; gap: 8px; padding: 12px 14px; border-bottom: 1px solid var(--border);
+  }
+  .panel-head .title { font-weight: 600; font-size: 13px; flex: 1; }
+  .icon-btn {
+    width: 26px; height: 26px; display: grid; place-items: center; border-radius: var(--radius-sm);
+    border: 1px solid transparent; background: transparent; color: var(--muted-foreground); cursor: pointer; font-size: 14px;
+  }
+  .icon-btn:hover { background: var(--muted); color: var(--foreground); }
+  .panel-body { flex: 1; overflow-y: auto; padding: 14px; display: flex; flex-direction: column; gap: 14px; }
+
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; }
+  .card.state-run   { border-color: rgb(255 255 255 / 0.14); }
+  .card.state-wait  { border-color: rgb(251 191 36 / 0.45); background: rgb(251 191 36 / 0.06); }
+  .card.state-ok    { border-color: rgb(74 222 128 / 0.4);  background: rgb(74 222 128 / 0.06); }
+  .card.state-bad   { border-color: rgb(255 101 104 / 0.4); background: rgb(255 101 104 / 0.06); }
+
+  .row { display: flex; align-items: center; gap: 8px; }
+  .grow { flex: 1; }
+  .status { font-weight: 600; font-size: 13px; display: flex; align-items: center; gap: 7px; }
+  .dot { width: 7px; height: 7px; border-radius: 999px; background: var(--muted-foreground); flex: none; }
+  .dot.run { background: var(--ok); animation: pulse 1.6s ease-in-out infinite; }
+  .dot.wait { background: var(--warn); }
+  .dot.bad { background: var(--destructive); }
+  @keyframes pulse { 0%,100% { opacity: 1 } 50% { opacity: .35 } }
+
+  .meta { color: var(--muted-foreground); font-size: 12px; margin-top: 6px; }
+  .objective {
+    margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border);
+    color: var(--muted-foreground); font-size: 12px; line-height: 1.6;
+    display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .bar { height: 3px; border-radius: 999px; background: var(--muted); overflow: hidden; margin-top: 10px; }
+  .bar > i { display: block; height: 100%; background: var(--primary); border-radius: 999px; }
+
+  .btn {
+    font: inherit; font-size: 12px; padding: 6px 12px; border-radius: var(--radius-sm);
+    border: 1px solid var(--border); background: var(--muted); color: var(--foreground); cursor: pointer;
+  }
+  .btn:hover { background: var(--accent); }
+  .btn.primary { background: var(--primary); color: var(--primary-foreground); border-color: transparent; font-weight: 500; }
+  .btn.primary:hover { opacity: .9; }
+  .btn.ghost { background: transparent; }
+  .btn.block { width: 100%; }
+
+  label.f { display: block; font-size: 12px; color: var(--muted-foreground); margin-bottom: 5px; }
+  textarea, input.f {
+    width: 100%; font: inherit; font-size: 12px; color: var(--foreground); background: var(--background);
+    border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 10px; resize: vertical;
+  }
+  textarea:focus, input.f:focus { outline: none; border-color: rgb(255 255 255 / 0.22); }
+  .field { margin-bottom: 12px; }
+  .hint { font-size: 11px; color: #6b6b6b; margin-top: 5px; line-height: 1.5; }
+
+  .checks { display: flex; flex-direction: column; gap: 6px; }
+  .check-row { display: flex; gap: 6px; align-items: center; }
+  .check-row input { flex: 1; }
+  .add-check { font-size: 11px; color: var(--muted-foreground); background: none; border: none; cursor: pointer; padding: 2px 0; text-align: left; }
+  .add-check:hover { color: var(--foreground); }
+
+  .sec-title { font-size: 11px; color: #6b6b6b; text-transform: none; letter-spacing: .02em; margin: 2px 0 -4px; }
+
+  /* 时间线 */
+  .tl { display: flex; flex-direction: column; }
+  .tl-item { display: grid; grid-template-columns: 18px 1fr; gap: 8px; padding-bottom: 12px; position: relative; }
+  .tl-item:not(:last-child)::before {
+    content: ""; position: absolute; left: 8px; top: 16px; bottom: 0; width: 1px; background: var(--border);
+  }
+  .tl-dot {
+    width: 17px; height: 17px; border-radius: 999px; display: grid; place-items: center;
+    background: var(--muted); border: 1px solid var(--border); font-size: 9px; color: var(--muted-foreground); z-index: 1;
+  }
+  .tl-dot.ok  { background: rgb(74 222 128 / .18); border-color: rgb(74 222 128 / .5); color: var(--ok); }
+  .tl-dot.bad { background: rgb(255 101 104 / .18); border-color: rgb(255 101 104 / .5); color: var(--destructive); }
+  .tl-dot.warn{ background: rgb(251 191 36 / .18); border-color: rgb(251 191 36 / .5); color: var(--warn); }
+  .tl-dot.run { background: transparent; border-color: rgb(255 255 255 / .3); }
+  .tl-main { min-width: 0; }
+  .tl-head { display: flex; align-items: baseline; gap: 7px; }
+  .tl-turn { font-size: 12px; font-weight: 500; }
+  .tl-time { font-size: 11px; color: #5f5f5f; margin-left: auto; }
+  .tl-note { font-size: 11.5px; color: var(--muted-foreground); margin-top: 3px; line-height: 1.55; }
+  .files { margin-top: 4px; display: flex; flex-wrap: wrap; gap: 4px; }
+  .file {
+    font-family: ui-monospace, Menlo, monospace; font-size: 10.5px; padding: 1px 6px;
+    background: var(--muted); border-radius: var(--radius-sm); color: #b5b5b5;
+  }
+  .file.test { background: rgb(251 191 36 / .12); color: #d3ad5e; }
+  .verdict {
+    margin-top: 6px; padding: 7px 9px; border-radius: var(--radius-sm); font-size: 11.5px; line-height: 1.55;
+    background: rgb(255 101 104 / .08); border: 1px solid rgb(255 101 104 / .25); color: #ffb3b5;
+  }
+  .verdict .mono { font-size: 10.5px; }
+  .flag {
+    margin-top: 6px; padding: 7px 9px; border-radius: var(--radius-sm); font-size: 11.5px; line-height: 1.55;
+    background: rgb(251 191 36 / .08); border: 1px solid rgb(251 191 36 / .3); color: #e8c887;
+  }
+  .empty { text-align: center; color: #5f5f5f; font-size: 12px; padding: 26px 10px; }
+  .empty .big { font-size: 26px; display: block; margin-bottom: 8px; opacity: .5; }
+  .fold { border: 1px solid var(--border); border-radius: var(--radius); padding: 9px 11px; background: var(--card); }
+  .fold > summary { cursor: pointer; font-size: 12px; color: var(--muted-foreground); list-style: none; display: flex; align-items: center; gap: 7px; }
+  .fold > summary::-webkit-details-marker { display: none; }
+  .fold > summary::before { content: "▸"; font-size: 10px; }
+  .fold[open] > summary::before { content: "▾"; }
+  .fold > summary:hover { color: var(--foreground); }
+  .fold .count { margin-left: auto; font-size: 10.5px; padding: 0 6px; border-radius: 999px; background: var(--muted); color: var(--muted-foreground); }
+  .draft-note {
+    font-size: 11px; line-height: 1.55; color: #cbb87a; margin-bottom: 7px;
+    background: rgb(251 191 36 / .07); border: 1px solid rgb(251 191 36 / .22);
+    border-radius: var(--radius-sm); padding: 6px 8px;
+  }
+  .seg { display: inline-flex; background: var(--background); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 2px; gap: 2px; }
+  .seg button {
+    font: inherit; font-size: 11.5px; padding: 3px 12px; border: none; border-radius: 4px;
+    background: transparent; color: var(--muted-foreground); cursor: pointer;
+  }
+  .seg button:hover { color: var(--foreground); }
+  .seg button.on { background: var(--primary); color: var(--primary-foreground); font-weight: 500; }
+  .kbd {
+    font-family: ui-monospace, Menlo, monospace; font-size: 10.5px; padding: 1px 5px;
+    border: 1px solid var(--border); border-radius: 4px; background: var(--background); color: var(--muted-foreground);
+  }
+</style>
+</head>
+<body>
+
+<div class="demo-bar">
+  <b>演示 · 点这里切状态</b>
+  <button data-s="empty" aria-pressed="true">未开始</button>
+  <button data-s="running">进行中</button>
+  <button data-s="rejected">验收驳回</button>
+  <button data-s="waiting">等你确认</button>
+  <button data-s="done">已完成</button>
+</div>
+
+<div class="app">
+  <div class="stage">
+    <div class="stage-hint">Orca 主区(仅作上下文,不是本次要设计的部分)</div>
+    <div class="term" id="term"></div>
+  </div>
+
+  <aside class="panel">
+    <div class="panel-head">
+      <span>🎯</span>
+      <span class="title">目标</span>
+      <button class="icon-btn" title="历史">🕘</button>
+      <button class="icon-btn" title="设置">⚙</button>
+    </div>
+    <div class="panel-body" id="body"></div>
+  </aside>
+</div>
+
+<script>
+const OBJ = "对照 Figma 设计稿完全还原:每个页面、每个组件、每个交互、每个动线都要与设计稿一致。";
+
+const TERM = {
+  empty: [
+    ['', 'markdown git:(main) ✗'],
+    ['u', '❯ '],
+  ],
+  running: [
+    ['', '⏺ 已把 MarkdownView 的字阶换成 MD/Body-15,letterSpacing -2%'],
+    ['', '  正在核对 ⋯ 菜单的分段控件…'],
+    ['', ''],
+    ['', '✻ Cogitated for 18s'],
+  ],
+  rejected: [
+    ['', '⏺ 我认为还原已经完成,已写入认领文件。'],
+    ['', ''],
+    ['u', '❯ 你报告了完成。验收门禁驳回了。原因如下:…'],
+    ['', '⏺ 明白,H2 字阶确实还是 20/30,我这就改。'],
+  ],
+  waiting: [
+    ['', '⏺ 需要改动 client/src/tailwind-theme.css'],
+    ['', ''],
+    ['', '  Do you want to make this edit?'],
+    ['u', '  ❯ 1. Yes'],
+    ['', '    2. No, tell Claude what to do differently'],
+  ],
+  done: [
+    ['', '⏺ 全部条目已与设计稿对齐,已写入认领文件。'],
+    ['', ''],
+    ['g', '✓ 目标达成 · 验收通过'],
+  ],
+};
+
+function tl(items) {
+  return `<div class="tl">${items.map(i => `
+    <div class="tl-item">
+      <div class="tl-dot ${i.kind||''}">${i.icon||''}</div>
+      <div class="tl-main">
+        <div class="tl-head">
+          <span class="tl-turn">${i.turn}</span>
+          <span class="tl-time">${i.time}</span>
+        </div>
+        ${i.note ? `<div class="tl-note">${i.note}</div>` : ''}
+        ${i.files ? `<div class="files">${i.files.map(f =>
+            `<span class="file ${/\.(test|spec)\./.test(f)?'test':''}">${f}</span>`).join('')}</div>` : ''}
+        ${i.verdict ? `<div class="verdict">${i.verdict}</div>` : ''}
+        ${i.flag ? `<div class="flag">⚑ ${i.flag}</div>` : ''}
+      </div>
+    </div>`).join('')}</div>`;
+}
+
+const form = `
+  <div class="field">
+    <label class="f">目标</label>
+    <textarea rows="4" placeholder="想让 agent 完成什么?写清楚「做完」是什么样子。"></textarea>
+    <div class="hint">这段话每一轮都会原样重发给 agent,防止它把目标悄悄缩小。</div>
+  </div>
+
+  <div class="sec-title">验收 · 不配的话,它说做完了就是做完了</div>
+
+  <div class="card" style="padding:11px">
+    <div class="row" style="margin-bottom:9px">
+      <label class="f" style="margin:0;flex:1">验收标准</label>
+      <button class="btn ghost" style="font-size:11px">✨ 从目标生成</button>
+    </div>
+    <div class="draft-note">
+      已从目标起草,并读过 Figma 与 <span class="mono">client/</span> —— <b>请过一遍再开始</b>。
+      目标里没说清的地方,这是唯一的补救机会。
+    </div>
+    <textarea rows="9" class="mono" style="font-size:11.5px">权威设计源是 Figma 文件 AaYKoUozJQDz2GNMDXFMpL,用 figma 工具直接读。
+
+仓库 docs/ 下那些设计规格文档已过期,只能当线索定位帧,不能当判据。
+
+逐帧对照 client/ 下的实现:布局、层级、间距、颜色 token、字阶、
+组件各状态(默认/hover/pressed/选中/禁用/空态)、交互动线。
+
+任何一处不一致、或证据不足以证明一致,就是 FAIL,并指名道姓列出
+哪个帧、哪个文件、差在哪。不接受「主要部分已完成」。</textarea>
+    <div class="row" style="margin-top:7px">
+      <button class="btn ghost" style="font-size:11px">从文件导入…</button>
+      <span class="grow"></span>
+      <span class="hint mono" style="margin:0">~/.orca-goal/criteria/…</span>
+    </div>
+    <div class="hint">
+      开始后<b>冻结</b>,并存在工作区之外 —— 干活的 agent 改不到自己的考卷。
+      你随时能改,但改动会记进逐轮记录(挪门柱要留痕)。
+    </div>
+
+    <div class="row" style="margin-top:11px;padding-top:10px;border-top:1px solid var(--border)">
+      <label class="f" style="margin:0">裁判</label>
+      <span class="grow"></span>
+      <div class="seg"><button>claude</button><button class="on">codex</button><button>gemini</button></div>
+    </div>
+    <div class="hint" style="margin-top:6px">
+      选一个和干活那个<b>不同家族</b>的模型 —— 同门的盲点是相关的。
+      当前干活的是 <span class="mono">kimi</span>。
+    </div>
+    <div class="row" style="margin-top:9px">
+      <label class="f" style="margin:0;flex:1">单次判定上限</label>
+      <input class="f" value="40" style="width:56px;text-align:right" />
+      <span style="color:#5f5f5f;font-size:12px">分钟</span>
+    </div>
+  </div>
+
+  <details class="fold">
+    <summary>另外还要跑的命令 <span class="count">2</span></summary>
+    <div class="hint" style="margin:6px 0 8px">
+      这些只证明「没弄坏」,证明不了「做到了」。留空也行。
+    </div>
+    <div class="checks">
+      <div class="check-row"><input class="f mono" value="pnpm lint" /><button class="icon-btn">✕</button></div>
+      <div class="check-row"><input class="f mono" value="pnpm test" /><button class="icon-btn">✕</button></div>
+      <button class="add-check">+ 加一条命令</button>
+    </div>
+  </details>
+
+  <div class="field" style="margin-top:2px">
+    <label class="f">预算</label>
+    <div class="row">
+      <input class="f" value="不限" style="flex:1" /><span style="color:#5f5f5f;font-size:12px">轮</span>
+      <input class="f" value="480" style="flex:1" /><span style="color:#5f5f5f;font-size:12px">分钟</span>
+    </div>
+  </div>
+
+  <button class="btn primary block">在这个终端上开始</button>
+  <div class="hint" style="text-align:center">当前终端:<span class="mono">kimi · dev/markdown</span></div>`;
+
+const VIEWS = {
+  empty: () => `
+    <div class="empty">
+      <span class="big">🎯</span>
+      这个工作区还没有目标<br />
+      <span style="font-size:11px">设一个目标,agent 停下来时会被自动叫醒继续干</span>
+    </div>
+    ${form}
+    <div class="hint" style="text-align:center;border-top:1px solid var(--border);padding-top:10px">
+      也可以按 <span class="kbd">⌘J</span> 搜「目标」
+    </div>`,
+
+  running: () => `
+    <div class="card state-run">
+      <div class="row">
+        <div class="status"><span class="dot run"></span>进行中</div>
+        <div class="grow"></div>
+        <button class="btn ghost">暂停</button>
+        <button class="btn">停止</button>
+      </div>
+      <div class="meta">第 7 轮 · 已跑 42 分钟 / 480 分钟 · agent 正在编辑文件</div>
+      <div class="bar"><i style="width:9%"></i></div>
+      <div class="objective">${OBJ}</div>
+    </div>
+    
+    <div class="card" style="padding:10px">
+      <div class="row">
+        <b style="font-size:12px">验收</b>
+        <span class="grow"></span>
+        <button class="btn ghost" style="font-size:11px">改</button>
+      </div>
+      <div style="margin-top:7px;display:flex;flex-direction:column;gap:6px">
+        <div class="row">
+          <span class="file" style="background:rgb(255 255 255/.12);color:#e8e8e8">🧑‍⚖️ codex</span>
+          <span class="hint mono" style="margin:0">markdown-figma-restore.md</span>
+        </div>
+        <div class="hint" style="margin:0">另跑 <span class="mono">pnpm lint</span> · <span class="mono">pnpm test</span></div>
+      </div>
+    </div>
+    <div class="sec-title">逐轮记录</div>
+    ${tl([
+      {turn:'第 7 轮', time:'刚刚', kind:'run', note:'进行中 —— 正在核对 ⋯ 菜单分段控件'},
+      {turn:'第 6 轮', time:'11 分钟前', icon:'✓', note:'改了 3 个文件',
+       files:['client/src/components/MarkdownView.tsx','client/src/typography.css','client/src/components/Layout.tsx']},
+      {turn:'第 5 轮', time:'19 分钟前', icon:'✓', note:'改了 1 个文件', files:['client/src/tailwind-theme.css']},
+      {turn:'第 4 轮', time:'26 分钟前', icon:'⚑', kind:'warn', note:'只改了测试文件,没有改源码',
+       files:['client/src/__tests__/theme.test.ts'],
+       flag:'本轮只动了测试。已作为事实写进下一轮提示词,不阻断。'},
+    ])}`,
+
+  rejected: () => `
+    <div class="card state-bad">
+      <div class="row">
+        <div class="status"><span class="dot bad"></span>完成声明被驳回</div>
+        <div class="grow"></div>
+        <button class="btn">停止</button>
+      </div>
+      <div class="meta">第 12 轮 · agent 已收到失败原文,正在继续</div>
+      <div class="objective">${OBJ}</div>
+    </div>
+    
+    <div class="card" style="padding:10px">
+      <div class="row">
+        <b style="font-size:12px">验收</b>
+        <span class="grow"></span>
+        <button class="btn ghost" style="font-size:11px">改</button>
+      </div>
+      <div style="margin-top:7px;display:flex;flex-direction:column;gap:6px">
+        <div class="row">
+          <span class="file" style="background:rgb(255 255 255/.12);color:#e8e8e8">🧑‍⚖️ codex</span>
+          <span class="hint mono" style="margin:0">markdown-figma-restore.md</span>
+        </div>
+        <div class="hint" style="margin:0">另跑 <span class="mono">pnpm lint</span> · <span class="mono">pnpm test</span></div>
+      </div>
+    </div>
+    <div class="sec-title">逐轮记录</div>
+    ${tl([
+      {turn:'第 12 轮', time:'刚刚', kind:'run', note:'已把驳回原因打回去,agent 正在改'},
+      {turn:'第 11 轮', time:'3 分钟前', icon:'✕', kind:'bad', note:'声称完成 → 验收未通过(第 2 次)',
+       verdict:'<b>codex 裁判:FAIL</b><br/>· H2 字阶仍是 20/30,设计稿要求 <span class="mono">MD/H2-20</span> 行高 30 但 letterSpacing 应为 -2%,实测为 0<br/>· <span class="mono">⋯ 菜单</span>缺「导出 Markdown」项,设计稿 54:2 里有'},
+      {turn:'第 10 轮', time:'14 分钟前', icon:'✓', note:'改了 2 个文件',
+       files:['client/src/components/DocMenu.tsx','client/src/typography.css']},
+      {turn:'—', time:'22 分钟前', icon:'✎', kind:'warn', note:'<b>你修改了验收标准</b>',
+       flag:'删去「移动端 M05/M10 需还原」一条。此后的验收按新标准判。'},
+    ])}`,
+
+  waiting: () => `
+    <div class="card state-wait">
+      <div class="row">
+        <div class="status"><span class="dot wait"></span>等你确认</div>
+        <div class="grow"></div>
+        <button class="btn primary">去终端</button>
+      </div>
+      <div class="meta">agent 在等权限确认(Edit) · 已暂停注入 2 分 10 秒</div>
+      <div class="objective">${OBJ}</div>
+    </div>
+    <div class="card" style="border-style:dashed">
+      <div style="font-size:12px;color:var(--muted-foreground);line-height:1.6">
+        循环不会往权限对话框里打字 —— 那会被当成你的回答。<br />
+        你去终端点一下,它自己会接着跑。
+      </div>
+    </div>
+    <div class="sec-title">逐轮记录</div>
+    ${tl([
+      {turn:'第 8 轮', time:'2 分钟前', kind:'warn', icon:'⏸', note:'卡在权限确认'},
+      {turn:'第 7 轮', time:'12 分钟前', icon:'✓', note:'改了 3 个文件',
+       files:['client/src/components/MarkdownView.tsx','client/src/typography.css','client/src/components/Layout.tsx']},
+    ])}`,
+
+  done: () => `
+    <div class="card state-ok">
+      <div class="row">
+        <div class="status"><span class="dot" style="background:var(--ok)"></span>目标达成</div>
+        <div class="grow"></div>
+        <button class="btn ghost">查看日志</button>
+        <button class="btn">再开一个</button>
+      </div>
+      <div class="meta">共 14 轮 · 1 小时 6 分钟 · 验收通过(codex 裁判)</div>
+      <div class="objective">${OBJ}</div>
+    </div>
+    <div class="card">
+      <div style="font-size:12px;line-height:1.7">
+        <div class="row" style="margin-bottom:4px"><span class="grow">被验收驳回的完成声明</span><b>2 次</b></div>
+        <div class="row" style="margin-bottom:4px"><span class="grow">因削弱验收被挡回</span><b>1 次</b></div>
+        <div class="row"><span class="grow">改动文件</span><b>31 个</b></div>
+      </div>
+    </div>
+    <div class="sec-title">逐轮记录</div>
+    ${tl([
+      {turn:'第 14 轮', time:'刚刚', icon:'✓', kind:'ok', note:'声称完成 → 验收通过',
+       verdict:'<b style="color:#9ae6b4">codex 裁判:PASS</b>'},
+      {turn:'第 13 轮', time:'8 分钟前', icon:'✓', note:'改了 2 个文件',
+       files:['client/src/components/DocMenu.tsx','client/src/typography.css']},
+      {turn:'第 12 轮', time:'21 分钟前', icon:'⚑', kind:'warn', note:'声称完成 → 验收通过,但发现削弱痕迹',
+       flag:'测试里断言被净删减:theme.test.ts(断言 -2)。已要求它逐条说明,下一轮才放行。'},
+    ])}`,
+};
+
+function render(state) {
+  document.getElementById('body').innerHTML = VIEWS[state]();
+  document.getElementById('term').innerHTML =
+    TERM[state].map(([c, t]) => `<div class="${c}">${t || '&nbsp;'}</div>`).join('');
+  document.querySelectorAll('.demo-bar button').forEach(b =>
+    b.setAttribute('aria-pressed', String(b.dataset.s === state)));
+}
+document.querySelectorAll('.demo-bar button').forEach(b =>
+  b.addEventListener('click', () => render(b.dataset.s)));
+render('empty');
+</script>
+</body>
+</html>

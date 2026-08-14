@@ -1,0 +1,28 @@
+{
+  "manifestVersion": 1,
+  "id": "goal",
+  "publisher": "orca-goal",
+  "name": "目标模式",
+  "version": "0.1.0",
+  "description": "给 agent 设一个持久目标,它停下来就自动叫醒继续干,直到验收通过或预算耗尽。",
+  "engines": { "orca": ">=1.4.0" },
+  "pluginApi": 1,
+  "main": "worker.mjs",
+  "contributes": {
+    "panels": [{ "id": "goal", "title": "目标", "icon": "target", "entry": "panel.html" }],
+    "commands": [
+      { "id": "goal.status", "title": "目标:查看当前状态", "context": "worktree" },
+      { "id": "goal.stop", "title": "目标:停止", "context": "worktree" },
+      { "id": "goal.start", "title": "目标:开始…", "context": "worktree" }
+    ],
+    "events": [{ "on": "agent.status.changed" }]
+  },
+  "capabilities": [
+    { "kind": "workspace:read" },
+    { "kind": "terminal:send" },
+    { "kind": "notifications:show" },
+    { "kind": "storage" },
+    { "kind": "events:subscribe" },
+    { "kind": "settings:own" }
+  ]
+}
