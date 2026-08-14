@@ -3,6 +3,28 @@ import { chromium } from 'playwright'
 const b = await chromium.connectOverCDP('http://127.0.0.1:9367')
 const page = b.contexts()[0].pages()[0]
 
+// 先验环境本身。CDP 的 setViewportSize 会把渲染视口撑得比 OS 窗口宽,多出来的部分
+// 被窗口边框裁掉 —— 从页面里量什么都「没溢出」,真窗口里却是缺一块的。
+// 这一条必须排在所有面板测量之前,否则后面量到的全是假的。
+const env = await page.evaluate(() => ({
+  innerWidth: window.innerWidth,
+  outerWidth: window.outerWidth,
+  innerHeight: window.innerHeight,
+  outerHeight: window.outerHeight
+}))
+if (env.innerWidth > env.outerWidth || env.innerHeight > env.outerHeight) {
+  console.error(
+    `✗ 渲染视口比窗口大(${env.innerWidth}x${env.innerHeight} vs ${env.outerWidth}x${env.outerHeight})。` +
+      '窗口边框会裁掉超出的部分,页内测量不可信。别用 page.setViewportSize()。'
+  )
+  await b.close()
+  process.exitCode = 1 // exit(1) 会被 Playwright 的清理吞掉,用 exitCode 才留得住
+  throw new Error('环境不可信,后续测量没有意义')
+}
+console.log(
+  `视口 ${env.innerWidth}x${env.innerHeight} ≤ 窗口 ${env.outerWidth}x${env.outerHeight} ✓`
+)
+
 async function openPanel() {
   await page.evaluate(() => window.api.plugins.refresh())
   await page.reload({ waitUntil: 'domcontentloaded' })
@@ -91,5 +113,8 @@ if (light.面板底色 === dark.面板底色) {
   fail.push('深浅两套底色相同 —— 主题没跟随宿主')
 }
 console.log(`\n${fail.length ? `✗ ${fail.join(' / ')}` : '✓ 全部通过'}`)
+if (fail.length) {
+  process.exitCode = 1
+}
 await page.evaluate(() => window.api.settings.set({ theme: 'light' })) // 还原
 await b.close()

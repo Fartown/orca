@@ -116,6 +116,11 @@ export async function runLoop(goal, { report, thresholds, attach = false }) {
       claim: sentinel,
       tree: after.kind === 'git' ? after.tree : null,
       head: after.kind === 'git' ? after.head : null,
+      // 「这一轮干了什么」的主体。只记哈希的话,时间线上就只剩一句「第 N 轮」,
+      // 看不出它到底动了什么。文件名截断保存,避免大改动把日志撑爆。
+      changed: changed
+        ? { source: changed.source.slice(0, 20), test: changed.test.slice(0, 20) }
+        : null,
       acceptancePassed: acceptance?.passed ?? null,
       findings: findings.length ? findings : null,
       action: verdict.action.type,

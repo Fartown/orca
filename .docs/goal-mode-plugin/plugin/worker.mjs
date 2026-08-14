@@ -106,7 +106,7 @@ async function mirror() {
   }
   try {
     const goals = await Promise.all((await readGoals()).map(withRounds))
-    schedulePolling(goals.some((g) => g.state === 'active'))
+    schedulePolling(goals.some((g) => g.state === 'active' && g.driverAlive))
 
     const encoded = JSON.stringify(goals)
     if (encoded === lastMirrored) {
@@ -137,6 +137,26 @@ async function readGoals() {
   return goals.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))
 }
 
+/**
+ * 驱动进程还活着吗。
+ * 「记录写着 active、驱动其实已经死了」是真实发生过的状态(进程崩溃、机器重启),
+ * 面板必须能把它和「正在跑」区分开 —— 前者要给「接回」,后者要给「停止」。
+ */
+async function driverAlive(goal) {
+  try {
+    const { pid } = JSON.parse(
+      await fs.readFile(path.join(GOAL_HOME, 'lock', `${goal.key}.lock`), 'utf8')
+    )
+    if (!Number.isInteger(pid)) {
+      return false
+    }
+    process.kill(pid, 0)
+    return true
+  } catch (err) {
+    return err?.code === 'EPERM' // 进程在,但不属于当前用户
+  }
+}
+
 /** 逐轮日志是 JSONL,只取最近若干轮供时间线渲染。 */
 async function withRounds(goal) {
   try {
@@ -149,9 +169,9 @@ async function withRounds(goal) {
         // 半行,跳过
       }
     }
-    return { ...goal, rounds }
+    return { ...goal, rounds, driverAlive: await driverAlive(goal) }
   } catch {
-    return { ...goal, rounds: [] }
+    return { ...goal, rounds: [], driverAlive: await driverAlive(goal) }
   }
 }
 

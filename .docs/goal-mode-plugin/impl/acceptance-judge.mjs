@@ -11,6 +11,8 @@ import { promises as fs } from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 
+const GRACE_MS = 15_000 // SIGTERM 到 SIGKILL 之间留给裁判落盘的时间
+
 /**
  * 必须显式关掉 stdin:codex exec 见到未关闭的 stdin 会打印
  * 「Reading additional input from stdin...」然后一直等,直接挂死。
@@ -38,15 +40,24 @@ function runAgent(command, args, { cwd, timeoutMs }) {
     let timedOut = false
     const timer = setTimeout(() => {
       timedOut = true
+      // 先给一次 SIGTERM,让裁判有机会把已有结论落盘;真不听话再 SIGKILL。
+      // 一次全量判定可能跑几十分钟,硬杀等于把这些工作全扔了。
       try {
-        if (process.platform === 'win32') {
-          child.kill('SIGKILL')
-        } else {
-          process.kill(-child.pid, 'SIGKILL')
-        }
+        child.kill('SIGTERM')
       } catch {
-        child.kill('SIGKILL')
+        /* 已经没了 */
       }
+      setTimeout(() => {
+        try {
+          if (process.platform === 'win32') {
+            child.kill('SIGKILL')
+          } else {
+            process.kill(-child.pid, 'SIGKILL')
+          }
+        } catch {
+          child.kill('SIGKILL')
+        }
+      }, GRACE_MS)
     }, timeoutMs)
 
     const settle = (code, err) => {
@@ -90,6 +101,17 @@ const AGENTS = {
       outFile,
       prompt
     ],
+    read: async ({ outFile }) => (await fs.readFile(outFile, 'utf8')).trim() || null
+  }
+}
+
+/**
+ * 测试用的假裁判从环境变量注入,不留在生产表里。
+ * ORCA_GOAL_JUDGE_TEST_AGENT=名字 会注册一个「参数照 codex、判词从 --output-last-message 读」的裁判。
+ */
+if (process.env.ORCA_GOAL_JUDGE_TEST_AGENT) {
+  AGENTS[process.env.ORCA_GOAL_JUDGE_TEST_AGENT] = {
+    args: (prompt, { outFile }) => ['--output-last-message', outFile, prompt],
     read: async ({ outFile }) => (await fs.readFile(outFile, 'utf8')).trim() || null
   }
 }
@@ -139,11 +161,15 @@ async function main(argv) {
       process.stdout.write(`验收裁判无法执行(${agentName}):${result.error.message}\n`)
       return 1
     }
+    // 超时前先发 SIGTERM 给裁判落盘的机会,所以这里必须去读那份产出 ——
+    // 只报一句「超时」等于把宽限期白给了,回灌给 agent 的也就没有任何可改的信息。
     if (result.timedOut) {
+      const partial = await agent.read({ ...result, outFile }).catch(() => null)
+      const head = `验收裁判(${agentName})超过 ${Math.round(timeoutMs / 1000)} 秒未判完`
       process.stdout.write(
-        `验收裁判(${agentName})超过 ${Math.round(timeoutMs / 1000)} 秒未给出判词\n`
+        partial ? `${head},以下是它中断前给出的结论:\n${partial}\n` : `${head}\n`
       )
-      return 1
+      return 1 // 判不完一律不通过,但把已有结论交出去,下一轮才有的可改
     }
 
     const verdict = await agent.read({ ...result, outFile }).catch(() => null)

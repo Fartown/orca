@@ -22,6 +22,14 @@ orca-goal-dev-path=$(pwd)
 
 装完要在 Orca 里过一次 consent —— 那个对话框会列出插件申请的能力。
 
+### 改完怎么让它生效(这里踩过坑)
+
+| 改了什么 | 怎么生效 |
+|---|---|
+| `panel.html` | 刷新面板即可,宿主每次都重读 |
+| `worker.mjs` | **必须把插件停用再启用**。`plugins.refresh()` 只重读 manifest,已加载的 worker 模块不会重新 import —— 面板看着变了就以为整体生效了,其实 worker 还是旧的 |
+| `orca-plugin.json` 的 capabilities | **会触发重新授权**(consent 指纹变了),哪怕是**减少**能力也一样 |
+
 ## 依赖一处 Orca 补丁
 
 面板要显示进度就得读 worker 写的 storage,而 `storage.get` 原本是 `panel: false`。

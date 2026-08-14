@@ -40,6 +40,37 @@
         overscroll-behavior: contain;
       }
 
+      /* 滚动条照抄 main.css 的 .scrollbar-sleek —— 面板是独立文档,继承不到应用样式,
+         不抄就是系统默认那根粗条,和 Orca 其它面板对不上。
+         刻意不留 scrollbar-gutter:内容不满时不显示滚动条,右边不会空一条。 */
+      body {
+        scrollbar-width: thin;
+        scrollbar-color: color-mix(in srgb, var(--muted-foreground, #737373) 34%, transparent) transparent;
+      }
+      body::-webkit-scrollbar {
+        width: 12px;
+        height: 12px;
+      }
+      body::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      body::-webkit-scrollbar-thumb {
+        background: color-mix(in srgb, var(--muted-foreground, #737373) 28%, transparent);
+        border: 3px solid transparent;
+        border-radius: 0;
+        background-clip: padding-box;
+        min-height: 28px;
+      }
+      body::-webkit-scrollbar-thumb:hover {
+        background-color: color-mix(in srgb, var(--muted-foreground, #737373) 48%, transparent);
+      }
+      body::-webkit-scrollbar-thumb:active {
+        background-color: color-mix(in srgb, var(--foreground, #171717) 36%, transparent);
+      }
+      body:hover {
+        scrollbar-color: color-mix(in srgb, var(--muted-foreground, #737373) 48%, transparent) transparent;
+      }
+
       .sec {
         padding: 12px;
         border-bottom: 1px solid var(--border, #333);
@@ -296,6 +327,22 @@
         flex: none;
       }
 
+      .files {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+        margin-top: 4px;
+      }
+      .file {
+        font-family: ui-monospace, Menlo, monospace;
+        font-size: 10px;
+        padding: 1px 5px;
+        border-radius: 4px;
+        background: var(--block);
+        color: var(--muted-foreground, #999);
+        max-width: 100%;
+        word-break: break-all;
+      }
       .flag {
         margin-top: 5px;
         padding: 5px 8px;
@@ -342,7 +389,7 @@
       <div class="row">
         <div class="title"><span class="dot" id="status-dot"></span><span id="status-text"></span></div>
         <div class="grow"></div>
-        <button class="btn" id="stop" hidden>停止</button>
+        <span id="actions"></span>
       </div>
       <div class="muted" id="status-facts" style="margin-top: 6px"></div>
       <div class="muted" id="status-reason"></div>
@@ -361,6 +408,7 @@
 
     <p class="empty" id="empty" hidden>这个工作区还没有目标</p>
 
+    <div id="form-region">
     <div class="sec">
       <div class="sec-label">新目标</div>
       <label class="f" for="objective">目标</label>
@@ -398,6 +446,7 @@
       <button class="btn primary wide" id="start" disabled>在当前终端上开始</button>
       <p class="hint">面板起不了后台循环,命令又不能带参数 —— 现在请用 <span class="mono">orca-goal start</span>。</p>
     </div>
+    </div>
 
     <script>
       'use strict'
@@ -431,19 +480,50 @@
       var el = {}
       ;[
         'blocker-sec', 'blocker', 'status-sec', 'status-dot', 'status-text', 'status-facts',
-        'status-reason', 'status-objective', 'stop', 'gate-sec', 'gate-list', 'rounds-sec',
-        'rounds', 'empty', 'judge'
+        'status-reason', 'status-objective', 'actions', 'gate-sec', 'gate-list', 'rounds-sec',
+        'rounds', 'empty', 'judge', 'form-region'
       ].forEach(function (id) {
         el[id] = document.getElementById(id)
       })
 
-      var LABEL = {
-        active: '进行中', complete: '目标达成', blocked: '受阻',
-        budget_exhausted: '预算耗尽', stalled: '空转', aborted: '人为中断'
+      // 状态 → 界面。每个状态显示什么、给哪些操作、收不收表单,全在这一张表里,
+      // 免得又变成「不管什么状态都摆一个禁用的开始按钮」。
+      // 操作都还点不了(面板起不了后台循环),但按状态显示才说得清该做什么。
+      var VIEW = {
+        active: { label: '进行中', tone: 'run', form: false, actions: ['stop'] },
+        // 记录写着 active 但驱动没了:能做的是接回,不是停止 —— 没东西可停。
+        orphaned: { label: '中断了(驱动已退出)', tone: 'bad', form: false, actions: ['resume', 'forget'] },
+        complete: { label: '目标达成', tone: 'ok', form: true, actions: ['log', 'forget'] },
+        blocked: { label: '受阻', tone: 'bad', form: true, actions: ['resume', 'log', 'forget'] },
+        budget_exhausted: { label: '预算耗尽', tone: 'warn', form: true, actions: ['resume', 'log', 'forget'] },
+        stalled: { label: '空转', tone: 'warn', form: true, actions: ['resume', 'log', 'forget'] },
+        aborted: { label: '人为中断', tone: '', form: true, actions: ['resume', 'forget'] }
       }
-      var TONE = {
-        active: 'run', complete: 'ok', blocked: 'bad',
-        budget_exhausted: 'warn', stalled: 'warn', aborted: ''
+      var ACTION_LABEL = { stop: '停止', resume: '接着跑', log: '看日志', forget: '清除记录' }
+      // 面板做不了的事,提示里说清用哪条命令,而不是给一个点不动的按钮就完事。
+      var ACTION_CLI = {
+        stop: 'orca-goal stop --terminal ',
+        resume: 'orca-goal resume --terminal ',
+        log: 'orca-goal watch --terminal ',
+        forget: 'orca-goal forget --terminal '
+      }
+
+      /**
+       * 正在跑第几轮。日志是一轮结束才写的,所以「最后记录的轮次」和「正在跑的轮次」
+       * 差一轮还是同一轮,取决于当前这轮有没有写进日志。顶部统计和时间线必须用同一个
+       * 计算,否则会出现「顶部说第 6 轮、时间线说第 7 轮」这种自相矛盾。
+       */
+      function currentTurn(g) {
+        var rounds = g.rounds || []
+        var logged = rounds.length ? rounds[rounds.length - 1].turn : 0
+        return g.turns === logged ? g.turns + 1 : g.turns
+      }
+
+      function viewOf(g) {
+        if (g.state === 'active' && g.driverAlive === false) {
+          return VIEW.orphaned
+        }
+        return VIEW[g.state] || { label: g.state, tone: '', form: true, actions: [] }
       }
 
       function ago(ts) {
@@ -471,66 +551,143 @@
         })
       }
 
-      function renderRounds(rounds) {
+      // 每轮注入的是哪种提示词 —— 这是「守卫做了什么」最直接的证据。
+      var INJECTED = {
+        continuation: '续跑',
+        'rejected-completion': '验收驳回后重试',
+        'tamper-challenge': '被质证削弱验收'
+      }
+
+      function roundItem(r, inProgress) {
+        var claim = r.claim && r.claim.kind
+        var tone = inProgress
+          ? 'run'
+          : r.acceptancePassed === false
+            ? 'bad'
+            : r.acceptancePassed === true
+              ? 'ok'
+              : claim
+                ? 'warn'
+                : ''
+        var icon = inProgress ? '' : r.acceptancePassed === false ? '✕' : r.acceptancePassed === true ? '✓' : ''
+        var item = node('div', 'tl-item')
+        item.appendChild(node('div', 'tl-dot ' + tone, icon))
+
+        var main = node('div')
+        var head = node('div', 'tl-head')
+        head.appendChild(node('span', 'tl-turn', '第 ' + r.turn + ' 轮'))
+        head.appendChild(node('span', 'tl-time', inProgress ? '进行中' : ago(Date.parse(r.at))))
+        main.appendChild(head)
+
+        if (inProgress) {
+          main.appendChild(node('div', 'muted', '已注入' + (INJECTED[r.prompt] || '续跑') + ',等 agent 跑完这一轮'))
+        } else if (INJECTED[r.prompt]) {
+          main.appendChild(node('div', 'muted', '注入:' + INJECTED[r.prompt]))
+        }
+
+        // agent 这一轮实际改了什么。与它自己的叙述无关的地面真相。
+        var changed = r.changed || { source: [], test: [] }
+        var total = changed.source.length + changed.test.length
+        if (!inProgress) {
+          if (total === 0) {
+            main.appendChild(node('div', 'muted', '没有产生文件改动'))
+          } else {
+            main.appendChild(
+              node('div', 'muted', '改了 ' + total + ' 个文件' + (changed.test.length ? '(含 ' + changed.test.length + ' 个测试)' : ''))
+            )
+            var files = node('div', 'files')
+            changed.source.concat(changed.test).slice(0, 6).forEach(function (f) {
+              files.appendChild(node('span', 'file', f))
+            })
+            if (total > 6) {
+              files.appendChild(node('span', 'file', '+' + (total - 6)))
+            }
+            main.appendChild(files)
+          }
+        }
+
+        // 守卫这一轮的动作
+        if (claim === 'complete') {
+          main.appendChild(
+            node('div', 'muted', r.acceptancePassed === false
+              ? '声称完成 → 验收未通过,已把失败原文打回'
+              : r.acceptancePassed === true
+                ? '声称完成 → 验收通过'
+                : '声称完成(未配验收)')
+          )
+        }
+        if (claim === 'blocked') {
+          main.appendChild(node('div', 'muted', '声称受阻:' + (r.claim.summary || '')))
+        }
+        ;(r.findings || [])
+          .filter(function (f) { return f.challenge })
+          .forEach(function (f) {
+            main.appendChild(node('div', 'flag', '⚑ ' + f.label + ':' + f.detail))
+          })
+
+        item.appendChild(main)
+        return item
+      }
+
+      function renderRounds(rounds, goal) {
         el.rounds.textContent = ''
+        // 正在跑的那一轮日志里还没有(日志是一轮结束才写的),但用户最想看的就是它。
+        var running = goal.state === 'active' && goal.driverAlive !== false
+        if (running) {
+          // 下一轮注入哪种提示词由上一轮的结果决定,面板据此推断,和驱动的逻辑一致。
+          var last = rounds.length ? rounds[rounds.length - 1] : null
+          var nextPrompt = 'continuation'
+          if (last && last.claim && last.claim.kind === 'complete' && last.acceptancePassed === false) {
+            nextPrompt = 'rejected-completion'
+          }
+          el.rounds.appendChild(roundItem({ turn: currentTurn(goal), prompt: nextPrompt }, true))
+        }
         rounds
           .slice()
           .reverse()
           .forEach(function (r) {
-            var claim = r.claim && r.claim.kind
-            var tone =
-              r.acceptancePassed === false ? 'bad' : r.acceptancePassed === true ? 'ok' : claim ? 'warn' : ''
-            var item = node('div', 'tl-item')
-            item.appendChild(
-              node('div', 'tl-dot ' + tone, r.acceptancePassed === false ? '✕' : r.acceptancePassed === true ? '✓' : '')
-            )
-            var main = node('div')
-            var head = node('div', 'tl-head')
-            head.appendChild(node('span', 'tl-turn', '第 ' + r.turn + ' 轮'))
-            head.appendChild(node('span', 'tl-time', ago(Date.parse(r.at))))
-            main.appendChild(head)
-
-            var notes = []
-            if (claim === 'complete') notes.push(r.acceptancePassed === false ? '声称完成 → 验收未通过' : '声称完成')
-            if (claim === 'blocked') notes.push('声称受阻')
-            if (r.prompt === 'tamper-challenge') notes.push('收到篡改质证')
-            if (r.prompt === 'rejected-completion') notes.push('收到验收驳回')
-            if (notes.length) main.appendChild(node('div', 'muted', notes.join(' · ')))
-            ;(r.findings || [])
-              .filter(function (f) { return f.challenge })
-              .forEach(function (f) {
-                main.appendChild(node('div', 'flag', '⚑ ' + f.label + ':' + f.detail))
-              })
-
-            item.appendChild(main)
-            el.rounds.appendChild(item)
+            el.rounds.appendChild(roundItem(r, false))
           })
       }
 
       function renderGoal(g) {
         var b = g.budget || {}
         var mins = Math.round((Date.now() - g.startedAt) / 60000)
+        // 跑着的时候顶部要显示「正在跑第几轮」,和时间线里那条进行中对齐;
+        // 停了就显示「一共跑了几轮」。两处口径不一致会让人以为数字错了。
+        var running = g.state === 'active' && g.driverAlive !== false
         var facts = [
-          '第 ' + g.turns + ' 轮' + (b.maxTurns ? ' / ' + b.maxTurns : ''),
+          (running ? '正在跑第 ' + currentTurn(g) : '共 ' + g.turns) + ' 轮' +
+            (b.maxTurns ? ' / ' + b.maxTurns : ''),
           mins + ' 分钟' + (b.maxMinutes ? ' / ' + b.maxMinutes : '')
         ]
         if (g.falseClaims) facts.push('假完成 ' + g.falseClaims + ' 次')
         if (g.tamperChallenges) facts.push('挡回 ' + g.tamperChallenges + ' 次')
 
-        el['status-dot'].className = 'dot ' + (TONE[g.state] || '')
-        el['status-text'].textContent = LABEL[g.state] || g.state
+        var view = viewOf(g)
+        el['status-dot'].className = 'dot ' + view.tone
+        el['status-text'].textContent = view.label
         el['status-facts'].textContent = facts.join(' · ')
         el['status-reason'].textContent = g.finishReason || ''
         el['status-objective'].textContent = g.objective
-        el.stop.hidden = g.state !== 'active'
         el['status-sec'].hidden = false
+
+        el.actions.textContent = ''
+        view.actions.forEach(function (name) {
+          var btn = node('button', 'btn', ACTION_LABEL[name])
+          btn.dataset.action = name
+          btn.title = ACTION_CLI[name] + (g.terminalHandle || '')
+          el.actions.appendChild(btn)
+        })
+        // 已经有目标占着这个终端时,不该还摆着「再开一个」的表单。
+        el['form-region'].hidden = !view.form
 
         renderGate((g.acceptance && g.acceptance.commands) || [])
         el['gate-sec'].hidden = false
 
         var rounds = g.rounds || []
-        renderRounds(rounds)
-        el['rounds-sec'].hidden = rounds.length === 0
+        renderRounds(rounds, g)
+        el['rounds-sec'].hidden = el.rounds.children.length === 0
       }
 
       function refresh() {
@@ -562,15 +719,15 @@
             el['gate-sec'].hidden = true
             el['rounds-sec'].hidden = true
             el.empty.hidden = false
+            el['form-region'].hidden = false
           }
         })
       }
 
-      el.stop.addEventListener('click', function () {
-        call('notifications.show', {
-          title: '目标模式',
-          body: '面板还不能停止目标,请用 orca-goal stop'
-        })
+      el.actions.addEventListener('click', function (event) {
+        var btn = event.target.closest('button[data-action]')
+        if (!btn) return
+        call('notifications.show', { title: '目标模式', body: '面板还做不了这个,请跑:' + btn.title })
       })
 
       el.judge.addEventListener('click', function (event) {
