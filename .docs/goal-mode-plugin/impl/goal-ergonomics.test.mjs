@@ -195,3 +195,29 @@ test('resume 的报告接口齐全 —— attach 回调必须存在,否则接管
     assert.ok(src.includes(hook), `makeReport 缺少 ${hook}`)
   }
 })
+
+// —— 预算写 0 表示不限,不能把 0 印出来 ——
+
+test('预算渲染:0 显示为不限', async () => {
+  const src = await fs.readFile(new URL('./orca-goal.mjs', import.meta.url), 'utf8')
+  const describeBudget = new Function(
+    `return ${src.match(/function describeBudget[\s\S]*?\n\}/)[0].replace('function describeBudget', 'function')}`
+  )()
+  assert.equal(describeBudget({ maxTurns: 0, maxMinutes: 0 }), '轮数不限 / 时长不限')
+  assert.equal(describeBudget({ maxTurns: 0, maxMinutes: 600 }), '轮数不限 / 600 分钟')
+  assert.equal(describeBudget({ maxTurns: 20, maxMinutes: 180 }), '20 轮 / 180 分钟')
+})
+
+test('注入给 agent 的提示词里,不限预算不能写成 0', async () => {
+  // 0 是有效取值,?? 挡不住它 —— 曾经因此让提示词出现「Turn 4 of 0」,
+  // agent 可能据此以为预算已经耗尽。
+  const src = await fs.readFile(new URL('./goal-loop.mjs', import.meta.url), 'utf8')
+  const body = src.match(/function promptVars[\s\S]*?\n\}/)[0]
+  assert.ok(!/maxTurns: goal\.budget\.maxTurns \?\?/.test(body), 'maxTurns 必须用 || 而不是 ??')
+  assert.ok(
+    !/maxMinutes: goal\.budget\.maxMinutes \?\?/.test(body),
+    'maxMinutes 必须用 || 而不是 ??'
+  )
+  assert.match(body, /maxTurns: goal\.budget\.maxTurns \|\| '不限'/)
+  assert.match(body, /maxMinutes: goal\.budget\.maxMinutes \|\| '不限'/)
+})

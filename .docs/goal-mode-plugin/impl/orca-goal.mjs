@@ -233,7 +233,7 @@ async function start(flags, rawArgs) {
 
   await writeGoal(goal)
   console.log(`目标已启动 → ${worktreePath}`)
-  console.log(`预算:${goal.budget.maxTurns} 轮 / ${goal.budget.maxMinutes} 分钟`)
+  console.log(`预算:${describeBudget(goal.budget)}`)
   console.log(`日志:${logPath(key)}\n`)
 
   try {
@@ -289,11 +289,18 @@ async function confirmAcceptance(acceptance, skip) {
   return /^y(es)?$/i.test(answer.trim())
 }
 
+/** 预算写 0 表示不限,别把 0 直接印出来。 */
+function describeBudget(budget) {
+  const turns = budget.maxTurns ? `${budget.maxTurns} 轮` : '轮数不限'
+  const minutes = budget.maxMinutes ? `${budget.maxMinutes} 分钟` : '时长不限'
+  return `${turns} / ${minutes}`
+}
+
 function makeReport() {
   const stamp = () => new Date().toTimeString().slice(0, 8)
   return {
     round: (turn, maxTurns, prompt) =>
-      console.log(`[${stamp()}] 第 ${turn}/${maxTurns} 轮 · 注入 ${prompt}`),
+      console.log(`[${stamp()}] 第 ${turn}${maxTurns ? `/${maxTurns}` : ''} 轮 · 注入 ${prompt}`),
     longRun: (mins) =>
       console.log(`[${stamp()}]   这一轮已经跑了 ${mins} 分钟,agent 仍在干活 —— 继续等,不打断`),
     attach: (turn) => console.log(`[${stamp()}] 接管:不注入,先等第 ${turn} 轮手上这波跑完`),
@@ -434,9 +441,7 @@ async function resume(flags, rawArgs = []) {
 
   await writeGoal(goal)
   console.log(`接回目标 → ${goal.worktreePath}`)
-  console.log(
-    `已跑 ${goal.turns} 轮,预算 ${goal.budget.maxTurns} 轮 / ${goal.budget.maxMinutes} 分钟`
-  )
+  console.log(`已跑 ${goal.turns} 轮,预算 ${describeBudget(goal.budget)}`)
   console.log(
     `${goal.acceptance?.commands?.length ? `验收:${goal.acceptance.commands.join(' / ')}` : '没有验收命令'}\n`
   )

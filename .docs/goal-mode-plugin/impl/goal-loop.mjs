@@ -209,15 +209,17 @@ async function buildInjection(goal, turn, pending) {
   return promptPointerLine(await writePromptFile(goal.key, turn, body))
 }
 
+// 预算写 0 表示不限。这里必须用 || 而不是 ?? —— 0 是有效取值,?? 只挡 null/undefined,
+// 结果会让提示词里出现「Turn 4 of 0」,agent 可能据此以为预算已经耗尽。
 function promptVars(goal, turn) {
   const noEvidence = turn === 1 ? '(首轮,没有上一轮可比)' : '(未能取得工作区指纹)'
   return {
     objective: goal.objective,
     claimPath: claimPath(goal.key),
     turns: turn,
-    maxTurns: goal.budget.maxTurns ?? '不限',
+    maxTurns: goal.budget.maxTurns || '不限',
     elapsedMinutes: Math.round((Date.now() - goal.startedAt) / 60_000),
-    maxMinutes: goal.budget.maxMinutes ?? '不限',
+    maxMinutes: goal.budget.maxMinutes || '不限',
     editsSource: noEvidence,
     editsTest: noEvidence,
     diffChanged: noEvidence,
