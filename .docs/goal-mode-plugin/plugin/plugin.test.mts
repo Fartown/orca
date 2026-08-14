@@ -329,6 +329,69 @@ describe('panel 行为', () => {
     expect(document.getElementById('hint-cmd')!.textContent).toContain('orca-goal')
   })
 
+  it('填了目标才让点「生成启动命令」', async () => {
+    results.set('storage.get', { ok: true, value: { value: { updatedAt: Date.now(), goals: [] } } })
+    mountPanel()
+    await flush()
+    const start = document.getElementById('start') as HTMLButtonElement
+    expect(start.disabled).toBe(true)
+    const objective = document.getElementById('objective') as HTMLTextAreaElement
+    objective.value = '把登录页补齐'
+    objective.dispatchEvent(new Event('input'))
+    expect(start.disabled).toBe(false)
+  })
+
+  it('把表单拼成能直接跑的命令,目标里的引号不会拆坏它', async () => {
+    results.set('storage.get', { ok: true, value: { value: { updatedAt: Date.now(), goals: [] } } })
+    mountPanel()
+    await flush()
+    const objective = document.getElementById('objective') as HTMLTextAreaElement
+    objective.value = "把 don't-panic 页面补齐"
+    objective.dispatchEvent(new Event('input'))
+    ;(document.getElementById('start') as HTMLButtonElement).click()
+    const cmd = document.getElementById('start-cmd')!.textContent!
+    expect(document.getElementById('start-out')!.hidden).toBe(false)
+    expect(cmd).toContain('orca-goal start --detach')
+    // 单引号必须按 POSIX 的 '\'' 收尾续写,否则参数会在引号处断掉
+    expect(cmd).toContain("'把 don'\\''t-panic 页面补齐'")
+  })
+
+  it('验收标准走 heredoc 写文件,不内联进 --check', async () => {
+    // --check 是 spawn(cmd,{shell:true}) 跑的,内联就是两层引号,用户写个 $ 或引号就崩。
+    results.set('storage.get', { ok: true, value: { value: { updatedAt: Date.now(), goals: [] } } })
+    mountPanel()
+    await flush()
+    const objective = document.getElementById('objective') as HTMLTextAreaElement
+    objective.value = '还原设计稿'
+    objective.dispatchEvent(new Event('input'))
+    const criteria = document.getElementById('criteria') as HTMLTextAreaElement
+    criteria.value = '每个页面都要有 $HOME 和 "引号" 以及 \'单引号\''
+    ;(document.getElementById('start') as HTMLButtonElement).click()
+    const cmd = document.getElementById('start-cmd')!.textContent!
+    expect(cmd).toContain("<<'ORCA_CRITERIA'")
+    // 定界符加了引号,标准原样进文件 —— 里面的 $ 和引号都不该被改写
+    expect(cmd).toContain('每个页面都要有 $HOME 和 "引号" 以及 \'单引号\'')
+    expect(cmd).toContain('--criteria-file')
+    expect(cmd).toContain('--agent codex') // 默认选中的裁判
+  })
+
+  it('换了裁判,生成的命令跟着换', async () => {
+    results.set('storage.get', { ok: true, value: { value: { updatedAt: Date.now(), goals: [] } } })
+    mountPanel()
+    await flush()
+    const objective = document.getElementById('objective') as HTMLTextAreaElement
+    objective.value = 'x'
+    objective.dispatchEvent(new Event('input'))
+    ;(document.getElementById('criteria') as HTMLTextAreaElement).value = '判据'
+    ;(document.querySelector('#judge button[data-agent=claude]') as HTMLButtonElement).click()
+    ;(document.getElementById('start') as HTMLButtonElement).click()
+    expect(document.getElementById('start-cmd')!.textContent).toContain('--agent claude')
+  })
+
+  it('没有能生成验收标准的 CLI 命令,就不摆一个点不动的按钮', () => {
+    expect(read('panel.html')).not.toContain('从目标生成')
+  })
+
   it('裁判分段控件可切换', async () => {
     results.set('storage.get', { ok: true, value: { value: { goals: [] } } })
     mountPanel()

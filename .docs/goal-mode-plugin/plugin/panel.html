@@ -422,11 +422,7 @@
     </div>
 
     <div class="sec">
-      <div class="row" style="margin-bottom: 6px">
-        <label class="f" for="criteria" style="margin: 0">验收标准</label>
-        <div class="grow"></div>
-        <button class="btn" id="draft" disabled>✨ 从目标生成</button>
-      </div>
+      <label class="f" for="criteria">验收标准</label>
       <textarea id="criteria" class="mono" rows="5" placeholder="什么算「做到了」?写具体到文件和行为。"></textarea>
       <div class="row" style="margin-top: 8px">
         <label class="f" style="margin: 0">裁判</label>
@@ -448,8 +444,15 @@
     </div>
 
     <div class="sec">
-      <button class="btn primary wide" id="start" disabled>在当前终端上开始</button>
-      <p class="hint">面板起不了后台循环,命令又不能带参数 —— 现在请用 <span class="mono">orca-goal start</span>。</p>
+      <button class="btn primary wide" id="start" disabled>生成启动命令</button>
+      <p class="hint">
+        面板起不了后台循环,也没法替你选终端 —— 命令给你拼好,粘到终端里跑,终端由
+        <span class="mono">orca-goal</span> 自己让你选。
+      </p>
+      <div id="start-out" hidden style="margin-top: 10px">
+        <div class="muted">整段复制到终端里跑:</div>
+        <div class="mono block" id="start-cmd" style="margin-top: 4px; user-select: text; white-space: pre-wrap"></div>
+      </div>
     </div>
     </div>
 
@@ -498,7 +501,8 @@
       ;[
         'blocker-sec', 'blocker', 'status-sec', 'status-dot', 'status-text', 'status-facts',
         'status-reason', 'stale', 'hint', 'hint-label', 'hint-cmd', 'status-objective', 'actions', 'gate-sec', 'gate-list', 'rounds-sec',
-        'rounds', 'empty', 'judge', 'form-region'
+        'rounds', 'empty', 'judge', 'form-region', 'objective', 'criteria', 'checks',
+        'start', 'start-out', 'start-cmd'
       ].forEach(function (id) {
         el[id] = document.getElementById(id)
       })
@@ -794,6 +798,54 @@
             ? '面板还执行不了,在终端跑:'
             : '面板还执行不了,通知也没发出来 —— 照这行敲:'
         })
+      })
+
+      // POSIX 单引号转义:引号里除了 ' 本身什么都不用管,所以只处理它。
+      function q(text) {
+        return "'" + String(text).replace(/'/g, "'\\''") + "'"
+      }
+
+      /**
+       * 把表单拼成一条能直接跑的命令。
+       * 验收标准走 heredoc 写进文件,而不是塞进 --check 的字符串里:验收命令是
+       * spawn(cmd, {shell:true}) 执行的,内联就变成两层引号嵌套,用户标准里一个引号或
+       * $ 就会把命令拆坏。heredoc 用引号包住定界符,内容原样进文件,不受 shell 解释。
+       */
+      function buildStartCommand() {
+        var objective = el.objective.value.trim()
+        if (!objective) return ''
+        var criteria = el.criteria.value.trim()
+        var extra = el.checks.value.trim()
+        var judge = (el.judge.querySelector('button.on') || {}).dataset
+        var lines = []
+        var args = ['orca-goal start --detach', '--objective ' + q(objective)]
+        if (criteria) {
+          var file = '~/.orca-goal/criteria/panel-' + Date.now() + '.md'
+          lines.push('mkdir -p ~/.orca-goal/criteria')
+          lines.push("cat > " + file + " <<'ORCA_CRITERIA'")
+          lines.push(criteria)
+          lines.push('ORCA_CRITERIA')
+          args.push(
+            '--check ' +
+              q('orca-goal-judge --agent ' + ((judge && judge.agent) || 'codex') + ' --criteria-file ' + file)
+          )
+        }
+        if (extra) args.push('--check ' + q(extra))
+        lines.push(args.join(' \\\n  '))
+        return lines.join('\n')
+      }
+
+      function syncStartButton() {
+        el.start.disabled = !el.objective.value.trim()
+      }
+      el.objective.addEventListener('input', syncStartButton)
+      syncStartButton()
+
+      el.start.addEventListener('click', function () {
+        var cmd = buildStartCommand()
+        if (!cmd) return
+        el['start-cmd'].textContent = cmd
+        el['start-out'].hidden = false
       })
 
       el.judge.addEventListener('click', function (event) {
