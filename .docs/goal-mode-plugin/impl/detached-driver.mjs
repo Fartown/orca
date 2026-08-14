@@ -12,6 +12,9 @@ export async function spawnDetached({ scriptPath, argv, logFile }) {
   const child = spawn(process.execPath, [scriptPath, ...argv], {
     detached: true,
     stdio: ['ignore', out, out],
+    // 别继承启动时的 cwd:那个目录被删掉(`git stash` 挪走未跟踪文件就够了)会让进程
+    // 在 uv_cwd 上直接崩掉,正跑着的目标就这么没了。状态目录是它唯一真正依赖的路径。
+    cwd: path.dirname(logFile),
     env: { ...process.env, ORCA_GOAL_DETACHED: '1' }
   })
   child.unref()
