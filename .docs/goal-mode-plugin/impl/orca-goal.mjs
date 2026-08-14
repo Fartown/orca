@@ -8,6 +8,7 @@ import { promises as fs, createReadStream } from 'node:fs'
 import path from 'node:path'
 import readline from 'node:readline/promises'
 import { isProcessAlive, spawnDetached, stopProcess } from './detached-driver.mjs'
+import { installCrashGuard } from './driver-crash-guard.mjs'
 import { notifyDesktop } from './desktop-notification.mjs'
 import { loadGoalConfig } from './goal-config-file.mjs'
 import { DEFAULT_THRESHOLDS } from './goal-decision.mjs'
@@ -213,6 +214,8 @@ async function start(flags, rawArgs) {
     now: Date.now()
   })
 
+  // 装在拿锁之前:锁一拿到,这个进程就是这个目标的唯一驱动,再崩就得留下死因。
+  installCrashGuard(key)
   const lock = await acquireLock(key)
   let released = false
   const release = async () => {
@@ -338,6 +341,9 @@ function printOutcome(goal) {
   console.log(`\n${outcomeLabel(goal.state)} —— ${goal.finishReason}`)
   const spent = goal.activeMs != null ? goal.activeMs : Date.now() - goal.startedAt
   console.log(`共 ${goal.turns} 轮,${Math.round(spent / 60_000)} 分钟`)
+  if (goal.driverError) {
+    console.log(`  上次驱动异常退出:${goal.driverError.message}`)
+  }
   if (goal.falseClaims > 0) {
     console.log(`其中被验收驳回的完成声明:${goal.falseClaims} 次`)
   }
@@ -393,7 +399,13 @@ async function resume(flags, rawArgs = []) {
   }
 
   const file = flags.file ? await loadGoalConfig(flags.file) : {}
-  const goal = { ...existing, state: 'active', finishReason: null, finishedAt: null }
+  const goal = {
+    ...existing,
+    state: 'active',
+    finishReason: null,
+    finishedAt: null,
+    driverError: null // 这次接回是新的一程,别挂着上次的死因
+  }
 
   // 只在显式给了的时候才覆盖,没给就沿用原记录。
   const checks = flags.check.length > 0 ? flags.check : file.check
@@ -422,6 +434,8 @@ async function resume(flags, rawArgs = []) {
     return await relaunchDetached('resume', key, terminal, rawArgs)
   }
 
+  // 装在拿锁之前:锁一拿到,这个进程就是这个目标的唯一驱动,再崩就得留下死因。
+  installCrashGuard(key)
   const lock = await acquireLock(key)
   let released = false
   const release = async () => {

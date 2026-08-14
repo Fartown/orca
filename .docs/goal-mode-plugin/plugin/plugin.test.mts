@@ -252,6 +252,28 @@ describe('panel 行为', () => {
     expect(document.getElementById('stale')!.hidden).toBe(true)
   })
 
+  it('驱动异常退出时把死因显示出来,而不是只说「退出了」', async () => {
+    results.set('storage.get', {
+      ok: true,
+      value: {
+        value: {
+          updatedAt: Date.now(),
+          goals: [
+            {
+              ...goal,
+              driverAlive: false,
+              driverError: { kind: 'uncaughtException', message: 'orca terminal show 执行失败' }
+            }
+          ]
+        }
+      }
+    })
+    mountPanel()
+    await flush()
+    expect(document.getElementById('status-text')!.textContent).toContain('中断了')
+    expect(document.getElementById('status-reason')!.textContent).toContain('orca terminal show')
+  })
+
   it('镜像是新的就不提示陈旧', async () => {
     results.set('storage.get', {
       ok: true,

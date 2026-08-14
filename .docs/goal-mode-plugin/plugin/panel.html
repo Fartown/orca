@@ -694,7 +694,11 @@
         el['status-dot'].className = 'dot ' + view.tone
         el['status-text'].textContent = view.label
         el['status-facts'].textContent = facts.join(' · ')
-        el['status-reason'].textContent = g.finishReason || ''
+        // 驱动是异常退出的话,死因比 finishReason 重要:否则只剩「驱动已退出」四个字,
+        // 用户还得自己去翻 ~/.orca-goal/log 才知道发生了什么。
+        el['status-reason'].textContent = g.driverError
+          ? '驱动异常退出:' + g.driverError.message
+          : g.finishReason || ''
         el['status-objective'].textContent = g.objective
         el['status-sec'].hidden = false
 

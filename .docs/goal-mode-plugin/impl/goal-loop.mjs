@@ -13,6 +13,10 @@ const num = (name, fallback) => Number(process.env[name] || fallback)
 const SETTLE_MS = num('ORCA_GOAL_SETTLE_MS', 5_000) // 送出 \r 到 agent 接管之间的空窗
 const QUIET_MS = num('ORCA_GOAL_QUIET_MS', 12_000) // 静默多久算这一轮停了
 const POLL_MS = num('ORCA_GOAL_POLL_MS', 3_000)
+// 观察终端要调 orca CLI,它偶发失败是常态(Orca 在重启、IPC 抖动、机器刚从休眠醒来)。
+// 一轮要轮询几千次,把任何一次失败当致命,目标迟早死在一次抖动上 —— 实测发生过。
+// 所以连续失败超过这个时长才判定「真的联系不上了」,中间一律重试。
+const OBSERVE_GRACE_MS = num('ORCA_GOAL_OBSERVE_GRACE_MS', 3 * 60_000)
 const START_MS = num('ORCA_GOAL_START_MS', 300_000) // 注入后多久还没有任何动静才认定没收到
 // 只在 agent「不在干活」时才计的卡死上限。它还在跑就一直等 —— 大任务里一个 turn
 // 连续调几十次工具跑上两三小时是正常的,拿单轮上限去砍它等于把干得好好的活腰斩。
@@ -162,8 +166,32 @@ async function waitForRoundEnd(handle, sentAt, report, goalDeadline = Infinity) 
   let lastBusyAt = sentAt
   let longRunNoticed = false
 
+  let firstObserveError = null // 连续失败的起点,恢复了就清掉
+
   while (Date.now() < goalDeadline) {
-    const activity = await observeAgent(handle)
+    let activity
+    try {
+      activity = await observeAgent(handle)
+      if (firstObserveError) {
+        report.warn(
+          `观察恢复正常(中断了 ${Math.round((Date.now() - firstObserveError.at) / 1000)} 秒)`
+        )
+        firstObserveError = null
+      }
+    } catch (err) {
+      // 一次失败不算数,连续失败够久才算联系不上。
+      if (!firstObserveError) {
+        firstObserveError = { at: Date.now(), message: err?.message || String(err) }
+        report.warn(`观察终端失败,重试中:${firstObserveError.message}`)
+      }
+      if (Date.now() - firstObserveError.at >= OBSERVE_GRACE_MS) {
+        return {
+          failure: `连续 ${Math.round(OBSERVE_GRACE_MS / 60_000)} 分钟观察不到终端:${firstObserveError.message}`
+        }
+      }
+      await sleep(POLL_MS)
+      continue
+    }
     const verdict = classifyRound(activity, sentAt, QUIET_MS)
 
     if (verdict === 'disconnected') {
