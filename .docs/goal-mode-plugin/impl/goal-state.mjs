@@ -48,6 +48,10 @@ export function newGoal({
     tamperFindings: [], // 削弱验收的痕迹,跨轮累积
     tamperChallenges: 0,
     startedAt: now,
+    // 真正花掉的时间:逐轮累加,驱动没跑的时候不计。
+    // 不能用 startedAt 起的墙钟当预算 —— 那样目标停着、驱动崩着也在扣,
+    // 停一晚上第二天接回来预算就没了,而它其实一分钟活都没干。
+    activeMs: 0,
     updatedAt: now,
     lastSnapshot: null,
     lastCursor: null,

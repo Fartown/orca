@@ -338,3 +338,28 @@ test('时长预算为 0 时不因时长停止', () => {
   const { action } = decide(g, obs({ now: T0 + 100 * 3600_000 }))
   assert.equal(action.type, 'continue')
 })
+
+test('时长预算按活跃时长算,目标停着的时间不扣预算', () => {
+  // 这就是「resume 接回来预算就没了」的根因:原来用 now - startedAt,
+  // 目标 aborted 躺一晚上,第二天接回来直接判 budget_exhausted,而它一分钟活都没干。
+  const g = makeGoal({
+    budget: { maxTurns: 0, maxMinutes: 60 },
+    startedAt: T0 - 48 * 60 * 60_000, // 两天前起的
+    activeMs: 10 * 60_000 // 但只真跑了 10 分钟
+  })
+  const { action } = decide(g, obs({ now: T0 }))
+  assert.notEqual(action.state, 'budget_exhausted', '躺着的时间不该扣预算')
+})
+
+test('活跃时长真的用满了才算预算耗尽', () => {
+  const g = makeGoal({ budget: { maxTurns: 0, maxMinutes: 60 }, activeMs: 61 * 60_000 })
+  const { action } = decide(g, obs({ now: T0 + 60_000 }))
+  assert.equal(action.state, 'budget_exhausted')
+})
+
+test('老记录没有 activeMs 时退回墙钟,不因字段缺失就变成不限', () => {
+  const g = makeGoal({ budget: { maxTurns: 0, maxMinutes: 60 } })
+  assert.equal(g.activeMs, undefined)
+  const { action } = decide(g, obs({ now: T0 + 61 * 60_000 }))
+  assert.equal(action.state, 'budget_exhausted')
+})

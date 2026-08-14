@@ -18,7 +18,9 @@ export const DEFAULT_THRESHOLDS = {
 export function decide(goal, obs, thresholds = DEFAULT_THRESHOLDS) {
   const next = { ...goal, updatedAt: obs.now }
   const budget = goal.budget || {}
-  const elapsedMs = obs.now - goal.startedAt
+  // 预算算的是花掉的活跃时长,不是日历天数:目标停着、驱动崩着的时间不该扣预算。
+  // runLoop 在每轮结束时已经把这一轮折进 activeMs 了。老记录没这个字段,退回墙钟。
+  const elapsedMs = goal.activeMs != null ? goal.activeMs : obs.now - goal.startedAt
 
   // 篡改证据先入账,后面所有分支共用。
   // 一轮里 decide 会被调两次(先判要不要验收,再带着验收结果判),两次传进来的 goal 都是本轮起点,

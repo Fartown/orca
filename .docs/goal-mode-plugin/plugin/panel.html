@@ -673,7 +673,12 @@
 
       function renderGoal(g) {
         var b = g.budget || {}
-        var mins = Math.round((Date.now() - g.startedAt) / 60000)
+        // 用累计活跃时长,不用墙钟:目标停着的时候不该继续涨,否则这个数和预算对不上。
+        // 老记录没有 activeMs,退回墙钟(它当年就是按墙钟扣的,显示成墙钟才不自相矛盾)。
+        var mins =
+          g.activeMs != null
+            ? Math.round((g.activeMs + (g.state === 'active' ? Date.now() - (g.updatedAt || Date.now()) : 0)) / 60000)
+            : Math.round((Date.now() - g.startedAt) / 60000)
         // 跑着的时候顶部要显示「正在跑第几轮」,和时间线里那条进行中对齐;
         // 停了就显示「一共跑了几轮」。两处口径不一致会让人以为数字错了。
         var running = g.state === 'active' && g.driverAlive !== false

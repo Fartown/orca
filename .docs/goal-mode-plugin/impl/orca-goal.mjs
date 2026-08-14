@@ -336,7 +336,8 @@ const outcomeLabel = (state) => OUTCOME[state] || state
 
 function printOutcome(goal) {
   console.log(`\n${outcomeLabel(goal.state)} —— ${goal.finishReason}`)
-  console.log(`共 ${goal.turns} 轮,${Math.round((Date.now() - goal.startedAt) / 60_000)} 分钟`)
+  const spent = goal.activeMs != null ? goal.activeMs : Date.now() - goal.startedAt
+  console.log(`共 ${goal.turns} 轮,${Math.round(spent / 60_000)} 分钟`)
   if (goal.falseClaims > 0) {
     console.log(`其中被验收驳回的完成声明:${goal.falseClaims} 次`)
   }

@@ -21,6 +21,9 @@ const STUCK_MS = num('ORCA_GOAL_STUCK_MS', 20 * 60_000)
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 
+/** 老记录没有这个字段。缺就当 0:旧的那个数是墙钟,本来就不代表消耗量,继承过来只会继续误导。 */
+const activeMsOf = (goal) => goal.activeMs || 0
+
 /**
  * @param {boolean} attach 挂载到一个已经在干活的会话:首轮不注入,先等它把手上这轮跑完再接管。
  *   目标已经在会话里了(比如上一次驱动退出但注入已落地),这时再注入会打断它。
@@ -48,16 +51,20 @@ export async function runLoop(goal, { report, thresholds, attach = false }) {
       await sendText(current.terminalHandle, text, { enter: true })
     }
 
-    const goalDeadline = current.budget.maxMinutes
-      ? current.startedAt + current.budget.maxMinutes * 60_000
+    // 预算按「已经花掉的活跃时长」算,不是按日历。本轮最多还能跑 remaining。
+    const remainingMs = current.budget.maxMinutes
+      ? Math.max(0, current.budget.maxMinutes * 60_000 - activeMsOf(current))
       : Infinity
+    const goalDeadline = remainingMs === Infinity ? Infinity : sentAt + remainingMs
     const outcome = await waitForRoundEnd(current.terminalHandle, sentAt, report, goalDeadline)
+    // 这一轮实际花了多久,立刻记账 —— 下面每个出口分支都从 current 派生,记在这里才不会漏。
+    current = { ...current, activeMs: activeMsOf(current) + (Date.now() - sentAt) }
     if (outcome.budgetHit) {
       current = {
         ...current,
         turns: turn,
         state: 'budget_exhausted',
-        finishReason: `时长预算耗尽(${current.budget.maxMinutes} 分钟),该轮仍在进行中`,
+        finishReason: `时长预算耗尽(累计跑了 ${Math.round(activeMsOf(current) / 60_000)} / ${current.budget.maxMinutes} 分钟),该轮仍在进行中`,
         finishedAt: Date.now()
       }
       await writeGoal(current)
@@ -223,7 +230,7 @@ function promptVars(goal, turn) {
     claimPath: claimPath(goal.key),
     turns: turn,
     maxTurns: goal.budget.maxTurns || '不限',
-    elapsedMinutes: Math.round((Date.now() - goal.startedAt) / 60_000),
+    elapsedMinutes: Math.round(activeMsOf(goal) / 60_000),
     maxMinutes: goal.budget.maxMinutes || '不限',
     editsSource: noEvidence,
     editsTest: noEvidence,
@@ -273,7 +280,7 @@ async function maybeSendWrapUp(goal, action, report) {
     const text = await renderPrompt('budget-limit', {
       limitKind: action.reason,
       turns: goal.turns,
-      elapsedMinutes: Math.round((Date.now() - goal.startedAt) / 60_000),
+      elapsedMinutes: Math.round(activeMsOf(goal) / 60_000),
       claimPath: claimPath(goal.key)
     })
     await sendText(goal.terminalHandle, text, { enter: true })
