@@ -104,15 +104,10 @@ export async function runLoop(goal, { report, thresholds, attach = false }) {
         return current
       }
       if (outcome.failure) {
-        current = {
-          ...current,
-          turns: turn,
-          state: 'blocked',
-          finishReason: `第 ${turn} 轮:${outcome.failure}`,
-          finishedAt: Date.now()
-        }
-        await writeGoal(current)
-        return current
+        // 终端断开、注入后没动静 —— 这些也可能只是一时的(Orca 在重启、机器刚睡醒),
+        // 交给下面同一套重试:能恢复就接着跑,连续不好满 ROUND_ERROR_GRACE_MS 才认输。
+        // 早先这里直接判 blocked 结束目标,是「一次意外终结目标」的另一条藏起来的路径。
+        throw new Error(outcome.failure)
       }
 
       const after = await snapshotWorktree(current.worktreePath)

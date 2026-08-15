@@ -363,3 +363,40 @@ test('老记录没有 activeMs 时退回墙钟,不因字段缺失就变成不限
   const { action } = decide(g, obs({ now: T0 + 61 * 60_000 }))
   assert.equal(action.state, 'budget_exhausted')
 })
+
+test('完成声明被驳回后,工作区基线也要更新 —— 否则下一轮的取证会算上这一轮', () => {
+  // 实况 bug:lastSnapshot 原来写在函数末尾,而「声称完成」那一块的 return 全在它之前。
+  // 结果第 4 轮声称完成被驳回,基线停在第 3 轮,第 5 轮的「本轮改了什么」把第 4 轮也算了进去。
+  const g = makeGoal({ acceptance: { commands: ['judge'] }, lastSnapshot: tree('old') })
+  const { goal } = decide(
+    g,
+    obs({
+      sentinel: { kind: 'complete', summary: '做完了' },
+      snapshot: tree('new'),
+      acceptance: {
+        passed: false,
+        results: [{ command: 'judge', ok: false, code: 1, output: 'x' }]
+      }
+    })
+  )
+  assert.equal(goal.lastSnapshot.tree, 'new')
+})
+
+test('反复声称完成也躲不开空转判定', () => {
+  // 基线不更新的次生危害:每次声称完成都绕过基线更新,空转计数就永远起不来。
+  let g = makeGoal({
+    acceptance: { commands: ['judge'] },
+    lastSnapshot: tree('same'),
+    budget: { maxTurns: 0, maxMinutes: 0 }
+  })
+  const claim = {
+    sentinel: { kind: 'complete', summary: '做完了' },
+    snapshot: tree('same'),
+    acceptance: { passed: false, results: [{ command: 'judge', ok: false, code: 1, output: 'x' }] }
+  }
+  for (let i = 0; i < 3; i++) {
+    g = decide(g, obs(claim)).goal
+  }
+  // 三轮一个字没改,基线必须一直跟着走,后面普通轮次才判得出空转
+  assert.equal(g.lastSnapshot.tree, 'same')
+})

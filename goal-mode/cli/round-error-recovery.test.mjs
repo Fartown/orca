@@ -214,3 +214,46 @@ test('接管时 agent 已空闲 —— 要正常注入,不能干等一个不存�
   assert.ok(sent > 0, 'attach 遇到空闲 agent 时必须注入,而不是干等')
   assert.notEqual(final.state, 'blocked', '不该被判成受阻')
 })
+
+test('终端一时断开不该终结目标 —— Orca 重启一下就死太脆了', async () => {
+  mock.reset()
+  let observations = 0
+  mock.module('./orca-terminal.mjs', { namedExports: { sendText: async () => {} } })
+  mock.module('./terminal-activity.mjs', {
+    namedExports: {
+      observeAgent: async () => ({}),
+      // 前几次报断开,之后恢复正常
+      classifyRound: () => (++observations <= 3 ? 'disconnected' : 'finished')
+    }
+  })
+  mock.module('./git-snapshot.mjs', {
+    namedExports: {
+      snapshotWorktree: async () => ({ kind: 'git', tree: 't', head: 'h' }),
+      diffTrees: async () => ({ source: [], test: [] })
+    }
+  })
+  mock.module('./tamper-scan.mjs', {
+    namedExports: { scanRound: async () => [], describeFindings: () => '' }
+  })
+  mock.module('./goal-claim.mjs', {
+    namedExports: {
+      readClaim: async () => null,
+      clearClaim: async () => {},
+      claimPath: () => '/tmp/c'
+    }
+  })
+  mock.module('./continuation-prompt.mjs', {
+    namedExports: {
+      renderPrompt: async () => '提示词',
+      writePromptFile: async () => '/tmp/p',
+      promptPointerLine: () => 'x'
+    }
+  })
+  const mod = await import(`./goal-loop.mjs?disc=${Math.random()}`)
+  const final = await mod.runLoop(goal({ key: 'disc', budget: { maxTurns: 1, maxMinutes: 0 } }), {
+    report,
+    thresholds: { maxBlockedClaims: 2, maxStalls: 9 }
+  })
+  assert.notEqual(final.state, 'blocked', '断开恢复后应该继续跑,而不是判受阻结束')
+  assert.ok(observations > 3, '应该重试过')
+})

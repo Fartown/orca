@@ -37,6 +37,12 @@ export function decide(goal, obs, thresholds = DEFAULT_THRESHOLDS) {
       .map((f) => ({ ...f, turn: goal.turns }))
   ]
 
+  // 工作区指纹是每一轮都要更新的基线,和走哪条判定分支无关。
+  // 早先它写在函数末尾,于是「声称完成」那一整块的所有 return 都绕过了它:
+  // 完成声明被验收驳回后基线原地不动,下一轮的「本轮改了什么」会把上一轮的改动也算进来,
+  // 空转判定也拿着几轮前的旧基线比 —— 反复声称完成就能一直躲开空转熔断。
+  next.lastSnapshot = obs.snapshot
+
   // 声称完成优先于预算判定:最后一轮真做完了,不该被记成预算耗尽。
   if (obs.sentinel?.kind === 'complete') {
     next.blockedClaims = 0
@@ -110,7 +116,6 @@ export function decide(goal, obs, thresholds = DEFAULT_THRESHOLDS) {
   } else if (unchanged === false) {
     next.stallCount = 0
   }
-  next.lastSnapshot = obs.snapshot
 
   const overBudget = budgetVerdict(next, budget, elapsedMs)
   if (overBudget) {
