@@ -413,3 +413,58 @@ test('落盘失败重试时,不把几十分钟的验收重跑一遍', async () =
   assert.ok(logWrites >= 3, '应该重试过')
   assert.equal(judgeRuns, 1, `裁判只该跑一次,实际跑了 ${judgeRuns} 次`)
 })
+
+test('轮次判定失灵时也不该几秒一轮 —— 最短间隔兜底', async () => {
+  // 实测复现过:注入时刻取在发送之前,落在窗口里的上一轮结束事件被当成本轮的,
+  // 文件夹工作区(拿不到指纹、空转熔断关闭)6 秒跑完 20 轮,向终端连灌 21 条提示词。
+  mock.reset()
+  process.env.ORCA_GOAL_MIN_ROUND_MS = '60'
+  let sent = 0
+  mock.module('./orca-terminal.mjs', {
+    namedExports: {
+      sendText: async () => {
+        sent++
+      }
+    }
+  })
+  mock.module('./terminal-activity.mjs', {
+    namedExports: { observeAgent: async () => ({}), classifyRound: () => 'finished' }
+  })
+  mock.module('./git-snapshot.mjs', {
+    namedExports: {
+      // 文件夹工作区:拿不到指纹,空转熔断自动关闭 —— 没有任何别的兜底
+      snapshotWorktree: async () => ({ kind: 'unavailable', reason: '不是 git 仓库' }),
+      diffTrees: async () => null,
+      diffText: async () => ''
+    }
+  })
+  mock.module('./tamper-scan.mjs', {
+    namedExports: { scanRound: async () => [], describeFindings: () => '' }
+  })
+  mock.module('./goal-claim.mjs', {
+    namedExports: {
+      readClaim: async () => null,
+      clearClaim: async () => {},
+      claimPath: () => '/tmp/c'
+    }
+  })
+  mock.module('./continuation-prompt.mjs', {
+    namedExports: {
+      renderPrompt: async () => '提示词',
+      writePromptFile: async () => '/tmp/p',
+      promptPointerLine: () => 'x'
+    }
+  })
+  const mod = await import(`./goal-loop.mjs?minround=${Math.random()}`)
+  const started = Date.now()
+  await mod.runLoop(goal({ key: 'minround', budget: { maxTurns: 5, maxMinutes: 0 } }), {
+    report,
+    thresholds: { maxBlockedClaims: 2, maxStallRounds: 99, maxFalseClaims: 9 }
+  })
+  delete process.env.ORCA_GOAL_MIN_ROUND_MS
+  assert.equal(sent, 6, '5 轮 + 预算耗尽时的一条收尾提示')
+  assert.ok(
+    Date.now() - started >= 5 * 60,
+    `5 轮至少要占 5 × 最短间隔,实际 ${Date.now() - started}ms`
+  )
+})

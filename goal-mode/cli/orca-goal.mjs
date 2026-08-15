@@ -7,7 +7,7 @@
 import { promises as fs, createReadStream } from 'node:fs'
 import path from 'node:path'
 import readline from 'node:readline/promises'
-import { isProcessAlive, spawnDetached, stopProcess } from './detached-driver.mjs'
+import { isOurDriver, isProcessAlive, spawnDetached, stopProcess } from './detached-driver.mjs'
 import { installCrashGuard } from './driver-crash-guard.mjs'
 import { notifyDesktop } from './desktop-notification.mjs'
 import { loadGoalConfig } from './goal-config-file.mjs'
@@ -120,6 +120,20 @@ function positive(name, value) {
   return n
 }
 
+/**
+ * 驱动真的在跑吗。
+ * 只看 pid 存活不够:锁文件残留 + pid 复用会让一个无关进程被当成驱动,
+ * 于是 status 报「在跑」、start/resume 被拒,目标彻底卡死,只能手删锁文件。
+ * 核不出来时(平台不支持、权限不够)按「在跑」处理,保守一点不误开第二个驱动。
+ */
+async function driverIsRunning(key) {
+  const pid = await readLockPid(key)
+  if (!isProcessAlive(pid)) {
+    return false
+  }
+  return isOurDriver(pid, key) !== false
+}
+
 function parseFlags(args) {
   const flags = { check: [] }
   for (let i = 0; i < args.length; i++) {
@@ -213,7 +227,7 @@ async function start(flags, rawArgs) {
 
   const key = goalKey(terminal.handle)
   const existing = await readGoal(key)
-  if (existing?.state === 'active' && isProcessAlive(await readLockPid(key))) {
+  if (existing?.state === 'active' && (await driverIsRunning(key))) {
     throw new Error(
       `该终端已有在跑的目标(${existing.turns} 轮)。先 \`orca-goal stop --terminal ${terminal.handle}\``
     )
@@ -425,7 +439,7 @@ async function resume(flags, rawArgs = []) {
   if (!existing) {
     throw new Error('这个终端没有目标记录,请用 `orca-goal start` 新建')
   }
-  if (isProcessAlive(await readLockPid(key))) {
+  if (await driverIsRunning(key)) {
     throw new Error('已经有驱动进程在跑这个目标了')
   }
 
@@ -578,13 +592,21 @@ async function stop(flags) {
   }
   const key = goalKey(flags.terminal)
   const pid = await readLockPid(key)
-  const result = await stopProcess(pid)
+  const result = await stopProcess(pid, { key })
   await markAborted(key)
-  console.log(
-    result === 'not-running'
-      ? '没有在跑的驱动进程。'
-      : `驱动进程已${result === 'killed' ? '强制终止' : '停止'}(pid ${pid})。`
-  )
+  if (result === 'not-ours') {
+    // 锁文件残留 + pid 复用:这个 pid 现在指向别的进程。宁可不停也不能杀错人。
+    console.log(
+      `锁文件里记的 pid ${pid} 现在是另一个进程,不是这个目标的驱动 —— 没有对它做任何事。\n` +
+        '这通常是上一次驱动被强杀后锁文件残留造成的。记录已标为中断,可以直接 resume。'
+    )
+  } else {
+    console.log(
+      result === 'not-running'
+        ? '没有在跑的驱动进程。'
+        : `驱动进程已${result === 'killed' ? '强制终止' : '停止'}(pid ${pid})。`
+    )
+  }
   console.log('目标记录保留;要删掉用 `orca-goal forget`。')
   return 0
 }

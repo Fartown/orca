@@ -270,3 +270,41 @@ test('认领文件是目录 / 超大 / 大写开头,都不该被当成完成声�
   assert.equal((await readClaim('d')).kind, 'complete')
   await fs.rm(home, { recursive: true, force: true })
 })
+
+test('锁文件里的 pid 被复用时,不能对无关进程动手', async () => {
+  // 锁文件只在干净退出时删除;SIGKILL / 断电 / forget 之后残留,重启后 pid 空间重排。
+  // 实测复现过:status 报「驱动在跑」、start 被拒,而 stop 把一个无关进程 SIGTERM + SIGKILL。
+  const { isOurDriver, stopProcess } = await import('./detached-driver.mjs')
+  const { spawn } = await import('node:child_process')
+  const victim = spawn('sleep', ['30'], { detached: true, stdio: 'ignore' })
+  victim.unref()
+  try {
+    assert.equal(isOurDriver(victim.pid, 'term_whatever'), false, 'sleep 不是我们的驱动')
+    assert.equal(await stopProcess(victim.pid, { key: 'term_whatever' }), 'not-ours')
+    assert.equal(victim.killed, false)
+    // 自己这个进程的命令行里有 node,但没有目标 key —— 同样不该被认成驱动
+    assert.equal(isOurDriver(process.pid, 'term_whatever'), false)
+  } finally {
+    try {
+      process.kill(victim.pid)
+    } catch {
+      /* 已经没了 */
+    }
+  }
+})
+
+test('orca CLI 的命令名按平台走,和上游那份定义一致', async () => {
+  // Linux 上它叫 orca-ide(避开 GNOME Orca 读屏软件),Windows 上是 .cmd 垫片。
+  // 写死 'orca' 的话 Linux 开箱即坏,报错还只说「找不到命令」。
+  const src = await fs.readFile(new URL('./orca-terminal.mjs', import.meta.url), 'utf8')
+  assert.match(src, /linux[\s\S]{0,80}orca-ide/, 'Linux 分支要在')
+  assert.match(src, /win32[\s\S]{0,80}orca\.cmd/, 'Windows 分支要在')
+  // 和上游定义对齐:上游改了名字这条断言会挂,提醒同步
+  const upstream = await fs.readFile(
+    new URL('../../src/shared/orca-cli-command-name.ts', import.meta.url),
+    'utf8'
+  )
+  for (const name of ['orca-ide', 'orca.cmd']) {
+    assert.ok(upstream.includes(name), `上游应该仍然用 ${name}`)
+  }
+})

@@ -24,6 +24,9 @@ const OBSERVE_GRACE_MS = num('ORCA_GOAL_OBSERVE_GRACE_MS', 3 * 60_000)
 // 轮次里出错后重试多久才认输。给得比观察宽限长:这里的错可能要人去修
 // (磁盘满了、模板文件没了、git 仓库坏了),留出察觉和补救的窗口。
 const ROUND_ERROR_GRACE_MS = num('ORCA_GOAL_ROUND_ERROR_GRACE_MS', 10 * 60_000)
+// 一轮最短要占多久。判定再怎么误判,也不该出现「几秒一轮」——
+// 那会在几秒内烧光轮数预算,并向终端连灌几十条提示词。实测复现过:6 秒跑完 20 轮。
+const MIN_ROUND_MS = num('ORCA_GOAL_MIN_ROUND_MS', 15_000)
 const START_MS = num('ORCA_GOAL_START_MS', 300_000) // 注入后多久还没有任何动静才认定没收到
 // 只在 agent「不在干活」时才计的卡死上限。它还在跑就一直等 —— 大任务里一个 turn
 // 连续调几十次工具跑上两三小时是正常的,拿单轮上限去砍它等于把干得好好的活腰斩。
@@ -65,7 +68,6 @@ export async function runLoop(goal, { report, thresholds, attach = false }) {
         report.warn(`空转熔断已关闭:${before.reason}`)
       }
 
-      const sentAt = Date.now()
       let inject = true
       if (attachPending) {
         attachPending = false
@@ -88,6 +90,10 @@ export async function runLoop(goal, { report, thresholds, attach = false }) {
         await sendText(current.terminalHandle, text, { enter: true })
         injectedTurn = turn
       }
+      // 计时起点取在**发送之后**:取在之前的话,落在「取时刻 → 发送返回」这个窗口里的
+      // 上一轮结束事件会被当成本轮的结束,一轮几秒就「跑完」,轮数预算几秒烧光、
+      // 终端被连灌几十条提示词。git 工作区还有空转熔断兜底,文件夹工作区完全没有。
+      const sentAt = Date.now()
 
       // 预算按「已经花掉的活跃时长」算,不是按日历。本轮最多还能跑 remaining。
       const remainingMs = current.budget.maxMinutes
@@ -95,6 +101,12 @@ export async function runLoop(goal, { report, thresholds, attach = false }) {
         : Infinity
       const goalDeadline = remainingMs === Infinity ? Infinity : sentAt + remainingMs
       const outcome = await waitForRoundEnd(current.terminalHandle, sentAt, report, goalDeadline)
+      // 判定说结束了,但这一轮短得不像话 —— 多半是把上一轮的结束事件当成了本轮的。
+      // 补足最短间隔再进下一轮,别让误判把预算和终端一起冲垮。
+      const roundMs = Date.now() - sentAt
+      if (outcome.ok && roundMs < MIN_ROUND_MS) {
+        await sleep(MIN_ROUND_MS - roundMs)
+      }
       // 这一轮实际花了多久,立刻记账 —— 下面每个出口分支都从 current 派生,记在这里才不会漏。
       current = { ...current, activeMs: activeMsOf(current) + (Date.now() - sentAt) }
       if (outcome.budgetHit) {
