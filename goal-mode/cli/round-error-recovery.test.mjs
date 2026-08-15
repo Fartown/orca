@@ -142,27 +142,75 @@ test('验收判词立刻落盘 —— 后面哪一步挂了都不该把它赔进
       describeFailures: () => ({ list: '- `judge-1` 退出码 1', output: 'FAIL 少了圆角' })
     }
   })
-  // 判词落盘之后、构造注入之前挂掉 —— 正是事故发生的位置
+  // 首轮注入正常,验收驳回后的那次注入才挂 —— 正是事故发生的位置
+  let renders = 0
   mock.module('./continuation-prompt.mjs', {
     namedExports: {
       renderPrompt: async () => {
-        throw new Error('ENOENT: rejected-completion.md')
+        if (++renders > 1) {
+          throw new Error('ENOENT: rejected-completion.md')
+        }
+        return '首轮提示词'
       },
       writePromptFile: async () => '/tmp/p',
       promptPointerLine: () => 'x'
     }
   })
   const mod = await import(`./goal-loop.mjs?verdict=${Math.random()}`)
-  // attach:首轮不注入 —— 事故的形状是「验收判完、要注入驳回提示词时挂掉」,
-  // 若首轮就卡在注入上,根本走不到验收那一步。
   await mod.runLoop(goal({ acceptance: { commands: ['judge-1'], timeoutMs: 1000, cwd: '/tmp' } }), {
     report,
-    thresholds: { maxBlockedClaims: 2, maxStalls: 2, maxFalseClaims: 9 },
-    attach: true
+    thresholds: { maxBlockedClaims: 2, maxStalls: 2, maxFalseClaims: 9 }
   })
 
   const saved = await readFile(path.join(HOME, 'verdict', 'k-turn1.md'), 'utf8')
   assert.match(saved, /FAIL 少了圆角/, '判词全文要留在 verdict/ 里')
   const log = await readFile(path.join(HOME, 'log', 'k.jsonl'), 'utf8')
   assert.match(log, /acceptanceFailed/, '逐轮日志要记下驳回摘要,面板才说得出为什么')
+})
+
+test('接管时 agent 已空闲 —— 要正常注入,不能干等一个不存在的轮次', async () => {
+  // 真事故:上一轮声称完成后 agent 就闲着了,resume 的 attach 干等 300 秒被判「毫无动静」受阻。
+  mock.reset()
+  let sent = 0
+  mock.module('./orca-terminal.mjs', {
+    namedExports: {
+      sendText: async () => {
+        sent++
+      }
+    }
+  })
+  mock.module('./terminal-activity.mjs', {
+    namedExports: { observeAgent: async () => ({}), classifyRound: () => 'finished' } // 一直空闲
+  })
+  mock.module('./git-snapshot.mjs', {
+    namedExports: {
+      snapshotWorktree: async () => ({ kind: 'git', tree: 't', head: 'h' }),
+      diffTrees: async () => ({ source: [], test: [] })
+    }
+  })
+  mock.module('./tamper-scan.mjs', {
+    namedExports: { scanRound: async () => [], describeFindings: () => '' }
+  })
+  mock.module('./goal-claim.mjs', {
+    namedExports: {
+      readClaim: async () => null,
+      clearClaim: async () => {},
+      claimPath: () => '/tmp/c'
+    }
+  })
+  mock.module('./continuation-prompt.mjs', {
+    namedExports: {
+      renderPrompt: async () => '提示词',
+      writePromptFile: async () => '/tmp/p',
+      promptPointerLine: () => 'x'
+    }
+  })
+  const mod = await import(`./goal-loop.mjs?idle=${Math.random()}`)
+  const final = await mod.runLoop(goal({ key: 'idle', budget: { maxTurns: 1, maxMinutes: 0 } }), {
+    report,
+    thresholds: { maxBlockedClaims: 2, maxStalls: 9 },
+    attach: true
+  })
+  assert.ok(sent > 0, 'attach 遇到空闲 agent 时必须注入,而不是干等')
+  assert.notEqual(final.state, 'blocked', '不该被判成受阻')
 })

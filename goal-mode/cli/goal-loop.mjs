@@ -60,10 +60,19 @@ export async function runLoop(goal, { report, thresholds, attach = false }) {
 
       await clearClaim(current.key)
       const sentAt = Date.now()
+      let inject = true
       if (attachPending) {
         attachPending = false
-        report.attach(turn)
-      } else {
+        // attach 的前提是「它手上真有一轮在跑」。agent 已经空闲时干等是等一个不存在的轮次,
+        // START_MS 一到就被判「毫无动静」受阻 —— 真发生过:上一轮声称完成后它就闲着了。
+        inject = !(await agentIsBusy(current.terminalHandle))
+        if (inject) {
+          report.warn('接管时 agent 已空闲,没有在跑的轮次可挂 —— 改为正常注入')
+        } else {
+          report.attach(turn)
+        }
+      }
+      if (inject) {
         const text = await buildInjection(current, turn, pending)
         report.round(turn, current.budget.maxTurns, pending.name)
         await sendText(current.terminalHandle, text, { enter: true })
@@ -202,6 +211,15 @@ export async function runLoop(goal, { report, thresholds, attach = false }) {
       attachPending = injectedTurn === turn
       await sleep(POLL_MS)
     }
+  }
+}
+
+/** 此刻它在动吗。观察不到就当它闲着 —— 注入总比干等一个不存在的轮次强。 */
+async function agentIsBusy(handle) {
+  try {
+    return classifyRound(await observeAgent(handle), Date.now(), QUIET_MS) === 'busy'
+  } catch {
+    return false
   }
 }
 
