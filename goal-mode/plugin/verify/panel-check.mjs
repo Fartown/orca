@@ -81,14 +81,14 @@ async function measure(label) {
 
 await openPanel()
 const light = await measure('浅色')
-await page.screenshot({ path: '.docs/goal-mode-plugin/mockup/panel-light.png' })
+await page.screenshot({ path: 'goal-mode/docs/mockup/panel-light.png' })
 
 // 改真设置,不是往 <html> 上贴 class —— 贴的 class 会被随后的 reload 冲掉。
 await page.evaluate(() => window.api.settings.set({ theme: 'dark' }))
 await page.waitForTimeout(1500)
 await openPanel()
 const dark = await measure('暗色')
-await page.screenshot({ path: '.docs/goal-mode-plugin/mockup/panel-dark.png' })
+await page.screenshot({ path: 'goal-mode/docs/mockup/panel-dark.png' })
 
 const fail = []
 for (const [name, m] of [

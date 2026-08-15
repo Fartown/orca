@@ -9,7 +9,7 @@
 装个别名:
 
 ```bash
-alias orca-goal='node /path/to/.docs/goal-mode-plugin/impl/orca-goal.mjs'
+alias orca-goal='node /path/to/goal-mode/cli/orca-goal.mjs'
 ```
 
 最短路径,和 Codex 的 `/goal` 一样只给一句目标。不带 `--terminal` 会列出终端让你选,

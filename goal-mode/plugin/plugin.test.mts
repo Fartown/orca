@@ -3,14 +3,11 @@ import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import {
-  pluginManifestSchema,
-  PLUGIN_EVENT_NAMES
-} from '../../../src/shared/plugins/plugin-manifest'
-import { PLUGIN_CAPABILITY_KINDS } from '../../../src/shared/plugins/plugin-capabilities'
-import { PANEL_DESIGN_TOKEN_ALLOWLIST } from '../../../src/shared/plugins/plugin-panel-shell'
-import { PLUGIN_HOST_API_V0 } from '../../../src/shared/plugins/plugin-host-api'
-import { PLUGIN_WORKER_INVOKE_TIMEOUT_MS } from '../../../src/shared/plugins/plugin-host-protocol'
+import { pluginManifestSchema, PLUGIN_EVENT_NAMES } from '../../src/shared/plugins/plugin-manifest'
+import { PLUGIN_CAPABILITY_KINDS } from '../../src/shared/plugins/plugin-capabilities'
+import { PANEL_DESIGN_TOKEN_ALLOWLIST } from '../../src/shared/plugins/plugin-panel-shell'
+import { PLUGIN_HOST_API_V0 } from '../../src/shared/plugins/plugin-host-api'
+import { PLUGIN_WORKER_INVOKE_TIMEOUT_MS } from '../../src/shared/plugins/plugin-host-protocol'
 
 const HERE = import.meta.dirname
 const read = (name: string): string => readFileSync(path.join(HERE, name), 'utf8')
@@ -748,7 +745,7 @@ describe('worker 行为', () => {
 
 describe('panel 样式与宿主一致', () => {
   const html = read('panel.html')
-  const appCss = readFileSync(path.join(HERE, '../../../src/renderer/src/assets/main.css'), 'utf8')
+  const appCss = readFileSync(path.join(HERE, '../../src/renderer/src/assets/main.css'), 'utf8')
 
   it('滚动条逐字照抄 main.css 的 .scrollbar-sleek', () => {
     const css = appCss.replace(/\/\*[\s\S]*?\*\//g, '')
