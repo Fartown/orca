@@ -577,15 +577,45 @@
         return n
       }
 
+      /**
+       * 一条验收命令用一行话说清它判什么。
+       * 裁判型验收之间通常只差中间那个判据文件名,其余全是重复样板 ——
+       * 原样铺四条几乎一模一样的长命令,真正有信息量的那一段反而被折行冲散了。
+       * 完整命令留在 title 里,需要时鼠标停一下就能看。
+       */
+      function gateLabel(cmd) {
+        var judge = cmd.match(/orca-goal-judge\b/)
+        if (!judge) {
+          return null
+        }
+        var agent = (cmd.match(/--agent\s+(\S+)/) || [])[1] || '裁判'
+        var file = (cmd.match(/--criteria-file\s+(\S+)/) || [])[1]
+        var name = file ? file.split('/').pop().replace(/\.md$/, '') : '内联判据'
+        return agent + ' 判 ' + name
+      }
+
       function renderGate(commands) {
         el['gate-list'].textContent = ''
         if (!commands.length) {
           el['gate-list'].appendChild(node('div', 'muted', '没有配验收 —— 它说做完了就是做完了'))
           return
         }
-        commands.forEach(function (c) {
-          el['gate-list'].appendChild(node('div', 'block mono', c))
+        commands.forEach(function (c, i) {
+          var label = gateLabel(c)
+          var row = node('div', label ? 'row' : 'block mono', label ? null : c)
+          row.title = c // 完整命令
+          if (label) {
+            row.appendChild(node('span', 'muted', String(i + 1) + '.'))
+            row.appendChild(node('span', null, label))
+          }
+          el['gate-list'].appendChild(row)
         })
+        if (commands.length > 1) {
+          // 闸门是串行的:第一条不过,后面的根本不会跑。不说清楚会让人以为每轮都拿到四份清单。
+          el['gate-list'].appendChild(
+            node('p', 'hint', '按顺序判,第 1 条不通过就停下 —— 后面几条要等它过了才会跑')
+          )
+        }
       }
 
       // 每轮注入的是哪种提示词 —— 这是「守卫做了什么」最直接的证据。

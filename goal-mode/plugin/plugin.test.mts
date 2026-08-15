@@ -414,6 +414,49 @@ describe('panel 行为', () => {
     expect(read('panel.html')).not.toContain('从目标生成')
   })
 
+  it('裁判型验收显示成一句话,不铺一排几乎一样的长命令', async () => {
+    const judge = (n: string) =>
+      `orca-goal-judge --agent codex --criteria-file /Users/x/.orca-goal/criteria/${n}.md --cwd /Users/x/repo --timeout 1500`
+    results.set('storage.get', {
+      ok: true,
+      value: {
+        value: {
+          updatedAt: Date.now(),
+          goals: [
+            {
+              ...goal,
+              acceptance: { commands: [judge('figma-1-design-system'), judge('figma-2-desktop')] }
+            }
+          ]
+        }
+      }
+    })
+    mountPanel()
+    await flush()
+    const text = document.getElementById('gate-list')!.textContent!
+    expect(text).toContain('codex 判 figma-1-design-system')
+    expect(text).toContain('codex 判 figma-2-desktop')
+    // 样板不该出现在正文里(完整命令留在 title)
+    expect(text).not.toContain('--criteria-file')
+    // 串行门禁要说清楚,否则会让人以为每轮拿到全部清单
+    expect(text).toContain('第 1 条不通过就停下')
+  })
+
+  it('非裁判型的验收命令仍然原样显示', async () => {
+    results.set('storage.get', {
+      ok: true,
+      value: {
+        value: {
+          updatedAt: Date.now(),
+          goals: [{ ...goal, acceptance: { commands: ['pnpm test'] } }]
+        }
+      }
+    })
+    mountPanel()
+    await flush()
+    expect(document.getElementById('gate-list')!.textContent).toContain('pnpm test')
+  })
+
   it('裁判分段控件可切换', async () => {
     results.set('storage.get', { ok: true, value: { value: { goals: [] } } })
     mountPanel()
