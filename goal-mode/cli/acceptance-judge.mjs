@@ -174,7 +174,14 @@ async function main(argv) {
 
     const verdict = await agent.read({ ...result, outFile }).catch(() => null)
     if (!verdict) {
-      process.stdout.write(`验收裁判(${agentName})没有给出可解析的判词\n`)
+      // 把裁判自己的错误交出去。早先这里只说一句「没有给出可解析的判词」,
+      // 而 stderr 里明明写着原因(模型不可用、没登录、额度用尽)—— 那条信息一丢,
+      // 现场看到的就只是「验收未通过」,会被当成 agent 没做完,实际是裁判根本没跑起来。
+      const detail = (result.stderr || result.stdout || '').trim().slice(-800)
+      const why = detail ? `,它自己报的错:\n${detail}` : ''
+      process.stdout.write(
+        `验收裁判(${agentName})没有给出可解析的判词(退出码 ${result.code})${why}\n`
+      )
       return 1
     }
     process.stdout.write(`${verdict}\n`)

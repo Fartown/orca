@@ -88,3 +88,19 @@ test('超长验收输出要保住真正的结尾 —— 失败原因几乎总在
   assert.match(out, /FAILED: src\/login\.ts:42/, '真正的失败行必须保住')
   assert.match(out, /已截断/, '同时要标明中间被截断了')
 })
+
+test('裁判自己跑挂时要把它报的错交出来,而不是只说「没有判词」', async () => {
+  // 真事故:codex 因为配置的模型账号不可用,每次调用 7 秒内 400 失败。
+  // 判词里只有一句「没有给出可解析的判词」,现场看起来像是 agent 没做完 ——
+  // 而真实原因(模型不可用)就在 stderr 里,被吞掉了。
+  const { execFile } = await import('node:child_process')
+  const { promisify } = await import('node:util')
+  const run = promisify(execFile)
+  const judge = new URL('./acceptance-judge.mjs', import.meta.url).pathname
+  // ls 收到这组参数会报错到 stderr、非零退出,且不会写出判词文件 —— 正好复现那条路径
+  const result = await run(process.execPath, [judge, '--agent', 'ls', '--criteria', 'x'], {
+    env: { ...process.env, ORCA_GOAL_JUDGE_TEST_AGENT: 'ls' }
+  }).catch((e) => e)
+  assert.match(result.stdout, /没有给出可解析的判词/)
+  assert.match(result.stdout, /它自己报的错/, '必须带上裁判自己的错误输出')
+})
