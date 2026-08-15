@@ -21,7 +21,8 @@ async function loadLoop({ renderFails }) {
   mock.module('./git-snapshot.mjs', {
     namedExports: {
       snapshotWorktree: async () => ({ kind: 'git', tree: 't', head: 'h' }),
-      diffTrees: async () => ({ source: [], test: [] })
+      diffTrees: async () => ({ source: [], test: [] }),
+      diffText: async () => ''
     }
   })
   mock.module('./tamper-scan.mjs', {
@@ -120,7 +121,8 @@ test('验收判词立刻落盘 —— 后面哪一步挂了都不该把它赔进
   mock.module('./git-snapshot.mjs', {
     namedExports: {
       snapshotWorktree: async () => ({ kind: 'git', tree: 't', head: 'h' }),
-      diffTrees: async () => ({ source: ['a.ts'], test: [] })
+      diffTrees: async () => ({ source: ['a.ts'], test: [] }),
+      diffText: async () => ''
     }
   })
   mock.module('./tamper-scan.mjs', {
@@ -185,7 +187,8 @@ test('接管时 agent 已空闲 —— 要正常注入,不能干等一个不存�
   mock.module('./git-snapshot.mjs', {
     namedExports: {
       snapshotWorktree: async () => ({ kind: 'git', tree: 't', head: 'h' }),
-      diffTrees: async () => ({ source: [], test: [] })
+      diffTrees: async () => ({ source: [], test: [] }),
+      diffText: async () => ''
     }
   })
   mock.module('./tamper-scan.mjs', {
@@ -229,7 +232,8 @@ test('终端一时断开不该终结目标 —— Orca 重启一下就死太脆�
   mock.module('./git-snapshot.mjs', {
     namedExports: {
       snapshotWorktree: async () => ({ kind: 'git', tree: 't', head: 'h' }),
-      diffTrees: async () => ({ source: [], test: [] })
+      diffTrees: async () => ({ source: [], test: [] }),
+      diffText: async () => ''
     }
   })
   mock.module('./tamper-scan.mjs', {
@@ -256,4 +260,75 @@ test('终端一时断开不该终结目标 —— Orca 重启一下就死太脆�
   })
   assert.notEqual(final.state, 'blocked', '断开恢复后应该继续跑,而不是判受阻结束')
   assert.ok(observations > 3, '应该重试过')
+})
+
+test('改了验证方式时,把 diff 通过环境变量交给裁判', async () => {
+  // 守卫不替人判断这次改动是修错还是作弊 —— 它只负责把改动摆到裁判面前。
+  mock.reset()
+  let seenEnv = null
+  mock.module('./orca-terminal.mjs', { namedExports: { sendText: async () => {} } })
+  mock.module('./terminal-activity.mjs', {
+    namedExports: { observeAgent: async () => ({}), classifyRound: () => 'finished' }
+  })
+  mock.module('./git-snapshot.mjs', {
+    namedExports: {
+      snapshotWorktree: async () => ({ kind: 'git', tree: 't', head: 'h' }),
+      diffTrees: async () => ({ source: [], test: ['a.test.ts'] }),
+      diffText: async () => 'diff --git a/a.test.ts b/a.test.ts\n-  expect(x).toBe(1)'
+    }
+  })
+  mock.module('./tamper-scan.mjs', {
+    namedExports: {
+      scanRound: async () => [
+        {
+          kind: 'assertions-removed',
+          key: 'k',
+          label: '删掉了断言',
+          detail: 'a.test.ts',
+          challenge: true
+        }
+      ],
+      describeFindings: () => 'x'
+    }
+  })
+  mock.module('./goal-claim.mjs', {
+    namedExports: {
+      readClaim: async () => ({ kind: 'complete', summary: '做完了' }),
+      clearClaim: async () => {},
+      claimPath: () => '/tmp/c'
+    }
+  })
+  mock.module('./acceptance-gate.mjs', {
+    namedExports: {
+      runAcceptance: async (_a, opts) => {
+        seenEnv = opts && opts.env
+        return { passed: true, results: [{ command: 'judge', ok: true, code: 0, output: 'PASS' }] }
+      },
+      describeFailures: () => ({ list: '', output: '' })
+    }
+  })
+  mock.module('./continuation-prompt.mjs', {
+    namedExports: {
+      renderPrompt: async () => '提示词',
+      writePromptFile: async () => '/tmp/p',
+      promptPointerLine: () => 'x'
+    }
+  })
+  const mod = await import(`./goal-loop.mjs?gate=${Math.random()}`)
+  await mod.runLoop(
+    goal({ key: 'gate', acceptance: { commands: ['judge'], timeoutMs: 1000, cwd: '/tmp' } }),
+    {
+      report,
+      thresholds: {
+        maxBlockedClaims: 2,
+        maxStallRounds: 9,
+        maxFalseClaims: 9,
+        maxTamperChallenges: 9
+      }
+    }
+  )
+  assert.ok(seenEnv && seenEnv.ORCA_GOAL_GATE_CHANGES, '验收要拿到门禁改动文件')
+  const body = await readFile(seenEnv.ORCA_GOAL_GATE_CHANGES, 'utf8')
+  assert.match(body, /删掉了断言/)
+  assert.match(body, /expect\(x\)\.toBe\(1\)/, 'diff 原文要在里面')
 })

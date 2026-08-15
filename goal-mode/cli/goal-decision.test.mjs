@@ -265,65 +265,43 @@ const claimOk = {
   acceptance: { passed: true, results: [] }
 }
 
-test('验收绿了但有未质证的削弱痕迹 → 不结束,先挡回去问一轮', () => {
-  const { action, goal } = decide(makeGoal({ tamperFindings: [tamper()] }), obs(claimOk))
-  assert.equal(action.type, 'continue')
-  assert.equal(action.prompt, 'tamper-challenge')
-  assert.equal(goal.tamperChallenges, 1)
-  assert.ok(goal.tamperFindings.every((f) => f.acknowledged))
+// 篡改扫描的定位是「让改动可见」,不是替人下判决。
+// 断言、门禁、ignore 规则本身就可能是错的 —— 人发现写错了也会直接删掉它,那是正当修复。
+// 静态规则区分不了「为蒙混而改松」和「因为它本来就错而改掉」,差别在于有没有正当理由,
+// 而能判断理由的只有裁判。所以改动的 diff 随验收一起交给裁判(见 goal-loop 的 writeGateChanges),
+// 裁判按原始意图判过之后仍说通过,守卫就没有理由再挡。
+test('改了验证方式但裁判仍判通过 → 放行,不再自己挡一轮', () => {
+  const { action, goal } = decide(makeGoal(), obs({ ...claimOk, findings: [tamper()] }))
+  assert.equal(action.state, 'complete')
+  assert.equal(goal.tamperChallenges, 1, '仍然记账,只是不挡')
 })
 
-test('质证过一轮后再声称完成 → 放行', () => {
-  const g = makeGoal({ tamperFindings: [tamper({ acknowledged: true })], tamperChallenges: 1 })
-  assert.equal(decide(g, obs(claimOk)).action.state, 'complete')
+test('反复在改验证方式的同时通过验收 → 叫人来看,而不是判 agent 受阻', () => {
+  const g = makeGoal({ tamperChallenges: DEFAULT_THRESHOLDS.maxTamperChallenges })
+  const { action, goal } = decide(g, obs({ ...claimOk, findings: [tamper()] }))
+  assert.equal(action.type, 'await-user')
+  assert.match(action.reason, /削弱验收/)
+  assert.equal(goal.state, 'active', '不终结,等人')
 })
 
-test('被挡回后仍在削弱,超过上限 → 判定受阻', () => {
-  const g = makeGoal({
-    tamperFindings: [tamper({ acknowledged: true }), tamper()],
-    tamperChallenges: DEFAULT_THRESHOLDS.maxTamperChallenges
-  })
-  const { action } = decide(g, obs(claimOk))
-  assert.equal(action.type, 'finish')
-  assert.equal(action.state, 'blocked')
+test('只改测试没削弱(challenge=false)不触发任何记账', () => {
+  const g = makeGoal()
+  const { action, goal } = decide(
+    g,
+    obs({ ...claimOk, findings: [tamper({ kind: 'test-only-edit', challenge: false })] })
+  )
+  assert.equal(action.state, 'complete')
+  assert.equal(goal.tamperChallenges || 0, 0)
 })
 
-test('只改测试没削弱(challenge=false)不挡完成', () => {
-  const g = makeGoal({ tamperFindings: [tamper({ kind: 'test-only-edit', challenge: false })] })
-  assert.equal(decide(g, obs(claimOk)).action.state, 'complete')
-})
-
-// 循环每轮调两次 decide,两次都从本轮起点的 goal 出发(先判要不要验收,再带验收结果判)。
-// 曾经在这里漏掉本轮发现,导致挡板对「同一轮里既削弱又声称完成」完全失效。
-test('同一轮里既留下削弱痕迹又声称完成 → 挡板必须生效', () => {
+// 循环每轮调两次 decide(先判要不要验收,再带验收结果判),两次都从本轮起点出发。
+test('两次调用不会重复累加本轮的发现', () => {
   const goal = makeGoal()
   const findings = [tamper()]
   const first = decide(goal, obs({ sentinel: { kind: 'complete', summary: 's' }, findings }))
   assert.equal(first.action.type, 'verify')
-
   const second = decide(goal, obs({ ...claimOk, findings }))
-  assert.equal(second.action.type, 'continue')
-  assert.equal(second.action.prompt, 'tamper-challenge')
-  assert.equal(second.goal.tamperFindings.length, 1, '两次调用不应重复累加')
-})
-
-test('回应质证时又碰到同一处 → 不重复质证(否则质证套质证会误判受阻)', () => {
-  const f = tamper({ key: 'gate-config-edited:package.json' })
-  const round1 = decide(makeGoal(), obs({ ...claimOk, findings: [f] }))
-  assert.equal(round1.action.prompt, 'tamper-challenge')
-  assert.deepEqual(round1.goal.suppressedKeys, [f.key])
-
-  const round2 = decide(round1.goal, obs({ ...claimOk, findings: [f] }))
-  assert.equal(round2.action.state, 'complete', '同一处发现紧接着再出现不应再挡')
-})
-
-test('压制只管一轮 —— 隔一轮同一处又被削弱,仍然要质证', () => {
-  const f = tamper({ key: 'assertions-removed:a.test.js' })
-  const r1 = decide(makeGoal(), obs({ ...claimOk, findings: [f] }))
-  const r2 = decide(r1.goal, obs({ ...claimOk, findings: [f] })) // 被压制,放行
-  assert.deepEqual(r2.goal.suppressedKeys, [])
-  const r3 = decide(r2.goal, obs({ ...claimOk, findings: [f] }))
-  assert.equal(r3.action.prompt, 'tamper-challenge')
+  assert.equal(second.goal.tamperFindings.length, 1)
 })
 
 // 预算写 0 = 不限,和 Codex 默认的 unbounded 对齐。

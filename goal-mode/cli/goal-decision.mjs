@@ -90,27 +90,28 @@ export function decide(goal, obs, thresholds = DEFAULT_THRESHOLDS) {
     next.gateFailures = 0
 
     if (obs.acceptance.passed) {
-      // 验收绿了不等于验收还是原来那个验收。有未质证的削弱痕迹就先挡一轮。
-      const pending = next.tamperFindings.filter((f) => f.challenge && !f.acknowledged)
-      if (pending.length > 0) {
+      // 验收绿了不等于验收还是原来那个验收 —— 但守卫不该替人判断这次改动是修错还是作弊。
+      // 改动的 diff 已经随验收一起交给裁判了(见 goal-loop 的 writeGateChanges),
+      // 裁判按原始意图判过之后还说通过,守卫就没有理由再挡。
+      // 守卫在这里只做两件事:记录,以及在「反复削弱」这种模式出现时叫人。
+      const gateTouched = (obs.findings || []).filter((f) => f.challenge)
+      if (gateTouched.length > 0) {
         next.tamperChallenges = (goal.tamperChallenges || 0) + 1
-        next.tamperFindings = next.tamperFindings.map((f) => ({ ...f, acknowledged: true }))
-        next.suppressedKeys = pending.map((f) => f.key)
         if (next.tamperChallenges > thresholds.maxTamperChallenges) {
-          return finish(
-            next,
-            'blocked',
-            `被指出削弱验收后仍在继续,已挡回 ${thresholds.maxTamperChallenges} 次,停止循环`
-          )
-        }
-        return {
-          action: { type: 'continue', prompt: 'tamper-challenge', findings: pending },
-          goal: next
+          return {
+            action: {
+              type: 'await-user',
+              reason: `第 ${next.tamperChallenges} 次在改动验证方式的同时通过验收,需要人看一眼是不是在削弱验收`,
+              findings: gateTouched
+            },
+            goal: next
+          }
         }
       }
       return finish(next, 'complete', '验收通过', {
         verified: true,
-        summary: obs.sentinel.summary
+        summary: obs.sentinel.summary,
+        gateTouched: gateTouched.length || undefined
       })
     }
 

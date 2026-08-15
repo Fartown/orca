@@ -5,7 +5,7 @@ import { describeFailures, runAcceptance } from './acceptance-gate.mjs'
 import { promptPointerLine, renderPrompt, writePromptFile } from './continuation-prompt.mjs'
 import { claimPath, clearClaim, readClaim } from './goal-claim.mjs'
 import { decide } from './goal-decision.mjs'
-import { diffTrees, snapshotWorktree } from './git-snapshot.mjs'
+import { diffText, diffTrees, snapshotWorktree } from './git-snapshot.mjs'
 import { describeFindings, scanRound } from './tamper-scan.mjs'
 import { ROOT, appendLog, writeGoal } from './goal-state.mjs'
 import { sendText } from './orca-terminal.mjs'
@@ -140,8 +140,12 @@ export async function runLoop(goal, { report, thresholds, attach = false }) {
       if (verdict.action.type === 'verify') {
         report.verifying(current.acceptance.commands)
         const verifyStart = Date.now()
+        // 本轮动过「验证方式本身」的话,把真实 diff 摆给裁判,让它按原始意图裁决 ——
+        // 而不是由守卫用静态规则替人判断这次改动是修错还是作弊。
+        const gateChangesFile = await writeGateChanges(current, before, after, findings)
         acceptance = await runAcceptance(current.acceptance, {
-          onCommandStart: (c) => report.command(c)
+          onCommandStart: (c) => report.command(c),
+          env: gateChangesFile ? { ORCA_GOAL_GATE_CHANGES: gateChangesFile } : undefined
         })
         // 验收耗时同样计入预算:一次判定十几到四十分钟,是整条链上最贵的一步,
         // 不计的话唯一的总闸几乎不动 —— 实测 9 小时挂钟只记了 5 分钟。
@@ -251,6 +255,54 @@ export async function runLoop(goal, { report, thresholds, attach = false }) {
  * 所以 hook 状态不论新旧都要采信 —— 传 Date.now() 会让 stateStartedAt > sinceMs 恒假,
  * needs-user 那一档直接变成死代码,权限对话框会被误判成空闲。
  */
+/**
+ * 把本轮「决定检查怎么跑」的改动写成一份 diff 交给裁判。
+ * 不预设动机:断言、门禁、ignore 规则本身就可能是错的,人发现写错了也会直接删掉它 ——
+ * 静态规则区分不了「为蒙混而改松」和「因为它本来就错而改掉」,差别在于有没有正当理由,
+ * 而能判断理由的只有裁判。所以守卫只把改动摆出来,不替人下判决。
+ */
+async function writeGateChanges(goal, before, after, findings) {
+  const gate = (findings || []).filter((f) => f.challenge)
+  if (gate.length === 0) {
+    return null
+  }
+  const files = [...new Set(gate.flatMap((f) => String(f.detail || '').split(/,\s*/)))].filter(
+    Boolean
+  )
+  const diff = await diffText(goal.worktreePath, before, after, files).catch(() => '')
+  const body = gate.map((f) => `- ${f.label}:${f.detail}`).join('\n') + (diff ? `\n\n${diff}` : '')
+  const dir = path.join(ROOT, 'gate-changes')
+  await fs.mkdir(dir, { recursive: true })
+  const file = path.join(dir, `${goal.key}-turn${goal.turns + 1}.diff`)
+  await fs.writeFile(file, body, 'utf8')
+  return file
+}
+
+/** 停下来等人:不注入、不判卡死,直到 agent 重新动起来。 */
+async function waitForUser(handle, report) {
+  let announced = false
+  while (true) {
+    if (await isAgentBusy(handle)) {
+      report.warn('agent 重新开始动了,继续跑')
+      return
+    }
+    if (!announced) {
+      announced = true
+      report.warn('已停下等人 —— 在那个终端里回复 agent 即可继续,或用 orca-goal stop 收摊')
+    }
+    await sleep(POLL_MS)
+  }
+}
+
+/** 此刻它在动吗(与「注入安不安全」相反:这里只问忙不忙)。 */
+async function isAgentBusy(handle) {
+  try {
+    return classifyRound(await observeAgent(handle), 0, QUIET_MS) === 'busy'
+  } catch {
+    return false
+  }
+}
+
 async function safeToInject(handle) {
   try {
     const verdict = classifyRound(await observeAgent(handle), 0, QUIET_MS)
@@ -397,12 +449,6 @@ function nextPrompt(action, acceptance, changed, findings) {
   }
   if (action.prompt === 'rejected-completion') {
     return { name: 'rejected-completion', extra: failureVars(acceptance) }
-  }
-  if (action.prompt === 'tamper-challenge') {
-    return {
-      name: 'tamper-challenge',
-      extra: { tamperList: action.findings.map((f) => `- ${f.label}:${f.detail}`).join('\n') }
-    }
   }
   return { name: 'continuation', extra: evidenceVars(changed, findings) }
 }

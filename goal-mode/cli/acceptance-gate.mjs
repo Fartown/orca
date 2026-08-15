@@ -9,7 +9,7 @@ const MAX_CAPTURE = 4000
 // 再把它记成「agent 反复声称完成却过不了」就是把自己的故障写成对方的诚信问题。
 const EXIT_INCONCLUSIVE = 3
 
-export async function runAcceptance(acceptance, { onCommandStart } = {}) {
+export async function runAcceptance(acceptance, { onCommandStart, env } = {}) {
   const commands = acceptance?.commands || []
   const timeoutMs = acceptance?.timeoutMs ?? 900_000
   const cwd = acceptance?.cwd
@@ -17,7 +17,7 @@ export async function runAcceptance(acceptance, { onCommandStart } = {}) {
 
   for (const command of commands) {
     onCommandStart?.(command)
-    const result = await runOne(command, cwd, timeoutMs)
+    const result = await runOne(command, cwd, timeoutMs, env)
     results.push(result)
     if (!result.ok) {
       break
@@ -33,7 +33,7 @@ export async function runAcceptance(acceptance, { onCommandStart } = {}) {
   }
 }
 
-function runOne(command, cwd, timeoutMs) {
+function runOne(command, cwd, timeoutMs, env) {
   return new Promise((resolve) => {
     const startedAt = Date.now()
     let child
@@ -44,7 +44,7 @@ function runOne(command, cwd, timeoutMs) {
         // 明确不给 TTY:交互式提示会挂住,管道让它们直接失败退出。
         stdio: ['ignore', 'pipe', 'pipe'],
         detached: process.platform !== 'win32',
-        env: { ...process.env, CI: '1', ORCA_GOAL_ACCEPTANCE: '1' }
+        env: { ...process.env, CI: '1', ORCA_GOAL_ACCEPTANCE: '1', ...env }
       })
     } catch (err) {
       resolve({
