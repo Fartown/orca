@@ -120,9 +120,9 @@ export async function runLoop(goal, { report, thresholds, attach = false }) {
         throw new Error(outcome.failure)
       }
 
-      const after = await snapshotWorktree(current.worktreePath)
-      const changed = await diffTrees(current.worktreePath, before, after)
-      const findings = await scanRound(current.worktreePath, before, after, changed)
+      // 取证阶段:几乎免费,而且下游本来就支持空值(判定会自动关掉指纹类熔断)。
+      // 所以它失败时降级,不把整轮拖去重来 —— 重来会连带把验收也重跑一遍。
+      const { after, changed, findings } = await collectEvidence(current, before, report)
       for (const f of findings.filter((x) => x.challenge)) {
         report.tamper(f)
       }
@@ -139,25 +139,38 @@ export async function runLoop(goal, { report, thresholds, attach = false }) {
       let verdict = decide(current, obs, thresholds)
 
       if (verdict.action.type === 'verify') {
-        report.verifying(current.acceptance.commands)
-        const verifyStart = Date.now()
-        // 本轮动过「验证方式本身」的话,把真实 diff 摆给裁判,让它按原始意图裁决 ——
-        // 而不是由守卫用静态规则替人判断这次改动是修错还是作弊。
-        const gateChangesFile = await writeGateChanges(current, before, after, findings)
-        acceptance = await runAcceptance(current.acceptance, {
-          onCommandStart: (c) => report.command(c),
-          env: gateChangesFile ? { ORCA_GOAL_GATE_CHANGES: gateChangesFile } : undefined
-        })
-        // 验收耗时同样计入预算:一次判定十几到四十分钟,是整条链上最贵的一步,
-        // 不计的话唯一的总闸几乎不动 —— 实测 9 小时挂钟只记了 5 分钟。
-        current = { ...current, activeMs: activeMsOf(current) + (Date.now() - verifyStart) }
-        report.verified(acceptance)
-        // 判词立刻落盘,再去干别的。裁判一次跑十几到四十分钟,是整条链上最贵的一步,
-        // 却曾经是唯一不留痕的:它只在内存里待到「构造下一轮注入」那一刻。
-        // 那一步一旦失败(真发生过),这几十分钟就白跑,连「为什么没通过」都查不到。
-        await saveVerdict(current.key, turn, acceptance).catch((err) =>
-          report.warn(`判词落盘失败(不影响本轮):${err?.message || err}`)
-        )
+        // 验收是整条链上最贵的一步(一次判定十几到四十分钟)。
+        // 同一轮、同一份工作区内容重试时直接读回上次的结果 —— 早先落盘之后任何一步出错,
+        // 重试都会把四批裁判从头再跑一遍,而判词其实已经在盘上了。
+        const cached = reusableAcceptance(current, after)
+        if (cached) {
+          report.warn('复用本轮已经跑过的验收结果,不重跑裁判')
+          acceptance = cached
+        } else {
+          report.verifying(current.acceptance.commands)
+          const verifyStart = Date.now()
+          // 本轮动过「验证方式本身」的话,把真实 diff 摆给裁判,让它按原始意图裁决 ——
+          // 而不是由守卫用静态规则替人判断这次改动是修错还是作弊。
+          const gateChangesFile = await writeGateChanges(current, before, after, findings)
+          acceptance = await runAcceptance(current.acceptance, {
+            onCommandStart: (c) => report.command(c),
+            env: gateChangesFile ? { ORCA_GOAL_GATE_CHANGES: gateChangesFile } : undefined
+          })
+          // 验收耗时同样计入预算:一次判定十几到四十分钟,是整条链上最贵的一步,
+          // 不计的话唯一的总闸几乎不动 —— 实测 9 小时挂钟只记了 5 分钟。
+          current = { ...current, activeMs: activeMsOf(current) + (Date.now() - verifyStart) }
+          report.verified(acceptance)
+          // 判词立刻落盘,再去干别的。裁判一次跑十几到四十分钟,是整条链上最贵的一步,
+          // 却曾经是唯一不留痕的:它只在内存里待到「构造下一轮注入」那一刻。
+          // 那一步一旦失败(真发生过),这几十分钟就白跑,连「为什么没通过」都查不到。
+          await saveVerdict(current.key, turn, acceptance).catch((err) =>
+            report.warn(`判词落盘失败(不影响本轮):${err?.message || err}`)
+          )
+          current = {
+            ...current,
+            lastAcceptance: { tree: after.kind === 'git' ? after.tree : null, result: acceptance }
+          }
+        }
         verdict = decide(current, { ...obs, now: Date.now(), acceptance }, thresholds)
       }
 
@@ -256,6 +269,43 @@ export async function runLoop(goal, { report, thresholds, attach = false }) {
  * 所以 hook 状态不论新旧都要采信 —— 传 Date.now() 会让 stateStartedAt > sinceMs 恒假,
  * needs-user 那一档直接变成死代码,权限对话框会被误判成空闲。
  */
+/**
+ * 取证阶段:快照 + 树 diff + 篡改扫描。
+ * 失败时降级而不是让整轮重来 —— 下游对空值本来就有定义(判定会自动关掉指纹类熔断),
+ * 而重来会把同一轮里最贵的验收也一起重跑。
+ */
+async function collectEvidence(goal, before, report) {
+  try {
+    const after = await snapshotWorktree(goal.worktreePath)
+    const changed = await diffTrees(goal.worktreePath, before, after)
+    const findings = await scanRound(goal.worktreePath, before, after, changed)
+    return { after, changed, findings }
+  } catch (err) {
+    report.warn(`取证失败,本轮按「拿不到指纹」处理:${err?.message || err}`)
+    return {
+      after: { kind: 'unavailable', reason: String(err?.message || err) },
+      changed: null,
+      findings: []
+    }
+  }
+}
+
+/**
+ * 已经判过的工作区内容不必再判一次。
+ *
+ * 键只用树哈希,不用轮次:重试时轮次号已经推进(turns 在验收之前就写了),按轮次永远命中不了。
+ * 而按内容更准 —— 同一份内容的判词本来就还成立,内容一变缓存自然失效。
+ * 拿不到指纹(非 git 工作区)时不缓存:那时无法判断内容有没有变。
+ */
+function reusableAcceptance(goal, after) {
+  const last = goal.lastAcceptance
+  const tree = after.kind === 'git' ? after.tree : null
+  if (!last || !tree || last.tree !== tree) {
+    return null
+  }
+  return last.result
+}
+
 /**
  * 把本轮「决定检查怎么跑」的改动写成一份 diff 交给裁判。
  * 不预设动机:断言、门禁、ignore 规则本身就可能是错的,人发现写错了也会直接删掉它 ——

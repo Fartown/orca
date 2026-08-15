@@ -332,3 +332,84 @@ test('改了验证方式时,把 diff 通过环境变量交给裁判', async () =
   assert.match(body, /删掉了断言/)
   assert.match(body, /expect\(x\)\.toBe\(1\)/, 'diff 原文要在里面')
 })
+
+test('落盘失败重试时,不把几十分钟的验收重跑一遍', async () => {
+  // 验收是整条链上最贵的一步。早先 appendLog 一抛,重试就把四批裁判从头再跑,
+  // 而判词其实已经在盘上了。
+  mock.reset()
+  let judgeRuns = 0
+  let logWrites = 0
+  mock.module('./orca-terminal.mjs', { namedExports: { sendText: async () => {} } })
+  mock.module('./terminal-activity.mjs', {
+    namedExports: { observeAgent: async () => ({}), classifyRound: () => 'finished' }
+  })
+  mock.module('./git-snapshot.mjs', {
+    namedExports: {
+      snapshotWorktree: async () => ({ kind: 'git', tree: 'same-tree', head: 'h' }),
+      diffTrees: async () => ({ source: [], test: [] }),
+      diffText: async () => ''
+    }
+  })
+  mock.module('./tamper-scan.mjs', {
+    namedExports: { scanRound: async () => [], describeFindings: () => '' }
+  })
+  let claimReads = 0
+  mock.module('./goal-claim.mjs', {
+    namedExports: {
+      // 第 1 轮(含它的两次重试)声称完成;之后不再声称,免得第 2 轮又合法地跑一次验收
+      readClaim: async () => (++claimReads <= 3 ? { kind: 'complete', summary: '做完了' } : null),
+      clearClaim: async () => {},
+      claimPath: () => '/tmp/c'
+    }
+  })
+  mock.module('./acceptance-gate.mjs', {
+    namedExports: {
+      runAcceptance: async () => {
+        judgeRuns++
+        return {
+          passed: false,
+          results: [{ command: 'judge', ok: false, code: 1, output: 'FAIL' }]
+        }
+      },
+      describeFailures: () => ({ list: '- judge', output: 'FAIL' })
+    }
+  })
+  mock.module('./goal-state.mjs', {
+    namedExports: {
+      ROOT: HOME,
+      writeGoal: async () => {},
+      appendLog: async () => {
+        // 前两次写日志失败:重试必须复用验收结果,而不是重判
+        if (++logWrites <= 2) {
+          throw new Error('ENOSPC: no space left on device')
+        }
+      }
+    }
+  })
+  mock.module('./continuation-prompt.mjs', {
+    namedExports: {
+      renderPrompt: async () => '提示词',
+      writePromptFile: async () => '/tmp/p',
+      promptPointerLine: () => 'x'
+    }
+  })
+  const mod = await import(`./goal-loop.mjs?reuse=${Math.random()}`)
+  await mod.runLoop(
+    goal({
+      key: 'reuse',
+      budget: { maxTurns: 3, maxMinutes: 0 },
+      acceptance: { commands: ['judge'], timeoutMs: 1000, cwd: '/tmp' }
+    }),
+    {
+      report,
+      thresholds: {
+        maxBlockedClaims: 2,
+        maxStallRounds: 9,
+        maxFalseClaims: 9,
+        maxTamperChallenges: 9
+      }
+    }
+  )
+  assert.ok(logWrites >= 3, '应该重试过')
+  assert.equal(judgeRuns, 1, `裁判只该跑一次,实际跑了 ${judgeRuns} 次`)
+})
