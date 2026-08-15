@@ -747,15 +747,29 @@ describe('panel 样式与宿主一致', () => {
   const html = read('panel.html')
   const appCss = readFileSync(path.join(HERE, '../../../src/renderer/src/assets/main.css'), 'utf8')
 
-  it('滚动条照抄 main.css 的 .scrollbar-sleek,不用系统默认', () => {
-    // 面板是独立文档继承不到应用样式,不抄就和其它面板对不上。
-    const sleek = appCss.slice(appCss.indexOf('.scrollbar-sleek {'))
-    const thumbColor = sleek.match(/scrollbar-thumb \{[\s\S]*?background: ([^;]+);/)![1].trim()
-    expect(html).toContain('scrollbar-width: thin')
-    expect(html).toContain(thumbColor)
-    // 匹配真实声明而不是注释里的字眼:不留占位槽,内容不满时右边不空一条。
-    const withoutComments = html.replace(/\/\*[\s\S]*?\*\//g, '')
-    expect(withoutComments).not.toMatch(/scrollbar-gutter\s*:/)
+  it('滚动条逐字照抄 main.css 的 .scrollbar-sleek', () => {
+    const css = appCss.replace(/\/\*[\s\S]*?\*\//g, '')
+    const panel = html.replace(/<!--[\s\S]*?-->/g, '').replace(/\/\*[\s\S]*?\*\//g, '')
+    for (const decl of [
+      'scrollbar-width: thin',
+      'width: 12px',
+      'border: 3px solid transparent',
+      'background-clip: padding-box',
+      'min-height: 28px'
+    ]) {
+      expect(css).toContain(decl)
+      expect(panel).toContain(decl)
+    }
+    // 内容不满时右边不该空一条
+    expect(panel).not.toContain('scrollbar-gutter')
+  })
+
+  it('滚动的是内层容器,不是整个文档 —— 视口滚动条取 html 的规则,body 上的样式不生效', () => {
+    const panel = html
+    expect(panel).toMatch(/id="scroll"[^>]*class="scrollbar-sleek"/)
+    expect(panel).not.toMatch(/body::-webkit-scrollbar/)
+    // body 自己不能再滚,否则会出现内外两根滚动条
+    expect(panel).toMatch(/body \{[^}]*overflow: hidden/)
   })
 })
 
