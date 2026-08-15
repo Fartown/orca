@@ -3,7 +3,8 @@ export const DEFAULT_THRESHOLDS = {
   maxFalseClaims: 3, // 连续假完成多少次判定为卡死
   maxBlockedClaims: 2, // 连续声称受阻多少次才采信
   maxStallRounds: 3, // 连续多少轮工作区零变化判定为空转
-  maxTamperChallenges: 2 // 因削弱验收被挡回多少次后不再给机会
+  maxTamperChallenges: 2, // 因削弱验收被挡回多少次后不再给机会
+  maxGateFailures: 2 // 验收闸门连续多少次无法给出判定后叫人 —— 这是叫人,不是判 agent 有错
 }
 
 /**
@@ -68,6 +69,25 @@ export function decide(goal, obs, thresholds = DEFAULT_THRESHOLDS) {
     if (!obs.acceptance) {
       return { action: { type: 'verify' }, goal: next }
     }
+
+    // 门禁自己没跑成(裁判起不来、超时、没给出判词)——「没判成」不是「判定为否」。
+    // 这时守卫已经没有判定能力了,把它记成 agent 反复假报完成,是把自己的故障写成对方的诚信问题。
+    // 实测发生过:codex 配的模型不可用,四次验收秒失败,假完成计数照涨。
+    if (obs.acceptance.inconclusive) {
+      next.gateFailures = (goal.gateFailures || 0) + 1
+      if (next.gateFailures >= thresholds.maxGateFailures) {
+        return finish(
+          next,
+          'blocked',
+          `验收闸门连续 ${next.gateFailures} 次无法给出判定,需要人来看一眼(这不是 agent 的问题)`
+        )
+      }
+      return {
+        action: { type: 'continue', prompt: 'gate-unavailable', acceptance: obs.acceptance },
+        goal: next
+      }
+    }
+    next.gateFailures = 0
 
     if (obs.acceptance.passed) {
       // 验收绿了不等于验收还是原来那个验收。有未质证的削弱痕迹就先挡一轮。

@@ -3,6 +3,11 @@
 import { spawn } from 'node:child_process'
 
 const MAX_CAPTURE = 4000
+// 约定:检查命令用退出码 3 表示「我没能做出判定」(而不是「判定为否」)。
+// orca-goal-judge 遵守这个约定。普通测试命令不会用 3,所以对它们没有影响。
+// 这个区分是必须的:门禁自己坏了的时候,守卫已经没有判定能力,
+// 再把它记成「agent 反复声称完成却过不了」就是把自己的故障写成对方的诚信问题。
+const EXIT_INCONCLUSIVE = 3
 
 export async function runAcceptance(acceptance, { onCommandStart } = {}) {
   const commands = acceptance?.commands || []
@@ -19,7 +24,13 @@ export async function runAcceptance(acceptance, { onCommandStart } = {}) {
     } // 第一条失败就够了,不浪费时间跑后面的
   }
 
-  return { passed: results.length > 0 && results.every((r) => r.ok), results }
+  // 有任何一条没判成,整次验收就不是一个可用的判定 —— 别拿它当「未达成」的证据。
+  const inconclusive = results.some((r) => r.inconclusive)
+  return {
+    passed: !inconclusive && results.length > 0 && results.every((r) => r.ok),
+    inconclusive,
+    results
+  }
 }
 
 function runOne(command, cwd, timeoutMs) {
@@ -74,6 +85,8 @@ function runOne(command, cwd, timeoutMs) {
       resolve({
         command,
         ok: !timedOut && !err && code === 0,
+        // 起不来、超时、或命令自己说「没判成」—— 这三种都不是判定结果
+        inconclusive: Boolean(err) || timedOut || code === EXIT_INCONCLUSIVE,
         code,
         timedOut,
         output: truncate(output, tail, overflowed) || (err ? String(err.message) : ''),
@@ -114,10 +127,13 @@ export function describeFailures(acceptanceResult) {
   const list = failures
     .map((r) => {
       if (r.timedOut) {
-        return `- \`${r.command}\` 超时(${Math.round(r.ms / 1000)}s)未完成`
+        return `- \`${r.command}\` 超时(${Math.round(r.ms / 1000)}s)未能给出判定`
       }
       if (r.code === null) {
         return `- \`${r.command}\` 无法执行`
+      }
+      if (r.code === EXIT_INCONCLUSIVE) {
+        return `- \`${r.command}\` 未能给出判定(不是判定为否)`
       }
       return `- \`${r.command}\` 退出码 ${r.code}`
     })

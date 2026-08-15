@@ -13,6 +13,15 @@ import path from 'node:path'
 
 const GRACE_MS = 15_000 // SIGTERM 到 SIGKILL 之间留给裁判落盘的时间
 
+// 退出码是给闸门看的,必须把「判了,没达成」和「根本没判成」分开:
+//   0 判定通过 · 1 判定未通过 · 3 无法判定(裁判起不来、没给出判词、判不完)
+// 早先两者都返回 1,于是「裁判坏了」和「活没干完」在上游长得一模一样 ——
+// 实测过一次:codex 配置的模型不可用,四次验收秒失败,却被记成 agent 反复假报完成。
+// 用 3 而不是 2:2 已经被参数用法错误占了。
+const EXIT_PASS = 0
+const EXIT_FAIL = 1
+const EXIT_INCONCLUSIVE = 3
+
 /**
  * 必须显式关掉 stdin:codex exec 见到未关闭的 stdin 会打印
  * 「Reading additional input from stdin...」然后一直等,直接挂死。
@@ -123,7 +132,8 @@ async function main(argv) {
     : flags.criteria
   if (!criteria) {
     process.stderr.write(
-      '用法: acceptance-judge --criteria "验收标准" | --criteria-file 路径 [--cwd 目录] [--agent claude|codex] [--timeout 秒]\n'
+      '用法: acceptance-judge --criteria "验收标准" | --criteria-file 路径 [--cwd 目录] [--agent claude|codex] [--timeout 秒] [--sandbox 模式]\n' +
+        '退出码: 0 通过 · 1 未通过 · 3 无法判定(裁判起不来/没给出判词/判不完)\n'
     )
     return 2
   }
@@ -159,7 +169,7 @@ async function main(argv) {
     // 裁判自己跑挂了,绝不能算通过 —— 否则「验收工具坏了」会被当成「目标达成」。
     if (result.error) {
       process.stdout.write(`验收裁判无法执行(${agentName}):${result.error.message}\n`)
-      return 1
+      return EXIT_INCONCLUSIVE
     }
     // 超时前先发 SIGTERM 给裁判落盘的机会,所以这里必须去读那份产出 ——
     // 只报一句「超时」等于把宽限期白给了,回灌给 agent 的也就没有任何可改的信息。
@@ -169,7 +179,8 @@ async function main(argv) {
       process.stdout.write(
         partial ? `${head},以下是它中断前给出的结论:\n${partial}\n` : `${head}\n`
       )
-      return 1 // 判不完一律不通过,但把已有结论交出去,下一轮才有的可改
+      // 判不完就是没判成。有部分结论也照样交出去 —— 下一轮才有的可改。
+      return EXIT_INCONCLUSIVE
     }
 
     const verdict = await agent.read({ ...result, outFile }).catch(() => null)
@@ -182,10 +193,10 @@ async function main(argv) {
       process.stdout.write(
         `验收裁判(${agentName})没有给出可解析的判词(退出码 ${result.code})${why}\n`
       )
-      return 1
+      return EXIT_INCONCLUSIVE
     }
     process.stdout.write(`${verdict}\n`)
-    return /^\s*PASS\b/i.test(verdict) ? 0 : 1
+    return /^\s*PASS\b/i.test(verdict) ? EXIT_PASS : EXIT_FAIL
   } finally {
     await fs.rm(scratch, { recursive: true, force: true }).catch(() => {})
   }

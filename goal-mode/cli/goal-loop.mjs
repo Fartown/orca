@@ -370,6 +370,9 @@ function promptVars(goal, turn) {
 }
 
 function nextPrompt(action, acceptance, changed, findings) {
+  if (action.prompt === 'gate-unavailable') {
+    return { name: 'gate-unavailable', extra: failureVars(acceptance) }
+  }
   if (action.prompt === 'rejected-completion') {
     return { name: 'rejected-completion', extra: failureVars(acceptance) }
   }

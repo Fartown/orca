@@ -422,3 +422,58 @@ test('声称完成被驳回的那一轮改了一大片,空转计数要清零', (
   )
   assert.equal(goal.stallCount, 0)
 })
+
+test('门禁没判成时不记假完成 —— 那是守卫自己的故障,不是 agent 撒谎', () => {
+  // 实测发生过:codex 配的模型不可用,验收秒失败,falseClaims 照涨到 2,
+  // 再来一次就会以「连续 3 次声称完成但验收未通过」终结目标,把配置问题写成 agent 的诚信问题。
+  const g = makeGoal({ acceptance: { commands: ['judge'] }, falseClaims: 2 })
+  const { action, goal } = decide(
+    g,
+    obs({
+      sentinel: { kind: 'complete', summary: '做完了' },
+      acceptance: {
+        passed: false,
+        inconclusive: true,
+        results: [
+          { command: 'judge', ok: false, inconclusive: true, code: 3, output: '裁判没给出判词' }
+        ]
+      }
+    })
+  )
+  assert.equal(goal.falseClaims, 2, '假完成计数不该涨')
+  assert.equal(action.type, 'continue')
+  assert.equal(action.prompt, 'gate-unavailable', '要用如实说明门禁坏了的提示词,不是驳回提示词')
+})
+
+test('门禁连续判不成就叫人,而且说清不是 agent 的问题', () => {
+  const g = makeGoal({ acceptance: { commands: ['judge'] }, gateFailures: 1 })
+  const { action } = decide(
+    g,
+    obs({
+      sentinel: { kind: 'complete', summary: '做完了' },
+      acceptance: {
+        passed: false,
+        inconclusive: true,
+        results: [{ command: 'judge', ok: false, inconclusive: true, code: 3 }]
+      }
+    })
+  )
+  assert.equal(action.type, 'finish')
+  assert.match(action.reason, /不是 agent 的问题/)
+})
+
+test('门禁恢复正常后,之前的失败计数要清零', () => {
+  const g = makeGoal({ acceptance: { commands: ['judge'] }, gateFailures: 1 })
+  const { goal } = decide(
+    g,
+    obs({
+      sentinel: { kind: 'complete', summary: '做完了' },
+      acceptance: {
+        passed: false,
+        results: [{ command: 'judge', ok: false, code: 1, output: 'FAIL 还差三条' }]
+      }
+    })
+  )
+  assert.equal(goal.gateFailures, 0)
+  assert.equal(goal.falseClaims, 1, '这次是真判了没过,该计数')
+})

@@ -12,6 +12,7 @@ import { renderPrompt } from './continuation-prompt.mjs'
 const USED = [
   'continuation',
   'rejected-completion',
+  'gate-unavailable',
   'tamper-challenge',
   'objective-reminder',
   'objective-updated',
@@ -66,4 +67,18 @@ test('数据里出现 {{词}} 不该炸掉渲染', async () => {
 
 test('模板真缺变量时仍然要抛', async () => {
   await assert.rejects(() => renderPrompt('continuation', { objective: 'x' }), /需要变量/)
+})
+
+test('驳回提示词不再无条件断言「是你验证太弱」', async () => {
+  // 门禁自己会坏。无条件断言会在门禁失灵时把 agent 推向「去自己身上找不存在的问题」——
+  // 实测过一次:裁判起不来,agent 收到的却是「你的验证太弱」加一句它无法处理的报错。
+  const raw = await readFile(
+    path.join(import.meta.dirname, 'prompts/rejected-completion.md'),
+    'utf8'
+  )
+  assert.ok(!/your verification was too weak/i.test(raw))
+  // 也不该再说「验收配置在工作区之外所以你改不了」—— 判据文件与 agent 同用户可写,这是假话
+  assert.ok(!/lives outside this working tree/i.test(raw))
+  // 但必须仍然明确禁止偷改验收
+  assert.match(raw, /Do not quietly edit the checks/i)
 })
