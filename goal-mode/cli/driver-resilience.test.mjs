@@ -104,3 +104,13 @@ test('裁判自己跑挂时要把它报的错交出来,而不是只说「没有�
   assert.match(result.stdout, /没有给出可解析的判词/)
   assert.match(result.stdout, /它自己报的错/, '必须带上裁判自己的错误输出')
 })
+
+test('默认第一条失败就停;--check-all 时跑完全部', async () => {
+  const { runAcceptance } = await import('./acceptance-gate.mjs')
+  const base = { commands: ['exit 1', 'exit 0'], timeoutMs: 20_000, cwd: '/tmp' }
+  const serial = await runAcceptance(base, {})
+  assert.equal(serial.results.length, 1, '默认短路 —— 不浪费几十分钟跑注定要重来的后几条')
+  const all = await runAcceptance({ ...base, all: true }, {})
+  assert.equal(all.results.length, 2, '--check-all 要拿到全景')
+  assert.equal(all.passed, false)
+})

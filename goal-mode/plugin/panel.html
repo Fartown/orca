@@ -875,11 +875,19 @@
         var lines = []
         var args = ['orca-goal start --detach', '--objective ' + q(objective)]
         if (criteria) {
-          var file = '~/.orca-goal/criteria/panel-' + Date.now() + '.md'
+          var stamp = Date.now()
+          var file = '~/.orca-goal/criteria/panel-' + stamp + '.md'
+          // 定界符必须和内容错开:标准里只要有一行恰好等于它,heredoc 就提前结束 ——
+          // 判据被截断(裁判据此打分),而剩下的标准行会被 shell 当命令执行。
+          // 先加随机后缀,再确认真的不冲突,冲突就换一个。
+          var eof = 'ORCA_CRITERIA_' + stamp
+          while (criteria.split('\n').some(function (l) { return l.trim() === eof })) {
+            eof = eof + 'X'
+          }
           lines.push('mkdir -p ~/.orca-goal/criteria')
-          lines.push("cat > " + file + " <<'ORCA_CRITERIA'")
+          lines.push('cat > ' + file + " <<'" + eof + "'")
           lines.push(criteria)
-          lines.push('ORCA_CRITERIA')
+          lines.push(eof)
           args.push(
             '--check ' +
               q('orca-goal-judge --agent ' + ((judge && judge.agent) || 'codex') + ' --criteria-file ' + file)

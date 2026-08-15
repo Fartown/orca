@@ -30,7 +30,7 @@ import { listTerminals } from './orca-terminal.mjs'
 import { formatChoice, listTerminalChoices, pickTerminal } from './terminal-picker.mjs'
 
 const SCRIPT = import.meta.filename
-const BOOLEAN_FLAGS = new Set(['yes', 'detach', 'prompt-file'])
+const BOOLEAN_FLAGS = new Set(['yes', 'detach', 'prompt-file', 'check-all'])
 const VALUE_FLAGS = new Set([
   'file',
   'terminal',
@@ -61,6 +61,7 @@ start 选项:
   --objective 文本      目标描述
   --check 命令          验收命令,可重复。全部退出码为 0 才算完成
   --check-timeout 秒    单条验收命令超时,默认 900
+  --check-all           验收跑完全部检查再汇总;默认第一条失败就停(省时间,也强制按顺序修)
   --on-blocked 模式     agent 声称受阻时怎么办:ask(默认,停下叫人)| verify(先跑一次验收核实)
   --max-turns N         轮数预算,默认 20;写 0 表示不限
   --max-minutes N       时长预算,默认 180;写 0 表示不限
@@ -221,7 +222,8 @@ async function start(flags, rawArgs) {
   const acceptance = {
     commands: settings.checks,
     timeoutMs: settings.checkTimeout * 1000,
-    cwd: worktreePath
+    cwd: worktreePath,
+    all: 'check-all' in flags
   }
   if (!(await confirmAcceptance(acceptance, flags.yes))) {
     console.log('已取消。')
@@ -451,7 +453,8 @@ async function resume(flags, rawArgs = []) {
       commands: checks,
       timeoutMs:
         positive('--check-timeout', flags['check-timeout'] ?? file.checkTimeout ?? 900) * 1000,
-      cwd: flags.worktree || file.worktree || existing.worktreePath
+      cwd: flags.worktree || file.worktree || existing.worktreePath,
+      all: 'check-all' in flags
     }
     if (!(await confirmAcceptance(goal.acceptance, flags.yes))) {
       console.log('已取消。')

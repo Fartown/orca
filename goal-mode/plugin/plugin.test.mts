@@ -390,11 +390,35 @@ describe('panel 行为', () => {
     criteria.value = '每个页面都要有 $HOME 和 "引号" 以及 \'单引号\''
     ;(document.getElementById('start') as HTMLButtonElement).click()
     const cmd = document.getElementById('start-cmd')!.textContent!
-    expect(cmd).toContain("<<'ORCA_CRITERIA'")
+    expect(cmd).toMatch(/<<'ORCA_CRITERIA_\d+'/) // 定界符带随机后缀,免得被标准里的同名行撞开
     // 定界符加了引号,标准原样进文件 —— 里面的 $ 和引号都不该被改写
     expect(cmd).toContain('每个页面都要有 $HOME 和 "引号" 以及 \'单引号\'')
     expect(cmd).toContain('--criteria-file')
     expect(cmd).toContain('--agent codex') // 默认选中的裁判
+  })
+
+  it('验收标准里出现定界符同名行,不能把 heredoc 撞开', async () => {
+    // 撞开的后果:判据被截断(裁判据此打分),剩下的标准行被 shell 当命令执行。
+    results.set('storage.get', { ok: true, value: { value: { updatedAt: Date.now(), goals: [] } } })
+    mountPanel()
+    await flush()
+    const objective = document.getElementById('objective') as HTMLTextAreaElement
+    objective.value = 'x'
+    objective.dispatchEvent(new Event('input'))
+    ;(document.getElementById('criteria') as HTMLTextAreaElement).value =
+      '第一条\nORCA_CRITERIA\nrm -rf 不该被当成命令执行\n最后一条'
+    ;(document.getElementById('start') as HTMLButtonElement).click()
+    const cmd = document.getElementById('start-cmd')!.textContent!
+    const eof = cmd.match(/<<'([^']+)'/)![1]
+    const lines = cmd.split('\n')
+    const opened = lines.findIndex((l) => l.includes(`<<'${eof}'`))
+    const closed = lines.indexOf(eof, opened + 1)
+    // 全部四行标准都必须在 heredoc 里面
+    for (const line of ['第一条', 'ORCA_CRITERIA', 'rm -rf 不该被当成命令执行', '最后一条']) {
+      const at = lines.indexOf(line)
+      expect(at).toBeGreaterThan(opened)
+      expect(at).toBeLessThan(closed)
+    }
   })
 
   it('换了裁判,生成的命令跟着换', async () => {

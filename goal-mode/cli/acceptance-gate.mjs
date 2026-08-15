@@ -10,6 +10,9 @@ const MAX_CAPTURE = 4000
 const EXIT_INCONCLUSIVE = 3
 
 export async function runAcceptance(acceptance, { onCommandStart, env } = {}) {
+  // 默认第一条失败就停:不浪费几十分钟去跑注定要重来的后几条,也强制按顺序修。
+  // acceptance.all 为真时跑完全部,用来一次拿到全景(orca-goal 的 --check-all)。
+  const runAll = Boolean(acceptance?.all)
   const commands = acceptance?.commands || []
   const timeoutMs = acceptance?.timeoutMs ?? 900_000
   const cwd = acceptance?.cwd
@@ -19,9 +22,9 @@ export async function runAcceptance(acceptance, { onCommandStart, env } = {}) {
     onCommandStart?.(command)
     const result = await runOne(command, cwd, timeoutMs, env)
     results.push(result)
-    if (!result.ok) {
+    if (!result.ok && !runAll) {
       break
-    } // 第一条失败就够了,不浪费时间跑后面的
+    }
   }
 
   // 有任何一条没判成,整次验收就不是一个可用的判定 —— 别拿它当「未达成」的证据。
