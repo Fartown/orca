@@ -26,16 +26,16 @@ function flatten(text) {
 
 export async function renderPrompt(name, vars, { flatten: doFlatten = true } = {}) {
   const template = await loadTemplate(name)
-  const filled = template.replace(/\{\{(\w+)\}\}/g, (match, k) => {
-    if (!(k in vars)) {
-      throw new Error(`模板 ${name}.md 需要变量 ${k},但没有提供`)
-    }
-    return String(vars[k] ?? '')
-  })
-  const leftover = filled.match(/\{\{\w+\}\}/)
+  // 残留检查只看模板本身。早先它检查的是替换后的全文,于是**数据里**出现 {{词}} 也会抛 ——
+  // 目标写「把模板里的 {{name}} 换成真实值」、或者验收输出里带 Vue/Jinja 语法,
+  // 就会每 3 秒抛一次、10 分钟后把目标判成受阻。数据不该有能力炸掉渲染。
+  const leftover = template
+    .replace(/\{\{(\w+)\}\}/g, (m, k) => (k in vars ? '' : m))
+    .match(/\{\{\w+\}\}/)
   if (leftover) {
-    throw new Error(`模板 ${name}.md 有未替换的占位符 ${leftover[0]}`)
+    throw new Error(`模板 ${name}.md 需要变量 ${leftover[0]},但没有提供`)
   }
+  const filled = template.replace(/\{\{(\w+)\}\}/g, (match, k) => String(vars[k] ?? ''))
   return doFlatten ? flatten(filled) : filled.trim()
 }
 

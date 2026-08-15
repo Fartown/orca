@@ -70,3 +70,21 @@ test('宽限期明显长于轮询间隔,否则等于没重试', async () => {
   const poll = Number(src.match(/ORCA_GOAL_POLL_MS', ([\d_]+)\)/)[1].replace(/_/g, ''))
   assert.ok(grace >= poll * 20, `宽限期 ${grace}ms 至少要够重试 20 次(轮询 ${poll}ms)`)
 })
+
+test('超长验收输出要保住真正的结尾 —— 失败原因几乎总在最后几行', async () => {
+  // 早先「保尾」保的是前 8000 字的尾巴:采集到上限就不再追加,于是真正的失败原因丢光,
+  // 而它是 rejected-completion 回灌给 agent 的唯一证据。
+  const { runAcceptance, describeFailures } = await import('./acceptance-gate.mjs')
+  const noise = "for(let i=0;i<600;i++)console.log('通过用例 '+i+' 的噪音行')"
+  const result = await runAcceptance(
+    {
+      commands: [`node -e "${noise}; console.log('FAILED: src/login.ts:42'); process.exit(1)"`],
+      timeoutMs: 30_000,
+      cwd: process.cwd()
+    },
+    {}
+  )
+  const out = describeFailures(result).output
+  assert.match(out, /FAILED: src\/login\.ts:42/, '真正的失败行必须保住')
+  assert.match(out, /已截断/, '同时要标明中间被截断了')
+})

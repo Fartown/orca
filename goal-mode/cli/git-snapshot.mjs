@@ -51,7 +51,14 @@ export async function snapshotWorktree(worktreePath) {
  */
 async function hashExclude(worktreePath) {
   try {
-    const gitDir = await git(['rev-parse', '--absolute-git-dir'], worktreePath)
+    // 必须是 --git-common-dir 而不是 --absolute-git-dir:linked worktree 里后者返回
+    // .git/worktrees/<name>,而 git 真正读的排除规则在共用的 .git/info/exclude ——
+    // 取错目录会让这条挡板在 worktree 里永远读不到文件、永远返回 null,形同虚设。
+    // 而 worktree 正是 Orca 的主力工作区形态。
+    const gitDir = await git(
+      ['rev-parse', '--path-format=absolute', '--git-common-dir'],
+      worktreePath
+    )
     const body = await fs.readFile(path.join(gitDir, 'info', 'exclude'), 'utf8')
     return createHash('sha256').update(body).digest('hex').slice(0, 16)
   } catch {

@@ -48,13 +48,17 @@ function runOne(command, cwd, timeoutMs) {
     }
 
     let output = ''
+    let tail = ''
     let overflowed = false
     const capture = (chunk) => {
-      if (output.length >= MAX_CAPTURE * 2) {
+      // 头尾分开留:早先到 8000 字就不再追加,于是「保尾」保的是前 8000 字的尾巴,
+      // 真正的失败原因(通常在最后几行)一个字都留不下 —— 而那是回灌给 agent 的唯一证据。
+      if (output.length < MAX_CAPTURE) {
+        output += chunk
+      } else {
         overflowed = true
-        return
+        tail = (tail + chunk).slice(-MAX_CAPTURE)
       }
-      output += chunk
     }
     child.stdout.on('data', (d) => capture(d.toString()))
     child.stderr.on('data', (d) => capture(d.toString()))
@@ -72,7 +76,7 @@ function runOne(command, cwd, timeoutMs) {
         ok: !timedOut && !err && code === 0,
         code,
         timedOut,
-        output: truncate(output, overflowed) || (err ? String(err.message) : ''),
+        output: truncate(output, tail, overflowed) || (err ? String(err.message) : ''),
         ms: Date.now() - startedAt
       })
     }
@@ -93,14 +97,16 @@ function killTree(child) {
   }
 }
 
-/** 保头保尾:命令名和最终错误通常分别在两端。 */
-function truncate(text, overflowed) {
-  if (!overflowed && text.length <= MAX_CAPTURE) {
-    return text
+/**
+ * 保头保尾:命令名通常在开头,真正的失败原因几乎总在最后几行。
+ * head 是流式采集的前 MAX_CAPTURE 字,tail 是**真实结尾**的滚动窗口 ——
+ * 两者分开采集,否则一旦超出上限就再也拿不到结尾了。
+ */
+function truncate(head, tail, overflowed) {
+  if (!overflowed) {
+    return head
   }
-  const head = text.slice(0, Math.floor(MAX_CAPTURE / 3))
-  const tail = text.slice(-Math.floor((MAX_CAPTURE * 2) / 3))
-  return `${head}\n... [输出过长,已截断] ...\n${tail}`
+  return `${head.slice(0, Math.floor(MAX_CAPTURE / 3))}\n... [输出过长,已截断] ...\n${tail}`
 }
 
 export function describeFailures(acceptanceResult) {

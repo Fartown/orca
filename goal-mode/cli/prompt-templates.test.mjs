@@ -45,3 +45,25 @@ test('目录里没有代码不认识的模板,也没有代码要而目录没有�
     .sort()
   assert.deepEqual(onDisk, [...USED].sort())
 })
+
+test('数据里出现 {{词}} 不该炸掉渲染', async () => {
+  // 事故形状:残留检查跑在替换后的全文上,于是目标写「把模板里的 {{name}} 换成真实值」、
+  // 或者验收输出里带 Vue/Jinja 语法,就会每 3 秒抛一次、10 分钟后把目标判成受阻。
+  const text = await renderPrompt('continuation', {
+    objective: '把模板里的 {{name}} 和 {{list}} 占位符替换成真实值',
+    claimPath: '/tmp/c',
+    turns: 1,
+    maxTurns: '不限',
+    elapsedMinutes: 1,
+    maxMinutes: '不限',
+    editsSource: '-',
+    editsTest: '-',
+    diffChanged: '-',
+    tamperNote: '-'
+  })
+  assert.ok(text.includes('{{name}}'), '目标原文里的占位符要原样保留')
+})
+
+test('模板真缺变量时仍然要抛', async () => {
+  await assert.rejects(() => renderPrompt('continuation', { objective: 'x' }), /需要变量/)
+})
