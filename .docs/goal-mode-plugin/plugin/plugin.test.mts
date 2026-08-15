@@ -223,7 +223,7 @@ describe('panel 行为', () => {
     await flush()
     const stale = document.getElementById('stale')!
     expect(stale.hidden).toBe(false)
-    expect(stale.textContent).toContain('8 分钟没有回报状态')
+    expect(stale.textContent).toContain('8 分钟前的快照')
   })
 
   it('陈旧阈值要留够几个心跳,不然正常运行也会误报', () => {
@@ -232,11 +232,11 @@ describe('panel 行为', () => {
         .match(/HEARTBEAT_MS = (\d+)/)![1]
         .replace(/_/g, '')
     )
-    const threshold = Number(read('panel.html').match(/age > (\d+)/)![1])
+    const threshold = Number(read('panel.html').match(/STALE_MS = (\d+)/)![1])
     expect(threshold).toBeGreaterThanOrEqual(heartbeat * 3)
   })
 
-  it('已经显示「中断了」时不再叠加陈旧提示', async () => {
+  it('快照过期时必须提示,哪怕它显示的是「中断了」—— 监控界面说谎比不显示更糟', async () => {
     results.set('storage.get', {
       ok: true,
       value: {
@@ -248,8 +248,11 @@ describe('panel 行为', () => {
     })
     mountPanel()
     await flush()
-    expect(document.getElementById('status-text')!.textContent).toContain('中断了')
-    expect(document.getElementById('stale')!.hidden).toBe(true)
+    // 真实事故:worker 三小时前被回收,镜像冻在 aborted,面板把它当成当前状态显示。
+    expect(document.getElementById('stale')!.hidden).toBe(false)
+    expect(document.getElementById('stale')!.textContent).toContain('不代表当前状态')
+    // 标题也要自曝是旧快照,光在下面加一行容易被忽略
+    expect(document.getElementById('status-text')!.textContent).toContain('旧快照')
   })
 
   it('驱动异常退出时把死因显示出来,而不是只说「退出了」', async () => {

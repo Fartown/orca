@@ -509,6 +509,9 @@
         resolve(data)
       })
 
+      // worker 每分钟心跳一次,连丢三次基本只剩「worker 已被回收」一种解释。
+      var STALE_MS = 180000
+      var stalePanel = false // 当前显示的是不是旧快照 —— 状态标题要据此加标注
       var lastIdentity = null // 上次渲染的是哪个目标的哪个状态
       var el = {}
       ;[
@@ -705,7 +708,7 @@
 
         var view = viewOf(g)
         el['status-dot'].className = 'dot ' + view.tone
-        el['status-text'].textContent = view.label
+        el['status-text'].textContent = view.label + (stalePanel ? '(旧快照)' : '')
         el['status-facts'].textContent = facts.join(' · ')
         // 驱动是异常退出的话,死因比 finishReason 重要:否则只剩「驱动已退出」四个字,
         // 用户还得自己去翻 ~/.orca-goal/log 才知道发生了什么。
@@ -777,19 +780,19 @@
           if (!shown) shown = goals[0]
 
           if (shown) {
-            renderGoal(shown)
-            // worker 每分钟至少心跳一次,面板又没有任何叫醒它的办法(能调的只有 storage.get)。
-            // 连丢三次心跳基本只剩「worker 没了」一种解释 —— 但这里只陈述观察到的事实,
-            // 不替用户断定原因:说错原因比不说更误导。
+            // 陈旧与否只看数据本身,不看它碰巧显示什么状态。
+            // 早先这里限定「只在显示进行中时才提示」,结果一份写着 aborted 的旧快照
+            // 把提示屏蔽掉了,面板就把三小时前的状态当成当前状态理直气壮地显示 ——
+            // 监控界面说谎比不显示更糟。必须在 renderGoal 之前算好,标题要跟着标注。
             var age = payload && payload.updatedAt ? Date.now() - payload.updatedAt : 0
-            // 只在面板正宣称「进行中」时才提示 —— 显示「中断了」时它自己已经把话说清楚了,
-            // 再叠一条陈旧警告纯属噪音。
-            var stale = viewOf(shown) === VIEW.active && age > 180000
-            el.stale.hidden = !stale
-            if (stale) {
+            stalePanel = age > STALE_MS
+            renderGoal(shown)
+            el.stale.hidden = !stalePanel
+            if (stalePanel) {
               el.stale.textContent =
-                '⚠ 后台已经 ' + Math.round(age / 60000) + ' 分钟没有回报状态,下面显示的是那时的快照。' +
-                '目标可能仍在跑 —— 用 orca-goal status 看当前进度。'
+                '⚠ 这是 ' + Math.round(age / 60000) + ' 分钟前的快照,不代表当前状态。' +
+                '后台进程被系统回收后,面板没有办法自己叫醒它 —— ' +
+                '按 Cmd-J 跑一次「目标:状态」即可刷新,或用 orca-goal status 看实时进度。'
             }
             el.empty.hidden = true
           } else {
