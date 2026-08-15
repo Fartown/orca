@@ -150,6 +150,53 @@ describe('panel 行为', () => {
     expect(document.getElementById('blocker-sec')!.hidden).toBe(true)
   })
 
+  it('本轮耗时按驱动落盘的起点算,不拿记录更新时间凑数', async () => {
+    // 记录是一轮结束才写的:拿 updatedAt 当本轮起点,跑到一半时会把上一轮结束到现在
+    // 的全部时间都算进这一轮。实测显示成过「441 分钟」,而那次接回才十几分钟。
+    results.set('storage.get', {
+      ok: true,
+      value: {
+        value: {
+          updatedAt: Date.now(),
+          goals: [
+            {
+              ...goal,
+              activeMs: 10 * 60_000,
+              updatedAt: Date.now() - 6 * 60 * 60_000, // 记录很旧
+              roundStartedAt: Date.now() - 2 * 60_000, // 但这一轮才开始两分钟
+              driverAlive: true
+            }
+          ]
+        }
+      }
+    })
+    mountPanel()
+    await flush()
+    expect(document.getElementById('status-facts')!.textContent).toContain('12 分钟')
+  })
+
+  it('驱动已退出的孤儿目标,时长不再一直涨', async () => {
+    results.set('storage.get', {
+      ok: true,
+      value: {
+        value: {
+          updatedAt: Date.now(),
+          goals: [
+            {
+              ...goal,
+              activeMs: 10 * 60_000,
+              roundStartedAt: Date.now() - 6 * 60 * 60_000,
+              driverAlive: false
+            }
+          ]
+        }
+      }
+    })
+    mountPanel()
+    await flush()
+    expect(document.getElementById('status-facts')!.textContent).toContain('10 分钟')
+  })
+
   it('预算写 0 表示不限,不该印成 /0', async () => {
     results.set('storage.get', { ok: true, value: { value: { goals: [goal] } } })
     mountPanel()

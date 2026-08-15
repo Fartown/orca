@@ -468,3 +468,59 @@ test('轮次判定失灵时也不该几秒一轮 —— 最短间隔兜底', asy
     `5 轮至少要占 5 × 最短间隔,实际 ${Date.now() - started}ms`
   )
 })
+
+test('终止的那一轮也要写进逐轮日志 —— 否则面板轮次推算会错位', async () => {
+  // 早先只有正常轮次写日志,目标是「戛然而止」的:JSONL 里缺最后一轮,
+  // 面板据此算「正在跑第几轮」就差一号,查因也只能去翻驱动的纯文本输出。
+  mock.reset()
+  const logged = []
+  mock.module('./orca-terminal.mjs', { namedExports: { sendText: async () => {} } })
+  mock.module('./terminal-activity.mjs', {
+    namedExports: { observeAgent: async () => ({}), classifyRound: () => 'finished' }
+  })
+  mock.module('./git-snapshot.mjs', {
+    namedExports: {
+      snapshotWorktree: async () => ({ kind: 'git', tree: 't', head: 'h' }),
+      diffTrees: async () => ({ source: [], test: [] }),
+      diffText: async () => ''
+    }
+  })
+  mock.module('./tamper-scan.mjs', {
+    namedExports: { scanRound: async () => [], describeFindings: () => '' }
+  })
+  mock.module('./goal-claim.mjs', {
+    namedExports: {
+      readClaim: async () => null,
+      clearClaim: async () => {},
+      claimPath: () => '/tmp/c'
+    }
+  })
+  mock.module('./goal-state.mjs', {
+    namedExports: {
+      ROOT: HOME,
+      writeGoal: async () => {},
+      appendLog: async (_k, entry) => {
+        logged.push(entry)
+      }
+    }
+  })
+  mock.module('./continuation-prompt.mjs', {
+    namedExports: {
+      renderPrompt: async () => '提示词',
+      writePromptFile: async () => '/tmp/p',
+      promptPointerLine: () => 'x'
+    }
+  })
+  const mod = await import(`./goal-loop.mjs?termlog=${Math.random()}`)
+  const final = await mod.runLoop(
+    goal({ key: 'termlog', budget: { maxTurns: 2, maxMinutes: 0 } }),
+    {
+      report,
+      thresholds: { maxBlockedClaims: 2, maxStallRounds: 99, maxFalseClaims: 9 }
+    }
+  )
+  assert.equal(final.state, 'budget_exhausted')
+  const turns = logged.map((e) => e.turn)
+  assert.deepEqual(turns, [1, 2], `每一轮都要有日志,实际:${turns.join(',')}`)
+  assert.equal(logged.at(-1).state, 'budget_exhausted', '最后一条要记下终局')
+})

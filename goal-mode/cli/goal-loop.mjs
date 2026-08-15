@@ -94,6 +94,10 @@ export async function runLoop(goal, { report, thresholds, attach = false }) {
       // 上一轮结束事件会被当成本轮的结束,一轮几秒就「跑完」,轮数预算几秒烧光、
       // 终端被连灌几十条提示词。git 工作区还有空转熔断兜底,文件夹工作区完全没有。
       const sentAt = Date.now()
+      // 本轮起点落盘:面板要显示「这一轮跑了多久」,而记录是一轮结束才写的 ——
+      // 拿「现在减记录更新时间」当本轮耗时,跑到一半时会把上一轮结束到现在的全部时间算进来。
+      current = { ...current, roundStartedAt: sentAt }
+      await writeGoal(current).catch(() => {})
 
       // 预算按「已经花掉的活跃时长」算,不是按日历。本轮最多还能跑 remaining。
       const remainingMs = current.budget.maxMinutes
@@ -118,6 +122,7 @@ export async function runLoop(goal, { report, thresholds, attach = false }) {
           finishedAt: Date.now()
         }
         await writeGoal(current)
+        await logTerminalRound(current, turn, pending.name)
         await maybeSendWrapUp(
           current,
           { state: 'budget_exhausted', reason: current.finishReason },
@@ -261,6 +266,7 @@ export async function runLoop(goal, { report, thresholds, attach = false }) {
           finishedAt: Date.now()
         }
         await writeGoal(current).catch(() => {})
+        await logTerminalRound(current, turn, pending.name)
         return current
       }
       // 已经注入过就别再注入一次 —— 重试时挂到 agent 手上那一轮上,和 resume 的语义一样。
@@ -281,6 +287,29 @@ export async function runLoop(goal, { report, thresholds, attach = false }) {
  * 所以 hook 状态不论新旧都要采信 —— 传 Date.now() 会让 stateStartedAt > sinceMs 恒假,
  * needs-user 那一档直接变成死代码,权限对话框会被误判成空闲。
  */
+/**
+ * 终止分支也要在逐轮日志里留一条。
+ * 早先只有正常轮次写日志,于是目标是「戛然而止」的:JSONL 里缺最后一轮,
+ * 面板据此推算「正在跑第几轮」就会错位,查因也只能去翻驱动的纯文本输出。
+ */
+async function logTerminalRound(goal, turn, promptName) {
+  await appendLog(goal.key, {
+    at: new Date(goal.updatedAt || Date.now()).toISOString(),
+    turn,
+    prompt: promptName,
+    claim: null,
+    tree: null,
+    head: null,
+    changed: null,
+    acceptancePassed: null,
+    acceptanceFailed: null,
+    findings: null,
+    action: 'finish',
+    state: goal.state,
+    reason: goal.finishReason || null
+  }).catch(() => {})
+}
+
 /**
  * 取证阶段:快照 + 树 diff + 篡改扫描。
  * 失败时降级而不是让整轮重来 —— 下游对空值本来就有定义(判定会自动关掉指纹类熔断),
