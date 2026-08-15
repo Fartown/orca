@@ -124,14 +124,16 @@ test('时长预算耗尽 → 停', () => {
   assert.equal(action.state, 'budget_exhausted')
 })
 
-test('声称受阻一次不停,到阈值才停', () => {
+test('声称受阻一次不停,到阈值才停下等人', () => {
+  // 到阈值的出口从「终结目标」改成了「停下叫人」:守卫核实不了受阻声明,
+  // 而真受阻的场景本来就必须人介入 —— 自动终结把这个需要人处理的信号变成了终点。
   const first = decide(makeGoal(), obs({ sentinel: { kind: 'blocked', summary: '缺凭证' } }))
   assert.equal(first.action.type, 'continue')
   assert.equal(first.goal.blockedClaims, 1)
 
   const second = decide(first.goal, obs({ sentinel: { kind: 'blocked', summary: '缺凭证' } }))
-  assert.equal(second.action.type, 'finish')
-  assert.equal(second.action.state, 'blocked')
+  assert.equal(second.action.type, 'await-user')
+  assert.equal(second.goal.state, 'active', '不终结,等人')
 })
 
 test('受阻计数不连续就清零', () => {
@@ -476,4 +478,37 @@ test('门禁恢复正常后,之前的失败计数要清零', () => {
   )
   assert.equal(goal.gateFailures, 0)
   assert.equal(goal.falseClaims, 1, '这次是真判了没过,该计数')
+})
+
+test('默认(ask):声称受阻到阈值不终结目标,停下叫人', () => {
+  // 说「完成」要过全部裁判,说「受阻」原来零核实、两轮就下班 —— 想收工的 agent 最省事的路径。
+  const g = makeGoal({ blockedClaims: 1 })
+  const { action, goal } = decide(
+    g,
+    obs({ sentinel: { kind: 'blocked', summary: '缺 Figma 权限' } })
+  )
+  assert.equal(action.type, 'await-user')
+  assert.match(action.reason, /缺 Figma 权限/)
+  assert.equal(goal.state, 'active', '不该被判成结束')
+})
+
+test('verify 模式:声称受阻先跑一次验收', () => {
+  const g = makeGoal({ blockedClaims: 1, onBlocked: 'verify', acceptance: { commands: ['judge'] } })
+  const { action } = decide(g, obs({ sentinel: { kind: 'blocked', summary: '卡住了' } }))
+  assert.equal(action.type, 'verify')
+  assert.equal(action.because, 'blocked-claim')
+})
+
+test('verify 模式:验收全绿就证伪了「受阻」,继续跑', () => {
+  const g = makeGoal({ blockedClaims: 1, onBlocked: 'verify', acceptance: { commands: ['judge'] } })
+  const { action, goal } = decide(
+    g,
+    obs({
+      sentinel: { kind: 'blocked', summary: '卡住了' },
+      acceptance: { passed: true, results: [{ command: 'judge', ok: true, code: 0 }] }
+    })
+  )
+  assert.equal(action.type, 'continue')
+  assert.equal(action.prompt, 'blocked-but-passing')
+  assert.equal(goal.blockedClaims, 0, '被证伪了就该清零')
 })

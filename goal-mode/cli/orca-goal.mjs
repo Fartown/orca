@@ -34,6 +34,7 @@ const VALUE_FLAGS = new Set([
   'file',
   'terminal',
   'objective',
+  'on-blocked',
   'check',
   'check-timeout',
   'max-turns',
@@ -59,6 +60,7 @@ start 选项:
   --objective 文本      目标描述
   --check 命令          验收命令,可重复。全部退出码为 0 才算完成
   --check-timeout 秒    单条验收命令超时,默认 900
+  --on-blocked 模式     agent 声称受阻时怎么办:ask(默认,停下叫人)| verify(先跑一次验收核实)
   --max-turns N         轮数预算,默认 20;写 0 表示不限
   --max-minutes N       时长预算,默认 180;写 0 表示不限
   --worktree 路径       取证与验收的目录,默认取终端登记的工作区
@@ -150,6 +152,7 @@ async function resolveSettings(flags) {
     flags[flagName] !== undefined ? flags[flagName] : (file[fileName] ?? fallback)
   return {
     objective: pick('objective', 'objective'),
+    onBlocked: pick('on-blocked', 'onBlocked') || 'ask',
     terminal: pick('terminal', 'terminal'),
     worktree: pick('worktree', 'worktree'),
     checks: flags.check.length > 0 ? flags.check : (file.check ?? []),
@@ -206,6 +209,7 @@ async function start(flags, rawArgs) {
   const goal = newGoal({
     key,
     objective: settings.objective,
+    onBlocked: settings.onBlocked,
     worktreePath,
     terminalHandle: terminal.handle,
     acceptance,
@@ -307,6 +311,7 @@ function makeReport() {
     longRun: (mins) =>
       console.log(`[${stamp()}]   这一轮已经跑了 ${mins} 分钟,agent 仍在干活 —— 继续等,不打断`),
     attach: (turn) => console.log(`[${stamp()}] 接管:不注入,先等第 ${turn} 轮手上这波跑完`),
+    awaitUser: (reason) => console.log(`[${stamp()}] ⏸ 等你确认:${reason}`),
     working: (source) =>
       console.log(
         `[${stamp()}]   agent 已接管,等这一轮跑完${source === 'hook' ? '' : '(无 hook 状态,退回标题判定)'}`

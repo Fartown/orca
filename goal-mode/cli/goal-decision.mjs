@@ -131,7 +131,24 @@ export function decide(goal, obs, thresholds = DEFAULT_THRESHOLDS) {
   if (obs.sentinel?.kind === 'blocked') {
     next.blockedClaims = goal.blockedClaims + 1
     if (next.blockedClaims >= thresholds.maxBlockedClaims) {
-      return finish(next, 'blocked', obs.sentinel.summary || 'agent 连续声称受阻')
+      const reason = obs.sentinel.summary || 'agent 连续声称受阻'
+      // 说「完成」要过全部裁判,说「受阻」原来零核实、连写两轮就下班 ——
+      // 对一个想收工的 agent 这是全局最省事的路径,而人在界面上只看得到它自己写的那句理由。
+      //
+      // verify:让它也付出代价 —— 跑一次验收。全绿本身就证伪了「受阻」。
+      // ask(默认):不终结目标,叫人来看。真受阻的场景(缺权限、缺凭证、需求有歧义)
+      //   本来就必须人介入,自动终结反而把这个「需要人处理」的信号变成了终点。
+      if (goal.onBlocked === 'verify' && (goal.acceptance?.commands || []).length > 0) {
+        if (!obs.acceptance) {
+          return { action: { type: 'verify', because: 'blocked-claim' }, goal: next }
+        }
+        if (obs.acceptance.passed) {
+          // 它说受阻,验收却全绿 —— 这条声明被自己的工作证伪了,继续跑。
+          next.blockedClaims = 0
+          return { action: { type: 'continue', prompt: 'blocked-but-passing' }, goal: next }
+        }
+      }
+      return { action: { type: 'await-user', reason, claim: obs.sentinel }, goal: next }
     }
   } else {
     next.blockedClaims = 0

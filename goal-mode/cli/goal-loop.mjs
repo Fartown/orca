@@ -10,6 +10,7 @@ import { describeFindings, scanRound } from './tamper-scan.mjs'
 import { ROOT, appendLog, writeGoal } from './goal-state.mjs'
 import { sendText } from './orca-terminal.mjs'
 import { classifyRound, observeAgent } from './terminal-activity.mjs'
+import { notifyDesktop } from './desktop-notification.mjs'
 
 const num = (name, fallback) => Number(process.env[name] || fallback)
 const SETTLE_MS = num('ORCA_GOAL_SETTLE_MS', 5_000) // 送出 \r 到 agent 接管之间的空窗
@@ -182,6 +183,24 @@ export async function runLoop(goal, { report, thresholds, attach = false }) {
       if (verdict.action.type === 'finish') {
         await maybeSendWrapUp(current, verdict.action, report)
         return current
+      }
+
+      // 「等你确认」:agent 说它受阻了,而守卫核实不了。不终结目标,也不再注入 ——
+      // 停在这里等人。真受阻的场景(缺权限、缺凭证、需求有歧义)本来就必须人介入,
+      // 自动终结反而把这个「需要人处理」的信号变成了终点。
+      // 任何人跟 agent 说了话(它重新忙起来)就自动接着跑,不需要再敲一次命令。
+      if (verdict.action.type === 'await-user') {
+        current = { ...current, awaitingUser: { reason: verdict.action.reason, since: Date.now() } }
+        await writeGoal(current)
+        report.awaitUser(verdict.action.reason)
+        // 停下等人是唯一「不叫人就永远不会动」的状态,必须主动通知,不能只写日志。
+        notifyDesktop('orca-goal:等你确认', verdict.action.reason.slice(0, 160))
+        await waitForUser(current.terminalHandle, report)
+        current = { ...current, awaitingUser: null }
+        await writeGoal(current)
+        attachPending = true // 人可能已经给它新指令了,别打断
+        errorSince = null
+        continue
       }
 
       pending = nextPrompt(verdict.action, acceptance, changed, findings)
@@ -370,6 +389,9 @@ function promptVars(goal, turn) {
 }
 
 function nextPrompt(action, acceptance, changed, findings) {
+  if (action.prompt === 'blocked-but-passing') {
+    return { name: 'blocked-but-passing', extra: {} }
+  }
   if (action.prompt === 'gate-unavailable') {
     return { name: 'gate-unavailable', extra: failureVars(acceptance) }
   }

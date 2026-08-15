@@ -13,6 +13,7 @@ const USED = [
   'continuation',
   'rejected-completion',
   'gate-unavailable',
+  'blocked-but-passing',
   'tamper-challenge',
   'objective-reminder',
   'objective-updated',

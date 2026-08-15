@@ -24,6 +24,7 @@ export const logPath = (key) => path.join(logDir(), `${key}.jsonl`)
 export function newGoal({
   key,
   objective,
+  onBlocked = 'ask',
   worktreePath,
   terminalHandle,
   acceptance,
@@ -39,6 +40,7 @@ export function newGoal({
     terminalHandle,
     acceptance, // { commands: string[], timeoutMs, cwd }
     budget, // { maxTurns, maxMinutes }
+    onBlocked, // 'ask' 停下叫人(默认)| 'verify' 先跑一次验收核实
     promptFile: Boolean(promptFile), // 提示词落文件、只注入一行指针
     state: 'active', // active | complete | blocked | budget_exhausted | stalled | aborted
     turns: 0,
