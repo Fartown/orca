@@ -14,9 +14,17 @@ export const WAIT_DEFAULTS = {
   longRunMs: 30 * 60_000 // 跑多久提醒一句「还在干,继续等」
 }
 
-export function initialWaitState(sentAt) {
+/**
+ * @param {number} sentAt 注入时刻(注入在此之前已经发出)
+ * @param {boolean} injected 这一轮是我们注入的吗。
+ *   注入的轮次必须先看到 agent 动起来,才能采信「结束」—— 否则它收尾上一轮时发出的
+ *   done 会被当成本轮的结束,一轮 16 秒空转三次就把空转熔断顶开。实测发生过。
+ *   attach 的轮次相反:我们本来就是来等它手上那一轮结束的,直接采信。
+ */
+export function initialWaitState(sentAt, injected = true) {
   return {
     sentAt,
+    injected,
     startAt: sentAt, // START_MS 的计时起点,等人的时间要往后顺延
     lastBusyAt: sentAt,
     startedWorking: false,
@@ -106,8 +114,9 @@ export function advanceWait(state, event, limits = WAIT_DEFAULTS) {
     }
   }
 
-  // finished 来自本轮的 hook 状态,可以直接采信。
-  if (event.verdict === 'finished') {
+  // finished 来自本轮的 hook 状态。但注入的轮次要先见它动过 ——
+  // 注入刚发出去时它可能还在收尾上一轮,那个 done 不是本轮的结束。
+  if (event.verdict === 'finished' && (s.startedWorking || !s.injected)) {
     return { state: s, outcome: { type: 'done' }, notices }
   }
   // quiet 只说明终端安静了 —— 只有确实见它动过,才算这一轮跑完;

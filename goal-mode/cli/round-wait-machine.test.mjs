@@ -128,3 +128,20 @@ test('陈旧的 working 只有终端还在动时才算忙', async () => {
   const fresh = { connected: true, state: 'working', stateStartedAt: now, silentMs: 3_600_000 }
   assert.equal(classifyRound(fresh, now - 1000, 12_000), 'busy')
 })
+
+// 实测事故:注入后 agent 还在收尾上一轮,发出的 done 被当成本轮结束 ——
+// 连续三轮 16 秒空转,把空转熔断顶开,目标被判「连续 3 轮工作区无任何变化」而终止。
+test('注入的轮次:没见它动过之前,finished 不算数', () => {
+  const r = run([finished(1000), finished(2000), finished(3000)])
+  assert.equal(r.outcome.type, 'wait', '收尾上一轮的 done 不是本轮的结束')
+})
+
+test('注入的轮次:见它动过之后,finished 才采信', () => {
+  assert.equal(run([finished(1000), busy(2000), finished(3000)]).outcome.type, 'done')
+})
+
+test('attach 的轮次相反:本来就是来等它手上那轮结束的,直接采信', () => {
+  let state = initialWaitState(T0, false) // injected = false
+  const step = advanceWait(state, finished(1000), limits)
+  assert.equal(step.outcome.type, 'done')
+})

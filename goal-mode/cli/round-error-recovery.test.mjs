@@ -16,7 +16,13 @@ async function loadLoop({ renderFails }) {
   let calls = 0
   mock.module('./orca-terminal.mjs', { namedExports: { sendText: async () => {} } })
   mock.module('./terminal-activity.mjs', {
-    namedExports: { observeAgent: async () => ({}), classifyRound: () => 'finished' }
+    namedExports: {
+      observeAgent: async () => ({}),
+      classifyRound: (() => {
+        let n = 0
+        return () => (++n % 2 === 1 ? 'busy' : 'finished')
+      })()
+    }
   })
   mock.module('./git-snapshot.mjs', {
     namedExports: {
@@ -116,7 +122,13 @@ test('验收判词立刻落盘 —— 后面哪一步挂了都不该把它赔进
   mock.reset()
   mock.module('./orca-terminal.mjs', { namedExports: { sendText: async () => {} } })
   mock.module('./terminal-activity.mjs', {
-    namedExports: { observeAgent: async () => ({}), classifyRound: () => 'finished' }
+    namedExports: {
+      observeAgent: async () => ({}),
+      classifyRound: (() => {
+        let n = 0
+        return () => (++n % 2 === 1 ? 'busy' : 'finished')
+      })()
+    }
   })
   mock.module('./git-snapshot.mjs', {
     namedExports: {
@@ -182,7 +194,14 @@ test('接管时 agent 已空闲 —— 要正常注入,不能干等一个不存�
     }
   })
   mock.module('./terminal-activity.mjs', {
-    namedExports: { observeAgent: async () => ({}), classifyRound: () => 'finished' } // 一直空闲
+    namedExports: {
+      observeAgent: async () => ({}),
+      classifyRound: (() => {
+        let n = 0
+        // 第 1 次是「注入安不安全」的探测:要判成空闲;之后才是本轮的观察
+        return () => (++n === 1 ? 'quiet' : n === 2 ? 'busy' : 'finished')
+      })()
+    }
   })
   mock.module('./git-snapshot.mjs', {
     namedExports: {
@@ -226,7 +245,8 @@ test('终端一时断开不该终结目标 —— Orca 重启一下就死太脆�
     namedExports: {
       observeAgent: async () => ({}),
       // 前几次报断开,之后恢复正常
-      classifyRound: () => (++observations <= 3 ? 'disconnected' : 'finished')
+      classifyRound: () =>
+        ++observations <= 3 ? 'disconnected' : observations === 4 ? 'busy' : 'finished'
     }
   })
   mock.module('./git-snapshot.mjs', {
@@ -268,7 +288,13 @@ test('改了验证方式时,把 diff 通过环境变量交给裁判', async () =
   let seenEnv = null
   mock.module('./orca-terminal.mjs', { namedExports: { sendText: async () => {} } })
   mock.module('./terminal-activity.mjs', {
-    namedExports: { observeAgent: async () => ({}), classifyRound: () => 'finished' }
+    namedExports: {
+      observeAgent: async () => ({}),
+      classifyRound: (() => {
+        let n = 0
+        return () => (++n % 2 === 1 ? 'busy' : 'finished')
+      })()
+    }
   })
   mock.module('./git-snapshot.mjs', {
     namedExports: {
@@ -341,7 +367,13 @@ test('落盘失败重试时,不把几十分钟的验收重跑一遍', async () =
   let logWrites = 0
   mock.module('./orca-terminal.mjs', { namedExports: { sendText: async () => {} } })
   mock.module('./terminal-activity.mjs', {
-    namedExports: { observeAgent: async () => ({}), classifyRound: () => 'finished' }
+    namedExports: {
+      observeAgent: async () => ({}),
+      classifyRound: (() => {
+        let n = 0
+        return () => (++n % 2 === 1 ? 'busy' : 'finished')
+      })()
+    }
   })
   mock.module('./git-snapshot.mjs', {
     namedExports: {
@@ -428,7 +460,13 @@ test('轮次判定失灵时也不该几秒一轮 —— 最短间隔兜底', asy
     }
   })
   mock.module('./terminal-activity.mjs', {
-    namedExports: { observeAgent: async () => ({}), classifyRound: () => 'finished' }
+    namedExports: {
+      observeAgent: async () => ({}),
+      classifyRound: (() => {
+        let n = 0
+        return () => (++n % 2 === 1 ? 'busy' : 'finished')
+      })()
+    }
   })
   mock.module('./git-snapshot.mjs', {
     namedExports: {
@@ -476,7 +514,13 @@ test('终止的那一轮也要写进逐轮日志 —— 否则面板轮次推算
   const logged = []
   mock.module('./orca-terminal.mjs', { namedExports: { sendText: async () => {} } })
   mock.module('./terminal-activity.mjs', {
-    namedExports: { observeAgent: async () => ({}), classifyRound: () => 'finished' }
+    namedExports: {
+      observeAgent: async () => ({}),
+      classifyRound: (() => {
+        let n = 0
+        return () => (++n % 2 === 1 ? 'busy' : 'finished')
+      })()
+    }
   })
   mock.module('./git-snapshot.mjs', {
     namedExports: {

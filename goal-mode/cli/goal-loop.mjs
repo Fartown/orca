@@ -104,7 +104,13 @@ export async function runLoop(goal, { report, thresholds, attach = false }) {
         ? Math.max(0, current.budget.maxMinutes * 60_000 - activeMsOf(current))
         : Infinity
       const goalDeadline = remainingMs === Infinity ? Infinity : sentAt + remainingMs
-      const outcome = await waitForRoundEnd(current.terminalHandle, sentAt, report, goalDeadline)
+      const outcome = await waitForRoundEnd(
+        current.terminalHandle,
+        sentAt,
+        report,
+        goalDeadline,
+        inject
+      )
       // 判定说结束了,但这一轮短得不像话 —— 多半是把上一轮的结束事件当成了本轮的。
       // 补足最短间隔再进下一轮,别让误判把预算和终端一起冲垮。
       const roundMs = Date.now() - sentAt
@@ -409,7 +415,7 @@ async function safeToInject(handle) {
  * 拿不到时退回标题字形 + PTY 静默,那条路没有时间戳,所以必须先看到它动起来才敢判结束。
  * 「等用户确认」单独一档:此时绝不能注入,否则提示词会被打进权限对话框。
  */
-async function waitForRoundEnd(handle, sentAt, report, goalDeadline = Infinity) {
+async function waitForRoundEnd(handle, sentAt, report, goalDeadline = Infinity, injected = true) {
   await sleep(SETTLE_MS)
   // 判定本身在 round-wait-machine 里,是纯函数;这里只负责观察、报告和睡觉。
   const limits = {
@@ -418,7 +424,7 @@ async function waitForRoundEnd(handle, sentAt, report, goalDeadline = Infinity) 
     observeGraceMs: OBSERVE_GRACE_MS,
     longRunMs: 30 * 60_000
   }
-  let state = initialWaitState(sentAt)
+  let state = initialWaitState(sentAt, injected)
 
   while (Date.now() < goalDeadline) {
     let event
