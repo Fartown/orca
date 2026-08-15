@@ -400,3 +400,25 @@ test('反复声称完成也躲不开空转判定', () => {
   // 三轮一个字没改,基线必须一直跟着走,后面普通轮次才判得出空转
   assert.equal(g.lastSnapshot.tree, 'same')
 })
+
+test('声称完成被驳回的那一轮改了一大片,空转计数要清零', () => {
+  // 原来空转计数只在普通轮次里更新,于是「大改一片 + 声称完成 + 验收没过」那一轮
+  // 既不清零也不累加,前后两个空轮就凑够阈值,判词却说「连续 3 轮零变化」。
+  const g = makeGoal({
+    stallCount: 2,
+    acceptance: { commands: ['judge'] },
+    lastSnapshot: tree('a')
+  })
+  const { goal } = decide(
+    g,
+    obs({
+      sentinel: { kind: 'complete', summary: '做完了' },
+      snapshot: tree('b'), // 工作区确实变了
+      acceptance: {
+        passed: false,
+        results: [{ command: 'judge', ok: false, code: 1, output: 'x' }]
+      }
+    })
+  )
+  assert.equal(goal.stallCount, 0)
+})

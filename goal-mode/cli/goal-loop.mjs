@@ -51,6 +51,11 @@ export async function runLoop(goal, { report, thresholds, attach = false }) {
     // 一次是偶发的 CLI 调用失败,一次是被搬走的提示词模板。
     // 一个瞬时或局部的错误不该终结整个目标,所以这里重试,连续错够久了才认输 ——
     // 而且认输也要留下死因、留在可接回的状态。
+    // 上一轮已经判了终局(达成/受阻/预算耗尽),但落盘或写日志失败被 catch 接住时,
+    // 循环会带着一个 state 已是终态的目标继续注入 —— 一个已达成的目标会被一路改写成 blocked。
+    if (current.state !== 'active') {
+      return current
+    }
     let turn = current.turns + 1
     try {
       const before = current.lastSnapshot || (await snapshotWorktree(current.worktreePath))
@@ -58,14 +63,13 @@ export async function runLoop(goal, { report, thresholds, attach = false }) {
         report.warn(`空转熔断已关闭:${before.reason}`)
       }
 
-      await clearClaim(current.key)
       const sentAt = Date.now()
       let inject = true
       if (attachPending) {
         attachPending = false
         // attach 的前提是「它手上真有一轮在跑」。agent 已经空闲时干等是等一个不存在的轮次,
         // START_MS 一到就被判「毫无动静」受阻 —— 真发生过:上一轮声称完成后它就闲着了。
-        inject = !(await agentIsBusy(current.terminalHandle))
+        inject = await safeToInject(current.terminalHandle)
         if (inject) {
           report.warn('接管时 agent 已空闲,没有在跑的轮次可挂 —— 改为正常注入')
         } else {
@@ -73,6 +77,10 @@ export async function runLoop(goal, { report, thresholds, attach = false }) {
         }
       }
       if (inject) {
+        // 清认领必须和注入绑在一起。早先它在循环体开头无条件执行,而重试是从体开头重来的:
+        // 取证阶段抖一下,重试第一件事就是删掉 agent 上一轮已经写好的完成声明,
+        // 而它已经闲下来不会再写第二次 —— 完成被静默吞掉,目标一路跑到预算耗尽。
+        await clearClaim(current.key)
         const text = await buildInjection(current, turn, pending)
         report.round(turn, current.budget.maxTurns, pending.name)
         await sendText(current.terminalHandle, text, { enter: true })
@@ -130,9 +138,13 @@ export async function runLoop(goal, { report, thresholds, attach = false }) {
 
       if (verdict.action.type === 'verify') {
         report.verifying(current.acceptance.commands)
+        const verifyStart = Date.now()
         acceptance = await runAcceptance(current.acceptance, {
           onCommandStart: (c) => report.command(c)
         })
+        // 验收耗时同样计入预算:一次判定十几到四十分钟,是整条链上最贵的一步,
+        // 不计的话唯一的总闸几乎不动 —— 实测 9 小时挂钟只记了 5 分钟。
+        current = { ...current, activeMs: activeMsOf(current) + (Date.now() - verifyStart) }
         report.verified(acceptance)
         // 判词立刻落盘,再去干别的。裁判一次跑十几到四十分钟,是整条链上最贵的一步,
         // 却曾经是唯一不留痕的:它只在内存里待到「构造下一轮注入」那一刻。
@@ -209,12 +221,23 @@ export async function runLoop(goal, { report, thresholds, attach = false }) {
   }
 }
 
-/** 此刻它在动吗。观察不到就当它闲着 —— 注入总比干等一个不存在的轮次强。 */
-async function agentIsBusy(handle) {
+/**
+ * 现在往这个终端注入安不安全。
+ *
+ * 要问的不是「忙不忙」而是「安不安全」:agent 卡在权限确认框上时它并不忙,
+ * 但这时注入会把整段提示词敲进那个对话框。所以只有明确处于「空闲在提示符前」
+ * (finished / quiet)才放行,busy、needs-user、断开、判不出来一律不注入。
+ *
+ * sinceMs 传 0:这里问的是「此刻是什么状态」,不是「本轮有没有结束」,
+ * 所以 hook 状态不论新旧都要采信 —— 传 Date.now() 会让 stateStartedAt > sinceMs 恒假,
+ * needs-user 那一档直接变成死代码,权限对话框会被误判成空闲。
+ */
+async function safeToInject(handle) {
   try {
-    return classifyRound(await observeAgent(handle), Date.now(), QUIET_MS) === 'busy'
+    const verdict = classifyRound(await observeAgent(handle), 0, QUIET_MS)
+    return verdict === 'finished' || verdict === 'quiet'
   } catch {
-    return false
+    return false // 观察不到就别乱敲
   }
 }
 
@@ -227,6 +250,8 @@ async function waitForRoundEnd(handle, sentAt, report, goalDeadline = Infinity) 
   await sleep(SETTLE_MS)
   let startedWorking = false
   let announcedNeedsUser = false
+  let waitingSince = null // 此刻正在等用户确认的起点;等待时长不该算进两道超时
+  let startAt = sentAt // START_MS 的计时起点,等人的时间要往后顺延
   let lastBusyAt = sentAt
   let longRunNoticed = false
 
@@ -266,8 +291,21 @@ async function waitForRoundEnd(handle, sentAt, report, goalDeadline = Infinity) 
         announcedNeedsUser = true
         report.needsUser(activity.toolName)
       }
+      waitingSince = waitingSince ?? Date.now()
       await sleep(POLL_MS)
       continue
+    }
+    if (waitingSince) {
+      // 刚从「等你确认」里出来:两道超时的计时都要从这一刻重新起算,
+      // 否则你思考的那段时间会被算成 agent 没动静。
+      // 而这个标志必须清掉 —— 早先它只置位不复位,于是本轮只要等过一次人,
+      // START_MS 和 STUCK_MS 就对这一整轮永久失效:agent 之后崩掉也没人管,
+      // 配 --max-minutes 0 就是永久挂起。
+      const waitedMs = Date.now() - waitingSince
+      waitingSince = null
+      announcedNeedsUser = false
+      startAt += waitedMs
+      lastBusyAt = Date.now()
     }
     if (verdict === 'busy') {
       lastBusyAt = Date.now()
@@ -288,13 +326,13 @@ async function waitForRoundEnd(handle, sentAt, report, goalDeadline = Infinity) 
     if (verdict === 'quiet' && startedWorking) {
       return { ok: true }
     }
-    if (!startedWorking && !announcedNeedsUser && Date.now() - sentAt > START_MS) {
+    if (!startedWorking && Date.now() - startAt > START_MS) {
       return {
         failure: `注入后 ${Math.round(START_MS / 1000)} 秒 agent 毫无动静,可能没收到输入或已退出`
       }
     }
     // 卡死判定只看「多久没见它动过」。等你确认不算卡死,那是在等人。
-    if (!announcedNeedsUser && Date.now() - lastBusyAt > STUCK_MS) {
+    if (Date.now() - lastBusyAt > STUCK_MS) {
       return {
         failure: `agent 已 ${Math.round(STUCK_MS / 60_000)} 分钟没有任何动静,且这一轮没有结束`
       }

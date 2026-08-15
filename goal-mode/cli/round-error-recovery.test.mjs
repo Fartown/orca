@@ -85,7 +85,7 @@ test('注入时读不到模板 —— 重试,不终结目标', async () => {
   const { mod, renders } = await loadLoop({ renderFails: 3 })
   const final = await mod.runLoop(goal(), {
     report,
-    thresholds: { maxBlockedClaims: 2, maxStalls: 2 }
+    thresholds: { maxBlockedClaims: 2, maxStallRounds: 9, maxFalseClaims: 9 }
   })
 
   assert.ok(renders() > 3, `应该重试过:实际只调了 ${renders()} 次`)
@@ -100,7 +100,7 @@ test('错误一直不好,认输也要留下死因和可接回的状态', async (
   const { mod } = await loadLoop({ renderFails: Infinity })
   const final = await mod.runLoop(goal(), {
     report,
-    thresholds: { maxBlockedClaims: 2, maxStalls: 2 }
+    thresholds: { maxBlockedClaims: 2, maxStallRounds: 9, maxFalseClaims: 9 }
   })
 
   assert.equal(final.state, 'blocked', '要停在可接回的状态,不是静默消失')
@@ -159,7 +159,7 @@ test('验收判词立刻落盘 —— 后面哪一步挂了都不该把它赔进
   const mod = await import(`./goal-loop.mjs?verdict=${Math.random()}`)
   await mod.runLoop(goal({ acceptance: { commands: ['judge-1'], timeoutMs: 1000, cwd: '/tmp' } }), {
     report,
-    thresholds: { maxBlockedClaims: 2, maxStalls: 2, maxFalseClaims: 9 }
+    thresholds: { maxBlockedClaims: 2, maxStallRounds: 9, maxFalseClaims: 9 }
   })
 
   const saved = await readFile(path.join(HOME, 'verdict', 'k-turn1.md'), 'utf8')
@@ -208,7 +208,7 @@ test('接管时 agent 已空闲 —— 要正常注入,不能干等一个不存�
   const mod = await import(`./goal-loop.mjs?idle=${Math.random()}`)
   const final = await mod.runLoop(goal({ key: 'idle', budget: { maxTurns: 1, maxMinutes: 0 } }), {
     report,
-    thresholds: { maxBlockedClaims: 2, maxStalls: 9 },
+    thresholds: { maxBlockedClaims: 2, maxStallRounds: 9, maxFalseClaims: 9 },
     attach: true
   })
   assert.ok(sent > 0, 'attach 遇到空闲 agent 时必须注入,而不是干等')
@@ -252,7 +252,7 @@ test('终端一时断开不该终结目标 —— Orca 重启一下就死太脆�
   const mod = await import(`./goal-loop.mjs?disc=${Math.random()}`)
   const final = await mod.runLoop(goal({ key: 'disc', budget: { maxTurns: 1, maxMinutes: 0 } }), {
     report,
-    thresholds: { maxBlockedClaims: 2, maxStalls: 9 }
+    thresholds: { maxBlockedClaims: 2, maxStallRounds: 9, maxFalseClaims: 9 }
   })
   assert.notEqual(final.state, 'blocked', '断开恢复后应该继续跑,而不是判受阻结束')
   assert.ok(observations > 3, '应该重试过')

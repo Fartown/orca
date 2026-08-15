@@ -43,6 +43,17 @@ export function decide(goal, obs, thresholds = DEFAULT_THRESHOLDS) {
   // 空转判定也拿着几轮前的旧基线比 —— 反复声称完成就能一直躲开空转熔断。
   next.lastSnapshot = obs.snapshot
 
+  // 空转计数同理:它衡量的是「工作区有没有动」,和这一轮走哪条判定分支无关。
+  // 早先它只在普通轮次里更新,于是「大改一片 + 声称完成 + 验收没过」的那一轮
+  // 既不清零也不累加,前后两个空轮就能凑够阈值,判词却说「连续 3 轮零变化」。
+  // 三值:true=和上一轮一样(没进展)、false=变了、null=指纹拿不到(未知 ≠ 没变)
+  const unchangedThisRound = sameFingerprint(goal.lastSnapshot, obs.snapshot)
+  if (unchangedThisRound === true) {
+    next.stallCount = goal.stallCount + 1
+  } else if (unchangedThisRound === false) {
+    next.stallCount = 0
+  }
+
   // 声称完成优先于预算判定:最后一轮真做完了,不该被记成预算耗尽。
   if (obs.sentinel?.kind === 'complete') {
     next.blockedClaims = 0
@@ -106,15 +117,10 @@ export function decide(goal, obs, thresholds = DEFAULT_THRESHOLDS) {
     next.blockedClaims = 0
   }
 
-  // 空转:工作区内容指纹连续多轮没变。指纹拿不到时不做判定(未知 ≠ 没变)。
-  const unchanged = sameFingerprint(goal.lastSnapshot, obs.snapshot)
-  if (unchanged === true) {
-    next.stallCount = goal.stallCount + 1
-    if (next.stallCount >= thresholds.maxStallRounds) {
-      return finish(next, 'stalled', `连续 ${next.stallCount} 轮工作区无任何变化,判定为空转`)
-    }
-  } else if (unchanged === false) {
-    next.stallCount = 0
+  // 空转熔断。计数已在函数开头更新过(所有分支共用),这里只做阈值判定 ——
+  // 但必须仍然要求「本轮确实没变」:指纹拿不到时不能拿历史计数判人空转。
+  if (unchangedThisRound === true && next.stallCount >= thresholds.maxStallRounds) {
+    return finish(next, 'stalled', `连续 ${next.stallCount} 轮工作区无任何变化,判定为空转`)
   }
 
   const overBudget = budgetVerdict(next, budget, elapsedMs)
