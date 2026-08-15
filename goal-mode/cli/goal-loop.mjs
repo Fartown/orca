@@ -10,6 +10,7 @@ import { describeFindings, scanRound } from './tamper-scan.mjs'
 import { ROOT, appendLog, writeGoal } from './goal-state.mjs'
 import { sendText } from './orca-terminal.mjs'
 import { classifyRound, observeAgent } from './terminal-activity.mjs'
+import { advanceWait, initialWaitState } from './round-wait-machine.mjs'
 import { notifyDesktop } from './desktop-notification.mjs'
 
 const num = (name, fallback) => Number(process.env[name] || fallback)
@@ -319,98 +320,59 @@ async function safeToInject(handle) {
  */
 async function waitForRoundEnd(handle, sentAt, report, goalDeadline = Infinity) {
   await sleep(SETTLE_MS)
-  let startedWorking = false
-  let announcedNeedsUser = false
-  let waitingSince = null // 此刻正在等用户确认的起点;等待时长不该算进两道超时
-  let startAt = sentAt // START_MS 的计时起点,等人的时间要往后顺延
-  let lastBusyAt = sentAt
-  let longRunNoticed = false
-
-  let firstObserveError = null // 连续失败的起点,恢复了就清掉
+  // 判定本身在 round-wait-machine 里,是纯函数;这里只负责观察、报告和睡觉。
+  const limits = {
+    startMs: START_MS,
+    stuckMs: STUCK_MS,
+    observeGraceMs: OBSERVE_GRACE_MS,
+    longRunMs: 30 * 60_000
+  }
+  let state = initialWaitState(sentAt)
 
   while (Date.now() < goalDeadline) {
-    let activity
+    let event
     try {
-      activity = await observeAgent(handle)
-      if (firstObserveError) {
-        report.warn(
-          `观察恢复正常(中断了 ${Math.round((Date.now() - firstObserveError.at) / 1000)} 秒)`
-        )
-        firstObserveError = null
+      const activity = await observeAgent(handle)
+      event = {
+        ok: true,
+        now: Date.now(),
+        verdict: classifyRound(activity, sentAt, QUIET_MS),
+        source: activity.source,
+        toolName: activity.toolName
       }
     } catch (err) {
-      // 一次失败不算数,连续失败够久才算联系不上。
-      if (!firstObserveError) {
-        firstObserveError = { at: Date.now(), message: err?.message || String(err) }
-        report.warn(`观察终端失败,重试中:${firstObserveError.message}`)
-      }
-      if (Date.now() - firstObserveError.at >= OBSERVE_GRACE_MS) {
-        return {
-          failure: `连续 ${Math.round(OBSERVE_GRACE_MS / 60_000)} 分钟观察不到终端:${firstObserveError.message}`
-        }
-      }
-      await sleep(POLL_MS)
-      continue
+      event = { ok: false, now: Date.now(), message: err?.message || String(err) }
     }
-    const verdict = classifyRound(activity, sentAt, QUIET_MS)
 
-    if (verdict === 'disconnected') {
-      return { failure: '终端已断开' }
+    const step = advanceWait(state, event, limits)
+    state = step.state
+    for (const n of step.notices) {
+      reportWaitNotice(report, n)
     }
-    if (verdict === 'needs-user') {
-      if (!announcedNeedsUser) {
-        announcedNeedsUser = true
-        report.needsUser(activity.toolName)
-      }
-      waitingSince = waitingSince ?? Date.now()
-      await sleep(POLL_MS)
-      continue
-    }
-    if (waitingSince) {
-      // 刚从「等你确认」里出来:两道超时的计时都要从这一刻重新起算,
-      // 否则你思考的那段时间会被算成 agent 没动静。
-      // 而这个标志必须清掉 —— 早先它只置位不复位,于是本轮只要等过一次人,
-      // START_MS 和 STUCK_MS 就对这一整轮永久失效:agent 之后崩掉也没人管,
-      // 配 --max-minutes 0 就是永久挂起。
-      const waitedMs = Date.now() - waitingSince
-      waitingSince = null
-      announcedNeedsUser = false
-      startAt += waitedMs
-      lastBusyAt = Date.now()
-    }
-    if (verdict === 'busy') {
-      lastBusyAt = Date.now()
-      if (!startedWorking) {
-        startedWorking = true
-        report.working(activity.source)
-      } else if (!longRunNoticed && Date.now() - sentAt > 30 * 60_000) {
-        longRunNoticed = true
-        report.longRun(Math.round((Date.now() - sentAt) / 60_000))
-      }
-    }
-    // finished 来自本轮的 hook 状态,可以直接采信。
-    if (verdict === 'finished') {
+    if (step.outcome.type === 'done') {
       return { ok: true }
     }
-    // quiet 只说明终端安静了 —— 只有确实见它动过,才算这一轮跑完;
-    // 否则就是注入刚发出去、agent 还没接管,继续等。
-    if (verdict === 'quiet' && startedWorking) {
-      return { ok: true }
-    }
-    if (!startedWorking && Date.now() - startAt > START_MS) {
-      return {
-        failure: `注入后 ${Math.round(START_MS / 1000)} 秒 agent 毫无动静,可能没收到输入或已退出`
-      }
-    }
-    // 卡死判定只看「多久没见它动过」。等你确认不算卡死,那是在等人。
-    if (Date.now() - lastBusyAt > STUCK_MS) {
-      return {
-        failure: `agent 已 ${Math.round(STUCK_MS / 60_000)} 分钟没有任何动静,且这一轮没有结束`
-      }
+    if (step.outcome.type === 'failure') {
+      return { failure: step.outcome.reason }
     }
     await sleep(POLL_MS)
   }
   return { budgetHit: true }
+}
+
+/** 状态机吐出来的事件怎么讲给人听 —— 纯函数不碰 I/O,呈现留在这里。 */
+function reportWaitNotice(report, notice) {
+  if (notice.kind === 'observe-failed') {
+    report.warn(`观察终端失败,重试中:${notice.message}`)
+  } else if (notice.kind === 'observe-recovered') {
+    report.warn(`观察恢复正常(中断了 ${Math.round(notice.outMs / 1000)} 秒)`)
+  } else if (notice.kind === 'needs-user') {
+    report.needsUser(notice.toolName)
+  } else if (notice.kind === 'working') {
+    report.working(notice.source)
+  } else if (notice.kind === 'long-run') {
+    report.longRun(notice.minutes)
+  }
 }
 
 async function buildInjection(goal, turn, pending) {

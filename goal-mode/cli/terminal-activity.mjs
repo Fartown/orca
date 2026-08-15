@@ -50,9 +50,11 @@ export function classifyRound(activity, sinceMs, quietMs) {
       return 'finished'
     }
   }
-  if (activity.state === 'working') {
-    return 'busy'
-  } // working 没有陈旧风险
+  // 陈旧的 working 只有在终端确实还在动时才采信。
+  // 注释原来断言「working 没有陈旧风险」,但它恰恰是最容易陈旧的一档:
+  // 上一轮被 Esc 打断、agent 进程崩了、Stop hook 没发出来,状态就永久卡在 working。
+  // 无条件采信的话,每次轮询都会把卡死计时刷新到当下 —— 那道闸门永远差一步,
+  // 配「时长不限」就是永久挂起。所以这里不再短路,交给下面的 PTY 存活判断。
 
   // 走到这里说明拿不到本轮的 hook 状态 —— 可能是没有 hook 行,也可能是状态还停在上一轮。
   // 两种都必须看终端本身有没有动静:有的 agent(实测 kimi)thinking 阶段不发 hook 事件,

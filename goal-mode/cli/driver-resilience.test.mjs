@@ -49,28 +49,6 @@ test('未捕获异常把死因写进记录,而不是让目标变成悬案', asyn
   })
 })
 
-test('观察终端偶发失败要重试,不能一次抖动就结束目标', async () => {
-  // 第 3 次运行就是死在这:轮询里一次 CLI 失败直接抛穿 runLoop,目标就没了。
-  const src = await readFile(new URL('./goal-loop.mjs', import.meta.url), 'utf8')
-  const poll = src.slice(src.indexOf('async function waitForRoundEnd'))
-  assert.match(poll, /try\s*\{\s*\n\s*activity = await observeAgent/, '观察必须包在 try 里')
-  assert.match(poll, /OBSERVE_GRACE_MS/, '要有连续失败的宽限期,而不是一次就判死')
-  assert.match(poll, /continue/, '失败后要继续轮询')
-})
-
-test('宽限期明显长于轮询间隔,否则等于没重试', async () => {
-  const src = await readFile(new URL('./goal-loop.mjs', import.meta.url), 'utf8')
-  const grace = Number(
-    src
-      .match(/OBSERVE_GRACE_MS', ([\d\s*_]+)\)/)[1]
-      .replace(/[_\s]/g, '')
-      .split('*')
-      .reduce((a, b) => a * b)
-  )
-  const poll = Number(src.match(/ORCA_GOAL_POLL_MS', ([\d_]+)\)/)[1].replace(/_/g, ''))
-  assert.ok(grace >= poll * 20, `宽限期 ${grace}ms 至少要够重试 20 次(轮询 ${poll}ms)`)
-})
-
 test('超长验收输出要保住真正的结尾 —— 失败原因几乎总在最后几行', async () => {
   // 早先「保尾」保的是前 8000 字的尾巴:采集到上限就不再追加,于是真正的失败原因丢光,
   // 而它是 rejected-completion 回灌给 agent 的唯一证据。
