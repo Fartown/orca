@@ -37,8 +37,8 @@ cp plugin/{orca-plugin.json,panel.html,worker.mjs} \
 ## 测
 
 ```sh
-cd cli    && node --test *.test.mjs                  # 驱动:66 个
-cd plugin && npx vitest run --config vitest.config.ts # 插件:71 个
+cd cli    && node --test --experimental-test-module-mocks *.test.mjs  # 驱动:72 个
+cd plugin && npx vitest run --config vitest.config.ts               # 插件:71 个
 ```
 
 ## 对 Orca 源码的改动

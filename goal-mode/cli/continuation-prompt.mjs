@@ -1,9 +1,12 @@
-// 渲染注入用的提示词。模板是 ../prompts/*.md 的原文,这里只做替换和压平。
+// 渲染注入用的提示词。模板是 prompts/*.md 的原文,这里只做替换和压平。
+//
+// 模板放在这个包里、不用 `..` 跨出去:它们是运行时按名字读盘的,不是启动时载入的,
+// 所以一次目录搬迁就能让跑着的目标在「要注入下一轮」的那一刻 ENOENT 死掉 —— 真发生过。
 import { promises as fs } from 'node:fs'
 import path from 'node:path'
 import { ROOT } from './goal-state.mjs'
 
-const PROMPTS_DIR = path.join(import.meta.dirname, '..', 'prompts')
+const PROMPTS_DIR = path.join(import.meta.dirname, 'prompts')
 const cache = new Map()
 
 async function loadTemplate(name) {

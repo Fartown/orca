@@ -1,11 +1,13 @@
 // 看门狗主循环:清认领 → 注入 → 等这一轮真结束 → 取证 → 判定 → 决定下一轮。
+import { promises as fs } from 'node:fs'
+import path from 'node:path'
 import { describeFailures, runAcceptance } from './acceptance-gate.mjs'
 import { promptPointerLine, renderPrompt, writePromptFile } from './continuation-prompt.mjs'
 import { claimPath, clearClaim, readClaim } from './goal-claim.mjs'
 import { decide } from './goal-decision.mjs'
 import { diffTrees, snapshotWorktree } from './git-snapshot.mjs'
 import { describeFindings, scanRound } from './tamper-scan.mjs'
-import { appendLog, writeGoal } from './goal-state.mjs'
+import { ROOT, appendLog, writeGoal } from './goal-state.mjs'
 import { sendText } from './orca-terminal.mjs'
 import { classifyRound, observeAgent } from './terminal-activity.mjs'
 
@@ -17,6 +19,9 @@ const POLL_MS = num('ORCA_GOAL_POLL_MS', 3_000)
 // 一轮要轮询几千次,把任何一次失败当致命,目标迟早死在一次抖动上 —— 实测发生过。
 // 所以连续失败超过这个时长才判定「真的联系不上了」,中间一律重试。
 const OBSERVE_GRACE_MS = num('ORCA_GOAL_OBSERVE_GRACE_MS', 3 * 60_000)
+// 轮次里出错后重试多久才认输。给得比观察宽限长:这里的错可能要人去修
+// (磁盘满了、模板文件没了、git 仓库坏了),留出察觉和补救的窗口。
+const ROUND_ERROR_GRACE_MS = num('ORCA_GOAL_ROUND_ERROR_GRACE_MS', 10 * 60_000)
 const START_MS = num('ORCA_GOAL_START_MS', 300_000) // 注入后多久还没有任何动静才认定没收到
 // 只在 agent「不在干活」时才计的卡死上限。它还在跑就一直等 —— 大任务里一个 turn
 // 连续调几十次工具跑上两三小时是正常的,拿单轮上限去砍它等于把干得好好的活腰斩。
@@ -36,120 +41,166 @@ export async function runLoop(goal, { report, thresholds, attach = false }) {
   let current = goal
   let pending = { name: 'continuation', extra: {} }
   let attachPending = attach
+  let injectedTurn = null // 这一轮的提示词已经送出去了吗 —— 重试时别送第二遍
+  let errorSince = null // 连续出错的起点,成功跑完一轮就清掉
 
   while (true) {
-    const turn = current.turns + 1
-    const before = current.lastSnapshot || (await snapshotWorktree(current.worktreePath))
-    if (before.kind === 'unavailable' && turn === 1) {
-      report.warn(`空转熔断已关闭:${before.reason}`)
-    }
-
-    await clearClaim(current.key)
-    const sentAt = Date.now()
-    if (attachPending) {
-      attachPending = false
-      report.attach(turn)
-    } else {
-      const text = await buildInjection(current, turn, pending)
-      report.round(turn, current.budget.maxTurns, pending.name)
-      await sendText(current.terminalHandle, text, { enter: true })
-    }
-
-    // 预算按「已经花掉的活跃时长」算,不是按日历。本轮最多还能跑 remaining。
-    const remainingMs = current.budget.maxMinutes
-      ? Math.max(0, current.budget.maxMinutes * 60_000 - activeMsOf(current))
-      : Infinity
-    const goalDeadline = remainingMs === Infinity ? Infinity : sentAt + remainingMs
-    const outcome = await waitForRoundEnd(current.terminalHandle, sentAt, report, goalDeadline)
-    // 这一轮实际花了多久,立刻记账 —— 下面每个出口分支都从 current 派生,记在这里才不会漏。
-    current = { ...current, activeMs: activeMsOf(current) + (Date.now() - sentAt) }
-    if (outcome.budgetHit) {
-      current = {
-        ...current,
-        turns: turn,
-        state: 'budget_exhausted',
-        finishReason: `时长预算耗尽(累计跑了 ${Math.round(activeMsOf(current) / 60_000)} / ${current.budget.maxMinutes} 分钟),该轮仍在进行中`,
-        finishedAt: Date.now()
+    // 轮次里的任何一步都可能抛:git、fs、orca CLI、读提示词模板。
+    // 早先这些错误会一路抛到顶层 catch,打印一行就 process.exit(1) —— 目标就此终结,
+    // 记录还停在 active,从外面看只是「驱动没了」。同一个模式已经杀过它两次:
+    // 一次是偶发的 CLI 调用失败,一次是被搬走的提示词模板。
+    // 一个瞬时或局部的错误不该终结整个目标,所以这里重试,连续错够久了才认输 ——
+    // 而且认输也要留下死因、留在可接回的状态。
+    let turn = current.turns + 1
+    try {
+      const before = current.lastSnapshot || (await snapshotWorktree(current.worktreePath))
+      if (before.kind === 'unavailable' && turn === 1) {
+        report.warn(`空转熔断已关闭:${before.reason}`)
       }
-      await writeGoal(current)
-      await maybeSendWrapUp(
-        current,
-        { state: 'budget_exhausted', reason: current.finishReason },
-        report
-      )
-      return current
-    }
-    if (outcome.failure) {
-      current = {
-        ...current,
-        turns: turn,
-        state: 'blocked',
-        finishReason: `第 ${turn} 轮:${outcome.failure}`,
-        finishedAt: Date.now()
+
+      await clearClaim(current.key)
+      const sentAt = Date.now()
+      if (attachPending) {
+        attachPending = false
+        report.attach(turn)
+      } else {
+        const text = await buildInjection(current, turn, pending)
+        report.round(turn, current.budget.maxTurns, pending.name)
+        await sendText(current.terminalHandle, text, { enter: true })
+        injectedTurn = turn
       }
+
+      // 预算按「已经花掉的活跃时长」算,不是按日历。本轮最多还能跑 remaining。
+      const remainingMs = current.budget.maxMinutes
+        ? Math.max(0, current.budget.maxMinutes * 60_000 - activeMsOf(current))
+        : Infinity
+      const goalDeadline = remainingMs === Infinity ? Infinity : sentAt + remainingMs
+      const outcome = await waitForRoundEnd(current.terminalHandle, sentAt, report, goalDeadline)
+      // 这一轮实际花了多久,立刻记账 —— 下面每个出口分支都从 current 派生,记在这里才不会漏。
+      current = { ...current, activeMs: activeMsOf(current) + (Date.now() - sentAt) }
+      if (outcome.budgetHit) {
+        current = {
+          ...current,
+          turns: turn,
+          state: 'budget_exhausted',
+          finishReason: `时长预算耗尽(累计跑了 ${Math.round(activeMsOf(current) / 60_000)} / ${current.budget.maxMinutes} 分钟),该轮仍在进行中`,
+          finishedAt: Date.now()
+        }
+        await writeGoal(current)
+        await maybeSendWrapUp(
+          current,
+          { state: 'budget_exhausted', reason: current.finishReason },
+          report
+        )
+        return current
+      }
+      if (outcome.failure) {
+        current = {
+          ...current,
+          turns: turn,
+          state: 'blocked',
+          finishReason: `第 ${turn} 轮:${outcome.failure}`,
+          finishedAt: Date.now()
+        }
+        await writeGoal(current)
+        return current
+      }
+
+      const after = await snapshotWorktree(current.worktreePath)
+      const changed = await diffTrees(current.worktreePath, before, after)
+      const findings = await scanRound(current.worktreePath, before, after, changed)
+      for (const f of findings.filter((x) => x.challenge)) {
+        report.tamper(f)
+      }
+
+      const claim = await readClaim(current.key)
+      if (claim?.kind === 'malformed') {
+        report.warn(`认领文件格式不对,按「未声明」处理:${claim.summary}`)
+      }
+      const sentinel = claim && claim.kind !== 'malformed' ? claim : null
+      current = { ...current, turns: turn }
+
+      let acceptance = null
+      const obs = { now: Date.now(), sentinel, snapshot: after, findings }
+      let verdict = decide(current, obs, thresholds)
+
+      if (verdict.action.type === 'verify') {
+        report.verifying(current.acceptance.commands)
+        acceptance = await runAcceptance(current.acceptance, {
+          onCommandStart: (c) => report.command(c)
+        })
+        report.verified(acceptance)
+        // 判词立刻落盘,再去干别的。裁判一次跑十几到四十分钟,是整条链上最贵的一步,
+        // 却曾经是唯一不留痕的:它只在内存里待到「构造下一轮注入」那一刻。
+        // 那一步一旦失败(真发生过),这几十分钟就白跑,连「为什么没通过」都查不到。
+        await saveVerdict(current.key, turn, acceptance).catch((err) =>
+          report.warn(`判词落盘失败(不影响本轮):${err?.message || err}`)
+        )
+        verdict = decide(current, { ...obs, now: Date.now(), acceptance }, thresholds)
+      }
+
+      current = verdict.goal
       await writeGoal(current)
-      return current
-    }
-
-    const after = await snapshotWorktree(current.worktreePath)
-    const changed = await diffTrees(current.worktreePath, before, after)
-    const findings = await scanRound(current.worktreePath, before, after, changed)
-    for (const f of findings.filter((x) => x.challenge)) {
-      report.tamper(f)
-    }
-
-    const claim = await readClaim(current.key)
-    if (claim?.kind === 'malformed') {
-      report.warn(`认领文件格式不对,按「未声明」处理:${claim.summary}`)
-    }
-    const sentinel = claim && claim.kind !== 'malformed' ? claim : null
-    current = { ...current, turns: turn }
-
-    let acceptance = null
-    const obs = { now: Date.now(), sentinel, snapshot: after, findings }
-    let verdict = decide(current, obs, thresholds)
-
-    if (verdict.action.type === 'verify') {
-      report.verifying(current.acceptance.commands)
-      acceptance = await runAcceptance(current.acceptance, {
-        onCommandStart: (c) => report.command(c)
+      await appendLog(current.key, {
+        at: new Date(current.updatedAt).toISOString(),
+        turn,
+        prompt: pending.name,
+        claim: sentinel,
+        tree: after.kind === 'git' ? after.tree : null,
+        head: after.kind === 'git' ? after.head : null,
+        // 「这一轮干了什么」的主体。只记哈希的话,时间线上就只剩一句「第 N 轮」,
+        // 看不出它到底动了什么。文件名截断保存,避免大改动把日志撑爆。
+        changed: changed
+          ? { source: changed.source.slice(0, 20), test: changed.test.slice(0, 20) }
+          : null,
+        acceptancePassed: acceptance?.passed ?? null,
+        // 没通过的话把哪几条挂了记下来。全文在 verdict/ 里,这里只留摘要,免得撑爆日志。
+        acceptanceFailed:
+          acceptance && !acceptance.passed ? describeFailures(acceptance).list : null,
+        findings: findings.length ? findings : null,
+        action: verdict.action.type,
+        state: current.state,
+        reason: verdict.action.reason || null
       })
-      report.verified(acceptance)
-      verdict = decide(current, { ...obs, now: Date.now(), acceptance }, thresholds)
-    }
 
-    current = verdict.goal
-    await writeGoal(current)
-    await appendLog(current.key, {
-      at: new Date(current.updatedAt).toISOString(),
-      turn,
-      prompt: pending.name,
-      claim: sentinel,
-      tree: after.kind === 'git' ? after.tree : null,
-      head: after.kind === 'git' ? after.head : null,
-      // 「这一轮干了什么」的主体。只记哈希的话,时间线上就只剩一句「第 N 轮」,
-      // 看不出它到底动了什么。文件名截断保存,避免大改动把日志撑爆。
-      changed: changed
-        ? { source: changed.source.slice(0, 20), test: changed.test.slice(0, 20) }
-        : null,
-      acceptancePassed: acceptance?.passed ?? null,
-      findings: findings.length ? findings : null,
-      action: verdict.action.type,
-      state: current.state,
-      reason: verdict.action.reason || null
-    })
+      if (verdict.action.type === 'finish') {
+        await maybeSendWrapUp(current, verdict.action, report)
+        return current
+      }
 
-    if (verdict.action.type === 'finish') {
-      await maybeSendWrapUp(current, verdict.action, report)
-      return current
-    }
+      pending = nextPrompt(verdict.action, acceptance, changed, findings)
 
-    pending = nextPrompt(verdict.action, acceptance, changed, findings)
-
-    if (sentinel?.kind === 'blocked') {
-      report.warn(
-        `agent 声称受阻(第 ${current.blockedClaims} 次,满 ${thresholds.maxBlockedClaims} 次才采信):${sentinel.summary}`
-      )
+      if (sentinel?.kind === 'blocked') {
+        report.warn(
+          `agent 声称受阻(第 ${current.blockedClaims} 次,满 ${thresholds.maxBlockedClaims} 次才采信):${sentinel.summary}`
+        )
+      }
+      if (errorSince) {
+        report.warn(
+          `第 ${turn} 轮已恢复正常(出错持续了 ${Math.round((Date.now() - errorSince) / 1000)} 秒)`
+        )
+      }
+      errorSince = null
+    } catch (err) {
+      const message = err?.message || String(err)
+      if (!errorSince) {
+        errorSince = Date.now()
+        report.warn(`第 ${turn} 轮出错,重试中:${message}`)
+      }
+      if (Date.now() - errorSince >= ROUND_ERROR_GRACE_MS) {
+        current = {
+          ...current,
+          state: 'blocked',
+          finishReason: `第 ${turn} 轮连续 ${Math.round(ROUND_ERROR_GRACE_MS / 60_000)} 分钟出错:${message}`,
+          driverError: { kind: 'round', message: message.slice(0, 500), at: Date.now() },
+          finishedAt: Date.now()
+        }
+        await writeGoal(current).catch(() => {})
+        return current
+      }
+      // 已经注入过就别再注入一次 —— 重试时挂到 agent 手上那一轮上,和 resume 的语义一样。
+      attachPending = injectedTurn === turn
+      await sleep(POLL_MS)
     }
   }
 }
@@ -297,6 +348,24 @@ function evidenceVars(changed, findings) {
 function failureVars(acceptance) {
   const { list, output } = describeFailures(acceptance)
   return { failureList: list, failureOutput: output || '(命令没有产生输出)' }
+}
+
+/**
+ * 把这一轮的验收判词写进 ~/.orca-goal/verdict/<key>-turn<N>.md。
+ * 一条命令一节,原样保留裁判的输出 —— 驳回理由是下一轮要改什么的唯一依据,
+ * 也是人事后回看「它到底卡在哪」的唯一材料。
+ */
+async function saveVerdict(key, turn, acceptance) {
+  const dir = path.join(ROOT, 'verdict')
+  await fs.mkdir(dir, { recursive: true })
+  const body = acceptance.results
+    .map((r) => `## ${r.ok ? '通过' : '未通过'}:${r.command}\n\n${r.output || '(没有输出)'}`)
+    .join('\n\n')
+  await fs.writeFile(
+    path.join(dir, `${key}-turn${turn}.md`),
+    `# 第 ${turn} 轮验收 —— ${acceptance.passed ? '全部通过' : '未通过'}\n\n${body}\n`,
+    'utf8'
+  )
 }
 
 /** 预算耗尽时给 agent 最后一轮收尾的机会 —— 让它自己总结进度和剩余工作。 */

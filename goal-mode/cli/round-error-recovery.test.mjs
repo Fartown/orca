@@ -1,0 +1,168 @@
+// 轮次里出错不该终结目标。
+//
+// 需要 `node --test --experimental-test-module-mocks`:这些用例要真驱动 runLoop,
+// 就得把它依赖的 git / 终端 / 验收替换掉,而那正是 mock.module 的用途。
+// 事故背景:提示词模板被一次目录搬迁挪走,驱动在「验收驳回后要注入重试」的那一刻
+// 读不到文件,异常抛到顶层 catch,print 一行就 process.exit(1) —— 跑了两小时的目标没了,
+// 记录还停在 active。当时 137 个测试全绿,因为没有一个真的驱动过 runLoop。
+import assert from 'node:assert/strict'
+import test, { after, mock } from 'node:test'
+import { mkdtemp, readFile, rm } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import path from 'node:path'
+
+async function loadLoop({ renderFails }) {
+  mock.reset() // mock 会跨用例残留,不清就报「already mocked」
+  let calls = 0
+  mock.module('./orca-terminal.mjs', { namedExports: { sendText: async () => {} } })
+  mock.module('./terminal-activity.mjs', {
+    namedExports: { observeAgent: async () => ({}), classifyRound: () => 'finished' }
+  })
+  mock.module('./git-snapshot.mjs', {
+    namedExports: {
+      snapshotWorktree: async () => ({ kind: 'git', tree: 't', head: 'h' }),
+      diffTrees: async () => ({ source: [], test: [] })
+    }
+  })
+  mock.module('./tamper-scan.mjs', {
+    namedExports: { scanRound: async () => [], describeFindings: () => '' }
+  })
+  mock.module('./goal-claim.mjs', {
+    namedExports: {
+      readClaim: async () => null,
+      clearClaim: async () => {},
+      claimPath: () => '/tmp/c'
+    }
+  })
+  mock.module('./continuation-prompt.mjs', {
+    namedExports: {
+      renderPrompt: async () => {
+        calls++
+        if (calls <= renderFails) {
+          throw new Error('ENOENT: no such file or directory, open rejected-completion.md')
+        }
+        return '提示词'
+      },
+      writePromptFile: async () => '/tmp/p',
+      promptPointerLine: () => 'x'
+    }
+  })
+  const mod = await import(`./goal-loop.mjs?t=${calls}-${renderFails}-${Math.random()}`)
+  return { mod, renders: () => calls }
+}
+
+// goal-state 的 ROOT 是模块加载时读的环境变量,而动态导入只会让 goal-loop 重新加载、
+// goal-state 仍走缓存 —— 所以整个文件必须共用一个 HOME,分用例各设各的会写到第一个那里去。
+const HOME = await mkdtemp(path.join(tmpdir(), 'goal-loop-'))
+process.env.ORCA_GOAL_HOME = HOME
+process.env.ORCA_GOAL_POLL_MS = '5'
+process.env.ORCA_GOAL_SETTLE_MS = '10'
+after(() => rm(HOME, { recursive: true, force: true }))
+
+const goal = (over = {}) => ({
+  key: 'k',
+  objective: 'o',
+  worktreePath: '/tmp/wt',
+  terminalHandle: 'term_x',
+  acceptance: null,
+  budget: { maxTurns: 2, maxMinutes: 0 },
+  state: 'active',
+  turns: 0,
+  falseClaims: 0,
+  blockedClaims: 0,
+  stallCount: 0,
+  tamperFindings: [],
+  tamperChallenges: 0,
+  startedAt: Date.now(),
+  updatedAt: Date.now(),
+  lastSnapshot: { kind: 'git', tree: 't0', head: 'h0' },
+  ...over
+})
+
+const report = new Proxy({}, { get: () => () => {} })
+
+test('注入时读不到模板 —— 重试,不终结目标', async () => {
+  const { mod, renders } = await loadLoop({ renderFails: 3 })
+  const final = await mod.runLoop(goal(), {
+    report,
+    thresholds: { maxBlockedClaims: 2, maxStalls: 2 }
+  })
+
+  assert.ok(renders() > 3, `应该重试过:实际只调了 ${renders()} 次`)
+  // 跑到轮数预算才停,而不是死在 ENOENT 上
+  assert.equal(final.state, 'budget_exhausted')
+})
+
+test('错误一直不好,认输也要留下死因和可接回的状态', async (t) => {
+  process.env.ORCA_GOAL_ROUND_ERROR_GRACE_MS = '80'
+  t.after(() => delete process.env.ORCA_GOAL_ROUND_ERROR_GRACE_MS)
+
+  const { mod } = await loadLoop({ renderFails: Infinity })
+  const final = await mod.runLoop(goal(), {
+    report,
+    thresholds: { maxBlockedClaims: 2, maxStalls: 2 }
+  })
+
+  assert.equal(final.state, 'blocked', '要停在可接回的状态,不是静默消失')
+  assert.match(final.finishReason, /ENOENT/, '死因要写清楚是什么错')
+  assert.ok(final.driverError, '记录里要留下 driverError 供面板显示')
+})
+
+test('验收判词立刻落盘 —— 后面哪一步挂了都不该把它赔进去', async (t) => {
+  process.env.ORCA_GOAL_ROUND_ERROR_GRACE_MS = '80'
+  t.after(() => delete process.env.ORCA_GOAL_ROUND_ERROR_GRACE_MS)
+
+  mock.reset()
+  mock.module('./orca-terminal.mjs', { namedExports: { sendText: async () => {} } })
+  mock.module('./terminal-activity.mjs', {
+    namedExports: { observeAgent: async () => ({}), classifyRound: () => 'finished' }
+  })
+  mock.module('./git-snapshot.mjs', {
+    namedExports: {
+      snapshotWorktree: async () => ({ kind: 'git', tree: 't', head: 'h' }),
+      diffTrees: async () => ({ source: ['a.ts'], test: [] })
+    }
+  })
+  mock.module('./tamper-scan.mjs', {
+    namedExports: { scanRound: async () => [], describeFindings: () => '' }
+  })
+  mock.module('./goal-claim.mjs', {
+    namedExports: {
+      readClaim: async () => ({ kind: 'complete', summary: '做完了' }),
+      clearClaim: async () => {},
+      claimPath: () => '/tmp/c'
+    }
+  })
+  mock.module('./acceptance-gate.mjs', {
+    namedExports: {
+      runAcceptance: async () => ({
+        passed: false,
+        results: [{ command: 'judge-1', ok: false, code: 1, ms: 720_000, output: 'FAIL 少了圆角' }]
+      }),
+      describeFailures: () => ({ list: '- `judge-1` 退出码 1', output: 'FAIL 少了圆角' })
+    }
+  })
+  // 判词落盘之后、构造注入之前挂掉 —— 正是事故发生的位置
+  mock.module('./continuation-prompt.mjs', {
+    namedExports: {
+      renderPrompt: async () => {
+        throw new Error('ENOENT: rejected-completion.md')
+      },
+      writePromptFile: async () => '/tmp/p',
+      promptPointerLine: () => 'x'
+    }
+  })
+  const mod = await import(`./goal-loop.mjs?verdict=${Math.random()}`)
+  // attach:首轮不注入 —— 事故的形状是「验收判完、要注入驳回提示词时挂掉」,
+  // 若首轮就卡在注入上,根本走不到验收那一步。
+  await mod.runLoop(goal({ acceptance: { commands: ['judge-1'], timeoutMs: 1000, cwd: '/tmp' } }), {
+    report,
+    thresholds: { maxBlockedClaims: 2, maxStalls: 2, maxFalseClaims: 9 },
+    attach: true
+  })
+
+  const saved = await readFile(path.join(HOME, 'verdict', 'k-turn1.md'), 'utf8')
+  assert.match(saved, /FAIL 少了圆角/, '判词全文要留在 verdict/ 里')
+  const log = await readFile(path.join(HOME, 'log', 'k.jsonl'), 'utf8')
+  assert.match(log, /acceptanceFailed/, '逐轮日志要记下驳回摘要,面板才说得出为什么')
+})
