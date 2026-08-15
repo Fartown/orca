@@ -11,14 +11,29 @@ import { ROOT } from './goal-state.mjs'
 
 export const claimPath = (key) => path.join(ROOT, 'claims', `${key}.txt`)
 
+// agent 可能把命令输出重定向进这个路径(每轮都告诉它路径),整份读进来能到几百 MB。
+// 声明本身只有一行,超过这个量的一定不是声明。
+const MAX_CLAIM_BYTES = 64 * 1024
+
 /** 每轮注入前清空 —— 否则上一轮的声明会被当成这一轮的。 */
 export async function clearClaim(key) {
-  await fs.rm(claimPath(key), { force: true })
+  // recursive:agent 手滑 mkdir 出这个路径时,不带它会每轮抛 EISDIR、十分钟后把目标判受阻。
+  await fs.rm(claimPath(key), { force: true, recursive: true })
 }
 
 export async function readClaim(key) {
   let raw
   try {
+    const stat = await fs.stat(claimPath(key))
+    if (stat.isDirectory()) {
+      return { kind: 'malformed', summary: '认领路径是个目录' }
+    }
+    if (stat.size > MAX_CLAIM_BYTES) {
+      return {
+        kind: 'malformed',
+        summary: `认领文件有 ${Math.round(stat.size / 1024)} KB,声明只该有一行`
+      }
+    }
     raw = await fs.readFile(claimPath(key), 'utf8')
   } catch (err) {
     if (err.code === 'ENOENT') {
@@ -28,7 +43,9 @@ export async function readClaim(key) {
   }
   for (const line of raw.split('\n')) {
     // 半角/全角冒号都收;agent 可能顺手加了 markdown 强调或引号。
-    const m = line.match(/^\s*["'`*_]*\s*(complete|blocked)\s*["'`*_]*\s*[:：]\s*(.*)$/i)
+    // 区分大小写:`Complete: 5 files changed, 12 insertions` 这种日志行原来会被当成完成声明,
+    // 没配验收时它足以让目标直接判成「达成(未经验证)」。约定就是小写开头。
+    const m = line.match(/^\s*["'`*_]*\s*(complete|blocked)\s*["'`*_]*\s*[:：]\s*(.*)$/)
     if (m) {
       return { kind: m[1].toLowerCase(), summary: m[2].trim().slice(0, 300) }
     }

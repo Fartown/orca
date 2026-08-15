@@ -221,3 +221,52 @@ test('注入给 agent 的提示词里,不限预算不能写成 0', async () => {
   assert.match(body, /maxTurns: goal\.budget\.maxTurns \|\| '不限'/)
   assert.match(body, /maxMinutes: goal\.budget\.maxMinutes \|\| '不限'/)
 })
+
+test('数值参数非法时直接报错,不静默退化', async () => {
+  // --check-timeout abc → NaN → setTimeout(NaN) 被 Node 当成 1 毫秒 →
+  // 每条验收刚起就被杀 → 完成声明永远被驳回。而 0 在轮数/时长里是「不限」,在超时里相反。
+  const { execFile } = await import('node:child_process')
+  const { promisify } = await import('node:util')
+  const run = promisify(execFile)
+  const cli = new URL('./orca-goal.mjs', import.meta.url).pathname
+  for (const bad of ['abc', '0', '-5']) {
+    const r = await run(process.execPath, [
+      cli,
+      'start',
+      '--terminal',
+      'x',
+      '--objective',
+      'y',
+      '--check-timeout',
+      bad
+    ]).catch((e) => e)
+    assert.match(
+      String(r.stderr || r.stdout),
+      /--check-timeout 需要一个大于 0 的秒数/,
+      `${bad} 应该被拒`
+    )
+  }
+})
+
+test('认领文件是目录 / 超大 / 大写开头,都不该被当成完成声明', async () => {
+  const home = await fs.mkdtemp(path.join(os.tmpdir(), 'goal-claim-'))
+  process.env.ORCA_GOAL_HOME = home
+  const { readClaim, claimPath, clearClaim } = await import(`./goal-claim.mjs?t=${Math.random()}`)
+  await fs.mkdir(path.join(home, 'claims'), { recursive: true })
+
+  await fs.mkdir(claimPath('a'), { recursive: true })
+  assert.equal((await readClaim('a')).kind, 'malformed', '目录不该抛,也不该算声明')
+  await clearClaim('a') // 不带 recursive 会 EISDIR,每轮必抛
+
+  await fs.writeFile(claimPath('b'), 'x'.repeat(100 * 1024))
+  assert.equal((await readClaim('b')).kind, 'malformed', '超大文件不该整份读进来当声明')
+
+  // 日志行:git 输出里很常见,原来会被当成完成声明。
+  // 现在落进 malformed —— 不算声明,而且会告警,比静默忽略更好。
+  await fs.writeFile(claimPath('c'), 'Complete: 5 files changed, 12 insertions\n')
+  assert.equal((await readClaim('c')).kind, 'malformed')
+
+  await fs.writeFile(claimPath('d'), 'complete: 真的做完了\n')
+  assert.equal((await readClaim('d')).kind, 'complete')
+  await fs.rm(home, { recursive: true, force: true })
+})

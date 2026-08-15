@@ -103,6 +103,22 @@ export async function listGoals() {
   return goals.filter(Boolean)
 }
 
+/**
+ * 同一个终端再开一个新目标时,把上一代的逐轮日志改名归档。
+ * 不归档的话新目标的轮次直接追加在旧目标后面,面板读日志尾部就会把上一代的轮次
+ * 混进这一代的时间线,轮次号也跟着对不上。
+ */
+export async function archiveLog(key) {
+  const from = logPath(key)
+  try {
+    await fs.rename(from, `${from}.${Date.now()}`)
+  } catch (err) {
+    if (err.code !== 'ENOENT') {
+      throw err
+    }
+  }
+}
+
 export async function appendLog(key, entry) {
   await fs.mkdir(logDir(), { recursive: true })
   await fs.appendFile(logPath(key), `${JSON.stringify(entry)}\n`, 'utf8')

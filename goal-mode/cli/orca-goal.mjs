@@ -23,7 +23,8 @@ import {
   newGoal,
   readGoal,
   readLockPid,
-  writeGoal
+  writeGoal,
+  archiveLog
 } from './goal-state.mjs'
 import { listTerminals } from './orca-terminal.mjs'
 import { formatChoice, listTerminalChoices, pickTerminal } from './terminal-picker.mjs'
@@ -98,6 +99,26 @@ async function main(argv) {
   }
 }
 
+const absolutize = (v) => (v ? path.resolve(v) : v)
+
+/** 0 合法(表示不限),负数和非数字不合法。 */
+function nonNegative(name, value) {
+  const n = Number(value)
+  if (!Number.isFinite(n) || n < 0) {
+    throw new Error(`${name} 需要一个不小于 0 的数字,收到:${value}`)
+  }
+  return n
+}
+
+/** 超时必须为正:0 在这里不是「不限」而是「立刻超时」,几乎肯定是笔误。 */
+function positive(name, value) {
+  const n = Number(value)
+  if (!Number.isFinite(n) || n <= 0) {
+    throw new Error(`${name} 需要一个大于 0 的秒数(0 会让检查立刻超时),收到:${value}`)
+  }
+  return n
+}
+
 function parseFlags(args) {
   const flags = { check: [] }
   for (let i = 0; i < args.length; i++) {
@@ -154,11 +175,16 @@ async function resolveSettings(flags) {
     objective: pick('objective', 'objective'),
     onBlocked: pick('on-blocked', 'onBlocked') || 'ask',
     terminal: pick('terminal', 'terminal'),
-    worktree: pick('worktree', 'worktree'),
+    // 子进程的 cwd 是状态目录(刻意的,见 detached-driver),相对路径在那里解析必然错 ——
+    // 父进程打印「已在后台启动」后子进程立刻退出,唯一线索埋在驱动日志里。
+    worktree: absolutize(pick('worktree', 'worktree')),
     checks: flags.check.length > 0 ? flags.check : (file.check ?? []),
-    checkTimeout: Number(pick('check-timeout', 'checkTimeout', 900)),
-    maxTurns: Number(pick('max-turns', 'maxTurns', 20)),
-    maxMinutes: Number(pick('max-minutes', 'maxMinutes', 180)),
+    // 必须校验:`--check-timeout abc` 会变成 NaN,setTimeout(NaN) 被 Node 当成 1 毫秒,
+    // 于是每条验收刚起就被杀、完成声明永远被驳回。而 0 在轮数/时长里表示「不限」,
+    // 在超时里却是「立刻超时」—— 语义相反,更不能静默接受。
+    checkTimeout: positive('--check-timeout', pick('check-timeout', 'checkTimeout', 900)),
+    maxTurns: nonNegative('--max-turns', pick('max-turns', 'maxTurns', 20)),
+    maxMinutes: nonNegative('--max-minutes', pick('max-minutes', 'maxMinutes', 180)),
     promptFile: Boolean(flags['prompt-file'] || file.promptFile)
   }
 }
@@ -238,6 +264,9 @@ async function start(flags, rawArgs) {
     })
   }
 
+  // 同一个终端上一代目标的逐轮日志先归档,否则新目标的轮次会追加在它后面,
+  // 面板读日志尾部就把上一代的轮次混进这一代的时间线。
+  await archiveLog(key)
   await writeGoal(goal)
   console.log(`目标已启动 → ${worktreePath}`)
   console.log(`预算:${describeBudget(goal.budget)}`)
@@ -409,7 +438,10 @@ async function resume(flags, rawArgs = []) {
     state: 'active',
     finishReason: null,
     finishedAt: null,
-    driverError: null // 这次接回是新的一程,别挂着上次的死因
+    driverError: null, // 这次接回是新的一程,别挂着上次的死因
+    // 基线必须重取:停几天后接回,旧基线会把这期间别人的提交全算成「本轮改动」,
+    // 篡改扫描据此报「改了门禁配置」「删了断言」,质证计数已到阈值时第一轮就判受阻。
+    lastSnapshot: null
   }
 
   // 只在显式给了的时候才覆盖,没给就沿用原记录。
@@ -417,7 +449,8 @@ async function resume(flags, rawArgs = []) {
   if (checks) {
     goal.acceptance = {
       commands: checks,
-      timeoutMs: Number(flags['check-timeout'] ?? file.checkTimeout ?? 900) * 1000,
+      timeoutMs:
+        positive('--check-timeout', flags['check-timeout'] ?? file.checkTimeout ?? 900) * 1000,
       cwd: flags.worktree || file.worktree || existing.worktreePath
     }
     if (!(await confirmAcceptance(goal.acceptance, flags.yes))) {

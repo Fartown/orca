@@ -73,7 +73,17 @@ export async function diffText(worktreePath, before, after, paths) {
   }
   try {
     return await git(
-      ['diff', '--unified=0', '--no-color', before.tree, after.tree, '--', ...paths],
+      [
+        '-c',
+        'core.quotePath=false',
+        'diff',
+        '--unified=0',
+        '--no-color',
+        before.tree,
+        after.tree,
+        '--',
+        ...paths
+      ],
       worktreePath
     )
   } catch {
@@ -96,7 +106,12 @@ export async function diffTrees(worktreePath, before, after) {
     return { source: [], test: [] }
   }
   try {
-    const out = await git(['diff', '--name-only', before.tree, after.tree], worktreePath)
+    // -c core.quotePath=false:git 默认把非 ASCII 路径转义成 "\347\231\273..." 并加引号,
+    // 那样测试文件会被归到源码类、门禁配置正则也匹配不上 —— 篡改扫描在中文路径下会整体失效。
+    const out = await git(
+      ['-c', 'core.quotePath=false', 'diff', '--name-only', before.tree, after.tree],
+      worktreePath
+    )
     const files = out ? out.split('\n').filter(Boolean) : []
     return {
       source: files.filter((f) => !TEST_PATH.test(f)),
