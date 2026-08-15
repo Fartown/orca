@@ -490,3 +490,20 @@ test('verify 模式:验收全绿就证伪了「受阻」,继续跑', () => {
   assert.equal(action.prompt, 'blocked-but-passing')
   assert.equal(goal.blockedClaims, 0, '被证伪了就该清零')
 })
+
+test('agent 声称受阻的轮次不计空转 —— 那时零改动是正确行为', () => {
+  // 实测:项目规则要求方案经人评审才能改代码,agent 照做、连着几轮不动工作区,
+  // 空转计数涨到阈值;人一批准,下一轮只要还是只读就会被判空转判死。
+  const g = makeGoal({ stallCount: 2, lastSnapshot: tree('same') })
+  const { goal } = decide(
+    g,
+    obs({ sentinel: { kind: 'blocked', summary: '等你评审方案' }, snapshot: tree('same') })
+  )
+  assert.equal(goal.stallCount, 2, '不该涨')
+})
+
+test('没有受阻声明时,零改动照常计空转', () => {
+  const g = makeGoal({ stallCount: 1, lastSnapshot: tree('same') })
+  const { goal } = decide(g, obs({ snapshot: tree('same') }))
+  assert.equal(goal.stallCount, 2)
+})

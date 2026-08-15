@@ -49,7 +49,12 @@ export function decide(goal, obs, thresholds = DEFAULT_THRESHOLDS) {
   // 既不清零也不累加,前后两个空轮就能凑够阈值,判词却说「连续 3 轮零变化」。
   // 三值:true=和上一轮一样(没进展)、false=变了、null=指纹拿不到(未知 ≠ 没变)
   const unchangedThisRound = sameFingerprint(goal.lastSnapshot, obs.snapshot)
-  if (unchangedThisRound === true) {
+  // agent 说自己受阻的轮次不计空转:那时它零改动是正确行为,不是原地打转。
+  // 实测撞上过 —— 项目规则要求方案经人评审才能改代码,agent 照做、连着几轮不动工作区,
+  // 空转计数照涨到阈值;人一批准,下一轮只要还是只读就会被判空转判死。
+  // 和「门禁失灵不该记成 agent 撒谎」是同一类错误:把守卫自己造成的停顿算到对方头上。
+  const blockedThisRound = obs.sentinel?.kind === 'blocked'
+  if (unchangedThisRound === true && !blockedThisRound) {
     next.stallCount = goal.stallCount + 1
   } else if (unchangedThisRound === false) {
     next.stallCount = 0
