@@ -21,12 +21,23 @@ export async function clearClaim(key) {
   await fs.rm(claimPath(key), { force: true, recursive: true })
 }
 
-export async function readClaim(key) {
+/**
+ * @param {number} after 本轮的观察起点。早于它写下的声明不属于这一轮。
+ *   注入的轮次靠 clearClaim 保证这点,但**接管**的轮次不注入也就不清 ——
+ *   上一轮留下的声明会被当成刚写的,每一轮重新裁决一次同一句话。
+ *   实测:agent 说了一次「受阻」,守卫停下等人;人回话后它接管、结束、
+ *   又读到那句九小时前的「受阻」,再停下等人 —— 每 45 秒一圈,agent 正常干活却永远推不动。
+ *   接管的轮次不能靠清文件解决:那一轮是半路挂上去的,清掉就等于删一份我们没资格删的声明。
+ */
+export async function readClaim(key, { after = 0 } = {}) {
   let raw
   try {
     const stat = await fs.stat(claimPath(key))
     if (stat.isDirectory()) {
       return { kind: 'malformed', summary: '认领路径是个目录' }
+    }
+    if (stat.mtimeMs < after) {
+      return { kind: 'stale', ageMs: after - stat.mtimeMs }
     }
     if (stat.size > MAX_CLAIM_BYTES) {
       return {

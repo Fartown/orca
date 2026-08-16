@@ -182,6 +182,77 @@ test('验收判词立刻落盘 —— 后面哪一步挂了都不该把它赔进
   assert.match(log, /acceptanceFailed/, '逐轮日志要记下驳回摘要,面板才说得出为什么')
 })
 
+test('接管的轮次不清认领 —— 上一轮的声明不能被当成这一轮的', async (t) => {
+  // 实测事故:agent 说了一次「受阻」,守卫停下等人;人回话后守卫接管,
+  // 接管不注入也就不清认领,一轮结束又读到那句九小时前的「受阻」,再停下等人。
+  // 每 45 秒一圈,轮次一直涨,agent 在终端里正常干活却永远推不动。
+  process.env.ORCA_GOAL_ROUND_ERROR_GRACE_MS = '80'
+  t.after(() => delete process.env.ORCA_GOAL_ROUND_ERROR_GRACE_MS)
+
+  mock.reset()
+  mock.module('./orca-terminal.mjs', { namedExports: { sendText: async () => {} } })
+  mock.module('./terminal-activity.mjs', {
+    namedExports: {
+      observeAgent: async () => ({}),
+      classifyRound: (() => {
+        let n = 0
+        return () => (++n % 2 === 1 ? 'busy' : 'finished')
+      })()
+    }
+  })
+  mock.module('./git-snapshot.mjs', {
+    namedExports: {
+      snapshotWorktree: async () => ({ kind: 'git', tree: 't', head: 'h' }),
+      diffTrees: async () => ({ source: ['a.ts'], test: [] }),
+      diffText: async () => ''
+    }
+  })
+  mock.module('./tamper-scan.mjs', {
+    namedExports: { scanRound: async () => [], describeFindings: () => '' }
+  })
+  mock.module('./continuation-prompt.mjs', {
+    namedExports: {
+      renderPrompt: async () => '提示词',
+      writePromptFile: async () => '/tmp/p',
+      promptPointerLine: () => 'x'
+    }
+  })
+  const WRITTEN_AT = 1 // 远早于任何一轮的起点
+  mock.module('./goal-claim.mjs', {
+    namedExports: {
+      readClaim: async (_key, { after = 0 } = {}) =>
+        WRITTEN_AT < after
+          ? { kind: 'stale', ageMs: after - WRITTEN_AT }
+          : { kind: 'blocked', summary: '九小时前那句受阻' },
+      clearClaim: async () => {},
+      claimPath: () => '/tmp/c'
+    }
+  })
+  const mod = await import(`./goal-loop.mjs?stale=${Math.random()}`)
+  // awaitUser 一被调用就炸:走到那里就说明陈旧声明被采信了。
+  // 用抛而不是断言,是为了不让用例卡死在 waitForUser 的轮询里 —— 挂住的用例读起来像通过。
+  const strictReport = new Proxy(
+    {},
+    {
+      get: (_t, name) =>
+        name === 'awaitUser'
+          ? () => {
+              throw new Error('STALE_CLAIM_ADJUDICATED')
+            }
+          : () => {}
+    }
+  )
+
+  const final = await mod.runLoop(goal({ blockedClaims: 1 }), {
+    report: strictReport,
+    thresholds: { maxBlockedClaims: 2, maxStallRounds: 9, maxFalseClaims: 9 },
+    attach: true
+  })
+
+  assert.equal(final.state, 'budget_exhausted', `陈旧声明不该拦住目标:${final.finishReason || ''}`)
+  assert.equal(final.blockedClaims, 0, '没有本轮声明就该把受阻计数清掉')
+})
+
 test('接管时 agent 已空闲 —— 要正常注入,不能干等一个不存在的轮次', async () => {
   // 真事故:上一轮声称完成后 agent 就闲着了,resume 的 attach 干等 300 秒被判「毫无动静」受阻。
   mock.reset()

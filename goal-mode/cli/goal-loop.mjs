@@ -150,11 +150,17 @@ export async function runLoop(goal, { report, thresholds, attach = false }) {
         report.tamper(f)
       }
 
-      const claim = await readClaim(current.key)
+      const claim = await readClaim(current.key, { after: sentAt })
       if (claim?.kind === 'malformed') {
         report.warn(`认领文件格式不对,按「未声明」处理:${claim.summary}`)
       }
-      const sentinel = claim && claim.kind !== 'malformed' ? claim : null
+      if (claim?.kind === 'stale') {
+        report.warn(
+          `认领文件是本轮开始前 ${Math.round(claim.ageMs / 1000)} 秒写的,不属于这一轮,按「未声明」处理`
+        )
+      }
+      // 白名单而不是排除法:再多一种「读到了但不能当声明」的情形,默认也是不采信。
+      const sentinel = claim?.kind === 'complete' || claim?.kind === 'blocked' ? claim : null
       current = { ...current, turns: turn }
 
       let acceptance = null

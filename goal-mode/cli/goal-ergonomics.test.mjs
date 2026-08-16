@@ -268,6 +268,13 @@ test('认领文件是目录 / 超大 / 大写开头,都不该被当成完成声�
 
   await fs.writeFile(claimPath('d'), 'complete: 真的做完了\n')
   assert.equal((await readClaim('d')).kind, 'complete')
+
+  // 接管的轮次不注入、也就不清认领,上一轮的声明会被当成刚写的。
+  // 实测:一句九小时前的「受阻」被每一轮重新裁决,守卫每 45 秒停一次「等你确认」,
+  // agent 正常干活却永远推不动。所以早于本轮起点的声明一律不算数。
+  const claimMtime = (await fs.stat(claimPath('d'))).mtimeMs
+  assert.equal((await readClaim('d', { after: claimMtime + 1000 })).kind, 'stale')
+  assert.equal((await readClaim('d', { after: claimMtime })).kind, 'complete', '同一时刻写的算本轮')
   await fs.rm(home, { recursive: true, force: true })
 })
 
