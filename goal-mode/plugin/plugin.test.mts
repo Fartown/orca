@@ -268,6 +268,13 @@ describe('panel 行为', () => {
     const stale = document.getElementById('stale')!
     expect(stale.hidden).toBe(false)
     expect(stale.textContent).toContain('8 分钟前的快照')
+    // 归因要准。原文只说「被系统回收」,读起来像「过一会儿自己会好」——
+    // 而实际上不会:打开面板不激活 worker,唯一的唤醒事件是 agent.status.changed,
+    // 没有 hook 状态的 agent 压根不触发它(实测 codex 24 小时一次都没发,面板冻了 49 小时)。
+    // 一个监控界面误诊自己的故障,会把人引向一条不存在的自愈路径。
+    expect(stale.textContent).toContain('不会自己变新')
+    expect(stale.textContent).toContain('打开面板并不会把它拉起来')
+    expect(stale.textContent).toContain('orca-goal status')
   })
 
   it('陈旧阈值要留够几个心跳,不然正常运行也会误报', () => {

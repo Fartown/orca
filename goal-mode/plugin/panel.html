@@ -823,10 +823,14 @@
             renderGoal(shown)
             el.stale.hidden = !stalePanel
             if (stalePanel) {
+              // 归因必须准确。原文只说「被系统回收」,暗示过一会儿自己会好 —— 而实际上不会:
+              // 面板打开并不会激活 worker,唯一的唤醒事件是 agent.status.changed,
+              // 而没有 hook 状态的 agent(实测 codex 整整 24 小时一次都没发)压根不触发它。
+              // 实测后果:面板冻了 49 小时,完整错过一次 24 小时的运行。
               el.stale.textContent =
-                '⚠ 这是 ' + Math.round(age / 60000) + ' 分钟前的快照,不代表当前状态。' +
-                '后台进程被系统回收后,面板没有办法自己叫醒它 —— ' +
-                '按 Cmd-J 跑一次「目标:状态」即可刷新,或用 orca-goal status 看实时进度。'
+                '⚠ 这是 ' + Math.round(age / 60000) + ' 分钟前的快照,不代表当前状态,而且不会自己变新。' +
+                '面板只在后台进程运行时才更新,而打开面板并不会把它拉起来 —— ' +
+                '按 Cmd-J 跑一次「目标:状态」把它叫醒,或者直接用 orca-goal status 看实时进度(这条一定准)。'
             }
             el.empty.hidden = true
           } else {

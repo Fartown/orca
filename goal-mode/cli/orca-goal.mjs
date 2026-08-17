@@ -19,6 +19,7 @@ import {
   deleteGoal,
   goalKey,
   listGoals,
+  listLogGenerations,
   logPath,
   migrateLegacyKeys,
   newGoal,
@@ -482,6 +483,19 @@ async function status(flags) {
       console.log(`  结束原因:${g.finishReason}`)
     }
     console.log(`  handle:${g.terminalHandle}`)
+    // 同一工作区重开目标时上一代逐轮日志被改名归档,在此之前没人读得到、也不知道有。
+    // 我自己因此读当代日志(验收字段全空)就断言「验收从没跑过」,而记录在上一代那份里。
+    const gens = await listLogGenerations(g.key)
+    const older = gens.filter((x) => !x.current)
+    console.log(`  逐轮日志:${gens.find((x) => x.current)?.file ?? '(无)'}`)
+    if (older.length > 0) {
+      console.log(
+        `  之前还有 ${older.length} 代(同一工作区重开目标时归档的,里面也有轮次和验收记录):`
+      )
+      for (const gen of older) {
+        console.log(`    ${new Date(gen.archivedAt).toLocaleString()}  ${gen.file}`)
+      }
+    }
   }
   return 0
 }

@@ -99,13 +99,25 @@ export async function readGoal(key) {
   }
 }
 
-/** 先写临时文件再 rename —— 崩在半路也不会留下截断的 JSON。 */
-export async function writeGoal(goal) {
+/**
+ * 先写临时文件再 rename —— 崩在半路也不会留下截断的 JSON。
+ *
+ * updatedAt 在这里盖章,不交给调用方。它原来只在 decide() 里设,于是任何不经过
+ * decide 的落盘都留着旧时间戳 —— 实测预算耗尽走的是循环里的直接落盘,记录写在
+ * 09:56,updatedAt 却停在前一轮注入的 22:11,差了 11 小时。面板算陈旧度只看这个字段,
+ * 于是任何已结束的目标都会被显示得比实际更旧。
+ *
+ * @param {boolean} touch false 用于「搬文件」这类行政写入(迁移、归档):
+ *   那不是新进展,盖章会毁掉「谁更新」这个信息 —— 迁移正是靠它裁决谁占工作区键的。
+ */
+export async function writeGoal(goal, { touch = true } = {}) {
   await fs.mkdir(goalsDir(), { recursive: true })
   const target = goalPath(goal.key)
   const tmp = `${target}.${process.pid}.tmp`
-  await fs.writeFile(tmp, `${JSON.stringify(goal, null, 2)}\n`, 'utf8')
+  const body = touch ? { ...goal, updatedAt: Date.now() } : goal
+  await fs.writeFile(tmp, `${JSON.stringify(body, null, 2)}\n`, 'utf8')
   await fs.rename(tmp, target)
+  return body
 }
 
 export async function deleteGoal(key) {
@@ -139,10 +151,26 @@ function sidecarsOf(key) {
   ]
 }
 
-/** 把一个目标的所有文件从 from 键搬到 to 键。 */
+/**
+ * 把一个目标的所有文件从 from 键搬到 to 键。
+ *
+ * 除了固定名字的那几个,还要扫一遍 log/ 里所有以 from 键开头的文件 ——
+ * 同一个键上重开目标时 archiveLog 会留下 `<键>.jsonl.<时间>`,而那是上一代
+ * 全部轮次的唯一记录。第一版只搬固定名字,实测把唯一记着两次验收判决的
+ * 归档日志落在了老键上,跟任何记录都对不上号。
+ */
 async function renameAll(from, to) {
-  for (const src of sidecarsOf(from)) {
+  const extras = await fs
+    .readdir(logDir())
+    .then((names) =>
+      names.filter((n) => n.startsWith(`${from}.`)).map((n) => path.join(logDir(), n))
+    )
+    .catch(() => [])
+  for (const src of [...sidecarsOf(from), ...extras]) {
     const dst = path.join(path.dirname(src), path.basename(src).replace(from, to))
+    if (src === dst) {
+      continue
+    }
     await fs.rename(src, dst).catch((err) => {
       if (err.code !== 'ENOENT') {
         throw err
@@ -150,6 +178,37 @@ async function renameAll(from, to) {
     })
   }
   await renameVerdicts(from, to)
+}
+
+/**
+ * 一个目标的逐轮日志有几代。
+ *
+ * 同一个键上重开目标时 archiveLog 把上一代改名成 `<键>.jsonl.<时间>`,
+ * 而在此之前没有任何东西读得到它们、也无从知道它们存在 —— 我自己因此连续两轮
+ * 读当代日志(验收字段全空)就断言「验收从没跑过」,而记录就在上一代那份里。
+ *
+ * 返回从新到旧,第一项是当代。
+ */
+export async function listLogGenerations(key) {
+  const live = logPath(key)
+  const out = []
+  if (
+    await fs.stat(live).then(
+      () => true,
+      () => false
+    )
+  ) {
+    out.push({ file: live, current: true, archivedAt: null })
+  }
+  const names = await fs.readdir(logDir()).catch(() => [])
+  const prefix = `${path.basename(live)}.`
+  for (const name of names.filter((n) => n.startsWith(prefix))) {
+    const stamp = Number(name.slice(prefix.length))
+    if (Number.isFinite(stamp)) {
+      out.push({ file: path.join(logDir(), name), current: false, archivedAt: stamp })
+    }
+  }
+  return out.sort((a, b) => (b.archivedAt ?? Infinity) - (a.archivedAt ?? Infinity))
 }
 
 /**
@@ -205,14 +264,14 @@ export async function migrateLegacyKeys() {
         continue
       }
       await renameAll(goal.key, archived)
-      await writeGoal({ ...goal, key: archived })
+      await writeGoal({ ...goal, key: archived }, { touch: false })
       await fs.rm(goalPath(goal.key), { force: true })
       moved.push({ from: goal.key, to: archived, archived: true })
     }
     const owner = ranked[0]
     if (owner.key !== key) {
       await renameAll(owner.key, key)
-      await writeGoal({ ...owner, key })
+      await writeGoal({ ...owner, key }, { touch: false })
       await fs.rm(goalPath(owner.key), { force: true })
       moved.push({ from: owner.key, to: key })
     }

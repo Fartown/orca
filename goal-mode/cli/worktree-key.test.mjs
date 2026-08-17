@@ -14,8 +14,16 @@ const HOME = await fs.mkdtemp(path.join(os.tmpdir(), 'goal-wtkey-'))
 process.env.ORCA_GOAL_HOME = HOME
 test.after(() => fs.rm(HOME, { recursive: true, force: true }))
 
-const { goalKey, newGoal, writeGoal, readGoal, listGoals, migrateLegacyKeys, goalPath } =
-  await import('./goal-state.mjs')
+const {
+  goalKey,
+  newGoal,
+  writeGoal,
+  readGoal,
+  listGoals,
+  migrateLegacyKeys,
+  goalPath,
+  listLogGenerations
+} = await import('./goal-state.mjs')
 
 test('同一个工作区算出同一个键,不同工作区不撞', () => {
   const a = goalKey('/Users/x/dev/markdown')
@@ -105,8 +113,9 @@ test('同工作区多条记录:最近更新的占键,较旧的归档', async () 
     ...newGoal({ key: k, terminalHandle: k, worktreePath: worktree, objective }),
     updatedAt
   })
-  await writeGoal(mk('term_older', '旧的', 1_000))
-  await writeGoal(mk('term_newer', '新的', 9_000))
+  // 夹具必须 touch:false —— writeGoal 默认盖章,会把这里精心设的先后顺序抹平
+  await writeGoal(mk('term_older', '旧的', 1_000), { touch: false })
+  await writeGoal(mk('term_newer', '新的', 9_000), { touch: false })
 
   const moved = await migrateLegacyKeys()
   assert.equal((await readGoal(key)).objective, '新的', '最近更新的那条必须占住工作区键')
@@ -118,8 +127,8 @@ test('同工作区多条记录:最近更新的占键,较旧的归档', async () 
   // 反向验证:换成旧的更新时间更大,占键的就该换人 —— 规则真的按时间,不是按名字。
   await fs.rm(goalPath(key), { force: true })
   await fs.rm(goalPath(archived.to), { force: true })
-  await writeGoal(mk('term_a', 'A 更旧', 1_000))
-  await writeGoal(mk('term_b', 'B 更新', 5_000))
+  await writeGoal(mk('term_a', 'A 更旧', 1_000), { touch: false })
+  await writeGoal(mk('term_b', 'B 更新', 5_000), { touch: false })
   await migrateLegacyKeys()
   assert.equal((await readGoal(key)).objective, 'B 更新')
 })
@@ -171,4 +180,97 @@ test('缺 worktreePath 的远古记录:算不出新键,留着不动', async () =
     (await listGoals()).some((g) => g.key === 'term_ancient'),
     '搬不了也不能删 —— 那是用户的历史'
   )
+})
+
+test('updatedAt 由 writeGoal 盖章 —— 不经过 decide 的落盘也要更新', async () => {
+  // 实测事故:预算耗尽走的是循环里的直接落盘,记录写在 09:56,
+  // updatedAt 却停在前一轮注入的 22:11,差了 11 小时。面板算陈旧度只看这个字段,
+  // 于是任何已结束的目标都会被显示得比实际更旧。
+  const worktree = path.join(HOME, 'wt-touch')
+  const key = goalKey(worktree)
+  const stale = 1_000
+  await writeGoal(
+    {
+      ...newGoal({ key, terminalHandle: 't', worktreePath: worktree, objective: 'o' }),
+      updatedAt: stale
+    },
+    { touch: false }
+  )
+  assert.equal((await readGoal(key)).updatedAt, stale, 'touch:false 要原样保留')
+
+  const before = Date.now()
+  // 模拟预算耗尽那条路径:直写终态,完全不经过 decide()
+  const written = await writeGoal({
+    ...(await readGoal(key)),
+    state: 'budget_exhausted',
+    finishReason: '时长预算耗尽',
+    updatedAt: stale
+  })
+  const after = await readGoal(key)
+  assert.ok(after.updatedAt >= before, `updatedAt 该被盖成现在:${after.updatedAt} < ${before}`)
+  assert.equal(written.updatedAt, after.updatedAt, 'writeGoal 要把盖过章的对象还给调用方')
+})
+
+test('迁移不能盖章 —— 否则裁决「谁更新」的依据被自己毁掉', async () => {
+  const worktree = path.join(HOME, 'wt-notouch')
+  const key = goalKey(worktree)
+  const mk = (k, updatedAt) => ({
+    ...newGoal({ key: k, terminalHandle: k, worktreePath: worktree, objective: k }),
+    updatedAt
+  })
+  await writeGoal(mk('term_x-old', 1_000), { touch: false })
+  await writeGoal(mk('term_x-new', 9_000), { touch: false })
+  await migrateLegacyKeys()
+  const owner = await readGoal(key)
+  assert.equal(owner.objective, 'term_x-new', '最近更新的占键')
+  assert.equal(owner.updatedAt, 9_000, '搬文件不是新进展,时间戳必须原样带过来')
+})
+
+test('迁移要连上一代归档日志一起搬 —— 那是唯一记着验收判决的地方', async () => {
+  // 实测:第一版只搬固定名字的侧车,`<键>.jsonl.<时间>` 落在了老键上跟谁都对不上号。
+  // 而那份文件里正是两次「声称完成 → 验收未通过」的唯一记录。
+  const legacy = 'term_gen-uuid'
+  const worktree = path.join(HOME, 'wt-generations')
+  await fs.mkdir(path.join(HOME, 'log'), { recursive: true })
+  await writeGoal(
+    newGoal({ key: legacy, terminalHandle: legacy, worktreePath: worktree, objective: 'o' }),
+    { touch: false }
+  )
+  await fs.writeFile(path.join(HOME, 'log', `${legacy}.jsonl`), '{"turn":1}\n')
+  await fs.writeFile(
+    path.join(HOME, 'log', `${legacy}.jsonl.1700000000000`),
+    '{"turn":4,"acceptancePassed":false}\n{"turn":6,"acceptancePassed":false}\n'
+  )
+
+  await migrateLegacyKeys()
+  const next = goalKey(worktree)
+  const gens = await listLogGenerations(next)
+  assert.equal(gens.length, 2, `当代 + 一代归档都该在新键下:${JSON.stringify(gens)}`)
+  assert.equal(gens[0].current, true, '当代排最前')
+  assert.equal(gens[1].archivedAt, 1_700_000_000_000)
+  const older = await fs.readFile(gens[1].file, 'utf8')
+  assert.match(older, /acceptancePassed/, '归档日志的内容要完好搬过来')
+  assert.equal(
+    await fs.stat(path.join(HOME, 'log', `${legacy}.jsonl.1700000000000`)).then(
+      () => true,
+      () => false
+    ),
+    false,
+    '老键下不该留下孤儿'
+  )
+})
+
+test('没有归档时只报当代,不凭空造出一代', async () => {
+  const worktree = path.join(HOME, 'wt-onegen')
+  const key = goalKey(worktree)
+  await fs.mkdir(path.join(HOME, 'log'), { recursive: true })
+  await fs.writeFile(path.join(HOME, 'log', `${key}.jsonl`), '{"turn":1}\n')
+  const gens = await listLogGenerations(key)
+  assert.deepEqual(
+    gens.map((g) => g.current),
+    [true]
+  )
+  // 名字里带非数字后缀的不是归档(比如 .trace),不能混进来
+  await fs.writeFile(path.join(HOME, 'log', `${key}.jsonl.trace`), 'x')
+  assert.equal((await listLogGenerations(key)).length, 1, '后缀不是时间戳的文件不算一代')
 })
