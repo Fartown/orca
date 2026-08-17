@@ -1,7 +1,9 @@
 // 目标状态的磁盘持久化。状态刻意放在 worktree 之外,agent 改不到自己的验收配置。
+import { createHash } from 'node:crypto'
 import { promises as fs } from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
+import { isProcessAlive } from './detached-driver.mjs'
 
 export const ROOT = process.env.ORCA_GOAL_HOME || path.join(os.homedir(), '.orca-goal')
 
@@ -9,13 +11,36 @@ const goalsDir = () => path.join(ROOT, 'goals')
 const logDir = () => path.join(ROOT, 'log')
 const lockDir = () => path.join(ROOT, 'lock')
 
-/** 终端 handle 已是文件名安全的,但外部输入仍要挡一道。 */
-export function goalKey(terminalHandle) {
-  const key = String(terminalHandle).replace(/[^A-Za-z0-9_.-]/g, '_')
-  if (!key || key === '.' || key === '..') {
-    throw new Error(`非法 terminal handle: ${terminalHandle}`)
+/**
+ * 目标按**工作区**标识,不按终端。
+ *
+ * 原来的键是终端 handle(`term_<uuid>`),那是一个标签页的会话 id:
+ * 关掉标签页记录就指向一个不存在的东西,而且没有重新绑定的路径。
+ * 更要命的是锁也跟着按标签页发 —— 同一个工作区开两个标签页各起一个目标,
+ * 两个驱动会同时改同一批文件,而空转熔断、变更取证、验收缓存全靠 git 树哈希,
+ * 会把对方的改动算成自己的。实测过一台机器上同一目录挂着 6 个终端。
+ *
+ * 需要独占的是「哪个工作区正在被改」,所以键从路径来,终端降级成
+ * 「此刻往哪儿灌字」的可替换字段(见 rebind)。
+ *
+ * 只用 path.resolve 归一化,不走 realpath:realpath 依赖目录当下存在,
+ * 工作区被删之后就算不出同一个键,连 forget 都做不到。代价是软链别名
+ * 会被当成两个工作区 —— 可预期,且比原来按标签页强得多。
+ */
+export function goalKey(worktreePath) {
+  const raw = String(worktreePath ?? '').trim()
+  if (!raw) {
+    throw new Error('工作区路径不能为空')
   }
-  return key
+  let full = path.resolve(raw).replace(/[/\\]+$/, '') || path.sep
+  if (process.platform === 'darwin' || process.platform === 'win32') {
+    full = full.toLowerCase() // 这两个平台默认大小写不敏感,不折叠会算出两个键
+  }
+  // 目录名给人看,哈希保证唯一 —— 只用目录名会撞(到处都有 client/、docs/),
+  // 只用哈希则 ls ~/.orca-goal/goals 时完全读不出是哪个项目。
+  const label = (path.basename(full) || 'root').replace(/[^A-Za-z0-9_.-]/g, '_').slice(0, 32)
+  const hash = createHash('sha256').update(full).digest('hex').slice(0, 10)
+  return `${label === '.' || label === '..' ? 'root' : label}-${hash}`
 }
 
 export const goalPath = (key) => path.join(goalsDir(), `${key}.json`)
@@ -101,6 +126,111 @@ export async function listGoals() {
     names.filter((n) => n.endsWith('.json')).map((n) => readGoal(n.slice(0, -5)))
   )
   return goals.filter(Boolean)
+}
+
+/** 一个目标的全部侧车文件,迁移和删除都要照顾到。 */
+function sidecarsOf(key) {
+  return [
+    goalPath(key),
+    logPath(key),
+    path.join(logDir(), `${key}.out`),
+    path.join(lockDir(), `${key}.lock`),
+    path.join(ROOT, 'claims', `${key}.txt`)
+  ]
+}
+
+/** 把一个目标的所有文件从 from 键搬到 to 键。 */
+async function renameAll(from, to) {
+  for (const src of sidecarsOf(from)) {
+    const dst = path.join(path.dirname(src), path.basename(src).replace(from, to))
+    await fs.rename(src, dst).catch((err) => {
+      if (err.code !== 'ENOENT') {
+        throw err
+      }
+    })
+  }
+  await renameVerdicts(from, to)
+}
+
+/**
+ * 把按终端 handle 命名的老记录改成按工作区命名。
+ *
+ * 每条 CLI 命令入口都跑一次:键换了之后,老记录用新键查不到,
+ * 于是 stop / resume / forget 全部找不到人,而记录还在磁盘上、面板照旧显示它 ——
+ * 看得见摸不着是最难排查的状态。
+ *
+ * 一个工作区只能有一个活记录 —— 这正是换键要达到的效果。而按终端命名的时代
+ * 允许同一目录并存多条(实测同一个 markdown 目录下挂着 6 个终端、存着 2 条记录),
+ * 所以迁移必须裁决:**最近更新的那条占住工作区键,其余归档。**
+ *
+ * 裁决规则必须是确定的。第一版按 readdir 顺序搬,谁先被读到谁占键 ——
+ * 实测里更旧的那条(08-15)抢到了键,而人真正想接回的是更新的那条(08-16)。
+ *
+ * 归档而不是删除:那是用户几十轮的历史和判词。改名到 `<键>.superseded-<时间>`,
+ * 让它退出活跃命名空间但仍然列得出来。
+ *
+ * 驱动还活着的工作区整组跳过 —— 它正拿着这些文件的路径,抽掉就等于把它弄瞎。
+ */
+export async function migrateLegacyKeys() {
+  const groups = new Map()
+  for (const goal of await listGoals()) {
+    if (!goal.worktreePath || /\.superseded-\d+$/.test(goal.key)) {
+      continue // 没记工作区的算不出键;已归档的不再参与裁决
+    }
+    let key
+    try {
+      key = goalKey(goal.worktreePath)
+    } catch {
+      continue
+    }
+    groups.set(key, [...(groups.get(key) ?? []), goal])
+  }
+
+  const moved = []
+  for (const [key, members] of groups) {
+    if (members.length === 1 && members[0].key === key) {
+      continue // 已经在位,没事可做
+    }
+    const live = await Promise.all(members.map((g) => readLockPid(g.key).then(isProcessAlive)))
+    if (live.some(Boolean)) {
+      continue
+    }
+    // 最近更新的占键。同一时刻(更新时间缺失)时按键名兜底,保证顺序稳定可重现。
+    const ranked = [...members].sort(
+      (a, b) => (b.updatedAt || 0) - (a.updatedAt || 0) || a.key.localeCompare(b.key)
+    )
+    for (const goal of ranked.slice(1)) {
+      const archived = `${key}.superseded-${goal.updatedAt || 0}`
+      if (goal.key === archived) {
+        continue
+      }
+      await renameAll(goal.key, archived)
+      await writeGoal({ ...goal, key: archived })
+      await fs.rm(goalPath(goal.key), { force: true })
+      moved.push({ from: goal.key, to: archived, archived: true })
+    }
+    const owner = ranked[0]
+    if (owner.key !== key) {
+      await renameAll(owner.key, key)
+      await writeGoal({ ...owner, key })
+      await fs.rm(goalPath(owner.key), { force: true })
+      moved.push({ from: owner.key, to: key })
+    }
+  }
+  return moved
+}
+
+async function renameVerdicts(from, to) {
+  const dir = path.join(ROOT, 'verdict')
+  let names
+  try {
+    names = await fs.readdir(dir)
+  } catch {
+    return
+  }
+  for (const name of names.filter((n) => n.startsWith(`${from}-turn`))) {
+    await fs.rename(path.join(dir, name), path.join(dir, name.replace(from, to))).catch(() => {}) // 判词是留档,搬不动不该拦住迁移
+  }
 }
 
 /**

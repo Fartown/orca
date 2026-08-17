@@ -20,6 +20,7 @@ import {
   goalKey,
   listGoals,
   logPath,
+  migrateLegacyKeys,
   newGoal,
   readGoal,
   readLockPid,
@@ -46,14 +47,18 @@ const ALIASES = { f: 'file', t: 'terminal', y: 'yes' }
 
 const USAGE = `orca-goal —— 目标模式 agent 看门狗
 
+目标按**工作区**标识,不按终端 —— 需要独占的是「哪个目录正在被改」。
+下面凡是接目录的地方,也可以给 --terminal HANDLE,会换算成它登记的工作区。
+
   orca-goal start [选项]                     启动目标(省略 --terminal 会让你交互式选)
   orca-goal terminals                        列出终端及其 agent 状态
-  orca-goal status [--terminal HANDLE]       查看目标状态与驱动进程是否还活着
-  orca-goal resume --terminal HANDLE [选项]  接上一个已有目标继续跑(首轮不注入,先等它手上这轮跑完)
+  orca-goal status [--worktree 路径]         查看目标状态与驱动进程是否还活着
+  orca-goal resume --worktree 路径 [选项]    接上一个已有目标继续跑(首轮不注入,先等它手上这轮跑完)
                                              可带 --check / --max-turns / --max-minutes 覆盖原配置
-  orca-goal watch --terminal HANDLE          跟踪后台驱动的输出
-  orca-goal stop --terminal HANDLE           停掉驱动进程(保留记录)
-  orca-goal forget --terminal HANDLE         删除目标记录
+  orca-goal watch --worktree 路径            跟踪后台驱动的输出
+  orca-goal stop --worktree 路径             停掉驱动进程(保留记录)
+  orca-goal forget --worktree 路径           删除目标记录
+  orca-goal rebind --worktree 路径 -t HANDLE 把目标改挂到另一个终端(原标签页关了时用;需先 stop)
 
 start 选项:
   -f, --file 路径       从 JSON 配置文件读取,命令行参数优先级更高
@@ -79,6 +84,17 @@ maxTurns、maxMinutes、worktree、terminal、promptFile。支持整行 // 注�
 async function main(argv) {
   const [command, ...rest] = argv
   const flags = parseFlags(rest)
+  // 键从终端换成工作区之后,老记录用新键查不到 —— 记录还在磁盘上、面板照旧显示,
+  // 但 stop / resume / forget 全部找不到人。所以每条命令先搬一次。
+  if (command && command !== 'terminals') {
+    for (const { from, to, archived } of await migrateLegacyKeys()) {
+      console.log(
+        archived
+          ? `同一工作区有多条老记录,已归档较旧的一条(仍可查看):${from} → ${to}`
+          : `已把按终端命名的老记录改按工作区:${from} → ${to}`
+      )
+    }
+  }
   switch (command) {
     case 'start':
       return await start(flags, rest)
@@ -94,10 +110,42 @@ async function main(argv) {
       return await stop(flags)
     case 'forget':
       return await forget(flags)
+    case 'rebind':
+      return await rebind(flags)
     default:
       process.stdout.write(USAGE)
       return command ? 1 : 0
   }
+}
+
+/**
+ * 定位一个已有目标:给目录,或者给终端 handle 换算成它登记的工作区。
+ *
+ * 保留 --terminal 这条路是因为人手上通常只有那个 —— 面板给的、上一条命令回显的都是 handle。
+ * 但换算依赖终端还活着;标签页已经关了就只能给目录,所以错误信息里要说清楚。
+ */
+async function resolveTarget(flags, { verb }) {
+  if (flags.worktree) {
+    const worktreePath = path.resolve(flags.worktree)
+    return { key: goalKey(worktreePath), worktreePath }
+  }
+  if (!flags.terminal) {
+    throw new Error(`必须指定 --worktree 路径(或 --terminal HANDLE)才能${verb}`)
+  }
+  const terminal = (await listTerminals()).find((t) => t.handle === flags.terminal)
+  if (terminal?.worktreePath) {
+    return { key: goalKey(terminal.worktreePath), worktreePath: terminal.worktreePath, terminal }
+  }
+  // 终端没了就从记录里反查:目标是按工作区存的,handle 只是记录上的一个字段。
+  const byHandle = (await listGoals()).filter((g) => g.terminalHandle === flags.terminal)
+  if (byHandle.length === 1) {
+    return { key: byHandle[0].key, worktreePath: byHandle[0].worktreePath }
+  }
+  throw new Error(
+    byHandle.length > 1
+      ? `有 ${byHandle.length} 条记录都挂着终端 ${flags.terminal},请改用 --worktree 指明目录`
+      : `找不到终端 ${flags.terminal},也没有记录挂着它。它可能已经关了 —— 请用 --worktree 指定目录`
+  )
 }
 
 const absolutize = (v) => (v ? path.resolve(v) : v)
@@ -225,11 +273,18 @@ async function start(flags, rawArgs) {
     throw new Error(`终端 ${terminal.handle} 没有关联的工作区路径,请用 --worktree 指定`)
   }
 
-  const key = goalKey(terminal.handle)
+  const key = goalKey(worktreePath)
   const existing = await readGoal(key)
   if (existing?.state === 'active' && (await driverIsRunning(key))) {
+    // 按工作区拦,不按终端:同一目录换个标签页再起一个,两个驱动会同时改同一批文件,
+    // 而空转熔断、变更取证、验收缓存都靠 git 树哈希,会把对方的改动算成自己的。
+    const where =
+      existing.terminalHandle === terminal.handle
+        ? '就在这个终端'
+        : `在终端 ${existing.terminalHandle}`
     throw new Error(
-      `该终端已有在跑的目标(${existing.turns} 轮)。先 \`orca-goal stop --terminal ${terminal.handle}\``
+      `工作区 ${worktreePath} 已有在跑的目标(${existing.turns} 轮,${where})。\n` +
+        `先 \`orca-goal stop --worktree ${worktreePath}\`,或换一个工作区。`
     )
   }
 
@@ -245,7 +300,7 @@ async function start(flags, rawArgs) {
   }
 
   if (flags.detach) {
-    return await relaunchDetached('start', key, terminal, rawArgs)
+    return await relaunchDetached('start', key, terminal, rawArgs, worktreePath)
   }
 
   const goal = newGoal({
@@ -303,7 +358,7 @@ async function start(flags, rawArgs) {
   }
 }
 
-async function relaunchDetached(command, key, terminal, rawArgs) {
+async function relaunchDetached(command, key, terminal, rawArgs, worktreePath) {
   const argv = [command, ...rawArgs.filter((a) => a !== '--detach'), '--yes']
   if (!rawArgs.some((a) => a === '--terminal' || a === '-t')) {
     argv.push('--terminal', terminal.handle) // 交互式选出来的,子进程没法再问一次
@@ -311,8 +366,9 @@ async function relaunchDetached(command, key, terminal, rawArgs) {
   const outFile = driverLogPath(key)
   const pid = await spawnDetached({ scriptPath: SCRIPT, argv, logFile: outFile })
   console.log(`已在后台启动,pid ${pid}`)
-  console.log(`跟进度:orca-goal watch --terminal ${terminal.handle}`)
-  console.log(`停止:  orca-goal stop  --terminal ${terminal.handle}`)
+  // 回显工作区而不是 handle:handle 随标签页消失,目录不会,粘回来永远有效。
+  console.log(`跟进度:orca-goal watch --worktree ${worktreePath}`)
+  console.log(`停止:  orca-goal stop  --worktree ${worktreePath}`)
   return 0
 }
 
@@ -403,9 +459,10 @@ function printOutcome(goal) {
 }
 
 async function status(flags) {
-  const goals = flags.terminal
-    ? [await readGoal(goalKey(flags.terminal))].filter(Boolean)
-    : await listGoals()
+  const goals =
+    flags.worktree || flags.terminal
+      ? [await readGoal((await resolveTarget(flags, { verb: '查状态' })).key)].filter(Boolean)
+      : await listGoals()
   if (goals.length === 0) {
     console.log('没有目标记录。')
     return 0
@@ -431,27 +488,30 @@ async function status(flags) {
 
 /** 驱动进程退出了但 agent 还在干活时用这个接回去,不重开、不打断。 */
 async function resume(flags, rawArgs = []) {
-  if (!flags.terminal) {
-    throw new Error('必须指定 --terminal')
-  }
-  const key = goalKey(flags.terminal)
+  const { key, worktreePath } = await resolveTarget(flags, { verb: '接回目标' })
   const existing = await readGoal(key)
   if (!existing) {
-    throw new Error('这个终端没有目标记录,请用 `orca-goal start` 新建')
+    throw new Error(`工作区 ${worktreePath} 没有目标记录,请用 \`orca-goal start\` 新建`)
   }
   if (await driverIsRunning(key)) {
     throw new Error('已经有驱动进程在跑这个目标了')
   }
 
-  const terminal = (await listTerminals()).find((t) => t.handle === flags.terminal)
+  // 往哪个终端灌字:命令行显式给了就用它,否则沿用记录里的。
+  const wanted = flags.terminal || existing.terminalHandle
+  const terminal = (await listTerminals()).find((t) => t.handle === wanted)
   if (!terminal) {
-    throw new Error(`找不到终端 ${flags.terminal}(它可能已经关了)`)
+    throw new Error(
+      `找不到终端 ${wanted}(它可能已经关了)。\n` +
+        `在别的终端里继续:orca-goal rebind --worktree ${worktreePath} --terminal 新HANDLE`
+    )
   }
 
   const file = flags.file ? await loadGoalConfig(flags.file) : {}
   const goal = {
     ...existing,
     state: 'active',
+    terminalHandle: terminal.handle, // 显式换了终端时要跟着走,否则还往老标签页灌字
     finishReason: null,
     finishedAt: null,
     driverError: null, // 这次接回是新的一程,别挂着上次的死因
@@ -486,7 +546,7 @@ async function resume(flags, rawArgs = []) {
   }
 
   if (flags.detach) {
-    return await relaunchDetached('resume', key, terminal, rawArgs)
+    return await relaunchDetached('resume', key, terminal, rawArgs, worktreePath)
   }
 
   // 装在拿锁之前:锁一拿到,这个进程就是这个目标的唯一驱动,再崩就得留下死因。
@@ -536,10 +596,7 @@ async function resume(flags, rawArgs = []) {
 }
 
 async function watch(flags) {
-  if (!flags.terminal) {
-    throw new Error('必须指定 --terminal')
-  }
-  const key = goalKey(flags.terminal)
+  const { key } = await resolveTarget(flags, { verb: '跟踪输出' })
   const file = driverLogPath(key)
   let size
   try {
@@ -587,10 +644,7 @@ async function readRange(file, start, end) {
 }
 
 async function stop(flags) {
-  if (!flags.terminal) {
-    throw new Error('必须指定 --terminal')
-  }
-  const key = goalKey(flags.terminal)
+  const { key } = await resolveTarget(flags, { verb: '停止' })
   const pid = await readLockPid(key)
   const result = await stopProcess(pid, { key })
   await markAborted(key)
@@ -620,15 +674,57 @@ async function markAborted(key) {
 }
 
 async function forget(flags) {
-  if (!flags.terminal) {
-    throw new Error('必须指定 --terminal')
-  }
-  const key = goalKey(flags.terminal)
+  const { key } = await resolveTarget(flags, { verb: '删除记录' })
   if (isProcessAlive(await readLockPid(key))) {
     throw new Error('驱动进程还在跑。先 `orca-goal stop`。')
   }
   await deleteGoal(key)
   console.log('目标记录已删除。')
+  return 0
+}
+
+/**
+ * 把目标改挂到另一个终端。
+ *
+ * 目标按工作区存,终端只是「此刻往哪儿灌字」—— 标签页关了、Orca 重启了都能换一个继续,
+ * 不用重开目标丢掉轮次和验收历史。
+ *
+ * 必须先 stop:驱动把 terminalHandle 读在内存里,每轮结束又整体写回记录,
+ * 边跑边改会被它下一次落盘直接覆盖掉,看起来像没生效。
+ */
+async function rebind(flags) {
+  if (!flags.terminal) {
+    throw new Error('必须用 --terminal 指定要改挂到哪个终端')
+  }
+  if (!flags.worktree) {
+    throw new Error('必须用 --worktree 指定是哪个工作区的目标')
+  }
+  const key = goalKey(path.resolve(flags.worktree))
+  const goal = await readGoal(key)
+  if (!goal) {
+    throw new Error(`工作区 ${path.resolve(flags.worktree)} 没有目标记录`)
+  }
+  if (isProcessAlive(await readLockPid(key))) {
+    throw new Error('驱动进程还在跑,改了会被它下一次落盘覆盖。先 `orca-goal stop`。')
+  }
+  const terminal = (await listTerminals()).find((t) => t.handle === flags.terminal)
+  if (!terminal) {
+    throw new Error(`找不到终端 ${flags.terminal}`)
+  }
+  if (!terminal.writable) {
+    throw new Error(`终端 ${flags.terminal} 不可写,灌不进提示词`)
+  }
+  if (terminal.worktreePath && goalKey(terminal.worktreePath) !== key) {
+    // 拦下来而不是照做:这个终端的 cwd 是另一个目录,往它灌字会让 agent 改错仓库,
+    // 而取证和验收仍按原工作区跑 —— 两边对不上,判词全部失真。
+    throw new Error(
+      `终端 ${flags.terminal} 登记的工作区是 ${terminal.worktreePath},和目标的 ${goal.worktreePath} 不是同一个。\n` +
+        '换到这个终端会让 agent 改另一个仓库,而取证仍按原工作区跑。'
+    )
+  }
+  await writeGoal({ ...goal, terminalHandle: terminal.handle })
+  console.log(`已改挂:${goal.terminalHandle} → ${terminal.handle}`)
+  console.log(`继续跑:orca-goal resume --worktree ${goal.worktreePath} --detach`)
   return 0
 }
 
