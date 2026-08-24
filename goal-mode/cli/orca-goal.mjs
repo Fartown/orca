@@ -8,6 +8,7 @@ import { promises as fs, createReadStream } from 'node:fs'
 import path from 'node:path'
 import readline from 'node:readline/promises'
 import { isOurDriver, isProcessAlive, spawnDetached, stopProcess } from './detached-driver.mjs'
+import { absolutizePathArgs, ALIASES, BOOLEAN_FLAGS, VALUE_FLAGS } from './goal-cli-flags.mjs'
 import { installCrashGuard } from './driver-crash-guard.mjs'
 import { notifyDesktop } from './desktop-notification.mjs'
 import { loadGoalConfig } from './goal-config-file.mjs'
@@ -32,19 +33,6 @@ import { listTerminals } from './orca-terminal.mjs'
 import { formatChoice, listTerminalChoices, pickTerminal } from './terminal-picker.mjs'
 
 const SCRIPT = import.meta.filename
-const BOOLEAN_FLAGS = new Set(['yes', 'detach', 'prompt-file', 'check-all'])
-const VALUE_FLAGS = new Set([
-  'file',
-  'terminal',
-  'objective',
-  'on-blocked',
-  'check',
-  'check-timeout',
-  'max-turns',
-  'max-minutes',
-  'worktree'
-])
-const ALIASES = { f: 'file', t: 'terminal', y: 'yes' }
 
 const USAGE = `orca-goal —— 目标模式 agent 看门狗
 
@@ -239,8 +227,8 @@ async function resolveSettings(flags) {
     objective: pick('objective', 'objective'),
     onBlocked: pick('on-blocked', 'onBlocked') || 'ask',
     terminal: pick('terminal', 'terminal'),
-    // 子进程的 cwd 是状态目录(刻意的,见 detached-driver),相对路径在那里解析必然错 ——
-    // 父进程打印「已在后台启动」后子进程立刻退出,唯一线索埋在驱动日志里。
+    // 只管非 detach 这条路:这行在子进程里也会跑一遍,而它的 cwd 是状态目录,
+    // 基准根本不对。转交给后台驱动的那份在 relaunchDetached 里定死成绝对路径。
     worktree: absolutize(pick('worktree', 'worktree')),
     checks: flags.check.length > 0 ? flags.check : (file.check ?? []),
     // 必须校验:`--check-timeout abc` 会变成 NaN,setTimeout(NaN) 被 Node 当成 1 毫秒,
@@ -360,7 +348,10 @@ async function start(flags, rawArgs) {
 }
 
 async function relaunchDetached(command, key, terminal, rawArgs, worktreePath) {
-  const argv = [command, ...rawArgs.filter((a) => a !== '--detach'), '--yes']
+  // 路径参数必须在这里就转成绝对路径:子进程的 cwd 是状态目录(见 detached-driver),
+  // 相对路径到了那里全解析错。实测过 `-f .docs/x.json` —— 父进程照常打印「已在后台启动」,
+  // 子进程当场因「配置文件不存在」退出,唯一线索埋在驱动日志末尾,现场看着像启动成功了。
+  const argv = [command, ...absolutizePathArgs(rawArgs.filter((a) => a !== '--detach')), '--yes']
   if (!rawArgs.some((a) => a === '--terminal' || a === '-t')) {
     argv.push('--terminal', terminal.handle) // 交互式选出来的,子进程没法再问一次
   }

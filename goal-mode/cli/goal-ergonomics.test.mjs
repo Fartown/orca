@@ -4,6 +4,7 @@ import os from 'node:os'
 import path from 'node:path'
 import test from 'node:test'
 import { buildCommand } from './desktop-notification.mjs'
+import { absolutizePathArgs } from './goal-cli-flags.mjs'
 import { loadGoalConfig } from './goal-config-file.mjs'
 import { formatChoice } from './terminal-picker.mjs'
 
@@ -314,4 +315,46 @@ test('orca CLI 的命令名按平台走,和上游那份定义一致', async () =
   for (const name of ['orca-ide', 'orca.cmd']) {
     assert.ok(upstream.includes(name), `上游应该仍然用 ${name}`)
   }
+})
+
+// —— 转交给后台驱动的参数 ——
+
+// 后台驱动的 cwd 是状态目录,不是你敲命令的地方。转交参数时不把路径定死成绝对路径,
+// 父进程会照常打印「已在后台启动」,子进程却当场因「配置文件不存在」退出 ——
+// 现场看着像启动成功了,唯一线索埋在驱动日志末尾。实测踩过一次。
+test('转交后台的路径参数一律变成绝对路径', () => {
+  assert.deepEqual(absolutizePathArgs(['-f', '.docs/goal.json'], '/repo'), [
+    '-f',
+    '/repo/.docs/goal.json'
+  ])
+  assert.deepEqual(absolutizePathArgs(['--file', './goal.json'], '/repo'), [
+    '--file',
+    '/repo/goal.json'
+  ])
+  // --worktree 也走这条路。它在 resolveSettings 里确实 absolutize 过,但那行在子进程里
+  // 也会再跑一次,基准变成状态目录 —— 父进程算出来的绝对值根本没被转交。
+  assert.deepEqual(absolutizePathArgs(['--worktree', 'sub/tree'], '/repo'), [
+    '--worktree',
+    '/repo/sub/tree'
+  ])
+})
+
+test('已经是绝对路径的原样不动', () => {
+  assert.deepEqual(absolutizePathArgs(['-f', '/abs/goal.json'], '/repo'), ['-f', '/abs/goal.json'])
+})
+
+test('非路径参数不碰 —— 验收命令在工作区里跑,改了就跑错地方', () => {
+  const args = ['--check', './scripts/verify.sh', '--objective', './不是路径,是描述']
+  assert.deepEqual(absolutizePathArgs(args, '/repo'), args)
+})
+
+test('把 flag 名当取值传进来时不误伤后面那个参数', () => {
+  // `--objective --file` 里那个 --file 是描述文本,不是参数。按位置盲扫会把它当参数,
+  // 于是去动再后面一个 token,改错人。
+  assert.deepEqual(absolutizePathArgs(['--objective', '--file', '--worktree', 'w'], '/repo'), [
+    '--objective',
+    '--file',
+    '--worktree',
+    '/repo/w'
+  ])
 })
