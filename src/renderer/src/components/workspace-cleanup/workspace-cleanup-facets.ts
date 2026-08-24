@@ -22,6 +22,7 @@ import {
   getWorkspaceCleanupHostIdentity,
   type WorkspaceCleanupWorktreeFacts
 } from './workspace-cleanup-host-identity'
+import { getWorktreeVisitTimestamp } from '@/lib/worktree-visit-recency'
 export type { WorkspaceCleanupWorktreeFacts } from './workspace-cleanup-host-identity'
 
 export type WorkspaceCleanupFacetSources = {
@@ -128,7 +129,12 @@ export function buildWorkspaceCleanupFacets(
     isSelectable: canSelectWorkspaceCleanupCandidate(candidate),
     lastActivityAt: candidate.lastActivityAt,
     createdAt: toFiniteOrNull(worktree?.createdAt ?? candidate.createdAt),
-    lastVisitedAt: toFiniteOrNull(sources.lastVisitedAtByWorktreeId?.[candidate.worktreeId]),
+    lastVisitedAt: toFiniteOrNull(
+      getWorktreeVisitTimestamp(sources.lastVisitedAtByWorktreeId, {
+        id: candidate.worktreeId,
+        hostId: worktree?.hostId ?? getWorkspaceCleanupCandidateHostId(candidate)
+      })
+    ),
     sizeBytes: toFiniteOrNull(
       sources.sizeBytesByWorktreeId?.get(hostIdentity) ??
         sources.sizeBytesByWorktreeId?.get(candidate.worktreeId)
@@ -139,7 +145,9 @@ export function buildWorkspaceCleanupFacets(
     isPinned: worktree?.isPinned ?? candidate.blockers.includes('pinned'),
     isUnread: worktree?.isUnread ?? false,
     hasComment,
-    agentState: sources.liveAgentStatusByWorktreeId?.get(candidate.worktreeId) ?? 'idle',
+    agentState: toWorkspaceCleanupAgentState(
+      sources.liveAgentStatusByWorktreeId?.get(candidate.worktreeId)
+    ),
     retainedDoneAgentCount: candidate.localContext.retainedDoneAgentCount,
     gitState: getWorkspaceCleanupGitState(candidate),
     upstreamAhead: toFiniteOrNull(candidate.git.upstreamAhead),
@@ -166,6 +174,17 @@ export function buildWorkspaceCleanupFacetList(
 
 export function countWorkspaceCleanupMeasuredRows(rows: readonly WorkspaceCleanupFacets[]): number {
   return rows.reduce((count, row) => count + (row.sizeBytes === null ? 0 : 1), 0)
+}
+
+// Why: monitoring is still registered background work, so it filters as active — offering
+// such a workspace as idle would invite cleaning up a running dev server (#10997).
+function toWorkspaceCleanupAgentState(
+  status: LiveAgentWorktreeStatus | undefined
+): WorkspaceCleanupAgentState {
+  if (status === undefined) {
+    return 'idle'
+  }
+  return status === 'monitoring' ? 'working' : status
 }
 
 function getLocalContextCount(candidate: WorkspaceCleanupCandidate): number {

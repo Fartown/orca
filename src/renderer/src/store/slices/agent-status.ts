@@ -2304,6 +2304,7 @@ export const createAgentStatusSlice: StateCreator<AppState, [], [], AgentStatusS
           matchedSleepingLaunchConfig
         const entry: AgentStatusEntry = {
           state: payload.state,
+          workingMode: payload.workingMode,
           prompt: payload.prompt,
           updatedAt,
           stateStartedAt,
@@ -2343,6 +2344,15 @@ export const createAgentStatusSlice: StateCreator<AppState, [], [], AgentStatusS
           ...(providerSession ? { providerSession } : {}),
           ...(promptInteractionKey ? { promptInteractionKey } : {}),
           ...(payload.restoredUnconfirmed ? { restoredUnconfirmed: true } : {}),
+          // Why: `updatedAt` cannot order two writes inside one millisecond — and the accept check
+          // above admits equal timestamps — so a deferred process-exit drop needs a token ordered by
+          // construction to tell "the pane reported again" from "an unrelated field moved". Every
+          // field-level rewrite of a row spreads it forward, so only a real report re-stamps it.
+          //
+          // Derived from the row it replaces, not from a module counter: there is then nothing for a
+          // sibling teardown path to reset (the bug this replaced), and a batched burst lands the
+          // same ordinals as the equivalent sequential writes.
+          acceptedStatusSeq: (existing?.acceptedStatusSeq ?? 0) + 1,
           // Why: never inherited from `existing` — an unstamped write is an unstamped
           // observation, not the previous one repeated.
           ...(payload.observation ? { observation: payload.observation } : {}),
@@ -2389,6 +2399,7 @@ export const createAgentStatusSlice: StateCreator<AppState, [], [], AgentStatusS
           existing?.state === 'done' &&
           entry.state === 'done' &&
           agentEntryCompletionAt(existing) !== agentEntryCompletionAt(entry)
+        const workingModeChanged = existing?.workingMode !== entry.workingMode
         const sortRelevantChange =
           !existing ||
           existing.state !== payload.state ||
@@ -2414,7 +2425,10 @@ export const createAgentStatusSlice: StateCreator<AppState, [], [], AgentStatusS
             entry.providerSession !== existing.providerSession ||
             entry.interrupted !== existing.interrupted)
         const retentionRelevantChange =
-          sortRelevantChange || attributionChanged || doneRetentionFieldsChanged
+          sortRelevantChange ||
+          attributionChanged ||
+          workingModeChanged ||
+          doneRetentionFieldsChanged
         // Why: a fresh status means the agent is live again — lift its one-shot retention suppressor.
         // Clone the map only when a suppressor exists, else every high-frequency ping churns the ref.
         const hasSuppressor = paneKey in s.retentionSuppressedPaneKeys
