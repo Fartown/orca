@@ -52,8 +52,16 @@ import { isPathInsideOrEqual } from '../../../../shared/cross-platform-path'
 import { getRepoIdFromWorktreeId } from '../../../../shared/worktree/id'
 import { structuralValuesEqual } from '../../../../shared/structural-value-equality'
 import { selectProjectGroupRemovalTargets } from './project-group-removal-targets'
+import {
+  catalogOwnsHost,
+  getProjectGroupHostId,
+  projectGroupMatchesOwnerHost,
+  resolveProjectGroupOwnerHostId,
+  settingsForProjectGroupOwner
+} from './project-group-owner-routing'
 import { reconcileCatalogRows, reconcileFetchedRepos } from './repo-identity-reconcile'
 import { retainValidFilterRepoIds } from './repo-filter-selection'
+import { readRuntimeWorktreeVisibilitySnapshot } from './worktree-visibility-owner-settings'
 import {
   mergeSshRepoReadoptions,
   reconcileReadoptedSshRepoRows,
@@ -138,17 +146,17 @@ export type RepoUpdate = Partial<
     | 'symlinkPaths'
     | 'issueSourcePreference'
     | 'forkSyncMode'
-    | 'externalWorktreeVisibility'
     | 'externalWorktreeVisibilityPromptDismissedAt'
     | 'externalWorktreeInboxBaselinePaths'
     | 'importedExternalWorktreePaths'
-    | 'agentWorktreeVisibility'
     | 'customWorktreeVisibilitySources'
     | 'worktreeVisibilitySourcePreferences'
     | 'projectGroupId'
     | 'projectGroupOrder'
   >
 > & {
+  externalWorktreeVisibility?: Repo['externalWorktreeVisibility'] | null
+  agentWorktreeVisibility?: Repo['agentWorktreeVisibility'] | null
   sourceControlAi?: Repo['sourceControlAi'] | null
   externalWorktreeDiscoverySuppressedAt?: Repo['externalWorktreeDiscoverySuppressedAt'] | null
 }
@@ -217,6 +225,8 @@ export type FolderWorkspacePathStatusCacheEntry = {
 
 export type DeleteProjectGroupWithContainedProjectsOptions = {
   removeContainedProjects: boolean
+  // hostId disambiguates which host's group row to delete when the id exists on multiple hosts.
+  hostId?: ExecutionHostId
 }
 
 type AllHostCatalogFetchOptions = {
@@ -1119,22 +1129,8 @@ function mergeProjectCompatibilityForHostRepoChange({
   })
 }
 
-function getProjectGroupHostId(group: Pick<ProjectGroup, 'connectionId' | 'executionHostId'>) {
-  if (group.executionHostId) {
-    return group.executionHostId
-  }
-  return group.connectionId ? toSshExecutionHostId(group.connectionId) : LOCAL_EXECUTION_HOST_ID
-}
-
 function getProjectGroupHostIdentity(group: ProjectGroup): string {
   return JSON.stringify([getProjectGroupHostId(group), group.id])
-}
-
-function catalogOwnsHost(catalogHostId: string, rowHostId: string): boolean {
-  if (catalogHostId !== LOCAL_EXECUTION_HOST_ID) {
-    return catalogHostId === rowHostId
-  }
-  return parseExecutionHostId(rowHostId)?.kind !== 'runtime'
 }
 
 function mergeFetchedProjectGroupsForHost(
@@ -1183,6 +1179,37 @@ function getFolderWorkspaceHostIdentity(
   projectGroups: readonly ProjectGroup[]
 ): string {
   return JSON.stringify([getFolderWorkspaceHostId(workspace, projectGroups), workspace.id])
+}
+
+// Why: a group id can exist on several hosts; only the deleted owner's rows may be cascaded away.
+function applyProjectGroupDeleteCascade(
+  s: Pick<RepoSlice, 'projectGroups' | 'folderWorkspaces' | 'repos'>,
+  groupId: string,
+  ownerHostId: ExecutionHostId | null
+): Pick<RepoSlice, 'projectGroups' | 'folderWorkspaces' | 'repos' | 'folderWorkspacePathStatuses'> {
+  const ownsRowHost = (rowHostId: string): boolean =>
+    ownerHostId ? catalogOwnsHost(ownerHostId, rowHostId) : true
+  const ownerGroups = s.projectGroups.filter((group) => ownsRowHost(getProjectGroupHostId(group)))
+  const deletedGroupIds = getProjectGroupSubtreeIds(ownerGroups, groupId)
+  const isDeletedGroup = (group: ProjectGroup): boolean =>
+    deletedGroupIds.has(group.id) && ownsRowHost(getProjectGroupHostId(group))
+  return {
+    projectGroups: s.projectGroups.filter((group) => !isDeletedGroup(group)),
+    folderWorkspaces: s.folderWorkspaces.filter(
+      (workspace) =>
+        !deletedGroupIds.has(workspace.projectGroupId) ||
+        // Why: resolve the workspace's host against the pre-delete group list, which still holds its owner row.
+        !ownsRowHost(getFolderWorkspaceHostId(workspace, s.projectGroups))
+    ),
+    repos: s.repos.map((repo) =>
+      repo.projectGroupId &&
+      deletedGroupIds.has(repo.projectGroupId) &&
+      ownsRowHost(getRepoExecutionHostId(repo))
+        ? { ...repo, projectGroupId: null }
+        : repo
+    ),
+    folderWorkspacePathStatuses: {}
+  }
 }
 
 function getFolderWorkspaceUpdateIdentity(
@@ -1882,11 +1909,13 @@ export type RepoSlice = {
     options?: { executionHostId?: ExecutionHostId }
   ) => Promise<boolean>
   deleteFolderWorkspace: (folderWorkspaceId: string) => Promise<boolean>
+  // options.hostId targets a specific host's row + RPC target when the id exists on multiple hosts; else the group's own host owns the call.
   updateProjectGroup: (
     groupId: string,
-    updates: Partial<Pick<ProjectGroup, 'name' | 'isCollapsed' | 'tabOrder' | 'color'>>
+    updates: Partial<Pick<ProjectGroup, 'name' | 'isCollapsed' | 'tabOrder' | 'color'>>,
+    options?: { hostId?: ExecutionHostId }
   ) => Promise<boolean>
-  deleteProjectGroup: (groupId: string) => Promise<boolean>
+  deleteProjectGroup: (groupId: string, options?: { hostId?: ExecutionHostId }) => Promise<boolean>
   deleteProjectGroupWithContainedProjects: (
     groupId: string,
     options: DeleteProjectGroupWithContainedProjectsOptions
@@ -2163,7 +2192,11 @@ export const createRepoSlice: StateCreator<AppState, [], [], RepoSlice> = (set, 
     const targetHostId = getRuntimeTargetHostId(target)
     claimRepoCatalogGeneration(get, targetHostId, catalogGeneration)
     try {
-      const catalog = await fetchRepoCatalogForTarget(target)
+      const [catalog, visibilitySnapshot] = await Promise.all([
+        fetchRepoCatalogForTarget(target),
+        readRuntimeWorktreeVisibilitySnapshot(environmentId)
+      ])
+      const visibilityDefaults = visibilitySnapshot.defaults
       if (
         runtimeRepoFetchGenerationByEnvironment.get(environmentId) !== requestGeneration ||
         !isLatestRepoCatalogGeneration(get, targetHostId, catalogGeneration) ||
@@ -2213,6 +2246,38 @@ export const createRepoSlice: StateCreator<AppState, [], [], RepoSlice> = (set, 
         )
         return {
           repos: finalizedRepos,
+          ...(visibilityDefaults === undefined
+            ? {}
+            : {
+                worktreeVisibilityDefaultsByHost: {
+                  ...s.worktreeVisibilityDefaultsByHost,
+                  [targetHostId]: visibilityDefaults
+                }
+              }),
+          ...(visibilityDefaults !== undefined && s.settings
+            ? getActiveRuntimeTarget(s.settings).kind === 'environment' &&
+              s.settings.activeRuntimeEnvironmentId === environmentId
+              ? visibilityDefaults
+                ? {
+                    settings: {
+                      ...s.settings,
+                      worktreeVisibilityDefaults: visibilityDefaults
+                    },
+                    worktreeVisibilityDefaultsSupportedRuntimeEnvironmentId: environmentId,
+                    worktreeVisibilitySourceDefaultsSupportedRuntimeEnvironmentId:
+                      visibilitySnapshot.sourceDefaultsSupported ? environmentId : null
+                  }
+                : {
+                    settings: Object.fromEntries(
+                      Object.entries(s.settings).filter(
+                        ([key]) => key !== 'worktreeVisibilityDefaults'
+                      )
+                    ) as GlobalSettings,
+                    worktreeVisibilityDefaultsSupportedRuntimeEnvironmentId: null,
+                    worktreeVisibilitySourceDefaultsSupportedRuntimeEnvironmentId: null
+                  }
+              : {}
+            : {}),
           pendingSshRepoReadoptions: reconciliation.pendingReadoptions,
           ...reconcileReadoptedSshWorktreeState(s, s.pendingSshRepoReadoptions),
           ...mergedProjectCompatibility,
@@ -2338,11 +2403,46 @@ export const createRepoSlice: StateCreator<AppState, [], [], RepoSlice> = (set, 
           environmentId: environment.id
         }
         claimRepoCatalogGeneration(get, getRuntimeTargetHostId(target), generation)
-        try {
-          applyCatalog(await fetchRepoCatalogForTarget(target))
-        } catch (err) {
+        const [catalogResult, visibilitySnapshot] = await Promise.all([
+          fetchRepoCatalogForTarget(target).then(
+            (catalog) => ({ ok: true as const, catalog }),
+            (error: unknown) => ({ ok: false as const, error })
+          ),
+          readRuntimeWorktreeVisibilitySnapshot(environment.id)
+        ])
+        const visibilityDefaults = visibilitySnapshot.defaults
+        const hostId = getRuntimeTargetHostId(target)
+        if (
+          visibilityDefaults !== undefined &&
+          latestAllHostRepoCatalogGenerationByStore.get(get) === generation &&
+          isLatestRepoCatalogGeneration(get, hostId, generation)
+        ) {
+          set((state) =>
+            isRemovedRuntimeHostId(hostId, state.removedRuntimeEnvironmentIds)
+              ? state
+              : {
+                  worktreeVisibilityDefaultsByHost: {
+                    ...state.worktreeVisibilityDefaultsByHost,
+                    [hostId]: visibilityDefaults
+                  },
+                  ...(getActiveRuntimeTarget(state.settings).kind === 'environment' &&
+                  state.settings?.activeRuntimeEnvironmentId === environment.id
+                    ? {
+                        worktreeVisibilitySourceDefaultsSupportedRuntimeEnvironmentId:
+                          visibilitySnapshot.sourceDefaultsSupported ? environment.id : null
+                      }
+                    : {})
+                }
+          )
+        }
+        if (catalogResult.ok) {
+          applyCatalog(catalogResult.catalog)
+        } else {
           failed = true
-          console.warn(`Skipped repos for runtime environment ${environment.id}:`, err)
+          console.warn(
+            `Skipped repos for runtime environment ${environment.id}:`,
+            catalogResult.error
+          )
         }
       })
     )
@@ -2918,10 +3018,13 @@ export const createRepoSlice: StateCreator<AppState, [], [], RepoSlice> = (set, 
     }
   },
 
-  updateProjectGroup: async (groupId, updates) => {
+  updateProjectGroup: async (groupId, updates, options) => {
     try {
-      // Why: project groups are focused-host-scoped by design; all CRUD routes by the focused host and the list is replaced, not merged.
-      const target = getActiveRuntimeTarget(get().settings)
+      // Why: the sidebar lists groups from every host, so the mutation follows the group's owner, not the focused host.
+      const ownerHostId = resolveProjectGroupOwnerHostId(get(), groupId, options?.hostId)
+      const target = getActiveRuntimeTarget(
+        settingsForProjectGroupOwner(get(), groupId, options?.hostId)
+      )
       const updated =
         target.kind === 'local'
           ? await window.api.projectGroups.update({ groupId, updates })
@@ -2938,7 +3041,9 @@ export const createRepoSlice: StateCreator<AppState, [], [], RepoSlice> = (set, 
       }
       const ownedGroup = projectGroupWithFetchedOwner(updated, target)
       set((s) => ({
-        projectGroups: s.projectGroups.map((group) => (group.id === groupId ? ownedGroup : group)),
+        projectGroups: s.projectGroups.map((group) =>
+          projectGroupMatchesOwnerHost(group, groupId, ownerHostId) ? ownedGroup : group
+        ),
         folderWorkspacePathStatuses: {}
       }))
       return true
@@ -2948,10 +3053,13 @@ export const createRepoSlice: StateCreator<AppState, [], [], RepoSlice> = (set, 
     }
   },
 
-  deleteProjectGroup: async (groupId) => {
+  deleteProjectGroup: async (groupId, options) => {
     try {
-      // Why: project groups are focused-host-scoped by design (see updateProjectGroup).
-      const target = getActiveRuntimeTarget(get().settings)
+      // Why: deletion targets the group's owner host (see updateProjectGroup); focus may be elsewhere.
+      const ownerHostId = resolveProjectGroupOwnerHostId(get(), groupId, options?.hostId)
+      const target = getActiveRuntimeTarget(
+        settingsForProjectGroupOwner(get(), groupId, options?.hostId)
+      )
       const deleted =
         target.kind === 'local'
           ? await window.api.projectGroups.delete({ groupId })
@@ -2966,21 +3074,7 @@ export const createRepoSlice: StateCreator<AppState, [], [], RepoSlice> = (set, 
       if (!deleted) {
         return false
       }
-      set((s) => {
-        const deletedGroupIds = getProjectGroupSubtreeIds(s.projectGroups, groupId)
-        return {
-          projectGroups: s.projectGroups.filter((group) => !deletedGroupIds.has(group.id)),
-          folderWorkspaces: s.folderWorkspaces.filter(
-            (workspace) => !deletedGroupIds.has(workspace.projectGroupId)
-          ),
-          repos: s.repos.map((repo) =>
-            repo.projectGroupId && deletedGroupIds.has(repo.projectGroupId)
-              ? { ...repo, projectGroupId: null }
-              : repo
-          ),
-          folderWorkspacePathStatuses: {}
-        }
-      })
+      set((s) => applyProjectGroupDeleteCascade(s, groupId, ownerHostId))
       return true
     } catch (err) {
       console.error('Failed to delete project group:', err)
@@ -2989,7 +3083,13 @@ export const createRepoSlice: StateCreator<AppState, [], [], RepoSlice> = (set, 
   },
 
   deleteProjectGroupWithContainedProjects: async (groupId, options) => {
-    const targets = selectProjectGroupRemovalTargets(get().projectGroups, get().repos, groupId)
+    const ownerHostId = resolveProjectGroupOwnerHostId(get(), groupId, options.hostId)
+    const targets = selectProjectGroupRemovalTargets(
+      get().projectGroups,
+      get().repos,
+      groupId,
+      ownerHostId
+    )
     const requestedProjectIds = options.removeContainedProjects ? targets.projectIds : []
     if (!targets.groupExists) {
       return {
@@ -3001,7 +3101,9 @@ export const createRepoSlice: StateCreator<AppState, [], [], RepoSlice> = (set, 
       }
     }
 
-    const deleted = await get().deleteProjectGroup(groupId)
+    const deleted = await get().deleteProjectGroup(groupId, {
+      hostId: ownerHostId ?? undefined
+    })
     if (!deleted) {
       return {
         status: 'group-delete-failed',
@@ -3024,16 +3126,26 @@ export const createRepoSlice: StateCreator<AppState, [], [], RepoSlice> = (set, 
 
     const removedProjectIds: string[] = []
     const failedProjectRemovals: ProjectRemovalFailure[] = []
+    // Why: the group's catalog can hold rows from several hosts (a local catalog also owns SSH rows),
+    // so each project is removed on its own host rather than on the group's.
+    const findOwnedProjects = (projectId: string): Repo[] =>
+      get().repos.filter(
+        (repo) =>
+          repo.id === projectId &&
+          (!ownerHostId || catalogOwnsHost(ownerHostId, getRepoExecutionHostId(repo)))
+      )
     for (const projectId of targets.projectIds) {
-      const existedBeforeRemoval = get().repos.some((repo) => repo.id === projectId)
+      const ownedProjects = findOwnedProjects(projectId)
+      const projectHostId =
+        ownedProjects.length === 1 ? getRepoExecutionHostId(ownedProjects[0]) : undefined
       try {
-        if (existedBeforeRemoval) {
-          await get().removeProject(projectId)
+        if (ownedProjects.length > 0) {
+          await get().removeProject(projectId, { hostId: projectHostId })
         }
       } catch (err) {
         console.error('Failed to remove contained project:', err)
       }
-      const stillExists = get().repos.some((repo) => repo.id === projectId)
+      const stillExists = findOwnedProjects(projectId).length > 0
       if (stillExists) {
         failedProjectRemovals.push({
           projectId,
@@ -3530,12 +3642,16 @@ export const createRepoSlice: StateCreator<AppState, [], [], RepoSlice> = (set, 
         return
       }
       const ownerHostId = getRepoExecutionHostId(ownerRepo)
+      const runtimeSshTargetId = ownerRepo.connectionId
       // Why: an SSH per-workspace-env's workspace is the repo's main worktree, so removal routes here; tear down its ephemeral runtime first so it doesn't leak.
-      if (isRuntimeOwnedSshTargetId(ownerRepo.connectionId)) {
-        await cleanupEphemeralVmRuntimesForDeleted({
+      if (runtimeSshTargetId && isRuntimeOwnedSshTargetId(runtimeSshTargetId)) {
+        const cleanup = await cleanupEphemeralVmRuntimesForDeleted({
           workspaceIds: getKnownRepoWorktreeIds(get(), projectId, ownerHostId),
-          runtimeOwnedSshTargetIds: [ownerRepo.connectionId as string]
+          runtimeOwnedSshTargetIds: [runtimeSshTargetId]
         })
+        if (cleanup.retainedSshTargetIds.includes(runtimeSshTargetId)) {
+          throw new Error('The cloud VM could not be destroyed. Retry cleanup before removing it.')
+        }
       }
       // Why: derive the target from the owner's settings (via options.hostId) so an SSH host removal never routes repo.rm to the focused runtime.
       const target = getActiveRuntimeTarget(settingsForRepoOwner(get(), projectId, options?.hostId))
@@ -3813,6 +3929,8 @@ export const createRepoSlice: StateCreator<AppState, [], [], RepoSlice> = (set, 
             const {
               sourceControlAi,
               externalWorktreeDiscoverySuppressedAt,
+              externalWorktreeVisibility,
+              agentWorktreeVisibility,
               ...updatesWithoutClearSentinels
             } = sanitizedUpdates
             mergedRepo = { ...mergedRepo, ...updatesWithoutClearSentinels }
@@ -3822,6 +3940,20 @@ export const createRepoSlice: StateCreator<AppState, [], [], RepoSlice> = (set, 
               mergedRepo = repoWithoutSourceControlAi
             } else if (sourceControlAi !== undefined) {
               mergedRepo = { ...mergedRepo, sourceControlAi }
+            }
+            if (externalWorktreeVisibility === null) {
+              const { externalWorktreeVisibility: _visibility, ...repoWithoutVisibility } =
+                mergedRepo
+              mergedRepo = { ...repoWithoutVisibility, externalWorktreeVisibilityLegacy: false }
+            } else if (externalWorktreeVisibility !== undefined) {
+              mergedRepo = { ...mergedRepo, externalWorktreeVisibility }
+            }
+            if (agentWorktreeVisibility === null) {
+              const { agentWorktreeVisibility: _agentVisibility, ...repoWithoutAgentVisibility } =
+                mergedRepo
+              mergedRepo = repoWithoutAgentVisibility
+            } else if (agentWorktreeVisibility !== undefined) {
+              mergedRepo = { ...mergedRepo, agentWorktreeVisibility }
             }
             if (externalWorktreeDiscoverySuppressedAt === null) {
               const {

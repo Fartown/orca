@@ -58,6 +58,7 @@ import { PluginsSettingsSection } from './PluginsSettingsSection'
 import { AgentsPane } from './AgentsPane'
 import { OrchestrationPane } from './OrchestrationPane'
 import { ArtifactsSettingsPane } from './ArtifactsSettingsPane'
+import { ShareSkillsSettingsPane } from './ShareSkillsSettingsPane'
 import { AutomationsSettingsPane } from './AutomationsSettingsPane'
 import { OrcaAccountSettingsPane } from './OrcaAccountSettingsPane'
 import { LinearAgentSkillPane } from './LinearAgentSkillPane'
@@ -309,7 +310,6 @@ function Settings(): React.JSX.Element {
   const settingsProjectHostSelection = useAppStore((s) => s.settingsProjectHostSelection)
   const settingsProjectSetupSelection = useAppStore((s) => s.settingsProjectSetupSelection)
   const setSettingsProjectHostSelection = useAppStore((s) => s.setSettingsProjectHostSelection)
-  const settingsSearchInputQuery = useAppStore((s) => s.settingsSearchInputQuery)
   const settingsSearchQuery = useAppStore((s) => s.settingsSearchQuery)
   const setSettingsSearchQuery = useAppStore((s) => s.setSettingsSearchQuery)
   const modelStates = useAppStore((s) => s.modelStates)
@@ -1205,12 +1205,10 @@ function Settings(): React.JSX.Element {
         generalGroups={generalNavGroups}
         repoSections={repoNavSections}
         hasRepos={repos.length > 0}
-        searchQuery={settingsSearchInputQuery}
         searchInputRef={searchInputRef}
         // Why: deep-links open panes/modals that own focus; plain entry lands in search.
         searchAutoFocus={settingsNavigationTarget == null}
         onBack={closeSettingsPageWithPromptGuard}
-        onSearchChange={setSettingsSearchQuery}
         onSelectSection={scrollToSection}
       />
 
@@ -1392,6 +1390,7 @@ function Settings(): React.JSX.Element {
                     <GeneralPane
                       settings={settings}
                       updateSettings={updateSettings}
+                      updateSettingsOrThrow={updateSettingsOrThrow}
                       fontSuggestions={terminalFontSuggestions}
                       onRequestFontSuggestions={requestFontSuggestions}
                       wslSupportedPlatform={localWslSupportedPlatform}
@@ -1457,6 +1456,19 @@ function Settings(): React.JSX.Element {
                   {isSectionMounted('artifacts') ? (
                     <ArtifactsSettingsPane settings={settings} updateSettings={updateSettings} />
                   ) : null}
+                </SettingsSection>
+
+                <SettingsSection
+                  id="share-skills"
+                  title={translate('auto.components.settings.shareSkills.title', 'Share Skills')}
+                  badge="Beta"
+                  description={translate(
+                    'auto.components.settings.shareSkills.description',
+                    'Share your skills with an unlisted link. Anyone who has it can install them.'
+                  )}
+                  searchEntries={getSectionSearchEntries('share-skills')}
+                >
+                  {isSectionMounted('share-skills') ? <ShareSkillsSettingsPane /> : null}
                 </SettingsSection>
 
                 <SettingsSection
