@@ -165,6 +165,7 @@ describe('Codex transcript history modes', () => {
         {
           id: 'user-1',
           role: 'user',
+          turnId: 'turn-1',
           blocks: [
             { type: 'text', text: 'Visible prompt' },
             { type: 'image-ref', url: 'data:image/png;base64,abc' },
@@ -174,6 +175,7 @@ describe('Codex transcript history modes', () => {
         {
           id: 'assistant-1',
           role: 'assistant',
+          turnId: 'turn-1',
           blocks: [{ type: 'text', text: 'Visible response' }]
         }
       ]

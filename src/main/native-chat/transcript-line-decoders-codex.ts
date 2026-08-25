@@ -123,7 +123,12 @@ function codexEventMessage(
     }
   }
   if (payload.type === 'item_completed') {
-    return codexCompletedTurnItem(payload, id, timestamp)
+    return codexCompletedTurnItem(
+      payload,
+      id,
+      timestamp,
+      extractString(payload.turn_id) ?? extractString(payload.turnId) ?? undefined
+    )
   }
   if (payload.type === 'user_message') {
     const text = extractString(payload.message)
@@ -143,7 +148,8 @@ function codexEventMessage(
 function codexCompletedTurnItem(
   payload: Record<string, unknown>,
   fallbackId: string,
-  timestamp: number | null
+  timestamp: number | null,
+  turnId: string | undefined
 ): NativeChatMessage | null {
   const item = asRecord(payload.item)
   if (!item) {
@@ -155,10 +161,24 @@ function codexCompletedTurnItem(
     return null
   }
   if (item.type === 'UserMessage' || item.type === 'user_message') {
-    return { id, role: 'user', blocks, timestamp, source: 'transcript' }
+    return {
+      id,
+      role: 'user',
+      blocks,
+      timestamp,
+      source: 'transcript',
+      ...(turnId ? { turnId } : {})
+    }
   }
   if (item.type === 'AgentMessage' || item.type === 'agent_message') {
-    return { id, role: 'assistant', blocks, timestamp, source: 'transcript' }
+    return {
+      id,
+      role: 'assistant',
+      blocks,
+      timestamp,
+      source: 'transcript',
+      ...(turnId ? { turnId } : {})
+    }
   }
   return null
 }

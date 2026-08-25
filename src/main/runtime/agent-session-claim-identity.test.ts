@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import {
   canonicalizeAgentSessionIdentity,
+  canonicalizeAgentSessionIdentityWithPathAccess,
   createEphemeralAgentSessionClaimSigner
 } from './agent-session-claim-identity'
 
@@ -67,5 +68,46 @@ describe('agent session claim identity', () => {
     } finally {
       rmSync(dir, { recursive: true, force: true })
     }
+  })
+
+  it('canonicalizes a remote Prime transcript on the execution owner filesystem', async () => {
+    const rawTranscriptPath = '/remote/link/session.jsonl'
+    await expect(
+      canonicalizeAgentSessionIdentityWithPathAccess(
+        'prime-agent',
+        {
+          key: 'session_id',
+          id: 'prime-session-remote',
+          transcriptPath: rawTranscriptPath
+        },
+        {
+          platform: 'linux',
+          realpath: async () => '/remote/canonical/session.jsonl',
+          stat: async () => ({ type: 'file' })
+        }
+      )
+    ).resolves.toMatchObject({
+      providerSession: { transcriptPath: '/remote/canonical/session.jsonl' }
+    })
+  })
+
+  it('uses Windows path rules for a remote execution owner', async () => {
+    await expect(
+      canonicalizeAgentSessionIdentityWithPathAccess(
+        'pi',
+        {
+          key: 'session_id',
+          id: 'pi-session-remote',
+          transcriptPath: 'C:\\Users\\alice\\sessions\\..\\session.jsonl'
+        },
+        {
+          platform: 'win32',
+          realpath: async () => 'C:\\Users\\Alice\\session.jsonl',
+          stat: async () => ({ type: 'file' })
+        }
+      )
+    ).resolves.toMatchObject({
+      providerSession: { transcriptPath: 'c:\\users\\alice\\session.jsonl' }
+    })
   })
 })

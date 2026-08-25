@@ -290,6 +290,8 @@ import {
 } from './claude-accounts/live-pty-gate'
 import { StarNagService } from './star-nag/service'
 import { agentHookServer, type AgentHookProviderSessionIdentity } from './agent-hooks/server'
+import type { IssueFeatureBootstrap } from './issues/issue-feature-bootstrap'
+import { startIssueFeatureForHost } from './issues/issue-host-lifecycle'
 import { createHookProviderSessionInvalidator } from './agent-hooks/hook-provider-session-invalidation'
 import { createHookStatusSessionTabsInvalidator } from './agent-hooks/hook-status-session-tabs-invalidation'
 import { wslHookRelayManager } from './agent-hooks/wsl-hook-relay-manager'
@@ -399,6 +401,7 @@ let claudeRuntimeAuth: ClaudeRuntimeAuthService | null = null
 let runtime: OrcaRuntimeService | null = null
 let rateLimits: RateLimitService | null = null
 let runtimeRpc: OrcaRuntimeRpcServer | null = null
+let issueFeatureBootstrap: IssueFeatureBootstrap | null = null
 const serveReadinessPublisher = new ServeReadinessPublisher()
 let desktopRelayService: DesktopRelayService | null = null
 let desktopRelayStatus: RelayBrokerStatus = 'offline'
@@ -3215,6 +3218,28 @@ void app.whenReady().then(async () => {
     await shellPathReady
     bindTerminalRuntimeStartupServices(Promise.resolve(startTerminalRuntimeStartupServices()))
   }
+  const issueFeatureReady = localPtyStartupReady.then(async () => {
+    const hooksEnabled = isAgentStatusHooksEnabled(store?.getSettings())
+    const hookEvidenceStatus = !hooksEnabled
+      ? 'disabled'
+      : Object.keys(agentHookServer.buildPtyEnv()).length > 0
+        ? 'ready'
+        : 'failed'
+    issueFeatureBootstrap = await startIssueFeatureForHost({
+      profileId: activeOrcaProfile.profile.id,
+      profileLabel: activeOrcaProfile.profile.name,
+      userDataPath: getCanonicalUserDataPath(),
+      runtime: runtimeService,
+      store: store!,
+      hookSource: agentHookServer,
+      hookEvidenceStatus
+    })
+  })
+  if (serveOptions) {
+    await issueFeatureReady
+  } else {
+    void issueFeatureReady
+  }
   app.on('activate', handleMacAppActivation)
 
   if (serveOptions) {
@@ -3430,6 +3455,8 @@ app.on('will-quit', (e) => {
   const codexBackfillRecoveryShutdown = stopCodexStateDbBackfillRecoveries()
   pluginService = null
   setUnreadDockBadgeCount(0)
+  issueFeatureBootstrap?.dispose()
+  issueFeatureBootstrap = null
   agentHookServer.stop()
   // Why: cancels relay restart/reinstall timers and kills wsl.exe children deterministically, not via stdio-pipe teardown.
   wslHookRelayManager.disposeAll()

@@ -45,11 +45,17 @@ import {
   signOutCurrentOrcaProfile
 } from '../orca-profiles/profile-cloud-service'
 import { registerOrcaProfileOrgMemberHandlers } from './orca-profile-org-members-handlers'
+import {
+  assertOrcaProfileProjectMoveAllowed,
+  parseOrcaProfileProjectTransferArgs,
+  type IssueProjectMoveGuard
+} from './orca-profile-project-transfer-admission'
 
 type RegisterOrcaProfileHandlersOptions = {
   onBeforeRelaunch?: () => void | Promise<void>
   onAuthMutation?: () => void
   onBeforeSignOut?: () => void
+  issueProjectMoveGuard?: IssueProjectMoveGuard
 }
 
 function profileIdFromArgs(args: unknown): string {
@@ -65,26 +71,6 @@ function profileIdFromArgs(args: unknown): string {
     throw new Error('invalid_orca_profile_id')
   }
   return profileId
-}
-
-function transferProjectArgsFromUnknown(args: unknown): TransferOrcaProfileProjectArgs {
-  if (!args || typeof args !== 'object') {
-    throw new Error('invalid_orca_profile_project_transfer')
-  }
-  const candidate = args as TransferOrcaProfileProjectArgs
-  const sourceProfileId = candidate.sourceProfileId?.trim()
-  const targetProfileId = candidate.targetProfileId?.trim()
-  const repoId = candidate.repoId?.trim()
-  const mode = candidate.mode
-  if (!sourceProfileId || !targetProfileId || !repoId || (mode !== 'move' && mode !== 'copy')) {
-    throw new Error('invalid_orca_profile_project_transfer')
-  }
-  return {
-    sourceProfileId,
-    targetProfileId,
-    repoId,
-    mode
-  }
 }
 
 function findProjectsByPathArgsFromUnknown(args: unknown): FindOrcaProfileProjectsByPathArgs {
@@ -229,11 +215,16 @@ export function registerOrcaProfileHandlers(
       _event,
       rawArgs: TransferOrcaProfileProjectArgs
     ): Promise<TransferOrcaProfileProjectResult> => {
-      const args = transferProjectArgsFromUnknown(rawArgs)
+      const args = parseOrcaProfileProjectTransferArgs(rawArgs)
       const current = getOrcaProfileListState()
       if (args.targetProfileId === current.activeProfileId) {
         throw new Error('active_target_orca_profile_transfer_requires_relaunch')
       }
+      assertOrcaProfileProjectMoveAllowed(
+        args,
+        getProfileUserDataPath(),
+        options.issueProjectMoveGuard
+      )
       if (args.mode === 'move' && args.sourceProfileId === current.activeProfileId) {
         // Why: transfer before any relaunch side effect so a duplicate-target
         // or validation failure cannot strand the app in a quitting state.

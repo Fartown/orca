@@ -27,6 +27,7 @@ export function launchAiVaultSessionInNewTab(args: {
   envToDelete?: string[]
   launchConfig?: SleepingAgentLaunchConfig
   providerSession?: AgentProviderSessionMetadata
+  launchToken?: string
   targetGroupId?: string
   splitDirection?: TabSplitDirection
 }): LaunchAiVaultSessionInNewTabResult {
@@ -46,6 +47,7 @@ export function launchAiVaultSessionInNewTab(args: {
       ...(args.envToDelete ? { envToDelete: args.envToDelete } : {}),
       ...(args.launchConfig ? { launchConfig: args.launchConfig } : {}),
       ...(args.providerSession ? { providerSession: args.providerSession } : {}),
+      ...(args.launchToken ? { launchToken: args.launchToken } : {}),
       ...(args.launchConfig ? { agentArgs: args.launchConfig.agentArgs } : {}),
       activate: true
     })
@@ -77,6 +79,7 @@ export function launchAiVaultSessionInNewTab(args: {
     ...(args.envToDelete ? { envToDelete: args.envToDelete } : {}),
     ...(args.launchConfig ? { launchConfig: args.launchConfig, launchAgent: args.agent } : {}),
     ...(args.providerSession ? { resumeProviderSession: args.providerSession } : {}),
+    ...(args.launchToken ? { launchToken: args.launchToken } : {}),
     telemetry: {
       agent_kind: tuiAgentToAgentKind(args.agent),
       launch_source: 'sidebar',

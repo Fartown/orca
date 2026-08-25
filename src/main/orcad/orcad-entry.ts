@@ -117,6 +117,8 @@ export async function startOrcad(options: OrcadOptions = {}): Promise<OrcadHandl
   const { ensureActiveOrcaProfile, initOrcaProfilePaths } =
     await import('../orca-profiles/profile-index-store')
   const { initSshHostKeyStoreFile } = await import('../ssh/ssh-host-key-store')
+  const { agentHookServer } = await import('../agent-hooks/server')
+  const { startIssueFeatureForHost } = await import('../issues/issue-host-lifecycle')
 
   const userDataPath = getAppEnvironment().getPath('userData')
   initOrcaProfilePaths()
@@ -133,6 +135,7 @@ export async function startOrcad(options: OrcadOptions = {}): Promise<OrcadHandl
     // Why lazy: a daemon swap replaces the provider after construction, so an eager
     // reference would freeze the pre-daemon one.
     getLocalProvider: () => getLocalPtyProvider(),
+    buildAgentHookPtyEnv: () => agentHookServer.buildPtyEnv(),
     // Why: destructive worktree removal refuses to run without a provider to stop
     // processes through — correctly, since it cannot otherwise verify the tree is idle.
     getSshProvider: (connectionId) => getSshPtyProvider(connectionId),
@@ -145,6 +148,17 @@ export async function startOrcad(options: OrcadOptions = {}): Promise<OrcadHandl
     // constructor's default would advertise it.
     getDesktopWindowStatus: () => 'blocked'
   })
+
+  let hookEvidenceStatus: 'ready' | 'failed' = 'ready'
+  try {
+    await agentHookServer.start({
+      env: 'production',
+      userDataPath
+    })
+  } catch (error) {
+    hookEvidenceStatus = 'failed'
+    console.error('[orcad] agent hook server failed to start:', error)
+  }
 
   // Why the headless entry point rather than registerPtyHandlers directly: this is the
   // same call `--serve` makes, and it threads the store through. Without the store the
@@ -159,6 +173,16 @@ export async function startOrcad(options: OrcadOptions = {}): Promise<OrcadHandl
   // restored orchestration rows claiming an authority this host never took over.
   await runtime.refreshRestoredOrchestrationAuthority()
   await runtime.reconcileLegacyWorkerTerminals()
+
+  const issueBootstrap = await startIssueFeatureForHost({
+    profileId: profile.profile.id,
+    profileLabel: profile.profile.name,
+    userDataPath,
+    runtime,
+    store,
+    hookSource: agentHookServer,
+    hookEvidenceStatus
+  })
 
   const rpc = new OrcaRuntimeRpcServer({
     runtime,
@@ -212,7 +236,9 @@ export async function startOrcad(options: OrcadOptions = {}): Promise<OrcadHandl
   return {
     readiness,
     stop: async () => {
+      issueBootstrap?.dispose()
       await rpc.stop()
+      agentHookServer.stop()
     }
   }
 }

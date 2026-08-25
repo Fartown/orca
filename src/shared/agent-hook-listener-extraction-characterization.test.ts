@@ -84,6 +84,26 @@ describe('agent hook extraction boundaries', () => {
     }
   })
 
+  it('projects Codex provider turn identity across supported hook spellings', () => {
+    for (const [field, value] of [
+      ['turn_id', 'turn-snake'],
+      ['turnId', 'turn-camel']
+    ] as const) {
+      const event = normalizeHookPayload(
+        createHookListenerState(),
+        'codex',
+        {
+          paneKey: PANE,
+          hook_event_name: 'PreToolUse',
+          payload: { [field]: value, tool_name: 'Read' }
+        },
+        'production'
+      )
+
+      expect(event).toMatchObject({ providerTurnId: value, payload: { state: 'working' } })
+    }
+  })
+
   it('warns before tab rejection and caps version and environment warning keys independently', () => {
     const orderState = createHookListenerState()
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)

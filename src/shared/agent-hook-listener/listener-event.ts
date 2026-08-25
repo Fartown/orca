@@ -23,6 +23,8 @@ export type AgentHookEventPayload = {
   hookEventName?: string
   /** Claude's provider-owned user-prompt UUID. */
   providerPromptId?: string
+  /** Provider-owned turn identity when the hook exposes one. */
+  providerTurnId?: string
   /** Active Claude compact generation, keyed by provider prompt identity. */
   compactTrigger?: 'manual' | 'auto'
   /** Claude tool-use identifier when the hook source exposes one. */

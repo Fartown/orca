@@ -114,9 +114,10 @@ async function ensureRuntimeEnvironmentCompatible(
     statusCheckedAt: null
   }
   const check = (async () => {
-    const response = await window.api.runtimeEnvironments.call({
-      selector: environmentId,
+    const response = await callRuntimeEnvironmentWithRevision({
+      environmentId,
       method: 'status.get',
+      params: undefined,
       timeoutMs: options.timeoutMs,
       expectedEnvironmentPairingRevision: options.expectedEnvironmentPairingRevision
     })
@@ -247,9 +248,10 @@ export async function getRuntimeEnvironmentStatus(
   // capability lookups coalesce onto this one status.get (via the cache-hit path
   // in runtimeEnvironmentSupportsCapability) instead of each firing their own.
   const check = (async () => {
-    const response = await window.api.runtimeEnvironments.call({
-      selector: trimmed,
+    const response = await callRuntimeEnvironmentWithRevision({
+      environmentId: trimmed,
       method: 'status.get',
+      params: undefined,
       timeoutMs
     })
     const status = unwrapRuntimeRpcResult<RuntimeStatus>(

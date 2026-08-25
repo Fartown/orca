@@ -4,6 +4,8 @@ const mocks = vi.hoisted(() => ({
   createTab: vi.fn(),
   closeTab: vi.fn(),
   createWebRuntimeSessionTerminal: vi.fn(),
+  isWebRuntimeSessionActive: vi.fn(),
+  queueTabStartupCommand: vi.fn(),
   setActiveTabType: vi.fn()
 }))
 
@@ -40,7 +42,7 @@ const store = {
   allWorktrees: vi.fn(() => store.worktreesByRepo['repo-1']),
   createTab: mocks.createTab,
   closeTab: mocks.closeTab,
-  queueTabStartupCommand: vi.fn(),
+  queueTabStartupCommand: mocks.queueTabStartupCommand,
   setActiveTabType: mocks.setActiveTabType,
   setTabBarOrder: vi.fn(),
   setAgentStatus: vi.fn(),
@@ -58,7 +60,7 @@ vi.mock('@/lib/telemetry', () => ({
 }))
 vi.mock('@/runtime/web-runtime-session', () => ({
   createWebRuntimeSessionTerminal: mocks.createWebRuntimeSessionTerminal,
-  isWebRuntimeSessionActive: vi.fn(() => true),
+  isWebRuntimeSessionActive: mocks.isWebRuntimeSessionActive,
   isWebTerminalSurfaceTabId: vi.fn(() => false)
 }))
 
@@ -73,6 +75,7 @@ describe('launchAgentInNewTab paired web runtime', () => {
     }
     store.tabsByWorktree = { 'wt-1': [{ id: 'tab-1' }] }
     mocks.createWebRuntimeSessionTerminal.mockResolvedValue({ status: 'created' })
+    mocks.isWebRuntimeSessionActive.mockReturnValue(true)
   })
 
   it('delegates agent quick launch to the host runtime', async () => {
@@ -82,7 +85,8 @@ describe('launchAgentInNewTab paired web runtime', () => {
     const result = launchAgentInNewTab({
       agent: 'claude',
       worktreeId: 'wt-1',
-      groupId: 'group-1'
+      groupId: 'group-1',
+      launchToken: 'launch-token-0123456789-abcdefghijklmnopqrstuvwxyz'
     })
 
     expect(result).toEqual(expect.objectContaining({ tabId: null, pasteDraftAfterLaunch: false }))
@@ -93,12 +97,34 @@ describe('launchAgentInNewTab paired web runtime', () => {
       activate: true,
       agentSessionKind: 'fresh',
       agent: 'claude',
+      launchToken: 'launch-token-0123456789-abcdefghijklmnopqrstuvwxyz',
       viewMode: 'terminal'
     })
     expect(mocks.createTab).not.toHaveBeenCalled()
     await Promise.resolve()
     expect(mocks.setActiveTabType).toHaveBeenCalledWith('terminal')
     expect(mocks.closeTab).toHaveBeenCalledWith('stale-agent-tab', { reason: 'cleanup' })
+  })
+
+  it('passes only the prepared launch token into local managed-agent startup', async () => {
+    store.settings.activeRuntimeEnvironmentId = null
+    mocks.isWebRuntimeSessionActive.mockReturnValue(false)
+    mocks.createTab.mockReturnValue({ id: 'tab-local' })
+    const { launchAgentInNewTab } = await import('./launch-agent-in-new-tab')
+
+    launchAgentInNewTab({
+      agent: 'codex',
+      worktreeId: 'wt-1',
+      launchToken: 'launch-token-0123456789-abcdefghijklmnopqrstuvwxyz'
+    })
+
+    expect(mocks.queueTabStartupCommand).toHaveBeenCalledWith(
+      'tab-local',
+      expect.objectContaining({
+        launchAgent: 'codex',
+        launchToken: 'launch-token-0123456789-abcdefghijklmnopqrstuvwxyz'
+      })
+    )
   })
 
   it('forwards prompt launch env and captured config to the host runtime', async () => {

@@ -33,6 +33,7 @@ import { seedNativeChatAppliedSessionOptions } from '@/components/native-chat/na
 export type LaunchAgentInNewTabArgs = {
   agent: TuiAgent
   worktreeId: string
+  launchToken?: string
   /** Tab group the user launched from; keeps split-group launches in that pane instead of the active group. */
   groupId?: string
   /** Optional initial prompt; delivery depends on `promptDelivery` and the agent's prompt mode. */
@@ -73,6 +74,7 @@ export function launchAgentInNewTab(args: LaunchAgentInNewTabArgs): LaunchAgentI
   const {
     agent,
     worktreeId,
+    launchToken,
     groupId,
     prompt,
     agentArgs,
@@ -150,6 +152,7 @@ export function launchAgentInNewTab(args: LaunchAgentInNewTabArgs): LaunchAgentI
       agent,
       worktreeId,
       environmentId: runtimeEnvironmentId,
+      launchToken,
       groupId,
       cwd: initialCwd,
       startupPlan,
@@ -190,6 +193,7 @@ export function launchAgentInNewTab(args: LaunchAgentInNewTabArgs): LaunchAgentI
     ...(startupPlan.env ? { env: startupPlan.env } : {}),
     launchConfig: startupPlan.launchConfig,
     launchAgent: agent,
+    ...(launchToken ? { launchToken } : {}),
     ...(agentArgs !== undefined ? { agentArgsOverride: agentArgs } : {}),
     ...(startupPlan.sessionOptions ? { sessionOptions: startupPlan.sessionOptions } : {}),
     ...(startupPlan.startupCommandDelivery

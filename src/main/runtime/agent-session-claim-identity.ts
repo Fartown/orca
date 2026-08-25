@@ -8,7 +8,7 @@ import {
   statSync,
   writeFileSync
 } from 'node:fs'
-import { dirname, isAbsolute, join, normalize } from 'node:path'
+import { dirname, join, posix, win32 } from 'node:path'
 import {
   AGENT_SESSION_CLAIM_DIGEST_VERSION,
   type AgentSessionExecutionClaim
@@ -37,6 +37,12 @@ export type CanonicalAgentSessionIdentity = {
   providerSession: AgentProviderSessionMetadata
 }
 
+export type AgentSessionIdentityPathAccess = {
+  platform: NodeJS.Platform
+  realpath(path: string): Promise<string>
+  stat(path: string): Promise<{ type: string } | { isFile(): boolean }>
+}
+
 function encodeFields(fields: readonly string[]): Buffer {
   const chunks: Buffer[] = []
   for (const field of fields) {
@@ -48,9 +54,34 @@ function encodeFields(fields: readonly string[]): Buffer {
   return Buffer.concat(chunks)
 }
 
-function canonicalPathForPlatform(value: string): string {
-  const canonical = normalize(realpathSync(value))
-  return process.platform === 'win32' ? canonical.toLocaleLowerCase('en-US') : canonical
+function pathApiForPlatform(platform: NodeJS.Platform): typeof posix | typeof win32 {
+  return platform === 'win32' ? win32 : posix
+}
+
+function normalizeCanonicalPath(value: string, platform: NodeJS.Platform): string {
+  const canonical = pathApiForPlatform(platform).normalize(value)
+  return platform === 'win32' ? canonical.toLocaleLowerCase('en-US') : canonical
+}
+
+function requireTranscriptPath(
+  agent: ResumableTuiAgent,
+  providerSession: AgentProviderSessionMetadata,
+  platform: NodeJS.Platform
+): string {
+  const transcriptPath = providerSession.transcriptPath
+  if (
+    (agent !== 'pi' && agent !== 'prime-agent') ||
+    !transcriptPath ||
+    !pathApiForPlatform(platform).isAbsolute(transcriptPath) ||
+    Buffer.byteLength(transcriptPath, 'utf8') > TRANSCRIPT_PATH_MAX_BYTES
+  ) {
+    throw new Error('agent_session_identity_required')
+  }
+  return transcriptPath
+}
+
+function isFileStat(value: { type: string } | { isFile(): boolean }): boolean {
+  return 'isFile' in value ? value.isFile() : value.type === 'file'
 }
 
 export function canonicalizeAgentSessionIdentity(
@@ -67,16 +98,44 @@ export function canonicalizeAgentSessionIdentity(
   if (agent !== 'pi' && agent !== 'prime-agent') {
     return { agent, providerSession }
   }
-  const transcriptPath = providerSession.transcriptPath
-  if (
-    !transcriptPath ||
-    !isAbsolute(transcriptPath) ||
-    Buffer.byteLength(transcriptPath, 'utf8') > TRANSCRIPT_PATH_MAX_BYTES
-  ) {
+  const transcriptPath = requireTranscriptPath(agent, providerSession, process.platform)
+  const canonicalTranscriptPath = normalizeCanonicalPath(
+    realpathSync(transcriptPath),
+    process.platform
+  )
+  if (!statSync(canonicalTranscriptPath).isFile()) {
     throw new Error('agent_session_identity_required')
   }
-  const canonicalTranscriptPath = canonicalPathForPlatform(transcriptPath)
-  if (!statSync(canonicalTranscriptPath).isFile()) {
+  return {
+    agent,
+    providerSession: { ...providerSession, transcriptPath: canonicalTranscriptPath }
+  }
+}
+
+export async function canonicalizeAgentSessionIdentityWithPathAccess(
+  agent: unknown,
+  rawProviderSession: unknown,
+  pathAccess?: AgentSessionIdentityPathAccess
+): Promise<CanonicalAgentSessionIdentity> {
+  if (!pathAccess) {
+    return canonicalizeAgentSessionIdentity(agent, rawProviderSession)
+  }
+  if (!isResumableTuiAgent(agent)) {
+    throw new Error('agent_session_identity_required')
+  }
+  const providerSession = normalizeAgentProviderSession(rawProviderSession)
+  if (!providerSession || !getAgentResumeArgv(agent, providerSession)) {
+    throw new Error('agent_session_identity_required')
+  }
+  if (agent !== 'pi' && agent !== 'prime-agent') {
+    return { agent, providerSession }
+  }
+  const transcriptPath = requireTranscriptPath(agent, providerSession, pathAccess.platform)
+  const canonicalTranscriptPath = normalizeCanonicalPath(
+    await pathAccess.realpath(transcriptPath),
+    pathAccess.platform
+  )
+  if (!isFileStat(await pathAccess.stat(canonicalTranscriptPath))) {
     throw new Error('agent_session_identity_required')
   }
   return {

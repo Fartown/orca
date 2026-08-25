@@ -21,6 +21,8 @@ import {
   classifySkillInstallFailureCode
 } from '../../../shared/skill-install-failure'
 import { GIT_DIFF_TOO_LARGE_CODE } from '../../../shared/git-diff-transport-budget'
+import { ISSUE_REPOSITORY_ERROR_CODES } from '../../issues/issue-repository-error'
+import { ISSUE_FEATURE_UNAVAILABLE_CODE } from '../../issues/issue-feature-readiness'
 
 export function successResponse(id: string, meta: RpcEnvelopeMeta, result: unknown): RpcSuccess {
   return {
@@ -76,6 +78,7 @@ const RUNTIME_PASSTHROUGH_CODES: ReadonlySet<string> = new Set([
 
 const COMPUTER_PASSTHROUGH_CODES: ReadonlySet<string> = new Set(Object.values(COMPUTER_ERROR_CODES))
 const LINEAR_PASSTHROUGH_CODES: ReadonlySet<string> = new Set(LINEAR_ERROR_CODES)
+const ISSUE_PASSTHROUGH_CODES: ReadonlySet<string> = new Set(ISSUE_REPOSITORY_ERROR_CODES)
 const STRUCTURED_RUNTIME_PASSTHROUGH_CODES: ReadonlySet<string> = new Set([
   'worktree_id_requires_full_path',
   'run_not_found',
@@ -125,7 +128,9 @@ const STRUCTURED_RUNTIME_PASSTHROUGH_CODES: ReadonlySet<string> = new Set([
   AGENT_SKILL_SELECTOR_NOT_FOUND_CODE,
   AGENT_SKILL_SHARING_BUSY_CODE,
   AGENT_SKILL_SHARING_UNSUPPORTED_ENVIRONMENT_CODE,
-  SKILL_INSTALL_RPC_ERROR_CODE
+  SKILL_INSTALL_RPC_ERROR_CODE,
+  ...ISSUE_REPOSITORY_ERROR_CODES,
+  ISSUE_FEATURE_UNAVAILABLE_CODE
 ])
 
 export function mapRuntimeError(id: string, meta: RpcEnvelopeMeta, error: unknown): RpcFailure {
@@ -150,7 +155,7 @@ export function mapRuntimeError(id: string, meta: RpcEnvelopeMeta, error: unknow
       meta,
       (error as { code: string }).code,
       message,
-      (error as { data?: unknown }).data
+      structuredRuntimeErrorData(error)
     )
   }
   if (
@@ -164,7 +169,7 @@ export function mapRuntimeError(id: string, meta: RpcEnvelopeMeta, error: unknow
       meta,
       (error as { code: string }).code,
       message,
-      (error as { data?: unknown }).data
+      structuredRuntimeErrorData(error)
     )
   }
   if (
@@ -178,10 +183,13 @@ export function mapRuntimeError(id: string, meta: RpcEnvelopeMeta, error: unknow
       meta,
       (error as { code: string }).code,
       message,
-      (error as { data?: unknown }).data
+      structuredRuntimeErrorData(error)
     )
   }
   if (RUNTIME_PASSTHROUGH_CODES.has(message)) {
+    return errorResponse(id, meta, message, message)
+  }
+  if (ISSUE_PASSTHROUGH_CODES.has(message)) {
     return errorResponse(id, meta, message, message)
   }
   const skillInstallFailure = classifySkillInstallFailureCode(message)
@@ -198,6 +206,19 @@ export function mapRuntimeError(id: string, meta: RpcEnvelopeMeta, error: unknow
     return errorResponse(id, meta, 'invalid_argument', 'Missing terminal send payload')
   }
   return errorResponse(id, meta, 'runtime_error', message)
+}
+
+function structuredRuntimeErrorData(error: Error): unknown {
+  if ('data' in error) {
+    return (error as { data?: unknown }).data
+  }
+  if ('details' in error) {
+    return (error as { details?: unknown }).details
+  }
+  if ('readiness' in error) {
+    return (error as { readiness?: unknown }).readiness
+  }
+  return undefined
 }
 
 export const computerErrorData = computerUseErrorRecoveryData

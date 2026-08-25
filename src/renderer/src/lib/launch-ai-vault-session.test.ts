@@ -106,7 +106,8 @@ describe('launchAiVaultSessionInNewTab', () => {
         agentArgs: '--dangerously-skip-permissions --effort max',
         agentEnv: { ANTHROPIC_BASE_URL: 'https://claude.example.test' }
       },
-      providerSession: { key: 'session_id', id: 'session-1' }
+      providerSession: { key: 'session_id', id: 'session-1' },
+      launchToken: 'resume-token-0123456789-abcdefghijklmnopqrstuvwxyz'
     })
 
     expect(mockCreateTab).toHaveBeenCalledWith('wt-1', undefined, undefined, {
@@ -123,6 +124,7 @@ describe('launchAiVaultSessionInNewTab', () => {
       },
       launchAgent: 'claude',
       resumeProviderSession: { key: 'session_id', id: 'session-1' },
+      launchToken: 'resume-token-0123456789-abcdefghijklmnopqrstuvwxyz',
       telemetry: {
         agent_kind: 'claude',
         launch_source: 'sidebar',
@@ -160,7 +162,8 @@ describe('launchAiVaultSessionInNewTab', () => {
         agentArgs: '',
         agentEnv: { CODEX_PROFILE: 'runtime' }
       },
-      providerSession: { key: 'session_id', id: 'session-1' }
+      providerSession: { key: 'session_id', id: 'session-1' },
+      launchToken: 'resume-token-0123456789-abcdefghijklmnopqrstuvwxyz'
     })
 
     expect(result.tabId).toBeNull()
@@ -179,6 +182,7 @@ describe('launchAiVaultSessionInNewTab', () => {
         agentEnv: { CODEX_PROFILE: 'runtime' }
       },
       providerSession: { key: 'session_id', id: 'session-1' },
+      launchToken: 'resume-token-0123456789-abcdefghijklmnopqrstuvwxyz',
       agentArgs: '',
       activate: true
     })

@@ -35,6 +35,7 @@ function removeStaleLocalAgentTabsForWebHostLaunch(worktreeId: string): void {
 export function launchAgentInWebHostTab(args: {
   agent: TuiAgent
   worktreeId: string
+  launchToken?: string
   environmentId: string | null
   groupId?: string
   cwd?: string | null
@@ -50,6 +51,7 @@ export function launchAgentInWebHostTab(args: {
   const {
     agent,
     worktreeId,
+    launchToken,
     environmentId,
     groupId,
     cwd,
@@ -69,6 +71,7 @@ export function launchAgentInWebHostTab(args: {
   removeStaleLocalAgentTabsForWebHostLaunch(worktreeId)
   const launch = {
     worktreeId,
+    ...(launchToken ? { launchToken } : {}),
     environmentId,
     targetGroupId: groupId,
     activate: true,
