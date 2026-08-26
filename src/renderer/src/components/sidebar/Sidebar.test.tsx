@@ -51,6 +51,16 @@ vi.mock('./WorktreeList', () => ({
   default: () => <div data-testid="worktree-list" />
 }))
 
+// Issues 模式的两个组件读真实 store 的 ssh 切片,这里的 store 是手写局部 mock。
+// 和上面所有重组件同样处理:这个测试测的是 Sidebar 自身的布局与开关,不是它们。
+vi.mock('./issues/sidebar-root-mode-bar', () => ({
+  SidebarRootModeBar: () => <div data-testid="sidebar-root-mode-bar" />
+}))
+
+vi.mock('./issues/issue-sidebar', () => ({
+  IssueSidebar: () => <div data-testid="issue-sidebar" />
+}))
+
 vi.mock('./SidebarToolbar', () => ({
   default: () => <div data-testid="sidebar-toolbar" />
 }))
