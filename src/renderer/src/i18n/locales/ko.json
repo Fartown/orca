@@ -3230,6 +3230,14 @@
             "workspaceConflict": "워크스페이스 충돌",
             "workspaceSyncError": "워크스페이스 동기화 오류"
           },
+          "CaffeinateStatusSegment": {
+            "active": "활성",
+            "inactive": "비활성",
+            "ariaLabel": "{{title}}, {{status}}",
+            "onDescription": "이 컴퓨터가 절전 모드로 전환되지 않도록 항상 유지",
+            "autoDescription": "에이전트가 작업하는 동안 절전 모드로 전환되지 않도록 유지",
+            "offDescription": "시스템의 기본 절전 동작 허용"
+          },
           "StatusBar": {
             "9659e38343": "포트",
             "d1e1a7a6bf": "리소스 관리자",
@@ -3965,6 +3973,10 @@
         "SkillUpdateRow": {
           "oneLocation": "1 location",
           "manyLocations": "{{value0}} locations"
+        },
+        "host": {
+          "local": "이 컴퓨터",
+          "remote": "연결된 런타임"
         }
       },
       "sidebar": {
@@ -9171,7 +9183,13 @@
         "agent-awake-copy": {
           "e5995ce268": "agents 작업 중 컴퓨터를 깨어 있게 유지",
           "95d3031db2": "agents가 작업하는 동안 이 컴퓨터와 디스플레이를 깨어 있게 유지합니다. 뚜껑을 닫을 때의 동작은 이 기기의 전원 설정을 따릅니다.",
-          "a42f6fbdd8": "agents가 작업하는 동안 이 컴퓨터와 디스플레이를 깨어 있게 유지합니다. Orca는 전원 정책에 따라 뚜껑이 닫혀 있을 때도 이 기기를 깨어 있게 유지하도록 요청합니다."
+          "a42f6fbdd8": "agents가 작업하는 동안 이 컴퓨터와 디스플레이를 깨어 있게 유지합니다. Orca는 전원 정책에 따라 뚜껑이 닫혀 있을 때도 이 기기를 깨어 있게 유지하도록 요청합니다.",
+          "modeTitle": "컴퓨터 절전 방지"
+        },
+        "AgentAwakeSetting": {
+          "on": "켜짐",
+          "auto": "에이전트",
+          "off": "꺼짐"
         },
         "agent-status-hooks-copy": {
           "7707c15abb": "Agent 상태 훅",
@@ -10592,6 +10610,8 @@
             "7a09d7f9d2": "베이스",
             "383cf92c73": "트리",
             "d7ae61269b": "브랜치에 Commit 됨",
+            "branchFilesChangedVsBaseOne": "{{ref}} 대비 파일 1개 변경됨",
+            "branchFilesChangedVsBaseOther": "{{ref}} 대비 파일 {{count}}개 변경됨",
             "48a003c1b1": "스테이징된 변경 사항",
             "d4ef4bafc5": "변경 사항",
             "522f44dce5": "추적되지 않은 파일",
@@ -10666,10 +10686,10 @@
             "b3c8f1a902": "파일 이름으로 필터링",
             "d4f8c2a901": "필터 지우고 닫기",
             "e8a1c4b203": "vs",
-            "f9b2441bb6": "{{value0}}보다 1 commit 앞서 있음",
-            "b715ef615b": "{{value1}}보다 {{value0}} commits 앞서 있음",
-            "c1a8f3e204": "{{value0}}보다 1 commit 뒤처짐",
-            "d2b9g4f315": "{{value1}}보다 {{value0}} commits 뒤처짐",
+            "compareBaseCommitsAheadOne": "{{ref}}보다 1 commit 앞서 있음",
+            "compareBaseCommitsAheadOther": "{{ref}}보다 {{count}} commits 앞서 있음",
+            "compareBaseCommitsBehindOne": "{{ref}}보다 1 commit 뒤처짐",
+            "compareBaseCommitsBehindOther": "{{ref}}보다 {{count}} commits 뒤처짐",
             "4b4a7de138": "브라우저에서 검토 페이지 열기",
             "createPrIntentCommitBlockedSummary": "커밋이 차단됨: {{value0}} 이슈를 수정한 후 PR 만들기를 다시 시도하세요.",
             "pushRecovery": {
