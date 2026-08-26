@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/select'
 import { useIssueDomainStore } from '@/issues/use-issue-domain-store'
 import type { IssuePartitionState } from '@/issues/issues-domain-store'
+import { SidebarCountBadge } from '../sidebar-count-badge'
 import type { IssueListFilter, IssueRouteExecutionHostId } from '../../../../../shared/issues/types'
 import { useSidebarHostScopeOptions } from '../use-sidebar-host-scope-options'
 import { buildIssueRows } from './build-issue-rows'
@@ -85,16 +86,23 @@ export function IssueSidebar(): React.JSX.Element {
         {visibleHosts.map((host) => {
           const route = host.id as IssueRouteExecutionHostId
           const partition = partitions[route]
+          const issueCount = partition?.issueViewsByFilter[filter]?.issueIds.length ?? 0
           return (
             <section key={host.id} aria-label={`${host.label} Issues`}>
-              <div className="flex h-7 items-center gap-1.5 px-3 text-[11px] font-semibold text-muted-foreground">
-                <Server className="size-3" />
-                <span className="min-w-0 flex-1 truncate">
-                  {host.label}
-                  {partition?.authority?.profileLabel
-                    ? ` · ${partition.authority.profileLabel}`
-                    : ''}
-                </span>
+              {/* 主机在 Workspaces 侧是一张带边框的卡片,Issues 侧必须同形,否则同一个侧栏两种语言 */}
+              <div className="px-2 pt-1">
+                <div className="flex h-8 w-full items-center gap-2 rounded-md border border-worktree-sidebar-border bg-worktree-sidebar-accent/70 px-2 text-left">
+                  <Server className="size-3.5 shrink-0 text-muted-foreground" />
+                  <span className="min-w-0 flex-1 truncate text-xs font-medium">
+                    {host.label}
+                    {partition?.authority?.profileLabel
+                      ? ` · ${partition.authority.profileLabel}`
+                      : ''}
+                  </span>
+                  {issueCount > 0 ? (
+                    <SidebarCountBadge count={issueCount} label={`${issueCount} Issues`} />
+                  ) : null}
+                </div>
               </div>
               <IssueHostRows
                 route={route}

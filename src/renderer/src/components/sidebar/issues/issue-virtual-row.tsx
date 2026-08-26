@@ -1,4 +1,5 @@
-import { ChevronRight, Circle, MessageSquare } from 'lucide-react'
+import { ChevronRight, MessageSquare } from 'lucide-react'
+import { useStore } from 'zustand'
 import { cn } from '@/lib/utils'
 import { parsePaneKey } from '../../../../../shared/stable-pane-id'
 import { activateTabAndFocusPane } from '@/lib/activate-tab-and-focus-pane'
@@ -8,7 +9,20 @@ import {
 } from '@/lib/worktree-activation'
 import { issueDomainStore } from '@/issues/issues-domain-store'
 import type { IssueRouteExecutionHostId } from '../../../../../shared/issues/types'
+import { SidebarCountBadge } from '../sidebar-count-badge'
+import {
+  SIDEBAR_NESTED_ROW_HOVER_CLASS,
+  SIDEBAR_ROW_HOVER_CLASS,
+  SIDEBAR_ROW_SURFACE_CLASS,
+  sidebarRowSurfaceAttributes
+} from '../sidebar-row-surface'
+import { getWorktreeCardContentIndent } from '../worktree-list/rows/indentation'
 import type { IssueSidebarRow } from './build-issue-rows'
+
+// Issue 树和 Workspaces 树共用同一套缩进步长,否则切换根模式时层级线对不齐。
+function contentIndent(depth: number): number {
+  return getWorktreeCardContentIndent({ isGrouped: true, groupDepth: 0, lineageDepth: depth })
+}
 
 export function IssueVirtualRow({
   row,
@@ -17,20 +31,36 @@ export function IssueVirtualRow({
   row: IssueSidebarRow
   route: IssueRouteExecutionHostId
 }): React.JSX.Element {
+  const activeIssueId = useStore(issueDomainStore, (state) => state.activeIssueRoute?.issueId)
+
   if (row.kind === 'unassigned') {
     return (
-      <button
-        type="button"
-        className="flex h-7 w-full items-center gap-1.5 px-3 text-left text-xs text-muted-foreground hover:bg-worktree-sidebar-accent"
-        onClick={() => issueDomainStore.getState().toggleCollapsedIssue(row.key)}
-      >
-        <ChevronRight className={cn('size-3 transition-transform', row.expanded && 'rotate-90')} />
-        <span className="min-w-0 flex-1 truncate">Unassigned</span>
-        <span className="tabular-nums">{row.count}</span>
-        {row.unresolvedCount > 0 ? <Circle className="size-2 fill-current" /> : null}
-      </button>
+      <div className={cn(SIDEBAR_ROW_SURFACE_CLASS, SIDEBAR_ROW_HOVER_CLASS)}>
+        <button
+          type="button"
+          className="flex h-7 w-full items-center gap-1.5 pr-2 text-left text-xs text-muted-foreground"
+          style={{ paddingLeft: `${contentIndent(0)}px` }}
+          onClick={() => issueDomainStore.getState().toggleCollapsedIssue(row.key)}
+        >
+          <ChevronRight
+            className={cn('size-3 transition-transform', row.expanded && 'rotate-90')}
+          />
+          <span className="min-w-0 flex-1 truncate">Unassigned</span>
+          {row.count > 0 ? (
+            <SidebarCountBadge count={row.count} label={`${row.count} unassigned Conversations`} />
+          ) : null}
+          {row.unresolvedCount > 0 ? (
+            <SidebarCountBadge
+              count={row.unresolvedCount}
+              label={`${row.unresolvedCount} needing attention`}
+              tone="foreground"
+            />
+          ) : null}
+        </button>
+      </div>
     )
   }
+
   if (row.kind === 'conversation') {
     return (
       <button
@@ -38,8 +68,12 @@ export function IssueVirtualRow({
         data-conversation-id={row.conversation.id}
         data-attachment-state={row.conversation.attachment.kind}
         data-execution-state={row.conversation.executionState}
-        className="flex h-7 w-full items-center gap-1.5 pr-2 text-left text-xs text-muted-foreground hover:bg-worktree-sidebar-accent hover:text-worktree-sidebar-accent-foreground"
-        style={{ paddingLeft: `${12 + row.depth * 14}px` }}
+        // 嵌套行比它所属的 Issue 行安静一档,和 Workspaces 里的 agent 行同一处理
+        className={cn(
+          'ml-1 flex h-7 w-[calc(100%-0.25rem)] items-center gap-1.5 rounded-lg pr-2 text-left text-xs text-muted-foreground',
+          SIDEBAR_NESTED_ROW_HOVER_CLASS
+        )}
+        style={{ paddingLeft: `${contentIndent(row.depth)}px` }}
         onClick={() => openConversation(row.conversation, route)}
       >
         <MessageSquare className="size-3 shrink-0" />
@@ -48,24 +82,32 @@ export function IssueVirtualRow({
         </span>
         <span className="max-w-20 truncate text-[10px]">{row.workspaceLabel}</span>
         {row.conversation.unresolvedRoundCount > 0 ? (
-          <span className="tabular-nums text-foreground">
-            {row.conversation.unresolvedRoundCount}
-          </span>
+          <SidebarCountBadge
+            count={row.conversation.unresolvedRoundCount}
+            label={`${row.conversation.unresolvedRoundCount} unresolved rounds`}
+            tone="foreground"
+          />
         ) : null}
       </button>
     )
   }
+
   const title =
     row.issue.source.kind === 'local' ? row.issue.localTitle : row.issue.source.titleSnapshot
+  const externalIdentifier = row.issue.source.kind === 'external' ? row.issue.source.identifier : ''
+  const running = row.issue.runningConversationCount
   return (
     <div
       data-issue-id={row.issue.id}
+      {...sidebarRowSurfaceAttributes(activeIssueId === row.issue.id)}
       className={cn(
-        'group flex h-7 w-full items-center pr-2 text-xs hover:bg-worktree-sidebar-accent',
+        SIDEBAR_ROW_SURFACE_CLASS,
+        activeIssueId === row.issue.id ? undefined : SIDEBAR_ROW_HOVER_CLASS,
+        'flex h-7 w-[calc(100%-0.25rem)] items-center pr-2 text-xs',
         row.contextOnly && 'opacity-60',
         row.issue.state === 'archived' && 'opacity-55'
       )}
-      style={{ paddingLeft: `${8 + row.depth * 14}px` }}
+      style={{ paddingLeft: `${contentIndent(row.depth)}px` }}
     >
       <button
         type="button"
@@ -87,12 +129,27 @@ export function IssueVirtualRow({
         }
       >
         <span className="min-w-0 flex-1 truncate text-worktree-sidebar-foreground">{title}</span>
-        {row.issue.ownUnresolvedCount > 0 ? (
-          <span className="tabular-nums text-foreground">{row.issue.ownUnresolvedCount}</span>
-        ) : row.issue.descendantAttentionCount > 0 ? (
-          <span className="tabular-nums text-muted-foreground">
-            +{row.issue.descendantAttentionCount}
+        {externalIdentifier ? (
+          <span className="shrink-0 truncate text-[10px] text-muted-foreground/80">
+            {externalIdentifier}
           </span>
+        ) : null}
+        {running > 0 ? (
+          <span className="shrink-0 text-[10px] text-muted-foreground/80">{running} running</span>
+        ) : null}
+        {/* 自身与后代是两个独立事实,不能二选一显示 —— 父行必须同时看得到 */}
+        {row.issue.ownUnresolvedCount > 0 ? (
+          <SidebarCountBadge
+            count={row.issue.ownUnresolvedCount}
+            label={`${row.issue.ownUnresolvedCount} needing attention here`}
+            tone="foreground"
+          />
+        ) : null}
+        {row.issue.descendantAttentionCount > 0 ? (
+          <SidebarCountBadge
+            count={row.issue.descendantAttentionCount}
+            label={`${row.issue.descendantAttentionCount} needing attention in descendants`}
+          />
         ) : null}
       </button>
     </div>
