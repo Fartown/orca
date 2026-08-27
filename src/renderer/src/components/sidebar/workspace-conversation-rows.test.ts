@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ConversationSummary } from '../../../../shared/issues/types'
 import {
   conversationMatchesWorkspace,
-  splitWorkspaceConversationOverlay,
+  selectDetachedConversations,
   WorkspaceConversationRowsHost
 } from './workspace-conversation-rows'
 import { buildIssueRows } from './issues/build-issue-rows'
@@ -15,7 +15,9 @@ import { beginIssueRouteRefresh } from '../../issues/IssueDomainSyncGate'
 
 vi.mock('./useWorktreeAgentRows', () => ({ useWorktreeAgentRows: () => [] }))
 vi.mock('./WorktreeCardAgents', () => ({ default: () => null }))
-vi.mock('@/components/AgentStateDot', () => ({ AgentStateDot: () => null }))
+// 补行现在走 DashboardAgentRow,把它整个 mock 掉 —— 这个测试测的是行的归属,不是渲染
+vi.mock('@/components/dashboard/DashboardAgentRow', () => ({ default: () => null }))
+vi.mock('@/components/dashboard/useNow', () => ({ useNow: () => 0 }))
 vi.mock('@/lib/agent-catalog', () => ({ AgentIcon: () => null }))
 vi.mock('@/lib/activate-tab-and-focus-pane', () => ({ activateTabAndFocusPane: vi.fn() }))
 vi.mock('@/lib/worktree-activation', () => ({ activateAndRevealWorktree: vi.fn() }))
@@ -27,14 +29,15 @@ beforeEach(() => {
 afterEach(cleanup)
 
 describe('Workspace Conversation rows', () => {
-  it('keeps persistent detached rows and filters only the mapped live overlay', () => {
+  it('supplements only the Conversations that have no live agent row', () => {
     const conversations = [conversation('mapped', 'pane-1'), conversation('detached', null)]
     const agents = [{ paneKey: 'pane-1' }, { paneKey: 'pane-unmapped' }]
 
-    expect(splitWorkspaceConversationOverlay(conversations, agents).unmappedAgents).toEqual([
-      { paneKey: 'pane-unmapped' }
+    // 有活 pane 的那条由 WorktreeCardAgents 原样渲染,补行只补另一条 ——
+    // 否则活着的 agent 行会被替换成信息更少的手写行。
+    expect(selectDetachedConversations(conversations, agents).map((item) => item.id)).toEqual([
+      'detached'
     ])
-    expect(conversations.map((item) => item.id)).toEqual(['mapped', 'detached'])
   })
 
   it('matches worktree and folder scopes without treating their ids as interchangeable', () => {
