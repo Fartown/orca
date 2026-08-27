@@ -16,7 +16,7 @@ import { agentLabel } from './ai-vault-session-filters'
 import type { AiVaultSessionResumeTargetState } from './ai-vault-session-resume'
 import { prepareAiVaultSessionContinuation } from './ai-vault-session-continuation'
 import type { AgentSessionContinuationRequest } from '@/lib/agent-session-continuation'
-import { IssueRuntimeClient, IssueRuntimeUnsupportedError } from '@/issues/issue-runtime-client'
+import { recordResumedConversation } from '@/issues/issue-resume-bookkeeping'
 import {
   activateAiVaultResumeWorkspace,
   resolveAiVaultSessionLaunchTargetOrNotify,
@@ -116,37 +116,20 @@ export function useAiVaultSessionLaunchActions({
           const launchToken = crypto.randomUUID()
           if (startup.providerSession) {
             const state = useAppStore.getState()
-            const executionHostId = getAiVaultResumeWorkspaceExecutionHostId(
-              targetState,
-              targetId.worktreeId
-            )
-            const workspacePath = resolveAiVaultTargetWorkspacePath(
-              targetState,
-              targetId.worktreeId
-            )
-            if (!executionHostId || !workspacePath) {
-              throw new Error('The target Workspace is unavailable for Resume.')
-            }
-            try {
-              await IssueRuntimeClient.forRoute(executionHostId).mutate(
-                'conversations.prepareResume',
-                {
-                  mutationId: crypto.randomUUID(),
-                  launchToken,
-                  workspaceRef: workspaceScopeForIssueResume(targetId.worktreeId),
-                  workspaceSnapshot: {
-                    name: workspaceDisplayName(state, targetId.worktreeId),
-                    path: workspacePath
-                  },
-                  agent: session.agent,
-                  providerSession: startup.providerSession
-                }
-              )
-            } catch (error) {
-              if (!(error instanceof IssueRuntimeUnsupportedError)) {
-                throw error
-              }
-            }
+            await recordResumedConversation({
+              executionHostId: getAiVaultResumeWorkspaceExecutionHostId(
+                targetState,
+                targetId.worktreeId
+              ),
+              launchToken,
+              workspaceRef: workspaceScopeForIssueResume(targetId.worktreeId),
+              workspaceSnapshot: {
+                name: workspaceDisplayName(state, targetId.worktreeId),
+                path: resolveAiVaultTargetWorkspacePath(targetState, targetId.worktreeId)
+              },
+              agent: session.agent,
+              providerSession: startup.providerSession
+            })
           }
           const launchResult = launchAiVaultSessionInNewTab({
             agent: session.agent,
