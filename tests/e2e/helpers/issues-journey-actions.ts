@@ -18,7 +18,8 @@ export async function captureJourneyScreenshot(
 }
 
 export async function openIssuesMode(page: Page): Promise<void> {
-  await page.getByRole('button', { name: 'Issues', exact: true }).click()
+  // 根模式切换是 ToggleGroup(和 SidebarGroupByToggle 同形),item 的 role 是 radio 不是 button
+  await page.getByRole('radio', { name: 'Issues', exact: true }).click()
   await expect(localIssuesRegion(page)).toBeVisible({ timeout: 20_000 })
 }
 
@@ -27,7 +28,7 @@ export function localIssuesRegion(page: Page) {
 }
 
 export async function openWorkspacesMode(page: Page): Promise<void> {
-  await page.getByRole('button', { name: 'Workspaces', exact: true }).click()
+  await page.getByRole('radio', { name: 'Workspaces', exact: true }).click()
   await expect(page.locator('[data-worktree-sidebar]')).toBeVisible()
 }
 
