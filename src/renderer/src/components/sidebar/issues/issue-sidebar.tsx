@@ -1,5 +1,6 @@
-import { useMemo, useState } from 'react'
-import { AlertCircle, Loader2, Search, Server } from 'lucide-react'
+import { useMemo, useRef, useState } from 'react'
+import { useVirtualizer } from '@tanstack/react-virtual'
+import { AlertCircle, Loader2, Search } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
@@ -11,8 +12,7 @@ import {
   SelectValue
 } from '@/components/ui/select'
 import { useIssueDomainStore } from '@/issues/use-issue-domain-store'
-import type { IssuePartitionState } from '@/issues/issues-domain-store'
-import { SidebarCountBadge } from '../sidebar-count-badge'
+import { SidebarHostBadge } from '../sidebar-host-badge'
 import type { IssueListFilter, IssueRouteExecutionHostId } from '../../../../../shared/issues/types'
 import { useSidebarHostScopeOptions } from '../use-sidebar-host-scope-options'
 import { buildIssueRows } from './build-issue-rows'
@@ -37,6 +37,91 @@ export function IssueSidebar(): React.JSX.Element {
       selectedHost === 'all' ? hostOptions : hostOptions.filter((host) => host.id === selectedHost),
     [hostOptions, selectedHost]
   )
+
+  // 主机不再是结构:空主机整段不出现(Orca 自己的规则 —— 空主机只留在选择器里),
+  // 有多个主机同时有内容时,主机降级成行上的一个小标签。
+  const sections = useMemo(
+    () =>
+      visibleHosts
+        .map((host) => {
+          const route = host.id as IssueRouteExecutionHostId
+          const partition = partitions[route]
+          const pending =
+            !partition || partition.status === 'idle' || partition.status === 'loading'
+          const failure =
+            partition &&
+            ['unsupported', 'unavailable', 'offline', 'error'].includes(partition.status)
+              ? (partition.error ?? statusLabel(partition.status))
+              : partition?.status === 'degraded'
+                ? (partition.error ?? 'Hook evidence unavailable; Issue CRUD remains available')
+                : null
+          const view = !pending && partition ? partition.issueViewsByFilter[filter] : undefined
+          const rows =
+            view && partition
+              ? buildIssueRows({
+                  issueIds: view.issueIds,
+                  issuesById: partition.issuesById,
+                  conversationsById: partition.conversationsById,
+                  collapsedIssueIds,
+                  filter,
+                  searchQuery,
+                  unassignedKey: `unassigned:${route}`
+                })
+              : []
+          return { host, route, pending, failure, rows }
+        })
+        .filter((section) => section.pending || section.failure || section.rows.length > 0),
+    [collapsedIssueIds, filter, partitions, searchQuery, visibleHosts]
+  )
+  const showHostLabels = sections.length > 1
+  // 摊平成一维再虚拟化:「未归属」一栏实测可达数百条,全量渲染会把侧栏拖垮。
+  // 复用 Workspaces 同一个 @tanstack/react-virtual,而不是另找一套。
+  const flatRows = useMemo(
+    () =>
+      sections.flatMap((section) => {
+        const hostLabel = showHostLabels ? section.host.label : undefined
+        const status = section.pending
+          ? [
+              {
+                kind: 'status' as const,
+                key: `${section.route}:loading`,
+                label: 'Loading Issues…',
+                spinning: true,
+                hostLabel
+              }
+            ]
+          : section.failure
+            ? [
+                {
+                  kind: 'status' as const,
+                  key: `${section.route}:failure`,
+                  label: section.failure,
+                  spinning: false,
+                  hostLabel
+                }
+              ]
+            : []
+        return [
+          ...status,
+          ...section.rows.map((row) => ({
+            kind: 'issue' as const,
+            key: `${section.route}:${row.key}`,
+            row,
+            route: section.route,
+            hostLabel
+          }))
+        ]
+      }),
+    [sections, showHostLabels]
+  )
+  const scrollRef = useRef<HTMLDivElement | null>(null)
+  const virtualizer = useVirtualizer({
+    count: flatRows.length,
+    getScrollElement: () => scrollRef.current,
+    // 行是 h-7(28px);状态行是 min-h-7,measureElement 会把实际高度量回来
+    estimateSize: () => 28,
+    overscan: 12
+  })
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -115,110 +200,72 @@ export function IssueSidebar(): React.JSX.Element {
           />
         ) : null}
       </div>
-      <div className="worktree-sidebar-scrollbar min-h-0 flex-1 overflow-y-auto py-1">
-        {visibleHosts.map((host) => {
-          const route = host.id as IssueRouteExecutionHostId
-          const partition = partitions[route]
-          const issueCount = partition?.issueViewsByFilter[filter]?.issueIds.length ?? 0
-          return (
-            <section key={host.id} aria-label={`${host.label} Issues`}>
-              {/* 只有一个主机时不画分组头 —— 与 host-section-rows.ts:276 同一规则:
-                  「a lone host section is pure noise」。多主机时才和 Workspaces 侧同形。 */}
-              {visibleHosts.length > 1 ? (
-                <div className="px-2 pt-1">
-                  <div className="flex h-8 w-full items-center gap-2 rounded-md border border-worktree-sidebar-border bg-worktree-sidebar-accent/70 px-2 text-left">
-                    <Server className="size-3.5 shrink-0 text-muted-foreground" />
-                    <span className="min-w-0 flex-1 truncate text-xs font-medium">
-                      {host.label}
-                      {partition?.authority?.profileLabel
-                        ? ` · ${partition.authority.profileLabel}`
-                        : ''}
-                    </span>
-                    {issueCount > 0 ? (
-                      <SidebarCountBadge count={issueCount} label={`${issueCount} Issues`} />
-                    ) : null}
-                  </div>
-                </div>
-              ) : null}
-              <IssueHostRows
-                route={route}
-                partition={partition}
-                filter={filter}
-                searchQuery={searchQuery}
-                collapsedIssueIds={collapsedIssueIds}
-              />
-            </section>
-          )
-        })}
+      <div
+        ref={scrollRef}
+        className="worktree-sidebar-scrollbar min-h-0 flex-1 overflow-y-auto py-1"
+      >
+        {flatRows.length === 0 ? (
+          <StatusRow label={searchQuery ? 'No matching Issues' : 'No Issues'} />
+        ) : null}
+        {/* 虚拟化后行不再按主机分块,但 region 仍需真实包住内容 ——
+            已提交的 16 步旅程 spec 用 toContainText 断言它。单主机时它就是整个列表。 */}
+        <div
+          role="region"
+          aria-label={`${sections[0]?.host.label ?? 'Local'} Issues`}
+          className="relative w-full"
+          style={{ height: `${virtualizer.getTotalSize()}px` }}
+        >
+          {virtualizer.getVirtualItems().map((virtualRow) => {
+            const item = flatRows[virtualRow.index]
+            if (!item) {
+              return null
+            }
+            return (
+              <div
+                key={item.key}
+                data-index={virtualRow.index}
+                ref={virtualizer.measureElement}
+                className="absolute top-0 left-0 w-full"
+                style={{ transform: `translateY(${virtualRow.start}px)` }}
+              >
+                {item.kind === 'status' ? (
+                  <StatusRow
+                    icon={
+                      item.spinning ? (
+                        <Loader2 className="size-3 animate-spin" />
+                      ) : (
+                        <AlertCircle className="size-3" />
+                      )
+                    }
+                    label={item.label}
+                    hostLabel={item.hostLabel}
+                  />
+                ) : (
+                  <IssueVirtualRow row={item.row} route={item.route} hostLabel={item.hostLabel} />
+                )}
+              </div>
+            )
+          })}
+        </div>
       </div>
     </div>
   )
 }
 
-function IssueHostRows({
-  route,
-  partition,
-  filter,
-  searchQuery,
-  collapsedIssueIds
+function StatusRow({
+  icon,
+  label,
+  hostLabel
 }: {
-  route: IssueRouteExecutionHostId
-  partition: IssuePartitionState | undefined
-  filter: IssueListFilter
-  searchQuery: string
-  collapsedIssueIds: ReadonlySet<string>
+  icon?: React.ReactNode
+  label: string
+  hostLabel?: string
 }): React.JSX.Element {
-  if (!partition || partition.status === 'idle' || partition.status === 'loading') {
-    return <StatusRow icon={<Loader2 className="size-3 animate-spin" />} label="Loading Issues…" />
-  }
-  if (['unsupported', 'unavailable', 'offline', 'error'].includes(partition.status)) {
-    return (
-      <StatusRow
-        icon={<AlertCircle className="size-3" />}
-        label={partition.error ?? statusLabel(partition.status)}
-      />
-    )
-  }
-  const view = partition.issueViewsByFilter[filter]
-  const rows = buildIssueRows({
-    issueIds: view.issueIds,
-    issuesById: partition.issuesById,
-    conversationsById: partition.conversationsById,
-    collapsedIssueIds,
-    filter,
-    searchQuery,
-    unassignedKey: `unassigned:${route}`
-  })
-  const degraded =
-    partition.status === 'degraded' ? (
-      <StatusRow
-        icon={<AlertCircle className="size-3" />}
-        label={partition.error ?? 'Hook evidence unavailable; Issue CRUD remains available'}
-      />
-    ) : null
-  if (rows.length === 0) {
-    return (
-      <>
-        {degraded}
-        <StatusRow label={searchQuery ? 'No matching Issues' : 'No Issues'} />
-      </>
-    )
-  }
-  return (
-    <>
-      {degraded}
-      {rows.map((row) => (
-        <IssueVirtualRow key={row.key} row={row} route={route} />
-      ))}
-    </>
-  )
-}
-
-function StatusRow({ icon, label }: { icon?: React.ReactNode; label: string }): React.JSX.Element {
   return (
     <div className="flex min-h-7 items-center gap-1.5 px-3 text-xs text-muted-foreground">
       {icon}
-      <span className="min-w-0 truncate">{label}</span>
+      <span className="min-w-0 flex-1 truncate">{label}</span>
+      {hostLabel ? <SidebarHostBadge label={hostLabel} /> : null}
     </div>
   )
 }
