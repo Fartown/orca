@@ -10,6 +10,7 @@ import {
 import { issueDomainStore } from '@/issues/issues-domain-store'
 import type { IssueRouteExecutionHostId } from '../../../../../shared/issues/types'
 import { SidebarCountBadge } from '../sidebar-count-badge'
+import { SidebarHostBadge } from '../sidebar-host-badge'
 import {
   SIDEBAR_NESTED_ROW_HOVER_CLASS,
   SIDEBAR_ROW_HOVER_CLASS,
@@ -26,10 +27,13 @@ function contentIndent(depth: number): number {
 
 export function IssueVirtualRow({
   row,
-  route
+  route,
+  hostLabel
 }: {
   row: IssueSidebarRow
   route: IssueRouteExecutionHostId
+  /** 多主机同时有内容时才给,且只挂顶层行 —— 子行继承,挂满每一行是刷屏。 */
+  hostLabel?: string
 }): React.JSX.Element {
   const activeIssueId = useStore(issueDomainStore, (state) => state.activeIssueRoute?.issueId)
 
@@ -56,6 +60,7 @@ export function IssueVirtualRow({
               tone="foreground"
             />
           ) : null}
+          {hostLabel ? <SidebarHostBadge label={hostLabel} /> : null}
         </button>
       </div>
     )
@@ -151,6 +156,7 @@ export function IssueVirtualRow({
             label={`${row.issue.descendantAttentionCount} needing attention in descendants`}
           />
         ) : null}
+        {hostLabel && row.depth === 0 ? <SidebarHostBadge label={hostLabel} /> : null}
       </button>
     </div>
   )

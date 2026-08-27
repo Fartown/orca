@@ -20,7 +20,10 @@ export async function captureJourneyScreenshot(
 export async function openIssuesMode(page: Page): Promise<void> {
   // 根模式切换是 ToggleGroup(和 SidebarGroupByToggle 同形),item 的 role 是 radio 不是 button
   await page.getByRole('radio', { name: 'Issues', exact: true }).click()
-  await expect(localIssuesRegion(page)).toBeVisible({ timeout: 20_000 })
+  // 等工具栏而不是主机分区:没有内容的主机整段不渲染,空环境里那个 region 不存在
+  await expect(page.getByRole('radio', { name: 'All', exact: true })).toBeVisible({
+    timeout: 20_000
+  })
 }
 
 export function localIssuesRegion(page: Page) {
