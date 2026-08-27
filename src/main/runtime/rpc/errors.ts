@@ -23,6 +23,7 @@ import {
 import { GIT_DIFF_TOO_LARGE_CODE } from '../../../shared/git-diff-transport-budget'
 import { ISSUE_REPOSITORY_ERROR_CODES } from '../../issues/issue-repository-error'
 import { ISSUE_FEATURE_UNAVAILABLE_CODE } from '../../issues/issue-feature-readiness'
+import { AUTOMATION_OWNER_CONFLICT_CODES } from '../../../shared/automation-owner-conflict'
 
 export function successResponse(id: string, meta: RpcEnvelopeMeta, result: unknown): RpcSuccess {
   return {
@@ -130,7 +131,10 @@ const STRUCTURED_RUNTIME_PASSTHROUGH_CODES: ReadonlySet<string> = new Set([
   AGENT_SKILL_SHARING_UNSUPPORTED_ENVIRONMENT_CODE,
   SKILL_INSTALL_RPC_ERROR_CODE,
   ...ISSUE_REPOSITORY_ERROR_CODES,
-  ISSUE_FEATURE_UNAVAILABLE_CODE
+  ISSUE_FEATURE_UNAVAILABLE_CODE,
+  // Why: an owner conflict is a distinct client decision (reload the host, re-adopt,
+  // stop offering the action) — flattened to runtime_error it can only be guessed at.
+  ...Object.values(AUTOMATION_OWNER_CONFLICT_CODES)
 ])
 
 export function mapRuntimeError(id: string, meta: RpcEnvelopeMeta, error: unknown): RpcFailure {
