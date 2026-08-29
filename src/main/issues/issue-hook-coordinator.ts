@@ -4,8 +4,10 @@ import {
   IssueHookSnapshotLiveCoordinator,
   type IssueHookObservedEvent
 } from './issue-hook-snapshot-live-coordinator'
-import type { IssueHookEvidenceSnapshot } from './issue-hook-evidence-reconciliation'
-import type { IssueHookEvidenceReconciler } from './issue-hook-evidence-reconciliation'
+import type {
+  IssueHookEvidenceReconciler,
+  IssueHookEvidenceSnapshot
+} from './issue-hook-evidence-reconciliation'
 import type { RoundRecordHookEvent, RoundRecordIngestor } from './round-record-ingestor'
 
 export type IssueAgentHookSource = Pick<
@@ -99,6 +101,7 @@ function toBufferedLiveHookEvent(event: unknown): BufferedHookEvent {
     launchToken?: string
     providerSession?: AgentStatusIpcPayload['providerSession']
     providerSessionOnly?: boolean
+    hookEventName?: string
     restoredUnconfirmed?: true
     hasExplicitPrompt?: boolean
     promptInteractionKey?: string
@@ -116,6 +119,7 @@ function toBufferedLiveHookEvent(event: unknown): BufferedHookEvent {
     launchToken: row.launchToken,
     providerSession: row.providerSession,
     providerSessionOnly: row.providerSessionOnly,
+    hookEventName: row.hookEventName,
     restoredUnconfirmed: row.restoredUnconfirmed,
     isReplay: false,
     hasExplicitPrompt: row.hasExplicitPrompt,

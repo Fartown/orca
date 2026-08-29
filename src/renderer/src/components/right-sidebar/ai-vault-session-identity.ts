@@ -1,4 +1,7 @@
+import type { AgentProviderSessionMetadata } from '../../../../shared/agent-session-resume'
 import type { AiVaultListResult, AiVaultSession } from '../../../../shared/ai-vault-types'
+import { normalizeRuntimePathForComparison } from '../../../../shared/cross-platform-path'
+import { getAiVaultAgentProviderSession } from '@/lib/ai-vault-resume-command'
 import { structuralValuesEqual } from '../../../../shared/structural-value-equality'
 import { reuseEqualCatalogRows } from '@/store/slices/worktree-catalog-reconciliation'
 
@@ -45,4 +48,36 @@ export function applyPublishedAiVaultList(
   setScanResult: (updater: (prev: AiVaultListResult | null) => AiVaultListResult) => void
 ): void {
   setScanResult((prev) => reuseAiVaultListResult(prev, published))
+}
+
+export function findAiVaultSessionByProviderIdentity(
+  sessions: readonly AiVaultSession[],
+  identity: {
+    executionHostId: AiVaultSession['executionHostId']
+    agent: string
+    providerSession: AgentProviderSessionMetadata
+  }
+): AiVaultSession | null {
+  const matches = sessions.filter((session) => {
+    const providerSession = getAiVaultAgentProviderSession(session)
+    return (
+      session.executionHostId === identity.executionHostId &&
+      session.agent === identity.agent &&
+      providerSession?.key === identity.providerSession.key &&
+      providerSession.id === identity.providerSession.id
+    )
+  })
+  if (matches.length === 1) {
+    return matches[0] ?? null
+  }
+
+  const transcriptPath = identity.providerSession.transcriptPath
+  if (matches.length < 2 || !transcriptPath) {
+    return null
+  }
+  const normalizedTranscriptPath = normalizeRuntimePathForComparison(transcriptPath)
+  const pathMatches = matches.filter(
+    (session) => normalizeRuntimePathForComparison(session.filePath) === normalizedTranscriptPath
+  )
+  return pathMatches.length === 1 ? (pathMatches[0] ?? null) : null
 }

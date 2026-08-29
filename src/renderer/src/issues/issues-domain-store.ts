@@ -7,6 +7,7 @@ import type {
   IssueRouteExecutionHostId
 } from '../../../shared/issues/types'
 import { e2eConfig } from '../lib/e2e-config'
+import { useAppStore } from '../store'
 import {
   emptyIssuePartition,
   reduceConversationPage,
@@ -34,28 +35,30 @@ export type IssueDomainState = {
   filter: IssueListFilter
   searchQuery: string
   collapsedIssueIds: Set<string>
-  setRouteStatus(
+  expandedUnassignedKeys: Set<string>
+  setRouteStatus: (
     route: IssueRouteExecutionHostId,
     status: IssuePartitionStatus,
     error?: string
-  ): void
-  applyIssuePage(
+  ) => void
+  applyIssuePage: (
     route: IssueRouteExecutionHostId,
     filter: IssueListFilter,
     result: IssueListResult,
     append: boolean
-  ): void
-  applyConversationPage(
+  ) => void
+  applyConversationPage: (
     route: IssueRouteExecutionHostId,
     scopeKey: string,
     result: ConversationListResult,
     append: boolean
-  ): void
-  setSidebarRootMode(mode: 'workspaces' | 'issues'): void
-  setActiveIssueRoute(route: IssueDomainState['activeIssueRoute']): void
-  setFilter(filter: IssueListFilter): void
-  setSearchQuery(searchQuery: string): void
-  toggleCollapsedIssue(issueId: string): void
+  ) => void
+  setSidebarRootMode: (mode: 'workspaces' | 'issues') => void
+  setActiveIssueRoute: (route: IssueDomainState['activeIssueRoute']) => void
+  setFilter: (filter: IssueListFilter) => void
+  setSearchQuery: (searchQuery: string) => void
+  toggleCollapsedIssue: (issueId: string) => void
+  toggleUnassigned: (key: string) => void
 }
 
 export const issueDomainStore = createStore<IssueDomainState>((set) => ({
@@ -65,6 +68,7 @@ export const issueDomainStore = createStore<IssueDomainState>((set) => ({
   filter: 'all',
   searchQuery: '',
   collapsedIssueIds: new Set(),
+  expandedUnassignedKeys: new Set(),
   setRouteStatus: (route, status, error) =>
     set((state) => ({
       partitionsByRouteExecutionHostId: {
@@ -100,8 +104,17 @@ export const issueDomainStore = createStore<IssueDomainState>((set) => ({
         )
       }
     })),
-  setSidebarRootMode: (sidebarRootMode) => set({ sidebarRootMode }),
-  setActiveIssueRoute: (activeIssueRoute) => set({ activeIssueRoute }),
+  setSidebarRootMode: (sidebarRootMode) =>
+    set({
+      sidebarRootMode,
+      ...(sidebarRootMode === 'workspaces' ? { activeIssueRoute: null } : {})
+    }),
+  setActiveIssueRoute: (activeIssueRoute) => {
+    if (activeIssueRoute && useAppStore.getState().activeView !== 'terminal') {
+      useAppStore.getState().setActiveView('terminal')
+    }
+    set({ activeIssueRoute })
+  },
   setFilter: (filter) => set({ filter }),
   setSearchQuery: (searchQuery) => set({ searchQuery }),
   toggleCollapsedIssue: (issueId) =>
@@ -113,6 +126,16 @@ export const issueDomainStore = createStore<IssueDomainState>((set) => ({
         collapsedIssueIds.add(issueId)
       }
       return { collapsedIssueIds }
+    }),
+  toggleUnassigned: (key) =>
+    set((state) => {
+      const expandedUnassignedKeys = new Set(state.expandedUnassignedKeys)
+      if (expandedUnassignedKeys.has(key)) {
+        expandedUnassignedKeys.delete(key)
+      } else {
+        expandedUnassignedKeys.add(key)
+      }
+      return { expandedUnassignedKeys }
     })
 }))
 

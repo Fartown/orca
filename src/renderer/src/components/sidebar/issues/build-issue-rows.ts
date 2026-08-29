@@ -2,8 +2,14 @@ import { projectIssueTree } from '../../../../../shared/issues/hierarchy'
 import type {
   ConversationSummary,
   IssueListFilter,
+  IssueRouteExecutionHostId,
   IssueSummary
 } from '../../../../../shared/issues/types'
+import {
+  issueConversationDisplayName,
+  shouldShowIssueConversation,
+  sortIssueConversations
+} from '@/issues/issue-conversation-presentation'
 
 export type IssueSidebarRow =
   | {
@@ -36,6 +42,9 @@ export function buildIssueRows(params: {
   issuesById: Readonly<Record<string, IssueSummary>>
   conversationsById: Readonly<Record<string, ConversationSummary>>
   collapsedIssueIds: ReadonlySet<string>
+  expandedUnassignedKeys: ReadonlySet<string>
+  conversationTitles?: ReadonlyMap<string, string>
+  conversationTitleExecutionHostScope?: IssueRouteExecutionHostId
   filter: IssueListFilter
   searchQuery: string
   unassignedKey: string
@@ -44,9 +53,27 @@ export function buildIssueRows(params: {
   const issues = params.issueIds
     .map((id) => params.issuesById[id])
     .filter((issue): issue is IssueSummary => Boolean(issue))
-  const conversations = Object.values(params.conversationsById)
+  const conversations = Object.values(params.conversationsById).filter(
+    (conversation) =>
+      conversation.issueId !== null ||
+      shouldShowIssueConversation(
+        conversation,
+        params.conversationTitles,
+        params.conversationTitleExecutionHostScope
+      )
+  )
   const matchingIssueIds = new Set(
-    issues.filter((issue) => issueMatches(issue, conversations, query)).map((issue) => issue.id)
+    issues
+      .filter((issue) =>
+        issueMatches(
+          issue,
+          conversations,
+          query,
+          params.conversationTitles,
+          params.conversationTitleExecutionHostScope
+        )
+      )
+      .map((issue) => issue.id)
   )
   const rows: IssueSidebarRow[] = []
   for (const projected of projectIssueTree(issues)) {
@@ -67,10 +94,19 @@ export function buildIssueRows(params: {
       hasChildren: projected.childIssueIds.length > 0
     })
     if (expanded) {
-      for (const conversation of conversations.filter(
-        (candidate) =>
-          candidate.issueId === projected.issue.id && conversationMatches(candidate, query)
-      )) {
+      const directConversations = sortIssueConversations(
+        conversations.filter(
+          (candidate) =>
+            candidate.issueId === projected.issue.id &&
+            conversationMatches(
+              candidate,
+              query,
+              params.conversationTitles,
+              params.conversationTitleExecutionHostScope
+            )
+        )
+      )
+      for (const conversation of directConversations) {
         rows.push({
           kind: 'conversation',
           key: `conversation:${conversation.id}`,
@@ -84,10 +120,17 @@ export function buildIssueRows(params: {
   }
 
   const unassigned = conversations.filter(
-    (conversation) => conversation.issueId === null && conversationMatches(conversation, query)
+    (conversation) =>
+      conversation.issueId === null &&
+      conversationMatches(
+        conversation,
+        query,
+        params.conversationTitles,
+        params.conversationTitleExecutionHostScope
+      )
   )
   if (unassigned.length > 0) {
-    const expanded = !params.collapsedIssueIds.has(params.unassignedKey)
+    const expanded = Boolean(query) || params.expandedUnassignedKeys.has(params.unassignedKey)
     rows.push({
       kind: 'unassigned',
       key: params.unassignedKey,
@@ -99,7 +142,7 @@ export function buildIssueRows(params: {
       expanded
     })
     if (expanded) {
-      for (const conversation of unassigned) {
+      for (const conversation of sortIssueConversations(unassigned)) {
         rows.push({
           kind: 'conversation',
           key: `conversation:${conversation.id}`,
@@ -117,7 +160,9 @@ export function buildIssueRows(params: {
 function issueMatches(
   issue: IssueSummary,
   conversations: readonly ConversationSummary[],
-  query: string
+  query: string,
+  conversationTitles?: ReadonlyMap<string, string>,
+  executionHostScope?: IssueRouteExecutionHostId
 ): boolean {
   if (!query) {
     return true
@@ -130,13 +175,24 @@ function issueMatches(
     identifier.toLocaleLowerCase().includes(query) ||
     conversations.some(
       (conversation) =>
-        conversation.issueId === issue.id && conversationMatches(conversation, query)
+        conversation.issueId === issue.id &&
+        conversationMatches(conversation, query, conversationTitles, executionHostScope)
     )
   )
 }
 
-function conversationMatches(conversation: ConversationSummary, query: string): boolean {
-  return !query || (conversation.title ?? '').toLocaleLowerCase().includes(query)
+function conversationMatches(
+  conversation: ConversationSummary,
+  query: string,
+  conversationTitles?: ReadonlyMap<string, string>,
+  executionHostScope?: IssueRouteExecutionHostId
+): boolean {
+  return (
+    !query ||
+    issueConversationDisplayName(conversation, conversationTitles, null, executionHostScope)
+      .toLocaleLowerCase()
+      .includes(query)
+  )
 }
 
 function matchesIssueOrDescendant(

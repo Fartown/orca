@@ -10,6 +10,10 @@ import { IssueLifecycleRepository } from './issue-lifecycle-repository'
 import { IssueRecordRepository } from './issue-record-repository'
 import { RoundRecordRepository } from './round-record-repository'
 
+export type OpenIssueRepositoryOptions = OpenIssueDatabaseOptions & {
+  hasConversationRuntimeEvidence?: (conversationId: string) => boolean
+}
+
 export class IssueRepository {
   readonly issues: IssueRecordRepository
   readonly conversations: ConversationRecordRepository
@@ -21,7 +25,10 @@ export class IssueRepository {
   readonly issueLifecycle: IssueLifecycleRepository
   readonly issueDeletion: IssueDeleteRepository
 
-  constructor(readonly database: IssueDatabase) {
+  constructor(
+    readonly database: IssueDatabase,
+    hasConversationRuntimeEvidence: (conversationId: string) => boolean = () => false
+  ) {
     this.issues = new IssueRecordRepository(database)
     this.conversations = new ConversationRecordRepository(database)
     this.conversationIdentities = new ConversationIdentityRepository(database)
@@ -30,7 +37,8 @@ export class IssueRepository {
       database,
       this.conversations,
       this.conversationIdentities,
-      this.conversationLaunchClaims
+      this.conversationLaunchClaims,
+      hasConversationRuntimeEvidence
     )
     this.rounds = new RoundRecordRepository(database)
     this.issueHierarchy = new IssueHierarchyMutation(database)
@@ -38,8 +46,8 @@ export class IssueRepository {
     this.issueDeletion = new IssueDeleteRepository(database)
   }
 
-  static open(options: OpenIssueDatabaseOptions): IssueRepository {
-    return new IssueRepository(IssueDatabase.open(options))
+  static open(options: OpenIssueRepositoryOptions): IssueRepository {
+    return new IssueRepository(IssueDatabase.open(options), options.hasConversationRuntimeEvidence)
   }
 
   close(): void {

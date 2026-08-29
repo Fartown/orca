@@ -129,6 +129,39 @@ describe('RoundRecordIngestor', () => {
     expect(repository.rounds.list(prepared.conversation.id)).toHaveLength(2)
     repository.close()
   })
+
+  it('rejects Codex title-generation utility threads before allocating a Conversation', async () => {
+    const repository = openRepository('codex-title-utility')
+    const { ingestor } = createIngestor(repository)
+    const sessionStart = await ingestor.ingest(
+      event({
+        hookEventName: 'SessionStart',
+        providerTurnId: 'session-start',
+        state: 'working',
+        prompt: ''
+      })
+    )
+    const utility = await ingestor.ingest(
+      event({
+        hookEventName: 'UserPromptSubmit',
+        providerTurnId: 'title-turn',
+        state: 'working',
+        prompt:
+          'Generate a concise, single-line task title of at most 36 characters. Start with an imperative verb.'
+      })
+    )
+
+    expect(sessionStart).toEqual({ disposition: 'ignored', reason: 'non-turn-status' })
+    expect(utility).toEqual({ disposition: 'ignored', reason: 'internal-utility' })
+    expect(repository.conversations.list()).toHaveLength(0)
+
+    const real = await ingestor.ingest(
+      event({ providerTurnId: 'real-turn', prompt: 'Investigate the issue' })
+    )
+    expect(real).toMatchObject({ disposition: 'persisted' })
+    expect(repository.conversations.list()).toHaveLength(1)
+    repository.close()
+  })
 })
 
 function createSetup(suffix: string) {
@@ -185,11 +218,13 @@ function conversationInput(issueId: string | null) {
 function event(input: {
   launchToken?: string
   providerTurnId: string
+  hookEventName?: string
   state?: 'done' | 'working' | 'waiting' | 'blocked'
   stateStartedAt?: number
   receivedAt?: number
   lastAssistantMessage?: string
   interactivePrompt?: string
+  prompt?: string
 }): RoundRecordHookEvent {
   return {
     paneKey: 'pane-1',
@@ -199,11 +234,12 @@ function event(input: {
     launchToken: input.launchToken,
     providerSession: { key: 'session_id', id: 'session-1' },
     providerTurnId: input.providerTurnId,
+    hookEventName: input.hookEventName,
     stateStartedAt: input.stateStartedAt ?? 10,
     payload: {
       state: input.state ?? 'done',
       agentType: 'codex',
-      prompt: 'Do the task',
+      prompt: input.prompt ?? 'Do the task',
       lastAssistantMessage: input.lastAssistantMessage ?? 'Done',
       interactivePrompt: input.interactivePrompt
     },

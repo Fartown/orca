@@ -3,6 +3,8 @@ import { mkdirSync } from 'node:fs'
 import path from 'node:path'
 import type { ConversationSummary, IssueSummary } from '../../../src/shared/issues/types'
 import { parsePaneKey } from '../../../src/shared/stable-pane-id'
+import { folderWorkspaceKey } from '../../../src/shared/workspace-scope'
+import { composeWorktreeHostIdentity } from '../../../src/shared/worktree/host-qualified-identity'
 import { configureGoldenStubAgent } from './golden-stub-agent'
 import { listConversations, listIssues } from './packaged-issues-journey'
 
@@ -21,7 +23,7 @@ export async function openIssuesMode(page: Page): Promise<void> {
   // 根模式切换是 ToggleGroup(和 SidebarGroupByToggle 同形),item 的 role 是 radio 不是 button
   await page.getByRole('radio', { name: 'Issues', exact: true }).click()
   // 等工具栏而不是主机分区:没有内容的主机整段不渲染,空环境里那个 region 不存在
-  await expect(page.getByRole('radio', { name: 'All', exact: true })).toBeVisible({
+  await expect(page.getByRole('radio', { name: 'All', exact: true }).first()).toBeVisible({
     timeout: 20_000
   })
 }
@@ -112,7 +114,9 @@ export async function launchConversationFromIssue(
   const workspaceTrigger = dialog.getByRole('combobox').first()
   await workspaceTrigger.click()
   await page.getByRole('option', { name: workspaceLabel, exact: true }).click()
-  await dialog.getByRole('button', { name: 'Start', exact: true }).click()
+  const start = dialog.getByRole('button', { name: 'Start', exact: true })
+  await expect(start).toBeEnabled({ timeout: 30_000 })
+  await start.click()
   await expect(dialog).toBeHidden()
   await expect
     .poll(
@@ -158,6 +162,27 @@ export async function waitForConversation(
   return conversation
 }
 
+export async function resumeUnassignedConversationFromIssuesSidebar(
+  page: Page,
+  conversation: ConversationSummary
+): Promise<ConversationSummary> {
+  await openIssuesMode(page)
+  const unassigned = page.getByRole('button', { name: /Unassigned/ }).first()
+  await expect(unassigned).toBeVisible()
+  if ((await unassigned.getAttribute('aria-expanded')) !== 'true') {
+    await unassigned.click()
+  }
+  const row = page.locator(`[data-conversation-id="${conversation.id}"]`)
+  const resume = row.getByRole('button', { name: 'Resume Conversation' })
+  await expect(resume).toBeVisible()
+  await row.getByTestId('issue-conversation-primary-action').click()
+  return waitForConversation(
+    page,
+    (candidate) => candidate.id === conversation.id && candidate.attachment.kind === 'attached',
+    30_000
+  )
+}
+
 export async function closeConversationPane(
   page: Page,
   conversation: ConversationSummary
@@ -172,6 +197,21 @@ export async function closeConversationPane(
   if (!parsed) {
     throw new Error(`Conversation ${conversation.id} has no live pane navigation`)
   }
+  const workspaceKey =
+    conversation.workspaceRef.type === 'worktree'
+      ? conversation.workspaceRef.worktreeId
+      : folderWorkspaceKey(conversation.workspaceRef.folderWorkspaceId)
+  const workspaceIdentity = composeWorktreeHostIdentity(conversation.executionHostId, workspaceKey)
+  const workspace = page
+    .locator(
+      `[data-worktree-sidebar] [role="option"]` +
+        `[data-worktree-id=${JSON.stringify(workspaceKey)}]` +
+        `[data-worktree-host-identity=${JSON.stringify(workspaceIdentity)}]:visible`
+    )
+    .first()
+  await expect(workspace).toBeVisible({ timeout: 15_000 })
+  await workspace.click()
+  await expect(workspace).toHaveAttribute('aria-current', 'page')
   const tab = page.locator(`[data-testid="sortable-tab"][data-tab-id="${parsed.tabId}"]`)
   await expect(tab).toBeVisible()
   await tab.hover()

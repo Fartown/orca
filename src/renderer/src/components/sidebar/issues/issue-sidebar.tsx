@@ -13,6 +13,8 @@ import {
 } from '@/components/ui/select'
 import { useIssueDomainStore } from '@/issues/use-issue-domain-store'
 import { SidebarHostBadge } from '../sidebar-host-badge'
+import { useConversationSessionTitles } from '@/issues/conversation-session-titles'
+import { useAiVaultOriginalPaneActions } from '@/components/right-sidebar/ai-vault-original-pane-actions'
 import type { IssueListFilter, IssueRouteExecutionHostId } from '../../../../../shared/issues/types'
 import { useSidebarHostScopeOptions } from '../use-sidebar-host-scope-options'
 import { buildIssueRows } from './build-issue-rows'
@@ -23,11 +25,13 @@ const FILTER_SEGMENT_CLASS =
   'h-6 px-1.5 text-[10px] data-[state=on]:bg-foreground/10 data-[state=on]:font-semibold data-[state=on]:text-foreground'
 
 export function IssueSidebar(): React.JSX.Element {
+  const { getOriginalPaneTarget } = useAiVaultOriginalPaneActions()
   const { hostOptions } = useSidebarHostScopeOptions()
   const partitions = useIssueDomainStore((state) => state.partitionsByRouteExecutionHostId)
   const filter = useIssueDomainStore((state) => state.filter)
   const searchQuery = useIssueDomainStore((state) => state.searchQuery)
   const collapsedIssueIds = useIssueDomainStore((state) => state.collapsedIssueIds)
+  const expandedUnassignedKeys = useIssueDomainStore((state) => state.expandedUnassignedKeys)
   const setFilter = useIssueDomainStore((state) => state.setFilter)
   const setSearchQuery = useIssueDomainStore((state) => state.setSearchQuery)
   const [selectedHost, setSelectedHost] = useState<'all' | IssueRouteExecutionHostId>('all')
@@ -37,6 +41,19 @@ export function IssueSidebar(): React.JSX.Element {
       selectedHost === 'all' ? hostOptions : hostOptions.filter((host) => host.id === selectedHost),
     [hostOptions, selectedHost]
   )
+  const visibleConversationTitleSources = useMemo(
+    () =>
+      visibleHosts.flatMap((host) =>
+        Object.values(
+          partitions[host.id as IssueRouteExecutionHostId]?.conversationsById ?? {}
+        ).map((conversation) => ({
+          conversation,
+          executionHostScope: host.id as IssueRouteExecutionHostId
+        }))
+      ),
+    [partitions, visibleHosts]
+  )
+  const sessionTitles = useConversationSessionTitles(visibleConversationTitleSources)
 
   // 主机不再是结构:空主机整段不出现(Orca 自己的规则 —— 空主机只留在选择器里),
   // 有多个主机同时有内容时,主机降级成行上的一个小标签。
@@ -63,6 +80,9 @@ export function IssueSidebar(): React.JSX.Element {
                   issuesById: partition.issuesById,
                   conversationsById: partition.conversationsById,
                   collapsedIssueIds,
+                  expandedUnassignedKeys,
+                  conversationTitles: sessionTitles,
+                  conversationTitleExecutionHostScope: route,
                   filter,
                   searchQuery,
                   unassignedKey: `unassigned:${route}`
@@ -71,7 +91,15 @@ export function IssueSidebar(): React.JSX.Element {
           return { host, route, pending, failure, rows }
         })
         .filter((section) => section.pending || section.failure || section.rows.length > 0),
-    [collapsedIssueIds, filter, partitions, searchQuery, visibleHosts]
+    [
+      collapsedIssueIds,
+      expandedUnassignedKeys,
+      filter,
+      partitions,
+      searchQuery,
+      sessionTitles,
+      visibleHosts
+    ]
   )
   const showHostLabels = sections.length > 1
   // 摊平成一维再虚拟化:「未归属」一栏实测可达数百条,全量渲染会把侧栏拖垮。
@@ -241,7 +269,13 @@ export function IssueSidebar(): React.JSX.Element {
                     hostLabel={item.hostLabel}
                   />
                 ) : (
-                  <IssueVirtualRow row={item.row} route={item.route} hostLabel={item.hostLabel} />
+                  <IssueVirtualRow
+                    row={item.row}
+                    route={item.route}
+                    hostLabel={item.hostLabel}
+                    sessionTitles={sessionTitles}
+                    getOriginalPaneTarget={getOriginalPaneTarget}
+                  />
                 )}
               </div>
             )

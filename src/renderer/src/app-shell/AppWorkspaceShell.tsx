@@ -96,6 +96,7 @@ export function AppWorkspaceShell(props: {
 }): React.JSX.Element {
   const { layout, floatingWorkspace } = props
   const activeIssueRoute = useIssueDomainStore((state) => state.activeIssueRoute)
+  const issueDetailVisible = layout.activeView === 'terminal' && activeIssueRoute !== null
   const titlebarLeftControls = <TitlebarLeftControls layout={layout} />
   const titlebarMainStrip = <TitlebarMainStrip layout={layout} />
   // Why: keep virtualized scroll memory above the sidebar's workspace/landing remount so the left list doesn't restart at scrollTop 0.
@@ -183,7 +184,7 @@ export function AppWorkspaceShell(props: {
                 <div className="flex flex-1 min-w-0 min-h-0 flex-col">
                   {layout.shouldMountTerminalWorkbench ? (
                     <TerminalWorkbenchContainer
-                      isVisible={layout.terminalWorkbenchVisible && activeIssueRoute === null}
+                      isVisible={layout.terminalWorkbenchVisible && !issueDetailVisible}
                     >
                       <Suspense fallback={null}>
                         <RecoverableRenderErrorBoundary
@@ -215,7 +216,7 @@ export function AppWorkspaceShell(props: {
                         'Retry the page or navigate to another Orca surface.'
                       )}
                     >
-                      {activeIssueRoute ? <IssuesPage /> : <ActivePage layout={layout} />}
+                      {issueDetailVisible ? <IssuesPage /> : <ActivePage layout={layout} />}
                     </RecoverableRenderErrorBoundary>
                   </Suspense>
                 </div>

@@ -55,6 +55,8 @@ const INVENTORY: readonly InventoryGroup[] = [
       ['src/renderer/src/components/automations/automation-list-search-rows.ts', 2],
       ['src/renderer/src/components/dashboard-popout/AgentMapSnapshotWorkspaceMenu.tsx', 2],
       ['src/renderer/src/components/dashboard-popout/AgentMapWorktreeRingNode.tsx', 2],
+      ['src/renderer/src/components/issues/IssueConversationBindingPopover.tsx', 3],
+      ['src/renderer/src/components/issues/IssueConversationRowContent.tsx', 3],
       ['src/renderer/src/components/settings/QuickCommandsList.tsx', 2],
       ['src/renderer/src/components/tab-bar/TabBarQuickCommandItem.tsx', 2],
       ['src/renderer/src/components/tab-bar/TabBarQuickCommandsMenu.tsx', 2],

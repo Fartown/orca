@@ -2,12 +2,8 @@ import { randomUUID } from 'node:crypto'
 import { existsSync, mkdirSync } from 'node:fs'
 import path from 'node:path'
 import type { ElectronApplication, Page } from '@stablyai/playwright-test'
-import type {
-  ConversationDeletePreparation,
-  ConversationSummary,
-  IssueSummary,
-  RoundRecordPreview
-} from '../../src/shared/issues/types'
+import type { ConversationSummary, IssueSummary } from '../../src/shared/issues/types'
+import { parsePaneKey } from '../../src/shared/stable-pane-id'
 import { expect, test } from './helpers/orca-app'
 import { attachRepoAndOpenTerminal } from './helpers/orca-restart'
 import { configureGoldenStubAgent } from './helpers/golden-stub-agent'
@@ -26,8 +22,18 @@ import {
   openSessionHistory,
   openWorkspacesMode,
   refreshIssueDetail,
+  resumeUnassignedConversationFromIssuesSidebar,
   waitForConversation
 } from './helpers/issues-journey-actions'
+import {
+  bindConversationFromIssueDetail,
+  updateConversationIssueFromWorkspaceRow
+} from './helpers/issues-journey-binding-actions'
+import {
+  ensureJourneySshTarget,
+  forgetAllConversations,
+  setCodexDefaultArgs
+} from './helpers/issues-journey-maintenance-actions'
 import {
   renameAndCompareConversationRows,
   verifyIssueEditConflict
@@ -220,10 +226,10 @@ test('真实打包 App Issues 16 步旅程 @issues-journey', async ({ testRepoPa
       )
       await refreshIssueDetail(activePage, rootIssue.id)
       const failedRow = activePage.locator(`[data-conversation-id="${failedPreparation.id}"]`)
-      await expect(failedRow.getByRole('button', { name: 'Retry' })).toBeVisible({
+      await expect(failedRow.getByRole('button', { name: 'Retry', exact: true })).toBeVisible({
         timeout: 15_000
       })
-      await failedRow.getByRole('button', { name: 'Retry' }).click()
+      await failedRow.getByRole('button', { name: 'Retry', exact: true }).click()
       let retried = await waitForConversation(
         activePage,
         (conversation) =>
@@ -311,28 +317,34 @@ test('真实打包 App Issues 16 步旅程 @issues-journey', async ({ testRepoPa
     await test.step('7. bind、rebind、unbind 与跨主机/stale 原子拒绝', async () => {
       const activePage = currentPage()
       const originalWorkspaceRef = folderConversation.workspaceRef
-      await refreshIssueDetail(activePage, rootIssue.id)
-      await activePage.getByRole('button', { name: 'Bind existing' }).click()
-      const bindDialog = activePage.getByRole('dialog', { name: 'Bind Conversation' })
-      await bindDialog.getByRole('combobox').click()
-      await activePage.getByRole('option').filter({ hasText: 'Issues Journey Folder' }).click()
-      await bindDialog.getByRole('button', { name: 'Bind', exact: true }).click()
-      folderConversation = await waitForConversation(
+      folderConversation = await bindConversationFromIssueDetail(
         activePage,
-        (conversation) =>
-          conversation.id === folderConversation.id && conversation.issueId === rootIssue.id
+        rootIssue.id,
+        folderConversation,
+        'Issues Journey Folder'
       )
+      const boundPane = folderConversation.navigation?.paneKey
+        ? parsePaneKey(folderConversation.navigation.paneKey)
+        : null
+      if (!boundPane) {
+        throw new Error('Bound existing Conversation lost its live pane.')
+      }
+      await activePage
+        .getByRole('heading', { name: 'Direct Conversations' })
+        .locator('..')
+        .locator(`[data-conversation-id="${folderConversation.id}"]`)
+        .locator(`[data-agent-pane-key="${folderConversation.navigation?.paneKey}"]`)
+        .click()
+      await expect(activePage.getByRole('button', { name: 'Close Issue detail' })).toBeHidden()
+      await expect
+        .poll(() => activePage.evaluate(() => window.__store?.getState().activeTabId))
+        .toBe(boundPane.tabId)
 
-      await runtimeRpc(activePage, 'conversations.bindIssue', {
-        mutationId: randomUUID(),
-        conversationId: folderConversation.id,
-        issueId: externalIssue.id,
-        expectedRecordRevision: folderConversation.recordRevision
-      })
-      const rebound = await waitForConversation(
+      const rebound = await updateConversationIssueFromWorkspaceRow(
         activePage,
-        (conversation) =>
-          conversation.id === folderConversation.id && conversation.issueId === externalIssue.id
+        folderConversation,
+        externalIssue.id,
+        '#4242'
       )
       await expect(
         runtimeRpc(activePage, 'conversations.bindIssue', {
@@ -354,20 +366,12 @@ test('真实打包 App Issues 16 步旅程 @issues-journey', async ({ testRepoPa
         (await listConversations(activePage)).find((item) => item.id === rebound.id)?.issueId
       ).toBe(externalIssue.id)
 
-      await refreshIssueDetail(activePage, externalIssue.id)
-      await activePage
-        .locator(`[data-conversation-id="${rebound.id}"]`)
-        .getByRole('button', { name: 'Unbind Conversation' })
-        .click()
-      folderConversation = await waitForConversation(
-        activePage,
-        (conversation) => conversation.id === rebound.id && conversation.issueId === null
-      )
+      folderConversation = await updateConversationIssueFromWorkspaceRow(activePage, rebound, null)
       expect(folderConversation.workspaceRef).toEqual(originalWorkspaceRef)
       await captureJourneyScreenshot(activePage, SCREENSHOT_DIR, '07-bind-rebind-unbind.png')
     })
 
-    await test.step('8. 关闭 pane 后持久 Conversation 保持 detached', async () => {
+    await test.step('8. 关闭 pane 后持久 Conversation 只在 Issues 保持 detached', async () => {
       const activePage = currentPage()
       await closeConversationPane(activePage, folderConversation)
       folderConversation = await waitForConversation(
@@ -376,17 +380,20 @@ test('真实打包 App Issues 16 步旅程 @issues-journey', async ({ testRepoPa
           conversation.id === folderConversation.id && conversation.attachment.kind === 'detached'
       )
       await openIssuesMode(activePage)
+      const unassigned = activePage.getByRole('button', { name: /Unassigned/ }).first()
+      await expect(unassigned).toBeVisible()
+      if ((await unassigned.getAttribute('aria-expanded')) !== 'true') {
+        await unassigned.click()
+      }
       await expect(
         activePage.locator(`[data-conversation-id="${folderConversation.id}"]`)
       ).toHaveAttribute('data-attachment-state', 'detached')
       await openWorkspacesMode(activePage)
-      const row = activePage.locator(`[data-conversation-id="${folderConversation.id}"]`)
-      await expect(row).toBeVisible()
-      await expect(row).toHaveAttribute('data-attachment-state', 'detached')
+      await expect(activePage.locator('[data-workspace-conversation-rows]')).toHaveCount(0)
       await captureJourneyScreenshot(activePage, SCREENSHOT_DIR, '08-detached-persists.png')
     })
 
-    await test.step('9. 原 folder Workspace Session History Resume 复用 conversationId', async () => {
+    await test.step('9. Issue 一键恢复与原 Session History Resume 共用同一 Conversation', async () => {
       const activePage = currentPage()
       folderProviderSessionId = readConversationProviderSessionId(
         journey.issueDatabasePath(PROFILE_A),
@@ -397,6 +404,21 @@ test('真实打包 App Issues 16 步旅程 @issues-journey', async ({ testRepoPa
         folderConversation.workspaceSnapshot.path
       )
       const beforeIds = (await listConversations(activePage)).map((conversation) => conversation.id)
+
+      folderConversation = await resumeUnassignedConversationFromIssuesSidebar(
+        activePage,
+        folderConversation
+      )
+      expect(
+        (await listConversations(activePage)).map((conversation) => conversation.id).sort()
+      ).toEqual([...beforeIds].sort())
+      await closeConversationPane(activePage, folderConversation)
+      folderConversation = await waitForConversation(
+        activePage,
+        (conversation) =>
+          conversation.id === folderConversation.id && conversation.attachment.kind === 'detached'
+      )
+
       await openSessionHistory(activePage, `folder:${folderWorkspaceId}`)
       await activePage.getByRole('button', { name: 'Refresh Session History' }).click()
       const sessionRow = activePage.locator(
@@ -528,6 +550,13 @@ test('真实打包 App Issues 16 步旅程 @issues-journey', async ({ testRepoPa
       expect(reloadedRound?.readAt).toBe(persistedRound?.readAt)
       expect(reloadedRound?.resolvedAt).toBe(persistedRound?.resolvedAt)
       await captureJourneyScreenshot(relaunchedPage, SCREENSHOT_DIR, '11-restart-persistence.png')
+      await closeConversationPane(relaunchedPage, firstConversation)
+      firstConversation = await waitForConversation(
+        relaunchedPage,
+        (conversation) =>
+          conversation.id === firstConversation.id && conversation.attachment.kind === 'detached',
+        30_000
+      )
     })
 
     await test.step('12. 切换 profile 后 Issue facts 互不可见', async () => {
@@ -670,15 +699,17 @@ test('真实打包 App Issues 16 步旅程 @issues-journey', async ({ testRepoPa
           )
         )
         .toBe(true)
-      await injectRuntimeAuthorityTree(activePage)
-      await expect(localIssuesRegion(activePage)).toContainText('Journey Profile B')
-      await expect(activePage.getByRole('region', { name: 'Journey SSH Issues' })).toContainText(
-        'Profile B SSH Issue'
-      )
-      const runtimeRegion = activePage.getByRole('region', { name: 'Journey Runtime Issues' })
-      await expect(runtimeRegion).toContainText('Runtime Profile B')
-      await expect(runtimeRegion).toContainText('Runtime generation B')
-      await expect(runtimeRegion).not.toContainText('Runtime generation A')
+      const runtimeIssueId = await injectRuntimeAuthorityTree(activePage)
+      const issuesRegion = localIssuesRegion(activePage)
+      await expect(issuesRegion).toContainText('Profile B SSH Issue')
+      await expect(issuesRegion).toContainText('Journey SSH')
+      await expect(issuesRegion).toContainText('Runtime generation B')
+      await expect(issuesRegion).toContainText('Journey Runtime')
+      await expect(issuesRegion).not.toContainText('Runtime generation A')
+      await openIssueDetail(activePage, localCreated.issue.id)
+      await expect(activePage.getByText('Journey Profile B', { exact: true })).toBeVisible()
+      await refreshIssueDetail(activePage, runtimeIssueId)
+      await expect(activePage.getByText('Runtime Profile B', { exact: true })).toBeVisible()
       await captureJourneyScreenshot(activePage, SCREENSHOT_DIR, '15-all-host-authority-trees.png')
     })
 
@@ -715,86 +746,3 @@ test('真实打包 App Issues 16 步旅程 @issues-journey', async ({ testRepoPa
     await journey.dispose()
   }
 })
-
-async function setCodexDefaultArgs(page: Page, args: string): Promise<void> {
-  await page.evaluate(async (nextArgs) => {
-    const store = window.__store
-    if (!store) {
-      throw new Error('E2E store unavailable')
-    }
-    const current = store.getState().settings?.agentDefaultArgs ?? {}
-    await store.getState().updateSettings({
-      agentDefaultArgs: { ...current, codex: nextArgs }
-    })
-  }, args)
-}
-
-async function ensureJourneySshTarget(page: Page): Promise<string> {
-  return page.evaluate(async () => {
-    const existing = (await window.api.ssh.listTargets()).find(
-      (target) => target.label === 'Journey SSH'
-    )
-    const target =
-      existing ??
-      (
-        await window.api.ssh.addTarget({
-          target: {
-            label: 'Journey SSH',
-            host: '127.0.0.1',
-            port: 65534,
-            username: 'journey',
-            relayGracePeriodSeconds: 60
-          }
-        })
-      ).target
-    const store = window.__store
-    if (!store) {
-      throw new Error('E2E store unavailable')
-    }
-    const labels = new Map(store.getState().sshTargetLabels)
-    labels.set(target.id, target.label)
-    store.getState().setSshTargetLabels(labels)
-    return target.id
-  })
-}
-
-async function forgetAllConversations(page: Page): Promise<void> {
-  for (const initial of await listConversations(page)) {
-    if (initial.attachment.kind === 'attached') {
-      await closeConversationPane(page, initial)
-      await waitForConversation(
-        page,
-        (conversation) =>
-          conversation.id === initial.id && conversation.attachment.kind === 'detached',
-        30_000
-      )
-    }
-    const rounds = await runtimeRpc<{
-      status: 'snapshot-page'
-      rounds: RoundRecordPreview[]
-    }>(page, 'issues.listRounds', {
-      mode: 'start',
-      scope: { kind: 'conversation', conversationId: initial.id },
-      limit: 200
-    })
-    for (const round of rounds.rounds.filter((candidate) => candidate.resolvedAt === null)) {
-      await runtimeRpc(page, 'issues.resolveRound', {
-        mutationId: randomUUID(),
-        roundId: round.id
-      })
-    }
-    const preparation = await runtimeRpc<ConversationDeletePreparation>(
-      page,
-      'conversations.prepareDelete',
-      { conversationId: initial.id }
-    )
-    expect(preparation.blockers).toEqual([])
-    expect(preparation.preflightToken).not.toBeNull()
-    await runtimeRpc(page, 'conversations.delete', {
-      mutationId: randomUUID(),
-      conversationId: initial.id,
-      expectedRecordRevision: preparation.conversation.recordRevision,
-      preflightToken: preparation.preflightToken
-    })
-  }
-}

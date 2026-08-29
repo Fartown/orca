@@ -82,7 +82,7 @@ export class ConversationRecordRepository {
     return this.require(id)
   }
 
-  prepareRetryWithinTransaction(input: {
+  clearLaunchFailureWithinTransaction(input: {
     id: string
     expectedRecordRevision: number
     now?: number

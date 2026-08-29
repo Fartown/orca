@@ -44,6 +44,8 @@ describe('electron-builder config', () => {
         '!tests{,/**/*}',
         '!examples{,/**/*}',
         '!pr-evidence{,/**/*}',
+        '!dist{,/**/*}',
+        '!tmp{,/**/*}',
         '!Casks{,/**/*}',
         '!{AGENTS.md,CLAUDE.md,DEVELOPING.md,bundle-size-progress.md,ORCHESTRATION_IMPLEMENTATION_CHECKLIST.md,ORCHESTRATION_STRUCTURED_OUTPUT_DESIGN.md}',
         '!out/**/*.test.js',

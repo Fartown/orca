@@ -4,6 +4,7 @@ import {
   removeIssueTestDirectories
 } from './issue-database.test-environment'
 import { getIssueDatabasePath } from './issue-database'
+import { ISSUE_DATABASE_SCHEMA_VERSION } from './issue-database-migrations'
 import { ProfileIssueProjectMoveGuard } from './issue-project-move-guard'
 import { IssueRepository, issueMutationIdentity } from './issue-repository'
 import SyncDatabase from '../sqlite/sync-database'
@@ -49,7 +50,7 @@ describe('ProfileIssueProjectMoveGuard', () => {
       readonly: true,
       fileMustExist: true
     })
-    expect(raw.pragma('user_version', { simple: true })).toBe(1)
+    expect(raw.pragma('user_version', { simple: true })).toBe(ISSUE_DATABASE_SCHEMA_VERSION)
     expect(
       raw
         .prepare(

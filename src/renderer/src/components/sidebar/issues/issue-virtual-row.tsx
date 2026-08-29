@@ -1,12 +1,18 @@
-import { ChevronRight, MessageSquare } from 'lucide-react'
+import { ChevronRight, RotateCcw } from 'lucide-react'
 import { useStore } from 'zustand'
-import { cn } from '@/lib/utils'
-import { parsePaneKey } from '../../../../../shared/stable-pane-id'
-import { activateTabAndFocusPane } from '@/lib/activate-tab-and-focus-pane'
+import { IssueConversationResumeButton } from '@/components/issues/IssueConversationResumeButton'
+import { IssueConversationRowContent } from '@/components/issues/IssueConversationRowContent'
+import { ConversationIssueBindingPopover } from '@/components/issues/ConversationIssueBindingPopover'
+import { retryIssueConversation } from '@/components/issues/issue-conversation-launch-action'
 import {
-  activateAndRevealFolderWorkspace,
-  activateAndRevealWorktree
-} from '@/lib/worktree-activation'
+  canRetryIssueConversation,
+  shouldShowIssueConversationResume
+} from '@/issues/issue-conversation-presentation'
+import { activateMissingWorkspaceIssueConversation } from '@/issues/issue-conversation-navigation'
+import { toIssueConversationAiVaultSessionReference } from '@/issues/issue-conversation-ai-vault-session'
+import { Button } from '@/components/ui/button'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { cn } from '@/lib/utils'
 import { issueDomainStore } from '@/issues/issues-domain-store'
 import type { IssueRouteExecutionHostId } from '../../../../../shared/issues/types'
 import { SidebarCountBadge } from '../sidebar-count-badge'
@@ -17,23 +23,39 @@ import {
   SIDEBAR_ROW_SURFACE_CLASS,
   sidebarRowSurfaceAttributes
 } from '../sidebar-row-surface'
-import { getWorktreeCardContentIndent } from '../worktree-list/rows/indentation'
+import {
+  getWorktreeCardContentIndent,
+  WORKTREE_SECTION_HEADER_PADDING_LEFT
+} from '../worktree-list/rows/indentation'
 import type { IssueSidebarRow } from './build-issue-rows'
+import type {
+  AiVaultOriginalPaneSessionReference,
+  AiVaultOriginalPaneTarget
+} from '@/components/right-sidebar/ai-vault-original-pane'
 
-// Issue 树和 Workspaces 树共用同一套缩进步长,否则切换根模式时层级线对不齐。
-function contentIndent(depth: number): number {
-  return getWorktreeCardContentIndent({ isGrouped: true, groupDepth: 0, lineageDepth: depth })
+export function getIssueRowContentIndent(depth: number): number {
+  return (
+    WORKTREE_SECTION_HEADER_PADDING_LEFT +
+    getWorktreeCardContentIndent({ isGrouped: false, groupDepth: 0, lineageDepth: depth })
+  )
 }
 
 export function IssueVirtualRow({
   row,
   route,
-  hostLabel
+  hostLabel,
+  sessionTitles,
+  getOriginalPaneTarget
 }: {
   row: IssueSidebarRow
   route: IssueRouteExecutionHostId
   /** 多主机同时有内容时才给,且只挂顶层行 —— 子行继承,挂满每一行是刷屏。 */
   hostLabel?: string
+  /** 由侧栏统一解析后传下来:单行组件拿不到会话全集,逐行请求会打爆解析接口。 */
+  sessionTitles?: ReadonlyMap<string, string>
+  getOriginalPaneTarget: (
+    session: AiVaultOriginalPaneSessionReference
+  ) => AiVaultOriginalPaneTarget | null
 }): React.JSX.Element {
   const activeIssueId = useStore(issueDomainStore, (state) => state.activeIssueRoute?.issueId)
 
@@ -43,8 +65,9 @@ export function IssueVirtualRow({
         <button
           type="button"
           className="flex h-7 w-full items-center gap-1.5 pr-2 text-left text-xs text-muted-foreground"
-          style={{ paddingLeft: `${contentIndent(0)}px` }}
-          onClick={() => issueDomainStore.getState().toggleCollapsedIssue(row.key)}
+          style={{ paddingLeft: `${getIssueRowContentIndent(0)}px` }}
+          aria-expanded={row.expanded}
+          onClick={() => issueDomainStore.getState().toggleUnassigned(row.key)}
         >
           <ChevronRight
             className={cn('size-3 transition-transform', row.expanded && 'rotate-90')}
@@ -67,33 +90,51 @@ export function IssueVirtualRow({
   }
 
   if (row.kind === 'conversation') {
+    const retryable = canRetryIssueConversation(row.conversation)
+    const sessionReference = toIssueConversationAiVaultSessionReference(row.conversation, route)
+    const originalPaneTarget = sessionReference ? getOriginalPaneTarget(sessionReference) : null
     return (
-      <button
-        type="button"
+      <div
         data-conversation-id={row.conversation.id}
         data-attachment-state={row.conversation.attachment.kind}
         data-execution-state={row.conversation.executionState}
-        // 嵌套行比它所属的 Issue 行安静一档,和 Workspaces 里的 agent 行同一处理
-        className={cn(
-          'ml-1 flex h-7 w-[calc(100%-0.25rem)] items-center gap-1.5 rounded-lg pr-2 text-left text-xs text-muted-foreground',
-          SIDEBAR_NESTED_ROW_HOVER_CLASS
-        )}
-        style={{ paddingLeft: `${contentIndent(row.depth)}px` }}
-        onClick={() => openConversation(row.conversation, route)}
+        className="group/issue-conversation ml-1 flex min-h-7 w-[calc(100%-0.25rem)] items-start rounded-lg pr-1"
+        style={{ paddingLeft: `${getIssueRowContentIndent(row.depth)}px` }}
       >
-        <MessageSquare className="size-3 shrink-0" />
-        <span className="min-w-0 flex-1 truncate">
-          {row.conversation.title ?? row.conversation.agent}
-        </span>
-        <span className="max-w-20 truncate text-[10px]">{row.workspaceLabel}</span>
-        {row.conversation.unresolvedRoundCount > 0 ? (
-          <SidebarCountBadge
-            count={row.conversation.unresolvedRoundCount}
-            label={`${row.conversation.unresolvedRoundCount} unresolved rounds`}
-            tone="foreground"
-          />
+        <IssueConversationRowContent
+          conversation={row.conversation}
+          route={route}
+          sessionTitles={sessionTitles}
+          originalPaneTarget={originalPaneTarget}
+          onMissingWorkspaceRowActivate={() =>
+            void (retryable
+              ? retryIssueConversation(route, row.conversation)
+              : activateMissingWorkspaceIssueConversation(row.conversation, route))
+          }
+          fallbackClassName={cn('h-7 rounded-lg', SIDEBAR_NESTED_ROW_HOVER_CLASS)}
+        />
+        {shouldShowIssueConversationResume(row.conversation, Boolean(originalPaneTarget)) ? (
+          <IssueConversationResumeButton route={route} conversation={row.conversation} compact />
         ) : null}
-      </button>
+        {retryable ? (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon-xs"
+                aria-label="Retry Conversation"
+                onClick={() => void retryIssueConversation(route, row.conversation)}
+              >
+                <RotateCcw className="size-3" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="top" sideOffset={4}>
+              Retry Conversation
+            </TooltipContent>
+          </Tooltip>
+        ) : null}
+        <ConversationIssueBindingPopover route={route} conversation={row.conversation} compact />
+      </div>
     )
   }
 
@@ -112,7 +153,7 @@ export function IssueVirtualRow({
         row.contextOnly && 'opacity-60',
         row.issue.state === 'archived' && 'opacity-55'
       )}
-      style={{ paddingLeft: `${contentIndent(row.depth)}px` }}
+      style={{ paddingLeft: `${getIssueRowContentIndent(row.depth)}px` }}
     >
       <button
         type="button"
@@ -140,7 +181,7 @@ export function IssueVirtualRow({
           </span>
         ) : null}
         {running > 0 ? (
-          <span className="shrink-0 text-[10px] text-muted-foreground/80">{running} running</span>
+          <span className="shrink-0 text-[10px] text-muted-foreground/80">{running} live</span>
         ) : null}
         {/* 自身与后代是两个独立事实,不能二选一显示 —— 父行必须同时看得到 */}
         {row.issue.ownUnresolvedCount > 0 ? (
@@ -160,33 +201,4 @@ export function IssueVirtualRow({
       </button>
     </div>
   )
-}
-
-function openConversation(
-  conversation: Extract<IssueSidebarRow, { kind: 'conversation' }>['conversation'],
-  route: IssueRouteExecutionHostId
-): void {
-  const paneKey = conversation.navigation?.paneKey
-  const parsed = paneKey ? parsePaneKey(paneKey) : null
-  if (!paneKey || !parsed) {
-    if (conversation.issueId) {
-      issueDomainStore.getState().setActiveIssueRoute({
-        routeExecutionHostId: route,
-        issueId: conversation.issueId
-      })
-    }
-    return
-  }
-  if (conversation.workspaceRef.type === 'worktree') {
-    activateAndRevealWorktree(conversation.workspaceRef.worktreeId)
-  } else {
-    activateAndRevealFolderWorkspace(conversation.workspaceRef.folderWorkspaceId, {
-      executionHostId: route
-    })
-  }
-  activateTabAndFocusPane(parsed.tabId, parsed.leafId, {
-    ackPaneKeyOnSuccess: paneKey,
-    flashFocusedPane: true,
-    scrollToBottomIfOutputSinceLastView: true
-  })
 }

@@ -11,6 +11,7 @@ import {
 import type { IssueRepository } from './issue-repository'
 import { IssueRepositoryError } from './issue-repository-error'
 import type { ConversationRuntimeAttachmentRegistry } from './conversation-runtime-attachment-registry'
+import { sameConversationWorkspace } from './conversation-launch-preparation-transactions'
 
 export type ConversationHookIdentityContext = {
   executionHostId: AuthorityExecutionHostId
@@ -35,6 +36,7 @@ export type ConversationHookIdentityEvent = {
   payload: {
     state?: AgentStatusState
     agentType?: AgentType
+    sessionBoundary?: boolean
   }
   receivedAt: number
 }
@@ -52,6 +54,7 @@ export type ConversationHookIdentityIngestResult =
         | 'runtime-evidence-mismatch'
         | 'identity-invalid'
         | 'claim-unresolved'
+        | 'runtime-unverifiable'
     }
 
 export type ConversationHookIdentityIngestorDependencies = {
@@ -86,11 +89,7 @@ export class ConversationHookIdentityIngestor {
   async ingest(
     event: ConversationHookIdentityEvent
   ): Promise<ConversationHookIdentityIngestResult> {
-    if (
-      event.restoredUnconfirmed ||
-      !event.providerSession ||
-      !isTuiAgent(event.payload.agentType)
-    ) {
+    if (!event.providerSession || !isTuiAgent(event.payload.agentType)) {
       return this.finish({ disposition: 'ignored', reason: 'identity-missing' }, event)
     }
     const context = await this.dependencies
@@ -124,13 +123,50 @@ export class ConversationHookIdentityIngestor {
       return this.finish({ disposition: 'ignored', reason: 'identity-invalid' }, event)
     }
 
+    const existingIdentity = this.repository.conversationIdentities.findActiveForExecutionHost({
+      executionHostId: context.executionHostId,
+      agent: event.payload.agentType,
+      providerSession
+    })
+    if (event.restoredUnconfirmed) {
+      if (existingIdentity) {
+        const conversation = this.repository.conversations.get(existingIdentity.conversationId)
+        if (
+          conversation &&
+          sameConversationWorkspace(conversation.workspaceRef, context.workspaceRef)
+        ) {
+          this.dependencies.attachments?.markUnverifiable({
+            conversationId: conversation.id,
+            paneKey: event.paneKey,
+            tabId: event.tabId ?? null,
+            worktreeId:
+              context.workspaceRef.type === 'worktree' ? context.workspaceRef.worktreeId : null,
+            connectionId: context.connectionId,
+            providerIdentityFingerprint: existingIdentity.identityFingerprint,
+            executionState: 'stopped',
+            observedAt: event.receivedAt
+          })
+        }
+      }
+      return this.finish({ disposition: 'ignored', reason: 'runtime-unverifiable' }, event)
+    }
+
+    if ((event.providerSessionOnly || event.payload.sessionBoundary) && !event.launchToken) {
+      if (!existingIdentity) {
+        return this.finish({ disposition: 'ignored', reason: 'identity-missing' }, event)
+      }
+      const conversation = this.repository.conversations.get(existingIdentity.conversationId)
+      if (
+        !conversation ||
+        !sameConversationWorkspace(conversation.workspaceRef, context.workspaceRef)
+      ) {
+        return this.finish({ disposition: 'ignored', reason: 'runtime-evidence-mismatch' }, event)
+      }
+      return this.resolveOrdinaryIdentity(event, context, providerSession, event.payload.agentType)
+    }
+
     if (event.isReplay && !event.launchToken) {
-      const existing = this.repository.conversationIdentities.findActiveForExecutionHost({
-        executionHostId: context.executionHostId,
-        agent: event.payload.agentType,
-        providerSession
-      })
-      if (!existing) {
+      if (!existingIdentity) {
         return this.finish({ disposition: 'ignored', reason: 'identity-missing' }, event)
       }
     }

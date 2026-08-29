@@ -2,12 +2,14 @@ import { useCallback, useMemo } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import { toast } from 'sonner'
 import { activateTabAndFocusPane } from '@/lib/activate-tab-and-focus-pane'
-import { activateAndRevealWorktree } from '@/lib/worktree-activation'
+import { activateAndRevealWorkspace } from '@/lib/worktree-activation'
 import { useAppStore } from '@/store'
 import type { AgentStatusState } from '../../../../shared/agent-status-types'
-import type { AiVaultSession } from '../../../../shared/ai-vault-types'
 import { translate } from '@/i18n/i18n'
-import { findOriginalAiVaultSessionPane } from './ai-vault-original-pane'
+import {
+  findOriginalAiVaultSessionPane,
+  type AiVaultOriginalPaneSessionReference
+} from './ai-vault-original-pane'
 import {
   createLazyAiVaultOriginalPaneIndex,
   findAiVaultSessionLiveStateInIndex,
@@ -16,10 +18,10 @@ import {
 
 export function useAiVaultOriginalPaneActions(): {
   getOriginalPaneTarget: (
-    session: AiVaultSession
+    session: AiVaultOriginalPaneSessionReference
   ) => ReturnType<typeof findOriginalAiVaultSessionPane>
-  getSessionLiveState: (session: AiVaultSession) => AgentStatusState | null
-  jumpToOriginalPane: (session: AiVaultSession) => void
+  getSessionLiveState: (session: AiVaultOriginalPaneSessionReference) => AgentStatusState | null
+  jumpToOriginalPane: (session: AiVaultOriginalPaneSessionReference) => void
   jumpToWorktree: (worktreeId: string) => void
 } {
   const originalPaneLookupState = useAppStore(
@@ -39,48 +41,23 @@ export function useAiVaultOriginalPaneActions(): {
   )
 
   const getOriginalPaneTarget = useCallback(
-    (session: AiVaultSession) =>
+    (session: AiVaultOriginalPaneSessionReference) =>
       findOriginalAiVaultSessionPaneInIndex(getOriginalPaneIndex(), session),
     [getOriginalPaneIndex]
   )
 
   const getSessionLiveState = useCallback(
-    (session: AiVaultSession) =>
+    (session: AiVaultOriginalPaneSessionReference) =>
       findAiVaultSessionLiveStateInIndex(getOriginalPaneIndex(), session),
     [getOriginalPaneIndex]
   )
 
-  const jumpToOriginalPane = useCallback((session: AiVaultSession): void => {
-    const target = findOriginalAiVaultSessionPane(useAppStore.getState(), session)
-    if (!target) {
-      toast.error(
-        translate(
-          'auto.components.right.sidebar.AiVaultPanel.originalPaneUnavailable',
-          'Original pane is no longer available.'
-        )
-      )
-      return
-    }
-
-    if (!activateAndRevealWorktree(target.worktreeId)) {
-      toast.error(
-        translate(
-          'auto.components.right.sidebar.AiVaultPanel.worktreeUnavailable',
-          'Worktree is no longer available.'
-        )
-      )
-      return
-    }
-    const state = useAppStore.getState()
-    state.setActiveTabType('terminal')
-    activateTabAndFocusPane(target.tabId, target.leafId, {
-      flashFocusedPane: true,
-      scrollToBottomIfOutputSinceLastView: true
-    })
+  const jumpToOriginalPane = useCallback((session: AiVaultOriginalPaneSessionReference): void => {
+    jumpToAiVaultOriginalPane(session)
   }, [])
 
   const jumpToWorktree = useCallback((worktreeId: string): void => {
-    if (!activateAndRevealWorktree(worktreeId)) {
+    if (!activateAndRevealWorkspace(worktreeId)) {
       toast.error(
         translate(
           'auto.components.right.sidebar.AiVaultPanel.worktreeUnavailable',
@@ -91,4 +68,45 @@ export function useAiVaultOriginalPaneActions(): {
   }, [])
 
   return { getOriginalPaneTarget, getSessionLiveState, jumpToOriginalPane, jumpToWorktree }
+}
+
+export type AiVaultOriginalPaneJumpResult = 'focused' | 'missing' | 'workspace-unavailable'
+
+export function jumpToAiVaultOriginalPane(
+  session: AiVaultOriginalPaneSessionReference,
+  options: { notifyWhenMissing?: boolean } = {}
+): AiVaultOriginalPaneJumpResult {
+  const target = findOriginalAiVaultSessionPane(useAppStore.getState(), session)
+  if (!target) {
+    if (options.notifyWhenMissing !== false) {
+      toast.error(
+        translate(
+          'auto.components.right.sidebar.AiVaultPanel.originalPaneUnavailable',
+          'Original pane is no longer available.'
+        )
+      )
+    }
+    return 'missing'
+  }
+
+  if (
+    !activateAndRevealWorkspace(
+      target.worktreeId,
+      session.executionHostId ? { executionHostId: session.executionHostId } : undefined
+    )
+  ) {
+    toast.error(
+      translate(
+        'auto.components.right.sidebar.AiVaultPanel.worktreeUnavailable',
+        'Worktree is no longer available.'
+      )
+    )
+    return 'workspace-unavailable'
+  }
+  useAppStore.getState().setActiveTabType('terminal')
+  activateTabAndFocusPane(target.tabId, target.leafId, {
+    flashFocusedPane: true,
+    scrollToBottomIfOutputSinceLastView: true
+  })
+  return 'focused'
 }

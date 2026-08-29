@@ -62,7 +62,45 @@ describe('RoundRecordReconciler', () => {
       expect(round).not.toHaveProperty('executionChainId')
       expect(round).not.toHaveProperty('supersedesRoundId')
     }
-    expect(rounds.every((round) => round.resolvedAt === null)).toBe(true)
+    expect(rounds[0]).toMatchObject({ resolvedAt: 20, resolution: 'new-input' })
+    expect(rounds[1]).toMatchObject({ resolvedAt: null, resolution: null })
+    repository.close()
+  })
+
+  it('resolves the last completion when the transcript contains a later unanswered prompt', async () => {
+    const repository = IssueRepository.open({
+      profileId: 'profile-a',
+      userDataPath: createIssueTestUserDataPath('orca-round-reconcile-later-prompt')
+    })
+    const managed = repository.conversationAllocator.resolveObservedIdentityOrAllocate({
+      executionHostId: 'local',
+      workspaceRef: { type: 'worktree', worktreeId: 'worktree-1' },
+      workspaceSnapshot: { name: 'Workspace', path: '/workspace' },
+      agent: 'codex',
+      issueId: null,
+      providerSession: { key: 'session_id', id: 'session-later-prompt' },
+      observedAt: 1
+    })
+    const messages = [
+      ...transcriptMessages(['turn-1']),
+      {
+        id: 'user-turn-2',
+        role: 'user' as const,
+        turnId: 'turn-2',
+        blocks: [{ type: 'text' as const, text: 'follow-up' }],
+        timestamp: 20,
+        source: 'transcript' as const
+      }
+    ]
+    const reconciler = new RoundRecordReconciler(repository, {
+      readTranscript: async () => ({ messages })
+    })
+
+    await reconciler.reconcile(managed.conversation.id)
+
+    expect(repository.rounds.list(managed.conversation.id)).toMatchObject([
+      { resolvedAt: 20, resolution: 'new-input' }
+    ])
     repository.close()
   })
 

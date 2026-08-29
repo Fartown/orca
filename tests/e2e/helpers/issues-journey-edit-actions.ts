@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { expect, type Page } from '@stablyai/playwright-test'
 import type { ConversationSummary, IssueSummary } from '../../../src/shared/issues/types'
+import { parsePaneKey } from '../../../src/shared/stable-pane-id'
 import {
   localIssuesRegion,
   openIssuesMode,
@@ -60,17 +61,51 @@ export async function renameAndCompareConversationRows(
     (candidate) => candidate.id === conversation.id && candidate.title === 'Journey shared title'
   )
 
+  if (updated.workspaceRef.type !== 'worktree') {
+    throw new Error('Shared running-row comparison requires the original worktree Conversation.')
+  }
+  await openWorkspacesMode(page)
+  const workspaceAgentList = page
+    .locator(`[data-worktree-id="${updated.workspaceRef.worktreeId}"]`)
+    .locator('[aria-label="Agents"]')
+    .first()
+  await expect(workspaceAgentList).toBeVisible()
+  const workspaceText = normalizeRowText(await workspaceAgentList.innerText())
+
   await openIssuesMode(page)
   const issueRow = localIssuesRegion(page).locator(`[data-conversation-id="${updated.id}"]`)
   await expect(issueRow).toBeVisible()
-  await expect(issueRow).toContainText('Journey shared title')
+  const issueAgentList = issueRow.locator('[aria-label="Agents"]')
+  await expect(issueAgentList).toBeVisible()
+  expect(normalizeRowText(await issueAgentList.innerText())).toBe(workspaceText)
   await expect(issueRow).toHaveAttribute('data-execution-state', updated.executionState)
+  await refreshIssueDetail(page, issueId)
+  const detailRow = page
+    .getByRole('heading', { name: 'Direct Conversations' })
+    .locator('..')
+    .locator(`[data-conversation-id="${updated.id}"]`)
+  await expect(detailRow).toBeVisible()
+  const detailAgentList = detailRow.locator('[aria-label="Agents"]')
+  await expect(detailAgentList).toBeVisible()
+  expect(normalizeRowText(await detailAgentList.innerText())).toBe(workspaceText)
+  await expect(detailRow).toHaveAttribute('data-execution-state', updated.executionState)
+  if (updated.attachment.kind !== 'attached') {
+    throw new Error('Shared running-row comparison lost its Runtime Attachment.')
+  }
+  const pane = parsePaneKey(updated.attachment.paneKey)
+  if (!pane) {
+    throw new Error('Shared running-row comparison received an invalid pane key.')
+  }
+  await detailAgentList.locator('.worktree-agent-row-hover').first().click()
+  await expect(page.getByRole('button', { name: 'Close Issue detail' })).toBeHidden()
+  await expect
+    .poll(() => page.evaluate(() => window.__store?.getState().activeTabId))
+    .toBe(pane.tabId)
   await openWorkspacesMode(page)
-  const workspaceRow = page.locator(
-    `[data-workspace-conversation-rows] [data-conversation-id="${updated.id}"]`
-  )
-  await expect(workspaceRow).toBeVisible()
-  await expect(workspaceRow).toContainText('Journey shared title')
-  await expect(workspaceRow).toHaveAttribute('data-execution-state', updated.executionState)
+  await expect(page.locator('[data-workspace-conversation-rows]')).toHaveCount(0)
   return updated
+}
+
+function normalizeRowText(value: string): string {
+  return value.replace(/\s+/g, ' ').trim()
 }

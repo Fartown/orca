@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 const { randomUUID } = require('node:crypto')
+const path = require('node:path')
 
 const READY_MARKER = 'GOLDEN_STUB_AGENT_READY'
 const EXIT_MARKER = 'GOLDEN_STUB_AGENT_EXITED'
@@ -14,6 +15,12 @@ const ESCAPE_TAIL_RE = /^(?:\[[0-9;?]*[ -/]*[@-~]|O[@-~])/
 const resumeArgIndex = process.argv.indexOf('resume')
 const resumedSessionId = resumeArgIndex !== -1 ? process.argv[resumeArgIndex + 1]?.trim() : ''
 const issueJourneySessionId = resumedSessionId || randomUUID()
+const issueJourneyTranscriptPath = process.env.ORCA_E2E_GOLDEN_STUB_TRANSCRIPT_ROOT
+  ? path.join(
+      process.env.ORCA_E2E_GOLDEN_STUB_TRANSCRIPT_ROOT,
+      `rollout-2026-08-25T00-00-00-${issueJourneySessionId}.jsonl`
+    )
+  : ''
 
 function postIssueJourneyHook(hookEventName, fields = {}) {
   if (
@@ -35,6 +42,7 @@ function postIssueJourneyHook(hookEventName, fields = {}) {
       hook_event_name: hookEventName,
       session_id: issueJourneySessionId,
       turn_id: 'issues-e2e-turn',
+      ...(issueJourneyTranscriptPath ? { transcript_path: issueJourneyTranscriptPath } : {}),
       ...fields
     })
   }).toString()

@@ -9,6 +9,8 @@ export const ISSUE_REPOSITORY_ERROR_CODES = [
   'conversation_launch_claim_not_found',
   'conversation_not_found',
   'conversation_record_revision_stale',
+  'conversation_resume_pending',
+  'conversation_resume_runtime_present',
   'conversation_retry_not_allowed',
   'issue_not_found',
   'issue_archive_blocked',

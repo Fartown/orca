@@ -1,4 +1,5 @@
 import type { AgentStatusIpcPayload } from '../../shared/agent-status-types'
+import { isCodexThreadTitleGenerationPrompt } from '../../shared/codex-thread-title-generation'
 import type {
   AgentHookAuthorityEvidence,
   AgentHookProviderSessionIdentity
@@ -19,10 +20,18 @@ export class IssueHookEvidenceReconciler {
     const statusesByPane = new Map(snapshot.statuses.map((status) => [status.paneKey, status]))
     for (const provider of snapshot.providerIdentities) {
       const status = statusesByPane.get(provider.paneKey)
-      const authority = matchingAuthority(snapshot, provider, status)
-      if (!status || !authority || !status.agentType) {
+      const match = matchingAuthority(snapshot, provider, status)
+      if (!status || !match || !status.agentType) {
         continue
       }
+      if (
+        status.agentType === 'codex' &&
+        !provider.transcriptPath &&
+        isCodexThreadTitleGenerationPrompt(status.prompt)
+      ) {
+        continue
+      }
+      const { authority, restoredUnconfirmed } = match
       const providerSession =
         status.providerSession?.id === provider.sessionId
           ? {
@@ -40,6 +49,7 @@ export class IssueHookEvidenceReconciler {
         worktreeId: provider.worktreeId ?? authority.worktreeId ?? status.worktreeId,
         connectionId: authority.connectionId,
         providerSession,
+        ...(restoredUnconfirmed ? { restoredUnconfirmed: true as const } : {}),
         isReplay: true,
         payload: { state: status.state, agentType: status.agentType },
         receivedAt: Math.max(status.receivedAt, authority.observedAt)
@@ -52,8 +62,8 @@ function matchingAuthority(
   snapshot: IssueHookEvidenceSnapshot,
   provider: AgentHookProviderSessionIdentity,
   status: AgentStatusIpcPayload | undefined
-): AgentHookAuthorityEvidence | undefined {
-  return [...snapshot.currentAuthorities, ...snapshot.hydratedAuthorities].find((authority) => {
+): { authority: AgentHookAuthorityEvidence; restoredUnconfirmed: boolean } | undefined {
+  const current = snapshot.currentAuthorities.find((authority) => {
     if (authority.paneKey !== provider.paneKey) {
       return false
     }
@@ -65,4 +75,20 @@ function matchingAuthority(
       !authority.worktreeId || !expectedWorktreeId || authority.worktreeId === expectedWorktreeId
     )
   })
+  if (current) {
+    return { authority: current, restoredUnconfirmed: false }
+  }
+  const hydrated = snapshot.hydratedAuthorities.find((authority) => {
+    if (authority.paneKey !== provider.paneKey) {
+      return false
+    }
+    if (status && authority.connectionId !== status.connectionId) {
+      return false
+    }
+    const expectedWorktreeId = provider.worktreeId ?? status?.worktreeId
+    return (
+      !authority.worktreeId || !expectedWorktreeId || authority.worktreeId === expectedWorktreeId
+    )
+  })
+  return hydrated ? { authority: hydrated, restoredUnconfirmed: true } : undefined
 }

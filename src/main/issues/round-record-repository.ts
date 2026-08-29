@@ -87,6 +87,14 @@ export class RoundRecordRepository {
     })
   }
 
+  reconcileTranscriptFact(input: CreateRoundRecordInput): RoundRecord {
+    return this.database.transaction(() => this.upsertWithinTransaction(input))
+  }
+
+  resolveReconciledHistory(input: ResolveRoundInput): RoundRecord {
+    return this.database.transaction(() => this.resolveWithinTransaction(input))
+  }
+
   latestUnresolved(
     conversationId: string,
     kind: RoundRecord['kind'],
@@ -229,7 +237,7 @@ export class RoundRecordRepository {
     const issue = this.database
       .prepare('SELECT state, archived_at FROM issues WHERE id = ?')
       .get(issueId) as { state: 'active' | 'archived'; archived_at: number | null } | undefined
-    if (!issue || issue.state !== 'archived' || issue.archived_at === null) {
+    if (issue?.state !== 'archived' || issue.archived_at === null) {
       return
     }
     const shouldReopen =

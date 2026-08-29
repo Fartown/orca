@@ -10,7 +10,7 @@ import {
 import { settleAiVaultTitleRequestBatches } from './ai-vault-tab-title-batches'
 import { aiVaultTitleSyncInputsChanged } from './ai-vault-tab-title-sync-inputs'
 
-const MISSING_TITLE_REFRESH_MS = 20_000
+export const MISSING_AI_VAULT_TITLE_REFRESH_MS = 20_000
 const LIVE_TITLE_REFRESH_MS = 5 * 60_000
 
 function requestIdentity(request: AiVaultTitleRequest): string {
@@ -56,7 +56,7 @@ function nextLiveRefreshDelay(state: AppState, requests: AiVaultTitleRequest[]):
       !stored.title.trim()
     )
   })
-  return hasMissingTitle ? MISSING_TITLE_REFRESH_MS : LIVE_TITLE_REFRESH_MS
+  return hasMissingTitle ? MISSING_AI_VAULT_TITLE_REFRESH_MS : LIVE_TITLE_REFRESH_MS
 }
 
 export function startAiVaultTabTitleSync(dependencies: SyncDependencies): () => void {

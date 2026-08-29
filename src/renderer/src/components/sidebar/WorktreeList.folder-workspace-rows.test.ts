@@ -67,6 +67,7 @@ function setFolderWorkspaceFixtureState(
     createdFrom?: ProjectGroup['createdFrom']
     experimentalNewWorktreeCardStyle?: boolean
     nestedGroup?: boolean
+    projectGroupConnectionId?: string
   } = {}
 ): void {
   const parentGroup: ProjectGroup | null = options.nestedGroup
@@ -89,6 +90,7 @@ function setFolderWorkspaceFixtureState(
     parentPath: '/tmp/lineage-order/folder',
     parentGroupId: parentGroup?.id ?? null,
     createdFrom: options.createdFrom ?? 'folder-scan',
+    connectionId: options.projectGroupConnectionId ?? null,
     tabOrder: parentGroup ? 1 : 0,
     isCollapsed: false,
     color: null,
@@ -166,6 +168,16 @@ describe('WorktreeList lineage child card renderer', () => {
 
     expect(markup).toContain(
       'aria-activedescendant="worktree-list-option-folder%3Afolder-workspace-1"'
+    )
+  })
+
+  it('routes inherited SSH folder rows through the host that owns the sidebar row', async () => {
+    setFolderWorkspaceFixtureState({ projectGroupConnectionId: 'ssh-builder' })
+    const markup = await renderWorktreeListMarkup()
+    const folderWorktreeId = folderWorkspaceKey('folder-workspace-1')
+
+    expect(getCardOpeningTag(markup, folderWorktreeId)).toContain(
+      'data-worktree-card-host-id="ssh:ssh-builder"'
     )
   })
 

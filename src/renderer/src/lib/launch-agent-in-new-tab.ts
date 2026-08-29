@@ -15,7 +15,10 @@ import { isNativeChatTranscriptLocalReadable } from '@/lib/native-chat-transcrip
 import { getRuntimeEnvironmentIdForWorktree } from '@/lib/worktree-runtime-owner'
 import { getLocalProjectExecutionRuntimeContext } from '@/lib/local-preflight-context'
 import { isWebRuntimeSessionActive } from '@/runtime/web-runtime-session'
-import { launchAgentInWebHostTab } from '@/lib/launch-agent-web-host-tab'
+import {
+  launchAgentInWebHostTab,
+  type WebHostAgentLaunchResult
+} from '@/lib/launch-agent-web-host-tab'
 import {
   resolveTuiAgentLaunchArgs,
   resolveTuiAgentLaunchEnv
@@ -58,6 +61,7 @@ export type LaunchAgentInNewTabResult = {
   startupPlan: AgentStartupPlan
   pasteDraftAfterLaunch: boolean
   promptDeliveryResult?: Promise<{ delivered: boolean; failureNotified: boolean }>
+  runtimeLaunchResult?: Promise<WebHostAgentLaunchResult>
 } | null
 
 /**
@@ -170,6 +174,7 @@ export function launchAgentInNewTab(args: LaunchAgentInNewTabArgs): LaunchAgentI
       tabId: null,
       startupPlan,
       pasteDraftAfterLaunch: pasteDraftAfterLaunch !== null,
+      runtimeLaunchResult: webHostDelivery,
       ...(pasteDraftAfterLaunch !== null && promptDelivery === 'submit-after-ready'
         ? { promptDeliveryResult: webHostDelivery }
         : {})

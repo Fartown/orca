@@ -17,16 +17,22 @@ import type { IssueDatabase } from './issue-database'
 import { hostPartitionForExecutionHost } from './issue-host-partition'
 import { executeIssueMutationWithReceipt } from './issue-mutation-receipt'
 import { IssueRepositoryError } from './issue-repository-error'
-import type { CreateConversationInput } from './issue-repository-types'
-import type { RecordConversationLaunchFailureInput } from './issue-repository-types'
+import type {
+  CreateConversationInput,
+  RecordConversationLaunchFailureInput
+} from './issue-repository-types'
 
+import { ConversationLaunchFailureTransactions } from './conversation-launch-failure-transactions'
 import {
   ConversationLaunchPreparationTransactions,
-  sameConversationWorkspace,
   type PrepareConversationLaunchInput,
   type PrepareConversationResumeInput,
   type PrepareConversationRetryInput
 } from './conversation-launch-preparation-transactions'
+import {
+  assertConversationRuntimeEvidenceMatches,
+  clearConversationLaunchFailureFromRuntimeEvidence
+} from './conversation-runtime-evidence-validation'
 
 export type {
   PrepareConversationLaunchInput,
@@ -53,6 +59,7 @@ export type ResolveObservedConversationIdentityInput = CreateConversationInput &
 }
 
 export class ConversationAllocator {
+  private readonly launchFailures: ConversationLaunchFailureTransactions
   private readonly launchPreparation: ConversationLaunchPreparationTransactions
 
   constructor(
@@ -60,14 +67,20 @@ export class ConversationAllocator {
     private readonly conversations: ConversationRecordRepository,
     private readonly identities: ConversationIdentityRepository,
     private readonly claims: ConversationLaunchClaimRepository,
-    isConversationAttached: (conversationId: string) => boolean = () => false
+    hasConversationRuntimeEvidence: (conversationId: string) => boolean = () => false
   ) {
+    this.launchFailures = new ConversationLaunchFailureTransactions(
+      database,
+      conversations,
+      claims,
+      hasConversationRuntimeEvidence
+    )
     this.launchPreparation = new ConversationLaunchPreparationTransactions(
       database,
       conversations,
       identities,
       claims,
-      isConversationAttached
+      hasConversationRuntimeEvidence
     )
   }
 
@@ -122,8 +135,13 @@ export class ConversationAllocator {
         providerSession: input.providerSession
       })
       if (existingIdentity) {
-        const conversation = this.requireConversation(existingIdentity.conversationId)
-        assertConversationEvidenceMatches(conversation, input)
+        let conversation = this.requireConversation(existingIdentity.conversationId)
+        assertConversationRuntimeEvidenceMatches(conversation, input)
+        conversation = clearConversationLaunchFailureFromRuntimeEvidence(
+          this.conversations,
+          conversation,
+          input.observedAt
+        )
         const identity = this.identities.attachWithinTransaction({
           conversationId: conversation.id,
           agent: input.agent,
@@ -161,8 +179,8 @@ export class ConversationAllocator {
         providerSession: input.providerSession
       })
       if (existingIdentity) {
-        const conversation = this.requireConversation(existingIdentity.conversationId)
-        assertConversationEvidenceMatches(conversation, input)
+        let conversation = this.requireConversation(existingIdentity.conversationId)
+        assertConversationRuntimeEvidenceMatches(conversation, input)
         const claim = this.resolveOptionalClaim(input, hostPartitionKey)
         if (claim && claim.conversationId !== conversation.id) {
           throw new IssueRepositoryError(
@@ -170,6 +188,11 @@ export class ConversationAllocator {
             'Provider identity and launch claim resolve to different Conversations.'
           )
         }
+        conversation = clearConversationLaunchFailureFromRuntimeEvidence(
+          this.conversations,
+          conversation,
+          input.observedAt
+        )
         const refreshed = this.identities.attachWithinTransaction({
           conversationId: conversation.id,
           agent: input.agent,
@@ -198,8 +221,13 @@ export class ConversationAllocator {
         connectionId: input.connectionId,
         now: input.observedAt
       })
-      const conversation = this.requireConversation(claim.conversationId)
-      assertConversationEvidenceMatches(conversation, input)
+      let conversation = this.requireConversation(claim.conversationId)
+      assertConversationRuntimeEvidenceMatches(conversation, input)
+      conversation = clearConversationLaunchFailureFromRuntimeEvidence(
+        this.conversations,
+        conversation,
+        input.observedAt
+      )
       const identity = this.identities.attachWithinTransaction({
         conversationId: conversation.id,
         agent: input.agent,
@@ -223,36 +251,7 @@ export class ConversationAllocator {
     identity: IssueMutationIdentity
     input: RecordConversationLaunchFailureInput
   }): ConversationRecord {
-    const { input } = params
-    return executeIssueMutationWithReceipt({
-      database: this.database,
-      identity: params.identity,
-      method: 'conversations.recordLaunchFailure',
-      payload: {
-        conversationId: input.conversationId,
-        claimId: input.claimId,
-        expectedRecordRevision: input.expectedRecordRevision,
-        failure: input.failure
-      },
-      operation: () => {
-        const claim = this.claims.failPendingWithinTransaction(
-          input.claimId,
-          input.occurredAt ?? Date.now()
-        )
-        if (claim.conversationId !== input.conversationId) {
-          throw new IssueRepositoryError(
-            'conversation_launch_claim_invalid',
-            'Launch failure claim belongs to another Conversation.'
-          )
-        }
-        return this.conversations.recordLaunchFailureWithinTransaction(
-          input.conversationId,
-          input.expectedRecordRevision,
-          input.failure,
-          input.occurredAt
-        )
-      }
-    }).result
+    return this.launchFailures.record(params)
   }
 
   private resolveOptionalClaim(
@@ -290,24 +289,5 @@ export class ConversationAllocator {
       throw new IssueRepositoryError('conversation_not_found', `Conversation ${id} was not found.`)
     }
     return conversation
-  }
-}
-
-function assertConversationEvidenceMatches(
-  conversation: ConversationRecord,
-  input: Pick<
-    ResolveObservedConversationIdentityInput,
-    'executionHostId' | 'workspaceRef' | 'agent'
-  >
-): void {
-  if (
-    conversation.executionHostId !== input.executionHostId ||
-    conversation.agent !== input.agent ||
-    !sameConversationWorkspace(conversation.workspaceRef, input.workspaceRef)
-  ) {
-    throw new IssueRepositoryError(
-      'conversation_identity_conflict',
-      'Provider identity evidence does not match the managed Conversation.'
-    )
   }
 }

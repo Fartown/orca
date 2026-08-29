@@ -1,7 +1,20 @@
 import type { AgentProviderSessionMetadata } from '../../../shared/agent-session-resume'
 import type { WorkspaceScope } from '../../../shared/folder-workspace-types'
-import type { IssueRouteExecutionHostId } from '../../../shared/issues/types'
+import type {
+  ConversationLaunchPreparation,
+  IssueRouteExecutionHostId
+} from '../../../shared/issues/types'
+import { recordPreparedIssueConversationLaunchFailure } from './issue-conversation-launch-failure'
+import { observePreparedIssueConversationLocalLaunch } from './issue-conversation-launch-observer'
 import { IssueRuntimeClient } from './issue-runtime-client'
+
+export type ResumedConversationBookkeeping =
+  | { recorded: false }
+  | {
+      recorded: true
+      route: IssueRouteExecutionHostId
+      preparation: ConversationLaunchPreparation
+    }
 
 /**
  * 把一次「恢复会话」记进 Issues。
@@ -17,12 +30,14 @@ export async function recordResumedConversation(args: {
   workspaceSnapshot: { name: string; path: string | null }
   agent: string
   providerSession: AgentProviderSessionMetadata
-}): Promise<{ recorded: boolean }> {
+}): Promise<ResumedConversationBookkeeping> {
   if (!args.executionHostId || !args.workspaceSnapshot.path) {
     return { recorded: false }
   }
   try {
-    await IssueRuntimeClient.forRoute(args.executionHostId).mutate('conversations.prepareResume', {
+    const preparation = await IssueRuntimeClient.forRoute(
+      args.executionHostId
+    ).mutate<ConversationLaunchPreparation>('conversations.prepareResume', {
       mutationId: crypto.randomUUID(),
       launchToken: args.launchToken,
       workspaceRef: args.workspaceRef,
@@ -30,9 +45,42 @@ export async function recordResumedConversation(args: {
       agent: args.agent,
       providerSession: args.providerSession
     })
-    return { recorded: true }
+    return { recorded: true, route: args.executionHostId, preparation }
   } catch (error) {
     console.warn('[issues] resume book-keeping failed; resuming anyway:', error)
     return { recorded: false }
   }
+}
+
+export async function recordResumedConversationLaunchFailure(
+  bookkeeping: ResumedConversationBookkeeping,
+  failure: string
+): Promise<void> {
+  if (!bookkeeping.recorded) {
+    return
+  }
+  try {
+    await recordPreparedIssueConversationLaunchFailure(
+      IssueRuntimeClient.forRoute(bookkeeping.route),
+      bookkeeping.preparation,
+      failure
+    )
+  } catch (error) {
+    console.warn('[issues] resumed Conversation failure book-keeping failed:', error)
+  }
+}
+
+export function observeResumedConversationLocalLaunch(
+  bookkeeping: ResumedConversationBookkeeping,
+  launched: { worktreeId: string; tabId: string }
+): void {
+  if (!bookkeeping.recorded) {
+    return
+  }
+  observePreparedIssueConversationLocalLaunch(
+    IssueRuntimeClient.forRoute(bookkeeping.route),
+    bookkeeping.preparation,
+    bookkeeping.route,
+    launched
+  )
 }

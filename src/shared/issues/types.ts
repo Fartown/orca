@@ -165,11 +165,15 @@ export type ConversationNavigationHint = {
   resumeLocator: string | null
 }
 
+export type ConversationLivenessVerdict = 'live' | 'unverifiable' | 'exited'
+
 export type ConversationSummary = ConversationRecord & {
   effectiveProjectRef: EffectiveConversationProject
   attachment: ConversationAttachmentSummary
   resumability: 'resumable' | 'unavailable'
   executionState: 'launching' | 'running' | 'waiting' | 'stopped' | 'failed'
+  /** Optional for mixed-version hosts; missing means the older host did not publish a verdict. */
+  livenessVerdict?: ConversationLivenessVerdict
   workspaceAvailability: 'available' | 'unavailable'
   unresolvedRoundCount: number
   latestRound: RoundRecordPreview | null

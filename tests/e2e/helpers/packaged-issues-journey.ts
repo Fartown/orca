@@ -245,6 +245,14 @@ export async function listRounds(page: Page, issueId: string): Promise<RoundReco
 }
 
 function packagedExecutablePath(): string {
+  const override = process.env.ORCA_E2E_PACKAGED_EXECUTABLE?.trim()
+  if (override) {
+    const executable = path.resolve(override)
+    if (!existsSync(executable)) {
+      throw new Error(`Missing overridden packaged application executable at ${executable}`)
+    }
+    return executable
+  }
   const relative =
     process.platform === 'darwin'
       ? path.join(

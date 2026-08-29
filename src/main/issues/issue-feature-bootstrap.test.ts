@@ -133,7 +133,7 @@ describe('IssueFeatureBootstrap', () => {
     bootstrap.dispose()
   })
 
-  it('rebuilds an attachment from hydrated evidence only for an existing identity', async () => {
+  it('keeps hydrated-only evidence detached and unverifiable for an existing identity', async () => {
     const userDataPath = createIssueTestUserDataPath('orca-bootstrap-hydrated')
     const existingConversationId = seedManagedConversation(userDataPath, 'session-restored')
     const source = new FakeHookSource()
@@ -152,7 +152,11 @@ describe('IssueFeatureBootstrap', () => {
     expect(conversations).toMatchObject({
       status: 'snapshot-page',
       conversations: [
-        { id: existingConversationId, attachment: { kind: 'attached', paneKey: 'pane-restored' } }
+        {
+          id: existingConversationId,
+          attachment: { kind: 'detached' },
+          livenessVerdict: 'unverifiable'
+        }
       ]
     })
     bootstrap.dispose()
@@ -174,7 +178,59 @@ describe('IssueFeatureBootstrap', () => {
     emptyBootstrap.dispose()
   })
 
-  it('reconciles provider-session live changes against hydrated evidence', async () => {
+  it('does not persist Codex title-generation utility snapshot evidence', async () => {
+    const source = new FakeHookSource()
+    source.statusSnapshot = [
+      {
+        paneKey: 'pane-title-generation',
+        tabId: 'tab-title-generation',
+        worktreeId: 'worktree-1',
+        connectionId: null,
+        receivedAt: 20,
+        stateStartedAt: 10,
+        state: 'done',
+        prompt:
+          'Generate a concise, single-line task title of at most 36 characters. Start with an imperative verb.',
+        lastAssistantMessage: '{"title":"Investigate issue"}',
+        agentType: 'codex',
+        providerSession: { key: 'session_id', id: 'utility-session' }
+      }
+    ]
+    source.providerIdentities = [
+      {
+        paneKey: 'pane-title-generation',
+        sessionId: 'utility-session',
+        worktreeId: 'worktree-1'
+      }
+    ]
+    source.currentAuthorities = [
+      {
+        paneKey: 'pane-title-generation',
+        launchTokenHash: 'a'.repeat(64),
+        connectionId: null,
+        tabId: 'tab-title-generation',
+        worktreeId: 'worktree-1',
+        observedAt: 20
+      }
+    ]
+    const bootstrap = await IssueFeatureBootstrap.create({
+      profileId: 'profile-a',
+      profileLabel: 'Profile A',
+      userDataPath: createIssueTestUserDataPath('orca-bootstrap-title-generation'),
+      workspaceResolver: resolver(),
+      hookSource: source.asSource(),
+      hookEvidenceStatus: 'ready'
+    })
+    await bootstrap.drainHookEvents()
+
+    expect(listConversations(bootstrap)).toMatchObject({
+      status: 'snapshot-page',
+      conversations: []
+    })
+    bootstrap.dispose()
+  })
+
+  it('waits for current authority before attaching hydrated provider-session evidence', async () => {
     const userDataPath = createIssueTestUserDataPath('orca-bootstrap-provider-live')
     const conversationId = seedManagedConversation(userDataPath, 'session-provider-live')
     const source = new FakeHookSource()
@@ -191,6 +247,20 @@ describe('IssueFeatureBootstrap', () => {
     })
 
     source.setRestoredEvidence('session-provider-live')
+    source.emitProviderSessionChange()
+    await bootstrap.drainHookEvents()
+
+    expect(listConversations(bootstrap)).toMatchObject({
+      conversations: [
+        {
+          id: conversationId,
+          attachment: { kind: 'detached' },
+          livenessVerdict: 'unverifiable'
+        }
+      ]
+    })
+
+    source.confirmRestoredEvidence()
     source.emitProviderSessionChange()
     await bootstrap.drainHookEvents()
 
@@ -335,6 +405,18 @@ class FakeHookSource {
         observedAt: 20
       }
     ]
+  }
+
+  confirmRestoredEvidence(): void {
+    this.statusSnapshot = this.statusSnapshot.map((status) => ({
+      ...status,
+      restoredUnconfirmed: undefined,
+      receivedAt: status.receivedAt + 1
+    }))
+    this.currentAuthorities = this.hydratedAuthorities.map((authority) => ({
+      ...authority,
+      observedAt: authority.observedAt + 1
+    }))
   }
 
   subscribePaneStatusClear(): () => void {

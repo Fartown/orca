@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import type { AiVaultListResult, AiVaultSession } from '../../../../shared/ai-vault-types'
-import { EMPTY_AI_VAULT_SESSIONS, reuseAiVaultListResult } from './ai-vault-session-identity'
+import {
+  EMPTY_AI_VAULT_SESSIONS,
+  findAiVaultSessionByProviderIdentity,
+  reuseAiVaultListResult
+} from './ai-vault-session-identity'
 
 // Why: production rows carry nested previewMessages + subagent. A scalar
 // {id, title} fixture reconciles even when the walker is broken, which is how
@@ -138,5 +142,62 @@ describe('EMPTY_AI_VAULT_SESSIONS', () => {
   it('is frozen so one panel cannot mutate the sentinel for the others', () => {
     expect(EMPTY_AI_VAULT_SESSIONS).toHaveLength(0)
     expect(Object.isFrozen(EMPTY_AI_VAULT_SESSIONS)).toBe(true)
+  })
+})
+
+describe('findAiVaultSessionByProviderIdentity', () => {
+  it('matches only the exact execution host, agent, and provider session id', () => {
+    const expected = makeProductionSession(1)
+    const wrongHost = { ...expected, id: 'wrong-host', executionHostId: 'ssh:build' as const }
+    const wrongAgent = { ...expected, id: 'wrong-agent', agent: 'claude' as const }
+
+    expect(
+      findAiVaultSessionByProviderIdentity([wrongHost, wrongAgent, expected], {
+        executionHostId: 'local',
+        agent: 'codex',
+        providerSession: { key: 'session_id', id: 'session-1' }
+      })
+    ).toBe(expected)
+    expect(
+      findAiVaultSessionByProviderIdentity([expected], {
+        executionHostId: 'local',
+        agent: 'codex',
+        providerSession: { key: 'conversation_id', id: 'session-1' }
+      })
+    ).toBeNull()
+  })
+
+  it('uses the reported transcript path only to disambiguate duplicate provider ids', () => {
+    const first = makeProductionSession(1)
+    const expected = {
+      ...first,
+      id: 'local:codex:session-1:/sessions/other/session-1.jsonl',
+      filePath: '/sessions/other/session-1.jsonl'
+    }
+
+    expect(
+      findAiVaultSessionByProviderIdentity([first, expected], {
+        executionHostId: 'local',
+        agent: 'codex',
+        providerSession: {
+          key: 'session_id',
+          id: 'session-1',
+          transcriptPath: '/sessions/other/session-1.jsonl'
+        }
+      })
+    ).toBe(expected)
+  })
+
+  it('does not guess when an exact provider identity remains ambiguous', () => {
+    const first = makeProductionSession(1)
+    const duplicate = { ...first, id: `${first.id}:duplicate` }
+
+    expect(
+      findAiVaultSessionByProviderIdentity([first, duplicate], {
+        executionHostId: 'local',
+        agent: 'codex',
+        providerSession: { key: 'session_id', id: 'session-1' }
+      })
+    ).toBeNull()
   })
 })

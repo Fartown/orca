@@ -170,7 +170,7 @@ export class ConversationIdentityRepository {
         .run(
           providerSession.key,
           providerSession.id,
-          providerSession.transcriptPath ?? null,
+          providerSession.transcriptPath ?? matching.transcript_path,
           input.resumeLocator ?? matching.resume_locator,
           observedAt,
           matching.id

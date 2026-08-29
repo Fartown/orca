@@ -121,6 +121,41 @@ describe('ConversationHookIdentityIngestor', () => {
     repository.close()
   })
 
+  it('keeps restored-unconfirmed evidence detached and marks the known Conversation unverifiable', async () => {
+    const repository = openRepository('restored-unconfirmed')
+    const attachments = new ConversationRuntimeAttachmentRegistry()
+    const ingestor = new ConversationHookIdentityIngestor(repository, {
+      resolveContext: async () => context(),
+      attachments
+    })
+    const first = await ingestor.ingest(event())
+    attachments.clearPane({ paneKey: 'pane-1' })
+
+    const restored = await ingestor.ingest(event({ isReplay: true, restoredUnconfirmed: true }))
+
+    expect(restored).toEqual({ disposition: 'ignored', reason: 'runtime-unverifiable' })
+    expect(
+      attachments.listForConversation((first as { conversationId: string }).conversationId)
+    ).toEqual([])
+    expect(
+      attachments.getDeleteState((first as { conversationId: string }).conversationId)
+    ).toMatchObject({ livenessVerdict: 'unverifiable' })
+    repository.close()
+  })
+
+  it('does not allocate an empty Conversation from an identity-only session boundary', async () => {
+    const repository = openRepository('identity-only')
+    const ingestor = new ConversationHookIdentityIngestor(repository, {
+      resolveContext: async () => context()
+    })
+
+    await expect(
+      ingestor.ingest(event({ providerSessionOnly: true, payload: { agentType: 'codex' } }))
+    ).resolves.toEqual({ disposition: 'ignored', reason: 'identity-missing' })
+    expect(repository.conversations.list()).toEqual([])
+    repository.close()
+  })
+
   it('canonicalizes Pi identity through the execution-owner path access', async () => {
     const repository = openRepository('remote-pi')
     const ingestor = new ConversationHookIdentityIngestor(repository, {

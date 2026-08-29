@@ -91,12 +91,15 @@ export class IssueFeatureBootstrap {
 
   static async create(options: IssueFeatureBootstrapOptions): Promise<IssueFeatureBootstrap> {
     const readinessRegistry = options.readinessRegistry ?? issueFeatureReadinessRegistry
+    const attachments = new ConversationRuntimeAttachmentRegistry()
     let repository: IssueRepository
     try {
       repository = IssueRepository.open({
         profileId: options.profileId,
         userDataPath: options.userDataPath,
-        migrationHooks: options.migrationHooks
+        migrationHooks: options.migrationHooks,
+        hasConversationRuntimeEvidence: (conversationId) =>
+          attachments.getDeleteState(conversationId).livenessVerdict !== 'exited'
       })
     } catch (error) {
       const reason = String(error).includes('migration')
@@ -105,7 +108,6 @@ export class IssueFeatureBootstrap {
       readinessRegistry.setUnavailable(reason, options.hookEvidenceStatus)
       throw error
     }
-    const attachments = new ConversationRuntimeAttachmentRegistry()
     const service = new IssueRuntimeService(repository, {
       profileLabel: options.profileLabel,
       managedSshTargets: options.managedSshTargets,

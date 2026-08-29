@@ -1,7 +1,7 @@
 import React, { useCallback, useLayoutEffect, useMemo, useRef } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import { useAppStore } from '@/store'
-import { activateAndRevealWorktree } from '@/lib/worktree-activation'
+import { activateAndRevealWorkspace } from '@/lib/worktree-activation'
 import { activateTabAndFocusPane } from '@/lib/activate-tab-and-focus-pane'
 import DashboardAgentRow from '@/components/dashboard/DashboardAgentRow'
 import { useNow } from '@/components/dashboard/useNow'
@@ -26,6 +26,7 @@ import { DEFAULT_AGENT_ACTIVITY_DISPLAY_MODE } from '../../../../shared/constant
 import { revealElementInScrollContainer } from './worktree-sidebar-reveal'
 import { useWorktreeAgentExpansionState } from './worktree-card-agents-expansion-state'
 import { translate } from '@/i18n/i18n'
+import type { ExecutionHostId } from '../../../../shared/execution-host'
 
 export const SUPPRESS_WORKTREE_LIST_SCROLL_ADJUSTMENT_EVENT =
   'orca-suppress-worktree-list-scroll-adjustment'
@@ -45,7 +46,11 @@ function revealCompactAgentCard(agentListRoot: HTMLElement | null): void {
 
 type Props = {
   worktreeId: string
+  executionHostId?: ExecutionHostId
+  onAgentActivate?: () => void
+  onRetainedAgentActivate?: () => void
   agents?: DashboardAgentRowData[]
+  renderTrailingAction?: (agent: DashboardAgentRowData) => React.ReactNode
   /** Spacing from the card body above; parent decides whether a divider is appropriate. */
   className?: string
 }
@@ -53,7 +58,11 @@ type Props = {
 /** Inline agent list rendered inside WorktreeCard when 'inline-agents' is enabled. */
 const WorktreeCardAgents = React.memo(function WorktreeCardAgents({
   worktreeId,
+  executionHostId,
+  onAgentActivate,
+  onRetainedAgentActivate,
   agents: precomputedAgents,
+  renderTrailingAction,
   className
 }: Props) {
   const selectedAgents = useWorktreeAgentRows(worktreeId, precomputedAgents === undefined)
@@ -62,18 +71,30 @@ const WorktreeCardAgents = React.memo(function WorktreeCardAgents({
     return null
   }
   // Why: mount the inner body (owns the 30s useNow tick) only for non-empty rows, so idle worktrees pay no timer cost.
-  return <WorktreeCardAgentsBody worktreeId={worktreeId} agents={agents} className={className} />
+  return (
+    <WorktreeCardAgentsBody
+      worktreeId={worktreeId}
+      executionHostId={executionHostId}
+      onAgentActivate={onAgentActivate}
+      onRetainedAgentActivate={onRetainedAgentActivate}
+      agents={agents}
+      renderTrailingAction={renderTrailingAction}
+      className={className}
+    />
+  )
 })
 
-type BodyProps = {
-  worktreeId: string
+type BodyProps = Omit<Props, 'agents'> & {
   agents: DashboardAgentRowData[]
-  className?: string
 }
 
 const WorktreeCardAgentsBody = React.memo(function WorktreeCardAgentsBody({
   worktreeId,
+  executionHostId,
+  onAgentActivate,
+  onRetainedAgentActivate,
   agents,
+  renderTrailingAction,
   className
 }: BodyProps) {
   const agentActivityDisplayMode =
@@ -164,8 +185,12 @@ const WorktreeCardAgentsBody = React.memo(function WorktreeCardAgentsBody({
         dismissStaleAgentRowByKey(paneKey)
         return
       }
-      // Why: design-doc rule — every user-initiated worktree switch must route through activateAndRevealWorktree (cross-repo activation + nav history).
-      activateAndRevealWorktree(worktreeId)
+      // Why: the shared workspace activator preserves folder/host ownership and navigation history.
+      if (
+        !activateAndRevealWorkspace(worktreeId, executionHostId ? { executionHostId } : undefined)
+      ) {
+        return
+      }
       const tabs = useAppStore.getState().tabsByWorktree[worktreeId] ?? []
       if (tabs.some((t) => t.id === tabId)) {
         activateTabAndFocusPane(tabId, parsed.leafId, {
@@ -173,6 +198,7 @@ const WorktreeCardAgentsBody = React.memo(function WorktreeCardAgentsBody({
           flashFocusedPane: true,
           scrollToBottomIfOutputSinceLastView: true
         })
+        onAgentActivate?.()
       } else {
         const liveEntry = useAppStore.getState().agentStatusByPaneKey[paneKey]
         if (liveEntry?.worktreeId === worktreeId) {
@@ -182,11 +208,12 @@ const WorktreeCardAgentsBody = React.memo(function WorktreeCardAgentsBody({
         dismissStaleAgentRowByKey(paneKey)
       }
     },
-    [worktreeId]
+    [executionHostId, onAgentActivate, worktreeId]
   )
   const handleActivateRetainedAgent = useCallback(() => {
-    // Why: hibernation-retained rows are passive completion evidence; activating would resume sleeping sessions, so the row is inert.
-  }, [])
+    // Why: Workspace rows stay passive; consumers with an authoritative target may provide their existing navigation action.
+    onRetainedAgentActivate?.()
+  }, [onRetainedAgentActivate])
 
   // Why: one 30s tick per non-empty inline list; zero-agent cards never mount this (see WorktreeCardAgents), so idle worktrees pay no timer cost.
   const now = useNow(30_000)
@@ -283,6 +310,7 @@ const WorktreeCardAgentsBody = React.memo(function WorktreeCardAgentsBody({
           sendTargetStatus={sendTarget?.status}
           sendTargetDisabledReason={sendTarget?.disabledReason}
           onSendTargetClick={isAgentSendTargetModeActive ? handleSendTargetClick : undefined}
+          trailingAction={isAgentSendTargetModeActive ? undefined : renderTrailingAction?.(agent)}
           // Why: hierarchy shows via chevron + indent; legacy L-connectors use a fixed offset that mismatches the column and reads as floating fragments.
           hideLineageConnectors
         />
@@ -336,6 +364,7 @@ const WorktreeCardAgentsBody = React.memo(function WorktreeCardAgentsBody({
           reserveDisclosureGutter={isRootAgent && anyRootHasChildren && !hasChildAgents}
           isFocusedPane={agent.paneKey === focusedAgentPaneKey}
           cacheTimerActive={cacheTimerActive}
+          trailingAction={isAgentSendTargetModeActive ? undefined : renderTrailingAction?.(agent)}
         />
         {hasChildAgents ? (
           <CompactAgentExpansion expanded={expanded}>

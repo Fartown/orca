@@ -1,6 +1,7 @@
 import { randomBytes } from 'node:crypto'
 import type {
   ConversationDeletePreparation,
+  ConversationLivenessVerdict,
   ConversationRecord,
   IssueMutationIdentity
 } from '../../shared/issues/types'
@@ -16,6 +17,7 @@ export type ConversationRuntimeDeleteState = {
   attachmentGeneration: number
   attached: boolean
   executionState: 'launching' | 'running' | 'waiting' | 'stopped' | 'failed'
+  livenessVerdict?: ConversationLivenessVerdict
 }
 
 export type ConversationRuntimeDeleteProbe = {
@@ -59,7 +61,8 @@ export class ConversationForgetService {
       blockers.push('pending-claim')
     }
 
-    const canDelete = blockers.length === 0
+    // Keep the old wire blocker vocabulary; mixed-version clients still receive a safe deny.
+    const canDelete = blockers.length === 0 && runtime.livenessVerdict !== 'unverifiable'
     const preflightToken = canDelete ? randomBytes(32).toString('base64url') : null
     if (preflightToken) {
       this.grants.set(preflightToken, {
@@ -115,6 +118,7 @@ export class ConversationForgetService {
           runtime.executionState === 'launching' ||
           runtime.executionState === 'running' ||
           runtime.executionState === 'waiting' ||
+          runtime.livenessVerdict === 'unverifiable' ||
           this.claims.hasPending(params.conversationId, this.now()) ||
           this.readCounts(params.conversationId).unresolvedWaitingCount > 0
         ) {

@@ -6,7 +6,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { translate } from '@/i18n/i18n'
 import { cn } from '@/lib/utils'
 import { LinearAgentSkillSetupPrompt } from './LinearAgentSkillSetupPrompt'
-import { WorkspaceConversationRowsHost } from './workspace-conversation-rows'
+import { WorkspaceConversationBindingRows } from './workspace-conversation-binding-rows'
 import { getWorktreeExecutionHostId } from '../../../../shared/execution-host'
 import type { WorktreeCardPresentation } from './worktree-card-presentation'
 import type { WorktreeCardController } from './use-worktree-card-controller'
@@ -67,7 +67,7 @@ export function WorktreeCardSecondaryRows({
 
       {/* Why: counterbalance the card stack gap (-mt-1) so agents right after the title read as one header group. */}
       {showInlineAgentList && (
-        <WorkspaceConversationRowsHost
+        <WorkspaceConversationBindingRows
           worktreeId={worktree.id}
           route={routeExecutionHostId}
           agents={agentActivityDisplayMode === 'compact' ? compactInlineAgentRows : undefined}

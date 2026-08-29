@@ -128,6 +128,7 @@ export function createWorktreeCardModuleMock(): Record<string, unknown> {
         'section',
         {
           'data-worktree-card-id': worktree.id,
+          'data-worktree-card-host-id': worktree.hostId,
           'data-worktree-card-active': isActive ? 'true' : undefined,
           'data-content-indent': contentIndent,
           'data-flush-surface': flushSurface ? 'true' : undefined,

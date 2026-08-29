@@ -21,15 +21,13 @@ export async function injectRuntimeFailureMatrix(page: Page): Promise<void> {
     appStore.getState().setRuntimeEnvironments(runtimeEnvironments)
   }, environments)
 
-  const legacy = page.getByRole('region', { name: 'Legacy Runtime Issues' })
-  const offline = page.getByRole('region', { name: 'Offline Runtime Issues' })
-  await expect(legacy).toContainText('This Orca host version does not support Issues.', {
+  await expect(page.getByText('This Orca host version does not support Issues.')).toBeVisible({
     timeout: 20_000
   })
-  await expect(offline).toContainText('Offline runtime is unreachable', { timeout: 20_000 })
+  await expect(page.getByText('Offline runtime is unreachable')).toBeVisible({ timeout: 20_000 })
 }
 
-export async function injectRuntimeAuthorityTree(page: Page): Promise<void> {
+export async function injectRuntimeAuthorityTree(page: Page): Promise<string> {
   await installIssueRuntimeSimulator(page)
   const environment = runtimeEnvironment('journey-runtime', 'Journey Runtime', Date.now())
   await page.evaluate((runtime) => {
@@ -43,8 +41,8 @@ export async function injectRuntimeAuthorityTree(page: Page): Promise<void> {
     appStore.getState().setRuntimeEnvironments([runtime])
   }, environment)
 
-  const region = page.getByRole('region', { name: 'Journey Runtime Issues' })
-  await expect(region).toContainText('Runtime generation A', { timeout: 20_000 })
+  const generationA = page.getByText('Runtime generation A', { exact: true })
+  await expect(generationA).toBeVisible({ timeout: 20_000 })
   await page.evaluate(() => {
     const simulator = window.__issuesJourneyRuntimeSimulator
     if (!simulator) {
@@ -52,8 +50,11 @@ export async function injectRuntimeAuthorityTree(page: Page): Promise<void> {
     }
     simulator.generation = 'b'
   })
-  await expect(region).toContainText('Runtime generation B', { timeout: 20_000 })
-  await expect(region).not.toContainText('Runtime generation A')
+  await expect(page.getByText('Runtime generation B', { exact: true })).toBeVisible({
+    timeout: 20_000
+  })
+  await expect(generationA).toBeHidden()
+  return 'dddddddd-dddd-4ddd-8ddd-dddddddddddd'
 }
 
 async function installIssueRuntimeSimulator(page: Page): Promise<void> {
@@ -127,6 +128,25 @@ async function installIssueRuntimeSimulator(page: Page): Promise<void> {
         }
         if (method === 'issues.list') {
           return success(environmentId, runtimeIssuePage(authority, simulator.generation))
+        }
+        if (method === 'issues.get') {
+          const issue = runtimeIssuePage(authority, simulator.generation).issues[0]
+          return success(environmentId, {
+            authority,
+            issue,
+            directChildren: [],
+            directConversations: [],
+            workspaceSnapshots: []
+          })
+        }
+        if (method === 'issues.listRounds') {
+          return success(environmentId, {
+            status: 'snapshot-page',
+            authority,
+            snapshotFactsRevision: simulator.generation === 'a' ? 1 : 2,
+            rounds: [],
+            nextCursor: null
+          })
         }
         if (method === 'conversations.list') {
           return success(environmentId, {

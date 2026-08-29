@@ -1,6 +1,7 @@
-import { useMemo, useState } from 'react'
-import { Link, Plus } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
+import { Loader2, Plus } from 'lucide-react'
 import { toast } from 'sonner'
+import AgentCombobox from '@/components/agent/AgentCombobox'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -18,12 +19,15 @@ import {
   SelectValue
 } from '@/components/ui/select'
 import { useAppStore } from '@/store'
-import { IssueRuntimeClient } from '@/issues/issue-runtime-client'
-import { useIssueDomainStore } from '@/issues/use-issue-domain-store'
-import { getWorktreeExecutionHostId, toSshExecutionHostId } from '../../../../shared/execution-host'
-import { folderWorkspaceKey } from '../../../../shared/workspace-scope'
+import { useAgentDetectionTargetForWorktree } from '@/hooks/useAgentDetectionTarget'
+import { useDetectedAgents } from '@/hooks/useDetectedAgents'
+import { getAgentCatalog } from '@/lib/agent-catalog'
 import type { IssueRouteExecutionHostId } from '../../../../shared/issues/types'
+import type { TuiAgent } from '../../../../shared/tui-agent'
+import { filterEnabledTuiAgents, pickTuiAgent } from '../../../../shared/tui-agent-selection'
 import { prepareAndLaunchIssueConversation } from './issue-conversation-launch-action'
+import { IssueConversationBindingPopover } from './IssueConversationBindingPopover'
+import { collectIssueConversationLaunchWorkspaces } from './issue-conversation-launch-workspaces'
 
 export function IssueConversationActions({
   route,
@@ -32,58 +36,72 @@ export function IssueConversationActions({
 }: {
   route: IssueRouteExecutionHostId
   issueId: string
-  onChanged(): void
+  onChanged: () => void
 }): React.JSX.Element {
   const repos = useAppStore((state) => state.repos)
   const worktreesByRepo = useAppStore((state) => state.worktreesByRepo)
   const folderWorkspaces = useAppStore((state) => state.folderWorkspaces)
-  const partition = useIssueDomainStore((state) => state.partitionsByRouteExecutionHostId[route])
+  const projectGroups = useAppStore((state) => state.projectGroups)
+  const settings = useAppStore((state) => state.settings)
   const [launchOpen, setLaunchOpen] = useState(false)
-  const [bindOpen, setBindOpen] = useState(false)
   const [workspaceId, setWorkspaceId] = useState('')
-  const [agent, setAgent] = useState('codex')
-  const [conversationId, setConversationId] = useState('')
+  const [agent, setAgent] = useState<TuiAgent | null>(null)
   const [pending, setPending] = useState(false)
   const workspaces = useMemo(() => {
-    const worktrees = Object.values(worktreesByRepo)
-      .flat()
-      .flatMap((worktree) => {
-        const repo = repos.find((candidate) => candidate.id === worktree.repoId)
-        return getWorktreeExecutionHostId(worktree, repo, 'local') === route
-          ? [
-              {
-                id: worktree.id,
-                label: worktree.displayName,
-                path: worktree.path,
-                ref: { type: 'worktree' as const, worktreeId: worktree.id }
-              }
-            ]
-          : []
-      })
-    const folders = folderWorkspaces.flatMap((workspace) => {
-      const host =
-        workspace.executionHostId ??
-        (workspace.connectionId ? toSshExecutionHostId(workspace.connectionId) : 'local')
-      return host === route
-        ? [
-            {
-              id: folderWorkspaceKey(workspace.id),
-              label: workspace.name,
-              path: workspace.folderPath,
-              ref: { type: 'folder' as const, folderWorkspaceId: workspace.id }
-            }
-          ]
-        : []
+    return collectIssueConversationLaunchWorkspaces({
+      repos,
+      worktreesByRepo,
+      folderWorkspaces,
+      projectGroups,
+      route
     })
-    return [...worktrees, ...folders]
-  }, [folderWorkspaces, repos, route, worktreesByRepo])
-  const unassigned = Object.values(partition?.conversationsById ?? {}).filter(
-    (conversation) => conversation.issueId === null
+  }, [folderWorkspaces, projectGroups, repos, route, worktreesByRepo])
+  const selectedWorkspace = useMemo(
+    () => workspaces.find((candidate) => candidate.id === workspaceId) ?? null,
+    [workspaces, workspaceId]
   )
+  const detectionTarget = useAgentDetectionTargetForWorktree(selectedWorkspace?.id ?? null)
+  const {
+    detectedIds,
+    isLoading: detectingAgents,
+    detectionFailed
+  } = useDetectedAgents(launchOpen && selectedWorkspace ? detectionTarget : undefined)
+  const enabledDetectedAgents = useMemo(
+    () => filterEnabledTuiAgents(detectedIds ?? [], settings?.disabledTuiAgents),
+    [detectedIds, settings?.disabledTuiAgents]
+  )
+  const agentOptions = useMemo(() => {
+    const enabled = new Set(enabledDetectedAgents)
+    return getAgentCatalog().filter((entry) => enabled.has(entry.id))
+  }, [enabledDetectedAgents])
+
+  useEffect(() => {
+    setAgent(null)
+  }, [workspaceId])
+
+  useEffect(() => {
+    if (!launchOpen || detectedIds === null) {
+      return
+    }
+    setAgent((current) =>
+      current && enabledDetectedAgents.includes(current)
+        ? current
+        : pickTuiAgent(
+            settings?.defaultTuiAgent,
+            enabledDetectedAgents,
+            settings?.disabledTuiAgents
+          )
+    )
+  }, [
+    detectedIds,
+    enabledDetectedAgents,
+    launchOpen,
+    settings?.defaultTuiAgent,
+    settings?.disabledTuiAgents
+  ])
 
   const launch = async (): Promise<void> => {
-    const workspace = workspaces.find((candidate) => candidate.id === workspaceId)
-    if (!workspace) {
+    if (!selectedWorkspace || !agent) {
       return
     }
     setPending(true)
@@ -92,14 +110,14 @@ export function IssueConversationActions({
       const outcome = await prepareAndLaunchIssueConversation({
         route,
         issueId,
-        workspace,
-        agent: agent as Parameters<typeof prepareAndLaunchIssueConversation>[0]['agent'],
+        workspace: selectedWorkspace,
+        agent,
         mutationId: crypto.randomUUID(),
         launchToken
       })
       setLaunchOpen(false)
       onChanged()
-      if (outcome.status === 'launcher-failed') {
+      if (outcome.status === 'launcher-failed' && !outcome.failureNotified) {
         toast.error(outcome.message)
       }
     } catch (error) {
@@ -110,44 +128,23 @@ export function IssueConversationActions({
     }
   }
 
-  const bind = async (): Promise<void> => {
-    const conversation = unassigned.find((candidate) => candidate.id === conversationId)
-    if (!conversation) {
-      return
-    }
-    setPending(true)
-    try {
-      await IssueRuntimeClient.forRoute(route).mutate('conversations.bindIssue', {
-        mutationId: crypto.randomUUID(),
-        conversationId: conversation.id,
-        issueId,
-        expectedRecordRevision: conversation.recordRevision
-      })
-      setBindOpen(false)
-      onChanged()
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : String(error))
-    } finally {
-      setPending(false)
-    }
-  }
-
   return (
     <>
       <div className="flex items-center gap-2">
-        <Button variant="default" size="sm" onClick={() => setLaunchOpen(true)}>
+        <Button
+          variant="default"
+          size="sm"
+          onClick={() => {
+            if (!selectedWorkspace) {
+              setWorkspaceId(workspaces[0]?.id ?? '')
+            }
+            setLaunchOpen(true)
+          }}
+        >
           <Plus className="size-3.5" />
           New Conversation
         </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={unassigned.length === 0}
-          onClick={() => setBindOpen(true)}
-        >
-          <Link className="size-3.5" />
-          Bind existing
-        </Button>
+        <IssueConversationBindingPopover route={route} issueId={issueId} onChanged={onChanged} />
       </div>
       <Dialog open={launchOpen} onOpenChange={setLaunchOpen}>
         <DialogContent className="sm:max-w-md">
@@ -167,52 +164,36 @@ export function IssueConversationActions({
               ))}
             </SelectContent>
           </Select>
-          <Select value={agent} onValueChange={setAgent}>
-            <SelectTrigger className="w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {['codex', 'claude', 'gemini', 'opencode'].map((value) => (
-                <SelectItem key={value} value={value}>
-                  {value}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <AgentCombobox
+            agents={agentOptions}
+            value={agent}
+            onValueChange={setAgent}
+            allowBlankTerminal={false}
+            triggerClassName="w-full"
+          />
+          {detectingAgents ? (
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <Loader2 className="size-3 animate-spin" />
+              Detecting agents…
+            </div>
+          ) : detectionFailed ? (
+            <p className="text-xs text-muted-foreground">
+              Agent detection failed on this Workspace host.
+            </p>
+          ) : detectedIds && agentOptions.length === 0 ? (
+            <p className="text-xs text-muted-foreground">No enabled agents were detected.</p>
+          ) : null}
           <DialogFooter>
             <Button variant="ghost" onClick={() => setLaunchOpen(false)}>
               Cancel
             </Button>
-            <Button disabled={!workspaceId || pending} onClick={() => void launch()}>
+            <Button
+              disabled={
+                !selectedWorkspace || !agent || detectedIds === null || detectingAgents || pending
+              }
+              onClick={() => void launch()}
+            >
               {pending ? 'Starting…' : 'Start'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-      <Dialog open={bindOpen} onOpenChange={setBindOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Bind Conversation</DialogTitle>
-            <DialogDescription>Move an unassigned Conversation into this Issue.</DialogDescription>
-          </DialogHeader>
-          <Select value={conversationId} onValueChange={setConversationId}>
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Conversation" />
-            </SelectTrigger>
-            <SelectContent>
-              {unassigned.map((conversation) => (
-                <SelectItem key={conversation.id} value={conversation.id}>
-                  {conversation.title ?? conversation.agent} · {conversation.workspaceSnapshot.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setBindOpen(false)}>
-              Cancel
-            </Button>
-            <Button disabled={!conversationId || pending} onClick={() => void bind()}>
-              Bind
             </Button>
           </DialogFooter>
         </DialogContent>

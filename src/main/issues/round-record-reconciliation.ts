@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto'
 import { resolveNativeChatTranscriptAgent } from '../../shared/native-chat-agent-support'
 import type { RoundRecord } from '../../shared/issues/types'
+import type { NativeChatMessage } from '../../shared/native-chat-types'
 import {
   readNativeChatTranscript,
   type ReadTranscriptResult
@@ -37,8 +38,6 @@ export type RoundRecordReconcilerDependencies = {
   readTranscript?: typeof readNativeChatTranscript
   onDiagnostic?(result: RoundRecordReconciliationResult): void
 }
-
-const RECONCILIATION_CALLER_FINGERPRINT = 'orca-round-transcript-reconciler'
 
 export class RoundRecordReconciler {
   private readonly scheduled = new Map<string, Promise<RoundRecordReconciliationResult>>()
@@ -110,11 +109,14 @@ export class RoundRecordReconciler {
       })
     }
 
+    const facts = buildRoundTranscriptFacts(readResult.messages)
     const createdRoundIds: string[] = []
     const upgradedRoundIds: string[] = []
     const unchangedRoundIds: string[] = []
-    for (const fact of buildRoundTranscriptFacts(readResult.messages)) {
+    const reconciledFacts: { fact: RoundTranscriptFact; round: RoundRecord }[] = []
+    for (const fact of facts) {
       const outcome = this.reconcileFact(conversationId, identity.identityFingerprint, fact)
+      reconciledFacts.push({ fact, round: outcome.round })
       if (outcome.disposition === 'created') {
         createdRoundIds.push(outcome.round.id)
       } else if (outcome.disposition === 'upgraded') {
@@ -123,6 +125,7 @@ export class RoundRecordReconciler {
         unchangedRoundIds.push(outcome.round.id)
       }
     }
+    this.resolveHistoricalCompletions(reconciledFacts, readResult.messages)
     return this.finish({
       disposition: 'reconciled',
       conversationId,
@@ -153,21 +156,15 @@ export class RoundRecordReconciler {
       ? this.repository.rounds.findByRef(providerRef)
       : this.repository.rounds.findByRef(transcriptRef)
     const before = existing ? JSON.stringify(existing) : null
-    const round = this.repository.rounds.create({
-      identity: {
-        callerFingerprint: RECONCILIATION_CALLER_FINGERPRINT,
-        mutationId: `round-reconcile:${hashValue([conversationId, transcriptRef.value])}`
-      },
-      input: {
-        conversationId,
-        kind: 'completion',
-        stateSource: 'reconciled',
-        occurredAt: existing?.occurredAt ?? fact.occurredAt,
-        dedupeKey: existing?.dedupeKey ?? `round:reconciled:v1:${transcriptRef.value}`,
-        userInput: { text: fact.userInput ?? null },
-        agentOutput: { text: fact.agentOutput },
-        refs: providerRef ? [providerRef, transcriptRef] : [transcriptRef]
-      }
+    const round = this.repository.rounds.reconcileTranscriptFact({
+      conversationId,
+      kind: 'completion',
+      stateSource: 'reconciled',
+      occurredAt: existing?.occurredAt ?? fact.occurredAt,
+      dedupeKey: existing?.dedupeKey ?? `round:reconciled:v1:${transcriptRef.value}`,
+      userInput: { text: fact.userInput ?? null },
+      agentOutput: { text: fact.agentOutput },
+      refs: providerRef ? [providerRef, transcriptRef] : [transcriptRef]
     })
     return {
       disposition: !existing
@@ -176,6 +173,31 @@ export class RoundRecordReconciler {
           ? 'unchanged'
           : 'upgraded',
       round
+    }
+  }
+
+  private resolveHistoricalCompletions(
+    reconciledFacts: readonly { fact: RoundTranscriptFact; round: RoundRecord }[],
+    messages: readonly NativeChatMessage[]
+  ): void {
+    const userInputTimes = messages
+      .filter((message) => message.role === 'user' && message.timestamp !== null)
+      .map((message) => message.timestamp as number)
+      .sort((left, right) => left - right)
+    for (const { fact, round } of reconciledFacts) {
+      if (round.resolvedAt !== null) {
+        continue
+      }
+      const completedAt = fact.finalizedAt ?? fact.occurredAt
+      const resolvedAt = userInputTimes.find((timestamp) => timestamp > completedAt)
+      if (resolvedAt === undefined) {
+        continue
+      }
+      this.repository.rounds.resolveReconciledHistory({
+        id: round.id,
+        resolvedAt,
+        resolution: 'new-input'
+      })
     }
   }
 
@@ -189,8 +211,4 @@ function scopedFactValue(identityFingerprint: string, factKey: string): string {
   return `v1:${createHash('sha256')
     .update(JSON.stringify([identityFingerprint, factKey]))
     .digest('hex')}`
-}
-
-function hashValue(value: unknown): string {
-  return createHash('sha256').update(JSON.stringify(value)).digest('hex')
 }

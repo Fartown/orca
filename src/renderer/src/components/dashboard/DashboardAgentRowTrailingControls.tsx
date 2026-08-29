@@ -15,6 +15,7 @@ type DashboardAgentRowTrailingControlsProps = {
   onDismiss: (paneKey: string) => void
   onToggleExpanded: () => void
   onSendTargetClick?: (paneKey: string) => void
+  leadingAction?: React.ReactNode
 }
 
 export function DashboardAgentRowTrailingControls({
@@ -26,7 +27,8 @@ export function DashboardAgentRowTrailingControls({
   sendTargetStatus,
   onDismiss,
   onToggleExpanded,
-  onSendTargetClick
+  onSendTargetClick,
+  leadingAction
 }: DashboardAgentRowTrailingControlsProps): React.JSX.Element {
   // Why: stop propagation so clicking nested row controls does not also
   // activate the agent row or parent worktree card.
@@ -66,6 +68,7 @@ export function DashboardAgentRowTrailingControls({
 
   return (
     <span className="relative ml-auto flex h-3.5 w-12 shrink-0 items-center justify-end">
+      {leadingAction ? <span className="absolute left-0 inline-flex">{leadingAction}</span> : null}
       {(sendTargetStatus === 'eligible' || sendTargetStatus === 'sending') && (
         <button
           type="button"

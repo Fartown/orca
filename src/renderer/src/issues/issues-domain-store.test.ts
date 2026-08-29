@@ -1,19 +1,60 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { ConversationSummary, IssueSummary } from '../../../shared/issues/types'
+import { useAppStore } from '../store'
 import { issueDomainStore } from './issues-domain-store'
 
 beforeEach(() => {
+  useAppStore.getState().setActiveView('terminal')
   issueDomainStore.setState({
     partitionsByRouteExecutionHostId: {},
     activeIssueRoute: null,
     sidebarRootMode: 'workspaces',
     filter: 'all',
     searchQuery: '',
-    collapsedIssueIds: new Set()
+    collapsedIssueIds: new Set(),
+    expandedUnassignedKeys: new Set()
   })
 })
 
 describe('Issue domain store normalization', () => {
+  it('reveals Issue detail on the terminal surface without trapping other app pages', () => {
+    useAppStore.getState().setActiveView('artifacts')
+
+    issueDomainStore.getState().setActiveIssueRoute({
+      routeExecutionHostId: 'local',
+      issueId: 'issue-1'
+    })
+
+    expect(useAppStore.getState().activeView).toBe('terminal')
+    expect(issueDomainStore.getState().activeIssueRoute?.issueId).toBe('issue-1')
+    useAppStore.getState().setActiveView('tasks')
+    expect(useAppStore.getState().activeView).toBe('tasks')
+  })
+
+  it('closes Issue detail when the user returns to Workspaces', () => {
+    issueDomainStore.setState({
+      sidebarRootMode: 'issues',
+      activeIssueRoute: { routeExecutionHostId: 'local', issueId: 'issue-1' }
+    })
+
+    issueDomainStore.getState().setSidebarRootMode('workspaces')
+
+    expect(issueDomainStore.getState()).toMatchObject({
+      sidebarRootMode: 'workspaces',
+      activeIssueRoute: null
+    })
+  })
+
+  it('tracks default-collapsed Unassigned groups separately from Issue collapse state', () => {
+    const actions = issueDomainStore.getState()
+    actions.toggleUnassigned('unassigned:local')
+
+    expect(issueDomainStore.getState().expandedUnassignedKeys).toEqual(
+      new Set(['unassigned:local'])
+    )
+    expect(issueDomainStore.getState().collapsedIssueIds).toEqual(new Set())
+  })
+
   it('keeps canonical Conversations when Issue filters change or go stale', () => {
     const actions = issueDomainStore.getState()
     actions.applyConversationPage(

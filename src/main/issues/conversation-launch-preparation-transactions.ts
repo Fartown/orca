@@ -1,4 +1,5 @@
 import type { AgentProviderSessionMetadata } from '../../shared/agent-session-resume'
+import { CONVERSATION_LAUNCH_CLAIM_TTL_MS } from '../../shared/issues/constants'
 import type { ConversationLaunchPreparation, ConversationRecord } from '../../shared/issues/types'
 import type { ConversationRecordRepository } from './conversation-record-repository'
 import type { ConversationIdentityRepository } from './conversation-identity-repository'
@@ -6,8 +7,6 @@ import type { ConversationLaunchClaimRepository } from './conversation-launch-cl
 import type { IssueDatabase } from './issue-database'
 import { IssueRepositoryError } from './issue-repository-error'
 import type { CreateConversationInput } from './issue-repository-types'
-
-const DEFAULT_LAUNCH_CLAIM_TTL_MS = 15 * 60 * 1000
 
 export type PrepareConversationLaunchInput = CreateConversationInput & {
   launchToken: string
@@ -40,7 +39,7 @@ export class ConversationLaunchPreparationTransactions {
     private readonly conversations: ConversationRecordRepository,
     private readonly identities: ConversationIdentityRepository,
     private readonly claims: ConversationLaunchClaimRepository,
-    private readonly isConversationAttached: (conversationId: string) => boolean
+    private readonly hasConversationRuntimeEvidence: (conversationId: string) => boolean
   ) {}
 
   allocate(
@@ -77,12 +76,33 @@ export class ConversationLaunchPreparationTransactions {
       })
       return prepared
     }
-    const conversation = this.requireConversation(existingIdentity.conversationId)
+    let conversation = this.requireConversation(existingIdentity.conversationId)
     if (!sameConversationWorkspace(conversation.workspaceRef, input.workspaceRef)) {
       throw new IssueRepositoryError(
         'resume_workspace_mismatch',
         'A managed provider session can only resume in its original Workspace.'
       )
+    }
+    const now = input.now ?? Date.now()
+    this.claims.expirePendingWithinTransaction(conversation.id, now)
+    if (this.hasConversationRuntimeEvidence(conversation.id)) {
+      throw new IssueRepositoryError(
+        'conversation_resume_runtime_present',
+        'Conversation still has live or unverifiable runtime evidence and cannot be resumed.'
+      )
+    }
+    if (this.claims.hasPending(conversation.id, now)) {
+      throw new IssueRepositoryError(
+        'conversation_resume_pending',
+        'Conversation already has a pending Resume request.'
+      )
+    }
+    if (conversation.launchFailure) {
+      conversation = this.conversations.clearLaunchFailureWithinTransaction({
+        id: conversation.id,
+        expectedRecordRevision: conversation.recordRevision,
+        now
+      })
     }
     const claim = this.claims.createWithinTransaction({
       conversationId: conversation.id,
@@ -116,7 +136,7 @@ export class ConversationLaunchPreparationTransactions {
           .prepare('SELECT 1 FROM round_records WHERE conversation_id = ? LIMIT 1')
           .get(conversation.id)
       ),
-      attachment: this.isConversationAttached(conversation.id),
+      runtimeEvidence: this.hasConversationRuntimeEvidence(conversation.id),
       pendingClaim: this.claims.hasPending(conversation.id, now)
     }
     if (Object.values(blockers).some(Boolean)) {
@@ -126,7 +146,7 @@ export class ConversationLaunchPreparationTransactions {
         { blockers }
       )
     }
-    const retried = this.conversations.prepareRetryWithinTransaction({
+    const retried = this.conversations.clearLaunchFailureWithinTransaction({
       id: conversation.id,
       expectedRecordRevision: input.expectedRecordRevision,
       now
@@ -154,7 +174,7 @@ export class ConversationLaunchPreparationTransactions {
 
 function claimExpiry(input: { now?: number; claimTtlMs?: number }): number {
   const now = input.now ?? Date.now()
-  const ttl = input.claimTtlMs ?? DEFAULT_LAUNCH_CLAIM_TTL_MS
+  const ttl = input.claimTtlMs ?? CONVERSATION_LAUNCH_CLAIM_TTL_MS
   if (!Number.isSafeInteger(ttl) || ttl <= 0) {
     throw new IssueRepositoryError(
       'conversation_launch_claim_invalid',

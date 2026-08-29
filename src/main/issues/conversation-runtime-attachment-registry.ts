@@ -16,6 +16,7 @@ export type RuntimeAttachment = {
 
 export class ConversationRuntimeAttachmentRegistry implements ConversationRuntimeDeleteProbe {
   private readonly byRuntimeKey = new Map<string, RuntimeAttachment>()
+  private readonly unverifiableByRuntimeKey = new Map<string, RuntimeAttachment>()
   private generation = 0
 
   get revision(): number {
@@ -32,6 +33,19 @@ export class ConversationRuntimeAttachmentRegistry implements ConversationRuntim
       this.byRuntimeKey.set(key, attachment)
       this.generation += 1
     }
+    this.clearMatchingUnverifiable(attachment)
+  }
+
+  markUnverifiable(attachment: RuntimeAttachment): void {
+    const key = runtimeKey(attachment.paneKey, attachment.connectionId)
+    const previous = this.unverifiableByRuntimeKey.get(key)
+    if (previous && attachment.observedAt < previous.observedAt) {
+      return
+    }
+    if (!previous || !sameAttachment(previous, attachment)) {
+      this.unverifiableByRuntimeKey.set(key, attachment)
+      this.generation += 1
+    }
   }
 
   clearPane(input: { paneKey: string; connectionId?: string | null; transient?: boolean }): void {
@@ -46,6 +60,16 @@ export class ConversationRuntimeAttachmentRegistry implements ConversationRuntim
       this.byRuntimeKey.delete(key)
       changed = true
     }
+    for (const [key, attachment] of this.unverifiableByRuntimeKey) {
+      if (attachment.paneKey !== input.paneKey) {
+        continue
+      }
+      if (input.transient && attachment.connectionId !== (input.connectionId ?? null)) {
+        continue
+      }
+      this.unverifiableByRuntimeKey.delete(key)
+      changed = true
+    }
     if (changed) {
       this.generation += 1
     }
@@ -57,6 +81,7 @@ export class ConversationRuntimeAttachmentRegistry implements ConversationRuntim
       if (attachment.connectionId !== connectionId) {
         continue
       }
+      this.retainNewestUnverifiable(key, attachment)
       this.byRuntimeKey.delete(key)
       changed = true
     }
@@ -70,6 +95,10 @@ export class ConversationRuntimeAttachmentRegistry implements ConversationRuntim
     for (const [key, attachment] of this.byRuntimeKey) {
       if (paneKeys.has(attachment.paneKey)) {
         continue
+      }
+      // Why: the hook server publishes the reduced snapshot before its SSH disconnect clear.
+      if (attachment.connectionId) {
+        this.retainNewestUnverifiable(key, attachment)
       }
       this.byRuntimeKey.delete(key)
       changed = true
@@ -87,6 +116,9 @@ export class ConversationRuntimeAttachmentRegistry implements ConversationRuntim
 
   getDeleteState(conversationId: string): ConversationRuntimeDeleteState {
     const attachments = this.listForConversation(conversationId)
+    const unverifiable = [...this.unverifiableByRuntimeKey.values()].some(
+      (attachment) => attachment.conversationId === conversationId
+    )
     const executionState = attachments.some((item) => item.executionState === 'waiting')
       ? 'waiting'
       : attachments.some((item) => item.executionState === 'running')
@@ -99,7 +131,32 @@ export class ConversationRuntimeAttachmentRegistry implements ConversationRuntim
     return {
       attachmentGeneration: this.generation,
       attached: attachments.length > 0,
-      executionState
+      executionState,
+      livenessVerdict: attachments.length > 0 ? 'live' : unverifiable ? 'unverifiable' : 'exited'
+    }
+  }
+
+  private clearMatchingUnverifiable(attachment: RuntimeAttachment): void {
+    let changed = false
+    for (const [key, previous] of this.unverifiableByRuntimeKey) {
+      if (
+        previous.conversationId !== attachment.conversationId ||
+        previous.observedAt > attachment.observedAt
+      ) {
+        continue
+      }
+      this.unverifiableByRuntimeKey.delete(key)
+      changed = true
+    }
+    if (changed) {
+      this.generation += 1
+    }
+  }
+
+  private retainNewestUnverifiable(key: string, attachment: RuntimeAttachment): void {
+    const previous = this.unverifiableByRuntimeKey.get(key)
+    if (!previous || previous.observedAt <= attachment.observedAt) {
+      this.unverifiableByRuntimeKey.set(key, attachment)
     }
   }
 }

@@ -197,6 +197,76 @@ describe('IssueQueryService snapshots', () => {
     repository.close()
   })
 
+  it('projects active and expired unconfirmed launch claims as Starting and Failed', () => {
+    const repository = openRepository('launch-claim-state')
+    const now = Date.now()
+    const active = createConversation(repository, 'active-claim', null, 'worktree-a')
+    const expired = createConversation(repository, 'expired-claim', null, 'worktree-b')
+    const settledExpired = createConversation(
+      repository,
+      'settled-expired-claim',
+      null,
+      'worktree-c'
+    )
+    const resuming = repository.conversationAllocator.resolveObservedIdentityOrAllocate({
+      executionHostId: 'local',
+      workspaceRef: { type: 'worktree', worktreeId: 'worktree-resume' },
+      workspaceSnapshot: { name: 'worktree-resume', path: '/workspace/worktree-resume' },
+      agent: 'codex',
+      providerSession: { key: 'session_id', id: 'resume-session' },
+      observedAt: now - 10_000
+    }).conversation
+    createRound(repository, resuming.id, 'historical-round', now - 9_000)
+    repository.conversationLaunchClaims.create({
+      conversationId: active.id,
+      launchToken: '11111111-1111-4111-8111-111111111111',
+      createdAt: now - 1_000,
+      expiresAt: now + 60_000
+    })
+    repository.conversationLaunchClaims.create({
+      conversationId: expired.id,
+      launchToken: '22222222-2222-4222-8222-222222222222',
+      createdAt: now - 60_000,
+      expiresAt: now - 1_000
+    })
+    repository.conversationLaunchClaims.create({
+      conversationId: resuming.id,
+      launchToken: '44444444-4444-4444-8444-444444444444',
+      createdAt: now - 1_000,
+      expiresAt: now + 60_000
+    })
+    repository.conversationLaunchClaims.create({
+      conversationId: settledExpired.id,
+      launchToken: '33333333-3333-4333-8333-333333333333',
+      createdAt: now - 60_000,
+      expiresAt: now - 1_000
+    })
+    repository.conversationLaunchClaims.expirePendingWithinTransaction(settledExpired.id, now)
+    const result = new IssueQueryService(
+      repository,
+      undefined,
+      new ConversationRuntimeAttachmentRegistry()
+    ).listConversations(
+      resolveIssueAuthorityRoute('local'),
+      ConversationsListParams.parse({
+        mode: 'start',
+        authorityExecutionHostId: 'local',
+        scope: { kind: 'authority' }
+      })
+    )
+
+    expect(result).toMatchObject({
+      status: 'snapshot-page',
+      conversations: expect.arrayContaining([
+        expect.objectContaining({ id: active.id, executionState: 'launching' }),
+        expect.objectContaining({ id: expired.id, executionState: 'failed' }),
+        expect.objectContaining({ id: settledExpired.id, executionState: 'failed' }),
+        expect.objectContaining({ id: resuming.id, executionState: 'launching' })
+      ])
+    })
+    repository.close()
+  })
+
   it('binds paged cursors to runtime revision and fails closed when it is omitted', () => {
     const repository = openRepository('runtime-cursor')
     const firstConversation = createConversation(repository, 'first', null, 'worktree-a')

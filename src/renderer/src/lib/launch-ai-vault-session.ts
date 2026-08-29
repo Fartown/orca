@@ -9,6 +9,7 @@ import {
 import type { AiVaultAgent } from '../../../shared/ai-vault-types'
 import type {
   AgentProviderSessionMetadata,
+  ResumableTuiAgent,
   SleepingAgentLaunchConfig
 } from '../../../shared/agent-session-resume'
 import type { TabSplitDirection } from '@/store/slices/tabs'
@@ -19,7 +20,7 @@ export type LaunchAiVaultSessionInNewTabResult =
   | { tabId: null; groupId?: string; runtimeLaunch: Promise<WebRuntimeTerminalCreateOutcome> }
 
 export function launchAiVaultSessionInNewTab(args: {
-  agent: AiVaultAgent
+  agent: AiVaultAgent | ResumableTuiAgent
   worktreeId: string
   command: string
   cwd?: string

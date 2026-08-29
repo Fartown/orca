@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto'
 import type { AgentStatusState } from '../../shared/agent-status-types'
+import { isCodexThreadTitleGenerationPrompt } from '../../shared/codex-thread-title-generation'
 import { isTuiAgent } from '../../shared/tui-agent-config'
 import type {
   ConversationHookIdentityEvent,
@@ -11,6 +12,7 @@ import { createProviderTurnRefValue } from './round-record-provider-turn-ref'
 
 export type RoundRecordHookEvent = ConversationHookIdentityEvent & {
   hasExplicitPrompt?: boolean
+  hookEventName?: string
   promptInteractionKey?: string
   providerPromptId?: string
   providerTurnId?: string
@@ -35,6 +37,7 @@ export type RoundRecordIngestResult =
         | 'non-turn-status'
         | 'conversation-unresolved'
         | 'agent-unsupported'
+        | 'internal-utility'
     }
 
 export type RoundRecordIngestorDependencies = {
@@ -80,6 +83,12 @@ export class RoundRecordIngestor {
   }
 
   private async ingestOne(event: RoundRecordHookEvent): Promise<RoundRecordIngestResult> {
+    if (isCodexThreadTitleGenerationEvent(event)) {
+      return this.finish({ disposition: 'ignored', reason: 'internal-utility' }, event)
+    }
+    if (isPathlessCodexSessionStart(event)) {
+      return this.finish({ disposition: 'ignored', reason: 'non-turn-status' }, event)
+    }
     const identity = await this.identityIngestor.ingest(event)
     if (event.providerSessionOnly || event.restoredUnconfirmed || event.payload.sessionBoundary) {
       return this.finish({ disposition: 'ignored', reason: 'non-turn-status' }, event)
@@ -193,6 +202,23 @@ export class RoundRecordIngestor {
     this.dependencies.onDiagnostic?.(result, event)
     return result
   }
+}
+
+function isCodexThreadTitleGenerationEvent(event: RoundRecordHookEvent): boolean {
+  return (
+    event.payload.agentType === 'codex' &&
+    Boolean(event.providerSession && !event.providerSession.transcriptPath) &&
+    isCodexThreadTitleGenerationPrompt(event.payload.prompt)
+  )
+}
+
+function isPathlessCodexSessionStart(event: RoundRecordHookEvent): boolean {
+  return (
+    event.payload.agentType === 'codex' &&
+    event.hookEventName === 'SessionStart' &&
+    Boolean(event.providerSession && !event.providerSession.transcriptPath) &&
+    !event.launchToken
+  )
 }
 
 function createRoundInput(
