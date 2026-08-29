@@ -7,6 +7,7 @@ import { WorkspacePortScanner } from '../components/ports/WorkspacePortScanner'
 import { MacosTccPromptNoticeHost } from '../hooks/MacosTccPromptNoticeHost'
 import { useAppStore } from '../store'
 import { IssueDomainSyncGate } from '../issues/IssueDomainSyncGate'
+import { StructuredAgentSessionStatusBridge } from '../components/native-chat/StructuredAgentSessionStatusBridge'
 
 const DashboardPopoutBridge = lazy(() => import('../components/dashboard/DashboardPopoutBridge'))
 
@@ -35,6 +36,7 @@ export function AppBackgroundServices(): React.JSX.Element {
         </Suspense>
       ) : null}
       <AgentHibernationGate />
+      <StructuredAgentSessionStatusBridge />
     </>
   )
 }

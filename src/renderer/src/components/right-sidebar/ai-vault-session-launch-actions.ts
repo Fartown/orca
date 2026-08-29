@@ -2,8 +2,7 @@ import { useCallback, useState } from 'react'
 import { toast } from 'sonner'
 import {
   buildAiVaultResumeCopyCommandForWorktree,
-  buildAiVaultResumeStartupForWorktree,
-  type AiVaultResumeStartup
+  buildAiVaultResumeStartupForWorktree
 } from '@/lib/ai-vault-resume-command'
 import { launchAiVaultSessionInNewTab } from '@/lib/launch-ai-vault-session'
 import { useAppStore } from '@/store'
@@ -29,6 +28,7 @@ import {
   workspaceDisplayName,
   workspaceScopeForIssueResume
 } from './ai-vault-session-launch-target'
+import { activateAiVaultStructuredSession } from '@/lib/activate-ai-vault-structured-session'
 
 export { resolveAiVaultSessionLaunchTarget } from './ai-vault-session-launch-target'
 
@@ -44,6 +44,13 @@ export async function resumeAiVaultSession(args: {
   targetState: AiVaultSessionResumeTargetState
   agentCmdOverrides?: Partial<Record<AiVaultAgent, string | null>>
 }): Promise<AiVaultSessionResumeLaunchResult> {
+  if (args.session.structuredSession) {
+    return {
+      launched: await activateAiVaultStructuredSession(args.session),
+      bookkeeping: { recorded: false }
+    }
+  }
+
   const targetId = resolveAiVaultSessionLaunchTargetOrNotify({
     sessionFilePath: args.session.filePath,
     sessionExecutionHostId: args.session.executionHostId,
@@ -140,14 +147,7 @@ export function useAiVaultSessionLaunchActions({
   activeWorktreeId: string | null
   targetState: AiVaultSessionResumeTargetState
   agentCmdOverrides?: Partial<Record<AiVaultAgent, string | null>>
-}): {
-  buildResumeStartup: (session: AiVaultSession, worktreeId?: string | null) => AiVaultResumeStartup
-  copyResumeCommand: (session: AiVaultSession, worktreeId?: string | null) => Promise<void>
-  handleResume: (session: AiVaultSession, targetWorktreeId?: string) => void
-  handleContinueInNewSession: (session: AiVaultSession, targetWorktreeId: string) => void
-  continuationRequest: AgentSessionContinuationRequest | null
-  handleContinuationDialogOpenChange: (open: boolean) => void
-} {
+}) {
   const [continuationRequest, setContinuationRequest] =
     useState<AgentSessionContinuationRequest | null>(null)
 

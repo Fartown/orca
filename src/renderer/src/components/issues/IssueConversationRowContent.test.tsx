@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { AgentStatusEntry } from '../../../../shared/agent-status-types'
 import type { TerminalTab } from '../../../../shared/terminal-tab-types'
 import type { DashboardAgentRow } from '@/components/dashboard/useDashboardData'
+import { TooltipProvider } from '@/components/ui/tooltip'
 import type { ConversationSummary } from '../../../../shared/issues/types'
 
 const mocks = vi.hoisted(() => ({
@@ -177,15 +178,17 @@ describe('IssueConversationRowContent', () => {
 
   it('keeps Starting while a newly allocated Conversation is still unattached', () => {
     render(
-      <IssueConversationRowContent
-        conversation={conversation('pending:leaf', {
-          attachment: { kind: 'detached' },
-          executionState: 'launching'
-        })}
-        route="local"
-        originalPaneTarget={null}
-        onMissingWorkspaceRowActivate={() => undefined}
-      />
+      <TooltipProvider>
+        <IssueConversationRowContent
+          conversation={conversation('pending:leaf', {
+            attachment: { kind: 'detached' },
+            executionState: 'launching'
+          })}
+          route="local"
+          originalPaneTarget={null}
+          onMissingWorkspaceRowActivate={() => undefined}
+        />
+      </TooltipProvider>
     )
 
     expect(screen.getByText('Starting')).toBeTruthy()

@@ -12,6 +12,7 @@ const mocks = vi.hoisted(() => ({
   recordFailure: vi.fn(),
   observeLaunch: vi.fn(),
   launch: vi.fn(),
+  activateStructured: vi.fn(),
   activate: vi.fn(),
   toastError: vi.fn(),
   toastSuccess: vi.fn(),
@@ -37,6 +38,9 @@ vi.mock('@/lib/launch-ai-vault-session', () => ({
     mocks.events.push('launch')
     return mocks.launch(...args)
   }
+}))
+vi.mock('@/lib/activate-ai-vault-structured-session', () => ({
+  activateAiVaultStructuredSession: (...args: unknown[]) => mocks.activateStructured(...args)
 }))
 vi.mock('@/store', () => ({
   useAppStore: { getState: () => mocks.state }
@@ -107,9 +111,30 @@ beforeEach(() => {
   })
   mocks.recordConversation.mockResolvedValue({ recorded: false })
   mocks.launch.mockReturnValue({ tabId: 'tab-resumed' })
+  mocks.activateStructured.mockResolvedValue(true)
 })
 
 describe('provider-session resolution and native AI Vault Resume', () => {
+  it('keeps structured sessions on the native structured activation path', async () => {
+    const structuredSession = {
+      ...session(),
+      structuredSession: { sessionId: 'structured-1', workspaceId: 'worktree-structured' }
+    }
+
+    await expect(
+      resumeAiVaultSession({
+        session: structuredSession,
+        activeWorktreeId: 'worktree-current',
+        targetState: targetState()
+      })
+    ).resolves.toEqual({ launched: true, bookkeeping: { recorded: false } })
+
+    expect(mocks.activateStructured).toHaveBeenCalledWith(structuredSession)
+    expect(mocks.resolveTarget).not.toHaveBeenCalled()
+    expect(mocks.recordConversation).not.toHaveBeenCalled()
+    expect(mocks.launch).not.toHaveBeenCalled()
+  })
+
   it('finds the exact host session, then enters the native AI Vault resume chain', async () => {
     const expected = session()
     mocks.listSessions.mockResolvedValue({

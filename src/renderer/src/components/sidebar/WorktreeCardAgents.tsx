@@ -27,6 +27,7 @@ import { revealElementInScrollContainer } from './worktree-sidebar-reveal'
 import { useWorktreeAgentExpansionState } from './worktree-card-agents-expansion-state'
 import { translate } from '@/i18n/i18n'
 import type { ExecutionHostId } from '../../../../shared/execution-host'
+import { activateStructuredAgentSessionTab } from '@/lib/structured-agent-session-tab-activation'
 
 export const SUPPRESS_WORKTREE_LIST_SCROLL_ADJUSTMENT_EVENT =
   'orca-suppress-worktree-list-scroll-adjustment'
@@ -34,6 +35,8 @@ export const SUPPRESS_WORKTREE_LIST_SCROLL_ADJUSTMENT_EVENT =
 const dispatchSuppressScrollAdjustment = () => {
   window.dispatchEvent(new CustomEvent(SUPPRESS_WORKTREE_LIST_SCROLL_ADJUSTMENT_EVENT))
 }
+
+const ignoreRetainedAgentActivation = (): void => undefined
 
 function revealCompactAgentCard(agentListRoot: HTMLElement | null): void {
   const sidebarElement = agentListRoot?.closest('[data-worktree-sidebar]')
@@ -84,9 +87,7 @@ const WorktreeCardAgents = React.memo(function WorktreeCardAgents({
   )
 })
 
-type BodyProps = Omit<Props, 'agents'> & {
-  agents: DashboardAgentRowData[]
-}
+type BodyProps = Omit<Props, 'agents'> & { agents: DashboardAgentRowData[] }
 
 const WorktreeCardAgentsBody = React.memo(function WorktreeCardAgentsBody({
   worktreeId,
@@ -199,6 +200,8 @@ const WorktreeCardAgentsBody = React.memo(function WorktreeCardAgentsBody({
           scrollToBottomIfOutputSinceLastView: true
         })
         onAgentActivate?.()
+      } else if (activateStructuredAgentSessionTab({ worktreeId, tabId })) {
+        onAgentActivate?.()
       } else {
         const liveEntry = useAppStore.getState().agentStatusByPaneKey[paneKey]
         if (liveEntry?.worktreeId === worktreeId) {
@@ -210,10 +213,7 @@ const WorktreeCardAgentsBody = React.memo(function WorktreeCardAgentsBody({
     },
     [executionHostId, onAgentActivate, worktreeId]
   )
-  const handleActivateRetainedAgent = useCallback(() => {
-    // Why: Workspace rows stay passive; consumers with an authoritative target may provide their existing navigation action.
-    onRetainedAgentActivate?.()
-  }, [onRetainedAgentActivate])
+  const handleActivateRetainedAgent = onRetainedAgentActivate ?? ignoreRetainedAgentActivation
 
   // Why: one 30s tick per non-empty inline list; zero-agent cards never mount this (see WorktreeCardAgents), so idle worktrees pay no timer cost.
   const now = useNow(30_000)
