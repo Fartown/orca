@@ -133,6 +133,10 @@ module.exports = {
     '!skill-guides{,/**/*}',
     '!skill-stubs{,/**/*}',
     '!tests{,/**/*}',
+    // Why: local build and validation outputs can contain packaged apps;
+    // including either tree can recursively inflate subsequent packages.
+    '!dist{,/**/*}',
+    '!tmp{,/**/*}',
     // Why: examples/ is plugin authoring documentation with no runtime consumer —
     // bundled plugins ship via extraResources from resources/plugins/launch/. It also
     // carries hostile-panel, the adversarial fixture the containment tests point at,
