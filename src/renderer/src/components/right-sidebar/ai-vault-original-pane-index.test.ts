@@ -91,6 +91,7 @@ describe('AI Vault original-pane index', () => {
       agentStatusByPaneKey: live.record,
       retainedAgentsByPaneKey: retained.record,
       sleepingAgentSessionsByPaneKey: sleeping.record,
+      agentLaunchConfigByPaneKey: {},
       tabsByWorktree: {},
       terminalLayoutsByTabId: {}
     } as never)
@@ -127,6 +128,7 @@ describe('AI Vault original-pane index', () => {
       agentStatusByPaneKey: live.record,
       retainedAgentsByPaneKey: retained.record,
       sleepingAgentSessionsByPaneKey: sleeping.record,
+      agentLaunchConfigByPaneKey: {},
       tabsByWorktree: {},
       terminalLayoutsByTabId: {}
     } as never
@@ -142,6 +144,42 @@ describe('AI Vault original-pane index', () => {
       expect(findAiVaultSessionLiveStateInIndex(index, SESSION)).toBeNull()
     }
     expect(live.reads.value + retained.reads.value + sleeping.reads.value).toBe(0)
+  })
+
+  it('matches a hook-silent resumed pane through the launch-config index like the direct scan', () => {
+    const leafId = '33333333-3333-4333-8333-333333333333'
+    const paneKey = `tab-lc:${leafId}`
+    const state = {
+      agentStatusByPaneKey: {},
+      retainedAgentsByPaneKey: {},
+      sleepingAgentSessionsByPaneKey: {},
+      agentLaunchConfigByPaneKey: {
+        [paneKey]: {
+          launchConfig: { agentArgs: '', agentEnv: {} },
+          registeredAt: 1,
+          identity: {
+            agentType: 'codex',
+            tabId: 'tab-lc',
+            providerSession: { key: 'session_id', id: 'target-session' }
+          }
+        }
+      },
+      tabsByWorktree: { 'wt-1': [{ id: 'tab-lc' }] },
+      terminalLayoutsByTabId: {
+        'tab-lc': {
+          root: { type: 'leaf', leafId },
+          activeLeafId: leafId,
+          expandedLeafId: null,
+          ptyIdsByLeafId: { [leafId]: 'pty-lc' }
+        }
+      }
+    } as never
+    const target = { paneKey, worktreeId: 'wt-1', tabId: 'tab-lc', leafId }
+
+    expect(findOriginalAiVaultSessionPane(state, SESSION)).toEqual(target)
+    expect(
+      findOriginalAiVaultSessionPaneInIndex(buildAiVaultOriginalPaneIndex(state), SESSION)
+    ).toEqual(target)
   })
 
   it('preserves provider, prompt-fallback, retained, sleeping, and missing matches', () => {
@@ -226,6 +264,7 @@ describe('AI Vault original-pane index', () => {
           origin: 'live'
         }
       },
+      agentLaunchConfigByPaneKey: {},
       tabsByWorktree: { 'wt-1': tabs },
       terminalLayoutsByTabId: layouts
     } as never

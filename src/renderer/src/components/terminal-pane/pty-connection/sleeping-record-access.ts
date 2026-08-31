@@ -145,6 +145,10 @@ export function installSleepingRecordAccess(session: ConnectPanePtySession): voi
       .registerAgentLaunchConfig(session.cacheKey, session.paneStartup.launchConfig, {
         agentType: session.paneStartup.launchAgent ?? session.paneStartup.initialAgentStatus?.agent,
         ...(session.launchToken ? { launchToken: session.launchToken } : {}),
+        // Why: a resumed agent emits no hook until its first turn; this identity is what lets the original-pane finder see the pane meanwhile.
+        ...(session.paneStartup.resumeProviderSession
+          ? { providerSession: session.paneStartup.resumeProviderSession }
+          : {}),
         tabId: session.deps.tabId,
         leafId: session.pane.leafId
       })
@@ -179,6 +183,9 @@ export function installSleepingRecordAccess(session: ConnectPanePtySession): voi
         persistedLaunchAgent,
       ...((metadata?.launchToken ?? session.launchToken)
         ? { launchToken: metadata?.launchToken ?? session.launchToken }
+        : {}),
+      ...(session.paneStartup?.resumeProviderSession
+        ? { providerSession: session.paneStartup.resumeProviderSession }
         : {}),
       tabId: session.deps.tabId,
       leafId: session.pane.leafId

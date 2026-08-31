@@ -20,6 +20,7 @@ export type OriginalPaneState = Pick<
   | 'agentStatusByPaneKey'
   | 'retainedAgentsByPaneKey'
   | 'sleepingAgentSessionsByPaneKey'
+  | 'agentLaunchConfigByPaneKey'
   | 'tabsByWorktree'
   | 'terminalLayoutsByTabId'
 >
@@ -281,6 +282,24 @@ export function findOriginalAiVaultSessionPane(
         paneKey: record.paneKey,
         worktreeIdHint: record.worktreeId,
         tabIdHint: record.tabId
+      })
+      if (target) {
+        return target
+      }
+    }
+  }
+
+  // Why: a resumed pane emits no hook until its first turn completes; the
+  // launch-config registry is the only identity carrier in that window.
+  for (const [paneKey, entry] of Object.entries(state.agentLaunchConfigByPaneKey)) {
+    if (
+      agentMatches(session, entry.identity.agentType) &&
+      providerSessionMatches(session, entry.identity.providerSession?.id)
+    ) {
+      const target = resolveOriginalPaneTarget({
+        state,
+        paneKey,
+        tabIdHint: entry.identity.tabId
       })
       if (target) {
         return target

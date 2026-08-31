@@ -10,6 +10,10 @@ import {
 type LiveEntry = NonNullable<OriginalPaneState['agentStatusByPaneKey'][string]>
 type RetainedEntry = NonNullable<OriginalPaneState['retainedAgentsByPaneKey'][string]>
 type SleepingEntry = NonNullable<OriginalPaneState['sleepingAgentSessionsByPaneKey'][string]>
+type LaunchConfigEntry = {
+  paneKey: string
+  entry: NonNullable<OriginalPaneState['agentLaunchConfigByPaneKey'][string]>
+}
 
 type ProviderIndex<T> = Map<string, T[]>
 type AgentIndex<T> = Map<string, T[]>
@@ -21,6 +25,7 @@ export type AiVaultOriginalPaneIndex = {
   retainedByProvider: ProviderIndex<RetainedEntry>
   retainedWithoutProviderByAgent: AgentIndex<RetainedEntry>
   sleepingByProvider: ProviderIndex<SleepingEntry>
+  launchConfigByProvider: ProviderIndex<LaunchConfigEntry>
 }
 
 function providerKey(agent: string, sessionId: string): string {
@@ -44,6 +49,7 @@ export function buildAiVaultOriginalPaneIndex(state: OriginalPaneState): AiVault
   const retainedByProvider: ProviderIndex<RetainedEntry> = new Map()
   const retainedWithoutProviderByAgent: AgentIndex<RetainedEntry> = new Map()
   const sleepingByProvider: ProviderIndex<SleepingEntry> = new Map()
+  const launchConfigByProvider: ProviderIndex<LaunchConfigEntry> = new Map()
 
   for (const entry of Object.values(state.agentStatusByPaneKey)) {
     if (!entry?.agentType) {
@@ -78,6 +84,15 @@ export function buildAiVaultOriginalPaneIndex(state: OriginalPaneState): AiVault
       )
     }
   }
+  for (const [paneKey, entry] of Object.entries(state.agentLaunchConfigByPaneKey)) {
+    if (entry?.identity.agentType && entry.identity.providerSession) {
+      appendToIndex(
+        launchConfigByProvider,
+        providerKey(entry.identity.agentType, entry.identity.providerSession.id),
+        { paneKey, entry }
+      )
+    }
+  }
 
   return {
     state,
@@ -85,7 +100,8 @@ export function buildAiVaultOriginalPaneIndex(state: OriginalPaneState): AiVault
     liveWithoutProviderByAgent,
     retainedByProvider,
     retainedWithoutProviderByAgent,
-    sleepingByProvider
+    sleepingByProvider,
+    launchConfigByProvider
   }
 }
 
@@ -162,6 +178,16 @@ export function findOriginalAiVaultSessionPaneInIndex(
       paneKey: record.paneKey,
       worktreeIdHint: record.worktreeId,
       tabIdHint: record.tabId
+    })
+    if (target) {
+      return target
+    }
+  }
+  for (const { paneKey, entry } of index.launchConfigByProvider.get(key) ?? []) {
+    const target = resolveOriginalPaneTarget({
+      state: index.state,
+      paneKey,
+      tabIdHint: entry.identity.tabId
     })
     if (target) {
       return target

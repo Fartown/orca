@@ -27,6 +27,7 @@ export function useAiVaultOriginalPaneActions(): {
       agentStatusByPaneKey: s.agentStatusByPaneKey,
       retainedAgentsByPaneKey: s.retainedAgentsByPaneKey,
       sleepingAgentSessionsByPaneKey: s.sleepingAgentSessionsByPaneKey,
+      agentLaunchConfigByPaneKey: s.agentLaunchConfigByPaneKey,
       tabsByWorktree: s.tabsByWorktree,
       terminalLayoutsByTabId: s.terminalLayoutsByTabId
     }))

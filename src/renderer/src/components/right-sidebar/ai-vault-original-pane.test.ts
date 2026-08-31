@@ -61,6 +61,7 @@ function makeState(overrides: Record<string, unknown> = {}) {
     agentStatusByPaneKey: {},
     retainedAgentsByPaneKey: {},
     sleepingAgentSessionsByPaneKey: {},
+    agentLaunchConfigByPaneKey: {},
     tabsByWorktree: { 'wt-1': [makeTab()] },
     terminalLayoutsByTabId: { 'tab-1': makeLayout() },
     ...overrides
@@ -99,6 +100,21 @@ function makeSleepingRecord(
     updatedAt: 1,
     origin: 'live',
     ...overrides
+  }
+}
+
+function makeLaunchConfigEntry(
+  identityOverrides: Record<string, unknown> = {}
+): Record<string, unknown> {
+  return {
+    launchConfig: { agentArgs: '', agentEnv: {} },
+    registeredAt: 1,
+    identity: {
+      agentType: 'codex',
+      tabId: 'tab-1',
+      providerSession: { key: 'session_id', id: 'session-1' },
+      ...identityOverrides
+    }
   }
 }
 
@@ -216,6 +232,62 @@ describe('findOriginalAiVaultSessionPane', () => {
     )
 
     expect(target?.leafId).toBe(LEAF_ID)
+  })
+
+  it('finds a hook-silent resumed pane through its launch-config identity', () => {
+    const state = makeState({
+      agentLaunchConfigByPaneKey: {
+        [makePaneKey('tab-1', LEAF_ID)]: makeLaunchConfigEntry()
+      }
+    })
+
+    expect(findOriginalAiVaultSessionPane(state, baseSession)).toEqual({
+      paneKey: makePaneKey('tab-1', LEAF_ID),
+      worktreeId: 'wt-1',
+      tabId: 'tab-1',
+      leafId: LEAF_ID
+    })
+    // Why: no hook has arrived, so the row must not claim a live turn state.
+    expect(findAiVaultSessionLiveState(state, baseSession)).toBeNull()
+  })
+
+  it('prefers the hook-confirmed live pane over a launch-config match', () => {
+    const state = makeState({
+      agentStatusByPaneKey: { [makePaneKey('tab-1', LEAF_ID)]: makeEntry() },
+      agentLaunchConfigByPaneKey: {
+        [makePaneKey('tab-2', OTHER_LEAF_ID)]: makeLaunchConfigEntry({ tabId: 'tab-2' })
+      },
+      tabsByWorktree: { 'wt-1': [makeTab(), makeTab('tab-2')] },
+      terminalLayoutsByTabId: { 'tab-1': makeLayout(), 'tab-2': makeLayout(OTHER_LEAF_ID) }
+    })
+
+    expect(findOriginalAiVaultSessionPane(state, baseSession)?.tabId).toBe('tab-1')
+  })
+
+  it('ignores launch configs without a provider identity or with a different agent', () => {
+    const state = makeState({
+      agentLaunchConfigByPaneKey: {
+        [makePaneKey('tab-1', LEAF_ID)]: makeLaunchConfigEntry({ providerSession: undefined }),
+        [makePaneKey('tab-2', OTHER_LEAF_ID)]: makeLaunchConfigEntry({
+          agentType: 'claude',
+          tabId: 'tab-2'
+        })
+      },
+      tabsByWorktree: { 'wt-1': [makeTab(), makeTab('tab-2')] },
+      terminalLayoutsByTabId: { 'tab-1': makeLayout(), 'tab-2': makeLayout(OTHER_LEAF_ID) }
+    })
+
+    expect(findOriginalAiVaultSessionPane(state, baseSession)).toBeNull()
+  })
+
+  it('drops a launch-config match when its pane is gone', () => {
+    const state = makeState({
+      agentLaunchConfigByPaneKey: {
+        [makePaneKey('tab-9', LEAF_ID)]: makeLaunchConfigEntry({ tabId: 'tab-9' })
+      }
+    })
+
+    expect(findOriginalAiVaultSessionPane(state, baseSession)).toBeNull()
   })
 })
 

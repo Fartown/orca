@@ -186,7 +186,8 @@ Issue 内新建会话保留现有 prepare/claim/launcher 数据链，但不在 I
 - 不修改 Workspace 原有会话行的数据语义、样式或默认交互；
 - 不删除 provider transcript，也不改变 AI Vault 原有手动搜索和恢复功能；
 - 不自动把 AI Vault 扫描出的所有历史会话绑定到 Issue；
-- 不修复右侧 AI Vault 已有的重复 Resume、原 pane 识别、Host 或启动窗口问题；
+- 不修复右侧 AI Vault 已有的重复 Resume 或 Host 支持问题；原 pane 识别的 launch-config
+  身份缺口按 2026-08-31 变更收进本需求（见变更记录）；
 - 不为无 provider identity 的预分配 Conversation 新增 Starting/Retry UI 或自动清理机制；
 - 不让过期 launch token 重新取得原 Issue 的绑定权限。
 
@@ -367,6 +368,14 @@ Issue 恢复只能使用已经持久记录的身份信息。匹配至少受以�
 以上问题是实现接线问题，不是新的产品决策点。
 
 ## 12. 变更记录
+
+### 2026-08-31 · 原 pane 识别的 launch-config 身份缺口收进本需求
+
+- 触发：真实事故——resume 后空闲的 Codex 不发 hook，原 pane 查找器看不见它，二次 Resume 触发
+  `already has an active writer (code -32600)`。
+- 决策：pane 绑定时把启动载荷中已有的 resume 身份写入 launch-config registry，并让原 pane
+  查找器把它作为第四个匹配来源；右侧 Session History 与 Issues 快捷入口同时受益。
+- 详细方案见 `.docs/并行任务看板/方案-原pane识别-补launch-config.md`。
 
 ### 2026-08-30 · 明确可激活原行与完成验证边界
 

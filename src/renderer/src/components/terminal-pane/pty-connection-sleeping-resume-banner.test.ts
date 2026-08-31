@@ -224,6 +224,7 @@ describe('connectPanePty', () => {
       {
         agentType: 'codex',
         launchToken: expect.stringMatching(new RegExp(`^${UUID_RE}$`)),
+        providerSession: { key: 'session_id', id: 'codex-session-1' },
         tabId: 'tab-1',
         leafId: LEAF_2
       }
