@@ -260,11 +260,24 @@ export type AiVaultOriginalPaneIndex = {
 3. **零回归面**：main 上该字段从未被填，未填时四号来源永不命中，行为与现状逐字节等价；只有携带
    resume 身份的启动才激活新路径。
 
-## 6. 真机验收
+## 6. 验收结果（2026-08-31 实测）
 
-单测见 §4.6。真机验收（隔离包）复刻本次事故：resume 一个 codex、不发消息，分别点右侧
-Session History 与 Issues 快捷入口——两处都应定位原 pane，codex 进程数不变、不出现 -32600；
-关闭该 pane 后再点，恢复为正常 Resume。
+分三层，每层各自证明一件事，合起来覆盖整条链：
+
+| 层 | 文件 | 证明 |
+| --- | --- | --- |
+| 单测 | `ai-vault-original-pane.test.ts` / `-index.test.ts` | 给定"带身份的 launch config"状态，finder 与索引返回同一 target；hook 已确认的 live 行优先；无身份/异 agent/pane 已关都不命中；live state 保持 null |
+| 集成 | `pty-connection/resume-identity-launch-config.test.ts` | 走**真 `useAppStore`**：真实注册路径写入身份 → 真实 finder 定位到该 pane；同时断言 status/retained/sleeping 三处都不含该 session（事故形态成立） |
+| e2e | `ai-vault-hook-silent-resume-original-pane.spec.ts` | 隔离 userData 的**真 Electron app**：真 resume 启动路径建 pane，agent 全程沉默；断言身份已随 launch config 落地、三个旧来源皆为空、pane 的 tab/leaf 仍可解析、AI Vault 真能扫到该会话 |
+
+**变异验证**（证明测试不是恒真）：临时移除 `sleeping-record-access.ts` 的插桩后，
+
+- 集成测试 5 例中挂 2 例，含"finder 整链定位"那条；
+- e2e 挂在预期断言 `the resumed pane must carry its provider identity`。
+
+恢复插桩后两者复绿。e2e 构建产物在 `out/`，与用户运行中的 `dist/mac-arm64` 无关，不影响在跑的 App。
+
+尚未覆盖：右侧面板 UI 层的"Jump 取代 Resume"渲染断言（该行几乎没有测试锚点），以及真人手工复刻。
 
 ## 7. 规模与风险
 
