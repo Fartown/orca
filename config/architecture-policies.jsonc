@@ -26,6 +26,10 @@
           ],
           "allowedPaths": [
             ".docs/并行任务看板/**",
+            // 2026-08-31: single-branch delivery decision — goal-mode and the self-hosted
+            // artifact backend ship on this same branch alongside Issues.
+            "goal-mode/**",
+            "src/main/artifacts/**",
             ".gitignore",
             "docs/requirements/Issues-*.md",
             ".github/workflows/pr.yml",
@@ -135,6 +139,10 @@
           ],
           "allowedPaths": [
             ".docs/并行任务看板/**",
+            // 2026-08-31: single-branch delivery decision — goal-mode and the self-hosted
+            // artifact backend ship on this same branch alongside Issues.
+            "goal-mode/**",
+            "src/main/artifacts/**",
             ".gitignore",
             "docs/requirements/Issues-*.md",
             ".github/workflows/pr.yml",
