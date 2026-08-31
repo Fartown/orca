@@ -2,12 +2,10 @@ import { AI_VAULT_SESSION_TITLE_REQUEST_MAX_COUNT } from '../../../shared/ai-vau
 import type { ExecutionHostId } from '../../../shared/execution-host'
 import type { AiVaultTitleRequest } from './ai-vault-tab-title-requests'
 
-type AiVaultTitleHostRequest = { executionHostId: ExecutionHostId }
-
-export function batchAiVaultSessionTitleRequests<T extends AiVaultTitleHostRequest>(
-  requests: T[]
-): T[][] {
-  const byHost = new Map<ExecutionHostId, T[]>()
+export function batchAiVaultTitleRequests(
+  requests: AiVaultTitleRequest[]
+): AiVaultTitleRequest[][] {
+  const byHost = new Map<ExecutionHostId, AiVaultTitleRequest[]>()
   for (const request of requests) {
     const hostRequests = byHost.get(request.executionHostId)
     if (hostRequests) {
@@ -16,7 +14,7 @@ export function batchAiVaultSessionTitleRequests<T extends AiVaultTitleHostReque
       byHost.set(request.executionHostId, [request])
     }
   }
-  const batches: T[][] = []
+  const batches: AiVaultTitleRequest[][] = []
   for (const hostRequests of byHost.values()) {
     for (
       let index = 0;
@@ -29,18 +27,12 @@ export function batchAiVaultSessionTitleRequests<T extends AiVaultTitleHostReque
   return batches
 }
 
-export function batchAiVaultTitleRequests(
-  requests: AiVaultTitleRequest[]
-): AiVaultTitleRequest[][] {
-  return batchAiVaultSessionTitleRequests(requests)
-}
-
-export async function settleAiVaultSessionTitleRequestBatches<T extends AiVaultTitleHostRequest>(
-  requests: T[],
-  resolveBatch: (batch: T[]) => Promise<void>
+export async function settleAiVaultTitleRequestBatches(
+  requests: AiVaultTitleRequest[],
+  resolveBatch: (batch: AiVaultTitleRequest[]) => Promise<void>
 ): Promise<void> {
-  const batchesByHost = new Map<ExecutionHostId, T[][]>()
-  for (const batch of batchAiVaultSessionTitleRequests(requests)) {
+  const batchesByHost = new Map<ExecutionHostId, AiVaultTitleRequest[][]>()
+  for (const batch of batchAiVaultTitleRequests(requests)) {
     const executionHostId = batch[0]!.executionHostId
     const hostBatches = batchesByHost.get(executionHostId) ?? []
     hostBatches.push(batch)
@@ -57,11 +49,4 @@ export async function settleAiVaultSessionTitleRequestBatches<T extends AiVaultT
       }
     })
   )
-}
-
-export function settleAiVaultTitleRequestBatches(
-  requests: AiVaultTitleRequest[],
-  resolveBatch: (batch: AiVaultTitleRequest[]) => Promise<void>
-): Promise<void> {
-  return settleAiVaultSessionTitleRequestBatches(requests, resolveBatch)
 }

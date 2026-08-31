@@ -37,6 +37,52 @@ describe('IssueQueryService snapshots', () => {
     repository.close()
   })
 
+  it('excludes prepared identity-less Conversations from Issue counts', () => {
+    const repository = openRepository('visible-counts')
+    const issue = createIssue(repository, 'visible-counts')
+    const prepared = createConversation(repository, 'prepared', issue.id, 'worktree-a')
+    const visible = createConversation(repository, 'visible', issue.id, 'worktree-a')
+    repository.conversationIdentities.attach({
+      conversationId: visible.id,
+      agent: 'codex',
+      providerSession: { key: 'session_id', id: 'visible-session' },
+      observedAt: 1
+    })
+    createRound(repository, prepared.id, 'prepared-round', 1)
+    createRound(repository, visible.id, 'visible-round', 2)
+    const attachments = new ConversationRuntimeAttachmentRegistry()
+    for (const conversation of [prepared, visible]) {
+      attachments.upsert({
+        conversationId: conversation.id,
+        paneKey: `${conversation.id}:leaf`,
+        tabId: `${conversation.id}:tab`,
+        worktreeId: 'worktree-a',
+        connectionId: null,
+        providerIdentityFingerprint: null,
+        executionState: 'running',
+        observedAt: 3
+      })
+    }
+    const query = new IssueQueryService(repository, undefined, attachments)
+    const result = query.listIssues(
+      resolveIssueAuthorityRoute('local'),
+      IssuesListParams.parse({ mode: 'start', authorityExecutionHostId: 'local', filter: 'all' })
+    )
+
+    expect(result).toMatchObject({
+      status: 'snapshot-page',
+      issues: [
+        {
+          id: issue.id,
+          directConversationCount: 1,
+          runningConversationCount: 1,
+          ownUnresolvedCount: 1
+        }
+      ]
+    })
+    repository.close()
+  })
+
   it('pins Issue pages to facts/tree revisions and returns stale after mutation', () => {
     const repository = openRepository('issue-pages')
     createIssue(repository, 'one')

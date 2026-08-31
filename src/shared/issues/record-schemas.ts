@@ -171,7 +171,6 @@ export const ConversationSummarySchema = ConversationRecordSchema.extend({
   ]),
   resumability: z.enum(['resumable', 'unavailable']),
   executionState: z.enum(['launching', 'running', 'waiting', 'stopped', 'failed']),
-  livenessVerdict: z.enum(['live', 'unverifiable', 'exited']).optional(),
   workspaceAvailability: z.enum(['available', 'unavailable']),
   unresolvedRoundCount: z.number().int().nonnegative(),
   latestRound: RoundRecordPreviewSchema.nullable(),

@@ -107,7 +107,7 @@ export function IssueConversationActions({
     setPending(true)
     const launchToken = crypto.randomUUID()
     try {
-      const outcome = await prepareAndLaunchIssueConversation({
+      await prepareAndLaunchIssueConversation({
         route,
         issueId,
         workspace: selectedWorkspace,
@@ -117,9 +117,6 @@ export function IssueConversationActions({
       })
       setLaunchOpen(false)
       onChanged()
-      if (outcome.status === 'launcher-failed' && !outcome.failureNotified) {
-        toast.error(outcome.message)
-      }
     } catch (error) {
       onChanged()
       toast.error(error instanceof Error ? error.message : String(error))

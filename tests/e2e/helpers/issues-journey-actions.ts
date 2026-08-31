@@ -3,6 +3,7 @@ import { mkdirSync } from 'node:fs'
 import path from 'node:path'
 import type { ConversationSummary, IssueSummary } from '../../../src/shared/issues/types'
 import { parsePaneKey } from '../../../src/shared/stable-pane-id'
+import type { TuiAgent } from '../../../src/shared/tui-agent'
 import { folderWorkspaceKey } from '../../../src/shared/workspace-scope'
 import { composeWorktreeHostIdentity } from '../../../src/shared/worktree/host-qualified-identity'
 import { configureGoldenStubAgent } from './golden-stub-agent'
@@ -105,7 +106,8 @@ export async function createChildIssue(
 export async function launchConversationFromIssue(
   page: Page,
   issueId: string,
-  workspaceLabel: string
+  workspaceLabel: string,
+  agent?: TuiAgent
 ): Promise<ConversationSummary> {
   const beforeIds = new Set((await listConversations(page)).map((conversation) => conversation.id))
   await refreshIssueDetail(page, issueId)
@@ -114,6 +116,13 @@ export async function launchConversationFromIssue(
   const workspaceTrigger = dialog.getByRole('combobox').first()
   await workspaceTrigger.click()
   await page.getByRole('option', { name: workspaceLabel, exact: true }).click()
+  if (agent) {
+    const agentTrigger = dialog.locator('[data-agent-combobox-root="true"][role="combobox"]')
+    await agentTrigger.click()
+    const agentOption = page.locator(`[cmdk-item][data-value=${JSON.stringify(agent)}]`)
+    await expect(agentOption).toBeVisible({ timeout: 30_000 })
+    await agentOption.click()
+  }
   const start = dialog.getByRole('button', { name: 'Start', exact: true })
   await expect(start).toBeEnabled({ timeout: 30_000 })
   await start.click()
@@ -173,9 +182,9 @@ export async function resumeUnassignedConversationFromIssuesSidebar(
     await unassigned.click()
   }
   const row = page.locator(`[data-conversation-id="${conversation.id}"]`)
-  const resume = row.getByRole('button', { name: 'Resume Conversation' })
-  await expect(resume).toBeVisible()
-  await row.getByTestId('issue-conversation-primary-action').click()
+  const primaryAction = row.getByTestId('issue-conversation-primary-action')
+  await expect(primaryAction).toBeVisible()
+  await primaryAction.click()
   return waitForConversation(
     page,
     (candidate) => candidate.id === conversation.id && candidate.attachment.kind === 'attached',

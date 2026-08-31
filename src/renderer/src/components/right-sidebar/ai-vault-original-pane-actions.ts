@@ -2,14 +2,12 @@ import { useCallback, useMemo } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import { toast } from 'sonner'
 import { activateTabAndFocusPane } from '@/lib/activate-tab-and-focus-pane'
-import { activateAndRevealWorkspace } from '@/lib/worktree-activation'
+import { activateAndRevealWorktree } from '@/lib/worktree-activation'
 import { useAppStore } from '@/store'
 import type { AgentStatusState } from '../../../../shared/agent-status-types'
+import type { AiVaultSession } from '../../../../shared/ai-vault-types'
 import { translate } from '@/i18n/i18n'
-import {
-  findOriginalAiVaultSessionPane,
-  type AiVaultOriginalPaneSessionReference
-} from './ai-vault-original-pane'
+import { findOriginalAiVaultSessionPane } from './ai-vault-original-pane'
 import {
   createLazyAiVaultOriginalPaneIndex,
   findAiVaultSessionLiveStateInIndex,
@@ -18,10 +16,10 @@ import {
 
 export function useAiVaultOriginalPaneActions(): {
   getOriginalPaneTarget: (
-    session: AiVaultOriginalPaneSessionReference
+    session: AiVaultSession
   ) => ReturnType<typeof findOriginalAiVaultSessionPane>
-  getSessionLiveState: (session: AiVaultOriginalPaneSessionReference) => AgentStatusState | null
-  jumpToOriginalPane: (session: AiVaultOriginalPaneSessionReference) => void
+  getSessionLiveState: (session: AiVaultSession) => AgentStatusState | null
+  jumpToOriginalPane: (session: AiVaultSession) => void
   jumpToWorktree: (worktreeId: string) => void
 } {
   const originalPaneLookupState = useAppStore(
@@ -41,23 +39,23 @@ export function useAiVaultOriginalPaneActions(): {
   )
 
   const getOriginalPaneTarget = useCallback(
-    (session: AiVaultOriginalPaneSessionReference) =>
+    (session: AiVaultSession) =>
       findOriginalAiVaultSessionPaneInIndex(getOriginalPaneIndex(), session),
     [getOriginalPaneIndex]
   )
 
   const getSessionLiveState = useCallback(
-    (session: AiVaultOriginalPaneSessionReference) =>
+    (session: AiVaultSession) =>
       findAiVaultSessionLiveStateInIndex(getOriginalPaneIndex(), session),
     [getOriginalPaneIndex]
   )
 
-  const jumpToOriginalPane = useCallback((session: AiVaultOriginalPaneSessionReference): void => {
+  const jumpToOriginalPane = useCallback((session: AiVaultSession): void => {
     jumpToAiVaultOriginalPane(session)
   }, [])
 
   const jumpToWorktree = useCallback((worktreeId: string): void => {
-    if (!activateAndRevealWorkspace(worktreeId)) {
+    if (!activateAndRevealWorktree(worktreeId)) {
       toast.error(
         translate(
           'auto.components.right.sidebar.AiVaultPanel.worktreeUnavailable',
@@ -73,7 +71,7 @@ export function useAiVaultOriginalPaneActions(): {
 export type AiVaultOriginalPaneJumpResult = 'focused' | 'missing' | 'workspace-unavailable'
 
 export function jumpToAiVaultOriginalPane(
-  session: AiVaultOriginalPaneSessionReference,
+  session: AiVaultSession,
   options: { notifyWhenMissing?: boolean } = {}
 ): AiVaultOriginalPaneJumpResult {
   const target = findOriginalAiVaultSessionPane(useAppStore.getState(), session)
@@ -89,12 +87,7 @@ export function jumpToAiVaultOriginalPane(
     return 'missing'
   }
 
-  if (
-    !activateAndRevealWorkspace(
-      target.worktreeId,
-      session.executionHostId ? { executionHostId: session.executionHostId } : undefined
-    )
-  ) {
+  if (!activateAndRevealWorktree(target.worktreeId)) {
     toast.error(
       translate(
         'auto.components.right.sidebar.AiVaultPanel.worktreeUnavailable',

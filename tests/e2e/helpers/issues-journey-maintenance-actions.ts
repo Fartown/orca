@@ -7,19 +7,6 @@ import type {
 import { closeConversationPane, waitForConversation } from './issues-journey-actions'
 import { listConversations, runtimeRpc } from './packaged-issues-journey'
 
-export async function setCodexDefaultArgs(page: Page, args: string): Promise<void> {
-  await page.evaluate(async (nextArgs) => {
-    const store = window.__store
-    if (!store) {
-      throw new Error('E2E store unavailable')
-    }
-    const current = store.getState().settings?.agentDefaultArgs ?? {}
-    await store.getState().updateSettings({
-      agentDefaultArgs: { ...current, codex: nextArgs }
-    })
-  }, args)
-}
-
 export async function ensureJourneySshTarget(page: Page): Promise<string> {
   return page.evaluate(async () => {
     const existing = (await window.api.ssh.listTargets()).find(

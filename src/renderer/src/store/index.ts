@@ -132,10 +132,10 @@ registerRendererMemoryProfileContributor('storeKB', () =>
 export type { AppState } from './types'
 
 // Why: exposes the Zustand store on window for console debugging (dev) and
-// isolated E2E launches. The E2E suite reads store state directly
+// E2E tests (VITE_EXPOSE_STORE). The E2E suite reads store state directly
 // to avoid fragile DOM scraping. Harmless — the store is already reachable
 // via React DevTools in any environment.
-if ((import.meta.env.DEV || e2eConfig.enabled) && typeof window !== 'undefined') {
+if ((import.meta.env.DEV || e2eConfig.exposeStore) && typeof window !== 'undefined') {
   const testWindow = window as unknown as Record<string, unknown>
   testWindow.__store = useAppStore
   if (e2eConfig.exposeStore) {

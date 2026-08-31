@@ -5,137 +5,30 @@ import {
   buildAiVaultResumeStartupForWorktree
 } from '@/lib/ai-vault-resume-command'
 import { launchAiVaultSessionInNewTab } from '@/lib/launch-ai-vault-session'
+import {
+  activateAndRevealFolderWorkspace,
+  activateAndRevealWorktree
+} from '@/lib/worktree-activation'
 import { useAppStore } from '@/store'
-import { getAiVaultResumeWorkspaceExecutionHostId } from '@/lib/ai-vault-resume-target'
+import {
+  canResumeAiVaultSessionOnTarget,
+  getAiVaultResumeWorkspaceExecutionHostId,
+  getAiVaultResumeWorkspaceTargetStatus
+} from '@/lib/ai-vault-resume-target'
 import type { AiVaultAgent, AiVaultSession } from '../../../../shared/ai-vault-types'
 import { prepareAiVaultSessionForResume } from '@/lib/ai-vault-session-resume-preparation'
 import type { Worktree } from '../../../../shared/worktree/types'
 import { translate } from '@/i18n/i18n'
 import { agentLabel } from './ai-vault-session-filters'
-import type { AiVaultSessionResumeTargetState } from './ai-vault-session-resume'
+import { parseWorkspaceKey } from '../../../../shared/workspace-scope'
+import {
+  isKnownAiVaultResumeWorkspaceTarget,
+  type AiVaultSessionResumeTargetState
+} from './ai-vault-session-resume'
 import { prepareAiVaultSessionContinuation } from './ai-vault-session-continuation'
 import type { AgentSessionContinuationRequest } from '@/lib/agent-session-continuation'
-import {
-  observeResumedConversationLocalLaunch,
-  recordResumedConversation,
-  recordResumedConversationLaunchFailure,
-  type ResumedConversationBookkeeping
-} from '@/issues/issue-resume-bookkeeping'
-import {
-  activateAiVaultResumeWorkspace,
-  resolveAiVaultSessionLaunchTargetOrNotify,
-  resolveAiVaultTargetWorkspacePath,
-  workspaceDisplayName,
-  workspaceScopeForIssueResume
-} from './ai-vault-session-launch-target'
+import { findWorktreeById } from '@/store/slices/worktree-helpers'
 import { activateAiVaultStructuredSession } from '@/lib/activate-ai-vault-structured-session'
-
-export { resolveAiVaultSessionLaunchTarget } from './ai-vault-session-launch-target'
-
-export type AiVaultSessionResumeLaunchResult = {
-  launched: boolean
-  bookkeeping: ResumedConversationBookkeeping
-}
-
-export async function resumeAiVaultSession(args: {
-  session: AiVaultSession
-  activeWorktreeId: string | null
-  targetWorktreeId?: string
-  targetState: AiVaultSessionResumeTargetState
-  agentCmdOverrides?: Partial<Record<AiVaultAgent, string | null>>
-}): Promise<AiVaultSessionResumeLaunchResult> {
-  if (args.session.structuredSession) {
-    return {
-      launched: await activateAiVaultStructuredSession(args.session),
-      bookkeeping: { recorded: false }
-    }
-  }
-
-  const targetId = resolveAiVaultSessionLaunchTargetOrNotify({
-    sessionFilePath: args.session.filePath,
-    sessionExecutionHostId: args.session.executionHostId,
-    activeWorktreeId: args.activeWorktreeId,
-    targetWorktreeId: args.targetWorktreeId,
-    targetState: args.targetState
-  })
-  if (!targetId) {
-    return { launched: false, bookkeeping: { recorded: false } }
-  }
-
-  let bookkeeping: ResumedConversationBookkeeping = { recorded: false }
-  try {
-    const preparedSession = await prepareAiVaultSessionForResume(args.session)
-    const startup = buildAiVaultResumeStartupForWorktree({
-      state: useAppStore.getState(),
-      worktreeId: targetId.worktreeId,
-      session: preparedSession,
-      commandOverride: args.agentCmdOverrides?.[preparedSession.agent]
-    })
-    const launchToken = crypto.randomUUID()
-    if (startup.providerSession) {
-      const state = useAppStore.getState()
-      bookkeeping = await recordResumedConversation({
-        executionHostId: getAiVaultResumeWorkspaceExecutionHostId(
-          args.targetState,
-          targetId.worktreeId
-        ),
-        launchToken,
-        workspaceRef: workspaceScopeForIssueResume(targetId.worktreeId),
-        workspaceSnapshot: {
-          name: workspaceDisplayName(state, targetId.worktreeId),
-          path: resolveAiVaultTargetWorkspacePath(args.targetState, targetId.worktreeId)
-        },
-        agent: preparedSession.agent,
-        providerSession: startup.providerSession
-      })
-    }
-    const launchResult = launchAiVaultSessionInNewTab({
-      agent: preparedSession.agent,
-      worktreeId: targetId.worktreeId,
-      ...startup,
-      launchToken
-    })
-    if (launchResult.tabId === null) {
-      const outcome = await launchResult.runtimeLaunch
-      if (outcome.status === 'failed') {
-        const failure =
-          outcome.message ||
-          translate(
-            'auto.lib.launch.agent.in.new.tab.11cce5cc77',
-            'Could not launch {{value0}} in a new terminal.',
-            { value0: agentLabel(preparedSession.agent) }
-          )
-        await recordResumedConversationLaunchFailure(bookkeeping, failure)
-        toast.error(failure)
-        return { launched: false, bookkeeping }
-      }
-    } else {
-      observeResumedConversationLocalLaunch(bookkeeping, {
-        worktreeId: targetId.worktreeId,
-        tabId: launchResult.tabId
-      })
-    }
-
-    if (useAppStore.getState().activeWorktreeId !== targetId.worktreeId) {
-      activateAiVaultResumeWorkspace(targetId.worktreeId)
-    }
-    toast.success(
-      translate(
-        'auto.components.right.sidebar.AiVaultPanel.agentSessionQueued',
-        '{{value0}} session queued',
-        { value0: agentLabel(preparedSession.agent) }
-      )
-    )
-    return { launched: true, bookkeeping }
-  } catch (error) {
-    await recordResumedConversationLaunchFailure(
-      bookkeeping,
-      error instanceof Error ? error.message : String(error)
-    )
-    notifyAiVaultSessionPreparationFailure(error)
-    return { launched: false, bookkeeping }
-  }
-}
 
 export function useAiVaultSessionLaunchActions({
   activeWorktree,
@@ -257,6 +150,70 @@ export function useAiVaultSessionLaunchActions({
   }
 }
 
+export async function resumeAiVaultSession(args: {
+  session: AiVaultSession
+  activeWorktreeId: string | null
+  targetWorktreeId?: string
+  targetState: AiVaultSessionResumeTargetState
+  agentCmdOverrides?: Partial<Record<AiVaultAgent, string | null>>
+}): Promise<boolean> {
+  if (args.session.structuredSession) {
+    return activateAiVaultStructuredSession(args.session)
+  }
+  const targetId = resolveAiVaultSessionLaunchTargetOrNotify({
+    sessionFilePath: args.session.filePath,
+    sessionExecutionHostId: args.session.executionHostId,
+    activeWorktreeId: args.activeWorktreeId,
+    targetWorktreeId: args.targetWorktreeId,
+    targetState: args.targetState
+  })
+  if (!targetId) {
+    return false
+  }
+
+  try {
+    const preparedSession = await prepareAiVaultSessionForResume(args.session)
+    const launchResult = launchAiVaultSessionInNewTab({
+      agent: args.session.agent,
+      worktreeId: targetId.worktreeId,
+      ...buildAiVaultResumeStartupForWorktree({
+        state: useAppStore.getState(),
+        worktreeId: targetId.worktreeId,
+        session: preparedSession,
+        commandOverride: args.agentCmdOverrides?.[preparedSession.agent]
+      })
+    })
+    if (launchResult.tabId === null) {
+      const outcome = await launchResult.runtimeLaunch
+      if (outcome.status === 'failed') {
+        toast.error(
+          outcome.message ||
+            translate(
+              'auto.lib.launch.agent.in.new.tab.11cce5cc77',
+              'Could not launch {{value0}} in a new terminal.',
+              { value0: agentLabel(args.session.agent) }
+            )
+        )
+        return false
+      }
+    }
+    if (useAppStore.getState().activeWorktreeId !== targetId.worktreeId) {
+      activateAiVaultResumeWorkspace(targetId.worktreeId)
+    }
+    toast.success(
+      translate(
+        'auto.components.right.sidebar.AiVaultPanel.agentSessionQueued',
+        '{{value0}} session queued',
+        { value0: agentLabel(args.session.agent) }
+      )
+    )
+    return true
+  } catch (error) {
+    notifyAiVaultSessionPreparationFailure(error)
+    return false
+  }
+}
+
 function notifyAiVaultSessionPreparationFailure(error: unknown): void {
   toast.error(
     error instanceof Error
@@ -266,4 +223,99 @@ function notifyAiVaultSessionPreparationFailure(error: unknown): void {
           'Could not prepare this session for resume.'
         )
   )
+}
+
+function resolveAiVaultTargetWorkspacePath(
+  state: AiVaultSessionResumeTargetState,
+  workspaceId: string
+): string | null {
+  const scope = parseWorkspaceKey(workspaceId)
+  if (scope?.type === 'folder') {
+    return (
+      state.folderWorkspaces.find((workspace) => workspace.id === scope.folderWorkspaceId)
+        ?.folderPath ?? null
+    )
+  }
+  const worktreeId = scope?.type === 'worktree' ? scope.worktreeId : workspaceId
+  return findWorktreeById(state.worktreesByRepo, worktreeId)?.path ?? null
+}
+
+export function resolveAiVaultSessionLaunchTarget(args: {
+  sessionFilePath: string | null
+  sessionExecutionHostId?: AiVaultSession['executionHostId'] | null
+  activeWorktreeId: string | null
+  targetWorktreeId?: string
+  targetState: AiVaultSessionResumeTargetState
+}) {
+  const targetWorktreeId = args.targetWorktreeId ?? args.activeWorktreeId
+  if (
+    !targetWorktreeId ||
+    !isKnownAiVaultResumeWorkspaceTarget(args.targetState, targetWorktreeId)
+  ) {
+    return { status: 'missing' } as const
+  }
+
+  const targetStatus = getAiVaultResumeWorkspaceTargetStatus(args.targetState, targetWorktreeId)
+  const targetExecutionHostId = getAiVaultResumeWorkspaceExecutionHostId(
+    args.targetState,
+    targetWorktreeId
+  )
+  if (
+    !canResumeAiVaultSessionOnTarget({
+      sessionFilePath: args.sessionFilePath,
+      sessionExecutionHostId: args.sessionExecutionHostId,
+      targetStatus,
+      targetExecutionHostId
+    })
+  ) {
+    return { status: 'unsupported', targetStatus } as const
+  }
+
+  return { status: 'ready', worktreeId: targetWorktreeId } as const
+}
+
+function resolveAiVaultSessionLaunchTargetOrNotify(
+  args: Parameters<typeof resolveAiVaultSessionLaunchTarget>[0]
+): Extract<ReturnType<typeof resolveAiVaultSessionLaunchTarget>, { status: 'ready' }> | null {
+  const target = resolveAiVaultSessionLaunchTarget(args)
+  if (target.status === 'missing') {
+    toast.error(
+      translate(
+        'auto.components.right.sidebar.AiVaultPanel.openWorkspaceBeforeResuming',
+        'Open a workspace before resuming a session.'
+      )
+    )
+    return null
+  }
+  if (target.status === 'unsupported') {
+    toast.error(aiVaultResumeUnsupportedMessage(target.targetStatus))
+    return null
+  }
+  return target
+}
+
+function aiVaultResumeUnsupportedMessage(
+  targetStatus: ReturnType<typeof getAiVaultResumeWorkspaceTargetStatus>
+): string {
+  // Why: local and SSH targets can both be valid generally; this branch means
+  // the session's recorded host does not match the selected workspace.
+  if (targetStatus === 'ssh' || targetStatus === 'local' || targetStatus === 'runtime') {
+    return translate(
+      'auto.components.right.sidebar.AiVaultPanel.sessionHostMismatchUnsupported',
+      'This session belongs to a different host. Open a workspace on the same host to resume it.'
+    )
+  }
+  return translate(
+    'auto.components.right.sidebar.AiVaultPanel.openSupportedWorkspace',
+    'Open a workspace before resuming a session.'
+  )
+}
+
+function activateAiVaultResumeWorkspace(workspaceId: string): void {
+  const workspaceScope = parseWorkspaceKey(workspaceId)
+  if (workspaceScope?.type === 'folder') {
+    activateAndRevealFolderWorkspace(workspaceScope.folderWorkspaceId)
+    return
+  }
+  activateAndRevealWorktree(workspaceId)
 }

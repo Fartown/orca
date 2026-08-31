@@ -1,150 +1,58 @@
 import { describe, expect, it } from 'vitest'
 import type { ConversationSummary } from '../../../shared/issues/types'
 import {
-  canResumeIssueConversation,
-  canRetryIssueConversation,
   conversationSessionTitleKey,
+  hasIssueConversationProviderIdentity,
   issueConversationDisplayName,
-  issueConversationStatus,
   shouldShowIssueConversation,
-  shouldShowIssueConversationResume,
   sortIssueConversations
 } from './issue-conversation-presentation'
 
 describe('Issue Conversation presentation', () => {
-  it('keeps automatic titles isolated by execution host and agent', () => {
-    const local = conversation()
-    const remote = conversation({ executionHostId: 'ssh:build' })
-    const titles = new Map([
-      [conversationSessionTitleKey(local)!, 'Local title'],
-      [conversationSessionTitleKey(remote)!, 'Remote title']
-    ])
-
-    expect(issueConversationDisplayName(local, titles)).toBe('Local title')
-    expect(issueConversationDisplayName(remote, titles)).toBe('Remote title')
-  })
-
-  it('uses the routed runtime host instead of the remote authority id for titles', () => {
+  it('isolates resolved titles by routed execution host and agent', () => {
     const item = conversation()
     const titles = new Map([
-      [conversationSessionTitleKey(item, 'runtime:paired')!, 'Paired runtime title']
+      [conversationSessionTitleKey(item, 'local')!, 'Local title'],
+      [conversationSessionTitleKey(item, 'runtime:paired')!, 'Paired title']
     ])
 
-    expect(issueConversationDisplayName(item, titles, null, 'runtime:paired')).toBe(
-      'Paired runtime title'
-    )
+    expect(issueConversationDisplayName(item, titles)).toBe('Local title')
+    expect(issueConversationDisplayName(item, titles, null, 'runtime:paired')).toBe('Paired title')
   })
 
-  it('prefers an explicit rename, then the live tab name, then session history', () => {
+  it('prefers an explicit Conversation title, then the native live title, then history', () => {
     const item = conversation()
     const titles = new Map([[conversationSessionTitleKey(item)!, 'History title']])
 
     expect(issueConversationDisplayName(item, titles, 'Live title')).toBe('Live title')
-    expect(issueConversationDisplayName({ ...item, title: 'My title' }, titles, 'Live title')).toBe(
-      'My title'
+    expect(issueConversationDisplayName({ ...item, title: 'Named' }, titles, 'Live title')).toBe(
+      'Named'
     )
   })
 
-  it('presents real execution states without coercing running to idle', () => {
-    expect(issueConversationStatus(conversation({ executionState: 'running' }))).toEqual({
-      dotState: 'working',
-      label: 'Live'
-    })
-    expect(issueConversationStatus(conversation({ executionState: 'waiting' }))).toEqual({
-      dotState: 'waiting',
-      label: 'Waiting for input'
-    })
-    expect(issueConversationStatus(conversation())).toEqual({
-      dotState: 'idle',
-      label: null
-    })
-    expect(
-      issueConversationStatus(
-        conversation({
-          attachment: { kind: 'attached', paneKey: 'tab:leaf', tabId: 'tab' }
-        })
-      )
-    ).toEqual({ dotState: 'done', label: 'Live' })
-  })
-
-  it('only offers Resume for a stopped, detached, resumable Conversation', () => {
-    expect(canResumeIssueConversation(conversation())).toBe(true)
-    expect(
-      canResumeIssueConversation(
-        conversation({
-          attachment: { kind: 'attached', paneKey: 'tab:leaf', tabId: 'tab' },
-          executionState: 'running'
-        })
-      )
-    ).toBe(false)
-    expect(shouldShowIssueConversationResume(conversation(), false)).toBe(true)
-    expect(shouldShowIssueConversationResume(conversation(), true)).toBe(false)
-  })
-
-  it('does not offer Resume or a synthetic status while remote liveness is unverifiable', () => {
-    const item = conversation({ livenessVerdict: 'unverifiable' })
-
-    expect(issueConversationStatus(item)).toEqual({ dotState: 'idle', label: null })
-    expect(canResumeIssueConversation(item)).toBe(false)
-  })
-
-  it('lets newer attached runtime evidence override a historical launch failure', () => {
-    const item = conversation({
+  it('hides every prepared record until an active provider identity exists', () => {
+    const prepared = conversation({
+      navigation: { paneKey: null, providerSession: null, resumeLocator: null },
+      executionState: 'launching',
       attachment: { kind: 'attached', paneKey: 'tab:leaf', tabId: 'tab' },
-      executionState: 'running',
-      launchFailure: { message: 'confirmation timed out', failedAt: 20 }
+      title: 'Prepared title'
     })
 
-    expect(issueConversationStatus(item)).toEqual({ dotState: 'working', label: 'Live' })
+    expect(hasIssueConversationProviderIdentity(prepared)).toBe(false)
+    expect(shouldShowIssueConversation(prepared)).toBe(false)
+    expect(shouldShowIssueConversation(prepared, new Map([['anything', 'Resolved']]))).toBe(false)
+    expect(hasIssueConversationProviderIdentity(conversation())).toBe(true)
+    expect(shouldShowIssueConversation(conversation())).toBe(true)
   })
 
-  it('offers Retry only for a failed launch without runtime or persisted session evidence', () => {
-    const failed = conversation({
-      resumability: 'unavailable',
-      executionState: 'failed',
-      navigation: { paneKey: null, providerSession: null, resumeLocator: null }
-    })
-
-    expect(canRetryIssueConversation(failed)).toBe(true)
-    expect(canRetryIssueConversation({ ...failed, executionState: 'stopped' })).toBe(true)
-    expect(canRetryIssueConversation({ ...failed, executionState: 'launching' })).toBe(false)
-    expect(canRetryIssueConversation({ ...failed, unresolvedRoundCount: 1 })).toBe(false)
-    expect(
-      canRetryIssueConversation({
-        ...failed,
-        resumability: 'resumable',
-        navigation: conversation().navigation
-      })
-    ).toBe(false)
-    expect(canRetryIssueConversation({ ...failed, livenessVerdict: 'unverifiable' })).toBe(false)
-  })
-
-  it('keeps attached and Issue-owned Conversations visible without inventing Untitled history rows', () => {
-    const emptyDetached = conversation({ issueId: null })
-    const key = conversationSessionTitleKey(emptyDetached)!
-
-    expect(shouldShowIssueConversation(emptyDetached)).toBe(false)
-    expect(shouldShowIssueConversation(emptyDetached, new Map())).toBe(false)
-    expect(shouldShowIssueConversation(emptyDetached, new Map([[key, '']]))).toBe(false)
-    expect(shouldShowIssueConversation(emptyDetached, new Map([[key, 'History title']]))).toBe(true)
-    expect(
-      shouldShowIssueConversation(
-        conversation({
-          issueId: null,
-          attachment: { kind: 'attached', paneKey: 'tab:leaf', tabId: 'tab' }
-        }),
-        new Map()
-      )
-    ).toBe(true)
-    expect(shouldShowIssueConversation(conversation({ title: null }), new Map([[key, '']]))).toBe(
-      true
-    )
-  })
-
-  it('orders live work first, then attention, then recent stopped history', () => {
+  it('orders native active work first, then attention, then recent stopped history', () => {
     const stoppedOld = conversation({ id: 'stopped-old', updatedAt: 10 })
     const attention = conversation({ id: 'attention', unresolvedRoundCount: 1, updatedAt: 5 })
-    const live = conversation({ id: 'live', executionState: 'running', updatedAt: 1 })
+    const live = conversation({
+      id: 'live',
+      attachment: { kind: 'attached', paneKey: 'tab:leaf', tabId: 'tab' },
+      updatedAt: 1
+    })
     const stoppedNew = conversation({ id: 'stopped-new', updatedAt: 20 })
 
     expect(
@@ -152,7 +60,7 @@ describe('Issue Conversation presentation', () => {
     ).toEqual(['live', 'attention', 'stopped-new', 'stopped-old'])
   })
 
-  it('hides internal Codex title-generation threads from user-facing lists', () => {
+  it('continues to hide internal Codex title-generation threads', () => {
     const internal = conversation({
       agent: 'codex',
       issueId: null,

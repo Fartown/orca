@@ -19,7 +19,6 @@ import type {
   PrepareDeleteConversationRuntimeParams,
   PrepareDeleteIssueRuntimeParams,
   PrepareLaunchRuntimeParams,
-  PrepareResumeRuntimeParams,
   PrepareRetryRuntimeParams,
   RecordLaunchFailureRuntimeParams,
   ReparentIssueRuntimeParams,
@@ -211,24 +210,6 @@ export class IssueRuntimeService implements IssueRuntimeServiceContract {
         agent: params.agent,
         issueId: params.issueId,
         title: params.title
-      }
-    })
-  }
-
-  prepareResume(
-    callerFingerprint: string,
-    params: PrepareResumeRuntimeParams
-  ): ConversationLaunchPreparation {
-    return this.repository.conversationAllocator.prepareResume({
-      identity: mutationIdentity(callerFingerprint, params.mutationId),
-      input: {
-        executionHostId: this.routes.resolve(params.authorityExecutionHostId)
-          .authorityExecutionHostId,
-        launchToken: params.launchToken,
-        workspaceRef: params.workspaceRef,
-        workspaceSnapshot: params.workspaceSnapshot,
-        agent: params.agent,
-        providerSession: params.providerSession
       }
     })
   }

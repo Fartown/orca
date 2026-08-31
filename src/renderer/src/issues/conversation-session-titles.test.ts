@@ -1,186 +1,131 @@
-import { describe, expect, it, vi } from 'vitest'
-import type { AiVaultSessionTitlesArgs } from '../../../shared/ai-vault-session-title'
+// @vitest-environment happy-dom
+
+import { cleanup, renderHook, waitFor } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ConversationSummary } from '../../../shared/issues/types'
 import {
   collectConversationSessionTitleRequests,
-  resolveConversationSessionTitleChanges,
-  resolveConversationSessionTitles,
-  type ConversationSessionTitleResolution,
-  type ConversationSessionTitleSource
+  type ConversationSessionTitleSource,
+  useConversationSessionTitles
 } from './conversation-session-titles'
 import { conversationSessionTitleKey } from './issue-conversation-presentation'
-import { MISSING_AI_VAULT_TITLE_REFRESH_MS } from '@/lib/ai-vault-tab-title-sync'
+
+const mocks = vi.hoisted(() => ({ resolve: vi.fn() }))
+
+beforeEach(() => {
+  mocks.resolve.mockReset()
+  Object.defineProperty(window, 'api', {
+    configurable: true,
+    value: { aiVault: { resolveSessionTitles: mocks.resolve } }
+  })
+})
+
+afterEach(cleanup)
 
 describe('Conversation session titles', () => {
-  it('batches by host and keeps equal provider ids isolated across hosts', async () => {
-    const conversations = [
-      ...Array.from({ length: 65 }, (_, index) =>
-        conversation(`local-${index}`, 'local', `session-${index}`)
-      ),
-      conversation('remote', 'ssh:build', 'session-0'),
-      conversation('paired', 'local', 'session-0')
-    ]
-    const sources = conversations.map(
-      (item, index): ConversationSessionTitleSource => ({
+  it('keeps identities host-scoped and skips unsupported, unnamed identities', () => {
+    const local = conversation('local', 'local', 'session-1')
+    const remote = conversation('remote', 'ssh:build', 'session-1')
+    const noIdentity = conversation('hidden', 'local', 'hidden')
+    noIdentity.navigation!.providerSession = null
+    const named = conversation('named', 'local', 'named')
+    named.title = 'User supplied'
+    const gemini = conversation('gemini', 'local', 'gemini', 'gemini')
+
+    const requests = collectConversationSessionTitleRequests(
+      [local, remote, noIdentity, named, gemini].map((item) => ({
         conversation: item,
-        executionHostScope:
-          index === conversations.length - 1 ? 'runtime:paired' : item.executionHostId
-      })
+        executionHostScope: item.executionHostId
+      }))
     )
-    const requests = collectConversationSessionTitleRequests(sources)
-    const resolveSessionTitles = vi.fn(async (args: AiVaultSessionTitlesArgs) => ({
-      titles: requests
-        .filter((request) => request.executionHostId === args.executionHostScope)
-        .filter((request) =>
-          args.requests.some(
-            (candidate) =>
-              candidate.agent === request.agent &&
-              candidate.sessionId === request.providerSession.id
-          )
-        )
-        .map((request) => ({
-          agent: request.agent,
-          sessionId: request.providerSession.id,
-          title: `${args.executionHostScope}:${request.providerSession.id}`
-        }))
-    }))
 
-    const titles = await resolveConversationSessionTitles(requests, resolveSessionTitles)
-
-    expect(resolveSessionTitles).toHaveBeenCalledTimes(4)
-    expect(
-      resolveSessionTitles.mock.calls.map(([args]) => args.requests.length).sort((a, b) => a - b)
-    ).toEqual([1, 1, 1, 64])
-    expect(titles.get(conversationSessionTitleKey(conversations[0]!)!)).toBe('local:session-0')
-    expect(titles.get(conversationSessionTitleKey(conversations.at(-2)!)!)).toBe(
-      'ssh:build:session-0'
-    )
-    expect(titles.get(conversationSessionTitleKey(conversations.at(-1)!, 'runtime:paired')!)).toBe(
-      'runtime:paired:session-0'
-    )
+    expect(requests).toHaveLength(2)
+    expect(requests.map((request) => request.executionHostId)).toEqual(['local', 'ssh:build'])
+    expect(conversationSessionTitleKey(local)).not.toBe(conversationSessionTitleKey(remote))
   })
 
-  it('keeps resolving other hosts when one host is unavailable', async () => {
-    const local = conversation('local', 'local', 'local-session')
-    const remote = conversation('remote', 'ssh:build', 'remote-session')
-    const titles = await resolveConversationSessionTitles(
-      collectConversationSessionTitleRequests([
-        { conversation: local, executionHostScope: 'local' },
-        { conversation: remote, executionHostScope: 'ssh:build' }
-      ]),
-      async (args) => {
-        if (args.executionHostScope === 'local') {
-          throw new Error('local scanner unavailable')
+  it('resolves exact titles locally without a global cache', async () => {
+    const item = conversation('codex', 'local', 'codex-session', 'codex')
+    item.navigation!.providerSession!.transcriptPath = '/sessions/codex-session.jsonl'
+    const source: ConversationSessionTitleSource = {
+      conversation: item,
+      executionHostScope: 'local'
+    }
+    const sources = [source]
+    mocks.resolve.mockResolvedValue({
+      titles: [{ agent: 'codex', sessionId: 'codex-session', title: 'Resolved title' }]
+    })
+
+    const view = renderHook(() => useConversationSessionTitles(sources))
+
+    await waitFor(() =>
+      expect(view.result.current.get(conversationSessionTitleKey(item)!)).toBe('Resolved title')
+    )
+    expect(mocks.resolve).toHaveBeenCalledWith({
+      executionHostScope: 'local',
+      requests: [
+        {
+          agent: 'codex',
+          sessionId: 'codex-session',
+          transcriptPath: '/sessions/codex-session.jsonl'
         }
-        return { titles: [{ agent: 'claude', sessionId: 'remote-session', title: 'Remote title' }] }
+      ]
+    })
+  })
+
+  it('keeps resolved titles and skips re-resolving when sources are rebuilt unchanged', async () => {
+    const item = conversation('codex', 'local', 'codex-session', 'codex')
+    mocks.resolve.mockResolvedValue({
+      titles: [{ agent: 'codex', sessionId: 'codex-session', title: 'Resolved title' }]
+    })
+    const view = renderHook(
+      ({ sources }: { sources: ConversationSessionTitleSource[] }) =>
+        useConversationSessionTitles(sources),
+      {
+        initialProps: {
+          sources: [{ conversation: item, executionHostScope: 'local' as const }]
+        }
       }
     )
+    await waitFor(() =>
+      expect(view.result.current.get(conversationSessionTitleKey(item)!)).toBe('Resolved title')
+    )
+    const resolvedTitles = view.result.current
 
-    expect(titles.has(conversationSessionTitleKey(local)!)).toBe(false)
-    expect(titles.get(conversationSessionTitleKey(remote)!)).toBe('Remote title')
+    // Why: every store publish hands the hook a fresh sources array carrying the same identities.
+    view.rerender({
+      sources: [{ conversation: { ...item }, executionHostScope: 'local' as const }]
+    })
+
+    expect(view.result.current).toBe(resolvedTitles)
+    expect(mocks.resolve).toHaveBeenCalledTimes(1)
   })
 
-  it('uses the native title agents only and records a resolved identity with no title', async () => {
-    const claude = conversation('claude', 'ssh:build', 'claude-session')
-    const gemini = conversation('gemini', 'ssh:build', 'gemini-session', 'gemini')
-    const codex = conversation('codex', 'ssh:build', 'codex-session', 'codex')
-    const requests = collectConversationSessionTitleRequests([
-      { conversation: claude, executionHostScope: 'ssh:build' },
-      { conversation: gemini, executionHostScope: 'ssh:build' },
-      { conversation: codex, executionHostScope: 'ssh:build' }
-    ])
-    const resolveSessionTitles = vi.fn(async () => ({
-      titles: [{ agent: 'claude' as const, sessionId: 'claude-session', title: 'Claude title' }]
-    }))
+  it('groups by host and respects the native 64-request batch limit', async () => {
+    const sources: ConversationSessionTitleSource[] = [
+      ...Array.from({ length: 65 }, (_, index) => {
+        const item = conversation(`local-${index}`, 'local', `session-${index}`, 'codex')
+        return { conversation: item, executionHostScope: 'local' as const }
+      }),
+      {
+        conversation: conversation('remote', 'ssh:build', 'remote-session', 'claude'),
+        executionHostScope: 'ssh:build'
+      }
+    ]
+    mocks.resolve.mockResolvedValue({ titles: [] })
 
-    const titles = await resolveConversationSessionTitles(requests, resolveSessionTitles)
+    renderHook(() => useConversationSessionTitles(sources))
 
-    expect(resolveSessionTitles).toHaveBeenCalledTimes(1)
-    expect(requests).toHaveLength(2)
-    expect(titles.get(conversationSessionTitleKey(claude)!)).toBe('Claude title')
-    expect(titles.get(conversationSessionTitleKey(codex)!)).toBe('')
-    expect(titles.has(conversationSessionTitleKey(gemini)!)).toBe(false)
-  })
-
-  it('does not resolve a native title when the Conversation already has an explicit name', () => {
-    const named = conversation('named', 'local', 'named-session')
-    named.title = 'User supplied name'
-
+    await waitFor(() => expect(mocks.resolve).toHaveBeenCalledTimes(3))
+    const calls = mocks.resolve.mock.calls.map(([args]) => args)
+    expect(calls.filter((args) => args.executionHostScope === 'local')).toHaveLength(2)
     expect(
-      collectConversationSessionTitleRequests([
-        { conversation: named, executionHostScope: 'local' }
-      ])
-    ).toEqual([])
-  })
-
-  it('does not re-resolve stable identities but refreshes when their transcript path changes', async () => {
-    const item = conversation('codex', 'local', 'codex-session', 'codex')
-    const resolutions = new Map<string, ConversationSessionTitleResolution>()
-    const resolveSessionTitles = vi.fn(async (args: AiVaultSessionTitlesArgs) => ({
-      titles: args.requests.map((request) => ({
-        agent: request.agent,
-        sessionId: request.sessionId,
-        title: 'Stable title'
-      }))
-    }))
-    const requests = () =>
-      collectConversationSessionTitleRequests([{ conversation: item, executionHostScope: 'local' }])
-
-    const first = await resolveConversationSessionTitleChanges(
-      requests(),
-      resolutions,
-      resolveSessionTitles,
-      1_000
-    )
-    expect(first.titles).toEqual(new Map([[conversationSessionTitleKey(item)!, 'Stable title']]))
-    for (const [key, resolution] of first.resolutions) {
-      resolutions.set(key, resolution)
-    }
-    await expect(
-      resolveConversationSessionTitleChanges(requests(), resolutions, resolveSessionTitles, 1_001)
-    ).resolves.toEqual({ titles: new Map(), resolutions: new Map() })
-    item.navigation!.providerSession!.transcriptPath = '/new/path.jsonl'
-    await resolveConversationSessionTitleChanges(
-      requests(),
-      resolutions,
-      resolveSessionTitles,
-      1_002
-    )
-
-    expect(resolveSessionTitles).toHaveBeenCalledTimes(2)
-  })
-
-  it('reuses the native missing-title backoff before trying an empty title again', async () => {
-    const item = conversation('codex', 'local', 'codex-session', 'codex')
-    const resolutions = new Map<string, ConversationSessionTitleResolution>()
-    const resolveSessionTitles = vi.fn(async () => ({ titles: [] }))
-    const requests = collectConversationSessionTitleRequests([
-      { conversation: item, executionHostScope: 'local' }
-    ])
-    const first = await resolveConversationSessionTitleChanges(
-      requests,
-      resolutions,
-      resolveSessionTitles,
-      1_000
-    )
-    for (const [key, resolution] of first.resolutions) {
-      resolutions.set(key, resolution)
-    }
-
-    await resolveConversationSessionTitleChanges(
-      requests,
-      resolutions,
-      resolveSessionTitles,
-      1_000 + MISSING_AI_VAULT_TITLE_REFRESH_MS - 1
-    )
-    await resolveConversationSessionTitleChanges(
-      requests,
-      resolutions,
-      resolveSessionTitles,
-      1_000 + MISSING_AI_VAULT_TITLE_REFRESH_MS
-    )
-
-    expect(resolveSessionTitles).toHaveBeenCalledTimes(2)
+      calls
+        .filter((args) => args.executionHostScope === 'local')
+        .map((args) => args.requests.length)
+        .sort((left, right) => right - left)
+    ).toEqual([64, 1])
+    expect(calls.filter((args) => args.executionHostScope === 'ssh:build')).toHaveLength(1)
   })
 })
 
@@ -194,6 +139,7 @@ function conversation(
     id,
     executionHostId,
     agent,
+    title: null,
     navigation: {
       paneKey: null,
       providerSession: { key: 'session_id', id: sessionId },

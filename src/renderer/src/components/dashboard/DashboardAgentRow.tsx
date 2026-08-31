@@ -84,7 +84,6 @@ type Props = {
   sendTargetStatus?: 'eligible' | 'disabled' | 'sending'
   sendTargetDisabledReason?: string
   onSendTargetClick?: (paneKey: string) => void
-  trailingAction?: React.ReactNode
 }
 
 const DashboardAgentRow = React.memo(function DashboardAgentRow({
@@ -104,8 +103,7 @@ const DashboardAgentRow = React.memo(function DashboardAgentRow({
   hideLineageConnectors = false,
   sendTargetStatus,
   sendTargetDisabledReason,
-  onSendTargetClick,
-  trailingAction
+  onSendTargetClick
 }: Props) {
   const hasChildDisclosure =
     typeof childAgentCount === 'number' &&
@@ -209,7 +207,6 @@ const DashboardAgentRow = React.memo(function DashboardAgentRow({
         sendTargetStatus === 'disabled' && 'cursor-default opacity-60'
       )}
       data-focused-agent-pane={isFocusedPane ? 'true' : undefined}
-      data-agent-pane-key={agent.paneKey}
       data-agent-send-target={sendTargetStatus}
       title={titleParts.length > 0 ? titleParts.join(' • ') : undefined}
       role={participatesInLineage ? 'treeitem' : undefined}
@@ -225,7 +222,7 @@ const DashboardAgentRow = React.memo(function DashboardAgentRow({
       {isLineageChild && !hideLineageConnectors ? (
         <span
           aria-hidden
-          data-agent-lineage-connector={lineage && !lineage.isLastSibling ? 'branch' : 'last'}
+          data-agent-lineage-connector={lineage?.isLastSibling === false ? 'branch' : 'last'}
           className="pointer-events-none absolute bottom-[-1px] left-[13px] top-[-1px] w-3"
         >
           <span
@@ -310,7 +307,6 @@ const DashboardAgentRow = React.memo(function DashboardAgentRow({
           onDismiss={onDismiss}
           onToggleExpanded={handleToggleExpanded}
           onSendTargetClick={onSendTargetClick}
-          leadingAction={trailingAction}
         />
       </div>
       <DashboardAgentRowToolStep

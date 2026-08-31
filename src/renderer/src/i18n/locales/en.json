@@ -12706,7 +12706,11 @@
             "localSessionSshWorkspaceUnsupported": "This session's history is stored on this machine, so it can't resume in an SSH workspace. Open a local workspace instead.",
             "prepareSessionResumeFailed": "Could not prepare this session for resume.",
             "sessionDeleted": "Session deleted",
-            "sessionDeleteFailed": "Couldn't delete the session"
+            "sessionDeleteFailed": "Couldn't delete the session",
+            "loadSessionHistoryFailed": "Could not load Agent Session History.",
+            "sessionHistoryRefreshInProgress": "Agent Session History is refreshing. Try again.",
+            "conversationSessionNotFound": "This Conversation could not be found in Agent Session History.",
+            "sessionHasNoSavedConversation": "This session has no saved conversation and cannot be resumed."
           },
           "AiVaultPanelControls": {
             "scanningSessions": "Scanning sessions",
@@ -16425,6 +16429,11 @@
           "externalLinkTitle": "Open link to {{host}}?",
           "externalLinkConfirm": "Open link",
           "externalLinkCancel": "Cancel"
+        }
+      },
+      "issues": {
+        "IssueConversationRowContent": {
+          "resume": "Resume"
         }
       }
     },

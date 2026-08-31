@@ -45,9 +45,22 @@ describe('Issue runtime RPC manifest', () => {
     })
   })
 
-  it('rejects paired-runtime SSH selectors before dispatch', () => {
+  it('allows desktop SSH selectors and rejects paired-runtime second hops', () => {
+    issueFeatureReadinessRegistry.setUnavailable('storage-open-failed')
+    expect(
+      call(
+        'issues.status',
+        { authorityExecutionHostId: 'ssh:known' },
+        { clientId: 'desktop-renderer', clientKind: 'runtime' }
+      )
+    ).toMatchObject({ status: 'unavailable', authority: null })
+
     expect(() =>
-      call('issues.status', { authorityExecutionHostId: 'ssh:known' }, { clientKind: 'runtime' })
+      call(
+        'issues.status',
+        { authorityExecutionHostId: 'ssh:known' },
+        { clientKind: 'runtime', pairedDeviceId: 'paired-runtime' }
+      )
     ).toThrow(/second SSH hop/)
   })
 

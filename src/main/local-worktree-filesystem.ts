@@ -1,5 +1,5 @@
 import { runProcess } from '../shared/child-process/run-process'
-import { lstat, readFile, realpath, stat } from 'node:fs/promises'
+import { lstat, readFile } from 'node:fs/promises'
 import { buildWslExecArgs, quotePosixShell } from '../shared/wsl-login-shell-command'
 import { removeHostTree } from './host-tree-removal'
 import { toLinuxPath } from './wsl'
@@ -14,12 +14,6 @@ export type LocalWorktreeFilesystemOptions = {
 type LocalWorktreePathAccess = {
   statPath: StatPath
   readPath: ReadPath
-}
-
-export type LocalWorktreeCanonicalPathAccess = {
-  platform: NodeJS.Platform
-  realpath(path: string): Promise<string>
-  stat(path: string): Promise<{ type: string }>
 }
 
 const WSL_FILE_OPERATION_TIMEOUT_MS = 30_000
@@ -102,52 +96,6 @@ export function getLocalWorktreePathAccess(
       const target = quotePosixShell(toLinuxPath(path))
       const stdout = await runWslCommand(distro, `cat -- ${target}`)
       return stdout
-    }
-  }
-}
-
-export function getLocalWorktreeCanonicalPathAccess(
-  options: LocalWorktreeFilesystemOptions = {}
-): LocalWorktreeCanonicalPathAccess {
-  const distro = options.wslDistro?.trim()
-  if (!shouldUseWslFilesystem(options) || !distro) {
-    return {
-      platform: process.platform,
-      realpath,
-      stat: async (path) => {
-        const metadata = await stat(path)
-        return {
-          type: metadata.isFile()
-            ? 'file'
-            : metadata.isDirectory()
-              ? 'directory'
-              : metadata.isSymbolicLink()
-                ? 'symlink'
-                : 'other'
-        }
-      }
-    }
-  }
-  return {
-    platform: 'linux',
-    realpath: async (path) => {
-      const target = quotePosixShell(toLinuxPath(path))
-      const canonicalPath = (await runWslCommand(distro, `realpath -- ${target}`)).trim()
-      if (!canonicalPath) {
-        throw new Error(`missing ${path}`)
-      }
-      return canonicalPath
-    },
-    stat: async (path) => {
-      const metadata = await getLocalWorktreePathAccess(options).statPath(path)
-      const type =
-        metadata &&
-        typeof metadata === 'object' &&
-        'type' in metadata &&
-        typeof metadata.type === 'string'
-          ? metadata.type
-          : 'other'
-      return { type }
     }
   }
 }

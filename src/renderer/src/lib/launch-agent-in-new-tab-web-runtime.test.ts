@@ -106,7 +106,7 @@ describe('launchAgentInNewTab paired web runtime', () => {
     expect(mocks.closeTab).toHaveBeenCalledWith('stale-agent-tab', { reason: 'cleanup' })
   })
 
-  it('passes only the prepared launch token into local managed-agent startup', async () => {
+  it('passes the prepared launch token into local managed-agent startup', async () => {
     store.settings.activeRuntimeEnvironmentId = null
     mocks.isWebRuntimeSessionActive.mockReturnValue(false)
     mocks.createTab.mockReturnValue({ id: 'tab-local' })

@@ -3,7 +3,6 @@ import type { AiVaultSession } from '../../../../shared/ai-vault-types'
 import type { AgentStatusEntry } from '../../../../shared/agent-status-types'
 import type { SleepingAgentSessionRecord } from '../../../../shared/agent-session-resume'
 import { makePaneKey } from '../../../../shared/stable-pane-id'
-import { toRemoteRuntimePtyId } from '../../../../shared/remote-runtime-pty-id'
 import {
   findAiVaultSessionLiveState,
   findOriginalAiVaultSessionPane
@@ -118,79 +117,6 @@ describe('findOriginalAiVaultSessionPane', () => {
       tabId: 'tab-1',
       leafId: LEAF_ID
     })
-  })
-
-  it('requires the persisted provider key when the caller supplies it', () => {
-    const entry = makeEntry({
-      providerSession: { key: 'conversation_id', id: 'session-1' }
-    })
-
-    expect(
-      findOriginalAiVaultSessionPane(
-        makeState({ agentStatusByPaneKey: { [entry.paneKey]: entry } }),
-        { ...baseSession, providerSessionKey: 'session_id' }
-      )
-    ).toBeNull()
-  })
-
-  it('skips a same-id pane on the wrong SSH host', () => {
-    const wrongPaneKey = makePaneKey('tab-1', LEAF_ID)
-    const rightPaneKey = makePaneKey('tab-2', OTHER_LEAF_ID)
-    const wrong = makeEntry({ paneKey: wrongPaneKey, connectionId: 'other-host' })
-    const right = makeEntry({
-      paneKey: rightPaneKey,
-      tabId: 'tab-2',
-      connectionId: 'build-host'
-    })
-    const state = makeState({
-      agentStatusByPaneKey: { [wrongPaneKey]: wrong, [rightPaneKey]: right },
-      tabsByWorktree: { 'wt-1': [makeTab('tab-1'), makeTab('tab-2')] },
-      terminalLayoutsByTabId: {
-        'tab-1': makeLayout(LEAF_ID),
-        'tab-2': makeLayout(OTHER_LEAF_ID)
-      }
-    })
-
-    expect(
-      findOriginalAiVaultSessionPane(state, {
-        ...baseSession,
-        executionHostId: 'ssh:build-host',
-        providerSessionKey: 'session_id'
-      })
-    ).toMatchObject({ paneKey: rightPaneKey, tabId: 'tab-2' })
-    expect(
-      findAiVaultSessionLiveState(state, {
-        ...baseSession,
-        executionHostId: 'ssh:missing-host',
-        providerSessionKey: 'session_id'
-      })
-    ).toBeNull()
-  })
-
-  it('requires the runtime PTY owner to match the session host', () => {
-    const entry = makeEntry()
-    const runtimeState = makeState({
-      agentStatusByPaneKey: { [entry.paneKey]: entry },
-      terminalLayoutsByTabId: {
-        'tab-1': {
-          ...makeLayout(),
-          ptyIdsByLeafId: { [LEAF_ID]: toRemoteRuntimePtyId('pty-1', 'runtime-a') }
-        }
-      }
-    })
-
-    expect(
-      findOriginalAiVaultSessionPane(runtimeState, {
-        ...baseSession,
-        executionHostId: 'runtime:runtime-b'
-      })
-    ).toBeNull()
-    expect(
-      findOriginalAiVaultSessionPane(runtimeState, {
-        ...baseSession,
-        executionHostId: 'runtime:runtime-a'
-      })
-    ).toMatchObject({ paneKey: entry.paneKey })
   })
 
   it('finds a unique live pane by prompt when provider session is not known yet', () => {

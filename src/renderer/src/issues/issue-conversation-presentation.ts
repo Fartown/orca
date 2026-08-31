@@ -1,17 +1,9 @@
-import type { AgentDotState } from '@/components/AgentStateDot'
-import { isResumableTuiAgent } from '../../../shared/agent-session-resume'
-import { AI_VAULT_AGENTS } from '../../../shared/ai-vault-types'
 import {
   isCodexThreadTitleGenerationOutput,
   isCodexThreadTitleGenerationPrompt
 } from '../../../shared/codex-thread-title-generation'
 import type { ExecutionHostId } from '../../../shared/execution-host'
 import type { ConversationSummary } from '../../../shared/issues/types'
-
-export type IssueConversationStatusPresentation = {
-  dotState: AgentDotState
-  label: 'Starting' | 'Live' | 'Waiting for input' | 'Failed' | null
-}
 
 export function conversationSessionTitleKey(
   conversation: ConversationSummary,
@@ -21,34 +13,9 @@ export function conversationSessionTitleKey(
   if (!providerSession?.id) {
     return null
   }
-  return [executionHostScope, conversation.agent, providerSession.id].join('\0')
-}
-
-export function issueConversationStatus(
-  conversation: ConversationSummary
-): IssueConversationStatusPresentation {
-  if (conversation.livenessVerdict === 'unverifiable') {
-    return { dotState: 'idle', label: null }
-  }
-  if (
-    conversation.executionState === 'failed' ||
-    (conversation.launchFailure && conversation.attachment.kind === 'detached')
-  ) {
-    return { dotState: 'failed', label: 'Failed' }
-  }
-  switch (conversation.executionState) {
-    case 'launching':
-      return { dotState: 'working', label: 'Starting' }
-    case 'running':
-      return { dotState: 'working', label: 'Live' }
-    case 'waiting':
-      return { dotState: 'waiting', label: 'Waiting for input' }
-    case 'stopped':
-      // An attachment proves a live pane; losing it never proves the host process exited.
-      return conversation.attachment.kind === 'attached'
-        ? { dotState: 'done', label: 'Live' }
-        : { dotState: 'idle', label: null }
-  }
+  return [executionHostScope, conversation.agent, providerSession.key, providerSession.id].join(
+    '\0'
+  )
 }
 
 export function issueConversationDisplayName(
@@ -71,25 +38,20 @@ export function issueConversationDisplayName(
 
 export function shouldShowIssueConversation(
   conversation: ConversationSummary,
-  sessionTitles?: ReadonlyMap<string, string>,
-  executionHostScope?: ExecutionHostId
+  _sessionTitles?: ReadonlyMap<string, string>,
+  _executionHostScope?: ExecutionHostId
 ): boolean {
+  if (!hasIssueConversationProviderIdentity(conversation)) {
+    return false
+  }
   if (isCodexThreadTitleGenerationConversation(conversation)) {
     return false
   }
-  if (
-    conversation.issueId !== null ||
-    conversation.title?.trim() ||
-    conversation.latestRound ||
-    conversation.unresolvedRoundCount > 0 ||
-    conversation.launchFailure ||
-    conversation.attachment.kind === 'attached' ||
-    conversation.executionState !== 'stopped'
-  ) {
-    return true
-  }
-  const sessionKey = conversationSessionTitleKey(conversation, executionHostScope)
-  return Boolean(sessionKey && sessionTitles?.get(sessionKey)?.trim())
+  return true
+}
+
+export function hasIssueConversationProviderIdentity(conversation: ConversationSummary): boolean {
+  return Boolean(conversation.navigation?.providerSession?.id)
 }
 
 export function sortIssueConversations(
@@ -101,52 +63,8 @@ export function sortIssueConversations(
   })
 }
 
-export function canResumeIssueConversation(conversation: ConversationSummary): boolean {
-  return (
-    conversation.attachment.kind === 'detached' &&
-    hasIssueConversationResumeTarget(conversation) &&
-    (conversation.executionState === 'stopped' || conversation.executionState === 'failed')
-  )
-}
-
-export function shouldShowIssueConversationResume(
-  conversation: ConversationSummary,
-  hasOriginalPane: boolean
-): boolean {
-  return !hasOriginalPane && canResumeIssueConversation(conversation)
-}
-
-export function hasIssueConversationResumeTarget(conversation: ConversationSummary): boolean {
-  return (
-    conversation.workspaceAvailability === 'available' &&
-    conversation.resumability === 'resumable' &&
-    conversation.livenessVerdict !== 'unverifiable' &&
-    Boolean(conversation.navigation?.providerSession) &&
-    isResumableTuiAgent(conversation.agent) &&
-    AI_VAULT_AGENTS.some((agent) => agent === conversation.agent)
-  )
-}
-
-export function canRetryIssueConversation(conversation: ConversationSummary): boolean {
-  return (
-    conversation.attachment.kind === 'detached' &&
-    conversation.workspaceAvailability === 'available' &&
-    conversation.resumability === 'unavailable' &&
-    conversation.livenessVerdict !== 'unverifiable' &&
-    !conversation.navigation?.providerSession &&
-    conversation.latestRound === null &&
-    conversation.unresolvedRoundCount === 0 &&
-    (conversation.executionState === 'stopped' || conversation.executionState === 'failed')
-  )
-}
-
 function conversationRank(conversation: ConversationSummary): number {
-  if (
-    conversation.attachment.kind === 'attached' ||
-    conversation.executionState === 'launching' ||
-    conversation.executionState === 'running' ||
-    conversation.executionState === 'waiting'
-  ) {
+  if (conversation.attachment.kind === 'attached') {
     return 0
   }
   return conversation.unresolvedRoundCount > 0 ? 1 : 2

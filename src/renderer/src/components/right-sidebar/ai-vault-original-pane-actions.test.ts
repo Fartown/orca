@@ -1,8 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type { AiVaultSession } from '../../../../shared/ai-vault-types'
 
 const mocks = vi.hoisted(() => ({
   target: null as null | { paneKey: string; worktreeId: string; tabId: string; leafId: string },
-  activateWorkspace: vi.fn(),
+  activateWorktree: vi.fn(),
   focusPane: vi.fn(),
   setActiveTabType: vi.fn(),
   toastError: vi.fn()
@@ -14,7 +15,7 @@ vi.mock('@/store', () => ({
   })
 }))
 vi.mock('@/lib/worktree-activation', () => ({
-  activateAndRevealWorkspace: mocks.activateWorkspace
+  activateAndRevealWorktree: mocks.activateWorktree
 }))
 vi.mock('@/lib/activate-tab-and-focus-pane', () => ({
   activateTabAndFocusPane: mocks.focusPane
@@ -32,29 +33,20 @@ import { jumpToAiVaultOriginalPane } from './ai-vault-original-pane-actions'
 beforeEach(() => {
   vi.clearAllMocks()
   mocks.target = null
-  mocks.activateWorkspace.mockReturnValue({ primaryTabId: null })
+  mocks.activateWorktree.mockReturnValue(true)
 })
 
 describe('jumpToAiVaultOriginalPane', () => {
-  it('uses the shared workspace activator and exact tab/leaf focus path', () => {
+  it('preserves the native worktree activation and exact pane focus sequence', () => {
     mocks.target = {
       paneKey: 'tab-1:leaf-1',
-      worktreeId: 'folder:folder-1',
+      worktreeId: 'worktree-1',
       tabId: 'tab-1',
       leafId: 'leaf-1'
     }
 
-    expect(
-      jumpToAiVaultOriginalPane({
-        agent: 'codex',
-        sessionId: 'session-1',
-        executionHostId: 'ssh:build'
-      })
-    ).toBe('focused')
-
-    expect(mocks.activateWorkspace).toHaveBeenCalledWith('folder:folder-1', {
-      executionHostId: 'ssh:build'
-    })
+    expect(jumpToAiVaultOriginalPane(session())).toBe('focused')
+    expect(mocks.activateWorktree).toHaveBeenCalledWith('worktree-1')
     expect(mocks.setActiveTabType).toHaveBeenCalledWith('terminal')
     expect(mocks.focusPane).toHaveBeenCalledWith('tab-1', 'leaf-1', {
       flashFocusedPane: true,
@@ -62,14 +54,50 @@ describe('jumpToAiVaultOriginalPane', () => {
     })
   })
 
-  it('allows a caller to probe without showing the right-sidebar missing-pane toast', () => {
-    expect(
-      jumpToAiVaultOriginalPane(
-        { agent: 'codex', sessionId: 'session-1' },
-        { notifyWhenMissing: false }
-      )
-    ).toBe('missing')
+  it('allows Issue lookup to suppress only the native missing-pane toast', () => {
+    expect(jumpToAiVaultOriginalPane(session(), { notifyWhenMissing: false })).toBe('missing')
     expect(mocks.toastError).not.toHaveBeenCalled()
-    expect(mocks.activateWorkspace).not.toHaveBeenCalled()
+
+    expect(jumpToAiVaultOriginalPane(session())).toBe('missing')
+    expect(mocks.toastError).toHaveBeenCalledWith('Original pane is no longer available.')
+  })
+
+  it('keeps the native unavailable-Workspace error and does not focus the pane', () => {
+    mocks.target = {
+      paneKey: 'tab-1:leaf-1',
+      worktreeId: 'worktree-1',
+      tabId: 'tab-1',
+      leafId: 'leaf-1'
+    }
+    mocks.activateWorktree.mockReturnValue(false)
+
+    expect(jumpToAiVaultOriginalPane(session())).toBe('workspace-unavailable')
+    expect(mocks.toastError).toHaveBeenCalledWith('Worktree is no longer available.')
+    expect(mocks.focusPane).not.toHaveBeenCalled()
   })
 })
+
+function session(): AiVaultSession {
+  return {
+    id: 'local:codex:session-1',
+    executionHostId: 'local',
+    agent: 'codex',
+    sessionId: 'session-1',
+    title: 'Session',
+    cwd: '/workspace',
+    branch: null,
+    model: null,
+    filePath: '/sessions/session-1.jsonl',
+    codexHome: null,
+    createdAt: null,
+    updatedAt: null,
+    modifiedAt: '2026-08-29T00:00:00.000Z',
+    messageCount: 2,
+    totalTokens: 1,
+    previewMessages: [],
+    queuedMessageCount: 0,
+    subagentTranscriptCount: 0,
+    resumeCommand: 'codex resume session-1',
+    subagent: null
+  }
+}

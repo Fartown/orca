@@ -13,7 +13,6 @@ import type { TerminalTab } from '../../../src/shared/terminal-tab-types'
 import type { Worktree } from '../../../src/shared/worktree/types'
 import type { DictationMeterState } from '../../../src/renderer/src/components/dictation/dictation-audio-meter'
 import type { IssueDomainState } from '../../../src/renderer/src/issues/issues-domain-store'
-import type { RuntimeEnvironmentCallE2E } from '../../../src/renderer/src/runtime/runtime-rpc-environment-call'
 
 // Why: window.__store is the Zustand bound store itself, so specs get the whole StoreApi.
 export type AppStore = {
@@ -76,11 +75,6 @@ declare global {
     __issueDomainStore?: IssueDomainStore
     __dictationMeterE2E?: { publish(meter: DictationMeterState): void }
     __paneManagers?: Map<string, PaneManagerLike>
-    __issuesJourneyRuntimeSimulator?: {
-      mode: 'failure' | 'authority'
-      generation: 'a' | 'b'
-    }
-    __runtimeEnvironmentCallE2E?: RuntimeEnvironmentCallE2E
   }
 }
 

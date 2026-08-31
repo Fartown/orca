@@ -26,7 +26,6 @@ import { ConversationLaunchFailureTransactions } from './conversation-launch-fai
 import {
   ConversationLaunchPreparationTransactions,
   type PrepareConversationLaunchInput,
-  type PrepareConversationResumeInput,
   type PrepareConversationRetryInput
 } from './conversation-launch-preparation-transactions'
 import {
@@ -36,7 +35,6 @@ import {
 
 export type {
   PrepareConversationLaunchInput,
-  PrepareConversationResumeInput,
   PrepareConversationRetryInput
 } from './conversation-launch-preparation-transactions'
 
@@ -94,19 +92,6 @@ export class ConversationAllocator {
       method: 'conversations.prepareLaunch',
       payload: params.input,
       operation: () => this.launchPreparation.allocate(params.input, 'created')
-    }).result
-  }
-
-  prepareResume(params: {
-    identity: IssueMutationIdentity
-    input: PrepareConversationResumeInput
-  }): ConversationLaunchPreparation {
-    return executeIssueMutationWithReceipt({
-      database: this.database,
-      identity: params.identity,
-      method: 'conversations.prepareResume',
-      payload: params.input,
-      operation: () => this.launchPreparation.resume(params.input)
     }).result
   }
 

@@ -187,8 +187,7 @@ function createIngestor(repository: IssueRepository) {
       workspaceRef: { type: 'worktree', worktreeId: 'worktree-1' },
       workspaceSnapshot: { name: 'Workspace', path: '/workspace' },
       processIncarnation: 'process-1',
-      connectionId: null,
-      hostPlatform: 'darwin'
+      connectionId: null
     }),
     attachments
   })

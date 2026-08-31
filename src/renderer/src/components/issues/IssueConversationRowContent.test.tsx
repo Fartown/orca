@@ -1,43 +1,41 @@
 // @vitest-environment happy-dom
 
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { AgentStatusEntry } from '../../../../shared/agent-status-types'
+import type { AgentProviderSessionMetadata } from '../../../../shared/agent-session-resume'
+import type { AgentStatusEntry, AgentType } from '../../../../shared/agent-status-types'
+import type { ConversationSummary } from '../../../../shared/issues/types'
 import type { TerminalTab } from '../../../../shared/terminal-tab-types'
 import type { DashboardAgentRow } from '@/components/dashboard/useDashboardData'
-import { TooltipProvider } from '@/components/ui/tooltip'
-import type { ConversationSummary } from '../../../../shared/issues/types'
 
 const mocks = vi.hoisted(() => ({
   rows: [] as DashboardAgentRow[],
-  sleepingAgentSessionsByPaneKey: {} as Record<string, unknown>,
-  setActiveIssueRoute: vi.fn()
+  executionHostId: 'local',
+  nativeActivate: vi.fn(),
+  setActiveIssueRoute: vi.fn(),
+  sendTarget: false
 }))
 
 vi.mock('@/components/sidebar/useWorktreeAgentRows', () => ({
   useWorktreeAgentRows: (_workspaceKey: string, active: boolean) => (active ? mocks.rows : [])
 }))
+vi.mock('@/lib/worktree-runtime-owner', () => ({
+  getExecutionHostIdForWorktree: () => mocks.executionHostId
+}))
 vi.mock('@/store', () => ({
-  useAppStore: (selector: (state: unknown) => unknown) =>
-    selector({ sleepingAgentSessionsByPaneKey: mocks.sleepingAgentSessionsByPaneKey })
+  useAppStore: (selector: (state: unknown) => unknown) => selector({})
 }))
 vi.mock('@/components/sidebar/WorktreeCardAgents', () => ({
-  default: ({
-    agents,
-    onAgentActivate,
-    onRetainedAgentActivate
-  }: {
-    agents: DashboardAgentRow[]
-    onAgentActivate?: () => void
-    onRetainedAgentActivate?: () => void
-  }) => (
-    <button
-      type="button"
+  default: ({ agents }: { agents: DashboardAgentRow[] }) => (
+    <div
+      className="worktree-agent-row-hover"
+      data-agent-send-target={mocks.sendTarget ? 'eligible' : undefined}
       data-testid="workspace-agent-row"
-      onClick={agents[0]?.rowSource === 'retained' ? onRetainedAgentActivate : onAgentActivate}
+      onClick={mocks.nativeActivate}
     >
-      {agents.map((agent) => agent.paneKey).join(',')}
-    </button>
+      <span>{agents.map((agent) => agent.paneKey).join(',')}</span>
+      <button type="button">Nested action</button>
+    </div>
   )
 }))
 vi.mock('@/issues/issues-domain-store', () => ({
@@ -53,200 +51,189 @@ import {
 
 beforeEach(() => {
   mocks.rows = []
-  mocks.sleepingAgentSessionsByPaneKey = {}
+  mocks.executionHostId = 'local'
+  mocks.nativeActivate.mockReset()
   mocks.setActiveIssueRoute.mockReset()
+  mocks.sendTarget = false
 })
 
 afterEach(cleanup)
 
 describe('IssueConversationRowContent', () => {
-  it('renders and delegates to the exact existing Workspace agent row', () => {
-    mocks.rows = [row('selected:leaf')]
-    const onMissingWorkspaceRowActivate = vi.fn()
+  it('renders the native Workspace row by provider identity even when attachment is stale', async () => {
+    mocks.rows = [row('live:leaf', 'codex', provider('session-1'))]
+    const missingAction = vi.fn(async () => undefined)
 
     render(
       <IssueConversationRowContent
-        conversation={conversation('selected:leaf')}
+        conversation={conversation({
+          attachment: { kind: 'detached' },
+          navigation: navigation(provider('session-1'))
+        })}
         route="local"
-        originalPaneTarget={null}
-        onMissingWorkspaceRowActivate={onMissingWorkspaceRowActivate}
+        onMissingWorkspaceRowActivate={missingAction}
       />
     )
 
     fireEvent.click(screen.getByTestId('workspace-agent-row'))
-    expect(screen.queryByTestId('issue-conversation-primary-action')).toBeNull()
-    expect(onMissingWorkspaceRowActivate).not.toHaveBeenCalled()
-    expect(mocks.setActiveIssueRoute).toHaveBeenCalledWith(null)
+    expect(mocks.nativeActivate).toHaveBeenCalledOnce()
+    expect(missingAction).not.toHaveBeenCalled()
+    await waitFor(() => expect(mocks.setActiveIssueRoute).toHaveBeenCalledWith(null))
   })
 
-  it('uses the missing-Workspace-row action when the attachment projection is stale', () => {
-    const onMissingWorkspaceRowActivate = vi.fn()
+  it('does not clear the Issue route for nested controls or send-target mode', async () => {
+    mocks.rows = [row('live:leaf', 'codex', provider('session-1'))]
+    const view = render(
+      <IssueConversationRowContent
+        conversation={conversation()}
+        route="local"
+        onMissingWorkspaceRowActivate={async () => undefined}
+      />
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Nested action' }))
+    await Promise.resolve()
+    expect(mocks.setActiveIssueRoute).not.toHaveBeenCalled()
+
+    mocks.sendTarget = true
+    view.rerender(
+      <IssueConversationRowContent
+        conversation={conversation()}
+        route="local"
+        onMissingWorkspaceRowActivate={async () => undefined}
+      />
+    )
+    fireEvent.click(screen.getByTestId('workspace-agent-row'))
+    await Promise.resolve()
+    expect(mocks.setActiveIssueRoute).not.toHaveBeenCalled()
+  })
+
+  it('uses the historical action when host or provider identity does not match', async () => {
+    mocks.executionHostId = 'ssh:other'
+    mocks.rows = [row('live:leaf', 'codex', provider('session-1'))]
+    const missingAction = vi.fn(async () => undefined)
 
     render(
       <IssueConversationRowContent
-        conversation={conversation('missing:leaf')}
+        conversation={conversation()}
         route="local"
-        originalPaneTarget={null}
-        onMissingWorkspaceRowActivate={onMissingWorkspaceRowActivate}
+        onMissingWorkspaceRowActivate={missingAction}
       />
     )
 
     fireEvent.click(screen.getByTestId('issue-conversation-primary-action'))
+    await waitFor(() => expect(missingAction).toHaveBeenCalledOnce())
     expect(screen.queryByTestId('workspace-agent-row')).toBeNull()
-    expect(screen.queryByText('Live')).toBeNull()
-    expect(onMissingWorkspaceRowActivate).toHaveBeenCalledTimes(1)
   })
 
-  it('reuses a Workspace row by provider identity when the Issue projection is detached', () => {
-    mocks.rows = [row('live:leaf', undefined, 'session-1')]
-    const onMissingWorkspaceRowActivate = vi.fn()
+  it('keeps the fallback action disabled while native Jump or Resume is pending', async () => {
+    let finish: (() => void) | undefined
+    const missingAction = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          finish = resolve
+        })
+    )
 
     render(
       <IssueConversationRowContent
-        conversation={conversation('old:leaf', {
-          attachment: { kind: 'detached' },
-          navigation: providerNavigation('session-1')
-        })}
+        conversation={conversation({ title: null })}
         route="local"
-        originalPaneTarget={target('live:leaf')}
-        onMissingWorkspaceRowActivate={onMissingWorkspaceRowActivate}
+        onMissingWorkspaceRowActivate={missingAction}
       />
     )
 
-    expect(screen.getByTestId('workspace-agent-row').textContent).toBe('live:leaf')
-    expect(screen.queryByTestId('issue-conversation-primary-action')).toBeNull()
-    expect(onMissingWorkspaceRowActivate).not.toHaveBeenCalled()
-  })
+    const action = screen.getByTestId('issue-conversation-primary-action')
+    expect(action.textContent).toContain('Codex')
+    expect(action.textContent).not.toContain('Untitled Conversation')
+    expect(action.getAttribute('title')).toBe('Resume')
+    fireEvent.click(action)
+    fireEvent.click(action)
+    expect(missingAction).toHaveBeenCalledOnce()
+    expect(action.getAttribute('aria-busy')).toBe('true')
 
-  it('reuses the exact Workspace row resolved by the existing sleeping-session identity', () => {
-    mocks.rows = [row('restored:leaf')]
-    mocks.sleepingAgentSessionsByPaneKey = {
-      'restored:leaf': {
-        paneKey: 'restored:leaf',
-        tabId: 'restored',
-        worktreeId: 'worktree-1',
-        agent: 'codex',
-        providerSession: { key: 'session_id', id: 'session-1' }
-      }
-    }
-
-    render(
-      <IssueConversationRowContent
-        conversation={conversation('old:leaf', {
-          attachment: { kind: 'detached' },
-          navigation: providerNavigation('session-1')
-        })}
-        route="local"
-        originalPaneTarget={target('restored:leaf')}
-        onMissingWorkspaceRowActivate={() => undefined}
-      />
-    )
-
-    expect(screen.getByTestId('workspace-agent-row').textContent).toBe('restored:leaf')
-  })
-
-  it('routes a retained Workspace row through the shared Issue navigation action', () => {
-    mocks.rows = [{ ...row('retained:leaf'), rowSource: 'retained' }]
-    const onMissingWorkspaceRowActivate = vi.fn()
-
-    render(
-      <IssueConversationRowContent
-        conversation={conversation('retained:leaf')}
-        route="local"
-        originalPaneTarget={target('retained:leaf')}
-        onMissingWorkspaceRowActivate={onMissingWorkspaceRowActivate}
-      />
-    )
-
-    fireEvent.click(screen.getByTestId('workspace-agent-row'))
-    expect(onMissingWorkspaceRowActivate).toHaveBeenCalledOnce()
-    expect(mocks.setActiveIssueRoute).not.toHaveBeenCalled()
-  })
-
-  it('does not present a stale attached projection as Starting without a Workspace row', () => {
-    render(
-      <IssueConversationRowContent
-        conversation={conversation('missing:leaf', { executionState: 'launching' })}
-        route="local"
-        originalPaneTarget={null}
-        onMissingWorkspaceRowActivate={() => undefined}
-      />
-    )
-
-    expect(screen.queryByText('Starting')).toBeNull()
-  })
-
-  it('keeps Starting while a newly allocated Conversation is still unattached', () => {
-    render(
-      <TooltipProvider>
-        <IssueConversationRowContent
-          conversation={conversation('pending:leaf', {
-            attachment: { kind: 'detached' },
-            executionState: 'launching'
-          })}
-          route="local"
-          originalPaneTarget={null}
-          onMissingWorkspaceRowActivate={() => undefined}
-        />
-      </TooltipProvider>
-    )
-
-    expect(screen.getByText('Starting')).toBeTruthy()
+    finish?.()
+    await waitFor(() => expect(action.getAttribute('aria-busy')).toBe('false'))
   })
 })
 
 describe('selectIssueConversationWorkspaceRows', () => {
-  it('keeps the exact pane row and its existing lineage branch', () => {
-    const otherRoot = row('other:leaf')
-    const selected = row('selected:leaf')
-    const child = row('child:leaf', 'selected:leaf')
-    const grandchild = row('grandchild:leaf', 'child:leaf')
+  it('uses attachment only as a tie-breaker and keeps the selected lineage branch', () => {
+    const session = provider('session-1')
+    const first = row('first:leaf', 'codex', session)
+    const selected = row('selected:leaf', 'codex', session)
+    const child = row('child:leaf', 'codex', provider('child'), 'selected:leaf')
+    const unrelated = row('other:leaf', 'codex', provider('session-2'))
 
     expect(
       selectIssueConversationWorkspaceRows(
-        [otherRoot, selected, child, grandchild],
+        [first, unrelated, selected, child],
+        'codex',
+        session,
         'selected:leaf'
       ).map((item) => item.paneKey)
-    ).toEqual(['selected:leaf', 'child:leaf', 'grandchild:leaf'])
+    ).toEqual(['selected:leaf', 'child:leaf'])
   })
 
-  it('does not substitute a different Workspace row when the pane key is missing', () => {
-    expect(selectIssueConversationWorkspaceRows([row('other:leaf')], 'missing:leaf')).toEqual([])
-    expect(selectIssueConversationWorkspaceRows([row('other:leaf')], null)).toEqual([])
-  })
-
-  it('reuses the existing Workspace row without a second local-tab liveness guess', () => {
-    expect(selectIssueConversationWorkspaceRows([row('remote:leaf')], 'remote:leaf')).toEqual([
-      row('remote:leaf')
-    ])
-  })
-
-  it('uses only the exact row selected by the shared original-pane resolver', () => {
-    const first = row('first:leaf', undefined, 'session-1')
-    const second = row('second:leaf', undefined, 'session-1')
-    const unrelated = row('other:leaf', undefined, 'session-2')
+  it('finds the exact identity when the attachment pane is stale', () => {
+    const selected = row('current:leaf', 'codex', provider('session-1'))
 
     expect(
-      selectIssueConversationWorkspaceRows([first, unrelated, second], 'second:leaf').map(
-        (item) => item.paneKey
+      selectIssueConversationWorkspaceRows([selected], 'codex', provider('session-1'), 'stale:leaf')
+    ).toEqual([selected])
+  })
+
+  it('uses the historical action for a retained Workspace completion row', async () => {
+    mocks.rows = [row('closed:leaf', 'codex', provider('session-1'), undefined, 'retained')]
+    const missingAction = vi.fn(async () => undefined)
+
+    render(
+      <IssueConversationRowContent
+        conversation={conversation({ attachment: { kind: 'detached' } })}
+        route="local"
+        onMissingWorkspaceRowActivate={missingAction}
+      />
+    )
+
+    expect(screen.queryByTestId('workspace-agent-row')).toBeNull()
+    fireEvent.click(screen.getByTestId('issue-conversation-primary-action'))
+    await waitFor(() => expect(missingAction).toHaveBeenCalledOnce())
+  })
+
+  it('requires Pi transcript identity as well as session id', () => {
+    const candidate = row('pi:leaf', 'pi', provider('session-1', '/tmp/first.jsonl'))
+
+    expect(
+      selectIssueConversationWorkspaceRows(
+        [candidate],
+        'pi',
+        provider('session-1', '/tmp/second.jsonl'),
+        null
       )
-    ).toEqual(['second:leaf'])
+    ).toEqual([])
   })
 })
 
-function target(paneKey: string) {
+function provider(id: string, transcriptPath?: string): AgentProviderSessionMetadata {
   return {
-    paneKey,
-    worktreeId: 'worktree-1',
-    tabId: paneKey.split(':')[0] ?? paneKey,
-    leafId: paneKey.split(':')[1] ?? 'leaf'
+    key: 'session_id',
+    id,
+    ...(transcriptPath ? { transcriptPath } : {})
   }
+}
+
+function navigation(
+  providerSession: AgentProviderSessionMetadata
+): NonNullable<ConversationSummary['navigation']> {
+  return { paneKey: null, providerSession, resumeLocator: null }
 }
 
 function row(
   paneKey: string,
+  agentType: AgentType,
+  providerSession: AgentProviderSessionMetadata,
   parentPaneKey?: string,
-  providerSessionId?: string
+  rowSource: DashboardAgentRow['rowSource'] = 'live'
 ): DashboardAgentRow {
   const entry: AgentStatusEntry = {
     paneKey,
@@ -255,10 +242,8 @@ function row(
     updatedAt: 1,
     stateStartedAt: 1,
     stateHistory: [],
-    agentType: 'codex',
-    ...(providerSessionId
-      ? { providerSession: { key: 'session_id' as const, id: providerSessionId } }
-      : {}),
+    agentType,
+    providerSession,
     ...(parentPaneKey
       ? {
           orchestration: {
@@ -283,35 +268,35 @@ function row(
     paneKey,
     entry,
     tab,
-    agentType: 'codex',
+    agentType,
+    rowSource,
     state: 'done',
     startedAt: 1
   }
 }
 
-function providerNavigation(sessionId: string): NonNullable<ConversationSummary['navigation']> {
-  return {
-    paneKey: null,
-    providerSession: { key: 'session_id', id: sessionId },
-    resumeLocator: null
-  }
-}
-
-function conversation(
-  paneKey: string,
-  overrides: Partial<ConversationSummary> = {}
-): ConversationSummary {
+function conversation(overrides: Partial<ConversationSummary> = {}): ConversationSummary {
   return {
     id: 'conversation-1',
-    issueId: 'issue-1',
+    hostPartitionKey: 'local',
     executionHostId: 'local',
     workspaceRef: { type: 'worktree', worktreeId: 'worktree-1' },
     workspaceSnapshot: { name: 'Workspace', path: '/workspace' },
     agent: 'codex',
     title: 'Named Conversation',
-    attachment: { kind: 'attached', paneKey, tabId: paneKey.split(':')[0] ?? null },
+    issueId: 'issue-1',
+    recordRevision: 1,
+    launchFailure: null,
+    createdAt: 1,
+    updatedAt: 1,
+    effectiveProjectRef: null,
+    attachment: { kind: 'attached', paneKey: 'old:leaf', tabId: 'old' },
+    resumability: 'resumable',
     executionState: 'running',
+    workspaceAvailability: 'available',
     unresolvedRoundCount: 0,
+    latestRound: null,
+    navigation: navigation(provider('session-1')),
     ...overrides
-  } as ConversationSummary
+  }
 }

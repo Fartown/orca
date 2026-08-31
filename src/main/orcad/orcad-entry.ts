@@ -143,8 +143,6 @@ async function startOrcadRuntime(
   const { ensureActiveOrcaProfile, initOrcaProfilePaths } =
     await import('../orca-profiles/profile-index-store')
   const { initSshHostKeyStoreFile } = await import('../ssh/ssh-host-key-store')
-  const { agentHookServer } = await import('../agent-hooks/server')
-  const { startIssueFeatureForHost } = await import('../issues/issue-host-lifecycle')
   const { startOrcadDaemon, stopOrcadDaemon } = await import('./orcad-daemon-supervision')
   const { daemonOwnsFreshPersistentPtys } = await import('../daemon/daemon-init')
   const { collectOrcadHealth } = await import('./orcad-health')
@@ -171,7 +169,6 @@ async function startOrcadRuntime(
     // Why lazy: a daemon swap replaces the provider after construction, so an eager
     // reference would freeze the pre-daemon one.
     getLocalProvider: () => getLocalPtyProvider(),
-    buildAgentHookPtyEnv: () => agentHookServer.buildPtyEnv(),
     // Why: destructive worktree removal refuses to run without a provider to stop
     // processes through — correctly, since it cannot otherwise verify the tree is idle.
     getSshProvider: (connectionId) => getSshPtyProvider(connectionId),
@@ -185,17 +182,6 @@ async function startOrcadRuntime(
     // constructor's default would advertise it.
     getDesktopWindowStatus: () => 'blocked'
   })
-
-  let hookEvidenceStatus: 'ready' | 'failed' = 'ready'
-  try {
-    await agentHookServer.start({
-      env: 'production',
-      userDataPath: runtimeUserDataPath
-    })
-  } catch (error) {
-    hookEvidenceStatus = 'failed'
-    console.error('[orcad] agent hook server failed to start:', error)
-  }
 
   // Why the headless entry point rather than registerPtyHandlers directly: this is the
   // same call `--serve` makes, and it threads the store through. Without the store the
@@ -213,16 +199,6 @@ async function startOrcadRuntime(
 
   await runtime.refreshRestoredOrchestrationAuthority()
   await runtime.reconcileLegacyWorkerTerminals()
-
-  const issueBootstrap = await startIssueFeatureForHost({
-    profileId: profile.profile.id,
-    profileLabel: profile.profile.name,
-    userDataPath: runtimeUserDataPath,
-    runtime,
-    store,
-    hookSource: agentHookServer,
-    hookEvidenceStatus
-  })
 
   const bindHost = resolveOrcadBindHost(options.bind)
   const rpc = new OrcaRuntimeRpcServer({
@@ -286,11 +262,9 @@ async function startOrcadRuntime(
   return {
     readiness,
     stop: async () => {
-      issueBootstrap?.dispose()
       try {
         await rpc.stop()
       } finally {
-        agentHookServer.stop()
         // Why disconnect and not shut down: the daemon must outlive this process, or an
         // orcad restart goes back to killing every running terminal. See
         // orcad-daemon-supervision.ts.

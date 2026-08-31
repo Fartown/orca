@@ -133,7 +133,7 @@ describe('IssueFeatureBootstrap', () => {
     bootstrap.dispose()
   })
 
-  it('keeps hydrated-only evidence detached and unverifiable for an existing identity', async () => {
+  it('keeps hydrated-only evidence detached for an existing identity', async () => {
     const userDataPath = createIssueTestUserDataPath('orca-bootstrap-hydrated')
     const existingConversationId = seedManagedConversation(userDataPath, 'session-restored')
     const source = new FakeHookSource()
@@ -154,8 +154,7 @@ describe('IssueFeatureBootstrap', () => {
       conversations: [
         {
           id: existingConversationId,
-          attachment: { kind: 'detached' },
-          livenessVerdict: 'unverifiable'
+          attachment: { kind: 'detached' }
         }
       ]
     })
@@ -251,13 +250,7 @@ describe('IssueFeatureBootstrap', () => {
     await bootstrap.drainHookEvents()
 
     expect(listConversations(bootstrap)).toMatchObject({
-      conversations: [
-        {
-          id: conversationId,
-          attachment: { kind: 'detached' },
-          livenessVerdict: 'unverifiable'
-        }
-      ]
+      conversations: [{ id: conversationId, attachment: { kind: 'detached' } }]
     })
 
     source.confirmRestoredEvidence()
@@ -434,8 +427,7 @@ function resolver() {
       workspaceRef: { type: 'worktree' as const, worktreeId: 'worktree-1' },
       workspaceSnapshot: { name: 'Workspace', path: '/workspace' },
       processIncarnation: 'process-1',
-      connectionId: null,
-      hostPlatform: 'darwin' as const
+      connectionId: null
     })
   }
 }

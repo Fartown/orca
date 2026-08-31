@@ -1,0 +1,37 @@
+{
+  "terminal": "term_53a4eae0-6e4c-4640-9311-6d3ca1c60b16",
+  "worktree": "/Users/bytedance/dev/orca",
+  "objective": [
+    "按 .docs/并行任务看板/技术方案.md 实现【工作包 1：shared types、profile-scoped DB、repository】。只做这一个工作包，不要碰 sidebar / Activity / 通知 / 移动端。",
+    "",
+    "先完整读这两份文档再动手：.docs/并行任务看板/技术方案.md（重点 §2 当前实现与复用决策、§4 数据模型、§13 工作包表）和 .docs/并行任务看板/产品方案.md（§1 不可变量）。",
+    "",
+    "范围：",
+    "1) src/shared/issues/ —— Issue / Conversation / RoundRecord 的共享类型与常量。",
+    "2) src/main/issues/ —— profile 隔离的 SQLite 库：开库、迁移、repository。",
+    "3) 对应单测放在同目录 *.test.ts，用仓库现有的 vitest。",
+    "",
+    "硬性技术约束（照抄 OrchestrationDb 的成熟范式，src/main/runtime/orchestration/db.ts）：",
+    "- 用 src/main/sqlite/sync-database.ts 的封装，不要引第二个 sqlite 驱动；",
+    "- 开库四件事：journal_mode=WAL、synchronous=NORMAL、busy_timeout=5000，以及显式 foreign_keys=ON（它是 per-connection、不写进文件，漏设会让 ON DELETE 约束静默失效）；",
+    "- 迁移在事务内做，只在成功时 bump user_version，失败要能回到旧版本继续可用；",
+    "- 库路径经 getOrcaProfileDirectory（src/main/orca-profiles/profile-storage-paths.ts）取，随 profile 隔离；",
+    "- 对 db / -wal / -shm 收紧文件权限，参照 hardenOrchestrationDatabaseFiles；",
+    "- repository 要有 mutation receipt 幂等（同一 mutationId 重复提交不产生第二次副作用）；",
+    "- Issue 的 executionHostId 创建后不可变，跨主机父子关系必须被拒。",
+    "",
+    "测试必须断言真实行为，不接受只断言函数被调用：迁移失败后 user_version 未变、PRAGMA foreign_keys 为 1、mutationId 幂等、不同 profile 互不可见、executionHostId 不可变、跨主机 parent 被拒。",
+    "",
+    "注意：本工作区落后 origin/main 335 个 commit。只新增文件、尽量不改既有文件，降低与主干冲突。",
+    "",
+    "完成判据就是下面三条验收命令全部退出码为 0，其中第三条是 codex 只读守卫。"
+  ],
+  "check": [
+    "pnpm run typecheck:node",
+    "pnpm exec vitest run src/shared/issues src/main/issues",
+    "node /Users/bytedance/dev/orca/goal-mode/cli/acceptance-judge.mjs --agent codex --sandbox read-only --criteria-file /Users/bytedance/dev/orca/.docs/并行任务看板/goal/wp1-criteria.md --cwd /Users/bytedance/dev/orca --timeout 600"
+  ],
+  "checkTimeout": 1200,
+  "maxTurns": 40,
+  "maxMinutes": 300
+}

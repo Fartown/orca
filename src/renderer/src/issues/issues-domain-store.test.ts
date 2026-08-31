@@ -132,6 +132,44 @@ describe('Issue domain store normalization', () => {
     expect(Object.keys(partition.conversationsById)).toHaveLength(1)
   })
 
+  it('keeps the partition reference when a poll reports nothing changed', () => {
+    const actions = issueDomainStore.getState()
+    actions.setRouteStatus('local', 'ready')
+    actions.applyIssuePage('local', 'all', issuePage('authority-a', [issue('I')]), false)
+    actions.applyConversationPage(
+      'local',
+      'authority',
+      conversationPage('authority-a', [conversation('A')]),
+      false
+    )
+    const before = issueDomainStore.getState().partitionsByRouteExecutionHostId
+
+    actions.setRouteStatus('local', 'ready')
+    actions.applyIssuePage(
+      'local',
+      'all',
+      {
+        status: 'not-modified',
+        authority: authority('authority-a'),
+        factsRevision: 1,
+        treeRevision: 1
+      },
+      false
+    )
+    actions.applyConversationPage(
+      'local',
+      'authority',
+      {
+        status: 'not-modified',
+        authority: authority('authority-a'),
+        factsRevision: 1
+      },
+      false
+    )
+
+    expect(issueDomainStore.getState().partitionsByRouteExecutionHostId).toBe(before)
+  })
+
   it('retains the hook readiness reason while degraded pages refresh', () => {
     const actions = issueDomainStore.getState()
     actions.setRouteStatus(

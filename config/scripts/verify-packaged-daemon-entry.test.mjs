@@ -43,41 +43,6 @@ describe('verify-packaged-daemon-entry', () => {
     expect(() => verifyPackagedDaemonEntryBoots(resourcesDir)).not.toThrow()
   })
 
-  it('retries one transient timeout without weakening the boot assertion', () => {
-    writePackagedEntry('console.error("Usage: daemon-entry <socket>"); process.exit(1)\n')
-    const attempts = []
-    const spawnSync = (...args) => {
-      attempts.push(args)
-      if (attempts.length === 1) {
-        const error = new Error('spawnSync node ETIMEDOUT')
-        error.code = 'ETIMEDOUT'
-        return { error, stderr: '', stdout: '' }
-      }
-      return { status: 1, stderr: 'Usage: daemon-entry <socket>\n', stdout: '' }
-    }
-
-    expect(() => verifyPackagedDaemonEntryBoots(resourcesDir, { spawnSync })).not.toThrow()
-    expect(attempts).toHaveLength(2)
-    expect(attempts[0][2]).toEqual({ encoding: 'utf8', timeout: 10_000 })
-    expect(attempts[1][2]).toEqual({ encoding: 'utf8', timeout: 10_000 })
-  })
-
-  it('fails after a second timeout', () => {
-    writePackagedEntry('console.error("Usage: daemon-entry <socket>"); process.exit(1)\n')
-    let attempts = 0
-    const spawnSync = () => {
-      attempts += 1
-      const error = new Error('spawnSync node ETIMEDOUT')
-      error.code = 'ETIMEDOUT'
-      return { error, stderr: '', stdout: '' }
-    }
-
-    expect(() => verifyPackagedDaemonEntryBoots(resourcesDir, { spawnSync })).toThrow(
-      /could not launch daemon-entry\.js.*ETIMEDOUT/
-    )
-    expect(attempts).toBe(2)
-  })
-
   it('fails when the packaged entry cannot resolve its module graph', () => {
     writePackagedEntry('require("orca-module-that-does-not-exist")\n')
     expect(() => verifyPackagedDaemonEntryBoots(resourcesDir)).toThrow(

@@ -6,7 +6,6 @@ import {
   ConversationsPrepareDeleteParams,
   ConversationsPrepareLaunchParams,
   ConversationsRecordLaunchFailureParams,
-  ConversationsPrepareResumeParams,
   ConversationsPrepareRetryParams,
   ConversationsUpdateParams,
   IssuesCreateParams,
@@ -34,7 +33,12 @@ function admitSelector(
   authorityExecutionHostId: 'local' | `ssh:${string}`,
   context: RpcContext
 ): void {
-  if (context.clientKind === 'runtime' && authorityExecutionHostId !== 'local') {
+  // Desktop IPC is also clientKind=runtime; only a paired device is already one network hop away.
+  if (
+    context.clientKind === 'runtime' &&
+    context.pairedDeviceId !== undefined &&
+    authorityExecutionHostId !== 'local'
+  ) {
     throw new InvalidArgumentError('Paired runtimes cannot route Issues through a second SSH hop.')
   }
 }
@@ -205,14 +209,6 @@ export const ISSUE_METHODS = [
     handler: (params, context) => {
       admitSelector(params.authorityExecutionHostId, context)
       return service().prepareRetry(callerFingerprint(context), params)
-    }
-  }),
-  defineMethod({
-    name: 'conversations.prepareResume',
-    params: ConversationsPrepareResumeParams,
-    handler: (params, context) => {
-      admitSelector(params.authorityExecutionHostId, context)
-      return service().prepareResume(callerFingerprint(context), params)
     }
   }),
   defineMethod({

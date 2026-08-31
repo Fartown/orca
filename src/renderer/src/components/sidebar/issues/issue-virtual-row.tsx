@@ -1,17 +1,8 @@
-import { ChevronRight, RotateCcw } from 'lucide-react'
+import { ChevronRight } from 'lucide-react'
 import { useStore } from 'zustand'
-import { IssueConversationResumeButton } from '@/components/issues/IssueConversationResumeButton'
 import { IssueConversationRowContent } from '@/components/issues/IssueConversationRowContent'
 import { ConversationIssueBindingPopover } from '@/components/issues/ConversationIssueBindingPopover'
-import { retryIssueConversation } from '@/components/issues/issue-conversation-launch-action'
-import {
-  canRetryIssueConversation,
-  shouldShowIssueConversationResume
-} from '@/issues/issue-conversation-presentation'
 import { activateMissingWorkspaceIssueConversation } from '@/issues/issue-conversation-navigation'
-import { toIssueConversationAiVaultSessionReference } from '@/issues/issue-conversation-ai-vault-session'
-import { Button } from '@/components/ui/button'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 import { issueDomainStore } from '@/issues/issues-domain-store'
 import type { IssueRouteExecutionHostId } from '../../../../../shared/issues/types'
@@ -28,10 +19,6 @@ import {
   WORKTREE_SECTION_HEADER_PADDING_LEFT
 } from '../worktree-list/rows/indentation'
 import type { IssueSidebarRow } from './build-issue-rows'
-import type {
-  AiVaultOriginalPaneSessionReference,
-  AiVaultOriginalPaneTarget
-} from '@/components/right-sidebar/ai-vault-original-pane'
 
 export function getIssueRowContentIndent(depth: number): number {
   return (
@@ -44,8 +31,7 @@ export function IssueVirtualRow({
   row,
   route,
   hostLabel,
-  sessionTitles,
-  getOriginalPaneTarget
+  sessionTitles
 }: {
   row: IssueSidebarRow
   route: IssueRouteExecutionHostId
@@ -53,9 +39,6 @@ export function IssueVirtualRow({
   hostLabel?: string
   /** 由侧栏统一解析后传下来:单行组件拿不到会话全集,逐行请求会打爆解析接口。 */
   sessionTitles?: ReadonlyMap<string, string>
-  getOriginalPaneTarget: (
-    session: AiVaultOriginalPaneSessionReference
-  ) => AiVaultOriginalPaneTarget | null
 }): React.JSX.Element {
   const activeIssueId = useStore(issueDomainStore, (state) => state.activeIssueRoute?.issueId)
 
@@ -90,9 +73,6 @@ export function IssueVirtualRow({
   }
 
   if (row.kind === 'conversation') {
-    const retryable = canRetryIssueConversation(row.conversation)
-    const sessionReference = toIssueConversationAiVaultSessionReference(row.conversation, route)
-    const originalPaneTarget = sessionReference ? getOriginalPaneTarget(sessionReference) : null
     return (
       <div
         data-conversation-id={row.conversation.id}
@@ -105,34 +85,11 @@ export function IssueVirtualRow({
           conversation={row.conversation}
           route={route}
           sessionTitles={sessionTitles}
-          originalPaneTarget={originalPaneTarget}
           onMissingWorkspaceRowActivate={() =>
-            void (retryable
-              ? retryIssueConversation(route, row.conversation)
-              : activateMissingWorkspaceIssueConversation(row.conversation, route))
+            activateMissingWorkspaceIssueConversation(row.conversation, route)
           }
           fallbackClassName={cn('h-7 rounded-lg', SIDEBAR_NESTED_ROW_HOVER_CLASS)}
         />
-        {shouldShowIssueConversationResume(row.conversation, Boolean(originalPaneTarget)) ? (
-          <IssueConversationResumeButton route={route} conversation={row.conversation} compact />
-        ) : null}
-        {retryable ? (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon-xs"
-                aria-label="Retry Conversation"
-                onClick={() => void retryIssueConversation(route, row.conversation)}
-              >
-                <RotateCcw className="size-3" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="top" sideOffset={4}>
-              Retry Conversation
-            </TooltipContent>
-          </Tooltip>
-        ) : null}
         <ConversationIssueBindingPopover route={route} conversation={row.conversation} compact />
       </div>
     )

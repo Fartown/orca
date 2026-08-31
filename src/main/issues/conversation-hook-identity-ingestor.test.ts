@@ -79,6 +79,43 @@ describe('ConversationHookIdentityIngestor', () => {
     repository.close()
   })
 
+  it('falls back to one unassigned Conversation when the Issue launch claim expired', async () => {
+    const repository = openRepository('expired-claim-fallback')
+    const issue = repository.issues.createLocal({
+      identity: issueMutationIdentity('caller-a', 'expired-claim-issue'),
+      input: { executionHostId: 'local', title: 'Expired launch' }
+    }).issue
+    const launchToken = token('expired-claim')
+    const prepared = repository.conversationAllocator.prepareLaunch({
+      identity: issueMutationIdentity('caller-a', 'expired-claim-prepare'),
+      input: {
+        ...conversationInput(),
+        issueId: issue.id,
+        launchToken,
+        now: 1,
+        claimTtlMs: 1
+      }
+    })
+    const ingestor = new ConversationHookIdentityIngestor(repository, {
+      resolveContext: async () => context()
+    })
+
+    const first = await ingestor.ingest(event({ launchToken, receivedAt: 3 }))
+    const replay = await ingestor.ingest(event({ launchToken, receivedAt: 4 }))
+
+    expect(first).toMatchObject({ disposition: 'created' })
+    expect(replay).toEqual({
+      disposition: 'attached',
+      conversationId: (first as { conversationId: string }).conversationId
+    })
+    expect((first as { conversationId: string }).conversationId).not.toBe(prepared.conversation.id)
+    expect(repository.conversations.list()).toMatchObject([
+      { id: prepared.conversation.id, issueId: issue.id },
+      { id: (first as { conversationId: string }).conversationId, issueId: null }
+    ])
+    repository.close()
+  })
+
   it('does not reuse a consumed Issue claim token for a later provider session', async () => {
     const repository = openRepository('consumed-token')
     const launchToken = token('consumed')
@@ -121,7 +158,7 @@ describe('ConversationHookIdentityIngestor', () => {
     repository.close()
   })
 
-  it('keeps restored-unconfirmed evidence detached and marks the known Conversation unverifiable', async () => {
+  it('keeps restored-unconfirmed evidence detached without recording runtime state', async () => {
     const repository = openRepository('restored-unconfirmed')
     const attachments = new ConversationRuntimeAttachmentRegistry()
     const ingestor = new ConversationHookIdentityIngestor(repository, {
@@ -139,7 +176,7 @@ describe('ConversationHookIdentityIngestor', () => {
     ).toEqual([])
     expect(
       attachments.getDeleteState((first as { conversationId: string }).conversationId)
-    ).toMatchObject({ livenessVerdict: 'unverifiable' })
+    ).toMatchObject({ attached: false })
     repository.close()
   })
 
@@ -156,18 +193,13 @@ describe('ConversationHookIdentityIngestor', () => {
     repository.close()
   })
 
-  it('canonicalizes Pi identity through the execution-owner path access', async () => {
+  it('fails closed for remote Pi identity without main-native path access', async () => {
     const repository = openRepository('remote-pi')
     const ingestor = new ConversationHookIdentityIngestor(repository, {
       resolveContext: async () => ({
         ...context(),
         executionHostId: 'ssh:remote',
         connectionId: 'remote'
-      }),
-      resolvePathAccess: () => ({
-        platform: 'linux',
-        realpath: async () => '/remote/canonical/session.jsonl',
-        stat: async () => ({ type: 'file' })
       })
     })
     const result = await ingestor.ingest(
@@ -176,18 +208,14 @@ describe('ConversationHookIdentityIngestor', () => {
         providerSession: {
           key: 'session_id',
           id: 'pi-session',
-          transcriptPath: '/remote/link/session.jsonl'
+          transcriptPath: '/orca-remote-only/session.jsonl'
         },
         payload: { state: 'working', agentType: 'pi' }
       })
     )
 
-    expect(result).toMatchObject({ disposition: 'created' })
-    expect(
-      repository.conversationIdentities.listForConversation(
-        (result as { conversationId: string }).conversationId
-      )[0].session.transcriptPath
-    ).toBe('/remote/canonical/session.jsonl')
+    expect(result).toEqual({ disposition: 'ignored', reason: 'identity-invalid' })
+    expect(repository.conversations.list()).toEqual([])
     repository.close()
   })
 })
@@ -215,8 +243,7 @@ function context(): ConversationHookIdentityContext {
     workspaceRef: { type: 'worktree', worktreeId: 'worktree-1' },
     workspaceSnapshot: { name: 'Workspace', path: '/workspace' },
     processIncarnation: 'process-1',
-    connectionId: null,
-    hostPlatform: 'darwin'
+    connectionId: null
   }
 }
 

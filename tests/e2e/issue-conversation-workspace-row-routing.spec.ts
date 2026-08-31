@@ -64,9 +64,12 @@ test('Issue Conversation routes by the exact Workspace row @workspace-row-routin
       .getByRole('region', { name: /Issues$/ })
       .locator(`[data-conversation-id="${attached.id}"]`)
 
-    await expect(issueRow.locator(`[data-agent-pane-key="${paneKey}"]`)).toBeVisible()
+    const nativeIssueRow = issueRow
+      .getByTestId('issue-conversation-workspace-row')
+      .locator('.worktree-agent-row-hover')
+    await expect(nativeIssueRow).toBeVisible()
     await openIssueDetail(page, issue.id)
-    await issueRow.locator(`[data-agent-pane-key="${paneKey}"]`).click()
+    await nativeIssueRow.click()
     await expect
       .poll(() =>
         page.evaluate(() => {
@@ -105,7 +108,6 @@ test('Issue Conversation routes by the exact Workspace row @workspace-row-routin
                 ...current,
                 attachment: { kind: 'detached' },
                 executionState: 'stopped',
-                livenessVerdict: undefined,
                 navigation: { ...current.navigation, paneKey: null }
               }
             }
@@ -114,10 +116,10 @@ test('Issue Conversation routes by the exact Workspace row @workspace-row-routin
       })
     }, attached.id)
     await expect(issueRow).toHaveAttribute('data-attachment-state', 'detached')
-    await expect(issueRow.locator(`[data-agent-pane-key="${paneKey}"]`)).toBeVisible()
+    await expect(nativeIssueRow).toBeVisible()
     await expect(issueRow.getByTestId('issue-conversation-primary-action')).toHaveCount(0)
     await openIssueDetail(page, issue.id)
-    await issueRow.locator(`[data-agent-pane-key="${paneKey}"]`).click()
+    await nativeIssueRow.click()
     await expect
       .poll(() =>
         page.evaluate(() => ({
@@ -126,9 +128,7 @@ test('Issue Conversation routes by the exact Workspace row @workspace-row-routin
         }))
       )
       .toEqual({ activeIssueRoute: null, activeTabId: tabId })
-    const detachedProjectionScreenshot = testInfo.outputPath(
-      '02-detached-projection-workspace-row.png'
-    )
+    const detachedProjectionScreenshot = testInfo.outputPath('02-detached-navigation-fallback.png')
     await page.screenshot({ path: detachedProjectionScreenshot, fullPage: true })
     await testInfo.attach('detached-projection-workspace-row', {
       path: detachedProjectionScreenshot,
@@ -165,7 +165,7 @@ test('Issue Conversation routes by the exact Workspace row @workspace-row-routin
         { timeout: 30_000 }
       )
       .toBe('detached')
-    await expect(issueRow.locator(`[data-agent-pane-key="${paneKey}"]`)).toHaveCount(0)
+    await expect(issueRow.getByTestId('issue-conversation-workspace-row')).toHaveCount(0)
     const fallback = issueRow.getByTestId('issue-conversation-primary-action')
     await expect(fallback).toBeVisible()
     const fallbackScreenshot = testInfo.outputPath('03-detached-issue-fallback.png')
@@ -198,9 +198,19 @@ test('Issue Conversation routes by the exact Workspace row @workspace-row-routin
 
     expect((await listConversations(page)).length).toBe(conversationCountBeforeResume)
     expect(resumed.navigation?.paneKey).not.toBe(paneKey)
-    await expect(
-      page.locator(`[data-agent-pane-key="${resumed.navigation?.paneKey}"]`).first()
-    ).toBeVisible({ timeout: 30_000 })
+    const resumedPane = parsePaneKey(resumed.navigation?.paneKey ?? '')
+    if (!resumedPane) {
+      throw new Error(
+        `Resumed Conversation published malformed pane key: ${resumed.navigation?.paneKey}`
+      )
+    }
+    await expect
+      .poll(() => page.evaluate(() => window.__store?.getState().activeTabId ?? null))
+      .toBe(resumedPane.tabId)
+    await openIssuesMode(page)
+    await expect(issueRow.getByTestId('issue-conversation-workspace-row')).toBeVisible({
+      timeout: 30_000
+    })
     const resumedScreenshot = testInfo.outputPath('04-resumed-pane-visible.png')
     await page.screenshot({ path: resumedScreenshot, fullPage: true })
     await testInfo.attach('resumed-pane-visible', {

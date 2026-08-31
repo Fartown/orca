@@ -69,12 +69,15 @@ test('Issue Conversation 行同形且不显示 agent 名 @row-parity', async ({
     const issuesLiveRow = page
       .getByRole('region', { name: /Issues$/ })
       .locator(`[data-conversation-id="${conversation.id}"]`)
-      .locator(`[data-agent-pane-key="${paneKey}"]`)
+      .getByTestId('issue-conversation-workspace-row')
+      .locator('.worktree-agent-row-hover')
     await expect(issuesLiveRow).toBeVisible()
     const issuesLiveSnapshot = await agentRowSnapshot(issuesLiveRow)
 
     await openWorkspacesMode(page)
-    const workspaceLiveRow = page.locator(`[data-agent-pane-key="${paneKey}"]`).first()
+    const workspaceLiveRow = page
+      .locator('[data-worktree-sidebar] .worktree-agent-row-hover')
+      .first()
     await expect(workspaceLiveRow).toBeVisible()
     expect(await agentRowSnapshot(workspaceLiveRow)).toEqual(issuesLiveSnapshot)
     await closeConversationPane(page, attachedConversation)
@@ -153,9 +156,10 @@ test('Issue Conversation 行同形且不显示 agent 名 @row-parity', async ({
       )
     expect((await listConversations(relaunched.page)).length).toBe(conversationCountBeforeResume)
     expect(resumedConversation.id).toBe(conversation.id)
-    await expect(
-      relaunched.page.locator(`[data-agent-pane-key="${resumedConversation.navigation?.paneKey}"]`)
-    ).toBeVisible({ timeout: 30_000 })
+    await openIssuesMode(relaunched.page)
+    await expect(issuesRow.getByTestId('issue-conversation-workspace-row')).toBeVisible({
+      timeout: 30_000
+    })
 
     await openWorkspacesMode(relaunched.page)
     const closeDetail = relaunched.page.getByRole('button', { name: 'Close Issue detail' })

@@ -11402,7 +11402,11 @@
             "sessionHostMismatchUnsupported": "此会话属于其他主机。请打开同一主机上的工作区以恢复它。",
             "prepareSessionResumeFailed": "无法为恢复准备此会话。",
             "sessionDeleted": "会话已删除",
-            "sessionDeleteFailed": "无法删除会话"
+            "sessionDeleteFailed": "无法删除会话",
+            "loadSessionHistoryFailed": "无法加载智能体会话历史。",
+            "sessionHistoryRefreshInProgress": "智能体会话历史正在刷新，请重试。",
+            "conversationSessionNotFound": "在智能体会话历史中找不到这条会话。",
+            "sessionHasNoSavedConversation": "此会话没有已保存的对话内容，无法恢复。"
           },
           "AiVaultPanelControls": {
             "scanningSessions": "正在扫描会话",
@@ -11644,6 +11648,11 @@
             "slowest": "最慢",
             "unlimited": "无限制"
           }
+        }
+      },
+      "issues": {
+        "IssueConversationRowContent": {
+          "resume": "恢复"
         }
       },
       "repo": {

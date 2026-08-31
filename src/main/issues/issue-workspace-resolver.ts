@@ -5,17 +5,11 @@ import {
 import { parseWorkspaceKey } from '../../shared/workspace-scope'
 import { toSshExecutionHostId } from '../../shared/execution-host'
 import type { FolderWorkspace } from '../../shared/folder-workspace-types'
-import type { AgentSessionIdentityPathAccess } from '../runtime/agent-session-claim-identity'
 import type { IssueWorkspaceResolver } from './issue-feature-bootstrap'
 
 export type IssueWorkspaceResolverAdapter = {
   getTerminalWorktreeIdForPaneKey(paneKey: string): string | null
   getFolderWorkspace(folderWorkspaceId: string): FolderWorkspace | undefined
-  pathAccess?(
-    connectionId: string | null,
-    hostPlatform: NodeJS.Platform
-  ): AgentSessionIdentityPathAccess | null
-  hostPlatform?(connectionId: string | null, workspacePath: string): NodeJS.Platform
 }
 
 export function createIssueWorkspaceResolver(
@@ -34,15 +28,12 @@ export function createIssueWorkspaceResolver(
           return null
         }
         const executionHostId = connectionId ? toSshExecutionHostId(connectionId) : 'local'
-        const hostPlatform =
-          adapter.hostPlatform?.(connectionId, folder.folderPath) ?? process.platform
         return {
           executionHostId,
           workspaceRef: parsedScope,
           workspaceSnapshot: { name: folder.name, path: folder.folderPath },
           processIncarnation: null,
-          connectionId,
-          hostPlatform
+          connectionId
         }
       }
       const worktreeScope =
@@ -54,8 +45,6 @@ export function createIssueWorkspaceResolver(
         return null
       }
       const executionHostId = connectionId ? toSshExecutionHostId(connectionId) : 'local'
-      const hostPlatform =
-        adapter.hostPlatform?.(connectionId, parsed.worktreePath) ?? process.platform
       return {
         executionHostId,
         workspaceRef: worktreeScope,
@@ -64,11 +53,8 @@ export function createIssueWorkspaceResolver(
           path: parsed.worktreePath
         },
         processIncarnation: null,
-        connectionId,
-        hostPlatform
+        connectionId
       }
-    },
-    pathAccess: (context) =>
-      adapter.pathAccess?.(context.connectionId, context.hostPlatform) ?? null
+    }
   }
 }

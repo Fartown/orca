@@ -1,8 +1,8 @@
 import React from 'react'
 import { AlertTriangle, ChevronDown, Loader2, Server, ServerOff } from 'lucide-react'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 import { translate } from '@/i18n/i18n'
-import { SidebarCountBadge } from '../../sidebar-count-badge'
 import type { HostHeaderRow } from '../../host-section-rows'
 import { HostSectionHeaderMenu } from '../../HostSectionHeaderMenu'
 
@@ -11,7 +11,25 @@ function formatSectionActivityLabel(count: number, label: string): string {
 }
 
 function SectionMetricsBadge({ count }: { count: number }): React.JSX.Element {
-  return <SidebarCountBadge count={count} label={formatSectionActivityLabel(count, 'workspace')} />
+  const totalLabel = formatSectionActivityLabel(count, 'workspace')
+
+  return (
+    <span
+      className="inline-flex h-4 shrink-0 overflow-hidden rounded-full border border-worktree-sidebar-border bg-worktree-sidebar-accent text-[9px] font-medium leading-none text-muted-foreground/90"
+      aria-label={totalLabel}
+    >
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span className="inline-flex h-full min-w-4 items-center justify-center px-1.5">
+            {count}
+          </span>
+        </TooltipTrigger>
+        <TooltipContent side="bottom" sideOffset={6}>
+          {totalLabel}
+        </TooltipContent>
+      </Tooltip>
+    </span>
+  )
 }
 
 function HostHeaderHealthIcon({

@@ -98,8 +98,12 @@ describe('buildIssueRows', () => {
     ])
   })
 
-  it('hides only unassigned shells after an exact title lookup proves they have no title', () => {
-    const noIdentity = conversation('no-identity', null, 0, { title: null })
+  it('hides identity-less shells while keeping identified history independent of title lookup', () => {
+    const noIdentity = conversation('no-identity', null, 0, {
+      title: null,
+      resumability: 'unavailable',
+      navigation: { paneKey: null, providerSession: null, resumeLocator: null }
+    })
     const resolving = conversation('resolving', null, 0, {
       title: null,
       resumability: 'resumable',
@@ -135,29 +139,27 @@ describe('buildIssueRows', () => {
     })
 
     expect(rows.filter((row) => row.kind === 'conversation').map((row) => row.key)).toEqual([
+      'conversation:resolving',
       'conversation:titled'
     ])
-    expect(rows.find((row) => row.kind === 'unassigned')).toMatchObject({ count: 1 })
+    expect(rows.find((row) => row.kind === 'unassigned')).toMatchObject({ count: 2 })
   })
 
-  it('hides unresolved empty history while keeping failed launches visible', () => {
-    const resolving = conversation('resolving', null, 0, {
-      title: null,
-      resumability: 'resumable',
-      navigation: {
-        paneKey: null,
-        providerSession: { key: 'session_id', id: 'resolving-session' },
-        resumeLocator: null
-      }
+  it('hides prepared Conversations whether assigned or unassigned', () => {
+    const item = issue('issue', null, 0)
+    const assigned = conversation('assigned', item.id, 0, {
+      navigation: { paneKey: null, providerSession: null, resumeLocator: null },
+      executionState: 'launching'
     })
-    const failed = conversation('failed', null, 0, {
-      title: null,
+    const unassigned = conversation('unassigned', null, 0, {
+      navigation: { paneKey: null, providerSession: null, resumeLocator: null },
       executionState: 'failed'
     })
+    const identified = conversation('identified', null, 0, { title: null })
     const rows = buildIssueRows({
-      issueIds: [],
-      issuesById: {},
-      conversationsById: { resolving, failed },
+      issueIds: [item.id],
+      issuesById: { [item.id]: item },
+      conversationsById: { assigned, unassigned, identified },
       collapsedIssueIds: new Set(),
       expandedUnassignedKeys: new Set(['unassigned:local']),
       conversationTitles: new Map(),
@@ -167,7 +169,7 @@ describe('buildIssueRows', () => {
     })
 
     expect(rows.filter((row) => row.kind === 'conversation').map((row) => row.key)).toEqual([
-      'conversation:failed'
+      'conversation:identified'
     ])
   })
 
@@ -280,6 +282,11 @@ function conversation(
     workspaceAvailability: 'available',
     unresolvedRoundCount,
     latestRound: null,
+    navigation: {
+      paneKey: null,
+      providerSession: { key: 'session_id', id: `${id}-session` },
+      resumeLocator: null
+    },
     ...overrides
   }
 }

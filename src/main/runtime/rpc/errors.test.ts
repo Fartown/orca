@@ -5,8 +5,6 @@ import {
   ARTIFACT_SHARING_DISABLED_MESSAGE,
   ArtifactSharingDisabledError
 } from '../../../shared/artifact-sharing-gate'
-import { IssueRepositoryError } from '../../issues/issue-repository-error'
-import { IssueFeatureUnavailableError } from '../../issues/issue-feature-readiness'
 import {
   AUTOMATION_OWNER_CONFLICT_CODES,
   AutomationOwnerConflictError
@@ -20,36 +18,6 @@ class LineageError extends Error {
 }
 
 describe('mapRuntimeError', () => {
-  it('preserves typed Issue conflicts and unavailable readiness across RPC', () => {
-    const conflict = new IssueRepositoryError(
-      'conversation_record_revision_stale',
-      'Conversation changed before this mutation.',
-      { current: { id: 'conversation-1', recordRevision: 4 } }
-    )
-    expect(mapRuntimeError('req_1', { runtimeId: 'runtime-1' }, conflict)).toMatchObject({
-      error: {
-        code: 'conversation_record_revision_stale',
-        data: { current: { id: 'conversation-1', recordRevision: 4 } }
-      }
-    })
-    expect(
-      mapRuntimeError('req_plain', { runtimeId: 'runtime-1' }, new Error('issue_not_found'))
-    ).toMatchObject({ error: { code: 'issue_not_found' } })
-
-    const unavailable = new IssueFeatureUnavailableError({
-      status: 'unavailable',
-      storage: 'failed',
-      hookEvidence: 'ready',
-      reason: 'storage-migration-failed'
-    })
-    expect(mapRuntimeError('req_2', { runtimeId: 'runtime-1' }, unavailable)).toMatchObject({
-      error: {
-        code: 'issue_feature_unavailable',
-        data: { storage: 'failed', reason: 'storage-migration-failed' }
-      }
-    })
-  })
-
   it('preserves the stable skill failure category and retryability across RPC', () => {
     expect(
       mapRuntimeError(

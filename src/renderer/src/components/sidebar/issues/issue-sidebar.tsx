@@ -14,7 +14,7 @@ import {
 import { useIssueDomainStore } from '@/issues/use-issue-domain-store'
 import { SidebarHostBadge } from '../sidebar-host-badge'
 import { useConversationSessionTitles } from '@/issues/conversation-session-titles'
-import { useAiVaultOriginalPaneActions } from '@/components/right-sidebar/ai-vault-original-pane-actions'
+import { shouldShowIssueConversation } from '@/issues/issue-conversation-presentation'
 import type { IssueListFilter, IssueRouteExecutionHostId } from '../../../../../shared/issues/types'
 import { useSidebarHostScopeOptions } from '../use-sidebar-host-scope-options'
 import { buildIssueRows } from './build-issue-rows'
@@ -25,7 +25,6 @@ const FILTER_SEGMENT_CLASS =
   'h-6 px-1.5 text-[10px] data-[state=on]:bg-foreground/10 data-[state=on]:font-semibold data-[state=on]:text-foreground'
 
 export function IssueSidebar(): React.JSX.Element {
-  const { getOriginalPaneTarget } = useAiVaultOriginalPaneActions()
   const { hostOptions } = useSidebarHostScopeOptions()
   const partitions = useIssueDomainStore((state) => state.partitionsByRouteExecutionHostId)
   const filter = useIssueDomainStore((state) => state.filter)
@@ -44,12 +43,12 @@ export function IssueSidebar(): React.JSX.Element {
   const visibleConversationTitleSources = useMemo(
     () =>
       visibleHosts.flatMap((host) =>
-        Object.values(
-          partitions[host.id as IssueRouteExecutionHostId]?.conversationsById ?? {}
-        ).map((conversation) => ({
-          conversation,
-          executionHostScope: host.id as IssueRouteExecutionHostId
-        }))
+        Object.values(partitions[host.id as IssueRouteExecutionHostId]?.conversationsById ?? {})
+          .filter((conversation) => shouldShowIssueConversation(conversation))
+          .map((conversation) => ({
+            conversation,
+            executionHostScope: host.id as IssueRouteExecutionHostId
+          }))
       ),
     [partitions, visibleHosts]
   )
@@ -274,7 +273,6 @@ export function IssueSidebar(): React.JSX.Element {
                     route={item.route}
                     hostLabel={item.hostLabel}
                     sessionTitles={sessionTitles}
-                    getOriginalPaneTarget={getOriginalPaneTarget}
                   />
                 )}
               </div>

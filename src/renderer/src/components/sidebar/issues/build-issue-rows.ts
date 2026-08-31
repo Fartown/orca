@@ -53,14 +53,12 @@ export function buildIssueRows(params: {
   const issues = params.issueIds
     .map((id) => params.issuesById[id])
     .filter((issue): issue is IssueSummary => Boolean(issue))
-  const conversations = Object.values(params.conversationsById).filter(
-    (conversation) =>
-      conversation.issueId !== null ||
-      shouldShowIssueConversation(
-        conversation,
-        params.conversationTitles,
-        params.conversationTitleExecutionHostScope
-      )
+  const conversations = Object.values(params.conversationsById).filter((conversation) =>
+    shouldShowIssueConversation(
+      conversation,
+      params.conversationTitles,
+      params.conversationTitleExecutionHostScope
+    )
   )
   const matchingIssueIds = new Set(
     issues

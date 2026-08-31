@@ -16,7 +16,6 @@ import { updateConversationIssueBinding } from '@/issues/conversation-issue-bind
 import { issueBindingTitle } from '@/issues/issue-binding-options'
 import {
   issueConversationDisplayName,
-  issueConversationStatus,
   shouldShowIssueConversation,
   sortIssueConversations
 } from '@/issues/issue-conversation-presentation'
@@ -40,21 +39,21 @@ export function IssueConversationBindingPopover({
     () => Object.values(partition?.conversationsById ?? {}),
     [partition?.conversationsById]
   )
+  const visibleConversations = useMemo(
+    () => conversations.filter((conversation) => shouldShowIssueConversation(conversation)),
+    [conversations]
+  )
   const titleSources = useMemo(
-    () => conversations.map((conversation) => ({ conversation, executionHostScope: route })),
-    [conversations, route]
+    () => visibleConversations.map((conversation) => ({ conversation, executionHostScope: route })),
+    [route, visibleConversations]
   )
   const sessionTitles = useConversationSessionTitles(titleSources)
   const candidates = useMemo(
     () =>
       sortIssueConversations(
-        conversations.filter(
-          (conversation) =>
-            conversation.issueId !== issueId &&
-            shouldShowIssueConversation(conversation, sessionTitles, route)
-        )
+        visibleConversations.filter((conversation) => conversation.issueId !== issueId)
       ),
-    [conversations, issueId, route, sessionTitles]
+    [issueId, visibleConversations]
   )
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
@@ -111,7 +110,7 @@ export function IssueConversationBindingPopover({
               {candidates.map((conversation) => {
                 const title =
                   issueConversationDisplayName(conversation, sessionTitles, null, route) ||
-                  'Untitled Conversation'
+                  getAgentLabel(conversation.agent)
                 const assignedIssue = conversation.issueId
                   ? partition?.issuesById[conversation.issueId]
                   : undefined
@@ -120,7 +119,6 @@ export function IssueConversationBindingPopover({
                   : conversation.issueId
                     ? 'Another Issue'
                     : 'Unassigned'
-                const status = issueConversationStatus(conversation).label
                 const pending = pendingConversationId === conversation.id
                 return (
                   <CommandItem
@@ -147,7 +145,6 @@ export function IssueConversationBindingPopover({
                       <span className="block truncate text-xs text-muted-foreground">
                         {conversation.workspaceSnapshot.name} · {getAgentLabel(conversation.agent)}{' '}
                         · {assignedLabel}
-                        {status ? ` · ${status}` : ''}
                       </span>
                     </span>
                   </CommandItem>

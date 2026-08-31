@@ -200,9 +200,7 @@ describe('plugin host main/relay conformance', () => {
     },
     {
       name: 'panel-forbidden method',
-      // storage.get is panel-callable so a panel can render its own worker's
-      // state; storage.set stays worker-only, so use it to cover this path.
-      request: { method: 'storage.set', params: { key: 'alpha', value: 1 } },
+      request: { method: 'storage.get', params: { key: 'alpha' } },
       viaPanel: true,
       policy: () => createPolicy(['storage']),
       code: 'panel_forbidden'
@@ -248,23 +246,6 @@ describe('plugin host main/relay conformance', () => {
     expect(outcomes[0]).toMatchObject({ ok: false, code: testCase.code })
     expect(outcomes[1]).toMatchObject({ ok: false, code: testCase.code })
     expect(outcomes[0]).toEqual(outcomes[1])
-  })
-
-  it('lets a panel read its own plugin storage but never write it', async () => {
-    // A panel has no other channel to its worker, so reading the plugin's own
-    // storage is how it renders live state. Writing stays worker-only.
-    for (const adapter of Object.values(
-      createAdapters(vi.fn().mockResolvedValue(createPolicy(['storage'])))
-    )) {
-      expect(
-        await adapter({ method: 'storage.get', params: { key: 'alpha' } }, true)
-      ).toMatchObject({
-        ok: true
-      })
-      expect(
-        await adapter({ method: 'storage.set', params: { key: 'alpha', value: 1 } }, true)
-      ).toMatchObject({ ok: false, code: 'panel_forbidden' })
-    }
   })
 
   it('enforces the same per-plugin panel budget on desktop main and relay', async () => {

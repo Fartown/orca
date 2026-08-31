@@ -6,7 +6,6 @@ const mocks = vi.hoisted(() => ({
   resolveSession: vi.fn(),
   nativeResume: vi.fn(),
   jump: vi.fn(),
-  focusPending: vi.fn(),
   state: {
     activeWorktreeId: 'active-worktree',
     settings: { agentCmdOverrides: { codex: 'codex-local' } }
@@ -21,79 +20,39 @@ vi.mock('@/components/right-sidebar/ai-vault-provider-session-resolution', () =>
 vi.mock('@/components/right-sidebar/ai-vault-session-launch-actions', () => ({
   resumeAiVaultSession: mocks.nativeResume
 }))
-vi.mock('@/components/right-sidebar/ai-vault-session-launch-target', () => ({
-  resolveAiVaultTargetWorkspacePath: vi.fn((state: { workspacePath?: string }) =>
-    state.workspacePath === undefined ? '/workspace' : state.workspacePath
-  )
-}))
 vi.mock('@/components/right-sidebar/ai-vault-original-pane-actions', () => ({
   jumpToAiVaultOriginalPane: mocks.jump
 }))
-vi.mock('./issue-conversation-pending-tab', () => ({
-  focusPendingIssueConversationTab: mocks.focusPending
-}))
 vi.mock('@/store', () => ({
-  useAppStore: {
-    getState: () => mocks.state
-  }
+  useAppStore: { getState: () => mocks.state }
 }))
 vi.mock('@/issues/issues-domain-store', () => ({
   issueDomainStore: { getState: () => ({ setActiveIssueRoute: mocks.setActiveIssueRoute }) }
 }))
 vi.mock('sonner', () => ({ toast: { error: mocks.toastError } }))
 
-import {
-  isIssueConversationResumePending,
-  resumeIssueConversationWithAiVault,
-  subscribeIssueConversationResumePending
-} from './issue-conversation-resume'
+import { resumeIssueConversationWithAiVault } from './issue-conversation-resume'
 
 beforeEach(() => {
-  mocks.resolveSession.mockReset()
-  mocks.nativeResume.mockReset()
-  mocks.jump.mockReset()
-  mocks.focusPending.mockReset()
-  mocks.setActiveIssueRoute.mockReset()
-  mocks.toastError.mockReset()
-  mocks.state = {
-    activeWorktreeId: 'active-worktree',
-    settings: { agentCmdOverrides: { codex: 'codex-local' } }
-  }
+  vi.clearAllMocks()
   mocks.resolveSession.mockResolvedValue(session())
-  mocks.nativeResume.mockResolvedValue({
-    launched: true,
-    bookkeeping: { recorded: false }
-  })
+  mocks.nativeResume.mockResolvedValue(true)
   mocks.jump.mockReturnValue('missing')
-  mocks.focusPending.mockResolvedValue(null)
 })
 
 describe('resumeIssueConversationWithAiVault', () => {
-  it('deduplicates concurrent row and icon clicks onto the existing AI Vault Resume chain', async () => {
-    let finishNativeResume: (value: {
-      launched: true
-      bookkeeping: { recorded: false }
-    }) => void = () => undefined
-    mocks.nativeResume.mockReturnValue(
-      new Promise((resolve) => {
-        finishNativeResume = resolve
-      })
-    )
+  it('resolves the real AI Vault session by the persisted provider identity', async () => {
     const item = conversation()
 
-    const rowClick = resumeIssueConversationWithAiVault('local', item)
-    const iconClick = resumeIssueConversationWithAiVault('local', item)
+    await expect(resumeIssueConversationWithAiVault('ssh:build', item)).resolves.toBe(true)
 
-    expect(rowClick).toBe(iconClick)
-    expect(isIssueConversationResumePending('local', item.id)).toBe(true)
-    await vi.waitFor(() => expect(mocks.resolveSession).toHaveBeenCalledTimes(1))
     expect(mocks.resolveSession).toHaveBeenCalledWith({
-      executionHostId: 'local',
+      executionHostId: 'ssh:build',
       agent: 'codex',
-      providerSession: item.navigation!.providerSession,
+      providerSession: { key: 'session_id', id: 'session-1' },
       workspacePaths: ['/workspace']
     })
-    await vi.waitFor(() => expect(mocks.nativeResume).toHaveBeenCalledTimes(1))
+    expect(mocks.jump).toHaveBeenCalledWith(session(), { notifyWhenMissing: false })
     expect(mocks.nativeResume).toHaveBeenCalledWith({
       session: session(),
       activeWorktreeId: 'active-worktree',
@@ -101,139 +60,64 @@ describe('resumeIssueConversationWithAiVault', () => {
       targetState: mocks.state,
       agentCmdOverrides: { codex: 'codex-local' }
     })
-    expect(mocks.jump).toHaveBeenCalledTimes(2)
-    finishNativeResume({ launched: true, bookkeeping: { recorded: false } })
-    await expect(rowClick).resolves.toBe(true)
     expect(mocks.setActiveIssueRoute).toHaveBeenCalledWith(null)
   })
 
-  it('publishes one shared pending state for every rendered entry point', async () => {
-    mocks.nativeResume.mockResolvedValue({
-      launched: false,
-      bookkeeping: { recorded: false }
-    })
-    const listener = vi.fn()
-    const unsubscribe = subscribeIssueConversationResumePending(listener)
-    const item = conversation()
-
-    expect(isIssueConversationResumePending('local', item.id)).toBe(false)
-    const resume = resumeIssueConversationWithAiVault('local', item)
-    expect(isIssueConversationResumePending('local', item.id)).toBe(true)
-    expect(listener).toHaveBeenCalledTimes(1)
-
-    await expect(resume).resolves.toBe(false)
-    expect(isIssueConversationResumePending('local', item.id)).toBe(false)
-    expect(listener).toHaveBeenCalledTimes(2)
-    unsubscribe()
-  })
-
-  it('focuses an existing pane without launching another provider session', async () => {
+  it('jumps to an existing native pane without launching another Resume', async () => {
     mocks.jump.mockReturnValue('focused')
 
     await expect(resumeIssueConversationWithAiVault('local', conversation())).resolves.toBe(true)
 
-    expect(mocks.resolveSession).not.toHaveBeenCalled()
+    expect(mocks.resolveSession).toHaveBeenCalledOnce()
     expect(mocks.nativeResume).not.toHaveBeenCalled()
-    expect(mocks.jump).toHaveBeenCalledTimes(1)
     expect(mocks.setActiveIssueRoute).toHaveBeenCalledWith(null)
   })
 
-  it('focuses the shared launch-gap tab instead of starting a duplicate Resume', async () => {
-    mocks.focusPending.mockResolvedValue('focused-pane')
+  it('keeps the Issue open when lookup, Jump, or native Resume fails', async () => {
+    mocks.resolveSession.mockResolvedValueOnce(null)
+    await expect(resumeIssueConversationWithAiVault('local', conversation())).resolves.toBe(false)
 
-    await expect(resumeIssueConversationWithAiVault('local', conversation())).resolves.toBe(true)
+    mocks.resolveSession.mockResolvedValueOnce(session())
+    mocks.jump.mockReturnValueOnce('workspace-unavailable')
+    await expect(resumeIssueConversationWithAiVault('local', conversation())).resolves.toBe(false)
 
-    expect(mocks.focusPending).toHaveBeenCalledWith('conversation-1', 'local')
-    expect(mocks.resolveSession).not.toHaveBeenCalled()
-    expect(mocks.nativeResume).not.toHaveBeenCalled()
+    mocks.resolveSession.mockResolvedValueOnce(session())
+    mocks.jump.mockReturnValueOnce('missing')
+    mocks.nativeResume.mockResolvedValueOnce(false)
+    await expect(resumeIssueConversationWithAiVault('local', conversation())).resolves.toBe(false)
+
+    expect(mocks.setActiveIssueRoute).not.toHaveBeenCalled()
   })
 
-  it('allows an immediate retry when the native AI Vault resume reports failure', async () => {
-    mocks.nativeResume.mockResolvedValue({
-      launched: false,
-      bookkeeping: { recorded: false }
+  it('uses the persisted folder Workspace key for native Resume', async () => {
+    await expect(
+      resumeIssueConversationWithAiVault(
+        'local',
+        conversation({ workspaceRef: { type: 'folder', folderWorkspaceId: 'folder-1' } })
+      )
+    ).resolves.toBe(true)
+
+    expect(mocks.nativeResume).toHaveBeenCalledWith(
+      expect.objectContaining({ targetWorktreeId: 'folder:folder-1' })
+    )
+  })
+
+  it('rejects an identity-less record without scanning AI Vault', async () => {
+    const item = conversation({
+      navigation: { paneKey: null, providerSession: null, resumeLocator: null }
     })
-    const item = conversation()
 
     await expect(resumeIssueConversationWithAiVault('local', item)).resolves.toBe(false)
-    await expect(resumeIssueConversationWithAiVault('local', item)).resolves.toBe(false)
-
-    expect(mocks.resolveSession).toHaveBeenCalledTimes(2)
-    expect(mocks.nativeResume).toHaveBeenCalledTimes(2)
-  })
-
-  it('rechecks the shared resolver after the AI Vault scan and skips a raced duplicate launch', async () => {
-    mocks.jump.mockReturnValueOnce('missing').mockReturnValueOnce('focused')
-
-    await expect(resumeIssueConversationWithAiVault('local', conversation())).resolves.toBe(true)
-
-    expect(mocks.resolveSession).toHaveBeenCalledTimes(1)
+    expect(mocks.resolveSession).not.toHaveBeenCalled()
     expect(mocks.nativeResume).not.toHaveBeenCalled()
-    expect(mocks.setActiveIssueRoute).toHaveBeenCalledWith(null)
-  })
-
-  it('uses the current Workspace target state after an asynchronous AI Vault scan', async () => {
-    let finishScan: (value: AiVaultSession) => void = () => undefined
-    mocks.resolveSession.mockReturnValue(
-      new Promise((resolve) => {
-        finishScan = resolve
-      })
-    )
-
-    const resume = resumeIssueConversationWithAiVault('local', conversation())
-    await vi.waitFor(() => expect(mocks.resolveSession).toHaveBeenCalledOnce())
-    mocks.state = {
-      activeWorktreeId: 'new-active-worktree',
-      settings: { agentCmdOverrides: { codex: 'codex-after-scan' } }
-    }
-    finishScan(session())
-
-    await vi.waitFor(() => expect(mocks.nativeResume).toHaveBeenCalledOnce())
-    expect(mocks.nativeResume).toHaveBeenCalledWith({
-      session: session(),
-      activeWorktreeId: 'new-active-worktree',
-      targetWorktreeId: 'worktree-1',
-      targetState: mocks.state,
-      agentCmdOverrides: { codex: 'codex-after-scan' }
-    })
-    await expect(resume).resolves.toBe(true)
-    expect(mocks.setActiveIssueRoute).toHaveBeenCalledWith(null)
-  })
-
-  it('scans the current Workspace path instead of a stale persisted snapshot', async () => {
-    mocks.state = {
-      ...mocks.state,
-      workspacePath: '/workspace/moved'
-    } as typeof mocks.state
-    mocks.nativeResume.mockResolvedValue({
-      launched: false,
-      bookkeeping: { recorded: false }
-    })
-
-    const resume = resumeIssueConversationWithAiVault('local', conversation())
-    await vi.waitFor(() => expect(mocks.resolveSession).toHaveBeenCalledOnce())
-
-    expect(mocks.resolveSession).toHaveBeenCalledWith(
-      expect.objectContaining({ workspacePaths: ['/workspace/moved', '/workspace'] })
-    )
-    await expect(resume).resolves.toBe(false)
-  })
-
-  it('settles when the native Resume queues the target instead of inventing a second pane wait', async () => {
-    await expect(resumeIssueConversationWithAiVault('ssh:build', conversation())).resolves.toBe(
-      true
-    )
-
-    expect(mocks.nativeResume).toHaveBeenCalledOnce()
-    expect(mocks.setActiveIssueRoute).toHaveBeenCalledWith(null)
-    expect(isIssueConversationResumePending('ssh:build', 'conversation-1')).toBe(false)
+    expect(mocks.toastError).toHaveBeenCalledWith('This Conversation cannot be resumed.')
   })
 })
 
 function session(): AiVaultSession {
   return {
-    id: 'local:codex:session-1',
-    executionHostId: 'local',
+    id: 'ssh:build:codex:session-1',
+    executionHostId: 'ssh:build',
     agent: 'codex',
     sessionId: 'session-1',
     title: 'Resume me',
@@ -255,7 +139,7 @@ function session(): AiVaultSession {
   }
 }
 
-function conversation(): ConversationSummary {
+function conversation(overrides: Partial<ConversationSummary> = {}): ConversationSummary {
   return {
     id: 'conversation-1',
     hostPartitionKey: 'local',
@@ -263,9 +147,9 @@ function conversation(): ConversationSummary {
     workspaceRef: { type: 'worktree', worktreeId: 'worktree-1' },
     workspaceSnapshot: { name: 'Workspace', path: '/workspace' },
     agent: 'codex',
-    title: null,
-    issueId: null,
-    recordRevision: 0,
+    title: 'Named Conversation',
+    issueId: 'issue-1',
+    recordRevision: 1,
     launchFailure: null,
     createdAt: 1,
     updatedAt: 1,
@@ -280,6 +164,7 @@ function conversation(): ConversationSummary {
       paneKey: null,
       providerSession: { key: 'session_id', id: 'session-1' },
       resumeLocator: null
-    }
+    },
+    ...overrides
   }
 }

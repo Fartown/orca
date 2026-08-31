@@ -119,7 +119,6 @@ export function VaultSessionRow({
     <ContextMenu>
       <ContextMenuTrigger asChild className="block w-full min-w-0">
         <div
-          data-ai-vault-session-id={session.sessionId}
           className={cn(
             'group/session-row flex w-full min-w-0 cursor-pointer flex-col border-b border-sidebar-border px-3 py-2 text-left transition-colors hover:bg-sidebar-accent/55',
             !detailsExpanded && 'min-h-[98px]'

@@ -1,4 +1,3 @@
-import type { AgentProviderSessionMetadata } from '../../shared/agent-session-resume'
 import { CONVERSATION_LAUNCH_CLAIM_TTL_MS } from '../../shared/issues/constants'
 import type { ConversationLaunchPreparation, ConversationRecord } from '../../shared/issues/types'
 import type { ConversationRecordRepository } from './conversation-record-repository'
@@ -15,11 +14,6 @@ export type PrepareConversationLaunchInput = CreateConversationInput & {
   connectionId?: string | null
   now?: number
   claimTtlMs?: number
-}
-
-export type PrepareConversationResumeInput = Omit<PrepareConversationLaunchInput, 'issueId'> & {
-  providerSession: AgentProviderSessionMetadata
-  resumeLocator?: string | null
 }
 
 export type PrepareConversationRetryInput = {
@@ -57,63 +51,6 @@ export class ConversationLaunchPreparationTransactions {
       expiresAt: claimExpiry(input)
     })
     return { conversation, claimId: claim.claimId, disposition }
-  }
-
-  resume(input: PrepareConversationResumeInput): ConversationLaunchPreparation {
-    const existingIdentity = this.identities.findActiveForExecutionHost({
-      executionHostId: input.executionHostId,
-      agent: input.agent,
-      providerSession: input.providerSession
-    })
-    if (!existingIdentity) {
-      const prepared = this.allocate({ ...input, issueId: null }, 'created')
-      this.identities.attachWithinTransaction({
-        conversationId: prepared.conversation.id,
-        agent: input.agent,
-        providerSession: input.providerSession,
-        resumeLocator: input.resumeLocator,
-        observedAt: input.now
-      })
-      return prepared
-    }
-    let conversation = this.requireConversation(existingIdentity.conversationId)
-    if (!sameConversationWorkspace(conversation.workspaceRef, input.workspaceRef)) {
-      throw new IssueRepositoryError(
-        'resume_workspace_mismatch',
-        'A managed provider session can only resume in its original Workspace.'
-      )
-    }
-    const now = input.now ?? Date.now()
-    this.claims.expirePendingWithinTransaction(conversation.id, now)
-    if (this.hasConversationRuntimeEvidence(conversation.id)) {
-      throw new IssueRepositoryError(
-        'conversation_resume_runtime_present',
-        'Conversation still has live or unverifiable runtime evidence and cannot be resumed.'
-      )
-    }
-    if (this.claims.hasPending(conversation.id, now)) {
-      throw new IssueRepositoryError(
-        'conversation_resume_pending',
-        'Conversation already has a pending Resume request.'
-      )
-    }
-    if (conversation.launchFailure) {
-      conversation = this.conversations.clearLaunchFailureWithinTransaction({
-        id: conversation.id,
-        expectedRecordRevision: conversation.recordRevision,
-        now
-      })
-    }
-    const claim = this.claims.createWithinTransaction({
-      conversationId: conversation.id,
-      launchToken: input.launchToken,
-      paneKey: input.paneKey,
-      processIncarnation: input.processIncarnation,
-      connectionId: input.connectionId,
-      createdAt: input.now,
-      expiresAt: claimExpiry(input)
-    })
-    return { conversation, claimId: claim.claimId, disposition: 'replayed' }
   }
 
   retry(input: PrepareConversationRetryInput): ConversationLaunchPreparation {

@@ -27,21 +27,13 @@ import {
 } from './helpers/issues-journey-actions'
 import {
   bindConversationFromIssueDetail,
-  updateConversationIssueFromWorkspaceRow
+  updateConversationIssueFromIssueRow
 } from './helpers/issues-journey-binding-actions'
-import {
-  ensureJourneySshTarget,
-  forgetAllConversations,
-  setCodexDefaultArgs
-} from './helpers/issues-journey-maintenance-actions'
+import { ensureJourneySshTarget } from './helpers/issues-journey-maintenance-actions'
 import {
   renameAndCompareConversationRows,
   verifyIssueEditConflict
 } from './helpers/issues-journey-edit-actions'
-import {
-  injectRuntimeAuthorityTree,
-  injectRuntimeFailureMatrix
-} from './helpers/issues-journey-runtime-state'
 import {
   createPackagedIssuesJourney,
   listConversations,
@@ -198,7 +190,7 @@ test('真实打包 App Issues 16 步旅程 @issues-journey', async ({ testRepoPa
       await captureJourneyScreenshot(activePage, SCREENSHOT_DIR, '03-three-level-hierarchy.png')
     })
 
-    await test.step('4. Issue 启动、可信 hook 附着、失败同 ID retry 与 forget', async () => {
+    await test.step('4. Issue 启动、可信 hook 附着与 forget', async () => {
       const activePage = currentPage()
       firstConversation = await launchConversationFromIssue(
         activePage,
@@ -212,70 +204,56 @@ test('真实打包 App Issues 16 步旅程 @issues-journey', async ({ testRepoPa
       )
       await expect.poll(() => listRounds(activePage, rootIssue.id)).not.toHaveLength(0)
 
-      await setCodexDefaultArgs(activePage, "'")
-      const failedPreparation = await launchConversationFromIssue(
+      let disposable = await launchConversationFromIssue(
         activePage,
         rootIssue.id,
         primaryWorktreeLabel
       )
-      await setCodexDefaultArgs(activePage, '')
-      await waitForConversation(
+      disposable = await waitForConversation(
         activePage,
         (conversation) =>
-          conversation.id === failedPreparation.id && conversation.launchFailure !== null
+          conversation.id === disposable.id && conversation.attachment.kind === 'attached'
       )
-      await refreshIssueDetail(activePage, rootIssue.id)
-      const failedRow = activePage.locator(`[data-conversation-id="${failedPreparation.id}"]`)
-      await expect(failedRow.getByRole('button', { name: 'Retry', exact: true })).toBeVisible({
-        timeout: 15_000
-      })
-      await failedRow.getByRole('button', { name: 'Retry', exact: true }).click()
-      let retried = await waitForConversation(
-        activePage,
-        (conversation) =>
-          conversation.id === failedPreparation.id && conversation.attachment.kind === 'attached'
-      )
-      expect(retried.id).toBe(failedPreparation.id)
 
       await refreshIssueDetail(activePage, rootIssue.id)
       await activePage
-        .locator(`[data-conversation-id="${retried.id}"]`)
+        .locator(`[data-conversation-id="${disposable.id}"]`)
         .getByRole('button', { name: 'Forget Conversation' })
         .click()
       await expect(activePage.getByText(/Cannot forget:.*attached/)).toBeVisible()
 
       const providerSessionId = readConversationProviderSessionId(
         journey.issueDatabasePath(PROFILE_A),
-        retried.id
+        disposable.id
       )
       const transcriptPath = journey.seedCodexTranscript(providerSessionId, primaryWorktreePath)
-      await closeConversationPane(activePage, retried)
-      retried = await waitForConversation(
+      await closeConversationPane(activePage, disposable)
+      disposable = await waitForConversation(
         activePage,
         (conversation) =>
-          conversation.id === retried.id && conversation.attachment.kind === 'detached'
+          conversation.id === disposable.id && conversation.attachment.kind === 'detached'
       )
       await refreshIssueDetail(activePage, rootIssue.id)
       activePage.once('dialog', (dialog) => void dialog.accept())
       await activePage
-        .locator(`[data-conversation-id="${retried.id}"]`)
+        .locator(`[data-conversation-id="${disposable.id}"]`)
         .getByRole('button', { name: 'Forget Conversation' })
         .click()
       await expect
         .poll(async () =>
-          (await listConversations(activePage)).some((item) => item.id === retried.id)
+          (await listConversations(activePage)).some((item) => item.id === disposable.id)
         )
         .toBe(false)
-      await expect(activePage.locator(`[data-conversation-id="${retried.id}"]`)).toHaveCount(0, {
+      await expect(activePage.locator(`[data-conversation-id="${disposable.id}"]`)).toHaveCount(0, {
         timeout: 20_000
       })
       await openWorkspacesMode(activePage)
-      await expect(activePage.locator(`[data-conversation-id="${retried.id}"]`)).toHaveCount(0, {
+      await expect(activePage.locator(`[data-conversation-id="${disposable.id}"]`)).toHaveCount(0, {
         timeout: 20_000
       })
       await openIssuesMode(activePage)
       expect(existsSync(transcriptPath)).toBe(true)
-      await captureJourneyScreenshot(activePage, SCREENSHOT_DIR, '04-retry-and-forget.png')
+      await captureJourneyScreenshot(activePage, SCREENSHOT_DIR, '04-launch-and-forget.png')
     })
 
     await test.step('5. folder Workspace 可信 hook 物化与无 hook terminal 不物化', async () => {
@@ -333,14 +311,16 @@ test('真实打包 App Issues 16 步旅程 @issues-journey', async ({ testRepoPa
         .getByRole('heading', { name: 'Direct Conversations' })
         .locator('..')
         .locator(`[data-conversation-id="${folderConversation.id}"]`)
-        .locator(`[data-agent-pane-key="${folderConversation.navigation?.paneKey}"]`)
+        .getByTestId('issue-conversation-workspace-row')
+        .locator('.worktree-agent-row-hover')
         .click()
       await expect(activePage.getByRole('button', { name: 'Close Issue detail' })).toBeHidden()
       await expect
         .poll(() => activePage.evaluate(() => window.__store?.getState().activeTabId))
         .toBe(boundPane.tabId)
 
-      const rebound = await updateConversationIssueFromWorkspaceRow(
+      await refreshIssueDetail(activePage, rootIssue.id)
+      const rebound = await updateConversationIssueFromIssueRow(
         activePage,
         folderConversation,
         externalIssue.id,
@@ -366,7 +346,8 @@ test('真实打包 App Issues 16 步旅程 @issues-journey', async ({ testRepoPa
         (await listConversations(activePage)).find((item) => item.id === rebound.id)?.issueId
       ).toBe(externalIssue.id)
 
-      folderConversation = await updateConversationIssueFromWorkspaceRow(activePage, rebound, null)
+      await refreshIssueDetail(activePage, externalIssue.id)
+      folderConversation = await updateConversationIssueFromIssueRow(activePage, rebound, null)
       expect(folderConversation.workspaceRef).toEqual(originalWorkspaceRef)
       await captureJourneyScreenshot(activePage, SCREENSHOT_DIR, '07-bind-rebind-unbind.png')
     })
@@ -421,10 +402,7 @@ test('真实打包 App Issues 16 步旅程 @issues-journey', async ({ testRepoPa
 
       await openSessionHistory(activePage, `folder:${folderWorkspaceId}`)
       await activePage.getByRole('button', { name: 'Refresh Session History' }).click()
-      const sessionRow = activePage.locator(
-        `[data-ai-vault-session-id="${folderProviderSessionId}"]`
-      )
-      await expect(sessionRow).toBeVisible({ timeout: 30_000 })
+      const sessionRow = await findSessionHistoryRow(activePage, folderProviderSessionId)
       await sessionRow.hover()
       await sessionRow.getByTestId('ai-vault-session-resume').click()
       folderConversation = await waitForConversation(
@@ -460,10 +438,7 @@ test('真实打包 App Issues 16 步旅程 @issues-journey', async ({ testRepoPa
       )
       await openSessionHistory(activePage, primaryWorktreeId)
       await activePage.getByRole('button', { name: 'Refresh Session History' }).click()
-      const sessionRow = activePage.locator(
-        `[data-ai-vault-session-id="${folderProviderSessionId}"]`
-      )
-      await expect(sessionRow).toBeVisible({ timeout: 30_000 })
+      const sessionRow = await findSessionHistoryRow(activePage, folderProviderSessionId)
       await sessionRow.hover()
       await sessionRow.getByTestId('ai-vault-session-continue-in-new-session').click()
       const dialog = activePage.getByRole('dialog', { name: 'Continue in New Session' })
@@ -589,7 +564,7 @@ test('真实打包 App Issues 16 步旅程 @issues-journey', async ({ testRepoPa
       await captureJourneyScreenshot(profileBPage, SCREENSHOT_DIR, '12-profile-isolation.png')
     })
 
-    await test.step('13. 区分 unsupported、degraded、unavailable 与 offline 动作', async () => {
+    await test.step('13. 区分 degraded 与 unavailable 动作', async () => {
       await close()
       journey.setProfileSettings(PROFILE_A, { agentStatusHooksEnabled: false })
       journey.setActiveProfile(PROFILE_A)
@@ -627,42 +602,13 @@ test('真实打包 App Issues 16 步旅程 @issues-journey', async ({ testRepoPa
       ).toBeDisabled()
       await unavailableDialog.getByRole('button', { name: 'Cancel' }).click()
 
-      await injectRuntimeFailureMatrix(unavailablePage)
-      await expect(
-        unavailablePage.getByText('This Orca host version does not support Issues.')
-      ).toBeVisible()
-      await expect(unavailablePage.getByText('Offline runtime is unreachable')).toBeVisible()
-      await captureJourneyScreenshot(
-        unavailablePage,
-        SCREENSHOT_DIR,
-        '13b-unavailable-unsupported-offline.png'
-      )
+      await captureJourneyScreenshot(unavailablePage, SCREENSHOT_DIR, '13b-storage-unavailable.png')
     })
 
-    await test.step('14. Project copy 不复制 Issue，move guard 可在 forget 后解除', async () => {
+    await test.step('14. Project transfer 沿用 main，Issue 不介入 move', async () => {
       await close()
       journey.setActiveProfile(profileB)
-      let activePage = await launch()
-      await expect(
-        transferProject(activePage, {
-          sourceProfileId: PROFILE_A,
-          targetProfileId: profileC,
-          repoId,
-          mode: 'move'
-        })
-      ).rejects.toThrow(/issue_project_move_blocked/)
-      expect(await listIssues(activePage)).toHaveLength(0)
-
-      await close()
-      journey.setProfileSettings(PROFILE_A, { agentStatusHooksEnabled: true })
-      journey.setActiveProfile(PROFILE_A)
-      activePage = await launch()
-      await forgetAllConversations(activePage)
-      expect(await listConversations(activePage)).toHaveLength(0)
-
-      await close()
-      journey.setActiveProfile(profileB)
-      activePage = await launch()
+      const activePage = await launch()
       const moved = await transferProject(activePage, {
         sourceProfileId: PROFILE_A,
         targetProfileId: profileC,
@@ -670,10 +616,11 @@ test('真实打包 App Issues 16 步旅程 @issues-journey', async ({ testRepoPa
         mode: 'move'
       })
       expect(moved.status).toBe('transferred')
-      await captureJourneyScreenshot(activePage, SCREENSHOT_DIR, '14-project-move-guard.png')
+      expect(await listIssues(activePage)).toHaveLength(0)
+      await captureJourneyScreenshot(activePage, SCREENSHOT_DIR, '14-project-transfer-main.png')
     })
 
-    await test.step('15. 全部主机 local/SSH/runtime 独立树、profile label 与 authority 清缓存', async () => {
+    await test.step('15. local/SSH 独立树与 profile label', async () => {
       const activePage = currentPage()
       await openIssuesMode(activePage)
       const localCreated = await runtimeRpc<{ issue: IssueSummary }>(activePage, 'issues.create', {
@@ -699,17 +646,11 @@ test('真实打包 App Issues 16 步旅程 @issues-journey', async ({ testRepoPa
           )
         )
         .toBe(true)
-      const runtimeIssueId = await injectRuntimeAuthorityTree(activePage)
       const issuesRegion = localIssuesRegion(activePage)
       await expect(issuesRegion).toContainText('Profile B SSH Issue')
       await expect(issuesRegion).toContainText('Journey SSH')
-      await expect(issuesRegion).toContainText('Runtime generation B')
-      await expect(issuesRegion).toContainText('Journey Runtime')
-      await expect(issuesRegion).not.toContainText('Runtime generation A')
       await openIssueDetail(activePage, localCreated.issue.id)
       await expect(activePage.getByText('Journey Profile B', { exact: true })).toBeVisible()
-      await refreshIssueDetail(activePage, runtimeIssueId)
-      await expect(activePage.getByText('Runtime Profile B', { exact: true })).toBeVisible()
       await captureJourneyScreenshot(activePage, SCREENSHOT_DIR, '15-all-host-authority-trees.png')
     })
 
@@ -746,3 +687,10 @@ test('真实打包 App Issues 16 步旅程 @issues-journey', async ({ testRepoPa
     await journey.dispose()
   }
 })
+
+async function findSessionHistoryRow(page: Page, sessionId: string) {
+  await page.getByPlaceholder('Search sessions').fill(sessionId)
+  const metadata = page.getByTestId('ai-vault-session-metadata')
+  await expect(metadata).toHaveCount(1, { timeout: 30_000 })
+  return metadata.locator('..')
+}

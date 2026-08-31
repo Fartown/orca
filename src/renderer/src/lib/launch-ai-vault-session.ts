@@ -9,7 +9,6 @@ import {
 import type { AiVaultAgent } from '../../../shared/ai-vault-types'
 import type {
   AgentProviderSessionMetadata,
-  ResumableTuiAgent,
   SleepingAgentLaunchConfig
 } from '../../../shared/agent-session-resume'
 import type { TabSplitDirection } from '@/store/slices/tabs'
@@ -20,7 +19,7 @@ export type LaunchAiVaultSessionInNewTabResult =
   | { tabId: null; groupId?: string; runtimeLaunch: Promise<WebRuntimeTerminalCreateOutcome> }
 
 export function launchAiVaultSessionInNewTab(args: {
-  agent: AiVaultAgent | ResumableTuiAgent
+  agent: AiVaultAgent
   worktreeId: string
   command: string
   cwd?: string
@@ -28,7 +27,6 @@ export function launchAiVaultSessionInNewTab(args: {
   envToDelete?: string[]
   launchConfig?: SleepingAgentLaunchConfig
   providerSession?: AgentProviderSessionMetadata
-  launchToken?: string
   targetGroupId?: string
   splitDirection?: TabSplitDirection
 }): LaunchAiVaultSessionInNewTabResult {
@@ -48,7 +46,6 @@ export function launchAiVaultSessionInNewTab(args: {
       ...(args.envToDelete ? { envToDelete: args.envToDelete } : {}),
       ...(args.launchConfig ? { launchConfig: args.launchConfig } : {}),
       ...(args.providerSession ? { providerSession: args.providerSession } : {}),
-      ...(args.launchToken ? { launchToken: args.launchToken } : {}),
       ...(args.launchConfig ? { agentArgs: args.launchConfig.agentArgs } : {}),
       activate: true
     })
@@ -80,7 +77,6 @@ export function launchAiVaultSessionInNewTab(args: {
     ...(args.envToDelete ? { envToDelete: args.envToDelete } : {}),
     ...(args.launchConfig ? { launchConfig: args.launchConfig, launchAgent: args.agent } : {}),
     ...(args.providerSession ? { resumeProviderSession: args.providerSession } : {}),
-    ...(args.launchToken ? { launchToken: args.launchToken } : {}),
     telemetry: {
       agent_kind: tuiAgentToAgentKind(args.agent),
       launch_source: 'sidebar',

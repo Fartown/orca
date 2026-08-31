@@ -12,7 +12,6 @@ import type { FolderWorkspacePathStatus } from '../../../../../../shared/folder-
 import { isConfirmedStaleFolderPathStatus } from '../../../../../../shared/folder-workspace-path-status'
 import { folderWorkspaceToWorktree } from '../../../../../../shared/folder-workspace-worktree'
 import WorktreeCard from '../../WorktreeCard'
-import { getFolderWorkspaceHostId } from '@/store/folder-workspaces/folder-workspace-catalog'
 import type { WorktreeGroupBy } from '../grouping/row-types'
 import { getVirtualRowTransform } from '../viewport/virtual-rows'
 import { getFolderWorkspaceRowGeometry } from './indentation'
@@ -59,10 +58,7 @@ export function renderFolderWorkspaceVirtualRow(args: {
   measureVirtualRowElement: (element: HTMLDivElement | null) => void
 }): React.JSX.Element {
   const { ctx, row, vItem } = args
-  const folderWorktree = {
-    ...folderWorkspaceToWorktree(row.folderWorkspace),
-    hostId: getFolderWorkspaceHostId(row.folderWorkspace, [row.projectGroup])
-  }
+  const folderWorktree = folderWorkspaceToWorktree(row.folderWorkspace)
   const folderWorktreeIdentity = getWorktreeHostIdentity(folderWorktree)
   const pathStatus = ctx.getCachedFolderWorkspacePathStatus({
     scope: 'folder-workspace',

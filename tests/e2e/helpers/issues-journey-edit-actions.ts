@@ -88,7 +88,6 @@ export async function renameAndCompareConversationRows(
   const detailAgentList = detailRow.locator('[aria-label="Agents"]')
   await expect(detailAgentList).toBeVisible()
   expect(normalizeRowText(await detailAgentList.innerText())).toBe(workspaceText)
-  await expect(detailRow).toHaveAttribute('data-execution-state', updated.executionState)
   if (updated.attachment.kind !== 'attached') {
     throw new Error('Shared running-row comparison lost its Runtime Attachment.')
   }

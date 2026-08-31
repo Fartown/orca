@@ -15,10 +15,7 @@ import { isNativeChatTranscriptLocalReadable } from '@/lib/native-chat-transcrip
 import { getRuntimeEnvironmentIdForWorktree } from '@/lib/worktree-runtime-owner'
 import { getLocalProjectExecutionRuntimeContext } from '@/lib/local-preflight-context'
 import { isWebRuntimeSessionActive } from '@/runtime/web-runtime-session'
-import {
-  launchAgentInWebHostTab,
-  type WebHostAgentLaunchResult
-} from '@/lib/launch-agent-web-host-tab'
+import { launchAgentInWebHostTab } from '@/lib/launch-agent-web-host-tab'
 import {
   resolveTuiAgentLaunchArgs,
   resolveTuiAgentLaunchEnv
@@ -65,7 +62,6 @@ export type LaunchAgentInNewTabResult = {
   /** The host will publish and focus a structured tab asynchronously. */
   focusAfterMenuClose?: 'structured-session'
   promptDeliveryResult?: Promise<{ delivered: boolean; failureNotified: boolean }>
-  runtimeLaunchResult?: Promise<WebHostAgentLaunchResult>
 } | null
 
 export function shouldQueueTerminalFocusAfterMenuClose(
@@ -165,8 +161,8 @@ export function launchAgentInNewTab(args: LaunchAgentInNewTabArgs): LaunchAgentI
     const webHostDelivery = launchAgentInWebHostTab({
       agent,
       worktreeId,
-      environmentId: runtimeEnvironmentId,
       launchToken,
+      environmentId: runtimeEnvironmentId,
       groupId,
       cwd: initialCwd,
       startupPlan,
@@ -184,7 +180,6 @@ export function launchAgentInNewTab(args: LaunchAgentInNewTabArgs): LaunchAgentI
       tabId: null,
       startupPlan,
       pasteDraftAfterLaunch: pasteDraftAfterLaunch !== null,
-      runtimeLaunchResult: webHostDelivery,
       ...(pasteDraftAfterLaunch !== null && promptDelivery === 'submit-after-ready'
         ? { promptDeliveryResult: webHostDelivery }
         : {})

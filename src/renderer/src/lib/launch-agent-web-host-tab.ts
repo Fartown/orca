@@ -13,13 +13,6 @@ import type { AgentPromptDelivery } from '../../../shared/agent-session-host-aut
 import { translate } from '@/i18n/i18n'
 import { toAgentLaunchPreferences } from '@/runtime/agent-session-create-operation'
 
-export type WebHostAgentLaunchResult = {
-  launched: boolean
-  delivered: boolean
-  failureNotified: boolean
-  message?: string
-}
-
 function removeStaleLocalAgentTabsForWebHostLaunch(worktreeId: string): void {
   const state = useAppStore.getState()
   for (const tab of state.tabsByWorktree[worktreeId] ?? []) {
@@ -54,7 +47,7 @@ export function launchAgentInWebHostTab(args: {
   agentArgs?: string | null
   viewMode?: Tab['viewMode']
   onPromptDelivered?: () => void
-}): Promise<WebHostAgentLaunchResult> {
+}): Promise<{ delivered: boolean; failureNotified: boolean }> {
   const {
     agent,
     worktreeId,
@@ -110,31 +103,26 @@ export function launchAgentInWebHostTab(args: {
   }: {
     outcome: Awaited<ReturnType<typeof createWebRuntimeSessionTerminal>>
     promptDelivered: boolean
-  }): WebHostAgentLaunchResult => {
+  }): { delivered: boolean; failureNotified: boolean } => {
     // Why: created means the host accepted the launch, not that a local tab
     // exists; keep pruning stale local rows until the snapshot mirrors.
     removeStaleLocalAgentTabsForWebHostLaunch(worktreeId)
     if (outcome.status === 'failed') {
-      const message =
+      toast.error(
         outcome.message ||
-        translate(
-          'auto.lib.launch.agent.in.new.tab.11cce5cc77',
-          'Could not launch {{value0}} in a new terminal.',
-          { value0: agent }
-        )
-      toast.error(message)
-      return {
-        launched: false,
-        delivered: false,
-        failureNotified: true,
-        message
-      }
+          translate(
+            'auto.lib.launch.agent.in.new.tab.11cce5cc77',
+            'Could not launch {{value0}} in a new terminal.',
+            { value0: agent }
+          )
+      )
+      return { delivered: false, failureNotified: true }
     }
     useAppStore.getState().setActiveTabType('terminal')
     if (hasPrompt && promptDelivered) {
       onPromptDelivered?.()
     }
-    return { launched: true, delivered: promptDelivered, failureNotified: false }
+    return { delivered: promptDelivered, failureNotified: false }
   }
 
   if (pastePromptAfterReady !== null) {

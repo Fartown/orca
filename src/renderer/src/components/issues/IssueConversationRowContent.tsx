@@ -1,30 +1,36 @@
-import { useMemo } from 'react'
-import { AgentStateDot } from '@/components/AgentStateDot'
+import { useMemo, useState } from 'react'
+import { Play } from 'lucide-react'
 import { buildAgentRowLineageTree } from '@/components/dashboard/agent-row-lineage-model'
 import type { DashboardAgentRow } from '@/components/dashboard/useDashboardData'
 import WorktreeCardAgents from '@/components/sidebar/WorktreeCardAgents'
 import { useWorktreeAgentRows } from '@/components/sidebar/useWorktreeAgentRows'
 import { Badge } from '@/components/ui/badge'
 import { AgentIcon, getAgentLabel } from '@/lib/agent-catalog'
+import { getExecutionHostIdForWorktree } from '@/lib/worktree-runtime-owner'
 import { cn } from '@/lib/utils'
+import { translate } from '@/i18n/i18n'
 import { issueDomainStore } from '@/issues/issues-domain-store'
 import {
-  canRetryIssueConversation,
-  issueConversationDisplayName,
-  issueConversationStatus
-} from '@/issues/issue-conversation-presentation'
+  NATIVE_AGENT_ROW_CLASS,
+  NATIVE_AGENT_ROW_SEND_TARGET_ATTRIBUTE
+} from '@/issues/native-agent-row-selectors'
+import { issueConversationDisplayName } from '@/issues/issue-conversation-presentation'
+import { useAppStore } from '@/store'
+import {
+  agentProviderSessionsEqual,
+  type AgentProviderSessionMetadata
+} from '../../../../shared/agent-session-resume'
+import type { AgentType } from '../../../../shared/agent-status-types'
 import type {
   ConversationSummary,
   IssueRouteExecutionHostId
 } from '../../../../shared/issues/types'
 import { folderWorkspaceKey } from '../../../../shared/workspace-scope'
-import type { AiVaultOriginalPaneTarget } from '@/components/right-sidebar/ai-vault-original-pane'
 
 export function IssueConversationRowContent({
   conversation,
   route,
   sessionTitles,
-  originalPaneTarget,
   onMissingWorkspaceRowActivate,
   className,
   fallbackClassName
@@ -32,70 +38,90 @@ export function IssueConversationRowContent({
   conversation: ConversationSummary
   route: IssueRouteExecutionHostId
   sessionTitles?: ReadonlyMap<string, string>
-  originalPaneTarget: AiVaultOriginalPaneTarget | null
-  onMissingWorkspaceRowActivate: () => void
+  onMissingWorkspaceRowActivate: () => Promise<unknown>
   className?: string
   fallbackClassName?: string
 }): React.JSX.Element {
-  const projectedWorkspaceKey =
+  const workspaceKey =
     conversation.workspaceRef.type === 'worktree'
       ? conversation.workspaceRef.worktreeId
       : folderWorkspaceKey(conversation.workspaceRef.folderWorkspaceId)
-  const workspaceKey = originalPaneTarget?.worktreeId ?? projectedWorkspaceKey
+  const providerSession = conversation.navigation?.providerSession ?? null
   const attachedPaneKey =
     conversation.attachment.kind === 'attached' ? conversation.attachment.paneKey : null
-  const resolvedPaneKey = originalPaneTarget?.paneKey ?? attachedPaneKey
-  const canMatchWorkspaceRow = resolvedPaneKey !== null
+  const workspaceExecutionHostId = useAppStore((state) =>
+    getExecutionHostIdForWorktree(state, workspaceKey)
+  )
+  const canMatchWorkspaceRow = providerSession !== null && workspaceExecutionHostId === route
   const workspaceRows = useWorktreeAgentRows(workspaceKey, canMatchWorkspaceRow)
   const attachedRows = useMemo(
-    () => selectIssueConversationWorkspaceRows(workspaceRows, resolvedPaneKey),
-    [resolvedPaneKey, workspaceRows]
+    () =>
+      providerSession
+        ? selectIssueConversationWorkspaceRows(
+            workspaceRows,
+            conversation.agent,
+            providerSession,
+            attachedPaneKey
+          )
+        : [],
+    [attachedPaneKey, conversation.agent, providerSession, workspaceRows]
   )
+  const [pending, setPending] = useState(false)
 
   if (attachedRows.length > 0) {
     return (
-      <WorktreeCardAgents
-        worktreeId={workspaceKey}
-        executionHostId={route}
-        onAgentActivate={() => issueDomainStore.getState().setActiveIssueRoute(null)}
-        onRetainedAgentActivate={onMissingWorkspaceRowActivate}
-        agents={attachedRows}
-        className={cn('!mt-0 min-w-0 flex-1', className)}
-      />
+      <div
+        className="min-w-0 flex-1"
+        data-testid="issue-conversation-workspace-row"
+        onClickCapture={handleNativeWorkspaceRowClickCapture}
+      >
+        <WorktreeCardAgents
+          worktreeId={workspaceKey}
+          agents={attachedRows}
+          className={cn('!mt-0 min-w-0 flex-1', className)}
+        />
+      </div>
     )
   }
 
-  const projectedStatus = issueConversationStatus(conversation)
-  const status =
-    projectedStatus.label === 'Failed' ||
-    (projectedStatus.label === 'Starting' && conversation.attachment.kind === 'detached')
-      ? projectedStatus
-      : { dotState: 'idle' as const, label: null }
   const displayName = issueConversationDisplayName(conversation, sessionTitles, null, route)
-  const primary =
-    displayName ||
-    (canRetryIssueConversation(conversation)
-      ? `${getAgentLabel(conversation.agent)} launch failed`
-      : 'Untitled Conversation')
+  const primary = displayName || getAgentLabel(conversation.agent)
   const accessibleLabel = [
     primary,
     getAgentLabel(conversation.agent),
-    conversation.workspaceSnapshot.name,
-    status.label
+    conversation.workspaceSnapshot.name
   ]
     .filter((value): value is string => Boolean(value))
     .join(' · ')
+  const resumeLabel = translate(
+    'auto.components.issues.IssueConversationRowContent.resume',
+    'Resume'
+  )
+
+  const activate = async (): Promise<void> => {
+    if (pending) {
+      return
+    }
+    setPending(true)
+    try {
+      await onMissingWorkspaceRowActivate()
+    } finally {
+      setPending(false)
+    }
+  }
 
   return (
     <button
       type="button"
       className={cn('flex min-w-0 flex-1 items-center text-left', fallbackClassName)}
-      title={accessibleLabel}
-      onClick={onMissingWorkspaceRowActivate}
+      title={resumeLabel}
+      aria-label={`${resumeLabel} · ${accessibleLabel}`}
+      disabled={pending}
+      aria-busy={pending}
+      onClick={() => void activate()}
       data-testid="issue-conversation-primary-action"
     >
       <span className={cn('flex min-w-0 flex-1 items-center gap-1.5 text-xs', className)}>
-        {status.label ? <AgentStateDot state={status.dotState} /> : null}
         <span className="inline-flex size-3.5 shrink-0 items-center justify-center">
           <AgentIcon agent={conversation.agent} size={14} />
         </span>
@@ -103,9 +129,6 @@ export function IssueConversationRowContent({
         <span className="max-w-24 shrink truncate text-muted-foreground">
           {conversation.workspaceSnapshot.name}
         </span>
-        {status.label ? (
-          <span className="shrink-0 text-muted-foreground">{status.label}</span>
-        ) : null}
         {conversation.unresolvedRoundCount > 0 ? (
           <Badge
             variant="outline"
@@ -115,6 +138,7 @@ export function IssueConversationRowContent({
             {conversation.unresolvedRoundCount}
           </Badge>
         ) : null}
+        <Play className="size-3 shrink-0 text-muted-foreground" aria-hidden="true" />
       </span>
     </button>
   )
@@ -122,9 +146,18 @@ export function IssueConversationRowContent({
 
 export function selectIssueConversationWorkspaceRows(
   rows: readonly DashboardAgentRow[],
+  agent: AgentType,
+  providerSession: AgentProviderSessionMetadata,
   paneKey: string | null
 ): DashboardAgentRow[] {
-  const root = paneKey ? rows.find((row) => row.paneKey === paneKey) : undefined
+  const matchingRows = rows.filter(
+    (row) =>
+      row.rowSource !== 'retained' &&
+      row.agentType === agent &&
+      agentProviderSessionsEqual(agent, row.entry.providerSession, providerSession)
+  )
+  const root =
+    (paneKey ? matchingRows.find((row) => row.paneKey === paneKey) : undefined) ?? matchingRows[0]
   if (!root) {
     return []
   }
@@ -144,4 +177,21 @@ export function selectIssueConversationWorkspaceRows(
   }
   appendBranch(root)
   return branch
+}
+
+function handleNativeWorkspaceRowClickCapture(event: React.MouseEvent<HTMLDivElement>): void {
+  const target = event.target
+  if (!(target instanceof Element)) {
+    return
+  }
+  const row = target.closest<HTMLElement>(`.${NATIVE_AGENT_ROW_CLASS}`)
+  if (
+    !row ||
+    row.hasAttribute(NATIVE_AGENT_ROW_SEND_TARGET_ATTRIBUTE) ||
+    target.closest('button, a, input, textarea, select, [role="button"], [contenteditable="true"]')
+  ) {
+    return
+  }
+  // Why: defer past the native row's bubble handler so routing away cannot unmount it before tab activation.
+  setTimeout(() => issueDomainStore.getState().setActiveIssueRoute(null), 0)
 }

@@ -109,6 +109,7 @@ docs/**
 !docs/reference/windows-process-enumeration.md
 !docs/reference/wsl-runner-verification.md
 !docs/reference/remote-wire-compatibility.md
+!docs/reference/architecture-policy-gates.md
 !docs/reference/renderer-agent-status-performance.md
 !docs/reference/ssh-execution-boundary.md
 !docs/reference/ssh-host-key-verification.md
@@ -163,3 +164,12 @@ tests/e2e/.cross-version-checkouts/
 # IS committed). Also keeps oxfmt/oxlint, which honor this file, from walking
 # vendored gems.
 /mobile/vendor/
+
+# Local task scratch directories; only the tracked feature docs under .docs/并行任务看板 belong in git.
+.docs/*
+!.docs/并行任务看板/
+mcp-gateway/
+
+# Issues feature requirement baseline is tracked despite the broad docs/** ignore above.
+!docs/requirements/
+!docs/requirements/Issues-会话展示与关闭会话恢复需求.md

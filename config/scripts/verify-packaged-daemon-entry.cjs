@@ -32,16 +32,9 @@ function assertPackagedDaemonEntryExists(resourcesDir) {
 // <appOutDir>/resources elsewhere). execPath defaults to the packaging Node.
 function verifyPackagedDaemonEntryBoots(resourcesDir, options = {}) {
   const execPath = options.execPath || process.execPath
-  const spawn = options.spawnSync || spawnSync
   const entryPath = assertPackagedDaemonEntryExists(resourcesDir)
 
-  let result = spawn(execPath, [entryPath], { encoding: 'utf8', timeout: 10_000 })
-  if (result.error?.code === 'ETIMEDOUT') {
-    console.warn(
-      '[verify-packaged-daemon-entry] initial boot timed out; retrying the freshly packaged entry once'
-    )
-    result = spawn(execPath, [entryPath], { encoding: 'utf8', timeout: 10_000 })
-  }
+  const result = spawnSync(execPath, [entryPath], { encoding: 'utf8', timeout: 10_000 })
   if (result.error) {
     throw new Error(
       `[verify-packaged-daemon-entry] could not launch daemon-entry.js: ${result.error.message}`

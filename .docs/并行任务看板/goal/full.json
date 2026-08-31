@@ -1,0 +1,36 @@
+{
+  "terminal": "term_53a4eae0-6e4c-4640-9311-6d3ca1c60b16",
+  "worktree": "/Users/bytedance/dev/orca",
+  "objective": [
+    "按 .docs/并行任务看板/技术方案.md 与 .docs/并行任务看板/产品方案.md，实现【完整需求】——技术方案 §13 的全部 10 个工作包，不是只做第一个。",
+    "",
+    "工作包 1 已经完成（src/shared/issues/ 与 src/main/issues/，typecheck 与 21 个单测已通过，codex 只读守卫已 PASS）。从工作包 2 继续，直到 10 个全部完成。",
+    "",
+    "顺序（§13）：2 Conversation allocator 与 identity mapping → 3 Round Record ingest/reconciliation/retention → 4 Issue CRUD/外部跟踪/hierarchy → 5 RPC/capability/cache/events → 6 Sidebar Workspaces/Issues 与 Issue detail → 7 Activity 与 Dashboard 接缝 → 8 通知/移动端/搜索/整理稿 → 9 Profile Project transfer → 10 Forge migration。",
+    "",
+    "每个工作包都要带上对应单测，测试必须断言真实行为而不是只断言函数被调用。",
+    "",
+    "必须守住的不变量（违反就是错的实现）：",
+    "- 开库四件事，含显式 foreign_keys=ON（per-connection，漏设外键静默失效）；迁移事务性、只在成功时 bump user_version；",
+    "- Issue 的 executionHostId 创建后不可变，跨主机父子被拒，跨主机只能单向关联；",
+    "- 已读（readAt）与处理状态（resolvedAt）是两个独立字段，ack 绝不写 resolvedAt；",
+    "- Round Record 正文带完整性状态，运行态预览不得冒充全文；",
+    "- 通知抑制到面板级（isVisibleForegroundPaneKey），不退回工作区级；",
+    "- Activity 是换底不是新建，不得出现两套 read；",
+    "- Issues 模式用独立的 row builder，不给 WorktreeGroupBy 加值。",
+    "",
+    "技术方案 §13 末尾列了「不得发布的半态」，那五条任何一条成立都算没做完。",
+    "",
+    "注意：本工作区落后 origin/main 335 个 commit，主干上 sidebar 行代码已迁到 worktree-list/grouping/。做工作包 6 之前先确认实际文件位置。",
+    "",
+    "每完成一个工作包就跑一次 pnpm run typecheck:node 和相关单测，别攒到最后。"
+  ],
+  "check": [
+    "pnpm run typecheck",
+    "pnpm exec vitest run src/shared/issues src/main/issues src/renderer/src/components/activity",
+    "node /Users/bytedance/dev/orca/goal-mode/cli/acceptance-judge.mjs --agent codex --sandbox read-only --criteria-file /Users/bytedance/dev/orca/.docs/并行任务看板/goal/full-criteria.md --cwd /Users/bytedance/dev/orca --timeout 900"
+  ],
+  "checkTimeout": 1800,
+  "maxTurns": 0,
+  "maxMinutes": 0
+}

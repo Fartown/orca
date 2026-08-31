@@ -1,37 +1,18 @@
 import type { AppState } from '@/store/types'
 import { resolveRuntimePaneTitleLeafId } from '@/lib/runtime-pane-title-leaf-id'
 import type { AgentStatusState } from '../../../../shared/agent-status-types'
-import type {
-  AgentProviderSessionKey,
-  AgentProviderSessionMetadata
-} from '../../../../shared/agent-session-resume'
-import type { AiVaultSessionPreviewMessage } from '../../../../shared/ai-vault-types'
-import type { ExecutionHostId } from '../../../../shared/execution-host'
+import type { AiVaultSession } from '../../../../shared/ai-vault-types'
 import { parseLegacyNumericPaneKey, parsePaneKey } from '../../../../shared/stable-pane-id'
 import type {
   TerminalLayoutSnapshot,
   TerminalPaneLayoutNode
 } from '../../../../shared/terminal-tab-types'
-import {
-  originalPaneTargetMatchesExecutionHost,
-  paneEntryMatchesExecutionHost
-} from './ai-vault-original-pane-host-match'
-import { promptsMatchSession } from './ai-vault-original-pane-prompt-match'
 
 export type AiVaultOriginalPaneTarget = {
   paneKey: string
   worktreeId: string
   tabId: string
   leafId: string
-}
-
-export type AiVaultOriginalPaneSessionReference = {
-  agent: string
-  sessionId: string
-  providerSessionKey?: AgentProviderSessionKey
-  title?: string | null
-  previewMessages?: readonly Pick<AiVaultSessionPreviewMessage, 'role' | 'text'>[]
-  executionHostId?: ExecutionHostId | null
 }
 
 export type OriginalPaneState = Pick<
@@ -43,20 +24,83 @@ export type OriginalPaneState = Pick<
   | 'terminalLayoutsByTabId'
 >
 
-function agentMatches(
-  session: AiVaultOriginalPaneSessionReference,
-  agent: string | undefined
-): boolean {
+function agentMatches(session: AiVaultSession, agent: string | undefined): boolean {
   return agent === session.agent
 }
 
-export function providerSessionMatchesReference(
-  session: AiVaultOriginalPaneSessionReference,
-  providerSession: AgentProviderSessionMetadata | undefined
-): boolean {
+function providerSessionMatches(session: AiVaultSession, providerSessionId: string | undefined) {
+  return providerSessionId === session.sessionId
+}
+
+function normalizeMatchText(value: string | null | undefined): string {
+  return value?.trim().replace(/\s+/g, ' ').toLowerCase() ?? ''
+}
+
+function longEnoughForPrefixMatch(value: string): boolean {
+  return value.length >= 24
+}
+
+function textMatchesSessionPrompt(sessionText: string, candidateText: string): boolean {
+  if (!sessionText || !candidateText) {
+    return false
+  }
+  if (sessionText === candidateText) {
+    return true
+  }
   return (
-    providerSession?.id === session.sessionId &&
-    (!session.providerSessionKey || providerSession.key === session.providerSessionKey)
+    longEnoughForPrefixMatch(sessionText) &&
+    longEnoughForPrefixMatch(candidateText) &&
+    (sessionText.startsWith(candidateText) || candidateText.startsWith(sessionText))
+  )
+}
+
+function sessionPromptCandidates(session: AiVaultSession): string[] {
+  const candidates = new Set<string>()
+  const title = normalizeMatchText(session.title)
+  if (title) {
+    candidates.add(title)
+  }
+  for (const message of session.previewMessages) {
+    if (message.role !== 'user') {
+      continue
+    }
+    const text = normalizeMatchText(message.text)
+    if (text) {
+      candidates.add(text)
+    }
+  }
+  return [...candidates]
+}
+
+function entryPromptCandidates(entry: {
+  prompt?: string
+  stateHistory?: readonly { prompt: string }[]
+}): string[] {
+  const candidates = new Set<string>()
+  const prompt = normalizeMatchText(entry.prompt)
+  if (prompt) {
+    candidates.add(prompt)
+  }
+  for (const historyEntry of entry.stateHistory ?? []) {
+    const text = normalizeMatchText(historyEntry.prompt)
+    if (text) {
+      candidates.add(text)
+    }
+  }
+  return [...candidates]
+}
+
+export function promptsMatchSession(
+  session: AiVaultSession,
+  entry: Parameters<typeof entryPromptCandidates>[0]
+): boolean {
+  const sessionCandidates = sessionPromptCandidates(session)
+  if (sessionCandidates.length === 0) {
+    return false
+  }
+  const entryCandidates = entryPromptCandidates(entry)
+  return sessionCandidates.some((sessionText) =>
+    entryCandidates.some((entryText) => textMatchesSessionPrompt(sessionText, entryText))
   )
 }
 
@@ -131,34 +175,14 @@ export function resolveOriginalPaneTarget(args: {
   return { paneKey, worktreeId, tabId: legacy.tabId, leafId }
 }
 
-export function resolveSessionOriginalPaneTarget(args: {
-  state: OriginalPaneState
-  session: AiVaultOriginalPaneSessionReference
-  paneKey: string
-  worktreeIdHint?: string
-  tabIdHint?: string
-  connectionId?: string | null
-}): AiVaultOriginalPaneTarget | null {
-  const target = resolveOriginalPaneTarget(args)
-  return target &&
-    originalPaneTargetMatchesExecutionHost({
-      state: args.state,
-      session: args.session,
-      target,
-      connectionId: args.connectionId
-    })
-    ? target
-    : null
-}
-
 /**
  * The hook-reported live state of the agent currently running this session,
  * or null when the session is not live in any pane. Matches by provider
  * session id first; falls back to a prompt match only when it is unambiguous.
  */
 export function findAiVaultSessionLiveState(
-  state: OriginalPaneState,
-  session: AiVaultOriginalPaneSessionReference
+  state: Pick<AppState, 'agentStatusByPaneKey'>,
+  session: AiVaultSession
 ): AgentStatusState | null {
   const promptMatchedStates: AgentStatusState[] = []
 
@@ -166,31 +190,10 @@ export function findAiVaultSessionLiveState(
     if (!agentMatches(session, entry.agentType)) {
       continue
     }
-    if (
-      providerSessionMatchesReference(session, entry.providerSession) &&
-      paneEntryMatchesExecutionHost({
-        state,
-        session,
-        paneKey: entry.paneKey,
-        worktreeIdHint: entry.worktreeId,
-        tabIdHint: entry.tabId,
-        connectionId: entry.connectionId
-      })
-    ) {
+    if (providerSessionMatches(session, entry.providerSession?.id)) {
       return entry.state
     }
-    if (
-      entry.providerSession === undefined &&
-      promptsMatchSession(session, entry) &&
-      paneEntryMatchesExecutionHost({
-        state,
-        session,
-        paneKey: entry.paneKey,
-        worktreeIdHint: entry.worktreeId,
-        tabIdHint: entry.tabId,
-        connectionId: entry.connectionId
-      })
-    ) {
+    if (entry.providerSession === undefined && promptsMatchSession(session, entry)) {
       promptMatchedStates.push(entry.state)
     }
   }
@@ -200,22 +203,20 @@ export function findAiVaultSessionLiveState(
 
 export function findOriginalAiVaultSessionPane(
   state: OriginalPaneState,
-  session: AiVaultOriginalPaneSessionReference
+  session: AiVaultSession
 ): AiVaultOriginalPaneTarget | null {
   const promptMatchedTargets: AiVaultOriginalPaneTarget[] = []
 
   for (const entry of Object.values(state.agentStatusByPaneKey)) {
     if (
       agentMatches(session, entry.agentType) &&
-      providerSessionMatchesReference(session, entry.providerSession)
+      providerSessionMatches(session, entry.providerSession?.id)
     ) {
-      const target = resolveSessionOriginalPaneTarget({
+      const target = resolveOriginalPaneTarget({
         state,
-        session,
         paneKey: entry.paneKey,
         worktreeIdHint: entry.worktreeId,
-        tabIdHint: entry.tabId,
-        connectionId: entry.connectionId
+        tabIdHint: entry.tabId
       })
       if (target) {
         return target
@@ -226,13 +227,11 @@ export function findOriginalAiVaultSessionPane(
       entry.providerSession === undefined &&
       promptsMatchSession(session, entry)
     ) {
-      const target = resolveSessionOriginalPaneTarget({
+      const target = resolveOriginalPaneTarget({
         state,
-        session,
         paneKey: entry.paneKey,
         worktreeIdHint: entry.worktreeId,
-        tabIdHint: entry.tabId,
-        connectionId: entry.connectionId
+        tabIdHint: entry.tabId
       })
       if (target) {
         promptMatchedTargets.push(target)
@@ -243,15 +242,13 @@ export function findOriginalAiVaultSessionPane(
   for (const retained of Object.values(state.retainedAgentsByPaneKey)) {
     if (
       agentMatches(session, retained.agentType) &&
-      providerSessionMatchesReference(session, retained.entry.providerSession)
+      providerSessionMatches(session, retained.entry.providerSession?.id)
     ) {
-      const target = resolveSessionOriginalPaneTarget({
+      const target = resolveOriginalPaneTarget({
         state,
-        session,
         paneKey: retained.entry.paneKey,
         worktreeIdHint: retained.worktreeId,
-        tabIdHint: retained.entry.tabId ?? retained.tab.id,
-        connectionId: retained.entry.connectionId
+        tabIdHint: retained.entry.tabId ?? retained.tab.id
       })
       if (target) {
         return target
@@ -262,13 +259,11 @@ export function findOriginalAiVaultSessionPane(
       retained.entry.providerSession === undefined &&
       promptsMatchSession(session, retained.entry)
     ) {
-      const target = resolveSessionOriginalPaneTarget({
+      const target = resolveOriginalPaneTarget({
         state,
-        session,
         paneKey: retained.entry.paneKey,
         worktreeIdHint: retained.worktreeId,
-        tabIdHint: retained.entry.tabId ?? retained.tab.id,
-        connectionId: retained.entry.connectionId
+        tabIdHint: retained.entry.tabId ?? retained.tab.id
       })
       if (target) {
         promptMatchedTargets.push(target)
@@ -279,15 +274,13 @@ export function findOriginalAiVaultSessionPane(
   for (const record of Object.values(state.sleepingAgentSessionsByPaneKey)) {
     if (
       agentMatches(session, record.agent) &&
-      providerSessionMatchesReference(session, record.providerSession)
+      providerSessionMatches(session, record.providerSession.id)
     ) {
-      const target = resolveSessionOriginalPaneTarget({
+      const target = resolveOriginalPaneTarget({
         state,
-        session,
         paneKey: record.paneKey,
         worktreeIdHint: record.worktreeId,
-        tabIdHint: record.tabId,
-        connectionId: record.connectionId
+        tabIdHint: record.tabId
       })
       if (target) {
         return target

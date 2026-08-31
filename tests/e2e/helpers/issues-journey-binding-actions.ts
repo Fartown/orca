@@ -1,10 +1,6 @@
 import { expect, type Page } from '@stablyai/playwright-test'
 import type { ConversationSummary } from '../../../src/shared/issues/types'
-import {
-  openWorkspacesMode,
-  refreshIssueDetail,
-  waitForConversation
-} from './issues-journey-actions'
+import { refreshIssueDetail, waitForConversation } from './issues-journey-actions'
 
 export async function bindConversationFromIssueDetail(
   page: Page,
@@ -26,21 +22,16 @@ export async function bindConversationFromIssueDetail(
   )
 }
 
-export async function updateConversationIssueFromWorkspaceRow(
+export async function updateConversationIssueFromIssueRow(
   page: Page,
   conversation: ConversationSummary,
   issueId: string | null,
   search = ''
 ): Promise<ConversationSummary> {
-  const paneKey = conversation.navigation?.paneKey
-  if (!paneKey || conversation.attachment.kind !== 'attached') {
-    throw new Error(`Conversation ${conversation.id} has no attached Workspace row`)
-  }
-  await openWorkspacesMode(page)
   const row = page
-    .locator('[data-worktree-sidebar]')
-    .locator(`[data-agent-pane-key=${JSON.stringify(paneKey)}]`)
-    .first()
+    .getByRole('heading', { name: 'Direct Conversations' })
+    .locator('..')
+    .locator(`[data-conversation-id=${JSON.stringify(conversation.id)}]`)
   await expect(row).toBeVisible({ timeout: 20_000 })
   await row.hover()
   await row.getByTestId('conversation-issue-binding-trigger').click()

@@ -36,14 +36,13 @@ describe('ConversationRuntimeAttachmentRegistry', () => {
     expect(registry.revision).toBe(4)
     expect(registry.getDeleteState(conversation.id)).toMatchObject({
       attached: false,
-      executionState: 'stopped',
-      livenessVerdict: 'exited'
+      executionState: 'stopped'
     })
     expect(repository.conversations.get(conversation.id)).toEqual(conversation)
     repository.close()
   })
 
-  it('keeps transiently disconnected remote work detached and unverifiable until live evidence returns', () => {
+  it('detaches remote work on connection loss and re-attaches on fresh evidence', () => {
     const registry = new ConversationRuntimeAttachmentRegistry()
     registry.upsert(attachment('conversation-a', 'ssh-connection', 1, 'pane-a'))
 
@@ -52,15 +51,11 @@ describe('ConversationRuntimeAttachmentRegistry', () => {
     expect(registry.listForConversation('conversation-a')).toEqual([])
     expect(registry.getDeleteState('conversation-a')).toMatchObject({
       attached: false,
-      executionState: 'stopped',
-      livenessVerdict: 'unverifiable'
+      executionState: 'stopped'
     })
 
     registry.upsert(attachment('conversation-a', 'ssh-reconnected', 2, 'pane-a'))
-    expect(registry.getDeleteState('conversation-a')).toMatchObject({
-      attached: true,
-      livenessVerdict: 'live'
-    })
+    expect(registry.getDeleteState('conversation-a')).toMatchObject({ attached: true })
   })
 
   it('removes panes absent from the current trusted evidence set', () => {
@@ -70,29 +65,20 @@ describe('ConversationRuntimeAttachmentRegistry', () => {
 
     registry.retainEvidencePanes(new Set(['pane-b']))
 
-    expect(registry.getDeleteState('conversation-a')).toMatchObject({
-      attached: false,
-      livenessVerdict: 'unverifiable'
-    })
+    expect(registry.getDeleteState('conversation-a')).toMatchObject({ attached: false })
     expect(registry.getDeleteState('conversation-b')).toMatchObject({ attached: true })
   })
 
-  it('preserves unverifiable across the real SSH clear ordering, then exits only on pane close', () => {
+  it('stays detached across the real SSH clear ordering and the final pane close', () => {
     const registry = new ConversationRuntimeAttachmentRegistry()
     registry.upsert(attachment('conversation-a', 'ssh-connection', 1, 'pane-a'))
 
     registry.retainEvidencePanes(new Set())
     registry.clearConnection('ssh-connection')
-    expect(registry.getDeleteState('conversation-a')).toMatchObject({
-      attached: false,
-      livenessVerdict: 'unverifiable'
-    })
+    expect(registry.getDeleteState('conversation-a')).toMatchObject({ attached: false })
 
     registry.clearPane({ paneKey: 'pane-a' })
-    expect(registry.getDeleteState('conversation-a')).toMatchObject({
-      attached: false,
-      livenessVerdict: 'exited'
-    })
+    expect(registry.getDeleteState('conversation-a')).toMatchObject({ attached: false })
   })
 })
 

@@ -93,7 +93,6 @@ type CompactAgentRowProps = {
   isFocusedPane?: boolean
   hideIdentityIcon?: boolean
   cacheTimerActive?: boolean
-  trailingAction?: React.ReactNode
 }
 
 export const CompactAgentRow = React.memo(function CompactAgentRow({
@@ -109,8 +108,7 @@ export const CompactAgentRow = React.memo(function CompactAgentRow({
   reserveDisclosureGutter = false,
   isFocusedPane = false,
   hideIdentityIcon = false,
-  cacheTimerActive = true,
-  trailingAction
+  cacheTimerActive = true
 }: CompactAgentRowProps) {
   const hasChildDisclosure =
     typeof childAgentCount === 'number' &&
@@ -252,26 +250,17 @@ export const CompactAgentRow = React.memo(function CompactAgentRow({
         </span>
       )}
       {cacheTimer && <CacheTimer startedAt={cacheTimer.startedAt} ttlMs={cacheTimer.ttlMs} />}
-      {trailingAction || shortTime ? (
-        <span className="relative grid shrink-0 grid-cols-1 grid-rows-1 items-center justify-items-end">
-          {shortTime ? (
-            <span
-              className={cn(
-                '[grid-area:1/1] text-[10px] tabular-nums transition-opacity',
-                trailingAction &&
-                  'group-hover/compact-agent-row:opacity-0 group-focus-within/compact-agent-row:opacity-0',
-                // Why: the muted timestamp drops out against the selected-row fill.
-                isFocusedPane ? 'text-foreground/70' : 'text-muted-foreground/60'
-              )}
-            >
-              {shortTime}
-            </span>
-          ) : null}
-          {trailingAction ? (
-            <span className="[grid-area:1/1] inline-flex">{trailingAction}</span>
-          ) : null}
+      {shortTime && (
+        <span
+          className={cn(
+            'shrink-0 text-[10px] tabular-nums',
+            // Why: the muted timestamp drops out against the selected-row fill.
+            isFocusedPane ? 'text-foreground/70' : 'text-muted-foreground/60'
+          )}
+        >
+          {shortTime}
         </span>
-      ) : null}
+      )}
     </>
   )
 
@@ -294,7 +283,6 @@ export const CompactAgentRow = React.memo(function CompactAgentRow({
       onPointerDown={(e) => e.stopPropagation()}
       onDragStart={(e) => e.stopPropagation()}
       data-focused-agent-pane={isFocusedPane ? 'true' : undefined}
-      data-agent-pane-key={agent.paneKey}
       data-agent-send-target={sendTargetStatus}
       role={agent.lineage ? 'treeitem' : undefined}
       aria-level={agent.lineage ? agent.lineage.depth + 1 : undefined}

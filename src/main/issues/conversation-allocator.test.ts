@@ -164,93 +164,6 @@ describe('Conversation allocator v1', () => {
     repository.close()
   })
 
-  it('guards Resume to the original Workspace and keeps the original conversationId', () => {
-    const repository = openRepository('resume')
-    const issue = repository.issues.createLocal({
-      identity: issueMutationIdentity('caller-a', 'resume-issue'),
-      input: { executionHostId: 'local', title: 'Resume issue' }
-    }).issue
-    const observed = repository.conversationAllocator.resolveObservedIdentityOrAllocate({
-      ...conversationInput('worktree-original'),
-      providerSession: providerSession('session-resume'),
-      observedAt: 5
-    })
-    repository.conversations.bindIssue({
-      identity: issueMutationIdentity('caller-a', 'resume-bind'),
-      input: {
-        id: observed.conversation.id,
-        issueId: issue.id,
-        expectedRecordRevision: observed.conversation.recordRevision
-      }
-    })
-
-    const runtimeBlockedAllocator = new ConversationAllocator(
-      repository.database,
-      repository.conversations,
-      repository.conversationIdentities,
-      repository.conversationLaunchClaims,
-      (conversationId) => conversationId === observed.conversation.id
-    )
-    expect(
-      captureError(() =>
-        runtimeBlockedAllocator.prepareResume({
-          identity: issueMutationIdentity('caller-a', 'resume-runtime-present'),
-          input: {
-            ...launchInput(token('resume-runtime-present'), 'worktree-original'),
-            providerSession: providerSession('session-resume')
-          }
-        })
-      )
-    ).toMatchObject({ code: 'conversation_resume_runtime_present' })
-    expect(receiptExists(repository, 'resume-runtime-present')).toBe(false)
-
-    const resumed = repository.conversationAllocator.prepareResume({
-      identity: issueMutationIdentity('caller-a', 'resume-original'),
-      input: {
-        ...launchInput(token('resume-original'), 'worktree-original'),
-        providerSession: providerSession('session-resume')
-      }
-    })
-    expect(resumed).toMatchObject({
-      conversation: { id: observed.conversation.id, issueId: issue.id },
-      disposition: 'replayed'
-    })
-
-    const claimsBefore = repository.conversationLaunchClaims.listForConversation(
-      observed.conversation.id
-    ).length
-    expect(
-      captureError(() =>
-        repository.conversationAllocator.prepareResume({
-          identity: issueMutationIdentity('caller-a', 'resume-pending'),
-          input: {
-            ...launchInput(token('resume-pending'), 'worktree-original'),
-            providerSession: providerSession('session-resume')
-          }
-        })
-      )
-    ).toMatchObject({ code: 'conversation_resume_pending' })
-    expect(receiptExists(repository, 'resume-pending')).toBe(false)
-    expect(
-      captureError(() =>
-        repository.conversationAllocator.prepareResume({
-          identity: issueMutationIdentity('caller-a', 'resume-other'),
-          input: {
-            ...launchInput(token('resume-other'), 'worktree-other'),
-            providerSession: providerSession('session-resume')
-          }
-        })
-      )
-    ).toMatchObject({ code: 'resume_workspace_mismatch' })
-    expect(
-      repository.conversationLaunchClaims.listForConversation(observed.conversation.id)
-    ).toHaveLength(claimsBefore)
-    expect(receiptExists(repository, 'resume-other')).toBe(false)
-    expect(databaseSecretSurface(repository)).not.toContain(token('resume-original'))
-    expect(databaseSecretSurface(repository)).not.toContain(token('resume-other'))
-    repository.close()
-  })
-
   it('retries a failed preparation with the same conversationId and a new claim', () => {
     const repository = openRepository('retry')
     const prepared = repository.conversationAllocator.prepareLaunch({
@@ -297,85 +210,6 @@ describe('Conversation allocator v1', () => {
     })
     expect(repository.conversationLaunchClaims.listForConversation(failed.id)).toHaveLength(2)
     expect(databaseSecretSurface(repository)).not.toContain(token('retry-second'))
-    repository.close()
-  })
-
-  it('settles a failed Resume and immediately replays it with the same Issue mapping', () => {
-    const repository = openRepository('resume-failure-retry')
-    const issue = repository.issues.createLocal({
-      identity: issueMutationIdentity('caller-a', 'resume-retry-issue'),
-      input: { executionHostId: 'local', title: 'Resume retry issue' }
-    }).issue
-    const observed = repository.conversationAllocator.resolveObservedIdentityOrAllocate({
-      ...conversationInput('worktree-original'),
-      providerSession: providerSession('session-resume-retry'),
-      observedAt: 5
-    })
-    const bound = repository.conversations.bindIssue({
-      identity: issueMutationIdentity('caller-a', 'resume-retry-bind'),
-      input: {
-        id: observed.conversation.id,
-        issueId: issue.id,
-        expectedRecordRevision: observed.conversation.recordRevision
-      }
-    }).conversation
-    const first = repository.conversationAllocator.prepareResume({
-      identity: issueMutationIdentity('caller-a', 'resume-retry-first'),
-      input: {
-        ...launchInput(token('resume-retry-first'), 'worktree-original'),
-        providerSession: providerSession('session-resume-retry'),
-        now: 10
-      }
-    })
-    const failed = repository.conversationAllocator.recordLaunchFailure({
-      identity: issueMutationIdentity('caller-a', 'resume-retry-failure'),
-      input: {
-        conversationId: first.conversation.id,
-        claimId: first.claimId,
-        expectedRecordRevision: first.conversation.recordRevision,
-        failure: 'runtime launcher failed',
-        occurredAt: 20
-      }
-    })
-
-    const second = repository.conversationAllocator.prepareResume({
-      identity: issueMutationIdentity('caller-a', 'resume-retry-second'),
-      input: {
-        ...launchInput(token('resume-retry-second'), 'worktree-original'),
-        providerSession: providerSession('session-resume-retry'),
-        now: 30
-      }
-    })
-
-    expect(first).toMatchObject({
-      conversation: { id: bound.id, issueId: issue.id },
-      disposition: 'replayed'
-    })
-    expect(failed).toMatchObject({
-      id: bound.id,
-      issueId: issue.id,
-      launchFailure: { message: 'runtime launcher failed', failedAt: 20 }
-    })
-    expect(second).toMatchObject({
-      conversation: {
-        id: bound.id,
-        issueId: issue.id,
-        recordRevision: failed.recordRevision + 1,
-        launchFailure: null
-      },
-      disposition: 'replayed'
-    })
-    expect(
-      repository.conversationLaunchClaims.listForConversation(bound.id).map((claim) => ({
-        claimId: claim.claimId,
-        settlement: claim.settlement
-      }))
-    ).toEqual(
-      expect.arrayContaining([
-        { claimId: first.claimId, settlement: 'failed' },
-        { claimId: second.claimId, settlement: null }
-      ])
-    )
     repository.close()
   })
 
@@ -446,71 +280,6 @@ describe('Conversation allocator v1', () => {
       repository.conversationLaunchClaims.listForConversation(failed.id)[0]?.settlement
     ).toBeNull()
     expect(repository.conversations.get(failed.id)?.launchFailure).toBeNull()
-    repository.close()
-  })
-
-  it('clears a failed Resume only when newer trusted runtime evidence attaches', () => {
-    const repository = openRepository('resume-late-attachment')
-    const resumeToken = token('resume-late-attachment')
-    const observed = repository.conversationAllocator.resolveObservedIdentityOrAllocate({
-      ...conversationInput('worktree-original'),
-      providerSession: providerSession('session-late-attachment'),
-      observedAt: 5
-    })
-    const prepared = repository.conversationAllocator.prepareResume({
-      identity: issueMutationIdentity('caller-a', 'resume-late-prepare'),
-      input: {
-        ...launchInput(resumeToken, 'worktree-original'),
-        providerSession: providerSession('session-late-attachment'),
-        now: 10
-      }
-    })
-    const failed = repository.conversationAllocator.recordLaunchFailure({
-      identity: issueMutationIdentity('caller-a', 'resume-late-failure'),
-      input: {
-        conversationId: prepared.conversation.id,
-        claimId: prepared.claimId,
-        expectedRecordRevision: prepared.conversation.recordRevision,
-        failure: 'confirmation timed out',
-        occurredAt: 20
-      }
-    })
-
-    const staleEvidence = repository.conversationAllocator.attachProviderIdentity({
-      executionHostId: 'local',
-      workspaceRef: workspaceRef('worktree-original'),
-      agent: 'codex',
-      providerSession: providerSession('session-late-attachment'),
-      launchToken: resumeToken,
-      paneKey: 'tab-1:11111111-1111-4111-8111-111111111111',
-      observedAt: 15
-    })
-    expect(staleEvidence.conversation).toMatchObject({
-      id: observed.conversation.id,
-      recordRevision: failed.recordRevision,
-      launchFailure: { message: 'confirmation timed out', failedAt: 20 }
-    })
-
-    const currentEvidence = repository.conversationAllocator.attachProviderIdentity({
-      executionHostId: 'local',
-      workspaceRef: workspaceRef('worktree-original'),
-      agent: 'codex',
-      providerSession: providerSession('session-late-attachment'),
-      launchToken: resumeToken,
-      paneKey: 'tab-1:11111111-1111-4111-8111-111111111111',
-      observedAt: 30
-    })
-    expect(currentEvidence).toMatchObject({
-      conversation: {
-        id: observed.conversation.id,
-        recordRevision: failed.recordRevision + 1,
-        launchFailure: null
-      },
-      claim: null
-    })
-    expect(
-      repository.conversationIdentities.listForConversation(observed.conversation.id)
-    ).toHaveLength(1)
     repository.close()
   })
 
@@ -650,22 +419,9 @@ describe('Conversation allocator v1', () => {
     })
 
     runtime.state = {
-      attachmentGeneration: 2,
-      attached: false,
-      executionState: 'stopped',
-      livenessVerdict: 'unverifiable'
-    }
-    expect(service.prepare(prepared.conversation.id)).toMatchObject({
-      canDelete: false,
-      blockers: [],
-      preflightToken: null
-    })
-
-    runtime.state = {
       attachmentGeneration: 3,
       attached: false,
-      executionState: 'stopped',
-      livenessVerdict: 'exited'
+      executionState: 'stopped'
     }
     const preflight = service.prepare(prepared.conversation.id)
     expect(preflight).toMatchObject({

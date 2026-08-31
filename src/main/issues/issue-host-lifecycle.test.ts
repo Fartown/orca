@@ -21,23 +21,4 @@ describe('Issue host lifecycle wiring', () => {
     expect(serveRpc).toBeGreaterThan(bootstrap)
     expect(hookStop).toBeGreaterThan(dispose)
   })
-
-  it('starts the singleton hook before orcad PTY and disposes Issue before RPC and hook', () => {
-    const source = readFileSync(join(MAIN_ROOT, 'orcad', 'orcad-entry.ts'), 'utf8')
-    const hookStart = source.indexOf('await agentHookServer.start')
-    const pty = source.indexOf('registerHeadlessPtyRuntime(', hookStart)
-    const bootstrap = source.indexOf('startIssueFeatureForHost(', pty)
-    const rpcStart = source.indexOf('await rpc.start()', bootstrap)
-    const issueDispose = source.indexOf('issueBootstrap?.dispose()')
-    const rpcStop = source.indexOf('await rpc.stop()', issueDispose)
-    const hookStop = source.indexOf('agentHookServer.stop()', rpcStop)
-
-    expect(pty).toBeGreaterThan(hookStart)
-    expect(bootstrap).toBeGreaterThan(pty)
-    expect(rpcStart).toBeGreaterThan(bootstrap)
-    expect(rpcStop).toBeGreaterThan(issueDispose)
-    expect(hookStop).toBeGreaterThan(rpcStop)
-    expect(source).not.toContain('new AgentHookServer')
-    expect(source).toContain('buildAgentHookPtyEnv: () => agentHookServer.buildPtyEnv()')
-  })
 })

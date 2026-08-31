@@ -148,24 +148,6 @@ export const ConversationsRecordLaunchFailureParams = z.object({
   failure: z.string().trim().min(1).max(2_048)
 })
 
-export const AgentProviderSessionMetadataSchema = z.object({
-  key: z.enum(['session_id', 'conversation_id']),
-  id: z.string().trim().min(1).max(512),
-  transcriptPath: z.string().min(1).max(32_768).optional()
-})
-
-export const ConversationsPrepareResumeParams = z.object({
-  ...MutationEnvelope,
-  launchToken: IssueLaunchTokenSchema,
-  workspaceRef: IssueWorkspaceRefSchema,
-  workspaceSnapshot: z.object({
-    name: z.string().min(1).max(512),
-    path: z.string().min(1).max(32_768)
-  }),
-  agent: IssueTuiAgentSchema,
-  providerSession: AgentProviderSessionMetadataSchema
-})
-
 export const ConversationsPrepareDeleteParams = z.object({
   authorityExecutionHostId: AuthorityExecutionHostIdSchema,
   conversationId: IssueEntityIdSchema

@@ -4,10 +4,7 @@ import type { WorkspaceScope } from '../../shared/folder-workspace-types'
 import type { AuthorityExecutionHostId, WorkspaceSnapshot } from '../../shared/issues/types'
 import { isTuiAgent } from '../../shared/tui-agent-config'
 import type { TuiAgent } from '../../shared/tui-agent'
-import {
-  canonicalizeAgentSessionIdentityWithPathAccess,
-  type AgentSessionIdentityPathAccess
-} from '../runtime/agent-session-claim-identity'
+import { canonicalizeAgentSessionIdentity } from '../runtime/agent-session-claim-identity'
 import type { IssueRepository } from './issue-repository'
 import { IssueRepositoryError } from './issue-repository-error'
 import type { ConversationRuntimeAttachmentRegistry } from './conversation-runtime-attachment-registry'
@@ -19,8 +16,6 @@ export type ConversationHookIdentityContext = {
   workspaceSnapshot: WorkspaceSnapshot
   processIncarnation: string | null
   connectionId: string | null
-  hostPlatform: NodeJS.Platform
-  wslDistro?: string | null
 }
 
 export type ConversationHookIdentityEvent = {
@@ -63,9 +58,6 @@ export type ConversationHookIdentityIngestorDependencies = {
     expectedWorktreeId?: string,
     connectionId?: string | null
   ): Promise<ConversationHookIdentityContext | null>
-  resolvePathAccess?(
-    context: ConversationHookIdentityContext
-  ): AgentSessionIdentityPathAccess | null
   onDiagnostic?(
     result: ConversationHookIdentityIngestResult,
     event: ConversationHookIdentityEvent
@@ -104,20 +96,9 @@ export class ConversationHookIdentityIngestor {
 
     let providerSession: AgentProviderSessionMetadata
     try {
-      const pathAccess = this.dependencies.resolvePathAccess?.(context) ?? undefined
-      if (
-        (event.payload.agentType === 'pi' || event.payload.agentType === 'prime-agent') &&
-        context.connectionId &&
-        !pathAccess
-      ) {
-        throw new Error('agent_session_identity_required')
-      }
-      providerSession = (
-        await canonicalizeAgentSessionIdentityWithPathAccess(
-          event.payload.agentType,
-          event.providerSession,
-          pathAccess
-        )
+      providerSession = canonicalizeAgentSessionIdentity(
+        event.payload.agentType,
+        event.providerSession
       ).providerSession
     } catch {
       return this.finish({ disposition: 'ignored', reason: 'identity-invalid' }, event)
@@ -129,25 +110,7 @@ export class ConversationHookIdentityIngestor {
       providerSession
     })
     if (event.restoredUnconfirmed) {
-      if (existingIdentity) {
-        const conversation = this.repository.conversations.get(existingIdentity.conversationId)
-        if (
-          conversation &&
-          sameConversationWorkspace(conversation.workspaceRef, context.workspaceRef)
-        ) {
-          this.dependencies.attachments?.markUnverifiable({
-            conversationId: conversation.id,
-            paneKey: event.paneKey,
-            tabId: event.tabId ?? null,
-            worktreeId:
-              context.workspaceRef.type === 'worktree' ? context.workspaceRef.worktreeId : null,
-            connectionId: context.connectionId,
-            providerIdentityFingerprint: existingIdentity.identityFingerprint,
-            executionState: 'stopped',
-            observedAt: event.receivedAt
-          })
-        }
-      }
+      // Why: hydrated snapshots are not live evidence; rows come from renderer identity matching, so record nothing.
       return this.finish({ disposition: 'ignored', reason: 'runtime-unverifiable' }, event)
     }
 
@@ -198,7 +161,8 @@ export class ConversationHookIdentityIngestor {
       } catch (error) {
         if (
           error instanceof IssueRepositoryError &&
-          error.code === 'conversation_launch_claim_not_found'
+          (error.code === 'conversation_launch_claim_not_found' ||
+            error.code === 'conversation_launch_claim_expired')
         ) {
           return this.resolveOrdinaryIdentity(
             event,

@@ -156,11 +156,7 @@ export const PLUGIN_HOST_API_V0: readonly PluginHostMethodSpec[] = [
     scope: 'plugin-private',
     capability: 'storage',
     mutation: false,
-    // Why: a panel has no other way to read what its own worker computed —
-    // there is no panel↔worker channel — so a read-only view of the plugin's
-    // own storage is the minimum needed for a panel to render live state.
-    // Still plugin-private and still gated on the `storage` capability.
-    panel: true,
+    panel: false,
     params: storageGetParams,
     result: storageGetResult
   }),

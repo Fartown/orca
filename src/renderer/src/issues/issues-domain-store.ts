@@ -61,6 +61,23 @@ export type IssueDomainState = {
   toggleUnassigned: (key: string) => void
 }
 
+// Why: the 5s poll lands here even when nothing changed; reminting the map re-renders the whole Issues UI.
+function replacePartition(
+  state: IssueDomainState,
+  route: IssueRouteExecutionHostId,
+  partition: IssuePartitionState
+): IssueDomainState | Pick<IssueDomainState, 'partitionsByRouteExecutionHostId'> {
+  if (state.partitionsByRouteExecutionHostId[route] === partition) {
+    return state
+  }
+  return {
+    partitionsByRouteExecutionHostId: {
+      ...state.partitionsByRouteExecutionHostId,
+      [route]: partition
+    }
+  }
+}
+
 export const issueDomainStore = createStore<IssueDomainState>((set) => ({
   partitionsByRouteExecutionHostId: {},
   activeIssueRoute: null,
@@ -70,40 +87,44 @@ export const issueDomainStore = createStore<IssueDomainState>((set) => ({
   collapsedIssueIds: new Set(),
   expandedUnassignedKeys: new Set(),
   setRouteStatus: (route, status, error) =>
-    set((state) => ({
-      partitionsByRouteExecutionHostId: {
-        ...state.partitionsByRouteExecutionHostId,
-        [route]: {
-          ...(state.partitionsByRouteExecutionHostId[route] ?? emptyIssuePartition()),
-          status,
-          error: error ?? null
-        }
+    set((state) => {
+      const previous = state.partitionsByRouteExecutionHostId[route]
+      const nextError = error ?? null
+      if (previous && previous.status === status && previous.error === nextError) {
+        return state
       }
-    })),
+      return replacePartition(state, route, {
+        ...(previous ?? emptyIssuePartition()),
+        status,
+        error: nextError
+      })
+    }),
   applyIssuePage: (route, filter, result, append) =>
-    set((state) => ({
-      partitionsByRouteExecutionHostId: {
-        ...state.partitionsByRouteExecutionHostId,
-        [route]: reduceIssuePage(
+    set((state) =>
+      replacePartition(
+        state,
+        route,
+        reduceIssuePage(
           state.partitionsByRouteExecutionHostId[route] ?? emptyIssuePartition(),
           filter,
           result,
           append
         )
-      }
-    })),
+      )
+    ),
   applyConversationPage: (route, scopeKey, result, append) =>
-    set((state) => ({
-      partitionsByRouteExecutionHostId: {
-        ...state.partitionsByRouteExecutionHostId,
-        [route]: reduceConversationPage(
+    set((state) =>
+      replacePartition(
+        state,
+        route,
+        reduceConversationPage(
           state.partitionsByRouteExecutionHostId[route] ?? emptyIssuePartition(),
           scopeKey,
           result,
           append
         )
-      }
-    })),
+      )
+    ),
   setSidebarRootMode: (sidebarRootMode) =>
     set({
       sidebarRootMode,

@@ -6,7 +6,6 @@ import {
 } from '../../../../shared/ai-vault-types'
 import { translate } from '@/i18n/i18n'
 import { blockingAiVaultScanIssue } from './ai-vault-scan-issue-state'
-import { findAiVaultSessionByProviderIdentity } from './ai-vault-session-identity'
 
 export async function resolveAiVaultSessionByProviderIdentity(args: {
   executionHostId: AiVaultSession['executionHostId']
@@ -43,11 +42,15 @@ export async function resolveAiVaultSessionByProviderIdentity(args: {
     return null
   }
 
-  const session = findAiVaultSessionByProviderIdentity(result.sessions, {
-    executionHostId: args.executionHostId,
-    agent: args.agent,
-    providerSession: args.providerSession
-  })
+  const matches = result.sessions.filter(
+    (session) =>
+      session.executionHostId === args.executionHostId &&
+      session.agent === args.agent &&
+      session.sessionId === args.providerSession.id &&
+      ((session.agent !== 'pi' && session.agent !== 'prime-agent') ||
+        session.filePath === args.providerSession.transcriptPath)
+  )
+  const session = matches.length === 1 ? matches[0] : null
   if (!session) {
     const blockingIssue = blockingAiVaultScanIssue(result)
     toast.error(

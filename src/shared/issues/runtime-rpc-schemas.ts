@@ -22,7 +22,6 @@ export const ISSUE_METHOD_NAMES = [
   'conversations.prepareLaunch',
   'conversations.recordLaunchFailure',
   'conversations.prepareRetry',
-  'conversations.prepareResume',
   'conversations.prepareDelete',
   'conversations.delete'
 ] as const

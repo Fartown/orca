@@ -7,6 +7,7 @@ import type {
   IssueSummary
 } from '../../../shared/issues/types'
 import type { ConversationsListResult } from '../../../shared/issues/query-rpc-schemas'
+import { structuralValuesEqual } from '../../../shared/structural-value-equality'
 
 type ConversationListResult = z.infer<typeof ConversationsListResult>
 
@@ -56,14 +57,13 @@ export function reduceIssuePage(
 ): IssuePartitionState {
   const current = withAuthorityGeneration(previous, result.authority)
   if (result.status === 'not-modified') {
-    return {
-      ...current,
+    return withScalarUpdates(current, {
       status: readyStatus(current),
       factsRevision: result.factsRevision,
       treeRevision: result.treeRevision,
       runtimeRevision: result.runtimeRevision ?? current.runtimeRevision,
       error: retainedReadinessError(current)
-    }
+    })
   }
   if (result.status === 'stale') {
     return {
@@ -71,7 +71,10 @@ export function reduceIssuePage(
       factsRevision: result.factsRevision,
       treeRevision: result.treeRevision,
       runtimeRevision: result.runtimeRevision ?? current.runtimeRevision,
-      issueViewsByFilter: { ...current.issueViewsByFilter, [filter]: emptyIssueView() }
+      issueViewsByFilter: {
+        ...current.issueViewsByFilter,
+        [filter]: emptyIssueView()
+      }
     }
   }
   const issuesById = { ...current.issuesById }
@@ -109,12 +112,11 @@ export function reduceConversationPage(
 ): IssuePartitionState {
   const current = withAuthorityGeneration(previous, result.authority)
   if (result.status === 'not-modified') {
-    return {
-      ...current,
+    return withScalarUpdates(current, {
       factsRevision: result.factsRevision,
       runtimeRevision: result.runtimeRevision ?? current.runtimeRevision,
       error: retainedReadinessError(current)
-    }
+    })
   }
   if (result.status === 'stale') {
     return {
@@ -183,9 +185,28 @@ function withAuthorityGeneration(
   partition: IssuePartitionState,
   authority: IssueAuthorityDescriptor
 ): IssuePartitionState {
-  return !partition.authority || partition.authority.authorityId === authority.authorityId
-    ? { ...partition, authority }
-    : { ...emptyIssuePartition(), status: 'loading', authority }
+  if (partition.authority && partition.authority.authorityId !== authority.authorityId) {
+    return { ...emptyIssuePartition(), status: 'loading', authority }
+  }
+  // Why: an unchanged poll must hand back the same partition, or every Issue selector re-renders each tick.
+  return structuralValuesEqual(partition.authority, authority)
+    ? partition
+    : { ...partition, authority }
+}
+
+function withScalarUpdates(
+  partition: IssuePartitionState,
+  updates: Partial<
+    Pick<
+      IssuePartitionState,
+      'status' | 'factsRevision' | 'treeRevision' | 'runtimeRevision' | 'error'
+    >
+  >
+): IssuePartitionState {
+  const changed = (Object.keys(updates) as (keyof typeof updates)[]).some(
+    (key) => partition[key] !== updates[key]
+  )
+  return changed ? { ...partition, ...updates } : partition
 }
 
 function emptyIssueView(): IssueViewCache {

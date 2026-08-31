@@ -1,4 +1,3 @@
-import type { AgentProviderSessionMetadata } from '../../shared/agent-session-resume'
 import type { WorkspaceScope } from '../../shared/folder-workspace-types'
 import type {
   AuthorityExecutionHostId,
@@ -67,14 +66,6 @@ export type PrepareLaunchRuntimeParams = RuntimeMutation & {
   agent: TuiAgent
   issueId: string | null
   title?: string | null
-}
-
-export type PrepareResumeRuntimeParams = RuntimeMutation & {
-  launchToken: string
-  workspaceRef: WorkspaceScope
-  workspaceSnapshot: WorkspaceSnapshot
-  agent: TuiAgent
-  providerSession: AgentProviderSessionMetadata
 }
 
 export type PrepareRetryRuntimeParams = RuntimeMutation & {

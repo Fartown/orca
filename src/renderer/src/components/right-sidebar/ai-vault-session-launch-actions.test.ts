@@ -1,3 +1,5 @@
+// @vitest-environment happy-dom
+
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { AiVaultSession } from '../../../../shared/ai-vault-types'
 import type { AiVaultSessionResumeTargetState } from './ai-vault-session-resume'
@@ -5,15 +7,12 @@ import type { AiVaultSessionResumeTargetState } from './ai-vault-session-resume'
 const mocks = vi.hoisted(() => ({
   events: [] as string[],
   listSessions: vi.fn(),
-  resolveTarget: vi.fn(),
   prepareSession: vi.fn(),
   buildStartup: vi.fn(),
-  recordConversation: vi.fn(),
-  recordFailure: vi.fn(),
-  observeLaunch: vi.fn(),
   launch: vi.fn(),
   activateStructured: vi.fn(),
-  activate: vi.fn(),
+  activateWorktree: vi.fn(),
+  activateFolder: vi.fn(),
   toastError: vi.fn(),
   toastSuccess: vi.fn(),
   state: { activeWorktreeId: 'worktree-current' }
@@ -27,11 +26,7 @@ vi.mock('@/lib/ai-vault-resume-command', () => ({
   buildAiVaultResumeStartupForWorktree: (...args: unknown[]) => {
     mocks.events.push('build-startup')
     return mocks.buildStartup(...args)
-  },
-  getAiVaultAgentProviderSession: (session: AiVaultSession) => ({
-    key: 'session_id',
-    id: session.sessionId
-  })
+  }
 }))
 vi.mock('@/lib/launch-ai-vault-session', () => ({
   launchAiVaultSessionInNewTab: (...args: unknown[]) => {
@@ -45,14 +40,26 @@ vi.mock('@/lib/activate-ai-vault-structured-session', () => ({
 vi.mock('@/store', () => ({
   useAppStore: { getState: () => mocks.state }
 }))
-vi.mock('@/lib/ai-vault-resume-target', () => ({
-  getAiVaultResumeWorkspaceExecutionHostId: vi.fn(() => 'ssh:build')
-}))
 vi.mock('@/lib/ai-vault-session-resume-preparation', () => ({
   prepareAiVaultSessionForResume: (...args: unknown[]) => {
     mocks.events.push('prepare')
     return mocks.prepareSession(...args)
   }
+}))
+vi.mock('@/lib/ai-vault-resume-target', () => ({
+  canResumeAiVaultSessionOnTarget: () => true,
+  getAiVaultResumeWorkspaceExecutionHostId: () => 'ssh:build',
+  getAiVaultResumeWorkspaceTargetStatus: () => 'ssh'
+}))
+vi.mock('@/lib/worktree-activation', () => ({
+  activateAndRevealWorktree: (...args: unknown[]) => {
+    mocks.events.push('activate')
+    return mocks.activateWorktree(...args)
+  },
+  activateAndRevealFolderWorkspace: mocks.activateFolder
+}))
+vi.mock('./ai-vault-session-resume', () => ({
+  isKnownAiVaultResumeWorkspaceTarget: () => true
 }))
 vi.mock('@/i18n/i18n', () => ({
   translate: (_key: string, fallback: string) => fallback
@@ -61,31 +68,7 @@ vi.mock('./ai-vault-session-filters', () => ({ agentLabel: () => 'Codex' }))
 vi.mock('./ai-vault-session-continuation', () => ({
   prepareAiVaultSessionContinuation: vi.fn()
 }))
-vi.mock('@/issues/issue-resume-bookkeeping', () => ({
-  observeResumedConversationLocalLaunch: (...args: unknown[]) => mocks.observeLaunch(...args),
-  recordResumedConversation: (...args: unknown[]) => {
-    mocks.events.push('record')
-    return mocks.recordConversation(...args)
-  },
-  recordResumedConversationLaunchFailure: (...args: unknown[]) => mocks.recordFailure(...args)
-}))
-vi.mock('./ai-vault-session-launch-target', () => ({
-  activateAiVaultResumeWorkspace: (...args: unknown[]) => {
-    mocks.events.push('activate')
-    return mocks.activate(...args)
-  },
-  resolveAiVaultSessionLaunchTarget: vi.fn(),
-  resolveAiVaultSessionLaunchTargetOrNotify: (...args: unknown[]) => {
-    mocks.events.push('resolve-target')
-    return mocks.resolveTarget(...args)
-  },
-  resolveAiVaultTargetWorkspacePath: vi.fn(() => '/workspace/orca'),
-  workspaceDisplayName: vi.fn(() => 'Orca'),
-  workspaceScopeForIssueResume: vi.fn((worktreeId: string) => ({
-    type: 'worktree',
-    worktreeId
-  }))
-}))
+vi.mock('@/store/slices/worktree-helpers', () => ({ findWorktreeById: vi.fn() }))
 
 import { resolveAiVaultSessionByProviderIdentity } from './ai-vault-provider-session-resolution'
 import { resumeAiVaultSession } from './ai-vault-session-launch-actions'
@@ -93,275 +76,152 @@ import { resumeAiVaultSession } from './ai-vault-session-launch-actions'
 beforeEach(() => {
   mocks.events.length = 0
   vi.clearAllMocks()
-  vi.stubGlobal('window', {
-    api: {
-      aiVault: {
-        listSessions: (...args: unknown[]) => {
-          mocks.events.push('list')
-          return mocks.listSessions(...args)
-        }
-      }
-    }
+  Object.defineProperty(window, 'api', {
+    configurable: true,
+    value: { aiVault: { listSessions: mocks.listSessions } }
   })
-  mocks.resolveTarget.mockReturnValue({ worktreeId: 'worktree-original' })
-  mocks.prepareSession.mockImplementation(async (session) => session)
+  mocks.prepareSession.mockImplementation(async (value) => value)
   mocks.buildStartup.mockReturnValue({
     command: 'codex resume session-1',
     providerSession: { key: 'session_id', id: 'session-1' }
   })
-  mocks.recordConversation.mockResolvedValue({ recorded: false })
   mocks.launch.mockReturnValue({ tabId: 'tab-resumed' })
   mocks.activateStructured.mockResolvedValue(true)
+  mocks.activateWorktree.mockReturnValue(true)
 })
 
 describe('provider-session resolution and native AI Vault Resume', () => {
+  it('finds one exact host, agent, and provider identity from the native listSessions result', async () => {
+    const expected = session()
+    mocks.listSessions.mockResolvedValue({
+      sessions: [
+        { ...expected, id: 'wrong-host', executionHostId: 'local' },
+        { ...expected, id: 'wrong-session', sessionId: 'session-2' },
+        expected
+      ],
+      issues: [],
+      scannedAt: '2026-08-28T00:00:00.000Z'
+    })
+
+    await expect(
+      resolveAiVaultSessionByProviderIdentity({
+        executionHostId: 'ssh:build',
+        agent: 'codex',
+        providerSession: { key: 'session_id', id: 'session-1' },
+        workspacePaths: ['/workspace/orca', '/workspace/orca']
+      })
+    ).resolves.toEqual(expected)
+    expect(mocks.listSessions).toHaveBeenCalledWith({
+      unlimited: true,
+      scopePaths: ['/workspace/orca'],
+      executionHostScope: 'ssh:build'
+    })
+  })
+
+  it('fails closed for ambiguous identity and Pi transcript mismatch', async () => {
+    const candidate = session()
+    mocks.listSessions.mockResolvedValueOnce({
+      sessions: [candidate, { ...candidate, id: `${candidate.id}:duplicate` }],
+      issues: [],
+      scannedAt: '2026-08-28T00:00:00.000Z'
+    })
+    await expect(
+      resolveAiVaultSessionByProviderIdentity({
+        executionHostId: 'ssh:build',
+        agent: 'codex',
+        providerSession: { key: 'session_id', id: 'session-1' },
+        workspacePaths: ['/workspace/orca']
+      })
+    ).resolves.toBeNull()
+
+    mocks.listSessions.mockResolvedValueOnce({
+      sessions: [{ ...candidate, agent: 'pi', filePath: '/sessions/first.jsonl' }],
+      issues: [],
+      scannedAt: '2026-08-28T00:00:00.000Z'
+    })
+    await expect(
+      resolveAiVaultSessionByProviderIdentity({
+        executionHostId: 'ssh:build',
+        agent: 'pi',
+        providerSession: {
+          key: 'session_id',
+          id: 'session-1',
+          transcriptPath: '/sessions/second.jsonl'
+        },
+        workspacePaths: ['/workspace/orca']
+      })
+    ).resolves.toBeNull()
+    expect(mocks.toastError).toHaveBeenCalledTimes(2)
+  })
+
+  it('extracts the existing target, preparation, launch, activation, and toast chain unchanged', async () => {
+    await expect(
+      resumeAiVaultSession({
+        session: session(),
+        activeWorktreeId: 'worktree-current',
+        targetWorktreeId: 'worktree-original',
+        targetState: targetState(),
+        agentCmdOverrides: { codex: 'codex-local' }
+      })
+    ).resolves.toBe(true)
+
+    expect(mocks.launch).toHaveBeenCalledWith({
+      agent: 'codex',
+      worktreeId: 'worktree-original',
+      command: 'codex resume session-1',
+      providerSession: { key: 'session_id', id: 'session-1' }
+    })
+    expect(mocks.events).toEqual(['prepare', 'build-startup', 'launch', 'activate'])
+    expect(mocks.toastSuccess).toHaveBeenCalledWith('{{value0}} session queued')
+  })
+
+  it('preserves native runtime-launch and preparation failures', async () => {
+    mocks.launch.mockReturnValueOnce({
+      tabId: null,
+      runtimeLaunch: Promise.resolve({ status: 'failed', message: 'runtime rejected launch' })
+    })
+    await expect(
+      resumeAiVaultSession({
+        session: session(),
+        activeWorktreeId: 'worktree-current',
+        targetWorktreeId: 'worktree-original',
+        targetState: targetState()
+      })
+    ).resolves.toBe(false)
+    expect(mocks.toastError).toHaveBeenCalledWith('runtime rejected launch')
+
+    mocks.prepareSession.mockRejectedValueOnce(new Error('transcript unavailable'))
+    await expect(
+      resumeAiVaultSession({
+        session: session(),
+        activeWorktreeId: 'worktree-current',
+        targetWorktreeId: 'worktree-original',
+        targetState: targetState()
+      })
+    ).resolves.toBe(false)
+    expect(mocks.toastError).toHaveBeenCalledWith('transcript unavailable')
+  })
+
   it('keeps structured sessions on the native structured activation path', async () => {
-    const structuredSession = {
+    const structured = {
       ...session(),
       structuredSession: { sessionId: 'structured-1', workspaceId: 'worktree-structured' }
     }
 
     await expect(
       resumeAiVaultSession({
-        session: structuredSession,
+        session: structured,
         activeWorktreeId: 'worktree-current',
         targetState: targetState()
       })
-    ).resolves.toEqual({ launched: true, bookkeeping: { recorded: false } })
-
-    expect(mocks.activateStructured).toHaveBeenCalledWith(structuredSession)
-    expect(mocks.resolveTarget).not.toHaveBeenCalled()
-    expect(mocks.recordConversation).not.toHaveBeenCalled()
+    ).resolves.toBe(true)
+    expect(mocks.activateStructured).toHaveBeenCalledWith(structured)
     expect(mocks.launch).not.toHaveBeenCalled()
-  })
-
-  it('finds the exact host session, then enters the native AI Vault resume chain', async () => {
-    const expected = session()
-    mocks.listSessions.mockResolvedValue({
-      sessions: [{ ...expected, id: 'wrong-host', executionHostId: 'local' }, expected],
-      issues: [],
-      scannedAt: '2026-08-28T00:00:00.000Z'
-    })
-
-    await expect(
-      resolveAiVaultSessionByProviderIdentity({
-        executionHostId: 'ssh:build',
-        agent: 'codex',
-        providerSession: { key: 'session_id', id: 'session-1' },
-        workspacePaths: ['/workspace/orca']
-      })
-    ).resolves.toEqual(expected)
-
-    expect(mocks.listSessions).toHaveBeenCalledWith({
-      unlimited: true,
-      scopePaths: ['/workspace/orca'],
-      executionHostScope: 'ssh:build'
-    })
-    expect(mocks.prepareSession).not.toHaveBeenCalled()
-    expect(mocks.events).toEqual(['list'])
-
-    await expect(
-      resumeAiVaultSession({
-        session: expected,
-        activeWorktreeId: 'worktree-current',
-        targetWorktreeId: 'worktree-original',
-        targetState: targetState()
-      })
-    ).resolves.toEqual({
-      launched: true,
-      bookkeeping: { recorded: false }
-    })
-
-    expect(mocks.prepareSession).toHaveBeenCalledWith(expected)
-    expect(mocks.resolveTarget).toHaveBeenCalledWith(
-      expect.objectContaining({
-        sessionExecutionHostId: 'ssh:build',
-        activeWorktreeId: 'worktree-current',
-        targetWorktreeId: 'worktree-original'
-      })
-    )
-    expect(mocks.recordConversation).toHaveBeenCalledWith(
-      expect.objectContaining({
-        executionHostId: 'ssh:build',
-        workspaceRef: { type: 'worktree', worktreeId: 'worktree-original' },
-        providerSession: { key: 'session_id', id: 'session-1' }
-      })
-    )
-    expect(mocks.launch).toHaveBeenCalledWith(
-      expect.objectContaining({
-        agent: 'codex',
-        worktreeId: 'worktree-original',
-        command: 'codex resume session-1',
-        providerSession: { key: 'session_id', id: 'session-1' }
-      })
-    )
-    expect(mocks.activate).toHaveBeenCalledWith('worktree-original')
-    expect(mocks.events).toEqual([
-      'list',
-      'resolve-target',
-      'prepare',
-      'build-startup',
-      'record',
-      'launch',
-      'activate'
-    ])
-  })
-
-  it('does not launch when the provider identity is not unique', async () => {
-    const first = session()
-    mocks.listSessions.mockResolvedValue({
-      sessions: [first, { ...first, id: `${first.id}:duplicate` }],
-      issues: [],
-      scannedAt: '2026-08-28T00:00:00.000Z'
-    })
-
-    await expect(
-      resolveAiVaultSessionByProviderIdentity({
-        executionHostId: 'ssh:build',
-        agent: 'codex',
-        providerSession: { key: 'session_id', id: 'session-1' },
-        workspacePaths: ['/workspace/orca']
-      })
-    ).resolves.toBeNull()
-
-    expect(mocks.resolveTarget).not.toHaveBeenCalled()
-    expect(mocks.launch).not.toHaveBeenCalled()
-    expect(mocks.toastError).toHaveBeenCalledWith(
-      'This Conversation could not be found in Agent Session History.'
-    )
-  })
-
-  it('reuses the native zero-turn Resume gate', async () => {
-    mocks.listSessions.mockResolvedValue({
-      sessions: [{ ...session(), messageCount: 0, previewMessages: [] }],
-      issues: [],
-      scannedAt: '2026-08-28T00:00:00.000Z'
-    })
-
-    await expect(
-      resolveAiVaultSessionByProviderIdentity({
-        executionHostId: 'ssh:build',
-        agent: 'codex',
-        providerSession: { key: 'session_id', id: 'session-1' },
-        workspacePaths: ['/workspace/orca']
-      })
-    ).resolves.toBeNull()
-
-    expect(mocks.resolveTarget).not.toHaveBeenCalled()
-    expect(mocks.launch).not.toHaveBeenCalled()
-    expect(mocks.toastError).toHaveBeenCalledWith(
-      'This session has no saved conversation and cannot be resumed.'
-    )
-  })
-
-  it('records the launch claim before launching so the resumed hook cannot outrun its mapping', async () => {
-    mocks.listSessions.mockResolvedValue({
-      sessions: [session()],
-      issues: [],
-      scannedAt: '2026-08-28T00:00:00.000Z'
-    })
-    let finishRecord: (value: { recorded: false }) => void = () => undefined
-    mocks.recordConversation.mockReturnValue(
-      new Promise((resolve) => {
-        finishRecord = resolve
-      })
-    )
-
-    const resume = resumeAiVaultSession({
-      session: session(),
-      activeWorktreeId: 'worktree-current',
-      targetWorktreeId: 'worktree-original',
-      targetState: targetState()
-    })
-
-    await vi.waitFor(() => expect(mocks.recordConversation).toHaveBeenCalledTimes(1))
-    expect(mocks.launch).not.toHaveBeenCalled()
-    finishRecord({ recorded: false })
-    await expect(resume).resolves.toEqual({
-      launched: true,
-      bookkeeping: { recorded: false }
-    })
-    expect(mocks.launch).toHaveBeenCalledTimes(1)
-  })
-
-  it('keeps the native Resume best-effort when Issue book-keeping is unavailable', async () => {
-    mocks.recordConversation.mockResolvedValue({ recorded: false })
-
-    await expect(
-      resumeAiVaultSession({
-        session: session(),
-        activeWorktreeId: 'worktree-current',
-        targetWorktreeId: 'worktree-original',
-        targetState: targetState()
-      })
-    ).resolves.toEqual({
-      launched: true,
-      bookkeeping: { recorded: false }
-    })
-
-    expect(mocks.launch).toHaveBeenCalledTimes(1)
-    expect(mocks.observeLaunch).toHaveBeenCalledWith(
-      { recorded: false },
-      { worktreeId: 'worktree-original', tabId: 'tab-resumed' }
-    )
-  })
-
-  it('reuses the Issue launch-gap locator for a recorded local Resume', async () => {
-    const bookkeeping = {
-      recorded: true,
-      route: 'ssh:build',
-      preparation: { conversation: { id: 'conversation-1' }, claimId: 'claim-1' }
-    }
-    mocks.recordConversation.mockResolvedValue(bookkeeping)
-
-    await resumeAiVaultSession({
-      session: session(),
-      activeWorktreeId: 'worktree-current',
-      targetWorktreeId: 'worktree-original',
-      targetState: targetState()
-    })
-
-    expect(mocks.observeLaunch).toHaveBeenCalledWith(bookkeeping, {
-      worktreeId: 'worktree-original',
-      tabId: 'tab-resumed'
-    })
-  })
-
-  it('settles the existing Resume claim when the native runtime launcher fails', async () => {
-    const bookkeeping = {
-      recorded: true,
-      route: 'ssh:build',
-      preparation: { conversation: { id: 'conversation-1' }, claimId: 'claim-1' }
-    }
-    mocks.recordConversation.mockResolvedValue(bookkeeping)
-    mocks.launch.mockReturnValue({
-      tabId: null,
-      runtimeLaunch: Promise.resolve({ status: 'failed', message: 'runtime launcher failed' })
-    })
-
-    await expect(
-      resumeAiVaultSession({
-        session: session(),
-        activeWorktreeId: 'worktree-current',
-        targetWorktreeId: 'worktree-original',
-        targetState: targetState()
-      })
-    ).resolves.toEqual({ launched: false, bookkeeping })
-
-    expect(mocks.recordFailure).toHaveBeenCalledOnce()
-    expect(mocks.recordFailure).toHaveBeenCalledWith(bookkeeping, 'runtime launcher failed')
-    expect(mocks.activate).not.toHaveBeenCalled()
-    expect(mocks.toastError).toHaveBeenCalledWith('runtime launcher failed')
   })
 })
 
 function targetState(): AiVaultSessionResumeTargetState {
-  return {
-    folderWorkspaces: [],
-    projectGroups: [],
-    repos: [],
-    worktreesByRepo: {}
-  }
+  return { folderWorkspaces: [], projectGroups: [], repos: [], worktreesByRepo: {} }
 }
 
 function session(): AiVaultSession {

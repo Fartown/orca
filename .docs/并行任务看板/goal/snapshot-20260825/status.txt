@@ -1,0 +1,112 @@
+ M config/scripts/verify-packaged-daemon-entry.cjs
+ M config/scripts/verify-packaged-daemon-entry.test.mjs
+ M mobile/app/h/[hostId]/index.tsx
+ M mobile/app/h/_layout.tsx
+ M mobile/src/notifications/local-notification-scheduling.ts
+ M mobile/src/notifications/notification-routing.test.ts
+ M mobile/src/notifications/notification-routing.ts
+ M src/main/agent-hooks/server.ts
+ M src/main/artifacts/artifact-cloud-config.test.ts
+ M src/main/artifacts/artifact-cloud-config.ts
+ M src/main/index.ts
+ M src/main/ipc/dashboard-payload-validation.test.ts
+ M src/main/ipc/dashboard-payload-validation.ts
+ M src/main/ipc/dashboard-popout.test.ts
+ M src/main/ipc/dashboard-popout.ts
+ M src/main/ipc/notification-options.ts
+ M src/main/ipc/notifications.test.ts
+ M src/main/ipc/notifications.ts
+ M src/main/ipc/pty.test.ts
+ M src/main/ipc/pty.ts
+ M src/main/local-worktree-filesystem.ts
+ M src/main/native-chat/transcript-line-decoders-codex.ts
+ M src/main/native-chat/transcript-reader-codex-history-mode.test.ts
+ M src/main/runtime/agent-session-claim-identity.test.ts
+ M src/main/runtime/agent-session-claim-identity.ts
+ M src/main/runtime/mobile-notification-replay.test.ts
+ M src/main/runtime/mobile-rpc-allowlist.test.ts
+ M src/main/runtime/orca-runtime.ts
+ M src/main/runtime/rpc/methods/agent-session.ts
+ M src/main/runtime/rpc/methods/client-events.test.ts
+ M src/main/runtime/rpc/methods/client-events.ts
+ M src/main/runtime/rpc/methods/client-ui-schemas.ts
+ M src/main/runtime/rpc/methods/index.ts
+ M src/main/runtime/runtime-rpc.ts
+ M src/main/ssh/ssh-relay-session.ts
+ M src/main/text-generation/commit-message-text-generation.ts
+ M src/preload/api-types.ts
+ M src/preload/api/dashboard-api.ts
+ M src/preload/api/pty-api.ts
+ M src/preload/api/ui-command-event-api.ts
+ M src/preload/index.ts
+ M src/relay/agent-hook-server.ts
+ M src/renderer/src/App.tsx
+ M src/renderer/src/components/activity/ActivityPrototypePage.tsx
+ M src/renderer/src/components/activity/useActivityUnreadCount.test.ts
+ M src/renderer/src/components/activity/useActivityUnreadCount.ts
+ M src/renderer/src/components/dashboard-popout/AgentKanbanBoard.test.tsx
+ M src/renderer/src/components/dashboard-popout/AgentKanbanBoard.tsx
+ M src/renderer/src/components/dashboard-popout/AgentKanbanCard.test.tsx
+ M src/renderer/src/components/dashboard-popout/AgentKanbanCard.tsx
+ M src/renderer/src/components/dashboard/AgentDashboardDrawer.tsx
+ M src/renderer/src/components/dashboard/useDashboardPopoutBridge.ts
+ M src/renderer/src/components/sidebar/SidebarHeader.tsx
+ M src/renderer/src/components/sidebar/index.tsx
+ M src/renderer/src/components/sidebar/use-sidebar-host-scope-options.ts
+ M src/renderer/src/components/terminal-pane/pty-connection-types.ts
+ M src/renderer/src/components/terminal-pane/pty-connection.test.ts
+ M src/renderer/src/components/terminal-pane/pty-connection.ts
+ M src/renderer/src/components/terminal-pane/pty-transport-types.ts
+ M src/renderer/src/components/terminal-pane/pty-transport.test.ts
+ M src/renderer/src/components/terminal-pane/pty-transport.ts
+ M src/renderer/src/components/terminal-pane/remote-runtime-pty-transport.test.ts
+ M src/renderer/src/components/terminal-pane/remote-runtime-pty-transport.ts
+ M src/renderer/src/components/terminal-pane/use-notification-dispatch.test.ts
+ M src/renderer/src/components/terminal-pane/use-notification-dispatch.ts
+ M src/renderer/src/components/terminal-pane/use-terminal-pane-lifecycle.ts
+ M src/renderer/src/hooks/agent-hook-completion-notifications.test.ts
+ M src/renderer/src/hooks/agent-hook-completion-notifications.ts
+ M src/renderer/src/hooks/useIpcEvents.ts
+ M src/renderer/src/lib/launch-agent-in-new-tab-web-runtime.test.ts
+ M src/renderer/src/lib/launch-agent-in-new-tab.test.ts
+ M src/renderer/src/lib/launch-agent-in-new-tab.ts
+ M src/renderer/src/lib/launch-agent-web-host-tab.ts
+ M src/renderer/src/lib/right-sidebar-visibility.ts
+ M src/renderer/src/lib/titlebar-worktree-history-controls.ts
+ M src/renderer/src/lib/worktree-activation.ts
+ M src/renderer/src/runtime/remote-agent-session-launch.test.ts
+ M src/renderer/src/runtime/remote-agent-session-launch.ts
+ M src/renderer/src/runtime/runtime-client-events.ts
+ M src/renderer/src/runtime/web-runtime-session.test.ts
+ M src/renderer/src/runtime/web-runtime-session.ts
+ M src/renderer/src/store/slices/terminals.ts
+ M src/renderer/src/store/slices/ui.ts
+ M src/renderer/src/store/slices/worktree-nav-history.ts
+ M src/shared/agent-hook-listener.ts
+ M src/shared/agent-hook-relay.ts
+ M src/shared/agent-session-host-authority.ts
+ M src/shared/dashboard-snapshot.ts
+ M src/shared/notification-settings-types.ts
+ M src/shared/protocol-version.ts
+ M src/shared/runtime-client-events.ts
+ M src/shared/runtime-types.ts
+ M src/shared/top-level-view.ts
+ M src/shared/ui-chrome-types.ts
+ M src/shared/worktree/launch-types.ts
+?? .docs/
+?? "goal-mode/docs/50-\346\226\271\346\241\210-\345\210\240\346\216\211\347\251\272\350\275\254\347\206\224\346\226\255.md"
+?? mcp-gateway/
+?? mobile/app/h/[hostId]/issues.tsx
+?? mobile/app/h/[hostId]/issues/
+?? mobile/src/issues/
+?? src/main/ipc/issues.test.ts
+?? src/main/ipc/issues.ts
+?? src/main/issues/
+?? src/main/runtime/orca-runtime-conversation-allocation.test.ts
+?? src/main/runtime/rpc/methods/issues.test.ts
+?? src/main/runtime/rpc/methods/issues.ts
+?? src/preload/api/issue-client-data-api.ts
+?? src/renderer/src/components/issues/
+?? src/renderer/src/components/sidebar/issues/
+?? src/renderer/src/issues/
+?? src/shared/issues/

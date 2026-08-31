@@ -1,4 +1,3 @@
-import type { AgentSessionIdentityPathAccess } from '../runtime/agent-session-claim-identity'
 import {
   ConversationHookIdentityIngestor,
   type ConversationHookIdentityContext
@@ -33,7 +32,6 @@ export type IssueWorkspaceResolver = {
     worktreeId?: string
     connectionId: string | null
   }): Promise<ConversationHookIdentityContext | null>
-  pathAccess?(context: ConversationHookIdentityContext): AgentSessionIdentityPathAccess | null
 }
 
 export type IssueFeatureBootstrapOptions = {
@@ -99,7 +97,7 @@ export class IssueFeatureBootstrap {
         userDataPath: options.userDataPath,
         migrationHooks: options.migrationHooks,
         hasConversationRuntimeEvidence: (conversationId) =>
-          attachments.getDeleteState(conversationId).livenessVerdict !== 'exited'
+          attachments.getDeleteState(conversationId).attached
       })
     } catch (error) {
       const reason = String(error).includes('migration')
@@ -131,7 +129,6 @@ export class IssueFeatureBootstrap {
               worktreeId,
               connectionId: connectionId ?? null
             }),
-          resolvePathAccess: (context) => options.workspaceResolver.pathAccess?.(context) ?? null,
           attachments
         })
         const reconciler = new RoundRecordReconciler(repository)

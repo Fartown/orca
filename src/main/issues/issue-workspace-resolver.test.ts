@@ -31,8 +31,7 @@ describe('Issue workspace resolver', () => {
   it('uses the direct SSH target as authority identity', async () => {
     const resolver = createIssueWorkspaceResolver({
       getTerminalWorktreeIdForPaneKey: () => null,
-      getFolderWorkspace: () => undefined,
-      hostPlatform: () => 'linux'
+      getFolderWorkspace: () => undefined
     })
     await expect(
       resolver.resolve({
@@ -42,8 +41,7 @@ describe('Issue workspace resolver', () => {
       })
     ).resolves.toMatchObject({
       executionHostId: 'ssh:ssh%20target',
-      connectionId: 'ssh target',
-      hostPlatform: 'linux'
+      connectionId: 'ssh target'
     })
   })
 })

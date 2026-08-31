@@ -12,6 +12,8 @@ import os from 'node:os'
 import path from 'node:path'
 import type { ElectronApplication, Page } from '@stablyai/playwright-test'
 import type { ConversationSummary, IssueSummary } from '../../src/shared/issues/types'
+import type { RuntimeTerminalListResult, RuntimeTerminalRead } from '../../src/shared/runtime-types'
+import { parsePaneKey } from '../../src/shared/stable-pane-id'
 import { expect, test } from './helpers/orca-app'
 import { attachRepoAndOpenTerminal } from './helpers/orca-restart'
 import {
@@ -31,12 +33,15 @@ import {
 import {
   createPackagedIssuesJourney,
   listConversations,
-  listIssues
+  listIssues,
+  runtimeRpc
 } from './helpers/packaged-issues-journey'
 import { bindConversationFromIssueDetail } from './helpers/issues-journey-binding-actions'
+import { resolveCodexTestExecutable } from './helpers/codex-test-executable'
 
 const OUT_DIR = path.join(process.cwd(), '.docs', '并行任务看板', '功能测试')
 const SHOTS = path.join(OUT_DIR, 'screenshots')
+const CODEX_READY_TIMEOUT_MS = 120_000
 
 test.setTimeout(45 * 60_000)
 
@@ -83,15 +88,23 @@ test('Issue 产品动线 · 真 agent @issues-product', async ({ testRepoPath },
   // 隔离 HOME 的登录 shell 不继承用户 PATH，以软链和 .zshenv 暴露真 codex。
   const binDir = path.join(journey.isolatedHome, 'bin')
   mkdirSync(binDir, { recursive: true })
-  const codexBin = execFileSync('command', ['-v', 'codex'], {
+  const codexCommand = execFileSync('command', ['-v', 'codex'], {
     shell: true,
     encoding: 'utf8'
   }).trim()
-  if (!codexBin) {
+  if (!codexCommand) {
     throw new Error('找不到真 codex 二进制')
   }
+  const codexBin = resolveCodexTestExecutable(codexCommand)
   symlinkSync(codexBin, path.join(binDir, 'codex'))
-  writeFileSync(path.join(journey.isolatedHome, '.zshenv'), `export PATH="${binDir}:$PATH"\n`)
+  writeFileSync(
+    path.join(journey.isolatedHome, '.zshenv'),
+    [
+      `export HOME=${shellQuote(journey.isolatedHome)}`,
+      `export PATH=${shellQuote(binDir)}:$PATH`,
+      ''
+    ].join('\n')
+  )
   const realPath = `${binDir}${path.delimiter}${process.env.PATH ?? ''}`
 
   const results: JourneyResult[] = []
@@ -104,7 +117,7 @@ test('Issue 产品动线 · 真 agent @issues-product', async ({ testRepoPath },
     return page
   }
   const launch = async (): Promise<Page> => {
-    const launched = await journey.launch({ PATH: realPath })
+    const launched = await journey.launch({ PATH: realPath, ZDOTDIR: journey.isolatedHome })
     app = launched.app
     page = launched.page
     // 种子 profile 把 codex 的启动命令写死成 golden-stub-agent(packaged-issues-journey.ts:280),
@@ -156,6 +169,7 @@ test('Issue 产品动线 · 真 agent @issues-product', async ({ testRepoPath },
   let grandchildIssue: IssueSummary | null = null
   let externalIssue: IssueSummary | null = null
   let firstConversation: ConversationSummary | null = null
+  let firstProviderSessionId = ''
 
   try {
     // 前置:起 App、挂仓库、拿到主 Workspace 标签。失败则整轮无意义,直接抛。
@@ -195,22 +209,30 @@ test('Issue 产品动线 · 真 agent @issues-product', async ({ testRepoPath },
         .locator(`[data-terminal-tab-id="${agentTabId}"] .xterm-helper-textarea`)
         .first()
       await expect(agentInput).toBeVisible({ timeout: 20_000 })
-      await captureJourneyScreenshot(p, SHOTS, 'J1-trust.png')
+      const terminal = await waitForTerminalHandle(p, worktreeId, agentTabId)
       await agentInput.focus()
-      await p.waitForTimeout(750)
-      await p.keyboard.press('Enter')
-      await p.waitForTimeout(2_000)
+      await waitForCodexComposer(p, terminal, CODEX_READY_TIMEOUT_MS)
+      await captureJourneyScreenshot(p, SHOTS, 'J1-ready.png')
+      const prompt = 'Reply exactly ISSUE_JOURNEY_READY'
       await agentInput.focus()
-      await p.keyboard.type('Reply exactly ISSUE_JOURNEY_READY')
+      await p.keyboard.type(prompt, { delay: 30 })
+      await expect
+        .poll(() => readTerminalComposer(p, terminal), { timeout: 10_000 })
+        .toContain(prompt)
       await p.keyboard.press('Enter')
       const attached = await waitForConversation(
         p,
         (c) =>
           c.id === firstConversation?.id &&
           c.attachment.kind === 'attached' &&
-          Boolean(c.navigation?.providerSession?.id),
+          Boolean(c.navigation?.providerSession?.id) &&
+          Boolean(c.latestRound?.agentOutput.text?.includes('ISSUE_JOURNEY_READY')),
         180_000
       )
+      firstProviderSessionId = attached.navigation?.providerSession?.id ?? ''
+      if (!firstProviderSessionId) {
+        throw new Error('真 agent 未发布 provider session identity')
+      }
       if (!['running', 'waiting', 'stopped'].includes(attached.executionState)) {
         const configOnDisk = readFileSync(path.join(codexHome, 'config.toml'), 'utf8')
           .replace(/\s+/g, ' ')
@@ -232,7 +254,7 @@ test('Issue 产品动线 · 真 agent @issues-product', async ({ testRepoPath },
       if (!rootIssue) {
         throw new Error('J1 未建立 Issue')
       }
-      const second = await launchConversationFromIssue(p, rootIssue.id, folder.name)
+      const second = await launchConversationFromIssue(p, rootIssue.id, folder.name, 'codex')
       const all = (await listConversations(p)).filter((c) => c.issueId === rootIssue?.id)
       if (all.length < 2) {
         throw new Error(`同一 Issue 下只有 ${all.length} 条 Conversation`)
@@ -270,19 +292,133 @@ test('Issue 产品动线 · 真 agent @issues-product', async ({ testRepoPath },
       if (!firstConversation) {
         throw new Error('J1 未建立 Conversation')
       }
-      const live = await waitForConversation(p, (c) => c.id === firstConversation?.id)
-      if (!live.navigation?.paneKey) {
+      const live = await waitForConversation(
+        p,
+        (c) => c.id === firstConversation?.id && c.attachment.kind === 'attached'
+      )
+      const originalPaneKey = live.navigation?.paneKey
+      const originalPane = originalPaneKey ? parsePaneKey(originalPaneKey) : null
+      if (!originalPane || !firstProviderSessionId) {
         throw new Error(
           `没有活着的 pane 可关（executionState=${live.executionState}）—— 前置的 agent 没有保持运行，这条动线无法验证`
         )
       }
       await closeConversationPane(p, live)
-      const after = await waitForConversation(
+      const detached = await waitForConversation(
         p,
-        (c) => c.id === firstConversation?.id && !c.navigation?.paneKey,
+        (c) =>
+          c.id === firstConversation?.id &&
+          c.attachment.kind === 'detached' &&
+          !c.navigation?.paneKey &&
+          c.navigation?.providerSession?.id === firstProviderSessionId,
         30_000
       )
-      return `关闭 pane 后 Conversation 仍在，运行附件已脱离（paneKey=${String(after.navigation?.paneKey)}）`
+      await openIssuesMode(p)
+      const issueRow = localIssuesRegion(p).locator(
+        `[data-conversation-id="${firstConversation.id}"]`
+      )
+      await expect(issueRow).toBeVisible({ timeout: 20_000 })
+      await expect(issueRow).toHaveAttribute('data-attachment-state', 'detached')
+      const primaryAction = issueRow.getByTestId('issue-conversation-primary-action')
+      await expect(primaryAction).toBeVisible()
+      await captureJourneyScreenshot(p, SHOTS, 'J4-detached.png')
+
+      const sortableTabs = p.locator('[data-testid="sortable-tab"]')
+      const tabCountBeforeResume = await sortableTabs.count()
+      const activeTabIdBeforeResume = await p.evaluate(
+        () => window.__store?.getState().activeTabId ?? ''
+      )
+      await primaryAction.click()
+      let nativeResumeTabId = ''
+      await expect
+        .poll(
+          async () => {
+            nativeResumeTabId =
+              (await p.evaluate(() => window.__store?.getState().activeTabId ?? '')) || ''
+            return (
+              nativeResumeTabId !== '' &&
+              nativeResumeTabId !== activeTabIdBeforeResume &&
+              nativeResumeTabId !== originalPane.tabId
+            )
+          },
+          { timeout: 30_000 }
+        )
+        .toBe(true)
+      const tabCountAfterResume = await sortableTabs.count()
+      expect(tabCountAfterResume).toBeGreaterThanOrEqual(tabCountBeforeResume)
+      expect(tabCountAfterResume).toBeLessThanOrEqual(tabCountBeforeResume + 1)
+
+      const resumedInput = p
+        .locator(`[data-terminal-tab-id="${nativeResumeTabId}"] .xterm-helper-textarea`)
+        .first()
+      await expect(resumedInput).toBeVisible({ timeout: 20_000 })
+      const resumedTerminal = await waitForTerminalHandle(p, worktreeId, nativeResumeTabId)
+      await resumedInput.focus()
+      await waitForCodexComposer(p, resumedTerminal, CODEX_READY_TIMEOUT_MS)
+      await captureJourneyScreenshot(p, SHOTS, 'J4-resumed-idle.png')
+
+      const resumePrompt = 'Reply exactly ISSUE_JOURNEY_RESUMED'
+      await p.keyboard.type(resumePrompt, { delay: 30 })
+      await expect
+        .poll(() => readTerminalComposer(p, resumedTerminal), { timeout: 10_000 })
+        .toContain(resumePrompt)
+      await p.keyboard.press('Enter')
+      const resumed = await waitForConversation(
+        p,
+        (c) =>
+          c.id === detached.id &&
+          c.attachment.kind === 'attached' &&
+          Boolean(c.navigation?.paneKey) &&
+          c.navigation?.paneKey !== originalPaneKey &&
+          c.navigation?.providerSession?.id === firstProviderSessionId &&
+          Boolean(c.latestRound?.agentOutput.text?.includes('ISSUE_JOURNEY_RESUMED')) &&
+          c.executionState !== 'launching',
+        180_000
+      )
+      const resumedPaneKey = resumed.navigation?.paneKey ?? ''
+      const resumedPane = parsePaneKey(resumedPaneKey)
+      if (!resumedPane) {
+        throw new Error(`恢复后 paneKey 非法：${resumedPaneKey}`)
+      }
+      await openIssuesMode(p)
+      await expect(issueRow).toHaveAttribute('data-attachment-state', 'attached')
+      await expect(issueRow).not.toHaveAttribute('data-execution-state', 'launching')
+      await expect(issueRow.getByTestId('issue-conversation-primary-action')).toHaveCount(0)
+      const focusAction = issueRow
+        .getByTestId('issue-conversation-workspace-row')
+        .locator('.worktree-agent-row-hover')
+      await expect(focusAction).toBeVisible({ timeout: 30_000 })
+      await captureJourneyScreenshot(p, SHOTS, 'J4-resumed.png')
+
+      const tabCountBeforeFocus = await sortableTabs.count()
+      await focusAction.click()
+      await expect
+        .poll(async () => {
+          return p.evaluate(
+            ({ tabId }) => {
+              const state = window.__store?.getState()
+              return {
+                tabId: state?.activeTabId ?? null,
+                leafId: state?.terminalLayoutsByTabId[tabId]?.activeLeafId ?? null,
+                activeIssueRoute: window.__issueDomainStore?.getState().activeIssueRoute ?? null
+              }
+            },
+            { tabId: resumedPane.tabId }
+          )
+        })
+        .toEqual({
+          tabId: resumedPane.tabId,
+          leafId: resumedPane.leafId,
+          activeIssueRoute: null
+        })
+      expect(await sortableTabs.count()).toBe(tabCountBeforeFocus)
+      await captureJourneyScreenshot(p, SHOTS, 'J4-focused.png')
+      return (
+        `Conversation ${resumed.id} 保持 provider ${firstProviderSessionId}；` +
+        `detached 后由 AI Vault 原生链打开 ${nativeResumeTabId}，首条新消息 Hook 后重新 attached 到 ${resumedPaneKey}；` +
+        `tab ${tabCountBeforeResume}→${tabCountAfterResume}，` +
+        `Workspace 原生行再次点击聚焦且仍为 ${tabCountBeforeFocus}`
+      )
     })
 
     await run('J5', '一眼看出哪些需要我', async () => {
@@ -477,3 +613,59 @@ test('Issue 产品动线 · 真 agent @issues-product', async ({ testRepoPath },
     expect(passed).toBe(results.length)
   }
 })
+
+function shellQuote(value: string): string {
+  return `'${value.replaceAll("'", `'"'"'`)}'`
+}
+
+async function waitForTerminalHandle(
+  page: Page,
+  worktreeId: string,
+  tabId: string
+): Promise<string> {
+  let handle = ''
+  await expect
+    .poll(
+      async () => {
+        const result = await runtimeRpc<RuntimeTerminalListResult>(page, 'terminal.list', {
+          worktree: `id:${worktreeId}`,
+          includeVisualLayouts: false
+        })
+        handle = result.terminals.find((terminal) => terminal.tabId === tabId)?.handle ?? ''
+        return handle
+      },
+      { timeout: 30_000 }
+    )
+    .not.toBe('')
+  return handle
+}
+
+async function readTerminalScreen(page: Page, terminal: string): Promise<RuntimeTerminalRead> {
+  return (
+    await runtimeRpc<{ terminal: RuntimeTerminalRead }>(page, 'terminal.read', {
+      terminal,
+      screen: true
+    })
+  ).terminal
+}
+
+async function readTerminalComposer(page: Page, terminal: string): Promise<string> {
+  const screen = await readTerminalScreen(page, terminal)
+  return screen.draft ?? screen.tail.join('\n')
+}
+
+async function waitForCodexComposer(page: Page, terminal: string, timeout: number): Promise<void> {
+  const state = async (): Promise<'ready' | 'trust-required' | 'waiting'> => {
+    const screen = await readTerminalScreen(page, terminal)
+    const text = `${screen.tail.join('\n')}\n${screen.draft ?? ''}`
+    if (/Do you trust|trust this folder|Trust this|Working with untrusted contents/i.test(text)) {
+      return 'trust-required'
+    }
+    return /Ask Codex/i.test(text) ? 'ready' : 'waiting'
+  }
+  await expect.poll(state, { timeout }).toMatch(/^(ready|trust-required)$/)
+  if ((await state()) === 'trust-required') {
+    await page.keyboard.press('Enter')
+  }
+  await expect.poll(state, { timeout }).toBe('ready')
+}

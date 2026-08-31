@@ -30,7 +30,12 @@ export function readIssueSummaries(
     const conversations = repository.conversations
       .list()
       .filter((conversation) => conversation.issueId === issue.id)
-    const ownUnresolvedCount = conversations.reduce(
+    const visibleConversations = conversations.filter((conversation) =>
+      repository.conversationIdentities
+        .listForConversation(conversation.id)
+        .some((identity) => identity.retiredAt === null)
+    )
+    const ownUnresolvedCount = visibleConversations.reduce(
       (count, conversation) =>
         count +
         repository.rounds.list(conversation.id).filter((round) => round.resolvedAt === null).length,
@@ -40,8 +45,8 @@ export function readIssueSummaries(
       ...issue,
       ownUnresolvedCount,
       descendantAttentionCount: 0,
-      directConversationCount: conversations.length,
-      runningConversationCount: conversations.filter((conversation) => {
+      directConversationCount: visibleConversations.length,
+      runningConversationCount: visibleConversations.filter((conversation) => {
         const state = attachments?.getDeleteState(conversation.id).executionState
         return state === 'running' || state === 'launching'
       }).length
@@ -71,9 +76,7 @@ export function readConversationSummaries(params: {
       const attachments = params.attachments?.listForConversation(conversation.id) ?? []
       const latestAttachment = attachments[0]
       const runtimeState = params.attachments?.getDeleteState(conversation.id)
-      const hasRuntimeProjection = Boolean(
-        runtimeState && (runtimeState.attached || runtimeState.livenessVerdict === 'unverifiable')
-      )
+      const hasRuntimeProjection = Boolean(runtimeState?.attached)
       const identity = params.repository.conversationIdentities
         .listForConversation(conversation.id)
         .find((candidate) => candidate.retiredAt === null)
@@ -104,9 +107,6 @@ export function readConversationSummaries(params: {
         executionState:
           (hasRuntimeProjection ? runtimeState?.executionState : undefined) ??
           (conversation.launchFailure ? 'failed' : (launchClaimState ?? 'stopped')),
-        ...(hasRuntimeProjection && runtimeState
-          ? { livenessVerdict: runtimeState.livenessVerdict }
-          : {}),
         workspaceAvailability: workspaceResolver.workspaceAvailable(conversation.id)
           ? 'available'
           : 'unavailable',
