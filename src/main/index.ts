@@ -12,6 +12,10 @@ import { registerMainProcessIpcHandlers } from './startup/main-process-ipc-boots
 import { initializeMainProcessReady } from './startup/main-process-ready'
 import { installMainProcessQuitHandlers } from './startup/main-process-quit'
 import { shouldActivateDesktopForSecondInstance } from './startup/single-instance-lock'
+import {
+  startIssueFeatureForMainProcess,
+  stopIssueFeatureForMainProcess
+} from './issues/issue-main-process-lifecycle'
 
 function openMainWindow(options: { revealOnDidFinishLoad?: boolean } = {}): BrowserWindow {
   return openMainWindowController(options)
@@ -55,11 +59,13 @@ if (preflightReady) {
   })
   state.skillShareDeepLinks.capture(process.argv)
   registerMainProcessIpcHandlers()
+  app.once('will-quit', stopIssueFeatureForMainProcess)
   installMainProcessQuitHandlers()
   void app.whenReady().then(async () => {
     await initializeMainProcessReady({
       openMainWindow,
-      handleMacAppActivation
+      handleMacAppActivation,
+      afterTerminalRuntimeStartup: startIssueFeatureForMainProcess
     })
   })
 }

@@ -2,7 +2,10 @@ import { isAgentStatusHooksEnabled } from '../agent-hooks/managed-agent-hook-con
 import { agentHookServer } from '../agent-hooks/server'
 import { getCanonicalUserDataPath } from '../persistence'
 import { mainProcessState as state } from '../startup/main-process-state'
+import type { IssueFeatureBootstrap } from './issue-feature-bootstrap'
 import { startIssueFeatureForHost } from './issue-host-lifecycle'
+
+let issueFeatureBootstrap: IssueFeatureBootstrap | null = null
 
 export async function startIssueFeatureForMainProcess(): Promise<void> {
   const runtime = state.runtime
@@ -18,7 +21,7 @@ export async function startIssueFeatureForMainProcess(): Promise<void> {
       : Object.keys(agentHookServer.buildPtyEnv()).length > 0
         ? 'ready'
         : 'failed'
-    state.issueFeatureBootstrap = await startIssueFeatureForHost({
+    issueFeatureBootstrap = await startIssueFeatureForHost({
       profileId: profile.profile.id,
       profileLabel: profile.profile.name,
       userDataPath: getCanonicalUserDataPath(),
@@ -36,6 +39,6 @@ export async function startIssueFeatureForMainProcess(): Promise<void> {
 }
 
 export function stopIssueFeatureForMainProcess(): void {
-  state.issueFeatureBootstrap?.dispose()
-  state.issueFeatureBootstrap = null
+  issueFeatureBootstrap?.dispose()
+  issueFeatureBootstrap = null
 }

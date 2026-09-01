@@ -36,13 +36,13 @@ import { scheduleAllPendingHistoryTreeRemovals } from '../terminal-history-delet
 import { triggerStartupNotificationRegistration } from '../ipc/startup-notification-registration'
 import { mainProcessState as state } from './main-process-state'
 import { logStartupMilestone } from './startup-diagnostics'
-import { startIssueFeatureForMainProcess } from '../issues/issue-main-process-lifecycle'
 
 type RuntimeService = NonNullable<typeof state.runtime>
 
 export type MainProcessRuntimeLaunchOptions = {
   openMainWindow: (options?: { revealOnDidFinishLoad?: boolean }) => BrowserWindow
   handleMacAppActivation: () => void
+  afterTerminalRuntimeStartup?: () => Promise<void>
 }
 
 function settleDesktopActivation(): void {
@@ -303,7 +303,7 @@ export async function initializeMainProcessRuntimeLaunch(
     await shellPathReady
     bindTerminalRuntimeStartupServices(Promise.resolve(startTerminalRuntimeStartupServices()))
   }
-  await startIssueFeatureForMainProcess()
+  await options.afterTerminalRuntimeStartup?.()
   app.on('activate', options.handleMacAppActivation)
   if (serveOptions) {
     await launchServeMode(runtime, runtimeRpc, serveOptions)

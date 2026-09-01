@@ -6,6 +6,7 @@ const STARTUP_ROOT = join(import.meta.dirname, '..', 'startup')
 
 describe('Issue host lifecycle wiring', () => {
   it('wires desktop and Electron serve after shared hook startup and before serve RPC', () => {
+    const indexSource = readFileSync(join(import.meta.dirname, '..', 'index.ts'), 'utf8')
     const lifecycleSource = readFileSync(
       join(import.meta.dirname, 'issue-main-process-lifecycle.ts'),
       'utf8'
@@ -16,22 +17,28 @@ describe('Issue host lifecycle wiring', () => {
       'const issueFeatureReady = state.localPtyStartupReady.then'
     )
     const bootstrap = lifecycleSource.indexOf(
-      'state.issueFeatureBootstrap = await startIssueFeatureForHost',
+      'issueFeatureBootstrap = await startIssueFeatureForHost',
       hookSettled
     )
     const bindRuntime = launchSource.indexOf('bindTerminalRuntimeStartupServices')
-    const bootstrapCall = launchSource.indexOf(
-      'await startIssueFeatureForMainProcess()',
-      bindRuntime
-    )
+    const bootstrapCall = launchSource.indexOf('await options.afterTerminalRuntimeStartup?.()')
     const serveRpc = launchSource.indexOf('await launchServeMode', bootstrapCall)
-    const dispose = quitSource.indexOf('stopIssueFeatureForMainProcess()')
-    const hookStop = quitSource.indexOf('agentHookServer.stop()', dispose)
+    const dispose = lifecycleSource.indexOf('issueFeatureBootstrap?.dispose()')
+    const hookStop = quitSource.indexOf('agentHookServer.stop()')
+    const startInjection = indexSource.indexOf(
+      'afterTerminalRuntimeStartup: startIssueFeatureForMainProcess'
+    )
+    const stopInjection = indexSource.indexOf(
+      "app.once('will-quit', stopIssueFeatureForMainProcess)"
+    )
 
     expect(hookSettled).toBeGreaterThan(0)
     expect(bootstrap).toBeGreaterThan(hookSettled)
     expect(bootstrapCall).toBeGreaterThan(bindRuntime)
     expect(serveRpc).toBeGreaterThan(bootstrapCall)
-    expect(hookStop).toBeGreaterThan(dispose)
+    expect(dispose).toBeGreaterThan(0)
+    expect(hookStop).toBeGreaterThan(0)
+    expect(startInjection).toBeGreaterThan(0)
+    expect(stopInjection).toBeGreaterThan(0)
   })
 })
