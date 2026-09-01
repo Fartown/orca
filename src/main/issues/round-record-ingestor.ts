@@ -43,6 +43,9 @@ export type RoundRecordIngestResult =
 export type RoundRecordIngestorDependencies = {
   onDiagnostic?(result: RoundRecordIngestResult, event: RoundRecordHookEvent): void
   scheduleReconciliation?(conversationId: string): void
+  // Why: round events are the follow-mode trigger for canonical titles — the
+  // first trusted hook (right after identity attach) also lands here.
+  scheduleTitleRefresh?(conversationId: string): void
 }
 
 const INGEST_CALLER_FINGERPRINT = 'orca-round-hook-ingestor'
@@ -106,6 +109,7 @@ export class RoundRecordIngestor {
     const resolvedIds = this.resolvePriorObligations(conversationId, event)
     if (event.payload.state === 'working') {
       this.dependencies.scheduleReconciliation?.(conversationId)
+      this.dependencies.scheduleTitleRefresh?.(conversationId)
       return this.finish({ disposition: 'resolved', conversationId, roundIds: resolvedIds }, event)
     }
 
@@ -122,6 +126,7 @@ export class RoundRecordIngestor {
       input
     })
     this.dependencies.scheduleReconciliation?.(conversationId)
+    this.dependencies.scheduleTitleRefresh?.(conversationId)
     return this.finish({ disposition: 'persisted', conversationId, roundId: round.id }, event)
   }
 

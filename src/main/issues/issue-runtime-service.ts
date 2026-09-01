@@ -199,18 +199,20 @@ export class IssueRuntimeService implements IssueRuntimeServiceContract {
     callerFingerprint: string,
     params: PrepareLaunchRuntimeParams
   ): ConversationLaunchPreparation {
+    const input = {
+      executionHostId: this.routes.resolve(params.authorityExecutionHostId)
+        .authorityExecutionHostId,
+      launchToken: params.launchToken,
+      workspaceRef: params.workspaceRef,
+      workspaceSnapshot: params.workspaceSnapshot,
+      agent: params.agent,
+      issueId: params.issueId
+    }
     return this.repository.conversationAllocator.prepareLaunch({
       identity: mutationIdentity(callerFingerprint, params.mutationId),
-      input: {
-        executionHostId: this.routes.resolve(params.authorityExecutionHostId)
-          .authorityExecutionHostId,
-        launchToken: params.launchToken,
-        workspaceRef: params.workspaceRef,
-        workspaceSnapshot: params.workspaceSnapshot,
-        agent: params.agent,
-        issueId: params.issueId,
-        title: params.title
-      }
+      // Why: a caller-supplied initial title is a user-declared name — it
+      // freezes automatic renaming just like a manual rename would.
+      input: params.title ? { ...input, title: params.title, titleSource: 'user' as const } : input
     })
   }
 

@@ -70,12 +70,21 @@ function conversationRank(conversation: ConversationSummary): number {
   return conversation.unresolvedRoundCount > 0 ? 1 : 2
 }
 
+// A user-set name always rescues a row from ghost filtering; automatic names
+// (minted fallback, provider follow) do not. Absent titleSource means a legacy
+// payload, which falls back to the historical title-emptiness check.
+function isManuallyNamedConversation(conversation: ConversationSummary): boolean {
+  return conversation.titleSource === undefined
+    ? Boolean(conversation.title?.trim())
+    : conversation.titleSource === 'user'
+}
+
 function isCodexThreadTitleGenerationConversation(conversation: ConversationSummary): boolean {
   const providerSession = conversation.navigation?.providerSession
   return (
     conversation.agent === 'codex' &&
     conversation.issueId === null &&
-    !conversation.title?.trim() &&
+    !isManuallyNamedConversation(conversation) &&
     conversation.attachment.kind === 'detached' &&
     Boolean(providerSession && !providerSession.transcriptPath) &&
     !conversation.navigation?.resumeLocator &&

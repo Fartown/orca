@@ -1,4 +1,5 @@
 import type { FolderWorkspace } from '../../shared/folder-workspace-types'
+import { resolveAiVaultSessionTitlesByHost } from '../ipc/ai-vault-session-title-routing'
 import type { IssueAgentHookSource } from './issue-feature-bootstrap'
 import { IssueFeatureBootstrap } from './issue-feature-bootstrap'
 import type { IssueFeatureReadinessRegistry } from './issue-feature-readiness'
@@ -37,6 +38,9 @@ export async function startIssueFeatureForHost(
       hookSource: options.hookSource,
       hookEvidenceStatus: options.hookEvidenceStatus,
       readinessRegistry: readiness,
+      // Why: follow-mode titles read transcripts through the host-routed
+      // resolver; local and ssh:* partitions are all this authority owns.
+      resolveSessionTitles: (args) => resolveAiVaultSessionTitlesByHost(args),
       managedSshTargets: { hasTarget: (targetId) => Boolean(options.store.getSshTarget(targetId)) },
       workspaceResolver: createIssueWorkspaceResolver({
         getTerminalWorktreeIdForPaneKey: (paneKey) =>

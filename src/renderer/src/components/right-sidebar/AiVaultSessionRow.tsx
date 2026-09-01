@@ -26,6 +26,7 @@ import type { AgentStatusState } from '../../../../shared/agent-status-types'
 
 export function VaultSessionRow({
   session,
+  canonicalTitle,
   liveState,
   resumeStartup,
   realHomeResumeStartup,
@@ -52,6 +53,9 @@ export function VaultSessionRow({
   onRequestDelete
 }: {
   session: AiVaultSession
+  // The Orca-side conversation name for this identity; shown as the primary
+  // title when present, with the scanner title as secondary while they differ.
+  canonicalTitle?: string | null
   liveState: AgentStatusState | null
   resumeStartup: AiVaultResumeStartup
   realHomeResumeStartup: AiVaultResumeStartup
@@ -157,7 +161,12 @@ export function VaultSessionRow({
                 window.dispatchEvent(new Event(AI_VAULT_SESSION_DRAG_END_EVENT))
               }}
             >
-              {session.title}
+              {canonicalTitle ?? session.title}
+              {canonicalTitle && canonicalTitle !== session.title ? (
+                <span className="ml-1.5 text-xs font-normal text-muted-foreground">
+                  {session.title}
+                </span>
+              ) : null}
             </div>
             <SessionRowTrailingActions
               session={session}

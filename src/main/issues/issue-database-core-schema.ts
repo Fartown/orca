@@ -108,6 +108,10 @@ CREATE TABLE conversations (
   workspace_path_snapshot TEXT NOT NULL,
   agent                   TEXT NOT NULL,
   title                   TEXT,
+  title_source            TEXT CHECK(
+                            title_source IS NULL OR
+                            title_source IN ('minted', 'provider', 'user')
+                          ),
   issue_id                TEXT REFERENCES issues(id) ON DELETE RESTRICT,
   record_revision         INTEGER NOT NULL DEFAULT 0 CHECK(record_revision >= 0),
   launch_failure_message  TEXT,

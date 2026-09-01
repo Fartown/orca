@@ -127,27 +127,16 @@ export class ConversationAllocator {
           conversation,
           input.observedAt
         )
-        const identity = this.identities.attachWithinTransaction({
-          conversationId: conversation.id,
-          agent: input.agent,
-          providerSession: input.providerSession,
-          resumeLocator: input.resumeLocator,
-          observedAt: input.observedAt
-        })
-        return { conversation, identity, disposition: 'replayed' }
+        return {
+          ...this.attachIdentityAndMintTitle(conversation.id, input),
+          disposition: 'replayed'
+        }
       }
       const conversation = this.conversations.createWithinTransaction({
         ...input,
         issueId: null
       })
-      const identity = this.identities.attachWithinTransaction({
-        conversationId: conversation.id,
-        agent: input.agent,
-        providerSession: input.providerSession,
-        resumeLocator: input.resumeLocator,
-        observedAt: input.observedAt
-      })
-      return { conversation, identity, disposition: 'created' }
+      return { ...this.attachIdentityAndMintTitle(conversation.id, input), disposition: 'created' }
     })
   }
 
@@ -178,16 +167,8 @@ export class ConversationAllocator {
           conversation,
           input.observedAt
         )
-        const refreshed = this.identities.attachWithinTransaction({
-          conversationId: conversation.id,
-          agent: input.agent,
-          providerSession: input.providerSession,
-          resumeLocator: input.resumeLocator,
-          observedAt: input.observedAt
-        })
         return {
-          conversation,
-          identity: refreshed,
+          ...this.attachIdentityAndMintTitle(conversation.id, input),
           claim: claim
             ? this.claims.settleWithinTransaction(
                 claim.claimId,
@@ -213,16 +194,8 @@ export class ConversationAllocator {
         conversation,
         input.observedAt
       )
-      const identity = this.identities.attachWithinTransaction({
-        conversationId: conversation.id,
-        agent: input.agent,
-        providerSession: input.providerSession,
-        resumeLocator: input.resumeLocator,
-        observedAt: input.observedAt
-      })
       return {
-        conversation,
-        identity,
+        ...this.attachIdentityAndMintTitle(conversation.id, input),
         claim: this.claims.settleWithinTransaction(
           claim.claimId,
           'attached',
@@ -230,6 +203,31 @@ export class ConversationAllocator {
         )
       }
     })
+  }
+
+  // Attach + mint are one atomic fact: a conversation becomes identifiable and
+  // named in the same transaction, and callers get the re-read fresh record.
+  private attachIdentityAndMintTitle(
+    conversationId: string,
+    input: {
+      agent: TuiAgent
+      providerSession: AgentProviderSessionMetadata
+      resumeLocator?: string | null
+      observedAt?: number
+    }
+  ): { conversation: ConversationRecord; identity: ConversationProviderIdentity } {
+    const identity = this.identities.attachWithinTransaction({
+      conversationId,
+      agent: input.agent,
+      providerSession: input.providerSession,
+      resumeLocator: input.resumeLocator,
+      observedAt: input.observedAt
+    })
+    const minted = this.conversations.mintTitleWithinTransaction({
+      id: conversationId,
+      sessionId: input.providerSession.id
+    })
+    return { conversation: minted.conversation, identity }
   }
 
   recordLaunchFailure(params: {

@@ -1,6 +1,7 @@
 import type { WorkspaceScope } from '../../shared/folder-workspace-types'
 import type {
   AuthorityExecutionHostId,
+  ConversationTitleSource,
   DeleteIssuePlan,
   ExternalIssueProvider,
   IssueMutationIdentity,
@@ -49,14 +50,19 @@ export type UpdateIssueInput = {
   note?: string | null
 }
 
+// Why: a caller may not write a title without declaring who named it; untitled
+// creation stays a no-op for existing call sites.
+export type CreateConversationTitleInput =
+  | { title?: null; titleSource?: null }
+  | { title: string; titleSource: ConversationTitleSource }
+
 export type CreateConversationInput = {
   executionHostId: AuthorityExecutionHostId
   workspaceRef: WorkspaceScope
   workspaceSnapshot: WorkspaceSnapshot
   agent: TuiAgent
-  title?: string | null
   issueId?: string | null
-}
+} & CreateConversationTitleInput
 
 export type UpdateConversationTitleInput = {
   id: string

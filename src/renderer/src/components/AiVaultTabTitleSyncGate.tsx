@@ -1,4 +1,8 @@
 import { useEffect } from 'react'
+import {
+  getCanonicalSessionTitle,
+  subscribeCanonicalSessionTitles
+} from '@/lib/canonical-session-titles'
 import { startAiVaultTabTitleSync } from '@/lib/ai-vault-tab-title-sync'
 import { scheduleAfterInputQuiet } from '@/lib/input-quiet-scheduler'
 import { useAppStore } from '@/store'
@@ -14,6 +18,9 @@ export function AiVaultTabTitleSyncGate(): null {
         getState: useAppStore.getState,
         subscribe: useAppStore.subscribe,
         resolveSessionTitles: (args) => window.api.aiVault.resolveSessionTitles(args),
+        getCanonicalTitle: (executionHostId, agent, sessionId) =>
+          getCanonicalSessionTitle(executionHostId, agent, sessionId)?.title ?? null,
+        subscribeCanonicalTitles: subscribeCanonicalSessionTitles,
         scheduleReconcile: (callback) =>
           scheduleAfterInputQuiet(callback, {
             delayMs: TITLE_SYNC_DELAY_MS,

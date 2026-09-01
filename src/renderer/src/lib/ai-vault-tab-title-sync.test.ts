@@ -421,3 +421,64 @@ describe('AI Vault tab title sync', () => {
     await pending
   })
 })
+
+describe('canonical conversation title projection', () => {
+  it('applies a canonical change to a sleeping slot without rescanning', async () => {
+    const store = makeState({
+      executionHostId: 'ssh:dev-box',
+      worktreeId: 'worktree-1',
+      path: '/workspace/albacore',
+      sleeping: true,
+      aiVaultTitle: { agent: 'codex', sessionId: 'codex-session', title: 'Old scanner name' }
+    })
+    let canonical: string | null = null
+    let notifyCanonical: (() => void) | null = null
+    const resolveSessionTitles = vi.fn(async () => titleResult('codex', 'Scanner name'))
+    const stop = startAiVaultTabTitleSync({
+      ...store,
+      resolveSessionTitles,
+      getCanonicalTitle: () => canonical,
+      subscribeCanonicalTitles: (listener) => {
+        notifyCanonical = listener
+        return () => undefined
+      }
+    })
+    // The slot already holds a matching non-empty title, so the sleeping
+    // candidate is excluded from scanning entirely.
+    await vi.waitFor(() => expect(resolveSessionTitles).not.toHaveBeenCalled())
+
+    canonical = 'Renamed by user'
+    notifyCanonical!()
+    await vi.waitFor(() =>
+      expect(store.getState().tabsByWorktree['worktree-1'][0].aiVaultTitle).toEqual({
+        agent: 'codex',
+        sessionId: 'codex-session',
+        title: 'Renamed by user'
+      })
+    )
+    expect(resolveSessionTitles).not.toHaveBeenCalled()
+    stop()
+  })
+
+  it('lets the canonical title outrank a fresh scanner result', async () => {
+    const store = makeState({
+      executionHostId: 'ssh:dev-box',
+      worktreeId: 'worktree-1',
+      path: '/workspace/albacore'
+    })
+    const stop = startAiVaultTabTitleSync({
+      ...store,
+      resolveSessionTitles: async () => titleResult('codex', 'Scanner value'),
+      getCanonicalTitle: () => 'Canonical value',
+      subscribeCanonicalTitles: () => () => undefined
+    })
+    await vi.waitFor(() =>
+      expect(store.getState().tabsByWorktree['worktree-1'][0].aiVaultTitle).toEqual({
+        agent: 'codex',
+        sessionId: 'codex-session',
+        title: 'Canonical value'
+      })
+    )
+    stop()
+  })
+})

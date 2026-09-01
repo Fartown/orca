@@ -306,8 +306,12 @@ describe('Conversation allocator v1', () => {
       launchToken: token('identity'),
       observedAt: 10
     })
+    // Why: attaching now mints the title, so retry must read the fresh revision.
+    const identityRevision = repository.conversations.get(
+      identityPrepared.conversation.id
+    )!.recordRevision
     expect(
-      retryError(repository, identityPrepared.conversation.id, 0, 'identity-retry')
+      retryError(repository, identityPrepared.conversation.id, identityRevision, 'identity-retry')
     ).toMatchObject({
       code: 'conversation_retry_not_allowed',
       details: { blockers: { identity: true } }

@@ -3,6 +3,7 @@ import {
   type ConversationHookIdentityContext
 } from './conversation-hook-identity-ingestor'
 import { ConversationRuntimeAttachmentRegistry } from './conversation-runtime-attachment-registry'
+import { ConversationTitleRefresh } from './conversation-title-refresh'
 import type { IssueFeatureReadinessRegistry } from './issue-feature-readiness'
 import { issueFeatureReadinessRegistry } from './issue-feature-readiness'
 import type { IssueHookSnapshotLiveCoordinator } from './issue-hook-snapshot-live-coordinator'
@@ -44,6 +45,9 @@ export type IssueFeatureBootstrapOptions = {
   managedSshTargets?: ManagedSshTargetResolver
   migrationHooks?: IssueDatabaseMigrationHooks
   readinessRegistry?: IssueFeatureReadinessRegistry
+  // Injected so tests and headless setups run without the ipc resolver stack;
+  // absent means canonical titles stay at their minted fallback.
+  resolveSessionTitles?: ConstructorParameters<typeof ConversationTitleRefresh>[1]
 }
 
 export class IssueFeatureBootstrap {
@@ -132,12 +136,21 @@ export class IssueFeatureBootstrap {
           attachments
         })
         const reconciler = new RoundRecordReconciler(repository)
+        const titleRefresh = options.resolveSessionTitles
+          ? new ConversationTitleRefresh(repository, options.resolveSessionTitles)
+          : null
         const roundIngestor = new RoundRecordIngestor(repository, identityIngestor, {
           scheduleReconciliation: (conversationId) => {
             void reconciler.schedule(conversationId).catch((error) => {
               console.error('[issues] Round reconciliation failed:', error)
             })
-          }
+          },
+          ...(titleRefresh
+            ? {
+                scheduleTitleRefresh: (conversationId: string) =>
+                  titleRefresh.schedule(conversationId)
+              }
+            : {})
         })
         const evidenceReconciler = new IssueHookEvidenceReconciler(identityIngestor)
         const scheduleEvidenceReconciliation = (): void => {

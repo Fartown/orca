@@ -6,6 +6,10 @@ const RENDERER_ROOT = join(import.meta.dirname, '..')
 const SOURCE_ROOT = join(RENDERER_ROOT, '..', '..')
 const RENDERER_NATIVE_FILES = [
   join(RENDERER_ROOT, 'components', 'right-sidebar', 'AiVaultSessionRow.tsx'),
+  join(RENDERER_ROOT, 'components', 'right-sidebar', 'AiVaultPanel.tsx'),
+  join(RENDERER_ROOT, 'components', 'AiVaultTabTitleSyncGate.tsx'),
+  join(RENDERER_ROOT, 'lib', 'canonical-session-titles.ts'),
+  join(RENDERER_ROOT, 'components', 'right-sidebar', 'use-canonical-session-titles.ts'),
   join(RENDERER_ROOT, 'components', 'right-sidebar', 'ai-vault-original-pane-actions.ts'),
   join(RENDERER_ROOT, 'components', 'right-sidebar', 'ai-vault-original-pane-index.ts'),
   join(RENDERER_ROOT, 'components', 'right-sidebar', 'ai-vault-original-pane.ts'),

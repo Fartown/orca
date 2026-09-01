@@ -65,6 +65,9 @@ export type ConversationLaunchFailure = {
   failedAt: number
 }
 
+/** Who last wrote `title`: minted fallback, provider follow, or the user. */
+export type ConversationTitleSource = 'minted' | 'provider' | 'user'
+
 export type ConversationRecord = {
   id: string
   hostPartitionKey: AuthorityHostPartitionKey
@@ -73,6 +76,9 @@ export type ConversationRecord = {
   workspaceSnapshot: WorkspaceSnapshot
   agent: TuiAgent
   title: string | null
+  // Why: optional on the wire — absent means a legacy peer that predates the
+  // field (fall back to title-based checks); null means "not classified yet".
+  titleSource?: ConversationTitleSource | null
   issueId: string | null
   recordRevision: number
   launchFailure: ConversationLaunchFailure | null

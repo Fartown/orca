@@ -88,6 +88,7 @@ export const ConversationRecordSchema = z.object({
   workspaceSnapshot: IssueWorkspaceSnapshotSchema,
   agent: IssueTuiAgentSchema,
   title: z.string().trim().min(1).max(ISSUE_TITLE_MAX_BYTES).nullable(),
+  titleSource: z.enum(['minted', 'provider', 'user']).nullable().optional(),
   issueId: IssueEntityIdSchema.nullable(),
   recordRevision: IssueRecordRevisionSchema,
   launchFailure: ConversationLaunchFailureSchema.nullable(),

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, type MutableRefObject } from 'react'
 import { useStore } from 'zustand'
 import type { IssueListFilter, IssueRouteExecutionHostId } from '../../../shared/issues/types'
 import { useSidebarHostScopeOptions } from '../components/sidebar/use-sidebar-host-scope-options'
+import { registerConversationCanonicalTitles } from './conversation-canonical-titles'
 import { IssueRuntimeClient, IssueRuntimeUnsupportedError } from './issue-runtime-client'
 import { issueDomainStore } from './issues-domain-store'
 
@@ -20,6 +21,8 @@ export function IssueDomainSyncGate(): null {
     [hostOptions]
   )
   const issuesVisible = sidebarRootMode === 'issues' || activeIssueRoute !== null
+
+  useEffect(() => registerConversationCanonicalTitles(), [])
 
   useEffect(() => {
     let disposed = false

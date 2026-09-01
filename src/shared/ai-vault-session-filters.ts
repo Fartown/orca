@@ -45,6 +45,9 @@ export type AiVaultSessionFilterState = {
   activeProjectKey?: string | null
   sessionProjectById?: ReadonlyMap<string, AiVaultSessionProject>
   projectLabelByKey?: ReadonlyMap<string, string>
+  // Canonical conversation titles keyed by `executionHostId\0agent\0sessionId`;
+  // searching either the canonical or the scanner title must hit the session.
+  canonicalTitleBySessionKey?: ReadonlyMap<string, string>
   hideEmptySessions: boolean
 }
 
@@ -204,10 +207,16 @@ export function parseVaultQuery(query: string): ParsedQuery {
 function matchesQuery(
   session: AiVaultSession,
   parsed: ParsedQuery,
-  filters: Pick<AiVaultSessionFilterState, 'sessionProjectById' | 'projectLabelByKey'>
+  filters: Pick<
+    AiVaultSessionFilterState,
+    'sessionProjectById' | 'projectLabelByKey' | 'canonicalTitleBySessionKey'
+  >
 ): boolean {
   const searchable = [
     session.title,
+    filters.canonicalTitleBySessionKey?.get(
+      `${session.executionHostId}\0${session.agent}\0${session.sessionId}`
+    ),
     session.sessionId,
     session.agent,
     session.branch,

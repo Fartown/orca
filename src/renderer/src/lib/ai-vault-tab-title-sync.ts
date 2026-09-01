@@ -21,6 +21,10 @@ type SyncDependencies = {
   getState: () => AppState
   resolveSessionTitles: (args: AiVaultSessionTitlesArgs) => Promise<AiVaultSessionTitlesResult>
   subscribe: (listener: (state: AppState, previous: AppState) => void) => () => void
+  // Canonical conversation titles outrank scanner values in the slot; the
+  // subscription re-projects when a rename or provider follow lands in the DB.
+  getCanonicalTitle?: (executionHostId: string, agent: string, sessionId: string) => string | null
+  subscribeCanonicalTitles?: (listener: () => void) => () => void
   scheduleReconcile?: (callback: () => void) => () => void
   setTimer?: (callback: () => void, delay: number) => ReturnType<typeof setTimeout> | number
   clearTimer?: (timer: ReturnType<typeof setTimeout> | number) => void
@@ -36,6 +40,20 @@ function scheduleMicrotask(callback: () => void): () => void {
   return () => {
     cancelled = true
   }
+}
+
+function storedTitleFor(
+  state: AppState,
+  request: AiVaultTitleRequest
+): { agent: string; sessionId: string; title: string } | null | undefined {
+  for (const tabs of Object.values(state.tabsByWorktree)) {
+    for (const tab of tabs) {
+      if (tab.id === request.tabId) {
+        return tab.aiVaultTitle
+      }
+    }
+  }
+  return undefined
 }
 
 function nextLiveRefreshDelay(state: AppState, requests: AiVaultTitleRequest[]): number | null {
@@ -73,14 +91,27 @@ export function startAiVaultTabTitleSync(dependencies: SyncDependencies): () => 
   let stopped = false
   let writing = false
 
+  const canonicalFor = (request: AiVaultTitleRequest): string | null =>
+    dependencies.getCanonicalTitle?.(
+      request.executionHostId,
+      request.agent,
+      request.providerSession.id
+    ) ?? null
+
+  // The single slot write point. A canonical conversation title always wins
+  // over the scanner value; on identity drift the slot is re-decided for the
+  // NEW candidate (its canonical if any, else cleared) — old names never leak.
   const writeTitle = (request: AiVaultTitleRequest, title: string | null): void => {
+    const resolved = canonicalFor(request) ?? title
     writing = true
     try {
       dependencies
         .getState()
         .setAiVaultTabTitle(
           request.tabId,
-          title ? { agent: request.agent, sessionId: request.providerSession.id, title } : null
+          resolved
+            ? { agent: request.agent, sessionId: request.providerSession.id, title: resolved }
+            : null
         )
     } finally {
       writing = false
@@ -140,13 +171,31 @@ export function startAiVaultTabTitleSync(dependencies: SyncDependencies): () => 
       refreshTimer = null
     }
 
+    const requests = collectAiVaultTitleRequests(dependencies.getState())
+    // Canonical application pass, ahead of the scan filter: retained and
+    // sleeping candidates never rescan once the slot holds a matching name,
+    // so renames and provider follows must be projected here directly.
+    for (const request of requests) {
+      const canonical = canonicalFor(request)
+      if (!canonical) {
+        continue
+      }
+      const stored = storedTitleFor(dependencies.getState(), request)
+      if (
+        stored?.agent !== request.agent ||
+        stored.sessionId !== request.providerSession.id ||
+        stored.title !== canonical
+      ) {
+        writeTitle(request, canonical)
+      }
+    }
+
     const state = dependencies.getState()
     const tabsById = new Map(
       Object.values(state.tabsByWorktree)
         .flat()
         .map((tab) => [tab.id, tab] as const)
     )
-    const requests = collectAiVaultTitleRequests(state)
     const requestsToScan = requests.filter((request) => {
       const stored = tabsById.get(request.tabId)?.aiVaultTitle
       const identityMatches =
@@ -192,11 +241,13 @@ export function startAiVaultTabTitleSync(dependencies: SyncDependencies): () => 
       schedule()
     }
   })
+  const unsubscribeCanonical = dependencies.subscribeCanonicalTitles?.(schedule) ?? null
   schedule()
 
   return () => {
     stopped = true
     unsubscribe()
+    unsubscribeCanonical?.()
     cancelScheduled?.()
     cancelScheduled = null
     if (refreshTimer !== null) {

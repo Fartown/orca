@@ -109,7 +109,9 @@ describe('RoundRecordIngestor', () => {
       archivedAt: 100,
       recordRevision: 1
     })
-    expect(getIssueHostRevisions(repository.database, 'local').factsRevision).toBe(before + 1)
+    // Why: first trusted evidence now also mints the canonical title inside
+    // the attach transaction — one extra facts bump on first attach only.
+    expect(getIssueHostRevisions(repository.database, 'local').factsRevision).toBe(before + 2)
 
     await ingestor.ingest(
       event({
@@ -125,7 +127,7 @@ describe('RoundRecordIngestor', () => {
       archivedAt: null,
       recordRevision: 2
     })
-    expect(getIssueHostRevisions(repository.database, 'local').factsRevision).toBe(before + 2)
+    expect(getIssueHostRevisions(repository.database, 'local').factsRevision).toBe(before + 3)
     expect(repository.rounds.list(prepared.conversation.id)).toHaveLength(2)
     repository.close()
   })

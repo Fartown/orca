@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import { toast } from 'sonner'
+import { useCanonicalSessionTitles } from './use-canonical-session-titles'
 import { useAppStore } from '@/store'
 import {
   useActiveRepo,
@@ -214,6 +215,8 @@ export default function AiVaultPanel(): React.JSX.Element {
     }
   }, [activeProjectKey, activeWorktreePath, scope])
 
+  const { canonicalTitleBySessionKey, getCanonicalTitle } = useCanonicalSessionTitles()
+
   const filteredSessions = useMemo(
     () =>
       filterAiVaultSessions(sessions, {
@@ -225,12 +228,14 @@ export default function AiVaultPanel(): React.JSX.Element {
         activeProjectKey,
         sessionProjectById,
         projectLabelByKey,
+        canonicalTitleBySessionKey,
         hideEmptySessions
       }),
     [
       activeProjectKey,
       activeWorktreePaths,
       agents,
+      canonicalTitleBySessionKey,
       hideEmptySessions,
       projectLabelByKey,
       query,
@@ -349,6 +354,7 @@ export default function AiVaultPanel(): React.JSX.Element {
 
       <AiVaultSessionVirtualList
         groups={groups}
+        getCanonicalTitle={getCanonicalTitle}
         collapsedGroups={collapsedGroups}
         loading={loading}
         sessionsCount={sessions.length}

@@ -1,5 +1,5 @@
 import type { TuiAgent } from '../../shared/tui-agent'
-import type { ConversationRecord } from '../../shared/issues/types'
+import type { ConversationRecord, ConversationTitleSource } from '../../shared/issues/types'
 
 export type ConversationRow = {
   id: string
@@ -11,6 +11,7 @@ export type ConversationRow = {
   workspace_path_snapshot: string
   agent: string
   title: string | null
+  title_source: string | null
   issue_id: string | null
   record_revision: number
   launch_failure_message: string | null
@@ -35,6 +36,9 @@ export function conversationRecordFromRow(row: ConversationRow): ConversationRec
     },
     agent: row.agent as TuiAgent,
     title: row.title,
+    // Why: always null or an enum value on this host — undefined is reserved
+    // for legacy wire payloads from peers that predate the column.
+    titleSource: (row.title_source as ConversationTitleSource | null) ?? null,
     issueId: row.issue_id,
     recordRevision: row.record_revision,
     launchFailure:

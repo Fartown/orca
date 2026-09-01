@@ -198,3 +198,34 @@ describe('/shared ai-vault-session-filters (lifted core)', () => {
     expect(sessionPreviewSearchText(baseSession)).toContain('scope tabs')
   })
 })
+
+describe('canonical title search', () => {
+  it('matches sessions by their canonical conversation title', () => {
+    const canonicalTitleBySessionKey = new Map([
+      ['local\0claude\0session-1', 'My renamed conversation']
+    ])
+    expect(
+      filterAiVaultSessions([baseSession, otherSession], {
+        query: 'renamed',
+        agents: ['claude', 'codex'],
+        scope: 'all',
+        sort: 'updated',
+        activeWorktreePaths: [],
+        canonicalTitleBySessionKey,
+        hideEmptySessions: false
+      }).map((session) => session.id)
+    ).toEqual(['claude:1'])
+    // The scanner title keeps matching too.
+    expect(
+      filterAiVaultSessions([baseSession, otherSession], {
+        query: 'Implement vault',
+        agents: ['claude', 'codex'],
+        scope: 'all',
+        sort: 'updated',
+        activeWorktreePaths: [],
+        canonicalTitleBySessionKey,
+        hideEmptySessions: false
+      }).map((session) => session.id)
+    ).toEqual(['claude:1'])
+  })
+})

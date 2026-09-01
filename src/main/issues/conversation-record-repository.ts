@@ -1,7 +1,14 @@
 import { randomUUID } from 'node:crypto'
 import type { ConversationRecord } from '../../shared/issues/types'
-import { ISSUE_TITLE_MAX_BYTES } from '../../shared/issues/constants'
 import { conversationRecordFromRow, type ConversationRow } from './conversation-record-codec'
+import {
+  applyProviderConversationTitle,
+  applyUserConversationTitle,
+  mintConversationTitle,
+  normalizedConversationTitle,
+  staleConversationRevision,
+  type ConversationTitleWriteAccess
+} from './conversation-title-writes'
 import type { IssueDatabase } from './issue-database'
 import { hostPartitionForExecutionHost } from './issue-host-partition'
 import {
@@ -148,14 +155,15 @@ export class ConversationRecordRepository {
     const hostPartitionKey = hostPartitionForExecutionHost(input.executionHostId)
     ensureIssueHostState(this.database, hostPartitionKey, now)
     const workspace = workspaceColumns(input)
+    const title = normalizedConversationTitle(input.title ?? null)
     this.database
       .prepare(
         `INSERT INTO conversations (
            id, host_partition_key, execution_host_id,
            workspace_kind, workspace_id, workspace_name_snapshot, workspace_path_snapshot,
-           agent, title, issue_id, record_revision,
+           agent, title, title_source, issue_id, record_revision,
            launch_failure_message, launch_failed_at, created_at, updated_at
-         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, NULL, NULL, ?, ?)`
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, NULL, NULL, ?, ?)`
       )
       .run(
         id,
@@ -166,7 +174,8 @@ export class ConversationRecordRepository {
         input.workspaceSnapshot.name,
         input.workspaceSnapshot.path,
         input.agent,
-        normalizedConversationTitle(input.title ?? null),
+        title,
+        title === null ? null : (input.titleSource ?? null),
         input.issueId ?? null,
         now,
         now
@@ -175,34 +184,40 @@ export class ConversationRecordRepository {
     return { conversation: this.require(id), ...revisions }
   }
 
+  /**
+   * Mint the canonical fallback name inside the identity-attach transaction.
+   * Idempotent: the authority gate rejects a second mint and freezes nothing.
+   * Not a mutation-receipt command — machine writes carry no mutation identity.
+   */
+  mintTitleWithinTransaction(input: { id: string; sessionId: string }): {
+    conversation: ConversationRecord
+    outcome: 'written' | 'unchanged' | 'rejected'
+  } {
+    return mintConversationTitle(this.titleWriteAccess(), input)
+  }
+
+  applyProviderTitleWithinTransaction(input: {
+    id: string
+    expectedRecordRevision: number
+    title: string
+  }): { conversation: ConversationRecord; outcome: 'written' | 'unchanged' | 'rejected' } {
+    return applyProviderConversationTitle(this.titleWriteAccess(), input)
+  }
+
   private updateTitleRecord(input: UpdateConversationTitleInput): ConversationRecordMutationResult {
-    const current = this.require(input.id)
-    this.assertRevision(current, input.expectedRecordRevision)
-    const title = normalizedConversationTitle(input.title)
-    if (title === current.title) {
-      return {
-        conversation: current,
-        ...getIssueHostRevisions(this.database, current.hostPartitionKey)
-      }
+    const { conversation } = applyUserConversationTitle(this.titleWriteAccess(), input)
+    return {
+      conversation,
+      ...getIssueHostRevisions(this.database, conversation.hostPartitionKey)
     }
-    const now = Date.now()
-    const update = this.database
-      .prepare(
-        `UPDATE conversations
-         SET title = ?, record_revision = record_revision + 1, updated_at = ?
-         WHERE id = ? AND record_revision = ?`
-      )
-      .run(title, now, input.id, input.expectedRecordRevision)
-    if (update.changes !== 1) {
-      throw staleConversationRevision(this.require(input.id))
+  }
+
+  private titleWriteAccess(): ConversationTitleWriteAccess {
+    return {
+      database: this.database,
+      require: (id) => this.require(id),
+      assertRevision: (conversation, expected) => this.assertRevision(conversation, expected)
     }
-    const revisions = bumpIssueHostRevisions(
-      this.database,
-      current.hostPartitionKey,
-      { tree: false },
-      now
-    )
-    return { conversation: this.require(input.id), ...revisions }
   }
 
   private bindIssueRecord(input: BindConversationIssueInput): ConversationRecordMutationResult {
@@ -256,23 +271,4 @@ function workspaceColumns(input: CreateConversationInput): {
   return input.workspaceRef.type === 'worktree'
     ? { kind: 'worktree', id: input.workspaceRef.worktreeId }
     : { kind: 'folder', id: input.workspaceRef.folderWorkspaceId }
-}
-
-function normalizedConversationTitle(value: string | null): string | null {
-  if (value === null) {
-    return null
-  }
-  const title = value.trim()
-  if (!title || Buffer.byteLength(title, 'utf8') > ISSUE_TITLE_MAX_BYTES) {
-    throw new Error('Conversation title is invalid.')
-  }
-  return title
-}
-
-function staleConversationRevision(current: ConversationRecord): IssueRepositoryError {
-  return new IssueRepositoryError(
-    'conversation_record_revision_stale',
-    `Conversation ${current.id} changed before this mutation.`,
-    { current }
-  )
 }

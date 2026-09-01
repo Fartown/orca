@@ -51,6 +51,7 @@ export function AiVaultSessionVirtualList({
   error,
   vaultScope,
   buildResumeStartup,
+  getCanonicalTitle,
   getOriginalPaneTarget,
   getSessionLiveState,
   getWorktreeInfo,
@@ -78,6 +79,7 @@ export function AiVaultSessionVirtualList({
   error: string | null
   vaultScope: AiVaultScope
   buildResumeStartup: (session: AiVaultSession, worktreeId?: string | null) => AiVaultResumeStartup
+  getCanonicalTitle?: (session: AiVaultSession) => string | undefined
   getOriginalPaneTarget: (session: AiVaultSession) => AiVaultOriginalPaneTarget | null
   getSessionLiveState: (session: AiVaultSession) => AgentStatusState | null
   getWorktreeInfo: (session: AiVaultSession) => AiVaultSessionWorktreeInfo | null
@@ -214,6 +216,7 @@ export function AiVaultSessionVirtualList({
               expandedSessionIds={expandedSessionIds}
               vaultScope={vaultScope}
               buildResumeStartup={buildResumeStartup}
+              getCanonicalTitle={getCanonicalTitle}
               getOriginalPaneTarget={getOriginalPaneTarget}
               getSessionLiveState={getSessionLiveState}
               getWorktreeInfo={getWorktreeInfo}
@@ -250,6 +253,7 @@ function AiVaultVirtualRow({
   expandedSessionIds,
   vaultScope,
   buildResumeStartup,
+  getCanonicalTitle,
   getOriginalPaneTarget,
   getSessionLiveState,
   getWorktreeInfo,
@@ -278,6 +282,7 @@ function AiVaultVirtualRow({
   expandedSessionIds: ReadonlySet<string>
   vaultScope: AiVaultScope
   buildResumeStartup: (session: AiVaultSession, worktreeId?: string | null) => AiVaultResumeStartup
+  getCanonicalTitle?: (session: AiVaultSession) => string | undefined
   getOriginalPaneTarget: (session: AiVaultSession) => AiVaultOriginalPaneTarget | null
   getSessionLiveState: (session: AiVaultSession) => AgentStatusState | null
   getWorktreeInfo: (session: AiVaultSession) => AiVaultSessionWorktreeInfo | null
@@ -351,6 +356,7 @@ function AiVaultVirtualRow({
       ) : (
         <VaultSessionRow
           session={row.session}
+          canonicalTitle={getCanonicalTitle?.(row.session) ?? null}
           liveState={getSessionLiveState(row.session)}
           resumeStartup={buildResumeStartup(row.session, resumeState?.worktreeId)}
           realHomeResumeStartup={buildResumeStartup(
