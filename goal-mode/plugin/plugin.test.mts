@@ -9,7 +9,11 @@ import { PANEL_DESIGN_TOKEN_ALLOWLIST } from '../../src/shared/plugins/plugin-pa
 import { PLUGIN_HOST_API_V0 } from '../../src/shared/plugins/plugin-host-api'
 import { PLUGIN_WORKER_INVOKE_TIMEOUT_MS } from '../../src/shared/plugins/plugin-host-protocol'
 
-const HERE = import.meta.dirname
+// 运行时三件套已搬去 resources/plugins/launch/stablyai.orca-goal —— 内置插件必须住在那儿
+// 才会被启动引导按 bundled-plugins.json 的 contentHash 校验并发布。测试留在 goal-mode 下,
+// 只把读取路径指过去,避免两份代码各自漂移。
+const REPO = path.resolve(import.meta.dirname, '../..')
+const HERE = path.join(REPO, 'resources/plugins/launch/stablyai.orca-goal')
 const read = (name: string): string => readFileSync(path.join(HERE, name), 'utf8')
 
 describe('manifest', () => {
@@ -579,7 +583,7 @@ describe('worker 行为', () => {
     // GOAL_HOME 在模块加载时读一次,所以每个用例都要清缓存重导。
     process.env.ORCA_GOAL_HOME = home
     vi.resetModules()
-    return await import('./worker.mjs')
+    return await import('../../resources/plugins/launch/stablyai.orca-goal/worker.mjs')
   }
 
   function fakeOrca() {
@@ -866,7 +870,7 @@ describe('worker 行为', () => {
 
 describe('panel 样式与宿主一致', () => {
   const html = read('panel.html')
-  const appCss = readFileSync(path.join(HERE, '../../src/renderer/src/assets/main.css'), 'utf8')
+  const appCss = readFileSync(path.join(REPO, 'src/renderer/src/assets/main.css'), 'utf8')
 
   it('滚动条逐字照抄 main.css 的 .scrollbar-sleek', () => {
     const css = appCss.replace(/\/\*[\s\S]*?\*\//g, '')

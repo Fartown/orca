@@ -2,6 +2,11 @@
   "version": 1,
   "plugins": [
     {
+      "pluginKey": "stablyai.orca-goal",
+      "path": "stablyai.orca-goal",
+      "contentHash": "2d1b7c4394d70e8833c19d401743ceaa5f448554d201f7050841c29c3ed5845e"
+    },
+    {
       "pluginKey": "stablyai.orca-navigation-shortcuts",
       "path": "stablyai.orca-navigation-shortcuts",
       "contentHash": "ce3a146bae9e121a18cb86a710973422be749a25da5a1c21a8911e2e98cc3a77"
