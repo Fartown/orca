@@ -44,11 +44,8 @@ describe('Phase 1 launch plugin content', () => {
       .filter((entry) => entry.isDirectory())
       .map((entry) => entry.name)
       .sort()
-    // Why a subset and not equality: "ships in the package" and "installable from the
-    // marketplace" are different things. Every marketplace listing must have its bytes
-    // on disk — otherwise the entry is a dead link — but a plugin can be bundled without
-    // being published, and such a plugin has no git source to list. Requiring equality
-    // forced a fabricated repository URL for those, which is worse than a shorter list.
+    // Subset, not equality: a listing without bytes is a dead link, but a bundled plugin
+    // need not be published — and an unpublished one has no git source to list.
     for (const listed of marketplace.plugins.map((plugin) => plugin.id)) {
       expect(localPluginDirectories, `${listed} is listed but its bytes are missing`).toContain(
         listed
@@ -117,8 +114,9 @@ describe('Phase 1 launch plugin content', () => {
     })
 
     expect(result.errors).toEqual([])
-    // Bundled plugins are whatever bundled-plugins.json indexes, not a fixed roster —
-    // asserting an exact list makes every future bundle land as an unrelated red test.
-    expect(result.installed).toContain('stablyai.orca-navigation-shortcuts')
+    expect(result.installed.sort()).toEqual([
+      'stablyai.orca-goal',
+      'stablyai.orca-navigation-shortcuts'
+    ])
   })
 })

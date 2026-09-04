@@ -200,9 +200,7 @@ describe('plugin host main/relay conformance', () => {
     },
     {
       name: 'panel-forbidden method',
-      // Why storage.set and not storage.get: reads are deliberately panel-callable —
-      // a panel has no other way to see what its worker computed. Writes are the
-      // permanent worker-only side, so they stay a stable fixture for this code.
+      // storage.set, not .get: reads are deliberately panel-callable; writes never are.
       request: { method: 'storage.set', params: { key: 'alpha', value: 1 } },
       viaPanel: true,
       policy: () => createPolicy(['storage']),
@@ -368,12 +366,8 @@ describe('plugin host main/relay conformance', () => {
   })
 })
 
-// Why pinned: a panel has no panel↔worker channel, so `storage.get` is the only way it
-// can read what its own worker computed. Flipping it to `panel: false` does not fail
-// loudly — the panel still mounts and renders, it just never receives data and silently
-// shows an empty shell. That is exactly what happened: a "restore to the main baseline"
-// cleanup reverted the flag while leaving its explanatory comment in place, and the
-// regression only surfaced days later as "the panel is gone". Writes stay worker-only.
+// Pinned because reverting `storage.get` to panel:false fails silently — the panel mounts,
+// renders, and just never receives data. A baseline-restore cleanup did exactly that once.
 describe('panel-callable host surface', () => {
   it('storage.get stays readable from panels; storage.set does not', () => {
     const byName = new Map(PLUGIN_HOST_API_V0.map((entry) => [entry.name, entry]))
@@ -383,7 +377,6 @@ describe('panel-callable host surface', () => {
   })
 
   it('every panel-callable method is a read, except the two deliberate writes', () => {
-    // Keeps the surface honest: widening it later has to be a conscious edit here.
     const panelWrites = PLUGIN_HOST_API_V0.filter((entry) => entry.panel && entry.mutation).map(
       (entry) => entry.name
     )
