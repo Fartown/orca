@@ -44,26 +44,30 @@ describe('Phase 1 launch plugin content', () => {
       .filter((entry) => entry.isDirectory())
       .map((entry) => entry.name)
       .sort()
-    // Subset, not equality: a listing without bytes is a dead link, but a bundled plugin
-    // need not be published — and an unpublished one has no git source to list.
-    for (const listed of marketplace.plugins.map((plugin) => plugin.id)) {
-      expect(localPluginDirectories, `${listed} is listed but its bytes are missing`).toContain(
-        listed
-      )
+    // Every shipped directory is either published or bundled: a listing without bytes is
+    // a dead link, and bytes in neither roster ship unnoticed. Bundled-only is legitimate
+    // — such a plugin has no git source to list — so the union, not the marketplace alone.
+    const bundled = (await readJson(join(launchRoot, 'bundled-plugins.json'))) as {
+      plugins: { pluginKey: string }[]
     }
+    const shipped = [
+      ...new Set([
+        ...marketplace.plugins.map((plugin) => plugin.id),
+        ...bundled.plugins.map((plugin) => plugin.pluginKey)
+      ])
+    ].sort()
+    expect(shipped).toEqual(localPluginDirectories)
 
     const contributionKinds = new Set<string>()
-    for (const listing of marketplace.plugins) {
+    for (const pluginKey of shipped) {
       const inspection = await inspectPluginInstallTree({
-        rootDir: join(launchRoot, listing.id),
+        rootDir: join(launchRoot, pluginKey),
         hostVersion: '1.4.0',
-        expectedPluginKey: listing.id
+        expectedPluginKey: pluginKey
       })
-      expect(inspection, `${listing.id} must pass the production install inspection`).toMatchObject(
-        {
-          ok: true
-        }
-      )
+      expect(inspection, `${pluginKey} must pass the production install inspection`).toMatchObject({
+        ok: true
+      })
       if (!inspection.ok) {
         continue
       }
