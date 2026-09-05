@@ -29,6 +29,11 @@
             // 2026-08-31: single-branch delivery decision — goal-mode and the self-hosted
             // artifact backend ship on this same branch alongside Issues.
             "goal-mode/**",
+            // 2026-09-05: goal-mode ships as the bundled plugin stablyai.orca-goal,
+            // so this branch also owns its launch payload.
+            "resources/plugins/launch/bundled-plugins.json",
+            "resources/plugins/launch/stablyai.orca-goal/**",
+            "src/main/plugins/plugin-launch-content.test.ts",
             "src/main/artifacts/**",
             "src/renderer/src/components/AiVaultTabTitleSyncGate.tsx",
             "src/renderer/src/components/right-sidebar/use-canonical-session-titles.ts",
@@ -174,6 +179,14 @@
             // 2026-08-31: single-branch delivery decision — goal-mode and the self-hosted
             // artifact backend ship on this same branch alongside Issues.
             "goal-mode/**",
+            // 2026-09-05: goal-mode ships as the bundled plugin stablyai.orca-goal,
+            // so this branch also owns its launch payload.
+            "resources/plugins/launch/bundled-plugins.json",
+            "resources/plugins/launch/stablyai.orca-goal/**",
+            "src/main/plugins/plugin-launch-content.test.ts",
+            // Its panel reads storage.get, which the host must expose to panels.
+            "src/shared/plugins/plugin-host-api.ts",
+            "src/main/plugins/plugin-host-conformance.test.ts",
             "src/main/artifacts/**",
             "src/renderer/src/components/AiVaultTabTitleSyncGate.tsx",
             "src/renderer/src/components/right-sidebar/use-canonical-session-titles.ts",
@@ -291,7 +304,9 @@
             "src/main/runtime/agent-session-claim-identity.test.ts",
             "src/main/runtime/rpc/errors.ts",
             "src/main/runtime/rpc/errors.test.ts",
-            "src/main/plugins/plugin-host-conformance.test.ts",
+            // 2026-09-05: plugin-host-api.ts and its conformance test left this pin so the
+            // bundled goal panel can read storage.get; the conformance suite now asserts the
+            // panel/worker split that byte-parity used to protect.
             "src/renderer/src/components/dashboard/DashboardAgentRow.tsx",
             "src/renderer/src/components/dashboard/DashboardAgentRowTrailingControls.tsx",
             "src/renderer/src/components/right-sidebar/ai-vault-original-pane-host-match.ts",
@@ -311,8 +326,7 @@
             "src/renderer/src/runtime/runtime-rpc-environment-call.ts",
             "src/renderer/src/runtime/runtime-rpc-environment-call.test.ts",
             "src/renderer/src/runtime/runtime-rpc-client.ts",
-            "src/renderer/src/store/index.ts",
-            "src/shared/plugins/plugin-host-api.ts"
+            "src/renderer/src/store/index.ts"
           ],
           "message": "Existing Workspace, AI Vault, Hook, runtime, or unrelated capability must remain at the selected base implementation."
         },
