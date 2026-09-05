@@ -1,3 +1,4 @@
+// @vitest-environment happy-dom
 import { readFileSync } from 'node:fs'
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'

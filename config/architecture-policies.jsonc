@@ -34,6 +34,7 @@
             "resources/plugins/launch/bundled-plugins.json",
             "resources/plugins/launch/stablyai.orca-goal/**",
             "src/main/plugins/plugin-launch-content.test.ts",
+            "config/vitest.config.ts",
             "src/main/artifacts/**",
             "src/renderer/src/components/AiVaultTabTitleSyncGate.tsx",
             "src/renderer/src/components/right-sidebar/use-canonical-session-titles.ts",
@@ -184,6 +185,7 @@
             "resources/plugins/launch/bundled-plugins.json",
             "resources/plugins/launch/stablyai.orca-goal/**",
             "src/main/plugins/plugin-launch-content.test.ts",
+            "config/vitest.config.ts",
             // Its panel reads storage.get, which the host must expose to panels.
             "src/shared/plugins/plugin-host-api.ts",
             "src/main/plugins/plugin-host-conformance.test.ts",
