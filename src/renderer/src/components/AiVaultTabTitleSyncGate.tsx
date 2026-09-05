@@ -19,7 +19,7 @@ export function AiVaultTabTitleSyncGate(): null {
         subscribe: useAppStore.subscribe,
         resolveSessionTitles: (args) => window.api.aiVault.resolveSessionTitles(args),
         getCanonicalTitle: (executionHostId, agent, sessionId) =>
-          getCanonicalSessionTitle(executionHostId, agent, sessionId)?.title ?? null,
+          getCanonicalSessionTitle(executionHostId, agent, sessionId) ?? null,
         subscribeCanonicalTitles: subscribeCanonicalSessionTitles,
         scheduleReconcile: (callback) =>
           scheduleAfterInputQuiet(callback, {

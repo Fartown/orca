@@ -62,6 +62,7 @@ export type ConversationHookIdentityIngestorDependencies = {
     result: ConversationHookIdentityIngestResult,
     event: ConversationHookIdentityEvent
   ): void
+  onProviderIdentityAttached?(conversationId: string): void
   attachments?: ConversationRuntimeAttachmentRegistry
 }
 
@@ -154,6 +155,9 @@ export class ConversationHookIdentityIngestor {
           attached.conversation.id,
           attached.identity.identityFingerprint
         )
+        if (!existingIdentity) {
+          this.dependencies.onProviderIdentityAttached?.(attached.conversation.id)
+        }
         return this.finish(
           { disposition: 'attached', conversationId: attached.conversation.id },
           event
@@ -203,6 +207,9 @@ export class ConversationHookIdentityIngestor {
       resolved.conversation.id,
       resolved.identity.identityFingerprint
     )
+    if (resolved.disposition === 'created') {
+      this.dependencies.onProviderIdentityAttached?.(resolved.conversation.id)
+    }
     return this.finish(
       {
         disposition: resolved.disposition,

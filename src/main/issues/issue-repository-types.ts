@@ -54,7 +54,7 @@ export type UpdateIssueInput = {
 // creation stays a no-op for existing call sites.
 export type CreateConversationTitleInput =
   | { title?: null; titleSource?: null }
-  | { title: string; titleSource: ConversationTitleSource }
+  | { title: string; titleSource: Extract<ConversationTitleSource, 'user'> }
 
 export type CreateConversationInput = {
   executionHostId: AuthorityExecutionHostId

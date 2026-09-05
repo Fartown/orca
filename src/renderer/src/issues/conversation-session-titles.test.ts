@@ -30,17 +30,29 @@ describe('Conversation session titles', () => {
     noIdentity.navigation!.providerSession = null
     const named = conversation('named', 'local', 'named')
     named.title = 'User supplied'
+    named.titleSource = 'user'
+    const legacyProvider = conversation('provider', 'local', 'provider')
+    legacyProvider.title = 'Provider snapshot'
+    legacyProvider.titleSource = 'provider'
+    const legacyMinted = conversation('minted', 'local', 'minted', 'codex')
+    legacyMinted.title = 'Codex minted00'
+    legacyMinted.titleSource = 'minted'
     const gemini = conversation('gemini', 'local', 'gemini', 'gemini')
 
     const requests = collectConversationSessionTitleRequests(
-      [local, remote, noIdentity, named, gemini].map((item) => ({
+      [local, remote, noIdentity, named, legacyProvider, legacyMinted, gemini].map((item) => ({
         conversation: item,
         executionHostScope: item.executionHostId
       }))
     )
 
-    expect(requests).toHaveLength(2)
-    expect(requests.map((request) => request.executionHostId)).toEqual(['local', 'ssh:build'])
+    expect(requests).toHaveLength(4)
+    expect(requests.map((request) => request.providerSession.id)).toEqual([
+      'session-1',
+      'session-1',
+      'provider',
+      'minted'
+    ])
     expect(conversationSessionTitleKey(local)).not.toBe(conversationSessionTitleKey(remote))
   })
 

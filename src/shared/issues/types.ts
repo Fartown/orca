@@ -65,7 +65,7 @@ export type ConversationLaunchFailure = {
   failedAt: number
 }
 
-/** Who last wrote `title`: minted fallback, provider follow, or the user. */
+/** Legacy classification for `title`; new writes use only `user` or null. */
 export type ConversationTitleSource = 'minted' | 'provider' | 'user'
 
 export type ConversationRecord = {
@@ -75,10 +75,13 @@ export type ConversationRecord = {
   workspaceRef: WorkspaceScope
   workspaceSnapshot: WorkspaceSnapshot
   agent: TuiAgent
+  /** User override. Null means follow the automatic title chain. */
   title: string | null
   // Why: optional on the wire — absent means a legacy peer that predates the
   // field (fall back to title-based checks); null means "not classified yet".
   titleSource?: ConversationTitleSource | null
+  /** Last meaningful Provider title. Optional for mixed-version readers. */
+  providerTitle?: string | null
   issueId: string | null
   recordRevision: number
   launchFailure: ConversationLaunchFailure | null

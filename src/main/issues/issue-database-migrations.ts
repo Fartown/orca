@@ -1,10 +1,8 @@
 import type SyncDatabase from '../sqlite/sync-database'
-import { mintAgentSessionFallbackTitle } from '../../shared/agent-session-fallback-title'
-import type { TuiAgent } from '../../shared/tui-agent'
 import { ISSUE_DATABASE_CORE_SCHEMA } from './issue-database-core-schema'
 import { ISSUE_DATABASE_ROUND_SCHEMA } from './issue-database-round-schema'
 
-export const ISSUE_DATABASE_SCHEMA_VERSION = 3
+export const ISSUE_DATABASE_SCHEMA_VERSION = 4
 
 const ISSUE_DATABASE_V2_DATA_REPAIR = `
 UPDATE round_records AS current
@@ -47,53 +45,61 @@ UPDATE conversations SET title_source = 'user'
 WHERE title IS NOT NULL AND title_source IS NULL;
 `
 
+const ISSUE_DATABASE_V4_ADD_PROVIDER_TITLE = `
+ALTER TABLE conversations ADD COLUMN provider_title TEXT;
+`
+
 function hasTitleSourceColumn(database: SyncDatabase.Database): boolean {
   const columns = database.prepare('PRAGMA table_info(conversations)').all() as { name: string }[]
   return columns.some((column) => column.name === 'title_source')
 }
 
-// Mint fallback names for legacy unnamed rows that have an active provider
-// identity, picking the canonical identity per conversation. Pure in-memory
-// work on rows already loaded — no IO inside the migration transaction.
-function classifyAndMintTitles(database: SyncDatabase.Database): void {
-  database.exec(ISSUE_DATABASE_V3_CLASSIFY_MANUAL_TITLES)
-  const candidates = database
+function hasProviderTitleColumn(database: SyncDatabase.Database): boolean {
+  const columns = database.prepare('PRAGMA table_info(conversations)').all() as { name: string }[]
+  return columns.some((column) => column.name === 'provider_title')
+}
+
+// v4 restores the pre-v3 meaning of `title` as a user override and keeps the
+// last meaningful automatic name in its own slot. Minted values are derivable
+// from identity and therefore carry no durable information.
+function splitLegacyTitleSlots(database: SyncDatabase.Database): void {
+  const affectedPartitions = database
     .prepare(
-      `SELECT c.id AS conversation_id, c.agent, c.host_partition_key, i.session_id
-       FROM conversations c
-       JOIN conversation_provider_identities i
-         ON i.conversation_id = c.id AND i.retired_at IS NULL
-       WHERE c.title IS NULL
-       ORDER BY c.id, i.observed_at DESC, i.id`
+      `SELECT DISTINCT host_partition_key
+       FROM conversations
+       WHERE title_source IN ('minted', 'provider')
+          OR (title IS NOT NULL AND title_source IS NULL)`
     )
-    .all() as {
-    conversation_id: string
-    agent: string
-    host_partition_key: string
-    session_id: string
-  }[]
-  const now = Date.now()
-  const minted = new Set<string>()
-  const touchedPartitions = new Set<string>()
-  const update = database.prepare(
-    `UPDATE conversations
-     SET title = ?, title_source = 'minted',
-         record_revision = record_revision + 1, updated_at = ?
-     WHERE id = ?`
-  )
-  for (const candidate of candidates) {
-    if (minted.has(candidate.conversation_id)) {
-      continue
-    }
-    minted.add(candidate.conversation_id)
-    touchedPartitions.add(candidate.host_partition_key)
-    update.run(
-      mintAgentSessionFallbackTitle(candidate.agent as TuiAgent, candidate.session_id),
-      now,
-      candidate.conversation_id
-    )
+    .all() as { host_partition_key: string }[]
+  if (affectedPartitions.length === 0) {
+    return
   }
-  for (const partition of touchedPartitions) {
+
+  const now = Date.now()
+  database
+    .prepare(
+      `UPDATE conversations
+       SET provider_title = CASE
+             WHEN title_source = 'provider' THEN title
+             ELSE provider_title
+           END,
+           title = CASE
+             WHEN title_source IN ('minted', 'provider') THEN NULL
+             ELSE title
+           END,
+           title_source = CASE
+             WHEN title_source IN ('minted', 'provider') THEN NULL
+             WHEN title IS NOT NULL AND title_source IS NULL THEN 'user'
+             ELSE title_source
+           END,
+           record_revision = record_revision + 1,
+           updated_at = ?
+       WHERE title_source IN ('minted', 'provider')
+          OR (title IS NOT NULL AND title_source IS NULL)`
+    )
+    .run(now)
+
+  for (const { host_partition_key: partition } of affectedPartitions) {
     database
       .prepare(
         `INSERT OR IGNORE INTO issue_host_state (
@@ -108,18 +114,6 @@ function classifyAndMintTitles(database: SyncDatabase.Database): void {
          WHERE host_partition_key = ?`
       )
       .run(now, partition)
-  }
-  const leftover = database
-    .prepare(
-      `SELECT COUNT(*) AS count FROM conversations c
-       WHERE c.title IS NULL AND EXISTS (
-         SELECT 1 FROM conversation_provider_identities i
-         WHERE i.conversation_id = c.id AND i.retired_at IS NULL
-       )`
-    )
-    .get() as { count: number }
-  if (leftover.count > 0) {
-    console.error(`[issues] title backfill left ${leftover.count} identified rows unnamed`)
   }
 }
 
@@ -156,7 +150,13 @@ export function migrateIssueDatabase(
       database.exec(ISSUE_DATABASE_V3_ADD_TITLE_SOURCE)
     }
     if (storedVersion < 3) {
-      classifyAndMintTitles(database)
+      database.exec(ISSUE_DATABASE_V3_CLASSIFY_MANUAL_TITLES)
+    }
+    if (storedVersion < 4 && !hasProviderTitleColumn(database)) {
+      database.exec(ISSUE_DATABASE_V4_ADD_PROVIDER_TITLE)
+    }
+    if (storedVersion < 4) {
+      splitLegacyTitleSlots(database)
     }
     hooks.beforeVersionBump?.(ISSUE_DATABASE_SCHEMA_VERSION)
     database.pragma(`user_version = ${ISSUE_DATABASE_SCHEMA_VERSION}`)

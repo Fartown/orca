@@ -1,6 +1,5 @@
-import { mintAgentSessionFallbackTitle } from '../../shared/agent-session-fallback-title'
-import type { ConversationRecord, ConversationTitleSource } from '../../shared/issues/types'
 import { ISSUE_TITLE_MAX_BYTES } from '../../shared/issues/constants'
+import type { ConversationRecord } from '../../shared/issues/types'
 import {
   applyConversationTitleAuthority,
   type ConversationTitleDecision
@@ -10,51 +9,33 @@ import { bumpIssueHostRevisions } from './issue-host-state'
 import { IssueRepositoryError } from './issue-repository-error'
 import type { UpdateConversationTitleInput } from './issue-repository-types'
 
-export type ConversationTitleWriteOutcome = 'written' | 'unchanged' | 'rejected'
+export type ConversationTitleWriteOutcome = 'written' | 'unchanged'
 
-/** The repository primitives every gated title write runs against. */
 export type ConversationTitleWriteAccess = {
   database: IssueDatabase
   require(id: string): ConversationRecord
   assertRevision(conversation: ConversationRecord, expected: number): void
 }
 
-/**
- * Mint the canonical fallback name inside the identity-attach transaction.
- * Idempotent: the authority gate rejects a second mint and freezes nothing.
- * Not a mutation-receipt command — machine writes carry no mutation identity.
- */
-export function mintConversationTitle(
-  access: ConversationTitleWriteAccess,
-  input: { id: string; sessionId: string }
-): { conversation: ConversationRecord; outcome: ConversationTitleWriteOutcome } {
-  const current = access.require(input.id)
-  const decision = applyConversationTitleAuthority(
-    { title: current.title, titleSource: current.titleSource ?? null },
-    {
-      title: mintAgentSessionFallbackTitle(current.agent, input.sessionId),
-      titleSource: 'minted'
-    }
-  )
-  return applyTitleDecision(access, current, decision)
-}
-
-/** Apply a provider (follow-mode) title through the authority gate. */
+/** Refresh the last-known Provider title without touching a user override. */
 export function applyProviderConversationTitle(
   access: ConversationTitleWriteAccess,
   input: { id: string; expectedRecordRevision: number; title: string }
 ): { conversation: ConversationRecord; outcome: ConversationTitleWriteOutcome } {
   const current = access.require(input.id)
   access.assertRevision(current, input.expectedRecordRevision)
+  const title = normalizedConversationTitle(input.title)
+  if (title === null) {
+    throw new Error('Provider conversation title is empty.')
+  }
   const decision = applyConversationTitleAuthority(
-    { title: current.title, titleSource: current.titleSource ?? null },
-    { title: normalizedConversationTitle(input.title), titleSource: 'provider' }
+    { userTitle: current.title, providerTitle: current.providerTitle ?? null },
+    { kind: 'provider', title }
   )
   return applyTitleDecision(access, current, decision)
 }
 
-// Why: the public update RPC always carries user semantics — renaming
-// freezes automatic sources, clearing resets to the unnamed follow state.
+/** Rename freezes the display override; clearing preserves the Provider snapshot. */
 export function applyUserConversationTitle(
   access: ConversationTitleWriteAccess,
   input: UpdateConversationTitleInput
@@ -62,8 +43,8 @@ export function applyUserConversationTitle(
   const current = access.require(input.id)
   access.assertRevision(current, input.expectedRecordRevision)
   const decision = applyConversationTitleAuthority(
-    { title: current.title, titleSource: current.titleSource ?? null },
-    { title: normalizedConversationTitle(input.title), titleSource: 'user' }
+    { userTitle: current.title, providerTitle: current.providerTitle ?? null },
+    { kind: 'user', title: normalizedConversationTitle(input.title) }
   )
   return applyTitleDecision(access, current, decision)
 }
@@ -73,34 +54,37 @@ function applyTitleDecision(
   current: ConversationRecord,
   decision: ConversationTitleDecision
 ): { conversation: ConversationRecord; outcome: ConversationTitleWriteOutcome } {
-  if (decision.kind === 'rejected') {
-    return { conversation: current, outcome: 'rejected' }
-  }
   if (decision.kind === 'unchanged') {
     return { conversation: current, outcome: 'unchanged' }
   }
-  writeTitleColumns(access, current, decision.title, decision.titleSource, Date.now())
-  return { conversation: access.require(current.id), outcome: 'written' }
-}
-
-function writeTitleColumns(
-  access: ConversationTitleWriteAccess,
-  current: ConversationRecord,
-  title: string | null,
-  titleSource: ConversationTitleSource | null,
-  now: number
-): void {
-  const update = access.database
-    .prepare(
-      `UPDATE conversations
-       SET title = ?, title_source = ?, record_revision = record_revision + 1, updated_at = ?
-       WHERE id = ? AND record_revision = ?`
-    )
-    .run(title, titleSource, now, current.id, current.recordRevision)
+  const now = Date.now()
+  const update =
+    decision.kind === 'write-user'
+      ? access.database
+          .prepare(
+            `UPDATE conversations
+             SET title = ?, title_source = ?, record_revision = record_revision + 1, updated_at = ?
+             WHERE id = ? AND record_revision = ?`
+          )
+          .run(
+            decision.title,
+            decision.title === null ? null : 'user',
+            now,
+            current.id,
+            current.recordRevision
+          )
+      : access.database
+          .prepare(
+            `UPDATE conversations
+             SET provider_title = ?, record_revision = record_revision + 1, updated_at = ?
+             WHERE id = ? AND record_revision = ?`
+          )
+          .run(decision.title, now, current.id, current.recordRevision)
   if (update.changes !== 1) {
     throw staleConversationRevision(access.require(current.id))
   }
   bumpIssueHostRevisions(access.database, current.hostPartitionKey, { tree: false }, now)
+  return { conversation: access.require(current.id), outcome: 'written' }
 }
 
 export function normalizedConversationTitle(value: string | null): string | null {

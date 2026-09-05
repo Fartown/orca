@@ -4,7 +4,6 @@ import { conversationRecordFromRow, type ConversationRow } from './conversation-
 import {
   applyProviderConversationTitle,
   applyUserConversationTitle,
-  mintConversationTitle,
   normalizedConversationTitle,
   staleConversationRevision,
   type ConversationTitleWriteAccess
@@ -161,9 +160,9 @@ export class ConversationRecordRepository {
         `INSERT INTO conversations (
            id, host_partition_key, execution_host_id,
            workspace_kind, workspace_id, workspace_name_snapshot, workspace_path_snapshot,
-           agent, title, title_source, issue_id, record_revision,
+           agent, title, title_source, provider_title, issue_id, record_revision,
            launch_failure_message, launch_failed_at, created_at, updated_at
-         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, NULL, NULL, ?, ?)`
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, 0, NULL, NULL, ?, ?)`
       )
       .run(
         id,
@@ -184,23 +183,11 @@ export class ConversationRecordRepository {
     return { conversation: this.require(id), ...revisions }
   }
 
-  /**
-   * Mint the canonical fallback name inside the identity-attach transaction.
-   * Idempotent: the authority gate rejects a second mint and freezes nothing.
-   * Not a mutation-receipt command — machine writes carry no mutation identity.
-   */
-  mintTitleWithinTransaction(input: { id: string; sessionId: string }): {
-    conversation: ConversationRecord
-    outcome: 'written' | 'unchanged' | 'rejected'
-  } {
-    return mintConversationTitle(this.titleWriteAccess(), input)
-  }
-
   applyProviderTitleWithinTransaction(input: {
     id: string
     expectedRecordRevision: number
     title: string
-  }): { conversation: ConversationRecord; outcome: 'written' | 'unchanged' | 'rejected' } {
+  }): { conversation: ConversationRecord; outcome: 'written' | 'unchanged' } {
     return applyProviderConversationTitle(this.titleWriteAccess(), input)
   }
 

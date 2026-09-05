@@ -11,6 +11,7 @@ const storeState = vi.hoisted(() => ({
     runtimePaneTitlesByTabId?: Record<string, unknown>
   }
 }))
+const canonicalTitleState = vi.hoisted(() => ({ current: undefined as string | undefined }))
 
 // Why: the mocked selector makes the hook a pure function, so tests can call it
 // directly without mounting a component. The pane maps default to empty so each
@@ -22,6 +23,10 @@ vi.mock('@/store', () => ({
       runtimePaneTitlesByTabId: {},
       ...storeState.current
     } as unknown as AppState)
+}))
+
+vi.mock('@/lib/canonical-session-titles', () => ({
+  useCanonicalSessionTitle: () => canonicalTitleState.current
 }))
 
 function makeAgent(overrides: Partial<DashboardAgentRow> = {}): DashboardAgentRow {
@@ -38,6 +43,7 @@ function makeAgent(overrides: Partial<DashboardAgentRow> = {}): DashboardAgentRo
 
 beforeEach(() => {
   storeState.current = { settings: {}, tabsByWorktree: {} }
+  canonicalTitleState.current = undefined
 })
 
 describe('useAgentRowConversationName', () => {
@@ -263,5 +269,70 @@ describe('useAgentRowConversationName', () => {
       tabsByWorktree: {}
     }
     expect(useAgentRowConversationName(agent)).toBe('Fix intake flow')
+  })
+})
+
+describe('aiVaultTitle slot ownership', () => {
+  it('uses the row identity fallback when every semantic title is absent', () => {
+    const tab = { id: 'tab-1', worktreeId: 'wt-1', customTitle: null, title: '⠋ ~/dev/orca' }
+    storeState.current = { settings: {}, tabsByWorktree: { 'wt-1': [tab] } }
+    const owner = makeAgent({
+      tab,
+      agentType: 'codex',
+      entry: { prompt: '', providerSession: { key: 'session_id', id: 'session-a' } }
+    } as Partial<DashboardAgentRow>)
+
+    expect(useAgentRowConversationName(owner)).toBe('Codex session-')
+  })
+
+  it('shows the slot title only on the row whose session it names', () => {
+    const tab = {
+      id: 'tab-1',
+      worktreeId: 'wt-1',
+      customTitle: null,
+      title: '',
+      aiVaultTitle: { agent: 'codex', sessionId: 'session-a', title: 'Fix auth bug' }
+    }
+    storeState.current = { settings: {}, tabsByWorktree: { 'wt-1': [tab] } }
+    const owner = makeAgent({
+      tab,
+      agentType: 'codex',
+      entry: { prompt: '', providerSession: { key: 'session_id', id: 'session-a' } }
+    } as Partial<DashboardAgentRow>)
+    expect(useAgentRowConversationName(owner)).toBe('Fix auth bug')
+
+    // A sibling pane in the same split tab runs a different session and must
+    // not wear the winner's conversation name.
+    const sibling = makeAgent({
+      paneKey: 'tab-1:leaf-2',
+      tab,
+      agentType: 'claude',
+      entry: { prompt: '', providerSession: { key: 'session_id', id: 'session-b' } }
+    } as Partial<DashboardAgentRow>)
+    expect(useAgentRowConversationName(sibling)).not.toBe('Fix auth bug')
+  })
+
+  it('lets a Conversation rename override the native Provider slot', () => {
+    canonicalTitleState.current = 'Named in Issues'
+    const tab = {
+      id: 'tab-1',
+      worktreeId: 'wt-1',
+      customTitle: null,
+      title: '',
+      aiVaultTitle: {
+        agent: 'codex' as const,
+        sessionId: 'session-a',
+        title: 'Provider title',
+        source: 'provider' as const
+      }
+    }
+    storeState.current = { settings: {}, tabsByWorktree: { 'wt-1': [tab] } }
+    const owner = makeAgent({
+      tab,
+      agentType: 'codex',
+      entry: { prompt: '', providerSession: { key: 'session_id', id: 'session-a' } }
+    } as Partial<DashboardAgentRow>)
+
+    expect(useAgentRowConversationName(owner)).toBe('Named in Issues')
   })
 })

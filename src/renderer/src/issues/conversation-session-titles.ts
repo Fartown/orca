@@ -28,8 +28,11 @@ export function collectConversationSessionTitleRequests(
   for (const { conversation, executionHostScope } of sources) {
     const conversationKey = conversationSessionTitleKey(conversation, executionHostScope)
     const providerSession = conversation.navigation?.providerSession
+    const hasUserOverride =
+      Boolean(conversation.title?.trim()) &&
+      (conversation.titleSource === 'user' || conversation.titleSource == null)
     if (
-      conversation.title?.trim() ||
+      hasUserOverride ||
       !conversationKey ||
       !providerSession ||
       !isAiVaultTitleAgent(conversation.agent) ||

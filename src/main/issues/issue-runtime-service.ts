@@ -32,6 +32,7 @@ export type IssueRuntimeServiceOptions = {
   profileLabel?: string
   managedSshTargets?: ManagedSshTargetResolver
   attachments: ConversationRuntimeAttachmentRegistry
+  scheduleConversationTitleRefresh?: (conversationId: string) => void
 }
 
 export class IssueRuntimeService implements IssueRuntimeServiceContract {
@@ -185,7 +186,7 @@ export class IssueRuntimeService implements IssueRuntimeServiceContract {
     if (params.issueId) {
       this.routes.requireIssue(params.authorityExecutionHostId, params.issueId)
     }
-    return this.repository.conversations.bindIssue({
+    const result = this.repository.conversations.bindIssue({
       identity: mutationIdentity(callerFingerprint, params.mutationId),
       input: {
         id: params.conversationId,
@@ -193,6 +194,10 @@ export class IssueRuntimeService implements IssueRuntimeServiceContract {
         issueId: params.issueId
       }
     })
+    if (params.issueId) {
+      this.options.scheduleConversationTitleRefresh?.(params.conversationId)
+    }
+    return result
   }
 
   prepareLaunch(
@@ -211,8 +216,12 @@ export class IssueRuntimeService implements IssueRuntimeServiceContract {
     return this.repository.conversationAllocator.prepareLaunch({
       identity: mutationIdentity(callerFingerprint, params.mutationId),
       // Why: a caller-supplied initial title is a user-declared name — it
-      // freezes automatic renaming just like a manual rename would.
-      input: params.title ? { ...input, title: params.title, titleSource: 'user' as const } : input
+      // freezes automatic renaming just like a manual rename would. Blank input
+      // is rejected by the schema's .min(1); this guard is belt-and-braces so a
+      // schema regression degrades to untitled instead of an untyped throw.
+      input: params.title?.trim()
+        ? { ...input, title: params.title.trim(), titleSource: 'user' as const }
+        : input
     })
   }
 

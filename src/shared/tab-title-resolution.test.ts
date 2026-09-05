@@ -90,6 +90,21 @@ describe('tab title resolution', () => {
     ).toBe('Repair provider-native tab titles')
   })
 
+  it('uses the identity fallback instead of spinner or cwd noise', () => {
+    const aiVaultTitle = {
+      agent: 'codex' as const,
+      sessionId: '01a0420e-rest',
+      title: 'Codex 01a0420e',
+      source: 'provider' as const
+    }
+    expect(
+      resolveTerminalTabTitle({ customTitle: null, aiVaultTitle, title: '⠋ ~/dev/orca' }, false)
+    ).toBe('Codex 01a0420e')
+    expect(
+      resolveUnifiedTabLabel({ customLabel: null, aiVaultTitle, label: 'Codex working' }, false)
+    ).toBe('Codex 01a0420e')
+  })
+
   it('keeps manual and quick-command labels ahead of AI Vault titles', () => {
     const aiVaultTitle = {
       agent: 'claude' as const,

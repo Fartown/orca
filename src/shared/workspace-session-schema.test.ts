@@ -241,7 +241,8 @@ describe('parseWorkspaceSession', () => {
             aiVaultTitle: {
               agent: 'codex',
               sessionId: 'session-1',
-              title: 'Provider thread name'
+              title: 'Provider thread name',
+              source: 'provider'
             },
             customTitle: null,
             color: null,
@@ -265,7 +266,8 @@ describe('parseWorkspaceSession', () => {
             aiVaultTitle: {
               agent: 'codex',
               sessionId: 'session-1',
-              title: 'Provider thread name'
+              title: 'Provider thread name',
+              source: 'conversation-override'
             },
             customLabel: null,
             color: null,
@@ -280,9 +282,48 @@ describe('parseWorkspaceSession', () => {
     if (result.ok) {
       expect(result.value.tabsByWorktree.wt[0].generatedTitle).toBe('Refactor auth')
       expect(result.value.tabsByWorktree.wt[0].aiVaultTitle?.title).toBe('Provider thread name')
+      expect(result.value.tabsByWorktree.wt[0].aiVaultTitle?.source).toBe('provider')
       expect(result.value.unifiedTabs?.wt[0].generatedLabel).toBe('Refactor auth')
       expect(result.value.unifiedTabs?.wt[0].aiVaultTitle?.title).toBe('Provider thread name')
+      expect(result.value.unifiedTabs?.wt[0].aiVaultTitle?.source).toBe('conversation-override')
       expect(result.value.unifiedTabs?.wt[0].executionHostId).toBe('runtime:host-b')
+    }
+  })
+
+  it('drops an unknown optional title source without dropping the title', () => {
+    const result = parseWorkspaceSession({
+      activeRepoId: null,
+      activeWorktreeId: 'wt',
+      activeTabId: 'tab1',
+      tabsByWorktree: {
+        wt: [
+          {
+            id: 'tab1',
+            ptyId: null,
+            worktreeId: 'wt',
+            title: 'Codex',
+            aiVaultTitle: {
+              agent: 'codex',
+              sessionId: 'session-1',
+              title: 'Provider thread name',
+              source: 'future-source'
+            },
+            customTitle: null,
+            color: null,
+            sortOrder: 0,
+            createdAt: 0
+          }
+        ]
+      },
+      terminalLayoutsByTabId: {}
+    })
+
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      expect(result.value.tabsByWorktree.wt[0].aiVaultTitle).toMatchObject({
+        title: 'Provider thread name',
+        source: undefined
+      })
     }
   })
 

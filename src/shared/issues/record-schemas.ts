@@ -89,6 +89,7 @@ export const ConversationRecordSchema = z.object({
   agent: IssueTuiAgentSchema,
   title: z.string().trim().min(1).max(ISSUE_TITLE_MAX_BYTES).nullable(),
   titleSource: z.enum(['minted', 'provider', 'user']).nullable().optional(),
+  providerTitle: z.string().trim().min(1).max(ISSUE_TITLE_MAX_BYTES).nullable().optional(),
   issueId: IssueEntityIdSchema.nullable(),
   recordRevision: IssueRecordRevisionSchema,
   launchFailure: ConversationLaunchFailureSchema.nullable(),

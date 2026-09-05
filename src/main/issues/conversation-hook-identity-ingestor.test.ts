@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   ConversationHookIdentityIngestor,
   type ConversationHookIdentityContext,
@@ -22,9 +22,11 @@ describe('ConversationHookIdentityIngestor', () => {
       input: { ...conversationInput(), launchToken, now: 1, claimTtlMs: 1_000 }
     })
     const attachments = new ConversationRuntimeAttachmentRegistry()
+    const onProviderIdentityAttached = vi.fn()
     const ingestor = new ConversationHookIdentityIngestor(repository, {
       resolveContext: async () => context(),
-      attachments
+      attachments,
+      onProviderIdentityAttached
     })
 
     await expect(ingestor.ingest(event({ launchToken }))).resolves.toEqual({
@@ -37,6 +39,12 @@ describe('ConversationHookIdentityIngestor', () => {
     expect(
       repository.conversationLaunchClaims.listForConversation(prepared.conversation.id)[0]
     ).toMatchObject({ settlement: 'attached' })
+    await expect(ingestor.ingest(event({ receivedAt: 11 }))).resolves.toMatchObject({
+      disposition: 'replayed',
+      conversationId: prepared.conversation.id
+    })
+    expect(onProviderIdentityAttached).toHaveBeenCalledOnce()
+    expect(onProviderIdentityAttached).toHaveBeenCalledWith(prepared.conversation.id)
     repository.close()
   })
 

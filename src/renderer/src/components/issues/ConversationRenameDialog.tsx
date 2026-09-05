@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import {
@@ -33,13 +33,23 @@ export function ConversationRenameDialog({
   const [title, setTitle] = useState(conversation.title ?? '')
   const [pending, setPending] = useState(false)
 
+  // Reseed only when the dialog opens: Provider snapshot refreshes update the
+  // conversation prop while it is open and must not clobber the user's typing.
+  const wasOpen = useRef(false)
   useEffect(() => {
-    if (open) {
+    if (open && !wasOpen.current) {
       setTitle(conversation.title ?? '')
     }
+    wasOpen.current = open
   }, [conversation, open])
 
   const save = async (): Promise<void> => {
+    // Saving the prefilled name unchanged must not freeze an automatic title
+    // as a manual rename (and needs no round-trip at all).
+    if (title.trim() === (conversation.title ?? '').trim()) {
+      onOpenChange(false)
+      return
+    }
     setPending(true)
     try {
       await IssueRuntimeClient.forRoute(route).mutate('conversations.update', {

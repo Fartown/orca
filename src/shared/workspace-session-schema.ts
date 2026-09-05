@@ -89,7 +89,8 @@ const terminalTabSchema = z.object({
     .object({
       agent: z.enum(['claude', 'codex']),
       sessionId: z.string(),
-      title: z.string()
+      title: z.string(),
+      source: z.enum(['provider', 'conversation-override']).optional().catch(undefined)
     })
     .nullable()
     .optional()
@@ -135,7 +136,8 @@ const tabSchema = z.object({
     .object({
       agent: z.enum(['claude', 'codex']),
       sessionId: z.string(),
-      title: z.string()
+      title: z.string(),
+      source: z.enum(['provider', 'conversation-override']).optional().catch(undefined)
     })
     .nullable()
     .optional()

@@ -45,8 +45,8 @@ export type AiVaultSessionFilterState = {
   activeProjectKey?: string | null
   sessionProjectById?: ReadonlyMap<string, AiVaultSessionProject>
   projectLabelByKey?: ReadonlyMap<string, string>
-  // Canonical conversation titles keyed by `executionHostId\0agent\0sessionId`;
-  // searching either the canonical or the scanner title must hit the session.
+  // Optional user overrides keyed by `executionHostId\0agent\0sessionId`;
+  // searching either the override or the scanner title must hit the session.
   canonicalTitleBySessionKey?: ReadonlyMap<string, string>
   hideEmptySessions: boolean
 }

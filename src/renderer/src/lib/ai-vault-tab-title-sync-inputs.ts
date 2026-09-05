@@ -99,7 +99,8 @@ function titleEqual(
   return (
     left?.agent === right?.agent &&
     left?.sessionId === right?.sessionId &&
-    left?.title === right?.title
+    left?.title === right?.title &&
+    left?.source === right?.source
   )
 }
 

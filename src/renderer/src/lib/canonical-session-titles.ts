@@ -1,18 +1,14 @@
-// Why: AI Vault surfaces show Orca-side conversation names without knowing who
-// owns them; the owning domain registers a provider from its own composition
-// root, so this module never imports domain code.
-export type CanonicalSessionTitle = {
-  title: string
-  titleSource: 'minted' | 'provider' | 'user'
-}
+import { useSyncExternalStore } from 'react'
 
+// AI Vault surfaces consume optional user overrides without knowing which
+// domain owns them. Absence means use the native Provider title chain.
 export type CanonicalSessionTitleProvider = {
-  get(executionHostId: string, agent: string, sessionId: string): CanonicalSessionTitle | undefined
-  index(): ReadonlyMap<string, CanonicalSessionTitle>
+  get(executionHostId: string, agent: string, sessionId: string): string | undefined
+  index(): ReadonlyMap<string, string>
   subscribe(listener: () => void): () => void
 }
 
-const EMPTY_INDEX: ReadonlyMap<string, CanonicalSessionTitle> = new Map()
+const EMPTY_INDEX: ReadonlyMap<string, string> = new Map()
 const listeners = new Set<() => void>()
 let provider: CanonicalSessionTitleProvider | null = null
 let stopProvider: (() => void) | null = null
@@ -53,12 +49,12 @@ export function getCanonicalSessionTitle(
   executionHostId: string,
   agent: string,
   sessionId: string
-): CanonicalSessionTitle | undefined {
+): string | undefined {
   return provider?.get(executionHostId, agent, sessionId)
 }
 
 /** Stable between notifications so useSyncExternalStore snapshots stay cached. */
-export function getCanonicalSessionTitleIndex(): ReadonlyMap<string, CanonicalSessionTitle> {
+export function getCanonicalSessionTitleIndex(): ReadonlyMap<string, string> {
   return provider?.index() ?? EMPTY_INDEX
 }
 
@@ -67,4 +63,19 @@ export function subscribeCanonicalSessionTitles(listener: () => void): () => voi
   return () => {
     listeners.delete(listener)
   }
+}
+
+export function useCanonicalSessionTitle(
+  executionHostId: string | null | undefined,
+  agent: string | null | undefined,
+  sessionId: string | null | undefined
+): string | undefined {
+  return useSyncExternalStore(
+    subscribeCanonicalSessionTitles,
+    () =>
+      executionHostId && agent && sessionId
+        ? getCanonicalSessionTitle(executionHostId, agent, sessionId)
+        : undefined,
+    () => undefined
+  )
 }

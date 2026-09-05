@@ -1,7 +1,11 @@
 import { getAgentRowConversationName } from '../../../../shared/agent-row-conversation-name'
+import { mintAgentSessionFallbackTitle } from '../../../../shared/agent-session-fallback-title'
 import { parsePaneKey } from '../../../../shared/stable-pane-id'
+import { isTuiAgent } from '../../../../shared/tui-agent-config'
 import { resolveAgentRowPaneLiveTitle } from './agent-row-pane-live-title'
 import { useAppStore } from '@/store'
+import { useCanonicalSessionTitle } from '@/lib/canonical-session-titles'
+import { getExecutionHostIdForWorktree } from '@/lib/worktree-runtime-owner'
 import type { AppState } from '@/store/types'
 import type { DashboardAgentRow } from './useDashboardData'
 
@@ -40,6 +44,9 @@ export function useAgentRowConversationName(agent: DashboardAgentRow): string | 
       ? undefined
       : getIndexedTab(s.tabsByWorktree[agent.tab.worktreeId], agent.tab.id)
   )
+  const executionHostId = useAppStore((s) => getExecutionHostIdForWorktree(s, agent.tab.worktreeId))
+  const rowSessionId = agent.entry.providerSession?.id
+  const userTitle = useCanonicalSessionTitle(executionHostId, agent.agentType, rowSessionId)
   // Why: parsed per render rather than inside the selector, which runs on every
   // store update and must stay allocation-free.
   const ownLeafId = cannotOwnTabName ? null : parsePaneKey(agent.paneKey)?.leafId
@@ -60,10 +67,23 @@ export function useAgentRowConversationName(agent: DashboardAgentRow): string | 
     return null
   }
   // Why: retained row snapshots need a fallback after their live tab disappears.
+  const tab = liveTab ?? agent.tab
+  // The aiVaultTitle slot is per-tab but names ONE pane's session; in a split
+  // tab a sibling row must not wear the winning pane's conversation name.
+  const slotNamesThisRow =
+    tab.aiVaultTitle == null ||
+    (tab.aiVaultTitle.agent === agent.agentType && tab.aiVaultTitle.sessionId === rowSessionId)
   return getAgentRowConversationName(
-    liveTab ?? agent.tab,
+    slotNamesThisRow ? tab : { ...tab, aiVaultTitle: null },
     agent.agentType,
     generatedTitlesEnabled,
-    paneLiveTitle
+    paneLiveTitle,
+    {
+      userTitle,
+      identityFallbackTitle:
+        rowSessionId && isTuiAgent(agent.agentType)
+          ? mintAgentSessionFallbackTitle(agent.agentType, rowSessionId)
+          : null
+    }
   )
 }

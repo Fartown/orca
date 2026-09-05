@@ -59,7 +59,8 @@ export function createTerminalTabPresentationActions(
         const sameTitle =
           current?.aiVaultTitle?.agent === aiVaultTitle?.agent &&
           current?.aiVaultTitle?.sessionId === aiVaultTitle?.sessionId &&
-          current?.aiVaultTitle?.title === aiVaultTitle?.title
+          current?.aiVaultTitle?.title === aiVaultTitle?.title &&
+          current?.aiVaultTitle?.source === aiVaultTitle?.source
         if (!current || sameTitle) {
           return s
         }

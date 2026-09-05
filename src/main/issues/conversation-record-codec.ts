@@ -12,6 +12,7 @@ export type ConversationRow = {
   agent: string
   title: string | null
   title_source: string | null
+  provider_title: string | null
   issue_id: string | null
   record_revision: number
   launch_failure_message: string | null
@@ -39,6 +40,7 @@ export function conversationRecordFromRow(row: ConversationRow): ConversationRec
     // Why: always null or an enum value on this host — undefined is reserved
     // for legacy wire payloads from peers that predate the column.
     titleSource: (row.title_source as ConversationTitleSource | null) ?? null,
+    providerTitle: row.provider_title,
     issueId: row.issue_id,
     recordRevision: row.record_revision,
     launchFailure:

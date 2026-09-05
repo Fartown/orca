@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useSyncExternalStore } from 'react'
+import { useCallback, useSyncExternalStore } from 'react'
 import {
   canonicalSessionTitleKey,
   getCanonicalSessionTitleIndex,
@@ -11,18 +11,13 @@ export function useCanonicalSessionTitles(): {
   canonicalTitleBySessionKey: ReadonlyMap<string, string>
   getCanonicalTitle: (session: AiVaultSession) => string | undefined
 } {
-  const canonicalTitleIndex = useSyncExternalStore(
+  // The provider index already maps identity keys to plain titles, so it
+  // feeds the search filter directly without a per-change copy.
+  const canonicalTitleBySessionKey = useSyncExternalStore(
     subscribeCanonicalSessionTitles,
     getCanonicalSessionTitleIndex,
     getCanonicalSessionTitleIndex
   )
-  const canonicalTitleBySessionKey = useMemo(() => {
-    const map = new Map<string, string>()
-    for (const [key, canonical] of canonicalTitleIndex) {
-      map.set(key, canonical.title)
-    }
-    return map
-  }, [canonicalTitleIndex])
   const getCanonicalTitle = useCallback(
     (session: AiVaultSession) =>
       canonicalTitleBySessionKey.get(

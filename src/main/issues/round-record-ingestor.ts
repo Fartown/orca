@@ -43,8 +43,8 @@ export type RoundRecordIngestResult =
 export type RoundRecordIngestorDependencies = {
   onDiagnostic?(result: RoundRecordIngestResult, event: RoundRecordHookEvent): void
   scheduleReconciliation?(conversationId: string): void
-  // Why: round events are the follow-mode trigger for canonical titles — the
-  // first trusted hook (right after identity attach) also lands here.
+  // Why: settled rounds refresh Provider follow-mode titles; first identity
+  // attachment is wired to the same refresher by the feature bootstrap.
   scheduleTitleRefresh?(conversationId: string): void
 }
 
@@ -108,8 +108,10 @@ export class RoundRecordIngestor {
     const conversationId = identity.conversationId
     const resolvedIds = this.resolvePriorObligations(conversationId, event)
     if (event.payload.state === 'working') {
+      // Title refresh waits for the round to settle: providers write ai-titles
+      // around completion, and refreshing here too would double the transcript
+      // reads (two SSH round-trips per round on remote partitions).
       this.dependencies.scheduleReconciliation?.(conversationId)
-      this.dependencies.scheduleTitleRefresh?.(conversationId)
       return this.finish({ disposition: 'resolved', conversationId, roundIds: resolvedIds }, event)
     }
 

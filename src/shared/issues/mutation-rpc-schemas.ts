@@ -130,7 +130,7 @@ export const ConversationsPrepareLaunchParams = z.object({
   }),
   agent: IssueTuiAgentSchema,
   issueId: IssueEntityIdSchema.nullable(),
-  title: z.string().trim().max(ISSUE_TITLE_MAX_BYTES).nullable().optional()
+  title: z.string().trim().min(1).max(ISSUE_TITLE_MAX_BYTES).nullable().optional()
 })
 
 export const ConversationsPrepareRetryParams = z.object({

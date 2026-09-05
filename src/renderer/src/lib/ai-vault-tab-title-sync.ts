@@ -21,8 +21,8 @@ type SyncDependencies = {
   getState: () => AppState
   resolveSessionTitles: (args: AiVaultSessionTitlesArgs) => Promise<AiVaultSessionTitlesResult>
   subscribe: (listener: (state: AppState, previous: AppState) => void) => () => void
-  // Canonical conversation titles outrank scanner values in the slot; the
-  // subscription re-projects when a rename or provider follow lands in the DB.
+  // Optional Conversation renames outrank scanner values in the slot; the
+  // subscription re-projects when a rename or Clear lands in the DB.
   getCanonicalTitle?: (executionHostId: string, agent: string, sessionId: string) => string | null
   subscribeCanonicalTitles?: (listener: () => void) => () => void
   scheduleReconcile?: (callback: () => void) => () => void
@@ -42,18 +42,24 @@ function scheduleMicrotask(callback: () => void): () => void {
   }
 }
 
-function storedTitleFor(
-  state: AppState,
-  request: AiVaultTitleRequest
-): { agent: string; sessionId: string; title: string } | null | undefined {
+type StoredSlotTitle =
+  | {
+      agent: string
+      sessionId: string
+      title: string
+      source?: 'provider' | 'conversation-override'
+    }
+  | null
+  | undefined
+
+function collectStoredTitles(state: AppState): Map<string, StoredSlotTitle> {
+  const byTabId = new Map<string, StoredSlotTitle>()
   for (const tabs of Object.values(state.tabsByWorktree)) {
     for (const tab of tabs) {
-      if (tab.id === request.tabId) {
-        return tab.aiVaultTitle
-      }
+      byTabId.set(tab.id, tab.aiVaultTitle)
     }
   }
-  return undefined
+  return byTabId
 }
 
 function nextLiveRefreshDelay(state: AppState, requests: AiVaultTitleRequest[]): number | null {
@@ -90,6 +96,9 @@ export function startAiVaultTabTitleSync(dependencies: SyncDependencies): () => 
   let cancelScheduled: (() => void) | null = null
   let stopped = false
   let writing = false
+  let firstReconcile = true
+  // Kept for mixed-version peers that may strip the optional slot source.
+  const canonicalProjectedTabIds = new Set<string>()
 
   const canonicalFor = (request: AiVaultTitleRequest): string | null =>
     dependencies.getCanonicalTitle?.(
@@ -98,21 +107,29 @@ export function startAiVaultTabTitleSync(dependencies: SyncDependencies): () => 
       request.providerSession.id
     ) ?? null
 
-  // The single slot write point. A canonical conversation title always wins
-  // over the scanner value; on identity drift the slot is re-decided for the
-  // NEW candidate (its canonical if any, else cleared) — old names never leak.
+  // The single slot write point. The optional source makes Clear/Forget
+  // reversible across restart without changing the existing title slot.
   const writeTitle = (request: AiVaultTitleRequest, title: string | null): void => {
-    const resolved = canonicalFor(request) ?? title
+    const canonical = canonicalFor(request)
+    const resolved = canonical ?? title
+    if (canonical) {
+      canonicalProjectedTabIds.add(request.tabId)
+    } else {
+      canonicalProjectedTabIds.delete(request.tabId)
+    }
     writing = true
     try {
-      dependencies
-        .getState()
-        .setAiVaultTabTitle(
-          request.tabId,
-          resolved
-            ? { agent: request.agent, sessionId: request.providerSession.id, title: resolved }
-            : null
-        )
+      dependencies.getState().setAiVaultTabTitle(
+        request.tabId,
+        resolved
+          ? {
+              agent: request.agent,
+              sessionId: request.providerSession.id,
+              title: resolved,
+              source: canonical ? ('conversation-override' as const) : ('provider' as const)
+            }
+          : null
+      )
     } finally {
       writing = false
     }
@@ -172,39 +189,46 @@ export function startAiVaultTabTitleSync(dependencies: SyncDependencies): () => 
     }
 
     const requests = collectAiVaultTitleRequests(dependencies.getState())
-    // Canonical application pass, ahead of the scan filter: retained and
+    // User-override pass, ahead of the scan filter: retained and
     // sleeping candidates never rescan once the slot holds a matching name,
-    // so renames and provider follows must be projected here directly.
+    // so Rename/Clear must be projected here directly. When an override this
+    // pass once projected disappears,
+    // the slot is cleared so the scan below restores the scanner value.
+    const storedBeforePass = collectStoredTitles(dependencies.getState())
     for (const request of requests) {
       const canonical = canonicalFor(request)
-      if (!canonical) {
-        continue
-      }
-      const stored = storedTitleFor(dependencies.getState(), request)
-      if (
-        stored?.agent !== request.agent ||
-        stored.sessionId !== request.providerSession.id ||
-        stored.title !== canonical
-      ) {
-        writeTitle(request, canonical)
+      const stored = storedBeforePass.get(request.tabId)
+      if (canonical) {
+        canonicalProjectedTabIds.add(request.tabId)
+        if (
+          stored?.agent !== request.agent ||
+          stored.sessionId !== request.providerSession.id ||
+          stored.title !== canonical ||
+          stored.source !== 'conversation-override'
+        ) {
+          writeTitle(request, canonical)
+        }
+      } else if (stored && canonicalProjectedTabIds.delete(request.tabId)) {
+        writeTitle(request, null)
       }
     }
 
-    const state = dependencies.getState()
-    const tabsById = new Map(
-      Object.values(state.tabsByWorktree)
-        .flat()
-        .map((tab) => [tab.id, tab] as const)
-    )
+    const storedAfterPass = collectStoredTitles(dependencies.getState())
     const requestsToScan = requests.filter((request) => {
-      const stored = tabsById.get(request.tabId)?.aiVaultTitle
+      const stored = storedAfterPass.get(request.tabId)
       const identityMatches =
         stored?.agent === request.agent && stored.sessionId === request.providerSession.id
       if (stored && !identityMatches) {
         writeTitle(request, null)
       }
-      return request.refresh || !identityMatches || !stored?.title.trim()
+      return (
+        request.refresh ||
+        !identityMatches ||
+        !stored?.title.trim() ||
+        (firstReconcile && stored.source !== 'provider' && !canonicalFor(request))
+      )
     })
+    firstReconcile = false
 
     if (requestsToScan.length > 0) {
       scanInFlight = true

@@ -112,6 +112,7 @@ CREATE TABLE conversations (
                             title_source IS NULL OR
                             title_source IN ('minted', 'provider', 'user')
                           ),
+  provider_title          TEXT,
   issue_id                TEXT REFERENCES issues(id) ON DELETE RESTRICT,
   record_revision         INTEGER NOT NULL DEFAULT 0 CHECK(record_revision >= 0),
   launch_failure_message  TEXT,

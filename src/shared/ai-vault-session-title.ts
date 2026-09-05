@@ -7,6 +7,8 @@ export type AiVaultSessionTitle = {
   agent: Extract<AiVaultAgent, 'claude' | 'codex'>
   sessionId: string
   title: string
+  /** Optional because persisted tabs and paired peers upgrade independently. */
+  source?: 'provider' | 'conversation-override'
 }
 
 export type AiVaultSessionTitleRequest = {

@@ -23,124 +23,81 @@ function createConversation(repository: IssueRepository, mutationId: string) {
 }
 
 describe('conversation title lifecycle', () => {
-  it('mints once, follows provider renames, and re-reads a fresh record', () => {
+  it('stores Provider follow in its own snapshot slot', () => {
     const repository = openRepository('follow')
     const created = createConversation(repository, 'create')
     expect(created.title).toBeNull()
-
-    const minted = repository.database.transaction(() =>
-      repository.conversations.mintTitleWithinTransaction({
-        id: created.id,
-        sessionId: 'a1b2c3d4-uuid'
-      })
-    )
-    expect(minted.outcome).toBe('written')
-    expect(minted.conversation.title).toBe('Claude a1b2c3d4')
-    expect(minted.conversation.titleSource).toBe('minted')
-    expect(minted.conversation.recordRevision).toBe(created.recordRevision + 1)
-
-    // Re-attach (replay) must not re-mint.
-    const replay = repository.database.transaction(() =>
-      repository.conversations.mintTitleWithinTransaction({
-        id: created.id,
-        sessionId: 'a1b2c3d4-uuid'
-      })
-    )
-    expect(replay.outcome).toBe('unchanged')
+    expect(created.providerTitle).toBeNull()
 
     const followed = repository.database.transaction(() =>
       repository.conversations.applyProviderTitleWithinTransaction({
         id: created.id,
-        expectedRecordRevision: minted.conversation.recordRevision,
+        expectedRecordRevision: created.recordRevision,
         title: 'Fix the flaky sidebar test'
       })
     )
     expect(followed.outcome).toBe('written')
-    expect(followed.conversation.title).toBe('Fix the flaky sidebar test')
-    expect(followed.conversation.titleSource).toBe('provider')
+    expect(followed.conversation.title).toBeNull()
+    expect(followed.conversation.titleSource).toBeNull()
+    expect(followed.conversation.providerTitle).toBe('Fix the flaky sidebar test')
 
-    const revised = repository.database.transaction(() =>
+    const replay = repository.database.transaction(() =>
       repository.conversations.applyProviderTitleWithinTransaction({
         id: created.id,
         expectedRecordRevision: followed.conversation.recordRevision,
-        title: 'Fix sidebar flake for good'
+        title: 'Fix the flaky sidebar test'
       })
     )
-    expect(revised.outcome).toBe('written')
+    expect(replay.outcome).toBe('unchanged')
     repository.close()
   })
 
-  it('freezes a manual rename against provider follow; clearing re-opens it', () => {
-    const repository = openRepository('freeze')
+  it('keeps refreshing the Provider snapshot under Rename and restores it on Clear', () => {
+    const repository = openRepository('override')
     const created = createConversation(repository, 'create')
+    const provider = repository.database.transaction(() =>
+      repository.conversations.applyProviderTitleWithinTransaction({
+        id: created.id,
+        expectedRecordRevision: created.recordRevision,
+        title: 'Provider name'
+      })
+    ).conversation
     const renamed = repository.conversations.updateTitle({
       identity: issueMutationIdentity('caller-a', 'rename'),
-      input: { id: created.id, expectedRecordRevision: created.recordRevision, title: 'My name' }
+      input: { id: created.id, expectedRecordRevision: provider.recordRevision, title: 'My name' }
     }).conversation
     expect(renamed.title).toBe('My name')
     expect(renamed.titleSource).toBe('user')
+    expect(renamed.providerTitle).toBe('Provider name')
 
-    const rejected = repository.database.transaction(() =>
+    const refreshed = repository.database.transaction(() =>
       repository.conversations.applyProviderTitleWithinTransaction({
         id: created.id,
         expectedRecordRevision: renamed.recordRevision,
-        title: 'AI name'
+        title: 'New Provider name'
       })
-    )
-    expect(rejected.outcome).toBe('rejected')
-    expect(rejected.conversation.title).toBe('My name')
+    ).conversation
+    expect(refreshed.title).toBe('My name')
+    expect(refreshed.providerTitle).toBe('New Provider name')
 
     const cleared = repository.conversations.updateTitle({
       identity: issueMutationIdentity('caller-a', 'clear'),
-      input: { id: created.id, expectedRecordRevision: renamed.recordRevision, title: null }
+      input: { id: created.id, expectedRecordRevision: refreshed.recordRevision, title: null }
     }).conversation
     expect(cleared.title).toBeNull()
     expect(cleared.titleSource).toBeNull()
-
-    const followedAgain = repository.database.transaction(() =>
-      repository.conversations.applyProviderTitleWithinTransaction({
-        id: created.id,
-        expectedRecordRevision: cleared.recordRevision,
-        title: 'AI name'
-      })
-    )
-    expect(followedAgain.outcome).toBe('written')
+    expect(cleared.providerTitle).toBe('New Provider name')
     repository.close()
   })
 
-  it('promotes source on identical text and bumps the record revision', () => {
-    const repository = openRepository('source-only')
-    const created = createConversation(repository, 'create')
-    const minted = repository.database.transaction(() =>
-      repository.conversations.mintTitleWithinTransaction({
-        id: created.id,
-        sessionId: 'a1b2c3d4'
-      })
-    )
-    const promoted = repository.database.transaction(() =>
-      repository.conversations.applyProviderTitleWithinTransaction({
-        id: created.id,
-        expectedRecordRevision: minted.conversation.recordRevision,
-        title: 'Claude a1b2c3d4'
-      })
-    )
-    expect(promoted.outcome).toBe('written')
-    expect(promoted.conversation.titleSource).toBe('provider')
-    expect(promoted.conversation.recordRevision).toBe(minted.conversation.recordRevision + 1)
-    repository.close()
-  })
-
-  it('stale revisions from a concurrent rename throw and leave the row intact', () => {
+  it('rejects a stale Provider snapshot write without touching a Rename', () => {
     const repository = openRepository('stale')
     const created = createConversation(repository, 'create')
-    const minted = repository.database.transaction(() =>
-      repository.conversations.mintTitleWithinTransaction({ id: created.id, sessionId: 'aaaa1111' })
-    )
     repository.conversations.updateTitle({
       identity: issueMutationIdentity('caller-a', 'rename'),
       input: {
         id: created.id,
-        expectedRecordRevision: minted.conversation.recordRevision,
+        expectedRecordRevision: created.recordRevision,
         title: 'User won'
       }
     })
@@ -148,12 +105,15 @@ describe('conversation title lifecycle', () => {
       repository.database.transaction(() =>
         repository.conversations.applyProviderTitleWithinTransaction({
           id: created.id,
-          expectedRecordRevision: minted.conversation.recordRevision,
-          title: 'Provider lost'
+          expectedRecordRevision: created.recordRevision,
+          title: 'Stale Provider value'
         })
       )
     ).toThrowError()
-    expect(repository.conversations.get(created.id)?.title).toBe('User won')
+    expect(repository.conversations.get(created.id)).toMatchObject({
+      title: 'User won',
+      providerTitle: null
+    })
     repository.close()
   })
 })

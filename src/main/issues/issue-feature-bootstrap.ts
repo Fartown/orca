@@ -46,7 +46,7 @@ export type IssueFeatureBootstrapOptions = {
   migrationHooks?: IssueDatabaseMigrationHooks
   readinessRegistry?: IssueFeatureReadinessRegistry
   // Injected so tests and headless setups run without the ipc resolver stack;
-  // absent means canonical titles stay at their minted fallback.
+  // absent means the Issue snapshot keeps its last Provider title.
   resolveSessionTitles?: ConstructorParameters<typeof ConversationTitleRefresh>[1]
 }
 
@@ -58,6 +58,7 @@ export class IssueFeatureBootstrap {
   private readonly stopProviderSubscription: (() => void) | null
   private readonly stopStatusSubscription: (() => void) | null
   private readonly stopPaneClearSubscription: (() => void) | null
+  private readonly titleRefresh: ConversationTitleRefresh | null
   private readonly coordinator: IssueHookSnapshotLiveCoordinator<
     IssueHookEvidenceSnapshot,
     BufferedHookEvent
@@ -73,6 +74,7 @@ export class IssueFeatureBootstrap {
     stopProviderSubscription: (() => void) | null
     stopStatusSubscription: (() => void) | null
     stopPaneClearSubscription: (() => void) | null
+    titleRefresh: ConversationTitleRefresh | null
     coordinator: IssueHookSnapshotLiveCoordinator<
       IssueHookEvidenceSnapshot,
       BufferedHookEvent
@@ -87,6 +89,7 @@ export class IssueFeatureBootstrap {
     this.stopProviderSubscription = params.stopProviderSubscription
     this.stopStatusSubscription = params.stopStatusSubscription
     this.stopPaneClearSubscription = params.stopPaneClearSubscription
+    this.titleRefresh = params.titleRefresh
     this.coordinator = params.coordinator
     this.drainEvidenceReconciliation = params.drainEvidenceReconciliation
   }
@@ -110,10 +113,19 @@ export class IssueFeatureBootstrap {
       readinessRegistry.setUnavailable(reason, options.hookEvidenceStatus)
       throw error
     }
+    const titleRefresh = options.resolveSessionTitles
+      ? new ConversationTitleRefresh(repository, options.resolveSessionTitles)
+      : null
     const service = new IssueRuntimeService(repository, {
       profileLabel: options.profileLabel,
       managedSshTargets: options.managedSshTargets,
-      attachments
+      attachments,
+      ...(titleRefresh
+        ? {
+            scheduleConversationTitleRefresh: (conversationId: string) =>
+              titleRefresh.schedule(conversationId)
+          }
+        : {})
     })
     const unregisterReadiness = readinessRegistry.register(service, options.hookEvidenceStatus)
     let coordinator: IssueHookSnapshotLiveCoordinator<
@@ -133,12 +145,15 @@ export class IssueFeatureBootstrap {
               worktreeId,
               connectionId: connectionId ?? null
             }),
-          attachments
+          attachments,
+          ...(titleRefresh
+            ? {
+                onProviderIdentityAttached: (conversationId: string) =>
+                  titleRefresh.schedule(conversationId)
+              }
+            : {})
         })
         const reconciler = new RoundRecordReconciler(repository)
-        const titleRefresh = options.resolveSessionTitles
-          ? new ConversationTitleRefresh(repository, options.resolveSessionTitles)
-          : null
         const roundIngestor = new RoundRecordIngestor(repository, identityIngestor, {
           scheduleReconciliation: (conversationId) => {
             void reconciler.schedule(conversationId).catch((error) => {
@@ -181,6 +196,9 @@ export class IssueFeatureBootstrap {
         })
         await coordinator.start()
       }
+      void titleRefresh?.backfillMissingSnapshots().catch((error) => {
+        console.error('[issues] conversation title startup backfill failed:', error)
+      })
       return new IssueFeatureBootstrap({
         service,
         attachments,
@@ -189,6 +207,7 @@ export class IssueFeatureBootstrap {
         stopProviderSubscription,
         stopStatusSubscription,
         stopPaneClearSubscription,
+        titleRefresh,
         coordinator,
         drainEvidenceReconciliation: () => evidenceChain
       })
@@ -197,6 +216,7 @@ export class IssueFeatureBootstrap {
       stopProviderSubscription?.()
       stopStatusSubscription?.()
       stopPaneClearSubscription?.()
+      titleRefresh?.dispose()
       unregisterReadiness()
       repository.close()
       throw error
@@ -217,6 +237,7 @@ export class IssueFeatureBootstrap {
     this.stopProviderSubscription?.()
     this.stopStatusSubscription?.()
     this.stopPaneClearSubscription?.()
+    this.titleRefresh?.dispose()
     this.unregisterReadiness()
     this.repository.close()
   }

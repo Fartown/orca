@@ -128,7 +128,7 @@ export class ConversationAllocator {
           input.observedAt
         )
         return {
-          ...this.attachIdentityAndMintTitle(conversation.id, input),
+          ...this.attachIdentity(conversation.id, input),
           disposition: 'replayed'
         }
       }
@@ -136,7 +136,7 @@ export class ConversationAllocator {
         ...input,
         issueId: null
       })
-      return { ...this.attachIdentityAndMintTitle(conversation.id, input), disposition: 'created' }
+      return { ...this.attachIdentity(conversation.id, input), disposition: 'created' }
     })
   }
 
@@ -168,7 +168,7 @@ export class ConversationAllocator {
           input.observedAt
         )
         return {
-          ...this.attachIdentityAndMintTitle(conversation.id, input),
+          ...this.attachIdentity(conversation.id, input),
           claim: claim
             ? this.claims.settleWithinTransaction(
                 claim.claimId,
@@ -195,7 +195,7 @@ export class ConversationAllocator {
         input.observedAt
       )
       return {
-        ...this.attachIdentityAndMintTitle(conversation.id, input),
+        ...this.attachIdentity(conversation.id, input),
         claim: this.claims.settleWithinTransaction(
           claim.claimId,
           'attached',
@@ -205,9 +205,7 @@ export class ConversationAllocator {
     })
   }
 
-  // Attach + mint are one atomic fact: a conversation becomes identifiable and
-  // named in the same transaction, and callers get the re-read fresh record.
-  private attachIdentityAndMintTitle(
+  private attachIdentity(
     conversationId: string,
     input: {
       agent: TuiAgent
@@ -223,11 +221,7 @@ export class ConversationAllocator {
       resumeLocator: input.resumeLocator,
       observedAt: input.observedAt
     })
-    const minted = this.conversations.mintTitleWithinTransaction({
-      id: conversationId,
-      sessionId: input.providerSession.id
-    })
-    return { conversation: minted.conversation, identity }
+    return { conversation: this.requireConversation(conversationId), identity }
   }
 
   recordLaunchFailure(params: {

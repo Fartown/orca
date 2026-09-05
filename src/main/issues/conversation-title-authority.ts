@@ -1,65 +1,28 @@
-import type { ConversationTitleSource } from '../../shared/issues/types'
-
 export type ConversationTitleState = {
-  title: string | null
-  titleSource: ConversationTitleSource | null
+  userTitle: string | null
+  providerTitle: string | null
 }
 
-export type ConversationTitleWrite = {
-  title: string | null
-  titleSource: ConversationTitleSource
-}
+export type ConversationTitleTarget =
+  | { kind: 'user'; title: string | null }
+  | { kind: 'provider'; title: string }
 
 export type ConversationTitleDecision =
-  | { kind: 'write'; title: string | null; titleSource: ConversationTitleSource | null }
   | { kind: 'unchanged' }
-  | { kind: 'rejected'; reason: 'user-frozen' | 'already-minted' }
+  | { kind: 'write-user'; title: string | null }
+  | { kind: 'write-provider'; title: string }
 
-/**
- * The single gate every conversation title write goes through.
- *
- * Rules: a user-set name freezes out automatic sources; automatic sources may
- * keep overwriting each other (follow mode); minting happens at most once.
- * Clearing (`user` + null title) resets to the unnamed state, which re-enables
- * automatic follow.
- */
+/** Keeps user override and Provider snapshot independent. */
 export function applyConversationTitleAuthority(
   current: ConversationTitleState,
-  target: ConversationTitleWrite
+  target: ConversationTitleTarget
 ): ConversationTitleDecision {
-  if (target.titleSource === 'user') {
-    // Clearing a name undoes any manual freeze and re-opens automatic follow.
-    const next: ConversationTitleState =
-      target.title === null
-        ? { title: null, titleSource: null }
-        : { title: target.title, titleSource: 'user' }
-    return sameState(current, next) ? { kind: 'unchanged' } : { kind: 'write', ...next }
+  if (target.kind === 'user') {
+    return current.userTitle === target.title
+      ? { kind: 'unchanged' }
+      : { kind: 'write-user', title: target.title }
   }
-  if (current.titleSource === 'user') {
-    return { kind: 'rejected', reason: 'user-frozen' }
-  }
-  if (target.title === null) {
-    // Automatic sources never erase a name; failure must not degrade state.
-    return { kind: 'unchanged' }
-  }
-  if (target.titleSource === 'minted') {
-    // A replayed attach re-mints the same string: idempotent, not an error.
-    if (sameState(current, { title: target.title, titleSource: 'minted' })) {
-      return { kind: 'unchanged' }
-    }
-    if (current.title !== null && current.titleSource !== null) {
-      return { kind: 'rejected', reason: 'already-minted' }
-    }
-    return { kind: 'write', title: target.title, titleSource: 'minted' }
-  }
-  // Provider follow: overwrites minted and earlier provider values.
-  return sameState(current, { title: target.title, titleSource: 'provider' })
+  return current.providerTitle === target.title
     ? { kind: 'unchanged' }
-    : { kind: 'write', title: target.title, titleSource: 'provider' }
-}
-
-// Why: a source-only transition (same text, minted -> provider) must count as a
-// change, otherwise the follow state machine wedges on identical strings.
-function sameState(left: ConversationTitleState, right: ConversationTitleState): boolean {
-  return left.title === right.title && left.titleSource === right.titleSource
+    : { kind: 'write-provider', title: target.title }
 }

@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ConversationsListParams } from '../../shared/issues/query-rpc-schemas'
 import type { AgentStatusIpcPayload } from '../../shared/agent-status-types'
 import {
@@ -44,6 +44,43 @@ describe('IssueFeatureBootstrap', () => {
     expect(conversations).toMatchObject({ status: 'snapshot-page', conversations: [] })
     bootstrap.dispose()
     expect(readiness.status('local').status).toBe('unavailable')
+  })
+
+  it('backfills a missing Provider title without requiring hook evidence', async () => {
+    const userDataPath = createIssueTestUserDataPath('orca-bootstrap-title-backfill')
+    const conversationId = seedManagedConversation(userDataPath, 'session-backfill')
+    const resolveSessionTitles = vi.fn(async () => ({
+      titles: [
+        {
+          agent: 'codex' as const,
+          sessionId: 'session-backfill',
+          title: 'Stable Provider title'
+        }
+      ]
+    }))
+    const bootstrap = await IssueFeatureBootstrap.create({
+      profileId: 'profile-a',
+      profileLabel: 'Profile A',
+      userDataPath,
+      workspaceResolver: resolver(),
+      hookSource: null,
+      hookEvidenceStatus: 'disabled',
+      resolveSessionTitles
+    })
+
+    await vi.waitFor(() =>
+      expect(
+        bootstrap.service.getConversation({
+          authorityExecutionHostId: 'local',
+          conversationId
+        }).providerTitle
+      ).toBe('Stable Provider title')
+    )
+    expect(resolveSessionTitles).toHaveBeenCalledWith({
+      executionHostScope: 'local',
+      requests: [{ agent: 'codex', sessionId: 'session-backfill' }]
+    })
+    bootstrap.dispose()
   })
 
   it('subscribes before snapshot and ingests a live hook emitted in the seed window', async () => {

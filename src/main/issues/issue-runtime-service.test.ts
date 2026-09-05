@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ConversationRuntimeAttachmentRegistry } from './conversation-runtime-attachment-registry'
 import {
   createIssueTestUserDataPath,
@@ -80,6 +80,51 @@ describe('IssueRuntimeService', () => {
     expect(methodNames).not.toEqual(
       expect.arrayContaining(['search', 'listActivity', 'projectDashboardPanes', 'prepareDigest'])
     )
+    repository.close()
+  })
+
+  it('schedules the existing title refresh only after binding a Conversation to an Issue', () => {
+    const repository = openRepository('bind-title-refresh')
+    const scheduleConversationTitleRefresh = vi.fn()
+    const service = new IssueRuntimeService(repository, {
+      attachments: new ConversationRuntimeAttachmentRegistry(),
+      scheduleConversationTitleRefresh
+    })
+    const issue = service.createIssue('caller-a', {
+      authorityExecutionHostId: 'local',
+      mutationId: 'create-bind-issue',
+      source: { kind: 'local', title: 'Bound issue' }
+    }).issue
+    const conversation = repository.conversationAllocator.resolveObservedIdentityOrAllocate({
+      executionHostId: 'local',
+      workspaceRef: { type: 'folder', folderWorkspaceId: 'folder-1' },
+      workspaceSnapshot: { name: 'Folder', path: '/folder' },
+      agent: 'codex',
+      issueId: null,
+      providerSession: { key: 'session_id', id: 'session-bind' },
+      observedAt: 1
+    }).conversation
+
+    const bound = service.bindConversation('caller-a', {
+      authorityExecutionHostId: 'local',
+      mutationId: 'bind-conversation',
+      conversationId: conversation.id,
+      expectedRecordRevision: conversation.recordRevision,
+      issueId: issue.id
+    })
+
+    expect(bound.conversation.issueId).toBe(issue.id)
+    expect(scheduleConversationTitleRefresh).toHaveBeenCalledOnce()
+    expect(scheduleConversationTitleRefresh).toHaveBeenCalledWith(conversation.id)
+
+    service.bindConversation('caller-a', {
+      authorityExecutionHostId: 'local',
+      mutationId: 'unbind-conversation',
+      conversationId: conversation.id,
+      expectedRecordRevision: bound.conversation.recordRevision,
+      issueId: null
+    })
+    expect(scheduleConversationTitleRefresh).toHaveBeenCalledOnce()
     repository.close()
   })
 

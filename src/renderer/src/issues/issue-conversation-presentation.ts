@@ -4,6 +4,8 @@ import {
 } from '../../../shared/codex-thread-title-generation'
 import type { ExecutionHostId } from '../../../shared/execution-host'
 import type { ConversationSummary } from '../../../shared/issues/types'
+import { mintAgentSessionFallbackTitle } from '../../../shared/agent-session-fallback-title'
+import { resolveSessionDisplayTitle } from '../../../shared/session-display-title'
 
 export function conversationSessionTitleKey(
   conversation: ConversationSummary,
@@ -24,16 +26,21 @@ export function issueConversationDisplayName(
   liveTitle?: string | null,
   executionHostScope: ExecutionHostId = conversation.executionHostId
 ): string {
-  const explicitTitle = conversation.title?.trim()
-  if (explicitTitle) {
-    return explicitTitle
-  }
-  const liveName = liveTitle?.trim()
-  if (liveName) {
-    return liveName
-  }
   const sessionKey = conversationSessionTitleKey(conversation, executionHostScope)
-  return (sessionKey ? sessionTitles?.get(sessionKey)?.trim() : undefined) || ''
+  const providerSession = conversation.navigation?.providerSession
+  const legacyTitle = conversation.title?.trim() || null
+  const isUserTitle = conversation.titleSource === 'user' || conversation.titleSource == null
+  const resolved = resolveSessionDisplayTitle({
+    userTitle: isUserTitle ? legacyTitle : null,
+    providerTitle: sessionKey ? sessionTitles?.get(sessionKey) : null,
+    providerTitleSnapshot:
+      conversation.providerTitle ?? (conversation.titleSource === 'provider' ? legacyTitle : null),
+    liveTitle,
+    identityFallbackTitle: providerSession
+      ? mintAgentSessionFallbackTitle(conversation.agent, providerSession.id)
+      : null
+  })
+  return resolved?.title ?? ''
 }
 
 export function shouldShowIssueConversation(

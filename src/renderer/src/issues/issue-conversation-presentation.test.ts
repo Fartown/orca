@@ -20,14 +20,25 @@ describe('Issue Conversation presentation', () => {
     expect(issueConversationDisplayName(item, titles, null, 'runtime:paired')).toBe('Paired title')
   })
 
-  it('prefers an explicit Conversation title, then the native live title, then history', () => {
+  it('prefers a user title, then current Provider history, then its snapshot and live title', () => {
     const item = conversation()
     const titles = new Map([[conversationSessionTitleKey(item)!, 'History title']])
 
-    expect(issueConversationDisplayName(item, titles, 'Live title')).toBe('Live title')
+    expect(issueConversationDisplayName(item, titles, 'Live title')).toBe('History title')
+    expect(
+      issueConversationDisplayName(
+        { ...item, providerTitle: 'Provider snapshot' },
+        new Map(),
+        'Live title'
+      )
+    ).toBe('Provider snapshot')
     expect(issueConversationDisplayName({ ...item, title: 'Named' }, titles, 'Live title')).toBe(
       'Named'
     )
+  })
+
+  it('uses the stable identity fallback instead of rendering an empty name', () => {
+    expect(issueConversationDisplayName(conversation(), new Map())).toBe('Claude session-')
   })
 
   it('hides every prepared record until an active provider identity exists', () => {

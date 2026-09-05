@@ -1,7 +1,7 @@
 // Resolves the stable "conversation name" an agent row can show instead of the
 // live last-message preview. Sources, in the same precedence the tab bar uses
 // (tab-title-resolution.ts): manual rename → quick-command label → OpenCode's
-// semantic session title → Orca's generated title → the agent-set live title.
+// semantic session title → Provider title → generated title → agent-set live title.
 // Live titles are accepted only when they carry a real name — pure status,
 // identity-echo, and spinner/cwd titles yield null so callers keep the
 // last-message label.
@@ -12,11 +12,17 @@ import { formatAgentTypeLabel } from './agent-type-label'
 import { isMeaningfulOpenCodeTerminalTitle } from './opencode-terminal-title'
 import { SYNTHETIC_AGENT_TITLE_PROFILES } from './synthetic-agent-title'
 import type { TerminalTab } from './terminal-tab-types'
+import { resolveSessionDisplayTitle } from './session-display-title'
 
 export type ConversationNameTab = Pick<
   TerminalTab,
   'customTitle' | 'quickCommandLabel' | 'aiVaultTitle' | 'generatedTitle' | 'title' | 'defaultTitle'
 >
+
+export type AgentRowConversationNameOptions = {
+  userTitle?: string | null
+  identityFallbackTitle?: string | null
+}
 
 // Why: synthetic status titles ("Codex ready", "Cursor - action required") are
 // state, not names. Precomputed once; the profile table is a module constant.
@@ -78,10 +84,9 @@ function isCwdLikeTitle(title: string): boolean {
   return !/\s/.test(title) && /[\\/]/.test(title)
 }
 
-function conversationNameFromLiveTitle(
+export function resolveAgentConversationLiveTitle(
   liveTitle: string,
   agentType: AgentType | null | undefined,
-  agentTypeLabelLower: string,
   defaultTitle: string | undefined
 ): string | null {
   const stripped = stripLeadingAgentTitleDecorationOrEmpty(liveTitle.trim()).trim()
@@ -92,7 +97,7 @@ function conversationNameFromLiveTitle(
   if (
     SYNTHETIC_STATUS_TITLES_LOWER.has(lower) ||
     lower === FALLBACK_TAB_TITLE_LOWER ||
-    isAgentIdentityStatusTitle(lower, agentType, agentTypeLabelLower) ||
+    isAgentIdentityStatusTitle(lower, agentType, formatAgentTypeLabel(agentType).toLowerCase()) ||
     STATUS_WITH_CONTEXT_RE.test(stripped) ||
     DEFAULT_TERMINAL_TITLE_RE.test(stripped) ||
     isClaudeManagementTitle(stripped) ||
@@ -119,7 +124,8 @@ export function getAgentRowConversationName(
   // this row's own pane title, or `null` when none resolves; `undefined` (a
   // single-pane tab) keeps the tab title. Tab-owned names above are unaffected:
   // the user gave those to the whole tab and they do not flip on focus.
-  paneLiveTitle?: string | null
+  paneLiveTitle?: string | null,
+  options: AgentRowConversationNameOptions = {}
 ): string | null {
   const customTitle = tab.customTitle?.trim()
   if (customTitle) {
@@ -134,23 +140,15 @@ export function getAgentRowConversationName(
   if (isMeaningfulOpenCodeTerminalTitle(liveTitle)) {
     return liveTitle
   }
-  // Same rank the tab bar gives this slot; it carries the canonical
-  // conversation title once one exists, so both surfaces show one name.
-  const aiVaultTitle = tab.aiVaultTitle?.title.trim()
-  if (aiVaultTitle) {
-    return aiVaultTitle
-  }
-  const generatedTitle = generatedTitlesEnabled ? tab.generatedTitle?.trim() : ''
-  if (generatedTitle) {
-    return generatedTitle
-  }
-  if (!liveTitle) {
-    return null
-  }
-  return conversationNameFromLiveTitle(
-    liveTitle,
-    agentType,
-    formatAgentTypeLabel(agentType).toLowerCase(),
-    tab.defaultTitle
-  )
+  const slot = tab.aiVaultTitle
+  const resolved = resolveSessionDisplayTitle({
+    userTitle: options.userTitle ?? (slot?.source === 'conversation-override' ? slot.title : null),
+    providerTitle: slot?.source !== 'conversation-override' ? slot?.title : null,
+    generatedTitle: generatedTitlesEnabled ? tab.generatedTitle : null,
+    liveTitle: liveTitle
+      ? resolveAgentConversationLiveTitle(liveTitle, agentType, tab.defaultTitle)
+      : null,
+    identityFallbackTitle: options.identityFallbackTitle
+  })
+  return resolved?.title ?? null
 }
