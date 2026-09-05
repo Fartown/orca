@@ -6,7 +6,7 @@ import { activateMissingWorkspaceIssueConversation } from '@/issues/issue-conver
 import { cn } from '@/lib/utils'
 import { issueDomainStore } from '@/issues/issues-domain-store'
 import type { IssueRouteExecutionHostId } from '../../../../../shared/issues/types'
-import { SidebarCountBadge } from '../sidebar-count-badge'
+import { SidebarCountPill } from '../sidebar-count-pill'
 import { SidebarHostBadge } from '../sidebar-host-badge'
 import {
   SIDEBAR_NESTED_ROW_HOVER_CLASS,
@@ -57,10 +57,10 @@ export function IssueVirtualRow({
           />
           <span className="min-w-0 flex-1 truncate">Unassigned</span>
           {row.count > 0 ? (
-            <SidebarCountBadge count={row.count} label={`${row.count} unassigned Conversations`} />
+            <SidebarCountPill count={row.count} label={`${row.count} unassigned Conversations`} />
           ) : null}
           {row.unresolvedCount > 0 ? (
-            <SidebarCountBadge
+            <SidebarCountPill
               count={row.unresolvedCount}
               label={`${row.unresolvedCount} needing attention`}
               tone="foreground"
@@ -142,14 +142,14 @@ export function IssueVirtualRow({
         ) : null}
         {/* 自身与后代是两个独立事实,不能二选一显示 —— 父行必须同时看得到 */}
         {row.issue.ownUnresolvedCount > 0 ? (
-          <SidebarCountBadge
+          <SidebarCountPill
             count={row.issue.ownUnresolvedCount}
             label={`${row.issue.ownUnresolvedCount} needing attention here`}
             tone="foreground"
           />
         ) : null}
         {row.issue.descendantAttentionCount > 0 ? (
-          <SidebarCountBadge
+          <SidebarCountPill
             count={row.issue.descendantAttentionCount}
             label={`${row.issue.descendantAttentionCount} needing attention in descendants`}
           />

@@ -1,6 +1,6 @@
 import {
   AGENT_SESSION_BOUNDARY_RUNTIME_CAPABILITY,
-  STRUCTURED_AGENT_SESSION_RUNTIME_CAPABILITY,
+  CLAUDE_STRUCTURED_AGENT_SESSION_RUNTIME_CAPABILITY,
   type RuntimeCapability
 } from '../../../../shared/protocol-version'
 import type {
@@ -9,20 +9,30 @@ import type {
   RuntimeMobileSessionTabsSnapshot
 } from '../../../../shared/runtime-types'
 import type { TabGroupLayoutNode } from '../../../../shared/tab-types'
+import { structuredNativeChatProjectionEnabled } from './structured-agent-session-policy'
 
 type SessionTabsPayload = RuntimeMobileSessionTabsResult | RuntimeMobileSessionTabsSnapshot
 
 export function projectSessionTabAgentStatus<TPayload extends SessionTabsPayload>(
   payload: TPayload,
   clientKind: 'mobile' | 'runtime' | undefined,
-  clientCapabilities: readonly RuntimeCapability[] | undefined
+  clientCapabilities: readonly RuntimeCapability[] | undefined,
+  structuredNativeChatEnabled?: boolean
 ): TPayload {
-  const structuredVisible =
-    clientKind !== 'mobile' &&
-    (clientKind === undefined ||
-      (clientCapabilities?.includes(STRUCTURED_AGENT_SESSION_RUNTIME_CAPABILITY) ?? false))
+  const structuredVisible = structuredNativeChatProjectionEnabled({
+    clientKind,
+    clientCapabilities,
+    structuredNativeChatEnabled
+  })
   let projected = structuredVisible ? payload : projectAgentSessionTabsOut(payload, () => true)
-  if (structuredVisible && clientKind !== undefined) {
+  // Why: a paired client renders only codex structured tabs unless it says otherwise
+  // (mobile's resolveMobileNativeChat returns null for every other agent), so an
+  // ungated row would list and select into a pane that shows neither chat nor terminal.
+  if (
+    structuredVisible &&
+    clientKind !== undefined &&
+    !clientCapabilities?.includes(CLAUDE_STRUCTURED_AGENT_SESSION_RUNTIME_CAPABILITY)
+  ) {
     projected = projectAgentSessionTabsOut(projected, (tab) => tab.agent !== 'codex')
   }
   // Why: only paired runtimes have legacy `done` completion side effects; mobile must keep its row without changing the exact v2 auth shape.

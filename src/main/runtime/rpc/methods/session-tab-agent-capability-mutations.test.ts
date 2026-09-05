@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import {
+  CLAUDE_STRUCTURED_AGENT_SESSION_RUNTIME_CAPABILITY,
   STRUCTURED_AGENT_SESSION_RUNTIME_CAPABILITY,
   type RuntimeCapability
 } from '../../../../shared/protocol-version'
@@ -67,14 +68,67 @@ describe('session tab structured capability mutations', () => {
       expect(fixture.calls[method.runtimeMethod]).toHaveBeenCalledOnce()
     })
 
-    it(`rejects ${method.name} for a legacy Claude row`, async () => {
+    it(`rejects ${method.name} on a Claude row the client never negotiated`, async () => {
       const fixture = createFixture([STRUCTURED_AGENT_SESSION_RUNTIME_CAPABILITY])
       const response = await fixture.dispatch(method.name, method.params('claude-session'))
 
       expect(response.ok).toBe(false)
       expect(fixture.calls[method.runtimeMethod]).not.toHaveBeenCalled()
     })
+
+    it(`allows ${method.name} for a client that negotiated Claude rows`, async () => {
+      const fixture = createFixture([
+        STRUCTURED_AGENT_SESSION_RUNTIME_CAPABILITY,
+        CLAUDE_STRUCTURED_AGENT_SESSION_RUNTIME_CAPABILITY
+      ])
+      const response = await fixture.dispatch(method.name, method.params('claude-session'))
+
+      expect(response.ok).toBe(true)
+      expect(fixture.calls[method.runtimeMethod]).toHaveBeenCalledOnce()
+    })
   }
+
+  it.each(['session.tabs.close', 'session.tabs.closeLifecycle'] as const)(
+    'allows capable mobile clients to close structured tabs when the experiment is enabled (%s)',
+    async (method) => {
+      const snapshot = agentSnapshot()
+      const closeMobileSessionTab = vi.fn().mockResolvedValue({ closed: true })
+      const runtime = {
+        getRuntimeId: () => 'test-runtime',
+        getClientSettings: vi.fn(() => ({ experimentalStructuredNativeChat: true })),
+        listMobileSessionTabs: vi.fn().mockResolvedValue(snapshot),
+        closeMobileSessionTab
+      } as unknown as OrcaRuntimeService
+      const dispatcher = new RpcDispatcher({ runtime, methods: SESSION_TAB_METHODS })
+      const replies: string[] = []
+      await dispatcher.dispatchStreaming(
+        {
+          id: 'request-1',
+          authToken: 'token',
+          method,
+          params:
+            method === 'session.tabs.close'
+              ? { worktree: 'id:wt-1', tabId: 'codex-session', reason: 'user' }
+              : {
+                  worktree: 'id:wt-1',
+                  tabId: 'codex-session',
+                  reason: 'cleanup',
+                  publicationEpoch: 'epoch-1',
+                  terminal: 'pty-1'
+                }
+        },
+        (response) => replies.push(response),
+        {
+          clientKind: 'mobile',
+          pairedDeviceId: 'paired-mobile',
+          clientCapabilities: [STRUCTURED_AGENT_SESSION_RUNTIME_CAPABILITY]
+        }
+      )
+
+      expect(JSON.parse(replies[0]!).ok).toBe(true)
+      expect(closeMobileSessionTab).toHaveBeenCalledOnce()
+    }
+  )
 })
 
 function createFixture(capabilities: RuntimeCapability[]) {

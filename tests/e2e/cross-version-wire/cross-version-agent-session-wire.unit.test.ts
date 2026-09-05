@@ -35,6 +35,7 @@ const SESSION = 'session-alpha'
 const WORKSPACE = 'workspace-1'
 const THREAD = '019fd532-7c11-7a90-b6de-4e1a2c3d5f60'
 const NOW = 1_800_000_000_000
+const CLIENT_CAPABILITY_UPDATE_METHOD = 'runtime.clientCapabilities.update'
 
 /** Every method the structured surface publishes: the host method it must reach,
  *  and the result it must hand back. A gate that hides one method and leaks
@@ -75,6 +76,11 @@ const STRUCTURED_CALLS: {
     method: 'agentSession.setOption',
     hostMethod: 'setOption',
     result: { ok: true, replayed: false }
+  },
+  {
+    method: 'agentSession.requestHandoff',
+    hostMethod: 'requestHandoff',
+    result: { status: { owner: 'native' } }
   },
   {
     method: 'agentSession.handoffStatus',
@@ -196,6 +202,14 @@ function paramsFor(method: string): unknown {
       const fields = { itemId: 'item-1', expectedRevision: 1, optionId: 'allow' }
       return { envelope: envelope({ method, fields, fence }), ...fields }
     }
+    case 'agentSession.requestHandoff': {
+      const fields = {
+        direction: 'to-tui' as const,
+        mode: 'now' as const,
+        action: 'start' as const
+      }
+      return { envelope: envelope({ method, fields, fence }), ...fields }
+    }
     case 'agentSession.setOption': {
       const fields = { key: 'model', value: 'gpt-5' }
       return { envelope: envelope({ method, fields, fence }), ...fields }
@@ -285,6 +299,10 @@ async function callBuild(
 function structuredHostStub(): Record<string, ReturnType<typeof vi.fn>> {
   return {
     attach: vi.fn(async () => ({ ok: true, replayed: false, value: { sessionId: SESSION } })),
+    // Attach-shaped entries take a client-supplied location, so the host is asked whether it
+    // supports creating there. A real host always answers; leaving it unstubbed made every
+    // `ensure` refuse for the harness's own reason rather than the location's.
+    supportsCreate: vi.fn(() => true),
     send: vi.fn(async () => ({ ok: true, replayed: false })),
     cancel: vi.fn(async () => ({ ok: true, replayed: false })),
     close: vi.fn(async () => undefined),
@@ -484,6 +502,49 @@ describe('cross-version structured agent sessions', () => {
     )
   })
 
+  describe('post-auth mobile capability negotiation', () => {
+    it('is an additive method that lets the current host record mobile capabilities', async () => {
+      const updates: string[][] = []
+
+      const replies = await callBuild(
+        current,
+        CLIENT_CAPABILITY_UPDATE_METHOD,
+        { clientCapabilities: [STRUCTURED_AGENT_SESSION_RUNTIME_CAPABILITY] },
+        {
+          clientKind: 'mobile',
+          clientCapabilities: [],
+          updateClientCapabilities: (capabilities) => updates.push([...capabilities])
+        }
+      )
+
+      expect(current.methodNames).toContain(CLIENT_CAPABILITY_UPDATE_METHOD)
+      expect(current.protocolVersion).toBe(baseline.protocolVersion)
+      expect(replies).toHaveLength(1)
+      expect(replies[0]).toMatchObject({
+        ok: true,
+        result: { clientCapabilities: [STRUCTURED_AGENT_SESSION_RUNTIME_CAPABILITY] }
+      })
+      expect(updates).toEqual([[STRUCTURED_AGENT_SESSION_RUNTIME_CAPABILITY]])
+    })
+
+    it('gets a normal answer from an old host instead of changing the auth shape', async () => {
+      const replies = await callBuild(
+        baseline,
+        CLIENT_CAPABILITY_UPDATE_METHOD,
+        { clientCapabilities: [STRUCTURED_AGENT_SESSION_RUNTIME_CAPABILITY] },
+        { clientKind: 'mobile', clientCapabilities: [] }
+      )
+
+      expect(replies).toHaveLength(1)
+      if (!baseline.methodNames.includes(CLIENT_CAPABILITY_UPDATE_METHOD)) {
+        expect(replies[0]).toMatchObject({
+          ok: false,
+          error: { code: 'method_not_found' }
+        })
+      }
+    })
+  })
+
   describe('an old client against a structured-owned AI Vault row', () => {
     let root: string
     let store: AgentSessionRecordStore
@@ -679,6 +740,10 @@ describe('cross-version structured agent sessions', () => {
     /** Phase 2 owns provider processes; the adapter is the only stub here. */
     function adapter(): StructuredAgentSessionAdapter {
       return {
+        // Every real adapter answers this; without it adapterSupportsCreate falls through to
+        // `supportsLocation`, which this fake also lacks, so the client-supplied-location gate
+        // refused for the fake's silence rather than for the location.
+        supportsCreate: () => true,
         acquire: async ({ fence }) => ({
           process: {
             hostId: 'local',
