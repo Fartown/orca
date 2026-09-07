@@ -28,11 +28,11 @@ Usage: /goal [OBJECTIVE|clear|edit|pause|resume]
 
 三个前提,任一不满足直接拒绝:
 
-| 前提 | 位置 | 失败表现 |
-|---|---|---|
-| `Feature::Goals` 特性开关打开 | `thread_goal_processor.rs:124`、`slash_dispatch.rs:776` | 命令静默返回,或 RPC 报 "goals feature is disabled" |
-| thread 必须**非临时**(有 rollout 文件) | `thread_goal_processor.rs:277` | "Goals need a saved session. This session is temporary." |
-| 会话已启动(有 thread_id) | `slash_dispatch.rs:802` | "The session must start before you can change a goal." |
+| 前提                                   | 位置                                                    | 失败表现                                                 |
+| -------------------------------------- | ------------------------------------------------------- | -------------------------------------------------------- |
+| `Feature::Goals` 特性开关打开          | `thread_goal_processor.rs:124`、`slash_dispatch.rs:776` | 命令静默返回,或 RPC 报 "goals feature is disabled"       |
+| thread 必须**非临时**(有 rollout 文件) | `thread_goal_processor.rs:277`                          | "Goals need a saved session. This session is temporary." |
+| 会话已启动(有 thread_id)               | `slash_dispatch.rs:802`                                 | "The session must start before you can change a goal."   |
 
 一句话概括它的本质:**把「什么时候该继续干」这个决策,从模型手里拿走,交给宿主。**
 
@@ -43,13 +43,13 @@ Usage: /goal [OBJECTIVE|clear|edit|pause|resume]
 五次数据库迁移完整记录了这个功能的成长过程,比任何设计文档都诚实。
 理解这段演进,比直接看最终形态更能明白每个部件为什么存在。
 
-| 迁移 | 内容 | 说明了什么 |
-|---|---|---|
-| `migrations/0029_thread_goals.sql` | 在**主 state 库**建表,`thread_id` 带 `REFERENCES threads(id) ON DELETE CASCADE`,状态只有 **4 个**:active / paused / budget_limited / complete | **初版没有「卡住」这个概念**。目标要么在跑、要么被用户暂停、要么烧完预算、要么完成 |
-| `migrations/0033_thread_goal_stopped_statuses.sql` | 重建表,状态加到 6 个:补上 **blocked** 与 **usage_limited** | 跑起来才发现:模型会陷进去,账号会被限流。这两个终止原因是**实践中学到的** |
-| `migrations/0034_drop_thread_goals.sql` | `DROP TABLE IF EXISTS thread_goals` | 从主库删除 |
-| `goals_migrations/0001_thread_goals.sql` | 在**独立库**重建,`thread_id` 变成裸 `TEXT PRIMARY KEY`,**去掉了对 threads 的外键** | 目标状态与 thread 生命周期**解耦**;独立库也意味着独立的连接与锁域 |
-| `goals_migrations/0002_thread_goal_continuation_deferrals.sql` | 加 deferral 表 | **fork 出来的新线程不该自己跑起来** —— 这个坑是后来才补的(deferral 只服务 fork,见 §6.4) |
+| 迁移                                                           | 内容                                                                                                                                          | 说明了什么                                                                              |
+| -------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| `migrations/0029_thread_goals.sql`                             | 在**主 state 库**建表,`thread_id` 带 `REFERENCES threads(id) ON DELETE CASCADE`,状态只有 **4 个**:active / paused / budget_limited / complete | **初版没有「卡住」这个概念**。目标要么在跑、要么被用户暂停、要么烧完预算、要么完成      |
+| `migrations/0033_thread_goal_stopped_statuses.sql`             | 重建表,状态加到 6 个:补上 **blocked** 与 **usage_limited**                                                                                    | 跑起来才发现:模型会陷进去,账号会被限流。这两个终止原因是**实践中学到的**                |
+| `migrations/0034_drop_thread_goals.sql`                        | `DROP TABLE IF EXISTS thread_goals`                                                                                                           | 从主库删除                                                                              |
+| `goals_migrations/0001_thread_goals.sql`                       | 在**独立库**重建,`thread_id` 变成裸 `TEXT PRIMARY KEY`,**去掉了对 threads 的外键**                                                            | 目标状态与 thread 生命周期**解耦**;独立库也意味着独立的连接与锁域                       |
+| `goals_migrations/0002_thread_goal_continuation_deferrals.sql` | 加 deferral 表                                                                                                                                | **fork 出来的新线程不该自己跑起来** —— 这个坑是后来才补的(deferral 只服务 fork,见 §6.4) |
 
 三条直接可迁移的经验:
 
@@ -111,14 +111,14 @@ flowchart TD
 
 `GoalExtension` 通过 `ExtensionRegistryBuilder` 注册 6 类 contributor(`extension.rs:460`):
 
-| Contributor | 钩子 | 职责 |
-|---|---|---|
-| `ThreadLifecycleContributor` | `on_thread_start` / `on_thread_resume` / **`on_thread_idle`** / `on_thread_stop` | `on_thread_idle` 是看门狗心脏 |
-| `TurnLifecycleContributor` | `on_turn_start` / `on_turn_stop` / `on_turn_abort` / `on_turn_error` | 计量起止、错误终止 |
-| `TokenUsageContributor` | `on_token_usage` | 累计 token 增量 |
-| `ToolLifecycleContributor` | `on_tool_finish` | 工具调用后即时结算,超预算即时注入收尾 |
-| `ToolContributor` | 无 | 暴露三个工具 |
-| `ConfigContributor` | `on_config_changed` | 开关热更新 |
+| Contributor                  | 钩子                                                                             | 职责                                  |
+| ---------------------------- | -------------------------------------------------------------------------------- | ------------------------------------- |
+| `ThreadLifecycleContributor` | `on_thread_start` / `on_thread_resume` / **`on_thread_idle`** / `on_thread_stop` | `on_thread_idle` 是看门狗心脏         |
+| `TurnLifecycleContributor`   | `on_turn_start` / `on_turn_stop` / `on_turn_abort` / `on_turn_error`             | 计量起止、错误终止                    |
+| `TokenUsageContributor`      | `on_token_usage`                                                                 | 累计 token 增量                       |
+| `ToolLifecycleContributor`   | `on_tool_finish`                                                                 | 工具调用后即时结算,超预算即时注入收尾 |
+| `ToolContributor`            | 无                                                                               | 暴露三个工具                          |
+| `ConfigContributor`          | `on_config_changed`                                                              | 开关热更新                            |
 
 **目标状态与 turn 完全解耦**,turn 只是目标的一次推进。
 
@@ -196,19 +196,19 @@ stateDiagram-v2
 
 ### 5.2 每条边由谁触发
 
-| 转移 | 触发者 | 入口 |
-|---|---|---|
-| 无 → active | 用户 `/goal OBJ`;模型 `create_goal` | `api.rs:143` / `tool.rs:180` |
-| active → complete | **仅模型** `update_goal(complete)` | `tool.rs:221` |
-| active → blocked | **模型** `update_goal(blocked)`;**系统**在不可重试 turn error 时 | `tool.rs:221` / `extension.rs:308` |
-| active → paused | **仅用户**:`/goal pause`、ESC、Ctrl-C 等中断 | `slash_dispatch.rs:797` / `interaction.rs:499` |
-| active → usage_limited | **系统**:`UsageLimitExceeded` | `extension.rs:315` |
-| active → budget_limited | **SQL 自动**:结算时 `tokens_used + delta >= token_budget` | `goals.rs:548` |
-| budget_limited → usage_limited | 系统(唯一允许覆盖终态的转移)。判定在 **Rust 里**做:`can_stop = status==Active \|\| (status==BudgetLimited && 新状态==UsageLimited)` | `runtime.rs:291` |
-| paused / blocked / usage_limited → active | **仅用户** `/goal resume` | `slash_dispatch.rs:798` |
-| complete → active | **仅用户** `/goal edit`,**且要求没有预算残留**(见 §5.4) | `goal_menu.rs:139` |
-| paused / blocked / usage_limited → budget_limited | 模型 `update_goal(blocked)` 时用 `ActiveOrStopped` 结算模式,会把超预算的停止态目标一并提升 | `tool.rs:239` + `goals.rs:530`,测试 `goals.rs:1290` |
-| budget_limited → complete | 模型 `update_goal(complete)`,走 CASE 的 ELSE 分支(分支①只挡 paused/blocked) | `goals.rs:292` |
+| 转移                                              | 触发者                                                                                                                              | 入口                                                |
+| ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------- |
+| 无 → active                                       | 用户 `/goal OBJ`;模型 `create_goal`                                                                                                 | `api.rs:143` / `tool.rs:180`                        |
+| active → complete                                 | **仅模型** `update_goal(complete)`                                                                                                  | `tool.rs:221`                                       |
+| active → blocked                                  | **模型** `update_goal(blocked)`;**系统**在不可重试 turn error 时                                                                    | `tool.rs:221` / `extension.rs:308`                  |
+| active → paused                                   | **仅用户**:`/goal pause`、ESC、Ctrl-C 等中断                                                                                        | `slash_dispatch.rs:797` / `interaction.rs:499`      |
+| active → usage_limited                            | **系统**:`UsageLimitExceeded`                                                                                                       | `extension.rs:315`                                  |
+| active → budget_limited                           | **SQL 自动**:结算时 `tokens_used + delta >= token_budget`                                                                           | `goals.rs:548`                                      |
+| budget_limited → usage_limited                    | 系统(唯一允许覆盖终态的转移)。判定在 **Rust 里**做:`can_stop = status==Active \|\| (status==BudgetLimited && 新状态==UsageLimited)` | `runtime.rs:291`                                    |
+| paused / blocked / usage_limited → active         | **仅用户** `/goal resume`                                                                                                           | `slash_dispatch.rs:798`                             |
+| complete → active                                 | **仅用户** `/goal edit`,**且要求没有预算残留**(见 §5.4)                                                                             | `goal_menu.rs:139`                                  |
+| paused / blocked / usage_limited → budget_limited | 模型 `update_goal(blocked)` 时用 `ActiveOrStopped` 结算模式,会把超预算的停止态目标一并提升                                          | `tool.rs:239` + `goals.rs:530`,测试 `goals.rs:1290` |
+| budget_limited → complete                         | 模型 `update_goal(complete)`,走 CASE 的 ELSE 分支(分支①只挡 paused/blocked)                                                         | `goals.rs:292`                                      |
 
 > ⚠️ `goals.rs` 里的 `pause_active_thread_goal` / `usage_limit_active_thread_goal`
 > (含 `update_active_thread_goal_status`,`goals.rs:436-470`)**是测试专用死代码** ——
@@ -244,13 +244,13 @@ END
 上面那段是简化写法。真实代码按 `(status, token_budget)` 的 Some/None 组合分成**四个独立分支**
 (`goals.rs:285-411`),语义各不相同 —— 照抄成一条会错:
 
-| 分支 | 行号 | 终态保护 | 复活即回落 | 谁走这条 |
-|---|---|---|---|---|
-| `(Some, Some)` | 286 | 有 | 比较**新传入**的 budget | `/goal edit`(所以抬高预算才能真复活) |
-| `(Some, None)` | 321 | 有 | 比较**列里现有**的 budget | `/goal pause` `/goal resume` |
-| `(None, Some)` | 352 | **无** | 只在 `status='active'` 时降级 | 单改预算,不受终态保护 |
-| `(None, None)` 带 objective | 380 | **无 status CASE** | 无 | **纯改 objective 完全不碰 status** |
-| `(None, None)` 无 objective | 399 | — | — | 退化成一次读;`expected_goal_id` 不匹配返回 `None` |
+| 分支                        | 行号 | 终态保护           | 复活即回落                    | 谁走这条                                          |
+| --------------------------- | ---- | ------------------ | ----------------------------- | ------------------------------------------------- |
+| `(Some, Some)`              | 286  | 有                 | 比较**新传入**的 budget       | `/goal edit`(所以抬高预算才能真复活)              |
+| `(Some, None)`              | 321  | 有                 | 比较**列里现有**的 budget     | `/goal pause` `/goal resume`                      |
+| `(None, Some)`              | 352  | **无**             | 只在 `status='active'` 时降级 | 单改预算,不受终态保护                             |
+| `(None, None)` 带 objective | 380  | **无 status CASE** | 无                            | **纯改 objective 完全不碰 status**                |
+| `(None, None)` 无 objective | 399  | —                  | —                             | 退化成一次读;`expected_goal_id` 不匹配返回 `None` |
 
 第四行解释了 §5.4 那个坑的另一半:SQL 层根本不负责「编辑即复活」,
 复活是 TUI 在客户端算好 status 再传回来的(`goal_menu.rs:133`)。
@@ -264,12 +264,12 @@ END
 
 这两个很容易混,但语义完全不同:
 
-| 操作 | 走的路径 | goal_id | 累计用量 | 状态 |
-|---|---|---|---|---|
-| `/goal NEW_OBJ`,当前无目标 | `replace_thread_goal` | 新 | 清零 | active |
-| `/goal NEW_OBJ`,当前有未完成目标 | **弹确认** → `get` → 物化 → `clear` → `set`(三次 RPC) | 新 | **清零** | active |
-| `/goal NEW_OBJ`,当前目标已 complete | 不弹确认,**但同样走 clear + set** | 新 | 清零 | active |
-| `/goal edit` | `update_thread_goal` | **保留** | **保留** | 见下,**没有想象中那么万能** |
+| 操作                                | 走的路径                                              | goal_id  | 累计用量 | 状态                        |
+| ----------------------------------- | ----------------------------------------------------- | -------- | -------- | --------------------------- |
+| `/goal NEW_OBJ`,当前无目标          | `replace_thread_goal`                                 | 新       | 清零     | active                      |
+| `/goal NEW_OBJ`,当前有未完成目标    | **弹确认** → `get` → 物化 → `clear` → `set`(三次 RPC) | 新       | **清零** | active                      |
+| `/goal NEW_OBJ`,当前目标已 complete | 不弹确认,**但同样走 clear + set**                     | 新       | 清零     | active                      |
+| `/goal edit`                        | `update_thread_goal`                                  | **保留** | **保留** | 见下,**没有想象中那么万能** |
 
 确认弹窗规则(`thread_goal_actions.rs:364`):**只有 `complete` 不需要确认**,
 其余五态(含 `budget_limited`)都要用户点「Replace current goal」。
@@ -389,12 +389,12 @@ sequenceDiagram
 
 四个真实触发点(全部是事件,没有定时器):
 
-| 触发点 | 位置 | 场景 |
-|---|---|---|
-| turn 正常结束或中止 | `core/src/tasks/mod.rs:814` | **主路径**,循环靠它闭合 |
-| guardian review 结束 | `core/src/guardian/review.rs:276` | 审批熔断中断后补一次;注释明确**用户主动 interrupt 不走这条** |
-| **冷 resume** | `app-server/…/thread_goal_processor.rs:79` | 线程未运行,恢复后启动 |
-| **热 resume** | `app-server/…/thread_lifecycle.rs:751` | 线程已在跑,replay 完成后补发,门控条件与冷 resume 不同 |
+| 触发点               | 位置                                       | 场景                                                         |
+| -------------------- | ------------------------------------------ | ------------------------------------------------------------ |
+| turn 正常结束或中止  | `core/src/tasks/mod.rs:814`                | **主路径**,循环靠它闭合                                      |
+| guardian review 结束 | `core/src/guardian/review.rs:276`          | 审批熔断中断后补一次;注释明确**用户主动 interrupt 不走这条** |
+| **冷 resume**        | `app-server/…/thread_goal_processor.rs:79` | 线程未运行,恢复后启动                                        |
+| **热 resume**        | `app-server/…/thread_lifecycle.rs:751`     | 线程已在跑,replay 完成后补发,门控条件与冷 resume 不同        |
 
 (另有 `core/src/codex_thread.rs:260` 的对外转发包装,不是独立触发点。)
 
@@ -452,12 +452,12 @@ ResponseItem::Message {
    `InternalModelContextFragment` 登记在 `CONTEXTUAL_USER_FRAGMENTS` 表里
    (`core/src/context/contextual_user_message.rs:57`),至少有四个消费者依赖这个身份:
 
-| 消费者 | 位置 | 行为 |
-|---|---|---|
-| 界面渲染 | `core/src/event_mapping.rs:93` | `parse_user_message` 返回 `None`,不显示给用户 |
-| **用户轮边界判定** | `core/src/context_manager/history.rs:795` | `is_user_turn_boundary` 显式排除它 |
-| 回滚裁剪 | `core/src/context_manager/history.rs:407` | `trim_pre_turn_context_updates` 会把它从历史里剥掉 |
-| realtime / guardian 转写 | `core/src/realtime_context.rs:220`、`core/src/guardian/prompt.rs:435` | 跳过 |
+| 消费者                   | 位置                                                                  | 行为                                               |
+| ------------------------ | --------------------------------------------------------------------- | -------------------------------------------------- |
+| 界面渲染                 | `core/src/event_mapping.rs:93`                                        | `parse_user_message` 返回 `None`,不显示给用户      |
+| **用户轮边界判定**       | `core/src/context_manager/history.rs:795`                             | `is_user_turn_boundary` 显式排除它                 |
+| 回滚裁剪                 | `core/src/context_manager/history.rs:407`                             | `trim_pre_turn_context_updates` 会把它从历史里剥掉 |
+| realtime / guardian 转写 | `core/src/realtime_context.rs:220`、`core/src/guardian/prompt.rs:435` | 跳过                                               |
 
 **第二条是这里最容易踩的坑**:`is_user_turn_boundary` 的下游有压缩边界、rollout 截断
 (`core/src/thread_rollout_truncation.rs:86`)、rollout 重建、时间提醒等一串消费者。
@@ -578,11 +578,11 @@ pub(crate) struct ActiveTurn {
 它不读模型上一轮的输出、不分析进度、不识别语义。
 发哪份模板 100% 由**代码路径**决定,三条路径各自绑死一份模板:
 
-| 路径 | 触发点 | 判定条件 | 模板 | 送达方式 | 送不到时 |
-|---|---|---|---|---|---|
-| ① **续跑** | `on_thread_idle` → `continue_if_idle`(`runtime.rs:403`) | status 为 active,无 deferral,能拿到活线程 | `continuation.md` | `try_start_turn_if_idle` **新开一轮** | 让位闸门拒绝 → 放弃本次,等下次 idle |
-| ② **预算收尾** | `on_tool_finish`(`extension.rs:409`) | 结算后 status **是** `budget_limited`(不是「刚变成」,`extension.rs:400`),且该 goal_id 尚未报告过 | `budget_limit.md` | `inject_if_running` **插进正在跑的 turn** | 没有活跃 turn → 静默丢弃 |
-| ③ **目标变更** | `apply_external_goal_set`(`runtime.rs:205`) | status 为 active **且** objective 文本发生变化 | `objective_updated.md` | `inject_if_running` **插进正在跑的 turn** | 没有活跃 turn → 丢弃,紧接着走路径 ① |
+| 路径           | 触发点                                                  | 判定条件                                                                                         | 模板                   | 送达方式                                  | 送不到时                            |
+| -------------- | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------ | ---------------------- | ----------------------------------------- | ----------------------------------- |
+| ① **续跑**     | `on_thread_idle` → `continue_if_idle`(`runtime.rs:403`) | status 为 active,无 deferral,能拿到活线程                                                        | `continuation.md`      | `try_start_turn_if_idle` **新开一轮**     | 让位闸门拒绝 → 放弃本次,等下次 idle |
+| ② **预算收尾** | `on_tool_finish`(`extension.rs:409`)                    | 结算后 status **是** `budget_limited`(不是「刚变成」,`extension.rs:400`),且该 goal_id 尚未报告过 | `budget_limit.md`      | `inject_if_running` **插进正在跑的 turn** | 没有活跃 turn → 静默丢弃            |
+| ③ **目标变更** | `apply_external_goal_set`(`runtime.rs:205`)             | status 为 active **且** objective 文本发生变化                                                   | `objective_updated.md` | `inject_if_running` **插进正在跑的 turn** | 没有活跃 turn → 丢弃,紧接着走路径 ① |
 
 ```mermaid
 flowchart LR
@@ -650,13 +650,13 @@ pub(crate) fn mark_budget_limit_reported_if_new(&self, goal_id: &str) -> bool {
 
 选定模板后,`steering.rs` 用目标的当前状态渲染。三份模板的变量集不同:
 
-| 变量 | continuation | budget_limit | objective_updated |
-|---|---|---|---|
-| `objective` | 有 | 有 | 有 |
-| `tokens_used` | 有 | 有 | 有 |
-| `token_budget` | 有 | 有 | 有 |
-| `remaining_tokens` | 有 | 无 | 有 |
-| `time_used_seconds` | 无 | 有 | 无 |
+| 变量                | continuation | budget_limit | objective_updated |
+| ------------------- | ------------ | ------------ | ----------------- |
+| `objective`         | 有           | 有           | 有                |
+| `tokens_used`       | 有           | 有           | 有                |
+| `token_budget`      | 有           | 有           | 有                |
+| `remaining_tokens`  | 有           | 无           | 有                |
+| `time_used_seconds` | 无           | 有           | 无                |
 
 无预算时的降级取值也不一样:`token_budget` 一律渲染成 `none`;
 `remaining_tokens` 在 continuation 里是 `unbounded`,在 objective_updated 里是 `unknown`。
@@ -779,13 +779,13 @@ before letting extensions react to the idle thread."
 
 ### 7.2 结算时机
 
-| 时机 | 钩子 | 说明 |
-|---|---|---|
-| turn 开始 | `on_turn_start` | 记录 token 基线,标记这一 turn 属于哪个目标 |
-| token 变化 | `on_token_usage` | 只更新进程内快照,不落库 |
-| 每个工具调用后 | `on_tool_finish` | **落库结算**,见下方计入规则 |
-| turn 结束 / 中止 | `on_turn_stop` / `on_turn_abort` | 收尾结算 |
-| 外部改目标前 | `prepare_external_goal_mutation` | 冲刷在途计量。**没有活跃 turn 时**走 `account_idle_goal_progress` 只结算墙钟 |
+| 时机             | 钩子                             | 说明                                                                         |
+| ---------------- | -------------------------------- | ---------------------------------------------------------------------------- |
+| turn 开始        | `on_turn_start`                  | 记录 token 基线,标记这一 turn 属于哪个目标                                   |
+| token 变化       | `on_token_usage`                 | 只更新进程内快照,不落库                                                      |
+| 每个工具调用后   | `on_tool_finish`                 | **落库结算**,见下方计入规则                                                  |
+| turn 结束 / 中止 | `on_turn_stop` / `on_turn_abort` | 收尾结算                                                                     |
+| 外部改目标前     | `prepare_external_goal_mutation` | 冲刷在途计量。**没有活跃 turn 时**走 `account_idle_goal_progress` 只结算墙钟 |
 
 **没有"空闲定时结算"这回事。** `account_idle_goal_progress`(`runtime.rs:505`)全仓库只有一个调用者
 —— 上表最后一行的 `prepare_external_goal_mutation`(`runtime.rs:150`),而且是在
@@ -828,13 +828,13 @@ before letting extensions react to the idle thread."
 
 **按结果计入**:
 
-| `ToolCallOutcome` | 计入结算 |
-|---|---|
-| `Completed` | 是 |
-| `Failed { handler_executed: true }` | 是 |
-| `Failed { handler_executed: false }` | 否 |
-| `Blocked` | 否 |
-| `Aborted` | 否 |
+| `ToolCallOutcome`                    | 计入结算 |
+| ------------------------------------ | -------- |
+| `Completed`                          | 是       |
+| `Failed { handler_executed: true }`  | 是       |
+| `Failed { handler_executed: false }` | 否       |
+| `Blocked`                            | 否       |
+| `Aborted`                            | 否       |
 
 ### 7.3.2 结算主流程伪代码
 
@@ -905,12 +905,12 @@ WHERE thread_id = ? AND STATUS_FILTER [AND goal_id = ?]
 
 **关键是这里有两个不同的 filter,不能写成同一个**(`goals.rs:518-531`):
 
-| `GoalAccountingMode` | `status_filter`(哪些行可以加账) | `budget_limit_status_filter`(哪些行可以被翻成 budget_limited) | 谁用 |
-|---|---|---|---|
-| `ActiveStatusOnly` | `active` | `active` | 生产零调用,仅测试 |
-| `ActiveOnly` | `active`, `budget_limited` | `active` | 默认路径:tool_finish / turn_stop / turn_abort / 外部变更 |
-| `ActiveOrComplete` | `active`, `budget_limited`, `complete` | `active` | `update_goal(complete)`(`tool.rs:238`) |
-| `ActiveOrStopped` | `active`, `paused`, `blocked`, `usage_limited`, `budget_limited` | **同左(全集)** | `update_goal(blocked)`(`tool.rs:239`) |
+| `GoalAccountingMode` | `status_filter`(哪些行可以加账)                                  | `budget_limit_status_filter`(哪些行可以被翻成 budget_limited) | 谁用                                                     |
+| -------------------- | ---------------------------------------------------------------- | ------------------------------------------------------------- | -------------------------------------------------------- |
+| `ActiveStatusOnly`   | `active`                                                         | `active`                                                      | 生产零调用,仅测试                                        |
+| `ActiveOnly`         | `active`, `budget_limited`                                       | `active`                                                      | 默认路径:tool_finish / turn_stop / turn_abort / 外部变更 |
+| `ActiveOrComplete`   | `active`, `budget_limited`, `complete`                           | `active`                                                      | `update_goal(complete)`(`tool.rs:238`)                   |
+| `ActiveOrStopped`    | `active`, `paused`, `blocked`, `usage_limited`, `budget_limited` | **同左(全集)**                                                | `update_goal(blocked)`(`tool.rs:239`)                    |
 
 两个 filter 的差异正是「已 `budget_limited` 的行继续加账、但不会重复触发状态翻转」的来源。
 **写成同一个 filter,行为立刻错。**
@@ -946,11 +946,11 @@ fn should_clear_active_goal(status, disposition) -> bool {
 
 所以「`budget_limited` 后继续记账」是三层共同作用的结果,少一层都不成立:
 
-| 层 | 位置 | 作用 |
-|---|---|---|
-| SQL `status_filter` 含 `budget_limited` | `goals.rs:520` | 允许 UPDATE 命中该行 |
-| `on_tool_finish` 用 `KeepActive` | `extension.rs:386` | 不清进程内标记,下次才进得了 SQL |
-| `on_turn_start` 对 `BudgetLimited` 也 mark active | `extension.rs:240` | 否则下一轮开始就断账 |
+| 层                                                | 位置               | 作用                            |
+| ------------------------------------------------- | ------------------ | ------------------------------- |
+| SQL `status_filter` 含 `budget_limited`           | `goals.rs:520`     | 允许 UPDATE 命中该行            |
+| `on_tool_finish` 用 `KeepActive`                  | `extension.rs:386` | 不清进程内标记,下次才进得了 SQL |
+| `on_turn_start` 对 `BudgetLimited` 也 mark active | `extension.rs:240` | 否则下一轮开始就断账            |
 
 判别性测试:`goal_extension_backend.rs:439 budget_limited_goal_keeps_accounting_after_later_tool_finish`
 —— 刻意不调 `stop_turn`,第二次 tool_finish 仍记到 35。若 tool_finish 用 `ClearActive`,会停在 25。
@@ -962,11 +962,11 @@ fn should_clear_active_goal(status, disposition) -> bool {
 只在 `tools_visible()` 时暴露:特性开启 **且** 有持久化 thread 状态 **且** 不是 Review 子代理
 (`extension.rs:105`)。
 
-| 工具 | 参数 | 约束 |
-|---|---|---|
-| `get_goal` | 无 | 读状态、预算、用量、剩余 |
+| 工具          | 参数                            | 约束                                                                                                                                                                                        |
+| ------------- | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `get_goal`    | 无                              | 读状态、预算、用量、剩余                                                                                                                                                                    |
 | `create_goal` | `objective`,可选 `token_budget` | **仅在用户明确要求时**创建;只有现有目标 `status = 'complete'` 才能替换(`goals.rs:245` 的 `ON CONFLICT … WHERE`),**budget_limited 虽是终态也会被拒**,报 "this thread has an unfinished goal" |
-| `update_goal` | `status: complete 或 blocked` | **只能标完成或卡住**。`tool.rs:226` 二次校验,传其他值直接报错 |
+| `update_goal` | `status: complete 或 blocked`   | **只能标完成或卡住**。`tool.rs:226` 二次校验,传其他值直接报错                                                                                                                               |
 
 返回体:
 
@@ -996,15 +996,15 @@ fn should_clear_active_goal(status, disposition) -> bool {
 
 七个小节,每节防一种具体失败:
 
-| 小节 | 防的失败 | 关键句 |
-|---|---|---|
-| **Continuation behavior** | 把目标缩小到本轮能做完的程度 | "Ending this turn does not require shrinking the objective to what fits now" |
-| **Budget** | 无(信息告知) | 已用 / 预算 / 剩余 |
-| **Work from evidence** | 靠对话记忆而不看实际状态 | "Use the current worktree and external state as authoritative" |
-| **Progress visibility** | 多步任务无计划;或用计划替代干活 | "do not treat a plan update as a substitute for doing the work" |
-| **Fidelity** | 换一个更容易通过测试的更小方案 | "An edit is aligned only if it makes the requested final state more true" |
-| **Completion audit** | 假完成 | "treat completion as unproven";逐条需求找权威证据;"Treat uncertain or indirect evidence as not achieved" |
-| **Blocked audit** | 一遇阻力就放弃 | 同一阻塞**连续 3 轮**才允许标 blocked |
+| 小节                      | 防的失败                        | 关键句                                                                                                   |
+| ------------------------- | ------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| **Continuation behavior** | 把目标缩小到本轮能做完的程度    | "Ending this turn does not require shrinking the objective to what fits now"                             |
+| **Budget**                | 无(信息告知)                    | 已用 / 预算 / 剩余                                                                                       |
+| **Work from evidence**    | 靠对话记忆而不看实际状态        | "Use the current worktree and external state as authoritative"                                           |
+| **Progress visibility**   | 多步任务无计划;或用计划替代干活 | "do not treat a plan update as a substitute for doing the work"                                          |
+| **Fidelity**              | 换一个更容易通过测试的更小方案  | "An edit is aligned only if it makes the requested final state more true"                                |
+| **Completion audit**      | 假完成                          | "treat completion as unproven";逐条需求找权威证据;"Treat uncertain or indirect evidence as not achieved" |
+| **Blocked audit**         | 一遇阻力就放弃                  | 同一阻塞**连续 3 轮**才允许标 blocked                                                                    |
 
 两条贯穿始终的硬约束:
 
@@ -1061,12 +1061,12 @@ fn should_clear_active_goal(status, disposition) -> bool {
 
 状态行指示器(`goal_status.rs`):
 
-| 状态 | 显示 |
-|---|---|
-| active | 有预算显示 `12.5K / 50K`,无预算显示已用时长 `2m` |
-| paused / stalled / usage limited | 只显示状态 |
-| limited by budget | `63.9K / 50K tokens` |
-| complete | 有预算显示 tokens,无预算显示时长 |
+| 状态                             | 显示                                             |
+| -------------------------------- | ------------------------------------------------ |
+| active                           | 有预算显示 `12.5K / 50K`,无预算显示已用时长 `2m` |
+| paused / stalled / usage limited | 只显示状态                                       |
+| limited by budget                | `63.9K / 50K tokens`                             |
+| complete                         | 有预算显示 tokens,无预算显示时长                 |
 
 active 状态下指示器的数字是滚动的,但**不是简单地加上 turn 已跑时间**:
 基线取 `max(快照观测时刻, turn 开始时刻)`(`goal_status.rs:34`),
@@ -1205,18 +1205,18 @@ sequenceDiagram
 
 ## 12. 失败与边界处理
 
-| 情形 | 行为 | 位置 |
-|---|---|---|
-| 不可重试的 turn error | → **blocked** | `extension.rs:308`,五个触发点见下 |
-| `UsageLimitExceeded` | → usage_limited | `extension.rs:315` |
-| 临时会话(无 rollout) | 拒绝,专门文案 | `thread_goal_processor.rs:277` |
-| Review 子代理 | 不暴露 goal 工具 | `extension.rs:108` |
-| Plan 模式 | 不计量、不续跑、usage-limit 不生效 | `accounting.rs:80` |
-| 拿不到活线程 | 跳过续跑 | `runtime.rs:379` |
-| 目标已被替换 | 在途结算被 `expected_goal_id` 拦掉 | `goals.rs:583` |
-| 过期 turn 的停止请求 | 忽略 | `runtime.rs:256` |
-| 模板 parse 失败 | **panic**(嵌入模板视为不变量) | `steering.rs:33` |
-| 模板 render 失败 | **panic** | `steering.rs:76/97/120` |
+| 情形                  | 行为                               | 位置                              |
+| --------------------- | ---------------------------------- | --------------------------------- |
+| 不可重试的 turn error | → **blocked**                      | `extension.rs:308`,五个触发点见下 |
+| `UsageLimitExceeded`  | → usage_limited                    | `extension.rs:315`                |
+| 临时会话(无 rollout)  | 拒绝,专门文案                      | `thread_goal_processor.rs:277`    |
+| Review 子代理         | 不暴露 goal 工具                   | `extension.rs:108`                |
+| Plan 模式             | 不计量、不续跑、usage-limit 不生效 | `accounting.rs:80`                |
+| 拿不到活线程          | 跳过续跑                           | `runtime.rs:379`                  |
+| 目标已被替换          | 在途结算被 `expected_goal_id` 拦掉 | `goals.rs:583`                    |
+| 过期 turn 的停止请求  | 忽略                               | `runtime.rs:256`                  |
+| 模板 parse 失败       | **panic**(嵌入模板视为不变量)      | `steering.rs:33`                  |
+| 模板 render 失败      | **panic**                          | `steering.rs:76/97/120`           |
 
 `on_turn_error` 那条的注释解释了为什么不可重试错误要直接 blocked:
 
@@ -1232,13 +1232,13 @@ as can happen with compaction errors.
 
 不是「turn 失败时触发一次」这么简单:
 
-| 位置 | 场景 |
-|---|---|
-| `core/src/tasks/mod.rs:562` | task 返回非 abort 错误 |
-| `core/src/session/turn.rs:175` | **pre-sampling 压缩失败** |
+| 位置                           | 场景                                                     |
+| ------------------------------ | -------------------------------------------------------- |
+| `core/src/tasks/mod.rs:562`    | task 返回非 abort 错误                                   |
+| `core/src/session/turn.rs:175` | **pre-sampling 压缩失败**                                |
 | `core/src/session/turn.rs:449` | **turn 中途压缩失败** ← 就是注释里说的 compaction errors |
-| `core/src/session/turn.rs:524` | 图片非法 → BadRequest |
-| `core/src/session/turn.rs:537` | 通用 turn 错误 |
+| `core/src/session/turn.rs:524` | 图片非法 → BadRequest                                    |
+| `core/src/session/turn.rs:537` | 通用 turn 错误                                           |
 
 三条必须知道的配套事实:
 
@@ -1259,14 +1259,14 @@ as can happen with compaction errors.
 
 ### 13.1 防偏移:是真机制
 
-| 机制 | 源码依据 | 挡住了什么 |
-|---|---|---|
-| **模型没有改写 objective 的权限** | `update_goal` 参数只有 `status`,且只接受 complete / blocked(`spec.rs:60`、`tool.rs:226` 二次校验);`create_goal` 在有未完成目标时硬失败(`goals.rs:245`) | 模型**不能**把「迁移全部并让测试通过」改成「迁移一个文件」 |
-| **每轮把完整 objective 原文重注入** | `continuation_steering_item` 每次续跑都重新渲染(`steering.rs:45`) | 长跑中上下文压缩、对话漂移导致的「忘了原始要求」 |
-| **objective 存 DB 而非上下文** | `thread_goals` 表 | compaction 吃不掉目标 |
-| **objective 被标为不可信数据** | XML 包裹 + 转义 + 显式声明 | 目标文本本身变成提示注入向量 |
-| **续跑与否由宿主决定** | `continue_if_idle` + `try_start_turn_if_idle`;预算判定在 SQL 里 | 模型无法自己决定「我不干了」 |
-| **不可重试错误强制 blocked** | `on_turn_error`(`extension.rs:308`) | 编译 / 压缩错误把循环变成烧钱机 |
+| 机制                                | 源码依据                                                                                                                                               | 挡住了什么                                                 |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------- |
+| **模型没有改写 objective 的权限**   | `update_goal` 参数只有 `status`,且只接受 complete / blocked(`spec.rs:60`、`tool.rs:226` 二次校验);`create_goal` 在有未完成目标时硬失败(`goals.rs:245`) | 模型**不能**把「迁移全部并让测试通过」改成「迁移一个文件」 |
+| **每轮把完整 objective 原文重注入** | `continuation_steering_item` 每次续跑都重新渲染(`steering.rs:45`)                                                                                      | 长跑中上下文压缩、对话漂移导致的「忘了原始要求」           |
+| **objective 存 DB 而非上下文**      | `thread_goals` 表                                                                                                                                      | compaction 吃不掉目标                                      |
+| **objective 被标为不可信数据**      | XML 包裹 + 转义 + 显式声明                                                                                                                             | 目标文本本身变成提示注入向量                               |
+| **续跑与否由宿主决定**              | `continue_if_idle` + `try_start_turn_if_idle`;预算判定在 SQL 里                                                                                        | 模型无法自己决定「我不干了」                               |
+| **不可重试错误强制 blocked**        | `on_turn_error`(`extension.rs:308`)                                                                                                                    | 编译 / 压缩错误把循环变成烧钱机                            |
 
 **「目标不偏移」这件事,Codex 是用权限边界解决的,不是用提示词。**
 
@@ -1300,17 +1300,17 @@ $ grep -rn "streak|consecutive|blocked_count" ext/goal/src/*.rs state/src/runtim
 
 ### 13.4 总表
 
-| 保证 | 靠什么 | 性质 |
-|---|---|---|
-| 模型不能改小目标 | 权限边界 | **机制** |
-| 目标不随压缩丢失 | 存 DB + 每轮重注入 | **机制** |
-| 目标文本不能当指令 | XML 包裹 + 转义 + 声明 | **机制** |
-| 续跑与否不由模型决定 | 宿主循环 + SQL 预算 | **机制** |
-| 不烧钱死循环 | 不可重试错误强制 blocked + SQL 硬预算 | **机制** |
-| 用户输入优先 | `try_start_turn_if_idle` 四重检查 | **机制** |
-| **完成是真的完成** | Completion audit 段 | **提示词** |
-| **不轻易放弃** | Blocked audit 三轮规则 | **提示词** |
-| **不偷换更容易的方案** | Fidelity 段 | **提示词** |
+| 保证                   | 靠什么                                | 性质       |
+| ---------------------- | ------------------------------------- | ---------- |
+| 模型不能改小目标       | 权限边界                              | **机制**   |
+| 目标不随压缩丢失       | 存 DB + 每轮重注入                    | **机制**   |
+| 目标文本不能当指令     | XML 包裹 + 转义 + 声明                | **机制**   |
+| 续跑与否不由模型决定   | 宿主循环 + SQL 预算                   | **机制**   |
+| 不烧钱死循环           | 不可重试错误强制 blocked + SQL 硬预算 | **机制**   |
+| 用户输入优先           | `try_start_turn_if_idle` 四重检查     | **机制**   |
+| **完成是真的完成**     | Completion audit 段                   | **提示词** |
+| **不轻易放弃**         | Blocked audit 三轮规则                | **提示词** |
+| **不偷换更容易的方案** | Fidelity 段                           | **提示词** |
 
 **结论:Codex 用权限边界解决了「不偏移」,用提示词处理「不敷衍」。**
 前者可以直接照搬,后者如果照搬,就只是搬了段文字。
@@ -1374,10 +1374,10 @@ $ grep -rn "streak|consecutive|blocked_count" ext/goal/src/*.rs state/src/runtim
 
 ### A5 `budget_limited` 与 `usage_limited` 的记账行为相反
 
-| 状态 | 后续用量 | 依据 |
-|---|---|---|
+| 状态             | 后续用量     | 依据                                                                              |
+| ---------------- | ------------ | --------------------------------------------------------------------------------- |
 | `budget_limited` | **继续累加** | 结算 mode `ActiveOnly` 含 budget_limited(`goals.rs:520`);测试 `:363` 断言 25 → 35 |
-| `usage_limited` | **停止累加** | 结算后 `clear_active_goal()`;测试 `:497` 断言之后再消耗仍是 23 |
+| `usage_limited`  | **停止累加** | 结算后 `clear_active_goal()`;测试 `:497` 断言之后再消耗仍是 23                    |
 
 ---
 
@@ -1387,13 +1387,13 @@ $ grep -rn "streak|consecutive|blocked_count" ext/goal/src/*.rs state/src/runtim
 
 实现时最容易漏变体的五个枚举,集中在这里。
 
-| 枚举 | 变体 | 位置 |
-|---|---|---|
-| `ThreadGoalStatus` | `active` / `paused` / `blocked` / `usage_limited` / `budget_limited` / `complete` | `state/src/model/thread_goal.rs:14` |
-| `GoalAccountingMode` | `ActiveStatusOnly`(仅测试) / `ActiveOnly`(默认) / `ActiveOrComplete`(标完成) / `ActiveOrStopped`(标阻塞) | `state/src/runtime/goals.rs:32`,语义见 §7.5 |
-| `BudgetLimitedGoalDisposition` | `KeepActive`(只有 `on_tool_finish` 用) / `ClearActive`(其余 5 处) | `ext/goal/src/accounting.rs:54`,语义见 §7.6 |
-| `TryStartTurnIfIdleRejectionReason` | `PendingTriggerTurn` / `PlanMode` / `Busy` | `core/src/codex_thread.rs`,检查点见 §6.2 |
-| `ToolCallOutcome`(决定是否计入结算) | `Completed` 计 / `Failed{handler_executed:true}` 计 / `Blocked` 不计 / `Failed{handler_executed:false}` 不计 / `Aborted` 不计 | `ext/goal/src/extension.rs:492` |
+| 枚举                                | 变体                                                                                                                          | 位置                                        |
+| ----------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------- |
+| `ThreadGoalStatus`                  | `active` / `paused` / `blocked` / `usage_limited` / `budget_limited` / `complete`                                             | `state/src/model/thread_goal.rs:14`         |
+| `GoalAccountingMode`                | `ActiveStatusOnly`(仅测试) / `ActiveOnly`(默认) / `ActiveOrComplete`(标完成) / `ActiveOrStopped`(标阻塞)                      | `state/src/runtime/goals.rs:32`,语义见 §7.5 |
+| `BudgetLimitedGoalDisposition`      | `KeepActive`(只有 `on_tool_finish` 用) / `ClearActive`(其余 5 处)                                                             | `ext/goal/src/accounting.rs:54`,语义见 §7.6 |
+| `TryStartTurnIfIdleRejectionReason` | `PendingTriggerTurn` / `PlanMode` / `Busy`                                                                                    | `core/src/codex_thread.rs`,检查点见 §6.2    |
+| `ToolCallOutcome`(决定是否计入结算) | `Completed` 计 / `Failed{handler_executed:true}` 计 / `Blocked` 不计 / `Failed{handler_executed:false}` 不计 / `Aborted` 不计 | `ext/goal/src/extension.rs:492`             |
 
 另外两个容易漏的数据契约:
 
@@ -1405,32 +1405,32 @@ $ grep -rn "streak|consecutive|blocked_count" ext/goal/src/*.rs state/src/runtim
 
 ## 附录 B:文件索引与阅读覆盖度
 
-| 层 | 文件 | 行数 | 覆盖 |
-|---|---|---|---|
-| protocol | `protocol/src/protocol.rs`(goal 部分) | — | 全 |
-| state | `state/src/model/thread_goal.rs` | 117 | 全 |
-| state | `state/src/runtime/goals.rs` | 1728 | 非测试部分全读 |
-| state | `goals_migrations/*.sql`、`migrations/0029/0033/0034` | 81 | 全 |
-| ext/goal | `extension.rs` | 504 | 全 |
-| ext/goal | `runtime.rs` | 586 | 全 |
-| ext/goal | `accounting.rs` | 442 | 全 |
-| ext/goal | `tool.rs` | 500 | 全 |
-| ext/goal | `api.rs` | 357 | 全 |
-| ext/goal | `spec.rs` / `steering.rs` / `events.rs` / `metrics.rs` / `analytics.rs` / `lib.rs` | 446 | 全 |
-| ext/goal | `tests/goal_extension_backend.rs` | 1477 | 20 个测试全读 |
-| ext/goal | `tests/accounting.rs` | 69 | 全 |
-| ext/goal | `templates/goals/*.md` | 83 | 全 |
-| core | `core/src/session/inject.rs` | 167 | 全 |
-| app-server | `thread_goal_processor.rs` | 462 | 全 |
-| app-server | `thread_fork_goal.rs` | 28 | 全 |
-| tui | `app/thread_goal_actions.rs` | 464 | 全 |
-| tui | `goal_files.rs` | 242 | 全 |
-| tui | `chatwidget/goal_menu.rs` | 143 | 全 |
-| tui | `chatwidget/goal_status.rs` | 228 | 全 |
-| tui | `goal_display.rs` | 111 | 全 |
-| tui | `chatwidget/slash_dispatch.rs`(goal 部分) | — | 全 |
-| tui | `chatwidget/interaction.rs`(中断部分) | — | 全 |
-| prompts | `prompts/src/goals.rs` | 110 | 全(旧位置,与 `steering.rs` 行为有出入,见 §9) |
+| 层         | 文件                                                                               | 行数 | 覆盖                                         |
+| ---------- | ---------------------------------------------------------------------------------- | ---- | -------------------------------------------- |
+| protocol   | `protocol/src/protocol.rs`(goal 部分)                                              | —    | 全                                           |
+| state      | `state/src/model/thread_goal.rs`                                                   | 117  | 全                                           |
+| state      | `state/src/runtime/goals.rs`                                                       | 1728 | 非测试部分全读                               |
+| state      | `goals_migrations/*.sql`、`migrations/0029/0033/0034`                              | 81   | 全                                           |
+| ext/goal   | `extension.rs`                                                                     | 504  | 全                                           |
+| ext/goal   | `runtime.rs`                                                                       | 586  | 全                                           |
+| ext/goal   | `accounting.rs`                                                                    | 442  | 全                                           |
+| ext/goal   | `tool.rs`                                                                          | 500  | 全                                           |
+| ext/goal   | `api.rs`                                                                           | 357  | 全                                           |
+| ext/goal   | `spec.rs` / `steering.rs` / `events.rs` / `metrics.rs` / `analytics.rs` / `lib.rs` | 446  | 全                                           |
+| ext/goal   | `tests/goal_extension_backend.rs`                                                  | 1477 | 20 个测试全读                                |
+| ext/goal   | `tests/accounting.rs`                                                              | 69   | 全                                           |
+| ext/goal   | `templates/goals/*.md`                                                             | 83   | 全                                           |
+| core       | `core/src/session/inject.rs`                                                       | 167  | 全                                           |
+| app-server | `thread_goal_processor.rs`                                                         | 462  | 全                                           |
+| app-server | `thread_fork_goal.rs`                                                              | 28   | 全                                           |
+| tui        | `app/thread_goal_actions.rs`                                                       | 464  | 全                                           |
+| tui        | `goal_files.rs`                                                                    | 242  | 全                                           |
+| tui        | `chatwidget/goal_menu.rs`                                                          | 143  | 全                                           |
+| tui        | `chatwidget/goal_status.rs`                                                        | 228  | 全                                           |
+| tui        | `goal_display.rs`                                                                  | 111  | 全                                           |
+| tui        | `chatwidget/slash_dispatch.rs`(goal 部分)                                          | —    | 全                                           |
+| tui        | `chatwidget/interaction.rs`(中断部分)                                              | —    | 全                                           |
+| prompts    | `prompts/src/goals.rs`                                                             | 110  | 全(旧位置,与 `steering.rs` 行为有出入,见 §9) |
 
 **未读**:TUI 快照文件(纯渲染断言)、`chatwidget/tests/goal_menu.rs` 与
 `goal_validation.rs` 的测试体(测试名已核对,覆盖超长目标、多行目标、粘贴保留、队列中断)。
@@ -1443,6 +1443,7 @@ $ grep -rn "streak|consecutive|blocked_count" ext/goal/src/*.rs state/src/runtim
 `on_turn_abort` 与 `on_thread_idle` 两个钩子也没有对应的 harness 方法。
 
 真正的覆盖散在别处:
+
 - 让位闸门拒绝:`core/src/session/tests.rs:10243/10272/10297/10328`
 - deferral 端到端:`app-server/tests/suite/v2/thread_fork.rs:603/746/818`
 

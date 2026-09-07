@@ -16,6 +16,10 @@ import {
   startIssueFeatureForMainProcess,
   stopIssueFeatureForMainProcess
 } from './issues/issue-main-process-lifecycle'
+import {
+  startGoalFeatureForMainProcess,
+  stopGoalFeatureForMainProcess
+} from './startup/main-process-goals'
 import { resolveOpenedMarkdownDocuments } from './startup/os-opened-markdown-files'
 
 function openMainWindow(options: { revealOnDidFinishLoad?: boolean } = {}): BrowserWindow {
@@ -110,12 +114,16 @@ if (preflightReady) {
   state.osOpenedMarkdownFiles.capture(process.argv)
   registerMainProcessIpcHandlers()
   app.once('will-quit', stopIssueFeatureForMainProcess)
+  app.once('will-quit', stopGoalFeatureForMainProcess)
   installMainProcessQuitHandlers()
   void app.whenReady().then(async () => {
     await initializeMainProcessReady({
       openMainWindow,
       handleMacAppActivation,
-      afterTerminalRuntimeStartup: startIssueFeatureForMainProcess
+      afterTerminalRuntimeStartup: async () => {
+        await startIssueFeatureForMainProcess()
+        await startGoalFeatureForMainProcess()
+      }
     })
   })
 }

@@ -22,6 +22,9 @@ export type NormalizeRightSidebarRouteOptions = {
   installedPluginTabKeys?: ReadonlySet<string>
 }
 
+/** The bundled Goal plugin this build replaced with the native Goals tab. */
+export const LEGACY_GOAL_PLUGIN_TAB_KEY = 'plugin:stablyai.orca-goal/goal'
+
 export function normalizeRightSidebarRoute(
   tab: unknown,
   explorerView?: unknown,
@@ -30,6 +33,10 @@ export function normalizeRightSidebarRoute(
   // Why: older builds persisted Search as a standalone activity tab.
   if (tab === 'search') {
     return { rightSidebarTab: 'explorer', rightSidebarExplorerView: 'search' }
+  }
+  // Why: a route persisted by the removed Goal plugin lands on the native tab, not on Explorer.
+  if (tab === LEGACY_GOAL_PLUGIN_TAB_KEY) {
+    return { rightSidebarTab: 'goals', rightSidebarExplorerView: 'files' }
   }
   // Why: plugin tabs are open-ended keys; validate their shape so a persisted
   // plugin tab isn't reset to Explorer on restart.
@@ -46,7 +53,8 @@ export function normalizeRightSidebarRoute(
     tab === 'pr-checks' ||
     tab === 'source-control' ||
     tab === 'checks' ||
-    tab === 'ports'
+    tab === 'ports' ||
+    tab === 'goals'
   ) {
     return {
       rightSidebarTab: tab,

@@ -8,7 +8,8 @@ import { decide } from './goal-decision.mjs'
 import { diffText, diffTrees, snapshotWorktree } from './git-snapshot.mjs'
 import { describeFindings, scanRound } from './tamper-scan.mjs'
 import { ROOT, appendLog, writeGoal } from './goal-state.mjs'
-import { sendText } from './orca-terminal.mjs'
+import { sendInterrupt, sendText } from './orca-terminal.mjs'
+import { applyRecordToGoal } from './goal-record-projection.mjs'
 import { classifyRound, observeAgent } from './terminal-activity.mjs'
 import { advanceWait, initialWaitState } from './round-wait-machine.mjs'
 import { notifyDesktop } from './desktop-notification.mjs'
@@ -32,17 +33,30 @@ const START_MS = num('ORCA_GOAL_START_MS', 300_000) // 注入后多久还没有�
 // 连续调几十次工具跑上两三小时是正常的,拿单轮上限去砍它等于把干得好好的活腰斩。
 // 真正的总闸是目标的时长预算,在下面 deadline 里查。
 const STUCK_MS = num('ORCA_GOAL_STUCK_MS', 20 * 60_000)
+// 停止时中断已发出后,最多等这么久看本轮有没有结束;等不到就如实报「中断未确认」。
+const STOP_GRACE_MS = num('ORCA_GOAL_STOP_GRACE_MS', 60_000)
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 
 /** 老记录没有这个字段。缺就当 0:旧的那个数是墙钟,本来就不代表消耗量,继承过来只会继续误导。 */
 const activeMsOf = (goal) => goal.activeMs || 0
 
+/** 没有宿主控制时的空实现:永远放行,不写收据。 */
+const NO_CONTROL = {
+  checkpoint: async () => 'run',
+  takeReload: () => null,
+  confirmReload: async () => {},
+  confirmStop: async () => {}
+}
+
 /**
  * @param {boolean} attach 挂载到一个已经在干活的会话:首轮不注入,先等它把手上这轮跑完再接管。
  *   目标已经在会话里了(比如上一次驱动退出但注入已落地),这时再注入会打断它。
+ * @param {{ checkpoint: (phase: string) => Promise<'run'|'paused'> }} control 合作式控制检查点。
+ *   宿主把「暂停续跑」写成意图文件,驱动只在这些点上读:注入前、等轮次期间、等人期间、重试退避期间。
+ *   暂停只关闭新注入,不打断已经在跑的一轮;确认也在这里落收据。
  */
-export async function runLoop(goal, { report, thresholds, attach = false }) {
+export async function runLoop(goal, { report, thresholds, attach = false, control = NO_CONTROL }) {
   let current = goal
   let pending = { name: 'continuation', extra: {} }
   let attachPending = attach
@@ -60,6 +74,23 @@ export async function runLoop(goal, { report, thresholds, attach = false }) {
     // 循环会带着一个 state 已是终态的目标继续注入 —— 一个已达成的目标会被一路改写成 blocked。
     if (current.state !== 'active') {
       return current
+    }
+    // 宿主改了定义/会话:注入前套用并确认。暂停期间也要套用,否则「保存」会一直挂在 applying,
+    // 而面板在有未结算操作时不放行「恢复」—— 两边互相等。
+    const applyReload = async () => {
+      const reload = control.takeReload?.()
+      if (!reload) {
+        return
+      }
+      current = applyRecordToGoal(current, reload)
+      await writeGoal(current)
+      await control.confirmReload?.()
+      report.warn(`已套用宿主更新的目标定义(版本 ${current.specRevision ?? '?'})`)
+    }
+    // 暂停闸口只挡「下一次注入」。跨过这里之后本轮就算在途,暂停要等它自然结束。
+    const gate = await holdWhilePaused(control, report, applyReload)
+    if (gate === 'stop') {
+      return await finishStopped(current, control, { turnStopped: null, acceptanceStopped: null })
     }
     let turn = current.turns + 1
     try {
@@ -109,7 +140,8 @@ export async function runLoop(goal, { report, thresholds, attach = false }) {
         sentAt,
         report,
         goalDeadline,
-        inject
+        inject,
+        control
       )
       // 判定说结束了,但这一轮短得不像话 —— 多半是把上一轮的结束事件当成了本轮的。
       // 补足最短间隔再进下一轮,别让误判把预算和终端一起冲垮。
@@ -119,6 +151,18 @@ export async function runLoop(goal, { report, thresholds, attach = false }) {
       }
       // 这一轮实际花了多久,立刻记账 —— 下面每个出口分支都从 current 派生,记在这里才不会漏。
       current = { ...current, activeMs: activeMsOf(current) + (Date.now() - sentAt) }
+      if (outcome.stopped) {
+        current = { ...current, turns: turn }
+        await logTerminalRound(
+          { ...current, state: 'aborted', finishReason: '人为停止' },
+          turn,
+          pending.name
+        )
+        return await finishStopped(current, control, {
+          turnStopped: outcome.turnStopped,
+          acceptanceStopped: null
+        })
+      }
       if (outcome.budgetHit) {
         current = {
           ...current,
@@ -242,9 +286,15 @@ export async function runLoop(goal, { report, thresholds, attach = false }) {
         report.awaitUser(verdict.action.reason)
         // 停下等人是唯一「不叫人就永远不会动」的状态,必须主动通知,不能只写日志。
         notifyDesktop('orca-goal:等你确认', verdict.action.reason.slice(0, 160))
-        await waitForUser(current.terminalHandle, report)
+        const resumed = await waitForUser(current.terminalHandle, report, control)
         current = { ...current, awaitingUser: null }
         await writeGoal(current)
+        if (resumed === 'stop') {
+          return await finishStopped(current, control, {
+            turnStopped: null,
+            acceptanceStopped: null
+          })
+        }
         attachPending = true // 人可能已经给它新指令了,别打断
         errorSince = null
         continue
@@ -283,9 +333,53 @@ export async function runLoop(goal, { report, thresholds, attach = false }) {
       }
       // 已经注入过就别再注入一次 —— 重试时挂到 agent 手上那一轮上,和 resume 的语义一样。
       attachPending = injectedTurn === turn
+      if ((await control.checkpoint('retry-backoff')) === 'stop') {
+        return await finishStopped(current, control, { turnStopped: null, acceptanceStopped: null })
+      }
       await sleep(POLL_MS)
     }
   }
+}
+
+/** 停止收尾:记录标为人为停止、落盘,再把驱动真正确认了的部分写进收据。 */
+async function finishStopped(goal, control, confirmation) {
+  const stopped = {
+    ...goal,
+    state: 'aborted',
+    finishReason: '人为停止',
+    finishedAt: Date.now(),
+    awaitingUser: null
+  }
+  await writeGoal(stopped).catch(() => {})
+  await control.confirmStop?.(confirmation)
+  return stopped
+}
+
+/**
+ * 注入前的闸口:暂停期间停在这里轮询意图,直到宿主重新放行或要求停止。不计入活跃时长。
+ * @returns {Promise<'run'|'stop'>}
+ */
+async function holdWhilePaused(control, report, applyReload = async () => {}) {
+  let announced = false
+  while (true) {
+    const gate = await control.checkpoint('before-inject')
+    await applyReload()
+    if (gate === 'stop') {
+      return 'stop'
+    }
+    if (gate !== 'paused') {
+      break
+    }
+    if (!announced) {
+      announced = true
+      report.warn('续跑已暂停 —— 不再注入下一轮,等待宿主恢复')
+    }
+    await sleep(POLL_MS)
+  }
+  if (announced) {
+    report.warn('续跑已恢复')
+  }
+  return 'run'
 }
 
 /**
@@ -383,12 +477,15 @@ async function writeGateChanges(goal, before, after, findings) {
 }
 
 /** 停下来等人:不注入、不判卡死,直到 agent 重新动起来。 */
-async function waitForUser(handle, report) {
+async function waitForUser(handle, report, control = NO_CONTROL) {
   let announced = false
   while (true) {
+    if ((await control.checkpoint('awaiting-user')) === 'stop') {
+      return 'stop'
+    }
     if (await isAgentBusy(handle)) {
       report.warn('agent 重新开始动了,继续跑')
-      return
+      return 'resumed'
     }
     if (!announced) {
       announced = true
@@ -421,7 +518,14 @@ async function safeToInject(handle) {
  * 拿不到时退回标题字形 + PTY 静默,那条路没有时间戳,所以必须先看到它动起来才敢判结束。
  * 「等用户确认」单独一档:此时绝不能注入,否则提示词会被打进权限对话框。
  */
-async function waitForRoundEnd(handle, sentAt, report, goalDeadline = Infinity, injected = true) {
+async function waitForRoundEnd(
+  handle,
+  sentAt,
+  report,
+  goalDeadline = Infinity,
+  injected = true,
+  control = NO_CONTROL
+) {
   await sleep(SETTLE_MS)
   // 判定本身在 round-wait-machine 里,是纯函数;这里只负责观察、报告和睡觉。
   const limits = {
@@ -431,8 +535,22 @@ async function waitForRoundEnd(handle, sentAt, report, goalDeadline = Infinity, 
     longRunMs: 30 * 60_000
   }
   let state = initialWaitState(sentAt, injected)
+  let interruptAt = null // 停止请求已发出中断的时刻
 
   while (Date.now() < goalDeadline) {
+    // 停止:先关闸(checkpoint 已做),再对在途的一轮发一次中断,然后仍按证据判断它结不结束。
+    if ((await control.checkpoint('waiting-round')) === 'stop' && interruptAt === null) {
+      interruptAt = Date.now()
+      try {
+        await sendInterrupt(handle)
+        report.warn('宿主要求停止:已向终端发送中断,等待本轮结束的证据')
+      } catch (err) {
+        report.warn(`宿主要求停止,但中断发送失败:${err?.message || err}`)
+      }
+    }
+    if (interruptAt !== null && Date.now() - interruptAt > STOP_GRACE_MS) {
+      return { stopped: true, turnStopped: false }
+    }
     let event
     try {
       const activity = await observeAgent(handle)
@@ -453,14 +571,17 @@ async function waitForRoundEnd(handle, sentAt, report, goalDeadline = Infinity, 
       reportWaitNotice(report, n)
     }
     if (step.outcome.type === 'done') {
-      return { ok: true }
+      return interruptAt !== null ? { stopped: true, turnStopped: true } : { ok: true }
     }
     if (step.outcome.type === 'failure') {
-      return { failure: step.outcome.reason }
+      // 中断之后终端断开或没动静,也算这一轮结束了;没中断过才是真正的失败。
+      return interruptAt !== null
+        ? { stopped: true, turnStopped: true }
+        : { failure: step.outcome.reason }
     }
     await sleep(POLL_MS)
   }
-  return { budgetHit: true }
+  return interruptAt !== null ? { stopped: true, turnStopped: false } : { budgetHit: true }
 }
 
 /** 状态机吐出来的事件怎么讲给人听 —— 纯函数不碰 I/O,呈现留在这里。 */

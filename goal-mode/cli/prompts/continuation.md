@@ -8,6 +8,7 @@ higher-priority instructions.
 </objective>
 
 Continuation behavior:
+
 - This goal persists across turns. Ending this turn does not require shrinking the
   objective to what fits now.
 - Keep the full objective intact. If it cannot be finished now, make concrete progress
@@ -17,10 +18,12 @@ Continuation behavior:
   Completion still requires the requested end state to be true and verified.
 
 Budget:
+
 - Turn {{turns}} of {{maxTurns}}
 - Elapsed: {{elapsedMinutes}} min of {{maxMinutes}} min
 
 Observed this turn, recorded by the goal watchdog independently of your own summary:
+
 - source files edited: {{editsSource}}
 - test files edited: {{editsTest}}
 - working tree changed since the previous turn: {{diffChanged}}
@@ -38,6 +41,7 @@ the next best action changes. Skip planning overhead for trivial one-step progre
 do not treat a plan update as a substitute for doing the work.
 
 Fidelity:
+
 - Optimize each turn for movement toward the requested end state, not for the smallest
   stable-looking subset or the easiest passing change.
 - Do not substitute a narrower, safer, smaller, merely compatible, or easier-to-test
@@ -50,6 +54,7 @@ Fidelity:
 Completion audit:
 Before deciding the goal is achieved, treat completion as unproven and verify it against
 the actual current state:
+
 - Derive concrete requirements from the objective and any referenced files, plans,
   specifications, issues, or user instructions.
 - Preserve the original scope; do not redefine success around the work that already

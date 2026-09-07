@@ -1,6 +1,6 @@
 ---
 document_type: test-case
-status: ready
+status: needs-update
 updated_at: 2026-09-05
 issue: Goal目标模式
 scope: Goal 目标模式
@@ -8,21 +8,23 @@ scope: Goal 目标模式
 
 # Goal 功能测试
 
-本文件整理当前测试代码与历史验收规格，不代表一次测试执行。`ready` 仅指文档现状核对完成；执行状态统一记录在 Test Run。关联 [需求](../../requirements/Goal目标模式.md) 与 [技术说明](../../solutions/Goal目标模式技术说明.md)。真实运行结果应另写 Test Run，不能把旧 README 的测试数量或历史截图填作本次通过。
+本文件整理既有测试代码与历史验收规格，不代表一次测试执行。2026-09-05 新增目标管理需求后标记为 `needs-update`：原 TC-301～TC-339 保留，尚未覆盖 REQ-116～REQ-120，旧面板命令提示等预期也不能直接用于验收新 UI。本轮只写方案，不新增正式 Test Case 或 Test Run。关联 [需求](../../requirements/Goal目标模式.md)、[目标管理方案](../../solutions/Goal目标管理与交互闭环方案.md) 与 [历史实现基线](../../solutions/Goal目标模式技术说明.md)。
 
 ## 覆盖来源与执行边界
 
-| 简称 | 实际测试来源 | 测试层级 |
-|---|---|---|
-| D | [goal-decision.test.mjs](../../../../../goal-mode/cli/goal-decision.test.mjs) | 纯决策、认领、扫描、部分验收真实子命令 |
-| W | [round-wait-machine.test.mjs](../../../../../goal-mode/cli/round-wait-machine.test.mjs) | 纯事件序列，不依赖真实 sleep |
-| L | [round-error-recovery.test.mjs](../../../../../goal-mode/cli/round-error-recovery.test.mjs) | runLoop 的 mock I/O/时钟编排 |
-| K | [worktree-key.test.mjs](../../../../../goal-mode/cli/worktree-key.test.mjs) | 临时目录与状态迁移 |
-| E | [goal-ergonomics.test.mjs](../../../../../goal-mode/cli/goal-ergonomics.test.mjs) | 参数、配置、路径、终端展示与假裁判等 |
-| R | [driver-resilience.test.mjs](../../../../../goal-mode/cli/driver-resilience.test.mjs) | 驱动退出/错误记录 |
-| P | [prompt-templates.test.mjs](../../../../../goal-mode/cli/prompt-templates.test.mjs) | 实际磁盘模板与变量契约 |
-| UI | [plugin.test.mts](../../../../../goal-mode/plugin/plugin.test.mts) | 真实 schema/host API/token，happy-dom 面板与 worker 行为 |
-| B | [plugin-launch-content.test.ts](../../../../../src/main/plugins/plugin-launch-content.test.ts) | bundled Goal 资源注册与宿主内容契约 |
+| 简称     | 实际测试来源                                                                                                                                                                                                                                                                                       | 测试层级                                                  |
+| -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| D        | [goal-decision.test.mjs](../../../../../goal-mode/cli/goal-decision.test.mjs)                                                                                                                                                                                                                      | 纯决策、认领、扫描、部分验收真实子命令                    |
+| W        | [round-wait-machine.test.mjs](../../../../../goal-mode/cli/round-wait-machine.test.mjs)                                                                                                                                                                                                            | 纯事件序列，不依赖真实 sleep                              |
+| L        | [round-error-recovery.test.mjs](../../../../../goal-mode/cli/round-error-recovery.test.mjs)                                                                                                                                                                                                        | runLoop 的 mock I/O/时钟编排                              |
+| K        | [worktree-key.test.mjs](../../../../../goal-mode/cli/worktree-key.test.mjs)                                                                                                                                                                                                                        | 临时目录与状态迁移                                        |
+| E        | [goal-ergonomics.test.mjs](../../../../../goal-mode/cli/goal-ergonomics.test.mjs)                                                                                                                                                                                                                  | 参数、配置、路径、终端展示与假裁判等                      |
+| R        | [driver-resilience.test.mjs](../../../../../goal-mode/cli/driver-resilience.test.mjs)                                                                                                                                                                                                              | 驱动退出/错误记录                                         |
+| P        | [prompt-templates.test.mjs](../../../../../goal-mode/cli/prompt-templates.test.mjs)                                                                                                                                                                                                                | 实际磁盘模板与变量契约                                    |
+| 宿主控制 | [goal-control-service.test.ts](../../../../../src/main/goals/goal-control-service.test.ts)、[goal-revision-control.test.ts](../../../../../src/main/goals/goal-revision-control.test.ts)、[goal-legacy-adoption.test.ts](../../../../../src/main/goals/goal-legacy-adoption.test.ts)               | 创建/暂停/继续/停止/编辑/换会话/归档/导入的收据与围栏语义 |
+| 驱动控制 | [goal-driver-control.test.mjs](../../../../../goal-mode/cli/goal-driver-control.test.mjs)、[goal-loop-stop.test.mjs](../../../../../goal-mode/cli/goal-loop-stop.test.mjs)                                                                                                                         | 意图文件到收据的确认；停止时的中断与本轮结束证据          |
+| 渲染层   | [goals-domain-store.test.ts](../../../../../src/renderer/src/goals/goals-domain-store.test.ts)、[goal-session-target.test.ts](../../../../../src/renderer/src/goals/goal-session-target.test.ts)、[right-sidebar-route.test.ts](../../../../../src/renderer/src/store/right-sidebar-route.test.ts) | store 身份保持、会话候选与绑定解析、旧插件路由归一        |
+| B        | [plugin-launch-content.test.ts](../../../../../src/main/plugins/plugin-launch-content.test.ts)                                                                                                                                                                                                     | bundled Goal 资源注册与宿主内容契约                       |
 
 表中“既有”只表示已找到相关自动化代码，不宣称覆盖完整。静态源码数量不是测试运行结果；需要实际测试报告后才填写通过数。
 
@@ -434,6 +436,6 @@ REQ-112 原提案规定的验证次序仍保留：先增加“连续不变仍继
 
 ## 后续执行记录要求
 
-安全的自动化入口是 CLI 目录内 `node --test --experimental-test-module-mocks *.test.mjs`，以及仓根 `pnpm exec vitest run --config goal-mode/plugin/vitest.config.ts`。使用项目 Node 版本；测试以临时目录、假终端和假裁判为主，不能将用户真实 `~/.orca-goal` 状态作为测试 fixture。
+安全的自动化入口是 CLI 目录内 `node --test --experimental-test-module-mocks *.test.mjs`，以及仓根 `pnpm test src/main/goals src/shared/goals src/renderer/src/goals`（插件目录已于 2026-09-06 移除）。使用项目 Node 版本；测试以临时目录、假终端和假裁判为主，不能将用户真实 `~/.orca-goal` 状态作为测试 fixture。
 
 每次 Test Run 记录代码版本、Node/平台、命令、实际覆盖的 TC、结果和证据路径。真实 Orca UI 验收遵守项目 Electron/CDP 流程；真实 agent 长跑、权限框、预算超时、应用重启、三平台和 SSH 的证据各自独立，不由 DOM 单测推导。

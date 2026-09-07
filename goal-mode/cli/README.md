@@ -50,7 +50,7 @@ node goal-mode/cli/acceptance-judge.mjs --agent codex --sandbox read-only --crit
 
 状态根目录为 `ORCA_GOAL_HOME` 或用户目录下的 `.orca-goal`。目标按工作区标识，终端可以改挂；放在工作区外不构成文件写入隔离。
 
-[运行提示词](prompts) 在首次使用时按 CLI 的相对路径读取，不能作为普通方案文档移动或删除。插件内置不会自动将 `orca-goal`、`orca-goal-judge` 安装到 PATH；可一直使用上述 Node 入口。
+[运行提示词](prompts) 在首次使用时按 CLI 的相对路径读取，不能作为普通方案文档移动或删除。App 内的原生目标面板不会把 `orca-goal`、`orca-goal-judge` 安装到 PATH；可一直使用上述 Node 入口。
 
 纯代码测试入口（不启动真实目标）：
 

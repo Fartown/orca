@@ -6,11 +6,23 @@ import { promises as fs } from 'node:fs'
 import path from 'node:path'
 import { ROOT } from './goal-state.mjs'
 
-const PROMPTS_DIR = path.join(import.meta.dirname, 'prompts')
+// 打成单文件的驱动里没有 import.meta.dirname,模板由入口内联后经 setTemplateSource 注入;
+// 那条路启动后不再读任何包内文件,应用升级删掉旧包也影响不到跑着的目标。
+const PROMPTS_DIR = import.meta.dirname ? path.join(import.meta.dirname, 'prompts') : null
 const cache = new Map()
+
+export function setTemplateSource(templates) {
+  cache.clear()
+  for (const [name, text] of Object.entries(templates)) {
+    cache.set(name, text)
+  }
+}
 
 async function loadTemplate(name) {
   if (!cache.has(name)) {
+    if (!PROMPTS_DIR) {
+      throw new Error(`模板 ${name}.md 未内联,且当前环境没有模板目录`)
+    }
     cache.set(name, await fs.readFile(path.join(PROMPTS_DIR, `${name}.md`), 'utf8'))
   }
   return cache.get(name)

@@ -19,6 +19,18 @@ function defaultOrcaBin() {
 
 const ORCA_BIN = process.env.ORCA_BIN || defaultOrcaBin()
 
+/**
+ * 可替换的传输后端。默认走 PATH 上的 orca CLI(子进程,每次一跑);
+ * 宿主拉起的驱动通过 setTerminalBackend 换成直连 runtime socket 的实现
+ * (goal-runtime-terminal.mjs),不依赖 PATH,也没有子进程抖动。
+ * 后端只负责传输;单行校验、accepted 判定这些语义仍在本文件里,两条路一致。
+ */
+let backend = null
+
+export function setTerminalBackend(next) {
+  backend = next
+}
+
 async function orca(args, { timeoutMs = 30_000 } = {}) {
   let stdout
   try {
@@ -65,6 +77,9 @@ function unwrap(envelope, what) {
 }
 
 export async function listTerminals() {
+  if (backend) {
+    return (await backend.listTerminals()) || []
+  }
   return unwrap(await orca(['terminal', 'list']), 'list').terminals || []
 }
 
@@ -74,15 +89,24 @@ export async function findTerminal(handle) {
 
 /** hook 驱动的 agent 状态行。CLI 里只有这条命令给得到 `waiting`,按 paneKey(tabId:leafId)对齐终端。 */
 export async function listAgentRows() {
+  if (backend) {
+    return backend.listAgentRows()
+  }
   const result = unwrap(await orca(['worktree', 'ps']), 'ps')
   return (result.worktrees || []).flatMap((w) => w.agents || [])
 }
 
 export async function showTerminal(handle) {
+  if (backend) {
+    return backend.showTerminal(handle)
+  }
   return unwrap(await orca(['terminal', 'show', '--terminal', handle]), 'show').terminal
 }
 
 export async function readTerminal(handle, { limit = 2000, cursor } = {}) {
+  if (backend) {
+    return backend.readTerminal(handle, { limit, cursor })
+  }
   const args = ['terminal', 'read', '--terminal', handle, '--limit', String(limit)]
   if (cursor != null) {
     args.push('--cursor', String(cursor))
@@ -100,19 +124,46 @@ export async function sendText(handle, text, { enter = true } = {}) {
   if (/[\r\n]/.test(text)) {
     throw new Error('sendText 收到多行文本:换行会被 TUI 当作回车提前提交')
   }
-  const args = ['terminal', 'send', '--terminal', handle, '--text', text]
-  if (enter) {
-    args.push('--enter')
+  let result
+  if (backend) {
+    result = await backend.send(handle, text, { enter })
+  } else {
+    const args = ['terminal', 'send', '--terminal', handle, '--text', text]
+    if (enter) {
+      args.push('--enter')
+    }
+    result = unwrap(await orca(args, { timeoutMs: 120_000 }), 'send')
   }
-  const result = unwrap(await orca(args, { timeoutMs: 120_000 }), 'send')
   if (result.accepted === false) {
     throw new Error('终端拒绝了输入(通常是移动端客户端正持有该终端的输入锁),本轮未写入任何字节')
   }
   return result
 }
 
+/**
+ * 向终端发一个中断(Ctrl+C)。accepted 只证明输入送达,不证明 agent 停了 ——
+ * 「本轮已结束」要由之后的 hook 状态另行确认。
+ */
+export async function sendInterrupt(handle) {
+  const result = backend
+    ? await backend.send(handle, '', { enter: false, interrupt: true })
+    : unwrap(
+        await orca(['terminal', 'send', '--terminal', handle, '--interrupt'], {
+          timeoutMs: 30_000
+        }),
+        'send'
+      )
+  if (result?.accepted === false) {
+    throw new Error('终端拒绝了中断输入(通常是移动端客户端正持有该终端的输入锁)')
+  }
+  return result
+}
+
 /** @returns {{idle: boolean, reason: string}} 超时不抛错 —— 「还在干活」是正常状态,不是异常。 */
 export async function waitIdle(handle, timeoutMs) {
+  if (backend) {
+    return backend.waitIdle(handle, timeoutMs)
+  }
   const envelope = await orca(
     [
       'terminal',

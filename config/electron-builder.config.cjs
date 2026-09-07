@@ -80,6 +80,12 @@ const relayExtraResource = {
   from: 'out/relay',
   to: 'relay'
 }
+// Why: the goal driver is a detached plain-Node child resolved from
+// process.resourcesPath, like the relay; it cannot live inside app.asar.
+const goalDriverExtraResource = {
+  from: 'out/goal-driver',
+  to: 'goal-driver'
+}
 // Why: bundled plugins are immutable install inputs and must remain ordinary
 // directories so the startup bootstrap can verify and publish exact bytes.
 const bundledPluginResources = {
@@ -99,6 +105,7 @@ const emojiShortcodeDatasetResource = {
 }
 const commonExtraResources = [
   relayExtraResource,
+  goalDriverExtraResource,
   bundledPluginResources,
   skillFreshnessResources,
   emojiShortcodeDatasetResource

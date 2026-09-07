@@ -17592,5 +17592,174 @@
       "action": "Try Agents",
       "hiddenToast": "Agents tab hidden. Re-enable it in Settings → Experimental."
     }
+  },
+  "goals": {
+    "quickActions": {
+      "newGoal": "Goal: New goal…",
+      "newGoalDescription": "Keep an agent session on a goal until it is verified.",
+      "verbs": {
+        "newGoal": "new goal",
+        "setGoal": "set goal",
+        "viewGoals": "view goals",
+        "goals": "goals"
+      },
+      "viewGoals": "Goal: View goals",
+      "viewGoalsDescription": "Open the Goals panel."
+    },
+    "controls": {
+      "pause": "Pause continuation",
+      "resume": "Resume",
+      "awaitingDriver": "Requested; waiting for the driver to confirm.",
+      "stop": "Stop",
+      "edit": "Edit",
+      "changeSession": "Change session",
+      "unarchive": "Unarchive",
+      "archive": "Archive",
+      "pauseToEdit": "Pause continuation to edit the goal or change its session.",
+      "stopTitle": "Stop this goal?",
+      "stopDescription": "Injection stops now and the round in flight gets an interrupt. The goal only reads as stopped once the agent confirms the turn ended; the session itself stays open.",
+      "keepRunning": "Keep running",
+      "stopConfirm": "Stop goal"
+    },
+    "editor": {
+      "criteria": "Acceptance criteria",
+      "addCriterion": "Add item",
+      "criteriaHint": "Each item can carry a command; only items with a command are verified independently.",
+      "criterionDescription": "Criterion {{value0}}",
+      "criterionPlaceholder": "What must hold",
+      "criterionCommand": "Command for criterion {{value0}}",
+      "criterionCommandPlaceholder": "Optional command; exit 0 passes, exit 3 means undecided",
+      "removeCriterion": "Remove criterion",
+      "title": "New goal",
+      "description": "The driver keeps injecting into the chosen session until the acceptance passes or the budget runs out.",
+      "objective": "Goal",
+      "objectivePlaceholder": "What must be true when this is done?",
+      "acceptanceText": "Acceptance notes",
+      "advanced": "Advanced settings",
+      "maxTurns": "Max turns",
+      "maxMinutes": "Max minutes",
+      "checkTimeout": "Check timeout (s)",
+      "zeroMeansUnlimited": "0 turns or minutes means unlimited.",
+      "extraChecks": "Extra check commands (one per line)",
+      "extraChecksHint": "Run by the driver in the workspace with a shell. Shown here before submission; nothing is hidden.",
+      "checkAll": "Run all checks even after the first failure",
+      "verifyWhenBlocked": "When the agent says it is blocked, run the checks before asking me",
+      "acknowledgeUnverified": "No acceptance commands: completion will be taken from the agent without independent verification.",
+      "cancel": "Cancel",
+      "starting": "Starting…",
+      "createAndStart": "Create and start",
+      "paneMissing": "That session is no longer open. Pick another one.",
+      "incarnationMissing": "Orca cannot pin this terminal; restart the session and retry.",
+      "workspaceMismatch": "That session belongs to another workspace.",
+      "workspace": "Workspace",
+      "pickWorkspace": "Pick a workspace",
+      "executionLocal": "Runs on this machine.",
+      "session": "Agent session",
+      "pickSession": "Pick a running agent session",
+      "noSessions": "No agent session is running in this workspace. Start one first; plain shells cannot be targeted.",
+      "sessionHint": "Only sessions Orca can identify by their agent hooks are listed.",
+      "unknownAgent": "agent",
+      "editTitle": "Edit goal",
+      "editDescription": "Changing the goal or acceptance starts a new definition revision; earlier evidence no longer counts. Changing only the budget keeps it.",
+      "save": "Save",
+      "saveAndResume": "Save and resume"
+    },
+    "detail": {
+      "back": "Goals",
+      "loading": "Loading goal…",
+      "continuationPaused": "Continuation paused",
+      "driverUnverifiable": "Driver unverifiable",
+      "execution": "Execution",
+      "turnsAndTime": "Turn {{value0}} · {{value1}} active",
+      "budget": "budget {{value0}} turns / {{value1}} min",
+      "sessionMissing": "The bound session is no longer open.",
+      "workspaceUnavailable": "The workspace is no longer available.",
+      "session": "Session",
+      "openSession": "Open session",
+      "terminalExited": "terminal closed",
+      "terminalUnverifiable": "terminal unverifiable",
+      "agentWorking": "agent working",
+      "agentWaiting": "agent waiting for you",
+      "agentIdle": "agent idle",
+      "agentUnknown": "agent status unknown",
+      "versions": "Definition revisions ({{value0}})",
+      "revisionLabel": "Revision {{value0}}",
+      "currentRevision": "current"
+    },
+    "list": {
+      "hostUnavailable": "Goals cannot be listed on this host",
+      "empty": "No goals in this scope",
+      "label": "Goals",
+      "turns": "{{value0}} turns",
+      "legacy": "CLI goal",
+      "import": "Import",
+      "legacyRunning": "Still driven by the orca-goal CLI; stop it there before importing."
+    },
+    "progress": {
+      "title": "Acceptance",
+      "noCriteria": "No acceptance commands: completion is taken from the agent, not verified.",
+      "verifiedCount": "{{value0}} of {{value1}} verified",
+      "extraCheck": "Check",
+      "passed": "Passed",
+      "failed": "Failed",
+      "inconclusive": "Could not be judged",
+      "stale": "Evidence out of date",
+      "notRun": "Not run",
+      "notVerified": "Not verified yet"
+    },
+    "sessionAction": {
+      "view": "View goal",
+      "set": "Set goal"
+    },
+    "panel": {
+      "title": "Goals",
+      "subtitle": "Keep an agent session on a goal until it is verified",
+      "newGoal": "New goal",
+      "searchPlaceholder": "Search goals",
+      "searchGoals": "Search goals"
+    },
+    "scope": {
+      "workspace": "This workspace",
+      "all": "All",
+      "label": "Scope"
+    },
+    "filter": {
+      "all": "All",
+      "running": "Running",
+      "attention": "Needs attention",
+      "history": "History"
+    },
+    "phase": {
+      "starting": "Starting",
+      "executing": "Running",
+      "verifying": "Verifying",
+      "waitingUser": "Needs you",
+      "idle": "Paused",
+      "complete": "Complete",
+      "budgetExhausted": "Budget exhausted",
+      "interrupted": "Interrupted"
+    },
+    "completion": {
+      "verified": "Independently verified",
+      "unverified": "Agent claimed completion; not verified",
+      "claimed": "Completion claimed; verifying"
+    },
+    "status": {
+      "unsupported": "This Orca host version does not support Goals.",
+      "offline": "The host is offline.",
+      "driverMissing": "The goal driver is not bundled with this build (run pnpm build:goal-driver).",
+      "unavailable": "Goals are unavailable on this host.",
+      "degraded": "Agent hook evidence is unavailable; turn status will be unknown.",
+      "checking": "Checking Goal availability…"
+    },
+    "stats": {
+      "activeMinutes": "{{value0}} min"
+    },
+    "rebind": {
+      "sessionUnavailable": "That session cannot be pinned; pick another one.",
+      "title": "Change session",
+      "description": "Pick another agent session in the same workspace. Turns, evidence and verdicts stay with the goal.",
+      "confirm": "Move goal"
+    }
   }
 }

@@ -30,8 +30,7 @@ export default defineConfig({
       'config/scripts/**/*.test.ts',
       'config/scripts/**/*.test.mjs',
       'tests/tools/**/*.test.mjs',
-      'tests/e2e/**/*.unit.test.ts',
-      'goal-mode/plugin/**/*.test.mts'
+      'tests/e2e/**/*.unit.test.ts'
     ],
     // Why: the full suite runs heavy TS transforms plus real git/http fixtures;
     // the Vitest 5s defaults are too tight for the slowest integration cases.

@@ -345,6 +345,20 @@ function packagedResourceDestinations(platform) {
   )
 }
 
+describe('goal driver resources', () => {
+  // Why: main resolves the driver from process.resourcesPath/goal-driver on every
+  // platform; a missing mapping silently downgrades Goals to "driver bundle missing".
+  it('copies out/goal-driver beside the relay bundles on every platform', () => {
+    for (const platform of ['win', 'mac', 'linux']) {
+      const entry = (electronBuilderConfig[platform].extraResources ?? []).find(
+        (resource) => String(resource.to).replaceAll('\\', '/') === 'goal-driver'
+      )
+      expect(entry, `${platform} does not package the goal driver`).toBeDefined()
+      expect(String(entry.from).replaceAll('\\', '/')).toBe('out/goal-driver')
+    }
+  })
+})
+
 describe('lazily required packages reach Resources/node_modules', () => {
   it('copies every createRequire specifier main uses into the packaged resource plan', () => {
     const specifiers = collectLazyRequireSpecifiers(join(projectRoot, 'src', 'main'))

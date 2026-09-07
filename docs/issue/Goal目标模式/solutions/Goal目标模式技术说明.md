@@ -1,6 +1,6 @@
 ---
 document_type: technical-solution
-status: ready
+status: superseded
 updated_at: 2026-09-05
 issue: Goal目标模式
 scope: Goal 目标模式
@@ -8,22 +8,26 @@ scope: Goal 目标模式
 
 # Goal 目标模式技术说明
 
+2026-09-05：面向后续开发的主方案入口已切换为 [Goal 目标管理与交互闭环方案](Goal目标管理与交互闭环方案.md)。本文保留为文档整理时的实现基线，不再代表目标态 UI 设计；新方案尚未实现，不能反过来把本文描述的当前能力当作已升级。
+
+后续核对修正：sandbox 面板没有 `commands.invoke` 通道，但 trusted renderer 的 `window.api.plugins.invokeCommand({ pluginKey, commandId, args })` 及 runtime `plugins.invokeCommand` 已支持带参并透传至 worker。本文 §9 的无上下文限制描述的是旧 Goal 命令调用方式，不代表整个宿主协议不能带参。源码参见 [插件 RPC](../../../../src/main/runtime/rpc/methods/plugins.ts) 与 [worker 消息协议](../../../../src/shared/plugins/plugin-host-protocol.ts)。
+
 本文合并 Goal 历史设计、CLI/plugin 说明、评审和待决清单中仍有效的信息，以当前工作区源码为准。`ready` 仅表示文档现状核对完成，不是产品验收、发布或三平台运行证明。关联 [需求](../requirements/Goal目标模式.md) 与 [测试](../tests/cases/Goal功能测试.md)。
 
 ## 需求覆盖索引
 
-| 关联需求 | 技术章节与边界 |
-| --- | --- |
-| REQ-101、REQ-106 | §1、§5：既有交互会话、轮次观察、等待与注入 |
-| REQ-102、REQ-115 | §3、§4、§8：工作区 key、锁、迁移、恢复和当前身份限制 |
-| REQ-103、REQ-104 | §6、§7：认领、独立验收与未经验证的完成 |
-| REQ-105 | §5、§6：轮数、活跃时长与验收超时边界 |
-| REQ-107 | §8：分阶段异常与恢复，不宣称持久阶段机已完整 |
-| REQ-108 | §7：git 证据、门禁变更与缓存限制 |
-| REQ-109 | §2、§9：bundled 资源、状态镜像、面板与命令边界 |
-| REQ-110 | §3：参数、配置、后台路径及未统一的校验 |
-| REQ-111 | §10：本机、Folder、Linux、Windows、SSH/WSL 支持边界 |
-| REQ-112、REQ-113、REQ-114 | §10.1～§10.3：未实现或部分实现的旧提案目标 |
+| 关联需求                  | 技术章节与边界                                       |
+| ------------------------- | ---------------------------------------------------- |
+| REQ-101、REQ-106          | §1、§5：既有交互会话、轮次观察、等待与注入           |
+| REQ-102、REQ-115          | §3、§4、§8：工作区 key、锁、迁移、恢复和当前身份限制 |
+| REQ-103、REQ-104          | §6、§7：认领、独立验收与未经验证的完成               |
+| REQ-105                   | §5、§6：轮数、活跃时长与验收超时边界                 |
+| REQ-107                   | §8：分阶段异常与恢复，不宣称持久阶段机已完整         |
+| REQ-108                   | §7：git 证据、门禁变更与缓存限制                     |
+| REQ-109                   | §2、§9：bundled 资源、状态镜像、面板与命令边界       |
+| REQ-110                   | §3：参数、配置、后台路径及未统一的校验               |
+| REQ-111                   | §10：本机、Folder、Linux、Windows、SSH/WSL 支持边界  |
+| REQ-112、REQ-113、REQ-114 | §10.1～§10.3：未实现或部分实现的旧提案目标           |
 
 ## 1. 当前架构与路线决策
 
@@ -46,59 +50,59 @@ flowchart TD
   W --> P
 ```
 
-| 历史路线 | 保留的取舍依据 | 最终位置 |
-|---|---|---|
-| 早期全部放入 worker | worker 有空闲回收、事件/命令超时；terminal.sendText 的工作区/长度约束不适合后台长循环 | worker 留作控制与观测 |
-| v2 Stop hook 拦截 | 旧记录报告连续 block 上限、hook 超时与长验收冲突、配置/路径读取障碍 | 不安装额外 hook；借用 Orca 已有状态信号 |
-| v3 headless 驱动干活 agent | 可获得结构化输出/成本，但不保留用户想要的交互式工作会话 | 仅裁判采用 headless |
-| v4 外部驱动交互会话 | 符合用户可查看、插话、切工作区的使用方式 | 当前主路线；具体实现已超过并偏离 v4 草案 |
+| 历史路线                   | 保留的取舍依据                                                                        | 最终位置                                 |
+| -------------------------- | ------------------------------------------------------------------------------------- | ---------------------------------------- |
+| 早期全部放入 worker        | worker 有空闲回收、事件/命令超时；terminal.sendText 的工作区/长度约束不适合后台长循环 | worker 留作控制与观测                    |
+| v2 Stop hook 拦截          | 旧记录报告连续 block 上限、hook 超时与长验收冲突、配置/路径读取障碍                   | 不安装额外 hook；借用 Orca 已有状态信号  |
+| v3 headless 驱动干活 agent | 可获得结构化输出/成本，但不保留用户想要的交互式工作会话                               | 仅裁判采用 headless                      |
+| v4 外部驱动交互会话        | 符合用户可查看、插话、切工作区的使用方式                                              | 当前主路线；具体实现已超过并偏离 v4 草案 |
 
 “不改 Orca 源码”是早期约束记录，不能描述整个当前集成：`storage.get` 的面板访问、bundled 插件资源和内容索引已有宿主侧改动。旧方案中的 `waiting → 注入` 映射被纠正；当前 waiting/blocked 都是需要用户。
 
 ## 2. 目录与运行资源
 
-| 位置 | 职责 |
-|---|---|
-| [orca-goal.mjs](../../../../goal-mode/cli/orca-goal.mjs) | CLI 解析、目标选择、start/resume/stop/rebind/status/watch/forget |
-| [goal-loop.mjs](../../../../goal-mode/cli/goal-loop.mjs) | 看门狗编排、证据、等待、验收、重试与判词 |
-| [goal-decision.mjs](../../../../goal-mode/cli/goal-decision.mjs) | 纯决策，给出 verify/continue/finish/await-user |
-| [round-wait-machine.mjs](../../../../goal-mode/cli/round-wait-machine.mjs) | 纯轮次等待状态机 |
-| [orca-terminal.mjs](../../../../goal-mode/cli/orca-terminal.mjs)、[terminal-activity.mjs](../../../../goal-mode/cli/terminal-activity.mjs) | 公开 CLI 与 hook/PTY 状态解释 |
-| [goal-state.mjs](../../../../goal-mode/cli/goal-state.mjs) | 工作区 key、原子状态写入、日志、迁移与锁 |
-| [acceptance-gate.mjs](../../../../goal-mode/cli/acceptance-gate.mjs)、[acceptance-judge.mjs](../../../../goal-mode/cli/acceptance-judge.mjs) | 命令验收及独立 agent 裁判 |
-| [cli/prompts](../../../../goal-mode/cli/prompts) | 实际运行提示词模板；必须保留原目录 |
-| [bundled Goal 插件](../../../../resources/plugins/launch/stablyai.orca-goal) | 实际 manifest、worker.mjs、panel.html |
-| [bundled-plugins.json](../../../../resources/plugins/launch/bundled-plugins.json) | `stablyai.orca-goal` 注册及 contentHash |
-| [goal-mode/plugin](../../../../goal-mode/plugin) | 测试配置、插件测试与 CDP 验证脚本，已不是插件 runtime 目录 |
+| 位置                                                                                                                                         | 职责                                                             |
+| -------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| [orca-goal.mjs](../../../../goal-mode/cli/orca-goal.mjs)                                                                                     | CLI 解析、目标选择、start/resume/stop/rebind/status/watch/forget |
+| [goal-loop.mjs](../../../../goal-mode/cli/goal-loop.mjs)                                                                                     | 看门狗编排、证据、等待、验收、重试与判词                         |
+| [goal-decision.mjs](../../../../goal-mode/cli/goal-decision.mjs)                                                                             | 纯决策，给出 verify/continue/finish/await-user                   |
+| [round-wait-machine.mjs](../../../../goal-mode/cli/round-wait-machine.mjs)                                                                   | 纯轮次等待状态机                                                 |
+| [orca-terminal.mjs](../../../../goal-mode/cli/orca-terminal.mjs)、[terminal-activity.mjs](../../../../goal-mode/cli/terminal-activity.mjs)   | 公开 CLI 与 hook/PTY 状态解释                                    |
+| [goal-state.mjs](../../../../goal-mode/cli/goal-state.mjs)                                                                                   | 工作区 key、原子状态写入、日志、迁移与锁                         |
+| [acceptance-gate.mjs](../../../../goal-mode/cli/acceptance-gate.mjs)、[acceptance-judge.mjs](../../../../goal-mode/cli/acceptance-judge.mjs) | 命令验收及独立 agent 裁判                                        |
+| [cli/prompts](../../../../goal-mode/cli/prompts)                                                                                             | 实际运行提示词模板；必须保留原目录                               |
+| [bundled Goal 插件](../../../../resources/plugins/launch/stablyai.orca-goal)                                                                 | 实际 manifest、worker.mjs、panel.html                            |
+| [bundled-plugins.json](../../../../resources/plugins/launch/bundled-plugins.json)                                                            | `stablyai.orca-goal` 注册及 contentHash                          |
+| [goal-mode/plugin](../../../../goal-mode/plugin)                                                                                             | 测试配置、插件测试与 CDP 验证脚本，已不是插件 runtime 目录       |
 
 用户可直接用 `node goal-mode/cli/orca-goal.mjs` 调用 CLI 源码。面板生成的 `orca-goal`、`orca-goal-judge` 命令依赖 PATH 中的对应包装脚本；交互式 shell 也可自行配置 alias。bundled 插件存在不证明这些命令已自动安装；当前 bundle 未负责这一步。没有独立 Goal daemon RPC/scheduler；本机驱动调用 Orca 公开 CLI，不能把 Orca 主 daemon 的能力当作 Goal 已实现的远端执行能力。
 
 ## 3. CLI、参数与配置
 
-| 命令 | 当前行为 |
-|---|---|
-| `start` | 解析配置、选择已有且 writable 的 terminal、确定工作区、确认 check、独占锁、归档旧轮次日志、写初始目标、进入循环 |
-| `resume` | 按工作区找旧目标，拒绝仍在跑的驱动，保留累计轮数/耗时，清终局原因与取证基线；busy 时 attach，idle 时正常注入 |
-| `rebind` | 要求先停止，指定工作区与新 terminal；拒绝明确属于其他工作区的 terminal；仅更换终端绑定 |
-| `status` | 展示目标状态、PID 存活、原因、工作区、handle、当前及归档 JSONL 位置 |
-| `watch` | 读取后台 `.out` 并增量跟随，锁 PID 不存活后返回 |
-| `stop` | 停驱动并将 active 目标记为 aborted；保留记录，不等价于杀掉工作 agent |
-| `forget` | 驱动 PID 不存活后只删 goals/KEY.json；并不清所有侧车 |
-| `terminals` | 列可选终端和 agent 状态 |
+| 命令        | 当前行为                                                                                                        |
+| ----------- | --------------------------------------------------------------------------------------------------------------- |
+| `start`     | 解析配置、选择已有且 writable 的 terminal、确定工作区、确认 check、独占锁、归档旧轮次日志、写初始目标、进入循环 |
+| `resume`    | 按工作区找旧目标，拒绝仍在跑的驱动，保留累计轮数/耗时，清终局原因与取证基线；busy 时 attach，idle 时正常注入    |
+| `rebind`    | 要求先停止，指定工作区与新 terminal；拒绝明确属于其他工作区的 terminal；仅更换终端绑定                          |
+| `status`    | 展示目标状态、PID 存活、原因、工作区、handle、当前及归档 JSONL 位置                                             |
+| `watch`     | 读取后台 `.out` 并增量跟随，锁 PID 不存活后返回                                                                 |
+| `stop`      | 停驱动并将 active 目标记为 aborted；保留记录，不等价于杀掉工作 agent                                            |
+| `forget`    | 驱动 PID 不存活后只删 goals/KEY.json；并不清所有侧车                                                            |
+| `terminals` | 列可选终端和 agent 状态                                                                                         |
 
 目标定位优先 `--worktree`；也接受 `--terminal HANDLE` 并换算其工作区。终端消失时会从目标记录反查 handle；不能唯一确定时要求显式工作区。`--detach` 在父进程确定路径与 terminal 后启动后台子进程，stdout/stderr 写日志，父进程返回 PID；该返回不代表子进程完成了整个运行握手。
 
 配置优先级：显式命令行 > JSON 文件 > 默认值。`--objective` 或 objective 字段给完整文本；数组会按换行拼接。文件允许整行 `//` 注释。check 是字符串数组，CLI `--check` 可重复。文件内 worktree 相对配置文件解析；转交后台的 `--file/--worktree` 在父进程先绝对化。未知字段与参数会报错。
 
-| 参数 | 默认与约束 |
-|---|---|
-| `--max-turns` | 20；0 不限；start 校验非负数 |
-| `--max-minutes` | 180；0 不限；start 校验非负数 |
-| `--check-timeout` | 单条 900 秒；start 要求正数，0 不表示不限 |
-| `--check-all` | 默认关闭；开启后所有 checks 执行并汇总 |
-| `--on-blocked ask\|verify` | start 默认 ask；ask 等用户，verify 在有 check 时先核实 |
-| `--prompt-file` | 默认关闭；写多行提示词文件，仅向终端发一行读取指针 |
-| `--yes` | 跳过本 CLI 的验收命令确认；有 check 的非交互启动要求给出 |
+| 参数                       | 默认与约束                                               |
+| -------------------------- | -------------------------------------------------------- |
+| `--max-turns`              | 20；0 不限；start 校验非负数                             |
+| `--max-minutes`            | 180；0 不限；start 校验非负数                            |
+| `--check-timeout`          | 单条 900 秒；start 要求正数，0 不表示不限                |
+| `--check-all`              | 默认关闭；开启后所有 checks 执行并汇总                   |
+| `--on-blocked ask\|verify` | start 默认 ask；ask 等用户，verify 在有 check 时先核实   |
+| `--prompt-file`            | 默认关闭；写多行提示词文件，仅向终端发一行读取指针       |
+| `--yes`                    | 跳过本 CLI 的验收命令确认；有 check 的非交互启动要求给出 |
 
 边界：配置文件白名单没有 `onBlocked`/`checkAll`，虽然 resolveSettings 有读 onBlocked 的代码；应通过 CLI 设置当前支持的开关。resume 只覆盖 checks 与显式预算，不是重跑 start 的完整参数合并；预算仍用 Number(value)，judge timeout 也未复用 start 的数值校验。不能写成“所有命令参数已经统一校验”。
 
@@ -108,17 +112,17 @@ flowchart TD
 
 运行根目录是 `ORCA_GOAL_HOME || ~/.orca-goal`，内容以同一用户身份可读写，不是独立权限沙箱。
 
-| 路径（相对根目录） | 内容 |
-|---|---|
-| `goals/KEY.json` | objective、worktreePath、terminalHandle、acceptance、budget、状态、累计值、快照与最近验收 |
-| `lock/KEY.lock` | pid 与 startedAt；fs.open 的 wx 独占创建 |
-| `claims/KEY.txt` | agent 本轮 complete/blocked 声明 |
-| `log/KEY.jsonl` | 逐轮声明、改动摘要、验收结果、findings、动作与状态 |
-| `log/KEY.jsonl.TIMESTAMP` | 同一工作区重新 start 时归档的上一代轮次 |
-| `log/KEY.out` | 后台驱动 stdout/stderr |
-| `verdict/KEY-turnN.md` | 每条验收命令的原始判词 |
-| `gate-changes/KEY-turnN.diff` | 交裁判的验证方式改动 |
-| `prompts/KEY-turnN.md` | prompt-file 模式的实际本轮指令 |
+| 路径（相对根目录）            | 内容                                                                                      |
+| ----------------------------- | ----------------------------------------------------------------------------------------- |
+| `goals/KEY.json`              | objective、worktreePath、terminalHandle、acceptance、budget、状态、累计值、快照与最近验收 |
+| `lock/KEY.lock`               | pid 与 startedAt；fs.open 的 wx 独占创建                                                  |
+| `claims/KEY.txt`              | agent 本轮 complete/blocked 声明                                                          |
+| `log/KEY.jsonl`               | 逐轮声明、改动摘要、验收结果、findings、动作与状态                                        |
+| `log/KEY.jsonl.TIMESTAMP`     | 同一工作区重新 start 时归档的上一代轮次                                                   |
+| `log/KEY.out`                 | 后台驱动 stdout/stderr                                                                    |
+| `verdict/KEY-turnN.md`        | 每条验收命令的原始判词                                                                    |
+| `gate-changes/KEY-turnN.diff` | 交裁判的验证方式改动                                                                      |
+| `prompts/KEY-turnN.md`        | prompt-file 模式的实际本轮指令                                                            |
 
 writeGoal 先写临时文件再 rename，并在每次实际落盘时更新 updatedAt；迁移使用 touch:false 保留原时间，避免改变“最新记录”的裁决。listGoals 只列 `.json`，不读取 `.tmp`。
 
@@ -134,31 +138,31 @@ writeGoal 先写临时文件再 rename，并在每次实际落盘时更新 updat
 
 `observeAgent` 从 `terminal show` 取 connected、lastOutputAt、title；从 `worktree ps` 取 agents，按 `tabId:leafId` 对齐 paneKey。`classifyRound` 先使用晚于本轮 sentAt 的 hook 状态，再回退到标题 Braille 动画和 PTY 最近输出。
 
-| 观察 | 当前分类 | 含义 |
-|---|---|---|
-| disconnected | disconnected | 本轮观察失败；主循环有恢复宽限，不能据此声称 agent 进程已退出 |
-| 本轮 waiting/blocked | needs-user | 暂停注入，报告等待用户 |
-| 本轮 working | busy | 等待 |
-| 本轮 done | finished | 可作为本轮结束候选 |
-| 无本轮 hook，标题旋转或最近输出不足 quietMs | busy | PTY 有活动 |
-| 无本轮 hook，PTY 静默达到 quietMs | quiet | 只有先见过 busy 才认作本轮结束 |
-| 以上均不满足 | unknown | 继续观察 |
+| 观察                                        | 当前分类     | 含义                                                          |
+| ------------------------------------------- | ------------ | ------------------------------------------------------------- |
+| disconnected                                | disconnected | 本轮观察失败；主循环有恢复宽限，不能据此声称 agent 进程已退出 |
+| 本轮 waiting/blocked                        | needs-user   | 暂停注入，报告等待用户                                        |
+| 本轮 working                                | busy         | 等待                                                          |
+| 本轮 done                                   | finished     | 可作为本轮结束候选                                            |
+| 无本轮 hook，标题旋转或最近输出不足 quietMs | busy         | PTY 有活动                                                    |
+| 无本轮 hook，PTY 静默达到 quietMs           | quiet        | 只有先见过 busy 才认作本轮结束                                |
+| 以上均不满足                                | unknown      | 继续观察                                                      |
 
 新注入必须先看见 agent 活动，才采信 finished；attach 的 finished 可以直接采信，因为正在接手已有轮次。旧 working 不再无条件短路 PTY 回退；但 `sinceMs=0` 的“当前安全性”查询仍有不同时间语义，不能扩写成所有陈旧状态都有统一 TTL。
 
 ### 5.2 时间阈值
 
-| 项目 | 默认 | 作用 |
-|---|---:|---|
-| settle | 5 秒 | 发送 Enter 到 agent 接管的缓冲 |
-| quiet | 12 秒 | 无本轮 hook 时的静默判定 |
-| poll | 3 秒 | 观察频率 |
-| min round | 15 秒 | 防误判造成几秒内连续灌入多轮 |
-| start | 5 分钟 | 注入后一直未观察到活动 |
-| stuck | 20 分钟 | 已非 busy 且这一轮仍未结束 |
-| observe grace | 3 分钟 | CLI 观察连续失败的宽限 |
-| round error grace | 10 分钟 | 整轮持续异常后记 blocked 与 driverError |
-| long run | 30 分钟 | agent 仍在活动时提醒一次，不因单轮长而直接砍掉 |
+| 项目              |    默认 | 作用                                           |
+| ----------------- | ------: | ---------------------------------------------- |
+| settle            |    5 秒 | 发送 Enter 到 agent 接管的缓冲                 |
+| quiet             |   12 秒 | 无本轮 hook 时的静默判定                       |
+| poll              |    3 秒 | 观察频率                                       |
+| min round         |   15 秒 | 防误判造成几秒内连续灌入多轮                   |
+| start             |  5 分钟 | 注入后一直未观察到活动                         |
+| stuck             | 20 分钟 | 已非 busy 且这一轮仍未结束                     |
+| observe grace     |  3 分钟 | CLI 观察连续失败的宽限                         |
+| round error grace | 10 分钟 | 整轮持续异常后记 blocked 与 driverError        |
+| long run          | 30 分钟 | agent 仍在活动时提醒一次，不因单轮长而直接砍掉 |
 
 对应 ORCA_GOAL_* 环境变量在 goal-loop 中配置。needs-user 时暂停 start/stuck 计时；用户回应后返还等待段，防一次等待使整轮超时永久失效。目标时长 deadline 另行存在，并没有暂停所有预算。
 
@@ -174,17 +178,17 @@ clearClaim 绑定实际注入；attach 不清旧文件而用 mtime 排除旧声�
 
 持久 state 是 `active | complete | blocked | budget_exhausted | stalled | aborted`。`await-user` 是动作，持久化为 active + awaitingUser；驱动生死和 driverError 是另外维度。
 
-| 触发 | 当前动作 |
-|---|---|
-| 完成认领，无 checks | complete，action.verified=false，原因注明未经验证 |
-| 完成认领，有 checks 但未验收 | verify |
-| 验收通过 | complete；若本轮 gate 改动累计超阈值则 await-user |
-| 验收 inconclusive | gateFailures 累加；未满 2 次发 gate-unavailable，满 2 次 finish blocked |
-| 普通验收失败 | falseClaims 累加；满 3 次 finish blocked，否则回灌 rejected-completion；该计数当前不是连续重置 |
-| 受阻认领 | blockedClaims 连续计数；满 2 次 ask 默认 await-user；verify 有 checks 时先验收，全绿发 blocked-but-passing 继续 |
-| 普通轮次连续 tree+HEAD 相同 | stallCount 达 3 时 stalled；指纹 unavailable 不判空转 |
-| 预算达到 | budget_exhausted，并尝试发送一次收尾提示 |
-| 用户 stop/SIGINT/SIGTERM | active → aborted，保留记录 |
+| 触发                         | 当前动作                                                                                                        |
+| ---------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| 完成认领，无 checks          | complete，action.verified=false，原因注明未经验证                                                               |
+| 完成认领，有 checks 但未验收 | verify                                                                                                          |
+| 验收通过                     | complete；若本轮 gate 改动累计超阈值则 await-user                                                               |
+| 验收 inconclusive            | gateFailures 累加；未满 2 次发 gate-unavailable，满 2 次 finish blocked                                         |
+| 普通验收失败                 | falseClaims 累加；满 3 次 finish blocked，否则回灌 rejected-completion；该计数当前不是连续重置                  |
+| 受阻认领                     | blockedClaims 连续计数；满 2 次 ask 默认 await-user；verify 有 checks 时先验收，全绿发 blocked-but-passing 继续 |
+| 普通轮次连续 tree+HEAD 相同  | stallCount 达 3 时 stalled；指纹 unavailable 不判空转                                                           |
+| 预算达到                     | budget_exhausted，并尝试发送一次收尾提示                                                                        |
+| 用户 stop/SIGINT/SIGTERM     | active → aborted，保留记录                                                                                      |
 
 完成分支优先于预算：最后一轮通过验收可以 complete。无认领或失败继续前检查预算。`activeMs` 累加观察轮次及验收时间，驱动停着的时间不计；显式 waitForUser 等待段不计。goalDeadline 在轮次等待过程中检查，但验收命令只有单条 timeout，可能超过剩余目标预算；收尾发送并不再等待 agent 完成最后回应。
 
@@ -238,16 +242,16 @@ worker 经 `$SHELL -lc` 调 `orca-goal`，CLI timeout 20 秒，小于宿主命�
 
 ## 10. 支持边界与未完成目标
 
-| 项目 | 当前结论 |
-|---|---|
-| 本机 CLI | 主实现路径；本次仅源码核对，未新跑真实 agent |
-| Linux | 默认命令名已改 orca-ide；不等价于全面运行验收 |
-| Windows | 已选择 orca.cmd，但直接 child_process、.cmd 调用、登录 shell、POSIX heredoc 等未完成完整适配 |
-| SSH/WSL | 验收、git、claim、ROOT 都在驱动本机，无 remote authority/provider；不能宣称支持 |
-| folder workspace | 目标/claim/check 可运行；无 git 快照、篡改证据、tree 缓存、空转判断 |
-| 进程身份 | 部分 command 检查与 PID 存活，不是所有路径的同主机身份闭环 |
-| 运行代际与清理 | JSONL 启动归档已做；runId 与完整侧车清理未做 |
-| 原意与判据质量 | 提示词强调 fidelity，测试/裁判只验证其覆盖范围，不能自动证明用户全部目标 |
+| 项目             | 当前结论                                                                                     |
+| ---------------- | -------------------------------------------------------------------------------------------- |
+| 本机 CLI         | 主实现路径；本次仅源码核对，未新跑真实 agent                                                 |
+| Linux            | 默认命令名已改 orca-ide；不等价于全面运行验收                                                |
+| Windows          | 已选择 orca.cmd，但直接 child_process、.cmd 调用、登录 shell、POSIX heredoc 等未完成完整适配 |
+| SSH/WSL          | 验收、git、claim、ROOT 都在驱动本机，无 remote authority/provider；不能宣称支持              |
+| folder workspace | 目标/claim/check 可运行；无 git 快照、篡改证据、tree 缓存、空转判断                          |
+| 进程身份         | 部分 command 检查与 PID 存活，不是所有路径的同主机身份闭环                                   |
+| 运行代际与清理   | JSONL 启动归档已做；runId 与完整侧车清理未做                                                 |
+| 原意与判据质量   | 提示词强调 fidelity，测试/裁判只验证其覆盖范围，不能自动证明用户全部目标                     |
 
 旧 v4 的通知风暴、首次工作自动分支命名、应用更新/退出影响 PTY 是宿主集成关注点；本次未验证这些历史具体行为是否仍相同，保留为后续真机观察项，不写成已复现当前故障。Git snapshot 当前用了 `--path-format=absolute`，尚未形成与项目 Git 2.25 基线配套的 capability fallback 证明。
 

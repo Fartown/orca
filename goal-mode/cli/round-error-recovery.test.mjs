@@ -14,7 +14,9 @@ import path from 'node:path'
 async function loadLoop({ renderFails }) {
   mock.reset() // mock 会跨用例残留,不清就报「already mocked」
   let calls = 0
-  mock.module('./orca-terminal.mjs', { namedExports: { sendText: async () => {} } })
+  mock.module('./orca-terminal.mjs', {
+    namedExports: { sendText: async () => {}, sendInterrupt: async () => {} }
+  })
   mock.module('./terminal-activity.mjs', {
     namedExports: {
       observeAgent: async () => ({}),
@@ -120,7 +122,9 @@ test('验收判词立刻落盘 —— 后面哪一步挂了都不该把它赔进
   t.after(() => delete process.env.ORCA_GOAL_ROUND_ERROR_GRACE_MS)
 
   mock.reset()
-  mock.module('./orca-terminal.mjs', { namedExports: { sendText: async () => {} } })
+  mock.module('./orca-terminal.mjs', {
+    namedExports: { sendText: async () => {}, sendInterrupt: async () => {} }
+  })
   mock.module('./terminal-activity.mjs', {
     namedExports: {
       observeAgent: async () => ({}),
@@ -190,7 +194,9 @@ test('接管的轮次不清认领 —— 上一轮的声明不能被当成这一
   t.after(() => delete process.env.ORCA_GOAL_ROUND_ERROR_GRACE_MS)
 
   mock.reset()
-  mock.module('./orca-terminal.mjs', { namedExports: { sendText: async () => {} } })
+  mock.module('./orca-terminal.mjs', {
+    namedExports: { sendText: async () => {}, sendInterrupt: async () => {} }
+  })
   mock.module('./terminal-activity.mjs', {
     namedExports: {
       observeAgent: async () => ({}),
@@ -259,6 +265,7 @@ test('接管时 agent 已空闲 —— 要正常注入,不能干等一个不存�
   let sent = 0
   mock.module('./orca-terminal.mjs', {
     namedExports: {
+      sendInterrupt: async () => {},
       sendText: async () => {
         sent++
       }
@@ -311,7 +318,9 @@ test('接管时 agent 已空闲 —— 要正常注入,不能干等一个不存�
 test('终端一时断开不该终结目标 —— Orca 重启一下就死太脆了', async () => {
   mock.reset()
   let observations = 0
-  mock.module('./orca-terminal.mjs', { namedExports: { sendText: async () => {} } })
+  mock.module('./orca-terminal.mjs', {
+    namedExports: { sendText: async () => {}, sendInterrupt: async () => {} }
+  })
   mock.module('./terminal-activity.mjs', {
     namedExports: {
       observeAgent: async () => ({}),
@@ -357,7 +366,9 @@ test('改了验证方式时,把 diff 通过环境变量交给裁判', async () =
   // 守卫不替人判断这次改动是修错还是作弊 —— 它只负责把改动摆到裁判面前。
   mock.reset()
   let seenEnv = null
-  mock.module('./orca-terminal.mjs', { namedExports: { sendText: async () => {} } })
+  mock.module('./orca-terminal.mjs', {
+    namedExports: { sendText: async () => {}, sendInterrupt: async () => {} }
+  })
   mock.module('./terminal-activity.mjs', {
     namedExports: {
       observeAgent: async () => ({}),
@@ -436,7 +447,9 @@ test('落盘失败重试时,不把几十分钟的验收重跑一遍', async () =
   mock.reset()
   let judgeRuns = 0
   let logWrites = 0
-  mock.module('./orca-terminal.mjs', { namedExports: { sendText: async () => {} } })
+  mock.module('./orca-terminal.mjs', {
+    namedExports: { sendText: async () => {}, sendInterrupt: async () => {} }
+  })
   mock.module('./terminal-activity.mjs', {
     namedExports: {
       observeAgent: async () => ({}),
@@ -525,6 +538,7 @@ test('轮次判定失灵时也不该几秒一轮 —— 最短间隔兜底', asy
   let sent = 0
   mock.module('./orca-terminal.mjs', {
     namedExports: {
+      sendInterrupt: async () => {},
       sendText: async () => {
         sent++
       }
@@ -583,7 +597,9 @@ test('终止的那一轮也要写进逐轮日志 —— 否则面板轮次推算
   // 面板据此算「正在跑第几轮」就差一号,查因也只能去翻驱动的纯文本输出。
   mock.reset()
   const logged = []
-  mock.module('./orca-terminal.mjs', { namedExports: { sendText: async () => {} } })
+  mock.module('./orca-terminal.mjs', {
+    namedExports: { sendText: async () => {}, sendInterrupt: async () => {} }
+  })
   mock.module('./terminal-activity.mjs', {
     namedExports: {
       observeAgent: async () => ({}),

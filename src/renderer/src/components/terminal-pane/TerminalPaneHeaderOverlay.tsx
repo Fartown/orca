@@ -14,6 +14,7 @@ import { WORKSPACE_FILE_PATH_MIME, WORKSPACE_FILE_PATHS_MIME } from '@/lib/works
 import { isImeCompositionKeyDown } from '@/lib/ime-composition-keyboard-event'
 import type { PtyTransport } from './pty-transport'
 import { handleInternalTerminalFileDrop } from './terminal-drop-handler'
+import { GoalSessionAction } from '@/components/goals/GoalSessionAction'
 
 export type PaneTitleOverlayRect = {
   left: number
@@ -246,6 +247,9 @@ export default function TerminalPaneHeaderOverlay({
                   </button>
                 ) : null}
                 <div className="pane-title-actions ml-auto flex shrink-0 items-center gap-0">
+                  {isActivePane ? (
+                    <GoalSessionAction worktreeId={worktreeId} tabId={tabId} leafId={pane.leafId} />
+                  ) : null}
                   {canContinueAgentSessionInNewSession && isActivePane ? (
                     <Tooltip>
                       <TooltipTrigger asChild>

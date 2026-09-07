@@ -7,6 +7,7 @@ import { WorkspacePortScanner } from '../components/ports/WorkspacePortScanner'
 import { MacosTccPromptNoticeHost } from '../hooks/MacosTccPromptNoticeHost'
 import { useAppStore } from '../store'
 import { IssueDomainSyncGate } from '../issues/IssueDomainSyncGate'
+import { GoalDomainSyncGate } from '../goals/GoalDomainSyncGate'
 import { StructuredAgentSessionStatusBridge } from '../components/native-chat/StructuredAgentSessionStatusBridge'
 
 const DashboardPopoutBridge = lazy(() => import('../components/dashboard/DashboardPopoutBridge'))
@@ -25,6 +26,7 @@ export function AppBackgroundServices(): React.JSX.Element {
     <>
       <WorkspacePortScanner enabled={workspaceSessionReady} />
       <IssueDomainSyncGate />
+      <GoalDomainSyncGate />
       {/* Why: plugin language-pack discovery must not re-render the App shell. */}
       <MacosTccPromptNoticeHost />
       {/* Why: leaf-mounted retention sync keeps agent-status subscriptions out of the App render tree. */}

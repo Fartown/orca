@@ -118,9 +118,6 @@ describe('Phase 1 launch plugin content', () => {
     })
 
     expect(result.errors).toEqual([])
-    expect(result.installed.sort()).toEqual([
-      'stablyai.orca-goal',
-      'stablyai.orca-navigation-shortcuts'
-    ])
+    expect(result.installed.sort()).toEqual(['stablyai.orca-navigation-shortcuts'])
   })
 })

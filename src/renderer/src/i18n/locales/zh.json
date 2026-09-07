@@ -15017,5 +15017,174 @@
       "action": "试用智能体",
       "hiddenToast": "智能体标签页已隐藏。可在设置 → 实验性功能中重新启用。"
     }
+  },
+  "goals": {
+    "quickActions": {
+      "newGoal": "目标:新建目标…",
+      "newGoalDescription": "让一个 agent 会话持续推进目标,直到验收通过。",
+      "verbs": {
+        "newGoal": "新建目标",
+        "setGoal": "设置目标",
+        "viewGoals": "查看目标",
+        "goals": "目标"
+      },
+      "viewGoals": "目标:查看目标",
+      "viewGoalsDescription": "打开目标面板。"
+    },
+    "controls": {
+      "pause": "暂停续跑",
+      "resume": "继续",
+      "awaitingDriver": "已请求,等待驱动确认。",
+      "stop": "停止",
+      "edit": "编辑",
+      "changeSession": "更换会话",
+      "unarchive": "取消归档",
+      "archive": "归档",
+      "pauseToEdit": "先暂停续跑,才能编辑目标或更换会话。",
+      "stopTitle": "停止这个目标?",
+      "stopDescription": "立即停止注入,并向在途的一轮发送中断。只有 agent 确认本轮已结束,目标才显示为已停止;会话本身保持打开。",
+      "keepRunning": "继续运行",
+      "stopConfirm": "停止目标"
+    },
+    "editor": {
+      "criteria": "验收标准",
+      "addCriterion": "添加验收项",
+      "criteriaHint": "每一项可以带一条命令;只有带命令的项才会被独立验证。",
+      "criterionDescription": "验收项 {{value0}}",
+      "criterionPlaceholder": "需要满足什么",
+      "criterionCommand": "验收项 {{value0}} 的命令",
+      "criterionCommandPlaceholder": "可选命令;退出码 0 为通过,3 为无法判定",
+      "removeCriterion": "删除验收项",
+      "title": "新建目标",
+      "description": "驱动会持续向所选会话注入指令,直到验收通过或预算耗尽。",
+      "objective": "目标",
+      "objectivePlaceholder": "做完时必须成立的事情是什么?",
+      "acceptanceText": "验收说明",
+      "advanced": "高级设置",
+      "maxTurns": "轮次上限",
+      "maxMinutes": "时长上限(分钟)",
+      "checkTimeout": "检查超时(秒)",
+      "zeroMeansUnlimited": "轮次或分钟填 0 表示不限。",
+      "extraChecks": "额外检查命令(每行一条)",
+      "extraChecksHint": "由驱动在工作区里用 shell 执行。提交前在此完整展示,不会隐藏。",
+      "checkAll": "第一条失败后仍跑完全部检查",
+      "verifyWhenBlocked": "agent 说受阻时,先跑检查再叫我",
+      "acknowledgeUnverified": "没有验收命令:完成与否将采信 agent 的说法,不做独立验证。",
+      "cancel": "取消",
+      "starting": "启动中…",
+      "createAndStart": "创建并开始",
+      "paneMissing": "那个会话已经关闭,请换一个。",
+      "incarnationMissing": "Orca 无法锁定这个终端;重启会话后重试。",
+      "workspaceMismatch": "那个会话属于另一个工作区。",
+      "workspace": "工作区",
+      "pickWorkspace": "选择工作区",
+      "executionLocal": "在本机执行。",
+      "session": "Agent 会话",
+      "pickSession": "选择一个正在运行的 agent 会话",
+      "noSessions": "这个工作区里没有运行中的 agent 会话。先启动一个;普通 shell 不能作为目标。",
+      "sessionHint": "只列出 Orca 能通过 agent hook 识别的会话。",
+      "unknownAgent": "agent",
+      "editTitle": "编辑目标",
+      "editDescription": "修改目标或验收会产生新的定义版本,之前的证据不再计入;只改预算则保留。",
+      "save": "保存",
+      "saveAndResume": "保存并继续"
+    },
+    "detail": {
+      "back": "目标",
+      "loading": "加载目标…",
+      "continuationPaused": "续跑已暂停",
+      "driverUnverifiable": "驱动状态无法核实",
+      "execution": "执行",
+      "turnsAndTime": "第 {{value0}} 轮 · 活跃 {{value1}}",
+      "budget": "预算 {{value0}} 轮 / {{value1}} 分钟",
+      "sessionMissing": "绑定的会话已经关闭。",
+      "workspaceUnavailable": "工作区已不可用。",
+      "session": "会话",
+      "openSession": "打开会话",
+      "terminalExited": "终端已关闭",
+      "terminalUnverifiable": "终端状态无法核实",
+      "agentWorking": "agent 工作中",
+      "agentWaiting": "agent 在等你",
+      "agentIdle": "agent 空闲",
+      "agentUnknown": "agent 状态未知",
+      "versions": "定义版本({{value0}})",
+      "revisionLabel": "版本 {{value0}}",
+      "currentRevision": "当前"
+    },
+    "list": {
+      "hostUnavailable": "此主机上无法列出目标",
+      "empty": "此范围内没有目标",
+      "label": "目标",
+      "turns": "{{value0}} 轮",
+      "legacy": "CLI 目标",
+      "import": "导入",
+      "legacyRunning": "仍由 orca-goal 命令行驱动;先在那边停掉再导入。"
+    },
+    "progress": {
+      "title": "验收",
+      "noCriteria": "没有验收命令:完成与否采信 agent 的说法,未经验证。",
+      "verifiedCount": "{{value0}} / {{value1}} 项已验证",
+      "extraCheck": "检查",
+      "passed": "通过",
+      "failed": "未通过",
+      "inconclusive": "无法判定",
+      "stale": "证据已过期",
+      "notRun": "未执行",
+      "notVerified": "尚未验证"
+    },
+    "sessionAction": {
+      "view": "查看目标",
+      "set": "设置目标"
+    },
+    "panel": {
+      "title": "目标",
+      "subtitle": "让 agent 会话持续推进目标,直到验收通过",
+      "newGoal": "新建目标",
+      "searchPlaceholder": "搜索目标",
+      "searchGoals": "搜索目标"
+    },
+    "scope": {
+      "workspace": "当前工作区",
+      "all": "全部",
+      "label": "范围"
+    },
+    "filter": {
+      "all": "全部",
+      "running": "进行中",
+      "attention": "待处理",
+      "history": "历史"
+    },
+    "phase": {
+      "starting": "启动中",
+      "executing": "运行中",
+      "verifying": "验收中",
+      "waitingUser": "需要你处理",
+      "idle": "已暂停",
+      "complete": "已完成",
+      "budgetExhausted": "预算耗尽",
+      "interrupted": "已中断"
+    },
+    "completion": {
+      "verified": "已独立验证",
+      "unverified": "agent 声称完成;未经验证",
+      "claimed": "已声称完成;验收中"
+    },
+    "status": {
+      "unsupported": "当前 Orca 宿主版本不支持目标功能。",
+      "offline": "宿主离线。",
+      "driverMissing": "此构建未打包目标驱动(运行 pnpm build:goal-driver)。",
+      "unavailable": "此主机上目标功能不可用。",
+      "degraded": "agent hook 证据不可用;本轮状态将显示为未知。",
+      "checking": "正在检查目标功能是否可用…"
+    },
+    "stats": {
+      "activeMinutes": "{{value0}} 分钟"
+    },
+    "rebind": {
+      "sessionUnavailable": "这个会话无法锁定,请换一个。",
+      "title": "更换会话",
+      "description": "在同一工作区里选另一个 agent 会话。轮次、证据和判词都留在目标上。",
+      "confirm": "移动目标"
+    }
   }
 }

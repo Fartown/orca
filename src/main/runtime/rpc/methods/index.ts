@@ -46,6 +46,7 @@ import { AGENT_SESSION_METHODS } from './agent-session'
 import { STRUCTURED_AGENT_SESSION_METHODS } from './structured-agent-session'
 import { ARTIFACT_METHODS } from './artifacts'
 import { ISSUE_METHODS } from './issues'
+import { GOAL_METHODS } from './goals'
 import { AGENT_HOOK_METHODS } from './agent-hooks'
 
 // Why: a flat manifest keeps registration order explicit and provides one
@@ -57,6 +58,7 @@ export const ALL_RPC_METHODS: readonly RpcAnyMethod[] = [
   ...AI_VAULT_METHODS,
   ...ARTIFACT_METHODS,
   ...ISSUE_METHODS,
+  ...GOAL_METHODS,
   ...AUTOMATION_METHODS,
   ...REPO_METHODS,
   ...WORKTREE_METHODS,
