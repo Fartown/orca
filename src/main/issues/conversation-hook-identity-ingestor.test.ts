@@ -117,10 +117,19 @@ describe('ConversationHookIdentityIngestor', () => {
       conversationId: (first as { conversationId: string }).conversationId
     })
     expect((first as { conversationId: string }).conversationId).not.toBe(prepared.conversation.id)
-    expect(repository.conversations.list()).toMatchObject([
-      { id: prepared.conversation.id, issueId: issue.id },
-      { id: (first as { conversationId: string }).conversationId, issueId: null }
-    ])
+    // Why order-independent: both rows can share a created_at millisecond, and the list then
+    // orders them by random id.
+    const listed = repository.conversations.list()
+    expect(listed).toHaveLength(2)
+    expect(listed).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: prepared.conversation.id, issueId: issue.id }),
+        expect.objectContaining({
+          id: (first as { conversationId: string }).conversationId,
+          issueId: null
+        })
+      ])
+    )
     repository.close()
   })
 
