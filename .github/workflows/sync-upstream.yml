@@ -7,11 +7,14 @@ name: Sync upstream
 # opens an issue naming the conflicting files instead, and a person (or an agent in its
 # own worktree) resolves them with `pnpm sync:upstream`.
 #
-# The job verifies the merged tree itself (fork feature gate, architecture policies and
-# every registered feature check) before opening the PR, so no personal token is needed for
-# the gates that matter. PRs opened with the default GITHUB_TOKEN do not trigger the regular
-# PR workflow; set the optional FORK_SYNC_TOKEN secret (a fine-grained PAT with contents +
-# pull requests write on this repo) only if you also want that full PR CI on sync PRs.
+# Credentials: pushes go through the FORK_SYNC_DEPLOY_KEY secret (a write deploy key scoped
+# to this repository), because GITHUB_TOKEN may not push commits that touch workflow files
+# and upstream changes its workflows all the time. PRs and issues are opened with
+# GITHUB_TOKEN. The job verifies the merged tree itself (fork feature gate, architecture
+# policies, driver bundle and every registered feature check) before opening the PR, so no
+# personal token is needed; the optional FORK_SYNC_TOKEN (fine-grained PAT, contents + pull
+# requests write on this repo) only adds the regular PR workflow on sync PRs, which
+# GITHUB_TOKEN-opened PRs never trigger.
 
 on:
   schedule:
@@ -37,16 +40,28 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out the integration branch
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: ${{ env.INTEGRATION_BRANCH }}
           fetch-depth: 0
           token: ${{ secrets.FORK_SYNC_TOKEN || secrets.GITHUB_TOKEN }}
 
-      - name: Configure git
+      - name: Configure git and the push key
+        env:
+          DEPLOY_KEY: ${{ secrets.FORK_SYNC_DEPLOY_KEY }}
         run: |
           git config user.name "orca-fork-sync"
           git config user.email "orca-fork-sync@users.noreply.github.com"
+          if [ -z "$DEPLOY_KEY" ]; then
+            echo "::error::FORK_SYNC_DEPLOY_KEY is not set; pushes that include upstream workflow changes will be rejected. See docs/reference/fork-maintenance.md."
+            exit 1
+          fi
+          mkdir -p ~/.ssh
+          printf '%s\n' "$DEPLOY_KEY" > ~/.ssh/orca_fork_sync
+          chmod 600 ~/.ssh/orca_fork_sync
+          ssh-keyscan -t ed25519 github.com >> ~/.ssh/known_hosts 2>/dev/null
+          git config core.sshCommand "ssh -i ~/.ssh/orca_fork_sync -o IdentitiesOnly=yes"
+          git remote set-url --push origin "git@github.com:${GITHUB_REPOSITORY}.git"
 
       - name: Fetch upstream
         run: |
