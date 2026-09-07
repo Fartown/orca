@@ -117,8 +117,8 @@ jobs:
             echo '```'
             echo 'pnpm sync:upstream          # stops on the same conflicts'
             echo '# resolve, keeping every feature in config/fork-features.jsonc'
-            echo 'pnpm check:fork-features && pnpm check:architecture-policies'
-            echo 'git commit && pnpm sync:upstream --push'
+            echo 'git add -A && git commit    # commit the merge before the gates run'
+            echo 'pnpm sync:upstream --push   # re-runs every gate and feature check, then pushes'
             echo '```'
           } > issue-body.md
           gh issue create --title "Upstream sync conflict ($(date -u +%Y-%m-%d))" --label sync-upstream --body-file issue-body.md \

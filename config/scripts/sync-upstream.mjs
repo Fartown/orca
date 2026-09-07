@@ -79,9 +79,9 @@ function main() {
       console.error(
         [
           'Resolve them so that every feature in config/fork-features.jsonc keeps working, then:',
-          '  pnpm check:fork-features && pnpm check:architecture-policies',
-          '  git commit',
-          `  pnpm sync:upstream${flags.has('--push') ? ' --push' : ''}   (re-run; the merge is skipped and the checks run)`
+          '  git add -A && git commit   (commit the merge first: worktree-scope rules read an',
+          '                              in-progress merge as one giant edit)',
+          `  pnpm sync:upstream${flags.has('--push') ? ' --push' : ''}   (re-run; the merge is skipped and every check runs)`
         ].join('\n')
       )
       return 2

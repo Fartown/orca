@@ -181,6 +181,11 @@
           "file": "src/renderer/src/components/sidebar/index.tsx",
           "mustContain": "SidebarRootModeBar",
           "why": "the sidebar switches between Workspaces and Issues"
+        },
+        {
+          "file": "src/renderer/src/components/right-sidebar/AiVaultVirtualRow.tsx",
+          "mustContain": "getCanonicalTitle",
+          "why": "Agent Session History rows show the Issue-pinned canonical title (moved here by upstream on 2026-09-07)"
         }
       ],
       "tests": [
