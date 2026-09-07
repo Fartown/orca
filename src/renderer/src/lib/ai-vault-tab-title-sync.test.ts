@@ -1,5 +1,8 @@
 import { describe, expect, it, vi } from 'vitest'
-import type { AiVaultSessionTitlesResult } from '../../../shared/ai-vault-session-title'
+import type {
+  AiVaultSessionTitlesArgs,
+  AiVaultSessionTitlesResult
+} from '../../../shared/ai-vault-session-title'
 import { resolveTerminalTabTitle } from '../../../shared/tab-title-resolution'
 import type { TerminalTab } from '../../../shared/terminal-tab-types'
 import {
@@ -384,12 +387,14 @@ describe('AI Vault tab title sync', () => {
     stop()
   })
 
-  it('reconciles immediately when the provider session identity changes', async () => {
+  it('keeps the last name when the provider identity changes but does not resolve', async () => {
     const store = makeState({
       executionHostId: 'ssh:dev-box',
       worktreeId: 'worktree-1',
       path: '/workspace/albacore'
     })
+    // The scanner only ever knows the original session, like an agent-internal
+    // side call that never writes a transcript.
     const resolveSessionTitles = vi.fn(async () => titleResult('codex', 'Original conversation'))
     const stop = startAiVaultTabTitleSync({ ...store, resolveSessionTitles })
 
@@ -397,7 +402,42 @@ describe('AI Vault tab title sync', () => {
     store.setProviderSessionId('codex-session-2')
 
     await vi.waitFor(() => expect(resolveSessionTitles).toHaveBeenCalledTimes(2))
-    expect(store.getState().tabsByWorktree['worktree-1'][0].aiVaultTitle).toBeNull()
+    expect(store.getState().tabsByWorktree['worktree-1'][0].aiVaultTitle).toMatchObject({
+      sessionId: 'codex-session',
+      title: 'Original conversation'
+    })
+    stop()
+  })
+
+  it('replaces the name once the changed provider identity resolves', async () => {
+    const store = makeState({
+      executionHostId: 'ssh:dev-box',
+      worktreeId: 'worktree-1',
+      path: '/workspace/albacore'
+    })
+    const resolveSessionTitles = vi.fn(async (args: AiVaultSessionTitlesArgs) => ({
+      titles: args.requests.map((request) => ({
+        agent: request.agent,
+        sessionId: request.sessionId,
+        title:
+          request.sessionId === 'codex-session-2' ? 'Next conversation' : 'Original conversation'
+      }))
+    }))
+    const stop = startAiVaultTabTitleSync({ ...store, resolveSessionTitles })
+
+    await vi.waitFor(() =>
+      expect(store.getState().tabsByWorktree['worktree-1'][0].aiVaultTitle?.title).toBe(
+        'Original conversation'
+      )
+    )
+    store.setProviderSessionId('codex-session-2')
+
+    await vi.waitFor(() =>
+      expect(store.getState().tabsByWorktree['worktree-1'][0].aiVaultTitle).toMatchObject({
+        sessionId: 'codex-session-2',
+        title: 'Next conversation'
+      })
+    )
     stop()
   })
 
@@ -584,6 +624,36 @@ describe('canonical conversation title projection', () => {
         'Scanner value'
       )
     )
+    stop()
+  })
+
+  it('keeps a projected override when the pane identity flips to an unresolvable session', async () => {
+    const store = makeState({
+      executionHostId: 'ssh:dev-box',
+      worktreeId: 'worktree-1',
+      path: '/workspace/albacore'
+    })
+    const resolveSessionTitles = vi.fn(async () => titleResult('codex', 'Scanner value'))
+    const stop = startAiVaultTabTitleSync({
+      ...store,
+      resolveSessionTitles,
+      getCanonicalTitle: (_host, _agent, sessionId) =>
+        sessionId === 'codex-session' ? 'Renamed by user' : null,
+      subscribeCanonicalTitles: () => () => undefined
+    })
+    await vi.waitFor(() =>
+      expect(store.getState().tabsByWorktree['worktree-1'][0].aiVaultTitle?.title).toBe(
+        'Renamed by user'
+      )
+    )
+
+    store.setProviderSessionId('codex-session-2')
+    await vi.waitFor(() => expect(resolveSessionTitles).toHaveBeenCalledTimes(2))
+    expect(store.getState().tabsByWorktree['worktree-1'][0].aiVaultTitle).toMatchObject({
+      sessionId: 'codex-session',
+      title: 'Renamed by user',
+      source: 'conversation-override'
+    })
     stop()
   })
 })

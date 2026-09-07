@@ -208,19 +208,27 @@ export function startAiVaultTabTitleSync(dependencies: SyncDependencies): () => 
         ) {
           writeTitle(request, canonical)
         }
-      } else if (stored && canonicalProjectedTabIds.delete(request.tabId)) {
+      } else if (
+        stored &&
+        canonicalProjectedTabIds.has(request.tabId) &&
+        stored.agent === request.agent &&
+        stored.sessionId === request.providerSession.id
+      ) {
+        // Same identity, override gone: the user cleared it, so hand the slot back to the scan.
+        canonicalProjectedTabIds.delete(request.tabId)
         writeTitle(request, null)
       }
     }
 
     const storedAfterPass = collectStoredTitles(dependencies.getState())
+    // Why: the pane identity flips whenever the agent runs a background side call
+    // (title generation, catch-up recap) in the same pane, and those never resolve
+    // to a name. A mismatch only reopens the scan; resolveBatch replaces the slot
+    // once the new identity actually resolves, so the last good name never drops.
     const requestsToScan = requests.filter((request) => {
       const stored = storedAfterPass.get(request.tabId)
       const identityMatches =
         stored?.agent === request.agent && stored.sessionId === request.providerSession.id
-      if (stored && !identityMatches) {
-        writeTitle(request, null)
-      }
       return (
         request.refresh ||
         !identityMatches ||
