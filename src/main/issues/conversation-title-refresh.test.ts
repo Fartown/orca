@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import type { AiVaultSessionTitlesArgs } from '../../shared/ai-vault-session-title'
 import { mintAgentSessionFallbackTitle } from '../../shared/agent-session-fallback-title'
 import {
   createIssueTestUserDataPath,
@@ -111,7 +112,7 @@ describe('ConversationTitleRefresh', () => {
         title: 'Saved Provider name'
       })
     )
-    const resolveSessionTitles = vi.fn(async () => ({
+    const resolveSessionTitles = vi.fn(async (_args: AiVaultSessionTitlesArgs) => ({
       titles: [
         { agent: 'codex' as const, sessionId: 'session-1', title: 'First Provider name' },
         {
@@ -125,21 +126,17 @@ describe('ConversationTitleRefresh', () => {
     await new ConversationTitleRefresh(repository, resolveSessionTitles).backfillMissingSnapshots()
 
     expect(resolveSessionTitles).toHaveBeenCalledOnce()
-    expect(resolveSessionTitles).toHaveBeenCalledWith({
-      executionHostScope: 'ssh:dev-box',
-      requests: [
-        {
-          agent: 'codex',
-          sessionId: 'session-1',
-          transcriptPath: '/remote/session-1.jsonl'
-        },
-        {
-          agent: 'codex',
-          sessionId: 'session-2',
-          transcriptPath: '/remote/session-2.jsonl'
-        }
-      ]
-    })
+    // Why order-independent: conversations created in the same millisecond are listed by their
+    // random id, and the resolver matches its answer by sessionId rather than by position.
+    const request = resolveSessionTitles.mock.calls[0]?.[0]
+    expect(request?.executionHostScope).toBe('ssh:dev-box')
+    expect(request?.requests).toHaveLength(2)
+    expect(request?.requests).toEqual(
+      expect.arrayContaining([
+        { agent: 'codex', sessionId: 'session-1', transcriptPath: '/remote/session-1.jsonl' },
+        { agent: 'codex', sessionId: 'session-2', transcriptPath: '/remote/session-2.jsonl' }
+      ])
+    )
     expect(repository.conversations.get(first.id)?.providerTitle).toBe('First Provider name')
     expect(repository.conversations.get(second.id)?.providerTitle).toBeNull()
     expect(repository.conversations.get(saved.id)?.providerTitle).toBe('Saved Provider name')

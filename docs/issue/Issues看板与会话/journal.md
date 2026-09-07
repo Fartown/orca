@@ -45,6 +45,15 @@ ready 只表示文档已按当前源码整理；本需求仍为 implementing，�
 
 ## 3. 开发记录
 
+### 2026-09-07 消除两处顺序敏感的断言
+
+- 本轮目标：fork 同步工作流在 CI 上跑 Issues 套件时两次变红，定位并修掉与顺序相关的断言，让「上游合并是否安全」这个信号可信。
+- 完成内容：`conversation-hook-identity-ingestor.test.ts` 与 `conversation-title-refresh.test.ts` 各有一处按数组顺序断言。根因同一个：`conversations.list()` 的排序是 `host_partition_key, created_at, id`，同一毫秒创建的两条记录只能按随机 UUID 决出先后，本机与 CI 结果不同。两处都改为顺序无关断言并写明原因；标题回填那处额外确认过 `resolveAndApply` 按 sessionId 匹配结果、不按位置，所以批内顺序对行为没有意义。
+- 代码或文档变更：上述两个测试文件、本记录。未改产品代码。
+- 验证证据：`pnpm tc:node` 通过；两个测试文件本地通过；Issues 全量套件 43 文件 175 例通过；随后由 fork 同步工作流在 Ubuntu runner 上复跑。
+- 未解决问题：`conversation-record-repository.ts` 的列表排序以随机 `id` 作最后一级 tie-break，同毫秒创建时对用户也是不稳定顺序。改成按插入顺序（rowid）更符合直觉，但会改变列表语义，留作单独决策，不在本轮顺手改。
+- 下一步：若要改排序，先在需求里明确「会话列表按什么排」再动代码。
+
 ### 2026-09-07 补齐渲染层本地化
 
 - 本轮目标：`verify:localization-coverage` 报 Issues 线 17 个文件 112 处未本地化文案，是本地 `pnpm lint` 唯一红项；在独立分支 `feat/issues-localization` 上补齐。
