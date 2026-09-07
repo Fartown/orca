@@ -6271,6 +6271,69 @@
           "title": "Worktree scan failed for {{value0}}",
           "retry": "Retry scan",
           "retained": "Existing worktrees are kept until a scan succeeds. Click to retry."
+        },
+        "issues": {
+          "create": {
+            "issue": {
+              "dialog": {
+                "873c45788e": "Create",
+                "f7abec03e7": "Creating…",
+                "2c05834243": "Cancel",
+                "3978cbdaa0": "Note",
+                "f8b6ded5ae": "URL",
+                "7bb9894c9b": "Title",
+                "2568b1f6bf": "External identifier",
+                "a85f53829b": "Provider",
+                "40801be22b": "External reference",
+                "4aa09df59d": "Local Issue",
+                "8dcc655e49": "Source",
+                "2e9c44c765": "Checking Issue availability…",
+                "6e2508f937": "This host is offline.",
+                "31b0f90c29": "Issue storage is unavailable.",
+                "e7360dc3ba": "This host version does not support Issues.",
+                "f9d5d6ce26": "Hook evidence is unavailable. Issue CRUD and explicit launches remain available.",
+                "1bf1f46971": "Execution host",
+                "0bb0137d72": "Create local work or record an external reference. Orca does not update the provider.",
+                "8de60203ff": "Create Issue",
+                "3b5e5ddf60": "Create child Issue"
+              }
+            }
+          },
+          "issue": {
+            "sidebar": {
+              "cf4ce33f6b": "{{value0}} Issues",
+              "dfe0a62edd": "No Issues",
+              "58da5ea13b": "No matching Issues",
+              "be4c7dee29": "Filter Issues",
+              "fae85e67da": "Filter titles",
+              "ca89b90323": "All hosts",
+              "39426cad7d": "Filter Issues by title",
+              "3d3adbc231": "Loading Issues…"
+            },
+            "virtual": {
+              "row": {
+                "f861411396": "{{value0}} needing attention in descendants",
+                "f45fae8d2f": "{{value0}} needing attention here",
+                "3efc549aca": "live",
+                "bc91a955af": "Expand Issue",
+                "b4c1545e41": "Collapse Issue",
+                "2784d396b2": "{{value0}} needing attention",
+                "d0d98f600a": "{{value0}} unassigned Conversations",
+                "3d51ddd39b": "Unassigned"
+              }
+            }
+          },
+          "sidebar": {
+            "root": {
+              "mode": {
+                "bar": {
+                  "0452eb4936": "Create Issue",
+                  "e2f8cd2104": "Issues",
+                  "304a4dac66": "Workspaces"
+                }
+              }
+            }
+          }
         }
       },
       "shared": {
@@ -13316,7 +13379,96 @@
       },
       "issues": {
         "IssueConversationRowContent": {
-          "resume": "Resume"
+          "resume": "Resume",
+          "9a65c22788": "{{value0}} unresolved rounds"
+        },
+        "ConversationIssueBindingPopover": {
+          "ac5b28b57f": "Remove from Issue",
+          "9802edeb84": "Current",
+          "f7b6c9f544": "No matching Issues",
+          "dec2daecaa": "Unable to load Issues",
+          "82ea8752f9": "Loading Issues…",
+          "bc10d0e661": "Search Issues…",
+          "81a4fe8854": "Select Issue for Conversation"
+        },
+        "ConversationRenameDialog": {
+          "2fc85442bc": "Save",
+          "72a7684dd9": "Saving…",
+          "472afc54a2": "Cancel",
+          "293fb382e4": "Title",
+          "d2f7c5b470": "Use one title in both Workspaces and Issues.",
+          "55087a9d88": "Rename Conversation"
+        },
+        "IssueChildren": {
+          "38915d9c8c": "Child Issues"
+        },
+        "IssueConversationActions": {
+          "e71a1d1f8a": "Start",
+          "13f5c087f7": "Starting…",
+          "4c8fd04665": "Cancel",
+          "fc184e7cc6": "No enabled agents were detected.",
+          "90aefebec0": "Agent detection failed on this Workspace host.",
+          "96758e93cb": "Detecting agents…",
+          "6ff696a51f": "Workspace",
+          "a269ae936e": "Select a Workspace on this Issue authority.",
+          "64380cbce5": "New Conversation"
+        },
+        "IssueConversationBindingPopover": {
+          "d6f4ab3e1b": "No matching Conversations",
+          "08292477ce": "Search Conversations…",
+          "0f5c489086": "Select Conversation for Issue",
+          "05b241515d": "Add Conversation"
+        },
+        "IssueConversationList": {
+          "b6c52d00d6": "Forget this Orca Conversation? The provider transcript will remain.",
+          "d16f7ffe63": "runtime state changed",
+          "1ecca1142d": "Cannot forget: {{value0}}",
+          "33e7cb8919": "Forget Conversation",
+          "e3e1e75ae3": "Rename Conversation",
+          "18f16f0aca": "No direct Conversations",
+          "17ab1ba679": "Direct Conversations"
+        },
+        "IssueDetail": {
+          "b3d3418bc6": "Delete this Orca Issue? {{value0}} child Issues will be promoted and {{value1}} Conversations will be unbound.",
+          "a6ba3466e6": "Close Issue detail",
+          "6075044b22": "Delete Issue",
+          "e7afe8e6d0": "Reopen",
+          "c3c9fdcbe2": "Archive",
+          "87b92084f3": "Move Issue",
+          "30248cf532": "Child",
+          "92a8657049": "Issue hierarchy is limited to three levels",
+          "d3d30d8651": "Edit Issue",
+          "493a425143": "· Archived"
+        },
+        "IssueEditDialog": {
+          "3070158375": "Update the local title, type, and note.",
+          "fa28154457": "Save",
+          "964134a03c": "Saving…",
+          "9b0bd662d7": "Cancel",
+          "e56037821a": "Optional",
+          "e5a01dc8e5": "Note",
+          "712e435b27": "Type",
+          "11926ad116": "Title",
+          "ab6cf20530": "Edit Issue"
+        },
+        "IssueReparentDialog": {
+          "46d48532d7": "Move",
+          "3a02fca5d2": "Moving…",
+          "902c972450": "Cancel",
+          "6bb9faffc7": "Root",
+          "3e8ed0b42c": "Only legal parents on this authority are shown.",
+          "e86947739f": "Move Issue"
+        },
+        "IssueTimeline": {
+          "b46304c040": "Mark handled",
+          "9599310894": "Mark read",
+          "9367492d8e": "Preview not captured",
+          "474b0f69df": "Completed",
+          "536983d29b": "Waiting",
+          "4d91ad47e5": "Timeline"
+        },
+        "IssuesPage": {
+          "6c141105a8": "Loading Issue…"
         }
       },
       "repo": {
@@ -16910,6 +17062,15 @@
           "insertColumnRight": "Insert column right",
           "deleteColumn": "Delete column",
           "deleteTable": "Delete table"
+        }
+      }
+    },
+    "issues": {
+      "issue": {
+        "conversation": {
+          "resume": {
+            "bb5612ee0c": "This Conversation cannot be resumed."
+          }
         }
       }
     }

@@ -133,7 +133,11 @@ export function IssueConversationRowContent({
           <Badge
             variant="outline"
             className="h-4 min-w-4 px-1 text-[9px] leading-none"
-            aria-label={`${conversation.unresolvedRoundCount} unresolved rounds`}
+            aria-label={translate(
+              'auto.components.issues.IssueConversationRowContent.9a65c22788',
+              '{{value0}} unresolved rounds',
+              { value0: conversation.unresolvedRoundCount }
+            )}
           >
             {conversation.unresolvedRoundCount}
           </Badge>

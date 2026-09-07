@@ -16,6 +16,7 @@ import type {
   ConversationSummary,
   IssueRouteExecutionHostId
 } from '../../../../shared/issues/types'
+import { translate } from '@/i18n/i18n'
 
 export function ConversationRenameDialog({
   route,
@@ -71,11 +72,23 @@ export function ConversationRenameDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Rename Conversation</DialogTitle>
-          <DialogDescription>Use one title in both Workspaces and Issues.</DialogDescription>
+          <DialogTitle>
+            {translate(
+              'auto.components.issues.ConversationRenameDialog.55087a9d88',
+              'Rename Conversation'
+            )}
+          </DialogTitle>
+          <DialogDescription>
+            {translate(
+              'auto.components.issues.ConversationRenameDialog.d2f7c5b470',
+              'Use one title in both Workspaces and Issues.'
+            )}
+          </DialogDescription>
         </DialogHeader>
         <div className="space-y-2">
-          <Label htmlFor="conversation-rename-title">Title</Label>
+          <Label htmlFor="conversation-rename-title">
+            {translate('auto.components.issues.ConversationRenameDialog.293fb382e4', 'Title')}
+          </Label>
           <Input
             id="conversation-rename-title"
             value={title}
@@ -86,10 +99,12 @@ export function ConversationRenameDialog({
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>
-            Cancel
+            {translate('auto.components.issues.ConversationRenameDialog.472afc54a2', 'Cancel')}
           </Button>
           <Button disabled={pending} onClick={() => void save()}>
-            {pending ? 'Saving…' : 'Save'}
+            {pending
+              ? translate('auto.components.issues.ConversationRenameDialog.72a7684dd9', 'Saving…')
+              : translate('auto.components.issues.ConversationRenameDialog.2fc85442bc', 'Save')}
           </Button>
         </DialogFooter>
       </DialogContent>

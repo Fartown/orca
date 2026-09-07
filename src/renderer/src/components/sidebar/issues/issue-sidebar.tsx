@@ -19,6 +19,7 @@ import type { IssueListFilter, IssueRouteExecutionHostId } from '../../../../../
 import { useSidebarHostScopeOptions } from '../use-sidebar-host-scope-options'
 import { buildIssueRows } from './build-issue-rows'
 import { IssueVirtualRow } from './issue-virtual-row'
+import { translate } from '@/i18n/i18n'
 
 // 规格照抄 SidebarGroupByToggle,只是不撑满整行 —— 同一行右侧还有搜索与主机选择。
 const FILTER_SEGMENT_CLASS =
@@ -112,7 +113,10 @@ export function IssueSidebar(): React.JSX.Element {
               {
                 kind: 'status' as const,
                 key: `${section.route}:loading`,
-                label: 'Loading Issues…',
+                label: translate(
+                  'auto.components.sidebar.issues.issue.sidebar.3d3adbc231',
+                  'Loading Issues…'
+                ),
                 spinning: true,
                 hostLabel
               }
@@ -185,7 +189,10 @@ export function IssueSidebar(): React.JSX.Element {
             variant="ghost"
             size="icon-xs"
             className="ml-auto"
-            aria-label="Filter Issues by title"
+            aria-label={translate(
+              'auto.components.sidebar.issues.issue.sidebar.39426cad7d',
+              'Filter Issues by title'
+            )}
             aria-expanded={searchOpen || searchQuery.length > 0}
             onClick={() => setSearchOpen((open) => !open)}
           >
@@ -205,7 +212,10 @@ export function IssueSidebar(): React.JSX.Element {
               </SelectTrigger>
               <SelectContent align="end">
                 <SelectItem value="all" className="text-xs">
-                  All hosts
+                  {translate(
+                    'auto.components.sidebar.issues.issue.sidebar.ca89b90323',
+                    'All hosts'
+                  )}
                 </SelectItem>
                 {hostOptions.map((host) => (
                   <SelectItem key={host.id} value={host.id} className="text-xs">
@@ -221,9 +231,15 @@ export function IssueSidebar(): React.JSX.Element {
             autoFocus
             value={searchQuery}
             onChange={(event) => setSearchQuery(event.target.value)}
-            placeholder="Filter titles"
+            placeholder={translate(
+              'auto.components.sidebar.issues.issue.sidebar.fae85e67da',
+              'Filter titles'
+            )}
             className="mt-1.5 h-6 bg-input/50 text-xs shadow-none"
-            aria-label="Filter Issues"
+            aria-label={translate(
+              'auto.components.sidebar.issues.issue.sidebar.be4c7dee29',
+              'Filter Issues'
+            )}
           />
         ) : null}
       </div>
@@ -232,13 +248,26 @@ export function IssueSidebar(): React.JSX.Element {
         className="worktree-sidebar-scrollbar min-h-0 flex-1 overflow-y-auto py-1"
       >
         {flatRows.length === 0 ? (
-          <StatusRow label={searchQuery ? 'No matching Issues' : 'No Issues'} />
+          <StatusRow
+            label={
+              searchQuery
+                ? translate(
+                    'auto.components.sidebar.issues.issue.sidebar.58da5ea13b',
+                    'No matching Issues'
+                  )
+                : translate('auto.components.sidebar.issues.issue.sidebar.dfe0a62edd', 'No Issues')
+            }
+          />
         ) : null}
         {/* 虚拟化后行不再按主机分块,但 region 仍需真实包住内容 ——
             已提交的 16 步旅程 spec 用 toContainText 断言它。单主机时它就是整个列表。 */}
         <div
           role="region"
-          aria-label={`${sections[0]?.host.label ?? 'Local'} Issues`}
+          aria-label={translate(
+            'auto.components.sidebar.issues.issue.sidebar.cf4ce33f6b',
+            '{{value0}} Issues',
+            { value0: sections[0]?.host.label ?? 'Local' }
+          )}
           className="relative w-full"
           style={{ height: `${virtualizer.getTotalSize()}px` }}
         >

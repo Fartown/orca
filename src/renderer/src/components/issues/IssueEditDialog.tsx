@@ -14,6 +14,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { IssueRuntimeClient } from '@/issues/issue-runtime-client'
 import type { IssueRecord, IssueRouteExecutionHostId } from '../../../../shared/issues/types'
+import { translate } from '@/i18n/i18n'
 
 export function IssueEditDialog({
   route,
@@ -65,12 +66,21 @@ export function IssueEditDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Edit Issue</DialogTitle>
-          <DialogDescription>Update the local title, type, and note.</DialogDescription>
+          <DialogTitle>
+            {translate('auto.components.issues.IssueEditDialog.ab6cf20530', 'Edit Issue')}
+          </DialogTitle>
+          <DialogDescription>
+            {translate(
+              'auto.components.issues.IssueEditDialog.3070158375',
+              'Update the local title, type, and note.'
+            )}
+          </DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
           <div className="space-y-2">
-            <Label htmlFor="issue-edit-title">Title</Label>
+            <Label htmlFor="issue-edit-title">
+              {translate('auto.components.issues.IssueEditDialog.11926ad116', 'Title')}
+            </Label>
             <Input
               id="issue-edit-title"
               value={title}
@@ -79,30 +89,42 @@ export function IssueEditDialog({
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="issue-edit-type">Type</Label>
+            <Label htmlFor="issue-edit-type">
+              {translate('auto.components.issues.IssueEditDialog.712e435b27', 'Type')}
+            </Label>
             <Input
               id="issue-edit-type"
               value={typeLabel}
               onChange={(event) => setTypeLabel(event.target.value)}
-              placeholder="Optional"
+              placeholder={translate(
+                'auto.components.issues.IssueEditDialog.e56037821a',
+                'Optional'
+              )}
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="issue-edit-note">Note</Label>
+            <Label htmlFor="issue-edit-note">
+              {translate('auto.components.issues.IssueEditDialog.e5a01dc8e5', 'Note')}
+            </Label>
             <Textarea
               id="issue-edit-note"
               value={note}
               onChange={(event) => setNote(event.target.value)}
-              placeholder="Optional"
+              placeholder={translate(
+                'auto.components.issues.IssueEditDialog.e56037821a',
+                'Optional'
+              )}
             />
           </div>
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>
-            Cancel
+            {translate('auto.components.issues.IssueEditDialog.9b0bd662d7', 'Cancel')}
           </Button>
           <Button disabled={pending || !title.trim()} onClick={() => void save()}>
-            {pending ? 'Saving…' : 'Save'}
+            {pending
+              ? translate('auto.components.issues.IssueEditDialog.964134a03c', 'Saving…')
+              : translate('auto.components.issues.IssueEditDialog.fa28154457', 'Save')}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -20,6 +20,7 @@ import type { IssueRouteExecutionHostId, IssueSummary } from '../../../../shared
 import { ISSUE_MAX_DEPTH } from '../../../../shared/issues/constants'
 import { IssueRuntimeClient } from '@/issues/issue-runtime-client'
 import { useIssueDomainStore } from '@/issues/use-issue-domain-store'
+import { translate } from '@/i18n/i18n'
 
 export function IssueReparentDialog({
   route,
@@ -68,15 +69,24 @@ export function IssueReparentDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
-          <DialogTitle>Move Issue</DialogTitle>
-          <DialogDescription>Only legal parents on this authority are shown.</DialogDescription>
+          <DialogTitle>
+            {translate('auto.components.issues.IssueReparentDialog.e86947739f', 'Move Issue')}
+          </DialogTitle>
+          <DialogDescription>
+            {translate(
+              'auto.components.issues.IssueReparentDialog.3e8ed0b42c',
+              'Only legal parents on this authority are shown.'
+            )}
+          </DialogDescription>
         </DialogHeader>
         <Select value={parentId} onValueChange={setParentId}>
           <SelectTrigger className="w-full">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="root">Root</SelectItem>
+            <SelectItem value="root">
+              {translate('auto.components.issues.IssueReparentDialog.6bb9faffc7', 'Root')}
+            </SelectItem>
             {candidates.map((candidate) => (
               <SelectItem key={candidate.id} value={candidate.id}>
                 {candidate.source.kind === 'local'
@@ -88,10 +98,12 @@ export function IssueReparentDialog({
         </Select>
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>
-            Cancel
+            {translate('auto.components.issues.IssueReparentDialog.902c972450', 'Cancel')}
           </Button>
           <Button disabled={pending} onClick={() => void submit()}>
-            {pending ? 'Moving…' : 'Move'}
+            {pending
+              ? translate('auto.components.issues.IssueReparentDialog.3a02fca5d2', 'Moving…')
+              : translate('auto.components.issues.IssueReparentDialog.46d48532d7', 'Move')}
           </Button>
         </DialogFooter>
       </DialogContent>

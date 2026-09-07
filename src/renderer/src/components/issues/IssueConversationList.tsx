@@ -14,6 +14,7 @@ import { IssueRuntimeClient } from '@/issues/issue-runtime-client'
 import { ConversationRenameDialog } from './ConversationRenameDialog'
 import { IssueConversationRowContent } from './IssueConversationRowContent'
 import { ConversationIssueBindingPopover } from './ConversationIssueBindingPopover'
+import { translate } from '@/i18n/i18n'
 
 export function IssueConversationList({
   route,
@@ -37,11 +38,17 @@ export function IssueConversationList({
   return (
     <section className="space-y-2">
       <h2 className="text-xs font-semibold uppercase tracking-[0.05em] text-muted-foreground">
-        Direct Conversations
+        {translate(
+          'auto.components.issues.IssueConversationList.17ab1ba679',
+          'Direct Conversations'
+        )}
       </h2>
       {visibleConversations.length === 0 ? (
         <div className="rounded-md border border-dashed border-border px-3 py-5 text-center text-sm text-muted-foreground">
-          No direct Conversations
+          {translate(
+            'auto.components.issues.IssueConversationList.18f16f0aca',
+            'No direct Conversations'
+          )}
         </div>
       ) : (
         <div className="divide-y divide-border rounded-md border border-border">
@@ -64,7 +71,10 @@ export function IssueConversationList({
                 <Button
                   variant="ghost"
                   size="icon-xs"
-                  aria-label="Rename Conversation"
+                  aria-label={translate(
+                    'auto.components.issues.IssueConversationList.e3e1e75ae3',
+                    'Rename Conversation'
+                  )}
                   onClick={() => setRenameConversation(conversation)}
                 >
                   <Pencil className="size-3" />
@@ -77,7 +87,10 @@ export function IssueConversationList({
                 <Button
                   variant="ghost"
                   size="icon-xs"
-                  aria-label="Forget Conversation"
+                  aria-label={translate(
+                    'auto.components.issues.IssueConversationList.33e7cb8919',
+                    'Forget Conversation'
+                  )}
                   onClick={() => void forgetConversation(route, conversation, onChanged)}
                 >
                   <Trash2 className="size-3" />
@@ -116,10 +129,30 @@ async function forgetConversation(
       { conversationId: conversation.id }
     )
     if (!preparation.canDelete || !preparation.preflightToken) {
-      toast.error(`Cannot forget: ${preparation.blockers.join(', ') || 'runtime state changed'}`)
+      toast.error(
+        translate(
+          'auto.components.issues.IssueConversationList.1ecca1142d',
+          'Cannot forget: {{value0}}',
+          {
+            value0:
+              preparation.blockers.join(', ') ||
+              translate(
+                'auto.components.issues.IssueConversationList.d16f7ffe63',
+                'runtime state changed'
+              )
+          }
+        )
+      )
       return
     }
-    if (!window.confirm('Forget this Orca Conversation? The provider transcript will remain.')) {
+    if (
+      !window.confirm(
+        translate(
+          'auto.components.issues.IssueConversationList.b6c52d00d6',
+          'Forget this Orca Conversation? The provider transcript will remain.'
+        )
+      )
+    ) {
       return
     }
     await client.mutate('conversations.delete', {

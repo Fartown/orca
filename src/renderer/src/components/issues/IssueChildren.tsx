@@ -1,5 +1,6 @@
 import type { IssueSummary } from '../../../../shared/issues/types'
 import { issueDomainStore } from '@/issues/issues-domain-store'
+import { translate } from '@/i18n/i18n'
 
 export function IssueChildren({
   route,
@@ -14,7 +15,7 @@ export function IssueChildren({
   return (
     <section className="space-y-2">
       <h2 className="text-xs font-semibold uppercase tracking-[0.05em] text-muted-foreground">
-        Child Issues
+        {translate('auto.components.issues.IssueChildren.38915d9c8c', 'Child Issues')}
       </h2>
       <div className="divide-y divide-border rounded-md border border-border">
         {issues.map((child) => (

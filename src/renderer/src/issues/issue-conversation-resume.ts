@@ -6,6 +6,7 @@ import { issueDomainStore } from '@/issues/issues-domain-store'
 import { useAppStore } from '@/store'
 import type { ConversationSummary, IssueRouteExecutionHostId } from '../../../shared/issues/types'
 import { folderWorkspaceKey } from '../../../shared/workspace-scope'
+import { translate } from '@/i18n/i18n'
 
 export async function resumeIssueConversationWithAiVault(
   route: IssueRouteExecutionHostId,
@@ -13,7 +14,12 @@ export async function resumeIssueConversationWithAiVault(
 ): Promise<boolean> {
   const providerSession = conversation.navigation?.providerSession
   if (!providerSession) {
-    toast.error('This Conversation cannot be resumed.')
+    toast.error(
+      translate(
+        'auto.issues.issue.conversation.resume.bb5612ee0c',
+        'This Conversation cannot be resumed.'
+      )
+    )
     return false
   }
 

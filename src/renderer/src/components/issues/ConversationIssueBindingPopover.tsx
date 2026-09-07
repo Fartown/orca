@@ -22,6 +22,7 @@ import type {
   ConversationSummary,
   IssueRouteExecutionHostId
 } from '../../../../shared/issues/types'
+import { translate } from '@/i18n/i18n'
 
 export function ConversationIssueBindingPopover({
   route,
@@ -114,16 +115,37 @@ export function ConversationIssueBindingPopover({
         onClick={(event) => event.stopPropagation()}
         onPointerDown={(event) => event.stopPropagation()}
       >
-        <Command aria-label="Select Issue for Conversation">
+        <Command
+          aria-label={translate(
+            'auto.components.issues.ConversationIssueBindingPopover.81a4fe8854',
+            'Select Issue for Conversation'
+          )}
+        >
           <CommandInput
-            placeholder="Search Issues…"
+            placeholder={translate(
+              'auto.components.issues.ConversationIssueBindingPopover.bc10d0e661',
+              'Search Issues…'
+            )}
             value={query}
             onValueChange={setQuery}
             autoFocus
           />
           <CommandList>
             <CommandEmpty>
-              {loading ? 'Loading Issues…' : error ? 'Unable to load Issues' : 'No matching Issues'}
+              {loading
+                ? translate(
+                    'auto.components.issues.ConversationIssueBindingPopover.82ea8752f9',
+                    'Loading Issues…'
+                  )
+                : error
+                  ? translate(
+                      'auto.components.issues.ConversationIssueBindingPopover.dec2daecaa',
+                      'Unable to load Issues'
+                    )
+                  : translate(
+                      'auto.components.issues.ConversationIssueBindingPopover.f7b6c9f544',
+                      'No matching Issues'
+                    )}
             </CommandEmpty>
             {options.length > 0 ? (
               <CommandGroup heading="Issues">
@@ -155,7 +177,10 @@ export function ConversationIssueBindingPopover({
                       {current ? (
                         <span className="flex shrink-0 items-center gap-1 text-xs text-muted-foreground">
                           <Check className="size-3" />
-                          Current
+                          {translate(
+                            'auto.components.issues.ConversationIssueBindingPopover.9802edeb84',
+                            'Current'
+                          )}
                         </span>
                       ) : null}
                     </CommandItem>
@@ -179,7 +204,10 @@ export function ConversationIssueBindingPopover({
                     ) : (
                       <Unlink className="size-3.5" />
                     )}
-                    Remove from Issue
+                    {translate(
+                      'auto.components.issues.ConversationIssueBindingPopover.ac5b28b57f',
+                      'Remove from Issue'
+                    )}
                   </CommandItem>
                 </CommandGroup>
               </>

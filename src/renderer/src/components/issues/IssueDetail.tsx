@@ -17,6 +17,7 @@ import { CreateIssueDialog } from '../sidebar/issues/create-issue-dialog'
 import { IssueConversationActions } from './IssueConversationActions'
 import { IssueReparentDialog } from './IssueReparentDialog'
 import { IssueEditDialog } from './IssueEditDialog'
+import { translate } from '@/i18n/i18n'
 
 export function IssueDetail({
   route,
@@ -43,13 +44,15 @@ export function IssueDetail({
           <h1 className="truncate text-sm font-semibold">{title}</h1>
           <p className="truncate text-xs text-muted-foreground">
             {detail.authority.profileLabel ?? detail.authority.authorityExecutionHostId}
-            {issue.state === 'archived' ? ' · Archived' : ''}
+            {issue.state === 'archived'
+              ? translate('auto.components.issues.IssueDetail.493a425143', '· Archived')
+              : ''}
           </p>
         </div>
         <Button
           variant="ghost"
           size="icon-xs"
-          aria-label="Edit Issue"
+          aria-label={translate('auto.components.issues.IssueDetail.d3d30d8651', 'Edit Issue')}
           onClick={() => setEditOpen(true)}
         >
           <Pencil className="size-3" />
@@ -58,16 +61,23 @@ export function IssueDetail({
           variant="outline"
           size="xs"
           disabled={!canCreateChild}
-          title={canCreateChild ? undefined : 'Issue hierarchy is limited to three levels'}
+          title={
+            canCreateChild
+              ? undefined
+              : translate(
+                  'auto.components.issues.IssueDetail.92a8657049',
+                  'Issue hierarchy is limited to three levels'
+                )
+          }
           onClick={() => setCreateChildOpen(true)}
         >
           <Plus className="size-3" />
-          Child
+          {translate('auto.components.issues.IssueDetail.30248cf532', 'Child')}
         </Button>
         <Button
           variant="ghost"
           size="icon-xs"
-          aria-label="Move Issue"
+          aria-label={translate('auto.components.issues.IssueDetail.87b92084f3', 'Move Issue')}
           onClick={() => setReparentOpen(true)}
         >
           <Move className="size-3" />
@@ -79,7 +89,7 @@ export function IssueDetail({
             onClick={() => void archiveIssue(route, detail, onChanged)}
           >
             <Archive className="size-3" />
-            Archive
+            {translate('auto.components.issues.IssueDetail.c3c9fdcbe2', 'Archive')}
           </Button>
         ) : (
           <Button
@@ -88,13 +98,13 @@ export function IssueDetail({
             onClick={() => void reopenIssue(route, detail, onChanged)}
           >
             <RotateCcw className="size-3" />
-            Reopen
+            {translate('auto.components.issues.IssueDetail.e7afe8e6d0', 'Reopen')}
           </Button>
         )}
         <Button
           variant="ghost"
           size="icon-xs"
-          aria-label="Delete Issue"
+          aria-label={translate('auto.components.issues.IssueDetail.6075044b22', 'Delete Issue')}
           onClick={() => void deleteIssue(route, detail, onChanged)}
         >
           <Trash2 className="size-3" />
@@ -102,7 +112,10 @@ export function IssueDetail({
         <Button
           variant="ghost"
           size="icon-xs"
-          aria-label="Close Issue detail"
+          aria-label={translate(
+            'auto.components.issues.IssueDetail.a6ba3466e6',
+            'Close Issue detail'
+          )}
           onClick={() => issueDomainStore.getState().setActiveIssueRoute(null)}
         >
           <X className="size-3" />
@@ -203,7 +216,14 @@ async function deleteIssue(
     }>('issues.prepareDelete', { issueId: detail.issue.id })
     if (
       !window.confirm(
-        `Delete this Orca Issue? ${preparation.plan.children.length} child Issues will be promoted and ${preparation.plan.conversations.length} Conversations will be unbound.`
+        translate(
+          'auto.components.issues.IssueDetail.b3d3418bc6',
+          'Delete this Orca Issue? {{value0}} child Issues will be promoted and {{value1}} Conversations will be unbound.',
+          {
+            value0: preparation.plan.children.length,
+            value1: preparation.plan.conversations.length
+          }
+        )
       )
     ) {
       return

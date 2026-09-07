@@ -19,6 +19,7 @@ import {
   WORKTREE_SECTION_HEADER_PADDING_LEFT
 } from '../worktree-list/rows/indentation'
 import type { IssueSidebarRow } from './build-issue-rows'
+import { translate } from '@/i18n/i18n'
 
 export function getIssueRowContentIndent(depth: number): number {
   return (
@@ -55,14 +56,27 @@ export function IssueVirtualRow({
           <ChevronRight
             className={cn('size-3 transition-transform', row.expanded && 'rotate-90')}
           />
-          <span className="min-w-0 flex-1 truncate">Unassigned</span>
+          <span className="min-w-0 flex-1 truncate">
+            {translate('auto.components.sidebar.issues.issue.virtual.row.3d51ddd39b', 'Unassigned')}
+          </span>
           {row.count > 0 ? (
-            <SidebarCountPill count={row.count} label={`${row.count} unassigned Conversations`} />
+            <SidebarCountPill
+              count={row.count}
+              label={translate(
+                'auto.components.sidebar.issues.issue.virtual.row.d0d98f600a',
+                '{{value0}} unassigned Conversations',
+                { value0: row.count }
+              )}
+            />
           ) : null}
           {row.unresolvedCount > 0 ? (
             <SidebarCountPill
               count={row.unresolvedCount}
-              label={`${row.unresolvedCount} needing attention`}
+              label={translate(
+                'auto.components.sidebar.issues.issue.virtual.row.2784d396b2',
+                '{{value0}} needing attention',
+                { value0: row.unresolvedCount }
+              )}
               tone="foreground"
             />
           ) : null}
@@ -116,7 +130,17 @@ export function IssueVirtualRow({
         type="button"
         className="flex size-5 shrink-0 items-center justify-center rounded-sm text-muted-foreground hover:text-foreground disabled:opacity-30"
         disabled={!row.hasChildren && row.issue.directConversationCount === 0}
-        aria-label={row.expanded ? 'Collapse Issue' : 'Expand Issue'}
+        aria-label={
+          row.expanded
+            ? translate(
+                'auto.components.sidebar.issues.issue.virtual.row.b4c1545e41',
+                'Collapse Issue'
+              )
+            : translate(
+                'auto.components.sidebar.issues.issue.virtual.row.bc91a955af',
+                'Expand Issue'
+              )
+        }
         onClick={() => issueDomainStore.getState().toggleCollapsedIssue(row.issue.id)}
       >
         <ChevronRight className={cn('size-3 transition-transform', row.expanded && 'rotate-90')} />
@@ -138,20 +162,31 @@ export function IssueVirtualRow({
           </span>
         ) : null}
         {running > 0 ? (
-          <span className="shrink-0 text-[10px] text-muted-foreground/80">{running} live</span>
+          <span className="shrink-0 text-[10px] text-muted-foreground/80">
+            {running}{' '}
+            {translate('auto.components.sidebar.issues.issue.virtual.row.3efc549aca', 'live')}
+          </span>
         ) : null}
         {/* 自身与后代是两个独立事实,不能二选一显示 —— 父行必须同时看得到 */}
         {row.issue.ownUnresolvedCount > 0 ? (
           <SidebarCountPill
             count={row.issue.ownUnresolvedCount}
-            label={`${row.issue.ownUnresolvedCount} needing attention here`}
+            label={translate(
+              'auto.components.sidebar.issues.issue.virtual.row.f45fae8d2f',
+              '{{value0}} needing attention here',
+              { value0: row.issue.ownUnresolvedCount }
+            )}
             tone="foreground"
           />
         ) : null}
         {row.issue.descendantAttentionCount > 0 ? (
           <SidebarCountPill
             count={row.issue.descendantAttentionCount}
-            label={`${row.issue.descendantAttentionCount} needing attention in descendants`}
+            label={translate(
+              'auto.components.sidebar.issues.issue.virtual.row.f861411396',
+              '{{value0}} needing attention in descendants',
+              { value0: row.issue.descendantAttentionCount }
+            )}
           />
         ) : null}
         {hostLabel && row.depth === 0 ? <SidebarHostBadge label={hostLabel} /> : null}
