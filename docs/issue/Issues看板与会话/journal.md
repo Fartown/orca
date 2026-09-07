@@ -45,6 +45,15 @@ ready 只表示文档已按当前源码整理；本需求仍为 implementing，�
 
 ## 3. 开发记录
 
+### 2026-09-07 记录两处越过 max-lines 的上游接缝文件
+
+- 本轮目标：第一次跑完整 `pnpm lint` 时发现 oxlint 的 `max-lines` 在两个 Issues 接缝文件上变红，定位原因并决定处理方式。
+- 完成内容：核实两处都是「上游本来就接近上限、fork 的改动把它顶过线」，不是上游自身的问题。`src/renderer/src/lib/launch-agent-in-new-tab.ts`：上游版本 lint 干净，fork 只加了 4 行把 `launchToken` 串过启动链路（参数类型、解构、web host 调用、启动配置各一行），计数 302 / 上限 300。`src/renderer/src/components/right-sidebar/ai-vault-session-launch-actions.ts`：上游版本 lint 干净，fork 把 hook 内联的续跑逻辑抽成导出的 `resumeAiVaultSession` 供 Issues 复用，净增 14 行，计数同样 302。两处都不能加 `max-lines` 关闭注释（AGENTS.md 明令禁止）。
+- 代码或文档变更：仅本记录。未改代码：两种可行解都需要真正的归属决策，且本轮没有真机运行条件，不适合顺手改。
+- 验证证据：分别 `git checkout origin/main -- <文件>` 后 `npx oxlint` 两文件均无告警，切回后复现 302/302，确认增量来自 fork；`rg` 确认 `resumeAiVaultSession` 在上游不存在，其依赖的三个私有 helper 在该文件内各有 3 处引用。
+- 未解决问题：两个方案各有代价。(a) 把 `resumeAiVaultSession` 连同它依赖的三个私有 helper 一起挪进 fork 自己的新文件（如 `ai-vault-session-resume-action.ts`），行数立刻降下来、对上游文件的 diff 也变小，但那三个 helper 是上游代码、文件内另有调用方，搬走会扩大上游 diff；只搬函数不搬 helper 会形成循环 import。(b) 从上游函数里抽一块（如 `launch-agent-in-new-tab.ts` 顶部的 agent 启动环境解析）换取空间，但纯粹为了 2 行余量去改上游代码，每次同步都会在那一段冲突。在决定之前，`pnpm lint` 在本分支保持红；周同步工作流跑的是门禁与各功能 checks，不含 oxlint，所以自动落地不受影响——这也是有意为之，不想让一个已知的独立问题卡住上游同步。
+- 下一步：由 Issues 线决定 `resumeAiVaultSession` 的归属后一并处理；处理完再考虑把 oxlint 加进同步工作流的验证列表。
+
 ### 2026-09-07 消除两处顺序敏感的断言
 
 - 本轮目标：fork 同步工作流在 CI 上跑 Issues 套件时两次变红，定位并修掉与顺序相关的断言，让「上游合并是否安全」这个信号可信。
