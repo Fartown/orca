@@ -279,7 +279,6 @@
             "src/renderer/src/components/sidebar/workspace-conversation-binding-rows*.tsx",
             "src/renderer/src/components/right-sidebar/ai-vault-original-pane-host-match.ts",
             "src/renderer/src/components/right-sidebar/ai-vault-original-pane-prompt-match.ts",
-            "src/renderer/src/components/right-sidebar/ai-vault-session-launch-target.ts",
             "tests/e2e/issue-conversation-unconfirmed-retry.spec.ts"
           ],
           "message": "A removed parallel lifecycle, cache, or native-capability rewrite has been reintroduced."
