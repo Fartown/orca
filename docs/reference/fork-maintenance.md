@@ -25,7 +25,7 @@ gitGraph
 | `main`                 | 上游镜像                                      | 永不直接提交;只由 `pnpm sync:upstream` 或周同步工作流 fast-forward 到 `origin/main`,再推到 `Fartown/main`                                           |
 | `fork/integration`     | 上游 + 全部 fork 功能;**fork 仓库的默认分支** | 打包和发布从这里出;只接受 merge(上游同步或功能 PR),不 rebase,不 squash。设为默认分支是因为 GitHub 的定时/手动工作流只从默认分支读取,PR 也默认指向它 |
 | `feat/<feature>`       | 一条功能一条分支                              | 从 `fork/integration` 切出;每条分支一个 worktree;以 PR 合回,PR 必须过门禁                                                                           |
-| `sync/upstream-<日期>` | 周同步工作流开出的合并分支                    | 合并成功即开 PR;有冲突则开 issue,由人在本地解                                                                                                       |
+| `sync/upstream-<日期>` | 周同步工作流开出的合并分支                    | 门禁全绿则由工作流 fast-forward 到 `fork/integration` 并删除;有检查失败则保留下来,由人在本地修                                                      |
 
 远程:`origin` = 上游 `stablyai/orca`,`Fartown` = fork。这两个名字写在 `config/fork-features.jsonc` 里,脚本从那里读。
 
@@ -49,13 +49,13 @@ gitGraph
 
 ## 3. 门禁:`config/architecture-policies.jsonc`
 
-- **`fork-upstream-diff-budget`**:`fork-integration-scope` 规则把分支相对 `origin/main` 的全部改动限制在一张白名单里。这张表就是 fork 对上游的改动预算:新功能只能新建自己的目录,碰上游文件只能碰表里列出的接缝。每次同步上游,冲突只会出现在这些接缝上。
+- **`fork-upstream-diff-budget`**:`fork-integration-scope` 规则把分支相对**上次合并的上游提交(merge-base)**的全部改动限制在一张白名单里 —— 用 merge-base 而不是 `origin/main` 顶端,是为了上游往前跑时本地门禁不会无故变红。这张表就是 fork 对上游的改动预算:新功能只能新建自己的目录,碰上游文件只能碰表里列出的接缝。每次同步上游,冲突只会出现在这些接缝上。
 - **每功能一个策略**(`goals-native-feature`、`issues-existing-capability-reuse`、`self-hosted-artifacts`):`comparison: worktree` 的规则只看当前未提交改动。改了某功能自己的文件,工作区里其余改动必须落在该功能的 owned 路径、接缝或 fork 基础设施文件里。这保证一个会话一次只动一条功能线。
 - 依赖边界规则保证上游原生模块不 import fork 功能的领域模块;`forbidden-path` 保证已删除的旧实现(如内置 Goal 插件)不会被重新引入。
 
 新增功能时,在 `fork-features.jsonc` 加记录,在策略文件加它的策略,并把它的 owned 路径与接缝加进 `fork-integration-scope` 的白名单;`check:fork-features` 会核对两边一致。
 
-## 3a. 文档门禁:`pnpm check:fork-docs`
+## 4. 文档门禁:`pnpm check:fork-docs`
 
 功能清单说“有什么”,`docs/issue/<需求>/` 说“为什么、到哪一步”。这个门禁让两边不漂移:
 
@@ -65,7 +65,7 @@ gitGraph
 
 它和 `check:fork-features` 一起挂在 `pnpm lint`、PR 检查和周同步里。
 
-## 4. 同步上游
+## 5. 同步上游
 
 每次同步先打印一份「接缝与依赖变更报告」:上游这批提交里,哪些碰到了各功能的 `seams` 或 `dependsOn`(`config/scripts/report-upstream-seam-changes.mjs`)。几百个上游提交不必全读,读这十几个就够;周工作流把它写进 job summary,检查失败时的 issue 里也带上。
 
@@ -78,12 +78,24 @@ pnpm sync:upstream --dry-run  # 只看落后多少
 
 脚本拒绝脏工作区和非 integration 分支。合并冲突时它停在冲突处并打印下一步;解冲突的唯一原则是**保住 `fork-features.jsonc` 里的每一项**。解完先 `git add -A && git commit` 提交合并(worktree 规则会把未提交的合并当成一次巨大改动),再重新执行 `pnpm sync:upstream`,它会跳过合并、跑完全部门禁和各功能 checks。上游把接缝挪进新文件时,`fork-integration-scope` 会报该文件越界:把它登记为对应功能的 `seams` 并加进白名单,这就是预算在起作用。
 
-`.github/workflows/sync-upstream.yml` 每周一自动做同样的事:ff `main`、把上游合到 `sync/upstream-<日期>` 分支,**在工作流里直接跑功能清单门禁、架构门禁、驱动打包和全部功能 checks**;全绿就把合并结果 fast-forward 到 `fork/integration`(结果写在 job summary 里),有失败则保留同步分支、开 issue 并让 job 变红;合并冲突同样开 issue。`GITHUB_TOKEN` 在这个 fork 里开不了 PR,所以失败时的 PR 只在配了 `FORK_SYNC_TOKEN` 时才会开。推送用的是仓库级的写 deploy key(secret `FORK_SYNC_DEPLOY_KEY`,2026-09-07 已配置):`GITHUB_TOKEN` 不能推带工作流文件改动的提交,而上游几乎每次都改工作流,所以 ff `main` 和推同步分支都走这把 key;开 PR / 开 issue 仍用 `GITHUB_TOKEN`。这条链不需要任何个人 token。`FORK_SYNC_TOKEN` 是可选项:默认 `GITHUB_TOKEN` 开出的 PR 不会再触发常规 PR 工作流,想让同步 PR 也跑完整 PR CI,才需要在 fork 仓库配一个细粒度 PAT(仅此仓库,contents 与 pull requests 写权限),PAT 只能由账号本人在浏览器里创建,创建后用 `gh secret set FORK_SYNC_TOKEN --repo Fartown/orca` 写入。换 deploy key:`ssh-keygen -t ed25519`,`gh repo deploy-key add <pub> --allow-write`,`gh secret set FORK_SYNC_DEPLOY_KEY < <私钥>`,再删掉旧 key。
+`.github/workflows/sync-upstream.yml` 每周一自动做同样的事:ff `main`、把上游合到 `sync/upstream-<日期>` 分支、打印接缝与依赖变更报告,然后**在工作流里直接跑**功能清单门禁、文档门禁、架构门禁、驱动打包和全部功能 checks。
 
-## 5. 日常规则
+| 结果       | 工作流的动作                                                                  |
+| ---------- | ----------------------------------------------------------------------------- |
+| 门禁全绿   | 把合并结果 fast-forward 到 `fork/integration`,删掉同步分支,结果写 job summary |
+| 有检查失败 | 保留同步分支,把逐项结果和变更报告写进 job summary 与 issue,job 变红           |
+| 合并有冲突 | 保留冲突文件清单,开 issue,由人在本地按 §5 的流程解                            |
+
+凭据:
+
+- 推送走仓库级写 deploy key(secret `FORK_SYNC_DEPLOY_KEY`,2026-09-07 已配置)。`GITHUB_TOKEN` 不能推带工作流文件改动的提交,而上游几乎每次都改工作流。换 key:`ssh-keygen -t ed25519` → `gh repo deploy-key add <pub> --allow-write` → `gh secret set FORK_SYNC_DEPLOY_KEY < <私钥>` → 删掉旧 key。
+- 开 issue 用 `GITHUB_TOKEN`,失败也只是 warning,不影响 job 的红绿。
+- `FORK_SYNC_TOKEN` 是可选项:`GITHUB_TOKEN` 在这个 fork 里开不了 PR,配一个细粒度 PAT(仅此仓库,contents 与 pull requests 写)才会在检查失败时额外开 PR、并让同步 PR 跑常规 PR CI。PAT 只能由账号本人在浏览器创建,之后 `gh secret set FORK_SYNC_TOKEN --repo Fartown/orca`。
+
+## 6. 日常规则
 
 1. 一条功能一个 worktree、一个分支、一个 `docs/issue/<需求>/`。不同 agent 会话不共用工作区。
-2. 改上游文件前先问:能不能放进自己的目录?必须碰上游时,只碰接缝,并把接缝登记到 `fork-features.jsonc` 的 `seams`。
+2. 改上游文件前先问:能不能放进自己的目录?必须碰上游时,只碰接缝,并把接缝登记到 `fork-features.jsonc` 的 `seams`;新 import 到的上游模块登记到 `dependsOn`。
 3. 提交要小、要按功能打前缀(`feat(goals)`、`fix(issues)`),不要把几条线攒成一个大提交。
 4. 纯格式化不要带进上游文件的 diff:整仓 `oxfmt` 之后,用 `git checkout origin/main -- <文件>` 把只有格式差异的上游文件恢复原样。
 5. 真机验证产物放 `.docs/<主题>-ui-validation/<日期>/{scripts,evidence,build}`,`.docs` 不进仓库;文档里引用完整相对路径。
