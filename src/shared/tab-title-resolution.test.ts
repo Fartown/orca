@@ -90,6 +90,33 @@ describe('tab title resolution', () => {
     ).toBe('Repair provider-native tab titles')
   })
 
+  it('holds the tab label instead of status noise for agents without a title slot', () => {
+    const tab = {
+      customTitle: null,
+      defaultTitle: 'Terminal 3',
+      launchAgent: 'gemini' as const
+    }
+    expect(resolveTerminalTabTitle({ ...tab, title: '⠋ ~/dev/orca' }, false, '⠋ ~/dev/orca')).toBe(
+      'Terminal 3'
+    )
+    expect(
+      resolveTerminalTabTitle({ ...tab, title: 'Gemini working' }, false, 'Gemini working')
+    ).toBe('Terminal 3')
+    expect(resolveTerminalTabTitle({ ...tab, title: 'Fix the login redirect' }, false, 'x')).toBe(
+      'Fix the login redirect'
+    )
+  })
+
+  it('leaves plain terminals without an agent untouched', () => {
+    expect(
+      resolveTerminalTabTitle(
+        { customTitle: null, defaultTitle: 'Terminal 3', title: '~/dev/orca' },
+        false,
+        '~/dev/orca'
+      )
+    ).toBe('~/dev/orca')
+  })
+
   it('uses the identity fallback instead of spinner or cwd noise', () => {
     const aiVaultTitle = {
       agent: 'codex' as const,

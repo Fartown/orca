@@ -15,18 +15,18 @@ issue: Issues看板与会话
 
 ## 需求覆盖索引
 
-| 关联需求 | 技术章节与边界 |
-| --- | --- |
-| REQ-001、REQ-006、REQ-010 | §1、§2、§5、§6：身份、可信物化与运行投影 |
-| REQ-002、REQ-003、REQ-008、REQ-020 | §4、§11：外部引用、树、绑定、归档与原生 Project transfer |
-| REQ-004、REQ-017、REQ-019、REQ-022 | §8：查询、刷新、虚拟列表与原 Workspace 行；容量缺口见 §11 |
-| REQ-005、REQ-007、REQ-009、REQ-024、REQ-028 | §5：claim、可见性、重试/忘记与辅助会话；未接线边界见 §11 |
-| REQ-011、REQ-023、REQ-027 | §9：AI Vault 恢复和 launch-config 原 pane 身份窗口 |
-| REQ-012、REQ-013 | §6：Round 义务、去重、后续输入与重开 |
-| REQ-014、REQ-016、REQ-026 | §3、§10：事务、receipt、revision、schema v4 与标题分槽 |
-| REQ-015、REQ-018 | §7、§11：host/RPC 合同、readiness 和未完成的 Node-only 装配 |
-| REQ-025 | §10：各 UI 按身份键消费同一标题优先级 |
-| REQ-021、REQ-029 | §11、§12：当前限制、后续目标与分层验收 |
+| 关联需求                                    | 技术章节与边界                                              |
+| ------------------------------------------- | ----------------------------------------------------------- |
+| REQ-001、REQ-006、REQ-010                   | §1、§2、§5、§6：身份、可信物化与运行投影                    |
+| REQ-002、REQ-003、REQ-008、REQ-020          | §4、§11：外部引用、树、绑定、归档与原生 Project transfer    |
+| REQ-004、REQ-017、REQ-019、REQ-022          | §8：查询、刷新、虚拟列表与原 Workspace 行；容量缺口见 §11   |
+| REQ-005、REQ-007、REQ-009、REQ-024、REQ-028 | §5：claim、可见性、重试/忘记与辅助会话；未接线边界见 §11    |
+| REQ-011、REQ-023、REQ-027                   | §9：AI Vault 恢复和 launch-config 原 pane 身份窗口          |
+| REQ-012、REQ-013                            | §6：Round 义务、去重、后续输入与重开                        |
+| REQ-014、REQ-016、REQ-026                   | §3、§10：事务、receipt、revision、schema v4 与标题分槽      |
+| REQ-015、REQ-018                            | §7、§11：host/RPC 合同、readiness 和未完成的 Node-only 装配 |
+| REQ-025                                     | §10：各 UI 按身份键消费同一标题优先级                       |
+| REQ-021、REQ-029                            | §11、§12：当前限制、后续目标与分层验收                      |
 
 ## 1. 模块与数据所有权
 
@@ -55,15 +55,15 @@ flowchart LR
 
 ## 2. 稳定记录与运行投影
 
-| 对象 | 关键字段/责任 | 不承担的责任 |
-| --- | --- | --- |
-| IssueRecord | ID、host partition、local/external source、标题/type/note、parent/order、active/archived、recordRevision | provider 原生工作项状态同步、运行进程身份 |
-| ConversationRecord | ID、唯一 WorkspaceScope 与 name/path snapshot、agent、可空 issueId、人工 title、providerTitle、launchFailure、revision | pane/PTY 生命周期、自动生成新标题 |
-| ConversationProviderIdentity | agent、session key/id、可选 transcript path、fingerprint、resume locator、observed/retired 时间 | 标题搜索、用 cwd 猜身份 |
-| ConversationLaunchClaim | token fingerprint、Conversation、pane/process/connection 辅助信息、TTL 与 settlement | 永久恢复映射、令牌明文存储 |
-| RoundRecord | completion/waiting、waiting reason、source/time、dedupe、三类有界预览、read/resolve | transcript 正文仓库、execution-chain supersession |
-| Runtime Attachment | 当前 pane/tab、identity/authority evidence、execution state 与内存 revision | 跨 profile 稳定事实、远端死亡判据 |
-| ConversationSummary | 上述稳定字段 + attachment、navigation、resumability、executionState、unresolved/latestRound | 保证原 Workspace 当前可用的完整探测结果 |
+| 对象                         | 关键字段/责任                                                                                                          | 不承担的责任                                      |
+| ---------------------------- | ---------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------- |
+| IssueRecord                  | ID、host partition、local/external source、标题/type/note、parent/order、active/archived、recordRevision               | provider 原生工作项状态同步、运行进程身份         |
+| ConversationRecord           | ID、唯一 WorkspaceScope 与 name/path snapshot、agent、可空 issueId、人工 title、providerTitle、launchFailure、revision | pane/PTY 生命周期、自动生成新标题                 |
+| ConversationProviderIdentity | agent、session key/id、可选 transcript path、fingerprint、resume locator、observed/retired 时间                        | 标题搜索、用 cwd 猜身份                           |
+| ConversationLaunchClaim      | token fingerprint、Conversation、pane/process/connection 辅助信息、TTL 与 settlement                                   | 永久恢复映射、令牌明文存储                        |
+| RoundRecord                  | completion/waiting、waiting reason、source/time、dedupe、三类有界预览、read/resolve                                    | transcript 正文仓库、execution-chain supersession |
+| Runtime Attachment           | 当前 pane/tab、identity/authority evidence、execution state 与内存 revision                                            | 跨 profile 稳定事实、远端死亡判据                 |
+| ConversationSummary          | 上述稳定字段 + attachment、navigation、resumability、executionState、unresolved/latestRound                            | 保证原 Workspace 当前可用的完整探测结果           |
 
 `WorkspaceScope` 为 `worktreeId` 或 `folderWorkspaceId`，不能默认有 repo/Git。记录的 workspace snapshot 供目标缺失后展示，不可单独证明目标可启动。
 
@@ -79,17 +79,17 @@ flowchart LR
 
 九张领域表保留：
 
-| 表 | 责任 |
-| --- | --- |
-| issue_authority_meta | authority ID 与 profile 元信息 |
-| issue_host_state | local Issue number、facts/tree revision |
-| issues | Issue 树、外部快照、生命周期 |
-| conversations | Workspace 强归属、绑定、人工标题与 Provider 快照 |
-| conversation_provider_identities | provider 会话身份与恢复信息 |
-| conversation_launch_claims | 一次性关联 claim |
-| round_records | 有界轮次事实与处理状态 |
-| round_refs | provider-turn/transcript-fact 等引用和去重 |
-| issue_mutation_receipts | caller/mutation 幂等结果 |
+| 表                               | 责任                                             |
+| -------------------------------- | ------------------------------------------------ |
+| issue_authority_meta             | authority ID 与 profile 元信息                   |
+| issue_host_state                 | local Issue number、facts/tree revision          |
+| issues                           | Issue 树、外部快照、生命周期                     |
+| conversations                    | Workspace 强归属、绑定、人工标题与 Provider 快照 |
+| conversation_provider_identities | provider 会话身份与恢复信息                      |
+| conversation_launch_claims       | 一次性关联 claim                                 |
+| round_records                    | 有界轮次事实与处理状态                           |
+| round_refs                       | provider-turn/transcript-fact 等引用和去重       |
+| issue_mutation_receipts          | caller/mutation 幂等结果                         |
 
 DDL 见[core schema](../../../../src/main/issues/issue-database-core-schema.ts)、[round schema](../../../../src/main/issues/issue-database-round-schema.ts)。host/workspace/关联约束由 schema、repository、FK/trigger 分层约束；不是只靠 UI 过滤。
 
@@ -194,11 +194,11 @@ TTL 后真实会话可在未归属区再次 Bind existing；原无 identity 预�
 
 ### 7.1 路由拓扑
 
-| Renderer route | RPC target | authority selector / DB partition | 数据 owner |
-| --- | --- | --- | --- |
-| local | 本地 runtime | local | 当前 profile 的本地 runtime |
-| ssh:target | 本地 runtime，经受管 SSH 目标执行所需读取 | ssh:target | 本地 authority DB 中的该 SSH partition |
-| runtime:environment | 对应 paired runtime | 远端 local | 协议目标为远端 runtime profile DB；当前 Node-only 服务装配未见生产调用 |
+| Renderer route      | RPC target                                | authority selector / DB partition | 数据 owner                                                             |
+| ------------------- | ----------------------------------------- | --------------------------------- | ---------------------------------------------------------------------- |
+| local               | 本地 runtime                              | local                             | 当前 profile 的本地 runtime                                            |
+| ssh:target          | 本地 runtime，经受管 SSH 目标执行所需读取 | ssh:target                        | 本地 authority DB 中的该 SSH partition                                 |
+| runtime:environment | 对应 paired runtime                       | 远端 local                        | 协议目标为远端 runtime profile DB；当前 Node-only 服务装配未见生产调用 |
 
 [resolveIssueRuntimeRoute](../../../../src/renderer/src/issues/issue-runtime-client.ts)将 paired route 映射为远端 local，缓存仍按客户端 runtime route 隔离。[resolveIssueAuthorityRoute](../../../../src/main/issues/issue-authority-route.ts)校验受管 SSH target；[route guard](../../../../src/main/issues/issue-runtime-route-guard.ts)在读取/mutation 前确认记录位于请求分区。
 
@@ -208,13 +208,13 @@ TTL 后真实会话可在未归属区再次 Bind existing；原无 identity 预�
 
 `orca-issues.v1` 表示协议支持，不表示数据库/Hook/网络当前健康：
 
-| 状态 | 行为 |
-| --- | --- |
-| ready | storage/hook ready，正常读取与 mutation |
-| degraded | storage ready，Hook disabled/failed；CRUD/显式 prepare 可用，普通启动无可信 Hook 不物化 |
-| unavailable | storage open/migration 失败；status-only registry 可读，其他 Issue 操作失败，不删库 |
-| unsupported | paired host 不含 capability；client 在 list/write 前拒绝 |
-| offline | route 不可用，禁写；不提供离线 mutation queue |
+| 状态        | 行为                                                                                    |
+| ----------- | --------------------------------------------------------------------------------------- |
+| ready       | storage/hook ready，正常读取与 mutation                                                 |
+| degraded    | storage ready，Hook disabled/failed；CRUD/显式 prepare 可用，普通启动无可信 Hook 不物化 |
+| unavailable | storage open/migration 失败；status-only registry 可读，其他 Issue 操作失败，不删库     |
+| unsupported | paired host 不含 capability；client 在 list/write 前拒绝                                |
+| offline     | route 不可用，禁写；不提供离线 mutation queue                                           |
 
 [IssueFeatureReadinessRegistry](../../../../src/main/issues/issue-feature-readiness.ts)保存 readiness，客户端还检验返回 authority selector。当前 `IssueDomainSyncGate.refreshRoute` 把所有非 Unsupported 异常归为 offline；类型中有 error，尚不能据此宣称独立 error/retry 流程完成。
 
@@ -308,12 +308,12 @@ inFlight 合并重复调用，期间新 trigger 记 pending，当前请求完成
 
 ### 10.3 四处消费
 
-| 显示面 | 当前接入 |
-| --- | --- |
-| Issues detached | issueConversationDisplayName 使用人工名→resolver 结果→providerTitle 快照→fallback |
-| Workspace row | 逐行 identity 查询人工 override，校验 tab aiVaultTitle 属于该 session；split sibling 不借用错误槽 |
-| Terminal Tab | 既有 active/priority pane 候选写入 aiVaultTitle，optional source 区分 provider/conversation-override |
-| 右侧 History | canonical 只投影人工 override；无 override 用原 session.title；搜索保留人工名和原生名 |
+| 显示面          | 当前接入                                                                                             |
+| --------------- | ---------------------------------------------------------------------------------------------------- |
+| Issues detached | issueConversationDisplayName 使用人工名→resolver 结果→providerTitle 快照→fallback                    |
+| Workspace row   | 逐行 identity 查询人工 override，校验 tab aiVaultTitle 属于该 session；split sibling 不借用错误槽    |
+| Terminal Tab    | 既有 active/priority pane 候选写入 aiVaultTitle，optional source 区分 provider/conversation-override |
+| 右侧 History    | canonical 只投影人工 override；无 override 用原 session.title；搜索保留人工名和原生名                |
 
 关键代码：[conversation-canonical-titles](../../../../src/renderer/src/issues/conversation-canonical-titles.ts)、[conversation-session-titles](../../../../src/renderer/src/issues/conversation-session-titles.ts)、[Workspace title hook](../../../../src/renderer/src/components/dashboard/use-agent-row-conversation-name.ts)、[tab-title-resolution](../../../../src/shared/tab-title-resolution.ts)、[tab sync](../../../../src/renderer/src/lib/ai-vault-tab-title-sync.ts)、[右侧 title hook](../../../../src/renderer/src/components/right-sidebar/use-canonical-session-titles.ts)。
 
@@ -321,22 +321,86 @@ Tab 既有 customTitle/quickCommandLabel/OpenCode 有意义标题优先；清人
 
 当前 Issues 标题请求 hook 以 identity 集合 requestsKey 变化触发解析，不是持续 resolver 轮询；展示新鲜度还依赖持久 provider snapshot 与已有原生刷新。不能把“统一来源优先级”写成每次 Provider 改名四处必然同步即时完成。
 
+### 10.4 已核实缺陷：resolver 依赖存储路径，右侧不依赖
+
+10.1–10.3 的优先级链本身成立，但**它上游的取数方式有缺陷**，导致 providerTitle 快照在真实库里大面积为空，展示链因此落到 liveTitle（agent 每帧改写的 OSC 串）。
+
+同一份 transcript，两条取数路径：
+
+| 路径                     | 实现                                                                                                                                | 是否依赖存储的 transcript_path |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------- | ------------------------------ |
+| 右侧 History             | [scanner roots](../../../../src/main/ai-vault/session-scanner-roots.ts) 遍历 `~/.claude/projects`、`~/.codex/sessions` 全目录后解析 | **否**——路径是遍历得到的       |
+| Issues / Tab / Workspace | [readOneTitle](../../../../src/main/ai-vault/session-title-file-reader.ts) 按 `request.transcriptPath` 点查                         | **是**                         |
+
+`readOneTitle` 的四条出口里，只有“无 `transcriptPath`”一条回落到进程内 titleIndex（由 `listSessions` 扫描顺带填充）；**路径存在但不可用的三条——`!stats.isFile()`、解析结果 agent/sessionId 不匹配或 title 为空、`catch`——都直接 `return null`，均不回落缓存**。因此“存了一个失效路径”比“没有存路径”更差。
+
+实测（2026-09-06，`local-default` profile，151 条 conversation）：
+
+| 分组                                                       | 条数 | 有 providerTitle |
+| ---------------------------------------------------------- | ---- | ---------------- |
+| identity 带有效 `transcript_path`                          | 62   | **62（全部）**   |
+| 无 `transcript_path`                                       | 78   | 0                |
+| 路径指向已不存在的文件                                     | 10   | 0                |
+| agent 与路径宿主错配（claude 记录指向 `.codex/sessions/`） | 1    | 0                |
+| 无 active identity                                         | 2    | 0                |
+
+按 agent：codex 19 条有路径 / 70 条无路径，有快照的恰好是那 19 条；claude 54 条有路径中 10 条为死链。相关性为 1，不是概率问题。
+
+**但路径不是根因。** 对上述 89 条无快照会话按 `(agent, sessionId)` 直接搜盘（`~/.claude/projects`、`~/.codex/sessions`、Orca 托管 CODEX_HOME 的 `sessions`，共 2829 个 codex `.jsonl` 加全部 claude 项目目录），**命中 0 条**；同一方法对有快照的会话逐条命中（claude 5/5、codex 3/3，作为正向对照）。结论修正为：
+
+> `provider_title IS NULL` ⟺ **transcript 已不在磁盘上**。identity 的路径缺失或失效是同一件事的症状，不是原因。
+
+因此任何取数策略（按路径点查、按 sessionId 定位、整库扫描）都救不回这 89 条——事实源本身没了。已实施的 [resolver 扫描回退](../../../../src/main/ai-vault/session-title-resolver.ts)只是把“路径失效但文件仍在”这一类补上（防御性、有单测），对本机实测**救回 0 条**。
+
+由此得到两条必须分开处理的结论：
+
+1. **展示侧**：transcript 消失后 Provider 名不可得，唯一能止住 liveTitle 抖动的是稳定兜底名。当前 `title`/`title_source` 全表为 NULL——**附着时铸兜底名从未实现**，`mintAgentSessionFallbackTitle` 在 main 侧仅被 refresh 用作拒绝比较，没有任何写入调用。这是止血的必要改动，与取数无关。
+2. **数据侧**：transcript 并未丢失——这 89 条里 **88 条不是用户会话**，是 Orca 自身发起的一次性内部调用（见 10.5），本就不落 rollout 文件。
+
+附带结论：`provider_title` 是派生值缓存，事实源是 transcript。右侧不缓存却始终正确，说明该缓存并非正确性必需。是否保留应在铸造补齐后单独评估，不作为止血前置。
+
+### 10.5 已核实缺陷：内部调用被当作用户会话纳管
+
+对 10.4 的 89 条无快照会话按首轮输入分类（2026-09-06 实测）：
+
+| 条数  | 首轮输入                                                               | 性质                    |
+| ----- | ---------------------------------------------------------------------- | ----------------------- |
+| 47    | `Write a brief catch-up for a user returning to this Codex task…`      | Orca 回归摘要调用       |
+| 40    | （零轮次）                                                             | 内部调用，无可记录轮次  |
+| 4     | `Generate a concise, single-line task title of at most 36 characters…` | Codex thread title 生成 |
+| 2     | `You are an expert at upholding safety and compliance standards…`      | 安全合规调用            |
+| 1     | `# Overview Generate 0 to 3 hyperpersonalized suggestions…`            | 建议生成调用            |
+| **1** | 用户中文提问                                                           | **唯一的真实会话**      |
+
+对照组 62 条有快照会话的首轮输入全部为真人输入（如「继续」「改」「跑啊 你在干嘛」）。即 **88/89 不是用户会话**。这些调用一次性执行、不落 rollout 文件，因而永远取不到 Provider 名；它们同时进入 Issues 行与 conversation 计数。
+
+现有过滤 [isCodexThreadTitleGenerationEvent](../../../../src/main/issues/round-record-ingestor.ts) 是**只覆盖一种 prompt 的白名单**：要求 `agentType === 'codex'`、`providerSession` 存在且**无** transcriptPath、且 prompt 同时匹配 [前缀与 imperative-verb 标记](../../../../src/shared/codex-thread-title-generation.ts)。因此：
+
+- claude 的内部调用完全不被覆盖（本次 21 条）；
+- 回归摘要、安全合规、建议生成三类 prompt 不在白名单内（本次 50 条）；
+- 即便是标题生成，仍有 4 条漏入——事件级判定还要求 `providerSession` 非空且无路径，首个到达的 hook 事件未必满足。
+
+按 prompt 文本匹配追不上不断新增/改写的内部 prompt。修复方向：由**发起端**在启动内部调用时打标（Orca 自己发起，掌握该事实），hook 事件透传该标记，ingestor 按标记忽略，不再在接收端猜测 prompt。此改动不在标题链范围内，但它同时消除 10.4 的“无快照”主因与假会话进入 Issues 列表/计数的问题。
+
 ## 11. 当前限制、撤回方案与风险
 
-| 项目 | 已核实的边界 | 文档处理 |
-| --- | --- | --- |
-| SQL 容量 | 多处全量 list 后再过滤/聚合/分页 | 后续目标，不写成已优化 |
-| 刷新调度 | 全局 sequence + setInterval；非 Issues 仍拉 Conversations | 保留真实周期，不宣称串行/零后台读取 |
-| 错误分类 | 非 unsupported 异常统一 offline | 独立 error/retry 保留待实现测试 |
-| Workspace 可用性 | query 默认 effectiveProject=null、workspaceAvailable=true，service 未注入真实 resolver | 最终动作靠原生 target 校验；不要信其为在线证明 |
-| Archive runtime waiting | repository 默认 probe=false | unresolved waiting Round 有防护；纯运行态窗口另测 |
-| Forget replay | grant 先检查且成功即消费 | 通用 receipt 不能证明该路径可 replay |
-| Project move guard | 当前 src 无旧 guard/错误码接线 | 撤回，保留原 transfer 回归 |
-| 原生恢复 | 承接原 AI Vault 能力与错误边界 | 不承诺第二套恢复状态机或全程幂等 |
-| Codex daemon 隔离旧方案 | 当前 src 未发现 `-c features.hooks=true` 注入或 codexHookDaemonIsolation 开关 | 历史候选原因留简述，不能列已实现 |
-| 标题输出 | refresh 日志当前包含 title JSON；隐私检查需按真实候选数据执行 | 不先行宣称全日志无用户文本 |
-| 远端装配与验证 | Node-only orcad 未见生产 bootstrap 调用，本轮也未连接 SSH/paired runtime 或执行 CDP | 分开协议路由、宿主接线和真实成功；不能写 paired 已可用 |
-| 真实 App | 暂存 v4/标题代码未在本轮构建验收 | 历史截图/包 hash 不能代表该工作树 |
+| 项目                    | 已核实的边界                                                                                                             | 文档处理                                                                 |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------ |
+| SQL 容量                | 多处全量 list 后再过滤/聚合/分页                                                                                         | 后续目标，不写成已优化                                                   |
+| 刷新调度                | 全局 sequence + setInterval；非 Issues 仍拉 Conversations                                                                | 保留真实周期，不宣称串行/零后台读取                                      |
+| 错误分类                | 非 unsupported 异常统一 offline                                                                                          | 独立 error/retry 保留待实现测试                                          |
+| Workspace 可用性        | query 默认 effectiveProject=null、workspaceAvailable=true，service 未注入真实 resolver                                   | 最终动作靠原生 target 校验；不要信其为在线证明                           |
+| Archive runtime waiting | repository 默认 probe=false                                                                                              | unresolved waiting Round 有防护；纯运行态窗口另测                        |
+| Forget replay           | grant 先检查且成功即消费                                                                                                 | 通用 receipt 不能证明该路径可 replay                                     |
+| Project move guard      | 当前 src 无旧 guard/错误码接线                                                                                           | 撤回，保留原 transfer 回归                                               |
+| 原生恢复                | 承接原 AI Vault 能力与错误边界                                                                                           | 不承诺第二套恢复状态机或全程幂等                                         |
+| Codex daemon 隔离旧方案 | 当前 src 未发现 `-c features.hooks=true` 注入或 codexHookDaemonIsolation 开关                                            | 历史候选原因留简述，不能列已实现                                         |
+| 标题输出                | refresh 日志当前包含 title JSON；隐私检查需按真实候选数据执行                                                            | 不先行宣称全日志无用户文本                                               |
+| Provider 快照覆盖率     | 实测 151 条 conversation 中仅 62 条有 providerTitle；缺口 89 条的 transcript 已不在磁盘（搜盘命中 0，见 10.4）           | 不能把 10.1 的优先级链写成“四处已一致”；缺快照时实际显示 liveTitle       |
+| 附着铸造                | `title`/`title_source` 全表 NULL；main 侧无任何 mint 写入调用，兜底名仅用作 refresh 的拒绝比较                           | 不能把“可见即有名”写成已实现；这是 liveTitle 抖动的直接原因              |
+| 内部调用纳管            | 89 条无快照会话中 88 条为 Orca 自身内部调用（回归摘要/标题生成/合规/建议），现有白名单只覆盖一种 codex prompt（见 10.5） | 不能把 conversation 计数与 Issues 行当作纯用户会话；按 prompt 匹配追不上 |
+| 远端装配与验证          | Node-only orcad 未见生产 bootstrap 调用，本轮也未连接 SSH/paired runtime 或执行 CDP                                      | 分开协议路由、宿主接线和真实成功；不能写 paired 已可用                   |
+| 真实 App                | 暂存 v4/标题代码未在本轮构建验收                                                                                         | 历史截图/包 hash 不能代表该工作树                                        |
 
 旧 `_历史稿` 中的介入卡强分类、自报模板、收件箱出队、diff 快照、整理稿自动起草、Forge 同步、Dashboard 换底、移动端窄路径已不属于本需求当前产品范围。其有用原则归并为 Issue/会话分工、可下钻和明确 read/resolve；不保留平行需求口径。
 

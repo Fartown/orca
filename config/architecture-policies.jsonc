@@ -50,6 +50,10 @@
             "src/shared/agent-session-fallback-title.test.ts",
             "src/shared/ai-vault-session-filters.ts",
             "src/shared/ai-vault-session-filters.test.ts",
+            // The host-local title read shared by the tab chain and the Issue
+            // refresh. Reads transcripts only; imports no Issue domain module.
+            "src/main/ai-vault/session-title-resolver.ts",
+            "src/main/ai-vault/session-title-resolver.test.ts",
             // Domain-neutral title projection surfaces. The dependency rule below
             // still forbids these native modules from importing the Issue domain.
             "src/shared/**/*title*.ts",
@@ -204,6 +208,10 @@
             "src/shared/agent-session-fallback-title.test.ts",
             "src/shared/ai-vault-session-filters.ts",
             "src/shared/ai-vault-session-filters.test.ts",
+            // The host-local title read shared by the tab chain and the Issue
+            // refresh. Reads transcripts only; imports no Issue domain module.
+            "src/main/ai-vault/session-title-resolver.ts",
+            "src/main/ai-vault/session-title-resolver.test.ts",
             // Domain-neutral title projection surfaces. The dependency rule below
             // still forbids these native modules from importing the Issue domain.
             "src/shared/**/*title*.ts",
