@@ -24,6 +24,8 @@ export const GoalSpecSchema = z.object({
   criteria: z.array(GoalCriterionSchema).max(100),
   acceptanceText: z.string().max(32_000),
   extraChecks: z.array(z.string().min(1).max(16_000)).max(20),
+  // Why default 'none': records written before item-mode judging must keep parsing.
+  judge: z.enum(['none', 'claude', 'codex']).default('none'),
   checkAll: z.boolean(),
   onBlocked: z.enum(['ask', 'verify'])
 })

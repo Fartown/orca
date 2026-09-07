@@ -1,4 +1,4 @@
-import { mkdtemp, rm, writeFile, mkdir } from 'node:fs/promises'
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
@@ -8,7 +8,11 @@ import type {
   GoalCreateParams,
   GoalDriverVerdict
 } from '../../shared/goals/goal-control-contract'
-import { legacyGoalRecordPath, legacyLockPath } from '../../shared/goals/goal-store-layout'
+import {
+  goalJudgeItemsPath,
+  legacyGoalRecordPath,
+  legacyLockPath
+} from '../../shared/goals/goal-store-layout'
 import { goalWorkspaceKey } from '../../shared/goals/goal-workspace-key'
 import type { RuntimeTerminalShow } from '../../shared/runtime-terminal-contracts'
 import { GoalControlService } from './goal-control-service'
@@ -105,7 +109,8 @@ function createParams(overrides: Partial<GoalCreateParams> = {}): GoalCreatePara
       acceptanceText: '',
       extraChecks: [],
       checkAll: false,
-      onBlocked: 'ask'
+      onBlocked: 'ask',
+      judge: 'none'
     },
     budget: { maxTurns: 5, maxMinutes: 30, checkTimeoutSeconds: 60 },
     acknowledgeUnverifiedCompletion: true,
@@ -401,6 +406,109 @@ describe('GoalControlService.list', () => {
         snapshotTree: 'abc',
         source: 'command'
       })
+    ])
+  })
+
+  it('writes the command-less criteria beside the record for the item-mode judge', async () => {
+    const svc = service()
+    const goalId = ids[0]
+    await svc.create(
+      createParams({
+        spec: {
+          objective: 'Ship it',
+          criteria: [
+            {
+              id: '22222222-2222-4222-8222-222222222222',
+              description: 'tests',
+              command: 'pnpm test'
+            },
+            { id: '33333333-3333-4333-8333-333333333333', description: 'docs explain usage' }
+          ],
+          acceptanceText: 'overall note',
+          extraChecks: [],
+          checkAll: false,
+          onBlocked: 'ask',
+          judge: 'claude'
+        }
+      })
+    )
+    const items = JSON.parse(await readFile(goalJudgeItemsPath(goalHome, goalId), 'utf8'))
+    expect(items).toEqual({
+      goalId,
+      specRevision: 1,
+      items: [{ id: '33333333-3333-4333-8333-333333333333', description: 'docs explain usage' }],
+      notes: 'overall note'
+    })
+  })
+
+  it('projects item-mode judge verdicts as judge evidence on the declared criteria only', async () => {
+    const svc = service()
+    const goalId = ids[0]
+    const runId = ids[1]
+    await svc.create(
+      createParams({
+        spec: {
+          objective: 'Ship it',
+          criteria: [
+            {
+              id: '22222222-2222-4222-8222-222222222222',
+              description: 'tests',
+              command: 'pnpm test'
+            },
+            { id: '33333333-3333-4333-8333-333333333333', description: 'docs explain usage' }
+          ],
+          acceptanceText: '',
+          extraChecks: [],
+          checkAll: false,
+          onBlocked: 'ask',
+          judge: 'claude'
+        }
+      })
+    )
+    await writeLegacy({
+      goalId,
+      runId,
+      specRevision: 1,
+      turns: 2,
+      lastAcceptance: {
+        tree: 'tree-1',
+        result: {
+          passed: false,
+          results: [
+            { command: 'pnpm test', ok: true, output: 'ok' },
+            {
+              command: 'judge …',
+              ok: false,
+              code: 3,
+              inconclusive: true,
+              output: 'INCONCLUSIVE',
+              items: [
+                {
+                  id: '33333333-3333-4333-8333-333333333333',
+                  status: 'failed',
+                  reason: 'README has no usage'
+                },
+                {
+                  id: '99999999-9999-4999-8999-999999999999',
+                  status: 'passed',
+                  reason: 'not declared'
+                }
+              ]
+            }
+          ]
+        }
+      }
+    })
+    const detail = await svc.get(goalId)
+    const judged = detail!.evidence.filter((row) => row.source === 'judge')
+    expect(judged).toEqual([
+      expect.objectContaining({
+        criterionId: '33333333-3333-4333-8333-333333333333',
+        status: 'failed',
+        summary: 'README has no usage',
+        snapshotTree: 'tree-1'
+      }),
+      expect.objectContaining({ criterionId: null, status: 'passed' })
     ])
   })
 

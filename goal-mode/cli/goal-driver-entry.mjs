@@ -18,7 +18,9 @@ import { createRuntimeTerminalBackend } from './goal-runtime-terminal.mjs'
 import { acquireLock, archiveLog, goalKey, newGoal, readGoal, writeGoal } from './goal-state.mjs'
 import { setTerminalBackend } from './orca-terminal.mjs'
 import {
+  GOAL_JUDGE_ENTRY_FILENAME,
   goalControlPath,
+  goalJudgeItemsPath,
   goalOperationPath,
   goalRecordPath,
   legacyDriverLogPath
@@ -60,10 +62,17 @@ async function main(argv) {
   })
   setTerminalBackend(createRuntimeTerminalBackend())
 
+  // 裁判脚本和驱动打在同一目录;开发期可用 ORCA_GOAL_JUDGE_PATH 指向源码。清单文件由宿主随记录写好。
+  const recordOptions = {
+    judgeEntry:
+      process.env.ORCA_GOAL_JUDGE_PATH ||
+      path.join(path.dirname(process.argv[1]), GOAL_JUDGE_ENTRY_FILENAME),
+    itemsPath: goalJudgeItemsPath(args.goalHome, args.goalId)
+  }
   const goal =
     args.mode === 'start'
-      ? buildStartGoal(record, args, key)
-      : await buildResumeGoal(record, args, key)
+      ? buildStartGoal(record, args, key, recordOptions)
+      : await buildResumeGoal(record, args, key, recordOptions)
 
   // 装在拿锁之前:锁一拿到,这个进程就是这个目标的唯一驱动,再崩就得留下死因。
   installCrashGuard(key, { log })
@@ -103,7 +112,8 @@ async function main(argv) {
       report: makeReport(log),
       thresholds: DEFAULT_THRESHOLDS,
       attach: args.mode === 'resume',
-      control
+      control,
+      recordOptions
     })
     const label = OUTCOME[final.state] || final.state
     log(`${label} —— ${final.finishReason}(共 ${final.turns} 轮)`)
@@ -126,7 +136,7 @@ function parseArgs(argv) {
   return { goalId, runId, mode, goalHome }
 }
 
-function buildStartGoal(record, args, key) {
+function buildStartGoal(record, args, key, recordOptions) {
   return {
     ...newGoal({
       key,
@@ -134,7 +144,7 @@ function buildStartGoal(record, args, key) {
       onBlocked: record.spec.onBlocked,
       worktreePath: record.workspace.path,
       terminalHandle: record.binding.terminal,
-      acceptance: acceptanceOf(record),
+      acceptance: acceptanceOf(record, recordOptions),
       budget: { maxTurns: record.budget.maxTurns, maxMinutes: record.budget.maxMinutes },
       promptFile: false,
       now: Date.now()
@@ -146,7 +156,7 @@ function buildStartGoal(record, args, key) {
 }
 
 /** 接回:沿用轮次、耗时和历史,只换掉可能变化的绑定、预算和验收。基线重取,见 orca-goal resume。 */
-async function buildResumeGoal(record, args, key) {
+async function buildResumeGoal(record, args, key, recordOptions) {
   const existing = await readGoal(key)
   if (!existing || (existing.goalId && existing.goalId !== record.goalId)) {
     throw new Error(`工作区 ${record.workspace.path} 没有属于目标 ${record.goalId} 的运行记录`)
@@ -154,7 +164,7 @@ async function buildResumeGoal(record, args, key) {
   // 定义、预算、绑定统一走 applyRecordToGoal:驱动不在时改过的目标正文也要在这里生效,
   // 版本变了就清掉旧判词,和运行中 reload 的规则一致。
   return {
-    ...applyRecordToGoal(existing, record),
+    ...applyRecordToGoal(existing, record, recordOptions),
     goalId: record.goalId,
     runId: args.runId,
     state: 'active',

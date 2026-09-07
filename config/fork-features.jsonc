@@ -45,6 +45,9 @@
         "src/renderer/src/goals/GoalDomainSyncGate.tsx",
         "goal-mode/cli/goal-driver-entry.mjs",
         "goal-mode/cli/goal-loop.mjs",
+        "goal-mode/cli/acceptance-judge.mjs",
+        "goal-mode/cli/judge-item-verdicts.mjs",
+        "src/main/goals/goal-evidence-projection.ts",
         "config/scripts/build-goal-driver.mjs"
       ],
       "seams": [
@@ -123,7 +126,9 @@
         "src/renderer/src/goals/goals-domain-store.test.ts",
         "src/shared/goals/goal-workspace-key.test.ts",
         "goal-mode/cli/goal-driver-control.test.mjs",
-        "goal-mode/cli/goal-loop-stop.test.mjs"
+        "goal-mode/cli/goal-loop-stop.test.mjs",
+        "goal-mode/cli/acceptance-judge-items.test.mjs",
+        "goal-mode/cli/judge-item-verdicts.test.mjs"
       ],
       "checks": [
         "pnpm exec vitest run --config config/vitest.config.ts src/main/goals src/shared/goals src/renderer/src/goals src/renderer/src/components/goals src/main/runtime/rpc/methods/goals.test.ts src/main/plugins/plugin-bundled-bootstrap.test.ts",

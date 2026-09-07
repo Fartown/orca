@@ -77,7 +77,8 @@ describe.skipIf(!BUNDLE)('launchGoalDriver with the built bundle', () => {
         acceptanceText: '',
         extraChecks: [],
         checkAll: false,
-        onBlocked: 'ask'
+        onBlocked: 'ask',
+        judge: 'none'
       },
       budget: { maxTurns: 1, maxMinutes: 1, checkTimeoutSeconds: 1 },
       specRevision: 1,

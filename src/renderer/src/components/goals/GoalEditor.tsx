@@ -5,6 +5,13 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from '@/components/ui/select'
+import {
   Sheet,
   SheetContent,
   SheetDescription,
@@ -34,6 +41,9 @@ import {
   type GoalDraft
 } from './goal-editor-draft'
 import { GoalTargetPicker, type GoalTargetSelection } from './GoalTargetPicker'
+
+// Product names of the judge CLIs; not copy, so they stay out of the catalog.
+const JUDGE_CLI_LABELS = { claude: 'Claude Code', codex: 'Codex' } as const
 
 /**
  * Create form in a right Sheet. The draft survives a cancel so a failed launch
@@ -70,10 +80,14 @@ export function GoalEditor(): React.JSX.Element {
   const hasCommands =
     draft.criteria.some((criterion) => criterion.command?.trim()) ||
     draft.extraChecks.trim().length > 0
+  // Why: an item-mode judge verifies command-less criteria, so they no longer need the acknowledgement.
+  const judgeCoversCriteria =
+    draft.judge !== 'none' && draft.criteria.some((criterion) => criterion.description.trim())
+  const verifiable = hasCommands || judgeCoversCriteria
   const valid =
     draft.objective.trim().length > 0 &&
     (editingGoalId !== null || Boolean(target.worktreeId && target.paneKey)) &&
-    (hasCommands || draft.acknowledgeUnverified) &&
+    (verifiable || draft.acknowledgeUnverified) &&
     isNonNegativeNumber(draft.maxTurns) &&
     isNonNegativeNumber(draft.maxMinutes) &&
     isPositiveNumber(draft.checkTimeoutSeconds)
@@ -104,7 +118,7 @@ export function GoalEditor(): React.JSX.Element {
         binding: resolved.binding,
         spec: specFromDraft(draft),
         budget: budgetFromDraft(draft),
-        acknowledgeUnverifiedCompletion: !hasCommands
+        acknowledgeUnverifiedCompletion: !verifiable
       }
       // Why: the same id retries into the same receipt; a fresh one is minted only after the host answers.
       const operation = await goalRuntimeClient.create({
@@ -268,9 +282,38 @@ export function GoalEditor(): React.JSX.Element {
                     'When the agent says it is blocked, run the checks before asking me'
                   )}
                 </label>
+                <div className="space-y-1">
+                  <Label htmlFor="goal-judge">
+                    {translate(
+                      'goals.editor.judge',
+                      'Independent judge for criteria without a command'
+                    )}
+                  </Label>
+                  <Select
+                    value={draft.judge}
+                    onValueChange={(value) => update('judge', value as GoalDraft['judge'])}
+                  >
+                    <SelectTrigger id="goal-judge">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">
+                        {translate('goals.editor.judgeNone', 'None: agent claims are taken as-is')}
+                      </SelectItem>
+                      <SelectItem value="claude">{JUDGE_CLI_LABELS.claude}</SelectItem>
+                      <SelectItem value="codex">{JUDGE_CLI_LABELS.codex}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    {translate(
+                      'goals.editor.judgeHint',
+                      'Criteria without a command are judged one by one in a separate read-only agent session; that CLI must be installed on this machine. Missing or unparsable verdicts count as inconclusive, never as passed.'
+                    )}
+                  </p>
+                </div>
               </CollapsibleContent>
             </Collapsible>
-            {!hasCommands ? (
+            {!verifiable ? (
               <label className="flex items-start gap-2 text-xs">
                 <Checkbox
                   checked={draft.acknowledgeUnverified}

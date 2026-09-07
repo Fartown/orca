@@ -22,10 +22,10 @@ import { GoalOperationReceipts, type GoalRejection } from './goal-operation-rece
 import { GoalRevisionControl } from './goal-revision-control'
 import { GoalRunCommitter } from './goal-run-commit'
 import type { GoalStore } from './goal-store'
+import { projectGoalEvidence } from './goal-evidence-projection'
 import {
   goalMatchesFilter,
   goalMatchesWorktree,
-  projectGoalEvidence,
   projectGoalSummary,
   type GoalHookFacts,
   type GoalTerminalFacts

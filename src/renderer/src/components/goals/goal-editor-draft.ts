@@ -19,6 +19,7 @@ export type GoalDraft = {
   extraChecks: string
   checkAll: boolean
   onBlocked: 'ask' | 'verify'
+  judge: 'none' | 'claude' | 'codex'
   maxTurns: string
   maxMinutes: string
   checkTimeoutSeconds: string
@@ -32,6 +33,7 @@ export const EMPTY_GOAL_DRAFT: GoalDraft = {
   extraChecks: '',
   checkAll: false,
   onBlocked: 'ask',
+  judge: 'none',
   maxTurns: '20',
   maxMinutes: '180',
   checkTimeoutSeconds: '900',
@@ -90,7 +92,8 @@ export function specFromDraft(draft: GoalDraft): GoalSpec {
       .map((line) => line.trim())
       .filter(Boolean),
     checkAll: draft.checkAll,
-    onBlocked: draft.onBlocked
+    onBlocked: draft.onBlocked,
+    judge: draft.judge
   }
 }
 
@@ -110,6 +113,7 @@ export function draftFromDetail(detail: GoalDetail): GoalDraft {
     extraChecks: detail.spec.extraChecks.join('\n'),
     checkAll: detail.spec.checkAll,
     onBlocked: detail.spec.onBlocked,
+    judge: detail.spec.judge ?? 'none',
     maxTurns: String(detail.budget.maxTurns),
     maxMinutes: String(detail.budget.maxMinutes),
     checkTimeoutSeconds: String(detail.budget.checkTimeoutSeconds),

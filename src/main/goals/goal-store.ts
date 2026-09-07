@@ -17,6 +17,7 @@ import {
   goalControlPath,
   goalDir,
   goalOperationPath,
+  goalJudgeItemsPath,
   goalRecordPath,
   goalsV2Dir,
   goalVersionsPath,
@@ -37,8 +38,17 @@ export class GoalStore {
     return parsed.success ? parsed.data : null
   }
 
+  /** The record plus the item list the judge reads: both host-owned, always rewritten together. */
   async writeRecord(record: GoalRecord): Promise<void> {
     await writeJsonAtomic(goalRecordPath(this.goalHome, record.goalId), record)
+    await writeJsonAtomic(goalJudgeItemsPath(this.goalHome, record.goalId), {
+      goalId: record.goalId,
+      specRevision: record.specRevision,
+      items: record.spec.criteria
+        .filter((criterion) => !criterion.command)
+        .map(({ id, description }) => ({ id, description })),
+      notes: record.spec.acceptanceText
+    })
   }
 
   async deleteGoal(goalId: string): Promise<void> {

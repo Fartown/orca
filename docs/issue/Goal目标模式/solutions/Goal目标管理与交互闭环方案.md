@@ -290,6 +290,7 @@ src/main/
   goals/goal-turn-evidence.ts                     [WP1 已建] AgentHookServer 面板快照 → 本轮状态投影
   goals/goal-revision-control.ts                  [WP3 已建] 编辑/换会话/归档/版本，静止态前置检查
   goals/goal-legacy-adoption.ts                   [WP4 已建] v1 CLI 目标只读列出与显式导入
+  goals/goal-evidence-projection.ts               [WP5 已建] 命令结果与条目级判词 → 证据行(source command/judge)
   goals/goal-driver-liveness.ts                   [WP1 已建] pid + 命令行核对 → live/unverifiable/exited
   goals/goal-driver-launch.ts                     [WP1 已建] 定位单文件驱动、fork + ready 握手
   goals/goal-store.ts                             [WP1 已建] v2 记录/意图/收据与 v1 记录、锁的原子读写
@@ -343,7 +344,10 @@ goal-mode/cli/
   goal-record-projection.mjs                     [WP3 已建] v2 记录 → v1 目标对象，reload 共用
   （旧数据导入改在宿主侧 goal-legacy-adoption.ts 实现，不新增 CLI 迁移脚本）
   goal-decision.mjs、round-wait-machine.mjs       [复用] 原决策/等待逻辑
-  acceptance-gate.mjs、acceptance-judge.mjs        [修改] 条目结果/取消/证据身份（WP3/WP4）
+  acceptance-gate.mjs                              [WP5 已改] 摘出裁判判词行,挂到该条命令结果的 items 上
+  acceptance-judge.mjs                             [WP5 已改] --items-file 条目模式:固定 id 进,经校验的 JSON 判词出
+  judge-item-verdicts.mjs                          [WP5 已建] 判词解析/校验/退出码/标记行,纯函数
+  goal-record-projection.mjs                       [WP5 已改] 选了裁判且有无命令的项时追加裁判命令(只读沙箱)
   prompts/、git-snapshot.mjs、tamper-scan.mjs      [复用] 模板构建时内联；取证逻辑不变
 config/
   scripts/build-goal-driver.mjs                   [WP1 已建] 仿 build-relay.mjs 的 esbuild 单文件打包，输出 out/goal-driver
@@ -740,7 +744,7 @@ flowchart TD
 | Agent 认领          | 自报完成/受阻与时间                           | 独立验证已经完成                  |
 | 文件快照            | 本轮实际变动文件与可用 Diff                   | 文件数越多进度越高                |
 
-条目级 judge 为显式的新输出模式：由输入给出固定 criterionId，输出对应结果/理由/证据引用；校验失败记 inconclusive，不用正则扫自然语言拼装。旧文本 PASS 模式保留兼容，条目仍显示尚未验证。额外回归命令单列“检查”，避免误计为需求验收项。
+条目级 judge 为显式的新输出模式：由输入给出固定 criterionId，输出对应结果/理由/证据引用；校验失败记 inconclusive，不用正则扫自然语言拼装。旧文本 PASS 模式保留兼容，条目仍显示尚未验证。额外回归命令单列“检查”，避免误计为需求验收项。2026-09-07 已实现：`GoalSpec.judge`（none/claude/codex，默认 none）；宿主随记录写 `judge-items.json`（无命令的验收项 + 验收说明）；驱动在验收命令末尾追加 `acceptance-judge.js --items-file … --sandbox read-only`；裁判把经校验的判词以 `ORCA_GOAL_JUDGE_ITEMS {json}` 一行打头，gate 摘出挂到该命令结果的 `items`，宿主投影成 `source: 'judge'` 的证据行；裁判起不来、超时、判词无法解析时每条都记 inconclusive 并带原因。
 
 目标正文/验收定义变更时旧证据全部退出当前汇总；同版本后续代码变化也应标出证据快照与当前工作区不一致，不长期悬挂旧绿色。非 Git 工作区显示“缺少版本化文件快照”，不宣称具备相同证据新鲜度。
 
@@ -868,6 +872,14 @@ WP1/2 是可演示的先行单元，但不能据此宣称 REQ-118/REQ-120 或整
 
 ## 8. 变更记录
 
+### 2026-09-07：WP5 条目级 judge 落地
+
+- 变更原因：没有命令的验收项此前永远显示“尚未验证”，整体 PASS 判词拆不到条目。
+- 变更内容：契约 `GoalSpec.judge`（none/claude/codex，`.default('none')` 保证老记录可解析）；`GoalStore.writeRecord` 同时写 `judge-items.json`；驱动 `acceptanceOf` 在选了裁判且存在无命令的项时追加一条裁判命令（同一可执行文件、同目录的 `acceptance-judge.js`、只读沙箱、超时沿用检查超时）；`acceptance-judge` 新增 `--items-file` 条目模式与 `ITEM_TEMPLATE`，判词由 `judge-item-verdicts.mjs` 解析校验（只认声明的 id，缺失/重复/非法 status/JSON 解析失败一律 inconclusive；退出码 0/1/3 按条目汇总；裁判起不来或超时也逐条给出 inconclusive 及原因）；gate 单独保存 stdout 第一行，摘出判词行挂到 `items`，回灌文本不含标记；记录 schema 的 results[] 加 `items`；宿主 `goal-evidence-projection.ts` 把 items 投影成 `source: 'judge'` 证据，未声明的 id 不挂 criterionId；编辑器高级设置加“独立裁判”选择，选了裁判后无命令的项不再要求“采信 agent”勾选；进度行对 judge 证据显示裁判理由；打包脚本多产出 `acceptance-judge.js`。
+- 已知限制：裁判 CLI 需在驱动进程的 PATH 上；codex 的只读沙箱会挡住需要写文件的核对；未在真机跑过真实裁判。
+- 验证：CLI node:test 149 例（新增 11 例：解析契约、假裁判端到端、gate 摘取、裁判命令构造）；主进程/渲染层 goal vitest 54 例（新增清单文件与判词投影两例）；`tc:node`/`tc:web`、本地化三项门禁、架构门禁与功能清单门禁通过。
+- 记录人：Claude Code。
+
 ### 2026-09-06：代码评审修复
 
 - 变更原因：对 WP1～WP4 全部改动做了一轮独立代码评审（高强度，19 条正确性候选 17 条确认、2 条可能，0 条被否决），按确认项修复。
@@ -882,7 +894,7 @@ WP1/2 是可演示的先行单元，但不能据此宣称 REQ-118/REQ-120 或整
 - WP3 停止与变更：`goals.control` 加 stop，驱动在等轮次检查点发一次中断并等本轮结束证据，宽限（默认 60 秒）内没有证据则收据为 confirmation_pending；`goals.amend`（spec/budget 分开，改 spec 递增版本并写 versions.jsonl）、`goals.rebind`（限同工作区）、`goals.archive`、`goals.versions`；驱动在注入前套用 reload 的新定义并确认；宿主对缺席驱动按意图种类结算收据。
 - WP4 打包与兼容：`out/goal-driver` 进 extraResources 并加打包契约测试；`build:goal-driver` 挂进 build:desktop/build:release；v1 CLI 目标只读列出并可显式导入（`goals.adoptLegacy`），导入要求旧驱动已退出且原终端仍在。
 - WP4 补充（真机发现）：安装包已删内置插件，但命令面板仍出现旧插件三条命令，来源是用户数据目录里早先引导安装的 bundled 副本；内置插件引导新增退役步骤（§7 第 6 条），带单测。
-- 未做：条目级 judge 输出模式（无命令的验收项仍显示“尚未验证”）；Windows/Linux/SSH/WSL 真实回归；SSH/peer 执行端仍 unsupported。
+- 未做：Windows/Linux/SSH/WSL 真实回归；SSH/peer 执行端仍 unsupported。（条目级 judge 于 2026-09-07 在 WP5 落地，见下。）
 - 验证：`pnpm tc`、goal 相关 vitest 161 例、goal-mode/cli node:test 137 例、本地化 extraction/catalog、架构门禁（本次路径）全部通过；真实 App 验证见 journal。
 - 记录人：Claude Code。
 

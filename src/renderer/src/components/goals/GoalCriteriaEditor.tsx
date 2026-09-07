@@ -32,7 +32,7 @@ export function GoalCriteriaEditor({
         <p className="text-xs text-muted-foreground">
           {translate(
             'goals.editor.criteriaHint',
-            'Each item can carry a command; only items with a command are verified independently.'
+            'Each item may carry a command; items without one are verified only when an independent judge is set under Advanced settings.'
           )}
         </p>
       ) : null}
