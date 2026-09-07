@@ -89,7 +89,7 @@ jobs:
             echo "state=merged" >> "$GITHUB_OUTPUT"
             echo "branch=$branch" >> "$GITHUB_OUTPUT"
           else
-            git diff --name-only --diff-filter=U > conflicts.txt
+            git diff --name-only --diff-filter=U > "$RUNNER_TEMP/conflicts.txt"
             echo "state=conflict" >> "$GITHUB_OUTPUT"
           fi
 
@@ -99,6 +99,8 @@ jobs:
           native-runtime: node
 
       # Why in-job: the merged tree is verified here whether or not PR CI runs later.
+      # Scratch files live in RUNNER_TEMP: anything written inside the checkout counts as a
+      # worktree change for the architecture gate.
       - name: Verify the merged tree
         id: verify
         if: steps.merge.outputs.state == 'merged'
@@ -113,21 +115,21 @@ jobs:
               "pnpm run check:architecture-policies -- --base upstream/$UPSTREAM_BRANCH" \
               "pnpm run build:goal-driver" \
               "node config/scripts/run-fork-feature-checks.mjs"; do
-              if $step > step.log 2>&1; then
+              if $step > "$RUNNER_TEMP/step.log" 2>&1; then
                 echo "- ✅ \`$step\`"
               else
                 echo "- ❌ \`$step\`"
                 echo
                 echo '```'
-                tail -n 40 step.log
+                tail -n 40 "$RUNNER_TEMP/step.log"
                 echo '```'
                 echo "failed=true" >> "$GITHUB_OUTPUT"
                 break
               fi
             done
-          } | tee verify-summary.md
-          cat verify-summary.md >> "$GITHUB_STEP_SUMMARY"
-          if grep -q '❌' verify-summary.md; then exit 1; fi
+          } | tee "$RUNNER_TEMP/verify-summary.md"
+          cat "$RUNNER_TEMP/verify-summary.md" >> "$GITHUB_STEP_SUMMARY"
+          if grep -q '❌' "$RUNNER_TEMP/verify-summary.md"; then exit 1; fi
 
       - name: Open the sync pull request
         if: steps.merge.outputs.state == 'merged'
@@ -148,17 +150,17 @@ jobs:
           {
             echo "Merges stablyai/orca main at \`$upstream_sha\` into \`$INTEGRATION_BRANCH\`."
             echo
-            cat verify-summary.md
+            cat "$RUNNER_TEMP/verify-summary.md"
             echo
             echo "Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
             echo
             echo "Opened by the sync-upstream workflow. Merge only when every line above is ✅ (or after fixing on this branch and re-running \`pnpm sync:upstream\` locally)."
-          } > pr-body.md
+          } > "$RUNNER_TEMP/pr-body.md"
           gh pr create \
             --base "$INTEGRATION_BRANCH" \
             --head "${{ steps.merge.outputs.branch }}" \
             --title "$title" \
-            --body-file pr-body.md
+            --body-file "$RUNNER_TEMP/pr-body.md"
 
       - name: Open a conflict issue
         if: steps.merge.outputs.state == 'conflict'
@@ -169,7 +171,7 @@ jobs:
           {
             echo "Merging stablyai/orca main at \`$upstream_sha\` into \`$INTEGRATION_BRANCH\` conflicts in:"
             echo
-            sed 's/^/- /' conflicts.txt
+            sed 's/^/- /' "$RUNNER_TEMP/conflicts.txt"
             echo
             echo 'Resolve locally from a clean `'"$INTEGRATION_BRANCH"'` checkout:'
             echo
@@ -179,6 +181,6 @@ jobs:
             echo 'git add -A && git commit    # commit the merge before the gates run'
             echo 'pnpm sync:upstream --push   # re-runs every gate and feature check, then pushes'
             echo '```'
-          } > issue-body.md
-          gh issue create --title "Upstream sync conflict ($(date -u +%Y-%m-%d))" --label sync-upstream --body-file issue-body.md \
-            || gh issue create --title "Upstream sync conflict ($(date -u +%Y-%m-%d))" --body-file issue-body.md
+          } > "$RUNNER_TEMP/issue-body.md"
+          gh issue create --title "Upstream sync conflict ($(date -u +%Y-%m-%d))" --label sync-upstream --body-file "$RUNNER_TEMP/issue-body.md" \
+            || gh issue create --title "Upstream sync conflict ($(date -u +%Y-%m-%d))" --body-file "$RUNNER_TEMP/issue-body.md"
