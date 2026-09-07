@@ -28,6 +28,7 @@ import { filterEnabledTuiAgents, pickTuiAgent } from '../../../../shared/tui-age
 import { prepareAndLaunchIssueConversation } from './issue-conversation-launch-action'
 import { IssueConversationBindingPopover } from './IssueConversationBindingPopover'
 import { collectIssueConversationLaunchWorkspaces } from './issue-conversation-launch-workspaces'
+import { translate } from '@/i18n/i18n'
 
 export function IssueConversationActions({
   route,
@@ -139,19 +140,37 @@ export function IssueConversationActions({
           }}
         >
           <Plus className="size-3.5" />
-          New Conversation
+          {translate(
+            'auto.components.issues.IssueConversationActions.64380cbce5',
+            'New Conversation'
+          )}
         </Button>
         <IssueConversationBindingPopover route={route} issueId={issueId} onChanged={onChanged} />
       </div>
       <Dialog open={launchOpen} onOpenChange={setLaunchOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>New Conversation</DialogTitle>
-            <DialogDescription>Select a Workspace on this Issue authority.</DialogDescription>
+            <DialogTitle>
+              {translate(
+                'auto.components.issues.IssueConversationActions.64380cbce5',
+                'New Conversation'
+              )}
+            </DialogTitle>
+            <DialogDescription>
+              {translate(
+                'auto.components.issues.IssueConversationActions.a269ae936e',
+                'Select a Workspace on this Issue authority.'
+              )}
+            </DialogDescription>
           </DialogHeader>
           <Select value={workspaceId} onValueChange={setWorkspaceId}>
             <SelectTrigger className="w-full">
-              <SelectValue placeholder="Workspace" />
+              <SelectValue
+                placeholder={translate(
+                  'auto.components.issues.IssueConversationActions.6ff696a51f',
+                  'Workspace'
+                )}
+              />
             </SelectTrigger>
             <SelectContent>
               {workspaces.map((workspace) => (
@@ -171,18 +190,29 @@ export function IssueConversationActions({
           {detectingAgents ? (
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
               <Loader2 className="size-3 animate-spin" />
-              Detecting agents…
+              {translate(
+                'auto.components.issues.IssueConversationActions.96758e93cb',
+                'Detecting agents…'
+              )}
             </div>
           ) : detectionFailed ? (
             <p className="text-xs text-muted-foreground">
-              Agent detection failed on this Workspace host.
+              {translate(
+                'auto.components.issues.IssueConversationActions.90aefebec0',
+                'Agent detection failed on this Workspace host.'
+              )}
             </p>
           ) : detectedIds && agentOptions.length === 0 ? (
-            <p className="text-xs text-muted-foreground">No enabled agents were detected.</p>
+            <p className="text-xs text-muted-foreground">
+              {translate(
+                'auto.components.issues.IssueConversationActions.fc184e7cc6',
+                'No enabled agents were detected.'
+              )}
+            </p>
           ) : null}
           <DialogFooter>
             <Button variant="ghost" onClick={() => setLaunchOpen(false)}>
-              Cancel
+              {translate('auto.components.issues.IssueConversationActions.4c8fd04665', 'Cancel')}
             </Button>
             <Button
               disabled={
@@ -190,7 +220,12 @@ export function IssueConversationActions({
               }
               onClick={() => void launch()}
             >
-              {pending ? 'Starting…' : 'Start'}
+              {pending
+                ? translate(
+                    'auto.components.issues.IssueConversationActions.13f5c087f7',
+                    'Starting…'
+                  )
+                : translate('auto.components.issues.IssueConversationActions.e71a1d1f8a', 'Start')}
             </Button>
           </DialogFooter>
         </DialogContent>

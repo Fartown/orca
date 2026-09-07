@@ -5,6 +5,7 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useIssueDomainStore } from '@/issues/use-issue-domain-store'
 import { CreateIssueDialog } from './create-issue-dialog'
+import { translate } from '@/i18n/i18n'
 
 // 规格照抄 SidebarGroupByToggle —— 侧栏分段控件在 Orca 里已经有既定写法,别再发明一套。
 const SEGMENT_CLASS =
@@ -32,10 +33,13 @@ export function SidebarRootModeBar(): React.JSX.Element {
           className="h-6 flex-1 justify-stretch"
         >
           <ToggleGroupItem value="workspaces" className={SEGMENT_CLASS}>
-            Workspaces
+            {translate(
+              'auto.components.sidebar.issues.sidebar.root.mode.bar.304a4dac66',
+              'Workspaces'
+            )}
           </ToggleGroupItem>
           <ToggleGroupItem value="issues" className={SEGMENT_CLASS}>
-            Issues
+            {translate('auto.components.sidebar.issues.sidebar.root.mode.bar.e2f8cd2104', 'Issues')}
           </ToggleGroupItem>
         </ToggleGroup>
         {mode === 'issues' ? (
@@ -46,14 +50,20 @@ export function SidebarRootModeBar(): React.JSX.Element {
                 variant="ghost"
                 size="icon-xs"
                 className="shrink-0"
-                aria-label="Create Issue"
+                aria-label={translate(
+                  'auto.components.sidebar.issues.sidebar.root.mode.bar.0452eb4936',
+                  'Create Issue'
+                )}
                 onClick={() => setCreateOpen(true)}
               >
                 <Plus className="size-3.5" />
               </Button>
             </TooltipTrigger>
             <TooltipContent side="right" sideOffset={6}>
-              Create Issue
+              {translate(
+                'auto.components.sidebar.issues.sidebar.root.mode.bar.0452eb4936',
+                'Create Issue'
+              )}
             </TooltipContent>
           </Tooltip>
         ) : null}

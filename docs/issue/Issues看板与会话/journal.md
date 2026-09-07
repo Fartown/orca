@@ -45,6 +45,15 @@ ready 只表示文档已按当前源码整理；本需求仍为 implementing，�
 
 ## 3. 开发记录
 
+### 2026-09-07 补齐渲染层本地化
+
+- 本轮目标：`verify:localization-coverage` 报 Issues 线 17 个文件 112 处未本地化文案，是本地 `pnpm lint` 唯一红项；在独立分支 `feat/issues-localization` 上补齐。
+- 完成内容：用仓库自带的 `config/scripts/localize-renderer-strings.mjs` 包裹为 `translate('auto.…', 默认文案)`，只保留 Issues 三个目录的改动（codemod 顺带碰到的 19 个上游文件已撤回，对应 en.json 条目已删）；手工修复一处嵌套模板字符串被改坏的调用（`IssueConversationList.tsx` 的 Cannot forget 提示）；en.json 新增 107 个 key，zh.json 同步补齐 107 条中文，术语沿用既有译法（Issue 议题、Conversation 对话、Workspace 工作区、Agent 智能体）。
+- 代码或文档变更：17 个 Issues 源文件、`en.json`、`zh.json`、本记录。
+- 验证证据：`verify:localization-coverage`、`verify:localization-extraction`、`verify:localization-catalog` 通过；`pnpm tc:web` 通过；Issues 渲染层 19 文件 77 例通过；架构门禁与 `check:fork-features` 通过。未做真机截图核对中文。
+- 未解决问题：key 为 codemod 生成的路径加哈希形式，与 Goal 线手写的 `goals.*` 命名不同；如需统一可在后续按文件重命名。
+- 下一步：真机里切中文看一遍 Issues 面板文案。
+
 ### 2026-09-07 与 Goal 共用主进程注入点
 
 - 本轮目标：首次用 `pnpm sync:upstream` 合并上游 268 个提交后跑 Issues 套件，修复暴露出的一处既有失败。

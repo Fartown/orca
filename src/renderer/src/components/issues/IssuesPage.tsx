@@ -7,6 +7,7 @@ import type {
 import { IssueRuntimeClient } from '@/issues/issue-runtime-client'
 import { useIssueDomainStore } from '@/issues/use-issue-domain-store'
 import { IssueDetail } from './IssueDetail'
+import { translate } from '@/i18n/i18n'
 
 export default function IssuesPage(): React.JSX.Element | null {
   const activeRoute = useIssueDomainStore((state) => state.activeIssueRoute)
@@ -83,7 +84,7 @@ export default function IssuesPage(): React.JSX.Element | null {
     return (
       <div className="flex h-full items-center justify-center gap-2 text-sm text-muted-foreground">
         <Loader2 className="size-4 animate-spin" />
-        Loading Issue…
+        {translate('auto.components.issues.IssuesPage.6c141105a8', 'Loading Issue…')}
       </div>
     )
   }

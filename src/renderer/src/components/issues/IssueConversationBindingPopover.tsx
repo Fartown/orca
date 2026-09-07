@@ -24,6 +24,7 @@ import type {
   ConversationSummary,
   IssueRouteExecutionHostId
 } from '../../../../shared/issues/types'
+import { translate } from '@/i18n/i18n'
 
 export function IssueConversationBindingPopover({
   route,
@@ -89,7 +90,10 @@ export function IssueConversationBindingPopover({
       <PopoverTrigger asChild>
         <Button variant="outline" size="sm" data-testid="issue-add-conversation-trigger">
           <Link className="size-3.5" />
-          Add Conversation
+          {translate(
+            'auto.components.issues.IssueConversationBindingPopover.05b241515d',
+            'Add Conversation'
+          )}
         </Button>
       </PopoverTrigger>
       <PopoverContent
@@ -97,15 +101,28 @@ export function IssueConversationBindingPopover({
         className="w-96 p-0"
         data-testid="issue-conversation-binding-popover"
       >
-        <Command aria-label="Select Conversation for Issue">
+        <Command
+          aria-label={translate(
+            'auto.components.issues.IssueConversationBindingPopover.0f5c489086',
+            'Select Conversation for Issue'
+          )}
+        >
           <CommandInput
-            placeholder="Search Conversations…"
+            placeholder={translate(
+              'auto.components.issues.IssueConversationBindingPopover.08292477ce',
+              'Search Conversations…'
+            )}
             value={query}
             onValueChange={setQuery}
             autoFocus
           />
           <CommandList>
-            <CommandEmpty>No matching Conversations</CommandEmpty>
+            <CommandEmpty>
+              {translate(
+                'auto.components.issues.IssueConversationBindingPopover.d6f4ab3e1b',
+                'No matching Conversations'
+              )}
+            </CommandEmpty>
             <CommandGroup heading="Conversations">
               {candidates.map((conversation) => {
                 const title =
