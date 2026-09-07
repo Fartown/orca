@@ -33,6 +33,7 @@
     "check:architecture-policies": "node config/scripts/check-architecture-policies.mjs",
     "check:fork-features": "node config/scripts/check-fork-features.mjs",
     "sync:upstream": "node config/scripts/sync-upstream.mjs",
+    "verify:fork-features": "node config/scripts/run-fork-feature-checks.mjs",
     "check:max-lines-ratchet": "node config/scripts/check-max-lines-ratchet.mjs",
     "check:ts-nocheck-ratchet": "node config/scripts/check-ts-nocheck-ratchet.mjs",
     "check:runtime-electron-ratchet": "node config/scripts/check-runtime-electron-ratchet.mjs",

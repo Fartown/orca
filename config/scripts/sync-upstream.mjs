@@ -13,6 +13,7 @@
 import { spawnSync } from 'node:child_process'
 import path from 'node:path'
 import { loadForkFeatureRegistry } from './check-fork-features.mjs'
+import { forkFeatureCheckSteps } from './run-fork-feature-checks.mjs'
 
 const root = path.resolve(import.meta.dirname, '..', '..')
 const flags = new Set(process.argv.slice(2))
@@ -93,7 +94,7 @@ function main() {
     const steps = [
       'pnpm run check:fork-features',
       'pnpm run check:architecture-policies',
-      ...registry.features.flatMap((feature) => feature.checks)
+      ...forkFeatureCheckSteps(registry).map((step) => step.command)
     ]
     for (const step of steps) {
       if (shell(step) !== 0) {

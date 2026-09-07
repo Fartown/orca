@@ -7,9 +7,11 @@ name: Sync upstream
 # opens an issue naming the conflicting files instead, and a person (or an agent in its
 # own worktree) resolves them with `pnpm sync:upstream`.
 #
-# PRs opened with the default GITHUB_TOKEN do not trigger PR workflows. Set the
-# FORK_SYNC_TOKEN secret (a fine-grained PAT with contents + pull requests write) so the
-# sync PR gets its checks automatically.
+# The job verifies the merged tree itself (fork feature gate, architecture policies and
+# every registered feature check) before opening the PR, so no personal token is needed for
+# the gates that matter. PRs opened with the default GITHUB_TOKEN do not trigger the regular
+# PR workflow; set the optional FORK_SYNC_TOKEN secret (a fine-grained PAT with contents +
+# pull requests write on this repo) only if you also want that full PR CI on sync PRs.
 
 on:
   schedule:
@@ -76,13 +78,53 @@ jobs:
             echo "state=conflict" >> "$GITHUB_OUTPUT"
           fi
 
+      - uses: ./.github/actions/install-node-dependencies
+        if: steps.merge.outputs.state == 'merged'
+        with:
+          native-runtime: node
+
+      # Why in-job: the merged tree is verified here whether or not PR CI runs later.
+      - name: Verify the merged tree
+        id: verify
+        if: steps.merge.outputs.state == 'merged'
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          {
+            echo "## Sync verification"
+            echo
+            for step in \
+              "pnpm run check:fork-features" \
+              "pnpm run check:architecture-policies -- --base upstream/$UPSTREAM_BRANCH" \
+              "pnpm run build:goal-driver" \
+              "node config/scripts/run-fork-feature-checks.mjs"; do
+              if $step > step.log 2>&1; then
+                echo "- ✅ \`$step\`"
+              else
+                echo "- ❌ \`$step\`"
+                echo
+                echo '```'
+                tail -n 40 step.log
+                echo '```'
+                echo "failed=true" >> "$GITHUB_OUTPUT"
+                break
+              fi
+            done
+          } | tee verify-summary.md
+          cat verify-summary.md >> "$GITHUB_STEP_SUMMARY"
+          if grep -q '❌' verify-summary.md; then exit 1; fi
+
       - name: Open the sync pull request
         if: steps.merge.outputs.state == 'merged'
         env:
           GH_TOKEN: ${{ secrets.FORK_SYNC_TOKEN || secrets.GITHUB_TOKEN }}
         run: |
-          title="sync: upstream main $(date -u +%Y-%m-%d)"
           upstream_sha=$(git rev-parse --short "upstream/$UPSTREAM_BRANCH")
+          if [ "${{ steps.verify.outputs.failed }}" = "true" ]; then
+            title="sync: upstream main $(date -u +%Y-%m-%d) [checks failed]"
+          else
+            title="sync: upstream main $(date -u +%Y-%m-%d)"
+          fi
           existing=$(gh pr list --base "$INTEGRATION_BRANCH" --head "${{ steps.merge.outputs.branch }}" --json number --jq '.[0].number')
           if [ -n "$existing" ]; then
             echo "PR #$existing already open for this branch."
@@ -91,9 +133,11 @@ jobs:
           {
             echo "Merges stablyai/orca main at \`$upstream_sha\` into \`$INTEGRATION_BRANCH\`."
             echo
-            echo "Required before merging: the PR checks must pass, including \`check:fork-features\` (every feature in \`config/fork-features.jsonc\` still present) and \`check:architecture-policies\` (the fork's upstream diff stays inside its budget)."
+            cat verify-summary.md
             echo
-            echo "Opened by the sync-upstream workflow."
+            echo "Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            echo
+            echo "Opened by the sync-upstream workflow. Merge only when every line above is ✅ (or after fixing on this branch and re-running \`pnpm sync:upstream\` locally)."
           } > pr-body.md
           gh pr create \
             --base "$INTEGRATION_BRANCH" \
