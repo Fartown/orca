@@ -108,3 +108,15 @@ This checkout is the `Fartown/orca` fork of `stablyai/orca` (`origin`). It carri
 - **Syncing upstream** is `pnpm sync:upstream` from a clean `fork/integration`. When it stops on conflicts, resolve them so every registered feature keeps working, commit the merge (`git add -A && git commit`; worktree-scope rules read an uncommitted merge as one giant edit), and re-run the script so every gate and feature check runs. If a seam moved to a new upstream file, register that file in the feature's `seams` and the budget allowlist. Never resolve a conflict by taking the upstream side of a seam wholesale.
 - **Formatting churn is not a change.** After a repository-wide `oxfmt`, restore upstream files whose diff is whitespace-only with `git checkout origin/main -- <file>` before committing.
 - **Validation artifacts** go under `.docs/<topic>-ui-validation/<date>/{scripts,evidence,build}` (ignored by git) with a README; consolidate throwaway probes into one named script and delete the rest.
+
+### Iteration Principles
+
+Every rule below has a gate that turns red when it is broken; the gate, not this text, is what holds.
+
+1. **Register before building.** A new capability starts as an entry in `config/fork-features.jsonc` plus `docs/issue/<feature>/` with a `journal.md` and a `requirements/*.md` that lists its `REQ-<n>` goals (task-leader contract). Gate: `pnpm check:fork-features`, `pnpm check:fork-docs`.
+2. **One feature, one branch, one worktree.** Cut `feat/<feature>` from `fork/integration`, work in its own worktree, merge back by PR. Gate: the feature's `*-worktree-scope` policy rejects a working tree that edits two features.
+3. **New code lives in feature-owned paths; upstream files change only at registered seams.** Gate: `fork-integration-scope`.
+4. **Definition of done** for any slice: `pnpm tc`, the feature's registered `checks`, the three localization gates, `pnpm check:architecture-policies`, `pnpm check:fork-features`, `pnpm check:fork-docs` are green; the journal gains a development record with 本轮目标 / 完成内容 / 代码或文档变更 / 验证证据 / 未解决问题 / 下一步; real-app evidence sits under `.docs/<topic>-ui-validation/<date>/`. Gate: the same commands run in PR checks and in the weekly sync.
+5. **Goals are facts, not aspirations.** A `REQ-<n>` marked 已实现 must be referenced by a test-case document; journal status uses the task-leader vocabulary (clarifying / designing / implementing / testing / done / blocked); `docs/issue/README.md` is generated (`pnpm generate:issue-index`), never edited by hand. Gate: `pnpm check:fork-docs`.
+6. **Never** delete or stub a registered feature to make something pass, run a repository-wide formatter and commit the churn, quit the user's running app without asking, or bundle several features into one commit.
+7. **Upstream comes in only through `pnpm sync:upstream` or the weekly workflow.** On conflicts keep every registered feature, commit the merge, re-run the script; a seam that moved to a new upstream file is registered, not dropped.

@@ -1,7 +1,7 @@
 ---
 title: Goal 目标模式
 slug: Goal目标模式
-status: developing
+status: implementing
 created: 2026-09-05
 updated: 2026-09-06
 external_ids: []
@@ -13,16 +13,16 @@ external_ids: []
 
 | 类型         | 文档                                                                   | 状态             | 说明                                                                |
 | ------------ | ---------------------------------------------------------------------- | ---------------- | ------------------------------------------------------------------- |
-| 需求         | [Goal 目标模式](requirements/Goal目标模式.md)                          | implemented      | REQ-101～REQ-115 保留原目标；REQ-109、REQ-116～REQ-120 已按方案落地 |
+| 需求         | [Goal 目标模式](requirements/Goal目标模式.md)                          | approved         | REQ-101～REQ-115 保留原目标；REQ-109、REQ-116～REQ-120 已按方案落地 |
 | 交互         | -                                                                      | not-required     | 本轮交互示意内嵌方案；没有独立设计事实源，不另建 design 文档        |
-| 方案         | [Goal 目标管理与交互闭环方案](solutions/Goal目标管理与交互闭环方案.md) | implemented      | 唯一实施主入口；WP1～WP4 已落地；未提交、未回推上游                 |
+| 方案         | [Goal 目标管理与交互闭环方案](solutions/Goal目标管理与交互闭环方案.md) | completed        | 唯一实施主入口；WP1～WP4 已落地；未提交、未回推上游                 |
 | 历史实现基线 | [Goal 目标模式技术说明](solutions/Goal目标模式技术说明.md)             | superseded       | 保留旧 CLI/插件实现事实与差距；补充宿主命令已支持带参的核对修正     |
 | 测试用例     | [功能测试](tests/cases/Goal功能测试.md)                                | reviewing        | 用例索引已按新交互更新；尚未建立正式 Test Run                       |
 | 调研         | -                                                                      | not-required     | 当前源码事实已归并到技术正文，本次不重复调研                        |
 | 历史调研     | [Codex Goal 历史机制对照](research/Codex-Goal历史机制对照.md)          | superseded       | 保留冻结 Codex SHA 的完整参考，不作为当前 Orca 事实                 |
 | 测试执行     | -                                                                      | pending-decision | 本次没有执行 Goal 测试，不因规格存在创建通过记录                    |
 
-当前增量处于 developing：WP1～WP4 于 2026-09-06 全部落地并做了一轮真机面板验证；改动未提交，退役旧插件的复验等用户确认重装后进行，尚无正式 Test Run，不代表已验收。
+当前增量处于 implementing：WP1～WP4 于 2026-09-06 全部落地并做了一轮真机面板验证；改动未提交，退役旧插件的复验等用户确认重装后进行，尚无正式 Test Run，不代表已验收。
 
 ## 2. 决策点记录
 

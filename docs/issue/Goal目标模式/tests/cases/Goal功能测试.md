@@ -426,6 +426,38 @@ scope: Goal 目标模式
 
 REQ-112 原提案规定的验证次序仍保留：先增加“连续不变仍继续”用例并确认当前代码失败，再实施移除转绿，最后重新注入旧空转判定以证明用例能重新失败；本次不执行代码修改或变异。
 
+## 目标管理用例（2026-09-07 新增）
+
+### TC-340
+
+关联需求：REQ-116、REQ-117；优先级：P0。
+
+前置条件与操作：宿主 Goal 服务就绪；存在两条 v2 记录（一条本工作区、一条其他工作区）和一条未导入的 v1 CLI 记录。切换“当前工作区/全部”范围与“进行中/待处理/历史”筛选，搜索目标，选择一条进入详情再返回，对 CLI 目标行执行导入。
+
+预期与核对证据：列表按范围与筛选过滤，搜索只匹配目标正文；详情可返回列表且选择不被自动改写；CLI 目标以只读行列出，导入后成为暂停态的受管目标，旧驱动仍在时导入被拒为 conflict。执行端只有本机，其余端不列出。
+
+覆盖来源：宿主控制（goal-control-service.test.ts 的 list/get、goal-legacy-adoption.test.ts）、渲染（goals-domain-store.test.ts）、真机记录 `.docs/goal-ui-validation/2026-09-06/`（面板与新建表单截图）。
+
+### TC-341
+
+关联需求：REQ-118；优先级：P1。
+
+前置条件与操作：目标带三类验收项：有命令的、无命令的（选了独立裁判）、额外检查命令。驱动写回一次验收结果，其中裁判命令输出条目判词；随后修改目标定义产生新版本。
+
+预期与核对证据：带命令的项映射 gate 结果；无命令的项映射 `source: 'judge'` 的条目判词，未声明的 id 不挂到任何验收项；缺失、重复、无法解析的判词记 inconclusive，不显示为通过；定义版本变更后旧证据显示“证据已过期”；轮次与预算分开显示，不用轮次表示完成度。
+
+覆盖来源：宿主控制（goal-control-service.test.ts 的两条证据用例、goal-evidence-projection.ts）、裁判（judge-item-verdicts.test.mjs、acceptance-judge-items.test.mjs、goal-record-projection.test.mjs）。真实 claude/codex 裁判未在真机执行。
+
+### TC-342
+
+关联需求：REQ-119、REQ-120；优先级：P0。
+
+前置条件与操作：驱动运行中，在途一轮未结束。依次执行暂停、恢复、停止；驱动缺席时再执行停止与恢复。
+
+预期与核对证据：暂停只关闭下一次注入并在收据里说明在途轮次照常结束；停止在关闸后向在途轮次发一次中断，等到本轮结束证据才写 turnStopped=true，宽限内没有证据则收据为 confirmation_pending 并显示“中断未确认”；恢复沿用累计轮次与时长，重新拉起驱动前先写本次意图，新驱动不会读到上一次的停止；驱动缺席时由宿主按缺席结算收据。
+
+覆盖来源：宿主控制（goal-control-service.test.ts、goal-revision-control.test.ts）、驱动（goal-driver-control.test.mjs、goal-loop-stop.test.mjs、goal-loop-reload.test.mjs）。
+
 ## 历史证据的使用方式
 
 历史 CLI README 曾记录真 agent 完成、假完成被拒后修复、原地快照不动 index、篡改 diff、后台运行、resume、prompt-file、claude/codex 裁判等场景。它们提供回归场景来源，不提供本次版本的通过证明；其中 prompt-file 旧文明确只有单次验证，默认关闭。

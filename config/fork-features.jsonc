@@ -13,6 +13,7 @@
   //   tests          test files that must exist
   //   checks         commands `pnpm sync:upstream` runs after merging upstream
   //   policyId       the policy in config/architecture-policies.jsonc that scopes daily edits
+  //   goal           one sentence for the docs/issue index; the requirements doc holds the REQ list
   "schemaVersion": 1,
   "upstream": { "remote": "origin", "branch": "main" },
   "fork": { "remote": "Fartown", "integrationBranch": "fork/integration" },
@@ -20,6 +21,7 @@
     {
       "id": "goals",
       "title": "Goal 目标模式：原生目标面板、宿主控制服务与合作式驱动",
+      "goal": "持久目标、既有会话续跑、独立验收与目标管理 UI",
       "journal": "docs/issue/Goal目标模式/journal.md",
       "policyId": "goals-native-feature",
       "ownedPaths": [
@@ -138,6 +140,7 @@
     {
       "id": "issues-board",
       "title": "Issues 看板与会话：跨工作区会话组织、恢复与标题稳定",
+      "goal": "组织跨工作区会话，关闭后准确恢复，保持标题稳定",
       "journal": "docs/issue/Issues看板与会话/journal.md",
       "policyId": "issues-existing-capability-reuse",
       "ownedPaths": [
@@ -208,6 +211,7 @@
     {
       "id": "self-hosted-artifacts",
       "title": "自托管产物后端：产物 API origin 放宽到 loopback 与局域网",
+      "goal": "通过现有产物客户端访问局域网服务",
       "journal": "docs/issue/自托管产物后端/journal.md",
       "policyId": "self-hosted-artifacts",
       "ownedPaths": ["docs/issue/自托管产物后端/**"],

@@ -112,6 +112,7 @@ jobs:
             echo
             for step in \
               "pnpm run check:fork-features" \
+              "pnpm run check:fork-docs" \
               "pnpm run check:architecture-policies -- --base upstream/$UPSTREAM_BRANCH" \
               "pnpm run build:goal-driver" \
               "node config/scripts/run-fork-feature-checks.mjs"; do

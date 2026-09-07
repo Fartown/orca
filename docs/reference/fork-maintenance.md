@@ -53,6 +53,16 @@ gitGraph
 
 新增功能时,在 `fork-features.jsonc` 加记录,在策略文件加它的策略,并把它的 owned 路径与接缝加进 `fork-integration-scope` 的白名单;`check:fork-features` 会核对两边一致。
 
+## 3a. 文档门禁:`pnpm check:fork-docs`
+
+功能清单说“有什么”,`docs/issue/<需求>/` 说“为什么、到哪一步”。这个门禁让两边不漂移:
+
+- journal 的 frontmatter `status` 必须是 task-leader 的需求整体状态之一(clarifying / designing / implementing / testing / done / blocked),`created`/`updated` 是日期;正文必须按顺序有“关键文档链接 / 决策点记录 / 开发记录”三段;关键文档链接表里的链接必须存在、状态必须是文档状态词汇;每条开发记录必须有“本轮目标”和“验证证据”。
+- `requirements/*.md` 里的 `### REQ-<n>` 唯一、每条有“当前状态：”;标为“已实现”的 REQ 必须在 `tests/cases/*.md` 里被引用,否则就是没有验证就宣称完成。
+- `docs/issue/README.md` 由 `pnpm generate:issue-index` 从清单(`goal` 字段)和各 journal(状态、更新日期、文档链接)生成,门禁校验它与事实源一致,不再手写。
+
+它和 `check:fork-features` 一起挂在 `pnpm lint`、PR 检查和周同步里。
+
 ## 4. 同步上游
 
 ```
