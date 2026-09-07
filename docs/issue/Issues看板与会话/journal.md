@@ -45,6 +45,15 @@ ready 只表示文档已按当前源码整理；本需求仍为 implementing，�
 
 ## 3. 开发记录
 
+### 2026-09-07 与 Goal 共用主进程注入点
+
+- 本轮目标：首次用 `pnpm sync:upstream` 合并上游 268 个提交后跑 Issues 套件，修复暴露出的一处既有失败。
+- 完成内容：`src/main/index.ts` 的 `afterTerminalRuntimeStartup` 自 Goal WP1 起是组合回调（先 `startIssueFeatureForMainProcess()` 再 `startGoalFeatureForMainProcess()`），`issue-host-lifecycle.test.ts` 仍按旧字面量查找而失败；改为在回调内查找 Issue 启动调用，顺序断言不变。
+- 代码或文档变更：仅该测试文件与本记录。合并上游时 Issues 线另有两处接缝冲突已解决：`AiVaultVirtualRow.tsx`（上游从 `AiVaultSessionVirtualList.tsx` 拆出，canonicalTitle 接缝随之迁移并登记到 `config/fork-features.jsonc`）、`ai-vault-session-launch-actions.ts`（保留 fork 的 `resumeAiVaultSession`，解析器改回上游的 `ai-vault-session-launch-target.ts`）。
+- 验证证据：Issues 相关 vitest 43 文件 175 例通过（见 `.docs/fork-sync/2026-09-07/`）；`pnpm check:fork-features` 与架构门禁通过。
+- 未解决问题：无新增。
+- 下一步：Issues 线继续在自己的功能分支推进，见 `docs/reference/fork-maintenance.md`。
+
 ### 2026-09-05 拆分独立 issue
 
 - 本轮目标：按用户确认，将 Issues 看板与会话从总 issue 独立出来。

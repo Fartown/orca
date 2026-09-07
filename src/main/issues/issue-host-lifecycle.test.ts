@@ -25,9 +25,10 @@ describe('Issue host lifecycle wiring', () => {
     const serveRpc = launchSource.indexOf('await launchServeMode', bootstrapCall)
     const dispose = lifecycleSource.indexOf('issueFeatureBootstrap?.dispose()')
     const hookStop = quitSource.indexOf('agentHookServer.stop()')
-    const startInjection = indexSource.indexOf(
-      'afterTerminalRuntimeStartup: startIssueFeatureForMainProcess'
-    )
+    // Why: the injection point is shared with other fork features (goals), so the Issue start
+    // is one call inside the afterTerminalRuntimeStartup callback rather than the callback itself.
+    const injectionPoint = indexSource.indexOf('afterTerminalRuntimeStartup:')
+    const startInjection = indexSource.indexOf('startIssueFeatureForMainProcess', injectionPoint)
     const stopInjection = indexSource.indexOf(
       "app.once('will-quit', stopIssueFeatureForMainProcess)"
     )
@@ -38,7 +39,8 @@ describe('Issue host lifecycle wiring', () => {
     expect(serveRpc).toBeGreaterThan(bootstrapCall)
     expect(dispose).toBeGreaterThan(0)
     expect(hookStop).toBeGreaterThan(0)
-    expect(startInjection).toBeGreaterThan(0)
+    expect(injectionPoint).toBeGreaterThan(0)
+    expect(startInjection).toBeGreaterThan(injectionPoint)
     expect(stopInjection).toBeGreaterThan(0)
   })
 })
