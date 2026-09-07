@@ -61,8 +61,8 @@ test('Issue Conversation 行同形且不显示 agent 名 @row-parity', async ({
         { timeout: 30_000 }
       )
       .not.toBeNull()
-      .then(
-        async () => (await listConversations(page)).find((item) => item.id === conversation.id)!
+      .then(async () =>
+        (await listConversations(page)).find((item) => item.id === conversation.id)!
       )
     const paneKey = attachedConversation.navigation?.paneKey
     expect(paneKey).toBeTruthy()
@@ -150,9 +150,8 @@ test('Issue Conversation 行同形且不显示 agent 名 @row-parity', async ({
         { timeout: 30_000 }
       )
       .not.toBeNull()
-      .then(
-        async () =>
-          (await listConversations(relaunched.page)).find((item) => item.id === conversation.id)!
+      .then(async () =>
+        (await listConversations(relaunched.page)).find((item) => item.id === conversation.id)!
       )
     expect((await listConversations(relaunched.page)).length).toBe(conversationCountBeforeResume)
     expect(resumedConversation.id).toBe(conversation.id)

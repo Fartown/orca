@@ -46,9 +46,8 @@ test('Issue Conversation routes by the exact Workspace row @workspace-row-routin
         { timeout: 30_000 }
       )
       .not.toBeNull()
-      .then(
-        async () =>
-          (await listConversations(page)).find((conversation) => conversation.id === allocated.id)!
+      .then(async () =>
+        (await listConversations(page)).find((conversation) => conversation.id === allocated.id)!
       )
     const paneKey = attached.navigation?.paneKey
     const providerSessionId = attached.navigation?.providerSession?.id
@@ -191,9 +190,8 @@ test('Issue Conversation routes by the exact Workspace row @workspace-row-routin
         { timeout: 30_000 }
       )
       .not.toBeNull()
-      .then(
-        async () =>
-          (await listConversations(page)).find((conversation) => conversation.id === attached.id)!
+      .then(async () =>
+        (await listConversations(page)).find((conversation) => conversation.id === attached.id)!
       )
 
     expect((await listConversations(page)).length).toBe(conversationCountBeforeResume)

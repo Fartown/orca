@@ -168,46 +168,46 @@ function Sidebar({
             <SidebarRootModeBar />
             {sidebarRootMode === 'workspaces' ? (
               <>
-              <SidebarHeader
-                onWorkspaceBoardMenuOpenChange={setWorkspaceBoardMenuOpen}
-                activityOptionsTarget={setAgentOptionsTarget}
-              />
-              {sidebarBody === 'agents' ? (
-                <React.Suspense fallback={<div className="min-h-0 flex-1" />}>
-                  <ActivityThreadCollapseContext.Provider value={agentsCollapseState}>
-                    <SidebarAgentsList
-                      readFilter={agentReadFilter}
-                      setReadFilter={setAgentReadFilter}
-                      groupBy={agentGroupBy}
-                      setGroupBy={setAgentGroupBy}
-                      query={agentQuery}
-                      setQuery={setAgentQuery}
-                      optionsTarget={agentOptionsTarget}
-                      scrollTopRef={agentsScrollTopRef}
-                    />
-                  </ActivityThreadCollapseContext.Provider>
-                </React.Suspense>
-              ) : (
-                <WorktreeList
-                  scrollOffsetRef={worktreeScrollOffsetRef}
-                  scrollAnchorRef={worktreeScrollAnchorRef}
-                  workspaceBoardOpen={workspaceBoardOpen}
-                  onWorkspaceBoardDragPreviewStart={previewWorkspaceBoardFromDrag}
-                  onWorkspaceBoardDragPreviewCommit={solidifyWorkspaceBoardFromDrag}
-                  onWorkspaceBoardDragPreviewCancel={cancelWorkspaceBoardDragPreview}
+                <SidebarHeader
+                  onWorkspaceBoardMenuOpenChange={setWorkspaceBoardMenuOpen}
+                  activityOptionsTarget={setAgentOptionsTarget}
                 />
-              )}
+                {sidebarBody === 'agents' ? (
+                  <React.Suspense fallback={<div className="min-h-0 flex-1" />}>
+                    <ActivityThreadCollapseContext.Provider value={agentsCollapseState}>
+                      <SidebarAgentsList
+                        readFilter={agentReadFilter}
+                        setReadFilter={setAgentReadFilter}
+                        groupBy={agentGroupBy}
+                        setGroupBy={setAgentGroupBy}
+                        query={agentQuery}
+                        setQuery={setAgentQuery}
+                        optionsTarget={agentOptionsTarget}
+                        scrollTopRef={agentsScrollTopRef}
+                      />
+                    </ActivityThreadCollapseContext.Provider>
+                  </React.Suspense>
+                ) : (
+                  <WorktreeList
+                    scrollOffsetRef={worktreeScrollOffsetRef}
+                    scrollAnchorRef={worktreeScrollAnchorRef}
+                    workspaceBoardOpen={workspaceBoardOpen}
+                    onWorkspaceBoardDragPreviewStart={previewWorkspaceBoardFromDrag}
+                    onWorkspaceBoardDragPreviewCommit={solidifyWorkspaceBoardFromDrag}
+                    onWorkspaceBoardDragPreviewCancel={cancelWorkspaceBoardDragPreview}
+                  />
+                )}
 
-              <div className="relative shrink-0">
-                <SetupScriptPromptCard />
+                <div className="relative shrink-0">
+                  <SetupScriptPromptCard />
 
-                {/* Fixed bottom toolbar */}
-                <SidebarToolbar
-                  workspaceBoardOpen={workspaceBoardOpen}
-                  workspaceBoardDragPreviewOpen={workspaceBoardDragPreviewOpen}
-                  onWorkspaceBoardToggle={toggleWorkspaceBoard}
-                />
-              </div>
+                  {/* Fixed bottom toolbar */}
+                  <SidebarToolbar
+                    workspaceBoardOpen={workspaceBoardOpen}
+                    workspaceBoardDragPreviewOpen={workspaceBoardDragPreviewOpen}
+                    onWorkspaceBoardToggle={toggleWorkspaceBoard}
+                  />
+                </div>
               </>
             ) : (
               <IssueSidebar />

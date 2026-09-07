@@ -250,19 +250,19 @@ Needs me 从 unresolved Round 派生。Mark read 只记阅读时间；Mark handl
 
 ## 5. 最新取舍替代的旧描述
 
-| 旧描述 | 当前归并口径 |
-| --- | --- |
-| Workspaces/Issues 全部由持久 Conversation 双投影驱动 | Workspaces 原生运行行；Issues 复用匹配原行并独立保留关闭历史 |
-| 关闭后先打开右侧，让用户手动搜索再 Resume | Issue 精确查找并直接复用 finder→Jump/Resume |
-| Issue 专属 Starting/Retry 和异步 launcher failure UI | identity 前隐藏；后端诊断/retry 合同仍在，未连接普通 UI |
-| 过期 claim Hook 一律丢弃 | 失去原绑定权，但可信 identity 可未归属纳管 |
-| Project move 必须被 Issue guard 阻止 | guard 撤回，沿用主工程 transfer |
-| minted/provider/user 共用 title，并作为 app-wide canonical | user override 与 Provider 快照分槽；fallback 纯派生 |
-| schema 固定 v1，旧稿 v3 是最终版本 | 当前 v4；保留 migration、回滚和混合版本边界 |
-| 增加长轮询/补偿保证所有标题及时生成 | 复用现有 resolver 与事件触发；无明确事件时不承诺即时收敛 |
-| 所有原生恢复失败都由 Issue 修复 | 复用原生合同，单独纳入 launch-config finder 缺口，不扩展为第二恢复系统 |
-| Codex 一律注入 `-c features.hooks=true` 已落地 | 这是历史候选方案；当前源码未发现该注入与诊断开关，不作为现行规范 |
-| 历史 16 步验收等于当前代码完成 | 历史报告仅说明对应包/日期；当前源码、暂存标题与真实远端另行验证 |
+| 旧描述                                                     | 当前归并口径                                                           |
+| ---------------------------------------------------------- | ---------------------------------------------------------------------- |
+| Workspaces/Issues 全部由持久 Conversation 双投影驱动       | Workspaces 原生运行行；Issues 复用匹配原行并独立保留关闭历史           |
+| 关闭后先打开右侧，让用户手动搜索再 Resume                  | Issue 精确查找并直接复用 finder→Jump/Resume                            |
+| Issue 专属 Starting/Retry 和异步 launcher failure UI       | identity 前隐藏；后端诊断/retry 合同仍在，未连接普通 UI                |
+| 过期 claim Hook 一律丢弃                                   | 失去原绑定权，但可信 identity 可未归属纳管                             |
+| Project move 必须被 Issue guard 阻止                       | guard 撤回，沿用主工程 transfer                                        |
+| minted/provider/user 共用 title，并作为 app-wide canonical | user override 与 Provider 快照分槽；fallback 纯派生                    |
+| schema 固定 v1，旧稿 v3 是最终版本                         | 当前 v4；保留 migration、回滚和混合版本边界                            |
+| 增加长轮询/补偿保证所有标题及时生成                        | 复用现有 resolver 与事件触发；无明确事件时不承诺即时收敛               |
+| 所有原生恢复失败都由 Issue 修复                            | 复用原生合同，单独纳入 launch-config finder 缺口，不扩展为第二恢复系统 |
+| Codex 一律注入 `-c features.hooks=true` 已落地             | 这是历史候选方案；当前源码未发现该注入与诊断开关，不作为现行规范       |
+| 历史 16 步验收等于当前代码完成                             | 历史报告仅说明对应包/日期；当前源码、暂存标题与真实远端另行验证        |
 
 ## 6. 验收与完成条件
 
