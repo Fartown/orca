@@ -1,0 +1,125 @@
+name: Sync upstream
+
+# Why: this fork tracks stablyai/orca and carries its own features, listed in
+# config/fork-features.jsonc. Every week this job fast-forwards `main` to upstream and
+# opens a PR that merges it into the integration branch; the PR checks then run the fork
+# feature gate and the architecture policies. Conflicts are never resolved here: the job
+# opens an issue naming the conflicting files instead, and a person (or an agent in its
+# own worktree) resolves them with `pnpm sync:upstream`.
+#
+# PRs opened with the default GITHUB_TOKEN do not trigger PR workflows. Set the
+# FORK_SYNC_TOKEN secret (a fine-grained PAT with contents + pull requests write) so the
+# sync PR gets its checks automatically.
+
+on:
+  schedule:
+    - cron: '0 2 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+concurrency:
+  group: sync-upstream
+  cancel-in-progress: false
+
+env:
+  UPSTREAM_URL: https://github.com/stablyai/orca.git
+  UPSTREAM_BRANCH: main
+  INTEGRATION_BRANCH: fork/integration
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the integration branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.INTEGRATION_BRANCH }}
+          fetch-depth: 0
+          token: ${{ secrets.FORK_SYNC_TOKEN || secrets.GITHUB_TOKEN }}
+
+      - name: Configure git
+        run: |
+          git config user.name "orca-fork-sync"
+          git config user.email "orca-fork-sync@users.noreply.github.com"
+
+      - name: Fetch upstream
+        run: |
+          git remote add upstream "$UPSTREAM_URL"
+          git fetch upstream "$UPSTREAM_BRANCH"
+          git fetch origin "$UPSTREAM_BRANCH"
+
+      - name: Fast-forward main to upstream
+        run: |
+          git fetch . "upstream/$UPSTREAM_BRANCH:$UPSTREAM_BRANCH"
+          git push origin "$UPSTREAM_BRANCH:$UPSTREAM_BRANCH"
+
+      - name: Merge upstream into a sync branch
+        id: merge
+        run: |
+          if git merge-base --is-ancestor "upstream/$UPSTREAM_BRANCH" HEAD; then
+            echo "Integration already contains upstream; nothing to do."
+            echo "state=current" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          branch="sync/upstream-$(date -u +%Y%m%d)"
+          git checkout -b "$branch"
+          if git merge --no-edit "upstream/$UPSTREAM_BRANCH"; then
+            git push --force-with-lease origin "$branch"
+            echo "state=merged" >> "$GITHUB_OUTPUT"
+            echo "branch=$branch" >> "$GITHUB_OUTPUT"
+          else
+            git diff --name-only --diff-filter=U > conflicts.txt
+            echo "state=conflict" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Open the sync pull request
+        if: steps.merge.outputs.state == 'merged'
+        env:
+          GH_TOKEN: ${{ secrets.FORK_SYNC_TOKEN || secrets.GITHUB_TOKEN }}
+        run: |
+          title="sync: upstream main $(date -u +%Y-%m-%d)"
+          upstream_sha=$(git rev-parse --short "upstream/$UPSTREAM_BRANCH")
+          existing=$(gh pr list --base "$INTEGRATION_BRANCH" --head "${{ steps.merge.outputs.branch }}" --json number --jq '.[0].number')
+          if [ -n "$existing" ]; then
+            echo "PR #$existing already open for this branch."
+            exit 0
+          fi
+          {
+            echo "Merges stablyai/orca main at \`$upstream_sha\` into \`$INTEGRATION_BRANCH\`."
+            echo
+            echo "Required before merging: the PR checks must pass, including \`check:fork-features\` (every feature in \`config/fork-features.jsonc\` still present) and \`check:architecture-policies\` (the fork's upstream diff stays inside its budget)."
+            echo
+            echo "Opened by the sync-upstream workflow."
+          } > pr-body.md
+          gh pr create \
+            --base "$INTEGRATION_BRANCH" \
+            --head "${{ steps.merge.outputs.branch }}" \
+            --title "$title" \
+            --body-file pr-body.md
+
+      - name: Open a conflict issue
+        if: steps.merge.outputs.state == 'conflict'
+        env:
+          GH_TOKEN: ${{ secrets.FORK_SYNC_TOKEN || secrets.GITHUB_TOKEN }}
+        run: |
+          upstream_sha=$(git rev-parse --short "upstream/$UPSTREAM_BRANCH")
+          {
+            echo "Merging stablyai/orca main at \`$upstream_sha\` into \`$INTEGRATION_BRANCH\` conflicts in:"
+            echo
+            sed 's/^/- /' conflicts.txt
+            echo
+            echo 'Resolve locally from a clean `'"$INTEGRATION_BRANCH"'` checkout:'
+            echo
+            echo '```'
+            echo 'pnpm sync:upstream          # stops on the same conflicts'
+            echo '# resolve, keeping every feature in config/fork-features.jsonc'
+            echo 'pnpm check:fork-features && pnpm check:architecture-policies'
+            echo 'git commit && pnpm sync:upstream --push'
+            echo '```'
+          } > issue-body.md
+          gh issue create --title "Upstream sync conflict ($(date -u +%Y-%m-%d))" --label sync-upstream --body-file issue-body.md \
+            || gh issue create --title "Upstream sync conflict ($(date -u +%Y-%m-%d))" --body-file issue-body.md

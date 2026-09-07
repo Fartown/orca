@@ -66,6 +66,15 @@ Keep policy rules architectural rather than incidental: encode ownership, depend
 reuse parity, and lifecycle boundaries. Avoid assertions about UI copy, temporary line numbers, or
 one test fixture unless those details are themselves part of the reviewed contract.
 
+## Fork policies
+
+`fork-upstream-diff-budget` is the fork-level rule: the branch's whole diff against `origin/main`
+must stay inside its allowlist, which is the union of every fork feature's owned paths and
+seams. Feature policies (`goals-native-feature`, `issues-existing-capability-reuse`,
+`self-hosted-artifacts`) use `comparison: worktree` rules so a working tree edits one feature at
+a time. `config/fork-features.jsonc` lists the features; `pnpm check:fork-features` cross-checks it
+against the budget allowlist. See [`fork-maintenance.md`](./fork-maintenance.md).
+
 ## Implementation boundary
 
 - `architecture-policy-manifest.mjs` parses and validates the declarative schema.

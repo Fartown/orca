@@ -130,6 +130,9 @@ jobs:
       - name: Enforce architecture policies
         run: pnpm run check:architecture-policies -- --base "${{ github.event.pull_request.base.sha }}"
 
+      - name: Enforce fork feature registry
+        run: pnpm run check:fork-features
+
       - name: Check VM runtime rollback compatibility
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
