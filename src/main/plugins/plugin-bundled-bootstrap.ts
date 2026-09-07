@@ -4,8 +4,8 @@ import { z } from 'zod'
 import { isQualifiedPluginKey } from '../../shared/plugins/plugin-manifest'
 import { pluginRelativeDirectorySchema } from '../../shared/plugins/plugin-manifest-fields'
 import { isOfficialPluginIdentity } from '../../shared/plugins/plugin-marketplace'
-import { getUserPluginsDir } from './plugin-discovery'
-import { installBundledPlugin, readPluginLockfile } from './plugin-install'
+import { getPluginsDataDir, getUserPluginsDir } from './plugin-discovery'
+import { installBundledPlugin, readPluginLockfile, removeInstalledPlugin } from './plugin-install'
 import { inspectPluginInstallTree } from './plugin-install-staging'
 import { readPluginCurrentPointer } from './plugin-current-pointer'
 import { hashPluginTree } from './plugin-content-hash'
@@ -49,6 +49,8 @@ const bundledPluginIndexSchema = z
 export type PluginBundledBootstrapResult = {
   installed: string[]
   unchanged: string[]
+  /** Bundled installs dropped from the release index and uninstalled. */
+  retired: string[]
   errors: { pluginKey: string; error: string }[]
 }
 
@@ -103,11 +105,18 @@ export async function bootstrapBundledPlugins(options: {
   userDataPath: string
   hostVersion: string
   blockedPluginReason?: (pluginKey: string) => string | null
+  /** Runs before a retired bundled plugin is removed (deactivate its worker). */
+  beforeRetire?: (pluginKey: string) => Promise<void>
 }): Promise<PluginBundledBootstrapResult> {
   const index = await readBundledPluginIndex(options.root)
   const pluginsDir = getUserPluginsDir(options.userDataPath)
   const lock = await readPluginLockfile(pluginsDir)
-  const result: PluginBundledBootstrapResult = { installed: [], unchanged: [], errors: [] }
+  const result: PluginBundledBootstrapResult = {
+    installed: [],
+    unchanged: [],
+    retired: [],
+    errors: []
+  }
   for (const entry of index.plugins) {
     const locked = lock.plugins[entry.pluginKey]
     if (
@@ -146,6 +155,28 @@ export async function bootstrapBundledPlugins(options: {
     } catch (error) {
       result.errors.push({
         pluginKey: entry.pluginKey,
+        error: error instanceof Error ? error.message : String(error)
+      })
+    }
+  }
+  // Why: a bundled plugin dropped from the release index would otherwise stay
+  // installed from an earlier bootstrap and keep contributing commands and panels.
+  const indexed = new Set(index.plugins.map((entry) => entry.pluginKey))
+  for (const [pluginKey, locked] of Object.entries(lock.plugins)) {
+    if (locked.source.kind !== 'bundled' || indexed.has(pluginKey)) {
+      continue
+    }
+    try {
+      await options.beforeRetire?.(pluginKey)
+      await removeInstalledPlugin({
+        pluginsDir,
+        pluginsDataDir: getPluginsDataDir(options.userDataPath),
+        pluginKey
+      })
+      result.retired.push(pluginKey)
+    } catch (error) {
+      result.errors.push({
+        pluginKey,
         error: error instanceof Error ? error.message : String(error)
       })
     }

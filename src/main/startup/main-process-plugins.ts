@@ -76,12 +76,17 @@ export async function initializeMainProcessPlugins(runtime: OrcaRuntimeService):
     hostVersion: app.getVersion(),
     isEnabled: () => state.store?.getSettings().pluginSystemEnabled === true,
     blockedPluginReason: (pluginKey) => state.pluginKillListService?.reason(pluginKey) ?? null,
+    beforeRetire: (pluginKey) =>
+      state.pluginService?.deactivatePlugin(pluginKey) ?? Promise.resolve(),
     refreshPlugins: () => state.pluginService?.refresh() ?? Promise.resolve()
   })
   const requestBundledPluginBootstrap = (): void => {
     void bundledPluginBootstrap
       .request()
       .then((result) => {
+        for (const pluginKey of result?.retired ?? []) {
+          console.info(`[plugins] retired bundled ${pluginKey}: no longer in the release index`)
+        }
         for (const failure of result?.errors ?? []) {
           console.warn(`[plugins] failed to publish bundled ${failure.pluginKey}:`, failure.error)
         }

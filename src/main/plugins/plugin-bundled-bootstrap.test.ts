@@ -1,4 +1,4 @@
-import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises'
+import { mkdtemp, mkdir, rm, stat, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
@@ -61,10 +61,20 @@ describe('bundled plugin bootstrap', () => {
 
     await expect(
       bootstrapBundledPlugins({ root, userDataPath, hostVersion: '1.4.0' })
-    ).resolves.toEqual({ installed: ['stablyai.orca-skills'], unchanged: [], errors: [] })
+    ).resolves.toEqual({
+      installed: ['stablyai.orca-skills'],
+      unchanged: [],
+      retired: [],
+      errors: []
+    })
     await expect(
       bootstrapBundledPlugins({ root, userDataPath, hostVersion: '1.4.0' })
-    ).resolves.toEqual({ installed: [], unchanged: ['stablyai.orca-skills'], errors: [] })
+    ).resolves.toEqual({
+      installed: [],
+      unchanged: ['stablyai.orca-skills'],
+      retired: [],
+      errors: []
+    })
   })
 
   it('publishes an updated immutable bundle only when the indexed hash matches', async () => {
@@ -78,7 +88,12 @@ describe('bundled plugin bootstrap', () => {
 
     const updated = await bootstrapBundledPlugins({ root, userDataPath, hostVersion: '1.4.0' })
 
-    expect(updated).toEqual({ installed: ['stablyai.orca-skills'], unchanged: [], errors: [] })
+    expect(updated).toEqual({
+      installed: ['stablyai.orca-skills'],
+      unchanged: [],
+      retired: [],
+      errors: []
+    })
     const lock = await readPluginLockfile(join(userDataPath, 'plugins'))
     expect(lock.plugins['stablyai.orca-skills']?.contentHash).toBe(second.hash)
   })
@@ -94,12 +109,22 @@ describe('bundled plugin bootstrap', () => {
 
     await expect(
       bootstrapBundledPlugins({ root, userDataPath, hostVersion: '1.4.0' })
-    ).resolves.toEqual({ installed: ['stablyai.orca-skills'], unchanged: [], errors: [] })
+    ).resolves.toEqual({
+      installed: ['stablyai.orca-skills'],
+      unchanged: [],
+      retired: [],
+      errors: []
+    })
 
     await rm(versionDir, { recursive: true, force: true })
     await expect(
       bootstrapBundledPlugins({ root, userDataPath, hostVersion: '1.4.0' })
-    ).resolves.toEqual({ installed: ['stablyai.orca-skills'], unchanged: [], errors: [] })
+    ).resolves.toEqual({
+      installed: ['stablyai.orca-skills'],
+      unchanged: [],
+      retired: [],
+      errors: []
+    })
   })
 
   it('refuses mismatched release hashes before publication', async () => {
@@ -113,6 +138,41 @@ describe('bundled plugin bootstrap', () => {
     expect(result.installed).toEqual([])
     expect(result.errors[0]?.error).toContain('does not match its release index')
     expect((await readPluginLockfile(join(userDataPath, 'plugins'))).plugins).toEqual({})
+  })
+
+  it('retires a bundled install that left the release index and deactivates it first', async () => {
+    const root = await tempRoot('orca-bundled-resources-')
+    const userDataPath = await tempRoot('orca-bundled-user-data-')
+    const bundle = await writeBundle(root)
+    await writeIndex(root, bundle.path, bundle.hash)
+    await bootstrapBundledPlugins({ root, userDataPath, hostVersion: '1.4.0' })
+    await mkdir(join(userDataPath, 'plugins-data', 'stablyai.orca-skills'), { recursive: true })
+    await writeFile(join(root, 'bundled-plugins.json'), JSON.stringify({ version: 1, plugins: [] }))
+    const retired: string[] = []
+
+    await expect(
+      bootstrapBundledPlugins({
+        root,
+        userDataPath,
+        hostVersion: '1.4.0',
+        beforeRetire: async (pluginKey) => {
+          retired.push(pluginKey)
+        }
+      })
+    ).resolves.toEqual({
+      installed: [],
+      unchanged: [],
+      retired: ['stablyai.orca-skills'],
+      errors: []
+    })
+    expect(retired).toEqual(['stablyai.orca-skills'])
+    expect((await readPluginLockfile(join(userDataPath, 'plugins'))).plugins).toEqual({})
+    await expect(stat(join(userDataPath, 'plugins', 'stablyai.orca-skills'))).rejects.toThrow()
+    await expect(stat(join(userDataPath, 'plugins-data', 'stablyai.orca-skills'))).rejects.toThrow()
+    // A second bootstrap has nothing left to retire.
+    await expect(
+      bootstrapBundledPlugins({ root, userDataPath, hostVersion: '1.4.0' })
+    ).resolves.toEqual({ installed: [], unchanged: [], retired: [], errors: [] })
   })
 
   it('resolves packaged and development resource roots without platform separators', () => {
