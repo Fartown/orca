@@ -366,7 +366,9 @@
           "type": "change-scope",
           "comparison": "base",
           "baseRef": "$base",
-          "requireBaseAncestor": true,
+          // Why merge-base, not ancestor: upstream moves between syncs; the budget is the fork's
+          // diff against the upstream commit it last merged, evaluated without a sync first.
+          "requireBaseAncestor": false,
           "allowedPaths": [
             // Fork infrastructure (docs/reference/fork-maintenance.md).
             "AGENTS.md",
