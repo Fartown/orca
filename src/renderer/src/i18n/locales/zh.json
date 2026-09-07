@@ -15239,7 +15239,7 @@
     "editor": {
       "criteria": "验收标准",
       "addCriterion": "添加验收项",
-      "criteriaHint": "每一项可以带一条命令;只有带命令的项才会被独立验证。",
+      "criteriaHint": "每一项可以带一条命令;没有命令的项只有在高级设置里选了独立裁判时才会被验证。",
       "criterionDescription": "验收项 {{value0}}",
       "criterionPlaceholder": "需要满足什么",
       "criterionCommand": "验收项 {{value0}} 的命令",
@@ -15277,7 +15277,10 @@
       "editTitle": "编辑目标",
       "editDescription": "修改目标或验收会产生新的定义版本,之前的证据不再计入;只改预算则保留。",
       "save": "保存",
-      "saveAndResume": "保存并继续"
+      "saveAndResume": "保存并继续",
+      "judge": "独立裁判(用于没有命令的验收项)",
+      "judgeNone": "不使用:采信 agent 的说法",
+      "judgeHint": "没有命令的验收项由独立的只读 agent 会话逐条判定,本机需要装有对应 CLI。缺失或无法解析的判词记为无法判定,不会记为通过。"
     },
     "detail": {
       "back": "目标",
@@ -15320,7 +15323,8 @@
       "inconclusive": "无法判定",
       "stale": "证据已过期",
       "notRun": "未执行",
-      "notVerified": "尚未验证"
+      "notVerified": "尚未验证",
+      "judge": "裁判"
     },
     "sessionAction": {
       "view": "查看目标",

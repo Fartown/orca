@@ -64,6 +64,15 @@ external_ids: []
 
 ## 3. 开发记录
 
+### 2026-09-07 WP5 条目级 judge
+
+- 本轮目标：补上方案 §5.7 的条目级 judge，让没有命令的验收项也能被独立验证并逐条显示结果。
+- 完成内容：见方案 §8「WP5 条目级 judge 落地」。在功能分支 `feat/goals-judge-items` 上完成，合回 `fork/integration`。
+- 代码或文档变更：`src/shared/goals/`（契约、记录、布局）、`src/main/goals/`（存储、新证据投影模块、导入调整）、goal-mode/cli（裁判、gate、记录投影、驱动入口、循环、新解析模块）、打包脚本、编辑器/进度组件、中英文案、功能清单登记、方案与本记录。
+- 验证证据：CLI node:test 149/149；goal vitest 11 文件 54 例；`pnpm tc:node`/`tc:web`；`verify:localization-extraction/catalog/coverage`；架构门禁与 `check:fork-features` 通过；`pnpm build:goal-driver` 产出 `goal-driver.js` 与 `acceptance-judge.js`。未用真实 claude/codex 裁判跑过真机验收。
+- 未解决问题：真机上选 claude 裁判跑一次完整验收；Windows 下裁判命令的引号规则只有单测覆盖。
+- 下一步：用户确认重装后，在真机建一个带无命令验收项的目标并选 claude 裁判跑一轮。
+
 ### 2026-09-06 代码评审与修复
 
 - 本轮目标：用户追问“review 代码了吗”，对 WP1～WP4 全部改动做一轮独立代码评审并修复确认项。

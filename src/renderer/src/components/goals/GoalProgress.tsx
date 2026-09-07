@@ -55,9 +55,11 @@ export function GoalProgress({ detail }: { detail: GoalDetail }): React.JSX.Elem
                 <p className="text-foreground">{criterion.description}</p>
                 <p className="truncate text-muted-foreground">
                   {statusLabel(evidence?.status ?? 'not_verified')}
-                  {evidence && evidence.status !== 'passed' && evidence.summary
-                    ? ` · ${evidence.summary.split('\n').slice(1).join(' ').slice(0, 120)}`
-                    : null}
+                  {evidence?.source === 'judge'
+                    ? ` · ${translate('goals.progress.judge', 'Judge')}${evidence.summary ? `: ${evidence.summary.slice(0, 160)}` : ''}`
+                    : evidence && evidence.status !== 'passed' && evidence.summary
+                      ? ` · ${evidence.summary.split('\n').slice(1).join(' ').slice(0, 120)}`
+                      : null}
                 </p>
               </div>
             </li>

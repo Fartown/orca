@@ -1,8 +1,11 @@
 // 完成守卫:agent 声称完成时,由驱动进程独立重跑验收命令。
 // 跑在 agent 会话之外,所以不受 hook 超时限制,几分钟的测试也扛得住。
 import { spawn } from 'node:child_process'
+import { extractItemVerdicts } from './judge-item-verdicts.mjs'
 
 const MAX_CAPTURE = 4000
+// 条目模式裁判把判词放在 stdout 第一行,单独整行保存,不受头尾截断影响。
+const FIRST_LINE_MAX = 512 * 1024
 // 约定:检查命令用退出码 3 表示「我没能做出判定」(而不是「判定为否」)。
 // orca-goal-judge 遵守这个约定。普通测试命令不会用 3,所以对它们没有影响。
 // 这个区分是必须的:门禁自己坏了的时候,守卫已经没有判定能力,
@@ -64,6 +67,22 @@ function runOne(command, cwd, timeoutMs, env) {
     let output = ''
     let tail = ''
     let overflowed = false
+    let firstLine = ''
+    let firstLineDone = false
+    const captureFirstLine = (chunk) => {
+      if (firstLineDone) {
+        return
+      }
+      const newline = chunk.indexOf('\n')
+      if (newline === -1) {
+        if (firstLine.length < FIRST_LINE_MAX) {
+          firstLine += chunk
+        }
+      } else {
+        firstLine += chunk.slice(0, newline)
+        firstLineDone = true
+      }
+    }
     const capture = (chunk) => {
       // 头尾分开留:早先到 8000 字就不再追加,于是「保尾」保的是前 8000 字的尾巴,
       // 真正的失败原因(通常在最后几行)一个字都留不下 —— 而那是回灌给 agent 的唯一证据。
@@ -74,7 +93,11 @@ function runOne(command, cwd, timeoutMs, env) {
         tail = (tail + chunk).slice(-MAX_CAPTURE)
       }
     }
-    child.stdout.on('data', (d) => capture(d.toString()))
+    child.stdout.on('data', (d) => {
+      const text = d.toString()
+      captureFirstLine(text)
+      capture(text)
+    })
     child.stderr.on('data', (d) => capture(d.toString()))
 
     let timedOut = false
@@ -85,6 +108,8 @@ function runOne(command, cwd, timeoutMs, env) {
 
     const settle = (code, err) => {
       clearTimeout(timer)
+      const marker = extractItemVerdicts(firstLine)
+      const text = truncate(output, tail, overflowed) || (err ? String(err.message) : '')
       resolve({
         command,
         ok: !timedOut && !err && code === 0,
@@ -92,8 +117,9 @@ function runOne(command, cwd, timeoutMs, env) {
         inconclusive: Boolean(err) || timedOut || code === EXIT_INCONCLUSIVE,
         code,
         timedOut,
-        output: truncate(output, tail, overflowed) || (err ? String(err.message) : ''),
-        ms: Date.now() - startedAt
+        output: marker.items ? extractItemVerdicts(text).output : text,
+        ms: Date.now() - startedAt,
+        ...(marker.items ? { items: marker.items } : {})
       })
     }
     child.on('error', (err) => settle(null, err))

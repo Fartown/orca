@@ -110,7 +110,8 @@ export class GoalLegacyAdoption {
         acceptanceText: '',
         extraChecks: acceptance.commands,
         checkAll: acceptance.all,
-        onBlocked: readOnBlocked(legacy)
+        onBlocked: readOnBlocked(legacy),
+        judge: 'none'
       },
       budget: {
         maxTurns: readNumber(legacy, ['budget', 'maxTurns'], 20),

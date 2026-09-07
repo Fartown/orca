@@ -17874,7 +17874,7 @@
     "editor": {
       "criteria": "Acceptance criteria",
       "addCriterion": "Add item",
-      "criteriaHint": "Each item can carry a command; only items with a command are verified independently.",
+      "criteriaHint": "Each item may carry a command; items without one are verified only when an independent judge is set under Advanced settings.",
       "criterionDescription": "Criterion {{value0}}",
       "criterionPlaceholder": "What must hold",
       "criterionCommand": "Command for criterion {{value0}}",
@@ -17912,7 +17912,10 @@
       "editTitle": "Edit goal",
       "editDescription": "Changing the goal or acceptance starts a new definition revision; earlier evidence no longer counts. Changing only the budget keeps it.",
       "save": "Save",
-      "saveAndResume": "Save and resume"
+      "saveAndResume": "Save and resume",
+      "judge": "Independent judge for criteria without a command",
+      "judgeNone": "None: agent claims are taken as-is",
+      "judgeHint": "Criteria without a command are judged one by one in a separate read-only agent session; that CLI must be installed on this machine. Missing or unparsable verdicts count as inconclusive, never as passed."
     },
     "detail": {
       "back": "Goals",
@@ -17955,7 +17958,8 @@
       "inconclusive": "Could not be judged",
       "stale": "Evidence out of date",
       "notRun": "Not run",
-      "notVerified": "Not verified yet"
+      "notVerified": "Not verified yet",
+      "judge": "Judge"
     },
     "sessionAction": {
       "view": "View goal",

@@ -56,7 +56,10 @@ const NO_CONTROL = {
  *   宿主把「暂停续跑」写成意图文件,驱动只在这些点上读:注入前、等轮次期间、等人期间、重试退避期间。
  *   暂停只关闭新注入,不打断已经在跑的一轮;确认也在这里落收据。
  */
-export async function runLoop(goal, { report, thresholds, attach = false, control = NO_CONTROL }) {
+export async function runLoop(
+  goal,
+  { report, thresholds, attach = false, control = NO_CONTROL, recordOptions = {} }
+) {
   let current = goal
   let pending = { name: 'continuation', extra: {} }
   let attachPending = attach
@@ -82,7 +85,7 @@ export async function runLoop(goal, { report, thresholds, attach = false, contro
       if (!reload) {
         return
       }
-      current = applyRecordToGoal(current, reload)
+      current = applyRecordToGoal(current, reload, recordOptions)
       await writeGoal(current)
       await control.confirmReload?.()
       report.warn(`已套用宿主更新的目标定义(版本 ${current.specRevision ?? '?'})`)

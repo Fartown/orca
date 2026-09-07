@@ -3,7 +3,6 @@ import {
   goalObjectivePreview,
   type GoalCompletion,
   type GoalDriverVerdict,
-  type GoalEvidence,
   type GoalListFilter,
   type GoalPhase,
   type GoalSummary
@@ -90,48 +89,6 @@ export async function observeTurn(
   return observed.paneKey
     ? projectTurnEvidence(sources.hooks.getStatusSnapshotForPane(observed.paneKey))
     : projectTurnEvidence([])
-}
-
-/**
- * Command results the v1 driver kept for the last acceptance run, one evidence
- * row each. Results from an earlier definition revision are shown as stale,
- * never as current passes.
- */
-export function projectGoalEvidence(
-  record: GoalRecord,
-  legacy: LegacyGoalRecord | null
-): GoalEvidence[] {
-  const last = legacy?.lastAcceptance
-  if (!last?.result.results) {
-    return []
-  }
-  const runId = record.currentRun?.runId ?? legacy?.runId ?? null
-  if (!runId) {
-    return []
-  }
-  const commandToCriterion = new Map(
-    record.spec.criteria.filter((c) => c.command).map((c) => [c.command as string, c.id])
-  )
-  const evidenceRevision = legacy?.specRevision ?? record.specRevision
-  const stale = evidenceRevision !== record.specRevision
-  return last.result.results.map((result, index) => ({
-    id: `${runId}:${legacy?.turns ?? 0}:${index}`,
-    runId,
-    specRevision: evidenceRevision,
-    turn: legacy?.turns ?? 0,
-    criterionId: commandToCriterion.get(result.command) ?? null,
-    status: stale
-      ? 'stale'
-      : result.inconclusive
-        ? 'inconclusive'
-        : result.ok
-          ? 'passed'
-          : 'failed',
-    source: 'command',
-    artifactId: null,
-    snapshotTree: last.tree,
-    summary: `${result.command}\n${(result.output ?? '').slice(0, 200)}`.trim()
-  }))
 }
 
 export function goalMatchesFilter(

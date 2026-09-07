@@ -12,6 +12,7 @@ import { join } from 'node:path'
 export const GOAL_HOME_ENV = 'ORCA_GOAL_HOME'
 export const GOAL_DRIVER_ENTRY_FILENAME = 'goal-driver.js'
 export const GOAL_DRIVER_VERSION_FILENAME = '.version'
+export const GOAL_JUDGE_ENTRY_FILENAME = 'acceptance-judge.js'
 
 export function resolveGoalHome(env: NodeJS.ProcessEnv, homeDir: string): string {
   const configured = env[GOAL_HOME_ENV]?.trim()
@@ -62,4 +63,9 @@ export function legacyLockPath(goalHome: string, key: string): string {
 
 export function legacyDriverLogPath(goalHome: string, key: string): string {
   return join(goalHome, 'log', `${key}.out`)
+}
+
+/** Criteria without a command, for the item-mode judge; the host writes it beside the record. */
+export function goalJudgeItemsPath(goalHome: string, goalId: string): string {
+  return join(goalDir(goalHome, goalId), 'judge-items.json')
 }

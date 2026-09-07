@@ -88,7 +88,8 @@ const spec: GoalSpec = {
   acceptanceText: '',
   extraChecks: [],
   checkAll: false,
-  onBlocked: 'ask'
+  onBlocked: 'ask',
+  judge: 'none'
 }
 
 function createParams(): GoalCreateParams {

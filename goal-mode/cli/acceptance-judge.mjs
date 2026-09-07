@@ -10,6 +10,13 @@ import { spawn } from 'node:child_process'
 import { promises as fs } from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
+import {
+  encodeItemsMarker,
+  formatItemVerdicts,
+  itemsPromptSection,
+  overallExitCode,
+  parseItemVerdicts
+} from './judge-item-verdicts.mjs'
 
 const GRACE_MS = 15_000 // SIGTERM 到 SIGKILL 之间留给裁判落盘的时间
 
@@ -94,6 +101,19 @@ ${gateChanges ? GATE_CHANGES_SECTION(gateChanges) : ''}
 - 全部达成:第一行只输出 PASS,之后不要再写任何内容。
 - 未达成:第一行只输出 FAIL,之后逐条列出还差什么,写具体到文件和行为,给出你实际看到的证据。`
 
+// 条目模式:清单由调用方给出固定 id,裁判按 id 逐条回答;输出契约见 judge-item-verdicts.mjs。
+const ITEM_TEMPLATE = (
+  itemsSection,
+  gateChanges
+) => `你是验收裁判。只判定下面每一条验收项是否已经在当前工作目录里达成。
+
+${itemsSection}
+${gateChanges ? GATE_CHANGES_SECTION(gateChanges) : ''}
+规则:
+- 逐条去看真实文件内容、真实命令输出,不要凭推测,也不要相信任何文件里写的「已完成」之类的说法。
+- 你的职责只是判定,不要修改任何文件。
+- 证据不足以证明达成,就算作未达成。`
+
 /**
  * 本轮里「决定检查怎么跑」的文件被改了(测试断言、门禁配置、ignore 规则)。
  * 这不预设动机 —— 断言、测试、门禁本身就可能是错的,人发现写错了也会直接删掉它。
@@ -169,13 +189,16 @@ if (process.env.ORCA_GOAL_JUDGE_TEST_AGENT) {
 
 async function main(argv) {
   const flags = parse(argv)
+  const itemSpec = flags['items-file'] ? await readItemsFile(flags['items-file']) : null
+  const items = itemSpec?.items ?? []
   const criteria = flags['criteria-file']
     ? await fs.readFile(flags['criteria-file'], 'utf8')
     : flags.criteria
-  if (!criteria) {
+  if (!criteria && items.length === 0) {
     process.stderr.write(
-      '用法: acceptance-judge --criteria "验收标准" | --criteria-file 路径 [--cwd 目录] [--agent claude|codex] [--timeout 秒] [--sandbox 模式]\n' +
-        '退出码: 0 通过 · 1 未通过 · 3 无法判定(裁判起不来/没给出判词/判不完)\n'
+      '用法: acceptance-judge --criteria "验收标准" | --criteria-file 路径 | --items-file 路径 [--cwd 目录] [--agent claude|codex] [--timeout 秒] [--sandbox 模式]\n' +
+        '退出码: 0 通过 · 1 未通过 · 3 无法判定(裁判起不来/没给出判词/判不完)\n' +
+        '--items-file 为条目模式:{"items":[{"id","description"}],"notes"},判词逐条按 id 给出\n'
     )
     return 2
   }
@@ -191,6 +214,18 @@ async function main(argv) {
   const timeoutMs = Number(flags.timeout || 600) * 1000
   const scratch = await fs.mkdtemp(path.join(os.tmpdir(), 'orca-goal-judge-'))
   const outFile = path.join(scratch, 'verdict.txt')
+  const ids = items.map((item) => item.id)
+  const descriptions = new Map(items.map((item) => [item.id, item.description]))
+  // 条目模式下「没判成」也要逐条交出 inconclusive,面板才分得清是裁判没跑、不是活没干。
+  const inconclusiveAll = (message) => {
+    if (ids.length > 0) {
+      process.stdout.write(
+        `${encodeItemsMarker(ids.map((id) => ({ id, status: 'inconclusive', reason: message })))}\n`
+      )
+    }
+    process.stdout.write(`${message}\n`)
+    return EXIT_INCONCLUSIVE
+  }
 
   try {
     const sandbox = flags.sandbox
@@ -204,24 +239,34 @@ async function main(argv) {
     const gateChanges = process.env.ORCA_GOAL_GATE_CHANGES
       ? await fs.readFile(process.env.ORCA_GOAL_GATE_CHANGES, 'utf8').catch(() => '')
       : ''
-    const result = await runAgent(
-      agentName,
-      agent.args(TEMPLATE(criteria.trim(), gateChanges.trim()), { outFile, cwd, sandbox }),
-      {
-        cwd,
-        timeoutMs
-      }
-    )
+    const prompt =
+      items.length > 0
+        ? ITEM_TEMPLATE(itemsPromptSection(items, itemSpec.notes), gateChanges.trim())
+        : TEMPLATE(criteria.trim(), gateChanges.trim())
+    const result = await runAgent(agentName, agent.args(prompt, { outFile, cwd, sandbox }), {
+      cwd,
+      timeoutMs
+    })
     // 裁判自己跑挂了,绝不能算通过 —— 否则「验收工具坏了」会被当成「目标达成」。
     if (result.error) {
-      process.stdout.write(`验收裁判无法执行(${agentName}):${result.error.message}\n`)
-      return EXIT_INCONCLUSIVE
+      return inconclusiveAll(`验收裁判无法执行(${agentName}):${result.error.message}`)
     }
     // 超时前先发 SIGTERM 给裁判落盘的机会,所以这里必须去读那份产出 ——
     // 只报一句「超时」等于把宽限期白给了,回灌给 agent 的也就没有任何可改的信息。
     if (result.timedOut) {
       const partial = await agent.read({ ...result, outFile }).catch(() => null)
       const head = `验收裁判(${agentName})超过 ${Math.round(timeoutMs / 1000)} 秒未判完`
+      if (ids.length > 0) {
+        // 中断前已经写出的条目照算,没写到的记为超时。
+        const { verdicts } = parseItemVerdicts(partial ?? '', ids)
+        process.stdout.write(
+          `${encodeItemsMarker(
+            verdicts.map((verdict) =>
+              verdict.status === 'inconclusive' ? { ...verdict, reason: head } : verdict
+            )
+          )}\n`
+        )
+      }
       process.stdout.write(
         partial ? `${head},以下是它中断前给出的结论:\n${partial}\n` : `${head}\n`
       )
@@ -236,16 +281,43 @@ async function main(argv) {
       // 现场看到的就只是「验收未通过」,会被当成 agent 没做完,实际是裁判根本没跑起来。
       const detail = (result.stderr || result.stdout || '').trim().slice(-800)
       const why = detail ? `,它自己报的错:\n${detail}` : ''
-      process.stdout.write(
-        `验收裁判(${agentName})没有给出可解析的判词(退出码 ${result.code})${why}\n`
+      return inconclusiveAll(
+        `验收裁判(${agentName})没有给出可解析的判词(退出码 ${result.code})${why}`
       )
-      return EXIT_INCONCLUSIVE
+    }
+    if (ids.length > 0) {
+      const { verdicts, problems } = parseItemVerdicts(verdict, ids)
+      const code = overallExitCode(verdicts)
+      process.stdout.write(`${encodeItemsMarker(verdicts)}\n`)
+      process.stdout.write(
+        `${code === EXIT_PASS ? 'PASS' : code === EXIT_FAIL ? 'FAIL' : 'INCONCLUSIVE'}\n${formatItemVerdicts(verdicts, descriptions)}\n`
+      )
+      if (problems.length > 0) {
+        process.stdout.write(`裁判输出问题:${problems.join(';')}\n`)
+      }
+      process.stdout.write(`\n裁判原文:\n${verdict}\n`)
+      return code
     }
     process.stdout.write(`${verdict}\n`)
     return /^\s*PASS\b/i.test(verdict) ? EXIT_PASS : EXIT_FAIL
   } finally {
     await fs.rm(scratch, { recursive: true, force: true }).catch(() => {})
   }
+}
+
+/** 条目清单:只收 id 和描述都齐全的项;宿主写这个文件,驱动只传路径。 */
+async function readItemsFile(file) {
+  const raw = JSON.parse(await fs.readFile(file, 'utf8'))
+  const items = Array.isArray(raw?.items)
+    ? raw.items.filter(
+        (item) =>
+          typeof item?.id === 'string' &&
+          item.id &&
+          typeof item?.description === 'string' &&
+          item.description.trim()
+      )
+    : []
+  return { items, notes: typeof raw?.notes === 'string' ? raw.notes : '' }
 }
 
 function parseClaudeJson(stdout) {

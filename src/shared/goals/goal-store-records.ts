@@ -143,7 +143,17 @@ export const LegacyGoalRecordSchema = z
                 command: z.string(),
                 ok: z.boolean(),
                 inconclusive: z.boolean().optional(),
-                output: z.string().optional()
+                output: z.string().optional(),
+                // Item-mode judge verdicts, one per declared criterion id.
+                items: z
+                  .array(
+                    z.object({
+                      id: z.string(),
+                      status: z.enum(['passed', 'failed', 'inconclusive']),
+                      reason: z.string().optional()
+                    })
+                  )
+                  .optional()
               })
             )
             .optional()
