@@ -27,7 +27,7 @@ const SKIP_MARKER =
 const TEST_DECL = /\b(it|test|describe)\s*\(|^\s*def\s+test_\w+|^\s*func\s+Test[A-Z]|@Test\b/
 
 /**
- * @returns {Array<{kind, label, detail, challenge}>}
+ * @returns {Promise<Array<{kind, label, detail, challenge}>>}
  */
 export async function scanRound(worktreePath, before, after, changed) {
   if (!changed) {

@@ -63,12 +63,12 @@ export function GoalProgress({ detail }: { detail: GoalDetail }): React.JSX.Elem
             </li>
           )
         })}
-        {extraChecks.map((command, index) => {
+        {extraChecks.map((command) => {
           const evidence = current.find(
             (row) => row.criterionId === null && row.summary.startsWith(command)
           )
           return (
-            <li key={`extra-${index}`} className="flex items-start gap-1.5 text-[11px]">
+            <li key={`extra-${command}`} className="flex items-start gap-1.5 text-[11px]">
               <StatusIcon status={evidence?.status ?? 'not_verified'} />
               <div className="min-w-0 flex-1">
                 <p className="truncate font-mono text-foreground">{command}</p>

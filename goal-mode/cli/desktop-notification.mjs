@@ -17,30 +17,30 @@ export function notifyDesktop(title, body) {
 export function buildCommand(title, body) {
   const t = String(title).slice(0, 120)
   const b = String(body).replace(/\s+/g, ' ').slice(0, 240)
-  switch (process.platform) {
-    case 'darwin':
-      // 走 argv 传参,不拼 shell;AppleScript 字符串里只需转义反斜杠和双引号。
-      return [
-        'osascript',
-        ['-e', `display notification ${osaString(b)} with title ${osaString(t)}`]
-      ]
-    case 'linux':
-      return ['notify-send', [t, b]]
-    case 'win32':
-      return [
-        'powershell',
-        [
-          '-NoProfile',
-          '-Command',
-          `[void][System.Reflection.Assembly]::LoadWithPartialName('System.Windows.Forms');` +
-            `$n=New-Object System.Windows.Forms.NotifyIcon;` +
-            `$n.Icon=[System.Drawing.SystemIcons]::Information;$n.Visible=$true;` +
-            `$n.ShowBalloonTip(5000,${psString(t)},${psString(b)},'Info')`
-        ]
-      ]
-    default:
-      return [null, null]
+  // Why an if-chain, not a switch: the lint asks every NodeJS.Platform to be listed; the three
+  // we support are the only ones with a notifier, everything else is a no-op.
+  const platform = process.platform
+  if (platform === 'darwin') {
+    // 走 argv 传参,不拼 shell;AppleScript 字符串里只需转义反斜杠和双引号。
+    return ['osascript', ['-e', `display notification ${osaString(b)} with title ${osaString(t)}`]]
   }
+  if (platform === 'linux') {
+    return ['notify-send', [t, b]]
+  }
+  if (platform === 'win32') {
+    return [
+      'powershell',
+      [
+        '-NoProfile',
+        '-Command',
+        `[void][System.Reflection.Assembly]::LoadWithPartialName('System.Windows.Forms');` +
+          `$n=New-Object System.Windows.Forms.NotifyIcon;` +
+          `$n.Icon=[System.Drawing.SystemIcons]::Information;$n.Visible=$true;` +
+          `$n.ShowBalloonTip(5000,${psString(t)},${psString(b)},'Info')`
+      ]
+    ]
+  }
+  return [null, null]
 }
 
 const osaString = (s) => `"${s.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`

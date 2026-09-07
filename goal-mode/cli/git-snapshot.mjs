@@ -21,7 +21,7 @@ async function git(args, cwd, extraEnv) {
 }
 
 /**
- * @returns {{kind:'git', tree:string, head:string|null}|{kind:'unavailable', reason:string}}
+ * @returns {Promise<{kind:'git', tree:string, head:string|null}|{kind:'unavailable', reason:string}>}
  * 拿不到指纹时**不**伪造一个值 —— 上层据此关掉空转熔断,而不是把「测不出变化」当成「没变化」。
  */
 export async function snapshotWorktree(worktreePath) {
