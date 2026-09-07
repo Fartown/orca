@@ -56,7 +56,11 @@ test('超长验收输出要保住真正的结尾 —— 失败原因几乎总在
   const noise = "for(let i=0;i<600;i++)console.log('通过用例 '+i+' 的噪音行')"
   const result = await runAcceptance(
     {
-      commands: [`node -e "${noise}; console.log('FAILED: src/login.ts:42'); process.exit(1)"`],
+      // Why exitCode, not exit(): on Linux CI runners stdout-to-pipe writes are asynchronous and
+      // process.exit() drops what is still queued, which would truncate the child, not the gate.
+      commands: [
+        `node -e "${noise}; console.log('FAILED: src/login.ts:42'); process.exitCode = 1"`
+      ],
       timeoutMs: 30_000,
       cwd: process.cwd()
     },
