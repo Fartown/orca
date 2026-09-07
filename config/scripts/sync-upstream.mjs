@@ -14,6 +14,7 @@ import { spawnSync } from 'node:child_process'
 import path from 'node:path'
 import { loadForkFeatureRegistry } from './check-fork-features.mjs'
 import { forkFeatureCheckSteps } from './run-fork-feature-checks.mjs'
+import { renderSeamChangeReport } from './report-upstream-seam-changes.mjs'
 
 const root = path.resolve(import.meta.dirname, '..', '..')
 const flags = new Set(process.argv.slice(2))
@@ -59,6 +60,11 @@ function main() {
   console.log(
     `upstream ${upstreamRef} is at ${upstreamSha}; ${behind} commit(s) not in ${fork.integrationBranch}.`
   )
+  if (!alreadyMerged) {
+    // Why before merging: the merge-base moves once the merge lands, and this is the list a
+    // maintainer actually needs to read out of a few hundred upstream commits.
+    console.log(`\n${renderSeamChangeReport(root, registry, upstreamRef)}`)
+  }
   if (dryRun) {
     console.log(alreadyMerged ? 'Nothing to merge.' : 'Would merge; re-run without --dry-run.')
     return 0

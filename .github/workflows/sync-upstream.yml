@@ -74,6 +74,10 @@ jobs:
           git fetch . "upstream/$UPSTREAM_BRANCH:$UPSTREAM_BRANCH"
           git push origin "$UPSTREAM_BRANCH:$UPSTREAM_BRANCH"
 
+      - uses: ./.github/actions/install-node-dependencies
+        with:
+          native-runtime: node
+
       - name: Merge upstream into a sync branch
         id: merge
         run: |
@@ -82,6 +86,7 @@ jobs:
             echo "state=current" >> "$GITHUB_OUTPUT"
             exit 0
           fi
+          echo "base=$(git merge-base "upstream/$UPSTREAM_BRANCH" HEAD)" >> "$GITHUB_OUTPUT"
           branch="sync/upstream-$(date -u +%Y%m%d)"
           git checkout -b "$branch"
           if git merge --no-edit "upstream/$UPSTREAM_BRANCH"; then
@@ -93,10 +98,12 @@ jobs:
             echo "state=conflict" >> "$GITHUB_OUTPUT"
           fi
 
-      - uses: ./.github/actions/install-node-dependencies
-        if: steps.merge.outputs.state == 'merged'
-        with:
-          native-runtime: node
+      # Why: the merge-base moved once the merge landed, so the report takes the one recorded above.
+      - name: Report upstream changes to seams and dependencies
+        if: steps.merge.outputs.state == 'merged' || steps.merge.outputs.state == 'conflict'
+        run: |
+          node config/scripts/report-upstream-seam-changes.mjs "upstream/$UPSTREAM_BRANCH" --from "${{ steps.merge.outputs.base }}" \
+            | tee "$RUNNER_TEMP/seam-report.md" >> "$GITHUB_STEP_SUMMARY"
 
       # Why in-job: the merged tree is verified here whether or not PR CI runs later.
       # Scratch files live in RUNNER_TEMP: anything written inside the checkout counts as a
@@ -183,6 +190,8 @@ jobs:
             echo "The merge is on branch \`${{ steps.merge.outputs.branch }}\`."
             echo
             cat "$RUNNER_TEMP/verify-summary.md"
+            echo
+            cat "$RUNNER_TEMP/seam-report.md" 2>/dev/null || true
             echo
             echo "Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
             echo

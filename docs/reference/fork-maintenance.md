@@ -33,15 +33,17 @@ gitGraph
 
 每个 fork 功能一条记录。它是“这个仓库比上游多了什么”的唯一清单,也是 agent 改代码前必须读的文件。
 
-| 字段            | 含义                                                                | 门禁怎么用                                                  |
-| --------------- | ------------------------------------------------------------------- | ----------------------------------------------------------- |
-| `ownedPaths`    | 功能完全拥有的目录或文件 glob                                       | 每个 glob 至少匹配一个文件;所有匹配文件必须在上游差异预算里 |
-| `requiredFiles` | 入口文件                                                            | 必须逐个存在                                                |
-| `seams`         | 功能挂进上游文件的注册点,以及能证明注册仍在的文本                   | 文件存在且包含 `mustContain`;文件必须在预算里               |
-| `tests`         | 必须存在的测试文件                                                  | 逐个存在                                                    |
-| `checks`        | 同步上游之后要跑的命令                                              | `pnpm sync:upstream` 按顺序执行,失败即停                    |
-| `journal`       | `docs/issue/<需求>/journal.md`                                      | 必须存在                                                    |
-| `policyId`      | `config/architecture-policies.jsonc` 里管这个功能日常改动范围的策略 | 必须存在                                                    |
+| 字段            | 含义                                                                  | 门禁怎么用                                                                                                                                      |
+| --------------- | --------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ownedPaths`    | 功能完全拥有的目录或文件 glob                                         | 每个 glob 至少匹配一个文件;所有匹配文件必须在上游差异预算里                                                                                     |
+| `requiredFiles` | 入口文件                                                              | 必须逐个存在                                                                                                                                    |
+| `seams`         | 功能挂进上游文件的注册点,以及能证明注册仍在的文本                     | 文件存在且包含 `mustContain`;文件必须在预算里                                                                                                   |
+| `tests`         | 必须存在的测试文件                                                    | 逐个存在                                                                                                                                        |
+| `checks`        | 同步上游之后要跑的命令                                                | `pnpm sync:upstream` 按顺序执行,失败即停                                                                                                        |
+| `journal`       | `docs/issue/<需求>/journal.md`                                        | 必须存在                                                                                                                                        |
+| `policyId`      | `config/architecture-policies.jsonc` 里管这个功能日常改动范围的策略   | 必须存在                                                                                                                                        |
+| `dependsOn`     | 功能依赖的上游模块:owned 文件 import 到的、在所有者目录之外的上游文件 | 每条必须仍存在(上游删了或挪了立刻红);owned 源文件 import 到的上游模块必须已登记,清单不能落后于代码。测试与 `tests/` 下的 e2e 脚手架不在审计范围 |
+| `goal`          | 给 `docs/issue/README.md` 索引的一句话目标                            | 索引由它生成                                                                                                                                    |
 
 `pnpm check:fork-features` 检查以上全部;`pnpm check:fork-features --list` 打印清单。它挂在 `pnpm lint` 和 PR 检查里,任何一项消失都会让 CI 变红。这就是“功能不会被 AI 弄丢”的机制:删除是允许的,但必须先改清单、在 journal 写决策,不能顺手。
 
@@ -64,6 +66,8 @@ gitGraph
 它和 `check:fork-features` 一起挂在 `pnpm lint`、PR 检查和周同步里。
 
 ## 4. 同步上游
+
+每次同步先打印一份「接缝与依赖变更报告」:上游这批提交里,哪些碰到了各功能的 `seams` 或 `dependsOn`(`config/scripts/report-upstream-seam-changes.mjs`)。几百个上游提交不必全读,读这十几个就够;周工作流把它写进 job summary,检查失败时的 issue 里也带上。
 
 ```
 git switch fork/integration

@@ -142,4 +142,47 @@ describe('fork feature gate', () => {
     await writeFile(join(root, 'bad.jsonc'), '{ "schemaVersion": 1, "features": [{ "id": "" }] }')
     expect(() => loadForkFeatureRegistry(root, 'bad.jsonc')).toThrow(/features\[0\]\.id/)
   })
+
+  it('requires upstream imports to be declared in dependsOn and declared dependencies to exist', () => {
+    const declared = registry()
+    declared.features[0].dependsOn = ['src/main/core/**', 'src/main/gone/**']
+    const files = [...healthyFiles, 'src/main/core/thing.ts', 'src/main/stray/other.ts']
+    const sources = {
+      ...contents,
+      'src/main/widgets/widget-service.ts':
+        "import { a } from '../core/thing'\nimport { b } from '../stray/other'\nimport { c } from './widget-helpers'"
+    }
+    const messages = evaluateForkFeatures({
+      registry: declared,
+      policyManifest: { ...manifest(), aliases: [] },
+      files,
+      readFile: (file) => sources[file] ?? ''
+    }).map((violation) => violation.message)
+    expect(messages).toEqual([
+      expect.stringContaining('depends on src/main/gone/**, but no file matches it'),
+      expect.stringContaining('imports src/main/stray/other.ts, which is not declared')
+    ])
+  })
+
+  it('does not audit imports from tests or e2e scaffolding', () => {
+    const declared = registry()
+    declared.features[0].ownedPaths = ['src/main/widgets/**', 'tests/e2e/helpers/widget-*.ts']
+    const files = [...healthyFiles, 'tests/e2e/helpers/widget-journey.ts']
+    const sources = {
+      ...contents,
+      'src/main/widgets/widget-service.test.ts': "import { x } from '../../shared/anything'",
+      'tests/e2e/helpers/widget-journey.ts': "import { y } from './other-journey'"
+    }
+    expect(
+      evaluateForkFeatures({
+        registry: declared,
+        policyManifest: {
+          ...manifest(['src/main/widgets/**', 'src/main/index.ts', 'docs/issue/**', 'tests/**']),
+          aliases: []
+        },
+        files,
+        readFile: (file) => sources[file] ?? ''
+      })
+    ).toEqual([])
+  })
 })

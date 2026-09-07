@@ -9,7 +9,12 @@ import path from 'node:path'
 import { spawnSync } from 'node:child_process'
 import { parse, printParseErrorCode } from 'jsonc-parser'
 import { loadArchitecturePolicyManifest } from './architecture-policy-manifest.mjs'
-import { matchesAnyPathPattern, normalizeRepositoryPath } from './architecture-policy-matching.mjs'
+import {
+  extractModuleSpecifiers,
+  matchesAnyPathPattern,
+  normalizeRepositoryPath,
+  resolveRepositoryImport
+} from './architecture-policy-matching.mjs'
 
 export const FORK_FEATURES_PATH = 'config/fork-features.jsonc'
 export const FORK_BUDGET_POLICY_ID = 'fork-upstream-diff-budget'
@@ -36,6 +41,9 @@ export function validateForkFeatureRegistry(registry) {
       errors.push(`${key}.${field} must be a non-empty string`)
     }
   }
+  if (registry?.dependsOnIgnore !== undefined) {
+    requireStringArray('dependsOnIgnore', registry.dependsOnIgnore, errors)
+  }
   if (!Array.isArray(registry?.features) || registry.features.length === 0) {
     errors.push('features must be a non-empty array')
     return errors
@@ -57,6 +65,9 @@ export function validateForkFeatureRegistry(registry) {
     }
     for (const field of ['ownedPaths', 'requiredFiles', 'tests', 'checks']) {
       requireStringArray(`${owner}.${field}`, feature[field], errors)
+    }
+    if (feature.dependsOn !== undefined) {
+      requireStringArray(`${owner}.dependsOn`, feature.dependsOn, errors)
     }
     if (!Array.isArray(feature.seams)) {
       errors.push(`${owner}.seams must be an array`)
@@ -116,6 +127,7 @@ export function findForkBudgetRule(policyManifest) {
  */
 export function evaluateForkFeatures({ registry, policyManifest, files, readFile }) {
   const fileSet = new Set(files)
+  const aliases = policyManifest.aliases ?? []
   const reported = new Set()
   const violations = []
   const report = (featureId, file, message) => {
@@ -203,8 +215,54 @@ export function evaluateForkFeatures({ registry, policyManifest, files, readFile
         report(feature.id, file, `Feature ${feature.id} lost a test.`)
       }
     }
+    // Why: dependsOn is the record of what the feature leans on upstream. A dependency that no
+    // longer exists means upstream removed or moved it; an undeclared import means the record
+    // went stale. Both are how "upstream changed something we rely on" becomes visible.
+    for (const pattern of feature.dependsOn ?? []) {
+      if (!files.some((file) => matchesAnyPathPattern(file, [pattern]))) {
+        report(
+          feature.id,
+          FORK_FEATURES_PATH,
+          `Feature ${feature.id} depends on ${pattern}, but no file matches it (upstream removed or moved it).`
+        )
+      }
+    }
+    const declared = [
+      ...feature.ownedPaths,
+      ...feature.seams.map((seam) => seam.file),
+      ...(feature.dependsOn ?? []),
+      ...(registry.dependsOnIgnore ?? [])
+    ]
+    for (const file of files) {
+      if (!isAuditedSourceFile(file) || !matchesAnyPathPattern(file, feature.ownedPaths)) {
+        continue
+      }
+      for (const entry of extractModuleSpecifiers(readFile(file), file)) {
+        const target = resolveRepositoryImport(entry.specifier, file, aliases, fileSet)
+        if (target && !matchesAnyPathPattern(target, declared)) {
+          report(
+            feature.id,
+            file,
+            `Feature ${feature.id} imports ${target}, which is not declared in its dependsOn or seams.`
+          )
+        }
+      }
+    }
   }
   return violations
+}
+
+/**
+ * Shipped source only. Test files and the e2e scaffolding under tests/ lean on each other and on
+ * whatever fixture they need; tracking that in dependsOn would churn without telling a maintainer
+ * anything an actually failing test would not.
+ */
+function isAuditedSourceFile(file) {
+  return (
+    /\.(?:ts|tsx|js|jsx|mjs|mts)$/.test(file) &&
+    !/\.(?:test|spec)\./.test(file) &&
+    !file.startsWith('tests/')
+  )
 }
 
 function escapeAnnotation(value) {
