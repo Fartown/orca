@@ -136,7 +136,7 @@ scope: Goal 目标模式
 
 前置条件与操作：完成声明分别无 checks、有 checks 未执行、check 全通过。
 
-预期与核对证据：无 checks 明示未经验证；有 checks 先 verify；仅有效通过进入 verified complete。
+预期与核对证据：judge 为 none 且没有任何验收命令时明示未经验证；有 checks 先 verify；仅有效通过进入 verified complete。
 
 覆盖来源：D。
 
@@ -437,6 +437,16 @@ REQ-112 原提案规定的验证次序仍保留：先增加“连续不变仍继
 预期与核对证据：列表按范围与筛选过滤，搜索只匹配目标正文；详情可返回列表且选择不被自动改写；CLI 目标以只读行列出，导入后成为暂停态的受管目标，旧驱动仍在时导入被拒为 conflict。执行端只有本机，其余端不列出。
 
 覆盖来源：宿主控制（goal-control-service.test.ts 的 list/get、goal-legacy-adoption.test.ts）、渲染（goals-domain-store.test.ts）、真机记录 `.docs/goal-ui-validation/2026-09-06/`（面板与新建表单截图）。
+
+### TC-343
+
+关联需求：REQ-104、REQ-118；优先级：P0。
+
+前置条件与操作：目标只写了目标正文（验收项为空、额外检查命令为空），在高级设置里选 codex 或 claude 作为独立裁判。agent 声称完成后触发验收。
+
+预期与核对证据：验收命令列表非空，末尾是一条 `--criteria-file` 整体裁判命令，工作目录为该工作区，只读沙箱，超时沿用检查超时；裁判说 PASS 落成“整体验收 · 通过”，说 FAIL 落成“整体验收 · 未通过”，两者都保留判词原文；判词缺失、无法解析、裁判起不来、超时一律记“无法判定”，绝不显示为通过；详情页不因整体判词生成逐项通过数；不再出现“未配置验收命令（未经验证）”。
+
+覆盖来源：[acceptance-judge-whole.test.mjs](../../../../../goal-mode/cli/acceptance-judge-whole.test.mjs)、[goal-record-projection.test.mjs](../../../../../goal-mode/cli/goal-record-projection.test.mjs)、[goal-judge-contract.test.ts](../../../../../src/shared/goals/goal-judge-contract.test.ts)、[GoalProgress.test.tsx](../../../../../src/renderer/src/components/goals/GoalProgress.test.tsx)、[goal-control-service.test.ts](../../../../../src/main/goals/goal-control-service.test.ts)。未用真实 claude/codex 裁判在真机执行。
 
 ### TC-341
 

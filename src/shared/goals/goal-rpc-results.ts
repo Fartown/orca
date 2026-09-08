@@ -97,6 +97,7 @@ export const GoalEvidenceResult = z
     criterionId: z.string().nullable(),
     status: z.enum(['passed', 'failed', 'inconclusive', 'not_run', 'stale']),
     source: z.enum(['command', 'judge', 'legacy']),
+    scope: z.literal('goal').optional(),
     artifactId: z.string().nullable(),
     snapshotTree: z.string().nullable(),
     summary: z.string()

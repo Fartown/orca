@@ -202,6 +202,8 @@ export type GoalEvidence = {
   criterionId: string | null
   status: 'passed' | 'failed' | 'inconclusive' | 'not_run' | 'stale'
   source: 'command' | 'judge' | 'legacy'
+  /** Present only on the whole-goal judge verdict; it is never one criterion's result. */
+  scope?: 'goal'
   artifactId: string | null
   snapshotTree: string | null
   summary: string

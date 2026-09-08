@@ -20,6 +20,7 @@ import { setTerminalBackend } from './orca-terminal.mjs'
 import {
   GOAL_JUDGE_ENTRY_FILENAME,
   goalControlPath,
+  goalJudgeCriteriaPath,
   goalJudgeItemsPath,
   goalOperationPath,
   goalRecordPath,
@@ -62,12 +63,13 @@ async function main(argv) {
   })
   setTerminalBackend(createRuntimeTerminalBackend())
 
-  // 裁判脚本和驱动打在同一目录;开发期可用 ORCA_GOAL_JUDGE_PATH 指向源码。清单文件由宿主随记录写好。
+  // 裁判脚本和驱动打在同一目录;开发期可用 ORCA_GOAL_JUDGE_PATH 指向源码。两种裁判输入文件都由宿主随记录写好。
   const recordOptions = {
     judgeEntry:
       process.env.ORCA_GOAL_JUDGE_PATH ||
       path.join(path.dirname(process.argv[1]), GOAL_JUDGE_ENTRY_FILENAME),
-    itemsPath: goalJudgeItemsPath(args.goalHome, args.goalId)
+    itemsPath: goalJudgeItemsPath(args.goalHome, args.goalId),
+    criteriaPath: goalJudgeCriteriaPath(args.goalHome, args.goalId)
   }
   const goal =
     args.mode === 'start'

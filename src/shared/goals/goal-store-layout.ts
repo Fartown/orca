@@ -5,8 +5,8 @@ import { join } from 'node:path'
  *
  * The v1 CLI already owns `GOAL_HOME/{goals,log,lock,claims}` keyed by workspace.
  * Everything the host owns lives under `GOAL_HOME/v2/goals/GOAL_ID/` so the two
- * writers never touch the same file: the host writes the record, the control
- * intent and the accepted receipt; the driver only rewrites a receipt to
+ * writers never touch the same file: the host writes the record, both judge
+ * inputs, the control intent and the accepted receipt; the driver only rewrites a receipt to
  * `applied` and never writes the record.
  */
 export const GOAL_HOME_ENV = 'ORCA_GOAL_HOME'
@@ -68,4 +68,9 @@ export function legacyDriverLogPath(goalHome: string, key: string): string {
 /** Criteria without a command, for the item-mode judge; the host writes it beside the record. */
 export function goalJudgeItemsPath(goalHome: string, goalId: string): string {
   return join(goalDir(goalHome, goalId), 'judge-items.json')
+}
+
+/** The goal's own text for the whole-goal judge; the host writes it beside the record. */
+export function goalJudgeCriteriaPath(goalHome: string, goalId: string): string {
+  return join(goalDir(goalHome, goalId), 'judge-criteria.md')
 }

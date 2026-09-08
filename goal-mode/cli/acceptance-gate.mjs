@@ -56,6 +56,8 @@ function runOne(command, cwd, timeoutMs, env) {
       resolve({
         command,
         ok: false,
+        // 起不来不是判定结果 —— 和下面 child.on('error') 的读法保持一致。
+        inconclusive: true,
         code: null,
         timedOut: false,
         output: `无法启动: ${err.message}`,

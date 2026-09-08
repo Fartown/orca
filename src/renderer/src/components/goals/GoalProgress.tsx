@@ -1,17 +1,22 @@
 import { CircleAlert, CircleCheck, CircleDashed, CircleX } from 'lucide-react'
 import { translate } from '@/i18n/i18n'
 import type { GoalDetail, GoalEvidence } from '../../../../shared/goals/goal-control-contract'
+import { judgeRunsWholeGoal } from '../../../../shared/goals/goal-judge-contract'
 
 type CriterionStatus = GoalEvidence['status'] | 'not_verified'
 
 /**
- * One row per user-declared criterion, plus the extra checks. Only evidence
- * from the current spec revision counts; anything older reads as not verified.
+ * One row per user-declared criterion, plus the extra checks, plus the whole-goal
+ * verdict when a judge ruled on the goal as a whole. Only evidence from the current
+ * spec revision counts; anything older reads as not verified.
  */
 export function GoalProgress({ detail }: { detail: GoalDetail }): React.JSX.Element | null {
   const criteria = detail.spec.criteria
   const extraChecks = detail.spec.extraChecks
-  if (criteria.length === 0 && extraChecks.length === 0) {
+  const current = detail.evidence.filter((row) => row.specRevision === detail.specRevision)
+  const wholeGoal = judgeRunsWholeGoal(detail.spec)
+  const whole = current.find((row) => row.scope === 'goal')
+  if (criteria.length === 0 && extraChecks.length === 0 && !wholeGoal) {
     return (
       <section className="space-y-1">
         <h3 className="text-[11px] font-semibold text-muted-foreground">
@@ -26,7 +31,6 @@ export function GoalProgress({ detail }: { detail: GoalDetail }): React.JSX.Elem
       </section>
     )
   }
-  const current = detail.evidence.filter((row) => row.specRevision === detail.specRevision)
   const verified = criteria.filter(
     (criterion) => latestFor(current, criterion.id)?.status === 'passed'
   )
@@ -45,6 +49,22 @@ export function GoalProgress({ detail }: { detail: GoalDetail }): React.JSX.Elem
           </span>
         ) : null}
       </div>
+      {wholeGoal || whole ? (
+        <div className="flex items-start gap-1.5 text-[11px]">
+          <StatusIcon status={whole?.status ?? 'not_verified'} />
+          <div className="min-w-0 flex-1">
+            <p className="text-foreground">
+              {translate('goals.progress.wholeGoal', 'Whole-goal acceptance')} ·{' '}
+              {statusLabel(whole?.status ?? 'not_verified')}
+            </p>
+            {whole?.summary ? (
+              <p className="scrollbar-sleek max-h-24 overflow-y-auto whitespace-pre-wrap break-words text-muted-foreground">
+                {whole.summary}
+              </p>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
       <ul className="space-y-1">
         {criteria.map((criterion) => {
           const evidence = latestFor(current, criterion.id)
@@ -66,8 +86,12 @@ export function GoalProgress({ detail }: { detail: GoalDetail }): React.JSX.Elem
           )
         })}
         {extraChecks.map((command) => {
+          // 精确匹配第一行:整体判词行也是 criterionId 为 null,不能被某条检查认领。
           const evidence = current.find(
-            (row) => row.criterionId === null && row.summary.startsWith(command)
+            (row) =>
+              row.source === 'command' &&
+              row.criterionId === null &&
+              row.summary.split('\n')[0] === command
           )
           return (
             <li key={`extra-${command}`} className="flex items-start gap-1.5 text-[11px]">

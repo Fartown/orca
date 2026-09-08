@@ -67,7 +67,7 @@ export async function projectGoalSummary(
     continuation: record.continuation,
     phase,
     reason: observed.incarnationDrift ? 'The bound terminal was restarted.' : reason,
-    completion: projectCompletion(legacy),
+    completion: projectCompletion(record, legacy),
     stopSupport: 'request_only',
     driver,
     terminal: observed.terminal,
@@ -214,11 +214,15 @@ function projectPhase(
   return { phase: 'executing', reason: null }
 }
 
-function projectCompletion(legacy: LegacyGoalRecord | null): GoalCompletion {
+/** Verified only by evidence from the current definition; an amend retires the old verdict. */
+function projectCompletion(record: GoalRecord, legacy: LegacyGoalRecord | null): GoalCompletion {
   if (!legacy || legacy.state !== 'complete') {
     return 'not_complete'
   }
-  return legacy.lastAcceptance?.result.passed ? 'verified' : 'unverified'
+  const evidenceRevision = legacy.specRevision ?? record.specRevision
+  return evidenceRevision === record.specRevision && legacy.lastAcceptance?.result.passed
+    ? 'verified'
+    : 'unverified'
 }
 
 function errorMessage(error: unknown): string {

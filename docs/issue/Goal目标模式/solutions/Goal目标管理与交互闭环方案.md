@@ -347,7 +347,9 @@ goal-mode/cli/
   acceptance-gate.mjs                              [WP5 已改] 摘出裁判判词行,挂到该条命令结果的 items 上
   acceptance-judge.mjs                             [WP5 已改] --items-file 条目模式:固定 id 进,经校验的 JSON 判词出
   judge-item-verdicts.mjs                          [WP5 已建] 判词解析/校验/退出码/标记行,纯函数
-  goal-record-projection.mjs                       [WP5 已改] 选了裁判且有无命令的项时追加裁判命令(只读沙箱)
+  goal-record-projection.mjs                       [已改] 选了裁判就追加裁判命令:还有没带命令的项走条目模式,一条都没有走整体文本模式(只读沙箱)
+  judge-whole-verdict.mjs                          [已建] 整体判词解析:只认第一行 PASS/FAIL,其余一律无法判定
+  goals/goal-judge-contract.ts                     [已建] 模式判定、保留 id 与目标正文拼装,宿主/驱动/面板共用一份
   prompts/、git-snapshot.mjs、tamper-scan.mjs      [复用] 模板构建时内联；取证逻辑不变
 config/
   scripts/build-goal-driver.mjs                   [WP1 已建] 仿 build-relay.mjs 的 esbuild 单文件打包，输出 out/goal-driver
@@ -562,6 +564,7 @@ export type GoalEvidence = {
   specRevision: number
   turn: number
   criterionId: string | null
+  scope?: 'goal' // [新增] 只挂在整体判词上;它是整个目标的结果,不属于任何一条验收项。
   status: 'passed' | 'failed' | 'inconclusive' | 'not_run' | 'stale'
   source: 'command' | 'judge' | 'legacy'
   artifactId: string | null
@@ -744,7 +747,7 @@ flowchart TD
 | Agent 认领          | 自报完成/受阻与时间                           | 独立验证已经完成                  |
 | 文件快照            | 本轮实际变动文件与可用 Diff                   | 文件数越多进度越高                |
 
-条目级 judge 为显式的新输出模式：由输入给出固定 criterionId，输出对应结果/理由/证据引用；校验失败记 inconclusive，不用正则扫自然语言拼装。旧文本 PASS 模式保留兼容，条目仍显示尚未验证。额外回归命令单列“检查”，避免误计为需求验收项。2026-09-07 已实现：`GoalSpec.judge`（none/claude/codex，默认 none）；宿主随记录写 `judge-items.json`（无命令的验收项 + 验收说明）；驱动在验收命令末尾追加 `acceptance-judge.js --items-file … --sandbox read-only`；裁判把经校验的判词以 `ORCA_GOAL_JUDGE_ITEMS {json}` 一行打头，gate 摘出挂到该命令结果的 `items`，宿主投影成 `source: 'judge'` 的证据行；裁判起不来、超时、判词无法解析时每条都记 inconclusive 并带原因。
+条目级 judge 为显式的新输出模式：由输入给出固定 criterionId，输出对应结果/理由/证据引用；校验失败记 inconclusive，不用正则扫自然语言拼装。旧文本 PASS 模式保留兼容，条目仍显示尚未验证。2026-09-08 已实现：选了裁判就一定追加一条验收命令——还有没带命令的验收项时走条目模式，一条都没有时驱动改用 `--criteria-file`，宿主随记录把目标正文与验收说明写成 `judge-criteria.md`；整体判词走同一条判词行、占用保留 id `orca-goal:whole`，落成**一条** `criterionId` 为 null 的 `scope: 'goal'` 证据行，面板显示“整体验收 · 通过/未通过/无法判定”与判词原文；整体判词为 FAIL 时各条验收项仍显示尚未验证，不拆条目、不生成逐项通过数。额外回归命令单列“检查”，避免误计为需求验收项。2026-09-07 已实现：`GoalSpec.judge`（none/claude/codex，默认 none）；宿主随记录写 `judge-items.json`（无命令的验收项 + 验收说明）；驱动在验收命令末尾追加 `acceptance-judge.js --items-file … --sandbox read-only`；裁判把经校验的判词以 `ORCA_GOAL_JUDGE_ITEMS {json}` 一行打头，gate 摘出挂到该命令结果的 `items`，宿主投影成 `source: 'judge'` 的证据行；裁判起不来、超时、判词无法解析时每条都记 inconclusive 并带原因。
 
 目标正文/验收定义变更时旧证据全部退出当前汇总；同版本后续代码变化也应标出证据快照与当前工作区不一致，不长期悬挂旧绿色。非 Git 工作区显示“缺少版本化文件快照”，不宣称具备相同证据新鲜度。
 
@@ -871,6 +874,14 @@ WP1/2 是可演示的先行单元，但不能据此宣称 REQ-118/REQ-120 或整
 实际安装 App 的资源布局、各 provider 的停止确认强度、headless/peer 服务组装、三平台启动与升级存活、真实 UI 可见性都未在本轮执行。源码存在只证明复用候选；本方案不把这些未知项写成当前已支持。judge 只输出文本 PASS、goal-loop 每轮整体写回目标对象这两条沿用原稿，本次评审未重新核实。
 
 ## 8. 变更记录
+
+### 2026-09-08：整体文本裁判落地
+
+- 变更原因：WP5 只实现了条目模式，`judgeCommandOf` 在「没有无命令的验收项」时直接返回 null。用户选了 codex 却只写了目标正文，于是验收命令列表为空，8 轮下来 `lastAcceptance` 一直是 null——选了裁判等于没选。§5.4 第 199 行与 §5.7 早已写明整体模式要保留并如何展示，是实现漏了这一半。
+- 变更内容：新增 `src/shared/goals/goal-judge-contract.ts`（模式判定 `judgeRunsWholeGoal`、保留 id、目标正文拼装），宿主/驱动/面板共用同一份判断；`GoalStore.writeRecord` 增写 `judge-criteria.md`；`judgeCommandOf` 不再早退，按模式选 `--items-file` 或 `--criteria-file`；`acceptance-judge.mjs` 的整体模式改为也吐判词行，并把「读不到输入、不认识的裁判、不认识的沙箱、裁判起不来、超时、判词无法解析、自身异常」全部从退 1 改为退 3；新增 `judge-whole-verdict.mjs` 只认第一行 PASS/FAIL；`acceptance-gate.mjs` 让同步 spawn 失败与异步 error 路径一致地记为无法判定；证据加 `scope: 'goal'`；`projectCompletion` 只采信当前定义版本的证据；面板新增「整体验收」一行并把额外检查改为首行精确匹配；编辑器里选了裁判就不再要求勾选「无独立验证」。
+- 已知限制：裁判 CLI 需在驱动进程的 PATH 上；只读沙箱会挡住需要构建才能核实的判据（裁判可回答 INCONCLUSIVE）；整体模式现在也会在 `onBlocked: verify` 时跑；源码模式下 `.mjs` 导入 `.ts` 会让 Node 打一条 MODULE_TYPELESS_PACKAGE_JSON 警告并被 gate 并进回灌文本（打包后的裁判没有）；未用真实 claude/codex 裁判在真机跑过。
+- 验证：goal-mode/cli node:test 163 例（新增整体模式 11 例并改写投影用例）；goal 相关 vitest 14 文件 76 例（新增契约 6 例、面板 6 例、宿主 4 例）；`tc:node`/`tc:web`、本地化三项门禁、架构门禁、功能清单与文档门禁通过；打包后的 `acceptance-judge.js` 真跑整体模式退 0 并吐出判词行。
+- 记录人：Claude Code。
 
 ### 2026-09-07：WP5 条目级 judge 落地
 

@@ -80,10 +80,8 @@ export function GoalEditor(): React.JSX.Element {
   const hasCommands =
     draft.criteria.some((criterion) => criterion.command?.trim()) ||
     draft.extraChecks.trim().length > 0
-  // Why: an item-mode judge verifies command-less criteria, so they no longer need the acknowledgement.
-  const judgeCoversCriteria =
-    draft.judge !== 'none' && draft.criteria.some((criterion) => criterion.description.trim())
-  const verifiable = hasCommands || judgeCoversCriteria
+  // Why: a picked judge always adds an independent check — per item, or over the goal text as a whole.
+  const verifiable = hasCommands || draft.judge !== 'none'
   const valid =
     draft.objective.trim().length > 0 &&
     (editingGoalId !== null || Boolean(target.worktreeId && target.paneKey)) &&
@@ -284,10 +282,7 @@ export function GoalEditor(): React.JSX.Element {
                 </label>
                 <div className="space-y-1">
                   <Label htmlFor="goal-judge">
-                    {translate(
-                      'goals.editor.judge',
-                      'Independent judge for criteria without a command'
-                    )}
+                    {translate('goals.editor.judge', 'Independent judge')}
                   </Label>
                   <Select
                     value={draft.judge}
@@ -300,7 +295,7 @@ export function GoalEditor(): React.JSX.Element {
                       <SelectItem value="none">
                         {translate(
                           'goals.editor.judgeNone',
-                          'None: criteria without a command stay unverified'
+                          'None: only commands verify this goal'
                         )}
                       </SelectItem>
                       <SelectItem value="claude">{JUDGE_CLI_LABELS.claude}</SelectItem>
@@ -310,7 +305,7 @@ export function GoalEditor(): React.JSX.Element {
                   <p className="text-xs text-muted-foreground">
                     {translate(
                       'goals.editor.judgeHint',
-                      'Criteria without a command are judged one by one by a separate read-only judge session; that CLI must be installed on this machine. Missing or unparsable verdicts count as inconclusive, never as passed.'
+                      'Picking a judge always adds an independent check. Criteria without a command are judged one by one; with none of those, the judge rules on the goal text and acceptance notes as a whole and reports only a whole-goal pass or fail plus its verdict, never per-criterion results. That CLI must be installed on this machine. Missing or unparsable verdicts count as inconclusive, never as passed.'
                     )}
                   </p>
                 </div>

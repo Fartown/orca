@@ -1,8 +1,12 @@
 // 宿主写的 v2 记录 → v1 循环认识的字段。入口在启动时用,循环在 reload 时用,两边必须一致。
+import {
+  composeGoalAcceptanceText,
+  judgeRunsWholeGoal
+} from '../../src/shared/goals/goal-judge-contract.ts'
 
 /**
- * 验收命令 = 有命令的验收项 + 额外检查 + (选了裁判时)一条条目模式裁判命令。
- * @param {{judgeEntry?: string, itemsPath?: string, execPath?: string, platform?: string}} [options]
+ * 验收命令 = 有命令的验收项 + 额外检查 + (选了裁判时)一条裁判命令(条目模式或整体文本模式)。
+ * @param {{judgeEntry?: string, itemsPath?: string, criteriaPath?: string, execPath?: string, platform?: string}} [options]
  */
 export function acceptanceOf(record, options = {}) {
   const judge = judgeCommandOf(record, options)
@@ -19,18 +23,28 @@ export function acceptanceOf(record, options = {}) {
 }
 
 /**
- * 没有命令的验收项交给独立裁判逐条判定。裁判脚本和驱动打在同一目录,用同一个可执行文件
- * 拉起(驱动跑在 Electron-as-Node 下时 env 里已有 ELECTRON_RUN_AS_NODE);清单文件由宿主随记录写好。
+ * 选了裁判就一定追加一条验收命令:还有没带命令的验收项时逐条判(条目模式),
+ * 一条都没有时对目标正文整体判(文本模式)。裁判脚本和驱动打在同一目录,用同一个可执行文件
+ * 拉起(驱动跑在 Electron-as-Node 下时 env 里已有 ELECTRON_RUN_AS_NODE);两种输入文件都由宿主随记录写好。
  */
 export function judgeCommandOf(
   record,
-  { judgeEntry, itemsPath, execPath = process.execPath, platform = process.platform } = {}
+  {
+    judgeEntry,
+    itemsPath,
+    criteriaPath,
+    execPath = process.execPath,
+    platform = process.platform
+  } = {}
 ) {
   const judge = record.spec.judge ?? 'none'
-  if (judge === 'none' || !judgeEntry || !itemsPath) {
+  if (judge === 'none' || !judgeEntry) {
     return null
   }
-  if (!record.spec.criteria.some((c) => !c.command)) {
+  const wholeGoal = judgeRunsWholeGoal(record.spec)
+  const inputPath = wholeGoal ? criteriaPath : itemsPath
+  // 驱动没给路径就什么都不追加,绝不发一条指向 undefined 的命令。
+  if (!inputPath) {
     return null
   }
   const q = (value) => quoteForShell(String(value), platform)
@@ -41,8 +55,8 @@ export function judgeCommandOf(
     judge,
     '--cwd',
     q(record.workspace.path),
-    '--items-file',
-    q(itemsPath),
+    wholeGoal ? '--criteria-file' : '--items-file',
+    q(inputPath),
     '--timeout',
     String(record.budget.checkTimeoutSeconds),
     '--sandbox',
@@ -58,18 +72,9 @@ export function quoteForShell(value, platform = process.platform) {
   return `'${value.replace(/'/g, `'\\''`)}'`
 }
 
-/** 注入给 agent 的目标正文:目标 + 逐条验收项 + 整体验收说明。 */
+/** 注入给 agent 的目标正文,也是整体模式交给裁判的那份文本 —— 同一份字节,不许各写一遍。 */
 export function objectiveOf(record) {
-  const parts = [record.spec.objective.trim()]
-  if (record.spec.criteria.length > 0) {
-    parts.push(
-      '验收标准:\n' + record.spec.criteria.map((c, i) => `${i + 1}. ${c.description}`).join('\n')
-    )
-  }
-  if (record.spec.acceptanceText.trim()) {
-    parts.push(record.spec.acceptanceText.trim())
-  }
-  return parts.join('\n\n')
+  return composeGoalAcceptanceText(record.spec)
 }
 
 /**

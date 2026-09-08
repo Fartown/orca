@@ -36,7 +36,7 @@ node goal-mode/cli/orca-goal.mjs forget --worktree WORKSPACE_PATH
 
 ## --check 是什么
 
-完成声明触发驱动独立执行的验收命令，工作目录是选定工作区，`CI=1`，无 stdin/TTY。默认首失败短路，`--check-all` 汇总全部；单条默认超时 900 秒。没有 check 时可以完成，但结果标记未经验证。
+完成声明触发驱动独立执行的验收命令，工作目录是选定工作区，`CI=1`，无 stdin/TTY。默认首失败短路，`--check-all` 汇总全部；单条默认超时 900 秒。未选裁判且没有 check 时可以完成，但结果标记未经验证。
 
 需要独立模型裁判时，入口是：
 
@@ -44,7 +44,7 @@ node goal-mode/cli/orca-goal.mjs forget --worktree WORKSPACE_PATH
 node goal-mode/cli/acceptance-judge.mjs --agent codex --sandbox read-only --criteria-file ACCEPTANCE_FILE --cwd WORKSPACE_PATH
 ```
 
-模型裁判是可选命令，不能代替可执行行为断言。门禁不可判定、false claim、blocked 与等待用户的规则及已知缺口，以技术说明为准；不把所有失败都归责于干活的 agent。
+选了裁判时，面板驱动会自动追加同一条命令，输入文件由宿主写在记录旁边：有没带命令的验收项时用 `--items-file`，一条都没有时用 `--criteria-file`。模型裁判不能代替可执行行为断言。门禁不可判定、false claim、blocked 与等待用户的规则及已知缺口，以技术说明为准；不把所有失败都归责于干活的 agent。
 
 ## 运行文件与测试
 

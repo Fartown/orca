@@ -13,9 +13,11 @@ import {
   type GoalVersionLine,
   type LegacyGoalRecord
 } from '../../shared/goals/goal-store-records'
+import { composeGoalAcceptanceText } from '../../shared/goals/goal-judge-contract'
 import {
   goalControlPath,
   goalDir,
+  goalJudgeCriteriaPath,
   goalOperationPath,
   goalJudgeItemsPath,
   goalRecordPath,
@@ -38,7 +40,7 @@ export class GoalStore {
     return parsed.success ? parsed.data : null
   }
 
-  /** The record plus the item list the judge reads: both host-owned, always rewritten together. */
+  /** The record plus both judge inputs: all host-owned, always rewritten together. */
   async writeRecord(record: GoalRecord): Promise<void> {
     await writeJsonAtomic(goalRecordPath(this.goalHome, record.goalId), record)
     await writeJsonAtomic(goalJudgeItemsPath(this.goalHome, record.goalId), {
@@ -49,6 +51,11 @@ export class GoalStore {
         .map(({ id, description }) => ({ id, description })),
       notes: record.spec.acceptanceText
     })
+    // Why unconditional: an amend that flips the goal between judge modes must never leave a stale blob.
+    await writeTextAtomic(
+      goalJudgeCriteriaPath(this.goalHome, record.goalId),
+      `${composeGoalAcceptanceText(record.spec)}\n`
+    )
   }
 
   async deleteGoal(goalId: string): Promise<void> {
@@ -201,11 +208,15 @@ async function readJson(path: string): Promise<unknown> {
   }
 }
 
-async function writeJsonAtomic(path: string, value: unknown): Promise<void> {
+async function writeTextAtomic(path: string, text: string): Promise<void> {
   await mkdir(dirname(path), { recursive: true })
   const tmp = `${path}.${process.pid}.${Date.now()}.tmp`
-  await writeFile(tmp, `${JSON.stringify(value, null, 2)}\n`, 'utf8')
+  await writeFile(tmp, text, 'utf8')
   await rename(tmp, path)
+}
+
+async function writeJsonAtomic(path: string, value: unknown): Promise<void> {
+  await writeTextAtomic(path, `${JSON.stringify(value, null, 2)}\n`)
 }
 
 function isMissing(error: unknown): boolean {

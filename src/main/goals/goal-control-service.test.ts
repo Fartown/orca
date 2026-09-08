@@ -9,6 +9,7 @@ import type {
   GoalDriverVerdict
 } from '../../shared/goals/goal-control-contract'
 import {
+  goalJudgeCriteriaPath,
   goalJudgeItemsPath,
   legacyGoalRecordPath,
   legacyLockPath
@@ -439,6 +440,189 @@ describe('GoalControlService.list', () => {
       items: [{ id: '33333333-3333-4333-8333-333333333333', description: 'docs explain usage' }],
       notes: 'overall note'
     })
+  })
+
+  it('writes the goal text beside the record so a judge with no criteria has something to judge', async () => {
+    const svc = service()
+    const goalId = ids[0]
+    await svc.create(
+      createParams({
+        spec: {
+          objective: 'Ship it',
+          criteria: [],
+          acceptanceText: '首页必须能打开',
+          extraChecks: [],
+          checkAll: false,
+          onBlocked: 'ask',
+          judge: 'codex'
+        }
+      })
+    )
+    expect(await readFile(goalJudgeCriteriaPath(goalHome, goalId), 'utf8')).toBe(
+      'Ship it\n\n首页必须能打开\n'
+    )
+    // The item list is still written, empty — an amend can never leave a stale blob behind.
+    expect(JSON.parse(await readFile(goalJudgeItemsPath(goalHome, goalId), 'utf8'))).toEqual({
+      goalId,
+      specRevision: 1,
+      items: [],
+      notes: '首页必须能打开'
+    })
+    const detail = await svc.get(goalId)
+    await svc.amend({
+      authorityExecutionHostId: 'local',
+      clientOperationId: 'op-amend-text',
+      payloadFingerprint: FP,
+      goalId,
+      expectedRuntimeFence: detail!.runtimeFence,
+      expectedRunId: detail!.runId,
+      spec: { ...detail!.spec, objective: 'Ship it twice' },
+      resumeAfterSave: false
+    })
+    expect(await readFile(goalJudgeCriteriaPath(goalHome, goalId), 'utf8')).toBe(
+      'Ship it twice\n\n首页必须能打开\n'
+    )
+  })
+
+  it('projects a whole-goal verdict as one scoped row that belongs to no criterion', async () => {
+    const svc = service()
+    const goalId = ids[0]
+    const runId = ids[1]
+    await svc.create(
+      createParams({
+        spec: {
+          objective: 'Ship it',
+          criteria: [
+            {
+              id: '22222222-2222-4222-8222-222222222222',
+              description: 'tests',
+              command: 'pnpm test'
+            }
+          ],
+          acceptanceText: '',
+          extraChecks: [],
+          checkAll: false,
+          onBlocked: 'ask',
+          judge: 'codex'
+        }
+      })
+    )
+    await writeLegacy({
+      goalId,
+      runId,
+      specRevision: 1,
+      turns: 2,
+      lastAcceptance: {
+        tree: 'tree-1',
+        result: {
+          passed: true,
+          results: [
+            {
+              command: 'judge …',
+              ok: true,
+              output: 'PASS',
+              items: [{ id: 'orca-goal:whole', status: 'passed', reason: 'PASS 全部达成' }]
+            }
+          ]
+        }
+      }
+    })
+    const detail = await svc.get(goalId)
+    const judged = detail!.evidence.filter((row) => row.source === 'judge')
+    expect(judged).toEqual([
+      expect.objectContaining({
+        criterionId: null,
+        scope: 'goal',
+        status: 'passed',
+        summary: 'PASS 全部达成',
+        snapshotTree: 'tree-1'
+      })
+    ])
+    expect(
+      judged.filter((row) => row.criterionId === '22222222-2222-4222-8222-222222222222')
+    ).toEqual([])
+  })
+
+  it('never lets an unknown verdict id borrow the whole-goal scope, and keeps completion honest', async () => {
+    const svc = service()
+    const goalId = ids[0]
+    await svc.create(createParams({ spec: { ...createParams().spec, judge: 'codex' } }))
+    await writeLegacy({
+      goalId,
+      runId: ids[1],
+      specRevision: 1,
+      turns: 2,
+      state: 'complete',
+      lastAcceptance: {
+        tree: 'tree-1',
+        result: {
+          passed: false,
+          inconclusive: true,
+          results: [
+            {
+              command: 'judge …',
+              ok: false,
+              inconclusive: true,
+              output: 'INCONCLUSIVE',
+              items: [
+                { id: 'orca-goal:whole', status: 'inconclusive', reason: '只读沙箱挡住了' },
+                { id: '99999999-9999-4999-8999-999999999999', status: 'passed', reason: 'stray' }
+              ]
+            }
+          ]
+        }
+      }
+    })
+    const detail = await svc.get(goalId)
+    const judged = detail!.evidence.filter((row) => row.source === 'judge')
+    expect(judged[0]).toMatchObject({ scope: 'goal', status: 'inconclusive' })
+    expect(judged[1]).toMatchObject({ criterionId: null, status: 'passed' })
+    expect(judged[1]).not.toHaveProperty('scope')
+    expect(detail!.completion).toBe('unverified')
+  })
+
+  it('retires a passing verdict from an older definition revision', async () => {
+    const svc = service()
+    const goalId = ids[0]
+    await svc.create(createParams({ spec: { ...createParams().spec, judge: 'codex' } }))
+    const before = await svc.get(goalId)
+    await svc.amend({
+      authorityExecutionHostId: 'local',
+      clientOperationId: 'op-amend-stale',
+      payloadFingerprint: FP,
+      goalId,
+      expectedRuntimeFence: before!.runtimeFence,
+      expectedRunId: before!.runId,
+      spec: { ...before!.spec, objective: 'Ship something else' },
+      resumeAfterSave: false
+    })
+    await writeLegacy({
+      goalId,
+      runId: ids[1],
+      specRevision: 1,
+      turns: 2,
+      state: 'complete',
+      lastAcceptance: {
+        tree: 'tree-1',
+        result: {
+          passed: true,
+          results: [
+            {
+              command: 'judge …',
+              ok: true,
+              output: 'PASS',
+              items: [{ id: 'orca-goal:whole', status: 'passed', reason: 'PASS' }]
+            }
+          ]
+        }
+      }
+    })
+    const detail = await svc.get(goalId)
+    expect(detail!.specRevision).toBe(2)
+    expect(detail!.evidence.find((row) => row.scope === 'goal')?.status).toBe('stale')
+    // The header must not claim independent verification the acceptance section already retired.
+    const listed = await svc.list({ authorityExecutionHostId: 'local', filter: 'all' })
+    expect(listed.items[0].completion).toBe('unverified')
   })
 
   it('projects item-mode judge verdicts as judge evidence on the declared criteria only', async () => {

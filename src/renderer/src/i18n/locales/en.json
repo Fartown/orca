@@ -17881,7 +17881,7 @@
     "editor": {
       "criteria": "Acceptance criteria",
       "addCriterion": "Add item",
-      "criteriaHint": "Each item may carry a command; items without one are verified only when an independent judge is set under Advanced settings.",
+      "criteriaHint": "Optional. List items only if you want them tracked one by one; each item may carry a command. With no items, an independent judge under Advanced settings rules on the goal as a whole.",
       "criterionDescription": "Criterion {{value0}}",
       "criterionPlaceholder": "What must hold",
       "criterionCommand": "Command for criterion {{value0}}",
@@ -17920,9 +17920,9 @@
       "editDescription": "Changing the goal or acceptance starts a new definition revision; earlier evidence no longer counts. Changing only the budget keeps it.",
       "save": "Save",
       "saveAndResume": "Save and resume",
-      "judge": "Independent judge for criteria without a command",
-      "judgeNone": "None: criteria without a command stay unverified",
-      "judgeHint": "Criteria without a command are judged one by one by a separate read-only judge session; that CLI must be installed on this machine. Missing or unparsable verdicts count as inconclusive, never as passed."
+      "judge": "Independent judge",
+      "judgeNone": "None: only commands verify this goal",
+      "judgeHint": "Picking a judge always adds an independent check. Criteria without a command are judged one by one; with none of those, the judge rules on the goal text and acceptance notes as a whole and reports only a whole-goal pass or fail plus its verdict, never per-criterion results. That CLI must be installed on this machine. Missing or unparsable verdicts count as inconclusive, never as passed."
     },
     "detail": {
       "back": "Goals",
@@ -17966,7 +17966,8 @@
       "stale": "Evidence out of date",
       "notRun": "Not run",
       "notVerified": "Not verified yet",
-      "judge": "Judge"
+      "judge": "Judge",
+      "wholeGoal": "Whole-goal acceptance"
     },
     "sessionAction": {
       "view": "View goal",

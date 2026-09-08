@@ -17,6 +17,8 @@ import {
   overallExitCode,
   parseItemVerdicts
 } from './judge-item-verdicts.mjs'
+import { GOAL_WHOLE_VERDICT_TEXT_MAX } from '../../src/shared/goals/goal-judge-contract.ts'
+import { GOAL_WHOLE_VERDICT_ID, parseWholeVerdict, wholeVerdictOf } from './judge-whole-verdict.mjs'
 
 const GRACE_MS = 15_000 // SIGTERM 到 SIGKILL 之间留给裁判落盘的时间
 
@@ -99,7 +101,8 @@ ${gateChanges ? GATE_CHANGES_SECTION(gateChanges) : ''}
 - 你的职责只是判定,不要修改任何文件。
 - 证据不足以证明达成,就算作未达成。
 - 全部达成:第一行只输出 PASS,之后不要再写任何内容。
-- 未达成:第一行只输出 FAIL,之后逐条列出还差什么,写具体到文件和行为,给出你实际看到的证据。`
+- 未达成:第一行只输出 FAIL,之后逐条列出还差什么,写具体到文件和行为,给出你实际看到的证据。
+- 你无法核实(需要跑的命令被只读沙箱挡住、缺少凭证、看不到必要产物):第一行只输出 INCONCLUSIVE,之后写清楚是什么挡住了你。不要用 FAIL 代替。`
 
 // 条目模式:清单由调用方给出固定 id,裁判按 id 逐条回答;输出契约见 judge-item-verdicts.mjs。
 const ITEM_TEMPLATE = (
@@ -191,58 +194,65 @@ async function main(argv) {
   const flags = parse(argv)
   const itemSpec = flags['items-file'] ? await readItemsFile(flags['items-file']) : null
   const items = itemSpec?.items ?? []
-  const criteria = flags['criteria-file']
-    ? await fs.readFile(flags['criteria-file'], 'utf8')
-    : flags.criteria
-  if (!criteria && items.length === 0) {
+  const criteriaFile = flags['criteria-file']
+  const criteria = criteriaFile
+    ? await fs.readFile(criteriaFile, 'utf8').catch(() => '')
+    : (flags.criteria ?? '')
+  // (c) 只有「一个输入开关都没给」才是用法错误;读不出内容是「没判成」,由 inconclusiveAll 交代。
+  if (!criteriaFile && !flags.criteria && !flags['items-file']) {
     process.stderr.write(
       '用法: acceptance-judge --criteria "验收标准" | --criteria-file 路径 | --items-file 路径 [--cwd 目录] [--agent claude|codex] [--timeout 秒] [--sandbox 模式]\n' +
         '退出码: 0 通过 · 1 未通过 · 3 无法判定(裁判起不来/没给出判词/判不完)\n' +
-        '--items-file 为条目模式:{"items":[{"id","description"}],"notes"},判词逐条按 id 给出\n'
+        '--items-file 为条目模式:{"items":[{"id","description"}],"notes"},判词逐条按 id 给出\n' +
+        '--criteria-file 为整体模式:裁判对目标正文整体判定,判词以 PASS / FAIL / INCONCLUSIVE 开头\n'
     )
     return 2
   }
 
   const agentName = flags.agent || 'claude'
+  const ids = items.map((item) => item.id)
+  const descriptions = new Map(items.map((item) => [item.id, item.description]))
+  // 一条验收项都没有 → 整体判:判词挂在保留 id 上,和条目模式共用同一条判词行。
+  const wholeGoal = ids.length === 0
+  const verdictIds = wholeGoal ? [GOAL_WHOLE_VERDICT_ID] : ids
+  // 「没判成」也要交出判词行,面板才分得清是裁判没跑、不是活没干。
+  const inconclusiveAll = (message) => {
+    const reason = message.slice(0, GOAL_WHOLE_VERDICT_TEXT_MAX)
+    process.stdout.write(
+      `${encodeItemsMarker(verdictIds.map((id) => ({ id, status: 'inconclusive', reason })))}\n`
+    )
+    process.stdout.write(`${message}\n`)
+    return EXIT_INCONCLUSIVE
+  }
+  if (wholeGoal && !criteria.trim()) {
+    return inconclusiveAll(
+      itemSpec?.unreadable ?? `验收裁判没有拿到可判定的验收标准(${criteriaFile ?? '--criteria'})`
+    )
+  }
   const agent = AGENTS[agentName]
   if (!agent) {
-    process.stdout.write(`不认识的裁判 ${agentName},可用:${Object.keys(AGENTS).join(' / ')}\n`)
-    return 1
+    return inconclusiveAll(`不认识的裁判 ${agentName},可用:${Object.keys(AGENTS).join(' / ')}`)
   }
 
   const cwd = path.resolve(flags.cwd || process.cwd())
   const timeoutMs = Number(flags.timeout || 600) * 1000
   const scratch = await fs.mkdtemp(path.join(os.tmpdir(), 'orca-goal-judge-'))
   const outFile = path.join(scratch, 'verdict.txt')
-  const ids = items.map((item) => item.id)
-  const descriptions = new Map(items.map((item) => [item.id, item.description]))
-  // 条目模式下「没判成」也要逐条交出 inconclusive,面板才分得清是裁判没跑、不是活没干。
-  const inconclusiveAll = (message) => {
-    if (ids.length > 0) {
-      process.stdout.write(
-        `${encodeItemsMarker(ids.map((id) => ({ id, status: 'inconclusive', reason: message })))}\n`
-      )
-    }
-    process.stdout.write(`${message}\n`)
-    return EXIT_INCONCLUSIVE
-  }
 
   try {
     const sandbox = flags.sandbox
     if (sandbox && !['read-only', 'workspace-write', 'danger-full-access'].includes(sandbox)) {
-      process.stdout.write(
-        `不认识的沙箱模式 ${sandbox},可用:read-only / workspace-write / danger-full-access\n`
+      return inconclusiveAll(
+        `不认识的沙箱模式 ${sandbox},可用:read-only / workspace-write / danger-full-access`
       )
-      return 1
     }
     // 由 orca-goal 在有门禁类改动时写好并通过环境变量指过来。
     const gateChanges = process.env.ORCA_GOAL_GATE_CHANGES
       ? await fs.readFile(process.env.ORCA_GOAL_GATE_CHANGES, 'utf8').catch(() => '')
       : ''
-    const prompt =
-      items.length > 0
-        ? ITEM_TEMPLATE(itemsPromptSection(items, itemSpec.notes), gateChanges.trim())
-        : TEMPLATE(criteria.trim(), gateChanges.trim())
+    const prompt = wholeGoal
+      ? TEMPLATE(criteria.trim(), gateChanges.trim())
+      : ITEM_TEMPLATE(itemsPromptSection(items, itemSpec.notes), gateChanges.trim())
     const result = await runAgent(agentName, agent.args(prompt, { outFile, cwd, sandbox }), {
       cwd,
       timeoutMs
@@ -256,7 +266,11 @@ async function main(argv) {
     if (result.timedOut) {
       const partial = await agent.read({ ...result, outFile }).catch(() => null)
       const head = `验收裁判(${agentName})超过 ${Math.round(timeoutMs / 1000)} 秒未判完`
-      if (ids.length > 0) {
+      const body = partial ? `${head},以下是它中断前给出的结论:\n${partial}` : head
+      if (wholeGoal) {
+        // 判不完就是没判成:被杀掉的裁判即使写了 PASS 也不算数。
+        process.stdout.write(`${encodeItemsMarker([wholeVerdictOf('inconclusive', body)])}\n`)
+      } else {
         // 中断前已经写出的条目照算,没写到的记为超时。
         const { verdicts } = parseItemVerdicts(partial ?? '', ids)
         process.stdout.write(
@@ -267,9 +281,7 @@ async function main(argv) {
           )}\n`
         )
       }
-      process.stdout.write(
-        partial ? `${head},以下是它中断前给出的结论:\n${partial}\n` : `${head}\n`
-      )
+      process.stdout.write(`${body}\n`)
       // 判不完就是没判成。有部分结论也照样交出去 —— 下一轮才有的可改。
       return EXIT_INCONCLUSIVE
     }
@@ -285,7 +297,7 @@ async function main(argv) {
         `验收裁判(${agentName})没有给出可解析的判词(退出码 ${result.code})${why}`
       )
     }
-    if (ids.length > 0) {
+    if (!wholeGoal) {
       const { verdicts, problems } = parseItemVerdicts(verdict, ids)
       const code = overallExitCode(verdicts)
       process.stdout.write(`${encodeItemsMarker(verdicts)}\n`)
@@ -298,16 +310,30 @@ async function main(argv) {
       process.stdout.write(`\n裁判原文:\n${verdict}\n`)
       return code
     }
+    const whole = parseWholeVerdict(verdict)
+    // 判词行必须是 stdout 第一行:gate 只扫第一行取标记。
+    process.stdout.write(`${encodeItemsMarker([whole])}\n`)
     process.stdout.write(`${verdict}\n`)
-    return /^\s*PASS\b/i.test(verdict) ? EXIT_PASS : EXIT_FAIL
+    return overallExitCode([whole])
+  } catch (err) {
+    return inconclusiveAll(`验收裁判执行失败:${err.message}`)
   } finally {
     await fs.rm(scratch, { recursive: true, force: true }).catch(() => {})
   }
 }
 
-/** 条目清单:只收 id 和描述都齐全的项;宿主写这个文件,驱动只传路径。 */
+/** 条目清单:只收 id 和描述都齐全的项;宿主写这个文件,驱动只传路径。读不到不抛 —— 读不到是「没判成」。 */
 async function readItemsFile(file) {
-  const raw = JSON.parse(await fs.readFile(file, 'utf8'))
+  const text = await fs.readFile(file, 'utf8').catch(() => null)
+  if (text === null) {
+    return { items: [], notes: '', unreadable: `验收裁判读不到条目清单文件 ${file}` }
+  }
+  let raw
+  try {
+    raw = JSON.parse(text)
+  } catch {
+    return { items: [], notes: '', unreadable: `条目清单文件不是合法 JSON:${file}` }
+  }
   const items = Array.isArray(raw?.items)
     ? raw.items.filter(
         (item) =>
@@ -341,16 +367,19 @@ function parseClaudeJson(stdout) {
   }
 }
 
+/** 用法错误退 2;其余一切都是「没判成」退 3,绝不退 1。 */
+class JudgeUsageError extends Error {}
+
 function parse(args) {
   const flags = {}
   for (let i = 0; i < args.length; i++) {
     if (!args[i].startsWith('--')) {
-      throw new Error(`无法识别的参数: ${args[i]}`)
+      throw new JudgeUsageError(`无法识别的参数: ${args[i]}`)
     }
     const name = args[i].slice(2)
     const value = args[++i]
     if (value === undefined) {
-      throw new Error(`--${name} 缺少取值`)
+      throw new JudgeUsageError(`--${name} 缺少取值`)
     }
     flags[name] = value
   }
@@ -360,6 +389,14 @@ function parse(args) {
 main(process.argv.slice(2))
   .then((code) => process.exit(code))
   .catch((err) => {
+    if (err instanceof JudgeUsageError) {
+      process.stderr.write(`${err.message}\n`)
+      process.exit(2)
+    }
+    // 裁判自己抛异常是「没判成」,不是「判定为否」——退 1 会把它记成 agent 假报完成。
+    process.stdout.write(
+      `${encodeItemsMarker([wholeVerdictOf('inconclusive', `验收裁判异常:${err.message}`)])}\n`
+    )
     process.stdout.write(`验收裁判异常:${err.message}\n`)
-    process.exit(1)
+    process.exit(3)
   })

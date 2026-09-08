@@ -1,9 +1,11 @@
 import type { GoalEvidence } from '../../shared/goals/goal-control-contract'
+import { GOAL_WHOLE_VERDICT_ID } from '../../shared/goals/goal-judge-contract'
 import type { GoalRecord, LegacyGoalRecord } from '../../shared/goals/goal-store-records'
 
 /**
  * Evidence rows from the v1 driver's last acceptance run: one per command, plus
- * one per criterion the item-mode judge answered. Results from an earlier
+ * one per criterion the item-mode judge answered, or one whole-goal row when the
+ * judge ruled on the goal as a whole. Results from an earlier
  * definition revision are shown as stale, never as current passes, and a judge
  * verdict for an id the current definition does not declare carries no
  * criterion (it can never count as one of the user's items passing).
@@ -55,6 +57,8 @@ export function projectGoalEvidence(
       criterionId: declaredCriteria.has(item.id) ? item.id : null,
       status: stale ? 'stale' : item.status,
       source: 'judge',
+      // 整体判词是整个目标的结果,不属于任何一条验收项。
+      ...(item.id === GOAL_WHOLE_VERDICT_ID ? { scope: 'goal' as const } : {}),
       summary: item.reason ?? ''
     }))
     return [commandRow, ...judgeRows]

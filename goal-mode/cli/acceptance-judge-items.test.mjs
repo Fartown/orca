@@ -62,6 +62,11 @@ test('条目模式:判词行在第一行,退出码按条目汇总,缺项记 inco
     { id: B, status: 'inconclusive', reason: '裁判没有对这一条给出结果' }
   ])
   assert.equal(verdictLine, 'INCONCLUSIVE')
+  // 条目模式必须逐字不变:整体模式的保留 id 不许漏进来。
+  assert.deepEqual(
+    JSON.parse(marker.slice('ORCA_GOAL_JUDGE_ITEMS '.length)).verdicts.map((v) => v.id),
+    [A, B]
+  )
   assert.match(result.stdout, /✓ 首页返回 200/)
   assert.match(result.stdout, /\? 文档写了用法/)
 })
@@ -100,7 +105,9 @@ test('gate 把判词行摘成 items,回灌文本里不再有那一行;全过时�
     { id: B, status: 'passed', reason: 'README 有用法' }
   ])
   assert.doesNotMatch(judged.output, /ORCA_GOAL_JUDGE_ITEMS/)
-  assert.match(judged.output, /^PASS/)
+  // 不断言 PASS 在第一行:gate 把 stderr 也并进 output,而源码模式下 Node 会为 .mjs 导入 .ts
+  // 先打一条 MODULE_TYPELESS_PACKAGE_JSON 警告(打包后的裁判没有这条)。
+  assert.match(judged.output, /(?:^|\n)PASS\n/)
 })
 
 test('裁判起不来:每一条都记 inconclusive 并带上原因,退出码 3', async () => {

@@ -3,7 +3,7 @@ title: Goal 目标模式
 slug: Goal目标模式
 status: implementing
 created: 2026-09-05
-updated: 2026-09-06
+updated: 2026-09-08
 external_ids: []
 ---
 
@@ -63,6 +63,15 @@ external_ids: []
 - 影响范围：需求、技术说明、测试规格及本需求的执行证据。
 
 ## 3. 开发记录
+
+### 2026-09-08 整体文本裁判
+
+- 本轮目标：用户选了 codex 当裁判却发现什么都没被验收；查明是 WP5 少实现了方案 §5.4/§5.7 已写明的整体文本模式，把它补上。
+- 完成内容：见方案 §8「2026-09-08：整体文本裁判落地」。设计先经一轮 4 侦察 + 4 设计 + 1 仲裁的工作流定稿，再按稿实现。
+- 代码或文档变更：新增 `src/shared/goals/goal-judge-contract.ts`、`goal-mode/cli/judge-whole-verdict.mjs` 与四个测试文件；改动 `goal-store.ts`、`goal-store-layout.ts`、`goal-control-contract.ts`、`goal-rpc-results.ts`、`goal-evidence-projection.ts`、`goal-summary-projection.ts`、`goal-record-projection.mjs`、`goal-driver-entry.mjs`、`acceptance-judge.mjs`、`acceptance-gate.mjs`、`GoalProgress.tsx`、`GoalEditor.tsx`、`GoalCriteriaEditor.tsx`、中英文案、功能清单、需求、测试用例与本记录。
+- 验证证据：goal-mode/cli node:test 163/163；goal 相关 vitest 14 文件 76 例；`pnpm tc:node`、`pnpm tc:web`；`verify:localization-extraction/catalog/coverage`；`check:architecture-policies`、`check:fork-features`、`check:fork-docs`；`pnpm build:goal-driver` 后用打包产物真跑整体模式（PASS 退 0、散文退 3）。未用真实 claude/codex 裁判在真机跑过一轮完整验收。
+- 未解决问题：真机上用 codex 跑一轮整体验收；判词原文目前截断到 4000 字，完整文本只在 `~/.orca-goal/verdict/<key>-turn<N>.md`，把它接到证据的「查看证据」是另一片；整体判词为 FAIL 时各验收项按方案保持「尚未验证」，如果期望改成一并标红需要先改方案。
+- 下一步：重装后在真机建一个只写目标、选 codex 的目标，跑到整体验收出结论。
 
 ### 2026-09-07 WP5 条目级 judge
 
