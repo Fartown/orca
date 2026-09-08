@@ -17901,7 +17901,7 @@
       "extraChecksHint": "Run by the driver in the workspace with a shell. Shown here before submission; nothing is hidden.",
       "checkAll": "Run all checks even after the first failure",
       "verifyWhenBlocked": "When the agent says it is blocked, run the checks before asking me",
-      "acknowledgeUnverified": "No acceptance commands: completion will be taken from the agent without independent verification.",
+      "acknowledgeUnverified": "Nothing verifies this goal: completion is whatever the working session claims. To verify it, give a criterion a command, or pick a judge under Advanced settings.",
       "cancel": "Cancel",
       "starting": "Starting…",
       "createAndStart": "Create and start",
@@ -17921,8 +17921,8 @@
       "save": "Save",
       "saveAndResume": "Save and resume",
       "judge": "Independent judge for criteria without a command",
-      "judgeNone": "None: agent claims are taken as-is",
-      "judgeHint": "Criteria without a command are judged one by one in a separate read-only agent session; that CLI must be installed on this machine. Missing or unparsable verdicts count as inconclusive, never as passed."
+      "judgeNone": "None: criteria without a command stay unverified",
+      "judgeHint": "Criteria without a command are judged one by one by a separate read-only judge session; that CLI must be installed on this machine. Missing or unparsable verdicts count as inconclusive, never as passed."
     },
     "detail": {
       "back": "Goals",
@@ -17957,7 +17957,7 @@
     },
     "progress": {
       "title": "Acceptance",
-      "noCriteria": "No acceptance commands: completion is taken from the agent, not verified.",
+      "noCriteria": "Nothing to verify: completion is whatever the working session claims.",
       "verifiedCount": "{{value0}} of {{value1}} verified",
       "extraCheck": "Check",
       "passed": "Passed",
@@ -18002,7 +18002,7 @@
     },
     "completion": {
       "verified": "Independently verified",
-      "unverified": "Agent claimed completion; not verified",
+      "unverified": "The working session claimed completion; not independently verified",
       "claimed": "Completion claimed; verifying"
     },
     "status": {

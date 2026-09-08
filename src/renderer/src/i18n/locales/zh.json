@@ -15259,7 +15259,7 @@
       "extraChecksHint": "由驱动在工作区里用 shell 执行。提交前在此完整展示,不会隐藏。",
       "checkAll": "第一条失败后仍跑完全部检查",
       "verifyWhenBlocked": "agent 说受阻时,先跑检查再叫我",
-      "acknowledgeUnverified": "没有验收命令:完成与否将采信 agent 的说法,不做独立验证。",
+      "acknowledgeUnverified": "这个目标没有任何独立验证:完成与否只采信干活的那个会话自己的说法。想要验证,就给验收项填一条命令,或在高级设置里选一个裁判。",
       "cancel": "取消",
       "starting": "启动中…",
       "createAndStart": "创建并开始",
@@ -15279,8 +15279,8 @@
       "save": "保存",
       "saveAndResume": "保存并继续",
       "judge": "独立裁判(用于没有命令的验收项)",
-      "judgeNone": "不使用:采信 agent 的说法",
-      "judgeHint": "没有命令的验收项由独立的只读 agent 会话逐条判定,本机需要装有对应 CLI。缺失或无法解析的判词记为无法判定,不会记为通过。"
+      "judgeNone": "不使用:没有命令的验收项不做验证",
+      "judgeHint": "没有命令的验收项,由另起的只读裁判会话逐条判定;本机需要装有对应 CLI。缺失或无法解析的判词记为无法判定,不会记为通过。"
     },
     "detail": {
       "back": "目标",
@@ -15315,7 +15315,7 @@
     },
     "progress": {
       "title": "验收",
-      "noCriteria": "没有验收命令:完成与否采信 agent 的说法,未经验证。",
+      "noCriteria": "没有可验证的验收项:完成与否只采信干活的那个会话的说法。",
       "verifiedCount": "{{value0}} / {{value1}} 项已验证",
       "extraCheck": "检查",
       "passed": "通过",
@@ -15360,7 +15360,7 @@
     },
     "completion": {
       "verified": "已独立验证",
-      "unverified": "agent 声称完成;未经验证",
+      "unverified": "干活的会话声称完成;未经独立验证",
       "claimed": "已声称完成;验收中"
     },
     "status": {

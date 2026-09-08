@@ -20,7 +20,7 @@ export function GoalProgress({ detail }: { detail: GoalDetail }): React.JSX.Elem
         <p className="text-[11px] text-muted-foreground">
           {translate(
             'goals.progress.noCriteria',
-            'No acceptance commands: completion is taken from the agent, not verified.'
+            'Nothing to verify: completion is whatever the working session claims.'
           )}
         </p>
       </section>

@@ -298,7 +298,10 @@ export function GoalEditor(): React.JSX.Element {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">
-                        {translate('goals.editor.judgeNone', 'None: agent claims are taken as-is')}
+                        {translate(
+                          'goals.editor.judgeNone',
+                          'None: criteria without a command stay unverified'
+                        )}
                       </SelectItem>
                       <SelectItem value="claude">{JUDGE_CLI_LABELS.claude}</SelectItem>
                       <SelectItem value="codex">{JUDGE_CLI_LABELS.codex}</SelectItem>
@@ -307,7 +310,7 @@ export function GoalEditor(): React.JSX.Element {
                   <p className="text-xs text-muted-foreground">
                     {translate(
                       'goals.editor.judgeHint',
-                      'Criteria without a command are judged one by one in a separate read-only agent session; that CLI must be installed on this machine. Missing or unparsable verdicts count as inconclusive, never as passed.'
+                      'Criteria without a command are judged one by one by a separate read-only judge session; that CLI must be installed on this machine. Missing or unparsable verdicts count as inconclusive, never as passed.'
                     )}
                   </p>
                 </div>
@@ -322,7 +325,7 @@ export function GoalEditor(): React.JSX.Element {
                 <span>
                   {translate(
                     'goals.editor.acknowledgeUnverified',
-                    'No acceptance commands: completion will be taken from the agent without independent verification.'
+                    'Nothing verifies this goal: completion is whatever the working session claims. To verify it, give a criterion a command, or pick a judge under Advanced settings.'
                   )}
                 </span>
               </label>

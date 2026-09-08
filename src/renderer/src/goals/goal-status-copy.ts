@@ -47,7 +47,10 @@ export function goalCompletionLabel(summary: Pick<GoalSummary, 'completion'>): s
     case 'verified':
       return translate('goals.completion.verified', 'Independently verified')
     case 'unverified':
-      return translate('goals.completion.unverified', 'Agent claimed completion; not verified')
+      return translate(
+        'goals.completion.unverified',
+        'The working session claimed completion; not independently verified'
+      )
     case 'claimed':
       return translate('goals.completion.claimed', 'Completion claimed; verifying')
     case 'not_complete':
