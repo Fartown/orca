@@ -54,7 +54,7 @@ export class GoalStore {
     // Why unconditional: an amend that flips the goal between judge modes must never leave a stale blob.
     await writeTextAtomic(
       goalJudgeCriteriaPath(this.goalHome, record.goalId),
-      `${composeGoalAcceptanceText(record.spec)}\n`
+      record.spec.acceptanceDocument ?? `${composeGoalAcceptanceText(record.spec)}\n`
     )
   }
 

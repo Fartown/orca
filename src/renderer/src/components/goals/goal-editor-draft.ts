@@ -15,6 +15,7 @@ import type { GoalTargetSelection } from './GoalTargetPicker'
 export type GoalDraft = {
   objective: string
   criteria: GoalCriterion[]
+  acceptanceDocument: string
   acceptanceText: string
   extraChecks: string
   checkAll: boolean
@@ -23,21 +24,20 @@ export type GoalDraft = {
   maxTurns: string
   maxMinutes: string
   checkTimeoutSeconds: string
-  acknowledgeUnverified: boolean
 }
 
 export const EMPTY_GOAL_DRAFT: GoalDraft = {
   objective: '',
   criteria: [],
+  acceptanceDocument: '',
   acceptanceText: '',
   extraChecks: '',
   checkAll: false,
   onBlocked: 'ask',
-  judge: 'none',
+  judge: 'codex',
   maxTurns: '20',
   maxMinutes: '180',
-  checkTimeoutSeconds: '900',
-  acknowledgeUnverified: false
+  checkTimeoutSeconds: '900'
 }
 
 export function targetFromPrefill(prefill: GoalEditorPrefill | null): GoalTargetSelection {
@@ -86,7 +86,10 @@ export function specFromDraft(draft: GoalDraft): GoalSpec {
         description: criterion.description.trim(),
         ...(criterion.command?.trim() ? { command: criterion.command.trim() } : {})
       })),
-    acceptanceText: draft.acceptanceText.trim(),
+    acceptanceText: draft.acceptanceDocument.trim() || draft.acceptanceText.trim(),
+    ...(draft.acceptanceDocument.trim()
+      ? { acceptanceDocument: draft.acceptanceDocument.trim() }
+      : {}),
     extraChecks: draft.extraChecks
       .split('\n')
       .map((line) => line.trim())
@@ -109,6 +112,7 @@ export function draftFromDetail(detail: GoalDetail): GoalDraft {
   return {
     objective: detail.spec.objective,
     criteria: detail.spec.criteria.map((criterion) => ({ ...criterion })),
+    acceptanceDocument: detail.spec.acceptanceDocument ?? '',
     acceptanceText: detail.spec.acceptanceText,
     extraChecks: detail.spec.extraChecks.join('\n'),
     checkAll: detail.spec.checkAll,
@@ -116,8 +120,7 @@ export function draftFromDetail(detail: GoalDetail): GoalDraft {
     judge: detail.spec.judge ?? 'none',
     maxTurns: String(detail.budget.maxTurns),
     maxMinutes: String(detail.budget.maxMinutes),
-    checkTimeoutSeconds: String(detail.budget.checkTimeoutSeconds),
-    acknowledgeUnverified: true
+    checkTimeoutSeconds: String(detail.budget.checkTimeoutSeconds)
   }
 }
 

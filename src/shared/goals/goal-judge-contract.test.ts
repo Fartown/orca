@@ -57,3 +57,15 @@ describe('composeGoalAcceptanceText', () => {
     expect(composeGoalAcceptanceText(spec({ acceptanceText: '   ' }))).toBe('完成核查')
   })
 })
+
+it('uses the reviewed document verbatim for execution and whole-goal judging', () => {
+  const spec = {
+    objective: '旧目标',
+    criteria: [criterion('legacy')],
+    acceptanceText: '旧说明',
+    acceptanceDocument: '# 审阅稿\n\n具体标准',
+    judge: 'codex' as const
+  }
+  expect(composeGoalAcceptanceText(spec)).toBe(spec.acceptanceDocument)
+  expect(judgeRunsWholeGoal(spec)).toBe(true)
+})

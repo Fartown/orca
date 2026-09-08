@@ -39,13 +39,13 @@ const options = {
   platform: 'darwin'
 }
 
-test('裁判命令排在命令类检查之后,只读沙箱,超时沿用检查超时', () => {
+test('裁判命令排在命令类检查之后,沿用用户 Agent 权限,超时沿用检查超时', () => {
   const acceptance = acceptanceOf(record(), options)
   assert.equal(acceptance.commands.length, 3)
   assert.deepEqual(acceptance.commands.slice(0, 2), ['pnpm test', 'pnpm lint'])
   assert.equal(
     acceptance.commands[2],
-    "'/Applications/Orca.app/Contents/MacOS/Orca' '/app/goal-driver/acceptance-judge.js' --agent claude --cwd '/tmp/my repo' --items-file '/home/u/.orca-goal/v2/goals/g/judge-items.json' --timeout 120 --sandbox read-only"
+    "'/Applications/Orca.app/Contents/MacOS/Orca' '/app/goal-driver/acceptance-judge.js' --agent claude --cwd '/tmp/my repo' --items-file '/home/u/.orca-goal/v2/goals/g/judge-items.json' --timeout 120"
   )
 })
 
@@ -55,7 +55,7 @@ test('每条验收项都带命令时改判整体:裁判仍然会跑,只是换成
       record({ criteria: [{ id: 'c1', description: 'x', command: 'true' }] }),
       options
     ),
-    "'/Applications/Orca.app/Contents/MacOS/Orca' '/app/goal-driver/acceptance-judge.js' --agent claude --cwd '/tmp/my repo' --criteria-file '/home/u/.orca-goal/v2/goals/g/judge-criteria.md' --timeout 120 --sandbox read-only"
+    "'/Applications/Orca.app/Contents/MacOS/Orca' '/app/goal-driver/acceptance-judge.js' --agent claude --cwd '/tmp/my repo' --criteria-file '/home/u/.orca-goal/v2/goals/g/judge-criteria.md' --timeout 120"
   )
 })
 
@@ -64,7 +64,7 @@ test('一条验收项都没有 —— 用户踩到的那种目标 —— 也一�
   assert.equal(acceptance.commands.length, 1)
   assert.equal(
     acceptance.commands[0],
-    "'/Applications/Orca.app/Contents/MacOS/Orca' '/app/goal-driver/acceptance-judge.js' --agent claude --cwd '/tmp/my repo' --criteria-file '/home/u/.orca-goal/v2/goals/g/judge-criteria.md' --timeout 120 --sandbox read-only"
+    "'/Applications/Orca.app/Contents/MacOS/Orca' '/app/goal-driver/acceptance-judge.js' --agent claude --cwd '/tmp/my repo' --criteria-file '/home/u/.orca-goal/v2/goals/g/judge-criteria.md' --timeout 120"
   )
 })
 

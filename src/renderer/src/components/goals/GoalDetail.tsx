@@ -1,3 +1,4 @@
+import CommentMarkdown from '@/components/sidebar/CommentMarkdown'
 import { useEffect, useState } from 'react'
 import { ChevronLeft, ExternalLink, History } from 'lucide-react'
 import { basename } from '@/lib/path'
@@ -81,6 +82,14 @@ export function GoalDetail({ goalId }: { goalId: string }): React.JSX.Element {
             </section>
             <BindingSection detail={current} />
             {detail ? <GoalControls detail={detail} /> : null}
+            {detail?.spec.acceptanceDocument ? (
+              <section className="space-y-2">
+                <h3 className="text-xs font-semibold">
+                  {translate('goals.editor.document', 'Acceptance document')}
+                </h3>
+                <CommentMarkdown content={detail.spec.acceptanceDocument} variant="document" />
+              </section>
+            ) : null}
             {detail ? <GoalProgress detail={detail} /> : null}
             <section className="space-y-1">
               <h3 className="text-[11px] font-semibold text-muted-foreground">
@@ -234,6 +243,9 @@ function VersionsSection({
                 : null}
               {` · ${new Date(version.savedAt).toLocaleString()}`}
               <p className="truncate">{version.spec.objective}</p>
+              {version.spec.acceptanceDocument ? (
+                <CommentMarkdown content={version.spec.acceptanceDocument} variant="document" />
+              ) : null}
             </li>
           ))}
         </ul>

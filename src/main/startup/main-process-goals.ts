@@ -40,10 +40,14 @@ export async function startGoalFeatureForMainProcess(): Promise<void> {
       userDataPath: getCanonicalUserDataPath()
     })
     unregister?.()
-    unregister = goalFeatureReadinessRegistry.register(service, {
+    const unregisterService = goalFeatureReadinessRegistry.register(service, {
       driverEntry: entryPath ? 'ready' : 'missing',
       hookEvidence
     })
+    unregister = () => {
+      service.drafts.dispose()
+      unregisterService()
+    }
     if (!entryPath) {
       console.warn('[goals] driver bundle missing; run `pnpm build:goal-driver` to enable goals')
     }

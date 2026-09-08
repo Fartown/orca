@@ -3,12 +3,26 @@ title: Goal 目标管理与交互闭环方案
 document_type: technical-solution
 status: implementing
 created_at: 2026-09-05
-updated_at: 2026-09-06
+updated_at: 2026-09-08
 issue: Goal目标模式
 scope: 原生目标管理 UI、执行控制与历史兼容
 ---
 
 # Goal 目标管理与交互闭环方案
+
+## 2026-09-08 验收文档流程实施修订
+
+本节是 REQ-121 的当前实施依据，替代下文初版表单中“直接填写验收项/说明后开始”的创建流程；旧目标读取与控制协议继续兼容。
+
+1. 填写目标、选已有执行会话、选择守卫（新建默认 Codex，也可选 Claude Code）。守卫选择位于主表单。
+2. 点击生成，守卫在宿主解析出的工作区读取源码、需求及目标引用的资料，返回 Markdown 文档。已有说明和上次文档作为修订上下文，不覆盖新目标。生成阶段不创建 Goal、不启动驱动、不注入执行会话。
+3. 查看、编辑或预览文档；也可粘贴已有文档。目标、守卫或会话改变后要求重新核对。命令检查折叠为可选高级设置。
+4. 点击“按此文档开始执行”，将最终文档保存在 `spec.acceptanceDocument`、版本记录和 `judge-criteria.md`。执行提示与整体裁判取同一份文档原文；`acceptanceText` 同步保留文本供旧读取方兼容。
+5. 守卫独立验收文档，具体缺口沿用既有判词与续跑链路返回；默认沿用 Agent 权限配置，不强制只读沙箱。详情及版本列表可查看文档。
+
+技术接入：`goals.draftAcceptance` 启动短操作，`goals.getAcceptanceDraft` 查询，`goals.cancelAcceptanceDraft` 取消；生成任务与结果存于 Goal Home 的 `v2/drafts/`。宿主通过既有 `runProcess` 管理生成进程及取消，生成与 CLI 裁判共享 `goal-agent-provider.ts` 中的 Agent 参数及输出解析。当前仍仅支持本地交互式执行会话；远程终端不会由本机代跑。
+
+验证边界：本轮类型、自动化、构建、真实 Codex 宿主/CLI 和隐藏 Electron 界面结果见 [Test Run](../tests/runs/2026-09-08-验收文档闭环.md)。UI 使用独立 CLI 测试替身，真实守卫另行补证；全分支架构门禁的既有差异单独记录，不宣称发布完成。
 
 ## 0. 摘要
 
@@ -18,7 +32,7 @@ scope: 原生目标管理 UI、执行控制与历史兼容
 
 宿主侧不新造基础设施：可用性探测照 Issues 的 `issues.status` 模式，本轮结束证据取自 main 进程已有的 `AgentHookServer`，进程判定沿用 `PtyLivenessVerdict` 的三态词汇，控制围栏与 `MutationEnvelope` 同名同义，独立驱动入口沿用 relay 的 esbuild 单文件打包，渲染层状态同步照搬 Issues 的同步门与 domain store。
 
-当前已完成的是源码核对和本方案，**没有实现新 UI、执行目标、修改运行数据或验证真实 App**。产品方向来自本轮对话确认；宿主服务、协议、数据迁移和分期是本方案提出的技术决策，仍待评审。先读 §4 看界面，再读 §5 看如何实现。
+以下正文保留 2026-09-05 初版方案及当时分期，当前实现以本页最新实施修订、需求状态和 Journal 为准。先读 §4 看初版界面，再读 §5 看基础机制。
 
 ## 1. 状态与结论
 

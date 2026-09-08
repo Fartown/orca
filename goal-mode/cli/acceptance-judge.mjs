@@ -7,6 +7,7 @@
 // 换一个不同模型家族当裁判(--agent codex)比同家族更有价值:同家族的盲点是相关的。
 // codex 还能用 -s read-only 把裁判关进只读沙箱,机制上杜绝它改文件让自己通过。
 import { spawn } from 'node:child_process'
+import { GOAL_AGENT_PROVIDERS } from '../../src/shared/goals/goal-agent-provider.ts'
 import { promises as fs } from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
@@ -139,45 +140,7 @@ ${changes}
 `
 
 /** 每个裁判 CLI 的调用形状和取判词的方式都不一样,集中在这里。 */
-const AGENTS = {
-  claude: {
-    // claude 没有 codex 那样的 OS 级只读沙箱,--sandbox read-only 只能近似成「禁掉写文件的工具」。
-    // 不加这层,裁判就是个能改仓库让自己通过的守卫。
-    args: (prompt, { sandbox }) => [
-      '-p',
-      prompt,
-      '--output-format',
-      'json',
-      // 用 bypassPermissions 而不是 dontAsk:dontAsk 会连 Bash 一起拒掉,裁判就查不了
-      // git merge-base、grep 死代码、核对截图是否真存在 —— 实测过一次,它自己说「无法二次核对」。
-      // 写入口靠禁用 Edit/Write/NotebookEdit 挡住;这不是 OS 沙箱,只是让裁判没有顺手改仓库的工具。
-      ...(sandbox === 'read-only'
-        ? [
-            '--permission-mode',
-            'bypassPermissions',
-            '--disallowed-tools',
-            'Edit,Write,NotebookEdit'
-          ]
-        : [])
-    ],
-    read: async ({ stdout }) => parseClaudeJson(stdout)
-  },
-  codex: {
-    // 不强制沙箱:判据往往需要构建、起服务、跑测试才验得了,锁成只读会把裁判废掉。
-    // 要限制就显式给 --sandbox。
-    args: (prompt, { outFile, cwd, sandbox }) => [
-      'exec',
-      '--cd',
-      cwd,
-      ...(sandbox ? ['--sandbox', sandbox] : []),
-      '--skip-git-repo-check',
-      '--output-last-message',
-      outFile,
-      prompt
-    ],
-    read: async ({ outFile }) => (await fs.readFile(outFile, 'utf8')).trim() || null
-  }
-}
+const AGENTS = { ...GOAL_AGENT_PROVIDERS }
 
 /**
  * 测试用的假裁判从环境变量注入,不留在生产表里。
@@ -344,27 +307,6 @@ async function readItemsFile(file) {
       )
     : []
   return { items, notes: typeof raw?.notes === 'string' ? raw.notes : '' }
-}
-
-function parseClaudeJson(stdout) {
-  const start = stdout.indexOf('{')
-  const bracket = stdout.indexOf('[')
-  const from = start === -1 ? bracket : bracket === -1 ? start : Math.min(start, bracket)
-  if (from < 0) {
-    return null
-  }
-  try {
-    let data = JSON.parse(stdout.slice(from))
-    if (Array.isArray(data)) {
-      data = data.at(-1)
-    }
-    if (data?.is_error) {
-      return `验收裁判报错:${String(data.result || '').slice(0, 500)}`
-    }
-    return typeof data?.result === 'string' ? data.result.trim() : null
-  } catch {
-    return null
-  }
 }
 
 /** 用法错误退 2;其余一切都是「没判成」退 3,绝不退 1。 */

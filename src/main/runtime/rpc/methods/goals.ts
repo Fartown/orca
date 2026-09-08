@@ -27,6 +27,30 @@ export const GOAL_METHODS = [
     }
   }),
   defineMethod({
+    name: 'goals.draftAcceptance',
+    params: GoalRpcParams['goals.draftAcceptance'],
+    handler: (params, context) => {
+      admitSelector(params.authorityExecutionHostId, context)
+      return service().drafts.start(params)
+    }
+  }),
+  defineMethod({
+    name: 'goals.getAcceptanceDraft',
+    params: GoalRpcParams['goals.getAcceptanceDraft'],
+    handler: (params, context) => {
+      admitSelector(params.authorityExecutionHostId, context)
+      return service().drafts.get(params.draftId)
+    }
+  }),
+  defineMethod({
+    name: 'goals.cancelAcceptanceDraft',
+    params: GoalRpcParams['goals.cancelAcceptanceDraft'],
+    handler: (params, context) => {
+      admitSelector(params.authorityExecutionHostId, context)
+      return service().drafts.cancel(params.draftId)
+    }
+  }),
+  defineMethod({
     name: 'goals.list',
     params: GoalRpcParams['goals.list'],
     handler: (params, context) => {

@@ -742,3 +742,26 @@ describe('GoalControlService.list', () => {
     })
   })
 })
+
+it('persists the reviewed document unchanged for the guard and definition history', async () => {
+  const api = service()
+  const params = createParams()
+  params.spec.acceptanceDocument = '# 验收文档\n\n验证真实交互与证据'
+  params.spec.acceptanceText = params.spec.acceptanceDocument
+  params.spec.judge = 'codex'
+  const operation = await api.create(params)
+  expect(operation.status).toBe('applied')
+  expect(await readFile(goalJudgeCriteriaPath(goalHome, operation.goalId!), 'utf8')).toBe(
+    params.spec.acceptanceDocument
+  )
+  expect((await api.versions(operation.goalId!)).items[0].spec.acceptanceDocument).toBe(
+    params.spec.acceptanceDocument
+  )
+})
+
+it('refuses a remote terminal instead of running generation or execution locally', async () => {
+  terminal = { ...terminal, executionHostId: 'ssh:remote' }
+  const operation = await service().create(createParams())
+  expect(operation).toMatchObject({ status: 'rejected', code: 'unsupported' })
+  expect(launches).toEqual([])
+})

@@ -1,3 +1,7 @@
+import {
+  GoalAcceptanceDraftResult,
+  type GoalAcceptanceDraft
+} from '../../../shared/goals/goal-acceptance-draft-contract'
 import type { z } from 'zod'
 import type {
   GoalAdoptLegacyParams,
@@ -5,6 +9,7 @@ import type {
   GoalArchiveParams,
   GoalControlParams,
   GoalCreateParams,
+  GoalDraftAcceptanceParams,
   GoalDetail,
   GoalListParams,
   GoalOperation,
@@ -26,8 +31,12 @@ import type { RuntimeClientTarget } from '../runtime/runtime-client-target'
 export class GoalRuntimeUnsupportedError extends Error {
   readonly code = 'goal_runtime_unsupported'
 
-  constructor() {
-    super('This Orca host version does not support Goals.')
+  constructor(method?: string) {
+    super(
+      method?.includes('Acceptance')
+        ? 'This Orca host version does not support acceptance document generation.'
+        : 'This Orca host version does not support Goals.'
+    )
     this.name = 'GoalRuntimeUnsupportedError'
   }
 }
@@ -43,6 +52,24 @@ export class GoalRuntimeClient {
 
   status(): Promise<GoalStatus> {
     return this.call('goals.status', {}, GoalStatusResult)
+  }
+
+  draftAcceptance(
+    params: HostScopedParams<GoalDraftAcceptanceParams>
+  ): Promise<GoalAcceptanceDraft> {
+    return this.call('goals.draftAcceptance', params, GoalAcceptanceDraftResult)
+  }
+
+  getAcceptanceDraft(draftId: string): Promise<GoalAcceptanceDraft | null> {
+    return this.call('goals.getAcceptanceDraft', { draftId }, GoalAcceptanceDraftResult.nullable())
+  }
+
+  cancelAcceptanceDraft(draftId: string): Promise<GoalAcceptanceDraft | null> {
+    return this.call(
+      'goals.cancelAcceptanceDraft',
+      { draftId },
+      GoalAcceptanceDraftResult.nullable()
+    )
   }
 
   list(
@@ -108,7 +135,7 @@ export class GoalRuntimeClient {
       })
     } catch (error) {
       if (isMethodNotFound(error)) {
-        throw new GoalRuntimeUnsupportedError()
+        throw new GoalRuntimeUnsupportedError(method)
       }
       throw error
     }
