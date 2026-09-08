@@ -166,9 +166,13 @@ export function startAiVaultTabTitleSync(dependencies: SyncDependencies): () => 
       ])
     )
     for (const request of requests) {
-      const current = currentByTabId.get(request.tabId)
       const title = titleByIdentity.get(requestIdentity(request))
-      if (current && requestIdentity(current) === requestIdentity(request) && title) {
+      // Why: the pane identity flips while the agent runs a background side call,
+      // and the scan above is async — re-checking the identity here would discard
+      // the name just resolved for this tab's real session. The slot records the
+      // identity it holds, so a genuine session switch is corrected by the next
+      // reconcile rather than losing this result.
+      if (title && currentByTabId.has(request.tabId)) {
         writeTitle(request, title)
       }
     }

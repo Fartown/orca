@@ -409,6 +409,29 @@ describe('AI Vault tab title sync', () => {
     stop()
   })
 
+  it('lands a resolved name even when the pane identity flips during the scan', async () => {
+    const store = makeState({
+      executionHostId: 'ssh:dev-box',
+      worktreeId: 'worktree-1',
+      path: '/workspace/albacore'
+    })
+    // The agent starts a background side call while the read is in flight, which
+    // is what flips the pane identity out from under the result.
+    const resolveSessionTitles = vi.fn(async () => {
+      store.setProviderSessionId('codex-side-call')
+      return titleResult('codex', 'Real conversation')
+    })
+    const stop = startAiVaultTabTitleSync({ ...store, resolveSessionTitles })
+
+    await vi.waitFor(() =>
+      expect(store.getState().tabsByWorktree['worktree-1'][0].aiVaultTitle).toMatchObject({
+        sessionId: 'codex-session',
+        title: 'Real conversation'
+      })
+    )
+    stop()
+  })
+
   it('replaces the name once the changed provider identity resolves', async () => {
     const store = makeState({
       executionHostId: 'ssh:dev-box',
