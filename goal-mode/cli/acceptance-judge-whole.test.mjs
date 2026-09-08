@@ -84,7 +84,7 @@ test('没表态的散文:退 3 不退 1 —— 这才不会被记成 agent 假�
   const { code, marker } = await judge(base(agent), agent)
   assert.equal(code, 3)
   assert.equal(marker[0].status, 'inconclusive')
-  assert.match(marker[0].reason, /^裁判没有以 PASS 或 FAIL 开头表态/)
+  assert.match(marker[0].reason, /^裁判没有以 PASS、FAIL 或 INCONCLUSIVE 开头表态/)
 })
 
 test('INCONCLUSIVE 是裁判的正当答案,原因照抄', async () => {
@@ -92,7 +92,8 @@ test('INCONCLUSIVE 是裁判的正当答案,原因照抄', async () => {
   const { code, marker } = await judge(base(agent), agent)
   assert.equal(code, 3)
   assert.equal(marker[0].status, 'inconclusive')
-  assert.match(marker[0].reason, /只读沙箱/)
+  // 它照提示词答了,判词就原样保留 —— 不许再扣一句「没有表态」。
+  assert.equal(marker[0].reason, 'INCONCLUSIVE 只读沙箱挡住了 pnpm build')
 })
 
 test('PASSED 不是 PASS —— 词边界之外的东西一律不算通过', async () => {

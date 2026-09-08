@@ -29,5 +29,12 @@ export function parseWholeVerdict(text) {
   if (/^FAIL\b/i.test(head)) {
     return wholeVerdictOf('failed', raw)
   }
-  return wholeVerdictOf('inconclusive', `裁判没有以 PASS 或 FAIL 开头表态,判词原文:\n${raw}`)
+  // 提示词给了裁判第三个正当答案,它照答了就别再说它「没有表态」。
+  if (/^INCONCLUSIVE\b/i.test(head)) {
+    return wholeVerdictOf('inconclusive', raw)
+  }
+  return wholeVerdictOf(
+    'inconclusive',
+    `裁判没有以 PASS、FAIL 或 INCONCLUSIVE 开头表态,判词原文:\n${raw}`
+  )
 }
