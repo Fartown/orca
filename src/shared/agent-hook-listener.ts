@@ -6,6 +6,10 @@ import {
   isClaudeCompactCompletionConsumed,
   markClaudeCompactCompletionConsumed
 } from './claude-compact-completion'
+import {
+  isIntrudingClaudePaneSession,
+  releaseClaudePaneSessionSuppression
+} from './agent-hook-listener/claude-pane-session-intrusion'
 import { parseHookEnvelope } from './agent-hook-listener/hook-envelope'
 import { readFirstString } from './agent-hook-listener/interactive-tool'
 import type { AgentHookEventPayload } from './agent-hook-listener/listener-event'
@@ -37,11 +41,32 @@ export function normalizeHookPayload(
     readFirstString(record, ['hook_event_name', 'hookEventName', 'hook_type', 'hookType']) ??
     hookPayloadRecord.hook_event_name ??
     hookPayloadRecord.hookEventName
+  const previousStatus = state.lastStatusByPaneKey.get(paneKey)
   // Codex child hooks expose the child's session_id on the parent's pane.
-  const providerSession =
+  const extractedProviderSession =
     source === 'codex' && readString(hookPayloadRecord, 'agent_id')
       ? null
       : extractAgentProviderSession(source, hookPayloadRecord)
+  // Claude has no equivalent marker: a second Claude process the agent starts for its own work
+  // reports a plain new session_id on the pane it was spawned from, indistinguishable by payload
+  // from a session the user opened. The pane tells them apart — see the guard's own file.
+  const providerSession =
+    source === 'claude' &&
+    isIntrudingClaudePaneSession({
+      paneKey,
+      previousStatus,
+      providerSession: extractedProviderSession,
+      suppressedSessionIdsByPaneKey: state.claudeIntrudingSessionIdByPaneKey
+    })
+      ? null
+      : extractedProviderSession
+  if (source === 'claude' && providerSession) {
+    releaseClaudePaneSessionSuppression(
+      state.claudeIntrudingSessionIdByPaneKey,
+      paneKey,
+      providerSession.id
+    )
+  }
   const providerPromptId =
     source === 'claude' ? normalizeClaudePromptId(hookPayloadRecord.prompt_id) : undefined
   const providerTurnId =
@@ -61,7 +86,6 @@ export function normalizeHookPayload(
   ) {
     return null
   }
-  const previousStatus = state.lastStatusByPaneKey.get(paneKey)
   // Why: only a MANUAL completion claims anything, so only it may write compact-scoped state. An
   // auto compact runs inside a turn that resumes and emits its own Stop; running the ownership
   // guard for it would burn the pane's consumed-compact slot on an event that maps to nothing.

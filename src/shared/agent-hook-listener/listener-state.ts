@@ -29,6 +29,10 @@ export type HookListenerState = {
    *  conversation was replaced (/clear, relaunch, resume), so claims the old session owned are void
    *  even when no SessionStart arrives — the backstop for the exits that emit no terminating hook. */
   claudeSessionOwnerByPaneKey: Map<string, string>
+  /** Claude `session_id` seen taking a busy pane away from the session in it — a second Claude
+   *  process the agent spawned for its own work. Kept per pane so every later event from that id
+   *  is suppressed too, not just the SessionStart that exposed it. */
+  claudeIntrudingSessionIdByPaneKey: Map<string, string>
   /** Live thread-spawn children per Codex pane. */
   codexSubagentRosterByPaneKey: Map<string, CodexSubagentRoster>
   /** Incremental parent/child rollout cursors for Codex collaboration v2. */
@@ -71,6 +75,7 @@ export function createHookListenerState(): HookListenerState {
     claudeActiveSessionCronPaneKeys: new Set(),
     claudeConsumedCompactPromptIdByPaneKey: new Map(),
     claudeSessionOwnerByPaneKey: new Map(),
+    claudeIntrudingSessionIdByPaneKey: new Map(),
     codexSubagentRosterByPaneKey: new Map(),
     codexSubagentTranscriptByPaneKey: new Map(),
     codexLeadStateByPaneKey: new Map()
@@ -90,6 +95,7 @@ export function clearPaneCacheState(state: HookListenerState, paneKey: string): 
   state.claudeRunningNonAgentTaskPaneKeys.delete(paneKey)
   state.claudeActiveSessionCronPaneKeys.delete(paneKey)
   state.claudeSessionOwnerByPaneKey.delete(paneKey)
+  state.claudeIntrudingSessionIdByPaneKey.delete(paneKey)
   state.codexSubagentRosterByPaneKey.delete(paneKey)
   state.codexSubagentTranscriptByPaneKey.delete(paneKey)
   state.codexLeadStateByPaneKey.delete(paneKey)
@@ -110,6 +116,7 @@ export function paneHasStateClaims(state: HookListenerState, paneKey: string): b
     state.claudeRunningNonAgentTaskPaneKeys.has(paneKey) ||
     state.claudeActiveSessionCronPaneKeys.has(paneKey) ||
     state.claudeSessionOwnerByPaneKey.has(paneKey) ||
+    state.claudeIntrudingSessionIdByPaneKey.has(paneKey) ||
     state.codexSubagentRosterByPaneKey.has(paneKey) ||
     state.codexLeadStateByPaneKey.has(paneKey)
   )
@@ -163,6 +170,7 @@ export function movePaneCacheState(
   movePaneScopedSetEntries(state.claudeRunningNonAgentTaskPaneKeys, fromPaneKey, toPaneKey)
   movePaneScopedSetEntries(state.claudeActiveSessionCronPaneKeys, fromPaneKey, toPaneKey)
   movePaneScopedMapEntries(state.claudeSessionOwnerByPaneKey, fromPaneKey, toPaneKey)
+  movePaneScopedMapEntries(state.claudeIntrudingSessionIdByPaneKey, fromPaneKey, toPaneKey)
   movePaneScopedMapEntries(state.codexSubagentRosterByPaneKey, fromPaneKey, toPaneKey)
   movePaneScopedMapEntries(state.codexSubagentTranscriptByPaneKey, fromPaneKey, toPaneKey)
   movePaneScopedMapEntries(state.codexLeadStateByPaneKey, fromPaneKey, toPaneKey)
@@ -210,6 +218,7 @@ export function clearAllListenerCaches(state: HookListenerState): void {
   state.claudeRunningNonAgentTaskPaneKeys.clear()
   state.claudeActiveSessionCronPaneKeys.clear()
   state.claudeSessionOwnerByPaneKey.clear()
+  state.claudeIntrudingSessionIdByPaneKey.clear()
   state.codexSubagentRosterByPaneKey.clear()
   state.codexSubagentTranscriptByPaneKey.clear()
   state.codexLeadStateByPaneKey.clear()
