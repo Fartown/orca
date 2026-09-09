@@ -295,8 +295,7 @@ async function launchDesktopMode(
 export async function initializeMainProcessRuntimeLaunch(
   options: MainProcessRuntimeLaunchOptions
 ): Promise<void> {
-  const runtime = state.runtime
-  const shellPathHydration = state.windowsShellPathHydration
+  const { runtime, windowsShellPathHydration: shellPathHydration } = state
   if (!runtime || !shellPathHydration) {
     throw new Error('Runtime and shell-path services must be initialized before launch')
   }

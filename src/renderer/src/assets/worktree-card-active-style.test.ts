@@ -4,10 +4,11 @@ import { describe, expect, it } from 'vitest'
 const mainCss = fs.readFileSync(new URL('./main.css', import.meta.url), 'utf8')
 
 function getCssRuleBody(selector: string): string {
-  const ruleMarker = mainCss.indexOf(`\n${selector} {`)
+  const ruleMarker = mainCss.indexOf(`\n${selector}`)
   expect(ruleMarker).toBeGreaterThanOrEqual(0)
 
   const ruleStart = ruleMarker + 1
+  expect(mainCss.slice(ruleStart + selector.length).trimStart()).toMatch(/^[,{]/)
   const bodyStart = mainCss.indexOf('{', ruleStart) + 1
   const bodyEnd = mainCss.indexOf('}', bodyStart)
   return mainCss.slice(bodyStart, bodyEnd)

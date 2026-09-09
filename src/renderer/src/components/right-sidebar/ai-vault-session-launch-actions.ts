@@ -115,14 +115,9 @@ export function useAiVaultSessionLaunchActions({
       // runs re-pins them, and its result is what names the conversation the host will look for.
       void prepareAiVaultSessionForResume(session)
         .then((preparedSession) => {
-          const launch = startStructuredAgentLaunch(
-            worktreeId,
-            session.agent as 'claude' | 'codex',
-            {
-              resumeFrom: { providerSessionId: preparedSession.sessionId }
-            }
-          )
-          return launch.launchResult
+          return startStructuredAgentLaunch(worktreeId, session.agent as 'claude' | 'codex', {
+            resumeFrom: { providerSessionId: preparedSession.sessionId }
+          }).launchResult
         })
         .then(() => {
           if (useAppStore.getState().activeWorktreeId !== worktreeId) {
