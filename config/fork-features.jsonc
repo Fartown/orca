@@ -263,6 +263,22 @@
       ],
       "seams": [
         {
+          "file": "src/main/startup/main-process-runtime-launch.ts",
+          "mustContain": "afterTerminalRuntimeStartup",
+          "why": "the Issue host starts after terminal startup"
+        },
+        {
+          "file": "src/renderer/src/lib/launch-agent-in-new-tab.ts",
+          "mustContain": "launchAgentInNewTab",
+          "why": "Issue launches share the existing agent launch funnel"
+        },
+        {
+          "file": "src/renderer/src/components/right-sidebar/ai-vault-session-launch-actions.ts",
+          "mustContain": "resumeAiVaultSession",
+          "why": "Issue session continuation reuses the native AI Vault actions"
+        },
+
+        {
           "file": "src/main/runtime/rpc/methods/index.ts",
           "mustContain": "ISSUE_METHODS",
           "why": "issues.* RPC methods are registered in the shared manifest"
