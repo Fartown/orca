@@ -62,6 +62,7 @@ vi.mock('./ai-vault-session-resume', () => ({
   isKnownAiVaultResumeWorkspaceTarget: () => true
 }))
 vi.mock('@/i18n/i18n', () => ({
+  i18n: { language: 'en' },
   translate: (_key: string, fallback: string) => fallback
 }))
 vi.mock('./ai-vault-session-filters', () => ({ agentLabel: () => 'Codex' }))

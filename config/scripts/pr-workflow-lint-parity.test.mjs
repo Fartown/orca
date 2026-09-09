@@ -46,7 +46,12 @@ function resolveLeafCommands(command, scripts, seen = new Set()) {
   const leaves = []
 
   for (const part of splitCommandChain(command)) {
-    const scriptName = part.match(/^(?:pnpm|npm|yarn)(?:\s+run)?\s+([\w:-]+)$/)?.[1]
+    // PR architecture checks pin the comparison to the target revision.
+    const invocation = part.replace(
+      /^(pnpm run check:architecture-policies) -- --base (?:"[^"]+"|'[^']+'|[^\s]+)$/,
+      '$1'
+    )
+    const scriptName = invocation.match(/^(?:pnpm|npm|yarn)(?:\s+run)?\s+([\w:-]+)$/)?.[1]
     if (scriptName && scripts[scriptName] && !seen.has(scriptName)) {
       leaves.push(
         ...resolveLeafCommands(scripts[scriptName], scripts, new Set([...seen, scriptName]))
@@ -60,6 +65,23 @@ function resolveLeafCommands(command, scripts, seen = new Set()) {
 }
 
 describe('PR workflow lint parity', () => {
+  it('recognizes the target-pinned architecture check without dropping other arguments', () => {
+    const scripts = {
+      'check:architecture-policies': 'node config/scripts/check-architecture-policies.mjs'
+    }
+    const command =
+      'pnpm run check:architecture-policies -- --base "${{ github.event.pull_request.base.sha }}"'
+    expect(resolveLeafCommands(command, scripts)).toEqual([
+      'config/scripts/check-architecture-policies.mjs'
+    ])
+    expect(resolveLeafCommands(`${command} --skip`, scripts)).not.toEqual([
+      'config/scripts/check-architecture-policies.mjs'
+    ])
+    expect(resolveLeafCommands('pnpm run another-check -- --base abc', scripts)).toEqual([
+      'another-check -- --base abc'
+    ])
+  })
+
   it('runs every `pnpm lint` step on pull requests', () => {
     const { scripts } = JSON.parse(readFileSync('package.json', 'utf8'))
     const workflow = parse(readFileSync('.github/workflows/pr.yml', 'utf8'))
