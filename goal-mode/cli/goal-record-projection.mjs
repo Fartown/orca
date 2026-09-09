@@ -58,9 +58,7 @@ export function judgeCommandOf(
     wholeGoal ? '--criteria-file' : '--items-file',
     q(inputPath),
     '--timeout',
-    String(record.budget.checkTimeoutSeconds),
-    '--sandbox',
-    'read-only'
+    String(record.budget.checkTimeoutSeconds)
   ].join(' ')
 }
 

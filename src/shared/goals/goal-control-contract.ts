@@ -1,3 +1,4 @@
+import type { GoalAcceptanceDraft } from './goal-acceptance-draft-contract'
 import { z } from 'zod'
 import type { AgentStatusState } from '../agent-status-types'
 import type { PtyLivenessVerdict } from '../pty-liveness-verdict'
@@ -23,6 +24,7 @@ export const GoalSpecSchema = z.object({
   objective: z.string().min(1).max(32_000),
   criteria: z.array(GoalCriterionSchema).max(100),
   acceptanceText: z.string().max(32_000),
+  acceptanceDocument: z.string().trim().min(1).max(32_000).optional(),
   extraChecks: z.array(z.string().min(1).max(16_000)).max(20),
   // Why default 'none': records written before item-mode judging must keep parsing.
   judge: z.enum(['none', 'claude', 'codex']).default('none'),
@@ -64,6 +66,15 @@ export const GoalListFilterSchema = z.enum(['running', 'attention', 'history', '
 
 export const GoalRpcParams = {
   'goals.status': GoalExecutionHostSchema,
+  'goals.draftAcceptance': GoalExecutionHostSchema.extend({
+    draftId: z.string().uuid(),
+    binding: GoalBindingSchema,
+    objective: z.string().trim().min(1).max(32_000),
+    judge: z.enum(['claude', 'codex']),
+    acceptanceContext: z.string().max(64_000).optional()
+  }),
+  'goals.getAcceptanceDraft': GoalExecutionHostSchema.extend({ draftId: z.string().uuid() }),
+  'goals.cancelAcceptanceDraft': GoalExecutionHostSchema.extend({ draftId: z.string().uuid() }),
   'goals.list': GoalExecutionHostSchema.extend({
     worktree: z.string().min(1).max(4_096).optional(),
     filter: GoalListFilterSchema,
@@ -230,6 +241,9 @@ export type GoalStatus = {
 
 export type GoalRpcResults = {
   'goals.status': GoalStatus
+  'goals.draftAcceptance': GoalAcceptanceDraft
+  'goals.getAcceptanceDraft': GoalAcceptanceDraft | null
+  'goals.cancelAcceptanceDraft': GoalAcceptanceDraft | null
   'goals.list': { items: GoalSummary[]; observedAt: number }
   'goals.get': GoalDetail | null
   'goals.create': GoalOperation
@@ -253,3 +267,5 @@ export function goalObjectivePreview(objective: string): string {
   const collapsed = objective.replace(/\s+/g, ' ').trim()
   return collapsed.length > 200 ? `${collapsed.slice(0, 199)}…` : collapsed
 }
+
+export type GoalDraftAcceptanceParams = z.infer<(typeof GoalRpcParams)['goals.draftAcceptance']>

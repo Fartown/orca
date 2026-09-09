@@ -1,7 +1,7 @@
 ---
 title: Goal 目标模式
 slug: Goal目标模式
-status: implementing
+status: testing
 created: 2026-09-05
 updated: 2026-09-08
 external_ids: []
@@ -13,16 +13,16 @@ external_ids: []
 
 | 类型         | 文档                                                                   | 状态             | 说明                                                                |
 | ------------ | ---------------------------------------------------------------------- | ---------------- | ------------------------------------------------------------------- |
-| 需求         | [Goal 目标模式](requirements/Goal目标模式.md)                          | approved         | REQ-101～REQ-115 保留原目标；REQ-109、REQ-116～REQ-120 已按方案落地 |
+| 需求         | [Goal 目标模式](requirements/Goal目标模式.md)                          | approved         | REQ-101～REQ-115 保留原目标；REQ-109、REQ-116～REQ-121 已按方案落地 |
 | 交互         | -                                                                      | not-required     | 本轮交互示意内嵌方案；没有独立设计事实源，不另建 design 文档        |
-| 方案         | [Goal 目标管理与交互闭环方案](solutions/Goal目标管理与交互闭环方案.md) | completed        | 唯一实施主入口；WP1～WP4 已落地；未提交、未回推上游                 |
+| 方案         | [Goal 目标管理与交互闭环方案](solutions/Goal目标管理与交互闭环方案.md) | completed        | 唯一实施主入口；WP1～WP4 已落地；未回推上游                 |
 | 历史实现基线 | [Goal 目标模式技术说明](solutions/Goal目标模式技术说明.md)             | superseded       | 保留旧 CLI/插件实现事实与差距；补充宿主命令已支持带参的核对修正     |
-| 测试用例     | [功能测试](tests/cases/Goal功能测试.md)                                | reviewing        | 用例索引已按新交互更新；尚未建立正式 Test Run                       |
+| 测试用例     | [功能测试](tests/cases/Goal功能测试.md)                                | reviewing        | TC-344～TC-346 覆盖验收文档流程，执行结果见 Test Run                       |
 | 调研         | -                                                                      | not-required     | 当前源码事实已归并到技术正文，本次不重复调研                        |
 | 历史调研     | [Codex Goal 历史机制对照](research/Codex-Goal历史机制对照.md)          | superseded       | 保留冻结 Codex SHA 的完整参考，不作为当前 Orca 事实                 |
-| 测试执行     | -                                                                      | pending-decision | 本次没有执行 Goal 测试，不因规格存在创建通过记录                    |
+| 测试执行     | [验收文档闭环验证](tests/runs/2026-09-08-验收文档闭环.md) | reviewing | 自动化、真实守卫及隐藏 Electron 文档流程已验证 |
 
-当前增量处于 implementing：WP1～WP4 于 2026-09-06 全部落地并做了一轮真机面板验证；改动未提交，退役旧插件的复验等用户确认重装后进行，尚无正式 Test Run，不代表已验收。
+当前增量处于 testing：REQ-121 的验收文档闭环已实现并完成自动化、构建与真实守卫验证。隐藏 Electron 已通过 8 项基础界面检查点、中文显示、重启回读，以及守卫失败显示与原会话反馈；全分支架构门禁仍有基线问题。本轮代码位于 feat/goal-acceptance-document 功能分支，尚未合并或发布。
 
 ## 2. 决策点记录
 
@@ -63,6 +63,15 @@ external_ids: []
 - 影响范围：需求、技术说明、测试规格及本需求的执行证据。
 
 ## 3. 开发记录
+
+### 2026-09-08 验收文档生成与确认闭环
+
+- 本轮目标：落实 REQ-121，恢复以验收文档为中心的创建流程。
+- 完成内容：新建默认选守卫，生成、编辑、预览验收文档后再开始；生成不启动执行，失败保留输入，取消/过期响应不覆盖文档；文档存入定义与历史，执行和整体裁判使用同一原文。命令为高级可选项；旧目标兼容保留。
+- 代码或文档变更：生成任务宿主服务和三个 Goal RPC；复用共享 Agent 参数及解析、宿主 runProcess、Goal 存储与版本、Markdown 渲染组件；补充 REQ-121、TC-344～TC-346 和方案当前实施修订。工作分支为 feat/goal-acceptance-document。
+- 验证证据：95 项 Goal 自动化、163 项 CLI 回归、pnpm tc、应用及驱动构建、四项本地化、fork-features、fork-docs、改动范围代码质量检查通过；真实 Codex 对隔离样例生成了基于源码的验收文档且未修改实现；再将同一文档交给真实守卫，返回 FAIL、5 个真实失败输出与具体缺口（另有范围证据不足被正确标为无法核实）。隐藏 Electron 中生成、预览、修改、上下文变化、失败保留、取消和创建共 8 项检查点通过，重启文档逐字一致，中文显示通过。实际 driver/judge 的 CLI 参数包含用户最终编辑的完整文档，界面显示 FAIL 与具体缺口，原执行进程 stdin 实际收到失败反馈。验证发现并修复取消确认前误采纳迟到文档、长路径撑宽表单和英文按钮文字溢出。真实进程测试确认忽略 SIGTERM 的守卫树也在取消后退出。证据保存在 `.docs/goal-acceptance-document-ui-validation/2026-09-08/`。
+- 未解决问题：默认全分支架构门禁存在 340 项已有上游范围差异；以 HEAD 为基线检查本轮变更通过。用户已授权复用仓库 Playwright Electron fixture 并完成界面验证；UI 使用固定 CLI 测试替身，真实 Codex 证据来自独立宿主/CLI 验证。未运行用户 App，也未操作历史 Goal。
+- 下一步：本轮功能验证完成，待后续处理全分支基线门禁并合并/发布；当前 status 为 testing，不把功能通过等同于全仓库门禁或发布完成。
 
 ### 2026-09-08 整体文本裁判
 

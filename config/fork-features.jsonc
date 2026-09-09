@@ -37,6 +37,7 @@
         "src/main/startup/main-process-state.ts",
         "src/main/windows/windows-process-table.ts",
         "src/renderer/src/components/cmd-j/quick-action-context.ts",
+        "src/renderer/src/components/sidebar/CommentMarkdown.tsx",
         "src/renderer/src/components/right-sidebar/AiVaultSessionListStates.tsx",
         "src/renderer/src/i18n/i18n.ts",
         "src/renderer/src/lib/activate-tab-and-focus-pane.ts",
@@ -82,6 +83,10 @@
         "goal-mode/cli/judge-item-verdicts.mjs",
         "goal-mode/cli/judge-whole-verdict.mjs",
         "src/shared/goals/goal-judge-contract.ts",
+        "src/shared/goals/goal-acceptance-draft-contract.ts",
+        "src/main/goals/goal-acceptance-drafts.ts",
+        "src/shared/goals/goal-agent-provider.ts",
+        "src/shared/goals/goal-acceptance-prompt.ts",
         "src/main/goals/goal-evidence-projection.ts",
         "config/scripts/build-goal-driver.mjs"
       ],
@@ -167,7 +172,9 @@
         "goal-mode/cli/judge-item-verdicts.test.mjs",
         "goal-mode/cli/goal-record-projection.test.mjs",
         "src/shared/goals/goal-judge-contract.test.ts",
-        "src/renderer/src/components/goals/GoalProgress.test.tsx"
+        "src/renderer/src/components/goals/GoalProgress.test.tsx",
+        "src/main/goals/goal-acceptance-drafts.test.ts",
+        "src/renderer/src/components/goals/GoalEditor.test.tsx"
       ],
       "checks": [
         "pnpm exec vitest run --config config/vitest.config.ts src/main/goals src/shared/goals src/renderer/src/goals src/renderer/src/components/goals src/main/runtime/rpc/methods/goals.test.ts src/main/plugins/plugin-bundled-bootstrap.test.ts",

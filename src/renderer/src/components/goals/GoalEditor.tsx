@@ -1,8 +1,5 @@
 import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { Checkbox } from '@/components/ui/checkbox'
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
-import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
   Select,
@@ -20,6 +17,7 @@ import {
 } from '@/components/ui/sheet'
 import { Textarea } from '@/components/ui/textarea'
 import { translate } from '@/i18n/i18n'
+import { composeGoalAcceptanceText } from '../../../../shared/goals/goal-judge-contract'
 import type { GoalOperation } from '../../../../shared/goals/goal-control-contract'
 import { requestGoalDetailRefresh } from '@/goals/GoalDomainSyncGate'
 import { fingerprintPayload, newClientOperationId } from '@/goals/goal-client-operation'
@@ -27,7 +25,9 @@ import { goalRuntimeClient } from '@/goals/goal-runtime-client'
 import { resolveGoalBindingForPane } from '@/goals/goal-session-target'
 import { goalDomainStore } from '@/goals/goals-domain-store'
 import { useGoalDomainStore } from '@/goals/use-goals-domain-store'
-import { GoalCriteriaEditor } from './GoalCriteriaEditor'
+import { GoalAdvancedSettings } from './GoalAdvancedSettings'
+import { GoalAcceptanceDocument } from './GoalAcceptanceDocument'
+import { useAcceptanceDraft } from './use-acceptance-draft'
 import {
   EMPTY_GOAL_DRAFT,
   amendGoal,
@@ -61,6 +61,15 @@ export function GoalEditor(): React.JSX.Element {
   const [error, setError] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
   const [operationId, setOperationId] = useState<string>(() => newClientOperationId())
+  const [documentContext, setDocumentContext] = useState<string | null>(null)
+  const context = JSON.stringify([
+    draft.objective.trim(),
+    draft.judge,
+    editing?.binding.worktree ?? target.worktreeId,
+    editing?.binding.terminal ?? target.paneKey
+  ])
+  const generation = useAcceptanceDraft(editor.open, context)
+  const staleDocument = Boolean(draft.acceptanceDocument && documentContext !== context)
   const locked = Boolean(editor.prefill?.paneKey)
 
   useEffect(() => {
@@ -74,6 +83,14 @@ export function GoalEditor(): React.JSX.Element {
     const saved = editingGoalId ? goalDomainStore.getState().detailsById[editingGoalId] : undefined
     if (saved) {
       setDraft(draftFromDetail(saved))
+      setDocumentContext(
+        JSON.stringify([
+          saved.spec.objective.trim(),
+          saved.spec.judge ?? 'none',
+          saved.binding.worktree,
+          saved.binding.terminal
+        ])
+      )
     }
   }, [editingGoalId, editingRevision, editor.open, editor.prefill])
 
@@ -84,8 +101,13 @@ export function GoalEditor(): React.JSX.Element {
   const verifiable = hasCommands || draft.judge !== 'none'
   const valid =
     draft.objective.trim().length > 0 &&
+    draft.objective.length <= 32_000 &&
+    (editingGoalId !== null || Boolean(draft.acceptanceDocument.trim())) &&
+    draft.acceptanceDocument.length <= 32_000 &&
+    (!draft.acceptanceDocument || draft.judge !== 'none') &&
+    !staleDocument &&
+    !generation.generating &&
     (editingGoalId !== null || Boolean(target.worktreeId && target.paneKey)) &&
-    (verifiable || draft.acknowledgeUnverified) &&
     isNonNegativeNumber(draft.maxTurns) &&
     isNonNegativeNumber(draft.maxMinutes) &&
     isPositiveNumber(draft.checkTimeoutSeconds)
@@ -116,6 +138,7 @@ export function GoalEditor(): React.JSX.Element {
         binding: resolved.binding,
         spec: specFromDraft(draft),
         budget: budgetFromDraft(draft),
+        // Why: the host never gates on this; it records that the unverified notice was shown.
         acknowledgeUnverifiedCompletion: !verifiable
       }
       // Why: the same id retries into the same receipt; a fresh one is minted only after the host answers.
@@ -155,7 +178,10 @@ export function GoalEditor(): React.JSX.Element {
   return (
     <Sheet open={editor.open} onOpenChange={(open) => (open ? undefined : close())}>
       <SheetContent side="right" className="flex flex-col gap-0 p-0 sm:max-w-[640px]">
-        <form className="flex min-h-0 flex-1 flex-col" onSubmit={(event) => void submit(event)}>
+        <form
+          className="flex min-h-0 min-w-0 flex-1 flex-col"
+          onSubmit={(event) => void submit(event)}
+        >
           <SheetHeader className="border-b border-border px-4 py-3">
             <SheetTitle>
               {editing
@@ -170,11 +196,14 @@ export function GoalEditor(): React.JSX.Element {
                   )
                 : translate(
                     'goals.editor.description',
-                    'The driver keeps injecting into the chosen session until the acceptance passes or the budget runs out.'
+                    'Write your goal, generate and review its acceptance document, then start. The guard checks the result against this document.'
                   )}
             </SheetDescription>
           </SheetHeader>
-          <div className="scrollbar-sleek min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-3">
+          <fieldset
+            disabled={pending}
+            className="scrollbar-sleek min-h-0 min-w-0 flex-1 space-y-4 overflow-y-auto px-4 py-3"
+          >
             <div className="space-y-1">
               <Label htmlFor="goal-objective">{translate('goals.editor.objective', 'Goal')}</Label>
               <Textarea
@@ -189,148 +218,116 @@ export function GoalEditor(): React.JSX.Element {
                 )}
               />
             </div>
-            <GoalCriteriaEditor
-              criteria={draft.criteria}
-              onChange={(criteria) => update('criteria', criteria)}
-            />
-            <div className="space-y-1">
-              <Label htmlFor="goal-acceptance-text">
-                {translate('goals.editor.acceptanceText', 'Acceptance notes')}
-              </Label>
-              <Textarea
-                id="goal-acceptance-text"
-                rows={2}
-                value={draft.acceptanceText}
-                onChange={(event) => update('acceptanceText', event.target.value)}
-              />
-            </div>
             {editing ? null : (
               <GoalTargetPicker value={target} locked={locked} onChange={setTarget} />
             )}
-            <Collapsible>
-              <CollapsibleTrigger asChild>
-                <Button type="button" variant="ghost" size="xs">
-                  {translate('goals.editor.advanced', 'Advanced settings')}
-                </Button>
-              </CollapsibleTrigger>
-              <CollapsibleContent className="mt-2 space-y-3">
-                <div className="grid grid-cols-3 gap-2">
-                  <NumberField
-                    id="goal-max-turns"
-                    label={translate('goals.editor.maxTurns', 'Max turns')}
-                    value={draft.maxTurns}
-                    onChange={(value) => update('maxTurns', value)}
-                  />
-                  <NumberField
-                    id="goal-max-minutes"
-                    label={translate('goals.editor.maxMinutes', 'Max minutes')}
-                    value={draft.maxMinutes}
-                    onChange={(value) => update('maxMinutes', value)}
-                  />
-                  <NumberField
-                    id="goal-check-timeout"
-                    label={translate('goals.editor.checkTimeout', 'Check timeout (s)')}
-                    value={draft.checkTimeoutSeconds}
-                    onChange={(value) => update('checkTimeoutSeconds', value)}
-                  />
-                </div>
-                <p className="text-[11px] text-muted-foreground">
-                  {translate(
-                    'goals.editor.zeroMeansUnlimited',
-                    '0 turns or minutes means unlimited.'
-                  )}
-                </p>
-                <div className="space-y-1">
-                  <Label htmlFor="goal-extra-checks">
-                    {translate('goals.editor.extraChecks', 'Extra check commands (one per line)')}
-                  </Label>
-                  <Textarea
-                    id="goal-extra-checks"
-                    rows={2}
-                    className="font-mono"
-                    value={draft.extraChecks}
-                    onChange={(event) => update('extraChecks', event.target.value)}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    {translate(
-                      'goals.editor.extraChecksHint',
-                      'Run by the driver in the workspace with a shell. Shown here before submission; nothing is hidden.'
-                    )}
-                  </p>
-                </div>
-                <label className="flex items-center gap-2 text-xs">
-                  <Checkbox
-                    checked={draft.checkAll}
-                    onCheckedChange={(checked) => update('checkAll', checked === true)}
-                  />
-                  {translate(
-                    'goals.editor.checkAll',
-                    'Run all checks even after the first failure'
-                  )}
-                </label>
-                <label className="flex items-center gap-2 text-xs">
-                  <Checkbox
-                    checked={draft.onBlocked === 'verify'}
-                    onCheckedChange={(checked) =>
-                      update('onBlocked', checked === true ? 'verify' : 'ask')
+            <div className="space-y-1">
+              <Label htmlFor="goal-judge">{translate('goals.editor.guard', 'Guard')}</Label>
+              <Select
+                value={draft.judge}
+                onValueChange={(value) => update('judge', value as GoalDraft['judge'])}
+              >
+                <SelectTrigger id="goal-judge">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {editing && !draft.acceptanceDocument ? (
+                    <SelectItem value="none">
+                      {translate('goals.editor.judgeNone', 'None: only commands verify this goal')}
+                    </SelectItem>
+                  ) : null}
+                  <SelectItem value="codex">{JUDGE_CLI_LABELS.codex}</SelectItem>
+                  <SelectItem value="claude">{JUDGE_CLI_LABELS.claude}</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                {translate(
+                  'goals.editor.guardHint',
+                  'The guard reads the workspace and referenced materials to draft the document, then independently checks the work during execution. Its CLI must be installed and signed in.'
+                )}
+              </p>
+            </div>
+            <GoalAcceptanceDocument
+              value={draft.acceptanceDocument}
+              onChange={(value) => {
+                update('acceptanceDocument', value)
+                if (!draft.acceptanceDocument) {
+                  setDocumentContext(context)
+                }
+              }}
+              generating={generation.generating}
+              canGenerate={Boolean(
+                draft.objective.trim() &&
+                draft.judge !== 'none' &&
+                (editing || (target.worktreeId && target.paneKey))
+              )}
+              stale={staleDocument}
+              onReview={() => setDocumentContext(context)}
+              onCancel={() => void generation.cancel()}
+              onGenerate={() => {
+                if (draft.judge === 'none') {
+                  return
+                }
+                void generation.generate({
+                  objective: draft.objective.trim(),
+                  acceptanceContext: composeGoalAcceptanceText({
+                    ...specFromDraft(draft),
+                    objective: '',
+                    acceptanceDocument: undefined,
+                    acceptanceText: draft.acceptanceDocument || draft.acceptanceText
+                  }),
+                  judge: draft.judge,
+                  resolveBinding: async () => {
+                    if (editing) {
+                      return editing.binding
                     }
-                  />
-                  {translate(
-                    'goals.editor.verifyWhenBlocked',
-                    'When the agent says it is blocked, run the checks before asking me'
-                  )}
-                </label>
-                <div className="space-y-1">
-                  <Label htmlFor="goal-judge">
-                    {translate('goals.editor.judge', 'Independent judge')}
-                  </Label>
-                  <Select
-                    value={draft.judge}
-                    onValueChange={(value) => update('judge', value as GoalDraft['judge'])}
-                  >
-                    <SelectTrigger id="goal-judge">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">
-                        {translate(
-                          'goals.editor.judgeNone',
-                          'None: only commands verify this goal'
-                        )}
-                      </SelectItem>
-                      <SelectItem value="claude">{JUDGE_CLI_LABELS.claude}</SelectItem>
-                      <SelectItem value="codex">{JUDGE_CLI_LABELS.codex}</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-muted-foreground">
-                    {translate(
-                      'goals.editor.judgeHint',
-                      'Picking a judge always adds an independent check. Criteria without a command are judged one by one; with none of those, the judge rules on the goal text and acceptance notes as a whole and reports only a whole-goal pass or fail plus its verdict, never per-criterion results. That CLI must be installed on this machine. Missing or unparsable verdicts count as inconclusive, never as passed.'
-                    )}
-                  </p>
-                </div>
-              </CollapsibleContent>
-            </Collapsible>
-            {!verifiable ? (
-              <label className="flex items-start gap-2 text-xs">
-                <Checkbox
-                  checked={draft.acknowledgeUnverified}
-                  onCheckedChange={(checked) => update('acknowledgeUnverified', checked === true)}
+                    const resolved = await resolveGoalBindingForPane(
+                      target.worktreeId!,
+                      target.paneKey!
+                    )
+                    if (!resolved.ok) {
+                      throw new Error(bindingFailureMessage(resolved.reason))
+                    }
+                    return resolved.binding
+                  },
+                  onDocument: (document) => {
+                    update('acceptanceDocument', document)
+                    setDocumentContext(context)
+                  }
+                })
+              }}
+            />
+            {editing && !draft.acceptanceDocument ? (
+              <div className="space-y-1">
+                <Label htmlFor="goal-acceptance-text">
+                  {translate('goals.editor.acceptanceText', 'Acceptance notes')}
+                </Label>
+                <Textarea
+                  id="goal-acceptance-text"
+                  value={draft.acceptanceText}
+                  onChange={(event) => update('acceptanceText', event.target.value)}
                 />
-                <span>
-                  {translate(
-                    'goals.editor.acknowledgeUnverified',
-                    'Nothing verifies this goal: completion is whatever the working session claims. To verify it, give a criterion a command, or pick a judge under Advanced settings.'
-                  )}
-                </span>
-              </label>
+              </div>
             ) : null}
-            {error ? (
-              <p className="text-xs text-destructive" role="alert">
-                {error}
+            <GoalAdvancedSettings
+              draft={draft}
+              update={update}
+              showCriteria={Boolean(editing && !draft.acceptanceDocument)}
+            />
+            {!verifiable ? (
+              <p className="text-xs text-muted-foreground" role="note">
+                {translate(
+                  'goals.editor.unverifiedNotice',
+                  'No check command and no judge: the goal completes when the agent says so, and the panel marks it as not independently verified.'
+                )}
               </p>
             ) : null}
-          </div>
+            {error || generation.error ? (
+              <p className="text-xs text-destructive" role="alert">
+                {error || generation.error}
+              </p>
+            ) : null}
+          </fieldset>
           <div className="flex shrink-0 items-center justify-end gap-2 border-t border-border px-4 py-3">
             <Button type="button" variant="ghost" onClick={close}>
               {translate('goals.editor.cancel', 'Cancel')}
@@ -349,39 +346,15 @@ export function GoalEditor(): React.JSX.Element {
                 </Button>
               </>
             ) : (
-              <Button type="submit" disabled={!valid || pending} className="w-36">
+              <Button type="submit" disabled={!valid || pending}>
                 {pending
                   ? translate('goals.editor.starting', 'Starting…')
-                  : translate('goals.editor.createAndStart', 'Create and start')}
+                  : translate('goals.editor.reviewAndStart', 'Start with this document')}
               </Button>
             )}
           </div>
         </form>
       </SheetContent>
     </Sheet>
-  )
-}
-
-function NumberField({
-  id,
-  label,
-  value,
-  onChange
-}: {
-  id: string
-  label: string
-  value: string
-  onChange: (value: string) => void
-}): React.JSX.Element {
-  return (
-    <div className="space-y-1">
-      <Label htmlFor={id}>{label}</Label>
-      <Input
-        id={id}
-        inputMode="numeric"
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-      />
-    </div>
   )
 }

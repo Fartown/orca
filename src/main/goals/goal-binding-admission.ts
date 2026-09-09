@@ -31,6 +31,12 @@ export class GoalBindingAdmission {
         message: `The bound terminal is unavailable: ${errorMessage(error)}`
       }
     }
+    if (show.executionHostId && show.executionHostId !== 'local') {
+      return {
+        code: 'unsupported',
+        message: 'Goals are only supported on the local execution host.'
+      }
+    }
     if (show.incarnationId && show.incarnationId !== binding.expectedIncarnationId) {
       return {
         code: 'target_changed',

@@ -53,24 +53,31 @@ export function GoalTargetPicker({
     : undefined
 
   return (
-    <div className="grid gap-3">
-      <div className="space-y-1">
+    <div className="grid min-w-0 gap-3">
+      <div className="min-w-0 space-y-1">
         <Label htmlFor="goal-workspace">{translate('goals.editor.workspace', 'Workspace')}</Label>
         <Select
           value={value.worktreeId ?? ''}
           disabled={locked || lockWorkspace}
           onValueChange={(worktreeId) => onChange({ worktreeId, paneKey: null })}
         >
-          <SelectTrigger id="goal-workspace" className="w-full">
+          <SelectTrigger id="goal-workspace" className="w-full min-w-0">
             <SelectValue
+              className="min-w-0 flex-1"
               placeholder={translate('goals.editor.pickWorkspace', 'Pick a workspace')}
             />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent
+            position="popper"
+            align="start"
+            className="w-(--radix-select-trigger-width) max-w-(--radix-select-content-available-width)"
+          >
             {localWorktrees.map((worktree) => (
-              <SelectItem key={worktree.id} value={worktree.id}>
-                {worktree.displayName || basename(worktree.path)}
-                <span className="ml-1 text-muted-foreground">{worktree.path}</span>
+              <SelectItem key={worktree.id} value={worktree.id} className="*:min-w-0">
+                <span className="min-w-0 truncate" title={worktree.path}>
+                  {worktree.displayName || basename(worktree.path)}
+                  <span className="ml-1 text-muted-foreground">{worktree.path}</span>
+                </span>
               </SelectItem>
             ))}
           </SelectContent>
@@ -79,22 +86,27 @@ export function GoalTargetPicker({
           {translate('goals.editor.executionLocal', 'Runs on this machine.')}
         </p>
       </div>
-      <div className="space-y-1">
+      <div className="min-w-0 space-y-1">
         <Label htmlFor="goal-session">{translate('goals.editor.session', 'Agent session')}</Label>
         <Select
           value={value.paneKey ?? ''}
           disabled={locked || !value.worktreeId}
           onValueChange={(paneKey) => onChange({ worktreeId: value.worktreeId, paneKey })}
         >
-          <SelectTrigger id="goal-session" className="w-full">
+          <SelectTrigger id="goal-session" className="w-full min-w-0">
             <SelectValue
+              className="min-w-0 flex-1"
               placeholder={translate('goals.editor.pickSession', 'Pick a running agent session')}
             />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent
+            position="popper"
+            align="start"
+            className="w-(--radix-select-trigger-width) max-w-(--radix-select-content-available-width)"
+          >
             {(lockedCandidate ? [lockedCandidate] : candidates).map((candidate) => (
-              <SelectItem key={candidate.paneKey} value={candidate.paneKey}>
-                {candidateLabel(candidate)}
+              <SelectItem key={candidate.paneKey} value={candidate.paneKey} className="*:min-w-0">
+                <span className="min-w-0 truncate">{candidateLabel(candidate)}</span>
               </SelectItem>
             ))}
           </SelectContent>

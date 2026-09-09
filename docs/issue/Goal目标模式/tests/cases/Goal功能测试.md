@@ -481,3 +481,35 @@ REQ-112 原提案规定的验证次序仍保留：先增加“连续不变仍继
 安全的自动化入口是 CLI 目录内 `node --test --experimental-test-module-mocks *.test.mjs`，以及仓根 `pnpm test src/main/goals src/shared/goals src/renderer/src/goals`（插件目录已于 2026-09-06 移除）。使用项目 Node 版本；测试以临时目录、假终端和假裁判为主，不能将用户真实 `~/.orca-goal` 状态作为测试 fixture。
 
 每次 Test Run 记录代码版本、Node/平台、命令、实际覆盖的 TC、结果和证据路径。真实 Orca UI 验收遵守项目 Electron/CDP 流程；真实 agent 长跑、权限框、预算超时、应用重启、三平台和 SSH 的证据各自独立，不由 DOM 单测推导。
+
+## 验收文档创建闭环（2026-09-08）
+
+### TC-344
+
+关联需求：REQ-121；优先级：P0。
+
+前置条件与操作：打开新建目标，填写目标并选定已有会话，选择 Codex/Claude 守卫，生成文档，修改文档后开始执行。
+
+预期与核对证据：未生成或粘贴文档前不能开始；生成阶段没有创建 Goal、启动驱动或向执行会话注入；修改后的文档原文写入 spec、版本记录及 judge-criteria.md，执行提示与守卫读取同一份原文。检查命令仅作为高级可选项。
+
+覆盖来源：GoalEditor.test.tsx、goal-acceptance-drafts.test.ts、goal-control-service.test.ts、goal-judge-contract.test.ts；真实守卫生成探针。
+
+### TC-345
+
+关联需求：REQ-121；优先级：P0。
+
+前置条件与操作：生成超时、未登录、输出为空或超长；生成中取消、关闭编辑器或修改目标；修改目标/工作区/守卫后尝试开始。
+
+预期与核对证据：失败保留输入；取消后迟到结果不应用；过期文档需重新核对才能开始；生成期间不能开始；来源无法访问时文档明确列出待确认事项，守卫不得编造证据。
+
+覆盖来源：GoalEditor.test.tsx、goal-acceptance-drafts.test.ts；真实 App 交互验证待执行。
+
+### TC-346
+
+关联需求：REQ-117、REQ-121；优先级：P0。
+
+前置条件与操作：在普通文件夹生成文档，尝试使用已重启或远程会话；读取旧版本无 acceptanceDocument 的 Goal。
+
+预期与核对证据：宿主按终端事实解析实际工作目录；过期绑定拒绝；SSH/WSL 仍按当前能力边界拒绝，不在本机代跑；旧记录按原有正文或逐项验收机制读取。默认守卫权限沿用 Agent 配置，不强制只读沙箱。
+
+覆盖来源：goal-acceptance-drafts.test.ts、goal-control-service.test.ts、goal-record-projection.test.mjs、既有 CLI 回归。

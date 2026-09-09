@@ -1,3 +1,4 @@
+import { GoalAcceptanceDrafts } from './goal-acceptance-drafts'
 import { randomUUID } from 'node:crypto'
 import type {
   GoalAdoptLegacyParams,
@@ -42,12 +43,9 @@ export type GoalControlServiceDependencies = {
   newId?: () => string
 }
 
-/**
- * Short host-side operations only: validate the target, record a durable
- * receipt, coordinate the detached driver, and read results back. The loop
- * itself runs in the driver; the host never injects into a terminal.
- */
+/** Coordinates receipts and the detached driver; the host never injects into a terminal. */
 export class GoalControlService {
+  readonly drafts: GoalAcceptanceDrafts
   private readonly store: GoalStore
   private readonly hooks: GoalHookFacts
   private readonly terminals: GoalTerminalFacts
@@ -70,6 +68,11 @@ export class GoalControlService {
       store: this.store,
       terminals: this.terminals,
       inspectDriver: dependencies.inspectDriver ?? inspectGoalDriver
+    })
+    this.drafts = new GoalAcceptanceDrafts({
+      goalHome: this.store.goalHome,
+      entryPath: dependencies.launcher.entryPath,
+      admission: this.admission
     })
     this.receipts = new GoalOperationReceipts({
       store: this.store,
