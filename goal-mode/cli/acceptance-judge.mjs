@@ -214,7 +214,7 @@ async function main(argv) {
       ? await fs.readFile(process.env.ORCA_GOAL_GATE_CHANGES, 'utf8').catch(() => '')
       : ''
     const prompt = wholeGoal
-      ? TEMPLATE(criteria.trim(), gateChanges.trim())
+      ? TEMPLATE(criteria, gateChanges.trim())
       : ITEM_TEMPLATE(itemsPromptSection(items, itemSpec.notes), gateChanges.trim())
     const result = await runAgent(agentName, agent.args(prompt, { outFile, cwd, sandbox }), {
       cwd,

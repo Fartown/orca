@@ -70,7 +70,7 @@ describe('Goal acceptance document workflow', () => {
     typeGoal()
     await generate()
     expect(goalRuntimeClient.create).not.toHaveBeenCalled()
-    const edited = `${DOC}\n\n增加键盘验收。`
+    const edited = `    保留 Markdown 缩进。\n\n${DOC}\n\n增加键盘验收。\n`
     fireEvent.change(screen.getByLabelText('Acceptance document'), { target: { value: edited } })
     fireEvent.click(startButton())
     await waitFor(() =>

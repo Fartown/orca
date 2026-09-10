@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { composeGoalAcceptanceText, judgeRunsWholeGoal } from './goal-judge-contract'
+import { GoalSpecSchema } from './goal-control-contract'
 
 const criterion = (id: string, command?: string) => ({
   id,
@@ -63,9 +64,18 @@ it('uses the reviewed document verbatim for execution and whole-goal judging', (
     objective: '旧目标',
     criteria: [criterion('legacy')],
     acceptanceText: '旧说明',
-    acceptanceDocument: '# 审阅稿\n\n具体标准',
+    acceptanceDocument: '    保留 Markdown 缩进。\n\n# 审阅稿\n\n具体标准\n',
     judge: 'codex' as const
   }
   expect(composeGoalAcceptanceText(spec)).toBe(spec.acceptanceDocument)
   expect(judgeRunsWholeGoal(spec)).toBe(true)
+})
+
+it('validates document content without normalizing its Markdown whitespace', () => {
+  const schema = GoalSpecSchema.shape.acceptanceDocument
+  const document = '    这是一段缩进代码。\n\n# 验收文档\n'
+  expect(schema.parse(document)).toBe(document)
+  expect(schema.safeParse(' \t\r\n').success).toBe(false)
+  expect(schema.safeParse('x'.repeat(32_001)).success).toBe(false)
+  expect(schema.parse(undefined)).toBeUndefined()
 })
