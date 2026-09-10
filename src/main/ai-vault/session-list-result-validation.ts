@@ -7,6 +7,7 @@ import {
   type AiVaultSession
 } from '../../shared/ai-vault-types'
 import { normalizeExecutionHostId } from '../../shared/execution-host'
+import { parseProviderNameEvidence } from '../../shared/session-names/session-name-contract'
 
 const aiVaultAgentSet = new Set<string>(AI_VAULT_AGENTS)
 
@@ -50,6 +51,11 @@ const aiVaultSessionSchema = z.object({
   agent: z.string().min(1),
   sessionId: z.string(),
   title: z.string(),
+  providerName: z
+    .unknown()
+    .transform((value) => parseProviderNameEvidence(value) ?? { kind: 'unavailable' as const })
+    .optional(),
+  generatedTitle: z.string().max(512).nullable().optional(),
   cwd: z.string().nullable(),
   branch: z.string().nullable(),
   model: z.string().nullable(),

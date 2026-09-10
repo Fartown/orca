@@ -1,6 +1,12 @@
 import type { AiVaultSession } from '../../shared/ai-vault-types'
 import type { SessionFileCandidate } from './session-scanner-types'
-import { readCodexSessionIndexTitle } from './session-scanner-codex-title-index'
+import { readCodexSessionIndexName } from './session-scanner-codex-title-index'
+import {
+  providerNameEvidenceEqual,
+  readProviderNameEvidence,
+  retainConfirmedProviderName,
+  type ProviderNameReader
+} from '../../shared/session-names/session-name-contract'
 
 /**
  * Codex names a thread in <CODEX_HOME>/session_index.jsonl asynchronously,
@@ -14,10 +20,25 @@ import { readCodexSessionIndexTitle } from './session-scanner-codex-title-index'
  */
 export async function refreshCodexTitleFromIndex(
   session: AiVaultSession,
-  readIndexedTitle: (sessionId: string) => Promise<string | null>
+  readIndexedTitle: ProviderNameReader
 ): Promise<AiVaultSession> {
-  const title = await readIndexedTitle(session.sessionId)
-  return title && title !== session.title ? { ...session, title } : session
+  const evidence = await readProviderNameEvidence(
+    readIndexedTitle,
+    session.sessionId,
+    'session_index.thread_name'
+  )
+  const providerName = retainConfirmedProviderName(session.providerName, evidence)
+  if (
+    providerNameEvidenceEqual(session.providerName, providerName) &&
+    (evidence.kind !== 'named' || evidence.title === session.title)
+  ) {
+    return session
+  }
+  return {
+    ...session,
+    ...(evidence.kind === 'named' ? { title: evidence.title } : {}),
+    providerName
+  }
 }
 
 export function refreshCachedCodexTitle(
@@ -25,6 +46,6 @@ export function refreshCachedCodexTitle(
   session: AiVaultSession
 ): Promise<AiVaultSession> {
   return refreshCodexTitleFromIndex(session, (sessionId) =>
-    readCodexSessionIndexTitle(candidate.file.path, candidate.codexHome, sessionId)
+    readCodexSessionIndexName(candidate.file.path, candidate.codexHome, sessionId)
   )
 }

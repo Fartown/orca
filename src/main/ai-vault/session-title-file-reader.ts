@@ -58,7 +58,9 @@ async function readOneTitle(
     const title = {
       agent: request.agent,
       sessionId: request.sessionId,
-      title: session.title.trim()
+      title: session.title.trim(),
+      ...(session.providerName ? { providerName: session.providerName } : {}),
+      ...(session.generatedTitle !== undefined ? { generatedTitle: session.generatedTitle } : {})
     }
     cache?.set(title)
     return title
@@ -86,5 +88,15 @@ export async function readAiVaultSessionTitlesFromFiles(
   await Promise.all(
     Array.from({ length: Math.min(TITLE_PARSE_CONCURRENCY, bounded.length) }, parseNext)
   )
-  return { titles: resolved.filter((title): title is AiVaultSessionTitle => title !== null) }
+  return {
+    titles: resolved.filter((title): title is AiVaultSessionTitle => title !== null),
+    nameEvidence: bounded.map((request, index) => ({
+      agent: request.agent,
+      sessionId: request.sessionId,
+      providerName: resolved[index]?.providerName ?? { kind: 'unavailable' },
+      ...(resolved[index]?.generatedTitle !== undefined
+        ? { generatedTitle: resolved[index]!.generatedTitle }
+        : {})
+    }))
+  }
 }

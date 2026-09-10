@@ -217,7 +217,7 @@ export default function AiVaultPanel(): React.JSX.Element {
     }
   }, [activeProjectKey, activeWorktreePath, scope])
 
-  const { canonicalTitleBySessionKey, getCanonicalTitle } = useCanonicalSessionTitles()
+  const { canonicalTitleBySessionKey, getCanonicalTitle } = useCanonicalSessionTitles(sessions)
 
   const filteredSessions = useMemo(
     () =>

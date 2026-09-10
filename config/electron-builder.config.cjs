@@ -175,6 +175,8 @@ module.exports = {
     '!src{,/**/*}',
     '!config{,/**/*}',
     '!docs{,/**/*}',
+    // Why: local validation evidence can include provider records and entire app bundles.
+    '!.docs{,/**/*}',
     '!mobile{,/**/*}',
     '!native{,/**/*}',
     '!skills{,/**/*}',

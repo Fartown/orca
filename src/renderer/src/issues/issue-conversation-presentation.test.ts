@@ -20,7 +20,7 @@ describe('Issue Conversation presentation', () => {
     expect(issueConversationDisplayName(item, titles, null, 'runtime:paired')).toBe('Paired title')
   })
 
-  it('prefers a user title, then current Provider history, then its snapshot and live title', () => {
+  it('prefers current Provider history and its snapshot before a manual fallback and live title', () => {
     const item = conversation()
     const titles = new Map([[conversationSessionTitleKey(item)!, 'History title']])
 
@@ -33,6 +33,9 @@ describe('Issue Conversation presentation', () => {
       )
     ).toBe('Provider snapshot')
     expect(issueConversationDisplayName({ ...item, title: 'Named' }, titles, 'Live title')).toBe(
+      'History title'
+    )
+    expect(issueConversationDisplayName({ ...item, title: 'Named' }, new Map(), 'Live title')).toBe(
       'Named'
     )
   })

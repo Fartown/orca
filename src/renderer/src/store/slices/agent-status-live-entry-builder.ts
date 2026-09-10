@@ -1,9 +1,12 @@
 import type { AppState } from '../types'
 import {
-  AGENT_STATE_HISTORY_MAX,
+  appendSessionNameHistory,
+  isSessionNameIdentityReplacement,
+  sessionNameStateStartedAt
+} from '../../../../shared/session-names/session-name-history'
+import {
   agentSubagentsEqual,
   type MigrationUnsupportedPtyEntry,
-  type AgentStateHistoryEntry,
   type AgentStatusEntry
 } from '../../../../shared/agent-status-types'
 import {
@@ -77,8 +80,12 @@ export function buildAgentStatusLiveEntry(
   if (existing && updatedAt < existing.updatedAt && !timing?.allowOlderTimestamp) {
     return { entry: null, reason: 'stale' }
   }
-  const effectiveTitle = terminalTitle ?? existing?.terminalTitle
-  let history: AgentStateHistoryEntry[] = existing?.stateHistory ?? []
+  const sessionNameIdentityChanged = isSessionNameIdentityReplacement(
+    existing,
+    payload.agentType,
+    metadata?.providerSession
+  )
+  let history = existing?.stateHistory ?? []
   let lastCompletedAssistantMessage = existing?.lastCompletedAssistantMessage
   const boundaryLandsOnRealDone =
     existing?.state === 'done' &&
@@ -87,21 +94,10 @@ export function buildAgentStatusLiveEntry(
     payload.sessionBoundary === true
   if (
     existing &&
-    (existing.state !== payload.state || boundaryLandsOnRealDone) &&
+    (existing.state !== payload.state || boundaryLandsOnRealDone || sessionNameIdentityChanged) &&
     !(existing.state === 'done' && existing.sessionBoundary === true)
   ) {
-    history = [
-      ...history,
-      {
-        state: existing.state,
-        prompt: existing.prompt,
-        startedAt: existing.stateStartedAt,
-        interrupted: existing.interrupted
-      }
-    ]
-    if (history.length > AGENT_STATE_HISTORY_MAX) {
-      history = history.slice(history.length - AGENT_STATE_HISTORY_MAX)
-    }
+    history = appendSessionNameHistory(existing)
     if (existing.state === 'done') {
       lastCompletedAssistantMessage = existing.lastAssistantMessage
     }
@@ -133,8 +129,15 @@ export function buildAgentStatusLiveEntry(
     payload.promptInteractionKey ??
     (payload.prompt === existing?.prompt ? existing?.promptInteractionKey : undefined)
   const stateStartedAt =
-    timing?.stateStartedAt ??
-    (commandCodeNewTurn
+    sessionNameStateStartedAt(
+      existing,
+      payload.agentType,
+      metadata?.providerSession,
+      payload.state,
+      timing?.stateStartedAt,
+      updatedAt
+    ) ??
+    (commandCodeNewTurn || sessionNameIdentityChanged
       ? updatedAt
       : existing && existing.state === payload.state
         ? existing.stateStartedAt
@@ -247,7 +250,8 @@ export function buildAgentStatusLiveEntry(
           ? { connectionId: state.sleepingAgentSessionsByPaneKey[paneKey].connectionId }
           : {}),
     tabId: statusTabId,
-    terminalTitle: effectiveTitle,
+    terminalTitle:
+      terminalTitle ?? (sessionNameIdentityChanged ? undefined : existing?.terminalTitle),
     stateHistory: history,
     toolName: payload.toolName,
     toolInput: payload.toolInput,

@@ -1,4 +1,5 @@
 import type { TuiAgent } from './tui-agent'
+import type { ProviderNameEvidence } from './session-names/session-name-contract'
 import type { ExecutionHostId, ExecutionHostScope } from './execution-host'
 
 export const AI_VAULT_AGENTS = [
@@ -89,6 +90,9 @@ export type AiVaultSession = {
   agent: AiVaultAgent
   sessionId: string
   title: string
+  /** Optional for mixed-version hosts; title above retains its legacy meaning. */
+  providerName?: ProviderNameEvidence
+  generatedTitle?: string | null
   cwd: string | null
   branch: string | null
   model: string | null

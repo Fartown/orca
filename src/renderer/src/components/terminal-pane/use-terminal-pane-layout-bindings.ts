@@ -5,6 +5,7 @@ import { resolveTerminalLayoutActiveLeafId } from './terminal-layout-leaf-ids'
 import { shouldIgnoreStalePanePtyLayoutBinding } from './pty-connection/pane-pty-layout-binding'
 import { useExpandCollapseActions } from './expand-collapse'
 import type { TerminalPaneLayoutController } from './use-terminal-pane-layout-persistence'
+import { resolveBoundPaneSelection } from '../../session-names/session-name-bound-pane-selection'
 
 export function useTerminalPaneLayoutBindings(controller: TerminalPaneLayoutController) {
   const {
@@ -53,6 +54,12 @@ export function useTerminalPaneLayoutBindings(controller: TerminalPaneLayoutCont
       if (ptyId) {
         setTabLayout(tabId, {
           ...layoutWithoutPtyBindings,
+          activeLeafId: resolveBoundPaneSelection({
+            activeLeafId: existingLayout.activeLeafId,
+            boundLeafId: leafId,
+            sourcePaneId,
+            selectedPane: managerRef.current?.getActivePane()
+          }),
           ptyIdsByLeafId: { ...existingBindings, [leafId]: ptyId }
         })
         return

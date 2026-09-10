@@ -1,4 +1,8 @@
-import { useCallback } from 'react'
+import { useCallback, useEffect } from 'react'
+import { isAiVaultTitleAgent } from '../../../../shared/ai-vault-session-title'
+import { sessionNameStore } from '@/session-names/session-name-store'
+import { useSessionNameIndex } from '@/session-names/session-name-subscriptions'
+import { getScannedSessionDisplayName } from '@/session-names/session-name-display'
 import type React from 'react'
 import { ContextMenu, ContextMenuContent, ContextMenuTrigger } from '@/components/ui/context-menu'
 import { cn } from '@/lib/utils'
@@ -54,8 +58,7 @@ export function VaultSessionRow({
   onRequestDelete
 }: {
   session: AiVaultSession
-  // The Orca-side conversation name for this identity; shown as the primary
-  // title when present, with the scanner title as secondary while they differ.
+  // Compatibility projection; qualified native evidence still takes precedence.
   canonicalTitle?: string | null
   liveState: AgentStatusState | null
   resumeStartup: AiVaultResumeStartup
@@ -83,6 +86,20 @@ export function VaultSessionRow({
   onOpenCwd?: () => void
   onRequestDelete: (session: AiVaultSession) => void
 }) {
+  useEffect(() => sessionNameStore.seed([session]), [session])
+  useSessionNameIndex(
+    isAiVaultTitleAgent(session.agent)
+      ? [
+          {
+            executionHostId: session.executionHostId,
+            agent: session.agent,
+            sessionId: session.sessionId,
+            transcriptPath: session.filePath
+          }
+        ]
+      : []
+  )
+  const displayTitle = getScannedSessionDisplayName(session, canonicalTitle)
   const updatedAt = session.updatedAt ?? session.modifiedAt
   const detailsId = getSessionDetailsId(session.id)
   const latestTurn = latestSessionConversationTurn(session)
@@ -103,7 +120,7 @@ export function VaultSessionRow({
         agent: session.agent,
         sessionId: session.sessionId,
         ...(session.structuredSession ? { structuredSession: session.structuredSession } : {}),
-        title: session.title,
+        title: displayTitle,
         command: resumeStartup.command,
         sessionFilePath: session.filePath,
         sessionExecutionHostId: session.executionHostId,
@@ -118,7 +135,7 @@ export function VaultSessionRow({
       })
       window.dispatchEvent(new Event(AI_VAULT_SESSION_DRAG_START_EVENT))
     },
-    [realHomeResumeStartup, resumeDisabled, session, resumeStartup]
+    [realHomeResumeStartup, resumeDisabled, session, resumeStartup, displayTitle]
   )
 
   return (
@@ -163,12 +180,7 @@ export function VaultSessionRow({
                 window.dispatchEvent(new Event(AI_VAULT_SESSION_DRAG_END_EVENT))
               }}
             >
-              {canonicalTitle ?? session.title}
-              {canonicalTitle && canonicalTitle !== session.title ? (
-                <span className="ml-1.5 text-xs font-normal text-muted-foreground">
-                  {session.title}
-                </span>
-              ) : null}
+              {displayTitle}
             </div>
             <SessionRowTrailingActions
               session={session}

@@ -51,6 +51,7 @@
     "../src/main/codex/codex-hook-local-maintenance.ts",
     "../src/main/codex/codex-hook-remote-install.ts",
     "../src/main/codex/codex-hook-script.ts",
+    "../src/main/codex-session-ownership/codex-nested-hook-guard.ts",
     "../src/main/codex/codex-hook-service-implementation.ts",
     "../src/main/codex/codex-hook-status.ts",
     "../src/main/codex/codex-hook-system-trust.ts",

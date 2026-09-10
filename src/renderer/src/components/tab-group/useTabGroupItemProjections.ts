@@ -69,6 +69,8 @@ export function useTabGroupItemProjections({
         .filter((item) => item.contentType === 'terminal')
         .map((item) => {
           const terminalTab = terminalTabById.get(item.entityId)
+          const aiVaultTitle =
+            terminalTab?.aiVaultTitle !== undefined ? terminalTab.aiVaultTitle : item.aiVaultTitle
           return {
             id: item.entityId,
             unifiedTabId: item.id,
@@ -77,6 +79,8 @@ export function useTabGroupItemProjections({
             title: resolveUnifiedTabLabel(
               {
                 ...item,
+                aiVaultTitle,
+                launchAgent: terminalTab?.launchAgent,
                 quickCommandLabel: item.quickCommandLabel ?? terminalTab?.quickCommandLabel,
                 generatedLabel: item.generatedLabel ?? terminalTab?.generatedTitle
               },
@@ -84,6 +88,8 @@ export function useTabGroupItemProjections({
               item.label
             ),
             defaultTitle: terminalTab?.defaultTitle,
+            // Why: the tab strip resolves again; dropping this slot promotes the generated fallback.
+            aiVaultTitle,
             quickCommandLabel: terminalTab?.quickCommandLabel ?? item.quickCommandLabel ?? null,
             generatedTitle: terminalTab?.generatedTitle ?? item.generatedLabel ?? null,
             customTitle: item.customLabel ?? terminalTab?.customTitle ?? null,

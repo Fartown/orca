@@ -18,6 +18,12 @@ import { parsePaneKey } from '../../../shared/stable-pane-id'
 import type { AgentHookEventPayload } from '../../../shared/agent-hook-listener/listener-event'
 import { isValidPiProviderSessionOnly } from './server-status-identity'
 import { AgentHookServerIngestTerminal } from './server-ingest-terminal'
+import { shouldRejectClaudeSessionReplacement } from '../../../shared/claude-session-ownership/claude-session-activity'
+import {
+  shouldRejectCodexTitleTask,
+  shouldRejectUnbackedCodexStart
+} from '../../../shared/session-names/codex-title-task-admission'
+import { isCodexThreadTitleGenerationPrompt } from '../../../shared/codex-thread-title-generation'
 
 export abstract class AgentHookServerIngestRemote extends AgentHookServerIngestTerminal {
   /** Ingest a payload from the relay JSON-RPC channel (not the local HTTP server); connectionId is stamped here. Main is still the SSH trust boundary, so re-run the canonical normalizer before caching. */
@@ -54,10 +60,10 @@ export abstract class AgentHookServerIngestRemote extends AgentHookServerIngestT
       return
     }
     const trimmedConnectionId = connectionId?.trim() ?? null
-    if (trimmedConnectionId !== null && trimmedConnectionId.length === 0) {
+    if (trimmedConnectionId?.length === 0) {
       return
     }
-    if (!envelope || typeof envelope.paneKey !== 'string') {
+    if (typeof envelope?.paneKey !== 'string') {
       return
     }
     // Why: trim paneKey to match the HTTP path, else remote-vs-local events for one pane diverge.
@@ -103,6 +109,19 @@ export abstract class AgentHookServerIngestRemote extends AgentHookServerIngestT
         ? envelope.hookEventName.trim()
         : undefined
     const source = isAgentHookSource(envelope.source) ? envelope.source : undefined
+    const providerSession = normalizeAgentProviderSession(envelope.providerSession) ?? undefined
+    if (
+      source === 'codex' &&
+      shouldRejectUnbackedCodexStart(this.state, paneKey, hookEventName, providerSession)
+    ) {
+      return
+    }
+    if (
+      source === 'claude' &&
+      shouldRejectClaudeSessionReplacement(this.state, paneKey, providerSession?.id)
+    ) {
+      return
+    }
     const providerPromptId =
       source === 'claude' ? normalizeClaudePromptId(envelope.providerPromptId) : undefined
     const compactTrigger =
@@ -152,10 +171,22 @@ export abstract class AgentHookServerIngestRemote extends AgentHookServerIngestT
       typeof envelope.toolAgentType === 'string' && envelope.toolAgentType.trim().length > 0
         ? envelope.toolAgentType.trim()
         : undefined
-    const providerSession = normalizeAgentProviderSession(envelope.providerSession) ?? undefined
     // Why: relay crosses a trust boundary — re-run the canonical normalizer to enforce caps/invariants (returns null on malformed).
     const validatedPayload = normalizeAgentStatusPayload(envelope.payload)
     if (!validatedPayload) {
+      return
+    }
+    const explicitCodexPrompt =
+      envelope.hasExplicitPrompt === true || hookEventName === 'UserPromptSubmit'
+    if (
+      source === 'codex' &&
+      shouldRejectCodexTitleTask(
+        this.state,
+        paneKey,
+        providerSession?.id,
+        explicitCodexPrompt ? validatedPayload.prompt : undefined
+      )
+    ) {
       return
     }
     // Why: restore a shed roster only when its digest and turn identity still match the cache.
@@ -165,6 +196,17 @@ export abstract class AgentHookServerIngestRemote extends AgentHookServerIngestT
       this.state.lastStatusByPaneKey.get(paneKey)?.payload
     )
     const previousStatus = this.state.lastStatusByPaneKey.get(paneKey)
+    // Old relays can echo the utility prompt on the real parent's later Stop.
+    if (
+      source === 'codex' &&
+      !explicitCodexPrompt &&
+      previousStatus?.source === 'codex' &&
+      providerSession?.id &&
+      previousStatus.providerSession?.id === providerSession.id &&
+      isCodexThreadTitleGenerationPrompt(normalizedPayload.prompt)
+    ) {
+      normalizedPayload = { ...normalizedPayload, prompt: previousStatus.payload.prompt }
+    }
     let acceptedCompactCompletion = false
     if (hookEventName === 'PreCompact' || hookEventName === 'PostCompact') {
       // Why: PreCompact is never registered and proves nothing (an aborted compact emits it alone);

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { X, Minimize2, Pin } from 'lucide-react'
 import { stripLeadingAgentTitleDecoration } from '../../../../shared/agent-title-decoration'
+import { resolveTerminalTabTitle } from '../../../../shared/tab-title-resolution'
 import { useTabAgent } from '@/lib/use-tab-agent'
 import { isImeCompositionKeyDown } from '@/lib/ime-composition-keyboard-event'
 import { Input } from '@/components/ui/input'
@@ -115,10 +116,18 @@ export default function SortableTab({
 
   // Why: use hook status + title evidence so the icon reflects the harness running now, not just the launch command.
   const tabAgent = useTabAgent(tab)
+  const generatedTitlesEnabled = useAppStore((s) => s.settings?.tabAutoGenerateTitle === true)
+  const tabTitle = resolveTerminalTabTitle(
+    { ...tab, launchAgent: tab.launchAgent ?? tabAgent ?? undefined },
+    generatedTitlesEnabled,
+    tab.title
+  )
 
   // Why: with a provider icon shown, strip the agent's own leading glyph so the tab doesn't show two icons for one agent.
+  const nativeTitle =
+    tab.aiVaultTitle?.providerName?.kind === 'named' ? tab.aiVaultTitle.providerName.title : null
   const displayTitle =
-    tab.customTitle ?? (tabAgent ? stripLeadingAgentTitleDecoration(tab.title) : tab.title)
+    nativeTitle === tabTitle || !tabAgent ? tabTitle : stripLeadingAgentTitleDecoration(tabTitle)
 
   const { attributes, listeners, setNodeRef } = useSortable({
     id: tab.id,
@@ -175,7 +184,6 @@ export default function SortableTab({
   })
   const closeShortcut = useOptionalShortcutLabel('tab.close')
   const closeLabel = translate('auto.components.tab.bar.SortableTab.95db5f2f7d', 'Close tab')
-  const tabTitle = tab.customTitle ?? tab.title
   const tabRoot = (
     <div
       ref={setNodeRef}

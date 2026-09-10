@@ -11,21 +11,12 @@ import {
   orchestrationLabelsMatchLiveDispatch
 } from './agent-row-primary-text'
 import { formatAgentToolPreview } from './agent-row-tool-preview'
+import { isLowInformationSessionPrompt } from '../../../shared/session-names/session-name-candidate-quality'
 
 // Why: follow-up replies ("yes", "ok proceed") are valid hook prompts but are
 // terrible scan labels for a cross-worktree agent list — treat them as non-titles.
-const TERSE_FOLLOW_UP_PATTERN =
-  /^(yes|no|ok|yep|nope|sure|thanks|thank you|please|proceed|continue|go ahead|lgtm|done|looks good|ok proceed|hi|hey|hello|yo)\.?$/i
-
 export function isTerseAgentFollowUpPrompt(prompt: string): boolean {
-  const trimmed = prompt.trim()
-  if (!trimmed) {
-    return true
-  }
-  if (trimmed.length > 24) {
-    return false
-  }
-  return TERSE_FOLLOW_UP_PATTERN.test(trimmed)
+  return isLowInformationSessionPrompt(prompt)
 }
 
 function taskTitleFromPrompt(prompt: string): string | null {
@@ -64,7 +55,7 @@ function bestTaskPromptFromHistory(history: readonly AgentStateHistoryEntry[]): 
 // describes the live work: a dispatch turn must share the task id (mirrors
 // getAgentRowPrimaryText), and a substantive non-dispatch prompt means the pane
 // moved on to new work — a terse follow-up ("yes") is still the same task.
-function orchestrationLabelForEntry(
+export function orchestrationLabelForEntry(
   entry: Pick<AgentStatusEntry, 'orchestration' | 'prompt'>
 ): string | null {
   const label =

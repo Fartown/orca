@@ -83,11 +83,6 @@ vi.mock('@/lib/agent-catalog', () => ({
   AgentIcon: ({ agent }: { agent: string }) => <span data-agent-catalog-icon={agent} />
 }))
 
-vi.mock('../../../../shared/agent-title-decoration', () => ({
-  stripLeadingAgentTitleDecoration: (title: string) =>
-    title.replace(/^(?:[✳✦⏲◇✋⠀-⣿]+|[.*]\s)\s*/, '').trimStart() || title
-}))
-
 vi.mock('@/lib/use-tab-agent', () => ({
   useTabAgent: () => mockTabAgent
 }))
@@ -254,39 +249,58 @@ describe('tab title tooltips', () => {
     mockTabAgent = null
   })
 
-  it('uses the terminal custom title for the visible label and tooltip trigger content', () => {
-    const markup = renderToStaticMarkup(
-      <SortableTab
-        tab={makeTerminalTab({ customTitle: 'Custom terminal title' })}
-        unifiedTabId="terminal-1"
-        groupId="group-1"
-        tabCount={1}
-        hasTabsToRight={false}
-        hasTabsToLeft={false}
-        isActive={true}
-        isPinned={false}
-        isExpanded={false}
-        onActivate={vi.fn()}
-        onClose={vi.fn()}
-        onCloseOthers={vi.fn()}
-        onCloseToRight={vi.fn()}
-        onCloseToLeft={vi.fn()}
-        onSetCustomTitle={vi.fn()}
-        onSetTabColor={vi.fn()}
-        onTogglePin={vi.fn()}
-        onToggleExpand={vi.fn()}
-        dragData={makeDragData('terminal', 'terminal-1')}
-      />
-    )
+  it.each([null, 'codex'] as const)(
+    'uses the shared title for visible label and tooltip (%s)',
+    (agent) => {
+      mockTabAgent = agent
+      const expectedTitle = agent ? '✳ Provider name' : 'Custom terminal title'
+      const markup = renderToStaticMarkup(
+        <SortableTab
+          tab={makeTerminalTab({
+            customTitle: 'Custom terminal title',
+            aiVaultTitle: agent
+              ? {
+                  agent,
+                  sessionId: 'session-a',
+                  title: 'Stale scanner fallback',
+                  source: 'provider',
+                  providerName: { kind: 'named', title: expectedTitle, field: 'test.nativeName' }
+                }
+              : null
+          })}
+          unifiedTabId="terminal-1"
+          groupId="group-1"
+          tabCount={1}
+          hasTabsToRight={false}
+          hasTabsToLeft={false}
+          isActive={true}
+          isPinned={false}
+          isExpanded={false}
+          onActivate={vi.fn()}
+          onClose={vi.fn()}
+          onCloseOthers={vi.fn()}
+          onCloseToRight={vi.fn()}
+          onCloseToLeft={vi.fn()}
+          onSetCustomTitle={vi.fn()}
+          onSetTabColor={vi.fn()}
+          onTogglePin={vi.fn()}
+          onToggleExpand={vi.fn()}
+          dragData={makeDragData('terminal', 'terminal-1')}
+        />
+      )
 
-    expectTooltipContent(markup, 'Custom terminal title')
-    expect(markup).not.toContain('Runtime terminal title')
-    expect(markup).toContain('data-tooltip-trigger="true"')
-    const root = openingTag(markup, 'data-testid', 'sortable-tab')
-    expect(root).toContain('role="tab"')
-    expect(root).toContain('tabindex="0"')
-    expectTabContainerWidth(markup, root)
-  })
+      expectTooltipContent(markup, expectedTitle)
+      if (agent) {
+        expect(markup).not.toContain('Custom terminal title')
+      }
+      expect(markup).not.toContain('Runtime terminal title')
+      expect(markup).toContain('data-tooltip-trigger="true"')
+      const root = openingTag(markup, 'data-testid', 'sortable-tab')
+      expect(root).toContain('role="tab"')
+      expect(root).toContain('tabindex="0"')
+      expectTabContainerWidth(markup, root)
+    }
+  )
 
   it("shows the provider icon while stripping the agent's leading status glyph from the label", () => {
     mockTabAgent = 'claude'

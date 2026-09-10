@@ -1,10 +1,4 @@
-// Resolves the stable "conversation name" an agent row can show instead of the
-// live last-message preview. Sources, in the same precedence the tab bar uses
-// (tab-title-resolution.ts): manual rename → quick-command label → OpenCode's
-// semantic session title → Provider title → generated title → agent-set live title.
-// Live titles are accepted only when they carry a real name — pure status,
-// identity-echo, and spinner/cwd titles yield null so callers keep the
-// last-message label.
+// Conversation names share the Provider-first order; task/status previews remain separate.
 import type { AgentType } from './agent-status-types'
 import { isClaudeManagementTitle } from './agent-title-core'
 import { stripLeadingAgentTitleDecorationOrEmpty } from './agent-title-decoration'
@@ -13,6 +7,7 @@ import { isMeaningfulOpenCodeTerminalTitle } from './opencode-terminal-title'
 import { SYNTHETIC_AGENT_TITLE_PROFILES } from './synthetic-agent-title'
 import type { TerminalTab } from './terminal-tab-types'
 import { resolveSessionDisplayTitle } from './session-display-title'
+import { sessionNameSlotCandidates } from './session-names/session-name-slot'
 
 export type ConversationNameTab = Pick<
   TerminalTab,
@@ -123,31 +118,28 @@ export function getAgentRowConversationName(
   // names one pane and mislabels its siblings. Callers on a multi-pane tab pass
   // this row's own pane title, or `null` when none resolves; `undefined` (a
   // single-pane tab) keeps the tab title. Tab-owned names above are unaffected:
-  // the user gave those to the whole tab and they do not flip on focus.
+  // container aliases and generated titles cannot name an unidentified sibling.
   paneLiveTitle?: string | null,
   options: AgentRowConversationNameOptions = {}
 ): string | null {
-  const customTitle = tab.customTitle?.trim()
-  if (customTitle) {
-    return customTitle
-  }
-  const quickCommandLabel = tab.quickCommandLabel?.trim()
-  if (quickCommandLabel) {
-    return quickCommandLabel
-  }
   const liveTitle =
     paneLiveTitle === undefined ? (tab.title?.trim() ?? '') : (paneLiveTitle?.trim() ?? '')
-  if (isMeaningfulOpenCodeTerminalTitle(liveTitle)) {
-    return liveTitle
-  }
   const slot = tab.aiVaultTitle
+  const sessionNames = sessionNameSlotCandidates(slot)
   const resolved = resolveSessionDisplayTitle({
-    userTitle: options.userTitle ?? (slot?.source === 'conversation-override' ? slot.title : null),
-    providerTitle: slot?.source !== 'conversation-override' ? slot?.title : null,
-    generatedTitle: generatedTitlesEnabled ? tab.generatedTitle : null,
+    ...sessionNames,
+    userTitle: options.userTitle ?? sessionNames.userTitle,
+    providerTitle:
+      sessionNames.providerTitle ??
+      (agentType === 'opencode' && isMeaningfulOpenCodeTerminalTitle(liveTitle) ? liveTitle : null),
+    generatedTitle:
+      sessionNames.generatedTitle ??
+      (generatedTitlesEnabled && paneLiveTitle === undefined ? tab.generatedTitle : null),
     liveTitle: liveTitle
       ? resolveAgentConversationLiveTitle(liveTitle, agentType, tab.defaultTitle)
       : null,
+    labelTitle:
+      paneLiveTitle === undefined ? tab.customTitle?.trim() || tab.quickCommandLabel : null,
     identityFallbackTitle: options.identityFallbackTitle
   })
   return resolved?.title ?? null

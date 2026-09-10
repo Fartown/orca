@@ -1,13 +1,15 @@
 ---
 title: 'Issues 功能测试'
 document_type: test-case-list
-status: ready
+status: needs-update
 created: 2026-08-26
-updated: 2026-09-05
+updated: 2026-09-08
 issue: Issues看板与会话
 ---
 
 # Issues 功能测试
+
+> 2026-09-08评审后：命名/过滤映射待同步（needs-update），非命名与历史基线保持。TC-060、TC-201～211、TC-214～223不能按旧排序/存储约束新实现；[原命名验收](Provider优先命名验收.md)也已标记needs-update，公共人工名工程撤出，身份/过滤前置，当前边界见[方案§6.2](../../solutions/Provider优先的会话命名统一方案.md#62-验收矩阵)。TC-200人工名保护及TC-212/213历史v4迁移仍需回归。本轮只标记影响，不改下表断言或执行测试。
 
 > 本文是可重复执行的测试规格。2026-09-05 按当前源码及暂存标题改动重整；保留原 TC-001～TC-190 编号并增加专项用例，不包含任何本轮执行结果。status=ready 只表示规格整理完成。
 

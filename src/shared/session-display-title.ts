@@ -1,9 +1,12 @@
+import { isEligibleSessionNamePrompt } from './session-names/session-name-candidate-quality'
+
 export type SessionDisplayTitleSource =
   | 'user'
   | 'provider'
   | 'provider-snapshot'
   | 'generated'
   | 'live'
+  | 'label'
   | 'identity-fallback'
 
 export type SessionDisplayTitleResult = {
@@ -17,6 +20,7 @@ export type SessionDisplayTitleCandidates = {
   providerTitleSnapshot?: string | null
   generatedTitle?: string | null
   liveTitle?: string | null
+  labelTitle?: string | null
   identityFallbackTitle?: string | null
 }
 
@@ -26,11 +30,12 @@ export function resolveSessionDisplayTitle(
 ): SessionDisplayTitleResult | null {
   const fallback = normalized(candidates.identityFallbackTitle)
   const ranked: [SessionDisplayTitleSource, string | null][] = [
-    ['user', normalized(candidates.userTitle)],
     ['provider', withoutFallback(candidates.providerTitle, fallback)],
     ['provider-snapshot', withoutFallback(candidates.providerTitleSnapshot, fallback)],
-    ['generated', normalized(candidates.generatedTitle)],
+    ['user', normalized(candidates.userTitle)],
+    ['generated', eligiblePromptTitle(candidates.generatedTitle)],
     ['live', normalized(candidates.liveTitle)],
+    ['label', normalized(candidates.labelTitle)],
     ['identity-fallback', fallback]
   ]
   for (const [source, title] of ranked) {
@@ -39,6 +44,11 @@ export function resolveSessionDisplayTitle(
     }
   }
   return null
+}
+
+function eligiblePromptTitle(value: string | null | undefined): string | null {
+  const title = normalized(value)
+  return title && isEligibleSessionNamePrompt(title) ? title : null
 }
 
 function withoutFallback(value: string | null | undefined, fallback: string | null): string | null {

@@ -163,6 +163,7 @@ export function makeActivityResult(args: {
 
 export function makeThreads(result: ReturnType<typeof buildActivityEvents>) {
   return buildAgentPaneThreads({
+    generatedTitlesEnabled: true,
     events: result.events,
     liveAgentByPaneKey: result.liveAgentByPaneKey
   })

@@ -3,11 +3,15 @@ title: Issues 看板与会话技术说明
 document_type: technical-solution
 status: ready
 created: 2026-09-05
-updated: 2026-09-05
+updated: 2026-09-08
 issue: Issues看板与会话
 ---
 
 # Issues 看板与会话技术说明
+
+> 2026-09-08核对：会话命名的当前事实以[会话命名现状调研](../research/会话命名现状调研.md)为准，目标态另见[Provider优先的统一方案](Provider优先的会话命名统一方案.md)（未实施）。下文§10.4、§10.5保留历史排查原文，但撤回其“已核实缺陷”定性、因果归属和统计结论；尤其不能使用“快照为空等价文件消失”“88/89均Orca内部调用”作为事实。§10.1～10.3只描述当时部分消费链，不能证明全界面一致，也不是新方案的优先级/存储合同。
+
+> 2026-09-08评审收缩：新方案已将主会话绑定与REQ-028内部调用边界前置，撤出公共人工名新系统与迁移。下文既有title/title_source/provider_title、Rename及窄过滤仍是兼容现状，不因新排序被直接删除；最新验收边界见新方案§6.2，原命名测试规格待同步。
 
 这是现有实现的合并说明，依据 2026-09-05 工作树及已暂存的标题稳定化改动，不是待实施的新设计。`ready` 表示文档核对完成，不表示代码已提交、当前 App 已更新或验收通过。
 
@@ -321,7 +325,9 @@ Tab 既有 customTitle/quickCommandLabel/OpenCode 有意义标题优先；清人
 
 当前 Issues 标题请求 hook 以 identity 集合 requestsKey 变化触发解析，不是持续 resolver 轮询；展示新鲜度还依赖持久 provider snapshot 与已有原生刷新。不能把“统一来源优先级”写成每次 Provider 改名四处必然同步即时完成。
 
-### 10.4 已核实缺陷：resolver 依赖存储路径，右侧不依赖
+### 10.4 历史排查记录（结论已撤回）：resolver 与存储路径
+
+以下是保留的历史原文，不是当前有效结论。当前resolver已有列表扫描回退；空快照存在多种原因，兜底也已可按identity纯函数计算，不能据此断定文件消失或必须写minted。
 
 10.1–10.3 的优先级链本身成立，但**它上游的取数方式有缺陷**，导致 providerTitle 快照在真实库里大面积为空，展示链因此落到 liveTitle（agent 每帧改写的 OSC 串）。
 
@@ -359,7 +365,9 @@ Tab 既有 customTitle/quickCommandLabel/OpenCode 有意义标题优先；清人
 
 附带结论：`provider_title` 是派生值缓存，事实源是 transcript。右侧不缓存却始终正确，说明该缓存并非正确性必需。是否保留应在铸造补齐后单独评估，不作为止血前置。
 
-### 10.5 已核实缺陷：内部调用被当作用户会话纳管
+### 10.5 历史排查记录（结论已撤回）：内部调用归属
+
+以下是保留的历史原文，不是当前有效结论。缺少创建方/进程/会话关联证据；表中分类合计95，与声称的89不符。prompt内容不能证明调用由Orca自身发起。
 
 对 10.4 的 89 条无快照会话按首轮输入分类（2026-09-06 实测）：
 
@@ -396,9 +404,9 @@ Tab 既有 customTitle/quickCommandLabel/OpenCode 有意义标题优先；清人
 | 原生恢复                | 承接原 AI Vault 能力与错误边界                                                                                           | 不承诺第二套恢复状态机或全程幂等                                         |
 | Codex daemon 隔离旧方案 | 当前 src 未发现 `-c features.hooks=true` 注入或 codexHookDaemonIsolation 开关                                            | 历史候选原因留简述，不能列已实现                                         |
 | 标题输出                | refresh 日志当前包含 title JSON；隐私检查需按真实候选数据执行                                                            | 不先行宣称全日志无用户文本                                               |
-| Provider 快照覆盖率     | 实测 151 条 conversation 中仅 62 条有 providerTitle；缺口 89 条的 transcript 已不在磁盘（搜盘命中 0，见 10.4）           | 不能把 10.1 的优先级链写成“四处已一致”；缺快照时实际显示 liveTitle       |
-| 附着铸造                | `title`/`title_source` 全表 NULL；main 侧无任何 mint 写入调用，兜底名仅用作 refresh 的拒绝比较                           | 不能把“可见即有名”写成已实现；这是 liveTitle 抖动的直接原因              |
-| 内部调用纳管            | 89 条无快照会话中 88 条为 Orca 自身内部调用（回归摘要/标题生成/合规/建议），现有白名单只覆盖一种 codex prompt（见 10.5） | 不能把 conversation 计数与 Issues 行当作纯用户会话；按 prompt 匹配追不上 |
+| Provider 快照覆盖率     | 历史覆盖率与“文件消失”因果未重新实证；缺快照不等于缺文件 | 以新调研的读取、快照和失败分支为准，不从NULL反推根因 |
+| 附着铸造                | 当前title只存人工覆盖；稳定fallback可由Provider identity推导，Issues纯展示已使用 | 不把未写minted当作抖动的必要原因，不恢复已撤回持久化提案 |
+| 内部调用纳管            | 当前仅有特定启发式过滤；历史调用方归属与88/89统计撤回 | 需要host、launch及事件证据，不能以prompt猜创建方 |
 | 远端装配与验证          | Node-only orcad 未见生产 bootstrap 调用，本轮也未连接 SSH/paired runtime 或执行 CDP                                      | 分开协议路由、宿主接线和真实成功；不能写 paired 已可用                   |
 | 真实 App                | 暂存 v4/标题代码未在本轮构建验收                                                                                         | 历史截图/包 hash 不能代表该工作树                                        |
 

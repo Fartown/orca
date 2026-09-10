@@ -2,6 +2,7 @@ import type { AppState } from '../../store'
 import { useAppStore } from '../../store'
 import type { RuntimeMobileSessionTabsResult } from '../../../../shared/runtime-types'
 import { pickParsedAgentStatusPayload } from '../../../../shared/agent-status-types'
+import type { AgentCompletionStatusSnapshot } from '@/components/terminal-pane/agent-completion-coordinator-types'
 import { normalizeTurnCompletedAtField } from '../../../../shared/agent-status-field-normalization'
 import { isClientAuthoritativeAgentStatusPane } from '@/components/terminal-pane/renderer-owned-agent-status-registry'
 import { observeAgentHookCompletionForNotification } from '@/hooks/agent-hook-completion-notifications'
@@ -32,10 +33,7 @@ export function applyWebSessionTabsStorePatch(
     paneKey: string
     worktreeId: string
     seedOnly?: true
-    payload: ReturnType<typeof pickParsedAgentStatusPayload> & {
-      stateStartedAt: number
-      localStateStartedAt?: number
-    }
+    payload: AgentCompletionStatusSnapshot
   }[] = []
 
   const runStorePatch = (
@@ -139,6 +137,9 @@ export function applyWebSessionTabsStorePatch(
                 ...(turnCompletedAt !== undefined ? { turnCompletedAt } : {})
               }),
               stateStartedAt: notificationStatus.stateStartedAt,
+              ...(notificationStatus.providerSession
+                ? { providerSession: notificationStatus.providerSession }
+                : {}),
               ...(clientOwnedNotification ? { localStateStartedAt } : {})
             }
           })

@@ -1,15 +1,19 @@
 import { openTranscriptReadStream } from '../native-chat/wsl-transcript-fs-access'
 import { createInterface } from 'node:readline'
 import type { AiVaultSession } from '../../shared/ai-vault-types'
-import { readCodexSessionIndexTitle } from './session-scanner-codex-title-index'
-import type { ExecutionHostId } from '../../shared/execution-host'
+import { readCodexSessionIndexName } from './session-scanner-codex-title-index'
 import {
-  cloneSessionAccumulator,
-  createAccumulator,
-  finalizeSession,
-  sessionIdFromFileName,
-  updateTimeline
-} from './session-scanner-accumulator'
+  readProviderNameEvidence,
+  retainConfirmedProviderName,
+  type ProviderNameReader
+} from '../../shared/session-names/session-name-contract'
+import type { ExecutionHostId } from '../../shared/execution-host'
+import { finalizeSession, updateTimeline } from './session-scanner-accumulator'
+import {
+  cloneCodexParseState,
+  createCodexParseState,
+  type CodexSessionParseState
+} from '../session-names/codex-session-parse-state'
 import {
   consumeCodexCompletedMessage,
   consumeCodexLegacyEventMessage,
@@ -19,8 +23,7 @@ import type {
   CodexUsageSnapshot,
   FileWithMtime,
   ResumableParseFinalizeOptions,
-  ResumableSessionParseState,
-  SessionAccumulator
+  ResumableSessionParseState
 } from './session-scanner-types'
 import type { TranscriptMessageSink } from './session-transcript-consumers'
 import {
@@ -38,7 +41,7 @@ import { readCodexTimelineOnlyRecord } from './session-scanner-codex-record-fast
 import {
   extractCodexSessionMetadataTitle,
   isCodexWorkerSession
-} from './session-scanner-codex-session-meta'
+} from '../session-names/codex-session-metadata'
 
 export async function parseCodexSessionFile(
   file: FileWithMtime,
@@ -59,7 +62,7 @@ export async function parseCodexSessionFile(
     codexHome,
     executionHostId,
     messages,
-    titleReader: (sessionId) => readCodexSessionIndexTitle(file.path, codexHome, sessionId)
+    titleReader: (sessionId) => readCodexSessionIndexName(file.path, codexHome, sessionId)
   })
 }
 
@@ -70,7 +73,7 @@ export async function parseCodexSessionContent(args: {
   codexHome?: string | null
   executionHostId?: ExecutionHostId
   executionHostPlatform?: NodeJS.Platform | null
-  readIndexedTitle?: (sessionId: string) => Promise<string | null>
+  readIndexedTitle?: ProviderNameReader
   signal?: AbortSignal
 }): Promise<AiVaultSession | null> {
   return parseCodexSessionLines({
@@ -82,44 +85,6 @@ export async function parseCodexSessionContent(args: {
     executionHostPlatform: args.executionHostPlatform,
     titleReader: args.readIndexedTitle
   })
-}
-
-type CodexSessionParseState = {
-  accumulator: SessionAccumulator
-  previousTotals: CodexUsageSnapshot | null
-  rejectedWorkerSession: boolean
-  sawSessionMeta: boolean
-  historyMode: string | null
-  // Which source set the current title; an index-file title outranks the raw
-  // first user prompt, so finalize must know whether 'meta' already won.
-  titleSource: 'meta' | 'user' | null
-}
-
-function createCodexParseState(
-  file: FileWithMtime,
-  messages?: TranscriptMessageSink
-): CodexSessionParseState {
-  return {
-    accumulator: createAccumulator({
-      agent: 'codex',
-      file,
-      sessionId: sessionIdFromFileName(file.path),
-      messages
-    }),
-    previousTotals: null,
-    rejectedWorkerSession: false,
-    sawSessionMeta: false,
-    historyMode: null,
-    titleSource: null
-  }
-}
-
-function cloneCodexParseState(state: CodexSessionParseState): CodexSessionParseState {
-  return {
-    // previousTotals snapshots are replaced, never mutated, so sharing is safe.
-    ...state,
-    accumulator: cloneSessionAccumulator(state.accumulator)
-  }
 }
 
 function consumeCodexRecordLine(state: CodexSessionParseState, line: string): void {
@@ -148,9 +113,13 @@ function consumeCodexRecordLine(state: CodexSessionParseState, line: string): vo
     if (sessionId) {
       accumulator.sessionId = sessionId
     }
-    const metadataTitle = extractCodexSessionMetadataTitle(payload)
-    if (metadataTitle) {
-      accumulator.title = metadataTitle
+    const metadataName = extractCodexSessionMetadataTitle(payload)
+    if (metadataName) {
+      accumulator.title = metadataName.title
+      accumulator.providerName = {
+        kind: 'named',
+        ...metadataName
+      }
       state.titleSource = 'meta'
     }
     const cwd = extractString(payload.cwd)
@@ -239,7 +208,7 @@ async function finalizeCodexParseState(
   platform: NodeJS.Platform,
   args: {
     codexHome: string | null
-    titleReader?: (sessionId: string) => Promise<string | null>
+    titleReader?: ProviderNameReader
     executionHostId?: ExecutionHostId
     executionHostPlatform?: NodeJS.Platform | null
   }
@@ -249,13 +218,26 @@ async function finalizeCodexParseState(
   }
   // Finalize a snapshot: the live state keeps accumulating appended lines.
   const snapshot = cloneCodexParseState(state)
+  snapshot.accumulator.providerName ??= { kind: 'absent' }
+  snapshot.accumulator.generatedTitle ??= null
   // Why: Codex names threads lazily in session_index.jsonl, so the lookup runs
   // per finalize (the index read is signature-cached) — a title that appears
   // after the transcript was first parsed must still replace the raw prompt.
-  if (snapshot.sawSessionMeta && snapshot.titleSource !== 'meta') {
-    const indexedTitle = await args.titleReader?.(snapshot.accumulator.sessionId)
-    if (indexedTitle) {
-      snapshot.accumulator.title = indexedTitle
+  if (snapshot.sawSessionMeta) {
+    const evidence = await readProviderNameEvidence(
+      args.titleReader,
+      snapshot.accumulator.sessionId,
+      'session_index.thread_name'
+    )
+    snapshot.accumulator.providerName = retainConfirmedProviderName(
+      snapshot.accumulator.providerName,
+      evidence
+    )
+    if (evidence.kind === 'named') {
+      // Preserve the legacy title contract for independently updated peers.
+      if (snapshot.titleSource !== 'meta') {
+        snapshot.accumulator.title = evidence.title
+      }
     }
   }
   return finalizeSession(snapshot.accumulator, platform, {
@@ -273,14 +255,14 @@ export function createCodexSessionResumeState(
   return codexResumeStateFromParseState(
     createCodexParseState(file, messages),
     codexHome,
-    (sessionId) => readCodexSessionIndexTitle(file.path, codexHome, sessionId)
+    (sessionId) => readCodexSessionIndexName(file.path, codexHome, sessionId)
   )
 }
 
 function codexResumeStateFromParseState(
   state: CodexSessionParseState,
   codexHome: string | null,
-  titleReader: (sessionId: string) => Promise<string | null>
+  titleReader: ProviderNameReader
 ): ResumableSessionParseState {
   return {
     consumeLine: (line) => consumeCodexRecordLine(state, line),
@@ -310,7 +292,7 @@ async function parseCodexSessionLines(args: {
   codexHome: string | null
   executionHostId?: ExecutionHostId
   executionHostPlatform?: NodeJS.Platform | null
-  titleReader?: (sessionId: string) => Promise<string | null>
+  titleReader?: ProviderNameReader
   messages?: TranscriptMessageSink
 }): Promise<AiVaultSession | null> {
   const state = createCodexParseState(args.file, args.messages)

@@ -28,6 +28,9 @@ vi.mock('@/store', () => ({
 vi.mock('@/lib/canonical-session-titles', () => ({
   useCanonicalSessionTitle: () => canonicalTitleState.current
 }))
+vi.mock('@/session-names/session-name-subscriptions', () => ({
+  useSessionNameRecord: () => undefined
+}))
 
 function makeAgent(overrides: Partial<DashboardAgentRow> = {}): DashboardAgentRow {
   return {
@@ -229,13 +232,13 @@ describe('useAgentRowConversationName', () => {
       expect(useAgentRowConversationName(splitRow(LEAF_B, '\u2733 Linear work log'))).toBeNull()
     })
 
-    it('still lends a tab-owned name to every pane', () => {
+    it('does not lend a container alias to unrelated split panes', () => {
       setSplitStore('\u2733 Linear work log', 'Patient sync spike')
       expect(useAgentRowConversationName(splitRow(LEAF_A, '\u2733 Linear work log'))).toBe(
-        'Patient sync spike'
+        'Linear work log'
       )
       expect(useAgentRowConversationName(splitRow(LEAF_B, '\u2733 Linear work log'))).toBe(
-        'Patient sync spike'
+        'Redis cache strategy'
       )
     })
 

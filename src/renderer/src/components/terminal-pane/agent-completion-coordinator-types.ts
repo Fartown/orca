@@ -1,13 +1,17 @@
-import type { ParsedAgentStatusPayload } from '../../../../shared/agent-status-types'
+import type {
+  AgentStatusEntry,
+  ParsedAgentStatusPayload
+} from '../../../../shared/agent-status-types'
 import type { GlobalSettings } from '../../../../shared/global-settings-types'
 import type { RecognizedAgentProcess } from '../../../../shared/agent-process-recognition'
 import type { RuntimeTerminalProcessInspection } from '@/runtime/runtime-terminal-inspection'
 
-export type AgentCompletionStatusSnapshot = ParsedAgentStatusPayload & {
-  stateStartedAt?: number
-  /** Renderer-local boundary used only to reject a delayed cross-host completion. */
-  localStateStartedAt?: number
-}
+export type AgentCompletionStatusSnapshot = ParsedAgentStatusPayload &
+  Pick<AgentStatusEntry, 'providerSession'> & {
+    stateStartedAt?: number
+    /** Renderer-local boundary used only to reject a delayed cross-host completion. */
+    localStateStartedAt?: number
+  }
 
 export type AgentCompletionDispatchMeta = {
   source: 'hook' | 'title' | 'process-exit'

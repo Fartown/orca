@@ -1,27 +1,24 @@
-import { useCallback, useSyncExternalStore } from 'react'
-import {
-  canonicalSessionTitleKey,
-  getCanonicalSessionTitleIndex,
-  subscribeCanonicalSessionTitles
-} from '@/lib/canonical-session-titles'
+import { useCallback, useEffect } from 'react'
+import { useSessionNameIndex } from '@/session-names/session-name-subscriptions'
+import { getScannedSessionDisplayName } from '@/session-names/session-name-display'
+import { sessionNameStore } from '@/session-names/session-name-store'
+import { canonicalSessionTitleKey } from '@/lib/canonical-session-titles'
 import type { AiVaultSession } from '../../../../shared/ai-vault-types'
 
-/** Canonical Orca-side names for history rows: a search haystack plus a per-session lookup. */
-export function useCanonicalSessionTitles(): {
+/** History supplies scanned evidence; the shared index drives rows and search. */
+export function useCanonicalSessionTitles(sessions: readonly AiVaultSession[]): {
   canonicalTitleBySessionKey: ReadonlyMap<string, string>
   getCanonicalTitle: (session: AiVaultSession) => string | undefined
 } {
-  // The provider index already maps identity keys to plain titles, so it
-  // feeds the search filter directly without a per-change copy.
-  const canonicalTitleBySessionKey = useSyncExternalStore(
-    subscribeCanonicalSessionTitles,
-    getCanonicalSessionTitleIndex,
-    getCanonicalSessionTitleIndex
-  )
+  useEffect(() => sessionNameStore.seed(sessions), [sessions])
+  const canonicalTitleBySessionKey = useSessionNameIndex([])
   const getCanonicalTitle = useCallback(
     (session: AiVaultSession) =>
-      canonicalTitleBySessionKey.get(
-        canonicalSessionTitleKey(session.executionHostId, session.agent, session.sessionId)
+      getScannedSessionDisplayName(
+        session,
+        canonicalTitleBySessionKey.get(
+          canonicalSessionTitleKey(session.executionHostId, session.agent, session.sessionId)
+        )
       ),
     [canonicalTitleBySessionKey]
   )

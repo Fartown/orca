@@ -149,7 +149,13 @@ async function parseCachedInLane(
     const read = await readResumableTranscript({
       candidate,
       platform,
-      resume: entry?.platform === platform ? entry.resume : null,
+      resume:
+        entry?.platform === platform &&
+        typeof file.sizeBytes === 'number' &&
+        typeof entry.sizeBytes === 'number' &&
+        file.sizeBytes > entry.sizeBytes
+          ? entry.resume
+          : null,
       stateFactory,
       stats
     })

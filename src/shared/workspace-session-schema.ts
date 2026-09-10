@@ -12,6 +12,7 @@
  * Only a payload that is not a session at all falls back to defaults.
  */
 import { z } from 'zod'
+import { sessionNameSlotSchema } from './session-names/session-name-slot-schema'
 import { closedTerminalTabTombstoneSchema } from './closed-terminal-tab-tombstones'
 import type { WorkspaceKey } from './folder-workspace-types'
 import type { TabGroupLayoutNode } from './tab-types'
@@ -86,16 +87,7 @@ const terminalTabSchema = z.object({
   title: z.string(),
   defaultTitle: z.string().optional(),
   generatedTitle: z.string().nullable().optional(),
-  aiVaultTitle: z
-    .object({
-      agent: z.enum(['claude', 'codex']),
-      sessionId: z.string(),
-      title: z.string(),
-      source: z.enum(['provider', 'conversation-override']).optional().catch(undefined)
-    })
-    .nullable()
-    .optional()
-    .catch(undefined),
+  aiVaultTitle: sessionNameSlotSchema,
   quickCommandLabel: z.string().nullable().optional(),
   customTitle: z.string().nullable(),
   color: z.string().nullable(),
@@ -133,16 +125,7 @@ const tabSchema = z.object({
   structuredSessionId: z.string().min(1).optional().catch(undefined),
   label: z.string(),
   generatedLabel: z.string().nullable().optional(),
-  aiVaultTitle: z
-    .object({
-      agent: z.enum(['claude', 'codex']),
-      sessionId: z.string(),
-      title: z.string(),
-      source: z.enum(['provider', 'conversation-override']).optional().catch(undefined)
-    })
-    .nullable()
-    .optional()
-    .catch(undefined),
+  aiVaultTitle: sessionNameSlotSchema,
   quickCommandLabel: z.string().nullable().optional(),
   customLabel: z.string().nullable(),
   color: z.string().nullable(),

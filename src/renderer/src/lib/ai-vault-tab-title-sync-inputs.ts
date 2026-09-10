@@ -4,6 +4,7 @@ import type { TerminalTab } from '../../../shared/terminal-tab-types'
 import { getExecutionHostIdForWorktree } from '@/lib/worktree-runtime-owner'
 import type { AppState } from '@/store/types'
 import { collectAiVaultTitleRequests } from './ai-vault-tab-title-requests'
+import { sessionNameSlotEqual } from '../../../shared/session-names/session-name-slot'
 
 function providerSessionEqual(
   left: AgentProviderSessionMetadata | undefined,
@@ -47,7 +48,7 @@ function relevantRecordEqual<T>(
 
 function agentRecordsEqual(current: AppState, previous: AppState): boolean {
   const relevantStatus = (entry: AppState['agentStatusByPaneKey'][string]): boolean =>
-    isAiVaultTitleAgent(entry.agentType) && Boolean(entry.providerSession?.id)
+    Boolean(entry.agentType && entry.agentType !== 'unknown' && entry.providerSession?.id)
   const statusEqual = relevantRecordEqual(
     current.agentStatusByPaneKey,
     previous.agentStatusByPaneKey,
@@ -99,12 +100,7 @@ function titleEqual(
   left: TerminalTab['aiVaultTitle'],
   right: TerminalTab['aiVaultTitle']
 ): boolean {
-  return (
-    left?.agent === right?.agent &&
-    left?.sessionId === right?.sessionId &&
-    left?.title === right?.title &&
-    left?.source === right?.source
-  )
+  return sessionNameSlotEqual(left, right)
 }
 
 function terminalTabsEqual(current: AppState, previous: AppState): boolean {
@@ -125,6 +121,8 @@ function terminalTabsEqual(current: AppState, previous: AppState): boolean {
       if (
         left.id !== right.id ||
         left.worktreeId !== right.worktreeId ||
+        left.ptyId !== right.ptyId ||
+        (left.generation ?? 0) !== (right.generation ?? 0) ||
         !titleEqual(left.aiVaultTitle, right.aiVaultTitle)
       ) {
         return false
@@ -140,11 +138,20 @@ function activePanesEqual(current: AppState, previous: AppState): boolean {
   if (currentKeys.length !== previousKeys.length) {
     return false
   }
-  return currentKeys.every(
-    (tabId) =>
-      current.terminalLayoutsByTabId[tabId]?.activeLeafId ===
-      previous.terminalLayoutsByTabId[tabId]?.activeLeafId
-  )
+  return currentKeys.every((tabId) => {
+    const currentLayout = current.terminalLayoutsByTabId[tabId]
+    const previousLayout = previous.terminalLayoutsByTabId[tabId]
+    return (
+      currentLayout?.activeLeafId === previousLayout?.activeLeafId &&
+      currentLayout?.root === previousLayout?.root &&
+      relevantRecordEqual(
+        currentLayout?.ptyIdsByLeafId ?? {},
+        previousLayout?.ptyIdsByLeafId ?? {},
+        () => true,
+        (left, right) => left === right
+      )
+    )
+  })
 }
 
 function requestOwnersEqual(current: AppState, previous: AppState): boolean {
@@ -163,6 +170,9 @@ function requestOwnersEqual(current: AppState, previous: AppState): boolean {
 }
 
 export function aiVaultTitleSyncInputsChanged(current: AppState, previous: AppState): boolean {
+  if (current.settings?.tabAutoGenerateTitle !== previous.settings?.tabAutoGenerateTitle) {
+    return true
+  }
   const agentRecordsChanged =
     current.agentStatusByPaneKey !== previous.agentStatusByPaneKey ||
     current.retainedAgentsByPaneKey !== previous.retainedAgentsByPaneKey ||

@@ -1,4 +1,5 @@
 import type { Tab } from '../../../../shared/tab-types'
+import { sessionNameSlotEqual } from '../../../../shared/session-names/session-name-slot'
 
 /**
  * Stable view of the unified tab map for the activity pipeline.
@@ -24,6 +25,7 @@ function activityTabFieldsEqual(a: Tab, b: Tab): boolean {
     a.label === b.label &&
     a.generatedLabel === b.generatedLabel &&
     a.customLabel === b.customLabel &&
+    sessionNameSlotEqual(a.aiVaultTitle, b.aiVaultTitle) &&
     a.color === b.color &&
     a.isPinned === b.isPinned &&
     a.sortOrder === b.sortOrder &&

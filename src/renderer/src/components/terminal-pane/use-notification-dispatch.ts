@@ -1,5 +1,6 @@
 import { useCallback } from 'react'
 import { useAppStore } from '@/store'
+import { captureNotificationSessionName } from '@/session-names/notification-session-name'
 import { resolveCommittedTitleAgentType } from '@/lib/pane-agent-evidence'
 import { getRepoMapFromState, getWorktreeMapFromState } from '@/store/selectors'
 import { playDesktopNotificationSound } from '@/lib/desktop-notification-sound'
@@ -212,8 +213,27 @@ export function dispatchTerminalNotification(
         })
       : null
 
-  void window.api.notifications
-    .dispatch({
+  const bellStatus =
+    event.source === 'terminal-bell' &&
+    event.paneKey &&
+    isCurrentLivePaneKey(state, worktreeId, event.paneKey)
+      ? state.agentStatusByPaneKey[event.paneKey]
+      : undefined
+  const bellNamesOwnAgent =
+    bellStatus && bellStatus.agentType === resolveCommittedTitleAgentType(event.terminalTitle ?? '')
+  const exitedStatus =
+    event.agentCompletionSource === 'process-exit' &&
+    explicitTitleAgentType === freshStoredAgentStatus?.agentType
+      ? freshStoredAgentStatus
+      : undefined
+  const sessionName = captureNotificationSessionName(state, {
+    worktreeId,
+    paneKey: event.paneKey,
+    terminalTitle: event.terminalTitle,
+    agentStatus: agentStatus ?? exitedStatus ?? (bellNamesOwnAgent ? bellStatus : undefined)
+  })
+  const dispatch = (sessionTitle?: string) =>
+    window.api.notifications.dispatch({
       source: event.source,
       ...(notificationId ? { notificationId } : {}),
       worktreeId,
@@ -222,9 +242,11 @@ export function dispatchTerminalNotification(
       worktreeLabel: worktree?.displayName || worktree?.branch || worktreeId,
       hasMultipleActiveRepos: countReposNeedingNotificationDisambiguation(state) > 1,
       terminalTitle: event.terminalTitle,
+      ...(sessionTitle ? { sessionTitle } : {}),
       isActiveWorktree: state.activeWorktreeId === worktreeId,
       ...agentSnapshot
     })
+  void (sessionName instanceof Promise ? sessionName.then(dispatch) : dispatch(sessionName))
     .then((result) => {
       if (result.delivered) {
         void playDesktopNotificationSound(customSoundId, customSoundVolume)

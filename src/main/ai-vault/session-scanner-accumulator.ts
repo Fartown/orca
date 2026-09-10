@@ -121,6 +121,10 @@ export function finalizeSession(
     agent: accumulator.agent,
     sessionId,
     title,
+    ...(accumulator.providerName ? { providerName: accumulator.providerName } : {}),
+    ...(accumulator.generatedTitle !== undefined
+      ? { generatedTitle: accumulator.generatedTitle }
+      : {}),
     cwd: accumulator.cwd,
     branch: accumulator.branch,
     model: accumulator.model,

@@ -58,6 +58,13 @@ export type AgentType = WellKnownAgentType | (string & {})
  *  Coalesced-turn output lives in AgentStatusEntry.lastCompletedAssistantMessage,
  *  one copy per pane, so it can't multiply by AGENT_STATE_HISTORY_MAX. */
 export type AgentStateHistoryEntry = {
+  /** Event-owned naming evidence; absent on legacy history, never inferred from the current pane. */
+  sessionName?: {
+    agentType?: AgentType
+    providerSession?: AgentProviderSessionMetadata
+    terminalTitle?: string
+    connectionId?: string | null
+  }
   state: AgentStatusState
   prompt: string
   /** When this state was first reported. */
