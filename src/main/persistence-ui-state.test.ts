@@ -248,20 +248,28 @@ describe('Store', () => {
     expect(store.getUI().rightSidebarOpen).toBe(false)
   })
 
-  it('preserves explicit rightSidebarTab in persisted UI', async () => {
-    writeDataFile({
-      schemaVersion: 1,
-      repos: [],
-      worktreeMeta: {},
-      settings: {},
-      ui: { rightSidebarTab: 'checks' },
-      githubCache: { pr: {}, issue: {} },
-      workspaceSession: {}
-    })
+  it.each(['checks', 'goals'] as const)(
+    'preserves the %s sidebar route across loading and unrelated UI updates',
+    async (rightSidebarTab) => {
+      writeDataFile({
+        schemaVersion: 1,
+        repos: [],
+        worktreeMeta: {},
+        settings: {},
+        ui: { rightSidebarTab },
+        githubCache: { pr: {}, issue: {} },
+        workspaceSession: {}
+      })
 
-    const store = await createStore()
-    expect(store.getUI().rightSidebarTab).toBe('checks')
-  })
+      const store = await createStore()
+      expect(store.getUI().rightSidebarTab).toBe(rightSidebarTab)
+      store.updateUI({ rightSidebarTab: 'explorer' })
+      store.updateUI({ rightSidebarTab })
+      expect(store.getUI().rightSidebarTab).toBe(rightSidebarTab)
+      store.updateUI({ sidebarWidth: 400 })
+      expect(store.getUI().rightSidebarTab).toBe(rightSidebarTab)
+    }
+  )
 
   it('preserves explicit rightSidebarExplorerView in persisted UI', async () => {
     writeDataFile({

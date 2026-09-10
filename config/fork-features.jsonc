@@ -107,6 +107,16 @@
           "why": "the right-sidebar tab id is part of the client UI schema"
         },
         {
+          "file": "src/main/persistence/applying-settings/ui-selection-normalization.ts",
+          "mustContain": "tab === 'goals'",
+          "why": "host UI normalization preserves Goals during persistence and state broadcasts"
+        },
+        {
+          "file": "src/main/persistence-ui-state.test.ts",
+          "mustContain": "'goals'",
+          "why": "real Store loading and partial UI updates retain the Goals route"
+        },
+        {
           "file": "src/shared/ui-chrome-types.ts",
           "mustContain": "'goals'",
           "why": "the right-sidebar tab union includes goals"
@@ -158,6 +168,7 @@
         }
       ],
       "tests": [
+        "src/main/persistence-ui-state.test.ts",
         "src/main/goals/goal-control-service.test.ts",
         "src/main/goals/goal-driver-launch.test.ts",
         "src/main/goals/goal-revision-control.test.ts",
@@ -177,7 +188,7 @@
         "src/renderer/src/components/goals/GoalEditor.test.tsx"
       ],
       "checks": [
-        "pnpm exec vitest run --config config/vitest.config.ts src/main/goals src/shared/goals src/renderer/src/goals src/renderer/src/components/goals src/main/runtime/rpc/methods/goals.test.ts src/main/plugins/plugin-bundled-bootstrap.test.ts",
+        "pnpm exec vitest run --config config/vitest.config.ts src/main/goals src/shared/goals src/renderer/src/goals src/renderer/src/components/goals src/main/runtime/rpc/methods/goals.test.ts src/main/plugins/plugin-bundled-bootstrap.test.ts src/main/persistence-ui-state.test.ts",
         "node --test --experimental-test-module-mocks goal-mode/cli/*.test.mjs"
       ]
     },

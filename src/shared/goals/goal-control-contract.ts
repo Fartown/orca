@@ -24,7 +24,12 @@ export const GoalSpecSchema = z.object({
   objective: z.string().min(1).max(32_000),
   criteria: z.array(GoalCriterionSchema).max(100),
   acceptanceText: z.string().max(32_000),
-  acceptanceDocument: z.string().trim().min(1).max(32_000).optional(),
+  acceptanceDocument: z
+    .string()
+    .min(1)
+    .max(32_000)
+    .refine((value) => value.trim().length > 0)
+    .optional(),
   extraChecks: z.array(z.string().min(1).max(16_000)).max(20),
   // Why default 'none': records written before item-mode judging must keep parsing.
   judge: z.enum(['none', 'claude', 'codex']).default('none'),
