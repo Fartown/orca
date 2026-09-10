@@ -325,6 +325,11 @@
           "file": "src/renderer/src/components/right-sidebar/AiVaultVirtualRow.tsx",
           "mustContain": "getCanonicalTitle",
           "why": "Agent Session History rows show the Issue-pinned canonical title (moved here by upstream on 2026-09-07)"
+        },
+        {
+          "file": "src/shared/ai-vault-session-filters.ts",
+          "mustContain": "filters.canonicalTitleBySessionKey?.get(",
+          "why": "history search retains Issue-pinned conversation titles alongside upstream filtering optimizations"
         }
       ],
       "tests": [
@@ -333,10 +338,11 @@
         "src/main/runtime/rpc/methods/issues.test.ts",
         "src/renderer/src/issues/issues-domain-store.test.ts",
         "src/renderer/src/issues/issue-native-dependency-boundary.test.ts",
-        "src/renderer/src/components/sidebar/issues/build-issue-rows.test.ts"
+        "src/renderer/src/components/sidebar/issues/build-issue-rows.test.ts",
+        "src/shared/ai-vault-session-filters.test.ts"
       ],
       "checks": [
-        "pnpm exec vitest run --config config/vitest.config.ts src/main/issues src/shared/issues src/renderer/src/issues src/renderer/src/components/issues src/renderer/src/components/sidebar/issues src/main/runtime/rpc/methods/issues.test.ts"
+        "pnpm exec vitest run --config config/vitest.config.ts src/main/issues src/shared/issues src/renderer/src/issues src/renderer/src/components/issues src/renderer/src/components/sidebar/issues src/main/runtime/rpc/methods/issues.test.ts src/shared/ai-vault-session-filters.test.ts"
       ]
     },
     {
