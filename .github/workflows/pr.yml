@@ -156,10 +156,22 @@ jobs:
           fi
 
       - name: Enforce changed-code quality
+        if: github.repository != 'Fartown/orca'
         run: pnpm run check:code-quality:changed -- "${{ github.event.pull_request.base.sha }}"
 
       - name: Enforce React Doctor on changed lines
+        if: github.repository != 'Fartown/orca'
         run: pnpm run check:react-doctor:changed -- "${{ github.event.pull_request.base.sha }}"
+
+      # Check every fork delta against merged upstream, including older fork changes.
+      - name: Enforce code quality across the fork diff
+        if: github.repository == 'Fartown/orca'
+        run: |
+          base=$(git merge-base HEAD origin/main)
+          echo "Checking all fork changes against upstream $base"
+          # Use the explicit upstream base instead of the synthetic PR merge's first parent.
+          env -u GITHUB_EVENT_NAME pnpm run check:code-quality:changed -- "$base"
+          env -u GITHUB_EVENT_NAME pnpm run check:react-doctor:changed -- "$base"
 
       - name: Check Zustand selector fan-out budget
         run: pnpm run check:zustand-selector-fanout
@@ -168,7 +180,9 @@ jobs:
         run: pnpm run check:reliability-gates
 
       - name: Enforce architecture policies
-        run: pnpm run check:architecture-policies -- --base "${{ github.event.pull_request.base.sha }}"
+        env:
+          ARCHITECTURE_BASE_REF: ${{ github.repository == 'Fartown/orca' && 'origin/main' || github.event.pull_request.base.sha }}
+        run: pnpm run check:architecture-policies -- --base "$ARCHITECTURE_BASE_REF"
 
       - name: Enforce fork feature registry
         run: pnpm run check:fork-features
@@ -652,6 +666,13 @@ jobs:
           fetch-depth: 0
           filter: blob:none
           persist-credentials: false
+
+      # The fork mirrors main but does not publish upstream's release tags.
+      - name: Fetch upstream compatibility baselines
+        if: github.repository == 'Fartown/orca'
+        run: >-
+          git fetch --no-tags --filter=blob:none https://github.com/stablyai/orca.git
+          'refs/tags/v*:refs/tags/v*'
 
       - uses: ./.github/actions/install-node-dependencies
         with:
