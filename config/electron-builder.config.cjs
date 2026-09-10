@@ -187,6 +187,7 @@ module.exports = {
     // including either tree can recursively inflate subsequent packages.
     '!dist{,/**/*}',
     '!tmp{,/**/*}',
+    '!.docs{,/**/*}',
     // Why: examples/ is plugin authoring documentation with no runtime consumer —
     // bundled plugins ship via extraResources from resources/plugins/launch/. It also
     // carries hostile-panel, the adversarial fixture the containment tests point at,

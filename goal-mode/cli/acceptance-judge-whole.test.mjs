@@ -6,7 +6,7 @@
 import assert from 'node:assert/strict'
 import test, { after } from 'node:test'
 import { execFile } from 'node:child_process'
-import { chmod, mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { chmod, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { promisify } from 'node:util'
@@ -68,6 +68,26 @@ test('PASS:退 0,判词行挂在保留 id 上,原文跟在后面', async () => {
   assert.equal(code, 0)
   assert.deepEqual(marker, [{ id: GOAL_WHOLE_VERDICT_ID, status: 'passed', reason: 'PASS' }])
   assert.equal(stdout.split('\n')[1], 'PASS')
+})
+
+test('验收文件的首行缩进和尾部换行原样传给裁判进程', async () => {
+  const document = '    保留 Markdown 缩进\n\n验收确认原文\n'
+  const criteriaFile = path.join(DIR, 'whitespace-criteria.md')
+  const promptFile = path.join(DIR, 'received-prompt.txt')
+  const agent = await fakeAgent('judge-capture-prompt', 'PASS')
+  await writeFile(criteriaFile, document)
+  await writeFile(
+    agent,
+    `${await readFile(agent, 'utf8')}require('node:fs').writeFileSync(${JSON.stringify(promptFile)}, process.argv.at(-1))\n`
+  )
+  const { code } = await judge(
+    ['--agent', agent, '--criteria-file', criteriaFile, '--cwd', DIR],
+    agent
+  )
+  assert.equal(code, 0)
+  const prompt = await readFile(promptFile, 'utf8')
+  const received = prompt.split('<acceptance_criteria>\n')[1]?.split('\n</acceptance_criteria>')[0]
+  assert.equal(received, document, '裁判实际收到的验收标准必须与确认原文逐字相同')
 })
 
 test('FAIL:退 1,判词原文完整保留给面板', async () => {

@@ -77,6 +77,7 @@ export function bindingFailureMessage(
 }
 
 export function specFromDraft(draft: GoalDraft): GoalSpec {
+  const hasDocument = draft.acceptanceDocument.trim().length > 0
   return {
     objective: draft.objective.trim(),
     criteria: draft.criteria
@@ -86,10 +87,8 @@ export function specFromDraft(draft: GoalDraft): GoalSpec {
         description: criterion.description.trim(),
         ...(criterion.command?.trim() ? { command: criterion.command.trim() } : {})
       })),
-    acceptanceText: draft.acceptanceDocument.trim() || draft.acceptanceText.trim(),
-    ...(draft.acceptanceDocument.trim()
-      ? { acceptanceDocument: draft.acceptanceDocument.trim() }
-      : {}),
+    acceptanceText: hasDocument ? draft.acceptanceDocument : draft.acceptanceText.trim(),
+    ...(hasDocument ? { acceptanceDocument: draft.acceptanceDocument } : {}),
     extraChecks: draft.extraChecks
       .split('\n')
       .map((line) => line.trim())
