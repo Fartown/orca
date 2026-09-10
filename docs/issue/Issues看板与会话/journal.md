@@ -45,6 +45,15 @@ ready 只表示文档已按当前源码整理；本需求仍为 implementing，�
 
 ## 3. 开发记录
 
+### 2026-09-10 跟进上游同步 PR 的 CI
+
+- 本轮目标：完成 PR #4 的远端验证，保持会话默认标题与上游扫描器一致。
+- 完成内容：上游将默认标题表达式抽取为 generatedSessionTitle，原标题测试的源码字符串断言失效；改为调用真实 createAccumulator / finalizeSession，比对全部 AI Vault Provider 在 macOS、Linux、Windows 和短 ID 情况下的最终标题。
+- 代码或文档变更：更新既有 fallback title 测试，并登记到 Issues 的同步检查；产品标题算法保持原样。
+- 验证证据：默认标题与搜索的 24 项定向测试通过；网络恢复后完整 pnpm sync:upstream 已通过此前的 500 项注册测试。日志见 .docs/upstream-sync-ui-validation/2026-09-10/evidence/。
+- 未解决问题：PR CI 仍需在修复后的提交完成；Fork 缺少上游发布标签和增量质量基线问题由同一同步分支的独立维护提交处理。
+- 下一步：完成 PR 检查并合入远端 fork/integration，保留主工作区其他会话的提交及未提交文档。
+
 ### 2026-09-10 同步上游并保留会话标题搜索
 
 - 本轮目标：合入上游 main 的 137 个提交（截至 aac38d698），保留已登记的 Goal、Issues 和自托管产物能力。
