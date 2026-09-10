@@ -334,6 +334,7 @@
       ],
       "tests": [
         "src/main/issues/issue-runtime-service.test.ts",
+        "src/main/issues/conversation-fallback-title.test.ts",
         "src/main/issues/issue-repository.test.ts",
         "src/main/runtime/rpc/methods/issues.test.ts",
         "src/renderer/src/issues/issues-domain-store.test.ts",
