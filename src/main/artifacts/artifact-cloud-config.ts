@@ -37,10 +37,11 @@ function isPrivateHost(hostname: string): boolean {
 
 export function resolveArtifactCloudApiUrl(
   override?: string,
-  env: NodeJS.ProcessEnv = process.env
+  env: NodeJS.ProcessEnv = process.env,
+  defaultApiUrl: string = PRODUCTION_ARTIFACTS_API_URL
 ): string {
   const candidate = override?.trim() || env.ORCA_ARTIFACTS_API_URL?.trim()
-  const url = new URL(candidate || PRODUCTION_ARTIFACTS_API_URL)
+  const url = new URL(candidate || defaultApiUrl)
   const privateHost = isPrivateHost(url.hostname)
   const firstParty = url.hostname === 'onorca.dev' || url.hostname.endsWith('.onorca.dev')
   // A self-hosted backend may use plaintext so it needs no certificate. The bearer sent to it is
