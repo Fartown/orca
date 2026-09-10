@@ -180,7 +180,9 @@ jobs:
         run: pnpm run check:reliability-gates
 
       - name: Enforce architecture policies
-        run: pnpm run check:architecture-policies -- --base "${{ github.repository == 'Fartown/orca' && 'origin/main' || github.event.pull_request.base.sha }}"
+        env:
+          ARCHITECTURE_BASE_REF: ${{ github.repository == 'Fartown/orca' && 'origin/main' || github.event.pull_request.base.sha }}
+        run: pnpm run check:architecture-policies -- --base "$ARCHITECTURE_BASE_REF"
 
       - name: Enforce fork feature registry
         run: pnpm run check:fork-features
