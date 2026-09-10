@@ -80,6 +80,10 @@ pnpm sync:upstream --dry-run  # 只看落后多少
 
 `.github/workflows/sync-upstream.yml` 每周一自动做同样的事:ff `main`、把上游合到 `sync/upstream-<日期>` 分支、打印接缝与依赖变更报告,然后**在工作流里直接跑**功能清单门禁、文档门禁、架构门禁、驱动打包和全部功能 checks。
 
+Fork 不发布上游的 release tags。PR 的跨版本通信检查会从 `stablyai/orca` 读取 `v*` 标签到 CI 检出,供新旧客户端与服务端配对测试使用;这些标签不会推送到 fork,也不会触发 fork 发布。
+
+Fork 的增量代码质量和 React Doctor 检查以 `HEAD` 与纯上游镜像 `origin/main` 的 merge-base 为基线,检查 fork 的全部差异(含旧功能),与架构差异预算一致。这样原样合入的上游代码不会因跨多次提交的规则变化被算作 fork 新增代码;完整 lint、类型检查、功能测试和跨版本检查仍正常执行。CI 此处移除子进程的 `GITHUB_EVENT_NAME`,防止通用检查脚本把显式上游基线替换成 GitHub 合成 PR merge 的第一父提交。
+
 | 结果       | 工作流的动作                                                                  |
 | ---------- | ----------------------------------------------------------------------------- |
 | 门禁全绿   | 把合并结果 fast-forward 到 `fork/integration`,删掉同步分支,结果写 job summary |
