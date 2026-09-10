@@ -352,14 +352,19 @@
       "title": "自托管产物后端：产物 API origin 放宽到 loopback 与局域网",
       "goal": "通过现有产物客户端访问局域网服务",
       "journal": "docs/issue/自托管产物后端/journal.md",
-      "dependsOn": [],
+      "dependsOn": ["src/main/artifacts/artifact-cloud-service.ts"],
       "policyId": "self-hosted-artifacts",
-      "ownedPaths": ["docs/issue/自托管产物后端/**"],
+      "ownedPaths": ["docs/issue/自托管产物后端/**", "src/main/self-hosted-artifacts/**"],
       "requiredFiles": [
         "src/main/artifacts/artifact-cloud-config.ts",
         "src/main/artifacts/artifact-cloud-config.test.ts"
       ],
       "seams": [
+        {
+          "file": "src/main/artifacts/artifact-cloud-service.ts",
+          "mustContain": "http://127.0.0.1:8787",
+          "why": "Artifact operations default to the local HTTP backend without launch environment setup"
+        },
         {
           "file": "src/main/artifacts/artifact-cloud-config.ts",
           "mustContain": "ORCA_ARTIFACTS_API_URL",
@@ -371,9 +376,12 @@
           "why": "auth override stays limited to non-packaged builds (REQ-204)"
         }
       ],
-      "tests": ["src/main/artifacts/artifact-cloud-config.test.ts"],
+      "tests": [
+        "src/main/artifacts/artifact-cloud-config.test.ts",
+        "src/main/self-hosted-artifacts/local-artifact-backend.test.ts"
+      ],
       "checks": [
-        "pnpm exec vitest run --config config/vitest.config.ts src/main/artifacts/artifact-cloud-config.test.ts"
+        "pnpm exec vitest run --config config/vitest.config.ts src/main/artifacts src/main/self-hosted-artifacts src/main/skills/skill-cloud-service.test.ts"
       ]
     }
   ]

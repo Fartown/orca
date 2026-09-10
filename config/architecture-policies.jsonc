@@ -439,6 +439,7 @@
             "src/shared/plugins/plugin-host-api.ts",
             "src/main/plugins/plugin-host-conformance.test.ts",
             "src/main/artifacts/**",
+            "src/main/self-hosted-artifacts/**",
             "src/renderer/src/components/AiVaultTabTitleSyncGate.tsx",
             "src/renderer/src/components/right-sidebar/use-canonical-session-titles.ts",
             "src/shared/pane-agent-identity-inventory.test.ts",
@@ -678,11 +679,15 @@
           "whenChanged": [
             "src/main/artifacts/artifact-cloud-config.ts",
             "src/main/artifacts/artifact-cloud-config.test.ts",
+            "src/main/artifacts/artifact-cloud-service.ts",
+            "src/main/self-hosted-artifacts/**",
             "docs/issue/自托管产物后端/**"
           ],
           "allowedPaths": [
             "src/main/artifacts/artifact-cloud-config.ts",
             "src/main/artifacts/artifact-cloud-config.test.ts",
+            "src/main/artifacts/artifact-cloud-service.ts",
+            "src/main/self-hosted-artifacts/**",
             "docs/issue/自托管产物后端/**",
             "config/architecture-policies.jsonc",
             "AGENTS.md",
