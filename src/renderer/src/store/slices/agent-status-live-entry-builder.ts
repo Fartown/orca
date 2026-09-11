@@ -80,11 +80,10 @@ export function buildAgentStatusLiveEntry(
   if (existing && updatedAt < existing.updatedAt && !timing?.allowOlderTimestamp) {
     return { entry: null, reason: 'stale' }
   }
-  const sessionNameIdentityChanged = isSessionNameIdentityReplacement(
-    existing,
-    payload.agentType,
-    metadata?.providerSession
-  )
+  // Structured sessions retain the host-owned turn when provider metadata resolves.
+  const sessionNameIdentityChanged =
+    metadata?.structuredHostOwned !== true &&
+    isSessionNameIdentityReplacement(existing, payload.agentType, metadata?.providerSession)
   let history = existing?.stateHistory ?? []
   let lastCompletedAssistantMessage = existing?.lastCompletedAssistantMessage
   const boundaryLandsOnRealDone =
@@ -129,14 +128,16 @@ export function buildAgentStatusLiveEntry(
     payload.promptInteractionKey ??
     (payload.prompt === existing?.prompt ? existing?.promptInteractionKey : undefined)
   const stateStartedAt =
-    sessionNameStateStartedAt(
-      existing,
-      payload.agentType,
-      metadata?.providerSession,
-      payload.state,
-      timing?.stateStartedAt,
-      updatedAt
-    ) ??
+    (metadata?.structuredHostOwned
+      ? timing?.stateStartedAt
+      : sessionNameStateStartedAt(
+          existing,
+          payload.agentType,
+          metadata?.providerSession,
+          payload.state,
+          timing?.stateStartedAt,
+          updatedAt
+        )) ??
     (commandCodeNewTurn || sessionNameIdentityChanged
       ? updatedAt
       : existing && existing.state === payload.state

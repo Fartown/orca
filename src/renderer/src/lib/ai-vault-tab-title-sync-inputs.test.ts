@@ -112,6 +112,8 @@ describe('AI Vault title subscription inputs', () => {
       scheduleReconcile,
       resolveSessionTitles: vi.fn()
     })
+    expect(unchangedEnumerations).toBe(2)
+    unchangedEnumerations = 0
     try {
       const paneKey = Object.keys(state.agentStatusByPaneKey)[0]
       for (let index = 0; index < 50; index++) {

@@ -98,6 +98,33 @@ it.each([
   }
 )
 
+it('keeps host-owned structured turn history and age when provider metadata changes', () => {
+  const store = createTestStore()
+  const entry: AgentStatusEntry = {
+    ...previous,
+    state: 'working',
+    structuredHostOwned: true
+  }
+  store.setState({ agentStatusByPaneKey: { [PANE_KEY]: entry } })
+  const result = buildAgentStatusLiveEntry({
+    state: store.getState(),
+    paneKey: PANE_KEY,
+    payload: { agentType: 'claude', state: 'working', prompt: entry.prompt },
+    metadata: {
+      structuredHostOwned: true,
+      providerSession: { key: 'session_id', id: 'resolved-provider-id' }
+    },
+    timing: { updatedAt: 20, stateStartedAt: 10 },
+    updatedAt: 20
+  })
+  expect(result.entry).toMatchObject({
+    providerSession: { id: 'resolved-provider-id' },
+    stateStartedAt: 10,
+    stateHistory: [],
+    terminalTitle: previous.terminalTitle
+  })
+})
+
 it('paired entry equality and publication notice an optional history identity-only correction', () => {
   const a = {
     ...previous,
