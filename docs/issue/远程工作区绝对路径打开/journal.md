@@ -1,7 +1,7 @@
 ---
 title: "远程工作区绝对路径打开"
 slug: "远程工作区绝对路径打开"
-status: testing
+status: done
 created: 2026-09-11
 updated: 2026-09-11
 external_ids: []
@@ -92,6 +92,15 @@ external_ids: []
 - [需求 REQ-301～REQ-305](requirements/远程工作区绝对路径打开.md)、[调研 §4.6](research/标签栏新建Tab弹窗打开文件路径链路调研.md)、[方案 §3.3](solutions/标签栏新建Tab弹窗远程工作区打开绝对路径方案.md)
 
 ## 3. 开发记录
+
+### 2026-09-11 合入 fork/integration
+
+- 本轮目标：把功能合回集成分支并收口本需求。
+- 完成内容：PR [Fartown/orca#7](https://github.com/Fartown/orca/pull/7) 合并，合并提交 `7074bdc10`。合并前先把分支更新到当时的 `fork/integration`（会话命名与自托管产物两个 PR 已先合入），两处冲突按保留双方处理：`config/architecture-policies.jsonc` 同时保留 session-names 与本功能的策略对象，`docs/issue/README.md` 由 `pnpm generate:issue-index` 重新生成。
+- 代码或文档变更：无新增功能代码；仅合并解冲突与本条记录。
+- 验证证据：PR CI 16 项检查全部通过、0 项失败（typecheck、static analysis、8 个单测分片、macOS 与 Windows 打包、verify、root directory guard、test vs non-test LoC），其余项按路径过滤跳过；合并后本地复验 `pnpm tc` 通过、目标测试 62 文件 514 用例通过、`check:fork-features` 与 `check:fork-docs` 通过（识别 5 个功能）。
+- 未解决问题：REQ-305（主机漂移时拒绝）仍只有单元证据，真机未构造该场景；`check:architecture-policies` 余 1 条越界位于 `src/main/orcad/orcad-entry.ts`，属基线既有项，本功能未触碰。
+- 下一步：无。功能分支与其 worktree 在合并后清理；真机验证夹具保留在主 worktree 的 `.docs/remote-workspace-absolute-path-open-ui-validation/2026-09-11/`。
 
 ### 2026-09-11 真机验证全部通过
 
