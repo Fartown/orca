@@ -13,6 +13,7 @@ import type {
 } from './session-scanner-types'
 import type { TranscriptMessageSink } from './session-transcript-consumers'
 import {
+  accumulatorSessionIdentity,
   addPreviewContent,
   createAccumulator,
   finalizeSession,
@@ -224,6 +225,7 @@ function claudeResumeStateFromParseState(
 ): ResumableSessionParseState {
   return {
     consumeLine: (line) => consumeClaudeSessionLine(state, line),
+    identity: () => accumulatorSessionIdentity(state.accumulator),
     clone: () => claudeResumeStateFromParseState(cloneClaudeSessionParseState(state)),
     touchFile: (file) => {
       state.accumulator.modifiedAt = file.modifiedAt

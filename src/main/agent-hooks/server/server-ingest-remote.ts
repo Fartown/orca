@@ -17,15 +17,15 @@ import { launchTokenHash } from '../../../shared/agent-hook-spool'
 import { parsePaneKey } from '../../../shared/stable-pane-id'
 import type { AgentHookEventPayload } from '../../../shared/agent-hook-listener/listener-event'
 import { isValidPiProviderSessionOnly } from './server-status-identity'
-import { AgentHookServerIngestTerminal } from './server-ingest-terminal'
 import { shouldRejectClaudeSessionReplacement } from '../../../shared/claude-session-ownership/claude-session-activity'
 import {
   shouldRejectCodexTitleTask,
   shouldRejectUnbackedCodexStart
 } from '../../../shared/session-names/codex-title-task-admission'
 import { isCodexThreadTitleGenerationPrompt } from '../../../shared/codex-thread-title-generation'
+import { AgentHookServerIngestStructured } from './server-ingest-structured'
 
-export abstract class AgentHookServerIngestRemote extends AgentHookServerIngestTerminal {
+export abstract class AgentHookServerIngestRemote extends AgentHookServerIngestStructured {
   /** Ingest a payload from the relay JSON-RPC channel (not the local HTTP server); connectionId is stamped here. Main is still the SSH trust boundary, so re-run the canonical normalizer before caching. */
   ingestRemote(
     envelope: {

@@ -102,9 +102,9 @@
           "why": "the host service starts after the terminal runtime"
         },
         {
-          "file": "src/main/runtime/rpc/methods/client-ui-schemas.ts",
+          "file": "src/shared/rpc-contract/client-ui-params.ts",
           "mustContain": "'goals'",
-          "why": "the right-sidebar tab id is part of the client UI schema"
+          "why": "the right-sidebar tab id is part of the client UI schema (moved here upstream in #19961)"
         },
         {
           "file": "src/main/persistence/applying-settings/ui-selection-normalization.ts",
