@@ -302,7 +302,7 @@ main 侧的本地授权模型:`authorizeExternalPath(targetPath)` 把 `resolve` 
 | `local-path-open-guard.ts` 的注释语义("本机 OS 打开动作")vs 弹窗用法("是否允许输入绝对路径") | 守卫被复用为不同语义的开关 | 改任一方会影响另一方 |
 | `getEditorFileOperationContext`(弹窗动作)vs `getFileExplorerOperationOwnerFromState`(弹窗文件索引) | 两套归属解析,来源同为 `resolveWorktreeOperationRoute`,但 folder workspace 的处理分支不同 | 索引就绪与动作放行可能短暂不一致(仅推断,未复现) |
 
-### 7.2 未知项 / 待确认
+### 7.2 未知项 / 待运行时验证
 
 1. **远程 runtime 下 worktree 之外的绝对路径**:没有任何 `files.*` RPC 接受绝对路径;`files.resolveTerminalPath` 的 `crossWorkspace` 只匹配已知工作区。host 侧 `resolveKnownWorkspaceFileTarget` 的实现与匹配范围未追(在 `this.host` 上的可选方法)。
 2. **SSH filesystem provider 的能力边界**:`requireSshFilesystemProvider(connectionId).stat/readFile` 对远端任意绝对路径的行为(权限、符号链接、Windows 远端)未在仓内验证,需运行时证据。
