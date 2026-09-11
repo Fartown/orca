@@ -3064,7 +3064,8 @@
                   "90eb94dc48": "Introduce una URL http:// o https://.",
                   "5553b283ce": "Introduce una URL o ruta de archivo.",
                   "queryTooLarge": "El texto de búsqueda es demasiado grande.",
-                  "absolutePathRemoteBlocked": "Las rutas absolutas requieren un espacio de trabajo local."
+                  "absolutePathRemoteBlocked": "Las rutas absolutas no están disponibles hasta que el host del espacio de trabajo esté listo.",
+                  "absolutePathOutsideWorkspace": "Este espacio de trabajo remoto solo puede abrir archivos dentro de su worktree."
                 }
               },
               "menu": {

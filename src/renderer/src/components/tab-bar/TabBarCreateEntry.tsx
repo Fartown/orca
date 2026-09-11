@@ -1,11 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { Input } from '@/components/ui/input'
 import { useRuntimeFileListForWorktree } from '../quick-open-file-list'
-import {
-  createTabEntryAllowAbsolutePathsSelector,
-  getTabEntryOptions,
-  isTabEntryAbsolutePathLike
-} from './tab-create-entry-action'
+import { getTabEntryOptions, isTabEntryAbsolutePathLike } from './tab-create-entry-action'
+import { useTabEntryAbsolutePathContext } from '../tab-entry-remote-path/use-tab-entry-absolute-path-context'
 import { findMatchingTabAgentLaunchOptions } from './tab-agent-launch-options'
 import { findMatchingTabCreateMenuOptions } from './tab-create-menu-options'
 import { getActiveOptionId, type ActiveOption } from './tab-create-entry-active-option'
@@ -22,7 +19,6 @@ import { useTabEntryMenuReturnFocus } from './use-tab-entry-menu-return-focus'
 import { activateOpenTabSearchResult } from './open-tab-selection-routing'
 import { useTabCreateEntrySearchResults } from './use-tab-create-entry-search-results'
 import { DEFAULT_SEARCH_ENGINE } from '../../../../shared/browser-url'
-import { getRendererAppPlatform } from '@/lib/renderer-app-platform'
 import { useAppStore } from '@/store'
 import { isQuickOpenQueryTooLarge } from '../quick-open-search'
 import { parseForcedSearchQuery } from './tab-create-entry-forced-search'
@@ -93,20 +89,17 @@ function TabBarCreateEntrySession({
   })
   const shouldResolveAbsolutePaths =
     menuOpen && !terminalQueryMode && isTabEntryAbsolutePathLike(query.trim())
-  const allowAbsolutePathsSelector = useMemo(
-    () =>
-      createTabEntryAllowAbsolutePathsSelector(worktreeId, {
-        skip: !shouldResolveAbsolutePaths
-      }),
-    [shouldResolveAbsolutePaths, worktreeId]
+  // Why: the owning host decides whether absolute paths are offered, how they are validated
+  // (remote hosts are POSIX) and whether they must stay inside the worktree (paired runtime).
+  const { allowAbsolutePaths, localPlatform, absolutePathScope } = useTabEntryAbsolutePathContext(
+    worktreeId,
+    shouldResolveAbsolutePaths
   )
-  const allowAbsolutePaths = useAppStore(allowAbsolutePathsSelector)
   // Why the worktree path: editor↔file dedupe folds case by the worktree's
   // filesystem, which a Windows client's own platform does not describe.
   const worktreePath = useAppStore((state) =>
     menuOpen ? (state.getKnownWorktreeById(worktreeId)?.path ?? null) : null
   )
-  const localPlatform = getRendererAppPlatform() === 'win32' ? 'windows' : 'posix'
   const searchEngine = useAppStore(
     (state) => state.browserDefaultSearchEngine ?? DEFAULT_SEARCH_ENGINE
   )
@@ -131,7 +124,8 @@ function TabBarCreateEntrySession({
       getTabEntryOptions(query, fileList, 4, {
         allowAbsolutePaths,
         localPlatform,
-        searchEngine
+        searchEngine,
+        absolutePathScope
       }),
       tabResults,
       worktreePath
@@ -142,6 +136,7 @@ function TabBarCreateEntrySession({
     // Why: a matched create-menu action should win over a generic new-file fallback.
     return entryOptions.filter((option) => option.classification.kind !== 'new-file')
   }, [
+    absolutePathScope,
     allowAbsolutePaths,
     fileList,
     localPlatform,

@@ -3064,7 +3064,8 @@
                   "90eb94dc48": "http:// または https:// URL を入力します。",
                   "5553b283ce": "URL またはファイルパスを入力します。",
                   "queryTooLarge": "検索テキストが大きすぎます。",
-                  "absolutePathRemoteBlocked": "絶対パスにはローカルワークスペースが必要です。"
+                  "absolutePathRemoteBlocked": "ワークスペースのホストが準備できるまで絶対パスは使用できません。",
+                  "absolutePathOutsideWorkspace": "このリモートワークスペースではワークツリー内のファイルのみ開けます。"
                 }
               },
               "menu": {

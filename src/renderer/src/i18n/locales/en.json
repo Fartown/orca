@@ -3487,7 +3487,8 @@
                   "90eb94dc48": "Enter an http:// or https:// URL.",
                   "5553b283ce": "Enter a URL or file path.",
                   "queryTooLarge": "Search text is too large.",
-                  "absolutePathRemoteBlocked": "Absolute paths require a local workspace."
+                  "absolutePathRemoteBlocked": "Absolute paths are unavailable until the workspace host is ready.",
+                  "absolutePathOutsideWorkspace": "This remote workspace can only open files inside its worktree."
                 }
               },
               "menu": {

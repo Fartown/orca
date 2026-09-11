@@ -3069,7 +3069,8 @@
                   "90eb94dc48": "http:// 또는 https:// URL을 입력하세요.",
                   "5553b283ce": "URL 또는 파일 경로를 입력하세요.",
                   "queryTooLarge": "검색 텍스트가 너무 큽니다.",
-                  "absolutePathRemoteBlocked": "절대 경로에는 로컬 워크스페이스가 필요합니다."
+                  "absolutePathRemoteBlocked": "워크스페이스 호스트가 준비될 때까지 절대 경로를 사용할 수 없습니다.",
+                  "absolutePathOutsideWorkspace": "이 원격 워크스페이스는 워크트리 내부의 파일만 열 수 있습니다."
                 }
               },
               "menu": {

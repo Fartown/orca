@@ -1,4 +1,5 @@
 import { detectLanguage } from '@/lib/language-detect'
+import { isLocalPathOpenBlocked } from '@/lib/local-path-open-guard'
 import { toWorktreeRelativePath } from '@/lib/terminal-links'
 import type { RuntimeFileOperationArgs, statRuntimePath } from '@/runtime/runtime-file-client'
 import type { OpenFile } from '@/store/slices/editor'
@@ -28,8 +29,16 @@ export async function openAbsoluteTabEntryFile(args: {
 }): Promise<void> {
   const filePath = validateNewTabEntryAbsolutePath(args.filePath, args.localPlatform)
   args.operations.assertAbsolutePathAllowed()
-  await args.operations.authorizeExternalPath({ targetPath: filePath })
-  args.operations.assertAbsolutePathAllowed()
+  // Why: only client-local paths need the main-process grant. SSH and paired-runtime paths
+  // belong to another machine, whose relay/runtime is the security boundary (same rule as
+  // terminal file links); granting them here would authorize a same-named local path instead.
+  const clientLocal = !isLocalPathOpenBlocked(args.context.settings, {
+    connectionId: args.context.connectionId
+  })
+  if (clientLocal) {
+    await args.operations.authorizeExternalPath({ targetPath: filePath })
+    args.operations.assertAbsolutePathAllowed()
+  }
   let stat: Awaited<ReturnType<typeof statRuntimePath>>
   try {
     stat = await args.operations.statRuntimePath(args.context, filePath)
@@ -41,13 +50,24 @@ export async function openAbsoluteTabEntryFile(args: {
   }
   args.operations.assertAbsolutePathAllowed()
 
+  const relativePath = toWorktreeRelativePath(filePath, args.worktreePath) || filePath
+  const externalSshTargetId =
+    relativePath === filePath &&
+    !clientLocal &&
+    !args.context.settings?.activeRuntimeEnvironmentId?.trim() &&
+    args.context.connectionId
+      ? args.context.connectionId
+      : undefined
   args.operations.openFile(
     {
       filePath,
-      relativePath: toWorktreeRelativePath(filePath, args.worktreePath) || filePath,
+      relativePath,
       worktreeId: args.worktreeId,
       language: detectLanguage(filePath),
-      mode: 'edit'
+      mode: 'edit',
+      // Why: an absolute SSH path outside the worktree otherwise looks identical to a
+      // client-local external file when the editor reloads or restores (terminal links stamp it too).
+      ...(externalSshTargetId ? { externalSshTargetId } : {})
     },
     { preview: false, targetGroupId: args.groupId }
   )
