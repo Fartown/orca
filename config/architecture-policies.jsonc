@@ -535,7 +535,19 @@
             "tests/e2e/helpers/issues-*.ts",
             "tests/e2e/helpers/packaged-issues-journey.ts",
             "tests/e2e/helpers/runtime-types.ts",
-            "tests/e2e/helpers/codex-test-executable*.ts"
+            "tests/e2e/helpers/codex-test-executable*.ts",
+            // 2026-09-11: remote workspace absolute path open (docs/issue/远程工作区绝对路径打开).
+            "src/renderer/src/components/tab-entry-remote-path/**",
+            "docs/issue/远程工作区绝对路径打开/**",
+            "src/renderer/src/components/tab-bar/tab-create-entry-action.ts",
+            "src/renderer/src/components/tab-bar/tab-create-entry-action.test.ts",
+            "src/renderer/src/components/tab-bar/tab-create-entry-classifier.ts",
+            "src/renderer/src/components/tab-bar/tab-create-entry-classifier.test.ts",
+            "src/renderer/src/components/tab-bar/tab-create-entry-absolute-file.ts",
+            "src/renderer/src/components/tab-bar/TabBarCreateEntry.tsx",
+            "src/renderer/src/components/tab-bar/TabBarCreateEntry.history.test.tsx",
+            "src/renderer/src/components/tab-bar/TabBarCreateEntry.keyboard.test.tsx",
+            "src/renderer/src/components/tab-bar/TabBarCreateEntry.tab-results.test.tsx"
           ],
           "message": "Branch changes an upstream path that no fork feature owns or registers as a seam; extend config/fork-features.jsonc and this allowlist, or move the change into a feature-owned path."
         }
@@ -701,6 +713,52 @@
             "docs/maintenance/**"
           ],
           "message": "Change is outside the self-hosted artifact backend and its journal."
+        }
+      ]
+    },
+    {
+      "id": "remote-workspace-absolute-path-open",
+      "description": "The tab create entry opens absolute paths on the workspace's owning host; the host policy lives in its own module and enters the omnibox only through registered seams (REQ-301～REQ-306).",
+      "rules": [
+        {
+          "id": "remote-workspace-absolute-path-open-worktree-scope",
+          "type": "change-scope",
+          "comparison": "worktree",
+          "whenChanged": [
+            "src/renderer/src/components/tab-entry-remote-path/**",
+            "docs/issue/远程工作区绝对路径打开/**"
+          ],
+          "allowedPaths": [
+            "src/renderer/src/components/tab-entry-remote-path/**",
+            "docs/issue/远程工作区绝对路径打开/**",
+            "src/renderer/src/components/tab-bar/tab-create-entry-action.ts",
+            "src/renderer/src/components/tab-bar/tab-create-entry-action.test.ts",
+            "src/renderer/src/components/tab-bar/tab-create-entry-classifier.ts",
+            "src/renderer/src/components/tab-bar/tab-create-entry-classifier.test.ts",
+            "src/renderer/src/components/tab-bar/tab-create-entry-absolute-file.ts",
+            "src/renderer/src/components/tab-bar/TabBarCreateEntry.tsx",
+            "src/renderer/src/components/tab-bar/TabBarCreateEntry.history.test.tsx",
+            "src/renderer/src/components/tab-bar/TabBarCreateEntry.keyboard.test.tsx",
+            "src/renderer/src/components/tab-bar/TabBarCreateEntry.tab-results.test.tsx",
+            "src/renderer/src/i18n/locales/*.json",
+            ".gitignore",
+            "config/architecture-policies.jsonc",
+            "AGENTS.md",
+            "config/fork-features.jsonc",
+            "config/scripts/check-fork-features.mjs",
+            "config/scripts/check-fork-features.test.mjs",
+            "config/scripts/run-fork-feature-checks.mjs",
+            "config/scripts/check-fork-docs.mjs",
+            "config/scripts/check-fork-docs.test.mjs",
+            "config/scripts/report-upstream-seam-changes.mjs",
+            "config/scripts/sync-upstream.mjs",
+            ".github/workflows/sync-upstream.yml",
+            ".github/workflows/track-community-prs.yaml",
+            "docs/reference/fork-maintenance.md",
+            "docs/issue/**",
+            "docs/maintenance/**"
+          ],
+          "message": "Change is outside the remote workspace absolute path feature and its journal."
         }
       ]
     }

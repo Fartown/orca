@@ -21,9 +21,11 @@ const entryOptionsMock = vi.hoisted(() => ({ options: [] as TabEntryOption[] }))
 const structuredLaunchMock = vi.hoisted(() => ({
   status: 'idle' as 'idle' | 'pending' | 'unknown'
 }))
+vi.mock('../tab-entry-remote-path/use-tab-entry-absolute-path-context', () => ({
+  useTabEntryAbsolutePathContext: () => ({ allowAbsolutePaths: true, localPlatform: 'posix' })
+}))
 vi.mock('./tab-create-entry-action', () => ({
   getTabEntryOptions: () => entryOptionsMock.options,
-  createTabEntryAllowAbsolutePathsSelector: () => () => true,
   isTabEntryAbsolutePathLike: () => false
 }))
 vi.mock('../quick-open-file-list', () => ({

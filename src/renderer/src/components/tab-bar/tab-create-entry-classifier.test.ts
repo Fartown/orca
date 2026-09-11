@@ -517,7 +517,24 @@ describe('tab create entry classification', () => {
     ).toMatchObject({ kind: 'blocked', message: 'Enter an absolute path for this computer.' })
   })
 
-  it('blocks absolute paths for remote workspaces', () => {
+  it('blocks absolute paths outside a paired-runtime worktree', () => {
+    const context = {
+      allowAbsolutePaths: true,
+      localPlatform: 'posix' as const,
+      absolutePathScope: { worktreePath: '/repo' }
+    }
+
+    expect(classifyTabEntryQuery('/tmp/notes.md', readyFiles([]), context)).toMatchObject({
+      kind: 'blocked',
+      message: 'This remote workspace can only open files inside its worktree.'
+    })
+    expect(classifyTabEntryQuery('/repo/src/index.ts', readyFiles([]), context)).toEqual({
+      kind: 'absolute-file',
+      filePath: '/repo/src/index.ts'
+    })
+  })
+
+  it('blocks absolute paths until the workspace host is resolved', () => {
     for (const query of [
       '/tmp/notes.md',
       'C:\\tmp\\notes.md',

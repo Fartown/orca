@@ -16,9 +16,11 @@ import { encodePaletteIdentity } from '@/lib/palette-match/palette-ranking'
 // Why: the real entry-action module pulls in runtime IPC + the app store; these
 // tests only need a controllable option list beneath the tab rows.
 const entryOptionsMock = vi.hoisted(() => ({ options: [] as TabEntryOption[] }))
+vi.mock('../tab-entry-remote-path/use-tab-entry-absolute-path-context', () => ({
+  useTabEntryAbsolutePathContext: () => ({ allowAbsolutePaths: true, localPlatform: 'posix' })
+}))
 vi.mock('./tab-create-entry-action', () => ({
   getTabEntryOptions: () => entryOptionsMock.options,
-  createTabEntryAllowAbsolutePathsSelector: () => () => true,
   isTabEntryAbsolutePathLike: () => false
 }))
 vi.mock('../quick-open-file-list', () => ({

@@ -3275,7 +3275,8 @@
                   "90eb94dc48": "Saisissez une URL http:// ou https://.",
                   "5553b283ce": "Saisissez une URL ou un chemin de fichier.",
                   "queryTooLarge": "Le texte recherché est trop long.",
-                  "absolutePathRemoteBlocked": "Les chemins absolus nécessitent un espace de travail local."
+                  "absolutePathRemoteBlocked": "Les chemins absolus ne sont pas disponibles tant que l'hôte de l'espace de travail n'est pas prêt.",
+                  "absolutePathOutsideWorkspace": "Cet espace de travail distant ne peut ouvrir que les fichiers de son worktree."
                 }
               },
               "menu": {

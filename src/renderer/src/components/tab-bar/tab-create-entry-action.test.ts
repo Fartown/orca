@@ -387,4 +387,110 @@ describe('openTabEntryWithOperations', () => {
     expect(operations.statRuntimePath).not.toHaveBeenCalled()
     expect(operations.openFile).not.toHaveBeenCalled()
   })
+  it('opens SSH absolute paths on the remote host without local authorization', async () => {
+    const operations = makeOperations()
+    const runtimeContext = {
+      settings: null,
+      worktreeId: 'wt-1',
+      worktreePath: '/home/me/repo',
+      connectionId: 'ssh-1'
+    }
+
+    await openTabEntryWithOperations({
+      ...baseArgs,
+      worktreePath: '/home/me/repo',
+      runtimeContext,
+      classification: { kind: 'absolute-file', filePath: '/home/me/notes.md' },
+      query: '/home/me/notes.md',
+      operations
+    })
+
+    expect(operations.authorizeExternalPath).not.toHaveBeenCalled()
+    expect(operations.statRuntimePath).toHaveBeenCalledWith(runtimeContext, '/home/me/notes.md')
+    expect(operations.openFile).toHaveBeenCalledWith(
+      expect.objectContaining({
+        filePath: '/home/me/notes.md',
+        relativePath: '/home/me/notes.md',
+        worktreeId: 'wt-1',
+        externalSshTargetId: 'ssh-1'
+      }),
+      { preview: false, targetGroupId: 'group-1' }
+    )
+  })
+
+  it('keeps SSH paths inside the worktree relative and unstamped', async () => {
+    const operations = makeOperations()
+
+    await openTabEntryWithOperations({
+      ...baseArgs,
+      worktreePath: '/home/me/repo',
+      runtimeContext: {
+        settings: null,
+        worktreeId: 'wt-1',
+        worktreePath: '/home/me/repo',
+        connectionId: 'ssh-1'
+      },
+      classification: { kind: 'absolute-file', filePath: '/home/me/repo/src/index.ts' },
+      query: '/home/me/repo/src/index.ts',
+      operations
+    })
+
+    expect(operations.authorizeExternalPath).not.toHaveBeenCalled()
+    expect(operations.openFile).toHaveBeenCalledWith(
+      expect.objectContaining({ relativePath: 'src/index.ts' }),
+      { preview: false, targetGroupId: 'group-1' }
+    )
+    expect(vi.mocked(operations.openFile).mock.calls[0]?.[0]).not.toHaveProperty(
+      'externalSshTargetId'
+    )
+  })
+
+  it('blocks paired-runtime absolute paths outside the worktree before any request', async () => {
+    const operations = makeOperations()
+
+    await expect(
+      openTabEntryWithOperations({
+        ...baseArgs,
+        runtimeContext: {
+          settings: { activeRuntimeEnvironmentId: 'hub-a' },
+          worktreeId: 'wt-1',
+          worktreePath: '/repo'
+        },
+        absolutePathScope: { worktreePath: '/repo' },
+        query: '/tmp/notes.md',
+        operations
+      })
+    ).rejects.toThrow('This remote workspace can only open files inside its worktree.')
+
+    expect(operations.authorizeExternalPath).not.toHaveBeenCalled()
+    expect(operations.statRuntimePath).not.toHaveBeenCalled()
+    expect(operations.openFile).not.toHaveBeenCalled()
+  })
+
+  it('opens paired-runtime absolute paths inside the worktree as relative files', async () => {
+    const operations = makeOperations()
+    const runtimeContext = {
+      settings: { activeRuntimeEnvironmentId: 'hub-a' },
+      worktreeId: 'wt-1',
+      worktreePath: '/repo'
+    }
+
+    await openTabEntryWithOperations({
+      ...baseArgs,
+      runtimeContext,
+      absolutePathScope: { worktreePath: '/repo' },
+      query: '/repo/src/index.ts',
+      operations
+    })
+
+    expect(operations.authorizeExternalPath).not.toHaveBeenCalled()
+    expect(operations.statRuntimePath).toHaveBeenCalledWith(runtimeContext, '/repo/src/index.ts')
+    expect(operations.openFile).toHaveBeenCalledWith(
+      expect.objectContaining({ filePath: '/repo/src/index.ts', relativePath: 'src/index.ts' }),
+      { preview: false, targetGroupId: 'group-1' }
+    )
+    expect(vi.mocked(operations.openFile).mock.calls[0]?.[0]).not.toHaveProperty(
+      'externalSshTargetId'
+    )
+  })
 })

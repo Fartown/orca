@@ -375,6 +375,73 @@
       "checks": [
         "pnpm exec vitest run --config config/vitest.config.ts src/main/artifacts/artifact-cloud-config.test.ts"
       ]
+    },
+    {
+      "id": "remote-workspace-absolute-path-open",
+      "title": "远程工作区绝对路径打开：「+」弹窗在 SSH 工作区按远端主机打开绝对路径",
+      "goal": "弹窗输入绝对路径时本地开本地、SSH 开远端，paired runtime 只放行 worktree 内路径",
+      "journal": "docs/issue/远程工作区绝对路径打开/journal.md",
+      "dependsOn": [
+        "src/renderer/src/components/tab-bar/tab-create-entry-local-path.ts",
+        "src/renderer/src/components/tab-bar/tab-create-entry-path-validation.ts",
+        "src/renderer/src/lib/folder-workspace-connection.ts",
+        "src/renderer/src/lib/renderer-app-platform.ts",
+        "src/renderer/src/lib/resolved-worktree-execution-host.ts",
+        "src/renderer/src/store/index.ts",
+        "src/shared/workspace-scope.ts"
+      ],
+      "policyId": "remote-workspace-absolute-path-open",
+      "ownedPaths": [
+        "src/renderer/src/components/tab-entry-remote-path/**",
+        "docs/issue/远程工作区绝对路径打开/**"
+      ],
+      "requiredFiles": [
+        "src/renderer/src/components/tab-entry-remote-path/absolute-path-host-policy.ts",
+        "src/renderer/src/components/tab-entry-remote-path/use-tab-entry-absolute-path-context.ts"
+      ],
+      "seams": [
+        {
+          "file": "src/renderer/src/components/tab-bar/tab-create-entry-action.ts",
+          "mustContain": "resolveTabEntryAbsolutePathHostPolicy",
+          "why": "the tab create entry resolves the owning host instead of the local-only guard (REQ-302, REQ-305)"
+        },
+        {
+          "file": "src/renderer/src/components/tab-bar/tab-create-entry-classifier.ts",
+          "mustContain": "absolutePathScope",
+          "why": "paired-runtime paths outside the worktree degrade to a status row (REQ-306)"
+        },
+        {
+          "file": "src/renderer/src/components/tab-bar/tab-create-entry-absolute-file.ts",
+          "mustContain": "externalSshTargetId",
+          "why": "SSH paths skip local authorization and stamp their owning target (REQ-302, REQ-304)"
+        },
+        {
+          "file": "src/renderer/src/components/tab-bar/TabBarCreateEntry.tsx",
+          "mustContain": "useTabEntryAbsolutePathContext",
+          "why": "the omnibox offers and validates absolute paths by owning host (REQ-303)"
+        },
+        {
+          "file": "src/renderer/src/i18n/locales/en.json",
+          "mustContain": "absolutePathOutsideWorkspace",
+          "why": "status row copy for paired-runtime paths outside the worktree (REQ-306)"
+        },
+        {
+          "file": "src/renderer/src/i18n/locales/zh.json",
+          "mustContain": "absolutePathOutsideWorkspace",
+          "why": "Chinese copy for the same status row (REQ-306)"
+        }
+      ],
+      "tests": [
+        "src/renderer/src/components/tab-entry-remote-path/absolute-path-host-policy.test.ts",
+        "src/renderer/src/components/tab-bar/tab-create-entry-action.test.ts",
+        "src/renderer/src/components/tab-bar/tab-create-entry-classifier.test.ts",
+        "src/renderer/src/components/tab-bar/TabBarCreateEntry.history.test.tsx",
+        "src/renderer/src/components/tab-bar/TabBarCreateEntry.keyboard.test.tsx",
+        "src/renderer/src/components/tab-bar/TabBarCreateEntry.tab-results.test.tsx"
+      ],
+      "checks": [
+        "pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/components/tab-entry-remote-path src/renderer/src/components/tab-bar/tab-create-entry-action.test.ts src/renderer/src/components/tab-bar/tab-create-entry-classifier.test.ts src/renderer/src/components/tab-bar/tab-create-entry-local-path.test.ts"
+      ]
     }
   ]
 }

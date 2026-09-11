@@ -11,9 +11,11 @@ import type { TabCreateEntryArgs, TabEntryOption } from './tab-create-entry-acti
 
 const entryOptionsMock = vi.hoisted(() => ({ options: [] as TabEntryOption[] }))
 const pathLikeMock = vi.hoisted(() => ({ value: false }))
+vi.mock('../tab-entry-remote-path/use-tab-entry-absolute-path-context', () => ({
+  useTabEntryAbsolutePathContext: () => ({ allowAbsolutePaths: true, localPlatform: 'posix' })
+}))
 vi.mock('./tab-create-entry-action', () => ({
   getTabEntryOptions: () => entryOptionsMock.options,
-  createTabEntryAllowAbsolutePathsSelector: () => () => true,
   isTabEntryAbsolutePathLike: () => pathLikeMock.value
 }))
 vi.mock('../quick-open-file-list', () => ({
