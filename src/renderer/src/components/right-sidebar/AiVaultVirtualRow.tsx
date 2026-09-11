@@ -69,7 +69,7 @@ export function AiVaultVirtualRow({
   expandedSessionIds: ReadonlySet<string>
   vaultScope: AiVaultScope
   buildResumeStartup: (session: AiVaultSession, worktreeId?: string | null) => AiVaultResumeStartup
-  // Fork seam (issues-board): Issue conversations pin a canonical title over the transcript's own.
+  // Shared name projection for this identity, independent of Issue membership.
   getCanonicalTitle?: (session: AiVaultSession) => string | undefined
   getOriginalPaneTarget: (session: AiVaultSession) => AiVaultOriginalPaneTarget | null
   getSessionLiveState: (session: AiVaultSession) => AgentStatusState | null

@@ -1,4 +1,5 @@
 import { normalizePromptField } from '../../shared/agent-status-field-normalization'
+import { deriveGeneratedTabTitle } from '../../shared/agent-tab-title'
 import { addPreviewContent } from './session-scanner-accumulator'
 import type { SessionAccumulator } from './session-scanner-types'
 import { asRecord, extractContentText, extractPreviewContentText } from './session-scanner-values'
@@ -12,6 +13,9 @@ export function consumeCodexResponseMessage(
   const role =
     payload.role === 'assistant' ? 'assistant' : payload.role === 'user' ? 'user' : 'unknown'
   const setTitle = role === 'user' && !accumulator.title
+  if (role === 'user' && !accumulator.generatedTitle) {
+    accumulator.generatedTitle = deriveGeneratedTabTitle(extractContentText(payload.content) ?? '')
+  }
   if (setTitle) {
     accumulator.title = extractContentText(payload.content)
   }
@@ -36,6 +40,7 @@ export function consumeCodexCompletedMessage(
   accumulator.messageCount++
   const setTitle = isUser && !accumulator.title
   if (isUser) {
+    accumulator.generatedTitle ??= deriveGeneratedTabTitle(extractContentText(item.content) ?? '')
     const prompt = normalizePromptField(extractPreviewContentText(item.content))
     if (prompt) {
       accumulator.lastUserPrompt = prompt
@@ -57,6 +62,9 @@ export function consumeCodexLegacyEventMessage(
   accumulator.messageCount++
   const setTitle = isUser && !accumulator.title
   if (isUser) {
+    accumulator.generatedTitle ??= deriveGeneratedTabTitle(
+      extractContentText(payload.message) ?? ''
+    )
     const prompt = normalizePromptField(payload.message)
     if (prompt) {
       accumulator.lastUserPrompt = prompt

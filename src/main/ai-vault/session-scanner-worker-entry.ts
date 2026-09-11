@@ -73,7 +73,11 @@ async function handleRequest(request: AiVaultWorkerRequest): Promise<AiVaultWork
         storeTitle({
           agent: session.agent,
           sessionId: session.sessionId,
-          title: session.title.trim()
+          title: session.title.trim(),
+          ...(session.providerName ? { providerName: session.providerName } : {}),
+          ...(session.generatedTitle !== undefined
+            ? { generatedTitle: session.generatedTitle }
+            : {})
         })
       }
     }

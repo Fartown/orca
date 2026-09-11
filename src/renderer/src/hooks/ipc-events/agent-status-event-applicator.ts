@@ -249,10 +249,13 @@ export function createAgentStatusEventApplicator(args: {
     }
     const applyPostCommitNotification = (): void => {
       if (statusWorktreeId && (options?.replay !== true || resolvedPayload.state === 'working')) {
-        const notificationPayload =
-          typeof data.stateStartedAt === 'number'
-            ? { ...resolvedPayload, stateStartedAt: data.stateStartedAt }
-            : resolvedPayload
+        const notificationPayload = {
+          ...resolvedPayload,
+          ...(typeof data.stateStartedAt === 'number'
+            ? { stateStartedAt: data.stateStartedAt }
+            : {}),
+          ...(data.providerSession ? { providerSession: data.providerSession } : {})
+        }
         observeAgentHookCompletionForNotification({
           paneKey,
           worktreeId: statusWorktreeId,

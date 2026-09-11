@@ -213,10 +213,15 @@ export function installDirectSshRetryStatus(session: ConnectPanePtySession): voi
       session.requiresFreshWorkingForAgentTaskCompleteNotification = false
     }
     const storedStatus = useAppStore.getState().agentStatusByPaneKey[session.cacheKey]
-    const notificationPayload =
-      typeof storedStatus?.stateStartedAt === 'number'
-        ? { ...statusPayload, stateStartedAt: storedStatus.stateStartedAt }
-        : statusPayload
+    const notificationPayload = {
+      ...statusPayload,
+      ...(typeof storedStatus?.stateStartedAt === 'number'
+        ? { stateStartedAt: storedStatus.stateStartedAt }
+        : {}),
+      ...(storedStatus?.agentType === statusPayload.agentType && storedStatus?.providerSession
+        ? { providerSession: storedStatus.providerSession }
+        : {})
+    }
     // Why: hook lifecycle owns deferred side effects even when alerts are disabled.
     session.agentCompletionCoordinator.observeHookStatus(notificationPayload)
     if (payload.state === 'working' && session.pendingTerminalBellNotification) {

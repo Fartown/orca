@@ -5,6 +5,7 @@ import type {
   AiVaultSessionPreviewMessage
 } from '../../shared/ai-vault-types'
 import type { ExecutionHostId } from '../../shared/execution-host'
+import type { ProviderNameEvidence } from '../../shared/session-names/session-name-contract'
 import type { TranscriptMessageSink } from './session-transcript-consumers'
 import type { SessionSidecarObservation } from './session-sidecar-stat'
 
@@ -120,6 +121,8 @@ export type SessionAccumulator = {
   sessionId: string
   title: string | null
   fallbackTitle: string | null
+  providerName?: ProviderNameEvidence
+  generatedTitle?: string | null
   cwd: string | null
   branch: string | null
   model: string | null

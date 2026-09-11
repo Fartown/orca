@@ -5,6 +5,7 @@ import type { AiVaultSession } from '../../shared/ai-vault-types'
 import { LOCAL_EXECUTION_HOST_ID, type ExecutionHostId } from '../../shared/execution-host'
 import { isKnownHarnessInjectedUserTurnText } from '../../shared/harness-injected-user-turns'
 import { normalizePromptField } from '../../shared/agent-status-field-normalization'
+import { deriveGeneratedTabTitle } from '../../shared/agent-tab-title'
 import type {
   FileWithMtime,
   ResumableSessionParseState,
@@ -41,6 +42,7 @@ export type ClaudeSessionParseState = {
   metaTitle: string | null
   generatedTitle: string | null
   firstUserTitle: string | null
+  agentName: string | null
 }
 
 export function createClaudeSessionParseState(
@@ -56,7 +58,8 @@ export function createClaudeSessionParseState(
     }),
     metaTitle: null,
     generatedTitle: null,
-    firstUserTitle: null
+    firstUserTitle: null,
+    agentName: null
   }
 }
 
@@ -70,7 +73,8 @@ export function cloneClaudeSessionParseState(
     },
     metaTitle: state.metaTitle,
     generatedTitle: state.generatedTitle,
-    firstUserTitle: state.firstUserTitle
+    firstUserTitle: state.firstUserTitle,
+    agentName: state.agentName
   }
 }
 
@@ -102,7 +106,8 @@ export function consumeClaudeSessionLine(state: ClaudeSessionParseState, line: s
   }
 
   if (record.type === 'agent-name' && !state.generatedTitle) {
-    state.metaTitle ??= normalizeTitleText(extractString(record.agentName) ?? '')
+    state.agentName = normalizeTitleText(extractString(record.agentName) ?? '')
+    state.metaTitle ??= state.agentName
     return
   }
 
@@ -147,6 +152,7 @@ export function consumeClaudeSessionLine(state: ClaudeSessionParseState, line: s
         state.metaTitle ??= title
       } else {
         state.firstUserTitle ??= title
+        accumulator.generatedTitle ??= deriveGeneratedTabTitle(title)
       }
     }
     return
@@ -172,6 +178,19 @@ export async function finalizeClaudeSessionParseState(
   // Finalize a snapshot: the live state (and its preview array) may keep
   // accumulating appended lines after this session object is handed out.
   const snapshot = cloneClaudeSessionParseState(state)
+  const nativeTitle = snapshot.accumulator.title ?? snapshot.generatedTitle ?? snapshot.agentName
+  snapshot.accumulator.providerName = nativeTitle
+    ? {
+        kind: 'named',
+        title: nativeTitle,
+        field: snapshot.accumulator.title
+          ? 'custom-title.customTitle'
+          : snapshot.generatedTitle
+            ? 'ai-title.aiTitle'
+            : 'agent-name.agentName'
+      }
+    : { kind: 'absent' }
+  snapshot.accumulator.generatedTitle ??= null
   // Why: a user-set custom-title (accumulator.title) wins, but Claude's generated
   // session name (ai-title) should outrank the raw first prompt when present.
   snapshot.accumulator.fallbackTitle =

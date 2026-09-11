@@ -1,0 +1,8 @@
+{
+  "extends": "../../../config/tsconfig.e2e.json",
+  "include": [
+    "../issues-session-name-file-chain.unit.test.ts",
+    "../../../src/renderer/src/env.d.ts",
+    "../../../src/types/**/*"
+  ]
+}

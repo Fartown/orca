@@ -35,6 +35,8 @@ export type NotificationDispatchRequest = {
   worktreeLabel?: string
   hasMultipleActiveRepos?: boolean
   terminalTitle?: string
+  /** Captured display name; raw terminal title remains status/identity evidence. */
+  sessionTitle?: string
   isActiveWorktree?: boolean
   agentType?: AgentType
   agentState?: AgentStatusState

@@ -1,5 +1,6 @@
 import type { AgentSessionContinuationRequest } from '@/lib/agent-session-continuation'
 import type { AiVaultSession } from '../../../../shared/ai-vault-types'
+import { getScannedSessionDisplayName } from '@/session-names/session-name-display'
 
 export function canContinueAiVaultSessionInNewSession(
   session: AiVaultSession,
@@ -21,7 +22,7 @@ export function prepareAiVaultSessionContinuation(args: {
     source: {
       capturedText: previewTranscript(session),
       sourceAgent: session.agent,
-      sourceTitle: session.title,
+      sourceTitle: getScannedSessionDisplayName(session),
       sourceWorkingDirectory: session.cwd,
       transcriptPath: session.filePath.trim() || null,
       // Why: preview user entries can be tool results or injected skill text; only provider-authenticated prompts are safe hints.

@@ -184,11 +184,13 @@ mcp-gateway/
 !docs/requirements/
 !docs/requirements/Issues-会话展示与关闭会话恢复需求.md
 
-# Consolidated docs: three independent feature issues and their lightweight index.
+# Consolidated feature requirements and their lightweight index.
 !docs/issue/
 !docs/issue/README.md
 !docs/issue/Issues看板与会话/
 !docs/issue/Issues看板与会话/**
+!docs/issue/会话命名与身份保护/
+!docs/issue/会话命名与身份保护/**
 !docs/issue/Goal目标模式/
 !docs/issue/Goal目标模式/**
 !docs/issue/自托管产物后端/

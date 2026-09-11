@@ -16,6 +16,7 @@ import { WslTranscriptFsError } from '../native-chat/wsl-transcript-fs-gate'
 import { recordSessionScanIssue } from './session-scan-issues'
 import { sessionIdFromFileName, sessionSortTime } from './session-scanner-accumulator'
 import { parseClaudeSessionFile } from './session-scanner-primary-parsers'
+import { resolveClaudeSubagentNameEvidence } from '../session-names/claude-subagent-name-evidence'
 import {
   isSubagentTranscriptFileName,
   subagentTranscriptsDirFor,
@@ -163,6 +164,7 @@ async function parseSubagentTranscript(args: {
       // Why: the spawn description is the name the main agent gave this Task;
       // it beats the transcript-derived fallback (the raw Task prompt).
       title: meta.description ?? session.title,
+      providerName: resolveClaudeSubagentNameEvidence(session.providerName, meta.description),
       subagent: {
         // The parent's sessionId is derived from its file path, not the
         // subagent transcript, so it survives transcripts with no sessionId.

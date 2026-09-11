@@ -9,19 +9,19 @@ function makeTab(overrides: Partial<ConversationNameTab> = {}): ConversationName
 }
 
 describe('getAgentRowConversationName', () => {
-  it('prefers the manual tab rename over every other source', () => {
+  it('keeps a stable prompt ahead of a container alias', () => {
     const tab = makeTab({
       customTitle: 'Patient sync spike',
       quickCommandLabel: 'Run tests',
       generatedTitle: 'Fix intake flow',
       title: '✳ Investigate replay bug'
     })
-    expect(getAgentRowConversationName(tab, 'claude', true)).toBe('Patient sync spike')
+    expect(getAgentRowConversationName(tab, 'claude', true)).toBe('Fix intake flow')
   })
 
-  it('falls back to the quick-command label before titles', () => {
+  it('keeps a meaningful live name ahead of the quick-command label', () => {
     const tab = makeTab({ quickCommandLabel: 'Run tests', title: '✳ Investigate replay bug' })
-    expect(getAgentRowConversationName(tab, 'claude', true)).toBe('Run tests')
+    expect(getAgentRowConversationName(tab, 'claude', true)).toBe('Investigate replay bug')
   })
 
   it('keeps OpenCode semantic session titles whole', () => {
@@ -53,16 +53,15 @@ describe('getAgentRowConversationName', () => {
     expect(getAgentRowConversationName(tab, 'claude', false)).toBe('Linear work log')
   })
 
-  it('keeps tab-owned names above the pane title', () => {
-    // Why: the user gave these to the whole tab, and none of them flip on focus.
+  it('does not let tab-owned names label a different pane', () => {
     const custom = makeTab({ customTitle: 'Patient sync spike' })
     expect(getAgentRowConversationName(custom, 'claude', false, 'Redis cache strategy')).toBe(
-      'Patient sync spike'
+      'Redis cache strategy'
     )
     const quick = makeTab({ quickCommandLabel: 'Run tests' })
-    expect(getAgentRowConversationName(quick, 'claude', false, null)).toBe('Run tests')
+    expect(getAgentRowConversationName(quick, 'claude', false, null)).toBeNull()
     const generated = makeTab({ generatedTitle: 'Fix intake flow' })
-    expect(getAgentRowConversationName(generated, 'claude', true, null)).toBe('Fix intake flow')
+    expect(getAgentRowConversationName(generated, 'claude', true, null)).toBeNull()
   })
 
   it('strips leading status decoration from agent-set titles', () => {

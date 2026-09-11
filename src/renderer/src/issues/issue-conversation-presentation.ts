@@ -6,6 +6,7 @@ import type { ExecutionHostId } from '../../../shared/execution-host'
 import type { ConversationSummary } from '../../../shared/issues/types'
 import { mintAgentSessionFallbackTitle } from '../../../shared/agent-session-fallback-title'
 import { resolveSessionDisplayTitle } from '../../../shared/session-display-title'
+import { canonicalSessionTitleKey } from '../lib/canonical-session-titles'
 
 export function conversationSessionTitleKey(
   conversation: ConversationSummary,
@@ -15,9 +16,7 @@ export function conversationSessionTitleKey(
   if (!providerSession?.id) {
     return null
   }
-  return [executionHostScope, conversation.agent, providerSession.key, providerSession.id].join(
-    '\0'
-  )
+  return canonicalSessionTitleKey(executionHostScope, conversation.agent, providerSession.id)
 }
 
 export function issueConversationDisplayName(
@@ -27,13 +26,16 @@ export function issueConversationDisplayName(
   executionHostScope: ExecutionHostId = conversation.executionHostId
 ): string {
   const sessionKey = conversationSessionTitleKey(conversation, executionHostScope)
+  const sharedTitle = sessionKey ? sessionTitles?.get(sessionKey) : null
+  if (sharedTitle) {
+    return sharedTitle
+  }
   const providerSession = conversation.navigation?.providerSession
   const legacyTitle = conversation.title?.trim() || null
   const isUserTitle = conversation.titleSource === 'user' || conversation.titleSource == null
   const resolved = resolveSessionDisplayTitle({
     userTitle: isUserTitle ? legacyTitle : null,
-    providerTitle: sessionKey ? sessionTitles?.get(sessionKey) : null,
-    providerTitleSnapshot:
+    generatedTitle:
       conversation.providerTitle ?? (conversation.titleSource === 'provider' ? legacyTitle : null),
     liveTitle,
     identityFallbackTitle: providerSession

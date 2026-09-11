@@ -17,6 +17,7 @@ function serializeAgentStatusEntry(
     agentType: entry.agentType ?? null,
     terminalTitle: entry.terminalTitle ?? null,
     stateHistory: entry.stateHistory.map((history) => ({
+      sessionName: history.sessionName,
       state: history.state,
       prompt: history.prompt,
       startedAt: history.startedAt,

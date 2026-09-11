@@ -1,7 +1,7 @@
 import { basename, dirname, join } from 'node:path'
 import { createInterface } from 'node:readline'
 import { openTranscriptReadStream, wslGatedStat } from '../native-chat/wsl-transcript-fs-access'
-import { WslTranscriptFsError } from '../native-chat/wsl-transcript-fs-gate'
+import type { ProviderNameEvidence } from '../../shared/session-names/session-name-contract'
 import { extractString, normalizeTitleText, parseJsonObject } from './session-scanner-values'
 
 // Codex names threads lazily in <CODEX_HOME>/session_index.jsonl; transcripts
@@ -15,6 +15,7 @@ const CODEX_SESSION_INDEX_TITLE_CACHE_MAX = 64
 type CodexSessionIndexTitleCacheEntry = {
   signature: string
   titles: Map<string, string>
+  unavailable?: boolean
 }
 
 const codexSessionIndexTitleCache = new Map<string, Promise<CodexSessionIndexTitleCacheEntry>>()
@@ -54,18 +55,31 @@ export async function readCodexSessionIndexTitle(
   codexHome: string | null,
   sessionId: string
 ): Promise<string | null> {
+  const evidence = await readCodexSessionIndexName(sessionFilePath, codexHome, sessionId)
+  return evidence.kind === 'named' ? evidence.title : null
+}
+
+export async function readCodexSessionIndexName(
+  sessionFilePath: string,
+  codexHome: string | null,
+  sessionId: string
+): Promise<ProviderNameEvidence> {
   const resolvedCodexHome = codexHome ?? codexHomeFromSessionFilePath(sessionFilePath)
   if (!resolvedCodexHome) {
-    return null
+    return { kind: 'unavailable' }
   }
   const titleBySessionId = await readCodexSessionIndexTitles(resolvedCodexHome)
-  return titleBySessionId.get(sessionId) ?? null
+  if (!titleBySessionId) {
+    return { kind: 'unavailable' }
+  }
+  const title = titleBySessionId.get(sessionId)
+  return title ? { kind: 'named', title, field: 'session_index.thread_name' } : { kind: 'absent' }
 }
 
 function codexHomeFromSessionFilePath(sessionFilePath: string): string | null {
   let currentDir = dirname(sessionFilePath)
   while (currentDir && dirname(currentDir) !== currentDir) {
-    if (basename(currentDir) === 'sessions') {
+    if (basename(currentDir) === 'sessions' || basename(currentDir) === 'archived_sessions') {
       return dirname(currentDir)
     }
     currentDir = dirname(currentDir)
@@ -73,14 +87,14 @@ function codexHomeFromSessionFilePath(sessionFilePath: string): string | null {
   return null
 }
 
-async function readCodexSessionIndexTitles(codexHome: string): Promise<Map<string, string>> {
+async function readCodexSessionIndexTitles(codexHome: string): Promise<Map<string, string> | null> {
   const indexPath = join(codexHome, CODEX_SESSION_INDEX_FILE)
   let signature: string
   try {
     const indexStat = await wslGatedStat(indexPath, 'scan')
     signature = `${indexStat.size}:${indexStat.mtimeMs}`
-  } catch {
-    return new Map()
+  } catch (error) {
+    return (error as NodeJS.ErrnoException).code === 'ENOENT' ? new Map() : null
   }
 
   const cachedTitles = await readCachedCodexSessionIndexTitles(codexHome, signature)
@@ -94,10 +108,11 @@ async function readCodexSessionIndexTitles(codexHome: string): Promise<Map<strin
     if (refused && codexSessionIndexTitleCache.get(codexHome) === pending) {
       codexSessionIndexTitleCache.delete(codexHome)
     }
-    return { signature, titles }
+    return { signature, titles, unavailable: refused }
   })
   storeCodexSessionIndexTitleCacheEntry(codexHome, pending)
-  return (await pending).titles
+  const result = await pending
+  return result.unavailable ? null : result.titles
 }
 
 async function readCachedCodexSessionIndexTitles(
@@ -109,7 +124,7 @@ async function readCachedCodexSessionIndexTitles(
     return undefined
   }
   const entry = await cached
-  if (entry.signature !== signature) {
+  if (entry.signature !== signature || entry.unavailable) {
     return undefined
   }
   // Why: another scan can evict or replace this Promise while it resolves;
@@ -155,9 +170,9 @@ async function readCodexSessionIndexTitlesFromDisk(
         titleBySessionId.set(sessionId, title)
       }
     }
-  } catch (error) {
+  } catch {
     // Codex creates the index opportunistically; older homes may only have raw transcripts.
-    return { titles: titleBySessionId, refused: error instanceof WslTranscriptFsError }
+    return { titles: titleBySessionId, refused: true }
   }
   return { titles: titleBySessionId, refused: false }
 }

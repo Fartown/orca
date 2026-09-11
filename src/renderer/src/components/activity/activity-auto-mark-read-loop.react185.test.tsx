@@ -4,6 +4,7 @@ import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { useAppStore } from '@/store'
+import { createGlobalSettingsFixture } from '../../../../shared/global-settings-test-fixture'
 import { makePaneKey } from '../../../../shared/stable-pane-id'
 import type { Repo } from '../../../../shared/repo-types'
 import type { TerminalTab } from '../../../../shared/terminal-tab-types'
@@ -62,6 +63,7 @@ let seededContainer: HTMLElement
 
 beforeEach(() => {
   useAppStore.setState(initialState, true)
+  useAppStore.setState({ settings: createGlobalSettingsFixture({ tabAutoGenerateTitle: true }) })
 })
 
 afterEach(() => {
@@ -126,7 +128,7 @@ async function mountActivityPage(): Promise<void> {
 
 async function selectSeededThread(): Promise<void> {
   const row = Array.from(seededContainer.querySelectorAll<HTMLElement>('[role="listitem"]')).find(
-    (element) => element.textContent?.includes(PROMPT)
+    (element) => element.getAttribute('aria-label') === 'Turn stamped by the execution host'
   )
   expect(row).toBeDefined()
   await act(async () => {

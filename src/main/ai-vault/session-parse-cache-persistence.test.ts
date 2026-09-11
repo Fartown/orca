@@ -163,6 +163,8 @@ const CACHED_SESSION_FIELDS = {
   previewMessages: true,
   previewMessagesTruncated: true,
   firstUserPrompt: true,
+  providerName: true,
+  generatedTitle: true,
   lastUserPrompt: true,
   queuedMessageCount: true,
   subagentTranscriptCount: true,

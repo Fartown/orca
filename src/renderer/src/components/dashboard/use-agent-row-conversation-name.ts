@@ -5,6 +5,9 @@ import { isTuiAgent } from '../../../../shared/tui-agent-config'
 import { resolveAgentRowPaneLiveTitle } from './agent-row-pane-live-title'
 import { useAppStore } from '@/store'
 import { useCanonicalSessionTitle } from '@/lib/canonical-session-titles'
+import { useSessionNameRecord } from '@/session-names/session-name-subscriptions'
+import { isAiVaultTitleAgent } from '../../../../shared/ai-vault-session-title'
+import { projectSessionNameSlot } from '../../../../shared/session-names/session-name-slot'
 import { getExecutionHostIdForWorktree } from '@/lib/worktree-runtime-owner'
 import type { AppState } from '@/store/types'
 import type { DashboardAgentRow } from './useDashboardData'
@@ -47,6 +50,18 @@ export function useAgentRowConversationName(agent: DashboardAgentRow): string | 
   const executionHostId = useAppStore((s) => getExecutionHostIdForWorktree(s, agent.tab.worktreeId))
   const rowSessionId = agent.entry.providerSession?.id
   const userTitle = useCanonicalSessionTitle(executionHostId, agent.agentType, rowSessionId)
+  const nameRecord = useSessionNameRecord(
+    !cannotOwnTabName && rowSessionId && isAiVaultTitleAgent(agent.agentType)
+      ? {
+          executionHostId,
+          agent: agent.agentType,
+          sessionId: rowSessionId,
+          ...(agent.entry.providerSession?.transcriptPath
+            ? { transcriptPath: agent.entry.providerSession.transcriptPath }
+            : {})
+        }
+      : null
+  )
   // Why: parsed per render rather than inside the selector, which runs on every
   // store update and must stay allocation-free.
   const ownLeafId = cannotOwnTabName ? null : parsePaneKey(agent.paneKey)?.leafId
@@ -73,8 +88,18 @@ export function useAgentRowConversationName(agent: DashboardAgentRow): string | 
   const slotNamesThisRow =
     tab.aiVaultTitle == null ||
     (tab.aiVaultTitle.agent === agent.agentType && tab.aiVaultTitle.sessionId === rowSessionId)
+  const ownSlot = slotNamesThisRow ? tab.aiVaultTitle : null
+  const aiVaultTitle = nameRecord
+    ? projectSessionNameSlot({
+        agent: nameRecord.agent,
+        sessionId: nameRecord.sessionId,
+        previous: ownSlot,
+        title: nameRecord,
+        manualTitle: userTitle ?? null
+      })
+    : ownSlot
   return getAgentRowConversationName(
-    slotNamesThisRow ? tab : { ...tab, aiVaultTitle: null },
+    aiVaultTitle === tab.aiVaultTitle ? tab : { ...tab, aiVaultTitle },
     agent.agentType,
     generatedTitlesEnabled,
     paneLiveTitle,

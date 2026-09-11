@@ -246,7 +246,7 @@ describe('buildActivityEvents', () => {
     })
   })
 
-  it('matches a custom-titled live thread by its current prompt', () => {
+  it('keeps prompt search while a stable prompt outranks a container alias', () => {
     const tab = { ...makeTab(), customTitle: 'Pinned agent title' }
     const entry = {
       ...makeWorkingEntryWithoutHistory(),
@@ -262,7 +262,7 @@ describe('buildActivityEvents', () => {
 
     const threads = makeThreads(result)
 
-    expect(threads[0].paneTitle).toBe('Pinned agent title')
+    expect(threads[0].paneTitle).toBe('Investigate activity live prompt search')
     expect(
       activityThreadMatchesSearchQuery({
         thread: threads[0],

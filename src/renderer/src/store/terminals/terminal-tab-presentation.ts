@@ -1,4 +1,5 @@
 import { isDecorativeAgentTitleFrameChange } from '../../../../shared/agent-decorative-title-signature'
+import { isEligibleSessionNamePrompt } from '../../../../shared/session-names/session-name-candidate-quality'
 import { scheduleRuntimeGraphSync } from '@/runtime/sync-runtime-graph'
 import { classifyTitleActivity } from '@/lib/pane-agent-evidence'
 import {
@@ -56,19 +57,33 @@ export function createTerminalTabPresentationActions(
         }
         const tabs = s.tabsByWorktree[ownerWorktreeId] ?? []
         const current = tabs.find((tab) => tab.id === tabId)
-        const sameTitle =
-          current?.aiVaultTitle?.agent === aiVaultTitle?.agent &&
-          current?.aiVaultTitle?.sessionId === aiVaultTitle?.sessionId &&
-          current?.aiVaultTitle?.title === aiVaultTitle?.title &&
-          current?.aiVaultTitle?.source === aiVaultTitle?.source
+        const sameTitle = sessionNameSlotEqual(current?.aiVaultTitle, aiVaultTitle)
         if (!current || sameTitle) {
           return s
         }
-        const ownerTabs = tabs.map((tab) => (tab.id === tabId ? { ...tab, aiVaultTitle } : tab))
+        const identityChanged =
+          current.aiVaultTitle != null &&
+          (current.aiVaultTitle.agent !== aiVaultTitle?.agent ||
+            current.aiVaultTitle.sessionId !== aiVaultTitle?.sessionId)
+        const ownerTabs = tabs.map((tab) =>
+          tab.id === tabId
+            ? {
+                ...tab,
+                aiVaultTitle,
+                ...(identityChanged ? { generatedTitle: null } : {})
+              }
+            : tab
+        )
         const nextTabsByWorktree = { ...s.tabsByWorktree, [ownerWorktreeId]: ownerTabs }
         const unifiedTabs = s.unifiedTabsByWorktree[ownerWorktreeId] ?? []
         const nextUnifiedTabs = unifiedTabs.map((tab) =>
-          tab.contentType === 'terminal' && tab.entityId === tabId ? { ...tab, aiVaultTitle } : tab
+          tab.contentType === 'terminal' && tab.entityId === tabId
+            ? {
+                ...tab,
+                aiVaultTitle,
+                ...(identityChanged ? { generatedLabel: null } : {})
+              }
+            : tab
         )
         adoptTerminalTabOwnerMetadataOnlyBuckets(s.tabsByWorktree, nextTabsByWorktree, [
           ownerWorktreeId
@@ -96,11 +111,14 @@ export function createTerminalTabPresentationActions(
       }
       const tabs = state.tabsByWorktree[ownerWorktreeId] ?? []
       const currentTab = tabs.find((tab) => tab.id === tabId)
-      if (!currentTab || currentTab.customTitle?.trim() || currentTab.quickCommandLabel?.trim()) {
+      if (!currentTab) {
         return
       }
       const existingGeneratedTitle = currentTab.generatedTitle?.trim()
-      if (existingGeneratedTitle && options?.replaceExistingGeneratedTitle !== true) {
+      if (
+        isEligibleSessionNamePrompt(existingGeneratedTitle ?? '') &&
+        options?.replaceExistingGeneratedTitle !== true
+      ) {
         return
       }
       set((latestState) => {
@@ -202,3 +220,4 @@ export function createTerminalTabPresentationActions(
     }
   }
 }
+import { sessionNameSlotEqual } from '../../../../shared/session-names/session-name-slot'

@@ -56,7 +56,10 @@ describe('readAiVaultSessionTitlesFromFiles', () => {
         { agent: 'codex', sessionId: 'session-1', transcriptPath: path }
       ])
     ).resolves.toEqual({
-      titles: [{ agent: 'codex', sessionId: 'session-1', title: 'Exact title' }]
+      titles: [{ agent: 'codex', sessionId: 'session-1', title: 'Exact title' }],
+      nameEvidence: [
+        { agent: 'codex', sessionId: 'session-1', providerName: { kind: 'unavailable' } }
+      ]
     })
     expect(parseAgentSessionFileCached).toHaveBeenCalledTimes(1)
     expect(parseAgentSessionFileCached.mock.calls[0]?.[0]).toMatchObject({
@@ -77,7 +80,12 @@ describe('readAiVaultSessionTitlesFromFiles', () => {
       readAiVaultSessionTitlesFromFiles([
         { agent: 'codex', sessionId: 'session-1', transcriptPath: path }
       ])
-    ).resolves.toEqual({ titles: [] })
+    ).resolves.toEqual({
+      titles: [],
+      nameEvidence: [
+        { agent: 'codex', sessionId: 'session-1', providerName: { kind: 'unavailable' } }
+      ]
+    })
   })
 
   it('uses the bounded worker index when no transcript path is available', async () => {
@@ -88,7 +96,12 @@ describe('readAiVaultSessionTitlesFromFiles', () => {
       readAiVaultSessionTitlesFromFiles([{ agent: 'claude', sessionId: 'session-1' }], {
         cache
       })
-    ).resolves.toEqual({ titles: [cached] })
+    ).resolves.toEqual({
+      titles: [cached],
+      nameEvidence: [
+        { agent: 'claude', sessionId: 'session-1', providerName: { kind: 'unavailable' } }
+      ]
+    })
     expect(parseAgentSessionFileCached).not.toHaveBeenCalled()
     expect(cache.set).not.toHaveBeenCalled()
   })

@@ -4,6 +4,7 @@ import {
   type AgentStatusEntry
 } from '../../../../shared/agent-status-types'
 import { agentProviderSessionsEqual } from '../../../../shared/agent-session-resume'
+import { sessionNameHistoryEqual } from '../../../../shared/session-names/session-name-history'
 import type {
   WebSessionTabsBatchContext,
   WebSessionTabsBatchRecordKey,
@@ -29,7 +30,8 @@ export function sameAgentStateHistory(
       entry.state === b[index]?.state &&
       entry.prompt === b[index]?.prompt &&
       entry.startedAt === b[index]?.startedAt &&
-      entry.interrupted === b[index]?.interrupted
+      entry.interrupted === b[index]?.interrupted &&
+      sessionNameHistoryEqual(entry.sessionName, b[index]?.sessionName)
   )
 }
 

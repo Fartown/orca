@@ -3,13 +3,15 @@ title: Issues 看板与会话
 document_type: requirement
 status: ready
 created: 2026-09-05
-updated: 2026-09-05
+updated: 2026-09-10
 issue: Issues看板与会话
 ---
 
 # Issues 看板与会话
 
-本文合并本地并行任务看板、会话展示与恢复、原 pane 识别和会话标题稳定化的需求口径。依据为 2026-09-05 当前工作树，包含已暂存的标题改动。状态 `ready` 只表示文档已按源码整理；没有重新运行产品测试或完成真实 App 验收。
+> 2026-09-10归属纠正：原 REQ-025/026/028 已迁入独立的[会话命名与身份保护需求](../../会话命名与身份保护/requirements/会话命名与身份保护.md)。本文只定义 Issues 的组织、绑定、恢复及公共名称消费关系，不再拥有全局命名优先级或 Provider 主会话保护。
+
+本文管理本地并行任务看板、Issue 会话组织与恢复、原 pane 定位的需求口径。原实现说明依据 2026-09-05 工作树；本轮只纠正需求归属。状态 `ready` 不代表产品验收完成。
 
 技术事实见[技术说明](../solutions/Issues看板与会话技术说明.md)，测试标准见[测试规格](../tests/cases/Issues功能测试.md)。旧稿里的版本号、某次测试结果和实施步骤均不作为本需求的当前完成证明。
 
@@ -17,7 +19,7 @@ issue: Issues看板与会话
 
 用户需要把跨 Workspace、跨日期的一件事组织到同一个 Issue 下，知道哪些会话需要自己处理，并在关闭 pane 后继续原会话。Issue 是可选的工作组织维度；Workspace 是执行环境；Conversation 是已纳管会话的持久身份；Round 记录等待或完成的义务。
 
-正在运行的会话应复用 Workspace 原行。关闭 pane 后，Issue 保留历史与绑定，用户从 Issue 点击一次 Resume，复用 AI Vault 现有查找、定位与恢复能力。标题有人工名时尊重人工名，否则优先显示 Provider 的有意义标题；身份兜底只作最低优先级候选。
+正在运行的会话应复用 Workspace 原行。关闭 pane 后，Issue 保留历史与绑定，用户从 Issue 点击一次 Resume，复用 AI Vault 现有查找、定位与恢复能力。会话名称消费公共结果，与 Workspace 一致；Issue 的组织操作不改变会话自己的名字，不新增专属命名逻辑或存储。
 
 ## 2. 范围与不变量
 
@@ -27,7 +29,7 @@ issue: Issues看板与会话
 - Conversation 可信纳管、Issue 内显式启动、绑定、改绑、解绑、改名、显式忘记与恢复。
 - Round 预览、attention、已读与已解决、去重和已有 transcript 对账。
 - profile 数据库、authority/host 隔离、revision、receipt、分页、混合版本和降级。
-- Issues Sidebar/详情、原 Workspace 行复用、AI Vault 恢复快捷入口、launch-config 身份查找、四处标题来源一致性。
+- Issues Sidebar/详情、原 Workspace 行复用、AI Vault 恢复快捷入口、launch-config 身份查找；会话名仅消费公共结果。
 
 继续延后：
 
@@ -35,6 +37,7 @@ issue: Issues看板与会话
 - 整理稿、产物聚合、全文搜索、正文读取服务、自动任务调度、provider 自动同步/反向写入。
 - 远端离线 cache/写队列、Profile Issue 数据迁移、Forge 迁移、push invalidation、execution-chain supersession。
 - 无 identity 预分配孤儿记录的自动回收。
+- 旧命名列清理、完整 Conversation 模型合并；既有 Rename/Clear 仅兼容保留，不在本次扩展。公共命名的范围由独立需求维护。
 
 必须保持：
 
@@ -45,6 +48,7 @@ issue: Issues看板与会话
 5. Workspaces 使用原生运行行；持久 Conversation 不向 Workspaces 叠加一套行。
 6. 失联不能证明进程退出。涉及执行的判断归执行主机；标题与 `detached` 都不能作为进程死亡证据。
 7. 本地 Issue 不是新的 TaskProvider，也不向通用 Workspace linked item 填入虚构 `provider='orca'`。
+8. Issues 消费公共层接受的会话身份，不独立决定 Provider 的主 pane 归属；组织和过滤不能改变会话名称。
 
 ## 3. 按需求目标分级
 
@@ -194,17 +198,13 @@ issue: Issues看板与会话
 
 目标与验收边界：identity 前无 Starting/Retry、无 direct/running 计数；过期可信 Hook 未归属纳管，旧预分配隐藏。
 
-### REQ-025 标题来源一致性
+### 公共会话名称消费（原 REQ-025 已迁出）
 
-优先级：P0。当前状态：已实现于当前暂存代码；标题不是全局统一字符串，也不参与匹配。
+Issues 显示同一会话的公共名称，与 Workspace 等入口一致；不在这里定义全局优先级或其他页面的验收。完整要求、实现取舍与验收归[会话命名与身份保护 REQ-025](../../会话命名与身份保护/requirements/会话命名与身份保护.md)。
 
-目标与验收边界：人工名→当前 Provider→Provider 快照→generated/live→identity fallback；四处采用自身粒度候选。
+### 公共命名与兼容边界（原 REQ-026 已迁出）
 
-### REQ-026 标题写入与 v4 迁移
-
-优先级：P0。当前状态：已实现于当前暂存代码；真实 UI/离线/重启仍待验收。
-
-目标与验收边界：user override 与 Provider 快照分槽；Clear 保快照；minted 不落库；identity/bind/round/startup 触发现有刷新器。
+Issues 只做筛选、组织、绑定，消费公共命名结果；旧 Conversation 数据与已有编辑合同保留兼容，不建立新的专属命名存储。完整要求、实现取舍与验收归[会话命名与身份保护 REQ-026](../../会话命名与身份保护/requirements/会话命名与身份保护.md)。
 
 ### REQ-027 首条 Hook 前原 pane 定位
 
@@ -212,11 +212,9 @@ issue: Issues看板与会话
 
 目标与验收边界：finder/index 从现有 launch-config provider identity 查找仍存在的 tab/leaf；不伪造 live 状态。
 
-### REQ-028 Codex 内部辅助会话过滤
+### 主会话身份保护依赖（原 REQ-028 已迁出）
 
-优先级：P1。当前状态：已实现过滤；2026-08-27 daemon 隔离 CLI 注入方案未发现落地。
-
-目标与验收边界：标题生成 utility 与 pathless SessionStart 不形成普通用户轮次；手工命名真实会话不误隐藏。
+Issues 消费公共层已接受的会话身份，不拥有 Claude/Codex 的主 pane 准入与后台调用保护。原有列表和绑定业务仍按本需求对应条目执行。完整要求、实现取舍与验收归[会话命名与身份保护 REQ-028](../../会话命名与身份保护/requirements/会话命名与身份保护.md)。
 
 ### REQ-029 容量与完整降级
 
@@ -246,7 +244,7 @@ Needs me 从 unresolved Round 派生。Mark read 只记阅读时间；Mark handl
 
 ### Rename 与 Clear
 
-人工名保存到 `title`；自动 Provider 名保存到 `provider_title`。Rename 不阻止后台刷新快照；Clear 清人工覆盖并恢复自动候选。Tab 自己的 customTitle、quickCommandLabel、OpenCode 语义标题仍遵循既有优先级；split pane 行按各自 identity 解析，不能借用 sibling 的槽。
+已有 Conversation Rename/Clear 按旧能力兼容保留：只改旧人工值，不改 Provider 文件或会话身份。最终显示消费公共命名规则，不保证保存旧备用名就改变主显示；本需求不新增全局改名入口。
 
 ## 5. 最新取舍替代的旧描述
 
@@ -257,7 +255,8 @@ Needs me 从 unresolved Round 派生。Mark read 只记阅读时间；Mark handl
 | Issue 专属 Starting/Retry 和异步 launcher failure UI       | identity 前隐藏；后端诊断/retry 合同仍在，未连接普通 UI                |
 | 过期 claim Hook 一律丢弃                                   | 失去原绑定权，但可信 identity 可未归属纳管                             |
 | Project move 必须被 Issue guard 阻止                       | guard 撤回，沿用主工程 transfer                                        |
-| minted/provider/user 共用 title，并作为 app-wide canonical | user override 与 Provider 快照分槽；fallback 纯派生                    |
+| minted/provider/user 共用 title，并作为 app-wide canonical | 保留v4及旧人工名兼容；Provider缓存归AI Vault，新显示链公共化，不新建人工存储或迁库 |
+| 全局命名与主会话保护由 Issues 需求定义 | 已迁入独立需求；Issues 只消费公共名称和身份 |
 | schema 固定 v1，旧稿 v3 是最终版本                         | 当前 v4；保留 migration、回滚和混合版本边界                            |
 | 增加长轮询/补偿保证所有标题及时生成                        | 复用现有 resolver 与事件触发；无明确事件时不承诺即时收敛               |
 | 所有原生恢复失败都由 Issue 修复                            | 复用原生合同，单独纳入 launch-config finder 缺口，不扩展为第二恢复系统 |
@@ -266,7 +265,7 @@ Needs me 从 unresolved Round 派生。Mark read 只记阅读时间；Mark handl
 
 ## 6. 验收与完成条件
 
-[测试规格](../tests/cases/Issues功能测试.md)保留 TC-001～TC-190 的有效独有细节，更新撤回目标，并扩展 TC-191 起的行复用、精确恢复、标题和迁移用例。历史编号不等于历史预期仍有效；已替换项均有映射说明。
+[原测试规格](../tests/cases/Issues功能测试.md)保留非命名及历史v4回归。最新命名与身份前置的验收边界以[方案§6.2](../../会话命名与身份保护/solutions/Provider优先的会话命名统一方案.md#62-验收矩阵)为准；[原命名验收](../../会话命名与身份保护/tests/cases/Provider优先命名验收.md)标记needs-update，公共人工名工程等旧断言不作为本期要求。正式用例同步是进入测试阶段的前置，不能用未执行矩阵或旧测试结果宣布完成。
 
 本需求不以测试总数衡量功能数量。P0 是用户主链和数据不变量，P1 是恢复/并发/跨主机完整性，P2 是容量和低频边界。完成结论至少记录源码 revision、是否包含 staged 变更、测试环境、实际执行集、未覆盖项；单测不能替代 Electron CDP 或真实远端验收。
 
@@ -277,3 +276,7 @@ Needs me 从 unresolved Round 派生。Mark read 只记阅读时间；Mark handl
 核对日期：2026-09-05；分支：`feat/self-hosted-artifact-backend`；本地 main：`51ed7d4f678de68b38eef14c79b473b84a6e55bc`；HEAD：`0b1e92fa9a783a978f3f43ac8f4eea1c5c55a3f9`。源码基线包含整理前已有的暂存标题实现，不能只用 HEAD 复现。原产品稿与已确认结论提供目标，当前工作树提供实现事实，历史执行只证明其记录的版本和环境。
 
 2026-09-05 变更：由共用总 issue 改为三项需求分别管理；仅调整文档归属、入口和证据分类，不扩大功能范围、不改变验收断言。来源映射和原稿恢复见 [文档归并记录](../../../maintenance/本地需求文档整理/2026-09-05-文档归并记录.md)。
+
+2026-09-08评审变更（用户确认）：身份归属/内部调用边界前置，公共人工名新系统撤出本次；排序仍保留已有人工名回退。REQ-025/026/028和Rename说明随方案收缩，历史用例不静默删除；本轮只修订文档，不改产品、Provider文件或运行数据。
+
+2026-09-08首期路线变更（用户确认，D-004）：REQ-028先采用Claude在位会话活跃窗口保护，完整可靠归属保留为后续目标；同步命名主方案与首期模块方案，不重写原始采样调研、不改脱敏证据或产品实现。
