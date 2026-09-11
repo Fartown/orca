@@ -18,6 +18,7 @@ import {
 } from './server-claude-status-rules'
 import { isToolProgressWorkingAfterInterrupt } from './server-status-identity'
 import { AgentHookServerStatusApplication } from './server-status-application'
+import { recordClaudeSessionActivity } from '../../../shared/claude-session-ownership/claude-session-activity'
 
 export abstract class AgentHookServerStatusUpdate extends AgentHookServerStatusApplication {
   protected applyNormalizedStatus(
@@ -198,6 +199,7 @@ export abstract class AgentHookServerStatusUpdate extends AgentHookServerStatusA
       this.runtimeObservedStatusPaneKeys.add(enriched.paneKey)
     }
     this.state.lastStatusByPaneKey.set(enriched.paneKey, enriched)
+    recordClaudeSessionActivity(this.state, enriched)
     this.scheduleStatusPersist()
     this.notifyStatusChangeListeners()
     this.emitEnrichedStatus(enriched)

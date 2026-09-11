@@ -58,6 +58,7 @@ import { forceKillPosixPtyProcessGroups } from '../main/pty/posix-pty-process-gr
 import type { PtyChildProcessVerdict } from '../shared/terminal-process-inspection'
 import { terminatePtyJob } from '../main/windows/windows-pty-job'
 import { stripInheritedBuildModeEnv } from '../main/pty/build-mode-env'
+import { removeCodexToolCallerIdentity } from '../main/codex-session-ownership/codex-tool-caller-environment'
 import { stripLegacyTerminalShimEnv } from '../main/pty/legacy-terminal-shim-dir'
 import { dropIncoherentCondaActivationEnv } from '../main/pty/conda-activation-env'
 import { dropInheritedOrcaFishHistory } from '../main/fish-history-session'
@@ -821,6 +822,7 @@ export class PtyHandler {
       }
     }
     const result = mergeGitConfigEnvProtocol(baseEnv, augmented) as Record<string, string>
+    removeCodexToolCallerIdentity(result)
     // Why: an older client may not ask a newly upgraded relay to delete inherited shim state.
     stripLegacyTerminalShimEnv(result, process.platform)
     // Why unconditionally here, not in injectRelayFishHistoryEnv: that runs only for a

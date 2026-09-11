@@ -12,6 +12,7 @@ import type {
 import type { EnrichedAgentHookEventPayload } from './server-types'
 import { agentTypeToPromptSentAgentKind } from './server-status-identity'
 import { AgentHookServerStatusDisposition } from './server-status-disposition'
+import { isSessionNameIdentityReplacement } from '../../../shared/session-names/session-name-history'
 
 /** Bounds the retained observation clock; eviction only degrades a replay to `now`. */
 const MAX_REMEMBERED_EVIDENCE_OBSERVATIONS = 1024
@@ -36,8 +37,16 @@ export abstract class AgentHookServerStatusApplication extends AgentHookServerSt
         previousPromptInteractionKey: previous.promptInteractionKey,
         incomingPromptInteractionKey: payload.promptInteractionKey
       })
+    const sessionReplaced = isSessionNameIdentityReplacement(
+      previous ? { ...previous.payload, providerSession: previous.providerSession } : undefined,
+      payload.payload.agentType,
+      payload.providerSession
+    )
     const stateStartedAt =
-      previous && previous.payload.state === payload.payload.state && !commandCodeNewTurn
+      previous &&
+      previous.payload.state === payload.payload.state &&
+      !commandCodeNewTurn &&
+      !sessionReplaced
         ? previous.stateStartedAt
         : now
     // Why: `stateStartedAt` tracks the current state, while `receivedAt` tracks every arrival.

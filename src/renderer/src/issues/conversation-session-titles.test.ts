@@ -9,10 +9,12 @@ import {
   useConversationSessionTitles
 } from './conversation-session-titles'
 import { conversationSessionTitleKey } from './issue-conversation-presentation'
+import { sessionNameStore } from '../session-names/session-name-store'
 
 const mocks = vi.hoisted(() => ({ resolve: vi.fn() }))
 
 beforeEach(() => {
+  sessionNameStore.reset()
   mocks.resolve.mockReset()
   Object.defineProperty(window, 'api', {
     configurable: true,
@@ -46,17 +48,18 @@ describe('Conversation session titles', () => {
       }))
     )
 
-    expect(requests).toHaveLength(4)
+    expect(requests).toHaveLength(5)
     expect(requests.map((request) => request.providerSession.id)).toEqual([
       'session-1',
       'session-1',
+      'named',
       'provider',
       'minted'
     ])
     expect(conversationSessionTitleKey(local)).not.toBe(conversationSessionTitleKey(remote))
   })
 
-  it('resolves exact titles locally without a global cache', async () => {
+  it('resolves exact titles through the shared native cache', async () => {
     const item = conversation('codex', 'local', 'codex-session', 'codex')
     item.navigation!.providerSession!.transcriptPath = '/sessions/codex-session.jsonl'
     const source: ConversationSessionTitleSource = {
@@ -83,6 +86,30 @@ describe('Conversation session titles', () => {
         }
       ]
     })
+  })
+
+  it('shares one request and one resulting index across multiple Issue surfaces', async () => {
+    const item = conversation('shared', 'local', 'shared', 'codex')
+    const sources = [{ conversation: item, executionHostScope: 'local' as const }]
+    mocks.resolve.mockResolvedValue({
+      titles: [
+        {
+          agent: 'codex',
+          sessionId: 'shared',
+          title: 'Native shared',
+          providerName: { kind: 'named', title: 'Native shared', field: 'test.nativeName' }
+        }
+      ]
+    })
+    const view = renderHook(() => [
+      useConversationSessionTitles(sources),
+      useConversationSessionTitles(sources)
+    ])
+    await waitFor(() =>
+      expect(view.result.current[0].get(conversationSessionTitleKey(item)!)).toBe('Native shared')
+    )
+    expect(mocks.resolve).toHaveBeenCalledTimes(1)
+    expect(view.result.current[1].get(conversationSessionTitleKey(item)!)).toBe('Native shared')
   })
 
   it('keeps resolved titles and skips re-resolving when sources are rebuilt unchanged', async () => {

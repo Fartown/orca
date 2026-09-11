@@ -173,7 +173,8 @@ const INVENTORY: readonly InventoryGroup[] = [
       ['src/renderer/src/components/terminal-pane/pty-connection/connect-pane-pty.ts', 2],
       ['src/renderer/src/components/terminal-pane/terminal-ctrl-enter.ts', 2],
       ['src/renderer/src/components/terminal-pane/terminal-windows-shift-enter.ts', 2],
-      ['src/renderer/src/components/terminal-pane/use-notification-dispatch.ts', 2]
+      ['src/renderer/src/components/terminal-pane/use-notification-dispatch.ts', 3],
+      ['src/renderer/src/session-names/notification-session-name.ts', 2]
     ]
   },
   {

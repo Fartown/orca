@@ -28,7 +28,7 @@ export function buildNotificationOptions(args: NotificationDispatchRequest): {
 } {
   if (args.source === 'terminal-bell') {
     return {
-      title: `Bell in ${args.worktreeLabel ?? 'workspace'}`,
+      title: `Bell in ${formatNotificationSessionContext(args, args.worktreeLabel ?? 'workspace')}`,
       body: args.repoLabel ? `${args.repoLabel} · Attention requested` : 'Attention requested'
     }
   }
@@ -56,7 +56,10 @@ function buildAgentTaskCompleteNotificationOptions(
   }
 
   const agentLabel = formatNotificationAgentLabel(args.agentType)
-  const worktreeContext = formatNotificationWorktreeContext(args)
+  const worktreeContext = formatNotificationSessionContext(
+    args,
+    formatNotificationWorktreeContext(args)
+  )
   const statusText =
     args.agentState === 'blocked' || args.agentState === 'waiting'
       ? 'needs input'
@@ -68,6 +71,17 @@ function buildAgentTaskCompleteNotificationOptions(
     title: `${worktreeContext} - ${agentLabel} ${statusText}`,
     body: buildAgentTaskCompleteRichBody(args) ?? `${agentLabel} ${statusText}.`
   }
+}
+
+function formatNotificationSessionContext(
+  args: NotificationDispatchRequest,
+  workspace: string
+): string {
+  const session = normalizeNotificationText(
+    args.sessionTitle,
+    NOTIFICATION_TITLE_CONTEXT_MAX_LENGTH
+  )
+  return session ? `${session} · ${workspace}` : workspace
 }
 
 function formatNotificationWorktreeContext(args: NotificationDispatchRequest): string {
@@ -129,7 +143,7 @@ function buildAgentTaskCompleteFallbackNotificationOptions(args: NotificationDis
   body: string
 } {
   return {
-    title: `Task complete in ${args.worktreeLabel ?? 'workspace'}`,
+    title: `Task complete in ${formatNotificationSessionContext(args, args.worktreeLabel ?? 'workspace')}`,
     body: buildAgentTaskCompleteFallbackBody(args)
   }
 }

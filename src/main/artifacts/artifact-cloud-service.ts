@@ -277,7 +277,7 @@ export class ArtifactCloudService {
     options: ArtifactCloudOptions,
     operation: (token: string, apiUrl: string, auth: ArtifactAuthContext) => Promise<T>
   ): Promise<ArtifactCloudOperation<T>> {
-    const apiUrl = resolveArtifactCloudApiUrl(options.apiUrl)
+    const apiUrl = resolveArtifactCloudApiUrl(options.apiUrl, process.env, 'http://127.0.0.1:8787')
     const active = ensureActiveOrcaProfile(this.userDataPath)
     prepareArtifactCloudUse(active.profile, this.userDataPath)
     if (options.authToken?.trim()) {

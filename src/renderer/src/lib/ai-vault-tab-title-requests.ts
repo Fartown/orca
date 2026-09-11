@@ -7,6 +7,10 @@ import { parsePaneKey } from '../../../shared/stable-pane-id'
 import type { TerminalTab } from '../../../shared/terminal-tab-types'
 import { getExecutionHostIdForWorktree } from '@/lib/worktree-runtime-owner'
 import type { AppState } from '@/store/types'
+import {
+  sessionNamePaneIsAmbiguous,
+  sessionNamePaneWasReplaced
+} from '../session-names/session-name-pane-binding'
 
 export type AiVaultTitleRequest = {
   agent: AiVaultSessionTitle['agent']
@@ -15,17 +19,15 @@ export type AiVaultTitleRequest = {
   refresh: boolean
   tabId: string
   worktreeId: string
+  paneKey?: string
+  ptyId?: string | null
+  terminalGeneration?: number
 }
 
 type RequestCandidate = AiVaultTitleRequest & { priority: number }
 
 function tabIdFromPaneKey(paneKey: string, tabId?: string): string | null {
   return tabId?.trim() || parsePaneKey(paneKey)?.tabId || null
-}
-
-function activePaneKey(state: AppState, tabId: string): string | null {
-  const activeLeafId = state.terminalLayoutsByTabId[tabId]?.activeLeafId
-  return activeLeafId ? `${tabId}:${activeLeafId}` : null
 }
 
 function registerCandidate(
@@ -51,7 +53,18 @@ function registerCandidate(
   if (!tabId || !tab || !worktreeId) {
     return
   }
-  const priority = args.priority + (activePaneKey(state, tabId) === args.paneKey ? 100 : 0)
+  if (
+    sessionNamePaneIsAmbiguous(state, tabId) ||
+    sessionNamePaneWasReplaced(state, {
+      ...args,
+      tabId,
+      agent: args.agent,
+      providerSession: args.providerSession
+    })
+  ) {
+    return
+  }
+  const priority = args.priority
   if ((candidates.get(tabId)?.priority ?? -1) >= priority) {
     return
   }
@@ -63,8 +76,18 @@ function registerCandidate(
     refresh: args.refresh,
     tabId,
     worktreeId,
+    paneKey: args.paneKey,
+    ptyId: panePtyId(state, tab, args.paneKey),
+    terminalGeneration: tab.generation ?? 0,
     priority
   })
+}
+
+function panePtyId(state: AppState, tab: TerminalTab, paneKey: string): string | null {
+  const layout = state.terminalLayoutsByTabId[tab.id]
+  const leaf = parsePaneKey(paneKey)?.leafId
+  const ownedPty = leaf ? layout?.ptyIdsByLeafId?.[leaf] : undefined
+  return ownedPty ?? (layout?.root?.type === 'split' ? null : tab.ptyId)
 }
 
 export function collectAiVaultTitleRequests(state: AppState): AiVaultTitleRequest[] {

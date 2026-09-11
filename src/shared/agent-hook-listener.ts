@@ -6,10 +6,6 @@ import {
   isClaudeCompactCompletionConsumed,
   markClaudeCompactCompletionConsumed
 } from './claude-compact-completion'
-import {
-  isIntrudingClaudePaneSession,
-  releaseClaudePaneSessionSuppression
-} from './agent-hook-listener/claude-pane-session-intrusion'
 import { parseHookEnvelope } from './agent-hook-listener/hook-envelope'
 import { readFirstString } from './agent-hook-listener/interactive-tool'
 import type { AgentHookEventPayload } from './agent-hook-listener/listener-event'
@@ -20,6 +16,11 @@ import { normalizeProviderEvent } from './agent-hook-listener/provider-dispatch'
 import { hasExplicitUserPrompt } from './agent-hook-listener/provider-event-routing'
 import { hasExplicitAmpPrompt } from './agent-hook-listener/providers/amp-events'
 import { readString } from './agent-hook-listener/tool-input-preview'
+import { shouldRejectClaudeSessionReplacement } from './claude-session-ownership/claude-session-activity'
+import {
+  shouldRejectCodexTitleTask,
+  shouldRejectUnbackedCodexStart
+} from './session-names/codex-title-task-admission'
 
 /** Canonical transport-agnostic normalization entry shared by main and relay listeners. */
 export function normalizeHookPayload(
@@ -34,38 +35,27 @@ export function normalizeHookPayload(
     return null
   }
   const { record, paneKey, hookPayloadRecord, tabId, worktreeId, launchToken } = envelope
-  if (source === 'claude') {
-    state.claudeUnconfirmedRestoredStatusPaneKeys.delete(paneKey)
-  }
   const eventName =
     readFirstString(record, ['hook_event_name', 'hookEventName', 'hook_type', 'hookType']) ??
     hookPayloadRecord.hook_event_name ??
     hookPayloadRecord.hookEventName
   const previousStatus = state.lastStatusByPaneKey.get(paneKey)
   // Codex child hooks expose the child's session_id on the parent's pane.
-  const extractedProviderSession =
+  const providerSession =
     source === 'codex' && readString(hookPayloadRecord, 'agent_id')
       ? null
       : extractAgentProviderSession(source, hookPayloadRecord)
-  // Claude has no equivalent marker: a second Claude process the agent starts for its own work
-  // reports a plain new session_id on the pane it was spawned from, indistinguishable by payload
-  // from a session the user opened. The pane tells them apart — see the guard's own file.
-  const providerSession =
-    source === 'claude' &&
-    isIntrudingClaudePaneSession({
-      paneKey,
-      previousStatus,
-      providerSession: extractedProviderSession,
-      suppressedSessionIdsByPaneKey: state.claudeIntrudingSessionIdByPaneKey
-    })
-      ? null
-      : extractedProviderSession
-  if (source === 'claude' && providerSession) {
-    releaseClaudePaneSessionSuppression(
-      state.claudeIntrudingSessionIdByPaneKey,
-      paneKey,
-      providerSession.id
-    )
+  if (
+    source === 'codex' &&
+    shouldRejectUnbackedCodexStart(state, paneKey, eventName, providerSession)
+  ) {
+    return null
+  }
+  if (source === 'claude') {
+    if (shouldRejectClaudeSessionReplacement(state, paneKey, providerSession?.id)) {
+      return null
+    }
+    state.claudeUnconfirmedRestoredStatusPaneKeys.delete(paneKey)
   }
   const providerPromptId =
     source === 'claude' ? normalizeClaudePromptId(hookPayloadRecord.prompt_id) : undefined
@@ -128,6 +118,12 @@ export function normalizeHookPayload(
 
   const extractedPrompt = extractPromptText(hookPayloadRecord)
   const promptText = extractedPrompt.text
+  if (
+    source === 'codex' &&
+    shouldRejectCodexTitleTask(state, paneKey, providerSession?.id, promptText)
+  ) {
+    return null
+  }
   const dispatched = normalizeProviderEvent({
     state,
     source,

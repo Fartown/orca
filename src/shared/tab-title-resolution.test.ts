@@ -132,7 +132,7 @@ describe('tab title resolution', () => {
     ).toBe('Codex 01a0420e')
   })
 
-  it('keeps manual and quick-command labels ahead of AI Vault titles', () => {
+  it('keeps Provider names ahead of manual container and quick-command labels', () => {
     const aiVaultTitle = {
       agent: 'claude' as const,
       sessionId: 'claude-session',
@@ -148,7 +148,7 @@ describe('tab title resolution', () => {
         },
         false
       )
-    ).toBe('Manual label')
+    ).toBe('Claude conversation')
     expect(
       resolveTerminalTabTitle(
         {
@@ -159,10 +159,10 @@ describe('tab title resolution', () => {
         },
         false
       )
-    ).toBe('Run tests')
+    ).toBe('Claude conversation')
   })
 
-  it('keeps OpenCode native and Orca-generated title behavior intact', () => {
+  it('does not let an OpenCode OSC title override a bound Codex name', () => {
     const aiVaultTitle = {
       agent: 'codex' as const,
       sessionId: 'codex-session',
@@ -178,7 +178,7 @@ describe('tab title resolution', () => {
         },
         true
       )
-    ).toBe('OC | OpenCode native')
+    ).toBe('Codex conversation')
     expect(
       resolveTerminalTabTitle(
         { customTitle: null, generatedTitle: 'Orca generated', title: '⠋ albacore' },
@@ -223,7 +223,7 @@ describe('tab title resolution', () => {
     ).toBe('OC | Native Stable Session')
   })
 
-  it('keeps manual and quick command labels ahead of native OpenCode labels', () => {
+  it('keeps native OpenCode names ahead of container and command labels', () => {
     expect(
       resolveUnifiedTabLabel(
         {
@@ -234,7 +234,7 @@ describe('tab title resolution', () => {
         },
         true
       )
-    ).toBe('Manual label')
+    ).toBe('OC | Native Stable Session')
     expect(
       resolveUnifiedTabLabel(
         {
@@ -245,6 +245,6 @@ describe('tab title resolution', () => {
         },
         true
       )
-    ).toBe('Run build')
+    ).toBe('OC | Native Stable Session')
   })
 })

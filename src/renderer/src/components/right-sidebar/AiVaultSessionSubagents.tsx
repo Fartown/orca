@@ -9,6 +9,7 @@ import { LOCAL_EXECUTION_HOST_ID } from '../../../../shared/execution-host'
 import { canOpenAiVaultSessionLogInOrca } from './ai-vault-session-path-actions'
 import { openAiVaultSessionLogInOrca } from './ai-vault-session-log-open'
 import { translate } from '@/i18n/i18n'
+import { getScannedSessionDisplayName } from '@/session-names/session-name-display'
 
 type SubagentListState = { status: 'loading' } | { status: 'loaded'; sessions: AiVaultSession[] }
 
@@ -114,6 +115,7 @@ const SUBAGENT_DOT_STATES: Record<AiVaultSubagentRunStatus, AgentDotState> = {
 
 function SubagentSessionLine({ session }: { session: AiVaultSession }): React.JSX.Element {
   const dotState = session.subagent?.status ? SUBAGENT_DOT_STATES[session.subagent.status] : null
+  const displayName = getScannedSessionDisplayName(session)
 
   return (
     <div className="flex min-w-0 items-center gap-1.5 rounded-md border border-sidebar-border/70 bg-sidebar-accent/25 px-2.5 py-1.5">
@@ -126,9 +128,9 @@ function SubagentSessionLine({ session }: { session: AiVaultSession }): React.JS
       ) : null}
       <span
         className="min-w-0 flex-1 truncate text-[12px] leading-[1.35] text-foreground/90"
-        title={session.title}
+        title={displayName}
       >
-        {session.title}
+        {displayName}
       </span>
       {session.subagent?.agentType ? (
         <Badge

@@ -38,7 +38,9 @@ function terminalTabFromAgentSessionTab(tab: Tab): TerminalTab {
     id: tab.id,
     ptyId: null,
     worktreeId: tab.worktreeId,
-    title: tab.customLabel ?? tab.generatedLabel ?? tab.label,
+    title: tab.label,
+    generatedTitle: tab.generatedLabel,
+    aiVaultTitle: tab.aiVaultTitle,
     customTitle: tab.customLabel,
     color: tab.color,
     isPinned: tab.isPinned,
@@ -109,7 +111,7 @@ export function buildActivityTabHostIndex(
   return index
 }
 
-function resolveActivityExecutionHostId(
+export function resolveActivityExecutionHostId(
   context: ActivityTabContext,
   entry: AgentStatusEntry,
   terminalPtyId: string | null | undefined,

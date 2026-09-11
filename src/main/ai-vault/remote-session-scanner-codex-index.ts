@@ -63,7 +63,7 @@ async function readRemoteCodexIndexTitles(
     )
     throwIfAiVaultScanCancelled(signal)
     if (isBinary) {
-      return titleBySessionId
+      throw new Error('Codex name index unavailable: binary content')
     }
     for await (const line of remoteSessionContentLines(content, signal)) {
       const record = parseJsonObject(line)
@@ -76,9 +76,10 @@ async function readRemoteCodexIndexTitles(
         titleBySessionId.set(sessionId, title)
       }
     }
-  } catch {
+  } catch (error) {
     throwIfAiVaultScanCancelled(signal)
-    // Codex indexes are opportunistic; raw transcripts remain sufficient.
+    // The provider-name reader converts this to unavailable without dropping the session.
+    throw error
   }
   return titleBySessionId
 }

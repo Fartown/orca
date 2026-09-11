@@ -11,6 +11,7 @@ import { buildActivityEvents, createActivityEventBuildCache } from './activity-e
 import { projectActivityTabs, type ActivityTabProjection } from './activity-tab-projection'
 import { buildAgentPaneThreads, createAgentPaneThreadReuseCache } from './activity-thread-builder'
 import { collectChildAgentPaneKeys } from './activity-thread-child-agent'
+import { useActivitySessionNames } from '@/session-names/use-activity-session-names'
 
 const EMPTY_PANE_KEYS: ReadonlySet<string> = new Set()
 import { filterThreadsByActivityScope, resolveActivityScopeRepoIds } from './activity-scope-filter'
@@ -151,17 +152,19 @@ export function useAgentPaneThreads(args: {
     [storeData, agentStatusEpoch]
   )
 
+  const resolveSessionTitle = useActivitySessionNames(allEvents, liveAgentByPaneKey)
   const allThreads = useMemo(
     () =>
       buildAgentPaneThreads(
         {
           events: allEvents,
           liveAgentByPaneKey,
-          generatedTitlesEnabled: storeData.generatedTitlesEnabled
+          generatedTitlesEnabled: storeData.generatedTitlesEnabled,
+          resolveSessionTitle
         },
         threadReuseCacheRef.current
       ),
-    [allEvents, liveAgentByPaneKey, storeData.generatedTitlesEnabled]
+    [allEvents, liveAgentByPaneKey, storeData.generatedTitlesEnabled, resolveSessionTitle]
   )
 
   const selectedPaneKeyIsLive =

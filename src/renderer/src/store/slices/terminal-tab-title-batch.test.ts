@@ -28,6 +28,56 @@ import { adoptTerminalTabOwnerMetadataOnlyBuckets } from './terminal-tab-owner-i
 
 const LEAF_ID = '11111111-1111-4111-8111-111111111111'
 
+describe('stable first task admission', () => {
+  it.each(['single', 'batch'] as const)(
+    'captures a valid task past an old low-information name and labels (%s)',
+    (mode) => {
+      const store = createTestStore()
+      seedStore(store, {
+        settings: { ...getDefaultSettings('/tmp'), tabAutoGenerateTitle: true },
+        tabsByWorktree: {
+          owner: [
+            makeTab({
+              id: 'tab-1',
+              worktreeId: 'owner',
+              generatedTitle: '继续',
+              customTitle: 'Container label',
+              quickCommandLabel: 'Launch label'
+            })
+          ]
+        },
+        unifiedTabsByWorktree: {
+          owner: [
+            makeUnifiedTab({
+              id: 'tab-1',
+              worktreeId: 'owner',
+              groupId: 'group-1',
+              generatedLabel: '继续'
+            })
+          ]
+        }
+      })
+      const write = (prompt: string) =>
+        mode === 'single'
+          ? store
+              .getState()
+              .setGeneratedTabTitleFromAgentPrompt(makePaneKey('tab-1', LEAF_ID), prompt)
+          : store
+              .getState()
+              .setGeneratedTabTitlesFromAgentPrompts([
+                { paneKey: makePaneKey('tab-1', LEAF_ID), prompt }
+              ])
+      write('运行测试')
+      expect(store.getState().tabsByWorktree.owner?.[0].generatedTitle).toBe('运行测试')
+      expect(store.getState().unifiedTabsByWorktree.owner?.[0].generatedLabel).toBe('运行测试')
+      write('继续')
+      write('修复另一个问题')
+      expect(store.getState().tabsByWorktree.owner?.[0].generatedTitle).toBe('运行测试')
+      expect(store.getState().tabsByWorktree.owner?.[0].customTitle).toBe('Container label')
+    }
+  )
+})
+
 function makeScaleState(count: number) {
   let idReads = 0
   const worktrees = Array.from({ length: count }, (_, index) =>

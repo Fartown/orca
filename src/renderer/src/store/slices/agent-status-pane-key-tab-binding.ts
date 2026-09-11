@@ -1,4 +1,5 @@
 import type { AppState } from '../types'
+import { isEligibleSessionNamePrompt } from '../../../../shared/session-names/session-name-candidate-quality'
 import type {
   AgentStatusEntry,
   AgentType,
@@ -29,7 +30,7 @@ export function getTabIdFromPaneKey(paneKey: string): string | null {
   return paneKey.slice(0, separator)
 }
 
-/** True when auto-title generation would no-op without replace (custom/quick/generated). */
+/** Only an eligible existing task protects the stable generated candidate. */
 export function agentStatusTabAlreadyHasProtectedOrGeneratedTitle(
   state: AppState,
   tabId: string | null,
@@ -41,18 +42,14 @@ export function agentStatusTabAlreadyHasProtectedOrGeneratedTitle(
   const ownerTabs = worktreeId ? state.tabsByWorktree[worktreeId] : undefined
   if (ownerTabs) {
     const tab = ownerTabs.find((candidate) => candidate.id === tabId)
-    return Boolean(
-      tab?.customTitle?.trim() || tab?.quickCommandLabel?.trim() || tab?.generatedTitle?.trim()
-    )
+    return isEligibleSessionNamePrompt(tab?.generatedTitle ?? '')
   }
   for (const tabs of Object.values(state.tabsByWorktree)) {
     const tab = tabs.find((candidate) => candidate.id === tabId)
     if (!tab) {
       continue
     }
-    return Boolean(
-      tab.customTitle?.trim() || tab.quickCommandLabel?.trim() || tab.generatedTitle?.trim()
-    )
+    return isEligibleSessionNamePrompt(tab.generatedTitle ?? '')
   }
   return false
 }

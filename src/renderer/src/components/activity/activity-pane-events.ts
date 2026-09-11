@@ -12,6 +12,7 @@ import type {
   ActivityLiveAgentState
 } from './activity-thread-types'
 import { EVENTS_PER_PANE_CAP } from './activity-event-cap'
+import { sessionNameHistorySnapshot } from '../../../../shared/session-names/session-name-history'
 
 function historyEntrySnapshot(
   entry: AgentStatusEntry,
@@ -19,6 +20,7 @@ function historyEntrySnapshot(
 ): AgentStatusEntry {
   return {
     ...entry,
+    ...sessionNameHistorySnapshot(history),
     state: history.state,
     prompt: history.prompt,
     updatedAt: history.startedAt,
@@ -76,7 +78,7 @@ export function buildPaneActivityEvents(args: PaneEventInputs): ActivityEvent[] 
       repo: args.repo,
       entry,
       tab: args.tab,
-      agentType: args.agentType ?? 'unknown',
+      agentType: entry.agentType ?? 'unknown',
       agentAlive: args.agentAlive,
       migrationUnsupportedPtyId: args.migrationUnsupportedPtyId,
       unread: args.acknowledgedAt < timestamp

@@ -314,7 +314,7 @@ Implement task B worker instructions for the next dispatch`,
     expect(tab.generatedTitle).toBe('Fix the flaky status tests')
   })
 
-  it('does not generate a title for quick command labeled tabs', () => {
+  it('prefers the agent task over a quick command container label', () => {
     vi.useFakeTimers()
     const store = createTestStore()
     seedStore(store, {
@@ -337,7 +337,10 @@ Implement task B worker instructions for the next dispatch`,
     })
 
     const tab = store.getState().tabsByWorktree[WORKTREE_ID][0]
-    expect(tab.generatedTitle).toBeUndefined()
+    expect(tab.generatedTitle).toBe('Fix the flaky status tests')
     expect(resolveTerminalTabTitle(tab, true)).toBe('Run tests')
+    expect(resolveTerminalTabTitle({ ...tab, launchAgent: 'claude' }, true)).toBe(
+      'Fix the flaky status tests'
+    )
   })
 })

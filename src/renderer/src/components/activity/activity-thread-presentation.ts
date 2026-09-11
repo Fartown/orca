@@ -3,7 +3,6 @@ import { formatAgentTypeLabel } from '@/lib/agent-status'
 import { getAgentRowPrimaryText } from '@/lib/agent-row-primary-text'
 import { showsAgentToolPreview } from '@/lib/agent-row-tool-preview'
 import {
-  getActivityThreadTaskTitle,
   getActivityThreadWorkspaceTitle,
   resolveActivityThreadStatusPreview
 } from '@/lib/activity-thread-display'
@@ -12,6 +11,7 @@ import { translate } from '@/i18n/i18n'
 import type { AgentStatusEntry, AgentStatusState } from '../../../../shared/agent-status-types'
 import type { TerminalTab } from '../../../../shared/terminal-tab-types'
 import type { ActivityEvent, AgentPaneThread } from './activity-thread-types'
+import { getActivitySessionName } from '@/session-names/activity-session-name'
 
 const ACTIVITY_THREAD_RESPONSE_RENDER_PREVIEW_MAX_LENGTH = 320
 
@@ -97,7 +97,7 @@ export function paneTitleForEntry(
   tab: TerminalTab,
   generatedTitlesEnabled: boolean
 ): string {
-  return getActivityThreadTaskTitle({ entry, tab, generatedTitlesEnabled })
+  return getActivitySessionName(entry, tab, generatedTitlesEnabled)
 }
 
 export function paneTitleForEvent(event: ActivityEvent, generatedTitlesEnabled: boolean): string {

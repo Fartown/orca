@@ -12,14 +12,21 @@ describe('resolveSessionDisplayTitle', () => {
       identityFallbackTitle: 'Codex 01a0420e'
     }
 
-    expect(resolveSessionDisplayTitle(candidates)).toEqual({ title: 'User name', source: 'user' })
-    expect(resolveSessionDisplayTitle({ ...candidates, userTitle: null })).toEqual({
+    expect(resolveSessionDisplayTitle(candidates)).toEqual({
       title: 'Current Provider name',
       source: 'provider'
     })
+    expect(resolveSessionDisplayTitle({ ...candidates, providerTitle: null })).toEqual({
+      title: 'Provider snapshot',
+      source: 'provider-snapshot'
+    })
     expect(
-      resolveSessionDisplayTitle({ ...candidates, userTitle: null, providerTitle: null })
-    ).toEqual({ title: 'Provider snapshot', source: 'provider-snapshot' })
+      resolveSessionDisplayTitle({
+        ...candidates,
+        providerTitle: null,
+        providerTitleSnapshot: null
+      })
+    ).toEqual({ title: 'User name', source: 'user' })
     expect(
       resolveSessionDisplayTitle({
         ...candidates,
@@ -50,11 +57,11 @@ describe('resolveSessionDisplayTitle', () => {
     ).toEqual({ title: 'Investigate title projection', source: 'generated' })
   })
 
-  it('keeps an explicit user title even when it equals the fallback text', () => {
+  it('keeps an explicit user title equal to the fallback only when no Provider name exists', () => {
     expect(
       resolveSessionDisplayTitle({
         userTitle: 'Codex 01a0420e',
-        providerTitle: 'Provider name',
+        providerTitle: null,
         identityFallbackTitle: 'Codex 01a0420e'
       })
     ).toEqual({ title: 'Codex 01a0420e', source: 'user' })

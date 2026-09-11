@@ -194,8 +194,8 @@
     },
     {
       "id": "issues-board",
-      "title": "Issues 看板与会话：跨工作区会话组织、恢复与标题稳定",
-      "goal": "组织跨工作区会话，关闭后准确恢复，保持标题稳定",
+      "title": "Issues 看板与会话：跨工作区组织、绑定与恢复",
+      "goal": "组织跨工作区会话，复用公共会话名称与原生恢复",
       "journal": "docs/issue/Issues看板与会话/journal.md",
       "dependsOn": [
         "src/main/agent-hooks/managed-agent-hook-controls.ts",
@@ -213,7 +213,6 @@
         "src/renderer/src/components/dashboard/useDashboardData.ts",
         "src/renderer/src/components/right-sidebar/ai-vault-original-pane-actions.ts",
         "src/renderer/src/components/right-sidebar/ai-vault-provider-session-resolution.ts",
-        "src/renderer/src/components/right-sidebar/ai-vault-session-launch-actions.ts",
         "src/renderer/src/components/sidebar/WorktreeCardAgents.tsx",
         "src/renderer/src/components/sidebar/sidebar-count-pill.tsx",
         "src/renderer/src/components/sidebar/sidebar-host-badge.tsx",
@@ -227,12 +226,12 @@
         "src/renderer/src/lib/agent-catalog.tsx",
         "src/renderer/src/lib/canonical-session-titles.ts",
         "src/renderer/src/lib/e2e-config.ts",
-        "src/renderer/src/lib/launch-agent-in-new-tab.ts",
         "src/renderer/src/lib/sidebar-worktree-activation.ts",
         "src/renderer/src/lib/utils.ts",
         "src/renderer/src/lib/worktree-runtime-owner.ts",
         "src/renderer/src/runtime/runtime-client-target.ts",
         "src/renderer/src/runtime/runtime-rpc-client.ts",
+        "src/renderer/src/session-names/session-name-subscriptions.ts",
         "src/renderer/src/store/folder-workspaces/folder-workspace-catalog.ts",
         "src/renderer/src/store/index.ts",
         "src/shared/agent-session-fallback-title.ts",
@@ -295,7 +294,6 @@
           "mustContain": "resumeAiVaultSession",
           "why": "Issue session continuation reuses the native AI Vault actions"
         },
-
         {
           "file": "src/main/runtime/rpc/methods/index.ts",
           "mustContain": "ISSUE_METHODS",
@@ -320,16 +318,6 @@
           "file": "src/renderer/src/components/sidebar/index.tsx",
           "mustContain": "SidebarRootModeBar",
           "why": "the sidebar switches between Workspaces and Issues"
-        },
-        {
-          "file": "src/renderer/src/components/right-sidebar/AiVaultVirtualRow.tsx",
-          "mustContain": "getCanonicalTitle",
-          "why": "Agent Session History rows show the Issue-pinned canonical title (moved here by upstream on 2026-09-07)"
-        },
-        {
-          "file": "src/shared/ai-vault-session-filters.ts",
-          "mustContain": "filters.canonicalTitleBySessionKey?.get(",
-          "why": "history search retains Issue-pinned conversation titles alongside upstream filtering optimizations"
         }
       ],
       "tests": [
@@ -339,12 +327,504 @@
         "src/main/runtime/rpc/methods/issues.test.ts",
         "src/renderer/src/issues/issues-domain-store.test.ts",
         "src/renderer/src/issues/issue-native-dependency-boundary.test.ts",
-        "src/renderer/src/components/sidebar/issues/build-issue-rows.test.ts",
+        "src/renderer/src/components/sidebar/issues/build-issue-rows.test.ts"
+      ],
+      "checks": [
+        "pnpm exec vitest run --config config/vitest.config.ts src/main/issues src/shared/issues src/renderer/src/issues src/renderer/src/components/issues src/renderer/src/components/sidebar/issues src/main/runtime/rpc/methods/issues.test.ts src/shared/agent-session-fallback-title.test.ts src/shared/ai-vault-session-filters.test.ts"
+      ]
+    },
+    {
+      "id": "session-names",
+      "title": "会话命名与身份保护：公共名称与 Provider 主会话归属",
+      "goal": "同一会话在各入口使用一致名称，后台调用不顶替主身份",
+      "journal": "docs/issue/会话命名与身份保护/journal.md",
+      "dependsOn": [
+        "src/main/agent-hooks/hook-stdin-contract.ts",
+        "src/main/ai-vault/session-scanner-codex-session-meta.ts",
+        "src/main/ai-vault/session-scanner-values.ts",
+        "src/main/ai-vault/session-transcript-consumers.ts",
+        "src/renderer/src/components/activity/activity-thread-types.ts",
+        "src/renderer/src/components/dashboard/agent-row-pane-live-title.ts",
+        "src/renderer/src/lib/agent-row-primary-text.ts",
+        "src/renderer/src/lib/canonical-session-titles.ts",
+        "src/renderer/src/lib/pane-agent-evidence.ts",
+        "src/renderer/src/lib/worktree-runtime-owner.ts",
+        "src/renderer/src/store/index.ts",
+        "src/renderer/src/store/types.ts",
+        "src/shared/agent-hook-listener/listener-event.ts",
+        "src/shared/agent-session-fallback-title.ts",
+        "src/shared/agent-session-resume.ts",
+        "src/shared/agent-type-label.ts",
+        "src/shared/codex-thread-title-generation.ts",
+        "src/shared/execution-host.ts",
+        "src/shared/harness-injected-user-turns.ts",
+        "src/shared/promise-timeout-fallback.ts",
+        "src/shared/stable-pane-id.ts",
+        "src/shared/structural-value-equality.ts",
+        "src/shared/terminal-tab-types.ts",
+        "src/shared/tui-agent-config.ts"
+      ],
+      "policyId": "session-names-native-feature",
+      "ownedPaths": [
+        "src/main/codex-session-ownership/**",
+        "src/shared/session-names/**",
+        "src/main/session-names/**",
+        "src/renderer/src/session-names/**",
+        "src/shared/claude-session-ownership/**",
+        "src/main/claude-session-ownership/**",
+        "tests/e2e/issues-session-name-file-chain.unit.test.ts",
+        "tests/e2e/helpers/issues-session-name-file-chain.tsconfig.json",
+        "docs/issue/会话命名与身份保护/**"
+      ],
+      "requiredFiles": [
+        "src/shared/session-names/session-name-contract.ts",
+        "src/shared/session-names/codex-title-task-admission.ts",
+        "src/shared/claude-session-ownership/claude-session-activity.ts",
+        "src/renderer/src/session-names/session-name-store.ts",
+        "src/main/codex-session-ownership/codex-nested-hook-guard.ts"
+      ],
+      "seams": [
+        {
+          "file": "src/renderer/src/components/activity/ActivityPrototypePage.test.ts",
+          "mustContain": "stable prompt outranks a container alias",
+          "why": "Activity search follows the common priority without losing the task text"
+        },
+        {
+          "file": "src/renderer/src/lib/ai-vault-tab-title-sync-inputs.test.ts",
+          "mustContain": "expect(unchangedEnumerations).toBe(2)",
+          "why": "initial binding inventory is separate from the zero-enumeration live-update contract"
+        },
+        {
+          "file": "src/renderer/src/store/slices/agent-generated-tab-title.test.ts",
+          "mustContain": "prefers the agent task over a quick command container label",
+          "why": "the existing store test follows the shared prompt-before-container title contract"
+        },
+        {
+          "file": "src/shared/pane-agent-identity-inventory.test.ts",
+          "mustContain": "src/renderer/src/session-names/notification-session-name.ts",
+          "why": "classify the existing notification identity consumers without weakening the inventory ratchet"
+        },
+        {
+          "file": "src/relay/ai-vault-handler.test.ts",
+          "mustContain": "nameEvidence",
+          "why": "exact relay responses assert optional name evidence separately from the legacy title"
+        },
+        {
+          "file": "src/renderer/src/components/activity/ActivityPrototypePage-test-fixtures.ts",
+          "mustContain": "generatedTitlesEnabled: true",
+          "why": "task-derived Activity test fixtures explicitly enable renderer name generation"
+        },
+        {
+          "file": "src/renderer/src/components/activity/activity-auto-mark-read-loop.react185.test.tsx",
+          "mustContain": "Turn stamped by the execution host",
+          "why": "unread regressions select the cleaned conversation label without weakening acknowledgement assertions"
+        },
+        {
+          "file": "src/renderer/src/components/activity/activity-thread-builder.ts",
+          "mustContain": "resolveSessionTitle",
+          "why": "Activity thread identities use the public name resolver separately from status previews"
+        },
+        {
+          "file": "src/renderer/src/components/activity/use-agent-pane-threads.ts",
+          "mustContain": "useActivitySessionNames",
+          "why": "mounted Activity consumers subscribe to exact session name changes"
+        },
+        {
+          "file": "src/renderer/src/components/activity/activity-thread-presentation.ts",
+          "mustContain": "getActivitySessionName",
+          "why": "Activity standalone name rendering uses the shared candidate order"
+        },
+        {
+          "file": "src/renderer/src/components/activity/activity-event-builder-context.ts",
+          "mustContain": "aiVaultTitle: tab.aiVaultTitle",
+          "why": "agent-session Activity projections retain independent name evidence"
+        },
+        {
+          "file": "src/renderer/src/components/activity/activity-tab-projection.ts",
+          "mustContain": "sessionNameSlotEqual",
+          "why": "native evidence-only updates invalidate the Activity tab projection"
+        },
+        {
+          "file": "src/renderer/src/components/activity/activity-pane-events.ts",
+          "mustContain": "sessionNameHistorySnapshot",
+          "why": "historical events keep their own identity rather than inheriting the current pane"
+        },
+        {
+          "file": "src/renderer/src/store/slices/agent-status-live-entry-builder.ts",
+          "mustContain": "appendSessionNameHistory",
+          "why": "status transitions capture the old session identity before pane replacement"
+        },
+        {
+          "file": "src/shared/agent-status-types.ts",
+          "mustContain": "sessionName?:",
+          "why": "optional bounded history provenance does not require a new storage subsystem"
+        },
+        {
+          "file": "src/renderer/src/runtime/web-session-tabs-sync/state-equality-core.ts",
+          "mustContain": "sessionNameHistoryEqual",
+          "why": "paired snapshots retain history identity-only changes"
+        },
+        {
+          "file": "src/renderer/src/runtime/sync-runtime-graph/agent-status-projection.ts",
+          "mustContain": "sessionName: history.sessionName",
+          "why": "optional history name identity participates in publication invalidation"
+        },
+        {
+          "file": "src/renderer/src/components/terminal-pane/agent-completion-coordinator-types.ts",
+          "mustContain": "'providerSession'",
+          "why": "delayed completion snapshots retain their own optional Provider identity"
+        },
+        {
+          "file": "src/renderer/src/hooks/ipc-events/agent-status-event-applicator.ts",
+          "mustContain": "providerSession: data.providerSession",
+          "why": "accepted hook notifications carry event identity beside the sanitized status fields"
+        },
+        {
+          "file": "src/renderer/src/runtime/web-session-tabs-sync/store-patch.ts",
+          "mustContain": "providerSession: notificationStatus.providerSession",
+          "why": "paired notification snapshots retain host-owned identity without broadening the status whitelist"
+        },
+        {
+          "file": "src/renderer/src/components/terminal-pane/pty-connection/direct-ssh-retry-status.ts",
+          "mustContain": "providerSession: storedStatus.providerSession",
+          "why": "direct SSH completion captures only the accepted same-agent pane identity"
+        },
+        {
+          "file": "src/renderer/src/components/terminal-pane/use-notification-dispatch.ts",
+          "mustContain": "captureNotificationSessionName",
+          "why": "notifications capture the event-owned public name without replacing raw status evidence"
+        },
+        {
+          "file": "src/shared/notification-settings-types.ts",
+          "mustContain": "sessionTitle",
+          "why": "an optional display snapshot preserves older notification producers"
+        },
+        {
+          "file": "src/main/ipc/notification-options.ts",
+          "mustContain": "formatNotificationSessionContext",
+          "why": "desktop and mobile use the same captured session name while retaining event body and status"
+        },
+        {
+          "file": "src/renderer/src/components/right-sidebar/ai-vault-session-delete-action.ts",
+          "mustContain": "getScannedSessionDisplayName",
+          "why": "History confirmation uses the row name without changing the deletion identity"
+        },
+        {
+          "file": "src/renderer/src/components/right-sidebar/ai-vault-session-continuation.ts",
+          "mustContain": "getScannedSessionDisplayName",
+          "why": "History continuation captures the public display name separately from transcript identity"
+        },
+        {
+          "file": "src/renderer/src/components/right-sidebar/AiVaultSessionSubagents.tsx",
+          "mustContain": "getScannedSessionDisplayName",
+          "why": "child transcript names use their own evidence without borrowing a shared parent session ID"
+        },
+        {
+          "file": "src/main/ai-vault/session-scanner-claude-subagents.ts",
+          "mustContain": "resolveClaudeSubagentNameEvidence",
+          "why": "the Provider sidecar task name is explicit child-owned evidence; legacy title stays unchanged"
+        },
+        {
+          "file": "src/renderer/src/lib/ai-vault-tab-title-batches.ts",
+          "mustContain": "extends { executionHostId",
+          "why": "the existing host-bounded scheduler also serves non-tab session consumers"
+        },
+        {
+          "file": "src/renderer/src/components/terminal-pane/use-terminal-pane-layout-bindings.ts",
+          "mustContain": "resolveBoundPaneSelection",
+          "why": "new split PTY registration publishes its existing selected leaf so titles do not keep the prior pane"
+        },
+        {
+          "file": "src/renderer/src/components/AiVaultTabTitleSyncGate.tsx",
+          "mustContain": "sessionNameStore",
+          "why": "tabs and other session surfaces share native requests and cached evidence"
+        },
+        {
+          "file": "src/renderer/src/store/slices/terminal-tab-title-batch.ts",
+          "mustContain": "isEligibleSessionNamePrompt",
+          "why": "low-information generated text and container labels cannot block the first valid task"
+        },
+        {
+          "file": "src/renderer/src/store/slices/agent-status-pane-key-tab-binding.ts",
+          "mustContain": "isEligibleSessionNamePrompt",
+          "why": "live prompt admission uses the same quality rule as final title writes"
+        },
+        {
+          "file": "src/renderer/src/components/dashboard/dashboard-card-labels.ts",
+          "mustContain": "slotNamesThisRow",
+          "why": "dashboard snapshot cards reject a sibling session's tab title just like sidebar rows"
+        },
+        {
+          "file": "src/renderer/src/lib/ai-vault-tab-title-sync.ts",
+          "mustContain": "projectSessionNameSlot",
+          "why": "manual names remain separate candidates and stale responses cannot cross ownership"
+        },
+        {
+          "file": "src/renderer/src/lib/ai-vault-tab-title-requests.ts",
+          "mustContain": "paneKey: args.paneKey",
+          "why": "title requests retain the owning pane and terminal generation"
+        },
+        {
+          "file": "src/renderer/src/lib/ai-vault-tab-title-sync-inputs.ts",
+          "mustContain": "sessionNameSlotEqual",
+          "why": "evidence-only changes are meaningful sync inputs"
+        },
+        {
+          "file": "src/renderer/src/store/terminals/terminal-tab-presentation.ts",
+          "mustContain": "sessionNameSlotEqual",
+          "why": "evidence-only changes persist through the actual store"
+        },
+        {
+          "file": "src/shared/workspace-session-schema.ts",
+          "mustContain": "sessionNameSlotSchema",
+          "why": "name provenance survives persistence and mixed-version workspace restore"
+        },
+        {
+          "file": "src/main/ai-vault/session-scanner-codex-title-index.ts",
+          "mustContain": "readCodexSessionIndexName",
+          "why": "host read errors do not become native-name absence"
+        },
+        {
+          "file": "src/main/ai-vault/remote-session-scanner-codex-index.ts",
+          "mustContain": "unavailable",
+          "why": "remote index failures retain a distinct evidence state"
+        },
+        {
+          "file": "src/main/ai-vault/session-parse-cache-persistence.test.ts",
+          "mustContain": "providerName",
+          "why": "cache schema coverage includes separate native evidence and prompt fallback"
+        },
+        {
+          "file": "src/shared/ai-vault-types.ts",
+          "mustContain": "providerName",
+          "why": "optional naming evidence preserves the legacy scan title for paired clients"
+        },
+        {
+          "file": "src/shared/ai-vault-session-title.ts",
+          "mustContain": "nameEvidence",
+          "why": "optional evidence distinguishes native names from prompt fallback"
+        },
+        {
+          "file": "src/main/ai-vault/session-scanner-types.ts",
+          "mustContain": "generatedTitle",
+          "why": "resumable scans retain the first eligible task separately"
+        },
+        {
+          "file": "src/main/ai-vault/session-scanner-accumulator.ts",
+          "mustContain": "providerName",
+          "why": "scanner finalization publishes optional naming evidence"
+        },
+        {
+          "file": "src/main/ai-vault/session-scanner-primary-parsers.ts",
+          "mustContain": "providerName",
+          "why": "Claude native title records remain distinct from user prompts"
+        },
+        {
+          "file": "src/main/ai-vault/session-scanner-codex-parser.ts",
+          "mustContain": "providerName",
+          "why": "Codex index and metadata evidence remain distinct from prompts"
+        },
+        {
+          "file": "src/main/ai-vault/session-scanner-codex-message-records.ts",
+          "mustContain": "generatedTitle",
+          "why": "all Codex transcript forms seed the same stable eligible task"
+        },
+        {
+          "file": "src/main/ai-vault/session-scanner-codex-cached-title.ts",
+          "mustContain": "providerName",
+          "why": "an index rename updates native evidence on unchanged transcripts"
+        },
+        {
+          "file": "src/main/ai-vault/session-title-file-reader.ts",
+          "mustContain": "nameEvidence",
+          "why": "exact host-owned reads publish unavailable independently of legacy titles"
+        },
+        {
+          "file": "src/main/ai-vault/session-title-result-validation.ts",
+          "mustContain": "nameEvidence",
+          "why": "paired hosts preserve and validate optional evidence"
+        },
+        {
+          "file": "src/main/ai-vault/session-list-result-validation.ts",
+          "mustContain": "providerName",
+          "why": "remote list validation preserves optional evidence"
+        },
+        {
+          "file": "src/main/ai-vault/session-scanner-worker-entry.ts",
+          "mustContain": "providerName",
+          "why": "worker scan cache retains native evidence"
+        },
+        {
+          "file": "src/main/ai-vault/session-parse-cache-persistence.ts",
+          "mustContain": "SCHEMA_VERSION = 3",
+          "why": "old mixed-source parse cache cannot be reused as new native evidence"
+        },
+        {
+          "file": "src/main/ai-vault/session-scanner-parse-cache.ts",
+          "mustContain": "file.sizeBytes > entry.sizeBytes",
+          "why": "a changed same-length transcript must reparse native names rather than resume at EOF"
+        },
+        {
+          "file": "config/electron-builder.config.cjs",
+          "mustContain": "!.docs{,/**/*}",
+          "why": "session validation evidence and nested test apps must stay outside the distributable"
+        },
+        {
+          "file": "src/renderer/src/components/tab-group/useTabGroupItemProjections.ts",
+          "mustContain": "const aiVaultTitle =",
+          "why": "grouped tabs must retain the provider title through the final tab-bar projection"
+        },
+        {
+          "file": "src/shared/session-display-title.ts",
+          "mustContain": "resolveSessionDisplayTitle",
+          "why": "one provider-first candidate order is shared by conversation consumers"
+        },
+        {
+          "file": "src/shared/agent-tab-title.ts",
+          "mustContain": "deriveGeneratedTabTitle",
+          "why": "prompt-derived names reuse the bounded cleaner and shared candidate admission"
+        },
+        {
+          "file": "src/shared/tab-title-resolution.ts",
+          "mustContain": "resolveSessionDisplayTitle",
+          "why": "agent tabs use the same order without custom or command-label overrides"
+        },
+        {
+          "file": "src/shared/agent-row-conversation-name.ts",
+          "mustContain": "resolveSessionDisplayTitle",
+          "why": "agent rows use the common order and do not broadcast container labels to sibling panes"
+        },
+        {
+          "file": "src/renderer/src/lib/activity-thread-display.ts",
+          "mustContain": "isLowInformationSessionPrompt",
+          "why": "activity previews and stable naming reuse the same short-reply admission rule"
+        },
+        {
+          "file": "src/renderer/src/components/tab-bar/SortableTab.tsx",
+          "mustContain": "resolveTerminalTabTitle",
+          "why": "the final rendered label and tooltip cannot override the shared result with a container alias"
+        },
+        {
+          "file": "config/tsconfig.cli.json",
+          "mustContain": "../src/main/codex-session-ownership/codex-nested-hook-guard.ts",
+          "why": "the CLI-managed hook installer typechecks the same generated guard"
+        },
+        {
+          "file": "src/main/providers/local-pty-spawn-environment.ts",
+          "mustContain": "removeCodexToolCallerIdentity",
+          "why": "a newly owned local pane cannot inherit its host's Codex tool caller"
+        },
+        {
+          "file": "src/main/daemon/pty-subprocess/spawn-environment.ts",
+          "mustContain": "removeCodexToolCallerIdentity",
+          "why": "a persistent daemon cannot resurrect its inherited Codex caller in new panes"
+        },
+        {
+          "file": "src/relay/pty-handler.ts",
+          "mustContain": "removeCodexToolCallerIdentity",
+          "why": "new and revived SSH panes establish their own caller scope on the executing host"
+        },
+        {
+          "file": "src/main/codex/codex-hook-script.ts",
+          "mustContain": "buildCodexNestedHookGuard",
+          "why": "nested Codex exec hooks cannot publish on their caller's pane or enter replay spools"
+        },
+        {
+          "file": "src/shared/agent-hook-listener.ts",
+          "mustContain": "shouldRejectClaudeSessionReplacement",
+          "why": "reject competing Claude hooks before provider state folding"
+        },
+        {
+          "file": "src/shared/agent-hook-listener/listener-state.ts",
+          "mustContain": "claudeSessionActivityByPaneKey",
+          "why": "the activity window follows the existing listener and pane lifecycle"
+        },
+        {
+          "file": "src/main/agent-hooks/server/server-status-update.ts",
+          "mustContain": "recordClaudeSessionActivity",
+          "why": "only accepted live hook observations refresh the local activity window"
+        },
+        {
+          "file": "src/main/agent-hooks/server/server-status-application.ts",
+          "mustContain": "isSessionNameIdentityReplacement",
+          "why": "a newly accepted provider session starts its own state clock even when the state is unchanged"
+        },
+        {
+          "file": "src/main/agent-hooks/server/server-ingest-remote.ts",
+          "mustContain": "shouldRejectClaudeSessionReplacement",
+          "why": "older relays must not bypass the client's identity window"
+        },
+        {
+          "file": "src/relay/agent-hook-server.ts",
+          "mustContain": "recordClaudeSessionActivity",
+          "why": "the relay owns its host-local activity clock and excludes replay"
+        },
+        {
+          "file": "src/renderer/src/components/right-sidebar/use-canonical-session-titles.ts",
+          "mustContain": "useSessionNameIndex",
+          "why": "History search and rows consume the same native-first name projection"
+        },
+        {
+          "file": "src/renderer/src/components/dashboard/use-agent-row-conversation-name.ts",
+          "mustContain": "useSessionNameRecord",
+          "why": "each admitted Dashboard pane reads its own native name without borrowing a sibling slot"
+        },
+        {
+          "file": "src/renderer/src/components/right-sidebar/AiVaultPanel.tsx",
+          "mustContain": "useCanonicalSessionTitles(sessions)",
+          "why": "History list evidence seeds the shared renderer projection without a separate cache"
+        },
+        {
+          "file": "src/renderer/src/components/right-sidebar/AiVaultSessionRow.tsx",
+          "mustContain": "getScannedSessionDisplayName",
+          "why": "visible History rows revalidate native names and use the same name in drag data"
+        },
+        {
+          "file": "src/renderer/src/components/right-sidebar/AiVaultVirtualRow.tsx",
+          "mustContain": "getCanonicalTitle",
+          "why": "Agent Session History rows receive the shared session-name projection"
+        },
+        {
+          "file": "src/shared/ai-vault-session-filters.ts",
+          "mustContain": "filters.canonicalTitleBySessionKey?.get(",
+          "why": "history search retains Issue-pinned conversation titles alongside upstream filtering optimizations"
+        }
+      ],
+      "tests": [
+        "src/main/codex-session-ownership/session-validation-package-contract.test.ts",
+        "src/main/codex-session-ownership/codex-title-task-admission.test.ts",
+        "src/renderer/src/issues/provider-title-tab-projection.test.ts",
+        "src/renderer/src/session-names/session-name-store.test.ts",
+        "src/shared/session-names/session-name-priority.test.ts",
+        "src/shared/session-names/session-name-slot.test.ts",
+        "src/main/session-names/codex-session-metadata.test.ts",
+        "src/renderer/src/session-names/session-name-subscriptions.test.tsx",
+        "src/renderer/src/components/native-chat/StructuredAgentSessionStatusBridge.test.tsx",
+        "src/renderer/src/lib/ai-vault-tab-title-sync-inputs.test.ts",
+        "src/renderer/src/store/slices/agent-generated-tab-title.test.ts",
+        "src/shared/pane-agent-identity-inventory.test.ts",
+        "src/relay/ai-vault-handler.test.ts",
+        "src/main/session-names/provider-name-evidence.test.ts",
+        "src/main/session-names/provider-name-file-chain.test.ts",
+        "src/renderer/src/issues/provider-name-store-chain.test.ts",
+        "src/renderer/src/issues/dashboard-name-ownership.test.ts",
+        "src/main/ai-vault/session-title-file-reader.test.ts",
+        "src/renderer/src/components/tab-bar/tab-title-tooltip.test.tsx",
+        "src/main/codex-session-ownership/codex-nested-hook-guard.test.ts",
+        "src/main/claude-session-ownership/claude-session-activity.test.ts",
         "src/shared/agent-session-fallback-title.test.ts",
         "src/shared/ai-vault-session-filters.test.ts"
       ],
       "checks": [
-        "pnpm exec vitest run --config config/vitest.config.ts src/main/issues src/shared/issues src/renderer/src/issues src/renderer/src/components/issues src/renderer/src/components/sidebar/issues src/main/runtime/rpc/methods/issues.test.ts src/shared/agent-session-fallback-title.test.ts src/shared/ai-vault-session-filters.test.ts"
+        "pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/components/activity src/renderer/src/lib/activity-thread-display.test.ts src/renderer/src/store/slices/agent-status-batch.test.ts src/renderer/src/store/slices/agent-status.test.ts src/renderer/src/runtime/web-session-tabs-sync-agent-status.test.ts src/renderer/src/runtime/sync-runtime-graph-agent-status-projection.test.ts src/renderer/src/runtime/sync-runtime-graph-agent-status-projection-join.test.ts",
+        "pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/components/native-chat/StructuredAgentSessionStatusBridge.test.tsx src/renderer/src/lib/ai-vault-tab-title-sync-inputs.test.ts src/renderer/src/store/slices/agent-generated-tab-title.test.ts src/shared/pane-agent-identity-inventory.test.ts src/relay/ai-vault-handler.test.ts",
+        "pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/components/terminal-pane/use-notification-dispatch.test.ts src/main/ipc/notifications-message-formatting.test.ts src/main/ipc/notifications-mobile-fanout.test.ts src/main/ipc/notifications-delivery-gating.test.ts src/main/ipc/notifications-retention-lifecycle.test.ts src/renderer/src/runtime/web-session-tabs-agent-completion-notifications.test.ts src/renderer/src/hooks/useIpcEvents-agent-status-turn-completion.test.ts src/renderer/src/hooks/agent-hook-completion-notifications.test.ts",
+        "pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/session-names src/renderer/src/issues/conversation-session-titles.test.ts src/renderer/src/issues/issue-conversation-presentation.test.ts src/renderer/src/components/right-sidebar/AiVaultSessionRow.test.tsx",
+        "pnpm exec tsc --noEmit -p tests/e2e/helpers/issues-session-name-file-chain.tsconfig.json && pnpm exec vitest run --config config/vitest.config.ts tests/e2e/issues-session-name-file-chain.unit.test.ts src/main/ai-vault/session-scanner-claude-subagents.test.ts src/renderer/src/components/right-sidebar/ai-vault-session-continuation.test.ts",
+        "pnpm exec vitest run --config config/vitest.config.ts src/main/codex-session-ownership",
+        "pnpm exec vitest run --config config/vitest.config.ts src/main/session-names src/main/ai-vault/session-title-file-reader.test.ts src/main/ai-vault/session-title-file-reader-wsl-stall.test.ts src/main/ai-vault/session-scanner-parse-cache.test.ts src/main/ai-vault/session-parse-cache-persistence.test.ts src/shared/workspace-session-schema.test.ts src/renderer/src/lib/ai-vault-tab-title-sync.test.ts src/renderer/src/components/tab-bar/tab-title-tooltip.test.tsx",
+        "pnpm exec vitest run --config config/vitest.config.ts src/shared/session-names src/shared/session-display-title.test.ts src/shared/agent-tab-title.test.ts src/shared/tab-title-resolution.test.ts src/shared/agent-row-conversation-name.test.ts",
+        "pnpm exec vitest run --config config/vitest.config.ts src/shared/claude-session-ownership src/main/claude-session-ownership"
       ]
     },
     {
@@ -352,14 +832,19 @@
       "title": "自托管产物后端：产物 API origin 放宽到 loopback 与局域网",
       "goal": "通过现有产物客户端访问局域网服务",
       "journal": "docs/issue/自托管产物后端/journal.md",
-      "dependsOn": [],
+      "dependsOn": ["src/main/artifacts/artifact-cloud-service.ts"],
       "policyId": "self-hosted-artifacts",
-      "ownedPaths": ["docs/issue/自托管产物后端/**"],
+      "ownedPaths": ["docs/issue/自托管产物后端/**", "src/main/self-hosted-artifacts/**"],
       "requiredFiles": [
         "src/main/artifacts/artifact-cloud-config.ts",
         "src/main/artifacts/artifact-cloud-config.test.ts"
       ],
       "seams": [
+        {
+          "file": "src/main/artifacts/artifact-cloud-service.ts",
+          "mustContain": "http://127.0.0.1:8787",
+          "why": "Artifact operations default to the local HTTP backend without launch environment setup"
+        },
         {
           "file": "src/main/artifacts/artifact-cloud-config.ts",
           "mustContain": "ORCA_ARTIFACTS_API_URL",
@@ -371,9 +856,12 @@
           "why": "auth override stays limited to non-packaged builds (REQ-204)"
         }
       ],
-      "tests": ["src/main/artifacts/artifact-cloud-config.test.ts"],
+      "tests": [
+        "src/main/artifacts/artifact-cloud-config.test.ts",
+        "src/main/self-hosted-artifacts/local-artifact-backend.test.ts"
+      ],
       "checks": [
-        "pnpm exec vitest run --config config/vitest.config.ts src/main/artifacts/artifact-cloud-config.test.ts"
+        "pnpm exec vitest run --config config/vitest.config.ts src/main/artifacts src/main/self-hosted-artifacts src/main/skills/skill-cloud-service.test.ts"
       ]
     },
     {

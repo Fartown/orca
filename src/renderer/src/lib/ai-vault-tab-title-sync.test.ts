@@ -15,6 +15,7 @@ import {
 } from './ai-vault-tab-title-batches'
 import { aiVaultTitleSyncInputsChanged } from './ai-vault-tab-title-sync-inputs'
 import { startAiVaultTabTitleSync } from './ai-vault-tab-title-sync'
+import { createSessionNameStore } from '../session-names/session-name-store'
 import type { AppState } from '@/store/types'
 
 function terminalTab(worktreeId: string, aiVaultTitle?: TerminalTab['aiVaultTitle']): TerminalTab {
@@ -32,7 +33,16 @@ function terminalTab(worktreeId: string, aiVaultTitle?: TerminalTab['aiVaultTitl
 }
 
 function titleResult(agent: 'claude' | 'codex', title: string): AiVaultSessionTitlesResult {
-  return { titles: [{ agent, sessionId: `${agent}-session`, title }] }
+  return {
+    titles: [
+      {
+        agent,
+        sessionId: `${agent}-session`,
+        title,
+        providerName: { kind: 'named', title, field: 'test.nativeName' }
+      }
+    ]
+  }
 }
 
 function makeState(args: {
@@ -171,6 +181,69 @@ function makeState(args: {
 }
 
 describe('AI Vault tab title sync', () => {
+  it('keeps polling missing native evidence at the short interval despite a task fallback', async () => {
+    const store = makeState({
+      executionHostId: 'ssh:dev-box',
+      worktreeId: 'worktree-1',
+      path: '/workspace'
+    })
+    let delay: number | undefined
+    const stop = startAiVaultTabTitleSync({
+      ...store,
+      resolveSessionTitles: async () => ({
+        titles: [],
+        nameEvidence: [
+          {
+            agent: 'codex',
+            sessionId: 'codex-session',
+            providerName: { kind: 'absent' },
+            generatedTitle: '运行测试'
+          }
+        ]
+      }),
+      setTimer: (_callback, ms) => {
+        delay = ms
+        return 1
+      },
+      clearTimer: () => {}
+    })
+    await vi.waitFor(() =>
+      expect(store.getState().tabsByWorktree['worktree-1'][0].aiVaultTitle?.title).toBe('运行测试')
+    )
+    expect(delay).toBe(20_000)
+    stop()
+  })
+
+  it('projects a shared-cache rename into a sleeping tab without a request feedback loop', async () => {
+    const store = makeState({
+      executionHostId: 'ssh:dev-box',
+      worktreeId: 'worktree-1',
+      path: '/workspace',
+      sleeping: true
+    })
+    const resolve = vi.fn(async () => titleResult('codex', 'First native'))
+    const names = createSessionNameStore(resolve)
+    const stop = startAiVaultTabTitleSync({
+      ...store,
+      resolveSessionTitles: names.resolveSessionTitles,
+      subscribeSessionNames: names.subscribe
+    })
+    await vi.waitFor(() =>
+      expect(store.getState().tabsByWorktree['worktree-1'][0].aiVaultTitle?.title).toBe(
+        'First native'
+      )
+    )
+    names.publish('ssh:dev-box', titleResult('codex', 'Renamed elsewhere'))
+    await vi.waitFor(() =>
+      expect(store.getState().tabsByWorktree['worktree-1'][0].aiVaultTitle?.title).toBe(
+        'Renamed elsewhere'
+      )
+    )
+    expect(resolve).toHaveBeenCalledTimes(1)
+    stop()
+    names.reset()
+  })
+
   it('treats a source-only slot transition as a sync input change', () => {
     const store = makeState({
       executionHostId: 'ssh:dev-box',
@@ -221,6 +294,8 @@ describe('AI Vault tab title sync', () => {
           agent,
           sessionId: `${agent}-session`,
           title: `${agent} conversation`,
+          providerName: { kind: 'named', title: `${agent} conversation`, field: 'test.nativeName' },
+          manualTitle: null,
           source: 'provider'
         })
       )
@@ -387,14 +462,13 @@ describe('AI Vault tab title sync', () => {
     stop()
   })
 
-  it('keeps the last name when the provider identity changes but does not resolve', async () => {
+  it('does not retain another session name after an admitted identity changes without a title', async () => {
     const store = makeState({
       executionHostId: 'ssh:dev-box',
       worktreeId: 'worktree-1',
       path: '/workspace/albacore'
     })
-    // The scanner only ever knows the original session, like an agent-internal
-    // side call that never writes a transcript.
+    // Internal calls are rejected upstream; this store transition is an admitted successor.
     const resolveSessionTitles = vi.fn(async () => titleResult('codex', 'Original conversation'))
     const stop = startAiVaultTabTitleSync({ ...store, resolveSessionTitles })
 
@@ -403,31 +477,34 @@ describe('AI Vault tab title sync', () => {
 
     await vi.waitFor(() => expect(resolveSessionTitles).toHaveBeenCalledTimes(2))
     expect(store.getState().tabsByWorktree['worktree-1'][0].aiVaultTitle).toMatchObject({
-      sessionId: 'codex-session',
-      title: 'Original conversation'
+      sessionId: 'codex-session-2',
+      manualTitle: null
     })
+    expect(store.getState().tabsByWorktree['worktree-1'][0].aiVaultTitle?.title).not.toBe(
+      'Original conversation'
+    )
     stop()
   })
 
-  it('lands a resolved name even when the pane identity flips during the scan', async () => {
+  it('does not land an old response after the admitted pane identity has changed', async () => {
     const store = makeState({
       executionHostId: 'ssh:dev-box',
       worktreeId: 'worktree-1',
       path: '/workspace/albacore'
     })
-    // The agent starts a background side call while the read is in flight, which
-    // is what flips the pane identity out from under the result.
+    // Child observations must be rejected by ownership admission, before this state changes.
     const resolveSessionTitles = vi.fn(async () => {
-      store.setProviderSessionId('codex-side-call')
+      store.setProviderSessionId('codex-new-session')
       return titleResult('codex', 'Real conversation')
     })
     const stop = startAiVaultTabTitleSync({ ...store, resolveSessionTitles })
 
-    await vi.waitFor(() =>
-      expect(store.getState().tabsByWorktree['worktree-1'][0].aiVaultTitle).toMatchObject({
-        sessionId: 'codex-session',
-        title: 'Real conversation'
-      })
+    await vi.waitFor(() => expect(resolveSessionTitles).toHaveBeenCalledTimes(2))
+    expect(store.getState().tabsByWorktree['worktree-1'][0].aiVaultTitle).toMatchObject({
+      sessionId: 'codex-new-session'
+    })
+    expect(store.getState().tabsByWorktree['worktree-1'][0].aiVaultTitle?.title).not.toBe(
+      'Real conversation'
     )
     stop()
   })
@@ -521,6 +598,47 @@ describe('AI Vault tab title sync', () => {
 })
 
 describe('canonical conversation title projection', () => {
+  it('projects a manual-name notification without waiting for the idle file-scan scheduler', () => {
+    const store = makeState({
+      executionHostId: 'ssh:dev-box',
+      worktreeId: 'worktree-1',
+      path: '/workspace/albacore',
+      aiVaultTitle: {
+        agent: 'codex',
+        sessionId: 'codex-session',
+        title: 'Codex codex-se',
+        providerName: { kind: 'absent' },
+        manualTitle: null,
+        source: 'provider'
+      }
+    })
+    let canonical: string | null = null
+    let notifyCanonical!: () => void
+    const resolveSessionTitles = vi.fn(async () => ({ titles: [] }))
+    const stop = startAiVaultTabTitleSync({
+      ...store,
+      resolveSessionTitles,
+      getCanonicalTitle: () => canonical,
+      subscribeCanonicalTitles: (listener) => {
+        notifyCanonical = listener
+        return () => undefined
+      },
+      scheduleReconcile: () => () => undefined
+    })
+    try {
+      canonical = 'Formal manual name, not the container alias'
+      notifyCanonical()
+      expect(store.getState().tabsByWorktree['worktree-1'][0].aiVaultTitle).toMatchObject({
+        title: canonical,
+        manualTitle: canonical,
+        source: 'conversation-override'
+      })
+      expect(resolveSessionTitles).not.toHaveBeenCalled()
+    } finally {
+      stop()
+    }
+  })
+
   it('revalidates a persisted override through the native resolver after restart', async () => {
     const store = makeState({
       executionHostId: 'ssh:dev-box',
@@ -542,6 +660,8 @@ describe('canonical conversation title projection', () => {
         agent: 'codex',
         sessionId: 'codex-session',
         title: 'Provider after Clear',
+        providerName: { kind: 'named', title: 'Provider after Clear', field: 'test.nativeName' },
+        manualTitle: null,
         source: 'provider'
       })
     )
@@ -559,6 +679,7 @@ describe('canonical conversation title projection', () => {
         agent: 'codex',
         sessionId: 'codex-session',
         title: 'Old scanner name',
+        providerName: { kind: 'named', title: 'Old scanner name', field: 'test.nativeName' },
         source: 'provider'
       }
     })
@@ -584,15 +705,17 @@ describe('canonical conversation title projection', () => {
       expect(store.getState().tabsByWorktree['worktree-1'][0].aiVaultTitle).toEqual({
         agent: 'codex',
         sessionId: 'codex-session',
-        title: 'Renamed by user',
-        source: 'conversation-override'
+        title: 'Old scanner name',
+        manualTitle: 'Renamed by user',
+        providerName: { kind: 'named', title: 'Old scanner name', field: 'test.nativeName' },
+        source: 'provider'
       })
     )
     expect(resolveSessionTitles).not.toHaveBeenCalled()
     stop()
   })
 
-  it('lets the canonical title outrank a fresh scanner result', async () => {
+  it('keeps a canonical manual fallback without replacing a fresh native name', async () => {
     const store = makeState({
       executionHostId: 'ssh:dev-box',
       worktreeId: 'worktree-1',
@@ -608,8 +731,10 @@ describe('canonical conversation title projection', () => {
       expect(store.getState().tabsByWorktree['worktree-1'][0].aiVaultTitle).toEqual({
         agent: 'codex',
         sessionId: 'codex-session',
-        title: 'Canonical value',
-        source: 'conversation-override'
+        title: 'Scanner value',
+        manualTitle: 'Canonical value',
+        providerName: { kind: 'named', title: 'Scanner value', field: 'test.nativeName' },
+        source: 'provider'
       })
     )
     stop()
@@ -624,7 +749,17 @@ describe('canonical conversation title projection', () => {
     })
     let canonical: string | null = 'Forget me'
     let notifyCanonical: (() => void) | null = null
-    const resolveSessionTitles = vi.fn(async () => titleResult('codex', 'Scanner value'))
+    const resolveSessionTitles = vi.fn(async () => ({
+      titles: [
+        {
+          agent: 'codex' as const,
+          sessionId: 'codex-session',
+          title: 'Scanner value',
+          providerName: { kind: 'absent' as const },
+          generatedTitle: 'Scanner value'
+        }
+      ]
+    }))
     const stop = startAiVaultTabTitleSync({
       ...store,
       resolveSessionTitles,
@@ -640,8 +775,7 @@ describe('canonical conversation title projection', () => {
 
     canonical = null
     notifyCanonical!()
-    // The stale projection is cleared, which re-opens the scan; the scanner
-    // value then takes the slot back.
+    // Clearing only the manual candidate reveals the already cached task prompt.
     await vi.waitFor(() =>
       expect(store.getState().tabsByWorktree['worktree-1'][0].aiVaultTitle?.title).toBe(
         'Scanner value'
@@ -650,13 +784,23 @@ describe('canonical conversation title projection', () => {
     stop()
   })
 
-  it('keeps a projected override when the pane identity flips to an unresolvable session', async () => {
+  it('does not transfer a manual override to an admitted unresolvable successor', async () => {
     const store = makeState({
       executionHostId: 'ssh:dev-box',
       worktreeId: 'worktree-1',
       path: '/workspace/albacore'
     })
-    const resolveSessionTitles = vi.fn(async () => titleResult('codex', 'Scanner value'))
+    const resolveSessionTitles = vi.fn(async () => ({
+      titles: [
+        {
+          agent: 'codex' as const,
+          sessionId: 'codex-session',
+          title: 'Scanner value',
+          providerName: { kind: 'absent' as const },
+          generatedTitle: 'Scanner value'
+        }
+      ]
+    }))
     const stop = startAiVaultTabTitleSync({
       ...store,
       resolveSessionTitles,
@@ -673,10 +817,12 @@ describe('canonical conversation title projection', () => {
     store.setProviderSessionId('codex-session-2')
     await vi.waitFor(() => expect(resolveSessionTitles).toHaveBeenCalledTimes(2))
     expect(store.getState().tabsByWorktree['worktree-1'][0].aiVaultTitle).toMatchObject({
-      sessionId: 'codex-session',
-      title: 'Renamed by user',
-      source: 'conversation-override'
+      sessionId: 'codex-session-2',
+      manualTitle: null
     })
+    expect(store.getState().tabsByWorktree['worktree-1'][0].aiVaultTitle?.title).not.toBe(
+      'Renamed by user'
+    )
     stop()
   })
 })

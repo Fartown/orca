@@ -7,6 +7,7 @@ import {
 } from '../../shared/ai-vault-session-title'
 import { listAiVaultSessions } from './cached-session-list'
 import { resolveAiVaultSessionTitlesInBackground } from './session-scanner-background'
+import type { AiVaultSession } from '../../shared/ai-vault-types'
 
 const TRANSCRIPT_PATH_MAX_LENGTH = 32_768
 
@@ -70,19 +71,49 @@ async function recoverMissingTitlesFromScan(
   if (missing.length === 0 || signal?.aborted) {
     return resolved
   }
-  let titleByIdentity: Map<string, string>
+  let sessionByIdentity: Map<string, AiVaultSession>
   try {
     // Default depth, so a panel scan already in cache covers this without rescanning.
     const { sessions } = await listAiVaultSessions(undefined, { signal })
-    titleByIdentity = new Map(
-      sessions.map((session) => [identityKey(session), session.title.trim()])
-    )
+    sessionByIdentity = new Map(sessions.map((session) => [identityKey(session), session]))
   } catch {
     return resolved
   }
   const recovered = missing.flatMap((request) => {
-    const title = titleByIdentity.get(identityKey(request))
-    return title ? [{ agent: request.agent, sessionId: request.sessionId, title }] : []
+    const session = sessionByIdentity.get(identityKey(request))
+    const title = session?.title.trim()
+    return title
+      ? [
+          {
+            agent: request.agent,
+            sessionId: request.sessionId,
+            title,
+            ...(session?.providerName ? { providerName: session.providerName } : {}),
+            ...(session?.generatedTitle !== undefined
+              ? { generatedTitle: session.generatedTitle }
+              : {})
+          }
+        ]
+      : []
   })
-  return recovered.length > 0 ? { titles: [...resolved.titles, ...recovered] } : resolved
+  if (recovered.length === 0) {
+    return resolved
+  }
+  const nameEvidence = new Map(
+    (resolved.nameEvidence ?? []).map((entry) => [identityKey(entry), entry])
+  )
+  for (const title of recovered) {
+    if (title.providerName) {
+      nameEvidence.set(identityKey(title), {
+        agent: title.agent,
+        sessionId: title.sessionId,
+        providerName: title.providerName,
+        ...(title.generatedTitle !== undefined ? { generatedTitle: title.generatedTitle } : {})
+      })
+    }
+  }
+  return {
+    titles: [...resolved.titles, ...recovered],
+    ...(nameEvidence.size ? { nameEvidence: [...nameEvidence.values()] } : {})
+  }
 }

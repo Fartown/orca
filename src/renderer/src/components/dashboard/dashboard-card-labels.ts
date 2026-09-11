@@ -37,9 +37,10 @@ export function rowConversationName(
   const parentPaneKey = row.entry.orchestration?.parentPaneKey
   // Why: a child row rendered on its parent's tab does not own that tab's name.
   if (
-    row.lineage?.depth === 1 &&
-    parentPaneKey !== undefined &&
-    parsePaneKey(parentPaneKey)?.tabId === row.tab.id
+    row.rowSource === 'subagent' ||
+    (row.lineage?.depth === 1 &&
+      parentPaneKey !== undefined &&
+      parsePaneKey(parentPaneKey)?.tabId === row.tab.id)
   ) {
     return undefined
   }
@@ -48,8 +49,16 @@ export function rowConversationName(
     paneTitles,
     parsePaneKey(row.paneKey)?.leafId
   )
+  const slot = row.tab.aiVaultTitle
+  const slotNamesThisRow =
+    slot == null ||
+    (slot.agent === row.agentType && slot.sessionId === row.entry.providerSession?.id)
   return (
-    getAgentRowConversationName(row.tab, row.agentType, generatedTitlesEnabled, paneLiveTitle) ??
-    undefined
+    getAgentRowConversationName(
+      slotNamesThisRow ? row.tab : { ...row.tab, aiVaultTitle: null },
+      row.agentType,
+      generatedTitlesEnabled,
+      paneLiveTitle
+    ) ?? undefined
   )
 }
