@@ -4,7 +4,7 @@ document_type: test-case-list
 status: ready
 created: 2026-09-08
 updated: 2026-09-10
-issue: Issues看板与会话
+issue: 会话命名与身份保护
 ---
 
 # Provider优先命名验收
@@ -20,32 +20,149 @@ issue: Issues看板与会话
 
 ## 2. 用例
 
-| 用例 | 关联需求 | 操作/数据 | 预期断言 |
-| --- | --- | --- | --- |
-| TC-231 全候选Provider优先 | REQ-025 | Provider、人工、prompt、OSC、custom/quick同时存在；走全部消费矩阵 | Provider主显；Agent Tab和左侧一致；没有链外抢占 |
-| TC-232 无Provider逐层回退 | REQ-025 | 按顺序移除人工、prompt、可信OSC、归属label | 各处依次显示同一人工/派生/实时/label/fallback；空白跳过 |
-| TC-233 首prompt不冒充Provider | REQ-025 | scanner只有首问摘要，另有人工名 | 人工名优先；来源明确为prompt而非provider；不开额外LLM |
-| TC-234 Provider晚生成与改名 | REQ-025 | Claude ai/custom变化；Codex只更新index，transcript不变 | 冷热/完整增量一致，已挂载各消费面收敛，无需重开Issues |
-| TC-235 失败和明确清除 | REQ-025、REQ-026 | 同identity已知Provider名；依次模拟断线、空结果、missing字段、明确撤销 | 前三者不伪装撤销；明确撤销才去掉Provider候选，按相同回退排序 |
-| TC-236 已有人工名兼容 | REQ-025、REQ-026 | Provider存在/不存在两组；沿旧入口保存、取消、Clear、冲突与写失败 | Provider存在时主名不变；不存在时已有人工值回退生效；沿旧revision/失败合同，不新增tombstone或公共编辑RPC |
-| TC-237 无Issues独立工作 | REQ-025、REQ-026 | 无Issue/无Conversation或停用Issues装配，保留Provider identity | Workspace/Tab/History/通知仍能一致自动命名；缺席旧人工适配不阻塞，也不创建新的DB或编辑入口 |
-| TC-238 Issue组织不改名 | REQ-008、REQ-025、REQ-026 | bind/rebind/unbind/delete Issue | 名称与公共记录不变；不新增专属标题请求/快照写入；session和Round保留原合同 |
-| TC-239 旧数据保留 | REQ-014、REQ-026 | 旧user/legacy人工名、Provider/minted值和Tab custom并存 | 不搬迁/删列；精确identity的旧人工值才进第2层；旧Provider快照不冒充原生证据；容器标签不升级成人工会话名 |
-| TC-240 旧存储回归 | REQ-014、REQ-026 | 运行既有v4迁移与Rename/Clear失败回归；重复加载旧数据 | 保留原兼容合同和数据；不新增receipt、复制迁移或自动回填；缺失证据不复活已清除的Provider缓存 |
-| TC-241 旧人工归属冲突 | REQ-014、REQ-026 | 同identity多个不同人工名、无identity、scope有歧义 | 不猜ID或覆盖原值；未能精确匹配的旧人工候选不投影，自动命名继续工作 |
-| TC-242 Tab旧别名与普通shell | REQ-025、REQ-026 | 模板/自动化/人工来源不明custom，单/多pane与shell | Agent名字不被旧别名抢占；不将其批量标成人工session名；shell容器Rename保持 |
-| TC-243 分屏与身份切换 | REQ-025、REQ-028 | A/B同tab，切焦点、真换session、关闭重建pane；对照后台B、合法worker与未知观察 | 每行用已确认的自身identity；Tab等于活跃pane；父标签不广播；后台B不替换父绑定，合法worker保留，unknown不凭prompt猜归属 |
-| TC-244 异步迟到与revision | REQ-016、REQ-025、REQ-026 | A请求未完切B；同A新请求先返回；Rename/Clear与导入并发 | 旧响应不覆盖新绑定/新结果；A缓存可保留；清除不会被旧导入复活 |
-| TC-245 稳定派生与设置 | REQ-025 | 无Provider/人工，首个有效任务后发“继续”或切换新话题；切tabAutoGenerateTitle | 同session保留稳定摘要，最新任务只改预览；renderer派生受统一设置控制，scanner有效首问摘要按合同保留；所有消费者相同；新session重新选名 |
-| TC-246 搜索和操作旁路 | REQ-025 | 按Provider名/备用名/ID检索；History拖拽、删除确认、接续、Goal/Notes选目标 | 显示结果一致且可搜索；操作ID/path/terminal handle不因名称变化而改变 |
-| TC-247 仪表盘Activity通知 | REQ-025 | 同一revision在主/弹出Dashboard、Map、Activity及新通知发布 | 会话标识取同一值；任务内容/状态另显；不再用当前prompt充当另一条主名 |
-| TC-248 关闭重启与隔离 | REQ-014、REQ-015、REQ-025、REQ-026 | local/folder/SSH/paired、不同profile、WSL/home scope；关闭恢复 | 名称按正确scope恢复；断线不读本地替代、不认为exited；模糊scope不投影其他会话旧人工值 |
-| TC-249 Mobile与headless/Chat | REQ-025、REQ-026 | 无桌面renderer，单/多pane；structured默认名后建立Provider handle | 同样优先级，不依赖桌面canonical provider；已有人工适配可用时接入、缺席明确披露；身份建立前不伪造会话名 |
-| TC-250 新旧端与退出旧职责 | REQ-015、REQ-025、REQ-026 | 新旧客户端/host双向；旧Issues Rename入口；源码调用图审计 | 新字段可选、旧title内容合同不变；新显示链只消费公共结果及可选旧人工适配，不依赖Issues局部请求/map；保留旧入口，未升级端不计新规则通过 |
-| TC-251 低信息派生候选跳过 | REQ-025 | 无Provider/人工；单独“继续”“好的”“ok”“continue”、空白、清理后空串；另有合格实时标题 | prompt候选无效，实时标题生效；实时也只有状态/目录时继续降级；不调用LLM，不从UI各自评分 |
-| TC-252 有效短请求与首问捕获 | REQ-025 | “继续修复登录超时”“运行测试”；首条注入/确认后出现真实任务；后续普通回合 | 不因子串/短长度误删有效请求；首个有效任务进入摘要，之后不被“继续”或普通新回合覆盖；未找到合格任务时实时回退可用 |
-| TC-253 Provider终端标题分类 | REQ-025 | 摘要/人工名存在；一组有适配器协议和当前identity证据，一组只是看似名称的OSC/其他pane标题 | 前组归Provider第一层；后组不因文本像名字而升级，不得跨pane借用；单纯来自Agent进程也不足以证明正式名 |
-| TC-254 不误过滤明确命名 | REQ-025 | Provider明确命名“继续”；无Provider时人工备用名“好的”；对照同文本作为prompt | Provider/人工名保留各自优先级；同文本作为低信息prompt被跳过；质量过滤不擅自否决明确命名 |
+### TC-231 全候选Provider优先
+
+- 关联需求：REQ-025
+- 输入和操作：Provider、人工、prompt、OSC、custom/quick同时存在；走全部消费矩阵
+- 预期：Provider主显；Agent Tab和左侧一致；没有链外抢占
+
+### TC-232 无Provider逐层回退
+
+- 关联需求：REQ-025
+- 输入和操作：按顺序移除人工、prompt、可信OSC、归属label
+- 预期：各处依次显示同一人工/派生/实时/label/fallback；空白跳过
+
+### TC-233 首prompt不冒充Provider
+
+- 关联需求：REQ-025
+- 输入和操作：scanner只有首问摘要，另有人工名
+- 预期：人工名优先；来源明确为prompt而非provider；不开额外LLM
+
+### TC-234 Provider晚生成与改名
+
+- 关联需求：REQ-025
+- 输入和操作：Claude ai/custom变化；Codex只更新index，transcript不变
+- 预期：冷热/完整增量一致，已挂载各消费面收敛，无需重开Issues
+
+### TC-235 失败和明确清除
+
+- 关联需求：REQ-025、REQ-026
+- 输入和操作：同identity已知Provider名；依次模拟断线、空结果、missing字段、明确撤销
+- 预期：前三者不伪装撤销；明确撤销才去掉Provider候选，按相同回退排序
+
+### TC-236 已有人工名兼容
+
+- 关联需求：REQ-025、REQ-026
+- 输入和操作：Provider存在/不存在两组；沿旧入口保存、取消、Clear、冲突与写失败
+- 预期：Provider存在时主名不变；不存在时已有人工值回退生效；沿旧revision/失败合同，不新增tombstone或公共编辑RPC
+
+### TC-237 无Issues独立工作
+
+- 关联需求：REQ-025、REQ-026
+- 输入和操作：无Issue/无Conversation或停用Issues装配，保留Provider identity
+- 预期：Workspace/Tab/History/通知仍能一致自动命名；缺席旧人工适配不阻塞，也不创建新的DB或编辑入口
+
+### TC-238 Issue组织不改名
+
+- 关联需求：[Issues：原子绑定与改名](../../../Issues看板与会话/requirements/Issues看板与会话.md#req-008-原子绑定与改名)、REQ-025、REQ-026
+- 输入和操作：bind/rebind/unbind/delete Issue
+- 预期：名称与公共记录不变；不新增专属标题请求/快照写入；session和Round保留原合同
+
+### TC-239 旧数据保留
+
+- 关联需求：[Issues：SQLite 与迁移](../../../Issues看板与会话/requirements/Issues看板与会话.md#req-014-sqlite-与迁移)、REQ-026
+- 输入和操作：旧user/legacy人工名、Provider/minted值和Tab custom并存
+- 预期：不搬迁/删列；精确identity的旧人工值才进第2层；旧Provider快照不冒充原生证据；容器标签不升级成人工会话名
+
+### TC-240 旧存储回归
+
+- 关联需求：[Issues：SQLite 与迁移](../../../Issues看板与会话/requirements/Issues看板与会话.md#req-014-sqlite-与迁移)、REQ-026
+- 输入和操作：运行既有v4迁移与Rename/Clear失败回归；重复加载旧数据
+- 预期：保留原兼容合同和数据；不新增receipt、复制迁移或自动回填；缺失证据不复活已清除的Provider缓存
+
+### TC-241 旧人工归属冲突
+
+- 关联需求：[Issues：SQLite 与迁移](../../../Issues看板与会话/requirements/Issues看板与会话.md#req-014-sqlite-与迁移)、REQ-026
+- 输入和操作：同identity多个不同人工名、无identity、scope有歧义
+- 预期：不猜ID或覆盖原值；未能精确匹配的旧人工候选不投影，自动命名继续工作
+
+### TC-242 Tab旧别名与普通shell
+
+- 关联需求：REQ-025、REQ-026
+- 输入和操作：模板/自动化/人工来源不明custom，单/多pane与shell
+- 预期：Agent名字不被旧别名抢占；不将其批量标成人工session名；shell容器Rename保持
+
+### TC-243 分屏与身份切换
+
+- 关联需求：REQ-025、REQ-028
+- 输入和操作：A/B同tab，切焦点、真换session、关闭重建pane；对照后台B、合法worker与未知观察
+- 预期：每行用已确认的自身identity；Tab等于活跃pane；父标签不广播；后台B不替换父绑定，合法worker保留，unknown不凭prompt猜归属
+
+### TC-244 异步迟到与revision
+
+- 关联需求：[Issues：Receipt 与 revision](../../../Issues看板与会话/requirements/Issues看板与会话.md#req-016-receipt-与-revision)、REQ-025、REQ-026
+- 输入和操作：A请求未完切B；同A新请求先返回；Rename/Clear与导入并发
+- 预期：旧响应不覆盖新绑定/新结果；A缓存可保留；清除不会被旧导入复活
+
+### TC-245 稳定派生与设置
+
+- 关联需求：REQ-025
+- 输入和操作：无Provider/人工，首个有效任务后发“继续”或切换新话题；切tabAutoGenerateTitle
+- 预期：同session保留稳定摘要，最新任务只改预览；renderer派生受统一设置控制，scanner有效首问摘要按合同保留；所有消费者相同；新session重新选名
+
+### TC-246 搜索和操作旁路
+
+- 关联需求：REQ-025
+- 输入和操作：按Provider名/备用名/ID检索；History拖拽、删除确认、接续、Goal/Notes选目标
+- 预期：显示结果一致且可搜索；操作ID/path/terminal handle不因名称变化而改变
+
+### TC-247 仪表盘Activity通知
+
+- 关联需求：REQ-025
+- 输入和操作：同一revision在主/弹出Dashboard、Map、Activity及新通知发布
+- 预期：会话标识取同一值；任务内容/状态另显；不再用当前prompt充当另一条主名
+
+### TC-248 关闭重启与隔离
+
+- 关联需求：[Issues：SQLite 与迁移](../../../Issues看板与会话/requirements/Issues看板与会话.md#req-014-sqlite-与迁移)、[Issues：Authority 与 host](../../../Issues看板与会话/requirements/Issues看板与会话.md#req-015-authority-与-host)、REQ-025、REQ-026
+- 输入和操作：local/folder/SSH/paired、不同profile、WSL/home scope；关闭恢复
+- 预期：名称按正确scope恢复；断线不读本地替代、不认为exited；模糊scope不投影其他会话旧人工值
+
+### TC-249 Mobile与headless/Chat
+
+- 关联需求：REQ-025、REQ-026
+- 输入和操作：无桌面renderer，单/多pane；structured默认名后建立Provider handle
+- 预期：同样优先级，不依赖桌面canonical provider；已有人工适配可用时接入、缺席明确披露；身份建立前不伪造会话名
+
+### TC-250 新旧端与退出旧职责
+
+- 关联需求：[Issues：Authority 与 host](../../../Issues看板与会话/requirements/Issues看板与会话.md#req-015-authority-与-host)、REQ-025、REQ-026
+- 输入和操作：新旧客户端/host双向；旧Issues Rename入口；源码调用图审计
+- 预期：新字段可选、旧title内容合同不变；新显示链只消费公共结果及可选旧人工适配，不依赖Issues局部请求/map；保留旧入口，未升级端不计新规则通过
+
+### TC-251 低信息派生候选跳过
+
+- 关联需求：REQ-025
+- 输入和操作：无Provider/人工；单独“继续”“好的”“ok”“continue”、空白、清理后空串；另有合格实时标题
+- 预期：prompt候选无效，实时标题生效；实时也只有状态/目录时继续降级；不调用LLM，不从UI各自评分
+
+### TC-252 有效短请求与首问捕获
+
+- 关联需求：REQ-025
+- 输入和操作：“继续修复登录超时”“运行测试”；首条注入/确认后出现真实任务；后续普通回合
+- 预期：不因子串/短长度误删有效请求；首个有效任务进入摘要，之后不被“继续”或普通新回合覆盖；未找到合格任务时实时回退可用
+
+### TC-253 Provider终端标题分类
+
+- 关联需求：REQ-025
+- 输入和操作：摘要/人工名存在；一组有适配器协议和当前identity证据，一组只是看似名称的OSC/其他pane标题
+- 预期：前组归Provider第一层；后组不因文本像名字而升级，不得跨pane借用；单纯来自Agent进程也不足以证明正式名
+
+### TC-254 不误过滤明确命名
+
+- 关联需求：REQ-025
+- 输入和操作：Provider明确命名“继续”；无Provider时人工备用名“好的”；对照同文本作为prompt
+- 预期：Provider/人工名保留各自优先级；同文本作为低信息prompt被跳过；质量过滤不擅自否决明确命名
 
 ## 3. 执行与证据要求
 

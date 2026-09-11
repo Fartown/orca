@@ -4,7 +4,7 @@ document_type: test-case-list
 status: ready
 created: 2026-09-09
 updated: 2026-09-10
-issue: Issues看板与会话
+issue: 会话命名与身份保护
 ---
 
 # Codex嵌套调用保护测试

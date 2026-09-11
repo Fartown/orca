@@ -3,8 +3,8 @@ title: Claude活跃窗口保护测试
 document_type: test-case-list
 status: ready
 created: 2026-09-08
-updated: 2026-09-08
-issue: Issues看板与会话
+updated: 2026-09-10
+issue: 会话命名与身份保护
 ---
 
 # Claude活跃窗口保护测试
@@ -16,8 +16,8 @@ issue: Issues看板与会话
 | F-255 | REQ-028 | 活跃在位者保护 | 是 | 竞争启动及后续事件均不能替换 | TC-255 |
 | F-256 | REQ-028 | 窗口及续期 | 是 | 小于W拒绝，达到W沿用旧逻辑 | TC-256 |
 | F-257 | REQ-028 | 原Provider行为 | 是 | 合法同ID子Agent、启动与其他Provider保留 | TC-257 |
-| F-258 | REQ-014、REQ-028 | 冷恢复与生命周期 | 是 | 私有计时不重放、不跨实例、不假称liveness | TC-258 |
-| F-259 | REQ-015、REQ-028 | relay与旧端入口 | 是 | 复用窗口；不新增wire字段 | TC-259 |
+| F-258 | [Issues：SQLite 与迁移](../../../Issues看板与会话/requirements/Issues看板与会话.md#req-014-sqlite-与迁移)、REQ-028 | 冷恢复与生命周期 | 是 | 私有计时不重放、不跨实例、不假称liveness | TC-258 |
+| F-259 | [Issues：Authority 与 host](../../../Issues看板与会话/requirements/Issues看板与会话.md#req-015-authority-与-host)、REQ-028 | relay与旧端入口 | 是 | 复用窗口；不新增wire字段 | TC-259 |
 | F-260 | REQ-025、REQ-028 | 真实App投影 | 是 | 受保护身份对应标题与Issue attachment不跳 | TC-260 |
 
 ## TC-255 活跃在位者保护
@@ -46,7 +46,7 @@ issue: Issues看板与会话
 
 ## TC-258 恢复、重放与pane生命周期
 
-- 关联需求：REQ-014、REQ-028；模块：listener私有状态；优先级：P0；类型：单元/集成。
+- 关联需求：[Issues：SQLite 与迁移](../../../Issues看板与会话/requirements/Issues看板与会话.md#req-014-sqlite-与迁移)、REQ-028；模块：listener私有状态；优先级：P0；类型：单元/集成。
 - 前置：A已接纳；准备冷恢复状态和独立listener。
 - 数据：同ID replay、relay spool、错误tab、pane remap/teardown/reset、其他身份的旧时间、OSC状态。
 - 步骤：分别重放、移位、清理与创建新实例；每次发B竞争事件检查窗口。
@@ -54,7 +54,7 @@ issue: Issues看板与会话
 
 ## TC-259 relay与混合版本入口
 
-- 关联需求：REQ-015、REQ-028；模块：relay HTTP/main remote ingest；优先级：P0；类型：集成。
+- 关联需求：[Issues：Authority 与 host](../../../Issues看板与会话/requirements/Issues看板与会话.md#req-015-authority-与-host)、REQ-028；模块：relay HTTP/main remote ingest；优先级：P0；类型：集成。
 - 前置：独立relay与main、认证HTTP端口；模拟旧relay只转发原normalized envelope。
 - 数据：A后接B完整序列、spool恢复、窗口过期的B。
 - 步骤：通过HTTP发到relay；另将未执行新guard的B envelope直接送main远端入口。

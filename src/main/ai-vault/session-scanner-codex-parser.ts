@@ -38,10 +38,8 @@ import {
 } from './session-scanner-values'
 import { remoteSessionContentLines } from './remote-session-content-lines'
 import { readCodexTimelineOnlyRecord } from './session-scanner-codex-record-fast-path'
-import {
-  extractCodexSessionMetadataTitle,
-  isCodexWorkerSession
-} from '../session-names/codex-session-metadata'
+import { extractCodexSessionMetadataTitle } from '../session-names/codex-session-metadata'
+import { isCodexWorkerSession } from './session-scanner-codex-session-meta'
 
 export async function parseCodexSessionFile(
   file: FileWithMtime,

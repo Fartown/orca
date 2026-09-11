@@ -4,7 +4,7 @@ document_type: technical-solution
 status: reviewing
 created: 2026-09-08
 updated: 2026-09-08
-issue: Issues看板与会话
+issue: 会话命名与身份保护
 ---
 
 # Claude在位会话活跃窗口保护方案
@@ -146,6 +146,6 @@ main 在 `applyNormalizedStatus` 接纳后记录，relay 在已接纳并缓存�
 
 ## 8. 引用与变更记录
 
-- [主命名方案](Provider优先的会话命名统一方案.md)、[需求 REQ-028](../requirements/Issues看板与会话.md#req-028-主会话绑定与内部辅助调用边界)、[Journal D-004](../journal.md#d-004-首期采用claude在位会话活跃窗口保护)。
+- [主命名方案](Provider优先的会话命名统一方案.md)、[需求 REQ-028](../requirements/会话命名与身份保护.md#req-028-主会话绑定与内部辅助调用边界)、[Journal D-004](../../Issues看板与会话/journal.md#d-004-首期采用claude在位会话活跃窗口保护)。
 - 2026-09-08，Codex：按用户“就按这个来吧。更新一下方案”新增本首期模块方案；用户确认的是时间窗口路线，不是所有安全性断言已通过。影响 WP0 顺序、REQ-028阶段边界及后续验收，未修改产品/运行数据；无需远端通知或飞书同步。
 - 2026-09-08 23:20，Codex：按“改完验证，有问题接着修”实施。首个版本实测后续 prompt 绕过，已向用户说明并扩展同窗 Hook/远端准入；采用 30 秒工程默认、冷恢复缺时沿用旧逻辑，时间只在接受后更新，重放不续期。影响 REQ-028 首期与 TC-255～260，不扩展全量命名/角色目标，不需飞书或外部通知。

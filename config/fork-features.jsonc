@@ -194,20 +194,13 @@
     },
     {
       "id": "issues-board",
-      "title": "Issues 看板与会话：跨工作区会话组织、恢复与标题稳定",
-      "goal": "组织跨工作区会话，关闭后准确恢复，保持标题稳定",
+      "title": "Issues 看板与会话：跨工作区组织、绑定与恢复",
+      "goal": "组织跨工作区会话，复用公共会话名称与原生恢复",
       "journal": "docs/issue/Issues看板与会话/journal.md",
       "dependsOn": [
-        "src/main/agent-hooks/hook-stdin-contract.ts",
-        "src/shared/child-process/run-process.ts",
-        "src/shared/agent-hook-listener/listener-event.ts",
-        "src/shared/agent-hook-relay.ts",
-        "src/shared/stable-pane-id.ts",
         "src/main/agent-hooks/managed-agent-hook-controls.ts",
         "src/main/agent-hooks/server.ts",
         "src/main/ipc/ai-vault-session-title-routing.ts",
-        "src/main/ipc/notifications.ts",
-        "src/main/ipc/notifications-test-harness.ts",
         "src/main/native-chat/transcript-reader.ts",
         "src/main/orca-profiles/profile-storage-paths.ts",
         "src/main/persistence.ts",
@@ -220,7 +213,6 @@
         "src/renderer/src/components/dashboard/useDashboardData.ts",
         "src/renderer/src/components/right-sidebar/ai-vault-original-pane-actions.ts",
         "src/renderer/src/components/right-sidebar/ai-vault-provider-session-resolution.ts",
-        "src/renderer/src/components/right-sidebar/ai-vault-session-launch-actions.ts",
         "src/renderer/src/components/sidebar/WorktreeCardAgents.tsx",
         "src/renderer/src/components/sidebar/sidebar-count-pill.tsx",
         "src/renderer/src/components/sidebar/sidebar-host-badge.tsx",
@@ -228,32 +220,23 @@
         "src/renderer/src/components/sidebar/use-sidebar-host-scope-options.ts",
         "src/renderer/src/components/sidebar/useWorktreeAgentRows.ts",
         "src/renderer/src/components/sidebar/worktree-list/rows/indentation.ts",
-        "src/renderer/src/components/tab-group/useTabGroupItemProjections.ts",
         "src/renderer/src/hooks/useAgentDetectionTarget.ts",
         "src/renderer/src/hooks/useDetectedAgents.ts",
-        "src/renderer/src/hooks/ipc-events-agent-status-store-test-fixtures.ts",
-        "src/renderer/src/runtime/web-session-tabs-sync.ts",
         "src/renderer/src/i18n/i18n.ts",
         "src/renderer/src/lib/agent-catalog.tsx",
         "src/renderer/src/lib/canonical-session-titles.ts",
         "src/renderer/src/lib/e2e-config.ts",
-        "src/renderer/src/lib/launch-agent-in-new-tab.ts",
-        "src/renderer/src/lib/pane-agent-evidence.ts",
         "src/renderer/src/lib/sidebar-worktree-activation.ts",
         "src/renderer/src/lib/utils.ts",
         "src/renderer/src/lib/worktree-runtime-owner.ts",
         "src/renderer/src/runtime/runtime-client-target.ts",
         "src/renderer/src/runtime/runtime-rpc-client.ts",
+        "src/renderer/src/session-names/session-name-subscriptions.ts",
         "src/renderer/src/store/folder-workspaces/folder-workspace-catalog.ts",
         "src/renderer/src/store/index.ts",
-        "src/renderer/src/store/types.ts",
         "src/shared/agent-session-fallback-title.ts",
         "src/shared/agent-session-resume.ts",
         "src/shared/agent-status-types.ts",
-        "src/shared/agent-type-label.ts",
-        "src/renderer/src/lib/agent-row-primary-text.ts",
-        "src/renderer/src/components/activity/activity-thread-types.ts",
-        "src/renderer/src/components/dashboard/agent-row-pane-live-title.ts",
         "src/shared/ai-vault-session-title.ts",
         "src/shared/codex-thread-title-generation.ts",
         "src/shared/execution-host.ts",
@@ -261,16 +244,8 @@
         "src/shared/native-chat-agent-support.ts",
         "src/shared/native-chat-types.ts",
         "src/shared/project-group-types.ts",
-        "src/shared/promise-timeout-fallback.ts",
         "src/shared/repo-types.ts",
         "src/shared/session-display-title.ts",
-        "src/main/ai-vault/session-scanner-values.ts",
-        "src/main/ai-vault/session-transcript-consumers.ts",
-        "src/shared/agent-tab-title.ts",
-        "src/shared/harness-injected-user-turns.ts",
-        "src/shared/tab-title-resolution.ts",
-        "src/shared/terminal-tab-types.ts",
-        "src/shared/agent-row-conversation-name.ts",
         "src/shared/structural-value-equality.ts",
         "src/shared/tui-agent-config.ts",
         "src/shared/tui-agent-display-names.ts",
@@ -283,12 +258,6 @@
       ],
       "policyId": "issues-existing-capability-reuse",
       "ownedPaths": [
-        "src/main/codex-session-ownership/**",
-        "src/shared/session-names/**",
-        "src/main/session-names/**",
-        "src/renderer/src/session-names/**",
-        "src/shared/claude-session-ownership/**",
-        "src/main/claude-session-ownership/**",
         "src/main/issues/**",
         "src/shared/issues/**",
         "src/renderer/src/issues/**",
@@ -297,8 +266,6 @@
         "src/main/runtime/rpc/methods/issues.ts",
         "src/main/runtime/rpc/methods/issues.test.ts",
         "tests/e2e/issues-*.spec.ts",
-        "tests/e2e/issues-session-name-file-chain.unit.test.ts",
-        "tests/e2e/helpers/issues-session-name-file-chain.tsconfig.json",
         "tests/e2e/helpers/issues-*.ts",
         "docs/issue/Issues看板与会话/**"
       ],
@@ -310,6 +277,111 @@
         "src/renderer/src/issues/IssueDomainSyncGate.tsx",
         "src/renderer/src/components/issues/IssuesPage.tsx",
         "src/renderer/src/components/sidebar/issues/issue-sidebar.tsx"
+      ],
+      "seams": [
+        {
+          "file": "src/main/startup/main-process-runtime-launch.ts",
+          "mustContain": "afterTerminalRuntimeStartup",
+          "why": "the Issue host starts after terminal startup"
+        },
+        {
+          "file": "src/renderer/src/lib/launch-agent-in-new-tab.ts",
+          "mustContain": "launchAgentInNewTab",
+          "why": "Issue launches share the existing agent launch funnel"
+        },
+        {
+          "file": "src/renderer/src/components/right-sidebar/ai-vault-session-launch-actions.ts",
+          "mustContain": "resumeAiVaultSession",
+          "why": "Issue session continuation reuses the native AI Vault actions"
+        },
+        {
+          "file": "src/main/runtime/rpc/methods/index.ts",
+          "mustContain": "ISSUE_METHODS",
+          "why": "issues.* RPC methods are registered in the shared manifest"
+        },
+        {
+          "file": "src/main/index.ts",
+          "mustContain": "startIssueFeatureForMainProcess",
+          "why": "the Issue host starts after the terminal runtime"
+        },
+        {
+          "file": "src/renderer/src/app-shell/AppBackgroundServices.tsx",
+          "mustContain": "IssueDomainSyncGate",
+          "why": "the Issue domain store is polled while the app runs"
+        },
+        {
+          "file": "src/renderer/src/app-shell/AppWorkspaceShell.tsx",
+          "mustContain": "IssuesPage",
+          "why": "the Issue detail page mounts in the workspace shell"
+        },
+        {
+          "file": "src/renderer/src/components/sidebar/index.tsx",
+          "mustContain": "SidebarRootModeBar",
+          "why": "the sidebar switches between Workspaces and Issues"
+        }
+      ],
+      "tests": [
+        "src/main/issues/issue-runtime-service.test.ts",
+        "src/main/issues/conversation-fallback-title.test.ts",
+        "src/main/issues/issue-repository.test.ts",
+        "src/main/runtime/rpc/methods/issues.test.ts",
+        "src/renderer/src/issues/issues-domain-store.test.ts",
+        "src/renderer/src/issues/issue-native-dependency-boundary.test.ts",
+        "src/renderer/src/components/sidebar/issues/build-issue-rows.test.ts"
+      ],
+      "checks": [
+        "pnpm exec vitest run --config config/vitest.config.ts src/main/issues src/shared/issues src/renderer/src/issues src/renderer/src/components/issues src/renderer/src/components/sidebar/issues src/main/runtime/rpc/methods/issues.test.ts src/shared/agent-session-fallback-title.test.ts src/shared/ai-vault-session-filters.test.ts"
+      ]
+    },
+    {
+      "id": "session-names",
+      "title": "会话命名与身份保护：公共名称与 Provider 主会话归属",
+      "goal": "同一会话在各入口使用一致名称，后台调用不顶替主身份",
+      "journal": "docs/issue/会话命名与身份保护/journal.md",
+      "dependsOn": [
+        "src/main/agent-hooks/hook-stdin-contract.ts",
+        "src/main/ai-vault/session-scanner-codex-session-meta.ts",
+        "src/main/ai-vault/session-scanner-values.ts",
+        "src/main/ai-vault/session-transcript-consumers.ts",
+        "src/renderer/src/components/activity/activity-thread-types.ts",
+        "src/renderer/src/components/dashboard/agent-row-pane-live-title.ts",
+        "src/renderer/src/lib/agent-row-primary-text.ts",
+        "src/renderer/src/lib/canonical-session-titles.ts",
+        "src/renderer/src/lib/pane-agent-evidence.ts",
+        "src/renderer/src/lib/worktree-runtime-owner.ts",
+        "src/renderer/src/store/index.ts",
+        "src/renderer/src/store/types.ts",
+        "src/shared/agent-hook-listener/listener-event.ts",
+        "src/shared/agent-session-fallback-title.ts",
+        "src/shared/agent-session-resume.ts",
+        "src/shared/agent-type-label.ts",
+        "src/shared/codex-thread-title-generation.ts",
+        "src/shared/execution-host.ts",
+        "src/shared/harness-injected-user-turns.ts",
+        "src/shared/promise-timeout-fallback.ts",
+        "src/shared/stable-pane-id.ts",
+        "src/shared/structural-value-equality.ts",
+        "src/shared/terminal-tab-types.ts",
+        "src/shared/tui-agent-config.ts"
+      ],
+      "policyId": "session-names-native-feature",
+      "ownedPaths": [
+        "src/main/codex-session-ownership/**",
+        "src/shared/session-names/**",
+        "src/main/session-names/**",
+        "src/renderer/src/session-names/**",
+        "src/shared/claude-session-ownership/**",
+        "src/main/claude-session-ownership/**",
+        "tests/e2e/issues-session-name-file-chain.unit.test.ts",
+        "tests/e2e/helpers/issues-session-name-file-chain.tsconfig.json",
+        "docs/issue/会话命名与身份保护/**"
+      ],
+      "requiredFiles": [
+        "src/shared/session-names/session-name-contract.ts",
+        "src/shared/session-names/codex-title-task-admission.ts",
+        "src/shared/claude-session-ownership/claude-session-activity.ts",
+        "src/renderer/src/session-names/session-name-store.ts",
+        "src/main/codex-session-ownership/codex-nested-hook-guard.ts"
       ],
       "seams": [
         {
@@ -668,47 +740,6 @@
           "why": "the relay owns its host-local activity clock and excludes replay"
         },
         {
-          "file": "src/main/startup/main-process-runtime-launch.ts",
-          "mustContain": "afterTerminalRuntimeStartup",
-          "why": "the Issue host starts after terminal startup"
-        },
-        {
-          "file": "src/renderer/src/lib/launch-agent-in-new-tab.ts",
-          "mustContain": "launchAgentInNewTab",
-          "why": "Issue launches share the existing agent launch funnel"
-        },
-        {
-          "file": "src/renderer/src/components/right-sidebar/ai-vault-session-launch-actions.ts",
-          "mustContain": "resumeAiVaultSession",
-          "why": "Issue session continuation reuses the native AI Vault actions"
-        },
-
-        {
-          "file": "src/main/runtime/rpc/methods/index.ts",
-          "mustContain": "ISSUE_METHODS",
-          "why": "issues.* RPC methods are registered in the shared manifest"
-        },
-        {
-          "file": "src/main/index.ts",
-          "mustContain": "startIssueFeatureForMainProcess",
-          "why": "the Issue host starts after the terminal runtime"
-        },
-        {
-          "file": "src/renderer/src/app-shell/AppBackgroundServices.tsx",
-          "mustContain": "IssueDomainSyncGate",
-          "why": "the Issue domain store is polled while the app runs"
-        },
-        {
-          "file": "src/renderer/src/app-shell/AppWorkspaceShell.tsx",
-          "mustContain": "IssuesPage",
-          "why": "the Issue detail page mounts in the workspace shell"
-        },
-        {
-          "file": "src/renderer/src/components/sidebar/index.tsx",
-          "mustContain": "SidebarRootModeBar",
-          "why": "the sidebar switches between Workspaces and Issues"
-        },
-        {
           "file": "src/renderer/src/components/right-sidebar/use-canonical-session-titles.ts",
           "mustContain": "useSessionNameIndex",
           "why": "History search and rows consume the same native-first name projection"
@@ -746,6 +777,7 @@
         "src/renderer/src/session-names/session-name-store.test.ts",
         "src/shared/session-names/session-name-priority.test.ts",
         "src/shared/session-names/session-name-slot.test.ts",
+        "src/main/session-names/codex-session-metadata.test.ts",
         "src/main/session-names/provider-name-evidence.test.ts",
         "src/main/session-names/provider-name-file-chain.test.ts",
         "src/renderer/src/issues/provider-name-store-chain.test.ts",
@@ -754,13 +786,6 @@
         "src/renderer/src/components/tab-bar/tab-title-tooltip.test.tsx",
         "src/main/codex-session-ownership/codex-nested-hook-guard.test.ts",
         "src/main/claude-session-ownership/claude-session-activity.test.ts",
-        "src/main/issues/issue-runtime-service.test.ts",
-        "src/main/issues/conversation-fallback-title.test.ts",
-        "src/main/issues/issue-repository.test.ts",
-        "src/main/runtime/rpc/methods/issues.test.ts",
-        "src/renderer/src/issues/issues-domain-store.test.ts",
-        "src/renderer/src/issues/issue-native-dependency-boundary.test.ts",
-        "src/renderer/src/components/sidebar/issues/build-issue-rows.test.ts",
         "src/shared/agent-session-fallback-title.test.ts",
         "src/shared/ai-vault-session-filters.test.ts"
       ],
@@ -772,8 +797,7 @@
         "pnpm exec vitest run --config config/vitest.config.ts src/main/codex-session-ownership",
         "pnpm exec vitest run --config config/vitest.config.ts src/main/session-names src/main/ai-vault/session-title-file-reader.test.ts src/main/ai-vault/session-title-file-reader-wsl-stall.test.ts src/main/ai-vault/session-scanner-parse-cache.test.ts src/main/ai-vault/session-parse-cache-persistence.test.ts src/shared/workspace-session-schema.test.ts src/renderer/src/lib/ai-vault-tab-title-sync.test.ts src/renderer/src/components/tab-bar/tab-title-tooltip.test.tsx",
         "pnpm exec vitest run --config config/vitest.config.ts src/shared/session-names src/shared/session-display-title.test.ts src/shared/agent-tab-title.test.ts src/shared/tab-title-resolution.test.ts src/shared/agent-row-conversation-name.test.ts",
-        "pnpm exec vitest run --config config/vitest.config.ts src/shared/claude-session-ownership src/main/claude-session-ownership",
-        "pnpm exec vitest run --config config/vitest.config.ts src/main/issues src/shared/issues src/renderer/src/issues src/renderer/src/components/issues src/renderer/src/components/sidebar/issues src/main/runtime/rpc/methods/issues.test.ts src/shared/agent-session-fallback-title.test.ts src/shared/ai-vault-session-filters.test.ts"
+        "pnpm exec vitest run --config config/vitest.config.ts src/shared/claude-session-ownership src/main/claude-session-ownership"
       ]
     },
     {

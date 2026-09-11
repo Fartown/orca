@@ -3,13 +3,13 @@ title: 'Issues 功能测试'
 document_type: test-case-list
 status: needs-update
 created: 2026-08-26
-updated: 2026-09-08
+updated: 2026-09-10
 issue: Issues看板与会话
 ---
 
 # Issues 功能测试
 
-> 2026-09-08评审后：命名/过滤映射待同步（needs-update），非命名与历史基线保持。TC-060、TC-201～211、TC-214～223不能按旧排序/存储约束新实现；[原命名验收](Provider优先命名验收.md)也已标记needs-update，公共人工名工程撤出，身份/过滤前置，当前边界见[方案§6.2](../../solutions/Provider优先的会话命名统一方案.md#62-验收矩阵)。TC-200人工名保护及TC-212/213历史v4迁移仍需回归。本轮只标记影响，不改下表断言或执行测试。
+> 2026-09-10 归属纠正：当前公共命名规格已迁入独立的[Provider优先命名验收](../../../会话命名与身份保护/tests/cases/Provider优先命名验收.md)，对应原 REQ-025/026/028；本文不再拥有全局命名验收。TC-060、TC-201～211、TC-214～223 保留原编号和旧断言，仅作已被替代的历史基线，不能按旧排序/专属刷新器约束新实现。TC-200 的人工名过滤保护、TC-212/213 的历史 v4 迁移仍作为兼容依赖保留。迁移不代表重新执行测试或新增人工名工程。
 
 > 本文是可重复执行的测试规格。2026-09-05 按当前源码及暂存标题改动重整；保留原 TC-001～TC-190 编号并增加专项用例，不包含任何本轮执行结果。status=ready 只表示规格整理完成。
 
@@ -434,7 +434,7 @@ issue: Issues看板与会话
 
 原 TC-001～TC-190 编号全部保留，失效预期在原编号位置订正。以下是规格的覆盖范围，不是执行结果或当前功能完成声明。
 
-- REQ-001～REQ-029 均有 Test Case 映射。
+- 原 REQ-001～REQ-029 的历史映射保留；REQ-025/026/028 的当前验收由独立命名需求拥有。
 - 覆盖正常、异常、边界、并发、幂等、故障注入、恢复、兼容性、安全和发布路径。
 - 覆盖 worktree、folder、no-Git、local、direct SSH、paired runtime 与多 Profile。
 - 覆盖 ready、degraded、unavailable、unsupported、offline、loading/empty，以及待实现的独立 error 目标。

@@ -4,7 +4,7 @@ document_type: technical-solution
 status: reviewing
 created: 2026-09-08
 updated: 2026-09-09
-issue: Issues看板与会话
+issue: 会话命名与身份保护
 ---
 
 # Provider优先的会话命名统一方案
@@ -428,7 +428,7 @@ WP0a以[首期方案§6](Claude在位会话活跃窗口保护方案.md#6-风险�
 ## 7. 附录与引用
 
 - [Claude在位会话活跃窗口保护方案](Claude在位会话活跃窗口保护方案.md)：用户当前选定的WP0a首期方案；严格归属与全量命名仍由本主稿管理。
-- [现状调研](../research/会话命名现状调研.md)、[需求](../requirements/Issues看板与会话.md)、[Journal](../journal.md)。
+- [现状调研](../research/会话命名现状调研.md)、[需求](../requirements/会话命名与身份保护.md)、[Journal](../../Issues看板与会话/journal.md)。
 - [被替代的初稿](会话命名统一方案.md)：人工名第一、Tab例外、Issues快照扩建均不再作为实施依据。
 - [Provider优先命名验收](../tests/cases/Provider优先命名验收.md)：已同步的正式规格，逐消费链定义入口与反例；执行结果见Test Run。
 - 本地Markdown为主稿；用户未要求飞书归档。后续实施的源码、隔离验证与未安装边界逐批记录于Journal/Test Run，不以方案文字代替实测。
