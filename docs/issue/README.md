@@ -4,6 +4,7 @@
 
 | 需求 | 目标 | 状态 | 需求文档 | 方案 | 测试用例 | 更新 |
 | --- | --- | --- | --- | --- | --- | --- |
+| [集成分支自动出包](集成分支自动出包/journal.md) | 合入集成分支后自动构建并成套发布到 fork 预发布页 | testing | [集成分支自动出包](集成分支自动出包/requirements/集成分支自动出包.md) | - | [自动出包](集成分支自动出包/tests/cases/自动出包.md) | 2026-09-12 |
 | [文档预览大小](文档预览大小/journal.md) | 扩大文档文本预览上限，不扩大普通文件读取和 paired RPC 预算 | testing | [文档预览大小](文档预览大小/requirements/文档预览大小.md) | - | [预览大小边界](文档预览大小/tests/cases/预览大小边界.md) | 2026-09-12 |
 | [Goal 目标模式](Goal目标模式/journal.md) | 持久目标、既有会话续跑、独立验收与目标管理 UI | testing | [Goal目标模式](Goal目标模式/requirements/Goal目标模式.md) | [Goal目标模式技术说明](Goal目标模式/solutions/Goal目标模式技术说明.md)、[Goal目标管理与交互闭环方案](Goal目标模式/solutions/Goal目标管理与交互闭环方案.md) | [Goal功能测试](Goal目标模式/tests/cases/Goal功能测试.md) | 2026-09-12 |
 | [Issues 看板与会话](Issues看板与会话/journal.md) | 组织跨工作区会话，复用公共会话名称与原生恢复 | implementing | [Issues看板与会话](Issues看板与会话/requirements/Issues看板与会话.md) | [Issues看板与会话技术说明](Issues看板与会话/solutions/Issues看板与会话技术说明.md) | [Issues功能测试](Issues看板与会话/tests/cases/Issues功能测试.md) | 2026-09-12 |
