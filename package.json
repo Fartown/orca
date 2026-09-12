@@ -315,7 +315,7 @@
     "{*.{ts,tsx,js,jsx,mjs,mts,cts},!(cloud)/**/*.{ts,tsx,js,jsx,mjs,mts,cts}}": [
       "oxlint",
       "oxlint --config config/oxlint-react-doctor.json",
-      "oxfmt --write"
+      "node config/scripts/format-fork-staged-files.mjs"
     ],
     "{*.{json,css},!(cloud)/**/*.{json,css}}": [
       "oxfmt --write"

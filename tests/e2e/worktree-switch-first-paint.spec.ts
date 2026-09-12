@@ -234,6 +234,39 @@ async function measureSwitch(
       message: 'revealed terminal never restored its content'
     })
     .not.toBeNull()
+    .catch(async (error: unknown) => {
+      console.log(
+        '[switch-paint-timeout]',
+        JSON.stringify(
+          await page.evaluate(() => {
+            const state = window.__store!.getState()
+            const probe = globalThis.__switchPaintProbe
+            return {
+              visibility: document.visibilityState,
+              activeWorktreeId: state.activeWorktreeId,
+              activeTabId: state.activeTabId,
+              activeTabType: state.activeTabType,
+              probe: probe ? { ...probe, stop: undefined, frames: probe.frames.length } : null,
+              panes: [...(window.__paneManagers ?? [])].map(([tabId, manager]) => ({
+                tabId,
+                panes: manager.getPanes().map(({ container, terminal }) => ({
+                  connected: container.isConnected,
+                  rows: terminal.rows,
+                  viewportY: terminal.buffer.active.viewportY,
+                  filledRows: Array.from({ length: terminal.rows }, (_, row) =>
+                    terminal.buffer.active
+                      .getLine(terminal.buffer.active.viewportY + row)
+                      ?.translateToString(true)
+                      .trim()
+                  ).filter(Boolean).length
+                }))
+              }))
+            }
+          })
+        )
+      )
+      throw error
+    })
   // Let the idle admission drain so the settled-resource readings are steady.
   await page.waitForTimeout(2_000)
 
@@ -372,8 +405,10 @@ function median(values: readonly number[]): number {
   return sorted.length % 2 === 0 ? (sorted[middle - 1] + sorted[middle]) / 2 : sorted[middle]
 }
 
-test.describe('Worktree switch first paint', () => {
+// Frame timing needs the headful fixture on an isolated display, not a hidden renderer.
+test.describe('Worktree switch first paint @headful', () => {
   test('repaints an unmounted worktree within the switch budget', async ({
+    electronApp,
     orcaPage,
     testRepoPath
   }, testInfo) => {
@@ -425,6 +460,15 @@ test.describe('Worktree switch first paint', () => {
         const unmounted = await waitForUnmountedTabs(orcaPage, targetTabIds)
         expect(unmounted, 'target worktree was already mounted before the switch').toBe(true)
 
+        const hostWindow = await electronApp.browserWindow(orcaPage)
+        const framePolicy = await hostWindow.evaluate((window) => {
+          return {
+            visible: window.isVisible(),
+            backgroundThrottling: window.webContents.getBackgroundThrottling()
+          }
+        })
+        console.log('[switch-paint-frame-policy]', JSON.stringify(framePolicy))
+        await hostWindow.dispose()
         const sample = await measureSwitch(orcaPage, targetId, targetTabIds)
         samples.push(sample)
         lines.push(report(`round ${round + 1} (target unmounted=${unmounted})`, sample))
@@ -467,6 +511,12 @@ test.describe('Worktree switch first paint', () => {
         'the switch mounted more than the pane the user is looking at'
       ).toBe(1)
     }
+    const screenshotPath = testInfo.outputPath('first-paint-final.png')
+    await orcaPage.screenshot({ path: screenshotPath })
+    await testInfo.attach('first-paint-final.png', {
+      path: screenshotPath,
+      contentType: 'image/png'
+    })
     // Why CI is exempt from the budget and not from the invariants: shared
     // runners cannot hold a latency threshold, but "the switch mounted one pane"
     // and "the warm set came back" are exact and are the real regression guards.

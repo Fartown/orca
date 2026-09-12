@@ -57,11 +57,13 @@ it.each([true, false])(
     )
     expect(dispatchMobileNotification).toHaveBeenCalledExactlyOnceWith({
       type: 'notification',
+      emittedAt: expect.any(Number),
       source: 'agent-task-complete',
       worktreeId: 'folder:f',
       notificationId: 'captured-event-A',
       title: 'Provider name · Folder - Codex finished',
-      body: 'The patch is ready.'
+      body: 'The patch is ready.',
+      agentState: 'done'
     })
     if (supported) {
       expect(notificationCtorMock).toHaveBeenCalledWith(

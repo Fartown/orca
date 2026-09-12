@@ -23,6 +23,80 @@
   "dependsOnIgnore": ["src/renderer/src/components/ui/**"],
   "features": [
     {
+      "id": "document-preview-size",
+      "title": "文档预览大小：本地、SSH 与配对预览支持 20 MiB",
+      "goal": "扩大文档文本预览上限，不扩大普通文件读取和 paired RPC 预算",
+      "journal": "docs/issue/文档预览大小/journal.md",
+      "dependsOn": ["src/shared/binary-buffer.ts", "src/shared/file-range-read.ts"],
+      "policyId": "document-preview-size",
+      "ownedPaths": [
+        "src/shared/document-preview-size/**",
+        "src/main/document-preview-size/**",
+        "docs/issue/文档预览大小/**"
+      ],
+      "requiredFiles": ["src/shared/document-preview-size/document-preview-size-limit.ts"],
+      "seams": [
+        {
+          "file": "src/shared/doc-preview-file-access.ts",
+          "mustContain": "DOCUMENT_PREVIEW_TEXT_MAX_BYTES",
+          "why": "the execution host accepts the document-specific text limit"
+        },
+        {
+          "file": "src/main/browser/doc-preview-file-reader.ts",
+          "mustContain": "DOCUMENT_PREVIEW_TEXT_MAX_BYTES",
+          "why": "direct SSH requests the same document-specific text limit"
+        },
+        {
+          "file": "src/main/runtime/runtime-file-commands-read-file-explorer-preview.ts",
+          "mustContain": "DOCUMENT_PREVIEW_TEXT_MAX_BYTES",
+          "why": "local document reads no longer inherit the mobile text cap"
+        },
+        {
+          "file": "src/main/browser/doc-preview-file-reader.test.ts",
+          "mustContain": "maxTextBytes: 20 * 1024 * 1024",
+          "why": "existing SSH routing assertions pin the requested cap"
+        },
+        {
+          "file": "src/main/runtime/orca-runtime-files-preview-budget.test.ts",
+          "mustContain": "maxTextBytes: 20 * 1024 * 1024",
+          "why": "existing runtime routing assertions retain authority and binary limits"
+        },
+        {
+          "file": "src/main/providers/ssh-filesystem-doc-preview.ts",
+          "mustContain": "requestGitStreamable",
+          "why": "reuse negotiated bulk responses for documents exceeding one relay frame"
+        },
+        {
+          "file": "src/main/providers/ssh-filesystem-doc-preview.test.ts",
+          "mustContain": "__streamResponse: true",
+          "why": "pin streaming opt-in and legacy relay fallback"
+        },
+        {
+          "file": "src/relay/fs-handler.ts",
+          "mustContain": "fs.readDocPreview",
+          "why": "document replies reuse the relay's single response stream registry"
+        },
+        {
+          "file": "src/shared/rpc-contract/files-params.ts",
+          "mustContain": "DocumentPreviewChunkRequest.optional()",
+          "why": "optional scoped chunks retain old-client full-response behavior"
+        },
+        {
+          "file": "src/main/runtime/rpc/methods/files.ts",
+          "mustContain": "params.chunk",
+          "why": "forward document-specific chunk requests through canonical authorization"
+        }
+      ],
+      "tests": [
+        "src/main/document-preview-size/document-preview-size.test.ts",
+        "src/main/document-preview-size/document-preview-relay.integration.test.ts",
+        "src/main/document-preview-size/document-preview-chunk-reader.test.ts"
+      ],
+      "checks": [
+        "pnpm exec vitest run --config config/vitest.config.ts src/main/document-preview-size src/shared/doc-preview-file-access.test.ts src/main/browser/doc-preview-file-reader.test.ts src/main/browser/doc-preview-protocol.test.ts src/main/runtime/orca-runtime-files-preview-budget.test.ts src/main/runtime/rpc/methods/files-doc-preview.test.ts src/main/providers/ssh-filesystem-doc-preview.test.ts src/relay/fs-list-files-large-response.integration.test.ts"
+      ]
+    },
+    {
       "id": "goals",
       "title": "Goal 目标模式：原生目标面板、宿主控制服务与合作式驱动",
       "goal": "持久目标、既有会话续跑、独立验收与目标管理 UI",
@@ -91,6 +165,11 @@
         "config/scripts/build-goal-driver.mjs"
       ],
       "seams": [
+        {
+          "file": "src/shared/rpc-contract/rpc-params-catalog.generated.ts",
+          "mustContain": "'goals.status': GoalExecutionHostSchema",
+          "why": "the generated shared catalog reflects the registered Goal RPC methods"
+        },
         {
           "file": "src/main/runtime/rpc/methods/index.ts",
           "mustContain": "GOAL_METHODS",
@@ -279,6 +358,11 @@
         "src/renderer/src/components/sidebar/issues/issue-sidebar.tsx"
       ],
       "seams": [
+        {
+          "file": "src/shared/rpc-contract/rpc-params-catalog.generated.ts",
+          "mustContain": "'conversations.list': ConversationsListParams",
+          "why": "the generated shared catalog reflects existing Issue and conversation RPC schemas"
+        },
         {
           "file": "src/main/startup/main-process-runtime-launch.ts",
           "mustContain": "afterTerminalRuntimeStartup",

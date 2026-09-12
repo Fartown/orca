@@ -82,9 +82,12 @@ export class FsHandler {
     this.dispatcher.onRequest('fs.readFile', (p) => this.readFile(p))
     this.dispatcher.onRequest('fs.readFileStream', (p, c) => this.readFileStream(p, c))
     this.dispatcher.onRequest('fs.readFileRange', (p) => this.readFileRange(p))
-    this.dispatcher.onRequest('fs.readDocPreview', (p) =>
-      readAuthorizedDocPreviewFile(p as DocPreviewFileAccessRequest)
-    )
+    this.dispatcher.onRequest('fs.readDocPreview', async (p, context) => {
+      const result = await readAuthorizedDocPreviewFile(p as DocPreviewFileAccessRequest)
+      return this.responseStreams
+        ? maybeStreamRpcResponse(result, p, context, this.responseStreams, this.dispatcher)
+        : result
+    })
     this.dispatcher.onRequest('fs.readTerminalArtifact', (p) => this.readTerminalArtifact(p))
     this.dispatcher.onRequest('fs.tempDir', () => this.tempDir())
     this.dispatcher.onRequest('fs.writeFile', (p) => writeRelayFile(p))

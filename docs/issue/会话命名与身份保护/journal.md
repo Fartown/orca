@@ -3,7 +3,7 @@ title: 会话命名与身份保护
 slug: 会话命名与身份保护
 status: implementing
 created: 2026-09-08
-updated: 2026-09-11
+updated: 2026-09-12
 external_ids: []
 ---
 
@@ -92,6 +92,15 @@ external_ids: []
 - 影响范围：REQ-028、Codex managed脚本的local/posix模板与feature-owned小模块及测试；同时清理local/daemon/relay新PTY继承的外层CODEX_THREAD_ID，避免由Codex启动Orca时误拦正常新pane。未知旧版本无标识、外部手工污染环境等仍需披露。既有失败记录保持原样。
 
 ## 3. 开发记录
+
+### 2026-09-12 — 对齐上游通知字段的回归断言
+
+- 本轮目标：按用户授权在 PR #9 修复既有单测失败，不修改命名功能。
+- 完成内容：复现通知投递两项失败；保留精确完整对象断言，补上上游已发布的 `emittedAt` 与 `agentState` 字段。
+- 代码或文档变更：只改通知测试及本记录，生产通知内容、名称优先级和投递逻辑不变。
+- 验证证据：修复前两项均失败，修复后三个文件 23 项通过，覆盖原生支持与不支持、手机投递和名称格式。
+- 未解决问题：远端 CI 待新提交完成；没有把本次断言维护视为全量命名重新验收。
+- 下一步：随 [PR #9](https://github.com/Fartown/orca/pull/9) 完成 CI 并合入集成分支。
 
 ### 2026-09-11 — 修复合码关联失败
 

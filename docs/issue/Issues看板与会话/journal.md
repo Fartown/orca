@@ -3,7 +3,7 @@ title: Issues 看板与会话
 slug: Issues看板与会话
 status: implementing
 created: 2026-09-05
-updated: 2026-09-10
+updated: 2026-09-12
 external_ids: []
 ---
 
@@ -53,6 +53,15 @@ ready 只表示文档已按当前源码整理；本需求仍为 implementing，�
 - 影响范围：需求、技术说明、测试规格及本需求的执行证据。
 
 ## 3. 开发记录
+
+### 2026-09-12 — 补齐已注册 RPC 的生成目录
+
+- 本轮目标：按用户授权在 PR #9 修复既有 CI 基线，不修改 Issues 需求或命名行为。
+- 完成内容：原生成器重新读取 host 方法清单，补齐已有 `issues.*` 与 `conversations.*` 的共享参数映射；登记生成目录接缝。
+- 代码或文档变更：仅生成产物、接缝清单与本记录；没有新增 RPC 方法或更改协议。
+- 验证证据：`pnpm verify:rpc-params-catalog` 修复前失败、生成后通过，`pnpm tc` 通过；远端 CI 以 [PR #9](https://github.com/Fartown/orca/pull/9) 为准。
+- 未解决问题：PR 其它既有 CI 失败仍在修复，不声明本需求重新完成验收。
+- 下一步：完成 PR #9 门禁并合入集成分支。
 
 ### 2026-09-10 — 将公共命名迁出 Issues
 

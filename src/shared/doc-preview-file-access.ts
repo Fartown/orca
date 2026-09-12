@@ -4,6 +4,12 @@ import { extname } from 'node:path'
 import { isBinaryBuffer } from './binary-buffer'
 import { isPathInsideOrEqual } from './cross-platform-path'
 import { IMAGE_FILE_MIME_TYPES } from './image-file-extensions'
+import { DOCUMENT_PREVIEW_TEXT_MAX_BYTES } from './document-preview-size/document-preview-size-limit'
+import type {
+  DocumentPreviewChunkRequest,
+  DocumentPreviewChunkMetadata
+} from './document-preview-size/document-preview-chunk'
+import { readDocumentPreviewFileChunk } from './document-preview-size/document-preview-file-chunk'
 import {
   NodeFileReadTooLargeError,
   readNodeFileHandleWithinLimit
@@ -19,19 +25,21 @@ export type DocPreviewFileAccessRequest = {
   targetPath: string
   maxTextBytes: number
   maxBinaryBytes: number
+  chunk?: DocumentPreviewChunkRequest
 }
 
 export type DocPreviewFileAccessResult = {
   content: string
   isBinary: boolean
   mimeType?: string
+  /** Base64 content, returned only after an explicit chunk request. */
+  chunk?: DocumentPreviewChunkMetadata
 }
 
 const DOC_PREVIEW_BINARY_MIME_TYPES: Record<string, string> = {
   ...IMAGE_FILE_MIME_TYPES,
   '.pdf': 'application/pdf'
 }
-const DOC_PREVIEW_MAX_TEXT_BYTES = 10 * 1024 * 1024
 const DOC_PREVIEW_MAX_BINARY_BYTES = 50 * 1024 * 1024
 
 const OPEN_NOFOLLOW = typeof constants.O_NOFOLLOW === 'number' ? constants.O_NOFOLLOW : 0
@@ -114,11 +122,21 @@ export async function readAuthorizedDocPreviewFile(
   const { handle, canonicalTarget } = await openAuthorizedDocPreviewTarget(request)
   try {
     const mimeType = DOC_PREVIEW_BINARY_MIME_TYPES[extname(canonicalTarget).toLowerCase()]
+    if (request.chunk) {
+      return await readDocumentPreviewFileChunk(
+        handle,
+        request.chunk,
+        mimeType
+          ? clampReadLimit(request.maxBinaryBytes, DOC_PREVIEW_MAX_BINARY_BYTES)
+          : clampReadLimit(request.maxTextBytes, DOCUMENT_PREVIEW_TEXT_MAX_BYTES),
+        mimeType
+      )
+    }
     const { buffer } = await readNodeFileHandleWithinLimit(
       handle,
       mimeType
         ? clampReadLimit(request.maxBinaryBytes, DOC_PREVIEW_MAX_BINARY_BYTES)
-        : clampReadLimit(request.maxTextBytes, DOC_PREVIEW_MAX_TEXT_BYTES)
+        : clampReadLimit(request.maxTextBytes, DOCUMENT_PREVIEW_TEXT_MAX_BYTES)
     )
     if (mimeType) {
       return { content: buffer.toString('base64'), isBinary: true, mimeType }

@@ -247,7 +247,7 @@ describe('RuntimeFileCommands', () => {
         implicitRootPath: '/repo/docs',
         authorizedRootPaths: ['/repo/assets'],
         targetPath: '/repo/docs/index.html',
-        maxTextBytes: 512 * 1024,
+        maxTextBytes: 20 * 1024 * 1024,
         maxBinaryBytes: 10 * 1024 * 1024
       })
     })
