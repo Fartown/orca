@@ -1,0 +1,197 @@
+name: Fork Integration Build
+
+on:
+  push:
+    branches: [fork/integration]
+  workflow_dispatch:
+  pull_request:
+    branches: [fork/integration]
+    paths:
+      - .github/workflows/fork-integration-build.yml
+      - config/scripts/integration-builds/**
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fork-integration-build-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  ORCA_BACKGROUND_LAUNCH: '1'
+
+jobs:
+  identity:
+    if: github.repository == 'Fartown/orca'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      sha: ${{ steps.identity.outputs.sha }}
+      version: ${{ steps.identity.outputs.version }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: package.json
+      - id: identity
+        run: node config/scripts/integration-builds/build-identity.mjs >> "$GITHUB_OUTPUT"
+
+  macos:
+    needs: identity
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: arm64
+            runner: macos-15
+            app-directory: mac-arm64
+          - arch: x64
+            runner: macos-15-intel
+            app-directory: mac
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 90
+    env:
+      ORCA_LOCAL_BUILD_VERSION: ${{ needs.identity.outputs.version }}
+      ORCA_BUILD_COMMIT: ${{ needs.identity.outputs.sha }}
+      ORCA_COMPUTER_MACOS_SIGN_IDENTITY: '-'
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      # PR packages use identity '-', never an Apple signing secret.
+      CSC_FOR_PULL_REQUEST: 'true'
+      NODE_OPTIONS: --max-old-space-size=4096
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.identity.outputs.sha }}
+          persist-credentials: false
+      - uses: pnpm/setup@v2
+        with:
+          install: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: package.json
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Test integration build contracts
+        run: pnpm exec vitest run --config config/vitest.config.ts config/scripts/integration-builds/integration-builds.test.mjs
+      - name: Build desktop and native helpers
+        run: pnpm run build:release
+      - name: Package internal-test DMG
+        env:
+          BUILD_ARCH: ${{ matrix.arch }}
+        run: |
+          pnpm run ensure:electron-runtime
+          pnpm exec electron-builder --config config/scripts/integration-builds/electron-builder.cjs --mac --"$BUILD_ARCH" --publish never
+      - name: Verify signature and native runtime
+        env:
+          APP_DIRECTORY: ${{ matrix.app-directory }}
+          BUILD_ARCH: ${{ matrix.arch }}
+        run: |
+          app="dist/$APP_DIRECTORY/Orca.app"
+          codesign --verify --deep --strict "$app"
+          test "$(ELECTRON_RUN_AS_NODE=1 "$app/Contents/MacOS/Orca" -p process.arch)" = "$BUILD_ARCH"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: integration-macos-${{ matrix.arch }}-${{ needs.identity.outputs.sha }}
+          path: dist/orca-integration-macos-${{ matrix.arch }}.dmg
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 14
+
+  android:
+    needs: identity
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.identity.outputs.sha }}
+          persist-credentials: false
+      - uses: pnpm/setup@v2
+        with:
+          install: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: package.json
+          cache: pnpm
+          cache-dependency-path: mobile/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - name: Validate committed Android version
+        run: node scripts/prepare-android-release.mjs
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 17
+      - name: Generate Android project
+        run: pnpm exec expo prebuild --platform android --no-install
+      - name: Verify template signing certificate before compilation
+        run: |
+          set -euo pipefail
+          keytool -exportcert -keystore android/app/debug.keystore -storepass android -alias androiddebugkey |
+            node ../config/scripts/integration-builds/build-identity.mjs verify-keystore
+      - name: Build release APK with existing internal-test signing
+        working-directory: mobile/android
+        run: ./gradlew assembleRelease --no-daemon --max-workers=2 -Dorg.gradle.jvmargs='-Xmx4g -XX:MaxMetaspaceSize=1g'
+      - name: Verify APK signature and collect package
+        run: |
+          set -euo pipefail
+          apksigner="$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -1)"
+          "$apksigner" verify --verbose --print-certs-pem android/app/build/outputs/apk/release/app-release.apk | tee "$RUNNER_TEMP/apk-signature.txt"
+          node ../config/scripts/integration-builds/build-identity.mjs verify-apk "$RUNNER_TEMP/apk-signature.txt"
+          mkdir -p ../dist
+          cp android/app/build/outputs/apk/release/app-release.apk ../dist/orca-integration-android.apk
+      - name: Retain public signing diagnostics
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: android-signing-diagnostics-${{ needs.identity.outputs.sha }}
+          path: ${{ runner.temp }}/apk-signature.txt
+          if-no-files-found: ignore
+          retention-days: 14
+      - name: Retain rejected APK for diagnosis
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: android-rejected-package-${{ needs.identity.outputs.sha }}
+          path: mobile/android/app/build/outputs/apk/release/app-release.apk
+          if-no-files-found: ignore
+          compression-level: 0
+          retention-days: 3
+      - uses: actions/upload-artifact@v7
+        with:
+          name: integration-android-${{ needs.identity.outputs.sha }}
+          path: dist/orca-integration-android.apk
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 14
+
+  publish:
+    needs: [identity, macos, android]
+    if: github.repository == 'Fartown/orca' && github.ref == 'refs/heads/fork/integration' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.identity.outputs.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: package.json
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: integration-*-${{ needs.identity.outputs.sha }}
+          merge-multiple: true
+          path: packages
+      - name: Publish complete prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ORCA_LOCAL_BUILD_VERSION: ${{ needs.identity.outputs.version }}
+        run: node config/scripts/integration-builds/publish-release.mjs packages

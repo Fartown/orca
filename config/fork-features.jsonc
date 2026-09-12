@@ -23,6 +23,34 @@
   "dependsOnIgnore": ["src/renderer/src/components/ui/**"],
   "features": [
     {
+      "id": "integration-builds",
+      "title": "集成分支自动出包：同一提交的 macOS 与 Android 内测包",
+      "goal": "合入集成分支后自动构建并成套发布到 fork 预发布页",
+      "journal": "docs/issue/集成分支自动出包/journal.md",
+      "dependsOn": [
+        "config/electron-builder.config.cjs",
+        "config/scripts/build-mac-local.mjs",
+        "mobile/scripts/prepare-android-release.mjs"
+      ],
+      "policyId": "integration-builds",
+      "ownedPaths": [
+        ".github/workflows/fork-integration-build.yml",
+        "config/scripts/integration-builds/**",
+        "docs/issue/集成分支自动出包/**"
+      ],
+      "requiredFiles": [
+        ".github/workflows/fork-integration-build.yml",
+        "config/scripts/integration-builds/electron-builder.cjs",
+        "config/scripts/integration-builds/build-identity.mjs",
+        "config/scripts/integration-builds/publish-release.mjs"
+      ],
+      "seams": [],
+      "tests": ["config/scripts/integration-builds/integration-builds.test.mjs"],
+      "checks": [
+        "pnpm exec vitest run --config config/vitest.config.ts config/scripts/integration-builds/integration-builds.test.mjs"
+      ]
+    },
+    {
       "id": "document-preview-size",
       "title": "文档预览大小：本地、SSH 与配对预览支持 20 MiB",
       "goal": "扩大文档文本预览上限，不扩大普通文件读取和 paired RPC 预算",

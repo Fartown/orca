@@ -7,6 +7,31 @@
   ],
   "policies": [
     {
+      "id": "integration-builds",
+      "description": "Fork integration packages reuse upstream builds without changing release channels.",
+      "rules": [
+        {
+          "id": "integration-builds-worktree-scope",
+          "type": "change-scope",
+          "comparison": "worktree",
+          "whenChanged": [
+            ".github/workflows/fork-integration-build.yml",
+            "config/scripts/integration-builds/**",
+            "docs/issue/集成分支自动出包/**"
+          ],
+          "allowedPaths": [
+            ".github/workflows/fork-integration-build.yml",
+            "config/scripts/integration-builds/**",
+            "docs/issue/集成分支自动出包/**",
+            "config/fork-features.jsonc",
+            "config/architecture-policies.jsonc",
+            "docs/issue/README.md"
+          ],
+          "message": "Change is outside the integration build feature."
+        }
+      ]
+    },
+    {
       "id": "issues-existing-capability-reuse",
       "description": "Keep Issue conversations as adapters over Workspace and AI Vault facts.",
       "rules": [
@@ -372,6 +397,8 @@
           "requireBaseAncestor": false,
           "allowedPaths": [
             // Fork infrastructure (docs/reference/fork-maintenance.md).
+            ".github/workflows/fork-integration-build.yml",
+            "config/scripts/integration-builds/**",
             "AGENTS.md",
             "config/scripts/format-fork-staged-files.mjs",
             "config/scripts/format-fork-staged-files.test.mjs",
