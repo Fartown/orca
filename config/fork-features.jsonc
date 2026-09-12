@@ -166,6 +166,11 @@
       ],
       "seams": [
         {
+          "file": "src/shared/rpc-contract/rpc-params-catalog.generated.ts",
+          "mustContain": "'goals.status': GoalExecutionHostSchema",
+          "why": "the generated shared catalog reflects the registered Goal RPC methods"
+        },
+        {
           "file": "src/main/runtime/rpc/methods/index.ts",
           "mustContain": "GOAL_METHODS",
           "why": "goals.* RPC methods are registered in the shared manifest"
@@ -353,6 +358,11 @@
         "src/renderer/src/components/sidebar/issues/issue-sidebar.tsx"
       ],
       "seams": [
+        {
+          "file": "src/shared/rpc-contract/rpc-params-catalog.generated.ts",
+          "mustContain": "'conversations.list': ConversationsListParams",
+          "why": "the generated shared catalog reflects existing Issue and conversation RPC schemas"
+        },
         {
           "file": "src/main/startup/main-process-runtime-launch.ts",
           "mustContain": "afterTerminalRuntimeStartup",

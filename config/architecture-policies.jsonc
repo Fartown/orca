@@ -388,6 +388,7 @@
             "docs/maintenance/**",
             // Every fork feature's owned paths and seams. config/fork-features.jsonc is
             // cross-checked against this list by check:fork-features.
+            "src/shared/rpc-contract/rpc-params-catalog.generated.ts",
             "src/shared/document-preview-size/**",
             "src/main/document-preview-size/**",
             "src/shared/doc-preview-file-access.ts",
