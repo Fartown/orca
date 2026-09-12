@@ -21,6 +21,7 @@ import { beginReport, finishReport, recordCheckpoint } from './probe-report.mjs'
 import { closeOrca } from './probe-startup.mjs'
 import { observeNativeRelaunch } from './probe-native-relaunch.mjs'
 import { waitForNativeReplacement } from './probe-native-selection.mjs'
+import { verifyExceptionObserver } from './probe-exception-preflight.mjs'
 import {
   createTerminal,
   launchOrca,
@@ -62,6 +63,7 @@ async function run(output) {
   let failure
   try {
     writeFileSync(join(profile, 'orca-data.json'), JSON.stringify(await completedProfile()))
+    await verifyExceptionObserver(scratch, output, isolation)
     const executable = await ensureRcodesign(join(scratch, 'signing-tool'))
     identity = createProbeIdentities(output)
     cleanup.privateMaterial = 'temporary PEM created; cleanup pending'

@@ -2,6 +2,7 @@ import { join } from 'node:path'
 import { command, writeJson } from '../signing-probe/probe-command.mjs'
 import { matchingAppProcesses, readNativeRuntime, waitUntil } from './probe-runtime.mjs'
 import { nativeFailureEvidence } from './probe-native-relaunch.mjs'
+import { readExceptionMonitor } from './probe-exception-monitor.mjs'
 
 export function selectNativeProcess(inventory, previousPids, metadata) {
   return (
@@ -22,7 +23,7 @@ export async function waitForNativeReplacement({
   let observation
   let serialized
   try {
-    return await waitUntil(
+    const result = await waitUntil(
       () => {
         const diskVersion = command(
           '/usr/bin/plutil',
@@ -36,7 +37,15 @@ export async function waitForNativeReplacement({
         ).stdout.trim()
         const inventory = matchingAppProcesses(appPath)
         const metadata = readNativeRuntime(profile)
-        observation = { diskVersion, inventory, metadata, previousPids }
+        const exception = readExceptionMonitor(
+          join(profile, 'native-exception-monitor.jsonl')
+        ).find(
+          ({ event, pid }) =>
+            event === 'uncaughtException' &&
+            !previousPids.includes(pid) &&
+            inventory.some((candidate) => candidate.pid === pid)
+        )
+        observation = { diskVersion, inventory, metadata, previousPids, exception }
         const current = JSON.stringify(observation)
         if (current !== serialized) {
           writeJson(join(output, 'native-relaunch-observation.json'), observation)
@@ -44,11 +53,18 @@ export async function waitForNativeReplacement({
           serialized = current
         }
         const candidate = selectNativeProcess(inventory, previousPids, metadata)
+        if (exception) {
+          return { exception }
+        }
         return diskVersion === version && candidate ? { diskVersion, ...candidate } : null
       },
       'Native replacement and new runtime-owned B process',
       180_000
     )
+    if (result.exception) {
+      throw new Error(`Native B uncaught exception: ${result.exception.stack}`)
+    }
+    return result
   } catch (error) {
     const candidates = (observation?.inventory ?? []).filter(
       ({ pid }) => !previousPids.includes(pid)

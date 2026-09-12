@@ -4,36 +4,63 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { createHash } from 'node:crypto'
 import { readBundledLaunchEnvironment } from './probe-native-relaunch.mjs'
-import {
-  captureNativeAlert,
-  nativeAlertTextScript,
-  nativeWindowInventoryScript
-} from './probe-native-alert.mjs'
+import { spawnSync } from 'node:child_process'
+import { readExceptionMonitor, withExceptionMonitor } from './probe-exception-monitor.mjs'
 
 describe('native relaunch read-only evidence', () => {
-  it('isolates an unavailable native alert channel and keeps each prior result', () => {
-    const directory = mkdtempSync(join(tmpdir(), 'orca-native-alert-contract-'))
+  it('records a real thrown Error without swallowing it or changing an existing handler', () => {
+    const directory = mkdtempSync(join(tmpdir(), 'orca-exception-monitor-contract-'))
     try {
-      mkdirSync(join(directory, 'screenshots'))
-      const calls = []
-      const evidence = captureNativeAlert(
-        123,
-        directory,
-        (command, args, options) => {
-          calls.push({ command, args, options })
-          return args.includes(nativeWindowInventoryScript)
-            ? { status: 0, stdout: '[{"id":456,"title":"Fixture error"}]' }
-            : { status: null, error: new Error('fixture permission timeout') }
-        },
-        () => {}
+      const destination = join(directory, 'monitor.jsonl')
+      const source = "'use strict';\nthrow new Error('real-node-error-marker')"
+      const observed = withExceptionMonitor(source, destination)
+      expect(observed.startsWith("'use strict';")).toBe(true)
+      const result = spawnSync(process.execPath, ['-e', observed], {
+        encoding: 'utf8',
+        timeout: 5_000
+      })
+      expect(result.status).toBe(1)
+      expect(result.stderr).toContain('real-node-error-marker')
+      expect(
+        readExceptionMonitor(destination).find(({ event }) => event === 'uncaughtException').stack
+      ).toContain('real-node-error-marker')
+      const existingHandler =
+        "'use strict'; process.on('uncaughtException', () => { process.exitCode = 42 }); throw new Error('handled-error')"
+      expect(
+        spawnSync(process.execPath, ['-e', withExceptionMonitor(existingHandler, destination)], {
+          timeout: 5_000
+        }).status
+      ).toBe(42)
+    } finally {
+      rmSync(directory, { recursive: true, force: true })
+    }
+  })
+  it('preserves the original exception when diagnostic cwd or stack access throws', () => {
+    const directory = mkdtempSync(join(tmpdir(), 'orca-observer-access-contract-'))
+    try {
+      const destination = join(directory, 'monitor.jsonl')
+      const handler =
+        "process.on('uncaughtException', error => { process.stdout.write(error.message); process.exitCode = 42 });"
+      const failedCwd = "process.cwd = () => { throw new Error('cwd-diagnostic-failure') };"
+      const cwdResult = spawnSync(
+        process.execPath,
+        [
+          '-e',
+          failedCwd +
+            withExceptionMonitor(handler + "throw new Error('original-cwd-error')", destination)
+        ],
+        { encoding: 'utf8', timeout: 5_000 }
       )
-      expect(evidence.windows).toEqual([{ id: 456, title: 'Fixture error' }])
-      expect(evidence.screenshots[0].exists).toBe(false)
-      expect(evidence.textError).toContain('fixture permission timeout')
-      expect(calls.every(({ options }) => options.timeout <= 8_000)).toBe(true)
-      expect(calls[1].args.slice(0, 3)).toEqual(['-x', '-l', '456'])
-      expect(nativeAlertTextScript).not.toMatch(/activate|click|keystroke|key code/)
-      expect(nativeWindowInventoryScript).toContain('window.kCGWindowOwnerPID === Number(argv[0])')
+      expect(cwdResult.status).toBe(42)
+      expect(cwdResult.stdout).toBe('original-cwd-error')
+      const failedStack = `${handler}const error = new Error('original-stack-error'); Object.defineProperty(error, 'stack', { get() { throw new Error('stack-diagnostic-failure') } }); throw error;`
+      const stackResult = spawnSync(
+        process.execPath,
+        ['-e', withExceptionMonitor(failedStack, destination)],
+        { encoding: 'utf8', timeout: 5_000 }
+      )
+      expect(stackResult.status).toBe(42)
+      expect(stackResult.stdout).toBe('original-stack-error')
     } finally {
       rmSync(directory, { recursive: true, force: true })
     }

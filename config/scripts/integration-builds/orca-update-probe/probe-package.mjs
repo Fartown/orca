@@ -3,6 +3,7 @@ import { closeSync, openSync, readFileSync, writeFileSync, existsSync } from 'no
 import { join, resolve } from 'node:path'
 import { buildSync } from 'esbuild'
 import { command, writeJson } from '../signing-probe/probe-command.mjs'
+import { instrumentGeneratedMain } from './probe-exception-monitor.mjs'
 
 export function runBuild(args, env, log) {
   console.log(`[real-orca] pnpm ${args.join(' ')}`)
@@ -74,6 +75,7 @@ export function packageVersions({ scratch, output, isolation, signer }) {
     `const base = require(${JSON.stringify(resolve('config/scripts/integration-builds/electron-builder.cjs'))});\nmodule.exports = { ...base, appId: 'dev.orca.native-update-probe.${process.env.GITHUB_RUN_ID}.${process.arch}', mac: { ...base.mac, identity: '-', extendInfo: { ...base.mac.extendInfo, LSUIElement: true, LSEnvironment: ${JSON.stringify(launchEnvironment)} } } };\n`
   )
   runBuild(['run', 'build:release'], env, join(output, 'build-release.log'))
+  instrumentGeneratedMain(isolation.env.ORCA_E2E_USER_DATA_DIR, output)
   const apps = versions.map((version, index) => {
     const destination = join(scratch, `package-${index}`)
     runBuild(

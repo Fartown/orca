@@ -1,4 +1,4 @@
-import { writeFileSync } from 'node:fs'
+import { appendFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { writeJson } from '../signing-probe/probe-command.mjs'
 
@@ -6,6 +6,10 @@ export function beginReport(output) {
   writeFileSync(
     join(output, 'test-plan.md'),
     `# Real Orca native update acceptance\n\n- Hosted macOS only; isolated profile and hidden windows.\n- Instrumented A/B launches use the repository packaged-test --use-mock-keychain flag; OS Keychain authorization is not under test. Native relaunch argv is recorded separately, without assuming that flag survives.\n- Build actual source once, package A/B normally as ZIP targets, preserve asar integrity and signing requirements.\n- Check default fork feed through exact HTTP fixtures; no localBuild override.\n- Create a real folder-workspace terminal, execute a marker, download B and invoke the normal restart action.\n- Expect native replacement on disk and a new process at the same installed path.\n- Instrumented reopen is recorded separately if native relaunch does not preserve CDP.\n- Expect the same workspace/tab and a working terminal after update.\n- No real provider session, production release, Android install or Gatekeeper first-install acceptance is in scope.\n`
+  )
+  appendFileSync(
+    join(output, 'test-plan.md'),
+    '\n- P2-only observability: add an uncaughtExceptionMonitor log banner to generated main before normal signing, never to production source/releases. Validate it first with a real thrown Error under prohibited activation; its default NSAlert must remain.\n'
   )
   return { started: new Date().toISOString(), actions: [], screenshots: [] }
 }
@@ -60,7 +64,7 @@ export function finishReport(output, report, error, cleanup) {
       keychain:
         'Instrumented A/B launches use --use-mock-keychain; native B argv is observed separately.',
       instrumentation:
-        'VITE_EXPOSE_STORE enables fixture setup and inspection; updater/signature/install/PTY remain real.'
+        'VITE_EXPOSE_STORE enables fixture setup. Only P2 generated main includes a signed uncaughtExceptionMonitor log observer; it does not intercept exceptions. Updater/signature/install/PTY remain real.'
     },
     actions: report.actions,
     screenshots: report.screenshots,
@@ -80,7 +84,7 @@ export function finishReport(output, report, error, cleanup) {
       : [],
     checks: {
       notes:
-        'Exact fork transport fixtures and --use-mock-keychain on instrumented launches are test isolation. Native updater/signature/install/PTY are real; native B runtime readiness is not proof of its renderer health.'
+        'Exact fork transport fixtures and --use-mock-keychain are test isolation. P2-only exception observer is validated against a real prohibited NSAlert fixture before building; no exception handler is replaced. Native updater/signature/install/PTY are real; native B runtime readiness is not proof of its renderer health.'
     },
     not_covered: [
       'Public release delivery',
@@ -107,7 +111,7 @@ export function finishReport(output, report, error, cleanup) {
     '',
     ...report.screenshots.map((shot) => `![${shot.title}](${shot.path})`),
     '',
-    'Transport is a local fixture for the exact fork endpoints. Instrumented A/B launches use --use-mock-keychain for CI isolation; native relaunch argv is recorded separately. No installer, signature validation, or PTY operation is stubbed.',
+    'Transport is a local fixture for the exact fork endpoints. Instrumented A/B launches use --use-mock-keychain; native relaunch argv is separate. A P2-only uncaughtExceptionMonitor banner is added before normal signing; it logs without intercepting errors and is not in production source/releases. No installer, signature validation, or PTY operation is stubbed.',
     '',
     'See test-result.json, network.json, native-relaunch.json and cleanup-result.json for raw evidence.'
   ]

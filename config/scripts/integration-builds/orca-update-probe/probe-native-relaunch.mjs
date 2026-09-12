@@ -1,10 +1,9 @@
 import { cpSync, existsSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { spawnSync } from 'node:child_process'
-import { writeJson } from '../signing-probe/probe-command.mjs'
+import { command, writeJson } from '../signing-probe/probe-command.mjs'
 import { processSample } from './probe-startup-evidence.mjs'
 import { verifyNativeRuntime } from './probe-runtime.mjs'
-import { captureNativeAlert } from './probe-native-alert.mjs'
 
 export function nativeStatePaths(output, profile) {
   return output.split('\n').flatMap((line) => {
@@ -40,19 +39,23 @@ export function nativeFailureEvidence({ native, appPath, profile, output }) {
   if (existsSync(chromiumLog)) {
     cpSync(chromiumLog, join(output, 'native-electron.log'))
   }
+  const exceptionLog = join(profile, 'native-exception-monitor.jsonl')
+  if (existsSync(exceptionLog)) {
+    cpSync(exceptionLog, join(output, 'native-exception-monitor.jsonl'))
+  }
+  const signature = command('/usr/bin/codesign', ['--verify', '--deep', '--strict', appPath], {
+    allowFailure: true,
+    timeout: 10_000
+  })
   const evidence = {
     sample,
     ...paths,
     profileEntries: readdirSync(profile),
     bundledLaunchEnvironment: readBundledLaunchEnvironment(appPath),
+    postReplacementSignature: { status: signature.status, stderr: signature.stderr },
     scope: 'Own B PID sample and state paths only; no process environment or runtime auth token.'
   }
   writeJson(join(output, `native-process-${native.pid}.json`), evidence)
-  try {
-    evidence.alert = captureNativeAlert(native.pid, output)
-  } catch (error) {
-    evidence.alertError = String(error)
-  }
   return evidence
 }
 
