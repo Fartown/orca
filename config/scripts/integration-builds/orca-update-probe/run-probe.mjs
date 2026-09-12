@@ -16,7 +16,12 @@ import { command, writeJson } from '../signing-probe/probe-command.mjs'
 import { ensureRcodesign } from '../mac-rcodesign.cjs'
 import { verifyPackageSignature } from '../mac-package-signature.mjs'
 import { completedProfile, packageVersions } from './probe-package.mjs'
-import { createForkFeed, routeForkRequests } from './probe-feed.mjs'
+import {
+  createForkFeed,
+  routeForkRequests,
+  verifyForkRouting,
+  saveForkEvidence
+} from './probe-feed.mjs'
 import { beginReport, finishReport, recordCheckpoint } from './probe-report.mjs'
 import { closeOrca } from './probe-startup.mjs'
 import { observeNativeRelaunch } from './probe-native-relaunch.mjs'
@@ -120,6 +125,8 @@ async function run(output) {
       await snapshot(first.page, output, '01-before-update'),
       ['terminal-before.json']
     )
+    await saveForkEvidence(first.app, first.page, output, 'before')
+    await verifyForkRouting(first.app, build.tag, output)
     await first.page.evaluate(() => {
       window.__orcaProbeStatuses = []
       window.api.updater.onStatus((status) => window.__orcaProbeStatuses.push(status))
@@ -221,6 +228,7 @@ async function run(output) {
     }
     const page = activeApp?.windows()[0]
     if (page) {
+      await saveForkEvidence(activeApp, page, output, 'failure').catch(() => undefined)
       await snapshot(page, output, '99-failure').catch(() => undefined)
     }
   } finally {

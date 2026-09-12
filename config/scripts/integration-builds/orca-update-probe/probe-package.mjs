@@ -36,7 +36,10 @@ export async function completedProfile() {
   const module = await import(
     `data:text/javascript;base64,${Buffer.from(result.outputFiles[0].text).toString('base64')}`
   )
-  return module.getE2ECompletedOnboardingProfile()
+  const profile = module.getE2ECompletedOnboardingProfile()
+  // The first explicit check must start after fixture routing, not reuse startup's public request.
+  profile.ui.lastUpdateCheckAt = Date.now()
+  return profile
 }
 
 export function packageVersions({ scratch, output, isolation, signer }) {

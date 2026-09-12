@@ -1,7 +1,9 @@
 import { createServer } from 'node:http'
 import { createReadStream, statSync } from 'node:fs'
 import { createHash } from 'node:crypto'
+import { join } from 'node:path'
 import { writeJson } from '../signing-probe/probe-command.mjs'
+import { startupDeadline } from './probe-startup.mjs'
 
 async function digest(file, algorithm, encoding) {
   const hash = createHash(algorithm)
@@ -43,6 +45,7 @@ export async function createForkFeed({ zip, sha, tag, version, output }) {
   const server = createServer((request, response) => {
     const path = new URL(request.url, 'http://fixture').pathname
     requests.push({ path, at: Date.now() })
+    writeJson(output, requests)
     if (path.endsWith('.zip')) {
       response.writeHead(200, { 'Content-Type': 'application/zip', 'Content-Length': bytes })
       createReadStream(zip).pipe(response)
@@ -95,4 +98,49 @@ export async function routeForkRequests(app, fixture, tag) {
     },
     { fixture, tag }
   )
+}
+
+export async function verifyForkRouting(app, tag, output) {
+  const observed = await startupDeadline(
+    app.evaluate(async ({ net }) => {
+      const response = await net.fetch(
+        'https://api.github.com/repos/Fartown/orca/releases?per_page=30'
+      )
+      const catalog = await response.json()
+      return {
+        status: response.status,
+        url: response.url,
+        tags: Array.isArray(catalog) ? catalog.map((release) => release.tag_name) : null,
+        routedRequests: globalThis.__orcaProbeRequests
+      }
+    }),
+    'Default-session fork routing preflight',
+    25_000
+  )
+  writeJson(join(output, 'fork-routing-preflight.json'), observed)
+  if (observed.status !== 200 || observed.tags?.length !== 1 || observed.tags[0] !== tag) {
+    throw new Error('Default fork routing did not reach this run fixture; no update attempted')
+  }
+}
+
+export async function saveForkEvidence(app, page, output, phase) {
+  const observed = await Promise.all([
+    startupDeadline(
+      app.evaluate(() => globalThis.__orcaProbeRequests),
+      'Fork requests',
+      3000
+    ).catch((error) => ({ error: String(error) })),
+    startupDeadline(
+      page.evaluate(async () => ({
+        current: await window.api.updater.getStatus(),
+        events: window.__orcaProbeStatuses ?? []
+      })),
+      'Updater statuses',
+      3000
+    ).catch((error) => ({ error: String(error) }))
+  ])
+  writeJson(join(output, `fork-check-${phase}.json`), {
+    routedRequests: observed[0],
+    statuses: observed[1]
+  })
 }

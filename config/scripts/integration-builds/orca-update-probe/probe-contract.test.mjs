@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { createForkFeed, routeForkRequests } from './probe-feed.mjs'
+import { createForkFeed, routeForkRequests, verifyForkRouting } from './probe-feed.mjs'
 import { completedProfile } from './probe-package.mjs'
 import { continuityCommand, hasContinuityOutput, readNativeRuntime } from './probe-runtime.mjs'
 import { assertHostedMac } from '../signing-probe/probe-policy.mjs'
@@ -170,6 +170,7 @@ describe('real Orca update acceptance contract', () => {
     const profile = await completedProfile()
     expect(profile.onboarding.closedAt).toBeGreaterThan(0)
     expect(profile.ui.contextualToursAutoEligible).toBe(false)
+    expect(Math.abs(Date.now() - profile.ui.lastUpdateCheckAt)).toBeLessThan(1000)
   })
 
   it('serves fork catalog, immutable manifest, exact YAML checksum and real ZIP bytes', async () => {
@@ -236,6 +237,23 @@ describe('real Orca update acceptance contract', () => {
     )
     expect(redirect).toEqual({ redirectURL: 'http://127.0.0.1:1234/catalog?per_page=30' })
     delete globalThis.__orcaProbeRequests
+  })
+
+  it('rejects a stale public catalog before the explicit update instead of silently retrying', async () => {
+    const directory = mkdtempSync(join(tmpdir(), 'orca-routing-contract-'))
+    directories.push(directory)
+    const tag = 'integration-1-123456789abc'
+    let tags = ['v1.0.0']
+    const app = { evaluate: async () => ({ status: 200, tags }) }
+    await expect(verifyForkRouting(app, tag, directory)).rejects.toThrow(
+      'did not reach this run fixture'
+    )
+    const observed = JSON.parse(
+      readFileSync(join(directory, 'fork-routing-preflight.json'), 'utf8')
+    )
+    expect(observed.tags).toEqual(['v1.0.0'])
+    tags = [tag]
+    await expect(verifyForkRouting(app, tag, directory)).resolves.toBeUndefined()
   })
 
   it('preserves normal packaging hooks and does not invoke localBuild or replace the native installer', () => {

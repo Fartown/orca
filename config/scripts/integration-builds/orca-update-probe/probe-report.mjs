@@ -11,6 +11,10 @@ export function beginReport(output) {
     join(output, 'test-plan.md'),
     '\n- P2-only observability: add an uncaughtExceptionMonitor log banner to generated main before normal signing, never to production source/releases. Validate it first with a real thrown Error under prohibited activation; its default NSAlert must remain.\n'
   )
+  appendFileSync(
+    join(output, 'test-plan.md'),
+    '\n- Seed isolated ui.lastUpdateCheckAt with now so startup does not race routing with a public check. Validate actual net.fetch routing, then make one manual default-fork check. Automatic startup scheduling is not accepted by this probe.\n'
+  )
   return { started: new Date().toISOString(), actions: [], screenshots: [] }
 }
 
@@ -51,6 +55,7 @@ export function finishReport(output, report, error, cleanup) {
       out_of_scope: [
         'Gatekeeper first install',
         'public GitHub asset delivery',
+        'automatic startup update scheduling',
         'Android',
         'provider sessions'
       ]
@@ -61,6 +66,7 @@ export function finishReport(output, report, error, cleanup) {
       browser: report.runtime ?? 'not launched',
       githubRun: process.env.GITHUB_RUN_ID,
       isolation: 'disposable profile; hidden windows',
+      checkTrigger: 'One manual default check; isolated lastUpdateCheckAt defers startup checking.',
       keychain:
         'Instrumented A/B launches use --use-mock-keychain; native B argv is observed separately.',
       instrumentation:
@@ -88,6 +94,7 @@ export function finishReport(output, report, error, cleanup) {
     },
     not_covered: [
       'Public release delivery',
+      'Automatic startup update scheduling',
       'Gatekeeper first installation',
       'OS Keychain authorization',
       'Native-relaunch renderer CDP if LaunchServices omits debugging arguments'
