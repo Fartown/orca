@@ -410,7 +410,8 @@ test.use({
   orcaAppExtraArgs: ['--disable-backgrounding-occluded-windows', '--disable-renderer-backgrounding']
 })
 
-test.describe('Worktree switch first paint', () => {
+// Use the CI compositor pipeline; ORCA_BACKGROUND_LAUNCH still keeps the window hidden.
+test.describe('Worktree switch first paint @headful', () => {
   test('repaints an unmounted worktree within the switch budget', async ({
     electronApp,
     orcaPage,

@@ -28,3 +28,12 @@
 - 验证证据：失败 job `103510079569` 的 viewport 60 行和 0 帧诊断；复测仍需以 Linux 结果为准。
 - 未解决问题：补齐启动配置后的红绿对照与完整 PR CI 待执行。
 - 下一步：定向复测，若仍失败继续基于实际帧策略与诊断定位，不循环盲重跑。
+
+## 2026-09-12 — 对照 Linux 合成器配置
+
+- 本轮目标：验证 Linux 禁用 GPU/compositing 的测试启动路径是否影响 rAF 采样。
+- 完成内容：run `34677833928` 仍失败；测量开始前 native `visible=false`、`backgroundThrottling=false`，失败时仍为 0 帧且活动 viewport 60 行均有文本。两个 Chromium 参数不足以修复，具体暂停机制未定。
+- 代码或文档变更：将依赖帧采样的 spec 标记为 `@headful`，使用仓库现有 Linux CI SwiftShader 合成器路径；显式 `ORCA_BACKGROUND_LAUNCH=1` 优先，native 窗口继续隐藏。原 5 轮、断言和超时保留。
+- 验证证据：失败 job `103510911319` 日志 969–970 行；已有窗口策略测试覆盖后台变量优先于 headful 标记。
+- 未解决问题：合成器配置变体尚待 Linux 实测，不能称已修复。
+- 下一步：定向红绿对照，确认有效后完成最终 SHA 的全部 PR CI。
