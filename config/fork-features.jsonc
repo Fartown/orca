@@ -83,6 +83,10 @@
       ],
       "tests": [
         "config/scripts/integration-builds/integration-builds.test.mjs",
+        "config/scripts/integration-builds/mac-signing.test.mjs",
+        "config/scripts/integration-builds/mac-package-signature.test.mjs",
+        "config/scripts/integration-builds/signing-probe/probe-policy.test.mjs",
+        "config/scripts/integration-builds/signing-probe/probe-trust.test.mjs",
         "src/shared/integration-builds/release-catalog.test.ts",
         "src/main/integration-builds/integration-update-feed.test.ts",
         "mobile/src/integration-builds/update-controller.test.ts"

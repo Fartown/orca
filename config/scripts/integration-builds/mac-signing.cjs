@@ -9,6 +9,7 @@ const {
 const { randomBytes, X509Certificate } = require('node:crypto')
 const { join, resolve, dirname } = require('node:path')
 const { spawnSync } = require('node:child_process')
+const { changeCodeSigningTrust } = require('./mac-signing-trust.cjs')
 
 const certificatePath = join(__dirname, 'mac-publisher-certificate.pem')
 
@@ -77,7 +78,15 @@ function cleanupSigning(env = process.env) {
     }
   }
   if (state.trustAdded) {
-    attempt(() => command(['remove-trusted-cert', certificatePath]))
+    attempt(() =>
+      changeCodeSigningTrust({
+        certificate: certificatePath,
+        remove: true,
+        evidenceDirectory: join(env.RUNNER_TEMP, 'integration-signing-evidence'),
+        label: 'remove-publisher',
+        env
+      })
+    )
   }
   if (state.searchListChanged) {
     attempt(() => command(['list-keychains', '-d', 'user', '-s', ...state.searchList]))
@@ -130,16 +139,13 @@ function prepareSigning(env = process.env) {
     rmSync(p12)
     state.trustAdded = true
     save()
-    command([
-      'add-trusted-cert',
-      '-r',
-      'trustRoot',
-      '-p',
-      'codeSign',
-      '-k',
+    changeCodeSigningTrust({
+      certificate: certificatePath,
       keychain,
-      certificatePath
-    ])
+      evidenceDirectory: join(env.RUNNER_TEMP, 'integration-signing-evidence'),
+      label: 'add-publisher',
+      env
+    })
     command(['set-key-partition-list', '-S', 'apple-tool:,apple:', '-s', '-k', password, keychain])
     const identities = command(['find-identity', '-v', '-p', 'codesigning', keychain])
     if (!identities.includes(certificate.sha1)) {

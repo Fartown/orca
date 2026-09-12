@@ -64,9 +64,10 @@ describe('native signing probe boundaries', () => {
   it('constrains trust to the disposable code-signing identity and removes it before runtime', () => {
     const identity = readFileSync(new URL('./probe-identities.mjs', import.meta.url), 'utf8')
     const runner = readFileSync(new URL('./run-probe.mjs', import.meta.url), 'utf8')
-    expect(identity).toMatch(/'-r',\s*'trustRoot',\s*'-p',\s*'codeSign'/)
-    expect(identity).not.toMatch(/'add-trusted-cert',\s*'-d'/)
-    expect(identity).toContain("['remove-trusted-cert', identity.certificate]")
+    const trust = readFileSync(new URL('../mac-signing-trust.cjs', import.meta.url), 'utf8')
+    expect(trust).toMatch(/'-r',\s*'trustRoot',\s*'-p',\s*'codeSign'/)
+    expect(trust).not.toMatch(/'add-trusted-cert',\s*'-d'/)
+    expect(identity).toContain('remove: true')
     expect(runner.indexOf('signing.removeTrustBeforeRuntime()')).toBeLessThan(
       runner.indexOf('await runProbeCase(testCase)')
     )

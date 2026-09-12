@@ -3,6 +3,7 @@ import { join } from 'node:path'
 import { randomBytes, X509Certificate } from 'node:crypto'
 import { assertHostedMac } from './probe-policy.mjs'
 import { command, writeJson } from './probe-command.mjs'
+import { changeCodeSigningTrust } from '../mac-signing-trust.cjs'
 
 export function createProbeIdentities(output) {
   assertHostedMac()
@@ -20,13 +21,16 @@ export function createProbeIdentities(output) {
       if (!identity.trusted) {
         continue
       }
-      const result = command('/usr/bin/security', ['remove-trusted-cert', identity.certificate], {
-        allowFailure: true
-      })
-      if (result.status === 0) {
+      try {
+        changeCodeSigningTrust({
+          certificate: identity.certificate,
+          remove: true,
+          evidenceDirectory: join(output, 'trust-authorization'),
+          label: `remove-${identity.label}`
+        })
         identity.trusted = false
-      } else {
-        errors.push(`${identity.label}: ${result.stderr}`)
+      } catch (error) {
+        errors.push(`${identity.label}: ${String(error)}`)
       }
     }
     if (errors.length) {
@@ -70,10 +74,12 @@ export function createProbeIdentities(output) {
   }
 
   try {
+    console.log('[signing] Creating disposable keychain')
     command('/usr/bin/security', ['create-keychain', '-p', password, keychain])
     keychainCreated = true
     command('/usr/bin/security', ['unlock-keychain', '-p', password, keychain])
     for (const label of ['publisher', 'other-publisher']) {
+      console.log(`[signing] Generating and importing ${label}`)
       const key = join(directory, `${label}.key`)
       const certificate = join(directory, `${label}.pem`)
       const config = join(directory, `${label}.cnf`)
@@ -108,19 +114,16 @@ export function createProbeIdentities(output) {
       identities.push(identity)
       command('/usr/bin/security', ['import', key, '-k', keychain, '-T', '/usr/bin/codesign'])
       command('/usr/bin/security', ['import', certificate, '-k', keychain])
-      identity.trusted = true
-      command('/usr/bin/security', [
-        'add-trusted-cert',
-        '-r',
-        'trustRoot',
-        '-p',
-        'codeSign',
-        '-k',
-        keychain,
-        certificate
-      ])
       copyFileSync(certificate, join(output, `${label}-public-certificate.pem`))
+      identity.trusted = true
+      changeCodeSigningTrust({
+        certificate,
+        keychain,
+        evidenceDirectory: join(output, 'trust-authorization'),
+        label: `add-${label}`
+      })
     }
+    console.log('[signing] Configuring disposable private-key access for codesign')
     command('/usr/bin/security', [
       'set-key-partition-list',
       '-S',
@@ -139,6 +142,7 @@ export function createProbeIdentities(output) {
       keychain,
       cleanup,
       removeTrustBeforeRuntime() {
+        console.log('[signing] Removing build-time trust before client tests')
         removeTrust()
         const checks = identities.map((identity) => ({
           label: identity.label,
