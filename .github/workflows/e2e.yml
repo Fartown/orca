@@ -173,11 +173,13 @@ jobs:
       - name: Run E2E tests (${{ matrix.shard_name }})
         run: xvfb-run --auto-servernum bash .github/scripts/e2e-with-window-manager.sh env SKIP_BUILD=1 ORCA_E2E_FORWARD_APP_LOGS=1 ORCA_E2E_WEB_CLIENT=1 ORCA_RELAY_PATH="$GITHUB_WORKSPACE/out/relay" pnpm run test:e2e --shard=${{ matrix.shard }}
 
-      # Why: Playwright retains traces/screenshots only on failure. Uploading
-      # them as an artifact makes post-mortem debugging on CI possible without
-      # re-running locally.
+      - name: Run first-paint contract on isolated display
+        if: matrix.shard == '1/14'
+        run: xvfb-run --auto-servernum bash .github/scripts/e2e-with-window-manager.sh env SKIP_BUILD=1 ORCA_E2E_FORWARD_APP_LOGS=1 ORCA_E2E_WEB_CLIENT=1 ORCA_RELAY_PATH="$GITHUB_WORKSPACE/out/relay" pnpm run test:e2e --project=electron-headful tests/e2e/worktree-switch-first-paint.spec.ts
+
+      # Keep failure diagnostics and the first-paint contract's success attachment.
       - name: Upload Playwright traces
-        if: failure()
+        if: failure() || matrix.shard == '1/14'
         uses: actions/upload-artifact@v7
         with:
           name: playwright-traces-${{ matrix.shard_name }}
@@ -255,7 +257,7 @@ jobs:
             pnpm run test:e2e "${TEST_FILES[@]}" --workers=1 "${E2E_PROJECT_ARGS[@]}"
 
       - name: Upload Playwright traces
-        if: failure()
+        if: failure() || contains(inputs.test_files, 'tests/e2e/worktree-switch-first-paint.spec.ts')
         uses: actions/upload-artifact@v7
         with:
           name: playwright-traces-changed

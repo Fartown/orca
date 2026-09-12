@@ -511,6 +511,10 @@ test.describe('Worktree switch first paint @headful', () => {
         'the switch mounted more than the pane the user is looking at'
       ).toBe(1)
     }
+    await testInfo.attach('first-paint-final.png', {
+      body: await orcaPage.screenshot(),
+      contentType: 'image/png'
+    })
     // Why CI is exempt from the budget and not from the invariants: shared
     // runners cannot hold a latency threshold, but "the switch mounted one pane"
     // and "the warm set came back" are exact and are the real regression guards.
