@@ -8,7 +8,7 @@
   "policies": [
     {
       "id": "integration-builds",
-      "description": "Fork integration packages reuse upstream builds without changing release channels.",
+      "description": "Fork packages and integration-only application updates reuse upstream build and install machinery.",
       "rules": [
         {
           "id": "integration-builds-worktree-scope",
@@ -17,11 +17,25 @@
           "whenChanged": [
             ".github/workflows/fork-integration-build.yml",
             "config/scripts/integration-builds/**",
+            "src/shared/integration-builds/**",
+            "src/main/integration-builds/**",
+            "mobile/src/integration-builds/**",
+            "mobile/modules/orca-app-update/**",
             "docs/issue/集成分支自动出包/**"
           ],
           "allowedPaths": [
             ".github/workflows/fork-integration-build.yml",
             "config/scripts/integration-builds/**",
+            "src/shared/integration-builds/**",
+            "src/main/integration-builds/**",
+            "mobile/src/integration-builds/**",
+            "mobile/modules/orca-app-update/**",
+            "mobile/app.config.js",
+            "mobile/app/_layout.tsx",
+            "mobile/src/settings/about-screen.tsx",
+            "src/main/updater/updater-release-feed.ts",
+            "src/main/updater/updater-nudge.ts",
+            "src/main/updater-changelog.ts",
             "docs/issue/集成分支自动出包/**",
             "config/fork-features.jsonc",
             "config/architecture-policies.jsonc",
@@ -399,6 +413,16 @@
             // Fork infrastructure (docs/reference/fork-maintenance.md).
             ".github/workflows/fork-integration-build.yml",
             "config/scripts/integration-builds/**",
+            "src/shared/integration-builds/**",
+            "src/main/integration-builds/**",
+            "mobile/src/integration-builds/**",
+            "mobile/modules/orca-app-update/**",
+            "mobile/app.config.js",
+            "mobile/app/_layout.tsx",
+            "mobile/src/settings/about-screen.tsx",
+            "src/main/updater/updater-release-feed.ts",
+            "src/main/updater/updater-nudge.ts",
+            "src/main/updater-changelog.ts",
             "AGENTS.md",
             "config/scripts/format-fork-staged-files.mjs",
             "config/scripts/format-fork-staged-files.test.mjs",

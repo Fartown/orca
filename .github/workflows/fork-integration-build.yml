@@ -4,11 +4,19 @@ on:
   push:
     branches: [fork/integration]
   workflow_dispatch:
+    inputs:
+      signing_probe_only:
+        description: Verify native macOS updates with temporary signing identities only
+        type: boolean
+        default: false
   pull_request:
     branches: [fork/integration]
     paths:
       - .github/workflows/fork-integration-build.yml
       - config/scripts/integration-builds/**
+      - src/shared/integration-builds/**
+      - src/main/integration-builds/**
+      - mobile/**
 
 permissions:
   contents: read
@@ -22,12 +30,14 @@ env:
 
 jobs:
   identity:
-    if: github.repository == 'Fartown/orca'
+    if: github.repository == 'Fartown/orca' && !inputs.signing_probe_only
     runs-on: ubuntu-latest
     timeout-minutes: 10
     outputs:
       sha: ${{ steps.identity.outputs.sha }}
       version: ${{ steps.identity.outputs.version }}
+      tag: ${{ steps.identity.outputs.tag }}
+      androidVersionCode: ${{ steps.identity.outputs.androidVersionCode }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -38,6 +48,42 @@ jobs:
           node-version-file: package.json
       - id: identity
         run: node config/scripts/integration-builds/build-identity.mjs >> "$GITHUB_OUTPUT"
+
+  signing-probe:
+    if: github.repository == 'Fartown/orca' && github.event_name == 'workflow_dispatch' && inputs.signing_probe_only
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [macos-15, macos-15-intel]
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: pnpm/setup@v2
+        with:
+          install: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: package.json
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Verify replacement, restart and signature rejection
+        run: node config/scripts/integration-builds/signing-probe/run-probe.mjs --output "$RUNNER_TEMP/signing-probe-evidence"
+      - name: Retain public probe evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: signing-probe-${{ matrix.runner }}-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/signing-probe-evidence
+            !${{ runner.temp }}/signing-probe-evidence/**/*.app/**
+            !${{ runner.temp }}/signing-probe-evidence/**/*.zip
+            !${{ runner.temp }}/signing-probe-evidence/**/fixed-home/**
+          if-no-files-found: error
+          retention-days: 14
 
   macos:
     needs: identity
@@ -55,6 +101,7 @@ jobs:
     timeout-minutes: 90
     env:
       ORCA_LOCAL_BUILD_VERSION: ${{ needs.identity.outputs.version }}
+      ORCA_INTEGRATION_TAG: ${{ needs.identity.outputs.tag }}
       ORCA_BUILD_COMMIT: ${{ needs.identity.outputs.sha }}
       ORCA_COMPUTER_MACOS_SIGN_IDENTITY: '-'
       CSC_IDENTITY_AUTO_DISCOVERY: 'false'
@@ -78,7 +125,7 @@ jobs:
         run: pnpm exec vitest run --config config/vitest.config.ts config/scripts/integration-builds/integration-builds.test.mjs
       - name: Build desktop and native helpers
         run: pnpm run build:release
-      - name: Package internal-test DMG
+      - name: Package internal-test DMG and update ZIP
         env:
           BUILD_ARCH: ${{ matrix.arch }}
         run: |
@@ -95,13 +142,17 @@ jobs:
       - uses: actions/upload-artifact@v7
         with:
           name: integration-macos-${{ matrix.arch }}-${{ needs.identity.outputs.sha }}
-          path: dist/orca-integration-macos-${{ matrix.arch }}.dmg
+          path: |
+            dist/orca-integration-macos-${{ matrix.arch }}.dmg
+            dist/orca-integration-macos-${{ matrix.arch }}.zip
           if-no-files-found: error
           compression-level: 0
           retention-days: 14
 
   android:
     needs: identity
+    env:
+      ORCA_INTEGRATION_VERSION_CODE: ${{ needs.identity.outputs.androidVersionCode }}
     runs-on: ubuntu-latest
     timeout-minutes: 90
     defaults:
@@ -143,6 +194,10 @@ jobs:
           apksigner="$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -1)"
           "$apksigner" verify --verbose --print-certs-pem android/app/build/outputs/apk/release/app-release.apk | tee "$RUNNER_TEMP/apk-signature.txt"
           node ../config/scripts/integration-builds/build-identity.mjs verify-apk "$RUNNER_TEMP/apk-signature.txt"
+          aapt="$(dirname "$apksigner")/aapt"
+          "$aapt" dump badging android/app/build/outputs/apk/release/app-release.apk > "$RUNNER_TEMP/apk-version.txt"
+          unzip -p android/app/build/outputs/apk/release/app-release.apk assets/app.config > "$RUNNER_TEMP/apk-config.json"
+          node ../config/scripts/integration-builds/verify-apk-version.mjs "$RUNNER_TEMP/apk-version.txt" "$RUNNER_TEMP/apk-config.json"
           mkdir -p ../dist
           cp android/app/build/outputs/apk/release/app-release.apk ../dist/orca-integration-android.apk
       - name: Retain public signing diagnostics
