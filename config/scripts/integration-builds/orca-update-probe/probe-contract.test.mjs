@@ -6,6 +6,7 @@ import { createForkFeed, routeForkRequests } from './probe-feed.mjs'
 import { completedProfile } from './probe-package.mjs'
 import { continuityCommand, hasContinuityOutput } from './probe-runtime.mjs'
 import { assertHostedMac } from '../signing-probe/probe-policy.mjs'
+import { readyOrca } from './probe-startup.mjs'
 
 const directories = []
 afterEach(() => {
@@ -15,6 +16,49 @@ afterEach(() => {
 })
 
 describe('real Orca update acceptance contract', () => {
+  it('retains actual startup diagnostics and closes an app that never reaches readiness', async () => {
+    const directory = mkdtempSync(join(tmpdir(), 'orca-startup-contract-'))
+    directories.push(directory)
+    const details = { home: directory, packaged: true, visibleWindows: 0, version: '1.0.0' }
+    const events = []
+    const page = {
+      url: () => 'file:///fixture/index.html',
+      on: (event) => events.push(event),
+      waitForLoadState: async () => {},
+      evaluate: async () => ({ hasApi: true, hasStore: false, workspaceSessionReady: null }),
+      screenshot: async () => {},
+      waitForFunction: async () => {
+        expect(JSON.parse(readFileSync(join(directory, 'before-process.json'), 'utf8'))).toEqual(
+          details
+        )
+        throw new Error('fixture readiness timeout')
+      }
+    }
+    const app = {
+      process: () => ({}),
+      evaluate: async () => details,
+      firstWindow: async () => page,
+      windows: () => [page]
+    }
+    let closed = false
+    await expect(
+      readyOrca(
+        app,
+        { isolatedHome: directory, realHome: '/non-fixture-home' },
+        directory,
+        'before',
+        async (owned) => {
+          expect(owned).toBe(app)
+          closed = true
+        }
+      )
+    ).rejects.toThrow('fixture readiness timeout')
+    expect(closed).toBe(true)
+    expect(events).toEqual(['pageerror', 'console'])
+    const failure = JSON.parse(readFileSync(join(directory, 'before-failed-startup.json'), 'utf8'))
+    expect(failure[0]).toMatchObject({ hasApi: true, hasStore: false, workspaceSessionReady: null })
+  })
+
   it('requires fresh output from the original shell variable, not command echo or old scrollback', () => {
     const marker = '1234567890abcdef1234567890abcdef'
     const before = continuityCommand(marker, true)

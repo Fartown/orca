@@ -32,7 +32,8 @@
         "config/scripts/build-mac-local.mjs",
         "mobile/scripts/prepare-android-release.mjs",
         "mobile/src/theme/mobile-theme.ts",
-        "tests/e2e/helpers/electron-home-isolation.ts"
+        "tests/e2e/helpers/electron-home-isolation.ts",
+        "tests/e2e/helpers/electron-process-shutdown.ts"
       ],
       "policyId": "integration-builds",
       "ownedPaths": [
@@ -48,6 +49,7 @@
         ".github/workflows/fork-integration-build.yml",
         "config/scripts/integration-builds/electron-builder.cjs",
         "config/scripts/integration-builds/build-identity.mjs",
+        "config/scripts/integration-builds/mac-publisher-certificate.pem",
         "config/scripts/integration-builds/publish-release.mjs"
       ],
       "seams": [

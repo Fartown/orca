@@ -18,6 +18,7 @@ import { verifyPackageSignature } from '../mac-package-signature.mjs'
 import { completedProfile, packageVersions } from './probe-package.mjs'
 import { createForkFeed, routeForkRequests } from './probe-feed.mjs'
 import { beginReport, finishReport, recordCheckpoint } from './probe-report.mjs'
+import { closeOrca } from './probe-startup.mjs'
 import {
   createTerminal,
   launchOrca,
@@ -230,7 +231,7 @@ async function run(output) {
     for (const operation of [
       async () => {
         if (activeApp) {
-          await activeApp.close()
+          await closeOrca(activeApp)
         }
       },
       async () => {

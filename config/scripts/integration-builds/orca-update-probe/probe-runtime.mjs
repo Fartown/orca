@@ -1,8 +1,8 @@
 import { _electron as electron } from 'playwright'
-import { appendFileSync, writeFileSync, readFileSync, existsSync } from 'node:fs'
+import { writeFileSync, readFileSync, existsSync } from 'node:fs'
 import { join } from 'node:path'
-import { command, writeJson } from '../signing-probe/probe-command.mjs'
-import { assertElectronResolvedIsolatedHome } from '../../../../tests/e2e/helpers/electron-home-isolation.ts'
+import { command } from '../signing-probe/probe-command.mjs'
+import { readyOrca } from './probe-startup.mjs'
 
 export async function waitUntil(operation, label, timeout = 120_000) {
   const deadline = Date.now() + timeout
@@ -35,35 +35,7 @@ export async function launchOrca(appPath, isolation, output, label) {
     env,
     timeout: 120_000
   })
-  const log = join(output, `${label}-process.log`)
-  for (const stream of [app.process().stdout, app.process().stderr]) {
-    stream?.on('data', (chunk) => appendFileSync(log, chunk))
-  }
-  const details = await app.evaluate(({ app, BrowserWindow }) => ({
-    home: app.getPath('home'),
-    version: app.getVersion(),
-    pid: process.pid,
-    execPath: process.execPath,
-    packaged: app.isPackaged,
-    electronVersion: process.versions.electron,
-    chromiumVersion: process.versions.chrome,
-    visibleWindows: BrowserWindow.getAllWindows().filter((window) => window.isVisible()).length
-  }))
-  assertElectronResolvedIsolatedHome(details.home, isolation)
-  if (!details.packaged || details.visibleWindows) {
-    throw new Error('Expected a hidden, packaged Orca process')
-  }
-  const page = await app.firstWindow({ timeout: 120_000 })
-  await page.waitForFunction(
-    () => window.api?.updater && window.__store?.getState().workspaceSessionReady,
-    null,
-    { timeout: 120_000 }
-  )
-  writeJson(join(output, `${label}-process.json`), details)
-  page.on('pageerror', (error) =>
-    appendFileSync(join(output, 'renderer-errors.log'), `${label}: ${error.message}\n`)
-  )
-  return { app, page, details }
+  return readyOrca(app, isolation, output, label)
 }
 
 export async function snapshot(page, output, name) {
