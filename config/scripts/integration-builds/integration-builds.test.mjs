@@ -8,7 +8,8 @@ import {
   ANDROID_CERT_SHA256,
   buildIdentity,
   integrationTag,
-  verifyAndroidCertificate
+  verifyAndroidCertificate,
+  verifyAndroidPublicCertificate
 } from './build-identity.mjs'
 import { hashPackages, PACKAGE_NAMES, publishRelease } from './publish-release.mjs'
 
@@ -64,13 +65,31 @@ describe('integration package identity and signing', () => {
   })
 
   it('accepts only the existing Expo signing certificate', () => {
-    const output = `Verifies\nSigner #1 certificate SHA-256 digest: ${ANDROID_CERT_SHA256}\n`
+    const certificate = readFileSync(
+      new URL('./expo-debug-certificate.pem', import.meta.url),
+      'utf8'
+    )
+    const output = `Verifies\nSigner #1 certificate SHA-256 digest: ${ANDROID_CERT_SHA256}\n${certificate}`
     expect(() => verifyAndroidCertificate(output)).not.toThrow()
-    expect(() =>
-      verifyAndroidCertificate(output.replace(ANDROID_CERT_SHA256, 'f'.repeat(64)))
-    ).toThrow()
+    expect(() => verifyAndroidCertificate(output.replace('3jb2aiJKg==', '3jb2aiJKQ=='))).toThrow()
     expect(() => verifyAndroidCertificate('DOES NOT VERIFY')).toThrow()
-    expect(() => verifyAndroidCertificate(output + output)).toThrow()
+    const ranged = output.replace(
+      'Signer #1',
+      'Signer (minSdkVersion=24, maxSdkVersion=2147483647)'
+    )
+    expect(() => verifyAndroidCertificate(ranged)).not.toThrow()
+    expect(() => verifyAndroidCertificate(ranged + output)).not.toThrow()
+    expect(() =>
+      verifyAndroidCertificate(ranged + output.replace('3jb2aiJKg==', '3jb2aiJKQ=='))
+    ).toThrow()
+  })
+
+  it('pins the actual template public certificate before the expensive Android build', () => {
+    const certificate = readFileSync(new URL('./expo-debug-certificate.pem', import.meta.url))
+    expect(() => verifyAndroidPublicCertificate(certificate)).not.toThrow()
+    expect(() => verifyAndroidPublicCertificate('not a certificate')).toThrow()
+    const changed = certificate.toString().replace('3jb2aiJKg==', '3jb2aiJKQ==')
+    expect(() => verifyAndroidPublicCertificate(changed)).toThrow()
   })
 
   it('keeps packaging hooks, resources and existing app updater metadata', () => {
@@ -203,7 +222,7 @@ describe('workflow wiring', () => {
       expect(job.needs).toBe('identity')
       expect(job.steps[0].with.ref).toBe('${{ needs.identity.outputs.sha }}')
       expect(
-        job.steps.find((step) => step.uses?.startsWith('actions/upload-artifact')).with[
+        job.steps.find((step) => step.with?.name?.startsWith('integration-')).with[
           'if-no-files-found'
         ]
       ).toBe('error')

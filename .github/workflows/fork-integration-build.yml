@@ -129,6 +129,11 @@ jobs:
           java-version: 17
       - name: Generate Android project
         run: pnpm exec expo prebuild --platform android --no-install
+      - name: Verify template signing certificate before compilation
+        run: |
+          set -euo pipefail
+          keytool -exportcert -keystore android/app/debug.keystore -storepass android -alias androiddebugkey |
+            node ../config/scripts/integration-builds/build-identity.mjs verify-keystore
       - name: Build release APK with existing internal-test signing
         working-directory: mobile/android
         run: ./gradlew assembleRelease --no-daemon --max-workers=2 -Dorg.gradle.jvmargs='-Xmx4g -XX:MaxMetaspaceSize=1g'
@@ -136,10 +141,27 @@ jobs:
         run: |
           set -euo pipefail
           apksigner="$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -1)"
-          "$apksigner" verify --verbose --print-certs android/app/build/outputs/apk/release/app-release.apk > "$RUNNER_TEMP/apk-signature.txt"
+          "$apksigner" verify --verbose --print-certs-pem android/app/build/outputs/apk/release/app-release.apk | tee "$RUNNER_TEMP/apk-signature.txt"
           node ../config/scripts/integration-builds/build-identity.mjs verify-apk "$RUNNER_TEMP/apk-signature.txt"
           mkdir -p ../dist
           cp android/app/build/outputs/apk/release/app-release.apk ../dist/orca-integration-android.apk
+      - name: Retain public signing diagnostics
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: android-signing-diagnostics-${{ needs.identity.outputs.sha }}
+          path: ${{ runner.temp }}/apk-signature.txt
+          if-no-files-found: ignore
+          retention-days: 14
+      - name: Retain rejected APK for diagnosis
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: android-rejected-package-${{ needs.identity.outputs.sha }}
+          path: mobile/android/app/build/outputs/apk/release/app-release.apk
+          if-no-files-found: ignore
+          compression-level: 0
+          retention-days: 3
       - uses: actions/upload-artifact@v7
         with:
           name: integration-android-${{ needs.identity.outputs.sha }}

@@ -1,4 +1,5 @@
 import { execFileSync } from 'node:child_process'
+import { X509Certificate } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { createLocalBuildVersion } from '../build-mac-local.mjs'
@@ -22,15 +23,30 @@ export function buildIdentity({ sha, runId, baseVersion, timestamp }) {
 }
 
 export function verifyAndroidCertificate(output) {
-  const certificates = [...output.matchAll(/^Signer #\d+ certificate SHA-256 digest: (\w+)$/gm)]
-  if (certificates.length !== 1 || certificates[0][1].toLowerCase() !== ANDROID_CERT_SHA256) {
-    throw new Error('APK signer changed: expected the existing Expo internal-test certificate.')
+  const certificates =
+    output.match(/-----BEGIN CERTIFICATE-----[\s\S]+?-----END CERTIFICATE-----/g) ?? []
+  if (!certificates.length) {
+    throw new Error('No APK signing certificate found in apksigner PEM output.')
+  }
+  for (const certificate of certificates) {
+    verifyAndroidPublicCertificate(certificate)
+  }
+}
+
+export function verifyAndroidPublicCertificate(certificate) {
+  const fingerprint = new X509Certificate(certificate).fingerprint256
+    .replaceAll(':', '')
+    .toLowerCase()
+  if (fingerprint !== ANDROID_CERT_SHA256) {
+    throw new Error(`Android signing certificate changed: ${fingerprint}`)
   }
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === resolve(import.meta.filename)) {
   if (process.argv[2] === 'verify-apk') {
     verifyAndroidCertificate(readFileSync(process.argv[3], 'utf8'))
+  } else if (process.argv[2] === 'verify-keystore') {
+    verifyAndroidPublicCertificate(readFileSync(0))
   } else {
     const sha = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim()
     if (sha !== process.env.GITHUB_SHA) {
