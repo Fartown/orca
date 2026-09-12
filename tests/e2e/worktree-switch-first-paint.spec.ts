@@ -405,8 +405,11 @@ function median(values: readonly number[]): number {
   return sorted.length % 2 === 0 ? (sorted[middle - 1] + sorted[middle]) / 2 : sorted[middle]
 }
 
+test.use({ orcaAppExtraEnv: { ORCA_BACKGROUND_LAUNCH: '1' } })
+
 test.describe('Worktree switch first paint', () => {
   test('repaints an unmounted worktree within the switch budget', async ({
+    electronApp,
     orcaPage,
     testRepoPath
   }, testInfo) => {
@@ -458,6 +461,10 @@ test.describe('Worktree switch first paint', () => {
         const unmounted = await waitForUnmountedTabs(orcaPage, targetTabIds)
         expect(unmounted, 'target worktree was already mounted before the switch').toBe(true)
 
+        // The hidden Linux renderer can restore its buffer while pausing the rAF clock.
+        const hostWindow = await electronApp.browserWindow(orcaPage)
+        await hostWindow.evaluate((window) => window.webContents.setBackgroundThrottling(false))
+        await hostWindow.dispose()
         const sample = await measureSwitch(orcaPage, targetId, targetTabIds)
         samples.push(sample)
         lines.push(report(`round ${round + 1} (target unmounted=${unmounted})`, sample))
