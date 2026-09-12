@@ -373,6 +373,8 @@
           "allowedPaths": [
             // Fork infrastructure (docs/reference/fork-maintenance.md).
             "AGENTS.md",
+            "config/scripts/format-fork-staged-files.mjs",
+            "config/scripts/format-fork-staged-files.test.mjs",
             "config/fork-features.jsonc",
             "config/scripts/check-fork-features.mjs",
             "config/scripts/check-fork-features.test.mjs",
