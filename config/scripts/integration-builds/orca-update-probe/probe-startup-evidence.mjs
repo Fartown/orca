@@ -1,5 +1,5 @@
 import { writeFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import { spawnSync } from 'node:child_process'
 import { writeJson } from '../signing-probe/probe-command.mjs'
 
@@ -22,6 +22,38 @@ export async function startupDeadline(promise, label, timeout = 2_000) {
 
 async function observe(promise, label, timeout) {
   return startupDeadline(promise, label, timeout).catch((error) => ({ error: String(error) }))
+}
+
+function processSample(pid, output, label) {
+  if (!Number.isSafeInteger(pid) || pid <= 1) {
+    return null
+  }
+  const path = join(output, `${label}-${pid}.sample.txt`)
+  const result = spawnSync('/usr/bin/sample', [String(pid), '2', '-file', path], {
+    timeout: 10_000,
+    encoding: 'utf8'
+  })
+  return { pid, status: result.status, error: String(result.error ?? ''), stderr: result.stderr }
+}
+
+function ownedRendererProcesses(app) {
+  const executable = app.process().spawnfile
+  if (!executable) {
+    return []
+  }
+  const appPath = dirname(dirname(dirname(executable)))
+  const result = spawnSync('/bin/ps', ['-axo', 'pid=,ppid=,command='], {
+    encoding: 'utf8',
+    timeout: 5_000
+  })
+  return (result.stdout ?? '').split('\n').flatMap((row) => {
+    const match = /^\s*(\d+)\s+(\d+)\s+(.+)$/.exec(row)
+    return match &&
+      match[3].includes(`${appPath}/Contents/Frameworks/`) &&
+      match[3].includes('--type=renderer')
+      ? [{ pid: Number(match[1]), parentPid: Number(match[2]), command: match[3] }]
+      : []
+  })
 }
 
 async function debuggerEvidence(page) {
@@ -50,7 +82,7 @@ async function debuggerEvidence(page) {
 }
 
 export async function startupEvidence(app, output, label) {
-  const main = await observe(
+  const inventory = await observe(
     app.evaluate(({ app, BrowserWindow }) => ({
       metrics: app.getAppMetrics(),
       windows: BrowserWindow.getAllWindows().map((window) => ({
@@ -66,6 +98,11 @@ export async function startupEvidence(app, output, label) {
     'Main process inventory',
     5_000
   )
+  const main = { ...inventory, pid: app.process().pid ?? null }
+  if (main.error) {
+    main.sample = processSample(main.pid, output, `${label}-main`)
+    main.renderers = ownedRendererProcesses(app)
+  }
   writeJson(join(output, `${label}-windows.json`), main)
   console.log(`[real-orca] ${label} main diagnostics: ${JSON.stringify(main)}`)
   const observations = []
@@ -114,20 +151,10 @@ export async function startupEvidence(app, output, label) {
       observation.debugger = await debuggerEvidence(page).catch((error) => ({
         error: String(error)
       }))
-      const pid = main.windows?.find((window) => window.url === page.url())?.rendererPid
-      if (Number.isSafeInteger(pid) && pid > 1) {
-        const result = spawnSync(
-          '/usr/bin/sample',
-          [String(pid), '2', '-file', join(output, `${label}-renderer-${pid}.sample.txt`)],
-          { timeout: 10_000, encoding: 'utf8' }
-        )
-        observation.sample = {
-          pid,
-          status: result.status,
-          error: String(result.error ?? ''),
-          stderr: result.stderr
-        }
-      }
+      const pid =
+        main.windows?.find((window) => window.url === page.url())?.rendererPid ??
+        main.renderers?.[index]?.pid
+      observation.sample = processSample(pid, output, `${label}-renderer`)
     }
     writeFileSync(
       join(output, `${label}-startup-${index}-dom.txt`),

@@ -171,6 +171,15 @@ describe('real Orca update acceptance contract', () => {
   it('preserves normal packaging hooks and does not invoke localBuild or replace the native installer', () => {
     const build = readFileSync(new URL('./probe-package.mjs', import.meta.url), 'utf8')
     const run = readFileSync(new URL('./run-probe.mjs', import.meta.url), 'utf8')
+    const runtime = readFileSync(new URL('./probe-runtime.mjs', import.meta.url), 'utf8')
+    const packagedFixture = readFileSync('tests/e2e/helpers/packaged-issues-journey.ts', 'utf8')
+    expect(runtime).toContain("process.platform === 'darwin' ? ['--use-mock-keychain'] : []")
+    expect(packagedFixture).toContain(
+      "process.platform === 'darwin' ? ['--use-mock-keychain'] : []"
+    )
+    expect(run).toContain(
+      "mockKeychainArgumentRetained: native.command.includes('--use-mock-keychain')"
+    )
     expect(build.match(/runBuild\(\['run', 'build:release'\]/g)).toHaveLength(1)
     expect(build).toContain('config/scripts/integration-builds/electron-builder.cjs')
     expect(build).not.toContain('afterPack:')

@@ -183,6 +183,7 @@ async function run(output) {
     writeJson(join(output, 'native-relaunch.json'), {
       ...native,
       readiness,
+      mockKeychainArgumentRetained: native.command.includes('--use-mock-keychain'),
       oldPid: first.details.pid,
       rendererAcceptance:
         'Instrumented reopen follows native relaunch; native LaunchServices process observed separately.'

@@ -3,7 +3,7 @@ title: 集成分支自动出包
 slug: 集成分支自动出包
 status: testing
 created: 2026-09-12
-updated: 2026-09-12
+updated: 2026-09-13
 external_ids: []
 ---
 
@@ -45,6 +45,15 @@ external_ids: []
 - 影响范围：REQ-401、REQ-402、REQ-403；APK 沿用 Expo debug 签名并核验指纹，不生成密钥或暗改 versionCode。
 
 ## 3. 开发记录
+
+### 2026-09-13：隔离主进程启动阻塞，补齐原生移动端环境
+
+- 本轮目标：用分层实证定位 Orca 启动阻塞，并继续原生安装验收。
+- 完成内容：第五轮 A/B 成品核验通过；页面加载后主进程 inventory、renderer 简单表达式及独立 CDP 均超时，不能归因为 store 字段。失败清理自然结束，不再空挂。Android arm64 无窗口模拟器已创建，真实 APK 安装和设置/关于页启动通过。
+- 代码或文档变更：测试启动补上仓库 packaged-issues 验收既有的 macOS `--use-mock-keychain`，仅作测试环境单变量对照；主进程超时直接采样已知自身 PID，不再依赖失联的 CDP 获取进程身份；单独记录原生重启是否保留参数。
+- 验证证据：P2 run 34707940000；8 项 probe 合同通过；移动端 `.docs/integration-updates-ui-validation/2026-09-12/android-native/` 保存真实界面。当前远端仍是旧 schema 清单，关于页实际返回 `Invalid integration update manifest.`，没有把它当成更新通过。
+- 未解决问题：钥匙串阻塞尚无线程栈证明；真实 Orca 原生更新/终端恢复、Android 应用内覆盖安装及完整清单发布仍待验。PR 新一轮既有会话关闭时间预算测试失败，源码与 integration 一致、本地 30/30 通过，已重跑失败 CI，未绕过门禁。
+- 下一步：运行第六轮 arm64 单变量对照，按实际结果修复；发布完整更新清单后用已安装的 Android 旧版验证真实默认更新源与系统安装。
 
 ### 2026-09-13：两版成品核验通过，补齐启动失败现场
 

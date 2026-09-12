@@ -31,7 +31,7 @@ export async function launchOrca(appPath, isolation, output, label) {
   delete env.ELECTRON_RUN_AS_NODE
   const app = await electron.launch({
     executablePath: join(appPath, 'Contents', 'MacOS', 'Orca'),
-    args: ['--disable-gpu'],
+    args: ['--disable-gpu', ...(process.platform === 'darwin' ? ['--use-mock-keychain'] : [])],
     env,
     timeout: 120_000
   })
