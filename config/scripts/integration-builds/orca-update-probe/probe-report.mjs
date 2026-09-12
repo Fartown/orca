@@ -43,12 +43,7 @@ export function finishReport(output, report, error, cleanup) {
     started_at: report.started,
     finished_at: new Date().toISOString(),
     scope: {
-      covered: [
-        'default fork check',
-        'real native updater',
-        'packaged source A/B',
-        'terminal continuity'
-      ],
+      covered: report.actions.map((step) => step.action),
       out_of_scope: [
         'Gatekeeper first install',
         'public GitHub asset delivery',
@@ -59,7 +54,7 @@ export function finishReport(output, report, error, cleanup) {
     environment: {
       platform: process.platform,
       arch: process.arch,
-      electron: 'from repository lockfile',
+      browser: report.runtime ?? 'not launched',
       githubRun: process.env.GITHUB_RUN_ID,
       isolation: 'disposable profile; hidden windows'
     },

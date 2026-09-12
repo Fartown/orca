@@ -80,9 +80,20 @@ function signMacBundle({
   privateKeyPath,
   evidenceDirectory
 }) {
-  const { captureSigningMetadata, assertSigningMetadata } = require('./mac-signing-metadata.cjs')
+  const {
+    captureSigningMetadata,
+    assertSigningMetadata,
+    findObjectResources,
+    exactSigningExclusions
+  } = require('./mac-signing-metadata.cjs')
   mkdirSync(evidenceDirectory, { recursive: true })
   const before = captureSigningMetadata(appPath)
+  // MH_OBJECT files are sealed resources, not runnable code that rcodesign can sign.
+  const objectResources = findObjectResources(appPath)
+  writeFileSync(
+    join(evidenceDirectory, 'object-resources.json'),
+    JSON.stringify(objectResources, null, 2)
+  )
   const result = run(executable, [
     'sign',
     '--config-file',
@@ -93,6 +104,7 @@ function signMacBundle({
     privateKeyPath,
     '--timestamp-url',
     'none',
+    ...exactSigningExclusions(objectResources),
     appPath
   ])
   writeFileSync(join(evidenceDirectory, 'rcodesign.log'), `${result.stdout}\n${result.stderr}`)

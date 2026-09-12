@@ -1,5 +1,5 @@
 const { createHash } = require('node:crypto')
-const { existsSync, readFileSync, readdirSync } = require('node:fs')
+const { existsSync, readFileSync, readdirSync, openSync, readSync, closeSync } = require('node:fs')
 const { join, relative } = require('node:path')
 const { spawnSync } = require('node:child_process')
 const { isDeepStrictEqual } = require('node:util')
@@ -65,4 +65,55 @@ function assertSigningMetadata(before, after) {
   }
 }
 
-module.exports = { captureSigningMetadata, assertSigningMetadata }
+function findObjectResources(root) {
+  const resources = join(root, 'Contents', 'Resources')
+  const objects = []
+  if (!existsSync(resources)) {
+    return objects
+  }
+  function visit(directory) {
+    for (const entry of readdirSync(directory, { withFileTypes: true })) {
+      const file = join(directory, entry.name)
+      if (entry.isDirectory() && !entry.name.endsWith('.app')) {
+        visit(file)
+      } else if (entry.isFile() && entry.name.endsWith('.o')) {
+        const header = Buffer.alloc(16)
+        const descriptor = openSync(file, 'r')
+        let bytes
+        try {
+          bytes = readSync(descriptor, header, 0, header.length, 0)
+        } finally {
+          closeSync(descriptor)
+        }
+        if (bytes !== header.length) {
+          continue
+        }
+        const magic = header.readUInt32BE(0)
+        const type = [0xfeedface, 0xfeedfacf].includes(magic)
+          ? header.readUInt32BE(12)
+          : [0xcefaedfe, 0xcffaedfe].includes(magic)
+            ? header.readUInt32LE(12)
+            : null
+        if (type === 1) {
+          objects.push(relative(root, file).split('\\').join('/'))
+        }
+      }
+    }
+  }
+  visit(resources)
+  return objects.sort()
+}
+
+function exactSigningExclusions(paths) {
+  return paths.flatMap((file) => [
+    '--exclude',
+    file.replace(/[*?[\]]/g, (character) => `[${character}]`)
+  ])
+}
+
+module.exports = {
+  captureSigningMetadata,
+  assertSigningMetadata,
+  findObjectResources,
+  exactSigningExclusions
+}

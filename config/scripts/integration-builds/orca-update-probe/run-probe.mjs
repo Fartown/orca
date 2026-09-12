@@ -8,6 +8,7 @@ import {
   cpSync
 } from 'node:fs'
 import { join, dirname } from 'node:path'
+import { randomBytes } from 'node:crypto'
 import { createElectronHomeIsolation } from '../../../../tests/e2e/helpers/electron-home-isolation.ts'
 import { assertHostedMac, probeOptions } from '../signing-probe/probe-policy.mjs'
 import { createProbeIdentities } from '../signing-probe/probe-identities.mjs'
@@ -23,7 +24,8 @@ import {
   matchingAppProcesses,
   snapshot,
   stopOwnedProcesses,
-  terminalCommand,
+  terminalContinuity,
+  verifyNativeRuntime,
   waitUntil
 } from './probe-runtime.mjs'
 
@@ -59,6 +61,7 @@ async function run(output) {
     writeFileSync(join(profile, 'orca-data.json'), JSON.stringify(await completedProfile()))
     const executable = await ensureRcodesign(join(scratch, 'signing-tool'))
     identity = createProbeIdentities(output)
+    cleanup.privateMaterial = 'temporary PEM created; cleanup pending'
     const publisher = identity.identities[0]
     const build = packageVersions({
       scratch,
@@ -94,13 +97,18 @@ async function run(output) {
       output: join(output, 'network.json')
     })
     const first = await launchOrca(build.apps[0], isolation, output, 'before')
+    report.runtime = {
+      electron: first.details.electronVersion,
+      chromium: first.details.chromiumVersion
+    }
     activeApp = first.app
     if (first.details.version !== build.versions[0]) {
       throw new Error('Initial process is not version A')
     }
     await routeForkRequests(first.app, feed.url, build.tag)
     const terminal = await createTerminal(first.page, isolation.isolatedHome)
-    const before = await terminalCommand(first.page, `BEFORE_${Date.now()}`)
+    const continuityValue = randomBytes(16).toString('hex')
+    const before = await terminalContinuity(first.page, continuityValue, true)
     writeJson(join(output, 'terminal-before.json'), { ...terminal, ...before })
     recordCheckpoint(
       report,
@@ -165,8 +173,10 @@ async function run(output) {
       'Native replacement and new B process',
       180_000
     )
+    const readiness = await verifyNativeRuntime(build.apps[0], profile, native.pid)
     writeJson(join(output, 'native-relaunch.json'), {
       ...native,
+      readiness,
       oldPid: first.details.pid,
       rendererAcceptance:
         'Instrumented reopen follows native relaunch; native LaunchServices process observed separately.'
@@ -188,8 +198,11 @@ async function run(output) {
     const savedTab = second.page.locator(`[data-tab-id="${terminal.tabId}"]`).first()
     await savedTab.waitFor({ state: 'visible', timeout: 60_000 })
     await savedTab.click({ force: true })
-    const after = await terminalCommand(second.page, `AFTER_${Date.now()}`)
+    const after = await terminalContinuity(second.page, continuityValue)
     writeJson(join(output, 'terminal-after.json'), after)
+    if (after.ptyId !== before.ptyId) {
+      throw new Error('Original shell marker survived but PTY identity changed')
+    }
     recordCheckpoint(
       report,
       'Native replacement launches B and its saved terminal executes again',
@@ -200,6 +213,9 @@ async function run(output) {
   } catch (error) {
     failure = error
     console.error(error)
+    if (error.terminalObservation) {
+      writeJson(join(output, 'terminal-failure.json'), error.terminalObservation)
+    }
     const page = activeApp?.windows()[0]
     if (page) {
       await snapshot(page, output, '99-failure').catch(() => undefined)
@@ -221,6 +237,9 @@ async function run(output) {
       },
       async () => {
         identity?.cleanup()
+        if (identity && cleanup.privateMaterial !== 'removed before runtime') {
+          cleanup.privateMaterial = 'removed during failure cleanup'
+        }
       }
     ]) {
       try {

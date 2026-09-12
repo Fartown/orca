@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { createForkFeed, routeForkRequests } from './probe-feed.mjs'
 import { completedProfile } from './probe-package.mjs'
+import { continuityCommand, hasContinuityOutput } from './probe-runtime.mjs'
 import { assertHostedMac } from '../signing-probe/probe-policy.mjs'
 
 const directories = []
@@ -14,6 +15,23 @@ afterEach(() => {
 })
 
 describe('real Orca update acceptance contract', () => {
+  it('requires fresh output from the original shell variable, not command echo or old scrollback', () => {
+    const marker = '1234567890abcdef1234567890abcdef'
+    const before = continuityCommand(marker, true)
+    const after = continuityCommand(marker, false)
+    expect(before).toContain(`export ORCA_UPDATE_CONTINUITY='${marker}'`)
+    expect(before).not.toContain(`ORCA_BEFORE_${marker}`)
+    expect(before).not.toContain('ORCA_AFTER_')
+    expect(after).toContain('"$ORCA_UPDATE_CONTINUITY"')
+    expect(after).not.toContain(marker)
+    expect(after).not.toContain('export ')
+    expect(after).toContain('ORCA_AFTER_%s')
+    const restoredHistory = `ORCA_BEFORE_${marker}\n${after}\nORCA_AFTER_\n`
+    expect(hasContinuityOutput(restoredHistory, marker, false)).toBe(false)
+    expect(hasContinuityOutput(`${restoredHistory}ORCA_AFTER_${marker}\n`, marker, false)).toBe(
+      true
+    )
+  })
   it('refuses actual execution on a developer Mac', () => {
     expect(() => assertHostedMac({}, 'darwin')).toThrow()
     expect(() =>

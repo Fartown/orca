@@ -1,5 +1,5 @@
 import { _electron as electron } from 'playwright'
-import { appendFileSync, writeFileSync } from 'node:fs'
+import { appendFileSync, writeFileSync, readFileSync, existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { command, writeJson } from '../signing-probe/probe-command.mjs'
 import { assertElectronResolvedIsolatedHome } from '../../../../tests/e2e/helpers/electron-home-isolation.ts'
@@ -45,6 +45,8 @@ export async function launchOrca(appPath, isolation, output, label) {
     pid: process.pid,
     execPath: process.execPath,
     packaged: app.isPackaged,
+    electronVersion: process.versions.electron,
+    chromiumVersion: process.versions.chrome,
     visibleWindows: BrowserWindow.getAllWindows().filter((window) => window.isVisible()).length
   }))
   assertElectronResolvedIsolatedHome(details.home, isolation)
@@ -89,7 +91,18 @@ export async function createTerminal(page, folderPath) {
   }, folderPath)
 }
 
-export async function terminalCommand(page, marker) {
+export function continuityCommand(value, initialize) {
+  if (!/^[a-f0-9]{32}$/.test(value)) {
+    throw new Error('Continuity marker must be random hexadecimal data')
+  }
+  return `${initialize ? `export ORCA_UPDATE_CONTINUITY='${value}'; ` : ''}printf 'ORCA_${initialize ? 'BEFORE' : 'AFTER'}_%s\\n' "$ORCA_UPDATE_CONTINUITY"`
+}
+
+export function hasContinuityOutput(text, value, initialize) {
+  return text.includes(`ORCA_${initialize ? 'BEFORE' : 'AFTER'}_${value}`)
+}
+
+export async function terminalContinuity(page, value, initialize = false) {
   await page.waitForFunction(
     () => {
       const tab = window.__store?.getState().activeTabId
@@ -102,21 +115,49 @@ export async function terminalCommand(page, marker) {
   )
   const input = page.locator('.xterm-helper-textarea').last()
   await input.focus()
-  await page.keyboard.type(`printf 'ORCA_%s\\n' '${marker}'`)
+  await page.keyboard.type(continuityCommand(value, initialize))
   await page.keyboard.press('Enter')
-  return waitUntil(
-    () =>
-      page.evaluate((marker) => {
-        const tab = window.__store.getState().activeTabId
-        const pane = window.__paneManagers.get(tab)?.getActivePane()
-        const text = pane?.serializeAddon?.serialize?.() ?? ''
-        return text.includes(`ORCA_${marker}`)
-          ? { text: text.slice(-8000), ptyId: pane.container.dataset.ptyId }
-          : null
-      }, marker),
-    `Terminal output ${marker}`,
-    60_000
+  let observed
+  try {
+    return await waitUntil(
+      async () => {
+        observed = await page.evaluate(() => {
+          const tab = window.__store.getState().activeTabId
+          const pane = window.__paneManagers.get(tab)?.getActivePane()
+          const text = pane?.serializeAddon?.serialize?.() ?? ''
+          return { text: text.slice(-8000), ptyId: pane?.container.dataset.ptyId }
+        })
+        return hasContinuityOutput(observed.text, value, initialize) ? observed : null
+      },
+      'Original shell continuity marker',
+      30_000
+    )
+  } catch (error) {
+    error.terminalObservation = observed
+    throw error
+  }
+}
+
+export async function verifyNativeRuntime(appPath, profile, pid) {
+  const metadata = await waitUntil(
+    () => {
+      const state = JSON.parse(readFileSync(join(profile, 'orca-runtime.json'), 'utf8'))
+      const socket = state.transports?.find((transport) => transport.kind === 'unix')
+      return state.pid === pid && socket && existsSync(socket.endpoint)
+        ? { pid: state.pid, startedAt: state.startedAt, transport: socket.kind }
+        : null
+    },
+    'Native B publishes its isolated runtime',
+    30_000
   )
+  const started = Date.now()
+  while (Date.now() - started < 15_000) {
+    if (!matchingAppProcesses(appPath).some((entry) => entry.pid === pid)) {
+      throw new Error('Native B exited during startup stability observation')
+    }
+    await new Promise((resolve) => setTimeout(resolve, 500))
+  }
+  return { ...metadata, stableForMs: Date.now() - started }
 }
 
 export function matchingAppProcesses(appPath) {

@@ -14,6 +14,7 @@ export function runBuild(args, env, log) {
       timeout: 30 * 60_000
     })
     if (result.status !== 0 || result.error) {
+      console.error(readFileSync(log, 'utf8').slice(-16_000))
       throw new Error(
         `Build failed: ${args[0]}; see ${log}; ${result.error?.message ?? result.status}`
       )
