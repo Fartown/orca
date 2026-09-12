@@ -405,12 +405,7 @@ function median(values: readonly number[]): number {
   return sorted.length % 2 === 0 ? (sorted[middle - 1] + sorted[middle]) / 2 : sorted[middle]
 }
 
-test.use({
-  orcaAppExtraEnv: { ORCA_BACKGROUND_LAUNCH: '1' },
-  orcaAppExtraArgs: ['--disable-backgrounding-occluded-windows', '--disable-renderer-backgrounding']
-})
-
-// Use the CI compositor pipeline; ORCA_BACKGROUND_LAUNCH still keeps the window hidden.
+// Frame timing needs the headful fixture on an isolated display, not a hidden renderer.
 test.describe('Worktree switch first paint @headful', () => {
   test('repaints an unmounted worktree within the switch budget', async ({
     electronApp,
@@ -465,10 +460,8 @@ test.describe('Worktree switch first paint @headful', () => {
         const unmounted = await waitForUnmountedTabs(orcaPage, targetTabIds)
         expect(unmounted, 'target worktree was already mounted before the switch').toBe(true)
 
-        // The hidden Linux renderer can restore its buffer while pausing the rAF clock.
         const hostWindow = await electronApp.browserWindow(orcaPage)
         const framePolicy = await hostWindow.evaluate((window) => {
-          window.webContents.setBackgroundThrottling(false)
           return {
             visible: window.isVisible(),
             backgroundThrottling: window.webContents.getBackgroundThrottling()
