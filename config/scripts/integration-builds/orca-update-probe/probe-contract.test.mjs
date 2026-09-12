@@ -4,9 +4,11 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { createForkFeed, routeForkRequests } from './probe-feed.mjs'
 import { completedProfile } from './probe-package.mjs'
-import { continuityCommand, hasContinuityOutput } from './probe-runtime.mjs'
+import { continuityCommand, hasContinuityOutput, readNativeRuntime } from './probe-runtime.mjs'
 import { assertHostedMac } from '../signing-probe/probe-policy.mjs'
 import { readyOrca, startupDeadline } from './probe-startup.mjs'
+import { nativeStatePaths, observeNativeRelaunch } from './probe-native-relaunch.mjs'
+import { selectNativeProcess } from './probe-native-selection.mjs'
 
 const directories = []
 afterEach(() => {
@@ -16,6 +18,74 @@ afterEach(() => {
 })
 
 describe('real Orca update acceptance contract', () => {
+  it('rejects surviving same-executable daemons and requires a new metadata-owned main PID', () => {
+    const old = [
+      { pid: 123, command: 'Orca' },
+      { pid: 456, command: 'Orca daemon.js' }
+    ]
+    const before = old.map(({ pid }) => pid)
+    expect(selectNativeProcess(old, before, { pid: 456 })).toBeNull()
+    const inventory = [
+      ...old,
+      { pid: 789, command: 'Orca' },
+      { pid: 790, command: 'Orca daemon.js' }
+    ]
+    expect(selectNativeProcess(inventory, before, {})).toBeNull()
+    expect(selectNativeProcess(inventory, before, { pid: 123 })).toBeNull()
+    expect(selectNativeProcess(inventory, before, { pid: 789 })).toEqual(inventory[2])
+    const directory = mkdtempSync(join(tmpdir(), 'orca-native-metadata-contract-'))
+    directories.push(directory)
+    expect(readNativeRuntime(directory)).toEqual({ error: 'ENOENT' })
+    writeFileSync(
+      join(directory, 'orca-runtime.json'),
+      JSON.stringify({ pid: 789, startedAt: 1, transports: [], authToken: 'must-not-be-recorded' })
+    )
+    expect(readNativeRuntime(directory)).toEqual({ pid: 789, startedAt: 1, transports: [] })
+  })
+  it('saves native replacement before readiness and retains failure diagnostics without passing', async () => {
+    const directory = mkdtempSync(join(tmpdir(), 'orca-native-relaunch-contract-'))
+    directories.push(directory)
+    const native = {
+      pid: 456,
+      diskVersion: '1.0.1',
+      command: '/fixture/Orca.app/Contents/MacOS/Orca'
+    }
+    const context = {
+      native,
+      oldPid: 123,
+      appPath: '/fixture/Orca.app',
+      profile: directory,
+      output: directory
+    }
+    await expect(
+      observeNativeRelaunch(
+        context,
+        async () => {
+          const saved = JSON.parse(readFileSync(join(directory, 'native-relaunch.json'), 'utf8'))
+          expect(saved).toMatchObject({
+            ...native,
+            oldPid: 123,
+            mockKeychainArgumentRetained: false
+          })
+          throw new Error('fixture native runtime absent')
+        },
+        () => ({ sample: { pid: 456 }, statePaths: [`${directory}/logs/daemon.log`] })
+      )
+    ).rejects.toThrow('fixture native runtime absent')
+    const saved = JSON.parse(readFileSync(join(directory, 'native-relaunch.json'), 'utf8'))
+    expect(saved.readiness).toBeUndefined()
+    expect(saved.readinessError).toContain('fixture native runtime absent')
+    expect(saved.diagnostics.sample.pid).toBe(456)
+    expect(
+      nativeStatePaths(
+        `p456\nn/unrelated/private.txt\nn${directory}/orca-runtime.json\nn/Users/runner/Library/Application Support/Orca/logs/main.log`,
+        directory
+      )
+    ).toEqual([
+      `${directory}/orca-runtime.json`,
+      '/Users/runner/Library/Application Support/Orca/logs/main.log'
+    ])
+  })
   it('bounds renderer diagnostics even when the page never responds', async () => {
     await expect(startupDeadline(new Promise(() => {}), 'Fixture renderer', 10)).rejects.toThrow(
       'Fixture renderer timed out after 10ms'
@@ -177,7 +247,8 @@ describe('real Orca update acceptance contract', () => {
     expect(packagedFixture).toContain(
       "process.platform === 'darwin' ? ['--use-mock-keychain'] : []"
     )
-    expect(run).toContain(
+    const native = readFileSync(new URL('./probe-native-relaunch.mjs', import.meta.url), 'utf8')
+    expect(native).toContain(
       "mockKeychainArgumentRetained: native.command.includes('--use-mock-keychain')"
     )
     expect(build.match(/runBuild\(\['run', 'build:release'\]/g)).toHaveLength(1)

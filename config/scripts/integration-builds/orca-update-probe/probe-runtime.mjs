@@ -110,12 +110,29 @@ export async function terminalContinuity(page, value, initialize = false) {
   }
 }
 
+export function readNativeRuntime(profile) {
+  try {
+    const state = JSON.parse(readFileSync(join(profile, 'orca-runtime.json'), 'utf8'))
+    return {
+      pid: state.pid,
+      startedAt: state.startedAt,
+      transports: (state.transports ?? []).map(({ kind, endpoint }) => ({
+        kind,
+        endpoint,
+        exists: kind === 'unix' && existsSync(endpoint)
+      }))
+    }
+  } catch (error) {
+    return { error: error.code ?? String(error) }
+  }
+}
+
 export async function verifyNativeRuntime(appPath, profile, pid) {
   const metadata = await waitUntil(
     () => {
-      const state = JSON.parse(readFileSync(join(profile, 'orca-runtime.json'), 'utf8'))
+      const state = readNativeRuntime(profile)
       const socket = state.transports?.find((transport) => transport.kind === 'unix')
-      return state.pid === pid && socket && existsSync(socket.endpoint)
+      return state.pid === pid && socket?.exists
         ? { pid: state.pid, startedAt: state.startedAt, transport: socket.kind }
         : null
     },

@@ -24,7 +24,7 @@ async function observe(promise, label, timeout) {
   return startupDeadline(promise, label, timeout).catch((error) => ({ error: String(error) }))
 }
 
-function processSample(pid, output, label) {
+export function processSample(pid, output, label) {
   if (!Number.isSafeInteger(pid) || pid <= 1) {
     return null
   }

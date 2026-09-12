@@ -46,6 +46,15 @@ external_ids: []
 
 ## 3. 开发记录
 
+### 2026-09-13：原生 staging 通过，修正验收的主进程识别
+
+- 本轮目标：验证原生替换后的真正主进程和原终端连续性。
+- 完成内容：第七轮正常 A/B ZIP、包内配置、签名、UI、终端和默认 fork 检查通过；原生日志确认下载完成、`macos_installer_ready` 和调用原生安装。磁盘已变 B，但旧探针选择同 executable 的第一个非 A PID，可能把应保留的终端 daemon 当成新主进程；本轮没有保存选中 PID，不能认定这就是唯一失败原因。
+- 代码或文档变更：升级前保存全体同 executable PID 与脱敏 A runtime，并先断言 A 的状态路径/主 PID/socket 正确；B 必须同时满足新 metadata 主 PID、非升级前 PID、当前进程清单和磁盘版本。每次记录当前 metadata，避免早期 ENOENT 掩盖后续 PID 不匹配。额外重开仪器化 B 时仅等待该主 PID 退出，不等待需保留的 daemon 消失；补齐失败采样与状态路径证据。
+- 验证证据：run 34709105346 的 Ready to Install 真截图和 updater 日志；源码确认 daemon 使用同一 Electron executable 且原生安装前采取 disconnect；10 项 probe 合同通过，覆盖旧 daemon 假阳性和先落证据再失败。
+- 未解决问题：尚未证明第七轮识别出的 PID 是新版主进程，也未完成升级后原 shell 连续性。不能把下载、staging 或磁盘替换当作完整通过。
+- 下一步：第八轮保持原验收强度，使用正确的主进程身份完成原生重启与终端恢复。
+
 ### 2026-09-13：真实界面与更新检查通过，纠正验收包目标
 
 - 本轮目标：跑通真实 Orca 的默认 fork 检查、下载、安装和终端恢复。

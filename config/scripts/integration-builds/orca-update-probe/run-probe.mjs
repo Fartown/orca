@@ -19,14 +19,16 @@ import { completedProfile, packageVersions } from './probe-package.mjs'
 import { createForkFeed, routeForkRequests } from './probe-feed.mjs'
 import { beginReport, finishReport, recordCheckpoint } from './probe-report.mjs'
 import { closeOrca } from './probe-startup.mjs'
+import { observeNativeRelaunch } from './probe-native-relaunch.mjs'
+import { waitForNativeReplacement } from './probe-native-selection.mjs'
 import {
   createTerminal,
   launchOrca,
   matchingAppProcesses,
+  readNativeRuntime,
   snapshot,
   stopOwnedProcesses,
   terminalContinuity,
-  verifyNativeRuntime,
   waitUntil
 } from './probe-runtime.mjs'
 
@@ -149,46 +151,41 @@ async function run(output) {
       join(output, 'fork-request-routing.json'),
       await first.app.evaluate(() => globalThis.__orcaProbeRequests)
     )
+    const beforeProcesses = matchingAppProcesses(build.apps[0])
+    writeJson(join(output, 'pre-update-processes.json'), beforeProcesses)
+    const beforeRuntime = readNativeRuntime(profile)
+    writeJson(join(output, 'pre-update-runtime.json'), beforeRuntime)
+    if (
+      beforeRuntime.pid !== first.details.pid ||
+      !beforeRuntime.transports?.some(({ kind, exists }) => kind === 'unix' && exists)
+    ) {
+      throw new Error('A runtime metadata does not identify its main PID and live isolated socket')
+    }
     await first.page
       .evaluate(() => {
         void window.api.updater.quitAndInstall()
       })
       .catch(() => undefined)
-    const native = await waitUntil(
-      () => {
-        const diskVersion = command(
-          '/usr/bin/plutil',
-          [
-            '-extract',
-            'CFBundleShortVersionString',
-            'raw',
-            join(build.apps[0], 'Contents', 'Info.plist')
-          ],
-          { allowFailure: true }
-        ).stdout.trim()
-        const process = matchingAppProcesses(build.apps[0]).find(
-          (candidate) => candidate.pid !== first.details.pid
-        )
-        return diskVersion === build.versions[1] && process ? { diskVersion, ...process } : null
-      },
-      'Native replacement and new B process',
-      180_000
-    )
-    const readiness = await verifyNativeRuntime(build.apps[0], profile, native.pid)
-    console.log('[real-orca] Native B replaced A, published its runtime and stayed alive')
-    writeJson(join(output, 'native-relaunch.json'), {
-      ...native,
-      readiness,
-      mockKeychainArgumentRetained: native.command.includes('--use-mock-keychain'),
-      oldPid: first.details.pid,
-      rendererAcceptance:
-        'Instrumented reopen follows native relaunch; native LaunchServices process observed separately.'
+    const native = await waitForNativeReplacement({
+      appPath: build.apps[0],
+      version: build.versions[1],
+      beforeProcesses,
+      profile,
+      output
     })
+    await observeNativeRelaunch({
+      native,
+      oldPid: first.details.pid,
+      appPath: build.apps[0],
+      profile,
+      output
+    })
+    console.log('[real-orca] Native B replaced A, published its runtime and stayed alive')
     command('/usr/bin/codesign', ['--verify', '--deep', '--strict', build.apps[0]])
     // LaunchServices does not promise to preserve Playwright's debugger arguments.
     process.kill(native.pid, 'SIGTERM')
     await waitUntil(
-      () => !matchingAppProcesses(build.apps[0]).length,
+      () => !matchingAppProcesses(build.apps[0]).some(({ pid }) => pid === native.pid),
       'Observed native B process exits for instrumented reopen',
       30_000
     )
