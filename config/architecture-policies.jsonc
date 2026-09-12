@@ -388,6 +388,18 @@
             "docs/maintenance/**",
             // Every fork feature's owned paths and seams. config/fork-features.jsonc is
             // cross-checked against this list by check:fork-features.
+            "src/shared/document-preview-size/**",
+            "src/main/document-preview-size/**",
+            "src/shared/doc-preview-file-access.ts",
+            "src/main/browser/doc-preview-file-reader.ts",
+            "src/main/browser/doc-preview-file-reader.test.ts",
+            "src/main/runtime/runtime-file-commands-read-file-explorer-preview.ts",
+            "src/main/runtime/orca-runtime-files-preview-budget.test.ts",
+            "src/main/providers/ssh-filesystem-doc-preview.ts",
+            "src/main/providers/ssh-filesystem-doc-preview.test.ts",
+            "src/relay/fs-handler.ts",
+            "src/shared/rpc-contract/files-params.ts",
+            "src/main/runtime/rpc/methods/files.ts",
             ".docs/并行任务看板/**",
             // 2026-08-31: single-branch delivery decision — goal-mode and the self-hosted
             // artifact backend ship on this same branch alongside Issues.
@@ -843,6 +855,42 @@
             "docs/maintenance/**"
           ],
           "message": "Change is outside the remote workspace absolute path feature and its journal."
+        }
+      ]
+    },
+    {
+      "id": "document-preview-size",
+      "description": "Document-specific read limits stay independent of ordinary file and paired transport limits.",
+      "rules": [
+        {
+          "id": "document-preview-size-worktree-scope",
+          "type": "change-scope",
+          "comparison": "worktree",
+          "whenChanged": [
+            "src/shared/document-preview-size/**",
+            "src/main/document-preview-size/**",
+            "docs/issue/文档预览大小/**"
+          ],
+          "allowedPaths": [
+            "src/shared/document-preview-size/**",
+            "src/main/document-preview-size/**",
+            "docs/issue/文档预览大小/**",
+            "src/shared/doc-preview-file-access.ts",
+            "src/main/browser/doc-preview-file-reader.ts",
+            "src/main/browser/doc-preview-file-reader.test.ts",
+            "src/main/runtime/runtime-file-commands-read-file-explorer-preview.ts",
+            "src/main/runtime/orca-runtime-files-preview-budget.test.ts",
+            "src/main/providers/ssh-filesystem-doc-preview.ts",
+            "src/main/providers/ssh-filesystem-doc-preview.test.ts",
+            "src/relay/fs-handler.ts",
+            "src/shared/rpc-contract/files-params.ts",
+            "src/main/runtime/rpc/methods/files.ts",
+            "config/fork-features.jsonc",
+            "config/architecture-policies.jsonc",
+            "docs/issue/README.md",
+            ".gitignore"
+          ],
+          "message": "Change is outside the document preview size feature."
         }
       ]
     },

@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import { QUICK_OPEN_REMOTE_QUERY_MAX_CODE_UNITS } from '../quick-open-path-search'
 import { FileOpen, WorktreeSelector } from './files-target-params'
+import { DocumentPreviewChunkRequest } from '../document-preview-size/document-preview-chunk'
 
 export const FilePathSearch = WorktreeSelector.extend({
   query: z.string().max(QUICK_OPEN_REMOTE_QUERY_MAX_CODE_UNITS).default(''),
@@ -43,7 +44,8 @@ export const FileOpenDiff = FileOpen.extend({
 export const DocPreviewFileRead = FileOpen.extend({
   entryRelativePath: z.string().min(1),
   implicitRootRelativePath: z.string().nullable(),
-  authorizedRootRelativePaths: z.array(z.string())
+  authorizedRootRelativePaths: z.array(z.string()),
+  chunk: DocumentPreviewChunkRequest.optional()
 })
 
 export const FileTreePath = WorktreeSelector.extend({

@@ -80,7 +80,7 @@ describe('readDocPreviewFile — ssh owner', () => {
       implicitRootPath: null,
       authorizedRootPaths: ['/home/alice/docs'],
       targetPath: '/home/alice/docs/index.html',
-      maxTextBytes: 10 * 1024 * 1024,
+      maxTextBytes: 20 * 1024 * 1024,
       maxBinaryBytes: 10 * 1024 * 1024
     })
     expect(outcome).toEqual({
@@ -215,7 +215,8 @@ describe('readDocPreviewFile — paired runtime owner', () => {
         relativePath: 'docs/index.html',
         entryRelativePath: 'docs/index.html',
         implicitRootRelativePath: null,
-        authorizedRootRelativePaths: ['docs']
+        authorizedRootRelativePaths: ['docs'],
+        chunk: { offset: 0, length: 256 * 1024 }
       },
       15_000
     )
@@ -369,7 +370,8 @@ describe('readDocPreviewFile — paired runtime owner', () => {
         relativePath: 'assets/app.js',
         entryRelativePath: 'docs/index.html',
         implicitRootRelativePath: 'docs',
-        authorizedRootRelativePaths: ['assets']
+        authorizedRootRelativePaths: ['assets'],
+        chunk: { offset: 0, length: 256 * 1024 }
       },
       15_000
     )

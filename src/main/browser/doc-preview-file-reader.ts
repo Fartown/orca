@@ -1,10 +1,12 @@
 import { extname } from 'node:path'
-import type { RuntimeFilePreviewResult } from '../../shared/runtime-file-contracts'
 import type { DocPreviewFileFailureReason } from '../../shared/doc-preview-scheme'
 import { callRuntimeEnvironment } from '../ipc/runtime-environment-transport-routing'
 import { FileReadCapExceededError } from '../ssh/ssh-filesystem-stream-reader'
 import { getCanonicalUserDataPath } from '../persistence'
 import { requireSshFilesystemProvider } from '../providers/ssh-filesystem-dispatch'
+import { DOCUMENT_PREVIEW_TEXT_MAX_BYTES } from '../../shared/document-preview-size/document-preview-size-limit'
+import { readDocumentPreviewInChunks } from '../document-preview-size/document-preview-chunk-reader'
+import type { DocPreviewFileAccessResult } from '../../shared/doc-preview-file-access'
 import {
   resolveDocPreviewAuthorityPaths,
   resolveDocPreviewCandidatePath,
@@ -15,7 +17,6 @@ import {
 } from './doc-preview-grant-registry'
 
 const DOC_PREVIEW_READ_TIMEOUT_MS = 15_000
-const DIRECT_SSH_DOC_PREVIEW_TEXT_MAX_BYTES = 10 * 1024 * 1024
 const DIRECT_SSH_DOC_PREVIEW_BINARY_MAX_BYTES = 10 * 1024 * 1024
 
 /** Why not "needs a newer server": the SSH read path only ever serves images and PDFs as bytes, so
@@ -116,34 +117,32 @@ async function readRuntimeDocPreviewFile(
   authorizedRootRelativePaths: string[]
 ): Promise<PreviewFileBytes> {
   const userDataPath = getCanonicalUserDataPath()
-  const response = await callRuntimeEnvironment(
-    userDataPath,
-    environmentId,
-    'files.readDocPreview',
-    {
-      worktree: worktreeSelector,
-      relativePath,
-      entryRelativePath,
-      implicitRootRelativePath,
-      authorizedRootRelativePaths
-    },
-    DOC_PREVIEW_READ_TIMEOUT_MS
-  )
-  if (!response.ok) {
-    // Why the rewrite: fail-closed on an old host is deliberate, so tell the reader what to do —
-    // the raw method_not_found wording reads as a broken preview, not an out-of-date machine.
-    throw new Error(
-      response.error.code === 'method_not_found'
-        ? RUNTIME_DOC_PREVIEW_UPDATE_REQUIRED_MESSAGE
-        : response.error.message
+  return readDocumentPreviewInChunks(async (chunk) => {
+    const response = await callRuntimeEnvironment(
+      userDataPath,
+      environmentId,
+      'files.readDocPreview',
+      {
+        worktree: worktreeSelector,
+        relativePath,
+        entryRelativePath,
+        implicitRootRelativePath,
+        authorizedRootRelativePaths,
+        chunk
+      },
+      DOC_PREVIEW_READ_TIMEOUT_MS
     )
-  }
-  const preview = response.result as RuntimeFilePreviewResult
-  return {
-    content: preview.content,
-    isBinary: preview.isBinary,
-    ...(preview.mimeType ? { mimeType: preview.mimeType } : {})
-  }
+    if (!response.ok) {
+      // Why the rewrite: fail-closed on an old host is deliberate, so tell the reader what to do —
+      // the raw method_not_found wording reads as a broken preview, not an out-of-date machine.
+      throw new Error(
+        response.error.code === 'method_not_found'
+          ? RUNTIME_DOC_PREVIEW_UPDATE_REQUIRED_MESSAGE
+          : response.error.message
+      )
+    }
+    return response.result as DocPreviewFileAccessResult
+  })
 }
 
 function notFoundOutcome(message = 'Not found'): DocPreviewReadOutcome {
@@ -183,7 +182,7 @@ export async function readDocPreviewFile(
           implicitRootPath: authority.implicitRootPath,
           authorizedRootPaths: authority.authorizedRootPaths,
           targetPath: absolutePath,
-          maxTextBytes: DIRECT_SSH_DOC_PREVIEW_TEXT_MAX_BYTES,
+          maxTextBytes: DOCUMENT_PREVIEW_TEXT_MAX_BYTES,
           maxBinaryBytes: DIRECT_SSH_DOC_PREVIEW_BINARY_MAX_BYTES
         }),
         contentType

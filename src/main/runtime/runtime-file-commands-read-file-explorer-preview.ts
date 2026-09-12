@@ -26,6 +26,8 @@ import type {
   DocPreviewFileAccessResult
 } from '../../shared/doc-preview-file-access'
 import { readAuthorizedDocPreviewFile } from '../../shared/doc-preview-file-access'
+import { DOCUMENT_PREVIEW_TEXT_MAX_BYTES } from '../../shared/document-preview-size/document-preview-size-limit'
+import type { DocumentPreviewChunkRequest } from '../../shared/document-preview-size/document-preview-chunk'
 import { readSshFileExplorerChunk } from './ssh-file-explorer-chunk-read'
 
 export class RuntimeFileCommandsWithReadFileExplorerPreview extends RuntimeFileCommandsWithAssertRemoteTerminalFileGrantPathStillCanonical {
@@ -106,7 +108,8 @@ export class RuntimeFileCommandsWithReadFileExplorerPreview extends RuntimeFileC
     entryRelativePath: string,
     implicitRootRelativePath: string | null,
     authorizedRootRelativePaths: string[],
-    maxContentBytes?: number
+    maxContentBytes?: number,
+    chunk?: DocumentPreviewChunkRequest
   ): Promise<DocPreviewFileAccessResult> {
     const relativePaths = [
       '',
@@ -131,8 +134,12 @@ export class RuntimeFileCommandsWithReadFileExplorerPreview extends RuntimeFileC
       implicitRootPath: implicitRoot?.path ?? null,
       authorizedRootPaths: authorizedRoots.map((root) => root.path),
       targetPath: target.path,
-      maxTextBytes: MOBILE_FILE_READ_MAX_BYTES,
-      maxBinaryBytes: binaryMaxBytes
+      maxTextBytes:
+        maxContentBytes === undefined || chunk !== undefined
+          ? DOCUMENT_PREVIEW_TEXT_MAX_BYTES
+          : MOBILE_FILE_READ_MAX_BYTES,
+      maxBinaryBytes: binaryMaxBytes,
+      ...(chunk ? { chunk } : {})
     }
     const provider = requireRuntimeFileProvider(target)
     if (provider && !provider.readDocPreviewFile) {

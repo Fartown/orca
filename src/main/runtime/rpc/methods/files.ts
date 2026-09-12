@@ -81,7 +81,8 @@ export const FILE_METHODS = [
         params.entryRelativePath,
         params.implicitRootRelativePath,
         params.authorizedRootRelativePaths,
-        remoteFileContentBudget(clientKind, requestId)
+        remoteFileContentBudget(clientKind, requestId),
+        ...(params.chunk ? ([params.chunk] as const) : [])
       )
   }),
   defineMethod({
