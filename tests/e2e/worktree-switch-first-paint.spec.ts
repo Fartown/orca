@@ -405,7 +405,10 @@ function median(values: readonly number[]): number {
   return sorted.length % 2 === 0 ? (sorted[middle - 1] + sorted[middle]) / 2 : sorted[middle]
 }
 
-test.use({ orcaAppExtraEnv: { ORCA_BACKGROUND_LAUNCH: '1' } })
+test.use({
+  orcaAppExtraEnv: { ORCA_BACKGROUND_LAUNCH: '1' },
+  orcaAppExtraArgs: ['--disable-backgrounding-occluded-windows', '--disable-renderer-backgrounding']
+})
 
 test.describe('Worktree switch first paint', () => {
   test('repaints an unmounted worktree within the switch budget', async ({
@@ -463,7 +466,14 @@ test.describe('Worktree switch first paint', () => {
 
         // The hidden Linux renderer can restore its buffer while pausing the rAF clock.
         const hostWindow = await electronApp.browserWindow(orcaPage)
-        await hostWindow.evaluate((window) => window.webContents.setBackgroundThrottling(false))
+        const framePolicy = await hostWindow.evaluate((window) => {
+          window.webContents.setBackgroundThrottling(false)
+          return {
+            visible: window.isVisible(),
+            backgroundThrottling: window.webContents.getBackgroundThrottling()
+          }
+        })
+        console.log('[switch-paint-frame-policy]', JSON.stringify(framePolicy))
         await hostWindow.dispose()
         const sample = await measureSwitch(orcaPage, targetId, targetTabIds)
         samples.push(sample)
