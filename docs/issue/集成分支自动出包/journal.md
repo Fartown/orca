@@ -46,6 +46,15 @@ external_ids: []
 
 ## 3. 开发记录
 
+### 2026-09-13：取得原生 B 异常正文，定位为验收隔离 HOME 传递失败
+
+- 本轮目标：依据真实异常定位 NSAlert，修复后完成原生就绪与原终端连续性验收。
+- 完成内容：第十一轮路由预检和唯一手动默认源检查通过，下载、原生 staging、磁盘替换通过；替换后 strict 验签再次通过。原生 B PID 56068 实录 `Refusing to start E2E outside its disposable home boundary`：其 HOME 被 LaunchServices 恢复为 runner home，ORCA_E2E_HOME_DIR 和 profile 仍正确。源码守卫及共用隔离 helper 与 integration 无差异，这是 P2 环境传递失败，不是签名或产品 updater 故障。
+- 代码或文档变更：下一修复仅限 P2 签前生成入口，在应用导入前绑定并恢复本轮临时 Node home；记录前后值，保留生产隔离守卫。对齐已有 mock-keychain 测试开关，不声称本次错误来自钥匙串，也不覆盖真实钥匙串场景。
+- 验证证据：[第十一轮](https://github.com/Fartown/orca/actions/runs/34712632663)，`native-exception-monitor.jsonl` 含完整栈，`native-process-56068.json` 的 postReplacementSignature.status=0；3fd63e079 本地更新回归 369 项、移动 9 项、双端 tc 及仓库门禁通过。
+- 未解决问题：新隔离 bootstrap 尚待真实 LaunchServices 前置和完整原生升级复验；原终端恢复及 Android 默认云源覆盖安装仍未通过。
+- 下一步：先验证真实原生启动下的隔离 home，再完整打包复跑；不删守卫、不更改系统全局环境。
+
 ### 2026-09-13：验证异常观察器，修正隔离更新检查的启动竞态
 
 - 本轮目标：让唯一一次手动检查确定命中本轮隔离更新源，再获取原生 B 的异常。

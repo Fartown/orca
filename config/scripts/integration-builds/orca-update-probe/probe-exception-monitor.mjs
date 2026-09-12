@@ -3,8 +3,9 @@ import { createHash } from 'node:crypto'
 import { resolve, join } from 'node:path'
 import { assertHostedMac } from '../signing-probe/probe-policy.mjs'
 import { writeJson } from '../signing-probe/probe-command.mjs'
+import { disposableHomeBootstrap } from './probe-launch-isolation.mjs'
 
-export function withExceptionMonitor(source, destination) {
+export function withExceptionMonitor(source, destination, isolation) {
   const banner = `;(() => {
   const record = (read) => {
     try { require('node:fs').appendFileSync(${JSON.stringify(destination)}, JSON.stringify({ pid: process.pid, ...read() }) + '\\n'); } catch {}
@@ -14,7 +15,8 @@ export function withExceptionMonitor(source, destination) {
 })();\n`
   const directive =
     /^(?:(?:#![^\n]*\n)?\s*(?:"use strict"|'use strict');?\s*)/.exec(source)?.[0] ?? ''
-  return `${directive}${banner}${source.slice(directive.length)}`
+  const bootstrap = isolation ? disposableHomeBootstrap(isolation, destination) : ''
+  return `${directive}${banner}${bootstrap}${source.slice(directive.length)}`
 }
 
 export function readExceptionMonitor(path) {
@@ -34,11 +36,15 @@ export function readExceptionMonitor(path) {
   }
 }
 
-export function instrumentGeneratedMain(profile, output) {
+export function instrumentGeneratedMain(isolation, output) {
   assertHostedMac()
+  const profile = isolation.env.ORCA_E2E_USER_DATA_DIR
   const entry = resolve(JSON.parse(readFileSync('package.json', 'utf8')).main)
   const original = readFileSync(entry, 'utf8')
-  const observed = withExceptionMonitor(original, join(profile, 'native-exception-monitor.jsonl'))
+  const observed = withExceptionMonitor(original, join(profile, 'native-exception-monitor.jsonl'), {
+    home: isolation.isolatedHome,
+    profile
+  })
   writeFileSync(entry, observed)
   const hash = (source) => createHash('sha256').update(source).digest('hex')
   writeJson(join(output, 'p2-build-observer.json'), {
@@ -46,6 +52,8 @@ export function instrumentGeneratedMain(profile, output) {
       'Only this P2 build output before normal packaging/signing; not production source or release builds.',
     event: 'uncaughtExceptionMonitor',
     behavior: 'Log only; no exception interception or recovery.',
+    launchIsolation:
+      'P2-only bound disposable HOME restoration and mock-keychain switch before application imports; production home guard unchanged.',
     sourceHash: hash(original),
     observedHash: hash(observed),
     entry

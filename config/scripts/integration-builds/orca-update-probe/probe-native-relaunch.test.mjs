@@ -6,8 +6,60 @@ import { createHash } from 'node:crypto'
 import { readBundledLaunchEnvironment } from './probe-native-relaunch.mjs'
 import { spawnSync } from 'node:child_process'
 import { readExceptionMonitor, withExceptionMonitor } from './probe-exception-monitor.mjs'
+import { launchIsolationFixtureSource } from './probe-launch-preflight.mjs'
 
 describe('native relaunch read-only evidence', () => {
+  it('restores only the baked test home before imports and refuses mismatched fixture bindings', () => {
+    const directory = mkdtempSync(join(tmpdir(), 'orca-native-home-contract-'))
+    try {
+      const home = join(directory, 'canonical-home')
+      mkdirSync(home)
+      const destination = join(directory, 'monitor.jsonl')
+      const profile = join(directory, 'profile-alias')
+      const stubElectron =
+        "const realRequire = require; require = name => name === 'electron' ? { app: { commandLine: { appendSwitch: value => { if (value !== 'use-mock-keychain') throw new Error('wrong switch'); } } } } : realRequire(name);"
+      const source = withExceptionMonitor(
+        "'use strict'; process.stdout.write(require('node:os').homedir());",
+        destination,
+        { home, profile }
+      )
+      const env = {
+        ...process.env,
+        HOME: join(directory, 'launchservices-home'),
+        ORCA_E2E_HOME_DIR: home,
+        ORCA_E2E_USER_DATA_DIR: profile
+      }
+      const restored = spawnSync(process.execPath, ['-e', stubElectron + source], {
+        env,
+        encoding: 'utf8',
+        timeout: 5000
+      })
+      expect(restored.status).toBe(0)
+      expect(restored.stdout).toBe(home)
+      expect(
+        readExceptionMonitor(destination).find(({ event }) => event === 'P2-home-restored')
+      ).toMatchObject({ before: env.HOME, after: home, nodeHome: home })
+      const refused = spawnSync(process.execPath, ['-e', stubElectron + source], {
+        env: { ...env, ORCA_E2E_HOME_DIR: directory },
+        encoding: 'utf8',
+        timeout: 5000
+      })
+      expect(refused.status).toBe(1)
+      expect(refused.stderr).toContain('does not match this signed fixture')
+      expect(refused.stdout).toBe('')
+    } finally {
+      rmSync(directory, { recursive: true, force: true })
+    }
+  })
+  it('bundles the actual production home guard into the small LaunchServices preflight', () => {
+    const source = launchIsolationFixtureSource('/fixture/home', '/fixture/result.json')
+    expect(source).toContain('Refusing to start E2E outside its disposable home boundary')
+    expect(source).toContain('configureDevUserDataPath(false)')
+    expect(source).toContain('wrong-fixture-home')
+    expect(source).toContain('wrongHomeRejected')
+    expect(source).not.toContain('node_modules')
+    expect(source.length).toBeLessThan(12_000)
+  })
   it('records a real thrown Error without swallowing it or changing an existing handler', () => {
     const directory = mkdtempSync(join(tmpdir(), 'orca-exception-monitor-contract-'))
     try {

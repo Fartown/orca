@@ -15,6 +15,10 @@ export function beginReport(output) {
     join(output, 'test-plan.md'),
     '\n- Seed isolated ui.lastUpdateCheckAt with now so startup does not race routing with a public check. Validate actual net.fetch routing, then make one manual default-fork check. Automatic startup scheduling is not accepted by this probe.\n'
   )
+  appendFileSync(
+    join(output, 'test-plan.md'),
+    '\n- P2-only generated bootstrap verifies this run home/profile bindings, restores disposable HOME before app imports, and adds use-mock-keychain to A/native B equally. First validate via a real hidden LaunchServices tiny fixture with the unchanged production home guard; wrong HOME must still be rejected. Production builds and global launch environment are unchanged.\n'
+  )
   return { started: new Date().toISOString(), actions: [], screenshots: [] }
 }
 
@@ -68,9 +72,9 @@ export function finishReport(output, report, error, cleanup) {
       isolation: 'disposable profile; hidden windows',
       checkTrigger: 'One manual default check; isolated lastUpdateCheckAt defers startup checking.',
       keychain:
-        'Instrumented A/B launches use --use-mock-keychain; native B argv is observed separately.',
+        'P2-only bootstrap adds use-mock-keychain for both A and native B; OS Keychain authorization is excluded.',
       instrumentation:
-        'VITE_EXPOSE_STORE enables fixture setup. Only P2 generated main includes a signed uncaughtExceptionMonitor log observer; it does not intercept exceptions. Updater/signature/install/PTY remain real.'
+        'VITE_EXPOSE_STORE enables fixture setup. P2 generated main includes an exception monitor and bound disposable HOME/mock-keychain bootstrap before imports. The unchanged production home guard is exercised through LaunchServices first. Updater/signature/install/PTY remain real.'
     },
     actions: report.actions,
     screenshots: report.screenshots,

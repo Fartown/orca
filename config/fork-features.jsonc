@@ -32,6 +32,8 @@
         "config/scripts/build-mac-local.mjs",
         "mobile/scripts/prepare-android-release.mjs",
         "mobile/src/theme/mobile-theme.ts",
+        "src/main/startup/configure-process.ts",
+        "tests/e2e/helpers/e2e-completed-onboarding-profile.ts",
         "tests/e2e/helpers/electron-home-isolation.ts",
         "tests/e2e/helpers/electron-process-shutdown.ts"
       ],
