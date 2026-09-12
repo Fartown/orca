@@ -4,9 +4,27 @@ import { join, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { execFileSync } from 'node:child_process'
 import { X509Certificate } from 'node:crypto'
+import { parse } from 'yaml'
+import { integrationDownloadUrl } from '../../../src/shared/integration-builds/release-catalog.ts'
 import { signingCertificate } from './mac-signing.cjs'
 import { assertPublisherRequirement } from './mac-signature-requirement.cjs'
 export { assertPublisherRequirement } from './mac-signature-requirement.cjs'
+
+export function verifyPackageUpdateConfiguration(application) {
+  const configuration = parse(
+    readFileSync(join(application, 'Contents', 'Resources', 'app-update.yml'), 'utf8')
+  )
+  if (
+    configuration?.provider !== 'generic' ||
+    typeof configuration.url !== 'string' ||
+    configuration.url !== integrationDownloadUrl(configuration.url.split('/').at(-1)) ||
+    typeof configuration.updaterCacheDirName !== 'string' ||
+    !configuration.updaterCacheDirName.trim()
+  ) {
+    throw new Error('Signed package is missing a valid fork update configuration')
+  }
+  return configuration
+}
 
 export function verifyPackageSignature(
   application,
@@ -48,7 +66,15 @@ export function verifyPackageSignature(
     if (actualArch !== arch) {
       throw new Error('Signed package architecture mismatch')
     }
-    return { schemaVersion: 1, arch, version, certificateSha256: expected.sha256, requirement }
+    const updateConfiguration = verifyPackageUpdateConfiguration(application)
+    return {
+      schemaVersion: 1,
+      arch,
+      version,
+      certificateSha256: expected.sha256,
+      requirement,
+      updateConfiguration
+    }
   } finally {
     rmSync(temporary, { recursive: true, force: true })
   }

@@ -87,12 +87,8 @@ async function run(output) {
     identity.removeTrustBeforeRuntime()
     identity.cleanup()
     cleanup.privateMaterial = 'removed before runtime'
-    const zip = join(scratch, 'update.zip')
-    command('/usr/bin/ditto', ['-c', '-k', '--sequesterRsrc', '--keepParent', build.apps[1], zip], {
-      timeout: 600_000
-    })
     feed = await createForkFeed({
-      zip,
+      zip: build.zips[1],
       sha: build.sha,
       tag: build.tag,
       version: build.versions[1],

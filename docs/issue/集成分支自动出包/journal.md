@@ -46,6 +46,15 @@ external_ids: []
 
 ## 3. 开发记录
 
+### 2026-09-13：真实界面与更新检查通过，纠正验收包目标
+
+- 本轮目标：跑通真实 Orca 的默认 fork 检查、下载、安装和终端恢复。
+- 完成内容：第六轮仅补测试用 `--use-mock-keychain` 后，main inventory 正常、renderer `1+1=2`、API/store 可用；真实 folder 终端执行随机标记，默认 fork 检查展示 B 的更新卡。下载阶段发现 `app-update.yml` 缺失。
+- 代码或文档变更：核实 electron-builder 仅在 macOS dmg/zip target 写入该配置；原验收使用 `--dir` 绕开了此步骤，生产 wrapper 已是 dmg/zip。验收改用两次正常 zip 包装并复用 B 的原生 ZIP，不手造清单、不签后改包；生产成品校验同时检查实际包内配置，新增缺清单、错误更新源和缺缓存目录反例。
+- 验证证据：run 34708536915 的实际页面截图、终端与 updater 状态；13 项成品合同与 8 项 probe 合同通过。完整更新相关回归 360 项、移动控制器 9 项通过。已下载 run 34708520840 的真实 PR arm64 ZIP，原样提取包内 `app-update.yml`，实际通用校验通过，包含具体 fork tag 和 `orca-updater` 缓存目录；证据在 `.docs/integration-updates-ui-validation/2026-09-12/pr-34708520840-arm64/`。
+- 未解决问题：第六轮未完成下载/安装/重启，不能把前两个检查点称作完整升级；下一轮正常 ZIP 包待跑。
+- 下一步：以生产同款 zip target 继续 arm64 原生验收；通过后推进完整清单发布和 Android 系统安装。
+
 ### 2026-09-13：隔离主进程启动阻塞，补齐原生移动端环境
 
 - 本轮目标：用分层实证定位 Orca 启动阻塞，并继续原生安装验收。

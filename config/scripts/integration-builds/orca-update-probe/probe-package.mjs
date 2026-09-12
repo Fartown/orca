@@ -81,8 +81,8 @@ export function packageVersions({ scratch, output, isolation, signer }) {
         '--config',
         config,
         '--mac',
+        'zip',
         `--${process.arch}`,
-        '--dir',
         '--publish',
         'never',
         `--config.directories.output=${destination}`
@@ -94,16 +94,25 @@ export function packageVersions({ scratch, output, isolation, signer }) {
     if (!existsSync(join(app, 'Contents', 'Resources', 'app.asar'))) {
       throw new Error('Packaging did not produce the real Orca asar')
     }
+    if (!existsSync(join(app, 'Contents', 'Resources', 'app-update.yml'))) {
+      throw new Error('Normal ZIP packaging did not include updater configuration')
+    }
     return app
   })
+  const zips = versions.map((_, index) =>
+    join(scratch, `package-${index}`, `orca-integration-macos-${process.arch}.zip`)
+  )
+  if (zips.some((zip) => !existsSync(zip))) {
+    throw new Error('Normal packaging did not produce both updater ZIP artifacts')
+  }
   writeJson(join(output, 'build-identity.json'), {
     sha,
     tag,
     versions,
     arch: process.arch,
     releaseBuilds: 1,
-    directoryPackages: 2,
+    zipPackages: 2,
     storeExposedForTestSetup: true
   })
-  return { sha, tag, versions, apps }
+  return { sha, tag, versions, apps, zips }
 }

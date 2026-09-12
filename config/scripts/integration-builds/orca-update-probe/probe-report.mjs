@@ -5,7 +5,7 @@ import { writeJson } from '../signing-probe/probe-command.mjs'
 export function beginReport(output) {
   writeFileSync(
     join(output, 'test-plan.md'),
-    `# Real Orca native update acceptance\n\n- Hosted macOS only; isolated profile and hidden windows.\n- Build actual source once, package A/B normally, preserve asar integrity and signing requirements.\n- Check default fork feed through exact HTTP fixtures; no localBuild override.\n- Create a real folder-workspace terminal, execute a marker, download B and invoke the normal restart action.\n- Expect native replacement on disk and a new process at the same installed path.\n- Instrumented reopen is recorded separately if native relaunch does not preserve CDP.\n- Expect the same workspace/tab and a working terminal after update.\n- No real provider session, production release, Android install or Gatekeeper first-install acceptance is in scope.\n`
+    `# Real Orca native update acceptance\n\n- Hosted macOS only; isolated profile and hidden windows.\n- Instrumented A/B launches use the repository packaged-test --use-mock-keychain flag; OS Keychain authorization is not under test. Native relaunch argv is recorded separately, without assuming that flag survives.\n- Build actual source once, package A/B normally as ZIP targets, preserve asar integrity and signing requirements.\n- Check default fork feed through exact HTTP fixtures; no localBuild override.\n- Create a real folder-workspace terminal, execute a marker, download B and invoke the normal restart action.\n- Expect native replacement on disk and a new process at the same installed path.\n- Instrumented reopen is recorded separately if native relaunch does not preserve CDP.\n- Expect the same workspace/tab and a working terminal after update.\n- No real provider session, production release, Android install or Gatekeeper first-install acceptance is in scope.\n`
   )
   return { started: new Date().toISOString(), actions: [], screenshots: [] }
 }
@@ -56,7 +56,11 @@ export function finishReport(output, report, error, cleanup) {
       arch: process.arch,
       browser: report.runtime ?? 'not launched',
       githubRun: process.env.GITHUB_RUN_ID,
-      isolation: 'disposable profile; hidden windows'
+      isolation: 'disposable profile; hidden windows',
+      keychain:
+        'Instrumented A/B launches use --use-mock-keychain; native B argv is observed separately.',
+      instrumentation:
+        'VITE_EXPOSE_STORE enables fixture setup and inspection; updater/signature/install/PTY remain real.'
     },
     actions: report.actions,
     screenshots: report.screenshots,
@@ -67,6 +71,7 @@ export function finishReport(output, report, error, cleanup) {
             title: String(error.message ?? error),
             kind: 'automation',
             severity: 'P1',
+            impact: 'Real Orca acceptance stopped before every required checkpoint completed.',
             status: '原因待日志确认',
             affects_verdict: true,
             evidence: ['failure.txt']
@@ -74,11 +79,13 @@ export function finishReport(output, report, error, cleanup) {
         ]
       : [],
     checks: {
-      notes: 'Network fixtures replace transport only; updater/signature/install/PTY are real.'
+      notes:
+        'Exact fork transport fixtures and --use-mock-keychain on instrumented launches are test isolation. Native updater/signature/install/PTY are real; native B runtime readiness is not proof of its renderer health.'
     },
     not_covered: [
       'Public release delivery',
       'Gatekeeper first installation',
+      'OS Keychain authorization',
       'Native-relaunch renderer CDP if LaunchServices omits debugging arguments'
     ],
     evidence: [{ label: 'Cleanup', path: 'cleanup-result.json' }],
@@ -100,7 +107,7 @@ export function finishReport(output, report, error, cleanup) {
     '',
     ...report.screenshots.map((shot) => `![${shot.title}](${shot.path})`),
     '',
-    'Transport is a local fixture for the exact fork endpoints. No installer, signature validation, or PTY operation is stubbed.',
+    'Transport is a local fixture for the exact fork endpoints. Instrumented A/B launches use --use-mock-keychain for CI isolation; native relaunch argv is recorded separately. No installer, signature validation, or PTY operation is stubbed.',
     '',
     'See test-result.json, network.json, native-relaunch.json and cleanup-result.json for raw evidence.'
   ]
