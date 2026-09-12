@@ -5,6 +5,7 @@ import { ChevronLeft, Globe } from 'lucide-react-native'
 import Svg, { Path } from 'react-native-svg'
 import { OrcaLogo } from '../components/OrcaLogo'
 import { colors, spacing, typography } from '../theme/mobile-theme'
+import { IntegrationUpdateRow } from '../integration-builds/IntegrationUpdateRow'
 
 function GithubIcon({ size = 16, color = colors.textSecondary }) {
   return (
@@ -91,6 +92,7 @@ export default function AboutScreen({
       </View>
 
       <Text style={styles.versionText}>{versionLabel}</Text>
+      <IntegrationUpdateRow />
       {error && (
         <Text accessibilityRole="alert" style={styles.errorText}>
           {error}

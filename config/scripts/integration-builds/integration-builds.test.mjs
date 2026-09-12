@@ -12,15 +12,20 @@ import {
   verifyAndroidPublicCertificate
 } from './build-identity.mjs'
 import { hashPackages, PACKAGE_NAMES, publishRelease } from './publish-release.mjs'
+import androidConfig from './android-config.cjs'
+import { verifyAndroidPackageVersion } from './verify-apk-version.mjs'
+import { signIntegrationPackage } from './mac-after-sign.cjs'
+import { signingCertificate } from './mac-signing.cjs'
 
 const sha = 'a'.repeat(40)
+const timestamp = 1789228800000
 const env = {
   GITHUB_REPOSITORY: 'Fartown/orca',
   GITHUB_REF: 'refs/heads/fork/integration',
   GITHUB_EVENT_NAME: 'push',
   GITHUB_SHA: sha,
   GITHUB_RUN_ID: '123',
-  ORCA_LOCAL_BUILD_VERSION: `1.2.3-local.123.${sha.slice(0, 12)}`
+  ORCA_LOCAL_BUILD_VERSION: `1.2.3-local.${timestamp}.${sha.slice(0, 12)}`
 }
 const mobile = { expo: { version: '0.0.48', android: { versionCode: 16 } } }
 const directories = []
@@ -30,6 +35,19 @@ function packages() {
   const directory = mkdtempSync(join(tmpdir(), 'orca-integration-packages-'))
   directories.push(directory)
   PACKAGE_NAMES.forEach((name) => writeFileSync(join(directory, name), name))
+  const certificate = signingCertificate()
+  for (const arch of ['arm64', 'x64']) {
+    writeFileSync(
+      join(directory, `mac-signing-${arch}.json`),
+      JSON.stringify({
+        schemaVersion: 1,
+        arch,
+        version: env.ORCA_LOCAL_BUILD_VERSION,
+        certificateSha256: certificate.sha256,
+        requirement: `identifier "com.stably.orca" and certificate root = H"${certificate.sha1}"`
+      })
+    )
+  }
   return directory
 }
 
@@ -53,11 +71,51 @@ afterEach(() => {
 })
 
 describe('integration package identity and signing', () => {
+  it('refuses publishing an ad-hoc package when publisher credentials are absent', async () => {
+    await expect(signIntegrationPackage({ electronPlatformName: 'darwin' }, env)).rejects.toThrow(
+      /Fixed publisher/
+    )
+    await expect(
+      signIntegrationPackage(
+        { electronPlatformName: 'darwin' },
+        { GITHUB_EVENT_NAME: 'pull_request' }
+      )
+    ).resolves.toBeUndefined()
+    await expect(
+      signIntegrationPackage({ electronPlatformName: 'linux' }, env)
+    ).resolves.toBeUndefined()
+  })
+  it('verifies the actual APK native version and embedded update channel together', () => {
+    const code = androidConfig.androidVersionCode(timestamp)
+    const badging = `package: name='com.stably.orca.mobile' versionCode='${code}'`
+    const config = { android: { versionCode: code }, extra: { orcaUpdateChannel: 'integration' } }
+    expect(() => verifyAndroidPackageVersion(badging, config, code)).not.toThrow()
+    expect(() => verifyAndroidPackageVersion(badging, { ...config, extra: {} }, code)).toThrow()
+    expect(() => verifyAndroidPackageVersion(badging, config, code + 1)).toThrow()
+  })
+  it('uses increasing native versions only for integration builds', () => {
+    const config = { android: { versionCode: 16 }, extra: { existing: true } }
+    expect(androidConfig.withIntegrationBuild(config, {})).toBe(config)
+    const code = androidConfig.androidVersionCode(timestamp)
+    expect(androidConfig.androidVersionCode(timestamp + 1000)).toBe(code + 1)
+    expect(
+      androidConfig.withIntegrationBuild(config, { ORCA_INTEGRATION_VERSION_CODE: String(code) })
+    ).toEqual({
+      android: { versionCode: code, permissions: ['REQUEST_INSTALL_PACKAGES'] },
+      extra: { existing: true, orcaUpdateChannel: 'integration' }
+    })
+    for (const value of ['16', 'NaN', '-1', '2100000001']) {
+      expect(() =>
+        androidConfig.withIntegrationBuild(config, { ORCA_INTEGRATION_VERSION_CODE: value })
+      ).toThrow()
+    }
+  })
   it('reuses local version identity and gives each workflow a separate non-release tag', () => {
-    expect(buildIdentity({ sha, runId: '123', baseVersion: '1.2.3', timestamp: 1000 })).toEqual({
+    expect(buildIdentity({ sha, runId: '123', baseVersion: '1.2.3', timestamp })).toEqual({
       sha,
       tag: `integration-123-${sha.slice(0, 12)}`,
-      version: `1.2.3-local.1000.${sha.slice(0, 12)}`
+      version: `1.2.3-local.${timestamp}.${sha.slice(0, 12)}`,
+      androidVersionCode: androidConfig.androidVersionCode(timestamp)
     })
     expect(integrationTag(sha, '124')).not.toBe(integrationTag(sha, '123'))
     expect(() => integrationTag('branch/name', '123')).toThrow()
@@ -92,18 +150,24 @@ describe('integration package identity and signing', () => {
     expect(() => verifyAndroidPublicCertificate(changed)).toThrow()
   })
 
-  it('keeps packaging hooks, resources and existing app updater metadata', () => {
+  it('keeps packaging hooks and resources while pinning fork update metadata', () => {
     vi.stubEnv('ORCA_LOCAL_BUILD_VERSION', env.ORCA_LOCAL_BUILD_VERSION)
+    vi.stubEnv('ORCA_INTEGRATION_TAG', integrationTag(sha, '123'))
     const upstream = require('../../electron-builder.config.cjs')
     const config = require('./electron-builder.cjs')
     expect(config.afterPack).toBe(upstream.afterPack)
     expect(config.beforeBuild).toBe(upstream.beforeBuild)
+    expect(config.afterSign).toBeTypeOf('function')
     expect(config.mac.extraResources).toBe(upstream.mac.extraResources)
-    expect(config.publish).toBe(upstream.publish)
+    expect(config.publish).toEqual({
+      provider: 'generic',
+      url: `https://github.com/Fartown/orca/releases/download/${integrationTag(sha, '123')}`
+    })
     expect(config.mac.identity).toBe('-')
     expect(config.mac.hardenedRuntime).toBe(false)
     expect(config.mac.notarize).toBe(false)
-    expect(config.mac.target).toEqual(['dmg'])
+    expect(config.mac.target).toEqual(['dmg', 'zip'])
+    expect(config.extraMetadata.orcaUpdateChannel).toBe('integration')
     expect(config.extraMetadata.version).toBe(env.ORCA_LOCAL_BUILD_VERSION)
   })
 
@@ -115,7 +179,7 @@ describe('integration package identity and signing', () => {
 })
 
 describe('complete, immutable fork prereleases', () => {
-  it('creates a draft, uploads all three packages and hashes, then publishes', async () => {
+  it('creates a draft, uploads all five packages and update manifests, then publishes', async () => {
     const directory = packages()
     const gh = github()
     await publishRelease({ env, directory, mobile, gh })
@@ -132,8 +196,18 @@ describe('complete, immutable fork prereleases', () => {
     }
     const manifest = JSON.parse(readFileSync(join(directory, 'build-info.json'), 'utf8'))
     expect(manifest.sha).toBe(sha)
-    expect(manifest.assets).toHaveLength(3)
-    expect(manifest.androidVersionCode).toBe(16)
+    expect(manifest.assets).toHaveLength(5)
+    expect(manifest.androidVersionCode).toBe(androidConfig.androidVersionCode(timestamp))
+    expect(manifest.macCertificateSha256).toBe(signingCertificate().sha256)
+    expect(manifest.macSigning).toBe('fixed self-signed publisher, not notarized')
+    const update = parse(readFileSync(join(directory, 'latest-mac.yml'), 'utf8'))
+    expect(update.version).toBe(env.ORCA_LOCAL_BUILD_VERSION)
+    expect(update.files).toEqual(
+      manifest.assets
+        .filter((asset) => asset.name.endsWith('.zip'))
+        .map((asset) => ({ url: asset.name, sha512: asset.sha512, size: asset.bytes }))
+    )
+    expect(gh.mock.calls[2][0]).toContain(join(directory, 'latest-mac.yml'))
     expect(readFileSync(join(directory, 'SHA256SUMS.txt'), 'utf8')).toMatch(/^[a-f0-9]{64}  orca-/)
   })
 
@@ -146,6 +220,23 @@ describe('complete, immutable fork prereleases', () => {
     rmSync(join(directory, PACKAGE_NAMES[2]))
     await expect(hashPackages(directory)).rejects.toThrow()
   })
+
+  it.each(['certificateSha256', 'version', 'arch', 'requirement'])(
+    'refuses publication when signing evidence has an invalid %s',
+    async (field) => {
+      const directory = packages()
+      const path = join(directory, 'mac-signing-x64.json')
+      const evidence = JSON.parse(readFileSync(path, 'utf8'))
+      evidence[field] = 'invalid'
+      writeFileSync(path, JSON.stringify(evidence))
+      const gh = github()
+      await expect(publishRelease({ env, directory, mobile, gh })).rejects.toThrow()
+      expect(gh).not.toHaveBeenCalled()
+      rmSync(path)
+      await expect(publishRelease({ env, directory, mobile, gh })).rejects.toThrow()
+      expect(gh).not.toHaveBeenCalled()
+    }
+  )
 
   it.each([
     { GITHUB_REPOSITORY: 'stablyai/orca' },
@@ -209,6 +300,40 @@ describe('complete, immutable fork prereleases', () => {
 })
 
 describe('workflow wiring', () => {
+  it('limits publisher secrets to integration packaging and always cleans them up', () => {
+    const workflow = parse(readFileSync('.github/workflows/fork-integration-build.yml', 'utf8'))
+    const steps = workflow.jobs.macos.steps
+    const prepare = steps.find((step) => step.name === 'Prepare fixed publisher signing key')
+    expect(prepare.if).toContain("github.ref == 'refs/heads/fork/integration'")
+    expect(prepare.if).toContain("github.event_name != 'pull_request'")
+    expect(Object.keys(prepare.env)).toEqual([
+      'ORCA_MAC_SIGN_PRIVATE_KEY_PEM',
+      'ORCA_MAC_SIGN_KEY_PASSWORD'
+    ])
+    const cleanup = steps.find((step) => step.name === 'Remove temporary publisher private key')
+    expect(cleanup.if).toContain('always()')
+    expect(cleanup.run).toContain('mac-signing.cjs cleanup')
+    expect(
+      steps.find((step) => step.name === 'Verify fixed publisher and package identity').run
+    ).toContain('mac-package-signature.mjs')
+    expect(JSON.stringify(workflow.jobs.publish)).not.toContain('secrets.')
+  })
+  it('isolates temporary signing probes from release builds and publication', () => {
+    const workflow = parse(readFileSync('.github/workflows/fork-integration-build.yml', 'utf8'))
+    expect(workflow.on.workflow_dispatch.inputs.signing_probe_only.default).toBe(false)
+    expect(workflow.jobs.identity.if).toContain('!inputs.signing_probe_only')
+    const probe = workflow.jobs['signing-probe']
+    expect(probe.if).toContain("github.event_name == 'workflow_dispatch'")
+    expect(probe.if).toContain('inputs.signing_probe_only')
+    expect(probe.strategy.matrix.runner).toEqual(['macos-15'])
+    expect(probe.steps[0].with.ref).toBe('${{ github.sha }}')
+    expect(JSON.stringify(probe)).not.toContain('secrets.')
+    expect(probe.steps.at(-1).with.path).toContain('${{ runner.temp }}/signing-probe-evidence')
+    expect(probe.steps.at(-1).with.path).toContain(
+      '!${{ runner.temp }}/signing-probe-evidence/**/*.app/**'
+    )
+  })
+
   it('pins all jobs to one SHA, builds in parallel and publishes only a complete integration run', () => {
     const workflow = parse(readFileSync('.github/workflows/fork-integration-build.yml', 'utf8'))
     expect(workflow.on.push.branches).toEqual(['fork/integration'])
@@ -232,7 +357,9 @@ describe('workflow wiring', () => {
       'x64'
     ])
     expect(
-      workflow.jobs.macos.steps.find((step) => step.name === 'Package internal-test DMG').run
+      workflow.jobs.macos.steps.find(
+        (step) => step.name === 'Package internal-test DMG and update ZIP'
+      ).run
     ).toContain('--publish never')
     expect(workflow.jobs.publish.needs).toEqual(['identity', 'macos', 'android'])
     expect(workflow.jobs.macos.env.CSC_FOR_PULL_REQUEST).toBe('true')
