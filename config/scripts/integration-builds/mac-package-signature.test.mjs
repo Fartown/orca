@@ -39,8 +39,10 @@ describe('macOS package publisher requirements', () => {
         if (args[1] === '-r-') {
           return `identifier "com.stablyai.orca" and anchor H"${sha1}"`
         }
-        if (args[1] === '--extract-certificates') {
-          extracted = `${args[2]}0`
+        if (args[1]?.startsWith('--extract-certificates=')) {
+          expect(args).toHaveLength(3)
+          expect(args[2]).toBe('/isolated/Orca.app')
+          extracted = `${args[1].slice('--extract-certificates='.length)}0`
           writeFileSync(extracted, parsed.raw)
         }
         if (binary.endsWith('plutil')) {

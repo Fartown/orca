@@ -25,7 +25,7 @@ export function verifyPackageSignature(
     const requirement = run('/usr/bin/codesign', ['-d', '-r-', application]).trim()
     assertPublisherRequirement(requirement, expected.sha1)
     const prefix = join(temporary, 'certificate-')
-    run('/usr/bin/codesign', ['-d', '--extract-certificates', prefix, application])
+    run('/usr/bin/codesign', ['-d', `--extract-certificates=${prefix}`, application])
     const actual = new X509Certificate(readFileSync(`${prefix}0`))
     if (actual.fingerprint256.replaceAll(':', '').toLowerCase() !== expected.sha256) {
       throw new Error('App was signed by a different publisher')

@@ -70,17 +70,18 @@ async function run(output) {
       signer: { executable, certificate: publisher.certificate, privateKey: publisher.privateKey }
     })
     for (const [index, appPath] of build.apps.entries()) {
+      cpSync(
+        join(dirname(appPath), 'publisher-signing-evidence'),
+        join(output, `signature-${index}`),
+        { recursive: true }
+      )
       const signed = verifyPackageSignature(appPath, {
         certificate: readFileSync(publisher.certificate),
         arch: process.arch,
         version: build.versions[index]
       })
       writeJson(join(output, `package-signature-${index}.json`), signed)
-      cpSync(
-        join(dirname(appPath), 'publisher-signing-evidence'),
-        join(output, `signature-${index}`),
-        { recursive: true }
-      )
+      console.log(`[real-orca] Package ${index} signature/version/architecture verified`)
     }
     identity.removeTrustBeforeRuntime()
     identity.cleanup()
@@ -97,6 +98,7 @@ async function run(output) {
       output: join(output, 'network.json')
     })
     const first = await launchOrca(build.apps[0], isolation, output, 'before')
+    console.log('[real-orca] A renderer is ready in the isolated profile')
     report.runtime = {
       electron: first.details.electronVersion,
       chromium: first.details.chromiumVersion
@@ -123,6 +125,7 @@ async function run(output) {
       return window.api.updater.check()
     })
     const available = await waitForStatus(first.page, 'available')
+    console.log('[real-orca] Default fork check reached update-available')
     if (available.version !== build.versions[1]) {
       throw new Error('Default fork check did not resolve B')
     }
@@ -134,6 +137,7 @@ async function run(output) {
     )
     await first.page.evaluate(() => window.api.updater.download())
     const downloaded = await waitForStatus(first.page, 'downloaded')
+    console.log('[real-orca] Native updater verified and staged B')
     recordCheckpoint(
       report,
       'Native updater verifies and stages B',
@@ -174,6 +178,7 @@ async function run(output) {
       180_000
     )
     const readiness = await verifyNativeRuntime(build.apps[0], profile, native.pid)
+    console.log('[real-orca] Native B replaced A, published its runtime and stayed alive')
     writeJson(join(output, 'native-relaunch.json'), {
       ...native,
       readiness,
@@ -199,6 +204,7 @@ async function run(output) {
     await savedTab.waitFor({ state: 'visible', timeout: 60_000 })
     await savedTab.click({ force: true })
     const after = await terminalContinuity(second.page, continuityValue)
+    console.log('[real-orca] Original shell continuity value read after update')
     writeJson(join(output, 'terminal-after.json'), after)
     if (after.ptyId !== before.ptyId) {
       throw new Error('Original shell marker survived but PTY identity changed')
