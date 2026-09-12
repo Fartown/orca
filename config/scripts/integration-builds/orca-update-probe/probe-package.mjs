@@ -65,7 +65,9 @@ export function packageVersions({ scratch, output, isolation, signer }) {
     ORCA_E2E_USER_DATA_DIR: isolation.env.ORCA_E2E_USER_DATA_DIR,
     CFFIXED_USER_HOME: isolation.isolatedHome,
     HOME: isolation.isolatedHome,
-    USERPROFILE: isolation.isolatedHome
+    USERPROFILE: isolation.isolatedHome,
+    ELECTRON_ENABLE_LOGGING: '1',
+    ELECTRON_LOG_FILE: join(isolation.env.ORCA_E2E_USER_DATA_DIR, 'native-electron.log')
   }
   writeFileSync(
     config,

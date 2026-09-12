@@ -46,6 +46,15 @@ external_ids: []
 
 ## 3. 开发记录
 
+### 2026-09-13：确认新版主进程卡在原生错误弹框，补齐只读取证
+
+- 本轮目标：获取原生 B 启动阻断的真实错误，不以进程存在替代可用性。
+- 完成内容：第八轮 A runtime 主 PID/socket 前置通过；A/B 正式 ZIP、签名/版本/架构/配置、真实终端、默认 fork 检查、下载、staging 和磁盘 B 通过。B 的新 PID 42889 由 launchd 启动且未保留测试参数，主线程全部采样停在 Electron/V8→`NSAlert runModal`；尚无弹框文案，不能归因于 Keychain。本轮升级前没有旧 daemon 被 PID 查询匹配，故第七轮识别漏洞不解释第八轮启动失败。
+- 代码或文档变更：修正诊断的 `plutil -extract ... json` 缺少 `-o -` 导致空 stdout、并会改写测试包 plist 的错误；该操作发生在启动超时后，不是之前阻断原因。先独立保存进程 sample、状态路径和隔离日志；增加 hosted CI-only、own PID 的原生错误文字/窗口截图，各渠道有界且不 activate/点击；签前加入 Electron 原生日志配置，不改产品入口。
+- 验证证据：[第八轮](https://github.com/Fartown/orca/actions/runs/34709797573)；脱敏 sample/native-selection-failure 位于 `.docs/integration-updates-ui-validation/2026-09-12/real-orca-ci/34709797573/`；12 项 probe 合同通过，包括真实临时 plist 前后 SHA-256 不变、非法 plist 不改内容及原生取证超时隔离。a225105b4 的更新相关回归 365 项、移动控制器 9 项、质量/架构/fork 门禁通过。
+- 未解决问题：原生 B 尚未发布 runtime，原终端恢复及 Android 默认源系统覆盖安装未通过；PR #11 保持 Draft，未发布新固定签名集成包。
+- 下一步：第九轮读取实际 NSAlert 错误栈，按证据修复后复验；Apple Silicon 之外不专项重跑。
+
 ### 2026-09-13：原生 staging 通过，修正验收的主进程识别
 
 - 本轮目标：验证原生替换后的真正主进程和原终端连续性。

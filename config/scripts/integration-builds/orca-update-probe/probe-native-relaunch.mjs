@@ -4,6 +4,7 @@ import { spawnSync } from 'node:child_process'
 import { writeJson } from '../signing-probe/probe-command.mjs'
 import { processSample } from './probe-startup-evidence.mjs'
 import { verifyNativeRuntime } from './probe-runtime.mjs'
+import { captureNativeAlert } from './probe-native-alert.mjs'
 
 export function nativeStatePaths(output, profile) {
   return output.split('\n').flatMap((line) => {
@@ -25,12 +26,51 @@ export function nativeFailureEvidence({ native, appPath, profile, output }) {
     encoding: 'utf8',
     timeout: 10_000
   })
+  const paths = {
+    statePaths: nativeStatePaths(openFiles.stdout ?? '', profile),
+    lsofStatus: openFiles.status,
+    lsofError: String(openFiles.error ?? '')
+  }
+  writeJson(join(output, `native-open-files-${native.pid}.json`), paths)
+  const logs = join(profile, 'logs')
+  if (existsSync(logs)) {
+    cpSync(logs, join(output, 'native-runtime-logs'), { recursive: true })
+  }
+  const chromiumLog = join(profile, 'native-electron.log')
+  if (existsSync(chromiumLog)) {
+    cpSync(chromiumLog, join(output, 'native-electron.log'))
+  }
+  const evidence = {
+    sample,
+    ...paths,
+    profileEntries: readdirSync(profile),
+    bundledLaunchEnvironment: readBundledLaunchEnvironment(appPath),
+    scope: 'Own B PID sample and state paths only; no process environment or runtime auth token.'
+  }
+  writeJson(join(output, `native-process-${native.pid}.json`), evidence)
+  try {
+    evidence.alert = captureNativeAlert(native.pid, output)
+  } catch (error) {
+    evidence.alertError = String(error)
+  }
+  return evidence
+}
+
+export function readBundledLaunchEnvironment(appPath) {
   const plist = spawnSync(
     '/usr/bin/plutil',
-    ['-extract', 'LSEnvironment', 'json', join(appPath, 'Contents', 'Info.plist')],
+    ['-extract', 'LSEnvironment', 'json', '-o', '-', join(appPath, 'Contents', 'Info.plist')],
     { encoding: 'utf8', timeout: 5_000 }
   )
-  const environment = plist.status === 0 ? JSON.parse(plist.stdout) : {}
+  let environment
+  try {
+    if (plist.status !== 0) {
+      throw plist.error ?? new Error(plist.stderr || 'plutil failed')
+    }
+    environment = JSON.parse(plist.stdout)
+  } catch (error) {
+    return { error: String(error), status: plist.status }
+  }
   const launchEnvironment = Object.fromEntries(
     [
       'HOME',
@@ -43,19 +83,7 @@ export function nativeFailureEvidence({ native, appPath, profile, output }) {
       .filter((key) => typeof environment[key] === 'string')
       .map((key) => [key, environment[key]])
   )
-  const logs = join(profile, 'logs')
-  if (existsSync(logs)) {
-    cpSync(logs, join(output, 'native-runtime-logs'), { recursive: true })
-  }
-  return {
-    sample,
-    statePaths: nativeStatePaths(openFiles.stdout ?? '', profile),
-    lsofStatus: openFiles.status,
-    lsofError: String(openFiles.error ?? ''),
-    profileEntries: readdirSync(profile),
-    bundledLaunchEnvironment: launchEnvironment,
-    scope: 'Own B PID sample and state paths only; no process environment or runtime auth token.'
-  }
+  return launchEnvironment
 }
 
 export async function observeNativeRelaunch(
