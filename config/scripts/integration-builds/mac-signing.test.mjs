@@ -29,7 +29,7 @@ describe('fixed macOS publisher signing', () => {
       /does not match/
     )
   })
-  it('allows only the hosted integration release runner to change signing trust', () => {
+  it('allows only the hosted integration release runner to prepare publisher credentials', () => {
     expect(() => assertReleaseRunner(runner, 'darwin')).not.toThrow()
     for (const [key, value] of [
       ['GITHUB_ACTIONS', 'false'],

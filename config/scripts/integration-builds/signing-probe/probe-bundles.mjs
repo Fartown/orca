@@ -54,6 +54,8 @@ function buildApp(destination, version, config, signer, executable) {
   })
   writeJson(join(application, 'probe-config.json'), config)
   writeJson(join(application, 'signed-payload.json'), { version })
+  // Raw x64 Electron is unsigned; mirror electron-builder's ad-hoc input to afterSign.
+  command('/usr/bin/codesign', ['--force', '--deep', '--sign', '-', destination])
   const { designated } = signMacBundle({
     executable,
     appPath: destination,

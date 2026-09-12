@@ -4,6 +4,8 @@ import { execFileSync } from 'node:child_process'
 import { join, resolve } from 'node:path'
 import { ANDROID_CERT_SHA256, integrationTag } from './build-identity.mjs'
 import androidConfig from './android-config.cjs'
+import { signingCertificate } from './mac-signing.cjs'
+import { assertPublisherRequirement } from './mac-signature-requirement.cjs'
 
 export const PACKAGE_NAMES = [
   'orca-integration-macos-arm64.dmg',
@@ -37,6 +39,23 @@ export async function hashPackages(directory) {
   return assets
 }
 
+export function verifyMacSigningEvidence(directory, version) {
+  const certificate = signingCertificate()
+  for (const arch of ['arm64', 'x64']) {
+    const evidence = JSON.parse(readFileSync(join(directory, `mac-signing-${arch}.json`), 'utf8'))
+    if (
+      evidence.schemaVersion !== 1 ||
+      evidence.arch !== arch ||
+      evidence.version !== version ||
+      evidence.certificateSha256 !== certificate.sha256
+    ) {
+      throw new Error(`Invalid publisher signing evidence for ${arch}`)
+    }
+    assertPublisherRequirement(evidence.requirement, certificate.sha1)
+  }
+  return certificate.sha256
+}
+
 export async function publishRelease({ env, directory, mobile, gh }) {
   if (
     env.GITHUB_REPOSITORY !== 'Fartown/orca' ||
@@ -54,6 +73,7 @@ export async function publishRelease({ env, directory, mobile, gh }) {
   const repo = env.GITHUB_REPOSITORY
   const runUrl = `https://github.com/${repo}/actions/runs/${env.GITHUB_RUN_ID}`
   const assets = await hashPackages(directory)
+  const macCertificateSha256 = verifyMacSigningEvidence(directory, version)
   const timestamp = Number(version.match(/-local\.(\d+)\./)?.[1])
   const androidVersionCode = androidConfig.androidVersionCode(timestamp)
   const manifest = {
@@ -65,7 +85,8 @@ export async function publishRelease({ env, directory, mobile, gh }) {
     androidVersion: mobile.expo.version,
     androidVersionCode,
     androidCertificateSha256: ANDROID_CERT_SHA256,
-    macSigning: 'ad-hoc, not notarized',
+    macSigning: 'fixed self-signed publisher, not notarized',
+    macCertificateSha256,
     assets
   }
   writeFileSync(join(directory, 'build-info.json'), `${JSON.stringify(manifest, null, 2)}\n`)
@@ -80,8 +101,9 @@ export async function publishRelease({ env, directory, mobile, gh }) {
     `${[
       `集成分支内测包（非正式版）\n\nCommit: ${sha}\n构建: ${runUrl}`,
       `macOS: ${version}\nAndroid: ${mobile.expo.version} (versionCode ${androidVersionCode})`,
-      'macOS 提供 Apple Silicon / Intel DMG，ad-hoc 签名、未公证，首次打开可能被系统拦截，需要手动允许；系统权限可能需要重新授予。',
-      '提供双架构 ZIP 与 latest-mac.yml；macOS ad-hoc 签名无法通过原生自动更新的跨版本签名校验，仍需手动安装 DMG。',
+      'macOS 提供 Apple Silicon / Intel DMG，使用固定 fork 自签身份、未公证；首次打开可能被系统拦截，需要手动允许，系统权限可能需要重新授予。',
+      '提供双架构 ZIP 与 latest-mac.yml，支持同一固定签名身份之间的原生自动更新。现有 ad-hoc 旧版需先手动安装一次 DMG，之后可应用内下载并确认重启更新。',
+      `macOS publisher certificate SHA-256: ${macCertificateSha256}`,
       'Android 集成包自动检查 fork 更新，可在应用内下载 APK 后通过系统确认安装。旧版需先手动安装一次；不同签名安装不能覆盖。APK 使用 Expo debug 内测签名，不用于商店发布。',
       `Android certificate SHA-256: ${ANDROID_CERT_SHA256}`,
       'build-info.json 和 SHA256SUMS.txt 记录来源及下载校验和。'

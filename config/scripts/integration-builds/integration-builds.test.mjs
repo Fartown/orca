@@ -15,6 +15,7 @@ import { hashPackages, PACKAGE_NAMES, publishRelease } from './publish-release.m
 import androidConfig from './android-config.cjs'
 import { verifyAndroidPackageVersion } from './verify-apk-version.mjs'
 import { signIntegrationPackage } from './mac-after-sign.cjs'
+import { signingCertificate } from './mac-signing.cjs'
 
 const sha = 'a'.repeat(40)
 const timestamp = 1789228800000
@@ -34,6 +35,19 @@ function packages() {
   const directory = mkdtempSync(join(tmpdir(), 'orca-integration-packages-'))
   directories.push(directory)
   PACKAGE_NAMES.forEach((name) => writeFileSync(join(directory, name), name))
+  const certificate = signingCertificate()
+  for (const arch of ['arm64', 'x64']) {
+    writeFileSync(
+      join(directory, `mac-signing-${arch}.json`),
+      JSON.stringify({
+        schemaVersion: 1,
+        arch,
+        version: env.ORCA_LOCAL_BUILD_VERSION,
+        certificateSha256: certificate.sha256,
+        requirement: `identifier "com.stably.orca" and certificate root = H"${certificate.sha1}"`
+      })
+    )
+  }
   return directory
 }
 
@@ -184,6 +198,8 @@ describe('complete, immutable fork prereleases', () => {
     expect(manifest.sha).toBe(sha)
     expect(manifest.assets).toHaveLength(5)
     expect(manifest.androidVersionCode).toBe(androidConfig.androidVersionCode(timestamp))
+    expect(manifest.macCertificateSha256).toBe(signingCertificate().sha256)
+    expect(manifest.macSigning).toBe('fixed self-signed publisher, not notarized')
     const update = parse(readFileSync(join(directory, 'latest-mac.yml'), 'utf8'))
     expect(update.version).toBe(env.ORCA_LOCAL_BUILD_VERSION)
     expect(update.files).toEqual(
@@ -204,6 +220,23 @@ describe('complete, immutable fork prereleases', () => {
     rmSync(join(directory, PACKAGE_NAMES[2]))
     await expect(hashPackages(directory)).rejects.toThrow()
   })
+
+  it.each(['certificateSha256', 'version', 'arch', 'requirement'])(
+    'refuses publication when signing evidence has an invalid %s',
+    async (field) => {
+      const directory = packages()
+      const path = join(directory, 'mac-signing-x64.json')
+      const evidence = JSON.parse(readFileSync(path, 'utf8'))
+      evidence[field] = 'invalid'
+      writeFileSync(path, JSON.stringify(evidence))
+      const gh = github()
+      await expect(publishRelease({ env, directory, mobile, gh })).rejects.toThrow()
+      expect(gh).not.toHaveBeenCalled()
+      rmSync(path)
+      await expect(publishRelease({ env, directory, mobile, gh })).rejects.toThrow()
+      expect(gh).not.toHaveBeenCalled()
+    }
+  )
 
   it.each([
     { GITHUB_REPOSITORY: 'stablyai/orca' },
@@ -267,6 +300,24 @@ describe('complete, immutable fork prereleases', () => {
 })
 
 describe('workflow wiring', () => {
+  it('limits publisher secrets to integration packaging and always cleans them up', () => {
+    const workflow = parse(readFileSync('.github/workflows/fork-integration-build.yml', 'utf8'))
+    const steps = workflow.jobs.macos.steps
+    const prepare = steps.find((step) => step.name === 'Prepare fixed publisher signing key')
+    expect(prepare.if).toContain("github.ref == 'refs/heads/fork/integration'")
+    expect(prepare.if).toContain("github.event_name != 'pull_request'")
+    expect(Object.keys(prepare.env)).toEqual([
+      'ORCA_MAC_SIGN_PRIVATE_KEY_PEM',
+      'ORCA_MAC_SIGN_KEY_PASSWORD'
+    ])
+    const cleanup = steps.find((step) => step.name === 'Remove temporary publisher private key')
+    expect(cleanup.if).toContain('always()')
+    expect(cleanup.run).toContain('mac-signing.cjs cleanup')
+    expect(
+      steps.find((step) => step.name === 'Verify fixed publisher and package identity').run
+    ).toContain('mac-package-signature.mjs')
+    expect(JSON.stringify(workflow.jobs.publish)).not.toContain('secrets.')
+  })
   it('isolates temporary signing probes from release builds and publication', () => {
     const workflow = parse(readFileSync('.github/workflows/fork-integration-build.yml', 'utf8'))
     expect(workflow.on.workflow_dispatch.inputs.signing_probe_only.default).toBe(false)

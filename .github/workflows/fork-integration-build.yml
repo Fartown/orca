@@ -163,12 +163,21 @@ jobs:
         run: pnpm exec vitest run --config config/vitest.config.ts config/scripts/integration-builds/integration-builds.test.mjs
       - name: Build desktop and native helpers
         run: pnpm run build:release
+      - name: Prepare fixed publisher signing key
+        if: github.ref == 'refs/heads/fork/integration' && github.event_name != 'pull_request'
+        env:
+          ORCA_MAC_SIGN_PRIVATE_KEY_PEM: ${{ secrets.ORCA_MAC_SIGN_PRIVATE_KEY_PEM }}
+          ORCA_MAC_SIGN_KEY_PASSWORD: ${{ secrets.ORCA_MAC_SIGN_KEY_PASSWORD }}
+        run: node config/scripts/integration-builds/mac-signing.cjs prepare
       - name: Package internal-test DMG and update ZIP
         env:
           BUILD_ARCH: ${{ matrix.arch }}
         run: |
           pnpm run ensure:electron-runtime
           pnpm exec electron-builder --config config/scripts/integration-builds/electron-builder.cjs --mac --"$BUILD_ARCH" --publish never
+      - name: Remove temporary publisher private key
+        if: always() && github.ref == 'refs/heads/fork/integration' && github.event_name != 'pull_request'
+        run: node config/scripts/integration-builds/mac-signing.cjs cleanup
       - name: Verify signature and native runtime
         env:
           APP_DIRECTORY: ${{ matrix.app-directory }}
@@ -177,12 +186,19 @@ jobs:
           app="dist/$APP_DIRECTORY/Orca.app"
           codesign --verify --deep --strict "$app"
           test "$(ELECTRON_RUN_AS_NODE=1 "$app/Contents/MacOS/Orca" -p process.arch)" = "$BUILD_ARCH"
+      - name: Verify fixed publisher and package identity
+        if: github.ref == 'refs/heads/fork/integration' && github.event_name != 'pull_request'
+        env:
+          APP_DIRECTORY: ${{ matrix.app-directory }}
+          BUILD_ARCH: ${{ matrix.arch }}
+        run: node config/scripts/integration-builds/mac-package-signature.mjs "dist/$APP_DIRECTORY/Orca.app" "$BUILD_ARCH" "dist/mac-signing-$BUILD_ARCH.json"
       - uses: actions/upload-artifact@v7
         with:
           name: integration-macos-${{ matrix.arch }}-${{ needs.identity.outputs.sha }}
           path: |
             dist/orca-integration-macos-${{ matrix.arch }}.dmg
             dist/orca-integration-macos-${{ matrix.arch }}.zip
+            dist/mac-signing-${{ matrix.arch }}.json
           if-no-files-found: error
           compression-level: 0
           retention-days: 14

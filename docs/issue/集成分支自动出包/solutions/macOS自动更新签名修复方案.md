@@ -1,9 +1,9 @@
 ---
 title: macOS 自动更新签名修复方案
 document_type: solution
-status: draft
+status: implementing
 created: 2026-09-12
-updated: 2026-09-12
+updated: 2026-09-13
 ---
 
 # macOS 自动更新签名修复方案
@@ -12,24 +12,24 @@ updated: 2026-09-12
 
 当前阻塞来自集成包使用 `identity: '-'` 的 ad-hoc 签名，而不是 ZIP、GitHub 更新源或下载功能。两版包各自有效，但旧版的默认 designated requirement 绑定旧包 cdhash，不能接受新版内容。这一点已由 Electron 43.6.0 原生更新和独立交叉验签共同证实。
 
-推荐先验证 **fork 专用固定自签代码签名证书 + 现有 Squirrel 原生更新器**。构建机签名时需要建立证书信任；客户端是否接受同一签名身份是另一项校验，不能把本机未配置信任造成的签名失败推导为自签更新不可行。Apple 文档明确支持自签身份和基于固定证书的指定要求，但当前 Electron/完整 Orca 链路仍须实测。
+采用 **固定自签代码签名证书 + rcodesign PEM 签名 + 现有 Squirrel 原生更新器**。不建立 keychain、不修改构建机或客户端信任；签名仍由 Apple strict 校验和 Squirrel 原生指定要求校验。本机 Electron 43.6.0 已连续两轮通过同证书实际替换/重启、错证书拒绝和篡改拒绝，完整 Orca 与双架构 CI 仍在验证。
 
-本稿是待验证方案，不是已解决声明。先通过下面的 P0 验证门槛，再引入长期密钥和发布配置。自签仍不是 Apple Developer ID、公证或免 Gatekeeper 提示；首次安装可能需要系统允许。现有 ad-hoc 安装需要手动迁移一次，之后才测试自动更新。
+最小原生探针通过不等于完整 Orca 已验收。长期固定发布身份已生成并配置 Actions secrets，私钥不进入仓库；公开证书固定到源码。自签不是 Apple Developer ID、公证或免 Gatekeeper 提示；现有 ad-hoc 安装需要手动迁移一次，之后使用同身份自动更新。
 
 ## 1. 需求与已知事实
 
 - 来源：用户要求 fork 检查、ZIP/清单和自动更新，并指出上一轮只报告阻塞、没有解决方案。对应 REQ-404。
 - 目标：应用内发现新版本、下载、用户确认重启、新版本实际启动，沿用既有更新 UI 与终端恢复逻辑。
-- 当前代码：集成包装器硬编码 `identity: '-'`；上游正式配置使用 Developer ID 及公证，不能直接打开上游正式发布开关，否则会引入缺失的 Apple 凭据。
+- 当前代码：继承原打包流程先完成 ad-hoc 签名，再通过 fork `afterSign` 使用固定 PEM 身份重签；发布缺少固定密钥时失败。上游 Developer ID 和公证配置不变。
 - 已验证：[签名探针报告](../../../../.docs/integration-updates-ui-validation/2026-09-12/mac-signing-probe/final-report.md)。ad-hoc 两包严格验签通过；下载完成后 Squirrel 拒绝跨包指定要求。
-- 未验证：固定自签身份的原生更新。上一轮专用 keychain 报 `CSSMERR_TP_NOT_TRUSTED`，没有进入签名后验证，更没有证明“客户端必须信任自签根证书”。
+- 新证据：`selfsigned-ci/local-rcodesign-20260913-0019/final-report.md` 记录 3/3 原生用例、9 张截图及前后信任设置摘要一致。两轮 CI 的 `add-trusted-cert` 都停在交互授权，已弃用该路线，未据此否定自签客户端更新。
 - 约束：不退出用户正在运行的 App；测试在隔离目录/隐藏窗口或 CI，CDP 委派执行；不改变用户电脑的系统/用户证书信任；SSH、Android、Windows、Linux 和非集成更新不变。
 
 ## 2. 候选方案及复用评估
 
 | 路线 | 改动与依赖 | 判断 |
 | --- | --- | --- |
-| 固定自签证书，保留原生更新 | 固定证书/私钥；CI 临时 keychain 和仅构建机代码签名信任；修改 fork 包装配置 | 当前内测用途优先验证，运行时改动最少；可行性不能仅凭文档宣称已通过 |
+| 固定自签证书，保留原生更新 | 固定 PEM 公私钥；固定版本和摘要的 rcodesign；fork afterSign | 本机原生正反例已通过；不修改 trust/keychain，继续验完整 Orca |
 | Apple Developer ID，保留原生更新 | 用户持有的 Apple Developer 账号、证书私钥；公证另需凭据 | 面向正式分发的成熟路线；现无凭据，不能代用户购买账号或假造身份 |
 | 自建下载后替换 App 的安装器 | 重写退出协调、替换、恢复、权限、重启及签名认证 | 不推荐；重复现有 Squirrel，改动大且新增安装故障面 |
 | 去掉验签、只检查 bundle ID 或修改 ad-hoc 要求 | 改弱现有签名校验 | 不采用；不能验证更新来自同一签名方 |
@@ -51,11 +51,11 @@ updated: 2026-09-12
 ```mermaid
 sequenceDiagram
   participant CI as 隔离 macOS 构建机
-  participant K as 临时签名 keychain
+  participant K as 临时解密的 PEM 私钥
   participant GH as Fork Release
   participant U as 现有 Orca 更新器
   participant S as Squirrel 原生安装器
-  CI->>K: 导入固定证书和私钥，仅构建机配置信任
+  CI->>K: 从受限 secret 解密并核对固定公钥
   CI->>CI: 签名两种架构及嵌套组件
   CI->>CI: 严格验签、固定证书指纹与更新探针
   alt 任一失败
@@ -69,7 +69,7 @@ sequenceDiagram
     U->>S: 用户确认后退出并安装
     S-->>U: 替换 bundle，重启到目标版本
   end
-  CI->>K: finally 清理本次 keychain 和信任
+  CI->>K: always 删除本次临时私钥
 ```
 
 验收看签名、原生就绪、磁盘版本、新进程版本四层，不以 ZIP 下载完成代替安装完成。
@@ -90,7 +90,7 @@ flowchart TD
   I --> J[新版本启动，会话重新连接]
 ```
 
-不新增前端页面、组件或状态库；继续使用现有 checking / available / downloading / downloaded / error 及安装交接状态。错误保持原错误态；不能提前显示“安装成功”。自签验证尚未通过期间继续显示明确的手动安装限制。
+不新增前端页面、组件或状态库；继续使用现有 checking / available / downloading / downloaded / error 及安装交接状态。错误保持原错误态；不能提前显示“安装成功”。说明中区分旧 ad-hoc 首次手动迁移与同固定身份后续自动升级。
 
 ## 4. 改动范围与实施顺序
 
@@ -98,12 +98,17 @@ flowchart TD
 
 ```text
 config/scripts/integration-builds/
-  mac-signing-probe.mjs            [新增] 从现有隔离探针收敛可供 CI 执行的正反例入口
-  mac-signing.cjs                  [新增] 临时 keychain 生命周期与固定指纹核验
+  signing-probe/                  [新增] 临时证书原生升级正反例
+  orca-update-probe/              [新增] 真实 Orca 升级和终端恢复验收
+  mac-signing.cjs                  [新增] 临时 PEM 生命周期、公私钥匹配及固定指纹核验
+  mac-rcodesign.cjs                [新增] 固定版本/摘要的工具和原生严格验签
+  mac-signing-metadata.cjs         [新增] 重签前后权限、flags、plist、asar 不变检查
+  mac-after-sign.cjs               [新增] 继承原流程后的固定证书签名接缝
+  mac-package-signature.mjs        [新增] 实际成品签名、版本和架构证据
   electron-builder.cjs             [修改] 显式固定签名身份，禁止发布时静默降为 ad-hoc
   publish-release.mjs              [修改] 如实标记签名种类和指纹，不宣称公证
   integration-builds.test.mjs      [修改] 签名必需条件、清理、禁止降级合同
-.github/workflows/fork-integration-build.yml [修改] 信任仅限隔离 CI，PR 无生产私钥
+.github/workflows/fork-integration-build.yml [修改] 发布密钥仅限 integration，PR 无生产私钥
 src/main/integration-builds/integration-update-feed.ts [修改] 验证通过后修正过时的 ad-hoc 限制说明
 src/main/updater-mac-install.ts    [复用，不改] 原生就绪与安装交接
 src/cli/runtime/mac-app-update-bundle.ts [复用，不改] 观察目标版本
@@ -113,19 +118,21 @@ docs/issue/集成分支自动出包/       [修改] 需求、用例和验收记�
 
 ### P0：先验证固定身份，不创建长期发布密钥
 
-- 将现有忽略目录中的探针收敛到功能自有 `mac-signing-probe.mjs`，不依赖 CI 访问本机 `.docs`；通过既有 workflow 的显式手动探针入口执行，不发布应用产物。
-- 在一次性 GitHub macOS runner 内创建临时自签代码签名身份，只在该构建用户的代码签名策略中信任该证书，不改本机信任。
+- 将探针收敛到功能自有 `signing-probe/`，不依赖 CI 访问本机 `.docs`；通过 workflow 显式手动入口执行，不发布应用产物。
+- 在隔离环境创建临时自签 PEM，用固定 rcodesign 0.29.0 签名，不添加任何证书信任。
 - 同一身份签出 A/B 两版不同内容、相同 bundle ID 的最小 Electron App；另用另一身份签出 C。
-- 完成签名后移除构建机对测试证书的信任，再执行验签和原生更新验证，避免拿“本机已信任”掩盖客户端限制。隔离运行环境同时核对 trust settings。
+- 签完删除临时私钥再启动客户端；只读核对 user/admin trust 与 keychain 搜索列表前后一致。
 - A→B 必须 staging 成功并实际替换/重启；A→C、篡改 B 必须拒绝且 A 可继续启动。不得显式放宽成只有 identifier 的要求。
 - arm64/x64 分别执行。若自签身份在当前 Electron/macOS 仍不被接受，记录原始原因，改走 Developer ID；不继续用文档推断替代实测。
 
 ### P1：验证通过后配置固定发布身份
 
-- 一次性生成 fork 专用私钥/证书和加密 P12，安全备份；同一身份签后续每个发布，不能在每次 CI 重新生成。
-- P12 与密码保存在 fork 的受限 GitHub Actions secrets，不写入 git、日志或 artifacts。只让可信 integration 分支的发布构建访问；PR 用一次性实验身份做检查，不注入长期密钥。
-- 新增签名脚本输入为 P12、密码、预期证书指纹；输出临时 keychain 路径和签名身份。使用 `finally` 清理；失败退出，不退回 `'-'`。
+- 一次性生成 fork 专用 RSA 2048 私钥及 10 年证书，私钥以 AES-256-CBC 加密 PKCS8 PEM 备份；同一身份签后续每个发布，不能每次 CI 重新生成。
+- `ORCA_MAC_SIGN_PRIVATE_KEY_PEM` 与 `ORCA_MAC_SIGN_KEY_PASSWORD` 保存在 fork Actions secrets，只在可信 integration 发布准备步骤使用。公开证书 SHA-256 为 `e68916f17fa53bdae7b7408f8a0971979db2a49c2091f01e2a95d840b98cff61`。PR 普通打包沿用 ad-hoc；两套手动原生探针使用临时身份，不注入长期密钥。
+- 签名脚本解密私钥并与固定证书公钥匹配，输出 0600 临时 PEM 路径；workflow `always()` 清理；失败退出，不退回 ad-hoc 发布。全过程没有 trust/keychain API。
 - 包装器继续继承上游 hooks，主 App、helpers、frameworks 和相关原生 helper 使用同一长期身份；签完再生成 ZIP/YAML。
+- `afterSign` 对比签名前后 entitlements、flags、Info.plist 和 asar 摘要，禁止以重签为由改变完整性或权限配置。Apple `codesign --verify --deep --strict` 必须通过；指定要求精确绑定证书，不接受只有 bundle ID 的要求。
+- 发布器要求两架构验签证据均匹配固定证书、架构和本次版本，缺一不创建公开 release。
 - `build-info.json` 只新增可选签名说明/公钥指纹，旧读取方忽略；现有更新清单的版本、文件大小和摘要契约不变。
 
 ### P2：真实 Orca 两版验收与一次性迁移
@@ -139,14 +146,14 @@ docs/issue/集成分支自动出包/       [修改] 需求、用例和验收记�
 
 | 风险/事实 | 处理与观测 |
 | --- | --- |
-| 自签与当前 Electron 组合未验证 | P0 为硬门槛；必须有移除构建信任后的正例、错证书反例及实际重启 |
+| 最小探针不能覆盖完整产品 | P0 与 P2 为独立门槛；后者须验证真实 Orca 替换、重启和终端恢复 |
 | 密钥轮换导致指定要求不匹配 | 固定身份、备份；轮换另做迁移，不自动换证书冒充兼容 |
 | 首次 Gatekeeper/权限提示 | 明确未公证，不承诺免提示；不自动关闭 Gatekeeper |
 | 无法替换/重启 | 记录原生错误与目标版本；旧 App 可启动，禁止只看下载完成 |
 | 发布配置缺失 | 构建失败且不公开半套产物，不降级 ad-hoc 后继续发布 |
 | 影响原渠道或平台 | 回归现有 updater、local build、Android、混合版本客户端；无新 wire 契约 |
 
-每次实验记录：源 SHA、Electron/macOS/架构、证书指纹、旧/新 designated requirement、验签退出码、update-downloaded/native-ready 事件、旧/新进程 PID/版本、磁盘版本和清理结果。不记录私钥/P12 密码。只有 P0 与 P2 都通过，才把 REQ-404 自动安装标为完成。
+每次实验记录：源 SHA、Electron/macOS/架构、证书指纹、旧/新 designated requirement、验签退出码、update-downloaded/native-ready 事件、旧/新进程 PID/版本、磁盘版本和清理结果。不记录私钥和密码。只有 P0 与 P2 都通过，才把 REQ-404 自动安装标为完成。
 
 ## 6. 引用
 
@@ -157,6 +164,13 @@ docs/issue/集成分支自动出包/       [修改] 需求、用例和验收记�
 - [本地更新测试记录](../tests/runs/2026-09-12-updates.md)、[需求](../requirements/集成分支自动出包.md)。
 
 ## 7. 变更记录
+
+### 2026-09-13
+
+- 原因：两轮临时 trust 授权均阻塞；PEM-only rcodesign 的本机真实原生正反例已连续通过。
+- 内容：删除无效 trust 路线，采用不修改证书信任的固定身份签名；补 metadata 保持、双架构真实 Orca 验收、发布前指纹校验。
+- 影响：仅 fork 签名/发布自有路径，原生安装器不改。长期密钥已配置，正式出包与 P2 仍待 CI，未宣称上线。
+- 记录人：Codex。
 
 ### 2026-09-12
 

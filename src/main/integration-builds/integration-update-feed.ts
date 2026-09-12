@@ -21,7 +21,7 @@ export function integrationChangelog(version: string) {
     release: {
       title: `Orca Integration ${release.sha.slice(0, 12)}`,
       description:
-        'Fork integration build. This ad-hoc macOS build requires manual DMG installation; native automatic installation needs a stable signing identity.',
+        'Fork integration build, signed by a fixed self-signed publisher and not notarized. Native updates work between builds with this identity. Older ad-hoc builds require one manual DMG installation first.',
       releaseNotesUrl: `${INTEGRATION_RELEASES_URL}/tag/${release.tag}`
     }
   }
