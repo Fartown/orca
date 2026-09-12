@@ -15,12 +15,22 @@ export function createProbeIdentities(output) {
   let cleaned = false
 
   function removeTrust() {
+    const errors = []
     for (const identity of identities) {
       if (!identity.trusted) {
         continue
       }
-      command('/usr/bin/security', ['remove-trusted-cert', identity.certificate])
-      identity.trusted = false
+      const result = command('/usr/bin/security', ['remove-trusted-cert', identity.certificate], {
+        allowFailure: true
+      })
+      if (result.status === 0) {
+        identity.trusted = false
+      } else {
+        errors.push(`${identity.label}: ${result.stderr}`)
+      }
+    }
+    if (errors.length) {
+      throw new Error(`Could not remove probe trust: ${errors.join('; ')}`)
     }
   }
 

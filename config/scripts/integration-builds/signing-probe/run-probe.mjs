@@ -1,4 +1,4 @@
-import { mkdirSync, existsSync, readdirSync } from 'node:fs'
+import { mkdirSync, existsSync, readdirSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { createRequire } from 'node:module'
@@ -30,6 +30,10 @@ export async function runProbe(args) {
     throw new Error('Probe output must be new or empty')
   }
   mkdirSync(options.output, { recursive: true })
+  writeFileSync(
+    join(options.output, 'test-plan.md'),
+    '# Native signing probe plan\n\nSame certificate: update-downloaded, quitAndInstall, disk 1.0.1 and a new 1.0.1 process. Wrong certificate and tampered candidate: native signature error, disk remains 1.0.0 and original app relaunches. All windows remain hidden. Build-time user code-signing trust and private material are removed before every runtime case. Real Orca business features and Gatekeeper first installation are out of scope.\n'
+  )
   const startedAt = new Date().toISOString()
   const environment = {
     url: 'Native Squirrel feed on per-case loopback ports',
