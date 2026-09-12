@@ -234,6 +234,39 @@ async function measureSwitch(
       message: 'revealed terminal never restored its content'
     })
     .not.toBeNull()
+    .catch(async (error: unknown) => {
+      console.log(
+        '[switch-paint-timeout]',
+        JSON.stringify(
+          await page.evaluate(() => {
+            const state = window.__store!.getState()
+            const probe = globalThis.__switchPaintProbe
+            return {
+              visibility: document.visibilityState,
+              activeWorktreeId: state.activeWorktreeId,
+              activeTabId: state.activeTabId,
+              activeTabType: state.activeTabType,
+              probe: probe ? { ...probe, stop: undefined, frames: probe.frames.length } : null,
+              panes: [...(window.__paneManagers ?? [])].map(([tabId, manager]) => ({
+                tabId,
+                panes: manager.getPanes().map(({ container, terminal }) => ({
+                  connected: container.isConnected,
+                  rows: terminal.rows,
+                  viewportY: terminal.buffer.active.viewportY,
+                  filledRows: Array.from({ length: terminal.rows }, (_, row) =>
+                    terminal.buffer.active
+                      .getLine(terminal.buffer.active.viewportY + row)
+                      ?.translateToString(true)
+                      .trim()
+                  ).filter(Boolean).length
+                }))
+              }))
+            }
+          })
+        )
+      )
+      throw error
+    })
   // Let the idle admission drain so the settled-resource readings are steady.
   await page.waitForTimeout(2_000)
 
@@ -471,7 +504,9 @@ test.describe('Worktree switch first paint', () => {
     // runners cannot hold a latency threshold, but "the switch mounted one pane"
     // and "the warm set came back" are exact and are the real regression guards.
     if (process.env.CI) {
-      console.log(`[switch-budget] CI run, latency budget not enforced (median ${median(restored).toFixed(1)}ms)`)
+      console.log(
+        `[switch-budget] CI run, latency budget not enforced (median ${median(restored).toFixed(1)}ms)`
+      )
       return
     }
     expect(median(restored)).toBeLessThanOrEqual(FIRST_PAINT_BUDGET_MS)

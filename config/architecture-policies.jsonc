@@ -375,6 +375,7 @@
             "AGENTS.md",
             "config/scripts/format-fork-staged-files.mjs",
             "config/scripts/format-fork-staged-files.test.mjs",
+            "tests/e2e/worktree-switch-first-paint.spec.ts",
             "config/fork-features.jsonc",
             "config/scripts/check-fork-features.mjs",
             "config/scripts/check-fork-features.test.mjs",
