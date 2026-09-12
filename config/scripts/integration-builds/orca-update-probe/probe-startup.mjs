@@ -1,8 +1,10 @@
-import { appendFileSync, writeFileSync } from 'node:fs'
+import { appendFileSync, cpSync, existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { buildSync } from 'esbuild'
 import { writeJson } from '../signing-probe/probe-command.mjs'
 import { assertElectronResolvedIsolatedHome } from '../../../../tests/e2e/helpers/electron-home-isolation.ts'
+import { startupEvidence } from './probe-startup-evidence.mjs'
+export { startupDeadline } from './probe-startup-evidence.mjs'
 
 let shutdownModule
 export async function closeOrca(app) {
@@ -19,37 +21,6 @@ export async function closeOrca(app) {
     )
   })()
   await (await shutdownModule).closeElectronAppForE2E(app)
-}
-
-async function startupEvidence(app, output, label) {
-  const observations = []
-  for (const [index, page] of app.windows().entries()) {
-    const observation = { index, url: page.url() }
-    try {
-      Object.assign(
-        observation,
-        await page.evaluate(() => ({
-          title: document.title,
-          readyState: document.readyState,
-          hasApi: Boolean(window.api),
-          hasUpdater: Boolean(window.api?.updater),
-          hasStore: Boolean(window.__store),
-          workspaceSessionReady: window.__store?.getState().workspaceSessionReady ?? null,
-          e2eConfig: window.api?.e2e?.getConfig(),
-          body: document.body?.innerText?.slice(0, 16_000)
-        }))
-      )
-      const screenshot = `screenshots/${label}-startup-${index}.png`
-      await page.screenshot({ path: join(output, screenshot), timeout: 10_000 })
-      observation.screenshot = screenshot
-      writeFileSync(join(output, `${label}-startup-${index}-dom.txt`), observation.body ?? '')
-    } catch (error) {
-      observation.diagnosticError = String(error)
-    }
-    observations.push(observation)
-  }
-  writeJson(join(output, `${label}-startup.json`), observations)
-  console.log(`[real-orca] ${label} startup diagnostics: ${JSON.stringify(observations)}`)
 }
 
 export async function readyOrca(app, isolation, output, label, close = closeOrca) {
@@ -73,6 +44,15 @@ export async function readyOrca(app, isolation, output, label, close = closeOrca
     if (!details.packaged || details.visibleWindows) {
       throw new Error('Expected a hidden, packaged Orca process')
     }
+    await app.evaluate(({ app, BrowserWindow }) => {
+      app.on('render-process-gone', (_event, contents, details) =>
+        console.error('[probe] render-process-gone', contents.id, details)
+      )
+      for (const window of BrowserWindow.getAllWindows()) {
+        window.on('unresponsive', () => console.error('[probe] unresponsive', window.id))
+        window.on('responsive', () => console.error('[probe] responsive', window.id))
+      }
+    })
     const page = await app.firstWindow({ timeout: 120_000 })
     page.on('pageerror', (error) => appendFileSync(log, `renderer: ${error.stack}\n`))
     page.on('console', (message) => appendFileSync(log, `${message.type()}: ${message.text()}\n`))
@@ -89,6 +69,10 @@ export async function readyOrca(app, isolation, output, label, close = closeOrca
     await startupEvidence(app, output, `${label}-failed`).catch((diagnosticError) => {
       appendFileSync(log, `startup evidence failed: ${diagnosticError}\n`)
     })
+    const logs = join(isolation.env?.ORCA_E2E_USER_DATA_DIR ?? isolation.isolatedHome, 'logs')
+    if (existsSync(logs)) {
+      cpSync(logs, join(output, `${label}-runtime-logs`), { recursive: true })
+    }
     await close(app)
     throw error
   }

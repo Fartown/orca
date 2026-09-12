@@ -138,10 +138,10 @@ async function run(output) {
     )
     await first.page.evaluate(() => window.api.updater.download())
     const downloaded = await waitForStatus(first.page, 'downloaded')
-    console.log('[real-orca] Native updater verified and staged B')
+    console.log('[real-orca] Updater reports B download completed')
     recordCheckpoint(
       report,
-      'Native updater verifies and stages B',
+      'Updater reports B download completed',
       JSON.stringify(downloaded),
       await snapshot(first.page, output, '03-downloaded')
     )
