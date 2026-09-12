@@ -73,14 +73,14 @@ describe('integration package identity and signing', () => {
     expect(() => verifyAndroidCertificate(output + output)).toThrow()
   })
 
-  it('keeps packaging hooks and resources while disabling updater publication', () => {
+  it('keeps packaging hooks, resources and existing app updater metadata', () => {
     vi.stubEnv('ORCA_LOCAL_BUILD_VERSION', env.ORCA_LOCAL_BUILD_VERSION)
     const upstream = require('../../electron-builder.config.cjs')
     const config = require('./electron-builder.cjs')
     expect(config.afterPack).toBe(upstream.afterPack)
     expect(config.beforeBuild).toBe(upstream.beforeBuild)
     expect(config.mac.extraResources).toBe(upstream.mac.extraResources)
-    expect(config.publish).toBeNull()
+    expect(config.publish).toBe(upstream.publish)
     expect(config.mac.identity).toBe('-')
     expect(config.mac.hardenedRuntime).toBe(false)
     expect(config.mac.notarize).toBe(false)
@@ -209,7 +209,11 @@ describe('workflow wiring', () => {
       'arm64',
       'x64'
     ])
+    expect(
+      workflow.jobs.macos.steps.find((step) => step.name === 'Package internal-test DMG').run
+    ).toContain('--publish never')
     expect(workflow.jobs.publish.needs).toEqual(['identity', 'macos', 'android'])
+    expect(workflow.jobs.macos.env.CSC_FOR_PULL_REQUEST).toBe('true')
     expect(workflow.jobs.publish.if).toContain("github.ref == 'refs/heads/fork/integration'")
     expect(workflow.jobs.publish.if).not.toContain('always()')
     expect(workflow.permissions).toEqual({ contents: 'read' })

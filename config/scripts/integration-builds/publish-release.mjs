@@ -67,7 +67,7 @@ export async function publishRelease({ env, directory, mobile, gh }) {
       `集成分支内测包（非正式版）\n\nCommit: ${sha}\n构建: ${runUrl}`,
       `macOS: ${version}\nAndroid: ${mobile.expo.version} (versionCode ${mobile.expo.android.versionCode})`,
       'macOS 提供 Apple Silicon / Intel DMG，ad-hoc 签名、未公证，首次打开可能被系统拦截，需要手动允许；系统权限可能需要重新授予。',
-      'APK 使用现有 Expo debug 内测签名，不用于商店发布；只有相同签名且 versionCode 不更高的安装才能覆盖。不会自动更新，也不会修改稳定更新频道。',
+      'APK 使用现有 Expo debug 内测签名，不用于商店发布；只有相同签名且 versionCode 不更高的安装才能覆盖。本流程仅提供手动下载，不发布自动更新源；应用内更新仍沿用原有行为。',
       `Android certificate SHA-256: ${ANDROID_CERT_SHA256}`,
       'build-info.json 和 SHA256SUMS.txt 记录来源及下载校验和。'
     ].join('\n\n')}\n`

@@ -8,7 +8,6 @@ if (upstream.forceCodeSigning || !process.env.ORCA_LOCAL_BUILD_VERSION) {
 
 module.exports = {
   ...upstream,
-  publish: null,
   mac: {
     ...upstream.mac,
     identity: '-',

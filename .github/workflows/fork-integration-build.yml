@@ -58,6 +58,8 @@ jobs:
       ORCA_BUILD_COMMIT: ${{ needs.identity.outputs.sha }}
       ORCA_COMPUTER_MACOS_SIGN_IDENTITY: '-'
       CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      # PR packages use identity '-', never an Apple signing secret.
+      CSC_FOR_PULL_REQUEST: 'true'
       NODE_OPTIONS: --max-old-space-size=4096
     steps:
       - uses: actions/checkout@v6

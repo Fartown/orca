@@ -32,6 +32,15 @@ external_ids: []
 
 ## 3. 开发记录
 
+### 2026-09-12：修复真实 PR 打包签名
+
+- 本轮目标：让 PR 验证与 integration 发布使用同样的 ad-hoc 签名。
+- 完成内容：GitHub arm64 实构建完成 DMG 后，验签抓到 electron-builder 默认跳过 PR 签名；允许 PR 的显式 ad-hoc 签名，不引入 Apple 凭据、不删除验签检查。
+- 代码或文档变更：工作流与合同断言；同时保留原 App 更新元数据，仅禁止 electron-builder 发布及 updater feed 上传。
+- 验证证据：[首次云构建](https://github.com/Fartown/orca/actions/runs/34695523934)，arm64 job 日志明确显示 PR signing skipped，随后 codesign 验证失败。
+- 未解决问题：修正后的云构建待执行；Android 首轮仍在编译。
+- 下一步：提交修复，在原 PR 复跑。
+
 ### 2026-09-12：实现并开始验证
 
 - 本轮目标：同源并行出包，成功后发布。
