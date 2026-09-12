@@ -94,7 +94,7 @@ export function finishReport(output, report, error, cleanup) {
       : [],
     checks: {
       notes:
-        'Exact fork transport fixtures and --use-mock-keychain are test isolation. P2-only exception observer is validated against a real prohibited NSAlert fixture before building; no exception handler is replaced. Native updater/signature/install/PTY are real; native B runtime readiness is not proof of its renderer health.'
+        'P2 uses exact fork HTTP fixtures, VITE_EXPOSE_STORE, and a signed test-only exception monitor plus bound disposable HOME/mock-keychain bootstrap. Real hidden LaunchServices preflight checks the unchanged production home guard and rejects wrong HOME. Native updater/signature/install/PTY are real. Native B runtime is verified first; the final UI/PTY check uses an additional instrumented reopen, not native B renderer CDP.'
     },
     not_covered: [
       'Public release delivery',
@@ -122,7 +122,7 @@ export function finishReport(output, report, error, cleanup) {
     '',
     ...report.screenshots.map((shot) => `![${shot.title}](${shot.path})`),
     '',
-    'Transport is a local fixture for the exact fork endpoints. Instrumented A/B launches use --use-mock-keychain; native relaunch argv is separate. A P2-only uncaughtExceptionMonitor banner is added before normal signing; it logs without intercepting errors and is not in production source/releases. No installer, signature validation, or PTY operation is stubbed.',
+    'Transport is a local fixture for exact fork endpoints; one manual default check is tested, not startup scheduling or public delivery. P2-only generated main adds an exception monitor and a bound disposable HOME/mock-keychain bootstrap before normal signing; production source/releases and the production home guard are unchanged. A real hidden LaunchServices preflight validates that guard, including wrong HOME rejection. Native B replacement/runtime readiness are observed first; the final UI and original-PTY check use an additional instrumented reopen. Native renderer CDP, Gatekeeper first install and real Keychain authorization are outside this acceptance. No installer, signature validation, or PTY operation is stubbed.',
     '',
     'See test-result.json, network.json, native-relaunch.json and cleanup-result.json for raw evidence.'
   ]

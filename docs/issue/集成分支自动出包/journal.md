@@ -20,6 +20,7 @@ external_ids: []
 | 测试用例 | [自动出包](tests/cases/自动出包.md) | ready | 按仓库完成门禁建立 |
 | 测试记录 | [本地验证](tests/runs/2026-09-12-local.md) | completed | 13 条合同测试，云构建尚未执行 |
 | 测试记录 | [应用更新验证](tests/runs/2026-09-12-updates.md) | completed | 本地实现、APK、组件验证；真机安装与新发布待验 |
+| 测试记录 | [原生更新验收](tests/runs/2026-09-13-native-update.md) | completed | arm64 真实替换、原生运行状态和原终端连续性通过；正式发布及 Android 默认源安装待验 |
 
 ## 2. 决策点记录
 
@@ -45,6 +46,15 @@ external_ids: []
 - 影响范围：REQ-401、REQ-402、REQ-403；APK 沿用 Expo debug 签名并核验指纹，不生成密钥或暗改 versionCode。
 
 ## 3. 开发记录
+
+### 2026-09-13：真实 Orca arm64 原生更新主流程通过
+
+- 本轮目标：完成真实替换、原生 B 就绪及原 shell 连续性，推进集成发布。
+- 完成内容：第十二轮真实 LaunchServices 正/错 HOME 前置通过；正常 A/B ZIP、签名/配置、默认 fork 手动检查、下载、staging、系统替换及 native B runtime 稳定通过。额外仪器化重开 B 后，同一 PTY 读取到更新前保存的随机 shell 值，排除回显和旧历史假阳性。
+- 代码或文档变更：测试启动入口绑定规范化临时 home，生产守卫不变；补成功路径观察器日志保留和报告边界。后两项仅证据保留/文字，不改此次已通过的验收断言或产品代码。新增原生验收记录。
+- 验证证据：[第十二轮 7m00s SUCCESS](https://github.com/Fartown/orca/actions/runs/34713324181)，被测 SHA 65d8777a0；native B PID 48661、Unix runtime 稳定 15459ms，after UI PID 49194、0 可见窗口，4 张实图，cleanup 无错误；371 项桌面/发布、9 项移动及本地门禁通过。
+- 未解决问题：65d 的 Android 云构建在 Maven gson:2.9.1 依赖解析阶段失败，未编译产品代码；同一 URL 本地当前 HTTP 200，尚不能据此声称 runner 已恢复。整条工作流未结束时 GitHub 未接受单任务重跑。最新 CI 仍需全绿；正式完整发布和 Android 默认源系统覆盖安装待验。
+- 下一步：按 merge-code 推进最新 CI、PR #11 合入及自动完整发布，再用已有 Android 隔离旧版执行覆盖更新验收；不绕过失败门禁。
 
 ### 2026-09-13：取得原生 B 异常正文，定位为验收隔离 HOME 传递失败
 

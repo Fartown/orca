@@ -239,6 +239,10 @@ async function run(output) {
         if (activeApp) {
           await closeOrca(activeApp)
         }
+        const monitor = join(profile, 'native-exception-monitor.jsonl')
+        if (existsSync(monitor)) {
+          cpSync(monitor, join(output, 'native-exception-monitor.jsonl'))
+        }
       },
       async () => {
         cleanup.ownProcesses = await stopOwnedProcesses(scratch)
