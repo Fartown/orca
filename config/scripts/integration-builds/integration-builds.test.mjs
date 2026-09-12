@@ -14,6 +14,7 @@ import {
 import { hashPackages, PACKAGE_NAMES, publishRelease } from './publish-release.mjs'
 import androidConfig from './android-config.cjs'
 import { verifyAndroidPackageVersion } from './verify-apk-version.mjs'
+import { signIntegrationPackage } from './mac-after-sign.cjs'
 
 const sha = 'a'.repeat(40)
 const timestamp = 1789228800000
@@ -56,6 +57,20 @@ afterEach(() => {
 })
 
 describe('integration package identity and signing', () => {
+  it('refuses publishing an ad-hoc package when publisher credentials are absent', async () => {
+    await expect(signIntegrationPackage({ electronPlatformName: 'darwin' }, env)).rejects.toThrow(
+      /Fixed publisher/
+    )
+    await expect(
+      signIntegrationPackage(
+        { electronPlatformName: 'darwin' },
+        { GITHUB_EVENT_NAME: 'pull_request' }
+      )
+    ).resolves.toBeUndefined()
+    await expect(
+      signIntegrationPackage({ electronPlatformName: 'linux' }, env)
+    ).resolves.toBeUndefined()
+  })
   it('verifies the actual APK native version and embedded update channel together', () => {
     const code = androidConfig.androidVersionCode(timestamp)
     const badging = `package: name='com.stably.orca.mobile' versionCode='${code}'`
@@ -128,6 +143,7 @@ describe('integration package identity and signing', () => {
     const config = require('./electron-builder.cjs')
     expect(config.afterPack).toBe(upstream.afterPack)
     expect(config.beforeBuild).toBe(upstream.beforeBuild)
+    expect(config.afterSign).toBeTypeOf('function')
     expect(config.mac.extraResources).toBe(upstream.mac.extraResources)
     expect(config.publish).toEqual({
       provider: 'generic',

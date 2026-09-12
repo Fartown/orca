@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import { readFileSync } from 'node:fs'
-import { assertHostedMac, assertPinnedRequirement, probeOptions, CASES } from './probe-policy.mjs'
+import {
+  assertHostedMac,
+  assertIsolatedMac,
+  assertPinnedRequirement,
+  probeOptions,
+  CASES
+} from './probe-policy.mjs'
 
 describe('native signing probe boundaries', () => {
   it('refuses local and self-hosted trust changes', () => {
@@ -41,6 +47,9 @@ describe('native signing probe boundaries', () => {
     expect(() =>
       assertPinnedRequirement(`identifier "probe" and anchor H"${sha}"`, sha)
     ).not.toThrow()
+    expect(() =>
+      assertPinnedRequirement(`identifier "probe" and certificate root = H"${sha}"`, sha)
+    ).not.toThrow()
     for (const requirement of [
       'identifier "probe"',
       `cdhash H"${sha}"`,
@@ -61,18 +70,37 @@ describe('native signing probe boundaries', () => {
     expect(runtime).not.toMatch(/\.show\(|\.showInactive\(|\.focus\(|\.bringToFront\(/)
     expect(runtime).toContain('autoUpdater.quitAndInstall()')
   })
-  it('constrains trust to the disposable code-signing identity and removes it before runtime', () => {
+  it('uses PEM-only identities and destroys private material before runtime', () => {
     const identity = readFileSync(new URL('./probe-identities.mjs', import.meta.url), 'utf8')
     const runner = readFileSync(new URL('./run-probe.mjs', import.meta.url), 'utf8')
-    const trust = readFileSync(new URL('../mac-signing-trust.cjs', import.meta.url), 'utf8')
-    expect(trust).toMatch(/'-r',\s*'trustRoot',\s*'-p',\s*'codeSign'/)
-    expect(trust).not.toMatch(/'add-trusted-cert',\s*'-d'/)
-    expect(identity).toContain('remove: true')
+    expect(identity).not.toMatch(
+      /add-trusted-cert|authorizationdb|create-keychain|mac-signing-trust/
+    )
+    expect(identity).toContain('trustNeverAdded: true')
     expect(runner.indexOf('signing.removeTrustBeforeRuntime()')).toBeLessThan(
       runner.indexOf('await runProbeCase(testCase)')
     )
     expect(runner.indexOf('signing.cleanup()')).toBeLessThan(
       runner.indexOf('await runProbeCase(testCase)')
     )
+  })
+  it('only allows local PEM-only probes below their evidence tree', () => {
+    expect(() =>
+      assertIsolatedMac(
+        '/work/.docs/integration-updates-ui-validation/2026-09-12/selfsigned-ci/run',
+        {},
+        'darwin',
+        '/work'
+      )
+    ).not.toThrow()
+    expect(() => assertIsolatedMac('/Applications/Test.app', {}, 'darwin', '/work')).toThrow()
+    expect(() =>
+      assertIsolatedMac(
+        '/work/.docs/integration-updates-ui-validation/2026-09-12/selfsigned-ci',
+        {},
+        'darwin',
+        '/work'
+      )
+    ).toThrow()
   })
 })

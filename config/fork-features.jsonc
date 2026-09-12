@@ -31,7 +31,8 @@
         "config/electron-builder.config.cjs",
         "config/scripts/build-mac-local.mjs",
         "mobile/scripts/prepare-android-release.mjs",
-        "mobile/src/theme/mobile-theme.ts"
+        "mobile/src/theme/mobile-theme.ts",
+        "tests/e2e/helpers/electron-home-isolation.ts"
       ],
       "policyId": "integration-builds",
       "ownedPaths": [
@@ -86,7 +87,7 @@
         "config/scripts/integration-builds/mac-signing.test.mjs",
         "config/scripts/integration-builds/mac-package-signature.test.mjs",
         "config/scripts/integration-builds/signing-probe/probe-policy.test.mjs",
-        "config/scripts/integration-builds/signing-probe/probe-trust.test.mjs",
+        "config/scripts/integration-builds/orca-update-probe/probe-contract.test.mjs",
         "src/shared/integration-builds/release-catalog.test.ts",
         "src/main/integration-builds/integration-update-feed.test.ts",
         "mobile/src/integration-builds/update-controller.test.ts"

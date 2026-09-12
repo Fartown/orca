@@ -46,6 +46,15 @@ external_ids: []
 
 ## 3. 开发记录
 
+### 2026-09-13：原生固定证书升级正反例通过
+
+- 本轮目标：解决签名准备交互阻塞，实际验证替换与重启。
+- 完成内容：采用固定版本 rcodesign 与 PEM 签名，不访问 keychain、不修改证书信任；本机连续两轮同证书升级、错证书拒绝、篡改拒绝均通过。
+- 代码或文档变更：复用 afterSign 接缝，核验签名前后 entitlements、flags、Info.plist 和 asar 完整性；删除未发布且已证实不可用的 trust 授权尝试，失败历史与证据保留；新增真实 Orca 双架构 CI 验收入口。
+- 验证证据：`.docs/integration-updates-ui-validation/2026-09-12/selfsigned-ci/local-rcodesign-20260913-0019/final-report.md`，3/3 用例、9 张截图、前后信任设置摘要一致；真实 Squirrel 替换和新进程版本通过。
+- 未解决问题：最小 Electron 探针不等于完整 Orca；双架构 CI、真实 Orca 终端恢复及长期固定身份发布待验证。
+- 下一步：并行执行两套 CI，接入正式发布签名与发布前公钥指纹校验，按失败证据继续修复。
+
 ### 2026-09-12：执行固定签名身份验证
 
 - 本轮目标：用户要求实际验证并解决 macOS 原生自动更新，不能只给方案。

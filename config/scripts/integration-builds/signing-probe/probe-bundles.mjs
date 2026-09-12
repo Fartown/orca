@@ -1,14 +1,15 @@
-import { mkdirSync, copyFileSync, existsSync, appendFileSync } from 'node:fs'
+import { mkdirSync, copyFileSync, existsSync, appendFileSync, readdirSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { createRequire } from 'node:module'
 import { command, writeJson } from './probe-command.mjs'
 import { assertPinnedRequirement } from './probe-policy.mjs'
+import { signMacBundle } from '../mac-rcodesign.cjs'
 
 const require = createRequire(import.meta.url)
 const source = import.meta.dirname
 const electron = join(dirname(require.resolve('electron/package.json')), 'dist', 'Electron.app')
 
-function buildApp(destination, version, config, signer, keychain) {
+function buildApp(destination, version, config, signer, executable) {
   if (existsSync(destination)) {
     throw new Error(`Refusing to overwrite a probe bundle: ${destination}`)
   }
@@ -26,6 +27,21 @@ function buildApp(destination, version, config, signer, keychain) {
     command('/usr/bin/plutil', ['-replace', key, '-string', value, plist])
   }
   command('/usr/bin/plutil', ['-replace', 'LSUIElement', '-bool', 'true', plist])
+  const frameworks = join(destination, 'Contents', 'Frameworks')
+  for (const helper of readdirSync(frameworks).filter((name) => name.endsWith('.app'))) {
+    const contents = join(frameworks, helper, 'Contents')
+    const executableNames = readdirSync(join(contents, 'MacOS'))
+    if (executableNames.length !== 1) {
+      throw new Error(`Unexpected raw Electron helper executables: ${helper}`)
+    }
+    command('/usr/bin/plutil', [
+      '-replace',
+      'CFBundleExecutable',
+      '-string',
+      executableNames[0],
+      join(contents, 'Info.plist')
+    ])
+  }
   const application = join(destination, 'Contents', 'Resources', 'app')
   mkdirSync(application, { recursive: true })
   for (const name of ['app-main.cjs', 'app-preload.cjs', 'app.html']) {
@@ -38,18 +54,13 @@ function buildApp(destination, version, config, signer, keychain) {
   })
   writeJson(join(application, 'probe-config.json'), config)
   writeJson(join(application, 'signed-payload.json'), { version })
-  command('/usr/bin/codesign', [
-    '--force',
-    '--deep',
-    '--sign',
-    signer.fingerprint,
-    '--keychain',
-    keychain,
-    destination
-  ])
-  const designated = command('/usr/bin/codesign', ['-d', '-r-', destination])
-    .stdout.trim()
-    .replace(/^# designated => /, '')
+  const { designated } = signMacBundle({
+    executable,
+    appPath: destination,
+    certificatePath: signer.certificate,
+    privateKeyPath: signer.privateKey,
+    evidenceDirectory: join(dirname(destination), 'signing-evidence')
+  })
   assertPinnedRequirement(designated, signer.fingerprint)
   command('/usr/bin/codesign', ['--verify', '--deep', '--strict', destination])
   return { path: destination, version, designated, fingerprint: signer.fingerprint }
@@ -63,14 +74,14 @@ export function buildProbeCase(root, name, config, signing) {
     '1.0.0',
     config,
     signing.identities[0],
-    signing.keychain
+    signing.executable
   )
   const next = buildApp(
     join(directory, 'candidate', 'Orca Signing Probe.app'),
     '1.0.1',
     config,
     signing.identities[name === 'wrong-certificate' ? 1 : 0],
-    signing.keychain
+    signing.executable
   )
   if (name === 'tampered') {
     appendFileSync(

@@ -8,11 +8,18 @@ describe('macOS package publisher requirements', () => {
   const pinned = `identifier "com.stablyai.orca" and anchor H"${fingerprint}"`
   it('accepts the default same-certificate requirement without client trust', () => {
     expect(() => assertPublisherRequirement(pinned, fingerprint.toLowerCase())).not.toThrow()
+    expect(() =>
+      assertPublisherRequirement(
+        `designated => ${pinned.replace('anchor', 'certificate root =')}`,
+        fingerprint
+      )
+    ).not.toThrow()
   })
   it.each([
     'identifier "com.stablyai.orca"',
     `cdhash H"${fingerprint}"`,
     `${pinned} and anchor trusted`,
+    `${pinned} or identifier "com.stablyai.orca"`,
     `identifier "com.stablyai.orca" and anchor H"${'B'.repeat(40)}"`
   ])('rejects an incompatible or unpinned requirement: %s', (requirement) => {
     expect(() => assertPublisherRequirement(requirement, fingerprint)).toThrow()

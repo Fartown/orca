@@ -5,17 +5,8 @@ import { pathToFileURL } from 'node:url'
 import { execFileSync } from 'node:child_process'
 import { X509Certificate } from 'node:crypto'
 import { signingCertificate } from './mac-signing.cjs'
-
-export function assertPublisherRequirement(requirement, sha1) {
-  const anchor = /anchor\s+H"([a-f0-9]{40})"/i.exec(requirement)
-  if (
-    !anchor ||
-    anchor[1].toUpperCase() !== sha1.toUpperCase() ||
-    /\bcdhash\b|\btrusted\b/.test(requirement)
-  ) {
-    throw new Error('App requirement is not pinned to the publisher certificate')
-  }
-}
+import { assertPublisherRequirement } from './mac-signature-requirement.cjs'
+export { assertPublisherRequirement } from './mac-signature-requirement.cjs'
 
 export function verifyPackageSignature(
   application,

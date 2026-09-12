@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs'
+import { generateKeyPairSync } from 'node:crypto'
 import { describe, expect, it } from 'vitest'
-import { assertReleaseRunner, signingCertificate } from './mac-signing.cjs'
+import { assertReleaseRunner, decodePublisherKey, signingCertificate } from './mac-signing.cjs'
 
 const runner = {
   GITHUB_ACTIONS: 'true',
@@ -12,6 +13,22 @@ const runner = {
 }
 
 describe('fixed macOS publisher signing', () => {
+  it('rejects wrong passwords and private keys that do not match the pinned certificate', () => {
+    const certificate = readFileSync(new URL('./expo-debug-certificate.pem', import.meta.url))
+    const { privateKey } = generateKeyPairSync('ec', {
+      namedCurve: 'prime256v1',
+      privateKeyEncoding: {
+        type: 'pkcs8',
+        format: 'pem',
+        cipher: 'aes-256-cbc',
+        passphrase: 'test-password'
+      }
+    })
+    expect(() => decodePublisherKey(certificate, privateKey, 'wrong-password')).toThrow()
+    expect(() => decodePublisherKey(certificate, privateKey, 'test-password')).toThrow(
+      /does not match/
+    )
+  })
   it('allows only the hosted integration release runner to change signing trust', () => {
     expect(() => assertReleaseRunner(runner, 'darwin')).not.toThrow()
     for (const [key, value] of [

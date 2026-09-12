@@ -9,6 +9,10 @@ on:
         description: Verify native macOS updates with temporary signing identities only
         type: boolean
         default: false
+      orca_update_probe_only:
+        description: Verify real Orca replacement, restart and terminal reconnection
+        type: boolean
+        default: false
   pull_request:
     branches: [fork/integration]
     paths:
@@ -22,7 +26,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: fork-integration-build-${{ github.event.pull_request.number || github.ref }}
+  group: fork-integration-build-${{ github.event.pull_request.number || github.ref }}-${{ inputs.orca_update_probe_only && 'orca-probe' || inputs.signing_probe_only && 'signing-probe' || 'packages' }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
@@ -30,7 +34,7 @@ env:
 
 jobs:
   identity:
-    if: github.repository == 'Fartown/orca' && !inputs.signing_probe_only
+    if: github.repository == 'Fartown/orca' && !inputs.signing_probe_only && !inputs.orca_update_probe_only
     runs-on: ubuntu-latest
     timeout-minutes: 10
     outputs:
@@ -50,7 +54,7 @@ jobs:
         run: node config/scripts/integration-builds/build-identity.mjs >> "$GITHUB_OUTPUT"
 
   signing-probe:
-    if: github.repository == 'Fartown/orca' && github.event_name == 'workflow_dispatch' && inputs.signing_probe_only
+    if: github.repository == 'Fartown/orca' && github.event_name == 'workflow_dispatch' && inputs.signing_probe_only && !inputs.orca_update_probe_only
     strategy:
       fail-fast: false
       matrix:
@@ -82,6 +86,40 @@ jobs:
             !${{ runner.temp }}/signing-probe-evidence/**/*.app/**
             !${{ runner.temp }}/signing-probe-evidence/**/*.zip
             !${{ runner.temp }}/signing-probe-evidence/**/fixed-home/**
+          if-no-files-found: error
+          retention-days: 14
+
+  orca-update-probe:
+    if: github.repository == 'Fartown/orca' && github.event_name == 'workflow_dispatch' && inputs.orca_update_probe_only
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [macos-15, macos-15-intel]
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    env:
+      NODE_OPTIONS: --max-old-space-size=4096
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: pnpm/setup@v2
+        with:
+          install: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: package.json
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Verify actual Orca update and terminal reconnection
+        run: node config/scripts/integration-builds/orca-update-probe/run-probe.mjs --output "$RUNNER_TEMP/orca-update-evidence"
+      - name: Retain real Orca update evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: orca-update-probe-${{ matrix.runner }}-${{ github.sha }}
+          path: ${{ runner.temp }}/orca-update-evidence
           if-no-files-found: error
           retention-days: 14
 

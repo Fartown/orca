@@ -1,4 +1,5 @@
 const upstream = require('../../electron-builder.config.cjs')
+const { signIntegrationPackage } = require('./mac-after-sign.cjs')
 
 if (upstream.forceCodeSigning || !process.env.ORCA_LOCAL_BUILD_VERSION) {
   throw new Error(
@@ -11,6 +12,14 @@ if (!/^integration-[1-9]\d*-[a-f0-9]{12}$/.test(process.env.ORCA_INTEGRATION_TAG
 
 module.exports = {
   ...upstream,
+  afterSign: async (context) => {
+    if (typeof upstream.afterSign === 'function') {
+      await upstream.afterSign(context)
+    } else if (upstream.afterSign) {
+      throw new Error('Unsupported upstream afterSign hook')
+    }
+    await signIntegrationPackage(context)
+  },
   extraMetadata: { ...upstream.extraMetadata, orcaUpdateChannel: 'integration' },
   publish: {
     provider: 'generic',

@@ -6,25 +6,10 @@ const {
   rmSync,
   writeFileSync
 } = require('node:fs')
-const { randomBytes, X509Certificate } = require('node:crypto')
+const { createPrivateKey, createPublicKey, X509Certificate } = require('node:crypto')
 const { join, resolve, dirname } = require('node:path')
-const { spawnSync } = require('node:child_process')
-const { changeCodeSigningTrust } = require('./mac-signing-trust.cjs')
 
 const certificatePath = join(__dirname, 'mac-publisher-certificate.pem')
-
-function command(args, options = {}) {
-  const result = spawnSync('/usr/bin/security', args, {
-    encoding: 'utf8',
-    timeout: 60_000,
-    ...options
-  })
-  if (result.error || result.status !== 0) {
-    // Command arguments can contain passwords.
-    throw new Error(`Signing keychain operation failed: ${result.stderr || result.error?.message}`)
-  }
-  return result.stdout
-}
 
 function signingCertificate(contents = readFileSync(certificatePath)) {
   const certificate = new X509Certificate(contents)
@@ -69,120 +54,78 @@ function cleanupSigning(env = process.env) {
   ) {
     throw new Error('Invalid signing cleanup directory')
   }
-  const errors = []
-  const attempt = (operation) => {
-    try {
-      operation()
-    } catch (error) {
-      errors.push(error)
-    }
-  }
-  if (state.trustAdded) {
-    attempt(() =>
-      changeCodeSigningTrust({
-        certificate: certificatePath,
-        remove: true,
-        evidenceDirectory: join(env.RUNNER_TEMP, 'integration-signing-evidence'),
-        label: 'remove-publisher',
-        env
-      })
-    )
-  }
-  if (state.searchListChanged) {
-    attempt(() => command(['list-keychains', '-d', 'user', '-s', ...state.searchList]))
-  }
-  const keychain = join(directory, 'publisher.keychain-db')
-  if (existsSync(keychain)) {
-    attempt(() => command(['delete-keychain', keychain]))
-  }
   rmSync(directory, { recursive: true, force: true })
-  if (errors.length) {
-    throw new AggregateError(errors, 'Signing cleanup failed')
-  }
   rmSync(stateFile)
 }
 
-function prepareSigning(env = process.env) {
+function decodePublisherKey(certificate, encryptedKey, password) {
+  const key = createPrivateKey({ key: encryptedKey, passphrase: password })
+  const encoding = { type: 'spki', format: 'der' }
+  if (
+    !createPublicKey(key)
+      .export(encoding)
+      .equals(new X509Certificate(certificate).publicKey.export(encoding))
+  ) {
+    throw new Error('Private key does not match the fixed publisher certificate')
+  }
+  return key.export({ type: 'pkcs8', format: 'pem' })
+}
+
+async function prepareSigning(env = process.env) {
   assertReleaseRunner(env)
-  if (!env.ORCA_MAC_SIGN_P12_BASE64 || !env.ORCA_MAC_SIGN_P12_PASSWORD || !env.GITHUB_ENV) {
+  if (!env.ORCA_MAC_SIGN_PRIVATE_KEY_PEM || !env.ORCA_MAC_SIGN_KEY_PASSWORD || !env.GITHUB_ENV) {
     throw new Error('Missing fixed macOS signing credentials; refusing ad-hoc release')
   }
   if (existsSync(statePath(env))) {
     throw new Error('A signing preparation already exists')
   }
-  const certificate = signingCertificate()
-  const directory = mkdtempSync(join(env.RUNNER_TEMP, 'orca-integration-signing-'))
-  const keychain = join(directory, 'publisher.keychain-db')
-  const p12 = join(directory, 'publisher.p12')
-  const password = randomBytes(32).toString('hex')
-  const searchList = [...command(['list-keychains', '-d', 'user']).matchAll(/"([^"\n]+)"/g)].map(
-    (match) => match[1]
+  const certificate = readFileSync(certificatePath)
+  const identity = signingCertificate(certificate)
+  const key = decodePublisherKey(
+    certificate,
+    env.ORCA_MAC_SIGN_PRIVATE_KEY_PEM,
+    env.ORCA_MAC_SIGN_KEY_PASSWORD
   )
-  const state = { directory, searchList, trustAdded: false, searchListChanged: false }
-  const save = () => writeFileSync(statePath(env), JSON.stringify(state), { mode: 0o600 })
-  save()
+  const directory = mkdtempSync(join(env.RUNNER_TEMP, 'orca-integration-signing-'))
+  writeFileSync(statePath(env), JSON.stringify({ directory }), { mode: 0o600 })
   try {
-    writeFileSync(p12, Buffer.from(env.ORCA_MAC_SIGN_P12_BASE64, 'base64'), { mode: 0o600 })
-    command(['create-keychain', '-p', password, keychain])
-    command(['set-keychain-settings', '-lut', '21600', keychain])
-    command(['unlock-keychain', '-p', password, keychain])
-    command([
-      'import',
-      p12,
-      '-P',
-      env.ORCA_MAC_SIGN_P12_PASSWORD,
-      '-k',
-      keychain,
-      '-T',
-      '/usr/bin/codesign'
-    ])
-    rmSync(p12)
-    state.trustAdded = true
-    save()
-    changeCodeSigningTrust({
-      certificate: certificatePath,
-      keychain,
-      evidenceDirectory: join(env.RUNNER_TEMP, 'integration-signing-evidence'),
-      label: 'add-publisher',
-      env
-    })
-    command(['set-key-partition-list', '-S', 'apple-tool:,apple:', '-s', '-k', password, keychain])
-    const identities = command(['find-identity', '-v', '-p', 'codesigning', keychain])
-    if (!identities.includes(certificate.sha1)) {
-      throw new Error('P12 does not match the fixed publisher certificate')
-    }
-    state.searchListChanged = true
-    save()
-    command(['list-keychains', '-d', 'user', '-s', keychain, ...searchList])
+    const privateKeyPath = join(directory, 'publisher-key.pem')
+    writeFileSync(privateKeyPath, key, { mode: 0o600 })
+    const { ensureRcodesign } = require('./mac-rcodesign.cjs')
+    const executable = await ensureRcodesign(join(env.RUNNER_TEMP, 'integration-signing-tools'))
     const variables = {
-      CSC_KEYCHAIN: keychain,
-      CSC_NAME: certificate.sha1,
-      ORCA_COMPUTER_MACOS_SIGN_IDENTITY: certificate.sha1,
-      ORCA_INTEGRATION_SIGN_IDENTITY: certificate.sha1
+      ORCA_INTEGRATION_SIGN_PRIVATE_KEY: privateKeyPath,
+      ORCA_INTEGRATION_SIGN_CERTIFICATE: certificatePath,
+      ORCA_INTEGRATION_SIGN_EXECUTABLE: executable
     }
     appendFileSync(
       env.GITHUB_ENV,
       Object.entries(variables)
-        .map(([key, value]) => `${key}=${value}\n`)
+        .map(([name, value]) => `${name}=${value}\n`)
         .join('')
     )
-    return certificate
+    return identity
   } catch (error) {
-    try {
-      cleanupSigning(env)
-    } catch (cleanupError) {
-      throw new AggregateError([error, cleanupError], 'Signing preparation and cleanup failed')
-    }
+    cleanupSigning(env)
     throw error
   }
 }
 
-module.exports = { assertReleaseRunner, cleanupSigning, prepareSigning, signingCertificate }
+module.exports = {
+  assertReleaseRunner,
+  cleanupSigning,
+  decodePublisherKey,
+  prepareSigning,
+  signingCertificate
+}
 
 if (require.main === module) {
   const action = process.argv[2]
   if (action === 'prepare') {
-    prepareSigning()
+    prepareSigning().catch((error) => {
+      console.error(error.message)
+      process.exitCode = 1
+    })
   } else if (action === 'cleanup') {
     cleanupSigning()
   } else {

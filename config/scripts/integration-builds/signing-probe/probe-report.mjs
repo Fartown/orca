@@ -57,7 +57,7 @@ export function writeProbeReport(output, { startedAt, environment, results, erro
       : [],
     checks: {
       notes:
-        '没有关闭签名检查，没有自定义或弱化指定要求。所有证书及私钥为此 CI 临时生成；签名完成后先移除用户代码签名信任再运行客户端。'
+        '没有关闭签名检查，没有自定义或弱化指定要求。PEM-only rcodesign 全程不写 keychain、trust 或 authorizationdb；私钥在客户端运行前删除。'
     },
     not_covered: ['真实 Orca 完整包 P2', '首次手动迁移与 Gatekeeper'],
     evidence: [

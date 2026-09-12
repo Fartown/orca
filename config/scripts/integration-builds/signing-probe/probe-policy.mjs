@@ -1,4 +1,5 @@
 import path from 'node:path'
+import { assertPublisherRequirement } from '../mac-signature-requirement.cjs'
 
 export const CASES = ['same-certificate', 'wrong-certificate', 'tampered']
 
@@ -44,14 +45,25 @@ export function assertHostedMac(env = process.env, platform = process.platform) 
   }
 }
 
+export function assertIsolatedMac(
+  output,
+  env = process.env,
+  platform = process.platform,
+  cwd = process.cwd()
+) {
+  const root =
+    env.GITHUB_ACTIONS === 'true' && env.RUNNER_ENVIRONMENT === 'github-hosted'
+      ? env.RUNNER_TEMP
+      : path.join(cwd, '.docs', 'integration-updates-ui-validation', '2026-09-12', 'selfsigned-ci')
+  if (
+    platform !== 'darwin' ||
+    !root ||
+    !path.resolve(output).startsWith(`${path.resolve(root)}${path.sep}`)
+  ) {
+    throw new Error('PEM-only macOS probes require a dedicated isolated evidence directory')
+  }
+}
+
 export function assertPinnedRequirement(requirement, fingerprint) {
-  const anchor = /anchor\s+H"([a-f0-9]{40})"/i.exec(requirement)
-  if (!anchor || anchor[1].toLowerCase() !== fingerprint.toLowerCase()) {
-    throw new Error(
-      `Default designated requirement did not pin the signing certificate: ${requirement}`
-    )
-  }
-  if (/\btrusted\b/.test(requirement)) {
-    throw new Error('Default designated requirement unexpectedly depends on client trust')
-  }
+  return assertPublisherRequirement(requirement, fingerprint)
 }

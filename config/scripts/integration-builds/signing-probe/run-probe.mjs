@@ -1,8 +1,10 @@
-import { mkdirSync, existsSync, readdirSync, writeFileSync } from 'node:fs'
+import { mkdirSync, existsSync, readdirSync, writeFileSync, readFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { createRequire } from 'node:module'
-import { probeOptions, assertHostedMac } from './probe-policy.mjs'
+import { randomBytes, createHash } from 'node:crypto'
+import { probeOptions, assertIsolatedMac } from './probe-policy.mjs'
+import { ensureRcodesign } from '../mac-rcodesign.cjs'
 import { command } from './probe-command.mjs'
 import { createProbeIdentities } from './probe-identities.mjs'
 import { buildProbeCase, verifyProbeCase } from './probe-bundles.mjs'
@@ -25,14 +27,14 @@ export async function runProbe(args) {
     )
     return
   }
-  assertHostedMac()
+  assertIsolatedMac(options.output)
   if (existsSync(options.output) && readdirSync(options.output).length > 0) {
     throw new Error('Probe output must be new or empty')
   }
   mkdirSync(options.output, { recursive: true })
   writeFileSync(
     join(options.output, 'test-plan.md'),
-    '# Native signing probe plan\n\nSame certificate: update-downloaded, quitAndInstall, disk 1.0.1 and a new 1.0.1 process. Wrong certificate and tampered candidate: native signature error, disk remains 1.0.0 and original app relaunches. All windows remain hidden. Build-time user code-signing trust and private material are removed before every runtime case. Real Orca business features and Gatekeeper first installation are out of scope.\n'
+    '# Native signing probe plan\n\nSame certificate: update-downloaded, quitAndInstall, disk 1.0.1 and a new 1.0.1 process. Wrong certificate and tampered candidate: native signature error, disk remains 1.0.0 and original app relaunches. All windows remain hidden. PEM-only rcodesign never modifies trust or keychains; private material is removed before runtime. Real Orca business features and Gatekeeper first installation are out of scope.\n'
   )
   const startedAt = new Date().toISOString()
   const environment = {
@@ -43,6 +45,19 @@ export async function runProbe(args) {
     arch: process.arch,
     macOS: command('/usr/bin/sw_vers', ['-productVersion']).stdout.trim(),
     sha: process.env.GITHUB_SHA,
+    sourceHashes: Object.fromEntries(
+      [
+        ...readdirSync(import.meta.dirname).filter((name) => /\.(?:mjs|cjs|html)$/.test(name)),
+        '../mac-rcodesign.cjs',
+        '../mac-signing-metadata.cjs',
+        '../mac-signature-requirement.cjs'
+      ].map((name) => [
+        name,
+        createHash('sha256')
+          .update(readFileSync(join(import.meta.dirname, name)))
+          .digest('hex')
+      ])
+    ),
     runId: process.env.GITHUB_RUN_ID,
     test_data: 'Ephemeral self-signed identities; no user Orca app'
   }
@@ -60,6 +75,7 @@ export async function runProbe(args) {
   process.once('SIGTERM', onSignal)
   try {
     signing = createProbeIdentities(options.output)
+    signing.executable = await ensureRcodesign(join(options.output, 'signing-tool'))
     const cases = []
     for (const name of options.cases) {
       const feedPort = await freePort()
@@ -68,7 +84,7 @@ export async function runProbe(args) {
         cdpPort: await freePort(),
         feedPort,
         feed: `http://127.0.0.1:${feedPort}/feed`,
-        bundleId: `dev.orca.ci-signing.${process.env.GITHUB_RUN_ID}.${process.arch}.${name}`
+        bundleId: `dev.orca.ci-signing.${process.env.GITHUB_RUN_ID ?? randomBytes(8).toString('hex')}.${process.arch}.${name}`
       }
       console.log(`Building ${name} with an ephemeral fixed certificate`)
       cases.push(buildProbeCase(options.output, name, config, signing))
