@@ -194,6 +194,9 @@ describe('workflow wiring', () => {
     const workflow = parse(readFileSync('.github/workflows/fork-integration-build.yml', 'utf8'))
     expect(workflow.on.push.branches).toEqual(['fork/integration'])
     expect(workflow.on).toHaveProperty('workflow_dispatch')
+    expect(workflow.concurrency['cancel-in-progress']).toBe(
+      "${{ github.event_name == 'pull_request' }}"
+    )
     expect(workflow.jobs.identity.if).toContain("github.repository == 'Fartown/orca'")
     for (const name of ['macos', 'android']) {
       const job = workflow.jobs[name]

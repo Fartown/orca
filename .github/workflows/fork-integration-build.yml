@@ -15,7 +15,7 @@ permissions:
 
 concurrency:
   group: fork-integration-build-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   ORCA_BACKGROUND_LAUNCH: '1'
