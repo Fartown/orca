@@ -511,8 +511,10 @@ test.describe('Worktree switch first paint @headful', () => {
         'the switch mounted more than the pane the user is looking at'
       ).toBe(1)
     }
+    const screenshotPath = testInfo.outputPath('first-paint-final.png')
+    await orcaPage.screenshot({ path: screenshotPath })
     await testInfo.attach('first-paint-final.png', {
-      body: await orcaPage.screenshot(),
+      path: screenshotPath,
       contentType: 'image/png'
     })
     // Why CI is exempt from the budget and not from the invariants: shared

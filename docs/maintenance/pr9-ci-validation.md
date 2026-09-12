@@ -55,3 +55,12 @@
 - 验证证据：上述 Linux 5 轮日志；工作流/路由/定时覆盖 3 文件 46 项测试、架构策略通过。前一成功 run 未上传成功截图，不用旧失败截图代替。
 - 未解决问题：包含覆盖/截图接线的最终 SHA 定向与完整 PR CI 待完成，尚未合并。
 - 下一步：读取最终截图与全部 checks，确认最终 HEAD 后合入 `fork/integration`。
+
+## 2026-09-12 — 成功截图落盘修正
+
+- 本轮目标：补齐成功截图上传，保持已经通过的功能和帧测试不变。
+- 完成内容：SHA `158d87a575c4403066b979bc6fd536732c062374` 的 run `34678890769` 原 5 轮再次通过，中位 144.6 ms；上传日志却显示无文件。实际 Playwright 1.59.1 的 body attachment 只返回 Buffer，path attachment 才复制到输出目录；两项零 App 复现实验确认，不是 teardown 清理或 preserveOutput 策略导致。
+- 代码或文档变更：采样与断言完成后先将截图写入 `testInfo.outputPath`，再附加 path；工作流上传路径不变，测试增加持久化接线断言。
+- 验证证据：上述 Linux 5 轮日志及忽略目录 `linux-diagnostic/final-acceptance/attachment-repro/run.log`；未用旧失败截图替代成功现场。
+- 未解决问题：落盘修正后最终 SHA 的截图回读与全部 PR CI 待完成。
+- 下一步：最终截图确认、检查全部 checks，再合并。

@@ -34,5 +34,7 @@ describe('worktree first-paint CI coverage', () => {
       workflow.jobs.e2e.steps.find((step) => step.name === 'Upload Playwright traces').if
     ).toBe("failure() || matrix.shard == '1/14'")
     expect(spec).toContain("testInfo.attach('first-paint-final.png'")
+    expect(spec).toContain('orcaPage.screenshot({ path: screenshotPath })')
+    expect(spec).toContain('path: screenshotPath,')
   })
 })
