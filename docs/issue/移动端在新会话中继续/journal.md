@@ -171,6 +171,15 @@ external_ids: []
 
 ## 3. 开发记录
 
+### 2026-09-13 合入上游同步：两处 ratchet 重算，投递迁到 typed RPC operation
+
+- 本轮目标：把同步后的 `fork/integration`（领先 196 个上游提交）合进本分支，并处理上游新门禁
+- 完成内容：合并冲突恰好是 D-007 预判的那两个 ratchet，按记录的配方重算而非选边；上游 #20018 新增「新代码必须走 RpcOperation、且禁止往旧清单里加」的边界测试，把 `continuation-delivery.ts` 从裸 `sendRequest` 迁到 `runRpcOperation`，新增 `continuation-rpc-operations.ts` 声明 `terminal.wait` 与 `terminal.send` 两个 operation
+- 代码或文档变更：mobile/src/session-continuation/continuation-rpc-operations.ts（新增）；mobile/src/session-continuation/continuation-delivery.ts；mobile/src/session/mobile-session-route-parity.test.ts；mobile/src/terminal/terminal-webview-payload-hash.test.ts；config/fork-features.jsonc（dependsOn 增删）
+- 验证证据：payload-hash 重算为 734707，比上游新基线 730472 多 4235 字节——与此前实测的关闭 minifySyntax 代价完全一致，说明修复与上游改动正确叠加；`grep -c 'void 0||(i=' ...generated.ts` 为 0，DECRQM 缺陷未复活；parity 只有 nested-function 与 runtime-string 两个摘要移动；`pnpm tc` 通过，mobile 571 文件 / 4698 测试全过，feature 注册的桌面 checks 33 测试通过，`check:fork-features`、`check:fork-docs`、`check:architecture-policies`（9 个策略集）全绿
+- 未解决问题：上游 #20155 收紧了 `tui-idle` 的判定（名字型标题不再单凭静默就算 idle，需叠加流静默；已知 agent 启动中不再被前台进程证明为 idle），回包形状未变、本功能无需改动，但此前实测的就绪耗时（claude 2312ms / codex 2146ms）是旧语义下的数字，真机复测时应重新采集
+- 下一步：推送更新 PR #14
+
 ### 2026-09-13 按 D-007 收缩冲突面：续接 scope 改挂在 sheets
 
 - 本轮目标：按 D-007 的量化结论，去掉上游改动最频繁的那个非测试 seam
