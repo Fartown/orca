@@ -1,116 +1,141 @@
-import type { GoalAcceptanceDraft } from '../../../../shared/goals/goal-acceptance-draft-contract'
-import { useEffect, useRef, useState } from 'react'
-import { translate } from '@/i18n/i18n'
-import { newClientOperationId } from '@/goals/goal-client-operation'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { goalRuntimeClient } from '@/goals/goal-runtime-client'
-import type { GoalBinding } from '../../../../shared/goals/goal-control-contract'
+import { newClientOperationId } from '@/goals/goal-client-operation'
+import type { GoalEditorDraftSession } from '@/goals/goal-editor-draft-session'
+import type { GoalAcceptanceDraft } from '../../../../shared/goals/goal-acceptance-draft-contract'
+import { canApplyGeneratedDocument } from '../../../../shared/goals/goal-editor-draft-contract'
 
-export function useAcceptanceDraft(open: boolean, context: string) {
-  const active = useRef<string | null>(null)
-  const cancelled = useRef<string | null>(null)
-  const [generating, setGenerating] = useState(false)
+export function useAcceptanceDraft(
+  session: GoalEditorDraftSession | null,
+  attemptId: string | null
+) {
+  const [result, setResult] = useState<GoalAcceptanceDraft | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [starting, setStarting] = useState(false)
+  const startLock = useRef(false)
+  const currentSession = useRef(session)
+  useLayoutEffect(() => {
+    currentSession.current = session
+  }, [session])
 
   useEffect(() => {
-    setGenerating(false)
+    setResult(null)
     setError(null)
-    return () => {
-      const id = active.current
-      active.current = null
-      if (id) {
-        void goalRuntimeClient.cancelAcceptanceDraft(id).catch(() => {})
+    if (!attemptId || !session) {
+      return
+    }
+    let disposed = false
+    let polling = false
+    const poll = async (): Promise<void> => {
+      if (polling) {
+        return
+      }
+      polling = true
+      try {
+        const latest = await goalRuntimeClient.getAcceptanceDraft(attemptId)
+        if (disposed) {
+          return
+        }
+        setResult(latest)
+        setError(
+          latest ? null : 'The task has not been confirmed yet. Reconnecting; your draft is saved.'
+        )
+        if (
+          latest?.status === 'ready' &&
+          latest.document &&
+          canApplyGeneratedDocument(session.getSnapshot().content, latest.draftId)
+        ) {
+          session.change((content) => ({
+            ...content,
+            fields: { ...content.fields, acceptanceDocument: latest.document! },
+            documentContext: content.generation!.context,
+            generation: { ...content.generation!, applied: true }
+          }))
+        }
+      } catch (caught) {
+        if (!disposed) {
+          setError(caught instanceof Error ? caught.message : String(caught))
+        }
+      } finally {
+        polling = false
       }
     }
-  }, [open, context])
+    void poll()
+    const timer = setInterval(() => void poll(), 1000)
+    return () => {
+      disposed = true
+      clearInterval(timer)
+    }
+  }, [session, attemptId])
 
   const generate = async (input: {
     objective: string
     judge: 'claude' | 'codex'
+    context: string
     acceptanceContext?: string
-    resolveBinding: () => Promise<GoalBinding>
-    onDocument: (document: string) => void
+    worktree: string
   }): Promise<void> => {
-    const draftId = newClientOperationId()
-    active.current = draftId
-    setGenerating(true)
-    setError(null)
-    try {
-      const binding = await input.resolveBinding()
-      if (active.current !== draftId) {
-        return
-      }
-      let result: GoalAcceptanceDraft | null = await goalRuntimeClient.draftAcceptance({
-        draftId,
-        binding,
-        objective: input.objective,
-        judge: input.judge,
-        acceptanceContext: input.acceptanceContext
-      })
-      while (
-        active.current === draftId &&
-        cancelled.current !== draftId &&
-        result?.status === 'generating'
-      ) {
-        await new Promise((resolve) => setTimeout(resolve, 1000))
-        if (active.current !== draftId) {
-          break
-        }
-        result = await goalRuntimeClient.getAcceptanceDraft(draftId)
-      }
-      if (active.current !== draftId) {
-        await goalRuntimeClient.cancelAcceptanceDraft(draftId)
-        return
-      }
-      if (cancelled.current === draftId) {
-        return
-      }
-      if (result?.status === 'ready' && result.document) {
-        input.onDocument(result.document)
-      } else if (result?.status !== 'cancelled') {
-        throw new Error(
-          result?.error ||
-            translate(
-              'goals.editor.draftLost',
-              'The document could not be retrieved. Generate it again.'
-            )
-        )
-      }
-    } catch (caught) {
-      void goalRuntimeClient.cancelAcceptanceDraft(draftId).catch(() => {})
-      if (active.current === draftId && cancelled.current !== draftId) {
-        setError(caught instanceof Error ? caught.message : String(caught))
-      }
-    } finally {
-      if (active.current === draftId && cancelled.current !== draftId) {
-        active.current = null
-        setGenerating(false)
-      }
-    }
-  }
-
-  const cancel = async (): Promise<void> => {
-    const id = active.current
-    if (!id) {
+    if (!session || startLock.current || result?.status === 'generating') {
       return
     }
-    cancelled.current = id
+    startLock.current = true
+    setStarting(true)
+    setError(null)
     try {
-      const result = await goalRuntimeClient.cancelAcceptanceDraft(id)
-      if (result?.status === 'failed') {
-        throw new Error(result.error || 'Could not cancel generation.')
+      const previous = session.getSnapshot().content.generation
+      const retry = previous && !result && previous.request
+      const draftId = retry ? previous.draftId : newClientOperationId()
+      const request = retry
+        ? previous.request!
+        : {
+            worktree: input.worktree,
+            objective: input.objective,
+            judge: input.judge,
+            acceptanceContext: input.acceptanceContext
+          }
+      if (!retry) {
+        session.change((content) => ({
+          ...content,
+          generation: {
+            draftId,
+            context: input.context,
+            baseDocument: content.fields.acceptanceDocument,
+            requestedAt: Date.now(),
+            applied: false,
+            request
+          }
+        }))
       }
-      if (active.current === id) {
-        active.current = null
-        setGenerating(false)
+      await session.flush()
+      const next = await goalRuntimeClient.draftAcceptance({ draftId, ...request })
+      if (currentSession.current === session) {
+        setResult(next)
       }
     } catch (caught) {
-      if (active.current === id) {
-        active.current = null
-        setGenerating(false)
-        setError(caught instanceof Error ? caught.message : String(caught))
-      }
+      setError(caught instanceof Error ? caught.message : String(caught))
+    } finally {
+      startLock.current = false
+      setStarting(false)
     }
   }
-
-  return { generating, error, generate, cancel }
+  const cancel = async (): Promise<void> => {
+    if (!attemptId) {
+      return
+    }
+    try {
+      setResult(await goalRuntimeClient.cancelAcceptanceDraft(attemptId))
+      setError(null)
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : String(caught))
+    }
+  }
+  const currentResult = result?.draftId === attemptId ? result : null
+  return {
+    result: currentResult,
+    error,
+    unresolved: Boolean(attemptId && !currentResult),
+    generating: starting || currentResult?.status === 'generating',
+    generate,
+    cancel
+  }
 }

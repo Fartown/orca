@@ -1,3 +1,9 @@
+import {
+  GoalCriterionSchema,
+  GoalEditorDraftSaveSchema,
+  type GoalEditorDraftRecord,
+  type GoalEditorDraftSummary
+} from './goal-editor-draft-contract'
 import type { GoalAcceptanceDraft } from './goal-acceptance-draft-contract'
 import { z } from 'zod'
 import type { AgentStatusState } from '../agent-status-types'
@@ -13,11 +19,7 @@ export const GoalBindingSchema = z.object({
   providerSessionId: z.string().min(1).max(256).optional()
 })
 
-export const GoalCriterionSchema = z.object({
-  id: z.string().uuid(),
-  description: z.string().min(1).max(8_000),
-  command: z.string().min(1).max(16_000).optional()
-})
+export { GoalCriterionSchema } from './goal-editor-draft-contract'
 
 // spec bumps specRevision; budget alone only bumps the runtime fence.
 export const GoalSpecSchema = z.object({
@@ -73,13 +75,17 @@ export const GoalRpcParams = {
   'goals.status': GoalExecutionHostSchema,
   'goals.draftAcceptance': GoalExecutionHostSchema.extend({
     draftId: z.string().uuid(),
-    binding: GoalBindingSchema,
+    binding: GoalBindingSchema.optional(),
+    worktree: z.string().min(1).max(4_096).optional(),
     objective: z.string().trim().min(1).max(32_000),
     judge: z.enum(['claude', 'codex']),
     acceptanceContext: z.string().max(64_000).optional()
   }),
   'goals.getAcceptanceDraft': GoalExecutionHostSchema.extend({ draftId: z.string().uuid() }),
   'goals.cancelAcceptanceDraft': GoalExecutionHostSchema.extend({ draftId: z.string().uuid() }),
+  'goals.listEditorDrafts': GoalExecutionHostSchema,
+  'goals.getEditorDraft': GoalExecutionHostSchema.extend({ editorDraftId: z.string().uuid() }),
+  'goals.saveEditorDraft': GoalExecutionHostSchema.merge(GoalEditorDraftSaveSchema),
   'goals.list': GoalExecutionHostSchema.extend({
     worktree: z.string().min(1).max(4_096).optional(),
     filter: GoalListFilterSchema,
@@ -249,6 +255,9 @@ export type GoalRpcResults = {
   'goals.draftAcceptance': GoalAcceptanceDraft
   'goals.getAcceptanceDraft': GoalAcceptanceDraft | null
   'goals.cancelAcceptanceDraft': GoalAcceptanceDraft | null
+  'goals.listEditorDrafts': { items: GoalEditorDraftSummary[] }
+  'goals.getEditorDraft': GoalEditorDraftRecord | null
+  'goals.saveEditorDraft': GoalEditorDraftRecord
   'goals.list': { items: GoalSummary[]; observedAt: number }
   'goals.get': GoalDetail | null
   'goals.create': GoalOperation

@@ -2736,9 +2736,12 @@
   },
   "goals": {
     "editor": {
+      "cancelGeneration": "Cancel generation",
       "createAndStart": "Create and start",
+      "draftLost": "The document could not be retrieved. Generate it again.",
       "judge": "Independent judge",
-      "judgeHint": "A separate agent checks the work after the working session claims completion. Criteria without a command are judged one by one; with none, it judges the goal as a whole. Its CLI must be installed on this machine."
+      "judgeHint": "A separate agent checks the work after the working session claims completion. Criteria without a command are judged one by one; with none, it judges the goal as a whole. Its CLI must be installed on this machine.",
+      "previewDocument": "Preview document"
     }
   },
   "runtimeRpc": {

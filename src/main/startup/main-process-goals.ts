@@ -1,3 +1,4 @@
+import { resolveGoalDraftWorkspace } from '../goals/goal-draft-workspace'
 import { app } from 'electron'
 import { homedir } from 'node:os'
 import { resolveGoalHome } from '../../shared/goals/goal-store-layout'
@@ -34,6 +35,13 @@ export async function startGoalFeatureForMainProcess(): Promise<void> {
     const service = new GoalControlService({
       store: new GoalStore(resolveGoalHome(process.env, homedir())),
       terminals: runtime,
+      resolveDraftWorkspace: (selector) =>
+        resolveGoalDraftWorkspace(selector, {
+          getFolderWorkspaces: () => store.getFolderWorkspaces(),
+          getRepos: () => store.getRepos(),
+          getProjectGroups: () => store.getProjectGroups(),
+          showWorktree: (value) => runtime.showManagedWorktree(value)
+        }),
       hooks: agentHookServer,
       launcher: createGoalDriverLauncher({ entryPath }),
       // Why: the driver's RuntimeClient reads runtime metadata from the same canonical path the RPC server writes it to.

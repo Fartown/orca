@@ -472,6 +472,8 @@
             "src/main/plugins/plugin-bundled-bootstrap-coordinator.test.ts",
             "src/main/startup/main-process-plugins.ts",
             "config/vitest.config.ts",
+            "src/shared/child-process/run-process.ts",
+            "src/shared/child-process/process-spec.ts",
             // 2026-09-06: goal management UI (docs/issue/Goal目标模式/solutions/Goal目标管理与交互闭环方案.md §5.10).
             "src/main/goals/**",
             "src/shared/goals/**",
@@ -488,6 +490,7 @@
             "src/renderer/src/components/terminal-pane/TerminalPaneHeaderOverlay.tsx",
             "src/renderer/src/components/terminal-pane/TerminalPaneSurface.tsx",
             "src/renderer/src/components/cmd-j/goal-quick-actions.ts",
+            "src/renderer/src/lib/worktree-activation-surface-caller-wiring.test.ts",
             "src/renderer/src/components/cmd-j/quick-actions.ts",
             "src/main/runtime/rpc/methods/client-ui-schemas.ts",
             "src/shared/rpc-contract/client-ui-params.ts",
@@ -717,11 +720,15 @@
             "goal-mode/**"
           ],
           "allowedPaths": [
+            "src/shared/rpc-contract/rpc-params-catalog.generated.ts",
+            "src/shared/child-process/run-process.ts",
+            "src/shared/child-process/process-spec.ts",
             "src/main/goals/**",
             "src/shared/goals/**",
             "src/renderer/src/goals/**",
             "src/renderer/src/components/goals/**",
             "src/renderer/src/components/cmd-j/goal-quick-actions.ts",
+            "src/renderer/src/lib/worktree-activation-surface-caller-wiring.test.ts",
             "src/main/runtime/rpc/methods/goals.ts",
             "src/main/runtime/rpc/methods/goals.test.ts",
             "src/main/startup/main-process-goals.ts",

@@ -3,7 +3,7 @@ title: Goal 目标模式
 slug: Goal目标模式
 status: testing
 created: 2026-09-05
-updated: 2026-09-12
+updated: 2026-09-13
 external_ids: []
 ---
 
@@ -17,14 +17,25 @@ external_ids: []
 | 交互         | -                                                                      | not-required | 本轮交互示意内嵌方案；没有独立设计事实源，不另建 design 文档        |
 | 方案         | [Goal 目标管理与交互闭环方案](solutions/Goal目标管理与交互闭环方案.md) | completed    | 唯一实施主入口；WP1～WP4 已落地；未回推上游                         |
 | 历史实现基线 | [Goal 目标模式技术说明](solutions/Goal目标模式技术说明.md)             | superseded   | 保留旧 CLI/插件实现事实与差距；补充宿主命令已支持带参的核对修正     |
-| 测试用例     | [功能测试](tests/cases/Goal功能测试.md)                                | reviewing    | TC-344～TC-347 覆盖验收文档与侧栏保留，执行结果见 Test Run          |
+| 测试用例     | [功能测试](tests/cases/Goal功能测试.md)                                | reviewing    | TC-344～TC-356 覆盖验收文档、侧栏、异步草稿与文件查看，执行结果见 Test Run          |
 | 调研         | -                                                                      | not-required | 当前源码事实已归并到技术正文，本次不重复调研                        |
 | 历史调研     | [Codex Goal 历史机制对照](research/Codex-Goal历史机制对照.md)          | superseded   | 保留冻结 Codex SHA 的完整参考，不作为当前 Orca 事实                 |
-| 测试执行     | [验收文档闭环验证](tests/runs/2026-09-08-验收文档闭环.md)              | reviewing    | 自动化、真实守卫及隐藏 Electron 文档流程已验证                      |
+| 历史测试执行 | [验收文档闭环验证](tests/runs/2026-09-08-验收文档闭环.md)              | reviewing    | 自动化、真实守卫及隐藏 Electron 文档流程已验证                      |
 
-当前处于 testing：REQ-121 已通过 PR #1 合入集成分支，但 2026-09-09 核实用户安装包缺少验收文档流程，历史 Goal 存在已选 Codex 守卫却未实际验收的记录。此前 GUI 全链路使用固定 CLI 测试替身，不能证明当前安装交付或真实 Codex GUI 闭环通过。本轮修复包已在隔离样例跑通真实 Codex GUI 主链路，独立守卫 PASS、Goal verified；尚未更新用户 App。重新构建和真实验证记录见 [当前交付核查](tests/runs/2026-09-09-当前交付核查.md)。
+| 当前测试执行 | [异步草稿验证](tests/runs/2026-09-12-异步草稿验证.md) | reviewing | REQ-122 自动化、真实 Codex 与独立 App 异步状态验证通过 |
+
+当前处于 testing：REQ-122 异步草稿和 Markdown 文件查看已实现并通过隔离验证，交付经 [PR #13](https://github.com/Fartown/orca/pull/13) 合入 `fork/integration`，最终合并与 CI 状态以该 PR 为准。最新文件查看结果见 [文档文件查看验证](tests/runs/2026-09-13-文档文件查看.md)，此前异步生命周期结果见 [异步草稿验证](tests/runs/2026-09-12-异步草稿验证.md)。旧 `orcad-entry.ts` 本地架构提示已定位为引用了尚未合入的上游 main；使用与 fork CI 相同的镜像基准检查通过，无需修改该文件或放宽规则。用户 App 未替换。REQ-121 历史完整执行/守卫证据保留在 [当前交付核查](tests/runs/2026-09-09-当前交付核查.md)。
 
 ## 2. 决策点记录
+
+### D-005 生成改为持久异步草稿
+
+- 日期：2026-09-12。
+- 背景：用户指出生成可能很久，关闭会自动取消，重新打开找不到进度与结果。
+- 最终决定：关闭仅保存并收起；显式停止才取消。草稿列表保存入口，后台完成待审阅，独立进程跨 App 重启继续，迟到结果不覆盖人工稿。
+- 原因：用户确认“按这个改吧，改完之后测一遍”；复用 Goal Home、RPC、驱动打包与进程执行设施。
+- 影响范围：REQ-122、TC-348～TC-355、目标表单与草稿生成；执行守卫仍依据同一最终文档验收。
+
 
 ### D-004 方案评审修订：复用 Issues 基础设施，直接替换旧插件
 
@@ -63,6 +74,54 @@ external_ids: []
 - 影响范围：需求、技术说明、测试规格及本需求的执行证据。
 
 ## 3. 开发记录
+
+### 2026-09-13 CI 渲染期间引用写入修复
+
+- 本轮目标：修复 PR #13 React Doctor 0.9.1 对渲染期间写入 ref 的阻断。
+- 完成内容：把当前草稿 session 引用更新移到 `useLayoutEffect`，只在 React 提交后更新迟到结果比较所用的引用。
+- 代码或文档变更：`use-acceptance-draft.ts` 与本记录；不放宽 lint 规则或取消迟到结果保护。
+- 验证证据：120 项 Goal/调用清单测试、`pnpm tc`、`check:react-doctor:changed -- Fartown/main` 通过。日志位于 `.docs/goal-acceptance-generation-ui-validation/2026-09-13/evidence/pr13-ref-{tests,typecheck,react-doctor}.log`；CI 原始报告在 `pr13-static-analysis.log`。独立 Mac App 重新构建复验，最终图文报告与远端结果以 PR #13 为准。
+- 未解决问题：等待新提交完整 CI 与隐藏 App 复验，不把上一包证据直接算作本次修改通过。
+- 下一步：核实最终源码的界面和全部远端门禁通过后合并。
+
+
+### 2026-09-13 CI 调用清单登记修复
+
+- 本轮目标：修复 PR #13 全仓库 CI 发现的 Goal 文档工作区激活清单遗漏。
+- 完成内容：本地复现原检查 1 项失败；在现有 surface-provider 调用清单登记 `open-goal-document.ts`，同时纳入 Goal 注册测试、检查命令和精确测试接缝。
+- 代码或文档变更：仅调用清单、功能登记、接缝允许路径与本记录；保留调用清单完整相等断言，不改变运行逻辑。
+- 验证证据：修复后调用清单与文档打开两个测试文件通过，共 17 项；前后日志为 `.docs/goal-acceptance-generation-ui-validation/2026-09-13/evidence/pr13-census-before.log` 和 `pr13-census-after.log`。远端完整回归继续由 PR #13 验证。
+- 未解决问题：远端最终 CI 与合并尚待完成；GitHub 浏览器未登录，图片附件尚未上传，本地真实 App 图文证据完整保留。
+- 下一步：通过所有远端检查后正常 merge commit 合入集成分支。
+
+
+### 2026-09-13 提交与集成分支合码
+
+- 本轮目标：按用户“提交合入”授权，提交本功能并通过 PR 合入集成分支。
+- 完成内容：功能提交 `d6b7746cb`，合入最新集成基线 `dab56ab8a` 无冲突；创建 [PR #13](https://github.com/Fartown/orca/pull/13)，保留全部检查。
+- 代码或文档变更：合码时仅更新功能交付记录；集成分支带来的既有自动更新功能保持原样，不混入本 PR 的差异。
+- 验证证据：合入基线后 `pnpm tc`、110 项 Goal 相关测试通过；`check:architecture-policies --base Fartown/main`、fork-features/fork-docs、RPC 目录通过。日志为 `.docs/goal-acceptance-generation-ui-validation/2026-09-13/evidence/merge-validation.log` 和 `merge-gates.log`；远端完整检查与合并结果见 PR。
+- 未解决问题：本地 `origin/main` 指向 stablyai 最新上游，fork CI 的 `origin/main` 指向 Fartown 镜像；前述 `orcad-entry.ts` 与 `Fartown/main` 的 blob 完全相同，不是本功能改动或 CI 基线破损。标准安装/更新用户 App 不在此次提交合入操作内。
+- 下一步：依 PR 门禁完成合并；后续安装交付另按用户指令执行。
+
+
+### 2026-09-13 文档路径与原生 Markdown 标签页
+
+- 本轮目标：按用户要求，以文件地址展示生成文档，复用已有 Markdown 标签页查看。
+- 完成内容：当前稿与候选文件入口、查看前保存并收起编辑器、原生 Markdown 预览与本地宿主路由；人工编辑和显式采用保持。
+- 代码或文档变更：Goal 文档结果与草稿记录增加可选文件路径；复用原子写入生成当前稿文件；移除弹窗内 Markdown 预览，更新 REQ-122 与 TC-356；修复保存队列收尾遗漏新修改，以及文件打开未激活工作区的实测缺陷。
+- 验证证据：110 项相关自动化、类型/质量/本轮架构/RPC/本地化/fork 门禁通过；独立 Mac App 的 9/9 项界面检查通过，含真实文件渲染、同文件 tab 复用、即时修改查看、候选查看及采用。结果见 [文档文件查看验证](tests/runs/2026-09-13-文档文件查看.md)。
+- 未解决问题：沿用已确认的集成架构基线差异；本轮尚未提交、合并或安装。
+- 下一步：本轮验证完成；代码仍在功能 worktree，按后续交付指令提交、合并或安装。
+
+### 2026-09-12～13 异步草稿、真实进度与恢复
+
+- 本轮目标：实现 REQ-122，关闭后继续生成，重新打开找回状态、输入与文档。
+- 完成内容：持久草稿列表、独立后台生成进程、真实活动/耗时、后台完成提醒、停止与重试、跨 App 正常重启恢复、迟到候选保护；起草不依赖有效执行会话，兼容普通文件夹。
+- 代码或文档变更：复用 Goal Home/RPC/驱动打包/通用进程与原子写入；注册 stdout 观察接缝及异步测试。顺带修复 CLI 回归发现的单块长输出截断问题；需求、方案与 TC-348～TC-355 更新。
+- 验证证据：147 项 Goal 相关自动化、164 项 CLI 回归、19 个最终隔离 App 检查点通过；真实 Codex 99.075 秒返回 4587 字，列表待审阅与完成提醒截图已核对。类型、质量、本轮架构、本地化、RPC、fork-features/fork-docs 通过，详见 Test Run。
+- 未解决问题：默认全分支架构门禁仍报基线 `orcad-entry.ts` 差异；本轮未引入，未掩盖。用户安装包未替换，代码未提交或合并。
+- 下一步：用户进入交付阶段时提交本功能分支，并处理集成基线门禁后推进 MR；不用历史安装包证据代替本轮验证。
 
 ### 2026-09-12 — 补齐已注册 RPC 的生成目录
 

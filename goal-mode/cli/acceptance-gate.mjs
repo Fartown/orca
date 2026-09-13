@@ -88,10 +88,14 @@ function runOne(command, cwd, timeoutMs, env) {
     const capture = (chunk) => {
       // 头尾分开留:早先到 8000 字就不再追加,于是「保尾」保的是前 8000 字的尾巴,
       // 真正的失败原因(通常在最后几行)一个字都留不下 —— 而那是回灌给 agent 的唯一证据。
-      if (output.length < MAX_CAPTURE) {
-        output += chunk
+      if (!overflowed) {
+        const collected = output + chunk
+        output = collected.slice(0, MAX_CAPTURE)
+        if (collected.length > MAX_CAPTURE) {
+          overflowed = true
+          tail = collected.slice(-MAX_CAPTURE)
+        }
       } else {
-        overflowed = true
         tail = (tail + chunk).slice(-MAX_CAPTURE)
       }
     }

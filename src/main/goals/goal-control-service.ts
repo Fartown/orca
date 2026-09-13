@@ -1,3 +1,4 @@
+import { GoalEditorDraftStore } from './goal-editor-draft-store'
 import { GoalAcceptanceDrafts } from './goal-acceptance-drafts'
 import { randomUUID } from 'node:crypto'
 import type {
@@ -38,6 +39,7 @@ export type GoalControlServiceDependencies = {
   hooks: GoalHookFacts
   launcher: GoalDriverLauncher
   userDataPath: string
+  resolveDraftWorkspace?: (selector: string) => Promise<string>
   inspectDriver?: (input: GoalDriverLivenessInput) => Promise<GoalDriverVerdict>
   now?: () => number
   newId?: () => string
@@ -46,6 +48,7 @@ export type GoalControlServiceDependencies = {
 /** Coordinates receipts and the detached driver; the host never injects into a terminal. */
 export class GoalControlService {
   readonly drafts: GoalAcceptanceDrafts
+  readonly editorDrafts: GoalEditorDraftStore
   private readonly store: GoalStore
   private readonly hooks: GoalHookFacts
   private readonly terminals: GoalTerminalFacts
@@ -72,8 +75,10 @@ export class GoalControlService {
     this.drafts = new GoalAcceptanceDrafts({
       goalHome: this.store.goalHome,
       entryPath: dependencies.launcher.entryPath,
-      admission: this.admission
+      admission: this.admission,
+      resolveWorkspace: dependencies.resolveDraftWorkspace
     })
+    this.editorDrafts = new GoalEditorDraftStore(this.store.goalHome, this.drafts)
     this.receipts = new GoalOperationReceipts({
       store: this.store,
       inspectRecordDriver: (record) => this.admission.inspectRecordDriver(record),
