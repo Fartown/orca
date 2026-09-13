@@ -1,11 +1,15 @@
 import { buildAgentPromptPasteBytes } from '../../../src/shared/agent-prompt-injection'
-import { isTerminalSendRpcAccepted } from '../terminal/terminal-send-rpc-response'
 import {
   buildTerminalSendParams,
   TERMINAL_INPUT_SEND_OPTIONS
 } from '../terminal/terminal-send-request'
 import { isRpcDeliveryUnknown } from '../transport/rpc-delivery-ambiguity'
+import { runRpcOperation } from '../transport/rpc-operation'
 import type { RpcClient } from '../transport/rpc-client'
+import {
+  continuationTerminalSendOperation,
+  continuationTerminalWaitOperation
+} from './continuation-rpc-operations'
 import type { MobileSessionContinuationAgent } from './continuation-agents'
 
 /** The host resolves tui-idle the moment an agent reports idle, and phase-one agents were
@@ -34,19 +38,6 @@ export type MobileSessionContinuationOutcome =
   | { kind: 'send-rejected'; handle: string }
   | { kind: 'unknown'; handle: string }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null
-}
-
-function readWait(result: unknown): { satisfied: boolean; status: string; blockedReason?: string } {
-  const wait = isRecord(result) && isRecord(result.wait) ? result.wait : null
-  return {
-    satisfied: wait?.satisfied === true,
-    status: typeof wait?.status === 'string' ? wait.status : 'unknown',
-    ...(typeof wait?.blockedReason === 'string' ? { blockedReason: wait.blockedReason } : {})
-  }
-}
-
 /**
  * Create a new agent terminal, wait for its TUI to accept input, then deliver the handoff
  * prompt as one submitted message — the mobile counterpart of the desktop's submit-after-ready
@@ -56,9 +47,9 @@ function readWait(result: unknown): { satisfied: boolean; status: string; blocke
  * failure cannot disprove the first one landed.
  */
 export async function runMobileSessionContinuation(args: {
-  // Why the whole client, not its method: RpcClient implementations include class methods that
-  // read `this` (DirectRpcClient), so a detached `sendRequest` is not safe to hold.
-  client: Pick<RpcClient, 'sendRequest'>
+  // Why the whole client, not its method: implementations include class methods that read
+  // `this` (DirectRpcClient), so a detached sender is not safe to hold.
+  client: RpcClient
   createTerminal: (
     agent: MobileSessionContinuationAgent,
     cwd: string | null
@@ -80,10 +71,11 @@ export async function runMobileSessionContinuation(args: {
   }
   const handle = created.handle
 
-  let waitResponse
+  let waitResult
   try {
-    waitResponse = await args.client.sendRequest(
-      'terminal.wait',
+    waitResult = await runRpcOperation(
+      args.client,
+      continuationTerminalWaitOperation,
       { terminal: handle, for: 'tui-idle', timeoutMs: CONTINUATION_READY_TIMEOUT_MS },
       // Why fail instead of parking: a wait that resumes after a reconnect would hand readiness
       // to a send the user may no longer expect. Giving up early only skips the handoff.
@@ -92,23 +84,24 @@ export async function runMobileSessionContinuation(args: {
   } catch {
     return { kind: 'not-ready', handle, status: 'unreachable' }
   }
-  if (!waitResponse.ok) {
+  if (!waitResult) {
     return { kind: 'not-ready', handle, status: 'refused' }
   }
-  const wait = readWait(waitResponse.result)
-  if (!wait.satisfied || wait.blockedReason) {
+  const wait = waitResult.wait
+  if (wait?.satisfied !== true || wait.blockedReason) {
     return {
       kind: 'not-ready',
       handle,
-      status: wait.status,
-      ...(wait.blockedReason ? { blockedReason: wait.blockedReason } : {})
+      status: wait?.status ?? 'unknown',
+      ...(wait?.blockedReason ? { blockedReason: wait.blockedReason } : {})
     }
   }
 
-  let sendResponse
+  let sendResult
   try {
-    sendResponse = await args.client.sendRequest(
-      'terminal.send',
+    sendResult = await runRpcOperation(
+      args.client,
+      continuationTerminalSendOperation,
       buildTerminalSendParams({
         terminal: handle,
         // Bracketed paste keeps a multi-line handoff one message; the host still waits out its
@@ -128,7 +121,7 @@ export async function runMobileSessionContinuation(args: {
       ? { kind: 'unknown', handle }
       : { kind: 'send-rejected', handle }
   }
-  return isTerminalSendRpcAccepted(sendResponse)
+  return sendResult?.send?.accepted === true
     ? { kind: 'delivered', handle }
     : { kind: 'send-rejected', handle }
 }
