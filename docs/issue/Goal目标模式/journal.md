@@ -3,7 +3,7 @@ title: Goal 目标模式
 slug: Goal目标模式
 status: testing
 created: 2026-09-05
-updated: 2026-09-12
+updated: 2026-09-13
 external_ids: []
 ---
 
@@ -24,7 +24,7 @@ external_ids: []
 
 | 当前测试执行 | [异步草稿验证](tests/runs/2026-09-12-异步草稿验证.md) | reviewing | REQ-122 自动化、真实 Codex 与独立 App 异步状态验证通过 |
 
-当前处于 testing：REQ-122 文件查看补充交互已有 110 项相关回归及 9 项隔离 App 检查通过，见 [文档文件查看验证](tests/runs/2026-09-13-文档文件查看.md)。异步草稿实现和隔离验证已通过，147 项 Goal 相关自动化、164 项 CLI 回归、19 个最终界面检查点通过；本轮范围门禁通过，默认全分支架构门禁仍有一个已实证的基线差异。尚未提交、合并或替换用户 App。当前结果见 [异步草稿验证](tests/runs/2026-09-12-异步草稿验证.md)；REQ-121 历史完整执行/守卫证据保留在 [当前交付核查](tests/runs/2026-09-09-当前交付核查.md)。
+当前处于 testing：REQ-122 异步草稿和 Markdown 文件查看已实现并通过隔离验证，交付经 [PR #13](https://github.com/Fartown/orca/pull/13) 合入 `fork/integration`，最终合并与 CI 状态以该 PR 为准。最新文件查看结果见 [文档文件查看验证](tests/runs/2026-09-13-文档文件查看.md)，此前异步生命周期结果见 [异步草稿验证](tests/runs/2026-09-12-异步草稿验证.md)。旧 `orcad-entry.ts` 本地架构提示已定位为引用了尚未合入的上游 main；使用与 fork CI 相同的镜像基准检查通过，无需修改该文件或放宽规则。用户 App 未替换。REQ-121 历史完整执行/守卫证据保留在 [当前交付核查](tests/runs/2026-09-09-当前交付核查.md)。
 
 ## 2. 决策点记录
 
@@ -74,6 +74,16 @@ external_ids: []
 - 影响范围：需求、技术说明、测试规格及本需求的执行证据。
 
 ## 3. 开发记录
+
+### 2026-09-13 提交与集成分支合码
+
+- 本轮目标：按用户“提交合入”授权，提交本功能并通过 PR 合入集成分支。
+- 完成内容：功能提交 `d6b7746cb`，合入最新集成基线 `dab56ab8a` 无冲突；创建 [PR #13](https://github.com/Fartown/orca/pull/13)，保留全部检查。
+- 代码或文档变更：合码时仅更新功能交付记录；集成分支带来的既有自动更新功能保持原样，不混入本 PR 的差异。
+- 验证证据：合入基线后 `pnpm tc`、110 项 Goal 相关测试通过；`check:architecture-policies --base Fartown/main`、fork-features/fork-docs、RPC 目录通过。日志为 `.docs/goal-acceptance-generation-ui-validation/2026-09-13/evidence/merge-validation.log` 和 `merge-gates.log`；远端完整检查与合并结果见 PR。
+- 未解决问题：本地 `origin/main` 指向 stablyai 最新上游，fork CI 的 `origin/main` 指向 Fartown 镜像；前述 `orcad-entry.ts` 与 `Fartown/main` 的 blob 完全相同，不是本功能改动或 CI 基线破损。标准安装/更新用户 App 不在此次提交合入操作内。
+- 下一步：依 PR 门禁完成合并；后续安装交付另按用户指令执行。
+
 
 ### 2026-09-13 文档路径与原生 Markdown 标签页
 
