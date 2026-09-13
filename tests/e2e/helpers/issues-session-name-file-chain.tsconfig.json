@@ -4,5 +4,11 @@
     "../issues-session-name-file-chain.unit.test.ts",
     "../../../src/renderer/src/env.d.ts",
     "../../../src/types/**/*"
-  ]
+  ],
+  "compilerOptions": {
+    // Why electron here and not in the shared e2e base: this narrow program pulls renderer and
+    // main modules transitively, and upstream now references the global `Electron` namespace and
+    // `process.resourcesPath` from them. Both are declared by electron's own types.
+    "types": ["node", "electron"]
+  }
 }
