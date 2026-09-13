@@ -405,8 +405,13 @@ function median(values: readonly number[]): number {
   return sorted.length % 2 === 0 ? (sorted[middle - 1] + sorted[middle]) / 2 : sorted[middle]
 }
 
-// Frame timing needs the headful fixture on an isolated display, not a hidden renderer.
+// Frame timing needs the headful fixture on an isolated display, not a hidden renderer:
+// on Linux, animation frames after a reload require a mapped window.
 test.describe('Worktree switch first paint @headful', () => {
+  test.skip(
+    process.env.ORCA_BACKGROUND_LAUNCH === '1',
+    'First-paint measurement requires a mapped window'
+  )
   test('repaints an unmounted worktree within the switch budget', async ({
     electronApp,
     orcaPage,
