@@ -1,7 +1,7 @@
 ---
 title: "移动端在新会话中继续"
 slug: "移动端在新会话中继续"
-status: designing
+status: testing
 created: 2026-09-13
 updated: 2026-09-13
 external_ids: []
@@ -133,6 +133,33 @@ external_ids: []
 - 无
 
 ## 3. 开发记录
+
+### 2026-09-13 补齐失败分支与桌面回归，并把 xterm 打包修复并入本分支
+
+- 本轮目标：把没跑的 case 补完，并按用户要求把终端 WebView 的 xterm 打包修复并进本分支而非单开
+- 完成内容：TC-006 用可注入失败的 mock 复现四种失败态；TC-007 用差分回归 + 桌面 dev 构建运行时三方比对完成；新增 TC-009 覆盖新会话首屏渲染并通过；xterm 修复落地为 `build-terminal-webview-engine.mjs` 两行，并在 `fork-features.jsonc` 登记 seam、在 `architecture-policies.jsonc` 两处规则放行
+- 代码或文档变更：mobile/scripts/build-terminal-webview-engine.mjs；config/fork-features.jsonc；config/architecture-policies.jsonc；docs/issue/移动端在新会话中继续/tests/cases/移动端续接会话.md；docs/issue/移动端在新会话中继续/tests/runs/2026-09-13-round-3-failure-branches-and-desktop.md；docs/issue/移动端在新会话中继续/requirements/移动端在新会话中继续.md；.docs/mobile-session-continuation-ui-validation/2026-09-13/（desktop 证据与两个比对脚本）
+- 验证证据：TC-007 差分 2304 组输入零差异、桌面运行时 prompt 三方 1395/1395/1395 全等；TC-006 四种失败提示正确且失败后不再调用后续 RPC、四次重试复用同一 clientMutationId；TC-009 冷启动后 engine error 与 DROPPED 均为 0 次且首屏实时渲染；check:fork-features、check:fork-docs 通过，check:architecture-policies 只剩两条既有违规
+- 未解决问题：TC-008 需要真实旧版本主机，本机只有 1.4.197，作为已接受风险保留
+- 下一步：提交本轮改动
+
+### 2026-09-13 真 Orca 主机端到端验收：整条链路跑通，并记录一个上游渲染问题
+
+- 本轮目标：把「移动端触发 → 主机建终端 → agent 被拉起 → 收到 prompt 并按其行事」在真实 Orca 主机上串一遍，补上 mock host 覆盖不到的主机侧行为
+- 完成内容：用 `--user-data-dir` 在隔离 profile 上起了一个真 Orca runtime（端口 6770，不动用户正在运行的 app，也不需要退出它），手机配对过去，在真 claude 会话上跑通 focused 与 full 两种模式；发现并归因了投递后新 tab 首屏不刷新的问题
+- 代码或文档变更：docs/issue/移动端在新会话中继续/tests/runs/2026-09-13-real-host-round-2.md；docs/issue/移动端在新会话中继续/requirements/移动端在新会话中继续.md；.docs/mobile-session-continuation-ui-validation/2026-09-13/README.md 与 evidence/device/22~32、evidence/prompts/realhost-*、scripts/build-expected-prompt-realhost.ts；.docs/mobile-real-device-testing/云真机真机测试流程.md
+- 验证证据：主机为不含本分支任何改动的 Orca 1.4.197 发布版二进制；focused 模式 prompt 1546/1546、full 模式 1434/1434 与共享内核逐字一致（source 字段从主机 agent status 与磁盘 transcript 独立取，非从收到文本反推）；被拉起的新 claude 复述了上一轮停点、核对 git status 与文件内容、判断无遗留工作后停下等指令
+- 未解决问题：投递后新 tab 首屏停在启动行。根因已查实并在真机验证修复——移动端终端 WebView 打包的 xterm 里 `InputHandler.requestMode` 被 esbuild 打坏（`target=chrome74` 降级 `||=` 时丢掉只写 `let` 的声明），DECRQM 查询触发 `ReferenceError` 打死渲染器；两行改 `build-terminal-webview-engine.mjs`（`minify` → `minifyWhitespace + minifyIdentifiers`，产物 +0.68%）即修好，但 `check:architecture-policies` 以「非本功能 seam」拒绝在本分支落地，须单独开分支。TC-007 桌面回归需用本分支桌面构建，TC-008 需带 startupCwd 的源会话 + 旧版本主机
+- 下一步：按用户决定处理上述独立问题与 TC-007 / TC-008；文档改动待用户确认后提交
+
+### 2026-09-13 云真机真机验收：入口、两种模式与投递参数全部通过
+
+- 本轮目标：在真机上跑通移动端「在新会话中继续」的完整用户路径，并核对投递出去的 prompt 与桌面端是否逐字一致
+- 完成内容：BITS 云真机小米 15 装 arm64 debug 包 + 本机 Metro 加载本分支代码，连 mock host（PORT=6769，避开用户在跑的 Orca 占用的 6768）；验证长按入口只在 agent 终端出现、面板三行、模式双向切换且每次重开回到 focused、两种模式 prompt 与共享内核输出逐字一致、投递后自动切到新会话 tab；抓到 createTerminal / wait / send 三组真实入参；临时 fixture 已还原
+- 代码或文档变更：docs/issue/移动端在新会话中继续/requirements/移动端在新会话中继续.md（六条 REQ 状态按真机结果分级更新）；.docs/mobile-session-continuation-ui-validation/2026-09-13/README.md 与 evidence/device、evidence/prompts、scripts/build-expected-prompt.ts；.docs/mobile-real-device-testing/云真机真机测试流程.md（补续期弹窗坑与 mock host 验证章节）
+- 验证证据：full 模式 prompt 1140/1140 字节逐字一致、focused 模式 1252/1252 逐字一致；wait 入参 for=tui-idle timeoutMs=60000；createTerminal 带 cwd=/Users/dev/app/packages/api、clientMutationId=mobile-continuation:surface-claude:*；zsh 终端长按无该入口；截图 evidence/device/13~21；git status 干净
+- 未解决问题：桌面端 UI 回归与旧版本主机兼容未实测（REQ-003 / REQ-004 仍为「已实现」）；失败分支（create-failed / not-ready / send-rejected）仅单测覆盖；本轮主机为 mock，主机侧建终端与 tui-idle 真实行为由 2026-09-13 早些时候的 orca CLI 真机探针覆盖
+- 下一步：按需补 tests/cases 与 tests/runs；用户批准后推分支并开 PR
 
 ### 2026-09-13 代码评审修正
 

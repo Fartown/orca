@@ -1155,6 +1155,11 @@
           "why": "fork and continuation share one bounded-transcript implementation"
         },
         {
+          "file": "mobile/scripts/build-terminal-webview-engine.mjs",
+          "mustContain": "minifyIdentifiers",
+          "why": "continuation is the first mobile path that watches a terminal from birth, so it is the one that hits the minifySyntax defect that kills xterm on DECRQM"
+        },
+        {
           "file": "mobile/src/session/mobile-session-route-types.ts",
           "mustContain": "startupCwd",
           "why": "the source cwd already rides the tab payload the host publishes"

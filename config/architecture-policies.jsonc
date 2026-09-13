@@ -410,6 +410,8 @@
           // diff against the upstream commit it last merged, evaluated without a sync first.
           "requireBaseAncestor": false,
           "allowedPaths": [
+            "mobile/src/terminal/terminal-webview-payload-hash.test.ts",
+            "mobile/scripts/build-terminal-webview-engine.mjs",
             // Mobile session-continuation: feature paths and reviewed seams.
             "src/shared/agent-session-continuation/**",
             "mobile/src/session-continuation/**",
@@ -948,6 +950,8 @@
             "docs/issue/移动端在新会话中继续/**"
           ],
           "allowedPaths": [
+            "mobile/src/terminal/terminal-webview-payload-hash.test.ts",
+            "mobile/scripts/build-terminal-webview-engine.mjs",
             "src/shared/agent-session-continuation/**",
             "mobile/src/session-continuation/**",
             "docs/issue/移动端在新会话中继续/**",
