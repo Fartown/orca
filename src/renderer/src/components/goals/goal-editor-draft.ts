@@ -1,7 +1,7 @@
+import type { GoalDraftFields } from '../../../../shared/goals/goal-editor-draft-contract'
 import { translate } from '@/i18n/i18n'
 import type {
   GoalBudget,
-  GoalCriterion,
   GoalDetail,
   GoalOperation,
   GoalSpec
@@ -12,19 +12,7 @@ import type { GoalEditorPrefill } from '@/goals/goals-domain-store'
 import type { GoalTargetSelection } from './GoalTargetPicker'
 
 /** Form state of the goal editor and the pure conversions around it. */
-export type GoalDraft = {
-  objective: string
-  criteria: GoalCriterion[]
-  acceptanceDocument: string
-  acceptanceText: string
-  extraChecks: string
-  checkAll: boolean
-  onBlocked: 'ask' | 'verify'
-  judge: 'none' | 'claude' | 'codex'
-  maxTurns: string
-  maxMinutes: string
-  checkTimeoutSeconds: string
-}
+export type GoalDraft = GoalDraftFields
 
 export const EMPTY_GOAL_DRAFT: GoalDraft = {
   objective: '',

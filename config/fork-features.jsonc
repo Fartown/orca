@@ -132,6 +132,10 @@
       "dependsOn": [
         "src/cli/runtime/index.ts",
         "src/main/agent-hooks/managed-agent-hook-controls.ts",
+        "src/main/project-groups/folder-workspace-path-status.ts",
+        "src/shared/folder-workspace-types.ts",
+        "src/shared/folder-workspace-worktree.ts",
+        "src/shared/workspace-scope.ts",
         "src/main/agent-hooks/server.ts",
         "src/main/daemon/daemon-process-inspection.ts",
         "src/main/persistence.ts",
@@ -187,12 +191,16 @@
         "src/shared/goals/goal-judge-contract.ts",
         "src/shared/goals/goal-acceptance-draft-contract.ts",
         "src/main/goals/goal-acceptance-drafts.ts",
+        "src/main/goals/goal-acceptance-draft-runner.ts",
+        "src/shared/goals/goal-editor-draft-contract.ts",
         "src/shared/goals/goal-agent-provider.ts",
         "src/shared/goals/goal-acceptance-prompt.ts",
         "src/main/goals/goal-evidence-projection.ts",
         "config/scripts/build-goal-driver.mjs"
       ],
       "seams": [
+        {"file": "src/shared/child-process/run-process.ts", "mustContain": "spec.onStdout?.(chunk)", "why": "observe structured draft activity through the canonical process runner"},
+        {"file": "src/shared/child-process/process-spec.ts", "mustContain": "onStdout?", "why": "optional process output observation does not change existing callers"},
         {
           "file": "src/shared/rpc-contract/rpc-params-catalog.generated.ts",
           "mustContain": "'goals.status': GoalExecutionHostSchema",
@@ -292,6 +300,12 @@
         "src/shared/goals/goal-judge-contract.test.ts",
         "src/renderer/src/components/goals/GoalProgress.test.tsx",
         "src/main/goals/goal-acceptance-drafts.test.ts",
+        "src/main/goals/goal-draft-recovery.test.ts",
+        "src/main/goals/goal-draft-workspace.test.ts",
+        "src/shared/goals/goal-agent-provider.test.ts",
+        "src/shared/goals/goal-editor-draft-contract.test.ts",
+        "src/renderer/src/goals/goal-editor-drafts-sync.test.tsx",
+        "src/renderer/src/goals/open-goal-document.test.ts",
         "src/renderer/src/components/goals/GoalEditor.test.tsx"
       ],
       "checks": [

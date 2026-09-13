@@ -448,6 +448,8 @@
             "src/main/plugins/plugin-bundled-bootstrap-coordinator.test.ts",
             "src/main/startup/main-process-plugins.ts",
             "config/vitest.config.ts",
+            "src/shared/child-process/run-process.ts",
+            "src/shared/child-process/process-spec.ts",
             // 2026-09-06: goal management UI (docs/issue/Goal目标模式/solutions/Goal目标管理与交互闭环方案.md §5.10).
             "src/main/goals/**",
             "src/shared/goals/**",
@@ -693,6 +695,9 @@
             "goal-mode/**"
           ],
           "allowedPaths": [
+            "src/shared/rpc-contract/rpc-params-catalog.generated.ts",
+            "src/shared/child-process/run-process.ts",
+            "src/shared/child-process/process-spec.ts",
             "src/main/goals/**",
             "src/shared/goals/**",
             "src/renderer/src/goals/**",

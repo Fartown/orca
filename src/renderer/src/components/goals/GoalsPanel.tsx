@@ -1,3 +1,5 @@
+import { getActiveSidebarWorkspaceId } from '../../../../shared/workspace-scope'
+import { GoalDraftList } from './GoalDraftList'
 import { Plus, Search } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -21,7 +23,9 @@ export default function GoalsPanel(): React.JSX.Element {
   const scope = useGoalDomainStore((s) => s.scope)
   const filter = useGoalDomainStore((s) => s.filter)
   const query = useGoalDomainStore((s) => s.query)
-  const activeWorktreeId = useAppStore((s) => s.activeWorktreeId)
+  const activeWorktreeId = useAppStore((s) =>
+    getActiveSidebarWorkspaceId(s.activeWorkspaceKey, s.activeWorktreeId)
+  )
   const statusMessage = goalRouteStatusMessage(status, statusReason)
   const canCreate = status === 'ready' || status === 'degraded'
 
@@ -90,6 +94,7 @@ export default function GoalsPanel(): React.JSX.Element {
           </div>
         )}
       </div>
+      <GoalDraftList />
       <div className="min-h-0 flex-1 overflow-hidden">
         {selectedGoalId ? <GoalDetail goalId={selectedGoalId} /> : <GoalList />}
       </div>

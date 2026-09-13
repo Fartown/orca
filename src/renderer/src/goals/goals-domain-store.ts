@@ -26,6 +26,7 @@ export type GoalEditorPrefill = {
   worktreeId: string | null
   paneKey: string | null
   goalId?: string
+  draftId?: string
 }
 
 export type GoalDomainState = {

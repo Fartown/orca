@@ -1,3 +1,4 @@
+import { folderWorkspaceToWorktree } from '../../../../shared/folder-workspace-worktree'
 import { useMemo } from 'react'
 import { basename } from '@/lib/path'
 import { Label } from '@/components/ui/label'
@@ -35,13 +36,14 @@ export function GoalTargetPicker({
   onChange: (next: GoalTargetSelection) => void
 }): React.JSX.Element {
   const worktrees = useAllWorktrees()
+  const folderWorkspaces = useAppStore((s) => s.folderWorkspaces)
   const agentStatusByPaneKey = useAppStore((s) => s.agentStatusByPaneKey)
   const localWorktrees = useMemo(
     () =>
-      worktrees
+      [...worktrees, ...folderWorkspaces.map(folderWorkspaceToWorktree)]
         .filter((worktree) => !worktree.hostId || worktree.hostId === 'local')
         .sort((a, b) => a.path.localeCompare(b.path)),
-    [worktrees]
+    [worktrees, folderWorkspaces]
   )
   const candidates = useMemo(
     () =>
@@ -115,11 +117,11 @@ export function GoalTargetPicker({
           {value.worktreeId && candidates.length === 0 && !locked
             ? translate(
                 'goals.editor.noSessions',
-                'No agent session is running in this workspace. Start one first; plain shells cannot be targeted.'
+                'You can draft the document now. Start and select an agent session before execution.'
               )
             : translate(
                 'goals.editor.sessionHint',
-                'Only sessions Orca can identify by their agent hooks are listed.'
+                'Select an agent session before execution. Document generation only needs the workspace.'
               )}
         </p>
       </div>

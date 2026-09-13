@@ -1,4 +1,5 @@
-import { appendFile, mkdir, readFile, readdir, rename, rm, writeFile } from 'node:fs/promises'
+import { appendFile, mkdir, readFile, readdir, rm } from 'node:fs/promises'
+import { readJson, writeTextAtomic, writeJsonAtomic } from './goal-record-files'
 import { dirname } from 'node:path'
 import {
   GoalControlIntentSchema,
@@ -195,28 +196,6 @@ export class GoalStore {
     const pid = (raw as { pid?: unknown }).pid
     return Number.isInteger(pid) && (pid as number) > 0 ? (pid as number) : null
   }
-}
-
-async function readJson(path: string): Promise<unknown> {
-  try {
-    return JSON.parse(await readFile(path, 'utf8')) as unknown
-  } catch (error) {
-    if (isMissing(error) || error instanceof SyntaxError) {
-      return null
-    }
-    throw error
-  }
-}
-
-async function writeTextAtomic(path: string, text: string): Promise<void> {
-  await mkdir(dirname(path), { recursive: true })
-  const tmp = `${path}.${process.pid}.${Date.now()}.tmp`
-  await writeFile(tmp, text, 'utf8')
-  await rename(tmp, path)
-}
-
-async function writeJsonAtomic(path: string, value: unknown): Promise<void> {
-  await writeTextAtomic(path, `${JSON.stringify(value, null, 2)}\n`)
 }
 
 function isMissing(error: unknown): boolean {

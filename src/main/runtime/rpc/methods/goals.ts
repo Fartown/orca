@@ -51,6 +51,30 @@ export const GOAL_METHODS = [
     }
   }),
   defineMethod({
+    name: 'goals.listEditorDrafts',
+    params: GoalRpcParams['goals.listEditorDrafts'],
+    handler: (params, context) => {
+      admitSelector(params.authorityExecutionHostId, context)
+      return service().editorDrafts.list()
+    }
+  }),
+  defineMethod({
+    name: 'goals.getEditorDraft',
+    params: GoalRpcParams['goals.getEditorDraft'],
+    handler: (params, context) => {
+      admitSelector(params.authorityExecutionHostId, context)
+      return service().editorDrafts.get(params.editorDraftId)
+    }
+  }),
+  defineMethod({
+    name: 'goals.saveEditorDraft',
+    params: GoalRpcParams['goals.saveEditorDraft'],
+    handler: (params, context) => {
+      admitSelector(params.authorityExecutionHostId, context)
+      return service().editorDrafts.save(params)
+    }
+  }),
+  defineMethod({
     name: 'goals.list',
     params: GoalRpcParams['goals.list'],
     handler: (params, context) => {

@@ -22,77 +22,57 @@ import type { GoalOperation } from '../../../../shared/goals/goal-control-contra
 import { requestGoalDetailRefresh } from '@/goals/GoalDomainSyncGate'
 import { fingerprintPayload, newClientOperationId } from '@/goals/goal-client-operation'
 import { goalRuntimeClient } from '@/goals/goal-runtime-client'
+import { openGoalDocument } from '@/goals/open-goal-document'
 import { resolveGoalBindingForPane } from '@/goals/goal-session-target'
 import { goalDomainStore } from '@/goals/goals-domain-store'
 import { useGoalDomainStore } from '@/goals/use-goals-domain-store'
 import { GoalAdvancedSettings } from './GoalAdvancedSettings'
 import { GoalAcceptanceDocument } from './GoalAcceptanceDocument'
 import { useAcceptanceDraft } from './use-acceptance-draft'
+import { useGoalEditorDraft } from './use-goal-editor-draft'
+import { GoalDraftProgress } from './GoalDraftProgress'
+import { goalDraftContext } from '../../../../shared/goals/goal-editor-draft-contract'
 import {
-  EMPTY_GOAL_DRAFT,
   amendGoal,
   bindingFailureMessage,
   budgetFromDraft,
-  draftFromDetail,
   isNonNegativeNumber,
   isPositiveNumber,
   specFromDraft,
-  targetFromPrefill,
   type GoalDraft
 } from './goal-editor-draft'
-import { GoalTargetPicker, type GoalTargetSelection } from './GoalTargetPicker'
+import { GoalTargetPicker } from './GoalTargetPicker'
 
 // Product names of the judge CLIs; not copy, so they stay out of the catalog.
 const JUDGE_CLI_LABELS = { claude: 'Claude Code', codex: 'Codex' } as const
 
-/**
- * Create form in a right Sheet. The draft survives a cancel so a failed launch
- * never costs the user their input; only a successful create clears it.
- */
+/** The persisted draft and its generation attempt outlive this editor. */
 export function GoalEditor(): React.JSX.Element {
   const editor = useGoalDomainStore((s) => s.editor)
+  const persistence = useGoalEditorDraft(editor)
+  const { session, content } = persistence
+  const draft = content.fields
+  const target = content.target
+  const editingGoalId = content.goalId
   const editing = useGoalDomainStore((s) =>
-    s.editor.prefill?.goalId ? s.detailsById[s.editor.prefill.goalId] : undefined
+    editingGoalId ? s.detailsById[editingGoalId] : undefined
   )
-  const editingGoalId = editor.prefill?.goalId ?? null
-  const editingRevision = editing?.specRevision ?? null
-  const [draft, setDraft] = useState<GoalDraft>(EMPTY_GOAL_DRAFT)
-  const [target, setTarget] = useState<GoalTargetSelection>({ worktreeId: null, paneKey: null })
   const [error, setError] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
-  const [operationId, setOperationId] = useState<string>(() => newClientOperationId())
-  const [documentContext, setDocumentContext] = useState<string | null>(null)
-  const context = JSON.stringify([
-    draft.objective.trim(),
-    draft.judge,
-    editing?.binding.worktree ?? target.worktreeId,
-    editing?.binding.terminal ?? target.paneKey
-  ])
-  const generation = useAcceptanceDraft(editor.open, context)
-  const staleDocument = Boolean(draft.acceptanceDocument && documentContext !== context)
-  const locked = Boolean(editor.prefill?.paneKey)
+  const context = goalDraftContext(draft, target.worktreeId)
+  const generation = useAcceptanceDraft(session, content.generation?.draftId ?? null)
+  const staleDocument = Boolean(draft.acceptanceDocument && content.documentContext !== context)
+  const locked = Boolean(editor.prefill?.paneKey && !editor.prefill?.draftId)
+  const candidate =
+    generation.result?.status === 'ready' && !content.generation?.applied
+      ? generation.result.document
+      : null
+  const setDocumentContext = (value: string): void =>
+    session?.change((current) => ({ ...current, documentContext: value }))
+  const setTarget = (value: typeof target): void =>
+    session?.change((current) => ({ ...current, target: value }))
 
-  useEffect(() => {
-    if (!editor.open) {
-      return
-    }
-    setTarget(targetFromPrefill(editor.prefill))
-    setError(null)
-    // Why keyed on id + revision, not the detail object: the 5s poll stores a fresh detail each
-    // time, and reloading the draft on every poll would wipe edits in progress.
-    const saved = editingGoalId ? goalDomainStore.getState().detailsById[editingGoalId] : undefined
-    if (saved) {
-      setDraft(draftFromDetail(saved))
-      setDocumentContext(
-        JSON.stringify([
-          saved.spec.objective.trim(),
-          saved.spec.judge ?? 'none',
-          saved.binding.worktree,
-          saved.binding.terminal
-        ])
-      )
-    }
-  }, [editingGoalId, editingRevision, editor.open, editor.prefill])
+  useEffect(() => setError(null), [session?.id])
 
   const hasCommands =
     draft.criteria.some((criterion) => criterion.command?.trim()) ||
@@ -100,6 +80,12 @@ export function GoalEditor(): React.JSX.Element {
   // Why: a picked judge always adds an independent check — per item, or over the goal text as a whole.
   const verifiable = hasCommands || draft.judge !== 'none'
   const valid =
+    Boolean(session) &&
+    !persistence.loading &&
+    !persistence.error &&
+    !candidate &&
+    !generation.unresolved &&
+    (!editingGoalId || Boolean(editing)) &&
     draft.objective.trim().length > 0 &&
     draft.objective.length <= 32_000 &&
     (editingGoalId !== null || Boolean(draft.acceptanceDocument.trim())) &&
@@ -112,7 +98,14 @@ export function GoalEditor(): React.JSX.Element {
     isNonNegativeNumber(draft.maxMinutes) &&
     isPositiveNumber(draft.checkTimeoutSeconds)
 
-  const close = (): void => goalDomainStore.getState().closeEditor()
+  const close = (): void => {
+    void (session?.flush() ?? Promise.resolve())
+      .then(() => {
+        setError(null)
+        goalDomainStore.getState().closeEditor()
+      })
+      .catch((caught) => setError(String(caught)))
+  }
 
   const submit = async (event: React.FormEvent, resumeAfterSave = false): Promise<void> => {
     event.preventDefault()
@@ -123,7 +116,7 @@ export function GoalEditor(): React.JSX.Element {
     setError(null)
     try {
       if (editing) {
-        finish(await amendGoal(editing, draft, operationId, resumeAfterSave))
+        await finish(await amendGoal(editing, draft, content.operationId, resumeAfterSave))
         return
       }
       if (!target.worktreeId || !target.paneKey) {
@@ -144,10 +137,10 @@ export function GoalEditor(): React.JSX.Element {
       // Why: the same id retries into the same receipt; a fresh one is minted only after the host answers.
       const operation = await goalRuntimeClient.create({
         ...payload,
-        clientOperationId: operationId,
+        clientOperationId: content.operationId,
         payloadFingerprint: await fingerprintPayload(payload)
       })
-      finish(operation)
+      await finish(operation)
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : String(caught))
     } finally {
@@ -155,10 +148,10 @@ export function GoalEditor(): React.JSX.Element {
     }
   }
 
-  const finish = (operation: GoalOperation): void => {
-    setOperationId(newClientOperationId())
+  const finish = async (operation: GoalOperation): Promise<void> => {
     if (operation.status === 'rejected') {
       setError(operation.message)
+      session?.change((current) => ({ ...current, operationId: newClientOperationId() }))
       return
     }
     if (operation.status === 'accepted') {
@@ -168,12 +161,13 @@ export function GoalEditor(): React.JSX.Element {
       goalDomainStore.getState().select(operation.goalId)
       requestGoalDetailRefresh(operation.goalId)
     }
-    setDraft(EMPTY_GOAL_DRAFT)
+    session?.change((current) => ({ ...current, archived: true }))
+    await session?.flush()
     close()
   }
 
   const update = <K extends keyof GoalDraft>(key: K, value: GoalDraft[K]): void =>
-    setDraft((current) => ({ ...current, [key]: value }))
+    session?.change((current) => ({ ...current, fields: { ...current.fields, [key]: value } }))
 
   return (
     <Sheet open={editor.open} onOpenChange={(open) => (open ? undefined : close())}>
@@ -201,7 +195,7 @@ export function GoalEditor(): React.JSX.Element {
             </SheetDescription>
           </SheetHeader>
           <fieldset
-            disabled={pending}
+            disabled={pending || persistence.loading || !session}
             className="scrollbar-sleek min-h-0 min-w-0 flex-1 space-y-4 overflow-y-auto px-4 py-3"
           >
             <div className="space-y-1">
@@ -247,8 +241,39 @@ export function GoalEditor(): React.JSX.Element {
                 )}
               </p>
             </div>
+            <GoalDraftProgress
+              result={generation.result}
+              error={generation.error}
+              generating={generation.generating}
+              saving={persistence.saving}
+              saveError={persistence.error}
+              onRetrySave={() => void session?.flush().catch(() => {})}
+            />
             <GoalAcceptanceDocument
+              key={session?.id}
               value={draft.acceptanceDocument}
+              documentPath={persistence.documentPath}
+              candidatePath={
+                generation.result?.status === 'ready' ? generation.result.documentPath : undefined
+              }
+              onOpenDocument={(path) => {
+                void (async () => {
+                  try {
+                    await session?.flush()
+                    const currentPath =
+                      path === persistence.documentPath
+                        ? (session?.getSnapshot().documentPath ?? path)
+                        : path
+                    if (!target.worktreeId) {
+                      return
+                    }
+                    await openGoalDocument(currentPath, target.worktreeId)
+                    goalDomainStore.getState().closeEditor()
+                  } catch (caught) {
+                    setError(caught instanceof Error ? caught.message : String(caught))
+                  }
+                })()
+              }}
               onChange={(value) => {
                 update('acceptanceDocument', value)
                 if (!draft.acceptanceDocument) {
@@ -257,10 +282,21 @@ export function GoalEditor(): React.JSX.Element {
               }}
               generating={generation.generating}
               canGenerate={Boolean(
-                draft.objective.trim() &&
-                draft.judge !== 'none' &&
-                (editing || (target.worktreeId && target.paneKey))
+                draft.objective.trim() && draft.judge !== 'none' && target.worktreeId
               )}
+              candidate={candidate}
+              onAdopt={() => {
+                if (!candidate || !content.generation) {
+                  return
+                }
+                session?.change((current) => ({
+                  ...current,
+                  fields: { ...current.fields, acceptanceDocument: candidate },
+                  documentContext: current.generation!.context,
+                  generation: { ...current.generation!, applied: true }
+                }))
+              }}
+              stopping={generation.result?.phase === 'stopping'}
               stale={staleDocument}
               onReview={() => setDocumentContext(context)}
               onCancel={() => void generation.cancel()}
@@ -270,30 +306,15 @@ export function GoalEditor(): React.JSX.Element {
                 }
                 void generation.generate({
                   objective: draft.objective.trim(),
+                  context,
+                  worktree: target.worktreeId!,
                   acceptanceContext: composeGoalAcceptanceText({
                     ...specFromDraft(draft),
                     objective: '',
                     acceptanceDocument: undefined,
                     acceptanceText: draft.acceptanceDocument || draft.acceptanceText
                   }),
-                  judge: draft.judge,
-                  resolveBinding: async () => {
-                    if (editing) {
-                      return editing.binding
-                    }
-                    const resolved = await resolveGoalBindingForPane(
-                      target.worktreeId!,
-                      target.paneKey!
-                    )
-                    if (!resolved.ok) {
-                      throw new Error(bindingFailureMessage(resolved.reason))
-                    }
-                    return resolved.binding
-                  },
-                  onDocument: (document) => {
-                    update('acceptanceDocument', document)
-                    setDocumentContext(context)
-                  }
+                  judge: draft.judge
                 })
               }}
             />
@@ -322,15 +343,15 @@ export function GoalEditor(): React.JSX.Element {
                 )}
               </p>
             ) : null}
-            {error || generation.error ? (
+            {error ? (
               <p className="text-xs text-destructive" role="alert">
-                {error || generation.error}
+                {error}
               </p>
             ) : null}
           </fieldset>
           <div className="flex shrink-0 items-center justify-end gap-2 border-t border-border px-4 py-3">
             <Button type="button" variant="ghost" onClick={close}>
-              {translate('goals.editor.cancel', 'Cancel')}
+              {translate('goals.editor.close', 'Close')}
             </Button>
             {editing ? (
               <>

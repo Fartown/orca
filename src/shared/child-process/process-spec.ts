@@ -50,6 +50,8 @@ export type ProcessSpec = {
   terminationBarrier?: boolean | ProcessTerminationBarrier
   /** Called once when the child exits or tree termination is verified. */
   onChildTerminated?: () => void
+  /** Observe stdout while preserving the normal captured result. */
+  onStdout?: (chunk: Buffer | string) => void
 }
 
 export type ProcessTerminationBarrier = {

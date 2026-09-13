@@ -1,4 +1,9 @@
 import {
+  GoalEditorDraftRecordSchema,
+  GoalEditorDraftListSchema,
+  type GoalEditorDraftSave
+} from '../../../shared/goals/goal-editor-draft-contract'
+import {
   GoalAcceptanceDraftResult,
   type GoalAcceptanceDraft
 } from '../../../shared/goals/goal-acceptance-draft-contract'
@@ -70,6 +75,22 @@ export class GoalRuntimeClient {
       { draftId },
       GoalAcceptanceDraftResult.nullable()
     )
+  }
+
+  listEditorDrafts() {
+    return this.call('goals.listEditorDrafts', {}, GoalEditorDraftListSchema)
+  }
+
+  getEditorDraft(editorDraftId: string) {
+    return this.call(
+      'goals.getEditorDraft',
+      { editorDraftId },
+      GoalEditorDraftRecordSchema.nullable()
+    )
+  }
+
+  saveEditorDraft(input: GoalEditorDraftSave) {
+    return this.call('goals.saveEditorDraft', input, GoalEditorDraftRecordSchema)
   }
 
   list(

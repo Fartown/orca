@@ -1,3 +1,4 @@
+import { useGoalEditorDraftSync } from './goal-editor-drafts-sync'
 import { useEffect, useRef, type MutableRefObject } from 'react'
 import { useStore } from 'zustand'
 import { isLegacyGoalId } from '../../../shared/goals/goal-control-contract'
@@ -15,6 +16,7 @@ const PENDING_OPERATION_POLL_MS = 1_000
  * slowly so the pane header can tell a bound session from an unbound one.
  */
 export function GoalDomainSyncGate(): null {
+  useGoalEditorDraftSync()
   const rightSidebarOpen = useAppStore((s) => s.rightSidebarOpen)
   const rightSidebarTab = useAppStore((s) => s.rightSidebarTab)
   const activeWorktreeId = useAppStore((s) => s.activeWorktreeId)
