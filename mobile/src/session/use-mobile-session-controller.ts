@@ -25,6 +25,7 @@ import { useMobileSessionAccessorySelection } from './use-mobile-session-accesso
 import { useMobileSessionAttachments } from './use-mobile-session-attachments'
 import { useMobileSessionTerminalCreateActions } from './use-mobile-session-terminal-create-actions'
 import { useMobileSessionContentCreateActions } from './use-mobile-session-content-create-actions'
+import { useMobileSessionContinuationScope } from '../session-continuation/use-mobile-session-continuation-scope'
 import { useMobileSessionCloseActions } from './use-mobile-session-close-actions'
 import { useMobileSessionBulkClose } from './use-mobile-session-bulk-close'
 import { useMobileSessionPresentation } from './use-mobile-session-presentation'
@@ -104,9 +105,13 @@ export function useMobileSessionController() {
     attachments,
     useMobileSessionTerminalCreateActions(attachments)
   )
-  const contentCreateActions = Object.assign(
+  const sessionContinuation = Object.assign(
     terminalCreateActions,
-    useMobileSessionContentCreateActions(terminalCreateActions)
+    useMobileSessionContinuationScope(terminalCreateActions)
+  )
+  const contentCreateActions = Object.assign(
+    sessionContinuation,
+    useMobileSessionContentCreateActions(sessionContinuation)
   )
   const closeActions = Object.assign(
     contentCreateActions,

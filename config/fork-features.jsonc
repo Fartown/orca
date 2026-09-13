@@ -1111,6 +1111,100 @@
       "checks": [
         "pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/components/tab-entry-remote-path src/renderer/src/components/tab-bar/tab-create-entry-action.test.ts src/renderer/src/components/tab-bar/tab-create-entry-classifier.test.ts src/renderer/src/components/tab-bar/tab-create-entry-local-path.test.ts"
       ]
+    },
+    {
+      "id": "mobile-session-continuation",
+      "title": "移动端在新会话中继续：claude / codex 终端通道",
+      "goal": "移动端从当前 claude / codex 会话新建续接会话，复用主机既有 RPC，不改 wire",
+      "journal": "docs/issue/移动端在新会话中继续/journal.md",
+      "dependsOn": [
+        "mobile/src/components/ActionSheetModal.tsx",
+        "mobile/src/platform/haptics.ts",
+        "mobile/src/session/mobile-new-tab-agent-loader.ts",
+        "mobile/src/tasks/mobile-tui-agents.ts",
+        "mobile/src/terminal/terminal-send-request.ts",
+        "mobile/src/terminal/terminal-send-rpc-response.ts",
+        "mobile/src/transport/rpc-client.ts",
+        "mobile/src/transport/rpc-delivery-ambiguity.ts",
+        "mobile/src/transport/types.ts",
+        "src/shared/agent-prompt-injection.ts",
+        "src/shared/agent-status-types.ts",
+        "src/shared/protocol-version.ts",
+        "src/shared/telemetry-events.ts",
+        "src/shared/tui-agent.ts"
+      ],
+      "policyId": "mobile-session-continuation",
+      "ownedPaths": [
+        "src/shared/agent-session-continuation/**",
+        "mobile/src/session-continuation/**",
+        "docs/issue/移动端在新会话中继续/**"
+      ],
+      "requiredFiles": [
+        "src/shared/agent-session-continuation/continuation-prompt.ts",
+        "mobile/src/session-continuation/continuation-actions.ts",
+        "mobile/src/session-continuation/continuation-delivery.ts"
+      ],
+      "seams": [
+        {
+          "file": "src/renderer/src/lib/agent-session-continuation.ts",
+          "mustContain": "shared/agent-session-continuation/continuation-prompt",
+          "why": "desktop keeps its import path while the prompt builder lives in shared"
+        },
+        {
+          "file": "src/renderer/src/lib/agent-session-fork-context.ts",
+          "mustContain": "shared/agent-session-continuation/bounded-session-transcript",
+          "why": "fork and continuation share one bounded-transcript implementation"
+        },
+        {
+          "file": "mobile/src/session/mobile-session-route-types.ts",
+          "mustContain": "startupCwd",
+          "why": "the source cwd already rides the tab payload the host publishes"
+        },
+        {
+          "file": "mobile/src/session/mobile-terminal-action-sheet-actions.ts",
+          "mustContain": "sessionContinuationActions",
+          "why": "the long-press menu takes the entry by injection, like bulk close"
+        },
+        {
+          "file": "mobile/src/session/MobileSessionSheets.tsx",
+          "mustContain": "getMobileSessionContinuationActions",
+          "why": "the picker mounts beside the other session sheets"
+        },
+        {
+          "file": "mobile/src/session/use-mobile-session-controller.ts",
+          "mustContain": "useMobileSessionContinuationScope",
+          "why": "the continuation scope joins the controller after the create actions it calls"
+        },
+        {
+          "file": "mobile/src/session/use-mobile-session-feedback-capabilities.ts",
+          "mustContain": "sessionContinuationSupported",
+          "why": "capability state lives with its siblings"
+        },
+        {
+          "file": "mobile/src/session/use-mobile-session-tab-reconciliation.ts",
+          "mustContain": "supportsMobileSessionContinuation",
+          "why": "the gate rides the existing runtime capability probe"
+        },
+        {
+          "file": "mobile/src/session/use-mobile-session-terminal-create-actions.ts",
+          "mustContain": "kind: 'terminal'",
+          "why": "the create action reports the handle the continuation waits on"
+        },
+        {
+          "file": "mobile/src/session/mobile-session-route-parity.test.ts",
+          "mustContain": "supportsMobileSessionContinuation",
+          "why": "the route parity ratchet tracks this capability gate like the quick-command one"
+        }
+      ],
+      "tests": [
+        "src/shared/agent-session-continuation/continuation-prompt.test.ts",
+        "mobile/src/session-continuation/continuation-delivery.test.ts",
+        "mobile/src/session-continuation/continuation-source.test.ts"
+      ],
+      "checks": [
+        "pnpm exec vitest run --config config/vitest.config.ts src/shared/agent-session-continuation src/renderer/src/lib/agent-session-fork-context.test.ts src/renderer/src/lib/launch-agent-session-continuation.test.ts src/renderer/src/components/agent-session-continuation src/renderer/src/components/terminal-pane/terminal-agent-session-continuation.test.ts src/renderer/src/components/right-sidebar/ai-vault-session-continuation.test.ts",
+        "pnpm --dir mobile exec vitest run src/session-continuation src/session/mobile-terminal-action-sheet-actions.test.ts src/session/mobile-session-route-parity.test.ts"
+      ]
     }
   ]
 }

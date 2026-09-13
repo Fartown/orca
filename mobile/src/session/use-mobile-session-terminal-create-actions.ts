@@ -9,6 +9,13 @@ import { terminalRecordsEqual } from './mobile-terminal-records'
 import type { MobileNewTabAgentOption } from './mobile-new-tab-agent-options'
 import type { TerminalQuickCommand } from '../../../src/shared/terminal-quick-command-types'
 import type { Terminal, TerminalCreateResult } from './mobile-session-route-types'
+
+/** What a create settled as, so a caller that must act on the new terminal (session
+ *  continuation waits on its readiness) can address it instead of re-deriving the handle. */
+export type MobileTerminalCreateResult =
+  | { kind: 'terminal'; handle: string }
+  | { kind: 'structured'; sessionId: string }
+  | null
 import type { MobileSessionAttachmentsModel } from './use-mobile-session-attachments'
 import { isAgentSessionHandleProvider } from '../../../src/shared/agent-session-provider-handle'
 import { createMobileStructuredAgentSession } from './mobile-structured-agent-session-launch'
@@ -48,12 +55,15 @@ export function useMobileSessionTerminalCreateActions(scope: MobileSessionAttach
     options?: MobileQuickCommandLaunch['options'] & {
       onPromptSent?: () => void
       errorToast?: string
+      /** Directory for the new terminal; a continuation reuses the source session's cwd. */
+      cwd?: string
     }
-  ) {
+  ): Promise<MobileTerminalCreateResult> {
     if (!client || creatingTerminalRef.current) {
-      return
+      return null
     }
     creatingTerminalRef.current = true
+    let createResult: MobileTerminalCreateResult = null
 
     setCreating(true)
     setCreateError('')
@@ -83,14 +93,14 @@ export function useMobileSessionTerminalCreateActions(scope: MobileSessionAttach
           setActiveHandle(null)
           // Refresh if the create response beats its published tab frame.
           scheduleDelayedAction(() => void fetchSessionTabs(), 500)
-          return
+          return { kind: 'structured', sessionId: structured.sessionId }
         }
         if (structured.kind === 'unknown') {
           // Never create a legacy sibling when the host may already have committed.
           setCreateError(structured.message)
           triggerError()
           showToast(structured.message, 1800)
-          return
+          return null
         }
       }
       const response = await client.sendRequest('session.tabs.createTerminal', {
@@ -102,6 +112,7 @@ export function useMobileSessionTerminalCreateActions(scope: MobileSessionAttach
           ? { startupCommandDelivery: options.startupCommandDelivery }
           : {}),
         ...(options?.agentPrompt ? { agentPrompt: options.agentPrompt } : {}),
+        ...(options?.cwd ? { cwd: options.cwd } : {}),
         ...(agent ? { agent } : {}),
         activate: false,
         select: true,
@@ -127,6 +138,7 @@ export function useMobileSessionTerminalCreateActions(scope: MobileSessionAttach
         })
         if (typeof created.terminal === 'string') {
           const createdHandle = created.terminal
+          createResult = { kind: 'terminal', handle: createdHandle }
           defaultTerminalHandlesToLiveInput([createdHandle])
           // Why: snapshots lag the create RPC; without this marker applySessionTabs reverts the active handle, blanking the new pane.
           pendingActiveTerminalHandleRef.current = createdHandle
@@ -217,6 +229,7 @@ export function useMobileSessionTerminalCreateActions(scope: MobileSessionAttach
       creatingTerminalRef.current = false
       setCreating(false)
     }
+    return createResult
   }
 
   // Quick commands spawn a fresh terminal tab, mirroring desktop's

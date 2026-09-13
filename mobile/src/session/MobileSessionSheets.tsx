@@ -11,6 +11,8 @@ import { CustomKeyModal } from '../components/CustomKeyModal'
 import { MobileDictationSetupSheet } from '../components/MobileDictationSetupSheet'
 import { MobileBrowserTabActionSheet } from './MobileBrowserTabActionSheet'
 import { getMobileTerminalActionSheetActions } from './mobile-terminal-action-sheet-actions'
+import { getMobileSessionContinuationActions } from '../session-continuation/continuation-actions'
+import type { MobileSessionTab } from './mobile-session-route-types'
 import {
   getRepoIdFromMobileWorktreeId,
   isTerminalPhoneDisplayMode
@@ -82,6 +84,13 @@ export function MobileSessionSheets({ controller }: { controller: MobileSessionC
     handleCloseTerminal,
     handleCloseSessionTab,
     bulkCloseActions,
+    sessionContinuationSupported,
+    continuationTarget,
+    continuationActions,
+    continuationTitle,
+    continuationMessage,
+    openContinuation,
+    closeContinuation,
     closeWithBulkActions,
     createTabAgentActions,
     sendDiffNotesAgentActions,
@@ -200,9 +209,27 @@ export function MobileSessionSheets({ controller }: { controller: MobileSessionC
           onClear: (target) => void handleClearTerminal(target),
           onClose: (target) => void handleCloseTerminal(target),
           onCloseSessionTab: (tab) => void handleCloseSessionTab(tab),
-          bulkCloseActions
+          bulkCloseActions,
+          sessionContinuationActions: (terminalHandle, dismiss) =>
+            getMobileSessionContinuationActions({
+              terminalHandle,
+              tabs: sessionTabs.filter(
+                (tab): tab is Extract<MobileSessionTab, { type: 'terminal' }> =>
+                  tab.type === 'terminal'
+              ),
+              hostSupported: sessionContinuationSupported,
+              onDismiss: dismiss,
+              onOpen: openContinuation
+            })
         })}
         onClose={() => setActionTarget(null)}
+      />
+      <ActionSheetModal
+        visible={continuationTarget != null}
+        title={continuationTitle}
+        message={continuationMessage}
+        actions={continuationActions}
+        onClose={closeContinuation}
       />
       <ActionSheetModal
         visible={markdownActionTarget != null}

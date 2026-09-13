@@ -32,6 +32,11 @@ export function useMobileSessionFeedbackCapabilities(scope: MobileSessionTermina
     null
   )
   const [quickCommandsSupported, setQuickCommandsSupported] = useState<boolean | null>(null)
+  // Why: continuation reads waitSubmitMs and the submission stages off terminal.send; hosts
+  // without that capability strip both, so hide the entry rather than report an unreadable result.
+  const [sessionContinuationSupported, setSessionContinuationSupported] = useState<boolean | null>(
+    null
+  )
   // Why: stable callbacks (handleFileTap) read the live value via this ref, since
   // the capability probe resolves after the callbacks are created.
   const browserScreencastSupportedRef = useRef(browserScreencastSupported)
@@ -115,6 +120,8 @@ export function useMobileSessionFeedbackCapabilities(scope: MobileSessionTermina
     setAgentSessionHistorySupported,
     quickCommandsSupported,
     setQuickCommandsSupported,
+    sessionContinuationSupported,
+    setSessionContinuationSupported,
     browserScreencastSupportedRef,
     reconciledCreateWarningState,
     createWarning,

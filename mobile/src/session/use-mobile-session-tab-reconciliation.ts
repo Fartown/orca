@@ -1,6 +1,7 @@
 import { useEffect, useRef, useCallback, useMemo, useState } from 'react'
 import { startRuntimeCapabilityProbe } from '../transport/runtime-capability-probe'
 import { supportsMobileQuickCommands } from '../terminal/quick-commands'
+import { supportsMobileSessionContinuation } from '../session-continuation/continuation-agents'
 import { MOBILE_AI_VAULT_CAPABILITY } from '../agent-history/agent-history-capability'
 import { TERMINAL_QUERY_REPLY_INPUT_RUNTIME_CAPABILITY } from '../../../src/shared/protocol-version'
 import { runAcceptedMobileSessionTabsEffects } from './mobile-session-tabs-accepted-effects'
@@ -32,6 +33,7 @@ export function useMobileSessionTabReconciliation(scope: MobileSessionMarkdownAc
     setBrowserScreencastSupported,
     setAgentSessionHistorySupported,
     setQuickCommandsSupported,
+    setSessionContinuationSupported,
     nativeChatStream,
     fetchTerminals,
     applySessionTabs,
@@ -149,6 +151,7 @@ export function useMobileSessionTabReconciliation(scope: MobileSessionMarkdownAc
       setBrowserScreencastSupported(null)
       setAgentSessionHistorySupported(null)
       setQuickCommandsSupported(null)
+      setSessionContinuationSupported(null)
       setShowQuickCommands(false)
       hostQueryReplyInputSupportedRef.current = false
       return
@@ -158,6 +161,7 @@ export function useMobileSessionTabReconciliation(scope: MobileSessionMarkdownAc
     setBrowserScreencastSupported(null)
     setAgentSessionHistorySupported(null)
     setQuickCommandsSupported(null)
+    setSessionContinuationSupported(null)
     setShowQuickCommands(false)
     hostQueryReplyInputSupportedRef.current = false
     // Why: the probe retries — a relay→direct cutover or request timeout rejects
@@ -166,6 +170,7 @@ export function useMobileSessionTabReconciliation(scope: MobileSessionMarkdownAc
       setBrowserScreencastSupported(capabilities.includes('browser.screencast.v1'))
       setAgentSessionHistorySupported(capabilities.includes(MOBILE_AI_VAULT_CAPABILITY))
       setQuickCommandsSupported(supportsMobileQuickCommands(capabilities))
+      setSessionContinuationSupported(supportsMobileSessionContinuation(capabilities))
       // Why: hosts without this capability strip inputKind from terminal.send,
       // so a forwarded xterm reply would become floor-stealing shell input.
       hostQueryReplyInputSupportedRef.current = capabilities.includes(
