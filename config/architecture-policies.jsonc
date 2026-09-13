@@ -421,7 +421,6 @@
             "mobile/src/session/mobile-session-route-types.ts",
             "mobile/src/session/mobile-terminal-action-sheet-actions.ts",
             "mobile/src/session/MobileSessionSheets.tsx",
-            "mobile/src/session/use-mobile-session-controller.ts",
             "mobile/src/session/use-mobile-session-terminal-create-actions.ts",
             "mobile/src/session/mobile-session-route-parity.test.ts",
             // Fork infrastructure (docs/reference/fork-maintenance.md).
@@ -960,7 +959,6 @@
             "mobile/src/session/mobile-session-route-types.ts",
             "mobile/src/session/mobile-terminal-action-sheet-actions.ts",
             "mobile/src/session/MobileSessionSheets.tsx",
-            "mobile/src/session/use-mobile-session-controller.ts",
             "mobile/src/session/use-mobile-session-terminal-create-actions.ts",
             "mobile/src/session/mobile-session-route-parity.test.ts",
             "config/fork-features.jsonc",

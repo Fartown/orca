@@ -1175,11 +1175,6 @@
           "why": "the picker mounts beside the other session sheets"
         },
         {
-          "file": "mobile/src/session/use-mobile-session-controller.ts",
-          "mustContain": "useMobileSessionContinuationScope",
-          "why": "the continuation scope joins the controller after the create actions it calls"
-        },
-        {
           "file": "mobile/src/session/use-mobile-session-terminal-create-actions.ts",
           "mustContain": "terminal-without-handle",
           "why": "the create action distinguishes a live tab with no handle from a failed create"

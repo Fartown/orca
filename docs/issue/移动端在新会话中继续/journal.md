@@ -21,11 +21,48 @@ external_ids: []
 
 ## 2. 决策点记录
 
+### D-007 上游同步的冲突面与解决口径
 
+- 日期：2026-09-13
+- 背景：PR #14 共 37 文件 +3436/-306，其中 10 个是上游文件。`fork/integration` 已落后 `origin/main` 175 个提交，下次 `pnpm sync:upstream` 会一次性撞上。按 `origin/main` 近 90 天的改动频次逐个量了冲突概率与误解决后果
+- 最终决定：保留当前 seam 结构，但把「必冲突且不能选边」的两处解决配方与「低概率高后果」的两处风险写进本记录；同时把续接 scope 的挂载点从 `use-mobile-session-controller.ts` 移到 `MobileSessionSheets.tsx`，去掉最热非测试文件上的 seam（已落地，seam 9 → 8）
+- 原因：改动面最大的两个渲染层再导出反而是冷文件（90 天各 1–2 次），且 `check:fork-features` 的 `mustContain` 能兜住误解决；真正的高频冲突在移动端 session-route 家族与两个 ratchet
+- 影响范围：seam 清单、`sync:upstream` 的冲突处理
 
+#### 冲突面清单（origin/main 近 90 天改动次数）
 
+| 文件 | 次数 | 最近 | 冲突性质 |
+| --- | --- | --- | --- |
+| `mobile/src/session/mobile-session-route-parity.test.ts` | 17 | 33 小时前 | 必冲突，机械 |
+| ~~`mobile/src/session/use-mobile-session-controller.ts`~~ | 8 | 33 小时前 | **已移除该 seam**，文件恢复与上游逐字一致 |
+| `mobile/src/session/mobile-session-route-types.ts` | 5 | 7 天前 | 低，仅追加一个可选字段 |
+| `mobile/src/session/mobile-terminal-action-sheet-actions.ts` | 5 | 6 周前 | 低，仅追加一个可选注入参数 |
+| `mobile/src/session/use-mobile-session-terminal-create-actions.ts` | 4 | 2 天前 | 中，返回类型由 void 改为联合，动到多个 return 点 |
+| `mobile/src/terminal/terminal-webview-payload-hash.test.ts` | 3 | 11 小时前 | 必冲突，**不能选边** |
+| `mobile/src/session/MobileSessionSheets.tsx` | 2 | 10 天前 | 低 |
+| `src/renderer/src/lib/agent-session-continuation.ts` | 2 | 4 周前 | 低概率，**高后果** |
+| `src/renderer/src/lib/agent-session-fork-context.ts` | 1 | 2 月前 | 低概率，**高后果** |
+| `mobile/scripts/build-terminal-webview-engine.mjs` | 1 | 2 月前 | 低 |
 
+#### 两处必须重算、不能选边的 ratchet
 
+两者都没有 `--fix` 或重算脚本，冲突时取任何一边都是错的：
+
+- `mobile/src/terminal/terminal-webview-payload-hash.test.ts`：先 `node mobile/scripts/build-terminal-webview-engine.mjs` 重建产物，再重算 `XTERM_HTML` 的 length 与 sha256 填回。**重算前必须确认打包脚本里 `minifyWhitespace + minifyIdentifiers` 仍在**——若被上游改回 `minify: true`，产物里会重新出现 `(void 0||(i={}))`，xterm 的 DECRQM handler 再次失效。用 `grep -c 'void 0||(i=' mobile/src/terminal/terminal-webview-engine.generated.ts` 校验，应为 0。
+- `mobile/src/session/mobile-session-route-parity.test.ts`：跑一次拿实际值重钉 hook 数、字符串数、JSX 数与各文件摘要。
+
+#### 两处低概率高后果的再导出 seam
+
+`src/renderer/src/lib/agent-session-continuation.ts` 与 `agent-session-fork-context.ts` 被掏成 11 行与 8 行的纯再导出。冲突时若取上游那边，会把完整实现原样恢复——编译与测试都会过，但 `src/shared/agent-session-continuation/` 就被孤立成第二份副本，桌面端与移动端的 prompt 从此各自演化。兜底是 `check:fork-features` 检查这两个文件仍包含指向 shared 的 import；解决冲突后务必跑一次。
+
+#### 评估过但未采纳的重组
+
+- **反转 transcript 依赖**（让 prompt builder 收一个已算好的字符串，从而完全不动 `agent-session-fork-context.ts`）：会把 1 个改动文件换成 5 个（3 处 source 构造点 + 2 处调用点），文件数变多、改动性质变碎，不划算。
+- **改用 ref 读取新终端句柄**以避免改 `handleCreateTerminal` 的返回类型：隐式耦合且有竞态，正是 review 时特意改成显式返回值要避免的。
+
+#### 关联文档与需求点
+
+- REQ-002、REQ-003
 
 ### D-006 Agent History 页不加入口，功能只在终端 tab 长按菜单
 
@@ -133,6 +170,15 @@ external_ids: []
 - 无
 
 ## 3. 开发记录
+
+### 2026-09-13 按 D-007 收缩冲突面：续接 scope 改挂在 sheets
+
+- 本轮目标：按 D-007 的量化结论，去掉上游改动最频繁的那个非测试 seam
+- 完成内容：`useMobileSessionContinuationScope` 不再插进 `use-mobile-session-controller.ts` 的 Object.assign 链，改为在唯一消费者 `MobileSessionSheets.tsx` 里调用；控制器恢复与 `fork/integration` 逐字一致；`fork-features.jsonc` 与两处架构策略同步摘掉该路径
+- 代码或文档变更：mobile/src/session/use-mobile-session-controller.ts（还原）；mobile/src/session/MobileSessionSheets.tsx；mobile/src/session/mobile-session-route-parity.test.ts（重钉基线）；config/fork-features.jsonc；config/architecture-policies.jsonc；docs/issue/移动端在新会话中继续/journal.md
+- 验证证据：控制器相对 fork/integration 的 diff 为 0 行；`MobileSessionSheets` 在 `MobileSessionSurface` 根 View 里无条件渲染，hook 生命周期与原挂载点等价；parity 基线只移动 3 处（hook 数 267→266、main-hook 摘要、hook-binding 摘要），其余 15 个摘要未变；`pnpm tc` 通过，mobile 533 文件 / 4371 测试全过；seam 由 9 减至 8
+- 未解决问题：无
+- 下一步：推送更新 PR #14
 
 ### 2026-09-13 补齐失败分支与桌面回归，并把 xterm 打包修复并入本分支
 
