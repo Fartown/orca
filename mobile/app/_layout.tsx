@@ -13,6 +13,7 @@ import { useOpenNotificationRoute } from '../src/notifications/use-open-notifica
 import { loadHostCatalog } from '../src/transport/host-store'
 import { extractPairingCodeFromUrl } from '../src/transport/pairing'
 import { recoverMobileRelayPairing } from '../src/transport/mobile-relay-pairing-recovery'
+import { IntegrationUpdateGate } from '../src/integration-builds/IntegrationUpdateGate'
 
 // Why: keeps the native splash screen visible until the React tree is mounted
 // and ready to render. Without this the user sees a blank white/black frame
@@ -161,6 +162,7 @@ export default function RootLayout() {
     <RpcClientProvider>
       <View style={styles.root} onLayout={onNavigatorLayout}>
         <StatusBar style="light" />
+        <IntegrationUpdateGate />
         <Stack
           screenOptions={{
             headerStyle: { backgroundColor: colors.bgPanel },

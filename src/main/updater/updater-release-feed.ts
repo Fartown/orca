@@ -1,5 +1,9 @@
 import { app } from 'electron'
 import {
+  isIntegrationBuild,
+  pinIntegrationReleaseFeed
+} from '../integration-builds/integration-update-feed'
+import {
   fetchNewerReleaseTagsWithReadiness,
   getReleaseDownloadUrl
 } from '../updater-prerelease-feed'
@@ -115,6 +119,12 @@ export abstract class UpdaterReleaseFeed extends UpdaterInstallExecution {
     variant: UpdateCheckVariant = 'default'
   ): Promise<'ready' | 'not-available'> {
     const autoUpdater = this.getAutoUpdater()
+    if (isIntegrationBuild()) {
+      this.clearPrereleaseFallbackContext()
+      this.clearPublishingWindowLastGoodCheck()
+      await pinIntegrationReleaseFeed(autoUpdater)
+      return 'ready'
+    }
     // Why: the latest/download redirect can move between check and download, so pin the concrete tag (prerelease users resolve any channel, stable only stable).
     const currentVersion = app.getVersion()
     const isPerfCheck = variant === 'perf'

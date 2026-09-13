@@ -25,29 +25,82 @@
     {
       "id": "integration-builds",
       "title": "集成分支自动出包：同一提交的 macOS 与 Android 内测包",
-      "goal": "合入集成分支后自动构建并成套发布到 fork 预发布页",
+      "goal": "同源发布 fork 内测包，并提供桌面更新清单和 Android 应用内更新",
       "journal": "docs/issue/集成分支自动出包/journal.md",
       "dependsOn": [
         "config/electron-builder.config.cjs",
         "config/scripts/build-mac-local.mjs",
-        "mobile/scripts/prepare-android-release.mjs"
+        "mobile/scripts/prepare-android-release.mjs",
+        "mobile/src/theme/mobile-theme.ts",
+        "src/main/startup/configure-process.ts",
+        "tests/e2e/helpers/e2e-completed-onboarding-profile.ts",
+        "tests/e2e/helpers/electron-home-isolation.ts",
+        "tests/e2e/helpers/electron-process-shutdown.ts"
       ],
       "policyId": "integration-builds",
       "ownedPaths": [
         ".github/workflows/fork-integration-build.yml",
         "config/scripts/integration-builds/**",
+        "src/shared/integration-builds/**",
+        "src/main/integration-builds/**",
+        "mobile/src/integration-builds/**",
+        "mobile/modules/orca-app-update/**",
         "docs/issue/集成分支自动出包/**"
       ],
       "requiredFiles": [
         ".github/workflows/fork-integration-build.yml",
         "config/scripts/integration-builds/electron-builder.cjs",
         "config/scripts/integration-builds/build-identity.mjs",
+        "config/scripts/integration-builds/mac-publisher-certificate.pem",
         "config/scripts/integration-builds/publish-release.mjs"
       ],
-      "seams": [],
-      "tests": ["config/scripts/integration-builds/integration-builds.test.mjs"],
+      "seams": [
+        {
+          "file": "mobile/app.config.js",
+          "mustContain": "integration-builds",
+          "why": "integration-only native version and build marker"
+        },
+        {
+          "file": "mobile/app/_layout.tsx",
+          "mustContain": "IntegrationUpdateGate",
+          "why": "foreground update checks independent of paired hosts"
+        },
+        {
+          "file": "mobile/src/settings/about-screen.tsx",
+          "mustContain": "IntegrationUpdateRow",
+          "why": "manual update check and download status"
+        },
+        {
+          "file": "src/main/updater/updater-release-feed.ts",
+          "mustContain": "pinIntegrationReleaseFeed",
+          "why": "fork builds resolve their default feed from fork releases"
+        },
+        {
+          "file": "src/main/updater/updater-nudge.ts",
+          "mustContain": "isIntegrationBuild",
+          "why": "fork builds do not subscribe to upstream update campaigns"
+        },
+        {
+          "file": "src/main/updater-changelog.ts",
+          "mustContain": "integrationChangelog",
+          "why": "fork update notes link to the matching fork release"
+        }
+      ],
+      "tests": [
+        "config/scripts/integration-builds/integration-builds.test.mjs",
+        "config/scripts/integration-builds/mac-signing.test.mjs",
+        "config/scripts/integration-builds/mac-package-signature.test.mjs",
+        "config/scripts/integration-builds/mac-signing-metadata.test.mjs",
+        "config/scripts/integration-builds/signing-probe/probe-policy.test.mjs",
+        "config/scripts/integration-builds/orca-update-probe/probe-contract.test.mjs",
+        "config/scripts/integration-builds/orca-update-probe/probe-native-relaunch.test.mjs",
+        "src/shared/integration-builds/release-catalog.test.ts",
+        "src/main/integration-builds/integration-update-feed.test.ts",
+        "mobile/src/integration-builds/update-controller.test.ts"
+      ],
       "checks": [
-        "pnpm exec vitest run --config config/vitest.config.ts config/scripts/integration-builds/integration-builds.test.mjs"
+        "pnpm exec vitest run --config config/vitest.config.ts config/scripts/integration-builds src/shared/integration-builds src/main/integration-builds",
+        "pnpm --dir mobile exec vitest run src/integration-builds"
       ]
     },
     {

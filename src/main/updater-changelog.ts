@@ -1,4 +1,8 @@
 import { net } from 'electron'
+import {
+  integrationChangelog,
+  isIntegrationBuild
+} from './integration-builds/integration-update-feed'
 import type { ChangelogData } from '../shared/update-status-types'
 import { compareVersions } from './updater-fallback'
 
@@ -42,6 +46,9 @@ export async function fetchChangelog(
   incomingVersion: string,
   localVersion: string
 ): Promise<ChangelogData | null> {
+  if (isIntegrationBuild()) {
+    return integrationChangelog(incomingVersion)
+  }
   const res = await net.fetch('https://onorca.dev/whats-new/changelog.json', {
     signal: AbortSignal.timeout(5000)
   })

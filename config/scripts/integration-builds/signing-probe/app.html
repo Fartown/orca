@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+  <meta charset="utf-8" /><title>Isolated Squirrel Signing Probe</title>
+  <style>
+    body {
+      font: 16px system-ui;
+      margin: 24px;
+      background: #f8fafc;
+      color: #0f172a;
+    }
+    h1 {
+      font-size: 24px;
+    }
+    button {
+      font: inherit;
+      padding: 10px;
+      margin-right: 12px;
+    }
+    pre {
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      font: 14px monospace;
+      background: white;
+      padding: 16px;
+    }
+    #status {
+      font-weight: 700;
+      margin: 16px 0;
+    }
+  </style>
+  <h1>Isolated native Squirrel signing probe</h1>
+  <p>
+    Disposable test app. Hidden window. Client certificate trust never added. No Orca user session.
+  </p>
+  <button id="check">Check for update</button
+  ><button id="install" disabled>Install and restart</button>
+  <div id="status">Starting</div>
+  <pre id="events"></pre>
+  <script>
+    function render(events) {
+      window.probeEvents = events
+      document.querySelector('#events').textContent = JSON.stringify(events, null, 2)
+      document.querySelector('#status').textContent = events.at(-1)?.kind ?? 'Starting'
+      document.querySelector('#install').disabled = !events.some(
+        (event) => event.kind === 'update-downloaded'
+      )
+    }
+    window.probe.state().then(render)
+    window.probe.subscribe(render)
+    document.querySelector('#check').onclick = () => window.probe.check()
+    document.querySelector('#install').onclick = () => window.probe.install()
+  </script>
+</html>

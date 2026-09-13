@@ -3,6 +3,7 @@ import { X509Certificate } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { createLocalBuildVersion } from '../build-mac-local.mjs'
+import androidConfig from './android-config.cjs'
 
 export const ANDROID_CERT_SHA256 =
   'fac61745dc0903786fb9ede62a962b399f7348f0bb6f899b8332667591033b9c'
@@ -18,7 +19,8 @@ export function buildIdentity({ sha, runId, baseVersion, timestamp }) {
   return {
     sha,
     tag: integrationTag(sha, runId),
-    version: createLocalBuildVersion(baseVersion, timestamp, sha)
+    version: createLocalBuildVersion(baseVersion, timestamp, sha),
+    androidVersionCode: androidConfig.androidVersionCode(timestamp)
   }
 }
 
