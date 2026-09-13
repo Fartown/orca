@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { goalRuntimeClient } from '@/goals/goal-runtime-client'
 import { newClientOperationId } from '@/goals/goal-client-operation'
 import type { GoalEditorDraftSession } from '@/goals/goal-editor-draft-session'
@@ -14,7 +14,9 @@ export function useAcceptanceDraft(
   const [starting, setStarting] = useState(false)
   const startLock = useRef(false)
   const currentSession = useRef(session)
-  currentSession.current = session
+  useLayoutEffect(() => {
+    currentSession.current = session
+  }, [session])
 
   useEffect(() => {
     setResult(null)

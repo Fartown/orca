@@ -75,6 +75,16 @@ external_ids: []
 
 ## 3. 开发记录
 
+### 2026-09-13 CI 渲染期间引用写入修复
+
+- 本轮目标：修复 PR #13 React Doctor 0.9.1 对渲染期间写入 ref 的阻断。
+- 完成内容：把当前草稿 session 引用更新移到 `useLayoutEffect`，只在 React 提交后更新迟到结果比较所用的引用。
+- 代码或文档变更：`use-acceptance-draft.ts` 与本记录；不放宽 lint 规则或取消迟到结果保护。
+- 验证证据：120 项 Goal/调用清单测试、`pnpm tc`、`check:react-doctor:changed -- Fartown/main` 通过。日志位于 `.docs/goal-acceptance-generation-ui-validation/2026-09-13/evidence/pr13-ref-{tests,typecheck,react-doctor}.log`；CI 原始报告在 `pr13-static-analysis.log`。独立 Mac App 重新构建复验，最终图文报告与远端结果以 PR #13 为准。
+- 未解决问题：等待新提交完整 CI 与隐藏 App 复验，不把上一包证据直接算作本次修改通过。
+- 下一步：核实最终源码的界面和全部远端门禁通过后合并。
+
+
 ### 2026-09-13 CI 调用清单登记修复
 
 - 本轮目标：修复 PR #13 全仓库 CI 发现的 Goal 文档工作区激活清单遗漏。
