@@ -253,6 +253,7 @@
       ],
       "seams": [
         {"file": "src/shared/child-process/run-process.ts", "mustContain": "spec.onStdout?.(chunk)", "why": "observe structured draft activity through the canonical process runner"},
+        {"file": "src/renderer/src/lib/worktree-activation-surface-caller-wiring.test.ts", "mustContain": "src/renderer/src/goals/open-goal-document.ts", "why": "register the Goal document opener in the existing surface-provider census"},
         {"file": "src/shared/child-process/process-spec.ts", "mustContain": "onStdout?", "why": "optional process output observation does not change existing callers"},
         {
           "file": "src/shared/rpc-contract/rpc-params-catalog.generated.ts",
@@ -359,10 +360,11 @@
         "src/shared/goals/goal-editor-draft-contract.test.ts",
         "src/renderer/src/goals/goal-editor-drafts-sync.test.tsx",
         "src/renderer/src/goals/open-goal-document.test.ts",
+        "src/renderer/src/lib/worktree-activation-surface-caller-wiring.test.ts",
         "src/renderer/src/components/goals/GoalEditor.test.tsx"
       ],
       "checks": [
-        "pnpm exec vitest run --config config/vitest.config.ts src/main/goals src/shared/goals src/renderer/src/goals src/renderer/src/components/goals src/main/runtime/rpc/methods/goals.test.ts src/main/plugins/plugin-bundled-bootstrap.test.ts src/main/persistence-ui-state.test.ts",
+        "pnpm exec vitest run --config config/vitest.config.ts src/main/goals src/shared/goals src/renderer/src/goals src/renderer/src/components/goals src/main/runtime/rpc/methods/goals.test.ts src/main/plugins/plugin-bundled-bootstrap.test.ts src/main/persistence-ui-state.test.ts src/renderer/src/lib/worktree-activation-surface-caller-wiring.test.ts",
         "node --test --experimental-test-module-mocks goal-mode/cli/*.test.mjs"
       ]
     },
