@@ -1129,7 +1129,6 @@
         "mobile/src/transport/types.ts",
         "src/shared/agent-prompt-injection.ts",
         "src/shared/agent-status-types.ts",
-        "src/shared/protocol-version.ts",
         "src/shared/telemetry-events.ts",
         "src/shared/tui-agent.ts"
       ],
@@ -1176,24 +1175,14 @@
           "why": "the continuation scope joins the controller after the create actions it calls"
         },
         {
-          "file": "mobile/src/session/use-mobile-session-feedback-capabilities.ts",
-          "mustContain": "sessionContinuationSupported",
-          "why": "capability state lives with its siblings"
-        },
-        {
-          "file": "mobile/src/session/use-mobile-session-tab-reconciliation.ts",
-          "mustContain": "supportsMobileSessionContinuation",
-          "why": "the gate rides the existing runtime capability probe"
-        },
-        {
           "file": "mobile/src/session/use-mobile-session-terminal-create-actions.ts",
-          "mustContain": "kind: 'terminal'",
-          "why": "the create action reports the handle the continuation waits on"
+          "mustContain": "terminal-without-handle",
+          "why": "the create action distinguishes a live tab with no handle from a failed create"
         },
         {
           "file": "mobile/src/session/mobile-session-route-parity.test.ts",
-          "mustContain": "supportsMobileSessionContinuation",
-          "why": "the route parity ratchet tracks this capability gate like the quick-command one"
+          "mustContain": "session-continuation entry",
+          "why": "the route parity baselines record which change last moved them"
         }
       ],
       "tests": [

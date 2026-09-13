@@ -84,7 +84,6 @@ export function MobileSessionSheets({ controller }: { controller: MobileSessionC
     handleCloseTerminal,
     handleCloseSessionTab,
     bulkCloseActions,
-    sessionContinuationSupported,
     continuationTarget,
     continuationActions,
     continuationTitle,
@@ -217,7 +216,6 @@ export function MobileSessionSheets({ controller }: { controller: MobileSessionC
                 (tab): tab is Extract<MobileSessionTab, { type: 'terminal' }> =>
                   tab.type === 'terminal'
               ),
-              hostSupported: sessionContinuationSupported,
               onDismiss: dismiss,
               onOpen: openContinuation
             })

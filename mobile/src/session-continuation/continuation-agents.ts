@@ -1,5 +1,3 @@
-import { TERMINAL_PROMPT_DELIVERY_RUNTIME_CAPABILITY } from '../../../src/shared/protocol-version'
-
 /** Phase one ships claude and codex only: both fold a prompt into argv, and both were
  *  verified end to end on a real host. Agents whose prompt must be typed after startup
  *  need their own readiness evidence first. */
@@ -13,11 +11,8 @@ export function isMobileSessionContinuationAgent(
   return value === 'claude' || value === 'codex'
 }
 
-/** Why this capability: continuation reads `waitSubmitMs` and the submission stages off
- *  `terminal.send`. Older hosts strip both, leaving the delivery unreadable, so the entry
- *  stays hidden instead of reporting an outcome it cannot observe. */
-export function supportsMobileSessionContinuation(
-  capabilities: readonly string[] | undefined
-): boolean {
-  return capabilities?.includes(TERMINAL_PROMPT_DELIVERY_RUNTIME_CAPABILITY) === true
-}
+// Deliberately no host-capability gate: every method this feature calls
+// (session.tabs.createTerminal, terminal.wait, terminal.send) has been on the mobile allowlist
+// since the repository's early history, and `cwd` is an existing optional field an older host
+// simply strips — the new terminal then starts at the workspace root, which the prompt still
+// names. Nothing here reads a field a pre-capability host would remove.

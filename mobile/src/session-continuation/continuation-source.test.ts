@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest'
 import { resolveMobileContinuationSource, type MobileContinuationTab } from './continuation-source'
-import { supportsMobileSessionContinuation } from './continuation-agents'
 
 function tab(overrides: Partial<MobileContinuationTab> = {}): MobileContinuationTab {
   return {
@@ -21,7 +20,7 @@ function tab(overrides: Partial<MobileContinuationTab> = {}): MobileContinuation
 
 describe('mobile continuation source', () => {
   it('builds the source from the tab the desktop reads the same fields off', () => {
-    const result = resolveMobileContinuationSource(tab(), true)
+    const result = resolveMobileContinuationSource(tab())
 
     expect(result).toEqual({
       eligible: true,
@@ -46,8 +45,7 @@ describe('mobile continuation source', () => {
           prompt: '',
           providerSession: { id: 's', transcriptPath: '/t.jsonl' }
         } as MobileContinuationTab['agentStatus']
-      }),
-      true
+      })
     )
 
     expect(withoutLiveAgent.eligible).toBe(true)
@@ -63,8 +61,7 @@ describe('mobile continuation source', () => {
           agentType: 'aider',
           providerSession: { id: 's', transcriptPath: '/t.jsonl' }
         } as MobileContinuationTab['agentStatus']
-      }),
-      true
+      })
     )
 
     expect(result).toEqual({ eligible: false, reason: 'unsupported-agent' })
@@ -72,7 +69,7 @@ describe('mobile continuation source', () => {
 
   it('refuses agents outside phase one', () => {
     expect(
-      resolveMobileContinuationSource(tab({ launchAgent: 'goose', agentStatus: null }), true)
+      resolveMobileContinuationSource(tab({ launchAgent: 'goose', agentStatus: null }))
     ).toEqual({ eligible: false, reason: 'unsupported-agent' })
   })
 
@@ -85,8 +82,7 @@ describe('mobile continuation source', () => {
           agentType: 'codex',
           providerSession: { id: 's', transcriptPath: '   ' }
         } as MobileContinuationTab['agentStatus']
-      }),
-      true
+      })
     )
     const missing = resolveMobileContinuationSource(
       tab({
@@ -95,8 +91,7 @@ describe('mobile continuation source', () => {
           prompt: '',
           agentType: 'codex'
         } as MobileContinuationTab['agentStatus']
-      }),
-      true
+      })
     )
 
     expect(blank).toEqual({ eligible: false, reason: 'no-transcript' })
@@ -104,39 +99,17 @@ describe('mobile continuation source', () => {
   })
 
   it('refuses non-terminal tabs and a missing tab', () => {
-    expect(resolveMobileContinuationSource(tab({ type: 'agent-session' }), true).eligible).toBe(
-      false
-    )
-    expect(resolveMobileContinuationSource(null, true).eligible).toBe(false)
-  })
-
-  it('keeps the entry hidden until the host capability is confirmed', () => {
-    expect(resolveMobileContinuationSource(tab(), null)).toEqual({
-      eligible: false,
-      reason: 'host-capability'
-    })
-    expect(resolveMobileContinuationSource(tab(), false)).toEqual({
-      eligible: false,
-      reason: 'host-capability'
-    })
+    expect(resolveMobileContinuationSource(tab({ type: 'agent-session' })).eligible).toBe(false)
+    expect(resolveMobileContinuationSource(null).eligible).toBe(false)
   })
 
   it('omits optional source fields the tab does not carry', () => {
-    const result = resolveMobileContinuationSource(
-      tab({ title: '   ', startupCwd: undefined }),
-      true
-    )
+    const result = resolveMobileContinuationSource(tab({ title: '   ', startupCwd: undefined }))
 
     expect(result.eligible).toBe(true)
     if (result.eligible) {
       expect(result.source.sourceTitle).toBeUndefined()
       expect(result.source.sourceWorkingDirectory).toBeUndefined()
     }
-  })
-
-  it('gates on the prompt-delivery capability', () => {
-    expect(supportsMobileSessionContinuation(['terminal.prompt-delivery.v1'])).toBe(true)
-    expect(supportsMobileSessionContinuation(['terminal.quick-commands.v1'])).toBe(false)
-    expect(supportsMobileSessionContinuation(undefined)).toBe(false)
   })
 })

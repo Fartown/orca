@@ -10,14 +10,13 @@ type ContinuationMenuTab = MobileContinuationTab & { id: string; terminal: strin
 export function getMobileSessionContinuationActions<Tab extends ContinuationMenuTab>(args: {
   terminalHandle: string | null
   tabs: readonly Tab[]
-  hostSupported: boolean | null
   onDismiss: () => void
   onOpen: (tab: Tab) => void
 }): ActionSheetAction[] {
   const tab = args.terminalHandle
     ? args.tabs.find((candidate) => candidate.terminal === args.terminalHandle)
     : undefined
-  if (!tab || !resolveMobileContinuationSource(tab, args.hostSupported).eligible) {
+  if (!tab || !resolveMobileContinuationSource(tab).eligible) {
     return []
   }
   return [

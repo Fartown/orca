@@ -62,15 +62,15 @@ const HOST_COMPONENT_NAMES = new Set([
   'View'
 ])
 
-const HEAD_MAIN_HOOK_SHA256 = '9f77b940cfd05e356a79c477c8a79bece63e78a031785c30473b6d8498d3c89c'
-const HEAD_HOOK_BINDING_SHA256 = '9435dd015e736c23d58da37e08591a73a145ac7f19ce61d55d092a5eaa0dbd1e'
+const HEAD_MAIN_HOOK_SHA256 = '03ff16904fc18034ca8b0cb738e5d6196d1df8a2b303d780a0a800f734aad453'
+const HEAD_HOOK_BINDING_SHA256 = '72ced3bdaaf51fadd868741d6fb802bd46809edae4228747042c785b0f49b2a3'
 const HEAD_CALLBACK_IDENTITY_SHA256 =
   '2a9e4825df007f6ef53b81aa5004991d6318eee7507b44d625c07e630be432eb'
 const HEAD_CALLBACK_BODY_SHA256 = 'af7f3c62954250d4be7ee432ecd10dc2689792aad8230fed2d1d68bbc892d776'
-const HEAD_EFFECT_SHA256 = '58fa8fa42a3dc2f53d354d8b4300be49a171cdb0f468b087f0a8cfc602cfc8c1'
+const HEAD_EFFECT_SHA256 = 'd9ebfaabc1e79773cdada7ab370b20459ed972f1f8edce1652199f4d0391cd13'
 const HEAD_CONTENT_HOOK_SHA256 = '9c3b612fef3f370d66873aefdbe1d701f20cb64ded31fef5cc45fde6f8189581'
 const HEAD_NESTED_FUNCTION_SHA256 =
-  'b8e73bd5974c17ea0aae96db813a1bd7fc89f4dbbf07233b4b4d13f7ca7393e9'
+  '91c2eb22745c7964b61b6d1710542faa8fe9174fa55e73c8e88200cd49c489ae'
 const HEAD_NATIVE_REGISTRATION_SHA256 =
   'cab85e4e4a3f43289ba93ddea9ccce57aea83e0bf14fd1620a965aad0c1cb49e'
 const HEAD_NATIVE_REMOVAL_SHA256 =
@@ -79,15 +79,15 @@ const HEAD_TIMER_CREATION_SHA256 =
   '1a31b625e2174c3db77272249843196d2b6b06ab1e654a96d8f7858e3082e66b'
 const HEAD_TIMER_CLEANUP_SHA256 = 'c73f1d1c2cc89642f3d727d6f3b6b81860a9d6f34234541a2065ec3d1a8cd116'
 const HEAD_RUNTIME_STRING_SHA256 =
-  '02f01272dbc41ca55a126d7190a6f97f892a2c5b98dc6c2cb89e9346a59182c4'
+  '3c33a56f0cfddabcc1780d0ee9e61a4fd6d2d809af51b1665b96e94fc918be5a'
 const HEAD_HOST_JSX_SHA256 = '390405926b1695fa3a33686f0bc192b432f5468d8576499d7cafbb4922defbb5'
-const HEAD_LEAF_JSX_SHA256 = '07162c13ae3b9ec598be4c22d09f1c06f21f7586ed4f9438225d1c186c4d47a1'
+const HEAD_LEAF_JSX_SHA256 = '138dd14ad355317e81b276ca439a486c2c0e652e811c46506e9e71b40203b173'
 const HEAD_STYLE_REFERENCE_SHA256 =
   '295a3501c2c6d7bea7c8bbf38b3f3534f01344cd7e1b91bb8e07c040821d596a'
 const HEAD_IDENTITY_FIELD_SHA256 =
   '91146853930a34dd1f3d80e5c97fbacd7cf19fb93dd26fe8fc6f29169622f9d6'
 const HEAD_NAVIGATION_SHA256 = '9d96f5dad7de555d6553eac39c0fab00efad507470fd562cb9beaa32db16f512'
-const HEAD_CAPABILITY_SHA256 = '2308a561c3967e851cc2521c42f8ca396231dd4e7f0778a31a7a122042b7f85c'
+const HEAD_CAPABILITY_SHA256 = 'ca219f7909a091717110b823d5b94a20770ad3ae51894e0fa765e8628309392d'
 
 type Definition = { declaration: ts.FunctionDeclaration; sourceFile: ts.SourceFile }
 type HookFacts = {
@@ -456,11 +456,7 @@ function readCompatibilityFacts(definitions: ReadonlyMap<string, Definition>): {
         : ''
     const callText = canonical(node, sourceFile)
     if (
-      [
-        'startRuntimeCapabilityProbe',
-        'supportsMobileQuickCommands',
-        'supportsMobileSessionContinuation'
-      ].includes(callName) ||
+      ['startRuntimeCapabilityProbe', 'supportsMobileQuickCommands'].includes(callName) ||
       (callName === 'includes' && callText.includes('capabilities.includes'))
     ) {
       capabilities.push(callText)
@@ -470,8 +466,8 @@ function readCompatibilityFacts(definitions: ReadonlyMap<string, Definition>): {
 }
 
 // Baselines move with every intentional change to this route family; last moved by the
-// session-continuation entry (one controller hook, one capability gate, one long-press action,
-// one sheet element). Everything untouched by that change kept its previous digest.
+// session-continuation entry (one controller hook, one long-press action, one sheet element).
+// Everything untouched by that change kept its previous digest.
 describe('mobile session route extraction parity', () => {
   it('preserves hooks, callbacks, effects, and nested action bodies', () => {
     const definitions = readDefinitions()
@@ -479,7 +475,7 @@ describe('mobile session route extraction parity', () => {
     const contentBindings = CONTENT_COMPONENT_NAMES.flatMap(
       (name) => readHookFacts(name, definitions).bindings
     )
-    expect(main.hooks).toHaveLength(268)
+    expect(main.hooks).toHaveLength(267)
     expect(hash(main.hooks)).toBe(HEAD_MAIN_HOOK_SHA256)
     expect(hash(main.bindings)).toBe(HEAD_HOOK_BINDING_SHA256)
     expect(main.callbacks).toHaveLength(77)
@@ -518,13 +514,13 @@ describe('mobile session route extraction parity', () => {
     expect(hash(compatibility.identityFields)).toBe(HEAD_IDENTITY_FIELD_SHA256)
     expect(compatibility.navigation).toHaveLength(6)
     expect(hash(compatibility.navigation)).toBe(HEAD_NAVIGATION_SHA256)
-    expect(compatibility.capabilities).toHaveLength(6)
+    expect(compatibility.capabilities).toHaveLength(5)
     expect(hash(compatibility.capabilities)).toBe(HEAD_CAPABILITY_SHA256)
   })
 
   it('preserves runtime strings, styles, and the expanded JSX tree', () => {
     const strings = readRuntimeStrings()
-    expect(strings).toHaveLength(549)
+    expect(strings).toHaveLength(550)
     expect(hash(strings)).toBe(HEAD_RUNTIME_STRING_SHA256)
     const jsx = readJsxFacts(readDefinitions())
     expect(jsx.host).toHaveLength(124)

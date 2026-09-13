@@ -14,6 +14,9 @@ import type { Terminal, TerminalCreateResult } from './mobile-session-route-type
  *  continuation waits on its readiness) can address it instead of re-deriving the handle. */
 export type MobileTerminalCreateResult =
   | { kind: 'terminal'; handle: string }
+  /** The tab was created and selected, but the reply carried no terminal handle — callers that
+   *  must address the terminal have to treat this as "session exists, cannot write to it". */
+  | { kind: 'terminal-without-handle' }
   | { kind: 'structured'; sessionId: string }
   | null
 import type { MobileSessionAttachmentsModel } from './use-mobile-session-attachments'
@@ -57,6 +60,9 @@ export function useMobileSessionTerminalCreateActions(scope: MobileSessionAttach
       errorToast?: string
       /** Directory for the new terminal; a continuation reuses the source session's cwd. */
       cwd?: string
+      /** Reuse an idempotency key across retries of the same logical create, so a retry after an
+       *  ambiguous failure resolves to the in-flight terminal instead of spawning a sibling. */
+      clientMutationId?: string
     }
   ): Promise<MobileTerminalCreateResult> {
     if (!client || creatingTerminalRef.current) {
@@ -69,9 +75,9 @@ export function useMobileSessionTerminalCreateActions(scope: MobileSessionAttach
     setCreateError('')
 
     // Why: idempotency key so a transport retry (reconnect replay) resolves to the same terminal, not a duplicate; kept compact (no worktree id) for the schema length cap.
-    const clientMutationId = `mobile-create:${Date.now().toString(36)}-${Math.random()
-      .toString(36)
-      .slice(2, 10)}`
+    const clientMutationId =
+      options?.clientMutationId ??
+      `mobile-create:${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`
 
     try {
       // Bare structured-provider launches follow host createSupport; prompted launches keep their startup semantics.
@@ -204,6 +210,7 @@ export function useMobileSessionTerminalCreateActions(scope: MobileSessionAttach
             showToast(options.successToast)
           }
         } else {
+          createResult = { kind: 'terminal-without-handle' }
           // Why: a prior pending handle must not outlive a create that returned no terminal; web-ready subscribe gates on this ref.
           pendingActiveTerminalHandleRef.current = null
           activeHandleRef.current = null

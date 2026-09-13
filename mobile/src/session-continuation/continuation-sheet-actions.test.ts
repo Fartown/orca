@@ -10,7 +10,6 @@ function build(overrides: Partial<SheetArgs> = {}) {
   const actions = buildMobileContinuationSheetActions({
     agents: { status: 'ready', agents: ['claude', 'codex'] },
     contextMode: 'focused',
-    fullContextAvailable: true,
     onToggleMode,
     onStart,
     ...overrides
@@ -23,7 +22,7 @@ describe('mobile continuation sheet rows', () => {
     const { actions, onToggleMode, onStart } = build()
 
     expect(actions.map((action) => action.label)).toEqual([
-      CONTINUATION_COPY.modeFocused,
+      CONTINUATION_COPY.switchToFull,
       CONTINUATION_COPY.continueWith('claude'),
       CONTINUATION_COPY.continueWith('codex')
     ])
@@ -34,18 +33,14 @@ describe('mobile continuation sheet rows', () => {
     expect(onStart).toHaveBeenCalledWith('codex')
   })
 
-  it('reflects the selected mode on the toggle row', () => {
-    const { actions } = build({ contextMode: 'full' })
+  it('names the mode it switches to, and describes the one in effect', () => {
+    const focused = build().actions[0]
+    expect(focused.label).toBe(CONTINUATION_COPY.switchToFull)
+    expect(focused.hint).toBe(CONTINUATION_COPY.modeFocusedHint)
 
-    expect(actions[0].label).toBe(CONTINUATION_COPY.modeFull)
-    expect(actions[0].hint).toBe(CONTINUATION_COPY.modeFullHint)
-  })
-
-  it('disables the mode row when the session has no transcript to read in full', () => {
-    const { actions } = build({ fullContextAvailable: false })
-
-    expect(actions[0].disabled).toBe(true)
-    expect(actions[0].hint).toBe(CONTINUATION_COPY.modeFullUnavailableHint)
+    const full = build({ contextMode: 'full' }).actions[0]
+    expect(full.label).toBe(CONTINUATION_COPY.switchToFocused)
+    expect(full.hint).toBe(CONTINUATION_COPY.modeFullHint)
   })
 
   it('shows a loading row while agents are being detected', () => {

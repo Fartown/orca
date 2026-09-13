@@ -17,21 +17,17 @@ export type MobileContinuationAgentsState =
 export function buildMobileContinuationSheetActions(args: {
   agents: MobileContinuationAgentsState
   contextMode: AgentSessionContinuationContextMode
-  fullContextAvailable: boolean
   onToggleMode: () => void
   onStart: (agent: MobileSessionContinuationAgent) => void
 }): ActionSheetAction[] {
   const isFull = args.contextMode === 'full'
   const modeRow: ActionSheetAction = {
-    label: isFull ? CONTINUATION_COPY.modeFull : CONTINUATION_COPY.modeFocused,
-    hint: args.fullContextAvailable
-      ? isFull
-        ? CONTINUATION_COPY.modeFullHint
-        : CONTINUATION_COPY.modeFocusedHint
-      : CONTINUATION_COPY.modeFullUnavailableHint,
+    // Why the label names the *other* mode: this row is a switch, and labelling it with the
+    // current mode reads as "pick this one" — one tap would silently opt into a full transcript.
+    label: isFull ? CONTINUATION_COPY.switchToFocused : CONTINUATION_COPY.switchToFull,
+    hint: isFull ? CONTINUATION_COPY.modeFullHint : CONTINUATION_COPY.modeFocusedHint,
     // Why: switching context is a setting, not a commit; keep the sheet open.
     skipAutoClose: true,
-    disabled: !args.fullContextAvailable,
     onPress: args.onToggleMode
   }
   if (args.agents.status === 'loading') {

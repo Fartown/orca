@@ -8,20 +8,19 @@ export const CONTINUATION_COPY = {
   sheetTitleFallback: 'Current session',
   originalAgent: (agent: MobileSessionContinuationAgent): string =>
     `Original agent: ${MOBILE_TUI_AGENT_LABELS[agent]}`,
-  modeFocused: 'Context: Focused handoff',
-  modeFull: 'Context: Full session transcript',
+  /** Named after the mode the row switches *to*; the hint describes the mode in effect now. */
+  switchToFull: 'Switch to full session transcript',
+  switchToFocused: 'Switch to focused handoff',
   modeFocusedHint:
-    'Uses the latest status and current workspace, reading older transcript details only when needed.',
+    'Now: focused handoff — uses the latest status and current workspace, reading older transcript details only when needed.',
   modeFullHint:
-    'Asks the new Agent to read the complete saved session before continuing. This can take longer and use more of your plan.',
-  modeFullUnavailableHint: 'This session has no saved transcript to read in full.',
+    'Now: full session transcript — the new Agent reads the complete saved session first. This can take longer and use more of your plan.',
   continueWith: (agent: MobileSessionContinuationAgent): string =>
     `Continue with ${MOBILE_TUI_AGENT_LABELS[agent]}`,
   continueWithHint: 'Starts a new session in this workspace',
   detecting: 'Detecting Agents…',
   noAgents: 'No Claude or Codex detected on this workspace host',
   detectFailed: 'Could not detect Agents on this workspace host',
-  starting: 'Starting…',
   sent: (agent: MobileSessionContinuationAgent): string =>
     `Session context sent to ${MOBILE_TUI_AGENT_LABELS[agent]} in a new session.`,
   launchFailed: (agent: MobileSessionContinuationAgent): string =>
@@ -29,5 +28,6 @@ export const CONTINUATION_COPY = {
   deliveryFailed: (agent: MobileSessionContinuationAgent): string =>
     `The new ${MOBILE_TUI_AGENT_LABELS[agent]} session started, but its context could not be sent.`,
   noContext: 'No session context is available to continue in a new session.',
-  deliveryUnknown: 'The context may have been sent. Check the new session.'
+  deliveryUnknown: 'The context may have been sent. Check the new session.',
+  busy: 'Another continuation is still starting.'
 } as const

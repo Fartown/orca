@@ -1,7 +1,6 @@
 import { useCallback, useRef, useState } from 'react'
 import {
   buildAgentSessionContinuationPrompt,
-  hasFullAgentSessionContext,
   type AgentSessionContinuationContextMode
 } from '../../../src/shared/agent-session-continuation/continuation-prompt'
 import type { ActionSheetAction } from '../components/ActionSheetModal'
@@ -15,7 +14,7 @@ import {
 import { CONTINUATION_COPY } from './continuation-copy'
 import {
   runMobileSessionContinuation,
-  type MobileContinuationTerminal,
+  type MobileContinuationCreateResult,
   type MobileSessionContinuationOutcome
 } from './continuation-delivery'
 import { resolveMobileContinuationSource, type MobileContinuationTab } from './continuation-source'
@@ -42,6 +41,9 @@ export function continuationOutcomeToast(
       return { message: CONTINUATION_COPY.noContext, ok: false }
     case 'create-failed':
       return { message: CONTINUATION_COPY.launchFailed(agent), ok: false }
+    case 'created-without-handle':
+      // The session exists and is selected; only the handoff could not be written.
+      return { message: CONTINUATION_COPY.deliveryFailed(agent), ok: false }
     case 'unknown':
       return { message: CONTINUATION_COPY.deliveryUnknown, ok: false }
     default:
@@ -59,11 +61,11 @@ export function useMobileSessionContinuation(args: {
   client: RpcClient | null
   worktreeId: string
   deviceToken: string | null
-  hostSupported: boolean | null
   createTerminal: (
     agent: MobileSessionContinuationAgent,
-    cwd: string | null
-  ) => Promise<MobileContinuationTerminal | null>
+    cwd: string | null,
+    clientMutationId: string
+  ) => Promise<MobileContinuationCreateResult>
   showToast: (message: string, durationMs?: number) => void
 }) {
   const [target, setTarget] = useState<MobileContinuationTarget | null>(null)
@@ -73,6 +75,10 @@ export function useMobileSessionContinuation(args: {
   // overwrite the newer load.
   const loadSeqRef = useRef(0)
   const inFlightRef = useRef(false)
+  // Why: a retry after an ambiguous create must reuse its idempotency key so the host resolves
+  // it to the in-flight terminal; a fresh start after success mints a new one. Keyed by source
+  // tab, mirroring the AI Vault resume registry.
+  const mutationIdsRef = useRef(new Map<string, string>())
 
   const close = useCallback(() => setTarget(null), [])
 
@@ -113,13 +119,25 @@ export function useMobileSessionContinuation(args: {
   const start = useCallback(
     (agent: MobileSessionContinuationAgent) => {
       const client = args.client
-      if (!client || !target || inFlightRef.current) {
+      if (!target) {
         return
       }
-      const eligibility = resolveMobileContinuationSource(target, args.hostSupported)
+      if (!client || inFlightRef.current) {
+        // Why not silent: the sheet closes on press, so a swallowed tap looks like the feature
+        // did nothing and the user retries into the same guard.
+        setTarget(null)
+        triggerError()
+        args.showToast(
+          inFlightRef.current ? CONTINUATION_COPY.busy : CONTINUATION_COPY.launchFailed(agent),
+          TOAST_MS
+        )
+        return
+      }
+      const eligibility = resolveMobileContinuationSource(target)
       const prompt = eligibility.eligible
         ? buildAgentSessionContinuationPrompt(eligibility.source, contextMode)
         : null
+      const sourceTabId = target.id
       setTarget(null)
       if (!eligibility.eligible || !prompt) {
         triggerError()
@@ -127,15 +145,26 @@ export function useMobileSessionContinuation(args: {
         return
       }
       inFlightRef.current = true
+      const mutationIds = mutationIdsRef.current
+      let mutationId = mutationIds.get(sourceTabId)
+      if (!mutationId) {
+        mutationId = `mobile-continuation:${sourceTabId.slice(0, 24)}:${Date.now().toString(36)}`
+        mutationIds.set(sourceTabId, mutationId)
+      }
       void runMobileSessionContinuation({
-        sendRequest: client.sendRequest,
-        createTerminal: args.createTerminal,
+        client,
+        createTerminal: (createAgent, cwd) =>
+          args.createTerminal(createAgent, cwd, mutationId as string),
         agent,
         prompt,
         cwd: eligibility.source.sourceWorkingDirectory ?? null,
         deviceToken: args.deviceToken
       })
         .then((outcome) => {
+          if (outcome.kind === 'delivered') {
+            // Only a settled handoff releases the key; every other end state may be retried.
+            mutationIds.delete(sourceTabId)
+          }
           const toast = continuationOutcomeToast(outcome, agent)
           if (toast.ok) {
             triggerSuccess()
@@ -155,14 +184,11 @@ export function useMobileSessionContinuation(args: {
     [args, contextMode, target]
   )
 
-  const eligibility = target ? resolveMobileContinuationSource(target, args.hostSupported) : null
+  const eligibility = target ? resolveMobileContinuationSource(target) : null
   const actions: ActionSheetAction[] = target
     ? buildMobileContinuationSheetActions({
         agents,
         contextMode,
-        fullContextAvailable: eligibility?.eligible
-          ? hasFullAgentSessionContext(eligibility.source)
-          : false,
         onToggleMode: () => setContextMode((mode) => (mode === 'focused' ? 'full' : 'focused')),
         onStart: start
       })

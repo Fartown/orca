@@ -1,8 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import {
-  CONTINUATION_SUBMIT_OBSERVE_MS,
-  runMobileSessionContinuation
-} from './continuation-delivery'
+import { runMobileSessionContinuation } from './continuation-delivery'
 import { markRpcDeliveryUnknown } from '../transport/rpc-delivery-ambiguity'
 import type { RpcResponse } from '../transport/types'
 
@@ -17,17 +14,14 @@ function fail(message = 'refused'): RpcResponse {
 const READY = ok({
   wait: { handle: 'term_1', condition: 'tui-idle', satisfied: true, status: 'running' }
 })
-const SENT = ok({
-  send: {
-    handle: 'term_1',
-    accepted: true,
-    bytesWritten: 12,
-    prompt: { stages: ['input_accepted', 'turn_started'] }
-  }
-})
+// Why no `prompt` field: the host only returns a submission receipt for `agentPrompt: true` sent
+// by a desktop client, so a mobile send can never carry one (terminal-send-method.ts).
+const SENT = ok({ send: { handle: 'term_1', accepted: true, bytesWritten: 12 } })
+
+type Replies = Partial<Record<'terminal.wait' | 'terminal.send', RpcResponse | Error>>
 
 function harness(
-  responses: Partial<Record<'terminal.wait' | 'terminal.send', RpcResponse | Error>>,
+  replies: Replies,
   overrides: {
     createTerminal?: ReturnType<typeof vi.fn>
     prompt?: string
@@ -35,19 +29,20 @@ function harness(
   } = {}
 ) {
   const sendRequest = vi.fn(async (method: string) => {
-    const reply = responses[method as 'terminal.wait' | 'terminal.send']
+    const reply = replies[method as keyof Replies]
     if (reply instanceof Error) {
       throw reply
     }
     return reply ?? fail(`unexpected ${method}`)
   })
-  const createTerminal = overrides.createTerminal ?? vi.fn(async () => ({ handle: 'term_1' }))
+  const createTerminal =
+    overrides.createTerminal ?? vi.fn(async () => ({ kind: 'terminal', handle: 'term_1' }))
   return {
     sendRequest,
     createTerminal,
     run: () =>
       runMobileSessionContinuation({
-        sendRequest: sendRequest as never,
+        client: { sendRequest: sendRequest as never },
         createTerminal: createTerminal as never,
         agent: 'claude',
         prompt: overrides.prompt ?? PROMPT,
@@ -61,23 +56,23 @@ describe('mobile session continuation delivery', () => {
   it('creates, waits for readiness, then submits the handoff as one message', async () => {
     const h = harness({ 'terminal.wait': READY, 'terminal.send': SENT })
 
-    await expect(h.run()).resolves.toEqual({
-      kind: 'delivered',
-      handle: 'term_1',
-      stages: ['input_accepted', 'turn_started']
-    })
+    await expect(h.run()).resolves.toEqual({ kind: 'delivered', handle: 'term_1' })
     expect(h.createTerminal).toHaveBeenCalledWith('claude', '/srv/app')
-    const [waitMethod, waitParams] = h.sendRequest.mock.calls[0]
+    const [waitMethod, waitParams, waitOptions] = h.sendRequest.mock.calls[0]
     expect(waitMethod).toBe('terminal.wait')
     expect(waitParams).toMatchObject({ terminal: 'term_1', for: 'tui-idle' })
-    const [sendMethod, sendParams] = h.sendRequest.mock.calls[1]
+    const [sendMethod, sendParams, sendOptions] = h.sendRequest.mock.calls[1]
     expect(sendMethod).toBe('terminal.send')
     expect(sendParams).toMatchObject({
       terminal: 'term_1',
       enter: true,
-      waitSubmitMs: CONTINUATION_SUBMIT_OBSERVE_MS,
       client: { id: 'device-1', type: 'mobile' }
     })
+    // A request that parks until reconnect would land in a PTY the user has since typed into.
+    expect(waitOptions).toMatchObject({ failWhenDisconnected: true })
+    expect(sendOptions).toMatchObject({ failWhenDisconnected: true })
+    // The submission receipt waitSubmitMs observes is desktop-only, so asking for it would lie.
+    expect(sendParams).not.toHaveProperty('waitSubmitMs')
   })
 
   it('wraps the prompt in bracketed paste so newlines cannot split it into commands', async () => {
@@ -90,6 +85,29 @@ describe('mobile session continuation delivery', () => {
     expect(text).toContain('line two')
   })
 
+  it('holds the client object rather than a detached sendRequest', async () => {
+    // Why: DirectRpcClient.sendRequest is a class method that reads `this`, so a detached
+    // reference would throw at call time.
+    const client = {
+      marker: 'alive',
+      sendRequest(this: { marker: string }, method: string): Promise<RpcResponse> {
+        expect(this.marker).toBe('alive')
+        return Promise.resolve(method === 'terminal.wait' ? READY : SENT)
+      }
+    }
+
+    await expect(
+      runMobileSessionContinuation({
+        client: client as never,
+        createTerminal: async () => ({ kind: 'terminal', handle: 'term_1' }),
+        agent: 'claude',
+        prompt: PROMPT,
+        cwd: null,
+        deviceToken: null
+      })
+    ).resolves.toEqual({ kind: 'delivered', handle: 'term_1' })
+  })
+
   it('never touches the host when there is no context to hand over', async () => {
     const h = harness({}, { prompt: '   ' })
 
@@ -99,9 +117,16 @@ describe('mobile session continuation delivery', () => {
   })
 
   it('stops before waiting when the terminal was never created', async () => {
-    const h = harness({}, { createTerminal: vi.fn(async () => null) })
+    const h = harness({}, { createTerminal: vi.fn(async () => ({ kind: 'failed' })) })
 
     await expect(h.run()).resolves.toEqual({ kind: 'create-failed' })
+    expect(h.sendRequest).not.toHaveBeenCalled()
+  })
+
+  it('separates a live session with no writable handle from a create that failed', async () => {
+    const h = harness({}, { createTerminal: vi.fn(async () => ({ kind: 'without-handle' })) })
+
+    await expect(h.run()).resolves.toEqual({ kind: 'created-without-handle' })
     expect(h.sendRequest).not.toHaveBeenCalled()
   })
 
@@ -175,14 +200,5 @@ describe('mobile session continuation delivery', () => {
     await h.run()
 
     expect(h.createTerminal).toHaveBeenCalledWith('claude', null)
-  })
-
-  it('tolerates a host reply without submission stages', async () => {
-    const h = harness({
-      'terminal.wait': READY,
-      'terminal.send': ok({ send: { handle: 'term_1', accepted: true, bytesWritten: 3 } })
-    })
-
-    await expect(h.run()).resolves.toEqual({ kind: 'delivered', handle: 'term_1', stages: [] })
   })
 })

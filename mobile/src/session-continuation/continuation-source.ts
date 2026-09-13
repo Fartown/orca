@@ -20,7 +20,7 @@ export type MobileContinuationEligibility =
       sourceAgent: MobileSessionContinuationAgent
       source: AgentSessionContinuationSource
     }
-  | { eligible: false; reason: 'unsupported-agent' | 'no-transcript' | 'host-capability' }
+  | { eligible: false; reason: 'unsupported-agent' | 'no-transcript' }
 
 /** Agent comes from the live status when it reported one, otherwise from the launch hint —
  *  the same order `resolveMobileNativeChat` uses. A live agent outside the allowed set is a
@@ -41,12 +41,8 @@ function resolveSourceAgent(tab: MobileContinuationTab): MobileSessionContinuati
  * without a hook-reported transcript path has no context to hand over at all.
  */
 export function resolveMobileContinuationSource(
-  tab: MobileContinuationTab | null,
-  hostSupported: boolean | null
+  tab: MobileContinuationTab | null
 ): MobileContinuationEligibility {
-  if (hostSupported !== true) {
-    return { eligible: false, reason: 'host-capability' }
-  }
   const sourceAgent = tab && tab.type === 'terminal' ? resolveSourceAgent(tab) : null
   if (!tab || !sourceAgent) {
     return { eligible: false, reason: 'unsupported-agent' }

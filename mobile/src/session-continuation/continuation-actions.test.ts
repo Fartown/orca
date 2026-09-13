@@ -27,15 +27,12 @@ function menuTab(overrides: Partial<MenuTab> = {}): MenuTab {
   }
 }
 
-function build(
-  overrides: { tabs?: readonly MenuTab[]; handle?: string | null; supported?: boolean | null } = {}
-) {
+function build(overrides: { tabs?: readonly MenuTab[]; handle?: string | null } = {}) {
   const onDismiss = vi.fn()
   const onOpen = vi.fn()
   const actions = getMobileSessionContinuationActions({
     terminalHandle: overrides.handle === undefined ? 'term_1' : overrides.handle,
     tabs: overrides.tabs ?? [menuTab()],
-    hostSupported: overrides.supported === undefined ? true : overrides.supported,
     onDismiss,
     onOpen
   })
@@ -71,11 +68,6 @@ describe('mobile session continuation menu entry', () => {
         ]
       }).actions
     ).toEqual([])
-  })
-
-  it('stays absent until the host capability is confirmed', () => {
-    expect(build({ supported: null }).actions).toEqual([])
-    expect(build({ supported: false }).actions).toEqual([])
   })
 
   it('stays absent when no tab matches the pressed handle', () => {

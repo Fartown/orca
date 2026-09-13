@@ -134,6 +134,15 @@ external_ids: []
 
 ## 3. 开发记录
 
+### 2026-09-13 代码评审修正
+
+- 本轮目标：按 `/code-review` 的发现与自查结果修正实现，并让每条结论都有核实依据
+- 完成内容：补断线保护；去掉对移动端恒为空的提交观测并收窄 delivered 语义；去掉建立在该错误前提上的主机能力门控（连带撤回两个 seam，seam 10→8）；编排改持 client 对象；新增 created-without-handle 终态；忙碌/无连接给出反馈；模式行改为开关语义并删死代码；按源 tab 复用创建幂等键以真正满足 REQ-005
+- 代码或文档变更：mobile/src/session-continuation/ 全部 8 个文件与 4 个测试；mobile/src/session/ 的 5 个 seam（其中 2 个撤回）；config/fork-features.jsonc、config/architecture-policies.jsonc；方案变更记录
+- 验证证据：核实依据——`terminal-send-method.ts` 的 `useSettledAgentPrompt` 要求 desktop 客户端、`ensureUnsupportedTerminalPromptReceipt` 额外要求编排上下文；`terminal.wait` 自 2026-07-04 起在移动端白名单内；`DirectRpcClient.sendRequest` 是读 `this` 的类方法。测试——移动端 163 文件 1532 项通过（含 parity 基线重取，EFFECT 与 CAPABILITY 回到原始值，反证门控接线已彻底撤回）；桌面端与白名单共 8 文件 38 项通过；pnpm tc、oxlint、check:fork-features、check:fork-docs 通过
+- 未解决问题：check:architecture-policies 仍有 2 条既有违规（`orcad-entry.ts`、`electron-builder-config.test.mjs`），在干净的 fork/integration 上同样复现，与本功能无关
+- 下一步：云真机（小米）真机验收，并把可复用的真机流程写入 .docs/
+
 ### 2026-09-13 实现 WP0–WP4：共享 prompt 内核、门控、入口与投递编排
 
 - 本轮目标：按已批准方案完成移动端「在新会话中继续」的代码实现与门禁验证
