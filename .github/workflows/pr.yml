@@ -173,8 +173,19 @@ jobs:
           base=$(git merge-base HEAD origin/main)
           echo "Checking all fork changes against upstream $base"
           # Use the explicit upstream base instead of the synthetic PR merge's first parent.
-          env -u GITHUB_EVENT_NAME pnpm run check:code-quality:changed -- "$base"
+          ORCA_CODE_QUALITY_SCANS='quality,type-aware,react-doctor' \
+            env -u GITHUB_EVENT_NAME pnpm run check:code-quality:changed -- "$base"
           env -u GITHUB_EVENT_NAME pnpm run check:react-doctor:changed -- "$base"
+
+      # Why casting is scoped to this PR while the sweep above spans the fork: upstream added the
+      # no-type-assertions rule after most fork code was written, and does not hold its own tree to
+      # it either (~37k hits on origin/main). Sweeping it over the whole delta would block every PR
+      # on code the rule never governed. New fork code still has to satisfy it.
+      - name: Enforce casting quality on changed lines
+        if: github.repository == 'Fartown/orca'
+        env:
+          ORCA_CODE_QUALITY_SCANS: casting
+        run: pnpm run check:code-quality:changed -- "${{ github.event.pull_request.base.sha }}"
 
       - name: Check Zustand selector fan-out budget
         run: pnpm run check:zustand-selector-fanout
