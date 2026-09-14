@@ -4,8 +4,10 @@ import { requireOptionalNativeModule } from 'expo-modules-core'
 import * as FileSystem from 'expo-file-system/legacy'
 import {
   fetchIntegrationRelease,
-  integrationDownloadUrl
+  integrationDownloadUrl,
+  type IntegrationRelease
 } from '../../../src/shared/integration-builds/release-catalog'
+import { downloadResumableApk } from './apk-download'
 import { createUpdateController } from './update-controller'
 
 interface NativeUpdate {
@@ -15,6 +17,12 @@ interface NativeUpdate {
   requestPermission(): Promise<void>
   install(): Promise<void>
 }
+
+const APK_ASSET = 'orca-integration-android.apk'
+// Drop a connection that has not moved for this long instead of burning the whole attempt budget
+// on a proxy that accepted the socket and then went silent.
+const STALL_TIMEOUT_MS = 45 * 1000
+const ATTEMPT_TIMEOUT_MS = 10 * 60 * 1000
 
 const native =
   Platform.OS === 'android' ? requireOptionalNativeModule<NativeUpdate>('OrcaAppUpdate') : null
@@ -28,56 +36,97 @@ function installer(): NativeUpdate {
   return native
 }
 
+function updateDirectory(): string {
+  if (!FileSystem.cacheDirectory) {
+    throw new Error('Update cache is unavailable.')
+  }
+  return `${FileSystem.cacheDirectory}integration-update/`
+}
+
+// The native installer reads this exact path, so a resumed download has to reuse the same file.
+const apkPath = () => `${updateDirectory()}update.apk`
+const tagPath = () => `${updateDirectory()}update.tag`
+
+async function discardUpdateCache(): Promise<void> {
+  await FileSystem.deleteAsync(apkPath(), { idempotent: true }).catch(() => {})
+  await FileSystem.deleteAsync(tagPath(), { idempotent: true }).catch(() => {})
+}
+
+function apkAsset(release: IntegrationRelease) {
+  const asset = release.assets.find((item) => item.name === APK_ASSET)
+  if (!asset) {
+    throw new Error('Update manifest does not contain an APK.')
+  }
+  return asset
+}
+
+async function runAttempt(
+  release: IntegrationRelease,
+  offset: number,
+  progress: (percent: number) => void
+): Promise<number | null> {
+  let cancel = () => {}
+  let idle: ReturnType<typeof setTimeout> | undefined
+  const arm = () => {
+    clearTimeout(idle)
+    idle = setTimeout(() => cancel(), STALL_TIMEOUT_MS)
+  }
+  const task = FileSystem.createDownloadResumable(
+    integrationDownloadUrl(release.tag, APK_ASSET),
+    apkPath(),
+    {},
+    ({ totalBytesWritten, totalBytesExpectedToWrite }) => {
+      arm()
+      if (totalBytesExpectedToWrite > 0) {
+        progress((totalBytesWritten / totalBytesExpectedToWrite) * 100)
+      }
+    },
+    offset > 0 ? String(offset) : undefined
+  )
+  cancel = () => {
+    void task.cancelAsync().catch(() => {})
+  }
+  const deadline = setTimeout(() => cancel(), ATTEMPT_TIMEOUT_MS)
+  arm()
+  try {
+    const result = await task.downloadAsync()
+    return result ? result.status : null
+  } finally {
+    clearTimeout(idle)
+    clearTimeout(deadline)
+  }
+}
+
 export const mobileUpdates = createUpdateController({
   versionCode: () => installer().getVersionCode(),
   latest: () => fetchIntegrationRelease('android'),
   download: async (release, progress) => {
-    if (!FileSystem.cacheDirectory) {
-      throw new Error('Update cache is unavailable.')
-    }
-    const directory = `${FileSystem.cacheDirectory}integration-update/`
-    const destination = `${directory}update.apk`
-    await FileSystem.makeDirectoryAsync(directory, { intermediates: true })
-    await FileSystem.deleteAsync(destination, { idempotent: true })
-    const task = FileSystem.createDownloadResumable(
-      integrationDownloadUrl(release.tag, 'orca-integration-android.apk'),
-      destination,
-      {},
-      ({ totalBytesWritten, totalBytesExpectedToWrite }) => {
-        if (totalBytesExpectedToWrite > 0) {
-          progress((totalBytesWritten / totalBytesExpectedToWrite) * 100)
-        }
+    const asset = apkAsset(release)
+    await FileSystem.makeDirectoryAsync(updateDirectory(), { intermediates: true })
+    await downloadResumableApk(
+      { tag: release.tag, expectedBytes: asset.bytes },
+      {
+        partialBytes: async () => {
+          const info = await FileSystem.getInfoAsync(apkPath())
+          return info.exists && !info.isDirectory ? info.size : 0
+        },
+        cachedTag: () => FileSystem.readAsStringAsync(tagPath()).catch(() => null),
+        claim: (tag) => FileSystem.writeAsStringAsync(tagPath(), tag),
+        discard: discardUpdateCache,
+        attempt: (offset) => runAttempt(release, offset, progress),
+        delay: (ms) => new Promise((resolve) => setTimeout(resolve, ms))
       }
     )
-    let timedOut = false
-    const timeout = setTimeout(
-      () => {
-        timedOut = true
-        void task.cancelAsync().catch(() => {})
-      },
-      10 * 60 * 1000
-    )
-    try {
-      const result = await task.downloadAsync()
-      if (timedOut) {
-        throw new Error('APK download timed out. Try again.')
-      }
-      if (!result || result.status !== 200) {
-        throw new Error(`APK download failed (HTTP ${result?.status ?? 'unknown'}).`)
-      }
-    } catch (error) {
-      await FileSystem.deleteAsync(destination, { idempotent: true }).catch(() => {})
-      throw error
-    } finally {
-      clearTimeout(timeout)
-    }
   },
   verify: async (release) => {
-    const apk = release.assets.find((asset) => asset.name === 'orca-integration-android.apk')
-    if (!apk) {
-      throw new Error('Update manifest does not contain an APK.')
+    const asset = apkAsset(release)
+    try {
+      await installer().verify(asset.sha256, asset.bytes, release.androidVersionCode)
+    } catch (error) {
+      // Bytes that fail their digest must never be resumed onto.
+      await discardUpdateCache()
+      throw error
     }
-    await installer().verify(apk.sha256, apk.bytes, release.androidVersionCode)
   },
   canInstall: () => installer().canInstall(),
   requestPermission: () => installer().requestPermission(),

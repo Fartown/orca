@@ -48,6 +48,15 @@ external_ids: []
 
 ## 3. 开发记录
 
+### 2026-09-14：更新下载支持断点续传，修复横幅压状态栏
+
+- 本轮目标：解决用户手机上「各种报错、也不支持断点继续下载」，并修掉更新横幅压住状态栏和刘海。
+- 完成内容：查实下载不可续传有三处原因——`createDownloadResumable` 被当成一次性下载（从不传 resumeData）、失败路径直接删掉半成品、返回码只认 200 所以续传返回的 206 反被判失败；另查实 expo-file-system 原生任务不看状态码就把响应体写进目标文件（`FileOutputStream(file, isResume)` 后直接拷贝 body），所以一次 504 会把错误页写进 APK。改为：带退避的 4 次重试（2s/5s/12s），每次按磁盘已有字节发 `Range`；用 tag 标记文件保证只对同一发布续传；非 2xx、忽略 Range 的 200、416 一律判半成品已污染，丢弃后从 0 重来；45s 无进度就取消当次连接并续传，不再干等满 10 分钟；摘要校验失败时清缓存，避免反复续在坏字节上。横幅按 `useSafeAreaInsets()` 补顶部 inset。
+- 代码或文档变更：新增 `mobile/src/integration-builds/apk-download.ts` 及其用例，`mobile-updates.ts` 只保留 expo 侧接线，`IntegrationUpdateGate.tsx` 补安全区；无新增上游接缝。
+- 验证证据：移动端 19 项（含续传 10 条新用例）与桌面侧 90 项通过；`mobile typecheck`、`oxlint`、根 `pnpm tc` 通过；`check:fork-features`、`check:fork-docs` 通过。
+- 未解决问题：真机未验证——修复要随新 APK 生效，而用户手机上现有的下载器正是坏的那版，首包需手动安装；用户 504 的具体来源（GitHub 资源 CDN 还是中转）没有抓到响应头证明。架构门禁 4 条 `issues-existing-capability-reuse/reference-drift` 违规在干净的 `fork/integration` 上同样存在，属上游同步遗留，不在本轮范围。
+- 下一步：合入后出新包，在小米真机上实测断点续传与横幅安全区。
+
 ### 2026-09-13：手机检查 HTTP403，补公开发布发现回退
 
 - 本轮目标：修复用户最新版Android关于页检查返回403的失败路径，不改下载安装与签名。
