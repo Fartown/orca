@@ -28,6 +28,9 @@ export function getMobileTerminalActionSheetActions<
   /** Appended after Close; receives the pressed tab's id so the session route's
    *  bulk-close builder can resolve the anchor itself. */
   bulkCloseActions?: (anchorTabId: string | undefined, dismiss: () => void) => ActionSheetAction[]
+  /** Injected like bulk close so this module stays free of continuation state; empty when the
+   *  session cannot be continued. */
+  sessionContinuationActions?: (terminalHandle: string, dismiss: () => void) => ActionSheetAction[]
 }): ActionSheetAction[] {
   const { target } = args
   if (!target) {
@@ -44,6 +47,7 @@ export function getMobileTerminalActionSheetActions<
       onClose: args.onDismiss,
       onToggle: args.onToggleChat
     }),
+    ...(args.sessionContinuationActions?.(target.handle, args.onDismiss) ?? []),
     {
       label: phoneMode ? 'Switch to Desktop' : 'Switch to Phone',
       icon: phoneMode ? Monitor : Smartphone,
