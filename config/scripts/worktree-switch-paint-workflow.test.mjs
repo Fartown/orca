@@ -11,13 +11,19 @@ const spec = readFileSync(resolve(root, specPath), 'utf8')
 describe('worktree first-paint CI coverage', () => {
   it('runs the headful contract once in full runs without changing headless shards', () => {
     const job = workflow.jobs.e2e
-    const step = job.steps.find((entry) => entry.name?.startsWith('Run first-paint contract'))
+    // Upstream #20197 took over running this spec on a mapped window, and its own contract
+    // test pins that there is exactly one such step — so the fork asserts against upstream's
+    // step rather than adding a second one.
+    const step = job.steps.find((entry) => entry.name?.startsWith('Run worktree first-paint'))
     expect(job.if).toBe("inputs.test_files == ''")
     expect(step.if).toBe("matrix.shard == '1/14'")
     expect(step.run).toContain('xvfb-run --auto-servernum')
-    expect(step.run).toContain(`--project=electron-headful ${specPath}`)
+    expect(step.run).toContain(specPath)
+    expect(step.run).toContain('--project=electron-headful --workers=1')
+    // Upstream moved full runs from a shard flag to a precomputed spec list; what the fork
+    // cares about is that the headless lane still runs separately from the headful step.
     expect(job.steps.find((entry) => entry.name?.startsWith('Run E2E tests')).run).toContain(
-      'pnpm run test:e2e --shard=${{ matrix.shard }}'
+      'pnpm run test:e2e --test-list=ci-shards/selected.txt'
     )
     expect(spec).toContain('Worktree switch first paint @headful')
   })

@@ -204,10 +204,6 @@ jobs:
         if: matrix.shard == '1/14'
         run: xvfb-run --auto-servernum bash .github/scripts/e2e-with-window-manager.sh env SKIP_BUILD=1 ORCA_E2E_FORWARD_APP_LOGS=1 pnpm exec playwright test tests/e2e/worktree-switch-first-paint.spec.ts --config tests/playwright.config.ts --project=electron-headful --workers=1
 
-      - name: Run first-paint contract on isolated display
-        if: matrix.shard == '1/14'
-        run: xvfb-run --auto-servernum bash .github/scripts/e2e-with-window-manager.sh env SKIP_BUILD=1 ORCA_E2E_FORWARD_APP_LOGS=1 ORCA_E2E_WEB_CLIENT=1 ORCA_RELAY_PATH="$GITHUB_WORKSPACE/out/relay" pnpm run test:e2e --project=electron-headful tests/e2e/worktree-switch-first-paint.spec.ts
-
       # Keep failure diagnostics and the first-paint contract's success attachment.
       - name: Upload Playwright traces
         if: failure() || matrix.shard == '1/14'
