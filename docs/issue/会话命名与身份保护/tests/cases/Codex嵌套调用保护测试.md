@@ -3,7 +3,7 @@ title: Codex嵌套调用保护测试
 document_type: test-case-list
 status: ready
 created: 2026-09-09
-updated: 2026-09-10
+updated: 2026-09-14
 issue: 会话命名与身份保护
 ---
 
@@ -42,3 +42,13 @@ issue: 会话命名与身份保护
 - 预期：B Start不能凭缺失的transcript替换已有有transcript的A；已有严格标题模板判据识别B后，后续无prompt事件也不写主pane。A的prompt/model/identity保持自身证据；原生改名后三处显示一致且身份仍A。
 - 自动回归：`src/main/codex-session-ownership/codex-title-task-admission.test.ts`，包含原始normalizer和旧relay归一化入口的顺序反例，分别先RED；不以只有最终名字相等替代中间身份未变。
 - 边界：本例基于已采集Codex 0.154.0的真实核心序列，不把缺少transcript普遍等同于内部调用，不声称未知Provider版本或任意后台任务均已验收。
+
+## TC-267 内部回归摘要任务不改写主会话名
+
+- 关联需求：REQ-025、REQ-028；优先级：P0；类型：接收层回归与已采集真实 Hook 证据。
+- 前置：pane 上已有带 `transcript_path` 的真实 Codex 会话 A；Codex 为刷新 Conversation recap 卡片运行一次内部轮次，使用一次性 session_id，不写 rollout 文件，其 Stop 携带 catch-up 提示词与单键 `{"recap": …}` 输出。
+- 步骤：按 A 的 SessionStart、UserPromptSubmit，再送入 recap 的 Stop；随后送入另一个带 transcript 的真实会话 B 的 SessionStart 与 UserPromptSubmit。
+- 预期：recap 的 Stop 在接收层被拒，pane 的 providerSession、prompt 与状态保持 A 自身证据；真实 B 仍能接管同一 pane。已经落盘的 recap 派生名判为不合格候选，下一条真实提示词可以覆盖它，不需要用户手工改名。
+- 自动回归：`src/main/codex-session-ownership/codex-title-task-admission.test.ts` 的 `Codex internal recap turn` 两例，以及 `src/shared/session-names/codex-recap-task-text.test.ts`。
+- 证据：2026-09-14 从本机 `agent-hooks/last-status.json` 采到的两条真实 recap 记录；同文件 7 条 Codex 记录中 5 条真实会话均带 `transcriptPath`，只有这 2 条 recap 不带。摘录见 `.docs/codex-recap-session-name-ui-validation/2026-09-14/evidence/`。
+- 边界：判据只在"同一 pane 已有带 transcript 的 Codex 主会话且会话 ID 不同"时生效，不把缺少 transcript 普遍等同于内部调用；不记忆被拒会话，真实会话仍可用下一次带 transcript 的事件接管 pane。本例未覆盖真实 App 端到端、SSH relay 实机与其它 Provider 的同类内部任务。

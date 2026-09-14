@@ -125,3 +125,64 @@ describe('Codex normal startup internal title task', () => {
     expect(state.codexTitleTaskSessionsByPaneKey.size).toBe(0)
   })
 })
+
+describe('Codex internal recap turn', () => {
+  const RECAP = '01a09f2c-30ae-7ec0-9283-95726289cf9f'
+  const RECAP_PROMPT =
+    'Write a brief catch-up for a user returning to this Codex task. In at most 40 words and one or two plain-text sentences, explain the objective, what was completed or learned, and the next step.'
+
+  function acceptOn(server: AgentHookServer) {
+    const state = server._getStateForTests()
+    return (id: string, name: string, extra: Record<string, unknown> = {}) => {
+      const event = normalizeHookPayload(
+        state,
+        'codex',
+        {
+          paneKey: PANE,
+          payload: {
+            session_id: id,
+            hook_event_name: name,
+            transcript_path: id === RECAP ? null : join('fixture', `rollout-${id}.jsonl`),
+            ...extra
+          }
+        },
+        'production'
+      )
+      if (event) {
+        server.ingestRemote(event, 'test-host')
+      }
+      return event
+    }
+  }
+
+  it('does not let a transcript-less recap Stop rename the pane', () => {
+    const server = createServer()
+    const state = server._getStateForTests()
+    const accept = acceptOn(server)
+    accept(A, 'SessionStart')
+    accept(A, 'UserPromptSubmit', { prompt: '你看一下这个项目的测试结果', model: 'gpt-6-astra' })
+    const incumbent = state.lastStatusByPaneKey.get(PANE)
+    expect(
+      accept(RECAP, 'Stop', {
+        prompt: RECAP_PROMPT,
+        model: 'gpt-6-astra',
+        last_assistant_message: '{"recap":"已完成三项问题修复。"}'
+      })
+    ).toBeNull()
+    expect(state.lastStatusByPaneKey.get(PANE)).toBe(incumbent)
+    expect(state.lastPromptByPaneKey.get(PANE)).toBe('你看一下这个项目的测试结果')
+    expect(state.lastStatusByPaneKey.get(PANE)?.providerSession?.id).toBe(A)
+  })
+
+  it('still lets the next transcript-backed session claim the pane', () => {
+    const server = createServer()
+    const state = server._getStateForTests()
+    const accept = acceptOn(server)
+    accept(A, 'SessionStart')
+    accept(A, 'UserPromptSubmit', { prompt: 'Reply CORE_CODEX_OK' })
+    expect(accept(RECAP, 'Stop', { prompt: RECAP_PROMPT })).toBeNull()
+    expect(accept(B, 'SessionStart')).not.toBeNull()
+    expect(accept(B, 'UserPromptSubmit', { prompt: '接着做第二个需求' })).not.toBeNull()
+    expect(state.lastStatusByPaneKey.get(PANE)?.providerSession?.id).toBe(B)
+  })
+})
