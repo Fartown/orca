@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { Alert, AppState, Pressable, Text } from 'react-native'
 import { useRouter } from 'expo-router'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useStore } from 'zustand'
 import { colors, spacing, typography } from '../theme/mobile-theme'
 import {
@@ -13,6 +14,9 @@ let announcedTag: string | null = null
 
 export function IntegrationUpdateGate() {
   const router = useRouter()
+  // Why: this banner mounts above the navigator in the root layout, so nothing else pads it
+  // away from the status bar and the notch — the label rendered under both.
+  const insets = useSafeAreaInsets()
   const { stage, progress, release } = useStore(mobileUpdates.store)
   useEffect(() => {
     if (!integrationUpdatesEnabled) {
@@ -77,7 +81,11 @@ export function IntegrationUpdateGate() {
     <Pressable
       accessibilityRole="button"
       onPress={() => router.push('/about')}
-      style={{ padding: spacing.md, backgroundColor: colors.bgRaised }}
+      style={{
+        padding: spacing.md,
+        paddingTop: insets.top + spacing.md,
+        backgroundColor: colors.bgRaised
+      }}
     >
       <Text style={{ color: colors.textPrimary, fontSize: typography.metaSize }}>{label}</Text>
     </Pressable>
