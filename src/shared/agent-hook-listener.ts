@@ -19,7 +19,7 @@ import { readString } from './agent-hook-listener/tool-input-preview'
 import { shouldRejectClaudeSessionReplacement } from './claude-session-ownership/claude-session-activity'
 import {
   shouldRejectCodexTitleTask,
-  shouldRejectUnbackedCodexStart
+  shouldRejectUnbackedCodexSessionEvent
 } from './session-names/codex-title-task-admission'
 
 /** Canonical transport-agnostic normalization entry shared by main and relay listeners. */
@@ -47,7 +47,7 @@ export function normalizeHookPayload(
       : extractAgentProviderSession(source, hookPayloadRecord)
   if (
     source === 'codex' &&
-    shouldRejectUnbackedCodexStart(state, paneKey, eventName, providerSession)
+    shouldRejectUnbackedCodexSessionEvent(state, paneKey, providerSession)
   ) {
     return null
   }

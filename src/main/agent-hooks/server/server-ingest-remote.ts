@@ -20,7 +20,7 @@ import { isValidPiProviderSessionOnly } from './server-status-identity'
 import { shouldRejectClaudeSessionReplacement } from '../../../shared/claude-session-ownership/claude-session-activity'
 import {
   shouldRejectCodexTitleTask,
-  shouldRejectUnbackedCodexStart
+  shouldRejectUnbackedCodexSessionEvent
 } from '../../../shared/session-names/codex-title-task-admission'
 import { isCodexThreadTitleGenerationPrompt } from '../../../shared/codex-thread-title-generation'
 import { AgentHookServerIngestStructured } from './server-ingest-structured'
@@ -112,7 +112,7 @@ export abstract class AgentHookServerIngestRemote extends AgentHookServerIngestS
     const providerSession = normalizeAgentProviderSession(envelope.providerSession) ?? undefined
     if (
       source === 'codex' &&
-      shouldRejectUnbackedCodexStart(this.state, paneKey, hookEventName, providerSession)
+      shouldRejectUnbackedCodexSessionEvent(this.state, paneKey, providerSession)
     ) {
       return
     }

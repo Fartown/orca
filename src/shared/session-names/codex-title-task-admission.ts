@@ -4,16 +4,20 @@ import { isCodexThreadTitleGenerationPrompt } from '../codex-thread-title-genera
 
 const MAX_TITLE_TASKS_PER_PANE = 64
 
-export function shouldRejectUnbackedCodexStart(
+/**
+ * Codex runs internal turns (thread titles, conversation recaps) as throwaway sessions on
+ * the user's own pane. They never write a rollout, so a missing transcript — not the prompt
+ * wording — is what marks them; rejecting only SessionStart let a recap Stop rename the pane.
+ */
+export function shouldRejectUnbackedCodexSessionEvent(
   state: HookListenerState,
   paneKey: string,
-  eventName: unknown,
   incoming: AgentProviderSessionMetadata | null | undefined
 ): boolean {
   const previous = state.lastStatusByPaneKey.get(paneKey)
-  // Ephemeral title tasks start before exposing their prompt, without a transcript.
+  // No pane memory: a real session whose first event precedes its rollout must still be
+  // able to claim the pane on its next, transcript-backed event.
   return Boolean(
-    eventName === 'SessionStart' &&
     incoming &&
     !incoming.transcriptPath &&
     previous?.source === 'codex' &&

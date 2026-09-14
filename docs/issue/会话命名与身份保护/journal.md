@@ -3,7 +3,7 @@ title: 会话命名与身份保护
 slug: 会话命名与身份保护
 status: implementing
 created: 2026-09-08
-updated: 2026-09-12
+updated: 2026-09-14
 external_ids: []
 ---
 
@@ -34,8 +34,18 @@ external_ids: []
 | 全量推进 | [全量命名验收推进](tests/runs/2026-09-09-全量命名验收推进.md) | draft | 核心已验证，其他入口与边界逐项留账 |
 | 等价整理 | [等价去重回归](tests/runs/2026-09-11-等价去重回归.md) | completed | 两处去重的前后对照和注册回归，不削减功能、不代表全量验收 |
 | 合码关联回归 | [合码关联回归](tests/runs/2026-09-11-合码关联回归.md) | completed | 本地关联回归与门禁通过，远端 CI 推进中 |
+| 回归摘要执行 | [Codex回归摘要命名](tests/runs/2026-09-14-Codex回归摘要命名.md) | completed | 接收层结构判据回归与真实 Hook 取证，未做真机 App 验证 |
 
 ## 2. 决策点记录
+
+### D-009 内部轮次按结构判据拒绝，不再逐条枚举提示词
+
+- 日期：2026-09-14。
+- 背景：Codex 的 Conversation recap 内部轮次改写了用户 pane 的会话名；用户追问是不是要一直枚举文案、还有哪些场景会漏。
+- 备选项：继续把每种内部提示词加进名单；或把已有的"缺 transcript 不得顶替"判据从 SessionStart 扩展到该会话的全部事件。
+- 最终决定：接收层采用结构判据；提示词匹配只保留一处，用于让已经落盘的 recap 派生名失去候选资格，下一条真实提示词即可覆盖。
+- 原因：内部轮次不写 rollout 是可观测的结构事实，对尚未出现的内部任务同样成立；文案枚举每次只能挡住已经发生过的那一种。
+- 影响范围：REQ-025、REQ-028 与 [TC-267](tests/cases/Codex嵌套调用保护测试.md)。不记忆被拒会话，真实会话仍可用下一次带 transcript 的事件接管 pane；旧 relay 客户端不上报 transcriptPath 时判据不启用，wire 兼容不变。
 
 ### D-008 本轮仅做行为等价整理
 
@@ -92,6 +102,15 @@ external_ids: []
 - 影响范围：REQ-028、Codex managed脚本的local/posix模板与feature-owned小模块及测试；同时清理local/daemon/relay新PTY继承的外层CODEX_THREAD_ID，避免由Codex启动Orca时误拦正常新pane。未知旧版本无标识、外部手工污染环境等仍需披露。既有失败记录保持原样。
 
 ## 3. 开发记录
+
+### 2026-09-14 — Codex 回归摘要不再改写主会话名（testing）
+
+- 本轮目标：查清用户截图里 Codex tab 标题与会话内容无关的原因，并在接收层堵住来源；不改动其它命名优先级。
+- 完成内容：定位为 Codex 刷新 Conversation recap 卡片时在用户 pane 上跑的一次性内部轮次，其 Stop 带 catch-up 提示词与 `{"recap": …}` 输出、会话 ID 一次性且无 rollout。把已有的"缺 transcript 不得顶替带 transcript 的在位会话"判据从 SessionStart 扩展到该会话的全部事件，按 D-009 走结构判据而非继续枚举文案；不记忆被拒会话，真实会话仍能用下一次带 transcript 的事件接管 pane。提示词匹配只保留一处，用于让已落盘的 recap 派生名失去候选资格。
+- 代码或文档变更：新增 `src/shared/session-names/codex-recap-task-text.ts` 及其测试；修改 `src/shared/session-names/codex-title-task-admission.ts`（函数更名为 `shouldRejectUnbackedCodexSessionEvent` 并放宽判据）与 `src/shared/session-names/session-name-candidate-quality.ts`；两处已登记接缝 `src/shared/agent-hook-listener.ts`、`src/main/agent-hooks/server/server-ingest-remote.ts` 同步调用点；`src/main/codex-session-ownership/codex-title-task-admission.test.ts` 新增 recap 两例。文档新增 TC-267、本轮 Test Run 与 `.docs/codex-recap-session-name-ui-validation/2026-09-14/` 证据目录。
+- 验证证据：见[本轮 Test Run](tests/runs/2026-09-14-Codex回归摘要命名.md)。取证来自用户 profile 的真实 Hook 记录，规则级回归先 RED 后 GREEN。
+- 未解决问题：Issues 侧已入库的历史 recap 轮次与 vault 缓存里的旧 recap 会话未回溯清理；已写坏的 `generatedTitle` 要等下一条真实提示词才被覆盖；未做真机 App 与真实 SSH relay 验证；其它 Provider 的同类内部任务不由本轮保证。
+- 下一步：等用户决定是否合入与重新构建；真机验证需用户授权后在其 Orca 上进行，本轮不提交合并、不替换用户运行包。
 
 ### 2026-09-12 — 对齐上游通知字段的回归断言
 
