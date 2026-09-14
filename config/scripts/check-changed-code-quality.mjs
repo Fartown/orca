@@ -15,22 +15,53 @@ export const OXLINT_SCANS = [
   {
     // Why: no --config, so Oxlint keeps discovering nested configs. Pinning the root
     // config would apply root rules to mobile/, whose .oxlintrc.json turns them off.
+    id: 'quality',
     label: 'code quality',
     args: ['--report-unused-disable-directives-severity', 'warn']
   },
   {
+    id: 'casting',
     label: 'casting code quality',
     args: ['--config', 'config/oxlint-code-quality-casting.json']
   },
   {
+    id: 'type-aware',
     label: 'type-aware code quality',
     args: ['--type-aware', '--config', 'config/oxlint-code-quality-type-aware.json']
   },
   {
+    id: 'react-doctor',
     label: 'React Doctor',
     args: ['--config', 'config/oxlint-react-doctor.json']
   }
 ]
+
+/**
+ * Which scans to run, as a comma-separated list of ids; all of them when unset.
+ *
+ * Why this exists: a caller may audit a wider range than one pull request — the fork compares its
+ * whole delta against merged upstream — so a rule upstream adds later lands retroactively on code
+ * written before it. Selecting scans lets that caller keep the wide sweep for the rules it wants
+ * while running a newly tightened one over added lines only.
+ */
+export function selectOxlintScans(selection = process.env.ORCA_CODE_QUALITY_SCANS) {
+  if (!selection) {
+    return OXLINT_SCANS
+  }
+  const wanted = selection
+    .split(',')
+    .map((entry) => entry.trim())
+    .filter(Boolean)
+  const known = OXLINT_SCANS.map((scan) => scan.id)
+  const unknown = wanted.filter((entry) => !known.includes(entry))
+  if (unknown.length > 0) {
+    throw new Error(
+      `Unknown code-quality scan id(s): ${unknown.join(', ')}. Known ids: ${known.join(', ')}.`
+    )
+  }
+  return OXLINT_SCANS.filter((scan) => wanted.includes(scan.id))
+}
+
 
 const SUPPRESSED_REACT_DOCTOR_DIAGNOSTICS = new Map([
   [
@@ -391,7 +422,8 @@ export function main(
   const baseBlocks = collectBaseLineBlocks(root, comparisonBase)
 
   let failures = 0
-  for (const scan of OXLINT_SCANS) {
+  const scans = selectOxlintScans()
+  for (const scan of scans) {
     const diagnostics = runOxlintScan(root, scan, files).filter(
       (diagnostic) =>
         !isSuppressedDiagnostic(diagnostic, root) &&
@@ -407,14 +439,18 @@ export function main(
     )
   }
 
-  const missingSafety = findCastingDirectivesMissingSafety(root, rangesByFile)
-  for (const diagnostic of missingSafety) {
-    printDiagnostic(diagnostic, root)
+  // Why gated: this polices suppressions of the casting rule, so it belongs with that scan and
+  // would otherwise print a reassuring zero for a range this run never linted for casts.
+  if (scans.some((scan) => scan.id === 'casting')) {
+    const missingSafety = findCastingDirectivesMissingSafety(root, rangesByFile)
+    for (const diagnostic of missingSafety) {
+      printDiagnostic(diagnostic, root)
+    }
+    failures += missingSafety.length
+    console.log(
+      `casting SAFETY: rationale: ${missingSafety.length} new finding(s) across ${files.length} changed file(s).`
+    )
   }
-  failures += missingSafety.length
-  console.log(
-    `casting SAFETY: rationale: ${missingSafety.length} new finding(s) across ${files.length} changed file(s).`
-  )
 
   if (failures > 0) {
     console.error(

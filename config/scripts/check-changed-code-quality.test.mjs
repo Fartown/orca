@@ -5,7 +5,8 @@ import {
   isMovedCode,
   isRootCodeQualityPath,
   overlapsAddedLines,
-  parseAddedLineRanges
+  parseAddedLineRanges,
+  selectOxlintScans
 } from './check-changed-code-quality.mjs'
 
 describe('changed-code quality line matching', () => {
@@ -108,5 +109,35 @@ describe('moved-code exemption', () => {
 
   it('never exempts an empty highlight', () => {
     expect(isMovedCode(['', '   '], [['a()']])).toBe(false)
+  })
+})
+
+describe('scan selection', () => {
+  it('runs every scan when nothing is selected', () => {
+    expect(selectOxlintScans(undefined)).toEqual(OXLINT_SCANS)
+    expect(selectOxlintScans('')).toEqual(OXLINT_SCANS)
+  })
+
+  it('keeps the declared order rather than the order asked for', () => {
+    // Why: the summary lines read as a fixed sequence in CI logs, so a caller cannot reorder them.
+    expect(selectOxlintScans('react-doctor,quality').map((scan) => scan.id)).toEqual([
+      'quality',
+      'react-doctor'
+    ])
+  })
+
+  it('selects one scan and tolerates whitespace', () => {
+    expect(selectOxlintScans(' casting ').map((scan) => scan.id)).toEqual(['casting'])
+  })
+
+  it('refuses an unknown id instead of silently linting nothing', () => {
+    // Why loud: a typo that quietly selected zero scans would report a passing gate.
+    expect(() => selectOxlintScans('castign')).toThrow(/Unknown code-quality scan id/)
+  })
+
+  it('gives every scan a stable id', () => {
+    const ids = OXLINT_SCANS.map((scan) => scan.id)
+    expect(ids.filter(Boolean)).toHaveLength(OXLINT_SCANS.length)
+    expect(new Set(ids).size).toBe(ids.length)
   })
 })

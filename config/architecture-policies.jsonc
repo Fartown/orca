@@ -450,6 +450,8 @@
             "config/scripts/check-fork-docs.test.mjs",
             "config/scripts/report-upstream-seam-changes.mjs",
             "config/scripts/sync-upstream.mjs",
+            "config/scripts/check-changed-code-quality.mjs",
+            "config/scripts/check-changed-code-quality.test.mjs",
             ".github/workflows/sync-upstream.yml",
             ".github/workflows/track-community-prs.yaml",
             "docs/reference/fork-maintenance.md",
