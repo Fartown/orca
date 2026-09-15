@@ -205,18 +205,70 @@ describe('runtime file client', () => {
     expect(runtimeEnvironmentCall).not.toHaveBeenCalled()
   })
 
-  it('rejects truncated remote reads instead of returning partial editable content', async () => {
-    runtimeEnvironmentCall.mockResolvedValue({
-      id: 'rpc-1',
-      ok: true,
-      result: {
-        worktree: 'id:wt-1',
+  it('finishes a truncated remote read over files.readChunk instead of refusing it', async () => {
+    const whole = 'line one\nline two\nline three\n'
+    let binary = ''
+    for (const byte of new TextEncoder().encode(whole)) {
+      binary += String.fromCharCode(byte)
+    }
+    runtimeEnvironmentCall.mockImplementation((args: { method: string }) =>
+      args.method === 'files.read'
+        ? Promise.resolve({
+            id: 'rpc-read',
+            ok: true,
+            result: {
+              worktree: 'id:wt-1',
+              relativePath: 'large.log',
+              content: 'line one\n',
+              truncated: true,
+              byteLength: 524_288
+            },
+            _meta: { runtimeId: 'remote-runtime' }
+          })
+        : Promise.resolve({
+            id: 'rpc-chunk',
+            ok: true,
+            result: {
+              contentBase64: globalThis.btoa(binary),
+              bytesRead: binary.length,
+              eof: true
+            },
+            _meta: { runtimeId: 'remote-runtime' }
+          })
+    )
+
+    await expect(
+      readRuntimeFileContent({
+        settings: { activeRuntimeEnvironmentId: 'env-1' },
+        filePath: '/remote/repo/large.log',
         relativePath: 'large.log',
-        content: 'partial',
-        truncated: true,
-        byteLength: 524_288
-      },
-      _meta: { runtimeId: 'remote-runtime' }
+        worktreeId: 'wt-1'
+      })
+    ).resolves.toEqual({ content: whole, isBinary: false })
+  })
+
+  it('names the remedy when the host predates chunked reads', async () => {
+    runtimeEnvironmentCall.mockImplementation((args: { method: string }) => {
+      if (args.method === 'files.read') {
+        return Promise.resolve({
+          id: 'rpc-read',
+          ok: true,
+          result: {
+            worktree: 'id:wt-1',
+            relativePath: 'large.log',
+            content: 'partial',
+            truncated: true,
+            byteLength: 524_288
+          },
+          _meta: { runtimeId: 'remote-runtime' }
+        })
+      }
+      return Promise.resolve({
+        id: 'rpc-chunk',
+        ok: false,
+        error: { code: 'method_not_found', message: 'files.readChunk' },
+        _meta: { runtimeId: 'remote-runtime' }
+      })
     })
 
     await expect(
@@ -226,7 +278,7 @@ describe('runtime file client', () => {
         relativePath: 'large.log',
         worktreeId: 'wt-1'
       })
-    ).rejects.toThrow('Remote file is too large to open in the editor')
+    ).rejects.toThrow('Update the Orca server to open files this size.')
   })
 
   it('falls back to files.readPreview when a remote binary file is opened', async () => {
