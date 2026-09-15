@@ -526,6 +526,7 @@
       "journal": "docs/issue/会话命名与身份保护/journal.md",
       "dependsOn": [
         "src/main/agent-hooks/hook-stdin-contract.ts",
+        "src/shared/agent-hook-relay.ts",
         "src/main/ai-vault/session-scanner-codex-session-meta.ts",
         "src/main/ai-vault/session-scanner-values.ts",
         "src/main/ai-vault/session-transcript-consumers.ts",
@@ -937,7 +938,7 @@
         },
         {
           "file": "src/main/agent-hooks/server/server-ingest-remote.ts",
-          "mustContain": "shouldRejectClaudeSessionReplacement",
+          "mustContain": "shouldRejectRelaySessionEvent",
           "why": "older relays must not bypass the client's identity window"
         },
         {
