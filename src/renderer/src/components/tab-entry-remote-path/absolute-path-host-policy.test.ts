@@ -9,7 +9,8 @@ import {
   createTabEntryAbsolutePathHostPolicySelector,
   isSameTabEntryAbsolutePathHost,
   resolveTabEntryAbsolutePathHostPolicy,
-  toTabEntryAbsolutePathContext
+  toTabEntryAbsolutePathContext,
+  toTabEntryAbsolutePathOperationContext
 } from './absolute-path-host-policy'
 
 vi.mock('@/lib/renderer-app-platform', () => ({
@@ -114,6 +115,27 @@ function setSshWorktree(sshConnectionStates: Map<string, SshConnectionState>): v
   })
 }
 
+/** A worktree routed at an environment id that is not in the catalog. */
+function setPhantomRuntimeWorktree({
+  runtimeEnvironmentCatalogHydrated
+}: {
+  runtimeEnvironmentCatalogHydrated: boolean
+}): void {
+  setLocalWorktree()
+  useAppStore.setState({
+    worktreesByRepo: {
+      'repo-local': (useAppStore.getState().worktreesByRepo['repo-local'] ?? []).map(
+        (worktree) => ({
+          ...worktree,
+          hostId: 'runtime:hub-gone',
+          runtimeOwnerEnvironmentId: 'hub-gone'
+        })
+      )
+    },
+    runtimeEnvironmentCatalogHydrated
+  })
+}
+
 describe('resolveTabEntryAbsolutePathHostPolicy', () => {
   afterEach(() => {
     useAppStore.setState(initialState, true)
@@ -181,6 +203,26 @@ describe('resolveTabEntryAbsolutePathHostPolicy', () => {
       environmentId: 'hub-a',
       worktreePath: '/Users/me/repo',
       pathPlatform: 'posix'
+    })
+  })
+
+  it('ignores a runtime environment the hydrated catalog does not hold', () => {
+    setPhantomRuntimeWorktree({ runtimeEnvironmentCatalogHydrated: true })
+
+    // Why local and not runtime: no `files.*` call can reach an id the catalog never had, so
+    // believing it would only mislabel this local workspace as remote.
+    expect(resolveTabEntryAbsolutePathHostPolicy(useAppStore.getState(), localWorktreeId)).toEqual({
+      kind: 'local',
+      pathPlatform: 'windows'
+    })
+  })
+
+  it('waits for the runtime catalog before disbelieving an unknown environment', () => {
+    setPhantomRuntimeWorktree({ runtimeEnvironmentCatalogHydrated: false })
+
+    expect(resolveTabEntryAbsolutePathHostPolicy(useAppStore.getState(), localWorktreeId)).toEqual({
+      kind: 'blocked',
+      reason: 'unresolved'
     })
   })
 
@@ -341,11 +383,39 @@ describe('toTabEntryAbsolutePathContext', () => {
         worktreePath: '/repo',
         pathPlatform: 'posix'
       })
-    ).toEqual({
-      allowAbsolutePaths: true,
-      localPlatform: 'posix',
-      absolutePathScope: { worktreePath: '/repo' }
-    })
+    ).toEqual({ allowAbsolutePaths: true, localPlatform: 'posix' })
+  })
+})
+
+describe('toTabEntryAbsolutePathOperationContext', () => {
+  const context = {
+    settings: { activeRuntimeEnvironmentId: 'hub-gone' },
+    worktreeId: localWorktreeId,
+    worktreePath: '/Users/me/repo'
+  }
+
+  it('drops an environment id the policy did not resolve', () => {
+    expect(
+      toTabEntryAbsolutePathOperationContext(context, {
+        kind: 'local',
+        pathPlatform: 'posix'
+      }).settings?.activeRuntimeEnvironmentId
+    ).toBeNull()
+  })
+
+  it('keeps the context untouched for the resolved runtime and for a blocked policy', () => {
+    const runtime = {
+      kind: 'runtime',
+      environmentId: 'hub-gone',
+      worktreePath: '/Users/me/repo',
+      pathPlatform: 'posix'
+    } as const
+    expect(toTabEntryAbsolutePathOperationContext(context, runtime)).toBe(context)
+    // Why blocked changes nothing: no host was resolved, so relative-path operations keep the
+    // routing they already had instead of silently falling back to this machine.
+    expect(
+      toTabEntryAbsolutePathOperationContext(context, { kind: 'blocked', reason: 'unresolved' })
+    ).toBe(context)
   })
 })
 

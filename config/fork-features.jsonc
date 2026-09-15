@@ -252,9 +252,21 @@
         "config/scripts/build-goal-driver.mjs"
       ],
       "seams": [
-        {"file": "src/shared/child-process/run-process.ts", "mustContain": "spec.onStdout?.(chunk)", "why": "observe structured draft activity through the canonical process runner"},
-        {"file": "src/renderer/src/lib/worktree-activation-surface-caller-wiring.test.ts", "mustContain": "src/renderer/src/goals/open-goal-document.ts", "why": "register the Goal document opener in the existing surface-provider census"},
-        {"file": "src/shared/child-process/process-spec.ts", "mustContain": "onStdout?", "why": "optional process output observation does not change existing callers"},
+        {
+          "file": "src/shared/child-process/run-process.ts",
+          "mustContain": "spec.onStdout?.(chunk)",
+          "why": "observe structured draft activity through the canonical process runner"
+        },
+        {
+          "file": "src/renderer/src/lib/worktree-activation-surface-caller-wiring.test.ts",
+          "mustContain": "src/renderer/src/goals/open-goal-document.ts",
+          "why": "register the Goal document opener in the existing surface-provider census"
+        },
+        {
+          "file": "src/shared/child-process/process-spec.ts",
+          "mustContain": "onStdout?",
+          "why": "optional process output observation does not change existing callers"
+        },
         {
           "file": "src/shared/rpc-contract/rpc-params-catalog.generated.ts",
           "mustContain": "'goals.status': GoalExecutionHostSchema",
@@ -1054,7 +1066,7 @@
     {
       "id": "remote-workspace-absolute-path-open",
       "title": "远程工作区绝对路径打开：「+」弹窗在 SSH 工作区按远端主机打开绝对路径",
-      "goal": "弹窗输入绝对路径时本地开本地、SSH 开远端，paired runtime 只放行 worktree 内路径",
+      "goal": "弹窗输入绝对路径时本地开本地、SSH 开远端；不按路径位置拦截，归属未解析才不可用",
       "journal": "docs/issue/远程工作区绝对路径打开/journal.md",
       "dependsOn": [
         "src/renderer/src/components/tab-bar/tab-create-entry-local-path.ts",
@@ -1062,6 +1074,7 @@
         "src/renderer/src/lib/folder-workspace-connection.ts",
         "src/renderer/src/lib/renderer-app-platform.ts",
         "src/renderer/src/lib/resolved-worktree-execution-host.ts",
+        "src/renderer/src/runtime/runtime-file-client.ts",
         "src/renderer/src/store/index.ts",
         "src/shared/workspace-scope.ts"
       ],
@@ -1082,8 +1095,8 @@
         },
         {
           "file": "src/renderer/src/components/tab-bar/tab-create-entry-classifier.ts",
-          "mustContain": "absolutePathScope",
-          "why": "paired-runtime paths outside the worktree degrade to a status row (REQ-306)"
+          "mustContain": "absolutePathRemoteBlocked",
+          "why": "absolute paths stay unavailable only while the owning host is unresolved (REQ-306)"
         },
         {
           "file": "src/renderer/src/components/tab-bar/tab-create-entry-absolute-file.ts",
@@ -1097,12 +1110,12 @@
         },
         {
           "file": "src/renderer/src/i18n/locales/en.json",
-          "mustContain": "absolutePathOutsideWorkspace",
-          "why": "status row copy for paired-runtime paths outside the worktree (REQ-306)"
+          "mustContain": "absolutePathRemoteBlocked",
+          "why": "status row copy for an unresolved workspace host (REQ-306)"
         },
         {
           "file": "src/renderer/src/i18n/locales/zh.json",
-          "mustContain": "absolutePathOutsideWorkspace",
+          "mustContain": "absolutePathRemoteBlocked",
           "why": "Chinese copy for the same status row (REQ-306)"
         }
       ],

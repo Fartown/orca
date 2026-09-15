@@ -3,7 +3,6 @@ import type { RuntimeFileListState } from '../quick-open-file-list'
 import { translate } from '@/i18n/i18n'
 import { getTabEntryOmniboxPlaceholder } from './tab-create-entry-copy'
 import { DEFAULT_SEARCH_ENGINE, type SearchEngine } from '../../../../shared/browser-url'
-import { relativePathInsideRoot } from '../../../../shared/cross-platform-path'
 import { findExistingFileMatches, isLikelyNewFileIntent } from './tab-create-entry-file-matches'
 import { parseForcedSearchQuery } from './tab-create-entry-forced-search'
 import {
@@ -24,8 +23,6 @@ export type TabEntryOptionsContext = {
   allowAbsolutePaths?: boolean
   localPlatform?: TabEntryLocalPlatform
   searchEngine?: SearchEngine
-  /** Set for paired-runtime workspaces: absolute paths must resolve inside this worktree. */
-  absolutePathScope?: { worktreePath: string }
 }
 
 export const TAB_ENTRY_ABSOLUTE_PATH_REMOTE_BLOCKED_MESSAGE =
@@ -178,23 +175,9 @@ export function getTabEntryOptions(
       ]
     }
     try {
+      // Why no scope check: where the path lives is the owning host's answer to give. Refusing it
+      // here only replaces the host's real error with a guess about which one it would have been.
       const filePath = validateNewTabEntryAbsolutePath(trimmed, context.localPlatform)
-      // Why: paired-runtime file RPCs only address worktree-relative paths, so a path outside
-      // the worktree gets a status row here instead of a stat that can only fail.
-      if (
-        context.absolutePathScope &&
-        relativePathInsideRoot(context.absolutePathScope.worktreePath, filePath) === null
-      ) {
-        return [
-          blockedOption(
-            'absolute-path-outside-workspace',
-            translate(
-              'auto.components.tab.bar.tab.create.entry.classifier.absolutePathOutsideWorkspace',
-              'This remote workspace can only open files inside its worktree.'
-            )
-          )
-        ]
-      }
       return toOptions([{ kind: 'absolute-file', filePath }], limit)
     } catch (error) {
       return [blockedOption('invalid-absolute-path', errorMessage(error))]
