@@ -116,9 +116,9 @@ external_ids: []
 - 本轮目标：按用户 2026-09-15 的指示，让弹窗不再因为路径位置拒绝任何绝对路径，并修掉把本地工作区判成远程 runtime 的误判。
 - 完成内容：删除分类器里的 `absolutePathScope` 预判与其文案键；主机策略改为要求路由给出的 runtime 环境 id 出现在已加载的环境目录中，目录未加载时维持封禁；新增 `toTabEntryAbsolutePathOperationContext`，把文件操作上下文的环境 id 对齐到判定出的主机，避免请求发往不存在的 runtime；`openTabBarEntry` 改用对齐后的上下文。
 - 代码或文档变更：`src/renderer/src/components/tab-entry-remote-path/absolute-path-host-policy.ts` 与其测试；`src/renderer/src/components/tab-bar/` 下 `tab-create-entry-classifier.ts`、`tab-create-entry-action.ts`、`TabBarCreateEntry.tsx` 及两个测试；6 个 locale 删除 `absolutePathOutsideWorkspace`；`config/fork-features.jsonc` 的 goal、classifier 与两个 locale seam、`dependsOn` 增加 `runtime-file-client.ts`；本 issue 的 REQ-306、TC-508、新增 TC-517～TC-519 与决策点 D-005。
-- 验证证据：目标单测 4 文件 99 用例通过；`pnpm tc` 通过；`check:fork-features`、`check:fork-docs` 通过。真机验证与其余门禁见本条后续补记。
+- 验证证据：单元 63 文件 529 用例通过；真机 TC-520 通过——worktree 外的绝对路径在弹窗里得到可点的 `Open file` 行并成功打开，两条旧状态行文案均未出现。证据在 `.docs/absolute-path-any-ui-validation/2026-09-15/evidence/`。`pnpm tc`、`oxlint`、三项 `verify:localization-*`、`check:architecture-policies`、`check:fork-features`、`check:fork-docs` 通过；`check:code-quality:changed` 为 319 项，与分支基线逐项相同，未新增。
 - 未解决问题：把本地工作区判成远程 runtime 的上游成因未定位。可复现的事实是环境目录为空而路由仍给出环境 id，嫌疑在 `resolveActiveWorkspaceRoute` 对活跃工作区直接采信 `activeWorkspaceExecutionHostId`、不校验该环境是否存在；本轮只在本功能内按目录校验规避，未改上游路由。
-- 下一步：跑完剩余门禁，做真机验证并记录 `tests/runs/`，提 PR 合回 `fork/integration`。
+- 下一步：提 PR 合回 `fork/integration`。
 
 ### 2026-09-11 合入 fork/integration
 
