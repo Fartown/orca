@@ -1,9 +1,9 @@
 ---
-title: "远程工作区绝对路径打开"
-slug: "远程工作区绝对路径打开"
-status: done
+title: '远程工作区绝对路径打开'
+slug: '远程工作区绝对路径打开'
+status: implementing
 created: 2026-09-11
-updated: 2026-09-11
+updated: 2026-09-15
 external_ids: []
 ---
 
@@ -11,16 +11,34 @@ external_ids: []
 
 ## 1. 关键文档链接
 
-| 类型 | 文档 | 状态 | 说明 |
-| --- | --- | --- | --- |
-| 需求 | [requirements/远程工作区绝对路径打开.md](requirements/远程工作区绝对路径打开.md) | ready | REQ-301～REQ-306;首轮批注已吸收,未决问题全部关闭 |
-| 交互 | - | not-required | 沿用弹窗现有行样式,无新 UI;用户动线在方案 §4.2 |
-| 调研 | [research/标签栏新建Tab弹窗打开文件路径链路调研.md](research/标签栏新建Tab弹窗打开文件路径链路调研.md) | ready | 现状链路、本地/远程分流点、其他入口对照与未知项 |
-| 方案 | [solutions/标签栏新建Tab弹窗远程工作区打开绝对路径方案.md](solutions/标签栏新建Tab弹窗远程工作区打开绝对路径方案.md) | approved | 思路 B:主机策略对象;SSH 放行、runtime 只放行 worktree 内;已吸收首轮批注 |
-| 测试用例 | [tests/cases/远程工作区绝对路径打开功能测试.md](tests/cases/远程工作区绝对路径打开功能测试.md) | ready | TC-501～TC-512 单元规格,TC-513～TC-516 真机规格 |
-| 测试记录 | [tests/runs/2026-09-11-本地真机与单元验证.md](tests/runs/2026-09-11-本地真机与单元验证.md) | completed | TC-501～TC-512、TC-516 通过;TC-513～TC-515 因无 Linux SSH 主机 BLOCKED |
+| 类型     | 文档                                                                                                                 | 状态         | 说明                                                                    |
+| -------- | -------------------------------------------------------------------------------------------------------------------- | ------------ | ----------------------------------------------------------------------- |
+| 需求     | [requirements/远程工作区绝对路径打开.md](requirements/远程工作区绝对路径打开.md)                                     | ready        | REQ-301～REQ-306;首轮批注已吸收,未决问题全部关闭                        |
+| 交互     | -                                                                                                                    | not-required | 沿用弹窗现有行样式,无新 UI;用户动线在方案 §4.2                          |
+| 调研     | [research/标签栏新建Tab弹窗打开文件路径链路调研.md](research/标签栏新建Tab弹窗打开文件路径链路调研.md)               | ready        | 现状链路、本地/远程分流点、其他入口对照与未知项                         |
+| 方案     | [solutions/标签栏新建Tab弹窗远程工作区打开绝对路径方案.md](solutions/标签栏新建Tab弹窗远程工作区打开绝对路径方案.md) | approved     | 思路 B:主机策略对象;SSH 放行、runtime 只放行 worktree 内;已吸收首轮批注 |
+| 测试用例 | [tests/cases/远程工作区绝对路径打开功能测试.md](tests/cases/远程工作区绝对路径打开功能测试.md)                       | ready        | TC-501～TC-512、TC-517～TC-519 单元规格,TC-513～TC-516 真机规格         |
+| 测试记录 | [tests/runs/2026-09-11-本地真机与单元验证.md](tests/runs/2026-09-11-本地真机与单元验证.md)                           | completed    | TC-501～TC-512、TC-516 通过;TC-513～TC-515 因无 Linux SSH 主机 BLOCKED  |
 
 ## 2. 决策点记录
+
+### D-005 弹窗不按路径位置拦截，推翻 D-002 与 D-004 的降级形式
+
+- 日期：2026-09-15
+- 背景：用户在本地工作区输入 `/Users/bytedance/workspace/forge/tmp/task`，被 D-004 的状态行「该远程工作区只能打开工作区内的文件。」拦下；该状态行只在策略判为 runtime 时出现，而用户机器上 `orca environment list` 为 0 个环境、`orca-data.json` 内无任何 runtime 标记，说明路由报出的环境 id 并不存在
+- 最终决定：分类阶段不再比较路径与 worktree 的包含关系；远程 runtime 的 worktree 外路径照发请求，由传输层既有的 fail-closed 返回错误；同时在本功能内按环境目录校验路由给出的环境 id
+- 原因：用户 2026-09-15 指示「不要拦任何路径」；且证据表明这条拦截对本地工作区误报，而拦截本身只是把传输层同一条 fail-closed 提前了一步，去掉不放宽任何主机边界
+- 影响范围：REQ-306、分类器接缝、主机策略、6 个 locale（`absolutePathOutsideWorkspace` 键删除）
+
+#### 备选项
+
+- 只删拦截，不动归属判定（用户仍打不开：上下文里的环境 id 会让请求发往不存在的 runtime）
+- 只修归属判定，保留 worktree 外拦截（不满足「不要拦任何路径」）
+- 两者都做
+
+#### 关联文档与需求点
+
+- [需求 REQ-306](requirements/远程工作区绝对路径打开.md)、[测试用例 TC-508、TC-517～TC-519](tests/cases/远程工作区绝对路径打开功能测试.md)
 
 ### D-004 runtime worktree 外路径的降级保持状态行形式
 
@@ -92,6 +110,15 @@ external_ids: []
 - [需求 REQ-301～REQ-305](requirements/远程工作区绝对路径打开.md)、[调研 §4.6](research/标签栏新建Tab弹窗打开文件路径链路调研.md)、[方案 §3.3](solutions/标签栏新建Tab弹窗远程工作区打开绝对路径方案.md)
 
 ## 3. 开发记录
+
+### 2026-09-15 取消按路径位置的拦截并按环境目录校验归属
+
+- 本轮目标：按用户 2026-09-15 的指示，让弹窗不再因为路径位置拒绝任何绝对路径，并修掉把本地工作区判成远程 runtime 的误判。
+- 完成内容：删除分类器里的 `absolutePathScope` 预判与其文案键；主机策略改为要求路由给出的 runtime 环境 id 出现在已加载的环境目录中，目录未加载时维持封禁；新增 `toTabEntryAbsolutePathOperationContext`，把文件操作上下文的环境 id 对齐到判定出的主机，避免请求发往不存在的 runtime；`openTabBarEntry` 改用对齐后的上下文。
+- 代码或文档变更：`src/renderer/src/components/tab-entry-remote-path/absolute-path-host-policy.ts` 与其测试；`src/renderer/src/components/tab-bar/` 下 `tab-create-entry-classifier.ts`、`tab-create-entry-action.ts`、`TabBarCreateEntry.tsx` 及两个测试；6 个 locale 删除 `absolutePathOutsideWorkspace`；`config/fork-features.jsonc` 的 goal、classifier 与两个 locale seam、`dependsOn` 增加 `runtime-file-client.ts`；本 issue 的 REQ-306、TC-508、新增 TC-517～TC-519 与决策点 D-005。
+- 验证证据：目标单测 4 文件 99 用例通过；`pnpm tc` 通过；`check:fork-features`、`check:fork-docs` 通过。真机验证与其余门禁见本条后续补记。
+- 未解决问题：把本地工作区判成远程 runtime 的上游成因未定位。可复现的事实是环境目录为空而路由仍给出环境 id，嫌疑在 `resolveActiveWorkspaceRoute` 对活跃工作区直接采信 `activeWorkspaceExecutionHostId`、不校验该环境是否存在；本轮只在本功能内按目录校验规避，未改上游路由。
+- 下一步：跑完剩余门禁，做真机验证并记录 `tests/runs/`，提 PR 合回 `fork/integration`。
 
 ### 2026-09-11 合入 fork/integration
 
