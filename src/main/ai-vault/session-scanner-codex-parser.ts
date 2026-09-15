@@ -70,7 +70,7 @@ export async function parseCodexSessionFile(
 
 export async function parseCodexSessionContent(args: {
   file: FileWithMtime
-  content: string
+  content: string | AsyncIterable<string>
   platform?: NodeJS.Platform
   codexHome?: string | null
   executionHostId?: ExecutionHostId

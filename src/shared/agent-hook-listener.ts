@@ -9,7 +9,10 @@ import {
 import { parseHookEnvelope } from './agent-hook-listener/hook-envelope'
 import { readFirstString } from './agent-hook-listener/interactive-tool'
 import type { AgentHookEventPayload } from './agent-hook-listener/listener-event'
-import { normalizeClaudePromptId } from './agent-hook-listener/listener-limits'
+import {
+  normalizeClaudePromptId,
+  normalizeGrokPromptId
+} from './agent-hook-listener/listener-limits'
 import type { HookListenerState } from './agent-hook-listener/listener-state'
 import { extractPromptText } from './agent-hook-listener/prompt-fields'
 import { normalizeProviderEvent } from './agent-hook-listener/provider-dispatch'
@@ -58,7 +61,11 @@ export function normalizeHookPayload(
     state.claudeUnconfirmedRestoredStatusPaneKeys.delete(paneKey)
   }
   const providerPromptId =
-    source === 'claude' ? normalizeClaudePromptId(hookPayloadRecord.prompt_id) : undefined
+    source === 'claude'
+      ? normalizeClaudePromptId(hookPayloadRecord.prompt_id)
+      : source === 'grok'
+        ? normalizeGrokPromptId(hookPayloadRecord.promptId ?? hookPayloadRecord.prompt_id)
+        : undefined
   const providerTurnId =
     source === 'codex' ? readFirstString(hookPayloadRecord, ['turn_id', 'turnId']) : undefined
   const compactTrigger =
@@ -149,6 +156,7 @@ export function normalizeHookPayload(
   if (!transportPayload) {
     return null
   }
+  const grokActiveTurn = source === 'grok' ? state.grokActiveTurnByPaneKey.get(paneKey) : undefined
 
   return {
     paneKey,
@@ -173,7 +181,9 @@ export function normalizeHookPayload(
           ),
     promptInteractionKey: dispatched.promptInteractionKey,
     hookEventName: typeof eventName === 'string' ? eventName : undefined,
-    providerPromptId,
+    providerPromptId:
+      source === 'grok' ? (grokActiveTurn?.promptId ?? providerPromptId) : providerPromptId,
+    grokPromptBoundary: grokActiveTurn ? true : undefined,
     providerTurnId,
     compactTrigger,
     toolUseId: readFirstString(hookPayloadRecord, ['tool_use_id', 'toolUseId']),

@@ -148,7 +148,8 @@ describe('agent hook extraction boundaries', () => {
       state.claudeLeadStateByPaneKey,
       state.codexSubagentRosterByPaneKey,
       state.codexSubagentTranscriptByPaneKey,
-      state.codexLeadStateByPaneKey
+      state.codexLeadStateByPaneKey,
+      state.grokActiveTurnByPaneKey
     ]
     for (const map of paneMaps) {
       const cache = map as Map<string, unknown>
@@ -209,6 +210,7 @@ describe('agent hook extraction boundaries', () => {
     state.ampCompletedCacheKeys.add(sibling)
     state.claudeLeadStateByPaneKey.set(PANE, { state: 'working' })
     state.codexLeadStateByPaneKey.set(PANE, { state: 'working' })
+    state.grokActiveTurnByPaneKey.set(PANE, { promptId: 'prompt-1' })
 
     clearPaneCacheState(state, PANE)
 
@@ -222,6 +224,7 @@ describe('agent hook extraction boundaries', () => {
     expect(state.ampCompletedCacheKeys.has(sibling)).toBe(true)
     expect(state.claudeLeadStateByPaneKey.has(PANE)).toBe(false)
     expect(state.codexLeadStateByPaneKey.has(PANE)).toBe(false)
+    expect(state.grokActiveTurnByPaneKey.has(PANE)).toBe(false)
   })
 
   it('preserves cache mutation from a provider reset that emits no row', () => {
@@ -250,6 +253,7 @@ describe('agent hook extraction boundaries', () => {
     state.lastPromptByPaneKey.set(PANE, 'prompt')
     state.claudeRunningNonAgentTaskPaneKeys.add(PANE)
     state.codexLeadStateByPaneKey.set(PANE, { state: 'working' })
+    state.grokActiveTurnByPaneKey.set(PANE, { promptId: 'prompt-1' })
 
     clearAllListenerCaches(state)
 
@@ -258,5 +262,6 @@ describe('agent hook extraction boundaries', () => {
     expect(state.lastPromptByPaneKey.size).toBe(0)
     expect(state.claudeRunningNonAgentTaskPaneKeys.size).toBe(0)
     expect(state.codexLeadStateByPaneKey.size).toBe(0)
+    expect(state.grokActiveTurnByPaneKey.size).toBe(0)
   })
 })

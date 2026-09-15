@@ -5,6 +5,7 @@ import { isAgentHookSource, restoreShedStatusFields } from '../../../shared/agen
 import {
   MAX_PANE_KEY_LEN,
   normalizeClaudePromptId,
+  normalizeGrokPromptId,
   warnOnHookEnvOrVersionMismatch
 } from '../../../shared/agent-hook-listener/listener-limits'
 import {
@@ -17,12 +18,11 @@ import { launchTokenHash } from '../../../shared/agent-hook-spool'
 import { parsePaneKey } from '../../../shared/stable-pane-id'
 import type { AgentHookEventPayload } from '../../../shared/agent-hook-listener/listener-event'
 import { isValidPiProviderSessionOnly } from './server-status-identity'
-import { shouldRejectClaudeSessionReplacement } from '../../../shared/claude-session-ownership/claude-session-activity'
 import {
-  shouldRejectCodexTitleTask,
-  shouldRejectUnbackedCodexSessionEvent
-} from '../../../shared/session-names/codex-title-task-admission'
-import { isCodexThreadTitleGenerationPrompt } from '../../../shared/codex-thread-title-generation'
+  restoreRelayEchoedPrompt,
+  shouldRejectRelayCodexTitleTask,
+  shouldRejectRelaySessionEvent
+} from '../../../shared/session-names/relay-session-admission'
 import { AgentHookServerIngestStructured } from './server-ingest-structured'
 
 export abstract class AgentHookServerIngestRemote extends AgentHookServerIngestStructured {
@@ -40,6 +40,7 @@ export abstract class AgentHookServerIngestRemote extends AgentHookServerIngestS
       hookEventName?: string
       source?: unknown
       providerPromptId?: unknown
+      grokPromptBoundary?: unknown
       compactTrigger?: unknown
       toolUseId?: string
       toolAgentId?: string
@@ -110,20 +111,24 @@ export abstract class AgentHookServerIngestRemote extends AgentHookServerIngestS
         : undefined
     const source = isAgentHookSource(envelope.source) ? envelope.source : undefined
     const providerSession = normalizeAgentProviderSession(envelope.providerSession) ?? undefined
-    if (
-      source === 'codex' &&
-      shouldRejectUnbackedCodexSessionEvent(this.state, paneKey, providerSession)
-    ) {
-      return
+    const admission = {
+      state: this.state,
+      paneKey,
+      source,
+      providerSession,
+      explicitPrompt: envelope.hasExplicitPrompt === true || hookEventName === 'UserPromptSubmit'
     }
-    if (
-      source === 'claude' &&
-      shouldRejectClaudeSessionReplacement(this.state, paneKey, providerSession?.id)
-    ) {
+    if (shouldRejectRelaySessionEvent(admission)) {
       return
     }
     const providerPromptId =
-      source === 'claude' ? normalizeClaudePromptId(envelope.providerPromptId) : undefined
+      source === 'claude'
+        ? normalizeClaudePromptId(envelope.providerPromptId)
+        : source === 'grok'
+          ? normalizeGrokPromptId(envelope.providerPromptId)
+          : undefined
+    const grokPromptBoundary =
+      source === 'grok' && envelope.grokPromptBoundary === true ? true : undefined
     const compactTrigger =
       source === 'claude' &&
       (envelope.compactTrigger === 'manual' || envelope.compactTrigger === 'auto')
@@ -176,17 +181,7 @@ export abstract class AgentHookServerIngestRemote extends AgentHookServerIngestS
     if (!validatedPayload) {
       return
     }
-    const explicitCodexPrompt =
-      envelope.hasExplicitPrompt === true || hookEventName === 'UserPromptSubmit'
-    if (
-      source === 'codex' &&
-      shouldRejectCodexTitleTask(
-        this.state,
-        paneKey,
-        providerSession?.id,
-        explicitCodexPrompt ? validatedPayload.prompt : undefined
-      )
-    ) {
+    if (shouldRejectRelayCodexTitleTask(admission, validatedPayload)) {
       return
     }
     // Why: restore a shed roster only when its digest and turn identity still match the cache.
@@ -196,17 +191,7 @@ export abstract class AgentHookServerIngestRemote extends AgentHookServerIngestS
       this.state.lastStatusByPaneKey.get(paneKey)?.payload
     )
     const previousStatus = this.state.lastStatusByPaneKey.get(paneKey)
-    // Old relays can echo the utility prompt on the real parent's later Stop.
-    if (
-      source === 'codex' &&
-      !explicitCodexPrompt &&
-      previousStatus?.source === 'codex' &&
-      providerSession?.id &&
-      previousStatus.providerSession?.id === providerSession.id &&
-      isCodexThreadTitleGenerationPrompt(normalizedPayload.prompt)
-    ) {
-      normalizedPayload = { ...normalizedPayload, prompt: previousStatus.payload.prompt }
-    }
+    normalizedPayload = restoreRelayEchoedPrompt(admission, normalizedPayload)
     let acceptedCompactCompletion = false
     if (hookEventName === 'PreCompact' || hookEventName === 'PostCompact') {
       // Why: PreCompact is never registered and proves nothing (an aborted compact emits it alone);
@@ -282,7 +267,7 @@ export abstract class AgentHookServerIngestRemote extends AgentHookServerIngestS
       env: envelope.env,
       expectedEnv: this.env
     })
-    const event = {
+    const event: AgentHookEventPayload = {
       paneKey,
       source,
       launchToken: statusDisposition === 'restart' ? undefined : envelope.launchToken,
@@ -293,6 +278,7 @@ export abstract class AgentHookServerIngestRemote extends AgentHookServerIngestS
       promptInteractionKey,
       hookEventName,
       providerPromptId,
+      grokPromptBoundary,
       compactTrigger,
       toolUseId,
       toolAgentId,
@@ -306,7 +292,7 @@ export abstract class AgentHookServerIngestRemote extends AgentHookServerIngestS
           ? envelope.claudeRunningNonAgentTask
           : undefined,
       payload: normalizedPayload
-    } as AgentHookEventPayload
+    }
     this.recordCurrentAuthorityObservation(event)
     this.applyNormalizedStatus(
       event,

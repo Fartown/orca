@@ -261,6 +261,11 @@
           "why": "the generated shared catalog reflects the registered Goal RPC methods"
         },
         {
+          "file": "src/main/runtime/rpc/rpc-params-type-parity.ts",
+          "mustContain": "'goals.create'",
+          "why": "Goal schemas live in src/shared/goals, so the parity gate lists them as uncatalogued"
+        },
+        {
           "file": "src/main/runtime/rpc/methods/index.ts",
           "mustContain": "GOAL_METHODS",
           "why": "goals.* RPC methods are registered in the shared manifest"

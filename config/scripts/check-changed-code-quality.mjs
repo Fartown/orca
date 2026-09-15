@@ -33,6 +33,12 @@ export const OXLINT_SCANS = [
     id: 'react-doctor',
     label: 'React Doctor',
     args: ['--config', 'config/oxlint-react-doctor.json']
+  },
+  {
+    // Why changed-lines only: the renderer carries ~4.7k pre-existing restyle/raw-color
+    // findings. Gating added lines holds the line without a repo-wide migration.
+    label: 'design system',
+    args: ['--config', 'config/oxlint-design-system.json']
   }
 ]
 
@@ -61,7 +67,6 @@ export function selectOxlintScans(selection = process.env.ORCA_CODE_QUALITY_SCAN
   }
   return OXLINT_SCANS.filter((scan) => wanted.includes(scan.id))
 }
-
 
 const SUPPRESSED_REACT_DOCTOR_DIAGNOSTICS = new Map([
   [
