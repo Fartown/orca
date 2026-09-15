@@ -37,6 +37,7 @@ export const OXLINT_SCANS = [
   {
     // Why changed-lines only: the renderer carries ~4.7k pre-existing restyle/raw-color
     // findings. Gating added lines holds the line without a repo-wide migration.
+    id: 'design-system',
     label: 'design system',
     args: ['--config', 'config/oxlint-design-system.json']
   }
