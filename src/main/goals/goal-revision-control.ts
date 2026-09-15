@@ -5,6 +5,7 @@ import type {
   GoalRebindParams,
   GoalSpecRevision
 } from '../../shared/goals/goal-control-contract'
+import { nextGoalRuntimeFence } from '../../shared/goals/goal-runtime-fence'
 import type { GoalRecord } from '../../shared/goals/goal-store-records'
 import type { GoalBindingAdmission } from './goal-binding-admission'
 import type { GoalContinuationControl } from './goal-continuation-control'
@@ -49,7 +50,7 @@ export class GoalRevisionControl {
     const next: GoalRecord = {
       ...record,
       updatedAt: this.deps.now(),
-      runtimeFence: record.runtimeFence + 1,
+      runtimeFence: nextGoalRuntimeFence(record),
       lastOperationId: params.clientOperationId,
       ...(params.spec && specChanged
         ? { spec: params.spec, specRevision: record.specRevision + 1 }
@@ -124,7 +125,7 @@ export class GoalRevisionControl {
       ...record,
       updatedAt: this.deps.now(),
       binding: params.binding,
-      runtimeFence: record.runtimeFence + 1,
+      runtimeFence: nextGoalRuntimeFence(record),
       lastOperationId: params.clientOperationId
     }
     await store.writeRecord(next)
@@ -183,7 +184,7 @@ export class GoalRevisionControl {
       ...record,
       updatedAt: this.deps.now(),
       archived: params.archived,
-      runtimeFence: record.runtimeFence + 1,
+      runtimeFence: nextGoalRuntimeFence(record),
       lastOperationId: params.clientOperationId
     }
     await store.writeRecord(next)
