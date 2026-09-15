@@ -1,7 +1,7 @@
 ---
 title: "HTML预览在当前面板打开"
 slug: "HTML预览在当前面板打开"
-status: implementing
+status: testing
 created: 2026-09-15
 updated: 2026-09-15
 external_ids: []
@@ -18,7 +18,7 @@ external_ids: []
 | 调研 | - | not-required | 链路已在上游 `src/renderer/src/lib/file-preview.ts` 内闭合，见决策点 D-101 |
 | 方案 | - | not-required | 改动集中在一个落位函数与两个调用点，方案要点记在 D-101、D-102 |
 | 测试用例 | [tests/cases/HTML预览在当前面板打开功能测试.md](tests/cases/HTML预览在当前面板打开功能测试.md) | ready | TC-601～TC-605 单元规格，TC-606 真机规格 |
-| 测试记录 | - | not-required | 真机记录待本轮验证后补入 `tests/runs/` |
+| 测试记录 | [tests/runs/2026-09-15-预览落位真机验证.md](tests/runs/2026-09-15-预览落位真机验证.md) | completed | TC-601～TC-606 全部通过 |
 
 ## 2. 决策点记录
 
@@ -64,6 +64,6 @@ external_ids: []
 - 本轮目标：HTML 预览不再强制右分屏，改为在发起操作的 pane 内新建预览 tab 并切过去。
 - 完成内容：新增功能自有模块 `src/renderer/src/components/file-preview-pane/open-file-preview-in-pane.ts`；把编辑器头部与合并 diff 段头部两个预览调用点改指向它；上游 `file-preview.ts` 只导出既有的 `openDocPreviewTab`；按钮文案改为「打开预览」并同步六个语言包；登记 fork 功能条目、架构策略与 `.gitignore` 放行。
 - 代码或文档变更：`src/renderer/src/components/file-preview-pane/**`；`src/renderer/src/lib/file-preview.ts`；`src/renderer/src/components/editor/{EditorPanel.tsx,EditorPanelHeader.tsx,DiffSectionHeader.tsx}`；`src/renderer/src/components/editor/combined-diff/review-controls/use-combined-diff-section-actions.ts`；`src/renderer/src/i18n/locales/*.json`；`config/fork-features.jsonc`、`config/architecture-policies.jsonc`、`.gitignore`；本 issue 的需求与测试规格。
-- 验证证据：待本轮门禁与真机验证后补入本条。
-- 未解决问题：TC-606 真机验证未执行。
-- 下一步：跑门禁、做真机验证并记录 `tests/runs/`，然后提 PR 合回 `fork/integration`。
+- 验证证据：单元 222 文件 1532 用例通过；真机 TC-606 通过——点击预览前后面板数均为 1，预览标签落在源标签同一分组并成为活动标签，按钮无障碍名为 `Open Preview`。证据在 `.docs/html-preview-current-pane-ui-validation/2026-09-15/evidence/`。`pnpm tc`、`oxlint`、三项 `verify:localization-*`、`check:architecture-policies`、`check:fork-features`、`check:fork-docs` 通过；`check:code-quality:changed` 为 319 项，与分支基线逐项相同，未新增。
+- 未解决问题：远程工作区的预览落位只有单元证据（TC-603），真机需要远端主机；合并 diff 入口与编辑器共用实现，真机只验了编辑器一条。
+- 下一步：提 PR 合回 `fork/integration`。
