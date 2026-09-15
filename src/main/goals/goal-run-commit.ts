@@ -1,3 +1,4 @@
+import { nextGoalRuntimeFence } from '../../shared/goals/goal-runtime-fence'
 import type { GoalControlIntent, GoalRecord } from '../../shared/goals/goal-store-records'
 import type { GoalDriverLauncher } from './goal-driver-launch'
 import type { GoalStore } from './goal-store'
@@ -11,7 +12,7 @@ export type GoalRunCommitDependencies = {
 
 /** The fence a run launch commits: a first start keeps the record's, a re-attach bumps it. */
 export function runFenceFor(record: GoalRecord, mode: 'start' | 'resume'): number {
-  return mode === 'start' ? record.runtimeFence : record.runtimeFence + 1
+  return mode === 'start' ? record.runtimeFence : nextGoalRuntimeFence(record)
 }
 
 /**
@@ -60,7 +61,7 @@ export class GoalRunCommitter {
     continuation: GoalRecord['continuation'],
     clientOperationId: string
   ): Promise<number> {
-    const runtimeFence = record.runtimeFence + 1
+    const runtimeFence = nextGoalRuntimeFence(record)
     await this.deps.store.writeRecord({
       ...record,
       updatedAt: this.deps.now(),
