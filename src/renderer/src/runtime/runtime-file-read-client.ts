@@ -17,6 +17,11 @@ import {
   hasRemoteRuntimeOwner
 } from './runtime-file-routing'
 import { toRuntimeWorktreeSelector } from './runtime-worktree-selector'
+import {
+  assembleRuntimeFileFromChunks,
+  RUNTIME_EDITOR_CHUNK_BYTES,
+  RuntimeFileTooLargeError
+} from '../runtime-large-file/assemble-runtime-file-chunks'
 
 const REMOTE_DOWNLOAD_CHUNK_BYTES = 384 * 1024
 const REMOTE_DOWNLOAD_UPDATE_REQUIRED_MESSAGE =
@@ -69,11 +74,45 @@ export async function readRuntimeFileContent({
     throw err
   }
   if (result.truncated) {
-    // Why: the runtime file RPC is preview-sized today; treating a truncated
-    // payload as editable content would make saves overwrite the rest of the file.
-    throw new Error(`Remote file is too large to open in the editor (${result.byteLength} bytes)`)
+    // Why not the truncated payload: saving it would overwrite the rest of the file. files.read
+    // is preview-sized, so finish the job on files.readChunk — the same RPC the download path
+    // already uses, so nothing new reaches the wire.
+    return {
+      content: await readWholeRuntimeFile(target, worktree, relativePath, result),
+      isBinary: false
+    }
   }
   return { content: result.content, isBinary: false }
+}
+
+async function readWholeRuntimeFile(
+  target: Extract<ReturnType<typeof getActiveRuntimeTarget>, { kind: 'environment' }>,
+  worktree: string,
+  relativePath: string,
+  truncated: RuntimeFileReadResult
+): Promise<string> {
+  try {
+    return await assembleRuntimeFileFromChunks((offset) =>
+      callRuntimeRpc<RuntimeFileReadChunkResult>(
+        target,
+        'files.readChunk',
+        { worktree, relativePath, offset, length: RUNTIME_EDITOR_CHUNK_BYTES },
+        { timeoutMs: 60_000 }
+      )
+    )
+  } catch (error) {
+    if (error instanceof RuntimeFileTooLargeError) {
+      throw new Error(`Remote file is too large to open in the editor (${error.byteLength} bytes)`)
+    }
+    // Why: a host that predates chunked reads can only offer the preview-sized answer, and that
+    // answer is not editable. Name the remedy instead of repeating the size.
+    if (error instanceof RuntimeRpcCallError && error.code === 'method_not_found') {
+      throw new Error(
+        `Remote file is too large to open in the editor (${truncated.byteLength} bytes). Update the Orca server to open files this size.`
+      )
+    }
+    throw error
+  }
 }
 
 export async function readRuntimeFilePreview(
