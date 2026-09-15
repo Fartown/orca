@@ -1119,6 +1119,67 @@
       ]
     },
     {
+      "id": "html-preview-in-pane",
+      "title": "HTML 预览在当前面板打开：眼睛按钮不再强制右分屏",
+      "goal": "预览 tab 建在发起操作的 pane 内并切过去，本地与远程工作区落位一致",
+      "journal": "docs/issue/HTML预览在当前面板打开/journal.md",
+      "dependsOn": [
+        "src/renderer/src/lib/file-preview.ts",
+        "src/renderer/src/store/index.ts"
+      ],
+      "policyId": "html-preview-in-pane",
+      "ownedPaths": [
+        "src/renderer/src/components/file-preview-pane/**",
+        "docs/issue/HTML预览在当前面板打开/**"
+      ],
+      "requiredFiles": [
+        "src/renderer/src/components/file-preview-pane/open-file-preview-in-pane.ts"
+      ],
+      "seams": [
+        {
+          "file": "src/renderer/src/lib/file-preview.ts",
+          "mustContain": "export function openDocPreviewTab",
+          "why": "the in-pane preview reuses the same document tab construction (REQ-403)"
+        },
+        {
+          "file": "src/renderer/src/components/editor/EditorPanel.tsx",
+          "mustContain": "openFilePreviewInSourcePane",
+          "why": "the editor header preview lands in its own pane instead of a right split (REQ-401)"
+        },
+        {
+          "file": "src/renderer/src/components/editor/combined-diff/review-controls/use-combined-diff-section-actions.ts",
+          "mustContain": "openFilePreviewInSourcePane",
+          "why": "the combined-diff preview button keeps the same landing rule (REQ-405)"
+        },
+        {
+          "file": "src/renderer/src/components/editor/EditorPanelHeader.tsx",
+          "mustContain": "openPreviewInPane",
+          "why": "the button no longer says it opens to the side (REQ-406)"
+        },
+        {
+          "file": "src/renderer/src/components/editor/DiffSectionHeader.tsx",
+          "mustContain": "openPreviewInPane",
+          "why": "the same icon in combined diff carries the same label (REQ-406)"
+        },
+        {
+          "file": "src/renderer/src/i18n/locales/en.json",
+          "mustContain": "openPreviewInPane",
+          "why": "English copy for the relabelled preview button (REQ-406)"
+        },
+        {
+          "file": "src/renderer/src/i18n/locales/zh.json",
+          "mustContain": "openPreviewInPane",
+          "why": "Chinese copy for the same button (REQ-406)"
+        }
+      ],
+      "tests": [
+        "src/renderer/src/components/file-preview-pane/open-file-preview-in-pane.test.ts"
+      ],
+      "checks": [
+        "pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/components/file-preview-pane src/renderer/src/lib/file-preview.test.ts"
+      ]
+    },
+    {
       "id": "mobile-session-continuation",
       "title": "移动端在新会话中继续：claude / codex 终端通道",
       "goal": "移动端从当前 claude / codex 会话新建续接会话，复用主机既有 RPC，不改 wire",

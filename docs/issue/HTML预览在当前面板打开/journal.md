@@ -1,0 +1,69 @@
+---
+title: "HTML预览在当前面板打开"
+slug: "HTML预览在当前面板打开"
+status: implementing
+created: 2026-09-15
+updated: 2026-09-15
+external_ids: []
+---
+
+# HTML预览在当前面板打开 开发 Journal
+
+## 1. 关键文档链接
+
+| 类型 | 文档 | 状态 | 说明 |
+| --- | --- | --- | --- |
+| 需求 | [requirements/HTML预览在当前面板打开.md](requirements/HTML预览在当前面板打开.md) | ready | REQ-401～REQ-406 |
+| 交互 | - | not-required | 复用既有预览 tab 样式，只改落位与按钮文案 |
+| 调研 | - | not-required | 链路已在上游 `src/renderer/src/lib/file-preview.ts` 内闭合，见决策点 D-101 |
+| 方案 | - | not-required | 改动集中在一个落位函数与两个调用点，方案要点记在 D-101、D-102 |
+| 测试用例 | [tests/cases/HTML预览在当前面板打开功能测试.md](tests/cases/HTML预览在当前面板打开功能测试.md) | ready | TC-601～TC-605 单元规格，TC-606 真机规格 |
+| 测试记录 | - | not-required | 真机记录待本轮验证后补入 `tests/runs/` |
+
+## 2. 决策点记录
+
+### D-102 按钮文案改为「打开预览」，上游的 props 名保持不动
+
+- 日期：2026-09-15
+- 背景：`canOpenPreviewToSide` / `onOpenPreviewToSide` 这两个 props 贯穿 EditorPanel、EditorPanelShell、EditorPanelHeader 三个上游组件
+- 最终决定：只改用户可见文案与本功能自有函数名，上游 props 名保留
+- 原因：改名要动三个上游文件、扩大 fork 与上游的 diff，并在每次 `pnpm sync:upstream` 制造冲突；收益只是内部命名
+- 影响范围：REQ-406、seam `EditorPanelHeader.tsx` 与 `DiffSectionHeader.tsx`
+
+#### 备选项
+
+- 一并重命名 props 为 `onOpenPreview`
+- 只改用户可见文案
+
+#### 关联文档与需求点
+
+- [需求 REQ-406](requirements/HTML预览在当前面板打开.md)
+
+### D-101 新增功能自有的落位函数，不改写上游的 openFilePreviewToSide
+
+- 日期：2026-09-15
+- 背景：分屏行为写在上游 `openFilePreviewToSide` 里，它是 VS Code「Open Preview to the Side」语义的实现
+- 最终决定：新增 `openFilePreviewInSourcePane`，两个调用点改指向它；上游函数原样保留
+- 原因：改写上游函数会让它的名字与行为不符，且未来上游新增调用方时会静默继承 fork 的语义；新增函数只需把 `openDocPreviewTab` 导出这一处上游改动
+- 影响范围：REQ-401～REQ-405，seam `file-preview.ts`、`EditorPanel.tsx`、`use-combined-diff-section-actions.ts`
+
+#### 备选项
+
+- 直接改写 `openFilePreviewToSide` 的落位逻辑
+- 给它加一个「是否分屏」参数
+- 新增功能自有的落位函数
+
+#### 关联文档与需求点
+
+- [需求 REQ-401～REQ-405](requirements/HTML预览在当前面板打开.md)
+
+## 3. 开发记录
+
+### 2026-09-15 实现落位函数与两个调用点
+
+- 本轮目标：HTML 预览不再强制右分屏，改为在发起操作的 pane 内新建预览 tab 并切过去。
+- 完成内容：新增功能自有模块 `src/renderer/src/components/file-preview-pane/open-file-preview-in-pane.ts`；把编辑器头部与合并 diff 段头部两个预览调用点改指向它；上游 `file-preview.ts` 只导出既有的 `openDocPreviewTab`；按钮文案改为「打开预览」并同步六个语言包；登记 fork 功能条目、架构策略与 `.gitignore` 放行。
+- 代码或文档变更：`src/renderer/src/components/file-preview-pane/**`；`src/renderer/src/lib/file-preview.ts`；`src/renderer/src/components/editor/{EditorPanel.tsx,EditorPanelHeader.tsx,DiffSectionHeader.tsx}`；`src/renderer/src/components/editor/combined-diff/review-controls/use-combined-diff-section-actions.ts`；`src/renderer/src/i18n/locales/*.json`；`config/fork-features.jsonc`、`config/architecture-policies.jsonc`、`.gitignore`；本 issue 的需求与测试规格。
+- 验证证据：待本轮门禁与真机验证后补入本条。
+- 未解决问题：TC-606 真机验证未执行。
+- 下一步：跑门禁、做真机验证并记录 `tests/runs/`，然后提 PR 合回 `fork/integration`。

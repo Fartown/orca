@@ -14848,7 +14848,6 @@
           "6c4f1a8d2e": "Check details are unavailable."
         },
         "EditorPanelHeader": {
-          "fb8331694e": "Open Preview to the Side",
           "4157f3cbf3": "Open Markdown Preview",
           "269ce4842b": "Copy Relative Path",
           "7c08a1f990": "Copy Path",
@@ -14866,7 +14865,8 @@
           "631dab0df3": "Next change",
           "revealInFinder": "Reveal in Finder",
           "openContainingFolder": "Open Containing Folder",
-          "revealInFileExplorer": "Reveal in File Explorer"
+          "revealInFileExplorer": "Reveal in File Explorer",
+          "openPreviewInPane": "Open Preview"
         },
         "EditorPanelMarkdownActionsMenu": {
           "3e0ce48c24": "Export as PDF",
