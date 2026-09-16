@@ -137,6 +137,7 @@ export function getEditorFileOperationContext(
     worktreeId: string
     runtimeEnvironmentId?: string | null
     externalSshTargetId?: string
+    runtimeHostPathGrant?: { grantId: string; absolutePath: string }
     operationProvenance?: EditorFileOperationProvenance
   },
   worktreePath: string | null
@@ -196,7 +197,10 @@ export function getEditorFileOperationContext(
     ...(host?.kind === 'ssh' ? { expectedSshTargetId: host.targetId } : {}),
     ...(provenance.expectedSshConnectionGeneration === undefined
       ? {}
-      : { expectedSshConnectionGeneration: provenance.expectedSshConnectionGeneration })
+      : { expectedSshConnectionGeneration: provenance.expectedSshConnectionGeneration }),
+    // Why carried on the context: a granted host path has no worktree-relative form, so every
+    // later read and save has to address it the same way the open did.
+    ...(file.runtimeHostPathGrant ? { hostPathGrant: file.runtimeHostPathGrant } : {})
   }
 }
 

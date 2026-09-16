@@ -3,7 +3,6 @@ import { getRendererAppPlatform } from '@/lib/renderer-app-platform'
 import { getResolvedExecutionHostIdForWorktree } from '@/lib/resolved-worktree-execution-host'
 import type { useAppStore } from '@/store'
 import { parseWorkspaceKey } from '../../../../shared/workspace-scope'
-import type { TabEntryOptionsContext } from '../tab-bar/tab-create-entry-classifier'
 import { getTabEntryFileOperationContext } from '../tab-bar/tab-create-entry-local-path'
 import type { TabEntryLocalPlatform } from '../tab-bar/tab-create-entry-path-validation'
 
@@ -100,7 +99,6 @@ export function isSameTabEntryAbsolutePathHost(
 export type TabEntryAbsolutePathContext = {
   allowAbsolutePaths: boolean
   localPlatform: TabEntryLocalPlatform
-  absolutePathScope?: TabEntryOptionsContext['absolutePathScope']
 }
 
 export function toTabEntryAbsolutePathContext(
@@ -109,15 +107,7 @@ export function toTabEntryAbsolutePathContext(
   if (policy.kind === 'blocked') {
     return { allowAbsolutePaths: false, localPlatform: getClientPathPlatform() }
   }
-  return {
-    allowAbsolutePaths: true,
-    localPlatform: policy.pathPlatform,
-    // Why: runtime file RPCs are worktree-scoped, so the classifier turns paths outside the
-    // worktree into a status row instead of a request that can only fail.
-    ...(policy.kind === 'runtime'
-      ? { absolutePathScope: { worktreePath: policy.worktreePath } }
-      : {})
-  }
+  return { allowAbsolutePaths: true, localPlatform: policy.pathPlatform }
 }
 
 type OwnerSlices = Pick<

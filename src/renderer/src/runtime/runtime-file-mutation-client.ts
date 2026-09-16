@@ -11,6 +11,7 @@ import {
 } from './runtime-file-routing'
 import { callRuntimeFileMutation } from './runtime-file-mutation-rpc'
 import { toRuntimeWorktreeSelector } from './runtime-worktree-selector'
+import { writeHostPathFileForTab } from '../runtime-host-path/host-path-grant-seams'
 
 export async function readRuntimeDirectory(
   context: RuntimeFileOperationArgs,
@@ -34,6 +35,11 @@ export async function writeRuntimeFile(
   filePath: string,
   content: string
 ): Promise<void> {
+  // Why first: a granted host path has no worktree-relative form, so the routing below cannot
+  // address it. Without this the file would open and then refuse to save.
+  if (await writeHostPathFileForTab(context, filePath, content)) {
+    return
+  }
   const remoteArgs = getRemoteFileArgs(context, filePath)
   if (!remoteArgs) {
     assertLocalFilesystemFallbackAllowed(context)

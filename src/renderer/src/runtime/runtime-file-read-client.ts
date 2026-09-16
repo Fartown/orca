@@ -17,6 +17,7 @@ import {
   hasRemoteRuntimeOwner
 } from './runtime-file-routing'
 import { toRuntimeWorktreeSelector } from './runtime-worktree-selector'
+import { readHostPathFileForTab } from '../runtime-host-path/host-path-grant-seams'
 import {
   assembleRuntimeFileFromChunks,
   RUNTIME_EDITOR_CHUNK_BYTES,
@@ -36,7 +37,8 @@ export async function readRuntimeFileContent({
   worktreeId,
   connectionId,
   expectedExternalSshTargetId,
-  includeLocalLogMetadata
+  includeLocalLogMetadata,
+  hostPathGrant
 }: RuntimeFileReadArgs): Promise<RuntimeReadableFileContent> {
   assertExternalSshReadOwnership(settings, connectionId, expectedExternalSshTargetId)
   const target = getActiveRuntimeTarget(settings)
@@ -45,6 +47,12 @@ export async function readRuntimeFileContent({
   }
   if (!worktreeId) {
     return window.api.fs.readFile({ filePath, connectionId, includeLocalLogMetadata })
+  }
+  // Why before the relative-path check: a grant addresses a path outside the worktree, which the
+  // worktree-relative contract below cannot express.
+  const granted = await readHostPathFileForTab(settings, worktreeId, hostPathGrant)
+  if (granted) {
+    return granted
   }
   if (!canReadRelativeRuntimeFile(relativePath)) {
     throw new Error('Remote file is outside the owning runtime worktree')

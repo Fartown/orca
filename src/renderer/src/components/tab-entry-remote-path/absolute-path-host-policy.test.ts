@@ -341,11 +341,7 @@ describe('toTabEntryAbsolutePathContext', () => {
         worktreePath: '/repo',
         pathPlatform: 'posix'
       })
-    ).toEqual({
-      allowAbsolutePaths: true,
-      localPlatform: 'posix',
-      absolutePathScope: { worktreePath: '/repo' }
-    })
+    ).toEqual({ allowAbsolutePaths: true, localPlatform: 'posix' })
   })
 })
 

@@ -24,9 +24,16 @@ import type { RuntimeTerminalPathResolution } from '../../shared/runtime-types'
 import { isPathInsideOrEqual } from '../../shared/cross-platform-path'
 import { randomUUID } from 'node:crypto'
 import {
+  runtimeFileRouteForTarget,
   runtimeFileSshTargetId,
   type ResolvedRuntimeFileTarget
 } from './runtime-file-command-target'
+import {
+  hostGrantPathCandidate,
+  HOST_PATH_GRANT_DIRECTORY_MESSAGE,
+  HOST_PATH_GRANT_PROVENANCE,
+  HOST_PATH_GRANT_REQUIRES_ABSOLUTE_MESSAGE
+} from '../remote-host-path-grant/host-path-grant-policy'
 
 export class RuntimeFileCommandsWithResolveAllowedTerminalArtifactPath extends RuntimeFileCommandsWithResolveTerminalPath {
   protected async resolveAllowedTerminalArtifactPath(args: {
@@ -142,6 +149,49 @@ export class RuntimeFileCommandsWithResolveAllowedTerminalArtifactPath extends R
     } finally {
       await handle.close()
     }
+  }
+
+  /**
+   * Mint a grant for any absolute path on this host (D-301).
+   *
+   * Unlike the terminal-artifact and native-chat routes this asks for no provenance: the client
+   * names the path. The policy that survives that widening lives in
+   * `remote-host-path-grant/host-path-grant-policy.ts`.
+   */
+  async grantHostPath(
+    worktreeSelector: string,
+    absolutePath: string,
+    clientId?: string
+  ): Promise<RuntimeTerminalPathResolution> {
+    const candidate = hostGrantPathCandidate(absolutePath)
+    if (!candidate) {
+      throw new Error(HOST_PATH_GRANT_REQUIRES_ABSOLUTE_MESSAGE)
+    }
+    const target = await this.host.resolveRuntimeFileTarget(worktreeSelector)
+    const route = runtimeFileRouteForTarget(target)
+    // Why canonicalize before minting: the grant's own freshness check requires the stored path to
+    // already be the real one, and `/var/...` is a symlink to `/private/var/...` on macOS. Storing
+    // the alias also means revoking the grant would not revoke access through the real path.
+    const artifactPath =
+      route.kind === 'ssh'
+        ? ((await getSshFilesystemProvider(route.connectionId)
+            ?.realpath(candidate)
+            .catch(() => candidate)) ?? candidate)
+        : await canonicalPathForArtifactComparison(candidate)
+    const resolution = await this.resolveAbsoluteFileGrant({
+      worktreeId: target.worktree.id,
+      artifactPath,
+      ...(route.kind === 'ssh' ? { connectionId: route.connectionId } : {}),
+      ...(clientId ? { clientId } : {}),
+      readOnly: false,
+      provenance: HOST_PATH_GRANT_PROVENANCE
+    })
+    // Why an error and not an empty resolution: the caller asked to open one named file, so a
+    // directory is a mistake worth naming rather than a silent "nothing here".
+    if (resolution.isDirectory) {
+      throw new Error(HOST_PATH_GRANT_DIRECTORY_MESSAGE)
+    }
+    return resolution
   }
 
   protected createTerminalFileGrant(args: {

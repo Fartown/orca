@@ -8,6 +8,7 @@ type RuntimeFileCommandName =
   | 'openMobileDiff'
   | 'readMobileFile'
   | 'resolveTerminalPath'
+  | 'grantHostPath'
   | 'readTerminalArtifactFile'
   | 'readTerminalArtifactPreview'
   | 'writeTerminalArtifactFile'
@@ -47,6 +48,7 @@ export function installRuntimeFileCommandSurface(
     openMobileDiff: commands.openMobileDiff.bind(commands),
     readMobileFile: commands.readMobileFile.bind(commands),
     resolveTerminalPath: commands.resolveTerminalPath.bind(commands),
+    grantHostPath: commands.grantHostPath.bind(commands),
     readTerminalArtifactFile: commands.readTerminalArtifactFile.bind(commands),
     readTerminalArtifactPreview: commands.readTerminalArtifactPreview.bind(commands),
     writeTerminalArtifactFile: commands.writeTerminalArtifactFile.bind(commands),

@@ -1,3 +1,4 @@
+import type { RuntimeHostPathGrantRef } from '@/runtime/runtime-file-client-types'
 import type { RecentlyClosedTabPosition } from '../../recently-closed-tabs'
 import type { EditorFileOperationProvenance } from '@/lib/editor-file-operation-owner'
 import type { OpenCheckRunDetailsState } from '@/components/editor/check-run-details-tab'
@@ -97,6 +98,8 @@ export type OpenFile = {
   runtimeEnvironmentId?: string | null
   /** SSH target that owns an absolute path outside the worktree. */
   externalSshTargetId?: string
+  /** Paired-runtime grant for a host path outside the worktree; reads and saves route through it. */
+  runtimeHostPathGrant?: RuntimeHostPathGrantRef
   /** Host provenance captured when the tab opened; mutations reject replacement owners. */
   operationProvenance?: EditorFileOperationProvenance
   /** Why: preview tabs mirror a source file's live draft; storing its ID lets the preview follow unsaved edits without becoming editable. */

@@ -25,6 +25,7 @@ import {
   type TabEntryOptionsContext
 } from './tab-create-entry-classifier'
 import { openAbsoluteTabEntryFile } from './tab-create-entry-absolute-file'
+import { requestHostPathGrantForContext } from '../../runtime-host-path/host-path-file-client'
 import { getTabEntryFileOperationContext } from './tab-create-entry-local-path'
 import {
   isSameTabEntryAbsolutePathHost,
@@ -69,6 +70,10 @@ export type TabEntryOperations = {
   statRuntimePath: typeof statRuntimePath
   authorizeExternalPath: (args: { targetPath: string }) => Promise<void>
   assertAbsolutePathAllowed: () => void
+  requestHostPathGrant: (
+    context: RuntimeFileOperationArgs,
+    absolutePath: string
+  ) => Promise<{ grantId: string; absolutePath: string }>
 }
 
 type OpenTabEntryWithOperationsArgs = {
@@ -80,7 +85,6 @@ type OpenTabEntryWithOperationsArgs = {
   runtimeContext: RuntimeFileOperationArgs
   allowAbsolutePaths: boolean
   localPlatform: TabEntryLocalPlatform
-  absolutePathScope?: TabEntryOptionsContext['absolutePathScope']
   searchEngine: SearchEngine
   searchUrlOptions?: SearchUrlOptions
   classification?: TabEntryActionClassification
@@ -181,7 +185,6 @@ function getNetworkTabRequest(
 }
 
 export async function openTabEntryWithOperations({
-  absolutePathScope,
   allowAbsolutePaths,
   classification: selectedClassification,
   fileList,
@@ -198,8 +201,7 @@ export async function openTabEntryWithOperations({
   const entryContext: TabEntryOptionsContext = {
     allowAbsolutePaths,
     localPlatform,
-    searchEngine,
-    absolutePathScope
+    searchEngine
   }
   const classification =
     selectedClassification ?? classifyTabEntryQuery(query, fileList, entryContext)
@@ -278,10 +280,9 @@ export async function openTabBarEntry(args: TabCreateEntryArgs): Promise<void> {
   if (!worktree) {
     throw new Error('No active worktree.')
   }
-  const runtimeContext = getTabEntryFileOperationContext(state, args.worktreeId, worktree.path)
   const hostPolicy = resolveTabEntryAbsolutePathHostPolicy(state, args.worktreeId)
-  const { allowAbsolutePaths, localPlatform, absolutePathScope } =
-    toTabEntryAbsolutePathContext(hostPolicy)
+  const runtimeContext = getTabEntryFileOperationContext(state, args.worktreeId, worktree.path)
+  const { allowAbsolutePaths, localPlatform } = toTabEntryAbsolutePathContext(hostPolicy)
   await openTabEntryWithOperations({
     query: args.query,
     fileList: args.fileList,
@@ -291,7 +292,6 @@ export async function openTabBarEntry(args: TabCreateEntryArgs): Promise<void> {
     runtimeContext,
     allowAbsolutePaths,
     localPlatform,
-    absolutePathScope,
     searchEngine,
     searchUrlOptions,
     classification: args.classification,
@@ -301,6 +301,7 @@ export async function openTabBarEntry(args: TabCreateEntryArgs): Promise<void> {
       openFile: state.openFile,
       statRuntimePath,
       authorizeExternalPath: window.api.fs.authorizeExternalPath,
+      requestHostPathGrant: requestHostPathGrantForContext,
       assertAbsolutePathAllowed: () => {
         // Why: the owning host is re-resolved after every await so a workspace that moved
         // between hosts mid-open fails closed instead of opening on the wrong machine.
