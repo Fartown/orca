@@ -30,7 +30,8 @@ import {
   isSameTabEntryAbsolutePathHost,
   resolveTabEntryAbsolutePathHostPolicy,
   TAB_ENTRY_ABSOLUTE_PATH_HOST_CHANGED_MESSAGE,
-  toTabEntryAbsolutePathContext
+  toTabEntryAbsolutePathContext,
+  toTabEntryAbsolutePathOperationContext
 } from '../tab-entry-remote-path/absolute-path-host-policy'
 import type { TabEntryLocalPlatform } from './tab-create-entry-path-validation'
 export {
@@ -80,7 +81,6 @@ type OpenTabEntryWithOperationsArgs = {
   runtimeContext: RuntimeFileOperationArgs
   allowAbsolutePaths: boolean
   localPlatform: TabEntryLocalPlatform
-  absolutePathScope?: TabEntryOptionsContext['absolutePathScope']
   searchEngine: SearchEngine
   searchUrlOptions?: SearchUrlOptions
   classification?: TabEntryActionClassification
@@ -181,7 +181,6 @@ function getNetworkTabRequest(
 }
 
 export async function openTabEntryWithOperations({
-  absolutePathScope,
   allowAbsolutePaths,
   classification: selectedClassification,
   fileList,
@@ -198,8 +197,7 @@ export async function openTabEntryWithOperations({
   const entryContext: TabEntryOptionsContext = {
     allowAbsolutePaths,
     localPlatform,
-    searchEngine,
-    absolutePathScope
+    searchEngine
   }
   const classification =
     selectedClassification ?? classifyTabEntryQuery(query, fileList, entryContext)
@@ -278,10 +276,14 @@ export async function openTabBarEntry(args: TabCreateEntryArgs): Promise<void> {
   if (!worktree) {
     throw new Error('No active worktree.')
   }
-  const runtimeContext = getTabEntryFileOperationContext(state, args.worktreeId, worktree.path)
   const hostPolicy = resolveTabEntryAbsolutePathHostPolicy(state, args.worktreeId)
-  const { allowAbsolutePaths, localPlatform, absolutePathScope } =
-    toTabEntryAbsolutePathContext(hostPolicy)
+  // Why realigned: routing can name a runtime environment the catalog does not know, and every
+  // file call carrying that id addresses a host that cannot answer.
+  const runtimeContext = toTabEntryAbsolutePathOperationContext(
+    getTabEntryFileOperationContext(state, args.worktreeId, worktree.path),
+    hostPolicy
+  )
+  const { allowAbsolutePaths, localPlatform } = toTabEntryAbsolutePathContext(hostPolicy)
   await openTabEntryWithOperations({
     query: args.query,
     fileList: args.fileList,
@@ -291,7 +293,6 @@ export async function openTabBarEntry(args: TabCreateEntryArgs): Promise<void> {
     runtimeContext,
     allowAbsolutePaths,
     localPlatform,
-    absolutePathScope,
     searchEngine,
     searchUrlOptions,
     classification: args.classification,

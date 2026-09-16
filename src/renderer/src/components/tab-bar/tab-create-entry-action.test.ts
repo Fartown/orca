@@ -445,25 +445,30 @@ describe('openTabEntryWithOperations', () => {
     )
   })
 
-  it('blocks paired-runtime absolute paths outside the worktree before any request', async () => {
-    const operations = makeOperations()
+  it('asks the owning runtime about paths outside its worktree instead of refusing them', async () => {
+    const operations = makeOperations({
+      statRuntimePath: vi
+        .fn()
+        .mockRejectedValue(new Error('Remote file is outside the owning runtime worktree'))
+    })
+    const runtimeContext = {
+      settings: { activeRuntimeEnvironmentId: 'hub-a' },
+      worktreeId: 'wt-1',
+      worktreePath: '/repo'
+    }
 
     await expect(
       openTabEntryWithOperations({
         ...baseArgs,
-        runtimeContext: {
-          settings: { activeRuntimeEnvironmentId: 'hub-a' },
-          worktreeId: 'wt-1',
-          worktreePath: '/repo'
-        },
-        absolutePathScope: { worktreePath: '/repo' },
+        runtimeContext,
         query: '/tmp/notes.md',
         operations
       })
-    ).rejects.toThrow('This remote workspace can only open files inside its worktree.')
+    ).rejects.toThrow('File not found: /tmp/notes.md')
 
+    expect(operations.statRuntimePath).toHaveBeenCalledWith(runtimeContext, '/tmp/notes.md')
+    // The path belongs to the runtime, so this desktop never mints a grant for its local twin.
     expect(operations.authorizeExternalPath).not.toHaveBeenCalled()
-    expect(operations.statRuntimePath).not.toHaveBeenCalled()
     expect(operations.openFile).not.toHaveBeenCalled()
   })
 
@@ -478,7 +483,6 @@ describe('openTabEntryWithOperations', () => {
     await openTabEntryWithOperations({
       ...baseArgs,
       runtimeContext,
-      absolutePathScope: { worktreePath: '/repo' },
       query: '/repo/src/index.ts',
       operations
     })

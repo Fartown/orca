@@ -89,9 +89,9 @@ function TabBarCreateEntrySession({
   })
   const shouldResolveAbsolutePaths =
     menuOpen && !terminalQueryMode && isTabEntryAbsolutePathLike(query.trim())
-  // Why: the owning host decides whether absolute paths are offered, how they are validated
-  // (remote hosts are POSIX) and whether they must stay inside the worktree (paired runtime).
-  const { allowAbsolutePaths, localPlatform, absolutePathScope } = useTabEntryAbsolutePathContext(
+  // Why: the owning host decides whether absolute paths are offered at all and how they are
+  // validated (remote hosts are POSIX); where the path points is never this surface's call.
+  const { allowAbsolutePaths, localPlatform } = useTabEntryAbsolutePathContext(
     worktreeId,
     shouldResolveAbsolutePaths
   )
@@ -124,8 +124,7 @@ function TabBarCreateEntrySession({
       getTabEntryOptions(query, fileList, 4, {
         allowAbsolutePaths,
         localPlatform,
-        searchEngine,
-        absolutePathScope
+        searchEngine
       }),
       tabResults,
       worktreePath
@@ -136,7 +135,6 @@ function TabBarCreateEntrySession({
     // Why: a matched create-menu action should win over a generic new-file fallback.
     return entryOptions.filter((option) => option.classification.kind !== 'new-file')
   }, [
-    absolutePathScope,
     allowAbsolutePaths,
     fileList,
     localPlatform,
