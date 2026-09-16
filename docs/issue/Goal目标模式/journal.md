@@ -28,6 +28,11 @@ external_ids: []
 
 ## 2. 决策点记录
 
+### D-006 定向引入上游 import 修复
+
+- 2026-09-16 用户明确批准仅带入上游 `7ec2986fd`，修正 `agent-status-store-snapshot-budget.ts` 的重复类型 import；不执行整批上游同步。
+- 源码保持该上游提交的原始内容，仅在 fork 差异预算登记这个文件；下次正常同步包含该提交后移除临时登记。此例外不改变运行逻辑或质量检查规则。
+
 ### D-005 生成改为持久异步草稿
 
 - 日期：2026-09-12。
@@ -81,8 +86,8 @@ external_ids: []
 - 完成内容：恢复 GitHub CLI 认证并推送 SSH 修复；修正 Goal 投影模块的重复类型 import，以及 Claude 输出解析在 Node 18 上调用 `toReversed()` 的兼容性问题。
 - 代码或文档变更：合并 `goal-turn-evidence` 导入声明；输出解析按下标倒序扫描，保留最后一个结果事件语义；将现有 relay 子进程兼容性测试加入 Goal 固定检查。
 - 验证证据：PR 首轮类型检查、Node 18 宿主检查、Linux/Windows 打包通过；本地 Goal/relay 35 项回归及真实 Node 18.20.8 输出解析 5 项通过。记录见 [SSH 运行记录](tests/runs/2026-09-16-SSH执行主机.md)，日志位于 `.docs/goal-remote-host-ui-validation/2026-09-16/evidence/pr26-*.log` 和 `provider-node18-smoke.log`。
-- 未解决问题：集成基线的 `agent-status-store-snapshot-budget.ts` 同样有重复 import，上游 `7ec2986fd` 已修复；本轮尚未引入该修复。其余远端测试仍在运行，尚未合入。
-- 下一步：按确认的上游引入范围解除基线阻断，完成全部 PR 检查后合入。
+- 未解决问题：用户已批准定向带入基线 import 修复 `7ec2986fd`；源码与上游一致。完整远端检查尚待最终结果，尚未合入。
+- 下一步：完成全部 PR 检查后合入，安装与用户远端升级另行记录。
 
 ### 2026-09-16 SSH 执行主机支持修复
 
