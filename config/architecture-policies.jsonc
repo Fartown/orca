@@ -413,6 +413,14 @@
           "allowedPaths": [
             "mobile/src/terminal/terminal-webview-payload-hash.test.ts",
             "mobile/scripts/build-terminal-webview-engine.mjs",
+            // HTML preview in pane: feature paths and reviewed seams.
+            "src/renderer/src/components/file-preview-pane/**",
+            "docs/issue/HTML预览在当前面板打开/**",
+            "src/renderer/src/lib/file-preview.ts",
+            "src/renderer/src/components/editor/EditorPanel.tsx",
+            "src/renderer/src/components/editor/EditorPanelHeader.tsx",
+            "src/renderer/src/components/editor/DiffSectionHeader.tsx",
+            "src/renderer/src/components/editor/combined-diff/review-controls/use-combined-diff-section-actions.ts",
             // Mobile session-continuation: feature paths and reviewed seams.
             "src/shared/agent-session-continuation/**",
             "mobile/src/session-continuation/**",
@@ -966,6 +974,49 @@
             "docs/maintenance/**"
           ],
           "message": "Change is outside the remote workspace absolute path feature and its journal."
+        }
+      ]
+    },
+    {
+      "id": "html-preview-in-pane",
+      "description": "The HTML preview lands in the pane that asked for it; the landing rule lives in its own module and reaches the editor only through registered seams (REQ-401～REQ-406).",
+      "rules": [
+        {
+          "id": "html-preview-in-pane-worktree-scope",
+          "type": "change-scope",
+          "comparison": "worktree",
+          "whenChanged": [
+            "src/renderer/src/components/file-preview-pane/**",
+            "docs/issue/HTML预览在当前面板打开/**"
+          ],
+          "allowedPaths": [
+            "src/renderer/src/components/file-preview-pane/**",
+            "docs/issue/HTML预览在当前面板打开/**",
+            "src/renderer/src/lib/file-preview.ts",
+            "src/renderer/src/lib/file-preview.test.ts",
+            "src/renderer/src/components/editor/EditorPanel.tsx",
+            "src/renderer/src/components/editor/EditorPanelHeader.tsx",
+            "src/renderer/src/components/editor/DiffSectionHeader.tsx",
+            "src/renderer/src/components/editor/combined-diff/review-controls/use-combined-diff-section-actions.ts",
+            "src/renderer/src/i18n/locales/*.json",
+            ".gitignore",
+            "config/architecture-policies.jsonc",
+            "AGENTS.md",
+            "config/fork-features.jsonc",
+            "config/scripts/check-fork-features.mjs",
+            "config/scripts/check-fork-features.test.mjs",
+            "config/scripts/run-fork-feature-checks.mjs",
+            "config/scripts/check-fork-docs.mjs",
+            "config/scripts/check-fork-docs.test.mjs",
+            "config/scripts/report-upstream-seam-changes.mjs",
+            "config/scripts/sync-upstream.mjs",
+            ".github/workflows/sync-upstream.yml",
+            ".github/workflows/track-community-prs.yaml",
+            "docs/reference/fork-maintenance.md",
+            "docs/issue/**",
+            "docs/maintenance/**"
+          ],
+          "message": "Change is outside the in-pane HTML preview feature and its journal."
         }
       ]
     },
