@@ -26,16 +26,14 @@ export function GoalDraftDeleteButton({
   const [stopping, setStopping] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const lock = useRef(false)
-  const client = useRef(
-    new GoalRuntimeClient(goalEditorDraftsStore.getState().routeExecutionHostId)
-  )
+  const client = useRef<GoalRuntimeClient | null>(null)
   const label =
     item.generation?.status === 'generating'
       ? translate('goals.drafts.stopAndDelete', 'Stop generation and delete')
       : translate('goals.drafts.delete', 'Delete draft')
 
   const remove = async (): Promise<void> => {
-    if (lock.current) {
+    if (lock.current || !client.current) {
       return
     }
     lock.current = true
