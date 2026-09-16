@@ -1,3 +1,4 @@
+import type { RuntimeClientTarget } from '../runtime/runtime-client-target'
 import type { AgentStatusEntry } from '../../../shared/agent-status-types'
 import type { GoalBinding } from '../../../shared/goals/goal-control-contract'
 import type { RuntimeTerminalResolvePane } from '../../../shared/runtime-terminal-contracts'
@@ -43,10 +44,11 @@ export type GoalBindingResolution =
 /** The host, not the renderer, names the terminal: resolve the pane and pin its PTY incarnation. */
 export async function resolveGoalBindingForPane(
   worktreeId: string,
-  paneKey: string
+  paneKey: string,
+  target: RuntimeClientTarget = { kind: 'local' }
 ): Promise<GoalBindingResolution> {
   const result = await callRuntimeRpc<{ terminal: RuntimeTerminalResolvePane | null }>(
-    { kind: 'local' },
+    target,
     'terminal.resolvePane',
     { paneKey, worktreeId },
     { timeoutMs: 15_000 }

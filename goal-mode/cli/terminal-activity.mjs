@@ -15,7 +15,14 @@ export async function observeAgent(handle) {
   const t = await showTerminal(handle)
   const paneKey = t.tabId && t.leafId ? `${t.tabId}:${t.leafId}` : null
   const row = paneKey ? (await listAgentRows()).find((a) => a.paneKey === paneKey) : null
+  const requiresHook = process.env.ORCA_GOAL_TERMINAL_BACKEND === 'ssh-cli'
+  if (requiresHook && (!row || row.restoredUnconfirmed || row.providerSessionOnly)) {
+    const error = new Error('The remote agent hook state is unverifiable')
+    error.code = 'goal_host_unverifiable'
+    throw error
+  }
   return {
+    requiresHook,
     connected: t.connected !== false,
     state: row?.state ?? null,
     stateStartedAt: row?.stateStartedAt ?? null,
@@ -50,6 +57,17 @@ export function classifyRound(activity, sinceMs, quietMs) {
       return 'finished'
     }
   }
+  // SSH reconnect can temporarily remove hook rows; terminal silence cannot close that gap.
+  if (activity.requiresHook) {
+    if (activity.state === 'working') {
+      return 'busy'
+    }
+    if (activity.state === 'waiting' || activity.state === 'blocked') {
+      return 'needs-user'
+    }
+    return 'unknown'
+  }
+
   // 陈旧的 working 只有在终端确实还在动时才采信。
   // 注释原来断言「working 没有陈旧风险」,但它恰恰是最容易陈旧的一档:
   // 上一轮被 Esc 打断、agent 进程崩了、Stop hook 没发出来,状态就永久卡在 working。

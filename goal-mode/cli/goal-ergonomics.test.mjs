@@ -358,3 +358,19 @@ test('把 flag 名当取值传进来时不误伤后面那个参数', () => {
     '/repo/w'
   ])
 })
+
+test('SSH rounds require current hook completion and never substitute terminal silence', () => {
+  const remote = act({ requiresHook: true, source: 'hook', silentMs: 3600000 })
+  assert.equal(
+    classifyRound({ ...remote, state: 'working', stateStartedAt: SENT - 1 }, SENT, 12000),
+    'busy'
+  )
+  assert.equal(
+    classifyRound({ ...remote, state: 'done', stateStartedAt: SENT - 1 }, SENT, 12000),
+    'unknown'
+  )
+  assert.equal(
+    classifyRound({ ...remote, state: 'done', stateStartedAt: SENT + 1 }, SENT, 12000),
+    'finished'
+  )
+})

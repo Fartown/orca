@@ -61,7 +61,9 @@ async function main(argv) {
     'objective-updated': objectiveUpdated,
     'rejected-completion': rejectedCompletion
   })
-  setTerminalBackend(createRuntimeTerminalBackend())
+  if (process.env.ORCA_GOAL_TERMINAL_BACKEND !== 'ssh-cli') {
+    setTerminalBackend(createRuntimeTerminalBackend())
+  }
 
   // 裁判脚本和驱动打在同一目录;开发期可用 ORCA_GOAL_JUDGE_PATH 指向源码。两种裁判输入文件都由宿主随记录写好。
   const recordOptions = {

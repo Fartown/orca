@@ -66,7 +66,9 @@ function parseClaudeJson(stdout: string): string | null {
     }
     return typeof data?.result === 'string' ? data.result.trim() : null
   } catch {
-    for (const line of stdout.trim().split('\n').toReversed()) {
+    const lines = stdout.trim().split('\n')
+    for (let index = lines.length - 1; index >= 0; index -= 1) {
+      const line = lines[index]
       try {
         const event = JSON.parse(line)
         if (event.type === 'result') {

@@ -113,6 +113,8 @@ export class RelayAgentHookServer {
     })
   }
 
+  getStatusForPane = (key: string) => this.state.lastStatusByPaneKey.get(key)
+
   async start(options: RelayHookServerStartOptions = {}): Promise<void> {
     if (this.server) {
       return

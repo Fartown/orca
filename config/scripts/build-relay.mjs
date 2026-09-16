@@ -9,6 +9,7 @@
  * gracefully degraded.
  */
 import { build } from 'esbuild'
+import { buildGoalDriverBundles } from './build-goal-driver.mjs'
 import { createHash } from 'node:crypto'
 import {
   copyFileSync,
@@ -116,6 +117,7 @@ for (const platform of RELAY_BUILD_PLATFORMS) {
   // manifest check and be hashed into .version, shipping mixed-generation bytes.
   rmSync(outDir, { recursive: true, force: true })
   mkdirSync(outDir, { recursive: true })
+  await buildGoalDriverBundles(outDir)
 
   await build({
     entryPoints: [RELAY_ENTRY],

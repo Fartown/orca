@@ -8,8 +8,10 @@ import type { GoalEditorDraftRecord } from '../../../../shared/goals/goal-editor
 import type { GoalAcceptanceDraft } from '../../../../shared/goals/goal-acceptance-draft-contract'
 import { GoalEditor } from './GoalEditor'
 
-vi.mock('@/goals/goal-runtime-client', () => ({
-  goalRuntimeClient: {
+vi.mock('@/goals/goal-runtime-client', () => {
+  const client = {
+    routeExecutionHostId: 'local',
+    target: { kind: 'local' },
     draftAcceptance: vi.fn(),
     getAcceptanceDraft: vi.fn(),
     cancelAcceptanceDraft: vi.fn(),
@@ -17,7 +19,8 @@ vi.mock('@/goals/goal-runtime-client', () => ({
     getEditorDraft: vi.fn(),
     create: vi.fn()
   }
-}))
+  return { goalRuntimeClient: client, getGoalRuntimeClient: () => client }
+})
 vi.mock('@/goals/goal-session-target', () => ({
   resolveGoalBindingForPane: vi.fn(async () => ({
     ok: true,
@@ -140,7 +143,7 @@ describe('persistent Goal editor', () => {
     await waitFor(() => expect(openGoalDocument).toHaveBeenCalledTimes(1))
     const saved = [...records.values()].at(-1)!
     expect(saved.fields.acceptanceDocument).toBe(' 新人工稿\n')
-    expect(openGoalDocument).toHaveBeenCalledWith(saved.documentPath, 'wt-1')
+    expect(openGoalDocument).toHaveBeenCalledWith(saved.documentPath, 'wt-1', 'local')
     expect(goalDomainStore.getState().editor.open).toBe(false)
     expect(goalRuntimeClient.cancelAcceptanceDraft).not.toHaveBeenCalled()
     await reopen()
@@ -165,7 +168,7 @@ describe('persistent Goal editor', () => {
     expect([...records.values()].at(-1)!.fields.acceptanceDocument).toBe('原文保留')
     fireEvent.click(candidatePath)
     await waitFor(() => expect(goalDomainStore.getState().editor.open).toBe(false))
-    expect(openGoalDocument).toHaveBeenLastCalledWith('/generated/acceptance.md', 'wt-1')
+    expect(openGoalDocument).toHaveBeenLastCalledWith('/generated/acceptance.md', 'wt-1', 'local')
     expect([...records.values()].at(-1)!.generation?.applied).toBe(false)
     expect(goalRuntimeClient.create).not.toHaveBeenCalled()
   })
