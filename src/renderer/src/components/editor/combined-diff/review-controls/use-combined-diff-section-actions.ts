@@ -4,7 +4,7 @@ import type { editor as monacoEditor } from 'monaco-editor'
 import { useAppStore } from '@/store'
 import { detectLanguage } from '@/lib/language-detect'
 import { joinPath } from '@/lib/path'
-import { openFilePreviewToSide } from '@/lib/file-preview'
+import { openFilePreviewInSourcePane } from '@/components/file-preview-pane/open-file-preview-in-pane'
 import { getEditorFileOperationContext } from '@/lib/editor-file-operation-owner'
 import { writeRuntimeFile } from '@/runtime/runtime-file-client'
 import { findWorktreeById } from '@/store/slices/worktree-helpers'
@@ -135,7 +135,7 @@ export function useCombinedDiffSectionActions({
         )?.groupId ??
         activeGroupId ??
         null
-      openFilePreviewToSide({
+      openFilePreviewInSourcePane({
         language: detectLanguage(section.path),
         filePath: joinPath(file.filePath, section.path),
         worktreeId: file.worktreeId,

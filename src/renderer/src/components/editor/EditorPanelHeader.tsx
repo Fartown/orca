@@ -126,8 +126,8 @@ export function EditorPanelHeader({
                 className="p-1 rounded hover:bg-accent text-muted-foreground hover:text-foreground transition-colors flex-shrink-0"
                 onClick={onOpenPreviewToSide}
                 aria-label={translate(
-                  'auto.components.editor.EditorPanelHeader.fb8331694e',
-                  'Open Preview to the Side'
+                  'auto.components.editor.EditorPanelHeader.openPreviewInPane',
+                  'Open Preview'
                 )}
               >
                 <Eye size={14} />
@@ -135,8 +135,8 @@ export function EditorPanelHeader({
             </TooltipTrigger>
             <TooltipContent side="bottom" sideOffset={4}>
               {translate(
-                'auto.components.editor.EditorPanelHeader.fb8331694e',
-                'Open Preview to the Side'
+                'auto.components.editor.EditorPanelHeader.openPreviewInPane',
+                'Open Preview'
               )}
             </TooltipContent>
           </Tooltip>
