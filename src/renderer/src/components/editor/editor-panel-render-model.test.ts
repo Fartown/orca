@@ -249,3 +249,40 @@ describe('getEditorPanelRenderModel markdown export affordance', () => {
     ).toBe(false)
   })
 })
+
+describe('getEditorPanelRenderModel rich-mode unsupported override', () => {
+  // Why: past the round-trip probe budget, so embedded html blocks rich mode
+  // without ever being verified — the case the override exists for.
+  const unverifiedHtml = `${'a'.repeat(50_001)}\n<span>text</span>\n`
+
+  function richModel(content: string, overridden: boolean) {
+    return renderModel({
+      markdownViewMode: { '/repo/README.md': 'rich' },
+      editorDrafts: { '/repo/README.md': content },
+      markdownRichModeSizeOverridden: overridden
+    }).inlineMarkdownRenderState
+  }
+
+  it('falls back to source with an explanation until the user overrides', () => {
+    const state = richModel(unverifiedHtml, false)
+
+    expect(state?.renderMode).toBe('source')
+    expect(state?.richModeUnsupportedMessage).toEqual(expect.any(String))
+    expect(state?.richModeUnsupportedOverrideActive).toBe(false)
+  })
+
+  it('hands the document to the rich editor once the user overrides', () => {
+    const state = richModel(unverifiedHtml, true)
+
+    expect(state?.renderMode).toBe('rich-editor')
+    expect(state?.richModeUnsupportedMessage).toBeNull()
+    expect(state?.richModeUnsupportedOverrideActive).toBe(true)
+  })
+
+  it('does not flag an override on a clean document that only tripped the size gate', () => {
+    const state = richModel('a'.repeat(RICH_MARKDOWN_MAX_SIZE_BYTES + 1), true)
+
+    expect(state?.renderMode).toBe('rich-editor')
+    expect(state?.richModeUnsupportedOverrideActive).toBe(false)
+  })
+})

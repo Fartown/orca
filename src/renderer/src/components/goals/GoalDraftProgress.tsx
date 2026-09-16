@@ -60,7 +60,7 @@ export function GoalDraftProgress({
           ? translate('goals.drafts.saving', 'Saving draft…')
           : saveError
             ? translate('goals.drafts.unsaved', 'Draft not saved')
-            : translate('goals.drafts.saved', 'Draft saved locally')}
+            : translate('goals.drafts.saved', 'Draft saved')}
       </p>
       {error || result?.error || saveError ? (
         <p role="alert" className="break-words text-destructive">

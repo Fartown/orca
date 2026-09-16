@@ -1,3 +1,4 @@
+import { getGoalRuntimeClient } from '@/goals/goal-runtime-client'
 import { useEffect, useState, useSyncExternalStore } from 'react'
 import { newClientOperationId } from '@/goals/goal-client-operation'
 import { goalDomainStore, type GoalEditorPrefill } from '@/goals/goals-domain-store'
@@ -59,7 +60,8 @@ export function useGoalEditorDraft(editor: { open: boolean; prefill: GoalEditorP
         revision: 0,
         createdAt: Date.now(),
         updatedAt: Date.now()
-      }
+      },
+      getGoalRuntimeClient()
     )
       .then((opened) => {
         if (!disposed) {

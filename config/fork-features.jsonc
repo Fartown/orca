@@ -217,7 +217,12 @@
         "src/shared/child-process/run-process.ts",
         "src/shared/pty-liveness-verdict.ts",
         "src/shared/runtime-terminal-contracts.ts",
-        "src/shared/sha256.ts"
+        "src/shared/sha256.ts",
+        "src/relay/dispatcher.ts",
+        "src/main/runtime/orca-runtime.ts",
+        "src/main/ssh/ssh-target-registry.ts",
+        "src/renderer/src/lib/worktree-runtime-owner.ts",
+        "src/shared/execution-host.ts"
       ],
       "policyId": "goals-native-feature",
       "ownedPaths": [
@@ -344,6 +349,46 @@
           "file": "src/renderer/src/i18n/locales/zh.json",
           "mustContain": "\"goals\":",
           "why": "the goals copy namespace exists in the catalog"
+        },
+        {
+          "file": "src/relay/relay-agent-hook-runtime.ts",
+          "mustContain": "getStatusSnapshotForPane",
+          "why": "Goal execution, documents and validation run on their owning SSH or runtime host"
+        },
+        {
+          "file": "src/relay/agent-hook-server.ts",
+          "mustContain": "getStatusForPane",
+          "why": "Goal execution, documents and validation run on their owning SSH or runtime host"
+        },
+        {
+          "file": "src/shared/relay-artifacts.ts",
+          "mustContain": "goal-driver.js",
+          "why": "Goal execution, documents and validation run on their owning SSH or runtime host"
+        },
+        {
+          "file": "config/scripts/build-relay.mjs",
+          "mustContain": "buildGoalDriverBundles",
+          "why": "Goal execution, documents and validation run on their owning SSH or runtime host"
+        },
+        {
+          "file": "src/main/orcad/orcad-entry.ts",
+          "mustContain": "registerRuntimeGoals",
+          "why": "Goal execution, documents and validation run on their owning SSH or runtime host"
+        },
+        {
+          "file": "config/scripts/build-orcad.mjs",
+          "mustContain": "buildGoalDriverBundles",
+          "why": "Goal execution, documents and validation run on their owning SSH or runtime host"
+        },
+        {
+          "file": "src/shared/orcad-artifacts.ts",
+          "mustContain": "goal-driver.js",
+          "why": "Goal execution, documents and validation run on their owning SSH or runtime host"
+        },
+        {
+          "file": "src/relay/dispatcher-rpc-routing.ts",
+          "mustContain": "requestClient(",
+          "why": "Goal execution, documents and validation run on their owning SSH or runtime host"
         }
       ],
       "tests": [
@@ -367,6 +412,7 @@
         "src/main/goals/goal-draft-recovery.test.ts",
         "src/main/goals/goal-draft-workspace.test.ts",
         "src/shared/goals/goal-agent-provider.test.ts",
+        "src/relay/subprocess.test.ts",
         "src/shared/goals/goal-editor-draft-contract.test.ts",
         "src/renderer/src/goals/goal-editor-drafts-sync.test.tsx",
         "src/renderer/src/goals/open-goal-document.test.ts",
@@ -374,7 +420,7 @@
         "src/renderer/src/components/goals/GoalEditor.test.tsx"
       ],
       "checks": [
-        "pnpm exec vitest run --config config/vitest.config.ts src/main/goals src/shared/goals src/renderer/src/goals src/renderer/src/components/goals src/main/runtime/rpc/methods/goals.test.ts src/main/plugins/plugin-bundled-bootstrap.test.ts src/main/persistence-ui-state.test.ts src/renderer/src/lib/worktree-activation-surface-caller-wiring.test.ts",
+        "pnpm exec vitest run --config config/vitest.config.ts src/main/goals src/shared/goals src/renderer/src/goals src/renderer/src/components/goals src/main/runtime/rpc/methods/goals.test.ts src/main/plugins/plugin-bundled-bootstrap.test.ts src/main/persistence-ui-state.test.ts src/renderer/src/lib/worktree-activation-surface-caller-wiring.test.ts src/relay/subprocess.test.ts",
         "node --test --experimental-test-module-mocks goal-mode/cli/*.test.mjs"
       ]
     },
@@ -1239,6 +1285,64 @@
       "checks": [
         "pnpm exec vitest run --config config/vitest.config.ts src/shared/agent-session-continuation src/renderer/src/lib/agent-session-fork-context.test.ts src/renderer/src/lib/launch-agent-session-continuation.test.ts src/renderer/src/components/agent-session-continuation src/renderer/src/components/terminal-pane/terminal-agent-session-continuation.test.ts src/renderer/src/components/right-sidebar/ai-vault-session-continuation.test.ts",
         "pnpm --dir mobile exec vitest run src/session-continuation src/session/mobile-terminal-action-sheet-actions.test.ts src/session/mobile-session-route-parity.test.ts"
+      ]
+    },
+    {
+      "id": "rich-markdown-unsupported-override",
+      "title": "富文本 Markdown 强制打开：语法不支持时提供「仍然打开」",
+      "goal": "把「只能在代码模式下编辑」从硬拦截改为可由用户显式承担的选择，并在强制期间持续提示改写风险",
+      "journal": "docs/issue/富文本Markdown强制打开/journal.md",
+      "dependsOn": [
+        "src/renderer/src/components/editor/markdown-rich-mode.ts",
+        "src/renderer/src/components/editor/markdown-render-mode.ts"
+      ],
+      "policyId": "rich-markdown-unsupported-override",
+      "ownedPaths": [
+        "src/renderer/src/components/rich-markdown-override/**",
+        "docs/issue/富文本Markdown强制打开/**"
+      ],
+      "requiredFiles": [
+        "src/renderer/src/components/rich-markdown-override/rich-markdown-unsupported-override.ts"
+      ],
+      "seams": [
+        {
+          "file": "src/renderer/src/components/editor/markdown-render-mode.ts",
+          "mustContain": "richModeUnsupportedOverrideActive",
+          "why": "the render state carries whether rich mode is holding an unsafe document (REQ-402)"
+        },
+        {
+          "file": "src/renderer/src/components/editor/editor-panel-render-model.ts",
+          "mustContain": "resolveRichMarkdownUnsupportedOverride",
+          "why": "the per-file override clears the unsupported gate, not only the size gate (REQ-401)"
+        },
+        {
+          "file": "src/renderer/src/components/editor/EditorMarkdownFileSurface.tsx",
+          "mustContain": "RichModeOverrideBanner",
+          "why": "the fallback offers the override and rich mode keeps the rewrite risk visible (REQ-401, REQ-402)"
+        },
+        {
+          "file": "src/renderer/src/components/editor/EditorContent.markdown-classification.test.tsx",
+          "mustContain": "sizeOverridden",
+          "why": "the upstream fallback assertions now pin overridable, not blocked (REQ-401)"
+        },
+        {
+          "file": "src/renderer/src/i18n/locales/en.json",
+          "mustContain": "overrideActive",
+          "why": "copy for the persistent rewrite-risk banner (REQ-402)"
+        },
+        {
+          "file": "src/renderer/src/i18n/locales/zh.json",
+          "mustContain": "overrideActive",
+          "why": "Chinese copy for the same banner and the override button (REQ-403)"
+        }
+      ],
+      "tests": [
+        "src/renderer/src/components/rich-markdown-override/rich-markdown-unsupported-override.test.ts",
+        "src/renderer/src/components/editor/editor-panel-render-model.test.ts",
+        "src/renderer/src/components/editor/EditorContent.markdown-classification.test.tsx"
+      ],
+      "checks": [
+        "pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/components/rich-markdown-override src/renderer/src/components/editor/editor-panel-render-model.test.ts src/renderer/src/components/editor/EditorContent.markdown-classification.test.tsx src/renderer/src/components/editor/markdown-rich-mode.test.ts src/renderer/src/components/editor/markdown-render-mode.test.ts"
       ]
     }
   ]

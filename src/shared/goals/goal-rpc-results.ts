@@ -1,3 +1,8 @@
+import { GoalAcceptanceDraftResult } from './goal-acceptance-draft-contract'
+import {
+  GoalEditorDraftRecordSchema,
+  GoalEditorDraftListSchema
+} from './goal-editor-draft-contract'
 import { z } from 'zod'
 import { GoalBindingSchema, GoalBudgetSchema, GoalSpecSchema } from './goal-control-contract'
 
@@ -128,3 +133,23 @@ export const GoalVersionsResult = z
     )
   })
   .passthrough()
+
+export const GoalRpcResultSchemas = {
+  'goals.status': GoalStatusResult,
+  'goals.draftAcceptance': GoalAcceptanceDraftResult,
+  'goals.getAcceptanceDraft': GoalAcceptanceDraftResult.nullable(),
+  'goals.cancelAcceptanceDraft': GoalAcceptanceDraftResult.nullable(),
+  'goals.listEditorDrafts': GoalEditorDraftListSchema,
+  'goals.getEditorDraft': GoalEditorDraftRecordSchema.nullable(),
+  'goals.saveEditorDraft': GoalEditorDraftRecordSchema,
+  'goals.list': GoalListResult,
+  'goals.get': GoalDetailResult.nullable(),
+  'goals.create': GoalOperationResult,
+  'goals.control': GoalOperationResult,
+  'goals.amend': GoalOperationResult,
+  'goals.rebind': GoalOperationResult,
+  'goals.archive': GoalOperationResult,
+  'goals.versions': GoalVersionsResult,
+  'goals.adoptLegacy': GoalOperationResult,
+  'goals.operation': GoalOperationResult.nullable()
+} as const

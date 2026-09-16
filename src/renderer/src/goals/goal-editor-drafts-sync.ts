@@ -3,15 +3,16 @@ import { createStore } from 'zustand/vanilla'
 import { toast } from 'sonner'
 import type { GoalEditorDraftSummary } from '../../../shared/goals/goal-editor-draft-contract'
 import { translate } from '@/i18n/i18n'
-import { goalRuntimeClient } from './goal-runtime-client'
+import { goalRuntimeClient, type GoalRuntimeClient } from './goal-runtime-client'
 
 export const goalEditorDraftsStore = createStore<{
   items: GoalEditorDraftSummary[]
   error: string | null
 }>(() => ({ items: [], error: null }))
 
-export function useGoalEditorDraftSync(): void {
+export function useGoalEditorDraftSync(client: GoalRuntimeClient = goalRuntimeClient): void {
   useEffect(() => {
+    goalEditorDraftsStore.setState({ items: [], error: null })
     let disposed = false
     let pending = false
     const statuses = new Map<string, string>()
@@ -22,7 +23,7 @@ export function useGoalEditorDraftSync(): void {
       }
       pending = true
       try {
-        const { items } = await goalRuntimeClient.listEditorDrafts()
+        const { items } = await client.listEditorDrafts()
         if (disposed) {
           return
         }
@@ -68,5 +69,5 @@ export function useGoalEditorDraftSync(): void {
       disposed = true
       clearInterval(timer)
     }
-  }, [])
+  }, [client])
 }

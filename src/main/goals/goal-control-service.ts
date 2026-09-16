@@ -34,6 +34,7 @@ import {
 } from './goal-summary-projection'
 
 export type GoalControlServiceDependencies = {
+  executionHostId?: string
   store: GoalStore
   terminals: GoalTerminalFacts
   hooks: GoalHookFacts
@@ -68,6 +69,7 @@ export class GoalControlService {
     this.now = dependencies.now ?? Date.now
     this.newId = dependencies.newId ?? randomUUID
     this.admission = new GoalBindingAdmission({
+      executionHostId: dependencies.executionHostId,
       store: this.store,
       terminals: this.terminals,
       inspectDriver: dependencies.inspectDriver ?? inspectGoalDriver
