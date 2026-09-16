@@ -250,7 +250,7 @@ export function GoalEditor(): React.JSX.Element {
               <p className="text-xs text-muted-foreground">
                 {translate(
                   'goals.editor.guardHint',
-                  'The guard reads the workspace and referenced materials to draft the document, then independently checks the work during execution. Its CLI must be installed and signed in.'
+                  'The guard reads the workspace and referenced materials to draft the document, then independently checks the work during execution. Its CLI must be installed and signed in on the workspace host.'
                 )}
               </p>
             </div>

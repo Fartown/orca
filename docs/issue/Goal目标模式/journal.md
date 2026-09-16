@@ -80,9 +80,9 @@ external_ids: []
 - 本轮目标：修复 REQ-111 的远程执行遗漏，用户明确要求远程机器能够使用 Goal。
 - 完成内容：补入 SSH relay 上的既有 GoalControlService、远端打包驱动/生成器/守卫、界面按工作区主机路由和草稿归属、远程 Markdown 文件查看；断联保持不可验证而不认定退出。
 - 代码或文档变更：独立 `feat/goal-remote-host` 分支；沿用 Goal 状态机、操作收据、文件存储、公共终端 CLI 与 SSH RPC；补充远程运行时入口和必要部署清单。orcad 组合根的旧逐字上游固定规则转为已登记接缝，既有生命周期测试及本轮真实重启验证保护服务注册；没有删除功能。
-- 验证证据：修改前隔离 App 复现 SSH 终端可用而 Goal 列表为空；最终同机真实 SSH 12/12 通过（含 folder、后台生成、断联重连、独立验收、主机隔离）。feature tests 176/176，tc、构建、架构/fork/localization 门禁通过；纯 Node orcad 注册、文档落盘与重启恢复 3/3。详见 [SSH 运行记录](tests/runs/2026-09-16-SSH执行主机.md)，原始证据位于 `.docs/goal-remote-host-ui-validation/2026-09-16/`。
+- 验证证据：修改前隔离 App 复现 SSH 终端可用而 Goal 列表为空；最终同机真实 SSH 12/12 通过（含 folder、后台生成、断联重连、独立验收、主机隔离）。集成后再次 12/12，相关 tests 200/200、CLI 166/166，tc、构建、架构/fork/localization 门禁通过；纯 Node orcad 注册、文档落盘与重启恢复 3/3。详见 [SSH 运行记录](tests/runs/2026-09-16-SSH执行主机.md)，原始证据位于 `.docs/goal-remote-host-ui-validation/2026-09-16/`。
 - 未解决问题：验证采用同机独立 sshd 和受控 provider，未覆盖异机 Linux、真实模型与 WSL；未更换用户 App，未更新用户远端 relay。
-- 下一步：合入最新集成分支后完成回归、提交 PR 并等待 CI；安装包交付与实际机器升级另行记录。
+- 下一步：已合入最新集成基线并完成回归；提交 PR 后等待 CI。安装包交付与实际机器升级另行记录。
 
 ### 2026-09-15 Goal 运行时 fence 收敛到单一铸造点
 
