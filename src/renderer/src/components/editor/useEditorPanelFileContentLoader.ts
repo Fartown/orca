@@ -149,7 +149,10 @@ export function useEditorPanelFileContentLoader({
               })
               return
             }
-            if (runtimeEnvironmentId && !route) {
+            // Why the grant exempts it: this refusal was true while a paired host could only
+            // address worktree-relative paths. A tab holding a host path grant has an address for
+            // exactly this file, so the read below reaches the host rather than this machine.
+            if (runtimeEnvironmentId && !route && !restoredOpenFile?.runtimeHostPathGrant) {
               throw new Error('External local files are not available for remote workspaces.')
             }
             if (!externalSshOwnerId) {
@@ -186,7 +189,7 @@ export function useEditorPanelFileContentLoader({
             // Why: a host path outside the worktree is only addressable through its grant.
             hostPathGrant: restoredOpenFile?.runtimeHostPathGrant,
             includeLocalLogMetadata: isLiveTailLogTab
-          }) as Promise<FileContent>
+          })
           pending = { externalEventGeneration: options?.externalEventGeneration, promise }
           inFlightFileReads.set(key, pending)
           queueMicrotask(() => {

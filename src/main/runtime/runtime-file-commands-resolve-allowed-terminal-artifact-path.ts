@@ -169,9 +169,18 @@ export class RuntimeFileCommandsWithResolveAllowedTerminalArtifactPath extends R
     }
     const target = await this.host.resolveRuntimeFileTarget(worktreeSelector)
     const route = runtimeFileRouteForTarget(target)
+    // Why canonicalize before minting: the grant's own freshness check requires the stored path to
+    // already be the real one, and `/var/...` is a symlink to `/private/var/...` on macOS. Storing
+    // the alias also means revoking the grant would not revoke access through the real path.
+    const artifactPath =
+      route.kind === 'ssh'
+        ? ((await getSshFilesystemProvider(route.connectionId)
+            ?.realpath(candidate)
+            .catch(() => candidate)) ?? candidate)
+        : await canonicalPathForArtifactComparison(candidate)
     const resolution = await this.resolveAbsoluteFileGrant({
       worktreeId: target.worktree.id,
-      artifactPath: candidate,
+      artifactPath,
       ...(route.kind === 'ssh' ? { connectionId: route.connectionId } : {}),
       ...(clientId ? { clientId } : {}),
       readOnly: false,

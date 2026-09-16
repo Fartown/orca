@@ -16,6 +16,9 @@ describe('openTabEntryWithOperations', () => {
       statRuntimePath: vi.fn().mockResolvedValue({ size: 1, isDirectory: false, mtime: 1 }),
       authorizeExternalPath: vi.fn().mockResolvedValue(undefined),
       assertAbsolutePathAllowed: vi.fn(),
+      requestHostPathGrant: vi
+        .fn()
+        .mockResolvedValue({ grantId: 'grant-1', absolutePath: '/tmp/notes.md' }),
       ...overrides
     }
   }
@@ -445,30 +448,55 @@ describe('openTabEntryWithOperations', () => {
     )
   })
 
-  it('asks the owning runtime about paths outside its worktree instead of refusing them', async () => {
-    const operations = makeOperations({
-      statRuntimePath: vi
-        .fn()
-        .mockRejectedValue(new Error('Remote file is outside the owning runtime worktree'))
-    })
+  it('opens a path outside the runtime worktree through a host grant', async () => {
+    const operations = makeOperations()
     const runtimeContext = {
       settings: { activeRuntimeEnvironmentId: 'hub-a' },
       worktreeId: 'wt-1',
       worktreePath: '/repo'
     }
 
+    await openTabEntryWithOperations({
+      ...baseArgs,
+      runtimeContext,
+      query: '/tmp/notes.md',
+      operations
+    })
+
+    expect(operations.requestHostPathGrant).toHaveBeenCalledWith(runtimeContext, '/tmp/notes.md')
+    // The grant request is also the existence check, so there is no stat to make.
+    expect(operations.statRuntimePath).not.toHaveBeenCalled()
+    // The file belongs to the host, so this desktop never mints a grant for its local twin.
+    expect(operations.authorizeExternalPath).not.toHaveBeenCalled()
+    expect(operations.openFile).toHaveBeenCalledWith(
+      expect.objectContaining({
+        filePath: '/tmp/notes.md',
+        relativePath: '/tmp/notes.md',
+        runtimeHostPathGrant: { grantId: 'grant-1', absolutePath: '/tmp/notes.md' }
+      }),
+      { preview: false, targetGroupId: 'group-1' }
+    )
+  })
+
+  it('surfaces the host refusal when it will not grant the path', async () => {
+    const operations = makeOperations({
+      requestHostPathGrant: vi
+        .fn()
+        .mockRejectedValue(new Error('File not found on the host: /tmp/gone.md'))
+    })
+
     await expect(
       openTabEntryWithOperations({
         ...baseArgs,
-        runtimeContext,
-        query: '/tmp/notes.md',
+        runtimeContext: {
+          settings: { activeRuntimeEnvironmentId: 'hub-a' },
+          worktreeId: 'wt-1',
+          worktreePath: '/repo'
+        },
+        query: '/tmp/gone.md',
         operations
       })
-    ).rejects.toThrow('File not found: /tmp/notes.md')
-
-    expect(operations.statRuntimePath).toHaveBeenCalledWith(runtimeContext, '/tmp/notes.md')
-    // The path belongs to the runtime, so this desktop never mints a grant for its local twin.
-    expect(operations.authorizeExternalPath).not.toHaveBeenCalled()
+    ).rejects.toThrow('File not found on the host: /tmp/gone.md')
     expect(operations.openFile).not.toHaveBeenCalled()
   })
 

@@ -412,6 +412,25 @@
           "allowedPaths": [
             "mobile/src/terminal/terminal-webview-payload-hash.test.ts",
             "mobile/scripts/build-terminal-webview-engine.mjs",
+            // Remote host path open: feature paths and reviewed seams.
+            "src/main/remote-host-path-grant/**",
+            "src/renderer/src/runtime-host-path/**",
+            "docs/issue/远程主机绝对路径打开/**",
+            "src/main/runtime/rpc/methods/files.ts",
+            "src/main/runtime/runtime-file-command-surface.ts",
+            "src/main/runtime/runtime-file-commands-mobile-file-list-limit.ts",
+            "src/main/runtime/runtime-file-commands-resolve-allowed-terminal-artifact-path.ts",
+            "src/shared/rpc-contract/files-params.ts",
+            "src/shared/rpc-contract/rpc-params-catalog.generated.ts",
+            "src/renderer/src/runtime/runtime-file-client-types.ts",
+            "src/renderer/src/runtime/runtime-file-read-client.ts",
+            "src/renderer/src/runtime/runtime-file-mutation-client.ts",
+            "src/renderer/src/store/slices/editor/types/open-file.ts",
+            "src/renderer/src/lib/editor-file-operation-owner.ts",
+            "src/renderer/src/components/editor/useEditorPanelFileContentLoader.ts",
+            "src/renderer/src/components/tab-bar/tab-create-entry-absolute-file.ts",
+            "src/renderer/src/components/tab-bar/tab-create-entry-action.ts",
+            "src/renderer/src/components/tab-bar/tab-create-entry-action.test.ts",
             // Mobile session-continuation: feature paths and reviewed seams.
             "src/shared/agent-session-continuation/**",
             "mobile/src/session-continuation/**",
@@ -917,6 +936,23 @@
             "src/renderer/src/components/tab-bar/TabBarCreateEntry.history.test.tsx",
             "src/renderer/src/components/tab-bar/TabBarCreateEntry.keyboard.test.tsx",
             "src/renderer/src/components/tab-bar/TabBarCreateEntry.tab-results.test.tsx",
+            // Why these here too: the omnibox stops refusing worktree-external paths only
+            // because the host learned to grant them, so the two features ship in one tree.
+            "src/main/remote-host-path-grant/**",
+            "src/renderer/src/runtime-host-path/**",
+            "docs/issue/远程主机绝对路径打开/**",
+            "src/main/runtime/rpc/methods/files.ts",
+            "src/main/runtime/runtime-file-command-surface.ts",
+            "src/main/runtime/runtime-file-commands-mobile-file-list-limit.ts",
+            "src/main/runtime/runtime-file-commands-resolve-allowed-terminal-artifact-path.ts",
+            "src/shared/rpc-contract/files-params.ts",
+            "src/shared/rpc-contract/rpc-params-catalog.generated.ts",
+            "src/renderer/src/runtime/runtime-file-client-types.ts",
+            "src/renderer/src/runtime/runtime-file-read-client.ts",
+            "src/renderer/src/runtime/runtime-file-mutation-client.ts",
+            "src/renderer/src/store/slices/editor/types/open-file.ts",
+            "src/renderer/src/lib/editor-file-operation-owner.ts",
+            "src/renderer/src/components/editor/useEditorPanelFileContentLoader.ts",
             "src/renderer/src/i18n/locales/*.json",
             ".gitignore",
             "config/architecture-policies.jsonc",
@@ -936,6 +972,57 @@
             "docs/maintenance/**"
           ],
           "message": "Change is outside the remote workspace absolute path feature and its journal."
+        }
+      ]
+    },
+    {
+      "id": "remote-host-path-open",
+      "description": "The paired host mints a grant for any absolute path it is asked for, and the client reads and saves through that grant (REQ-801～REQ-805).",
+      "rules": [
+        {
+          "id": "remote-host-path-open-worktree-scope",
+          "type": "change-scope",
+          "comparison": "worktree",
+          "whenChanged": [
+            "src/main/remote-host-path-grant/**",
+            "src/renderer/src/runtime-host-path/**",
+            "docs/issue/远程主机绝对路径打开/**"
+          ],
+          "allowedPaths": [
+            "src/main/remote-host-path-grant/**",
+            "src/renderer/src/runtime-host-path/**",
+            "docs/issue/远程主机绝对路径打开/**",
+            "src/main/runtime/rpc/methods/files.ts",
+            "src/main/runtime/runtime-file-command-surface.ts",
+            "src/main/runtime/runtime-file-commands-mobile-file-list-limit.ts",
+            "src/main/runtime/runtime-file-commands-resolve-allowed-terminal-artifact-path.ts",
+            "src/shared/rpc-contract/files-params.ts",
+            "src/shared/rpc-contract/rpc-params-catalog.generated.ts",
+            "src/renderer/src/runtime/runtime-file-client-types.ts",
+            "src/renderer/src/runtime/runtime-file-read-client.ts",
+            "src/renderer/src/runtime/runtime-file-mutation-client.ts",
+            "src/renderer/src/store/slices/editor/types/open-file.ts",
+            "src/renderer/src/lib/editor-file-operation-owner.ts",
+            "src/renderer/src/components/editor/useEditorPanelFileContentLoader.ts",
+            "src/renderer/src/components/tab-bar/tab-create-entry-absolute-file.ts",
+            "src/renderer/src/components/tab-bar/tab-create-entry-action.ts",
+            "src/renderer/src/components/tab-bar/tab-create-entry-action.test.ts",
+            "src/renderer/src/components/tab-bar/**",
+            "src/renderer/src/components/tab-entry-remote-path/**",
+            "src/renderer/src/i18n/locales/*.json",
+            ".gitignore",
+            "config/architecture-policies.jsonc",
+            "AGENTS.md",
+            "config/fork-features.jsonc",
+            "config/scripts/check-fork-features.mjs",
+            "config/scripts/check-fork-docs.mjs",
+            "config/scripts/report-upstream-seam-changes.mjs",
+            "config/scripts/sync-upstream.mjs",
+            "docs/reference/fork-maintenance.md",
+            "docs/issue/**",
+            "docs/maintenance/**"
+          ],
+          "message": "Change is outside the remote host path open feature and its journal."
         }
       ]
     },

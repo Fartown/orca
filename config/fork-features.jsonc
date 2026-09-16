@@ -1132,6 +1132,103 @@
       ]
     },
     {
+      "id": "remote-host-path-open",
+      "title": "远程主机绝对路径打开：配对客户端可打开主机上 worktree 之外的文件",
+      "goal": "主机为任意绝对路径发放 grant，客户端按 grant 读写，不新增 wire 方法之外的协议面",
+      "journal": "docs/issue/远程主机绝对路径打开/journal.md",
+      "dependsOn": [
+        "src/renderer/src/runtime/runtime-rpc-client.ts",
+        "src/renderer/src/runtime/runtime-worktree-selector.ts",
+        "src/shared/cross-platform-path.ts",
+        "src/shared/runtime-types.ts"
+      ],
+      "policyId": "remote-host-path-open",
+      "ownedPaths": [
+        "src/main/remote-host-path-grant/**",
+        "src/renderer/src/runtime-host-path/**",
+        "docs/issue/远程主机绝对路径打开/**"
+      ],
+      "requiredFiles": [
+        "src/main/remote-host-path-grant/host-path-grant-policy.ts",
+        "src/renderer/src/runtime-host-path/host-path-file-client.ts"
+      ],
+      "seams": [
+        {
+          "file": "src/main/runtime/rpc/methods/files.ts",
+          "mustContain": "files.grantHostPath",
+          "why": "the host exposes the grant request as an RPC (REQ-801)"
+        },
+        {
+          "file": "src/main/runtime/runtime-file-command-surface.ts",
+          "mustContain": "grantHostPath",
+          "why": "the command surface forwards it to the runtime service (REQ-801)"
+        },
+        {
+          "file": "src/main/runtime/runtime-file-commands-resolve-allowed-terminal-artifact-path.ts",
+          "mustContain": "grantHostPath",
+          "why": "the grant is minted beside the provenance-backed ones it deliberately skips (REQ-801, REQ-802)"
+        },
+        {
+          "file": "src/main/runtime/runtime-file-commands-mobile-file-list-limit.ts",
+          "mustContain": "'host-path'",
+          "why": "the grant store records which grants skipped provenance (REQ-802)"
+        },
+        {
+          "file": "src/shared/rpc-contract/files-params.ts",
+          "mustContain": "HostPathGrant",
+          "why": "the request carries an absolute path instead of a worktree-relative one (REQ-801)"
+        },
+        {
+          "file": "src/renderer/src/runtime/runtime-file-client-types.ts",
+          "mustContain": "hostPathGrant",
+          "why": "file operations carry the grant that addresses the file (REQ-803)"
+        },
+        {
+          "file": "src/renderer/src/runtime/runtime-file-read-client.ts",
+          "mustContain": "readHostPathFile",
+          "why": "reads of a granted path go to the host, not this machine (REQ-803)"
+        },
+        {
+          "file": "src/renderer/src/runtime/runtime-file-mutation-client.ts",
+          "mustContain": "writeHostPathFile",
+          "why": "saves of a granted path go to the host (REQ-804)"
+        },
+        {
+          "file": "src/renderer/src/store/slices/editor/types/open-file.ts",
+          "mustContain": "runtimeHostPathGrant",
+          "why": "the tab remembers the grant so later reads and saves keep the same address (REQ-803)"
+        },
+        {
+          "file": "src/renderer/src/lib/editor-file-operation-owner.ts",
+          "mustContain": "hostPathGrant",
+          "why": "the editor's file operation context carries the tab's grant (REQ-803)"
+        },
+        {
+          "file": "src/renderer/src/components/editor/useEditorPanelFileContentLoader.ts",
+          "mustContain": "runtimeHostPathGrant",
+          "why": "a granted tab is exempt from the external-local-file refusal (REQ-803)"
+        },
+        {
+          "file": "src/renderer/src/components/tab-bar/tab-create-entry-absolute-file.ts",
+          "mustContain": "requestHostPathGrant",
+          "why": "the omnibox asks for a grant instead of a stat it cannot make (REQ-801)"
+        },
+        {
+          "file": "src/renderer/src/components/tab-bar/tab-create-entry-action.ts",
+          "mustContain": "requestHostPathGrant",
+          "why": "the real grant request is injected here (REQ-801)"
+        }
+      ],
+      "tests": [
+        "src/main/remote-host-path-grant/host-path-grant-policy.test.ts",
+        "src/renderer/src/runtime-host-path/host-path-file-client.test.ts",
+        "src/renderer/src/components/tab-bar/tab-create-entry-action.test.ts"
+      ],
+      "checks": [
+        "pnpm exec vitest run --config config/vitest.config.ts src/main/remote-host-path-grant src/renderer/src/runtime-host-path src/renderer/src/components/tab-bar"
+      ]
+    },
+    {
       "id": "mobile-session-continuation",
       "title": "移动端在新会话中继续：claude / codex 终端通道",
       "goal": "移动端从当前 claude / codex 会话新建续接会话，复用主机既有 RPC，不改 wire",

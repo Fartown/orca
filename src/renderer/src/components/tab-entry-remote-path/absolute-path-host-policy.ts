@@ -1,7 +1,6 @@
 import { getFolderWorkspaceConnectionId } from '@/lib/folder-workspace-connection'
 import { getRendererAppPlatform } from '@/lib/renderer-app-platform'
 import { getResolvedExecutionHostIdForWorktree } from '@/lib/resolved-worktree-execution-host'
-import type { RuntimeFileOperationArgs } from '@/runtime/runtime-file-client'
 import type { useAppStore } from '@/store'
 import { parseWorkspaceKey } from '../../../../shared/workspace-scope'
 import { getTabEntryFileOperationContext } from '../tab-bar/tab-create-entry-local-path'
@@ -41,12 +40,6 @@ function getClientPathPlatform(): TabEntryLocalPlatform {
   return getRendererAppPlatform() === 'win32' ? 'windows' : 'posix'
 }
 
-function isSavedRuntimeEnvironment(state: AppState, environmentId: string): boolean {
-  return (state.runtimeEnvironments ?? []).some(
-    (environment) => environment.id.trim() === environmentId
-  )
-}
-
 export function resolveTabEntryAbsolutePathHostPolicy(
   state: AppState,
   worktreeId: string
@@ -74,15 +67,7 @@ export function resolveTabEntryAbsolutePathHostPolicy(
   }
   const environmentId = context.settings?.activeRuntimeEnvironmentId?.trim()
   if (environmentId) {
-    if (isSavedRuntimeEnvironment(state, environmentId)) {
-      return { kind: 'runtime', environmentId, worktreePath: worktree.path, pathPlatform: 'posix' }
-    }
-    // Why: routing can still name an environment the catalog never held or has already dropped.
-    // No `files.*` call can reach such an id, so believing it only mislabels a workspace as
-    // remote — but an unhydrated catalog is not yet evidence of absence, so wait for it first.
-    if (state.runtimeEnvironmentCatalogHydrated !== true) {
-      return BLOCKED_UNRESOLVED
-    }
+    return { kind: 'runtime', environmentId, worktreePath: worktree.path, pathPlatform: 'posix' }
   }
   const connectionId = context.connectionId?.trim()
   if (connectionId) {
@@ -123,29 +108,6 @@ export function toTabEntryAbsolutePathContext(
     return { allowAbsolutePaths: false, localPlatform: getClientPathPlatform() }
   }
   return { allowAbsolutePaths: true, localPlatform: policy.pathPlatform }
-}
-
-/**
- * The file-operation context that names the same host the policy resolved. Routing can hand back
- * an environment id the catalog does not know; left in the context it would address every request
- * to a runtime that cannot answer. A blocked policy resolved no host, so it changes nothing.
- */
-export function toTabEntryAbsolutePathOperationContext(
-  context: RuntimeFileOperationArgs,
-  policy: TabEntryAbsolutePathHostPolicy
-): RuntimeFileOperationArgs {
-  const environmentId = policy.kind === 'runtime' ? policy.environmentId : null
-  if (
-    policy.kind === 'blocked' ||
-    !context.settings ||
-    (context.settings.activeRuntimeEnvironmentId?.trim() || null) === environmentId
-  ) {
-    return context
-  }
-  return {
-    ...context,
-    settings: { ...context.settings, activeRuntimeEnvironmentId: environmentId }
-  }
 }
 
 type OwnerSlices = Pick<

@@ -1,3 +1,6 @@
+import { callRuntimeRpc, getActiveRuntimeTarget } from '@/runtime/runtime-rpc-client'
+import { toRuntimeWorktreeSelector } from '@/runtime/runtime-worktree-selector'
+
 /**
  * Reading and writing a host file the client named by absolute path.
  *
@@ -121,4 +124,30 @@ export async function withFreshHostPathGrant<T>(
     const replacement = await regrant()
     return { result: await run(replacement), grant: replacement }
   }
+}
+
+/**
+ * The grant request bound to the live runtime target the context names.
+ *
+ * Why it lives here and not at the call site: the tab-entry action is at its line budget, and this
+ * is feature code — it belongs with the rest of the grant handling.
+ */
+export async function requestHostPathGrantForContext(
+  context: {
+    settings?: Parameters<typeof getActiveRuntimeTarget>[0]
+    worktreeId?: string | null
+  },
+  absolutePath: string
+): Promise<RuntimeHostPathGrant> {
+  const target = getActiveRuntimeTarget(context.settings)
+  if (target.kind !== 'environment' || !context.worktreeId) {
+    // Why this wording: "no runtime here" and "that path is not reachable" are the same thing from
+    // where the reader sits.
+    throw new Error(`File not found: ${absolutePath}`)
+  }
+  return requestHostPathGrant(
+    (method, params) => callRuntimeRpc(target, method, params, { timeoutMs: 15_000 }),
+    toRuntimeWorktreeSelector(context.worktreeId),
+    absolutePath
+  )
 }

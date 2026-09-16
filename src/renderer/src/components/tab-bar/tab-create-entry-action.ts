@@ -25,13 +25,13 @@ import {
   type TabEntryOptionsContext
 } from './tab-create-entry-classifier'
 import { openAbsoluteTabEntryFile } from './tab-create-entry-absolute-file'
+import { requestHostPathGrantForContext } from '../../runtime-host-path/host-path-file-client'
 import { getTabEntryFileOperationContext } from './tab-create-entry-local-path'
 import {
   isSameTabEntryAbsolutePathHost,
   resolveTabEntryAbsolutePathHostPolicy,
   TAB_ENTRY_ABSOLUTE_PATH_HOST_CHANGED_MESSAGE,
-  toTabEntryAbsolutePathContext,
-  toTabEntryAbsolutePathOperationContext
+  toTabEntryAbsolutePathContext
 } from '../tab-entry-remote-path/absolute-path-host-policy'
 import type { TabEntryLocalPlatform } from './tab-create-entry-path-validation'
 export {
@@ -70,6 +70,10 @@ export type TabEntryOperations = {
   statRuntimePath: typeof statRuntimePath
   authorizeExternalPath: (args: { targetPath: string }) => Promise<void>
   assertAbsolutePathAllowed: () => void
+  requestHostPathGrant: (
+    context: RuntimeFileOperationArgs,
+    absolutePath: string
+  ) => Promise<{ grantId: string; absolutePath: string }>
 }
 
 type OpenTabEntryWithOperationsArgs = {
@@ -277,12 +281,7 @@ export async function openTabBarEntry(args: TabCreateEntryArgs): Promise<void> {
     throw new Error('No active worktree.')
   }
   const hostPolicy = resolveTabEntryAbsolutePathHostPolicy(state, args.worktreeId)
-  // Why realigned: routing can name a runtime environment the catalog does not know, and every
-  // file call carrying that id addresses a host that cannot answer.
-  const runtimeContext = toTabEntryAbsolutePathOperationContext(
-    getTabEntryFileOperationContext(state, args.worktreeId, worktree.path),
-    hostPolicy
-  )
+  const runtimeContext = getTabEntryFileOperationContext(state, args.worktreeId, worktree.path)
   const { allowAbsolutePaths, localPlatform } = toTabEntryAbsolutePathContext(hostPolicy)
   await openTabEntryWithOperations({
     query: args.query,
@@ -302,6 +301,7 @@ export async function openTabBarEntry(args: TabCreateEntryArgs): Promise<void> {
       openFile: state.openFile,
       statRuntimePath,
       authorizeExternalPath: window.api.fs.authorizeExternalPath,
+      requestHostPathGrant: requestHostPathGrantForContext,
       assertAbsolutePathAllowed: () => {
         // Why: the owning host is re-resolved after every await so a workspace that moved
         // between hosts mid-open fails closed instead of opening on the wrong machine.
