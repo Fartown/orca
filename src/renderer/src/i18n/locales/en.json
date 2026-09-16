@@ -18103,6 +18103,7 @@
       "workspace": "Workspace",
       "pickWorkspace": "Pick a workspace",
       "executionLocal": "Runs on this machine.",
+      "executionHost": "Runs on the workspace’s machine.",
       "session": "Agent session",
       "pickSession": "Pick a running agent session",
       "noSessions": "You can draft the document now. Start and select an agent session before execution.",
@@ -18155,7 +18156,8 @@
       "agentUnknown": "agent status unknown",
       "versions": "Definition revisions ({{value0}})",
       "revisionLabel": "Revision {{value0}}",
-      "currentRevision": "current"
+      "currentRevision": "current",
+      "offlineSnapshot": "Connection lost. Showing the last observed state; current processes are unverifiable."
     },
     "list": {
       "hostUnavailable": "Goals cannot be listed on this host",

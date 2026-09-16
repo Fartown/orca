@@ -1,4 +1,4 @@
-import type { AgentStatusIpcPayload } from '../../shared/agent-status-types'
+import type { GoalTurnRow } from './goal-turn-evidence'
 import {
   goalObjectivePreview,
   type GoalCompletion,
@@ -13,15 +13,15 @@ import {
   type LegacyGoalRecord
 } from '../../shared/goals/goal-store-records'
 import type { PtyLivenessVerdict } from '../../shared/pty-liveness-verdict'
-import type { RuntimeTerminalShow } from '../../shared/runtime-terminal-contracts'
+import type { GoalTerminalSnapshot } from '../../shared/goals/goal-host-facts'
 import { projectTurnEvidence, type GoalTurnEvidence } from './goal-turn-evidence'
 
 export type GoalTerminalFacts = {
-  showTerminal(handle: string): Promise<RuntimeTerminalShow>
+  showTerminal(handle: string): Promise<GoalTerminalSnapshot>
 }
 
 export type GoalHookFacts = {
-  getStatusSnapshotForPane(paneKey: string): AgentStatusIpcPayload[]
+  getStatusSnapshotForPane(paneKey: string): GoalTurnRow[]
 }
 
 export type GoalProjectionSources = {
@@ -143,7 +143,7 @@ export async function observeTerminal(
   record: GoalRecord,
   terminals: GoalTerminalFacts
 ): Promise<GoalTerminalObservation> {
-  let show: RuntimeTerminalShow
+  let show: GoalTerminalSnapshot
   try {
     show = await terminals.showTerminal(record.binding.terminal)
   } catch (error) {

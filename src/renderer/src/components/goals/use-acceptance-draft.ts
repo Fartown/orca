@@ -1,5 +1,4 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { goalRuntimeClient } from '@/goals/goal-runtime-client'
 import { newClientOperationId } from '@/goals/goal-client-operation'
 import type { GoalEditorDraftSession } from '@/goals/goal-editor-draft-session'
 import type { GoalAcceptanceDraft } from '../../../../shared/goals/goal-acceptance-draft-contract'
@@ -32,7 +31,7 @@ export function useAcceptanceDraft(
       }
       polling = true
       try {
-        const latest = await goalRuntimeClient.getAcceptanceDraft(attemptId)
+        const latest = await session.client.getAcceptanceDraft(attemptId)
         if (disposed) {
           return
         }
@@ -107,7 +106,7 @@ export function useAcceptanceDraft(
         }))
       }
       await session.flush()
-      const next = await goalRuntimeClient.draftAcceptance({ draftId, ...request })
+      const next = await session.client.draftAcceptance({ draftId, ...request })
       if (currentSession.current === session) {
         setResult(next)
       }
@@ -119,11 +118,11 @@ export function useAcceptanceDraft(
     }
   }
   const cancel = async (): Promise<void> => {
-    if (!attemptId) {
+    if (!attemptId || !session) {
       return
     }
     try {
-      setResult(await goalRuntimeClient.cancelAcceptanceDraft(attemptId))
+      setResult(await session.client.cancelAcceptanceDraft(attemptId))
       setError(null)
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : String(caught))

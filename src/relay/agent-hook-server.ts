@@ -115,6 +115,8 @@ export class RelayAgentHookServer {
     })
   }
 
+  getStatusForPane = (key: string) => this.state.lastStatusByPaneKey.get(key)
+
   async start(options: RelayHookServerStartOptions = {}): Promise<void> {
     if (this.server) {
       return
@@ -326,10 +328,9 @@ export class RelayAgentHookServer {
     // Why: keep PostCompact identity in the replay cache so the client can re-run ownership when
     // it reconnects. Stripping it would let a cold relay replay a completion as an ordinary `done`
     // row and resurrect a pane that the client had already retired.
-    const cachedEvent = event
     // Why: delete-then-set makes Map insertion order = recency, so the cap below evicts the longest-idle pane.
     this.state.lastStatusByPaneKey.delete(event.paneKey)
-    this.state.lastStatusByPaneKey.set(event.paneKey, cachedEvent)
+    this.state.lastStatusByPaneKey.set(event.paneKey, event)
     recordClaudeSessionActivity(this.state, event, options.isReplay || event.isReplay)
     this.lastEnvelopeMetaByPaneKey.delete(event.paneKey)
     this.lastEnvelopeMetaByPaneKey.set(event.paneKey, { source, env, version })

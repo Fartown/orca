@@ -1,3 +1,4 @@
+import { registerRelayGoals, projectRelayGoalHookFacts } from '../main/goals/goal-relay-service'
 import type { RelayDispatcher } from './dispatcher'
 import type { PtyEnvAugmenter, PtyHandler } from './pty-handler'
 import { RelayAgentHookServer } from './agent-hook-server'
@@ -19,6 +20,7 @@ import { relayLogLine } from './relay-diagnostic-log'
 import { registerManagedHookInstaller } from './managed-hook-installer'
 
 export class RelayAgentHookRuntime {
+  private stopGoals: (() => void) | null = null
   private readonly hookServer: RelayAgentHookServer
   private readonly pluginOverlay = new PluginOverlayManager()
 
@@ -37,6 +39,10 @@ export class RelayAgentHookRuntime {
     })
   }
 
+  getStatusSnapshotForPane(paneKey: string) {
+    return projectRelayGoalHookFacts(this.hookServer.getStatusForPane(paneKey))
+  }
+
   async start(): Promise<void> {
     try {
       await this.hookServer.start({ publishEndpoint: false })
@@ -47,6 +53,11 @@ export class RelayAgentHookRuntime {
     }
     this.registerPtyEnvironment()
     this.registerHandlers()
+    this.stopGoals = registerRelayGoals(
+      this.dispatcher,
+      this,
+      Object.keys(this.hookServer.buildPtyEnv()).length > 0
+    )
   }
 
   publishEndpointFile(): void {
@@ -54,6 +65,7 @@ export class RelayAgentHookRuntime {
   }
 
   stop(): void {
+    this.stopGoals?.()
     this.hookServer.stop()
   }
 

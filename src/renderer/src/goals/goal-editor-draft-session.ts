@@ -2,7 +2,7 @@ import type {
   GoalEditorDraftContent,
   GoalEditorDraftRecord
 } from '../../../shared/goals/goal-editor-draft-contract'
-import { goalRuntimeClient } from './goal-runtime-client'
+import { goalRuntimeClient, type GoalRuntimeClient } from './goal-runtime-client'
 
 export type DraftSessionSnapshot = {
   content: GoalEditorDraftContent
@@ -21,7 +21,10 @@ export class GoalEditorDraftSession {
   private snapshot: DraftSessionSnapshot
   readonly id: string
 
-  constructor(record: GoalEditorDraftRecord) {
+  constructor(
+    record: GoalEditorDraftRecord,
+    readonly client: GoalRuntimeClient = goalRuntimeClient
+  ) {
     this.id = record.editorDraftId
     this.revision = record.revision
     const {
@@ -72,7 +75,7 @@ export class GoalEditorDraftSession {
   private async saveLatest(): Promise<void> {
     while (this.savedVersion !== this.version) {
       const version = this.version
-      const result = await goalRuntimeClient.saveEditorDraft({
+      const result = await this.client.saveEditorDraft({
         editorDraftId: this.id,
         expectedRevision: this.revision,
         content: this.snapshot.content
@@ -94,20 +97,21 @@ export class GoalEditorDraftSession {
 
 const sessions = new Map<string, GoalEditorDraftSession>()
 export async function openGoalDraftSession(
-  recordOrId: GoalEditorDraftRecord | string
+  recordOrId: GoalEditorDraftRecord | string,
+  client: GoalRuntimeClient = goalRuntimeClient
 ): Promise<GoalEditorDraftSession> {
   const id = typeof recordOrId === 'string' ? recordOrId : recordOrId.editorDraftId
-  const cached = sessions.get(id)
+  const key = `${client.routeExecutionHostId}:${id}`
+  const cached = sessions.get(key)
   if (cached) {
     return cached
   }
-  const record =
-    typeof recordOrId === 'string' ? await goalRuntimeClient.getEditorDraft(id) : recordOrId
+  const record = typeof recordOrId === 'string' ? await client.getEditorDraft(id) : recordOrId
   if (!record) {
     throw new Error('The saved goal draft could not be found.')
   }
-  const session = new GoalEditorDraftSession(record)
-  sessions.set(id, session)
+  const session = new GoalEditorDraftSession(record, client)
+  sessions.set(key, session)
   if (record.revision === 0) {
     session.change((content) => content)
   }

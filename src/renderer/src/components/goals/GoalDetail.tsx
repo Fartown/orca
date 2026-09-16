@@ -16,7 +16,7 @@ import type {
   GoalSpecRevision
 } from '../../../../shared/goals/goal-control-contract'
 import { requestGoalDetailRefresh } from '@/goals/GoalDomainSyncGate'
-import { goalRuntimeClient } from '@/goals/goal-runtime-client'
+import { getGoalRuntimeClient } from '@/goals/goal-runtime-client'
 import { goalDomainStore } from '@/goals/goals-domain-store'
 import { findPaneForTerminalHandle } from '@/goals/goal-session-target'
 import {
@@ -30,6 +30,7 @@ import { GoalControls } from './GoalControls'
 import { GoalProgress } from './GoalProgress'
 
 export function GoalDetail({ goalId }: { goalId: string }): React.JSX.Element {
+  const offline = useGoalDomainStore((s) => s.status === 'offline')
   const detail = useGoalDomainStore((s) => s.detailsById[goalId])
   const summary = useGoalDomainStore((s) => s.summaries.find((item) => item.goalId === goalId))
 
@@ -80,8 +81,16 @@ export function GoalDetail({ goalId }: { goalId: string }): React.JSX.Element {
                 <p className="text-[11px] text-muted-foreground">{goalCompletionLabel(current)}</p>
               ) : null}
             </section>
-            <BindingSection detail={current} />
-            {detail ? <GoalControls detail={detail} /> : null}
+            {offline ? (
+              <p className="text-[11px] text-muted-foreground">
+                {translate(
+                  'goals.detail.offlineSnapshot',
+                  'Connection lost. Showing the last observed state; current processes are unverifiable.'
+                )}
+              </p>
+            ) : null}
+            <BindingSection detail={current} offline={offline} />
+            {detail ? <GoalControls detail={detail} unavailable={offline} /> : null}
             {detail?.spec.acceptanceDocument ? (
               <section className="space-y-2">
                 <h3 className="text-xs font-semibold">
@@ -128,9 +137,11 @@ export function GoalDetail({ goalId }: { goalId: string }): React.JSX.Element {
 }
 
 function BindingSection({
-  detail
+  detail,
+  offline
 }: {
   detail: Pick<GoalDetailRecord, 'binding' | 'workspace' | 'agentStatus' | 'terminal'>
+  offline: boolean
 }): React.JSX.Element {
   const agentStatusByPaneKey = useAppStore((s) => s.agentStatusByPaneKey)
   const openSession = (): void => {
@@ -158,7 +169,11 @@ function BindingSection({
           {basename(detail.workspace.path) || detail.workspace.path}
         </span>
         <span aria-hidden="true">·</span>
-        <span className="shrink-0">{terminalStatusLabel(detail)}</span>
+        <span className="shrink-0">
+          {offline
+            ? translate('goals.detail.terminalUnverifiable', 'terminal unverifiable')
+            : terminalStatusLabel(detail)}
+        </span>
         <Button type="button" size="xs" variant="ghost" className="ml-auto" onClick={openSession}>
           <ExternalLink />
           {translate('goals.detail.openSession', 'Open session')}
@@ -203,7 +218,7 @@ function VersionsSection({
       return
     }
     let disposed = false
-    void goalRuntimeClient
+    void getGoalRuntimeClient()
       .versions(goalId)
       .then((items) => {
         if (!disposed) {

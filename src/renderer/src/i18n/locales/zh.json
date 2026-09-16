@@ -15296,6 +15296,7 @@
       "workspace": "工作区",
       "pickWorkspace": "选择工作区",
       "executionLocal": "在本机执行。",
+      "executionHost": "在工作区所属机器上执行。",
       "session": "Agent 会话",
       "pickSession": "选择一个正在运行的 agent 会话",
       "noSessions": "可以先生成文档。开始执行前，再启动并选择一个 Agent 会话。",
@@ -15348,7 +15349,8 @@
       "agentUnknown": "agent 状态未知",
       "versions": "定义版本({{value0}})",
       "revisionLabel": "版本 {{value0}}",
-      "currentRevision": "当前"
+      "currentRevision": "当前",
+      "offlineSnapshot": "连接已断开，以下为上次观测的状态；当前进程不可验证。"
     },
     "list": {
       "hostUnavailable": "此主机上无法列出目标",

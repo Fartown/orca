@@ -17,60 +17,68 @@ const ROOT = join(import.meta.dirname, '..', '..')
 const ENTRY = join(ROOT, 'goal-mode', 'cli', 'goal-driver-entry.mjs')
 const JUDGE_ENTRY = join(ROOT, 'goal-mode', 'cli', 'acceptance-judge.mjs')
 const OUT_DIR = process.env.ORCA_GOAL_DRIVER_OUT_DIR ?? join(ROOT, 'out', 'goal-driver')
-const OUT_FILE = join(OUT_DIR, 'goal-driver.js')
-const JUDGE_OUT_FILE = join(OUT_DIR, 'acceptance-judge.js')
-const DRAFT_OUT_FILE = join(OUT_DIR, 'acceptance-draft.js')
-const DRIVER_VERSION = '0.1.0'
+export async function buildGoalDriverBundles(OUT_DIR) {
+  const OUT_FILE = join(OUT_DIR, 'goal-driver.js')
+  const JUDGE_OUT_FILE = join(OUT_DIR, 'acceptance-judge.js')
+  const DRAFT_OUT_FILE = join(OUT_DIR, 'acceptance-draft.js')
+  const DRIVER_VERSION = '0.1.0'
 
-rmSync(OUT_DIR, { recursive: true, force: true })
-mkdirSync(OUT_DIR, { recursive: true })
+  mkdirSync(OUT_DIR, { recursive: true })
 
-await build({
-  entryPoints: [ENTRY],
-  bundle: true,
-  platform: 'node',
-  target: 'node20',
-  format: 'cjs',
-  outfile: OUT_FILE,
-  external: ['electron'],
-  // Why: prompts/*.md become strings; continuation-prompt.mjs receives them via setTemplateSource.
-  loader: { '.md': 'text' },
-  sourcemap: false,
-  minify: true,
-  define: { 'process.env.NODE_ENV': '"production"' }
-})
+  await build({
+    entryPoints: [ENTRY],
+    bundle: true,
+    platform: 'node',
+    target: 'node18',
+    format: 'cjs',
+    outfile: OUT_FILE,
+    external: ['electron'],
+    // Why: prompts/*.md become strings; continuation-prompt.mjs receives them via setTemplateSource.
+    loader: { '.md': 'text' },
+    sourcemap: false,
+    minify: true,
+    define: { 'process.env.NODE_ENV': '"production"' }
+  })
 
-// Why a second bundle: the driver launches the item-mode judge as its own process
-// (config/scripts/build-goal-driver.mjs keeps both in one directory, see goal-record-projection.mjs).
-await build({
-  entryPoints: [JUDGE_ENTRY],
-  bundle: true,
-  platform: 'node',
-  target: 'node20',
-  format: 'cjs',
-  outfile: JUDGE_OUT_FILE,
-  external: ['electron'],
-  sourcemap: false,
-  minify: true,
-  define: { 'process.env.NODE_ENV': '"production"' }
-})
+  // Why a second bundle: the driver launches the item-mode judge as its own process
+  // (config/scripts/build-goal-driver.mjs keeps both in one directory, see goal-record-projection.mjs).
+  await build({
+    entryPoints: [JUDGE_ENTRY],
+    bundle: true,
+    platform: 'node',
+    target: 'node18',
+    format: 'cjs',
+    outfile: JUDGE_OUT_FILE,
+    external: ['electron'],
+    sourcemap: false,
+    minify: true,
+    define: { 'process.env.NODE_ENV': '"production"' }
+  })
 
-await build({
-  entryPoints: [join(ROOT, 'src/main/goals/goal-acceptance-draft-entry.ts')],
-  bundle: true,
-  platform: 'node',
-  target: 'node20',
-  format: 'cjs',
-  outfile: DRAFT_OUT_FILE,
-  external: ['electron'],
-  minify: true
-})
+  await build({
+    entryPoints: [join(ROOT, 'src/main/goals/goal-acceptance-draft-entry.ts')],
+    bundle: true,
+    platform: 'node',
+    target: 'node18',
+    format: 'cjs',
+    outfile: DRAFT_OUT_FILE,
+    external: ['electron'],
+    minify: true
+  })
 
-const hash = createHash('sha256')
-  .update(readFileSync(OUT_FILE))
-  .update(readFileSync(JUDGE_OUT_FILE))
-  .update(readFileSync(DRAFT_OUT_FILE))
-  .digest('hex')
-  .slice(0, 12)
-writeFileSync(join(OUT_DIR, '.version'), `${DRIVER_VERSION}+${hash}`)
-console.log(`Built goal driver → ${OUT_FILE}\nBuilt acceptance judge → ${JUDGE_OUT_FILE}`)
+  const hash = createHash('sha256')
+    .update(readFileSync(OUT_FILE))
+    .update(readFileSync(JUDGE_OUT_FILE))
+    .update(readFileSync(DRAFT_OUT_FILE))
+    .digest('hex')
+    .slice(0, 12)
+  writeFileSync(join(OUT_DIR, '.version'), `${DRIVER_VERSION}+${hash}`)
+  console.log(`Built goal driver → ${OUT_FILE}\nBuilt acceptance judge → ${JUDGE_OUT_FILE}`)
+}
+if (
+  process.argv[1] &&
+  import.meta.url === (await import('node:url')).pathToFileURL(process.argv[1]).href
+) {
+  rmSync(OUT_DIR, { recursive: true, force: true })
+  await buildGoalDriverBundles(OUT_DIR)
+}

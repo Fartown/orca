@@ -212,7 +212,12 @@
         "src/shared/child-process/run-process.ts",
         "src/shared/pty-liveness-verdict.ts",
         "src/shared/runtime-terminal-contracts.ts",
-        "src/shared/sha256.ts"
+        "src/shared/sha256.ts",
+        "src/relay/dispatcher.ts",
+        "src/main/runtime/orca-runtime.ts",
+        "src/main/ssh/ssh-target-registry.ts",
+        "src/renderer/src/lib/worktree-runtime-owner.ts",
+        "src/shared/execution-host.ts"
       ],
       "policyId": "goals-native-feature",
       "ownedPaths": [
@@ -339,6 +344,46 @@
           "file": "src/renderer/src/i18n/locales/zh.json",
           "mustContain": "\"goals\":",
           "why": "the goals copy namespace exists in the catalog"
+        },
+        {
+          "file": "src/relay/relay-agent-hook-runtime.ts",
+          "mustContain": "getStatusSnapshotForPane",
+          "why": "Goal execution, documents and validation run on their owning SSH or runtime host"
+        },
+        {
+          "file": "src/relay/agent-hook-server.ts",
+          "mustContain": "getStatusForPane",
+          "why": "Goal execution, documents and validation run on their owning SSH or runtime host"
+        },
+        {
+          "file": "src/shared/relay-artifacts.ts",
+          "mustContain": "goal-driver.js",
+          "why": "Goal execution, documents and validation run on their owning SSH or runtime host"
+        },
+        {
+          "file": "config/scripts/build-relay.mjs",
+          "mustContain": "buildGoalDriverBundles",
+          "why": "Goal execution, documents and validation run on their owning SSH or runtime host"
+        },
+        {
+          "file": "src/main/orcad/orcad-entry.ts",
+          "mustContain": "registerRuntimeGoals",
+          "why": "Goal execution, documents and validation run on their owning SSH or runtime host"
+        },
+        {
+          "file": "config/scripts/build-orcad.mjs",
+          "mustContain": "buildGoalDriverBundles",
+          "why": "Goal execution, documents and validation run on their owning SSH or runtime host"
+        },
+        {
+          "file": "src/shared/orcad-artifacts.ts",
+          "mustContain": "goal-driver.js",
+          "why": "Goal execution, documents and validation run on their owning SSH or runtime host"
+        },
+        {
+          "file": "src/relay/dispatcher-rpc-routing.ts",
+          "mustContain": "requestClient(",
+          "why": "Goal execution, documents and validation run on their owning SSH or runtime host"
         }
       ],
       "tests": [

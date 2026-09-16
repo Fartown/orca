@@ -1,3 +1,4 @@
+import type { ExecutionHostId } from '../../../shared/execution-host'
 import { createStore } from 'zustand/vanilla'
 import type {
   GoalDetail,
@@ -30,6 +31,8 @@ export type GoalEditorPrefill = {
 }
 
 export type GoalDomainState = {
+  routeExecutionHostId: ExecutionHostId
+  setRoute: (routeExecutionHostId: ExecutionHostId) => void
   status: GoalRouteStatus
   statusReason: string | null
   supports: GoalStatus['supports'] | null
@@ -65,6 +68,25 @@ export type GoalDomainState = {
 }
 
 export const goalDomainStore = createStore<GoalDomainState>((set) => ({
+  routeExecutionHostId: 'local',
+  setRoute: (routeExecutionHostId) =>
+    set((state) =>
+      state.routeExecutionHostId === routeExecutionHostId
+        ? state
+        : {
+            routeExecutionHostId,
+            status: 'idle',
+            statusReason: null,
+            supports: null,
+            summaries: [],
+            detailsById: {},
+            listObservedAt: null,
+            selectedGoalId: null,
+            rebindGoalId: null,
+            pendingOperations: {},
+            editor: { open: false, prefill: null }
+          }
+    ),
   status: 'idle',
   statusReason: null,
   supports: null,

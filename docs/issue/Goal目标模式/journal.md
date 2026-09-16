@@ -3,7 +3,7 @@ title: Goal 目标模式
 slug: Goal目标模式
 status: testing
 created: 2026-09-05
-updated: 2026-09-13
+updated: 2026-09-16
 external_ids: []
 ---
 
@@ -17,7 +17,7 @@ external_ids: []
 | 交互         | -                                                                      | not-required | 本轮交互示意内嵌方案；没有独立设计事实源，不另建 design 文档        |
 | 方案         | [Goal 目标管理与交互闭环方案](solutions/Goal目标管理与交互闭环方案.md) | completed    | 唯一实施主入口；WP1～WP4 已落地；未回推上游                         |
 | 历史实现基线 | [Goal 目标模式技术说明](solutions/Goal目标模式技术说明.md)             | superseded   | 保留旧 CLI/插件实现事实与差距；补充宿主命令已支持带参的核对修正     |
-| 测试用例     | [功能测试](tests/cases/Goal功能测试.md)                                | reviewing    | TC-344～TC-356 覆盖验收文档、侧栏、异步草稿与文件查看，执行结果见 Test Run          |
+| 测试用例     | [功能测试](tests/cases/Goal功能测试.md)                                | reviewing    | TC-344～TC-361 覆盖验收文档、异步草稿、文件查看与 SSH，执行结果见 Test Run          |
 | 调研         | -                                                                      | not-required | 当前源码事实已归并到技术正文，本次不重复调研                        |
 | 历史调研     | [Codex Goal 历史机制对照](research/Codex-Goal历史机制对照.md)          | superseded   | 保留冻结 Codex SHA 的完整参考，不作为当前 Orca 事实                 |
 | 历史测试执行 | [验收文档闭环验证](tests/runs/2026-09-08-验收文档闭环.md)              | reviewing    | 自动化、真实守卫及隐藏 Electron 文档流程已验证                      |
@@ -74,6 +74,16 @@ external_ids: []
 - 影响范围：需求、技术说明、测试规格及本需求的执行证据。
 
 ## 3. 开发记录
+
+### 2026-09-16 SSH 执行主机支持修复
+
+- 本轮目标：修复 REQ-111 的远程执行遗漏，用户明确要求远程机器能够使用 Goal。
+- 完成内容：补入 SSH relay 上的既有 GoalControlService、远端打包驱动/生成器/守卫、界面按工作区主机路由和草稿归属、远程 Markdown 文件查看；断联保持不可验证而不认定退出。
+- 代码或文档变更：独立 `feat/goal-remote-host` 分支；沿用 Goal 状态机、操作收据、文件存储、公共终端 CLI 与 SSH RPC；补充远程运行时入口和必要部署清单。orcad 组合根的旧逐字上游固定规则转为已登记接缝，既有生命周期测试及本轮真实重启验证保护服务注册；没有删除功能。
+- 验证证据：修改前隔离 App 复现 SSH 终端可用而 Goal 列表为空；最终同机真实 SSH 12/12 通过（含 folder、后台生成、断联重连、独立验收、主机隔离）。feature tests 176/176，tc、构建、架构/fork/localization 门禁通过；纯 Node orcad 注册、文档落盘与重启恢复 3/3。详见 [SSH 运行记录](tests/runs/2026-09-16-SSH执行主机.md)，原始证据位于 `.docs/goal-remote-host-ui-validation/2026-09-16/`。
+- 未解决问题：验证采用同机独立 sshd 和受控 provider，未覆盖异机 Linux、真实模型与 WSL；未更换用户 App，未更新用户远端 relay。
+- 下一步：合入最新集成分支后完成回归、提交 PR 并等待 CI；安装包交付与实际机器升级另行记录。
+
 
 ### 2026-09-13 CI 渲染期间引用写入修复
 

@@ -12,6 +12,7 @@
  * Chromium proves available at startup.
  */
 import process from 'node:process'
+import { resolveGoalDriverEntry } from '../goals/goal-driver-launch'
 import { setAppEnvironment, type AppEnvironment } from '../../shared/app-environment'
 import { setSecretStore, type SecretStore } from '../../shared/secret-store'
 import type { ServeReadiness } from '../server/serve-readiness'
@@ -271,6 +272,19 @@ async function startOrcadRuntime(
   // Why: same post-registration reconciliation `--serve` performs. Skipping it leaves
   // restored orchestration rows claiming an authority this host never took over.
   // Why before the RPC server binds: a client host attaching first would find no pages to recover.
+  const { registerRuntimeGoals } = await import('../goals/goal-runtime-registration')
+  const stopGoals = registerRuntimeGoals({
+    runtime,
+    store,
+    userDataPath: runtimeUserDataPath,
+    entryPath: resolveGoalDriverEntry({
+      env: process.env,
+      resourcesPath: undefined,
+      appPath: resolveOrcadInstallRoot()
+    })
+  })
+  registerCleanup(async () => stopGoals())
+
   runtime.rehydrateClientHostedBrowserPages()
 
   await runtime.refreshRestoredOrchestrationAuthority()

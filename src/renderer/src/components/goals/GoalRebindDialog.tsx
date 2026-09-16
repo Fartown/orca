@@ -12,7 +12,7 @@ import {
 import { translate } from '@/i18n/i18n'
 import { requestGoalDetailRefresh } from '@/goals/GoalDomainSyncGate'
 import { fingerprintPayload, newClientOperationId } from '@/goals/goal-client-operation'
-import { goalRuntimeClient } from '@/goals/goal-runtime-client'
+import { getGoalRuntimeClient } from '@/goals/goal-runtime-client'
 import { resolveGoalBindingForPane } from '@/goals/goal-session-target'
 import { goalDomainStore } from '@/goals/goals-domain-store'
 import { useGoalDomainStore } from '@/goals/use-goals-domain-store'
@@ -20,6 +20,7 @@ import { GoalTargetPicker, type GoalTargetSelection } from './GoalTargetPicker'
 
 /** Moves a paused goal onto another agent session of the same workspace; history and evidence stay. */
 export function GoalRebindDialog(): React.JSX.Element {
+  const client = getGoalRuntimeClient()
   const goalId = useGoalDomainStore((s) => s.rebindGoalId)
   const detail = useGoalDomainStore((s) => (goalId ? s.detailsById[goalId] : undefined))
   const [target, setTarget] = useState<GoalTargetSelection>({ worktreeId: null, paneKey: null })
@@ -42,7 +43,11 @@ export function GoalRebindDialog(): React.JSX.Element {
     setPending(true)
     setError(null)
     try {
-      const resolved = await resolveGoalBindingForPane(target.worktreeId, target.paneKey)
+      const resolved = await resolveGoalBindingForPane(
+        target.worktreeId,
+        target.paneKey,
+        client.target
+      )
       if (!resolved.ok) {
         setError(
           translate(
@@ -58,11 +63,14 @@ export function GoalRebindDialog(): React.JSX.Element {
         expectedRunId: detail.runId,
         binding: resolved.binding
       }
-      const operation = await goalRuntimeClient.rebind({
+      const operation = await client.rebind({
         ...envelope,
         clientOperationId: newClientOperationId(),
         payloadFingerprint: await fingerprintPayload(envelope)
       })
+      if (goalDomainStore.getState().routeExecutionHostId !== client.routeExecutionHostId) {
+        return
+      }
       if (operation.status === 'rejected') {
         setError(operation.message)
         return
@@ -72,7 +80,7 @@ export function GoalRebindDialog(): React.JSX.Element {
       } else {
         toast.success(operation.message)
       }
-      requestGoalDetailRefresh(detail.goalId)
+      requestGoalDetailRefresh(detail.goalId, client)
       close()
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : String(caught))

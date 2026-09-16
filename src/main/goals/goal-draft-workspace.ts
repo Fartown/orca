@@ -5,6 +5,8 @@ import { inferFolderWorkspacePathConnection } from '../project-groups/folder-wor
 
 type ConnectionInput = Parameters<typeof inferFolderWorkspacePathConnection>[0]
 export type GoalDraftWorkspacePorts = {
+  executionHostId?: string
+  checkDirectory?: boolean
   getFolderWorkspaces(): FolderWorkspace[]
   getRepos(): ConnectionInput['repos']
   getProjectGroups(): ConnectionInput['projectGroups']
@@ -31,21 +33,23 @@ export async function resolveGoalDraftWorkspace(
       repos: ports.getRepos(),
       projectGroups: ports.getProjectGroups()
     })
-    if (
-      connection.kind !== 'local' ||
-      (folder.executionHostId && folder.executionHostId !== 'local')
-    ) {
+    const host =
+      folder.executionHostId ||
+      (connection.kind === 'ssh' ? `ssh:${connection.connectionId}` : connection.kind)
+    if (host !== (ports.executionHostId ?? 'local')) {
       throw new Error('Goal drafting is only supported on the local execution host.')
     }
     path = folder.folderPath
   } else {
     const worktree = await ports.showWorktree(selector)
-    if (worktree.connectionId || (worktree.hostId && worktree.hostId !== 'local')) {
+    const host =
+      worktree.hostId || (worktree.connectionId ? `ssh:${worktree.connectionId}` : 'local')
+    if (host !== (ports.executionHostId ?? 'local')) {
       throw new Error('Goal drafting is only supported on the local execution host.')
     }
     path = worktree.path
   }
-  if (!(await stat(path)).isDirectory()) {
+  if (ports.checkDirectory !== false && !(await stat(path)).isDirectory()) {
     throw new Error('The selected workspace directory is unavailable.')
   }
   return path
