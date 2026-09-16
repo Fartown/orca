@@ -50,6 +50,9 @@ export const RELAY_WINDOWS_PROCESS_TREE_FILENAME = 'windows-process-tree.node'
 
 export const RELAY_ARTIFACTS: readonly RelayArtifact[] = [
   { filename: 'relay.js' },
+  { filename: 'goal-driver.js' },
+  { filename: 'acceptance-judge.js' },
+  { filename: 'acceptance-draft.js' },
   { filename: 'relay-watcher.js', daemonServiceChild: true },
   { filename: 'relay-ai-vault-service.js', daemonServiceChild: true },
   { filename: 'managed-hook-runtime.js' },

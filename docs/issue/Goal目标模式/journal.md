@@ -3,7 +3,7 @@ title: Goal 目标模式
 slug: Goal目标模式
 status: testing
 created: 2026-09-05
-updated: 2026-09-15
+updated: 2026-09-16
 external_ids: []
 ---
 
@@ -17,7 +17,7 @@ external_ids: []
 | 交互         | -                                                                      | not-required | 本轮交互示意内嵌方案；没有独立设计事实源，不另建 design 文档        |
 | 方案         | [Goal 目标管理与交互闭环方案](solutions/Goal目标管理与交互闭环方案.md) | completed    | 唯一实施主入口；WP1～WP4 已落地；未回推上游                         |
 | 历史实现基线 | [Goal 目标模式技术说明](solutions/Goal目标模式技术说明.md)             | superseded   | 保留旧 CLI/插件实现事实与差距；补充宿主命令已支持带参的核对修正     |
-| 测试用例     | [功能测试](tests/cases/Goal功能测试.md)                                | reviewing    | TC-344～TC-356 覆盖验收文档、侧栏、异步草稿与文件查看，执行结果见 Test Run          |
+| 测试用例     | [功能测试](tests/cases/Goal功能测试.md)                                | reviewing    | TC-344～TC-361 覆盖验收文档、异步草稿、文件查看与 SSH，执行结果见 Test Run          |
 | 调研         | -                                                                      | not-required | 当前源码事实已归并到技术正文，本次不重复调研                        |
 | 历史调研     | [Codex Goal 历史机制对照](research/Codex-Goal历史机制对照.md)          | superseded   | 保留冻结 Codex SHA 的完整参考，不作为当前 Orca 事实                 |
 | 历史测试执行 | [验收文档闭环验证](tests/runs/2026-09-08-验收文档闭环.md)              | reviewing    | 自动化、真实守卫及隐藏 Electron 文档流程已验证                      |
@@ -27,6 +27,11 @@ external_ids: []
 当前处于 testing：REQ-122 异步草稿和 Markdown 文件查看已实现并通过隔离验证，交付经 [PR #13](https://github.com/Fartown/orca/pull/13) 合入 `fork/integration`，最终合并与 CI 状态以该 PR 为准。最新文件查看结果见 [文档文件查看验证](tests/runs/2026-09-13-文档文件查看.md)，此前异步生命周期结果见 [异步草稿验证](tests/runs/2026-09-12-异步草稿验证.md)。旧 `orcad-entry.ts` 本地架构提示已定位为引用了尚未合入的上游 main；使用与 fork CI 相同的镜像基准检查通过，无需修改该文件或放宽规则。用户 App 未替换。REQ-121 历史完整执行/守卫证据保留在 [当前交付核查](tests/runs/2026-09-09-当前交付核查.md)。
 
 ## 2. 决策点记录
+
+### D-006 定向引入上游 import 修复
+
+- 2026-09-16 用户明确批准仅带入上游 `7ec2986fd`，修正 `agent-status-store-snapshot-budget.ts` 的重复类型 import；不执行整批上游同步。
+- 源码保持该上游提交的原始内容，仅在 fork 差异预算登记这个文件；下次正常同步包含该提交后移除临时登记。此例外不改变运行逻辑或质量检查规则。
 
 ### D-005 生成改为持久异步草稿
 
@@ -74,6 +79,24 @@ external_ids: []
 - 影响范围：需求、技术说明、测试规格及本需求的执行证据。
 
 ## 3. 开发记录
+
+### 2026-09-16 SSH 修复 PR 静态检查
+
+- 本轮目标：推进 [PR #26](https://github.com/Fartown/orca/pull/26) 的远端检查与集成合入。
+- 完成内容：恢复 GitHub CLI 认证并推送 SSH 修复；修正 Goal 投影模块的重复类型 import，以及 Claude 输出解析在 Node 18 上调用 `toReversed()` 的兼容性问题。
+- 代码或文档变更：合并 `goal-turn-evidence` 导入声明；输出解析按下标倒序扫描，保留最后一个结果事件语义；将现有 relay 子进程兼容性测试加入 Goal 固定检查。
+- 验证证据：PR 首轮类型检查、Node 18 宿主检查、Linux/Windows 打包通过；本地 Goal/relay 35 项回归及真实 Node 18.20.8 输出解析 5 项通过。记录见 [SSH 运行记录](tests/runs/2026-09-16-SSH执行主机.md)，日志位于 `.docs/goal-remote-host-ui-validation/2026-09-16/evidence/pr26-*.log` 和 `provider-node18-smoke.log`。
+- 未解决问题：用户已批准定向带入基线 import 修复 `7ec2986fd`；源码与上游一致。完整远端检查尚待最终结果，尚未合入。
+- 下一步：完成全部 PR 检查后合入，安装与用户远端升级另行记录。
+
+### 2026-09-16 SSH 执行主机支持修复
+
+- 本轮目标：修复 REQ-111 的远程执行遗漏，用户明确要求远程机器能够使用 Goal。
+- 完成内容：补入 SSH relay 上的既有 GoalControlService、远端打包驱动/生成器/守卫、界面按工作区主机路由和草稿归属、远程 Markdown 文件查看；断联保持不可验证而不认定退出。
+- 代码或文档变更：独立 `feat/goal-remote-host` 分支；沿用 Goal 状态机、操作收据、文件存储、公共终端 CLI 与 SSH RPC；补充远程运行时入口和必要部署清单。orcad 组合根的旧逐字上游固定规则转为已登记接缝，既有生命周期测试及本轮真实重启验证保护服务注册；没有删除功能。
+- 验证证据：修改前隔离 App 复现 SSH 终端可用而 Goal 列表为空；最终同机真实 SSH 12/12 通过（含 folder、后台生成、断联重连、独立验收、主机隔离）。集成后再次 12/12，相关 tests 200/200、CLI 166/166，tc、构建、架构/fork/localization 门禁通过；纯 Node orcad 注册、文档落盘与重启恢复 3/3。详见 [SSH 运行记录](tests/runs/2026-09-16-SSH执行主机.md)，原始证据位于 `.docs/goal-remote-host-ui-validation/2026-09-16/`。
+- 未解决问题：验证采用同机独立 sshd 和受控 provider，未覆盖异机 Linux、真实模型与 WSL；未更换用户 App，未更新用户远端 relay。
+- 下一步：已合入最新集成基线并完成回归，最终文案/Markdown 补测 3/3；本地提交已就绪。恢复 GitHub 推送凭据后创建 PR、等待 CI 并合入。安装包交付与实际机器升级另行记录。
 
 ### 2026-09-15 Goal 运行时 fence 收敛到单一铸造点
 

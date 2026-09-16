@@ -21,7 +21,6 @@ import { composeGoalAcceptanceText } from '../../../../shared/goals/goal-judge-c
 import type { GoalOperation } from '../../../../shared/goals/goal-control-contract'
 import { requestGoalDetailRefresh } from '@/goals/GoalDomainSyncGate'
 import { fingerprintPayload, newClientOperationId } from '@/goals/goal-client-operation'
-import { goalRuntimeClient } from '@/goals/goal-runtime-client'
 import { openGoalDocument } from '@/goals/open-goal-document'
 import { resolveGoalBindingForPane } from '@/goals/goal-session-target'
 import { goalDomainStore } from '@/goals/goals-domain-store'
@@ -102,7 +101,12 @@ export function GoalEditor(): React.JSX.Element {
     void (session?.flush() ?? Promise.resolve())
       .then(() => {
         setError(null)
-        goalDomainStore.getState().closeEditor()
+        if (
+          !session ||
+          session.client.routeExecutionHostId === goalDomainStore.getState().routeExecutionHostId
+        ) {
+          goalDomainStore.getState().closeEditor()
+        }
       })
       .catch((caught) => setError(String(caught)))
   }
@@ -116,13 +120,19 @@ export function GoalEditor(): React.JSX.Element {
     setError(null)
     try {
       if (editing) {
-        await finish(await amendGoal(editing, draft, content.operationId, resumeAfterSave))
+        await finish(
+          await amendGoal(editing, draft, content.operationId, resumeAfterSave, session!.client)
+        )
         return
       }
       if (!target.worktreeId || !target.paneKey) {
         return
       }
-      const resolved = await resolveGoalBindingForPane(target.worktreeId, target.paneKey)
+      const resolved = await resolveGoalBindingForPane(
+        target.worktreeId,
+        target.paneKey,
+        session!.client.target
+      )
       if (!resolved.ok) {
         setError(bindingFailureMessage(resolved.reason))
         return
@@ -135,7 +145,7 @@ export function GoalEditor(): React.JSX.Element {
         acknowledgeUnverifiedCompletion: !verifiable
       }
       // Why: the same id retries into the same receipt; a fresh one is minted only after the host answers.
-      const operation = await goalRuntimeClient.create({
+      const operation = await session!.client.create({
         ...payload,
         clientOperationId: content.operationId,
         payloadFingerprint: await fingerprintPayload(payload)
@@ -154,15 +164,18 @@ export function GoalEditor(): React.JSX.Element {
       session?.change((current) => ({ ...current, operationId: newClientOperationId() }))
       return
     }
+    session?.change((current) => ({ ...current, archived: true }))
+    await session?.flush()
+    if (session?.client.routeExecutionHostId !== goalDomainStore.getState().routeExecutionHostId) {
+      return
+    }
     if (operation.status === 'accepted') {
       goalDomainStore.getState().trackOperation(operation)
     }
     if (operation.goalId) {
       goalDomainStore.getState().select(operation.goalId)
-      requestGoalDetailRefresh(operation.goalId)
+      requestGoalDetailRefresh(operation.goalId, session.client)
     }
-    session?.change((current) => ({ ...current, archived: true }))
-    await session?.flush()
     close()
   }
 
@@ -237,7 +250,7 @@ export function GoalEditor(): React.JSX.Element {
               <p className="text-xs text-muted-foreground">
                 {translate(
                   'goals.editor.guardHint',
-                  'The guard reads the workspace and referenced materials to draft the document, then independently checks the work during execution. Its CLI must be installed and signed in.'
+                  'The guard reads the workspace and referenced materials to draft the document, then independently checks the work during execution. Its CLI must be installed and signed in on the workspace host.'
                 )}
               </p>
             </div>
@@ -267,7 +280,11 @@ export function GoalEditor(): React.JSX.Element {
                     if (!target.worktreeId) {
                       return
                     }
-                    await openGoalDocument(currentPath, target.worktreeId)
+                    await openGoalDocument(
+                      currentPath,
+                      target.worktreeId,
+                      session!.client.routeExecutionHostId
+                    )
                     goalDomainStore.getState().closeEditor()
                   } catch (caught) {
                     setError(caught instanceof Error ? caught.message : String(caught))

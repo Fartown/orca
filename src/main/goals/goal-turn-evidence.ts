@@ -1,6 +1,10 @@
 import type { AgentStatusIpcPayload, AgentStatusState } from '../../shared/agent-status-types'
 import type { GoalTurnState } from '../../shared/goals/goal-control-contract'
 
+export type GoalTurnRow = Pick<AgentStatusIpcPayload, 'state' | 'providerSessionOnly'> & {
+  stateStartedAt: number | null
+}
+
 export type GoalTurnEvidence = {
   agentStatus: AgentStatusState | null
   turn: GoalTurnState
@@ -13,13 +17,13 @@ export type GoalTurnEvidence = {
  * of the rest the newest state wins. `waiting` and `blocked` are still an open
  * turn: the agent is parked on the user, not finished.
  */
-export function projectTurnEvidence(rows: readonly AgentStatusIpcPayload[]): GoalTurnEvidence {
-  let latest: AgentStatusIpcPayload | null = null
+export function projectTurnEvidence(rows: readonly GoalTurnRow[]): GoalTurnEvidence {
+  let latest: GoalTurnRow | null = null
   for (const row of rows) {
     if (row.providerSessionOnly === true) {
       continue
     }
-    if (!latest || row.stateStartedAt > latest.stateStartedAt) {
+    if (!latest || (row.stateStartedAt ?? 0) > (latest.stateStartedAt ?? 0)) {
       latest = row
     }
   }

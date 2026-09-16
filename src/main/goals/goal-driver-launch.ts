@@ -42,7 +42,7 @@ export function resolveGoalDriverEntry(input: {
     candidates.push(join(input.resourcesPath, 'goal-driver'))
   }
   if (input.appPath) {
-    candidates.push(join(input.appPath, 'out', 'goal-driver'))
+    candidates.push(join(input.appPath, 'out', 'goal-driver'), input.appPath)
   }
   for (const dir of candidates) {
     const entry = join(dir, GOAL_DRIVER_ENTRY_FILENAME)
@@ -56,6 +56,7 @@ export function resolveGoalDriverEntry(input: {
 export function createGoalDriverLauncher(input: {
   entryPath: string | null
   execPath?: string
+  env?: NodeJS.ProcessEnv
 }): GoalDriverLauncher {
   return {
     entryPath: input.entryPath,
@@ -63,7 +64,12 @@ export function createGoalDriverLauncher(input: {
       if (!input.entryPath) {
         return Promise.reject(new Error('The goal driver bundle is missing.'))
       }
-      return launchGoalDriverChild(input.entryPath, request, input.execPath ?? process.execPath)
+      return launchGoalDriverChild(
+        input.entryPath,
+        request,
+        input.execPath ?? process.execPath,
+        input.env
+      )
     }
   }
 }
@@ -80,7 +86,8 @@ type DriverMessage =
 async function launchGoalDriverChild(
   entryPath: string,
   request: GoalDriverLaunchRequest,
-  execPath: string
+  execPath: string,
+  env?: NodeJS.ProcessEnv
 ): Promise<GoalDriverLaunchResult> {
   // Why spawnProcess, not fork: the shared runner owns windowsHide and .cmd handling; the ipc slot gives the same handshake channel.
   const child = spawnProcess({
@@ -102,6 +109,7 @@ async function launchGoalDriverChild(
     stdio: ['ignore', 'ignore', 'pipe', 'ipc'],
     env: {
       ...process.env,
+      ...env,
       ELECTRON_RUN_AS_NODE: '1',
       ORCA_USER_DATA_PATH: request.userDataPath,
       [GOAL_HOME_ENV]: request.goalHome,

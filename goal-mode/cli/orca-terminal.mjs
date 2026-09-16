@@ -44,7 +44,12 @@ async function orca(args, { timeoutMs = 30_000 } = {}) {
     if (parsed) {
       return parsed
     }
-    throw new Error(`orca ${args[0]} ${args[1]} 执行失败: ${err.shortMessage || err.message}`)
+    const failure = new Error(
+      `orca ${args[0]} ${args[1]} 执行失败: ${err.shortMessage || err.message}`
+    )
+    if (process.env.ORCA_GOAL_TERMINAL_BACKEND === 'ssh-cli')
+      failure.code = 'goal_host_unverifiable'
+    throw failure
   }
   const parsed = tryParse(stdout)
   if (!parsed) {

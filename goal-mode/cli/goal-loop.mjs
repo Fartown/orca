@@ -322,7 +322,10 @@ export async function runLoop(
         errorSince = Date.now()
         report.warn(`第 ${turn} 轮出错,重试中:${message}`)
       }
-      if (Date.now() - errorSince >= ROUND_ERROR_GRACE_MS) {
+      if (
+        err?.code !== 'goal_host_unverifiable' &&
+        Date.now() - errorSince >= ROUND_ERROR_GRACE_MS
+      ) {
         current = {
           ...current,
           state: 'blocked',
@@ -561,11 +564,17 @@ async function waitForRoundEnd(
         ok: true,
         now: Date.now(),
         verdict: classifyRound(activity, sentAt, QUIET_MS),
+        unverifiable: process.env.ORCA_GOAL_TERMINAL_BACKEND === 'ssh-cli' && !activity.connected,
         source: activity.source,
         toolName: activity.toolName
       }
     } catch (err) {
-      event = { ok: false, now: Date.now(), message: err?.message || String(err) }
+      event = {
+        ok: false,
+        now: Date.now(),
+        message: err?.message || String(err),
+        unverifiable: process.env.ORCA_GOAL_TERMINAL_BACKEND === 'ssh-cli'
+      }
     }
 
     const step = advanceWait(state, event, limits)
@@ -579,7 +588,7 @@ async function waitForRoundEnd(
     if (step.outcome.type === 'failure') {
       // 中断之后终端断开或没动静,也算这一轮结束了;没中断过才是真正的失败。
       return interruptAt !== null
-        ? { stopped: true, turnStopped: true }
+        ? { stopped: true, turnStopped: false }
         : { failure: step.outcome.reason }
     }
     await sleep(POLL_MS)

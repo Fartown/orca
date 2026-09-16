@@ -1,3 +1,5 @@
+import { useGoalDomainStore } from '@/goals/use-goals-domain-store'
+import { getExecutionHostIdForWorktree } from '@/lib/worktree-runtime-owner'
 import { folderWorkspaceToWorktree } from '../../../../shared/folder-workspace-worktree'
 import { useMemo } from 'react'
 import { basename } from '@/lib/path'
@@ -38,12 +40,15 @@ export function GoalTargetPicker({
   const worktrees = useAllWorktrees()
   const folderWorkspaces = useAppStore((s) => s.folderWorkspaces)
   const agentStatusByPaneKey = useAppStore((s) => s.agentStatusByPaneKey)
-  const localWorktrees = useMemo(
+  const route = useGoalDomainStore((s) => s.routeExecutionHostId)
+  const hostWorktrees = useMemo(
     () =>
       [...worktrees, ...folderWorkspaces.map(folderWorkspaceToWorktree)]
-        .filter((worktree) => !worktree.hostId || worktree.hostId === 'local')
+        .filter(
+          (worktree) => getExecutionHostIdForWorktree(useAppStore.getState(), worktree.id) === route
+        )
         .sort((a, b) => a.path.localeCompare(b.path)),
-    [worktrees, folderWorkspaces]
+    [worktrees, folderWorkspaces, route]
   )
   const candidates = useMemo(
     () =>
@@ -74,7 +79,7 @@ export function GoalTargetPicker({
             align="start"
             className="w-(--radix-select-trigger-width) max-w-(--radix-select-content-available-width)"
           >
-            {localWorktrees.map((worktree) => (
+            {hostWorktrees.map((worktree) => (
               <SelectItem key={worktree.id} value={worktree.id} className="*:min-w-0">
                 <span className="min-w-0 truncate" title={worktree.path}>
                   {worktree.displayName || basename(worktree.path)}
@@ -85,7 +90,7 @@ export function GoalTargetPicker({
           </SelectContent>
         </Select>
         <p className="text-xs text-muted-foreground">
-          {translate('goals.editor.executionLocal', 'Runs on this machine.')}
+          {translate('goals.editor.executionHost', 'Runs on the workspace’s machine.')}
         </p>
       </div>
       <div className="min-w-0 space-y-1">

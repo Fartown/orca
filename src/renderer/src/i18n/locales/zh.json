@@ -7,6 +7,13 @@
       "webDescription": "重试 Web 客户端或重新连接到配对的运行时。"
     }
   },
+  "editor": {
+    "richMarkdown": {
+      "tooLarge": "文件超过 {{limit}} 的富文本编辑上限，已改为源码模式。",
+      "openAnyway": "仍然打开",
+      "overrideActive": "已对无法无损往返的文件强制启用富文本编辑。在此保存可能改写或丢失文件中的 HTML、引用式链接或脚注。"
+    }
+  },
   "githubChecks": {
     "retrying": "正在重试..."
   },
@@ -15295,6 +15302,7 @@
       "workspace": "工作区",
       "pickWorkspace": "选择工作区",
       "executionLocal": "在本机执行。",
+      "executionHost": "在工作区所属机器上执行。",
       "session": "Agent 会话",
       "pickSession": "选择一个正在运行的 agent 会话",
       "noSessions": "可以先生成文档。开始执行前，再启动并选择一个 Agent 会话。",
@@ -15318,7 +15326,7 @@
       "documentStale": "目标、守卫或工作区已变化，请按新内容重新核对文档，或重新生成。",
       "documentReviewed": "已按新内容核对文档",
       "guard": "守卫",
-      "guardHint": "守卫会读取工作区和目标引用的资料，起草验收文档，并在执行中独立验收。需要在本机安装对应 CLI 并完成登录。",
+      "guardHint": "守卫会读取工作区和目标引用的资料，起草验收文档，并在执行中独立验收。需要在工作区所属机器安装对应 CLI 并完成登录。",
       "reviewAndStart": "按此文档开始执行",
       "draftLost": "未能取回验收文档，请重新生成。",
       "close": "关闭",
@@ -15347,7 +15355,8 @@
       "agentUnknown": "agent 状态未知",
       "versions": "定义版本({{value0}})",
       "revisionLabel": "版本 {{value0}}",
-      "currentRevision": "当前"
+      "currentRevision": "当前",
+      "offlineSnapshot": "连接已断开，以下为上次观测的状态；当前进程不可验证。"
     },
     "list": {
       "hostUnavailable": "此主机上无法列出目标",
@@ -15436,7 +15445,7 @@
       "backgroundHint": "可以关闭编辑器，生成会在后台继续；稍后可在 Goal 草稿中找到结果。",
       "saving": "正在保存草稿…",
       "unsaved": "草稿尚未保存",
-      "saved": "草稿已保存到本地",
+      "saved": "草稿已保存",
       "retrySave": "重试保存",
       "connected": "守卫已连接，正在等待下一条活动。",
       "tool": "守卫正在使用工具查看工作区或引用资料。",

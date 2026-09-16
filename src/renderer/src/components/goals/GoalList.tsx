@@ -7,7 +7,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { translate } from '@/i18n/i18n'
 import type { GoalSummary } from '../../../../shared/goals/goal-control-contract'
 import { fingerprintPayload, newClientOperationId } from '@/goals/goal-client-operation'
-import { goalRuntimeClient } from '@/goals/goal-runtime-client'
+import { getGoalRuntimeClient } from '@/goals/goal-runtime-client'
 import { goalDomainStore } from '@/goals/goals-domain-store'
 import { goalPhaseBadgeVariant, goalPhaseLabel } from '@/goals/goal-status-copy'
 import { useGoalDomainStore } from '@/goals/use-goals-domain-store'
@@ -100,14 +100,18 @@ function LegacyGoalRow({
 }): React.JSX.Element {
   const [pending, setPending] = useState(false)
   const adopt = async (): Promise<void> => {
+    const client = getGoalRuntimeClient()
     setPending(true)
     try {
       const payload = { legacyKey }
-      const operation = await goalRuntimeClient.adoptLegacy({
+      const operation = await client.adoptLegacy({
         ...payload,
         clientOperationId: newClientOperationId(),
         payloadFingerprint: await fingerprintPayload(payload)
       })
+      if (goalDomainStore.getState().routeExecutionHostId !== client.routeExecutionHostId) {
+        return
+      }
       if (operation.status === 'rejected') {
         toast.error(operation.message)
         return

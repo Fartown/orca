@@ -1,14 +1,25 @@
+import { parseExecutionHostId, type ExecutionHostId } from '../../../shared/execution-host'
 import { basename } from '@/lib/path'
 import { activateAndRevealWorkspace } from '@/lib/worktree-activation'
 import { translate } from '@/i18n/i18n'
 import { useAppStore } from '@/store'
 
-export async function openGoalDocument(filePath: string, worktreeId: string): Promise<void> {
-  await window.api.fs.authorizeExternalPath({ targetPath: filePath })
+export async function openGoalDocument(
+  filePath: string,
+  worktreeId: string,
+  executionHostId: ExecutionHostId = 'local'
+): Promise<void> {
+  const host = parseExecutionHostId(executionHostId)
+  if (!host) {
+    throw new Error('The document execution host is unavailable.')
+  }
+  if (host.kind === 'local') {
+    await window.api.fs.authorizeExternalPath({ targetPath: filePath })
+  }
   if (
     !activateAndRevealWorkspace(worktreeId, {
       providesInitialSurface: true,
-      executionHostId: 'local'
+      executionHostId
     })
   ) {
     throw new Error(
@@ -18,7 +29,6 @@ export async function openGoalDocument(filePath: string, worktreeId: string): Pr
       )
     )
   }
-  // Goal drafts belong to the local host even when another runtime is selected.
   useAppStore.getState().openFile(
     {
       filePath,
@@ -27,7 +37,8 @@ export async function openGoalDocument(filePath: string, worktreeId: string): Pr
       language: 'markdown',
       mode: 'markdown-preview',
       readOnly: true,
-      runtimeEnvironmentId: null
+      runtimeEnvironmentId: host.kind === 'runtime' ? host.environmentId : null,
+      ...(host.kind === 'ssh' ? { externalSshTargetId: host.targetId } : {})
     },
     { preview: false, suppressActiveRuntimeFallback: true, forceContentReload: true }
   )

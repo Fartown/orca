@@ -49,3 +49,21 @@ it('reports missing workspaces without touching a provider session', async () =>
     'no longer exists'
   )
 })
+
+it('resolves SSH folders and Git workspaces without touching client-local paths', async () => {
+  const source = ports()
+  source.executionHostId = 'ssh:remote'
+  source.checkDirectory = false
+  source.showWorktree = async () => ({ path: '/remote-only/worktree', connectionId: 'remote' })
+  expect(await resolveGoalDraftWorkspace('remote-worktree', source)).toBe('/remote-only/worktree')
+  source.getFolderWorkspaces = () => [
+    {
+      ...ports().getFolderWorkspaces()[0],
+      folderPath: '/remote-only/folder',
+      connectionId: 'remote'
+    }
+  ]
+  expect(await resolveGoalDraftWorkspace('folder:folder-1', source)).toBe('/remote-only/folder')
+  source.executionHostId = 'ssh:another'
+  await expect(resolveGoalDraftWorkspace('folder:folder-1', source)).rejects.toThrow()
+})
