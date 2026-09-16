@@ -421,6 +421,11 @@
             "src/renderer/src/components/editor/EditorPanelHeader.tsx",
             "src/renderer/src/components/editor/DiffSectionHeader.tsx",
             "src/renderer/src/components/editor/combined-diff/review-controls/use-combined-diff-section-actions.ts",
+            // Remote editor large-file read: feature paths and reviewed seams.
+            "src/renderer/src/runtime-large-file/**",
+            "docs/issue/远程大文件编辑器读取/**",
+            "src/renderer/src/runtime/runtime-file-read-client.ts",
+            "src/renderer/src/runtime/runtime-file-client.test.ts",
             // Mobile session-continuation: feature paths and reviewed seams.
             "src/shared/agent-session-continuation/**",
             "mobile/src/session-continuation/**",
@@ -1017,6 +1022,39 @@
             "docs/maintenance/**"
           ],
           "message": "Change is outside the in-pane HTML preview feature and its journal."
+        }
+      ]
+    },
+    {
+      "id": "remote-editor-large-file-read",
+      "description": "A truncated paired-runtime read finishes over the existing files.readChunk RPC; the assembly lives in its own module and reaches the read client only through a registered seam (REQ-701～REQ-704).",
+      "rules": [
+        {
+          "id": "remote-editor-large-file-read-worktree-scope",
+          "type": "change-scope",
+          "comparison": "worktree",
+          "whenChanged": [
+            "src/renderer/src/runtime-large-file/**",
+            "docs/issue/远程大文件编辑器读取/**"
+          ],
+          "allowedPaths": [
+            "src/renderer/src/runtime-large-file/**",
+            "docs/issue/远程大文件编辑器读取/**",
+            "src/renderer/src/runtime/runtime-file-read-client.ts",
+            "src/renderer/src/runtime/runtime-file-client.test.ts",
+            ".gitignore",
+            "config/architecture-policies.jsonc",
+            "AGENTS.md",
+            "config/fork-features.jsonc",
+            "config/scripts/check-fork-features.mjs",
+            "config/scripts/check-fork-docs.mjs",
+            "config/scripts/report-upstream-seam-changes.mjs",
+            "config/scripts/sync-upstream.mjs",
+            "docs/reference/fork-maintenance.md",
+            "docs/issue/**",
+            "docs/maintenance/**"
+          ],
+          "message": "Change is outside the remote editor large-file read feature and its journal."
         }
       ]
     },

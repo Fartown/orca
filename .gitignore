@@ -211,6 +211,8 @@ mcp-gateway/
 !docs/issue/文档预览大小/**
 !docs/issue/移动端在新会话中继续/
 !docs/issue/移动端在新会话中继续/**
+!docs/issue/远程大文件编辑器读取/
+!docs/issue/远程大文件编辑器读取/**
 !docs/issue/HTML预览在当前面板打开/
 !docs/issue/HTML预览在当前面板打开/**
 !docs/issue/富文本Markdown强制打开/
