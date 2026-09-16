@@ -14110,7 +14110,7 @@
           "6c4f1a8d2e": "Les détails de la vérification sont indisponibles."
         },
         "EditorPanelHeader": {
-          "fb8331694e": "Ouvrir l'aperçu sur le côté",
+          "openPreviewInPane": "Ouvrir l'aperçu",
           "4157f3cbf3": "Ouvrir l'aperçu Markdown",
           "269ce4842b": "Copier le chemin relatif",
           "7c08a1f990": "Copier le chemin",

@@ -2,7 +2,8 @@ import React, { useCallback, useMemo, useRef, useState } from 'react'
 import { useAppStore } from '@/store'
 import { getConnectionId } from '@/lib/connection-context'
 import { detectLanguage } from '@/lib/language-detect'
-import { canShowWorkspaceFileBrowserAction, openFilePreviewToSide } from '@/lib/file-preview'
+import { canShowWorkspaceFileBrowserAction } from '@/lib/file-preview'
+import { openFilePreviewInSourcePane } from '../file-preview-pane/open-file-preview-in-pane'
 import { getEditorHeaderCopyState } from './editor-header'
 import { isLocalPathOpenBlocked, showLocalPathOpenBlockedToast } from '@/lib/local-path-open-guard'
 import { settingsForRuntimeOwner } from '@/runtime/runtime-rpc-client'
@@ -227,7 +228,7 @@ function EditorPanelInner({
           (t) => t.id === activeViewStateId
         )?.groupId ?? null)
       : null
-    openFilePreviewToSide({
+    openFilePreviewInSourcePane({
       language: model.resolvedLanguage,
       filePath: activeFile.filePath,
       worktreeId: activeFile.worktreeId,
