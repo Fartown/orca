@@ -14,6 +14,7 @@ import type { FileContent } from './editor-panel-content-types'
 import { canUseChangesModeForFile } from './editor-panel-file-mode'
 import { getMarkdownRenderMode, type MarkdownRenderState } from './markdown-render-mode'
 import { getCachedMarkdownRichModeEligibility } from './markdown-rich-mode-eligibility-cache'
+import { resolveRichMarkdownUnsupportedOverride } from '../rich-markdown-override/rich-markdown-unsupported-override'
 
 type StoreState = ReturnType<typeof useAppStore.getState>
 
@@ -148,14 +149,19 @@ export function getEditorPanelRenderModel({
           sizeOverridden: markdownRichModeSizeOverridden
         })
       : null
-    const richModeUnsupportedMessage = richModeEligibility?.unsupportedMessage ?? null
+    const { unsupportedMessage: richModeUnsupportedMessage, overrideActive } =
+      resolveRichMarkdownUnsupportedOverride({
+        unsupportedMessage: richModeEligibility?.unsupportedMessage ?? null,
+        overridden: markdownRichModeSizeOverridden
+      })
     inlineMarkdownRenderState = {
       renderMode: getMarkdownRenderMode({
         exceedsRichModeSizeLimit: richModeEligibility?.exceedsSizeLimit ?? false,
         hasRichModeUnsupportedContent: richModeUnsupportedMessage !== null,
         viewMode: mdViewMode
       }),
-      richModeUnsupportedMessage
+      richModeUnsupportedMessage,
+      richModeUnsupportedOverrideActive: overrideActive
     }
   }
   const canExportMarkdownToPdf =

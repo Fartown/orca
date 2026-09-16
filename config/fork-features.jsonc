@@ -1252,6 +1252,64 @@
         "pnpm exec vitest run --config config/vitest.config.ts src/shared/agent-session-continuation src/renderer/src/lib/agent-session-fork-context.test.ts src/renderer/src/lib/launch-agent-session-continuation.test.ts src/renderer/src/components/agent-session-continuation src/renderer/src/components/terminal-pane/terminal-agent-session-continuation.test.ts src/renderer/src/components/right-sidebar/ai-vault-session-continuation.test.ts",
         "pnpm --dir mobile exec vitest run src/session-continuation src/session/mobile-terminal-action-sheet-actions.test.ts src/session/mobile-session-route-parity.test.ts"
       ]
+    },
+    {
+      "id": "rich-markdown-unsupported-override",
+      "title": "富文本 Markdown 强制打开：语法不支持时提供「仍然打开」",
+      "goal": "把「只能在代码模式下编辑」从硬拦截改为可由用户显式承担的选择，并在强制期间持续提示改写风险",
+      "journal": "docs/issue/富文本Markdown强制打开/journal.md",
+      "dependsOn": [
+        "src/renderer/src/components/editor/markdown-rich-mode.ts",
+        "src/renderer/src/components/editor/markdown-render-mode.ts"
+      ],
+      "policyId": "rich-markdown-unsupported-override",
+      "ownedPaths": [
+        "src/renderer/src/components/rich-markdown-override/**",
+        "docs/issue/富文本Markdown强制打开/**"
+      ],
+      "requiredFiles": [
+        "src/renderer/src/components/rich-markdown-override/rich-markdown-unsupported-override.ts"
+      ],
+      "seams": [
+        {
+          "file": "src/renderer/src/components/editor/markdown-render-mode.ts",
+          "mustContain": "richModeUnsupportedOverrideActive",
+          "why": "the render state carries whether rich mode is holding an unsafe document (REQ-402)"
+        },
+        {
+          "file": "src/renderer/src/components/editor/editor-panel-render-model.ts",
+          "mustContain": "resolveRichMarkdownUnsupportedOverride",
+          "why": "the per-file override clears the unsupported gate, not only the size gate (REQ-401)"
+        },
+        {
+          "file": "src/renderer/src/components/editor/EditorMarkdownFileSurface.tsx",
+          "mustContain": "RichModeOverrideBanner",
+          "why": "the fallback offers the override and rich mode keeps the rewrite risk visible (REQ-401, REQ-402)"
+        },
+        {
+          "file": "src/renderer/src/components/editor/EditorContent.markdown-classification.test.tsx",
+          "mustContain": "sizeOverridden",
+          "why": "the upstream fallback assertions now pin overridable, not blocked (REQ-401)"
+        },
+        {
+          "file": "src/renderer/src/i18n/locales/en.json",
+          "mustContain": "overrideActive",
+          "why": "copy for the persistent rewrite-risk banner (REQ-402)"
+        },
+        {
+          "file": "src/renderer/src/i18n/locales/zh.json",
+          "mustContain": "overrideActive",
+          "why": "Chinese copy for the same banner and the override button (REQ-403)"
+        }
+      ],
+      "tests": [
+        "src/renderer/src/components/rich-markdown-override/rich-markdown-unsupported-override.test.ts",
+        "src/renderer/src/components/editor/editor-panel-render-model.test.ts",
+        "src/renderer/src/components/editor/EditorContent.markdown-classification.test.tsx"
+      ],
+      "checks": [
+        "pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/components/rich-markdown-override src/renderer/src/components/editor/editor-panel-render-model.test.ts src/renderer/src/components/editor/EditorContent.markdown-classification.test.tsx src/renderer/src/components/editor/markdown-rich-mode.test.ts src/renderer/src/components/editor/markdown-render-mode.test.ts"
+      ]
     }
   ]
 }
