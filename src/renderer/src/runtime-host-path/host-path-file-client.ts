@@ -1,3 +1,4 @@
+import { z } from 'zod'
 import { callRuntimeRpc, getActiveRuntimeTarget } from '@/runtime/runtime-rpc-client'
 import { toRuntimeWorktreeSelector } from '@/runtime/runtime-worktree-selector'
 
@@ -35,17 +36,19 @@ export type RuntimeHostPathRpc = (
   params: Record<string, unknown>
 ) => Promise<unknown>
 
-function readField(source: unknown, key: string): unknown {
-  if (typeof source !== 'object' || source === null) {
-    return undefined
-  }
-  return Reflect.get(source, key)
-}
+/**
+ * What this client accepts back from the host.
+ *
+ * Why parsed and not read field by field: the answers cross a version boundary, so the shape is
+ * input rather than a promise. Naming it here means a host that answers something else fails at the
+ * boundary with a message about the boundary.
+ */
+const HostPathGrantResolution = z.object({
+  exists: z.boolean(),
+  openTarget: z.object({ grantId: z.string().min(1), absolutePath: z.string().min(1) }).optional()
+})
 
-function readNonEmptyString(source: unknown, key: string): string | null {
-  const value = readField(source, key)
-  return typeof value === 'string' && value.length > 0 ? value : null
-}
+const HostPathFileContent = z.object({ content: z.string() })
 
 function errorText(error: unknown): string {
   return error instanceof Error ? error.message : String(error)
@@ -62,15 +65,16 @@ export async function requestHostPathGrant(
   worktree: string,
   absolutePath: string
 ): Promise<RuntimeHostPathGrant> {
-  const resolution = await call('files.grantHostPath', { worktree, absolutePath })
-  const openTarget = readField(resolution, 'openTarget')
-  const grantId = readNonEmptyString(openTarget, 'grantId')
-  const grantedPath = readNonEmptyString(openTarget, 'absolutePath')
-  if (readField(resolution, 'exists') !== true || !grantId || !grantedPath) {
+  const resolution = HostPathGrantResolution.safeParse(
+    await call('files.grantHostPath', { worktree, absolutePath })
+  )
+  const openTarget =
+    resolution.success && resolution.data.exists ? resolution.data.openTarget : null
+  if (!openTarget) {
     // Why not the host's own words: `exists: false` is how it says "no", and it carries no message.
     throw new Error(`File not found on the host: ${absolutePath}`)
   }
-  return { grantId, absolutePath: grantedPath }
+  return { grantId: openTarget.grantId, absolutePath: openTarget.absolutePath }
 }
 
 export async function readHostPathFile(
@@ -78,16 +82,17 @@ export async function readHostPathFile(
   worktree: string,
   grant: RuntimeHostPathGrant
 ): Promise<{ content: string; isBinary: false }> {
-  const result = await call('files.readTerminalArtifact', {
-    worktree,
-    grantId: grant.grantId,
-    absolutePath: grant.absolutePath
-  })
-  const content = readField(result, 'content')
-  if (typeof content !== 'string') {
+  const result = HostPathFileContent.safeParse(
+    await call('files.readTerminalArtifact', {
+      worktree,
+      grantId: grant.grantId,
+      absolutePath: grant.absolutePath
+    })
+  )
+  if (!result.success) {
     throw new Error(HOST_PATH_UNAVAILABLE_MESSAGE)
   }
-  return { content, isBinary: false }
+  return { content: result.data.content, isBinary: false }
 }
 
 export async function writeHostPathFile(
