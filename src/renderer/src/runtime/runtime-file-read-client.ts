@@ -17,7 +17,7 @@ import {
   hasRemoteRuntimeOwner
 } from './runtime-file-routing'
 import { toRuntimeWorktreeSelector } from './runtime-worktree-selector'
-import { readHostPathFile } from '../runtime-host-path/host-path-file-client'
+import { readHostPathFileForTab } from '../runtime-host-path/host-path-grant-seams'
 
 const REMOTE_DOWNLOAD_CHUNK_BYTES = 384 * 1024
 const REMOTE_DOWNLOAD_UPDATE_REQUIRED_MESSAGE =
@@ -43,14 +43,11 @@ export async function readRuntimeFileContent({
   if (!worktreeId) {
     return window.api.fs.readFile({ filePath, connectionId, includeLocalLogMetadata })
   }
-  // Why before the relative-path check: a grant is how a path outside the worktree is addressed at
-  // all, so the worktree-relative contract below does not apply to it.
-  if (hostPathGrant) {
-    return readHostPathFile(
-      (method, params) => callRuntimeRpc(target, method, params, { timeoutMs: 15_000 }),
-      toRuntimeWorktreeSelector(worktreeId),
-      hostPathGrant
-    )
+  // Why before the relative-path check: a grant addresses a path outside the worktree, which the
+  // worktree-relative contract below cannot express.
+  const granted = await readHostPathFileForTab(settings, worktreeId, hostPathGrant)
+  if (granted) {
+    return granted
   }
   if (!canReadRelativeRuntimeFile(relativePath)) {
     throw new Error('Remote file is outside the owning runtime worktree')

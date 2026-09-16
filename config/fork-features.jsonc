@@ -204,6 +204,7 @@
         "src/renderer/src/lib/path.ts",
         "src/renderer/src/lib/worktree-activation.ts",
         "src/renderer/src/runtime/runtime-client-target.ts",
+        "src/renderer/src/runtime/runtime-file-mutation-rpc.ts",
         "src/renderer/src/runtime/runtime-rpc-client.ts",
         "src/renderer/src/store/index.ts",
         "src/renderer/src/store/selectors.ts",
@@ -423,6 +424,7 @@
         "src/renderer/src/lib/utils.ts",
         "src/renderer/src/lib/worktree-runtime-owner.ts",
         "src/renderer/src/runtime/runtime-client-target.ts",
+        "src/renderer/src/runtime/runtime-file-mutation-rpc.ts",
         "src/renderer/src/runtime/runtime-rpc-client.ts",
         "src/renderer/src/session-names/session-name-subscriptions.ts",
         "src/renderer/src/store/folder-workspaces/folder-workspace-catalog.ts",
@@ -1137,6 +1139,7 @@
       "goal": "主机为任意绝对路径发放 grant，客户端按 grant 读写，不新增 wire 方法之外的协议面",
       "journal": "docs/issue/远程主机绝对路径打开/journal.md",
       "dependsOn": [
+        "src/renderer/src/runtime/runtime-file-mutation-rpc.ts",
         "src/renderer/src/runtime/runtime-rpc-client.ts",
         "src/renderer/src/runtime/runtime-worktree-selector.ts",
         "src/shared/cross-platform-path.ts",
@@ -1150,7 +1153,8 @@
       ],
       "requiredFiles": [
         "src/main/remote-host-path-grant/host-path-grant-policy.ts",
-        "src/renderer/src/runtime-host-path/host-path-file-client.ts"
+        "src/renderer/src/runtime-host-path/host-path-file-client.ts",
+        "src/renderer/src/runtime-host-path/host-path-grant-seams.ts"
       ],
       "seams": [
         {
@@ -1185,12 +1189,12 @@
         },
         {
           "file": "src/renderer/src/runtime/runtime-file-read-client.ts",
-          "mustContain": "readHostPathFile",
+          "mustContain": "readHostPathFileForTab",
           "why": "reads of a granted path go to the host, not this machine (REQ-803)"
         },
         {
           "file": "src/renderer/src/runtime/runtime-file-mutation-client.ts",
-          "mustContain": "writeHostPathFile",
+          "mustContain": "writeHostPathFileForTab",
           "why": "saves of a granted path go to the host (REQ-804)"
         },
         {
@@ -1210,7 +1214,7 @@
         },
         {
           "file": "src/renderer/src/components/tab-bar/tab-create-entry-absolute-file.ts",
-          "mustContain": "requestHostPathGrant",
+          "mustContain": "resolveAbsoluteTabEntryReach",
           "why": "the omnibox asks for a grant instead of a stat it cannot make (REQ-801)"
         },
         {

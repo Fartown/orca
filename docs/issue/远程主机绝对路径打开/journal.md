@@ -60,6 +60,15 @@ external_ids: []
 
 ## 3. 开发记录
 
+### 2026-09-16 把上游接缝压成一行调用
+
+- 本轮目标：降低这个功能长期的上游同步成本。
+- 完成内容：13 处接缝里有 5 处是"往上游函数体里插一段逻辑"，是冲突真正会疼的地方。新增 `src/renderer/src/runtime-host-path/host-path-grant-seams.ts`，把这几段逻辑搬进功能自有目录，上游文件里只留一行调用：读 `readHostPathFileForTab`、写 `writeHostPathFileForTab`、弹窗 `resolveAbsoluteTabEntryReach`。
+- 代码或文档变更：新增 seams 模块；`runtime-file-read-client.ts`、`runtime-file-mutation-client.ts`、`tab-create-entry-absolute-file.ts` 相应缩减；`fork-features.jsonc` 的 `mustContain` 改指新函数名，`requiredFiles` 与 `dependsOn` 补齐。
+- 验证证据：三处接缝的新增行数 13→10、26→7、36→21，结构性改动合计 75→38 行；单元 284 文件 2027 条通过；真机 TC-801 重跑通过（`1 of 1`，标签页仍持有 grant）。`pnpm tc`、`oxlint`、`check:fork-features`、`check:code-quality:changed`(319，与基线同)通过。
+- 未解决问题：`check:architecture-policies` 报 1 条 `src/main/runtime/rpc/errors.ts` 的 reference-drift。已在**一行未改**的 `fork/integration` 上复现，成因是 `origin/main` 前进而集成分支尚未同步，与本分支无关，下次 `pnpm sync:upstream` 后消失。
+- 下一步：与其余 PR 一起合回 `fork/integration`。
+
 ### 2026-09-16 主机发放与客户端消费打通
 
 - 本轮目标：配对客户端能打开主机上 worktree 之外的绝对路径。

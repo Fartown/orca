@@ -11,19 +11,7 @@ import {
 } from './runtime-file-routing'
 import { callRuntimeFileMutation } from './runtime-file-mutation-rpc'
 import { toRuntimeWorktreeSelector } from './runtime-worktree-selector'
-import { writeHostPathFile } from '../runtime-host-path/host-path-file-client'
-
-/** The granted host path this write addresses, when the context carries a grant for exactly it. */
-function getHostPathWriteTarget(context: RuntimeFileOperationArgs, filePath: string) {
-  const grant = context.hostPathGrant
-  const target = getActiveRuntimeTarget(context.settings)
-  if (!grant || grant.absolutePath !== filePath || target.kind !== 'environment') {
-    return null
-  }
-  return context.worktreeId
-    ? { grant, target, worktreeSelector: toRuntimeWorktreeSelector(context.worktreeId) }
-    : null
-}
+import { writeHostPathFileForTab } from '../runtime-host-path/host-path-grant-seams'
 
 export async function readRuntimeDirectory(
   context: RuntimeFileOperationArgs,
@@ -48,15 +36,8 @@ export async function writeRuntimeFile(
   content: string
 ): Promise<void> {
   // Why first: a granted host path has no worktree-relative form, so the routing below cannot
-  // address it. Opening such a file without this branch would give an editor that cannot save.
-  const hostPathTarget = getHostPathWriteTarget(context, filePath)
-  if (hostPathTarget) {
-    await writeHostPathFile(
-      (method, params) => callRuntimeFileMutation(hostPathTarget.target, method, params, 15_000),
-      hostPathTarget.worktreeSelector,
-      hostPathTarget.grant,
-      content
-    )
+  // address it. Without this the file would open and then refuse to save.
+  if (await writeHostPathFileForTab(context, filePath, content)) {
     return
   }
   const remoteArgs = getRemoteFileArgs(context, filePath)

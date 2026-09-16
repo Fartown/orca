@@ -2,7 +2,7 @@ import { detectLanguage } from '@/lib/language-detect'
 import { isLocalPathOpenBlocked } from '@/lib/local-path-open-guard'
 import { toWorktreeRelativePath } from '@/lib/terminal-links'
 import type { RuntimeFileOperationArgs, statRuntimePath } from '@/runtime/runtime-file-client'
-import type { RuntimeHostPathGrant } from '../../runtime-host-path/host-path-file-client'
+import { resolveAbsoluteTabEntryReach } from '../../runtime-host-path/host-path-grant-seams'
 import type { OpenFile } from '@/store/slices/editor'
 import {
   validateNewTabEntryAbsolutePath,
@@ -20,7 +20,7 @@ type AbsoluteFileOperations = {
   requestHostPathGrant: (
     context: RuntimeFileOperationArgs,
     absolutePath: string
-  ) => Promise<RuntimeHostPathGrant>
+  ) => Promise<{ grantId: string; absolutePath: string }>
 }
 
 export async function openAbsoluteTabEntryFile(args: {
@@ -45,31 +45,15 @@ export async function openAbsoluteTabEntryFile(args: {
     args.operations.assertAbsolutePathAllowed()
   }
   const worktreeRelativePath = toWorktreeRelativePath(filePath, args.worktreePath)
-  // Why a grant and not a stat: the paired host addresses files.* by worktree-relative path, so a
-  // path outside the worktree has no form this RPC can carry. The grant request is also the
-  // existence check — the host refuses a missing path and a directory itself.
-  const needsHostPathGrant =
-    Boolean(args.context.settings?.activeRuntimeEnvironmentId?.trim()) && !worktreeRelativePath
-  let hostPathGrant: RuntimeHostPathGrant | undefined
-  if (needsHostPathGrant) {
-    hostPathGrant = await args.operations.requestHostPathGrant(args.context, filePath)
-  } else {
-    let stat: Awaited<ReturnType<typeof statRuntimePath>>
-    try {
-      stat = await args.operations.statRuntimePath(args.context, filePath)
-    } catch {
-      throw new Error(`File not found: ${filePath}`)
-    }
-    if (stat.isDirectory) {
-      throw new Error(`Cannot open a directory: ${filePath}`)
-    }
-  }
+  const reach = await resolveAbsoluteTabEntryReach({
+    ...args.operations,
+    context: args.context,
+    filePath,
+    worktreeRelativePath
+  })
   args.operations.assertAbsolutePathAllowed()
 
-  // Why the grant's path wins: the host canonicalizes before minting, so this is the file it will
-  // actually read and write. Keeping the typed alias would leave every later save unable to match
-  // the grant it holds.
-  const openedPath = hostPathGrant?.absolutePath ?? filePath
+  const openedPath = reach.openedPath
   const relativePath = worktreeRelativePath || openedPath
   const externalSshTargetId =
     relativePath === filePath &&
@@ -90,7 +74,7 @@ export async function openAbsoluteTabEntryFile(args: {
       ...(externalSshTargetId ? { externalSshTargetId } : {}),
       // Why stamped on the tab: every later read and save has to address the file the same way
       // this open did, and the grant is the only address it has.
-      ...(hostPathGrant ? { runtimeHostPathGrant: hostPathGrant } : {})
+      ...(reach.grant ? { runtimeHostPathGrant: reach.grant } : {})
     },
     { preview: false, targetGroupId: args.groupId }
   )
