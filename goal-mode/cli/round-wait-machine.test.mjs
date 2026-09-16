@@ -4,7 +4,7 @@
 // 有两条甚至退化成了正则匹配源码,重构一移位就集体误报。
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { advanceWait, initialWaitState } from './round-wait-machine.mjs'
+import { advanceWait, initialWaitState, WAIT_DEFAULTS } from './round-wait-machine.mjs'
 
 const T0 = 1_700_000_000_000
 const limits = {
@@ -143,5 +143,26 @@ test('注入的轮次:见它动过之后,finished 才采信', () => {
 test('attach 的轮次相反:本来就是来等它手上那轮结束的,直接采信', () => {
   let state = initialWaitState(T0, false) // injected = false
   const step = advanceWait(state, finished(1000), limits)
+  assert.equal(step.outcome.type, 'done')
+})
+
+test('SSH contact loss stays unverifiable beyond the observation grace and resumes the same round', () => {
+  const limits = { ...WAIT_DEFAULTS, observeGraceMs: 100, startMs: 1000, stuckMs: 1000 }
+  let state = initialWaitState(1000, false)
+  let step = advanceWait(
+    state,
+    { ok: false, unverifiable: true, now: 1100, message: 'SSH disconnected' },
+    limits
+  )
+  state = step.state
+  step = advanceWait(
+    state,
+    { ok: false, unverifiable: true, now: 100000, message: 'SSH disconnected' },
+    limits
+  )
+  assert.equal(step.outcome.type, 'wait')
+  step = advanceWait(step.state, { ok: true, verdict: 'busy', now: 100001 }, limits)
+  assert.equal(step.outcome.type, 'wait')
+  step = advanceWait(step.state, { ok: true, verdict: 'finished', now: 100002 }, limits)
   assert.equal(step.outcome.type, 'done')
 })

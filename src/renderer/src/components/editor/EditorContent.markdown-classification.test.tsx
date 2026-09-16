@@ -32,7 +32,10 @@ vi.mock('./editor-lazy-views', () => {
     MonacoEditor: view('source'),
     DiffViewer: view('diff'),
     CombinedDiffViewer: view('combined-diff'),
-    RichMarkdownEditor: view('rich-editor'),
+    // Why: the surface passes its banners through headerSlot, so the stub has to render it.
+    RichMarkdownEditor: ({ headerSlot }: { headerSlot?: React.ReactNode }) => (
+      <div data-editor-view="rich-editor">{headerSlot}</div>
+    ),
     MarkdownPreview: view('preview'),
     ImageViewer: view('image'),
     ImageDiffViewer: view('image-diff'),
@@ -97,12 +100,14 @@ function renderEditPath({
   content,
   language = 'markdown',
   viewMode = 'rich',
-  mode = 'edit'
+  mode = 'edit',
+  sizeOverridden = false
 }: {
   content: string
   language?: 'markdown' | 'typescript'
   viewMode?: 'source' | 'rich' | 'preview'
   mode?: 'edit' | 'markdown-preview'
+  sizeOverridden?: boolean
 }) {
   const activeFile = openFile(language, mode)
   const fileContents = {
@@ -116,7 +121,7 @@ function renderEditPath({
     gitStatusEntries: undefined,
     gitBranchEntries: undefined,
     markdownViewMode: { [activeFile.id]: viewMode },
-    markdownRichModeSizeOverridden: false,
+    markdownRichModeSizeOverridden: sizeOverridden,
     isChangesMode: false,
     canOpenWorkspaceFileBrowser: true
   })
@@ -287,12 +292,12 @@ describe('inline Markdown render classification', () => {
     expect(classifiers.exceedsSizeLimit).not.toHaveBeenCalled()
   })
 
-  it('preserves unsupported and oversized rich-mode fallbacks', () => {
+  it('preserves unsupported and oversized rich-mode fallbacks, both overridable', () => {
     const unsupported = renderEditPath({ content: '[reference]: https://example.com' })
 
     expect(unsupported.model.canExportMarkdownToPdf).toBe(false)
     expect(unsupported.view.getByText('Reference links require source mode.')).toBeTruthy()
-    expect(unsupported.view.queryByText('Open anyway')).toBeNull()
+    expect(unsupported.view.getByText('Open anyway')).toBeTruthy()
     unsupported.view.unmount()
 
     const oversized = renderEditPath({ content: '# oversized' })
@@ -300,5 +305,22 @@ describe('inline Markdown render classification', () => {
     expect(oversized.model.canExportMarkdownToPdf).toBe(false)
     expect(oversized.view.getByText(/File is larger than the .* rich editing limit/)).toBeTruthy()
     expect(oversized.view.getByText('Open anyway')).toBeTruthy()
+  })
+
+  it('warns for as long as rich mode holds a document it cannot round-trip', () => {
+    const overridden = renderEditPath({
+      content: '[reference]: https://example.com',
+      sizeOverridden: true
+    })
+
+    expect(overridden.view.container.querySelector('[data-editor-view="rich-editor"]')).toBeTruthy()
+    expect(overridden.view.queryByText('Reference links require source mode.')).toBeNull()
+    expect(overridden.view.getByText(/Saving from here can rewrite or drop/)).toBeTruthy()
+    overridden.view.unmount()
+
+    // Why: the same per-file flag lifts the size gate, where nothing is at risk.
+    const oversized = renderEditPath({ content: '# oversized', sizeOverridden: true })
+
+    expect(oversized.view.queryByText(/Saving from here can rewrite or drop/)).toBeNull()
   })
 })

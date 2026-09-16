@@ -228,7 +228,8 @@
             "src/main/ipc/orca-profiles.ts",
             "src/main/ipc/orca-profiles.test.ts",
             "src/main/local-worktree-filesystem.ts",
-            "src/main/orcad/orcad-entry.ts",
+            // Goal registers at the orcad composition root; the registered seam and host
+            // lifecycle tests replace byte parity for this additive initialization.
             "src/main/runtime/agent-session-claim-identity.ts",
             "src/main/runtime/agent-session-claim-identity.test.ts",
             "src/main/runtime/rpc/errors.ts",
@@ -432,6 +433,8 @@
             "mobile/src/session/use-mobile-session-terminal-create-actions.ts",
             "mobile/src/session/mobile-session-route-parity.test.ts",
             // Fork infrastructure (docs/reference/fork-maintenance.md).
+            // User-approved backport of upstream 7ec2986fd; remove after the next upstream sync.
+            "src/shared/agent-status-store-snapshot-budget.ts",
             ".github/workflows/fork-integration-build.yml",
             "config/scripts/integration-builds/**",
             "src/shared/integration-builds/**",
@@ -724,7 +727,23 @@
             "src/renderer/src/components/tab-bar/TabBarCreateEntry.tsx",
             "src/renderer/src/components/tab-bar/TabBarCreateEntry.history.test.tsx",
             "src/renderer/src/components/tab-bar/TabBarCreateEntry.keyboard.test.tsx",
-            "src/renderer/src/components/tab-bar/TabBarCreateEntry.tab-results.test.tsx"
+            "src/renderer/src/components/tab-bar/TabBarCreateEntry.tab-results.test.tsx",
+            "src/relay/relay-agent-hook-runtime.ts",
+            "src/shared/relay-artifacts.ts",
+            "config/scripts/build-relay.mjs",
+            "src/main/orcad/orcad-entry.ts",
+            "config/scripts/build-orcad.mjs",
+            "src/shared/orcad-artifacts.ts",
+            "src/relay/dispatcher-rpc-routing.ts",
+            // 2026-09-16: rich markdown unsupported override (docs/issue/富文本Markdown强制打开).
+            "src/renderer/src/components/rich-markdown-override/**",
+            "docs/issue/富文本Markdown强制打开/**",
+            "src/renderer/src/components/editor/markdown-render-mode.ts",
+            "src/renderer/src/components/editor/editor-panel-render-model.ts",
+            "src/renderer/src/components/editor/editor-panel-render-model.test.ts",
+            "src/renderer/src/components/editor/EditorMarkdownFileSurface.tsx",
+            "src/renderer/src/components/editor/EditorContent.markdown-classification.test.tsx",
+            "src/renderer/src/components/editor/EditorContent.monaco-lifecycle.test.tsx"
           ],
           "message": "Branch changes an upstream path that no fork feature owns or registers as a seam; extend config/fork-features.jsonc and this allowlist, or move the change into a feature-owned path."
         }
@@ -806,7 +825,15 @@
             ".github/workflows/track-community-prs.yaml",
             "docs/reference/fork-maintenance.md",
             "docs/issue/**",
-            "docs/maintenance/**"
+            "docs/maintenance/**",
+            "src/relay/relay-agent-hook-runtime.ts",
+            "src/relay/agent-hook-server.ts",
+            "src/shared/relay-artifacts.ts",
+            "config/scripts/build-relay.mjs",
+            "src/main/orcad/orcad-entry.ts",
+            "config/scripts/build-orcad.mjs",
+            "src/shared/orcad-artifacts.ts",
+            "src/relay/dispatcher-rpc-routing.ts"
           ],
           "message": "Change is outside the Goal feature and its reviewed seams."
         },
@@ -823,7 +850,8 @@
             "**/*.test.ts",
             "**/*.test.tsx",
             "**/*.spec.ts",
-            "**/*.spec.tsx"
+            "**/*.spec.tsx",
+            "src/main/orcad/orcad-entry.ts"
           ],
           "forbiddenTargets": ["src/main/goals/**", "src/shared/goals/**"],
           "importTextHints": ["goals"],
@@ -1245,6 +1273,37 @@
             "issues"
           ],
           "message": "Public session names must not depend on Issue records or assembly."
+        }
+      ]
+    },
+    {
+      "id": "rich-markdown-unsupported-override",
+      "description": "The rich-mode code-mode gate becomes a user choice: the override policy lives in its own module and reaches the markdown surface only through registered seams (REQ-401～REQ-403).",
+      "rules": [
+        {
+          "id": "rich-markdown-unsupported-override-worktree-scope",
+          "type": "change-scope",
+          "comparison": "worktree",
+          "whenChanged": [
+            "src/renderer/src/components/rich-markdown-override/**",
+            "docs/issue/富文本Markdown强制打开/**"
+          ],
+          "allowedPaths": [
+            "src/renderer/src/components/rich-markdown-override/**",
+            "docs/issue/富文本Markdown强制打开/**",
+            "src/renderer/src/components/editor/markdown-render-mode.ts",
+            "src/renderer/src/components/editor/editor-panel-render-model.ts",
+            "src/renderer/src/components/editor/editor-panel-render-model.test.ts",
+            "src/renderer/src/components/editor/EditorMarkdownFileSurface.tsx",
+            "src/renderer/src/components/editor/EditorContent.markdown-classification.test.tsx",
+            "src/renderer/src/components/editor/EditorContent.monaco-lifecycle.test.tsx",
+            "src/renderer/src/i18n/locales/*.json",
+            ".gitignore",
+            "config/architecture-policies.jsonc",
+            "config/fork-features.jsonc",
+            "docs/issue/**"
+          ],
+          "message": "Change is outside the rich-markdown override feature and its journal."
         }
       ]
     }

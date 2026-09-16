@@ -18,7 +18,7 @@ import type {
 } from '../../../../shared/goals/goal-control-contract'
 import { requestGoalDetailRefresh } from '@/goals/GoalDomainSyncGate'
 import { fingerprintPayload, newClientOperationId } from '@/goals/goal-client-operation'
-import { goalRuntimeClient } from '@/goals/goal-runtime-client'
+import { getGoalRuntimeClient } from '@/goals/goal-runtime-client'
 import { goalDomainStore } from '@/goals/goals-domain-store'
 import { useGoalDomainStore } from '@/goals/use-goals-domain-store'
 
@@ -27,7 +27,14 @@ import { useGoalDomainStore } from '@/goals/use-goals-domain-store'
  * than the receipt says: an accepted request reads as "requested" until the
  * driver confirms it, and a stop only reads as stopped once the turn ended.
  */
-export function GoalControls({ detail }: { detail: GoalDetail }): React.JSX.Element {
+export function GoalControls({
+  detail,
+  unavailable = false
+}: {
+  detail: GoalDetail
+  unavailable?: boolean
+}): React.JSX.Element {
+  const client = getGoalRuntimeClient()
   const pending = useGoalDomainStore((s) =>
     Object.values(s.pendingOperations).find((operation) => operation.goalId === detail.goalId)
   )
@@ -42,7 +49,7 @@ export function GoalControls({ detail }: { detail: GoalDetail }): React.JSX.Elem
     (detail.continuation === 'paused' || detail.phase === 'interrupted' || detail.phase === 'idle')
   const canStop = !terminal && !driverGone
   const canEdit = quiescent && !detail.archived
-  const busy = submitting !== null || pending !== undefined
+  const busy = unavailable || submitting !== null || pending !== undefined
 
   const submit = async (
     label: string,
@@ -50,12 +57,15 @@ export function GoalControls({ detail }: { detail: GoalDetail }): React.JSX.Elem
   ): Promise<void> => {
     setSubmitting(label)
     try {
-      reportOperation(await call(newClientOperationId()))
+      const operation = await call(newClientOperationId())
+      if (goalDomainStore.getState().routeExecutionHostId === client.routeExecutionHostId) {
+        reportOperation(operation)
+      }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : String(error))
     } finally {
       setSubmitting(null)
-      requestGoalDetailRefresh(detail.goalId)
+      requestGoalDetailRefresh(detail.goalId, client)
     }
   }
 
@@ -67,7 +77,7 @@ export function GoalControls({ detail }: { detail: GoalDetail }): React.JSX.Elem
         expectedRunId: detail.runId,
         action
       }
-      return goalRuntimeClient.control({
+      return client.control({
         ...envelope,
         clientOperationId,
         payloadFingerprint: await fingerprintPayload(envelope)
@@ -82,7 +92,7 @@ export function GoalControls({ detail }: { detail: GoalDetail }): React.JSX.Elem
         expectedRunId: detail.runId,
         archived
       }
-      return goalRuntimeClient.archive({
+      return client.archive({
         ...envelope,
         clientOperationId,
         payloadFingerprint: await fingerprintPayload(envelope)

@@ -1,3 +1,4 @@
+import { TriangleAlert } from 'lucide-react'
 import { translate } from '@/i18n/i18n'
 import { useAppStore } from '@/store'
 import type { MarkdownViewMode, OpenFile } from '@/store/slices/editor'
@@ -53,10 +54,9 @@ export function EditorMarkdownFileSurface({
   if (!inlineMarkdownRenderState) {
     return <div className="h-full min-h-0">{monacoEditor}</div>
   }
-  const { renderMode, richModeUnsupportedMessage } = inlineMarkdownRenderState
+  const { renderMode, richModeUnsupportedMessage, richModeUnsupportedOverrideActive } =
+    inlineMarkdownRenderState
   if (renderMode === 'source' && mdViewMode === 'rich') {
-    // Why: only a size fallback is recoverable — unsupported syntax would round-trip badly, so it gets no override.
-    const isSizeFallback = richModeUnsupportedMessage === null
     const richFallbackMessage =
       richModeUnsupportedMessage ??
       translate(
@@ -68,17 +68,17 @@ export function EditorMarkdownFileSurface({
       <div className="flex h-full min-h-0 flex-col">
         <div className="flex items-center gap-3 border-b border-border/60 bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
           <span className="min-w-0 flex-1">{richFallbackMessage}</span>
-          {isSizeFallback ? (
-            <Button
-              type="button"
-              variant="outline"
-              size="xs"
-              className="shrink-0"
-              onClick={() => setSizeOverride(activeFile.id, true)}
-            >
-              {translate('editor.richMarkdown.openAnyway', 'Open anyway')}
-            </Button>
-          ) : null}
+          {/* Why: both fallbacks are the user's call — size costs responsiveness, unsupported
+              syntax risks a round-trip rewrite. Neither is ours to decide for them. */}
+          <Button
+            type="button"
+            variant="outline"
+            size="xs"
+            className="shrink-0"
+            onClick={() => setSizeOverride(activeFile.id, true)}
+          >
+            {translate('editor.richMarkdown.openAnyway', 'Open anyway')}
+          </Button>
         </div>
         <div className="min-h-0 flex-1 h-full">{monacoEditor}</div>
       </div>
@@ -124,9 +124,12 @@ export function EditorMarkdownFileSurface({
               markdownReviewContent={currentContent}
               // Why: banner goes below the toolbar (inside the editor shell) so formatting controls stay at the top of the pane.
               headerSlot={
-                frontMatter && showMarkdownFrontmatter ? (
-                  <FrontMatterBanner raw={frontMatter.raw} />
-                ) : null
+                <>
+                  {richModeUnsupportedOverrideActive ? <RichModeOverrideBanner /> : null}
+                  {frontMatter && showMarkdownFrontmatter ? (
+                    <FrontMatterBanner raw={frontMatter.raw} />
+                  ) : null}
+                </>
               }
             />
           </RichMarkdownErrorBoundary>
@@ -163,6 +166,20 @@ export function EditorMarkdownFileSurface({
     )
   }
   return <div className="h-full min-h-0">{monacoEditor}</div>
+}
+
+function RichModeOverrideBanner(): React.JSX.Element {
+  return (
+    <div className="flex items-start gap-2 border-b border-border/60 bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+      <TriangleAlert className="mt-px size-3.5 shrink-0" aria-hidden="true" />
+      <span className="min-w-0 flex-1">
+        {translate(
+          'editor.richMarkdown.overrideActive',
+          'Rich editing was turned on for a file it cannot round-trip. Saving from here can rewrite or drop the HTML, reference-style links, or footnotes it contains.'
+        )}
+      </span>
+    </div>
+  )
 }
 
 function FrontMatterBanner({ raw }: { raw: string }): React.JSX.Element {

@@ -53,6 +53,15 @@ export function advanceWait(state, event, limits = WAIT_DEFAULTS) {
   const notices = []
   const now = event.now
 
+  if (event.unverifiable) {
+    if (s.observeErrorAt === null) {
+      s.observeErrorAt = now
+      s.observeErrorMessage = event.message ?? 'Remote terminal is unverifiable'
+      notices.push({ kind: 'observe-failed', message: s.observeErrorMessage })
+    }
+    return { state: s, outcome: { type: 'wait' }, notices }
+  }
+
   if (!event.ok) {
     // 观察终端要调 orca CLI,偶发失败是常态(Orca 在重启、IPC 抖动、机器刚睡醒)。
     // 一轮要轮询几千次,把任何一次失败当致命,目标迟早死在一次抖动上 —— 实测发生过。
@@ -76,6 +85,8 @@ export function advanceWait(state, event, limits = WAIT_DEFAULTS) {
 
   if (s.observeErrorAt) {
     notices.push({ kind: 'observe-recovered', outMs: now - s.observeErrorAt })
+    s.startAt += now - s.observeErrorAt
+    s.lastBusyAt += now - s.observeErrorAt
     s.observeErrorAt = null
     s.observeErrorMessage = null
   }

@@ -9,6 +9,7 @@
  */
 import { fork, spawnSync } from 'node:child_process'
 import { build } from 'esbuild'
+import { buildGoalDriverBundles } from './build-goal-driver.mjs'
 import { createHash } from 'node:crypto'
 import {
   chmodSync,
@@ -79,6 +80,7 @@ const externalNativeAddons = {
 
 rmSync(OUT_DIR, { recursive: true, force: true })
 mkdirSync(OUT_DIR, { recursive: true })
+await buildGoalDriverBundles(OUT_DIR)
 copyFileSync(AGENT_BROWSER_SOURCE, AGENT_BROWSER_OUTPUT)
 if (process.platform !== 'win32') {
   chmodSync(AGENT_BROWSER_OUTPUT, 0o755)
