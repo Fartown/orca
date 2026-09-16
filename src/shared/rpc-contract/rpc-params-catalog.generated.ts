@@ -1208,6 +1208,7 @@ export const RPC_PARAMS_BY_METHOD = {
 // Why: these methods bind a schema the shared contract cannot hold because its value
 // graph reaches into src/main. Listing them keeps the gap visible instead of absent.
 export const RPC_METHODS_WITHOUT_SHARED_PARAMS: readonly string[] = [
+  'agent.launch',
   'emulator.install',
   'goals.adoptLegacy',
   'goals.amend',

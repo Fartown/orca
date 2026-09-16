@@ -89,7 +89,12 @@ describe('launchAgentInNewTab paired web runtime', () => {
       launchToken: 'launch-token-0123456789-abcdefghijklmnopqrstuvwxyz'
     })
 
-    expect(result).toEqual(expect.objectContaining({ tabId: null, pasteDraftAfterLaunch: false }))
+    expect(result).toEqual(
+      expect.objectContaining({
+        surface: { kind: 'host-published' },
+        pasteDraftAfterLaunch: false
+      })
+    )
     expect(mocks.createWebRuntimeSessionTerminal).toHaveBeenCalledWith({
       worktreeId: 'wt-1',
       environmentId: 'web-runtime',
@@ -139,7 +144,12 @@ describe('launchAgentInNewTab paired web runtime', () => {
       groupId: 'group-1'
     })
 
-    expect(result).toEqual(expect.objectContaining({ tabId: null, pasteDraftAfterLaunch: false }))
+    expect(result).toEqual(
+      expect.objectContaining({
+        surface: { kind: 'host-published' },
+        pasteDraftAfterLaunch: false
+      })
+    )
     expect(mocks.createWebRuntimeSessionTerminal).toHaveBeenCalledWith({
       worktreeId: 'wt-1',
       environmentId: 'web-runtime',

@@ -3,7 +3,7 @@ title: 文档预览大小
 document_type: journal
 status: testing
 created: 2026-09-12
-updated: 2026-09-12
+updated: 2026-09-15
 issue: 文档预览大小
 external_ids: []
 ---
@@ -49,6 +49,15 @@ external_ids: []
 - 影响范围：REQ-401 与 TC-401 描述已同步；生产代码没有因此变更。
 
 ## 3. 开发记录
+
+### 2026-09-15 — 预览 CSP 放行内联 data: 媒体
+
+- 本轮目标：远程 octo 工作区在 Orca 侧栏预览面板打开自包含 HTML 报告时，内联 `data:video/webm` 录屏无法播放（截图能显示），修复该必现问题。
+- 完成内容：定位根因为 `doc-preview-protocol.ts` 固定 CSP 缺 `media-src`，媒体回落到 `default-src 'self'`，`data:` 视频被 Chromium 判为 SRC_NOT_SUPPORTED（error code 4 / networkState 3）。补 `media-src 'self' data:`，与既有 `img-src`/`font-src 'self' data:` 对等——只放行页面内联媒体，不放行任何网络地址；会话层 `onBeforeRequest` 的外链硬拦截不变。
+- 代码或文档变更：`src/main/browser/doc-preview-protocol.ts` CSP 增一条并加 WHY 注释；`doc-preview-protocol.test.ts` 断言 CSP 含 `media-src 'self' data:` 且仍不含 `https:`；在 `config/fork-features.jsonc` 将该文件登记为 document-preview-size 的 seam（mustContain `media-src 'self' data:`），并加入 `config/architecture-policies.jsonc` 的 `fork-integration-scope` 与 `document-preview-size-worktree-scope` 允许清单。
+- 验证证据：ego-browser 用真实抠出的 webm（V_VP8，759 KB）跑同 CSP 对照——shipped CSP error=4/net=3 且 `media-src` 违规；加 `media-src 'self' data:` 后 error=null/readyState=4 正常播；无 CSP 亦正常。门禁结果见本轮末尾命令输出。
+- 未解决问题：改动需下个 fork 内测包生效，未热补已安装 App；真实 Electron 预览面板端到端截图待出包后补。上游同源 bug，可另行向 stablyai/orca 提 PR。
+- 下一步：过全部 fork 门禁后按 feat 分支提 PR 合入 fork/integration。
 
 ### 2026-09-12 — 在同一 PR 修复既有 CI 基线
 

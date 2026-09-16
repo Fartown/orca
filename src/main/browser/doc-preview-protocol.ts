@@ -52,6 +52,9 @@ const DOC_PREVIEW_CONTENT_SECURITY_POLICY = [
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data:",
   "font-src 'self' data:",
+  // Same rationale as img-src: an inline `data:` recording is self-contained, not an outbound
+  // fetch, so it renders while a network media URL still cannot.
+  "media-src 'self' data:",
   "connect-src 'self'",
   "frame-src 'self'",
   "object-src 'none'"
