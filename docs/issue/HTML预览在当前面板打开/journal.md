@@ -59,6 +59,15 @@ external_ids: []
 
 ## 3. 开发记录
 
+### 2026-09-16 补反向对照并在上游同步后复验
+
+- 本轮目标：让本功能达到与 #23、#25 相同的证据标准——真机通过之外，还要证明用例不是空跑。
+- 完成内容：把 `EditorPanel.tsx` 改回调用上游 `openFilePreviewToSide` 重新构建后跑同一条 TC-606，确认它在 `paneStrips → toHaveCount(stripsBefore)` 处失败（面板数由 1 变 2），随后还原复验通过。另：`fork/integration` 合入上游 1642 文件的同步后，本分支重新合入并全量复验。
+- 代码或文档变更：`.docs/html-preview-current-pane-ui-validation/2026-09-15/evidence/00-before-fix-split-pane.png`；本 issue 测试记录新增 §3.1、§3.2。
+- 验证证据：反向对照失败截图捕获到分屏右栏的 `RENDERED HTML` 标题——顺带填上了原先声明的「无法证明 HTML 像素渲染出来」这个缺口；合并上游后 `pnpm tc`、`check:fork-features`、`check:architecture-policies` 通过，TC-606 真机重跑通过。
+- 未解决问题：远程工作区的预览落位与合并 diff 入口仍只有单测证据。
+- 下一步：等待合入。
+
 ### 2026-09-15 实现落位函数与两个调用点
 
 - 本轮目标：HTML 预览不再强制右分屏，改为在发起操作的 pane 内新建预览 tab 并切过去。
