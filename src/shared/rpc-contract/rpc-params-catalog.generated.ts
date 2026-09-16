@@ -198,6 +198,7 @@ import {
   FileSearch,
   FileTreePath,
   FileUnwatch,
+  HostPathGrant,
   ResolveTerminalPath,
   ServerDirectoryBrowse
 } from './files-params'
@@ -766,6 +767,7 @@ export const RPC_PARAMS_BY_METHOD = {
   'files.createDirNoClobber': FileMutationOpen,
   'files.createFile': FileMutationOpen,
   'files.delete': FileDelete,
+  'files.grantHostPath': HostPathGrant,
   'files.list': WorktreeSelector,
   'files.listAll': FileListAll,
   'files.listMarkdownDocuments': WorktreeSelector,

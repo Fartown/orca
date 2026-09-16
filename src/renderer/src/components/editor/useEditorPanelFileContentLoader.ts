@@ -183,6 +183,8 @@ export function useEditorPanelFileContentLoader({
             worktreeId: readWorktreeId,
             connectionId: readConnectionId,
             expectedExternalSshTargetId: restoredOpenFile?.externalSshTargetId,
+            // Why: a host path outside the worktree is only addressable through its grant.
+            hostPathGrant: restoredOpenFile?.runtimeHostPathGrant,
             includeLocalLogMetadata: isLiveTailLogTab
           }) as Promise<FileContent>
           pending = { externalEventGeneration: options?.externalEventGeneration, promise }

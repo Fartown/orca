@@ -16,6 +16,7 @@ import {
   FileSearch,
   FileTreePath,
   FileUnwatch,
+  HostPathGrant,
   ResolveTerminalPath,
   ServerDirectoryBrowse
 } from '../../../../shared/rpc-contract/files-params'
@@ -99,6 +100,12 @@ export const FILE_METHODS = [
         params.crossWorkspace === true,
         params.nativeChatContext ?? null
       )
+  }),
+  defineMethod({
+    name: 'files.grantHostPath',
+    params: HostPathGrant,
+    handler: async (params, { runtime, clientId }) =>
+      runtime.grantHostPath(params.worktree, params.absolutePath, clientId)
   }),
   ...FILE_TERMINAL_ARTIFACT_METHODS,
   defineMethod({

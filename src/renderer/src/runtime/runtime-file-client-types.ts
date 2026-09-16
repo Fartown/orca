@@ -8,6 +8,9 @@ export type RuntimeReadableFileContent = {
   fileIdentity?: string
 }
 
+/** A host file outside the worktree, addressed by the grant the host minted for it. */
+export type RuntimeHostPathGrantRef = { grantId: string; absolutePath: string }
+
 export type RuntimeFileReadArgs = {
   settings: Pick<GlobalSettings, 'activeRuntimeEnvironmentId'> | null | undefined
   filePath: string
@@ -16,6 +19,7 @@ export type RuntimeFileReadArgs = {
   connectionId?: string
   expectedExternalSshTargetId?: string
   includeLocalLogMetadata?: boolean
+  hostPathGrant?: RuntimeHostPathGrantRef
 }
 
 export type RuntimeFileOperationArgs = {
@@ -27,6 +31,7 @@ export type RuntimeFileOperationArgs = {
   expectedSshTargetId?: string
   expectedSshConnectionGeneration?: number
   expectedExternalSshTargetId?: string
+  hostPathGrant?: RuntimeHostPathGrantRef
 }
 
 export type RuntimeFileDownloadResult =

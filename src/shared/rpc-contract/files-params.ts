@@ -42,6 +42,13 @@ export const ResolveTerminalPath = WorktreeSelector.extend({
     .optional()
 })
 
+export const HostPathGrant = WorktreeSelector.extend({
+  absolutePath: z
+    .unknown()
+    .transform((v) => (typeof v === 'string' ? v : ''))
+    .pipe(z.string().min(1, 'Missing absolute path'))
+})
+
 export const FileOpenDiff = FileOpen.extend({
   staged: z.boolean().optional()
 })

@@ -170,7 +170,7 @@ export type TerminalFileGrant = {
   expiresAt: number
   statIdentity: string | null
   readOnly: boolean
-  provenance: 'terminal-output' | 'native-chat'
+  provenance: 'terminal-output' | 'native-chat' | 'host-path'
   expiryTimer?: ReturnType<typeof setTimeout>
 }
 
