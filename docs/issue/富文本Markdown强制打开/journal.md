@@ -1,7 +1,7 @@
 ---
 title: "富文本Markdown强制打开"
 slug: "富文本Markdown强制打开"
-status: testing
+status: done
 created: 2026-09-16
 updated: 2026-09-16
 external_ids: []
@@ -18,7 +18,7 @@ external_ids: []
 | 调研 | - | not-required | 拦截链路在本 journal §2 D-002 内记录，范围小于一篇独立调研 |
 | 方案 | - | not-required | 单模块 + 3 接缝，设计写在 D-001～D-003 |
 | 测试用例 | [tests/cases/富文本Markdown强制打开功能测试.md](tests/cases/富文本Markdown强制打开功能测试.md) | ready | TC-601～TC-606 单元规格，TC-607 真机规格 |
-| 测试记录 | - | pending-decision | 单元已全绿；TC-607 真机验证待补 |
+| 测试记录 | [tests/runs/2026-09-16-本地真机与单元验证.md](tests/runs/2026-09-16-本地真机与单元验证.md) | completed | TC-601～TC-607 全过；TC-607 的覆盖持久化预期已按实测改写 |
 
 ## 2. 决策点记录
 
@@ -59,5 +59,16 @@ external_ids: []
   - 登记 feature、策略、`.gitignore` 放行与需求/用例文档
 - 代码或文档变更：`src/renderer/src/components/rich-markdown-override/`（新增模块与测试）、`src/renderer/src/components/editor/markdown-render-mode.ts`、`editor-panel-render-model.ts`、`EditorMarkdownFileSurface.tsx`、`EditorContent.markdown-classification.test.tsx`、`EditorContent.monaco-lifecycle.test.tsx`、`editor-panel-render-model.test.ts`、`src/renderer/src/i18n/locales/en.json`、`zh.json`、`config/fork-features.jsonc`、`config/architecture-policies.jsonc`、`.gitignore`、本目录文档
 - 验证证据：`pnpm tc` 通过；`pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/components/editor src/renderer/src/components/rich-markdown-override` 220 文件 1507 用例通过；feature checks、`check:architecture-policies`、`check:fork-features`、`check:fork-docs`、四项本地化门禁通过
-- 未解决问题：TC-607 真机动线尚未在打包应用上走一遍
-- 下一步：补 TC-607 真机验证记录，然后开 PR 合回 `fork/integration`
+- 未解决问题：无
+- 下一步：开 PR 合回 `fork/integration`
+
+### 2026-09-16 真机验证与用例修正
+
+- 本轮目标：在真实应用上走完 TC-607 动线，确认中文文案、模式切换与常驻提示，并把实测与用例对齐
+- 完成内容：
+  - 后台 dev 构建（`orca-dev` profile，CDP 9435，不抢焦点）跑通「回落 → 仍然打开 → 富文本接管 → 常驻提示」全链路
+  - 发现首版 TC-607 关于「覆盖跨标签页关闭保留」的预期与实测相反，查证为上游 `close-file-action.ts:35` 的既有清理语义，按实测改写用例而非改代码
+- 代码或文档变更：`docs/issue/富文本Markdown强制打开/tests/cases/`（TC-607 预期改写）、`tests/runs/2026-09-16-本地真机与单元验证.md`（新增）、本 journal
+- 验证证据：`.docs/rich-markdown-override-ui-validation/2026-09-16/` 下的 `evidence/05~07*.png` 与 `scripts/tc607-*.mjs`；TC-601～TC-607 共 7 条全过
+- 未解决问题：无
+- 下一步：开 PR 合回 `fork/integration`
