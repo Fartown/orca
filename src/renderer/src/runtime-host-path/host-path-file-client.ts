@@ -48,7 +48,11 @@ const HostPathGrantResolution = z.object({
   openTarget: z.object({ grantId: z.string().min(1), absolutePath: z.string().min(1) }).optional()
 })
 
-const HostPathFileContent = z.object({ content: z.string() })
+const HostPathFileContent = z.object({
+  content: z.string(),
+  truncated: z.boolean().optional(),
+  byteLength: z.number().optional()
+})
 
 function errorText(error: unknown): string {
   return error instanceof Error ? error.message : String(error)
@@ -91,6 +95,14 @@ export async function readHostPathFile(
   )
   if (!result.success) {
     throw new Error(HOST_PATH_UNAVAILABLE_MESSAGE)
+  }
+  if (result.data.truncated) {
+    // Why refused and not completed: files.readChunk addresses a worktree-relative path, so a
+    // granted path has no chunked form. Returning the prefix would make the next save drop the
+    // rest of the file — the exact damage the worktree-relative read path refuses for.
+    throw new Error(
+      `Host file is too large to open in the editor (${result.data.byteLength ?? 0} bytes)`
+    )
   }
   return { content: result.data.content, isBinary: false }
 }

@@ -82,6 +82,19 @@ describe('readHostPathFile / writeHostPathFile', () => {
     })
   })
 
+  it('refuses a truncated answer instead of handing back a savable prefix', async () => {
+    // Why this case exists: files.readTerminalArtifact truncates like files.read does, but a
+    // granted path has no files.readChunk form to finish on. Returning the prefix would let the
+    // next save drop the rest of the host's file.
+    const call = hostAnswering({
+      'files.readTerminalArtifact': { content: 'prefix', truncated: true, byteLength: 524_288 }
+    })
+
+    await expect(readHostPathFile(call, 'id:wt-1', GRANT)).rejects.toThrow(
+      'Host file is too large to open in the editor (524288 bytes)'
+    )
+  })
+
   it('writes through the terminal-artifact method with the grant', async () => {
     const call = hostAnswering({ 'files.writeTerminalArtifact': undefined })
 

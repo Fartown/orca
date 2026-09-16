@@ -60,6 +60,15 @@ external_ids: []
 
 ## 3. 开发记录
 
+### 2026-09-16 合流时发现并堵上一个交互缺口
+
+- 本轮目标：把本分支更新到已合入 #20、#23 的集成分支。
+- 完成内容：`runtime-file-read-client.ts` 与「远程大文件编辑器读取」冲突（两者都改 `readRuntimeFileContent`），实为 import 块冲突，函数体内两条分支位置不同、自动合好。但合流暴露出一个新口子：`files.readTerminalArtifact` 同样会截断，而授权路径没有 `files.readChunk` 的分块形式，我原先的实现忽略了 `truncated`，会把前缀当成可编辑内容交出去——一保存就抹掉主机文件后半截。新增 REQ-806 明确拒绝并补单测。
+- 代码或文档变更：`host-path-file-client.ts` 解析 `truncated`/`byteLength` 并拒绝；对应单测；本 issue 需求新增 REQ-806 与未决项。
+- 验证证据：单元 11 条通过；`pnpm tc` 通过；`check:fork-features`、`check:fork-docs`、`check:architecture-policies` 通过（13 个策略集，四个功能全在）。
+- 未解决问题：授权路径上的大文件目前只能拒绝，要支持需要主机提供按 grant 的分块读。
+- 下一步：跑真机复验后合入。
+
 ### 2026-09-16 把上游接缝压成一行调用
 
 - 本轮目标：降低这个功能长期的上游同步成本。
