@@ -716,7 +716,16 @@
             "src/renderer/src/components/tab-bar/TabBarCreateEntry.tsx",
             "src/renderer/src/components/tab-bar/TabBarCreateEntry.history.test.tsx",
             "src/renderer/src/components/tab-bar/TabBarCreateEntry.keyboard.test.tsx",
-            "src/renderer/src/components/tab-bar/TabBarCreateEntry.tab-results.test.tsx"
+            "src/renderer/src/components/tab-bar/TabBarCreateEntry.tab-results.test.tsx",
+            // 2026-09-16: rich markdown unsupported override (docs/issue/富文本Markdown强制打开).
+            "src/renderer/src/components/rich-markdown-override/**",
+            "docs/issue/富文本Markdown强制打开/**",
+            "src/renderer/src/components/editor/markdown-render-mode.ts",
+            "src/renderer/src/components/editor/editor-panel-render-model.ts",
+            "src/renderer/src/components/editor/editor-panel-render-model.test.ts",
+            "src/renderer/src/components/editor/EditorMarkdownFileSurface.tsx",
+            "src/renderer/src/components/editor/EditorContent.markdown-classification.test.tsx",
+            "src/renderer/src/components/editor/EditorContent.monaco-lifecycle.test.tsx"
           ],
           "message": "Branch changes an upstream path that no fork feature owns or registers as a seam; extend config/fork-features.jsonc and this allowlist, or move the change into a feature-owned path."
         }
@@ -1194,6 +1203,37 @@
             "issues"
           ],
           "message": "Public session names must not depend on Issue records or assembly."
+        }
+      ]
+    },
+    {
+      "id": "rich-markdown-unsupported-override",
+      "description": "The rich-mode code-mode gate becomes a user choice: the override policy lives in its own module and reaches the markdown surface only through registered seams (REQ-401～REQ-403).",
+      "rules": [
+        {
+          "id": "rich-markdown-unsupported-override-worktree-scope",
+          "type": "change-scope",
+          "comparison": "worktree",
+          "whenChanged": [
+            "src/renderer/src/components/rich-markdown-override/**",
+            "docs/issue/富文本Markdown强制打开/**"
+          ],
+          "allowedPaths": [
+            "src/renderer/src/components/rich-markdown-override/**",
+            "docs/issue/富文本Markdown强制打开/**",
+            "src/renderer/src/components/editor/markdown-render-mode.ts",
+            "src/renderer/src/components/editor/editor-panel-render-model.ts",
+            "src/renderer/src/components/editor/editor-panel-render-model.test.ts",
+            "src/renderer/src/components/editor/EditorMarkdownFileSurface.tsx",
+            "src/renderer/src/components/editor/EditorContent.markdown-classification.test.tsx",
+            "src/renderer/src/components/editor/EditorContent.monaco-lifecycle.test.tsx",
+            "src/renderer/src/i18n/locales/*.json",
+            ".gitignore",
+            "config/architecture-policies.jsonc",
+            "config/fork-features.jsonc",
+            "docs/issue/**"
+          ],
+          "message": "Change is outside the rich-markdown override feature and its journal."
         }
       ]
     }

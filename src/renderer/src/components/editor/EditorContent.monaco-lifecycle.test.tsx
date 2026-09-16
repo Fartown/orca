@@ -329,7 +329,8 @@ describe('EditorContent Monaco lifecycle boundary', () => {
         mdViewMode="rich"
         inlineMarkdownRenderState={{
           renderMode: 'rich-editor',
-          richModeUnsupportedMessage: null
+          richModeUnsupportedMessage: null,
+          richModeUnsupportedOverrideActive: false
         }}
       />
     )

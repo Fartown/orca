@@ -5,6 +5,9 @@ export type MarkdownRenderMode = 'source' | 'rich-editor' | 'preview'
 export type MarkdownRenderState = {
   renderMode: MarkdownRenderMode
   richModeUnsupportedMessage: string | null
+  // Why: rich mode owns a document it cannot round-trip, so the surface keeps
+  // the rewrite risk visible instead of only warning at the moment of opt-in.
+  richModeUnsupportedOverrideActive: boolean
 }
 
 export function getMarkdownRenderMode({

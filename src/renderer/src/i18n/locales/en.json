@@ -111,7 +111,8 @@
   "editor": {
     "richMarkdown": {
       "tooLarge": "File is larger than the {{limit}} rich editing limit. Showing source mode instead.",
-      "openAnyway": "Open anyway"
+      "openAnyway": "Open anyway",
+      "overrideActive": "Rich editing was turned on for a file it cannot round-trip. Saving from here can rewrite or drop the HTML, reference-style links, or footnotes it contains."
     }
   },
   "githubChecks": {

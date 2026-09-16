@@ -7,6 +7,13 @@
       "webDescription": "重试 Web 客户端或重新连接到配对的运行时。"
     }
   },
+  "editor": {
+    "richMarkdown": {
+      "tooLarge": "文件超过 {{limit}} 的富文本编辑上限，已改为源码模式。",
+      "openAnyway": "仍然打开",
+      "overrideActive": "已对无法无损往返的文件强制启用富文本编辑。在此保存可能改写或丢失文件中的 HTML、引用式链接或脚注。"
+    }
+  },
   "githubChecks": {
     "retrying": "正在重试..."
   },
