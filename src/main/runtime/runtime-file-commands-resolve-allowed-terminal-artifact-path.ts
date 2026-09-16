@@ -24,10 +24,10 @@ import type { RuntimeTerminalPathResolution } from '../../shared/runtime-types'
 import { isPathInsideOrEqual } from '../../shared/cross-platform-path'
 import { randomUUID } from 'node:crypto'
 import {
+  runtimeFileRouteForTarget,
   runtimeFileSshTargetId,
   type ResolvedRuntimeFileTarget
 } from './runtime-file-command-target'
-import { runtimeFileRouteForTarget } from './runtime-file-command-target'
 import {
   hostGrantPathCandidate,
   HOST_PATH_GRANT_DIRECTORY_MESSAGE,
