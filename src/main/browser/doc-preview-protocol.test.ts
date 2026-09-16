@@ -169,6 +169,9 @@ describe('handleDocPreviewRequest', () => {
     expect(policy).toContain("connect-src 'self'")
     expect(policy).toContain("object-src 'none'")
     expect(policy).toContain("img-src 'self' data:")
+    // Why: an inline `data:` recording (agent-authored report videos) is self-contained; without
+    // this it falls back to default-src 'self' and Chromium refuses the media as SRC_NOT_SUPPORTED.
+    expect(policy).toContain("media-src 'self' data:")
     expect(policy).not.toContain('https:')
     // Why assert an absence: `webrtc 'block'` is the obvious directive to reach for here and this
     // Chromium does not implement it — it logs "Unrecognized Content-Security-Policy directive

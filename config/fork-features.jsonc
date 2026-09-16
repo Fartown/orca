@@ -166,6 +166,11 @@
           "file": "src/main/runtime/rpc/methods/files.ts",
           "mustContain": "params.chunk",
           "why": "forward document-specific chunk requests through canonical authorization"
+        },
+        {
+          "file": "src/main/browser/doc-preview-protocol.ts",
+          "mustContain": "media-src 'self' data:",
+          "why": "inline data: recordings in previewed reports render like inline images instead of failing default-src"
         }
       ],
       "tests": [
