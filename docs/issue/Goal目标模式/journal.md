@@ -78,9 +78,9 @@ external_ids: []
 ### 2026-09-16 SSH 修复 PR 静态检查
 
 - 本轮目标：推进 [PR #26](https://github.com/Fartown/orca/pull/26) 的远端检查与集成合入。
-- 完成内容：恢复 GitHub CLI 认证并推送 SSH 修复；修正 Goal 投影模块的重复类型 import。
-- 代码或文档变更：仅合并 `goal-turn-evidence` 的导入声明，运行行为不变。
-- 验证证据：PR 首轮类型检查、Node 18 宿主检查通过；本轮 Goal 文件的 native code-quality 检查通过。静态检查日志见 `.docs/goal-remote-host-ui-validation/2026-09-16/evidence/pr26-static-analysis.log`。
+- 完成内容：恢复 GitHub CLI 认证并推送 SSH 修复；修正 Goal 投影模块的重复类型 import，以及 Claude 输出解析在 Node 18 上调用 `toReversed()` 的兼容性问题。
+- 代码或文档变更：合并 `goal-turn-evidence` 导入声明；输出解析按下标倒序扫描，保留最后一个结果事件语义；将现有 relay 子进程兼容性测试加入 Goal 固定检查。
+- 验证证据：PR 首轮类型检查、Node 18 宿主检查、Linux/Windows 打包通过；本地 Goal/relay 35 项回归及真实 Node 18.20.8 输出解析 5 项通过。记录见 [SSH 运行记录](tests/runs/2026-09-16-SSH执行主机.md)，日志位于 `.docs/goal-remote-host-ui-validation/2026-09-16/evidence/pr26-*.log` 和 `provider-node18-smoke.log`。
 - 未解决问题：集成基线的 `agent-status-store-snapshot-budget.ts` 同样有重复 import，上游 `7ec2986fd` 已修复；本轮尚未引入该修复。其余远端测试仍在运行，尚未合入。
 - 下一步：按确认的上游引入范围解除基线阻断，完成全部 PR 检查后合入。
 
