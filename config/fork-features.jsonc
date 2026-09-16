@@ -423,6 +423,8 @@
         "src/renderer/src/components/goals/GoalProgress.test.tsx",
         "src/main/goals/goal-acceptance-drafts.test.ts",
         "src/main/goals/goal-draft-recovery.test.ts",
+        "src/main/goals/goal-editor-draft-delete.test.ts",
+        "src/renderer/src/components/goals/GoalDraftList.test.tsx",
         "src/main/goals/goal-draft-workspace.test.ts",
         "src/shared/goals/goal-agent-provider.test.ts",
         "src/relay/subprocess.test.ts",

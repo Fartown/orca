@@ -10,6 +10,8 @@ scope: 原生目标管理 UI、执行控制与历史兼容
 
 # Goal 目标管理与交互闭环方案
 
+本轮补充（2026-09-16，REQ-123）：草稿行复用 Button、Tooltip、Dialog 提供删除确认；生成中显示停止阶段，错误保留对话框与条目。`goals.deleteEditorDraft` 沿既有主机路由进入 `GoalEditorDraftStore`，携带 `expectedRevision` 并与保存共用串行队列。先通过既有 cancel/stop.json 停止生成，仍运行或无法确认时不移除；结束后原子写删除标记，拒绝迟到保存。启动端在 spawn 前检查停止标记，客户端失效编辑缓存并过滤旧列表响应。Markdown 文件和正式执行 Goal 保留。旧宿主明确报告不支持，不回退本机。验证对应 TC-362～TC-365，实际结果见本轮 Test Run。
+
 ## 2026-09-16 SSH 与远程宿主修复（REQ-111、REQ-122）
 
 本节替代下文历史“首期仅本机”的执行端限制。该分期未经用户批准；SSH 工作区和普通文件夹均需支持原有 Goal 流程。

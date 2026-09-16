@@ -31,5 +31,6 @@ it('registers the existing Goal API on the relay and leaves its host store separ
   expect(methods.has('goals.draftAcceptance')).toBe(true)
   expect(methods.has('goals.create')).toBe(true)
   expect(methods.has('goals.control')).toBe(true)
+  expect(methods.has('goals.deleteEditorDraft')).toBe(true)
   expect(requestClient).not.toHaveBeenCalled()
 })

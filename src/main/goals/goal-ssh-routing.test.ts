@@ -34,3 +34,19 @@ it('does not fall back when an older relay rejects the method', async () => {
   ).rejects.toThrow('Method not found')
   expect(local).not.toHaveBeenCalled()
 })
+
+it('routes draft deletion to the owning SSH host without touching the local store', async () => {
+  const result = { status: 'deleted' } as const
+  request.mockResolvedValue(result)
+  const local = vi.fn(() => result)
+  const params = {
+    authorityExecutionHostId: 'ssh:remote',
+    editorDraftId: 'draft',
+    expectedRevision: 1
+  }
+  await expect(
+    routeGoalRequest('goals.deleteEditorDraft', params, context, local)
+  ).resolves.toEqual(result)
+  expect(request).toHaveBeenCalledWith('goals.deleteEditorDraft', params)
+  expect(local).not.toHaveBeenCalled()
+})

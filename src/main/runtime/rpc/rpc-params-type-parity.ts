@@ -19,6 +19,7 @@ type UncataloguedMethod =
   | 'goals.cancelAcceptanceDraft'
   | 'goals.control'
   | 'goals.create'
+  | 'goals.deleteEditorDraft'
   | 'goals.draftAcceptance'
   | 'goals.get'
   | 'goals.getAcceptanceDraft'

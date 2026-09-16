@@ -95,6 +95,12 @@ export class GoalAcceptanceDrafts {
       const input = { ...params, fingerprint, workspace }
       await writeJsonAtomic(join(dir, 'input.json'), input)
       await writeJsonAtomic(join(dir, 'result.json'), result)
+      // Deletion can arrive while workspace resolution is still in flight.
+      if (await readJson(join(dir, 'stop.json'))) {
+        result = { ...result, status: 'cancelled', phase: undefined, finishedAt: Date.now() }
+        await writeJsonAtomic(join(dir, 'result.json'), result)
+        return result
+      }
       if (this.deps.run) {
         const abort = new AbortController()
         const settled = runAcceptanceDraft(dir, input, result, { run: this.deps.run, abort })

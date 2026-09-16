@@ -66,6 +66,14 @@ export const GOAL_METHODS = [
       )
   }),
   defineMethod({
+    name: 'goals.deleteEditorDraft',
+    params: GoalRpcParams['goals.deleteEditorDraft'],
+    handler: (params, context) =>
+      routeGoalRequest('goals.deleteEditorDraft', params, context, () =>
+        service().editorDrafts.delete(params)
+      )
+  }),
+  defineMethod({
     name: 'goals.list',
     params: GoalRpcParams['goals.list'],
     handler: (params, context) =>

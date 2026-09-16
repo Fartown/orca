@@ -1218,6 +1218,7 @@ export const RPC_METHODS_WITHOUT_SHARED_PARAMS: readonly string[] = [
   'goals.cancelAcceptanceDraft',
   'goals.control',
   'goals.create',
+  'goals.deleteEditorDraft',
   'goals.draftAcceptance',
   'goals.get',
   'goals.getAcceptanceDraft',

@@ -125,6 +125,12 @@ export function registerRelayGoals(
       return service.editorDrafts.save(params)
     })
   )
+  dispatcher.onRequest('goals.deleteEditorDraft', async (raw, context) =>
+    callers.run(context.clientId, async () => {
+      const params = GoalRpcParams['goals.deleteEditorDraft'].parse(raw)
+      return service.editorDrafts.delete(params)
+    })
+  )
   dispatcher.onRequest('goals.list', async (raw, context) =>
     callers.run(context.clientId, async () => {
       const params = GoalRpcParams['goals.list'].parse(raw)

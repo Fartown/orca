@@ -15436,6 +15436,13 @@
       "confirm": "移动目标"
     },
     "drafts": {
+      "delete": "删除草稿",
+      "stopAndDelete": "停止生成并删除",
+      "deleteDescription": "从列表中删除这份草稿；如仍在生成，将先停止任务。已生成的 Markdown 文件和已创建的 Goal 会保留。",
+      "deletingStopping": "正在停止生成…",
+      "deleting": "正在删除草稿…",
+      "deleteUnverifiable": "暂时无法确认生成任务已停止，草稿已保留。请连接所属主机后重试。",
+      "deleteStillStopping": "生成任务仍在停止中，草稿已保留，请稍后重试。",
       "candidate": "新文档已生成，已保留你的编辑。请先查看新版本，再决定是否采用。",
       "previewCandidate": "查看生成版本",
       "adoptCandidate": "采用生成文档",

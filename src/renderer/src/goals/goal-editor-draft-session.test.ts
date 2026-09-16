@@ -2,7 +2,7 @@ import { afterEach, expect, it, vi } from 'vitest'
 import { GoalRpcParams } from '../../../shared/goals/goal-control-contract'
 import type { GoalEditorDraftRecord } from '../../../shared/goals/goal-editor-draft-contract'
 import { callRuntimeRpc } from '../runtime/runtime-rpc-client'
-import { openGoalDraftSession } from './goal-editor-draft-session'
+import { openGoalDraftSession, forgetGoalDraftSession } from './goal-editor-draft-session'
 import { GoalRuntimeClient } from './goal-runtime-client'
 import { goalDomainStore } from './goals-domain-store'
 
@@ -59,4 +59,18 @@ it('isolates identical draft IDs and pins delayed saves when the selected host c
   await one.flush()
   expect(calls).toEqual(['ssh:one'])
   expect(two.getSnapshot().content.fields.objective).toBe('host-owned')
+})
+
+it('invalidates a deleted editor cache without affecting the same ID on another host', async () => {
+  const client = new GoalRuntimeClient('ssh:delete-one')
+  const other = new GoalRuntimeClient('ssh:delete-two')
+  const one = await openGoalDraftSession(record(), client)
+  const two = await openGoalDraftSession(record(), other)
+  forgetGoalDraftSession(one.id, client)
+  one.change((content) => ({ ...content, fields: { ...content.fields, objective: 'late result' } }))
+  expect(one.getSnapshot().content.fields.objective).toBe('host-owned')
+  await expect(one.flush()).rejects.toThrow('deleted')
+  vi.mocked(callRuntimeRpc).mockResolvedValue(null)
+  await expect(openGoalDraftSession(one.id, client)).rejects.toThrow('could not be found')
+  expect(await openGoalDraftSession(two.id, other)).toBe(two)
 })

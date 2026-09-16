@@ -1,6 +1,8 @@
 import {
   GoalEditorDraftRecordSchema,
   GoalEditorDraftListSchema,
+  GoalEditorDraftDeleteResultSchema,
+  type GoalEditorDraftDelete,
   type GoalEditorDraftSave
 } from '../../../shared/goals/goal-editor-draft-contract'
 import {
@@ -40,9 +42,11 @@ export class GoalRuntimeUnsupportedError extends Error {
 
   constructor(method?: string) {
     super(
-      method?.includes('Acceptance')
-        ? 'This Orca host version does not support acceptance document generation.'
-        : 'This Orca host version does not support Goals.'
+      method === 'goals.deleteEditorDraft'
+        ? 'This Orca host version does not support deleting Goal drafts. Update the host and retry.'
+        : method?.includes('Acceptance')
+          ? 'This Orca host version does not support acceptance document generation.'
+          : 'This Orca host version does not support Goals.'
     )
     this.name = 'GoalRuntimeUnsupportedError'
   }
@@ -102,6 +106,10 @@ export class GoalRuntimeClient {
 
   saveEditorDraft(input: GoalEditorDraftSave) {
     return this.call('goals.saveEditorDraft', input, GoalEditorDraftRecordSchema)
+  }
+
+  deleteEditorDraft(input: GoalEditorDraftDelete) {
+    return this.call('goals.deleteEditorDraft', input, GoalEditorDraftDeleteResultSchema)
   }
 
   list(

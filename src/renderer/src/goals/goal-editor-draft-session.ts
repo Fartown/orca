@@ -14,6 +14,7 @@ export type DraftSessionSnapshot = {
 /** A save belongs to its draft, even after its Sheet unmounts or another draft opens. */
 export class GoalEditorDraftSession {
   private listeners = new Set<() => void>()
+  private deleted = false
   private version = 0
   private savedVersion = 0
   private revision: number
@@ -46,12 +47,23 @@ export class GoalEditorDraftSession {
   getSnapshot = (): DraftSessionSnapshot => this.snapshot
 
   change(update: (content: GoalEditorDraftContent) => GoalEditorDraftContent): void {
+    if (this.deleted) {
+      return
+    }
     this.version++
     this.publish({ content: update(this.snapshot.content) })
     void this.flush().catch(() => {})
   }
 
+  markDeleted(): void {
+    this.deleted = true
+    this.publish({ content: { ...this.snapshot.content, archived: true } })
+  }
+
   flush(): Promise<void> {
+    if (this.deleted) {
+      return Promise.reject(new Error('This goal draft was deleted.'))
+    }
     if (this.pending) {
       return this.pending.then(() => this.flush())
     }
@@ -116,4 +128,14 @@ export async function openGoalDraftSession(
     session.change((content) => content)
   }
   return session
+}
+
+export async function flushGoalDraftSession(id: string, client: GoalRuntimeClient): Promise<void> {
+  await sessions.get(`${client.routeExecutionHostId}:${id}`)?.flush()
+}
+
+export function forgetGoalDraftSession(id: string, client: GoalRuntimeClient): void {
+  const key = `${client.routeExecutionHostId}:${id}`
+  sessions.get(key)?.markDeleted()
+  sessions.delete(key)
 }

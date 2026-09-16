@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import type { ExecutionHostId } from '../../../shared/execution-host'
 import { createStore } from 'zustand/vanilla'
 import { toast } from 'sonner'
 import type { GoalEditorDraftSummary } from '../../../shared/goals/goal-editor-draft-contract'
@@ -8,11 +9,18 @@ import { goalRuntimeClient, type GoalRuntimeClient } from './goal-runtime-client
 export const goalEditorDraftsStore = createStore<{
   items: GoalEditorDraftSummary[]
   error: string | null
-}>(() => ({ items: [], error: null }))
+  routeExecutionHostId: ExecutionHostId
+  deletedIds: ReadonlySet<string>
+}>(() => ({ items: [], error: null, routeExecutionHostId: 'local', deletedIds: new Set() }))
 
 export function useGoalEditorDraftSync(client: GoalRuntimeClient = goalRuntimeClient): void {
   useEffect(() => {
-    goalEditorDraftsStore.setState({ items: [], error: null })
+    goalEditorDraftsStore.setState({
+      items: [],
+      error: null,
+      routeExecutionHostId: client.routeExecutionHostId,
+      deletedIds: new Set()
+    })
     let disposed = false
     let pending = false
     const statuses = new Map<string, string>()
@@ -23,10 +31,12 @@ export function useGoalEditorDraftSync(client: GoalRuntimeClient = goalRuntimeCl
       }
       pending = true
       try {
-        const { items } = await client.listEditorDrafts()
+        const result = await client.listEditorDrafts()
         if (disposed) {
           return
         }
+        const deletedIds = goalEditorDraftsStore.getState().deletedIds
+        const items = result.items.filter((item) => !deletedIds.has(item.editorDraftId))
         for (const item of items) {
           const attempt = item.generation
           if (!attempt) {
@@ -70,4 +80,16 @@ export function useGoalEditorDraftSync(client: GoalRuntimeClient = goalRuntimeCl
       clearInterval(timer)
     }
   }, [client])
+}
+
+export function removeDeletedGoalDraft(id: string, client: GoalRuntimeClient): void {
+  goalEditorDraftsStore.setState((state) => {
+    if (state.routeExecutionHostId !== client.routeExecutionHostId) {
+      return state
+    }
+    return {
+      items: state.items.filter((item) => item.editorDraftId !== id),
+      deletedIds: new Set([...state.deletedIds, id])
+    }
+  })
 }

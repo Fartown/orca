@@ -67,6 +67,16 @@ export const GoalEditorDraftSaveSchema = z.object({
   expectedRevision: z.number().int().nonnegative(),
   content: GoalEditorDraftContentSchema
 })
+export const GoalEditorDraftDeleteSchema = z.object({
+  editorDraftId: z.string().uuid(),
+  expectedRevision: z.number().int().nonnegative()
+})
+export const GoalEditorDraftDeleteResultSchema = z.object({
+  status: z.enum(['deleted', 'stopping', 'unverifiable'])
+})
+export type GoalEditorDraftDelete = z.infer<typeof GoalEditorDraftDeleteSchema>
+export type GoalEditorDraftDeleteResult = z.infer<typeof GoalEditorDraftDeleteResultSchema>
+
 export const GoalEditorDraftSummarySchema = z.object({
   editorDraftId: z.string().uuid(),
   objectivePreview: z.string(),

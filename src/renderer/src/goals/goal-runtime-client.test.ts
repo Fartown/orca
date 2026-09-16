@@ -38,3 +38,16 @@ it('reports an older host without retrying a local service', async () => {
   )
   expect(callRuntimeRpc).toHaveBeenCalledTimes(1)
 })
+
+it('reports unsupported draft deletion on older hosts without falling back or hiding a row', async () => {
+  vi.mocked(callRuntimeRpc).mockRejectedValue(
+    new Error('Method not found: goals.deleteEditorDraft')
+  )
+  await expect(
+    new GoalRuntimeClient('ssh:old').deleteEditorDraft({
+      editorDraftId: 'draft',
+      expectedRevision: 1
+    })
+  ).rejects.toThrow('does not support deleting Goal drafts')
+  expect(callRuntimeRpc).toHaveBeenCalledTimes(1)
+})

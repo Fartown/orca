@@ -1,6 +1,7 @@
 import { GoalAcceptanceDraftResult } from './goal-acceptance-draft-contract'
 import {
   GoalEditorDraftRecordSchema,
+  GoalEditorDraftDeleteResultSchema,
   GoalEditorDraftListSchema
 } from './goal-editor-draft-contract'
 import { z } from 'zod'
@@ -142,6 +143,7 @@ export const GoalRpcResultSchemas = {
   'goals.listEditorDrafts': GoalEditorDraftListSchema,
   'goals.getEditorDraft': GoalEditorDraftRecordSchema.nullable(),
   'goals.saveEditorDraft': GoalEditorDraftRecordSchema,
+  'goals.deleteEditorDraft': GoalEditorDraftDeleteResultSchema,
   'goals.list': GoalListResult,
   'goals.get': GoalDetailResult.nullable(),
   'goals.create': GoalOperationResult,
