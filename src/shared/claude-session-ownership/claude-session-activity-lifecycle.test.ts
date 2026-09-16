@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import {
   clearAllListenerCaches,
+  clearLegacyAgentStatuses,
   clearPaneCacheState,
   clearPaneTurnCacheState,
   createHookListenerState,
   movePaneCacheState,
-  paneHasStateClaims
+  paneHasStateClaims,
+  seedLegacyAgentStatusForTests
 } from '../agent-hook-listener/listener-state'
 import { shouldRejectClaudeSessionReplacement } from './claude-session-activity'
 
@@ -16,7 +18,7 @@ describe('Claude activity follows existing listener lifecycle', () => {
       sessionId: 'a',
       observedAt: performance.now()
     })
-    state.lastStatusByPaneKey.set('pane-a', {
+    seedLegacyAgentStatusForTests(state, {
       paneKey: 'pane-a',
       connectionId: null,
       source: 'claude',
@@ -46,7 +48,7 @@ describe('Claude activity follows existing listener lifecycle', () => {
 
   it('clears on listener reset and never counts activity alone as liveness', () => {
     const state = populated()
-    state.lastStatusByPaneKey.clear()
+    clearLegacyAgentStatuses(state)
     expect(paneHasStateClaims(state, 'pane-a')).toBe(false)
     expect(shouldRejectClaudeSessionReplacement(state, 'pane-a', 'b')).toBe(false)
     clearAllListenerCaches(state)
