@@ -75,6 +75,15 @@ external_ids: []
 
 ## 3. 开发记录
 
+### 2026-09-16 SSH 修复 PR 静态检查
+
+- 本轮目标：推进 [PR #26](https://github.com/Fartown/orca/pull/26) 的远端检查与集成合入。
+- 完成内容：恢复 GitHub CLI 认证并推送 SSH 修复；修正 Goal 投影模块的重复类型 import。
+- 代码或文档变更：仅合并 `goal-turn-evidence` 的导入声明，运行行为不变。
+- 验证证据：PR 首轮类型检查、Node 18 宿主检查通过；本轮 Goal 文件的 native code-quality 检查通过。静态检查日志见 `.docs/goal-remote-host-ui-validation/2026-09-16/evidence/pr26-static-analysis.log`。
+- 未解决问题：集成基线的 `agent-status-store-snapshot-budget.ts` 同样有重复 import，上游 `7ec2986fd` 已修复；本轮尚未引入该修复。其余远端测试仍在运行，尚未合入。
+- 下一步：按确认的上游引入范围解除基线阻断，完成全部 PR 检查后合入。
+
 ### 2026-09-16 SSH 执行主机支持修复
 
 - 本轮目标：修复 REQ-111 的远程执行遗漏，用户明确要求远程机器能够使用 Goal。

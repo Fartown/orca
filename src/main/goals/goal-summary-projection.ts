@@ -1,4 +1,3 @@
-import type { GoalTurnRow } from './goal-turn-evidence'
 import {
   goalObjectivePreview,
   type GoalCompletion,
@@ -14,7 +13,7 @@ import {
 } from '../../shared/goals/goal-store-records'
 import type { PtyLivenessVerdict } from '../../shared/pty-liveness-verdict'
 import type { GoalTerminalSnapshot } from '../../shared/goals/goal-host-facts'
-import { projectTurnEvidence, type GoalTurnEvidence } from './goal-turn-evidence'
+import { projectTurnEvidence, type GoalTurnEvidence, type GoalTurnRow } from './goal-turn-evidence'
 
 export type GoalTerminalFacts = {
   showTerminal(handle: string): Promise<GoalTerminalSnapshot>
