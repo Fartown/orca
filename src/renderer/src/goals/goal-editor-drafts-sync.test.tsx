@@ -3,10 +3,17 @@ import { act, cleanup, renderHook } from '@testing-library/react'
 import { afterEach, expect, it, vi } from 'vitest'
 import { toast } from 'sonner'
 import { goalRuntimeClient } from './goal-runtime-client'
-import { useGoalEditorDraftSync } from './goal-editor-drafts-sync'
+import {
+  useGoalEditorDraftSync,
+  removeDeletedGoalDraft,
+  goalEditorDraftsStore
+} from './goal-editor-drafts-sync'
+import type { GoalEditorDraftSummary } from '../../../shared/goals/goal-editor-draft-contract'
 
 vi.mock('sonner', () => ({ toast: vi.fn() }))
-vi.mock('./goal-runtime-client', () => ({ goalRuntimeClient: { listEditorDrafts: vi.fn() } }))
+vi.mock('./goal-runtime-client', () => ({
+  goalRuntimeClient: { routeExecutionHostId: 'local', listEditorDrafts: vi.fn() }
+}))
 afterEach(() => {
   cleanup()
   vi.useRealTimers()
@@ -38,4 +45,30 @@ it('notifies once when a fast generation finishes between polls, without replayi
     await vi.advanceTimersByTimeAsync(4000)
   })
   expect(toast).toHaveBeenCalledTimes(1)
+})
+
+it('does not resurrect a deleted row or notify from a list response already in flight', async () => {
+  const item: GoalEditorDraftSummary = {
+    editorDraftId: 'deleted',
+    objectivePreview: '',
+    worktreeId: null,
+    goalId: null,
+    updatedAt: 1,
+    hasDocument: false,
+    generation: null
+  }
+  let resolveList: ((result: { items: GoalEditorDraftSummary[] }) => void) | undefined
+  vi.mocked(goalRuntimeClient.listEditorDrafts).mockImplementation(
+    () =>
+      new Promise((resolve) => {
+        resolveList = resolve
+      })
+  )
+  renderHook(() => useGoalEditorDraftSync())
+  await act(async () => {
+    removeDeletedGoalDraft(item.editorDraftId, goalRuntimeClient)
+    resolveList?.({ items: [item] })
+  })
+  expect(goalEditorDraftsStore.getState().items).toEqual([])
+  expect(toast).not.toHaveBeenCalled()
 })

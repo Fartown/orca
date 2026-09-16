@@ -1,6 +1,8 @@
 import {
   GoalCriterionSchema,
   GoalEditorDraftSaveSchema,
+  GoalEditorDraftDeleteSchema,
+  type GoalEditorDraftDeleteResult,
   type GoalEditorDraftRecord,
   type GoalEditorDraftSummary
 } from './goal-editor-draft-contract'
@@ -86,6 +88,7 @@ export const GoalRpcParams = {
   'goals.listEditorDrafts': GoalExecutionHostSchema,
   'goals.getEditorDraft': GoalExecutionHostSchema.extend({ editorDraftId: z.string().uuid() }),
   'goals.saveEditorDraft': GoalExecutionHostSchema.merge(GoalEditorDraftSaveSchema),
+  'goals.deleteEditorDraft': GoalExecutionHostSchema.merge(GoalEditorDraftDeleteSchema),
   'goals.list': GoalExecutionHostSchema.extend({
     worktree: z.string().min(1).max(4_096).optional(),
     filter: GoalListFilterSchema,
@@ -258,6 +261,7 @@ export type GoalRpcResults = {
   'goals.listEditorDrafts': { items: GoalEditorDraftSummary[] }
   'goals.getEditorDraft': GoalEditorDraftRecord | null
   'goals.saveEditorDraft': GoalEditorDraftRecord
+  'goals.deleteEditorDraft': GoalEditorDraftDeleteResult
   'goals.list': { items: GoalSummary[]; observedAt: number }
   'goals.get': GoalDetail | null
   'goals.create': GoalOperation

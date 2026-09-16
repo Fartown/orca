@@ -18262,6 +18262,13 @@
       "confirm": "Move goal"
     },
     "drafts": {
+      "delete": "Delete draft",
+      "stopAndDelete": "Stop generation and delete",
+      "deleteDescription": "Remove this draft from the list. Any generation must stop first. Generated Markdown files and existing Goals are kept.",
+      "deletingStopping": "Stopping generation…",
+      "deleting": "Deleting draft…",
+      "deleteUnverifiable": "Cannot confirm that generation stopped. The draft is kept; reconnect and retry.",
+      "deleteStillStopping": "Generation is still stopping. The draft is kept; retry shortly.",
       "candidate": "A new document is ready. Your edits are preserved. Review this version before adopting it.",
       "previewCandidate": "Review generated version",
       "adoptCandidate": "Adopt generated document",

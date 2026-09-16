@@ -1,4 +1,5 @@
 import { useStore } from 'zustand'
+import { GoalDraftDeleteButton } from './GoalDraftDeleteButton'
 import { translate } from '@/i18n/i18n'
 import { goalDomainStore } from '@/goals/goals-domain-store'
 import { goalEditorDraftsStore } from '@/goals/goal-editor-drafts-sync'
@@ -29,32 +30,37 @@ export function GoalDraftList(): React.JSX.Element | null {
       ) : null}
       <div className="scrollbar-sleek max-h-48 space-y-1 overflow-y-auto">
         {items.map((item) => (
-          <button
-            type="button"
+          <div
             key={item.editorDraftId}
             data-goal-draft-id={item.editorDraftId}
-            className="block w-full rounded-md px-2 py-1.5 text-left text-xs hover:bg-accent"
-            onClick={() => {
-              if (item.goalId) {
-                requestGoalDetailRefresh(item.goalId)
-              }
-              goalDomainStore.getState().openEditor({
-                worktreeId: item.worktreeId,
-                paneKey: null,
-                draftId: item.editorDraftId,
-                ...(item.goalId ? { goalId: item.goalId } : {})
-              })
-            }}
+            className="flex items-center gap-1 rounded-md pr-1 hover:bg-accent"
           >
-            <span className="block truncate">
-              {item.objectivePreview || translate('goals.drafts.untitled', 'Untitled goal draft')}
-            </span>
-            <span className="block text-muted-foreground">
-              {error
-                ? translate('goals.drafts.reconnecting', 'Status unavailable · reconnecting')
-                : goalDraftStatusLabel(item.generation, false, item.hasDocument)}
-            </span>
-          </button>
+            <button
+              type="button"
+              className="block min-w-0 flex-1 rounded-md px-2 py-1.5 text-left text-xs"
+              onClick={() => {
+                if (item.goalId) {
+                  requestGoalDetailRefresh(item.goalId)
+                }
+                goalDomainStore.getState().openEditor({
+                  worktreeId: item.worktreeId,
+                  paneKey: null,
+                  draftId: item.editorDraftId,
+                  ...(item.goalId ? { goalId: item.goalId } : {})
+                })
+              }}
+            >
+              <span className="block truncate">
+                {item.objectivePreview || translate('goals.drafts.untitled', 'Untitled goal draft')}
+              </span>
+              <span className="block text-muted-foreground">
+                {error
+                  ? translate('goals.drafts.reconnecting', 'Status unavailable · reconnecting')
+                  : goalDraftStatusLabel(item.generation, false, item.hasDocument)}
+              </span>
+            </button>
+            <GoalDraftDeleteButton item={item} />
+          </div>
         ))}
       </div>
     </section>

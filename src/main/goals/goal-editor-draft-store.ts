@@ -4,6 +4,8 @@ import {
   GoalEditorDraftRecordSchema,
   GoalEditorDraftContentSchema,
   type GoalEditorDraftRecord,
+  type GoalEditorDraftDelete,
+  type GoalEditorDraftDeleteResult,
   type GoalEditorDraftSave,
   type GoalEditorDraftSummary
 } from '../../shared/goals/goal-editor-draft-contract'
@@ -15,22 +17,26 @@ export class GoalEditorDraftStore {
   private readonly writes = new Map<string, Promise<unknown>>()
   constructor(
     private readonly goalHome: string,
-    private readonly attempts: GoalAcceptanceDrafts
+    private readonly attempts: Pick<GoalAcceptanceDrafts, 'get' | 'cancel'>
   ) {}
 
   async get(id: string): Promise<GoalEditorDraftRecord | null> {
+    if (await this.isDeleted(id)) {
+      return null
+    }
     const raw = await readJson(join(this.directory(), `${id}.json`))
     return raw === null ? null : this.withDocumentFile(GoalEditorDraftRecordSchema.parse(raw))
   }
 
   save(input: GoalEditorDraftSave): Promise<GoalEditorDraftRecord> {
-    const pending = this.writes.get(input.editorDraftId) ?? Promise.resolve()
-    const write = pending
-      .catch(() => {})
-      .then(async () => {
-        const previous = await this.get(input.editorDraftId)
-        if ((previous?.revision ?? 0) !== input.expectedRevision) {
-          // A lost response may be retried without overwriting a newer draft.
+    return this.serialize(input.editorDraftId, async () => {
+      if (await this.isDeleted(input.editorDraftId)) {
+        throw new Error('This goal draft was deleted. Create a new draft to continue.')
+      }
+      const previous = await this.get(input.editorDraftId)
+      if ((previous?.revision ?? 0) !== input.expectedRevision) {
+        // A lost response may be retried without overwriting a newer draft.
+        if (previous) {
           const {
             editorDraftId: _id,
             revision: _rev,
@@ -38,39 +44,70 @@ export class GoalEditorDraftStore {
             updatedAt: _updated,
             documentPath: _documentPath,
             ...content
-          } = previous ?? ({} as GoalEditorDraftRecord)
+          } = previous
           if (
-            previous &&
             JSON.stringify(content) ===
-              JSON.stringify(GoalEditorDraftContentSchema.parse(input.content))
+            JSON.stringify(GoalEditorDraftContentSchema.parse(input.content))
           ) {
             return previous
           }
-          throw new Error(
-            'This draft was changed in another editor. Your unsaved text is kept here; reopen the saved draft before retrying.'
-          )
         }
-        const next = await this.withDocumentFile(
-          GoalEditorDraftRecordSchema.parse({
-            ...input.content,
-            editorDraftId: input.editorDraftId,
-            revision: (previous?.revision ?? 0) + 1,
-            createdAt: previous?.createdAt ?? Date.now(),
-            updatedAt: Date.now()
-          })
+        throw new Error(
+          'This draft was changed in another editor. Your unsaved text is kept here; reopen the saved draft before retrying.'
         )
-        await writeJsonAtomic(join(this.directory(), `${input.editorDraftId}.json`), next)
-        return next
-      })
-    this.writes.set(input.editorDraftId, write)
+      }
+      const next = await this.withDocumentFile(
+        GoalEditorDraftRecordSchema.parse({
+          ...input.content,
+          editorDraftId: input.editorDraftId,
+          revision: (previous?.revision ?? 0) + 1,
+          createdAt: previous?.createdAt ?? Date.now(),
+          updatedAt: Date.now()
+        })
+      )
+      await writeJsonAtomic(join(this.directory(), `${input.editorDraftId}.json`), next)
+      return next
+    })
+  }
+
+  delete(input: GoalEditorDraftDelete): Promise<GoalEditorDraftDeleteResult> {
+    return this.serialize(input.editorDraftId, async () => {
+      const record = await this.get(input.editorDraftId)
+      if (record && record.revision !== input.expectedRevision) {
+        throw new Error('This draft changed in another editor. Reopen it before deleting.')
+      }
+      if (record?.generation) {
+        const result = await this.attempts.cancel(record.generation.draftId)
+        if (result?.status === 'generating') {
+          return { status: result.phase === 'unverifiable' ? 'unverifiable' : 'stopping' }
+        }
+      }
+      // Keep a tombstone so delayed saves cannot recreate the draft; document paths remain valid.
+      await writeJsonAtomic(this.tombstone(input.editorDraftId), { deletedAt: Date.now() })
+      return { status: 'deleted' }
+    })
+  }
+
+  private serialize<T>(id: string, operation: () => Promise<T>): Promise<T> {
+    const pending = this.writes.get(id) ?? Promise.resolve()
+    const write = pending.catch(() => {}).then(operation)
+    this.writes.set(id, write)
     void write
       .finally(() => {
-        if (this.writes.get(input.editorDraftId) === write) {
-          this.writes.delete(input.editorDraftId)
+        if (this.writes.get(id) === write) {
+          this.writes.delete(id)
         }
       })
       .catch(() => {})
     return write
+  }
+
+  private tombstone(id: string): string {
+    return join(this.directory(), `${id}.deleted.json`)
+  }
+
+  private async isDeleted(id: string): Promise<boolean> {
+    return (await readJson(this.tombstone(id))) !== null
   }
 
   async list(): Promise<{ items: GoalEditorDraftSummary[] }> {
