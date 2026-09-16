@@ -47,6 +47,7 @@ import { ARTIFACT_METHODS } from './artifacts'
 import { ISSUE_METHODS } from './issues'
 import { GOAL_METHODS } from './goals'
 import { AGENT_HOOK_METHODS } from './agent-hooks'
+import { AGENT_LAUNCH_METHODS } from './agent-launch'
 
 // Why: a flat manifest keeps registration order explicit and provides one
 // grep-point for "what methods does the RPC server expose?" — useful when
@@ -63,6 +64,7 @@ export const ALL_RPC_METHODS = [
   ...WORKTREE_METHODS,
   ...AGENT_SESSION_METHODS,
   ...STRUCTURED_AGENT_SESSION_METHODS,
+  ...AGENT_LAUNCH_METHODS,
   ...TERMINAL_METHODS,
   ...TERMINAL_ORPHAN_METHODS,
   ...BROWSER_CORE_METHODS,

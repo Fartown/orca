@@ -3,7 +3,7 @@ title: Goal 目标模式
 slug: Goal目标模式
 status: testing
 created: 2026-09-05
-updated: 2026-09-13
+updated: 2026-09-15
 external_ids: []
 ---
 
@@ -74,6 +74,15 @@ external_ids: []
 - 影响范围：需求、技术说明、测试规格及本需求的执行证据。
 
 ## 3. 开发记录
+
+### 2026-09-15 Goal 运行时 fence 收敛到单一铸造点
+
+- 本轮目标：修掉上游合并后 `src/shared/agent-session-fence-mint-boundary.test.ts` 对 Goal 文件的阻断，让 fork/integration 的 CI 重新可绿。
+- 完成内容：上游新增的源码级棘轮按正则扫描整个 `src/`，把 Goal 自有的 `GoalRecord.runtimeFence` 直接自增判成 agent-session lease 的裸铸造（`goal-run-commit.ts:14` 甚至是三元表达式的冒号被正则误配）。Goal fence 与 agent-session lease fence 是两套语义，不能改走 `nextAgentSessionFence`（后者带 `minimumNextFence` 恢复下限，GoalRecord 没有该字段）。改为给 Goal 域自己的单一铸造点 `nextGoalRuntimeFence(record)`，四处自增全部改走它。
+- 代码或文档变更：新增 `src/shared/goals/goal-runtime-fence.ts`；`src/main/goals/goal-revision-control.ts`（3 处）、`src/main/goals/goal-run-commit.ts`（2 处）改为调用它；本记录。
+- 验证证据：`pnpm exec vitest run config/scripts/check-changed-code-quality.test.mjs src/shared/agent-session-fence-mint-boundary.test.ts src/main/goals` 11 文件 83 用例通过（此前该棘轮用例失败）；`pnpm tc`、`oxlint`、`check:architecture-policies`、`check:fork-features`、`check:fork-docs` 通过。
+- 未解决问题：无。行为未变——每处仍然是「当前 fence 加一」，只是收敛到一个有名字的调用点。
+- 下一步：合回 `fork/integration`，解除对其他 PR 的阻塞。
 
 ### 2026-09-13 CI 渲染期间引用写入修复
 
