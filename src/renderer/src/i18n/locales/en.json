@@ -18129,6 +18129,7 @@
       "workspace": "Workspace",
       "pickWorkspace": "Pick a workspace",
       "executionLocal": "Runs on this machine.",
+      "executionHost": "Runs on the workspace’s machine.",
       "session": "Agent session",
       "pickSession": "Pick a running agent session",
       "noSessions": "You can draft the document now. Start and select an agent session before execution.",
@@ -18152,7 +18153,7 @@
       "documentStale": "The goal, guard or workspace changed. Review the document against the new context, or regenerate it.",
       "documentReviewed": "I reviewed the updated context",
       "guard": "Guard",
-      "guardHint": "The guard reads the workspace and referenced materials to draft the document, then independently checks the work during execution. Its CLI must be installed and signed in.",
+      "guardHint": "The guard reads the workspace and referenced materials to draft the document, then independently checks the work during execution. Its CLI must be installed and signed in on the workspace host.",
       "reviewAndStart": "Start with this document",
       "draftLost": "The document could not be retrieved. Generate it again.",
       "stopGeneration": "Stop generation",
@@ -18181,7 +18182,8 @@
       "agentUnknown": "agent status unknown",
       "versions": "Definition revisions ({{value0}})",
       "revisionLabel": "Revision {{value0}}",
-      "currentRevision": "current"
+      "currentRevision": "current",
+      "offlineSnapshot": "Connection lost. Showing the last observed state; current processes are unverifiable."
     },
     "list": {
       "hostUnavailable": "Goals cannot be listed on this host",
@@ -18273,7 +18275,7 @@
       "backgroundHint": "You can close this editor. Generation continues in the background; find the result in Goal drafts.",
       "saving": "Saving draft…",
       "unsaved": "Draft not saved",
-      "saved": "Draft saved locally",
+      "saved": "Draft saved",
       "retrySave": "Retry saving",
       "connected": "Guard connected; waiting for its next activity.",
       "tool": "Guard is using a tool to inspect the workspace or referenced material.",

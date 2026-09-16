@@ -61,3 +61,32 @@ it('keeps the editor available when its workspace cannot be activated', async ()
   )
   expect(openFile).not.toHaveBeenCalled()
 })
+
+it('opens the remote absolute document on SSH without authorizing a client-local path', async () => {
+  const authorizeExternalPath = vi.fn()
+  vi.stubGlobal('api', { fs: { authorizeExternalPath } })
+  await openGoalDocument('/same/path/document.md', 'folder:remote', 'ssh:server')
+  expect(authorizeExternalPath).not.toHaveBeenCalled()
+  expect(openFile).toHaveBeenCalledWith(
+    expect.objectContaining({
+      filePath: '/same/path/document.md',
+      externalSshTargetId: 'server',
+      runtimeEnvironmentId: null
+    }),
+    expect.anything()
+  )
+  expect(activateAndRevealWorkspace).toHaveBeenCalledWith('folder:remote', {
+    providesInitialSurface: true,
+    executionHostId: 'ssh:server'
+  })
+})
+
+it('opens paired-runtime Markdown with its explicit owner', async () => {
+  await openGoalDocument('/host/document.md', 'remote-worktree', 'runtime:peer')
+  expect(openFile).toHaveBeenCalledWith(
+    expect.objectContaining({
+      runtimeEnvironmentId: 'peer'
+    }),
+    expect.anything()
+  )
+})

@@ -7,6 +7,8 @@ import {
   GoalAcceptanceDraftResult,
   type GoalAcceptanceDraft
 } from '../../../shared/goals/goal-acceptance-draft-contract'
+import { parseExecutionHostId, type ExecutionHostId } from '../../../shared/execution-host'
+import { goalDomainStore } from './goals-domain-store'
 import type { z } from 'zod'
 import type {
   GoalAdoptLegacyParams,
@@ -48,12 +50,21 @@ export class GoalRuntimeUnsupportedError extends Error {
 
 type HostScopedParams<T> = Omit<T, 'authorityExecutionHostId'>
 
-/**
- * Typed facade over the goals.* RPC, same shape as IssueRuntimeClient. The
- * first delivery only routes to the local execution host.
- */
+/** Each client pins its execution host for the whole asynchronous operation. */
 export class GoalRuntimeClient {
-  private readonly target: RuntimeClientTarget = { kind: 'local' }
+  readonly target: RuntimeClientTarget
+  readonly authorityExecutionHostId: string
+  constructor(readonly routeExecutionHostId: ExecutionHostId = 'local') {
+    const parsed = parseExecutionHostId(routeExecutionHostId)
+    if (!parsed) {
+      throw new Error('The Goal execution host is unavailable.')
+    }
+    this.target =
+      parsed.kind === 'runtime'
+        ? { kind: 'environment', environmentId: parsed.environmentId }
+        : { kind: 'local' }
+    this.authorityExecutionHostId = parsed.kind === 'runtime' ? 'local' : parsed.id
+  }
 
   status(): Promise<GoalStatus> {
     return this.call('goals.status', {}, GoalStatusResult)
@@ -96,15 +107,12 @@ export class GoalRuntimeClient {
   list(
     params: HostScopedParams<GoalListParams>
   ): Promise<{ items: GoalSummary[]; observedAt: number }> {
-    return this.call('goals.list', params, GoalListResult) as Promise<{
-      items: GoalSummary[]
-      observedAt: number
-    }>
+    return this.call('goals.list', params, GoalListResult)
   }
 
   async get(goalId: string): Promise<GoalDetail | null> {
     const result = await this.callRaw('goals.get', { goalId })
-    return result === null ? null : (GoalDetailResult.parse(result) as GoalDetail)
+    return result === null ? null : GoalDetailResult.parse(result)
   }
 
   create(params: HostScopedParams<GoalCreateParams>): Promise<GoalOperation> {
@@ -152,7 +160,7 @@ export class GoalRuntimeClient {
     try {
       return await callRuntimeRpc<unknown>(this.target, method, {
         ...params,
-        authorityExecutionHostId: 'local'
+        authorityExecutionHostId: this.authorityExecutionHostId
       })
     } catch (error) {
       if (isMethodNotFound(error)) {
@@ -165,8 +173,12 @@ export class GoalRuntimeClient {
 
 export const goalRuntimeClient = new GoalRuntimeClient()
 
+export function getGoalRuntimeClient(): GoalRuntimeClient {
+  return new GoalRuntimeClient(goalDomainStore.getState().routeExecutionHostId)
+}
+
 function isMethodNotFound(error: unknown): boolean {
-  const code = (error as { code?: unknown })?.code
+  const code = error && typeof error === 'object' && 'code' in error ? error.code : undefined
   const message = error instanceof Error ? error.message : ''
   return code === 'method_not_found' || /method[_ ]not[_ ]found|unknown method/i.test(message)
 }

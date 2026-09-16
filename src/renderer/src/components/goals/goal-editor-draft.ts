@@ -7,7 +7,7 @@ import type {
   GoalSpec
 } from '../../../../shared/goals/goal-control-contract'
 import { fingerprintPayload } from '@/goals/goal-client-operation'
-import { goalRuntimeClient } from '@/goals/goal-runtime-client'
+import { getGoalRuntimeClient, type GoalRuntimeClient } from '@/goals/goal-runtime-client'
 import type { GoalEditorPrefill } from '@/goals/goals-domain-store'
 import type { GoalTargetSelection } from './GoalTargetPicker'
 
@@ -116,7 +116,8 @@ export async function amendGoal(
   detail: GoalDetail,
   draft: GoalDraft,
   clientOperationId: string,
-  resumeAfterSave: boolean
+  resumeAfterSave: boolean,
+  client: GoalRuntimeClient = getGoalRuntimeClient()
 ): Promise<GoalOperation> {
   const spec = specFromDraft(draft)
   const budget = budgetFromDraft(draft)
@@ -128,7 +129,7 @@ export async function amendGoal(
     ...(JSON.stringify(budget) === JSON.stringify(detail.budget) ? {} : { budget }),
     resumeAfterSave
   }
-  return goalRuntimeClient.amend({
+  return client.amend({
     ...envelope,
     clientOperationId,
     payloadFingerprint: await fingerprintPayload(envelope)

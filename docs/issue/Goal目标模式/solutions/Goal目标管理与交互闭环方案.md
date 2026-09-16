@@ -3,12 +3,25 @@ title: Goal 目标管理与交互闭环方案
 document_type: technical-solution
 status: implementing
 created_at: 2026-09-05
-updated_at: 2026-09-13
+updated_at: 2026-09-16
 issue: Goal目标模式
 scope: 原生目标管理 UI、执行控制与历史兼容
 ---
 
 # Goal 目标管理与交互闭环方案
+
+## 2026-09-16 SSH 与远程宿主修复（REQ-111、REQ-122）
+
+本节替代下文历史“首期仅本机”的执行端限制。该分期未经用户批准；SSH 工作区和普通文件夹均需支持原有 Goal 流程。
+
+- 界面复用工作区所属 executionHostId。SSH 请求经现有 multiplexer 到 relay，配对 runtime 经既有 environment 路由；整个异步操作固定原宿主，切换工作区不改写路由、不覆盖另一宿主的草稿或详情。
+- relay 复用 GoalControlService、GoalStore、后台生成器、driver 和 judge。文件、检查命令、生成与独立验收都在远端执行。回调原客户端仅解析已有工作区及终端句柄，远端仍校验目录；不把远端路径交给本机生成器。
+- relay/orcad 部署包包含同源的 goal-driver、acceptance-draft、acceptance-judge 三个文件，纳入部署清单和版本 hash。orcad 在终端初始化后注册同一 Goal 服务，停机释放注册和轮询，保留持久记录及后台任务。
+- SSH driver 复用远端已安装的公共 Orca CLI shim。远端本轮结束依赖 hook：working 始终等待，缺失或无法核实时保持 unverifiable；不能因安静、标题或断联判断完成。重连刷新同一运行，不自动再次 start。
+- 离线详情明确标注旧快照和“当前进程不可验证”，暂停操作入口；宿主返回结果后再恢复。旧宿主 method_not_found 显示 unsupported，不尝试本机代跑。
+- 文件地址保留远端实际路径，既有 Markdown tab 带 externalSshTargetId 或 runtimeEnvironmentId 从所属机器读取。普通 folder 使用相同工作区身份解析。
+
+真实验证与边界见 [SSH 运行记录](../tests/runs/2026-09-16-SSH执行主机.md)。本轮使用同机独立 sshd 和受控 provider，不据此宣称异机 Linux、真实模型或 WSL 已验收。
 
 ## 2026-09-13 文档文件入口（REQ-122）
 
@@ -814,9 +827,9 @@ flowchart TD
 
 Windows 需要把所用 gate/driver 的直接 spawn、shell:true 和任务回收接到项目 child-process 封装；不是只改命令名。三平台均验证资源内空格/中文路径、无全局 Node/CLI、detached 存活与异常回读。缺资源/缺 adapter 的端返回 unsupported，不显示运行中。
 
-直接 SSH 的文件和进程由远端拥有，现有本机驱动不具备完整适配；不在客户端执行远端路径的验收。peer runtime 的新 RPC、驱动资源和组合根必须同时可用才开放；本轮没有证据证明 headless 已注入 Goal 服务。WSL 同样不能用 Windows 本机路径/进程结果冒充 guest 结果。
+直接 SSH 的文件、driver、生成器和 judge 由 relay 所在主机拥有，客户端仅通过既有 RPC/CLI 管道观测与控制。peer runtime 在 orcad 组合根注册同一服务，驱动资源随包部署。WSL 仍不能用 Windows 本机路径/进程结果冒充 guest 结果。
 
-列表覆盖首个交付只有本机；不支持/断联端在选项里标明原因，不计作“零个 Goal”。进程判断的固定 vocabulary 为 live/unverifiable/exited；连接失败保持 unverifiable，重连只刷新/接回，不默认再 start。
+列表按当前工作区所属主机切换；不支持/断联端显示具体原因，不计作“零个 Goal”。进程判断的固定 vocabulary 为 live/unverifiable/exited；连接失败保持 unverifiable，重连只刷新/接回，不默认再 start。
 
 ### 5.10 门禁与依赖边界
 

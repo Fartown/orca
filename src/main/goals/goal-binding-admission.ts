@@ -1,13 +1,14 @@
 import type { GoalBinding, GoalDriverVerdict } from '../../shared/goals/goal-control-contract'
 import type { GoalRecord } from '../../shared/goals/goal-store-records'
 import { goalWorkspaceKey } from '../../shared/goals/goal-workspace-key'
-import type { RuntimeTerminalShow } from '../../shared/runtime-terminal-contracts'
+import type { GoalTerminalSnapshot } from '../../shared/goals/goal-host-facts'
 import type { GoalDriverLivenessInput } from './goal-driver-liveness'
 import type { GoalRejection } from './goal-operation-receipts'
 import type { GoalStore } from './goal-store'
 import type { GoalTerminalFacts } from './goal-summary-projection'
 
 export type GoalBindingAdmissionDependencies = {
+  executionHostId?: string
   store: GoalStore
   terminals: GoalTerminalFacts
   inspectDriver: (input: GoalDriverLivenessInput) => Promise<GoalDriverVerdict>
@@ -21,8 +22,8 @@ export type GoalBindingAdmissionDependencies = {
 export class GoalBindingAdmission {
   constructor(private readonly deps: GoalBindingAdmissionDependencies) {}
 
-  async validate(binding: GoalBinding): Promise<RuntimeTerminalShow | GoalRejection> {
-    let show: RuntimeTerminalShow
+  async validate(binding: GoalBinding): Promise<GoalTerminalSnapshot | GoalRejection> {
+    let show: GoalTerminalSnapshot
     try {
       show = await this.deps.terminals.showTerminal(binding.terminal)
     } catch (error) {
@@ -31,10 +32,10 @@ export class GoalBindingAdmission {
         message: `The bound terminal is unavailable: ${errorMessage(error)}`
       }
     }
-    if (show.executionHostId && show.executionHostId !== 'local') {
+    if (show.executionHostId && show.executionHostId !== (this.deps.executionHostId ?? 'local')) {
       return {
         code: 'unsupported',
-        message: 'Goals are only supported on the local execution host.'
+        message: 'The terminal belongs to another execution host.'
       }
     }
     if (show.incarnationId && show.incarnationId !== binding.expectedIncarnationId) {
