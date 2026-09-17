@@ -38,12 +38,21 @@ updated: 2026-09-17
 
 变更代码质量门禁：PR #31 第一次 CI 的 static analysis 报 3 条类型断言，都在本次改动的行上（测试里新加的更新器替身、解析函数的返回行）。修复方式：`pinIntegrationReleaseFeed` 的参数只要求用到的四个更新器成员，测试直接传普通对象；合入列表不再在解析时改写返回值，改为 `integrationChanges(release)` 读取时校验，返回行恢复原样。按 PR 基线 3e83a774f 本地重跑五项扫描均为 0 条。
 
+## 合入后核对（#31，0231e645f）
+
+| 验证 | 实际结果 | 边界 |
+| --- | --- | --- |
+| 自动出包 | run 35175801533 第一次尝试 Intel 打 DMG 时 `getaddrinfo ENOTFOUND github.com` 失败，Apple Silicon 与 Android 成功；重跑 Intel 任务后发布成功（03:23 UTC） | Intel 失败是构建机网络问题，之后按 D-005 去掉 Intel |
+| 发布说明 | `integration-35175801533-0231e645f69d` 的「本次合入」列出「#31 feat(integration-builds): 发布说明与更新提示列出本次合入的 PR」，附上一个集成包 `integration-35169245036-3e83a774f79f` 与完整提交差异链接 | 发布任务按新方式检出（全部历史、不含文件内容）在 GitHub 上跑通 |
+| 清单 | `build-info.json` 的 `changes` 为 `[{number: 31, …}]`，桌面版本 `1.4.197-local.1789613322600.0231e645f69d` | — |
+| 桌面更新 | 通过运行时更新接口（与界面上检查、下载、重启更新同一路径）：03:24:14 检查，3 秒后发现新版本；32 秒下载完成；03:25:12 安装，03:25:59 新主进程启动，运行时报告新版本。终端守护进程未重启，其中的会话未中断 | 用户这台 Mac；旧版本显示的更新提示仍是固定说明（旧代码生成） |
+
 ## 未验证
 
-- 合入后第一个集成包的发布页与 `build-info.json`，需等合入后的自动出包完成再核对。
-- 真实更新提示里的合入标题：提示文案由已安装的版本生成，要等用户装上含本改动的集成包、再发布下一个集成包后才能看到。
+- 真实更新提示里的合入标题：提示文案由已安装的版本生成。用户这台 Mac 已装上含本改动的版本，要等下一个集成包发布后才能看到。
+- 其他设备（另一台 Mac、Android）是否已更新。
 - 第二步（出包改用 `-preview.N`）尚未实现，本次只让客户端提前兼容。
 
 ## 证据
 
-本地完整索引：`.docs/integration-release-notes-ui-validation/2026-09-17/README.md`。
+本地完整索引：`.docs/integration-release-notes-ui-validation/2026-09-17/README.md`；桌面更新过程见同目录 `evidence/desktop-update-rpc.log`，调用脚本为 `scripts/orca-updater-rpc.mjs`。
