@@ -27,6 +27,13 @@ external_ids: []
 
 ## 2. 决策点记录
 
+### D-005 2026-09-17：不再出 Intel 版
+
+- 背景：合入 #31 后 Intel 构建机打 DMG 时解析不到 github.com 而失败，只能重跑；用户表示不需要 Intel 版，要求去掉。
+- 最终决定：工作流只构建 Apple Silicon，发布只含 Apple Silicon DMG/ZIP 与 APK，桌面检查只要求 Apple Silicon ZIP。已安装的旧集成包把 Intel 更新 ZIP 当作发布完整的必要条件，所以每个发布附带同名的占位说明（合法 ZIP，只含 README），发布说明写明它不是安装包。
+- 原因：不附占位文件时，所有已安装的集成包都看不到之后的发布，需要逐台手动重装。
+- 影响范围：REQ-401、REQ-402、REQ-404；与 D-004 第二步合在同一个 PR。占位文件在用户确认所有集成包都更新到本版本之后可以移除。
+
 ### D-004 2026-09-17：发布内容随合入变化，版本号分两步切换
 
 - 背景：用户指出集成包的发布说明和更新提示是固定文案，应按最新合入的 PR 显示；并要求版本号改为常规格式，不再是 `1.4.197-local.时间戳.提交`。
@@ -56,6 +63,15 @@ external_ids: []
 - 影响范围：REQ-401、REQ-402、REQ-403；APK 沿用 Expo debug 签名并核验指纹，不生成密钥或暗改 versionCode。
 
 ## 3. 开发记录
+
+### 2026-09-17：去掉 Intel 出包，保留旧集成包的更新路径
+
+- 本轮目标：按用户要求去掉 Intel 出包（D-005），并让已安装的集成包继续自动更新。
+- 完成内容：工作流 macOS 矩阵只留 arm64；发布包只含 Apple Silicon DMG/ZIP 与 APK，签名证据只核验 arm64，`latest-mac.yml` 只列 Apple Silicon ZIP；新增 `legacy-intel-placeholder.mjs`，在发布时生成 `orca-integration-macos-x64.zip` 占位说明并写入清单、校验和与上传列表；桌面检查不再要求 Intel ZIP。本次合入的集成包（#31）仍由含 Intel 任务的工作流发布，Intel 任务失败后重跑。
+- 代码或文档变更：`publish-release.mjs`、新增 `legacy-intel-placeholder.mjs`、工作流 macOS 矩阵、`release-catalog.ts` 及对应测试；需求范围、REQ-404 验收、TC-401/TC-404 更新。
+- 验证证据：功能检查 110 + 19 项通过，新增用例确认旧集成包要求的四个文件都在上传列表里、占位文件大小与清单一致、`latest-mac.yml` 不含 x64；占位 ZIP 用 `unzip -t` 校验通过，见[常规版本号](tests/runs/2026-09-17-preview-version.md)。
+- 未解决问题：真实发布待合入后核对；占位文件何时移除取决于所有集成包是否都已更新。
+- 下一步：与第二步一起开 PR，CI 通过后合入，核对第一个 `-preview.N` 发布。
 
 ### 2026-09-17：集成包改用常规预发布版本号（暂不合入）
 

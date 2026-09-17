@@ -23,6 +23,15 @@ updated: 2026-09-17
 | 版本比较 | 与最新已发布的 `1.4.197-local.1789607195626.3e83a774f79f` 相比，electron-updater 的 `semver.gt` 与 Orca 的 `compareAppVersions` 都判定 `1.4.197-preview.24` 更新；`1.4.198-preview.25` 高于 `1.4.197-preview.24`；`preview.10` 高于 `preview.9` | 比较函数的判定，不等于真实安装 |
 | 门禁 | 改动文件 `oxlint`、相对 REQ-406 分支的变更代码质量门禁（五项 0 条）、`check:fork-features`、按 `--base Fartown/main` 的架构门禁通过 | 默认基线的 `errors.ts` 漂移见 REQ-406 测试记录 |
 
+## 去掉 Intel 出包（D-005）
+
+| 验证 | 实际结果 | 边界 |
+| --- | --- | --- |
+| 发布内容 | 清单资产为 Apple Silicon DMG、ZIP、APK 与 Intel 占位说明；`latest-mac.yml` 只列 Apple Silicon ZIP；发布说明写明 Intel 版已停止、占位文件不是安装包 | 控制 `gh`、`git` 响应 |
+| 旧集成包兼容 | 旧集成包判断 Mac 发布完整所需的 `build-info.json`、`latest-mac.yml`、两个架构的 ZIP 都在上传列表里；占位文件的大小与清单记录一致 | 按旧代码的要求列表断言，未用旧版应用实际检查 |
+| 占位 ZIP | `unzip -t` 通过，内容为说明文字（380 字节） | — |
+| 功能检查 | 桌面侧 9 个文件 110 项、移动端 19 项通过 | — |
+
 ## 未验证
 
 - 合入后第一个 `-preview.N` 集成包的真实发布，以及桌面与 Android 集成包从旧格式更新到新格式的实际安装。
