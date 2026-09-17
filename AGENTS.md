@@ -78,6 +78,8 @@ Ordinary `pnpm install` covers the host OS and CPU only. Before packaging for an
 
 All changes must consider the SSH use case. Don't assume local-only execution. Before changing anything that reports on, stops, or lists remote work, follow [`docs/reference/ssh-execution-boundary.md`](./docs/reference/ssh-execution-boundary.md): the execution host owns everything that touches execution, and loss of contact is never evidence of process death — the verdict vocabulary is `live` / `unverifiable` / `exited`, with no synonyms.
 
+Every fork feature must work for both local access and SSH access (the Orca client on one machine, the workspace, files, or services on an SSH-connected machine); a feature that covers only one is not done. Its requirements, design, test cases, and real-app validation must each cover the SSH scenario, and the design must state which machine owns every file, `127.0.0.1` port, environment variable, config, and service it touches. See rule 7 in [`docs/reference/fork-maintenance.md`](./docs/reference/fork-maintenance.md#6-日常规则).
+
 ## Folder Workspace Use Case
 
 All changes must consider folder workspaces as well as git worktrees. Don't assume every workspace is a git worktree.
