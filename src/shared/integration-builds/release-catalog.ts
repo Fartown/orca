@@ -1,6 +1,8 @@
 export const INTEGRATION_RELEASES_URL = 'https://github.com/Fartown/orca/releases'
 const API_URL = 'https://api.github.com/repos/Fartown/orca/releases?per_page=30'
 const TAG_PATTERN = /^integration-[1-9]\d*-([a-f0-9]{12})$/
+const LOCAL_DESKTOP_VERSION = /^\d+\.\d+\.\d+-local\.\d+\.([a-f0-9]{12})$/
+const PREVIEW_DESKTOP_VERSION = /^\d+\.\d+\.\d+-preview\.[1-9]\d*$/
 const ATOM_TAG_LINK =
   /<link\b[^>]*\bhref="https:\/\/github\.com\/Fartown\/orca\/releases\/tag\/(integration-[1-9]\d*-[a-f0-9]{12})"[^>]*>/g
 
@@ -10,6 +12,12 @@ export type IntegrationAsset = {
   sha256: string
 }
 
+/** A pull request merged into the integration branch, or a direct commit without `number`. */
+export type IntegrationChange = {
+  number?: number
+  title: string
+}
+
 export type IntegrationRelease = {
   tag: string
   sha: string
@@ -17,6 +25,7 @@ export type IntegrationRelease = {
   androidVersion: string
   androidVersionCode: number
   assets: IntegrationAsset[]
+  changes?: IntegrationChange[]
 }
 
 export function integrationDownloadUrl(tag: string, name = ''): string {
@@ -24,6 +33,41 @@ export function integrationDownloadUrl(tag: string, name = ''): string {
     throw new Error('Invalid integration release asset.')
   }
   return `${INTEGRATION_RELEASES_URL}/download/${tag}${name ? `/${name}` : ''}`
+}
+
+export function isPreviewDesktopVersion(version: string): boolean {
+  return PREVIEW_DESKTOP_VERSION.test(version)
+}
+
+// Builds before `-preview.N` versions carried the commit in the version itself.
+function isDesktopVersionOf(version: unknown, sha: string): boolean {
+  return (
+    typeof version === 'string' &&
+    (isPreviewDesktopVersion(version) ||
+      version.match(LOCAL_DESKTOP_VERSION)?.[1] === sha.slice(0, 12))
+  )
+}
+
+// Display-only, so a malformed list is dropped instead of blocking the update.
+function readChanges(value: unknown): IntegrationChange[] | undefined {
+  if (!Array.isArray(value) || value.length > 100) {
+    return undefined
+  }
+  const changes: IntegrationChange[] = []
+  for (const change of value) {
+    const title = change?.title
+    const number = change?.number
+    if (
+      typeof title !== 'string' ||
+      !title.trim() ||
+      title.length > 300 ||
+      (number !== undefined && !(Number.isSafeInteger(number) && number > 0))
+    ) {
+      return undefined
+    }
+    changes.push(number === undefined ? { title: title.trim() } : { number, title: title.trim() })
+  }
+  return changes
 }
 
 export function parseIntegrationRelease(value: unknown, tag: string): IntegrationRelease {
@@ -36,9 +80,7 @@ export function parseIntegrationRelease(value: unknown, tag: string): Integratio
     typeof item.sha !== 'string' ||
     !/^[a-f0-9]{40}$/.test(item.sha) ||
     !tag.endsWith(item.sha.slice(0, 12)) ||
-    typeof item.desktopVersion !== 'string' ||
-    !/^\d+\.\d+\.\d+-local\.\d+\.[a-f0-9]{12}$/.test(item.desktopVersion) ||
-    !item.desktopVersion.endsWith(item.sha.slice(0, 12)) ||
+    !isDesktopVersionOf(item.desktopVersion, item.sha) ||
     typeof item.androidVersion !== 'string' ||
     !Number.isSafeInteger(item.androidVersionCode) ||
     item.androidVersionCode! <= 16 ||
@@ -65,7 +107,7 @@ export function parseIntegrationRelease(value: unknown, tag: string): Integratio
     }
     names.add(asset.name)
   }
-  return item as IntegrationRelease
+  return { ...(item as IntegrationRelease), changes: readChanges(item.changes) }
 }
 
 class UpdateHttpError extends Error {

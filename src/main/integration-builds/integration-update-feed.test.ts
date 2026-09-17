@@ -21,6 +21,8 @@ afterEach(() => {
   vi.resetAllMocks()
 })
 
+const feedUpdater = () => ({ setFeedURL: vi.fn() }) as unknown as AppUpdater
+
 function fork() {
   Object.defineProperty(process, 'platform', { value: 'darwin' })
   mock.readFileSync.mockReturnValue('{"orcaUpdateChannel":"integration"}')
@@ -43,10 +45,10 @@ describe('integration-only default updater feed', () => {
     expect(isIntegrationBuild()).toBe(false)
   })
 
-  it('pins the concrete fork feed and matching notes without allowing downgrades', async () => {
-    fork()
-    const tag = 'integration-123-aaaaaaaaaaaa'
-    const version = '1.2.3-local.1789228800000.aaaaaaaaaaaa'
+  const tag = 'integration-123-aaaaaaaaaaaa'
+  const localVersion = '1.2.3-local.1789228800000.aaaaaaaaaaaa'
+
+  function publish(manifest: Record<string, unknown>) {
     const assets = ['orca-integration-macos-arm64.zip', 'orca-integration-macos-x64.zip'].map(
       (name) => ({ name, bytes: 123, sha256: 'b'.repeat(64) })
     )
@@ -69,14 +71,21 @@ describe('integration-only default updater feed', () => {
             schemaVersion: 2,
             tag,
             sha: 'a'.repeat(40),
-            desktopVersion: version,
+            desktopVersion: localVersion,
             androidVersion: '0.0.48',
             androidVersionCode: 211392000,
-            assets
+            assets,
+            ...manifest
           })
         )
       )
-    const updater = { setFeedURL: vi.fn() } as unknown as AppUpdater
+  }
+
+  it('pins the concrete fork feed and matching notes without allowing downgrades', async () => {
+    fork()
+    const version = localVersion
+    publish({})
+    const updater = feedUpdater()
     expect(await pinIntegrationReleaseFeed(updater)).toBe(true)
     expect(updater.setFeedURL).toHaveBeenCalledWith({
       provider: 'generic',
@@ -88,12 +97,39 @@ describe('integration-only default updater feed', () => {
       `https://github.com/Fartown/orca/releases/tag/${tag}`
     )
     expect(integrationChangelog('another-version')).toBe(null)
+    expect(integrationChangelog(version)?.release).toMatchObject({
+      title: 'Orca Integration aaaaaaaaaaaa',
+      description: expect.stringContaining('Fork integration build')
+    })
+  })
+
+  it('describes the update by what merged, keeping the card to one short paragraph', async () => {
+    fork()
+    const version = '1.4.197-preview.12'
+    const changes = [
+      { number: 34, title: 'feat: four' },
+      { title: "Merge remote-tracking branch 'upstream/main' into fork/integration" },
+      { number: 32, title: 'fix: two' },
+      { number: 31, title: 'feat: one' },
+      { number: 30, title: 'feat: zero' }
+    ]
+    publish({ desktopVersion: version, changes })
+    await pinIntegrationReleaseFeed(feedUpdater())
+    expect(integrationChangelog(version)?.release).toMatchObject({
+      title: 'Orca 1.4.197-preview.12',
+      description:
+        "feat: four · Merge remote-tracking branch 'upstream/main' into fork/integration · fix: two +2"
+    })
+
+    publish({ desktopVersion: version, changes: changes.slice(0, 1) })
+    await pinIntegrationReleaseFeed(feedUpdater())
+    expect(integrationChangelog(version)?.release.description).toBe('feat: four')
   })
 
   it('does not fall back to upstream when the fork check fails', async () => {
     fork()
     mock.fetch.mockRejectedValue(new Error('offline'))
-    const updater = { setFeedURL: vi.fn() } as unknown as AppUpdater
+    const updater = feedUpdater()
     await expect(pinIntegrationReleaseFeed(updater)).rejects.toThrow('offline')
     expect(updater.setFeedURL).not.toHaveBeenCalled()
   })

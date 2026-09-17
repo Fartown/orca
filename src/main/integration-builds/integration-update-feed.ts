@@ -6,10 +6,26 @@ import {
   fetchIntegrationRelease,
   integrationDownloadUrl,
   INTEGRATION_RELEASES_URL,
+  isPreviewDesktopVersion,
   type IntegrationRelease
 } from '../../shared/integration-builds/release-catalog'
 
+const SHOWN_CHANGES = 3
+
 let resolvedRelease: IntegrationRelease | null = null
+
+// The update card renders one paragraph; the release page keeps the full list.
+function changeSummary(release: IntegrationRelease): string | null {
+  const changes = release.changes ?? []
+  if (!changes.length) {
+    return null
+  }
+  const shown = changes
+    .slice(0, SHOWN_CHANGES)
+    .map((change) => change.title)
+    .join(' · ')
+  return changes.length > SHOWN_CHANGES ? `${shown} +${changes.length - SHOWN_CHANGES}` : shown
+}
 
 export function integrationChangelog(version: string) {
   const release = resolvedRelease
@@ -19,8 +35,11 @@ export function integrationChangelog(version: string) {
   return {
     releasesBehind: null,
     release: {
-      title: `Orca Integration ${release.sha.slice(0, 12)}`,
+      title: isPreviewDesktopVersion(release.desktopVersion)
+        ? `Orca ${release.desktopVersion}`
+        : `Orca Integration ${release.sha.slice(0, 12)}`,
       description:
+        changeSummary(release) ??
         'Fork integration build, signed by a fixed self-signed publisher and not notarized. Native updates work between builds with this identity. Older ad-hoc builds require one manual DMG installation first.',
       releaseNotesUrl: `${INTEGRATION_RELEASES_URL}/tag/${release.tag}`
     }
