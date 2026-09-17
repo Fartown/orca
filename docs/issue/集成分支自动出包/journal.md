@@ -23,6 +23,7 @@ external_ids: []
 | 测试记录 | [原生更新验收](tests/runs/2026-09-13-native-update.md) | completed | arm64 真实替换、原生运行状态和原终端连续性通过；正式发布及 Android 默认源安装待验 |
 | 测试记录 | [HTTP403修复验证](tests/runs/2026-09-13-update-http403.md) | completed | 失败恢复、公网回退、实际组件及修复APK通过；手机具体响应仍待接入 |
 | 测试记录 | [发布说明与版本号兼容](tests/runs/2026-09-17-release-notes.md) | completed | 单测与真实发布记录预演通过；合入后的发布页待核对 |
+| 测试记录 | [常规版本号](tests/runs/2026-09-17-preview-version.md) | completed | 编号、发布复核与版本比较通过；按 D-004 暂不合入 |
 
 ## 2. 决策点记录
 
@@ -55,6 +56,15 @@ external_ids: []
 - 影响范围：REQ-401、REQ-402、REQ-403；APK 沿用 Expo debug 签名并核验指纹，不生成密钥或暗改 versionCode。
 
 ## 3. 开发记录
+
+### 2026-09-17：集成包改用常规预发布版本号（暂不合入）
+
+- 本轮目标：实现 D-004 第二步，把集成包桌面版本号从 `1.4.197-local.时间戳.提交` 改为 `1.4.197-preview.N`，发布标题改为「Orca 版本号」。
+- 完成内容：新增 `integration-releases.mjs`，跨分页统计已发布的集成包，并按「已发布数加一」生成版本号；上游版本带预发布后缀时出包失败。身份任务用只读令牌统计编号；发布前重新统计，编号被占用或已有更新的构建发布时拒绝发布。Android versionCode 改由身份任务输出传入发布任务，不再从版本号里的时间戳推算。上一个集成包的查找改用同一份发布列表。
+- 代码或文档变更：`build-identity.mjs`、`publish-release.mjs`、新增 `integration-releases.mjs`、工作流身份与发布任务的环境变量、`integration-builds.test.mjs`；REQ-407 与 TC-408 更新，新增测试记录。无新增上游接缝。
+- 验证证据：功能检查 109 + 19 项通过；真实发布记录预演得到下一个版本 `1.4.197-preview.24`，少一的编号被拒绝且没有写发布；两种版本比较都判定新格式高于最新已发布的旧格式版本；`oxlint`、变更代码质量门禁、`check:fork-features`、按 fork 同步基线的架构门禁通过，见[常规版本号](tests/runs/2026-09-17-preview-version.md)。
+- 未解决问题：未在 GitHub 上真实出包；合入须等用户确认桌面与 Android 集成包都已更新到含 REQ-406 的版本，否则旧客户端会报清单无效。
+- 下一步：REQ-406 合入并出包后，把本分支变基到 `fork/integration`、开草稿 PR；用户确认后合入，并核对第一个 `-preview.N` 集成包的发布与桌面、Android 更新。
 
 ### 2026-09-17：发布说明列出本次合入，客户端兼容常规版本号
 
