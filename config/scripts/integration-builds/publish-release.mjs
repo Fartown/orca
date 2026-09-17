@@ -3,11 +3,10 @@ import { createReadStream, readFileSync, statSync, writeFileSync } from 'node:fs
 import { execFileSync } from 'node:child_process'
 import { join, resolve } from 'node:path'
 import { ANDROID_CERT_SHA256, integrationTag } from './build-identity.mjs'
-import androidConfig from './android-config.cjs'
+import { listIntegrationReleases } from './integration-releases.mjs'
 import { signingCertificate } from './mac-signing.cjs'
 import { assertPublisherRequirement } from './mac-signature-requirement.cjs'
 
-const RELEASE_TAG = /^integration-([1-9]\d*)-[a-f0-9]{12}$/
 const MAX_CHANGES = 100
 
 export const PACKAGE_NAMES = [
@@ -80,29 +79,25 @@ function shortTitle(text) {
   return title.length > 200 ? `${title.slice(0, 199)}…` : title
 }
 
-function previousIntegrationRelease(gh, repo, sha, runId) {
-  const releases = JSON.parse(gh(['api', `repos/${repo}/releases?per_page=30`]))
+function previousIntegrationRelease(releases, sha, runId) {
   return releases
-    .map((release) => ({ release, run: Number(release?.tag_name?.match(RELEASE_TAG)?.[1]) }))
     .filter(
-      ({ release, run }) =>
-        run < Number(runId) &&
-        !release.draft &&
-        release.prerelease &&
+      (release) =>
+        release.run < Number(runId) &&
         /^[a-f0-9]{40}$/.test(release.target_commitish) &&
         release.target_commitish !== sha
     )
-    .sort((a, b) => b.run - a.run)[0]?.release
+    .sort((a, b) => b.run - a.run)[0]
 }
 
 // First-parent history keeps upstream commits brought in by a sync merge out of the list.
-export function listMergedChanges({ gh, git, repo, sha, runId }) {
+export function listMergedChanges({ releases, git, sha, runId }) {
   const messages = (count, revisions) =>
     parseMergedChanges(
       git(['log', '--first-parent', `--max-count=${count}`, '--format=%B%x00', ...revisions, '--'])
     )
   try {
-    const previous = previousIntegrationRelease(gh, repo, sha, runId)
+    const previous = previousIntegrationRelease(releases, sha, runId)
     if (previous) {
       git(['merge-base', '--is-ancestor', previous.target_commitish, sha])
       return {
@@ -141,16 +136,33 @@ export async function publishRelease({ env, directory, mobile, gh, git }) {
   const sha = env.GITHUB_SHA
   const tag = integrationTag(sha, env.GITHUB_RUN_ID)
   const version = env.ORCA_LOCAL_BUILD_VERSION
-  if (!version?.includes('-') || !version.endsWith(`.${sha.slice(0, 12)}`)) {
-    throw new Error('The macOS version must identify this exact commit.')
+  const buildNumber = Number(version?.match(/^\d+\.\d+\.\d+-preview\.([1-9]\d*)$/)?.[1])
+  if (!buildNumber) {
+    throw new Error('The macOS version must be a numbered integration preview.')
+  }
+  const androidVersionCode = Number(env.ORCA_INTEGRATION_VERSION_CODE)
+  if (
+    !Number.isSafeInteger(androidVersionCode) ||
+    androidVersionCode <= 16 ||
+    androidVersionCode > 2100000000
+  ) {
+    throw new Error('Invalid integration Android versionCode.')
   }
   const repo = env.GITHUB_REPOSITORY
   const runUrl = `https://github.com/${repo}/actions/runs/${env.GITHUB_RUN_ID}`
   const assets = await hashPackages(directory)
   const macCertificateSha256 = verifyMacSigningEvidence(directory, version)
-  const timestamp = Number(version.match(/-local\.(\d+)\./)?.[1])
-  const androidVersionCode = androidConfig.androidVersionCode(timestamp)
-  const merged = listMergedChanges({ gh, git, repo, sha, runId: env.GITHUB_RUN_ID })
+  const releases = listIntegrationReleases(gh, repo).filter((release) => release.tag_name !== tag)
+  // The number was taken when this run started; a build published since then already owns it.
+  if (
+    buildNumber !== releases.length + 1 ||
+    releases.some((release) => release.run > Number(env.GITHUB_RUN_ID))
+  ) {
+    throw new Error(
+      `Integration build ${version} is stale: ${releases.length} builds are already published.`
+    )
+  }
+  const merged = listMergedChanges({ releases, git, sha, runId: env.GITHUB_RUN_ID })
   const manifest = {
     schemaVersion: 2,
     sha,
@@ -216,7 +228,7 @@ export async function publishRelease({ env, directory, mobile, gh, git }) {
       '--prerelease',
       '--latest=false',
       '--title',
-      `Orca Integration ${sha.slice(0, 12)}`,
+      `Orca ${version}`,
       '--notes-file',
       notesPath
     ])

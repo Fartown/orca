@@ -51,6 +51,9 @@ jobs:
         with:
           node-version-file: package.json
       - id: identity
+        env:
+          # Reads published releases to number this build.
+          GH_TOKEN: ${{ github.token }}
         run: node config/scripts/integration-builds/build-identity.mjs >> "$GITHUB_OUTPUT"
 
   signing-probe:
@@ -306,4 +309,5 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           ORCA_LOCAL_BUILD_VERSION: ${{ needs.identity.outputs.version }}
+          ORCA_INTEGRATION_VERSION_CODE: ${{ needs.identity.outputs.androidVersionCode }}
         run: node config/scripts/integration-builds/publish-release.mjs packages
