@@ -4,6 +4,7 @@ import { join } from 'node:path'
 import type { AppUpdater } from 'electron-updater'
 import {
   fetchIntegrationRelease,
+  integrationChanges,
   integrationDownloadUrl,
   INTEGRATION_RELEASES_URL,
   isPreviewDesktopVersion,
@@ -16,7 +17,7 @@ let resolvedRelease: IntegrationRelease | null = null
 
 // The update card renders one paragraph; the release page keeps the full list.
 function changeSummary(release: IntegrationRelease): string | null {
-  const changes = release.changes ?? []
+  const changes = integrationChanges(release)
   if (!changes.length) {
     return null
   }
@@ -60,7 +61,12 @@ export function isIntegrationBuild(): boolean {
   }
 }
 
-export async function pinIntegrationReleaseFeed(updater: AppUpdater): Promise<boolean> {
+export async function pinIntegrationReleaseFeed(
+  updater: Pick<
+    AppUpdater,
+    'allowPrerelease' | 'allowDowngrade' | 'disableDifferentialDownload' | 'setFeedURL'
+  >
+): Promise<boolean> {
   if (!isIntegrationBuild()) {
     return false
   }

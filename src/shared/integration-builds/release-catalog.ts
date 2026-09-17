@@ -25,7 +25,8 @@ export type IntegrationRelease = {
   androidVersion: string
   androidVersionCode: number
   assets: IntegrationAsset[]
-  changes?: IntegrationChange[]
+  /** Unvalidated manifest list; read it through `integrationChanges`. */
+  changes?: unknown
 }
 
 export function integrationDownloadUrl(tag: string, name = ''): string {
@@ -48,10 +49,11 @@ function isDesktopVersionOf(version: unknown, sha: string): boolean {
   )
 }
 
-// Display-only, so a malformed list is dropped instead of blocking the update.
-function readChanges(value: unknown): IntegrationChange[] | undefined {
+// Display-only, so a malformed list reads as empty instead of rejecting the update.
+export function integrationChanges(release: IntegrationRelease): IntegrationChange[] {
+  const value = release.changes
   if (!Array.isArray(value) || value.length > 100) {
-    return undefined
+    return []
   }
   const changes: IntegrationChange[] = []
   for (const change of value) {
@@ -63,7 +65,7 @@ function readChanges(value: unknown): IntegrationChange[] | undefined {
       title.length > 300 ||
       (number !== undefined && !(Number.isSafeInteger(number) && number > 0))
     ) {
-      return undefined
+      return []
     }
     changes.push(number === undefined ? { title: title.trim() } : { number, title: title.trim() })
   }
@@ -107,7 +109,7 @@ export function parseIntegrationRelease(value: unknown, tag: string): Integratio
     }
     names.add(asset.name)
   }
-  return { ...(item as IntegrationRelease), changes: readChanges(item.changes) }
+  return item as IntegrationRelease
 }
 
 class UpdateHttpError extends Error {

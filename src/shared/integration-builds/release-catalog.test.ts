@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import {
   fetchIntegrationRelease,
+  integrationChanges,
   integrationDownloadUrl,
   parseIntegrationRelease
 } from './release-catalog'
@@ -183,10 +184,11 @@ describe('fork integration release catalog', () => {
 
   it('reads merged changes but never lets a malformed list block the update', () => {
     const changes = [{ number: 31, title: ' feat: list merged pull requests ' }, { title: 'sync' }]
-    expect(parseIntegrationRelease({ ...manifest, changes }, tag).changes).toEqual([
+    expect(integrationChanges(parseIntegrationRelease({ ...manifest, changes }, tag))).toEqual([
       { number: 31, title: 'feat: list merged pull requests' },
       { title: 'sync' }
     ])
+    expect(integrationChanges(parseIntegrationRelease(manifest, tag))).toEqual([])
     for (const malformed of [
       'feat: one',
       [{ number: 0, title: 'zero' }],
@@ -195,9 +197,8 @@ describe('fork integration release catalog', () => {
       [{ title: 'x'.repeat(301) }],
       Array.from({ length: 101 }, () => ({ title: 'many' }))
     ]) {
-      expect(parseIntegrationRelease({ ...manifest, changes: malformed }, tag).changes).toBe(
-        undefined
-      )
+      const release = parseIntegrationRelease({ ...manifest, changes: malformed }, tag)
+      expect(integrationChanges(release)).toEqual([])
     }
   })
 

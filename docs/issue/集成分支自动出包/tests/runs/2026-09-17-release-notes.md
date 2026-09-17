@@ -21,7 +21,7 @@ updated: 2026-09-17
 | 原更新器回归 | `src/main/updater*`、`updater-changelog`、更新卡片组件等 26 个文件 294 项通过 | 更新卡片组件未改动 |
 | 真实发布记录预演 | 用 fork 的真实发布列表与本地集成分支历史运行发布脚本，创建、上传、编辑发布三步只记录不执行，结果见下表 | 预演用的 `ORCA_LOCAL_BUILD_VERSION` 与签名证据是按旧格式临时生成的 |
 | 发布任务检出方式 | 按新检出方式（全部历史、不含文件内容）从公开 fork 拉取：3 秒、36 MB；`merge-base --is-ancestor` 与第一父提交日志可用，没有按需下载任何文件内容 | 在本机网络执行，不代表 GitHub runner 的耗时 |
-| 类型与门禁 | 根 `pnpm tc`、移动端 `typecheck`、改动文件 `oxlint`、`check:fork-features`、本地化三项通过 | 见下方架构门禁说明 |
+| 类型与门禁 | 根 `pnpm tc`、移动端 `typecheck`、改动文件 `oxlint`、按 PR 基线的变更代码质量门禁、`check:fork-features`、本地化三项通过 | 见下方架构门禁说明 |
 
 真实发布记录预演（发布说明里的条目）：
 
@@ -36,7 +36,7 @@ updated: 2026-09-17
 
 默认基线（本机刚拉取的 `origin/main`）报 1 条：`src/main/runtime/rpc/errors.ts` reference-drift。本分支没有改这个文件；在干净的 `fork/integration`（3e83a774f）上同样报这一条，原因是上游 a01027697 在 fork 同步点 a9232e8db 之后给该文件加了 3 行。按 fork 实际同步到的上游基线 `--base Fartown/main` 运行通过，13 组策略。
 
-变更文件质量门禁对比的是 fork 与上游的分叉点，列出的类型断言都在集成出包功能既有代码里；本次把测试里的 5 处断言收敛为 3 处，没有新增。
+变更代码质量门禁：PR #31 第一次 CI 的 static analysis 报 3 条类型断言，都在本次改动的行上（测试里新加的更新器替身、解析函数的返回行）。修复方式：`pinIntegrationReleaseFeed` 的参数只要求用到的四个更新器成员，测试直接传普通对象；合入列表不再在解析时改写返回值，改为 `integrationChanges(release)` 读取时校验，返回行恢复原样。按 PR 基线 3e83a774f 本地重跑五项扫描均为 0 条。
 
 ## 未验证
 

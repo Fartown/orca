@@ -21,7 +21,12 @@ afterEach(() => {
   vi.resetAllMocks()
 })
 
-const feedUpdater = () => ({ setFeedURL: vi.fn() }) as unknown as AppUpdater
+const feedUpdater = () => ({
+  allowPrerelease: false,
+  allowDowngrade: true,
+  disableDifferentialDownload: false,
+  setFeedURL: vi.fn()
+})
 
 function fork() {
   Object.defineProperty(process, 'platform', { value: 'darwin' })
