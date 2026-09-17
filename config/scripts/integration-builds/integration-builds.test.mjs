@@ -11,7 +11,13 @@ import {
   verifyAndroidCertificate,
   verifyAndroidPublicCertificate
 } from './build-identity.mjs'
-import { hashPackages, PACKAGE_NAMES, publishRelease } from './publish-release.mjs'
+import {
+  hashPackages,
+  listMergedChanges,
+  PACKAGE_NAMES,
+  parseMergedChanges,
+  publishRelease
+} from './publish-release.mjs'
 import androidConfig from './android-config.cjs'
 import { verifyAndroidPackageVersion } from './verify-apk-version.mjs'
 import { signIntegrationPackage } from './mac-after-sign.cjs'
@@ -51,9 +57,27 @@ function packages() {
   return directory
 }
 
-function github(existing) {
+const previousSha = 'b'.repeat(40)
+const previousRelease = {
+  tag_name: `integration-122-${previousSha.slice(0, 12)}`,
+  target_commitish: previousSha,
+  draft: false,
+  prerelease: true
+}
+const mergeLog = [
+  'Merge pull request #31 from Fartown/feat/integration-builds-release-notes\n\nfeat(integration-builds): list merged pull requests\n',
+  "Merge remote-tracking branch 'upstream/main' into fork/integration\n",
+  'Merge pull request #30 from Fartown/feat/self-hosted-artifacts-lan-share\n'
+]
+  .map((message) => `${message}\0`)
+  .join('\n')
+
+function github(existing, releases = [previousRelease]) {
   return vi.fn((args) => {
     if (args[0] === 'api') {
+      if (args[1].includes('/releases?')) {
+        return JSON.stringify(releases)
+      }
       if (existing) {
         return JSON.stringify(existing)
       }
@@ -63,9 +87,19 @@ function github(existing) {
   })
 }
 
+function repository({ ancestor = true, log = mergeLog } = {}) {
+  return vi.fn((args) => {
+    if (args[0] === 'merge-base' && !ancestor) {
+      throw new Error('Command failed: git merge-base --is-ancestor')
+    }
+    return args[0] === 'log' ? log : ''
+  })
+}
+
 afterEach(() => {
   directories.splice(0).forEach((path) => rmSync(path, { recursive: true, force: true }))
   vi.unstubAllEnvs()
+  vi.restoreAllMocks()
   delete require.cache[require.resolve('./electron-builder.cjs')]
   delete require.cache[require.resolve('../../electron-builder.config.cjs')]
 })
@@ -182,16 +216,17 @@ describe('complete, immutable fork prereleases', () => {
   it('creates a draft, uploads all five packages and update manifests, then publishes', async () => {
     const directory = packages()
     const gh = github()
-    await publishRelease({ env, directory, mobile, gh })
+    await publishRelease({ env, directory, mobile, gh, git: repository() })
     expect(gh.mock.calls.map(([args]) => args.slice(0, 2))).toEqual([
+      ['api', 'repos/Fartown/orca/releases?per_page=30'],
       ['api', `repos/Fartown/orca/releases/tags/${integrationTag(sha, '123')}`],
       ['release', 'create'],
       ['release', 'upload'],
       ['release', 'edit']
     ])
-    expect(gh.mock.calls[1][0]).toContain('--draft')
-    expect(gh.mock.calls[3][0]).toContain('--draft=false')
-    for (const [args] of gh.mock.calls.slice(1)) {
+    expect(gh.mock.calls[2][0]).toContain('--draft')
+    expect(gh.mock.calls[4][0]).toContain('--draft=false')
+    for (const [args] of gh.mock.calls.slice(2)) {
       expect(args).toContain('Fartown/orca')
     }
     const manifest = JSON.parse(readFileSync(join(directory, 'build-info.json'), 'utf8'))
@@ -207,7 +242,7 @@ describe('complete, immutable fork prereleases', () => {
         .filter((asset) => asset.name.endsWith('.zip'))
         .map((asset) => ({ url: asset.name, sha512: asset.sha512, size: asset.bytes }))
     )
-    expect(gh.mock.calls[2][0]).toContain(join(directory, 'latest-mac.yml'))
+    expect(gh.mock.calls[3][0]).toContain(join(directory, 'latest-mac.yml'))
     expect(readFileSync(join(directory, 'SHA256SUMS.txt'), 'utf8')).toMatch(/^[a-f0-9]{64}  orca-/)
   })
 
@@ -215,7 +250,9 @@ describe('complete, immutable fork prereleases', () => {
     const directory = packages()
     const gh = github()
     writeFileSync(join(directory, PACKAGE_NAMES[2]), '')
-    await expect(publishRelease({ env, directory, mobile, gh })).rejects.toThrow(/empty/)
+    await expect(publishRelease({ env, directory, mobile, gh, git: repository() })).rejects.toThrow(
+      /empty/
+    )
     expect(gh).not.toHaveBeenCalled()
     rmSync(join(directory, PACKAGE_NAMES[2]))
     await expect(hashPackages(directory)).rejects.toThrow()
@@ -230,10 +267,11 @@ describe('complete, immutable fork prereleases', () => {
       evidence[field] = 'invalid'
       writeFileSync(path, JSON.stringify(evidence))
       const gh = github()
-      await expect(publishRelease({ env, directory, mobile, gh })).rejects.toThrow()
+      const git = repository()
+      await expect(publishRelease({ env, directory, mobile, gh, git })).rejects.toThrow()
       expect(gh).not.toHaveBeenCalled()
       rmSync(path)
-      await expect(publishRelease({ env, directory, mobile, gh })).rejects.toThrow()
+      await expect(publishRelease({ env, directory, mobile, gh, git })).rejects.toThrow()
       expect(gh).not.toHaveBeenCalled()
     }
   )
@@ -245,37 +283,45 @@ describe('complete, immutable fork prereleases', () => {
   ])('cannot publish outside the integration branch: %j', async (override) => {
     const gh = github()
     await expect(
-      publishRelease({ env: { ...env, ...override }, directory: packages(), mobile, gh })
+      publishRelease({
+        env: { ...env, ...override },
+        directory: packages(),
+        mobile,
+        gh,
+        git: repository()
+      })
     ).rejects.toThrow(/Only the fork/)
     expect(gh).not.toHaveBeenCalled()
   })
 
   it('keeps the release draft if an upload fails', async () => {
-    const gh = github()
-    gh.mockImplementationOnce(() => {
-      throw Object.assign(new Error('Not found'), { stderr: 'HTTP 404' })
-    })
-      .mockImplementationOnce(() => '')
-      .mockImplementationOnce(() => {
+    const listed = github()
+    const gh = vi.fn((args) => {
+      if (args[1] === 'upload') {
         throw new Error('upload failed')
-      })
-    await expect(publishRelease({ env, directory: packages(), mobile, gh })).rejects.toThrow(
-      'upload failed'
-    )
+      }
+      return listed(args)
+    })
+    await expect(
+      publishRelease({ env, directory: packages(), mobile, gh, git: repository() })
+    ).rejects.toThrow('upload failed')
+    expect(gh.mock.calls.some(([args]) => args[1] === 'create')).toBe(true)
     expect(gh.mock.calls.some(([args]) => args[1] === 'edit')).toBe(false)
   })
 
   it('retries a matching draft without overwriting a published release', async () => {
     const existing = { target_commitish: sha, prerelease: true, draft: true }
     const gh = github(existing)
-    await publishRelease({ env, directory: packages(), mobile, gh })
+    const git = repository()
+    await publishRelease({ env, directory: packages(), mobile, gh, git })
     expect(gh.mock.calls.some(([args]) => args[1] === 'create')).toBe(false)
     await expect(
       publishRelease({
         env,
         directory: packages(),
         mobile,
-        gh: github({ ...existing, draft: false })
+        gh: github({ ...existing, draft: false }),
+        git
       })
     ).rejects.toThrow(/Already published/)
     await expect(
@@ -283,7 +329,8 @@ describe('complete, immutable fork prereleases', () => {
         env,
         directory: packages(),
         mobile,
-        gh: github({ ...existing, target_commitish: 'b'.repeat(40) })
+        gh: github({ ...existing, target_commitish: 'b'.repeat(40) }),
+        git
       })
     ).rejects.toThrow(/identity/)
   })
@@ -292,10 +339,92 @@ describe('complete, immutable fork prereleases', () => {
     const gh = vi.fn(() => {
       throw Object.assign(new Error('auth failed'), { stderr: 'HTTP 401' })
     })
-    await expect(publishRelease({ env, directory: packages(), mobile, gh })).rejects.toThrow(
-      'auth failed'
+    vi.spyOn(console, 'warn').mockImplementation(() => {})
+    await expect(
+      publishRelease({ env, directory: packages(), mobile, gh, git: repository() })
+    ).rejects.toThrow('auth failed')
+    // The release listing only feeds the notes; the identity lookup must still fail closed.
+    expect(gh.mock.calls.map(([args]) => args[0])).toEqual(['api', 'api'])
+  })
+})
+
+describe('what merged since the previous integration build', () => {
+  it('lists first-parent merges since the newest earlier published build', async () => {
+    const directory = packages()
+    const git = repository()
+    const releases = [
+      { ...previousRelease, tag_name: `integration-124-${previousSha.slice(0, 12)}` },
+      { ...previousRelease, tag_name: 'integration-121-cccccccccccc', target_commitish: sha },
+      { ...previousRelease, tag_name: 'integration-120-dddddddddddd', draft: true },
+      { ...previousRelease, tag_name: 'v1.2.3' },
+      previousRelease,
+      {
+        ...previousRelease,
+        tag_name: 'integration-100-eeeeeeeeeeee',
+        target_commitish: 'e'.repeat(40)
+      }
+    ]
+    await publishRelease({ env, directory, mobile, gh: github(undefined, releases), git })
+    expect(git.mock.calls.map(([args]) => args)).toEqual([
+      ['merge-base', '--is-ancestor', previousSha, sha],
+      [
+        'log',
+        '--first-parent',
+        '--max-count=100',
+        '--format=%B%x00',
+        `${previousSha}..${sha}`,
+        '--'
+      ]
+    ])
+    const changes = [
+      { number: 31, title: 'feat(integration-builds): list merged pull requests' },
+      { title: "Merge remote-tracking branch 'upstream/main' into fork/integration" },
+      { number: 30, title: 'Fartown/feat/self-hosted-artifacts-lan-share' }
+    ]
+    expect(JSON.parse(readFileSync(join(directory, 'build-info.json'), 'utf8')).changes).toEqual(
+      changes
     )
-    expect(gh).toHaveBeenCalledTimes(1)
+    const notes = readFileSync(join(directory, 'release-notes.md'), 'utf8')
+    expect(notes).toContain(
+      `[integration-122-${previousSha.slice(0, 12)}](https://github.com/Fartown/orca/releases/tag/integration-122-${previousSha.slice(0, 12)})`
+    )
+    expect(notes).toContain(`https://github.com/Fartown/orca/compare/${previousSha}...${sha}`)
+    expect(notes).toContain(
+      [
+        '- #31 feat(integration-builds): list merged pull requests',
+        "- Merge remote-tracking branch 'upstream/main' into fork/integration",
+        '- #30 Fartown/feat/self-hosted-artifacts-lan-share'
+      ].join('\n')
+    )
+  })
+
+  it.each([
+    ['the previous build is not an ancestor', repository({ ancestor: false }), [previousRelease]],
+    ['no earlier build was published', repository(), []]
+  ])('falls back to the head commit when %s', (_, git, releases) => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const result = listMergedChanges({
+      gh: github(undefined, releases),
+      git,
+      repo: 'Fartown/orca',
+      sha,
+      runId: '123'
+    })
+    expect(result.previous).toBe(null)
+    expect(git.mock.calls.at(-1)[0]).toEqual([
+      'log',
+      '--first-parent',
+      '--max-count=1',
+      '--format=%B%x00',
+      sha,
+      '--'
+    ])
+    expect(warn).toHaveBeenCalledTimes(releases.length ? 1 : 0)
+  })
+
+  it('keeps release titles short and ignores empty messages', () => {
+    const long = 'x'.repeat(250)
+    expect(parseMergedChanges(`\0\n${long}\0\n`)).toEqual([{ title: `${'x'.repeat(199)}…` }])
   })
 })
 

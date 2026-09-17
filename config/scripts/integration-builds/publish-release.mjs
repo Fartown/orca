@@ -7,6 +7,9 @@ import androidConfig from './android-config.cjs'
 import { signingCertificate } from './mac-signing.cjs'
 import { assertPublisherRequirement } from './mac-signature-requirement.cjs'
 
+const RELEASE_TAG = /^integration-([1-9]\d*)-[a-f0-9]{12}$/
+const MAX_CHANGES = 100
+
 export const PACKAGE_NAMES = [
   'orca-integration-macos-arm64.dmg',
   'orca-integration-macos-x64.dmg',
@@ -56,7 +59,78 @@ export function verifyMacSigningEvidence(directory, version) {
   return certificate.sha256
 }
 
-export async function publishRelease({ env, directory, mobile, gh }) {
+export function parseMergedChanges(log) {
+  return log
+    .split('\0')
+    .map((message) => message.trim())
+    .filter(Boolean)
+    .map((message) => {
+      const [subject, ...body] = message.split('\n')
+      const merge = subject.match(/^Merge pull request #([1-9]\d*) from (\S+)$/)
+      if (!merge) {
+        return { title: shortTitle(subject) }
+      }
+      const title = body.map((line) => line.trim()).find(Boolean) ?? merge[2]
+      return { number: Number(merge[1]), title: shortTitle(title) }
+    })
+}
+
+function shortTitle(text) {
+  const title = text.trim()
+  return title.length > 200 ? `${title.slice(0, 199)}…` : title
+}
+
+function previousIntegrationRelease(gh, repo, sha, runId) {
+  const releases = JSON.parse(gh(['api', `repos/${repo}/releases?per_page=30`]))
+  return releases
+    .map((release) => ({ release, run: Number(release?.tag_name?.match(RELEASE_TAG)?.[1]) }))
+    .filter(
+      ({ release, run }) =>
+        run < Number(runId) &&
+        !release.draft &&
+        release.prerelease &&
+        /^[a-f0-9]{40}$/.test(release.target_commitish) &&
+        release.target_commitish !== sha
+    )
+    .sort((a, b) => b.run - a.run)[0]?.release
+}
+
+// First-parent history keeps upstream commits brought in by a sync merge out of the list.
+export function listMergedChanges({ gh, git, repo, sha, runId }) {
+  const messages = (count, revisions) =>
+    parseMergedChanges(
+      git(['log', '--first-parent', `--max-count=${count}`, '--format=%B%x00', ...revisions, '--'])
+    )
+  try {
+    const previous = previousIntegrationRelease(gh, repo, sha, runId)
+    if (previous) {
+      git(['merge-base', '--is-ancestor', previous.target_commitish, sha])
+      return {
+        previous,
+        changes: messages(MAX_CHANGES, [`${previous.target_commitish}..${sha}`])
+      }
+    }
+  } catch (error) {
+    console.warn(`Could not compare with the previous integration release: ${error.message}`)
+  }
+  return { previous: null, changes: messages(1, [sha]) }
+}
+
+function changeNotes(repo, sha, { previous, changes }) {
+  if (!changes.length) {
+    return []
+  }
+  const since = previous
+    ? `（相比 [${previous.tag_name}](https://github.com/${repo}/releases/tag/${previous.tag_name})，[完整提交差异](https://github.com/${repo}/compare/${previous.target_commitish}...${sha})）`
+    : '（未找到可对比的上一个集成包，只列出本次提交）'
+  return [
+    `**本次合入**${since}\n\n${changes
+      .map((change) => `- ${change.number ? `#${change.number} ` : ''}${change.title}`)
+      .join('\n')}`
+  ]
+}
+
+export async function publishRelease({ env, directory, mobile, gh, git }) {
   if (
     env.GITHUB_REPOSITORY !== 'Fartown/orca' ||
     env.GITHUB_REF !== 'refs/heads/fork/integration' ||
@@ -76,6 +150,7 @@ export async function publishRelease({ env, directory, mobile, gh }) {
   const macCertificateSha256 = verifyMacSigningEvidence(directory, version)
   const timestamp = Number(version.match(/-local\.(\d+)\./)?.[1])
   const androidVersionCode = androidConfig.androidVersionCode(timestamp)
+  const merged = listMergedChanges({ gh, git, repo, sha, runId: env.GITHUB_RUN_ID })
   const manifest = {
     schemaVersion: 2,
     sha,
@@ -87,7 +162,8 @@ export async function publishRelease({ env, directory, mobile, gh }) {
     androidCertificateSha256: ANDROID_CERT_SHA256,
     macSigning: 'fixed self-signed publisher, not notarized',
     macCertificateSha256,
-    assets
+    assets,
+    changes: merged.changes
   }
   writeFileSync(join(directory, 'build-info.json'), `${JSON.stringify(manifest, null, 2)}\n`)
   writeFileSync(join(directory, 'latest-mac.yml'), macUpdateManifest(version, assets))
@@ -99,7 +175,9 @@ export async function publishRelease({ env, directory, mobile, gh }) {
   writeFileSync(
     notesPath,
     `${[
-      `集成分支内测包（非正式版）\n\nCommit: ${sha}\n构建: ${runUrl}`,
+      '集成分支内测包（非正式版）',
+      ...changeNotes(repo, sha, merged),
+      `Commit: ${sha}\n构建: ${runUrl}`,
       `macOS: ${version}\nAndroid: ${mobile.expo.version} (versionCode ${androidVersionCode})`,
       'macOS 提供 Apple Silicon / Intel DMG，使用固定 fork 自签身份、未公证；首次打开可能被系统拦截，需要手动允许，系统权限可能需要重新授予。',
       '提供双架构 ZIP 与 latest-mac.yml，支持同一固定签名身份之间的原生自动更新。现有 ad-hoc 旧版需先手动安装一次 DMG，之后可应用内下载并确认重启更新。',
@@ -193,6 +271,8 @@ if (process.argv[1] && resolve(process.argv[1]) === resolve(import.meta.filename
     env: process.env,
     directory: resolve(process.argv[2]),
     mobile: JSON.parse(readFileSync('mobile/app.json', 'utf8')),
-    gh: (args) => execFileSync('gh', args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] })
+    gh: (args) => execFileSync('gh', args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }),
+    git: (args) =>
+      execFileSync('git', args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] })
   })
 }

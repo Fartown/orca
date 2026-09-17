@@ -291,6 +291,9 @@ jobs:
         with:
           ref: ${{ needs.identity.outputs.sha }}
           persist-credentials: false
+          # Commit history without file contents, to list what merged since the previous build.
+          fetch-depth: 0
+          filter: blob:none
       - uses: actions/setup-node@v6
         with:
           node-version-file: package.json

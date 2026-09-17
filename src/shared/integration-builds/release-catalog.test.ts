@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import {
   fetchIntegrationRelease,
+  integrationChanges,
   integrationDownloadUrl,
   parseIntegrationRelease
 } from './release-catalog'
@@ -164,9 +165,41 @@ describe('fork integration release catalog', () => {
     { assets: [{ ...manifest.assets[0], sha256: 'bad' }] },
     { assets: [{ ...manifest.assets[0], name: '../other.apk' }] },
     { assets: [manifest.assets[0], manifest.assets[0]] },
-    { desktopVersion: 'v1.2.3' }
+    { desktopVersion: 'v1.2.3' },
+    { desktopVersion: '1.2.3-local.1789228800000.cccccccccccc' },
+    { desktopVersion: '1.2.3-preview.0' },
+    { desktopVersion: '1.2.3-preview.01' },
+    { desktopVersion: '1.2.3-preview.4.aaaaaaaaaaaa' }
   ])('rejects malformed or mismatched build identity %j', (change) => {
     expect(() => parseIntegrationRelease({ ...manifest, ...change }, tag)).toThrow()
+  })
+
+  it('accepts numbered preview versions alongside commit-stamped local versions', () => {
+    expect(
+      parseIntegrationRelease({ ...manifest, desktopVersion: '1.4.197-preview.12' }, tag)
+        .desktopVersion
+    ).toBe('1.4.197-preview.12')
+    expect(parseIntegrationRelease(manifest, tag).desktopVersion).toBe(manifest.desktopVersion)
+  })
+
+  it('reads merged changes but never lets a malformed list block the update', () => {
+    const changes = [{ number: 31, title: ' feat: list merged pull requests ' }, { title: 'sync' }]
+    expect(integrationChanges(parseIntegrationRelease({ ...manifest, changes }, tag))).toEqual([
+      { number: 31, title: 'feat: list merged pull requests' },
+      { title: 'sync' }
+    ])
+    expect(integrationChanges(parseIntegrationRelease(manifest, tag))).toEqual([])
+    for (const malformed of [
+      'feat: one',
+      [{ number: 0, title: 'zero' }],
+      [{ number: 31 }],
+      [{ title: '  ' }],
+      [{ title: 'x'.repeat(301) }],
+      Array.from({ length: 101 }, () => ({ title: 'many' }))
+    ]) {
+      const release = parseIntegrationRelease({ ...manifest, changes: malformed }, tag)
+      expect(integrationChanges(release)).toEqual([])
+    }
   })
 
   it('does not mask a rate limit or missing release as up-to-date', async () => {

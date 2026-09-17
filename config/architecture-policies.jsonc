@@ -39,7 +39,8 @@
             "docs/issue/集成分支自动出包/**",
             "config/fork-features.jsonc",
             "config/architecture-policies.jsonc",
-            "docs/issue/README.md"
+            "docs/issue/README.md",
+            ".gitignore"
           ],
           "message": "Change is outside the integration build feature."
         }
