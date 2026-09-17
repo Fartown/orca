@@ -3,24 +3,23 @@ import { createReadStream, readFileSync, statSync, writeFileSync } from 'node:fs
 import { execFileSync } from 'node:child_process'
 import { join, resolve } from 'node:path'
 import { ANDROID_CERT_SHA256, integrationTag } from './build-identity.mjs'
-import androidConfig from './android-config.cjs'
+import { listIntegrationReleases } from './integration-releases.mjs'
+import { LEGACY_INTEL_PLACEHOLDER, legacyIntelPlaceholder } from './legacy-intel-placeholder.mjs'
 import { signingCertificate } from './mac-signing.cjs'
 import { assertPublisherRequirement } from './mac-signature-requirement.cjs'
 
-const RELEASE_TAG = /^integration-([1-9]\d*)-[a-f0-9]{12}$/
 const MAX_CHANGES = 100
 
 export const PACKAGE_NAMES = [
   'orca-integration-macos-arm64.dmg',
-  'orca-integration-macos-x64.dmg',
   'orca-integration-macos-arm64.zip',
-  'orca-integration-macos-x64.zip',
   'orca-integration-android.apk'
 ]
+const MAC_UPDATE_ZIP = 'orca-integration-macos-arm64.zip'
 
-export async function hashPackages(directory) {
+export async function hashPackages(directory, names = PACKAGE_NAMES) {
   const assets = []
-  for (const name of PACKAGE_NAMES) {
+  for (const name of names) {
     const path = join(directory, name)
     const stat = statSync(path)
     if (!stat.isFile() || stat.size === 0) {
@@ -44,18 +43,16 @@ export async function hashPackages(directory) {
 
 export function verifyMacSigningEvidence(directory, version) {
   const certificate = signingCertificate()
-  for (const arch of ['arm64', 'x64']) {
-    const evidence = JSON.parse(readFileSync(join(directory, `mac-signing-${arch}.json`), 'utf8'))
-    if (
-      evidence.schemaVersion !== 1 ||
-      evidence.arch !== arch ||
-      evidence.version !== version ||
-      evidence.certificateSha256 !== certificate.sha256
-    ) {
-      throw new Error(`Invalid publisher signing evidence for ${arch}`)
-    }
-    assertPublisherRequirement(evidence.requirement, certificate.sha1)
+  const evidence = JSON.parse(readFileSync(join(directory, 'mac-signing-arm64.json'), 'utf8'))
+  if (
+    evidence.schemaVersion !== 1 ||
+    evidence.arch !== 'arm64' ||
+    evidence.version !== version ||
+    evidence.certificateSha256 !== certificate.sha256
+  ) {
+    throw new Error('Invalid publisher signing evidence for arm64')
   }
+  assertPublisherRequirement(evidence.requirement, certificate.sha1)
   return certificate.sha256
 }
 
@@ -80,29 +77,25 @@ function shortTitle(text) {
   return title.length > 200 ? `${title.slice(0, 199)}…` : title
 }
 
-function previousIntegrationRelease(gh, repo, sha, runId) {
-  const releases = JSON.parse(gh(['api', `repos/${repo}/releases?per_page=30`]))
+function previousIntegrationRelease(releases, sha, runId) {
   return releases
-    .map((release) => ({ release, run: Number(release?.tag_name?.match(RELEASE_TAG)?.[1]) }))
     .filter(
-      ({ release, run }) =>
-        run < Number(runId) &&
-        !release.draft &&
-        release.prerelease &&
+      (release) =>
+        release.run < Number(runId) &&
         /^[a-f0-9]{40}$/.test(release.target_commitish) &&
         release.target_commitish !== sha
     )
-    .sort((a, b) => b.run - a.run)[0]?.release
+    .sort((a, b) => b.run - a.run)[0]
 }
 
 // First-parent history keeps upstream commits brought in by a sync merge out of the list.
-export function listMergedChanges({ gh, git, repo, sha, runId }) {
+export function listMergedChanges({ releases, git, sha, runId }) {
   const messages = (count, revisions) =>
     parseMergedChanges(
       git(['log', '--first-parent', `--max-count=${count}`, '--format=%B%x00', ...revisions, '--'])
     )
   try {
-    const previous = previousIntegrationRelease(gh, repo, sha, runId)
+    const previous = previousIntegrationRelease(releases, sha, runId)
     if (previous) {
       git(['merge-base', '--is-ancestor', previous.target_commitish, sha])
       return {
@@ -141,16 +134,35 @@ export async function publishRelease({ env, directory, mobile, gh, git }) {
   const sha = env.GITHUB_SHA
   const tag = integrationTag(sha, env.GITHUB_RUN_ID)
   const version = env.ORCA_LOCAL_BUILD_VERSION
-  if (!version?.includes('-') || !version.endsWith(`.${sha.slice(0, 12)}`)) {
-    throw new Error('The macOS version must identify this exact commit.')
+  const buildNumber = Number(version?.match(/^\d+\.\d+\.\d+-preview\.([1-9]\d*)$/)?.[1])
+  if (!buildNumber) {
+    throw new Error('The macOS version must be a numbered integration preview.')
+  }
+  const androidVersionCode = Number(env.ORCA_INTEGRATION_VERSION_CODE)
+  if (
+    !Number.isSafeInteger(androidVersionCode) ||
+    androidVersionCode <= 16 ||
+    androidVersionCode > 2100000000
+  ) {
+    throw new Error('Invalid integration Android versionCode.')
   }
   const repo = env.GITHUB_REPOSITORY
   const runUrl = `https://github.com/${repo}/actions/runs/${env.GITHUB_RUN_ID}`
   const assets = await hashPackages(directory)
   const macCertificateSha256 = verifyMacSigningEvidence(directory, version)
-  const timestamp = Number(version.match(/-local\.(\d+)\./)?.[1])
-  const androidVersionCode = androidConfig.androidVersionCode(timestamp)
-  const merged = listMergedChanges({ gh, git, repo, sha, runId: env.GITHUB_RUN_ID })
+  const releases = listIntegrationReleases(gh, repo).filter((release) => release.tag_name !== tag)
+  // The number was taken when this run started; a build published since then already owns it.
+  if (
+    buildNumber !== releases.length + 1 ||
+    releases.some((release) => release.run > Number(env.GITHUB_RUN_ID))
+  ) {
+    throw new Error(
+      `Integration build ${version} is stale: ${releases.length} builds are already published.`
+    )
+  }
+  const merged = listMergedChanges({ releases, git, sha, runId: env.GITHUB_RUN_ID })
+  writeFileSync(join(directory, LEGACY_INTEL_PLACEHOLDER), legacyIntelPlaceholder())
+  const published = [...assets, ...(await hashPackages(directory, [LEGACY_INTEL_PLACEHOLDER]))]
   const manifest = {
     schemaVersion: 2,
     sha,
@@ -162,14 +174,14 @@ export async function publishRelease({ env, directory, mobile, gh, git }) {
     androidCertificateSha256: ANDROID_CERT_SHA256,
     macSigning: 'fixed self-signed publisher, not notarized',
     macCertificateSha256,
-    assets,
+    assets: published,
     changes: merged.changes
   }
   writeFileSync(join(directory, 'build-info.json'), `${JSON.stringify(manifest, null, 2)}\n`)
   writeFileSync(join(directory, 'latest-mac.yml'), macUpdateManifest(version, assets))
   writeFileSync(
     join(directory, 'SHA256SUMS.txt'),
-    assets.map((a) => `${a.sha256}  ${a.name}\n`).join('')
+    published.map((a) => `${a.sha256}  ${a.name}\n`).join('')
   )
   const notesPath = join(directory, 'release-notes.md')
   writeFileSync(
@@ -179,8 +191,9 @@ export async function publishRelease({ env, directory, mobile, gh, git }) {
       ...changeNotes(repo, sha, merged),
       `Commit: ${sha}\n构建: ${runUrl}`,
       `macOS: ${version}\nAndroid: ${mobile.expo.version} (versionCode ${androidVersionCode})`,
-      'macOS 提供 Apple Silicon / Intel DMG，使用固定 fork 自签身份、未公证；首次打开可能被系统拦截，需要手动允许，系统权限可能需要重新授予。',
-      '提供双架构 ZIP 与 latest-mac.yml，支持同一固定签名身份之间的原生自动更新。现有 ad-hoc 旧版需先手动安装一次 DMG，之后可应用内下载并确认重启更新。',
+      'macOS 只提供 Apple Silicon DMG，使用固定 fork 自签身份、未公证；首次打开可能被系统拦截，需要手动允许，系统权限可能需要重新授予。',
+      '提供 Apple Silicon ZIP 与 latest-mac.yml，支持同一固定签名身份之间的原生自动更新。现有 ad-hoc 旧版需先手动安装一次 DMG，之后可应用内下载并确认重启更新。',
+      `Intel 版已停止提供。${LEGACY_INTEL_PLACEHOLDER} 不是安装包，只是一份说明，让 2026-09-17 之前的集成包仍把本次发布识别为完整并继续自动更新。`,
       `macOS publisher certificate SHA-256: ${macCertificateSha256}`,
       'Android 集成包自动检查 fork 更新，可在应用内下载 APK 后通过系统确认安装。旧版需先手动安装一次；不同签名安装不能覆盖。APK 使用 Expo debug 内测签名，不用于商店发布。',
       `Android certificate SHA-256: ${ANDROID_CERT_SHA256}`,
@@ -216,7 +229,7 @@ export async function publishRelease({ env, directory, mobile, gh, git }) {
       '--prerelease',
       '--latest=false',
       '--title',
-      `Orca Integration ${sha.slice(0, 12)}`,
+      `Orca ${version}`,
       '--notes-file',
       notesPath
     ])
@@ -228,9 +241,13 @@ export async function publishRelease({ env, directory, mobile, gh, git }) {
     '--repo',
     repo,
     '--clobber',
-    ...[...PACKAGE_NAMES, 'latest-mac.yml', 'build-info.json', 'SHA256SUMS.txt'].map((name) =>
-      join(directory, name)
-    )
+    ...[
+      ...PACKAGE_NAMES,
+      LEGACY_INTEL_PLACEHOLDER,
+      'latest-mac.yml',
+      'build-info.json',
+      'SHA256SUMS.txt'
+    ].map((name) => join(directory, name))
   ])
   gh([
     'release',
@@ -248,9 +265,9 @@ export async function publishRelease({ env, directory, mobile, gh, git }) {
 }
 
 export function macUpdateManifest(version, assets) {
-  const files = assets.filter((asset) => asset.name.endsWith('.zip'))
-  if (files.length !== 2) {
-    throw new Error('Both macOS update ZIPs are required.')
+  const files = assets.filter((asset) => asset.name === MAC_UPDATE_ZIP)
+  if (files.length !== 1) {
+    throw new Error('The Apple Silicon update ZIP is required.')
   }
   return [
     `version: ${JSON.stringify(version)}`,

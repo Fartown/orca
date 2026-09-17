@@ -23,8 +23,16 @@ external_ids: []
 | 测试记录 | [原生更新验收](tests/runs/2026-09-13-native-update.md) | completed | arm64 真实替换、原生运行状态和原终端连续性通过；正式发布及 Android 默认源安装待验 |
 | 测试记录 | [HTTP403修复验证](tests/runs/2026-09-13-update-http403.md) | completed | 失败恢复、公网回退、实际组件及修复APK通过；手机具体响应仍待接入 |
 | 测试记录 | [发布说明与版本号兼容](tests/runs/2026-09-17-release-notes.md) | completed | 单测与真实发布记录预演通过；合入后的发布页待核对 |
+| 测试记录 | [常规版本号](tests/runs/2026-09-17-preview-version.md) | completed | 编号、发布复核与版本比较通过；按 D-004 暂不合入 |
 
 ## 2. 决策点记录
+
+### D-005 2026-09-17：不再出 Intel 版
+
+- 背景：合入 #31 后 Intel 构建机打 DMG 时解析不到 github.com 而失败，只能重跑；用户表示不需要 Intel 版，要求去掉。
+- 最终决定：工作流只构建 Apple Silicon，发布只含 Apple Silicon DMG/ZIP 与 APK，桌面检查只要求 Apple Silicon ZIP。已安装的旧集成包把 Intel 更新 ZIP 当作发布完整的必要条件，所以每个发布附带同名的占位说明（合法 ZIP，只含 README），发布说明写明它不是安装包。
+- 原因：不附占位文件时，所有已安装的集成包都看不到之后的发布，需要逐台手动重装。
+- 影响范围：REQ-401、REQ-402、REQ-404；与 D-004 第二步合在同一个 PR。占位文件在用户确认所有集成包都更新到本版本之后可以移除。
 
 ### D-004 2026-09-17：发布内容随合入变化，版本号分两步切换
 
@@ -55,6 +63,33 @@ external_ids: []
 - 影响范围：REQ-401、REQ-402、REQ-403；APK 沿用 Expo debug 签名并核验指纹，不生成密钥或暗改 versionCode。
 
 ## 3. 开发记录
+
+### 2026-09-17：#31 合入后核对真实发布，并更新用户的桌面集成包
+
+- 本轮目标：确认 REQ-406 在真实发布中生效，并按用户「你自己点」的要求更新用户这台 Mac 上的集成包，满足第二步合入前提。
+- 完成内容：#31 合入后自动出包第一次尝试时，Intel 打 DMG 因构建机解析不到 github.com 失败；重跑后发布 `integration-35175801533-0231e645f69d`。发布说明与 `build-info.json` 正确列出 #31。通过运行时更新接口依次检查、下载、安装（与界面上点更新、重启同一路径），用户这台 Mac 从 e6277cf40f83 更新到 0231e645f69d，终端守护进程与其中的会话不受影响。
+- 代码或文档变更：无代码改动；REQ-406 状态、测试记录「合入后核对」一节更新。
+- 验证证据：[发布说明与版本号兼容](tests/runs/2026-09-17-release-notes.md)；更新过程日志在 `.docs/integration-release-notes-ui-validation/2026-09-17/evidence/desktop-update-rpc.log`。
+- 未解决问题：更新提示里显示合入标题要等下一个集成包；另一台 Mac 与 Android 集成包是否已更新未知，没有更新的话，第二步合入后需要手动安装一次。
+- 下一步：PR #32 CI 通过后合入，核对第一个 `-preview.N` 发布，并在这台 Mac 上再更新一次，验证版本号切换与更新提示里的合入标题。
+
+### 2026-09-17：去掉 Intel 出包，保留旧集成包的更新路径
+
+- 本轮目标：按用户要求去掉 Intel 出包（D-005），并让已安装的集成包继续自动更新。
+- 完成内容：工作流 macOS 矩阵只留 arm64；发布包只含 Apple Silicon DMG/ZIP 与 APK，签名证据只核验 arm64，`latest-mac.yml` 只列 Apple Silicon ZIP；新增 `legacy-intel-placeholder.mjs`，在发布时生成 `orca-integration-macos-x64.zip` 占位说明并写入清单、校验和与上传列表；桌面检查不再要求 Intel ZIP。本次合入的集成包（#31）仍由含 Intel 任务的工作流发布，Intel 任务失败后重跑。
+- 代码或文档变更：`publish-release.mjs`、新增 `legacy-intel-placeholder.mjs`、工作流 macOS 矩阵、`release-catalog.ts` 及对应测试；需求范围、REQ-404 验收、TC-401/TC-404 更新。
+- 验证证据：功能检查 110 + 19 项通过，新增用例确认旧集成包要求的四个文件都在上传列表里、占位文件大小与清单一致、`latest-mac.yml` 不含 x64；占位 ZIP 用 `unzip -t` 校验通过，见[常规版本号](tests/runs/2026-09-17-preview-version.md)。
+- 未解决问题：真实发布待合入后核对；占位文件何时移除取决于所有集成包是否都已更新。
+- 下一步：与第二步一起开 PR，CI 通过后合入，核对第一个 `-preview.N` 发布。
+
+### 2026-09-17：集成包改用常规预发布版本号（暂不合入）
+
+- 本轮目标：实现 D-004 第二步，把集成包桌面版本号从 `1.4.197-local.时间戳.提交` 改为 `1.4.197-preview.N`，发布标题改为「Orca 版本号」。
+- 完成内容：新增 `integration-releases.mjs`，跨分页统计已发布的集成包，并按「已发布数加一」生成版本号；上游版本带预发布后缀时出包失败。身份任务用只读令牌统计编号；发布前重新统计，编号被占用或已有更新的构建发布时拒绝发布。Android versionCode 改由身份任务输出传入发布任务，不再从版本号里的时间戳推算。上一个集成包的查找改用同一份发布列表。
+- 代码或文档变更：`build-identity.mjs`、`publish-release.mjs`、新增 `integration-releases.mjs`、工作流身份与发布任务的环境变量、`integration-builds.test.mjs`；REQ-407 与 TC-408 更新，新增测试记录。无新增上游接缝。
+- 验证证据：功能检查 109 + 19 项通过；真实发布记录预演得到下一个版本 `1.4.197-preview.24`，少一的编号被拒绝且没有写发布；两种版本比较都判定新格式高于最新已发布的旧格式版本；`oxlint`、变更代码质量门禁、`check:fork-features`、按 fork 同步基线的架构门禁通过，见[常规版本号](tests/runs/2026-09-17-preview-version.md)。
+- 未解决问题：未在 GitHub 上真实出包；合入须等用户确认桌面与 Android 集成包都已更新到含 REQ-406 的版本，否则旧客户端会报清单无效。
+- 下一步：REQ-406 合入并出包后，把本分支变基到 `fork/integration`、开草稿 PR；用户确认后合入，并核对第一个 `-preview.N` 集成包的发布与桌面、Android 更新。
 
 ### 2026-09-17：发布说明列出本次合入，客户端兼容常规版本号
 

@@ -201,7 +201,7 @@ export async function fetchIntegrationRelease(
     'build-info.json',
     ...(platform === 'android'
       ? ['orca-integration-android.apk']
-      : ['latest-mac.yml', 'orca-integration-macos-arm64.zip', 'orca-integration-macos-x64.zip'])
+      : ['latest-mac.yml', 'orca-integration-macos-arm64.zip'])
   ]
   let releases: unknown
   try {

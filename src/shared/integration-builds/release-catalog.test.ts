@@ -53,7 +53,7 @@ describe('fork integration release catalog', () => {
     ).toHaveLength(1)
   })
 
-  it('verifies both ZIPs and the updater YAML before accepting the public Mac release', async () => {
+  it('verifies the Apple Silicon ZIP and updater YAML before accepting the public Mac release', async () => {
     const fetcher = vi
       .fn<typeof fetch>()
       .mockResolvedValueOnce(new Response('', { status: 403 }))
@@ -62,8 +62,8 @@ describe('fork integration release catalog', () => {
       .mockImplementation(async () => new Response(null, { status: 200 }))
     expect(await fetchIntegrationRelease('mac', fetcher)).toMatchObject(manifest)
     expect(fetcher.mock.calls.slice(3).map(([url]) => url)).toEqual(
-      ['latest-mac.yml', 'orca-integration-macos-arm64.zip', 'orca-integration-macos-x64.zip'].map(
-        (name) => integrationDownloadUrl(tag, name)
+      ['latest-mac.yml', 'orca-integration-macos-arm64.zip'].map((name) =>
+        integrationDownloadUrl(tag, name)
       )
     )
     expect(fetcher.mock.calls.slice(3).every(([, init]) => init?.method === 'HEAD')).toBe(true)
