@@ -44,6 +44,7 @@ import { UPDATER_METHODS } from './updater'
 import { AGENT_SESSION_METHODS } from './agent-session'
 import { STRUCTURED_AGENT_SESSION_METHODS } from './structured-agent-session'
 import { ARTIFACT_METHODS } from './artifacts'
+import { ARTIFACT_SHARE_METHODS } from './artifact-share'
 import { ISSUE_METHODS } from './issues'
 import { GOAL_METHODS } from './goals'
 import { AGENT_HOOK_METHODS } from './agent-hooks'
@@ -57,6 +58,7 @@ export const ALL_RPC_METHODS = [
   ...AGENT_HOOK_METHODS,
   ...AI_VAULT_METHODS,
   ...ARTIFACT_METHODS,
+  ...ARTIFACT_SHARE_METHODS,
   ...ISSUE_METHODS,
   ...GOAL_METHODS,
   ...AUTOMATION_METHODS,

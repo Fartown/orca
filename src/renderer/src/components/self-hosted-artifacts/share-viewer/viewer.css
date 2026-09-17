@@ -1,0 +1,36 @@
+/* Theme tokens are extracted from assets/main.css at build time so the page matches Orca. */
+@import 'orca-share-viewer-tokens.css';
+@import 'katex/dist/katex.min.css';
+@import '../../../assets/markdown-preview.css';
+
+html,
+body {
+  margin: 0;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+}
+
+.orca-share-page.markdown-preview {
+  box-sizing: border-box;
+  max-width: 920px;
+  margin: 0 auto;
+  font-size: 15px;
+}
+
+.orca-share-footer {
+  margin-top: 48px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+  color: var(--muted-foreground);
+  font-size: 12px;
+}
+
+.orca-share-fallback {
+  box-sizing: border-box;
+  max-width: 920px;
+  margin: 0 auto;
+  padding: 24px 32px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}

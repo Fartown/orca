@@ -29,9 +29,13 @@ export const HANDLER_GROUPS: readonly HandlerGroup[] = [
       'artifacts share',
       'artifacts update',
       'artifacts unshare',
-      'artifacts delete'
+      'artifacts delete',
+      'artifacts service status'
     ],
-    load: async () => (await import('./handlers/artifacts.js')).ARTIFACT_HANDLERS
+    // Why: this fork shares files over the local network from the computer that holds them.
+    load: async () =>
+      (await import('./self-hosted-artifacts/artifact-share-cli-handlers.js'))
+        .ARTIFACT_SHARE_CLI_HANDLERS
   },
   {
     name: 'automations',

@@ -1,4 +1,5 @@
 import { registerRelayGoals, projectRelayGoalHookFacts } from '../main/goals/goal-relay-service'
+import { registerRelayArtifactShare } from '../main/self-hosted-artifacts/artifact-share-relay-service'
 import type { RelayDispatcher } from './dispatcher'
 import type { PtyEnvAugmenter, PtyHandler } from './pty-handler'
 import { RelayAgentHookServer } from './agent-hook-server'
@@ -58,6 +59,7 @@ export class RelayAgentHookRuntime {
       this,
       Object.keys(this.hookServer.buildPtyEnv()).length > 0
     )
+    registerRelayArtifactShare(this.dispatcher)
   }
 
   publishEndpointFile(): void {

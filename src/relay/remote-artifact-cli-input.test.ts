@@ -26,23 +26,18 @@ afterEach(async () => {
 })
 
 describe('prepareRemoteArtifactCliInput', () => {
-  it('reads a folder-workspace file on the SSH host and preserves its source path', async () => {
+  it('forwards only the SSH host path so the host serves the file itself', async () => {
     const cwd = await remoteFolder()
     await writeFile(join(cwd, 'report.md'), '# Remote report', 'utf8')
 
     await expect(
       prepareRemoteArtifactCliInput(['artifacts', 'share', 'report.md'], cwd)
     ).resolves.toEqual({
-      stdin: '# Remote report',
-      artifactInput: {
-        sourceKey: join(cwd, 'report.md'),
-        fileName: 'report.md',
-        contentType: 'text/markdown'
-      }
+      artifactInput: { sourceKey: join(cwd, 'report.md'), fileName: 'report.md' }
     })
   })
 
-  it('rejects a sparse oversized file from stat metadata before reading its contents', async () => {
+  it('does not read a file larger than the CLI transport', async () => {
     const cwd = await remoteFolder()
     const path = join(cwd, 'sparse.html')
     const handle = await open(path, 'w')
@@ -51,7 +46,7 @@ describe('prepareRemoteArtifactCliInput', () => {
 
     await expect(
       prepareRemoteArtifactCliInput(['artifacts', 'share', 'sparse.html'], cwd)
-    ).rejects.toThrow(/too large/)
+    ).resolves.toEqual({ artifactInput: { sourceKey: path, fileName: 'sparse.html' } })
   })
 
   it('transfers source identity without reading content for unshare', async () => {

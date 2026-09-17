@@ -69,8 +69,9 @@ describe('OrcaAccountSettingsPane', () => {
 
     expect(screen.getByText('Ada Lovelace')).toBeInTheDocument()
     expect(screen.getByText('ada@example.com')).toBeInTheDocument()
-    expect(screen.getByText('Artifact sharing')).toBeInTheDocument()
+    expect(screen.queryByText('Artifact sharing')).not.toBeInTheDocument()
     expect(screen.getByText('Orca Relay')).toBeInTheDocument()
+    expect(screen.getByText('Skill sharing')).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: 'Sign out' }))
     await user.click(screen.getByRole('button', { name: 'Confirm sign out' }))
@@ -84,7 +85,7 @@ describe('OrcaAccountSettingsPane', () => {
 
     expect(
       screen.getByText(
-        'Sign in to extend Orca with cloud features, including Artifacts and Orca Relay.'
+        'Sign in to extend Orca with cloud features, including Orca Relay and skill sharing.'
       )
     ).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Sign in to Orca' }))

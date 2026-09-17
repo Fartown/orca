@@ -270,7 +270,7 @@ describe('artifact runtime routing', () => {
 
     expect(process.exitCode).not.toBe(1)
     expect(runtimeClientConstructorMock).toHaveBeenCalledWith(null, null)
-    expect(callMock).toHaveBeenCalledWith('artifacts.list', {})
+    expect(callMock).toHaveBeenCalledWith('artifactShare.list', {})
   })
 })
 

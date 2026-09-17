@@ -29,6 +29,7 @@ import { shouldQuitWhenAllWindowsClosed } from './window-all-closed-quit-policy'
 import { mainProcessState as state } from './main-process-state'
 import { isDevParentShutdownRequested } from './configure-process'
 import { getCanonicalUserDataPath } from '../persistence'
+import { stopArtifactShareForMainProcess } from '../self-hosted-artifacts/artifact-share-main-process'
 
 // Why: will-quit fires twice — first pass preventDefaults and runs teardown; second pass exits.
 let daemonDisconnectDone = false
@@ -147,6 +148,7 @@ function installWillQuitHandler(): void {
     ).then(() => {})
     state.uninstallRepoMaintenanceIdleGate = null
     agentHookServer.stop()
+    const artifactShareShutdown = stopArtifactShareForMainProcess()
     // Why Windows only: POSIX hooks short-circuit on ORCA_PANE_KEY, while Windows must register a
     // bare script path that cannot express the guard and would otherwise keep spawning after quit.
     // Why bounded here: every other teardown member carries its own ceiling, and this one reaches
@@ -232,6 +234,7 @@ function installWillQuitHandler(): void {
     // temp+rename swap means a write cut short by the deadline leaves the old file intact.
     settleTeardownWithinDeadline([
       { name: 'daemon', promise: daemonTeardown },
+      { name: 'artifact-share', promise: artifactShareShutdown },
       { name: 'browser', promise: browserShutdown },
       { name: 'runtime-rpc', promise: rpcStopAndClear },
       { name: 'watchers', promise: watcherShutdown },

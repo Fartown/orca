@@ -20,9 +20,8 @@ import { callRuntimeEnvironment } from '../ipc/runtime-environment-transport-rou
 import { mainProcessState as state } from './main-process-state'
 import { prepareCodexRuntimeHomeForLaunch } from './codex-launch-preparation'
 import type { RuntimeDesktopWindowStatus } from '../../shared/runtime-types'
-import { ArtifactCloudService } from '../artifacts/artifact-cloud-service'
+import { startArtifactShareForMainProcess } from '../self-hosted-artifacts/artifact-share-main-process'
 import { SkillCloudService } from '../skills/skill-cloud-service'
-import { isArtifactSharingEnabled } from '../../shared/artifact-sharing-gate'
 import {
   AgentStatusObservedPaneIdentities,
   recordObservedAgentStatusPaneIdentity
@@ -160,11 +159,15 @@ export function configureRuntimeServices(runtime: OrcaRuntimeService): void {
   if (!store || !claudeAccounts || !codexAccounts || !rateLimits) {
     throw new Error('Account services must be initialized before runtime wiring')
   }
-  runtime.setArtifactService(
-    new ArtifactCloudService(app.getPath('userData'), () =>
-      isArtifactSharingEnabled(state.store?.getSettings())
-    )
-  )
+  // Why: this fork shares files from the computer that holds them over the local network; the
+  // cloud artifact service stays unregistered so no path can publish workspace files off-network.
+  startArtifactShareForMainProcess({
+    settings: store,
+    userDataPath: app.getPath('userData'),
+    resourcesPath: process.resourcesPath,
+    appPath: app.getAppPath(),
+    callRuntimeEnvironment
+  })
   runtime.setSkillCloudService(new SkillCloudService(app.getPath('userData')))
   runtime.setAccountServices({ claudeAccounts, codexAccounts, rateLimits })
   runtime.setCommitMessageAgentEnvironmentResolvers({

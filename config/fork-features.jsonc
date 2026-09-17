@@ -1083,39 +1083,281 @@
     },
     {
       "id": "self-hosted-artifacts",
-      "title": "自托管产物后端：产物 API origin 放宽到 loopback 与局域网",
-      "goal": "通过现有产物客户端访问局域网服务",
+      "title": "局域网 Artifact 分享：文件所在电脑上的 Orca 提供静态分享服务",
+      "goal": "文件在哪台电脑就由那台电脑的 Orca 在局域网提供链接，本机文件与 SSH 主机上的文件走同一套规则",
       "journal": "docs/issue/自托管产物后端/journal.md",
-      "dependsOn": ["src/main/artifacts/artifact-cloud-service.ts"],
+      "dependsOn": [
+        "src/cli/dispatch.ts",
+        "src/cli/format.ts",
+        "src/cli/remote-selection-flag-rejection.ts",
+        "src/cli/runtime-client.ts",
+        "src/main/browser/doc-preview-file-reader.ts",
+        "src/main/runtime/agent-session-store-transaction-lock.ts",
+        "src/main/runtime/pairing-network-interfaces.ts",
+        "src/main/runtime/rpc/core.ts",
+        "src/main/runtime/rpc/errors.ts",
+        "src/main/ssh/ssh-target-registry.ts",
+        "src/relay/dispatcher.ts",
+        "src/renderer/src/components/artifacts/ArtifactListToolbar.tsx",
+        "src/renderer/src/components/artifacts/ArtifactPublishedLinkPanel.tsx",
+        "src/renderer/src/components/artifacts/ArtifactsPageSkeleton.tsx",
+        "src/renderer/src/components/artifacts/ArtifactsPageStates.tsx",
+        "src/renderer/src/components/artifacts/artifact-link-actions.ts",
+        "src/renderer/src/components/browser-pane/workspace-doc/doc-preview-document-identity.ts",
+        "src/renderer/src/components/confirmation-dialog-context.ts",
+        "src/renderer/src/components/editor/MarkdownPreviewBody.tsx",
+        "src/renderer/src/components/editor/MermaidBlock.tsx",
+        "src/renderer/src/components/settings/SettingsFormControls.tsx",
+        "src/renderer/src/components/settings/settings-search-keywords.ts",
+        "src/renderer/src/i18n/i18n.ts",
+        "src/renderer/src/i18n/localized-catalog.ts",
+        "src/renderer/src/lib/utils.ts",
+        "src/renderer/src/lib/web-client-location.ts",
+        "src/renderer/src/lib/worktree-operation-route.ts",
+        "src/renderer/src/runtime/runtime-rpc-client.ts",
+        "src/renderer/src/runtime/runtime-rpc-result.ts",
+        "src/renderer/src/store/index.ts",
+        "src/renderer/src/store/slices/editor.ts",
+        "src/renderer/src/store/slices/worktree-helpers.ts",
+        "src/shared/artifact-cli-bridge.ts",
+        "src/shared/artifact-sharing-gate.ts",
+        "src/shared/execution-host.ts",
+        "src/shared/global-settings-types.ts",
+        "src/shared/orchestration-compatibility-evidence.ts",
+        "src/shared/pairing-address-auto-selection.ts",
+        "src/shared/runtime-environment-store.ts",
+        "src/shared/runtime-rpc-envelope.ts",
+        "src/shared/secure-file.ts",
+        "src/shared/tailnet-address.ts",
+        "src/shared/workspace-scope.ts",
+        "src/shared/worktree/id.ts"
+      ],
       "policyId": "self-hosted-artifacts",
-      "ownedPaths": ["docs/issue/自托管产物后端/**", "src/main/self-hosted-artifacts/**"],
+      "ownedPaths": [
+        "docs/issue/自托管产物后端/**",
+        "src/main/self-hosted-artifacts/**",
+        "src/shared/self-hosted-artifacts/**",
+        "src/cli/self-hosted-artifacts/**",
+        "src/renderer/src/components/self-hosted-artifacts/**",
+        "src/main/runtime/rpc/methods/artifact-share.ts",
+        "config/scripts/build-artifact-share-viewer.mjs"
+      ],
       "requiredFiles": [
-        "src/main/artifacts/artifact-cloud-config.ts",
-        "src/main/artifacts/artifact-cloud-config.test.ts"
+        "src/main/self-hosted-artifacts/artifact-share-main-process.ts",
+        "src/main/self-hosted-artifacts/artifact-share-runtime-registry.ts",
+        "src/main/self-hosted-artifacts/artifact-share-owner-service.ts",
+        "src/main/self-hosted-artifacts/artifact-share-relay-service.ts",
+        "src/main/self-hosted-artifacts/artifact-share-rpc-error.ts",
+        "src/main/self-hosted-artifacts/server/artifact-share-app-server.ts",
+        "src/main/self-hosted-artifacts/server/artifact-share-http-handler.ts",
+        "src/main/self-hosted-artifacts/server/artifact-share-identity.ts",
+        "src/main/runtime/rpc/methods/artifact-share.ts",
+        "src/shared/self-hosted-artifacts/artifact-share-contract.ts",
+        "src/cli/self-hosted-artifacts/artifact-share-cli-handlers.ts",
+        "src/renderer/src/components/self-hosted-artifacts/share-button/LanArtifactShareEntryButtons.tsx",
+        "src/renderer/src/components/self-hosted-artifacts/page/LanArtifactsPage.tsx",
+        "src/renderer/src/components/self-hosted-artifacts/settings/LanArtifactsSettingsPane.tsx",
+        "src/renderer/src/components/self-hosted-artifacts/share-viewer/viewer-entry.tsx",
+        "config/scripts/build-artifact-share-viewer.mjs"
       ],
       "seams": [
         {
-          "file": "src/main/artifacts/artifact-cloud-service.ts",
-          "mustContain": "http://127.0.0.1:8787",
-          "why": "Artifact operations default to the local HTTP backend without launch environment setup"
+          "file": "src/main/startup/main-process-runtime-service.ts",
+          "mustContain": "startArtifactShareForMainProcess",
+          "why": "the share service follows the app and replaces the cloud artifact service"
         },
         {
-          "file": "src/main/artifacts/artifact-cloud-config.ts",
-          "mustContain": "ORCA_ARTIFACTS_API_URL",
-          "why": "the API origin can be pointed at a self-hosted server"
+          "file": "src/main/startup/main-process-quit.ts",
+          "mustContain": "stopArtifactShareForMainProcess",
+          "why": "quitting the app stops serving and releases the port"
         },
         {
-          "file": "src/main/artifacts/artifact-cloud-config.ts",
-          "mustContain": "allowsArtifactCloudAuthOverride",
-          "why": "auth override stays limited to non-packaged builds (REQ-204)"
+          "file": "src/main/runtime/rpc/methods/index.ts",
+          "mustContain": "...ARTIFACT_SHARE_METHODS",
+          "why": "artifactShare.* RPC methods reach the renderer, CLI and paired clients"
+        },
+        {
+          "file": "src/main/runtime/rpc/dispatcher-error-response.ts",
+          "mustContain": "mapArtifactShareRpcError",
+          "why": "sharing failures keep their code over RPC (errors.ts is pinned by reference parity)"
+        },
+        {
+          "file": "src/relay/relay-agent-hook-runtime.ts",
+          "mustContain": "registerRelayArtifactShare(this.dispatcher)",
+          "why": "an SSH host answers sharing questions about its own files"
+        },
+        {
+          "file": "src/shared/rpc-contract/rpc-params-catalog.generated.ts",
+          "mustContain": "artifactShare.share",
+          "why": "generated params catalog lists the artifactShare methods"
+        },
+        {
+          "file": "src/renderer/src/components/editor/EditorPanelHeader.tsx",
+          "mustContain": "EditorFileLanShareButton",
+          "why": "Markdown editor share entry"
+        },
+        {
+          "file": "src/renderer/src/components/editor/EditorPanelHeader.test.tsx",
+          "mustContain": "LanArtifactShareEntryButtons",
+          "why": "header test mocks the LAN share entry"
+        },
+        {
+          "file": "src/renderer/src/components/browser-pane/assemble-chrome/browser-page-toolbar.tsx",
+          "mustContain": "BrowserFileLanShareButton",
+          "why": "browser pane file: page share entry"
+        },
+        {
+          "file": "src/renderer/src/components/browser-pane/workspace-doc/doc-preview-toolbar.tsx",
+          "mustContain": "DocPreviewLanShareButton",
+          "why": "workspace document preview share entry"
+        },
+        {
+          "file": "src/renderer/src/app-shell/AppWorkspaceShell.tsx",
+          "mustContain": "self-hosted-artifacts/page/LanArtifactsPage",
+          "why": "Artifacts page lists shares per computer"
+        },
+        {
+          "file": "src/renderer/src/components/settings/settings-setup-workflow-section-renderers.tsx",
+          "mustContain": "LanArtifactsSettingsPane",
+          "why": "Settings → Artifacts controls this computer's share service"
+        },
+        {
+          "file": "src/renderer/src/hooks/settings-navigation-workflow-sections.ts",
+          "mustContain": "getLanArtifactsSettingsSearchEntries",
+          "why": "settings search finds the local network sharing rows"
+        },
+        {
+          "file": "src/cli/handler-group-manifest.ts",
+          "mustContain": "ARTIFACT_SHARE_CLI_HANDLERS",
+          "why": "orca artifacts commands share over the local network"
+        },
+        {
+          "file": "src/cli/specs/artifacts.ts",
+          "mustContain": "'service', 'status'",
+          "why": "orca artifacts service status is a registered command"
+        },
+        {
+          "file": "src/relay/remote-artifact-cli-input.ts",
+          "mustContain": "the computer holding the file serves it",
+          "why": "an SSH terminal forwards only the host path, never file bytes"
+        },
+        {
+          "file": "src/relay/remote-artifact-cli-input.test.ts",
+          "mustContain": "forwards only the SSH host path",
+          "why": "remote CLI input test covers path-only forwarding"
+        },
+        {
+          "file": "config/electron-builder.config.cjs",
+          "mustContain": "artifactShareViewerExtraResource",
+          "why": "packaged apps ship the share page script"
+        },
+        {
+          "file": "package.json",
+          "mustContain": "build:artifact-share-viewer",
+          "why": "desktop and release builds bundle the share page script"
+        },
+        {
+          "file": "skill-guides/orca-cli.md",
+          "mustContain": "Share on local network from this computer",
+          "why": "agents learn the local network sharing gate"
+        },
+        {
+          "file": "skill-guides/orca-cli/references/publishing.md",
+          "mustContain": "ORCA artifacts service status",
+          "why": "agents learn the local network artifact commands"
+        },
+        {
+          "file": "src/cli/bundled-skill-guides.ts",
+          "mustContain": "Share on local network from this computer",
+          "why": "generated bundle carries the updated guide"
+        },
+        {
+          "file": "config/scripts/orca-cli-skill-guidance.test.mjs",
+          "mustContain": "Share on local network from this computer",
+          "why": "guide test asserts the local network sharing gate"
+        },
+        {
+          "file": "src/renderer/src/i18n/locales/en.json",
+          "mustContain": "\"selfHostedArtifacts\"",
+          "why": "English copy for sharing UI"
+        },
+        {
+          "file": "src/renderer/src/i18n/locales/zh.json",
+          "mustContain": "\"selfHostedArtifacts\"",
+          "why": "Chinese copy for sharing UI"
+        },
+        {
+          "file": "src/renderer/src/i18n/en-runtime-required.json",
+          "mustContain": "artifactsDescription",
+          "why": "generated boot catalog keeps retired upstream artifacts copy shippable"
+        },
+        {
+          "file": "src/cli/index.test.ts",
+          "mustContain": "'artifactShare.list'",
+          "why": "CLI routing test follows the local network artifact list method"
+        },
+        {
+          "file": "src/renderer/src/hooks/useSettingsNavigationMetadata.test.ts",
+          "mustContain": "Share workspace files on your local network",
+          "why": "settings navigation test follows the Artifacts section copy"
+        },
+        {
+          "file": "src/renderer/src/components/settings/OrcaAccountSettingsPane.tsx",
+          "mustContain": "auto.components.selfHostedArtifacts.account.signedOut",
+          "why": "account page no longer lists artifact sharing as a sign-in feature"
+        },
+        {
+          "file": "src/renderer/src/components/settings/OrcaAccountSettingsPane.test.tsx",
+          "mustContain": "queryByText('Artifact sharing')",
+          "why": "account page test asserts artifact sharing is not an account benefit"
+        },
+        {
+          "file": "src/renderer/src/components/orca-profiles/OrcaProfileSignOutConfirmDialog.tsx",
+          "mustContain": "auto.components.selfHostedArtifacts.account.signOutDescription",
+          "why": "sign-out no longer warns that artifacts stop working"
+        },
+        {
+          "file": "src/renderer/src/components/orca-profiles/OrcaProfileSignOutConfirmDialog.test.tsx",
+          "mustContain": "'Orca Relay will be unavailable until you sign in again.",
+          "why": "sign-out dialog test follows the copy"
+        },
+        {
+          "file": "src/renderer/src/components/UnexpectedSignoutCard.tsx",
+          "mustContain": "auto.components.selfHostedArtifacts.account.restore",
+          "why": "unexpected sign-out card no longer lists artifact sharing as lost"
+        },
+        {
+          "file": "src/renderer/src/components/settings/orca-account-settings-search.ts",
+          "mustContain": "auto.components.selfHostedArtifacts.account.searchDescription",
+          "why": "settings search no longer ties the account to artifacts"
         }
       ],
       "tests": [
-        "src/main/artifacts/artifact-cloud-config.test.ts",
-        "src/main/self-hosted-artifacts/local-artifact-backend.test.ts"
+        "src/main/self-hosted-artifacts/store/artifact-share-records.test.ts",
+        "src/main/self-hosted-artifacts/server/artifact-share-app-server.test.ts",
+        "src/main/self-hosted-artifacts/server/artifact-share-http-handler.test.ts",
+        "src/main/self-hosted-artifacts/server/artifact-share-request-path.test.ts",
+        "src/main/self-hosted-artifacts/server/artifact-share-lan-ip.test.ts",
+        "src/main/self-hosted-artifacts/artifact-share-owner-service.test.ts",
+        "src/main/self-hosted-artifacts/artifact-share-relay-service.test.ts",
+        "src/main/self-hosted-artifacts/artifact-share-routing.test.ts",
+        "src/main/self-hosted-artifacts/artifact-share-rpc-error.test.ts",
+        "src/main/self-hosted-artifacts/artifact-share-rpc-methods.test.ts",
+        "src/main/self-hosted-artifacts/artifact-share-relay-bundle.test.ts",
+        "src/cli/self-hosted-artifacts/artifact-share-cli-target.test.ts",
+        "src/renderer/src/components/self-hosted-artifacts/share-button/lan-artifact-share-machine.test.ts",
+        "src/renderer/src/components/self-hosted-artifacts/share-button/lan-artifact-share-target.test.ts",
+        "src/relay/remote-artifact-cli-input.test.ts",
+        "src/renderer/src/components/editor/EditorPanelHeader.test.tsx",
+        "config/scripts/orca-cli-skill-guidance.test.mjs",
+        "src/cli/index.test.ts",
+        "src/renderer/src/hooks/useSettingsNavigationMetadata.test.ts",
+        "src/renderer/src/components/settings/OrcaAccountSettingsPane.test.tsx",
+        "src/renderer/src/components/orca-profiles/OrcaProfileSignOutConfirmDialog.test.tsx"
       ],
       "checks": [
-        "pnpm exec vitest run --config config/vitest.config.ts src/main/artifacts src/main/self-hosted-artifacts src/main/skills/skill-cloud-service.test.ts"
+        "pnpm exec vitest run --config config/vitest.config.ts src/main/self-hosted-artifacts src/cli/self-hosted-artifacts src/renderer/src/components/self-hosted-artifacts src/relay/remote-artifact-cli-input.test.ts src/renderer/src/components/editor/EditorPanelHeader.test.tsx src/renderer/src/hooks/useSettingsNavigationMetadata.test.ts src/cli/index.test.ts src/renderer/src/components/browser-pane/workspace-doc config/scripts/orca-cli-skill-guidance.test.mjs src/renderer/src/components/settings/OrcaAccountSettingsPane.test.tsx src/renderer/src/components/orca-profiles/OrcaProfileSignOutConfirmDialog.test.tsx src/renderer/src/components/unexpected-signout",
+        "pnpm run build:artifact-share-viewer"
       ]
     },
     {

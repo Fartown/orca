@@ -551,6 +551,13 @@ import {
   WorktreeSortOrder,
   WorktreeTeardownMissingTerminalsParams
 } from './worktree-params'
+import {
+  ArtifactShareConfigureLocalRequest,
+  ArtifactShareFileRequest,
+  ArtifactShareHostRef,
+  ArtifactShareListRequest,
+  ArtifactShareStopWorkspaceRequest
+} from '../self-hosted-artifacts/artifact-share-contract'
 import { SkillBundleInstallRequestSchema } from '../skill-bundle-install-contract'
 import { SkillDeleteRequestSchema } from '../skill-delete-contract'
 import {
@@ -609,6 +616,12 @@ export const RPC_PARAMS_BY_METHOD = {
   'aiVault.resolveSessionTitles': AiVaultSessionTitlesParams,
   'aiVault.searchSessions': AiVaultSearchRequestSchema,
   'aiVault.searchStatus': AiVaultSearchStatusRequestSchema,
+  'artifactShare.configureLocal': ArtifactShareConfigureLocalRequest,
+  'artifactShare.hostStatus': ArtifactShareHostRef,
+  'artifactShare.list': ArtifactShareListRequest,
+  'artifactShare.lookup': ArtifactShareFileRequest,
+  'artifactShare.share': ArtifactShareFileRequest,
+  'artifactShare.stopWorkspace': ArtifactShareStopWorkspaceRequest,
   'artifacts.delete': ArtifactsDeleteParams,
   'artifacts.getPublishedLink': SourceRequest,
   'artifacts.list': ListOptions,

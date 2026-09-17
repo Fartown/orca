@@ -6,8 +6,8 @@ export const getOrcaAccountSettingsSearchEntries = createLocalizedCatalog(() => 
   {
     title: translate('auto.components.settings.orcaAccount.account', 'Orca account'),
     description: translate(
-      'auto.components.settings.orcaAccount.searchDescription',
-      'Sign in or out of the account used by Artifacts and Orca Relay.'
+      'auto.components.selfHostedArtifacts.account.searchDescription',
+      'Sign in or out of the account used by Orca Relay and skill sharing.'
     ),
     keywords: [
       ...translateSearchKeyword('auto.components.settings.orcaAccount.keywordAccount', 'account'),
