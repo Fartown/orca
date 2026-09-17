@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { BookOpen, ChevronDown, CircleUserRound, Files, Smartphone, X } from 'lucide-react'
+import { BookOpen, ChevronDown, CircleUserRound, Smartphone, X, type Files } from 'lucide-react'
 import { useAppStore } from '../store'
 import { translate } from '@/i18n/i18n'
 import { cn } from '@/lib/utils'
@@ -173,13 +173,13 @@ export function UnexpectedSignoutCard(): React.JSX.Element | null {
           <p className="text-sm text-muted-foreground">
             {email
               ? translate(
-                  'auto.components.UnexpectedSignoutCard.7b4d9e1f2a',
-                  'Sign in again as {{value0}} to restore Artifact sharing, Orca Relay, and skill sharing.',
+                  'auto.components.selfHostedArtifacts.account.restoreAs',
+                  'Sign in again as {{value0}} to restore Orca Relay and skill sharing.',
                   { value0: email }
                 )
               : translate(
-                  'auto.components.UnexpectedSignoutCard.5a1c8d3e6f',
-                  'Sign in again to restore Artifact sharing, Orca Relay, and skill sharing.'
+                  'auto.components.selfHostedArtifacts.account.restore',
+                  'Sign in again to restore Orca Relay and skill sharing.'
                 )}
           </p>
 
@@ -197,18 +197,8 @@ export function UnexpectedSignoutCard(): React.JSX.Element | null {
                 />
               </Button>
             </CollapsibleTrigger>
+            {/* Why: this fork shares artifacts over the local network, which needs no account. */}
             <CollapsibleContent className="space-y-3 pt-2.5">
-              <FeatureRow
-                icon={Files}
-                title={translate(
-                  'auto.components.UnexpectedSignoutCard.8d2e4f7a1b',
-                  'Artifact sharing'
-                )}
-                description={translate(
-                  'auto.components.UnexpectedSignoutCard.2c9a5b6e8d',
-                  'Publish HTML and Markdown files and manage every shared link from Orca.'
-                )}
-              />
               <FeatureRow
                 icon={Smartphone}
                 title={translate('auto.components.UnexpectedSignoutCard.6e3f1a9c5b', 'Orca Relay')}

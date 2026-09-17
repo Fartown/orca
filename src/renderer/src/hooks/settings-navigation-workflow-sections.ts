@@ -1,4 +1,3 @@
-import { getArtifactsSettingsSearchEntries } from '@/components/settings/artifacts-settings-search'
 import { getAutomationsSettingsSearchEntries } from '@/components/settings/automations-settings-search'
 import { getBrowserPaneCombinedSearchEntries } from '@/components/settings/browser-pane-search'
 import { getCommitMessageAiPaneSearchEntries } from '@/components/settings/commit-message-ai-search'
@@ -9,6 +8,7 @@ import { getMobileEmulatorSearchEntries } from '@/components/settings/mobile-emu
 import { getQuickCommandsPaneSearchEntries } from '@/components/settings/quick-commands-search'
 import { getShareSkillsSettingsSearchEntries } from '@/components/settings/share-skills-settings-search'
 import { getTasksPaneSearchEntries } from '@/components/settings/tasks-search'
+import { getLanArtifactsSettingsSearchEntries } from '@/components/self-hosted-artifacts/settings/lan-artifacts-settings-search'
 import { translate } from '@/i18n/i18n'
 import type { SettingsNavSection } from '@/lib/settings-navigation-types'
 import {
@@ -46,11 +46,11 @@ export function buildWorkflowSettingsSections(
       id: 'artifacts',
       title: translate('auto.hooks.useSettingsNavigationMetadata.artifactsTitle', 'Artifacts'),
       description: translate(
-        'auto.hooks.useSettingsNavigationMetadata.artifactsDescription',
-        'Share HTML and Markdown files with your team and manage their public links.'
+        'auto.components.selfHostedArtifacts.settings.sectionDescription',
+        'Share workspace files on your local network from the computer that holds them.'
       ),
       icon: Files,
-      searchEntries: getArtifactsSettingsSearchEntries(),
+      searchEntries: getLanArtifactsSettingsSearchEntries(),
       group: 'workflows',
       badge: translate('auto.hooks.useSettingsNavigationMetadata.40d80bad8a', 'Beta')
     },

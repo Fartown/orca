@@ -1,8 +1,5 @@
-import { basename, extname, resolve } from 'node:path'
+import { basename, resolve } from 'node:path'
 import type { RemoteArtifactInput } from '../shared/artifact-cli-bridge'
-import { ARTIFACT_CLI_MAX_RPC_BYTES } from '../shared/artifacts'
-import { readArtifactFileWithinLimit } from '../shared/artifact-file-read'
-import { MAX_MESSAGE_SIZE } from './protocol'
 
 export type PreparedRemoteArtifactCliInput = {
   stdin?: string
@@ -44,52 +41,15 @@ function parseArtifactInvocation(argv: string[]): { command: string; file?: stri
   return { command: positionals[1], file: file ?? positionals[2] }
 }
 
-function contentTypeForPath(path: string): NonNullable<RemoteArtifactInput['contentType']> | null {
-  const extension = extname(path).toLowerCase()
-  return ['.html', '.htm'].includes(extension)
-    ? 'text/html'
-    : ['.md', '.markdown'].includes(extension)
-      ? 'text/markdown'
-      : null
-}
-
 export async function prepareRemoteArtifactCliInput(
   argv: string[],
   cwd: string
 ): Promise<PreparedRemoteArtifactCliInput> {
   const invocation = parseArtifactInvocation(argv)
-  if (!invocation || argv.includes('--help')) {
+  if (!invocation || argv.includes('--help') || !invocation.file) {
     return {}
   }
-  if (!invocation.file) {
-    return {}
-  }
+  // Why only the path: the computer holding the file serves it, so the client never carries its bytes.
   const sourceKey = resolve(cwd, invocation.file)
-  if (invocation.command === 'unshare') {
-    return { artifactInput: { sourceKey, fileName: basename(sourceKey) } }
-  }
-  const contentType = contentTypeForPath(sourceKey)
-  if (!contentType) {
-    throw new Error('Artifacts must be HTML or Markdown files.')
-  }
-  const result = await readArtifactFileWithinLimit(sourceKey, ARTIFACT_CLI_MAX_RPC_BYTES)
-  if (result.status === 'not-file') {
-    throw new Error('Artifact file was not found or is not a file.')
-  }
-  if (result.status === 'too-large') {
-    throw new Error(
-      'Artifact is too large for the Orca CLI transport. Use the browser upload page instead.'
-    )
-  }
-  if (result.status === 'empty') {
-    throw new Error('Artifact file is empty.')
-  }
-  const prepared = {
-    stdin: result.content,
-    artifactInput: { sourceKey, fileName: basename(sourceKey), contentType }
-  }
-  if (Buffer.byteLength(JSON.stringify(prepared), 'utf8') > MAX_MESSAGE_SIZE - 64 * 1024) {
-    throw new Error('Artifact content exceeds the SSH relay message limit.')
-  }
-  return prepared
+  return { artifactInput: { sourceKey, fileName: basename(sourceKey) } }
 }

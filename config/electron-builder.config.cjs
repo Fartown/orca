@@ -88,6 +88,12 @@ const goalDriverExtraResource = {
   from: 'out/goal-driver',
   to: 'goal-driver'
 }
+// Why: the local network share server streams this page script from process.resourcesPath;
+// it is plain static files, so keeping it outside app.asar keeps the served bytes inspectable.
+const artifactShareViewerExtraResource = {
+  from: 'out/artifact-share-viewer',
+  to: 'artifact-share-viewer'
+}
 // Why: bundled plugins are immutable install inputs and must remain ordinary
 // directories so the startup bootstrap can verify and publish exact bytes.
 const bundledPluginResources = {
@@ -108,6 +114,7 @@ const emojiShortcodeDatasetResource = {
 const commonExtraResources = [
   relayExtraResource,
   goalDriverExtraResource,
+  artifactShareViewerExtraResource,
   bundledPluginResources,
   skillFreshnessResources,
   emojiShortcodeDatasetResource

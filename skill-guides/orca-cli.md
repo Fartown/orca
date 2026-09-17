@@ -186,18 +186,24 @@ Terminal rules:
 
 ## Artifacts
 
-Artifacts publish HTML or Markdown files through the signed-in Orca account. Anyone can view
-the share URL; creating, listing, updating, and deleting need the active profile signed in.
+Artifacts share files over the local network. The computer that holds the file serves it: a
+file in a local workspace is served by this computer's Orca, and a file on an SSH host is served
+by the Orca app running on that host. A link looks like `http://IP:PORT/TOKEN/PATH` and keeps
+working only while Orca is open on that computer.
 
-**Publishing is off by default and only a human can turn it on.** `share` and `update` need a
-device-wide capability the user grants in the desktop app under Settings → Artifacts ("Allow
-publishing public artifact links"). It applies to every caller on the device, agent or human.
-There is no CLI or RPC way to grant it. `list`, `unshare`, and `delete` are never gated, so old
-links stay auditable and revocable.
+**Sharing is off by default and only a human can turn it on.** Each computer has its own switch,
+"Share on local network from this computer" in Settings → Artifacts, and it covers every caller on
+that computer, agent or human. There is no CLI or RPC way to grant it. `list`, `unshare`, and
+`delete` are never gated, so links stay auditable and revocable.
 
-A denied share fails with `artifact_sharing_disabled` before any upload. Do not retry; the
-answer will not change until a human acts. Tell the user to turn the setting on and re-run, or
-deliver the file locally if they decline.
+**A link opens the whole workspace.** Its token grants read access to every file in the shared
+workspace except `.git`, `.env`, keys, and similar credential paths. Share only files the user asked
+to share, and tell them the workspace is readable through the link.
+
+A refused share fails before anything is recorded: `artifact_sharing_disabled` (the switch is off),
+`artifact_share_orca_not_running` (Orca is not open on the file's computer), or
+`artifact_share_host_unreachable` (the SSH host is not connected). Do not retry; tell the user what
+the error names and re-run after they act.
 
 The `artifacts` commands, and the separate default-off permission for publishing installed skills, are in `references/publishing.md`. Load it before publishing either kind of link; a skill folder can hold scripts, configuration, or credentials.
 

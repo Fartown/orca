@@ -18,8 +18,7 @@ import { useDiffNavigation } from './diff-navigation-context'
 import { useShortcutKeyDetails } from '@/hooks/useShortcutLabel'
 import { ShortcutKeyCombo } from '@/components/ShortcutKeyCombo'
 import type { ArtifactWriteRequest } from '../../../../shared/artifacts'
-import { ArtifactPublishButton } from '@/components/artifacts/ArtifactPublishButton'
-import { markdownArtifactSourceKey } from './markdown-artifact-upload'
+import { EditorFileLanShareButton } from '@/components/self-hosted-artifacts/share-button/LanArtifactShareEntryButtons'
 
 type EditorPanelHeaderProps = {
   activeFile: OpenFile
@@ -318,11 +317,7 @@ export function EditorPanelHeader({
         </TooltipProvider>
       )}
       {isMarkdown && !isDiffSurface && createMarkdownArtifactRequest ? (
-        <ArtifactPublishButton
-          sourceKey={markdownArtifactSourceKey(activeFile)}
-          className="size-6 [&_svg]:size-3.5!"
-          createRequest={createMarkdownArtifactRequest}
-        />
+        <EditorFileLanShareButton file={activeFile} className="size-6 [&_svg]:size-3.5!" />
       ) : null}
       <EditorPanelMarkdownActionsMenu
         isMarkdown={isMarkdown}

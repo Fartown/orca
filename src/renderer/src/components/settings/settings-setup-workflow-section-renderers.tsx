@@ -1,4 +1,4 @@
-import { ArtifactsSettingsPane } from './ArtifactsSettingsPane'
+import { LanArtifactsSettingsPane } from '@/components/self-hosted-artifacts/settings/LanArtifactsSettingsPane'
 import { AutomationsSettingsPane } from './AutomationsSettingsPane'
 import { GeneralPane } from './GeneralPane'
 import { IntegrationsPane } from './IntegrationsPane'
@@ -145,13 +145,13 @@ export function renderArtifactsSettingsSection(context: SettingsRenderContext): 
       title={translate('auto.components.settings.artifacts.title', 'Artifacts')}
       badge="Beta"
       description={translate(
-        'auto.components.settings.artifacts.description',
-        'Share HTML and Markdown files with your team and manage their public links.'
+        'auto.components.selfHostedArtifacts.settings.sectionDescription',
+        'Share workspace files on your local network from the computer that holds them.'
       )}
       searchEntries={navigation.getSectionSearchEntries('artifacts')}
     >
       {view.isSectionMounted('artifacts') ? (
-        <ArtifactsSettingsPane settings={model.settings} updateSettings={model.updateSettings} />
+        <LanArtifactsSettingsPane settings={model.settings} updateSettings={model.updateSettings} />
       ) : null}
     </SettingsSection>
   )

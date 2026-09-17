@@ -42,8 +42,8 @@ vi.mock('./EditorPanelMarkdownActionsMenu', () => ({
   EditorPanelMarkdownActionsMenu: () => null
 }))
 
-vi.mock('@/components/artifacts/ArtifactPublishButton', () => ({
-  ArtifactPublishButton: () => <button data-artifact-publish />
+vi.mock('@/components/self-hosted-artifacts/share-button/LanArtifactShareEntryButtons', () => ({
+  EditorFileLanShareButton: () => <button data-artifact-publish />
 }))
 
 vi.mock('./diff-navigation-context', () => ({

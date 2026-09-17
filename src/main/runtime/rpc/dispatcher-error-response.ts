@@ -7,6 +7,10 @@ import {
   mapEmulatorError,
   mapRuntimeError
 } from './errors'
+import {
+  ARTIFACT_SHARE_RPC_METHOD_PREFIX,
+  mapArtifactShareRpcError
+} from '../../self-hosted-artifacts/artifact-share-rpc-error'
 
 export function invalidArgumentResponse(
   request: RpcRequest,
@@ -38,6 +42,9 @@ export function mapDispatcherError(
   }
   if (request.method.startsWith('emulator.')) {
     return mapEmulatorError(request.id, meta, error)
+  }
+  if (request.method.startsWith(ARTIFACT_SHARE_RPC_METHOD_PREFIX)) {
+    return mapArtifactShareRpcError(request.id, meta, error)
   }
   return mapRuntimeError(request.id, meta, error)
 }

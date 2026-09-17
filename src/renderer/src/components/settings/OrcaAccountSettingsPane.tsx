@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { BookOpen, Check, CircleUserRound, Files, Smartphone } from 'lucide-react'
+import { BookOpen, Check, CircleUserRound, Smartphone, type Files } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { useOrcaProfileAuthStatusRefresh } from '@/hooks/use-orca-profile-auth-status-refresh'
@@ -29,8 +29,8 @@ function accountStatusCopy(
   }
   if (state === 'local') {
     return translate(
-      'auto.components.settings.orcaAccount.signedOut',
-      'Sign in to extend Orca with cloud features, including Artifacts and Orca Relay.'
+      'auto.components.selfHostedArtifacts.account.signedOut',
+      'Sign in to extend Orca with cloud features, including Orca Relay and skill sharing.'
     )
   }
   return translate('auto.components.settings.orcaAccount.checking', 'Checking account status…')
@@ -139,35 +139,20 @@ export function OrcaAccountSettingsPane(): React.JSX.Element {
               'Included with your account'
             )}
           </p>
-          <div className="space-y-5">
-            <div className="grid gap-5 md:grid-cols-2 md:gap-0 md:divide-x md:divide-border/60">
-              <AccountBenefit
-                icon={Files}
-                className="md:pr-6"
-                title={translate(
-                  'auto.components.settings.orcaAccount.artifactsTitle',
-                  'Artifact sharing'
-                )}
-                description={translate(
-                  'auto.components.settings.orcaAccount.artifactsDescription',
-                  'Publish HTML and Markdown files, then manage every shared link from Orca.'
-                )}
-              />
-              <AccountBenefit
-                icon={Smartphone}
-                className="md:pl-6"
-                title={translate('auto.components.settings.orcaAccount.relayTitle', 'Orca Relay')}
-                description={translate(
-                  'auto.components.settings.orcaAccount.relayDescription',
-                  'Connect Orca Mobile to this desktop across cellular or any Wi-Fi.'
-                )}
-              />
-            </div>
-            {/* Why: a third column would squeeze all three; a full-width row
-                below keeps the pair's divider and reads as one list. */}
+          {/* Why: this fork shares artifacts over the local network, which needs no account. */}
+          <div className="grid gap-5 md:grid-cols-2 md:gap-0 md:divide-x md:divide-border/60">
+            <AccountBenefit
+              icon={Smartphone}
+              className="md:pr-6"
+              title={translate('auto.components.settings.orcaAccount.relayTitle', 'Orca Relay')}
+              description={translate(
+                'auto.components.settings.orcaAccount.relayDescription',
+                'Connect Orca Mobile to this desktop across cellular or any Wi-Fi.'
+              )}
+            />
             <AccountBenefit
               icon={BookOpen}
-              className="border-t border-border/60 pt-5"
+              className="md:pl-6"
               title={translate('auto.components.settings.orcaAccount.skillsTitle', 'Skill sharing')}
               description={translate(
                 'auto.components.settings.orcaAccount.skillsDescription',

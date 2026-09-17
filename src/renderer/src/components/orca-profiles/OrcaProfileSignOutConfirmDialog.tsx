@@ -30,8 +30,8 @@ export function OrcaProfileSignOutConfirmDialog({
           </DialogTitle>
           <DialogDescription>
             {translate(
-              'auto.components.orca.profiles.signout.confirm.description',
-              "Artifacts and Orca Relay will be unavailable until you sign in again. Your local projects and worktrees won't be affected."
+              'auto.components.selfHostedArtifacts.account.signOutDescription',
+              "Orca Relay will be unavailable until you sign in again. Your local projects and worktrees won't be affected."
             )}
           </DialogDescription>
         </DialogHeader>

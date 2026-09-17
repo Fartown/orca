@@ -182,6 +182,12 @@
       "Terminal": {
         "cdc9ac4b2d": "editor"
       },
+      "UnexpectedSignoutCard": {
+        "2c9a5b6e8d": "Publish HTML and Markdown files and manage every shared link from Orca.",
+        "5a1c8d3e6f": "Sign in again to restore Artifact sharing, Orca Relay, and skill sharing.",
+        "7b4d9e1f2a": "Sign in again as {{value0}} to restore Artifact sharing, Orca Relay, and skill sharing.",
+        "8d2e4f7a1b": "Artifact sharing"
+      },
       "UpdateCard": {
         "522df222b9": "spinner",
         "7ffc08506e": "check",
@@ -673,6 +679,15 @@
               "card": {
                 "3d18cf71f9": "Updates automatically."
               }
+            }
+          }
+        }
+      },
+      "orca": {
+        "profiles": {
+          "signout": {
+            "confirm": {
+              "description": "Artifacts and Orca Relay will be unavailable until you sign in again. Your local projects and worktrees won't be affected."
             }
           }
         }
@@ -1591,6 +1606,7 @@
         "artifacts": {
           "account": "Orca account",
           "connected": "Connected",
+          "description": "Share HTML and Markdown files with your team and manage their public links.",
           "enable": "Enable Artifacts",
           "enableDescription": "Add Artifacts to the sidebar so you can open and delete shared files.",
           "openArtifactsDescription": "View and delete links shared through your account.",
@@ -1707,6 +1723,12 @@
               "b730ff7049": "experimental"
             }
           }
+        },
+        "orcaAccount": {
+          "artifactsDescription": "Publish HTML and Markdown files, then manage every shared link from Orca.",
+          "artifactsTitle": "Artifact sharing",
+          "searchDescription": "Sign in or out of the account used by Artifacts and Orca Relay.",
+          "signedOut": "Sign in to extend Orca with cloud features, including Artifacts and Orca Relay."
         },
         "providerAccountScope": {
           "localMac": "Local Mac"
@@ -2548,7 +2570,8 @@
         "f6300deb8b": "New Browser Tab"
       },
       "useSettingsNavigationMetadata": {
-        "5235c215ca": "Choose which task providers appear in the Tasks page and sidebar."
+        "5235c215ca": "Choose which task providers appear in the Tasks page and sidebar.",
+        "artifactsDescription": "Share HTML and Markdown files with your team and manage their public links."
       }
     },
     "lib": {

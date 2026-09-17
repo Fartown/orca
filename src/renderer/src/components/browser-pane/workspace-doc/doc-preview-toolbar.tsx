@@ -9,6 +9,7 @@ import { DocPreviewAddressEdit } from './doc-preview-address-edit'
 import type { DocPreviewDocumentIdentity } from './doc-preview-document-identity'
 import type { DocPreviewHistory } from './doc-preview-webview-history'
 import { DocPreviewOverflowMenu } from './doc-preview-overflow-menu'
+import { DocPreviewLanShareButton } from '@/components/self-hosted-artifacts/share-button/LanArtifactShareEntryButtons'
 
 /**
  * Binds the shared browser chrome to a workspace document: the address bar becomes a read-only
@@ -87,6 +88,9 @@ export function DocPreviewToolbar({
       // Cookie import is a browsing-session action; a preview reads workspace disk over a grant
       // and has no session for cookies to land in.
       importControl={null}
+      shareControl={
+        <DocPreviewLanShareButton worktreeId={worktreeId} identity={identity} className="h-7 w-7" />
+      }
       elementTools={elementTools}
       markup={{
         active: markupActive,

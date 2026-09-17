@@ -22,7 +22,10 @@ const AutomationsPage = lazy(() => import('../components/automations/Automations
 const ActivityPrototypePage = lazy(() => import('../components/activity/ActivityPrototypePage'))
 const Settings = lazy(() => import('../components/settings/Settings'))
 const SkillsPage = lazy(() => import('../components/skills/SkillsPage'))
-const ArtifactsPage = lazy(() => import('../components/artifacts/ArtifactsPage'))
+// Why: this fork serves shared files over the local network from the computer that holds them.
+const ArtifactsPage = lazy(
+  () => import('../components/self-hosted-artifacts/page/LanArtifactsPage')
+)
 const WorkspaceSpacePage = lazy(() => import('../components/workspace-space/WorkspaceSpacePage'))
 const MobilePage = lazy(() => import('../components/mobile/MobilePage'))
 const Terminal = lazy(() => import('../components/Terminal'))

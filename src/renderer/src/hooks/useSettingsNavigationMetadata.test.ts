@@ -114,7 +114,7 @@ describe('settings navigation metadata', () => {
     expect(artifacts?.group).toBe('workflows')
     expect(artifacts?.badge).toBe('Beta')
     expect(artifacts?.description).toBe(
-      'Share HTML and Markdown files with your team and manage their public links.'
+      'Share workspace files on your local network from the computer that holds them.'
     )
     expect(shareSkills).toMatchObject({ group: 'workflows', badge: 'Beta' })
     expect(shareSkills?.searchEntries[0]?.title).toBe('Unlisted skill links')

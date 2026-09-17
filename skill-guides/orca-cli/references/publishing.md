@@ -6,28 +6,24 @@ The publish gate and its recovery are in the guide body. This is the command sur
 
 ```text
 ORCA artifacts share <file> --json
-ORCA artifacts update <file> --json
 ORCA artifacts unshare <file> --json
-ORCA artifacts list [--cursor <cursor>] --json
-ORCA artifacts delete <id> --json
+ORCA artifacts list --json
+ORCA artifacts delete <link-or-token> --json
+ORCA artifacts service status --json
 ```
 
-- `share`, `update`, and `unshare` accept `.html`, `.htm`, `.md`, and `.markdown` files.
-- `share` saves the returned edit token in the active Orca profile and never includes it
-  in CLI output. `update` and `unshare` look up that record by the resolved local file
-  path, so use the same path and Orca profile that originally shared the file.
-- `list` returns one page of artifacts owned by the signed-in account. If JSON output has
-  `nextCursor`, pass it back with `--cursor <cursor>`. `delete <id>` deletes an account-owned
-  artifact by the id returned from `list`; it does not need the original local file or its
-  edit-token record.
-- Relative HTML assets are not uploaded. Share a self-contained HTML file or use absolute
-  asset URLs.
-- If an upload exceeds the CLI transport limit, use the browser upload page as directed
-  by the error.
-- For local or staging development, `--api-url <url>` overrides the artifact service;
-  `ORCA_ARTIFACTS_API_URL` provides the same override for the session.
-- `ORCA_CLOUD_AUTH_TOKEN` is a development-only authentication override. Prefer the active
-  Orca profile's normal PropelAuth session and never expose the token in logs or agent output.
+- Run `share` in an Orca terminal on the computer that holds the file. In a terminal on an SSH
+  host the host's Orca app serves the link; the file never passes through the client.
+- `share` accepts any file. It shares the terminal's Orca workspace when that holds the file;
+  otherwise an already-shared folder holding it, or else only the file's folder.
+- The link reads the saved file on every request, so there is no `update`.
+- The first share of a workspace mints its token; later shares in the same workspace reuse it.
+  Relative links, images, and scripts in shared HTML or Markdown resolve under the same token.
+- `unshare <file>` and `delete <link-or-token>` revoke the whole workspace token: every link to that
+  workspace stops working. Sharing again mints a new token.
+- `list` groups shared workspaces by computer; computers that are not connected show as not connected.
+- `service status` reports whether that computer is serving and on which IP and port.
+- `--api-url`, `ORCA_ARTIFACTS_API_URL`, and `ORCA_CLOUD_AUTH_TOKEN` do not apply to artifacts.
 
 ## Skill sharing
 

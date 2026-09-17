@@ -1,5 +1,5 @@
 import type { Dispatch, RefObject, SetStateAction } from 'react'
-import { ArtifactPublishButton } from '@/components/artifacts/ArtifactPublishButton'
+import { BrowserFileLanShareButton } from '@/components/self-hosted-artifacts/share-button/LanArtifactShareEntryButtons'
 import { translate } from '@/i18n/i18n'
 import type { BrowserReloadTrigger } from '../navigate/browser-reload-action'
 import BrowserAddressBar from './BrowserAddressBar'
@@ -9,7 +9,6 @@ import { BrowserReloadControl } from './browser-reload-control'
 import { BrowserToolbarMenu } from './BrowserToolbarMenu'
 import { SshEgressIndicator } from './browser-egress-indicator'
 import { destroyPersistentWebview } from '../host-guest/webview-registry'
-import { readBrowserHtmlArtifactRequest } from '../describe-page/browser-artifact-upload'
 import type { GrabModeHook } from '../annotate/useGrabMode'
 import type {
   BrowserPageConversionOrigin,
@@ -59,7 +58,6 @@ export function BrowserPageToolbar({
   grabElementShortcut,
   browserAnnotationsLength,
   shareableArtifactFile,
-  currentBrowserUrl,
   externalUrl
 }: {
   browserPageId: string
@@ -177,10 +175,10 @@ export function BrowserPageToolbar({
       }}
       shareControl={
         shareableArtifactFile ? (
-          <ArtifactPublishButton
-            sourceKey={shareableArtifactFile.filePath}
+          <BrowserFileLanShareButton
+            worktreeId={worktreeId}
+            filePath={shareableArtifactFile.filePath}
             className="h-7 w-7"
-            createRequest={() => readBrowserHtmlArtifactRequest(currentBrowserUrl)}
           />
         ) : null
       }
