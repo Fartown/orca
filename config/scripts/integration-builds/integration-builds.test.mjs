@@ -19,6 +19,7 @@ import {
   publishRelease
 } from './publish-release.mjs'
 import { integrationVersion, listIntegrationReleases } from './integration-releases.mjs'
+import { LEGACY_INTEL_PLACEHOLDER } from './legacy-intel-placeholder.mjs'
 import androidConfig from './android-config.cjs'
 import { verifyAndroidPackageVersion } from './verify-apk-version.mjs'
 import { signIntegrationPackage } from './mac-after-sign.cjs'
@@ -45,18 +46,16 @@ function packages() {
   directories.push(directory)
   PACKAGE_NAMES.forEach((name) => writeFileSync(join(directory, name), name))
   const certificate = signingCertificate()
-  for (const arch of ['arm64', 'x64']) {
-    writeFileSync(
-      join(directory, `mac-signing-${arch}.json`),
-      JSON.stringify({
-        schemaVersion: 1,
-        arch,
-        version: env.ORCA_LOCAL_BUILD_VERSION,
-        certificateSha256: certificate.sha256,
-        requirement: `identifier "com.stably.orca" and certificate root = H"${certificate.sha1}"`
-      })
-    )
-  }
+  writeFileSync(
+    join(directory, 'mac-signing-arm64.json'),
+    JSON.stringify({
+      schemaVersion: 1,
+      arch: 'arm64',
+      version: env.ORCA_LOCAL_BUILD_VERSION,
+      certificateSha256: certificate.sha256,
+      requirement: `identifier "com.stably.orca" and certificate root = H"${certificate.sha1}"`
+    })
+  )
   return directory
 }
 
@@ -223,7 +222,7 @@ describe('integration package identity and signing', () => {
 })
 
 describe('complete, immutable fork prereleases', () => {
-  it('creates a draft, uploads all five packages and update manifests, then publishes', async () => {
+  it('creates a draft, uploads every package and update manifest, then publishes', async () => {
     const directory = packages()
     const gh = github()
     await publishRelease({ env, directory, mobile, gh, git: repository() })
@@ -242,7 +241,10 @@ describe('complete, immutable fork prereleases', () => {
     }
     const manifest = JSON.parse(readFileSync(join(directory, 'build-info.json'), 'utf8'))
     expect(manifest.sha).toBe(sha)
-    expect(manifest.assets).toHaveLength(5)
+    expect(manifest.assets.map((asset) => asset.name)).toEqual([
+      ...PACKAGE_NAMES,
+      LEGACY_INTEL_PLACEHOLDER
+    ])
     expect(manifest.androidVersionCode).toBe(androidConfig.androidVersionCode(timestamp))
     expect(manifest.desktopVersion).toBe('1.2.3-preview.2')
     expect(manifest.macCertificateSha256).toBe(signingCertificate().sha256)
@@ -251,11 +253,39 @@ describe('complete, immutable fork prereleases', () => {
     expect(update.version).toBe(env.ORCA_LOCAL_BUILD_VERSION)
     expect(update.files).toEqual(
       manifest.assets
-        .filter((asset) => asset.name.endsWith('.zip'))
+        .filter((asset) => asset.name === 'orca-integration-macos-arm64.zip')
         .map((asset) => ({ url: asset.name, sha512: asset.sha512, size: asset.bytes }))
     )
     expect(gh.mock.calls[3][0]).toContain(join(directory, 'latest-mac.yml'))
     expect(readFileSync(join(directory, 'SHA256SUMS.txt'), 'utf8')).toMatch(/^[a-f0-9]{64}  orca-/)
+  })
+
+  it('keeps releases complete for apps that still expect an Intel update ZIP', async () => {
+    const directory = packages()
+    const gh = github()
+    await publishRelease({ env, directory, mobile, gh, git: repository() })
+    // What integration apps built before Intel was dropped require for a Mac release.
+    const olderAppRequirement = [
+      'build-info.json',
+      'latest-mac.yml',
+      'orca-integration-macos-arm64.zip',
+      'orca-integration-macos-x64.zip'
+    ]
+    const uploaded = gh.mock.calls.find(([args]) => args[1] === 'upload')[0]
+    for (const name of olderAppRequirement) {
+      expect(uploaded).toContain(join(directory, name))
+    }
+    const placeholder = readFileSync(join(directory, LEGACY_INTEL_PLACEHOLDER))
+    expect(placeholder.readUInt32LE(0)).toBe(0x04034b50)
+    expect(placeholder.toString('latin1')).toContain('This archive is not an app.')
+    const manifest = JSON.parse(readFileSync(join(directory, 'build-info.json'), 'utf8'))
+    expect(manifest.assets.find((asset) => asset.name === LEGACY_INTEL_PLACEHOLDER).bytes).toBe(
+      placeholder.length
+    )
+    expect(readFileSync(join(directory, 'latest-mac.yml'), 'utf8')).not.toContain('x64')
+    expect(readFileSync(join(directory, 'release-notes.md'), 'utf8')).toContain(
+      'Intel 版已停止提供'
+    )
   })
 
   it('does not create a release when one platform is missing or empty', async () => {
@@ -274,7 +304,7 @@ describe('complete, immutable fork prereleases', () => {
     'refuses publication when signing evidence has an invalid %s',
     async (field) => {
       const directory = packages()
-      const path = join(directory, 'mac-signing-x64.json')
+      const path = join(directory, 'mac-signing-arm64.json')
       const evidence = JSON.parse(readFileSync(path, 'utf8'))
       evidence[field] = 'invalid'
       writeFileSync(path, JSON.stringify(evidence))
@@ -541,10 +571,7 @@ describe('workflow wiring', () => {
         ]
       ).toBe('error')
     }
-    expect(workflow.jobs.macos.strategy.matrix.include.map((row) => row.arch)).toEqual([
-      'arm64',
-      'x64'
-    ])
+    expect(workflow.jobs.macos.strategy.matrix.include.map((row) => row.arch)).toEqual(['arm64'])
     expect(
       workflow.jobs.macos.steps.find(
         (step) => step.name === 'Package internal-test DMG and update ZIP'
