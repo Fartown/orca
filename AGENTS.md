@@ -92,6 +92,12 @@ All changes must consider the SSH use case. Don't assume local-only execution. B
 
 Every fork feature must work for both local access and SSH access (the Orca client on one machine, the workspace, files, or services on an SSH-connected machine); a feature that covers only one is not done. Its requirements, design, test cases, and real-app validation must each cover the SSH scenario, and the design must state which machine owns every file, `127.0.0.1` port, environment variable, config, and service it touches. See rule 7 in [`docs/reference/fork-maintenance.md`](./docs/reference/fork-maintenance.md#6-日常规则).
 
+Standing up that SSH scenario is yours, not the user's. A root-run sshd already listens on
+`127.0.0.1:2222` and an isolated app instance covers the rest — see
+[`docs/reference/ssh-real-app-validation.md`](./docs/reference/ssh-real-app-validation.md) for the
+fixtures and the traps (a self-started user-level sshd cannot launch the relay). Do not close out a
+change by asking the user to verify the SSH path on their machine.
+
 ## Folder Workspace Use Case
 
 All changes must consider folder workspaces as well as git worktrees. Don't assume every workspace is a git worktree.
