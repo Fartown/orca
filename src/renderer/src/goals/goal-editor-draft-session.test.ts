@@ -74,3 +74,26 @@ it('invalidates a deleted editor cache without affecting the same ID on another 
   await expect(openGoalDraftSession(one.id, client)).rejects.toThrow('could not be found')
   expect(await openGoalDraftSession(two.id, other)).toBe(two)
 })
+
+it('coalesces a burst of edits into one save, and flush still writes immediately', async () => {
+  const saved: string[] = []
+  vi.mocked(callRuntimeRpc).mockImplementation(async (_target, _method, raw) => {
+    const params = GoalRpcParams['goals.saveEditorDraft'].parse(raw)
+    saved.push(params.content.fields.objective)
+    return {
+      ...params.content,
+      editorDraftId: params.editorDraftId,
+      revision: params.expectedRevision + 1,
+      createdAt: 1,
+      updatedAt: 2
+    }
+  })
+  const session = await openGoalDraftSession(record(), new GoalRuntimeClient('ssh:debounce'))
+  session.change((content) => ({ ...content, fields: { ...content.fields, objective: 'a' } }))
+  session.change((content) => ({ ...content, fields: { ...content.fields, objective: 'b' } }))
+  // Why asserted before waiting: typing must not reach the host per keystroke, because each save
+  // rewrites the draft's document on the execution host.
+  expect(saved).toEqual([])
+  await session.flush()
+  expect(saved).toEqual(['b'])
+})

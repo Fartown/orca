@@ -134,8 +134,9 @@ describe('persistent Goal editor', () => {
     await open()
     fireEvent.click(screen.getByRole('button', { name: 'Generate acceptance document' }))
     await screen.findByRole('button', { name: 'Open Markdown tab' })
-    await waitFor(() =>
-      expect(screen.queryByRole('textbox', { name: 'Acceptance document' })).toBeNull()
+    await waitFor(
+      () => expect(screen.queryByRole('textbox', { name: 'Acceptance document' })).toBeNull(),
+      { timeout: 2500 }
     )
     fireEvent.click(screen.getByRole('button', { name: 'Edit document' }))
     fireEvent.change(document(), { target: { value: ' 新人工稿\n' } })
@@ -273,10 +274,14 @@ describe('persistent Goal editor', () => {
     await open()
     await generate()
     fireEvent.change(document(), { target: { value: '保存人工编辑\n' } })
-    await waitFor(() =>
-      expect([...records.values()].at(-1)?.fields.acceptanceDocument).toBe('保存人工编辑\n')
-    )
-    const draftId = [...records.keys()].at(-1)!
+    // Why found by content rather than by insertion order: mounting the editor arms a draft per
+    // effect run, and saves are coalesced, so the order records land in carries no meaning.
+    const edited = () =>
+      [...records.entries()].find(
+        ([, record]) => record.fields.acceptanceDocument === '保存人工编辑\n'
+      )
+    await waitFor(() => expect(edited()).toBeDefined(), { timeout: 2500 })
+    const draftId = edited()![0]
     cleanup()
     act(() => goalDomainStore.getState().closeEditor())
     render(<GoalEditor />)

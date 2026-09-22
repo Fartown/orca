@@ -274,3 +274,34 @@ external_ids: []
 - 验证证据：本需求结构与链接校验、完整 REQ/TC 及正文保留校验记录在 `docs/maintenance/本地需求文档整理/2026-09-05-三需求拆分校验.md`；本次不重新执行功能测试。
 - 未解决问题：删除空转熔断等最新目标尚未实现，旧待决清单仍有差距；真实目标、插件 UI 以及 Windows/SSH/WSL 支持没有本次执行证明。
 - 下一步：后续仅在本 issue 内推进对应开发和验收，每次真实执行新增 Test Run。
+
+### 2026-09-23 修复验收文档打不开与草稿写放大
+
+- 本轮目标：修两个缺陷。其一，SSH / 配对主机下点「打开 Markdown 标签」报 `ENOENT ... stat '<工作区>/acceptance-155.md'`；其二，一次编辑会在草稿目录里堆出几十上百份同样的 33 KB 文档。
+- 完成内容：
+  - `openGoalDocument` 改为按绝对路径寻址。验收文档在工作区之外，编辑器的读取链路只有 `relativePath === filePath` 这一支会刷新客户端授权、或用 grant 抵达主机；原来传 `basename(filePath)`，配对主机的 `files.read { worktree, relativePath }` 就把它当工作区相对路径解析，于是去 stat 一个从来不存在的文件。现在沿用「绝对路径开标签页」那条既有链路：工作区外先经 `files.grantHostPath` 取 grant 并盖在标签页上。
+  - 草稿文档不再按 revision 命名。`acceptance-<revision>.md` 每保存一次就新铸一个文件、旧的不回收，用户复制走的路径转眼就不是当前文档了。改为每份草稿固定一个 `acceptance.md`。
+  - 内容没变就不算新版本：`save()` 先比对内容，相同则原样返回，顺带覆盖了「重试丢失的响应」这条老路径。
+  - 编辑保存加 300 ms 防抖，把一串按键并成一次落盘；`flush()` 仍立即写，所以打开文档、关闭编辑器前的保存不受影响。
+- 代码或文档变更：`src/renderer/src/goals/open-goal-document.ts`、`src/renderer/src/goals/goal-editor-draft-session.ts`、`src/main/goals/goal-editor-draft-store.ts` 及其三份测试；`config/fork-features.jsonc` 补登 6 个新依赖。
+- 验证证据：`pnpm tc` 干净；goals feature check 228 项全过；新增用例覆盖「工作区外走 grant」「工作区内仍用相对路径」「SSH 不授权客户端本地路径」「连续编辑合并为一次保存」「内容未变不涨版本」「一份草稿只留一个文档文件」；真机 e2e 见 `.docs/goal-acceptance-doc-open-ui-validation/2026-09-22/`。
+- 未解决问题：配对主机（用户报错的那类环境）只有单测覆盖，没有真机证据——本机没有可配对的远端。另外发现一次编辑器挂载会起两份草稿记录，是既有现象，不在本轮范围。
+- 下一步：请用户在出问题的那台机器上复验；确认后合入 `fork/integration`。
+
+### 2026-09-23 配对主机真机复现与归属修正
+
+- 本轮目标：自己搭出用户报错的拓扑并复现，不再把 SSH / 远程验证退回给用户。
+- 完成内容：
+  - 先用本机 root sshd 搭了 SSH 工作区，跑通了，但那条路读文件用的是绝对 `filePath`，**复现不出**报错——修复前后都通过。说明用户碰到的不是 SSH 工作区，而是**配对主机**（客户端 `activeRuntimeEnvironmentId` 指向一个 runtime），读取走 `files.read { worktree, relativePath }`。
+  - 改用 `createRuntimeDesktopPairingOffer` + `launchPairedElectronClient`，在本机起客户端与主机两个实例配对（127.0.0.1，不需要 Docker），复现成功。
+  - 复现过程暴露上一版修复判断错了归属：它按**客户端当前的** active runtime 决定要不要申请 grant，于是一个本地目标的文档也会去问主机要授权，主机没有那个路径，开都开不起来。改为按**目标自己的执行主机**决定：`runtime` 才取 grant，`local` / `ssh` 直接用绝对路径，读取端的 `settingsForRuntimeOwner` 会据标签页的 `runtimeEnvironmentId` 回到本机。
+  - 把这套做法固化成 `docs/reference/ssh-real-app-validation.md`，并在 AGENTS.md 写明：SSH 场景由改动者自己搭，不要退回给用户。
+- 代码或文档变更：`src/renderer/src/goals/open-goal-document.ts` 与其测试；`docs/reference/ssh-real-app-validation.md`（新增，并在 `.gitignore` 放行）；`AGENTS.md`。
+- 验证证据：`.docs/goal-acceptance-doc-open-ui-validation/2026-09-23-ssh/`
+  - `run-8`（修复后，配对主机）：`relativePath` 为绝对路径、`hasGrant: true`、无报错、文档渲染，**通过**。
+  - `run-9`（修复前，同一拓扑）：`relativePath: "acceptance.md"`、`hasGrant: false`、
+    `ENOENT: no such file or directory, stat '<工作区>/acceptance.md'` —— 与用户截图同形，**失败**。
+  - `run-2`/`run-5`：SSH 工作区拓扑，修复前后均通过（该路径本就按绝对路径读），记录在案以说明覆盖边界。
+  - 新增单测：客户端配对着主机、但目标是本地时不得申请 grant。
+- 未解决问题：无。红→绿闭环已在用户报错的拓扑上取得。
+- 下一步：合入 `fork/integration`。

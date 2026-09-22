@@ -4,6 +4,9 @@ import type {
 } from '../../../shared/goals/goal-editor-draft-contract'
 import { goalRuntimeClient, type GoalRuntimeClient } from './goal-runtime-client'
 
+/** Coalesces a burst of edits into one save; a flush() still writes immediately. */
+const SAVE_DEBOUNCE_MS = 300
+
 export type DraftSessionSnapshot = {
   content: GoalEditorDraftContent
   saving: boolean
@@ -19,6 +22,7 @@ export class GoalEditorDraftSession {
   private savedVersion = 0
   private revision: number
   private pending: Promise<void> | null = null
+  private scheduled: ReturnType<typeof setTimeout> | null = null
   private snapshot: DraftSessionSnapshot
   readonly id: string
 
@@ -52,7 +56,14 @@ export class GoalEditorDraftSession {
     }
     this.version++
     this.publish({ content: update(this.snapshot.content) })
-    void this.flush().catch(() => {})
+    // Why not saved here: typing calls change() per keystroke, and each save is a host round-trip
+    // that rewrites the document. Anything that needs the saved state calls flush() instead.
+    if (this.scheduled === null) {
+      this.scheduled = setTimeout(() => {
+        this.scheduled = null
+        void this.flush().catch(() => {})
+      }, SAVE_DEBOUNCE_MS)
+    }
   }
 
   markDeleted(): void {
@@ -61,6 +72,10 @@ export class GoalEditorDraftSession {
   }
 
   flush(): Promise<void> {
+    if (this.scheduled !== null) {
+      clearTimeout(this.scheduled)
+      this.scheduled = null
+    }
     if (this.deleted) {
       return Promise.reject(new Error('This goal draft was deleted.'))
     }

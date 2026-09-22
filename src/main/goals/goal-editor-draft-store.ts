@@ -34,24 +34,13 @@ export class GoalEditorDraftStore {
         throw new Error('This goal draft was deleted. Create a new draft to continue.')
       }
       const previous = await this.get(input.editorDraftId)
+      // Why before the revision check: this also answers a retried lost response without
+      // overwriting a newer draft. Why at all: the editor saves on every change, and a revision
+      // per save would rewrite the whole document each time and leave the old copy behind.
+      if (previous && matchesStoredContent(previous, input.content)) {
+        return previous
+      }
       if ((previous?.revision ?? 0) !== input.expectedRevision) {
-        // A lost response may be retried without overwriting a newer draft.
-        if (previous) {
-          const {
-            editorDraftId: _id,
-            revision: _rev,
-            createdAt: _created,
-            updatedAt: _updated,
-            documentPath: _documentPath,
-            ...content
-          } = previous
-          if (
-            JSON.stringify(content) ===
-            JSON.stringify(GoalEditorDraftContentSchema.parse(input.content))
-          ) {
-            return previous
-          }
-        }
         throw new Error(
           'This draft was changed in another editor. Your unsaved text is kept here; reopen the saved draft before retrying.'
         )
@@ -153,11 +142,9 @@ export class GoalEditorDraftStore {
     if (!document) {
       return { ...record, documentPath: undefined }
     }
-    const documentPath = join(
-      this.directory(),
-      record.editorDraftId,
-      `acceptance-${record.revision}.md`
-    )
+    // Why not keyed by revision: that minted a new 30 KB file per save and left every older one
+    // behind, and the path a reader had copied stopped being the current document.
+    const documentPath = join(this.directory(), record.editorDraftId, 'acceptance.md')
     const saved = await readFile(documentPath, 'utf8').catch((error: NodeJS.ErrnoException) => {
       if (error.code === 'ENOENT') {
         return null
@@ -169,4 +156,22 @@ export class GoalEditorDraftStore {
     }
     return { ...record, documentPath }
   }
+}
+
+/** Content equality ignoring the fields the store owns. */
+function matchesStoredContent(
+  stored: GoalEditorDraftRecord,
+  content: GoalEditorDraftSave['content']
+): boolean {
+  const {
+    editorDraftId: _id,
+    revision: _revision,
+    createdAt: _created,
+    updatedAt: _updated,
+    documentPath: _documentPath,
+    ...storedContent
+  } = stored
+  return (
+    JSON.stringify(storedContent) === JSON.stringify(GoalEditorDraftContentSchema.parse(content))
+  )
 }
