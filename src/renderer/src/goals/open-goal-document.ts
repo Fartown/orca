@@ -39,20 +39,24 @@ export async function openGoalDocument(
   // The goal home belongs to the execution host but sits outside the workspace, so a paired host
   // cannot name this document in the worktree-relative form its files.* RPC carries.
   const worktreeRelativePath = worktreePath ? toWorktreeRelativePath(filePath, worktreePath) : null
-  const context = {
-    settings: state.settings,
-    worktreeId,
-    worktreePath,
-    ...(host.kind === 'ssh' ? { expectedSshTargetId: host.targetId } : {}),
-    connectionId: getConnectionIdForFileFromState(state, worktreeId, filePath) ?? undefined
-  }
-  const reach = await resolveAbsoluteTabEntryReach({
-    context,
-    filePath,
-    worktreeRelativePath,
-    requestHostPathGrant: requestHostPathGrantForContext,
-    statRuntimePath
-  })
+  // Why the goal's host and not this client's active runtime: the document belongs to whichever
+  // machine ran the goal. A client paired to some other host still reads a local goal's document
+  // locally, and asking that host to grant a path it does not have would fail the open outright.
+  const reach =
+    host.kind === 'runtime'
+      ? await resolveAbsoluteTabEntryReach({
+          context: {
+            settings: { activeRuntimeEnvironmentId: host.environmentId },
+            worktreeId,
+            worktreePath,
+            connectionId: getConnectionIdForFileFromState(state, worktreeId, filePath) ?? undefined
+          },
+          filePath,
+          worktreeRelativePath,
+          requestHostPathGrant: requestHostPathGrantForContext,
+          statRuntimePath
+        })
+      : { openedPath: filePath, grant: undefined }
   state.openFile(
     {
       filePath: reach.openedPath,

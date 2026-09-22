@@ -138,3 +138,21 @@ it('grants the host path for a paired runtime, whose files RPC cannot name it', 
     expect.anything()
   )
 })
+
+it('reads a local goal document locally even while this client is paired to a host', async () => {
+  // The reported failure: a client paired to a runtime host still has to open a local goal's
+  // document from its own disk. Asking that host to grant a path it does not have fails the open.
+  state.settings.activeRuntimeEnvironmentId = 'peer'
+  await openGoalDocument('/drafts/local-goal.md', 'folder:local')
+  expect(requestHostPathGrantForContext).not.toHaveBeenCalled()
+  expect(openFile).toHaveBeenCalledWith(
+    expect.objectContaining({
+      filePath: '/drafts/local-goal.md',
+      relativePath: '/drafts/local-goal.md',
+      runtimeEnvironmentId: null
+    }),
+    // Why the flag matters here: it pins the tab to this client, so the reader does not fall back
+    // to the paired host for a file only this machine has.
+    expect.objectContaining({ suppressActiveRuntimeFallback: true })
+  )
+})
