@@ -489,6 +489,7 @@
             ".github/workflows/sync-upstream.yml",
             ".github/workflows/track-community-prs.yaml",
             "docs/reference/fork-maintenance.md",
+            "docs/reference/ssh-real-app-validation.md",
             "docs/issue/**",
             "docs/maintenance/**",
             // Every fork feature's owned paths and seams. config/fork-features.jsonc is
