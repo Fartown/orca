@@ -130,6 +130,7 @@ const SENT = 1_000_000
 const act = (over = {}) => ({
   connected: true,
   state: null,
+  workingMode: null,
   stateStartedAt: null,
   silentMs: null,
   spinning: false,
@@ -149,6 +150,23 @@ test('本轮的 hook 状态直接定论', () => {
   assert.equal(
     classifyRound(act({ source: 'hook', state: 'waiting', stateStartedAt: SENT + 1 }), SENT, 12000),
     'needs-user'
+  )
+})
+
+test('monitoring 是本轮已结束,只剩后台 shell 挂着 —— 不能当成在干活', () => {
+  // 回归:agent 起了一个不退出的 next dev,宿主把 pane 报成 working+monitoring,
+  // 轮询每次判 busy 就把卡死计时刷到当下,这一轮永远等不到结束(实测空等 48 分钟)。
+  const a = act({
+    source: 'hook',
+    state: 'working',
+    workingMode: 'monitoring',
+    stateStartedAt: SENT + 1
+  })
+  assert.equal(classifyRound(a, SENT, 12000), 'finished')
+  assert.equal(
+    classifyRound({ ...a, requiresHook: true, stateStartedAt: SENT - 5000 }, SENT, 12000),
+    'finished',
+    'SSH 主机同样只有 hook 一条信号,monitoring 也得放行'
   )
 })
 

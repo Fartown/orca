@@ -25,6 +25,7 @@ export async function observeAgent(handle) {
     requiresHook,
     connected: t.connected !== false,
     state: row?.state ?? null,
+    workingMode: row?.workingMode ?? null,
     stateStartedAt: row?.stateStartedAt ?? null,
     silentMs: t.lastOutputAt ? Date.now() - t.lastOutputAt : null,
     spinning: BRAILLE.test((t.title || '').trim()),
@@ -51,7 +52,10 @@ export function classifyRound(activity, sinceMs, quietMs) {
       return 'needs-user'
     }
     if (activity.state === 'working') {
-      return 'busy'
+      // monitoring 是「本轮已经讲完话,只剩后台 shell/cron 还挂着」——宿主用它区分
+      // 真正在干活的 working。当成 busy 的话,轮询会一直把卡死计时刷到当下,
+      // 这一轮永远等不到结束(实测被一个没关的 next dev 钉死 48 分钟)。
+      return activity.workingMode === 'monitoring' ? 'finished' : 'busy'
     }
     if (activity.state === 'done') {
       return 'finished'
@@ -60,7 +64,7 @@ export function classifyRound(activity, sinceMs, quietMs) {
   // SSH reconnect can temporarily remove hook rows; terminal silence cannot close that gap.
   if (activity.requiresHook) {
     if (activity.state === 'working') {
-      return 'busy'
+      return activity.workingMode === 'monitoring' ? 'finished' : 'busy'
     }
     if (activity.state === 'waiting' || activity.state === 'blocked') {
       return 'needs-user'
