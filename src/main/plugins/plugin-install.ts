@@ -273,13 +273,16 @@ export async function removeInstalledPlugin(input: {
   pluginsDir: string
   pluginsDataDir: string
   pluginKey: string
+  /** Bundled installs are protected from uninstalls. Bootstrap sets this to retire the ones the
+   *  current release index no longer lists, which would otherwise keep contributing commands. */
+  allowBundled?: boolean
 }): Promise<void> {
   await serializePluginMutation(input.pluginsDir, async () => {
     if (!isQualifiedPluginKey(input.pluginKey)) {
       throw new Error(`invalid qualified plugin key: ${input.pluginKey}`)
     }
     const lock = await readPluginLockfile(input.pluginsDir)
-    if (lock.plugins[input.pluginKey]?.source.kind === 'bundled') {
+    if (input.allowBundled !== true && lock.plugins[input.pluginKey]?.source.kind === 'bundled') {
       throw new Error(`cannot remove protected plugin ${input.pluginKey}`)
     }
     await removeResolvedPluginDirectory(input.pluginsDir, input.pluginKey)

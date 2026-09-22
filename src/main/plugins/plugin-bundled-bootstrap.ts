@@ -171,7 +171,8 @@ export async function bootstrapBundledPlugins(options: {
       await removeInstalledPlugin({
         pluginsDir,
         pluginsDataDir: getPluginsDataDir(options.userDataPath),
-        pluginKey
+        pluginKey,
+        allowBundled: true
       })
       result.retired.push(pluginKey)
     } catch (error) {
