@@ -1,6 +1,6 @@
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
+import { mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import { randomUUID } from 'node:crypto'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { GoalAcceptanceDrafts } from './goal-acceptance-drafts'
@@ -149,8 +149,14 @@ it('atomically saves incomplete forms, rejects stale concurrent saves and replay
   expect((await store.list()).items[0]).toMatchObject({ editorDraftId: id, hasDocument: true })
   const saved = (await store.get(id))!
   expect(await readFile(saved.documentPath!, 'utf8')).toBe(update.fields.acceptanceDocument)
-  expect(saved.documentPath).not.toBe(first.documentPath)
-  expect(await readFile(first.documentPath!, 'utf8')).toBe(content.fields.acceptanceDocument)
+  // The document keeps one path per draft: a reader who copied it still has the current file,
+  // and a save no longer leaves the previous copy behind.
+  expect(saved.documentPath).toBe(first.documentPath)
+  expect(await readdir(dirname(saved.documentPath!))).toEqual(['acceptance.md'])
+  // An unchanged save is not a new revision, so typing cannot inflate the draft.
+  expect(
+    await store.save({ editorDraftId: id, expectedRevision: 2, content: update })
+  ).toMatchObject({ revision: 2 })
 })
 
 it('reports split structured tool events without exposing reasoning or tool arguments', () => {
