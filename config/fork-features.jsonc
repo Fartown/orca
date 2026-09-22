@@ -1024,9 +1024,9 @@
           "why": "each admitted Dashboard pane reads its own native name without borrowing a sibling slot"
         },
         {
-          "file": "src/renderer/src/components/right-sidebar/AiVaultPanel.tsx",
+          "file": "src/renderer/src/components/right-sidebar/ai-vault-session-filters.ts",
           "mustContain": "useCanonicalSessionTitles(sessions)",
-          "why": "History list evidence seeds the shared renderer projection without a separate cache"
+          "why": "History list evidence seeds the shared renderer projection without a separate cache; it binds where the panel's filter/group hook runs, which is what feeds the query"
         },
         {
           "file": "src/renderer/src/components/right-sidebar/AiVaultSessionRow.tsx",

@@ -669,6 +669,7 @@
             "src/main/ai-vault/session-parse-cache-persistence.test.ts",
             "src/shared/agent-session-fallback-title.ts",
             "src/shared/agent-session-fallback-title.test.ts",
+            "src/renderer/src/components/right-sidebar/ai-vault-session-filters.ts",
             "src/shared/ai-vault-session-filters.ts",
             "src/shared/ai-vault-session-filters.test.ts",
             // The host-local title read shared by the tab chain and the Issue
