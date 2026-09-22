@@ -526,7 +526,6 @@ describe('connectPanePty', () => {
         }
       },
       getAgentLaunchConfigForStatusEntry: vi.fn(() => undefined),
-      getAgentLaunchConfigForStatusMetadata: vi.fn(() => undefined),
       sleepingAgentSessionsByPaneKey: {
         [paneKey]: {
           paneKey,

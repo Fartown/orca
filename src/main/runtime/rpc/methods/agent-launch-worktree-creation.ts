@@ -35,7 +35,14 @@ export function agentLaunchWorkspaceFactory(
   agent: TuiAgent
 ): AgentLaunchWorkspaceFactory {
   return {
-    createWorktree: async ({ create, startupAgent }) => {
+    createWorktree: async ({
+      create,
+      startupAgent,
+      startupPrompt,
+      agentArgs,
+      cwd,
+      launchSource
+    }) => {
       // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: already validated by `AgentLaunch`; the executor only removed the reserved agent fields, so the rest of the payload is the parsed shape.
       const params = create as WorktreeCreateParams
       const { runtime } = context
@@ -50,7 +57,14 @@ export function agentLaunchWorkspaceFactory(
       try {
         const result = await runtime.createManagedWorktree({
           ...buildManagedWorktreeCreateArgs(
-            { ...params, ...(startupAgent ? { startupAgent } : {}) },
+            {
+              ...params,
+              ...(startupAgent ? { startupAgent } : {}),
+              // Only ever set alongside `startupAgent`, which is what the create requires; the
+              // executor sends it exclusively for an agent that takes its prompt on argv, so this
+              // is the startup command carrying the text rather than a second delivery path.
+              ...(startupPrompt ? { startupPrompt } : {})
+            },
             {
               automationProvenance,
               cliProvenance: buildCliWorkspaceProvenance(params.cliProvenanceRequest, {
@@ -61,6 +75,9 @@ export function agentLaunchWorkspaceFactory(
             },
             context.clientKind ? { clientKind: context.clientKind } : {}
           ),
+          ...(agentArgs !== undefined ? { startupAgentArgs: agentArgs } : {}),
+          ...(cwd ? { startupCwd: cwd } : {}),
+          ...(launchSource ? { startupLaunchSource: launchSource } : {}),
           // The launch owns the agent whichever surface it settles on, so the workspace records
           // it even when no startup terminal was created for it.
           createdWithAgent: agent,
@@ -76,7 +93,10 @@ export function agentLaunchWorkspaceFactory(
         finishAutomationWorkspaceProvenanceRequest(params.automationProvenanceRequest)
         return {
           worktreeId: result.worktree.id,
-          startupTerminalHandle: result.startupTerminal?.handle
+          startupTerminalHandle: result.startupTerminal?.handle,
+          // Carried, not dropped: `createManagedWorktree` reports a failed startup terminal or an
+          // uncopied working tree here, and it is the only place the host says so.
+          ...(result.warning ? { warning: result.warning } : {})
         }
       } catch (error) {
         releaseAutomationWorkspaceProvenanceRequest(params.automationProvenanceRequest)

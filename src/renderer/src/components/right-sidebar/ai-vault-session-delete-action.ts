@@ -11,9 +11,11 @@ import { getScannedSessionDisplayName } from '@/session-names/session-name-displ
  * refresh so the row goes away immediately.
  */
 export function useAiVaultSessionDeleteAction({
-  refresh
+  refresh,
+  onDeleted
 }: {
   refresh: (options: { force: boolean }) => Promise<void>
+  onDeleted?: (session: AiVaultSession) => void
 }): (session: AiVaultSession) => Promise<void> {
   const confirm = useConfirmationDialog()
 
@@ -50,6 +52,7 @@ export function useAiVaultSessionDeleteAction({
           // main-side detail, not something to surface raw.
           throw new Error(result.outcome)
         }
+        onDeleted?.(session)
         toast.success(
           translate('auto.components.right.sidebar.AiVaultPanel.sessionDeleted', 'Session deleted')
         )
@@ -65,6 +68,6 @@ export function useAiVaultSessionDeleteAction({
         )
       }
     },
-    [confirm, refresh]
+    [confirm, refresh, onDeleted]
   )
 }

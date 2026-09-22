@@ -458,8 +458,6 @@
             "mobile/src/session/use-mobile-session-terminal-create-actions.ts",
             "mobile/src/session/mobile-session-route-parity.test.ts",
             // Fork infrastructure (docs/reference/fork-maintenance.md).
-            // User-approved backport of upstream 7ec2986fd; remove after the next upstream sync.
-            "src/shared/agent-status-store-snapshot-budget.ts",
             ".github/workflows/fork-integration-build.yml",
             "config/scripts/integration-builds/**",
             "src/shared/integration-builds/**",

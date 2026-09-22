@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { writeDurableSecureJsonFile } from '../../../shared/secure-file'
-import { withAgentSessionStoreTransactionLock } from '../../runtime/agent-session-store-transaction-lock'
+import { withFileTransactionLock } from '../../file-transaction-lock'
 import {
   ARTIFACT_SHARE_FILE_VERSION,
   readVersionedArtifactShareFile
@@ -38,7 +38,7 @@ export function updateArtifactShareConfig(
   patch: Partial<Pick<ArtifactShareConfig, 'preferredPort' | 'confirmedPort' | 'ip'>>
 ): Promise<ArtifactShareConfig> {
   const path = artifactShareConfigPath(home)
-  return withAgentSessionStoreTransactionLock(path, async () => {
+  return withFileTransactionLock(path, async () => {
     const next = {
       ...(readVersionedArtifactShareFile(path, StoredConfig) ?? defaultConfig()),
       ...patch,

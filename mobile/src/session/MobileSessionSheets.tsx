@@ -1,5 +1,5 @@
 import { Platform } from 'react-native'
-import * as Clipboard from 'expo-clipboard'
+import { useClipboardWriter } from '../platform/clipboard'
 import { Copy, FileText, Globe, RefreshCw, SquareTerminal } from 'lucide-react-native'
 import { MobileSessionHeaderMoreActionsSheet } from './MobileSessionHeaderMoreActionsSheet'
 import { QuickCommandsSheet } from './QuickCommandsSheet'
@@ -12,7 +12,7 @@ import { MobileDictationSetupSheet } from '../components/MobileDictationSetupShe
 import { MobileBrowserTabActionSheet } from './MobileBrowserTabActionSheet'
 import { getMobileTerminalActionSheetActions } from './mobile-terminal-action-sheet-actions'
 import { getMobileSessionContinuationActions } from '../session-continuation/continuation-actions'
-import { useMobileSessionContinuationScope } from '../session-continuation/use-mobile-session-continuation-scope'
+import { useMobileSessionContinuationSheet } from '../session-continuation/MobileSessionContinuationSheet'
 import type { MobileSessionTab } from './mobile-session-route-types'
 import {
   getRepoIdFromMobileWorktreeId,
@@ -93,17 +93,11 @@ export function MobileSessionSheets({ controller }: { controller: MobileSessionC
     showAgentSessionHistoryAction,
     showChecksAction
   } = controller
+  const clipboard = useClipboardWriter()
   // Why here and not in the controller chain: nothing downstream of that chain reads these,
   // and the controller is the hottest upstream file in this family — mounting the scope at its
   // only consumer keeps the feature off it.
-  const {
-    continuationTarget,
-    continuationActions,
-    continuationTitle,
-    continuationMessage,
-    openContinuation,
-    closeContinuation
-  } = useMobileSessionContinuationScope(controller)
+  const { openContinuation, continuationSheet } = useMobileSessionContinuationSheet(controller)
   return (
     <>
       <MobileSessionHeaderMoreActionsSheet
@@ -184,7 +178,8 @@ export function MobileSessionSheets({ controller }: { controller: MobileSessionC
               if (!delivery) {
                 return
               }
-              void Clipboard.setStringAsync(delivery.prompt)
+              void clipboard
+                .writeText(delivery.prompt)
                 .then(() => {
                   triggerSuccess()
                   showToast('Notes copied')
@@ -228,13 +223,7 @@ export function MobileSessionSheets({ controller }: { controller: MobileSessionC
         })}
         onClose={() => setActionTarget(null)}
       />
-      <ActionSheetModal
-        visible={continuationTarget != null}
-        title={continuationTitle}
-        message={continuationMessage}
-        actions={continuationActions}
-        onClose={closeContinuation}
-      />
+      {continuationSheet}
       <ActionSheetModal
         visible={markdownActionTarget != null}
         title={markdownActionTarget?.title || 'Markdown'}
@@ -259,8 +248,13 @@ export function MobileSessionSheets({ controller }: { controller: MobileSessionC
               const target = markdownActionTarget
               setMarkdownActionTarget(null)
               if (target) {
-                void Clipboard.setStringAsync(target.relativePath || target.filePath)
-                showToast('Path copied')
+                void clipboard
+                  .writeText(target.relativePath || target.filePath)
+                  .then(() => showToast('Path copied'))
+                  .catch(() => {
+                    triggerError()
+                    showToast("Couldn't copy path", 1500)
+                  })
               }
             }
           },
@@ -315,7 +309,8 @@ export function MobileSessionSheets({ controller }: { controller: MobileSessionC
               const combined = drafts
                 .map((draft) => `# ${draft.title}\n\n${draft.content}`)
                 .join('\n\n---\n\n')
-              void Clipboard.setStringAsync(combined)
+              void clipboard
+                .writeText(combined)
                 .then(() => {
                   setLeaveDrafts(null)
                   leaveSession()

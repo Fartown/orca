@@ -18,6 +18,10 @@ import { extractPromptText } from './agent-hook-listener/prompt-fields'
 import { normalizeProviderEvent } from './agent-hook-listener/provider-dispatch'
 import { hasExplicitUserPrompt } from './agent-hook-listener/provider-event-routing'
 import { hasExplicitAmpPrompt } from './agent-hook-listener/providers/amp-events'
+import {
+  resolveOpenCodeSharedServerEnvelope,
+  trackOpenCodePaneLaunchToken
+} from './agent-hook-listener/opencode-session-registry'
 import { readString } from './agent-hook-listener/tool-input-preview'
 import { shouldRejectClaudeSessionReplacement } from './claude-session-ownership/claude-session-activity'
 import {
@@ -37,28 +41,53 @@ export function normalizeHookPayload(
   if (!envelope) {
     return null
   }
-  const { record, paneKey, hookPayloadRecord, tabId, worktreeId, launchToken } = envelope
+  const {
+    record,
+    paneKey: stampedPaneKey,
+    hookPayloadRecord,
+    tabId: stampedTabId,
+    worktreeId: stampedWorktreeId,
+    launchToken: stampedLaunchToken
+  } = envelope
+  if (source === 'claude') {
+    state.claudeUnconfirmedRestoredStatusPaneKeys.delete(stampedPaneKey)
+  }
   const eventName =
     readFirstString(record, ['hook_event_name', 'hookEventName', 'hook_type', 'hookType']) ??
     hookPayloadRecord.hook_event_name ??
     hookPayloadRecord.hookEventName
-  const previousStatus = state.lastStatusByPaneKey.get(paneKey)
   // Codex child hooks expose the child's session_id on the parent's pane.
   const providerSession =
     source === 'codex' && readString(hookPayloadRecord, 'agent_id')
       ? null
       : extractAgentProviderSession(source, hookPayloadRecord)
+  // Why (#21359): the shared OpenCode server stamps every post with its own
+  // frozen pane. When the binder has mapped this session to its real pane,
+  // the stamp is replaced before anything downstream (status lookup, dispatch,
+  // fences) can act on the wrong owner. Unbound sessions keep the stamp.
+  const { paneKey, tabId, worktreeId, launchToken } = resolveOpenCodeSharedServerEnvelope({
+    state,
+    source,
+    stamped: {
+      paneKey: stampedPaneKey,
+      tabId: stampedTabId,
+      worktreeId: stampedWorktreeId,
+      launchToken: stampedLaunchToken
+    },
+    sessionId: providerSession?.id
+  })
+  // Why after the resolve: tracking the stamped token first would let a stale
+  // shared-server stamp overwrite the pane's live token; the resolved envelope
+  // carries the stored token (or nothing) for bound sessions instead.
+  trackOpenCodePaneLaunchToken(state, paneKey, launchToken)
   if (
     source === 'codex' &&
     shouldRejectUnbackedCodexSessionEvent(state, paneKey, providerSession)
   ) {
     return null
   }
-  if (source === 'claude') {
-    if (shouldRejectClaudeSessionReplacement(state, paneKey, providerSession?.id)) {
-      return null
-    }
-    state.claudeUnconfirmedRestoredStatusPaneKeys.delete(paneKey)
+  if (source === 'claude' && shouldRejectClaudeSessionReplacement(state, paneKey, providerSession?.id)) {
+    return null
   }
   const providerPromptId =
     source === 'claude'
@@ -83,6 +112,7 @@ export function normalizeHookPayload(
   ) {
     return null
   }
+  const previousStatus = state.lastStatusByPaneKey.get(paneKey)
   // Why: only a MANUAL completion claims anything, so only it may write compact-scoped state. An
   // auto compact runs inside a turn that resumes and emits its own Stop; running the ownership
   // guard for it would burn the pane's consumed-compact slot on an event that maps to nothing.

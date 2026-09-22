@@ -2,6 +2,20 @@ import type { AgentStateHistoryEntry, AgentStatusEntry } from '../agent-status-t
 import { AGENT_STATE_HISTORY_MAX } from '../agent-status-types'
 import { structuralValuesEqualIgnoringUndefined } from '../structural-value-equality'
 
+/** A host-owned structured session keeps its turn, so only other sessions count as replaced. */
+export function sessionNameIdentityReplaced(
+  previous: Pick<AgentStatusEntry, 'agentType' | 'providerSession'> | undefined,
+  payload: Pick<AgentStatusEntry, 'agentType'>,
+  metadata:
+    | { structuredHostOwned?: boolean; providerSession?: AgentStatusEntry['providerSession'] }
+    | undefined
+): boolean {
+  return (
+    metadata?.structuredHostOwned !== true &&
+    isSessionNameIdentityReplacement(previous, payload.agentType, metadata?.providerSession)
+  )
+}
+
 export function isSessionNameIdentityReplacement(
   previous: Pick<AgentStatusEntry, 'agentType' | 'providerSession'> | undefined,
   agent: AgentStatusEntry['agentType'],

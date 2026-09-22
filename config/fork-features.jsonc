@@ -1092,7 +1092,7 @@
         "src/cli/remote-selection-flag-rejection.ts",
         "src/cli/runtime-client.ts",
         "src/main/browser/doc-preview-file-reader.ts",
-        "src/main/runtime/agent-session-store-transaction-lock.ts",
+        "src/main/file-transaction-lock.ts",
         "src/main/runtime/pairing-network-interfaces.ts",
         "src/main/runtime/rpc/core.ts",
         "src/main/runtime/rpc/errors.ts",

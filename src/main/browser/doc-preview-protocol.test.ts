@@ -270,7 +270,7 @@ describe('installDocPreviewProtocolHandler', () => {
     installDocPreviewProtocolHandler()
 
     expect(mocks.installBrowserSessionPartitionPolicies).toHaveBeenCalledWith(
-      expect.objectContaining({ partition: 'orca-doc-preview', userAgentMode: 'clean' }),
+      expect.objectContaining({ partition: 'orca-doc-preview' }),
       expect.anything()
     )
   })

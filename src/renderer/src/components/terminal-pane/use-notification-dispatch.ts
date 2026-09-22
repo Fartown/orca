@@ -2,7 +2,6 @@ import { useCallback } from 'react'
 import { useAppStore } from '@/store'
 import { captureNotificationSessionName } from '@/session-names/notification-session-name'
 import { resolveCommittedTitleAgentType } from '@/lib/pane-agent-evidence'
-import { getRepoMapFromState, getWorktreeMapFromState } from '@/store/selectors'
 import { playDesktopNotificationSound } from '@/lib/desktop-notification-sound'
 import { showBlockedNotificationFallbackToast } from '@/lib/blocked-notification-fallback'
 import { buildAgentNotificationId } from '../../../../shared/agent-notification-id'
@@ -17,7 +16,7 @@ import type {
   AgentCompletionStatusSnapshot
 } from './agent-completion-coordinator-types'
 import {
-  countReposNeedingNotificationDisambiguation,
+  getNotificationWorkspaceLabels,
   isCurrentLivePaneKey
 } from './terminal-notification-state'
 import { createTerminalAttentionSurface } from './terminal-attention-surface'
@@ -138,13 +137,6 @@ export function dispatchTerminalNotification(
 
   // Desktop settings are applied in main after independent mobile delivery.
 
-  // Why: prefer worktree.repoId over string-parsing the worktreeId. The
-  // `${repoId}::${path}` format is an implementation detail of id
-  // construction; coupling the notification dispatcher to it would silently
-  // drop the repo label if that format ever changes. The worktree object
-  // itself is the source of truth for its owning repo.
-  const worktree = getWorktreeMapFromState(state).get(worktreeId)
-  const repo = worktree ? getRepoMapFromState(state).get(worktree.repoId) : null
   const customSoundId = state.settings?.notifications?.customSoundId ?? 'system'
   const customSoundVolume = state.settings?.notifications?.customSoundVolume ?? null
   // Why: pane keys are reused across turns. A rich OS notification must not
@@ -198,9 +190,7 @@ export function dispatchTerminalNotification(
         ...(notificationId ? { notificationId } : {}),
         worktreeId: request.workspaceId,
         paneKey: request.subjectKey ?? undefined,
-        repoLabel: repo?.displayName,
-        worktreeLabel: worktree?.displayName || worktree?.branch || worktreeId,
-        hasMultipleActiveRepos: countReposNeedingNotificationDisambiguation(state) > 1,
+        ...getNotificationWorkspaceLabels(state, request.workspaceId, event.terminalTitle),
         terminalTitle: event.terminalTitle,
         ...(sessionTitle ? { sessionTitle } : {}),
         isActiveWorktree: request.workspaceIsActive,

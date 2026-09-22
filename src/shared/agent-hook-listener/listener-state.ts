@@ -11,6 +11,11 @@ import type { ClaudeSubagentRoster } from '../claude-subagent-roster'
 import type { CodexSubagentRoster } from '../codex-subagent-roster'
 import type { CodexSubagentTranscriptState } from '../codex-subagent-transcript'
 import type { AgentHookEventPayload, ToolSnapshot } from './listener-event'
+import {
+  moveOpenCodeSessionBindings,
+  unbindOpenCodeSessionsOfPane,
+  type OpenCodeSessionBinding
+} from './opencode-session-registry'
 import type { ClaudeSessionActivity } from '../claude-session-ownership/claude-session-activity'
 
 /** Per-listener-instance caches needing per-PTY teardown; Orca's main process and the relay each get their own, never shared. */
@@ -49,6 +54,15 @@ export type HookListenerState = {
   codexTitleTaskSessionsByPaneKey: Map<string, Set<string>>
   /** Newest Grok turn per pane, used to reject end reports that arrive after a replacement prompt. */
   grokActiveTurnByPaneKey: Map<string, GrokActiveTurn>
+  /**
+   * OpenCode session id -> owning pane, observed from the client side. The
+   * shared v2 server stamps every post with its own frozen pane, so ingest
+   * reattributes bound sessions before disposition. Not a state claim itself —
+   * it names no row — so paneHasStateClaims ignores it.
+   */
+  opencodeSessionPaneBySessionId: Map<string, OpenCodeSessionBinding>
+  /** Last launch token seen per pane; a rewritten shared-server post needs the bound pane's live token to pass its fence. */
+  lastLaunchTokenByPaneKey: Map<string, string>
 }
 
 export type GrokActiveTurn = {
@@ -108,7 +122,9 @@ export function createHookListenerState(
     codexSubagentTranscriptByPaneKey: new Map(),
     codexLeadStateByPaneKey: new Map(),
     codexTitleTaskSessionsByPaneKey: new Map(),
-    grokActiveTurnByPaneKey: new Map()
+    grokActiveTurnByPaneKey: new Map(),
+    opencodeSessionPaneBySessionId: new Map(),
+    lastLaunchTokenByPaneKey: new Map()
   }
   legacyStatusAdapterByState.set(state, adapter)
   return state
@@ -122,6 +138,15 @@ export function admitLegacyAgentStatus(
   options?: { moveToEnd?: boolean }
 ): boolean {
   return legacyStatusAdapter(state).admit(caller, mode, entry, options)
+}
+
+export function canAdmitLegacyAgentStatusEntry(
+  state: HookListenerState,
+  caller: AgentStatusLegacyIngressCaller,
+  entry: AgentHookEventPayload,
+  mode: AgentStatusLegacyAdmissionMode
+): boolean {
+  return legacyStatusAdapter(state).canAdmit(caller, mode, entry)
 }
 
 export function deleteLegacyAgentStatus(state: HookListenerState, paneKey: string): boolean {
@@ -188,6 +213,8 @@ export function clearPaneCacheState(state: HookListenerState, paneKey: string): 
   state.codexLeadStateByPaneKey.delete(paneKey)
   state.codexTitleTaskSessionsByPaneKey.delete(paneKey)
   state.grokActiveTurnByPaneKey.delete(paneKey)
+  unbindOpenCodeSessionsOfPane(state, paneKey)
+  deletePaneScopedCacheEntry(state.lastLaunchTokenByPaneKey, paneKey)
 }
 
 /** Does this pane still hold anything that can ASSERT a state — a stored row, or a Claude latch that
@@ -264,6 +291,8 @@ export function movePaneCacheState(
   movePaneScopedMapEntries(state.codexLeadStateByPaneKey, fromPaneKey, toPaneKey)
   movePaneScopedMapEntries(state.codexTitleTaskSessionsByPaneKey, fromPaneKey, toPaneKey)
   movePaneScopedMapEntries(state.grokActiveTurnByPaneKey, fromPaneKey, toPaneKey)
+  moveOpenCodeSessionBindings(state, fromPaneKey, toPaneKey)
+  movePaneScopedMapEntries(state.lastLaunchTokenByPaneKey, fromPaneKey, toPaneKey)
 }
 
 export function clearPaneTurnCacheState(state: HookListenerState, paneKey: string): void {
@@ -315,4 +344,6 @@ export function clearAllListenerCaches(state: HookListenerState): void {
   state.codexLeadStateByPaneKey.clear()
   state.codexTitleTaskSessionsByPaneKey.clear()
   state.grokActiveTurnByPaneKey.clear()
+  state.opencodeSessionPaneBySessionId.clear()
+  state.lastLaunchTokenByPaneKey.clear()
 }

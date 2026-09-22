@@ -1,7 +1,7 @@
 import { randomBytes } from 'node:crypto'
 import { z } from 'zod'
 import { writeDurableSecureJsonFile } from '../../../shared/secure-file'
-import { withAgentSessionStoreTransactionLock } from '../../runtime/agent-session-store-transaction-lock'
+import { withFileTransactionLock } from '../../file-transaction-lock'
 import {
   ARTIFACT_SHARE_FILE_VERSION,
   readVersionedArtifactShareFile
@@ -47,7 +47,7 @@ export function readArtifactShareWorkspaces(home: string): StoredArtifactShareWo
 /** Every change goes through one cross-process lock so the app and a relay never lose each other's writes. */
 async function mutateRecords<T>(home: string, apply: (records: StoredRecords) => T): Promise<T> {
   const path = artifactShareRecordsPath(home)
-  return withAgentSessionStoreTransactionLock(path, async () => {
+  return withFileTransactionLock(path, async () => {
     const records = readVersionedArtifactShareFile(path, StoredRecords) ?? emptyRecords()
     const result = apply(records)
     writeDurableSecureJsonFile(path, { ...records, version: ARTIFACT_SHARE_FILE_VERSION })

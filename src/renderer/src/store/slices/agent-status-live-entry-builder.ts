@@ -1,7 +1,7 @@
 import type { AppState } from '../types'
 import {
   appendSessionNameHistory,
-  isSessionNameIdentityReplacement,
+  sessionNameIdentityReplaced,
   sessionNameStateStartedAt
 } from '../../../../shared/session-names/session-name-history'
 import {
@@ -80,10 +80,7 @@ export function buildAgentStatusLiveEntry(
   if (existing && updatedAt < existing.updatedAt && !timing?.allowOlderTimestamp) {
     return { entry: null, reason: 'stale' }
   }
-  // Structured sessions retain the host-owned turn when provider metadata resolves.
-  const sessionNameIdentityChanged =
-    metadata?.structuredHostOwned !== true &&
-    isSessionNameIdentityReplacement(existing, payload.agentType, metadata?.providerSession)
+  const sessionNameIdentityChanged = sessionNameIdentityReplaced(existing, payload, metadata)
   let history = existing?.stateHistory ?? []
   let lastCompletedAssistantMessage = existing?.lastCompletedAssistantMessage
   const boundaryLandsOnRealDone =
@@ -236,6 +233,7 @@ export function buildAgentStatusLiveEntry(
     agentType: identity.agentType,
     model:
       payload.model ?? (existing?.agentType === identity.agentType ? existing.model : undefined),
+    ...(payload.modelSwitchCommand ? { modelSwitchCommand: payload.modelSwitchCommand } : {}),
     paneKey,
     terminalHandle: statusTerminalHandle,
     worktreeId:

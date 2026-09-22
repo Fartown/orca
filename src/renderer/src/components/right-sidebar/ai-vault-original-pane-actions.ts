@@ -4,6 +4,8 @@ import { toast } from 'sonner'
 import { activateTabAndFocusPane } from '@/lib/activate-tab-and-focus-pane'
 import { activateAndRevealWorktree } from '@/lib/worktree-activation'
 import { useAppStore } from '@/store'
+import { activateAiVaultStructuredSession } from '@/lib/activate-ai-vault-structured-session'
+import { findStructuredAgentSessionTab } from '@/lib/structured-agent-session-tab-activation'
 import type { AgentStatusState } from '../../../../shared/agent-status-types'
 import type { AiVaultSession } from '../../../../shared/ai-vault-types'
 import { translate } from '@/i18n/i18n'
@@ -19,6 +21,7 @@ export function useAiVaultOriginalPaneActions(): {
     session: AiVaultSession
   ) => ReturnType<typeof findOriginalAiVaultSessionPane>
   getSessionLiveState: (session: AiVaultSession) => AgentStatusState | null
+  isStructuredSessionOpen: (session: AiVaultSession) => boolean
   jumpToOriginalPane: (session: AiVaultSession) => void
   jumpToWorktree: (worktreeId: string) => void
 } {
@@ -29,8 +32,24 @@ export function useAiVaultOriginalPaneActions(): {
       sleepingAgentSessionsByPaneKey: s.sleepingAgentSessionsByPaneKey,
       agentLaunchConfigByPaneKey: s.agentLaunchConfigByPaneKey,
       tabsByWorktree: s.tabsByWorktree,
-      terminalLayoutsByTabId: s.terminalLayoutsByTabId
+      terminalLayoutsByTabId: s.terminalLayoutsByTabId,
+      unifiedTabsByWorktree: s.unifiedTabsByWorktree
     }))
+  )
+
+  const isStructuredSessionOpen = useCallback(
+    (session: AiVaultSession): boolean => {
+      const structured = session.structuredSession
+      return structured
+        ? Boolean(
+            findStructuredAgentSessionTab(originalPaneLookupState.unifiedTabsByWorktree, {
+              workspaceId: structured.workspaceId,
+              sessionId: structured.sessionId
+            })
+          )
+        : false
+    },
+    [originalPaneLookupState.unifiedTabsByWorktree]
   )
   // Why: loading, filtered, or collapsed views may render no session rows.
   // Build once on the first actual lookup, then share it across visible rows.
@@ -51,9 +70,16 @@ export function useAiVaultOriginalPaneActions(): {
     [getOriginalPaneIndex]
   )
 
-  const jumpToOriginalPane = useCallback((session: AiVaultSession): void => {
-    jumpToAiVaultOriginalPane(session)
-  }, [])
+  const jumpToOriginalPane = useCallback(
+    (session: AiVaultSession): void => {
+      if (session.structuredSession && isStructuredSessionOpen(session)) {
+        void activateAiVaultStructuredSession(session)
+        return
+      }
+      jumpToAiVaultOriginalPane(session)
+    },
+    [isStructuredSessionOpen]
+  )
 
   const jumpToWorktree = useCallback((worktreeId: string): void => {
     if (!activateAndRevealWorktree(worktreeId)) {
@@ -66,7 +92,13 @@ export function useAiVaultOriginalPaneActions(): {
     }
   }, [])
 
-  return { getOriginalPaneTarget, getSessionLiveState, jumpToOriginalPane, jumpToWorktree }
+  return {
+    getOriginalPaneTarget,
+    getSessionLiveState,
+    isStructuredSessionOpen,
+    jumpToOriginalPane,
+    jumpToWorktree
+  }
 }
 
 export type AiVaultOriginalPaneJumpResult = 'focused' | 'missing' | 'workspace-unavailable'
