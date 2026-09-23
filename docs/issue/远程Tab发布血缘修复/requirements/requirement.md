@@ -90,7 +90,7 @@ updated: 2026-09-23
 ## 9. 外部来源
 
 - 现场诊断报告:`.docs/remote-tab-sync-ui-validation/2026-09-23/README.md`(git 忽略目录,含回放脚本与证据 JSON)。
-- 上游修复:`stablyai/orca` commit `5c2d3322c1`(PR #19860)。
+- 上游修复:[stablyai/orca PR #19860](https://github.com/stablyai/orca/pull/19860),commit [`5c2d3322c1`](https://github.com/stablyai/orca/commit/5c2d3322c1cb08c0ca71c9bf9b9a7596cded6ac7)。提交标题是终端识别问题,内含本次同步修复:关闭 Tab 删除强行生成新 headless 发布标识的代码(保留原标识、递增版本)、修正列表移除通知与同代发布标识的淘汰规则、新增 `headless-close-keeps-publication-epoch.test.ts`。注意:该提交信息称兄弟写路径已沿用 epoch,实际仍有 7 处在铸造新 epoch,即本需求的修复范围。
 
 ## 10. 需求变更记录
 
