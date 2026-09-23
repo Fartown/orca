@@ -54,6 +54,12 @@ export const MOBILE_WEB_APP_BUNDLE_MAX_TOTAL_BYTES = 9 * 1024 * 1024
  *
  * This table is the fence's only input, so a route added to the tree stales it and the pins beside
  * the fence fail until it is re-measured. That is the point: the bound is re-derived, never bumped.
+ *
+ * Re-measured after mobile session continuation at `ef98278cfc`, the first twelve prefixes stay
+ * fixed and the final three each lose one script. The session route now reaches both
+ * `mobile-tui-agents.ts` and `clipboard-text.ts`; once the tasks route joins, their importer sets
+ * match and esbuild folds the former clipboard-only chunk into the agent-catalog chunk. This is a
+ * sharing change, so the four-script margin remains unchanged.
  */
 export const MOBILE_WEB_APP_BUNDLE_SCRIPT_SWEEP = [
   ['./h/[hostId]/[...page].tsx', 3],
@@ -68,9 +74,9 @@ export const MOBILE_WEB_APP_BUNDLE_SCRIPT_SWEEP = [
   ['./h/[hostId]/review/[worktreeId].tsx', 43],
   ['./h/[hostId]/session/[worktreeId].tsx', 51],
   ['./h/[hostId]/source-control/[worktreeId].tsx', 56],
-  ['./h/[hostId]/tasks.tsx', 63],
-  ['./h/[hostId]/web.tsx', 64],
-  ['./h/_layout.tsx', 66]
+  ['./h/[hostId]/tasks.tsx', 62],
+  ['./h/[hostId]/web.tsx', 63],
+  ['./h/_layout.tsx', 65]
 ]
 
 const sweptScripts = MOBILE_WEB_APP_BUNDLE_SCRIPT_SWEEP.map(([, scripts]) => scripts)
@@ -188,7 +194,7 @@ export async function readMobileWebBundleMaxAssets() {
  * shells return null for a manifest over MOBILE_WEB_BUNDLE_MAX_ASSETS rather than dropping the
  * extra assets, so a route count that pushes the chunk envelope plus images plus the document past
  * it would pass this build and fail on the device with nothing to read. At today's 42 images that
- * is 31 routes, inside what Phase C adds, which is why this is a build failure and not a comment.
+ * is 32 routes, inside what Phase C adds, which is why this is a build failure and not a comment.
  * The envelope grants the worst swept route to each one past the sweep, so re-measuring a tree
  * whose routes share more moves that crossing out again.
  */
