@@ -49,9 +49,6 @@ export function normalizeHookPayload(
     worktreeId: stampedWorktreeId,
     launchToken: stampedLaunchToken
   } = envelope
-  if (source === 'claude') {
-    state.claudeUnconfirmedRestoredStatusPaneKeys.delete(stampedPaneKey)
-  }
   const eventName =
     readFirstString(record, ['hook_event_name', 'hookEventName', 'hook_type', 'hookType']) ??
     hookPayloadRecord.hook_event_name ??
@@ -86,8 +83,14 @@ export function normalizeHookPayload(
   ) {
     return null
   }
-  if (source === 'claude' && shouldRejectClaudeSessionReplacement(state, paneKey, providerSession?.id)) {
-    return null
+  if (source === 'claude') {
+    // Why after the guard and not before: a rejected replacement belongs to another session, and
+    // clearing the mark here would spend the incumbent's pending restored-unconfirmed state on an
+    // event that maps to nothing.
+    if (shouldRejectClaudeSessionReplacement(state, paneKey, providerSession?.id)) {
+      return null
+    }
+    state.claudeUnconfirmedRestoredStatusPaneKeys.delete(paneKey)
   }
   const providerPromptId =
     source === 'claude'
