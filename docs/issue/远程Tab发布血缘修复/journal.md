@@ -79,3 +79,18 @@ external_ids: ["stablyai/orca#19860"]
   - 全仓检索确认除 `create-runtime-owned` 的合法 `??` 回退外无残留 `headless:${Date.now()}` 铸造点
 - 未解决问题:Q-701(客户端自愈)未决;TC-707 真机验收待含修复的构建
 - 下一步:提交分支、过 fork 门禁、出包后执行 TC-707
+
+### 2026-09-23 最新 integration 基线与出包准备
+
+- 本轮目标:把已验证修复移植到最新 `fork/integration`,完成 PR 前门禁并触发新的 integration release
+- 完成内容:
+  - 从 `origin/fork/integration` `ef98278cfc` 新建独立 worktree,无冲突移植 4 个提交
+  - 保留原 worktree 的未提交 `pnpm-lock.yaml`,未把依赖安装噪声带入本分支
+- 代码或文档变更:
+  - 功能代码与测试不变;补充最新基线复验记录
+- 验证证据:
+  - 定向 7 用例与 `orca-runtime.test.ts` 聚合 1292 用例通过
+  - `pnpm tc`、fork feature、fork docs、architecture policy、四项 localization gate 通过
+  - PR 增量 casting gate 0 findings;全 fork quality/type-aware/React Doctor 增量 0 findings
+- 未解决问题:TC-707 仍需使用新发布包执行真机验收
+- 下一步:创建 PR 合入 `fork/integration`,等待 `preview.28` 发布完成
