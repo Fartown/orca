@@ -1769,6 +1769,53 @@
       "checks": [
         "pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/components/rich-markdown-override src/renderer/src/components/editor/editor-panel-render-model.test.ts src/renderer/src/components/editor/EditorContent.markdown-classification.test.tsx src/renderer/src/components/editor/markdown-rich-mode.test.ts src/renderer/src/components/editor/markdown-render-mode.test.ts"
       ]
+    },
+    {
+      "id": "session-tabs-publication-lineage",
+      "title": "远程Tab发布血缘修复:headless 写路径沿用现任 publicationEpoch",
+      "goal": "headless 内容修改不再伪造发布者换代，远程 Tab 同步与终端连接不被误退役打断",
+      "journal": "docs/issue/远程Tab发布血缘修复/journal.md",
+      "dependsOn": [
+        "src/main/runtime/orca-runtime.ts",
+        "src/shared/constants.ts",
+        "src/shared/runtime-types.ts"
+      ],
+      "policyId": "session-tabs-publication-lineage",
+      "ownedPaths": [
+        "docs/issue/远程Tab发布血缘修复/**",
+        "src/main/runtime/headless-sibling-writers-keep-publication-epoch.test.ts"
+      ],
+      "requiredFiles": [
+        "src/main/runtime/headless-sibling-writers-keep-publication-epoch.test.ts"
+      ],
+      "seams": [
+        {
+          "file": "src/main/runtime/orca-runtime-move-headless-mobile-session-tab.ts",
+          "mustContain": "minting a fresh publisher fences live renderer frames",
+          "why": "tab reorder/split/move-to-group carry the incumbent epoch instead of minting one (REQ-701)"
+        },
+        {
+          "file": "src/main/runtime/orca-runtime-persist-headless-session-tab-props.ts",
+          "mustContain": "minting a fresh publisher fences live renderer frames",
+          "why": "tab props and pane layout carry the incumbent epoch instead of minting one (REQ-701)"
+        },
+        {
+          "file": "src/main/runtime/orca-runtime-apply-mobile-session-tab-navigation.ts",
+          "mustContain": "minting a fresh publisher fences live renderer frames",
+          "why": "tab activation carries the incumbent epoch instead of minting one (REQ-701)"
+        },
+        {
+          "file": "src/main/runtime/orca-runtime-close-structured-agent-session-tab.ts",
+          "mustContain": "minting a fresh publisher fences live renderer frames",
+          "why": "browser tab retirement carries the incumbent epoch instead of minting one (REQ-701)"
+        }
+      ],
+      "tests": [
+        "src/main/runtime/headless-sibling-writers-keep-publication-epoch.test.ts"
+      ],
+      "checks": [
+        "pnpm exec vitest run --config config/vitest.config.ts src/main/runtime/headless-sibling-writers-keep-publication-epoch.test.ts src/main/runtime/headless-close-keeps-publication-epoch.test.ts"
+      ]
     }
   ]
 }

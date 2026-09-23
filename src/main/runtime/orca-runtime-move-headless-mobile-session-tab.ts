@@ -61,7 +61,9 @@ export class OrcaRuntimeWithMoveHeadlessMobileSessionTab extends OrcaRuntimeWith
       : [{ ...targetGroup, tabOrder, activeTabId: reorderedTargetActiveTabId }]
     const nextSnapshot: RuntimeMobileSessionTabsSnapshot = {
       ...snapshot,
-      publicationEpoch: `headless:${Date.now().toString(36)}`,
+      // Why: the epoch names the publisher generation; a headless content edit
+      // bumps the version, minting a fresh publisher fences live renderer frames.
+      publicationEpoch: snapshot.publicationEpoch,
       snapshotVersion: snapshot.snapshotVersion + 1,
       activeTabId: active?.id ?? null,
       activeTabType: active?.type ?? null,
@@ -104,7 +106,9 @@ export class OrcaRuntimeWithMoveHeadlessMobileSessionTab extends OrcaRuntimeWith
     }
     const nextSnapshot: RuntimeMobileSessionTabsSnapshot = {
       ...snapshot,
-      publicationEpoch: `headless:${Date.now().toString(36)}`,
+      // Why: the epoch names the publisher generation; a headless content edit
+      // bumps the version, minting a fresh publisher fences live renderer frames.
+      publicationEpoch: snapshot.publicationEpoch,
       snapshotVersion: snapshot.snapshotVersion + 1,
       activeGroupId: split.newGroupId,
       tabGroups: split.groups,
@@ -140,7 +144,9 @@ export class OrcaRuntimeWithMoveHeadlessMobileSessionTab extends OrcaRuntimeWith
     const layout = moved.layout ?? { type: 'leaf' as const, groupId: move.targetGroupId }
     const nextSnapshot: RuntimeMobileSessionTabsSnapshot = {
       ...snapshot,
-      publicationEpoch: `headless:${Date.now().toString(36)}`,
+      // Why: the epoch names the publisher generation; a headless content edit
+      // bumps the version, minting a fresh publisher fences live renderer frames.
+      publicationEpoch: snapshot.publicationEpoch,
       snapshotVersion: snapshot.snapshotVersion + 1,
       activeGroupId: move.targetGroupId,
       tabGroups: moved.groups,
