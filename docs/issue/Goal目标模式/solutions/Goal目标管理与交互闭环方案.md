@@ -3,7 +3,7 @@ title: Goal 目标管理与交互闭环方案
 document_type: technical-solution
 status: implementing
 created_at: 2026-09-05
-updated_at: 2026-09-16
+updated_at: 2026-09-23
 issue: Goal目标模式
 scope: 原生目标管理 UI、执行控制与历史兼容
 ---
@@ -62,7 +62,7 @@ RPC 新增 `goals.listEditorDrafts/getEditorDraft/saveEditorDraft`。原有生�
 1. 填写目标、选已有执行会话、选择守卫（新建默认 Codex，也可选 Claude Code）。守卫选择位于主表单。
 2. 点击生成，守卫在宿主解析出的工作区读取源码、需求及目标引用的资料，返回 Markdown 文档。已有说明和上次文档作为修订上下文，不覆盖新目标。生成阶段不创建 Goal、不启动驱动、不注入执行会话。
 3. 查看、编辑或预览文档；也可粘贴已有文档。目标、守卫或会话改变后要求重新核对。命令检查折叠为可选高级设置。
-4. 点击“按此文档开始执行”，将最终文档保存在 `spec.acceptanceDocument`、版本记录和 `judge-criteria.md`。执行提示与整体裁判取同一份文档原文；`acceptanceText` 同步保留文本供旧读取方兼容。
+4. 点击“按此文档开始执行”，将最终文档保存在 `spec.acceptanceDocument`、版本记录和 `judge-criteria.md`。执行提示与整体裁判取同一份文档原文；`acceptanceText` 同步保留文本供旧读取方兼容。（2026-09-23 注：本条的实现方式——执行提示只发文档、不再发目标原文——由 [守卫监工修订方案](Goal守卫监工与唤醒兜底修订方案.md) §5.5.5 取代，待评审。）
 5. 守卫独立验收文档，具体缺口沿用既有判词与续跑链路返回；默认沿用 Agent 权限配置，不强制只读沙箱。详情及版本列表可查看文档。
 
 技术接入：`goals.draftAcceptance` 启动短操作，`goals.getAcceptanceDraft` 查询，`goals.cancelAcceptanceDraft` 取消；生成任务与结果存于 Goal Home 的 `v2/drafts/`。宿主通过既有 `runProcess` 管理生成进程及取消，生成与 CLI 裁判共享 `goal-agent-provider.ts` 中的 Agent 参数及输出解析。当前仍仅支持本地交互式执行会话；远程终端不会由本机代跑。
@@ -933,6 +933,13 @@ WP1/2 是可演示的先行单元，但不能据此宣称 REQ-118/REQ-120 或整
 实际安装 App 的资源布局、各 provider 的停止确认强度、headless/peer 服务组装、三平台启动与升级存活、真实 UI 可见性都未在本轮执行。源码存在只证明复用候选；本方案不把这些未知项写成当前已支持。judge 只输出文本 PASS、goal-loop 每轮整体写回目标对象这两条沿用原稿，本次评审未重新核实。
 
 ## 8. 变更记录
+
+### 2026-09-23：驱动判定部分由修订方案取代
+
+- 变更原因：2026-09-22 travel 目标事故；用户确认守卫设计需要重做。
+- 变更内容：本方案「复用现有独立驱动、不重写业务算法」的前提，以及 09-08 实施修订第 4 条的实现方式，由 [守卫监工修订方案](Goal守卫监工与唤醒兜底修订方案.md) 取代。UI、宿主控制服务、RPC 与草稿部分继续有效。
+- 影响范围：REQ-103、REQ-106、REQ-112～REQ-114、REQ-121；新增 REQ-124～REQ-126。
+- 是否需要通知相关方：随修订方案一起评审。
 
 ### 2026-09-08：整体文本裁判落地
 
