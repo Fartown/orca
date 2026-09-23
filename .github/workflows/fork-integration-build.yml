@@ -159,6 +159,9 @@ jobs:
           node-version-file: package.json
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # Why here: build:release now bundles the mobile web app, which resolves React Native and
+      # Expo from mobile/node_modules — the root install leaves that empty.
+      - uses: ./.github/actions/install-mobile-dependencies
       - name: Test integration build contracts
         run: pnpm exec vitest run --config config/vitest.config.ts config/scripts/integration-builds/integration-builds.test.mjs
       - name: Build desktop and native helpers
