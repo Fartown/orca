@@ -16,6 +16,8 @@ updated: 2026-09-23
 
 上游 #19860(2026-09-18 合入,commit `5c2d3322c1`)已修复 `closeHeadlessMobileTerminalTab` 一处:关闭不再铸造新 epoch,并确立规则——**epoch 标识发布者世代,内容修改只递增 `snapshotVersion`**(`getMergedMobileSessionPublicationEpoch` 的既有注释与该提交的测试 `headless-close-keeps-publication-epoch.test.ts`)。但同语义的其余 headless 写路径仍在每次写入时铸造新 `headless:<时间戳>` epoch,相同的投毒机制仍可经这些路径复发。
 
+可达性核实(2026-09-23,逐调用点核对):7 处残留铸造点中,6 处(Tab 拖动×3、属性×2、激活×1)的调用方均有"仅在无权威 renderer 时执行"的前置守卫(`!notifier?.moveSessionTab`、`getAvailableAuthoritativeWindow()` 早退、`shouldPersistHeadlessMobileSessionActivation`),renderer 存活时不可达,属一致性加固;`retireRuntimeOwnedBrowserSessionTab` 存在 renderer 存活时可达的路径(`runtime-browser-client-page-release.ts` 的租约围栏释放、`:headless-merge:` 快照上的离屏浏览器 Tab 关闭),是修复后仍残留的现行投毒路径。
+
 目标:把"写内容不换发布者"的规则补齐到全部 headless 写路径,使任何 Tab 内容修改(移动、属性、布局、激活、浏览器 Tab 退役)都不再触发客户端误退役,消除"远程 Tab 不同步 / 发消息即重连"这一类故障的复发路径。
 
 ## 2. 用户场景

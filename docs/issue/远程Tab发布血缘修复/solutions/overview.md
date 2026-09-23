@@ -50,12 +50,12 @@ publicationEpoch: snapshot.publicationEpoch,
 
 ## 5. 仓库改动总览
 
-| 文件 | 位置 | 写路径 | 关联 REQ |
-| --- | --- | --- | --- |
-| `src/main/runtime/orca-runtime-move-headless-mobile-session-tab.ts` | reorder / split / move-to-group 三处 | Tab 拖动排序、拆组、移组 | REQ-701/702 |
-| `src/main/runtime/orca-runtime-persist-headless-session-tab-props.ts` | `applyHeadlessSessionTabPropsToSnapshot` / `applyHeadlessTerminalPaneLayoutToSnapshot` | 置顶/改色/视图模式、分屏布局 | REQ-701/702 |
-| `src/main/runtime/orca-runtime-apply-mobile-session-tab-navigation.ts` | `activateHeadlessMobileSessionTerminalTab` | 激活切换 | REQ-701/702 |
-| `src/main/runtime/orca-runtime-close-structured-agent-session-tab.ts` | `retireRuntimeOwnedBrowserSessionTab` | 浏览器 Tab 退役(租约围栏) | REQ-701/702 |
+| 文件 | 位置 | 写路径 | 可达性 | 关联 REQ |
+| --- | --- | --- | --- | --- |
+| `src/main/runtime/orca-runtime-close-structured-agent-session-tab.ts` | `retireRuntimeOwnedBrowserSessionTab` | 浏览器 Tab 退役(租约围栏) | **renderer 存活可达**(现行投毒路径) | REQ-701/702 |
+| `src/main/runtime/orca-runtime-move-headless-mobile-session-tab.ts` | reorder / split / move-to-group 三处 | Tab 拖动排序、拆组、移组 | 仅无权威 renderer 时可达(一致性加固) | REQ-701/702 |
+| `src/main/runtime/orca-runtime-persist-headless-session-tab-props.ts` | `applyHeadlessSessionTabPropsToSnapshot` / `applyHeadlessTerminalPaneLayoutToSnapshot` | 置顶/改色/视图模式、分屏布局 | 仅无权威 renderer 时可达(一致性加固) | REQ-701/702 |
+| `src/main/runtime/orca-runtime-apply-mobile-session-tab-navigation.ts` | `activateHeadlessMobileSessionTerminalTab` | 激活切换 | 仅无权威 renderer 时可达(一致性加固) | REQ-701/702 |
 | `src/main/runtime/headless-sibling-writers-keep-publication-epoch.test.ts` | 新增 | 5 条回归用例 | REQ-703 |
 
 `closeHeadlessMobileTerminalTab` 不在改动内:上游 #19860 已修并带测试 `headless-close-keeps-publication-epoch.test.ts`,随分支更新(至 `origin/fork/integration` `144f0ac71b`)合入。
