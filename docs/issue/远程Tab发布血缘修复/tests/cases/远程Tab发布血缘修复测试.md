@@ -3,7 +3,7 @@ title: "远程Tab发布血缘修复测试"
 document_type: test-case
 status: ready
 created: 2026-09-23
-updated: 2026-09-23
+updated: 2026-09-24
 ---
 
 # 远程Tab发布血缘修复测试
@@ -79,6 +79,8 @@ updated: 2026-09-23
 
 ## TC-707 真机现场验收
 
+> 观测说明：daemon 无 session-attached 不能代替客户端无重连。验收需直接连续观测客户端重连状态并确认每条输入回显。
+
 - 关联 REQ:REQ-702、REQ-704
 - 功能模块:桌面端 ↔ paired runtime 远程工作区
 - 优先级:P0;测试类型:真机手动
@@ -88,6 +90,6 @@ updated: 2026-09-23
   2. 向远程 agent 终端连续发送 3 条消息
   3. 在远程主机上新建一个终端 Tab
 - 预期结果:
-  1. 步骤 2 中不出现"正在重新连接到远程运行时"横幅
-  2. mini 侧 daemon 日志在步骤 1/2 期间无对应 `session-attached` 重挂
+  1. 步骤 2 中每条消息均确认收到终端响应，且连续观测期间不出现"正在重新连接到远程运行时"横幅
+  2. 记录 mini 侧 daemon 日志在步骤 1/2 期间对应 `session-attached` 重挂事件，作为辅助证据；计数为 0 不能替代步骤 1 的客户端观测
   3. 步骤 3 的新 Tab 在桌面端出现

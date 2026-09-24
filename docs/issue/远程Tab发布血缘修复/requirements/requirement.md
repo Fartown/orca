@@ -3,7 +3,7 @@ title: "远程Tab发布血缘修复"
 document_type: requirement
 status: ready
 created: 2026-09-23
-updated: 2026-09-23
+updated: 2026-09-24
 ---
 
 # 远程Tab发布血缘修复
@@ -12,13 +12,13 @@ updated: 2026-09-23
 
 远程工作区(paired runtime)的会话 Tab 列表由主机以 `(publicationEpoch, snapshotVersion)` 发布、客户端订阅合并。`publicationEpoch` 的语义是"发布者换代":客户端把新 epoch 顶替掉的旧 epoch 永久列入退役名单(`sessionTabsPublicationEpochHistoryByWorktree`),退役即永久拒收,只在内存中、重启才清空。
 
-2026-09-23 现场(桌面 mbp5 ↔ mini 的 octo 远程工作区)确认:13:50:44 一次普通的"关闭远程 Tab"操作,经 `closeHeadlessMobileTerminalTab` 把整个工作区快照的 epoch 从 `renderer:…` 改写为 `headless:<时间戳>`——一次内容修改被错误表达成发布者换代。客户端随即将仍在正常工作的 renderer epoch 永久退役,mini 后续用该 epoch 发布的全部帧被静默拒收。症状:远程新建 Tab 在桌面端不出现、已关闭 Tab 的僵尸句柄残留,且该工作区内**每发一条消息终端就弹"正在重新连接到远程运行时"横幅**并重订 PTY 流(空闲时连接完全稳定,发消息与重挂一一对应,有 daemon 日志与对照实验证据)。
+2026-09-23 现场(桌面 mbp5 ↔ mini 的 octo 远程工作区)确认:13:50:44 一次普通的"关闭远程 Tab"操作,经 `closeHeadlessMobileTerminalTab` 把整个工作区快照的 epoch 从 `renderer:…` 改写为 `headless:<时间戳>`——一次内容修改被错误表达成发布者换代。客户端随即将仍在正常工作的 renderer epoch 永久退役,mini 后续用该 epoch 发布的全部帧被静默拒收。已证实的症状是远程新建 Tab 在桌面端不出现、已关闭 Tab 的僵尸句柄残留。用户同时报告“每发一条消息终端就弹重连横幅”，但该现象与 epoch 误退役之间的因果关系尚未证实。2026-09-24 隔离双实例实验已复现 Tab 不同步，期间既有终端仍能正常收发且无重连横幅；详见隔离双实例复验记录。
 
 上游 #19860(2026-09-18 合入,commit `5c2d3322c1`)已修复 `closeHeadlessMobileTerminalTab` 一处:关闭不再铸造新 epoch,并确立规则——**epoch 标识发布者世代,内容修改只递增 `snapshotVersion`**(`getMergedMobileSessionPublicationEpoch` 的既有注释与该提交的测试 `headless-close-keeps-publication-epoch.test.ts`)。但同语义的其余 headless 写路径仍在每次写入时铸造新 `headless:<时间戳>` epoch,相同的投毒机制仍可经这些路径复发。
 
 可达性核实(2026-09-23,逐调用点核对):7 处残留铸造点中,6 处(Tab 拖动×3、属性×2、激活×1)的调用方均有"仅在无权威 renderer 时执行"的前置守卫(`!notifier?.moveSessionTab`、`getAvailableAuthoritativeWindow()` 早退、`shouldPersistHeadlessMobileSessionActivation`),renderer 存活时不可达,属一致性加固;`retireRuntimeOwnedBrowserSessionTab` 存在 renderer 存活时可达的路径(`runtime-browser-client-page-release.ts` 的租约围栏释放、`:headless-merge:` 快照上的离屏浏览器 Tab 关闭),是修复后仍残留的现行投毒路径。
 
-目标:把"写内容不换发布者"的规则补齐到全部 headless 写路径,使任何 Tab 内容修改(移动、属性、布局、激活、浏览器 Tab 退役)都不再触发客户端误退役,消除"远程 Tab 不同步 / 发消息即重连"这一类故障的复发路径。
+目标:把"写内容不换发布者"的规则补齐到全部 headless 写路径,使任何 Tab 内容修改(移动、属性、布局、激活、浏览器 Tab 退役)都不再触发客户端误退役,消除远程 Tab 因误退役而不同步的复发路径；发送后重连须独立验证根因。
 
 ## 2. 用户场景
 
@@ -52,7 +52,7 @@ updated: 2026-09-23
 
 ### REQ-702 误退役类故障不再经 Tab 管理操作复发
 
-- 目标级别：P0；当前状态：测试中（单元层面已覆盖，真机验收 TC-707 待含修复构建）。
+- 目标级别：P0；当前状态：测试中（单元层面已覆盖，隔离双实例关闭路径已验证，TC-707 的真实 agent 与其他 Tab 操作尚未完整覆盖）。
 - 描述：在 renderer 世代存活的远程工作区执行关闭、移动、置顶/改色、分屏布局调整、激活切换、浏览器 Tab 退役后,客户端不得把该 renderer epoch 列入退役名单;主机后续以该 epoch 发布的帧必须被客户端正常接受。
 
 ### REQ-703 回归测试覆盖全部修复点
@@ -62,8 +62,8 @@ updated: 2026-09-23
 
 ### REQ-704 现场故障链路有据可查
 
-- 目标级别：P1；当前状态：已实现（证据链已归档并引用）。
-- 描述：本需求根因(关闭 Tab 投毒 → 客户端永久误退役 → 远程 Tab 不同步 + 发消息即重连)的证据链保留在案:现场诊断报告、安装包回放脚本、daemon 日志时间线,引用 `.docs/remote-tab-sync-ui-validation/2026-09-23/`(git 忽略目录)。
+- 目标级别：P1；当前状态：测试中（Tab 同步证据链已归档，发送后重连的因果环节未证实）。
+- 描述：保存关闭 Tab 改写 epoch → 客户端误退役 → 远程 Tab 不同步的证据链；将用户报告的发送后重连单独记录为未解决问题。daemon 的 session-attached 次数不能代替客户端重连状态观测。现场报告位于 `.docs/remote-tab-sync-ui-validation/2026-09-23/`，本轮复验见 [隔离双实例复验](../tests/runs/2026-09-24-隔离双实例复验.md)。
 
 ## 5. 业务规则
 
@@ -83,6 +83,10 @@ updated: 2026-09-23
 
 已被旧构建投毒的客户端目前只能重启恢复(退役名单在内存)。是否在"已退役 epoch 以更高 version + 相同 runtimeId 归来"时,经权威 `listAll` 确认后调用既有 `reviveRetiredValue` 解除误退役,使卡死客户端免重启自愈。**待确认**,作为后续独立增强,不阻塞本需求。
 
+### Q-702 发送后重连的真实触发条件
+
+完整旧版本在 epoch 被错误更换、客户端不再显示新 Tab 的状态下仍可从界面发送并收到回显，未观察到重连。该实验使用真实终端 shell，尚未复现用户现场的 agent/hooks 和网络条件。不得把 epoch 修复等同于原始重连问题已解决。
+
 ## 8. 已确认结论
 
 - 根因链路(关闭 Tab 改写 epoch → 客户端永久误退役)已经现场日志、安装包回放两次证实(2026-09-23,另一排查会话的诊断报告与本会话的 daemon 日志对照实验)。
@@ -97,3 +101,5 @@ updated: 2026-09-23
 ## 10. 需求变更记录
 
 - 2026-09-23:初始版本。
+
+- 2026-09-24：根据隔离真实 App 正反对照，撤回发送后重连因果关系已证实的表述；REQ-704 恢复测试中，TC-707 保持未完成。

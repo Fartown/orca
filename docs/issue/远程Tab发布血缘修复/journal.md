@@ -3,7 +3,7 @@ title: "远程Tab发布血缘修复"
 slug: "远程Tab发布血缘修复"
 status: testing
 created: 2026-09-23
-updated: 2026-09-23
+updated: 2026-09-24
 external_ids: ["stablyai/orca#19860"]
 ---
 
@@ -13,12 +13,13 @@ external_ids: ["stablyai/orca#19860"]
 
 | 类型 | 文档 | 状态 | 说明 |
 | --- | --- | --- | --- |
-| 需求 | [requirements/requirement.md](requirements/requirement.md) | ready | REQ-701～REQ-704;根因证据链与验收标准已确认 |
+| 需求 | [requirements/requirement.md](requirements/requirement.md) | ready | REQ-701～REQ-704;Tab 同步根因已确认；发送后重连仍待验证 |
 | 交互 | - | not-required | 无 UI 变更;为主机写路径语义修复 |
 | 调研 | - | not-required | 现场诊断已由并行排查完成,证据在 `.docs/remote-tab-sync-ui-validation/2026-09-23/`(git 忽略);结论摘录于需求 §1/§8 与方案 §1 |
 | 方案 | [solutions/overview.md](solutions/overview.md) | approved | 规则:写内容不换发布者,epoch 只在无可继承快照时铸造 |
-| 测试用例 | [tests/cases/远程Tab发布血缘修复测试.md](tests/cases/远程Tab发布血缘修复测试.md) | ready | TC-701～TC-707;TC-707 为出包后真机验收 |
+| 测试用例 | [tests/cases/远程Tab发布血缘修复测试.md](tests/cases/远程Tab发布血缘修复测试.md) | ready | TC-707 已明确直接观测横幅与输入响应；daemon 为辅助证据 |
 | 测试记录 | [tests/runs/2026-09-23-本地单元验证.md](tests/runs/2026-09-23-本地单元验证.md) | completed | TC-701～TC-706 PASS;聚合 1292 全绿 |
+| 测试记录 | [tests/runs/2026-09-24-隔离双实例复验.md](tests/runs/2026-09-24-隔离双实例复验.md) | completed | 五组隔离对照已归档；TC-707 整体未完成 |
 
 ## 2. 决策点记录
 
@@ -55,6 +56,15 @@ external_ids: ["stablyai/orca#19860"]
 #### 关联文档与需求点
 
 - [需求 REQ-701](requirements/requirement.md)、[方案 §4/§5](solutions/overview.md)
+
+### D-703 按隔离实验收窄已证实结论
+
+- 日期：2026-09-24。
+- 背景：完整旧版可复现新 Tab 不显示，但既有终端连续输入正常；输出丢失阳性对照出现重连横幅时 daemon session-attached 仍为 0。
+- 最终决定：保留 epoch 修复；撤回“发送后重连根因已确证”的说法；REQ-702/704 与整体保持 testing，TC-707 不标全量 PASS。
+- 原因：Tab 快照同步与终端输出恢复的证据不能互相替代。
+- 影响范围：需求背景、REQ-704/Q-702、方案现状、TC-707 的观测判据；用例判据已同步修订，验收须直接观测客户端横幅与输入回显。
+- 关联文档：[隔离复验记录](tests/runs/2026-09-24-隔离双实例复验.md)。
 
 ## 3. 开发记录
 
@@ -94,3 +104,13 @@ external_ids: ["stablyai/orca#19860"]
   - PR 增量 casting gate 0 findings;全 fork quality/type-aware/React Doctor 增量 0 findings
 - 未解决问题:TC-707 仍需使用新发布包执行真机验收
 - 下一步:创建 PR 合入 `fork/integration`,等待 `preview.28` 发布完成
+
+### 2026-09-24 隔离双实例复验与验收纠偏
+
+- 本轮目标：不操作用户正式 Orca，独立启动隐藏 App 验证 Kimi 修复及原始重连结论。
+- 完成内容：从源码构建新旧两版；完成候选、单点旧写法、完整旧版、输出丢失阳性对照、新 host 配旧 client 五组测试；证实 Tab 同步改善，原始发送后重连尚未复现。
+- 代码或文档变更：产品源码无变更；新增隔离测试脚本与证据（`.docs/`）；修正需求与方案事实描述、新增本轮测试记录；TC-707 判据已同步修订。
+- 验证证据：五组 Playwright 场景断言通过，详见[复验记录](tests/runs/2026-09-24-隔离双实例复验.md)；阳性对照捕获 recovering 横幅；14 个临时目录、隔离 profile 与 App 进程均已清理。
+- 文档门禁：check:fork-docs、check:fork-features、check:architecture-policies、task-leader 阶段校验与 git diff --check 均通过；本轮仅文档和隔离证据变更，未重复全量 typecheck。
+- 未解决问题：Q-702 原始重连根因未证实；真实 agent/hooks、mini SSH 与其他 Tab 管理操作未完成验收；不具备发布完成依据。
+- 下一步：保留本隔离环境，补现场 agent/hooks 与输出流诊断，不在正式 App 试错；补齐 TC-707 后再评估 done。

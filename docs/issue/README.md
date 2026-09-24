@@ -16,7 +16,7 @@
 | ["远程主机绝对路径打开"](远程主机绝对路径打开/journal.md) | 主机为任意绝对路径发放 grant，客户端按 grant 读写，不新增 wire 方法之外的协议面 | testing | [远程主机绝对路径打开](远程主机绝对路径打开/requirements/远程主机绝对路径打开.md) | - | [远程主机绝对路径打开功能测试](远程主机绝对路径打开/tests/cases/远程主机绝对路径打开功能测试.md) | 2026-09-16 |
 | ["移动端在新会话中继续"](移动端在新会话中继续/journal.md) | 移动端从当前 claude / codex 会话新建续接会话，复用主机既有 RPC，不改 wire | testing | [移动端在新会话中继续](移动端在新会话中继续/requirements/移动端在新会话中继续.md) | [移动端续接会话终端通道方案](移动端在新会话中继续/solutions/移动端续接会话终端通道方案.md) | [移动端续接会话](移动端在新会话中继续/tests/cases/移动端续接会话.md) | 2026-09-13 |
 | ["富文本Markdown强制打开"](富文本Markdown强制打开/journal.md) | 把「只能在代码模式下编辑」从硬拦截改为可由用户显式承担的选择，并在强制期间持续提示改写风险 | done | [富文本Markdown强制打开](富文本Markdown强制打开/requirements/富文本Markdown强制打开.md) | - | [富文本Markdown强制打开功能测试](富文本Markdown强制打开/tests/cases/富文本Markdown强制打开功能测试.md) | 2026-09-16 |
-| ["远程Tab发布血缘修复"](远程Tab发布血缘修复/journal.md) | headless 内容修改不再伪造发布者换代，远程 Tab 同步与终端连接不被误退役打断 | testing | [requirement](远程Tab发布血缘修复/requirements/requirement.md) | [overview](远程Tab发布血缘修复/solutions/overview.md) | [远程Tab发布血缘修复测试](远程Tab发布血缘修复/tests/cases/远程Tab发布血缘修复测试.md) | 2026-09-23 |
+| ["远程Tab发布血缘修复"](远程Tab发布血缘修复/journal.md) | headless 内容修改不再伪造发布者换代，远程 Tab 同步与终端连接不被误退役打断 | testing | [requirement](远程Tab发布血缘修复/requirements/requirement.md) | [overview](远程Tab发布血缘修复/solutions/overview.md) | [远程Tab发布血缘修复测试](远程Tab发布血缘修复/tests/cases/远程Tab发布血缘修复测试.md) | 2026-09-24 |
 
 状态是需求整体状态（clarifying / designing / implementing / testing / done / blocked）；各文档自己的状态以 Journal 的关键文档链接表为准。文档 ready、代码存在、单测通过和真实产品验收是不同状态；各自 Test Run 只证明记录的执行范围。
 

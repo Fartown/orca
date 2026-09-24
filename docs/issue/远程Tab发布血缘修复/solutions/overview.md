@@ -3,7 +3,7 @@ title: "远程Tab发布血缘修复方案"
 document_type: solution
 status: approved
 created: 2026-09-23
-updated: 2026-09-23
+updated: 2026-09-24
 ---
 
 # 远程Tab发布血缘修复方案
@@ -12,7 +12,7 @@ updated: 2026-09-23
 
 远程会话 Tab 同步以 `(publicationEpoch, snapshotVersion)` 排序:epoch 标识**发布者世代**,version 在同一世代内排序内容。客户端(`src/renderer/src/runtime/web-session-tabs-sync/`)把被新 epoch 顶替的旧 epoch 永久退役(仅内存,重启清空)。
 
-`src/main/runtime/` 的 8 处 headless 写路径在持有既有快照的情况下,每次内容修改都铸造新 `headless:<时间戳>` epoch——把内容修改错误表达成发布者换代。renderer 世代存活时,客户端随即将其永久误退役,主机后续正常发布被全部拒收,表现为远程 Tab 不同步、该工作区终端每发一条消息就触发"重新连接到远程运行时"并重订 PTY 流(REQ-704 证据链)。
+`src/main/runtime/` 的 8 处 headless 写路径在持有既有快照的情况下,每次内容修改都铸造新 `headless:<时间戳>` epoch——把内容修改错误表达成发布者换代。renderer 世代存活时,客户端随即将其永久误退役,主机后续正常发布被全部拒收,已证实表现为远程 Tab 不同步。发送后重连与此缺陷的因果关系未证实；2026-09-24 隔离双实例复验在旧版同步卡死后仍能正常发送，故本方案不能承诺修复原始发送重连问题（REQ-704/Q-702）。
 
 上游 #19860 已修复其中 1 处(`closeHeadlessMobileTerminalTab`)并确立规则:**写内容不换发布者;epoch 只在无可继承快照时铸造**。本方案把同一规则补齐到其余 7 处(4 个文件),每处附"epoch 不变、version +1"回归测试。
 
