@@ -56,6 +56,11 @@
       ],
       "seams": [
         {
+          "file": "config/scripts/mobile-web-bundle-packaging-workflow-contract.test.mjs",
+          "mustContain": "fork-integration-build.yml macos",
+          "why": "the fork macOS package participates in the shared mobile bundle precondition census"
+        },
+        {
           "file": "mobile/app.config.js",
           "mustContain": "integration-builds",
           "why": "integration-only native version and build marker"
@@ -87,6 +92,7 @@
         }
       ],
       "tests": [
+        "config/scripts/mobile-web-bundle-packaging-workflow-contract.test.mjs",
         "config/scripts/integration-builds/integration-builds.test.mjs",
         "config/scripts/integration-builds/mac-signing.test.mjs",
         "config/scripts/integration-builds/mac-package-signature.test.mjs",
@@ -99,7 +105,7 @@
         "mobile/src/integration-builds/update-controller.test.ts"
       ],
       "checks": [
-        "pnpm exec vitest run --config config/vitest.config.ts config/scripts/integration-builds src/shared/integration-builds src/main/integration-builds",
+        "pnpm exec vitest run --config config/vitest.config.ts config/scripts/mobile-web-bundle-packaging-workflow-contract.test.mjs config/scripts/integration-builds src/shared/integration-builds src/main/integration-builds",
         "pnpm --dir mobile exec vitest run src/integration-builds"
       ]
     },

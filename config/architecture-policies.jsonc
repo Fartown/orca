@@ -16,6 +16,7 @@
           "comparison": "worktree",
           "whenChanged": [
             ".github/workflows/fork-integration-build.yml",
+            "config/scripts/mobile-web-bundle-packaging-workflow-contract.test.mjs",
             "config/scripts/integration-builds/**",
             "src/shared/integration-builds/**",
             "src/main/integration-builds/**",
@@ -25,6 +26,7 @@
           ],
           "allowedPaths": [
             ".github/workflows/fork-integration-build.yml",
+            "config/scripts/mobile-web-bundle-packaging-workflow-contract.test.mjs",
             "config/scripts/integration-builds/**",
             "src/shared/integration-builds/**",
             "src/main/integration-builds/**",
@@ -459,6 +461,7 @@
             "mobile/src/session/mobile-session-route-parity.test.ts",
             // Fork infrastructure (docs/reference/fork-maintenance.md).
             ".github/workflows/fork-integration-build.yml",
+            "config/scripts/mobile-web-bundle-packaging-workflow-contract.test.mjs",
             "config/scripts/integration-builds/**",
             "src/shared/integration-builds/**",
             "src/main/integration-builds/**",
