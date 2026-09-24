@@ -114,3 +114,13 @@ external_ids: ["stablyai/orca#19860"]
 - 文档门禁：check:fork-docs、check:fork-features、check:architecture-policies、task-leader 阶段校验与 git diff --check 均通过；本轮仅文档和隔离证据变更，未重复全量 typecheck。
 - 未解决问题：Q-702 原始重连根因未证实；真实 agent/hooks、mini SSH 与其他 Tab 管理操作未完成验收；不具备发布完成依据。
 - 下一步：保留本隔离环境，补现场 agent/hooks 与输出流诊断，不在正式 App 试错；补齐 TC-707 后再评估 done。
+
+
+### 2026-09-24 PR 合码准备
+
+- 本轮目标：按用户授权推进既有 PR #38 合入 fork/integration，保持正式 App 不受人工操作。
+- 完成内容：在独立验证分支中移植复验文档到 PR #38 当前基线，保留原发布验证记录；修正功能登记的一句话目标，避免暗示原始重连原因已经确定。
+- 代码或文档变更：文档与功能目标描述；产品源码相对 PR 原 HEAD 无变化。
+- 验证证据：新 HEAD 的定向 7 条测试、fork docs/features/architecture、四项 localization 门禁通过；远端 typecheck、static analysis、macOS/Windows package 通过。本机额外全量 typecheck 收到 SIGKILL，未计为通过。
+- 未解决问题：PR CI 唯一实际失败为已有 packaging job census 缺项；需先解除 #39/#40 的相互门禁阻塞。TC-707 和 Q-702 保持 testing。
+- 下一步：基础分支修复通过后，更新 #38 并等待最终 HEAD 全部门禁，再执行 merge commit；不手动安装或重启用户 App。

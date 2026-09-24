@@ -1773,7 +1773,7 @@
     {
       "id": "session-tabs-publication-lineage",
       "title": "远程Tab发布血缘修复:headless 写路径沿用现任 publicationEpoch",
-      "goal": "headless 内容修改不再伪造发布者换代，远程 Tab 同步与终端连接不被误退役打断",
+      "goal": "headless 内容修改沿用现任发布者，避免远程 Tab 列表因误退役停止同步",
       "journal": "docs/issue/远程Tab发布血缘修复/journal.md",
       "dependsOn": [
         "src/main/runtime/orca-runtime.ts",
