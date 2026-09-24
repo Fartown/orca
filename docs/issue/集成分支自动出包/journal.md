@@ -3,7 +3,7 @@ title: 集成分支自动出包
 slug: 集成分支自动出包
 status: testing
 created: 2026-09-12
-updated: 2026-09-17
+updated: 2026-09-23
 external_ids: []
 ---
 
@@ -24,6 +24,7 @@ external_ids: []
 | 测试记录 | [HTTP403修复验证](tests/runs/2026-09-13-update-http403.md) | completed | 失败恢复、公网回退、实际组件及修复APK通过；手机具体响应仍待接入 |
 | 测试记录 | [发布说明与版本号兼容](tests/runs/2026-09-17-release-notes.md) | completed | 单测与真实发布记录预演通过；合入后的发布页待核对 |
 | 测试记录 | [常规版本号](tests/runs/2026-09-17-preview-version.md) | completed | 编号、发布复核与版本比较通过；按 D-004 暂不合入 |
+| 测试记录 | [打包任务清单契约](tests/runs/2026-09-23-packaging-census.md) | completed | 共享 packaging census 纳入 fork macOS job，定向门禁通过 |
 
 ## 2. 决策点记录
 
@@ -63,6 +64,15 @@ external_ids: []
 - 影响范围：REQ-401、REQ-402、REQ-403；APK 沿用 Expo debug 签名并核验指纹，不生成密钥或暗改 versionCode。
 
 ## 3. 开发记录
+
+### 2026-09-23：补齐 fork macOS 打包任务的共享契约登记
+
+- 本轮目标：修复上游移动 Web bundle packaging census 未登记 fork macOS job 导致的确定性 PR CI 失败，并让 integration-builds 自身检查覆盖该共享契约。
+- 完成内容：把 `fork-integration-build.yml macos` 加入显式 packaging job 清单；继续由同一契约验证其执行 `build:mobile-web` 且先安装 `mobile/node_modules`；将共享测试登记为 integration-builds seam、测试和同步检查。
+- 代码或文档变更：共享 packaging workflow contract、fork feature registry、architecture policy、TC-401 与本记录；不改变打包行为、发布格式或客户端更新协议。
+- 验证证据：[打包任务清单契约](tests/runs/2026-09-23-packaging-census.md)。
+- 未解决问题：真实 GitHub PR 门禁与合入后的 integration release 待远端执行。
+- 下一步：先合入本修复，再更新功能 PR 到最新 `fork/integration` 并触发新的 preview release。
 
 ### 2026-09-17：#32 合入后核对第一个 preview 发布与桌面更新
 

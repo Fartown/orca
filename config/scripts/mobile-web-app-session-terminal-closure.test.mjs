@@ -364,8 +364,20 @@ const MERMAID_PACKAGE = 'node_modules/mermaid/'
  *
  *   modules        4210 -> 4211   (+1)
  *   local modules  1024 -> 1025   (+1)
+ *
+ * The mobile session-continuation feature then adds 15 local modules and no vendored modules.
+ * Both sides were measured with all five postinstall generators run, against the fork's upstream
+ * merge-base `3bb9a4e261` and the merged fork head `ef98278cfc`:
+ *
+ *   modules        4211 -> 4226   (+15)
+ *   local modules  1025 -> 1040   (+15)
+ *
+ * The added set is the shared prompt injection, bounded transcript and continuation prompt;
+ * issue constants and terminal input; the mobile continuation sheet and its nine supporting
+ * modules. Diffing the complete local lists showed no removals, so this records the feature's
+ * route closure rather than spending a budget or hiding a package increase.
  */
-const SESSION_ROUTE_MODULES = 4211
+const SESSION_ROUTE_MODULES = 4226
 
 /** What the page enters this route through once the route is a switch with a `.web.tsx` sibling. */
 const ROUTE_ENTRY = [
