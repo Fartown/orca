@@ -1,65 +1,16 @@
-// 宿主写的 v2 记录 → v1 循环认识的字段。入口在启动时用,循环在 reload 时用,两边必须一致。
-import {
-  composeGoalAcceptanceText,
-  judgeRunsWholeGoal
-} from '../../src/shared/goals/goal-judge-contract.ts'
+// 宿主写的 v2 记录 → 驱动认识的字段。入口在启动时用,循环在 reload 时用,两边必须一致。
 
-/**
- * 验收命令 = 有命令的验收项 + 额外检查 + (选了裁判时)一条裁判命令(条目模式或整体文本模式)。
- * @param {{judgeEntry?: string, itemsPath?: string, criteriaPath?: string, execPath?: string, platform?: string}} [options]
- */
-export function acceptanceOf(record, options = {}) {
-  const judge = judgeCommandOf(record, options)
+/** 用户额外配置的检查命令:带命令的验收项 + 额外检查。守卫判完成后才跑,通过才算完成。 */
+export function acceptanceOf(record) {
   return {
     commands: [
       ...record.spec.criteria.filter((c) => c.command).map((c) => c.command),
-      ...record.spec.extraChecks,
-      ...(judge ? [judge] : [])
+      ...record.spec.extraChecks
     ],
     timeoutMs: record.budget.checkTimeoutSeconds * 1000,
     cwd: record.workspace.path,
     all: record.spec.checkAll
   }
-}
-
-/**
- * 选了裁判就一定追加一条验收命令:还有没带命令的验收项时逐条判(条目模式),
- * 一条都没有时对目标正文整体判(文本模式)。裁判脚本和驱动打在同一目录,用同一个可执行文件
- * 拉起(驱动跑在 Electron-as-Node 下时 env 里已有 ELECTRON_RUN_AS_NODE);两种输入文件都由宿主随记录写好。
- */
-export function judgeCommandOf(
-  record,
-  {
-    judgeEntry,
-    itemsPath,
-    criteriaPath,
-    execPath = process.execPath,
-    platform = process.platform
-  } = {}
-) {
-  const judge = record.spec.judge ?? 'none'
-  if (judge === 'none' || !judgeEntry) {
-    return null
-  }
-  const wholeGoal = judgeRunsWholeGoal(record.spec)
-  const inputPath = wholeGoal ? criteriaPath : itemsPath
-  // 驱动没给路径就什么都不追加,绝不发一条指向 undefined 的命令。
-  if (!inputPath) {
-    return null
-  }
-  const q = (value) => quoteForShell(String(value), platform)
-  return [
-    q(execPath),
-    q(judgeEntry),
-    '--agent',
-    judge,
-    '--cwd',
-    q(record.workspace.path),
-    wholeGoal ? '--criteria-file' : '--items-file',
-    q(inputPath),
-    '--timeout',
-    String(record.budget.checkTimeoutSeconds)
-  ].join(' ')
 }
 
 /** gate 用 shell 跑命令:POSIX 单引号、cmd.exe 双引号。 */
@@ -70,25 +21,51 @@ export function quoteForShell(value, platform = process.platform) {
   return `'${value.replace(/'/g, `'\\''`)}'`
 }
 
-/** 注入给 agent 的目标正文,也是整体模式交给裁判的那份文本 —— 同一份字节,不许各写一遍。 */
+/** 发给执行 agent 和守卫的是用户写的目标原文;验收清单另给路径,不再顶替目标。 */
 export function objectiveOf(record) {
-  return composeGoalAcceptanceText(record.spec)
+  return record.spec.objective
 }
 
 /**
- * 把宿主改过的记录套回运行中的目标对象。定义版本变了,旧判词不再算数:
- * 上一次验收结果清掉,假完成计数归零,下一轮提示词用新目标正文。
+ * 守卫就是记录里选的那个 agent;没选(旧目标的 judge: none)时为 null,驱动拒绝启动。
+ * @param {{ guardLogDir?: string }} [options]
  */
+export function guardOf(record, options = {}) {
+  const agent = record.spec.judge && record.spec.judge !== 'none' ? record.spec.judge : null
+  return {
+    agent,
+    // 判完成时要当场构建、跑测试;检查超时设得很短也给守卫留足 10 分钟。
+    timeoutMs: Math.max(10 * 60_000, record.budget.checkTimeoutSeconds * 1000),
+    logDir: options.guardLogDir ?? null
+  }
+}
+
+/**
+ * 清单文件由宿主随记录写好(有验收文档就是文档,否则是验收项与说明)。只有目标原文时不给路径,
+ * 免得执行 agent 去读一份和目标一模一样的文件。
+ * @param {{ criteriaPath?: string }} [options]
+ */
+export function checklistPathOf(record, options = {}) {
+  const spec = record.spec
+  const hasChecklist =
+    Boolean(spec.acceptanceDocument) ||
+    spec.criteria.length > 0 ||
+    Boolean(spec.acceptanceText?.trim())
+  return hasChecklist ? (options.criteriaPath ?? null) : null
+}
+
+/** 把宿主改过的记录套回运行中的目标对象。定义版本变了,旧的验收结果不再算数。 */
 export function applyRecordToGoal(goal, record, options = {}) {
   const specChanged = goal.specRevision !== record.specRevision
   return {
     ...goal,
     objective: objectiveOf(record),
-    onBlocked: record.spec.onBlocked,
-    acceptance: acceptanceOf(record, options),
+    acceptance: acceptanceOf(record),
     budget: { maxTurns: record.budget.maxTurns, maxMinutes: record.budget.maxMinutes },
+    guard: guardOf(record, options),
+    checklistPath: checklistPathOf(record, options),
     terminalHandle: record.binding.terminal,
     specRevision: record.specRevision,
-    ...(specChanged ? { lastAcceptance: null, falseClaims: 0, blockedClaims: 0 } : {})
+    ...(specChanged ? { lastAcceptance: null } : {})
   }
 }

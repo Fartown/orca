@@ -16,7 +16,8 @@ import type {
 } from '../../shared/goals/goal-control-contract'
 import { toGoalOperation, type GoalRecord } from '../../shared/goals/goal-store-records'
 import { GoalBindingAdmission } from './goal-binding-admission'
-import { GoalContinuationControl } from './goal-continuation-control'
+import { GoalContinuationControl, rejectGuardless } from './goal-continuation-control'
+import { GoalDriverRecovery, type GoalDriverRecoveryDependencies } from './goal-driver-recovery'
 import type { GoalDriverLauncher } from './goal-driver-launch'
 import { inspectGoalDriver, type GoalDriverLivenessInput } from './goal-driver-liveness'
 import { GoalLegacyAdoption } from './goal-legacy-adoption'
@@ -42,6 +43,7 @@ export type GoalControlServiceDependencies = {
   userDataPath: string
   resolveDraftWorkspace?: (selector: string) => Promise<string>
   inspectDriver?: (input: GoalDriverLivenessInput) => Promise<GoalDriverVerdict>
+  recoveryHostContext?: GoalDriverRecoveryDependencies['withHostContext']
   now?: () => number
   newId?: () => string
 }
@@ -50,6 +52,7 @@ export type GoalControlServiceDependencies = {
 export class GoalControlService {
   readonly drafts: GoalAcceptanceDrafts
   readonly editorDrafts: GoalEditorDraftStore
+  readonly recovery: GoalDriverRecovery
   private readonly store: GoalStore
   private readonly hooks: GoalHookFacts
   private readonly terminals: GoalTerminalFacts
@@ -108,6 +111,13 @@ export class GoalControlService {
       continuation: this.continuation,
       projection: () => this.projectionSources(),
       now: this.now
+    })
+    this.recovery = new GoalDriverRecovery({
+      store: this.store,
+      inspectRecordDriver: (record) => this.admission.inspectRecordDriver(record),
+      relaunch: (record) => this.continuation.recover(record),
+      now: this.now,
+      withHostContext: dependencies.recoveryHostContext
     })
     this.legacy = new GoalLegacyAdoption({
       store: this.store,
@@ -169,7 +179,8 @@ export class GoalControlService {
     if (replay) {
       return replay
     }
-    const target = await this.admission.validate(params.binding)
+    // A goal without a guard is refused before its terminal is even checked.
+    const target = rejectGuardless(params.spec) ?? (await this.admission.validate(params.binding))
     if ('code' in target) {
       return this.receipts.reject(params, null, target)
     }
@@ -283,6 +294,7 @@ export class GoalControlService {
       terminals: this.terminals,
       hooks: this.hooks,
       readLegacyRecord: (key: string) => this.store.readLegacyRecord(key),
+      readRecovery: (goalId: string) => this.store.readRecovery(goalId),
       inspectDriver: (record: GoalRecord) => this.admission.inspectRecordDriver(record),
       now: this.now
     }

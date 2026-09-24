@@ -127,13 +127,22 @@ export function extractItemVerdicts(output) {
   }
 }
 
-function locateVerdictJson(text) {
+/** 取最后一个能解析、且满足 accept 的 json 代码块;守卫结论和条目判词共用。 */
+export function lastFencedJson(text, accept) {
   const fenced = [...text.matchAll(/```(?:json)?\s*\n([\s\S]*?)\n\s*```/g)]
   for (let index = fenced.length - 1; index >= 0; index -= 1) {
     const parsed = tryParse(fenced[index][1])
-    if (parsed && typeof parsed === 'object' && 'verdicts' in parsed) {
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed) && accept(parsed)) {
       return parsed
     }
+  }
+  return null
+}
+
+function locateVerdictJson(text) {
+  const fenced = lastFencedJson(text, (parsed) => 'verdicts' in parsed)
+  if (fenced) {
+    return fenced
   }
   // 没有代码块:从后往前找一个能解析、且带 verdicts 的对象。
   let cursor = text.lastIndexOf('{"verdicts"')

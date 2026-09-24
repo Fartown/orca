@@ -105,6 +105,26 @@ export function toGoalOperation(receipt: GoalOperationReceipt): GoalOperation {
   }
 }
 
+/** Something the user should hear about; the client turns it into a system notification. */
+export const GoalNoticeSchema = z.object({
+  id: z.string().min(1).max(256),
+  // Why a string: kinds grow with the driver, and a strict enum would drop a newer host's notice.
+  kind: z.string().min(1).max(64),
+  text: z.string().max(2_000),
+  at: z.number(),
+  resolvedAt: z.number().nullable().optional()
+})
+
+export type GoalNotice = z.infer<typeof GoalNoticeSchema>
+
+/** Host-owned recovery.json: relaunches by the recovery scan, and the notices it raised. */
+export const GoalRecoveryRecordSchema = z.object({
+  relaunches: z.array(z.number()),
+  notices: z.array(GoalNoticeSchema)
+})
+
+export type GoalRecoveryRecord = z.infer<typeof GoalRecoveryRecordSchema>
+
 /**
  * The driver-owned v1 record (goal-mode/cli/goal-state.mjs `newGoal`), read
  * defensively: the host projects it and never trusts unknown JSON on the wire.
@@ -127,6 +147,9 @@ export const LegacyGoalRecordSchema = z
     finishReason: z.string().nullable().optional(),
     roundStartedAt: z.number().nullable().optional(),
     awaitingUser: z.object({ reason: z.string(), since: z.number() }).nullable().optional(),
+    guardMs: z.number().nonnegative().optional(),
+    guardObservation: z.string().nullable().optional(),
+    notices: z.array(GoalNoticeSchema).optional(),
     driverError: z
       .object({ kind: z.string(), message: z.string(), at: z.number() })
       .nullable()

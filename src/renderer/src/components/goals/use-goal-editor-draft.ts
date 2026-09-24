@@ -11,7 +11,13 @@ import {
   goalDraftContext,
   type GoalEditorDraftContent
 } from '../../../../shared/goals/goal-editor-draft-contract'
-import { EMPTY_GOAL_DRAFT, draftFromDetail, targetFromPrefill } from './goal-editor-draft'
+import { useAppStore } from '@/store'
+import {
+  EMPTY_GOAL_DRAFT,
+  defaultGuardFor,
+  draftFromDetail,
+  targetFromPrefill
+} from './goal-editor-draft'
 
 const EMPTY_CONTENT: GoalEditorDraftContent = {
   fields: EMPTY_GOAL_DRAFT,
@@ -44,10 +50,15 @@ export function useGoalEditorDraft(editor: { open: boolean; prefill: GoalEditorP
     setError(null)
     const prefill = editor.prefill
     const saved = prefill?.goalId ? goalDomainStore.getState().detailsById[prefill.goalId] : null
-    const fields = saved ? draftFromDetail(saved) : { ...EMPTY_GOAL_DRAFT }
     const target = saved
       ? { worktreeId: saved.binding.worktree, paneKey: saved.binding.terminal }
       : targetFromPrefill(prefill)
+    const paneAgent = target.paneKey
+      ? useAppStore.getState().agentStatusByPaneKey[target.paneKey]?.agentType
+      : null
+    const fields = saved
+      ? draftFromDetail(saved)
+      : { ...EMPTY_GOAL_DRAFT, judge: defaultGuardFor(paneAgent) ?? EMPTY_GOAL_DRAFT.judge }
     void openGoalDraftSession(
       prefill?.draftId ?? {
         ...EMPTY_CONTENT,

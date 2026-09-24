@@ -15413,8 +15413,6 @@
       "extraChecks": "额外检查命令(每行一条)",
       "extraChecksHint": "由驱动在工作区里用 shell 执行。提交前在此完整展示,不会隐藏。",
       "checkAll": "第一条失败后仍跑完全部检查",
-      "verifyWhenBlocked": "agent 说受阻时,先跑检查再叫我",
-      "unverifiedNotice": "没有检查命令,也没选裁判:agent 说完成就算完成,面板会标为「未经独立验证」。",
       "cancel": "取消",
       "starting": "启动中…",
       "createAndStart": "创建并开始",
@@ -15435,7 +15433,6 @@
       "save": "保存",
       "saveAndResume": "保存并继续",
       "judge": "独立裁判",
-      "judgeNone": "不使用:只有命令能验证这个目标",
       "judgeHint": "干活的会话声称完成后,由另一个 agent 独立检查。没带命令的验收项逐条判定;一项都没有时,对整个目标做整体判定。本机需要装有对应 CLI。",
       "document": "验收文档",
       "cancelGeneration": "取消生成",
@@ -15455,7 +15452,9 @@
       "stopGeneration": "停止生成",
       "finishEditingDocument": "完成编辑",
       "openMarkdownTab": "在 Markdown 标签页查看",
-      "documentWorkspaceUnavailable": "无法打开文档所属工作区，请选择可用工作区后重试。"
+      "documentWorkspaceUnavailable": "无法打开文档所属工作区，请选择可用工作区后重试。",
+      "pickGuard": "选择守卫",
+      "guardRequired": "这个目标还没有守卫，选一个才能保存或开始。"
     },
     "detail": {
       "back": "目标",
@@ -15478,7 +15477,8 @@
       "versions": "定义版本({{value0}})",
       "revisionLabel": "版本 {{value0}}",
       "currentRevision": "当前",
-      "offlineSnapshot": "连接已断开，以下为上次观测的状态；当前进程不可验证。"
+      "offlineSnapshot": "连接已断开，以下为上次观测的状态；当前进程不可验证。",
+      "guardTime": "其中守卫用时 {{value0}}"
     },
     "list": {
       "hostUnavailable": "此主机上无法列出目标",
@@ -15594,6 +15594,15 @@
       "title": "Goal 草稿",
       "listUnavailable": "暂时无法获取草稿，正在重新连接…",
       "untitled": "未命名目标草稿"
+    },
+    "notice": {
+      "sessionTitle": "目标",
+      "question": "守卫需要你：{{value0}}",
+      "guardUnavailable": "守卫无法运行：{{value0}}",
+      "driverFault": "目标驱动持续出错：{{value0}}",
+      "relaunchLimit": "目标驱动一小时内退出了三次，已停止自动接回；排除原因后请手动继续。",
+      "complete": "目标完成：{{value0}}",
+      "budget": "预算已用完：{{value0}}"
     }
   },
   "notifications": {

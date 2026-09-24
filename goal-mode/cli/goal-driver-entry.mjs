@@ -7,32 +7,33 @@
 // 多了一个合作式控制检查点,让宿主的「暂停/恢复」能被确认。
 import { promises as fs } from 'node:fs'
 import path from 'node:path'
-import { notifyDesktop } from './desktop-notification.mjs'
 import { installCrashGuard } from './driver-crash-guard.mjs'
 import { setTemplateSource } from './continuation-prompt.mjs'
-import { DEFAULT_THRESHOLDS } from './goal-decision.mjs'
 import { createDriverControl } from './goal-driver-control.mjs'
-import { acceptanceOf, applyRecordToGoal, objectiveOf } from './goal-record-projection.mjs'
+import {
+  acceptanceOf,
+  applyRecordToGoal,
+  checklistPathOf,
+  guardOf,
+  objectiveOf
+} from './goal-record-projection.mjs'
 import { runLoop } from './goal-loop.mjs'
 import { createRuntimeTerminalBackend } from './goal-runtime-terminal.mjs'
 import { acquireLock, archiveLog, goalKey, newGoal, readGoal, writeGoal } from './goal-state.mjs'
 import { setTerminalBackend } from './orca-terminal.mjs'
 import {
-  GOAL_JUDGE_ENTRY_FILENAME,
   goalControlPath,
+  goalGuardCallsDir,
   goalJudgeCriteriaPath,
-  goalJudgeItemsPath,
   goalOperationPath,
   goalRecordPath,
   legacyDriverLogPath
 } from '../../src/shared/goals/goal-store-layout.ts'
-import blockedButPassing from './prompts/blocked-but-passing.md'
 import budgetLimit from './prompts/budget-limit.md'
 import continuation from './prompts/continuation.md'
-import gateUnavailable from './prompts/gate-unavailable.md'
-import objectiveReminder from './prompts/objective-reminder.md'
+import firstTurn from './prompts/first-turn.md'
+import guard from './prompts/guard.md'
 import objectiveUpdated from './prompts/objective-updated.md'
-import rejectedCompletion from './prompts/rejected-completion.md'
 
 const OUTCOME = {
   complete: '目标达成',
@@ -53,25 +54,23 @@ async function main(argv) {
   log(`=== 驱动启动 ${args.mode} goal=${args.goalId} run=${args.runId} ===`)
 
   setTemplateSource({
-    'blocked-but-passing': blockedButPassing,
     'budget-limit': budgetLimit,
     continuation,
-    'gate-unavailable': gateUnavailable,
-    'objective-reminder': objectiveReminder,
-    'objective-updated': objectiveUpdated,
-    'rejected-completion': rejectedCompletion
+    'first-turn': firstTurn,
+    guard,
+    'objective-updated': objectiveUpdated
   })
   if (process.env.ORCA_GOAL_TERMINAL_BACKEND !== 'ssh-cli') {
     setTerminalBackend(createRuntimeTerminalBackend())
   }
 
-  // 裁判脚本和驱动打在同一目录;开发期可用 ORCA_GOAL_JUDGE_PATH 指向源码。两种裁判输入文件都由宿主随记录写好。
+  // 清单文件由宿主随记录写好;守卫每次调用的全文留在目标目录下。
   const recordOptions = {
-    judgeEntry:
-      process.env.ORCA_GOAL_JUDGE_PATH ||
-      path.join(path.dirname(process.argv[1]), GOAL_JUDGE_ENTRY_FILENAME),
-    itemsPath: goalJudgeItemsPath(args.goalHome, args.goalId),
-    criteriaPath: goalJudgeCriteriaPath(args.goalHome, args.goalId)
+    criteriaPath: goalJudgeCriteriaPath(args.goalHome, args.goalId),
+    guardLogDir: goalGuardCallsDir(args.goalHome, args.goalId)
+  }
+  if (!guardOf(record, recordOptions).agent) {
+    throw new Error('这个目标没有守卫,不能启动:先在编辑里选一个守卫')
   }
   const goal =
     args.mode === 'start'
@@ -114,14 +113,13 @@ async function main(argv) {
   try {
     const final = await runLoop(goal, {
       report: makeReport(log),
-      thresholds: DEFAULT_THRESHOLDS,
       attach: args.mode === 'resume',
       control,
       recordOptions
     })
+    // 不在这台机器上弹通知:SSH 下它是远端。终局已写成通知事件,由客户端发出。
     const label = OUTCOME[final.state] || final.state
     log(`${label} —— ${final.finishReason}(共 ${final.turns} 轮)`)
-    notifyDesktop(`orca-goal:${label}`, `${final.finishReason}(${final.turns} 轮)`)
     return final.state === 'complete' ? 0 : 2
   } finally {
     await release()
@@ -145,12 +143,12 @@ function buildStartGoal(record, args, key, recordOptions) {
     ...newGoal({
       key,
       objective: objectiveOf(record),
-      onBlocked: record.spec.onBlocked,
       worktreePath: record.workspace.path,
       terminalHandle: record.binding.terminal,
-      acceptance: acceptanceOf(record, recordOptions),
+      acceptance: acceptanceOf(record),
       budget: { maxTurns: record.budget.maxTurns, maxMinutes: record.budget.maxMinutes },
-      promptFile: false,
+      guard: guardOf(record, recordOptions),
+      checklistPath: checklistPathOf(record, recordOptions),
       now: Date.now()
     }),
     goalId: record.goalId,
@@ -206,22 +204,22 @@ function makeLogger(file) {
 function makeReport(log) {
   return {
     round: (turn, maxTurns, prompt) =>
-      log(`第 ${turn}${maxTurns ? `/${maxTurns}` : ''} 轮 · 注入 ${prompt}`),
-    longRun: (mins) => log(`这一轮已经跑了 ${mins} 分钟,agent 仍在干活 —— 继续等,不打断`),
-    attach: (turn) => log(`接管:不注入,先等第 ${turn} 轮手上这波跑完`),
-    awaitUser: (reason) => log(`⏸ 等你确认:${reason}`),
-    working: (source) =>
-      log(`agent 已接管,等这一轮跑完${source === 'hook' ? '' : '(无 hook 状态,退回标题判定)'}`),
-    needsUser: (tool) => log(`⏸ agent 在等你确认${tool ? `(${tool})` : ''} —— 已暂停注入`),
-    verifying: (commands) => log(`声称完成,开始验收(${commands.length} 条)`),
+      log(`第 ${turn}${maxTurns ? `/${maxTurns}` : ''} 轮 · 发出 ${prompt}`),
+    guard: (reason) => log(`唤醒守卫:${reason}`),
+    guardDone: (verdict, ms, error) =>
+      log(
+        verdict
+          ? `守卫结论 ${verdict.decision}(${Math.round(ms / 1000)} 秒):${verdict.observation}`
+          : `守卫调用失败(${Math.round(ms / 1000)} 秒):${error}`
+      ),
+    verifying: (commands) => log(`守卫判了完成,跑用户配置的检查命令(${commands.length} 条)`),
     command: (c) => log(`  $ ${c}`),
     verified: (result) =>
       log(
-        `验收${result.passed ? '通过' : '未通过'}:${result.results
+        `检查命令${result.passed ? '通过' : '未通过'}:${result.results
           .map((r) => `${r.ok ? '✓' : '✗'} ${r.command}`)
           .join(' / ')}`
       ),
-    tamper: (f) => log(`⚑ 验收被削弱的痕迹:${f.label} —— ${f.detail}`),
     warn: (msg) => log(`⚠ ${msg}`)
   }
 }

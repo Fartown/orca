@@ -229,7 +229,14 @@
         "src/main/runtime/orca-runtime.ts",
         "src/main/ssh/ssh-target-registry.ts",
         "src/renderer/src/lib/worktree-runtime-owner.ts",
-        "src/shared/execution-host.ts"
+        "src/shared/execution-host.ts",
+        "src/shared/notification-settings-types.ts",
+        "src/main/ai-vault/session-scanner-values.ts",
+        "src/main/native-chat/transcript-line-decoders-claude.ts",
+        "src/main/native-chat/transcript-line-decoders-codex.ts",
+        "src/main/native-chat/transcript-turn-markers.ts",
+        "src/shared/harness-injected-user-turns.ts",
+        "src/shared/native-chat-types.ts"
       ],
       "policyId": "goals-native-feature",
       "ownedPaths": [
@@ -255,6 +262,16 @@
         "src/renderer/src/goals/GoalDomainSyncGate.tsx",
         "goal-mode/cli/goal-driver-entry.mjs",
         "goal-mode/cli/goal-loop.mjs",
+        "goal-mode/cli/guard-call.mjs",
+        "goal-mode/cli/guard-verdict.mjs",
+        "goal-mode/cli/goal-notices.mjs",
+        "goal-mode/cli/guard-materials.mjs",
+        "goal-mode/cli/prompts/guard.md",
+        "src/main/goals/goal-transcript-digest.ts",
+        "src/main/goals/goal-transcript-entries.ts",
+        "src/shared/goals/goal-agent-run.ts",
+        "src/main/goals/goal-driver-recovery.ts",
+        "src/renderer/src/goals/GoalNoticeWatcher.tsx",
         "goal-mode/cli/acceptance-judge.mjs",
         "goal-mode/cli/judge-item-verdicts.mjs",
         "goal-mode/cli/judge-whole-verdict.mjs",
@@ -408,6 +425,26 @@
           "file": "src/relay/dispatcher-rpc-routing.ts",
           "mustContain": "requestClient(",
           "why": "Goal execution, documents and validation run on their owning SSH or runtime host"
+        },
+        {
+          "file": "src/shared/runtime-worktree-contracts.ts",
+          "mustContain": "transcriptPath?: string",
+          "why": "the Goal guard reads the working agent's transcript path from worktree ps rows"
+        },
+        {
+          "file": "src/main/runtime/runtime-worktree-agent-source.ts",
+          "mustContain": "transcriptPath?: string",
+          "why": "the Goal guard reads the working agent's transcript path from worktree ps rows"
+        },
+        {
+          "file": "src/main/runtime/runtime-worktree-pty-agent-sources.ts",
+          "mustContain": "entry.providerSession?.transcriptPath",
+          "why": "the Goal guard reads the working agent's transcript path from worktree ps rows"
+        },
+        {
+          "file": "src/main/runtime/runtime-worktree-agent-rows.ts",
+          "mustContain": "transcriptPath: source.transcriptPath",
+          "why": "the Goal guard reads the working agent's transcript path from worktree ps rows"
         }
       ],
       "tests": [
@@ -420,7 +457,13 @@
         "src/renderer/src/goals/goals-domain-store.test.ts",
         "src/shared/goals/goal-workspace-key.test.ts",
         "goal-mode/cli/goal-driver-control.test.mjs",
-        "goal-mode/cli/goal-loop-stop.test.mjs",
+        "goal-mode/cli/goal-loop.test.mjs",
+        "goal-mode/cli/guard-verdict.test.mjs",
+        "goal-mode/cli/goal-notices.test.mjs",
+        "src/main/goals/goal-driver-recovery.test.ts",
+        "src/main/goals/goal-transcript-digest.test.ts",
+        "src/main/goals/goal-agent-transcript-row.test.ts",
+        "src/renderer/src/goals/GoalNoticeWatcher.test.tsx",
         "goal-mode/cli/acceptance-judge-items.test.mjs",
         "goal-mode/cli/acceptance-judge-whole.test.mjs",
         "goal-mode/cli/judge-item-verdicts.test.mjs",

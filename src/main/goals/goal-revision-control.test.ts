@@ -89,7 +89,7 @@ const spec: GoalSpec = {
   extraChecks: [],
   checkAll: false,
   onBlocked: 'ask',
-  judge: 'none'
+  judge: 'codex'
 }
 
 function createParams(): GoalCreateParams {

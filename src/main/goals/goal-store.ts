@@ -5,12 +5,14 @@ import {
   GoalControlIntentSchema,
   GoalOperationReceiptSchema,
   GoalRecordSchema,
+  GoalRecoveryRecordSchema,
   GoalVersionLineSchema,
   LegacyGoalRecordSchema,
   ownedLegacyRecord,
   type GoalControlIntent,
   type GoalOperationReceipt,
   type GoalRecord,
+  type GoalRecoveryRecord,
   type GoalVersionLine,
   type LegacyGoalRecord
 } from '../../shared/goals/goal-store-records'
@@ -22,6 +24,7 @@ import {
   goalOperationPath,
   goalJudgeItemsPath,
   goalRecordPath,
+  goalRecoveryPath,
   goalsV2Dir,
   goalVersionsPath,
   legacyGoalRecordPath,
@@ -102,6 +105,17 @@ export class GoalStore {
 
   async writeReceipt(receipt: GoalOperationReceipt): Promise<void> {
     await writeJsonAtomic(goalOperationPath(this.goalHome, receipt.clientOperationId), receipt)
+  }
+
+  async readRecovery(goalId: string): Promise<GoalRecoveryRecord> {
+    const parsed = GoalRecoveryRecordSchema.safeParse(
+      await readJson(goalRecoveryPath(this.goalHome, goalId))
+    )
+    return parsed.success ? parsed.data : { relaunches: [], notices: [] }
+  }
+
+  async writeRecovery(goalId: string, recovery: GoalRecoveryRecord): Promise<void> {
+    await writeJsonAtomic(goalRecoveryPath(this.goalHome, goalId), recovery)
   }
 
   async appendVersion(goalId: string, line: GoalVersionLine): Promise<void> {

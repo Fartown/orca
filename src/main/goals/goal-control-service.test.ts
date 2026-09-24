@@ -111,7 +111,7 @@ function createParams(overrides: Partial<GoalCreateParams> = {}): GoalCreatePara
       extraChecks: [],
       checkAll: false,
       onBlocked: 'ask',
-      judge: 'none'
+      judge: 'codex'
     },
     budget: { maxTurns: 5, maxMinutes: 30, checkTimeoutSeconds: 60 },
     acknowledgeUnverifiedCompletion: true,

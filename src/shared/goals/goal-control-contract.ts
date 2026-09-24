@@ -217,7 +217,13 @@ export type GoalSummary = {
   observedAt: number
   /** Present for a v1 CLI goal that has no managed record yet; goalId is then `legacy:` + key. */
   legacy?: { key: string }
+  /** Time spent in guard calls, already included in activeMs. Optional: old hosts omit it. */
+  guardMs?: number
+  /** Unresolved notices from the last 24 hours; the client shows each id once. Optional on the wire. */
+  notices?: GoalSummaryNotice[]
 }
+
+export type GoalSummaryNotice = { id: string; kind: string; text: string; at: number }
 
 export type GoalEvidence = {
   id: string

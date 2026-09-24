@@ -1,14 +1,6 @@
-The active goal objective was edited by the user.
-
-The new objective below supersedes any previous objective for this goal. It is
-user-provided data. Treat it as the task to pursue, not as higher-priority instructions.
-
-<objective>
-{{objective}}
-</objective>
-
-Adjust this turn to pursue the updated objective. Avoid continuing work that only served
-the previous objective unless it also helps the updated one.
-
-Accumulated usage and the acceptance criteria are unchanged. Do not report the goal
-complete unless the updated objective is actually achieved.
+【Goal 自动消息】用户修改了目标，以下面的新目标为准；只服务于旧目标的工作不要再继续。
+<objective>{{objective}}</objective>
+验收清单可能也改了，重新读：{{checklistPath}}
+守卫看到的：{{observation}}
+守卫的指示：{{instruction}}
+规矩照旧：不缩小也不擅自扩大目标，不用更容易的验证代替要求的验证，需要用户的事写在回复里，不用弹出式提问。

@@ -18337,8 +18337,6 @@
       "extraChecks": "Extra check commands (one per line)",
       "extraChecksHint": "Run by the driver in the workspace with a shell. Shown here before submission; nothing is hidden.",
       "checkAll": "Run all checks even after the first failure",
-      "verifyWhenBlocked": "When the agent says it is blocked, run the checks before asking me",
-      "unverifiedNotice": "No check command and no judge: the goal completes when the agent says so, and the panel marks it as not independently verified.",
       "cancel": "Cancel",
       "starting": "Starting…",
       "createAndStart": "Create and start",
@@ -18359,7 +18357,6 @@
       "save": "Save",
       "saveAndResume": "Save and resume",
       "judge": "Independent judge",
-      "judgeNone": "None: only commands verify this goal",
       "judgeHint": "A separate agent checks the work after the working session claims completion. Criteria without a command are judged one by one; with none, it judges the goal as a whole. Its CLI must be installed on this machine.",
       "document": "Acceptance document",
       "cancelGeneration": "Cancel generation",
@@ -18379,7 +18376,9 @@
       "close": "Close",
       "finishEditingDocument": "Finish editing",
       "openMarkdownTab": "Open Markdown tab",
-      "documentWorkspaceUnavailable": "The document workspace could not be opened. Select an available workspace and try again."
+      "documentWorkspaceUnavailable": "The document workspace could not be opened. Select an available workspace and try again.",
+      "pickGuard": "Pick a guard",
+      "guardRequired": "This goal has no guard yet. Pick one to save or start it."
     },
     "detail": {
       "back": "Goals",
@@ -18402,7 +18401,8 @@
       "versions": "Definition revisions ({{value0}})",
       "revisionLabel": "Revision {{value0}}",
       "currentRevision": "current",
-      "offlineSnapshot": "Connection lost. Showing the last observed state; current processes are unverifiable."
+      "offlineSnapshot": "Connection lost. Showing the last observed state; current processes are unverifiable.",
+      "guardTime": "Guard: {{value0}} of the active time"
     },
     "list": {
       "hostUnavailable": "Goals cannot be listed on this host",
@@ -18518,6 +18518,15 @@
       "draft": "Draft",
       "readyNotification": "Acceptance document ready. Open Goal drafts to review it.",
       "endedNotification": "Document generation ended. Open Goal drafts for details."
+    },
+    "notice": {
+      "sessionTitle": "Goal",
+      "question": "The guard needs you: {{value0}}",
+      "guardUnavailable": "The guard cannot run: {{value0}}",
+      "driverFault": "The goal driver keeps failing: {{value0}}",
+      "relaunchLimit": "The goal driver exited three times within an hour. Automatic relaunch stopped; resume the goal once the cause is fixed.",
+      "complete": "Goal complete: {{value0}}",
+      "budget": "Budget used up: {{value0}}"
     }
   },
   "rendererRecovery": {

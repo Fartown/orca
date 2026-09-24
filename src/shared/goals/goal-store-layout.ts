@@ -74,3 +74,13 @@ export function goalJudgeItemsPath(goalHome: string, goalId: string): string {
 export function goalJudgeCriteriaPath(goalHome: string, goalId: string): string {
   return join(goalDir(goalHome, goalId), 'judge-criteria.md')
 }
+
+/** Full text of every guard call, written by the driver: one file per call. */
+export function goalGuardCallsDir(goalHome: string, goalId: string): string {
+  return join(goalDir(goalHome, goalId), 'guard')
+}
+
+/** Host-owned: driver relaunches by the recovery scan and the notices it raised. */
+export function goalRecoveryPath(goalHome: string, goalId: string): string {
+  return join(goalDir(goalHome, goalId), 'recovery.json')
+}

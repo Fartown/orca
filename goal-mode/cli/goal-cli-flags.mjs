@@ -4,12 +4,12 @@
 // 两边各写一份迟早会漂,而漂出来的症状是父进程报「已在后台启动」、子进程当场退出。
 import path from 'node:path'
 
-export const BOOLEAN_FLAGS = new Set(['yes', 'detach', 'prompt-file', 'check-all'])
+export const BOOLEAN_FLAGS = new Set(['yes', 'detach', 'check-all'])
 export const VALUE_FLAGS = new Set([
   'file',
   'terminal',
   'objective',
-  'on-blocked',
+  'guard',
   'check',
   'check-timeout',
   'max-turns',

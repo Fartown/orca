@@ -11,6 +11,7 @@ import {
   GoalRuntimeUnsupportedError
 } from './goal-runtime-client'
 import { goalDomainStore } from './goals-domain-store'
+import { GoalNoticeWatcher } from './GoalNoticeWatcher'
 
 const VISIBLE_POLL_MS = 5_000
 const HIDDEN_POLL_MS = 30_000
@@ -21,7 +22,7 @@ const PENDING_OPERATION_POLL_MS = 1_000
  * so a late response never overwrites a newer one. Hidden panels still refresh
  * slowly so the pane header can tell a bound session from an unbound one.
  */
-export function GoalDomainSyncGate(): null {
+export function GoalDomainSyncGate(): React.JSX.Element {
   const workspaceId = useAppStore((s) =>
     getActiveSidebarWorkspaceId(s.activeWorkspaceKey, s.activeWorktreeId)
   )
@@ -104,7 +105,8 @@ export function GoalDomainSyncGate(): null {
     return () => window.clearInterval(timer)
   }, [client, pendingCount])
 
-  return null
+  // Notices follow every execution host, not this route; see GoalNoticeWatcher.
+  return <GoalNoticeWatcher />
 }
 
 async function refreshList(

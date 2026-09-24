@@ -62,7 +62,8 @@ export function attachRuntimeWorktreeAgentRows(args: {
       interrupted: source.interrupted,
       stateStartedAt: source.stateStartedAt,
       updatedAt: source.updatedAt,
-      ...(source.structuredHost === 'owned' ? { structuredHostOwned: true as const } : {})
+      ...(source.structuredHost === 'owned' ? { structuredHostOwned: true as const } : {}),
+      ...(source.transcriptPath ? { transcriptPath: source.transcriptPath } : {})
     }
     const rows = rowsByWorktree.get(summary.worktreeId)
     if (rows) {

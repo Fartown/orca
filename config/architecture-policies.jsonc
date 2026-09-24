@@ -558,6 +558,12 @@
             "config/scripts/build-goal-driver.mjs",
             "config/scripts/electron-builder-runtime-resources.test.mjs",
             "docs/issue/Goal目标模式/**",
+            // 2026-09-23: the Goal guard reads the agent transcript path from worktree ps
+            // (docs/issue/Goal目标模式/solutions/Goal守卫监工与唤醒兜底修订方案.md §5.4.2).
+            "src/shared/runtime-worktree-contracts.ts",
+            "src/main/runtime/runtime-worktree-agent-source.ts",
+            "src/main/runtime/runtime-worktree-pty-agent-sources.ts",
+            "src/main/runtime/runtime-worktree-agent-rows.ts",
             // Its panel reads storage.get, which the host must expose to panels.
             "src/shared/plugins/plugin-host-api.ts",
             "src/main/plugins/plugin-host-conformance.test.ts",
@@ -889,7 +895,11 @@
             "src/main/orcad/orcad-entry.ts",
             "config/scripts/build-orcad.mjs",
             "src/shared/orcad-artifacts.ts",
-            "src/relay/dispatcher-rpc-routing.ts"
+            "src/relay/dispatcher-rpc-routing.ts",
+            "src/shared/runtime-worktree-contracts.ts",
+            "src/main/runtime/runtime-worktree-agent-source.ts",
+            "src/main/runtime/runtime-worktree-pty-agent-sources.ts",
+            "src/main/runtime/runtime-worktree-agent-rows.ts"
           ],
           "message": "Change is outside the Goal feature and its reviewed seams."
         },

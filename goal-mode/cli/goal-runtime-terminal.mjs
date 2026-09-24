@@ -35,9 +35,20 @@ export function createRuntimeTerminalBackend(options = {}) {
       return (await call('terminal.read', params)).terminal
     },
     async send(handle, text, { enter = true, interrupt = false } = {}) {
+      // 带回车的文字按 agent 提示词投递(和 `orca terminal send --text --enter` 一样):整段一次粘贴,
+      // Claude 的输入框不会再把分块写入的开头丢掉;agent 忙时排队也算送达。
+      const prompt = Boolean(text) && enter && !interrupt
       const result = await call(
         'terminal.send',
-        { terminal: handle, text, enter, ...(interrupt ? { interrupt: true } : {}) },
+        {
+          terminal: handle,
+          text,
+          enter,
+          ...(interrupt ? { interrupt: true } : {}),
+          ...(prompt
+            ? { agentPrompt: true, client: { id: 'orca-goal-driver', type: 'desktop' } }
+            : {})
+        },
         { timeoutMs: 120_000 }
       )
       return result.send

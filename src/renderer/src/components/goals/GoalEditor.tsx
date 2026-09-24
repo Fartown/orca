@@ -24,6 +24,7 @@ import { fingerprintPayload, newClientOperationId } from '@/goals/goal-client-op
 import { openGoalDocument } from '@/goals/open-goal-document'
 import { resolveGoalBindingForPane } from '@/goals/goal-session-target'
 import { goalDomainStore } from '@/goals/goals-domain-store'
+import { useAppStore } from '@/store'
 import { useGoalDomainStore } from '@/goals/use-goals-domain-store'
 import { GoalAdvancedSettings } from './GoalAdvancedSettings'
 import { GoalAcceptanceDocument } from './GoalAcceptanceDocument'
@@ -37,6 +38,7 @@ import {
   budgetFromDraft,
   isNonNegativeNumber,
   isPositiveNumber,
+  defaultGuardFor,
   specFromDraft,
   type GoalDraft
 } from './goal-editor-draft'
@@ -69,15 +71,20 @@ export function GoalEditor(): React.JSX.Element {
   const setDocumentContext = (value: string): void =>
     session?.change((current) => ({ ...current, documentContext: value }))
   const setTarget = (value: typeof target): void =>
-    session?.change((current) => ({ ...current, target: value }))
+    session?.change((current) => {
+      const guard =
+        !current.goalId && value.paneKey
+          ? defaultGuardFor(useAppStore.getState().agentStatusByPaneKey[value.paneKey]?.agentType)
+          : null
+      return {
+        ...current,
+        target: value,
+        ...(guard ? { fields: { ...current.fields, judge: guard } } : {})
+      }
+    })
 
   useEffect(() => setError(null), [session?.id])
 
-  const hasCommands =
-    draft.criteria.some((criterion) => criterion.command?.trim()) ||
-    draft.extraChecks.trim().length > 0
-  // Why: a picked judge always adds an independent check — per item, or over the goal text as a whole.
-  const verifiable = hasCommands || draft.judge !== 'none'
   const valid =
     Boolean(session) &&
     !persistence.loading &&
@@ -89,7 +96,8 @@ export function GoalEditor(): React.JSX.Element {
     draft.objective.length <= 32_000 &&
     (editingGoalId !== null || Boolean(draft.acceptanceDocument.trim())) &&
     draft.acceptanceDocument.length <= 32_000 &&
-    (!draft.acceptanceDocument || draft.judge !== 'none') &&
+    // Every run is driven by its guard; an old goal saved without one must pick one first.
+    draft.judge !== 'none' &&
     !staleDocument &&
     !generation.generating &&
     (editingGoalId !== null || Boolean(target.worktreeId && target.paneKey)) &&
@@ -141,8 +149,8 @@ export function GoalEditor(): React.JSX.Element {
         binding: resolved.binding,
         spec: specFromDraft(draft),
         budget: budgetFromDraft(draft),
-        // Why: the host never gates on this; it records that the unverified notice was shown.
-        acknowledgeUnverifiedCompletion: !verifiable
+        // Why false: every goal runs with a guard, so there is no unverified completion to accept.
+        acknowledgeUnverifiedCompletion: false
       }
       // Why: the same id retries into the same receipt; a fresh one is minted only after the host answers.
       const operation = await session!.client.create({
@@ -235,14 +243,9 @@ export function GoalEditor(): React.JSX.Element {
                 onValueChange={(value) => update('judge', value as GoalDraft['judge'])}
               >
                 <SelectTrigger id="goal-judge">
-                  <SelectValue />
+                  <SelectValue placeholder={translate('goals.editor.pickGuard', 'Pick a guard')} />
                 </SelectTrigger>
                 <SelectContent>
-                  {editing && !draft.acceptanceDocument ? (
-                    <SelectItem value="none">
-                      {translate('goals.editor.judgeNone', 'None: only commands verify this goal')}
-                    </SelectItem>
-                  ) : null}
                   <SelectItem value="codex">{JUDGE_CLI_LABELS.codex}</SelectItem>
                   <SelectItem value="claude">{JUDGE_CLI_LABELS.claude}</SelectItem>
                 </SelectContent>
@@ -352,11 +355,11 @@ export function GoalEditor(): React.JSX.Element {
               update={update}
               showCriteria={Boolean(editing && !draft.acceptanceDocument)}
             />
-            {!verifiable ? (
+            {draft.judge === 'none' ? (
               <p className="text-xs text-muted-foreground" role="note">
                 {translate(
-                  'goals.editor.unverifiedNotice',
-                  'No check command and no judge: the goal completes when the agent says so, and the panel marks it as not independently verified.'
+                  'goals.editor.guardRequired',
+                  'This goal has no guard yet. Pick one to save or start it.'
                 )}
               </p>
             ) : null}

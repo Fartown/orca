@@ -1,4 +1,5 @@
 import { promises as fs } from 'node:fs'
+import { dirname, join } from 'node:path'
 
 export type GoalAgentProvider = {
   args: (
@@ -27,7 +28,9 @@ export const GOAL_AGENT_PROVIDERS: Record<'claude' | 'codex', GoalAgentProvider>
             '--disallowed-tools',
             'Edit,Write,NotebookEdit'
           ]
-        : [])
+        : sandbox === 'danger-full-access'
+          ? ['--permission-mode', 'bypassPermissions']
+          : [])
     ],
     read: async ({ stdout }) => parseClaudeJson(stdout)
   },
@@ -79,5 +82,77 @@ function parseClaudeJson(stdout: string): string | null {
       }
     }
     return null
+  }
+}
+
+export type GoalAgentFamily = 'claude' | 'codex'
+
+export type GoalSessionHistorySource = { family: GoalAgentFamily; path: string; note: string }
+
+/** Claude Code names a project's session folder after its cwd with every non-alphanumeric char dashed. */
+export function claudeProjectSessionDir(workspacePath: string, homeDir: string): string {
+  return join(homeDir, '.claude', 'projects', workspacePath.replace(/[^a-zA-Z0-9]/g, '-'))
+}
+
+/**
+ * Where an agent family keeps this workspace's past sessions on the execution host. Only
+ * sources that exist are returned, so a prompt never presents an empty variable as searched.
+ */
+export async function goalSessionHistorySources(
+  workspacePath: string,
+  homeDir: string,
+  families: readonly GoalAgentFamily[] = ['claude', 'codex'],
+  exists: (path: string) => Promise<boolean> = pathExists
+): Promise<GoalSessionHistorySource[]> {
+  const candidates: GoalSessionHistorySource[] = families.map((family) =>
+    family === 'claude'
+      ? { family, path: claudeProjectSessionDir(workspacePath, homeDir), note: '本工作区的会话' }
+      : {
+          family,
+          path: join(homeDir, '.codex', 'sessions'),
+          note: `所有工作区的会话，按 cwd 为 ${workspacePath} 筛选`
+        }
+  )
+  const found = await Promise.all(candidates.map((candidate) => exists(candidate.path)))
+  return candidates.filter((_, index) => found[index])
+}
+
+/**
+ * The working agent's own session folder, read off its transcript path. Orca launches agents
+ * with managed homes, so this beats guessing from HOME: a codex rollout sits under
+ * `CODEX_HOME/sessions/...`, a claude transcript directly in its project folder.
+ */
+export function sessionHistoryFromTranscript(
+  transcriptPath: string | null | undefined,
+  family: GoalAgentFamily | null
+): GoalSessionHistorySource | null {
+  if (!transcriptPath || !family) {
+    return null
+  }
+  if (family === 'claude') {
+    return { family, path: dirname(transcriptPath), note: '执行 agent 所在项目的会话' }
+  }
+  const marker = transcriptPath.replace(/\\/g, '/').lastIndexOf('/sessions/')
+  return marker === -1
+    ? null
+    : {
+        family,
+        path: transcriptPath.slice(0, marker + '/sessions'.length),
+        note: '执行 agent 所用的会话目录,按 cwd 筛选本工作区'
+      }
+}
+
+export function describeGoalSessionHistory(sources: readonly GoalSessionHistorySource[]): string {
+  return sources.length === 0
+    ? '不可用'
+    : sources.map((source) => `${source.path}（${source.family}，${source.note}）`).join('；')
+}
+
+async function pathExists(path: string): Promise<boolean> {
+  try {
+    await fs.stat(path)
+    return true
+  } catch {
+    return false
   }
 }
