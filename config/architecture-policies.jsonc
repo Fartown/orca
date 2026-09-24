@@ -16,6 +16,7 @@
           "comparison": "worktree",
           "whenChanged": [
             ".github/workflows/fork-integration-build.yml",
+            "config/scripts/mobile-web-bundle-packaging-workflow-contract.test.mjs",
             "config/scripts/integration-builds/**",
             "src/shared/integration-builds/**",
             "src/main/integration-builds/**",
@@ -25,6 +26,7 @@
           ],
           "allowedPaths": [
             ".github/workflows/fork-integration-build.yml",
+            "config/scripts/mobile-web-bundle-packaging-workflow-contract.test.mjs",
             "config/scripts/integration-builds/**",
             "src/shared/integration-builds/**",
             "src/main/integration-builds/**",
@@ -457,8 +459,12 @@
             "mobile/src/session/MobileSessionSheets.tsx",
             "mobile/src/session/use-mobile-session-terminal-create-actions.ts",
             "mobile/src/session/mobile-session-route-parity.test.ts",
+            "config/scripts/mobile-web-app-session-terminal-closure.test.mjs",
+            "config/scripts/verify-mobile-web-app-bundle.mjs",
+            "config/scripts/build-mobile-web-app-bundle.test.mjs",
             // Fork infrastructure (docs/reference/fork-maintenance.md).
             ".github/workflows/fork-integration-build.yml",
+            "config/scripts/mobile-web-bundle-packaging-workflow-contract.test.mjs",
             "config/scripts/integration-builds/**",
             "src/shared/integration-builds/**",
             "src/main/integration-builds/**",
@@ -494,6 +500,11 @@
             "docs/maintenance/**",
             // Every fork feature's owned paths and seams. config/fork-features.jsonc is
             // cross-checked against this list by check:fork-features.
+            "src/main/runtime/headless-sibling-writers-keep-publication-epoch.test.ts",
+            "src/main/runtime/orca-runtime-move-headless-mobile-session-tab.ts",
+            "src/main/runtime/orca-runtime-persist-headless-session-tab-props.ts",
+            "src/main/runtime/orca-runtime-apply-mobile-session-tab-navigation.ts",
+            "src/main/runtime/orca-runtime-close-structured-agent-session-tab.ts",
             "src/shared/rpc-contract/rpc-params-catalog.generated.ts",
             "src/main/runtime/rpc/rpc-params-type-parity.ts",
             "src/shared/document-preview-size/**",
@@ -1253,6 +1264,9 @@
             "mobile/src/session/MobileSessionSheets.tsx",
             "mobile/src/session/use-mobile-session-terminal-create-actions.ts",
             "mobile/src/session/mobile-session-route-parity.test.ts",
+            "config/scripts/mobile-web-app-session-terminal-closure.test.mjs",
+            "config/scripts/verify-mobile-web-app-bundle.mjs",
+            "config/scripts/build-mobile-web-app-bundle.test.mjs",
             "config/fork-features.jsonc",
             "config/architecture-policies.jsonc",
             "docs/issue/README.md",
@@ -1297,6 +1311,34 @@
             ".gitignore"
           ],
           "message": "Change is outside the document preview size feature."
+        }
+      ]
+    },
+    {
+      "id": "session-tabs-publication-lineage",
+      "description": "Headless session-tab writers carry the incumbent publicationEpoch forward; minting a publisher generation is reserved for snapshots with nothing to inherit from (REQ-701～REQ-704).",
+      "rules": [
+        {
+          "id": "session-tabs-publication-lineage-worktree-scope",
+          "type": "change-scope",
+          "comparison": "worktree",
+          "whenChanged": [
+            "src/main/runtime/headless-sibling-writers-keep-publication-epoch.test.ts",
+            "docs/issue/远程Tab发布血缘修复/**"
+          ],
+          "allowedPaths": [
+            "src/main/runtime/headless-sibling-writers-keep-publication-epoch.test.ts",
+            "docs/issue/远程Tab发布血缘修复/**",
+            "src/main/runtime/orca-runtime-move-headless-mobile-session-tab.ts",
+            "src/main/runtime/orca-runtime-persist-headless-session-tab-props.ts",
+            "src/main/runtime/orca-runtime-apply-mobile-session-tab-navigation.ts",
+            "src/main/runtime/orca-runtime-close-structured-agent-session-tab.ts",
+            "config/fork-features.jsonc",
+            "config/architecture-policies.jsonc",
+            "docs/issue/README.md",
+            ".gitignore"
+          ],
+          "message": "Change is outside the session tabs publication lineage fix."
         }
       ]
     },

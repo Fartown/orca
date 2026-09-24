@@ -91,7 +91,9 @@ export class OrcaRuntimeWithPersistHeadlessSessionTabProps extends OrcaRuntimeWi
     }
     const nextSnapshot: RuntimeMobileSessionTabsSnapshot = {
       ...snapshot,
-      publicationEpoch: `headless:${Date.now().toString(36)}`,
+      // Why: the epoch names the publisher generation; a headless content edit
+      // bumps the version, minting a fresh publisher fences live renderer frames.
+      publicationEpoch: snapshot.publicationEpoch,
       snapshotVersion: snapshot.snapshotVersion + 1,
       tabs
     }
@@ -177,7 +179,9 @@ export class OrcaRuntimeWithPersistHeadlessSessionTabProps extends OrcaRuntimeWi
     }
     const nextSnapshot: RuntimeMobileSessionTabsSnapshot = {
       ...snapshot,
-      publicationEpoch: `headless:${Date.now().toString(36)}`,
+      // Why: the epoch names the publisher generation; a headless content edit
+      // bumps the version, minting a fresh publisher fences live renderer frames.
+      publicationEpoch: snapshot.publicationEpoch,
       snapshotVersion: snapshot.snapshotVersion + 1,
       tabs
     }

@@ -3,7 +3,7 @@ title: "移动端在新会话中继续"
 slug: "移动端在新会话中继续"
 status: testing
 created: 2026-09-13
-updated: 2026-09-13
+updated: 2026-09-23
 external_ids: []
 ---
 
@@ -170,6 +170,15 @@ external_ids: []
 - 无
 
 ## 3. 开发记录
+
+### 2026-09-23 重录 mobile web bundle 闭包与分块基线
+
+- 本轮目标：修复续接功能合入后遗留的 mobile web bundle 基线漂移，让 integration packaging gate 对当前代码给出真实判定
+- 完成内容：以 fork 的 upstream merge-base `3bb9a4e261` 和当前 integration `ef98278cfc` 分别运行全部 mobile postinstall generator 后重测；session route 从 4211 / 1025 个总计 / 本地模块变为 4226 / 1040，新增 15 个均归属于续接链路；完整 route-prefix sweep 尾部从 63 / 64 / 66 变为 62 / 63 / 65，确认是 `clipboard-text.ts` 与 agent catalog 的 importer set 相同后被 esbuild 合并，不是代码或预算缺失
+- 代码或文档变更：`config/scripts/mobile-web-app-session-terminal-closure.test.mjs`、`config/scripts/verify-mobile-web-app-bundle.mjs`、`config/scripts/build-mobile-web-app-bundle.test.mjs`；`config/fork-features.jsonc`、`config/architecture-policies.jsonc`；TC-010 与本轮测试记录
+- 验证证据：定向 bundle 套件 2 文件 / 49 测试、续接桌面侧 33 测试、移动侧 34 测试全过；完整 typecheck、changed-code quality、四项 localization、check:fork-features、check:fork-docs、check:architecture-policies 全绿；当前构建 108 个 assets、7,682,447 bytes；脚本 margin 保持 4，设备 manifest 上限保持 256，派生边界按实测从 31 路由顺延到 32 路由
+- 未解决问题：无
+- 下一步：提交独立 PR，先合回 `fork/integration`，再重跑 integration packaging PR
 
 ### 2026-09-13 合入上游同步：两处 ratchet 重算，投递迁到 typed RPC operation
 

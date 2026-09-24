@@ -56,6 +56,11 @@
       ],
       "seams": [
         {
+          "file": "config/scripts/mobile-web-bundle-packaging-workflow-contract.test.mjs",
+          "mustContain": "fork-integration-build.yml macos",
+          "why": "the fork macOS package participates in the shared mobile bundle precondition census"
+        },
+        {
           "file": "mobile/app.config.js",
           "mustContain": "integration-builds",
           "why": "integration-only native version and build marker"
@@ -87,6 +92,7 @@
         }
       ],
       "tests": [
+        "config/scripts/mobile-web-bundle-packaging-workflow-contract.test.mjs",
         "config/scripts/integration-builds/integration-builds.test.mjs",
         "config/scripts/integration-builds/mac-signing.test.mjs",
         "config/scripts/integration-builds/mac-package-signature.test.mjs",
@@ -99,7 +105,7 @@
         "mobile/src/integration-builds/update-controller.test.ts"
       ],
       "checks": [
-        "pnpm exec vitest run --config config/vitest.config.ts config/scripts/integration-builds src/shared/integration-builds src/main/integration-builds",
+        "pnpm exec vitest run --config config/vitest.config.ts config/scripts/mobile-web-bundle-packaging-workflow-contract.test.mjs config/scripts/integration-builds src/shared/integration-builds src/main/integration-builds",
         "pnpm --dir mobile exec vitest run src/integration-builds"
       ]
     },
@@ -1743,16 +1749,34 @@
           "file": "mobile/src/session/mobile-session-route-parity.test.ts",
           "mustContain": "session-continuation entry",
           "why": "the route parity baselines record which change last moved them"
+        },
+        {
+          "file": "config/scripts/mobile-web-app-session-terminal-closure.test.mjs",
+          "mustContain": "const SESSION_ROUTE_MODULES = 4226",
+          "why": "the session route closure records the continuation feature's fifteen local modules"
+        },
+        {
+          "file": "config/scripts/verify-mobile-web-app-bundle.mjs",
+          "mustContain": "['./h/_layout.tsx', 65]",
+          "why": "the route-prefix sweep records continuation's measured chunk-sharing change"
+        },
+        {
+          "file": "config/scripts/build-mobile-web-app-bundle.test.mjs",
+          "mustContain": "assertAssetCeilingFitsShell(32, 42",
+          "why": "the asset-ceiling boundary follows the re-measured route-prefix sweep"
         }
       ],
       "tests": [
         "src/shared/agent-session-continuation/continuation-prompt.test.ts",
         "mobile/src/session-continuation/continuation-delivery.test.ts",
-        "mobile/src/session-continuation/continuation-source.test.ts"
+        "mobile/src/session-continuation/continuation-source.test.ts",
+        "config/scripts/mobile-web-app-session-terminal-closure.test.mjs",
+        "config/scripts/build-mobile-web-app-bundle.test.mjs"
       ],
       "checks": [
         "pnpm exec vitest run --config config/vitest.config.ts src/shared/agent-session-continuation src/renderer/src/lib/agent-session-fork-context.test.ts src/renderer/src/lib/launch-agent-session-continuation.test.ts src/renderer/src/components/agent-session-continuation src/renderer/src/components/terminal-pane/terminal-agent-session-continuation.test.ts src/renderer/src/components/right-sidebar/ai-vault-session-continuation.test.ts",
-        "pnpm --dir mobile exec vitest run src/session-continuation src/session/mobile-terminal-action-sheet-actions.test.ts src/session/mobile-session-route-parity.test.ts"
+        "pnpm --dir mobile exec vitest run src/session-continuation src/session/mobile-terminal-action-sheet-actions.test.ts src/session/mobile-session-route-parity.test.ts",
+        "pnpm exec vitest run --config config/vitest.config.ts config/scripts/mobile-web-app-session-terminal-closure.test.mjs config/scripts/build-mobile-web-app-bundle.test.mjs"
       ]
     },
     {
@@ -1811,6 +1835,53 @@
       ],
       "checks": [
         "pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/components/rich-markdown-override src/renderer/src/components/editor/editor-panel-render-model.test.ts src/renderer/src/components/editor/EditorContent.markdown-classification.test.tsx src/renderer/src/components/editor/markdown-rich-mode.test.ts src/renderer/src/components/editor/markdown-render-mode.test.ts"
+      ]
+    },
+    {
+      "id": "session-tabs-publication-lineage",
+      "title": "远程Tab发布血缘修复:headless 写路径沿用现任 publicationEpoch",
+      "goal": "headless 内容修改沿用现任发布者，避免远程 Tab 列表因误退役停止同步",
+      "journal": "docs/issue/远程Tab发布血缘修复/journal.md",
+      "dependsOn": [
+        "src/main/runtime/orca-runtime.ts",
+        "src/shared/constants.ts",
+        "src/shared/runtime-types.ts"
+      ],
+      "policyId": "session-tabs-publication-lineage",
+      "ownedPaths": [
+        "docs/issue/远程Tab发布血缘修复/**",
+        "src/main/runtime/headless-sibling-writers-keep-publication-epoch.test.ts"
+      ],
+      "requiredFiles": [
+        "src/main/runtime/headless-sibling-writers-keep-publication-epoch.test.ts"
+      ],
+      "seams": [
+        {
+          "file": "src/main/runtime/orca-runtime-move-headless-mobile-session-tab.ts",
+          "mustContain": "minting a fresh publisher fences live renderer frames",
+          "why": "tab reorder/split/move-to-group carry the incumbent epoch instead of minting one (REQ-701)"
+        },
+        {
+          "file": "src/main/runtime/orca-runtime-persist-headless-session-tab-props.ts",
+          "mustContain": "minting a fresh publisher fences live renderer frames",
+          "why": "tab props and pane layout carry the incumbent epoch instead of minting one (REQ-701)"
+        },
+        {
+          "file": "src/main/runtime/orca-runtime-apply-mobile-session-tab-navigation.ts",
+          "mustContain": "minting a fresh publisher fences live renderer frames",
+          "why": "tab activation carries the incumbent epoch instead of minting one (REQ-701)"
+        },
+        {
+          "file": "src/main/runtime/orca-runtime-close-structured-agent-session-tab.ts",
+          "mustContain": "minting a fresh publisher fences live renderer frames",
+          "why": "browser tab retirement carries the incumbent epoch instead of minting one (REQ-701)"
+        }
+      ],
+      "tests": [
+        "src/main/runtime/headless-sibling-writers-keep-publication-epoch.test.ts"
+      ],
+      "checks": [
+        "pnpm exec vitest run --config config/vitest.config.ts src/main/runtime/headless-sibling-writers-keep-publication-epoch.test.ts src/main/runtime/headless-close-keeps-publication-epoch.test.ts"
       ]
     }
   ]
