@@ -28,6 +28,11 @@ export const EMPTY_GOAL_DRAFT: GoalDraft = {
   checkTimeoutSeconds: '900'
 }
 
+/** C15: the guard defaults to the other model family than the agent doing the work. */
+export function defaultGuardFor(agentType: string | null | undefined): GoalDraft['judge'] | null {
+  return agentType === 'codex' ? 'claude' : agentType === 'claude' ? 'codex' : null
+}
+
 export function targetFromPrefill(prefill: GoalEditorPrefill | null): GoalTargetSelection {
   return { worktreeId: prefill?.worktreeId ?? null, paneKey: prefill?.paneKey ?? null }
 }

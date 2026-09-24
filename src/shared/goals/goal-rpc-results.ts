@@ -90,7 +90,15 @@ export const GoalSummaryResult = z
     turns: z.number(),
     activeMs: z.number(),
     observedAt: z.number(),
-    legacy: z.object({ key: z.string() }).optional()
+    legacy: z.object({ key: z.string() }).optional(),
+    guardMs: z.number().optional(),
+    notices: z
+      .array(
+        z
+          .object({ id: z.string(), kind: z.string(), text: z.string(), at: z.number() })
+          .passthrough()
+      )
+      .optional()
   })
   .passthrough()
 

@@ -1,10 +1,15 @@
 import { readFile, writeFile } from 'node:fs/promises'
+import { homedir } from 'node:os'
 import { join } from 'node:path'
 import { StringDecoder } from 'node:string_decoder'
 import { runProcess } from '../../shared/child-process/run-process'
 import type { GoalAcceptanceDraft } from '../../shared/goals/goal-acceptance-draft-contract'
 import type { GoalDraftAcceptanceParams } from '../../shared/goals/goal-control-contract'
-import { GOAL_AGENT_PROVIDERS } from '../../shared/goals/goal-agent-provider'
+import {
+  describeGoalSessionHistory,
+  GOAL_AGENT_PROVIDERS,
+  goalSessionHistorySources
+} from '../../shared/goals/goal-agent-provider'
 import { acceptanceDraftPrompt } from '../../shared/goals/goal-acceptance-prompt'
 import { readJson, writeJsonAtomic } from './goal-record-files'
 
@@ -96,9 +101,13 @@ export async function runAcceptanceDraft(
     save()
     const agent = GOAL_AGENT_PROVIDERS[input.judge]
     const outFile = join(dir, 'agent-document.md')
+    // Why here: the runner is on the execution host, which is where past sessions live.
+    const history = describeGoalSessionHistory(
+      await goalSessionHistorySources(input.workspace, homedir())
+    )
     const output = await (dependencies.run ?? runProcess)({
       program: input.judge,
-      args: agent.args(acceptanceDraftPrompt(input.objective, input.acceptanceContext), {
+      args: agent.args(acceptanceDraftPrompt(input.objective, input.acceptanceContext, history), {
         outFile,
         cwd: input.workspace,
         streamEvents: true

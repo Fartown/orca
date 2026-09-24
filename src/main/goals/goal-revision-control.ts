@@ -8,7 +8,7 @@ import type {
 import { nextGoalRuntimeFence } from '../../shared/goals/goal-runtime-fence'
 import type { GoalRecord } from '../../shared/goals/goal-store-records'
 import type { GoalBindingAdmission } from './goal-binding-admission'
-import type { GoalContinuationControl } from './goal-continuation-control'
+import { rejectGuardless, type GoalContinuationControl } from './goal-continuation-control'
 import type { GoalOperationReceipts, GoalRejection } from './goal-operation-receipts'
 import type { GoalRunCommitter } from './goal-run-commit'
 import type { GoalStore } from './goal-store'
@@ -41,6 +41,10 @@ export class GoalRevisionControl {
         code: 'conflict',
         message: 'Nothing to change.'
       })
+    }
+    const guardless = params.spec ? rejectGuardless(params.spec) : null
+    if (guardless) {
+      return receipts.reject(params, record.goalId, guardless)
     }
     const quiet = await this.quiescence(record)
     if (!quiet.ok) {

@@ -120,6 +120,13 @@ export function GoalDetail({ goalId }: { goalId: string }): React.JSX.Element {
                     )}`
                   : null}
               </p>
+              {current.guardMs !== undefined ? (
+                <p className="text-[11px] text-muted-foreground">
+                  {translate('goals.detail.guardTime', 'Guard: {{value0}} of the active time', {
+                    value0: formatActiveMinutes(current.guardMs)
+                  })}
+                </p>
+              ) : null}
               {detail?.latestOperation ? (
                 <p className="text-[11px] text-muted-foreground">
                   {detail.latestOperation.message}

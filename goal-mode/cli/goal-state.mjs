@@ -49,12 +49,12 @@ export const logPath = (key) => path.join(logDir(), `${key}.jsonl`)
 export function newGoal({
   key,
   objective,
-  onBlocked = 'ask',
   worktreePath,
   terminalHandle,
   acceptance,
   budget,
-  promptFile,
+  guard,
+  checklistPath = null,
   now
 }) {
   return {
@@ -63,26 +63,26 @@ export function newGoal({
     objective,
     worktreePath,
     terminalHandle,
-    acceptance, // { commands: string[], timeoutMs, cwd }
+    acceptance, // 用户额外配置的检查命令 { commands: string[], timeoutMs, cwd, all }
     budget, // { maxTurns, maxMinutes }
-    onBlocked, // 'ask' 停下叫人(默认)| 'verify' 先跑一次验收核实
-    promptFile: Boolean(promptFile), // 提示词落文件、只注入一行指针
+    guard, // { agent: 'claude'|'codex', timeoutMs, logDir }
+    checklistPath, // 验收清单文件;没有时守卫以目标原文为准
     state: 'active', // active | complete | blocked | budget_exhausted | stalled | aborted
     turns: 0,
-    falseClaims: 0,
-    blockedClaims: 0,
-    stallCount: 0,
-    tamperFindings: [], // 削弱验收的痕迹,跨轮累积
-    tamperChallenges: 0,
     startedAt: now,
-    // 真正花掉的时间:逐轮累加,驱动没跑的时候不计。
-    // 不能用 startedAt 起的墙钟当预算 —— 那样目标停着、驱动崩着也在扣,
-    // 停一晚上第二天接回来预算就没了,而它其实一分钟活都没干。
+    // 真正花掉的时间:逐拍累加,驱动没跑、暂停、等用户回答的时间不计。
+    // 不能用 startedAt 起的墙钟当预算 —— 那样目标停着、驱动崩着也在扣。
     activeMs: 0,
+    guardMs: 0,
+    guardCalls: 0,
+    guardNote: '',
+    guardObservation: null,
+    lastReviewAt: null,
+    awaitingUser: null, // 当前仍待用户回答的问题 { reason, since }
+    notifiedQuestions: [],
+    notices: [],
     updatedAt: now,
     lastSnapshot: null,
-    lastCursor: null,
-    roundMarker: null,
     finishedAt: null,
     finishReason: null
   }

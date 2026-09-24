@@ -35,6 +35,9 @@ export function registerRelayGoals(
   hookReady = true
 ): () => void {
   const callers = new AsyncLocalStorage<number>()
+  // Why: the recovery scan has no request of its own; terminal handles resolve through the last
+  // client that asked (the client polls goals.list), and not at all while none is connected.
+  let lastCaller: number | undefined
   const hostFacts = (params: Record<string, unknown>) => {
     const caller = callers.getStore()
     if (caller === undefined) {
@@ -77,9 +80,27 @@ export function registerRelayGoals(
         )
       }
     }),
-    userDataPath: process.env.ORCA_USER_DATA_PATH ?? join(homedir(), '.orca-relay')
+    userDataPath: process.env.ORCA_USER_DATA_PATH ?? join(homedir(), '.orca-relay'),
+    recoveryHostContext: async (pass) => {
+      const caller = lastCaller
+      if (caller === undefined) {
+        return false
+      }
+      await callers.run(caller, pass)
+      return true
+    }
   })
-  dispatcher.onRequest('goals.status', async (raw, context) =>
+  const onRequest: typeof dispatcher.onRequest = (method, handler) =>
+    dispatcher.onRequest(method, (raw, context) => {
+      const reconnected = lastCaller !== context.clientId
+      lastCaller = context.clientId
+      if (reconnected) {
+        // A client just (re)connected: drivers that exited while nobody could reach them come back now.
+        void service.recovery.scan()
+      }
+      return handler(raw, context)
+    })
+  onRequest('goals.status', async (raw, context) =>
     callers.run(context.clientId, async () => {
       GoalRpcParams['goals.status'].parse(raw)
       return {
@@ -89,107 +110,111 @@ export function registerRelayGoals(
       }
     })
   )
-  dispatcher.onRequest('goals.draftAcceptance', async (raw, context) =>
+  onRequest('goals.draftAcceptance', async (raw, context) =>
     callers.run(context.clientId, async () => {
       const params = GoalRpcParams['goals.draftAcceptance'].parse(raw)
       return service.drafts.start(params)
     })
   )
-  dispatcher.onRequest('goals.getAcceptanceDraft', async (raw, context) =>
+  onRequest('goals.getAcceptanceDraft', async (raw, context) =>
     callers.run(context.clientId, async () => {
       const params = GoalRpcParams['goals.getAcceptanceDraft'].parse(raw)
       return service.drafts.get(params.draftId)
     })
   )
-  dispatcher.onRequest('goals.cancelAcceptanceDraft', async (raw, context) =>
+  onRequest('goals.cancelAcceptanceDraft', async (raw, context) =>
     callers.run(context.clientId, async () => {
       const params = GoalRpcParams['goals.cancelAcceptanceDraft'].parse(raw)
       return service.drafts.cancel(params.draftId)
     })
   )
-  dispatcher.onRequest('goals.listEditorDrafts', async (raw, context) =>
+  onRequest('goals.listEditorDrafts', async (raw, context) =>
     callers.run(context.clientId, async () => {
       GoalRpcParams['goals.listEditorDrafts'].parse(raw)
       return service.editorDrafts.list()
     })
   )
-  dispatcher.onRequest('goals.getEditorDraft', async (raw, context) =>
+  onRequest('goals.getEditorDraft', async (raw, context) =>
     callers.run(context.clientId, async () => {
       const params = GoalRpcParams['goals.getEditorDraft'].parse(raw)
       return service.editorDrafts.get(params.editorDraftId)
     })
   )
-  dispatcher.onRequest('goals.saveEditorDraft', async (raw, context) =>
+  onRequest('goals.saveEditorDraft', async (raw, context) =>
     callers.run(context.clientId, async () => {
       const params = GoalRpcParams['goals.saveEditorDraft'].parse(raw)
       return service.editorDrafts.save(params)
     })
   )
-  dispatcher.onRequest('goals.deleteEditorDraft', async (raw, context) =>
+  onRequest('goals.deleteEditorDraft', async (raw, context) =>
     callers.run(context.clientId, async () => {
       const params = GoalRpcParams['goals.deleteEditorDraft'].parse(raw)
       return service.editorDrafts.delete(params)
     })
   )
-  dispatcher.onRequest('goals.list', async (raw, context) =>
+  onRequest('goals.list', async (raw, context) =>
     callers.run(context.clientId, async () => {
       const params = GoalRpcParams['goals.list'].parse(raw)
       return service.list(params)
     })
   )
-  dispatcher.onRequest('goals.get', async (raw, context) =>
+  onRequest('goals.get', async (raw, context) =>
     callers.run(context.clientId, async () => {
       const params = GoalRpcParams['goals.get'].parse(raw)
       return service.get(params.goalId)
     })
   )
-  dispatcher.onRequest('goals.create', async (raw, context) =>
+  onRequest('goals.create', async (raw, context) =>
     callers.run(context.clientId, async () => {
       const params = GoalRpcParams['goals.create'].parse(raw)
       return service.create(params)
     })
   )
-  dispatcher.onRequest('goals.control', async (raw, context) =>
+  onRequest('goals.control', async (raw, context) =>
     callers.run(context.clientId, async () => {
       const params = GoalRpcParams['goals.control'].parse(raw)
       return service.control(params)
     })
   )
-  dispatcher.onRequest('goals.amend', async (raw, context) =>
+  onRequest('goals.amend', async (raw, context) =>
     callers.run(context.clientId, async () => {
       const params = GoalRpcParams['goals.amend'].parse(raw)
       return service.amend(params)
     })
   )
-  dispatcher.onRequest('goals.rebind', async (raw, context) =>
+  onRequest('goals.rebind', async (raw, context) =>
     callers.run(context.clientId, async () => {
       const params = GoalRpcParams['goals.rebind'].parse(raw)
       return service.rebind(params)
     })
   )
-  dispatcher.onRequest('goals.archive', async (raw, context) =>
+  onRequest('goals.archive', async (raw, context) =>
     callers.run(context.clientId, async () => {
       const params = GoalRpcParams['goals.archive'].parse(raw)
       return service.archive(params)
     })
   )
-  dispatcher.onRequest('goals.versions', async (raw, context) =>
+  onRequest('goals.versions', async (raw, context) =>
     callers.run(context.clientId, async () => {
       const params = GoalRpcParams['goals.versions'].parse(raw)
       return service.versions(params.goalId)
     })
   )
-  dispatcher.onRequest('goals.adoptLegacy', async (raw, context) =>
+  onRequest('goals.adoptLegacy', async (raw, context) =>
     callers.run(context.clientId, async () => {
       const params = GoalRpcParams['goals.adoptLegacy'].parse(raw)
       return service.adoptLegacy(params)
     })
   )
-  dispatcher.onRequest('goals.operation', async (raw, context) =>
+  onRequest('goals.operation', async (raw, context) =>
     callers.run(context.clientId, async () => {
       const params = GoalRpcParams['goals.operation'].parse(raw)
       return service.operation(params.clientOperationId)
     })
   )
-  return () => service.drafts.dispose()
+  service.recovery.start()
+  return () => {
+    service.recovery.stop()
+    service.drafts.dispose()
+  }
 }

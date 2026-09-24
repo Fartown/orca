@@ -39,7 +39,9 @@ export function registerRuntimeGoals(input: {
         ? 'ready'
         : 'failed'
   })
+  service.recovery.start()
   return () => {
+    service.recovery.stop()
     service.drafts.dispose()
     unregister()
   }

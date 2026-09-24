@@ -4,11 +4,14 @@ import {
   type GoalDriverVerdict,
   type GoalListFilter,
   type GoalPhase,
-  type GoalSummary
+  type GoalSummary,
+  type GoalSummaryNotice
 } from '../../shared/goals/goal-control-contract'
 import {
   ownedLegacyRecord,
+  type GoalNotice,
   type GoalRecord,
+  type GoalRecoveryRecord,
   type LegacyGoalRecord
 } from '../../shared/goals/goal-store-records'
 import type { PtyLivenessVerdict } from '../../shared/pty-liveness-verdict'
@@ -27,6 +30,8 @@ export type GoalProjectionSources = {
   terminals: GoalTerminalFacts
   hooks: GoalHookFacts
   readLegacyRecord(key: string): Promise<LegacyGoalRecord | null>
+  /** Host-side recovery notices; absent in callers that never run the recovery scan. */
+  readRecovery?(goalId: string): Promise<GoalRecoveryRecord>
   inspectDriver(record: GoalRecord): Promise<GoalDriverVerdict>
   now(): number
 }
@@ -51,6 +56,11 @@ export async function projectGoalSummary(
     ? projectTurnEvidence(sources.hooks.getStatusSnapshotForPane(observed.paneKey))
     : projectTurnEvidence([])
   const { phase, reason } = projectPhase(record, legacy, driver, evidence)
+  const recovery = sources.readRecovery ? await sources.readRecovery(record.goalId) : null
+  const notices = projectNotices(
+    [...(legacy?.notices ?? []), ...(recovery?.notices ?? [])],
+    sources.now()
+  )
   return {
     goalId: record.goalId,
     objectivePreview: goalObjectivePreview(record.spec.objective),
@@ -75,8 +85,20 @@ export async function projectGoalSummary(
     archived: record.archived,
     turns: legacy?.turns ?? 0,
     activeMs: legacy?.activeMs ?? 0,
-    observedAt: sources.now()
+    observedAt: sources.now(),
+    ...(legacy?.guardMs !== undefined ? { guardMs: legacy.guardMs } : {}),
+    ...(notices.length > 0 ? { notices } : {})
   }
+}
+
+const NOTICE_WINDOW_MS = 24 * 60 * 60_000
+
+/** Unresolved notices from the last day, oldest first; the client shows each id once. */
+export function projectNotices(notices: readonly GoalNotice[], now: number): GoalSummaryNotice[] {
+  return notices
+    .filter((notice) => !notice.resolvedAt && now - notice.at < NOTICE_WINDOW_MS)
+    .sort((a, b) => a.at - b.at)
+    .map(({ id, kind, text, at }) => ({ id, kind, text, at }))
 }
 
 /** The bound pane's turn facts alone, for callers that only need to know whether a turn is open. */
@@ -210,7 +232,8 @@ function projectPhase(
   if (record.continuation === 'paused' && evidence.turn !== 'running') {
     return { phase: 'idle', reason: 'Continuation is paused.' }
   }
-  return { phase: 'executing', reason: null }
+  // The guard's latest observation is the most useful one-line status there is.
+  return { phase: 'executing', reason: legacy.guardObservation ?? null }
 }
 
 /** Verified only by evidence from the current definition; an amend retires the old verdict. */

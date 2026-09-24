@@ -11,7 +11,7 @@ const FIELDS = {
   maxMinutes: 'number',
   worktree: 'string',
   terminal: 'string',
-  promptFile: 'boolean'
+  guard: 'string'
 }
 
 export async function loadGoalConfig(file) {

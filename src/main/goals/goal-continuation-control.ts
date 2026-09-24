@@ -1,7 +1,12 @@
+import { createHash } from 'node:crypto'
 import type { GoalOperation } from '../../shared/goals/goal-control-contract'
 import type { GoalRecord } from '../../shared/goals/goal-store-records'
 import type { GoalBindingAdmission } from './goal-binding-admission'
-import type { GoalOperationIdentity, GoalOperationReceipts } from './goal-operation-receipts'
+import type {
+  GoalOperationIdentity,
+  GoalOperationReceipts,
+  GoalRejection
+} from './goal-operation-receipts'
 import { runFenceFor, type GoalRunCommitter } from './goal-run-commit'
 import type { GoalStore } from './goal-store'
 
@@ -189,11 +194,32 @@ export class GoalContinuationControl {
     return this.relaunch(params, record)
   }
 
+  /**
+   * The execution host's recovery scan re-attaches a driver that exited while the goal was
+   * still running. Same path as a user resume; the receipt id marks where it came from.
+   */
+  recover(record: GoalRecord): Promise<GoalOperation> {
+    const clientOperationId = `recovery-${this.deps.newId()}`
+    return this.relaunch(
+      {
+        clientOperationId,
+        payloadFingerprint: createHash('sha256')
+          .update(JSON.stringify({ kind: 'recovery', goalId: record.goalId, clientOperationId }))
+          .digest('hex')
+      },
+      record
+    )
+  }
+
   private async relaunch(
     params: GoalOperationIdentity,
     record: GoalRecord
   ): Promise<GoalOperation> {
     const { receipts, admission, runs } = this.deps
+    const guardless = rejectGuardless(record.spec)
+    if (guardless) {
+      return receipts.reject(params, record.goalId, guardless)
+    }
     if (!record.legacyKey) {
       return receipts.reject(params, record.goalId, {
         code: 'driver_error',
@@ -243,6 +269,16 @@ export class GoalContinuationControl {
       })
     }
   }
+}
+
+/** Every run is driven by its guard; a goal saved without one must pick one before it runs. */
+export function rejectGuardless(spec: Pick<GoalRecord['spec'], 'judge'>): GoalRejection | null {
+  return (spec.judge ?? 'none') === 'none'
+    ? {
+        code: 'unsupported',
+        message: 'This goal has no guard. Pick a guard in the goal editor, save, then start it.'
+      }
+    : null
 }
 
 /** A raised budget reopens an exhausted goal; the driver re-reads the record on resume. */

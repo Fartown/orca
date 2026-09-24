@@ -28,6 +28,9 @@ export type RuntimeWorktreeAgentRow = {
   /** The structured session host still runs this row's provider child, so it is fresh regardless
    *  of age. Optional on the wire: old hosts never send it. */
   structuredHostOwned?: true
+  /** The provider's on-disk transcript on the execution host, when its hook reported one.
+   *  Optional on the wire: old hosts never send it. */
+  transcriptPath?: string
 }
 
 export type RuntimeWorktreePsSummary = {

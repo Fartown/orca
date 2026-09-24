@@ -12,7 +12,6 @@ import { absolutizePathArgs, ALIASES, BOOLEAN_FLAGS, VALUE_FLAGS } from './goal-
 import { installCrashGuard } from './driver-crash-guard.mjs'
 import { notifyDesktop } from './desktop-notification.mjs'
 import { loadGoalConfig } from './goal-config-file.mjs'
-import { DEFAULT_THRESHOLDS } from './goal-decision.mjs'
 import { runLoop } from './goal-loop.mjs'
 import {
   ROOT,
@@ -53,19 +52,19 @@ start 选项:
   -f, --file 路径       从 JSON 配置文件读取,命令行参数优先级更高
   -t, --terminal HANDLE 目标终端
   --objective 文本      目标描述
-  --check 命令          验收命令,可重复。全部退出码为 0 才算完成
-  --check-timeout 秒    单条验收命令超时,默认 900
-  --check-all           验收跑完全部检查再汇总;默认第一条失败就停(省时间,也强制按顺序修)
-  --on-blocked 模式     agent 声称受阻时怎么办:ask(默认,停下叫人)| verify(先跑一次验收核实)
+  --guard 名字          守卫:claude | codex(必填)。它在每轮结束和每 15 分钟看一次进展,
+                        给执行 agent 下一步,确属非人不可才问你,判完成时当场逐条验收
+  --check 命令          额外检查命令,可重复。守卫判完成后再跑,全部退出码为 0 才算完成
+  --check-timeout 秒    单条检查命令超时,默认 900
+  --check-all           检查跑完全部再汇总;默认第一条失败就停
   --max-turns N         轮数预算,默认 20;写 0 表示不限
   --max-minutes N       时长预算,默认 180;写 0 表示不限
   --worktree 路径       取证与验收的目录,默认取终端登记的工作区
   --detach              后台跑,立刻返回;用 watch/status 跟进度
-  --prompt-file         提示词写进文件,只注入一行指针(保排版,但 agent 多一次读取且可能不读)
-  -y, --yes             跳过验收命令的确认提示
+  -y, --yes             跳过检查命令的确认提示
 
-配置文件字段:objective(字符串或字符串数组)、check、checkTimeout、
-maxTurns、maxMinutes、worktree、terminal、promptFile。支持整行 // 注释。
+配置文件字段:objective(字符串或字符串数组)、guard、check、checkTimeout、
+maxTurns、maxMinutes、worktree、terminal。支持整行 // 注释。
 
 状态目录:${ROOT}
 `
@@ -225,7 +224,7 @@ async function resolveSettings(flags) {
     flags[flagName] !== undefined ? flags[flagName] : (file[fileName] ?? fallback)
   return {
     objective: pick('objective', 'objective'),
-    onBlocked: pick('on-blocked', 'onBlocked') || 'ask',
+    guard: guardName(pick('guard', 'guard')),
     terminal: pick('terminal', 'terminal'),
     // 只管非 detach 这条路:这行在子进程里也会跑一遍,而它的 cwd 是状态目录,
     // 基准根本不对。转交给后台驱动的那份在 relaunchDetached 里定死成绝对路径。
@@ -236,8 +235,26 @@ async function resolveSettings(flags) {
     // 在超时里却是「立刻超时」—— 语义相反,更不能静默接受。
     checkTimeout: positive('--check-timeout', pick('check-timeout', 'checkTimeout', 900)),
     maxTurns: nonNegative('--max-turns', pick('max-turns', 'maxTurns', 20)),
-    maxMinutes: nonNegative('--max-minutes', pick('max-minutes', 'maxMinutes', 180)),
-    promptFile: Boolean(flags['prompt-file'] || file.promptFile)
+    maxMinutes: nonNegative('--max-minutes', pick('max-minutes', 'maxMinutes', 180))
+  }
+}
+
+/** 守卫只能是本机装了 CLI 的两家之一;不给就不能开始 —— 判断全靠它。 */
+function guardName(value) {
+  if (value === undefined) {
+    return null
+  }
+  if (value !== 'claude' && value !== 'codex') {
+    throw new Error(`--guard 只能是 claude 或 codex,收到的是 ${value}`)
+  }
+  return value
+}
+
+function guardOfSettings(agent, checkTimeoutSeconds, key) {
+  return {
+    agent,
+    timeoutMs: Math.max(10 * 60_000, checkTimeoutSeconds * 1000),
+    logDir: path.join(ROOT, 'guard', key)
   }
 }
 
@@ -245,6 +262,9 @@ async function start(flags, rawArgs) {
   const settings = await resolveSettings(flags)
   if (!settings.objective) {
     throw new Error('必须给出目标描述(--objective,或配置文件里的 objective)')
+  }
+  if (!settings.guard) {
+    throw new Error('必须选一个守卫(--guard claude|codex,或配置文件里的 guard)')
   }
 
   const terminal = settings.terminal
@@ -295,12 +315,11 @@ async function start(flags, rawArgs) {
   const goal = newGoal({
     key,
     objective: settings.objective,
-    onBlocked: settings.onBlocked,
     worktreePath,
     terminalHandle: terminal.handle,
     acceptance,
     budget: { maxTurns: settings.maxTurns, maxMinutes: settings.maxMinutes },
-    promptFile: settings.promptFile,
+    guard: guardOfSettings(settings.guard, settings.checkTimeout, key),
     now: Date.now()
   })
 
@@ -330,10 +349,11 @@ async function start(flags, rawArgs) {
   await writeGoal(goal)
   console.log(`目标已启动 → ${worktreePath}`)
   console.log(`预算:${describeBudget(goal.budget)}`)
+  console.log(`守卫:${goal.guard.agent}`)
   console.log(`日志:${logPath(key)}\n`)
 
   try {
-    const final = await runLoop(goal, { report: makeReport(), thresholds: DEFAULT_THRESHOLDS })
+    const final = await runLoop(goal, { report: makeReport() })
     printOutcome(final)
     if (process.env.ORCA_GOAL_DETACHED === '1') {
       notifyDesktop(
@@ -368,11 +388,10 @@ const driverLogPath = (key) => path.join(ROOT, 'log', `${key}.out`)
 
 async function confirmAcceptance(acceptance, skip) {
   if (acceptance.commands.length === 0) {
-    console.log('没有配置验收命令 —— 和 Codex 的 /goal 一样,完成与否采信 agent 的说法。')
-    console.log('想让它被独立验证,加 --check;见 README「--check 是什么」。')
+    console.log('没有额外检查命令 —— 守卫当场逐条验收通过即算完成。')
     return true
   }
-  console.log('验收命令(agent 声称完成时,由本进程在下面这个目录里执行):')
+  console.log('额外检查命令(守卫判完成后,由本进程在下面这个目录里执行):')
   console.log(`  目录:${acceptance.cwd}`)
   for (const c of acceptance.commands) {
     console.log(`  $ ${c}`)
@@ -400,28 +419,23 @@ function makeReport() {
   const stamp = () => new Date().toTimeString().slice(0, 8)
   return {
     round: (turn, maxTurns, prompt) =>
-      console.log(`[${stamp()}] 第 ${turn}${maxTurns ? `/${maxTurns}` : ''} 轮 · 注入 ${prompt}`),
-    longRun: (mins) =>
-      console.log(`[${stamp()}]   这一轮已经跑了 ${mins} 分钟,agent 仍在干活 —— 继续等,不打断`),
-    attach: (turn) => console.log(`[${stamp()}] 接管:不注入,先等第 ${turn} 轮手上这波跑完`),
-    awaitUser: (reason) => console.log(`[${stamp()}] ⏸ 等你确认:${reason}`),
-    working: (source) =>
+      console.log(`[${stamp()}] 第 ${turn}${maxTurns ? `/${maxTurns}` : ''} 轮 · 发出 ${prompt}`),
+    guard: (reason) => console.log(`[${stamp()}]   唤醒守卫:${reason}`),
+    guardDone: (verdict, ms, error) =>
       console.log(
-        `[${stamp()}]   agent 已接管,等这一轮跑完${source === 'hook' ? '' : '(无 hook 状态,退回标题判定)'}`
+        verdict
+          ? `[${stamp()}]   守卫结论 ${verdict.decision}(${Math.round(ms / 1000)} 秒):${verdict.observation}`
+          : `[${stamp()}] ⚠ 守卫调用失败(${Math.round(ms / 1000)} 秒):${error}`
       ),
-    needsUser: (tool) =>
-      console.log(
-        `[${stamp()}] ⏸ agent 在等你确认${tool ? `(${tool})` : ''} —— 已暂停注入,去终端里回应它`
-      ),
-    verifying: (commands) => console.log(`[${stamp()}]   声称完成,开始验收(${commands.length} 条)`),
+    verifying: (commands) =>
+      console.log(`[${stamp()}]   守卫判了完成,跑额外检查命令(${commands.length} 条)`),
     command: (c) => console.log(`[${stamp()}]     $ ${c}`),
     verified: (result) =>
       console.log(
-        `[${stamp()}]   验收${result.passed ? '通过' : '未通过'}:${result.results
+        `[${stamp()}]   检查${result.passed ? '通过' : '未通过'}:${result.results
           .map((r) => `${r.ok ? '✓' : '✗'} ${r.command}`)
           .join(' / ')}`
       ),
-    tamper: (f) => console.log(`[${stamp()}] ⚑ 验收被削弱的痕迹:${f.label} —— ${f.detail}`),
     warn: (msg) => console.log(`[${stamp()}] ⚠ ${msg}`)
   }
 }
@@ -442,11 +456,8 @@ function printOutcome(goal) {
   if (goal.driverError) {
     console.log(`  上次驱动异常退出:${goal.driverError.message}`)
   }
-  if (goal.falseClaims > 0) {
-    console.log(`其中被验收驳回的完成声明:${goal.falseClaims} 次`)
-  }
-  if (goal.tamperChallenges > 0) {
-    console.log(`因削弱验收被挡回:${goal.tamperChallenges} 次`)
+  if (goal.guardMs) {
+    console.log(`其中守卫用时 ${Math.round(goal.guardMs / 60_000)} 分钟`)
   }
 }
 
@@ -513,15 +524,20 @@ async function resume(flags, rawArgs = []) {
   }
 
   const file = flags.file ? await loadGoalConfig(flags.file) : {}
+  // 老记录(守卫接管前起的目标)没有守卫,接回时必须补一个。
+  const guardAgent = guardName(flags.guard ?? file.guard) ?? existing.guard?.agent ?? null
+  if (!guardAgent) {
+    throw new Error('这个目标没有守卫,接回时必须用 --guard claude|codex 选一个')
+  }
   const goal = {
     ...existing,
+    guard: guardOfSettings(guardAgent, (existing.acceptance?.timeoutMs ?? 900_000) / 1000, key),
     state: 'active',
     terminalHandle: terminal.handle, // 显式换了终端时要跟着走,否则还往老标签页灌字
     finishReason: null,
     finishedAt: null,
     driverError: null, // 这次接回是新的一程,别挂着上次的死因
-    // 基线必须重取:停几天后接回,旧基线会把这期间别人的提交全算成「本轮改动」,
-    // 篡改扫描据此报「改了门禁配置」「删了断言」,质证计数已到阈值时第一轮就判受阻。
+    // 基线必须重取:停几天后接回,旧基线会把这期间别人的提交全算成「上次以来的改动」。
     lastSnapshot: null
   }
 
@@ -578,15 +594,11 @@ async function resume(flags, rawArgs = []) {
   console.log(`接回目标 → ${goal.worktreePath}`)
   console.log(`已跑 ${goal.turns} 轮,预算 ${describeBudget(goal.budget)}`)
   console.log(
-    `${goal.acceptance?.commands?.length ? `验收:${goal.acceptance.commands.join(' / ')}` : '没有验收命令'}\n`
+    `守卫:${goal.guard.agent} · ${goal.acceptance?.commands?.length ? `额外检查:${goal.acceptance.commands.join(' / ')}` : '没有额外检查命令'}\n`
   )
 
   try {
-    const final = await runLoop(goal, {
-      report: makeReport(),
-      thresholds: DEFAULT_THRESHOLDS,
-      attach: true
-    })
+    const final = await runLoop(goal, { report: makeReport(), attach: true })
     printOutcome(final)
     if (process.env.ORCA_GOAL_DETACHED === '1') {
       notifyDesktop(

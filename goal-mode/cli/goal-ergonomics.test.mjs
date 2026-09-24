@@ -29,14 +29,14 @@ test('读取完整配置', async () => {
       objective: '把 X 做完',
       check: ['pnpm test'],
       maxTurns: 5,
-      promptFile: true
+      guard: 'codex'
     })
   )
   const c = await loadGoalConfig(f)
   assert.equal(c.objective, '把 X 做完')
   assert.deepEqual(c.check, ['pnpm test'])
   assert.equal(c.maxTurns, 5)
-  assert.equal(c.promptFile, true)
+  assert.equal(c.guard, 'codex')
 })
 
 test('objective 可以写成数组,每项一行', async () => {
@@ -123,77 +123,66 @@ test('没有 agent 的终端要明确标出来', () => {
   assert.match(formatChoice(term({ agent: null }), 3), /^\s*4\./)
 })
 
-// —— 轮次判定(回归:kimi 在 thinking 阶段被误判成「毫无动静」)——
+// —— 读 agent 状态:只搬运状态存储的事实,没有状态行时才看终端 ——
 
-const { classifyRound } = await import('./terminal-activity.mjs')
-const SENT = 1_000_000
-const act = (over = {}) => ({
+const { describeActivity } = await import('./terminal-activity.mjs')
+const act = (row, over = {}) => ({
   connected: true,
-  state: null,
-  stateStartedAt: null,
+  row: row ? { workingMode: null, stateStartedAt: 1, prompt: '', ...row } : null,
   silentMs: null,
   spinning: false,
-  source: 'title',
   ...over
 })
 
-test('本轮的 hook 状态直接定论', () => {
+test('状态行直接定论,不在读取端重新裁决', () => {
+  assert.equal(describeActivity(act({ state: 'done' }), 12000), 'ended')
+  assert.equal(describeActivity(act({ state: 'working' }), 12000), 'busy')
+  assert.equal(describeActivity(act({ state: 'waiting' }), 12000), 'needs-user')
+  assert.equal(describeActivity(act({ state: 'blocked' }), 12000), 'needs-user')
+  // 终端还在刷屏也不推翻状态行:判断这一轮有没有真结束是守卫的事。
   assert.equal(
-    classifyRound(act({ source: 'hook', state: 'done', stateStartedAt: SENT + 1 }), SENT, 12000),
-    'finished'
-  )
-  assert.equal(
-    classifyRound(act({ source: 'hook', state: 'working', stateStartedAt: SENT + 1 }), SENT, 12000),
-    'busy'
-  )
-  assert.equal(
-    classifyRound(act({ source: 'hook', state: 'waiting', stateStartedAt: SENT + 1 }), SENT, 12000),
-    'needs-user'
+    describeActivity(act({ state: 'done' }, { silentMs: 50, spinning: true }), 12000),
+    'ended'
   )
 })
 
-test('上一轮遗留的 done 不能当成本轮结束', () => {
-  const a = act({ source: 'hook', state: 'done', stateStartedAt: SENT - 5000, silentMs: 200 })
-  assert.notEqual(classifyRound(a, SENT, 12000), 'finished')
+test('monitoring 是本轮已结束,只剩后台 shell 挂着 —— 不能当成在干活', () => {
+  // 回归:agent 起了一个不退出的 next dev,宿主把 pane 报成 working+monitoring,
+  // 按 busy 处理的话这一轮永远等不到结束(实测空等 48 分钟)。
+  assert.equal(
+    describeActivity(act({ state: 'working', workingMode: 'monitoring' }), 12000),
+    'ended'
+  )
 })
 
-test('hook 状态陈旧但终端在刷屏 → busy(kimi thinking 阶段的真实情形)', () => {
-  const a = act({ source: 'hook', state: 'done', stateStartedAt: SENT - 5000, silentMs: 92 })
-  assert.equal(classifyRound(a, SENT, 12000), 'busy', 'PTY 有输出就说明它活着,不能判成毫无动静')
-})
-
-test('hook 状态陈旧且终端安静 → quiet(由调用方结合是否动过再判)', () => {
-  const a = act({ source: 'hook', state: 'done', stateStartedAt: SENT - 5000, silentMs: 30000 })
-  assert.equal(classifyRound(a, SENT, 12000), 'quiet')
-})
-
-test('完全没有 hook 行时,靠字形和静默', () => {
-  assert.equal(classifyRound(act({ spinning: true, silentMs: 30000 }), SENT, 12000), 'busy')
-  assert.equal(classifyRound(act({ silentMs: 500 }), SENT, 12000), 'busy')
-  assert.equal(classifyRound(act({ silentMs: 30000 }), SENT, 12000), 'quiet')
+test('完全没有状态行时,靠字形和静默', () => {
+  assert.equal(describeActivity(act(null, { spinning: true, silentMs: 30000 }), 12000), 'busy')
+  assert.equal(describeActivity(act(null, { silentMs: 500 }), 12000), 'busy')
+  assert.equal(describeActivity(act(null, { silentMs: 30000 }), 12000), 'quiet')
+  assert.equal(describeActivity(act(null), 12000), 'unknown')
 })
 
 test('断开优先于一切', () => {
   assert.equal(
-    classifyRound(act({ connected: false, state: 'working' }), SENT, 12000),
+    describeActivity(act({ state: 'working' }, { connected: false }), 12000),
     'disconnected'
   )
 })
 
-test('resume 的报告接口齐全 —— attach 回调必须存在,否则接管时会崩', async () => {
-  const src = await fs.readFile(new URL('./orca-goal.mjs', import.meta.url), 'utf8')
-  for (const hook of [
-    'attach:',
-    'round:',
-    'working:',
-    'needsUser:',
-    'verifying:',
-    'command:',
-    'verified:',
-    'tamper:',
-    'warn:'
-  ]) {
-    assert.ok(src.includes(hook), `makeReport 缺少 ${hook}`)
+test('驱动的报告接口齐全 —— 循环会调用的回调都得存在,否则跑到那一步才崩', async () => {
+  for (const file of ['./orca-goal.mjs', './goal-driver-entry.mjs']) {
+    const src = await fs.readFile(new URL(file, import.meta.url), 'utf8')
+    for (const hook of [
+      'round:',
+      'guard:',
+      'guardDone:',
+      'verifying:',
+      'command:',
+      'verified:',
+      'warn:'
+    ]) {
+      assert.ok(src.includes(hook), `${file} 的 makeReport 缺少 ${hook}`)
+    }
   }
 })
 
@@ -207,20 +196,6 @@ test('预算渲染:0 显示为不限', async () => {
   assert.equal(describeBudget({ maxTurns: 0, maxMinutes: 0 }), '轮数不限 / 时长不限')
   assert.equal(describeBudget({ maxTurns: 0, maxMinutes: 600 }), '轮数不限 / 600 分钟')
   assert.equal(describeBudget({ maxTurns: 20, maxMinutes: 180 }), '20 轮 / 180 分钟')
-})
-
-test('注入给 agent 的提示词里,不限预算不能写成 0', async () => {
-  // 0 是有效取值,?? 挡不住它 —— 曾经因此让提示词出现「Turn 4 of 0」,
-  // agent 可能据此以为预算已经耗尽。
-  const src = await fs.readFile(new URL('./goal-loop.mjs', import.meta.url), 'utf8')
-  const body = src.match(/function promptVars[\s\S]*?\n\}/)[0]
-  assert.ok(!/maxTurns: goal\.budget\.maxTurns \?\?/.test(body), 'maxTurns 必须用 || 而不是 ??')
-  assert.ok(
-    !/maxMinutes: goal\.budget\.maxMinutes \?\?/.test(body),
-    'maxMinutes 必须用 || 而不是 ??'
-  )
-  assert.match(body, /maxTurns: goal\.budget\.maxTurns \|\| '不限'/)
-  assert.match(body, /maxMinutes: goal\.budget\.maxMinutes \|\| '不限'/)
 })
 
 test('数值参数非法时直接报错,不静默退化', async () => {
@@ -247,36 +222,6 @@ test('数值参数非法时直接报错,不静默退化', async () => {
       `${bad} 应该被拒`
     )
   }
-})
-
-test('认领文件是目录 / 超大 / 大写开头,都不该被当成完成声明', async () => {
-  const home = await fs.mkdtemp(path.join(os.tmpdir(), 'goal-claim-'))
-  process.env.ORCA_GOAL_HOME = home
-  const { readClaim, claimPath, clearClaim } = await import(`./goal-claim.mjs?t=${Math.random()}`)
-  await fs.mkdir(path.join(home, 'claims'), { recursive: true })
-
-  await fs.mkdir(claimPath('a'), { recursive: true })
-  assert.equal((await readClaim('a')).kind, 'malformed', '目录不该抛,也不该算声明')
-  await clearClaim('a') // 不带 recursive 会 EISDIR,每轮必抛
-
-  await fs.writeFile(claimPath('b'), 'x'.repeat(100 * 1024))
-  assert.equal((await readClaim('b')).kind, 'malformed', '超大文件不该整份读进来当声明')
-
-  // 日志行:git 输出里很常见,原来会被当成完成声明。
-  // 现在落进 malformed —— 不算声明,而且会告警,比静默忽略更好。
-  await fs.writeFile(claimPath('c'), 'Complete: 5 files changed, 12 insertions\n')
-  assert.equal((await readClaim('c')).kind, 'malformed')
-
-  await fs.writeFile(claimPath('d'), 'complete: 真的做完了\n')
-  assert.equal((await readClaim('d')).kind, 'complete')
-
-  // 接管的轮次不注入、也就不清认领,上一轮的声明会被当成刚写的。
-  // 实测:一句九小时前的「受阻」被每一轮重新裁决,守卫每 45 秒停一次「等你确认」,
-  // agent 正常干活却永远推不动。所以早于本轮起点的声明一律不算数。
-  const claimMtime = (await fs.stat(claimPath('d'))).mtimeMs
-  assert.equal((await readClaim('d', { after: claimMtime + 1000 })).kind, 'stale')
-  assert.equal((await readClaim('d', { after: claimMtime })).kind, 'complete', '同一时刻写的算本轮')
-  await fs.rm(home, { recursive: true, force: true })
 })
 
 test('锁文件里的 pid 被复用时,不能对无关进程动手', async () => {
@@ -359,18 +304,8 @@ test('把 flag 名当取值传进来时不误伤后面那个参数', () => {
   ])
 })
 
-test('SSH rounds require current hook completion and never substitute terminal silence', () => {
-  const remote = act({ requiresHook: true, source: 'hook', silentMs: 3600000 })
-  assert.equal(
-    classifyRound({ ...remote, state: 'working', stateStartedAt: SENT - 1 }, SENT, 12000),
-    'busy'
-  )
-  assert.equal(
-    classifyRound({ ...remote, state: 'done', stateStartedAt: SENT - 1 }, SENT, 12000),
-    'unknown'
-  )
-  assert.equal(
-    classifyRound({ ...remote, state: 'done', stateStartedAt: SENT + 1 }, SENT, 12000),
-    'finished'
-  )
+test('SSH 下只信状态行,不拿终端静默顶替', () => {
+  const remote = { silentMs: 3_600_000 }
+  assert.equal(describeActivity(act({ state: 'working' }, remote), 12000), 'busy')
+  assert.equal(describeActivity(act({ state: 'done' }, remote), 12000), 'ended')
 })

@@ -79,16 +79,6 @@ export function GoalAdvancedSettings({
           />
           {translate('goals.editor.checkAll', 'Run all checks even after the first failure')}
         </label>
-        <label className="flex items-center gap-2 text-xs">
-          <Checkbox
-            checked={draft.onBlocked === 'verify'}
-            onCheckedChange={(checked) => update('onBlocked', checked === true ? 'verify' : 'ask')}
-          />
-          {translate(
-            'goals.editor.verifyWhenBlocked',
-            'When the agent says it is blocked, run the checks before asking me'
-          )}
-        </label>
       </CollapsibleContent>
     </Collapsible>
   )

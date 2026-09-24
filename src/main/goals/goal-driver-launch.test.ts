@@ -78,7 +78,7 @@ describe.skipIf(!BUNDLE)('launchGoalDriver with the built bundle', () => {
         extraChecks: [],
         checkAll: false,
         onBlocked: 'ask',
-        judge: 'none'
+        judge: 'codex'
       },
       budget: { maxTurns: 1, maxMinutes: 1, checkTimeoutSeconds: 1 },
       specRevision: 1,
@@ -107,6 +107,52 @@ describe.skipIf(!BUNDLE)('launchGoalDriver with the built bundle', () => {
     const v1 = JSON.parse(await readFile(legacyGoalRecordPath(goalHome, key), 'utf8'))
     expect(v1).toMatchObject({ goalId, runId, state: 'active', terminalHandle: 'term_missing' })
     expect(await readFile(legacyDriverLogPath(goalHome, key), 'utf8')).toContain('驱动启动 start')
+    await rm(worktree, { recursive: true, force: true })
+  })
+
+  it('refuses a record without a guard before it takes the lock', async () => {
+    goalHome = await mkdtemp(join(tmpdir(), 'goal-launch-'))
+    const worktree = await mkdtemp(join(tmpdir(), 'goal-launch-wt-'))
+    const goalId = '00000000-0000-4000-8000-00000000abce'
+    const record = {
+      version: 1,
+      goalId,
+      authorityExecutionHostId: 'local',
+      createdAt: 1,
+      updatedAt: 1,
+      binding: { worktree, terminal: 'term_missing', expectedIncarnationId: 'inc' },
+      workspace: { selector: worktree, path: worktree, worktreeId: null },
+      spec: {
+        objective: 'smoke',
+        criteria: [],
+        acceptanceText: '',
+        extraChecks: [],
+        checkAll: false,
+        onBlocked: 'ask',
+        judge: 'none'
+      },
+      budget: { maxTurns: 1, maxMinutes: 1, checkTimeoutSeconds: 1 },
+      specRevision: 1,
+      runtimeFence: 0,
+      continuation: 'enabled',
+      archived: false,
+      legacyKey: null,
+      currentRun: null,
+      lastOperationId: null
+    }
+    await mkdir(join(goalHome, 'v2', 'goals', goalId), { recursive: true })
+    await writeFile(goalRecordPath(goalHome, goalId), JSON.stringify(record))
+    const launcher = createGoalDriverLauncher({ entryPath: BUNDLE, execPath: process.execPath })
+    await expect(
+      launcher.launch({
+        goalHome,
+        goalId,
+        runId: '00000000-0000-4000-8000-00000000ef02',
+        mode: 'start',
+        userDataPath: join(goalHome, 'no-runtime')
+      })
+    ).rejects.toThrow(/没有守卫/)
+    expect(existsSync(legacyLockPath(goalHome, goalWorkspaceKey(worktree)))).toBe(false)
     await rm(worktree, { recursive: true, force: true })
   })
 })
