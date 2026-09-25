@@ -19,11 +19,13 @@ import {
   IssuesReparentParams,
   IssuesResolveRoundParams,
   IssuesStatusParams,
+  IssuesUnsubscribeChangesParams,
   IssuesUpdateParams
 } from '../../../../shared/issues/schemas'
 import type { IssueRuntimeService } from '../../../issues/issue-runtime-service'
 import { issueFeatureReadinessRegistry } from '../../../issues/issue-feature-readiness'
-import { defineMethod, InvalidArgumentError, type RpcContext } from '../core'
+import { cancelIssueChanges, streamIssueChanges } from '../../../issues/issue-change-subscription'
+import { defineMethod, defineStreamingMethod, InvalidArgumentError, type RpcContext } from '../core'
 
 function service(): IssueRuntimeService {
   return issueFeatureReadinessRegistry.requireService() as IssueRuntimeService
@@ -48,6 +50,16 @@ function callerFingerprint(context: RpcContext): string {
 }
 
 export const ISSUE_METHODS = [
+  defineStreamingMethod({
+    name: 'issues.subscribeChanges',
+    params: null,
+    handler: (_params, context, emit) => streamIssueChanges(context, emit)
+  }),
+  defineMethod({
+    name: 'issues.unsubscribeChanges',
+    params: IssuesUnsubscribeChangesParams,
+    handler: (params, context) => cancelIssueChanges(context, params.subscriptionId)
+  }),
   defineMethod({
     name: 'issues.status',
     params: IssuesStatusParams,

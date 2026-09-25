@@ -42,6 +42,23 @@ describe('ConversationRuntimeAttachmentRegistry', () => {
     repository.close()
   })
 
+  it('notifies listeners only when the runtime projection actually changes', () => {
+    const registry = new ConversationRuntimeAttachmentRegistry()
+    let changes = 0
+    const stop = registry.onChange(() => {
+      changes += 1
+    })
+    registry.upsert(attachment('conversation-a', 'connection-a', 1))
+    registry.upsert(attachment('conversation-a', 'connection-a', 1))
+    registry.clearConnection('connection-missing')
+    registry.clearConnection('connection-a')
+    stop()
+    registry.upsert(attachment('conversation-a', 'connection-a', 2))
+
+    expect(changes).toBe(2)
+    expect(registry.revision).toBe(3)
+  })
+
   it('detaches remote work on connection loss and re-attaches on fresh evidence', () => {
     const registry = new ConversationRuntimeAttachmentRegistry()
     registry.upsert(attachment('conversation-a', 'ssh-connection', 1, 'pane-a'))

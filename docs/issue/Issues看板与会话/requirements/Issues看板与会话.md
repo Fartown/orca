@@ -3,7 +3,7 @@ title: Issues 看板与会话
 document_type: requirement
 status: ready
 created: 2026-09-05
-updated: 2026-09-10
+updated: 2026-09-25
 issue: Issues看板与会话
 ---
 
@@ -152,7 +152,7 @@ issue: Issues看板与会话
 
 ### REQ-017 分页与状态隔离
 
-优先级：P1。当前状态：局部实现；当前先全量读后分页、全局刷新序列，见技术限制。
+优先级：P1。当前状态：局部实现；当前先全量读后分页，见技术限制；刷新已按 route 串行，见 REQ-030。
 
 目标与验收边界：固定快照、stale 整 scope 重拉、normalized entities、authority generation 与晚到响应隔离。
 
@@ -220,7 +220,13 @@ Issues 消费公共层已接受的会话身份，不拥有 Claude/Codex 的主 p
 
 优先级：P2。当前状态：后续目标；不把旧改造方案当已实施。
 
-目标与验收边界：SQL 侧受限查询、route 独立不重叠刷新、完整错误分类、可靠 workspace 可用性、孤儿/receipt 清理。
+目标与验收边界：SQL 侧受限查询、完整错误分类、可靠 workspace 可用性、孤儿/receipt 清理；route 独立不重叠刷新已由 REQ-030 实现。
+
+### REQ-030 按变化同步，不访问不可达主机
+
+优先级：P0。当前状态：已实现（2026-09-25）；新客户端连接不含变化通知的旧主机时，退回为仅在联系期间的低频读取。
+
+目标与验收边界：Issue 事实、树或运行投影变化由持有数据的主机推送变化通知，客户端只在收到通知、订阅就绪（含断线重连后）、主机集合或筛选变化时读取，不再定时轮询。paired host 由共享运行时状态判定不在联系时直接显示 offline，不产生任何 Issue 请求。同一 route 的读取不重叠，读取期间到达的通知合并为一次补读。本地与 SSH 分区由本机主机通知，paired host 只通知其自身分区。
 
 ## 4. 关键用户动线
 

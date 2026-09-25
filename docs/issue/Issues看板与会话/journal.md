@@ -3,7 +3,7 @@ title: Issues 看板与会话
 slug: Issues看板与会话
 status: implementing
 created: 2026-09-05
-updated: 2026-09-12
+updated: 2026-09-25
 external_ids: []
 ---
 
@@ -13,7 +13,7 @@ external_ids: []
 
 | 类型     | 文档                                                                 | 状态         | 说明                                                                 |
 | --- | --- | --- | --- |
-| 需求     | [Issues 看板与会话](requirements/Issues看板与会话.md)                | ready        | 独立目标、范围、分级与 REQ-001～REQ-029                              |
+| 需求     | [Issues 看板与会话](requirements/Issues看板与会话.md)                | ready        | 独立目标、范围、分级与 REQ-001～REQ-030                              |
 | 交互     | -                                                                    | not-required | 本次仅整理既有文档，不创建新交互设计或修改 UI                        |
 | 方案     | [Issues 看板与会话技术说明](solutions/Issues看板与会话技术说明.md)   | ready        | 看板、真实会话行、绑定与恢复；标题现状以2026-09-08专项调研为准 |
 | 测试用例 | [功能测试](tests/cases/Issues功能测试.md)                            | needs-update | 非命名/历史基线保留；受REQ-025/026/028影响的命名与过滤映射待同步，不含执行结果 |
@@ -53,6 +53,15 @@ ready 只表示文档已按当前源码整理；本需求仍为 implementing，�
 - 影响范围：需求、技术说明、测试规格及本需求的执行证据。
 
 ## 3. 开发记录
+
+### 2026-09-25 — Issues 改为按变化同步，修复离线主机请求风暴
+
+- 本轮目标：远程 Orca 主机连不上（没有本地网络权限或主机不可达）时客户端 CPU 占满、界面卡死，用户在 MBP5 上以远程 Orca 客户端身份遇到；查清根因后按用户决定直接根治，不单独合止血修复。
+- 完成内容：根因是 `IssueDomainSyncGate` 的轮询 effect 以主机列表的对象身份为依赖，请求失败让主机状态重新发布、列表换成新数组、effect 立即重跑，形成没有等待的闭环（原代码实测每秒约 900 次 `issues.status`、650 次 `status.get`，渲染进程 45 秒内 RSS 从 336 MB 涨到 1.5 GB）；更深一层是 Issues 自己定时轮询每个主机，没有接上游「主机推变化、客户端按需读」的统一做法。现改为：主机侧 `IssueChangeFeed` 汇总事实提交、运行投影与 readiness 变化，经流式方法 `issues.subscribeChanges` 推送；客户端 `startIssueDomainSync` 本机订阅一次覆盖 local/SSH 分区，paired host 复用上游订阅同步器与在线判定、只在联系期间订阅；只在路由加入、筛选变化、订阅 ready（含重连）和本路由通知时读取，同一路由不重叠读取；旧主机返回 `method_not_found` 时退回为仅联系期间的 5/15 秒读取。新增 REQ-030 与 TC-231～237，技术说明新增 §8.4。
+- 代码或文档变更：新增 `src/main/issues/issue-change-feed.ts`、`issue-change-subscription.ts`、`src/shared/issues/change-stream-schemas.ts`、`src/renderer/src/issues/issue-change-subscriptions.ts`、`issue-domain-sync.ts`、`issue-route-refresh.ts`（原刷新函数迁出）及对应测试；改 `IssueDomainSyncGate.tsx`、`conversation-runtime-attachment-registry.ts`（变化监听）、`issue-feature-bootstrap.ts`（接线）、`rpc/methods/issues.ts`（两个新方法）、RPC 参数目录；唯一上游接缝 `src/shared/remote-runtime-shared-control-protocol.ts`（订阅关闭时的清理映射），已登记到 `fork-features.jsonc` 与架构白名单；需求、技术说明、测试规格与本记录。
+- 验证证据：控制器单测 6 例（去掉「不在联系不读」后 5 例失败），主机侧通知合并、订阅与取消、bootstrap 接线、清理映射单测通过；Issues 注册套件 53 文件 225 例、RPC 与连接层相关 370 文件 3164 例通过；远程 Orca 隐藏实例（`profile-events-1790296082389`）在线安静 30 秒 Issues 请求 0 次、主机新建 Issue 后 274 ms 客户端读取、杀主机与不可达地址各 45 秒 Issues 请求 0 次且内存不涨；SSH 真连本机 2222（`drop-1790296310286`）已连接期 0 次、SSH 分区新建后 282 ms 读取、断线 180 秒 20 次状态变化 Issues 请求 0 次（原来 24 次）；证据与脚本在 `.docs/ssh-reconnect-cpu-ui-validation/2026-09-24/`；`pnpm tc`、`verify:rpc-params-catalog`、`check:fork-features`、`check:fork-docs`、三项本地化检查、React Doctor 通过；架构门禁 5 项 reference-drift 与改动前集成分支 HEAD 完全相同，改动质量门禁 309 项均为既有 fork 差异、本次文件 0 项。
+- 未解决问题：新客户端连旧主机的退回路径只有单测，没有真机混用验证；4 个需要打包 App 的 Issues 端到端用例（issues-journey、issues-product-journey、issue-conversation-workspace-row-routing、conversation-row-parity）本机未能运行，`pnpm build:unpack` 在原生辅助程序处失败，原因是本机 Command Line Tools 的 swift-package 缺符号（dyld Symbol not found），与本次改动无关；离线期间上游两个转圈动画（终端重连横幅、状态栏连接状态）仍占合计 CPU 30%～45%（隐藏窗口测得，暂停后 0%～15%）；上游放大因素（状态查询每次新开连接、共享连接请求绕过退避）未改；Goals 的草稿同步仍每 2 秒轮询，属另一功能。
+- 下一步：用户确认后提交并开 PR；合并出包后在 MBP5 上复核；转圈动画和上游放大因素由用户决定是否提给上游；Goals 轮询另开分支。
 
 ### 2026-09-12 — 补齐已注册 RPC 的生成目录
 

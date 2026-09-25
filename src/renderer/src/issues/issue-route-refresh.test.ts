@@ -1,16 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { MutableRefObject } from 'react'
 import type { ConversationSummary, IssueSummary } from '../../../shared/issues/types'
 import { issueDomainStore } from './issues-domain-store'
 import {
   beginIssueRouteRefresh,
   refreshConversationPages,
-  refreshIssuePages
-} from './IssueDomainSyncGate'
-
-vi.mock('../components/sidebar/use-sidebar-host-scope-options', () => ({
-  useSidebarHostScopeOptions: () => ({ hostOptions: [] })
-}))
+  refreshIssuePages,
+  type IssueRefreshSequenceRef
+} from './issue-route-refresh'
 
 const authority = {
   authorityId: '11111111-1111-4111-8111-111111111111',
@@ -103,7 +99,7 @@ describe('Issue snapshot pagination', () => {
   })
 })
 
-function sequenceRef(): MutableRefObject<number> {
+function sequenceRef(): IssueRefreshSequenceRef {
   return { current: 1 }
 }
 

@@ -5,6 +5,7 @@ import {
   createIssueTestUserDataPath,
   removeIssueTestDirectories
 } from './issue-database.test-environment'
+import { IssueChangeFeed, type IssueChangeNotice } from './issue-change-feed'
 import { IssueFeatureBootstrap, type IssueAgentHookSource } from './issue-feature-bootstrap'
 import { IssueFeatureReadinessRegistry } from './issue-feature-readiness'
 import { IssueRepository } from './issue-repository'
@@ -44,6 +45,38 @@ describe('IssueFeatureBootstrap', () => {
     expect(conversations).toMatchObject({ status: 'snapshot-page', conversations: [] })
     bootstrap.dispose()
     expect(readiness.status('local').status).toBe('unavailable')
+  })
+
+  it('announces readiness and committed facts on the change feed', async () => {
+    const changeFeed = new IssueChangeFeed(0)
+    const notices: IssueChangeNotice[] = []
+    changeFeed.subscribe((notice) => notices.push(notice))
+    const flush = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 5))
+    const bootstrap = await IssueFeatureBootstrap.create({
+      profileId: 'profile-a',
+      profileLabel: 'Profile A',
+      userDataPath: createIssueTestUserDataPath('orca-bootstrap-change-feed'),
+      workspaceResolver: resolver(),
+      hookSource: null,
+      hookEvidenceStatus: 'disabled',
+      readinessRegistry: new IssueFeatureReadinessRegistry(),
+      changeFeed
+    })
+    await flush()
+    bootstrap.service.createIssue('caller-a', {
+      authorityExecutionHostId: 'local',
+      mutationId: 'create-announced',
+      source: { kind: 'local', title: 'Announced' }
+    })
+    await flush()
+    bootstrap.dispose()
+    await flush()
+
+    expect(notices).toEqual([
+      { hostPartitionKeys: null },
+      { hostPartitionKeys: ['local'] },
+      { hostPartitionKeys: null }
+    ])
   })
 
   it('backfills a missing Provider title without requiring hook evidence', async () => {

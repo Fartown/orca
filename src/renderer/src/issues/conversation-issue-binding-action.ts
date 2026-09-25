@@ -3,7 +3,7 @@ import type {
   IssueListFilter,
   IssueRouteExecutionHostId
 } from '../../../shared/issues/types'
-import { refreshConversationPages, refreshIssuePages } from './IssueDomainSyncGate'
+import { refreshConversationPages, refreshIssuePages } from './issue-route-refresh'
 import { issueDomainStore } from './issues-domain-store'
 import { IssueRuntimeClient } from './issue-runtime-client'
 
