@@ -8,6 +8,7 @@ import type { GoalSummary, GoalSummaryNotice } from '../../../shared/goals/goal-
 import type { NotificationDispatchResult } from '../../../shared/notification-settings-types'
 import { translate } from '@/i18n/i18n'
 import { useAppStore } from '../store'
+import { isGoalHostInContact, type GoalHostContactState } from './goal-host-contact'
 import { GoalRuntimeClient } from './goal-runtime-client'
 
 const POLL_MS = 30_000
@@ -21,7 +22,8 @@ const RETRY_REASONS = new Set<NotificationDispatchResult['reason']>(['cooldown']
  * is selected, or which machine runs the goal. Execution hosts record notices; this shows them.
  */
 export function GoalNoticeWatcher(): null {
-  const hostsKey = useAppStore(selectGoalHostsKey)
+  // Only hosts in contact; one that comes back is polled at once through the key change.
+  const hostsKey = useAppStore(selectGoalHostsInContactKey)
 
   useEffect(() => {
     const hosts = hostsKey.split('\n').flatMap((value) => {
@@ -57,15 +59,20 @@ export function GoalNoticeWatcher(): null {
   return null
 }
 
-function selectGoalHostsKey(state: {
-  repos?: readonly { connectionId?: string | null; executionHostId?: string | null }[]
-  folderWorkspaces?: readonly { connectionId?: string | null; executionHostId?: string | null }[]
-}): string {
+function selectGoalHostsInContactKey(
+  state: GoalHostContactState & {
+    repos?: readonly { connectionId?: string | null; executionHostId?: string | null }[]
+    folderWorkspaces?: readonly { connectionId?: string | null; executionHostId?: string | null }[]
+  }
+): string {
   const hosts = new Set<string>(['local'])
   for (const owner of [...(state.repos ?? []), ...(state.folderWorkspaces ?? [])]) {
     hosts.add(getRepoExecutionHostId(owner))
   }
-  return [...hosts].sort().join('\n')
+  return [...hosts]
+    .filter((host) => isGoalHostInContact(state, host))
+    .sort()
+    .join('\n')
 }
 
 async function pollHost(host: ExecutionHostId): Promise<void> {

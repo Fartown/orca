@@ -11,6 +11,7 @@ import {
   GoalRuntimeUnsupportedError
 } from './goal-runtime-client'
 import { goalDomainStore } from './goals-domain-store'
+import { isGoalHostInContact } from './goal-host-contact'
 import { GoalNoticeWatcher } from './GoalNoticeWatcher'
 
 const VISIBLE_POLL_MS = 5_000
@@ -29,7 +30,8 @@ export function GoalDomainSyncGate(): React.JSX.Element {
   const route = useAppStore((s) => getExecutionHostIdForWorktree(s, workspaceId))
   const client = useMemo(() => new GoalRuntimeClient(route), [route])
   useEffect(() => goalDomainStore.getState().setRoute(route), [route])
-  useGoalEditorDraftSync(client)
+  // Why: the shared connection layer owns reconnecting; Goals only reads a host in contact.
+  const inContact = useAppStore((s) => isGoalHostInContact(s, route))
   const rightSidebarOpen = useAppStore((s) => s.rightSidebarOpen)
   const rightSidebarTab = useAppStore((s) => s.rightSidebarTab)
   const scope = useStore(goalDomainStore, (s) => s.scope)
@@ -41,8 +43,13 @@ export function GoalDomainSyncGate(): React.JSX.Element {
   const detailSequence = useRef(0)
   const visible = rightSidebarOpen && rightSidebarTab === 'goals'
   const worktree = scope === 'workspace' ? workspaceId : null
+  useGoalEditorDraftSync(client, { inContact, panelVisible: visible })
 
   useEffect(() => {
+    if (!inContact) {
+      goalDomainStore.getState().setStatus('offline')
+      return
+    }
     let disposed = false
     const refresh = async (): Promise<void> => {
       if (disposed) {
@@ -67,10 +74,10 @@ export function GoalDomainSyncGate(): React.JSX.Element {
       disposed = true
       window.clearInterval(timer)
     }
-  }, [client, filter, query, visible, worktree])
+  }, [client, filter, inContact, query, visible, worktree])
 
   useEffect(() => {
-    if (!selectedGoalId || !visible) {
+    if (!selectedGoalId || !visible || !inContact) {
       return
     }
     let disposed = false
@@ -92,10 +99,10 @@ export function GoalDomainSyncGate(): React.JSX.Element {
       disposed = true
       window.clearInterval(timer)
     }
-  }, [client, selectedGoalId, visible])
+  }, [client, inContact, selectedGoalId, visible])
 
   useEffect(() => {
-    if (pendingCount === 0) {
+    if (pendingCount === 0 || !inContact) {
       return
     }
     const timer = window.setInterval(
@@ -103,7 +110,7 @@ export function GoalDomainSyncGate(): React.JSX.Element {
       PENDING_OPERATION_POLL_MS
     )
     return () => window.clearInterval(timer)
-  }, [client, pendingCount])
+  }, [client, inContact, pendingCount])
 
   // Notices follow every execution host, not this route; see GoalNoticeWatcher.
   return <GoalNoticeWatcher />

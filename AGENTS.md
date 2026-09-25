@@ -98,6 +98,16 @@ Standing up that SSH scenario is yours, not the user's. A root-run sshd already 
 fixtures and the traps (a self-started user-level sshd cannot launch the relay). Do not close out a
 change by asking the user to verify the SSH path on their machine.
 
+## Remote Host Reads
+
+A feature never reconnects, retries, or backs off against a host on its own, and never reads a host that is out of contact. Reachability and reconnection belong to the shared connection layer; a feature only follows its verdicts:
+
+- A paired runtime is read only while `getReachableRuntimeEnvironmentIds` lists it; an SSH host only while its `sshConnectionStates` entry is `connected`. Per-host subscriptions go through `createRuntimeClientEventsSync`.
+- Coming back into contact is what triggers the next read — not a timer and not a failed request.
+- Prefer host-pushed change notices over polling. A feature that still polls polls only hosts in contact.
+
+Why: a feature that re-requested on every failure turned one unreachable host into ~900 requests/s and froze the client (Issues, 2026-09).
+
 ## Folder Workspace Use Case
 
 All changes must consider folder workspaces as well as git worktrees. Don't assume every workspace is a git worktree.

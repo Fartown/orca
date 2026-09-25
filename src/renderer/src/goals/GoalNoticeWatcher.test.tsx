@@ -18,11 +18,13 @@ vi.mock('./goal-runtime-client', () => ({
     }
   }
 }))
+const ssh = vi.hoisted(() => ({ boxStatus: 'connected' }))
 vi.mock('../store', () => ({
   useAppStore: (select: (state: unknown) => unknown) =>
     select({
       repos: [{ connectionId: null }, { connectionId: 'box' }],
-      folderWorkspaces: [{ connectionId: 'box' }]
+      folderWorkspaces: [{ connectionId: 'box' }],
+      sshConnectionStates: new Map([['box', { status: ssh.boxStatus }]])
     })
 }))
 
@@ -33,6 +35,7 @@ function summary(notices: GoalSummary['notices']): NoticeRow {
 }
 
 beforeEach(() => {
+  ssh.boxStatus = 'connected'
   vi.useFakeTimers()
   window.localStorage.clear()
   routes.length = 0
@@ -112,5 +115,23 @@ it('treats an unreachable host as unverifiable: nothing is marked, the next poll
   await act(async () => {
     await vi.advanceTimersByTimeAsync(30_000)
   })
+  expect(dispatch).toHaveBeenCalledTimes(1)
+})
+
+it('never reads a disconnected host and reads it as soon as it is back', async () => {
+  const notice = { id: 'question:2', kind: 'question', text: 'x', at: 1 }
+  lists.set('ssh:box', async () => ({ items: [summary([notice])] }))
+  ssh.boxStatus = 'reconnecting'
+  const view = render(<GoalNoticeWatcher />)
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(90_000)
+  })
+  expect(routes).not.toContain('ssh:box')
+  expect(dispatch).not.toHaveBeenCalled()
+
+  ssh.boxStatus = 'connected'
+  view.rerender(<GoalNoticeWatcher />)
+  await act(async () => {})
+  expect(routes).toContain('ssh:box')
   expect(dispatch).toHaveBeenCalledTimes(1)
 })

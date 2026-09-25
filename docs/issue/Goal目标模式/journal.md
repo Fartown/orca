@@ -3,7 +3,7 @@ title: Goal 目标模式
 slug: Goal目标模式
 status: testing
 created: 2026-09-05
-updated: 2026-09-24
+updated: 2026-09-25
 external_ids: []
 ---
 
@@ -140,6 +140,28 @@ external_ids: []
 - 影响范围：需求、技术说明、测试规格及本需求的执行证据。
 
 ## 3. 开发记录
+
+### 2026-09-25 不在线的主机不读，草稿按需轮询
+
+- 本轮目标：排查 Issues 离线请求风暴时发现 Goals 的 5 处定时读取在主机离线后照发不误；用户定下项目规则「重连不要自己做，就用公共的；不在线就不读」，按改法一（不改主机、relay 与协议）落地。
+- 完成内容：
+  - **统一在线判定**：新增 `goal-host-contact.ts`，只组合公共判定：远程 Orca 看 `getReachableRuntimeEnvironmentIds`，SSH 看 `sshConnectionStates` 是否 `connected`，本机总在线。Goals 不探测、不重连。
+  - **列表、详情、待确认操作**：主机不在线时不发请求，面板显示已有的「The host is offline.」；恢复联系时立即读一次，再回到原节奏。
+  - **草稿**：原来一直每 2 秒读。改为只在主机在线且（Goals 面板打开，或有草稿正在生成）时每 2 秒读；其余时间只在挂载和恢复联系时读一次。点「生成验收文档」后立即读一次，面板关掉也能跟到生成结束并弹提示。
+  - **生成进度**：编辑器里每秒一次的 `getAcceptanceDraft` 在主机离线时暂停，已显示的结果保留。
+  - **通知**：`GoalNoticeWatcher` 只轮询在线主机；主机恢复联系时立即拉一次。
+  - **项目规则**：`AGENTS.md` 新增「Remote Host Reads」。
+- 代码或文档变更：
+  - 代码：`src/renderer/src/goals/goal-host-contact.ts`（新增）、`GoalDomainSyncGate.tsx`、`goal-editor-drafts-sync.ts`、`GoalNoticeWatcher.tsx`、`src/renderer/src/components/goals/use-acceptance-draft.ts`，及对应测试。
+  - 登记：`config/fork-features.jsonc` 的 goals 新增 2 个上游依赖、2 个测试。
+  - 文档：`AGENTS.md`；方案「Goal 守卫监工与唤醒兜底修订方案」中通知轮询一句改为只拉在线主机。
+- 验证证据：
+  - 自动化：新增在线判定 3 例、同步入口 1 例、草稿按需 2 例、通知 1 例；去掉「不在线不读」后同步入口与通知两例失败。Goals 注册套件 37 个文件 259 例通过；`pnpm tc`、`check:fork-features`、`check:fork-docs`、三项本地化检查、React Doctor 通过；`check:code-quality:changed` 310 条与改动前本分支 HEAD 相同（本次文件无新增）；`check:architecture-policies` 7 条 reference-drift 与改动前 HEAD 相同。
+  - 真机（隐藏实例；测试版临时叠加 Issues 分支源码构建，以免 Issues 旧的请求风暴拖慢定时器掩盖结果，构建后已撤回）：远程 Orca 在线安静 30 秒草稿请求 0 次（原来约 15 次），杀主机、不可达地址各 45 秒对远程主机的 Goals 请求 0 次；SSH 已连接 20 秒 0 次（原来草稿 10 次），断线 180 秒草稿 0 次、状态 0 次（原来草稿 92、列表 12、状态 6），剩下 7 次列表是通知在读本机。证据在 `.docs/ssh-reconnect-cpu-ui-validation/2026-09-24/evidence/`（`profile-goals-1790303433922`、`drop-1790303661381`）。
+- 未解决问题：
+  - 完整的「主机推送变化」没有做：Goals 状态由驱动进程直接写文件、SSH 由远端 relay 持有，推送要在三类主机上监视文件并扩展 relay 协议；relay 恢复扫描还依赖客户端来问 `goals.list`。
+  - 面板关闭且不是本客户端发起的草稿生成，完成时不再弹提示（打开面板即可看到结果）。
+- 下一步：用户确认后提交并开 PR；和 Issues 的 PR #43 合并顺序无关。
 
 ### 2026-09-24 提示词评审与修订
 
