@@ -40,6 +40,7 @@ import {
   IssuesReparentParams,
   IssuesResolveRoundParams,
   IssuesStatusParams,
+  IssuesUnsubscribeChangesParams,
   IssuesUpdateParams
 } from '../issues/schemas'
 import {
@@ -957,6 +958,8 @@ export const RPC_PARAMS_BY_METHOD = {
   'issues.reparent': IssuesReparentParams,
   'issues.resolveRound': IssuesResolveRoundParams,
   'issues.status': IssuesStatusParams,
+  'issues.subscribeChanges': null,
+  'issues.unsubscribeChanges': IssuesUnsubscribeChangesParams,
   'issues.update': IssuesUpdateParams,
   'jira.addIssueComment': IssueCommentOfJiraParams,
   'jira.connect': Connect,

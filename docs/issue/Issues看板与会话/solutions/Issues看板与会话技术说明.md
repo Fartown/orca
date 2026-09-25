@@ -3,7 +3,7 @@ title: Issues 看板与会话技术说明
 document_type: technical-solution
 status: ready
 created: 2026-09-05
-updated: 2026-09-10
+updated: 2026-09-25
 issue: Issues看板与会话
 ---
 
@@ -33,6 +33,7 @@ issue: Issues看板与会话
 | REQ-015、REQ-018                            | §7、§11：host/RPC 合同、readiness 和未完成的 Node-only 装配 |
 | [公共命名依赖](../../会话命名与身份保护/requirements/会话命名与身份保护.md) | 原 REQ-025/026/028 已迁出；Issues 消费公共名称和已接受身份 |
 | REQ-021、REQ-029                            | §11、§12：当前限制、后续目标与分层验收                      |
+| REQ-030                                     | §7.1、§8.4：变化通知流、读取时机与不可达主机                |
 
 ## 1. 模块与数据所有权
 
@@ -208,7 +209,7 @@ TTL 后真实会话可在未归属区再次 Bind existing；原无 identity 预�
 
 [resolveIssueRuntimeRoute](../../../../src/renderer/src/issues/issue-runtime-client.ts)将 paired route 映射为远端 local，缓存仍按客户端 runtime route 隔离。[resolveIssueAuthorityRoute](../../../../src/main/issues/issue-authority-route.ts)校验受管 SSH target；[route guard](../../../../src/main/issues/issue-runtime-route-guard.ts)在读取/mutation 前确认记录位于请求分区。
 
-协议使用现有 request/response RPC，不新增 stream opcode。[shared RPC schemas](../../../../src/shared/issues/runtime-rpc-schemas.ts)和[query schemas](../../../../src/shared/issues/query-rpc-schemas.ts)定义 status/list/get/listRounds 及 mutation。paired caller 不允许选 ssh 形成二跳；新增字段保持 optional。
+协议使用现有 request/response RPC，不新增 stream opcode；变化通知是一条流式方法 `issues.subscribeChanges`，走现有订阅通道，见 §8.4。[shared RPC schemas](../../../../src/shared/issues/runtime-rpc-schemas.ts)和[query schemas](../../../../src/shared/issues/query-rpc-schemas.ts)定义 status/list/get/listRounds 及 mutation。paired caller 不允许选 ssh 形成二跳；新增字段保持 optional。
 
 ### 7.2 支持与健康
 
@@ -220,7 +221,7 @@ TTL 后真实会话可在未归属区再次 Bind existing；原无 identity 预�
 | degraded    | storage ready，Hook disabled/failed；CRUD/显式 prepare 可用，普通启动无可信 Hook 不物化 |
 | unavailable | storage open/migration 失败；status-only registry 可读，其他 Issue 操作失败，不删库     |
 | unsupported | paired host 不含 capability；client 在 list/write 前拒绝                                |
-| offline     | route 不可用，禁写；不提供离线 mutation queue                                           |
+| offline     | route 不可用，禁写；不提供离线 mutation queue；paired host 不在联系时不发请求，直接显示  |
 
 [IssueFeatureReadinessRegistry](../../../../src/main/issues/issue-feature-readiness.ts)保存 readiness，客户端还检验返回 authority selector。当前 `IssueDomainSyncGate.refreshRoute` 把所有非 Unsupported 异常归为 offline；类型中有 error，尚不能据此宣称独立 error/retry 流程完成。
 
@@ -240,12 +241,21 @@ TTL 后真实会话可在未归属区再次 Bind existing；原无 identity 预�
 
 [IssueDomainSyncGate](../../../../src/renderer/src/issues/IssueDomainSyncGate.tsx)：
 
-- Issues Sidebar/详情可见时 5 秒刷新；否则 15 秒。
+- 读取时机与离线行为见 §8.4；只有不含变化通知的旧主机按 5 秒（Issues 可见）或 15 秒读取，且仅在联系期间。
 - 非 Issues 模式仍拉 authority Conversations，以提供标题等中性投影；不向 Workspaces 添加持久行。
 - 每页请求 200 条，stale 最多重启 3 次。
 - entities 在 partitionsByRouteExecutionHostId 内归一化，filter/scope 只引用 IDs，authorityId 改变清 generation。
-- 当前使用 setInterval 和全局 sequence；不是 route 独立串行队列。慢请求可重叠，旧 sequence 响应被丢弃。
+- 每个 route 同时只有一次读取；读取期间到达的通知合并为一次补读。route 被移除或失去联系时推进该 route 的 sequence，丢弃晚到响应。
 - 当前 repository 全量 list 后过滤、聚合、内存分页；没有实现 SQL 先分页/聚合。
+
+### 8.4 变化通知与读取时机
+
+2026-09-25 前客户端按 5/15 秒轮询每个主机，且轮询 effect 以主机列表的对象身份为依赖。paired host 连不上时，请求失败会让主机状态重新发布、主机列表换成新数组、effect 立即重跑，形成没有等待的请求闭环：实测每秒约 900 次 `issues.status`，渲染进程一分钟内涨到 1.5 GB 以上。现改为由持有数据的主机推送变化：
+
+- 主机侧：[IssueChangeFeed](../../../../src/main/issues/issue-change-feed.ts)汇总三类来源，250 ms 内合并为一条通知：`IssueDatabase.onFactsChanged`（事务提交后，带分区）、Runtime Attachment 变化、readiness 注册与注销（后两类影响全部分区，记为 null）。[issues.subscribeChanges](../../../../src/main/issues/issue-change-subscription.ts)先挂监听再发 ready，之后转发 changed；本机桌面订阅在 IPC 取消时结束，远端订阅在收到 `issues.unsubscribeChanges` 或连接关闭时结束。共享控制连接关闭订阅时按客户端 request id 发清理请求，这是唯一的上游接缝（`remote-runtime-shared-control-protocol.ts`）。
+- 客户端：[startIssueDomainSync](../../../../src/renderer/src/issues/issue-domain-sync.ts)订阅本机一次（覆盖 local 与 ssh:* 分区），并复用上游的订阅同步器与在线判定，只为共享运行时状态认定在联系的 paired host 各开一条订阅。读取时机只有：route 加入、筛选或可见性变化、订阅 ready（首次及每次断线重订）、收到相关分区的 changed。paired host 只关心其 `local` 分区。
+- 不可达主机：paired host 失去联系时标记 offline，并推进 sequence 丢弃在途响应；此后不发任何 Issue 请求，恢复联系后由订阅 ready 重新同步。
+- 混合版本：旧主机对订阅返回 `method_not_found`，客户端改为只在联系期间按 5/15 秒读取；失去联系后清除该判定，重连时再尝试订阅，以便识别已升级的主机。旧客户端不调用新方法，行为不变。
 
 ### 8.2 Sidebar 与详情
 

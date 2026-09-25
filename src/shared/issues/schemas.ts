@@ -1,4 +1,5 @@
 export * from './authority-schemas'
+export * from './change-stream-schemas'
 export * from './mutation-rpc-schemas'
 export * from './query-rpc-schemas'
 export * from './record-schemas'

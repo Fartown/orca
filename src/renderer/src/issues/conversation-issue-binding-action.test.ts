@@ -18,7 +18,7 @@ vi.mock('./issue-runtime-client', () => ({
   }
 }))
 
-vi.mock('./IssueDomainSyncGate', () => ({
+vi.mock('./issue-route-refresh', () => ({
   refreshConversationPages: mocks.refreshConversations,
   refreshIssuePages: mocks.refreshIssues
 }))
