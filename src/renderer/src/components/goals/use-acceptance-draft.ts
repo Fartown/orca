@@ -1,5 +1,8 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { newClientOperationId } from '@/goals/goal-client-operation'
+import { requestGoalEditorDraftsRefresh } from '@/goals/goal-editor-drafts-sync'
+import { isGoalHostInContact } from '@/goals/goal-host-contact'
+import { useAppStore } from '@/store'
 import type { GoalEditorDraftSession } from '@/goals/goal-editor-draft-session'
 import type { GoalAcceptanceDraft } from '../../../../shared/goals/goal-acceptance-draft-contract'
 import { canApplyGeneratedDocument } from '../../../../shared/goals/goal-editor-draft-contract'
@@ -13,14 +16,24 @@ export function useAcceptanceDraft(
   const [starting, setStarting] = useState(false)
   const startLock = useRef(false)
   const currentSession = useRef(session)
+  const route = session?.client.routeExecutionHostId
+  const inContact = useAppStore((s) => route !== undefined && isGoalHostInContact(s, route))
   useLayoutEffect(() => {
     currentSession.current = session
   }, [session])
 
+  const shownAttempt = useRef<{ session: GoalEditorDraftSession | null; attemptId: string | null }>(
+    { session: null, attemptId: null }
+  )
+
   useEffect(() => {
-    setResult(null)
-    setError(null)
-    if (!attemptId || !session) {
+    // Losing contact pauses the poll but keeps the last result on screen.
+    if (shownAttempt.current.session !== session || shownAttempt.current.attemptId !== attemptId) {
+      shownAttempt.current = { session, attemptId }
+      setResult(null)
+      setError(null)
+    }
+    if (!attemptId || !session || !inContact) {
       return
     }
     let disposed = false
@@ -65,7 +78,7 @@ export function useAcceptanceDraft(
       disposed = true
       clearInterval(timer)
     }
-  }, [session, attemptId])
+  }, [session, attemptId, inContact])
 
   const generate = async (input: {
     objective: string
@@ -107,6 +120,8 @@ export function useAcceptanceDraft(
       }
       await session.flush()
       const next = await session.client.draftAcceptance({ draftId, ...request })
+      // Keeps the result notice alive if the panel closes before the next draft read.
+      requestGoalEditorDraftsRefresh()
       if (currentSession.current === session) {
         setResult(next)
       }
