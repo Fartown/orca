@@ -3,6 +3,7 @@ import {
   type ConversationHookIdentityContext
 } from './conversation-hook-identity-ingestor'
 import { ConversationRuntimeAttachmentRegistry } from './conversation-runtime-attachment-registry'
+import { issueChangeFeed, type IssueChangeFeed } from './issue-change-feed'
 import { ConversationTitleRefresh } from './conversation-title-refresh'
 import type { IssueFeatureReadinessRegistry } from './issue-feature-readiness'
 import { issueFeatureReadinessRegistry } from './issue-feature-readiness'
@@ -45,6 +46,7 @@ export type IssueFeatureBootstrapOptions = {
   managedSshTargets?: ManagedSshTargetResolver
   migrationHooks?: IssueDatabaseMigrationHooks
   readinessRegistry?: IssueFeatureReadinessRegistry
+  changeFeed?: IssueChangeFeed
   // Injected so tests and headless setups run without the ipc resolver stack;
   // absent means the Issue snapshot keeps its last Provider title.
   resolveSessionTitles?: ConstructorParameters<typeof ConversationTitleRefresh>[1]
@@ -55,6 +57,7 @@ export class IssueFeatureBootstrap {
   readonly attachments: ConversationRuntimeAttachmentRegistry
   private readonly repository: IssueRepository
   private readonly unregisterReadiness: () => void
+  private readonly stopChangeFeed: () => void
   private readonly stopProviderSubscription: (() => void) | null
   private readonly stopStatusSubscription: (() => void) | null
   private readonly stopPaneClearSubscription: (() => void) | null
@@ -71,6 +74,7 @@ export class IssueFeatureBootstrap {
     attachments: ConversationRuntimeAttachmentRegistry
     repository: IssueRepository
     unregisterReadiness: () => void
+    stopChangeFeed: () => void
     stopProviderSubscription: (() => void) | null
     stopStatusSubscription: (() => void) | null
     stopPaneClearSubscription: (() => void) | null
@@ -86,6 +90,7 @@ export class IssueFeatureBootstrap {
     this.attachments = params.attachments
     this.repository = params.repository
     this.unregisterReadiness = params.unregisterReadiness
+    this.stopChangeFeed = params.stopChangeFeed
     this.stopProviderSubscription = params.stopProviderSubscription
     this.stopStatusSubscription = params.stopStatusSubscription
     this.stopPaneClearSubscription = params.stopPaneClearSubscription
@@ -128,6 +133,18 @@ export class IssueFeatureBootstrap {
         : {})
     })
     const unregisterReadiness = readinessRegistry.register(service, options.hookEvidenceStatus)
+    const changeFeed = options.changeFeed ?? issueChangeFeed
+    const stopFactsNotices = repository.database.onFactsChanged((change) =>
+      changeFeed.publish(change.hostPartitionKey)
+    )
+    const stopAttachmentNotices = attachments.onChange(() => changeFeed.publish(null))
+    const stopChangeFeed = (): void => {
+      stopFactsNotices()
+      stopAttachmentNotices()
+      // Readiness moved; clients subscribed before this point re-read status.
+      changeFeed.publish(null)
+    }
+    changeFeed.publish(null)
     let coordinator: IssueHookSnapshotLiveCoordinator<
       IssueHookEvidenceSnapshot,
       BufferedHookEvent
@@ -204,6 +221,7 @@ export class IssueFeatureBootstrap {
         attachments,
         repository,
         unregisterReadiness,
+        stopChangeFeed,
         stopProviderSubscription,
         stopStatusSubscription,
         stopPaneClearSubscription,
@@ -218,6 +236,7 @@ export class IssueFeatureBootstrap {
       stopPaneClearSubscription?.()
       titleRefresh?.dispose()
       unregisterReadiness()
+      stopChangeFeed()
       repository.close()
       throw error
     }
@@ -239,6 +258,7 @@ export class IssueFeatureBootstrap {
     this.stopPaneClearSubscription?.()
     this.titleRefresh?.dispose()
     this.unregisterReadiness()
+    this.stopChangeFeed()
     this.repository.close()
   }
 }

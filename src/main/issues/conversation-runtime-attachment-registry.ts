@@ -16,10 +16,18 @@ export type RuntimeAttachment = {
 
 export class ConversationRuntimeAttachmentRegistry implements ConversationRuntimeDeleteProbe {
   private readonly byRuntimeKey = new Map<string, RuntimeAttachment>()
+  private readonly changeListeners = new Set<() => void>()
   private generation = 0
 
   get revision(): number {
     return this.generation
+  }
+
+  onChange(listener: () => void): () => void {
+    this.changeListeners.add(listener)
+    return () => {
+      this.changeListeners.delete(listener)
+    }
   }
 
   upsert(attachment: RuntimeAttachment): void {
@@ -30,7 +38,7 @@ export class ConversationRuntimeAttachmentRegistry implements ConversationRuntim
     }
     if (!previous || !sameAttachment(previous, attachment)) {
       this.byRuntimeKey.set(key, attachment)
-      this.generation += 1
+      this.bump()
     }
   }
 
@@ -47,7 +55,7 @@ export class ConversationRuntimeAttachmentRegistry implements ConversationRuntim
       changed = true
     }
     if (changed) {
-      this.generation += 1
+      this.bump()
     }
   }
 
@@ -61,7 +69,7 @@ export class ConversationRuntimeAttachmentRegistry implements ConversationRuntim
       changed = true
     }
     if (changed) {
-      this.generation += 1
+      this.bump()
     }
   }
 
@@ -75,7 +83,14 @@ export class ConversationRuntimeAttachmentRegistry implements ConversationRuntim
       changed = true
     }
     if (changed) {
-      this.generation += 1
+      this.bump()
+    }
+  }
+
+  private bump(): void {
+    this.generation += 1
+    for (const listener of this.changeListeners) {
+      listener()
     }
   }
 

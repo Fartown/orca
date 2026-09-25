@@ -2,6 +2,8 @@ export * from './mutation-rpc-schemas'
 export * from './query-rpc-schemas'
 
 export const ISSUE_METHOD_NAMES = [
+  'issues.subscribeChanges',
+  'issues.unsubscribeChanges',
   'issues.status',
   'issues.list',
   'issues.get',
