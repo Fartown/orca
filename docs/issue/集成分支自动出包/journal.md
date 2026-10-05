@@ -3,7 +3,7 @@ title: 集成分支自动出包
 slug: 集成分支自动出包
 status: testing
 created: 2026-09-12
-updated: 2026-09-23
+updated: 2026-10-06
 external_ids: []
 ---
 
@@ -64,6 +64,15 @@ external_ids: []
 - 影响范围：REQ-401、REQ-402、REQ-403；APK 沿用 Expo debug 签名并核验指纹，不生成密钥或暗改 versionCode。
 
 ## 3. 开发记录
+
+### 2026-10-06 同步上游 d17351401d：CI 与构建适配，移动端屏蔽上游更新提示（testing）
+
+- 本轮目标：同步上游后保住 fork 的 CI 门禁与打包步骤，并避免集成包被上游的新更新提示误导。
+- 完成内容：`pr.yml` 按上游新的 preflight 布局接回 fork 门禁（全量代码质量、casting、架构、登记、文档），统一加 `static_analysis` 条件，并新增仅在 fork 仓库执行的补拉 `origin/main` 历史步骤（上游把检出深度降到 50）；`e2e.yml` 合并上游 `cancelled()` 与 fork 的首帧条件；`electron-builder` 与 `package.json` 接回 Goal 驱动、分享页面资源与三道 fork lint 门禁；上游新增的移动端更新检查在集成渠道下不提供来源，集成 APK 不会再被提示安装签名不同的 stablyai 版本。
+- 代码或文档变更：`.github/workflows/pr.yml`、`.github/workflows/e2e.yml`、`config/electron-builder.config.cjs`、`package.json`、`mobile/app/_layout.tsx`、`mobile/src/integration-builds/integration-update-channel.ts`（新，含测试）、`mobile-updates.ts`、接缝 `mobile/src/app-update/app-update-runtime.ts`（新）。
+- 验证证据：同步后 `pnpm sync:upstream` 的功能登记门禁、架构门禁（14 个策略集）与 25 条功能检查全部通过（`.docs/upstream-sync/2026-10-05/sync-run3.txt`），`pnpm tc` 通过，暂存的 10259 个代码文件 oxlint 零错误；`pr.yml` YAML 解析通过，审查在本机浅克隆上验证了补拉命令可用；集成渠道测试覆盖“集成包不查询上游、非集成包照常查询”。
+- 未解决问题：`pr.yml` 的新步骤尚未在真实 CI 上运行，需由下一个 PR 验证。
+- 下一步：下一个 PR 观察 preflight 中 fork 门禁与补拉步骤。
 
 ### 2026-09-23：补齐 fork macOS 打包任务的共享契约登记
 

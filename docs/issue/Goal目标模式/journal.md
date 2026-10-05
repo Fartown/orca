@@ -3,7 +3,7 @@ title: Goal 目标模式
 slug: Goal目标模式
 status: testing
 created: 2026-09-05
-updated: 2026-09-25
+updated: 2026-10-06
 external_ids: []
 ---
 
@@ -140,6 +140,15 @@ external_ids: []
 - 影响范围：需求、技术说明、测试规格及本需求的执行证据。
 
 ## 3. 开发记录
+
+### 2026-10-06 同步上游 d17351401d：驱动打包、orcad 注册与验收文档打开随上游调整（testing）
+
+- 本轮目标：同步上游后保住 Goal 驱动的打包与部署、orcad 上的目标注册和验收文档打开。
+- 完成内容：上游把 relay 改为构建一次再复制到各平台目录，Goal 驱动包改在共享构建步骤里生成，随之进入每个平台目录；orcad 入口改用上游改名后的 `profileStore`（自动合并后变量不存在，orcad 上注册目标会直接报错）；验收文档打开从已删除的 `fs:authorizeExternalPath` 改为上游的用户点名访问（本机先以 user-file 权限 stat，SSH 与配对主机路径不变），并登记进上游的权限清单测试；`GoalDetail` 适配 `setActiveTabType` 新签名。
+- 代码或文档变更：`config/scripts/build-relay.mjs`、`build-orcad.mjs`、`src/main/orcad/orcad-entry.ts`、`src/renderer/src/goals/open-goal-document.ts`（及测试）、`src/renderer/src/lib/local-file-access.test.ts`（新接缝）、`src/renderer/src/components/goals/GoalDetail.tsx`、`config/fork-features.jsonc`（依赖 `local-file-access.ts`）。
+- 验证证据：同步后 `pnpm sync:upstream` 的功能登记门禁、架构门禁（14 个策略集）与 25 条功能检查全部通过（`.docs/upstream-sync/2026-10-05/sync-run3.txt`），`pnpm tc` 通过，暂存的 10259 个代码文件 oxlint 零错误；relay 六个平台目录均含 `goal-driver.js`、`acceptance-judge.js`、`acceptance-draft.js`；真机本机打开目标目录外的验收文档为只读预览、删除文件后打开失败且不留死标签，SSH 上验收文档以 SSH 只读标签打开 3/3，见 `.docs/upstream-sync-ui-validation/2026-10-05/README.md`（git 忽略）。
+- 未解决问题：文档缺失时的提示是原始 IPC 错误文本（`Error invoking remote method 'fs:stat': ENOENT …`），合并前同样是原始错误，未在本轮改动。
+- 下一步：随 `fork/integration` 推送。
 
 ### 2026-09-25 不在线的主机不读，草稿按需轮询
 

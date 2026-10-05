@@ -3,7 +3,7 @@ title: 自托管产物后端
 slug: 自托管产物后端
 status: testing
 created: 2026-09-05
-updated: 2026-09-17
+updated: 2026-10-06
 external_ids: []
 ---
 
@@ -91,6 +91,15 @@ external_ids: []
 - 影响范围：需求、技术说明、测试规格及本需求的执行证据。
 
 ## 3. 开发记录
+
+### 2026-10-06 同步上游 d17351401d：局域网分享接入上游工具栏折叠（testing）
+
+- 本轮目标：上游浏览器工具栏改为受控分享位并会把分享折叠进溢出菜单，让局域网分享在两种形态下都可用且文案正确。
+- 完成内容：`LanArtifactShareButton` 支持受控打开与锚点（折叠时锚定到 ⋯ 按钮、忙碌时忽略关闭、关闭后焦点回到 ⋯）；工具栏新增可选 `shareLabel`，折叠项显示 “Share on local network” 而非上游的 “Share as artifact”；浏览器页与文档预览工具栏改用函数式分享位。
+- 代码或文档变更：`src/renderer/src/components/self-hosted-artifacts/share-button/LanArtifactShareButton.tsx`、`LanArtifactShareEntryButtons.tsx`、`lan-artifact-share-copy.ts`；接缝 `browser-chrome-toolbar.tsx`（新）、`browser-page-toolbar.tsx`、`doc-preview-toolbar.tsx`；新增测试 `LanArtifactShareButton.test.tsx`、`lan-share-toolbar-label.test.tsx`。
+- 验证证据：同步后 `pnpm sync:upstream` 的功能登记门禁、架构门禁（14 个策略集）与 25 条功能检查全部通过（`.docs/upstream-sync/2026-10-05/sync-run3.txt`），`pnpm tc` 通过，暂存的 10259 个代码文件 oxlint 零错误；新测试做过反向验证（关掉锚点分支、去掉忙碌保护、去掉文案回退各自变红）；真机宽工具栏按钮打开弹层、窄到 1060px 折叠后从 ⋯ 打开并锚定、折叠项文案正确，2/2，见 `.docs/upstream-sync-ui-validation/2026-10-05/README.md`（git 忽略）。
+- 未解决问题：无。
+- 下一步：随 `fork/integration` 推送。
 
 ### 2026-09-17 账号文案与双实例 SSH 真机验证
 

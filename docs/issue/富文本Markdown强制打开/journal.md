@@ -3,7 +3,7 @@ title: "富文本Markdown强制打开"
 slug: "富文本Markdown强制打开"
 status: done
 created: 2026-09-16
-updated: 2026-09-16
+updated: 2026-10-06
 external_ids: []
 ---
 
@@ -47,6 +47,15 @@ external_ids: []
 - 影响范围：REQ-402；用 muted token + `TriangleAlert` 图标，不用同文件预览分支那套 raw amber（STYLEGUIDE 明确不复制既有债）
 
 ## 3. 开发记录
+
+### 2026-10-06 同步上游 d17351401d：与上游硬性渲染上限合并（testing）
+
+- 本轮目标：同步上游后保住“仍然打开”覆盖，同时吸收上游新增的硬性渲染上限。
+- 完成内容：上限以下行为不变，尺寸回退与不支持语法回退都可强制打开；超过上游硬性渲染上限时不再显示“仍然打开”，避免渲染进程卡死；中文文案双方都改时保留 fork 译法。
+- 代码或文档变更：`src/renderer/src/components/editor/EditorMarkdownFileSurface.tsx`、`editor-panel-render-model.ts`（及测试）、`src/renderer/src/i18n/locales/zh.json`。
+- 验证证据：同步后 `pnpm sync:upstream` 的功能登记门禁、架构门禁（14 个策略集）与 25 条功能检查全部通过（`.docs/upstream-sync/2026-10-05/sync-run3.txt`），`pnpm tc` 通过，暂存的 10259 个代码文件 oxlint 零错误；render-model 两组测试（fork 覆盖与上游 PDF 尺寸保护）均通过。
+- 未解决问题：无。
+- 下一步：随 `fork/integration` 推送。
 
 ### 2026-09-16 放开语法不支持的硬拦截
 

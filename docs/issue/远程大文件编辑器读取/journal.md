@@ -3,7 +3,7 @@ title: "远程大文件编辑器读取"
 slug: "远程大文件编辑器读取"
 status: testing
 created: 2026-09-15
-updated: 2026-09-15
+updated: 2026-10-06
 external_ids: []
 ---
 
@@ -59,6 +59,15 @@ external_ids: []
 - [需求 REQ-701](requirements/远程大文件编辑器读取.md)、[docs/reference/remote-wire-compatibility.md](../../reference/remote-wire-compatibility.md)
 
 ## 3. 开发记录
+
+### 2026-10-06 同步上游 d17351401d：分块补读与上游访问参数并存（testing）
+
+- 本轮目标：同步上游后保住远程大文件的分块补读。
+- 完成内容：`runtime-file-read-client.ts` 保留分块整读，同时接入上游的 `access` 与本地访问参数；审查确认分块补读只在配对主机分支生效。
+- 代码或文档变更：`src/renderer/src/runtime/runtime-file-read-client.ts`、`runtime-file-client-types.ts`。
+- 验证证据：同步后 `pnpm sync:upstream` 的功能登记门禁、架构门禁（14 个策略集）与 25 条功能检查全部通过（`.docs/upstream-sync/2026-10-05/sync-run3.txt`），`pnpm tc` 通过，暂存的 10259 个代码文件 oxlint 零错误；运行时文件客户端相关测试通过。
+- 未解决问题：无。
+- 下一步：随 `fork/integration` 推送。
 
 ### 2026-09-15 分块补读落地
 

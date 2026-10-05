@@ -3,7 +3,7 @@ title: Issues 看板与会话
 slug: Issues看板与会话
 status: implementing
 created: 2026-09-05
-updated: 2026-09-25
+updated: 2026-10-06
 external_ids: []
 ---
 
@@ -53,6 +53,15 @@ ready 只表示文档已按当前源码整理；本需求仍为 implementing，�
 - 影响范围：需求、技术说明、测试规格及本需求的执行证据。
 
 ## 3. 开发记录
+
+### 2026-10-06 同步上游 d17351401d：对话启动适配请求 ID（testing）
+
+- 本轮目标：同步上游后保住 Issue 对话的启动与侧栏根模式。
+- 完成内容：上游要求每次启动 agent 带请求 ID，Issue 对话启动复用本次动作的 `mutationId`（每次点击新生成，同一动作重投会合并）；侧栏保留 fork 的 Issues 根模式，上游新增的 Git 工具链提示横幅放在工作区模式。
+- 代码或文档变更：`src/renderer/src/components/issues/issue-conversation-launch-action.ts`、`IssueConversationActions.test.ts`、`src/renderer/src/components/sidebar/index.tsx`。
+- 验证证据：同步后 `pnpm sync:upstream` 的功能登记门禁、架构门禁（14 个策略集）与 25 条功能检查全部通过（`.docs/upstream-sync/2026-10-05/sync-run3.txt`），`pnpm tc` 通过，暂存的 10259 个代码文件 oxlint 零错误；Issues 功能检查 225/225；真机本机 Issues 模式正常渲染，见 `.docs/upstream-sync-ui-validation/2026-10-05/README.md`（git 忽略）。
+- 未解决问题：Issues 模式下看不到上游的 Git 工具链提示横幅（上游本身只在非 Agents 视图显示），未调整。
+- 下一步：随 `fork/integration` 推送。
 
 ### 2026-09-25 — Issues 改为按变化同步，修复离线主机请求风暴
 

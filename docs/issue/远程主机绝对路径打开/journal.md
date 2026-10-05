@@ -3,7 +3,7 @@ title: "远程主机绝对路径打开"
 slug: "远程主机绝对路径打开"
 status: testing
 created: 2026-09-16
-updated: 2026-09-16
+updated: 2026-10-06
 external_ids: []
 ---
 
@@ -59,6 +59,15 @@ external_ids: []
 - [需求 REQ-801](requirements/远程主机绝对路径打开.md)、[docs/reference/ssh-execution-boundary.md](../../reference/ssh-execution-boundary.md)
 
 ## 3. 开发记录
+
+### 2026-10-06 同步上游 d17351401d：改用上游用户点名访问（testing）
+
+- 本轮目标：上游删除主进程授权接口、改为“用户点名”访问后，保住主机路径授权打开。
+- 完成内容：地址栏绝对路径打开改用上游 `statUserOpenedPath` 作为检查步骤，保留主机授权、SSH 归属标记与授权印记；运行时文件读写客户端同时携带 `hostPathGrant` 与上游 `access`；持有授权的 CSV 标签不走上游新加的分页预览，仍按授权整读。
+- 代码或文档变更：`src/renderer/src/components/tab-bar/tab-create-entry-absolute-file.ts`、`tab-create-entry-action.ts`（及测试）、`src/renderer/src/runtime/runtime-file-read-client.ts`、`runtime-file-mutation-client.ts`、`runtime-file-client-types.ts`、`src/shared/rpc-contract/files-params.ts`、`useEditorPanelFileContentLoader.ts`；新增测试 `src/renderer/src/runtime-host-path/host-path-csv-read.test.tsx`。
+- 验证证据：同步后 `pnpm sync:upstream` 的功能登记门禁、架构门禁（14 个策略集）与 25 条功能检查全部通过（`.docs/upstream-sync/2026-10-05/sync-run3.txt`），`pnpm tc` 通过，暂存的 10259 个代码文件 oxlint 零错误；新测试做过反向验证；真机本机地址栏打开工作区外绝对路径、SSH 上工作区外路径按授权打开且可读（3/3），见 `.docs/upstream-sync-ui-validation/2026-10-05/README.md`（git 忽略）。
+- 未解决问题：项目外的大 CSV 在授权标签里整读，超限时报“文件过大”而不分页。
+- 下一步：随 `fork/integration` 推送。
 
 ### 2026-09-16 合流时发现并堵上一个交互缺口
 

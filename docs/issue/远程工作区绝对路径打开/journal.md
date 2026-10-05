@@ -3,7 +3,7 @@ title: '远程工作区绝对路径打开'
 slug: '远程工作区绝对路径打开'
 status: implementing
 created: 2026-09-11
-updated: 2026-09-15
+updated: 2026-10-06
 external_ids: []
 ---
 
@@ -110,6 +110,15 @@ external_ids: []
 - [需求 REQ-301～REQ-305](requirements/远程工作区绝对路径打开.md)、[调研 §4.6](research/标签栏新建Tab弹窗打开文件路径链路调研.md)、[方案 §3.3](solutions/标签栏新建Tab弹窗远程工作区打开绝对路径方案.md)
 
 ## 3. 开发记录
+
+### 2026-10-06 同步上游 d17351401d：绝对路径打开随上游访问模型调整（testing）
+
+- 本轮目标：同步上游后保住远程工作区的绝对路径打开。
+- 完成内容：与“远程主机绝对路径打开”共用的 `tab-create-entry-absolute-file.ts` 手工重写：检查步骤换成上游 `statUserOpenedPath`，保留 SSH 路径的远端归属与工作区内外判断，并吸收上游“项目内链接指向项目外”的标记。
+- 代码或文档变更：`src/renderer/src/components/tab-bar/tab-create-entry-absolute-file.ts`、`tab-create-entry-action.ts`、`TabBarCreateEntry.keyboard.test.tsx`。
+- 验证证据：同步后 `pnpm sync:upstream` 的功能登记门禁、架构门禁（14 个策略集）与 25 条功能检查全部通过（`.docs/upstream-sync/2026-10-05/sync-run3.txt`），`pnpm tc` 通过，暂存的 10259 个代码文件 oxlint 零错误；真机本机与 SSH 上工作区内路径按相对路径打开、工作区外按绝对路径打开，见 `.docs/upstream-sync-ui-validation/2026-10-05/README.md`（git 忽略）。
+- 未解决问题：无。
+- 下一步：随 `fork/integration` 推送。
 
 ### 2026-09-15 取消按路径位置的拦截并按环境目录校验归属
 

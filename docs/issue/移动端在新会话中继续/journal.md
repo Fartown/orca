@@ -3,7 +3,7 @@ title: "移动端在新会话中继续"
 slug: "移动端在新会话中继续"
 status: testing
 created: 2026-09-13
-updated: 2026-09-23
+updated: 2026-10-06
 external_ids: []
 ---
 
@@ -170,6 +170,15 @@ external_ids: []
 - 无
 
 ## 3. 开发记录
+
+### 2026-10-06 同步上游 d17351401d：续接建终端适配上游新建终端动作，基线接缝撤下（testing）
+
+- 本轮目标：同步上游后保住移动端续接的建终端与投递，处理上游删除的源码文本测试和过时的包基线。
+- 完成内容：上游重写移动端建终端动作，续接改用拆出的 `createTerminalWithResult`（带 `cwd` 或 `clientMutationId` 时不走上游的 agent.launch 新路径，因为续接需要拿回新终端句柄）；`continuation-prompt.ts` 移植上游的 OpenCode sqlite 记录过滤；上游删除 `mobile-session-route-parity.test.ts` 与会话路由模块计数常量，对应接缝撤下；上游的路由前缀基线表已落后于它自己的代码（上游代码实测 73 个脚本、表中记 69，上限 73），fork 树实测 72，未重写上游表，撤下两条基线接缝。
+- 代码或文档变更：`mobile/src/session/use-mobile-session-terminal-create-actions.ts`、`mobile/src/session-continuation/use-mobile-session-continuation-scope.ts`、`src/shared/agent-session-continuation/continuation-prompt.ts`、`config/fork-features.jsonc`；新增测试 `mobile/src/session-continuation/continuation-terminal-create.test.ts`；测量脚本 `.docs/upstream-sync/2026-10-05/scripts/measure-mobile-route-sweep.mjs`。
+- 验证证据：同步后 `pnpm sync:upstream` 的功能登记门禁、架构门禁（14 个策略集）与 25 条功能检查全部通过（`.docs/upstream-sync/2026-10-05/sync-run3.txt`），`pnpm tc` 通过，暂存的 10259 个代码文件 oxlint 零错误；移动端测试通过，新测试做过反向验证；`build-mobile-web-app-bundle` 与 `verify-mobile-web-app-bundle` 通过（72 个分块，与逐前缀测量一致，同一脚本在纯上游树上测得 73）。
+- 未解决问题：续接仍走上游标注待删的兼容路径（`COMPAT(agent.launch.v2)`），上游删除时需把续接迁到能接收 `cwd` 并返回句柄的新路径；移动端 Web 包只剩 1 个脚本余量；`MobileSessionContinuationSheet.tsx:18` 的类型错误在合并前已存在，未在本轮修复。
+- 下一步：随 `fork/integration` 推送；单独开分支修类型错误。
 
 ### 2026-09-23 重录 mobile web bundle 闭包与分块基线
 

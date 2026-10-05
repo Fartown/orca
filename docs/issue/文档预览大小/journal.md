@@ -3,7 +3,7 @@ title: 文档预览大小
 document_type: journal
 status: testing
 created: 2026-09-12
-updated: 2026-09-15
+updated: 2026-10-06
 issue: 文档预览大小
 external_ids: []
 ---
@@ -49,6 +49,15 @@ external_ids: []
 - 影响范围：REQ-401 与 TC-401 描述已同步；生产代码没有因此变更。
 
 ## 3. 开发记录
+
+### 2026-10-06 同步上游 d17351401d：测试 mock 跟随上游删除的模块（testing）
+
+- 本轮目标：同步上游后保持文档预览大小功能的测试可运行。
+- 完成内容：上游删除了 `rg-availability` 与 `filesystem-search-git` 两个模块及其 mock，测试里对应的两处 mock 移除；`files-params.ts` 的 fork 字段与上游新增字段并存。
+- 代码或文档变更：`src/main/document-preview-size/document-preview-size.test.ts`、`src/shared/rpc-contract/files-params.ts`。
+- 验证证据：同步后 `pnpm sync:upstream` 的功能登记门禁、架构门禁（14 个策略集）与 25 条功能检查全部通过（`.docs/upstream-sync/2026-10-05/sync-run3.txt`），`pnpm tc` 通过，暂存的 10259 个代码文件 oxlint 零错误；`document-preview-size.test.ts` 11/11 通过。
+- 未解决问题：无。
+- 下一步：随 `fork/integration` 推送。
 
 ### 2026-09-15 — 预览 CSP 放行内联 data: 媒体
 

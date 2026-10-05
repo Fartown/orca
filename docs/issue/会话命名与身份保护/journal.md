@@ -3,7 +3,7 @@ title: 会话命名与身份保护
 slug: 会话命名与身份保护
 status: implementing
 created: 2026-09-08
-updated: 2026-09-14
+updated: 2026-10-06
 external_ids: []
 ---
 
@@ -102,6 +102,15 @@ external_ids: []
 - 影响范围：REQ-028、Codex managed脚本的local/posix模板与feature-owned小模块及测试；同时清理local/daemon/relay新PTY继承的外层CODEX_THREAD_ID，避免由Codex启动Orca时误拦正常新pane。未知旧版本无标识、外部手工污染环境等仍需披露。既有失败记录保持原样。
 
 ## 3. 开发记录
+
+### 2026-10-06 同步上游 d17351401d：会话保护与上游进程在线模型并存（testing）
+
+- 本轮目标：把上游 1166 个提交合入 `fork/integration`，保住会话命名与 Claude/Codex 会话保护，并让 Claude 30 秒活跃窗口与上游新加的进程在线（presence）模型共存。
+- 完成内容：解开 hook 监听、relay、PTY 环境、Activity、AI Vault、通知等冲突；上游删除扫描 worker，会话名证据迁到生产路径 service 进程的扫描缓存；Claude 窗口新增两条放行规则（同一进程切换会话、原主进程已退出），被拒的外来进程 hook 会请执行主机探测原主是否存活（本机与 relay 两侧）；修复上游 SSH 适配层漏转 `agentPresence`（远端 Claude 退出后客户端状态不清），客户端对带 presence 的 relay 采纳 relay 的判定，旧 relay 仍按客户端窗口兜底；三个被合并挤出行数上限的上游文件把 fork 部分移入 fork 模块。
+- 代码或文档变更：`src/shared/claude-session-ownership/claude-session-activity.ts`、`src/shared/session-names/session-ownership-listener-caches.ts`（新）、`src/main/session-names/relay-session-payload-admission.ts`（新）、`src/main/session-names/scanned-session-name-evidence.ts`（新）、`src/shared/session-names/relay-session-admission.ts`；接缝 `src/shared/agent-hook-listener/listener-state.ts`、`src/main/agent-hooks/server/server-ingest-normalization.ts`、`server-status-update.ts`、`server-ingest-remote.ts`、`src/relay/agent-hook-server.ts`、`agent-hook-request.ts`、`src/main/ssh/ssh-relay-session.ts`、`src/main/ai-vault/session-scanner-service-entry.ts`、`session-scanner-accumulator.ts`、`src/renderer/src/components/right-sidebar/AiVaultSessionVirtualList.tsx`；登记表随上游挪动的接缝更新（`agent-state-history.ts`、`agent-status-live-entry-state-history.ts`、`session-parse-cache-snapshot-serialization.ts`），撤下上游已删除的 `pane-agent-identity-inventory.test.ts` 接缝；新增测试 `claude-session-process-presence.test.ts`、`claude-session-relay-presence.test.ts`、`scanned-session-name-evidence.test.ts`、`history-list-canonical-title.test.tsx`。
+- 验证证据：同步后 `pnpm sync:upstream` 的功能登记门禁、架构门禁（14 个策略集）与 25 条功能检查全部通过（`.docs/upstream-sync/2026-10-05/sync-run3.txt`），`pnpm tc` 通过，暂存的 10259 个代码文件 oxlint 零错误；上游 3 个进程在线测试与 fork 保护测试全部通过，新规则测试均做过反向验证（拆掉规则或接线即变红）；真机（隐藏隔离实例、真实 Claude CLI）本机 L2 后台调用被拒、窗口内 `/clear` 即时接管、退出重开接管各 2/2，SSH（本机 2222 root sshd、隔离 HOME）后台调用被拒 3/3、窗口内 `/clear` 6/6、退出后执行主机侧状态清除 3 轮，见 `.docs/upstream-sync-ui-validation/2026-10-05/README.md`（git 忽略）。
+- 未解决问题：`d6d042cd88` 的兜底（所有者行无进程时用上一个被接受 hook 的进程）在真机路径上未被触发，只有单测覆盖；被拒 hook 触发的存活探测只在途去重，后台调用 hook 密集时会多次探测（与上游对已接受嵌套 agent 的探测频率相同）；e2e 隔离实例里经 New tab 启动的 Claude 拿到真实 HOME（测试基础设施问题，验证脚本已绕过，根因未定位）。
+- 下一步：随 `fork/integration` 推送；后续同步关注上游 presence 模型与 SSH 适配层变化。
 
 ### 2026-09-14 — Codex 回归摘要不再改写主会话名（testing）
 
