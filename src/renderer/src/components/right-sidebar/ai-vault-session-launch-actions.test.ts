@@ -41,6 +41,8 @@ vi.mock('@/store', () => ({
   useAppStore: { getState: () => mocks.state }
 }))
 vi.mock('@/lib/ai-vault-session-resume-preparation', () => ({
+  // Why pass-through: a local session is never probed for a deleted SSH folder.
+  dropDeletedSshResumeCwd: async (session: unknown) => session,
   prepareAiVaultSessionForResume: (...args: unknown[]) => {
     mocks.events.push('prepare')
     return mocks.prepareSession(...args)

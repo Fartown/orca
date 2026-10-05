@@ -21,7 +21,8 @@ vi.mock('@/lib/activate-tab-and-focus-pane', () => ({
   activateTabAndFocusPane: mocks.focusPane
 }))
 vi.mock('sonner', () => ({ toast: { error: mocks.toastError } }))
-vi.mock('@/i18n/i18n', () => ({
+vi.mock('@/i18n/i18n', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
   translate: (_key: string, fallback: string) => fallback
 }))
 vi.mock('./ai-vault-original-pane', () => ({
