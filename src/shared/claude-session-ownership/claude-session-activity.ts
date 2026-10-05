@@ -8,7 +8,12 @@ import {
 
 export const CLAUDE_SESSION_ACTIVITY_WINDOW_MS = 30_000
 
-export type ClaudeSessionActivity = { sessionId: string; observedAt: number }
+export type ClaudeSessionActivity = {
+  sessionId: string
+  observedAt: number
+  /** The process whose hook was accepted; panes found by process detection carry no owner process. */
+  process?: AgentProcessIdentity
+}
 
 export function shouldRejectClaudeSessionReplacement(
   state: HookListenerState,
@@ -33,9 +38,10 @@ export function shouldRejectClaudeSessionReplacement(
   // Why: an exited owner has nothing left to protect, and the owner's own process switching
   // sessions (/clear, /resume) is the user's switch, not a background call.
   const owner = previous.agentPresence
+  const ownerProcess = owner?.process ?? activity.process
   if (
     owner?.ended ||
-    (senderProcess && owner?.process && isSameAgentProcess(senderProcess, owner.process))
+    (senderProcess && ownerProcess && isSameAgentProcess(senderProcess, ownerProcess))
   ) {
     return false
   }
@@ -45,14 +51,18 @@ export function shouldRejectClaudeSessionReplacement(
 export function recordClaudeSessionActivity(
   state: HookListenerState,
   event: AgentHookEventPayload,
-  isReplay = event.isReplay
+  isReplay = event.isReplay,
+  /** The event as its sender posted it, before presence transfer replaced its process. */
+  sent?: Pick<AgentHookEventPayload, 'agentPresence'>
 ): void {
   if (isReplay || event.source !== 'claude' || !event.hookEventName || !event.providerSession) {
     return
   }
+  const sender = sent?.agentPresence?.process
   state.claudeSessionActivityByPaneKey.set(event.paneKey, {
     sessionId: event.providerSession.id,
-    observedAt: performance.now()
+    observedAt: performance.now(),
+    ...(sender ? { process: sender } : {})
   })
 }
 

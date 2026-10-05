@@ -81,6 +81,40 @@ describe('Claude activity window with process presence', () => {
     expect(probe).not.toHaveBeenCalled()
   })
 
+  describe('when process detection registered the pane before any hook', () => {
+    // Why: an Orca-launched TUI is first seen by its foreground process, so the pane's owner
+    // carries no process and only the guard's own record knows which process the session runs in.
+    async function detectedServer(): Promise<AgentHookServer> {
+      const server = await createServer()
+      server.ingestTerminalStatus({
+        paneKey: PANE,
+        payload: { state: 'idle', prompt: '', agentType: 'claude' } as never,
+        origin: 'process'
+      })
+      await hook(server, 'SessionStart', 'session-a', OWNER_PID)
+      await hook(server, 'UserPromptSubmit', 'session-a', OWNER_PID)
+      expect(server._getStateForTests().lastStatusByPaneKey.get(PANE)?.agentPresence?.process).toBe(
+        undefined
+      )
+      return server
+    }
+
+    it('accepts /clear in the owner process inside the window', async () => {
+      const server = await detectedServer()
+      await hook(server, 'SessionEnd', 'session-a', OWNER_PID, 'clear')
+      await hook(server, 'SessionStart', 'session-b', OWNER_PID)
+      await hook(server, 'UserPromptSubmit', 'session-b', OWNER_PID)
+      expect(ownerSession(server)).toBe('session-b')
+    })
+
+    it('still refuses a background call from another process', async () => {
+      const server = await detectedServer()
+      await hook(server, 'SessionStart', 'session-b', OTHER_PID)
+      await hook(server, 'UserPromptSubmit', 'session-b', OTHER_PID)
+      expect(ownerSession(server)).toBe('session-a')
+    })
+  })
+
   it('lets a relaunch replace an owner whose process exited inside the window', async () => {
     const server = await createServer()
     probe.mockResolvedValue('exited')

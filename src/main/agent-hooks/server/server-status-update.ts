@@ -244,7 +244,7 @@ export abstract class AgentHookServerStatusUpdate extends AgentHookServerStatusA
     }
     this.commitStatusRowMutation(rowBefore, enriched)
     // Fork (session-names): independent of the row-store bookkeeping above.
-    recordClaudeSessionActivity(this.state, enriched)
+    recordClaudeSessionActivity(this.state, enriched, enriched.isReplay, incoming)
     // Why skipped for structured rows: the serializer drops them, so the whole walk and stringify
     // can only ever reproduce the last file — once per debounce window for a streaming chat.
     if (!enriched.structuredHost) {

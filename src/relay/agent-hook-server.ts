@@ -307,7 +307,7 @@ export class RelayAgentHookServer extends RelayAgentHookCanonicalStatus {
     if (!cacheRelayLegacyAgentStatus(this.state, event, MAX_CACHED_PANES, dropPane)) {
       return undefined
     }
-    recordClaudeSessionActivity(this.state, event, options.isReplay || event.isReplay)
+    recordClaudeSessionActivity(this.state, event, options.isReplay || event.isReplay, incoming)
     this.lastEnvelopeMetaByPaneKey.delete(event.paneKey)
     this.lastEnvelopeMetaByPaneKey.set(event.paneKey, { source, env, version })
     this.forward(buildRelayHookEnvelope(event, source, env, version, options))
