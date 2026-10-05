@@ -1,4 +1,3 @@
-import Constants from 'expo-constants'
 import { Platform } from 'react-native'
 import { requireOptionalNativeModule } from 'expo-modules-core'
 import * as FileSystem from 'expo-file-system/legacy'
@@ -9,6 +8,7 @@ import {
 } from '../../../src/shared/integration-builds/release-catalog'
 import { downloadResumableApk } from './apk-download'
 import { createUpdateController } from './update-controller'
+import { isIntegrationUpdateChannel } from './integration-update-channel'
 
 interface NativeUpdate {
   getVersionCode(): number
@@ -26,8 +26,7 @@ const ATTEMPT_TIMEOUT_MS = 10 * 60 * 1000
 
 const native =
   Platform.OS === 'android' ? requireOptionalNativeModule<NativeUpdate>('OrcaAppUpdate') : null
-export const integrationUpdatesEnabled =
-  Platform.OS === 'android' && Constants.expoConfig?.extra?.orcaUpdateChannel === 'integration'
+export const integrationUpdatesEnabled = Platform.OS === 'android' && isIntegrationUpdateChannel()
 
 function installer(): NativeUpdate {
   if (!native) {

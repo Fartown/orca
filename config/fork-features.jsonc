@@ -71,6 +71,11 @@
           "why": "foreground update checks independent of paired hosts"
         },
         {
+          "file": "mobile/src/app-update/app-update-runtime.ts",
+          "mustContain": "isIntegrationUpdateChannel",
+          "why": "an integration APK never offers upstream's release, which its signing key cannot install over"
+        },
+        {
           "file": "mobile/src/settings/about-screen.tsx",
           "mustContain": "IntegrationUpdateRow",
           "why": "manual update check and download status"

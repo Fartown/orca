@@ -11,6 +11,7 @@ import { appStoreUpdateSource } from './app-store-update-source'
 import { createAppUpdateChecker, type AppUpdateState } from './app-update-checker'
 import type { AppUpdateSource } from './app-update-source'
 import { githubReleaseUpdateSource } from './github-release-update-source'
+import { isIntegrationUpdateChannel } from '../integration-builds/integration-update-channel'
 
 /**
  * Invariant: this app does not use expo-updates, so `expoConfig` is the manifest embedded in the
@@ -21,6 +22,10 @@ export const installedAppVersion: string | null = Constants.expoConfig?.version 
 
 /** The channel that installed this binary. */
 function resolveAppUpdateSource(): AppUpdateSource | null {
+  // Why: an integration APK is signed by the fork; upstream's release cannot install over it.
+  if (isIntegrationUpdateChannel()) {
+    return null
+  }
   if (Platform.OS === 'android') {
     return githubReleaseUpdateSource
   }
