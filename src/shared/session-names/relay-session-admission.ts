@@ -16,7 +16,7 @@ export type RelaySessionAdmission = {
   source: AgentHookSource | undefined
   providerSession: AgentProviderSessionMetadata | undefined
   explicitPrompt: boolean
-  /** The reporting agent's process; absent from relays that predate process presence. */
+  /** The pane owner's process as the relay saw it after its own guard; absent before presence. */
   senderProcess?: AgentProcessIdentity
 }
 
