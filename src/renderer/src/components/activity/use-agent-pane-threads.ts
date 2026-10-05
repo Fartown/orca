@@ -12,6 +12,10 @@ import { projectActivityTabs, type ActivityTabProjection } from './activity-tab-
 import { buildAgentPaneThreads, createAgentPaneThreadReuseCache } from './activity-thread-builder'
 import { collectChildAgentPaneKeys } from './activity-thread-child-agent'
 import { useActivitySessionNames } from '@/session-names/use-activity-session-names'
+import {
+  EMPTY_PAIRED_DEVICE_IDS_BY_ENVIRONMENT,
+  getPairedDeviceIdsByEnvironment
+} from '@/components/sidebar/workspace-creator-visibility'
 
 const EMPTY_PANE_KEYS: ReadonlySet<string> = new Set()
 import { filterThreadsByActivityScope, resolveActivityScopeRepoIds } from './activity-scope-filter'
@@ -78,6 +82,25 @@ export function useAgentPaneThreads(args: {
   const { query, readFilter, groupBy, selectedPaneKey, showChildAgents = false } = args
   const agentsVisibleHostIds = useAppStore((s) => s.agentsVisibleHostIds)
   const agentsFilterRepoIds = useAppStore((s) => s.agentsFilterRepoIds)
+  const hideWorkspacesFromOtherDevices = useAppStore((s) => s.agentsHideWorkspacesFromOtherDevices)
+  const hideAutomationGeneratedWorkspaces = useAppStore(
+    (s) => s.agentsHideAutomationGeneratedWorkspaces
+  )
+  const hideCliCreatedWorkspaces = useAppStore((s) => s.agentsHideCliCreatedWorkspaces)
+  // Why gated selectors: runtime status churns, and only the other-device filter reads it.
+  const runtimeEnvironments = useAppStore((s) =>
+    s.agentsHideWorkspacesFromOtherDevices ? s.runtimeEnvironments : null
+  )
+  const runtimeStatusByEnvironmentId = useAppStore((s) =>
+    s.agentsHideWorkspacesFromOtherDevices ? s.runtimeStatusByEnvironmentId : null
+  )
+  const pairedDeviceIdsByEnvironment = useMemo(
+    () =>
+      runtimeEnvironments && runtimeStatusByEnvironmentId
+        ? getPairedDeviceIdsByEnvironment(runtimeEnvironments, runtimeStatusByEnvironmentId)
+        : EMPTY_PAIRED_DEVICE_IDS_BY_ENVIRONMENT,
+    [runtimeEnvironments, runtimeStatusByEnvironmentId]
+  )
   // Why project: the unified tab map is rewritten on every tab focus; the projection keeps
   // its identity (and each tab's) unless a field this pipeline reads actually changed.
   const tabProjectionRef = useRef<{
@@ -182,7 +205,7 @@ export function useAgentPaneThreads(args: {
     selectedPaneKey === null || allThreads.some((thread) => thread.paneKey === selectedPaneKey)
   const effectiveSelectedPaneKey = selectedPaneKeyIsLive ? selectedPaneKey : null
 
-  // Why scope runs before the per-view filters: host/project scope must stay separate
+  // Why scope runs before the per-view filters: host/project/origin scope must stay separate
   // from unread/search narrowing.
   const { threads: scopeVisibleThreads } = useMemo(
     () =>
@@ -191,7 +214,11 @@ export function useAgentPaneThreads(args: {
         scope: {
           visibleHostIds: agentsVisibleHostIds,
           filterRepoIds: resolveActivityScopeRepoIds(agentsFilterRepoIds, storeData.repoMap),
-          defaultHostId: storeData.defaultHostId
+          defaultHostId: storeData.defaultHostId,
+          hideWorkspacesFromOtherDevices,
+          pairedDeviceIdsByEnvironment,
+          hideAutomationGeneratedWorkspaces,
+          hideCliCreatedWorkspaces
         },
         exemptPaneKey: effectiveSelectedPaneKey
       }),
@@ -201,6 +228,10 @@ export function useAgentPaneThreads(args: {
       agentsFilterRepoIds,
       storeData.repoMap,
       storeData.defaultHostId,
+      hideWorkspacesFromOtherDevices,
+      pairedDeviceIdsByEnvironment,
+      hideAutomationGeneratedWorkspaces,
+      hideCliCreatedWorkspaces,
       effectiveSelectedPaneKey
     ]
   )
