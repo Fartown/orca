@@ -153,6 +153,8 @@ async function startOrcadRuntime(
   let uninstallHookStatusRepublish = (): void => {}
   let uninstallObservedStatusIdentity = (): void => {}
   let removeStatusHookSettingsListener = (): void => {}
+  // Why one chain: orcad keeps a single runtime cleanup, so a second registerCleanup replaces this one.
+  let stopGoals = (): void => {}
   registerCleanup(async () => {
     try {
       await rpc?.stop()
@@ -169,6 +171,7 @@ async function startOrcadRuntime(
           // orcad restart goes back to killing every running terminal.
           await stopOrcadDaemon()
         } finally {
+          stopGoals()
           removeStatusHookSettingsListener()
           uninstallObservedStatusIdentity()
           uninstallHookStatusRepublish()
@@ -310,7 +313,7 @@ async function startOrcadRuntime(
   // restored orchestration rows claiming an authority this host never took over.
   // Why before the RPC server binds: a client host attaching first would find no pages to recover.
   const { registerRuntimeGoals } = await import('../goals/goal-runtime-registration')
-  const stopGoals = registerRuntimeGoals({
+  stopGoals = registerRuntimeGoals({
     runtime,
     store: profileStore,
     userDataPath: runtimeUserDataPath,
@@ -320,7 +323,6 @@ async function startOrcadRuntime(
       appPath: resolveOrcadInstallRoot()
     })
   })
-  registerCleanup(async () => stopGoals())
 
   runtime.rehydrateClientHostedBrowserPages()
 
