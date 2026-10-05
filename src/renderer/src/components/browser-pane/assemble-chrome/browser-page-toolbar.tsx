@@ -1,5 +1,6 @@
 import type { Dispatch, RefObject, SetStateAction } from 'react'
 import { BrowserFileLanShareButton } from '@/components/self-hosted-artifacts/share-button/LanArtifactShareEntryButtons'
+import { lanShareLabel } from '@/components/self-hosted-artifacts/share-button/lan-artifact-share-copy'
 import { translate } from '@/i18n/i18n'
 import { useShortcutLabel } from '@/hooks/useShortcutLabel'
 import { useAppStore } from '@/store'
@@ -190,6 +191,7 @@ export function BrowserPageToolbar({
         onToggle: () => (markupIsActive ? markupCancel() : void markupStart()),
         canShowDiscoveryHint: isActive
       }}
+      shareLabel={lanShareLabel()}
       shareControl={
         shareableArtifactFile
           ? (control) => (

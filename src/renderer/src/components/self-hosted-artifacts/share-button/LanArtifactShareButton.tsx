@@ -16,7 +16,7 @@ import {
   stopLanArtifactWorkspace,
   type LanArtifactShareTarget
 } from '../client/lan-artifact-share-client'
-import { lanShareHostLabel } from './lan-artifact-share-copy'
+import { lanShareHostLabel, lanShareLabel } from './lan-artifact-share-copy'
 import {
   initialLanShareState,
   lanShareReducer,
@@ -139,10 +139,7 @@ export function LanArtifactShareButton({
     }
   }
 
-  const label = translate(
-    'auto.components.selfHostedArtifacts.shareButton.label',
-    'Share on local network'
-  )
+  const label = lanShareLabel()
   return (
     <Popover open={open} onOpenChange={(next) => state.busy === null && setOpen(next)}>
       {anchorRef ? (

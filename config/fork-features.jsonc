@@ -1308,6 +1308,11 @@
           "why": "browser pane file: page share entry"
         },
         {
+          "file": "src/renderer/src/components/browser-pane/assemble-chrome/browser-chrome-toolbar.tsx",
+          "mustContain": "shareLabel",
+          "why": "the folded share item names local network sharing, not artifact publishing"
+        },
+        {
           "file": "src/renderer/src/components/browser-pane/workspace-doc/doc-preview-toolbar.tsx",
           "mustContain": "DocPreviewLanShareButton",
           "why": "workspace document preview share entry"

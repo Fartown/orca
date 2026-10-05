@@ -10,6 +10,7 @@ import type { DocPreviewDocumentIdentity } from './doc-preview-document-identity
 import type { DocPreviewHistory } from './doc-preview-webview-history'
 import { DocPreviewOverflowMenu } from './doc-preview-overflow-menu'
 import { DocPreviewLanShareButton } from '@/components/self-hosted-artifacts/share-button/LanArtifactShareEntryButtons'
+import { lanShareLabel } from '@/components/self-hosted-artifacts/share-button/lan-artifact-share-copy'
 
 /**
  * Binds the shared browser chrome to a workspace document: the address bar becomes a read-only
@@ -88,6 +89,7 @@ export function DocPreviewToolbar({
       // Cookie import is a browsing-session action; a preview reads workspace disk over a grant
       // and has no session for cookies to land in.
       importControl={null}
+      shareLabel={lanShareLabel()}
       shareControl={(control) => (
         <DocPreviewLanShareButton
           worktreeId={worktreeId}

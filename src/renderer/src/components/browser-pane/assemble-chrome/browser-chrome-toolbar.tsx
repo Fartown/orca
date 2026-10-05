@@ -97,6 +97,7 @@ export function BrowserChromeToolbar({
   elementTools,
   markup,
   shareControl,
+  shareLabel,
   viewSource,
   openExternal,
   overflowMenu,
@@ -112,6 +113,8 @@ export function BrowserChromeToolbar({
   elementTools: BrowserChromeElementTools | null
   markup: BrowserChromeMarkupTool
   shareControl?: (control: BrowserChromeShareControl) => React.ReactNode
+  /** The folded menu item's label when the share control is not artifact publishing. */
+  shareLabel?: string
   viewSource: BrowserChromeToolAction | null
   openExternal: BrowserChromeToolAction | null
   overflowMenu: (props: BrowserChromeOverflowMenuProps) => React.ReactNode
@@ -180,10 +183,12 @@ export function BrowserChromeToolbar({
   if (shareControl && folded.has('share')) {
     foldedTools.push({
       stage: 'share',
-      label: translate(
-        'auto.components.artifacts.ArtifactPublishButton.a4a49da6af',
-        'Share as artifact'
-      ),
+      label:
+        shareLabel ??
+        translate(
+          'auto.components.artifacts.ArtifactPublishButton.a4a49da6af',
+          'Share as artifact'
+        ),
       icon: Share2,
       onSelect: () => setSharePopoverOpen(true),
       deferUntilMenuClose: true

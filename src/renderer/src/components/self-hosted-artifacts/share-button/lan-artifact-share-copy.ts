@@ -1,6 +1,13 @@
 import { translate } from '@/i18n/i18n'
 import type { LanShareBlockedReason } from './lan-artifact-share-machine'
 
+export function lanShareLabel(): string {
+  return translate(
+    'auto.components.selfHostedArtifacts.shareButton.label',
+    'Share on local network'
+  )
+}
+
 export function lanShareHostLabel(host: { executionHostId: string; label: string } | null): string {
   if (!host || host.executionHostId === 'local') {
     return translate(
