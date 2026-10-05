@@ -193,6 +193,18 @@ it('pins every foreground and background step to its selected phase', () => {
     ['Check Zustand selector fan-out budget', staticPhase],
     ['Check reliability gate manifest', staticPhase],
     ['Enforce dead design-system classes', staticPhase],
+    // Fork gates (Fartown/orca): one contiguous block after upstream's static checks.
+    [
+      'Fetch upstream history for fork gates',
+      `${staticPhase} && github.repository == 'Fartown/orca'`
+    ],
+    [
+      'Enforce code quality across the fork diff',
+      `${staticPhase} && github.repository == 'Fartown/orca'`
+    ],
+    ['Enforce architecture policies', staticPhase],
+    ['Enforce fork feature registry', staticPhase],
+    ['Enforce fork feature docs', staticPhase],
     ['Check VM runtime rollback compatibility', staticPhase],
     ['Enforce max-lines ratchet', staticPhase],
     ['Enforce ts-nocheck ratchet', staticPhase],

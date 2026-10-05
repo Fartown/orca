@@ -178,11 +178,6 @@ jobs:
           fetch-depth: 50
           persist-credentials: false
 
-      # The fork's gates diff against the upstream merge-base (origin/main), which depth 50 misses.
-      - name: Fetch upstream history for fork gates
-        if: github.repository == 'Fartown/orca' && needs.code_paths.outputs.static_analysis == 'true'
-        run: git fetch --unshallow --no-tags --filter=blob:none origin '+refs/heads/main:refs/remotes/origin/main'
-
       # Why two guarded installs: the mixed root+mobile store entry is 537 MB against
       # 321 MB for root alone, and restoring it costs 8.6s against 4.6s. Most PRs skip the
       # mobile install below, so they were paying 216 MB for packages they never link. The
@@ -251,38 +246,15 @@ jobs:
         env:
           PREFLIGHT_PHASE_SELECTED: ${{ needs.code_paths.outputs.static_analysis == 'true' }}
           PREFLIGHT_PRIOR_SUCCESS: ${{ job.status == 'success' }}
-          # The fork sweeps its whole upstream delta in the fork steps below instead.
-          FORK_REPOSITORY: ${{ github.repository == 'Fartown/orca' }}
         run: |
-          if [ "$PREFLIGHT_PHASE_SELECTED" != true ] || [ "$PREFLIGHT_PRIOR_SUCCESS" != true ] || [ "$FORK_REPOSITORY" = true ]; then exit 0; fi
+          if [ "$PREFLIGHT_PHASE_SELECTED" != true ] || [ "$PREFLIGHT_PRIOR_SUCCESS" != true ]; then exit 0; fi
           pnpm run check:code-quality:changed -- "${{ github.event.pull_request.base.sha }}"
 
       - name: Enforce React Doctor on changed lines
-        if: needs.code_paths.outputs.static_analysis == 'true' && github.repository != 'Fartown/orca'
+        if: needs.code_paths.outputs.static_analysis == 'true'
         run: pnpm run check:react-doctor:changed -- "${{ github.event.pull_request.base.sha }}"
 
       - wait: changed-code-quality
-
-      # Check every fork delta against merged upstream, including older fork changes.
-      - name: Enforce code quality across the fork diff
-        if: needs.code_paths.outputs.static_analysis == 'true' && github.repository == 'Fartown/orca'
-        run: |
-          base=$(git merge-base HEAD origin/main)
-          echo "Checking all fork changes against upstream $base"
-          # Use the explicit upstream base instead of the synthetic PR merge's first parent.
-          ORCA_CODE_QUALITY_SCANS='quality,type-aware,react-doctor' \
-            env -u GITHUB_EVENT_NAME pnpm run check:code-quality:changed -- "$base"
-          env -u GITHUB_EVENT_NAME pnpm run check:react-doctor:changed -- "$base"
-
-      # Why casting is scoped to this PR while the sweep above spans the fork: upstream added the
-      # no-type-assertions rule after most fork code was written, and does not hold its own tree to
-      # it either (~37k hits on origin/main). Sweeping it over the whole delta would block every PR
-      # on code the rule never governed. New fork code still has to satisfy it.
-      - name: Enforce casting quality on changed lines
-        if: needs.code_paths.outputs.static_analysis == 'true' && github.repository == 'Fartown/orca'
-        env:
-          ORCA_CODE_QUALITY_SCANS: casting
-        run: pnpm run check:code-quality:changed -- "${{ github.event.pull_request.base.sha }}"
 
       - name: Check Zustand selector fan-out budget
         if: needs.code_paths.outputs.static_analysis == 'true'
@@ -295,6 +267,23 @@ jobs:
       - name: Enforce dead design-system classes
         if: needs.code_paths.outputs.static_analysis == 'true'
         run: pnpm run check:dead-classes
+
+      # Fork gates (Fartown/orca): one block so upstream's preflight steps stay verbatim.
+      # The fork-only steps diff against the upstream merge-base (origin/main), which depth 50 misses.
+      - name: Fetch upstream history for fork gates
+        if: needs.code_paths.outputs.static_analysis == 'true' && github.repository == 'Fartown/orca'
+        run: git fetch --unshallow --no-tags --filter=blob:none origin '+refs/heads/main:refs/remotes/origin/main'
+
+      # Check every fork delta against merged upstream, including older fork changes.
+      - name: Enforce code quality across the fork diff
+        if: needs.code_paths.outputs.static_analysis == 'true' && github.repository == 'Fartown/orca'
+        run: |
+          base=$(git merge-base HEAD origin/main)
+          echo "Checking all fork changes against upstream $base"
+          # Use the explicit upstream base instead of the synthetic PR merge's first parent.
+          ORCA_CODE_QUALITY_SCANS='quality,type-aware,react-doctor' \
+            env -u GITHUB_EVENT_NAME pnpm run check:code-quality:changed -- "$base"
+          env -u GITHUB_EVENT_NAME pnpm run check:react-doctor:changed -- "$base"
 
       - name: Enforce architecture policies
         if: needs.code_paths.outputs.static_analysis == 'true'

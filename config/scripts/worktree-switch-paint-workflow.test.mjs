@@ -34,11 +34,11 @@ describe('worktree first-paint CI coverage', () => {
       'E2E_PROJECT_ARGS+=(--project=electron-headful)'
     )
     expect(changed.find((step) => step.name === 'Upload Playwright traces').if).toBe(
-      `failure() || contains(inputs.test_files, '${specPath}')`
+      `failure() || cancelled() || contains(inputs.test_files, '${specPath}')`
     )
     expect(
       workflow.jobs.e2e.steps.find((step) => step.name === 'Upload Playwright traces').if
-    ).toBe("failure() || matrix.shard == '1/14'")
+    ).toBe("failure() || cancelled() || matrix.shard == '1/14'")
     expect(spec).toContain("testInfo.attach('first-paint-final.png'")
     expect(spec).toContain('orcaPage.screenshot({ path: screenshotPath })')
     expect(spec).toContain('path: screenshotPath,')
