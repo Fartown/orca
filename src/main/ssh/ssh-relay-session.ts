@@ -1760,6 +1760,8 @@ export class SshRelaySession {
           advertisedAgentStatusCapabilities: AGENT_STATUS_LEGACY_UNADVERTISED_PEER_CAPABILITIES,
           evidenceAgeMs: envelope.evidenceAgeMs,
           statusUnavailable: envelope.statusUnavailable,
+          // Why: an agent's process exit and identity travel only here; ingestRemote validates it.
+          agentPresence: envelope.agentPresence,
           payload: envelope.payload
         },
         this.targetId

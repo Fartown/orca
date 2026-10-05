@@ -339,6 +339,38 @@ describe('SshRelaySession agent hooks over a fake relay transport', () => {
     )
   })
 
+  it('clears a remote Claude row when the relay reports its process exited', async () => {
+    relay = createFakeRelay()
+    vi.mocked(deployAndLaunchRelay).mockResolvedValue({
+      transport: relay.transport,
+      serverBuildId: 'test-relay-build',
+      platform: 'linux-x64'
+    })
+    session = createSession('conn-presence')
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: Mocked deployment never reads the connection.
+    await session.establish({} as SshConnection)
+    const process = { pid: 4001, platform: 'linux' as const, startTime: 'birth-4001' }
+    const envelope = makeEnvelope({
+      source: 'claude',
+      hookEventName: 'UserPromptSubmit',
+      providerSession: { key: 'session_id', id: 'remote-claude-a' },
+      agentPresence: { agent: 'claude', process },
+      payload: { state: 'working', prompt: 'remote prompt', agentType: 'claude' }
+    })
+    relay.notifyAgentHook(envelope)
+    const row = () =>
+      agentHookServer.getStatusSnapshot().find((entry) => entry.paneKey === envelope.paneKey)
+    await vi.waitFor(() => expect(row()).toBeDefined())
+    relay.notifyAgentHook({
+      ...envelope,
+      hookEventName: 'SessionEnd',
+      providerSessionOnly: true,
+      agentPresence: { agent: 'claude', process, ended: true }
+    })
+    // Why providerSessionOnly: the ended row keeps only its resume identity and leaves the status list.
+    await vi.waitFor(() => expect(row()?.providerSessionOnly).toBe(true))
+  })
+
   it('preserves Claude monitoring mode across the SSH relay boundary', async () => {
     relay = createFakeRelay()
     vi.mocked(deployAndLaunchRelay).mockResolvedValue({

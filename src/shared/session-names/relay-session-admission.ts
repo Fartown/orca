@@ -2,7 +2,6 @@ import type { AgentHookSource } from '../agent-hook-relay'
 import type { AgentProviderSessionMetadata } from '../agent-session-resume'
 import type { AgentStatusPayload } from '../agent-status-types'
 import type { HookListenerState } from '../agent-hook-listener/listener-state'
-import type { AgentProcessIdentity } from '../agent-process-presence'
 import { shouldRejectClaudeSessionReplacement } from '../claude-session-ownership/claude-session-activity'
 import { isCodexThreadTitleGenerationPrompt } from '../codex-thread-title-generation'
 import {
@@ -16,8 +15,8 @@ export type RelaySessionAdmission = {
   source: AgentHookSource | undefined
   providerSession: AgentProviderSessionMetadata | undefined
   explicitPrompt: boolean
-  /** The pane owner's process as the relay saw it after its own guard; absent before presence. */
-  senderProcess?: AgentProcessIdentity
+  /** A relay that publishes process presence already ran this guard against the true sender. */
+  relayAppliedClaudeGuard?: boolean
 }
 
 /** Relay events reach the same session-ownership rules the local ingest path applies. */
@@ -27,11 +26,9 @@ export function shouldRejectRelaySessionEvent(event: RelaySessionAdmission): boo
     return shouldRejectUnbackedCodexSessionEvent(state, paneKey, providerSession)
   }
   if (source === 'claude') {
-    return shouldRejectClaudeSessionReplacement(
-      state,
-      paneKey,
-      providerSession?.id,
-      event.senderProcess
+    return (
+      event.relayAppliedClaudeGuard !== true &&
+      shouldRejectClaudeSessionReplacement(state, paneKey, providerSession?.id)
     )
   }
   return false

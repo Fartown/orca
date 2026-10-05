@@ -35,7 +35,7 @@ export function admitRelaySessionPayload(
     source,
     providerSession,
     explicitPrompt: envelope.hasExplicitPrompt === true || hookEventName === 'UserPromptSubmit',
-    senderProcess: readAgentProcessPresence(envelope.agentPresence)?.process
+    relayAppliedClaudeGuard: readAgentProcessPresence(envelope.agentPresence) !== undefined
   }
   if (
     shouldRejectRelaySessionEvent(admission) ||

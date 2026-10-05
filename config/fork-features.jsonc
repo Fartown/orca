@@ -1116,6 +1116,16 @@
           "why": "a refused local hook from another process still asks whether the owner exited"
         },
         {
+          "file": "src/main/ssh/ssh-relay-session.ts",
+          "mustContain": "agentPresence: envelope.agentPresence",
+          "why": "relay presence reaches the client, so remote exits clear and the client defers to the relay's guard"
+        },
+        {
+          "file": "src/main/ssh/ssh-relay-session-agent-hooks.integration.test.ts",
+          "mustContain": "clears a remote Claude row when the relay reports its process exited",
+          "why": "the SSH adapter is the only path that carried presence and had no test"
+        },
+        {
           "file": "src/renderer/src/components/right-sidebar/use-canonical-session-titles.ts",
           "mustContain": "useSessionNameIndex",
           "why": "History search and rows consume the same native-first name projection"

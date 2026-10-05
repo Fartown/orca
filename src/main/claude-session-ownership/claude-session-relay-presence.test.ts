@@ -102,3 +102,33 @@ describe('relay Claude activity window with process presence', () => {
     expect(probe).not.toHaveBeenCalled()
   })
 })
+
+describe('client admission of presence-aware relay traffic', () => {
+  async function relayIntoClient() {
+    vi.resetModules()
+    const { AgentHookServer } = await import('../agent-hooks/server')
+    const client = new AgentHookServer()
+    cleanups.push(async () => client.stop())
+    const relay = await startRelay()
+    relay.forward.mockImplementation((envelope) => client.ingestRemote(envelope, 'ssh-host'))
+    const clientSession = () =>
+      client._getStateForTests().lastStatusByPaneKey.get(paneKey)?.providerSession?.id
+    return { ...relay, clientSession }
+  }
+
+  it('follows the relay when the owner process switches sessions inside the window', async () => {
+    const { post, clientSession } = await relayIntoClient()
+    await post('UserPromptSubmit', 'session-a', OWNER_PID)
+    await post('SessionEnd', 'session-a', OWNER_PID, 'clear')
+    await post('UserPromptSubmit', 'session-c', OWNER_PID)
+    expect(clientSession()).toBe('session-c')
+  })
+
+  it('still keeps the owner when the relay refuses a background call', async () => {
+    const { post, clientSession } = await relayIntoClient()
+    probe.mockResolvedValue('live')
+    await post('UserPromptSubmit', 'session-a', OWNER_PID)
+    await post('UserPromptSubmit', 'session-b', OTHER_PID)
+    expect(clientSession()).toBe('session-a')
+  })
+})
