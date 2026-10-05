@@ -45,6 +45,8 @@ describe('Issue Conversation native launch adapter', () => {
       issueId: 'issue-1'
     })
     expect(mocks.launch).toHaveBeenCalledWith({
+      // The mutation id names the user's action, so a re-delivered launch joins it.
+      requestId: 'mutation-1',
       agent: 'codex',
       worktreeId: 'worktree-local',
       launchToken: 'launch-token-1'
