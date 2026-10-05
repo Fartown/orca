@@ -8,6 +8,7 @@ import { translate } from '@/i18n/i18n'
 import { getActiveStickyHeaderIndexForScroll } from '../sidebar/worktree-list/viewport/virtual-rows'
 import { EmptyState, SessionLoadingState } from './AiVaultSessionListStates'
 import type { AiVaultSessionListGroup } from './ai-vault-session-filters'
+import { useCanonicalSessionTitleLookup } from './use-canonical-session-titles'
 import type { AiVaultOriginalPaneTarget } from './ai-vault-original-pane'
 import type {
   AiVaultSessionResumeActions,
@@ -37,7 +38,6 @@ export function AiVaultSessionVirtualList({
   error,
   vaultScope,
   buildResumeStartup,
-  getCanonicalTitle,
   getOriginalPaneTarget,
   isStructuredSessionOpen,
   getSessionLiveState,
@@ -69,7 +69,6 @@ export function AiVaultSessionVirtualList({
   error: string | null
   vaultScope: AiVaultScope
   buildResumeStartup: (session: AiVaultSession, worktreeId?: string | null) => AiVaultResumeStartup
-  getCanonicalTitle?: (session: AiVaultSession) => string | undefined
   getOriginalPaneTarget: (session: AiVaultSession) => AiVaultOriginalPaneTarget | null
   isStructuredSessionOpen: (session: AiVaultSession) => boolean
   getSessionLiveState: (session: AiVaultSession) => AgentStatusState | null
@@ -92,6 +91,7 @@ export function AiVaultSessionVirtualList({
   onRequestDelete: (session: AiVaultSession) => void
   searchHits?: ReadonlyMap<string, AiVaultSearchHit>
 }): React.JSX.Element {
+  const { getCanonicalTitle } = useCanonicalSessionTitleLookup()
   const listScrollRef = useRef<HTMLDivElement>(null)
   const stickyRangeStartIndexRef = useRef(0)
   const activeStickyHeaderIndexRef = useRef<number | null>(null)

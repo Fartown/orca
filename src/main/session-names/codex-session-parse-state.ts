@@ -9,11 +9,13 @@ import type {
   SessionAccumulator
 } from '../ai-vault/session-scanner-types'
 import type { TranscriptMessageSink } from '../ai-vault/session-transcript-consumers'
+import type { CodexNonUserOrigin } from '../ai-vault/session-scanner-codex-non-user-origin'
 
 export type CodexSessionParseState = {
   accumulator: SessionAccumulator
   previousTotals: CodexUsageSnapshot | null
-  rejectedWorkerSession: boolean
+  /** Codex's own non-user classification (spawned agent, review, compaction); rejects the parse. */
+  nonUserOrigin: CodexNonUserOrigin | null
   sawSessionMeta: boolean
   historyMode: string | null
   /** Kept for the legacy title; native evidence is retained separately. */
@@ -32,7 +34,7 @@ export function createCodexParseState(
       messages
     }),
     previousTotals: null,
-    rejectedWorkerSession: false,
+    nonUserOrigin: null,
     sawSessionMeta: false,
     historyMode: null,
     titleSource: null

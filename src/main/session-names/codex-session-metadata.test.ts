@@ -11,7 +11,8 @@ const workerCases: [string, Record<string, unknown>, boolean][] = [
   ['camel case worker', { threadSource: 'memory' }, true],
   ['legacy worker', { source: { subagent: { thread_spawn: {} } } }, true],
   ['empty legacy worker', { source: { subagent: {} } }, true],
-  ['invalid legacy worker', { source: { subagent: 'worker' } }, false],
+  // The outer `subagent` tag alone classifies the thread, whatever its payload.
+  ['tagged legacy worker', { source: { subagent: 'worker' } }, true],
   ['user outranks legacy worker', { thread_source: 'user', source: { subagent: {} } }, false],
   ['snake case wins', { thread_source: 'user', threadSource: 'subagent' }, false],
   ['empty snake case falls through', { thread_source: ' ', threadSource: 'subagent' }, true],

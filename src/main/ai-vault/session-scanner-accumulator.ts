@@ -1,4 +1,5 @@
 import { basename, extname } from 'node:path'
+import { scannedSessionNameEvidence } from '../session-names/scanned-session-name-evidence'
 import {
   aiVaultAgentLabel,
   type AiVaultAgent,
@@ -149,10 +150,7 @@ export function finalizeSession(
     agent: accumulator.agent,
     sessionId,
     title,
-    ...(accumulator.providerName ? { providerName: accumulator.providerName } : {}),
-    ...(accumulator.generatedTitle !== undefined
-      ? { generatedTitle: accumulator.generatedTitle }
-      : {}),
+    ...scannedSessionNameEvidence(accumulator),
     cwd: accumulator.cwd,
     branch: accumulator.branch,
     model: accumulator.model,
@@ -165,6 +163,9 @@ export function finalizeSession(
     totalTokens: accumulator.totalTokens,
     previewMessages: accumulator.previewMessages,
     ...(accumulator.previewMessagesTruncated ? { previewMessagesTruncated: true } : {}),
+    ...(accumulator.antigravityOpeningPrompt
+      ? { antigravityOpeningPrompt: accumulator.antigravityOpeningPrompt }
+      : {}),
     ...(accumulator.firstUserPrompt ? { firstUserPrompt: accumulator.firstUserPrompt } : {}),
     ...(accumulator.lastUserPrompt ? { lastUserPrompt: accumulator.lastUserPrompt } : {}),
     queuedMessageCount: accumulator.queuedMessageCount,

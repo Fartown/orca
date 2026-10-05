@@ -88,9 +88,14 @@ export function DocPreviewToolbar({
       // Cookie import is a browsing-session action; a preview reads workspace disk over a grant
       // and has no session for cookies to land in.
       importControl={null}
-      shareControl={
-        <DocPreviewLanShareButton worktreeId={worktreeId} identity={identity} className="h-7 w-7" />
-      }
+      shareControl={(control) => (
+        <DocPreviewLanShareButton
+          worktreeId={worktreeId}
+          identity={identity}
+          className="h-7 w-7"
+          {...control}
+        />
+      )}
       elementTools={elementTools}
       markup={{
         active: markupActive,
@@ -106,7 +111,8 @@ export function DocPreviewToolbar({
         label: translate(
           'auto.components.editor.HtmlDocPreview.openSourceControl',
           'Open source file'
-        )
+        ),
+        alreadyInOverflowMenu: true
       }}
       openExternal={{
         onSelect: onOpenExternally,
@@ -115,15 +121,16 @@ export function DocPreviewToolbar({
           'Open with default app'
         )
       }}
-      overflowMenu={
+      overflowMenu={(overflow) => (
         <DocPreviewOverflowMenu
           onReload={onReload}
           onHardReload={onHardReload}
           onOpenSource={onOpenSource}
           onCopyPath={onCopyPath}
           onCopyRelativePath={onCopyRelativePath}
+          overflow={overflow}
         />
-      }
+      )}
     />
   )
 }

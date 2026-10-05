@@ -1,4 +1,5 @@
 import { mergeGitConfigEnvProtocol } from '../../shared/git-credential-prompt-env'
+import { restoreManagedDataAccountEnvironment } from '../../shared/managed-data-account-environment'
 import {
   ORCA_IMAGE_PROTOCOL_ENV,
   ORCA_IMAGE_PROTOCOL_VALUE
@@ -6,14 +7,16 @@ import {
 import { removeAppImageRuntimeEnv } from '../pty/appimage-terminal-env'
 import { stripInheritedBuildModeEnv } from '../pty/build-mode-env'
 import { removeCodexToolCallerIdentity } from '../codex-session-ownership/codex-tool-caller-environment'
+import { stripPiProcessOwnerEnv } from '../pty/pi-process-owner-env'
 import { removeInheritedNoColor } from '../pty/terminal-color-env'
 import { isWindowsGitBashShellPath } from '../git-bash'
+import { applyScrubSafeAgentEnvAliases } from '../../shared/agent-hook-scrub-safe-env'
 import { removeUnspecifiedPaneIdentityEnv } from './local-pty-launch-helpers'
 import type { LocalPtyLaunchPlan } from './local-pty-launch-plan'
 import type { LocalPtyProviderOptions } from './local-pty-provider-types'
-import { awaitCancelableLocalPtySpawn } from './local-pty-spawn-state'
 import type { PtySpawnOptions } from './types'
 
+/** Pane ownership must be fresh even when Orca itself was launched inside an agent. */
 export function buildLocalPtySpawnEnvironment(args: {
   id: string
   spawn: PtySpawnOptions
@@ -21,8 +24,10 @@ export function buildLocalPtySpawnEnvironment(args: {
   plan: LocalPtyLaunchPlan
 }): Record<string, string> | Promise<Record<string, string>> {
   const { id, spawn, getOptions, plan } = args
+  const inheritedEnv = stripInheritedBuildModeEnv(process.env)
+  restoreManagedDataAccountEnvironment(inheritedEnv)
   const spawnEnv: Record<string, string> = {
-    ...mergeGitConfigEnvProtocol(stripInheritedBuildModeEnv(process.env), spawn.env),
+    ...mergeGitConfigEnvProtocol(inheritedEnv, spawn.env),
     TERM: 'xterm-256color',
     COLORTERM: 'truecolor',
     TERM_PROGRAM: 'Orca',
@@ -33,8 +38,8 @@ export function buildLocalPtySpawnEnvironment(args: {
     [ORCA_IMAGE_PROTOCOL_ENV]: ORCA_IMAGE_PROTOCOL_VALUE
   } satisfies Record<string, string>
   removeCodexToolCallerIdentity(spawnEnv)
-  // Why: Orca can be launched from an Orca terminal; pane identity belongs to the child PTY, not the parent shell.
   removeUnspecifiedPaneIdentityEnv(spawnEnv, spawn.env)
+  stripPiProcessOwnerEnv(spawnEnv)
   removeAppImageRuntimeEnv(spawnEnv)
   removeInheritedNoColor(spawnEnv)
   for (const key of spawn.envToDelete ?? []) {
@@ -43,6 +48,8 @@ export function buildLocalPtySpawnEnvironment(args: {
   if (spawn.env?.TERM) {
     spawnEnv.TERM = spawn.env.TERM
   }
+  // Why after the strips and deletes: an alias must never outlive the value it mirrors.
+  applyScrubSafeAgentEnvAliases(spawnEnv)
 
   spawnEnv.LANG ??= 'en_US.UTF-8'
 
@@ -58,29 +65,25 @@ export function buildLocalPtySpawnEnvironment(args: {
   if (!getOptions().buildSpawnEnv) {
     return spawnEnv
   }
-  // Why (#16441): building the env now awaits Codex hook installs and trust
-  // grants, so shutdown must be able to cancel this session id here too.
-  return awaitCancelableLocalPtySpawn(
-    id,
-    getOptions().buildSpawnEnv!(id, spawnEnv, {
-      explicitEnv: spawn.env ?? {},
-      command: spawn.command,
-      launchAgent: spawn.launchAgent,
-      codexHomePathOverride: spawn.codexHomePathOverride,
-      cwd: plan.cwd,
-      shellPath: plan.shellPath,
-      isWsl: plan.isWslShell,
-      wslDistro: plan.launchWslDistro
-    })
-  )
+  return getOptions().buildSpawnEnv!(id, spawnEnv, {
+    explicitEnv: spawn.env ?? {},
+    command: spawn.command,
+    launchAgent: spawn.launchAgent,
+    codexHomePathOverride: spawn.codexHomePathOverride,
+    cwd: plan.cwd,
+    shellPath: plan.shellPath,
+    isWsl: plan.isWslShell,
+    wslDistro: plan.launchWslDistro
+  })
 }
 
+/** App-level env builders can reintroduce deleted keys; enforce isolation after they finish. */
 export function enforceLocalPtySpawnEnvironmentOverrides(
   spawn: PtySpawnOptions,
   finalEnv: Record<string, string>
 ): void {
   removeCodexToolCallerIdentity(finalEnv)
-  // Why: app-level env hooks can re-add scrubbed vars; delete last so shims like Claude Agent Teams keep their PATH.
+  stripPiProcessOwnerEnv(finalEnv)
   for (const key of spawn.envToDelete ?? []) {
     delete finalEnv[key]
   }

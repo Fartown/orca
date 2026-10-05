@@ -68,6 +68,8 @@ export default function AiVaultPanel(): React.JSX.Element {
   const projectHostSetupProjection = useProjectHostSetupProjection()
   const resumeTargetState = useAppStore(
     useShallow((state) => ({
+      projects: state.projects,
+      settings: state.settings,
       folderWorkspaces: state.folderWorkspaces,
       projectGroups: state.projectGroups,
       repos: state.repos,
@@ -210,9 +212,7 @@ export default function AiVaultPanel(): React.JSX.Element {
     sessionLimit
   })
 
-  const { filteredSessions, groups, getCanonicalTitle } = useAiVaultPanelSessions(sessions, {
-    searching,
-    group,
+  const { filteredSessions, groups } = useAiVaultPanelSessions(sessions, searching, group, {
     query,
     agents,
     scope,
@@ -354,7 +354,6 @@ export default function AiVaultPanel(): React.JSX.Element {
           <AiVaultSessionVirtualList
             key={searching ? search.resetKey : 'history'}
             searchHits={searching ? searchHits : undefined}
-            getCanonicalTitle={getCanonicalTitle}
             groups={groups}
             collapsedGroups={collapsedGroups}
             loading={searching ? search.loading : loading}

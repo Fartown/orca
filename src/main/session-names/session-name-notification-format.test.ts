@@ -30,19 +30,19 @@ it('preserves legacy formatting when an older producer omits the name', () => {
 })
 
 it.each([
-  ['blocked', false, 'needs input'],
-  ['waiting', false, 'needs input'],
-  ['done', true, 'stopped']
+  ['blocked', undefined, 'needs input'],
+  ['waiting', undefined, 'needs input'],
+  ['done', 'cancellation', 'stopped']
 ] as const)(
   'keeps the %s status and tool body separate from the session name',
-  (agentState, agentInterrupted, status) => {
+  (agentState, agentTurnOutcome, status) => {
     expect(
       buildNotificationOptions({
         source: 'agent-task-complete',
         sessionTitle: 'Native name',
         agentType: 'claude',
         agentState,
-        agentInterrupted,
+        agentTurnOutcome,
         worktreeLabel: 'feature',
         agentToolName: 'Read',
         agentToolInput: 'src/main.ts'

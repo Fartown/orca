@@ -118,6 +118,7 @@ export abstract class UpdaterReleaseFeed extends UpdaterInstallExecution {
   protected async pinDefaultReleaseFeed(
     variant: UpdateCheckVariant = 'default'
   ): Promise<'ready' | 'not-available'> {
+    const attemptId = this.activeUpdateCheckAttemptId
     const autoUpdater = this.getAutoUpdater()
     if (isIntegrationBuild()) {
       this.clearPrereleaseFallbackContext()
@@ -138,6 +139,10 @@ export abstract class UpdaterReleaseFeed extends UpdaterInstallExecution {
         ...(isPerfCheck ? { releaseFilter: 'perf' as const } : {})
       }
     )
+    // A timed-out preflight must not overwrite a newer check's feed.
+    if (attemptId === null || !this.isActiveUpdateCheckAttempt(attemptId)) {
+      return 'not-available'
+    }
     const newerTag = releaseTagsResult.tags[0] ?? null
     const fallbackTag = includePrerelease ? (releaseTagsResult.tags[1] ?? null) : null
     this.pendingPrereleaseFallback =

@@ -21,7 +21,8 @@ import { preventMiddleButtonDefault } from './middle-button-default-guard'
 import { useSortableTabRename } from './use-sortable-tab-rename'
 import { SortableTabContextMenu } from './SortableTabContextMenu'
 import { translate } from '@/i18n/i18n'
-import { TAB_CONTAINER_WIDTH_CLASSES, TAB_LABEL_WIDTH_CLASSES } from './tab-width-rules'
+import { TAB_LABEL_WIDTH_CLASSES } from './tab-width-rules'
+import { useTabStripSlotProps } from './use-tab-strip-slot-props'
 import { useOptionalShortcutLabel } from '@/hooks/useShortcutLabel'
 import { useTabStripPointerActivation } from './tab-strip-pointer-activation'
 import { TerminalTabLeadingIcon } from './TerminalTabLeadingIcon'
@@ -118,7 +119,11 @@ export default function SortableTab({
   const tabAgent = useTabAgent(tab)
   const generatedTitlesEnabled = useAppStore((s) => s.settings?.tabAutoGenerateTitle === true)
   const tabTitle = resolveTerminalTabTitle(
-    { ...tab, launchAgent: tab.launchAgent ?? tabAgent ?? undefined },
+    // Why 'dsb' is skipped: a manually started agent has no Orca launcher, so it names no launch agent.
+    {
+      ...tab,
+      launchAgent: tab.launchAgent ?? (tabAgent === 'dsb' ? undefined : tabAgent) ?? undefined
+    },
     generatedTitlesEnabled,
     tab.title
   )
@@ -182,6 +187,7 @@ export default function SortableTab({
     onActivate: handleActivate,
     disabled: isEditing
   })
+  const slotProps = useTabStripSlotProps(tab.id, isActive)
   const closeShortcut = useOptionalShortcutLabel('tab.close')
   const closeLabel = translate('auto.components.tab.bar.SortableTab.95db5f2f7d', 'Close tab')
   const tabRoot = (
@@ -375,7 +381,7 @@ export default function SortableTab({
   return (
     <>
       <div
-        className={TAB_CONTAINER_WIDTH_CLASSES}
+        {...slotProps}
         onContextMenuCapture={(event) => {
           event.preventDefault()
           window.dispatchEvent(new Event(CLOSE_ALL_CONTEXT_MENUS_EVENT))

@@ -1,5 +1,6 @@
 import { parseExecutionHostId, type ExecutionHostId } from '../../../shared/execution-host'
 import { getConnectionIdForFileFromState } from '@/lib/connection-owner-resolution'
+import { userNamedFileAccess } from '@/lib/local-file-access'
 import { toWorktreeRelativePath } from '@/lib/terminal-links'
 import { activateAndRevealWorkspace } from '@/lib/worktree-activation'
 import { requestHostPathGrantForContext } from '@/runtime-host-path/host-path-file-client'
@@ -19,7 +20,8 @@ export async function openGoalDocument(
     throw new Error('The document execution host is unavailable.')
   }
   if (host.kind === 'local') {
-    await window.api.fs.authorizeExternalPath({ targetPath: filePath })
+    // Why: the goal home sits outside every project; a missing document fails here, not as a dead tab.
+    await window.api.fs.stat({ filePath, access: userNamedFileAccess() })
   }
   if (
     !activateAndRevealWorkspace(worktreeId, {

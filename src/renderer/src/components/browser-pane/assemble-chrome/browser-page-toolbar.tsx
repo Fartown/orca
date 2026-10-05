@@ -1,6 +1,8 @@
 import type { Dispatch, RefObject, SetStateAction } from 'react'
 import { BrowserFileLanShareButton } from '@/components/self-hosted-artifacts/share-button/LanArtifactShareEntryButtons'
 import { translate } from '@/i18n/i18n'
+import { useShortcutLabel } from '@/hooks/useShortcutLabel'
+import { useAppStore } from '@/store'
 import type { BrowserReloadTrigger } from '../navigate/browser-reload-action'
 import BrowserAddressBar from './BrowserAddressBar'
 import { BrowserChromeToolbar } from './browser-chrome-toolbar'
@@ -100,9 +102,21 @@ export function BrowserPageToolbar({
   currentBrowserUrl: string
   externalUrl: string | null
 }): React.JSX.Element {
+  const annotateElementShortcut = useShortcutLabel('browser.annotateElement')
+  const browserTourStep = useAppStore((state) =>
+    state.activeContextualTourId === 'browser' ? state.activeContextualTourStepIndex : null
+  )
+  const pinnedStage =
+    browserTourStep === 0
+      ? ('grab' as const)
+      : browserTourStep === 1
+        ? ('annotate' as const)
+        : undefined
+
   return (
     <BrowserChromeToolbar
       showTourAnchors
+      pinnedStage={pinnedStage}
       controls={{
         canGoBack: canGoBack || Boolean(convertedFrom),
         canGoForward: canGoForward || Boolean(convertedTo),
@@ -159,12 +173,15 @@ export function BrowserPageToolbar({
           onHardReload={() => runReloadTrigger('hard-reload')}
         />
       }
-      importControl={<BrowserImportHintButton profileId={sessionProfileId} />}
+      importControl={(compact) => (
+        <BrowserImportHintButton profileId={sessionProfileId} compact={compact} />
+      )}
       elementTools={{
         activeIntent: grab.state !== 'idle' ? grabIntent : null,
         onStartIntent: startGrabIntent,
         disabled: isBlankTab || markupIsActive,
         grabShortcutLabel: grabElementShortcut,
+        annotateShortcutLabel: annotateElementShortcut,
         annotationCount: browserAnnotationsLength
       }}
       markup={{
@@ -174,13 +191,16 @@ export function BrowserPageToolbar({
         canShowDiscoveryHint: isActive
       }}
       shareControl={
-        shareableArtifactFile ? (
-          <BrowserFileLanShareButton
-            worktreeId={worktreeId}
-            filePath={shareableArtifactFile.filePath}
-            className="h-7 w-7"
-          />
-        ) : null
+        shareableArtifactFile
+          ? (control) => (
+              <BrowserFileLanShareButton
+                worktreeId={worktreeId}
+                filePath={shareableArtifactFile.filePath}
+                className="h-7 w-7"
+                {...control}
+              />
+            )
+          : undefined
       }
       viewSource={{
         onSelect: () => void window.api.browser.openDevTools({ browserPageId }),
@@ -202,7 +222,7 @@ export function BrowserPageToolbar({
         ),
         disabled: !externalUrl
       }}
-      overflowMenu={
+      overflowMenu={(overflow) => (
         <BrowserToolbarMenu
           currentProfileId={sessionProfileId}
           workspaceId={workspaceId}
@@ -210,8 +230,9 @@ export function BrowserPageToolbar({
           viewportPresetId={viewportPresetId}
           onDestroyWebview={() => destroyPersistentWebview(browserPageId)}
           isActive={isActive}
+          overflow={overflow}
         />
-      }
+      )}
     />
   )
 }

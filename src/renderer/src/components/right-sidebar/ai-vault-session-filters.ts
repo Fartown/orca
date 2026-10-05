@@ -35,9 +35,9 @@ export type AiVaultSessionListGroup = {
 
 export function useAiVaultPanelSessions(
   sessions: readonly AiVaultSession[],
+  searching: boolean,
+  group: AiVaultGroup,
   {
-    searching,
-    group,
     query,
     agents,
     scope,
@@ -47,12 +47,9 @@ export function useAiVaultPanelSessions(
     sessionProjectById,
     projectLabelByKey,
     hideEmptySessions
-  }: Omit<AiVaultSessionFilterState, 'canonicalTitleBySessionKey'> & {
-    searching: boolean
-    group: AiVaultGroup
-  }
+  }: Omit<AiVaultSessionFilterState, 'canonicalTitleBySessionKey'>
 ) {
-  const { canonicalTitleBySessionKey, getCanonicalTitle } = useCanonicalSessionTitles(sessions)
+  const { canonicalTitleBySessionKey } = useCanonicalSessionTitles(sessions)
   const filteredSessions = useMemo(
     () =>
       searching
@@ -94,5 +91,5 @@ export function useAiVaultPanelSessions(
         : groupAiVaultSessions(filteredSessions, group, { sessionProjectById, projectLabelByKey }),
     [searching, filteredSessions, group, projectLabelByKey, sessionProjectById]
   )
-  return { filteredSessions, groups, getCanonicalTitle }
+  return { filteredSessions, groups }
 }

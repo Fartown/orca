@@ -12,12 +12,12 @@ export function useMobileSessionContinuationScope(scope: {
   worktreeId: string
   deviceTokenRef: { readonly current: string | null }
   showToast: (message: string, durationMs?: number) => void
-  handleCreateTerminal: (
+  createTerminalWithResult: (
     agent?: MobileSessionContinuationAgent,
     options?: { cwd?: string; clientMutationId?: string }
   ) => Promise<MobileTerminalCreateResult>
 }) {
-  const { handleCreateTerminal } = scope
+  const { createTerminalWithResult } = scope
   const createTerminal = useCallback(
     async (
       agent: MobileSessionContinuationAgent,
@@ -26,7 +26,7 @@ export function useMobileSessionContinuationScope(scope: {
     ): Promise<MobileContinuationCreateResult> => {
       // Passing options at all keeps this on the terminal channel (the structured route is the
       // bare-agent case), and reuses the existing activate/subscribe/toast behaviour.
-      const result = await handleCreateTerminal(agent, {
+      const result = await createTerminalWithResult(agent, {
         ...(cwd ? { cwd } : {}),
         clientMutationId
       })
@@ -39,7 +39,7 @@ export function useMobileSessionContinuationScope(scope: {
         ? { kind: 'without-handle' }
         : { kind: 'failed' }
     },
-    [handleCreateTerminal]
+    [createTerminalWithResult]
   )
   return useMobileSessionContinuation({
     client: scope.client,

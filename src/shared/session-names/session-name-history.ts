@@ -1,5 +1,4 @@
 import type { AgentStateHistoryEntry, AgentStatusEntry } from '../agent-status-types'
-import { AGENT_STATE_HISTORY_MAX } from '../agent-status-types'
 import { structuralValuesEqualIgnoringUndefined } from '../structural-value-equality'
 
 /** A host-owned structured session keeps its turn, so only other sessions count as replaced. */
@@ -64,19 +63,6 @@ export function captureSessionNameHistory(
     terminalTitle: entry.terminalTitle,
     connectionId: entry.connectionId
   }
-}
-
-export function appendSessionNameHistory(entry: AgentStatusEntry): AgentStateHistoryEntry[] {
-  return [
-    ...entry.stateHistory,
-    {
-      state: entry.state,
-      sessionName: captureSessionNameHistory(entry),
-      prompt: entry.prompt,
-      startedAt: entry.stateStartedAt,
-      interrupted: entry.interrupted
-    }
-  ].slice(-AGENT_STATE_HISTORY_MAX)
 }
 
 export function sessionNameHistoryEqual(

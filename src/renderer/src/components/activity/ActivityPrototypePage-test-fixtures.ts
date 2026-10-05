@@ -165,6 +165,7 @@ export function makeThreads(result: ReturnType<typeof buildActivityEvents>) {
   return buildAgentPaneThreads({
     generatedTitlesEnabled: true,
     events: result.events,
-    liveAgentByPaneKey: result.liveAgentByPaneKey
+    liveAgentByPaneKey: result.liveAgentByPaneKey,
+    paneEntryByPaneKey: result.paneEntryByPaneKey
   })
 }

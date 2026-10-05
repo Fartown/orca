@@ -51,32 +51,29 @@ export const MOBILE_WEB_APP_BUNDLE_MAX_TOTAL_BYTES = 9 * 1024 * 1024
  * what it fails to share rather than what it weighs. Re-measured on this head by building
  * `routes.slice(0, n)` for every n, which is what the fence below is derived from rather than
  * fitted to. The spread it shows is 1 to 9: `pr` and `web` add one script each, `review` adds nine.
+ * The root `./_layout.tsx` (the page's web sibling of the native root) sorts first; with it the
+ * swept tree reads 69 scripts at 16 routes, the old 15 read 67 on the same head.
  *
  * This table is the fence's only input, so a route added to the tree stales it and the pins beside
  * the fence fail until it is re-measured. That is the point: the bound is re-derived, never bumped.
- *
- * Re-measured after mobile session continuation at `ef98278cfc`, the first twelve prefixes stay
- * fixed and the final three each lose one script. The session route now reaches both
- * `mobile-tui-agents.ts` and `clipboard-text.ts`; once the tasks route joins, their importer sets
- * match and esbuild folds the former clipboard-only chunk into the agent-catalog chunk. This is a
- * sharing change, so the four-script margin remains unchanged.
  */
 export const MOBILE_WEB_APP_BUNDLE_SCRIPT_SWEEP = [
-  ['./h/[hostId]/[...page].tsx', 3],
-  ['./h/[hostId]/accounts.tsx', 7],
-  ['./h/[hostId]/agent-history/[worktreeId].tsx', 11],
-  ['./h/[hostId]/edit.tsx', 16],
-  ['./h/[hostId]/files/[worktreeId].tsx', 19],
-  ['./h/[hostId]/files/preview/[worktreeId].tsx', 26],
-  ['./h/[hostId]/history/[worktreeId].tsx', 28],
-  ['./h/[hostId]/index.tsx', 33],
-  ['./h/[hostId]/pr/[worktreeId].tsx', 34],
-  ['./h/[hostId]/review/[worktreeId].tsx', 43],
-  ['./h/[hostId]/session/[worktreeId].tsx', 51],
-  ['./h/[hostId]/source-control/[worktreeId].tsx', 56],
-  ['./h/[hostId]/tasks.tsx', 62],
-  ['./h/[hostId]/web.tsx', 63],
-  ['./h/_layout.tsx', 65]
+  ['./_layout.tsx', 3],
+  ['./h/[hostId]/[...page].tsx', 7],
+  ['./h/[hostId]/accounts.tsx', 9],
+  ['./h/[hostId]/agent-history/[worktreeId].tsx', 13],
+  ['./h/[hostId]/edit.tsx', 18],
+  ['./h/[hostId]/files/[worktreeId].tsx', 21],
+  ['./h/[hostId]/files/preview/[worktreeId].tsx', 28],
+  ['./h/[hostId]/history/[worktreeId].tsx', 30],
+  ['./h/[hostId]/index.tsx', 35],
+  ['./h/[hostId]/pr/[worktreeId].tsx', 36],
+  ['./h/[hostId]/review/[worktreeId].tsx', 45],
+  ['./h/[hostId]/session/[worktreeId].tsx', 54],
+  ['./h/[hostId]/source-control/[worktreeId].tsx', 59],
+  ['./h/[hostId]/tasks.tsx', 66],
+  ['./h/[hostId]/web.tsx', 67],
+  ['./h/_layout.tsx', 69]
 ]
 
 const sweptScripts = MOBILE_WEB_APP_BUNDLE_SCRIPT_SWEEP.map(([, scripts]) => scripts)
@@ -194,7 +191,7 @@ export async function readMobileWebBundleMaxAssets() {
  * shells return null for a manifest over MOBILE_WEB_BUNDLE_MAX_ASSETS rather than dropping the
  * extra assets, so a route count that pushes the chunk envelope plus images plus the document past
  * it would pass this build and fail on the device with nothing to read. At today's 42 images that
- * is 32 routes, inside what Phase C adds, which is why this is a build failure and not a comment.
+ * is 31 routes, inside what Phase C adds, which is why this is a build failure and not a comment.
  * The envelope grants the worst swept route to each one past the sweep, so re-measuring a tree
  * whose routes share more moves that crossing out again.
  */

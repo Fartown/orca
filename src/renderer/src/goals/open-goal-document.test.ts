@@ -39,17 +39,20 @@ vi.mock('@/runtime-host-path/host-path-file-client', () => ({
 beforeEach(() => {
   state.settings.activeRuntimeEnvironmentId = null
   state.worktreesByRepo = {}
-  vi.stubGlobal('api', { fs: { authorizeExternalPath: vi.fn(async () => {}) } })
+  vi.stubGlobal('api', {
+    fs: { stat: vi.fn(async () => ({ size: 1, isDirectory: false, mtime: 0 })) }
+  })
 })
 afterEach(() => {
   vi.clearAllMocks()
   vi.unstubAllGlobals()
 })
 
-it('authorizes the actual local file and addresses it by its absolute path', async () => {
+it('checks the actual local file as user-named and addresses it by its absolute path', async () => {
   await openGoalDocument('/drafts/验收 文档.md', 'folder:local')
-  expect(window.api.fs.authorizeExternalPath).toHaveBeenCalledWith({
-    targetPath: '/drafts/验收 文档.md'
+  expect(window.api.fs.stat).toHaveBeenCalledWith({
+    filePath: '/drafts/验收 文档.md',
+    access: { kind: 'user-file' }
   })
   expect(activateAndRevealWorkspace).toHaveBeenCalledWith('folder:local', {
     providesInitialSurface: true,
@@ -81,10 +84,10 @@ it('keeps a document inside the workspace on its worktree-relative path', async 
   )
 })
 
-it('surfaces an authorization failure without opening an unusable tab', async () => {
+it('surfaces a missing document without opening an unusable tab', async () => {
   vi.stubGlobal('api', {
     fs: {
-      authorizeExternalPath: vi.fn(async () => {
+      stat: vi.fn(async () => {
         throw new Error('missing')
       })
     }
@@ -102,9 +105,9 @@ it('keeps the editor available when its workspace cannot be activated', async ()
   expect(openFile).not.toHaveBeenCalled()
 })
 
-it('opens the remote absolute document on SSH without authorizing a client-local path', async () => {
+it('opens the remote absolute document on SSH without reading a client-local path', async () => {
   await openGoalDocument('/same/path/document.md', 'folder:remote', 'ssh:server')
-  expect(window.api.fs.authorizeExternalPath).not.toHaveBeenCalled()
+  expect(window.api.fs.stat).not.toHaveBeenCalled()
   expect(openFile).toHaveBeenCalledWith(
     expect.objectContaining({
       filePath: '/same/path/document.md',

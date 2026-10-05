@@ -409,7 +409,10 @@ function createTestService(
   return {
     listSessions: (params, signal) =>
       scan({
-        provider: createRelayAiVaultFilesystemProvider(),
+        provider: createRelayAiVaultFilesystemProvider({
+          homeDirectory: remoteHome,
+          environment: {}
+        }),
         executionHostId: 'local',
         remoteHome,
         hostPlatform,

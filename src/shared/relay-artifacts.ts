@@ -47,6 +47,7 @@ export type RelayArtifact = {
 
 /** The bare Windows process-table addon; see docs/reference/windows-process-enumeration.md. */
 export const RELAY_WINDOWS_PROCESS_TREE_FILENAME = 'windows-process-tree.node'
+export const RELAY_OPENCODE_SQLITE_READER_FILENAME = 'opencode-sqlite-reader.cjs'
 
 export const RELAY_ARTIFACTS: readonly RelayArtifact[] = [
   { filename: 'relay.js' },
@@ -55,6 +56,7 @@ export const RELAY_ARTIFACTS: readonly RelayArtifact[] = [
   { filename: 'acceptance-draft.js' },
   { filename: 'relay-watcher.js', daemonServiceChild: true },
   { filename: 'relay-ai-vault-service.js', daemonServiceChild: true },
+  { filename: RELAY_OPENCODE_SQLITE_READER_FILENAME },
   { filename: 'managed-hook-runtime.js' },
   // Forked by the AI Vault title reader; without it a relay answers every WSL
   // title request with no title and no error.
@@ -88,6 +90,9 @@ export const RELAY_VERSION_FILENAME = '.version'
 
 /** Written last by the installer; its absence means a torn install. */
 export const RELAY_INSTALL_COMPLETE_FILENAME = '.install-complete'
+
+/** PID of the last relay daemon that bound a socket from this version dir; GC liveness evidence. */
+export const RELAY_PID_FILENAME = '.relay-pid'
 
 /** Artifacts every relay must have; the remote install probe requires each one. */
 export function relayArtifactFilenames(isWindows: boolean): string[] {

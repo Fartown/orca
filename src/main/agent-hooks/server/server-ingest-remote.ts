@@ -1,5 +1,6 @@
+import { readAgentProcessPresence } from '../../../shared/agent-process-presence'
 import { track } from '../../telemetry/client'
-import { normalizeAgentStatusPayload } from '../../../shared/agent-status-types'
+import { admitRelaySessionPayload } from '../../session-names/relay-session-payload-admission'
 import { restoreShedStatusFields } from '../../../shared/agent-hook-relay'
 import {
   MAX_PANE_KEY_LEN,
@@ -20,15 +21,10 @@ import {
   olderPeerAgentStatusLegacyMode
 } from '../../../shared/agent-status-legacy-adapter'
 import { isValidPiProviderSessionOnly } from './server-status-identity'
-import {
-  restoreRelayEchoedPrompt,
-  shouldRejectRelayCodexTitleTask,
-  shouldRejectRelaySessionEvent
-} from '../../../shared/session-names/relay-session-admission'
 import { normalizeRemoteEnvelopeFields } from './server-remote-envelope-normalization'
-import { AgentHookServerIngestStructured } from './server-ingest-structured'
+import { AgentHookServerIngestStructuredChildren } from './server-ingest-structured-children'
 
-export abstract class AgentHookServerIngestRemote extends AgentHookServerIngestStructured {
+export abstract class AgentHookServerIngestRemote extends AgentHookServerIngestStructuredChildren {
   /** Ingest a payload from the relay JSON-RPC channel (not the local HTTP server); connectionId is stamped here. Main is still the SSH trust boundary, so re-run the canonical normalizer before caching. */
   ingestRemote(
     envelope: {
@@ -40,6 +36,7 @@ export abstract class AgentHookServerIngestRemote extends AgentHookServerIngestS
       launchToken?: string
       hasExplicitPrompt?: boolean
       promptInteractionKey?: string
+      agentPresence?: unknown
       hookEventName?: string
       source?: unknown
       providerPromptId?: unknown
@@ -57,6 +54,8 @@ export abstract class AgentHookServerIngestRemote extends AgentHookServerIngestS
       claudeRunningNonAgentTask?: unknown
       /** The producing peer's advertised run-capability set — a property of the peer/connection that built this envelope, not an orthogonal call parameter. Absent (older relay/HTTP paths) defaults to the unadvertised-legacy-peer set. */
       advertisedAgentStatusCapabilities?: readonly string[]
+      statusUnavailable?: unknown
+      evidenceAgeMs?: unknown
       payload: unknown
     },
     connectionId: string | null
@@ -77,10 +76,10 @@ export abstract class AgentHookServerIngestRemote extends AgentHookServerIngestS
       return
     }
     const trimmedConnectionId = connectionId?.trim() ?? null
-    if (trimmedConnectionId?.length === 0) {
+    if (trimmedConnectionId !== null && trimmedConnectionId.length === 0) {
       return
     }
-    if (typeof envelope?.paneKey !== 'string') {
+    if (!envelope || typeof envelope.paneKey !== 'string') {
       return
     }
     // Why: trim paneKey to match the HTTP path, else remote-vs-local events for one pane diverge.
@@ -141,18 +140,27 @@ export abstract class AgentHookServerIngestRemote extends AgentHookServerIngestS
       toolAgentType,
       providerSession
     } = normalizeRemoteEnvelopeFields(envelope)
-    const admission = {
-      state: this.state,
-      paneKey,
-      source,
-      providerSession,
-      explicitPrompt: envelope.hasExplicitPrompt === true || hookEventName === 'UserPromptSubmit'
+    if (envelope.statusUnavailable === true && envelope.payload === null) {
+      const previous = this.state.lastStatusByPaneKey.get(paneKey)
+      if (
+        (source === 'opencode' || source === 'opencode2') &&
+        previous?.connectionId === trimmedConnectionId &&
+        trimmedConnectionId !== null &&
+        previous.worktreeId === worktreeId &&
+        previous.source === source &&
+        previous.launchToken === envelope.launchToken &&
+        this.getAgentStatusDisposition(paneKey) !== 'suppress'
+      ) {
+        this.clearPaneState(paneKey, { statusUnavailable: true })
+      }
+      return
     }
-    if (shouldRejectRelaySessionEvent(admission)) {
+    const age = envelope.evidenceAgeMs
+    if (age !== undefined && (typeof age !== 'number' || !Number.isSafeInteger(age) || age < 0)) {
       return
     }
     // Why: relay crosses a trust boundary — re-run the canonical normalizer to enforce caps/invariants (returns null on malformed).
-    const validatedPayload = normalizeAgentStatusPayload(envelope.payload)
+    const validatedPayload = admitRelaySessionPayload(this.state, paneKey, envelope)
     if (!validatedPayload) {
       return
     }
@@ -163,9 +171,6 @@ export abstract class AgentHookServerIngestRemote extends AgentHookServerIngestS
     ) {
       return
     }
-    if (shouldRejectRelayCodexTitleTask(admission, validatedPayload)) {
-      return
-    }
     // Why: restore a shed roster only when its digest and turn identity still match the cache.
     let normalizedPayload = restoreShedStatusFields(
       validatedPayload,
@@ -174,6 +179,7 @@ export abstract class AgentHookServerIngestRemote extends AgentHookServerIngestS
     )
     if (
       envelope.providerSessionOnly === true &&
+      !readAgentProcessPresence(envelope.agentPresence)?.ended &&
       !isValidPiProviderSessionOnly(providerSession, normalizedPayload.agentType)
     ) {
       return
@@ -208,7 +214,6 @@ export abstract class AgentHookServerIngestRemote extends AgentHookServerIngestS
       this.observations.rebind(paneKey)
     }
     const previousStatus = this.state.lastStatusByPaneKey.get(paneKey)
-    normalizedPayload = restoreRelayEchoedPrompt(admission, normalizedPayload)
     let acceptedCompactCompletion = false
     if (hookEventName === 'PreCompact' || hookEventName === 'PostCompact') {
       // Why: PreCompact is never registered and proves nothing (an aborted compact emits it alone);
@@ -216,10 +221,7 @@ export abstract class AgentHookServerIngestRemote extends AgentHookServerIngestS
       if (hookEventName === 'PreCompact' || source !== 'claude') {
         return
       }
-      // Why: a relay predating this change strips `compactTrigger` from its cached PostCompact
-      // before replaying it, so the replay has no manual/auto discriminator. That relay's mapping is
-      // fixed and known — manual produced `done`, auto produced `working` — so the payload state
-      // stands in for the missing trigger. Trigger substitution only; ownership is still checked.
+      // Older relays omit the trigger; their state supplies it without bypassing ownership.
       const effectiveTrigger = resolveLegacyCompactTrigger(compactTrigger, normalizedPayload.state)
       // Why: an auto compact happens inside a turn that resumes and emits its own Stop. An older
       // relay maps it to `working`, and this ingest applies the relay's payload verbatim — so
@@ -275,6 +277,7 @@ export abstract class AgentHookServerIngestRemote extends AgentHookServerIngestS
     })
     const event: AgentHookEventPayload & { authorityRestartId?: string } = {
       paneKey,
+      agentPresence: readAgentProcessPresence(envelope.agentPresence),
       source: effectiveSource,
       ...(restartedAuthority?.authorityRestartId
         ? { authorityRestartId: restartedAuthority.authorityRestartId }
@@ -313,7 +316,9 @@ export abstract class AgentHookServerIngestRemote extends AgentHookServerIngestS
               this.state.claudeRunningNonAgentTaskPaneKeys.delete(paneKey)
             }
           }
-        : undefined
+        : undefined,
+      'hook',
+      typeof age === 'number' ? Math.max(0, Date.now() - age) : undefined
     )
   }
 }

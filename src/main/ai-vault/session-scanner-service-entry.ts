@@ -1,4 +1,5 @@
 import { requestSessionSearchRoots } from './session-scanner-service-root-request'
+import { scannedSessionNameEvidence } from '../session-names/scanned-session-name-evidence'
 import type { AiVaultSessionTitle } from '../../shared/ai-vault-session-title'
 import { readAiVaultFirstUserPrompt } from './session-first-user-prompt-read'
 import {
@@ -96,7 +97,8 @@ async function executeRequest(request: AiVaultServiceRequest): Promise<AiVaultSe
         cacheServiceTitle(titleIndex, {
           agent: session.agent,
           sessionId: session.sessionId,
-          title: session.title.trim()
+          title: session.title.trim(),
+          ...scannedSessionNameEvidence(session)
         })
       }
     }

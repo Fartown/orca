@@ -34,6 +34,8 @@ export async function prepareAndLaunchIssueConversation(
     issueId: input.issueId
   })
   const launchResult = launchAgentInNewTab({
+    // Why the mutation id: it already names this one user action, so a re-delivery joins it.
+    requestId: input.mutationId,
     agent: input.agent,
     worktreeId: input.workspace.id,
     launchToken: input.launchToken

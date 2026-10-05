@@ -2,7 +2,8 @@
 // this module stays as the renderer's import path.
 export {
   buildAgentSessionContinuationPrompt,
-  hasFullAgentSessionContext
+  hasFullAgentSessionContext,
+  resolveAgentSessionContinuationTranscriptPath
 } from '../../../shared/agent-session-continuation/continuation-prompt'
 export type {
   AgentSessionContinuationContextMode,

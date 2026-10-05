@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useReducer, useRef, useState } from 'react'
+import { useCallback, useEffect, useReducer, useRef, useState, type RefObject } from 'react'
 import { Loader2, Share2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useConfirmationDialog } from '@/components/confirmation-dialog-context'
 import { Button } from '@/components/ui/button'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { translate } from '@/i18n/i18n'
 import { cn } from '@/lib/utils'
@@ -26,6 +26,15 @@ import type { ArtifactSharedWorkspace } from '../../../../../shared/self-hosted-
 import type { LanArtifactShareTargetResolution } from './lan-artifact-share-target'
 import { LanArtifactSharePanel } from './LanArtifactSharePanel'
 
+/** Lets a toolbar that folds the button into its overflow menu own the popover and anchor it. */
+export type LanArtifactShareControl =
+  | { anchorRef?: never; open?: never; onOpenChange?: never }
+  | {
+      anchorRef?: RefObject<HTMLButtonElement | null>
+      open: boolean
+      onOpenChange: (open: boolean) => void
+    }
+
 /**
  * Share on local network: the computer that holds the file serves it. `resolveTarget` runs when
  * the popover opens so it always reflects the file's current owner.
@@ -33,13 +42,18 @@ import { LanArtifactSharePanel } from './LanArtifactSharePanel'
 export function LanArtifactShareButton({
   resolveTarget,
   hasUnsavedChanges = false,
-  className
+  className,
+  anchorRef,
+  open: controlledOpen,
+  onOpenChange
 }: {
   resolveTarget: () => LanArtifactShareTargetResolution
   hasUnsavedChanges?: boolean
   className?: string
-}): React.JSX.Element {
-  const [open, setOpen] = useState(false)
+} & LanArtifactShareControl): React.JSX.Element {
+  const [ownOpen, setOwnOpen] = useState(false)
+  const open = controlledOpen ?? ownOpen
+  const setOpen = onOpenChange ?? setOwnOpen
   const [state, dispatch] = useReducer(lanShareReducer, initialLanShareState)
   const targetRef = useRef<LanArtifactShareTarget | null>(null)
   const sequence = useRef(0)
@@ -131,25 +145,43 @@ export function LanArtifactShareButton({
   )
   return (
     <Popover open={open} onOpenChange={(next) => state.busy === null && setOpen(next)}>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <PopoverTrigger asChild>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-sm"
-              className={cn('shrink-0', className)}
-              aria-label={label}
-            >
-              {state.busy === 'sharing' ? <Loader2 className="animate-spin" /> : <Share2 />}
-            </Button>
-          </PopoverTrigger>
-        </TooltipTrigger>
-        <TooltipContent side="bottom" sideOffset={4}>
-          {label}
-        </TooltipContent>
-      </Tooltip>
-      <PopoverContent align="end" sideOffset={6} className="w-80">
+      {anchorRef ? (
+        <PopoverAnchor
+          // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: DOM refs are transiently null before mount, though Radix's virtualRef type omits that lifecycle state.
+          virtualRef={anchorRef as RefObject<HTMLButtonElement>}
+        />
+      ) : (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <PopoverTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                className={cn('shrink-0', className)}
+                aria-label={label}
+              >
+                {state.busy === 'sharing' ? <Loader2 className="animate-spin" /> : <Share2 />}
+              </Button>
+            </PopoverTrigger>
+          </TooltipTrigger>
+          <TooltipContent side="bottom" sideOffset={4}>
+            {label}
+          </TooltipContent>
+        </Tooltip>
+      )}
+      <PopoverContent
+        align="end"
+        sideOffset={6}
+        className="w-80"
+        onCloseAutoFocus={(event) => {
+          if (!anchorRef) {
+            return
+          }
+          event.preventDefault()
+          anchorRef.current?.focus({ preventScroll: true })
+        }}
+      >
         <LanArtifactSharePopoverBody
           label={label}
           state={state}

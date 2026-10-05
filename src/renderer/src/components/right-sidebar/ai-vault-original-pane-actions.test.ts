@@ -47,7 +47,7 @@ describe('jumpToAiVaultOriginalPane', () => {
 
     expect(jumpToAiVaultOriginalPane(session())).toBe('focused')
     expect(mocks.activateWorktree).toHaveBeenCalledWith('worktree-1')
-    expect(mocks.setActiveTabType).toHaveBeenCalledWith('terminal')
+    expect(mocks.setActiveTabType).toHaveBeenCalledWith('terminal', 'worktree-1')
     expect(mocks.focusPane).toHaveBeenCalledWith('tab-1', 'leaf-1', {
       flashFocusedPane: true,
       scrollToBottomIfOutputSinceLastView: true

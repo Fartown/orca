@@ -43,7 +43,7 @@ import {
 import { remoteSessionContentLines } from './remote-session-content-lines'
 import { readCodexTimelineOnlyRecord } from './session-scanner-codex-record-fast-path'
 import { extractCodexSessionMetadataTitle } from '../session-names/codex-session-metadata'
-import { isCodexWorkerSession } from './session-scanner-codex-session-meta'
+import { readCodexNonUserOrigin } from './session-scanner-codex-non-user-origin'
 
 export async function parseCodexSessionFile(
   file: FileWithMtime,
@@ -90,7 +90,7 @@ export async function parseCodexSessionContent(args: {
 }
 
 function consumeCodexRecordLine(state: CodexSessionParseState, line: string): void {
-  if (state.rejectedWorkerSession) {
+  if (state.nonUserOrigin) {
     return
   }
   const record = parseJsonObject(line)
@@ -103,10 +103,8 @@ function consumeCodexRecordLine(state: CodexSessionParseState, line: string): vo
 
   const payload = asRecord(record.payload)
   if (record.type === 'session_meta' && payload) {
-    if (isCodexWorkerSession(payload)) {
-      // Why: Codex writes internal worker/sub-agent transcripts into the same
-      // history tree; AI Vault should show user-started sessions only.
-      state.rejectedWorkerSession = true
+    state.nonUserOrigin = readCodexNonUserOrigin(payload)
+    if (state.nonUserOrigin) {
       return
     }
     state.sawSessionMeta = true
@@ -209,7 +207,7 @@ async function finalizeCodexParseState(
     executionHostPlatform?: NodeJS.Platform | null
   }
 ): Promise<AiVaultSession | null> {
-  if (state.rejectedWorkerSession) {
+  if (state.nonUserOrigin) {
     return null
   }
   // Finalize a snapshot: the live state keeps accumulating appended lines.
@@ -273,7 +271,7 @@ function codexResumeStateFromParseState(
         consumeCodexRecordLine(state, line.toString('utf8'))
       }
     },
-    shouldStop: () => state.rejectedWorkerSession,
+    shouldStop: () => state.nonUserOrigin !== null,
     identity: () => accumulatorSessionIdentity(state.accumulator),
     clone: () =>
       codexResumeStateFromParseState(cloneCodexParseState(state), codexHome, titleReader),
@@ -298,7 +296,7 @@ async function parseCodexSessionLines(args: {
   const state = createCodexParseState(args.file, args.messages)
   for await (const line of args.lines) {
     consumeCodexRecordLine(state, line)
-    if (state.rejectedWorkerSession) {
+    if (state.nonUserOrigin) {
       // Worker transcripts are excluded outright; stop reading early.
       return null
     }

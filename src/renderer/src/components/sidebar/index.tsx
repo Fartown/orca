@@ -21,6 +21,7 @@ import { lazyWithRetry } from '@/lib/lazy-with-retry'
 import { useIssueDomainStore } from '@/issues/use-issue-domain-store'
 import { SidebarRootModeBar } from './issues/sidebar-root-mode-bar'
 import { IssueSidebar } from './issues/issue-sidebar'
+import { LocalGitToolchainScanBanner } from './LocalGitToolchainScanBanner'
 
 // Why lazy: the Agents list pulls the whole activity pipeline (virtualizer, markdown
 // previews, thread derivation); users on the workspace view should not load or render any of it.
@@ -188,15 +189,18 @@ function Sidebar({
                     </ActivityThreadCollapseContext.Provider>
                   </React.Suspense>
                 ) : (
-                  <WorktreeList
-                    scrollOffsetRef={worktreeScrollOffsetRef}
-                    scrollAnchorRef={worktreeScrollAnchorRef}
-                    workspaceBoardOpen={workspaceBoardOpen}
-                    onWorktreeCardClick={closeWorkspaceBoard}
-                    onWorkspaceBoardDragPreviewStart={previewWorkspaceBoardFromDrag}
-                    onWorkspaceBoardDragPreviewCommit={solidifyWorkspaceBoardFromDrag}
-                    onWorkspaceBoardDragPreviewCancel={cancelWorkspaceBoardDragPreview}
-                  />
+                  <>
+                    <LocalGitToolchainScanBanner />
+                    <WorktreeList
+                      scrollOffsetRef={worktreeScrollOffsetRef}
+                      scrollAnchorRef={worktreeScrollAnchorRef}
+                      workspaceBoardOpen={workspaceBoardOpen}
+                      onWorktreeCardClick={closeWorkspaceBoard}
+                      onWorkspaceBoardDragPreviewStart={previewWorkspaceBoardFromDrag}
+                      onWorkspaceBoardDragPreviewCommit={solidifyWorkspaceBoardFromDrag}
+                      onWorkspaceBoardDragPreviewCancel={cancelWorkspaceBoardDragPreview}
+                    />
+                  </>
                 )}
 
                 <div className="relative shrink-0">

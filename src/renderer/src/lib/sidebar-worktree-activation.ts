@@ -13,15 +13,15 @@ export async function activateWorktreeFromSidebar(
 ): Promise<boolean> {
   const workspaceScope = parseWorkspaceKey(worktreeId)
   if (workspaceScope?.type === 'folder') {
-    const activated = executionHostId
-      ? activateAndRevealFolderWorkspace(workspaceScope.folderWorkspaceId, {
-          executionHostId
-        })
-      : activateAndRevealFolderWorkspace(workspaceScope.folderWorkspaceId)
+    const activated = activateAndRevealFolderWorkspace(workspaceScope.folderWorkspaceId, {
+      navigationIntent: 'user-open',
+      ...(executionHostId ? { executionHostId } : {})
+    })
     return activated !== false
   }
   // Keep navigation independent from an optional runtime wake IPC.
   const activated = activateAndRevealWorktree(worktreeId, {
+    navigationIntent: 'user-open',
     revealInSidebar: false,
     ...(executionHostId ? { executionHostId } : {})
   })

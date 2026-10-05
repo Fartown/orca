@@ -81,12 +81,10 @@ async function buildEngineJs() {
     },
     bundle: true,
     format: 'iife',
-    // esbuild lowers `||=` for this target, and minifySyntax then drops the `let` of a
-    // write-only variable while keeping the assignment — xterm's requestMode (DECRQM)
-    // ends up assigning to an undeclared name and throws in the always-strict class body,
-    // killing the terminal renderer on the first mode query an agent sends.
+    // esbuild 0.25 syntax folding drops xterm's local DECRQM enum declaration.
     minifyWhitespace: true,
     minifyIdentifiers: true,
+    minifySyntax: false,
     platform: 'browser',
     target,
     legalComments: 'none',

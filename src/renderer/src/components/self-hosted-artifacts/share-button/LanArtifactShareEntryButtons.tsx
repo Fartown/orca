@@ -7,7 +7,7 @@ import {
   resolveEditorFileShareTarget,
   resolveWorkspaceFileShareTarget
 } from './lan-artifact-share-target'
-import { LanArtifactShareButton } from './LanArtifactShareButton'
+import { LanArtifactShareButton, type LanArtifactShareControl } from './LanArtifactShareButton'
 
 /** Markdown editor header: the open tab already knows which computer owns the file. */
 export function EditorFileLanShareButton({
@@ -42,12 +42,13 @@ function relativeInside(root: string, filePath: string): string | null {
 export function BrowserFileLanShareButton({
   worktreeId,
   filePath,
-  className
+  className,
+  ...control
 }: {
   worktreeId: string
   filePath: string
   className?: string
-}): React.JSX.Element {
+} & LanArtifactShareControl): React.JSX.Element {
   const resolveTarget = useCallback(() => {
     const worktree = findWorktreeById(useAppStore.getState().worktreesByRepo, worktreeId)
     const relativePath = worktree ? relativeInside(worktree.path, filePath) : null
@@ -59,19 +60,20 @@ export function BrowserFileLanShareButton({
           : { executionHostId: 'local', sourcePath: filePath }
     }
   }, [filePath, worktreeId])
-  return <LanArtifactShareButton resolveTarget={resolveTarget} className={className} />
+  return <LanArtifactShareButton resolveTarget={resolveTarget} className={className} {...control} />
 }
 
 /** Workspace HTML document preview: shares from whichever computer owns the workspace. */
 export function DocPreviewLanShareButton({
   worktreeId,
   identity,
-  className
+  className,
+  ...control
 }: {
   worktreeId: string
   identity: DocPreviewDocumentIdentity
   className?: string
-}): React.JSX.Element {
+} & LanArtifactShareControl): React.JSX.Element {
   const resolveTarget = useCallback(
     () =>
       resolveWorkspaceFileShareTarget(useAppStore.getState(), {
@@ -81,5 +83,5 @@ export function DocPreviewLanShareButton({
       }),
     [identity, worktreeId]
   )
-  return <LanArtifactShareButton resolveTarget={resolveTarget} className={className} />
+  return <LanArtifactShareButton resolveTarget={resolveTarget} className={className} {...control} />
 }

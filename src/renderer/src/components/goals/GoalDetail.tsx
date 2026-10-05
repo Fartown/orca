@@ -163,7 +163,7 @@ function BindingSection({
       )
       return
     }
-    useAppStore.getState().setActiveTabType('terminal')
+    useAppStore.getState().setActiveTabType('terminal', detail.binding.worktree)
     activateTabAndFocusPane(pane.tabId, pane.leafId, { flashFocusedPane: true })
   }
   return (

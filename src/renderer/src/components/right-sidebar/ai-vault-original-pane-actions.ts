@@ -129,7 +129,7 @@ export function jumpToAiVaultOriginalPane(
     )
     return 'workspace-unavailable'
   }
-  useAppStore.getState().setActiveTabType('terminal')
+  useAppStore.getState().setActiveTabType('terminal', target.worktreeId)
   activateTabAndFocusPane(target.tabId, target.leafId, {
     flashFocusedPane: true,
     scrollToBottomIfOutputSinceLastView: true

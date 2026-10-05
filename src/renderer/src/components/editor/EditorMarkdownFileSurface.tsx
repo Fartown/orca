@@ -7,6 +7,7 @@ import { RICH_MARKDOWN_MAX_SIZE_BYTES } from '../../../../shared/constants'
 import { formatBytes } from '../status-bar/workspace-space-format'
 import { MarkdownPreview, RichMarkdownEditor } from './editor-lazy-views'
 import { extractFrontMatter, prependFrontMatter } from './markdown-frontmatter'
+import { exceedsMarkdownRenderOverrideSizeLimit } from './markdown-rich-size-limit'
 import type { MarkdownRenderState } from './markdown-render-mode'
 import { RichMarkdownErrorBoundary } from './RichMarkdownErrorBoundary'
 import type { useMarkdownDocuments } from './useMarkdownDocuments'
@@ -57,6 +58,8 @@ export function EditorMarkdownFileSurface({
   const { renderMode, richModeUnsupportedMessage, richModeUnsupportedOverrideActive } =
     inlineMarkdownRenderState
   if (renderMode === 'source' && mdViewMode === 'rich') {
+    // Why: past the hard render cap no override is safe — rich mode would freeze the renderer.
+    const canOverride = !exceedsMarkdownRenderOverrideSizeLimit(currentContent)
     const richFallbackMessage =
       richModeUnsupportedMessage ??
       translate(
@@ -70,15 +73,17 @@ export function EditorMarkdownFileSurface({
           <span className="min-w-0 flex-1">{richFallbackMessage}</span>
           {/* Why: both fallbacks are the user's call — size costs responsiveness, unsupported
               syntax risks a round-trip rewrite. Neither is ours to decide for them. */}
-          <Button
-            type="button"
-            variant="outline"
-            size="xs"
-            className="shrink-0"
-            onClick={() => setSizeOverride(activeFile.id, true)}
-          >
-            {translate('editor.richMarkdown.openAnyway', 'Open anyway')}
-          </Button>
+          {canOverride ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="xs"
+              className="shrink-0"
+              onClick={() => setSizeOverride(activeFile.id, true)}
+            >
+              {translate('editor.richMarkdown.openAnyway', 'Open anyway')}
+            </Button>
+          ) : null}
         </div>
         <div className="min-h-0 flex-1 h-full">{monacoEditor}</div>
       </div>
@@ -149,7 +154,7 @@ export function EditorMarkdownFileSurface({
         {/* Why: fall back to the stable preview renderer when Tiptap can't safely own the document. */}
         <div className="min-h-0 flex-1">
           <MarkdownPreview
-            key={viewStateScopeId}
+            key={`${viewStateScopeId}:${editorViewStateKey}`}
             content={currentContent}
             filePath={activeFile.filePath}
             sourceFileId={activeFile.id}
