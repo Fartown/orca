@@ -171,6 +171,15 @@ external_ids: []
 
 ## 3. 开发记录
 
+### 2026-10-06 修正续接入口的打开函数类型（testing）
+
+- 本轮目标：修掉合并前就存在、移动端类型检查报出的续接入口类型错误。
+- 完成内容：`useMobileSessionContinuationSheet` 把 `openContinuation` 声明成无参函数，实际实现要接收被续接的标签，调用方也会把标签传进去；声明改为 `(tab: MobileContinuationTarget) => void`，运行行为不变。
+- 代码或文档变更：`mobile/src/session-continuation/MobileSessionContinuationSheet.tsx`。
+- 验证证据：`mobile` 下 `tsc --noEmit` 零错误（修复前唯一的错误即此处），移动端 222 个测试文件 2108 个用例通过。
+- 未解决问题：续接仍走上游标注待删的兼容建终端路径。
+- 下一步：PR 合入 `fork/integration`。
+
 ### 2026-10-06 上游重测路由前缀表后重新登记 fork 实测值（testing）
 
 - 本轮目标：上游在新提交里重新测量了移动端路由前缀表，让基线门禁重新反映 fork 树。
