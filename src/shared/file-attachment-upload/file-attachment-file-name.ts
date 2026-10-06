@@ -8,7 +8,8 @@ const FALLBACK_EXTENSION = '.bin'
 
 // oxlint-disable-next-line no-control-regex -- control characters are exactly what this strips
 const UNSAFE_CHARACTERS = /[\u0000-\u001f\u007f\\/:*?"<>|]/g
-const WINDOWS_RESERVED_STEM = /^(con|prn|aux|nul|com[1-9]|lpt[1-9])$/i
+// Windows reserves these names before the first dot (`nul.tar.gz` too), trailing spaces aside.
+const WINDOWS_RESERVED_BASE = /^(con|prn|aux|nul|conin\$|conout\$|com[0-9¹²³]|lpt[0-9¹²³]) *$/i
 
 const EXTENSION_BY_MIME: Readonly<Record<string, string>> = {
   'application/pdf': '.pdf',
@@ -95,7 +96,7 @@ export function sanitizeFileAttachmentName(rawName: string, mimeType?: string): 
   if (!extension && mimeExtension) {
     extension = mimeExtension
   }
-  if (WINDOWS_RESERVED_STEM.test(stem)) {
+  if (WINDOWS_RESERVED_BASE.test(stem.split('.')[0] ?? '')) {
     stem = `_${stem}`
   }
   const extensionBytes = new TextEncoder().encode(extension).byteLength

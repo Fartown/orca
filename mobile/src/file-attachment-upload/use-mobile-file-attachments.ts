@@ -7,7 +7,7 @@ import {
   type SetStateAction
 } from 'react'
 import {
-  appendFileAttachmentReferenceToDraft,
+  appendFileAttachmentPathToDraft,
   isAgentImageAttachmentName
 } from '../../../src/shared/file-attachment-upload/file-attachment-delivery-text'
 import { FILE_ATTACHMENT_MAX_BYTES } from '../../../src/shared/file-attachment-upload/file-attachment-upload-limits'
@@ -168,6 +168,9 @@ export function useMobileFileAttachments(args: MobileFileAttachmentsArgs): Mobil
     // Captured now: the draft and chip scope stay the chat the user attached from.
     const { addUploadedImages, setComposerText } = chat
     let files: readonly PickedAttachmentFile[] = []
+    // A chip renders from the picker's copy, so only those outlive the attach; the rest go as soon
+    // as they are delivered, or when the attach fails.
+    const previewedByChip = new Set<PickedAttachmentFile>()
     try {
       files = await picker.pickFiles(true)
       for (const file of files) {
@@ -187,8 +190,14 @@ export function useMobileFileAttachments(args: MobileFileAttachmentsArgs): Mobil
         const image = chatImageFor(file, uploaded)
         if (image) {
           addUploadedImages(scope, [image])
+          if (image.previewUri === file.previewUri) {
+            previewedByChip.add(file)
+          }
         } else {
-          setComposerText((draft) => appendFileAttachmentReferenceToDraft(draft, uploaded.path))
+          setComposerText((draft) => appendFileAttachmentPathToDraft(draft, uploaded.path))
+        }
+        if (!previewedByChip.has(file)) {
+          await file.release()
         }
       }
       if (files.length > 0) {
@@ -199,8 +208,7 @@ export function useMobileFileAttachments(args: MobileFileAttachmentsArgs): Mobil
     } finally {
       setUploadingChat(false)
       for (const file of files) {
-        // A chip previews from the picker's copy, so only files with no preview are dropped now.
-        if (!file.previewUri) {
+        if (!previewedByChip.has(file)) {
           await file.release()
         }
       }

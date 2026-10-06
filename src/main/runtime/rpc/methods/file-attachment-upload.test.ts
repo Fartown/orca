@@ -15,12 +15,13 @@ import {
 import {
   FILE_ATTACHMENT_RETENTION_MS,
   FILE_ATTACHMENT_UPLOAD_IDLE_TTL_MS,
-  FILE_ATTACHMENT_UPLOAD_MAX_CONCURRENT,
+  FILE_ATTACHMENT_UPLOAD_MAX_CONCURRENT_PER_CLIENT,
   FileAttachmentUploadStore
 } from '../../../file-attachment-upload/file-attachment-upload-store'
 import {
   createLocalFileAttachmentTarget,
   fileAttachmentUploadDirectoryName,
+  SSH_FILE_ATTACHMENT_FLUSH_BYTES,
   type FileAttachmentSshFilesystem,
   type FileAttachmentUploadTarget
 } from '../../../file-attachment-upload/file-attachment-upload-target'
@@ -28,20 +29,40 @@ import { createFileAttachmentUploadMethods } from './file-attachment-upload'
 
 type FakeEntry = { kind: 'dir' } | { kind: 'file'; bytes: Buffer }
 
-/** An SSH host's filesystem as the upload sees it: absolute paths, POSIX or Windows style. */
+/** An SSH host's filesystem as the upload sees it: `~` expands to its home, POSIX or Windows. */
 class FakeRemoteFilesystem implements FileAttachmentSshFilesystem {
   readonly entries = new Map<string, FakeEntry>()
   failWrites = false
+  writes = 0
 
-  constructor(private readonly tempDir: string) {
-    this.entries.set(tempDir, { kind: 'dir' })
+  constructor(private readonly home: string) {
+    this.entries.set(home, { kind: 'dir' })
   }
 
-  async getTempDir(): Promise<string> {
-    return this.tempDir
+  private expand(target: string): string {
+    if (!target.startsWith('~/')) {
+      return target
+    }
+    const separator = this.home.includes('\\') ? '\\' : '/'
+    return `${this.home}${separator}${target.slice(2).split('/').join(separator)}`
+  }
+  async realpath(target: string): Promise<string> {
+    const resolved = this.expand(target)
+    if (!this.entries.has(resolved)) {
+      throw new Error('ENOENT')
+    }
+    return resolved
   }
   async createDir(dirPath: string): Promise<void> {
-    this.entries.set(dirPath, { kind: 'dir' })
+    const resolved = this.expand(dirPath)
+    const separator = resolved.includes('\\') ? '\\' : '/'
+    // `mkdir -p` below the home this fake was given; above it is out of scope.
+    const below = resolved.slice(this.home.length + 1).split(separator)
+    for (let index = 1; index <= below.length; index += 1) {
+      this.entries.set(`${this.home}${separator}${below.slice(0, index).join(separator)}`, {
+        kind: 'dir'
+      })
+    }
   }
   async createDirNoClobber(dirPath: string): Promise<void> {
     if (this.entries.has(dirPath)) {
@@ -50,6 +71,7 @@ class FakeRemoteFilesystem implements FileAttachmentSshFilesystem {
     this.entries.set(dirPath, { kind: 'dir' })
   }
   async writeFileBase64Chunk(filePath: string, contentBase64: string, append: boolean) {
+    this.writes += 1
     if (this.failWrites) {
       throw new Error('Remote connection dropped')
     }
@@ -94,6 +116,12 @@ class FakeRemoteFilesystem implements FileAttachmentSshFilesystem {
   }
 }
 
+const REMOTE_ROOT_ENTRIES = [
+  '/home/me',
+  '/home/me/.orca-remote',
+  '/home/me/.orca-remote/file-attachments'
+]
+
 const LOCAL_WORKTREE = 'id:local-worktree'
 const SSH_WORKTREE = 'id:ssh-worktree'
 const SSH_FOLDER_WORKSPACE = 'id:folder:ssh-folder'
@@ -105,6 +133,7 @@ let store: FileAttachmentUploadStore
 let dispatcher: RpcDispatcher
 let localTarget: FileAttachmentUploadTarget
 let connected: boolean
+let chmodded: { connectionId: string; root: string }[]
 
 function workspaceScope(selector: string) {
   const connectionId =
@@ -172,9 +201,10 @@ async function upload(worktree: string, fileName: string, bytes: Buffer, clientI
 
 beforeEach(async () => {
   tempRoot = await mkdtemp(path.join(tmpdir(), 'orca-file-attachment-test-'))
-  remote = new FakeRemoteFilesystem('/home/me/tmp')
-  windowsRemote = new FakeRemoteFilesystem('C:\\Users\\me\\AppData\\Local\\Temp')
+  remote = new FakeRemoteFilesystem('/home/me')
+  windowsRemote = new FakeRemoteFilesystem('C:\\Users\\me')
   connected = true
+  chmodded = []
   store = new FileAttachmentUploadStore({ onBackgroundError: () => undefined })
   localTarget = createLocalFileAttachmentTarget(tempRoot)
   const runtime = {
@@ -188,7 +218,10 @@ beforeEach(async () => {
       store,
       localTarget: () => localTarget,
       sshProvider: (connectionId) =>
-        !connected ? undefined : connectionId === 'ssh-windows' ? windowsRemote : remote
+        !connected ? undefined : connectionId === 'ssh-windows' ? windowsRemote : remote,
+      restrictSshRoot: async (connectionId, root) => {
+        chmodded.push({ connectionId, root })
+      }
     })
   })
 })
@@ -247,10 +280,37 @@ describe('fileAttachment upload on a local workspace', () => {
 })
 
 describe('fileAttachment upload on an SSH workspace', () => {
+  it('makes the remote root private once, and never on a Windows host', async () => {
+    await upload(SSH_WORKTREE, 'a.txt', Buffer.from('a'))
+    await upload(SSH_WORKTREE, 'b.txt', Buffer.from('b'))
+    await upload('id:windows-worktree', 'c.txt', Buffer.from('c'))
+    expect(chmodded).toEqual([
+      { connectionId: 'ssh-linux', root: '/home/me/.orca-remote/file-attachments' }
+    ])
+  })
+
+  it('batches chunks into few remote writes', async () => {
+    const bytes = Buffer.from(
+      Array.from({ length: SSH_FILE_ATTACHMENT_FLUSH_BYTES * 2 + 1000 }, (_, index) => index % 253)
+    )
+    const result = await upload(SSH_WORKTREE, 'big.bin', bytes)
+    expect(Buffer.compare(remote.fileAt(result.path) ?? Buffer.alloc(0), bytes)).toBe(0)
+    // 22 chunks reach the host; it writes the empty part, one batch once past 4 MiB, and the
+    // remainder at commit.
+    expect(remote.writes).toBe(3)
+  })
+
+  it('recreates the remote root when it was removed between uploads', async () => {
+    await upload(SSH_WORKTREE, 'a.txt', Buffer.from('a'))
+    await remote.deletePath('/home/me/.orca-remote/file-attachments')
+    const result = await upload(SSH_WORKTREE, 'b.txt', Buffer.from('b'))
+    expect(remote.fileAt(result.path)?.toString()).toBe('b')
+  })
+
   it('writes to the remote temp directory and nothing locally', async () => {
     const bytes = Buffer.from('remote bytes')
     const result = await upload(SSH_WORKTREE, 'notes.txt', bytes)
-    expect(result.path.startsWith('/home/me/tmp/orca-file-attachments/')).toBe(true)
+    expect(result.path.startsWith('/home/me/.orca-remote/file-attachments/')).toBe(true)
     expect(remote.fileAt(result.path)?.toString()).toBe('remote bytes')
     expect(await readdir(tempRoot)).toEqual([])
   })
@@ -262,9 +322,7 @@ describe('fileAttachment upload on an SSH workspace', () => {
 
   it('joins Windows remote paths with Windows separators', async () => {
     const result = await upload('id:windows-worktree', 'a.txt', Buffer.from('x'))
-    expect(result.path).toMatch(
-      /^C:\\Users\\me\\AppData\\Local\\Temp\\orca-file-attachments\\\d{13}-/
-    )
+    expect(result.path).toMatch(/^C:\\Users\\me\\\.orca-remote\\file-attachments\\\d{13}-/)
     expect(windowsRemote.fileAt(result.path)?.toString()).toBe('x')
   })
 
@@ -279,29 +337,27 @@ describe('fileAttachment upload on an SSH workspace', () => {
     ).toBe(FILE_ATTACHMENT_HOST_UNAVAILABLE_ERROR)
   })
 
-  it('surfaces a dropped connection mid-upload and abort cleans the remote directory', async () => {
+  it('surfaces a dropped connection at commit and leaves no remote directory', async () => {
     const uploadId = await start({
       worktree: SSH_WORKTREE,
       fileName: 'a.bin',
       byteLength: 4
     })
+    await ok('fileAttachment.appendUploadChunk', {
+      uploadId,
+      offset: 0,
+      contentBase64: Buffer.from('abcd').toString('base64')
+    })
     remote.failWrites = true
-    expect(
-      await failure('fileAttachment.appendUploadChunk', {
-        uploadId,
-        offset: 0,
-        contentBase64: Buffer.from('abcd').toString('base64')
-      })
-    ).toContain('Remote connection dropped')
-    await ok('fileAttachment.abortUpload', { uploadId })
-    expect([...remote.entries.keys()]).toEqual([
-      '/home/me/tmp',
-      '/home/me/tmp/orca-file-attachments'
-    ])
+    expect(await failure('fileAttachment.commitUpload', { uploadId })).toContain(
+      'Remote connection dropped'
+    )
+    expect(await ok('fileAttachment.abortUpload', { uploadId })).toEqual({ aborted: false })
+    expect([...remote.entries.keys()]).toEqual(REMOTE_ROOT_ENTRIES)
   })
 
   it('sweeps only its own expired upload directories on the next start', async () => {
-    const root = '/home/me/tmp/orca-file-attachments'
+    const root = '/home/me/.orca-remote/file-attachments'
     const expired = `${root}/${fileAttachmentUploadDirectoryName(Date.now() - FILE_ATTACHMENT_RETENTION_MS - 1, '00000000-0000-0000-0000-000000000000')}`
     const fresh = `${root}/${fileAttachmentUploadDirectoryName(Date.now(), '11111111-1111-1111-1111-111111111111')}`
     const foreign = `${root}/someone-elses`
@@ -375,13 +431,9 @@ describe('fileAttachment upload guards', () => {
     )
   })
 
-  it('bounds concurrent uploads', async () => {
-    for (let index = 0; index < FILE_ATTACHMENT_UPLOAD_MAX_CONCURRENT; index += 1) {
-      await ok('fileAttachment.startUpload', {
-        worktree: LOCAL_WORKTREE,
-        fileName: `f${index}`,
-        byteLength: 1
-      })
+  it('bounds concurrent uploads per client without locking other clients out', async () => {
+    for (let index = 0; index < FILE_ATTACHMENT_UPLOAD_MAX_CONCURRENT_PER_CLIENT; index += 1) {
+      await start({ worktree: LOCAL_WORKTREE, fileName: `f${index}`, byteLength: 1 })
     }
     expect(
       await failure('fileAttachment.startUpload', {
@@ -390,6 +442,7 @@ describe('fileAttachment upload guards', () => {
         byteLength: 1
       })
     ).toBe('Too many file uploads are in progress')
+    await start({ worktree: LOCAL_WORKTREE, fileName: 'other-phone', byteLength: 1 }, 'device-b')
   })
 
   it('expires an idle upload and removes what it wrote', async () => {
@@ -403,12 +456,7 @@ describe('fileAttachment upload guards', () => {
     await vi.advanceTimersByTimeAsync(FILE_ATTACHMENT_UPLOAD_IDLE_TTL_MS + 1)
     expect(store.activeCount()).toBe(0)
     vi.useRealTimers()
-    await vi.waitFor(() =>
-      expect([...remote.entries.keys()]).toEqual([
-        '/home/me/tmp',
-        '/home/me/tmp/orca-file-attachments'
-      ])
-    )
+    await vi.waitFor(() => expect([...remote.entries.keys()]).toEqual(REMOTE_ROOT_ENTRIES))
     expect(await failure('fileAttachment.commitUpload', { uploadId })).toBe(
       'File upload was not found'
     )

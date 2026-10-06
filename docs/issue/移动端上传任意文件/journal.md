@@ -17,9 +17,42 @@ external_ids: []
 | 交互 | - | not-required | 沿用现有底部菜单与附件按钮，无独立设计稿 |
 | 调研 | [research/移动端附件上传现状与技术链路.md](research/移动端附件上传现状与技术链路.md) | ready | 两种会话页形态、选择器、上传与落盘、目标机器判定、交付方式、版本兼容 |
 | 方案 | [solutions/移动端文件附件上传方案.md](solutions/移动端文件附件上传方案.md) | reviewing | 新 RPC `fileAttachment.*` 流式写入目标机器临时目录；手机壳新接口 `native.file.*`；图片旧通道保留 |
-| 测试用例 | [tests/cases/移动端上传任意文件.md](tests/cases/移动端上传任意文件.md) | ready | TC-001~017，覆盖本机与 SSH；执行记录见 [tests/runs/2026-10-06-real-app-host-round-1.md](tests/runs/2026-10-06-real-app-host-round-1.md) |
+| 测试用例 | [tests/cases/移动端上传任意文件.md](tests/cases/移动端上传任意文件.md) | ready | TC-001~018，覆盖本机与 SSH；执行记录见 [电脑端第一轮](tests/runs/2026-10-06-real-app-host-round-1.md)、[电脑端第二轮](tests/runs/2026-10-06-real-app-host-round-2.md)、[云真机第一轮](tests/runs/2026-10-06-cloud-device-round-1.md) |
 
 ## 2. 决策点记录
+
+### D-008 新桥接接口只占会话路由一个授权名额
+
+- 日期：2026-10-06
+- 背景：云真机第一轮发现，会话路由加上 `native.file.pick/read/release` 后授权共 17 个，超过主机与手机共同遵守的协议上限 16，电脑端拒收整份网页包，所有网页页面退回原生；构建期校验没有拦住
+- 备选项：
+  1. 调高上限：手机端也按 16 解析，旧手机壳会拒收新清单，不可行
+  2. 放弃网页版的新接口：网页版会话页只能传约 18 MiB、文件名按类型生成，不满足已确认的 100 MiB
+  3. 只新增 `native.file.pick`，句柄放进媒体登记，读取与释放走 `native.media.read/release`，读取偏移上限放宽到 100 MiB
+- 最终决定：采用 3，并新增路由协议守护测试
+- 原因：会话路由降为 15 个授权；放宽读取偏移对新旧版本组合安全（只有授予 `native.file.pick` 的新手机壳才会收到大偏移的读取）；手机壳侧重复的读取循环随之删除
+- 影响范围：REQ-004、REQ-005；方案 §6；TC-003、TC-015
+
+### D-007 聊天输入框插入纯路径，不用 `@路径`
+
+- 日期：2026-10-06
+- 背景：云真机第一轮中，聊天里含 `@路径` 的消息在 Claude 终端里停在输入框不提交：`@` 打开文件提及菜单，菜单吞掉发送时的回车；手动输入 `@/tmp/...` 同样复现
+- 备选项：保留 `@路径` 并在发送前关掉菜单；插入纯路径（含空格时加引号）
+- 最终决定：插入纯路径
+- 原因：agent 能直接按绝对路径读取文件；不依赖各家终端 agent 的提及菜单行为（Codex 输入 `@` 也会弹文件搜索，Q-3）
+- 影响范围：REQ-003；方案 §5.4；TC-010
+
+### D-006 SSH 主机上的上传目录放远端家目录，不放 `/tmp`
+
+- 日期：2026-10-06
+- 背景：自查发现 relay 的 `fs.tempDir` 在 Linux 上就是共享的 `/tmp`；relay 与 SFTP 按默认 umask 建目录和文件（通常 0755 / 0644），文件接口没有改权限的方法。多人共用的服务器上，别的账号能读到用户上传的 PDF、压缩包
+- 备选项：
+  1. 仍放 `/tmp`，接受风险（上游剪贴板图片 `/tmp/orca-paste-*.png` 现状如此）
+  2. 给 relay 增加改权限或带 mode 的建目录接口：要改上游 relay 与 provider，接缝大
+  3. 放远端用户家目录 `~/.orca-remote/file-attachments/`，靠家目录权限挡住其他账号
+- 最终决定：采用 3，并在 POSIX 主机上经 SSH 执行一次 `chmod 700` 把上传根目录设为私有（代码审查指出家目录在部分发行版是 0755，单靠家目录挡不住）
+- 原因：不改上游文件接口；根目录 0700 后其下所有上传对其他账号不可见，与本机 0700 私有根目录一致；与 Orca 远端的其他数据放在一处，便于用户找到和清理
+- 影响范围：REQ-002、REQ-006；方案 §3、§4.3；TC-005
 
 ### D-005 移动端放行用 fork 自有名单，不改上游白名单文件
 
@@ -73,6 +106,15 @@ external_ids: []
 - 影响范围：REQ-002、REQ-006；Q-2（工作目录外文件的权限确认）待真机验证
 
 ## 3. 开发记录
+
+### 2026-10-06 代码审查与云真机第一轮的修复
+
+- 本轮目标：处理代码审查 9 条与云真机第一轮的 2 个缺陷
+- 完成内容：云真机第一轮在原生会话页上验证了入口菜单、系统选择器、终端上传与 `unzip -l`、超限提示、Claude Code 读取 PDF、聊天交付；发现网页包因授权超限被整份拒收（D-008）与聊天 `@路径` 不提交（D-007），均已修复。审查 9 条的处理：聊天缓存副本改为凡不作待发图片就释放；SSH 上传根目录 `chmod 700`（D-006）；Windows 保留名按第一个点判断并补 `CONIN$`/`CONOUT$`；base64 长度改为对无填充尾块也正确；单次选择合计不超过 200 MiB；按客户端限并发 4、全局 16；SSH 攒到 4 MiB 再写远端；SSH 写入目标按连接缓存；手机壳侧重复的读取循环随 D-008 删除，路径转义的副本因手机端无法引用 renderer 保留，由对照测试防漂移
+- 代码或文档变更：`src/main/file-attachment-upload/**`、`src/main/runtime/rpc/methods/file-attachment-upload*.ts`、`src/shared/file-attachment-upload/**`、`mobile/src/file-attachment-upload/**`；上游接缝新增 `mobile/src/mobile-web-shell/bridge/bridge-media-verbs.ts`（读取偏移上限）；新增 `config/scripts/mobile-web-page-routes-contract.test.mjs`
+- 验证证据：[tests/runs/2026-10-06-cloud-device-round-1.md](tests/runs/2026-10-06-cloud-device-round-1.md)；[tests/runs/2026-10-06-real-app-host-round-2.md](tests/runs/2026-10-06-real-app-host-round-2.md)（8 项全过，远端根目录 700）；重新构建的网页包清单通过协议校验；`pnpm tc`、手机端 `typecheck`、功能 checks（40 + 147 例）、`check:fork-features`、`check:fork-docs`、`check:architecture-policies --base Fartown/main`、`verify:rpc-params-catalog`、`check:runtime-electron-ratchet` 通过
+- 未解决问题：网页版会话页（TC-018）与聊天纯路径的自动提交需要云真机第二轮确认；Q-2 需在非 bypass 的 Claude 会话里观察；Q-3 未验证
+- 下一步：云真机第二轮，随后推送并开 PR
 
 ### 2026-10-06 真实 App 电脑端验证（本机 + SSH）
 

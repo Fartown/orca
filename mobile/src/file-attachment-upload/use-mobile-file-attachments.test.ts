@@ -158,7 +158,7 @@ describe('useMobileFileAttachments', () => {
     expect(hook.isUploadingToTerminal).toBe(false)
   })
 
-  it('puts a non-image into the chat draft as an @path reference', async () => {
+  it('puts a non-image into the chat draft as a plain path', async () => {
     picker.current = pickerOf([memoryFile('report.pdf', new Uint8Array([1]))])
     const args = baseArgs(uploadingHost())
     render(args)
@@ -166,7 +166,7 @@ describe('useMobileFileAttachments', () => {
 
     const update = args.chat.setComposerText.mock.calls[0]?.[0]
     expect(typeof update).toBe('function')
-    expect(update('look at')).toBe('look at @/tmp/orca-file-attachments/1/report.pdf ')
+    expect(update('look at')).toBe('look at /tmp/orca-file-attachments/1/report.pdf ')
     expect(args.chat.addUploadedImages).not.toHaveBeenCalled()
   })
 
@@ -185,6 +185,34 @@ describe('useMobileFileAttachments', () => {
     ])
     expect(args.chat.setComposerText).not.toHaveBeenCalled()
     expect(image.released()).toBe(false)
+  })
+
+  it('releases an image that rides as a path and every file of a failed attach', async () => {
+    const heic = memoryFile('photo.heic', new Uint8Array([1]), {
+      mimeType: 'image/heic',
+      previewUri: 'file:///cache/photo.heic'
+    })
+    picker.current = pickerOf([heic])
+    const args = baseArgs(uploadingHost('/tmp/orca-file-attachments/3/photo.heic', 'photo.heic'))
+    render(args)
+    await choose('chat', 'file')
+    expect(args.chat.addUploadedImages).not.toHaveBeenCalled()
+    expect(heic.released()).toBe(true)
+
+    const shot = memoryFile('shot.png', new Uint8Array([1]), {
+      mimeType: 'image/png',
+      previewUri: 'file:///cache/shot.png'
+    })
+    picker.current = pickerOf([shot])
+    const failing = baseArgs(
+      fakeHost({
+        'fileAttachment.startUpload': () => rpcError('runtime_error', 'disk full')
+      })
+    )
+    act(() => renderer?.unmount())
+    render(failing)
+    await choose('chat', 'file')
+    expect(shot.released()).toBe(true)
   })
 
   it('refuses a file over what this side can stage before uploading', async () => {

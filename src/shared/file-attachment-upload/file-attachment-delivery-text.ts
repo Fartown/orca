@@ -1,4 +1,3 @@
-import { formatNativeChatFileReference } from '../agent-image-paste'
 import { isWindowsAbsolutePathLike } from '../cross-platform-path'
 
 // The five types structured Claude reads as images (`claude-structured-dispatch-content.ts`);
@@ -36,9 +35,20 @@ export function fileAttachmentTerminalInput(path: string): string {
   return `${escapeFileAttachmentPathForShell(path)} `
 }
 
-/** Appends an `@path` reference to a chat draft, keeping one space on each side of it. */
-export function appendFileAttachmentReferenceToDraft(draft: string, path: string): string {
-  const reference = formatNativeChatFileReference(path)
+/**
+ * A path as prose for a chat message: bare when it has no space, quoted when it does. Not `@path`:
+ * a TUI agent opens its file-mention picker on `@`, and that picker takes the Enter the send ends
+ * with, leaving the message parked in the agent's input instead of submitted.
+ */
+export function fileAttachmentChatPath(path: string): string {
+  if (!/[\s"']/.test(path)) {
+    return path
+  }
+  return path.includes('"') ? `'${path}'` : `"${path}"`
+}
+
+/** Appends an uploaded file's path to a chat draft, keeping one space on each side of it. */
+export function appendFileAttachmentPathToDraft(draft: string, path: string): string {
   const separator = draft.length === 0 || /\s$/.test(draft) ? '' : ' '
-  return `${draft}${separator}${reference} `
+  return `${draft}${separator}${fileAttachmentChatPath(path)} `
 }

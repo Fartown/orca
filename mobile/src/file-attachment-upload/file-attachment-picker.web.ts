@@ -17,14 +17,7 @@ import {
 } from '../mobile-web-shell/bridge/use-native-verbs'
 import { usePageBridgeClient } from '../transport/client-context.web'
 import { base64DecodedByteLength } from './attachment-base64-length'
-import {
-  BRIDGE_FILE_VERB_NAMES,
-  filePickResultSchema,
-  fileReadResultSchema,
-  fileReleaseResultSchema,
-  type BridgeFileItem,
-  type BridgeFileVerb
-} from './bridge-file-verbs'
+import { filePickResultSchema, type BridgeFileItem } from './bridge-file-verbs'
 import {
   FileAttachmentShellLimitError,
   FileAttachmentTooLargeError,
@@ -35,12 +28,8 @@ import {
 /** The three media verbs a file pick uses; the rest of the shell's surface is not reachable here. */
 export type StagedMediaVerbs = Pick<NativeVerbs, 'pickMedia' | 'readMedia' | 'releaseMedia'>
 
-/** `native.file.*`, as this page calls them. */
-export type ShellFileVerbs = {
-  readonly pickFiles: (multiple: boolean) => Promise<readonly BridgeFileItem[]>
-  readonly readFile: (handle: string, offset: number, length: number) => Promise<BridgeMediaChunk>
-  readonly releaseFile: (handle: string) => Promise<boolean>
-}
+/** `native.file.pick`, as this page calls it; its handles are read through the media verbs. */
+export type ShellFilePick = (multiple: boolean) => Promise<readonly BridgeFileItem[]>
 
 type ReadRange = (offset: number, length: number) => Promise<BridgeMediaChunk>
 
@@ -129,14 +118,17 @@ export function createStagedMediaFileAttachmentPicker(
   }
 }
 
-/** A shell with `native.file.*` names each file and stages up to the upload ceiling. */
-export function createShellFileAttachmentPicker(files: ShellFileVerbs): FileAttachmentPicker {
+/** A shell with `native.file.pick` names each file and stages up to the upload ceiling. */
+export function createShellFileAttachmentPicker(
+  pick: ShellFilePick,
+  verbs: Pick<StagedMediaVerbs, 'readMedia' | 'releaseMedia'>
+): FileAttachmentPicker {
   return {
     maxBytes: FILE_ATTACHMENT_MAX_BYTES,
     async pickFiles(multiple) {
       let items: readonly BridgeFileItem[]
       try {
-        items = await files.pickFiles(multiple)
+        items = await pick(multiple)
       } catch (error) {
         if (error instanceof NativeVerbError && error.reason === 'native_media_too_large') {
           throw new FileAttachmentTooLargeError(FILE_ATTACHMENT_MAX_BYTES)
@@ -146,8 +138,8 @@ export function createShellFileAttachmentPicker(files: ShellFileVerbs): FileAtta
       return items.map((item) =>
         shellStagedFile(
           item,
-          (offset, length) => files.readFile(item.handle, offset, length),
-          files.releaseFile
+          (offset, length) => verbs.readMedia(item.handle, offset, length),
+          verbs.releaseMedia
         )
       )
     }
@@ -163,40 +155,24 @@ function shellReason(error: unknown): NativeVerbReason {
   return NATIVE_VERB_REASONS.find((reason) => reason === code) ?? 'unreported'
 }
 
-function grantsFileVerbs(client: BridgeRpcClient): boolean {
+function grantsNamedFilePick(client: BridgeRpcClient): boolean {
   const granted = client.getShellSession()?.grants.native ?? []
-  return BRIDGE_FILE_VERB_NAMES.every((verb) => granted.includes(verb))
+  return ['native.file.pick', 'native.media.read', 'native.media.release'].every((verb) =>
+    granted.includes(verb)
+  )
 }
 
-function bridgeFileVerbs(client: BridgeRpcClient): ShellFileVerbs {
-  async function call<Value>(
-    verb: BridgeFileVerb,
-    params: unknown,
-    parse: (value: unknown) => Value
-  ): Promise<Value> {
+function bridgeFilePick(client: BridgeRpcClient): ShellFilePick {
+  return async (multiple) => {
     try {
-      return parse((await client.callNativeVerb(verb, params)).result)
+      const reply = await client.callNativeVerb('native.file.pick', { multiple })
+      return filePickResultSchema.parse(reply.result).items
     } catch (error) {
       throw new NativeVerbError(
         shellReason(error),
-        error instanceof Error ? error.message : `${verb} failed`
+        error instanceof Error ? error.message : 'native.file.pick failed'
       )
     }
-  }
-  return {
-    pickFiles: async (multiple) =>
-      (await call('native.file.pick', { multiple }, (value) => filePickResultSchema.parse(value)))
-        .items,
-    readFile: (handle, offset, length) =>
-      call('native.file.read', { handle, offset, length }, (value) =>
-        fileReadResultSchema.parse(value)
-      ),
-    releaseFile: async (handle) =>
-      (
-        await call('native.file.release', { handle }, (value) =>
-          fileReleaseResultSchema.parse(value)
-        )
-      ).released
   }
 }
 
@@ -209,8 +185,8 @@ export function useFileAttachmentPicker(): FileAttachmentPicker {
   const client = usePageBridgeClient()
   return useMemo(() => {
     const legacy = createStagedMediaFileAttachmentPicker(verbs)
-    const named = createShellFileAttachmentPicker(bridgeFileVerbs(client))
-    const current = () => (grantsFileVerbs(client) ? named : legacy)
+    const named = createShellFileAttachmentPicker(bridgeFilePick(client), verbs)
+    const current = () => (grantsNamedFilePick(client) ? named : legacy)
     return {
       get maxBytes() {
         return current().maxBytes

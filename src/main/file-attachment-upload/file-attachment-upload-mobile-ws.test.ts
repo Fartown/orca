@@ -2,6 +2,7 @@ import { mkdtempSync, readFileSync, realpathSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { z } from 'zod'
 import { setAppEnvironment } from '../../shared/app-environment'
 import { OrcaRuntimeService } from '../runtime/orca-runtime'
 import { OrcaRuntimeRpcServer } from '../runtime/runtime-rpc'
@@ -82,7 +83,7 @@ describe('file attachment upload from a paired phone', () => {
         mimeType: 'application/pdf'
       })
       expect(started.ok).toBe(true)
-      const { uploadId } = started.result as { uploadId: string }
+      const { uploadId } = z.object({ uploadId: z.string() }).parse(started.result)
       const chunkBytes = (512 * 1024 * 3) / 4
       for (let offset = 0; offset < bytes.byteLength; offset += chunkBytes) {
         const appended = await request('fileAttachment.appendUploadChunk', {
@@ -94,7 +95,9 @@ describe('file attachment upload from a paired phone', () => {
       }
       const committed = await request('fileAttachment.commitUpload', { uploadId })
       expect(committed.ok).toBe(true)
-      const { path, fileName } = committed.result as { path: string; fileName: string }
+      const { path, fileName } = z
+        .object({ path: z.string(), fileName: z.string() })
+        .parse(committed.result)
       expect(fileName).toBe('quarterly report.pdf')
       expect(path.startsWith(join(root, 'orca-file-attachments'))).toBe(true)
       expect(Buffer.compare(readFileSync(path), bytes)).toBe(0)
@@ -106,7 +109,7 @@ describe('file attachment upload from a paired phone', () => {
         contentBase64: 'AAAA'
       })
       expect(refused.ok).toBe(false)
-      expect((refused.error as { code: string }).code).toBe('forbidden')
+      expect(z.object({ code: z.string() }).parse(refused.error).code).toBe('forbidden')
 
       responses.dispose()
       phone.ws.close()

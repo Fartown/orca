@@ -1967,6 +1967,9 @@
         "src/shared/clipboard-image.ts",
         "src/shared/image-paste-following-text.ts",
         "src/main/providers/ssh-filesystem-dispatch.ts",
+        "src/main/ssh/ssh-connection-utils.ts",
+        "src/main/ssh/ssh-relay-exec-command.ts",
+        "src/main/ssh/ssh-target-registry.ts",
         "src/main/providers/types.ts",
         "src/main/runtime/orca-runtime.ts",
         "src/main/runtime/rpc/core.ts",
@@ -1987,6 +1990,7 @@
         "src/main/runtime/runtime-rpc/fork-mobile-rpc-method-allowlist.test.ts",
         "src/renderer/src/file-attachment-upload/**",
         "mobile/src/file-attachment-upload/**",
+        "config/scripts/mobile-web-page-routes-contract.test.mjs",
         "docs/issue/移动端上传任意文件/**"
       ],
       "requiredFiles": [
@@ -2061,12 +2065,17 @@
         {
           "file": "mobile/src/mobile-web-shell/bridge/bridge-native-verbs.ts",
           "mustContain": "...BRIDGE_FILE_VERBS",
-          "why": "the shell advertises and validates native.file.* beside the media verbs (REQ-002, REQ-004)"
+          "why": "the shell advertises and validates native.file.pick beside the media verbs (REQ-002, REQ-004)"
+        },
+        {
+          "file": "mobile/src/mobile-web-shell/bridge/bridge-media-verbs.ts",
+          "mustContain": "offset: z.number().int().min(0).max(FILE_ATTACHMENT_MAX_BYTES)",
+          "why": "native.file.pick handles read back through native.media.read up to the upload ceiling, so the route spends one grant (REQ-004)"
         },
         {
           "file": "mobile/src/platform/use-native-device-verbs.ts",
-          "mustContain": "useNativeFileVerbServer(sessionId)",
-          "why": "the shell serves native.file.* from its own handle registry (REQ-004)"
+          "mustContain": "useNativeFileVerbServer(registry)",
+          "why": "the shell serves native.file.pick into the session media registry (REQ-004)"
         },
         {
           "file": "mobile/src/mobile-web-shell/bridge/bridge-port-pair-test-harness.ts",
@@ -2076,7 +2085,7 @@
         {
           "file": "config/scripts/mobile-web-page-routes.mjs",
           "mustContain": "'native.file.pick'",
-          "why": "the session page may use native.file.* where the shell has it and falls back where not (REQ-005)"
+          "why": "the session page may use native.file.pick where the shell has it and falls back where not (REQ-005)"
         },
         {
           "file": "config/scripts/mobile-web-app-held-press-probe-routes.mjs",
@@ -2096,11 +2105,13 @@
         "mobile/src/file-attachment-upload/file-attachment-picker.web.test.ts",
         "mobile/src/file-attachment-upload/file-attachment-terminal-write.test.ts",
         "mobile/src/file-attachment-upload/use-mobile-file-attachments.test.ts",
-        "mobile/src/file-attachment-upload/native-file-verbs.test.ts"
+        "mobile/src/file-attachment-upload/native-file-verbs.test.ts",
+        "mobile/src/file-attachment-upload/attachment-base64-length.test.ts",
+        "config/scripts/mobile-web-page-routes-contract.test.mjs"
       ],
       "checks": [
-        "pnpm exec vitest run --config config/vitest.config.ts src/shared/file-attachment-upload src/main/file-attachment-upload src/renderer/src/file-attachment-upload src/main/runtime/rpc/methods/file-attachment-upload.test.ts src/main/runtime/runtime-rpc/fork-mobile-rpc-method-allowlist.test.ts src/main/runtime/mobile-rpc-allowlist.test.ts",
-        "pnpm --dir mobile exec vitest run src/file-attachment-upload src/session/use-mobile-native-chat-image-attachments.test.ts src/session/use-mobile-session-image-attachments.test.tsx src/mobile-web-shell/page-route-policy.test.ts src/mobile-web-shell/bridge-host-init.test.ts"
+        "pnpm exec vitest run --config config/vitest.config.ts src/shared/file-attachment-upload src/main/file-attachment-upload src/renderer/src/file-attachment-upload src/main/runtime/rpc/methods/file-attachment-upload.test.ts src/main/runtime/runtime-rpc/fork-mobile-rpc-method-allowlist.test.ts src/main/runtime/mobile-rpc-allowlist.test.ts config/scripts/mobile-web-page-routes-contract.test.mjs",
+        "pnpm --dir mobile exec vitest run src/file-attachment-upload src/session/use-mobile-native-chat-image-attachments.test.ts src/session/use-mobile-session-image-attachments.test.tsx src/mobile-web-shell/page-route-policy.test.ts src/mobile-web-shell/bridge-host-init.test.ts src/mobile-web-shell/bridge/bridge-media-verbs.test.ts"
       ]
     }
   ]

@@ -13,7 +13,9 @@ import {
   type FileAttachmentUploadTarget
 } from './file-attachment-upload-target'
 
-export const FILE_ATTACHMENT_UPLOAD_MAX_CONCURRENT = 4
+/** Per client, so one phone that dropped mid-upload cannot lock every other client out. */
+export const FILE_ATTACHMENT_UPLOAD_MAX_CONCURRENT_PER_CLIENT = 4
+export const FILE_ATTACHMENT_UPLOAD_MAX_CONCURRENT = 16
 export const FILE_ATTACHMENT_UPLOAD_IDLE_TTL_MS = 5 * 60 * 1000
 export const FILE_ATTACHMENT_RETENTION_MS = 7 * 24 * 60 * 60 * 1000
 const SWEEP_INTERVAL_MS = 60 * 60 * 1000
@@ -68,9 +70,7 @@ export class FileAttachmentUploadStore {
   }
 
   async start(input: StartFileAttachmentUploadInput): Promise<StartFileAttachmentUploadResult> {
-    if (this.uploads.size >= FILE_ATTACHMENT_UPLOAD_MAX_CONCURRENT) {
-      throw new Error('Too many file uploads are in progress')
-    }
+    this.refuseOverCapacity(input.ownerId)
     this.sweepInBackground(input.target)
     const fileName = sanitizeFileAttachmentName(input.fileName, input.mimeType)
     const uploadId = this.newId()
@@ -79,9 +79,11 @@ export class FileAttachmentUploadStore {
       fileName
     )
     // A concurrent start may have filled the last slot while this one was creating its directory.
-    if (this.uploads.size >= FILE_ATTACHMENT_UPLOAD_MAX_CONCURRENT) {
+    try {
+      this.refuseOverCapacity(input.ownerId)
+    } catch (error) {
       await this.removeQuietly(input.target, paths)
-      throw new Error('Too many file uploads are in progress')
+      throw error
     }
     this.uploads.set(uploadId, {
       ownerId: input.ownerId,
@@ -163,6 +165,19 @@ export class FileAttachmentUploadStore {
     }
     this.uploads.clear()
     this.lastSweepByHost.clear()
+  }
+
+  private refuseOverCapacity(ownerId: string | undefined): void {
+    let owned = 0
+    for (const upload of this.uploads.values()) {
+      owned += upload.ownerId === ownerId ? 1 : 0
+    }
+    if (
+      owned >= FILE_ATTACHMENT_UPLOAD_MAX_CONCURRENT_PER_CLIENT ||
+      this.uploads.size >= FILE_ATTACHMENT_UPLOAD_MAX_CONCURRENT
+    ) {
+      throw new Error('Too many file uploads are in progress')
+    }
   }
 
   private requireOwned(uploadId: string, ownerId: string | undefined): Upload {

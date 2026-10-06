@@ -29,14 +29,14 @@ export function useNativeDeviceVerbs(
   // microphone the previous one left open is nobody's to stop but this seam's.
   const audio = useMemo(() => createNativeAudioCapture(nativeAudioDeviceEngine), [sessionId])
   useEffect(() => () => audio.dispose(), [audio])
-  const serveFiles = useNativeFileVerbServer(sessionId)
+  const serveFiles = useNativeFileVerbServer(registry)
   return useMemo(
     () => (verb, params) => {
       if (verb === 'native.clipboard.write' || verb === 'native.clipboard.read') {
         return serveNativeClipboardVerb(verb, params)
       }
       if (isBridgeFileVerb(verb)) {
-        return serveFiles(verb, params)
+        return serveFiles(params)
       }
       return verb.startsWith('native.audio.') ? audio.serve(verb, params) : serveMedia(verb, params)
     },

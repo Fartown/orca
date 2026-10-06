@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import { CLIPBOARD_IMAGE_MAX_SOURCE_BYTES } from '../../../../src/shared/clipboard-image'
 import { MOBILE_CLIPBOARD_IMAGE_UPLOAD_CHUNK_BASE64_CHARS } from '../../session/mobile-clipboard-image-upload-chunk'
+import { FILE_ATTACHMENT_MAX_BYTES } from '../../../../src/shared/file-attachment-upload/file-attachment-upload-limits'
 
 /**
  * The wire shapes of `native.media.pick`, `native.media.read` and `native.media.release`.
@@ -94,7 +95,8 @@ export const mediaPickResultSchema = z.strictObject({
 
 export const mediaReadParamsSchema = z.strictObject({
   handle: handleSchema,
-  offset: byteOffsetSchema,
+  // A file attachment (`native.file.pick`) stages to the upload ceiling and reads back here.
+  offset: z.number().int().min(0).max(FILE_ATTACHMENT_MAX_BYTES),
   length: z.number().int().min(1).max(BRIDGE_MEDIA_READ_MAX_BYTES)
 })
 

@@ -25,6 +25,10 @@ describe('sanitizeFileAttachmentName', () => {
     expect(sanitizeFileAttachmentName('notes.txt. . ')).toBe('notes.txt')
     expect(sanitizeFileAttachmentName('CON.txt')).toBe('_CON.txt')
     expect(sanitizeFileAttachmentName('nul')).toBe('_nul')
+    expect(sanitizeFileAttachmentName('nul.tar.gz')).toBe('_nul.tar.gz')
+    expect(sanitizeFileAttachmentName('aux.min.js')).toBe('_aux.min.js')
+    expect(sanitizeFileAttachmentName('CONOUT$.log')).toBe('_CONOUT$.log')
+    expect(sanitizeFileAttachmentName('console.log')).toBe('console.log')
   })
 
   it('falls back to a typed name when nothing usable is left', () => {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
-  appendFileAttachmentReferenceToDraft,
+  appendFileAttachmentPathToDraft,
   fileAttachmentTerminalInput,
   isAgentImageAttachmentName
 } from './file-attachment-delivery-text'
@@ -21,14 +21,15 @@ describe('isAgentImageAttachmentName', () => {
   })
 })
 
-describe('appendFileAttachmentReferenceToDraft', () => {
-  it('keeps one space on each side of the reference', () => {
-    expect(appendFileAttachmentReferenceToDraft('', '/tmp/a.pdf')).toBe('@/tmp/a.pdf ')
-    expect(appendFileAttachmentReferenceToDraft('read', '/tmp/a.pdf')).toBe('read @/tmp/a.pdf ')
-    expect(appendFileAttachmentReferenceToDraft('read ', '/tmp/a.pdf')).toBe('read @/tmp/a.pdf ')
+describe('appendFileAttachmentPathToDraft', () => {
+  it('keeps one space on each side of the path and never writes an @ mention', () => {
+    expect(appendFileAttachmentPathToDraft('', '/tmp/a.pdf')).toBe('/tmp/a.pdf ')
+    expect(appendFileAttachmentPathToDraft('read', '/tmp/a.pdf')).toBe('read /tmp/a.pdf ')
+    expect(appendFileAttachmentPathToDraft('read ', '/tmp/a.pdf')).toBe('read /tmp/a.pdf ')
   })
 
-  it('quotes a path with spaces', () => {
-    expect(appendFileAttachmentReferenceToDraft('', '/tmp/a b.pdf')).toBe('@"/tmp/a b.pdf" ')
+  it('quotes a path with spaces or quotes', () => {
+    expect(appendFileAttachmentPathToDraft('', '/tmp/a b.pdf')).toBe('"/tmp/a b.pdf" ')
+    expect(appendFileAttachmentPathToDraft('', '/tmp/say "hi".txt')).toBe(`'/tmp/say "hi".txt' `)
   })
 })

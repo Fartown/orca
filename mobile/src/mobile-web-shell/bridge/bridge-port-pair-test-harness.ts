@@ -193,10 +193,6 @@ function defaultVerbAnswer(verb: BridgeNativeVerb): unknown {
       return { stopped: true, base64: '', droppedBytes: 0 }
     case 'native.file.pick':
       return { items: [] }
-    case 'native.file.read':
-      return { base64: '', eof: true }
-    case 'native.file.release':
-      return { released: false }
   }
 }
 

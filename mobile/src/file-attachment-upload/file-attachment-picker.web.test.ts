@@ -16,7 +16,6 @@ import {
   createShellFileAttachmentPicker,
   createStagedMediaFileAttachmentPicker,
   readShellStagedBase64Chunks,
-  type ShellFileVerbs,
   type StagedMediaVerbs
 } from './file-attachment-picker.web'
 import {
@@ -87,37 +86,37 @@ describe('createStagedMediaFileAttachmentPicker', () => {
 })
 
 describe('createShellFileAttachmentPicker', () => {
-  it('keeps the name the shell reports and reads through native.file.read', async () => {
-    const bytes = new Uint8Array([1, 2, 3, 4, 5])
-    const read = reading(bytes)
-    const files = {
-      pickFiles: vi.fn(async () => [
-        { handle: 'f1', name: 'report.pdf', mime: 'application/pdf', byteLength: 5 }
-      ]),
-      readFile: vi.fn((_handle: string, offset: number, length: number) => read(offset, length)),
-      releaseFile: vi.fn(async () => true)
-    } satisfies ShellFileVerbs
-    const picker = createShellFileAttachmentPicker(files)
+  it('keeps the name the shell reports and reads through native.media.read', async () => {
+    const read = reading(new Uint8Array([1, 2, 3, 4, 5]))
+    const pick = vi.fn(async () => [
+      { handle: 'f1', name: 'report.pdf', mime: 'application/pdf', byteLength: 5 }
+    ])
+    const verbs = {
+      readMedia: vi.fn((_handle: string, offset: number, length: number) => read(offset, length)),
+      releaseMedia: vi.fn(async () => true)
+    }
+    const picker = createShellFileAttachmentPicker(pick, verbs)
     expect(picker.maxBytes).toBe(100 * 1024 * 1024)
     const [file] = await picker.pickFiles(true)
+    expect(pick).toHaveBeenCalledWith(true)
     expect(file?.name).toBe('report.pdf')
     expect(await drain(file!.readBase64Chunks(3))).toEqual([3, 2])
-    expect(files.readFile).toHaveBeenCalledWith('f1', 3, 2)
+    expect(verbs.readMedia).toHaveBeenCalledWith('f1', 3, 2)
     await file?.release()
     await file?.release()
-    expect(files.releaseFile).toHaveBeenCalledTimes(1)
+    expect(verbs.releaseMedia).toHaveBeenCalledTimes(1)
   })
 
   it('reports a file over the upload ceiling as too large', async () => {
-    const files = {
-      pickFiles: vi.fn(async (): Promise<never> => {
-        throw new NativeVerbError('native_media_too_large', 'too big')
-      }),
-      readFile: vi.fn(async () => ({ base64: '', eof: true })),
-      releaseFile: vi.fn(async () => true)
-    } satisfies ShellFileVerbs
-    await expect(createShellFileAttachmentPicker(files).pickFiles(false)).rejects.toBeInstanceOf(
-      FileAttachmentTooLargeError
-    )
+    const pick = vi.fn(async (): Promise<never> => {
+      throw new NativeVerbError('native_media_too_large', 'too big')
+    })
+    const verbs = {
+      readMedia: vi.fn(async () => ({ base64: '', eof: true })),
+      releaseMedia: vi.fn(async () => true)
+    }
+    await expect(
+      createShellFileAttachmentPicker(pick, verbs).pickFiles(false)
+    ).rejects.toBeInstanceOf(FileAttachmentTooLargeError)
   })
 })
