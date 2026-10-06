@@ -1124,6 +1124,11 @@
           "why": "the SSH adapter is the only path that carried presence and had no test"
         },
         {
+          "file": "src/relay/agent-hook-interrupt-reconciliation.test.ts",
+          "mustContain": "CLAUDE_SESSION_ACTIVITY_WINDOW_MS",
+          "why": "upstream's new-session case must replace the row after the activity window, or the guard drops it"
+        },
+        {
           "file": "src/renderer/src/components/right-sidebar/use-canonical-session-titles.ts",
           "mustContain": "useSessionNameIndex",
           "why": "History search and rows consume the same native-first name projection"
