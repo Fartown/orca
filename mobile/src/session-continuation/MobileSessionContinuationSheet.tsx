@@ -1,11 +1,15 @@
 import { ActionSheetModal } from '../components/ActionSheetModal'
 import { useMobileSessionContinuationScope } from './use-mobile-session-continuation-scope'
+import type { MobileContinuationTarget } from './use-mobile-session-continuation'
 
 /** The continuation sheet plus its opener, so the session sheet file carries one line for this
  *  feature instead of a scope binding and a modal it does not otherwise know about. */
 export function useMobileSessionContinuationSheet(
   scope: Parameters<typeof useMobileSessionContinuationScope>[0]
-): { openContinuation: () => void; continuationSheet: React.JSX.Element } {
+): {
+  openContinuation: (tab: MobileContinuationTarget) => void
+  continuationSheet: React.JSX.Element
+} {
   const {
     continuationTarget,
     continuationActions,
