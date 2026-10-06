@@ -199,6 +199,10 @@ it('pins every foreground and background step to its selected phase', () => {
       `${staticPhase} && github.repository == 'Fartown/orca'`
     ],
     [
+      './.github/actions/install-mobile-dependencies',
+      `${staticPhase} && github.repository == 'Fartown/orca' && needs.code_paths.outputs.mobile_dependencies != 'true'`
+    ],
+    [
       'Enforce code quality across the fork diff',
       `${staticPhase} && github.repository == 'Fartown/orca'`
     ],
