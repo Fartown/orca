@@ -11,14 +11,8 @@ import {
   verifyAndroidCertificate,
   verifyAndroidPublicCertificate
 } from './build-identity.mjs'
-import {
-  hashPackages,
-  listMergedChanges,
-  PACKAGE_NAMES,
-  parseMergedChanges,
-  publishRelease
-} from './publish-release.mjs'
-import { integrationVersion, listIntegrationReleases } from './integration-releases.mjs'
+import { hashPackages, PACKAGE_NAMES, publishRelease } from './publish-release.mjs'
+import { integrationVersion } from './integration-releases.mjs'
 import { LEGACY_INTEL_PLACEHOLDER } from './legacy-intel-placeholder.mjs'
 import androidConfig from './android-config.cjs'
 import { verifyAndroidPackageVersion } from './verify-apk-version.mjs'
@@ -68,10 +62,12 @@ const previousRelease = {
 }
 const mergeLog = [
   'Merge pull request #31 from Fartown/feat/integration-builds-release-notes\n\nfeat(integration-builds): list merged pull requests\n',
-  "Merge remote-tracking branch 'upstream/main' into fork/integration\n",
   'Merge pull request #30 from Fartown/feat/self-hosted-artifacts-lan-share\n'
 ]
-  .map((message) => `${message}\0`)
+  .map(
+    (message, index) =>
+      `${String(index).repeat(40)}\x1f${previousSha} ${'c'.repeat(40)}\x1f${message}\0`
+  )
   .join('\n')
 
 function github(existing, releases = [previousRelease]) {
@@ -146,9 +142,9 @@ describe('integration package identity and signing', () => {
       ).toThrow()
     }
   })
-  it('numbers each build after the published ones and gives each workflow its own tag', () => {
+  it('numbers each build after the latest published one and gives each workflow its own tag', () => {
     expect(
-      buildIdentity({ sha, runId: '123', baseVersion: '1.2.3', timestamp, publishedCount: 41 })
+      buildIdentity({ sha, runId: '123', baseVersion: '1.2.3', timestamp, latestNumber: 41 })
     ).toEqual({
       sha,
       tag: `integration-123-${sha.slice(0, 12)}`,
@@ -428,96 +424,6 @@ describe('complete, immutable fork prereleases', () => {
   )
 })
 
-describe('what merged since the previous integration build', () => {
-  it('counts and compares only published integration builds across every page', () => {
-    const releases = listIntegrationReleases(
-      github(undefined, [
-        { ...previousRelease, tag_name: 'integration-124-cccccccccccc' },
-        { ...previousRelease, tag_name: 'integration-121-cccccccccccc', target_commitish: sha },
-        { ...previousRelease, tag_name: 'integration-120-dddddddddddd', draft: true },
-        { ...previousRelease, tag_name: 'v1.2.3' },
-        { ...previousRelease, tag_name: 'integration-119-dddddddddddd', prerelease: false },
-        previousRelease,
-        {
-          ...previousRelease,
-          tag_name: 'integration-100-eeeeeeeeeeee',
-          target_commitish: 'e'.repeat(40)
-        }
-      ]),
-      'Fartown/orca'
-    )
-    expect(releases.map((release) => release.run)).toEqual([124, 121, 122, 100])
-    const git = repository()
-    expect(listMergedChanges({ releases, git, sha, runId: '123' }).previous).toBe(releases[2])
-    expect(git.mock.calls[0][0]).toEqual(['merge-base', '--is-ancestor', previousSha, sha])
-  })
-
-  it('lists first-parent merges since the newest earlier published build', async () => {
-    const directory = packages()
-    const git = repository()
-    await publishRelease({ env, directory, mobile, gh: github(), git })
-    expect(git.mock.calls.map(([args]) => args)).toEqual([
-      ['merge-base', '--is-ancestor', previousSha, sha],
-      [
-        'log',
-        '--first-parent',
-        '--max-count=100',
-        '--format=%B%x00',
-        `${previousSha}..${sha}`,
-        '--'
-      ]
-    ])
-    const changes = [
-      { number: 31, title: 'feat(integration-builds): list merged pull requests' },
-      { title: "Merge remote-tracking branch 'upstream/main' into fork/integration" },
-      { number: 30, title: 'Fartown/feat/self-hosted-artifacts-lan-share' }
-    ]
-    expect(JSON.parse(readFileSync(join(directory, 'build-info.json'), 'utf8')).changes).toEqual(
-      changes
-    )
-    const notes = readFileSync(join(directory, 'release-notes.md'), 'utf8')
-    expect(notes).toContain(
-      `[integration-122-${previousSha.slice(0, 12)}](https://github.com/Fartown/orca/releases/tag/integration-122-${previousSha.slice(0, 12)})`
-    )
-    expect(notes).toContain(`https://github.com/Fartown/orca/compare/${previousSha}...${sha}`)
-    expect(notes).toContain(
-      [
-        '- #31 feat(integration-builds): list merged pull requests',
-        "- Merge remote-tracking branch 'upstream/main' into fork/integration",
-        '- #30 Fartown/feat/self-hosted-artifacts-lan-share'
-      ].join('\n')
-    )
-  })
-
-  it.each([
-    ['the previous build is not an ancestor', repository({ ancestor: false }), [previousRelease]],
-    ['no earlier build was published', repository(), []]
-  ])('falls back to the head commit when %s', (_, git, releases) => {
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
-    const result = listMergedChanges({
-      releases: listIntegrationReleases(github(undefined, releases), 'Fartown/orca'),
-      git,
-      sha,
-      runId: '123'
-    })
-    expect(result.previous).toBe(null)
-    expect(git.mock.calls.at(-1)[0]).toEqual([
-      'log',
-      '--first-parent',
-      '--max-count=1',
-      '--format=%B%x00',
-      sha,
-      '--'
-    ])
-    expect(warn).toHaveBeenCalledTimes(releases.length ? 1 : 0)
-  })
-
-  it('keeps release titles short and ignores empty messages', () => {
-    const long = 'x'.repeat(250)
-    expect(parseMergedChanges(`\0\n${long}\0\n`)).toEqual([{ title: `${'x'.repeat(199)}…` }])
-  })
-})
-
 describe('workflow wiring', () => {
   it('limits publisher secrets to integration packaging and always cleans them up', () => {
     const workflow = parse(readFileSync('.github/workflows/fork-integration-build.yml', 'utf8'))
@@ -553,6 +459,27 @@ describe('workflow wiring', () => {
     )
   })
 
+  it('keeps the Anthropic key in a read-only job whose failure cannot block publishing', () => {
+    const workflow = parse(readFileSync('.github/workflows/fork-integration-build.yml', 'utf8'))
+    const summary = workflow.jobs['release-summary']
+    expect(summary.permissions).toBeUndefined()
+    expect(summary.if).toContain("github.ref == 'refs/heads/fork/integration'")
+    expect(summary.if).toContain("github.event_name != 'pull_request'")
+    expect(JSON.stringify(summary).match(/secrets\.\w+/g)).toEqual(['secrets.ANTHROPIC_API_KEY'])
+    for (const step of summary.steps.filter((item) => !item.uses?.startsWith('actions/'))) {
+      expect(step['continue-on-error']).toBe(true)
+    }
+    expect(summary.steps.at(-1).with['if-no-files-found']).toBe('ignore')
+    const download = workflow.jobs.publish.steps.find((step) =>
+      step.with?.name?.startsWith('release-summary-')
+    )
+    expect(download['continue-on-error']).toBe(true)
+    expect(workflow.jobs.publish.steps.at(-1).run).toContain(
+      'publish-release.mjs packages release-summary'
+    )
+    expect(workflow.on.workflow_dispatch.inputs.milestone.default).toBe(false)
+  })
+
   it('pins all jobs to one SHA, builds in parallel and publishes only a complete integration run', () => {
     const workflow = parse(readFileSync('.github/workflows/fork-integration-build.yml', 'utf8'))
     expect(workflow.on.push.branches).toEqual(['fork/integration'])
@@ -577,7 +504,7 @@ describe('workflow wiring', () => {
         (step) => step.name === 'Package internal-test DMG and update ZIP'
       ).run
     ).toContain('--publish never')
-    expect(workflow.jobs.publish.needs).toEqual(['identity', 'macos', 'android'])
+    expect(workflow.jobs.publish.needs).toEqual(['identity', 'macos', 'android', 'release-summary'])
     expect(workflow.jobs.macos.env.CSC_FOR_PULL_REQUEST).toBe('true')
     expect(workflow.jobs.publish.if).toContain("github.ref == 'refs/heads/fork/integration'")
     expect(workflow.jobs.publish.if).not.toContain('always()')

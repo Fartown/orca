@@ -1,14 +1,22 @@
 import { createHash } from 'node:crypto'
 import { createReadStream, readFileSync, statSync, writeFileSync } from 'node:fs'
-import { execFileSync } from 'node:child_process'
 import { join, resolve } from 'node:path'
 import { ANDROID_CERT_SHA256, integrationTag } from './build-identity.mjs'
-import { listIntegrationReleases } from './integration-releases.mjs'
+import { commandOutput } from './command-output.mjs'
+import { readAiSummary } from './ai-release-summary.mjs'
+import { latestPreviewNumber, listReleases } from './integration-releases.mjs'
 import { LEGACY_INTEL_PLACEHOLDER, legacyIntelPlaceholder } from './legacy-intel-placeholder.mjs'
 import { signingCertificate } from './mac-signing.cjs'
 import { assertPublisherRequirement } from './mac-signature-requirement.cjs'
-
-const MAX_CHANGES = 100
+import { milestoneNotes, milestoneUpstreamVersion, publishMilestone } from './milestone-release.mjs'
+import { pruneBuildReleases } from './prune-releases.mjs'
+import { releaseContext } from './release-context.mjs'
+import {
+  foldedSection,
+  loadFeatureGroups,
+  manifestChanges,
+  renderChangeSections
+} from './release-notes.mjs'
 
 export const PACKAGE_NAMES = [
   'orca-integration-macos-arm64.dmg',
@@ -56,74 +64,116 @@ export function verifyMacSigningEvidence(directory, version) {
   return certificate.sha256
 }
 
-export function parseMergedChanges(log) {
-  return log
-    .split('\0')
-    .map((message) => message.trim())
-    .filter(Boolean)
-    .map((message) => {
-      const [subject, ...body] = message.split('\n')
-      const merge = subject.match(/^Merge pull request #([1-9]\d*) from (\S+)$/)
-      if (!merge) {
-        return { title: shortTitle(subject) }
-      }
-      const title = body.map((line) => line.trim()).find(Boolean) ?? merge[2]
-      return { number: Number(merge[1]), title: shortTitle(title) }
-    })
+const INSTALL_NOTES = [
+  'macOS 只提供 Apple Silicon DMG，使用固定 fork 自签身份、未公证；首次打开可能被系统拦截，需要手动允许，系统权限可能需要重新授予。',
+  '提供 Apple Silicon ZIP 与 latest-mac.yml，支持同一固定签名身份之间的原生自动更新。现有 ad-hoc 旧版需先手动安装一次 DMG，之后可应用内下载并确认重启更新。',
+  `Intel 版已停止提供。${LEGACY_INTEL_PLACEHOLDER} 不是安装包，只是一份说明，让 2026-09-17 之前的集成包仍把本次发布识别为完整并继续自动更新。`,
+  'Android 集成包自动检查 fork 更新，可在应用内下载 APK 后通过系统确认安装。旧版需先手动安装一次；不同签名安装不能覆盖。APK 使用 Expo debug 内测签名，不用于商店发布。',
+  'build-info.json 和 SHA256SUMS.txt 记录来源及下载校验和。'
+]
+
+function bulletList(lines) {
+  return lines.map((line) => `- ${line}`).join('\n')
 }
 
-function shortTitle(text) {
-  const title = text.trim()
-  return title.length > 200 ? `${title.slice(0, 199)}…` : title
-}
-
-function previousIntegrationRelease(releases, sha, runId) {
-  return releases
-    .filter(
-      (release) =>
-        release.run < Number(runId) &&
-        /^[a-f0-9]{40}$/.test(release.target_commitish) &&
-        release.target_commitish !== sha
-    )
-    .sort((a, b) => b.run - a.run)[0]
-}
-
-// First-parent history keeps upstream commits brought in by a sync merge out of the list.
-export function listMergedChanges({ releases, git, sha, runId }) {
-  const messages = (count, revisions) =>
-    parseMergedChanges(
-      git(['log', '--first-parent', `--max-count=${count}`, '--format=%B%x00', ...revisions, '--'])
-    )
-  try {
-    const previous = previousIntegrationRelease(releases, sha, runId)
-    if (previous) {
-      git(['merge-base', '--is-ancestor', previous.target_commitish, sha])
-      return {
-        previous,
-        changes: messages(MAX_CHANGES, [`${previous.target_commitish}..${sha}`])
-      }
-    }
-  } catch (error) {
-    console.warn(`Could not compare with the previous integration release: ${error.message}`)
-  }
-  return { previous: null, changes: messages(1, [sha]) }
-}
-
-function changeNotes(repo, sha, { previous, changes }) {
-  if (!changes.length) {
-    return []
-  }
+function buildNotes(
+  { repo, sha, version, runUrl, android, macCertificateSha256 },
+  context,
+  features
+) {
+  const { previous, buildChanges } = context
   const since = previous
-    ? `（相比 [${previous.tag_name}](https://github.com/${repo}/releases/tag/${previous.tag_name})，[完整提交差异](https://github.com/${repo}/compare/${previous.target_commitish}...${sha})）`
-    : '（未找到可对比的上一个集成包，只列出本次提交）'
-  return [
-    `**本次合入**${since}\n\n${changes
-      .map((change) => `- ${change.number ? `#${change.number} ` : ''}${change.title}`)
-      .join('\n')}`
-  ]
+    ? `相比 [${previous.tag_name}](https://github.com/${repo}/releases/tag/${previous.tag_name})：[完整提交差异](https://github.com/${repo}/compare/${previous.target_commitish}...${sha})`
+    : '未找到可对比的上一个集成包，只列出本次提交'
+  return `${[
+    '集成分支内测包（非正式版）。',
+    ...renderChangeSections({
+      changes: buildChanges,
+      features,
+      syncSummaries: context.syncSummariesOf(buildChanges)
+    }),
+    foldedSection(
+      '安装、签名与校验',
+      bulletList([
+        ...INSTALL_NOTES,
+        `macOS publisher certificate SHA-256: \`${macCertificateSha256}\``,
+        `Android certificate SHA-256: \`${ANDROID_CERT_SHA256}\``
+      ])
+    ),
+    foldedSection(
+      '构建信息',
+      bulletList([
+        `版本：macOS ${version}；Android ${android.version}（versionCode ${android.versionCode}）`,
+        `提交：[\`${sha.slice(0, 12)}\`](https://github.com/${repo}/commit/${sha})`,
+        `构建：${runUrl}`,
+        since
+      ])
+    )
+  ].join('\n\n')}\n`
 }
 
-export async function publishRelease({ env, directory, mobile, gh, git }) {
+/** Milestone and pruning run after the build is public, so neither can hold the build back. */
+function finishPublication({
+  gh,
+  repo,
+  sha,
+  tag,
+  version,
+  baseVersion,
+  runId,
+  context,
+  features,
+  directory,
+  summaryDirectory
+}) {
+  const milestones = [...context.milestones]
+  if (context.plan) {
+    try {
+      const syncSummaries = context.syncSummariesOf(context.plan.changes)
+      const notes = milestoneNotes({
+        repo,
+        sha,
+        plan: context.plan,
+        features,
+        syncSummaries,
+        aiSummary: readAiSummary(summaryDirectory),
+        build: { tag, version }
+      })
+      const milestoneTag = publishMilestone({
+        gh,
+        repo,
+        sha,
+        upstreamVersion: milestoneUpstreamVersion({
+          syncSummaries,
+          previous: context.plan.previous,
+          packageVersion: baseVersion
+        }),
+        milestones: context.milestones,
+        notes,
+        notesPath: join(directory, 'milestone-notes.md')
+      })
+      milestones.push({ tag_name: milestoneTag, body: notes })
+    } catch (error) {
+      console.log(`::warning::Could not publish the milestone release: ${error.message}`)
+    }
+  }
+  pruneBuildReleases({
+    gh,
+    repo,
+    builds: [{ tag_name: tag, run: Number(runId) }, ...context.builds],
+    milestones
+  })
+}
+
+export async function publishRelease({
+  env,
+  directory,
+  mobile,
+  gh,
+  git,
+  features = loadFeatureGroups(),
+  summaryDirectory
+}) {
   if (
     env.GITHUB_REPOSITORY !== 'Fartown/orca' ||
     env.GITHUB_REF !== 'refs/heads/fork/integration' ||
@@ -150,17 +200,25 @@ export async function publishRelease({ env, directory, mobile, gh, git }) {
   const runUrl = `https://github.com/${repo}/actions/runs/${env.GITHUB_RUN_ID}`
   const assets = await hashPackages(directory)
   const macCertificateSha256 = verifyMacSigningEvidence(directory, version)
-  const releases = listIntegrationReleases(gh, repo).filter((release) => release.tag_name !== tag)
+  const context = releaseContext({
+    gh,
+    git,
+    releases: listReleases(gh, repo),
+    sha,
+    runId: env.GITHUB_RUN_ID,
+    milestoneRequested: env.ORCA_INTEGRATION_MILESTONE === 'true'
+  })
+  const latest = latestPreviewNumber(context.builds)
   // The number was taken when this run started; a build published since then already owns it.
   if (
-    buildNumber !== releases.length + 1 ||
-    releases.some((release) => release.run > Number(env.GITHUB_RUN_ID))
+    buildNumber !== latest + 1 ||
+    context.builds.some((release) => release.run > Number(env.GITHUB_RUN_ID))
   ) {
     throw new Error(
-      `Integration build ${version} is stale: ${releases.length} builds are already published.`
+      `Integration build ${version} is stale: preview.${latest} is already published.`
     )
   }
-  const merged = listMergedChanges({ releases, git, sha, runId: env.GITHUB_RUN_ID })
+  const syncSummaries = context.syncSummariesOf(context.buildChanges)
   writeFileSync(join(directory, LEGACY_INTEL_PLACEHOLDER), legacyIntelPlaceholder())
   const published = [...assets, ...(await hashPackages(directory, [LEGACY_INTEL_PLACEHOLDER]))]
   const manifest = {
@@ -175,7 +233,7 @@ export async function publishRelease({ env, directory, mobile, gh, git }) {
     macSigning: 'fixed self-signed publisher, not notarized',
     macCertificateSha256,
     assets: published,
-    changes: merged.changes
+    changes: manifestChanges(context.buildChanges, syncSummaries)
   }
   writeFileSync(join(directory, 'build-info.json'), `${JSON.stringify(manifest, null, 2)}\n`)
   writeFileSync(join(directory, 'latest-mac.yml'), macUpdateManifest(version, assets))
@@ -183,22 +241,22 @@ export async function publishRelease({ env, directory, mobile, gh, git }) {
     join(directory, 'SHA256SUMS.txt'),
     published.map((a) => `${a.sha256}  ${a.name}\n`).join('')
   )
+  const baseVersion = version.replace(/-preview\.\d+$/, '')
   const notesPath = join(directory, 'release-notes.md')
   writeFileSync(
     notesPath,
-    `${[
-      '集成分支内测包（非正式版）',
-      ...changeNotes(repo, sha, merged),
-      `Commit: ${sha}\n构建: ${runUrl}`,
-      `macOS: ${version}\nAndroid: ${mobile.expo.version} (versionCode ${androidVersionCode})`,
-      'macOS 只提供 Apple Silicon DMG，使用固定 fork 自签身份、未公证；首次打开可能被系统拦截，需要手动允许，系统权限可能需要重新授予。',
-      '提供 Apple Silicon ZIP 与 latest-mac.yml，支持同一固定签名身份之间的原生自动更新。现有 ad-hoc 旧版需先手动安装一次 DMG，之后可应用内下载并确认重启更新。',
-      `Intel 版已停止提供。${LEGACY_INTEL_PLACEHOLDER} 不是安装包，只是一份说明，让 2026-09-17 之前的集成包仍把本次发布识别为完整并继续自动更新。`,
-      `macOS publisher certificate SHA-256: ${macCertificateSha256}`,
-      'Android 集成包自动检查 fork 更新，可在应用内下载 APK 后通过系统确认安装。旧版需先手动安装一次；不同签名安装不能覆盖。APK 使用 Expo debug 内测签名，不用于商店发布。',
-      `Android certificate SHA-256: ${ANDROID_CERT_SHA256}`,
-      'build-info.json 和 SHA256SUMS.txt 记录来源及下载校验和。'
-    ].join('\n\n')}\n`
+    buildNotes(
+      {
+        repo,
+        sha,
+        version,
+        runUrl,
+        android: { version: mobile.expo.version, versionCode: androidVersionCode },
+        macCertificateSha256
+      },
+      context,
+      features
+    )
   )
 
   let existing
@@ -229,6 +287,7 @@ export async function publishRelease({ env, directory, mobile, gh, git }) {
       '--prerelease',
       '--latest=false',
       '--title',
+      // latestPreviewNumber reads the build number back from this title.
       `Orca ${version}`,
       '--notes-file',
       notesPath
@@ -262,6 +321,19 @@ export async function publishRelease({ env, directory, mobile, gh, git }) {
     notesPath
   ])
   console.log(`https://github.com/${repo}/releases/tag/${tag}`)
+  finishPublication({
+    gh,
+    repo,
+    sha,
+    tag,
+    version,
+    baseVersion,
+    runId: env.GITHUB_RUN_ID,
+    context,
+    features,
+    directory,
+    summaryDirectory
+  })
 }
 
 export function macUpdateManifest(version, assets) {
@@ -288,8 +360,8 @@ if (process.argv[1] && resolve(process.argv[1]) === resolve(import.meta.filename
     env: process.env,
     directory: resolve(process.argv[2]),
     mobile: JSON.parse(readFileSync('mobile/app.json', 'utf8')),
-    gh: (args) => execFileSync('gh', args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }),
-    git: (args) =>
-      execFileSync('git', args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] })
+    gh: commandOutput('gh'),
+    git: commandOutput('git'),
+    summaryDirectory: process.argv[3] && resolve(process.argv[3])
   })
 }
