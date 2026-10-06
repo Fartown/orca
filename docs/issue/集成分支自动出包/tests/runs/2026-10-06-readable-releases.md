@@ -43,7 +43,19 @@ updated: 2026-10-06
 
 本机 `origin` 指向上游，`origin/main` 已比集成分支合入的上游多 48 个提交，`issues-existing-capability-reuse` 会把上游改过的 `runtime-rpc-client.ts` 报为偏离；它与本次改动无关。CI 的 `origin` 是 fork，基准为 fork 的上游镜像，所以本机以 `--base Fartown/main` 复现 CI 结果：通过。REQ-412 原计划在本分支改 AGENTS.md 与 fork 维护文档，被 `integration-builds-worktree-scope` 拦下，改为单独的文档 PR。
 
+## 合入后核对
+
+#46 合入为 `e4b5ba8667`。证据在 `.docs/integration-release-notes-review/2026-10-06/evidence/post-merge/`。
+
+| 核对 | 实际结果 |
+| --- | --- |
+| 推送出包（运行 37433234101） | 发布 `Orca 1.4.214-preview.40`，接在 `preview.39` 之后；正文开头为「这一版变了什么」并列出 #46，安装签名与构建信息折叠；`build-info.json` 的合入列表只有 #46 |
+| 清理 | 日志 `Pruned 30 older build release(s)`；Release 页与远端 `integration-*` tag 各剩 10 个 |
+| 手动整理版（运行 37437587579，`milestone=true`） | 先发布 `preview.41`，再发布 `fork-v1.4.221-1`「Orca 集成版 1.4.221 · 第 1 版」：非预发布、无安装包、为仓库 Latest。正文从最近一次同步写起：6 个功能组 9 条可见改动、同步上游（期间官方发布 v1.4.221，5 个提交）、工程改动 3 项折叠，安装链接指向 `preview.41`。构建发布仍为 10 个 |
+| AI 短版本 | `release-summary` 任务输出 `ANTHROPIC_API_KEY is not set`，无产物；整理版照常发布、不含短版本 |
+| 应用内更新检查 | 用 `release-catalog.ts` 对真实 GitHub 检查：桌面与 Android 在 API 正常与强制 403（走 atom 订阅）两种情况下都选中最新构建（`preview.40`，整理版发布后为 `preview.41`），没有选中整理版 |
+
 ## 未执行
 
-- 合入后的真实出包、清理、手动整理版与桌面、Android 更新检查。
-- 真实 Claude 调用：仓库尚未配置 `ANTHROPIC_API_KEY`。
+- 真实 Claude 调用：用户决定暂不测试，待仓库配置 `ANTHROPIC_API_KEY` 后核对。
+- 真机上的更新提示与安装：本次用应用自己的更新检查代码对真实 GitHub 验证，没有在用户设备上安装。

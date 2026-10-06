@@ -1,7 +1,7 @@
 ---
 title: 集成分支自动出包
 slug: 集成分支自动出包
-status: testing
+status: done
 created: 2026-09-12
 updated: 2026-10-06
 external_ids: []
@@ -26,7 +26,7 @@ external_ids: []
 | 测试记录 | [发布说明与版本号兼容](tests/runs/2026-09-17-release-notes.md) | completed | 单测与真实发布记录预演通过；合入后的发布页待核对 |
 | 测试记录 | [常规版本号](tests/runs/2026-09-17-preview-version.md) | completed | 编号、发布复核与版本比较通过；按 D-004 暂不合入 |
 | 测试记录 | [打包任务清单契约](tests/runs/2026-09-23-packaging-census.md) | completed | 共享 packaging census 纳入 fork macOS job，定向门禁通过 |
-| 测试记录 | [发布页分层与可读发布说明](tests/runs/2026-10-06-readable-releases.md) | completed | 单测与真实历史预演通过；合入后的出包、清理与真实 Claude 调用待核对 |
+| 测试记录 | [发布页分层与可读发布说明](tests/runs/2026-10-06-readable-releases.md) | completed | 单测、预演与合入后核对通过；真实 Claude 调用待配置 key |
 
 ## 2. 决策点记录
 
@@ -74,6 +74,15 @@ external_ids: []
 - 影响范围：REQ-401、REQ-402、REQ-403；APK 沿用 Expo debug 签名并核验指纹，不生成密钥或暗改 versionCode。
 
 ## 3. 开发记录
+
+### 2026-10-06 #46 合入后核对出包、清理与整理版（done）
+
+- 本轮目标：确认 REQ-408～REQ-411 在真实出包中生效，旧客户端仍能找到更新。
+- 完成内容：#46 合入后推送出包为 `preview.40`，删除 30 个旧构建及其 tag，剩 10 个；手动触发带整理版的出包，得到 `preview.41` 与 Latest 整理版 `fork-v1.4.221-1`；未配置 key 时按设计省略 AI 短版本。
+- 代码或文档变更：REQ-408～REQ-411 状态、测试记录「合入后核对」一节、本记录；无代码改动。
+- 验证证据：[发布页分层与可读发布说明](tests/runs/2026-10-06-readable-releases.md)「合入后核对」一节；应用的更新检查代码对真实 GitHub 的 API 与 atom 两条路径都选中最新构建，不选整理版。
+- 未解决问题：真实 Claude 调用由用户决定暂不测试；跨版本兼容检查要等下次同步上游（带进 `@streamparser/json`）后恢复。
+- 下一步：用户配置 `ANTHROPIC_API_KEY` 后，在下次同步上游的整理版上核对短版本。
 
 ### 2026-10-06 发布页分层与可读发布说明（testing）
 
