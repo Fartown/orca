@@ -107,6 +107,15 @@ external_ids: []
 
 ## 3. 开发记录
 
+### 2026-10-06 合入上游同步后的 fork/integration，清掉 PR 的既有红灯
+
+- 本轮目标：PR #50 的 CI 红灯都来自 `fork/integration` 的既有问题（上游 prompt-carry 用例、续接测试类型、失效的终端哈希钉子），在集成分支修好后合入本分支
+- 完成内容：集成分支同步上游 5cf3585b78，并修复同步遗留：合并丢失的测试导入、relay 中断对账用例与会话保护窗口对齐、提交钩子合并时格式化上游文件；#51（续接测试类型）合入。本分支两次合并 `fork/integration` 均无冲突，合并前后本功能改动的文件集合完全一致
+- 代码或文档变更：本功能代码无变化；仅本 journal
+- 验证证据：`pnpm tc`、`check:fork-features`、`check:fork-docs`、`check:architecture-policies --base Fartown/main`、`verify:fork-features`、`check:code-quality:changed -- fork/integration`（62 个改动文件 0 新问题）通过；功能相关 26 个测试文件 184 例通过；手机端 `tsc`、测试类型棘轮（932 个文件）、上传与续接测试通过
+- 未解决问题：Q-2 待用户决定；Q-3 未验证；本机全量 `pnpm lint` 的 `audit:code-quality:native` 报 5 条手机端 `import(no-cycle)`，纯上游 5cf3585b78 同样复现，且只在装了 `mobile/node_modules` 时出现，CI 在安装手机端依赖前跑这一步，结果为 0 条
+- 下一步：推送并观察 PR #50 的 CI
+
 ### 2026-10-06 合入 fork/integration 与提交前门禁
 
 - 本轮目标：合入 `fork/integration` 最新提交（#46、#49），在合并后的状态跑全部相关门禁，准备开 PR
