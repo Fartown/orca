@@ -1,7 +1,7 @@
 ---
 title: "移动端上传任意文件"
 slug: "移动端上传任意文件"
-status: implementing
+status: testing
 created: 2026-10-06
 updated: 2026-10-06
 external_ids: []
@@ -17,7 +17,7 @@ external_ids: []
 | 交互 | - | not-required | 沿用现有底部菜单与附件按钮，无独立设计稿 |
 | 调研 | [research/移动端附件上传现状与技术链路.md](research/移动端附件上传现状与技术链路.md) | ready | 两种会话页形态、选择器、上传与落盘、目标机器判定、交付方式、版本兼容 |
 | 方案 | [solutions/移动端文件附件上传方案.md](solutions/移动端文件附件上传方案.md) | reviewing | 新 RPC `fileAttachment.*` 流式写入目标机器临时目录；手机壳新接口 `native.file.*`；图片旧通道保留 |
-| 测试用例 | - | pending-decision | 实现落地后编写 |
+| 测试用例 | [tests/cases/移动端上传任意文件.md](tests/cases/移动端上传任意文件.md) | ready | TC-001~017，覆盖本机与 SSH；执行记录见 [tests/runs/2026-10-06-real-app-host-round-1.md](tests/runs/2026-10-06-real-app-host-round-1.md) |
 
 ## 2. 决策点记录
 
@@ -73,6 +73,15 @@ external_ids: []
 - 影响范围：REQ-002、REQ-006；Q-2（工作目录外文件的权限确认）待真机验证
 
 ## 3. 开发记录
+
+### 2026-10-06 真实 App 电脑端验证（本机 + SSH）
+
+- 本轮目标：在真实 App 上验证电脑端写入、SSH 路由、断连、清理与手机权限边界
+- 完成内容：编写 TC-001~017；隐藏隔离的本分支 e2e 构建 + 本机 root sshd（远端 HOME 隔离）上以手机身份跑 8 项检查，全部通过
+- 代码或文档变更：`docs/issue/移动端上传任意文件/tests/**`；验证脚本 `.docs/mobile-file-attachment-upload-ui-validation/2026-10-06/scripts/`
+- 验证证据：[tests/runs/2026-10-06-real-app-host-round-1.md](tests/runs/2026-10-06-real-app-host-round-1.md)；`.docs/mobile-file-attachment-upload-ui-validation/2026-10-06/evidence/run-1791279687469/checks.json`
+- 未解决问题：手机界面（入口、系统选择器、聊天交付、Claude Code 读取 PDF）尚未真机验收；Q-1、Q-2、Q-3 仍待确认
+- 下一步：云真机上用本分支构建的 App 连本分支电脑端，跑 TC-001、TC-002、TC-003、TC-009、TC-010
 
 ### 2026-10-06 手机壳新接口与网页版会话页
 
