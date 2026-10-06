@@ -62,7 +62,7 @@ let root: Root
 let seededContainer: HTMLElement
 
 beforeEach(() => {
-  useAppStore.setState(initialState, true)
+  useAppStore.setState({ ...initialState, refreshGitHubForWorktreeIfStale: () => {} }, true)
   useAppStore.setState({ settings: createGlobalSettingsFixture({ tabAutoGenerateTitle: true }) })
 })
 

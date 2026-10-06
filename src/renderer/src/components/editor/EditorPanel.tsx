@@ -5,7 +5,6 @@ import { detectLanguage } from '@/lib/language-detect'
 import { canShowWorkspaceFileBrowserAction } from '@/lib/file-preview'
 import { openFilePreviewInSourcePane } from '../file-preview-pane/open-file-preview-in-pane'
 import { getEditorHeaderCopyState } from './editor-header'
-import { isLocalPathOpenBlocked, showLocalPathOpenBlockedToast } from '@/lib/local-path-open-guard'
 import { settingsForRuntimeOwner } from '@/runtime/runtime-rpc-client'
 import { exportActiveMarkdownToPdf } from './export-active-markdown'
 import type { EditorToggleValue } from './EditorViewToggle'
@@ -279,21 +278,6 @@ function EditorPanelInner({
       { sourceFileId: activeFile.id }
     )
   }
-  const handleOpenContainingFolder = (): void => {
-    // Why: virtual editor tabs use synthetic ids instead of on-disk paths.
-    if (activeFile.mode === 'check-details') {
-      return
-    }
-    if (
-      isLocalPathOpenBlocked(settingsForRuntimeOwner(settings, activeFile.runtimeEnvironmentId), {
-        connectionId: getConnectionId(activeFile.worktreeId)
-      })
-    ) {
-      showLocalPathOpenBlockedToast()
-      return
-    }
-    window.api.shell.openPath(activeFile.filePath)
-  }
   const disableRenameBrowse = Boolean(
     settingsForRuntimeOwner(
       settings,
@@ -358,7 +342,6 @@ function EditorPanelInner({
         onOpenDiffTargetFile={handleOpenDiffTargetFile}
         onOpenPreviewToSide={handleOpenPreviewToSide}
         onOpenMarkdownPreview={handleOpenMarkdownPreview}
-        onOpenContainingFolder={handleOpenContainingFolder}
         onToggleSideBySide={() => setSideBySide((prev) => !prev)}
         onEditorToggleChange={handleEditorToggleChange}
         onToggleMarkdownTableOfContents={() =>
