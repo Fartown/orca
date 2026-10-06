@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { runMobileSessionContinuation } from './continuation-delivery'
 import { markRpcDeliveryUnknown } from '../transport/rpc-delivery-ambiguity'
+import type { RpcClient } from '../transport/rpc-client'
 import type { RpcResponse } from '../transport/types'
 
 const PROMPT = 'Continue work from the prior Orca session using the context below.\nline two'
@@ -28,7 +29,7 @@ function harness(
     cwd?: string | null
   } = {}
 ) {
-  const sendRequest = vi.fn(async (method: string) => {
+  const sendRequest = vi.fn(async (method: string, _params?: unknown, _options?: unknown) => {
     const reply = replies[method as keyof Replies]
     if (reply instanceof Error) {
       throw reply
@@ -42,7 +43,8 @@ function harness(
     createTerminal,
     run: () =>
       runMobileSessionContinuation({
-        client: { sendRequest: sendRequest as never },
+        // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: delivery reaches the host only through sendRequest, which this harness fakes.
+        client: { sendRequest } as unknown as RpcClient,
         createTerminal: createTerminal as never,
         agent: 'claude',
         prompt: overrides.prompt ?? PROMPT,
