@@ -719,6 +719,8 @@
             "docs/requirements/Issues-*.md",
             ".github/workflows/pr.yml",
             "config/scripts/pr-preflight-gates.test.mjs",
+            // Upstream b6c5f3f123 merged two fixes that both import codexProviderHandle; drop once upstream dedupes.
+            "src/main/native-chat/agent-session-journal/journal-submission-positions.test.ts",
             "config/architecture-policies.jsonc",
             "docs/reference/architecture-policy-gates.md",
             "config/scripts/architecture-policy-matching.mjs",
