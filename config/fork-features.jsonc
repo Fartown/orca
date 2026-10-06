@@ -1995,6 +1995,7 @@
         "src/renderer/src/file-attachment-upload/**",
         "mobile/src/file-attachment-upload/**",
         "config/scripts/mobile-web-page-routes-contract.test.mjs",
+        "config/scripts/mobile-web-app-file-attachment-grant.test.mjs",
         "docs/issue/移动端上传任意文件/**"
       ],
       "requiredFiles": [
@@ -2092,6 +2093,16 @@
           "why": "the session page may use native.file.pick where the shell has it and falls back where not (REQ-005)"
         },
         {
+          "file": "config/scripts/mobile-web-app-page-grant-call-sites.mjs",
+          "mustContain": "mobile-web-app-file-attachment-grant.test.mjs",
+          "why": "the grant census counts native.file.pick as censused by the feature's own test"
+        },
+        {
+          "file": "mobile/web-entry/web-overrides.json",
+          "mustContain": "src/file-attachment-upload/file-attachment-picker.web.ts",
+          "why": "the page build lists the web picker that keeps the native document picker out of the bundle"
+        },
+        {
           "file": "config/scripts/mobile-web-app-held-press-probe-routes.mjs",
           "mustContain": "fileAttachments: { openTerminalSheet",
           "why": "the key-bar probe mounts the command dock, which now opens the attach sheet"
@@ -2111,10 +2122,11 @@
         "mobile/src/file-attachment-upload/use-mobile-file-attachments.test.ts",
         "mobile/src/file-attachment-upload/native-file-verbs.test.ts",
         "mobile/src/file-attachment-upload/attachment-base64-length.test.ts",
-        "config/scripts/mobile-web-page-routes-contract.test.mjs"
+        "config/scripts/mobile-web-page-routes-contract.test.mjs",
+        "config/scripts/mobile-web-app-file-attachment-grant.test.mjs"
       ],
       "checks": [
-        "pnpm exec vitest run --config config/vitest.config.ts src/shared/file-attachment-upload src/main/file-attachment-upload src/renderer/src/file-attachment-upload src/main/runtime/rpc/methods/file-attachment-upload.test.ts src/main/runtime/runtime-rpc/fork-mobile-rpc-method-allowlist.test.ts src/main/runtime/mobile-rpc-allowlist.test.ts config/scripts/mobile-web-page-routes-contract.test.mjs",
+        "pnpm exec vitest run --config config/vitest.config.ts src/shared/file-attachment-upload src/main/file-attachment-upload src/renderer/src/file-attachment-upload src/main/runtime/rpc/methods/file-attachment-upload.test.ts src/main/runtime/runtime-rpc/fork-mobile-rpc-method-allowlist.test.ts src/main/runtime/mobile-rpc-allowlist.test.ts config/scripts/mobile-web-page-routes-contract.test.mjs config/scripts/mobile-web-app-file-attachment-grant.test.mjs",
         "pnpm --dir mobile exec vitest run src/file-attachment-upload src/session/use-mobile-native-chat-image-attachments.test.ts src/session/use-mobile-session-image-attachments.test.tsx src/mobile-web-shell/page-route-policy.test.ts src/mobile-web-shell/bridge-host-init.test.ts src/mobile-web-shell/bridge/bridge-media-verbs.test.ts"
       ]
     }

@@ -107,6 +107,15 @@ external_ids: []
 
 ## 3. 开发记录
 
+### 2026-10-06 合入 fork/integration 与提交前门禁
+
+- 本轮目标：合入 `fork/integration` 最新提交（#46、#49），在合并后的状态跑全部相关门禁，准备开 PR
+- 完成内容：合并无冲突；补上两处随新接口暴露的普查：`native.file.pick` 的授权普查（功能自有 `config/scripts/mobile-web-app-file-attachment-grant.test.mjs`，上游计数注释改为 seven）与网页替身清单 `mobile/web-entry/web-overrides.json`
+- 代码或文档变更：上述两个文件与 `config/scripts/mobile-web-app-page-grant-call-sites.mjs` 的注释；功能清单与架构策略登记
+- 验证证据：`config/scripts/mobile-web-*` 与网页包构建测试串行运行，除 webkit 相关（本机缺 Playwright WebKit）外全部通过；手机端全量 946 个测试文件仅 `terminal-webview-payload-hash.test.ts` 失败（与本功能无关）；`pnpm tc`、手机端 `tsc`、功能 checks、`check:fork-features`、`check:fork-docs`、`check:architecture-policies --base Fartown/main` 通过
+- 未解决问题：Q-2 待用户决定；Q-3 未验证
+- 下一步：推送并开 PR
+
 ### 2026-10-06 云真机第二轮与聊天路径加引号
 
 - 本轮目标：验证网页版会话页、聊天纯路径的提交与 Q-2
