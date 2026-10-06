@@ -3,7 +3,8 @@
 import { describeFailures, runAcceptance } from './acceptance-gate.mjs'
 import { renderPrompt } from './continuation-prompt.mjs'
 import { planVerdict, timeBudgetReason } from './goal-decision.mjs'
-import { appendLog, writeGoal } from './goal-state.mjs'
+import { writeGoal } from './goal-state.mjs'
+import { logReview, logTerminal } from './goal-loop-log.mjs'
 import { sendInterrupt, sendText } from './orca-terminal.mjs'
 import { applyRecordToGoal } from './goal-record-projection.mjs'
 import { describeActivity, observeAgent } from './terminal-activity.mjs'
@@ -664,33 +665,4 @@ async function holdWhilePaused(control, report, applyReload = async () => {}) {
     return 'resumed'
   }
   return 'run'
-}
-
-async function logReview(goal, wakeText, verdict, plan) {
-  await appendLog(goal.key, {
-    at: new Date().toISOString(),
-    turn: goal.turns,
-    prompt: wakeText,
-    tree: goal.lastSnapshot?.kind === 'git' ? goal.lastSnapshot.tree : null,
-    head: goal.lastSnapshot?.kind === 'git' ? goal.lastSnapshot.head : null,
-    action: verdict.decision,
-    plan: plan.type,
-    state: goal.state,
-    reason: verdict.observation || null,
-    question: verdict.question || null
-  }).catch(() => {})
-}
-
-/** 终局也在逐轮日志里留一条,目标不会「戛然而止」。 */
-async function logTerminal(goal) {
-  await appendLog(goal.key, {
-    at: new Date(goal.updatedAt || Date.now()).toISOString(),
-    turn: goal.turns,
-    prompt: null,
-    tree: null,
-    head: null,
-    action: 'finish',
-    state: goal.state,
-    reason: goal.finishReason || null
-  }).catch(() => {})
 }

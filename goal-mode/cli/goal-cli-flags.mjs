@@ -53,3 +53,23 @@ export function absolutizePathArgs(args, cwd = process.cwd()) {
   }
   return out
 }
+
+export const absolutize = (v) => (v ? path.resolve(v) : v)
+
+/** 0 合法(表示不限),负数和非数字不合法。 */
+export function nonNegative(name, value) {
+  const n = Number(value)
+  if (!Number.isFinite(n) || n < 0) {
+    throw new Error(`${name} 需要一个不小于 0 的数字,收到:${value}`)
+  }
+  return n
+}
+
+/** 超时必须为正:0 在这里不是「不限」而是「立刻超时」,几乎肯定是笔误。 */
+export function positive(name, value) {
+  const n = Number(value)
+  if (!Number.isFinite(n) || n <= 0) {
+    throw new Error(`${name} 需要一个大于 0 的秒数(0 会让检查立刻超时),收到:${value}`)
+  }
+  return n
+}
