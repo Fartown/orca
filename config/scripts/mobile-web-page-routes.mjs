@@ -160,6 +160,9 @@ export const MOBILE_WEB_PAGE_ROUTES = [
       'native.audio.read',
       'native.audio.stop'
     ],
-    optionalGrants: ['externalNavigation']
+    // A file of any type, named, to the upload ceiling; read and released through the media verbs,
+    // so it costs one grant of the route's 16. Optional: on a shell without it the attach sheet
+    // still offers File through `native.media.pick`, at the image ceiling.
+    optionalGrants: ['externalNavigation', 'native.file.pick']
   }
 ]

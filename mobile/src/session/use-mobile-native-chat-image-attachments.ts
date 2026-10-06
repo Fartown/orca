@@ -82,6 +82,8 @@ export type MobileNativeChatImageAttachments = {
   readonly isAttaching: boolean
   readonly attachImage: (source: MobileImageSource) => Promise<void>
   readonly removeAttachment: (id: string) => void
+  /** Adds images another flow already uploaded (a file picked as File) to a scope's chips. */
+  readonly addUploadedImages: (scope: string, images: Omit<PendingNativeChatImage, 'id'>[]) => void
   /** Ride any pending images along with `text`, then submit; clears the sent
    *  chips (and only those) once the send is accepted. */
   readonly sendNativeChat: (text: string) => Promise<boolean>
@@ -331,5 +333,12 @@ export function useMobileNativeChatImageAttachments({
     ]
   )
 
-  return { attachments, isAttaching, attachImage, removeAttachment, sendNativeChat }
+  return {
+    attachments,
+    isAttaching,
+    attachImage,
+    removeAttachment,
+    addUploadedImages,
+    sendNativeChat
+  }
 }

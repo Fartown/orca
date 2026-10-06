@@ -1,5 +1,5 @@
 import { ActivityIndicator, Pressable, type StyleProp, type ViewStyle } from 'react-native'
-import { ImagePlus, Mic } from 'lucide-react-native'
+import { Mic, Paperclip } from 'lucide-react-native'
 import { colors } from '../theme/mobile-theme'
 import { keepHeldPressThroughLongPress } from './held-press-long-press'
 
@@ -48,18 +48,18 @@ export function MobileTerminalInputActions({
       <Pressable
         style={[buttonStyle, (!canSend || isAttaching) && disabledButtonStyle]}
         disabled={!canSend || isAttaching}
-        // Tap opens the photo library; long-press picks a file. Uploads via host
+        // Tap offers Photo or File; long-press goes straight to File. Uploads via host
         // RPC so SSH/remote sessions attach the same as local ones.
         onPress={onAttachImage}
         onLongPress={onAttachFile}
         delayLongPress={350}
-        accessibilityLabel={isAttaching ? 'Sending image' : 'Attach a photo'}
-        accessibilityHint="Long press to attach a file instead"
+        accessibilityLabel={isAttaching ? 'Sending attachment' : 'Attach'}
+        accessibilityHint="Long press to attach a file"
       >
         {isAttaching ? (
           <ActivityIndicator size="small" color={colors.textSecondary} />
         ) : (
-          <ImagePlus size={17} color={colors.textSecondary} strokeWidth={2.4} />
+          <Paperclip size={17} color={colors.textSecondary} strokeWidth={2.4} />
         )}
       </Pressable>
       <Pressable

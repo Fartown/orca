@@ -141,6 +141,7 @@ export default function CommandDockProbeRoute() {
     handlePaste: () => Promise.resolve(),
     isAttaching: false,
     attachImage: () => Promise.resolve(),
+    fileAttachments: { openTerminalSheet: noop, attachFileToTerminal: noop },
     activeMarkdownTab: null,
     activeFileTab: null,
     activeBrowserTab: null,

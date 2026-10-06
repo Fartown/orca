@@ -26,8 +26,9 @@ const importRow = (grants, specifier, why) => ({ kind: 'import', grants, specifi
  *
  * `haptics` and `screencastBinary` have their own files (`mobile-web-app-haptics-seam.test.mjs`,
  * `mobile-web-app-screencast-lane-grant.test.mjs`), the three audio grants have
- * `mobile-web-app-session-dictation-capture.test.mjs` and `externalNavigation` has
- * `mobile-web-app-external-navigation-grant.test.mjs`, so those six are not repeated here. The
+ * `mobile-web-app-session-dictation-capture.test.mjs`, `externalNavigation` has
+ * `mobile-web-app-external-navigation-grant.test.mjs` and `native.file.pick` has
+ * `mobile-web-app-file-attachment-grant.test.mjs`, so those seven are not repeated here. The
  * media three share one seam and one row: `useMediaPicker` is the only way in, and `canPickMedia`
  * is `pick && read && release`, so a route reaching it needs all three or none of them.
  *

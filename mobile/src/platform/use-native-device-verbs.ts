@@ -6,6 +6,8 @@ import { nativeAudioDeviceEngine } from './native-audio-device'
 import { serveNativeClipboardVerb } from './native-clipboard'
 import { createNativeMediaVerbServer } from './native-media'
 import { discardStagedMedia, nativeMediaDeviceDeps } from './native-media-device'
+import { isBridgeFileVerb } from '../file-attachment-upload/bridge-file-verbs'
+import { useNativeFileVerbServer } from '../file-attachment-upload/use-native-file-verb-server'
 
 /**
  * Every `native.` verb this device serves, behind the one function the host dispatches to.
@@ -27,13 +29,17 @@ export function useNativeDeviceVerbs(
   // microphone the previous one left open is nobody's to stop but this seam's.
   const audio = useMemo(() => createNativeAudioCapture(nativeAudioDeviceEngine), [sessionId])
   useEffect(() => () => audio.dispose(), [audio])
+  const serveFiles = useNativeFileVerbServer(registry)
   return useMemo(
     () => (verb, params) => {
       if (verb === 'native.clipboard.write' || verb === 'native.clipboard.read') {
         return serveNativeClipboardVerb(verb, params)
       }
+      if (isBridgeFileVerb(verb)) {
+        return serveFiles(params)
+      }
       return verb.startsWith('native.audio.') ? audio.serve(verb, params) : serveMedia(verb, params)
     },
-    [audio, serveMedia]
+    [audio, serveFiles, serveMedia]
   )
 }

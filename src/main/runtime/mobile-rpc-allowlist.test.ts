@@ -100,16 +100,21 @@ function mobileRpcMethods(): string[] {
   return [...new Set([...mobileLiteralRpcMethods(), ...MOBILE_DYNAMIC_RPC_METHODS])].sort()
 }
 
-function mobileRpcAllowlist(): Set<string> {
-  const source = readFileSync(
-    join(process.cwd(), 'src/main/runtime/runtime-rpc/runtime-rpc-mobile-method-allowlist.ts'),
-    'utf8'
-  )
-  const allowlist = source.match(/const MOBILE_RPC_METHOD_ALLOWLIST = new Set\(\[([\s\S]*?)\]\)/)
+function allowlistLiteral(file: string, name: string): string[] {
+  const source = readFileSync(join(process.cwd(), 'src/main/runtime/runtime-rpc', file), 'utf8')
+  const allowlist = source.match(new RegExp(`const ${name} = new Set\\(\\[([\\s\\S]*?)\\]\\)`))
   if (!allowlist) {
-    throw new Error('MOBILE_RPC_METHOD_ALLOWLIST not found')
+    throw new Error(`${name} not found`)
   }
-  return new Set([...allowlist[1]!.matchAll(/'([^']+)'/g)].map((match) => match[1]!))
+  return [...allowlist[1]!.matchAll(/'([^']+)'/g)].map((match) => match[1]!)
+}
+
+// Fork features list their mobile methods beside the upstream list; the dispatcher admits either.
+function mobileRpcAllowlist(): Set<string> {
+  return new Set([
+    ...allowlistLiteral('runtime-rpc-mobile-method-allowlist.ts', 'MOBILE_RPC_METHOD_ALLOWLIST'),
+    ...allowlistLiteral('fork-mobile-rpc-method-allowlist.ts', 'FORK_MOBILE_RPC_METHOD_ALLOWLIST')
+  ])
 }
 
 function registeredRuntimeMethods(): Set<string> {

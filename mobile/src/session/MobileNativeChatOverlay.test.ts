@@ -54,6 +54,7 @@ function overlayElement(tick: Tick): ReturnType<typeof createElement> {
   return createElement(MobileNativeChatOverlay, {
     controller,
     images: {} as never,
+    files: { openChatSheet: vi.fn(), isUploadingToChat: false },
     onMicPress: vi.fn(),
     micActive: false,
     dictationMode: 'toggle',

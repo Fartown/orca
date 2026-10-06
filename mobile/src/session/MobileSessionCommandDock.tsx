@@ -62,7 +62,7 @@ export function MobileSessionCommandDock({ controller }: { controller: MobileSes
     startAccessoryRepeat,
     handlePaste,
     isAttaching,
-    attachImage,
+    fileAttachments,
     activeMarkdownTab,
     activeFileTab,
     activeBrowserTab,
@@ -286,8 +286,8 @@ export function MobileSessionCommandDock({ controller }: { controller: MobileSes
               buttonStyle={styles.dictationButton}
               activeButtonStyle={styles.dictationButtonActive}
               disabledButtonStyle={styles.sendButtonDisabled}
-              onAttachImage={() => void attachImage('library')}
-              onAttachFile={() => void attachImage('files')}
+              onAttachImage={fileAttachments.openTerminalSheet}
+              onAttachFile={fileAttachments.attachFileToTerminal}
               onDictationToggle={handleDictationToggle}
               onDictationPressIn={handleDictationPressIn}
               onDictationPressOut={handleDictationPressOut}
@@ -354,8 +354,8 @@ export function MobileSessionCommandDock({ controller }: { controller: MobileSes
               buttonStyle={styles.dictationButton}
               activeButtonStyle={styles.dictationButtonActive}
               disabledButtonStyle={styles.sendButtonDisabled}
-              onAttachImage={() => void attachImage('library')}
-              onAttachFile={() => void attachImage('files')}
+              onAttachImage={fileAttachments.openTerminalSheet}
+              onAttachFile={fileAttachments.attachFileToTerminal}
               onDictationToggle={handleDictationToggle}
               onDictationPressIn={handleDictationPressIn}
               onDictationPressOut={handleDictationPressOut}

@@ -9,7 +9,7 @@ import {
   TextInput,
   View
 } from 'react-native'
-import { ArrowUp, ImagePlus, Mic, Square, X } from 'lucide-react-native'
+import { ArrowUp, Mic, Paperclip, Square, X } from 'lucide-react-native'
 import { colors, radii, spacing } from '../theme/mobile-theme'
 import { structuredSlashCommands } from '../../../src/shared/structured-agent-session-composer'
 import type { AgentSessionConversationCommand } from '../../../src/shared/agent-session-conversation-command'
@@ -275,7 +275,7 @@ export function MobileNativeChatComposer({
           <View style={styles.actionRow} testID="native-chat-composer-actions">
             {onAttachImage ? (
               <Pressable
-                accessibilityLabel="Attach image"
+                accessibilityLabel="Attach"
                 style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}
                 onPress={onAttachImage}
                 disabled={isAttaching || disabled}
@@ -283,7 +283,7 @@ export function MobileNativeChatComposer({
                 {isAttaching ? (
                   <ActivityIndicator size="small" color={colors.textSecondary} />
                 ) : (
-                  <ImagePlus size={20} color={colors.textSecondary} strokeWidth={2} />
+                  <Paperclip size={20} color={colors.textSecondary} strokeWidth={2} />
                 )}
               </Pressable>
             ) : null}

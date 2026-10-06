@@ -1933,6 +1933,195 @@
       "checks": [
         "pnpm exec vitest run --config config/vitest.config.ts src/main/runtime/headless-sibling-writers-keep-publication-epoch.test.ts src/main/runtime/headless-close-keeps-publication-epoch.test.ts"
       ]
+    },
+    {
+      "id": "mobile-file-attachment-upload",
+      "title": "移动端上传任意文件：ZIP、PDF 等任意类型交给终端或 agent",
+      "goal": "移动端把任意类型文件流式上传到工作区所在机器的临时目录，并交给终端或 agent",
+      "journal": "docs/issue/移动端上传任意文件/journal.md",
+      "dependsOn": [
+        "mobile/src/components/ActionSheetModal.tsx",
+        "mobile/src/files/file-list-fallback.ts",
+        "mobile/src/mobile-web-shell/bridge-host-errors.ts",
+        "mobile/src/mobile-web-shell/bridge/bridge-rpc-client.ts",
+        "mobile/src/mobile-web-shell/use-media-handle-registry.ts",
+        "mobile/src/platform/native-media-device.ts",
+        "mobile/src/transport/client-context.web.tsx",
+        "mobile/src/mobile-web-shell/bridge/bridge-media-verbs.ts",
+        "mobile/src/mobile-web-shell/bridge/use-native-verbs.ts",
+        "mobile/src/mobile-web-shell/media-handle-registry.ts",
+        "mobile/src/platform/haptics.ts",
+        "mobile/src/platform/media-picker-contract.ts",
+        "mobile/src/session/mobile-clipboard-image.ts",
+        "mobile/src/session/mobile-session-write-operations.ts",
+        "mobile/src/session/use-mobile-native-chat-image-attachments.ts",
+        "mobile/src/session/use-mobile-session-accessory-selection.ts",
+        "mobile/src/transport/base64-byte-codec.ts",
+        "mobile/src/transport/rpc-client.ts",
+        "mobile/src/transport/rpc-operation-result-reader.ts",
+        "mobile/src/transport/rpc-operation.ts",
+        "mobile/src/transport/types.ts",
+        "src/shared/clipboard-image.ts",
+        "src/shared/image-paste-following-text.ts",
+        "src/main/providers/ssh-filesystem-dispatch.ts",
+        "src/main/ssh/ssh-connection-utils.ts",
+        "src/main/ssh/ssh-relay-exec-command.ts",
+        "src/main/ssh/ssh-target-registry.ts",
+        "src/main/providers/types.ts",
+        "src/main/runtime/orca-runtime.ts",
+        "src/main/runtime/rpc/core.ts",
+        "src/main/runtime/runtime-rpc/runtime-rpc-mobile-method-allowlist.ts",
+        "src/main/window/owned-temp-staging-root.ts",
+        "src/shared/agent-image-paste.ts",
+        "src/shared/app-environment.ts",
+        "src/shared/cross-platform-path.ts",
+        "src/shared/rpc-contract/files-mutation-params.ts"
+      ],
+      "policyId": "mobile-file-attachment-upload",
+      "ownedPaths": [
+        "src/shared/file-attachment-upload/**",
+        "src/main/file-attachment-upload/**",
+        "src/main/runtime/rpc/methods/file-attachment-upload.ts",
+        "src/main/runtime/rpc/methods/file-attachment-upload.test.ts",
+        "src/main/runtime/runtime-rpc/fork-mobile-rpc-method-allowlist.ts",
+        "src/main/runtime/runtime-rpc/fork-mobile-rpc-method-allowlist.test.ts",
+        "src/renderer/src/file-attachment-upload/**",
+        "mobile/src/file-attachment-upload/**",
+        "config/scripts/mobile-web-page-routes-contract.test.mjs",
+        "config/scripts/mobile-web-app-file-attachment-grant.test.mjs",
+        "docs/issue/移动端上传任意文件/**"
+      ],
+      "requiredFiles": [
+        "src/shared/file-attachment-upload/file-attachment-upload-params.ts",
+        "src/main/file-attachment-upload/file-attachment-upload-store.ts",
+        "src/main/file-attachment-upload/file-attachment-upload-target.ts",
+        "src/main/runtime/rpc/methods/file-attachment-upload.ts",
+        "src/main/runtime/runtime-rpc/fork-mobile-rpc-method-allowlist.ts",
+        "mobile/src/file-attachment-upload/use-mobile-file-attachments.ts",
+        "mobile/src/file-attachment-upload/file-attachment-upload-client.ts",
+        "mobile/src/file-attachment-upload/file-attachment-picker.ts",
+        "mobile/src/file-attachment-upload/file-attachment-picker.web.ts",
+        "mobile/src/file-attachment-upload/bridge-file-verbs.ts",
+        "mobile/src/file-attachment-upload/native-file-verbs.ts"
+      ],
+      "seams": [
+        {
+          "file": "src/main/runtime/rpc/methods/index.ts",
+          "mustContain": "...FILE_ATTACHMENT_UPLOAD_METHODS",
+          "why": "the host exposes the upload methods (REQ-002, REQ-004)"
+        },
+        {
+          "file": "src/main/runtime/runtime-rpc/runtime-rpc-websocket-dispatch.ts",
+          "mustContain": "isMobileRpcMethodAllowed(request.method)",
+          "why": "paired phones may call fork-listed methods; the upstream list is at its max-lines ceiling (REQ-001)"
+        },
+        {
+          "file": "src/main/runtime/mobile-rpc-allowlist.test.ts",
+          "mustContain": "FORK_MOBILE_RPC_METHOD_ALLOWLIST",
+          "why": "the mobile allowlist census reads the fork list beside the upstream one"
+        },
+        {
+          "file": "src/shared/rpc-contract/rpc-params-catalog.generated.ts",
+          "mustContain": "'fileAttachment.startUpload': StartFileAttachmentUpload",
+          "why": "the generated params catalog carries the new methods"
+        },
+        {
+          "file": "mobile/src/session/use-mobile-session-attachments.ts",
+          "mustContain": "useMobileSessionFileAttachments(scope",
+          "why": "the session route wires file attachments in one call (REQ-001)"
+        },
+        {
+          "file": "mobile/src/session/MobileSessionCommandDock.tsx",
+          "mustContain": "fileAttachments.openTerminalSheet",
+          "why": "the terminal attach button offers Photo or File; long press goes to File (REQ-001)"
+        },
+        {
+          "file": "mobile/src/session/MobileTerminalInputActions.tsx",
+          "mustContain": "Paperclip",
+          "why": "the terminal attach button reads as attach, not photo (REQ-001)"
+        },
+        {
+          "file": "mobile/src/session/MobileSessionActiveContent.tsx",
+          "mustContain": "<MobileAttachmentSourceSheet",
+          "why": "the Photo / File sheet mounts where both inputs can open it (REQ-001)"
+        },
+        {
+          "file": "mobile/src/session/MobileNativeChatOverlay.tsx",
+          "mustContain": "files.openChatSheet",
+          "why": "the chat attach button offers Photo or File (REQ-001)"
+        },
+        {
+          "file": "mobile/src/session/MobileNativeChatComposer.tsx",
+          "mustContain": "Paperclip",
+          "why": "the chat attach button reads as attach, not photo (REQ-001)"
+        },
+        {
+          "file": "mobile/src/session/use-mobile-native-chat-image-attachments.ts",
+          "mustContain": "readonly addUploadedImages",
+          "why": "an image picked as File joins the chat chips like a photo (REQ-003)"
+        },
+        {
+          "file": "mobile/src/mobile-web-shell/bridge/bridge-native-verbs.ts",
+          "mustContain": "...BRIDGE_FILE_VERBS",
+          "why": "the shell advertises and validates native.file.pick beside the media verbs (REQ-002, REQ-004)"
+        },
+        {
+          "file": "mobile/src/mobile-web-shell/bridge/bridge-media-verbs.ts",
+          "mustContain": "offset: z.number().int().min(0).max(FILE_ATTACHMENT_MAX_BYTES)",
+          "why": "native.file.pick handles read back through native.media.read up to the upload ceiling, so the route spends one grant (REQ-004)"
+        },
+        {
+          "file": "mobile/src/platform/use-native-device-verbs.ts",
+          "mustContain": "useNativeFileVerbServer(registry)",
+          "why": "the shell serves native.file.pick into the session media registry (REQ-004)"
+        },
+        {
+          "file": "mobile/src/mobile-web-shell/bridge/bridge-port-pair-test-harness.ts",
+          "mustContain": "case 'native.file.pick'",
+          "why": "the bridge test shell answers every advertised verb"
+        },
+        {
+          "file": "config/scripts/mobile-web-page-routes.mjs",
+          "mustContain": "'native.file.pick'",
+          "why": "the session page may use native.file.pick where the shell has it and falls back where not (REQ-005)"
+        },
+        {
+          "file": "config/scripts/mobile-web-app-page-grant-call-sites.mjs",
+          "mustContain": "mobile-web-app-file-attachment-grant.test.mjs",
+          "why": "the grant census counts native.file.pick as censused by the feature's own test"
+        },
+        {
+          "file": "mobile/web-entry/web-overrides.json",
+          "mustContain": "src/file-attachment-upload/file-attachment-picker.web.ts",
+          "why": "the page build lists the web picker that keeps the native document picker out of the bundle"
+        },
+        {
+          "file": "config/scripts/mobile-web-app-held-press-probe-routes.mjs",
+          "mustContain": "fileAttachments: { openTerminalSheet",
+          "why": "the key-bar probe mounts the command dock, which now opens the attach sheet"
+        }
+      ],
+      "tests": [
+        "src/shared/file-attachment-upload/file-attachment-file-name.test.ts",
+        "src/shared/file-attachment-upload/file-attachment-delivery-text.test.ts",
+        "src/renderer/src/file-attachment-upload/file-attachment-shell-escape-parity.test.ts",
+        "src/main/runtime/rpc/methods/file-attachment-upload.test.ts",
+        "src/main/file-attachment-upload/file-attachment-upload-mobile-ws.test.ts",
+        "src/main/runtime/runtime-rpc/fork-mobile-rpc-method-allowlist.test.ts",
+        "mobile/src/file-attachment-upload/file-attachment-upload-client.test.ts",
+        "mobile/src/file-attachment-upload/file-attachment-picker.test.ts",
+        "mobile/src/file-attachment-upload/file-attachment-picker.web.test.ts",
+        "mobile/src/file-attachment-upload/file-attachment-terminal-write.test.ts",
+        "mobile/src/file-attachment-upload/use-mobile-file-attachments.test.ts",
+        "mobile/src/file-attachment-upload/native-file-verbs.test.ts",
+        "mobile/src/file-attachment-upload/attachment-base64-length.test.ts",
+        "config/scripts/mobile-web-page-routes-contract.test.mjs",
+        "config/scripts/mobile-web-app-file-attachment-grant.test.mjs"
+      ],
+      "checks": [
+        "pnpm exec vitest run --config config/vitest.config.ts src/shared/file-attachment-upload src/main/file-attachment-upload src/renderer/src/file-attachment-upload src/main/runtime/rpc/methods/file-attachment-upload.test.ts src/main/runtime/runtime-rpc/fork-mobile-rpc-method-allowlist.test.ts src/main/runtime/mobile-rpc-allowlist.test.ts config/scripts/mobile-web-page-routes-contract.test.mjs config/scripts/mobile-web-app-file-attachment-grant.test.mjs",
+        "pnpm --dir mobile exec vitest run src/file-attachment-upload src/session/use-mobile-native-chat-image-attachments.test.ts src/session/use-mobile-session-image-attachments.test.tsx src/mobile-web-shell/page-route-policy.test.ts src/mobile-web-shell/bridge-host-init.test.ts src/mobile-web-shell/bridge/bridge-media-verbs.test.ts"
+      ]
     }
   ]
 }

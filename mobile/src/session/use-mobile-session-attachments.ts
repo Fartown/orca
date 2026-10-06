@@ -7,6 +7,7 @@ import { useMobileSessionImageAttachments } from './use-mobile-session-image-att
 import { useMobileAttachmentInputLeaseGate } from './use-mobile-attachment-input-lease-gate'
 import { useMobileTerminalPaste } from './use-mobile-terminal-paste'
 import type { MobileSessionAccessorySelectionModel } from './use-mobile-session-accessory-selection'
+import { useMobileSessionFileAttachments } from '../file-attachment-upload/use-mobile-session-file-attachments'
 
 export function useMobileSessionAttachments(scope: MobileSessionAccessorySelectionModel) {
   const {
@@ -95,6 +96,12 @@ export function useMobileSessionAttachments(scope: MobileSessionAccessorySelecti
     onSuccess: triggerSelection,
     onError: triggerError
   })
+  const fileAttachments = useMobileSessionFileAttachments(scope, {
+    agent,
+    attachImage,
+    nativeChatImages,
+    beforeTerminalSend: flushPendingLiveInputBeforeAttachmentSend
+  })
 
   // Why: refresh canPaste on mount, AppState active, after paste.
   useEffect(() => {
@@ -162,8 +169,9 @@ export function useMobileSessionAttachments(scope: MobileSessionAccessorySelecti
     handlePaste,
     flushPendingLiveInputBeforeAttachmentSend,
     attachImage,
-    isAttaching,
-    nativeChatImages
+    isAttaching: isAttaching || fileAttachments.isUploadingToTerminal,
+    nativeChatImages,
+    fileAttachments
   }
 }
 

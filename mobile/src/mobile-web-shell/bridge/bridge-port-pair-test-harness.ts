@@ -191,6 +191,8 @@ function defaultVerbAnswer(verb: BridgeNativeVerb): unknown {
       return { base64: '', droppedBytes: 0, recording: true, interruption: null }
     case 'native.audio.stop':
       return { stopped: true, base64: '', droppedBytes: 0 }
+    case 'native.file.pick':
+      return { items: [] }
   }
 }
 

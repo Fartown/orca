@@ -26,7 +26,8 @@ vi.mock('react-native', () => ({
 }))
 vi.mock('lucide-react-native', () => ({
   ImagePlus: (props: Record<string, unknown>) => createElement('lucide-image-plus', props),
-  Mic: (props: Record<string, unknown>) => createElement('lucide-mic', props)
+  Mic: (props: Record<string, unknown>) => createElement('lucide-mic', props),
+  Paperclip: (props: Record<string, unknown>) => createElement('lucide-paperclip', props)
 }))
 
 // The page's capture seam, which is what the web build resolves.

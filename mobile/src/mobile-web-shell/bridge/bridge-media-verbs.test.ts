@@ -2,6 +2,7 @@
 import { describe, expect, it } from 'vitest'
 import { MOBILE_CLIPBOARD_IMAGE_UPLOAD_CHUNK_BASE64_CHARS } from '../../session/mobile-clipboard-image-upload-chunk'
 import { CLIPBOARD_IMAGE_MAX_SOURCE_BYTES } from '../../../../src/shared/clipboard-image'
+import { FILE_ATTACHMENT_MAX_BYTES } from '../../../../src/shared/file-attachment-upload/file-attachment-upload-limits'
 import {
   BRIDGE_MEDIA_HANDLE_MAX_CHARS,
   BRIDGE_MEDIA_MAX_LIVE_HANDLES,
@@ -122,7 +123,7 @@ describe('what a chunk read may ask for', () => {
       { handle: HANDLE, offset: 0, length: 0 },
       { handle: HANDLE, offset: -1, length: 16 },
       { handle: HANDLE, offset: 1.5, length: 16 },
-      { handle: HANDLE, offset: CLIPBOARD_IMAGE_MAX_SOURCE_BYTES + 1, length: 16 },
+      { handle: HANDLE, offset: FILE_ATTACHMENT_MAX_BYTES + 1, length: 16 },
       { handle: '', offset: 0, length: 16 },
       { handle: HANDLE, offset: 0 },
       { handle: HANDLE, offset: 0, length: 16, encoding: 'hex' }
