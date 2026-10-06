@@ -54,6 +54,10 @@ export const MOBILE_WEB_APP_BUNDLE_MAX_TOTAL_BYTES = 9 * 1024 * 1024
  * The root `./_layout.tsx` (the page's web sibling of the native root) sorts first; with it the
  * swept tree reads 74 scripts at 16 routes.
  *
+ * Fork (mobile session continuation): the last three prefixes read one fewer script on this tree.
+ * Its session route reaches `mobile-tui-agents.ts` and `clipboard-text.ts`, so once tasks joins
+ * they share an importer set and esbuild folds the clipboard chunk into the agent-catalog chunk.
+ *
  * This table is the fence's only input, so a route added to the tree stales it and the pins beside
  * the fence fail until it is re-measured. That is the point: the bound is re-derived, never bumped.
  */
@@ -71,9 +75,9 @@ export const MOBILE_WEB_APP_BUNDLE_SCRIPT_SWEEP = [
   ['./h/[hostId]/review/[worktreeId].tsx', 48],
   ['./h/[hostId]/session/[worktreeId].tsx', 58],
   ['./h/[hostId]/source-control/[worktreeId].tsx', 63],
-  ['./h/[hostId]/tasks.tsx', 71],
-  ['./h/[hostId]/web.tsx', 72],
-  ['./h/_layout.tsx', 74]
+  ['./h/[hostId]/tasks.tsx', 70],
+  ['./h/[hostId]/web.tsx', 71],
+  ['./h/_layout.tsx', 73]
 ]
 
 const sweptScripts = MOBILE_WEB_APP_BUNDLE_SCRIPT_SWEEP.map(([, scripts]) => scripts)

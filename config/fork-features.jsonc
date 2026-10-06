@@ -1806,6 +1806,16 @@
           "file": "mobile/src/session/use-mobile-session-terminal-create-actions.ts",
           "mustContain": "terminal-without-handle",
           "why": "the create action distinguishes a live tab with no handle from a failed create"
+        },
+        {
+          "file": "config/scripts/verify-mobile-web-app-bundle.mjs",
+          "mustContain": "['./h/_layout.tsx', 73]",
+          "why": "the route-prefix sweep records continuation's measured chunk-sharing change"
+        },
+        {
+          "file": "config/scripts/build-mobile-web-app-bundle.test.mjs",
+          "mustContain": "assertAssetCeilingFitsShell(29, 42, MOBILE_WEB_BUNDLE_MAX_ASSETS)).toBe(250)",
+          "why": "the asset-ceiling boundary follows the re-measured route-prefix sweep"
         }
       ],
       "tests": [
