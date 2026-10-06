@@ -21,6 +21,18 @@ external_ids: []
 
 ## 2. 决策点记录
 
+### D-005 移动端放行用 fork 自有名单，不改上游白名单文件
+
+- 日期：2026-10-06
+- 背景：上游 `runtime-rpc-mobile-method-allowlist.ts` 恰好 300 个有效行（`max-lines` 上限），且 `mobile-rpc-allowlist.test.ts` 按字面量解析该文件；加任何一个方法都会让提交钩子失败，而仓库规则禁止放宽 `max-lines`
+- 备选项：
+  1. 把 4 个方法合成 1 个带操作字段的方法：仍超 1 行
+  2. 拆分上游白名单文件：改动大，每次上游同步都会冲突
+  3. 新建 fork 自有名单，分发处同时认两个名单，测试同时读两个文件
+- 最终决定：采用 3
+- 原因：上游白名单保持逐字一致；fork 侧只有分发处一行判断和测试里读文件的一处是接缝；以后 fork 功能的移动端方法都登记在同一处
+- 影响范围：REQ-001；方案 §4.5、§8
+
 ### D-004 新增专用 RPC，不扩展剪贴板图片接口、不开放通用文件写入
 
 - 日期：2026-10-06
@@ -62,11 +74,20 @@ external_ids: []
 
 ## 3. 开发记录
 
+### 2026-10-06 电脑端上传接口与手机端入口
+
+- 本轮目标：实现电脑端 `fileAttachment.*` 流式写入，以及手机端「照片 / 文件」入口、上传与交付
+- 完成内容：电脑端按工作区判定目标机器（与终端启动同一规则），边收边写入本机或 SSH 主机的 `orca-file-attachments` 临时目录，带槽位归属、偏移校验、5 分钟空闲过期、失败清理与 7 天保留期清扫；手机端附件按钮改为弹出「Photo / File」，原生会话页用系统文档选择器分块读取，网页版会话页先走现有 `native.media.*`（约 18 MiB、名字按类型生成）；终端插入转义路径或图片粘贴，聊天输入框插入 `@路径` 或加入待发图片；旧电脑端只放行可作为附件的图片，其余提示更新
+- 代码或文档变更：`src/shared/file-attachment-upload/**`、`src/main/file-attachment-upload/**`、`src/main/runtime/rpc/methods/file-attachment-upload*.ts`、`src/renderer/src/file-attachment-upload/**`、`mobile/src/file-attachment-upload/**`；接缝见方案 §8 与 `config/fork-features.jsonc`
+- 验证证据：电脑端 `file-attachment-upload.test.ts` 16 例（本机、SSH 假文件系统、文件夹工作区、Windows 远端路径、断连、清扫、归属、偏移、并发、过期）与共享模块 13 例通过；`src/main/runtime/rpc` 全量 352 个测试文件通过；手机端功能 24 例通过，手机端全量 944 个测试文件中与本功能相关的 4 个已修复；`pnpm tc`、手机端 `typecheck`、`check:runtime-electron-ratchet`、`verify:rpc-params-catalog`、`check:fork-features`、`check:fork-docs`、`check:architecture-policies --base Fartown/main` 通过
+- 未解决问题：手机端 `terminal-webview-payload-hash.test.ts` 在本机失败，原因是本机手机端依赖未随 4 天前的锁文件更新，与本功能无关；`check:tests-typecheck` 报 3 个「移动端续接会话」测试文件，同为既有问题；网页版会话页还没有原名与 100 MiB
+- 下一步：手机壳新增 `native.file.pick/read/release`，网页版会话页在新手机壳上用原名与 100 MiB；随后做本机与 SSH 真机验证
+
 ### 2026-10-06 登记需求、调研与方案
 
 - 本轮目标：按 fork 流程登记「移动端上传任意文件」，完成需求、调研与方案，进入实现
 - 完成内容：用户确认存放位置、入口与大小上限三项取舍；完成现状调研（两种会话页形态、上传链路、目标机器判定、交付方式、版本兼容）；完成技术方案；在 `feat/mobile-file-attachment-upload` 分支登记功能
 - 代码或文档变更：`docs/issue/移动端上传任意文件/**`、`config/fork-features.jsonc`、`config/architecture-policies.jsonc`、`.gitignore`
-- 验证证据：`pnpm check:fork-features`、`pnpm check:fork-docs` 通过后提交（结果见提交记录）
+- 验证证据：`pnpm check:fork-features`、`pnpm check:fork-docs`、`pnpm check:architecture-policies -- --base Fartown/main` 通过，提交 `112fd202d3`
 - 未解决问题：Q-1 保留期取值；Q-2 Claude Code 读取工作目录外文件是否弹权限确认；Q-3 Codex 对 `@路径` 的处理
 - 下一步：实现电脑端 `fileAttachment.*` 与单测

@@ -6,6 +6,7 @@ import type { MobileNativeChatImageAttachments } from './use-mobile-native-chat-
 import type { MobileNativeChatController } from './use-mobile-native-chat-controller'
 import { useMobileNativeChatStreamingBubble } from './use-mobile-native-chat-streaming-bubble'
 import { useMobileNativeChatQueuedSlot } from './use-mobile-native-chat-queued-slot'
+import type { MobileFileAttachments } from '../file-attachment-upload/use-mobile-file-attachments'
 
 type Props = {
   controller: MobileNativeChatController
@@ -15,6 +16,8 @@ type Props = {
   /** Native-chat image attachments: picking adds a composer chip, and sending
    *  rides the pending images along with the message text (desktop parity). */
   images: MobileNativeChatImageAttachments
+  /** The attach button offers Photo or File; File uploads any type to the workspace host. */
+  files: Pick<MobileFileAttachments, 'openChatSheet' | 'isUploadingToChat'>
   onMicPress: () => void
   micActive: boolean
   dictationMode: string | undefined
@@ -40,6 +43,7 @@ export function MobileNativeChatOverlay({
   controller,
   onOpenFile,
   images,
+  files,
   onMicPress,
   micActive,
   dictationMode,
@@ -114,10 +118,10 @@ export function MobileNativeChatOverlay({
         imagePreviewsByMessageId={controller.chatImagePreviewsByMessageId}
         composerText={controller.chatComposerText}
         onComposerTextChange={controller.setChatComposerText}
-        onAttachImage={() => void images.attachImage('library')}
+        onAttachImage={files.openChatSheet}
         attachments={images.attachments}
         onRemoveAttachment={images.removeAttachment}
-        isAttaching={images.isAttaching}
+        isAttaching={images.isAttaching || files.isUploadingToChat}
         onMicPress={onMicPress}
         micActive={micActive}
         dictationMode={dictationMode}

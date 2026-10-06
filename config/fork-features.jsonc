@@ -1942,13 +1942,132 @@
       "title": "移动端上传任意文件：ZIP、PDF 等任意类型交给终端或 agent",
       "goal": "移动端把任意类型文件流式上传到工作区所在机器的临时目录，并交给终端或 agent",
       "journal": "docs/issue/移动端上传任意文件/journal.md",
-      "dependsOn": [],
+      "dependsOn": [
+        "mobile/src/components/ActionSheetModal.tsx",
+        "mobile/src/files/file-list-fallback.ts",
+        "mobile/src/mobile-web-shell/bridge/bridge-media-verbs.ts",
+        "mobile/src/mobile-web-shell/bridge/use-native-verbs.ts",
+        "mobile/src/mobile-web-shell/media-handle-registry.ts",
+        "mobile/src/platform/haptics.ts",
+        "mobile/src/platform/media-picker-contract.ts",
+        "mobile/src/session/mobile-clipboard-image.ts",
+        "mobile/src/session/mobile-session-write-operations.ts",
+        "mobile/src/session/use-mobile-native-chat-image-attachments.ts",
+        "mobile/src/session/use-mobile-session-accessory-selection.ts",
+        "mobile/src/transport/base64-byte-codec.ts",
+        "mobile/src/transport/rpc-client.ts",
+        "mobile/src/transport/rpc-operation-result-reader.ts",
+        "mobile/src/transport/rpc-operation.ts",
+        "mobile/src/transport/types.ts",
+        "src/shared/clipboard-image.ts",
+        "src/shared/image-paste-following-text.ts",
+        "src/main/providers/ssh-filesystem-dispatch.ts",
+        "src/main/providers/types.ts",
+        "src/main/runtime/orca-runtime.ts",
+        "src/main/runtime/rpc/core.ts",
+        "src/main/runtime/runtime-rpc/runtime-rpc-mobile-method-allowlist.ts",
+        "src/main/window/owned-temp-staging-root.ts",
+        "src/shared/agent-image-paste.ts",
+        "src/shared/app-environment.ts",
+        "src/shared/cross-platform-path.ts",
+        "src/shared/rpc-contract/files-mutation-params.ts"
+      ],
       "policyId": "mobile-file-attachment-upload",
-      "ownedPaths": ["docs/issue/移动端上传任意文件/**"],
-      "requiredFiles": [],
-      "seams": [],
-      "tests": [],
-      "checks": []
+      "ownedPaths": [
+        "src/shared/file-attachment-upload/**",
+        "src/main/file-attachment-upload/**",
+        "src/main/runtime/rpc/methods/file-attachment-upload.ts",
+        "src/main/runtime/rpc/methods/file-attachment-upload.test.ts",
+        "src/main/runtime/runtime-rpc/fork-mobile-rpc-method-allowlist.ts",
+        "src/main/runtime/runtime-rpc/fork-mobile-rpc-method-allowlist.test.ts",
+        "src/renderer/src/file-attachment-upload/**",
+        "mobile/src/file-attachment-upload/**",
+        "docs/issue/移动端上传任意文件/**"
+      ],
+      "requiredFiles": [
+        "src/shared/file-attachment-upload/file-attachment-upload-params.ts",
+        "src/main/file-attachment-upload/file-attachment-upload-store.ts",
+        "src/main/file-attachment-upload/file-attachment-upload-target.ts",
+        "src/main/runtime/rpc/methods/file-attachment-upload.ts",
+        "src/main/runtime/runtime-rpc/fork-mobile-rpc-method-allowlist.ts",
+        "mobile/src/file-attachment-upload/use-mobile-file-attachments.ts",
+        "mobile/src/file-attachment-upload/file-attachment-upload-client.ts",
+        "mobile/src/file-attachment-upload/file-attachment-picker.ts",
+        "mobile/src/file-attachment-upload/file-attachment-picker.web.ts"
+      ],
+      "seams": [
+        {
+          "file": "src/main/runtime/rpc/methods/index.ts",
+          "mustContain": "...FILE_ATTACHMENT_UPLOAD_METHODS",
+          "why": "the host exposes the upload methods (REQ-002, REQ-004)"
+        },
+        {
+          "file": "src/main/runtime/runtime-rpc/runtime-rpc-websocket-dispatch.ts",
+          "mustContain": "isMobileRpcMethodAllowed(request.method)",
+          "why": "paired phones may call fork-listed methods; the upstream list is at its max-lines ceiling (REQ-001)"
+        },
+        {
+          "file": "src/main/runtime/mobile-rpc-allowlist.test.ts",
+          "mustContain": "FORK_MOBILE_RPC_METHOD_ALLOWLIST",
+          "why": "the mobile allowlist census reads the fork list beside the upstream one"
+        },
+        {
+          "file": "src/shared/rpc-contract/rpc-params-catalog.generated.ts",
+          "mustContain": "'fileAttachment.startUpload': StartFileAttachmentUpload",
+          "why": "the generated params catalog carries the new methods"
+        },
+        {
+          "file": "mobile/src/session/use-mobile-session-attachments.ts",
+          "mustContain": "useMobileSessionFileAttachments(scope",
+          "why": "the session route wires file attachments in one call (REQ-001)"
+        },
+        {
+          "file": "mobile/src/session/MobileSessionCommandDock.tsx",
+          "mustContain": "fileAttachments.openTerminalSheet",
+          "why": "the terminal attach button offers Photo or File; long press goes to File (REQ-001)"
+        },
+        {
+          "file": "mobile/src/session/MobileTerminalInputActions.tsx",
+          "mustContain": "Paperclip",
+          "why": "the terminal attach button reads as attach, not photo (REQ-001)"
+        },
+        {
+          "file": "mobile/src/session/MobileSessionActiveContent.tsx",
+          "mustContain": "<MobileAttachmentSourceSheet",
+          "why": "the Photo / File sheet mounts where both inputs can open it (REQ-001)"
+        },
+        {
+          "file": "mobile/src/session/MobileNativeChatOverlay.tsx",
+          "mustContain": "files.openChatSheet",
+          "why": "the chat attach button offers Photo or File (REQ-001)"
+        },
+        {
+          "file": "mobile/src/session/MobileNativeChatComposer.tsx",
+          "mustContain": "Paperclip",
+          "why": "the chat attach button reads as attach, not photo (REQ-001)"
+        },
+        {
+          "file": "mobile/src/session/use-mobile-native-chat-image-attachments.ts",
+          "mustContain": "readonly addUploadedImages",
+          "why": "an image picked as File joins the chat chips like a photo (REQ-003)"
+        }
+      ],
+      "tests": [
+        "src/shared/file-attachment-upload/file-attachment-file-name.test.ts",
+        "src/shared/file-attachment-upload/file-attachment-delivery-text.test.ts",
+        "src/renderer/src/file-attachment-upload/file-attachment-shell-escape-parity.test.ts",
+        "src/main/runtime/rpc/methods/file-attachment-upload.test.ts",
+        "src/main/runtime/runtime-rpc/fork-mobile-rpc-method-allowlist.test.ts",
+        "mobile/src/file-attachment-upload/file-attachment-upload-client.test.ts",
+        "mobile/src/file-attachment-upload/file-attachment-picker.test.ts",
+        "mobile/src/file-attachment-upload/file-attachment-picker.web.test.ts",
+        "mobile/src/file-attachment-upload/file-attachment-terminal-write.test.ts",
+        "mobile/src/file-attachment-upload/use-mobile-file-attachments.test.ts"
+      ],
+      "checks": [
+        "pnpm exec vitest run --config config/vitest.config.ts src/shared/file-attachment-upload src/main/file-attachment-upload src/renderer/src/file-attachment-upload src/main/runtime/rpc/methods/file-attachment-upload.test.ts src/main/runtime/runtime-rpc/fork-mobile-rpc-method-allowlist.test.ts src/main/runtime/mobile-rpc-allowlist.test.ts",
+        "pnpm --dir mobile exec vitest run src/file-attachment-upload src/session/use-mobile-native-chat-image-attachments.test.ts src/session/use-mobile-session-image-attachments.test.tsx"
+      ]
     }
   ]
 }

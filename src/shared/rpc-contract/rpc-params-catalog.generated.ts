@@ -18,6 +18,12 @@ import {
   BrowserNetworkTunnelAttachParams
 } from '../browser-client-host-protocol'
 import { BrowserClientPageMetadataParams } from '../browser-client-page-metadata-protocol'
+import {
+  AbortFileAttachmentUpload,
+  AppendFileAttachmentUploadChunk,
+  CommitFileAttachmentUpload,
+  StartFileAttachmentUpload
+} from '../file-attachment-upload/file-attachment-upload-params'
 import { GoalExecutionHostSchema } from '../goals/goal-control-contract'
 import {
   ConversationsBindIssueParams,
@@ -817,6 +823,10 @@ export const RPC_PARAMS_BY_METHOD = {
   'emulator.tap': TapParams,
   'emulator.type': TypeParams,
   'emulator.unregisterActive': EmulatorUnregisterActiveParams,
+  'fileAttachment.abortUpload': AbortFileAttachmentUpload,
+  'fileAttachment.appendUploadChunk': AppendFileAttachmentUploadChunk,
+  'fileAttachment.commitUpload': CommitFileAttachmentUpload,
+  'fileAttachment.startUpload': StartFileAttachmentUpload,
   'files.browseServerDir': ServerDirectoryBrowse,
   'files.commitUpload': FileCommitUpload,
   'files.copy': FileCopy,

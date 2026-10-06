@@ -3,6 +3,7 @@ import { saveTerminalTextScale } from '../storage/preferences'
 import { MobileBrowserPane } from '../browser/MobileBrowserPane'
 import { TerminalPaneView } from './TerminalPaneView'
 import { MobileNativeChatOverlay } from './MobileNativeChatOverlay'
+import { MobileAttachmentSourceSheet } from '../file-attachment-upload/MobileAttachmentSourceSheet'
 import { colors } from '../theme/mobile-theme'
 import { styles } from './mobile-session-styles'
 import type { MobileSessionController } from './use-mobile-session-controller'
@@ -68,6 +69,7 @@ export function MobileSessionActiveContent({
     handleKeyboardAvoidanceMetrics,
     handleHaptic,
     nativeChatImages,
+    fileAttachments,
     activeMarkdownTab,
     activeFileTab,
     activeBrowserTab,
@@ -227,6 +229,7 @@ export function MobileSessionActiveContent({
         controller={nativeChatController}
         onOpenFile={handleNativeChatFileTap}
         images={nativeChatImages}
+        files={fileAttachments}
         onMicPress={handleDictationToggle}
         micActive={dictation.isRecording}
         dictationMode={dictationMode}
@@ -239,6 +242,7 @@ export function MobileSessionActiveContent({
         getSendCompletionGeneration={controller.getSendCompletionGeneration}
         keyboardInset={keyboardLift}
       />
+      <MobileAttachmentSourceSheet {...fileAttachments.sheet} />
       {toastMessage && (
         <Animated.View pointerEvents="none" style={[styles.toast, toastAnimatedStyle]}>
           <Text style={styles.toastText}>{toastMessage}</Text>

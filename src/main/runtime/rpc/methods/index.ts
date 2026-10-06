@@ -50,6 +50,7 @@ import { ARTIFACT_METHODS } from './artifacts'
 import { ARTIFACT_SHARE_METHODS } from './artifact-share'
 import { ISSUE_METHODS } from './issues'
 import { GOAL_METHODS } from './goals'
+import { FILE_ATTACHMENT_UPLOAD_METHODS } from './file-attachment-upload'
 import { AGENT_HOOK_METHODS } from './agent-hooks'
 import { AGENT_LAUNCH_METHODS } from './agent-launch'
 
@@ -64,6 +65,7 @@ export const ALL_RPC_METHODS = [
   ...ARTIFACT_SHARE_METHODS,
   ...ISSUE_METHODS,
   ...GOAL_METHODS,
+  ...FILE_ATTACHMENT_UPLOAD_METHODS,
   ...AUTOMATION_METHODS,
   ...REPO_METHODS,
   ...WORKTREE_METHODS,
