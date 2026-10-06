@@ -515,6 +515,7 @@
       "goal": "组织跨工作区会话，复用公共会话名称与原生恢复",
       "journal": "docs/issue/Issues看板与会话/journal.md",
       "dependsOn": [
+        "src/renderer/src/lib/browser-uuid.ts",
         "src/main/agent-hooks/managed-agent-hook-controls.ts",
         "src/main/agent-hooks/server.ts",
         "src/main/ipc/ai-vault-session-title-routing.ts",

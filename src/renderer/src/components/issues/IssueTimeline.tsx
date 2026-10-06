@@ -2,6 +2,7 @@ import { Button } from '@/components/ui/button'
 import type { IssueRouteExecutionHostId, RoundRecordPreview } from '../../../../shared/issues/types'
 import { IssueRuntimeClient } from '@/issues/issue-runtime-client'
 import { translate } from '@/i18n/i18n'
+import { createBrowserUuid } from '@/lib/browser-uuid'
 
 export function IssueTimeline({
   route,
@@ -80,7 +81,7 @@ async function mutateRound(
   onChanged: () => void
 ): Promise<void> {
   await IssueRuntimeClient.forRoute(route).mutate(method, {
-    mutationId: crypto.randomUUID(),
+    mutationId: createBrowserUuid(),
     roundId
   })
   onChanged()

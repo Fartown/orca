@@ -29,6 +29,7 @@ import { prepareAndLaunchIssueConversation } from './issue-conversation-launch-a
 import { IssueConversationBindingPopover } from './IssueConversationBindingPopover'
 import { collectIssueConversationLaunchWorkspaces } from './issue-conversation-launch-workspaces'
 import { translate } from '@/i18n/i18n'
+import { createBrowserUuid } from '@/lib/browser-uuid'
 
 export function IssueConversationActions({
   route,
@@ -106,14 +107,14 @@ export function IssueConversationActions({
       return
     }
     setPending(true)
-    const launchToken = crypto.randomUUID()
+    const launchToken = createBrowserUuid()
     try {
       await prepareAndLaunchIssueConversation({
         route,
         issueId,
         workspace: selectedWorkspace,
         agent,
-        mutationId: crypto.randomUUID(),
+        mutationId: createBrowserUuid(),
         launchToken
       })
       setLaunchOpen(false)

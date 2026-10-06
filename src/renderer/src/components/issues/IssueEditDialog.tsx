@@ -15,6 +15,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { IssueRuntimeClient } from '@/issues/issue-runtime-client'
 import type { IssueRecord, IssueRouteExecutionHostId } from '../../../../shared/issues/types'
 import { translate } from '@/i18n/i18n'
+import { createBrowserUuid } from '@/lib/browser-uuid'
 
 export function IssueEditDialog({
   route,
@@ -46,7 +47,7 @@ export function IssueEditDialog({
     setPending(true)
     try {
       await IssueRuntimeClient.forRoute(route).mutate('issues.update', {
-        mutationId: crypto.randomUUID(),
+        mutationId: createBrowserUuid(),
         issueId: issue.id,
         expectedRecordRevision: issue.recordRevision,
         title,

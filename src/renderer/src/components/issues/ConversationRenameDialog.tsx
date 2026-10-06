@@ -17,6 +17,7 @@ import type {
   IssueRouteExecutionHostId
 } from '../../../../shared/issues/types'
 import { translate } from '@/i18n/i18n'
+import { createBrowserUuid } from '@/lib/browser-uuid'
 
 export function ConversationRenameDialog({
   route,
@@ -54,7 +55,7 @@ export function ConversationRenameDialog({
     setPending(true)
     try {
       await IssueRuntimeClient.forRoute(route).mutate('conversations.update', {
-        mutationId: crypto.randomUUID(),
+        mutationId: createBrowserUuid(),
         conversationId: conversation.id,
         expectedRecordRevision: conversation.recordRevision,
         title: title.trim() || null
