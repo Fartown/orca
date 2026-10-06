@@ -22,14 +22,13 @@ describe('isAgentImageAttachmentName', () => {
 })
 
 describe('appendFileAttachmentPathToDraft', () => {
-  it('keeps one space on each side of the path and never writes an @ mention', () => {
-    expect(appendFileAttachmentPathToDraft('', '/tmp/a.pdf')).toBe('/tmp/a.pdf ')
-    expect(appendFileAttachmentPathToDraft('read', '/tmp/a.pdf')).toBe('read /tmp/a.pdf ')
-    expect(appendFileAttachmentPathToDraft('read ', '/tmp/a.pdf')).toBe('read /tmp/a.pdf ')
+  it('quotes the path so it opens neither an @ nor a slash-command menu', () => {
+    expect(appendFileAttachmentPathToDraft('', '/tmp/a.pdf')).toBe('"/tmp/a.pdf" ')
+    expect(appendFileAttachmentPathToDraft('read', '/tmp/a.pdf')).toBe('read "/tmp/a.pdf" ')
+    expect(appendFileAttachmentPathToDraft('read ', '/tmp/a b.pdf')).toBe('read "/tmp/a b.pdf" ')
   })
 
-  it('quotes a path with spaces or quotes', () => {
-    expect(appendFileAttachmentPathToDraft('', '/tmp/a b.pdf')).toBe('"/tmp/a b.pdf" ')
+  it('falls back to single quotes for a path that holds a double quote', () => {
     expect(appendFileAttachmentPathToDraft('', '/tmp/say "hi".txt')).toBe(`'/tmp/say "hi".txt' `)
   })
 })

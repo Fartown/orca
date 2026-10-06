@@ -36,14 +36,11 @@ export function fileAttachmentTerminalInput(path: string): string {
 }
 
 /**
- * A path as prose for a chat message: bare when it has no space, quoted when it does. Not `@path`:
- * a TUI agent opens its file-mention picker on `@`, and that picker takes the Enter the send ends
- * with, leaving the message parked in the agent's input instead of submitted.
+ * A path as prose for a chat message, always quoted. Bare, it would open a TUI agent's menus: `@`
+ * its file-mention picker and a leading `/` its slash commands, and either menu can take the Enter
+ * the send ends with.
  */
 export function fileAttachmentChatPath(path: string): string {
-  if (!/[\s"']/.test(path)) {
-    return path
-  }
   return path.includes('"') ? `'${path}'` : `"${path}"`
 }
 

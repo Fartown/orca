@@ -17,7 +17,7 @@ external_ids: []
 | 交互 | - | not-required | 沿用现有底部菜单与附件按钮，无独立设计稿 |
 | 调研 | [research/移动端附件上传现状与技术链路.md](research/移动端附件上传现状与技术链路.md) | ready | 两种会话页形态、选择器、上传与落盘、目标机器判定、交付方式、版本兼容 |
 | 方案 | [solutions/移动端文件附件上传方案.md](solutions/移动端文件附件上传方案.md) | reviewing | 新 RPC `fileAttachment.*` 流式写入目标机器临时目录；手机壳新接口 `native.file.*`；图片旧通道保留 |
-| 测试用例 | [tests/cases/移动端上传任意文件.md](tests/cases/移动端上传任意文件.md) | ready | TC-001~018，覆盖本机与 SSH；执行记录见 [电脑端第一轮](tests/runs/2026-10-06-real-app-host-round-1.md)、[电脑端第二轮](tests/runs/2026-10-06-real-app-host-round-2.md)、[云真机第一轮](tests/runs/2026-10-06-cloud-device-round-1.md) |
+| 测试用例 | [tests/cases/移动端上传任意文件.md](tests/cases/移动端上传任意文件.md) | ready | TC-001~018，覆盖本机与 SSH；执行记录见 [电脑端第一轮](tests/runs/2026-10-06-real-app-host-round-1.md)、[电脑端第二轮](tests/runs/2026-10-06-real-app-host-round-2.md)、[云真机第一轮](tests/runs/2026-10-06-cloud-device-round-1.md)、[云真机第二轮](tests/runs/2026-10-06-cloud-device-round-2.md) |
 
 ## 2. 决策点记录
 
@@ -38,8 +38,8 @@ external_ids: []
 - 日期：2026-10-06
 - 背景：云真机第一轮中，聊天里含 `@路径` 的消息在 Claude 终端里停在输入框不提交：`@` 打开文件提及菜单，菜单吞掉发送时的回车；手动输入 `@/tmp/...` 同样复现
 - 备选项：保留 `@路径` 并在发送前关掉菜单；插入纯路径（含空格时加引号）
-- 最终决定：插入纯路径
-- 原因：agent 能直接按绝对路径读取文件；不依赖各家终端 agent 的提及菜单行为（Codex 输入 `@` 也会弹文件搜索，Q-3）
+- 最终决定：插入纯路径，并一律加引号（云真机第二轮又发现：以 `/` 开头的路径会弹 Claude 的斜杠命令建议）
+- 原因：agent 能直接按绝对路径读取文件；不依赖各家终端 agent 的提及或斜杠命令菜单行为（Codex 输入 `@` 也会弹文件搜索，Q-3）
 - 影响范围：REQ-003；方案 §5.4；TC-010
 
 ### D-006 SSH 主机上的上传目录放远端家目录，不放 `/tmp`
@@ -106,6 +106,15 @@ external_ids: []
 - 影响范围：REQ-002、REQ-006；Q-2（工作目录外文件的权限确认）待真机验证
 
 ## 3. 开发记录
+
+### 2026-10-06 云真机第二轮与聊天路径加引号
+
+- 本轮目标：验证网页版会话页、聊天纯路径的提交与 Q-2
+- 完成内容：网页版会话页上入口、选择器、原名与 60 MiB、超限、聊天交付均通过；Q-2 观察到非 bypass 模式首次读取会弹「Read outside the working directories」；发现以 `/` 开头的路径会弹斜杠命令建议，聊天路径改为一律加引号
+- 代码或文档变更：`src/shared/file-attachment-upload/file-attachment-delivery-text.ts` 及测试；本目录需求、方案、用例与执行记录
+- 验证证据：[tests/runs/2026-10-06-cloud-device-round-2.md](tests/runs/2026-10-06-cloud-device-round-2.md)；共享 12 例、手机端 34 例通过
+- 未解决问题：Q-2 是否改放工作区内待用户决定；Q-3 未验证；加引号后的聊天路径未在真机上复测（格式改动，单测覆盖）；第二轮中 Claude 一度使用真实 HOME，真实 `~/.claude/` 下的 daemon 日志与备份未清理（详见执行记录第 4 节）
+- 下一步：合入 `fork/integration` 最新提交，跑全部门禁，推送并开 PR
 
 ### 2026-10-06 代码审查与云真机第一轮的修复
 

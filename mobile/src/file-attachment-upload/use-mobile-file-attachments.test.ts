@@ -158,7 +158,7 @@ describe('useMobileFileAttachments', () => {
     expect(hook.isUploadingToTerminal).toBe(false)
   })
 
-  it('puts a non-image into the chat draft as a plain path', async () => {
+  it('puts a non-image into the chat draft as a quoted path', async () => {
     picker.current = pickerOf([memoryFile('report.pdf', new Uint8Array([1]))])
     const args = baseArgs(uploadingHost())
     render(args)
@@ -166,7 +166,7 @@ describe('useMobileFileAttachments', () => {
 
     const update = args.chat.setComposerText.mock.calls[0]?.[0]
     expect(typeof update).toBe('function')
-    expect(update('look at')).toBe('look at /tmp/orca-file-attachments/1/report.pdf ')
+    expect(update('look at')).toBe('look at "/tmp/orca-file-attachments/1/report.pdf" ')
     expect(args.chat.addUploadedImages).not.toHaveBeenCalled()
   })
 
