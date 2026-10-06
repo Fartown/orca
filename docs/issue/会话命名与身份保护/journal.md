@@ -103,6 +103,15 @@ external_ids: []
 
 ## 3. 开发记录
 
+### 2026-10-06 同步上游 5cf3585b78：上游中断对账用例与活跃窗口对齐（testing）
+
+- 本轮目标：让 PR CI 的单测分片恢复通过；上游 #24878 新增的 `src/relay/agent-hook-interrupt-reconciliation.test.ts` 里「new-session 取代旧行」一例在 fork 上稳定失败（纯上游通过）。
+- 完成内容：该例在原会话刚活跃时，从未携带进程身份的发送方补发 `session-b` 的 SessionStart。按本功能的 30 秒活跃窗口，这正是被拒收的后台调用，旧行仍归 `session-a`，中断命令自然仍有效。生产行为不改；用例在补发前把时钟推过 `CLAUDE_SESSION_ACTIVITY_WINDOW_MS`，与 fork 自己的 `claude-session-relay.test.ts`「安静后才接纳」一致，上游要验证的「被取代后旧命令失效」保持不变。
+- 代码或文档变更：`src/relay/agent-hook-interrupt-reconciliation.test.ts` 登记为本功能接缝，并加入 `fork-integration-scope` 与本功能策略的允许清单。
+- 验证证据：改前本地连跑 3 次均失败、纯上游 `origin/main` 通过；改后该文件与 `src/main/claude-session-ownership`、`src/shared/claude-session-ownership` 共 6 个文件 48 例连跑 2 次通过；`check:fork-features`、`check:architecture-policies --base Fartown/main` 通过。
+- 未解决问题：无。
+- 下一步：随 `fork/integration` 推送，合入在途 PR 后重跑 CI。
+
 ### 2026-10-06 同步上游 d17351401d：会话保护与上游进程在线模型并存（testing）
 
 - 本轮目标：把上游 1166 个提交合入 `fork/integration`，保住会话命名与 Claude/Codex 会话保护，并让 Claude 30 秒活跃窗口与上游新加的进程在线（presence）模型共存。
