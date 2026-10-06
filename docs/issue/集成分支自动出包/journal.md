@@ -65,6 +65,15 @@ external_ids: []
 
 ## 3. 开发记录
 
+### 2026-10-06 CI 门禁布局随上游 preflight 约束调整，并再同步 37 个上游提交（testing）
+
+- 本轮目标：修掉推送后定时 x86 单测中由合并引入的工作流约束失败，并把 `fork/integration` 跟到最新上游。
+- 完成内容：上游有测试逐条钉住 preflight 的步骤与阶段条件；合并时对上游变更代码检查和 React Doctor 加的“fork 仓库跳过”已撤回，上游步骤在 fork 上原样运行（它们覆盖 PR 改动行且包含 casting，原 fork casting 步骤删除），fork 的五个门禁集中成一块并登记进该约束测试；fork 首帧工作流测试跟随合并后的 trace 条件。之后再合入上游 `355e35b5f2`（33 个提交）与 `e65bbc95ce`（4 个提交），冲突均已解决。
+- 代码或文档变更：`.github/workflows/pr.yml`、`config/scripts/pr-preflight-gates.test.mjs`（新接缝）、`config/scripts/worktree-switch-paint-workflow.test.mjs`、`config/architecture-policies.jsonc`；合并提交 `6e1759c945`、`af3cc1ce1d`。
+- 验证证据：工作流相关 33 个测试文件 611 个用例通过；x86 定时任务原有 8 项失败中，4 项由合并引入且已修复，另 3 项只在 Node 26 失败、代码与上游逐字一致且上游同名任务同样失败，1 项 Terminal Perf 合并前就失败；本机全量单测失败文件与纯上游对照后无合并引入项，见 `.docs/upstream-sync/2026-10-05/sync3/`（git 忽略）。
+- 未解决问题：Node 26 上的 3 项失败（SQLite undefined 绑定、Buffer 池化字节数、目录列举顺序）属于上游，未处理。
+- 下一步：推送后手动触发 x86 单测确认只剩上游已知失败。
+
 ### 2026-10-06 同步上游 d17351401d：CI 与构建适配，移动端屏蔽上游更新提示（testing）
 
 - 本轮目标：同步上游后保住 fork 的 CI 门禁与打包步骤，并避免集成包被上游的新更新提示误导。

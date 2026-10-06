@@ -141,6 +141,15 @@ external_ids: []
 
 ## 3. 开发记录
 
+### 2026-10-06 修复 orcad 关闭时 Goals 覆盖上游运行时清理（testing）
+
+- 本轮目标：修掉推送后定时 x86 单测暴露的 orcad 关闭清理问题。
+- 完成内容：orcad 只保留一个运行时清理函数，后登记的会覆盖先登记的；Goals 块在上游清理之后单独登记 `stopGoals`，导致 orcad 关闭时只停 Goals，跳过停止 RPC、配置存储最终刷写和 daemon 断开。该问题自 Goals 接入 orcad 起就存在，上游新增的断言才暴露出来。现在 `stopGoals` 并入上游那条清理链，放在必定执行的 finally 中。
+- 代码或文档变更：`src/main/orcad/orcad-entry.ts`（提交 `d1c04537b9`）。
+- 验证证据：上游 `orcad-push-startup.test.ts` 的 RPC 停止断言通过，`src/main/orcad` 30 个测试文件全部通过；同步门禁与功能检查通过，见 `.docs/upstream-sync/2026-10-05/sync3/`（git 忽略）。
+- 未解决问题：无。
+- 下一步：随 `fork/integration` 推送后，用手动触发的 x86 单测确认。
+
 ### 2026-10-06 同步上游 d17351401d：驱动打包、orcad 注册与验收文档打开随上游调整（testing）
 
 - 本轮目标：同步上游后保住 Goal 驱动的打包与部署、orcad 上的目标注册和验收文档打开。

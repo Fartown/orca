@@ -54,6 +54,15 @@ ready 只表示文档已按当前源码整理；本需求仍为 implementing，�
 
 ## 3. 开发记录
 
+### 2026-10-06 移植上游“已删除 SSH 文件夹的会话续接”到 fork 续接链（testing）
+
+- 本轮目标：上游 `0e43c4f9b5` 在 AI Vault 续接链里新加了一步（SSH 会话记录的文件夹已删除时改在目标工作区根目录续接），而这段链已被 fork 移进 `resumeAiVaultSession`，需移植。
+- 完成内容：`resumeAiVaultSession` 在准备会话后调用 `dropDeletedSshResumeCwd`，AI Vault 续接与 Issues 对话续接都经过它；fork 的两份测试替身补上新函数并保留 i18n 真实导出。
+- 代码或文档变更：`src/renderer/src/components/right-sidebar/ai-vault-session-launch-actions.ts`（及测试）、`ai-vault-original-pane-actions.test.ts`；合并提交 `af3cc1ce1d`。
+- 验证证据：右侧栏 267 个测试文件全部通过，上游新增的续接准备测试通过，见 `.docs/upstream-sync/2026-10-05/sync3/`（git 忽略）。
+- 未解决问题：无。
+- 下一步：随 `fork/integration` 推送。
+
 ### 2026-10-06 同步上游 d17351401d：对话启动适配请求 ID（testing）
 
 - 本轮目标：同步上游后保住 Issue 对话的启动与侧栏根模式。

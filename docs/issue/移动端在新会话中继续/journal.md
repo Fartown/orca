@@ -171,6 +171,15 @@ external_ids: []
 
 ## 3. 开发记录
 
+### 2026-10-06 上游重测路由前缀表后重新登记 fork 实测值（testing）
+
+- 本轮目标：上游在新提交里重新测量了移动端路由前缀表，让基线门禁重新反映 fork 树。
+- 完成内容：上游表最后三项为 71、72、74；fork 树实测 70、71、73，与此前记录的续接共享效应一致（clipboard 分块并入 agent-catalog 分块）。表与推导出的资源上限断言（29 条路由 250、30 条路由 260 超出设备上限）按 fork 实测更新，两条基线接缝重新登记。
+- 代码或文档变更：`config/scripts/verify-mobile-web-app-bundle.mjs`、`config/scripts/build-mobile-web-app-bundle.test.mjs`、`config/fork-features.jsonc`（提交 `d9232b31ae`）。
+- 验证证据：逐前缀测量脚本 `.docs/upstream-sync/2026-10-05/scripts/measure-mobile-route-sweep.mjs` 与真实构建均为 73 个分块；两份包测试 52/52 通过，见 `.docs/upstream-sync/2026-10-05/sync3/`（git 忽略）。
+- 未解决问题：续接走上游标注待删的兼容建终端路径，仍待迁移。
+- 下一步：随 `fork/integration` 推送。
+
 ### 2026-10-06 同步上游 d17351401d：续接建终端适配上游新建终端动作，基线接缝撤下（testing）
 
 - 本轮目标：同步上游后保住移动端续接的建终端与投递，处理上游删除的源码文本测试和过时的包基线。
