@@ -52,7 +52,11 @@
         "config/scripts/integration-builds/electron-builder.cjs",
         "config/scripts/integration-builds/build-identity.mjs",
         "config/scripts/integration-builds/mac-publisher-certificate.pem",
-        "config/scripts/integration-builds/publish-release.mjs"
+        "config/scripts/integration-builds/publish-release.mjs",
+        "config/scripts/integration-builds/release-notes.mjs",
+        "config/scripts/integration-builds/milestone-release.mjs",
+        "config/scripts/integration-builds/prune-releases.mjs",
+        "config/scripts/integration-builds/ai-release-summary.mjs"
       ],
       "seams": [
         {

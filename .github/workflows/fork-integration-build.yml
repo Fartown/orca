@@ -13,6 +13,10 @@ on:
         description: Verify real Orca replacement, restart and terminal reconnection
         type: boolean
         default: false
+      milestone:
+        description: Also publish a milestone release (the readable Latest page) for this build
+        type: boolean
+        default: false
   pull_request:
     branches: [fork/integration]
     paths:
@@ -282,8 +286,38 @@ jobs:
           compression-level: 0
           retention-days: 14
 
+  # The only job holding the Anthropic key; it has no write access and hands publish a text file.
+  release-summary:
+    needs: identity
+    if: github.repository == 'Fartown/orca' && github.ref == 'refs/heads/fork/integration' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.identity.outputs.sha }}
+          persist-credentials: false
+          fetch-depth: 0
+          filter: blob:none
+      # A summary that cannot be written leaves the milestone without it; it never blocks publishing.
+      - uses: ./.github/actions/install-node-dependencies
+        continue-on-error: true
+      - name: Write the AI short version for a milestone
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          ORCA_INTEGRATION_MILESTONE: ${{ inputs.milestone }}
+        run: node config/scripts/integration-builds/ai-release-summary.mjs release-summary
+      - uses: actions/upload-artifact@v7
+        with:
+          name: release-summary-${{ needs.identity.outputs.sha }}
+          path: release-summary
+          if-no-files-found: ignore
+          retention-days: 14
+
   publish:
-    needs: [identity, macos, android]
+    needs: [identity, macos, android, release-summary]
     if: github.repository == 'Fartown/orca' && github.ref == 'refs/heads/fork/integration' && github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -305,9 +339,16 @@ jobs:
           pattern: integration-*-${{ needs.identity.outputs.sha }}
           merge-multiple: true
           path: packages
+      # Absent when no milestone is due or no summary could be written.
+      - uses: actions/download-artifact@v8
+        continue-on-error: true
+        with:
+          name: release-summary-${{ needs.identity.outputs.sha }}
+          path: release-summary
       - name: Publish complete prerelease
         env:
           GH_TOKEN: ${{ github.token }}
           ORCA_LOCAL_BUILD_VERSION: ${{ needs.identity.outputs.version }}
           ORCA_INTEGRATION_VERSION_CODE: ${{ needs.identity.outputs.androidVersionCode }}
-        run: node config/scripts/integration-builds/publish-release.mjs packages
+          ORCA_INTEGRATION_MILESTONE: ${{ inputs.milestone }}
+        run: node config/scripts/integration-builds/publish-release.mjs packages release-summary

@@ -17,6 +17,7 @@ external_ids: []
 | 交互 | - | not-required | 小型更新提示及关于页入口，交互规则随 REQ-405 与 TC-405 记录 |
 | 调研 | - | not-required | 直接核实既有构建入口 |
 | 方案 | [macOS 自动更新签名修复](solutions/macOS自动更新签名修复方案.md) | draft | 固定自签身份优先验证；Developer ID 备选 |
+| 方案 | [发布页分层与可读发布说明](solutions/发布页分层与可读发布说明方案.md) | ready | 构建发布清理、整理版、按功能分组、同步上游摘要、AI 短版本 |
 | 测试用例 | [自动出包](tests/cases/自动出包.md) | ready | 按仓库完成门禁建立 |
 | 测试记录 | [本地验证](tests/runs/2026-09-12-local.md) | completed | 13 条合同测试，云构建尚未执行 |
 | 测试记录 | [应用更新验证](tests/runs/2026-09-12-updates.md) | completed | 本地实现、APK、组件验证；真机安装与新发布待验 |
@@ -25,8 +26,17 @@ external_ids: []
 | 测试记录 | [发布说明与版本号兼容](tests/runs/2026-09-17-release-notes.md) | completed | 单测与真实发布记录预演通过；合入后的发布页待核对 |
 | 测试记录 | [常规版本号](tests/runs/2026-09-17-preview-version.md) | completed | 编号、发布复核与版本比较通过；按 D-004 暂不合入 |
 | 测试记录 | [打包任务清单契约](tests/runs/2026-09-23-packaging-census.md) | completed | 共享 packaging census 纳入 fork macOS job，定向门禁通过 |
+| 测试记录 | [发布页分层与可读发布说明](tests/runs/2026-10-06-readable-releases.md) | completed | 单测与真实历史预演通过；合入后的出包、清理与真实 Claude 调用待核对 |
 
 ## 2. 决策点记录
+
+### D-006 2026-10-06：发布页分层与 AI 短版本
+
+- 背景：用户指出集成分支的出包日志和 Release 页很乱、没有有效信息，官方 Release 很清晰；要求四项改进都做。核实发现已安装的桌面与 Android 集成包靠「预发布 + `integration-运行号-提交` tag」找更新，不能把构建合并成一个滚动发布或挪到别的仓库。
+- 备选项：清理旧构建保留 5 个 / 10 个 / 不删；整理版在同步上游时加手动触发 / 每个 PR / 仅手动；AI 短版本先建草稿待确认 / 直接发布并标注 / 不接 AI。
+- 最终决定：保留最近 10 个构建发布（被整理版引用的不删）；整理版在同步上游时自动出，也可手动触发；AI 短版本直接发布，标注由 AI 生成、未经人工审阅。
+- 原因：用户选择。
+- 影响范围：REQ-408～REQ-412；工作流增加手动触发选项与只读的摘要任务，仓库需要用户自行配置 `ANTHROPIC_API_KEY`。清理会让「已发布数量」变小，预览版编号随之改为现有最大编号加一（REQ-407）。
 
 ### D-005 2026-09-17：不再出 Intel 版
 
@@ -64,6 +74,29 @@ external_ids: []
 - 影响范围：REQ-401、REQ-402、REQ-403；APK 沿用 Expo debug 签名并核验指纹，不生成密钥或暗改 versionCode。
 
 ## 3. 开发记录
+
+### 2026-10-06 发布页分层与可读发布说明（testing）
+
+- 本轮目标：按 D-006 让集成分支的发布页像官方一样可读：构建发布只留最近 10 个，同步上游时另出整理版，说明按用户可见变化分组并写清同步带进了什么，整理版开头有 AI 中文短版本。
+- 完成内容：
+  - 新增发布说明整理（按功能分组、工程改动与固定说明折叠）、同步上游摘要（按发布时间匹配期间官方发布）、整理版、清理与 AI 短版本五个模块，以及摘要任务与发布任务共用的构建区间计算。
+  - 预览版编号改为现有最大编号加一。
+  - 工作流增加 `milestone` 手动选项与只读的 `release-summary` 任务；有写权限的发布任务仍不带密钥。
+  - 预演中修正：上游列表超出输出缓冲；同步标题与官方版本矛盾；上游提交摘录混入基础设施改动；第一个整理版范围过窄。
+- 代码或文档变更：
+  - `config/scripts/integration-builds/` 新增 `release-notes.mjs`、`upstream-summary.mjs`、`release-context.mjs`、`milestone-release.mjs`、`prune-releases.mjs`、`ai-release-summary.mjs`、`command-output.mjs` 及两个测试文件；改 `publish-release.mjs`、`integration-releases.mjs`、`build-identity.mjs`、`integration-builds.test.mjs`。
+  - `.github/workflows/fork-integration-build.yml`；登记表 `requiredFiles`。
+  - REQ-407～REQ-412、TC-408～TC-413、方案文档。
+- 验证证据：[发布页分层与可读发布说明](tests/runs/2026-10-06-readable-releases.md)；门禁输出在 `.docs/integration-release-notes-review/2026-10-06/evidence/gates/`（git 忽略）。
+- 未解决问题：
+  - REQ-412 的约定写入 AGENTS.md 与 fork 维护文档超出本功能范围，已由 #47 单独合入。
+  - #46 首轮 CI 的 fork 差异门禁误报移动端测试类型：上游只在 PR 改动移动端时安装 `mobile/node_modules`，fork 差异门禁却总要检查移动端文件。已由 #48 在 fork 门禁块补装依赖修复，本机挪走依赖可复现、还原后消失。
+  - #48 的 CI 另有两项与本功能无关的失败：上游已知的 `startup-line-prompt-carry` 测试；跨版本兼容检查拉取的上游 v1.4.221 依赖 `@streamparser/json`，集成分支同步到的上游还没有，下次同步上游后恢复。
+  - 合入后的真实出包、清理与整理版未执行；仓库未配置 `ANTHROPIC_API_KEY`。
+- 下一步：
+  1. 开 PR 合入。
+  2. 核对第一次出包的正文、编号与清理结果，并手动触发一次整理版。
+  3. 请用户配置 `ANTHROPIC_API_KEY`。
 
 ### 2026-10-06 CI 门禁布局随上游 preflight 约束调整，并再同步 37 个上游提交（testing）
 
