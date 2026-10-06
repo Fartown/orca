@@ -3,6 +3,7 @@ import { useAppStore } from '@/store'
 import { findWorktreeById } from '@/store/slices/worktree-helpers'
 import type { OpenFile } from '@/store/slices/editor'
 import type { DocPreviewDocumentIdentity } from '@/components/browser-pane/workspace-doc/doc-preview-document-identity'
+import type { BrowserChromeShareControl } from '@/components/browser-pane/assemble-chrome/browser-chrome-toolbar'
 import {
   resolveEditorFileShareTarget,
   resolveWorkspaceFileShareTarget
@@ -84,4 +85,34 @@ export function DocPreviewLanShareButton({
     [identity, worktreeId]
   )
   return <LanArtifactShareButton resolveTarget={resolveTarget} className={className} {...control} />
+}
+
+// Why built here: a render function declared inside the toolbar component reads as a nested
+// component; the chrome only calls it with its controlled open state and overflow anchor.
+export function browserFileLanShareControl(
+  worktreeId: string,
+  filePath: string
+): (control: BrowserChromeShareControl) => React.JSX.Element {
+  return (control) => (
+    <BrowserFileLanShareButton
+      worktreeId={worktreeId}
+      filePath={filePath}
+      className="h-7 w-7"
+      {...control}
+    />
+  )
+}
+
+export function docPreviewLanShareControl(
+  worktreeId: string,
+  identity: DocPreviewDocumentIdentity
+): (control: BrowserChromeShareControl) => React.JSX.Element {
+  return (control) => (
+    <DocPreviewLanShareButton
+      worktreeId={worktreeId}
+      identity={identity}
+      className="h-7 w-7"
+      {...control}
+    />
+  )
 }

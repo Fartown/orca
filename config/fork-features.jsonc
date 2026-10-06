@@ -1315,7 +1315,7 @@
         },
         {
           "file": "src/renderer/src/components/browser-pane/assemble-chrome/browser-page-toolbar.tsx",
-          "mustContain": "BrowserFileLanShareButton",
+          "mustContain": "browserFileLanShareControl",
           "why": "browser pane file: page share entry"
         },
         {
@@ -1325,7 +1325,7 @@
         },
         {
           "file": "src/renderer/src/components/browser-pane/workspace-doc/doc-preview-toolbar.tsx",
-          "mustContain": "DocPreviewLanShareButton",
+          "mustContain": "docPreviewLanShareControl",
           "why": "workspace document preview share entry"
         },
         {
