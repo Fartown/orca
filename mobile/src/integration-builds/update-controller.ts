@@ -14,14 +14,14 @@ export type UpdateStage =
   | 'installer-opened'
   | 'error'
 
-export interface UpdateState {
+export type UpdateState = {
   stage: UpdateStage
   release: IntegrationRelease | null
   progress: number
   error: string | null
 }
 
-export interface UpdatePorts {
+export type UpdatePorts = {
   versionCode(): number
   latest(): Promise<IntegrationRelease>
   download(release: IntegrationRelease, progress: (percent: number) => void): Promise<void>

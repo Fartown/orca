@@ -10,7 +10,7 @@ import { downloadResumableApk } from './apk-download'
 import { createUpdateController } from './update-controller'
 import { isIntegrationUpdateChannel } from './integration-update-channel'
 
-interface NativeUpdate {
+type NativeUpdate = {
   getVersionCode(): number
   canInstall(): boolean
   verify(sha256: string, bytes: number, versionCode: number): Promise<void>
