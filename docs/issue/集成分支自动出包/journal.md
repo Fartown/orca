@@ -75,6 +75,15 @@ external_ids: []
 
 ## 3. 开发记录
 
+### 2026-10-06 上游同步：撤下 mobile 网页包打包工作流普查的接缝
+
+- 本轮目标：合并上游 `5cf3585b78` 时解决「上游删除、fork 修改」的冲突，保住功能本身
+- 完成内容：上游 #25791 删除了 `config/scripts/mobile-web-bundle-packaging-workflow-contract.test.mjs`（低价值的测试清单）。本功能在其中登记的 `fork-integration-build.yml macos` 一行随文件一起失去作用；功能清单撤下该接缝、测试与 checks 中的引用。出包工作流本身不变
+- 代码或文档变更：`config/fork-features.jsonc`；被删除的上游测试文件跟随上游
+- 验证证据：同步后 `pnpm sync:upstream` 的门禁与本功能 checks 结果见 `.docs/fork-sync/2026-10-06/`
+- 未解决问题：无
+- 下一步：无
+
 ### 2026-10-06 #46 合入后核对出包、清理与整理版（done）
 
 - 本轮目标：确认 REQ-408～REQ-411 在真实出包中生效，旧客户端仍能找到更新。

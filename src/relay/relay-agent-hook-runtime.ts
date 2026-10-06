@@ -1,3 +1,4 @@
+import { AGENT_HOOK_INFER_INTERRUPT_METHOD } from '../shared/agent-hook-interrupt-reconciliation'
 import { homedir } from 'node:os'
 import { registerRelayGoals, projectRelayGoalHookFacts } from '../main/goals/goal-relay-service'
 import { registerRelayArtifactShare } from '../main/self-hosted-artifacts/artifact-share-relay-service'
@@ -201,6 +202,9 @@ export class RelayAgentHookRuntime {
   }
 
   private registerHandlers(): void {
+    this.dispatcher.onRequest(AGENT_HOOK_INFER_INTERRUPT_METHOD, async (params) => ({
+      applied: this.hookServer.inferInterrupt(params)
+    }))
     this.dispatcher.onRequest(AGENT_HOOK_REQUEST_REPLAY_METHOD, async () => ({
       replayed: this.hookServer.replayCachedPayloadsForPanes()
     }))

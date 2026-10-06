@@ -73,6 +73,25 @@ it('uses merged upstream history, not an upstream commit the feature has not mer
   expect(filesRequiringFormat(root, ['upstream.ts'])).toEqual([])
 })
 
+it('preserves upstream files a merge brings in from a branch that already synced', () => {
+  const root = fixture()
+  const base = git(root, ['rev-parse', 'HEAD'])
+  git(root, ['checkout', '--quiet', '-b', 'feature'])
+  writeFileSync(path.join(root, 'feature.ts'), 'export const feature = 1\n')
+  git(root, ['add', '.'])
+  git(root, ['commit', '--quiet', '-m', 'feature'])
+  git(root, ['checkout', '--quiet', '-b', 'integration', base])
+  writeFileSync(path.join(root, 'upstream.ts'), 'export const value=2\n')
+  git(root, ['add', '.'])
+  git(root, ['commit', '--quiet', '-m', 'upstream advances'])
+  git(root, ['update-ref', 'refs/remotes/origin/main', 'HEAD'])
+  git(root, ['checkout', '--quiet', 'feature'])
+  git(root, ['merge', '--quiet', '--no-commit', '--no-ff', 'integration'])
+  expect(filesRequiringFormat(root, ['upstream.ts'])).toEqual([])
+  writeFileSync(path.join(root, 'upstream.ts'), 'export const value=3\n')
+  expect(filesRequiringFormat(root, ['upstream.ts'])).toEqual(['upstream.ts'])
+})
+
 it('runs normal formatting when the upstream reference is unavailable', () => {
   const root = fixture()
   git(root, ['update-ref', '-d', 'refs/remotes/origin/main'])

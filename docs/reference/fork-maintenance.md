@@ -102,7 +102,7 @@ Fork 的增量代码质量和 React Doctor 检查以 `HEAD` 与纯上游镜像 `
 2. 改上游文件前先问:能不能放进自己的目录?必须碰上游时,只碰接缝,并把接缝登记到 `fork-features.jsonc` 的 `seams`;新 import 到的上游模块登记到 `dependsOn`。
 3. 提交要小、要按功能打前缀(`feat(goals)`、`fix(issues)`),不要把几条线攒成一个大提交。
 4. 纯格式化不要带进上游文件的 diff:整仓 `oxfmt` 之后,用 `git checkout origin/main -- <文件>` 把只有格式差异的上游文件恢复原样。
-   提交钩子仍对全部暂存源码运行两组 lint；格式化入口 `format-fork-staged-files.mjs` 保留与已合入上游逐字相同的文件，避免再次引入刚撤回的格式差异。新文件与语义改动仍正常格式化；上游引用不可用时沿用普通格式化。
+   提交钩子仍对全部暂存源码运行两组 lint；格式化入口 `format-fork-staged-files.mjs` 保留与已合入上游逐字相同的文件（合并提交时也包括另一侧已合入的上游，例如把已同步的 `fork/integration` 合进功能分支），避免再次引入刚撤回的格式差异。新文件与语义改动仍正常格式化；上游引用不可用时沿用普通格式化。
 5. 真机验证产物放 `.docs/<主题>-ui-validation/<日期>/{scripts,evidence,build}`,`.docs` 不进仓库;文档里引用完整相对路径。
 6. 删除或替换一个 fork 功能:先改 `fork-features.jsonc` 和策略,在 journal 记决策,再删代码。反过来做会被门禁拦下,这是设计如此。
 7. **每个功能都必须同时覆盖本地访问和 SSH 访问两种场景,缺一个就不算完成。** SSH 场景指:Orca 客户端在一台机器上,工作区、文件或服务在通过 SSH 连接的另一台机器上(例:在 mbp5 的 Orca 里通过 SSH 打开 minizc 上的文件)。

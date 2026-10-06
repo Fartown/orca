@@ -92,6 +92,15 @@ external_ids: []
 
 ## 3. 开发记录
 
+### 2026-10-06 上游同步：撤下 CLI 指南测试的接缝
+
+- 本轮目标：合并上游 `5cf3585b78` 时解决「上游删除、fork 修改」的冲突，保住功能本身
+- 完成内容：上游 #25791 删除了 `config/scripts/orca-cli-skill-guidance.test.mjs`。本功能对其中分享开关文案的断言随文件一起移除；同一文案仍由 `src/cli/bundled-skill-guides.ts` 的接缝（必须包含「Share on local network from this computer」）守住。功能清单撤下该接缝、测试与 checks 中的引用
+- 代码或文档变更：`config/fork-features.jsonc`；被删除的上游测试文件跟随上游
+- 验证证据：同步后 `pnpm sync:upstream` 的门禁与本功能 checks 结果见 `.docs/fork-sync/2026-10-06/`
+- 未解决问题：无
+- 下一步：无
+
 ### 2026-10-06 同步上游 d17351401d：局域网分享接入上游工具栏折叠（testing）
 
 - 本轮目标：上游浏览器工具栏改为受控分享位并会把分享折叠进溢出菜单，让局域网分享在两种形态下都可用且文案正确。
