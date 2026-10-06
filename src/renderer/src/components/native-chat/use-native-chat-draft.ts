@@ -44,7 +44,8 @@ export function useNativeChatDraft(
         const pending = pendingAppendRef.current
         pendingAppendRef.current = {
           scopeKey,
-          text: pending?.scopeKey === scopeKey ? appendReturnedDraftText(pending.text, text) : text
+          text:
+            pending?.scopeKey === scopeKey ? appendReturnedDraftText(pending.text, text) : text
         }
       }),
     [isComposing, scopeKey]
