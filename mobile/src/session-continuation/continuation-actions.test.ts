@@ -7,6 +7,7 @@ vi.mock('lucide-react-native', () => ({ MessageSquarePlus: vi.fn() }))
 import { getMobileSessionContinuationActions } from './continuation-actions'
 import { CONTINUATION_COPY } from './continuation-copy'
 import type { MobileContinuationTab } from './continuation-source'
+import { continuationAgentStatus } from './continuation-agent-status-fixture'
 
 type MenuTab = MobileContinuationTab & { id: string; terminal: string | null }
 
@@ -17,12 +18,11 @@ function menuTab(overrides: Partial<MenuTab> = {}): MenuTab {
     type: 'terminal',
     title: 'Add auth',
     launchAgent: 'claude',
-    agentStatus: {
-      state: 'idle',
+    agentStatus: continuationAgentStatus({
       prompt: '',
       agentType: 'claude',
-      providerSession: { id: 's', transcriptPath: '/t.jsonl' }
-    } as MenuTab['agentStatus'],
+      providerSession: { key: 'session_id', id: 's', transcriptPath: '/t.jsonl' }
+    }),
     ...overrides
   }
 }
@@ -59,11 +59,10 @@ describe('mobile session continuation menu entry', () => {
       build({
         tabs: [
           menuTab({
-            agentStatus: {
-              state: 'idle',
+            agentStatus: continuationAgentStatus({
               prompt: '',
               agentType: 'claude'
-            } as MenuTab['agentStatus']
+            })
           })
         ]
       }).actions

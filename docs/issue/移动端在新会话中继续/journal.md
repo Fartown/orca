@@ -171,6 +171,15 @@ external_ids: []
 
 ## 3. 开发记录
 
+### 2026-10-06 测试夹具跟上上游类型（testing）
+
+- 本轮目标：让三个续接测试文件重新通过手机端测试类型棘轮（PR #45、#48、#50 的 CI 都因此报红）
+- 完成内容：上游收紧了 `AgentStatusEntry`（去掉 `idle` 状态，新增必填的 `updatedAt`、`stateStartedAt`、`paneKey`、`stateHistory`，`providerSession` 必带 `key`）和 `RpcClient`；测试里的状态行改由新的 `continuationAgentStatus` 夹具构造完整对象，交付测试的发送桩补全参数签名，客户端断言注明只经 `sendRequest` 到达主机。生产代码不变
+- 代码或文档变更：`mobile/src/session-continuation/continuation-agent-status-fixture.ts`（新增）、`continuation-actions.test.ts`、`continuation-source.test.ts`、`continuation-delivery.test.ts`
+- 验证证据：手机端 `check:tests-typecheck` 通过；`src/session-continuation` 5 个文件 30 例通过；手机端 `tsc` 通过
+- 未解决问题：无
+- 下一步：合入后各 PR 合并 `fork/integration` 重跑 CI
+
 ### 2026-10-06 修正续接入口的打开函数类型（testing）
 
 - 本轮目标：修掉合并前就存在、移动端类型检查报出的续接入口类型错误。

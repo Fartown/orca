@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { resolveMobileContinuationSource, type MobileContinuationTab } from './continuation-source'
+import { continuationAgentStatus } from './continuation-agent-status-fixture'
 
 function tab(overrides: Partial<MobileContinuationTab> = {}): MobileContinuationTab {
   return {
@@ -7,13 +8,16 @@ function tab(overrides: Partial<MobileContinuationTab> = {}): MobileContinuation
     title: 'Add auth',
     launchAgent: 'claude',
     startupCwd: '/srv/app/packages/api',
-    agentStatus: {
-      state: 'idle',
+    agentStatus: continuationAgentStatus({
       prompt: 'keep going',
       agentType: 'claude',
       lastAssistantMessage: 'tests pass',
-      providerSession: { id: 'sess-1', transcriptPath: '/home/dev/.claude/a.jsonl' }
-    } as MobileContinuationTab['agentStatus'],
+      providerSession: {
+        key: 'session_id',
+        id: 'sess-1',
+        transcriptPath: '/home/dev/.claude/a.jsonl'
+      }
+    }),
     ...overrides
   }
 }
@@ -40,11 +44,10 @@ describe('mobile continuation source', () => {
   it('falls back to the launch hint only when no live agent was reported', () => {
     const withoutLiveAgent = resolveMobileContinuationSource(
       tab({
-        agentStatus: {
-          state: 'idle',
+        agentStatus: continuationAgentStatus({
           prompt: '',
-          providerSession: { id: 's', transcriptPath: '/t.jsonl' }
-        } as MobileContinuationTab['agentStatus']
+          providerSession: { key: 'session_id', id: 's', transcriptPath: '/t.jsonl' }
+        })
       })
     )
 
@@ -55,12 +58,11 @@ describe('mobile continuation source', () => {
     const result = resolveMobileContinuationSource(
       tab({
         launchAgent: 'claude',
-        agentStatus: {
-          state: 'idle',
+        agentStatus: continuationAgentStatus({
           prompt: '',
           agentType: 'aider',
-          providerSession: { id: 's', transcriptPath: '/t.jsonl' }
-        } as MobileContinuationTab['agentStatus']
+          providerSession: { key: 'session_id', id: 's', transcriptPath: '/t.jsonl' }
+        })
       })
     )
 
@@ -76,21 +78,19 @@ describe('mobile continuation source', () => {
   it('refuses a session with no transcript path, since mobile has no scrollback fallback', () => {
     const blank = resolveMobileContinuationSource(
       tab({
-        agentStatus: {
-          state: 'idle',
+        agentStatus: continuationAgentStatus({
           prompt: '',
           agentType: 'codex',
-          providerSession: { id: 's', transcriptPath: '   ' }
-        } as MobileContinuationTab['agentStatus']
+          providerSession: { key: 'session_id', id: 's', transcriptPath: '   ' }
+        })
       })
     )
     const missing = resolveMobileContinuationSource(
       tab({
-        agentStatus: {
-          state: 'idle',
+        agentStatus: continuationAgentStatus({
           prompt: '',
           agentType: 'codex'
-        } as MobileContinuationTab['agentStatus']
+        })
       })
     )
 
