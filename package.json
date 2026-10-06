@@ -352,7 +352,7 @@
       "node config/scripts/format-fork-staged-files.mjs"
     ],
     "{*.{json,css},!(cloud)/**/*.{json,css}}": [
-      "oxfmt --write"
+      "node config/scripts/format-fork-staged-files.mjs"
     ]
   },
   "engines": {
