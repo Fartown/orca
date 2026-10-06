@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from 'vitest'
 import type { AgentHookRelayEnvelope } from '../shared/agent-hook-relay'
 import type { RemoteAgentInterruptRequest } from '../shared/agent-hook-interrupt-reconciliation'
 import { makePaneKey } from '../shared/stable-pane-id'
+import { CLAUDE_SESSION_ACTIVITY_WINDOW_MS } from '../shared/claude-session-ownership/claude-session-activity'
 import { RelayAgentHookServer } from './agent-hook-server'
 
 const PANE = makePaneKey('tab-1', '11111111-1111-4111-8111-111111111111')
@@ -124,11 +125,18 @@ describe('relay interrupt owner reconciliation', () => {
         })
       }
       if (change === 'new-session') {
-        await host.post({
-          hook_event_name: 'SessionStart',
-          source: 'startup',
-          session_id: 'session-b'
-        })
+        // Fork: another session replaces an active Claude row only after its activity window.
+        const later = performance.now() + CLAUDE_SESSION_ACTIVITY_WINDOW_MS
+        const clock = vi.spyOn(performance, 'now').mockReturnValue(later)
+        try {
+          await host.post({
+            hook_event_name: 'SessionStart',
+            source: 'startup',
+            session_id: 'session-b'
+          })
+        } finally {
+          clock.mockRestore()
+        }
       }
       if (change === 'task-wakeup') {
         await host.post({
