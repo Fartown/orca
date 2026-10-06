@@ -467,6 +467,14 @@
             "config/scripts/mobile-web-app-session-terminal-closure.test.mjs",
             "config/scripts/verify-mobile-web-app-bundle.mjs",
             "config/scripts/build-mobile-web-app-bundle.test.mjs",
+            // Mobile file attachment upload: feature paths and reviewed seams.
+            "src/shared/file-attachment-upload/**",
+            "src/main/file-attachment-upload/**",
+            "src/main/runtime/rpc/methods/file-attachment-upload.ts",
+            "src/main/runtime/rpc/methods/file-attachment-upload.test.ts",
+            "mobile/src/file-attachment-upload/**",
+            "docs/issue/移动端上传任意文件/**",
+            "src/main/runtime/runtime-rpc/runtime-rpc-mobile-method-allowlist.ts",
             // Fork infrastructure (docs/reference/fork-maintenance.md).
             ".github/workflows/fork-integration-build.yml",
             "config/scripts/mobile-web-bundle-packaging-workflow-contract.test.mjs",
@@ -1294,6 +1302,40 @@
             ".gitignore"
           ],
           "message": "Change is outside the mobile session-continuation feature and its reviewed seams."
+        }
+      ]
+    },
+    {
+      "id": "mobile-file-attachment-upload",
+      "description": "Mobile attaches any file type by streaming it to the workspace host's temp directory over a dedicated RPC; the image channel stays as it is.",
+      "rules": [
+        {
+          "id": "mobile-file-attachment-upload-worktree-scope",
+          "type": "change-scope",
+          "comparison": "worktree",
+          "whenChanged": [
+            "src/shared/file-attachment-upload/**",
+            "src/main/file-attachment-upload/**",
+            "src/main/runtime/rpc/methods/file-attachment-upload.ts",
+            "mobile/src/file-attachment-upload/**",
+            "docs/issue/移动端上传任意文件/**"
+          ],
+          "allowedPaths": [
+            "src/shared/file-attachment-upload/**",
+            "src/main/file-attachment-upload/**",
+            "src/main/runtime/rpc/methods/file-attachment-upload.ts",
+            "src/main/runtime/rpc/methods/file-attachment-upload.test.ts",
+            "mobile/src/file-attachment-upload/**",
+            "docs/issue/移动端上传任意文件/**",
+            "src/main/runtime/rpc/methods/index.ts",
+            "src/main/runtime/runtime-rpc/runtime-rpc-mobile-method-allowlist.ts",
+            "src/shared/rpc-contract/rpc-params-catalog.generated.ts",
+            "config/fork-features.jsonc",
+            "config/architecture-policies.jsonc",
+            "docs/issue/README.md",
+            ".gitignore"
+          ],
+          "message": "Change is outside the mobile file attachment upload feature and its reviewed seams."
         }
       ]
     },

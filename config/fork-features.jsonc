@@ -1936,6 +1936,19 @@
       "checks": [
         "pnpm exec vitest run --config config/vitest.config.ts src/main/runtime/headless-sibling-writers-keep-publication-epoch.test.ts src/main/runtime/headless-close-keeps-publication-epoch.test.ts"
       ]
+    },
+    {
+      "id": "mobile-file-attachment-upload",
+      "title": "移动端上传任意文件：ZIP、PDF 等任意类型交给终端或 agent",
+      "goal": "移动端把任意类型文件流式上传到工作区所在机器的临时目录，并交给终端或 agent",
+      "journal": "docs/issue/移动端上传任意文件/journal.md",
+      "dependsOn": [],
+      "policyId": "mobile-file-attachment-upload",
+      "ownedPaths": ["docs/issue/移动端上传任意文件/**"],
+      "requiredFiles": [],
+      "seams": [],
+      "tests": [],
+      "checks": []
     }
   ]
 }
