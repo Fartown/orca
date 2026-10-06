@@ -1814,6 +1814,7 @@
         "src/shared/agent-session-continuation/continuation-prompt.test.ts",
         "mobile/src/session-continuation/continuation-delivery.test.ts",
         "mobile/src/session-continuation/continuation-source.test.ts",
+        "mobile/src/session-continuation/terminal-engine-request-mode.test.ts",
         "config/scripts/mobile-web-app-session-terminal-closure.test.mjs",
         "config/scripts/build-mobile-web-app-bundle.test.mjs"
       ],

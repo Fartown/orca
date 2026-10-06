@@ -171,6 +171,15 @@ external_ids: []
 
 ## 3. 开发记录
 
+### 2026-10-06 用请求模式守护测试替换整文档哈希钉子（testing）
+
+- 本轮目标：让 PR CI 的手机端测试恢复通过；D-007 所说的「必须重算、不能选边」的 `terminal-webview-payload-hash.test.ts` 已失效
+- 完成内容：上游在 #21878 删除了该测试，fork 当时保留了它，但钉住的长度与 sha256 之后再没人更新，fork 构建实际产出 746246 字节（钉的是 734707），CI 一直红，只是被前面的测试类型棘轮挡住没暴露。整文档哈希每次上游改动都会失效，真正需要守住的是「打包产物里没有 `void 0||(i=`」（DECRQM 失效的标志）。删除该钉子，新增 `mobile/src/session-continuation/terminal-engine-request-mode.test.ts` 自动断言这一点，取代 D-007 里的手工 grep
+- 代码或文档变更：删除 `mobile/src/terminal/terminal-webview-payload-hash.test.ts`；新增上述测试并登记到功能清单的 tests
+- 验证证据：用 fork 的 `build-terminal-webview-engine.mjs` 重建产物后，`void 0||(i=` 计数为 0，新测试通过
+- 未解决问题：无
+- 下一步：随本次上游同步一起推送
+
 ### 2026-10-06 修正续接入口的打开函数类型（testing）
 
 - 本轮目标：修掉合并前就存在、移动端类型检查报出的续接入口类型错误。
