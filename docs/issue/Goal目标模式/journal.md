@@ -141,6 +141,15 @@ external_ids: []
 
 ## 3. 开发记录
 
+### 2026-10-06 上游同步：撤下工作区激活调用点普查的接缝
+
+- 本轮目标：合并上游 `5cf3585b78` 时解决「上游删除、fork 修改」的冲突，保住功能本身
+- 完成内容：上游 #25791 删除了 `src/renderer/src/lib/worktree-activation-surface-caller-wiring.test.ts`（低价值的测试清单）。本功能在其中登记的 `open-goal-document.ts` 随文件一起失去作用；功能清单撤下该接缝、测试与 checks 中的引用。Goal 文档打开逻辑不变
+- 代码或文档变更：`config/fork-features.jsonc`；被删除的上游测试文件跟随上游
+- 验证证据：同步后 `pnpm sync:upstream` 的门禁与本功能 checks 结果见 `.docs/fork-sync/2026-10-06/`
+- 未解决问题：无
+- 下一步：无
+
 ### 2026-10-06 修复 orcad 关闭时 Goals 覆盖上游运行时清理（testing）
 
 - 本轮目标：修掉推送后定时 x86 单测暴露的 orcad 关闭清理问题。

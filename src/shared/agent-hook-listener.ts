@@ -25,6 +25,7 @@ import {
   suppressOpenCodeSharedServerPost,
   trackOpenCodePaneLaunchToken
 } from './agent-hook-listener/opencode-session-registry'
+import { claudeRowHasUnlistedLiveWork } from './agent-hook-listener/providers/claude-pane-hold-evidence'
 import { readString } from './agent-hook-listener/tool-input-preview'
 import { shouldRejectClaudeSessionReplacement } from './claude-session-ownership/claude-session-activity'
 import {
@@ -325,9 +326,7 @@ export function normalizeHookPayload(
     toolAgentType: readString(hookPayloadRecord, 'agent_type'),
     ...(source === 'claude'
       ? {
-          claudeRunningNonAgentTask:
-            state.claudeRunningNonAgentTaskPaneKeys.has(paneKey) ||
-            state.claudeActiveSessionCronPaneKeys.has(paneKey)
+          claudeRunningNonAgentTask: claudeRowHasUnlistedLiveWork(state, paneKey)
         }
       : {}),
     ...(providerSession ? { providerSession } : {}),
