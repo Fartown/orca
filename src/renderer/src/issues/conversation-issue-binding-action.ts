@@ -6,6 +6,7 @@ import type {
 import { refreshConversationPages, refreshIssuePages } from './issue-route-refresh'
 import { issueDomainStore } from './issues-domain-store'
 import { IssueRuntimeClient } from './issue-runtime-client'
+import { createBrowserUuid } from '@/lib/browser-uuid'
 
 export async function loadActiveIssueBindingOptions(
   route: IssueRouteExecutionHostId
@@ -27,7 +28,7 @@ export async function updateConversationIssueBinding(args: {
 }): Promise<void> {
   const client = IssueRuntimeClient.forRoute(args.route)
   await client.mutate('conversations.bindIssue', {
-    mutationId: crypto.randomUUID(),
+    mutationId: createBrowserUuid(),
     conversationId: args.conversation.id,
     issueId: args.issueId,
     expectedRecordRevision: args.conversation.recordRevision

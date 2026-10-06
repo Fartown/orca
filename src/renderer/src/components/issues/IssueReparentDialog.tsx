@@ -21,6 +21,7 @@ import { ISSUE_MAX_DEPTH } from '../../../../shared/issues/constants'
 import { IssueRuntimeClient } from '@/issues/issue-runtime-client'
 import { useIssueDomainStore } from '@/issues/use-issue-domain-store'
 import { translate } from '@/i18n/i18n'
+import { createBrowserUuid } from '@/lib/browser-uuid'
 
 export function IssueReparentDialog({
   route,
@@ -50,7 +51,7 @@ export function IssueReparentDialog({
     setPending(true)
     try {
       await IssueRuntimeClient.forRoute(route).mutate('issues.reparent', {
-        mutationId: crypto.randomUUID(),
+        mutationId: createBrowserUuid(),
         issueId: issue.id,
         parentId: parentId === 'root' ? null : parentId,
         index: 0,

@@ -25,6 +25,7 @@ import { issueDomainStore } from '@/issues/issues-domain-store'
 import { useIssueDomainStore } from '@/issues/use-issue-domain-store'
 import { useSidebarHostScopeOptions } from '../use-sidebar-host-scope-options'
 import { translate } from '@/i18n/i18n'
+import { createBrowserUuid } from '@/lib/browser-uuid'
 
 export function CreateIssueDialog({
   open,
@@ -68,7 +69,7 @@ export function CreateIssueDialog({
     setPending(true)
     try {
       await IssueRuntimeClient.forRoute(route).mutate('issues.create', {
-        mutationId: crypto.randomUUID(),
+        mutationId: createBrowserUuid(),
         source:
           kind === 'local'
             ? { kind: 'local', title: trimmedTitle }

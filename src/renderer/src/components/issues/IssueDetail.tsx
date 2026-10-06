@@ -18,6 +18,7 @@ import { IssueConversationActions } from './IssueConversationActions'
 import { IssueReparentDialog } from './IssueReparentDialog'
 import { IssueEditDialog } from './IssueEditDialog'
 import { translate } from '@/i18n/i18n'
+import { createBrowserUuid } from '@/lib/browser-uuid'
 
 export function IssueDetail({
   route,
@@ -194,7 +195,7 @@ async function mutateLifecycle(
 ): Promise<void> {
   try {
     await IssueRuntimeClient.forRoute(route).mutate(method, {
-      mutationId: crypto.randomUUID(),
+      mutationId: createBrowserUuid(),
       issueId: detail.issue.id,
       expectedRecordRevision: detail.issue.recordRevision
     })
@@ -229,7 +230,7 @@ async function deleteIssue(
       return
     }
     await client.mutate('issues.delete', {
-      mutationId: crypto.randomUUID(),
+      mutationId: createBrowserUuid(),
       plan: preparation.plan
     })
     issueDomainStore.getState().setActiveIssueRoute(null)

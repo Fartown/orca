@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { translate } from '@/i18n/i18n'
 import type { GoalCriterion } from '../../../../shared/goals/goal-control-contract'
+import { createBrowserUuid } from '@/lib/browser-uuid'
 
 /** User-declared acceptance items; only an item with a command is verified independently. */
 export function GoalCriteriaEditor({
@@ -14,7 +15,7 @@ export function GoalCriteriaEditor({
   onChange: (criteria: GoalCriterion[]) => void
 }): React.JSX.Element {
   const add = (): void =>
-    onChange([...criteria, { id: crypto.randomUUID(), description: '', command: undefined }])
+    onChange([...criteria, { id: createBrowserUuid(), description: '', command: undefined }])
   const patch = (id: string, changes: Partial<GoalCriterion>): void =>
     onChange(
       criteria.map((criterion) => (criterion.id === id ? { ...criterion, ...changes } : criterion))

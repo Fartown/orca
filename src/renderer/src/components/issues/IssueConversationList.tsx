@@ -15,6 +15,7 @@ import { ConversationRenameDialog } from './ConversationRenameDialog'
 import { IssueConversationRowContent } from './IssueConversationRowContent'
 import { ConversationIssueBindingPopover } from './ConversationIssueBindingPopover'
 import { translate } from '@/i18n/i18n'
+import { createBrowserUuid } from '@/lib/browser-uuid'
 
 export function IssueConversationList({
   route,
@@ -156,7 +157,7 @@ async function forgetConversation(
       return
     }
     await client.mutate('conversations.delete', {
-      mutationId: crypto.randomUUID(),
+      mutationId: createBrowserUuid(),
       conversationId: conversation.id,
       expectedRecordRevision: preparation.conversation.recordRevision,
       preflightToken: preparation.preflightToken
