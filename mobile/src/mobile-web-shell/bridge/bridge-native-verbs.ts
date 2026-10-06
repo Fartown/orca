@@ -15,6 +15,10 @@ import {
   mediaReleaseParamsSchema,
   mediaReleaseResultSchema
 } from './bridge-media-verbs'
+import {
+  BRIDGE_FILE_VERB_NAMES,
+  BRIDGE_FILE_VERBS
+} from '../../file-attachment-upload/bridge-file-verbs'
 
 /**
  * The shell-answered request seam: what a `native.` method is, and every verb there is.
@@ -42,7 +46,8 @@ export const BRIDGE_NATIVE_VERB_NAMES = [
   'native.media.release',
   'native.audio.start',
   'native.audio.read',
-  'native.audio.stop'
+  'native.audio.stop',
+  ...BRIDGE_FILE_VERB_NAMES
 ] as const
 
 export type BridgeNativeVerb = (typeof BRIDGE_NATIVE_VERB_NAMES)[number]
@@ -124,7 +129,8 @@ export const BRIDGE_NATIVE_VERBS: Readonly<Record<BridgeNativeVerb, BridgeNative
   'native.audio.stop': {
     params: audioStopParamsSchema,
     result: audioStopResultSchema
-  }
+  },
+  ...BRIDGE_FILE_VERBS
 }
 
 /** Whether a method the page named is one this seam answers rather than one the desktop serves. */

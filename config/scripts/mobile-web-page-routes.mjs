@@ -160,6 +160,13 @@ export const MOBILE_WEB_PAGE_ROUTES = [
       'native.audio.read',
       'native.audio.stop'
     ],
-    optionalGrants: ['externalNavigation']
+    // A file of any type, named, to the upload ceiling. Optional: on a shell without these the
+    // attach sheet still offers File through `native.media.*`, at the image ceiling.
+    optionalGrants: [
+      'externalNavigation',
+      'native.file.pick',
+      'native.file.read',
+      'native.file.release'
+    ]
   }
 ]

@@ -1,54 +1,68 @@
 import { useMemo } from 'react'
 import { fileAttachmentExtensionForMime } from '../../../src/shared/file-attachment-upload/file-attachment-file-name'
-import type { BridgeMediaItem } from '../mobile-web-shell/bridge/bridge-media-verbs'
-import { BRIDGE_MEDIA_READ_MAX_BYTES } from '../mobile-web-shell/bridge/bridge-media-verbs'
+import { FILE_ATTACHMENT_MAX_BYTES } from '../../../src/shared/file-attachment-upload/file-attachment-upload-limits'
+import {
+  BRIDGE_MEDIA_READ_MAX_BYTES,
+  type BridgeMediaChunk,
+  type BridgeMediaItem
+} from '../mobile-web-shell/bridge/bridge-media-verbs'
+import type { BridgeRpcClient } from '../mobile-web-shell/bridge/bridge-rpc-client'
 import { MEDIA_STAGED_MAX_BYTES } from '../mobile-web-shell/media-handle-registry'
 import {
+  NATIVE_VERB_REASONS,
   NativeVerbError,
   useNativeVerbs,
+  type NativeVerbReason,
   type NativeVerbs
 } from '../mobile-web-shell/bridge/use-native-verbs'
-
-/** The three media verbs a file pick uses; the rest of the shell's surface is not reachable here. */
-export type StagedMediaVerbs = Pick<NativeVerbs, 'pickMedia' | 'readMedia' | 'releaseMedia'>
-
-async function releaseQuietly(verbs: StagedMediaVerbs, handle: string): Promise<void> {
-  try {
-    await verbs.releaseMedia(handle)
-  } catch (error) {
-    // The shell's TTL sweep reclaims a handle this could not release.
-    console.warn('[page] a staged file handle could not be released', { handle }, error)
-  }
-}
+import { usePageBridgeClient } from '../transport/client-context.web'
 import { base64DecodedByteLength } from './attachment-base64-length'
 import {
+  BRIDGE_FILE_VERB_NAMES,
+  filePickResultSchema,
+  fileReadResultSchema,
+  fileReleaseResultSchema,
+  type BridgeFileItem,
+  type BridgeFileVerb
+} from './bridge-file-verbs'
+import {
   FileAttachmentShellLimitError,
+  FileAttachmentTooLargeError,
   type FileAttachmentPicker,
   type PickedAttachmentFile
 } from './picked-attachment-file'
 
-/** The shell's picker reports no file name, so the host gets one built from the type. */
+/** The three media verbs a file pick uses; the rest of the shell's surface is not reachable here. */
+export type StagedMediaVerbs = Pick<NativeVerbs, 'pickMedia' | 'readMedia' | 'releaseMedia'>
+
+/** `native.file.*`, as this page calls them. */
+export type ShellFileVerbs = {
+  readonly pickFiles: (multiple: boolean) => Promise<readonly BridgeFileItem[]>
+  readonly readFile: (handle: string, offset: number, length: number) => Promise<BridgeMediaChunk>
+  readonly releaseFile: (handle: string) => Promise<boolean>
+}
+
+type ReadRange = (offset: number, length: number) => Promise<BridgeMediaChunk>
+
+/** A staged item with no name of its own gets one built from its type. */
 function nameForMime(mime: string): string {
   return `attachment${fileAttachmentExtensionForMime(mime) ?? '.bin'}`
 }
 
-export async function* readStagedMediaBase64Chunks(
-  verbs: Pick<NativeVerbs, 'readMedia'>,
-  item: BridgeMediaItem,
+/** Reads a shell-staged item one upload chunk at a time; the shell caps each read at the same size. */
+export async function* readShellStagedBase64Chunks(
+  read: ReadRange,
+  label: string,
+  byteLength: number,
   chunkBytes: number
 ): AsyncGenerator<string> {
-  // The shell caps one read; the upload chunk is the same size, so each read is one chunk.
   const length = Math.min(chunkBytes, BRIDGE_MEDIA_READ_MAX_BYTES)
   let offset = 0
-  while (offset < item.byteLength) {
-    const chunk = await verbs.readMedia(
-      item.handle,
-      offset,
-      Math.min(length, item.byteLength - offset)
-    )
+  while (offset < byteLength) {
+    const chunk = await read(offset, Math.min(length, byteLength - offset))
     const bytes = base64DecodedByteLength(chunk.base64)
     if (bytes === 0) {
-      throw new Error(`the shell answered no bytes for ${item.handle} at ${offset}`)
+      throw new Error(`the shell answered no bytes for ${label} at ${offset}`)
     }
     offset += bytes
     yield chunk.base64
@@ -56,33 +70,39 @@ export async function* readStagedMediaBase64Chunks(
       break
     }
   }
-  if (offset !== item.byteLength) {
-    throw new Error(
-      `the shell answered ${offset} bytes for an item it declared as ${item.byteLength}`
-    )
+  if (offset !== byteLength) {
+    throw new Error(`the shell answered ${offset} bytes for an item it declared as ${byteLength}`)
   }
 }
 
-function stagedMediaFile(verbs: StagedMediaVerbs, item: BridgeMediaItem): PickedAttachmentFile {
+function shellStagedFile(
+  item: { handle: string; name: string; mime: string; byteLength: number },
+  read: ReadRange,
+  release: (handle: string) => Promise<boolean>
+): PickedAttachmentFile {
   let released = false
   return {
-    name: nameForMime(item.mime),
+    name: item.name || nameForMime(item.mime),
     mimeType: item.mime,
     byteLength: item.byteLength,
-    readBase64Chunks: (chunkBytes) => readStagedMediaBase64Chunks(verbs, item, chunkBytes),
+    readBase64Chunks: (chunkBytes) =>
+      readShellStagedBase64Chunks(read, item.handle, item.byteLength, chunkBytes),
     release: async () => {
-      if (!released) {
-        released = true
-        await releaseQuietly(verbs, item.handle)
+      if (released) {
+        return
+      }
+      released = true
+      try {
+        await release(item.handle)
+      } catch (error) {
+        // The shell's TTL sweep reclaims a handle this could not release.
+        console.warn('[page] a staged file handle could not be released', item.handle, error)
       }
     }
   }
 }
 
-/**
- * Web sibling: the page has no Files app, so the shell picks and stages for it. This shell's
- * staging holds as much as an image, which is the ceiling a file gets here.
- */
+/** A shell built before `native.file.*` stages files through the media verbs, at the image ceiling. */
 export function createStagedMediaFileAttachmentPicker(
   verbs: StagedMediaVerbs
 ): FileAttachmentPicker {
@@ -98,12 +118,104 @@ export function createStagedMediaFileAttachmentPicker(
         }
         throw error
       }
-      return items.map((item) => stagedMediaFile(verbs, item))
+      return items.map((item) =>
+        shellStagedFile(
+          { ...item, name: '' },
+          (offset, length) => verbs.readMedia(item.handle, offset, length),
+          verbs.releaseMedia
+        )
+      )
     }
   }
 }
 
+/** A shell with `native.file.*` names each file and stages up to the upload ceiling. */
+export function createShellFileAttachmentPicker(files: ShellFileVerbs): FileAttachmentPicker {
+  return {
+    maxBytes: FILE_ATTACHMENT_MAX_BYTES,
+    async pickFiles(multiple) {
+      let items: readonly BridgeFileItem[]
+      try {
+        items = await files.pickFiles(multiple)
+      } catch (error) {
+        if (error instanceof NativeVerbError && error.reason === 'native_media_too_large') {
+          throw new FileAttachmentTooLargeError(FILE_ATTACHMENT_MAX_BYTES)
+        }
+        throw error
+      }
+      return items.map((item) =>
+        shellStagedFile(
+          item,
+          (offset, length) => files.readFile(item.handle, offset, length),
+          files.releaseFile
+        )
+      )
+    }
+  }
+}
+
+/** The shell's code, floored to a reason this page knows, like `use-native-verbs` does. */
+function shellReason(error: unknown): NativeVerbReason {
+  const code =
+    typeof error === 'object' && error !== null && 'code' in error && typeof error.code === 'string'
+      ? error.code
+      : null
+  return NATIVE_VERB_REASONS.find((reason) => reason === code) ?? 'unreported'
+}
+
+function grantsFileVerbs(client: BridgeRpcClient): boolean {
+  const granted = client.getShellSession()?.grants.native ?? []
+  return BRIDGE_FILE_VERB_NAMES.every((verb) => granted.includes(verb))
+}
+
+function bridgeFileVerbs(client: BridgeRpcClient): ShellFileVerbs {
+  async function call<Value>(
+    verb: BridgeFileVerb,
+    params: unknown,
+    parse: (value: unknown) => Value
+  ): Promise<Value> {
+    try {
+      return parse((await client.callNativeVerb(verb, params)).result)
+    } catch (error) {
+      throw new NativeVerbError(
+        shellReason(error),
+        error instanceof Error ? error.message : `${verb} failed`
+      )
+    }
+  }
+  return {
+    pickFiles: async (multiple) =>
+      (await call('native.file.pick', { multiple }, (value) => filePickResultSchema.parse(value)))
+        .items,
+    readFile: (handle, offset, length) =>
+      call('native.file.read', { handle, offset, length }, (value) =>
+        fileReadResultSchema.parse(value)
+      ),
+    releaseFile: async (handle) =>
+      (
+        await call('native.file.release', { handle }, (value) =>
+          fileReleaseResultSchema.parse(value)
+        )
+      ).released
+  }
+}
+
+/**
+ * Web sibling: the page has no Files app, so the shell picks and stages for it. Which verbs the
+ * shell grants is read at pick time, because a page can mount before its session is open.
+ */
 export function useFileAttachmentPicker(): FileAttachmentPicker {
   const verbs = useNativeVerbs()
-  return useMemo(() => createStagedMediaFileAttachmentPicker(verbs), [verbs])
+  const client = usePageBridgeClient()
+  return useMemo(() => {
+    const legacy = createStagedMediaFileAttachmentPicker(verbs)
+    const named = createShellFileAttachmentPicker(bridgeFileVerbs(client))
+    const current = () => (grantsFileVerbs(client) ? named : legacy)
+    return {
+      get maxBytes() {
+        return current().maxBytes
+      },
+      pickFiles: (multiple) => current().pickFiles(multiple)
+    }
+  }, [client, verbs])
 }

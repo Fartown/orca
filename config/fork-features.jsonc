@@ -1945,6 +1945,11 @@
       "dependsOn": [
         "mobile/src/components/ActionSheetModal.tsx",
         "mobile/src/files/file-list-fallback.ts",
+        "mobile/src/mobile-web-shell/bridge-host-errors.ts",
+        "mobile/src/mobile-web-shell/bridge/bridge-rpc-client.ts",
+        "mobile/src/mobile-web-shell/use-media-handle-registry.ts",
+        "mobile/src/platform/native-media-device.ts",
+        "mobile/src/transport/client-context.web.tsx",
         "mobile/src/mobile-web-shell/bridge/bridge-media-verbs.ts",
         "mobile/src/mobile-web-shell/bridge/use-native-verbs.ts",
         "mobile/src/mobile-web-shell/media-handle-registry.ts",
@@ -1993,7 +1998,9 @@
         "mobile/src/file-attachment-upload/use-mobile-file-attachments.ts",
         "mobile/src/file-attachment-upload/file-attachment-upload-client.ts",
         "mobile/src/file-attachment-upload/file-attachment-picker.ts",
-        "mobile/src/file-attachment-upload/file-attachment-picker.web.ts"
+        "mobile/src/file-attachment-upload/file-attachment-picker.web.ts",
+        "mobile/src/file-attachment-upload/bridge-file-verbs.ts",
+        "mobile/src/file-attachment-upload/native-file-verbs.ts"
       ],
       "seams": [
         {
@@ -2050,6 +2057,31 @@
           "file": "mobile/src/session/use-mobile-native-chat-image-attachments.ts",
           "mustContain": "readonly addUploadedImages",
           "why": "an image picked as File joins the chat chips like a photo (REQ-003)"
+        },
+        {
+          "file": "mobile/src/mobile-web-shell/bridge/bridge-native-verbs.ts",
+          "mustContain": "...BRIDGE_FILE_VERBS",
+          "why": "the shell advertises and validates native.file.* beside the media verbs (REQ-002, REQ-004)"
+        },
+        {
+          "file": "mobile/src/platform/use-native-device-verbs.ts",
+          "mustContain": "useNativeFileVerbServer(sessionId)",
+          "why": "the shell serves native.file.* from its own handle registry (REQ-004)"
+        },
+        {
+          "file": "mobile/src/mobile-web-shell/bridge/bridge-port-pair-test-harness.ts",
+          "mustContain": "case 'native.file.pick'",
+          "why": "the bridge test shell answers every advertised verb"
+        },
+        {
+          "file": "config/scripts/mobile-web-page-routes.mjs",
+          "mustContain": "'native.file.pick'",
+          "why": "the session page may use native.file.* where the shell has it and falls back where not (REQ-005)"
+        },
+        {
+          "file": "config/scripts/mobile-web-app-held-press-probe-routes.mjs",
+          "mustContain": "fileAttachments: { openTerminalSheet",
+          "why": "the key-bar probe mounts the command dock, which now opens the attach sheet"
         }
       ],
       "tests": [
@@ -2057,16 +2089,18 @@
         "src/shared/file-attachment-upload/file-attachment-delivery-text.test.ts",
         "src/renderer/src/file-attachment-upload/file-attachment-shell-escape-parity.test.ts",
         "src/main/runtime/rpc/methods/file-attachment-upload.test.ts",
+        "src/main/file-attachment-upload/file-attachment-upload-mobile-ws.test.ts",
         "src/main/runtime/runtime-rpc/fork-mobile-rpc-method-allowlist.test.ts",
         "mobile/src/file-attachment-upload/file-attachment-upload-client.test.ts",
         "mobile/src/file-attachment-upload/file-attachment-picker.test.ts",
         "mobile/src/file-attachment-upload/file-attachment-picker.web.test.ts",
         "mobile/src/file-attachment-upload/file-attachment-terminal-write.test.ts",
-        "mobile/src/file-attachment-upload/use-mobile-file-attachments.test.ts"
+        "mobile/src/file-attachment-upload/use-mobile-file-attachments.test.ts",
+        "mobile/src/file-attachment-upload/native-file-verbs.test.ts"
       ],
       "checks": [
         "pnpm exec vitest run --config config/vitest.config.ts src/shared/file-attachment-upload src/main/file-attachment-upload src/renderer/src/file-attachment-upload src/main/runtime/rpc/methods/file-attachment-upload.test.ts src/main/runtime/runtime-rpc/fork-mobile-rpc-method-allowlist.test.ts src/main/runtime/mobile-rpc-allowlist.test.ts",
-        "pnpm --dir mobile exec vitest run src/file-attachment-upload src/session/use-mobile-native-chat-image-attachments.test.ts src/session/use-mobile-session-image-attachments.test.tsx"
+        "pnpm --dir mobile exec vitest run src/file-attachment-upload src/session/use-mobile-native-chat-image-attachments.test.ts src/session/use-mobile-session-image-attachments.test.tsx src/mobile-web-shell/page-route-policy.test.ts src/mobile-web-shell/bridge-host-init.test.ts"
       ]
     }
   ]

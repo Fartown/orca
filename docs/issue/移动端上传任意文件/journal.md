@@ -74,6 +74,15 @@ external_ids: []
 
 ## 3. 开发记录
 
+### 2026-10-06 手机壳新接口与网页版会话页
+
+- 本轮目标：网页版会话页在新手机壳上保留原文件名并支持 100 MiB；旧手机壳照常可用
+- 完成内容：新增桥接接口 `native.file.pick / read / release`（独立句柄登记、100 MiB 上限、非本 App 缓存副本一律拒绝、整次拒绝时删除已暂存副本）；会话路由把三者列为可选授权；页面在选择时按手机壳授权决定走新接口还是 `native.media.*`；补上真实 WebSocket + 端到端加密 + 移动端设备身份的集成测试
+- 代码或文档变更：`mobile/src/file-attachment-upload/{bridge-file-verbs,native-file-verbs,use-native-file-verb-server,file-attachment-picker.web}.ts`；接缝 `bridge-native-verbs.ts`、`use-native-device-verbs.ts`、`bridge-port-pair-test-harness.ts`、`mobile-web-page-routes.mjs`、按键栏探针 `mobile-web-app-held-press-probe-routes.mjs`；授权清单钉住测试 `page-route-policy.test.ts`、`bridge-host-init.test.ts`
+- 验证证据：`file-attachment-upload-mobile-ws.test.ts` 通过（手机身份上传 600 KB 文件逐字节一致，`files.writeBase64Chunk` 对手机仍为 `forbidden`）；手机端 `src/file-attachment-upload`、`src/mobile-web-shell`、`src/platform` 共 116 个测试文件通过；按键栏长按渲染门禁 7 例通过（曾因探针缺 `fileAttachments` 失败，已修）；`pnpm tc`、手机端 `typecheck`、`check:fork-features` 通过
+- 未解决问题：本机 Playwright 的 WebKit 下载失败，webkit 相关的网页渲染门禁（mermaid、HTML 预览、抽屉、原生一致性、栈切换）本机无法执行，留给 CI；chromium 下同组门禁通过
+- 下一步：隔离的真实 App 验证本机与 SSH 工作区（本机 sshd 127.0.0.1:2222，远端 HOME 隔离）
+
 ### 2026-10-06 电脑端上传接口与手机端入口
 
 - 本轮目标：实现电脑端 `fileAttachment.*` 流式写入，以及手机端「照片 / 文件」入口、上传与交付
