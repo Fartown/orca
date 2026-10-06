@@ -4,7 +4,7 @@ import { downloadResumableApk, type ApkDownloadPorts } from './apk-download'
 const TAG = 'integration-1-aaaaaaaaaaaa'
 const TOTAL = 1000
 
-interface Step {
+type Step = {
   status?: number
   error?: string
   stalled?: boolean

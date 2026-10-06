@@ -23,46 +23,58 @@ function usePrefersDark(): boolean {
   return dark
 }
 
+// Why module-level: components declared inside ShareViewer get a new identity per render, so
+// react-markdown would remount every link and code block whenever the theme flips.
+const ShareDarkContext = React.createContext(false)
+
+const ShareLink: NonNullable<Components['a']> = ({ href, children, ...props }) =>
+  isShareViewerLocalHref(href) ? (
+    <span>{children}</span>
+  ) : (
+    <a {...props} href={href}>
+      {children}
+    </a>
+  )
+
+const ShareCode: NonNullable<Components['code']> = function ShareCode({
+  className,
+  children,
+  ...props
+}) {
+  const isDark = React.useContext(ShareDarkContext)
+  return /language-mermaid/.test(className || '') ? (
+    <MermaidBlock content={String(children).trimEnd()} isDark={isDark} htmlLabels={false} />
+  ) : (
+    <code className={className} {...props}>
+      {children}
+    </code>
+  )
+}
+
+const SharePre: NonNullable<Components['pre']> = ({ children, ...props }) => {
+  const child = React.Children.toArray(children)[0]
+  return React.isValidElement(child) && child.type === MermaidBlock ? (
+    <>{children}</>
+  ) : (
+    <pre {...props}>{children}</pre>
+  )
+}
+
+const SHARE_MARKDOWN_COMPONENTS: Components = { a: ShareLink, code: ShareCode, pre: SharePre }
+
 function ShareViewer({ document: shared }: { document: ShareDocument }): React.JSX.Element {
   const isDark = usePrefersDark()
   useEffect(() => {
     window.document.documentElement.classList.toggle('dark', isDark)
   }, [isDark])
-  const components = useMemo<Components>(
-    () => ({
-      a: ({ href, children, ...props }) =>
-        isShareViewerLocalHref(href) ? (
-          <span>{children}</span>
-        ) : (
-          <a {...props} href={href}>
-            {children}
-          </a>
-        ),
-      code: ({ className, children, ...props }) =>
-        /language-mermaid/.test(className || '') ? (
-          <MermaidBlock content={String(children).trimEnd()} isDark={isDark} htmlLabels={false} />
-        ) : (
-          <code className={className} {...props}>
-            {children}
-          </code>
-        ),
-      pre: ({ children, ...props }) => {
-        const child = React.Children.toArray(children)[0]
-        return React.isValidElement(child) && child.type === MermaidBlock ? (
-          <>{children}</>
-        ) : (
-          <pre {...props}>{children}</pre>
-        )
-      }
-    }),
-    [isDark]
-  )
   return (
     <div
       className={`orca-share-page markdown-preview ${isDark ? 'markdown-dark' : 'markdown-light'}`}
     >
       <div className="markdown-body" translate="no">
-        <MarkdownPreviewBody content={shared.markdown} components={components} />
+        <ShareDarkContext.Provider value={isDark}>
+          <MarkdownPreviewBody content={shared.markdown} components={SHARE_MARKDOWN_COMPONENTS} />
+        </ShareDarkContext.Provider>
       </div>
       <footer className="orca-share-footer">
         {translate(

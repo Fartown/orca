@@ -1,5 +1,5 @@
 import type { Dispatch, RefObject, SetStateAction } from 'react'
-import { BrowserFileLanShareButton } from '@/components/self-hosted-artifacts/share-button/LanArtifactShareEntryButtons'
+import { browserFileLanShareControl } from '@/components/self-hosted-artifacts/share-button/LanArtifactShareEntryButtons'
 import { lanShareLabel } from '@/components/self-hosted-artifacts/share-button/lan-artifact-share-copy'
 import { translate } from '@/i18n/i18n'
 import { useShortcutLabel } from '@/hooks/useShortcutLabel'
@@ -194,14 +194,7 @@ export function BrowserPageToolbar({
       shareLabel={lanShareLabel()}
       shareControl={
         shareableArtifactFile
-          ? (control) => (
-              <BrowserFileLanShareButton
-                worktreeId={worktreeId}
-                filePath={shareableArtifactFile.filePath}
-                className="h-7 w-7"
-                {...control}
-              />
-            )
+          ? browserFileLanShareControl(worktreeId, shareableArtifactFile.filePath)
           : undefined
       }
       viewSource={{

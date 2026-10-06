@@ -1,7 +1,7 @@
 const RETRY_DELAYS_MS = [2_000, 5_000, 12_000]
 const RETRYABLE_STATUSES = new Set([408, 425, 429, 500, 502, 503, 504])
 
-export interface ApkDownloadPorts {
+export type ApkDownloadPorts = {
   /** Bytes of the cached partial APK, 0 when nothing is cached. */
   partialBytes(): Promise<number>
   /** Release tag the cached partial belongs to, null when unknown. */
@@ -15,12 +15,12 @@ export interface ApkDownloadPorts {
   delay(ms: number): Promise<void>
 }
 
-export interface ApkDownloadRequest {
+export type ApkDownloadRequest = {
   tag: string
   expectedBytes: number
 }
 
-interface AttemptOutcome {
+type AttemptOutcome = {
   done: boolean
   retryable: boolean
   keepPartial: boolean

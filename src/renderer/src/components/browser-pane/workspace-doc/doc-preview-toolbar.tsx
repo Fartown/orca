@@ -9,7 +9,7 @@ import { DocPreviewAddressEdit } from './doc-preview-address-edit'
 import type { DocPreviewDocumentIdentity } from './doc-preview-document-identity'
 import type { DocPreviewHistory } from './doc-preview-webview-history'
 import { DocPreviewOverflowMenu } from './doc-preview-overflow-menu'
-import { DocPreviewLanShareButton } from '@/components/self-hosted-artifacts/share-button/LanArtifactShareEntryButtons'
+import { docPreviewLanShareControl } from '@/components/self-hosted-artifacts/share-button/LanArtifactShareEntryButtons'
 import { lanShareLabel } from '@/components/self-hosted-artifacts/share-button/lan-artifact-share-copy'
 
 /**
@@ -90,14 +90,7 @@ export function DocPreviewToolbar({
       // and has no session for cookies to land in.
       importControl={null}
       shareLabel={lanShareLabel()}
-      shareControl={(control) => (
-        <DocPreviewLanShareButton
-          worktreeId={worktreeId}
-          identity={identity}
-          className="h-7 w-7"
-          {...control}
-        />
-      )}
+      shareControl={docPreviewLanShareControl(worktreeId, identity)}
       elementTools={elementTools}
       markup={{
         active: markupActive,
