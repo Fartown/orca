@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Loader2, Plus } from 'lucide-react'
 import { toast } from 'sonner'
 import AgentCombobox from '@/components/agent/AgentCombobox'
@@ -47,7 +47,10 @@ export function IssueConversationActions({
   const settings = useAppStore((state) => state.settings)
   const [launchOpen, setLaunchOpen] = useState(false)
   const [workspaceId, setWorkspaceId] = useState('')
-  const [agent, setAgent] = useState<TuiAgent | null>(null)
+  // Why keyed by workspace: switching workspace drops the pick; the shown agent is derived, not synced.
+  const [pickedAgent, setPickedAgent] = useState<{ workspaceId: string; agent: TuiAgent } | null>(
+    null
+  )
   const [pending, setPending] = useState(false)
   const workspaces = useMemo(() => {
     return collectIssueConversationLaunchWorkspaces({
@@ -77,30 +80,17 @@ export function IssueConversationActions({
     return getAgentCatalog().filter((entry) => enabled.has(entry.id))
   }, [enabledDetectedAgents])
 
-  useEffect(() => {
-    setAgent(null)
-  }, [workspaceId])
-
-  useEffect(() => {
-    if (!launchOpen || detectedIds === null) {
-      return
-    }
-    setAgent((current) =>
-      current && enabledDetectedAgents.includes(current)
-        ? current
+  const agent =
+    detectedIds === null
+      ? null
+      : pickedAgent?.workspaceId === workspaceId &&
+          enabledDetectedAgents.includes(pickedAgent.agent)
+        ? pickedAgent.agent
         : pickTuiAgent(
             settings?.defaultTuiAgent,
             enabledDetectedAgents,
             settings?.disabledTuiAgents
           )
-    )
-  }, [
-    detectedIds,
-    enabledDetectedAgents,
-    launchOpen,
-    settings?.defaultTuiAgent,
-    settings?.disabledTuiAgents
-  ])
 
   const launch = async (): Promise<void> => {
     if (!selectedWorkspace || !agent) {
@@ -184,7 +174,7 @@ export function IssueConversationActions({
           <AgentCombobox
             agents={agentOptions}
             value={agent}
-            onValueChange={setAgent}
+            onValueChange={(next) => setPickedAgent(next ? { workspaceId, agent: next } : null)}
             allowBlankTerminal={false}
             triggerClassName="w-full"
           />
