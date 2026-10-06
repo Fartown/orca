@@ -89,7 +89,9 @@ external_ids: []
   - REQ-407～REQ-412、TC-408～TC-413、方案文档。
 - 验证证据：[发布页分层与可读发布说明](tests/runs/2026-10-06-readable-releases.md)；门禁输出在 `.docs/integration-release-notes-review/2026-10-06/evidence/gates/`（git 忽略）。
 - 未解决问题：
-  - REQ-412 的约定写入 AGENTS.md 与 fork 维护文档超出本功能范围，补丁在 `.docs/integration-release-notes-review/2026-10-06/build/changes-via-pr-docs.patch`，待单独 PR。
+  - REQ-412 的约定写入 AGENTS.md 与 fork 维护文档超出本功能范围，已由 #47 单独合入。
+  - #46 首轮 CI 的 fork 差异门禁误报移动端测试类型：上游只在 PR 改动移动端时安装 `mobile/node_modules`，fork 差异门禁却总要检查移动端文件。已由 #48 在 fork 门禁块补装依赖修复，本机挪走依赖可复现、还原后消失。
+  - #48 的 CI 另有两项与本功能无关的失败：上游已知的 `startup-line-prompt-carry` 测试；跨版本兼容检查拉取的上游 v1.4.221 依赖 `@streamparser/json`，集成分支同步到的上游还没有，下次同步上游后恢复。
   - 合入后的真实出包、清理与整理版未执行；仓库未配置 `ANTHROPIC_API_KEY`。
 - 下一步：
   1. 开 PR 合入。
