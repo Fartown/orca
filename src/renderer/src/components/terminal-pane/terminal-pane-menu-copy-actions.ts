@@ -2,7 +2,7 @@ import { toast } from 'sonner'
 import type { ManagedPane } from '@/lib/pane-manager/pane-manager'
 import { makePaneKey } from '../../../../shared/stable-pane-id'
 import { translate } from '@/i18n/i18n'
-import { copyTerminalHandleForPane } from './terminal-handle-copy'
+import { copyWorkspaceTerminalHandle } from '@/terminal-id-copy-routing/copy-workspace-terminal-handle'
 import { runTerminalCopy, runTerminalIdentityCopy } from './terminal-copy-rejection-guards'
 import { readTerminalClipboardSelection } from './terminal-clipboard-selection-text'
 
@@ -55,18 +55,14 @@ export const copyTerminalPaneMenuPaneId = async (
 
 export const copyTerminalPaneMenuTerminalId = async (
   pane: ManagedPane | null,
-  tabId: string
+  tabId: string,
+  worktreeId: string
 ): Promise<void> => {
   if (!pane) {
     return
   }
   try {
-    await copyTerminalHandleForPane({
-      tabId,
-      leafId: pane.leafId,
-      callRuntime: window.api.runtime.call,
-      writeClipboardText: window.api.ui.writeTerminalClipboardText
-    })
+    await copyWorkspaceTerminalHandle(worktreeId, tabId, pane.leafId)
     toast.success(
       translate(
         'auto.components.terminal.pane.use.terminal.pane.context.menu.terminal.id.copied',
