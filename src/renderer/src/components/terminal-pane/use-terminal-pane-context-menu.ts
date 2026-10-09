@@ -175,7 +175,7 @@ export function useTerminalPaneContextMenu({
     copyTerminalPaneMenuPaneId(resolveMenuPane(), tabId)
 
   const onCopyTerminalId = async (): Promise<void> =>
-    copyTerminalPaneMenuTerminalId(resolveMenuPane(), tabId)
+    copyTerminalPaneMenuTerminalId(resolveMenuPane(), tabId, worktreeId)
 
   const onCopyAgentSessionId = async (): Promise<void> => {
     const pane = resolveMenuPane()

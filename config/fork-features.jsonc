@@ -2122,6 +2122,51 @@
         "pnpm exec vitest run --config config/vitest.config.ts src/shared/file-attachment-upload src/main/file-attachment-upload src/renderer/src/file-attachment-upload src/main/runtime/rpc/methods/file-attachment-upload.test.ts src/main/runtime/runtime-rpc/fork-mobile-rpc-method-allowlist.test.ts src/main/runtime/mobile-rpc-allowlist.test.ts config/scripts/mobile-web-page-routes-contract.test.mjs config/scripts/mobile-web-app-file-attachment-grant.test.mjs",
         "pnpm --dir mobile exec vitest run src/file-attachment-upload src/session/use-mobile-native-chat-image-attachments.test.ts src/session/use-mobile-session-image-attachments.test.tsx src/mobile-web-shell/page-route-policy.test.ts src/mobile-web-shell/bridge-host-init.test.ts src/mobile-web-shell/bridge/bridge-media-verbs.test.ts"
       ]
+    },
+    {
+      "id": "terminal-id-copy-routing",
+      "title": "终端 ID 复制主机路由",
+      "goal": "复制终端 ID 时查询所属本地、SSH 或配对主机，失联或归属不明时不回退本机",
+      "journal": "docs/issue/终端ID复制主机路由/journal.md",
+      "dependsOn": [
+        "src/renderer/src/components/terminal-pane/terminal-handle-copy.ts",
+        "src/renderer/src/lib/terminal-worktree-route.ts",
+        "src/renderer/src/lib/resolved-worktree-execution-host.ts",
+        "src/shared/workspace-scope.ts",
+        "src/renderer/src/lib/worktree-runtime-owner.ts",
+        "src/renderer/src/hooks/ipc-events/runtime-environment-subscription-selection.ts",
+        "src/renderer/src/store/index.ts",
+        "src/shared/execution-host.ts",
+        "src/renderer/src/runtime/runtime-environment-revision.ts",
+        "src/renderer/src/store/slices/runtime-environment-ssh-selectors.ts",
+        "src/shared/terminal-surface-id.ts"
+      ],
+      "policyId": "terminal-id-copy-routing",
+      "ownedPaths": [
+        "src/renderer/src/terminal-id-copy-routing/**",
+        "docs/issue/终端ID复制主机路由/**"
+      ],
+      "requiredFiles": [
+        "src/renderer/src/terminal-id-copy-routing/copy-workspace-terminal-handle.ts"
+      ],
+      "seams": [
+        {
+          "file": "src/renderer/src/components/terminal-pane/terminal-pane-menu-copy-actions.ts",
+          "mustContain": "copyWorkspaceTerminalHandle",
+          "why": "Pass the source workspace to the host-aware terminal handle copy operation"
+        },
+        {
+          "file": "src/renderer/src/components/terminal-pane/use-terminal-pane-context-menu.ts",
+          "mustContain": "copyTerminalPaneMenuTerminalId(resolveMenuPane(), tabId, worktreeId)",
+          "why": "Pass the source workspace to the host-aware terminal handle copy operation"
+        }
+      ],
+      "tests": [
+        "src/renderer/src/terminal-id-copy-routing/copy-workspace-terminal-handle.test.ts"
+      ],
+      "checks": [
+        "ORCA_BACKGROUND_LAUNCH=1 pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/terminal-id-copy-routing src/renderer/src/components/terminal-pane/terminal-handle-copy.test.ts"
+      ]
     }
   ]
 }

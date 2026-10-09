@@ -869,7 +869,11 @@
             "src/renderer/src/components/editor/editor-panel-render-model.test.ts",
             "src/renderer/src/components/editor/EditorMarkdownFileSurface.tsx",
             "src/renderer/src/components/editor/EditorContent.markdown-classification.test.tsx",
-            "src/renderer/src/components/editor/EditorContent.monaco-lifecycle.test.tsx"
+            "src/renderer/src/components/editor/EditorContent.monaco-lifecycle.test.tsx",
+            "src/renderer/src/terminal-id-copy-routing/**",
+            "docs/issue/终端ID复制主机路由/**",
+            "src/renderer/src/components/terminal-pane/terminal-pane-menu-copy-actions.ts",
+            "src/renderer/src/components/terminal-pane/use-terminal-pane-context-menu.ts"
           ],
           "message": "Branch changes an upstream path that no fork feature owns or registers as a seam; extend config/fork-features.jsonc and this allowlist, or move the change into a feature-owned path."
         }
@@ -1681,6 +1685,32 @@
             "docs/issue/**"
           ],
           "message": "Change is outside the rich-markdown override feature and its journal."
+        }
+      ]
+    },
+    {
+      "id": "terminal-id-copy-routing",
+      "description": "复制终端 ID 时查询所属本地、SSH 或配对主机，失联或归属不明时不回退本机",
+      "rules": [
+        {
+          "id": "terminal-id-copy-routing-worktree-scope",
+          "type": "change-scope",
+          "comparison": "worktree",
+          "whenChanged": [
+            "src/renderer/src/terminal-id-copy-routing/**",
+            "docs/issue/终端ID复制主机路由/**"
+          ],
+          "allowedPaths": [
+            "src/renderer/src/terminal-id-copy-routing/**",
+            "docs/issue/终端ID复制主机路由/**",
+            "src/renderer/src/components/terminal-pane/terminal-pane-menu-copy-actions.ts",
+            "src/renderer/src/components/terminal-pane/use-terminal-pane-context-menu.ts",
+            "config/fork-features.jsonc",
+            "config/architecture-policies.jsonc",
+            "docs/issue/README.md",
+            ".gitignore"
+          ],
+          "message": "Change is outside terminal ID copy routing."
         }
       ]
     }
