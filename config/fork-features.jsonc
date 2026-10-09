@@ -2131,6 +2131,8 @@
       "dependsOn": [
         "src/renderer/src/components/terminal-pane/terminal-handle-copy.ts",
         "src/renderer/src/lib/terminal-worktree-route.ts",
+        "src/renderer/src/lib/resolved-worktree-execution-host.ts",
+        "src/shared/workspace-scope.ts",
         "src/renderer/src/lib/worktree-runtime-owner.ts",
         "src/renderer/src/hooks/ipc-events/runtime-environment-subscription-selection.ts",
         "src/renderer/src/store/index.ts",

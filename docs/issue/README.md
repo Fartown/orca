@@ -18,7 +18,7 @@
 | ["富文本Markdown强制打开"](富文本Markdown强制打开/journal.md) | 把「只能在代码模式下编辑」从硬拦截改为可由用户显式承担的选择，并在强制期间持续提示改写风险 | done | [富文本Markdown强制打开](富文本Markdown强制打开/requirements/富文本Markdown强制打开.md) | - | [富文本Markdown强制打开功能测试](富文本Markdown强制打开/tests/cases/富文本Markdown强制打开功能测试.md) | 2026-10-06 |
 | ["远程Tab发布血缘修复"](远程Tab发布血缘修复/journal.md) | headless 内容修改沿用现任发布者，避免远程 Tab 列表因误退役停止同步 | testing | [requirement](远程Tab发布血缘修复/requirements/requirement.md) | [overview](远程Tab发布血缘修复/solutions/overview.md) | [远程Tab发布血缘修复测试](远程Tab发布血缘修复/tests/cases/远程Tab发布血缘修复测试.md) | 2026-09-24 |
 | ["移动端上传任意文件"](移动端上传任意文件/journal.md) | 移动端把任意类型文件流式上传到工作区所在机器的临时目录，并交给终端或 agent | testing | [移动端上传任意文件](移动端上传任意文件/requirements/移动端上传任意文件.md) | [移动端文件附件上传方案](移动端上传任意文件/solutions/移动端文件附件上传方案.md) | [移动端上传任意文件](移动端上传任意文件/tests/cases/移动端上传任意文件.md) | 2026-10-06 |
-| ["终端 ID 复制主机路由"](终端ID复制主机路由/journal.md) | 复制终端 ID 时查询所属本地、SSH 或配对主机，失联或归属不明时不回退本机 | done | [终端ID复制主机路由](终端ID复制主机路由/requirements/终端ID复制主机路由.md) | [主机路由](终端ID复制主机路由/solutions/主机路由.md) | [主机路由](终端ID复制主机路由/tests/cases/主机路由.md) | 2026-10-08 |
+| ["终端 ID 复制主机路由"](终端ID复制主机路由/journal.md) | 复制终端 ID 时查询所属本地、SSH 或配对主机，失联或归属不明时不回退本机 | done | [终端ID复制主机路由](终端ID复制主机路由/requirements/终端ID复制主机路由.md) | [主机路由](终端ID复制主机路由/solutions/主机路由.md) | [主机路由](终端ID复制主机路由/tests/cases/主机路由.md) | 2026-10-09 |
 
 状态是需求整体状态（clarifying / designing / implementing / testing / done / blocked）；各文档自己的状态以 Journal 的关键文档链接表为准。文档 ready、代码存在、单测通过和真实产品验收是不同状态；各自 Test Run 只证明记录的执行范围。
 

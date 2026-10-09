@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { copyWorkspaceTerminalHandle } from './copy-workspace-terminal-handle'
 import { replaceRuntimeEnvironmentRevisions } from '@/runtime/runtime-environment-revision'
+import { FLOATING_TERMINAL_WORKTREE_ID } from '../../../shared/constants'
 import type { ExecutionHostId } from '../../../shared/execution-host'
 
 const { getState, localCall, remoteCall, writeClipboardText } = vi.hoisted(() => ({
@@ -153,6 +154,118 @@ describe('copyWorkspaceTerminalHandle', () => {
       }
     }
   )
+
+  it.each([
+    { name: 'missing folder', folderWorkspaces: [], projectGroups: [] },
+    {
+      name: 'ambiguous folder',
+      folderWorkspaces: [
+        { id: 'folder', executionHostId: 'local' },
+        { id: 'folder', executionHostId: 'runtime:mini' }
+      ],
+      projectGroups: []
+    },
+    {
+      name: 'ambiguous project group',
+      folderWorkspaces: [{ id: 'folder', projectGroupId: 'group' }],
+      projectGroups: [
+        { id: 'group', executionHostId: 'local' },
+        { id: 'group', executionHostId: 'runtime:mini' }
+      ]
+    }
+  ])('rejects $name without querying either runtime', async (catalogs) => {
+    getState.mockReturnValue({ ...state(), ...catalogs })
+    await expect(copyWorkspaceTerminalHandle('folder:folder', tabId, leafId)).rejects.toThrow(
+      'Terminal owner unavailable'
+    )
+    expect(localCall).not.toHaveBeenCalled()
+    expect(remoteCall).not.toHaveBeenCalled()
+    expect(writeClipboardText).not.toHaveBeenCalled()
+  })
+
+  it('keeps a legacy local folder local while a paired host is focused', async () => {
+    getState.mockReturnValue({
+      ...state(),
+      settings: { activeRuntimeEnvironmentId: 'mini' },
+      folderWorkspaces: [{ id: 'folder', projectGroupId: 'group', connectionId: null }],
+      projectGroups: [{ id: 'group', connectionId: null }]
+    })
+    await expect(copyWorkspaceTerminalHandle('folder:folder', tabId, leafId)).resolves.toBe(
+      'term_local'
+    )
+    expect(remoteCall).not.toHaveBeenCalled()
+    expect(localCall).toHaveBeenCalledExactlyOnceWith({
+      ...request,
+      params: { ...request.params, worktreeId: 'folder:folder' }
+    })
+  })
+
+  it('uses a restored folder owner before its catalog arrives', async () => {
+    getState.mockReturnValue({
+      ...state(),
+      folderWorkspaces: [],
+      restoredRuntimeHostIdByWorkspaceSessionKey: { 'folder:folder': 'runtime:mini' }
+    })
+    await expect(
+      copyWorkspaceTerminalHandle('folder:folder', 'web-terminal-tab', leafId)
+    ).resolves.toBe('term_remote')
+    expect(localCall).not.toHaveBeenCalled()
+    expect(remoteCall).toHaveBeenCalledExactlyOnceWith({
+      ...request,
+      params: { ...request.params, worktreeId: 'folder:folder' },
+      selector: 'mini',
+      expectedEnvironmentPairingRevision: 7
+    })
+  })
+
+  it('uses an explicit selected host to distinguish same-ID folders', async () => {
+    getState.mockReturnValue({
+      ...state(),
+      activeWorktreeId: 'folder:folder',
+      activeWorkspaceExecutionHostId: 'runtime:mini',
+      folderWorkspaces: [
+        { id: 'folder', executionHostId: 'local' },
+        { id: 'folder', executionHostId: 'runtime:mini' }
+      ]
+    })
+    await expect(copyWorkspaceTerminalHandle('folder:folder', tabId, leafId)).resolves.toBe(
+      'term_remote'
+    )
+    expect(localCall).not.toHaveBeenCalled()
+    expect(remoteCall).toHaveBeenCalledExactlyOnceWith({
+      ...request,
+      params: { ...request.params, worktreeId: 'folder:folder' },
+      selector: 'mini',
+      expectedEnvironmentPairingRevision: 7
+    })
+  })
+
+  it('keeps the global floating terminal on the local runtime', async () => {
+    getState.mockReturnValue({ ...state(), settings: { activeRuntimeEnvironmentId: 'mini' } })
+    await expect(
+      copyWorkspaceTerminalHandle(FLOATING_TERMINAL_WORKTREE_ID, tabId, leafId)
+    ).resolves.toBe('term_local')
+    expect(remoteCall).not.toHaveBeenCalled()
+    expect(localCall).toHaveBeenCalledExactlyOnceWith({
+      ...request,
+      params: { ...request.params, worktreeId: FLOATING_TERMINAL_WORKTREE_ID }
+    })
+  })
+
+  it('routes an SSH folder to the controlling local runtime', async () => {
+    getState.mockReturnValue({
+      ...state(),
+      folderWorkspaces: [{ id: 'folder', executionHostId: 'ssh:ssh-target' }]
+    })
+    await expect(copyWorkspaceTerminalHandle('folder:folder', tabId, leafId)).resolves.toBe(
+      'term_local'
+    )
+    expect(remoteCall).not.toHaveBeenCalled()
+    expect(localCall).toHaveBeenCalledExactlyOnceWith({
+      ...request,
+      params: { ...request.params, worktreeId: 'folder:folder' }
+    })
+  })
 
   it('does not read a paired runtime out of contact', async () => {
     getState.mockReturnValue({ ...state('runtime:mini'), runtimeStatusByEnvironmentId: new Map() })
