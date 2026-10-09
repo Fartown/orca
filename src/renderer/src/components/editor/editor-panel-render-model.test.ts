@@ -251,9 +251,8 @@ describe('getEditorPanelRenderModel markdown export affordance', () => {
 })
 
 describe('getEditorPanelRenderModel rich-mode unsupported override', () => {
-  // Why: past the round-trip probe budget, so embedded html blocks rich mode
-  // without ever being verified — the case the override exists for.
-  const unverifiedHtml = `${'a'.repeat(50_001)}\n<span>text</span>\n`
+  // Editable details still needs a DOM round trip above the probe budget.
+  const unverifiedHtml = `${'a'.repeat(50_001)}\n\n<details>\n<summary>Toggle</summary>\n\nBody\n\n</details>\n`
 
   function richModel(content: string, overridden: boolean) {
     return renderModel({

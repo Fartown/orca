@@ -3,7 +3,7 @@ title: "富文本Markdown强制打开"
 slug: "富文本Markdown强制打开"
 status: done
 created: 2026-09-16
-updated: 2026-10-06
+updated: 2026-10-09
 external_ids: []
 ---
 
@@ -47,6 +47,16 @@ external_ids: []
 - 影响范围：REQ-402；用 muted token + `TriangleAlert` 图标，不用同文件预览分支那套 raw amber（STYLEGUIDE 明确不复制既有债）
 
 ## 3. 开发记录
+
+### 2026-10-09 同步上游 Markdown 透传支持
+
+- 本轮目标：在上游扩大可编辑 HTML 范围后继续验证强制打开边界。
+- 完成内容：将测试中的大型 span 替换为上游仍需 DOM 往返验证的大型 details；保留原有拒绝与显式强制打开断言。
+- 代码或文档变更：`editor-panel-render-model.test.ts` 和本记录；未改变生产逻辑或放宽断言。
+- 验证证据：`.docs/upstream-sync-ui-validation/2026-10-09/build/rich-markdown-tests.log`。
+- 未解决问题：同步流程其他功能验证以该目录 README 为准。
+- 下一步：完成同步门禁并推送集成分支。
+
 
 ### 2026-10-06 同步上游 d17351401d：与上游硬性渲染上限合并（testing）
 
