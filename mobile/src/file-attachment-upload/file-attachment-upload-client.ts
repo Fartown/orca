@@ -4,7 +4,7 @@ import {
   FILE_ATTACHMENT_CHUNK_BYTES,
   FILE_ATTACHMENT_MAX_BYTES
 } from '../../../src/shared/file-attachment-upload/file-attachment-upload-limits'
-import { isMobileMethodUnavailableError } from '../files/file-list-fallback'
+import { isMobileMethodUnavailableError } from '../transport/mobile-method-unavailable'
 import { base64DecodedByteLength } from './attachment-base64-length'
 import { saveMobileClipboardImageAsTempFile } from '../session/mobile-clipboard-image'
 import {

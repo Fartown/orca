@@ -1953,7 +1953,7 @@
       "journal": "docs/issue/移动端上传任意文件/journal.md",
       "dependsOn": [
         "mobile/src/components/ActionSheetModal.tsx",
-        "mobile/src/files/file-list-fallback.ts",
+        "mobile/src/transport/mobile-method-unavailable.ts",
         "mobile/src/mobile-web-shell/bridge-host-errors.ts",
         "mobile/src/mobile-web-shell/bridge/bridge-rpc-client.ts",
         "mobile/src/mobile-web-shell/use-media-handle-registry.ts",
@@ -2056,6 +2056,11 @@
           "file": "mobile/src/session/MobileSessionActiveContent.tsx",
           "mustContain": "<MobileAttachmentSourceSheet",
           "why": "the Photo / File sheet mounts where both inputs can open it (REQ-001)"
+        },
+        {
+          "file": "mobile/src/session/__mocks__/mobile-prompt-controller.ts",
+          "mustContain": "openChatSheet",
+          "why": "the upstream prompt controller fixture supplies the fork attachment contract"
         },
         {
           "file": "mobile/src/session/MobileNativeChatOverlay.tsx",

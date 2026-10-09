@@ -57,6 +57,7 @@ vi.mock('lucide-react-native', () =>
       'ChevronsUpDown',
       'ShieldQuestion',
       'ImagePlus',
+      'Paperclip',
       'Mic',
       'Square',
       'X',
@@ -219,10 +220,12 @@ function Harness(props: HarnessProps) {
     images: {
       sendNativeChat: controller.handleNativeChatSend,
       attachments: [],
+      addUploadedImages: vi.fn(),
       isAttaching: false,
       attachImage: async () => {},
       removeAttachment: () => {}
     },
+    files: { openChatSheet: vi.fn(), isUploadingToChat: false },
     onMicPress: vi.fn(),
     onMicPressOut: vi.fn(),
     onMicPressIn: vi.fn(),
