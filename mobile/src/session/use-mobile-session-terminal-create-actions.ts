@@ -116,6 +116,7 @@ export function useMobileSessionTerminalCreateActions(scope: MobileSessionAttach
           agent,
           options,
           lock: clientMutationId,
+          activeSessionTabId,
           pendingSelectionRef,
           fetchSessionTabs,
           getSessionTabs: () => sessionTabsRef.current,

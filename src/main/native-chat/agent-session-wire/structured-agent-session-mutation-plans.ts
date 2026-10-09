@@ -9,6 +9,7 @@
 
 import type { AgentJournalMessageItem } from '../../../shared/agent-session-journal-types'
 import {
+  AGENT_MESSAGE_SOURCE,
   USER_MESSAGE_SOURCE,
   type AgentSessionMessageSource
 } from '../../../shared/agent-session-message-source'
@@ -19,11 +20,15 @@ import type {
   AgentSessionMutationEnvelope,
   AgentSessionOptionResult,
   AgentSessionPromptResult,
+  AgentSessionQueuedSendReceipt,
   AgentSessionSendResult
 } from '../../../shared/agent-session-wire'
 import type { AgentSessionConversationCommandResult } from '../../../shared/agent-session-conversation-command'
 import { DISPATCH_DOUBT_SUBMISSION_MISSING } from '../agent-session-journal/journal-dispatch-doubt-reasons'
-import { structuredAgentSessionPayloadFingerprint } from '../../../shared/structured-agent-session-mutation'
+import {
+  agentSessionMessagePayload,
+  agentSessionSendBodyFingerprint
+} from '../../../shared/structured-agent-session-send-mutation'
 import {
   STRUCTURED_AGENT_SESSION_COMPACT_COMMAND,
   structuredAgentSessionCompactBody
@@ -38,16 +43,7 @@ import {
 } from './structured-agent-session-turns'
 import type { AgentSessionPromptRequest } from './structured-agent-session-turns-prompt'
 import { queuedSendAnswer } from './structured-agent-session-queued-send-answer'
-
-/** The body-only hash: what the reducer recomputes to alias a provider echo
- *  onto its submission, so the stored value must never include control fields. */
-function sendBodyFingerprint(sessionId: string, body: AgentJournalMessageItem): string {
-  return structuredAgentSessionPayloadFingerprint({
-    method: 'agentSession.send',
-    sessionId,
-    fields: { body }
-  })
-}
+import type { JournalOperationReceipt } from '../agent-session-journal/journal-row-writer'
 
 export type MutationPlan<TValue> = {
   method: string
@@ -63,11 +59,10 @@ export type MutationPlan<TValue> = {
   recoverUnknownFromDurableState?: boolean
 } & (
   | {
-      /** Its success is the row its run writes, so it commits in that row's transaction
-       *  (`AgentSessionTurnContext.operationReceipt`): a row left pending wrote nothing. That
-       *  success is fixed before the value exists, so it records no `settledOutcome`. */
+      /** Commits success with its row; paths without a committed receipt use fallback settlement. */
       settlesWithWrite: true
-      settledOutcome?: never
+      successReceipt?: () => JournalOperationReceipt
+      settledOutcome?: (value: TValue) => AgentSessionOperationOutcome
     }
   | {
       settlesWithWrite?: never
@@ -75,14 +70,28 @@ export type MutationPlan<TValue> = {
     }
 )
 
+/** Who a send is from, read off what it carries, the one place it is decided: the person's own
+ *  send, another agent's message (its body names the sender), or neither, such as a dispatch
+ *  preamble or a restart continuation. */
+function sendSource(params: {
+  body: AgentJournalMessageItem
+  userSend?: true
+  personsMessage?: true
+}): AgentSessionMessageSource | undefined {
+  if (params.userSend || params.personsMessage) {
+    return USER_MESSAGE_SOURCE
+  }
+  return params.body.from ? AGENT_MESSAGE_SOURCE : undefined
+}
+
 export function sendPlan(params: {
   envelope: AgentSessionMutationEnvelope
   body: AgentJournalMessageItem
   retryUnknown?: true
   delivery?: 'queue-if-active'
   userSend?: true
-  /** Who a host-side send is from; a person's send (`userSend`) is always the user. */
-  source?: AgentSessionMessageSource
+  /** A person's message the host sends for them; `userSend` is always one. */
+  personsMessage?: true
   beforeRun?: () => void
 }): MutationPlan<AgentSessionSendResult> {
   // The operation id IS the client message id: one send, one durable row, one
@@ -95,19 +104,23 @@ export function sendPlan(params: {
     settlesWithWrite: true,
     // `delivery` joins the OPERATION fingerprint only; the submission row keeps
     // the body-only fingerprint the reducer's echo-aliasing recomputes.
-    fields: { body: params.body, ...(params.delivery ? { delivery: params.delivery } : {}) },
+    fields: {
+      body: agentSessionMessagePayload(params.body),
+      ...(params.delivery ? { delivery: params.delivery } : {})
+    },
     recoverUnknownFromDurableState: true,
     // `retryUnknown` is a compatibility-only client signal. A recorded send
     // always replays and never reaches the provider twice.
     run: (ctx) => {
       // Asked at acceptance: a send accepted after this one is queued behind it.
       params.beforeRun?.()
-      const source = params.userSend ? USER_MESSAGE_SOURCE : params.source
+      const source = sendSource(params)
       return performSend(ctx, {
         origin: params.userSend ? 'client' : 'host',
         ...(source ? { source } : {}),
         clientMessageId,
-        payloadFingerprint: sendBodyFingerprint(params.envelope.sessionId, params.body),
+        // Body-only, so the reducer's echo aliasing never sees control fields or the sender.
+        payloadFingerprint: agentSessionSendBodyFingerprint(params.envelope.sessionId, params.body),
         body: params.body
       })
     },
@@ -155,13 +168,17 @@ export function sendPlan(params: {
 
 export type ConversationCommandAcceptance =
   | { clientMessageId: string }
+  /** Held as a card, keyed by the operation id, behind work in flight. */
+  | { queued: AgentSessionQueuedSendReceipt }
   /** What an older build's run of this operation recorded. */
   | { recorded: AgentSessionConversationCommandResult }
 
 /** `/compact` accepted like a send: one submission, keyed by the operation id, that the delivery
- *  loop carries out as the command's own turn. */
+ *  loop carries out as the command's own turn — or, asked with `delivery`, a card while the
+ *  agent works, which the queue's drain turns into that submission. */
 export function conversationCommandPlan(params: {
   envelope: AgentSessionMutationEnvelope
+  delivery?: 'queue-if-active'
   priorRecord: () => AgentSessionConversationCommandResult | null
 }): MutationPlan<ConversationCommandAcceptance> {
   const clientMessageId = params.envelope.clientOperationId
@@ -169,7 +186,10 @@ export function conversationCommandPlan(params: {
     method: 'agentSession.conversationCommand',
     conversationWrite: true,
     settlesWithWrite: true,
-    fields: { command: STRUCTURED_AGENT_SESSION_COMPACT_COMMAND },
+    fields: {
+      command: STRUCTURED_AGENT_SESSION_COMPACT_COMMAND,
+      ...(params.delivery ? { delivery: params.delivery } : {})
+    },
     recoverUnknownFromDurableState: true,
     run: async (ctx) => {
       const sent = await performSend(ctx, {
@@ -185,6 +205,17 @@ export function conversationCommandPlan(params: {
     replay: (ctx, outcome) => {
       if (outcome.status === 'succeeded' && outcome.conversationCommand) {
         return { recorded: outcome.conversationCommand }
+      }
+      // A card answers from itself until drained, then from the submission it became; only a
+      // command that asked to wait can have one, as for a send.
+      const queued =
+        params.delivery === 'queue-if-active'
+          ? queuedSendAnswer(ctx.journal, clientMessageId)
+          : null
+      if (queued) {
+        return 'queued' in queued
+          ? { queued: queued.queued }
+          : { clientMessageId: queued.submission.clientMessageId }
       }
       if (ctx.journal.submissions().some((entry) => entry.clientMessageId === clientMessageId)) {
         return { clientMessageId }

@@ -3,7 +3,7 @@ title: "远程主机绝对路径打开"
 slug: "远程主机绝对路径打开"
 status: testing
 created: 2026-09-16
-updated: 2026-10-06
+updated: 2026-10-09
 external_ids: []
 ---
 
@@ -59,6 +59,16 @@ external_ids: []
 - [需求 REQ-801](requirements/远程主机绝对路径打开.md)、[docs/reference/ssh-execution-boundary.md](../../reference/ssh-execution-boundary.md)
 
 ## 3. 开发记录
+
+### 2026-10-09 同步上游 main 13c9f1fcc8
+
+- 本轮目标：同步上游并保留已登记功能行为。
+- 完成内容：保留主机路径授权接缝，适配上游新增 RPC 权限字段和附件读取入口。
+- 代码或文档变更：对应功能接缝、功能登记与本记录。
+- 验证证据：`.docs/upstream-sync-ui-validation/2026-10-09/`；首组冲突回归 65 项通过；合并提交后继续执行完整门禁与功能检查。
+- 未解决问题：完整同步检查仍在进行，结果以该目录 README 和日志为准；本次记录不改变此前未完成验收的状态。
+- 下一步：完成同步门禁后推送集成分支。
+
 
 ### 2026-10-06 同步上游 d17351401d：改用上游用户点名访问（testing）
 

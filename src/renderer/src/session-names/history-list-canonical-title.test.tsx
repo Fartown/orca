@@ -82,6 +82,7 @@ function renderList(): void {
       onToggleGroup={vi.fn()}
       onJumpToOriginalPane={vi.fn()}
       onJumpToWorktree={vi.fn()}
+      onResumeInNewCli={vi.fn()}
       onResume={vi.fn()}
       onContinueInNewSession={vi.fn()}
       onResumeInNewChat={vi.fn()}

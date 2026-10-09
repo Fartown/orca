@@ -85,3 +85,15 @@ export function checkOwnerAfterRefusedClaudeHook(
     void checkOwner(paneKey)
   }
 }
+
+export function refusedHook(state: HookListenerState, checkOwner: (paneKey: string) => unknown) {
+  return (body: unknown): void => checkOwnerAfterRefusedClaudeHook(state, body, checkOwner)
+}
+
+export function cacheRecorder(
+  state: HookListenerState,
+  sent: Pick<AgentHookEventPayload, 'agentPresence'>
+) {
+  return (event: AgentHookEventPayload, isReplay: boolean): void =>
+    recordClaudeSessionActivity(state, event, isReplay, sent)
+}

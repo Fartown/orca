@@ -197,6 +197,8 @@
       "goal": "持久目标、既有会话续跑、独立验收与目标管理 UI",
       "journal": "docs/issue/Goal目标模式/journal.md",
       "dependsOn": [
+        "src/shared/app-environment.ts",
+        "src/main/orcad/orcad-app-paths.ts",
         "src/cli/runtime/index.ts",
         "src/renderer/src/lib/local-file-access.ts",
         "src/main/agent-hooks/managed-agent-hook-controls.ts",
@@ -420,7 +422,7 @@
         },
         {
           "file": "src/main/orcad/orcad-entry.ts",
-          "mustContain": "registerRuntimeGoals",
+          "mustContain": "../goals/orcad-goals",
           "why": "Goal execution, documents and validation run on their owning SSH or runtime host"
         },
         {
@@ -507,6 +509,15 @@
       "goal": "组织跨工作区会话，复用公共会话名称与原生恢复",
       "journal": "docs/issue/Issues看板与会话/journal.md",
       "dependsOn": [
+        "src/shared/ai-vault-types.ts",
+        "src/renderer/src/lib/ai-vault-resume-command.ts",
+        "src/renderer/src/lib/ai-vault-session-resume-preparation.ts",
+        "src/renderer/src/lib/activate-ai-vault-structured-session.ts",
+        "src/renderer/src/lib/launch-ai-vault-session.ts",
+        "src/renderer/src/components/right-sidebar/ai-vault-session-filters.ts",
+        "src/renderer/src/components/right-sidebar/ai-vault-session-resume.ts",
+        "src/renderer/src/components/right-sidebar/ai-vault-session-resume-in-chat-launch.ts",
+        "src/renderer/src/components/right-sidebar/ai-vault-session-launch-target.ts",
         "src/renderer/src/lib/browser-uuid.ts",
         "src/main/agent-hooks/managed-agent-hook-controls.ts",
         "src/main/agent-hooks/server.ts",
@@ -576,6 +587,7 @@
         "src/main/issues/**",
         "src/shared/issues/**",
         "src/renderer/src/issues/**",
+        "src/renderer/src/components/ai-vault-session-resume/**",
         "src/renderer/src/components/issues/**",
         "src/renderer/src/components/sidebar/issues/**",
         "src/main/runtime/rpc/methods/issues.ts",
@@ -1090,7 +1102,7 @@
         },
         {
           "file": "src/relay/agent-hook-server.ts",
-          "mustContain": "recordClaudeSessionActivity",
+          "mustContain": "activity.cacheRecorder",
           "why": "the relay owns its host-local activity clock and excludes replay"
         },
         {
@@ -1100,7 +1112,7 @@
         },
         {
           "file": "src/relay/agent-hook-server.ts",
-          "mustContain": "checkOwnerAfterRefusedClaudeHook",
+          "mustContain": "activity.refusedHook",
           "why": "a refused relay hook from another process still asks whether the owner exited"
         },
         {
@@ -2011,9 +2023,9 @@
           "why": "the host exposes the upload methods (REQ-002, REQ-004)"
         },
         {
-          "file": "src/main/runtime/runtime-rpc/runtime-rpc-websocket-dispatch.ts",
-          "mustContain": "isMobileRpcMethodAllowed(request.method)",
-          "why": "paired phones may call fork-listed methods; the upstream list is at its max-lines ceiling (REQ-001)"
+          "file": "src/main/runtime/rpc/rpc-caller-scope.ts",
+          "mustContain": "isMobileRpcMethodAllowed(methodName)",
+          "why": "the central dispatcher admits the existing fork mobile methods (REQ-001)"
         },
         {
           "file": "src/main/runtime/mobile-rpc-allowlist.test.ts",

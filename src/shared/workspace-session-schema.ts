@@ -11,6 +11,7 @@
  * survives, because one bad tab record must not cost every worktree its state.
  * Only a payload that is not a session at all falls back to defaults.
  */
+import { agentLaunchPaneOnTabSchema } from './agent-launch-pane-verdict'
 import { z } from 'zod'
 import { sessionNameSlotSchema } from './session-names/session-name-slot-schema'
 import { closedTerminalTabTombstoneSchema } from './closed-terminal-tab-tombstones'
@@ -51,7 +52,7 @@ const workspaceKeySchema = z.custom<WorkspaceKey>(
 // Why: z.lazy + type annotation keeps the recursive inference working without
 // forcing zod to resolve the whole tree at definition time. Discriminated on `type` because a
 // plain union re-tries the leaf branch for every split node of every restored terminal layout.
-const terminalPaneLayoutNodeSchema: z.ZodType<TerminalPaneLayoutNode> = z.lazy(() =>
+export const terminalPaneLayoutNodeSchema: z.ZodType<TerminalPaneLayoutNode> = z.lazy(() =>
   z.discriminatedUnion('type', [
     z.object({
       type: z.literal('leaf'),
@@ -82,7 +83,7 @@ const terminalLayoutSnapshotSchema = z.object({
 
 // ─── Terminal tab (legacy) ──────────────────────────────────────────
 
-const terminalTabSchema = z.object({
+export const terminalTabSchema = z.object({
   id: terminalTabIdSchema,
   ptyId: z.string().nullable(),
   worktreeId: z.string(),
@@ -111,7 +112,9 @@ const terminalTabSchema = z.object({
   launchAgent: z
     .custom<TuiAgent>((v) => isTuiAgent(v))
     .optional()
-    .catch(undefined)
+    .catch(undefined),
+  // Why: survives a restart so a restored launch pane reads its fate before it spawns.
+  agentLaunchPane: agentLaunchPaneOnTabSchema
 })
 
 // ─── Unified tab model ──────────────────────────────────────────────

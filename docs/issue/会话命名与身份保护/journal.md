@@ -3,7 +3,7 @@ title: 会话命名与身份保护
 slug: 会话命名与身份保护
 status: implementing
 created: 2026-09-08
-updated: 2026-10-06
+updated: 2026-10-09
 external_ids: []
 ---
 
@@ -102,6 +102,16 @@ external_ids: []
 - 影响范围：REQ-028、Codex managed脚本的local/posix模板与feature-owned小模块及测试；同时清理local/daemon/relay新PTY继承的外层CODEX_THREAD_ID，避免由Codex启动Orca时误拦正常新pane。未知旧版本无标识、外部手工污染环境等仍需披露。既有失败记录保持原样。
 
 ## 3. 开发记录
+
+### 2026-10-09 同步上游 main 13c9f1fcc8
+
+- 本轮目标：同步上游并保留已登记功能行为。
+- 完成内容：合并上游结构化聊天标题来源与 fork 终端会话名称投影，保留各自会话的手动名称优先级。
+- 代码或文档变更：对应功能接缝、功能登记与本记录。
+- 验证证据：`.docs/upstream-sync-ui-validation/2026-10-09/`；首组冲突回归 65 项通过；合并提交后继续执行完整门禁与功能检查。
+- 未解决问题：完整同步检查仍在进行，结果以该目录 README 和日志为准；本次记录不改变此前未完成验收的状态。
+- 下一步：完成同步门禁后推送集成分支。
+
 
 ### 2026-10-06 同步上游 5cf3585b78：上游中断对账用例与活跃窗口对齐（testing）
 

@@ -4,6 +4,7 @@ import { restoreOrStripOverlayEnv } from '../../../shared/agent-overlay-env'
 import { delimiter } from 'node:path'
 import { dropInheritedOrcaFishHistory } from '../../fish-history-session'
 import { removeAppImageRuntimeEnv } from '../../pty/appimage-terminal-env'
+import { removeChromiumDisabledSessionBus } from '../../pty/chromium-session-bus-env'
 import { stripInheritedBuildModeEnv } from '../../pty/build-mode-env'
 import { removeCodexToolCallerIdentity } from '../../codex-session-ownership/codex-tool-caller-environment'
 import { stripPiProcessOwnerEnv } from '../../pty/pi-process-owner-env'
@@ -201,6 +202,7 @@ export function createDaemonPtyEnvironment(opts: PtySubprocessOptions): Record<s
   removeInheritedDevAgentHookEndpoint(env, opts.env)
   delete env.ELECTRON_RUN_AS_NODE
   removeAppImageRuntimeEnv(env)
+  removeChromiumDisabledSessionBus(env)
   removeInheritedNoColor(env)
   // Why last: the aliases mirror pane identity AFTER every strip above has settled, so an
   // alias can never outlive the value it mirrors.

@@ -140,6 +140,7 @@ export async function listArtifactShareHosts(
 
 export const ARTIFACT_SHARE_METHODS = [
   defineMethod({
+    permission: 'workspace',
     name: 'artifactShare.hostStatus',
     params: ArtifactShareHostRef,
     handler: (params, context) =>
@@ -153,6 +154,7 @@ export const ARTIFACT_SHARE_METHODS = [
       )
   }),
   defineMethod({
+    permission: 'workspace',
     name: 'artifactShare.lookup',
     params: ArtifactShareFileRequest,
     handler: ({ executionHostId, ...request }, context) =>
@@ -166,6 +168,7 @@ export const ARTIFACT_SHARE_METHODS = [
       )
   }),
   defineMethod({
+    permission: 'workspace',
     name: 'artifactShare.share',
     params: ArtifactShareFileRequest,
     handler: async ({ executionHostId, ...request }, context) => {
@@ -182,6 +185,7 @@ export const ARTIFACT_SHARE_METHODS = [
     }
   }),
   defineMethod({
+    permission: 'workspace',
     name: 'artifactShare.stopWorkspace',
     params: ArtifactShareStopWorkspaceRequest,
     handler: ({ executionHostId, token }, context) =>
@@ -196,11 +200,13 @@ export const ARTIFACT_SHARE_METHODS = [
       })
   }),
   defineMethod({
+    permission: 'workspace',
     name: 'artifactShare.list',
     params: ArtifactShareListRequest,
     handler: (params, context) => listArtifactShareHosts(params, context)
   }),
   defineMethod({
+    permission: 'host-admin',
     name: 'artifactShare.configureLocal',
     params: ArtifactShareConfigureLocalRequest,
     handler: async (params) => {

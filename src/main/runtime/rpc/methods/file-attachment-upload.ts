@@ -74,6 +74,7 @@ export function createFileAttachmentUploadMethods(deps: FileAttachmentUploadMeth
 
   return [
     defineMethod({
+      permission: 'workspace',
       name: 'fileAttachment.startUpload',
       params: StartFileAttachmentUpload,
       handler: async (params, ctx) => {
@@ -89,17 +90,20 @@ export function createFileAttachmentUploadMethods(deps: FileAttachmentUploadMeth
       }
     }),
     defineMethod({
+      permission: 'workspace',
       name: 'fileAttachment.appendUploadChunk',
       params: AppendFileAttachmentUploadChunk,
       handler: (params, ctx) =>
         deps.store.append(params.uploadId, uploadOwnerId(ctx), params.offset, params.contentBase64)
     }),
     defineMethod({
+      permission: 'workspace',
       name: 'fileAttachment.commitUpload',
       params: CommitFileAttachmentUpload,
       handler: (params, ctx) => deps.store.commit(params.uploadId, uploadOwnerId(ctx))
     }),
     defineMethod({
+      permission: 'workspace',
       name: 'fileAttachment.abortUpload',
       params: AbortFileAttachmentUpload,
       handler: (params, ctx) => deps.store.abort(params.uploadId, uploadOwnerId(ctx))

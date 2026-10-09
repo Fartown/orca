@@ -25,7 +25,8 @@ import {
   PROVIDER_SESSION_ID,
   fakeClaude,
   identityFor,
-  recordingJournalSink
+  recordingJournalSink,
+  claudeStartupSettled
 } from './claude-structured-session-test-support'
 
 const SESSION = 'session-1'
@@ -120,7 +121,7 @@ async function startChild(
     events: recordingJournalSink(),
     ...(options ? { options } : {})
   })
-  await adapter.awaitStarted(SESSION)
+  await claudeStartupSettled(adapter, SESSION)
   return adapter
 }
 
@@ -150,7 +151,7 @@ function readAtRest(store: AgentModelCatalogStore, record: AgentSessionRecord) {
   const resting = {
     child: null,
     params: { provider: 'claude' },
-    journal: { threadGoal: () => null, contextUsage: () => null }
+    journal: { threadGoal: () => null, contextUsage: () => null, context: { floor: () => null } }
   }
   // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the resting read touches only these members.
   const context = {

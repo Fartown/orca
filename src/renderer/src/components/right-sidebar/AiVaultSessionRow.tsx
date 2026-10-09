@@ -31,6 +31,7 @@ import {
 import type { AgentStatusState } from '../../../../shared/agent-status-types'
 import type { AiVaultSearchHit } from '../../../../shared/ai-vault-search-types'
 import { AiVaultSearchEvidence } from './AiVaultSearchEvidence'
+import { useAiVaultSessionDisplayTitle } from './use-ai-vault-session-display-title'
 
 export function VaultSessionRow({
   session,
@@ -50,6 +51,7 @@ export function VaultSessionRow({
   onResume,
   onContinueInNewSession,
   onResumeInNewChat,
+  onResumeInNewCli,
   resumeLabel: defaultResumeLabel,
   resumeActions,
   onResumeInWorktree,
@@ -82,6 +84,7 @@ export function VaultSessionRow({
   onResume: () => void
   onContinueInNewSession?: () => void
   onResumeInNewChat?: () => void
+  onResumeInNewCli?: () => void
   resumeLabel: string
   resumeActions: AiVaultSessionResumeActions
   onResumeInWorktree: () => void
@@ -109,7 +112,10 @@ export function VaultSessionRow({
         ]
       : []
   )
-  const displayTitle = getScannedSessionDisplayName(session, canonicalTitle)
+  const structuredTitle = useAiVaultSessionDisplayTitle(session)
+  const displayTitle = session.structuredSession
+    ? structuredTitle
+    : getScannedSessionDisplayName(session, canonicalTitle)
   const resumeLabel = isAntigravityReferenceSession(session)
     ? translate('aiVault.continueInCli', 'Continue in CLI')
     : defaultResumeLabel
@@ -218,6 +224,7 @@ export function VaultSessionRow({
               onResume={onResume}
               onContinueInNewSession={onContinueInNewSession}
               onResumeInNewChat={onResumeInNewChat}
+              onResumeInNewCli={onResumeInNewCli}
               onCopyResume={onCopyResume}
               onCopyId={onCopyId}
               onCopyPath={onCopyPath}
@@ -265,6 +272,7 @@ export function VaultSessionRow({
               subagentResume={subagentResume}
               onContinueInNewSession={onContinueInNewSession}
               onResumeInNewChat={onResumeInNewChat}
+              onResumeInNewCli={onResumeInNewCli}
               onOpenLog={onOpenLog}
             />
           ) : null}
@@ -282,6 +290,7 @@ export function VaultSessionRow({
           onResume={onResume}
           onContinueInNewSession={onContinueInNewSession}
           onResumeInNewChat={onResumeInNewChat}
+          onResumeInNewCli={onResumeInNewCli}
           onCopyResume={onCopyResume}
           onCopyId={onCopyId}
           onCopyPath={onCopyPath}

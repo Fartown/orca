@@ -23,8 +23,8 @@ import { SortableTabContextMenu } from './SortableTabContextMenu'
 import { translate } from '@/i18n/i18n'
 import { TAB_LABEL_WIDTH_CLASSES } from './tab-width-rules'
 import { useTabStripSlotProps } from './use-tab-strip-slot-props'
-import { useOptionalShortcutLabel } from '@/hooks/useShortcutLabel'
 import { useTabStripPointerActivation } from './tab-strip-pointer-activation'
+import { TabCloseTooltip } from './TabCloseTooltip'
 import { TerminalTabLeadingIcon } from './TerminalTabLeadingIcon'
 import {
   isTerminalTabActivityLive,
@@ -62,6 +62,8 @@ type SortableTabProps = {
   /** Toggle the tab between terminal and native chat view. */
   onToggleViewMode?: () => void
   canSplitTerminal?: boolean
+  /** Set only for a native chat tab: the chat session it shows. */
+  structuredSessionId?: string
 }
 
 export default function SortableTab({
@@ -89,7 +91,8 @@ export default function SortableTab({
   canToggleViewMode = false,
   isChatView = false,
   onToggleViewMode,
-  canSplitTerminal = true
+  canSplitTerminal = true,
+  structuredSessionId
 }: SortableTabProps): React.JSX.Element {
   // Why: agent-completion unread exists even with terminal-attention off; collapse both sources to one primitive so unrelated tabs don't re-render.
   const hasUnreadActivity = useAppStore((s) =>
@@ -187,8 +190,6 @@ export default function SortableTab({
     disabled: isEditing
   })
   const slotProps = useTabStripSlotProps(tab.id, isActive)
-  const closeShortcut = useOptionalShortcutLabel('tab.close')
-  const closeLabel = translate('auto.components.tab.bar.SortableTab.95db5f2f7d', 'Close tab')
   const tabRoot = (
     <div
       ref={setNodeRef}
@@ -334,45 +335,40 @@ export default function SortableTab({
         </button>
       )}
       {!isEditing && !isPinned && (
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <button
-              className={`relative z-10 flex items-center justify-center w-4 h-4 rounded-sm shrink-0 ${
-                isActive
-                  ? 'text-muted-foreground hover:text-foreground hover:bg-muted focus-visible:text-foreground focus-visible:bg-muted'
-                  : 'text-transparent group-hover:text-muted-foreground hover:!text-foreground hover:!bg-muted focus-visible:!text-foreground focus-visible:!bg-muted'
-              }`}
-              // Why: stable accessible name lets E2E drive the real close path (hover, then X) instead of calling the store.
-              aria-label={translate(
-                'auto.components.tab.bar.SortableTab.6df69d9388',
-                'Close tab {{value0}}',
-                { value0: tabTitle }
-              )}
-              type="button"
-              data-tab-close-button="true"
-              onPointerDown={(e) => {
-                if (e.button === 0) {
-                  e.stopPropagation()
-                }
-              }}
-              onMouseDown={(e) => {
-                if (e.button === 0) {
-                  e.stopPropagation()
-                }
-              }}
-              onClick={(e) => {
-                e.preventDefault()
+        <TabCloseTooltip>
+          <button
+            className={`relative z-10 flex items-center justify-center w-4 h-4 rounded-sm shrink-0 ${
+              isActive
+                ? 'text-muted-foreground hover:text-foreground hover:bg-muted focus-visible:text-foreground focus-visible:bg-muted'
+                : 'text-transparent group-hover:text-muted-foreground hover:!text-foreground hover:!bg-muted focus-visible:!text-foreground focus-visible:!bg-muted'
+            }`}
+            // Why: stable accessible name lets E2E drive the real close path instead of calling the store.
+            aria-label={translate(
+              'auto.components.tab.bar.SortableTab.6df69d9388',
+              'Close tab {{value0}}',
+              { value0: tabTitle }
+            )}
+            type="button"
+            data-tab-close-button="true"
+            onPointerDown={(e) => {
+              if (e.button === 0) {
                 e.stopPropagation()
-                onClose(tab.id)
-              }}
-            >
-              <X className="w-3 h-3" />
-            </button>
-          </TooltipTrigger>
-          <TooltipContent side="bottom" sideOffset={6}>
-            {closeShortcut ? `${closeLabel} (${closeShortcut})` : closeLabel}
-          </TooltipContent>
-        </Tooltip>
+              }
+            }}
+            onMouseDown={(e) => {
+              if (e.button === 0) {
+                e.stopPropagation()
+              }
+            }}
+            onClick={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              onClose(tab.id)
+            }}
+          >
+            <X className="w-3 h-3" />
+          </button>
+        </TabCloseTooltip>
       )}
     </div>
   )
@@ -415,6 +411,7 @@ export default function SortableTab({
         isChatView={isChatView}
         onToggleViewMode={onToggleViewMode}
         canSplitTerminal={canSplitTerminal}
+        structuredSessionId={structuredSessionId}
       />
     </>
   )

@@ -5,6 +5,7 @@ import {
   ORCA_IMAGE_PROTOCOL_VALUE
 } from '../../shared/terminal-image-protocol'
 import { removeAppImageRuntimeEnv } from '../pty/appimage-terminal-env'
+import { removeChromiumDisabledSessionBus } from '../pty/chromium-session-bus-env'
 import { stripInheritedBuildModeEnv } from '../pty/build-mode-env'
 import { removeCodexToolCallerIdentity } from '../codex-session-ownership/codex-tool-caller-environment'
 import { stripPiProcessOwnerEnv } from '../pty/pi-process-owner-env'
@@ -41,6 +42,7 @@ export function buildLocalPtySpawnEnvironment(args: {
   removeUnspecifiedPaneIdentityEnv(spawnEnv, spawn.env)
   stripPiProcessOwnerEnv(spawnEnv)
   removeAppImageRuntimeEnv(spawnEnv)
+  removeChromiumDisabledSessionBus(spawnEnv)
   removeInheritedNoColor(spawnEnv)
   for (const key of spawn.envToDelete ?? []) {
     delete spawnEnv[key]

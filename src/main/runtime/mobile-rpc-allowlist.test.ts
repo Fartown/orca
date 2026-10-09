@@ -1,7 +1,9 @@
+import { FORK_MOBILE_RPC_METHOD_ALLOWLIST } from './runtime-rpc/fork-mobile-rpc-method-allowlist'
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { ALL_RPC_METHODS } from './rpc/methods'
+import { MOBILE_RPC_METHOD_ALLOWLIST } from './runtime-rpc/runtime-rpc-mobile-method-allowlist'
 
 const MOBILE_DYNAMIC_RPC_METHODS = [
   // Why: computed sendRequest method names do not appear as literals in the
@@ -100,21 +102,8 @@ function mobileRpcMethods(): string[] {
   return [...new Set([...mobileLiteralRpcMethods(), ...MOBILE_DYNAMIC_RPC_METHODS])].sort()
 }
 
-function allowlistLiteral(file: string, name: string): string[] {
-  const source = readFileSync(join(process.cwd(), 'src/main/runtime/runtime-rpc', file), 'utf8')
-  const allowlist = source.match(new RegExp(`const ${name} = new Set\\(\\[([\\s\\S]*?)\\]\\)`))
-  if (!allowlist) {
-    throw new Error(`${name} not found`)
-  }
-  return [...allowlist[1]!.matchAll(/'([^']+)'/g)].map((match) => match[1]!)
-}
-
-// Fork features list their mobile methods beside the upstream list; the dispatcher admits either.
-function mobileRpcAllowlist(): Set<string> {
-  return new Set([
-    ...allowlistLiteral('runtime-rpc-mobile-method-allowlist.ts', 'MOBILE_RPC_METHOD_ALLOWLIST'),
-    ...allowlistLiteral('fork-mobile-rpc-method-allowlist.ts', 'FORK_MOBILE_RPC_METHOD_ALLOWLIST')
-  ])
+function mobileRpcAllowlist(): ReadonlySet<string> {
+  return new Set([...MOBILE_RPC_METHOD_ALLOWLIST, ...FORK_MOBILE_RPC_METHOD_ALLOWLIST])
 }
 
 function registeredRuntimeMethods(): Set<string> {
@@ -181,6 +170,8 @@ describe('mobile RPC allowlist', () => {
       'agentSession.history',
       'agentSession.subscribe',
       'agentSession.unsubscribe',
+      'agentSession.subscribeStatus',
+      'agentSession.readVisual',
       'agentSession.hold',
       'agentSession.release'
     ])

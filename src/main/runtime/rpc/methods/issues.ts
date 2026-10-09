@@ -51,16 +51,19 @@ function callerFingerprint(context: RpcContext): string {
 
 export const ISSUE_METHODS = [
   defineStreamingMethod({
+    permission: 'workspace',
     name: 'issues.subscribeChanges',
     params: null,
     handler: (_params, context, emit) => streamIssueChanges(context, emit)
   }),
   defineMethod({
+    permission: 'workspace',
     name: 'issues.unsubscribeChanges',
     params: IssuesUnsubscribeChangesParams,
     handler: (params, context) => cancelIssueChanges(context, params.subscriptionId)
   }),
   defineMethod({
+    permission: 'workspace',
     name: 'issues.status',
     params: IssuesStatusParams,
     handler: (params, context) => {
@@ -69,6 +72,7 @@ export const ISSUE_METHODS = [
     }
   }),
   defineMethod({
+    permission: 'workspace',
     name: 'issues.list',
     params: IssuesListParams,
     handler: (params, context) => {
@@ -77,6 +81,7 @@ export const ISSUE_METHODS = [
     }
   }),
   defineMethod({
+    permission: 'workspace',
     name: 'issues.get',
     params: IssuesGetParams,
     handler: (params, context) => {
@@ -85,6 +90,7 @@ export const ISSUE_METHODS = [
     }
   }),
   defineMethod({
+    permission: 'workspace',
     name: 'issues.create',
     params: IssuesCreateParams,
     handler: (params, context) => {
@@ -93,6 +99,7 @@ export const ISSUE_METHODS = [
     }
   }),
   defineMethod({
+    permission: 'workspace',
     name: 'issues.update',
     params: IssuesUpdateParams,
     handler: (params, context) => {
@@ -101,6 +108,7 @@ export const ISSUE_METHODS = [
     }
   }),
   defineMethod({
+    permission: 'workspace',
     name: 'issues.archive',
     params: IssuesLifecycleParams,
     handler: (params, context) => {
@@ -109,6 +117,7 @@ export const ISSUE_METHODS = [
     }
   }),
   defineMethod({
+    permission: 'workspace',
     name: 'issues.reopen',
     params: IssuesLifecycleParams,
     handler: (params, context) => {
@@ -117,6 +126,7 @@ export const ISSUE_METHODS = [
     }
   }),
   defineMethod({
+    permission: 'workspace',
     name: 'issues.reparent',
     params: IssuesReparentParams,
     handler: (params, context) => {
@@ -125,6 +135,7 @@ export const ISSUE_METHODS = [
     }
   }),
   defineMethod({
+    permission: 'workspace',
     name: 'issues.prepareDelete',
     params: IssuesPrepareDeleteParams,
     handler: (params, context) => {
@@ -136,6 +147,7 @@ export const ISSUE_METHODS = [
     }
   }),
   defineMethod({
+    permission: 'workspace',
     name: 'issues.delete',
     params: IssuesDeleteParams,
     handler: (params, context) => {
@@ -144,6 +156,7 @@ export const ISSUE_METHODS = [
     }
   }),
   defineMethod({
+    permission: 'workspace',
     name: 'issues.markRead',
     params: IssuesMarkReadParams,
     handler: (params, context) => {
@@ -152,6 +165,7 @@ export const ISSUE_METHODS = [
     }
   }),
   defineMethod({
+    permission: 'workspace',
     name: 'issues.resolveRound',
     params: IssuesResolveRoundParams,
     handler: (params, context) => {
@@ -160,6 +174,7 @@ export const ISSUE_METHODS = [
     }
   }),
   defineMethod({
+    permission: 'workspace',
     name: 'issues.listRounds',
     params: IssuesListRoundsParams,
     handler: (params, context) => {
@@ -168,6 +183,7 @@ export const ISSUE_METHODS = [
     }
   }),
   defineMethod({
+    permission: 'workspace',
     name: 'conversations.list',
     params: ConversationsListParams,
     handler: (params, context) => {
@@ -176,6 +192,7 @@ export const ISSUE_METHODS = [
     }
   }),
   defineMethod({
+    permission: 'workspace',
     name: 'conversations.get',
     params: ConversationsGetParams,
     handler: (params, context) => {
@@ -184,6 +201,7 @@ export const ISSUE_METHODS = [
     }
   }),
   defineMethod({
+    permission: 'workspace',
     name: 'conversations.update',
     params: ConversationsUpdateParams,
     handler: (params, context) => {
@@ -192,6 +210,7 @@ export const ISSUE_METHODS = [
     }
   }),
   defineMethod({
+    permission: 'workspace',
     name: 'conversations.bindIssue',
     params: ConversationsBindIssueParams,
     handler: (params, context) => {
@@ -200,6 +219,7 @@ export const ISSUE_METHODS = [
     }
   }),
   defineMethod({
+    permission: 'workspace',
     name: 'conversations.prepareLaunch',
     params: ConversationsPrepareLaunchParams,
     handler: (params, context) => {
@@ -208,6 +228,7 @@ export const ISSUE_METHODS = [
     }
   }),
   defineMethod({
+    permission: 'workspace',
     name: 'conversations.recordLaunchFailure',
     params: ConversationsRecordLaunchFailureParams,
     handler: (params, context) => {
@@ -216,6 +237,7 @@ export const ISSUE_METHODS = [
     }
   }),
   defineMethod({
+    permission: 'workspace',
     name: 'conversations.prepareRetry',
     params: ConversationsPrepareRetryParams,
     handler: (params, context) => {
@@ -224,6 +246,7 @@ export const ISSUE_METHODS = [
     }
   }),
   defineMethod({
+    permission: 'workspace',
     name: 'conversations.prepareDelete',
     params: ConversationsPrepareDeleteParams,
     handler: (params, context) => {
@@ -232,6 +255,7 @@ export const ISSUE_METHODS = [
     }
   }),
   defineMethod({
+    permission: 'workspace',
     name: 'conversations.delete',
     params: ConversationsDeleteParams,
     handler: (params, context) => {
