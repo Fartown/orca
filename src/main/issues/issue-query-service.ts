@@ -23,6 +23,7 @@ import {
   type IssueWorkspaceProjectionResolver
 } from './issue-query-projections'
 import { listIssueRoundPage } from './issue-round-query'
+import { readUnresolvedRoundCounts } from './issue-round-summaries'
 
 type IssueListParams = z.infer<typeof IssuesListParams>
 type ConversationListParams = z.infer<typeof ConversationsListParams>
@@ -127,15 +128,8 @@ export class IssueQueryService {
     }
     const offset = params.mode === 'continue' ? cursorOffset(params.cursor, cursorBase) : 0
     const ids = this.conversationIdsForScope(route, params.scope)
-    const records = readConversationSummaries({
-      repository: this.repository,
-      route,
-      conversationIds: ids,
-      attachments: this.attachments,
-      workspaceResolver: this.workspaceResolver
-    })
     const page = sliceIssueSnapshotPage({
-      records,
+      records: [...ids],
       offset,
       limit: params.limit,
       cursor: cursorBase
@@ -145,7 +139,13 @@ export class IssueQueryService {
       authority,
       snapshotFactsRevision: revisions.factsRevision,
       snapshotRuntimeRevision: runtimeRevision,
-      conversations: page.records,
+      conversations: readConversationSummaries({
+        repository: this.repository,
+        route,
+        conversationIds: new Set(page.records),
+        attachments: this.attachments,
+        workspaceResolver: this.workspaceResolver
+      }),
       nextCursor: page.nextCursor
     }
   }
@@ -258,13 +258,14 @@ export class IssueQueryService {
         (conversation) =>
           conversation.hostPartitionKey === route.hostPartitionKey && conversation.issueId === null
       )
+    const unresolvedCounts = readUnresolvedRoundCounts(
+      this.repository.database,
+      conversations.map((conversation) => conversation.id)
+    )
     return {
       conversationCount: conversations.length,
       unresolvedCount: conversations.reduce(
-        (count, conversation) =>
-          count +
-          this.repository.rounds.list(conversation.id).filter((round) => round.resolvedAt === null)
-            .length,
+        (count, conversation) => count + (unresolvedCounts.get(conversation.id) ?? 0),
         0
       )
     }
