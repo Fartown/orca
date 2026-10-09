@@ -19,6 +19,7 @@ import { installOsFileDropCancellationGuard } from '@/lib/os-file-drop-cancellat
 
 const mocks = vi.hoisted(() => ({
   state: {
+    agentStatusByPaneKey: {},
     settings: { activeRuntimeEnvironmentId: 'focused-runtime' },
     projects: [],
     repos: [],

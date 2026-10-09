@@ -422,6 +422,8 @@
           // diff against the upstream commit it last merged, evaluated without a sync first.
           "requireBaseAncestor": false,
           "allowedPaths": [
+            "config/scripts/vitest-sqlite-database-runtime-files.mjs",
+            "src/renderer/src/components/terminal-pane/terminal-pane-element-file-drop.test.tsx",
             "mobile/src/terminal/terminal-webview-payload-hash.test.ts",
             "mobile/scripts/build-terminal-webview-engine.mjs",
             // HTML preview in pane: feature paths and reviewed seams.
