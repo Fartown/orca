@@ -24,18 +24,23 @@ vi.mock('@/i18n/i18n', () => ({
       fallback
     )
 }))
-vi.mock('@/store', () => ({
-  useAppStore: {
-    getState: () => ({
-      settings: { activeRuntimeEnvironmentId: null },
-      repos: [{ id: 'repo1', connectionId: null, executionHostId: 'local' }],
-      worktreesByRepo: { repo1: [{ id: 'wt-1', repoId: 'repo1', hostId: 'local', path: '/repo' }] },
-      detectedWorktreesByRepo: {},
-      folderWorkspaces: [],
-      sshConnectionStates: new Map()
-    })
+vi.mock('@/store', () => {
+  const getState = () => ({
+    agentStatusByPaneKey: {},
+    settings: { activeRuntimeEnvironmentId: null },
+    repos: [{ id: 'repo1', connectionId: null, executionHostId: 'local' }],
+    worktreesByRepo: { repo1: [{ id: 'wt-1', repoId: 'repo1', hostId: 'local', path: '/repo' }] },
+    detectedWorktreesByRepo: {},
+    folderWorkspaces: [],
+    sshConnectionStates: new Map()
+  })
+  return {
+    useAppStore: Object.assign(
+      <T,>(selector: (state: ReturnType<typeof getState>) => T) => selector(getState()),
+      { getState }
+    )
   }
-}))
+})
 vi.mock('./terminal-input-activity', () => ({ recordTerminalUserInputForLeaf: vi.fn() }))
 
 const mounted: { container: HTMLDivElement; root: Root }[] = []
