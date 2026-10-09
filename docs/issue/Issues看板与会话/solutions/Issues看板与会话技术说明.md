@@ -246,7 +246,8 @@ TTL 后真实会话可在未归属区再次 Bind existing；原无 identity 预�
 - 每页请求 200 条，stale 最多重启 3 次。
 - entities 在 partitionsByRouteExecutionHostId 内归一化，filter/scope 只引用 IDs，authorityId 改变清 generation。
 - 每个 route 同时只有一次读取；读取期间到达的通知合并为一次补读。route 被移除或失去联系时推进该 route 的 sequence，丢弃晚到响应。
-- 当前 repository 全量 list 后过滤、聚合、内存分页；没有实现 SQL 先分页/聚合。
+- 2026-10-09 起，会话列表仍读取会话元数据并按原顺序过滤，但先截取当前页 ID，再查询该页最新轮次（`ORDER BY occurred_at DESC, id DESC LIMIT 1`）。未解决数通过 SQL `COUNT(*) GROUP BY conversation_id` 聚合，不解码历史正文。Issue 与未分配摘要共用聚合计数。无 schema、索引或协议变化。
+- 轮次详情查询仍先全量读取后分页；上述优化不等于所有列表均已 SQL 分页。容量断言见[摘要容量回归](../tests/cases/Issues摘要容量回归.md)。
 
 ### 8.4 变化通知与读取时机
 
@@ -408,7 +409,7 @@ Tab 既有 customTitle/quickCommandLabel/OpenCode 有意义标题优先；清人
 
 | 项目                    | 已核实的边界                                                                                                             | 文档处理                                                                 |
 | ----------------------- | ------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------ |
-| SQL 容量                | 多处全量 list 后再过滤/聚合/分页                                                                                         | 后续目标，不写成已优化                                                   |
+| SQL 容量 | 摘要使用 SQL 计数、当前页最新轮次；会话元数据和轮次详情仍有全量读取 | 局部实现，其余容量目标保留 |
 | 刷新调度                | 全局 sequence + setInterval；非 Issues 仍拉 Conversations                                                                | 保留真实周期，不宣称串行/零后台读取                                      |
 | 错误分类                | 非 unsupported 异常统一 offline                                                                                          | 独立 error/retry 保留待实现测试                                          |
 | Workspace 可用性        | query 默认 effectiveProject=null、workspaceAvailable=true，service 未注入真实 resolver                                   | 最终动作靠原生 target 校验；不要信其为在线证明                           |
