@@ -3,7 +3,7 @@ import {
   deliverLaunchPromptToAgentTab,
   seedNativeChatLaunchDraftForAgentTab
 } from '../lib/agent-launch-prompt-delivery'
-import { createWebRuntimeSessionTerminalResult } from './web-runtime-terminal-create-operation'
+import { createWebRuntimeSessionTerminalResult } from '../terminal-launch-diagnostics/paired-terminal-launch'
 import { toWebTerminalSurfaceTabId } from './web-terminal-surface-id'
 import type {
   CreateWebRuntimeSessionTerminalArgs,

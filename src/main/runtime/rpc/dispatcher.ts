@@ -10,6 +10,7 @@ import {
 } from './core'
 
 import { errorResponse, successResponse } from './errors'
+import { traceTerminalLaunchRpc } from '../../terminal-launch-diagnostics/launch-trace'
 import { ALL_RPC_METHODS } from './methods'
 import { emulatorProbe, emulatorProbeError } from '../../emulator/emulator-probe'
 import type { OrcaRuntimeService } from '../orca-runtime'
@@ -71,6 +72,13 @@ export class RpcDispatcher {
   }
 
   async dispatch(request: RpcRequest, options?: DispatchCallOptions): Promise<RpcResponse> {
+    return traceTerminalLaunchRpc(request, options, () => this.dispatchRecorded(request, options))
+  }
+
+  private async dispatchRecorded(
+    request: RpcRequest,
+    options?: DispatchCallOptions
+  ): Promise<RpcResponse> {
     const meta = this.meta()
     const method = this.registry.get(request.method)
     const callerScope = this.pinnedCallerScope ?? options?.callerScope ?? OWNER_RPC_CALLER_SCOPE

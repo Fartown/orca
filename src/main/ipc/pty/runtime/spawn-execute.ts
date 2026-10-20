@@ -1,4 +1,12 @@
 import type { PtySpawnResult } from '../../../providers/types'
+import {
+  recordTerminalLaunchStage,
+  traceTerminalClaimOwnerLiveness
+} from '../../../terminal-launch-diagnostics/launch-trace'
+import {
+  recordTerminalProviderDispatch,
+  recordTerminalProviderResult
+} from '../../../terminal-launch-diagnostics/provider-launch-evidence'
 import { ptyIncarnationById, deletePtyOwnership } from '../provider/ownership-state'
 import { ptySizes } from '../delivery/visibility-state'
 import { tryGetProviderForAgentSessionOwner } from '../provider/registry'
@@ -43,6 +51,7 @@ export async function executeRuntimePtySpawn(ctx: RuntimePtySpawnState): Promise
           )
     const expectedPtyId =
       stablePaneOwnerCandidate?.ptyId ?? ctx.effectiveSessionAppId ?? ctx.sessionId
+    recordTerminalProviderDispatch(args, expectedPtyId, stablePaneOwnerCandidate?.ptyId)
     if (!stablePaneOwnerCandidate) {
       markRuntimeSpawnHiddenBeforeSpawn(ctx)
     }
@@ -70,6 +79,10 @@ export async function executeRuntimePtySpawn(ctx: RuntimePtySpawnState): Promise
       // proven owners before deciding that an identity is absent.
       await reconcileAgentSessionOwnerListings()
       const recoveredOwner = agentSessionOwners.find(args.agentSessionEnsure.claim)
+      recordTerminalLaunchStage('claim-candidate', {
+        ...args,
+        candidatePtyId: recoveredOwner?.ptyId
+      })
       if (recoveredOwner && ctx.pendingRegistrationPtyId !== recoveredOwner.ptyId) {
         if (ctx.pendingRegistrationPtyId) {
           ctx.deps.runtime?.cancelPendingPtyRegistration?.(ctx.pendingRegistrationPtyId)
@@ -116,9 +129,15 @@ export async function executeRuntimePtySpawn(ctx: RuntimePtySpawnState): Promise
           if (!ownerProvider) {
             // Why: a disconnected relay may keep its PTY alive during the
             // grace window; missing transport is unknown, never absence.
+            recordTerminalLaunchStage('claim-owner-unverifiable', {
+              ...args,
+              candidatePtyId: owner.ptyId
+            })
             throw new Error('execution_owner_unavailable')
           }
-          return await isProviderAgentSessionOwnerLive(ownerProvider, owner)
+          return traceTerminalClaimOwnerLiveness({ ...args, candidatePtyId: owner.ptyId }, () =>
+            isProviderAgentSessionOwnerLive(ownerProvider, owner)
+          )
         }
       })
       ctx.result = providerResult ?? {
@@ -165,6 +184,7 @@ export async function executeRuntimePtySpawn(ctx: RuntimePtySpawnState): Promise
       assertSpawnReplyWasLive(ctx.result)
     }
     ctx.rejectedRegistrationCandidate ??= ctx.result
+    recordTerminalProviderResult(args, ctx.result)
     if (ctx.pendingRegistrationPtyId !== ctx.result.id) {
       if (ctx.pendingRegistrationPtyId) {
         ctx.deps.runtime?.cancelPendingPtyRegistration?.(ctx.pendingRegistrationPtyId)

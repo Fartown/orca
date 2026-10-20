@@ -1,4 +1,5 @@
 import { createBrowserUuid } from '@/lib/browser-uuid'
+import { recordTerminalLaunchOrigin } from '@/terminal-launch-diagnostics/launch-origin'
 import type { TerminalSlice, TerminalStoreGet, TerminalStoreSet } from './terminal-state'
 
 export function createTerminalStartupQueueActions(
@@ -19,6 +20,7 @@ export function createTerminalStartupQueueActions(
 > {
   return {
     queueTabStartupCommand: (tabId, startup) => {
+      recordTerminalLaunchOrigin('queued-startup', { ...startup, tabId }, get())
       // Why: launchToken is only meaningful for tracked launch-config reuse; plain startup commands must not mint a synthetic token.
       const launchToken = startup.launchConfig
         ? (startup.launchToken ?? createBrowserUuid())

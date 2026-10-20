@@ -7,7 +7,7 @@ import {
   recordCoalescedCrashBreadcrumb,
   recordCrashBreadcrumb
 } from '../crash-reporting/crash-breadcrumb-store'
-import { startSpan } from '../observability/tracer'
+import { flushActiveSink, startSpan } from '../observability/tracer'
 import { TERMINAL_WEBGL_DIAGNOSTIC_BREADCRUMB } from '../../shared/terminal-webgl-diagnostics'
 
 function sanitizeRendererBreadcrumbData(value: unknown): CrashReportBreadcrumbData | undefined {
@@ -40,6 +40,9 @@ function recordRendererBreadcrumbTrace(
   // Why: main-process native crashes cannot persist memory-only breadcrumbs.
   // A tiny trace span gives the next crash report durable pre-crash context.
   span.end()
+  if (name === 'terminal_launch_origin') {
+    flushActiveSink()
+  }
 }
 
 // Why: a repeating renderer error (e.g. a ResizeObserver or SSH-rejection

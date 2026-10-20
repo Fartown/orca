@@ -1,4 +1,9 @@
 import { performance } from 'node:perf_hooks'
+import {
+  launchEvidence,
+  launchReference
+} from '../../shared/terminal-launch-diagnostics/launch-evidence'
+import { traceDaemonTerminalLaunch } from '../terminal-launch-diagnostics/daemon-launch-trace'
 import type { BackgroundTransientFactRelay } from './daemon-background-transient-facts'
 import type { DaemonClientConnections } from './daemon-client-connections'
 import type { DaemonEndpointLifecycle } from './daemon-endpoint-lifecycle'
@@ -50,6 +55,12 @@ export class DaemonTerminalAdmission {
   }
 
   async createOrAttach(clientId: string, request: CreateOrAttachRequest): Promise<unknown> {
+    return traceDaemonTerminalLaunch(this.options.log, clientId, request, () =>
+      this.createRecorded(clientId, request)
+    )
+  }
+
+  private async createRecorded(clientId: string, request: CreateOrAttachRequest): Promise<unknown> {
     const client = this.options.connections.get(clientId)
     if (!this.options.isAcceptingWork()) {
       throw new Error('Daemon temporarily unavailable; reconnect')
@@ -151,7 +162,15 @@ export class DaemonTerminalAdmission {
     }
     this.options.log.log(result.isNew ? 'session-created' : 'session-attached', {
       sessionId: routedSessionId,
-      pid: result.pid
+      pid: result.pid,
+      ...launchEvidence({
+        ...payload,
+        ptyId: routedSessionId,
+        incarnationId: result.incarnationId
+      }),
+      clientRef: launchReference(clientId),
+      requestRef: launchReference(request.id),
+      disposition: result.agentSessionEnsure?.disposition ?? (result.isNew ? 'created' : 'attached')
     })
     return {
       isNew: result.isNew,

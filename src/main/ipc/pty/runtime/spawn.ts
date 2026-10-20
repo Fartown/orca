@@ -1,4 +1,8 @@
 import type { AgentSessionClaimedSpawnResult } from '../../../../shared/agent-session-host-authority'
+import {
+  recordTerminalLaunchStage,
+  traceTerminalPtyAdmission
+} from '../../../terminal-launch-diagnostics/launch-trace'
 import { isTerminalLeafId, makePaneKey } from '../../../../shared/stable-pane-id'
 import { isValidTerminalTabId } from '../../../../shared/terminal-tab-id'
 import {
@@ -53,6 +57,11 @@ export async function spawnPtyFromRuntimeController(
   deps: PtyRuntimeControllerDeps,
   args: RuntimePtySpawnArgs
 ) {
+  return traceTerminalPtyAdmission(args, () => spawnRecordedPty(deps, args))
+}
+
+async function spawnRecordedPty(deps: PtyRuntimeControllerDeps, args: RuntimePtySpawnArgs) {
+  recordTerminalLaunchStage('pty-request', args)
   const ctx = createRuntimePtySpawnState(deps, args)
   if (!args.adoptedStablePane) {
     const leafId =
@@ -79,16 +88,30 @@ export async function spawnPtyFromRuntimeController(
       ctx.paneSpawnReservationKey = ownerKey
       ctx.paneSpawnReservation = reservePaneSpawn(ownerKey)
     }
+    recordTerminalLaunchStage('stable-pane-candidate', {
+      ...args,
+      candidatePtyId: existingOwner?.ptyId
+    })
   }
   try {
     const materializedOrPromise = adoptMaterializedRuntimePtySpawn(ctx)
     const materialized =
       materializedOrPromise instanceof Promise ? await materializedOrPromise : materializedOrPromise
     if (materialized) {
+      recordTerminalLaunchStage('adopt-materialized', {
+        ...args,
+        ptyId: materialized.id,
+        incarnationId: materialized.incarnationId
+      })
       return toRuntimeSpawnReply(materialized)
     }
     const earlyAdopt = await prepareRuntimePtySpawn(ctx)
     if (earlyAdopt) {
+      recordTerminalLaunchStage('adopt-preflight', {
+        ...args,
+        ptyId: earlyAdopt.id,
+        incarnationId: earlyAdopt.incarnationId
+      })
       return toRuntimeSpawnReply(earlyAdopt)
     }
     const earlyReserved = await buildRuntimePtySpawnOptions(ctx).catch((error: unknown) => {
@@ -96,13 +119,28 @@ export async function spawnPtyFromRuntimeController(
       throw error
     })
     if (earlyReserved) {
+      recordTerminalLaunchStage('adopt-reservation', {
+        ...args,
+        ptyId: earlyReserved.id,
+        incarnationId: earlyReserved.incarnationId
+      })
       return toRuntimeSpawnReply(earlyReserved)
     }
     await executeRuntimePtySpawn(ctx)
     const committed = await commitRuntimePtySpawn(ctx)
     commitRuntimeSpawnHiddenDelivery(ctx)
+    recordTerminalLaunchStage('pty-committed', {
+      ...args,
+      ptyId: committed.id,
+      incarnationId: committed.incarnationId,
+      isReattach: ctx.result.isReattach
+    })
     return toRuntimeSpawnReply(committed)
   } catch (err) {
+    recordTerminalLaunchStage('pty-failed', {
+      ...args,
+      ptyId: ctx.result?.id ?? ctx.pendingRegistrationPtyId
+    })
     releaseRuntimeSpawnPreSpawnHiddenMark(ctx)
     if (ctx.pendingRegistrationPtyId) {
       deps.runtime?.cancelPendingPtyRegistration?.(

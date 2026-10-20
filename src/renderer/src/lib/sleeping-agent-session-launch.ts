@@ -1,5 +1,6 @@
 import { toast } from 'sonner'
 import { useAppStore } from '@/store'
+import { recordTerminalLaunchOrigin } from '@/terminal-launch-diagnostics/launch-origin'
 import { buildAgentResumeStartupPlan } from '@/lib/tui-agent-startup'
 import { tuiAgentToAgentKind } from '@/lib/telemetry'
 import { persistAgentLaunchTabOrder } from '@/lib/launch-agent-tab-order'
@@ -80,6 +81,7 @@ export function launchSleepingAgentSession(
     return false
   }
 
+  recordTerminalLaunchOrigin('automatic-sleeping-resume', record, state)
   const tab = state.createTab(record.worktreeId, undefined, undefined, {
     launchAgent: record.agent,
     pendingStartup: {
@@ -106,6 +108,11 @@ export function launchSleepingAgentSession(
     },
     ...(options?.suppressNavigation ? { activate: false, recordInteraction: false } : {})
   })
+  recordTerminalLaunchOrigin(
+    'automatic-sleeping-resume',
+    { ...record, tabId: tab.id, eventPhase: 'created' },
+    state
+  )
   state.clearSleepingAgentSession(record.paneKey)
   if (!options?.suppressNavigation) {
     state.setActiveTabType('terminal', record.worktreeId)

@@ -1,4 +1,5 @@
 import { useAppStore } from '@/store'
+import { recordTerminalLaunchOrigin } from '@/terminal-launch-diagnostics/launch-origin'
 import type { PtyReplayDataMeta } from '../pty-transport'
 import { INITIAL_MODE_2031_REPLY_SCAN_STATE } from '../../../../../shared/terminal-color-scheme-protocol'
 import { waitForTerminalOutputParsed } from '@/lib/pane-manager/pane-terminal-output-scheduler'
@@ -62,6 +63,16 @@ export function bindDeferredColdRestoreAndSnapshot(session: ConnectPanePtySessio
     startup: ColdRestoreAgentResumeStartup | null = session.buildColdRestoreAgentResumeStartup(),
     options: FreshSpawnOptions = {}
   ): Promise<string | null> => {
+    recordTerminalLaunchOrigin(
+      'cold-restore-resume',
+      {
+        ...startup,
+        tabId: session.deps.tabId,
+        leafId: session.pane.leafId,
+        worktreeId: session.deps.worktreeId
+      },
+      useAppStore.getState()
+    )
     session.applyColdRestoreAgentResumeStartup(startup)
     return session.startFreshSpawn(startup, options)
   }

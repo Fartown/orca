@@ -7,6 +7,45 @@
   ],
   "policies": [
     {
+      "id": "terminal-launch-diagnostics",
+      "description": "Observational terminal launch tracing only; no runtime ownership or wire changes.",
+      "rules": [
+        {
+          "id": "terminal-launch-diagnostics-worktree-scope",
+          "type": "change-scope",
+          "comparison": "worktree",
+          "whenChanged": [
+            "src/shared/terminal-launch-diagnostics/**",
+            "src/main/terminal-launch-diagnostics/**",
+            "src/renderer/src/terminal-launch-diagnostics/**",
+            "docs/issue/终端创建链路诊断/**"
+          ],
+          "allowedPaths": [
+            "src/shared/terminal-launch-diagnostics/**",
+            "src/main/terminal-launch-diagnostics/**",
+            "src/renderer/src/terminal-launch-diagnostics/**",
+            "docs/issue/终端创建链路诊断/**",
+            "src/main/runtime/rpc/dispatcher.ts",
+            "src/main/ipc/pty/runtime/spawn.ts",
+            "src/main/ipc/pty/runtime/spawn-execute.ts",
+            "src/main/daemon/daemon-terminal-admission.ts",
+            "src/renderer/src/store/terminals/terminal-startup-queues.ts",
+            "src/renderer/src/runtime/web-runtime-terminal-creation.ts",
+            "src/main/observability/index.ts",
+            "src/renderer/src/lib/sleeping-agent-session-launch.ts",
+            "src/renderer/src/components/terminal-pane/pty-connection/deferred-cold-restore-and-snapshot.ts",
+            "src/renderer/src/hooks/ipc-events/terminal-request-ipc-bridge.ts",
+            "src/renderer/src/store/terminals/terminal-tab-creation.ts",
+            "src/main/ipc/crash-reporting-renderer-breadcrumbs.ts",
+            "config/fork-features.jsonc",
+            "config/architecture-policies.jsonc",
+            "docs/issue/README.md"
+          ],
+          "message": "Change is outside terminal launch diagnostics."
+        }
+      ]
+    },
+    {
       "id": "integration-builds",
       "description": "Fork packages and integration-only application updates reuse upstream build and install machinery.",
       "rules": [
@@ -422,6 +461,22 @@
           // diff against the upstream commit it last merged, evaluated without a sync first.
           "requireBaseAncestor": false,
           "allowedPaths": [
+            "src/shared/terminal-launch-diagnostics/**",
+            "src/main/terminal-launch-diagnostics/**",
+            "src/renderer/src/terminal-launch-diagnostics/**",
+            "docs/issue/终端创建链路诊断/**",
+            "src/main/runtime/rpc/dispatcher.ts",
+            "src/renderer/src/store/terminals/terminal-startup-queues.ts",
+            "src/renderer/src/runtime/web-runtime-terminal-creation.ts",
+            "src/main/observability/index.ts",
+            "src/main/ipc/pty/runtime/spawn.ts",
+            "src/main/ipc/pty/runtime/spawn-execute.ts",
+            "src/main/daemon/daemon-terminal-admission.ts",
+            "src/renderer/src/lib/sleeping-agent-session-launch.ts",
+            "src/renderer/src/components/terminal-pane/pty-connection/deferred-cold-restore-and-snapshot.ts",
+            "src/renderer/src/hooks/ipc-events/terminal-request-ipc-bridge.ts",
+            "src/renderer/src/store/terminals/terminal-tab-creation.ts",
+            "src/main/ipc/crash-reporting-renderer-breadcrumbs.ts",
             "config/scripts/vitest-sqlite-database-runtime-files.mjs",
             "src/renderer/src/components/terminal-pane/terminal-pane-element-file-drop.test.tsx",
             "mobile/src/terminal/terminal-webview-payload-hash.test.ts",

@@ -2160,6 +2160,104 @@
       ]
     },
     {
+      "id": "terminal-launch-diagnostics",
+      "title": "终端创建链路诊断：重复会话来源可追踪",
+      "goal": "记录恢复入口、RPC 调用方、旧终端候选及实际 PTY 创建结果，不改变会话行为",
+      "journal": "docs/issue/终端创建链路诊断/journal.md",
+      "policyId": "terminal-launch-diagnostics",
+      "ownedPaths": [
+        "src/shared/terminal-launch-diagnostics/**",
+        "src/main/terminal-launch-diagnostics/**",
+        "src/renderer/src/terminal-launch-diagnostics/**",
+        "docs/issue/终端创建链路诊断/**"
+      ],
+      "requiredFiles": [
+        "src/shared/terminal-launch-diagnostics/launch-evidence.ts",
+        "src/main/terminal-launch-diagnostics/launch-trace.ts",
+        "src/renderer/src/terminal-launch-diagnostics/launch-origin.ts"
+      ],
+      "dependsOn": [
+        "src/shared/sha256.ts",
+        "src/shared/stable-pane-id.ts",
+        "src/main/observability/tracer.ts",
+        "src/main/observability/local-file-sink.ts",
+        "src/main/daemon/daemon-file-log.ts",
+        "src/renderer/src/lib/crash-breadcrumb-recorder.ts",
+        "src/renderer/src/store/index.ts",
+        "src/renderer/src/runtime/web-runtime-terminal-create-operation.ts"
+      ],
+      "seams": [
+        {
+          "file": "src/main/runtime/rpc/dispatcher.ts",
+          "mustContain": "traceTerminalLaunchRpc",
+          "why": "capture creating/activating RPC callers, including rejected requests"
+        },
+        {
+          "file": "src/main/ipc/pty/runtime/spawn.ts",
+          "mustContain": "recordTerminalLaunchStage",
+          "why": "record every controller admission and early adoption"
+        },
+        {
+          "file": "src/main/ipc/pty/runtime/spawn-execute.ts",
+          "mustContain": "recordTerminalLaunchStage",
+          "why": "record the existing owner candidate and physical provider result"
+        },
+        {
+          "file": "src/main/daemon/daemon-terminal-admission.ts",
+          "mustContain": "launchEvidence",
+          "why": "join daemon requests and outcomes without changing the wire"
+        },
+        {
+          "file": "src/renderer/src/store/terminals/terminal-startup-queues.ts",
+          "mustContain": "recordTerminalLaunchOrigin",
+          "why": "capture all queued commands with safe compiled callsites, including explicit history resume"
+        },
+        {
+          "file": "src/renderer/src/lib/sleeping-agent-session-launch.ts",
+          "mustContain": "recordTerminalLaunchOrigin",
+          "why": "distinguish automatic new-tab resume"
+        },
+        {
+          "file": "src/renderer/src/components/terminal-pane/pty-connection/deferred-cold-restore-and-snapshot.ts",
+          "mustContain": "recordTerminalLaunchOrigin",
+          "why": "distinguish in-pane cold restore"
+        },
+        {
+          "file": "src/renderer/src/hooks/ipc-events/terminal-request-ipc-bridge.ts",
+          "mustContain": "recordTerminalLaunchOrigin",
+          "why": "join runtime-to-renderer tab creation by request identity"
+        },
+        {
+          "file": "src/renderer/src/store/terminals/terminal-tab-creation.ts",
+          "mustContain": "recordTerminalLaunchOrigin",
+          "why": "capture all renderer-created tabs, not only known resume entry points"
+        },
+        {
+          "file": "src/main/ipc/crash-reporting-renderer-breadcrumbs.ts",
+          "mustContain": "terminal_launch_origin",
+          "why": "flush low-frequency terminal origin evidence before a main-process crash"
+        },
+        {
+          "file": "src/renderer/src/runtime/web-runtime-terminal-creation.ts",
+          "mustContain": "terminal-launch-diagnostics/paired-terminal-launch",
+          "why": "record paired launch callsites before capability selection"
+        },
+        {
+          "file": "src/main/observability/index.ts",
+          "mustContain": "diagnostics-ready",
+          "why": "persist a startup marker so deployed diagnostics can be checked"
+        }
+      ],
+      "tests": [
+        "src/shared/terminal-launch-diagnostics/launch-evidence.test.ts",
+        "src/main/terminal-launch-diagnostics/launch-trace.test.ts",
+        "src/renderer/src/terminal-launch-diagnostics/launch-origin.test.ts"
+      ],
+      "checks": [
+        "ORCA_BACKGROUND_LAUNCH=1 pnpm exec vitest run --config config/vitest.config.ts src/shared/terminal-launch-diagnostics src/main/terminal-launch-diagnostics src/renderer/src/terminal-launch-diagnostics"
+      ]
+    },
+    {
       "id": "terminal-id-copy-routing",
       "title": "终端 ID 复制主机路由",
       "goal": "复制终端 ID 时查询所属本地、SSH 或配对主机，失联或归属不明时不回退本机",
