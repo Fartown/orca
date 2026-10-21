@@ -38,7 +38,8 @@
         "tests/e2e/helpers/electron-process-shutdown.ts",
         "src/main/goals/orcad-goals.ts",
         "src/main/issues/orcad-issues.ts",
-        "src/main/self-hosted-artifacts/orcad-artifact-share.ts"
+        "src/main/self-hosted-artifacts/orcad-artifact-share.ts",
+        "config/scripts/pnpm-lockfile-root-importer.mjs"
       ],
       "policyId": "integration-builds",
       "ownedPaths": [
@@ -96,6 +97,16 @@
           "file": "src/main/updater-changelog.ts",
           "mustContain": "integrationChangelog",
           "why": "fork update notes link to the matching fork release"
+        },
+        {
+          "file": "mobile/package.json",
+          "mustContain": "zustand",
+          "why": "The fork update UI requires its own mobile Zustand dependency; root resolution cannot supply Metro."
+        },
+        {
+          "file": "mobile/pnpm-lock.yaml",
+          "mustContain": "zustand",
+          "why": "The fork update UI requires its own mobile Zustand dependency; root resolution cannot supply Metro."
         }
       ],
       "tests": [
@@ -108,7 +119,8 @@
         "config/scripts/integration-builds/orca-update-probe/probe-native-relaunch.test.mjs",
         "src/shared/integration-builds/release-catalog.test.ts",
         "src/main/integration-builds/integration-update-feed.test.ts",
-        "mobile/src/integration-builds/update-controller.test.ts"
+        "mobile/src/integration-builds/update-controller.test.ts",
+        "config/scripts/integration-builds/mobile-dependency-contract.test.mjs"
       ],
       "checks": [
         "pnpm exec vitest run --config config/vitest.config.ts config/scripts/integration-builds src/shared/integration-builds src/main/integration-builds",

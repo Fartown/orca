@@ -425,3 +425,12 @@ external_ids: []
 - 验证证据：`.docs/upstream-sync-ui-validation/2026-10-21/evidence/`；四目标类型检查、最终 Web 类型复验、三项本地化、功能注册及全部注册功能回归通过；隐藏 Electron + 真实 SSH 隔离 orcad 验收通过。完整记录见 sync-upstream-gates.log、attachment-grant-matrix.log 与 remaining-feature-checks.log。
 - 未解决问题：本轮实现无未解决问题；提交后需从干净 integration 复核架构门禁并观察远端构建。不在本次安装用户应用或升级已有远程服务。
 - 下一步：推送通过门禁的 integration，跟踪远端检查；保留当前应用及会话。
+
+## 2026-10-21 Android 独立依赖恢复（done）
+
+- 本轮目标：修复上游同步后 Android 集成构建缺少 Zustand 的失败。
+- 完成内容：上游删除了 mobile 的 Zustand 声明，fork 更新 UI 与控制器仍需要该包；在 mobile 项目恢复固定版本 5.0.15 和锁文件，避免依赖根目录偶然解析。未改动安装流程或更新行为。
+- 代码或文档变更：mobile/package.json、mobile/pnpm-lock.yaml；注册两处依赖接缝和对应允许路径；新增 mobile-dependency-contract.test.mjs，检查移动端直接声明和锁文件一致。
+- 验证证据：CI 39594208265 的 macOS 成功，Android 在 Metro 解析 IntegrationUpdateGate.tsx 时报告 Unable to resolve module zustand；本地依赖契约、21 项更新控制器回归、共享依赖版本、注册与架构检查通过，Metro 原生 Android 导出（完整 17 MB JS 包）和 mobile 类型检查通过。
+- 未解决问题：等待新提交的完整远端构建通过；旧失败日志保留于 .docs/upstream-sync-ui-validation/2026-10-21/evidence/android-ci-failure.log。
+- 下一步：通过本地验证后提交并推送同步修复，重新验证两端构建与发布。

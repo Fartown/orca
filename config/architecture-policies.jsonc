@@ -43,7 +43,9 @@
             "config/fork-features.jsonc",
             "config/architecture-policies.jsonc",
             "docs/issue/README.md",
-            ".gitignore"
+            ".gitignore",
+            "mobile/package.json",
+            "mobile/pnpm-lock.yaml"
           ],
           "message": "Change is outside the integration build feature."
         }
@@ -853,7 +855,9 @@
             "src/main/runtime/orchestration/orchestration-sender-name.ts",
             "src/main/runtime/session-tabs/structured-session-tab-close.ts",
             "src/renderer/src/components/browser-pane/workspace-doc/HtmlDocPreview.toolbar.test.tsx",
-            "src/renderer/src/components/terminal-pane/pty-connection/pane-host-capability-flags.ts"
+            "src/renderer/src/components/terminal-pane/pty-connection/pane-host-capability-flags.ts",
+            "mobile/package.json",
+            "mobile/pnpm-lock.yaml"
           ],
           "message": "Branch changes an upstream path that no fork feature owns or registers as a seam; extend config/fork-features.jsonc and this allowlist, or move the change into a feature-owned path."
         }
