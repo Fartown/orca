@@ -103,7 +103,9 @@ export function docPreviewLanShareControl(
   identity: DocPreviewDocumentIdentity,
   location: DocPreviewGrantLocation | null
 ): ((control: BrowserChromeShareControl) => React.JSX.Element) | undefined {
-  if (!location) {return undefined}
+  if (!location) {
+    return undefined
+  }
   return (control) => (
     <DocPreviewLanShareButton
       identity={identity}

@@ -6,15 +6,16 @@ import type {
 import type { RecognizedAgentProcess } from '../../../../shared/agent-process-recognition'
 import type { RuntimeTerminalProcessInspection } from '@/runtime/runtime-terminal-inspection'
 
-export type AgentCompletionStatusSnapshot = ParsedAgentStatusPayload & Pick<AgentStatusEntry, 'providerSession'> & {
-  stateStartedAt?: number
-  /** The host's stamp for the turn end this `done` reports; restatements keep it. */
-  turnEndedAt?: number
-  /** How the host identified that end (`TurnEndDisposition`). */
-  turnEndDisposition?: TurnEndDisposition
-  /** Renderer-local boundary used only to reject a delayed cross-host completion. */
-  localStateStartedAt?: number
-}
+export type AgentCompletionStatusSnapshot = ParsedAgentStatusPayload &
+  Pick<AgentStatusEntry, 'providerSession'> & {
+    stateStartedAt?: number
+    /** The host's stamp for the turn end this `done` reports; restatements keep it. */
+    turnEndedAt?: number
+    /** How the host identified that end (`TurnEndDisposition`). */
+    turnEndDisposition?: TurnEndDisposition
+    /** Renderer-local boundary used only to reject a delayed cross-host completion. */
+    localStateStartedAt?: number
+  }
 
 export type AgentCompletionDispatchMeta = {
   source: 'hook' | 'title' | 'process-exit'

@@ -284,7 +284,8 @@
             "**/*.test.ts",
             "**/*.test.tsx",
             "**/*.spec.ts",
-            "**/*.spec.tsx"
+            "**/*.spec.tsx",
+            "src/main/integration-builds/orcad-fork-services.ts"
           ],
           "forbiddenTargets": ["src/main/issues/**", "src/shared/issues/**"],
           "importTextHints": ["issues"],
@@ -848,7 +849,11 @@
             "src/renderer/src/components/terminal-pane/use-terminal-pane-context-menu.ts",
             "mobile/src/session/mobile-session-terminal-create-request.ts",
             "src/wsl-guest/agent-hook-provider-normalization.ts",
-            "src/renderer/src/components/browser-pane/workspace-doc/HtmlDocPreview.tsx"
+            "src/renderer/src/components/browser-pane/workspace-doc/HtmlDocPreview.tsx",
+            "src/main/runtime/orchestration/orchestration-sender-name.ts",
+            "src/main/runtime/session-tabs/structured-session-tab-close.ts",
+            "src/renderer/src/components/browser-pane/workspace-doc/HtmlDocPreview.toolbar.test.tsx",
+            "src/renderer/src/components/terminal-pane/pty-connection/pane-host-capability-flags.ts"
           ],
           "message": "Branch changes an upstream path that no fork feature owns or registers as a seam; extend config/fork-features.jsonc and this allowlist, or move the change into a feature-owned path."
         }
@@ -963,7 +968,8 @@
             "**/*.test.tsx",
             "**/*.spec.ts",
             "**/*.spec.tsx",
-            "src/main/orcad/orcad-entry.ts"
+            "src/main/orcad/orcad-entry.ts",
+            "src/main/integration-builds/orcad-fork-services.ts"
           ],
           "forbiddenTargets": ["src/main/goals/**", "src/shared/goals/**"],
           "importTextHints": ["goals"],

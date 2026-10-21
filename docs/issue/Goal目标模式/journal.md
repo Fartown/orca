@@ -524,3 +524,5 @@ external_ids: []
 - 验证证据：首轮类型检查及冲突记录位于 .docs/upstream-sync-ui-validation/2026-10-21/evidence/；当前尚未通过验收。
 - 未解决问题：类型检查、注册检查、功能回归和本地及 SSH 实机验收仍在进行。
 - 下一步：完成上述门禁后记录最终证据，再提交同步合并。
+
+- 迁移补充：Goal 状态由执行主机的 orcad hook store 提供。移除没有调用者的旧 relay 专用 getStatusForPane 和类型再导出，保留 WSL hook 主体及会话归属能力；新 orcad 注册测试和 SSH 草稿读写已通过。

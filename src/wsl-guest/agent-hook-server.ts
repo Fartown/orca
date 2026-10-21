@@ -12,7 +12,6 @@ import type {
   RelayHookServerOptions,
   RelayHookServerStartOptions
 } from './agent-hook-server-contract'
-export type { RelayHookForward, RelayHookServerOptions, RelayHookServerStartOptions }
 import { handleRelayHookRequest } from './agent-hook-request'
 import { RelayAgentPresence } from './relay-agent-presence'
 import type { createServer } from 'node:http'
@@ -108,8 +107,6 @@ export class RelayAgentHookServer extends RelayAgentHookCanonicalStatus {
     })
   }
 
-  getStatusForPane = (key: string) => this.state.lastStatusByPaneKey.get(key)
-
   start(options: RelayHookServerStartOptions = {}): Promise<void> {
     return this.startup.start((isCurrent) => this.startListener(options, isCurrent))
   }
@@ -146,7 +143,9 @@ export class RelayAgentHookServer extends RelayAgentHookCanonicalStatus {
           getAgentLaunchToken: this.getAgentLaunchToken,
           applyEvent: (event, source, env, version) => this.applyEvent(event, source, env, version),
           ingestTmuxHook: (source, body) => this.ingestCanonicalTmuxHook(source, body, this.env),
-          onRefusedClaudeHook: activity.refusedHook(this.state, (key) => this.checkAgentPresence(key)),
+          onRefusedClaudeHook: activity.refusedHook(this.state, (key) =>
+            this.checkAgentPresence(key)
+          ),
           retryScheduler: this.retryScheduler,
           transportInterference: this.transportInterference
         }),

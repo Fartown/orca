@@ -42,7 +42,9 @@ async function callOverRuntime<T>(
   params: Record<string, unknown>,
   resultSchema: z.ZodType<T>
 ): Promise<T> {
-  if (!runtimeEnvironment.isReachable(environmentId)) {throw unreachable(environmentId)}
+  if (!runtimeEnvironment.isReachable(environmentId)) {
+    throw unreachable(environmentId)
+  }
   let response: Awaited<ReturnType<ArtifactShareRuntimeEnvironmentCall>>
   try {
     response = await runtimeEnvironment.call(

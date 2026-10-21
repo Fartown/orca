@@ -249,7 +249,7 @@ export abstract class RelayDispatcherRpcRouting extends RelayDispatcherFrameCode
     )
   }
 
-  requestClient(
+  private requestClient(
     clientId: number,
     method: string,
     params?: Record<string, unknown>,

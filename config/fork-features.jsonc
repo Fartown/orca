@@ -398,11 +398,6 @@
           "why": "the goals copy namespace exists in the catalog"
         },
         {
-          "file": "src/wsl-guest/agent-hook-server.ts",
-          "mustContain": "getStatusForPane",
-          "why": "Goal execution, documents and validation run on their owning SSH or runtime host"
-        },
-        {
           "file": "src/main/orcad/orcad-entry.ts",
           "mustContain": "startOrcadForkServices",
           "why": "Goal execution, documents and validation run on their owning SSH or runtime host"
@@ -1141,6 +1136,16 @@
           "file": "src/wsl-guest/agent-hook-provider-normalization.ts",
           "mustContain": "claudeSessionOwnerState: canonical",
           "why": "Provider-local normalization consults host-owned process presence for session replacement."
+        },
+        {
+          "file": "src/main/runtime/orchestration/orchestration-sender-name.ts",
+          "mustContain": "providerSessionId: terminal.providerSessionId",
+          "why": "pass the provider session identity into the canonical conversation-name resolver"
+        },
+        {
+          "file": "src/renderer/src/components/terminal-pane/pty-connection/pane-host-capability-flags.ts",
+          "mustContain": "providerSession: storedStatus.providerSession",
+          "why": "completion notifications retain the current provider identity"
         }
       ],
       "tests": [
@@ -1437,6 +1442,11 @@
           "file": "src/main/integration-builds/orcad-fork-services.ts",
           "mustContain": "startOrcadArtifactShare",
           "why": "start each fork service on the owning headless runtime before RPC becomes available"
+        },
+        {
+          "file": "src/renderer/src/components/browser-pane/workspace-doc/HtmlDocPreview.toolbar.test.tsx",
+          "mustContain": "Share on local network",
+          "why": "exercise the owned network-share button beside upstream toolbar actions"
         }
       ],
       "tests": [
@@ -1929,6 +1939,11 @@
           "file": "src/main/runtime/session-lifecycle/projection/apply-mobile-session-tab-navigation.ts",
           "mustContain": "publicationEpoch: snapshot.publicationEpoch",
           "why": "tab activation carries the incumbent epoch instead of minting one (REQ-701)"
+        },
+        {
+          "file": "src/main/runtime/session-tabs/structured-session-tab-close.ts",
+          "mustContain": "publicationEpoch: snapshot.publicationEpoch",
+          "why": "closing a chat edits content without replacing the publisher"
         }
       ],
       "tests": [

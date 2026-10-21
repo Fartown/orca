@@ -15,10 +15,7 @@ import type {
 } from '@/runtime/runtime-file-client-types'
 import { readHostPathFile, writeHostPathFile } from './host-path-file-client'
 
-function environmentTarget(
-  target: RuntimeFileOperationArgs['target'],
-  worktreeId?: string | null
-) {
+function environmentTarget(target: RuntimeFileOperationArgs['target'], worktreeId?: string | null) {
   return target.kind === 'environment' && worktreeId
     ? { target, worktree: toRuntimeWorktreeSelector(worktreeId) }
     : null
@@ -93,8 +90,7 @@ export async function resolveAbsoluteTabEntryReach(args: {
     filePath: string
   ) => Promise<{ isDirectory: boolean }>
 }): Promise<AbsoluteTabEntryReach> {
-  const needsGrant =
-    args.context.target.kind === 'environment' && !args.worktreeRelativePath
+  const needsGrant = args.context.target.kind === 'environment' && !args.worktreeRelativePath
   if (needsGrant) {
     const grant = await args.requestHostPathGrant(args.context, args.filePath)
     // Why the grant's path wins: the host canonicalizes before minting, so this is the file it

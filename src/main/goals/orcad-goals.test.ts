@@ -20,7 +20,9 @@ let stop: (() => void) | undefined
 afterEach(async () => {
   stop?.()
   vi.unstubAllEnvs()
-  if (root) {await rm(root, { recursive: true, force: true })}
+  if (root) {
+    await rm(root, { recursive: true, force: true })
+  }
 })
 
 it('starts the host Goal store and cleans up readiness without a client relay callback', async () => {

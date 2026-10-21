@@ -17,7 +17,9 @@ export async function grantHostPath(
   clientId?: string
 ) {
   const candidate = hostGrantPathCandidate(absolutePath)
-  if (!candidate) {throw new Error(HOST_PATH_GRANT_REQUIRES_ABSOLUTE_MESSAGE)}
+  if (!candidate) {
+    throw new Error(HOST_PATH_GRANT_REQUIRES_ABSOLUTE_MESSAGE)
+  }
   const target = await host.resolveRuntimeFileTarget(worktreeSelector)
   // SSH clients call the owning orcad; a foreign host must never read this machine's path.
   requireLocalRuntimeFileRoute(target)
@@ -29,6 +31,8 @@ export async function grantHostPath(
     readOnly: false,
     provenance: HOST_PATH_GRANT_PROVENANCE
   })
-  if (resolution.isDirectory) {throw new Error(HOST_PATH_GRANT_DIRECTORY_MESSAGE)}
+  if (resolution.isDirectory) {
+    throw new Error(HOST_PATH_GRANT_DIRECTORY_MESSAGE)
+  }
   return resolution
 }
