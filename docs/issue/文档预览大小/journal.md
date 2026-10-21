@@ -3,7 +3,7 @@ title: 文档预览大小
 document_type: journal
 status: testing
 created: 2026-09-12
-updated: 2026-10-06
+updated: 2026-10-21
 issue: 文档预览大小
 external_ids: []
 ---
@@ -113,11 +113,11 @@ external_ids: []
 - 未解决问题：全仓架构门禁的两处既有接缝、RPC 生成目录的既有缺项未混入修复；没有真实远端部署或 Electron UI 证据，也未替换用户 App，因此保持 testing，不声明整体 done。
 - 下一步：需要交付安装包时再提交/合入、构建并在隔离 App 验收；不操作用户当前进程。
 
-## 2026-10-21 上游 orcad 迁移（implementing）
+## 2026-10-21 上游 orcad 迁移（done）
 
-- 本轮目标：同步上游 bbc8303b47f，保留 document-preview-size 能力。
-- 完成内容：按用户确认迁移旧 SSH relay 接缝至执行端 orcad；注册表随接口移动更新，功能目标不变。
-- 代码或文档变更：入口、服务生命周期、主机归属及原有测试随上游结构迁移；旧 relay 专用测试由 runtime 对应测试替代。
-- 验证证据：首轮类型检查及冲突记录位于 .docs/upstream-sync-ui-validation/2026-10-21/evidence/；当前尚未通过验收。
-- 未解决问题：类型检查、注册检查、功能回归和本地及 SSH 实机验收仍在进行。
-- 下一步：完成上述门禁后记录最终证据，再提交同步合并。
+- 本轮目标：按用户确认迁移 fork 能力，并通过官方同步入口合入上游 `2eae220b2ef`。
+- 完成内容：将文档 MIME 表放入可供 Node 服务复用的模块；保留 20 MiB 预览上限和有界分块传输。
+- 代码或文档变更：注册表的接缝、依赖与测试随上游结构迁移；未删除或禁用已注册功能。详见集成分支的 `2026-10-21-orcad上游同步.md` 方案。
+- 验证证据：`.docs/upstream-sync-ui-validation/2026-10-21/evidence/`；四目标类型检查、最终 Web 类型复验、三项本地化、功能注册及全部注册功能回归通过；隐藏 Electron + 真实 SSH 隔离 orcad 验收通过。完整记录见 sync-upstream-gates.log、attachment-grant-matrix.log 与 remaining-feature-checks.log。
+- 未解决问题：本轮实现无未解决问题；提交后需从干净 integration 复核架构门禁并观察远端构建。不在本次安装用户应用或升级已有远程服务。
+- 下一步：推送通过门禁的 integration，跟踪远端检查；保留当前应用及会话。

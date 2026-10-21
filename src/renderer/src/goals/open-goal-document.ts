@@ -1,3 +1,4 @@
+import { hostWorktreeTarget } from '../../../shared/worktree/host-qualified-identity'
 import { parseExecutionHostId, type ExecutionHostId } from '../../../shared/execution-host'
 import { getConnectionIdForFileFromState } from '@/lib/connection-owner-resolution'
 import { userNamedFileAccess } from '@/lib/local-file-access'
@@ -6,7 +7,7 @@ import { activateAndRevealWorkspace } from '@/lib/worktree-activation'
 import { requestHostPathGrantForContext } from '@/runtime-host-path/host-path-file-client'
 import { resolveAbsoluteTabEntryReach } from '@/runtime-host-path/host-path-grant-seams'
 import { statRuntimePath } from '@/runtime/runtime-file-metadata-client'
-import { findWorktreeById } from '@/store/slices/worktree-helpers'
+import { selectWorkspaceByHostTarget } from '@/store/workspace-record-selectors'
 import { translate } from '@/i18n/i18n'
 import { useAppStore } from '@/store'
 
@@ -37,7 +38,11 @@ export async function openGoalDocument(
     )
   }
   const state = useAppStore.getState()
-  const worktreePath = findWorktreeById(state.worktreesByRepo, worktreeId)?.path ?? null
+  const worktreePath =
+    selectWorkspaceByHostTarget(
+      state,
+      hostWorktreeTarget({ id: worktreeId, hostId: executionHostId })
+    )?.path ?? null
   // The goal home belongs to the execution host but sits outside the workspace, so a paired host
   // cannot name this document in the worktree-relative form its files.* RPC carries.
   const worktreeRelativePath = worktreePath ? toWorktreeRelativePath(filePath, worktreePath) : null

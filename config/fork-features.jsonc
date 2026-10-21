@@ -242,7 +242,9 @@
         "src/shared/native-chat-types.ts",
         "src/cli/runtime/client.ts",
         "src/cli/runtime/types.ts",
-        "src/shared/runtime-client-target.ts"
+        "src/shared/runtime-client-target.ts",
+        "src/renderer/src/store/workspace-record-selectors.ts",
+        "src/shared/worktree/host-qualified-identity.ts"
       ],
       "policyId": "goals-native-feature",
       "ownedPaths": [
@@ -564,7 +566,8 @@
         "src/shared/folder-workspace-execution-host.ts",
         "src/shared/runtime-client-target.ts",
         "src/shared/app-environment.ts",
-        "src/main/orca-profiles/profile-index-store.ts"
+        "src/main/orca-profiles/profile-index-store.ts",
+        "src/renderer/src/store/workspace-record-selectors.ts"
       ],
       "policyId": "issues-existing-capability-reuse",
       "ownedPaths": [
@@ -1237,7 +1240,9 @@
         "src/shared/app-environment.ts",
         "src/main/orcad/orcad-app-paths.ts",
         "src/main/document-preview-size/document-preview-content-type.ts",
-        "src/renderer/src/lib/doc-preview-grants.ts"
+        "src/renderer/src/lib/doc-preview-grants.ts",
+        "src/renderer/src/store/workspace-record-selectors.ts",
+        "src/shared/worktree/host-qualified-identity.ts"
       ],
       "policyId": "self-hosted-artifacts",
       "ownedPaths": [

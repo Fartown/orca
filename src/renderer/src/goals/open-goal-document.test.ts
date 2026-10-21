@@ -4,17 +4,20 @@ import { openGoalDocument } from './open-goal-document'
 import { activateAndRevealWorkspace } from '@/lib/worktree-activation'
 import { requestHostPathGrantForContext } from '@/runtime-host-path/host-path-file-client'
 import { statRuntimePath } from '@/runtime/runtime-file-metadata-client'
+import type { FolderWorkspace } from '../../../shared/folder-workspace-types'
 
 type StubState = {
   openFile: (...args: never[]) => unknown
   settings: { activeRuntimeEnvironmentId: string | null }
-  worktreesByRepo: Record<string, { id: string; path: string }[]>
+  folderWorkspaces: FolderWorkspace[]
+  worktreesByRepo: Record<string, { id: string; path: string; hostId?: string }[]>
 }
 const { openFile, state } = vi.hoisted(() => {
   const openFile = vi.fn()
   const state: StubState = {
     openFile,
     settings: { activeRuntimeEnvironmentId: null },
+    folderWorkspaces: [],
     worktreesByRepo: {}
   }
   return { openFile, state }
@@ -38,6 +41,7 @@ vi.mock('@/runtime-host-path/host-path-file-client', () => ({
 
 beforeEach(() => {
   state.settings.activeRuntimeEnvironmentId = null
+  state.folderWorkspaces = []
   state.worktreesByRepo = {}
   vi.stubGlobal('api', {
     fs: { stat: vi.fn(async () => ({ size: 1, isDirectory: false, mtime: 0 })) }
@@ -157,5 +161,17 @@ it('reads a local goal document locally even while this client is paired to a ho
     // Why the flag matters here: it pins the tab to this client, so the reader does not fall back
     // to the paired host for a file only this machine has.
     expect.objectContaining({ suppressActiveRuntimeFallback: true })
+  )
+})
+
+it('uses the goal host when two hosts have the same workspace id', async () => {
+  state.worktreesByRepo = {
+    local: [{ id: 'same-worktree', path: '/local/work', hostId: 'local' }],
+    remote: [{ id: 'same-worktree', path: '/host/work', hostId: 'runtime:peer' }]
+  }
+  await openGoalDocument('/host/work/docs/acceptance.md', 'same-worktree', 'runtime:peer')
+  expect(openFile).toHaveBeenCalledWith(
+    expect.objectContaining({ relativePath: 'docs/acceptance.md', runtimeEnvironmentId: 'peer' }),
+    expect.anything()
   )
 })

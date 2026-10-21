@@ -1,7 +1,8 @@
+import { hostWorktreeTarget } from '../../../../../shared/worktree/host-qualified-identity'
 import type { DocPreviewGrantLocation } from '@/lib/doc-preview-grants'
 import { useCallback } from 'react'
 import { useAppStore } from '@/store'
-import { findWorktreeById } from '@/store/slices/worktree-helpers'
+import { selectWorkspaceByHostTarget } from '@/store/workspace-record-selectors'
 import type { OpenFile } from '@/store/slices/editor'
 import type { DocPreviewDocumentIdentity } from '@/components/browser-pane/workspace-doc/doc-preview-document-identity'
 import type { BrowserChromeShareControl } from '@/components/browser-pane/assemble-chrome/browser-chrome-toolbar'
@@ -52,7 +53,10 @@ export function BrowserFileLanShareButton({
   className?: string
 } & LanArtifactShareControl): React.JSX.Element {
   const resolveTarget = useCallback(() => {
-    const worktree = findWorktreeById(useAppStore.getState().worktreesByRepo, worktreeId)
+    const worktree = selectWorkspaceByHostTarget(
+      useAppStore.getState(),
+      hostWorktreeTarget({ id: worktreeId, hostId: 'local' })
+    )
     const relativePath = worktree ? relativeInside(worktree.path, filePath) : null
     return {
       ok: true as const,

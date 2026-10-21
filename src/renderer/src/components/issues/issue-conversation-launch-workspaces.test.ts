@@ -7,8 +7,8 @@ describe('Issue Conversation launch Workspace options', () => {
   it('reuses inherited ProjectGroup ownership for SSH folder Workspaces', () => {
     const result = collectIssueConversationLaunchWorkspaces({
       repos: [],
-      worktreesByRepo: {},
-      folderWorkspaces: [folderWorkspace()],
+      worktrees: {},
+      folders: [folderWorkspace()],
       projectGroups: [projectGroup({ connectionId: 'ssh-builder' })],
       route: 'ssh:ssh-builder'
     })
@@ -26,8 +26,8 @@ describe('Issue Conversation launch Workspace options', () => {
   it('keeps a runtime-owned Folder on its stamped runtime route', () => {
     const result = collectIssueConversationLaunchWorkspaces({
       repos: [],
-      worktreesByRepo: {},
-      folderWorkspaces: [folderWorkspace({ executionHostId: 'runtime:paired' })],
+      worktrees: {},
+      folders: [folderWorkspace({ executionHostId: 'runtime:paired' })],
       projectGroups: [projectGroup({ connectionId: 'ssh-builder' })],
       route: 'runtime:paired'
     })

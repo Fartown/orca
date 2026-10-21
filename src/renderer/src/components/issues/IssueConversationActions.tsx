@@ -19,6 +19,7 @@ import {
   SelectValue
 } from '@/components/ui/select'
 import { useAppStore } from '@/store'
+import { selectWorktreesByRepo, selectFolderWorkspaces } from '@/store/workspace-record-selectors'
 import { useAgentDetectionTargetForWorktree } from '@/hooks/useAgentDetectionTarget'
 import { useDetectedAgents } from '@/hooks/useDetectedAgents'
 import { getAgentCatalog } from '@/lib/agent-catalog'
@@ -41,8 +42,8 @@ export function IssueConversationActions({
   onChanged: () => void
 }): React.JSX.Element {
   const repos = useAppStore((state) => state.repos)
-  const worktreesByRepo = useAppStore((state) => state.worktreesByRepo)
-  const folderWorkspaces = useAppStore((state) => state.folderWorkspaces)
+  const worktreesByRepo = useAppStore(selectWorktreesByRepo)
+  const folderWorkspaces = useAppStore(selectFolderWorkspaces)
   const projectGroups = useAppStore((state) => state.projectGroups)
   const settings = useAppStore((state) => state.settings)
   const [launchOpen, setLaunchOpen] = useState(false)
@@ -55,8 +56,8 @@ export function IssueConversationActions({
   const workspaces = useMemo(() => {
     return collectIssueConversationLaunchWorkspaces({
       repos,
-      worktreesByRepo,
-      folderWorkspaces,
+      worktrees: worktreesByRepo,
+      folders: folderWorkspaces,
       projectGroups,
       route
     })
