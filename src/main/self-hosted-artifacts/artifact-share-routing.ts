@@ -4,26 +4,18 @@ import type { ARTIFACT_SHARE_RELAY_METHODS } from '../../shared/self-hosted-arti
 import {
   ARTIFACT_SHARE_ERROR_CODES,
   ArtifactShareError,
-  ArtifactShareRelayEnvelope,
-  artifactShareErrorFromEnvelope,
   isArtifactShareErrorCode
 } from '../../shared/self-hosted-artifacts/artifact-share-errors'
-import { getActiveMultiplexer, listRegisteredSshTargets } from '../ssh/ssh-target-registry'
 import type { ArtifactShareRuntimeEnvironmentCall } from './artifact-share-runtime-registry'
 
 type ArtifactShareOwnerMethod =
   (typeof ARTIFACT_SHARE_RELAY_METHODS)[keyof typeof ARTIFACT_SHARE_RELAY_METHODS]
 
 const OWNER_REQUEST_TIMEOUT_MS = 20_000
-const JSON_RPC_METHOD_NOT_FOUND = -32601
 
 export type ArtifactShareCallerContext = {
   clientKind?: 'mobile' | 'runtime'
   pairedDeviceId?: string
-}
-
-export function artifactShareSshTargetLabel(targetId: string): string {
-  return listRegisteredSshTargets().find((target) => target.id === targetId)?.label ?? targetId
 }
 
 function unreachable(label: string): ArtifactShareError {
@@ -37,41 +29,10 @@ function outdated(label: string): ArtifactShareError {
   )
 }
 
-async function callOverSsh<T>(
-  targetId: string,
-  method: ArtifactShareOwnerMethod,
-  params: Record<string, unknown>,
-  resultSchema: z.ZodType<T>
-): Promise<T> {
-  const label = artifactShareSshTargetLabel(targetId)
-  let mux: ReturnType<typeof getActiveMultiplexer>
-  try {
-    mux = getActiveMultiplexer(targetId)
-  } catch {
-    throw unreachable(label)
-  }
-  if (!mux) {
-    throw unreachable(label)
-  }
-  let raw: unknown
-  try {
-    raw = await mux.request(method, params, { timeoutMs: OWNER_REQUEST_TIMEOUT_MS })
-  } catch (error) {
-    if (error instanceof Error && 'code' in error && error.code === JSON_RPC_METHOD_NOT_FOUND) {
-      throw outdated(label)
-    }
-    throw unreachable(label)
-  }
-  const envelope = ArtifactShareRelayEnvelope.parse(raw)
-  if (!envelope.ok) {
-    throw artifactShareErrorFromEnvelope(envelope)
-  }
-  return resultSchema.parse(envelope.value)
-}
-
 export type ArtifactShareRuntimeEnvironmentAccess = {
   userDataPath: string
   call: ArtifactShareRuntimeEnvironmentCall
+  isReachable: (environmentId: string) => boolean
 }
 
 async function callOverRuntime<T>(
@@ -81,6 +42,7 @@ async function callOverRuntime<T>(
   params: Record<string, unknown>,
   resultSchema: z.ZodType<T>
 ): Promise<T> {
+  if (!runtimeEnvironment.isReachable(environmentId)) {throw unreachable(environmentId)}
   let response: Awaited<ReturnType<ArtifactShareRuntimeEnvironmentCall>>
   try {
     response = await runtimeEnvironment.call(
@@ -139,7 +101,7 @@ export function routeArtifactShareCall<T>(input: {
     )
   }
   if (host.kind === 'ssh') {
-    return callOverSsh(host.targetId, input.method, input.params, input.resultSchema)
+    return Promise.reject(outdated(host.targetId))
   }
   return callOverRuntime(
     input.runtimeEnvironment(),

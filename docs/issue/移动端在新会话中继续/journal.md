@@ -1,6 +1,6 @@
 ---
-title: "移动端在新会话中继续"
-slug: "移动端在新会话中继续"
+title: '移动端在新会话中继续'
+slug: '移动端在新会话中继续'
 status: testing
 created: 2026-09-13
 updated: 2026-10-06
@@ -11,13 +11,13 @@ external_ids: []
 
 ## 1. 关键文档链接
 
-| 类型 | 文档 | 状态 | 说明 |
-| --- | --- | --- | --- |
-| 需求 | [requirements/移动端在新会话中继续.md](requirements/移动端在新会话中继续.md) | ready | REQ-001~006：claude/codex 续接、只复用已开放能力、桌面行为不变、旧主机兼容、失败可感知、范围限定 |
-| 交互 | - | not-required | 以桌面端既有『在新会话中继续』对话框为交互基线，移动端按现有 ActionSheet 范式落地；无独立设计稿 |
-| 调研 | [research/移动端「基于当前会话新建对话」的现状与技术链路调研.md](research/移动端「基于当前会话新建对话」的现状与技术链路调研.md) | ready | 桌面端 continuation 全链路、移动端可复用能力、主机侧投递器与 RPC 白名单；含 2026-09-13 真机验证结论 |
-| 方案 | [solutions/移动端续接会话终端通道方案.md](solutions/移动端续接会话终端通道方案.md) | reviewing | 共享 prompt 内核 + 终端长按入口 + 建终端→等就绪→投递编排；不新增 RPC；含 fork 注册条目与工作包 |
-| 测试用例 | - | pending-decision | 需求尚未确认，不编写 Test Case |
+| 类型     | 文档                                                                                                                             | 状态             | 说明                                                                                                |
+| -------- | -------------------------------------------------------------------------------------------------------------------------------- | ---------------- | --------------------------------------------------------------------------------------------------- |
+| 需求     | [requirements/移动端在新会话中继续.md](requirements/移动端在新会话中继续.md)                                                     | ready            | REQ-001~006：claude/codex 续接、只复用已开放能力、桌面行为不变、旧主机兼容、失败可感知、范围限定    |
+| 交互     | -                                                                                                                                | not-required     | 以桌面端既有『在新会话中继续』对话框为交互基线，移动端按现有 ActionSheet 范式落地；无独立设计稿     |
+| 调研     | [research/移动端「基于当前会话新建对话」的现状与技术链路调研.md](research/移动端「基于当前会话新建对话」的现状与技术链路调研.md) | ready            | 桌面端 continuation 全链路、移动端可复用能力、主机侧投递器与 RPC 白名单；含 2026-09-13 真机验证结论 |
+| 方案     | [solutions/移动端续接会话终端通道方案.md](solutions/移动端续接会话终端通道方案.md)                                               | reviewing        | 共享 prompt 内核 + 终端长按入口 + 建终端→等就绪→投递编排；不新增 RPC；含 fork 注册条目与工作包      |
+| 测试用例 | -                                                                                                                                | pending-decision | 需求尚未确认，不编写 Test Case                                                                      |
 
 ## 2. 决策点记录
 
@@ -31,18 +31,18 @@ external_ids: []
 
 #### 冲突面清单（origin/main 近 90 天改动次数）
 
-| 文件 | 次数 | 最近 | 冲突性质 |
-| --- | --- | --- | --- |
-| `mobile/src/session/mobile-session-route-parity.test.ts` | 17 | 33 小时前 | 必冲突，机械 |
-| ~~`mobile/src/session/use-mobile-session-controller.ts`~~ | 8 | 33 小时前 | **已移除该 seam**，文件恢复与上游逐字一致 |
-| `mobile/src/session/mobile-session-route-types.ts` | 5 | 7 天前 | 低，仅追加一个可选字段 |
-| `mobile/src/session/mobile-terminal-action-sheet-actions.ts` | 5 | 6 周前 | 低，仅追加一个可选注入参数 |
-| `mobile/src/session/use-mobile-session-terminal-create-actions.ts` | 4 | 2 天前 | 中，返回类型由 void 改为联合，动到多个 return 点 |
-| `mobile/src/terminal/terminal-webview-payload-hash.test.ts` | 3 | 11 小时前 | 必冲突，**不能选边** |
-| `mobile/src/session/MobileSessionSheets.tsx` | 2 | 10 天前 | 低 |
-| `src/renderer/src/lib/agent-session-continuation.ts` | 2 | 4 周前 | 低概率，**高后果** |
-| `src/renderer/src/lib/agent-session-fork-context.ts` | 1 | 2 月前 | 低概率，**高后果** |
-| `mobile/scripts/build-terminal-webview-engine.mjs` | 1 | 2 月前 | 低 |
+| 文件                                                               | 次数 | 最近      | 冲突性质                                         |
+| ------------------------------------------------------------------ | ---- | --------- | ------------------------------------------------ |
+| `mobile/src/session/mobile-session-route-parity.test.ts`           | 17   | 33 小时前 | 必冲突，机械                                     |
+| ~~`mobile/src/session/use-mobile-session-controller.ts`~~          | 8    | 33 小时前 | **已移除该 seam**，文件恢复与上游逐字一致        |
+| `mobile/src/session/mobile-session-route-types.ts`                 | 5    | 7 天前    | 低，仅追加一个可选字段                           |
+| `mobile/src/session/mobile-terminal-action-sheet-actions.ts`       | 5    | 6 周前    | 低，仅追加一个可选注入参数                       |
+| `mobile/src/session/use-mobile-session-terminal-create-actions.ts` | 4    | 2 天前    | 中，返回类型由 void 改为联合，动到多个 return 点 |
+| `mobile/src/terminal/terminal-webview-payload-hash.test.ts`        | 3    | 11 小时前 | 必冲突，**不能选边**                             |
+| `mobile/src/session/MobileSessionSheets.tsx`                       | 2    | 10 天前   | 低                                               |
+| `src/renderer/src/lib/agent-session-continuation.ts`               | 2    | 4 周前    | 低概率，**高后果**                               |
+| `src/renderer/src/lib/agent-session-fork-context.ts`               | 1    | 2 月前    | 低概率，**高后果**                               |
+| `mobile/scripts/build-terminal-webview-engine.mjs`                 | 1    | 2 月前    | 低                                               |
 
 #### 两处必须重算、不能选边的 ratchet
 
@@ -323,3 +323,12 @@ external_ids: []
 - 验证证据：调研文档结构校验通过；方案与调研文档共 9 张 Mermaid 图经 mermaid 解析器验证；真机：claude wait 2312ms / codex 2146ms 均 satisfied，send 均 accepted 且 stages 含 turn_started，agent 各回复 PROBE-OK ZEBRA
 - 未解决问题：无
 - 下一步：用户评审方案（入口位置、完整记录模式是否第一期提供、是否自动切到新 tab）；评审通过后 WP0 注册 feature 并在 feat/mobile-session-continuation 工作树实现
+
+## 2026-10-21 上游 orcad 迁移（implementing）
+
+- 本轮目标：同步上游 bbc8303b47f，保留 mobile-session-continuation 能力。
+- 完成内容：按用户确认迁移旧 SSH relay 接缝至执行端 orcad；注册表随接口移动更新，功能目标不变。
+- 代码或文档变更：入口、服务生命周期、主机归属及原有测试随上游结构迁移；旧 relay 专用测试由 runtime 对应测试替代。
+- 验证证据：首轮类型检查及冲突记录位于 .docs/upstream-sync-ui-validation/2026-10-21/evidence/；当前尚未通过验收。
+- 未解决问题：类型检查、注册检查、功能回归和本地及 SSH 实机验收仍在进行。
+- 下一步：完成上述门禁后记录最终证据，再提交同步合并。

@@ -1,52 +1,30 @@
-import { afterEach, expect, it, vi } from 'vitest'
+import { expect, it, vi } from 'vitest'
 import { routeGoalRequest } from './goal-ssh-routing'
 import type { RpcContext } from '../runtime/rpc/core'
-import { getActiveMultiplexer } from '../ssh/ssh-target-registry'
 
-const { request, onRequest } = vi.hoisted(() => ({ request: vi.fn(), onRequest: vi.fn() }))
-vi.mock('../ssh/ssh-target-registry', () => ({
-  getActiveMultiplexer: vi.fn(() => ({ request, onRequest }))
-}))
-afterEach(() => vi.clearAllMocks())
+// oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: Host admission does not read any runtime methods.
+const context = {} as RpcContext
 const ready = {
   status: 'ready',
   reason: null,
-  supports: { localTerminal: true, structured: false, ssh: true, wsl: false }
+  supports: { localTerminal: true, structured: false, ssh: false, wsl: false }
 } as const
-// oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: Status routing does not call runtime methods; callback-specific tests provide the method they exercise.
-const context = { runtime: {} } as RpcContext
 
-it('forwards the original mutation envelope to SSH and never invokes the local service', async () => {
-  request.mockResolvedValue(ready)
+it('runs the Goal on the selected runtime, including a client connected to SSH orcad', () => {
   const local = vi.fn(() => ready)
-  const params = { authorityExecutionHostId: 'ssh:remote' }
-  await expect(routeGoalRequest('goals.status', params, context, local)).resolves.toEqual(ready)
-  expect(getActiveMultiplexer).toHaveBeenCalledWith('remote')
-  expect(request).toHaveBeenCalledWith('goals.status', params)
-  expect(local).not.toHaveBeenCalled()
+  expect(
+    routeGoalRequest('goals.status', { authorityExecutionHostId: 'local' }, context, local)
+  ).toEqual(ready)
+  expect(local).toHaveBeenCalledOnce()
 })
 
-it('does not fall back when an older relay rejects the method', async () => {
-  request.mockRejectedValue(new Error('Method not found: goals.status'))
-  const local = vi.fn(() => ready)
-  await expect(
-    routeGoalRequest('goals.status', { authorityExecutionHostId: 'ssh:old' }, context, local)
-  ).rejects.toThrow('Method not found')
-  expect(local).not.toHaveBeenCalled()
-})
-
-it('routes draft deletion to the owning SSH host without touching the local store', async () => {
-  const result = { status: 'deleted' } as const
-  request.mockResolvedValue(result)
-  const local = vi.fn(() => result)
-  const params = {
-    authorityExecutionHostId: 'ssh:remote',
-    editorDraftId: 'draft',
-    expectedRevision: 1
+it.each(['ssh:old-host', 'runtime:another-host'])(
+  'refuses a second host without reading the local store (%s)',
+  (host) => {
+    const local = vi.fn(() => ready)
+    expect(() =>
+      routeGoalRequest('goals.status', { authorityExecutionHostId: host }, context, local)
+    ).toThrow('Orca Server connection')
+    expect(local).not.toHaveBeenCalled()
   }
-  await expect(
-    routeGoalRequest('goals.deleteEditorDraft', params, context, local)
-  ).resolves.toEqual(result)
-  expect(request).toHaveBeenCalledWith('goals.deleteEditorDraft', params)
-  expect(local).not.toHaveBeenCalled()
-})
+)

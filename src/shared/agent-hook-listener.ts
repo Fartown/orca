@@ -1,4 +1,6 @@
 import { readAgentProcessIdentity } from './agent-process-presence'
+import { resolveAgentStatusIdentity } from './agent-status-identity'
+import { sameAgentStatusTerminalOwner } from './agent-status-terminal-owner'
 import { normalizeAgentStatusPayload, type AgentMainAgentStatus } from './agent-status-types'
 import type { AgentHookSource } from './agent-hook-relay'
 import { extractAgentProviderSession } from './agent-session-resume'
@@ -27,19 +29,11 @@ import {
 } from './agent-hook-listener/opencode-session-registry'
 import { claudeRowHasUnlistedLiveWork } from './agent-hook-listener/providers/claude-pane-hold-evidence'
 import { readString } from './agent-hook-listener/tool-input-preview'
-import { shouldRejectClaudeSessionReplacement } from './claude-session-ownership/claude-session-activity'
 import {
-  shouldRejectCodexTitleTask,
-  shouldRejectUnbackedCodexSessionEvent
-} from './session-names/codex-title-task-admission'
-
-/** Canonical transport-agnostic normalization entry shared by main and relay listeners. */
-const CLAUDE_EXIT_SESSION_END_REASONS = new Set([
-  'prompt_input_exit',
-  'logout',
-  'other',
-  'bypass_permissions_disabled'
-])
+  admitSessionHook,
+  rejectTitleHook,
+  isSessionProcessExit
+} from './session-names/hook-session-admission'
 
 export function normalizeHookPayload(
   state: HookListenerState,
@@ -47,6 +41,8 @@ export function normalizeHookPayload(
   body: unknown,
   expectedEnv: string,
   options: {
+    /** Provider folds may be isolated; process ownership belongs to the execution host. */
+    claudeSessionOwnerState?: HookListenerState
     deferCompactOwnershipToClient?: boolean
     previousOpenCodeMainAgent?: AgentMainAgentStatus
     admitOpenCodeTui?: (
@@ -133,27 +129,8 @@ export function normalizeHookPayload(
   if (tuiAdmission !== 'preserve-poster') {
     trackOpenCodePaneLaunchToken(state, paneKey, launchToken)
   }
-  if (
-    source === 'codex' &&
-    shouldRejectUnbackedCodexSessionEvent(state, paneKey, providerSession)
-  ) {
+  if (!admitSessionHook(state, source, paneKey, providerSession, record, options)) {
     return null
-  }
-  if (source === 'claude') {
-    // Why after the guard and not before: a rejected replacement belongs to another session, and
-    // clearing the mark here would spend the incumbent's pending restored-unconfirmed state on an
-    // event that maps to nothing.
-    if (
-      shouldRejectClaudeSessionReplacement(
-        state,
-        paneKey,
-        providerSession?.id,
-        readAgentProcessIdentity(record.agentProcess)
-      )
-    ) {
-      return null
-    }
-    state.claudeUnconfirmedRestoredStatusPaneKeys.delete(paneKey)
   }
   const providerPromptId =
     source === 'claude'
@@ -161,8 +138,6 @@ export function normalizeHookPayload(
       : source === 'grok'
         ? normalizeGrokPromptId(hookPayloadRecord.promptId ?? hookPayloadRecord.prompt_id)
         : undefined
-  const providerTurnId =
-    source === 'codex' ? readFirstString(hookPayloadRecord, ['turn_id', 'turnId']) : undefined
   const compactTrigger =
     source === 'claude' &&
     (eventName === 'PreCompact' || eventName === 'PostCompact') &&
@@ -179,6 +154,34 @@ export function normalizeHookPayload(
     return null
   }
   const previousStatus = state.lastStatusByPaneKey.get(paneKey)
+  const previousReceivedAt =
+    previousStatus &&
+    'receivedAt' in previousStatus &&
+    typeof previousStatus.receivedAt === 'number'
+      ? previousStatus.receivedAt
+      : previousStatus?.hostEvidenceObservedAt
+  // Reject before provider folds mutate the pane's prompt, tool and child caches.
+  if (
+    previousStatus &&
+    previousReceivedAt !== undefined &&
+    sameAgentStatusTerminalOwner(
+      { connectionId: previousStatus.connectionId ?? null, worktreeId: previousStatus.worktreeId },
+      { connectionId: null, worktreeId }
+    ) &&
+    resolveAgentStatusIdentity({
+      existing: {
+        agentType: previousStatus.payload.agentType,
+        state: previousStatus.payload.state,
+        updatedAt: previousReceivedAt,
+        restoredUnconfirmed: previousStatus.restoredUnconfirmed,
+        agentPresence: previousStatus.providerSessionOnly ? undefined : previousStatus.agentPresence
+      },
+      incoming: source,
+      now: Date.now()
+    }).inheritedFromActivePane
+  ) {
+    return null
+  }
   // Why: only a MANUAL completion claims anything, so only it may write compact-scoped state. An
   // auto compact runs inside a turn that resumes and emits its own Stop; running the ownership
   // guard for it would burn the pane's consumed-compact slot on an event that maps to nothing.
@@ -222,17 +225,10 @@ export function normalizeHookPayload(
   // Why: presence needs the agent's own process; without it the hook cannot speak for liveness.
   const agentProcess =
     source === 'claude' ? readAgentProcessIdentity(record.agentProcess) : undefined
-  const agentPresence = agentProcess ? { agent: source, process: agentProcess } : undefined
-  const sessionEndReason = readString(hookPayloadRecord, 'reason')
-  if (
-    eventName === 'SessionEnd' &&
-    agentPresence &&
-    !readString(hookPayloadRecord, 'agent_id') &&
-    // Why: only reasons that end the process; /clear and /resume keep it running, and an unknown
-    // reason is left to the process check rather than guessed.
-    sessionEndReason !== undefined &&
-    CLAUDE_EXIT_SESSION_END_REASONS.has(sessionEndReason)
-  ) {
+  const agentPresence = agentProcess
+    ? { agent: source, process: agentProcess, sessionOwner: true as const }
+    : undefined
+  if (agentPresence && isSessionProcessExit(eventName, hookPayloadRecord)) {
     const payload =
       previousStatus?.payload ??
       normalizeAgentStatusPayload({ state: 'done', prompt: '', agentType: source })
@@ -254,10 +250,7 @@ export function normalizeHookPayload(
   }
 
   const promptText = extractedPrompt.text
-  if (
-    source === 'codex' &&
-    shouldRejectCodexTitleTask(state, paneKey, providerSession?.id, promptText)
-  ) {
+  if (rejectTitleHook(state, source, paneKey, providerSession, promptText)) {
     return null
   }
   const dispatched = normalizeProviderEvent({
@@ -305,17 +298,18 @@ export function normalizeHookPayload(
           : undefined
         : hasExplicitUserPrompt(
             source,
-            eventName,
+            dispatched.eventName,
             extractedPrompt,
             dispatched.resolvedPromptText,
             dispatched.hasTranscriptPromptEvidence
           ),
     promptInteractionKey: dispatched.promptInteractionKey,
-    hookEventName: typeof eventName === 'string' ? eventName : undefined,
+    hookEventName: typeof dispatched.eventName === 'string' ? dispatched.eventName : undefined,
     providerPromptId:
       source === 'grok' ? (grokActiveTurn?.promptId ?? providerPromptId) : providerPromptId,
     grokPromptBoundary: grokActiveTurn ? true : undefined,
-    providerTurnId,
+    providerTurnId:
+      source === 'codex' ? readFirstString(hookPayloadRecord, ['turn_id', 'turnId']) : undefined,
     compactTrigger,
     toolUseId: readFirstString(hookPayloadRecord, ['tool_use_id', 'toolUseId']),
     toolAgentId: readFirstString(hookPayloadRecord, ['agent_id', 'agentId']),
@@ -331,6 +325,7 @@ export function normalizeHookPayload(
       : {}),
     ...(providerSession ? { providerSession } : {}),
     ...(providerSessionOnly ? { providerSessionOnly: true } : {}),
+    ...dispatched.hostTurnSignals,
     payload: transportPayload
   }
 }

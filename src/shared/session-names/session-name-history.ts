@@ -84,3 +84,31 @@ export function sessionNameHistorySnapshot(history: AgentStateHistoryEntry) {
     lastCompletedAssistantMessage: undefined
   }
 }
+
+export function sessionNameEntryStateStartedAt(
+  previous: AgentStatusEntry | undefined,
+  payload: Pick<AgentStatusEntry, 'agentType' | 'state'>,
+  metadata: Parameters<typeof sessionNameIdentityReplaced>[2],
+  hostStartedAt: number | undefined,
+  updatedAt: number,
+  resetClock: boolean
+): number {
+  const hostClock = metadata?.structuredHostOwned
+    ? hostStartedAt
+    : sessionNameStateStartedAt(
+        previous,
+        payload.agentType,
+        metadata?.providerSession,
+        payload.state,
+        hostStartedAt,
+        updatedAt
+      )
+  return (
+    hostClock ??
+    (resetClock
+      ? updatedAt
+      : previous?.state === payload.state
+        ? previous.stateStartedAt
+        : updatedAt)
+  )
+}

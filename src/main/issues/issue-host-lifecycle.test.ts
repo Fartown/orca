@@ -24,7 +24,7 @@ describe('Issue host lifecycle wiring', () => {
     const bootstrapCall = launchSource.indexOf('await options.afterTerminalRuntimeStartup?.()')
     const serveRpc = launchSource.indexOf('await launchServeMode', bootstrapCall)
     const dispose = lifecycleSource.indexOf('issueFeatureBootstrap?.dispose()')
-    const hookStop = quitSource.indexOf('agentHookServer.stop()')
+    const hookStop = quitSource.indexOf('agentHookServer.stop({ keepStatus: true })')
     // Why: the injection point is shared with other fork features (goals), so the Issue start
     // is one call inside the afterTerminalRuntimeStartup callback rather than the callback itself.
     const injectionPoint = indexSource.indexOf('afterTerminalRuntimeStartup:')

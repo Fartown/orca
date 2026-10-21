@@ -2,7 +2,7 @@ import { appendFile, mkdir, rename, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { getAppEnvironment } from '../../shared/app-environment'
 import { isWindowsAbsolutePathLike } from '../../shared/cross-platform-path'
-import type { IFilesystemProvider } from '../providers/types'
+import type { IFilesystemProvider } from '../providers/filesystem-provider-contract'
 import {
   ensureOwnedTempStagingRoot,
   getOwnedTempStagingRoot,

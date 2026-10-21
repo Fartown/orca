@@ -35,7 +35,10 @@
         "src/main/startup/configure-process.ts",
         "tests/e2e/helpers/e2e-completed-onboarding-profile.ts",
         "tests/e2e/helpers/electron-home-isolation.ts",
-        "tests/e2e/helpers/electron-process-shutdown.ts"
+        "tests/e2e/helpers/electron-process-shutdown.ts",
+        "src/main/goals/orcad-goals.ts",
+        "src/main/issues/orcad-issues.ts",
+        "src/main/self-hosted-artifacts/orcad-artifact-share.ts"
       ],
       "policyId": "integration-builds",
       "ownedPaths": [
@@ -117,14 +120,22 @@
       "title": "文档预览大小：本地、SSH 与配对预览支持 20 MiB",
       "goal": "扩大文档文本预览上限，不扩大普通文件读取和 paired RPC 预算",
       "journal": "docs/issue/文档预览大小/journal.md",
-      "dependsOn": ["src/shared/binary-buffer.ts", "src/shared/file-range-read.ts"],
+      "dependsOn": [
+        "src/shared/binary-buffer.ts",
+        "src/shared/file-range-read.ts",
+        "src/main/runtime/orca-runtime-files-test-harness.ts",
+        "src/shared/font-file-extensions.ts"
+      ],
       "policyId": "document-preview-size",
       "ownedPaths": [
         "src/shared/document-preview-size/**",
         "src/main/document-preview-size/**",
         "docs/issue/文档预览大小/**"
       ],
-      "requiredFiles": ["src/shared/document-preview-size/document-preview-size-limit.ts"],
+      "requiredFiles": [
+        "src/shared/document-preview-size/document-preview-size-limit.ts",
+        "src/main/document-preview-size/document-preview-content-type.ts"
+      ],
       "seams": [
         {
           "file": "src/shared/doc-preview-file-access.ts",
@@ -133,38 +144,18 @@
         },
         {
           "file": "src/main/browser/doc-preview-file-reader.ts",
-          "mustContain": "DOCUMENT_PREVIEW_TEXT_MAX_BYTES",
-          "why": "direct SSH requests the same document-specific text limit"
+          "mustContain": "readDocumentPreviewInChunks",
+          "why": "Paired runtime reads assemble bounded transport chunks under the shared document cap."
         },
         {
-          "file": "src/main/runtime/runtime-file-commands-read-file-explorer-preview.ts",
+          "file": "src/main/runtime/files/file-reads.ts",
           "mustContain": "DOCUMENT_PREVIEW_TEXT_MAX_BYTES",
           "why": "local document reads no longer inherit the mobile text cap"
         },
         {
           "file": "src/main/browser/doc-preview-file-reader.test.ts",
-          "mustContain": "maxTextBytes: 20 * 1024 * 1024",
-          "why": "existing SSH routing assertions pin the requested cap"
-        },
-        {
-          "file": "src/main/runtime/orca-runtime-files-preview-budget.test.ts",
-          "mustContain": "maxTextBytes: 20 * 1024 * 1024",
-          "why": "existing runtime routing assertions retain authority and binary limits"
-        },
-        {
-          "file": "src/main/providers/ssh-filesystem-doc-preview.ts",
-          "mustContain": "requestGitStreamable",
-          "why": "reuse negotiated bulk responses for documents exceeding one relay frame"
-        },
-        {
-          "file": "src/main/providers/ssh-filesystem-doc-preview.test.ts",
-          "mustContain": "__streamResponse: true",
-          "why": "pin streaming opt-in and legacy relay fallback"
-        },
-        {
-          "file": "src/relay/fs-handler.ts",
-          "mustContain": "fs.readDocPreview",
-          "why": "document replies reuse the relay's single response stream registry"
+          "mustContain": "readDocPreviewFile",
+          "why": "Paired runtime preview reads preserve document size and grant checks."
         },
         {
           "file": "src/shared/rpc-contract/files-params.ts",
@@ -184,11 +175,11 @@
       ],
       "tests": [
         "src/main/document-preview-size/document-preview-size.test.ts",
-        "src/main/document-preview-size/document-preview-relay.integration.test.ts",
+        "src/main/document-preview-size/document-preview-runtime.integration.test.ts",
         "src/main/document-preview-size/document-preview-chunk-reader.test.ts"
       ],
       "checks": [
-        "pnpm exec vitest run --config config/vitest.config.ts src/main/document-preview-size src/shared/doc-preview-file-access.test.ts src/main/browser/doc-preview-file-reader.test.ts src/main/browser/doc-preview-protocol.test.ts src/main/runtime/orca-runtime-files-preview-budget.test.ts src/main/runtime/rpc/methods/files-doc-preview.test.ts src/main/providers/ssh-filesystem-doc-preview.test.ts src/relay/fs-list-files-large-response.integration.test.ts"
+        "pnpm exec vitest run --config config/vitest.config.ts src/main/document-preview-size src/shared/doc-preview-file-access.test.ts src/main/browser/doc-preview-file-reader.test.ts src/main/browser/doc-preview-protocol.test.ts src/main/runtime/orca-runtime-files-preview-budget.test.ts src/main/runtime/rpc/methods/files-unary-rpc.test.ts"
       ]
     },
     {
@@ -199,7 +190,6 @@
       "dependsOn": [
         "src/shared/app-environment.ts",
         "src/main/orcad/orcad-app-paths.ts",
-        "src/cli/runtime/index.ts",
         "src/renderer/src/lib/local-file-access.ts",
         "src/main/agent-hooks/managed-agent-hook-controls.ts",
         "src/main/project-groups/folder-workspace-path-status.ts",
@@ -234,14 +224,13 @@
         "src/renderer/src/store/types.ts",
         "src/renderer/src/hooks/ipc-events/runtime-environment-subscription-selection.ts",
         "src/shared/agent-status-types.ts",
-        "src/shared/child-process/process-spec.ts",
-        "src/shared/child-process/run-process.ts",
+        "src/packages/process-host/src/process-spec.ts",
+        "src/packages/process-host/src/run-process.ts",
         "src/shared/pty-liveness-verdict.ts",
         "src/shared/runtime-terminal-contracts.ts",
         "src/shared/sha256.ts",
-        "src/relay/dispatcher.ts",
         "src/main/runtime/orca-runtime.ts",
-        "src/main/ssh/ssh-target-registry.ts",
+        "src/main/ssh/targets/ssh-target-registry.ts",
         "src/renderer/src/lib/worktree-runtime-owner.ts",
         "src/shared/execution-host.ts",
         "src/shared/notification-settings-types.ts",
@@ -250,7 +239,10 @@
         "src/main/native-chat/transcript-line-decoders-codex.ts",
         "src/main/native-chat/transcript-turn-markers.ts",
         "src/shared/harness-injected-user-turns.ts",
-        "src/shared/native-chat-types.ts"
+        "src/shared/native-chat-types.ts",
+        "src/cli/runtime/client.ts",
+        "src/cli/runtime/types.ts",
+        "src/shared/runtime-client-target.ts"
       ],
       "policyId": "goals-native-feature",
       "ownedPaths": [
@@ -301,17 +293,12 @@
       ],
       "seams": [
         {
-          "file": "src/renderer/src/lib/local-file-access.test.ts",
-          "mustContain": "goals/open-goal-document.ts",
-          "why": "the acceptance document opens as a user-named tab in the upstream access ratchet"
-        },
-        {
-          "file": "src/shared/child-process/run-process.ts",
+          "file": "src/packages/process-host/src/run-process.ts",
           "mustContain": "spec.onStdout?.(chunk)",
           "why": "observe structured draft activity through the canonical process runner"
         },
         {
-          "file": "src/shared/child-process/process-spec.ts",
+          "file": "src/packages/process-host/src/process-spec.ts",
           "mustContain": "onStdout?",
           "why": "optional process output observation does not change existing callers"
         },
@@ -411,28 +398,13 @@
           "why": "the goals copy namespace exists in the catalog"
         },
         {
-          "file": "src/relay/relay-agent-hook-runtime.ts",
-          "mustContain": "getStatusSnapshotForPane",
-          "why": "Goal execution, documents and validation run on their owning SSH or runtime host"
-        },
-        {
-          "file": "src/relay/agent-hook-server.ts",
+          "file": "src/wsl-guest/agent-hook-server.ts",
           "mustContain": "getStatusForPane",
           "why": "Goal execution, documents and validation run on their owning SSH or runtime host"
         },
         {
-          "file": "src/shared/relay-artifacts.ts",
-          "mustContain": "goal-driver.js",
-          "why": "Goal execution, documents and validation run on their owning SSH or runtime host"
-        },
-        {
-          "file": "config/scripts/build-relay.mjs",
-          "mustContain": "buildGoalDriverBundles",
-          "why": "Goal execution, documents and validation run on their owning SSH or runtime host"
-        },
-        {
           "file": "src/main/orcad/orcad-entry.ts",
-          "mustContain": "../goals/orcad-goals",
+          "mustContain": "startOrcadForkServices",
           "why": "Goal execution, documents and validation run on their owning SSH or runtime host"
         },
         {
@@ -443,11 +415,6 @@
         {
           "file": "src/shared/orcad-artifacts.ts",
           "mustContain": "goal-driver.js",
-          "why": "Goal execution, documents and validation run on their owning SSH or runtime host"
-        },
-        {
-          "file": "src/relay/dispatcher-rpc-routing.ts",
-          "mustContain": "requestClient(",
           "why": "Goal execution, documents and validation run on their owning SSH or runtime host"
         },
         {
@@ -469,6 +436,11 @@
           "file": "src/main/runtime/runtime-worktree-agent-rows.ts",
           "mustContain": "transcriptPath: source.transcriptPath",
           "why": "the Goal guard reads the working agent's transcript path from worktree ps rows"
+        },
+        {
+          "file": "src/main/integration-builds/orcad-fork-services.ts",
+          "mustContain": "startGoals",
+          "why": "start each fork service on the owning headless runtime before RPC becomes available"
         }
       ],
       "tests": [
@@ -504,14 +476,15 @@
         "src/renderer/src/components/goals/GoalDraftList.test.tsx",
         "src/main/goals/goal-draft-workspace.test.ts",
         "src/shared/goals/goal-agent-provider.test.ts",
-        "src/relay/subprocess.test.ts",
         "src/shared/goals/goal-editor-draft-contract.test.ts",
         "src/renderer/src/goals/goal-editor-drafts-sync.test.tsx",
         "src/renderer/src/goals/open-goal-document.test.ts",
-        "src/renderer/src/components/goals/GoalEditor.test.tsx"
+        "src/renderer/src/components/goals/GoalEditor.test.tsx",
+        "src/main/goals/orcad-goals.test.ts",
+        "src/main/goals/goal-driver-resources.test.ts"
       ],
       "checks": [
-        "pnpm exec vitest run --config config/vitest.config.ts src/main/goals src/shared/goals src/renderer/src/goals src/renderer/src/components/goals src/main/runtime/rpc/methods/goals.test.ts src/main/plugins/plugin-bundled-bootstrap.test.ts src/main/persistence-ui-state.test.ts src/relay/subprocess.test.ts src/renderer/src/components/terminal-pane/TerminalPaneHeaderOverlay.test.tsx src/renderer/src/components/terminal-pane/terminal-pane-element-file-drop.test.tsx",
+        "pnpm exec vitest run --config config/vitest.config.ts src/main/goals src/shared/goals src/renderer/src/goals src/renderer/src/components/goals src/main/runtime/rpc/methods/goals.test.ts src/main/plugins/plugin-bundled-bootstrap.test.ts src/main/persistence-ui-state.test.ts src/renderer/src/components/terminal-pane/TerminalPaneHeaderOverlay.test.tsx src/renderer/src/components/terminal-pane/terminal-pane-element-file-drop.test.tsx src/main/goals/goal-driver-resources.test.ts",
         "node --test --experimental-test-module-mocks goal-mode/cli/*.test.mjs"
       ]
     },
@@ -592,7 +565,11 @@
         "src/shared/utf8-byte-limits.ts",
         "src/shared/workspace-scope.ts",
         "src/shared/worktree/id.ts",
-        "src/shared/worktree/types.ts"
+        "src/shared/worktree/types.ts",
+        "src/shared/folder-workspace-execution-host.ts",
+        "src/shared/runtime-client-target.ts",
+        "src/shared/app-environment.ts",
+        "src/main/orca-profiles/profile-index-store.ts"
       ],
       "policyId": "issues-existing-capability-reuse",
       "ownedPaths": [
@@ -615,14 +592,10 @@
         "src/shared/issues/index.ts",
         "src/renderer/src/issues/IssueDomainSyncGate.tsx",
         "src/renderer/src/components/issues/IssuesPage.tsx",
-        "src/renderer/src/components/sidebar/issues/issue-sidebar.tsx"
+        "src/renderer/src/components/sidebar/issues/issue-sidebar.tsx",
+        "src/main/issues/orcad-issues.ts"
       ],
       "seams": [
-        {
-          "file": "config/scripts/vitest-sqlite-database-runtime-files.mjs",
-          "mustContain": "src/main/issues/**/*.test.ts",
-          "why": "Issue database fixtures run under Node SQLite in the hybrid CI runner"
-        },
         {
           "file": "src/shared/rpc-contract/rpc-params-catalog.generated.ts",
           "mustContain": "'conversations.list': ConversationsListParams",
@@ -672,6 +645,11 @@
           "file": "src/renderer/src/components/sidebar/index.tsx",
           "mustContain": "SidebarRootModeBar",
           "why": "the sidebar switches between Workspaces and Issues"
+        },
+        {
+          "file": "src/main/integration-builds/orcad-fork-services.ts",
+          "mustContain": "startOrcadIssues",
+          "why": "start each fork service on the owning headless runtime before RPC becomes available"
         }
       ],
       "tests": [
@@ -687,10 +665,12 @@
         "src/renderer/src/issues/IssueDomainSyncGate.test.tsx",
         "src/main/issues/issue-change-feed.test.ts",
         "src/shared/issues/change-stream-cleanup.test.ts",
-        "src/renderer/src/components/sidebar/issues/build-issue-rows.test.ts"
+        "src/renderer/src/components/sidebar/issues/build-issue-rows.test.ts",
+        "src/main/issues/orcad-issues.test.ts"
       ],
       "checks": [
-        "pnpm exec vitest run --config config/vitest.config.ts src/main/issues src/shared/issues src/renderer/src/issues src/renderer/src/components/issues src/renderer/src/components/sidebar/issues src/main/runtime/rpc/methods/issues.test.ts src/shared/agent-session-fallback-title.test.ts src/shared/ai-vault-session-filters.test.ts config/scripts/vitest-sqlite-runtime-boundary.test.ts"
+        "pnpm exec vitest run --config config/vitest.config.ts src/main/issues src/shared/issues src/renderer/src/issues src/renderer/src/components/issues src/renderer/src/components/sidebar/issues src/main/runtime/rpc/methods/issues.test.ts src/shared/agent-session-fallback-title.test.ts src/shared/ai-vault-session-filters.test.ts config/scripts/vitest-sqlite-runtime-boundary.test.ts",
+        "pnpm test src/main/issues/orcad-issues.test.ts"
       ]
     },
     {
@@ -727,7 +707,10 @@
         "src/shared/stable-pane-id.ts",
         "src/shared/structural-value-equality.ts",
         "src/shared/terminal-tab-types.ts",
-        "src/shared/tui-agent-config.ts"
+        "src/shared/tui-agent-config.ts",
+        "src/main/ai-vault/session-parse-cache-database.ts",
+        "src/shared/agent-title-decoration.ts",
+        "src/shared/agent-hook-listener/tool-input-preview.ts"
       ],
       "policyId": "session-names-native-feature",
       "ownedPaths": [
@@ -763,11 +746,6 @@
           "file": "src/renderer/src/store/slices/agent-generated-tab-title.test.ts",
           "mustContain": "prefers the agent task over a quick command container label",
           "why": "the existing store test follows the shared prompt-before-container title contract"
-        },
-        {
-          "file": "src/relay/ai-vault-handler.test.ts",
-          "mustContain": "nameEvidence",
-          "why": "exact relay responses assert optional name evidence separately from the legacy title"
         },
         {
           "file": "src/renderer/src/components/activity/ActivityPrototypePage-test-fixtures.ts",
@@ -815,7 +793,7 @@
           "why": "a provider session replacement counts as a state switch"
         },
         {
-          "file": "src/renderer/src/store/slices/agent-status-live-entry-state-history.ts",
+          "file": "src/shared/agent-status-live-entry-state-history.ts",
           "mustContain": "captureSessionNameHistory",
           "why": "status transitions capture the old session identity before pane replacement"
         },
@@ -841,18 +819,13 @@
         },
         {
           "file": "src/renderer/src/hooks/ipc-events/agent-status-event-applicator.ts",
-          "mustContain": "providerSession: data.providerSession",
+          "mustContain": "sessionNameNotificationPayload",
           "why": "accepted hook notifications carry event identity beside the sanitized status fields"
         },
         {
           "file": "src/renderer/src/runtime/web-session-tabs-sync/store-patch.ts",
           "mustContain": "providerSession: notificationStatus.providerSession",
           "why": "paired notification snapshots retain host-owned identity without broadening the status whitelist"
-        },
-        {
-          "file": "src/renderer/src/components/terminal-pane/pty-connection/direct-ssh-retry-status.ts",
-          "mustContain": "providerSession: storedStatus.providerSession",
-          "why": "direct SSH completion captures only the accepted same-agent pane identity"
         },
         {
           "file": "src/renderer/src/components/terminal-pane/use-notification-dispatch.ts",
@@ -950,11 +923,6 @@
           "why": "host read errors do not become native-name absence"
         },
         {
-          "file": "src/main/ai-vault/remote-session-scanner-codex-index.ts",
-          "mustContain": "unavailable",
-          "why": "remote index failures retain a distinct evidence state"
-        },
-        {
           "file": "src/main/ai-vault/session-parse-cache-persistence.test.ts",
           "mustContain": "providerName",
           "why": "cache schema coverage includes separate native evidence and prompt fallback"
@@ -1020,11 +988,6 @@
           "why": "service scan cache retains native evidence"
         },
         {
-          "file": "src/main/ai-vault/session-parse-cache-snapshot-serialization.ts",
-          "mustContain": "SESSION_PARSE_CACHE_SCHEMA_VERSION = 4",
-          "why": "old mixed-source parse cache (schema below 3) cannot be reused as new native evidence"
-        },
-        {
           "file": "src/main/ai-vault/session-scanner-parse-cache.ts",
           "mustContain": "file.sizeBytes > entry.sizeBytes",
           "why": "a changed same-length transcript must reparse native names rather than resume at EOF"
@@ -1066,7 +1029,7 @@
         },
         {
           "file": "src/renderer/src/components/tab-bar/SortableTab.tsx",
-          "mustContain": "resolveTerminalTabTitle",
+          "mustContain": "useSessionTabTitles",
           "why": "the final rendered label and tooltip cannot override the shared result with a container alias"
         },
         {
@@ -1085,18 +1048,13 @@
           "why": "a persistent daemon cannot resurrect its inherited Codex caller in new panes"
         },
         {
-          "file": "src/relay/pty-handler.ts",
-          "mustContain": "removeCodexToolCallerIdentity",
-          "why": "new and revived SSH panes establish their own caller scope on the executing host"
-        },
-        {
           "file": "src/main/codex/codex-hook-script.ts",
           "mustContain": "buildCodexNestedHookGuard",
           "why": "nested Codex exec hooks cannot publish on their caller's pane or enter replay spools"
         },
         {
           "file": "src/shared/agent-hook-listener.ts",
-          "mustContain": "shouldRejectClaudeSessionReplacement",
+          "mustContain": "admitSessionHook",
           "why": "reject competing Claude hooks before provider state folding"
         },
         {
@@ -1120,22 +1078,22 @@
           "why": "older relays must not bypass the client's identity window"
         },
         {
-          "file": "src/relay/agent-hook-server.ts",
+          "file": "src/wsl-guest/agent-hook-server.ts",
           "mustContain": "activity.cacheRecorder",
           "why": "the relay owns its host-local activity clock and excludes replay"
         },
         {
-          "file": "src/relay/agent-hook-event-admission.ts",
+          "file": "src/wsl-guest/agent-hook-event-admission.ts",
           "mustContain": "host.recordCached?.(event",
           "why": "upstream moved relay event admission here; the activity clock still sees each cached row before it is forwarded"
         },
         {
-          "file": "src/relay/agent-hook-server.ts",
+          "file": "src/wsl-guest/agent-hook-server.ts",
           "mustContain": "activity.refusedHook",
           "why": "a refused relay hook from another process still asks whether the owner exited"
         },
         {
-          "file": "src/relay/agent-hook-request.ts",
+          "file": "src/wsl-guest/agent-hook-request.ts",
           "mustContain": "onRefusedClaudeHook",
           "why": "the relay request path reports refused Claude hooks to its owner check"
         },
@@ -1145,17 +1103,7 @@
           "why": "a refused local hook from another process still asks whether the owner exited"
         },
         {
-          "file": "src/main/ssh/ssh-relay-session.ts",
-          "mustContain": "agentPresence: envelope.agentPresence",
-          "why": "relay presence reaches the client, so remote exits clear and the client defers to the relay's guard"
-        },
-        {
-          "file": "src/main/ssh/ssh-relay-session-agent-hooks.integration.test.ts",
-          "mustContain": "clears a remote Claude row when the relay reports its process exited",
-          "why": "the SSH adapter is the only path that carried presence and had no test"
-        },
-        {
-          "file": "src/relay/agent-hook-interrupt-reconciliation.test.ts",
+          "file": "src/wsl-guest/agent-hook-interrupt-reconciliation.test.ts",
           "mustContain": "CLAUDE_SESSION_ACTIVITY_WINDOW_MS",
           "why": "upstream's new-session case must replace the row after the activity window, or the guard drops it"
         },
@@ -1188,6 +1136,11 @@
           "file": "src/shared/ai-vault-session-filters.ts",
           "mustContain": "filters.canonicalTitleBySessionKey?.get(",
           "why": "history search retains Issue-pinned conversation titles alongside upstream filtering optimizations"
+        },
+        {
+          "file": "src/wsl-guest/agent-hook-provider-normalization.ts",
+          "mustContain": "claudeSessionOwnerState: canonical",
+          "why": "Provider-local normalization consults host-owned process presence for session replacement."
         }
       ],
       "tests": [
@@ -1202,7 +1155,6 @@
         "src/renderer/src/components/native-chat/StructuredAgentSessionStatusBridge.test.tsx",
         "src/renderer/src/lib/ai-vault-tab-title-sync-inputs.test.ts",
         "src/renderer/src/store/slices/agent-generated-tab-title.test.ts",
-        "src/relay/ai-vault-handler.test.ts",
         "src/main/session-names/provider-name-evidence.test.ts",
         "src/main/session-names/provider-name-file-chain.test.ts",
         "src/renderer/src/issues/provider-name-store-chain.test.ts",
@@ -1212,18 +1164,20 @@
         "src/main/codex-session-ownership/codex-nested-hook-guard.test.ts",
         "src/main/claude-session-ownership/claude-session-activity.test.ts",
         "src/shared/agent-session-fallback-title.test.ts",
-        "src/shared/ai-vault-session-filters.test.ts"
+        "src/shared/ai-vault-session-filters.test.ts",
+        "src/renderer/src/components/terminal-pane/pty-connection/resume-identity-launch-config.test.ts"
       ],
       "checks": [
         "pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/components/activity src/renderer/src/lib/activity-thread-display.test.ts src/renderer/src/store/slices/agent-status-batch.test.ts src/renderer/src/store/slices/agent-status.test.ts src/renderer/src/runtime/web-session-tabs-sync-agent-status.test.ts src/renderer/src/runtime/sync-runtime-graph-agent-status-projection.test.ts src/renderer/src/runtime/sync-runtime-graph-agent-status-projection-join.test.ts",
-        "pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/components/native-chat/StructuredAgentSessionStatusBridge.test.tsx src/renderer/src/lib/ai-vault-tab-title-sync-inputs.test.ts src/renderer/src/store/slices/agent-generated-tab-title.test.ts src/relay/ai-vault-handler.test.ts",
+        "pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/components/native-chat/StructuredAgentSessionStatusBridge.test.tsx src/renderer/src/lib/ai-vault-tab-title-sync-inputs.test.ts src/renderer/src/store/slices/agent-generated-tab-title.test.ts",
         "pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/components/terminal-pane/use-notification-dispatch.test.ts src/main/ipc/notifications-message-formatting.test.ts src/main/ipc/notifications-mobile-fanout.test.ts src/main/ipc/notifications-delivery-gating.test.ts src/main/ipc/notifications-retention-lifecycle.test.ts src/renderer/src/runtime/web-session-tabs-agent-completion-notifications.test.ts src/renderer/src/hooks/useIpcEvents-agent-status-turn-completion.test.ts src/renderer/src/hooks/agent-hook-completion-notifications.test.ts",
         "pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/session-names src/renderer/src/issues/conversation-session-titles.test.ts src/renderer/src/issues/issue-conversation-presentation.test.ts src/renderer/src/components/right-sidebar/AiVaultSessionRow.test.tsx",
         "pnpm exec tsc --noEmit -p tests/e2e/helpers/issues-session-name-file-chain.tsconfig.json && pnpm exec vitest run --config config/vitest.config.ts tests/e2e/issues-session-name-file-chain.unit.test.ts src/main/ai-vault/session-scanner-claude-subagents.test.ts src/renderer/src/components/right-sidebar/ai-vault-session-continuation.test.ts",
         "pnpm exec vitest run --config config/vitest.config.ts src/main/codex-session-ownership",
         "pnpm exec vitest run --config config/vitest.config.ts src/main/session-names src/main/ai-vault/session-title-file-reader.test.ts src/main/ai-vault/session-title-file-reader-wsl-stall.test.ts src/main/ai-vault/session-scanner-parse-cache.test.ts src/main/ai-vault/session-parse-cache-persistence.test.ts src/shared/workspace-session-schema.test.ts src/renderer/src/lib/ai-vault-tab-title-sync.test.ts src/renderer/src/components/tab-bar/tab-title-tooltip.test.tsx",
         "pnpm exec vitest run --config config/vitest.config.ts src/shared/session-names src/shared/session-display-title.test.ts src/shared/agent-tab-title.test.ts src/shared/tab-title-resolution.test.ts src/shared/agent-row-conversation-name.test.ts",
-        "pnpm exec vitest run --config config/vitest.config.ts src/shared/claude-session-ownership src/main/claude-session-ownership"
+        "pnpm exec vitest run --config config/vitest.config.ts src/shared/claude-session-ownership src/main/claude-session-ownership",
+        "pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/components/terminal-pane/pty-connection/resume-identity-launch-config.test.ts"
       ]
     },
     {
@@ -1241,8 +1195,7 @@
         "src/main/runtime/pairing-network-interfaces.ts",
         "src/main/runtime/rpc/core.ts",
         "src/main/runtime/rpc/errors.ts",
-        "src/main/ssh/ssh-target-registry.ts",
-        "src/relay/dispatcher.ts",
+        "src/main/ssh/targets/ssh-target-registry.ts",
         "src/renderer/src/components/artifacts/ArtifactListToolbar.tsx",
         "src/renderer/src/components/artifacts/ArtifactPublishedLinkPanel.tsx",
         "src/renderer/src/components/artifacts/ArtifactsPageSkeleton.tsx",
@@ -1275,7 +1228,11 @@
         "src/shared/secure-file.ts",
         "src/shared/tailnet-address.ts",
         "src/shared/workspace-scope.ts",
-        "src/shared/worktree/id.ts"
+        "src/shared/worktree/id.ts",
+        "src/shared/app-environment.ts",
+        "src/main/orcad/orcad-app-paths.ts",
+        "src/main/document-preview-size/document-preview-content-type.ts",
+        "src/renderer/src/lib/doc-preview-grants.ts"
       ],
       "policyId": "self-hosted-artifacts",
       "ownedPaths": [
@@ -1291,7 +1248,7 @@
         "src/main/self-hosted-artifacts/artifact-share-main-process.ts",
         "src/main/self-hosted-artifacts/artifact-share-runtime-registry.ts",
         "src/main/self-hosted-artifacts/artifact-share-owner-service.ts",
-        "src/main/self-hosted-artifacts/artifact-share-relay-service.ts",
+        "src/main/self-hosted-artifacts/orcad-artifact-share.ts",
         "src/main/self-hosted-artifacts/artifact-share-rpc-error.ts",
         "src/main/self-hosted-artifacts/server/artifact-share-app-server.ts",
         "src/main/self-hosted-artifacts/server/artifact-share-http-handler.ts",
@@ -1325,11 +1282,6 @@
           "file": "src/main/runtime/rpc/dispatcher-error-response.ts",
           "mustContain": "mapArtifactShareRpcError",
           "why": "sharing failures keep their code over RPC (errors.ts is pinned by reference parity)"
-        },
-        {
-          "file": "src/relay/relay-agent-hook-runtime.ts",
-          "mustContain": "registerRelayArtifactShare(this.dispatcher)",
-          "why": "an SSH host answers sharing questions about its own files"
         },
         {
           "file": "src/shared/rpc-contract/rpc-params-catalog.generated.ts",
@@ -1385,16 +1337,6 @@
           "file": "src/cli/specs/artifacts.ts",
           "mustContain": "'service', 'status'",
           "why": "orca artifacts service status is a registered command"
-        },
-        {
-          "file": "src/relay/remote-artifact-cli-input.ts",
-          "mustContain": "the computer holding the file serves it",
-          "why": "an SSH terminal forwards only the host path, never file bytes"
-        },
-        {
-          "file": "src/relay/remote-artifact-cli-input.test.ts",
-          "mustContain": "forwards only the SSH host path",
-          "why": "remote CLI input test covers path-only forwarding"
         },
         {
           "file": "config/electron-builder.config.cjs",
@@ -1462,11 +1404,6 @@
           "why": "sign-out no longer warns that artifacts stop working"
         },
         {
-          "file": "src/renderer/src/components/orca-profiles/OrcaProfileSignOutConfirmDialog.test.tsx",
-          "mustContain": "'Orca Relay will be unavailable until you sign in again.",
-          "why": "sign-out dialog test follows the copy"
-        },
-        {
           "file": "src/renderer/src/components/UnexpectedSignoutCard.tsx",
           "mustContain": "auto.components.selfHostedArtifacts.account.restore",
           "why": "unexpected sign-out card no longer lists artifact sharing as lost"
@@ -1475,6 +1412,31 @@
           "file": "src/renderer/src/components/settings/orca-account-settings-search.ts",
           "mustContain": "auto.components.selfHostedArtifacts.account.searchDescription",
           "why": "settings search no longer ties the account to artifacts"
+        },
+        {
+          "file": "src/main/orcad/orcad-entry.ts",
+          "mustContain": "startOrcadForkServices",
+          "why": "start and stop the owner service on SSH orcad"
+        },
+        {
+          "file": "config/scripts/build-orcad.mjs",
+          "mustContain": "buildArtifactShareViewer",
+          "why": "ship viewer assets with the owning server"
+        },
+        {
+          "file": "src/shared/orcad-artifacts.ts",
+          "mustContain": "artifact-share-viewer/manifest.json",
+          "why": "hash and deploy every viewer asset with the runtime"
+        },
+        {
+          "file": "src/renderer/src/components/browser-pane/workspace-doc/HtmlDocPreview.tsx",
+          "mustContain": "shareLocation={grant?.location ?? null}",
+          "why": "LAN sharing stays on the minted preview grant owner."
+        },
+        {
+          "file": "src/main/integration-builds/orcad-fork-services.ts",
+          "mustContain": "startOrcadArtifactShare",
+          "why": "start each fork service on the owning headless runtime before RPC becomes available"
         }
       ],
       "tests": [
@@ -1484,23 +1446,21 @@
         "src/main/self-hosted-artifacts/server/artifact-share-request-path.test.ts",
         "src/main/self-hosted-artifacts/server/artifact-share-lan-ip.test.ts",
         "src/main/self-hosted-artifacts/artifact-share-owner-service.test.ts",
-        "src/main/self-hosted-artifacts/artifact-share-relay-service.test.ts",
+        "src/main/self-hosted-artifacts/orcad-artifact-share.test.ts",
         "src/main/self-hosted-artifacts/artifact-share-routing.test.ts",
         "src/main/self-hosted-artifacts/artifact-share-rpc-error.test.ts",
         "src/main/self-hosted-artifacts/artifact-share-rpc-methods.test.ts",
-        "src/main/self-hosted-artifacts/artifact-share-relay-bundle.test.ts",
+        "src/main/self-hosted-artifacts/artifact-share-orcad-bundle.test.ts",
         "src/cli/self-hosted-artifacts/artifact-share-cli-target.test.ts",
         "src/renderer/src/components/self-hosted-artifacts/share-button/lan-artifact-share-machine.test.ts",
         "src/renderer/src/components/self-hosted-artifacts/share-button/lan-artifact-share-target.test.ts",
-        "src/relay/remote-artifact-cli-input.test.ts",
         "src/renderer/src/components/editor/EditorPanelHeader.test.tsx",
         "src/cli/index.test.ts",
         "src/renderer/src/hooks/useSettingsNavigationMetadata.test.ts",
-        "src/renderer/src/components/settings/OrcaAccountSettingsPane.test.tsx",
-        "src/renderer/src/components/orca-profiles/OrcaProfileSignOutConfirmDialog.test.tsx"
+        "src/renderer/src/components/settings/OrcaAccountSettingsPane.test.tsx"
       ],
       "checks": [
-        "pnpm exec vitest run --config config/vitest.config.ts src/main/self-hosted-artifacts src/cli/self-hosted-artifacts src/renderer/src/components/self-hosted-artifacts src/relay/remote-artifact-cli-input.test.ts src/renderer/src/components/editor/EditorPanelHeader.test.tsx src/renderer/src/hooks/useSettingsNavigationMetadata.test.ts src/cli/index.test.ts src/renderer/src/components/browser-pane/workspace-doc src/renderer/src/components/settings/OrcaAccountSettingsPane.test.tsx src/renderer/src/components/orca-profiles/OrcaProfileSignOutConfirmDialog.test.tsx src/renderer/src/components/unexpected-signout",
+        "pnpm exec vitest run --config config/vitest.config.ts src/main/self-hosted-artifacts src/cli/self-hosted-artifacts src/renderer/src/components/self-hosted-artifacts src/renderer/src/components/editor/EditorPanelHeader.test.tsx src/renderer/src/hooks/useSettingsNavigationMetadata.test.ts src/cli/index.test.ts src/renderer/src/components/browser-pane/workspace-doc src/renderer/src/components/settings/OrcaAccountSettingsPane.test.tsx src/renderer/src/components/unexpected-signout",
         "pnpm run build:artifact-share-viewer"
       ]
     },
@@ -1515,7 +1475,7 @@
         "src/renderer/src/lib/folder-workspace-connection.ts",
         "src/renderer/src/lib/renderer-app-platform.ts",
         "src/renderer/src/lib/resolved-worktree-execution-host.ts",
-        "src/renderer/src/runtime/runtime-file-client.ts",
+        "src/renderer/src/runtime/runtime-file-client-types.ts",
         "src/renderer/src/store/index.ts",
         "src/shared/workspace-scope.ts"
       ],
@@ -1638,7 +1598,12 @@
       "title": "远程大文件编辑器读取：配对 runtime 上超出预览预算的文件改走分块读",
       "goal": "files.read 报 truncated 时用已有的 files.readChunk 读全文，不新增 wire 面",
       "journal": "docs/issue/远程大文件编辑器读取/journal.md",
-      "dependsOn": ["src/shared/runtime-types.ts"],
+      "dependsOn": [
+        "src/shared/runtime-types.ts",
+        "src/renderer/src/runtime/runtime-file-client-types.ts",
+        "src/renderer/src/runtime/runtime-rpc-client.ts",
+        "src/renderer/src/runtime/runtime-rpc-result.ts"
+      ],
       "policyId": "remote-editor-large-file-read",
       "ownedPaths": [
         "src/renderer/src/runtime-large-file/**",
@@ -1650,7 +1615,7 @@
       "seams": [
         {
           "file": "src/renderer/src/runtime/runtime-file-read-client.ts",
-          "mustContain": "assembleRuntimeFileFromChunks",
+          "mustContain": "readWholeRuntimeFile",
           "why": "a truncated files.read finishes on files.readChunk instead of refusing (REQ-701)"
         },
         {
@@ -1677,7 +1642,11 @@
         "src/renderer/src/runtime/runtime-rpc-client.ts",
         "src/renderer/src/runtime/runtime-worktree-selector.ts",
         "src/shared/cross-platform-path.ts",
-        "src/shared/runtime-types.ts"
+        "src/shared/runtime-types.ts",
+        "src/main/runtime/terminal/artifacts/terminal-artifacts.ts",
+        "src/main/runtime/terminal/artifacts/artifact-integrity.ts",
+        "src/main/runtime/files/file-target.ts",
+        "src/shared/runtime-client-target.ts"
       ],
       "policyId": "remote-host-path-open",
       "ownedPaths": [
@@ -1688,7 +1657,8 @@
       "requiredFiles": [
         "src/main/remote-host-path-grant/host-path-grant-policy.ts",
         "src/renderer/src/runtime-host-path/host-path-file-client.ts",
-        "src/renderer/src/runtime-host-path/host-path-grant-seams.ts"
+        "src/renderer/src/runtime-host-path/host-path-grant-seams.ts",
+        "src/main/remote-host-path-grant/grant-host-path.ts"
       ],
       "seams": [
         {
@@ -1702,12 +1672,12 @@
           "why": "the command surface forwards it to the runtime service (REQ-801)"
         },
         {
-          "file": "src/main/runtime/runtime-file-commands-resolve-allowed-terminal-artifact-path.ts",
+          "file": "src/main/runtime/orca-runtime-files.ts",
           "mustContain": "grantHostPath",
           "why": "the grant is minted beside the provenance-backed ones it deliberately skips (REQ-801, REQ-802)"
         },
         {
-          "file": "src/main/runtime/runtime-file-commands-mobile-file-list-limit.ts",
+          "file": "src/main/runtime/terminal/artifacts/file-grants.ts",
           "mustContain": "'host-path'",
           "why": "the grant store records which grants skipped provenance (REQ-802)"
         },
@@ -1786,7 +1756,10 @@
         "src/shared/agent-prompt-injection.ts",
         "src/shared/agent-status-types.ts",
         "src/shared/telemetry-events.ts",
-        "src/shared/tui-agent.ts"
+        "src/shared/tui-agent.ts",
+        "mobile/src/session/mobile-new-tab-agent-options.ts",
+        "mobile/src/session/mobile-session-route-types.ts",
+        "mobile/src/terminal/quick-commands.ts"
       ],
       "policyId": "mobile-session-continuation",
       "ownedPaths": [
@@ -1827,7 +1800,7 @@
         },
         {
           "file": "mobile/src/session/MobileSessionSheets.tsx",
-          "mustContain": "getMobileSessionContinuationActions",
+          "mustContain": "sessionContinuationActions",
           "why": "the picker mounts beside the other session sheets"
         },
         {
@@ -1837,13 +1810,18 @@
         },
         {
           "file": "config/scripts/verify-mobile-web-app-bundle.mjs",
-          "mustContain": "['./h/_layout.tsx', 73]",
+          "mustContain": "['./h/_layout.tsx', 78]",
           "why": "the route-prefix sweep records continuation's measured chunk-sharing change"
         },
         {
           "file": "config/scripts/build-mobile-web-app-bundle.test.mjs",
-          "mustContain": "assertAssetCeilingFitsShell(29, 42, MOBILE_WEB_BUNDLE_MAX_ASSETS)).toBe(250)",
+          "mustContain": "assertAssetCeilingFitsShell(25, 42, MOBILE_WEB_BUNDLE_MAX_ASSETS)).toBe(245)",
           "why": "the asset-ceiling boundary follows the re-measured route-prefix sweep"
+        },
+        {
+          "file": "mobile/src/session/mobile-session-terminal-create-request.ts",
+          "mustContain": "cwd: options.cwd",
+          "why": "continuation forwards its original working directory through the shared create request"
         }
       ],
       "tests": [
@@ -1938,31 +1916,26 @@
       ],
       "seams": [
         {
-          "file": "src/main/runtime/orca-runtime-move-headless-mobile-session-tab.ts",
+          "file": "src/main/runtime/session-tabs/headless-tab-group-moves.ts",
           "mustContain": "minting a fresh publisher fences live renderer frames",
           "why": "tab reorder/split/move-to-group carry the incumbent epoch instead of minting one (REQ-701)"
         },
         {
-          "file": "src/main/runtime/orca-runtime-persist-headless-session-tab-props.ts",
+          "file": "src/main/runtime/session-tabs/headless-tab-properties.ts",
           "mustContain": "minting a fresh publisher fences live renderer frames",
           "why": "tab props and pane layout carry the incumbent epoch instead of minting one (REQ-701)"
         },
         {
-          "file": "src/main/runtime/orca-runtime-apply-mobile-session-tab-navigation.ts",
-          "mustContain": "minting a fresh publisher fences live renderer frames",
+          "file": "src/main/runtime/session-lifecycle/projection/apply-mobile-session-tab-navigation.ts",
+          "mustContain": "publicationEpoch: snapshot.publicationEpoch",
           "why": "tab activation carries the incumbent epoch instead of minting one (REQ-701)"
-        },
-        {
-          "file": "src/main/runtime/orca-runtime-close-structured-agent-session-tab.ts",
-          "mustContain": "minting a fresh publisher fences live renderer frames",
-          "why": "browser tab retirement carries the incumbent epoch instead of minting one (REQ-701)"
         }
       ],
       "tests": [
         "src/main/runtime/headless-sibling-writers-keep-publication-epoch.test.ts"
       ],
       "checks": [
-        "pnpm exec vitest run --config config/vitest.config.ts src/main/runtime/headless-sibling-writers-keep-publication-epoch.test.ts src/main/runtime/headless-close-keeps-publication-epoch.test.ts"
+        "pnpm exec vitest run --config config/vitest.config.ts src/main/runtime/headless-sibling-writers-keep-publication-epoch.test.ts src/main/runtime/runtime-headless-publication-contracts.test.ts"
       ]
     },
     {
@@ -1995,10 +1968,8 @@
         "src/shared/clipboard-image.ts",
         "src/shared/image-paste-following-text.ts",
         "src/main/providers/ssh-filesystem-dispatch.ts",
-        "src/main/ssh/ssh-connection-utils.ts",
-        "src/main/ssh/ssh-relay-exec-command.ts",
-        "src/main/ssh/ssh-target-registry.ts",
-        "src/main/providers/types.ts",
+        "src/main/ssh/targets/ssh-target-registry.ts",
+        "src/main/providers/filesystem-provider-contract.ts",
         "src/main/runtime/orca-runtime.ts",
         "src/main/runtime/rpc/core.ts",
         "src/main/runtime/runtime-rpc/runtime-rpc-mobile-method-allowlist.ts",
@@ -2193,7 +2164,7 @@
         },
         {
           "file": "src/renderer/src/components/terminal-pane/use-terminal-pane-context-menu.ts",
-          "mustContain": "copyTerminalPaneMenuTerminalId(resolveMenuPane(), tabId, worktreeId)",
+          "mustContain": "copyTerminalPaneMenuTerminalId(pane, tabId, worktreeId, ptyId)",
           "why": "Pass the source workspace to the host-aware terminal handle copy operation"
         }
       ],

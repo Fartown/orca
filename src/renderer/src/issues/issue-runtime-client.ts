@@ -13,7 +13,7 @@ import type {
   IssueRouteExecutionHostId
 } from '../../../shared/issues/types'
 import { callRuntimeRpc, runtimeEnvironmentSupportsCapability } from '../runtime/runtime-rpc-client'
-import type { RuntimeClientTarget } from '../runtime/runtime-client-target'
+import type { RuntimeClientTarget } from '../../../shared/runtime-client-target'
 
 export class IssueRuntimeUnsupportedError extends Error {
   readonly code = 'issue_runtime_unsupported'

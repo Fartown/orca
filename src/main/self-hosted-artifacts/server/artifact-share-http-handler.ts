@@ -2,7 +2,7 @@ import { createReadStream } from 'node:fs'
 import { readFile, stat } from 'node:fs/promises'
 import type { IncomingMessage, RequestListener, ServerResponse } from 'node:http'
 import { extname, join } from 'node:path'
-import { docPreviewContentType } from '../../browser/doc-preview-file-reader'
+import { docPreviewContentType } from '../../document-preview-size/document-preview-content-type'
 import { readArtifactShareWorkspaces } from '../store/artifact-share-records'
 import {
   ARTIFACT_SHARE_MARKDOWN_PAGE_CSP,

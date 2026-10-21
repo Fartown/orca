@@ -32,14 +32,6 @@ function rows(snapshot: Partial<AgentStatusIpcPayload>): RuntimeWorktreePsSummar
   const summaries = new Map([[WORKTREE_ID, summary]])
   attachRuntimeWorktreeAgentRows({
     summaries,
-    pathIndex: {
-      platformByRepoId: new Map(),
-      posixAbsolute: new Map(),
-      posixRelative: new Map(),
-      windows: new Map(),
-      windowsAbsolute: new Map()
-    },
-    missingWorktreeIds: new Set(),
     workingTerminalEvidenceByWorktreeId: new Map(),
     rowSources: collectRuntimeWorktreeAgentSources({
       mirroredWorktreeIdByTabId: new Map(),
@@ -51,7 +43,7 @@ function rows(snapshot: Partial<AgentStatusIpcPayload>): RuntimeWorktreePsSummar
       hookSnapshots: [snapshotRow]
     }),
     orchestrationByPaneKey: null,
-    getSummary: (map, _paths, _missing, id) => map.get(id) ?? null
+    getSummary: (id) => summaries.get(id) ?? null
   })
   return summary.agents
 }

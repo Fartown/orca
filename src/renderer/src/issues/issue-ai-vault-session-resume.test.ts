@@ -54,6 +54,10 @@ vi.mock('@/lib/ai-vault-resume-target', () => ({
   getAiVaultResumeWorkspaceTargetStatus: () => 'ssh'
 }))
 vi.mock('@/lib/worktree-activation', () => ({
+  activateAndRevealWorkspace: (...args: unknown[]) => {
+    mocks.events.push('activate')
+    return mocks.activateWorktree(...args)
+  },
   activateAndRevealWorktree: (...args: unknown[]) => {
     mocks.events.push('activate')
     return mocks.activateWorktree(...args)

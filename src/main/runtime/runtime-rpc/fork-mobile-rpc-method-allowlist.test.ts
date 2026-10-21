@@ -12,9 +12,9 @@ describe('isMobileRpcMethodAllowed', () => {
     ).not.toBeNull()
     expect(
       denyRpcMethodForCaller(
-        { kind: 'ssh-bridge', targetId: 'remote', remoteCliControl: false },
-        'fileAttachment.startUpload',
-        'workspace'
+        { kind: 'runtime-paired', grants: [] },
+        'pairing.createOffer',
+        'pairing-admin'
       )
     ).not.toBeNull()
   })

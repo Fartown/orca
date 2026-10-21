@@ -11,8 +11,8 @@ import { createGoalDriverLauncher } from './goal-driver-launch'
 import { GoalStore } from './goal-store'
 
 export function registerRuntimeGoals(input: {
-  runtime: OrcaRuntimeService
-  store: Store
+  runtime: Pick<OrcaRuntimeService, 'showTerminal' | 'showManagedWorktree'>
+  store: Pick<Store, 'getSettings' | 'getFolderWorkspaces' | 'getRepos' | 'getProjectGroups'>
   entryPath: string | null
   userDataPath: string
 }): () => void {

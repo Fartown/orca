@@ -2,25 +2,22 @@ import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { toSshExecutionHostId } from '../../shared/execution-host'
 import type {
   ArtifactShareHostListing,
   ArtifactShareServiceStatus
 } from '../../shared/self-hosted-artifacts/artifact-share-contract'
-import { ARTIFACT_SHARE_RELAY_METHODS } from '../../shared/self-hosted-artifacts/artifact-share-contract'
 import { rememberArtifactShareHost } from './artifact-share-known-hosts'
 import type { ArtifactShareOwnerService } from './artifact-share-owner-service'
 import { registerArtifactShareRuntime } from './artifact-share-runtime-registry'
 
-const { getActiveMultiplexer } = vi.hoisted(() => ({ getActiveMultiplexer: vi.fn() }))
-
-vi.mock('../ssh/ssh-target-registry', () => ({
-  getActiveMultiplexer,
-  listRegisteredSshTargets: () => [
-    { id: 'minizc', label: 'Mac mini' },
-    { id: 'offline', label: 'Old laptop' }
+const { callRuntime, environments } = vi.hoisted(() => ({
+  callRuntime: vi.fn(),
+  environments: [
+    { id: 'env-mini', name: 'Mac mini' },
+    { id: 'offline', name: 'Old laptop' }
   ]
 }))
+vi.mock('../../shared/runtime-environment-store', () => ({ listEnvironments: () => environments }))
 
 const { listArtifactShareHosts } = await import('../runtime/rpc/methods/artifact-share')
 
@@ -50,19 +47,11 @@ beforeEach(async () => {
     owner,
     userDataPath,
     configureLocal: vi.fn(),
-    callRuntimeEnvironment: vi.fn()
+    callRuntimeEnvironment: callRuntime,
+    isEnvironmentReachable: (id) => id === 'env-mini'
   })
-  getActiveMultiplexer.mockReset()
-  getActiveMultiplexer.mockImplementation((targetId: string) =>
-    targetId === 'minizc'
-      ? {
-          request: async (method: string) => {
-            expect(method).toBe(ARTIFACT_SHARE_RELAY_METHODS.list)
-            return { ok: true, value: listing('minizc.local') }
-          }
-        }
-      : undefined
-  )
+  callRuntime.mockReset()
+  callRuntime.mockResolvedValue({ ok: true, result: listing('minizc.local') })
 })
 
 afterEach(async () => {
@@ -72,38 +61,34 @@ afterEach(async () => {
 
 describe('artifactShare.list', () => {
   it('groups this computer, connected hosts, and hosts shared to before', async () => {
-    rememberArtifactShareHost(userDataPath, toSshExecutionHostId('offline'))
+    rememberArtifactShareHost(userDataPath, 'runtime:offline')
 
     const result = await listArtifactShareHosts({}, {})
 
     expect(result.hosts.map((host) => [host.host, host.service.state])).toEqual([
       [{ executionHostId: 'local', label: 'mbp5' }, 'serving'],
-      [{ executionHostId: toSshExecutionHostId('minizc'), label: 'Mac mini' }, 'serving'],
-      [{ executionHostId: toSshExecutionHostId('offline'), label: 'Old laptop' }, 'unverifiable']
+      [{ executionHostId: 'runtime:env-mini', label: 'Mac mini' }, 'serving'],
+      [{ executionHostId: 'runtime:offline', label: 'Old laptop' }, 'unverifiable']
     ])
     expect(result.hosts[2]?.service).toEqual({ state: 'unverifiable', reason: 'disconnected' })
   })
 
   it('shows a paired caller only the computer it paired with', async () => {
-    rememberArtifactShareHost(userDataPath, toSshExecutionHostId('offline'))
+    rememberArtifactShareHost(userDataPath, 'runtime:offline')
 
     const result = await listArtifactShareHosts({}, { clientKind: 'runtime', pairedDeviceId: 'p1' })
 
     expect(result.hosts.map((host) => host.host.executionHostId)).toEqual(['local'])
-    expect(getActiveMultiplexer).not.toHaveBeenCalled()
+    expect(callRuntime).not.toHaveBeenCalled()
   })
 
   it('reports an outdated host instead of an empty list', async () => {
-    getActiveMultiplexer.mockImplementation(() => ({
-      request: async () => {
-        throw Object.assign(new Error('Method not found'), { code: -32601 })
-      }
-    }))
+    callRuntime.mockResolvedValue({
+      ok: false,
+      error: { code: 'method_not_found', message: 'old host' }
+    })
 
-    const result = await listArtifactShareHosts(
-      { executionHostIds: [toSshExecutionHostId('minizc')] },
-      {}
-    )
+    const result = await listArtifactShareHosts({ executionHostIds: ['runtime:env-mini'] }, {})
 
     expect(result.hosts[0]?.service).toEqual({ state: 'unverifiable', reason: 'host-outdated' })
   })

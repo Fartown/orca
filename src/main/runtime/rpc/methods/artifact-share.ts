@@ -24,17 +24,11 @@ import {
   rememberArtifactShareHost
 } from '../../../self-hosted-artifacts/artifact-share-known-hosts'
 import {
-  artifactShareSshTargetLabel,
   routeArtifactShareCall,
   type ArtifactShareCallerContext,
   type ArtifactShareRuntimeEnvironmentAccess
 } from '../../../self-hosted-artifacts/artifact-share-routing'
-import {
-  isRuntimeOwnedSshTargetId,
-  parseExecutionHostId,
-  toSshExecutionHostId
-} from '../../../../shared/execution-host'
-import { getActiveMultiplexer, listRegisteredSshTargets } from '../../../ssh/ssh-target-registry'
+import { parseExecutionHostId } from '../../../../shared/execution-host'
 import { defineMethod } from '../core'
 
 const StopResult = z.object({ stopped: z.boolean() })
@@ -49,7 +43,7 @@ function hostLabelFor(
     return reported
   }
   if (host.kind === 'ssh') {
-    return { executionHostId, label: artifactShareSshTargetLabel(host.targetId) }
+    return { executionHostId, label: host.targetId }
   }
   const runtime = requireArtifactShareRuntime()
   const environment = listEnvironments(runtime.userDataPath).find(
@@ -60,7 +54,11 @@ function hostLabelFor(
 
 function runtimeEnvironmentAccess(): ArtifactShareRuntimeEnvironmentAccess {
   const runtime = requireArtifactShareRuntime()
-  return { userDataPath: runtime.userDataPath, call: runtime.callRuntimeEnvironment }
+  return {
+    userDataPath: runtime.userDataPath,
+    call: runtime.callRuntimeEnvironment,
+    isReachable: runtime.isEnvironmentReachable
+  }
 }
 
 function route<T extends { host: ArtifactShareHostLabel }>(
@@ -80,14 +78,6 @@ function route<T extends { host: ArtifactShareHostLabel }>(
     context,
     runtimeEnvironment: runtimeEnvironmentAccess
   }).then((result) => ({ ...result, host: hostLabelFor(executionHostId, result.host) }))
-}
-
-function isConnectedSshTarget(targetId: string): boolean {
-  try {
-    return getActiveMultiplexer(targetId) !== undefined
-  } catch {
-    return false
-  }
 }
 
 async function listHost(
@@ -127,11 +117,11 @@ export async function listArtifactShareHosts(
       ? ['local']
       : [
           'local',
-          ...listRegisteredSshTargets()
-            .filter(
-              (target) => !isRuntimeOwnedSshTargetId(target.id) && isConnectedSshTarget(target.id)
+          ...listEnvironments(requireArtifactShareRuntime().userDataPath)
+            .filter((environment) =>
+              requireArtifactShareRuntime().isEnvironmentReachable(environment.id)
             )
-            .map((target) => toSshExecutionHostId(target.id)),
+            .map((environment) => `runtime:${environment.id}`),
           ...readKnownArtifactShareHosts(requireArtifactShareRuntime().userDataPath)
         ])
   const unique = [...new Set(ids)]

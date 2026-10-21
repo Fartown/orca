@@ -1,4 +1,4 @@
-import type { RuntimeClientTarget } from '../runtime/runtime-client-target'
+import type { RuntimeClientTarget } from '../../../shared/runtime-client-target'
 import type { AgentStatusEntry } from '../../../shared/agent-status-types'
 import type { GoalBinding } from '../../../shared/goals/goal-control-contract'
 import type { RuntimeTerminalResolvePane } from '../../../shared/runtime-terminal-contracts'

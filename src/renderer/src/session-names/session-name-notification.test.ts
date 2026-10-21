@@ -32,7 +32,7 @@ beforeEach(() => {
     ptyIdsByTabId: { tab: ['leaf-pty'] },
     suppressedPtyExitIds: {},
     settings: getDefaultSettings('/workspace'),
-    markWorktreeUnread: vi.fn(),
+    markAgentAttentionUnread: vi.fn(),
     markAgentCompletionPaneUnread: vi.fn(),
     markTerminalTabUnread: vi.fn(),
     markTerminalPaneUnread: vi.fn(),
@@ -80,7 +80,7 @@ it('times out once with the captured prompt fallback, not the latest round or re
     ]
   })
   send()
-  expect(store.getState().markWorktreeUnread).toHaveBeenCalledExactlyOnceWith('workspace')
+  expect(store.getState().markAgentAttentionUnread).toHaveBeenCalledOnce()
   await vi.advanceTimersByTimeAsync(1499)
   expect(dispatch).not.toHaveBeenCalled()
   store.replaceIdentity('B')

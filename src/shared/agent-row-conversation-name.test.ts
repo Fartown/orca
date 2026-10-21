@@ -64,6 +64,32 @@ describe('getAgentRowConversationName', () => {
     expect(getAgentRowConversationName(generated, 'claude', true, null)).toBeNull()
   })
 
+  it('uses provider names only for the row’s own provider session', () => {
+    const tab = makeTab({
+      aiVaultTitle: {
+        agent: 'codex',
+        sessionId: 'focused-session',
+        title: 'Focused conversation',
+        providerName: { kind: 'named', title: 'Focused conversation', field: 'thread_name' }
+      }
+    })
+    expect(
+      getAgentRowConversationName(tab, 'codex', false, null, {
+        providerSessionId: 'focused-session'
+      })
+    ).toBe('Focused conversation')
+    expect(
+      getAgentRowConversationName(tab, 'codex', false, null, {
+        providerSessionId: 'sibling-session'
+      })
+    ).toBeNull()
+    expect(
+      getAgentRowConversationName(tab, 'claude', false, null, {
+        providerSessionId: 'focused-session'
+      })
+    ).toBeNull()
+  })
+
   it('strips leading status decoration from agent-set titles', () => {
     expect(
       getAgentRowConversationName(makeTab({ title: '✳ Fix patient intake flow' }), 'claude', false)

@@ -26,7 +26,8 @@ export const AI_VAULT_AGENTS = [
   'cline',
   'kimi',
   'muse',
-  'jcode'
+  'jcode',
+  'kiro'
 ] as const satisfies readonly TuiAgent[]
 
 // Why: the aiVault.listSessions RPC schema CLAMPS scopePaths to this bound
@@ -46,6 +47,17 @@ export function isAiVaultScanCancelledError(error: unknown): boolean {
 }
 
 export type AiVaultAgent = (typeof AI_VAULT_AGENTS)[number]
+
+export function isAiVaultAgent(value: unknown): value is AiVaultAgent {
+  return AI_VAULT_AGENTS.some((agent) => agent === value)
+}
+
+/** The agents Session History may list `agent`'s sessions under. */
+export function aiVaultHistoryAgents(agent: AiVaultAgent): AiVaultAgent[] {
+  // One OpenCode store holds both versions' sessions, and the scanner labels current ones `opencode2`.
+  return agent === 'opencode' || agent === 'opencode2' ? ['opencode', 'opencode2'] : [agent]
+}
+
 export type AiVaultScope = 'workspace' | 'project' | 'all'
 export type AiVaultSort = 'updated' | 'created'
 export const AI_VAULT_SEARCH_SORTS = ['relevance', 'newest'] as const
@@ -77,7 +89,8 @@ export const AI_VAULT_AGENT_LABELS = {
   cline: 'Cline',
   kimi: 'Kimi',
   muse: 'Muse',
-  jcode: 'Jcode'
+  jcode: 'Jcode',
+  kiro: 'Kiro'
 } as const satisfies Record<AiVaultAgent, string>
 
 export type AiVaultSessionPreviewMessage = {
@@ -109,6 +122,8 @@ export type AiVaultSession = {
   providerName?: ProviderNameEvidence
   generatedTitle?: string | null
   cwd: string | null
+  /** The host's spellings of `cwd` under a symlinked scope path. Scope matching only; resume reads `cwd`. */
+  cwdAliases?: string[]
   branch: string | null
   model: string | null
   filePath: string
@@ -220,6 +235,8 @@ export type AiVaultScanIssue = {
 }
 
 export type AiVaultListArgs = {
+  /** Opts a selected runtime-host refresh into content-conditional replies. */
+  afterFingerprint?: string | null
   /** Opt-in promises this client starts IDE history in a new CLI conversation. */
   includeAntigravityIdeSessions?: boolean
   limit?: number
@@ -233,6 +250,11 @@ export type AiVaultListArgs = {
 }
 
 export type AiVaultListResult = {
+  /** Local scan entry that produced this result; absent for remote and merged results. */
+  scanId?: string
+  fingerprint?: string
+  /** Requires the caller to reuse the exact previously received body. */
+  unchanged?: true
   sessions: AiVaultSession[]
   issues: AiVaultScanIssue[]
   scannedAt: string

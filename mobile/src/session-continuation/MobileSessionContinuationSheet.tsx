@@ -1,15 +1,13 @@
 import { ActionSheetModal } from '../components/ActionSheetModal'
 import { useMobileSessionContinuationScope } from './use-mobile-session-continuation-scope'
-import type { MobileContinuationTarget } from './use-mobile-session-continuation'
+import type { MobileSessionTab } from '../session/mobile-session-route-types'
+import { getMobileSessionContinuationActions } from './continuation-actions'
 
-/** The continuation sheet plus its opener, so the session sheet file carries one line for this
- *  feature instead of a scope binding and a modal it does not otherwise know about. */
 export function useMobileSessionContinuationSheet(
-  scope: Parameters<typeof useMobileSessionContinuationScope>[0]
-): {
-  openContinuation: (tab: MobileContinuationTarget) => void
-  continuationSheet: React.JSX.Element
-} {
+  scope: Parameters<typeof useMobileSessionContinuationScope>[0] & {
+    sessionTabs: MobileSessionTab[]
+  }
+) {
   const {
     continuationTarget,
     continuationActions,
@@ -19,7 +17,15 @@ export function useMobileSessionContinuationSheet(
     closeContinuation
   } = useMobileSessionContinuationScope(scope)
   return {
-    openContinuation,
+    sessionContinuationActions: (terminalHandle: string | null, dismiss: () => void) =>
+      getMobileSessionContinuationActions({
+        terminalHandle,
+        tabs: scope.sessionTabs.filter(
+          (tab): tab is Extract<MobileSessionTab, { type: 'terminal' }> => tab.type === 'terminal'
+        ),
+        onDismiss: dismiss,
+        onOpen: openContinuation
+      }),
     continuationSheet: (
       <ActionSheetModal
         visible={continuationTarget != null}

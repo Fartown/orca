@@ -4,6 +4,7 @@ import type { EditorFileOperationProvenance } from '@/lib/editor-file-operation-
 import type { WorktreeOperationRoute } from '@/lib/worktree-operation-route'
 import {
   deriveLanArtifactShareRoot,
+  resolveDocPreviewShareTarget,
   resolveEditorFileShareTarget
 } from './lan-artifact-share-target'
 
@@ -105,5 +106,49 @@ describe('editor file share target', () => {
         operationProvenance: provenance({ executionHostId: null, runtimeEnvironmentId: null })
       })
     ).toEqual({ ok: false, reason: 'unknown-host' })
+  })
+})
+
+describe('document preview grant owner', () => {
+  it('keeps the minted runtime and root instead of resolving the currently selected workspace', () => {
+    const location = {
+      owner: {
+        kind: 'runtime' as const,
+        environmentId: 'ssh/orcad-a',
+        worktreeRoot: '/srv/repo',
+        worktreeSelector: '/srv/repo'
+      },
+      requestBase: '/srv/repo',
+      root: '/srv/repo/docs',
+      entryRelativePath: 'docs/report.html'
+    }
+    expect(resolveDocPreviewShareTarget(location, '/srv/repo/docs/report.html')).toEqual({
+      ok: true,
+      target: {
+        executionHostId: 'runtime:ssh%2Forcad-a',
+        workspaceRoot: '/srv/repo',
+        sourcePath: '/srv/repo/docs/report.html'
+      }
+    })
+  })
+  it('keeps a legacy SSH grant remote so an unsupported host never reads a local same-path file', () => {
+    expect(
+      resolveDocPreviewShareTarget(
+        {
+          owner: { kind: 'ssh', connectionId: 'old-host' },
+          requestBase: '/srv/repo',
+          root: '/srv/repo',
+          entryRelativePath: 'report.html'
+        },
+        '/srv/repo/report.html'
+      )
+    ).toEqual({
+      ok: true,
+      target: {
+        executionHostId: 'ssh:old-host',
+        workspaceRoot: '/srv/repo',
+        sourcePath: '/srv/repo/report.html'
+      }
+    })
   })
 })

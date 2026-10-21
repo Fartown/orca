@@ -1,7 +1,7 @@
 import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { runProcess } from '../child-process/run-process'
+import { runProcess } from '@orca/process-host'
 import { GOAL_AGENT_PROVIDERS, type GoalAgentFamily } from './goal-agent-provider'
 
 export type GoalAgentRunInput = {

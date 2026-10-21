@@ -1,104 +1,85 @@
+// @vitest-environment happy-dom
+import { renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { AiVaultSession } from '../../../../shared/ai-vault-types'
 
 const mocks = vi.hoisted(() => ({
-  target: null as null | { paneKey: string; worktreeId: string; tabId: string; leafId: string },
-  activateWorktree: vi.fn(),
-  focusPane: vi.fn(),
-  setActiveTabType: vi.fn(),
-  toastError: vi.fn()
+  activateAndRevealWorkspace: vi.fn<(workspaceId: string) => unknown>(),
+  toastError: vi.fn<(message: string) => void>(),
+  folderWorkspaces: new Array<{ id: string; projectGroupId: string; executionHostId: string }>()
 }))
 
-vi.mock('@/store', () => ({
-  useAppStore: Object.assign(vi.fn(), {
-    getState: () => ({ setActiveTabType: mocks.setActiveTabType })
-  })
-}))
 vi.mock('@/lib/worktree-activation', () => ({
-  activateAndRevealWorktree: mocks.activateWorktree
+  activateAndRevealWorkspace: mocks.activateAndRevealWorkspace
 }))
-vi.mock('@/lib/activate-tab-and-focus-pane', () => ({
-  activateTabAndFocusPane: mocks.focusPane
+vi.mock('@/lib/activate-tab-and-focus-pane', () => ({ activateTabAndFocusPane: vi.fn() }))
+vi.mock('@/lib/activate-ai-vault-structured-session', () => ({
+  activateAiVaultStructuredSession: vi.fn()
+}))
+vi.mock('@/lib/structured-agent-session-tab-activation', () => ({
+  findStructuredAgentSessionTab: vi.fn(() => null)
 }))
 vi.mock('sonner', () => ({ toast: { error: mocks.toastError } }))
-vi.mock('@/i18n/i18n', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  translate: (_key: string, fallback: string) => fallback
-}))
-vi.mock('./ai-vault-original-pane', () => ({
-  findOriginalAiVaultSessionPane: () => mocks.target
-}))
-
-import { jumpToAiVaultOriginalPane } from './ai-vault-original-pane-actions'
-
-beforeEach(() => {
-  vi.clearAllMocks()
-  mocks.target = null
-  mocks.activateWorktree.mockReturnValue(true)
-})
-
-describe('jumpToAiVaultOriginalPane', () => {
-  it('preserves the native worktree activation and exact pane focus sequence', () => {
-    mocks.target = {
-      paneKey: 'tab-1:leaf-1',
-      worktreeId: 'worktree-1',
-      tabId: 'tab-1',
-      leafId: 'leaf-1'
+vi.mock('@/store', () => {
+  const state = {
+    agentStatusByPaneKey: {},
+    retainedAgentsByPaneKey: {},
+    sleepingAgentSessionsByPaneKey: {},
+    tabsByWorktree: {},
+    terminalLayoutsByTabId: {},
+    unifiedTabsByWorktree: {},
+    get folderWorkspaces() {
+      return mocks.folderWorkspaces
     }
-
-    expect(jumpToAiVaultOriginalPane(session())).toBe('focused')
-    expect(mocks.activateWorktree).toHaveBeenCalledWith('worktree-1')
-    expect(mocks.setActiveTabType).toHaveBeenCalledWith('terminal', 'worktree-1')
-    expect(mocks.focusPane).toHaveBeenCalledWith('tab-1', 'leaf-1', {
-      flashFocusedPane: true,
-      scrollToBottomIfOutputSinceLastView: true
-    })
-  })
-
-  it('allows Issue lookup to suppress only the native missing-pane toast', () => {
-    expect(jumpToAiVaultOriginalPane(session(), { notifyWhenMissing: false })).toBe('missing')
-    expect(mocks.toastError).not.toHaveBeenCalled()
-
-    expect(jumpToAiVaultOriginalPane(session())).toBe('missing')
-    expect(mocks.toastError).toHaveBeenCalledWith('Original pane is no longer available.')
-  })
-
-  it('keeps the native unavailable-Workspace error and does not focus the pane', () => {
-    mocks.target = {
-      paneKey: 'tab-1:leaf-1',
-      worktreeId: 'worktree-1',
-      tabId: 'tab-1',
-      leafId: 'leaf-1'
-    }
-    mocks.activateWorktree.mockReturnValue(false)
-
-    expect(jumpToAiVaultOriginalPane(session())).toBe('workspace-unavailable')
-    expect(mocks.toastError).toHaveBeenCalledWith('Worktree is no longer available.')
-    expect(mocks.focusPane).not.toHaveBeenCalled()
-  })
-})
-
-function session(): AiVaultSession {
-  return {
-    id: 'local:codex:session-1',
-    executionHostId: 'local',
-    agent: 'codex',
-    sessionId: 'session-1',
-    title: 'Session',
-    cwd: '/workspace',
-    branch: null,
-    model: null,
-    filePath: '/sessions/session-1.jsonl',
-    codexHome: null,
-    createdAt: null,
-    updatedAt: null,
-    modifiedAt: '2026-08-29T00:00:00.000Z',
-    messageCount: 2,
-    totalTokens: 1,
-    previewMessages: [],
-    queuedMessageCount: 0,
-    subagentTranscriptCount: 0,
-    resumeCommand: 'codex resume session-1',
-    subagent: null
   }
+  return {
+    useAppStore: Object.assign((select: (s: typeof state) => unknown) => select(state), {
+      getState: () => state
+    })
+  }
+})
+
+import { useAiVaultOriginalPaneActions } from './ai-vault-original-pane-actions'
+
+function folder(executionHostId: string) {
+  return { id: 'folder-1', projectGroupId: 'group-1', executionHostId }
 }
+
+describe('jumpToWorktree', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mocks.folderWorkspaces = []
+  })
+
+  it('activates folder workspaces through the workspace activator', () => {
+    mocks.activateAndRevealWorkspace.mockReturnValue({ primaryTabId: null })
+    const { result } = renderHook(() => useAiVaultOriginalPaneActions())
+    result.current.jumpToWorktree('folder:folder-1')
+    expect(mocks.activateAndRevealWorkspace).toHaveBeenCalledWith('folder:folder-1')
+    expect(mocks.toastError).not.toHaveBeenCalled()
+  })
+
+  it('leaves a refused folder to the toast folder activation already showed', () => {
+    mocks.activateAndRevealWorkspace.mockReturnValue(false)
+    mocks.folderWorkspaces = [folder('local')]
+    const { result } = renderHook(() => useAiVaultOriginalPaneActions())
+    result.current.jumpToWorktree('folder:folder-1')
+    expect(mocks.toastError).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    ['folder:gone', []],
+    ['repo-1::/repo/gone', []],
+    // The same folder id on two hosts: activation cannot pick one and returns before any toast.
+    ['folder:folder-1', [folder('local'), folder('runtime:env-2')]]
+  ])('reports a workspace that is gone or has no single owner (%s)', (id, folders) => {
+    mocks.folderWorkspaces = folders
+    mocks.activateAndRevealWorkspace.mockReturnValue(false)
+    const { result } = renderHook(() => useAiVaultOriginalPaneActions())
+    result.current.jumpToWorktree(id)
+    expect(mocks.toastError).toHaveBeenCalledWith(
+      id.startsWith('folder:')
+        ? 'Folder workspace is no longer available.'
+        : 'Worktree is no longer available.'
+    )
+  })
+})

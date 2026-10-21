@@ -35,7 +35,7 @@ import {
   GoalVersionsResult
 } from '../../../shared/goals/goal-rpc-results'
 import { callRuntimeRpc } from '../runtime/runtime-rpc-client'
-import type { RuntimeClientTarget } from '../runtime/runtime-client-target'
+import type { RuntimeClientTarget } from '../../../shared/runtime-client-target'
 
 export class GoalRuntimeUnsupportedError extends Error {
   readonly code = 'goal_runtime_unsupported'

@@ -48,7 +48,7 @@ export async function openGoalDocument(
     host.kind === 'runtime'
       ? await resolveAbsoluteTabEntryReach({
           context: {
-            settings: { activeRuntimeEnvironmentId: host.environmentId },
+            target: { kind: 'environment', environmentId: host.environmentId },
             worktreeId,
             worktreePath,
             connectionId: getConnectionIdForFileFromState(state, worktreeId, filePath) ?? undefined

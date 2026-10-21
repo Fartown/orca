@@ -16,6 +16,7 @@ export type ConversationNameTab = Pick<
 >
 
 export type AgentRowConversationNameOptions = {
+  providerSessionId?: string
   userTitle?: string | null
   identityFallbackTitle?: string | null
 }
@@ -129,7 +130,12 @@ export function getAgentRowConversationName(
 ): string | null {
   const liveTitle =
     paneLiveTitle === undefined ? (tab.title?.trim() ?? '') : (paneLiveTitle?.trim() ?? '')
-  const slot = tab.aiVaultTitle
+  const slot =
+    options.providerSessionId !== undefined &&
+    (tab.aiVaultTitle?.sessionId !== options.providerSessionId ||
+      tab.aiVaultTitle.agent !== agentType)
+      ? undefined
+      : tab.aiVaultTitle
   const sessionNames = sessionNameSlotCandidates(slot)
   const resolved = resolveSessionDisplayTitle({
     ...sessionNames,

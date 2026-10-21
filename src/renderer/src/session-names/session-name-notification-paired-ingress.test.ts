@@ -1,11 +1,9 @@
 import { afterEach, expect, it, vi } from 'vitest'
 import { useAppStore } from '@/store'
-import {
-  applyWebSessionTabsSnapshot,
-  applyWebSessionTabsStorePatch,
-  decideWebSessionTabsSnapshot,
-  resetWebSessionTabsSnapshotFreshnessForTests
-} from '../runtime/web-session-tabs-sync'
+import { applyWebSessionTabsSnapshot } from '../runtime/web-session-tabs-sync/snapshot-api'
+import { applyWebSessionTabsStorePatch } from '../runtime/web-session-tabs-sync/store-patch'
+import { decideWebSessionTabsSnapshot } from '../runtime/web-session-tabs-sync/tracking-decisions'
+import { resetWebSessionTabsSnapshotFreshnessForTests } from '../runtime/web-session-tabs-sync/tracking-lifecycle'
 import type { RuntimeMobileSessionTabsResult } from '../../../shared/runtime-types'
 import { LEAF } from './session-name-binding-test-fixture'
 

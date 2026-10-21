@@ -1,18 +1,15 @@
+import { sameAgentStatusTerminalOwner } from '../../../../shared/agent-status-terminal-owner'
 import type { AppState } from '../types'
-import {
-  sessionNameIdentityReplaced,
-  sessionNameStateStartedAt
-} from '../../../../shared/session-names/session-name-history'
+import * as names from '../../../../shared/session-names/session-name-history'
 import { resolveAgentStatusLiveEntryMainAgent } from './agent-status-live-entry-main-agent'
-import { resolveAgentStatusLiveEntryStateHistory } from './agent-status-live-entry-state-history'
-import type {
-  MigrationUnsupportedPtyEntry,
-  AgentStatusEntry
+import { resolveAgentStatusLiveEntryStateHistory } from '../../../../shared/agent-status-live-entry-state-history'
+import {
+  pickHostTurnEnd,
+  type MigrationUnsupportedPtyEntry,
+  type AgentStatusEntry
 } from '../../../../shared/agent-status-types'
 import {
   agentProviderSessionsEqual,
-  getAgentResumeArgv,
-  isResumableTuiAgent,
   type AgentProviderSessionMetadata,
   type SleepingAgentLaunchConfig,
   type SleepingAgentSessionRecord
@@ -33,6 +30,11 @@ import { findAgentPaneWorktreeId, getTabIdFromPaneKey } from './agent-status-pan
 import { mergeCurrentOrchestrationContext } from './agent-status-orchestration-context'
 import { deriveAgentStatusLiveFacts } from './agent-status-live-facts'
 import { liveEntryChildFields } from './agent-status-live-entry-children'
+import {
+  canReuseStatusProviderSession,
+  recordLaunchConfigForStatus,
+  statusRetainsResumableIdentity
+} from '../../../../shared/agent-resume-record-from-status'
 
 export type AgentStatusLiveEntryBuild = {
   entry: AgentStatusEntry
@@ -81,7 +83,7 @@ export function buildAgentStatusLiveEntry(
   if (existing && updatedAt < existing.updatedAt && !timing?.allowOlderTimestamp) {
     return { entry: null, reason: 'stale' }
   }
-  const sessionNameIdentityChanged = sessionNameIdentityReplaced(existing, payload, metadata)
+  const sessionNameIdentityChanged = names.sessionNameIdentityReplaced(existing, payload, metadata)
   const { history, lastCompletedAssistantMessage, stateObservedAt } =
     resolveAgentStatusLiveEntryStateHistory(
       existing,
@@ -90,14 +92,19 @@ export function buildAgentStatusLiveEntry(
       sessionNameIdentityChanged
     )
   const identity = resolveAgentStatusIdentity({
-    existing: existing
-      ? {
-          agentType: existing.agentType,
-          state: existing.state,
-          updatedAt: existing.updatedAt,
-          restoredUnconfirmed: existing.restoredUnconfirmed
+    existing:
+      existing &&
+      sameAgentStatusTerminalOwner(
+        { connectionId: existing.connectionId ?? null, worktreeId: existing.worktreeId },
+        {
+          connectionId:
+            (routing?.connectionId === undefined ? existing.connectionId : routing.connectionId) ??
+            null,
+          worktreeId: routing?.worktreeId ?? existing.worktreeId
         }
-      : undefined,
+      )
+        ? existing
+        : undefined,
     incoming: payload.agentType,
     now: updatedAt
   })
@@ -115,32 +122,30 @@ export function buildAgentStatusLiveEntry(
   const promptInteractionKey =
     payload.promptInteractionKey ??
     (payload.prompt === existing?.prompt ? existing?.promptInteractionKey : undefined)
-  const stateStartedAt =
-    (metadata?.structuredHostOwned
-      ? timing?.stateStartedAt
-      : sessionNameStateStartedAt(
-          existing,
-          payload.agentType,
-          metadata?.providerSession,
-          payload.state,
-          timing?.stateStartedAt,
-          updatedAt
-        )) ??
-    (commandCodeNewTurn || sessionNameIdentityChanged
-      ? updatedAt
-      : existing && existing.state === payload.state
-        ? existing.stateStartedAt
-        : updatedAt)
+  const stateStartedAt = names.sessionNameEntryStateStartedAt(
+    existing,
+    payload,
+    metadata,
+    timing?.stateStartedAt,
+    updatedAt,
+    commandCodeNewTurn || sessionNameIdentityChanged
+  )
   // Why: a writer with no turn clock (an OSC repaint) keeps the host's stamp only within one state;
   // a state change it cannot date must not inherit another turn's start.
   const turnStartedAt =
     timing?.turnStartedAt ??
     (existing && existing.state === payload.state ? existing.turnStartedAt : undefined)
+  // Why: the end stamp and its disposition are one host fact, inherited together.
+  const turnEnd =
+    timing?.turnEndedAt !== undefined || timing?.turnEndDisposition !== undefined
+      ? pickHostTurnEnd(timing)
+      : existing && existing.state === payload.state
+        ? pickHostTurnEnd(existing)
+        : {}
   if (
     existing &&
     shouldSuppressInheritedTerminalStatus({
-      inheritedFromActivePane: identity.inheritedFromActivePane,
-      incomingState: payload.state
+      inheritedFromActivePane: identity.inheritedFromActivePane
     })
   ) {
     return { entry: null, reason: 'suppressed-inherited-terminal' }
@@ -159,9 +164,10 @@ export function buildAgentStatusLiveEntry(
     payloadMergedOrchestration ??
     runtimeMergedOrchestration ??
     (payload.state === 'done' ? existing?.orchestration : undefined)
-  const canReuseExistingProviderSession =
-    existing?.agentType === identity.agentType &&
-    (existing.state !== 'done' || payload.state === 'done')
+  const canReuseExistingProviderSession = canReuseStatusProviderSession(existing, {
+    agentType: identity.agentType,
+    state: payload.state
+  })
   const providerSession =
     metadata?.providerSession ??
     (canReuseExistingProviderSession ? existing.providerSession : undefined)
@@ -191,22 +197,16 @@ export function buildAgentStatusLiveEntry(
   })
   const matchedRegistryLaunchConfig = registryMatched ? registryEntry?.launchConfig : undefined
   const existingSleepingRecord = state.sleepingAgentSessionsByPaneKey[paneKey]
-  const retainsResumableRecoveryIdentity =
-    payload.state === 'done' &&
-    isResumableTuiAgent(identity.agentType) &&
-    providerSession !== undefined &&
-    getAgentResumeArgv(identity.agentType, providerSession) !== null
+  const retainsResumableRecoveryIdentity = statusRetainsResumableIdentity(
+    { agentType: identity.agentType, state: payload.state },
+    providerSession
+  )
   const matchedSleepingLaunchConfig =
-    (payload.state !== 'done' || retainsResumableRecoveryIdentity) &&
-    existingSleepingRecord?.launchConfig &&
-    existingSleepingRecord.agent === identity.agentType &&
-    providerSession &&
-    agentProviderSessionsEqual(
-      identity.agentType,
-      existingSleepingRecord.providerSession,
-      providerSession
-    )
-      ? existingSleepingRecord.launchConfig
+    payload.state !== 'done' || retainsResumableRecoveryIdentity
+      ? recordLaunchConfigForStatus(existingSleepingRecord, {
+          agentType: identity.agentType,
+          providerSession
+        })
       : undefined
   const launchConfigSource =
     (payload.state !== 'done' && !providerSessionChanged && metadata?.launchToken
@@ -215,6 +215,8 @@ export function buildAgentStatusLiveEntry(
     matchedRegistryLaunchConfig ??
     matchedSleepingLaunchConfig
   const mainAgent = resolveAgentStatusLiveEntryMainAgent(existing, payload, identity.agentType)
+  const programStatus =
+    payload.programStatus === undefined ? existing?.programStatus : payload.programStatus
   const entry: AgentStatusEntry = {
     state: payload.state,
     workingMode: payload.workingMode,
@@ -229,6 +231,7 @@ export function buildAgentStatusLiveEntry(
     stateStartedAt,
     stateObservedAt,
     ...(turnStartedAt !== undefined ? { turnStartedAt } : {}),
+    ...turnEnd,
     agentType: identity.agentType,
     model:
       payload.model ?? (existing?.agentType === identity.agentType ? existing.model : undefined),
@@ -269,6 +272,7 @@ export function buildAgentStatusLiveEntry(
     ...(payload.restoredUnconfirmed ? { restoredUnconfirmed: true } : {}),
     acceptedStatusSeq: (existing?.acceptedStatusSeq ?? 0) + 1,
     ...(payload.observation ? { observation: payload.observation } : {}),
+    ...(programStatus ? { programStatus } : {}),
     interrupted: payload.interrupted,
     sessionBoundary:
       payload.sessionBoundary ??

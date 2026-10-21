@@ -56,13 +56,14 @@ export const copyTerminalPaneMenuPaneId = async (
 export const copyTerminalPaneMenuTerminalId = async (
   pane: ManagedPane | null,
   tabId: string,
-  worktreeId: string
+  worktreeId: string,
+  ptyId: string | null
 ): Promise<void> => {
   if (!pane) {
     return
   }
   try {
-    await copyWorkspaceTerminalHandle(worktreeId, tabId, pane.leafId)
+    await copyWorkspaceTerminalHandle(worktreeId, tabId, pane.leafId, ptyId)
     toast.success(
       translate(
         'auto.components.terminal.pane.use.terminal.pane.context.menu.terminal.id.copied',

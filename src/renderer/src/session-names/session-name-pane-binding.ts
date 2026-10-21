@@ -2,6 +2,7 @@ import type { TerminalPaneLayoutNode } from '../../../shared/terminal-tab-types'
 import { parsePaneKey } from '../../../shared/stable-pane-id'
 import type { AppState } from '../store/types'
 import type { AiVaultTitleRequest } from '../lib/ai-vault-tab-title-requests'
+import type { AgentType } from '../../../shared/agent-status-types'
 
 function containsLeaf(node: TerminalPaneLayoutNode, leaf: string): boolean {
   return node.type === 'leaf'
@@ -11,11 +12,18 @@ function containsLeaf(node: TerminalPaneLayoutNode, leaf: string): boolean {
 
 export function sessionNamePaneWasReplaced(
   state: AppState,
-  request: Pick<AiVaultTitleRequest, 'tabId' | 'paneKey' | 'agent' | 'providerSession'>
+  request: Pick<AiVaultTitleRequest, 'tabId' | 'paneKey' | 'providerSession'> & {
+    agent: AgentType
+  },
+  requireFocusedPane = true
 ): boolean {
   const layout = state.terminalLayoutsByTabId[request.tabId]
   const leaf = request.paneKey && parsePaneKey(request.paneKey)?.leafId
-  if (layout?.activeLeafId && request.paneKey !== `${request.tabId}:${layout.activeLeafId}`) {
+  if (
+    requireFocusedPane &&
+    layout?.activeLeafId &&
+    request.paneKey !== `${request.tabId}:${layout.activeLeafId}`
+  ) {
     return true
   }
   if (layout?.root && leaf && !containsLeaf(layout.root, leaf)) {

@@ -1,13 +1,16 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { X, Minimize2, Pin } from 'lucide-react'
-import { stripLeadingAgentTitleDecoration } from '../../../../shared/agent-title-decoration'
-import { resolveTerminalTabTitle } from '../../../../shared/tab-title-resolution'
-import { useTabAgent } from '@/lib/use-tab-agent'
+import {
+  useSessionTabTitles,
+  type SessionTabTitleModel as SortableTabModel
+} from '../../session-names/use-session-tab-titles'
+import { getAgentLabel } from '@/lib/agent-catalog'
+import { basename } from '@/lib/path'
 import { isImeCompositionKeyDown } from '@/lib/ime-composition-keyboard-event'
 import { Input } from '@/components/ui/input'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import type { TerminalTab } from '../../../../shared/terminal-tab-types'
+import { TabHoverCard } from './TabHoverCard'
+import type { TerminalAgent } from '../../../../shared/terminal-agent'
 import type { TabDragItemData } from '../tab-group/useTabDragSplit'
 import { useAppStore } from '../../store'
 import {
@@ -20,21 +23,27 @@ import {
 import { preventMiddleButtonDefault } from './middle-button-default-guard'
 import { useSortableTabRename } from './use-sortable-tab-rename'
 import { SortableTabContextMenu } from './SortableTabContextMenu'
+import { useSortableTabContextMenu } from './use-sortable-tab-context-menu'
 import { translate } from '@/i18n/i18n'
 import { TAB_LABEL_WIDTH_CLASSES } from './tab-width-rules'
 import { useTabStripSlotProps } from './use-tab-strip-slot-props'
 import { useTabStripPointerActivation } from './tab-strip-pointer-activation'
-import { TabCloseTooltip } from './TabCloseTooltip'
 import { TerminalTabLeadingIcon } from './TerminalTabLeadingIcon'
 import {
   isTerminalTabActivityLive,
-  resolveTerminalTabActivityStatus,
   terminalTabHasUnreadActivity
 } from './terminal-tab-activity-status'
+import { useTerminalTabActivity } from './use-terminal-tab-activity'
 import { CLOSE_ALL_CONTEXT_MENUS_EVENT } from '@/lib/close-all-context-menus'
+import type { NativeChatTabSession } from './tab-session-history-switch'
+import type { StructuredChatTabNamingFailure } from '@/runtime/structured-conversation-name'
+import { useNativeChatNamingFailure } from './use-native-chat-naming-failure'
+import { NativeChatNamingErrorBlock, NativeChatNamingFailedDialog } from './NativeChatNamingFailure'
 
-type SortableTabProps = {
-  tab: TerminalTab
+export type SortableTabProps = {
+  tab: SortableTabModel
+  /** The tab's agent, resolved by the caller from its own source of truth (pane signals or the chat's provider). */
+  agent: TerminalAgent | null
   unifiedTabId: string
   groupId: string
   tabCount: number
@@ -48,6 +57,7 @@ type SortableTabProps = {
   onCloseOthers: (tabId: string) => void
   onCloseToRight: (tabId: string) => void
   onCloseToLeft: (tabId: string) => void
+  onCloseSplitPane?: () => void
   onSetCustomTitle: (tabId: string, title: string | null) => void
   onSetTabColor: (tabId: string, color: string | null) => void
   onTogglePin: () => void
@@ -62,12 +72,15 @@ type SortableTabProps = {
   /** Toggle the tab between terminal and native chat view. */
   onToggleViewMode?: () => void
   canSplitTerminal?: boolean
-  /** Set only for a native chat tab: the chat session it shows. */
-  structuredSessionId?: string
+  /** Set only for a native chat tab. */
+  nativeChat?: NativeChatTabSession
+  /** A native chat whose generated name failed, unless the user named the tab. */
+  namingFailure?: StructuredChatTabNamingFailure | null
 }
 
 export default function SortableTab({
   tab,
+  agent: tabAgent,
   unifiedTabId,
   groupId,
   tabCount,
@@ -81,6 +94,7 @@ export default function SortableTab({
   onCloseOthers,
   onCloseToRight,
   onCloseToLeft,
+  onCloseSplitPane,
   onSetCustomTitle,
   onSetTabColor,
   onTogglePin,
@@ -92,8 +106,10 @@ export default function SortableTab({
   isChatView = false,
   onToggleViewMode,
   canSplitTerminal = true,
-  structuredSessionId
+  nativeChat,
+  namingFailure
 }: SortableTabProps): React.JSX.Element {
+  const naming = useNativeChatNamingFailure(namingFailure)
   // Why: agent-completion unread exists even with terminal-attention off; collapse both sources to one primitive so unrelated tabs don't re-render.
   const hasUnreadActivity = useAppStore((s) =>
     terminalTabHasUnreadActivity({
@@ -102,39 +118,12 @@ export default function SortableTab({
       unreadAgentCompletionPanes: s.unreadAgentCompletionPanes
     })
   )
-  // Why: resolver returns a primitive so unrelated agent updates can't repaint this tab (pane bucketing memoized per snapshot).
-  const activityStatus = useAppStore((s) =>
-    resolveTerminalTabActivityStatus({
-      tab,
-      agentStatusByPaneKey: s.agentStatusByPaneKey,
-      agentStatusEpoch: s.agentStatusEpoch,
-      runtimePaneTitlesByTabId: s.runtimePaneTitlesByTabId,
-      ptyIdsByTabId: s.ptyIdsByTabId,
-      terminalLayout: s.terminalLayoutsByTabId?.[tab.id]
-    })
-  )
+  const { activityStatus, programProgress } = useTerminalTabActivity(tab)
 
   // Why: shellOverride is stamped at create time, so changing the default shell later won't repaint existing tabs.
   const shellForIcon = tab.shellOverride
 
-  // Why: use hook status + title evidence so the icon reflects the harness running now, not just the launch command.
-  const tabAgent = useTabAgent(tab)
-  const generatedTitlesEnabled = useAppStore((s) => s.settings?.tabAutoGenerateTitle === true)
-  const tabTitle = resolveTerminalTabTitle(
-    // Why 'dsb' is skipped: a manually started agent has no Orca launcher, so it names no launch agent.
-    {
-      ...tab,
-      launchAgent: tab.launchAgent ?? (tabAgent === 'dsb' ? undefined : tabAgent) ?? undefined
-    },
-    generatedTitlesEnabled,
-    tab.title
-  )
-
-  // Why: with a provider icon shown, strip the agent's own leading glyph so the tab doesn't show two icons for one agent.
-  const nativeTitle =
-    tab.aiVaultTitle?.providerName?.kind === 'named' ? tab.aiVaultTitle.providerName.title : null
-  const displayTitle =
-    nativeTitle === tabTitle || !tabAgent ? tabTitle : stripLeadingAgentTitleDecoration(tabTitle)
+  const { tabTitle, displayTitle } = useSessionTabTitles(tab, tabAgent)
 
   const { attributes, listeners, setNodeRef } = useSortable({
     id: tab.id,
@@ -143,7 +132,12 @@ export default function SortableTab({
   })
 
   // Why: no transform/transition/opacity so tabs stay anchored during drag, only the insertion bar moves (see TabBar.tsx).
-  const [menuOpen, setMenuOpen] = useState(false)
+  const {
+    open: menuOpen,
+    openingId,
+    onOpenChange: setMenuOpen,
+    onComplete
+  } = useSortableTabContextMenu()
   const [menuPoint, setMenuPoint] = useState({ x: 0, y: 0 })
   const {
     isEditing,
@@ -167,7 +161,7 @@ export default function SortableTab({
     const closeMenu = (): void => setMenuOpen(false)
     window.addEventListener(CLOSE_ALL_CONTEXT_MENUS_EVENT, closeMenu)
     return () => window.removeEventListener(CLOSE_ALL_CONTEXT_MENUS_EVENT, closeMenu)
-  }, [])
+  }, [setMenuOpen])
 
   // Why: webview clicks miss the renderer pointerdown Radix uses for outside-click, so dismiss on window blur instead.
   useEffect(() => {
@@ -177,7 +171,7 @@ export default function SortableTab({
     const dismiss = (): void => setMenuOpen(false)
     window.addEventListener('blur', dismiss)
     return () => window.removeEventListener('blur', dismiss)
-  }, [menuOpen])
+  }, [menuOpen, setMenuOpen])
 
   // Why: while editing, drop drag listeners so typing can't start a drag; attributes stay spread to keep dnd-kit a11y.
   const dragListeners = isEditing ? undefined : listeners
@@ -249,6 +243,7 @@ export default function SortableTab({
         shell={shellForIcon}
         showUnreadActivity={showUnreadActivity}
         isActive={isActive}
+        progress={programProgress}
       />
       {isPinned && !isEditing && (
         <Pin className="mr-1 size-3 shrink-0 text-muted-foreground" aria-hidden />
@@ -294,21 +289,8 @@ export default function SortableTab({
           className="mr-1 h-5 min-w-[72px] flex-1 px-1 py-0 text-xs"
           spellCheck={false}
         />
-      ) : isEditing || menuOpen ? (
-        <span className={`${TAB_LABEL_WIDTH_CLASSES} mr-1`}>{displayTitle}</span>
       ) : (
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <span className={`${TAB_LABEL_WIDTH_CLASSES} mr-1`}>{displayTitle}</span>
-          </TooltipTrigger>
-          <TooltipContent
-            side="bottom"
-            sideOffset={6}
-            className="max-w-80 whitespace-normal break-words text-left"
-          >
-            {displayTitle}
-          </TooltipContent>
-        </Tooltip>
+        <span className={`${TAB_LABEL_WIDTH_CLASSES} mr-1`}>{displayTitle}</span>
       )}
       {tab.color && !isEditing && (
         <span
@@ -335,40 +317,38 @@ export default function SortableTab({
         </button>
       )}
       {!isEditing && !isPinned && (
-        <TabCloseTooltip>
-          <button
-            className={`relative z-10 flex items-center justify-center w-4 h-4 rounded-sm shrink-0 ${
-              isActive
-                ? 'text-muted-foreground hover:text-foreground hover:bg-muted focus-visible:text-foreground focus-visible:bg-muted'
-                : 'text-transparent group-hover:text-muted-foreground hover:!text-foreground hover:!bg-muted focus-visible:!text-foreground focus-visible:!bg-muted'
-            }`}
-            // Why: stable accessible name lets E2E drive the real close path instead of calling the store.
-            aria-label={translate(
-              'auto.components.tab.bar.SortableTab.6df69d9388',
-              'Close tab {{value0}}',
-              { value0: tabTitle }
-            )}
-            type="button"
-            data-tab-close-button="true"
-            onPointerDown={(e) => {
-              if (e.button === 0) {
-                e.stopPropagation()
-              }
-            }}
-            onMouseDown={(e) => {
-              if (e.button === 0) {
-                e.stopPropagation()
-              }
-            }}
-            onClick={(e) => {
-              e.preventDefault()
+        <button
+          className={`relative z-10 flex items-center justify-center w-4 h-4 rounded-sm shrink-0 ${
+            isActive
+              ? 'text-muted-foreground hover:text-foreground hover:bg-muted focus-visible:text-foreground focus-visible:bg-muted'
+              : 'text-transparent group-hover:text-muted-foreground hover:!text-foreground hover:!bg-muted focus-visible:!text-foreground focus-visible:!bg-muted'
+          }`}
+          // Why: stable accessible name lets E2E drive the real close path instead of calling the store.
+          aria-label={translate(
+            'auto.components.tab.bar.SortableTab.6df69d9388',
+            'Close tab {{value0}}',
+            { value0: tabTitle }
+          )}
+          type="button"
+          data-tab-close-button="true"
+          onPointerDown={(e) => {
+            if (e.button === 0) {
               e.stopPropagation()
-              onClose(tab.id)
-            }}
-          >
-            <X className="w-3 h-3" />
-          </button>
-        </TabCloseTooltip>
+            }
+          }}
+          onMouseDown={(e) => {
+            if (e.button === 0) {
+              e.stopPropagation()
+            }
+          }}
+          onClick={(e) => {
+            e.preventDefault()
+            e.stopPropagation()
+            onClose(tab.id)
+          }}
+        >
+          <X className="w-3 h-3" />
+        </button>
       )}
     </div>
   )
@@ -378,16 +358,47 @@ export default function SortableTab({
       <div
         {...slotProps}
         onContextMenuCapture={(event) => {
-          event.preventDefault()
-          window.dispatchEvent(new Event(CLOSE_ALL_CONTEXT_MENUS_EVENT))
-          setMenuPoint({ x: event.clientX, y: event.clientY })
-          setMenuOpen(true)
+          // The hover card is portalled: React still routes its events through this slot.
+          if (event.target instanceof Node && event.currentTarget.contains(event.target)) {
+            event.preventDefault()
+            window.dispatchEvent(new Event(CLOSE_ALL_CONTEXT_MENUS_EVENT))
+            setMenuPoint({ x: event.clientX, y: event.clientY })
+            setMenuOpen(true)
+          }
         }}
       >
-        {tabRoot}
+        {isEditing || menuOpen ? (
+          tabRoot
+        ) : (
+          <TabHoverCard
+            title={displayTitle}
+            programName={
+              tabAgent
+                ? getAgentLabel(tabAgent)
+                : shellForIcon
+                  ? basename(shellForIcon)
+                  : translate('tabHoverCard.terminal', 'Terminal')
+            }
+            icon={
+              <TerminalTabLeadingIcon
+                agent={tabAgent}
+                activityStatus={activityStatus}
+                shell={shellForIcon}
+                showUnreadActivity={false}
+                isActive
+                progress={programProgress}
+              />
+            }
+            alert={naming ? <NativeChatNamingErrorBlock naming={naming} /> : undefined}
+          >
+            {tabRoot}
+          </TabHoverCard>
+        )}
       </div>
 
       <SortableTabContextMenu
+        sessionSwitchOpening={openingId}
+        onSessionSwitchComplete={onComplete}
         tab={tab}
         unifiedTabId={unifiedTabId}
         groupId={groupId}
@@ -404,6 +415,7 @@ export default function SortableTab({
         onCloseOthers={onCloseOthers}
         onCloseToRight={onCloseToRight}
         onCloseToLeft={onCloseToLeft}
+        onCloseSplitPane={onCloseSplitPane}
         onRenameOpen={handleRenameOpen}
         onSetTabColor={onSetTabColor}
         onTogglePin={onTogglePin}
@@ -411,8 +423,9 @@ export default function SortableTab({
         isChatView={isChatView}
         onToggleViewMode={onToggleViewMode}
         canSplitTerminal={canSplitTerminal}
-        structuredSessionId={structuredSessionId}
+        nativeChat={nativeChat}
       />
+      {naming ? <NativeChatNamingFailedDialog naming={naming} chatName={displayTitle} /> : null}
     </>
   )
 }

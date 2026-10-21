@@ -164,3 +164,12 @@ external_ids: []
 - 验证证据：`validate_task.py` 结构校验通过；codebase-research 文档校验脚本通过；未运行代码测试。
 - 未解决问题：无。
 - 下一步：用户二次确认方案后登记 `config/fork-features.jsonc` 条目与策略白名单，进入实现；实现时补 `tests/cases`（TC-501 起）。
+
+## 2026-10-21 上游 orcad 迁移（implementing）
+
+- 本轮目标：同步上游 bbc8303b47f，保留 remote-workspace-absolute-path-open 能力。
+- 完成内容：按用户确认迁移旧 SSH relay 接缝至执行端 orcad；注册表随接口移动更新，功能目标不变。
+- 代码或文档变更：入口、服务生命周期、主机归属及原有测试随上游结构迁移；旧 relay 专用测试由 runtime 对应测试替代。
+- 验证证据：首轮类型检查及冲突记录位于 .docs/upstream-sync-ui-validation/2026-10-21/evidence/；当前尚未通过验收。
+- 未解决问题：类型检查、注册检查、功能回归和本地及 SSH 实机验收仍在进行。
+- 下一步：完成上述门禁后记录最终证据，再提交同步合并。

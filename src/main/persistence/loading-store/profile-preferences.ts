@@ -1,9 +1,14 @@
 import type { GlobalSettings } from '../../../shared/global-settings-types'
+import { retireAtRestCommandSettings } from '../../native-chat/agent-session-wire/at-rest-command-context'
 import type { OnboardingChecklistState } from '../../../shared/onboarding-state-types'
 import type { PersistedState } from '../../../shared/persisted-state-types'
 import { getDefaultOnboardingState } from '../../../shared/onboarding-defaults'
 import type { FeatureInteractionId } from '../../../shared/feature-interactions'
-import { parseNativeChatUpgradeTipAudience } from '../../../shared/native-chat-upgrade-tip-audience'
+import {
+  nativeChatUpgradeTipVariant,
+  parseNativeChatUpgradeTipAudience,
+  type NativeChatUpgradeTipVariant
+} from '../../../shared/native-chat-upgrade-tip-audience'
 import {
   updateSettings as updateSettingsOperation,
   type SettingsMutationOperations
@@ -113,6 +118,7 @@ export class ProfilePreferences {
             }
           }
           runtime.state.settings = restoredSettings
+          retireAtRestCommandSettings(updateKeys)
         }
       }
     })
@@ -167,12 +173,13 @@ export class ProfilePreferences {
     return this.getOnboarding()
   }
 
-  /** Fails closed: a missing or damaged record reads as not in the audience. */
-  isInNativeChatUpgradeTipAudience(): boolean {
-    const audience = parseNativeChatUpgradeTipAudience(
-      this[profilePreferencesContext].runtime.state.nativeChatUpgradeTipAudience
+  /** Fails closed: a missing or damaged record reads as no tip. */
+  getNativeChatUpgradeTipVariant(): NativeChatUpgradeTipVariant {
+    return nativeChatUpgradeTipVariant(
+      parseNativeChatUpgradeTipAudience(
+        this[profilePreferencesContext].runtime.state.nativeChatUpgradeTipAudience
+      )
     )
-    return audience?.membership === 'eligible'
   }
 
   getGitHubCache(): PersistedState['githubCache'] {
@@ -243,13 +250,4 @@ export function getFeatureInteractionOperations(
     notifyUIChanged: () => notifyUIChanged(owner),
     getUI: () => owner.getUI()
   }
-}
-
-export function installProfilePreferencesContext(
-  target: ProfilePreferences,
-  source: ProfilePreferences
-): void {
-  Object.defineProperty(target, profilePreferencesContext, {
-    value: source[profilePreferencesContext]
-  })
 }
