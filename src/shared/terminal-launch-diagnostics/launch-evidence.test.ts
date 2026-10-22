@@ -123,12 +123,12 @@ describe('terminal launch diagnostic allowlist', () => {
     }
     expect(launchCandidateEvidence(input, state)).toMatchObject({
       candidateCount: 1,
-      candidate0HasLivePty: false,
+      candidate0HasRendererPty: false,
       candidate0State: 'working'
     })
     expect(
       launchCandidateEvidence(input, { ...state, ptyIdsByTabId: { tab: ['pty'] } })
-    ).toMatchObject({ candidate0HasLivePty: true })
+    ).toMatchObject({ candidate0HasRendererPty: true })
   })
 
   it('makes candidate truncation explicit and never logs arbitrary status text', () => {

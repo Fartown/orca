@@ -89,6 +89,8 @@ export function launchEvidence(input: unknown): LaunchEvidence {
     candidatePtyRef: launchReference(launchField(input, 'candidatePtyId')),
     isReattach: launchField(input, 'isReattach') === true,
     providerRef: providerReference(agent, provider),
+    providerKeyRef: launchReference(launchField(provider, 'key')),
+    providerTranscriptRef: launchReference(launchField(provider, 'transcriptPath')),
     connectionRef: launchReference(launchField(input, 'connectionId')),
     requestRef: launchReference(launchField(input, 'requestId')),
     hasCommand: typeof launchField(input, 'command') === 'string',
@@ -166,7 +168,7 @@ export function launchCandidateEvidence(input: unknown, state: unknown): LaunchE
         : undefined
     evidence[`candidate${index}PaneRef`] = launchReference(paneKey)
     evidence[`candidate${index}TabRef`] = tabReference(tabId)
-    evidence[`candidate${index}HasLivePty`] = Array.isArray(liveIds) && liveIds.length > 0
+    evidence[`candidate${index}HasRendererPty`] = Array.isArray(liveIds) && liveIds.length > 0
     const status = launchField(entry, 'state')
     evidence[`candidate${index}State`] = ['working', 'done', 'waiting', 'blocked'].includes(
       String(status)

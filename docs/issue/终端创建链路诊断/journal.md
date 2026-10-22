@@ -9,15 +9,16 @@ updated: 2026-10-22
 
 ## 1. 关键文档链接
 
-| 类型 | 文档 | 状态 | 说明 |
-| --- | --- | --- | --- |
-| requirement | [需求](requirements/requirement.md) | ready | REQ-801～803 |
-| research | [原版覆盖审计](research/终端创建日志原版覆盖审计.md) | ready | 当前分发器与原诊断版的缺口 |
-| design | - | not-required | 不改 UI |
-| solution | - | not-required | 本轮只加观察性日志，不进入历史故障修复方案阶段 |
-| test-case | [测试规格](tests/cases/launch-diagnostics.md) | ready | TC-801～803 |
-| test-run | [提交前复核](tests/runs/2026-10-20-提交前复核.md) | completed | 请求摘要红绿回归及本地门禁，不代表部署验收 |
-| test-run | [本地验证](tests/runs/2026-10-09-local-diagnostics.md) | completed | 代码与文件写入验证，未部署 |
+| 类型        | 文档                                                   | 状态         | 说明                                           |
+| ----------- | ------------------------------------------------------ | ------------ | ---------------------------------------------- |
+| requirement | [需求](requirements/requirement.md)                    | ready        | REQ-801～803                                   |
+| research    | [原版覆盖审计](research/终端创建日志原版覆盖审计.md)   | ready        | 当前分发器与原诊断版的缺口                     |
+| design      | -                                                      | not-required | 不改 UI                                        |
+| solution    | -                                                      | not-required | 本轮只加观察性日志，不进入历史故障修复方案阶段 |
+| test-case   | [测试规格](tests/cases/launch-diagnostics.md)          | ready        | TC-801～803                                    |
+| test-run    | [提交前复核](tests/runs/2026-10-20-提交前复核.md)      | completed    | 请求摘要红绿回归及本地门禁，不代表部署验收     |
+| test-run    | [隔离双端验收](tests/runs/2026-10-22-隔离双端验收.md)  | completed    | 本地、paired、SSH 真实日志链；不代表生产部署   |
+| test-run    | [本地验证](tests/runs/2026-10-09-local-diagnostics.md) | completed    | 代码与文件写入验证，未部署                     |
 
 ## 2. 决策点记录
 
@@ -55,7 +56,7 @@ updated: 2026-10-22
 - 本轮目标：补齐原诊断版本并推进合入，不操作用户运行的两端应用。
 - 完成内容：对照当前 WebSocket 分发器发现 streaming-unary 漏记；加入同一日志包装，显式 AI Vault origin、返回主机 Tab 关联、placement/operation/intent 摘要、可见列表与持久绑定差异及 daemon readiness；保留上游新 stable-pane admission，不恢复旧创建逻辑。
 - 代码或文档变更：原诊断模块与接缝、覆盖审计、对应隐私和关联回归；原提交已保留 backup 分支。
-- 验证证据：第一轮完整类型检查通过；11 文件 91 项定向及既有分发/历史恢复回归通过。真实应用和最终门禁尚在执行，不宣称部署生效。
+- 验证证据：[隔离双端验收](tests/runs/2026-10-22-隔离双端验收.md)：完整类型检查、21 文件 131 项回归及隐藏本地/paired/SSH 2 项实机通过；功能登记、文档、架构和本功能增量质量通过。完整 fork 的既有移动端穷尽性错误独立处理，不宣称所有门禁或部署已完成。
 - 未解决问题：历史 19:12 创建入口仍未知；生产部署不在本轮授权范围。
 - 下一步：完成隔离本地/paired/SSH 验收与门禁，推送 PR 并等待必需检查后合入。
 

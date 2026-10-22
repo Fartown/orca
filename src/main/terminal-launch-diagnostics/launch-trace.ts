@@ -20,6 +20,14 @@ const METHODS = new Set([
   'terminal.restart'
 ])
 
+type LaunchCaller = {
+  clientId?: string
+  connectionId?: string
+  clientKind?: string
+  pairedDeviceId?: string
+  pairedDeviceParentId?: string
+}
+
 export async function traceTerminalPtyAdmission<T>(
   input: unknown,
   invoke: () => Promise<T>
@@ -66,7 +74,7 @@ export async function traceTerminalClaimOwnerLiveness(
 
 export async function traceTerminalLaunchRpc<T>(
   request: { method: string; id: string; params?: unknown },
-  caller: { clientId?: string; connectionId?: string; clientKind?: string } | undefined,
+  caller: LaunchCaller | undefined,
   invoke: () => Promise<T>,
   transport: 'unary' | 'streaming' = 'unary'
 ): Promise<T> {
@@ -81,6 +89,8 @@ export async function traceTerminalLaunchRpc<T>(
     requestRef: launchReference(request.id),
     clientRef: launchReference(caller?.clientId),
     callerConnectionRef: launchReference(caller?.connectionId),
+    deviceRef: launchReference(caller?.pairedDeviceId),
+    parentDeviceRef: launchReference(caller?.pairedDeviceParentId),
     clientKind:
       caller?.clientKind === 'mobile'
         ? 'mobile'
@@ -134,7 +144,7 @@ export async function traceTerminalLaunchRpc<T>(
 
 export async function traceTerminalStreamingLaunchRpc(
   request: { method: string; id: string; params?: unknown },
-  caller: { clientId?: string; connectionId?: string; clientKind?: string } | undefined,
+  caller: LaunchCaller | undefined,
   reply: (response: string) => void,
   invoke: (reply: (response: string) => void) => Promise<void>
 ): Promise<void> {

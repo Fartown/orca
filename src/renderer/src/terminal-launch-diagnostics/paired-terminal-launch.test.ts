@@ -6,7 +6,10 @@ vi.mock('@/store', () => ({ useAppStore: { getState: () => mocked.state } }))
 vi.mock('../runtime/web-runtime-terminal-create-operation', () => ({
   createWebRuntimeSessionTerminalResult: mocked.create
 }))
-vi.mock('./launch-origin', () => ({ recordTerminalLaunchOrigin: mocked.record }))
+vi.mock('./launch-origin', () => ({
+  recordTerminalLaunchOrigin: mocked.record,
+  currentTerminalLaunchOrigin: () => undefined
+}))
 
 beforeEach(() => vi.clearAllMocks())
 

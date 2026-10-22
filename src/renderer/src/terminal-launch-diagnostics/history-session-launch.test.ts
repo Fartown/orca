@@ -1,5 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { launchAiVaultSessionInNewTab, launchDroppedAiVaultSession, launchRevealedAiVaultSession } from './history-session-launch'
+import {
+  launchAiVaultSessionInNewTab,
+  launchDroppedAiVaultSession,
+  launchRevealedAiVaultSession
+} from './history-session-launch'
 import { currentTerminalLaunchOrigin, withTerminalLaunchOrigin } from './launch-origin'
 
 const mocked = vi.hoisted(() => ({ launch: vi.fn(), state: {} }))
@@ -26,9 +30,13 @@ describe('history entry diagnostic decorators', () => {
 
   it('restores an outer scope even when the original launcher throws', () => {
     const error = new Error('original failure')
-    mocked.launch.mockImplementation(() => { throw error })
+    mocked.launch.mockImplementation(() => {
+      throw error
+    })
     withTerminalLaunchOrigin('queued-startup', () => {
-      expect(() => launchAiVaultSessionInNewTab({ agent: 'claude', worktreeId: 'wt', command: '' })).toThrow(error)
+      expect(() =>
+        launchAiVaultSessionInNewTab({ agent: 'claude', worktreeId: 'wt', command: '' })
+      ).toThrow(error)
       expect(currentTerminalLaunchOrigin()).toBe('queued-startup')
     })
     expect(currentTerminalLaunchOrigin()).toBeUndefined()
