@@ -186,7 +186,7 @@ function addRuntimeHost(
   })
 }
 
-export function buildExecutionHostRegistry(args: {
+export type ExecutionHostRegistryInput = {
   repos: readonly Pick<Repo, 'connectionId' | 'executionHostId'>[]
   settings: Pick<GlobalSettings, 'activeRuntimeEnvironmentId'> | null | undefined
   hostSource?: ExecutionHostSource
@@ -199,7 +199,20 @@ export function buildExecutionHostRegistry(args: {
   hostLabelOverrides?: ReadonlyMap<ExecutionHostId, string>
   /** Defaults to this process's platform, which only the host itself may use. */
   localHostLabel?: string
-}): ExecutionHostRegistryEntry[] {
+}
+
+export function buildExecutionHostRegistry(
+  args: ExecutionHostRegistryInput
+): ExecutionHostRegistryEntry[] {
+  const focusedHostId = getSettingsFocusedExecutionHostId(args.settings)
+  const inventory = buildExecutionHostInventory(args, focusedHostId)
+  return inventory
+}
+
+export function buildExecutionHostInventory(
+  args: Omit<ExecutionHostRegistryInput, 'settings'>,
+  referencedHostId?: ExecutionHostId | null
+): ExecutionHostRegistryEntry[] {
   const hosts = new Map<ExecutionHostId, ExecutionHostRegistryEntry>()
   hosts.set(LOCAL_EXECUTION_HOST_ID, {
     id: LOCAL_EXECUTION_HOST_ID,
@@ -232,8 +245,7 @@ export function buildExecutionHostRegistry(args: {
     )
   }
 
-  const focusedHost = getSettingsFocusedExecutionHostId(args.settings)
-  const parsedFocusedHost = parseExecutionHostId(focusedHost)
+  const parsedFocusedHost = parseExecutionHostId(referencedHostId)
   if (parsedFocusedHost?.kind === 'runtime' && args.hostSource !== 'configured-only') {
     addRuntimeHost(
       hosts,

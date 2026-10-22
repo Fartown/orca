@@ -9,6 +9,7 @@ import {
 } from '../../../../shared/execution-host'
 import {
   buildExecutionHostRegistry,
+  type ExecutionHostRegistryEntry,
   type ExecutionHostHealth
 } from '../../../../shared/execution-host-registry'
 import { getExecutionHostHealthLabel } from '../../../../shared/execution-host-health'
@@ -60,7 +61,7 @@ export type SidebarHostScopeOption = {
   health: ExecutionHostHealth | 'mixed'
 }
 
-export function buildSidebarHostOptions(args: {
+export type SidebarHostOptionsInput = {
   repos: readonly Pick<Repo, 'connectionId' | 'executionHostId'>[]
   sshTargetLabels: ReadonlyMap<string, string>
   sshConnectionStates?: ReadonlyMap<string, SshConnectionState>
@@ -80,7 +81,24 @@ export function buildSidebarHostOptions(args: {
   wslHostsEnabled?: boolean
   /** True keeps WSL hosts' rows but marks them unable to run in this build. */
   wslHostServerFilesMissing?: boolean
-}): SidebarHostOption[] {
+}
+
+export function buildSidebarHostOptions(args: SidebarHostOptionsInput): SidebarHostOption[] {
+  const activeRuntimeHostId = args.settings?.activeRuntimeEnvironmentId?.trim()
+    ? toRuntimeExecutionHostId(args.settings.activeRuntimeEnvironmentId.trim())
+    : null
+  return sidebarHostOptionsFromInventory(
+    args,
+    buildExecutionHostRegistry(args),
+    activeRuntimeHostId
+  )
+}
+
+export function sidebarHostOptionsFromInventory(
+  args: Omit<SidebarHostOptionsInput, 'settings'>,
+  inventory: readonly ExecutionHostRegistryEntry[],
+  activeRuntimeHostId: ExecutionHostId | null = null
+): SidebarHostOption[] {
   const configuredSshTargetIds = new Set(args.sshTargetLabels.keys())
   const projectSshTargetIds = new Set<string>()
   for (const repo of args.repos) {
@@ -100,18 +118,7 @@ export function buildSidebarHostOptions(args: {
       })
     }
   }
-  const activeRuntimeHostId = args.settings?.activeRuntimeEnvironmentId?.trim()
-    ? toRuntimeExecutionHostId(args.settings.activeRuntimeEnvironmentId.trim())
-    : null
-  return buildExecutionHostRegistry({
-    repos: args.repos,
-    settings: args.settings,
-    sshTargetLabels: args.sshTargetLabels,
-    sshConnectionStates: args.sshConnectionStates,
-    runtimeEnvironments: args.runtimeEnvironments,
-    runtimeStatusByEnvironmentId: args.runtimeStatusByEnvironmentId,
-    hostLabelOverrides: args.hostLabelOverrides
-  }).map((host) => {
+  return inventory.map((host) => {
     if (host.kind === 'local') {
       return { ...host, presence: 'local' }
     }

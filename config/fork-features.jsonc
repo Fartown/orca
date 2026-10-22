@@ -607,7 +607,8 @@
         "src/shared/runtime-client-target.ts",
         "src/shared/app-environment.ts",
         "src/main/orca-profiles/profile-index-store.ts",
-        "src/renderer/src/store/workspace-record-selectors.ts"
+        "src/renderer/src/store/workspace-record-selectors.ts",
+        "src/renderer/src/components/host-picker/HostCombobox.tsx"
       ],
       "policyId": "issues-existing-capability-reuse",
       "ownedPaths": [
@@ -688,6 +689,21 @@
           "file": "src/main/integration-builds/orcad-fork-services.ts",
           "mustContain": "startOrcadIssues",
           "why": "start each fork service on the owning headless runtime before RPC becomes available"
+        },
+        {
+          "file": "src/shared/execution-host-registry.ts",
+          "mustContain": "buildExecutionHostInventory",
+          "why": "Reuse existing contracts while keeping host inventory and historical path semantics explicit."
+        },
+        {
+          "file": "src/renderer/src/components/sidebar/sidebar-host-options.ts",
+          "mustContain": "sidebarHostOptionsFromInventory",
+          "why": "Reuse existing contracts while keeping host inventory and historical path semantics explicit."
+        },
+        {
+          "file": "src/renderer/src/components/sidebar/use-sidebar-host-scope-options.ts",
+          "mustContain": "useSidebarHostInventoryOptions",
+          "why": "Reuse existing contracts while keeping host inventory and historical path semantics explicit."
         }
       ],
       "tests": [
@@ -704,7 +720,9 @@
         "src/main/issues/issue-change-feed.test.ts",
         "src/shared/issues/change-stream-cleanup.test.ts",
         "src/renderer/src/components/sidebar/issues/build-issue-rows.test.ts",
-        "src/main/issues/orcad-issues.test.ts"
+        "src/main/issues/orcad-issues.test.ts",
+        "src/renderer/src/issues/issue-host-inventory.test.ts",
+        "src/renderer/src/components/sidebar/issues/issue-host-picker.test.tsx"
       ],
       "checks": [
         "pnpm exec vitest run --config config/vitest.config.ts src/main/issues src/shared/issues src/renderer/src/issues src/renderer/src/components/issues src/renderer/src/components/sidebar/issues src/main/runtime/rpc/methods/issues.test.ts src/shared/agent-session-fallback-title.test.ts src/shared/ai-vault-session-filters.test.ts config/scripts/vitest-sqlite-runtime-boundary.test.ts",

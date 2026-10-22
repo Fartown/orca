@@ -23,7 +23,9 @@ import type { IssueRouteExecutionHostId } from '../../../../../shared/issues/typ
 import { IssueRuntimeClient } from '@/issues/issue-runtime-client'
 import { issueDomainStore } from '@/issues/issues-domain-store'
 import { useIssueDomainStore } from '@/issues/use-issue-domain-store'
-import { useSidebarHostScopeOptions } from '../use-sidebar-host-scope-options'
+import { useSidebarHostInventoryOptions } from '../use-sidebar-host-scope-options'
+import { HostCombobox } from '@/components/host-picker/HostCombobox'
+import { normalizeExecutionHostId } from '../../../../../shared/execution-host'
 import { translate } from '@/i18n/i18n'
 import { createBrowserUuid } from '@/lib/browser-uuid'
 
@@ -40,7 +42,7 @@ export function CreateIssueDialog({
   lockedRoute?: IssueRouteExecutionHostId
   onCreated?: () => void
 }): React.JSX.Element {
-  const { hostOptions } = useSidebarHostScopeOptions()
+  const hostOptions = useSidebarHostInventoryOptions()
   const [route, setRoute] = useState<IssueRouteExecutionHostId>('local')
   const routeStatus = useIssueDomainStore(
     (state) => state.partitionsByRouteExecutionHostId[route]?.status ?? 'loading'
@@ -134,22 +136,18 @@ export function CreateIssueDialog({
                   'Execution host'
                 )}
               </Label>
-              <Select
+              <HostCombobox
+                id="issue-host"
                 value={route}
                 disabled={Boolean(lockedRoute)}
-                onValueChange={(value) => setRoute(value as IssueRouteExecutionHostId)}
-              >
-                <SelectTrigger id="issue-host" className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {hostOptions.map((host) => (
-                    <SelectItem key={host.id} value={host.id}>
-                      {host.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                options={hostOptions}
+                onChange={(value) => {
+                  const hostId = normalizeExecutionHostId(value)
+                  if (hostId) {
+                    setRoute(hostId)
+                  }
+                }}
+              />
               {routeStatus === 'degraded' ? (
                 <p className="text-xs text-muted-foreground">
                   {translate(

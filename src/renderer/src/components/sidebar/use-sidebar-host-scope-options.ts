@@ -1,9 +1,11 @@
 import { useMemo } from 'react'
 import { useAppStore } from '@/store'
 import { getHostDisplayLabelOverrides } from '../../../../shared/host-setting-overrides'
+import { buildExecutionHostInventory } from '../../../../shared/execution-host-registry'
 import {
   buildSidebarHostOptions,
   buildSidebarHostScopeOptions,
+  sidebarHostOptionsFromInventory,
   type SidebarHostOption,
   type SidebarHostScopeOption
 } from './sidebar-host-options'
@@ -15,6 +17,22 @@ export function useSidebarHostScopeOptions(): {
   hostOptions: SidebarHostOption[]
   hostScopeOptions: SidebarHostScopeOption[]
 } {
+  const inputs = useSidebarHostSourceInputs()
+  const hostOptions = useMemo(() => buildSidebarHostOptions(inputs), [inputs])
+  const hostScopeOptions = useMemo(() => buildSidebarHostScopeOptions(hostOptions), [hostOptions])
+  return { hostOptions, hostScopeOptions }
+}
+
+/** Catalog-only consumers must not add the focused runtime as an implied owner. */
+export function useSidebarHostInventoryOptions(): SidebarHostOption[] {
+  const inputs = useSidebarHostSourceInputs()
+  return useMemo(
+    () => sidebarHostOptionsFromInventory(inputs, buildExecutionHostInventory(inputs)),
+    [inputs]
+  )
+}
+
+function useSidebarHostSourceInputs() {
   const repos = useAppStore((s) => s.repos)
   const sshTargetLabels = useAppStore((s) => s.sshTargetLabels)
   const sshConnectionStates = useAppStore((s) => s.sshConnectionStates)
@@ -25,20 +43,19 @@ export function useSidebarHostScopeOptions(): {
   const wslHostServerFilesMissing = useAppStore((s) => s.wslHostServerFiles === 'missing')
 
   const hostLabelOverrides = useMemo(() => getHostDisplayLabelOverrides(settings), [settings])
-  const hostOptions = useMemo(
-    () =>
-      buildSidebarHostOptions({
-        repos,
-        sshTargetLabels,
-        sshConnectionStates,
-        settings,
-        runtimeEnvironments,
-        runtimeStatusByEnvironmentId,
-        hostLabelOverrides,
-        wslHostStatuses,
-        wslHostsEnabled: settings?.experimentalWslHosts === true,
-        wslHostServerFilesMissing
-      }),
+  return useMemo(
+    () => ({
+      repos,
+      sshTargetLabels,
+      sshConnectionStates,
+      settings,
+      runtimeEnvironments,
+      runtimeStatusByEnvironmentId,
+      hostLabelOverrides,
+      wslHostStatuses,
+      wslHostsEnabled: settings?.experimentalWslHosts === true,
+      wslHostServerFilesMissing
+    }),
     [
       repos,
       sshTargetLabels,
@@ -51,7 +68,4 @@ export function useSidebarHostScopeOptions(): {
       wslHostServerFilesMissing
     ]
   )
-  const hostScopeOptions = useMemo(() => buildSidebarHostScopeOptions(hostOptions), [hostOptions])
-
-  return { hostOptions, hostScopeOptions }
 }
