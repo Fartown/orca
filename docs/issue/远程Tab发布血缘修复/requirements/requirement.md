@@ -1,5 +1,5 @@
 ---
-title: "远程Tab发布血缘修复"
+title: '远程Tab发布血缘修复'
 document_type: requirement
 status: ready
 created: 2026-09-23

@@ -1,5 +1,5 @@
 ---
-title: "2026-10-06 云真机第一轮（Android，原生会话页）"
+title: '2026-10-06 云真机第一轮（Android，原生会话页）'
 document_type: test-run
 status: completed
 created: 2026-10-06
@@ -19,16 +19,16 @@ updated: 2026-10-06
 
 ## 2. 执行结果
 
-| Case ID | 实际结果 | 结论 | 证据 | 缺陷或遗留问题 |
-| --- | --- | --- | --- | --- |
-| TC-001 | 终端输入栏与聊天输入框点按回形针都弹出「Attach」菜单，含 Photo、File | PASS | `.docs/mobile-file-attachment-upload-ui-validation/2026-10-06/evidence/device/TC001-terminal-attach-menu.png`、`TC001-chat-attach-menu.png` | - |
-| TC-002 | 终端选 Photo 后 Claude 输入框出现 `[Image #1]`；聊天选 Photo 出现图片待发项 | PASS | `TC002-terminal-photo-after.png`、`TC002-chat-photo-after.png` | - |
-| TC-003 | 系统选择器中 pdf、zip、txt、png、bin 均可选 | PASS | `TC003-terminal-file-picker.png` | - |
-| 终端上传（TC-008 手机端） | 选 `logs.zip` 后主机临时目录文件 sha256 与手机一致；路径写入终端未回车；补 `unzip -l` 回车列出 4 项。长按回形针直接打开文件选择器 | PASS | `UP-zip-after.png`、`TERM-unzip-after-enter.png`、`LONGPRESS-terminal-clip.png` | - |
-| TC-009 | Claude 用 Read 读取 `report.pdf`，回复含文中 secret word `PELICAN-42` | PASS | `TC009-reply.png`、`TC009-host-claude-screen.txt` | 会话处于 bypass permissions，Q-2 未被检验 |
-| TC-010 | `notes.txt` 以 `@路径` 插入草稿，`shot.png` 成为待发图片；agent 复述出 notes 中的独特句子并说出图片颜色 | FAIL | `TC010-notes-attached.png`、`TC010-png-attached.png`、`TC010-reply.png` | 缺陷 2：含 `@路径` 的消息停在 Claude 输入框不提交，需手动回车 |
-| TC-012（手机） | 选 101 MiB 的 `huge.bin` 提示「File is over 100 MB」，主机无新目录 | PASS | `TC012-huge-toast.png` | - |
-| TC-013（手机） | 未执行 | BLOCKED | - | 云真机经网络 adb，断网即失联 |
+| Case ID                   | 实际结果                                                                                                                          | 结论    | 证据                                                                                                                                        | 缺陷或遗留问题                                                |
+| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
+| TC-001                    | 终端输入栏与聊天输入框点按回形针都弹出「Attach」菜单，含 Photo、File                                                              | PASS    | `.docs/mobile-file-attachment-upload-ui-validation/2026-10-06/evidence/device/TC001-terminal-attach-menu.png`、`TC001-chat-attach-menu.png` | -                                                             |
+| TC-002                    | 终端选 Photo 后 Claude 输入框出现 `[Image #1]`；聊天选 Photo 出现图片待发项                                                       | PASS    | `TC002-terminal-photo-after.png`、`TC002-chat-photo-after.png`                                                                              | -                                                             |
+| TC-003                    | 系统选择器中 pdf、zip、txt、png、bin 均可选                                                                                       | PASS    | `TC003-terminal-file-picker.png`                                                                                                            | -                                                             |
+| 终端上传（TC-008 手机端） | 选 `logs.zip` 后主机临时目录文件 sha256 与手机一致；路径写入终端未回车；补 `unzip -l` 回车列出 4 项。长按回形针直接打开文件选择器 | PASS    | `UP-zip-after.png`、`TERM-unzip-after-enter.png`、`LONGPRESS-terminal-clip.png`                                                             | -                                                             |
+| TC-009                    | Claude 用 Read 读取 `report.pdf`，回复含文中 secret word `PELICAN-42`                                                             | PASS    | `TC009-reply.png`、`TC009-host-claude-screen.txt`                                                                                           | 会话处于 bypass permissions，Q-2 未被检验                     |
+| TC-010                    | `notes.txt` 以 `@路径` 插入草稿，`shot.png` 成为待发图片；agent 复述出 notes 中的独特句子并说出图片颜色                           | FAIL    | `TC010-notes-attached.png`、`TC010-png-attached.png`、`TC010-reply.png`                                                                     | 缺陷 2：含 `@路径` 的消息停在 Claude 输入框不提交，需手动回车 |
+| TC-012（手机）            | 选 101 MiB 的 `huge.bin` 提示「File is over 100 MB」，主机无新目录                                                                | PASS    | `TC012-huge-toast.png`                                                                                                                      | -                                                             |
+| TC-013（手机）            | 未执行                                                                                                                            | BLOCKED | -                                                                                                                                           | 云真机经网络 adb，断网即失联                                  |
 
 ## 3. 缺陷
 
@@ -37,11 +37,11 @@ updated: 2026-10-06
 
 ## 4. 证据索引
 
-| 证据 | 类型 | 对应 Case | 说明 |
-| --- | --- | --- | --- |
-| `.docs/mobile-file-attachment-upload-ui-validation/2026-10-06/evidence/device/` | 截图与文本 | 全部 | 截图、`device-checks.jsonl`、主机终端快照 |
-| `.docs/mobile-file-attachment-upload-ui-validation/2026-10-06/build/host-serve-first-run.log`、`host-serve-second-run.log` | 日志 | 缺陷 1 | 电脑端拒收网页包的原始日志 |
-| `.docs/mobile-file-attachment-upload-ui-validation/2026-10-06/build/android-build.log`、`metro.log` | 日志 | - | dev 构建与 Metro |
+| 证据                                                                                                                       | 类型       | 对应 Case | 说明                                      |
+| -------------------------------------------------------------------------------------------------------------------------- | ---------- | --------- | ----------------------------------------- |
+| `.docs/mobile-file-attachment-upload-ui-validation/2026-10-06/evidence/device/`                                            | 截图与文本 | 全部      | 截图、`device-checks.jsonl`、主机终端快照 |
+| `.docs/mobile-file-attachment-upload-ui-validation/2026-10-06/build/host-serve-first-run.log`、`host-serve-second-run.log` | 日志       | 缺陷 1    | 电脑端拒收网页包的原始日志                |
+| `.docs/mobile-file-attachment-upload-ui-validation/2026-10-06/build/android-build.log`、`metro.log`                        | 日志       | -         | dev 构建与 Metro                          |
 
 ## 5. 收尾
 

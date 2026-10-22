@@ -19,27 +19,27 @@ issue: 会话命名与身份保护
 
 ## 1. 范围与非目标
 
-| 项目 | 本期边界 |
-| --- | --- |
-| 目标 | 在活跃窗口内阻止不同 Claude session 的启动及后续 Hook 替换 pane 在位身份 |
-| 入口 | 现有共享 Hook normalizer；不依赖 Workspace 是否为 git worktree，folder workspace 同样适用 |
+| 项目       | 本期边界                                                                                           |
+| ---------- | -------------------------------------------------------------------------------------------------- |
+| 目标       | 在活跃窗口内阻止不同 Claude session 的启动及后续 Hook 替换 pane 在位身份                           |
+| 入口       | 现有共享 Hook normalizer；不依赖 Workspace 是否为 git worktree，folder workspace 同样适用          |
 | 数据与协议 | 不改数据库、Provider文件、RPC/wire字段，不新建会话中心或人工名系统；允许补 listener 内私有时间状态 |
-| 保持 | Codex 现有 child 分支、Claude 现有 source/child 过滤、合法子 Agent 展示及原名称排序保持 |
-| 未覆盖 | 同 ID 子路径/候选污染、缺 ID 事件、OSC 归属、标题异步乱序和全入口命名统一，不自动算作本期已修复 |
-| 远端 | 共享代码可能同时影响 main/relay，必须分端验证；本地成功不代表 SSH/paired 已通过 |
+| 保持       | Codex 现有 child 分支、Claude 现有 source/child 过滤、合法子 Agent 展示及原名称排序保持            |
+| 未覆盖     | 同 ID 子路径/候选污染、缺 ID 事件、OSC 归属、标题异步乱序和全入口命名统一，不自动算作本期已修复    |
+| 远端       | 共享代码可能同时影响 main/relay，必须分端验证；本地成功不代表 SSH/paired 已通过                    |
 
 ## 2. 用户确认规则与参数
 
 `A` 是当前 pane 缓存中的在位 session，`B` 是新事件的 session；`W` 为活跃窗口，`age` 为同一 listener 的本地单调时间减去 A 最近一次被接受事件的观察时间。
 
-| 条件 | 首期决策 |
-| --- | --- |
-| 没有在位 A | 不拦截，交给现有 SessionStart 逻辑 |
-| B 与 A 相同 | 不拦截；接受后更新本地观察时间，不创建新身份 |
-| B 与 A 不同，且 `age < W` | 拒绝本次 Hook，包括启动后的 prompt/工具/Stop；不更新 A 的时间、不修改身份或正常状态缓存 |
-| B 与 A 不同，且 `age >= W` | 不拦截，允许现有逻辑处理 B；这只是策略放行，不证明 A 已退出或 B 由用户发起 |
-| 缺 session ID、非 Claude | 沿用现有逻辑，不猜测身份 |
-| 已恢复 A，但无本地观察时间或时间记录不属于 A | 沿用现有逻辑；不把恢复/重放时间当新活动 |
+| 条件                                         | 首期决策                                                                                |
+| -------------------------------------------- | --------------------------------------------------------------------------------------- |
+| 没有在位 A                                   | 不拦截，交给现有 SessionStart 逻辑                                                      |
+| B 与 A 相同                                  | 不拦截；接受后更新本地观察时间，不创建新身份                                            |
+| B 与 A 不同，且 `age < W`                    | 拒绝本次 Hook，包括启动后的 prompt/工具/Stop；不更新 A 的时间、不修改身份或正常状态缓存 |
+| B 与 A 不同，且 `age >= W`                   | 不拦截，允许现有逻辑处理 B；这只是策略放行，不证明 A 已退出或 B 由用户发起              |
+| 缺 session ID、非 Claude                     | 沿用现有逻辑，不猜测身份                                                                |
+| 已恢复 A，但无本地观察时间或时间记录不属于 A | 沿用现有逻辑；不把恢复/重放时间当新活动                                                 |
 
 上述“允许”不绕过当前 `source` / `agent_id` 校验；例如当前不接纳的 compact/未知 source/child-attributed SessionStart 仍由原逻辑处理。
 
@@ -49,13 +49,13 @@ issue: 会话命名与身份保护
 
 ## 3. 当前源码与证据边界
 
-| 已检查实现 | 当前事实 | 本期复用结论 |
-| --- | --- | --- |
-| `src/shared/agent-hook-listener.ts` | 统一解析 raw Hook，提取 providerSession，再调用 Provider normalizer；Codex child 分支只抑制身份提取 | 在既有入口增量增加 SessionStart 准入，不复制一套 listener；不能只把 providerSession 设 null 就声称事件已拒绝 |
-| `src/shared/agent-hook-listener/listener-state.ts`、`listener-event.ts` | `lastStatusByPaneKey` 保存 `AgentHookEventPayload`；共享类型没有事件时间戳；已有 pane 清理、迁移与全量清理路径 | 复用 pane 生命周期；时间需要 listener 私有状态，不能承诺“时间字段已经现成” |
-| `src/shared/agent-hook-listener/providers/claude-events.ts`、`claude-roster-state.ts` | 已读取 SessionStart.source；UserPromptSubmit、Stop、工具等其他事件也能更新 owner | 复用原折叠；实测后将同窗准入放到这些写入之前，不新增角色分类 |
-| `src/main/agent-hooks/server/server-status-update.ts` | main 后续富化接收时间并写缓存 | 接收时间语义可参考，但不是 shared/relay 均有的字段合同，不借新 wire 字段传时间 |
-| `src/renderer/src/store/slices/agent-status-launch-config.ts`、`agent-status-live-reducer.ts` | token 匹配主要约束启动配置继承，不是所有状态的接收门 | 本期不依赖 token 是否消费来判断新旧归属，不下移或重建启动授权系统 |
+| 已检查实现                                                                                    | 当前事实                                                                                                       | 本期复用结论                                                                                                 |
+| --------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `src/shared/agent-hook-listener.ts`                                                           | 统一解析 raw Hook，提取 providerSession，再调用 Provider normalizer；Codex child 分支只抑制身份提取            | 在既有入口增量增加 SessionStart 准入，不复制一套 listener；不能只把 providerSession 设 null 就声称事件已拒绝 |
+| `src/shared/agent-hook-listener/listener-state.ts`、`listener-event.ts`                       | `lastStatusByPaneKey` 保存 `AgentHookEventPayload`；共享类型没有事件时间戳；已有 pane 清理、迁移与全量清理路径 | 复用 pane 生命周期；时间需要 listener 私有状态，不能承诺“时间字段已经现成”                                   |
+| `src/shared/agent-hook-listener/providers/claude-events.ts`、`claude-roster-state.ts`         | 已读取 SessionStart.source；UserPromptSubmit、Stop、工具等其他事件也能更新 owner                               | 复用原折叠；实测后将同窗准入放到这些写入之前，不新增角色分类                                                 |
+| `src/main/agent-hooks/server/server-status-update.ts`                                         | main 后续富化接收时间并写缓存                                                                                  | 接收时间语义可参考，但不是 shared/relay 均有的字段合同，不借新 wire 字段传时间                               |
+| `src/renderer/src/store/slices/agent-status-launch-config.ts`、`agent-status-live-reducer.ts` | token 匹配主要约束启动配置继承，不是所有状态的接收门                                                           | 本期不依赖 token 是否消费来判断新旧归属，不下移或重建启动授权系统                                            |
 
 现状输入为 [会话命名现状调研](../research/会话命名现状调研.md)、[用户提供的 G0 采样调研](../research/会话身份归属证据调研.md) 和既有隔离验证。采样调研中的“source 没人读”“compact 换 ID”未获本轮源码/样本复核支持，不作为本方案事实；其中顶替状态摘录缺少配套采样文件，不能将 41 条 Hook 记录当成完整 Hook→UI 证明。证据中的 compact_summary 尚未完全脱敏，不复制正文到本稿。
 
@@ -121,18 +121,18 @@ main 在 `applyNormalizedStatus` 接纳后记录，relay 在已接纳并缓存�
 
 ## 6. 风险、观测与验证要求
 
-| 项目 | 本期必须说明/观察的结果 |
-| --- | --- |
-| 无在位者、同 ID | 沿用原流程；新增保护不阻止首次正常启动/恢复 |
-| 不同 ID 且 age 在窗口内 | 启动与后续 Hook 均拒绝；owner/lastStatus/prompt/路径及该事件的正常发布均不改 |
-| 不同 ID 且 age 到达/超过窗口 | 放行既有逻辑；覆盖 W 前、恰好 W、W 后边界，不把放行描述成存活证明 |
-| 主会话刚有活动后启动 headless | 先验证事件准入，再观察完整事件序列、标题和 Issues attachment，不能只截图首个瞬间 |
-| B 被拒绝后继续发 UserPromptSubmit/工具/Stop | 窗口内仍拒绝，不能续期 A；不得只验首事件 |
-| 主会话长期推理/长工具/等待输入 | 无事件可能超过 W，B 将被放行；这是已知误放风险，测试不得删掉这个场景 |
-| 用户退出 A 后立刻启动 B | A 近期事件可能导致 B 被拒绝；这是已知误拦风险，静默窗口不能同时消除两类误判 |
-| 同 ID 子路径、OSC、迟到标题 | 本期不提供新保护；保留此前反例，单独报告未覆盖，不改为已通过 |
-| pane重建/重映射、冷恢复、重放、SSH中断 | 时间不得跨实例继承或由重放续期；未知时间策略须先定案；本地结果不代表远端 |
-| 正常子Agent、Codex、folder workspace | 既有 source/child 行为及非目标 Provider 不回退；没有git前提 |
+| 项目                                        | 本期必须说明/观察的结果                                                          |
+| ------------------------------------------- | -------------------------------------------------------------------------------- |
+| 无在位者、同 ID                             | 沿用原流程；新增保护不阻止首次正常启动/恢复                                      |
+| 不同 ID 且 age 在窗口内                     | 启动与后续 Hook 均拒绝；owner/lastStatus/prompt/路径及该事件的正常发布均不改     |
+| 不同 ID 且 age 到达/超过窗口                | 放行既有逻辑；覆盖 W 前、恰好 W、W 后边界，不把放行描述成存活证明                |
+| 主会话刚有活动后启动 headless               | 先验证事件准入，再观察完整事件序列、标题和 Issues attachment，不能只截图首个瞬间 |
+| B 被拒绝后继续发 UserPromptSubmit/工具/Stop | 窗口内仍拒绝，不能续期 A；不得只验首事件                                         |
+| 主会话长期推理/长工具/等待输入              | 无事件可能超过 W，B 将被放行；这是已知误放风险，测试不得删掉这个场景             |
+| 用户退出 A 后立刻启动 B                     | A 近期事件可能导致 B 被拒绝；这是已知误拦风险，静默窗口不能同时消除两类误判      |
+| 同 ID 子路径、OSC、迟到标题                 | 本期不提供新保护；保留此前反例，单独报告未覆盖，不改为已通过                     |
+| pane重建/重映射、冷恢复、重放、SSH中断      | 时间不得跨实例继承或由重放续期；未知时间策略须先定案；本地结果不代表远端         |
+| 正常子Agent、Codex、folder workspace        | 既有 source/child 行为及非目标 Provider 不回退；没有git前提                      |
 
 本期不新增持久诊断日志；测试记录接纳/拒绝、身份与 age/W，不输出真实 prompt、工具输入或 compact_summary。此策略可减少近期抢占，但不能承诺彻底杜绝子调用改名。规则级断言与产品效果分别记录。
 

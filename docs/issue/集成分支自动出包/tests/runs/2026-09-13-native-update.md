@@ -15,17 +15,17 @@ updated: 2026-09-13
 
 ## 实际结果
 
-| 检查点 | 结果与证据 |
-| --- | --- |
-| 固定自签原生更新正反例 | [P0 arm64](https://github.com/Fartown/orca/actions/runs/34705144558/job/103583748850) 同证书 A→B 替换/重启通过，错证书和篡改包拒绝；失败后 A 可启动 |
-| 真实 LaunchServices 隔离前置 | 恢复临时 HOME 后 Node/Electron home 一致；调用原 `configureDevUserDataPath`，错误 HOME 仍被拒绝 |
-| 真实 Orca 正常 ZIP 成品 | 一次 build:release、两次正常 ZIP 包装；A/B 签名、版本、架构及包内 app-update.yml 核验通过 |
-| 默认 fork 手动检查与下载 | 真实 net.fetch 路由前置通过，界面发现 B、下载完成；原生 staging 及 quitAndInstall 执行 |
-| 原生替换与启动 | A PID 47908 退出，磁盘版本为 B；native B PID 48661 发布正确 Unix runtime 并稳定 15459ms；替换后 strict 验签通过 |
-| 原终端连续性 | 仪器化重开后的 B PID 49194 版本正确；同一 PTY ID；升级后命令不包含随机值，而是读取原 shell 环境变量并输出匹配的 AFTER 值，排除旧滚屏/回显假阳性 |
-| 隐藏运行与清理 | 检查到 0 个可见窗口；cleanup errors=[]，临时签名私钥在运行前删除，scratch 已删除 |
-| 本地回归 | 371 项桌面/发布测试、9 项移动控制器通过；双端类型、质量、架构、fork 功能/文档、本地化、max-lines 门禁通过 |
-| Android 原生系统安装 | 已在 Android 16 arm64 隔离模拟器安装旧 release APK 并验证入口，预留文字大小 125% 设置；完整云发布后的默认源下载与系统覆盖安装仍待执行，不是实体手机验收 |
+| 检查点                       | 结果与证据                                                                                                                                              |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 固定自签原生更新正反例       | [P0 arm64](https://github.com/Fartown/orca/actions/runs/34705144558/job/103583748850) 同证书 A→B 替换/重启通过，错证书和篡改包拒绝；失败后 A 可启动     |
+| 真实 LaunchServices 隔离前置 | 恢复临时 HOME 后 Node/Electron home 一致；调用原 `configureDevUserDataPath`，错误 HOME 仍被拒绝                                                         |
+| 真实 Orca 正常 ZIP 成品      | 一次 build:release、两次正常 ZIP 包装；A/B 签名、版本、架构及包内 app-update.yml 核验通过                                                               |
+| 默认 fork 手动检查与下载     | 真实 net.fetch 路由前置通过，界面发现 B、下载完成；原生 staging 及 quitAndInstall 执行                                                                  |
+| 原生替换与启动               | A PID 47908 退出，磁盘版本为 B；native B PID 48661 发布正确 Unix runtime 并稳定 15459ms；替换后 strict 验签通过                                         |
+| 原终端连续性                 | 仪器化重开后的 B PID 49194 版本正确；同一 PTY ID；升级后命令不包含随机值，而是读取原 shell 环境变量并输出匹配的 AFTER 值，排除旧滚屏/回显假阳性         |
+| 隐藏运行与清理               | 检查到 0 个可见窗口；cleanup errors=[]，临时签名私钥在运行前删除，scratch 已删除                                                                        |
+| 本地回归                     | 371 项桌面/发布测试、9 项移动控制器通过；双端类型、质量、架构、fork 功能/文档、本地化、max-lines 门禁通过                                               |
+| Android 原生系统安装         | 已在 Android 16 arm64 隔离模拟器安装旧 release APK 并验证入口，预留文字大小 125% 设置；完整云发布后的默认源下载与系统覆盖安装仍待执行，不是实体手机验收 |
 
 完整 P2：[第十二轮 SUCCESS](https://github.com/Fartown/orca/actions/runs/34713324181)。4 张状态截图及原始 JSON 位于该 run artifact，本地索引为 `.docs/integration-updates-ui-validation/2026-09-12/real-orca-ci/34713324181/`。
 

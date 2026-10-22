@@ -1,6 +1,6 @@
 ---
-title: "富文本 Markdown 强制打开"
-slug: "富文本Markdown强制打开"
+title: '富文本 Markdown 强制打开'
+slug: '富文本Markdown强制打开'
 status: ready
 created: 2026-09-16
 updated: 2026-09-16
