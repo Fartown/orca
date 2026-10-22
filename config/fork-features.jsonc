@@ -1801,6 +1801,11 @@
       ],
       "seams": [
         {
+          "file": "mobile/src/session/MobileSessionSheets.test.tsx",
+          "mustContain": "deviceTokenRef: { current: null }",
+          "why": "New Tab fixture supplies continuation scope without host requests."
+        },
+        {
           "file": "src/renderer/src/lib/agent-session-continuation.ts",
           "mustContain": "shared/agent-session-continuation/continuation-prompt",
           "why": "desktop keeps its import path while the prompt builder lives in shared"

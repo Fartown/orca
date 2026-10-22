@@ -171,6 +171,15 @@ external_ids: []
 
 ## 3. 开发记录
 
+### 2026-10-22：New Tab 测试夹具补齐续接 scope（testing）
+
+- 本轮目标：修复完整 Mobile verify 暴露的既有测试夹具缺口。
+- 完成内容：补齐 client、deviceTokenRef、showToast 与 createTerminalWithResult，不发起主机请求。
+- 代码或文档变更：MobileSessionSheets.test.tsx 及注册接缝。
+- 验证证据：续接与 New Tab 共 8 文件 35 项通过；架构、注册、文档检查通过。
+- 未解决问题：远端 CI 与合入未完成；未部署应用。
+- 下一步：更新 PR #57，复验完整移动端检查。
+
 ### 2026-10-22 显式列出既有投递失败状态
 
 - 本轮目标：消除完整 fork 类型感知门禁发现的穷尽性错误，保持既有反馈行为。
