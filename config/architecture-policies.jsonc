@@ -259,7 +259,9 @@
             "config/scripts/verify-packaged-daemon-entry.test.mjs",
             "src/shared/execution-host-registry.ts",
             "src/renderer/src/components/sidebar/sidebar-host-options.ts",
-            "src/renderer/src/components/sidebar/use-sidebar-host-scope-options.ts"
+            "src/renderer/src/components/sidebar/use-sidebar-host-scope-options.ts",
+            "src/shared/host-operation-ownership.ts",
+            "src/shared/wsl-move/wsl-move-storage-dispositions.ts"
           ],
           "message": "Change is outside the reviewed Issue implementation or rollback surface."
         },
@@ -920,7 +922,8 @@
             "config/scripts/win32-test-lane-registration.test.mjs",
             "src/shared/host-operation-ownership.ts",
             "src/main/startup/main-process-ready-duplicate-pty-repair.test.ts",
-            "src/main/runtime/construction/runtime-composition-parity.test.ts"
+            "src/main/runtime/construction/runtime-composition-parity.test.ts",
+            "src/shared/wsl-move/wsl-move-storage-dispositions.ts"
           ],
           "message": "Branch changes an upstream path that no fork feature owns or registers as a seam; extend config/fork-features.jsonc and this allowlist, or move the change into a feature-owned path."
         }

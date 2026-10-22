@@ -718,6 +718,16 @@
           "file": "src/renderer/src/components/sidebar/use-sidebar-host-scope-options.ts",
           "mustContain": "useSidebarHostInventoryOptions",
           "why": "Reuse existing contracts while keeping host inventory and historical path semantics explicit."
+        },
+        {
+          "file": "src/shared/host-operation-ownership.ts",
+          "mustContain": "HOST_OPERATION_OWNERSHIP",
+          "why": "Keep the feature contract and its exhaustive integration checks aligned."
+        },
+        {
+          "file": "src/shared/wsl-move/wsl-move-storage-dispositions.ts",
+          "mustContain": "SQLITE_SCHEMA_FILE_DATABASES",
+          "why": "Keep the feature contract and its exhaustive integration checks aligned."
         }
       ],
       "tests": [
@@ -736,11 +746,14 @@
         "src/renderer/src/components/sidebar/issues/build-issue-rows.test.ts",
         "src/main/issues/orcad-issues.test.ts",
         "src/renderer/src/issues/issue-host-inventory.test.ts",
-        "src/renderer/src/components/sidebar/issues/issue-host-picker.test.tsx"
+        "src/renderer/src/components/sidebar/issues/issue-host-picker.test.tsx",
+        "src/shared/host-operation-ownership.test.ts",
+        "src/shared/wsl-move/wsl-move-dispositions.test.ts"
       ],
       "checks": [
         "pnpm exec vitest run --config config/vitest.config.ts src/main/issues src/shared/issues src/renderer/src/issues src/renderer/src/components/issues src/renderer/src/components/sidebar/issues src/main/runtime/rpc/methods/issues.test.ts src/shared/agent-session-fallback-title.test.ts src/shared/ai-vault-session-filters.test.ts config/scripts/vitest-sqlite-runtime-boundary.test.ts",
-        "pnpm test src/main/issues/orcad-issues.test.ts"
+        "pnpm test src/main/issues/orcad-issues.test.ts",
+        "ORCA_BACKGROUND_LAUNCH=1 pnpm exec vitest run --config config/vitest.config.ts src/shared/host-operation-ownership.test.ts src/shared/wsl-move/wsl-move-dispositions.test.ts"
       ]
     },
     {
