@@ -15,7 +15,7 @@ describe('paired terminal launch diagnostic seam', () => {
     const one = {
       worktreeId: 'remote-workspace',
       environmentId: 'paired-host',
-      providerSession: { id: 'same' }
+      providerSession: { key: 'session_id' as const, id: 'same' }
     }
     const two = { ...one }
     mocked.create.mockImplementationOnce(async () => ({

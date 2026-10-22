@@ -6,12 +6,31 @@ import {
 
 export type TerminalLaunchOrigin =
   | 'ai-vault-resume'
+  | 'ai-vault-drop-resume'
+  | 'ai-vault-reveal-resume'
   | 'queued-startup'
   | 'paired-terminal-create'
   | 'automatic-sleeping-resume'
   | 'cold-restore-resume'
   | 'runtime-tab-create-request'
   | 'renderer-tab-created'
+
+let synchronousOrigin: TerminalLaunchOrigin | undefined
+
+export function currentTerminalLaunchOrigin(): TerminalLaunchOrigin | undefined {
+  return synchronousOrigin
+}
+
+// Only the synchronous launch call is scoped; completion observers capture their own origin.
+export function withTerminalLaunchOrigin<T>(origin: TerminalLaunchOrigin, invoke: () => T): T {
+  const previous = synchronousOrigin
+  synchronousOrigin = origin
+  try {
+    return invoke()
+  } finally {
+    synchronousOrigin = previous
+  }
+}
 
 export function recordTerminalLaunchOrigin(
   origin: TerminalLaunchOrigin,

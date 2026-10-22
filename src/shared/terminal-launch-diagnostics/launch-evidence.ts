@@ -18,7 +18,11 @@ export function launchReference(value: unknown): string | null {
 }
 
 function tabReference(value: unknown): string | null {
-  return launchReference(typeof value === 'string' ? toHostSessionTabId(value).split(HOST_TERMINAL_SURFACE_SEPARATOR)[0] : value)
+  return launchReference(
+    typeof value === 'string'
+      ? toHostSessionTabId(value).split(HOST_TERMINAL_SURFACE_SEPARATOR)[0]
+      : value
+  )
 }
 
 export function providerReference(agent: unknown, session: unknown): string | null {

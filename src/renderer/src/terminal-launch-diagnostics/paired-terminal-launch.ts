@@ -1,10 +1,14 @@
 import { useAppStore } from '@/store'
 import { createWebRuntimeSessionTerminalResult as createTerminal } from '../runtime/web-runtime-terminal-create-operation'
-import { recordTerminalLaunchOrigin, type TerminalLaunchOrigin } from './launch-origin'
+import {
+  currentTerminalLaunchOrigin,
+  recordTerminalLaunchOrigin,
+  type TerminalLaunchOrigin
+} from './launch-origin'
 
 export function createWebRuntimeSessionTerminalResult(
   args: Parameters<typeof createTerminal>[0],
-  origin: TerminalLaunchOrigin = 'paired-terminal-create'
+  origin: TerminalLaunchOrigin = currentTerminalLaunchOrigin() ?? 'paired-terminal-create'
 ): ReturnType<typeof createTerminal> {
   recordTerminalLaunchOrigin(origin, args, useAppStore.getState())
   const pending = createTerminal(args)

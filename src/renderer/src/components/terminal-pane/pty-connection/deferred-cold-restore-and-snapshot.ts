@@ -81,7 +81,8 @@ export function bindDeferredColdRestoreAndSnapshot(session: ConnectPanePtySessio
       {
         ...startup,
         tabId: session.deps.tabId,
-        leafId: session.pane.id,
+        leafId: session.pane.leafId,
+        paneKey: session.cacheKey,
         worktreeId: session.deps.worktreeId
       },
       useAppStore.getState()

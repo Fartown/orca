@@ -198,7 +198,7 @@ describe('launchAiVaultSessionInNewTab', () => {
         activate: true
       },
       // Its callers toast the failure with the agent's own wording.
-      { notifyFailure: false, diagnosticOrigin: 'ai-vault-resume' }
+      { notifyFailure: false }
     )
     expect(mockCreateTab).not.toHaveBeenCalled()
     expect(queuedStartups()).toEqual([])
@@ -225,7 +225,7 @@ describe('launchAiVaultSessionInNewTab', () => {
     expect(mockCreateEmptySplitGroup).toHaveBeenCalledWith('wt-1', 'group-1', 'right')
     expect(runtimeMocks.createWebRuntimeSessionTerminal).toHaveBeenCalledWith(
       expect.objectContaining({ targetGroupId: 'group-new' }),
-      { notifyFailure: false, diagnosticOrigin: 'ai-vault-resume' }
+      { notifyFailure: false }
     )
     if (result.tabId === null) {
       await result.runtimeLaunch

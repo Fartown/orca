@@ -11,7 +11,7 @@ import {
   prepareAiVaultSessionForResume
 } from '@/lib/ai-vault-session-resume-preparation'
 import { activateAiVaultStructuredSession } from '@/lib/activate-ai-vault-structured-session'
-import { launchAiVaultSessionInNewTab } from '@/lib/launch-ai-vault-session'
+import { launchAiVaultSessionInNewTab } from '@/terminal-launch-diagnostics/history-session-launch'
 import { agentLabel } from '../right-sidebar/ai-vault-session-filters'
 import type { AiVaultSessionResumeTargetState } from '../right-sidebar/ai-vault-session-resume'
 import { activateAiVaultResumeWorkspace } from '../right-sidebar/ai-vault-session-resume-in-chat-launch'

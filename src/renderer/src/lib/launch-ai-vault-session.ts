@@ -1,5 +1,4 @@
 import { useAppStore } from '@/store'
-import { recordTerminalLaunchOrigin } from '@/terminal-launch-diagnostics/launch-origin'
 import { persistAgentLaunchTabOrder } from '@/lib/launch-agent-tab-order'
 import { tuiAgentToAgentKind } from '@/lib/telemetry'
 import { runtimeEnvironmentIdWithLegacyFallbackUnlessTwin } from '@/lib/worktree-runtime-owner'
@@ -61,7 +60,7 @@ export function launchAiVaultSessionInNewTab(args: {
         ...(args.launchConfig ? { agentArgs: args.launchConfig.agentArgs } : {}),
         activate: true
       },
-      { notifyFailure: false, diagnosticOrigin: 'ai-vault-resume' }
+      { notifyFailure: false }
     )
     const observedRuntimeLaunch = runtimeLaunch.then((outcome) => {
       if (outcome.status === 'created') {
@@ -75,7 +74,6 @@ export function launchAiVaultSessionInNewTab(args: {
     return { tabId: null, runtimeLaunch: observedRuntimeLaunch }
   }
 
-  recordTerminalLaunchOrigin('ai-vault-resume', args, store)
   const tab = store.createTab(args.worktreeId, args.targetGroupId, undefined, {
     ...(split ? { split } : {}),
     ...(args.cwd ? { startupCwd: args.cwd } : {}),
@@ -93,11 +91,6 @@ export function launchAiVaultSessionInNewTab(args: {
     }
   })
   store.setActiveTabType('terminal', args.worktreeId)
-  recordTerminalLaunchOrigin(
-    'ai-vault-resume',
-    { ...args, tabId: tab.id, eventPhase: 'created' },
-    useAppStore.getState()
-  )
 
   persistAgentLaunchTabOrder(args.worktreeId, tab.id)
 

@@ -9,7 +9,10 @@ describe('terminal launch coverage contract', () => {
     ['src/main/ipc/pty/runtime/spawn-execute.ts', 'recordTerminalProviderDispatch'],
     ['src/main/daemon/daemon-terminal-admission.ts', 'traceDaemonTerminalLaunch'],
     ['src/renderer/src/store/terminals/terminal-tab-creation.ts', 'recordCreatedTerminalTab'],
-    ['src/renderer/src/lib/launch-ai-vault-session.ts', 'ai-vault-resume'],
+    [
+      'src/renderer/src/components/ai-vault-session-resume/session-terminal-launch.ts',
+      'terminal-launch-diagnostics/history-session-launch'
+    ],
     ['src/renderer/src/store/terminals/terminal-startup-queues.ts', 'queued-startup'],
     [
       'src/renderer/src/runtime/web-runtime-terminal-creation.ts',
