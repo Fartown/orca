@@ -524,3 +524,12 @@ external_ids: []
 - 验证证据：`.docs/upstream-sync-ui-validation/2026-10-21/evidence/`；四目标类型检查、最终 Web 类型复验、三项本地化、功能注册及全部注册功能回归通过；隐藏 Electron + 真实 SSH 隔离 orcad 验收通过。完整记录见 sync-upstream-gates.log、attachment-grant-matrix.log 与 remaining-feature-checks.log。
 - 未解决问题：本轮实现无未解决问题；提交后需从干净 integration 复核架构门禁并观察远端构建。不在本次安装用户应用或升级已有远程服务。
 - 下一步：推送通过门禁的 integration，跟踪远端检查；保留当前应用及会话。
+
+## 2026-10-22 完整门禁补齐（testing）
+
+- 本轮目标：修复同树完整检查暴露的问题，不降低门禁。
+- 完成内容：将实际承载工作区的数组准确命名为 routeWorkspaces，消除主机列表规则误报；界面、数据与交互不变。
+- 代码或文档变更：功能源码、对应回归与登记；各能力保持独立提交。
+- 验证证据：定向测试及完整同树复验记录归集至 .docs/ci-baseline-repair/2026-10-22/；最终结果待集成复验。
+- 未解决问题：最终同树 CI 尚未完成；未部署或重启用户应用和远程服务。
+- 下一步：完整本地门禁、隐藏应用与 SSH 验证后，等待最终 CI 并合入。
