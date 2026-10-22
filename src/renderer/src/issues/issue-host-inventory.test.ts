@@ -1,13 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import {
   buildExecutionHostInventory,
-  buildExecutionHostRegistry
+  buildExecutionHostRegistry,
+  type ExecutionHostRegistryInput
 } from '../../../shared/execution-host-registry'
 import { sidebarHostOptionsFromInventory } from '../components/sidebar/sidebar-host-options'
 
 describe('Issue host inventory', () => {
   it('uses configured and row-owned hosts, never a focus-only default', () => {
-    const input = {
+    const input: ExecutionHostRegistryInput = {
       repos: [{ executionHostId: 'runtime:owner', connectionId: null }],
       settings: { activeRuntimeEnvironmentId: 'focus-only' },
       runtimeEnvironments: [{ id: 'owner', name: 'Execution owner' }],
