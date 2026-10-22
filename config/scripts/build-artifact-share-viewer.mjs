@@ -55,7 +55,7 @@ const viewerResolvePlugin = {
   }
 }
 
-export async function buildArtifactShareViewer(outDir = OUT_DIR) {
+export async function buildArtifactShareViewer(outDir = OUT_DIR, { portable = false } = {}) {
   rmSync(outDir, { recursive: true, force: true })
   mkdirSync(outDir, { recursive: true })
   const result = await build({
@@ -68,9 +68,13 @@ export async function buildArtifactShareViewer(outDir = OUT_DIR) {
     minify: true,
     legalComments: 'none',
     outdir: outDir,
-    entryNames: 'viewer.[hash]',
+    entryNames: portable ? 'viewer.orcad' : 'viewer.[hash]',
     assetNames: '[name].[hash]',
-    loader: { '.woff': 'file', '.woff2': 'file', '.ttf': 'file' },
+    loader: {
+      '.woff': portable ? 'dataurl' : 'file',
+      '.woff2': portable ? 'dataurl' : 'file',
+      '.ttf': portable ? 'dataurl' : 'file'
+    },
     define: { 'process.env.NODE_ENV': '"production"' },
     metafile: true,
     logLevel: 'warning',

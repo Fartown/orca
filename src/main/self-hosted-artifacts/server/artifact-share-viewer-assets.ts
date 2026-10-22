@@ -32,6 +32,7 @@ export function resolveArtifactShareViewerAssets(input: {
   }
   if (input.appPath) {
     candidates.push(join(input.appPath, 'out', 'artifact-share-viewer'))
+    candidates.push(join(input.appPath, 'artifact-share-viewer'))
   }
   for (const directory of candidates) {
     const manifestPath = join(directory, ARTIFACT_SHARE_VIEWER_MANIFEST)

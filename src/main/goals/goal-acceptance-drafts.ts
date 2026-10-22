@@ -1,7 +1,7 @@
 import { mkdir } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
-import type { runProcess } from '../../shared/child-process/run-process'
-import { spawnProcess } from '../../shared/child-process/run-process'
+import type { runProcess } from '@orca/process-host'
+import { spawnProcess } from '@orca/process-host'
 import {
   GoalAcceptanceDraftResult,
   type GoalAcceptanceDraft

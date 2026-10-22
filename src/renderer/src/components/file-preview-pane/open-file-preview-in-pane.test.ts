@@ -41,7 +41,7 @@ vi.mock('@/lib/client-creation-action-policy', () => ({
 }))
 
 vi.mock('@/lib/worktree-runtime-owner', () => ({
-  getRuntimeEnvironmentIdForWorktree: () => mocks.environmentId
+  runtimeEnvironmentIdWithLegacyFallbackUnlessTwin: () => mocks.environmentId
 }))
 
 vi.mock('@/store', () => ({

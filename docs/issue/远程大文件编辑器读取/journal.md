@@ -1,9 +1,9 @@
 ---
-title: "远程大文件编辑器读取"
-slug: "远程大文件编辑器读取"
+title: '远程大文件编辑器读取'
+slug: '远程大文件编辑器读取'
 status: testing
 created: 2026-09-15
-updated: 2026-10-06
+updated: 2026-10-21
 external_ids: []
 ---
 
@@ -11,14 +11,14 @@ external_ids: []
 
 ## 1. 关键文档链接
 
-| 类型 | 文档 | 状态 | 说明 |
-| --- | --- | --- | --- |
-| 需求 | [requirements/远程大文件编辑器读取.md](requirements/远程大文件编辑器读取.md) | ready | REQ-701～REQ-704 |
-| 交互 | - | not-required | 无新 UI；成功路径就是文件正常打开 |
-| 调研 | - | not-required | 链路在 `runtime-file-read-client.ts` 内闭合，成因见 D-201 |
-| 方案 | - | not-required | 复用既有 `files.readChunk`，要点记在 D-201、D-202 |
-| 测试用例 | [tests/cases/远程大文件编辑器读取功能测试.md](tests/cases/远程大文件编辑器读取功能测试.md) | ready | TC-701～TC-707 |
-| 测试记录 | [tests/runs/2026-09-15-分块补读单元验证.md](tests/runs/2026-09-15-分块补读单元验证.md) | completed | TC-701～TC-707 通过 |
+| 类型     | 文档                                                                                       | 状态         | 说明                                                      |
+| -------- | ------------------------------------------------------------------------------------------ | ------------ | --------------------------------------------------------- |
+| 需求     | [requirements/远程大文件编辑器读取.md](requirements/远程大文件编辑器读取.md)               | ready        | REQ-701～REQ-704                                          |
+| 交互     | -                                                                                          | not-required | 无新 UI；成功路径就是文件正常打开                         |
+| 调研     | -                                                                                          | not-required | 链路在 `runtime-file-read-client.ts` 内闭合，成因见 D-201 |
+| 方案     | -                                                                                          | not-required | 复用既有 `files.readChunk`，要点记在 D-201、D-202         |
+| 测试用例 | [tests/cases/远程大文件编辑器读取功能测试.md](tests/cases/远程大文件编辑器读取功能测试.md) | ready        | TC-701～TC-707                                            |
+| 测试记录 | [tests/runs/2026-09-15-分块补读单元验证.md](tests/runs/2026-09-15-分块补读单元验证.md)     | completed    | TC-701～TC-707 通过                                       |
 
 ## 2. 决策点记录
 
@@ -86,3 +86,12 @@ external_ids: []
 - 验证证据：TC-708 PASS；反向对照失败截图文案为 `Remote file is too large to open in the editor (524289 bytes)`，与用户报告数字逐字一致。另：`src/main/runtime` 全量 794 文件 8087 条通过（此前一次 6 条失败未能复现，判定为高负载下的抖动）。
 - 未解决问题：无。
 - 下一步：合回 `fork/integration`。
+
+## 2026-10-21 上游 orcad 迁移（done）
+
+- 本轮目标：按用户确认迁移 fork 能力，并通过官方同步入口合入上游 `2eae220b2ef`。
+- 完成内容：保留运行端文件分块读取与客户端组装，旧 direct SSH 路径不回退客户端。
+- 代码或文档变更：注册表的接缝、依赖与测试随上游结构迁移；未删除或禁用已注册功能。详见集成分支的 `2026-10-21-orcad上游同步.md` 方案。
+- 验证证据：`.docs/upstream-sync-ui-validation/2026-10-21/evidence/`；四目标类型检查、最终 Web 类型复验、三项本地化、功能注册及全部注册功能回归通过；隐藏 Electron + 真实 SSH 隔离 orcad 验收通过。完整记录见 sync-upstream-gates.log、attachment-grant-matrix.log 与 remaining-feature-checks.log。
+- 未解决问题：本轮实现无未解决问题；提交后需从干净 integration 复核架构门禁并观察远端构建。不在本次安装用户应用或升级已有远程服务。
+- 下一步：推送通过门禁的 integration，跟踪远端检查；保留当前应用及会话。

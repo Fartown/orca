@@ -1,9 +1,9 @@
 ---
-title: "移动端上传任意文件"
-slug: "移动端上传任意文件"
+title: '移动端上传任意文件'
+slug: '移动端上传任意文件'
 status: testing
 created: 2026-10-06
-updated: 2026-10-09
+updated: 2026-10-21
 external_ids: []
 ---
 
@@ -11,13 +11,13 @@ external_ids: []
 
 ## 1. 关键文档链接
 
-| 类型 | 文档 | 状态 | 说明 |
-| --- | --- | --- | --- |
-| 需求 | [requirements/移动端上传任意文件.md](requirements/移动端上传任意文件.md) | ready | REQ-001~006：入口、落到工作区所在机器、交给终端或 agent、100 MiB、新旧版本组合、临时文件清理 |
-| 交互 | - | not-required | 沿用现有底部菜单与附件按钮，无独立设计稿 |
-| 调研 | [research/移动端附件上传现状与技术链路.md](research/移动端附件上传现状与技术链路.md) | ready | 两种会话页形态、选择器、上传与落盘、目标机器判定、交付方式、版本兼容 |
-| 方案 | [solutions/移动端文件附件上传方案.md](solutions/移动端文件附件上传方案.md) | reviewing | 新 RPC `fileAttachment.*` 流式写入目标机器临时目录；手机壳新接口 `native.file.*`；图片旧通道保留 |
-| 测试用例 | [tests/cases/移动端上传任意文件.md](tests/cases/移动端上传任意文件.md) | ready | TC-001~018，覆盖本机与 SSH；执行记录见 [电脑端第一轮](tests/runs/2026-10-06-real-app-host-round-1.md)、[电脑端第二轮](tests/runs/2026-10-06-real-app-host-round-2.md)、[云真机第一轮](tests/runs/2026-10-06-cloud-device-round-1.md)、[云真机第二轮](tests/runs/2026-10-06-cloud-device-round-2.md) |
+| 类型     | 文档                                                                                 | 状态         | 说明                                                                                                                                                                                                                                                                                                |
+| -------- | ------------------------------------------------------------------------------------ | ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 需求     | [requirements/移动端上传任意文件.md](requirements/移动端上传任意文件.md)             | ready        | REQ-001~006：入口、落到工作区所在机器、交给终端或 agent、100 MiB、新旧版本组合、临时文件清理                                                                                                                                                                                                        |
+| 交互     | -                                                                                    | not-required | 沿用现有底部菜单与附件按钮，无独立设计稿                                                                                                                                                                                                                                                            |
+| 调研     | [research/移动端附件上传现状与技术链路.md](research/移动端附件上传现状与技术链路.md) | ready        | 两种会话页形态、选择器、上传与落盘、目标机器判定、交付方式、版本兼容                                                                                                                                                                                                                                |
+| 方案     | [solutions/移动端文件附件上传方案.md](solutions/移动端文件附件上传方案.md)           | reviewing    | 新 RPC `fileAttachment.*` 流式写入目标机器临时目录；手机壳新接口 `native.file.*`；图片旧通道保留                                                                                                                                                                                                    |
+| 测试用例 | [tests/cases/移动端上传任意文件.md](tests/cases/移动端上传任意文件.md)               | ready        | TC-001~018，覆盖本机与 SSH；执行记录见 [电脑端第一轮](tests/runs/2026-10-06-real-app-host-round-1.md)、[电脑端第二轮](tests/runs/2026-10-06-real-app-host-round-2.md)、[云真机第一轮](tests/runs/2026-10-06-cloud-device-round-1.md)、[云真机第二轮](tests/runs/2026-10-06-cloud-device-round-2.md) |
 
 ## 2. 决策点记录
 
@@ -116,7 +116,6 @@ external_ids: []
 - 未解决问题：完整同步检查仍在进行，结果以该目录 README 和日志为准；本次记录不改变此前未完成验收的状态。
 - 下一步：完成同步门禁后推送集成分支。
 
-
 ### 2026-10-06 合入上游同步后的 fork/integration，清掉 PR 的既有红灯
 
 - 本轮目标：PR #50 的 CI 红灯都来自 `fork/integration` 的既有问题（上游 prompt-carry 用例、续接测试类型、失效的终端哈希钉子），在集成分支修好后合入本分支
@@ -188,3 +187,12 @@ external_ids: []
 - 验证证据：`pnpm check:fork-features`、`pnpm check:fork-docs`、`pnpm check:architecture-policies -- --base Fartown/main` 通过，提交 `112fd202d3`
 - 未解决问题：Q-1 保留期取值；Q-2 Claude Code 读取工作目录外文件是否弹权限确认；Q-3 Codex 对 `@路径` 的处理
 - 下一步：实现电脑端 `fileAttachment.*` 与单测
+
+## 2026-10-21 上游 orcad 迁移（done）
+
+- 本轮目标：按用户确认迁移 fork 能力，并通过官方同步入口合入上游 `2eae220b2ef`。
+- 完成内容：附件数据只写工作区所属运行端，文件夹工作区走相同通路；保留手机原生和网页附件能力。路由授权回归改为逐路由用例，保持全部 9 个页面入口和原 240 秒单用例上限，复用会话页构建。
+- 代码或文档变更：注册表的接缝、依赖与测试随上游结构迁移；未删除或禁用已注册功能。详见集成分支的 `2026-10-21-orcad上游同步.md` 方案。
+- 验证证据：`.docs/upstream-sync-ui-validation/2026-10-21/evidence/`；四目标类型检查、最终 Web 类型复验、三项本地化、功能注册及全部注册功能回归通过；隐藏 Electron + 真实 SSH 隔离 orcad 验收通过。完整记录见 sync-upstream-gates.log、attachment-grant-matrix.log 与 remaining-feature-checks.log。
+- 未解决问题：本轮实现无未解决问题；提交后需从干净 integration 复核架构门禁并观察远端构建。不在本次安装用户应用或升级已有远程服务。
+- 下一步：推送通过门禁的 integration，跟踪远端检查；保留当前应用及会话。

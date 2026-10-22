@@ -1,22 +1,19 @@
 import { requestBackgroundTerminalWorktreeMount } from '@/components/terminal/background-terminal-worktree-mount'
+import { recordTerminalLaunchOrigin } from '@/terminal-launch-diagnostics/launch-origin'
 import { resolveTerminalWorktreeRoute } from '@/lib/terminal-worktree-route'
 import { insertUnifiedTabAfterAnchor } from '@/lib/unified-tab-anchor-insertion'
 import { translate } from '@/i18n/i18n'
+import { revealWorkspaceSurface } from '@/lib/workspace-surface-reveal'
 import { useAppStore } from '../../store'
-import { recordTerminalLaunchOrigin } from '@/terminal-launch-diagnostics/launch-origin'
-import {
-  activateTerminalInitiatedWorktree,
-  focusTerminalInitiatedTab,
-  resolveTerminalPresentation
-} from './terminal-command-state'
+import { focusTerminalInitiatedTab, resolveTerminalPresentation } from './terminal-command-state'
 
 export function registerTerminalRequestIpcBridge(unsubs: (() => void)[]): void {
   unsubs.push(
     window.api.ui.onRequestTerminalCreate((data) => {
-      recordTerminalLaunchOrigin('runtime-tab-create-request', data)
       try {
         const store = useAppStore.getState()
         const worktreeId = data.worktreeId ?? store.activeWorktreeId
+        recordTerminalLaunchOrigin('runtime-tab-create-request', { ...data, worktreeId }, store)
         if (!worktreeId) {
           window.api.ui.replyTerminalCreate({
             requestId: data.requestId,
@@ -67,11 +64,32 @@ export function registerTerminalRequestIpcBridge(unsubs: (() => void)[]): void {
                 recordInteraction: false,
                 ...(data.cwd ? { startupCwd: data.cwd } : {})
               }
-        const tab = store.createTab(worktreeId, data.targetGroupId, data.shellOverride, tabOptions)
+        const pendingStartup = data.command
+          ? {
+              command: data.command,
+              ...(data.env ? { env: data.env } : {}),
+              ...(data.envToDelete ? { envToDelete: data.envToDelete } : {}),
+              ...(data.launchConfig ? { launchConfig: data.launchConfig } : {}),
+              ...(data.resumeProviderSession
+                ? { resumeProviderSession: data.resumeProviderSession }
+                : {}),
+              ...(data.launchToken ? { launchToken: data.launchToken } : {}),
+              ...(data.launchAgent ? { launchAgent: data.launchAgent } : {}),
+              ...(data.startupCommandDelivery
+                ? { startupCommandDelivery: data.startupCommandDelivery }
+                : {})
+            }
+          : undefined
+        const tab = store.createTab(
+          worktreeId,
+          data.targetGroupId,
+          data.shellOverride,
+          pendingStartup ? { ...tabOptions, pendingStartup } : tabOptions
+        )
         recordTerminalLaunchOrigin(
           'runtime-tab-create-request',
-          { ...data, tabId: tab.id, eventPhase: 'created' },
-          store
+          { ...data, worktreeId, tabId: tab.id, eventPhase: 'created' },
+          useAppStore.getState()
         )
         if (!shouldActivate) {
           // Why: renderer-backed Codex startup must mount its new TerminalPane without switching UI or connecting every saved tab.
@@ -87,32 +105,17 @@ export function registerTerminalRequestIpcBridge(unsubs: (() => void)[]): void {
         }
         if (shouldActivate) {
           // After the tab lands: activating prunes the workspace's empty groups, the requested one too.
-          activateTerminalInitiatedWorktree(store, worktreeId, [tab.id])
+          revealWorkspaceSurface(store, worktreeId, [tab.id])
           store.setActiveTabType('terminal', worktreeId)
           store.setActiveTab(tab.id)
+        } else if (shouldSurfaceOwner) {
+          store.revealWorktreeInSidebar(worktreeId)
         }
         if (shouldSurfaceOwner) {
-          store.revealWorktreeInSidebar(worktreeId)
           focusTerminalInitiatedTab(tab.id, undefined, worktreeId)
         }
         if (data.title) {
           store.setTabCustomTitle(tab.id, data.title, { recordInteraction: false })
-        }
-        if (data.command) {
-          store.queueTabStartupCommand(tab.id, {
-            command: data.command,
-            ...(data.env ? { env: data.env } : {}),
-            ...(data.envToDelete ? { envToDelete: data.envToDelete } : {}),
-            ...(data.launchConfig ? { launchConfig: data.launchConfig } : {}),
-            ...(data.resumeProviderSession
-              ? { resumeProviderSession: data.resumeProviderSession }
-              : {}),
-            ...(data.launchToken ? { launchToken: data.launchToken } : {}),
-            ...(data.launchAgent ? { launchAgent: data.launchAgent } : {}),
-            ...(data.startupCommandDelivery
-              ? { startupCommandDelivery: data.startupCommandDelivery }
-              : {})
-          })
         }
         window.api.ui.replyTerminalCreate({
           requestId: data.requestId,

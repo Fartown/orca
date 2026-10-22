@@ -1,4 +1,4 @@
-import { getFolderWorkspaceHostId } from '@/store/folder-workspaces/folder-workspace-catalog'
+import { getFolderWorkspaceHostId } from '../../../../shared/folder-workspace-execution-host'
 import { getWorktreeExecutionHostId } from '../../../../shared/execution-host'
 import type { FolderWorkspace, WorkspaceScope } from '../../../../shared/folder-workspace-types'
 import type { IssueRouteExecutionHostId } from '../../../../shared/issues/types'
@@ -16,13 +16,13 @@ export type IssueConversationLaunchWorkspace = {
 
 export function collectIssueConversationLaunchWorkspaces(args: {
   repos: readonly Repo[]
-  worktreesByRepo: Readonly<Record<string, readonly Worktree[]>>
-  folderWorkspaces: readonly FolderWorkspace[]
+  worktrees: Readonly<Record<string, readonly Worktree[]>>
+  folders: readonly FolderWorkspace[]
   projectGroups: readonly ProjectGroup[]
   route: IssueRouteExecutionHostId
 }): IssueConversationLaunchWorkspace[] {
   const repoById = new Map(args.repos.map((repo) => [repo.id, repo]))
-  const worktrees = Object.values(args.worktreesByRepo)
+  const worktrees = Object.values(args.worktrees)
     .flat()
     .flatMap((worktree) =>
       getWorktreeExecutionHostId(worktree, repoById.get(worktree.repoId), 'local') === args.route
@@ -36,7 +36,7 @@ export function collectIssueConversationLaunchWorkspaces(args: {
           ]
         : []
     )
-  const folders = args.folderWorkspaces.flatMap((workspace) =>
+  const folders = args.folders.flatMap((workspace) =>
     getFolderWorkspaceHostId(workspace, args.projectGroups) === args.route
       ? [
           {

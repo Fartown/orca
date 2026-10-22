@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
-import type { ChildProcessHandle } from '../../shared/child-process/process-spec'
-import { spawnProcess } from '../../shared/child-process/run-process'
+import type { ChildProcessHandle } from '@orca/process-host/process-spec'
+import { spawnProcess } from '@orca/process-host'
 import { GOAL_DRIVER_ENTRY_FILENAME, GOAL_HOME_ENV } from '../../shared/goals/goal-store-layout'
 
 const READY_TIMEOUT_MS = 20_000

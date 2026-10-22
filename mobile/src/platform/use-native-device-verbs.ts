@@ -9,6 +9,9 @@ import { discardStagedMedia, nativeMediaDeviceDeps } from './native-media-device
 import { isBridgeFileVerb } from '../file-attachment-upload/bridge-file-verbs'
 import { useNativeFileVerbServer } from '../file-attachment-upload/use-native-file-verb-server'
 
+/** The storage read is the shell's own store, answered before this dispatcher is reached. */
+export type NativeDeviceVerb = Exclude<BridgeNativeVerb, 'native.storage.read'>
+
 /**
  * Every `native.` verb this device serves, behind the one function the host dispatches to.
  *
@@ -19,7 +22,7 @@ import { useNativeFileVerbServer } from '../file-attachment-upload/use-native-fi
  */
 export function useNativeDeviceVerbs(
   sessionId: string | null
-): (verb: BridgeNativeVerb, params: unknown) => Promise<unknown> {
+): (verb: NativeDeviceVerb, params: unknown) => Promise<unknown> {
   const registry = useMediaHandleRegistry({ sessionId, discard: discardStagedMedia })
   const serveMedia = useMemo(
     () => createNativeMediaVerbServer(nativeMediaDeviceDeps(registry)),

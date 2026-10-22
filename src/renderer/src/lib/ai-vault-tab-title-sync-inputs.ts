@@ -5,6 +5,11 @@ import { getExecutionHostIdForWorktree } from '@/lib/worktree-runtime-owner'
 import type { AppState } from '@/store/types'
 import { collectAiVaultTitleRequests } from './ai-vault-tab-title-requests'
 import { sessionNameSlotEqual } from '../../../shared/session-names/session-name-slot'
+import {
+  selectDetectedWorktreesByRepo,
+  selectFolderWorkspaces,
+  selectWorktreesByRepo
+} from '@/store/workspace-record-selectors'
 
 function providerSessionEqual(
   left: AgentProviderSessionMetadata | undefined,
@@ -192,9 +197,9 @@ export function aiVaultTitleSyncInputsChanged(current: AppState, previous: AppSt
 
   const ownerInputsChanged =
     current.repos !== previous.repos ||
-    current.worktreesByRepo !== previous.worktreesByRepo ||
-    current.detectedWorktreesByRepo !== previous.detectedWorktreesByRepo ||
-    current.folderWorkspaces !== previous.folderWorkspaces ||
+    selectWorktreesByRepo(current) !== selectWorktreesByRepo(previous) ||
+    selectDetectedWorktreesByRepo(current) !== selectDetectedWorktreesByRepo(previous) ||
+    selectFolderWorkspaces(current) !== selectFolderWorkspaces(previous) ||
     current.projectGroups !== previous.projectGroups ||
     current.settings !== previous.settings ||
     current.activeWorktreeId !== previous.activeWorktreeId ||

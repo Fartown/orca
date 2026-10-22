@@ -6,7 +6,7 @@
  * it. The logic itself lives here, where `check:fork-features` can also pin it by name.
  */
 import { callRuntimeFileMutation } from '@/runtime/runtime-file-mutation-rpc'
-import { callRuntimeRpc, getActiveRuntimeTarget } from '@/runtime/runtime-rpc-client'
+import { callRuntimeRpc } from '@/runtime/runtime-rpc-client'
 import { toRuntimeWorktreeSelector } from '@/runtime/runtime-worktree-selector'
 import type {
   RuntimeFileOperationArgs,
@@ -15,11 +15,7 @@ import type {
 } from '@/runtime/runtime-file-client-types'
 import { readHostPathFile, writeHostPathFile } from './host-path-file-client'
 
-function environmentTarget(
-  settings: RuntimeFileOperationArgs['settings'],
-  worktreeId?: string | null
-) {
-  const target = getActiveRuntimeTarget(settings)
+function environmentTarget(target: RuntimeFileOperationArgs['target'], worktreeId?: string | null) {
   return target.kind === 'environment' && worktreeId
     ? { target, worktree: toRuntimeWorktreeSelector(worktreeId) }
     : null
@@ -27,11 +23,11 @@ function environmentTarget(
 
 /** Read a granted host path, or `null` when this read is not one. */
 export async function readHostPathFileForTab(
-  settings: RuntimeFileOperationArgs['settings'],
+  target: RuntimeFileOperationArgs['target'],
   worktreeId: string | null | undefined,
   grant: RuntimeHostPathGrantRef | undefined
 ): Promise<RuntimeReadableFileContent | null> {
-  const addressed = grant ? environmentTarget(settings, worktreeId) : null
+  const addressed = grant ? environmentTarget(target, worktreeId) : null
   if (!grant || !addressed) {
     return null
   }
@@ -53,7 +49,7 @@ export async function writeHostPathFileForTab(
   // through an authorization that was never asked for.
   const addressed =
     grant && grant.absolutePath === filePath
-      ? environmentTarget(context.settings, context.worktreeId)
+      ? environmentTarget(context.target, context.worktreeId)
       : null
   if (!grant || !addressed) {
     return false
@@ -94,8 +90,7 @@ export async function resolveAbsoluteTabEntryReach(args: {
     filePath: string
   ) => Promise<{ isDirectory: boolean }>
 }): Promise<AbsoluteTabEntryReach> {
-  const needsGrant =
-    Boolean(args.context.settings?.activeRuntimeEnvironmentId?.trim()) && !args.worktreeRelativePath
+  const needsGrant = args.context.target.kind === 'environment' && !args.worktreeRelativePath
   if (needsGrant) {
     const grant = await args.requestHostPathGrant(args.context, args.filePath)
     // Why the grant's path wins: the host canonicalizes before minting, so this is the file it

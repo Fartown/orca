@@ -22,6 +22,13 @@ const SESSION = '/h/[hostId]/session/[worktreeId]'
 const SEAM = 'src/file-attachment-upload/file-attachment-picker.web.ts'
 const NATIVE = 'src/file-attachment-upload/file-attachment-picker.ts'
 const GRANT_MODULE = 'src/file-attachment-upload/bridge-file-verbs.ts'
+const closures = new Map()
+
+function routeClosure(module) {
+  const closure = closures.get(module) ?? mobileWebAppRouteClosure(module)
+  closures.set(module, closure)
+  return closure
+}
 
 /** The verb, parsed off its own declaration: a second spelling is one that can drift. */
 function filePickGrantToken() {
@@ -42,23 +49,22 @@ function routesDeclaring(token) {
 describe('the grant token this census is written against', () => {
   it('is the one the shell declares', () => {
     expect(filePickGrantToken()).toBe('native.file.pick')
+    expect(routesDeclaring(filePickGrantToken())).toEqual([SESSION])
   })
 })
 
 describeClosure(
   'the routes that attach a file',
   () => {
-    it('declares the named picker on exactly the routes whose closure reaches it', async () => {
-      const reaching = []
-      for (const [route, mod] of PAGE_ROUTE_MODULES) {
-        const closure = await mobileWebAppRouteClosure(mod)
-        if (closure.local.includes(SEAM)) {
-          reaching.push(route)
-        }
+    it.each([...PAGE_ROUTE_MODULES])(
+      'declares the named picker exactly when %s reaches it',
+      async (route, mod) => {
+        const closure = await routeClosure(mod)
+        const reachesPicker = closure.local.includes(SEAM)
+        expect(reachesPicker).toBe(route === SESSION)
+        expect(routesDeclaring(filePickGrantToken()).includes(route)).toBe(reachesPicker)
       }
-      expect(reaching).toEqual([SESSION])
-      expect(routesDeclaring(filePickGrantToken()).sort()).toEqual([...reaching].sort())
-    })
+    )
 
     it('declares it on the optional lane, so a shell without it keeps the screen on the page', () => {
       const session = MOBILE_WEB_PAGE_ROUTES.find((route) => route.pathname === SESSION)
@@ -74,7 +80,7 @@ describeClosure(
     })
 
     it('reaches the picker through its web sibling, never the native document picker', async () => {
-      const closure = await mobileWebAppRouteClosure(PAGE_ROUTE_MODULES.get(SESSION))
+      const closure = await routeClosure(PAGE_ROUTE_MODULES.get(SESSION))
       expect(closure.local).toContain(SEAM)
       expect(closure.local).not.toContain(NATIVE)
     })

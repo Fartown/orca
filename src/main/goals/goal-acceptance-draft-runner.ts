@@ -2,7 +2,7 @@ import { readFile, writeFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 import { StringDecoder } from 'node:string_decoder'
-import { runProcess } from '../../shared/child-process/run-process'
+import { runProcess } from '@orca/process-host'
 import type { GoalAcceptanceDraft } from '../../shared/goals/goal-acceptance-draft-contract'
 import type { GoalDraftAcceptanceParams } from '../../shared/goals/goal-control-contract'
 import {

@@ -6,14 +6,11 @@ import {
   createRuntimeFileCommands,
   useRuntimeFileCommandsLifecycle
 } from '../runtime/orca-runtime-files-test-harness'
-import {
-  getSshFilesystemProviderMock,
-  resolveAuthorizedPathMock
-} from '../runtime/orca-runtime-files-mock-registry'
+import { resolveAuthorizedPathMock } from '../runtime/orca-runtime-files-mock-registry'
 import { readAuthorizedDocPreviewFile } from '../../shared/doc-preview-file-access'
 import { REMOTE_RPC_MAX_CONTENT_BYTES } from '../../shared/remote-rpc-content-budget'
 import { readDocPreviewFile } from '../browser/doc-preview-file-reader'
-import { callRuntimeEnvironment } from '../ipc/runtime-environment-transport-routing'
+import { callRuntimeEnvironment } from '../ipc/runtime-environments/runtime-environment-transport-routing'
 import { RpcDispatcher } from '../runtime/rpc/dispatcher'
 import { FILE_METHODS } from '../runtime/rpc/methods/files'
 import type { OrcaRuntimeService } from '../runtime/orca-runtime'
@@ -41,12 +38,9 @@ vi.mock(
   async () =>
     (await import('../runtime/orca-runtime-files-mock-registry')).localWorktreeRuntimeOptionsMock
 )
-vi.mock(
-  '../providers/ssh-filesystem-dispatch',
-  async () =>
-    (await import('../runtime/orca-runtime-files-mock-registry')).sshFilesystemDispatchMock
-)
-vi.mock('../ipc/runtime-environment-transport-routing', () => ({ callRuntimeEnvironment: vi.fn() }))
+vi.mock('../ipc/runtime-environments/runtime-environment-transport-routing', () => ({
+  callRuntimeEnvironment: vi.fn()
+}))
 vi.mock('../persistence', () => ({ getCanonicalUserDataPath: () => '/unused-user-data' }))
 
 const TEXT_CAP = 20 * 1024 * 1024
@@ -154,31 +148,6 @@ describe('document preview text size', () => {
     }
   )
 
-  it.each([512 * 1024 + 1, TEXT_CAP])(
-    'reads all %i bytes through the direct SSH adapter',
-    async (size) => {
-      const { root, content } = await fixture(size)
-      getSshFilesystemProviderMock.mockReturnValue({
-        readDocPreviewFile: readAuthorizedDocPreviewFile
-      })
-      const grant = mintDocPreviewGrant({
-        owner: { kind: 'ssh', connectionId: 'ssh-preview-size' },
-        root,
-        entryRelativePath: 'index.html',
-        browserPageId: 'preview-size-test'
-      })
-
-      const result = await readDocPreviewFile(grant, 'index.html')
-
-      expect(result.ok).toBe(true)
-      if (!result.ok) {
-        throw new Error(result.message)
-      }
-      expect(result.bytes.byteLength).toBe(size)
-      expect(result.bytes.toString('utf8') === content).toBe(true)
-    }
-  )
-
   it('rejects 20 MiB plus one byte without returning partial content', async () => {
     const { root, entryPath } = await fixture(TEXT_CAP + 1)
     const { commands } = createRuntimeFileCommands({ path: root })
@@ -197,21 +166,6 @@ describe('document preview text size', () => {
         maxBinaryBytes: 10 * 1024 * 1024
       })
     ).rejects.toThrow('file_too_large')
-
-    getSshFilesystemProviderMock.mockReturnValue({
-      readDocPreviewFile: readAuthorizedDocPreviewFile
-    })
-    const grant = mintDocPreviewGrant({
-      owner: { kind: 'ssh', connectionId: 'ssh-preview-size' },
-      root,
-      entryRelativePath: 'index.html',
-      browserPageId: 'preview-size-test'
-    })
-    await expect(readDocPreviewFile(grant, 'index.html')).resolves.toMatchObject({
-      ok: false,
-      status: 413,
-      reason: 'too-large'
-    })
   })
 
   it('preserves the paired and ordinary file text caps', async () => {

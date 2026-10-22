@@ -8,6 +8,8 @@ import type { GoalSummary, GoalSummaryNotice } from '../../../shared/goals/goal-
 import type { NotificationDispatchResult } from '../../../shared/notification-settings-types'
 import { translate } from '@/i18n/i18n'
 import { useAppStore } from '../store'
+import type { AppState } from '@/store/types'
+import { selectFolderWorkspaces } from '@/store/workspace-record-selectors'
 import { isGoalHostInContact, type GoalHostContactState } from './goal-host-contact'
 import { GoalRuntimeClient } from './goal-runtime-client'
 
@@ -60,13 +62,10 @@ export function GoalNoticeWatcher(): null {
 }
 
 function selectGoalHostsInContactKey(
-  state: GoalHostContactState & {
-    repos?: readonly { connectionId?: string | null; executionHostId?: string | null }[]
-    folderWorkspaces?: readonly { connectionId?: string | null; executionHostId?: string | null }[]
-  }
+  state: GoalHostContactState & Pick<AppState, 'repos' | 'folderWorkspaces'>
 ): string {
   const hosts = new Set<string>(['local'])
-  for (const owner of [...(state.repos ?? []), ...(state.folderWorkspaces ?? [])]) {
+  for (const owner of [...(state.repos ?? []), ...selectFolderWorkspaces(state)]) {
     hosts.add(getRepoExecutionHostId(owner))
   }
   return [...hosts]

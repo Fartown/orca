@@ -1,9 +1,9 @@
 ---
-title: "远程主机绝对路径打开"
-slug: "远程主机绝对路径打开"
+title: '远程主机绝对路径打开'
+slug: '远程主机绝对路径打开'
 status: testing
 created: 2026-09-16
-updated: 2026-10-09
+updated: 2026-10-21
 external_ids: []
 ---
 
@@ -11,14 +11,14 @@ external_ids: []
 
 ## 1. 关键文档链接
 
-| 类型 | 文档 | 状态 | 说明 |
-| --- | --- | --- | --- |
-| 需求 | [requirements/远程主机绝对路径打开.md](requirements/远程主机绝对路径打开.md) | ready | REQ-801～REQ-805 |
-| 交互 | - | not-required | 无新 UI；成功路径就是文件正常打开 |
-| 调研 | - | not-required | 主机既有 grant 机制的盘点写在 D-302 |
-| 方案 | - | not-required | 要点记在 D-301、D-302 |
-| 测试用例 | [tests/cases/远程主机绝对路径打开功能测试.md](tests/cases/远程主机绝对路径打开功能测试.md) | ready | TC-801 真机，TC-802～TC-810 单元 |
-| 测试记录 | [tests/runs/2026-09-16-配对真机与单元验证.md](tests/runs/2026-09-16-配对真机与单元验证.md) | completed | TC-801 真机通过并带反向对照 |
+| 类型     | 文档                                                                                       | 状态         | 说明                                |
+| -------- | ------------------------------------------------------------------------------------------ | ------------ | ----------------------------------- |
+| 需求     | [requirements/远程主机绝对路径打开.md](requirements/远程主机绝对路径打开.md)               | ready        | REQ-801～REQ-805                    |
+| 交互     | -                                                                                          | not-required | 无新 UI；成功路径就是文件正常打开   |
+| 调研     | -                                                                                          | not-required | 主机既有 grant 机制的盘点写在 D-302 |
+| 方案     | -                                                                                          | not-required | 要点记在 D-301、D-302               |
+| 测试用例 | [tests/cases/远程主机绝对路径打开功能测试.md](tests/cases/远程主机绝对路径打开功能测试.md) | ready        | TC-801 真机，TC-802～TC-810 单元    |
+| 测试记录 | [tests/runs/2026-09-16-配对真机与单元验证.md](tests/runs/2026-09-16-配对真机与单元验证.md) | completed    | TC-801 真机通过并带反向对照         |
 
 ## 2. 决策点记录
 
@@ -69,7 +69,6 @@ external_ids: []
 - 未解决问题：完整同步检查仍在进行，结果以该目录 README 和日志为准；本次记录不改变此前未完成验收的状态。
 - 下一步：完成同步门禁后推送集成分支。
 
-
 ### 2026-10-06 同步上游 d17351401d：改用上游用户点名访问（testing）
 
 - 本轮目标：上游删除主进程授权接口、改为“用户点名”访问后，保住主机路径授权打开。
@@ -114,3 +113,12 @@ external_ids: []
 - 验证证据：两处修正前后各有一次真机运行，截图在 `.docs/remote-host-path-open-ui-validation/2026-09-16/evidence/`。
 - 未解决问题：无。
 - 下一步：无。这条记录用于说明为什么这个功能必须有真机验证——两处都通不过单测的自造替身。
+
+## 2026-10-21 上游 orcad 迁移（done）
+
+- 本轮目标：按用户确认迁移 fork 能力，并通过官方同步入口合入上游 `2eae220b2ef`。
+- 完成内容：由文件所属 orcad 颁发绝对路径 grant，校验 canonical path 与客户端身份；不跨机器读取同名文件。
+- 代码或文档变更：注册表的接缝、依赖与测试随上游结构迁移；未删除或禁用已注册功能。详见集成分支的 `2026-10-21-orcad上游同步.md` 方案。
+- 验证证据：`.docs/upstream-sync-ui-validation/2026-10-21/evidence/`；四目标类型检查、最终 Web 类型复验、三项本地化、功能注册及全部注册功能回归通过；隐藏 Electron + 真实 SSH 隔离 orcad 验收通过。完整记录见 sync-upstream-gates.log、attachment-grant-matrix.log 与 remaining-feature-checks.log。
+- 未解决问题：本轮实现无未解决问题；提交后需从干净 integration 复核架构门禁并观察远端构建。不在本次安装用户应用或升级已有远程服务。
+- 下一步：推送通过门禁的 integration，跟踪远端检查；保留当前应用及会话。

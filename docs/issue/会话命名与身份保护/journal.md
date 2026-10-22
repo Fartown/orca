@@ -3,7 +3,7 @@ title: 会话命名与身份保护
 slug: 会话命名与身份保护
 status: implementing
 created: 2026-09-08
-updated: 2026-10-09
+updated: 2026-10-21
 external_ids: []
 ---
 
@@ -11,30 +11,30 @@ external_ids: []
 
 ## 1. 关键文档链接
 
-| 类型 | 文档 | 状态 | 说明 |
-| --- | --- | --- | --- |
-| 需求 | [会话命名与身份保护](requirements/会话命名与身份保护.md) | ready | 独立的公共命名要求，承接 REQ-025/026/028 |
-| 方案 | [Provider优先的会话命名统一方案](solutions/Provider优先的会话命名统一方案.md) | reviewing | 既有主方案，迁移不等于新增方案或全量完成 |
-| 身份首期 | [Claude在位会话活跃窗口保护方案](solutions/Claude在位会话活跃窗口保护方案.md) | reviewing | 已选实现手段和限制，不是新产品需求 |
-| 历史方案 | [会话命名统一方案](solutions/会话命名统一方案.md) | superseded | 保留撤回方案的历史，不恢复人工名新系统 |
-| 调研 | [会话命名现状调研](research/会话命名现状调研.md) | ready | 保留原调研版本与证据边界 |
-| 范围审查 | [会话命名改动范围审查](research/会话命名改动范围审查.md) | ready | 固定 SHA 的必要性、重复与交叉依赖审查，不是产品重测 |
-| 逐文件评审 | [会话命名接缝逐文件评审](research/会话命名接缝逐文件评审.md) | ready | 回应 Claude：69 项表、A 范围选项与 B/D 变体失败归类，不是精简版放行 |
-| 归属证据 | [会话身份归属证据调研](research/会话身份归属证据调研.md) | ready | 原脱敏证据不移动或改写 |
-| 命名测试 | [Provider优先命名验收](tests/cases/Provider优先命名验收.md) | ready | TC-231～254，规格不是执行结果 |
-| Claude测试 | [Claude活跃窗口保护测试](tests/cases/Claude活跃窗口保护测试.md) | ready | TC-255～260 |
-| Codex测试 | [Codex嵌套调用保护测试](tests/cases/Codex嵌套调用保护测试.md) | ready | 嵌套调用及内部标题任务准入 |
-| 顶部测试 | [顶部名称投影测试](tests/cases/顶部名称投影测试.md) | ready | 原有投影测试迁入 |
-| 首期执行 | [Claude窗口保护](tests/runs/2026-09-08-Claude活跃窗口保护.md) | completed | 原规则级及后台 App 结果 |
-| Claude真实执行 | [真实Claude](tests/runs/2026-09-09-真实Claude活跃窗口保护.md) | completed | 保留原测试版本与未覆盖项 |
-| Codex失败证据 | [真实Codex身份与名称](tests/runs/2026-09-09-真实Codex身份与名称验证.md) | completed | 修复前失败仍保留 |
-| Codex修复执行 | [Codex嵌套调用修复](tests/runs/2026-09-09-Codex嵌套调用修复.md) | completed | 原真实修复回归 |
-| 顶部执行 | [顶部名称投影修复](tests/runs/2026-09-09-顶部名称投影修复.md) | completed | 原源码与 UI 证据 |
-| 打包执行 | [打包身份保护验证](tests/runs/2026-09-09-打包身份保护验证.md) | draft | 原记录未完成，不补写 PASS |
-| 全量推进 | [全量命名验收推进](tests/runs/2026-09-09-全量命名验收推进.md) | draft | 核心已验证，其他入口与边界逐项留账 |
-| 等价整理 | [等价去重回归](tests/runs/2026-09-11-等价去重回归.md) | completed | 两处去重的前后对照和注册回归，不削减功能、不代表全量验收 |
-| 合码关联回归 | [合码关联回归](tests/runs/2026-09-11-合码关联回归.md) | completed | 本地关联回归与门禁通过，远端 CI 推进中 |
-| 回归摘要执行 | [Codex回归摘要命名](tests/runs/2026-09-14-Codex回归摘要命名.md) | completed | 接收层结构判据回归与真实 Hook 取证，未做真机 App 验证 |
+| 类型           | 文档                                                                          | 状态       | 说明                                                                |
+| -------------- | ----------------------------------------------------------------------------- | ---------- | ------------------------------------------------------------------- |
+| 需求           | [会话命名与身份保护](requirements/会话命名与身份保护.md)                      | ready      | 独立的公共命名要求，承接 REQ-025/026/028                            |
+| 方案           | [Provider优先的会话命名统一方案](solutions/Provider优先的会话命名统一方案.md) | reviewing  | 既有主方案，迁移不等于新增方案或全量完成                            |
+| 身份首期       | [Claude在位会话活跃窗口保护方案](solutions/Claude在位会话活跃窗口保护方案.md) | reviewing  | 已选实现手段和限制，不是新产品需求                                  |
+| 历史方案       | [会话命名统一方案](solutions/会话命名统一方案.md)                             | superseded | 保留撤回方案的历史，不恢复人工名新系统                              |
+| 调研           | [会话命名现状调研](research/会话命名现状调研.md)                              | ready      | 保留原调研版本与证据边界                                            |
+| 范围审查       | [会话命名改动范围审查](research/会话命名改动范围审查.md)                      | ready      | 固定 SHA 的必要性、重复与交叉依赖审查，不是产品重测                 |
+| 逐文件评审     | [会话命名接缝逐文件评审](research/会话命名接缝逐文件评审.md)                  | ready      | 回应 Claude：69 项表、A 范围选项与 B/D 变体失败归类，不是精简版放行 |
+| 归属证据       | [会话身份归属证据调研](research/会话身份归属证据调研.md)                      | ready      | 原脱敏证据不移动或改写                                              |
+| 命名测试       | [Provider优先命名验收](tests/cases/Provider优先命名验收.md)                   | ready      | TC-231～254，规格不是执行结果                                       |
+| Claude测试     | [Claude活跃窗口保护测试](tests/cases/Claude活跃窗口保护测试.md)               | ready      | TC-255～260                                                         |
+| Codex测试      | [Codex嵌套调用保护测试](tests/cases/Codex嵌套调用保护测试.md)                 | ready      | 嵌套调用及内部标题任务准入                                          |
+| 顶部测试       | [顶部名称投影测试](tests/cases/顶部名称投影测试.md)                           | ready      | 原有投影测试迁入                                                    |
+| 首期执行       | [Claude窗口保护](tests/runs/2026-09-08-Claude活跃窗口保护.md)                 | completed  | 原规则级及后台 App 结果                                             |
+| Claude真实执行 | [真实Claude](tests/runs/2026-09-09-真实Claude活跃窗口保护.md)                 | completed  | 保留原测试版本与未覆盖项                                            |
+| Codex失败证据  | [真实Codex身份与名称](tests/runs/2026-09-09-真实Codex身份与名称验证.md)       | completed  | 修复前失败仍保留                                                    |
+| Codex修复执行  | [Codex嵌套调用修复](tests/runs/2026-09-09-Codex嵌套调用修复.md)               | completed  | 原真实修复回归                                                      |
+| 顶部执行       | [顶部名称投影修复](tests/runs/2026-09-09-顶部名称投影修复.md)                 | completed  | 原源码与 UI 证据                                                    |
+| 打包执行       | [打包身份保护验证](tests/runs/2026-09-09-打包身份保护验证.md)                 | draft      | 原记录未完成，不补写 PASS                                           |
+| 全量推进       | [全量命名验收推进](tests/runs/2026-09-09-全量命名验收推进.md)                 | draft      | 核心已验证，其他入口与边界逐项留账                                  |
+| 等价整理       | [等价去重回归](tests/runs/2026-09-11-等价去重回归.md)                         | completed  | 两处去重的前后对照和注册回归，不削减功能、不代表全量验收            |
+| 合码关联回归   | [合码关联回归](tests/runs/2026-09-11-合码关联回归.md)                         | completed  | 本地关联回归与门禁通过，远端 CI 推进中                              |
+| 回归摘要执行   | [Codex回归摘要命名](tests/runs/2026-09-14-Codex回归摘要命名.md)               | completed  | 接收层结构判据回归与真实 Hook 取证，未做真机 App 验证               |
 
 ## 2. 决策点记录
 
@@ -111,7 +111,6 @@ external_ids: []
 - 验证证据：`.docs/upstream-sync-ui-validation/2026-10-09/`；首组冲突回归 65 项通过；合并提交后继续执行完整门禁与功能检查。
 - 未解决问题：完整同步检查仍在进行，结果以该目录 README 和日志为准；本次记录不改变此前未完成验收的状态。
 - 下一步：完成同步门禁后推送集成分支。
-
 
 ### 2026-10-06 同步上游 5cf3585b78：上游中断对账用例与活跃窗口对齐（testing）
 
@@ -430,3 +429,12 @@ external_ids: []
 - 验证证据：基线`cabf7f675e36af68ba95e7b095b695f38bee38f2`，开工工作树干净；主干源码回读及有界子代理消费者核实。`validate_research_doc.py`通过（2张Mermaid、59个源码索引）；两份新文档13个相对链接均存在，代码围栏平衡；`git diff --check`通过。本轮未执行产品测试/构建/CDP，不证明App行为已修复。
 - 未解决问题：实际异常identity归属需host/launch/事件实证；通用主/辅助身份判别、同host的WSL/account-home歧义和跨端逐类型接线仍需对应工作包细化。旧端无provenance，不能承诺严格原生名一致。
 - 下一步：按用户选定的目标范围实施工作包；实施前登记feature-owned路径与seams，之后逐项完成代码与真机验收，不把本文proposed状态转成已实现。
+
+## 2026-10-21 上游 orcad 迁移（done）
+
+- 本轮目标：按用户确认迁移 fork 能力，并通过官方同步入口合入上游 `2eae220b2ef`。
+- 完成内容：保留 provider 身份折叠、主机会话归属、焦点标题刷新和恢复令牌；WSL 的 Claude 替换判断采用主机进程状态。
+- 代码或文档变更：注册表的接缝、依赖与测试随上游结构迁移；未删除或禁用已注册功能。详见集成分支的 `2026-10-21-orcad上游同步.md` 方案。
+- 验证证据：`.docs/upstream-sync-ui-validation/2026-10-21/evidence/`；四目标类型检查、最终 Web 类型复验、三项本地化、功能注册及全部注册功能回归通过；隐藏 Electron + 真实 SSH 隔离 orcad 验收通过。完整记录见 sync-upstream-gates.log、attachment-grant-matrix.log 与 remaining-feature-checks.log。
+- 未解决问题：本轮实现无未解决问题；提交后需从干净 integration 复核架构门禁并观察远端构建。不在本次安装用户应用或升级已有远程服务。
+- 下一步：推送通过门禁的 integration，跟踪远端检查；保留当前应用及会话。

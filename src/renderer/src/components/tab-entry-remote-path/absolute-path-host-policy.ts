@@ -65,7 +65,8 @@ export function resolveTabEntryAbsolutePathHostPolicy(
   } catch {
     return BLOCKED_UNRESOLVED
   }
-  const environmentId = context.settings?.activeRuntimeEnvironmentId?.trim()
+  const environmentId =
+    context.target.kind === 'environment' ? context.target.environmentId : undefined
   if (environmentId) {
     return { kind: 'runtime', environmentId, worktreePath: worktree.path, pathPlatform: 'posix' }
   }
@@ -162,5 +163,17 @@ export function createTabEntryAbsolutePathHostPolicySelector(
     previousSlices = slices
     previousResult = resolveTabEntryAbsolutePathHostPolicy(state, worktreeId)
     return previousResult
+  }
+}
+
+/** Resolve again after awaits; a moved workspace cannot reuse a former host's grant. */
+export function tabEntryAbsolutePathHostGuard(
+  policy: TabEntryAbsolutePathHostPolicy,
+  current: () => TabEntryAbsolutePathHostPolicy
+): () => void {
+  return () => {
+    if (!isSameTabEntryAbsolutePathHost(policy, current())) {
+      throw new Error(TAB_ENTRY_ABSOLUTE_PATH_HOST_CHANGED_MESSAGE)
+    }
   }
 }

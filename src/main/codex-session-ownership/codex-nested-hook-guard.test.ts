@@ -3,7 +3,7 @@ import { createServer, type Server } from 'node:http'
 import { mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { runProcess } from '../../shared/child-process/run-process'
+import { runProcess } from '@orca/process-host'
 import { getManagedScript } from '../codex/codex-hook-script'
 
 describe.skipIf(process.platform === 'win32')('Codex nested hook delivery', () => {

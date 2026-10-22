@@ -1,5 +1,6 @@
 import { sha256 } from '../sha256'
 import { parsePaneKey } from '../stable-pane-id'
+import { toHostSessionTabId, HOST_TERMINAL_SURFACE_SEPARATOR } from '../terminal-surface-id'
 
 export type LaunchEvidence = Record<string, string | number | boolean | null>
 
@@ -17,7 +18,7 @@ export function launchReference(value: unknown): string | null {
 }
 
 function tabReference(value: unknown): string | null {
-  return launchReference(typeof value === 'string' ? value.replace(/^web-terminal-/, '') : value)
+  return launchReference(typeof value === 'string' ? toHostSessionTabId(value).split(HOST_TERMINAL_SURFACE_SEPARATOR)[0] : value)
 }
 
 export function providerReference(agent: unknown, session: unknown): string | null {
@@ -27,10 +28,20 @@ export function providerReference(agent: unknown, session: unknown): string | nu
     : null
 }
 
+function knownValue(value: unknown, allowed: readonly string[]): string {
+  return typeof value === 'string' && allowed.includes(value) ? value : 'unspecified'
+}
+
+function worktreeReference(value: unknown): string | null {
+  return launchReference(typeof value === 'string' ? value.replace(/^id:/, '') : value)
+}
+
 export function launchEvidence(input: unknown): LaunchEvidence {
   const agent = launchField(input, 'launchAgent') ?? launchField(input, 'agent')
   const provider =
     launchField(input, 'resumeProviderSession') ?? launchField(input, 'providerSession')
+  const placement = launchField(input, 'placement')
+  const owner = launchField(launchField(input, 'agentSessionEnsure'), 'owner')
   return {
     diagnosticVersion: 1,
     sourcePaneRef: launchReference(launchField(input, 'paneKey')),
@@ -40,11 +51,32 @@ export function launchEvidence(input: unknown): LaunchEvidence {
       launchField(input, 'source') === 'runtime-session' ? 'runtime-session' : 'unspecified',
     launchSourceRef: launchReference(launchField(launchField(input, 'telemetry'), 'launch_source')),
     requestKindRef: launchReference(launchField(launchField(input, 'telemetry'), 'request_kind')),
-    worktreeRef: launchReference(
+    worktreeRef: worktreeReference(
       launchField(input, 'worktreeId') ?? launchField(input, 'worktree')
     ),
-    tabRef: tabReference(launchField(input, 'tabId')),
-    leafRef: launchReference(launchField(input, 'leafId')),
+    tabRef: tabReference(launchField(input, 'tabId') ?? launchField(placement, 'tabId')),
+    leafRef: launchReference(launchField(input, 'leafId') ?? launchField(placement, 'leafId')),
+    hasPlacement: placement != null,
+    kind: knownValue(launchField(input, 'kind'), ['explicit', 'automatic']),
+    agentSessionKind: knownValue(launchField(input, 'agentSessionKind'), ['fresh', 'resume']),
+    spawnIntent: knownValue(launchField(input, 'spawnIntent'), [
+      'interactive',
+      'user-resume',
+      'automatic-restore',
+      'automation'
+    ]),
+    disposition: knownValue(
+      launchField(input, 'disposition') ??
+        launchField(launchField(input, 'agentSessionEnsure'), 'disposition'),
+      ['created', 'adopted', 'attached', 'replayed']
+    ),
+    sleepingOrigin: knownValue(launchField(input, 'origin'), ['quit', 'live', 'worktree-sleep']),
+    hasSleepingRecord: launchField(input, 'hasSleepingRecord') === true,
+    useLiveEntry: launchField(input, 'useLiveEntry') === true,
+    operationRef: launchReference(launchField(input, 'clientOperationId')),
+    mutationRef: launchReference(launchField(input, 'clientMutationId')),
+    launchTokenRef: launchReference(launchField(input, 'launchToken')),
+    environmentRef: launchReference(launchField(input, 'environmentId')),
     ptyRef: launchReference(launchField(input, 'ptyId') ?? launchField(input, 'sessionId')),
     handleRef: launchReference(
       launchField(input, 'handle') ?? launchField(input, 'preAllocatedHandle')
@@ -59,7 +91,11 @@ export function launchEvidence(input: unknown): LaunchEvidence {
     hasProviderIdentity: provider !== undefined && provider !== null,
     hasOwnerClaim: launchField(input, 'agentSessionEnsure') != null,
     claimRef: launchReference(
-      launchField(launchField(launchField(input, 'agentSessionEnsure'), 'claim'), 'identityDigest')
+      launchField(
+        launchField(launchField(input, 'agentSessionEnsure'), 'claim') ??
+          launchField(owner, 'claim'),
+        'identityDigest'
+      )
     ),
     hasRequestedSession: typeof launchField(input, 'sessionId') === 'string',
     attachOnly: launchField(input, 'attachOnly') === true,
@@ -84,6 +120,19 @@ export function launchCandidateEvidence(input: unknown, state: unknown): LaunchE
       typeof launchField(launchField(layout, 'ptyIdsByLeafId'), pane.leafId) === 'string'
     evidence.sourcePaneHasTab =
       Array.isArray(tabs) && tabs.some((tab) => launchField(tab, 'id') === pane.tabId)
+    const sourceTab = Array.isArray(tabs)
+      ? tabs.find((tab) => launchField(tab, 'id') === pane.tabId)
+      : undefined
+    evidence.sourcePanePendingActivation = launchField(sourceTab, 'pendingActivationSpawn') === true
+    const unified = launchField(
+      launchField(state, 'unifiedTabsByWorktree'),
+      String(launchField(input, 'worktreeId'))
+    )
+    evidence.sourcePaneInUnifiedTabs =
+      Array.isArray(unified) && unified.some((tab) => launchField(tab, 'entityId') === pane.tabId)
+    evidence.sourcePanePtyRef = launchReference(
+      launchField(launchField(layout, 'ptyIdsByLeafId'), pane.leafId)
+    )
   }
   const ref = providerReference(
     launchField(input, 'launchAgent') ?? launchField(input, 'agent'),

@@ -27,6 +27,7 @@ export function startArtifactShareForMainProcess(input: {
   resourcesPath: string | undefined
   appPath: string | null
   callRuntimeEnvironment: ArtifactShareRuntimeEnvironmentCall
+  isEnvironmentReachable: (environmentId: string) => boolean
 }): void {
   const home = resolveArtifactShareHome(process.env, homedir())
   const computerLabel = hostname()
@@ -49,6 +50,7 @@ export function startArtifactShareForMainProcess(input: {
     owner,
     userDataPath: input.userDataPath,
     callRuntimeEnvironment: input.callRuntimeEnvironment,
+    isEnvironmentReachable: input.isEnvironmentReachable,
     configureLocal: async (request) => {
       const before = readArtifactShareConfig(home)
       await updateArtifactShareConfig(home, {

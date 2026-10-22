@@ -1,6 +1,9 @@
 import { requestSessionSearchRoots } from './session-scanner-service-root-request'
 import { scannedSessionNameEvidence } from '../session-names/scanned-session-name-evidence'
+import { aiVaultScanWork, trackAiVaultScanProgress } from './ai-vault-scan-progress'
+import type { AiVaultScanWork } from '../../shared/ai-vault-scan-progress'
 import type { AiVaultSessionTitle } from '../../shared/ai-vault-session-title'
+import type { AiVaultListResult } from '../../shared/ai-vault-types'
 import { readAiVaultFirstUserPrompt } from './session-first-user-prompt-read'
 import {
   flushSessionParseCachePersist,
@@ -44,6 +47,21 @@ function send(message: AiVaultServiceChildMessage): void {
 
 function titleKey(request: { agent: string; sessionId: string }): string {
   return `${request.agent}\0${request.sessionId}`
+}
+
+async function scanReportingProgress(
+  request: Extract<AiVaultServiceRequest, { operation: 'scan' }>,
+  signal: AbortSignal
+): Promise<{ result: AiVaultListResult; work: AiVaultScanWork | null }> {
+  const stopProgress = trackAiVaultScanProgress(signal, (work) =>
+    send({ type: 'progress', id: request.id, work })
+  )
+  try {
+    const result = await scanAiVaultSessions({ ...request.options, signal })
+    return { result, work: aiVaultScanWork(signal) }
+  } finally {
+    stopProgress()
+  }
 }
 
 async function executeRequest(request: AiVaultServiceRequest): Promise<AiVaultServiceResultValue> {
@@ -91,7 +109,7 @@ async function executeRequest(request: AiVaultServiceRequest): Promise<AiVaultSe
       }
     }
     const startedAt = performance.now()
-    const result = await scanAiVaultSessions({ ...request.options, signal: controller.signal })
+    const { result, work } = await scanReportingProgress(request, controller.signal)
     for (const session of result.sessions) {
       if ((session.agent === 'claude' || session.agent === 'codex') && session.title.trim()) {
         cacheServiceTitle(titleIndex, {
@@ -104,7 +122,7 @@ async function executeRequest(request: AiVaultServiceRequest): Promise<AiVaultSe
     }
     return {
       operation: 'scan',
-      value: { result, durationMs: performance.now() - startedAt }
+      value: { result, durationMs: performance.now() - startedAt, work }
     }
   } finally {
     controllers.delete(request.id)
@@ -182,7 +200,11 @@ process.on('message', (raw: AiVaultServiceParentMessage) => {
     if (raw.sessionSearch) {
       sessionSearch.apply(raw.sessionSearch)
     }
-    send({ type: 'ready', protocol: AI_VAULT_SERVICE_PROTOCOL_VERSION, pid: process.pid })
+    send({
+      type: 'ready',
+      protocol: AI_VAULT_SERVICE_PROTOCOL_VERSION,
+      pid: process.pid
+    })
     return
   }
   if (!initialized || shuttingDown) {

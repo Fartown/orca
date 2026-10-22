@@ -3,7 +3,8 @@ import type {
   RuntimeFileReadChunkResult,
   RuntimeFileReadResult
 } from '../../../shared/runtime-types'
-import { callRuntimeRpc, getActiveRuntimeTarget, RuntimeRpcCallError } from './runtime-rpc-client'
+import { callRuntimeRpc } from './runtime-rpc-client'
+import { RuntimeRpcCallError } from './runtime-rpc-result'
 import type {
   RuntimeFileDownloadResult,
   RuntimeFileOperationArgs,
@@ -18,13 +19,12 @@ import {
 } from './runtime-file-routing'
 import { toRuntimeWorktreeSelector } from './runtime-worktree-selector'
 import { readHostPathFileForTab } from '../runtime-host-path/host-path-grant-seams'
-import {
-  assembleRuntimeFileFromChunks,
-  RUNTIME_EDITOR_CHUNK_BYTES,
-  RuntimeFileTooLargeError
-} from '../runtime-large-file/assemble-runtime-file-chunks'
+import { readWholeRuntimeFile } from '../runtime-large-file/read-whole-runtime-file'
+import { chatScratchFileAddress } from './runtime-chat-scratch-file-address'
 import { isAgentSessionAttachmentStorePath } from '../../../shared/agent-session-attachments'
 import type { LocalFileAccess } from '../../../shared/local-file-access'
+import { readRuntimeTerminalArtifactContent } from './runtime-terminal-artifact-read'
+import { pinRemoteFileAddress, readRemoteFilePreview } from './runtime-paged-file-read'
 
 const REMOTE_DOWNLOAD_CHUNK_BYTES = 384 * 1024
 const REMOTE_DOWNLOAD_UPDATE_REQUIRED_MESSAGE =
@@ -41,7 +41,7 @@ export function localAccess(
 }
 
 export async function readRuntimeFileContent({
-  settings,
+  target,
   filePath,
   relativePath,
   worktreeId,
@@ -49,10 +49,11 @@ export async function readRuntimeFileContent({
   expectedExternalSshTargetId,
   includeLocalLogMetadata,
   hostPathGrant,
-  access
+  access,
+  terminalArtifactGrantId,
+  pageOversizedBinary
 }: RuntimeFileReadArgs): Promise<RuntimeReadableFileContent> {
-  assertExternalSshReadOwnership(settings, connectionId, expectedExternalSshTargetId)
-  const target = getActiveRuntimeTarget(settings)
+  assertExternalSshReadOwnership(target, connectionId, expectedExternalSshTargetId)
   if (target.kind !== 'environment' || !worktreeId) {
     return window.api.fs.readFile({
       filePath,
@@ -63,34 +64,48 @@ export async function readRuntimeFileContent({
   }
   // Why before the relative-path check: a grant addresses a path outside the worktree, which the
   // worktree-relative contract below cannot express.
-  const granted = await readHostPathFileForTab(settings, worktreeId, hostPathGrant)
+  const granted = await readHostPathFileForTab(target, worktreeId, hostPathGrant)
   if (granted) {
     return granted
   }
-  if (!canReadRelativeRuntimeFile(relativePath)) {
+  if (terminalArtifactGrantId) {
+    return readRuntimeTerminalArtifactContent({
+      target,
+      worktreeId,
+      absolutePath: filePath,
+      grantId: terminalArtifactGrantId
+    })
+  }
+  // A workspace path first; a chat's scratch file is the absolute path no workspace contains.
+  const scratch = canReadRelativeRuntimeFile(relativePath) ? null : chatScratchFileAddress(filePath)
+  const readPath = scratch?.relativePath ?? relativePath
+  if (!canReadRelativeRuntimeFile(readPath)) {
     throw new Error('Remote file is outside the owning runtime worktree')
   }
 
-  const worktree = toRuntimeWorktreeSelector(worktreeId)
+  const remote = pinRemoteFileAddress({
+    target,
+    worktree: scratch?.worktreeSelector ?? toRuntimeWorktreeSelector(worktreeId),
+    relativePath: readPath
+  })
   let result: RuntimeFileReadResult
   try {
     result = await callRuntimeRpc<RuntimeFileReadResult>(
       target,
       'files.read',
-      { worktree, relativePath },
-      { timeoutMs: 15_000 }
+      { worktree: remote.worktree, relativePath: readPath },
+      {
+        timeoutMs: 15_000,
+        expectedEnvironmentPairingRevision: remote.expectedEnvironmentPairingRevision
+      }
     )
   } catch (err) {
     // Why: files.read rejects binary paths with the typed 'binary_file' error; fall
     // back to the base64 preview RPC so PDFs/images render like local/SSH paths.
     // Match the exact typed error so an unrelated failure can't spoof the fallback.
     if (err instanceof RuntimeRpcCallError && err.message === 'binary_file') {
-      return callRuntimeRpc<RuntimeFilePreviewResult>(
-        target,
-        'files.readPreview',
-        { worktree, relativePath },
-        { timeoutMs: 15_000 }
-      )
+      // Why: baseline checks call this too and discard binary content, so paging is opt-in.
+      return readRemoteFilePreview(remote, { pageOversized: pageOversizedBinary === true })
     }
     throw err
   }
@@ -99,41 +114,16 @@ export async function readRuntimeFileContent({
     // is preview-sized, so finish the job on files.readChunk — the same RPC the download path
     // already uses, so nothing new reaches the wire.
     return {
-      content: await readWholeRuntimeFile(target, worktree, relativePath, result),
+      content: await readWholeRuntimeFile(
+        remote.target,
+        remote.worktree,
+        remote.relativePath,
+        result
+      ),
       isBinary: false
     }
   }
   return { content: result.content, isBinary: false }
-}
-
-async function readWholeRuntimeFile(
-  target: Extract<ReturnType<typeof getActiveRuntimeTarget>, { kind: 'environment' }>,
-  worktree: string,
-  relativePath: string,
-  truncated: RuntimeFileReadResult
-): Promise<string> {
-  try {
-    return await assembleRuntimeFileFromChunks((offset) =>
-      callRuntimeRpc<RuntimeFileReadChunkResult>(
-        target,
-        'files.readChunk',
-        { worktree, relativePath, offset, length: RUNTIME_EDITOR_CHUNK_BYTES },
-        { timeoutMs: 60_000 }
-      )
-    )
-  } catch (error) {
-    if (error instanceof RuntimeFileTooLargeError) {
-      throw new Error(`Remote file is too large to open in the editor (${error.byteLength} bytes)`)
-    }
-    // Why: a host that predates chunked reads can only offer the preview-sized answer, and that
-    // answer is not editable. Name the remedy instead of repeating the size.
-    if (error instanceof RuntimeRpcCallError && error.code === 'method_not_found') {
-      throw new Error(
-        `Remote file is too large to open in the editor (${truncated.byteLength} bytes). Update the Orca server to open files this size.`
-      )
-    }
-    throw error
-  }
 }
 
 export async function readRuntimeFilePreview(
@@ -142,12 +132,12 @@ export async function readRuntimeFilePreview(
   access?: LocalFileAccess
 ): Promise<RuntimeFilePreviewResult> {
   assertExternalSshReadOwnership(
-    context.settings,
+    context.target,
     context.connectionId,
     context.expectedExternalSshTargetId
   )
   const remoteArgs = getRemoteFileArgs(context, filePath)
-  const runtimeTarget = getActiveRuntimeTarget(context.settings)
+  const runtimeTarget = context.target
   // A chat attachment lives in the paired server's store, outside every worktree; that server
   // reads it back itself (an older one answers method_not_found, and the preview falls back).
   if (
@@ -172,11 +162,13 @@ export async function readRuntimeFilePreview(
       ...localAccess(context.connectionId, access)
     })
   }
-  return callRuntimeRpc<RuntimeFilePreviewResult>(
-    remoteArgs.target,
-    'files.readPreview',
-    { worktree: remoteArgs.worktreeSelector, relativePath: remoteArgs.relativePath },
-    { timeoutMs: 15_000 }
+  return readRemoteFilePreview(
+    {
+      target: remoteArgs.target,
+      worktree: remoteArgs.worktreeSelector,
+      relativePath: remoteArgs.relativePath
+    },
+    { pageOversized: true }
   )
 }
 
@@ -186,7 +178,7 @@ export async function downloadRuntimeFile(
   suggestedName: string
 ): Promise<RuntimeFileDownloadResult> {
   assertExternalSshReadOwnership(
-    context.settings,
+    context.target,
     context.connectionId,
     context.expectedExternalSshTargetId
   )

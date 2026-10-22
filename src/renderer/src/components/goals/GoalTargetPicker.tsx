@@ -14,6 +14,7 @@ import {
 import { translate } from '@/i18n/i18n'
 import { useAppStore } from '@/store'
 import { useAllWorktrees } from '@/store/selectors'
+import { selectFolderWorkspaces } from '@/store/workspace-record-selectors'
 import { listGoalSessionCandidates, type GoalSessionCandidate } from '@/goals/goal-session-target'
 
 export type GoalTargetSelection = {
@@ -38,7 +39,7 @@ export function GoalTargetPicker({
   onChange: (next: GoalTargetSelection) => void
 }): React.JSX.Element {
   const worktrees = useAllWorktrees()
-  const folderWorkspaces = useAppStore((s) => s.folderWorkspaces)
+  const folderWorkspaces = useAppStore(selectFolderWorkspaces)
   const agentStatusByPaneKey = useAppStore((s) => s.agentStatusByPaneKey)
   const route = useGoalDomainStore((s) => s.routeExecutionHostId)
   const hostWorktrees = useMemo(

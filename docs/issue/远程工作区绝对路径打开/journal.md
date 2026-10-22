@@ -3,7 +3,7 @@ title: '远程工作区绝对路径打开'
 slug: '远程工作区绝对路径打开'
 status: implementing
 created: 2026-09-11
-updated: 2026-10-06
+updated: 2026-10-21
 external_ids: []
 ---
 
@@ -164,3 +164,12 @@ external_ids: []
 - 验证证据：`validate_task.py` 结构校验通过；codebase-research 文档校验脚本通过；未运行代码测试。
 - 未解决问题：无。
 - 下一步：用户二次确认方案后登记 `config/fork-features.jsonc` 条目与策略白名单，进入实现；实现时补 `tests/cases`（TC-501 起）。
+
+## 2026-10-21 上游 orcad 迁移（done）
+
+- 本轮目标：按用户确认迁移 fork 能力，并通过官方同步入口合入上游 `2eae220b2ef`。
+- 完成内容：复用上游路径解析；新建标签页与路径跳转继续校验工作区执行主机，异步期间主机切换时拒绝旧操作。
+- 代码或文档变更：注册表的接缝、依赖与测试随上游结构迁移；未删除或禁用已注册功能。详见集成分支的 `2026-10-21-orcad上游同步.md` 方案。
+- 验证证据：`.docs/upstream-sync-ui-validation/2026-10-21/evidence/`；四目标类型检查、最终 Web 类型复验、三项本地化、功能注册及全部注册功能回归通过；隐藏 Electron + 真实 SSH 隔离 orcad 验收通过。完整记录见 sync-upstream-gates.log、attachment-grant-matrix.log 与 remaining-feature-checks.log。
+- 未解决问题：本轮实现无未解决问题；提交后需从干净 integration 复核架构门禁并观察远端构建。不在本次安装用户应用或升级已有远程服务。
+- 下一步：推送通过门禁的 integration，跟踪远端检查；保留当前应用及会话。

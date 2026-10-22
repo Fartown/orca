@@ -3,7 +3,7 @@ title: 集成分支自动出包
 slug: 集成分支自动出包
 status: done
 created: 2026-09-12
-updated: 2026-10-06
+updated: 2026-10-21
 external_ids: []
 ---
 
@@ -11,22 +11,22 @@ external_ids: []
 
 ## 1. 关键文档链接
 
-| 类型 | 文档 | 状态 | 说明 |
-| --- | --- | --- | --- |
-| 需求 | [集成分支自动出包](requirements/集成分支自动出包.md) | ready | 已确认范围与内测安装边界 |
-| 交互 | - | not-required | 小型更新提示及关于页入口，交互规则随 REQ-405 与 TC-405 记录 |
-| 调研 | - | not-required | 直接核实既有构建入口 |
-| 方案 | [macOS 自动更新签名修复](solutions/macOS自动更新签名修复方案.md) | draft | 固定自签身份优先验证；Developer ID 备选 |
-| 方案 | [发布页分层与可读发布说明](solutions/发布页分层与可读发布说明方案.md) | ready | 构建发布清理、整理版、按功能分组、同步上游摘要、AI 短版本 |
-| 测试用例 | [自动出包](tests/cases/自动出包.md) | ready | 按仓库完成门禁建立 |
-| 测试记录 | [本地验证](tests/runs/2026-09-12-local.md) | completed | 13 条合同测试，云构建尚未执行 |
-| 测试记录 | [应用更新验证](tests/runs/2026-09-12-updates.md) | completed | 本地实现、APK、组件验证；真机安装与新发布待验 |
-| 测试记录 | [原生更新验收](tests/runs/2026-09-13-native-update.md) | completed | arm64 真实替换、原生运行状态和原终端连续性通过；正式发布及 Android 默认源安装待验 |
-| 测试记录 | [HTTP403修复验证](tests/runs/2026-09-13-update-http403.md) | completed | 失败恢复、公网回退、实际组件及修复APK通过；手机具体响应仍待接入 |
-| 测试记录 | [发布说明与版本号兼容](tests/runs/2026-09-17-release-notes.md) | completed | 单测与真实发布记录预演通过；合入后的发布页待核对 |
-| 测试记录 | [常规版本号](tests/runs/2026-09-17-preview-version.md) | completed | 编号、发布复核与版本比较通过；按 D-004 暂不合入 |
-| 测试记录 | [打包任务清单契约](tests/runs/2026-09-23-packaging-census.md) | completed | 共享 packaging census 纳入 fork macOS job，定向门禁通过 |
-| 测试记录 | [发布页分层与可读发布说明](tests/runs/2026-10-06-readable-releases.md) | completed | 单测、预演与合入后核对通过；真实 Claude 调用待配置 key |
+| 类型     | 文档                                                                   | 状态         | 说明                                                                              |
+| -------- | ---------------------------------------------------------------------- | ------------ | --------------------------------------------------------------------------------- |
+| 需求     | [集成分支自动出包](requirements/集成分支自动出包.md)                   | ready        | 已确认范围与内测安装边界                                                          |
+| 交互     | -                                                                      | not-required | 小型更新提示及关于页入口，交互规则随 REQ-405 与 TC-405 记录                       |
+| 调研     | -                                                                      | not-required | 直接核实既有构建入口                                                              |
+| 方案     | [macOS 自动更新签名修复](solutions/macOS自动更新签名修复方案.md)       | draft        | 固定自签身份优先验证；Developer ID 备选                                           |
+| 方案     | [发布页分层与可读发布说明](solutions/发布页分层与可读发布说明方案.md)  | ready        | 构建发布清理、整理版、按功能分组、同步上游摘要、AI 短版本                         |
+| 测试用例 | [自动出包](tests/cases/自动出包.md)                                    | ready        | 按仓库完成门禁建立                                                                |
+| 测试记录 | [本地验证](tests/runs/2026-09-12-local.md)                             | completed    | 13 条合同测试，云构建尚未执行                                                     |
+| 测试记录 | [应用更新验证](tests/runs/2026-09-12-updates.md)                       | completed    | 本地实现、APK、组件验证；真机安装与新发布待验                                     |
+| 测试记录 | [原生更新验收](tests/runs/2026-09-13-native-update.md)                 | completed    | arm64 真实替换、原生运行状态和原终端连续性通过；正式发布及 Android 默认源安装待验 |
+| 测试记录 | [HTTP403修复验证](tests/runs/2026-09-13-update-http403.md)             | completed    | 失败恢复、公网回退、实际组件及修复APK通过；手机具体响应仍待接入                   |
+| 测试记录 | [发布说明与版本号兼容](tests/runs/2026-09-17-release-notes.md)         | completed    | 单测与真实发布记录预演通过；合入后的发布页待核对                                  |
+| 测试记录 | [常规版本号](tests/runs/2026-09-17-preview-version.md)                 | completed    | 编号、发布复核与版本比较通过；按 D-004 暂不合入                                   |
+| 测试记录 | [打包任务清单契约](tests/runs/2026-09-23-packaging-census.md)          | completed    | 共享 packaging census 纳入 fork macOS job，定向门禁通过                           |
+| 测试记录 | [发布页分层与可读发布说明](tests/runs/2026-10-06-readable-releases.md) | completed    | 单测、预演与合入后核对通过；真实 Claude 调用待配置 key                            |
 
 ## 2. 决策点记录
 
@@ -416,3 +416,21 @@ external_ids: []
 - 验证证据：macOS 正式环境校验要求 Apple 凭据；Expo SDK 55 release 模板使用 debug 签名；新流程尚未执行。
 - 未解决问题：真实云构建尚未验证，用户手机现有签名未知。
 - 下一步：实现、定向测试和 GitHub 实构建。
+
+## 2026-10-21 上游 orcad 迁移（done）
+
+- 本轮目标：按用户确认迁移 fork 能力，并通过官方同步入口合入上游 `2eae220b2ef`。
+- 完成内容：以单一 orcad fork 服务组合入口启动 Goal、Issues 和产物分享；保留 Node-only bundle、Goal driver 资源与移动端真实路由预算。
+- 代码或文档变更：注册表的接缝、依赖与测试随上游结构迁移；未删除或禁用已注册功能。详见集成分支的 `2026-10-21-orcad上游同步.md` 方案。
+- 验证证据：`.docs/upstream-sync-ui-validation/2026-10-21/evidence/`；四目标类型检查、最终 Web 类型复验、三项本地化、功能注册及全部注册功能回归通过；隐藏 Electron + 真实 SSH 隔离 orcad 验收通过。完整记录见 sync-upstream-gates.log、attachment-grant-matrix.log 与 remaining-feature-checks.log。
+- 未解决问题：本轮实现无未解决问题；提交后需从干净 integration 复核架构门禁并观察远端构建。不在本次安装用户应用或升级已有远程服务。
+- 下一步：推送通过门禁的 integration，跟踪远端检查；保留当前应用及会话。
+
+## 2026-10-21 Android 独立依赖恢复（done）
+
+- 本轮目标：修复上游同步后 Android 集成构建缺少 Zustand 的失败。
+- 完成内容：上游删除了 mobile 的 Zustand 声明，fork 更新 UI 与控制器仍需要该包；在 mobile 项目恢复固定版本 5.0.15 和锁文件，避免依赖根目录偶然解析。未改动安装流程或更新行为。
+- 代码或文档变更：mobile/package.json、mobile/pnpm-lock.yaml；注册两处依赖接缝和对应允许路径；新增 mobile-dependency-contract.test.mjs，检查移动端直接声明和锁文件一致。
+- 验证证据：CI 39594208265 的 macOS 成功，Android 在 Metro 解析 IntegrationUpdateGate.tsx 时报告 Unable to resolve module zustand；本地依赖契约、21 项更新控制器回归、共享依赖版本、注册与架构检查通过，Metro 原生 Android 导出（完整 17 MB JS 包）和 mobile 类型检查通过。
+- 未解决问题：等待新提交的完整远端构建通过；旧失败日志保留于 .docs/upstream-sync-ui-validation/2026-10-21/evidence/android-ci-failure.log。
+- 下一步：通过本地验证后提交并推送同步修复，重新验证两端构建与发布。

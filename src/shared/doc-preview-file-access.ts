@@ -10,6 +10,7 @@ import type {
   DocumentPreviewChunkMetadata
 } from './document-preview-size/document-preview-chunk'
 import { readDocumentPreviewFileChunk } from './document-preview-size/document-preview-file-chunk'
+import { FONT_FILE_MIME_TYPES } from './font-file-extensions'
 import {
   NodeFileReadTooLargeError,
   readNodeFileHandleWithinLimit
@@ -38,6 +39,7 @@ export type DocPreviewFileAccessResult = {
 
 const DOC_PREVIEW_BINARY_MIME_TYPES: Record<string, string> = {
   ...IMAGE_FILE_MIME_TYPES,
+  ...FONT_FILE_MIME_TYPES,
   '.pdf': 'application/pdf'
 }
 const DOC_PREVIEW_MAX_BINARY_BYTES = 50 * 1024 * 1024

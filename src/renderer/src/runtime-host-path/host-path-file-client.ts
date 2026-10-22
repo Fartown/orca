@@ -1,5 +1,6 @@
+import type { RuntimeClientTarget } from '../../../shared/runtime-client-target'
 import { z } from 'zod'
-import { callRuntimeRpc, getActiveRuntimeTarget } from '@/runtime/runtime-rpc-client'
+import { callRuntimeRpc } from '@/runtime/runtime-rpc-client'
 import { toRuntimeWorktreeSelector } from '@/runtime/runtime-worktree-selector'
 
 /**
@@ -151,12 +152,12 @@ export async function withFreshHostPathGrant<T>(
  */
 export async function requestHostPathGrantForContext(
   context: {
-    settings?: Parameters<typeof getActiveRuntimeTarget>[0]
+    target: RuntimeClientTarget
     worktreeId?: string | null
   },
   absolutePath: string
 ): Promise<RuntimeHostPathGrant> {
-  const target = getActiveRuntimeTarget(context.settings)
+  const target = context.target
   if (target.kind !== 'environment' || !context.worktreeId) {
     // Why this wording: "no runtime here" and "that path is not reachable" are the same thing from
     // where the reader sits.

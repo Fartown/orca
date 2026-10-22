@@ -20,6 +20,7 @@ export type ArtifactShareRuntime = {
   userDataPath: string
   configureLocal: (request: ArtifactShareConfigureLocalRequest) => Promise<void>
   callRuntimeEnvironment: ArtifactShareRuntimeEnvironmentCall
+  isEnvironmentReachable: (environmentId: string) => boolean
 }
 
 // Why a registry instead of importing the server: the runtime must boot on plain Node, and the

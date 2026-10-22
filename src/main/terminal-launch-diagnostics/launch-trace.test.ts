@@ -11,6 +11,7 @@ import {
   recordTerminalLaunchStage,
   traceTerminalClaimOwnerLiveness,
   traceTerminalLaunchRpc,
+  traceTerminalStreamingLaunchRpc,
   traceTerminalPtyAdmission
 } from './launch-trace'
 
@@ -33,6 +34,61 @@ function traceFile(): string {
 }
 
 describe('durable launch tracing', () => {
+  it('records a paired unary call over the streaming transport and keeps its reply unchanged', async () => {
+    const file = traceFile()
+    const response = JSON.stringify({
+      id: 'req',
+      ok: true,
+      result: { terminal: { tabId: 'tab', ptyId: 'pty' }, disposition: 'adopted' }
+    })
+    const reply = vi.fn()
+    await traceTerminalStreamingLaunchRpc(
+      { method: 'terminal.ensureAgentSession', id: 'req', params: { kind: 'explicit' } },
+      { clientKind: 'runtime', clientId: 'private-client' },
+      reply,
+      async (send) => {
+        expect(readFileSync(file, 'utf8')).toContain('rpc-accepted')
+        recordTerminalLaunchStage('provider-returned', { ptyId: 'pty' })
+        send(response)
+      }
+    )
+    expect(reply).toHaveBeenCalledExactlyOnceWith(response)
+    const rows = readFileSync(file, 'utf8')
+      .trim()
+      .split('\n')
+      .map((line) => JSON.parse(line))
+    expect(new Set(rows.map((row) => row.traceId)).size).toBe(1)
+    expect(rows.find((row) => row.name === 'terminal.launch.rpc').attributes).toMatchObject({
+      transport: 'streaming',
+      ok: true,
+      result: { tabRef: launchReference('tab'), disposition: 'adopted' }
+    })
+  })
+
+  it('records rejected streaming calls and passes malformed replies through without retry', async () => {
+    const file = traceFile()
+    const reply = vi.fn()
+    for (const response of [
+      JSON.stringify({
+        id: 'req',
+        ok: false,
+        error: { code: 'forbidden', message: 'private-message' }
+      }),
+      'invalid-frame'
+    ]) {
+      const invoke = vi.fn(async (send: (response: string) => void) => send(response))
+      await traceTerminalStreamingLaunchRpc(
+        { method: 'terminal.create', id: 'req' },
+        undefined,
+        reply,
+        invoke
+      )
+      expect(invoke).toHaveBeenCalledOnce()
+      expect(reply).toHaveBeenLastCalledWith(response)
+    }
+    expect(readFileSync(file, 'utf8')).not.toContain('private-message')
+    expect(readFileSync(file, 'utf8')).toContain(launchReference('forbidden'))
+  })
   it.each([
     'terminal.create',
     'terminal.createAgentSession',

@@ -1,3 +1,4 @@
+import type { DocPreviewGrantLocation } from '@/lib/doc-preview-grants'
 import { parseExecutionHostId, toSshExecutionHostId } from '../../../../../shared/execution-host'
 import type { LanArtifactShareTarget } from '../client/lan-artifact-share-client'
 import {
@@ -112,6 +113,24 @@ export function resolveWorkspaceFileShareTarget(
       input.relativePath === null
         ? null
         : deriveLanArtifactShareRoot(input.filePath, input.relativePath)
+    )
+  }
+}
+
+/** A preview keeps the host and root of its minted grant after the selected host changes. */
+export function resolveDocPreviewShareTarget(
+  location: DocPreviewGrantLocation,
+  filePath: string
+): LanArtifactShareTargetResolution {
+  const owner = location.owner
+  return {
+    ok: true,
+    target: withWorkspaceRoot(
+      owner.kind === 'runtime'
+        ? `runtime:${encodeURIComponent(owner.environmentId)}`
+        : toSshExecutionHostId(owner.connectionId),
+      filePath,
+      owner.kind === 'runtime' ? owner.worktreeRoot : location.requestBase
     )
   }
 }

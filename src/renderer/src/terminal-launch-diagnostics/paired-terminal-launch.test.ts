@@ -11,6 +11,37 @@ vi.mock('./launch-origin', () => ({ recordTerminalLaunchOrigin: mocked.record })
 beforeEach(() => vi.clearAllMocks())
 
 describe('paired terminal launch diagnostic seam', () => {
+  it('joins concurrent history resumes to their own returned host tabs', async () => {
+    const one = {
+      worktreeId: 'remote-workspace',
+      environmentId: 'paired-host',
+      providerSession: { id: 'same' }
+    }
+    const two = { ...one }
+    mocked.create.mockImplementationOnce(async () => ({
+      outcome: { status: 'created' },
+      hostTabId: 'tab-one'
+    }))
+    mocked.create.mockImplementationOnce(async () => ({
+      outcome: { status: 'created' },
+      hostTabId: 'tab-two'
+    }))
+    await Promise.all([
+      createWebRuntimeSessionTerminalResult(one, 'ai-vault-resume'),
+      createWebRuntimeSessionTerminalResult(two, 'ai-vault-resume')
+    ])
+    for (const tabId of ['tab-one', 'tab-two']) {
+      expect(mocked.record).toHaveBeenCalledWith(
+        'ai-vault-resume',
+        expect.objectContaining({
+          tabId,
+          eventPhase: 'created',
+          providerSession: one.providerSession
+        }),
+        mocked.state
+      )
+    }
+  })
   it('records origin then returns the existing operation promise without changing its arguments', async () => {
     const args = { worktreeId: 'remote-workspace', environmentId: 'paired-host' }
     const result = { outcome: { status: 'created' } }

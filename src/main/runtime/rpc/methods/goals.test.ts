@@ -1,4 +1,3 @@
-import { setSshActiveMultiplexerResolver } from '../../../ssh/ssh-target-registry'
 import { afterEach, describe, expect, it } from 'vitest'
 import { GOAL_METHOD_NAMES } from '../../../../shared/goals/goal-control-contract'
 import type { GoalControlService } from '../../../goals/goal-control-service'
@@ -8,7 +7,6 @@ import { ALL_RPC_METHODS } from './index'
 
 afterEach(() => {
   goalFeatureReadinessRegistry.setUnavailable('service-stopped')
-  setSshActiveMultiplexerResolver(null)
 })
 
 describe('Goal runtime RPC manifest', () => {
@@ -48,16 +46,15 @@ describe('Goal runtime RPC manifest', () => {
   })
 
   it('refuses paired second-hop routing and never falls back locally for a disconnected SSH host', () => {
-    setSshActiveMultiplexerResolver(() => undefined)
     expect(() =>
       call(
         'goals.status',
         { authorityExecutionHostId: 'ssh:known' },
         { clientId: 'phone', clientKind: 'runtime', pairedDeviceId: 'device' }
       )
-    ).toThrow(/second SSH host/)
+    ).toThrow(/Orca Server connection/)
     expect(() => call('goals.status', { authorityExecutionHostId: 'ssh:known' }, {})).toThrow(
-      /disconnected/
+      /Orca Server connection/
     )
     expect(() =>
       call('goals.list', { authorityExecutionHostId: 'local', filter: 'all' }, {})

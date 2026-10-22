@@ -1,10 +1,9 @@
-import { extname } from 'node:path'
+import { docPreviewContentType } from '../document-preview-size/document-preview-content-type'
+export { docPreviewContentType } from '../document-preview-size/document-preview-content-type'
 import type { DocPreviewFileFailureReason } from '../../shared/doc-preview-scheme'
-import { callRuntimeEnvironment } from '../ipc/runtime-environment-transport-routing'
-import { FileReadCapExceededError } from '../ssh/ssh-filesystem-stream-reader'
+import { callRuntimeEnvironment } from '../ipc/runtime-environments/runtime-environment-transport-routing'
 import { getCanonicalUserDataPath } from '../persistence'
-import { requireSshFilesystemProvider } from '../providers/ssh-filesystem-dispatch'
-import { DOCUMENT_PREVIEW_TEXT_MAX_BYTES } from '../../shared/document-preview-size/document-preview-size-limit'
+import { SSH_HOST_NOT_SERVED_MESSAGE } from '../providers/ssh-host-not-served-error'
 import { readDocumentPreviewInChunks } from '../document-preview-size/document-preview-chunk-reader'
 import type { DocPreviewFileAccessResult } from '../../shared/doc-preview-file-access'
 import {
@@ -17,10 +16,8 @@ import {
 } from './doc-preview-grant-registry'
 
 const DOC_PREVIEW_READ_TIMEOUT_MS = 15_000
-const DIRECT_SSH_DOC_PREVIEW_BINARY_MAX_BYTES = 10 * 1024 * 1024
 
-/** Why not "needs a newer server": the SSH read path only ever serves images and PDFs as bytes, so
- *  a font is refused there by design, not by version. Name the file type, not the host's age. */
+/** Older hosts may refuse a binary format, so report the file type they cannot send. */
 const UNSERVABLE_ASSET_PREVIEW_MESSAGE = 'This workspace cannot send this file type to a preview.'
 
 /** `files.read` clamps text at the host's cap and reports it; serving the clamped bytes would
@@ -30,52 +27,17 @@ const TRUNCATED_PREVIEW_MESSAGE = 'This document is too large for the server to 
 /** The paired host rejects an over-cap asset outright instead of clamping it. */
 const RUNTIME_TOO_LARGE_ERROR = 'file_too_large'
 
-/** Same stance as the SSH relay message: previews fail closed on a host without scoped reads. */
+/** Previews fail closed on a host without scoped reads. */
 const RUNTIME_DOC_PREVIEW_UPDATE_REQUIRED_MESSAGE =
   'Secure document previews require a newer Orca on the paired machine. Update it and try again.'
 
-/** Both owners refuse an over-cap file; only their error shapes differ. */
 function isTooLargeReadError(error: unknown): boolean {
-  return (
-    error instanceof FileReadCapExceededError ||
-    (error instanceof Error && error.message === RUNTIME_TOO_LARGE_ERROR)
-  )
+  return error instanceof Error && error.message === RUNTIME_TOO_LARGE_ERROR
 }
 
 export type DocPreviewReadOutcome =
   | { ok: true; bytes: Buffer; contentType: string }
   | { ok: false; status: number; reason: DocPreviewFileFailureReason; message: string }
-
-const DOC_PREVIEW_CONTENT_TYPES: Record<string, string> = {
-  '.html': 'text/html; charset=utf-8',
-  '.htm': 'text/html; charset=utf-8',
-  '.css': 'text/css; charset=utf-8',
-  '.js': 'text/javascript; charset=utf-8',
-  '.mjs': 'text/javascript; charset=utf-8',
-  '.json': 'application/json; charset=utf-8',
-  '.txt': 'text/plain; charset=utf-8',
-  '.md': 'text/plain; charset=utf-8',
-  '.csv': 'text/plain; charset=utf-8',
-  '.svg': 'image/svg+xml',
-  '.png': 'image/png',
-  '.jpg': 'image/jpeg',
-  '.jpeg': 'image/jpeg',
-  '.gif': 'image/gif',
-  '.webp': 'image/webp',
-  '.bmp': 'image/bmp',
-  '.ico': 'image/x-icon',
-  '.pdf': 'application/pdf',
-  '.woff': 'font/woff',
-  '.woff2': 'font/woff2',
-  '.ttf': 'font/ttf',
-  '.otf': 'font/otf'
-}
-
-export function docPreviewContentType(relativePath: string): string {
-  return (
-    DOC_PREVIEW_CONTENT_TYPES[extname(relativePath).toLowerCase()] ?? 'application/octet-stream'
-  )
-}
 
 type PreviewFileBytes = {
   content: string
@@ -170,23 +132,7 @@ export async function readDocPreviewFile(
   const contentType = docPreviewContentType(relativePath)
   try {
     if (grant.owner.kind === 'ssh') {
-      const provider = requireSshFilesystemProvider(grant.owner.connectionId)
-      const authority = resolveDocPreviewAuthorityPaths(grant)
-      if (!authority.entryPath || !provider.readDocPreviewFile) {
-        return notFoundOutcome()
-      }
-      return toOutcome(
-        await provider.readDocPreviewFile({
-          boundaryPath: grant.requestBase,
-          entryPath: authority.entryPath,
-          implicitRootPath: authority.implicitRootPath,
-          authorizedRootPaths: authority.authorizedRootPaths,
-          targetPath: absolutePath,
-          maxTextBytes: DOCUMENT_PREVIEW_TEXT_MAX_BYTES,
-          maxBinaryBytes: DIRECT_SSH_DOC_PREVIEW_BINARY_MAX_BYTES
-        }),
-        contentType
-      )
+      return notFoundOutcome(SSH_HOST_NOT_SERVED_MESSAGE)
     }
     const runtimeOwner = grant.owner
     const worktreeRelativePath = toRuntimeWorktreeRelativePath(

@@ -1,7 +1,6 @@
 import { detectLanguage } from '@/lib/language-detect'
-import { isLocalPathOpenBlocked } from '@/lib/local-path-open-guard'
 import { toWorktreeRelativePath } from '@/lib/terminal-links'
-import type { RuntimeFileOperationArgs } from '@/runtime/runtime-file-client'
+import type { RuntimeFileOperationArgs } from '@/runtime/runtime-file-client-types'
 import { resolveAbsoluteTabEntryReach } from '../../runtime-host-path/host-path-grant-seams'
 import type { OpenFile } from '@/store/slices/editor'
 import {
@@ -53,13 +52,11 @@ export async function openAbsoluteTabEntryFile(args: {
   // Why: a project link out of the project keeps its absolute path, so it reads as user-named.
   const relativePath = escapesWorktree ? openedPath : worktreeRelativePath || openedPath
   // Why: SSH and paired-runtime paths belong to another machine; only those need an owner stamp.
-  const clientLocal = !isLocalPathOpenBlocked(args.context.settings, {
-    connectionId: args.context.connectionId
-  })
+  const clientLocal = args.context.target.kind === 'local' && !args.context.connectionId
   const externalSshTargetId =
     relativePath === filePath &&
     !clientLocal &&
-    !args.context.settings?.activeRuntimeEnvironmentId?.trim() &&
+    args.context.target.kind === 'local' &&
     args.context.connectionId
       ? args.context.connectionId
       : undefined

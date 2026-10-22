@@ -1,9 +1,9 @@
 ---
-title: "富文本Markdown强制打开"
-slug: "富文本Markdown强制打开"
+title: '富文本Markdown强制打开'
+slug: '富文本Markdown强制打开'
 status: done
 created: 2026-09-16
-updated: 2026-10-09
+updated: 2026-10-21
 external_ids: []
 ---
 
@@ -11,14 +11,14 @@ external_ids: []
 
 ## 1. 关键文档链接
 
-| 类型 | 文档 | 状态 | 说明 |
-| --- | --- | --- | --- |
-| 需求 | [requirements/富文本Markdown强制打开.md](requirements/富文本Markdown强制打开.md) | ready | REQ-401～REQ-403；非目标已写明不动往返检测本身 |
-| 交互 | - | not-required | 复用同文件既有回落横幅与「仍然打开」按钮样式，无新控件 |
-| 调研 | - | not-required | 拦截链路在本 journal §2 D-002 内记录，范围小于一篇独立调研 |
-| 方案 | - | not-required | 单模块 + 3 接缝，设计写在 D-001～D-003 |
-| 测试用例 | [tests/cases/富文本Markdown强制打开功能测试.md](tests/cases/富文本Markdown强制打开功能测试.md) | ready | TC-601～TC-606 单元规格，TC-607 真机规格 |
-| 测试记录 | [tests/runs/2026-09-16-本地真机与单元验证.md](tests/runs/2026-09-16-本地真机与单元验证.md) | completed | TC-601～TC-607 全过；TC-607 的覆盖持久化预期已按实测改写 |
+| 类型     | 文档                                                                                           | 状态         | 说明                                                       |
+| -------- | ---------------------------------------------------------------------------------------------- | ------------ | ---------------------------------------------------------- |
+| 需求     | [requirements/富文本Markdown强制打开.md](requirements/富文本Markdown强制打开.md)               | ready        | REQ-401～REQ-403；非目标已写明不动往返检测本身             |
+| 交互     | -                                                                                              | not-required | 复用同文件既有回落横幅与「仍然打开」按钮样式，无新控件     |
+| 调研     | -                                                                                              | not-required | 拦截链路在本 journal §2 D-002 内记录，范围小于一篇独立调研 |
+| 方案     | -                                                                                              | not-required | 单模块 + 3 接缝，设计写在 D-001～D-003                     |
+| 测试用例 | [tests/cases/富文本Markdown强制打开功能测试.md](tests/cases/富文本Markdown强制打开功能测试.md) | ready        | TC-601～TC-606 单元规格，TC-607 真机规格                   |
+| 测试记录 | [tests/runs/2026-09-16-本地真机与单元验证.md](tests/runs/2026-09-16-本地真机与单元验证.md)     | completed    | TC-601～TC-607 全过；TC-607 的覆盖持久化预期已按实测改写   |
 
 ## 2. 决策点记录
 
@@ -57,7 +57,6 @@ external_ids: []
 - 未解决问题：同步流程其他功能验证以该目录 README 为准。
 - 下一步：完成同步门禁并推送集成分支。
 
-
 ### 2026-10-06 同步上游 d17351401d：与上游硬性渲染上限合并（testing）
 
 - 本轮目标：同步上游后保住“仍然打开”覆盖，同时吸收上游新增的硬性渲染上限。
@@ -91,3 +90,12 @@ external_ids: []
 - 验证证据：`.docs/rich-markdown-override-ui-validation/2026-09-16/` 下的 `evidence/05~07*.png` 与 `scripts/tc607-*.mjs`；TC-601～TC-607 共 7 条全过
 - 未解决问题：无
 - 下一步：开 PR 合回 `fork/integration`
+
+## 2026-10-21 上游 orcad 迁移（done）
+
+- 本轮目标：按用户确认迁移 fork 能力，并通过官方同步入口合入上游 `2eae220b2ef`。
+- 完成内容：保留强制富文本打开入口及上游编辑器接缝，随合并进行原有功能回归。
+- 代码或文档变更：注册表的接缝、依赖与测试随上游结构迁移；未删除或禁用已注册功能。详见集成分支的 `2026-10-21-orcad上游同步.md` 方案。
+- 验证证据：`.docs/upstream-sync-ui-validation/2026-10-21/evidence/`；四目标类型检查、最终 Web 类型复验、三项本地化、功能注册及全部注册功能回归通过；隐藏 Electron + 真实 SSH 隔离 orcad 验收通过。完整记录见 sync-upstream-gates.log、attachment-grant-matrix.log 与 remaining-feature-checks.log。
+- 未解决问题：本轮实现无未解决问题；提交后需从干净 integration 复核架构门禁并观察远端构建。不在本次安装用户应用或升级已有远程服务。
+- 下一步：推送通过门禁的 integration，跟踪远端检查；保留当前应用及会话。

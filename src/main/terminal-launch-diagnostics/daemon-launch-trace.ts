@@ -5,6 +5,14 @@ import {
   launchReference
 } from '../../shared/terminal-launch-diagnostics/launch-evidence'
 
+export function recordDaemonLaunchDiagnosticsReady(log: DaemonFileLog): void {
+  try {
+    log.log('terminal-launch-diagnostics-ready', { diagnosticVersion: 1 })
+  } catch {
+    // An unwritable diagnostic log cannot prevent daemon startup.
+  }
+}
+
 export async function traceDaemonTerminalLaunch<T>(
   log: DaemonFileLog,
   clientId: string,
@@ -27,6 +35,9 @@ export async function traceDaemonTerminalLaunch<T>(
         ? 'terminal-launch-created'
         : 'terminal-launch-attached',
       {
+        ...(request.payload != null && typeof request.payload === 'object' ? request.payload : {}),
+        agentSessionEnsure: launchField(result, 'agentSessionEnsure'),
+        disposition: launchField(launchField(result, 'agentSessionEnsure'), 'disposition'),
         sessionId:
           launchField(launchField(result, 'agentSessionEnsure'), 'owner') == null
             ? launchField(request.payload, 'sessionId')

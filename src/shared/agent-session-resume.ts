@@ -27,7 +27,8 @@ export const RESUMABLE_TUI_AGENTS = [
   'muse',
   'zcode',
   'dsh',
-  'jcode'
+  'jcode',
+  'kiro'
 ] as const satisfies readonly TuiAgent[]
 
 export type ResumableTuiAgent = (typeof RESUMABLE_TUI_AGENTS)[number]
@@ -82,6 +83,11 @@ export type SleepingAgentSessionRecord = {
    *  opened, so a mobile wake must not background-mount every such tab and
    *  respawn the whole workspace the user just slept (#11598). */
   restoreOnTabOpenOnly?: boolean
+}
+
+/** A record of a slept pane (worktree sleep, or a legacy record); 'quit'/'live' resume a running agent. */
+export function isPaneSleepRecord(record: Pick<SleepingAgentSessionRecord, 'origin'>): boolean {
+  return record.origin === undefined || record.origin === 'worktree-sleep'
 }
 
 const RESUMABLE_TUI_AGENT_SET: ReadonlySet<string> = new Set(RESUMABLE_TUI_AGENTS)
@@ -229,6 +235,8 @@ export function extractAgentProviderSession(
     }
     // Why: DSH's hook bridge always sends an empty `transcript_path` (its persistence seam
     // exposes no artifact path), so the session id alone carries the resume target.
+    // Why: Kiro's hooks send no transcript path; the id alone feeds `--resume-id`.
+    case 'kiro':
     case 'dsh': {
       const id = readSessionId(payload, ['session_id'])
       return id ? { key: 'session_id', id } : null

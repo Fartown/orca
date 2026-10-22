@@ -5,6 +5,7 @@ import {
 } from '../../../shared/terminal-launch-diagnostics/launch-evidence'
 
 export type TerminalLaunchOrigin =
+  | 'ai-vault-resume'
   | 'queued-startup'
   | 'paired-terminal-create'
   | 'automatic-sleeping-resume'

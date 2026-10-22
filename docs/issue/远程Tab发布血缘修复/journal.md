@@ -1,25 +1,25 @@
 ---
-title: "远程Tab发布血缘修复"
-slug: "远程Tab发布血缘修复"
+title: '远程Tab发布血缘修复'
+slug: '远程Tab发布血缘修复'
 status: testing
 created: 2026-09-23
-updated: 2026-09-24
-external_ids: ["stablyai/orca#19860"]
+updated: 2026-10-21
+external_ids: ['stablyai/orca#19860']
 ---
 
 # 远程Tab发布血缘修复 开发 Journal
 
 ## 1. 关键文档链接
 
-| 类型 | 文档 | 状态 | 说明 |
-| --- | --- | --- | --- |
-| 需求 | [requirements/requirement.md](requirements/requirement.md) | ready | REQ-701～REQ-704;Tab 同步根因已确认；发送后重连仍待验证 |
-| 交互 | - | not-required | 无 UI 变更;为主机写路径语义修复 |
-| 调研 | - | not-required | 现场诊断已由并行排查完成,证据在 `.docs/remote-tab-sync-ui-validation/2026-09-23/`(git 忽略);结论摘录于需求 §1/§8 与方案 §1 |
-| 方案 | [solutions/overview.md](solutions/overview.md) | approved | 规则:写内容不换发布者,epoch 只在无可继承快照时铸造 |
-| 测试用例 | [tests/cases/远程Tab发布血缘修复测试.md](tests/cases/远程Tab发布血缘修复测试.md) | ready | TC-707 已明确直接观测横幅与输入响应；daemon 为辅助证据 |
-| 测试记录 | [tests/runs/2026-09-23-本地单元验证.md](tests/runs/2026-09-23-本地单元验证.md) | completed | TC-701～TC-706 PASS;聚合 1292 全绿 |
-| 测试记录 | [tests/runs/2026-09-24-隔离双实例复验.md](tests/runs/2026-09-24-隔离双实例复验.md) | completed | 五组隔离对照已归档；TC-707 整体未完成 |
+| 类型     | 文档                                                                               | 状态         | 说明                                                                                                                       |
+| -------- | ---------------------------------------------------------------------------------- | ------------ | -------------------------------------------------------------------------------------------------------------------------- |
+| 需求     | [requirements/requirement.md](requirements/requirement.md)                         | ready        | REQ-701～REQ-704;Tab 同步根因已确认；发送后重连仍待验证                                                                    |
+| 交互     | -                                                                                  | not-required | 无 UI 变更;为主机写路径语义修复                                                                                            |
+| 调研     | -                                                                                  | not-required | 现场诊断已由并行排查完成,证据在 `.docs/remote-tab-sync-ui-validation/2026-09-23/`(git 忽略);结论摘录于需求 §1/§8 与方案 §1 |
+| 方案     | [solutions/overview.md](solutions/overview.md)                                     | approved     | 规则:写内容不换发布者,epoch 只在无可继承快照时铸造                                                                         |
+| 测试用例 | [tests/cases/远程Tab发布血缘修复测试.md](tests/cases/远程Tab发布血缘修复测试.md)   | ready        | TC-707 已明确直接观测横幅与输入响应；daemon 为辅助证据                                                                     |
+| 测试记录 | [tests/runs/2026-09-23-本地单元验证.md](tests/runs/2026-09-23-本地单元验证.md)     | completed    | TC-701～TC-706 PASS;聚合 1292 全绿                                                                                         |
+| 测试记录 | [tests/runs/2026-09-24-隔离双实例复验.md](tests/runs/2026-09-24-隔离双实例复验.md) | completed    | 五组隔离对照已归档；TC-707 整体未完成                                                                                      |
 
 ## 2. 决策点记录
 
@@ -115,7 +115,6 @@ external_ids: ["stablyai/orca#19860"]
 - 未解决问题：Q-702 原始重连根因未证实；真实 agent/hooks、mini SSH 与其他 Tab 管理操作未完成验收；不具备发布完成依据。
 - 下一步：保留本隔离环境，补现场 agent/hooks 与输出流诊断，不在正式 App 试错；补齐 TC-707 后再评估 done。
 
-
 ### 2026-09-24 PR 合码准备
 
 - 本轮目标：按用户授权推进既有 PR #38 合入 fork/integration，保持正式 App 不受人工操作。
@@ -125,3 +124,12 @@ external_ids: ["stablyai/orca#19860"]
 - 基础门禁处理：#39/#40 的相互依赖修复通过全量 CI 后，由 #41 合入 integration；本分支无冲突更新到 `46fc21c2e4`。新基线上的 Tab 定向测试及打包合约共 45 条通过，fork docs/features/architecture 再次通过；产品源码与隔离复验版本一致。
 - 未解决问题：等待 #38 最终 HEAD 的远端全量 CI。TC-707 和 Q-702 保持 testing。
 - 下一步：等待 #38 最终 HEAD 全部门禁，再执行 merge commit；不手动安装或重启用户 App。
+
+## 2026-10-21 上游 orcad 迁移（done）
+
+- 本轮目标：按用户确认迁移 fork 能力，并通过官方同步入口合入上游 `2eae220b2ef`。
+- 完成内容：关闭会话及编辑 tab 内容继续保留 publicationEpoch，避免内容更新被误当作发布者切换。
+- 代码或文档变更：注册表的接缝、依赖与测试随上游结构迁移；未删除或禁用已注册功能。详见集成分支的 `2026-10-21-orcad上游同步.md` 方案。
+- 验证证据：`.docs/upstream-sync-ui-validation/2026-10-21/evidence/`；四目标类型检查、最终 Web 类型复验、三项本地化、功能注册及全部注册功能回归通过；隐藏 Electron + 真实 SSH 隔离 orcad 验收通过。完整记录见 sync-upstream-gates.log、attachment-grant-matrix.log 与 remaining-feature-checks.log。
+- 未解决问题：本轮实现无未解决问题；提交后需从干净 integration 复核架构门禁并观察远端构建。不在本次安装用户应用或升级已有远程服务。
+- 下一步：推送通过门禁的 integration，跟踪远端检查；保留当前应用及会话。

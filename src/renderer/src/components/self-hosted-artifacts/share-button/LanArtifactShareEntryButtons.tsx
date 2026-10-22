@@ -1,12 +1,14 @@
+import { hostWorktreeTarget } from '../../../../../shared/worktree/host-qualified-identity'
+import type { DocPreviewGrantLocation } from '@/lib/doc-preview-grants'
 import { useCallback } from 'react'
 import { useAppStore } from '@/store'
-import { findWorktreeById } from '@/store/slices/worktree-helpers'
+import { selectWorkspaceByHostTarget } from '@/store/workspace-record-selectors'
 import type { OpenFile } from '@/store/slices/editor'
 import type { DocPreviewDocumentIdentity } from '@/components/browser-pane/workspace-doc/doc-preview-document-identity'
 import type { BrowserChromeShareControl } from '@/components/browser-pane/assemble-chrome/browser-chrome-toolbar'
 import {
   resolveEditorFileShareTarget,
-  resolveWorkspaceFileShareTarget
+  resolveDocPreviewShareTarget
 } from './lan-artifact-share-target'
 import { LanArtifactShareButton, type LanArtifactShareControl } from './LanArtifactShareButton'
 
@@ -51,7 +53,10 @@ export function BrowserFileLanShareButton({
   className?: string
 } & LanArtifactShareControl): React.JSX.Element {
   const resolveTarget = useCallback(() => {
-    const worktree = findWorktreeById(useAppStore.getState().worktreesByRepo, worktreeId)
+    const worktree = selectWorkspaceByHostTarget(
+      useAppStore.getState(),
+      hostWorktreeTarget({ id: worktreeId, hostId: 'local' })
+    )
     const relativePath = worktree ? relativeInside(worktree.path, filePath) : null
     return {
       ok: true as const,
@@ -64,25 +69,20 @@ export function BrowserFileLanShareButton({
   return <LanArtifactShareButton resolveTarget={resolveTarget} className={className} {...control} />
 }
 
-/** Workspace HTML document preview: shares from whichever computer owns the workspace. */
+/** A document preview shares from the owner of the grant currently displayed. */
 export function DocPreviewLanShareButton({
-  worktreeId,
   identity,
+  location,
   className,
   ...control
 }: {
-  worktreeId: string
   identity: DocPreviewDocumentIdentity
+  location: DocPreviewGrantLocation
   className?: string
 } & LanArtifactShareControl): React.JSX.Element {
   const resolveTarget = useCallback(
-    () =>
-      resolveWorkspaceFileShareTarget(useAppStore.getState(), {
-        worktreeId,
-        filePath: identity.absolutePath,
-        relativePath: `${identity.directoryPrefix}${identity.fileName}`
-      }),
-    [identity, worktreeId]
+    () => resolveDocPreviewShareTarget(location, identity.absolutePath),
+    [identity.absolutePath, location]
   )
   return <LanArtifactShareButton resolveTarget={resolveTarget} className={className} {...control} />
 }
@@ -104,13 +104,16 @@ export function browserFileLanShareControl(
 }
 
 export function docPreviewLanShareControl(
-  worktreeId: string,
-  identity: DocPreviewDocumentIdentity
-): (control: BrowserChromeShareControl) => React.JSX.Element {
+  identity: DocPreviewDocumentIdentity,
+  location: DocPreviewGrantLocation | null
+): ((control: BrowserChromeShareControl) => React.JSX.Element) | undefined {
+  if (!location) {
+    return undefined
+  }
   return (control) => (
     <DocPreviewLanShareButton
-      worktreeId={worktreeId}
       identity={identity}
+      location={location}
       className="h-7 w-7"
       {...control}
     />

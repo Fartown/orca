@@ -3,7 +3,7 @@ title: Issues 看板与会话
 slug: Issues看板与会话
 status: implementing
 created: 2026-09-05
-updated: 2026-10-09
+updated: 2026-10-21
 external_ids: []
 ---
 
@@ -11,15 +11,15 @@ external_ids: []
 
 ## 1. 关键文档链接
 
-| 类型     | 文档                                                                 | 状态         | 说明                                                                 |
-| --- | --- | --- | --- |
-| 需求     | [Issues 看板与会话](requirements/Issues看板与会话.md)                | ready        | 独立目标、范围、分级与 REQ-001～REQ-030                              |
-| 交互     | -                                                                    | not-required | 本次仅整理既有文档，不创建新交互设计或修改 UI                        |
-| 方案     | [Issues 看板与会话技术说明](solutions/Issues看板与会话技术说明.md)   | ready        | 看板、真实会话行、绑定与恢复；标题现状以2026-09-08专项调研为准 |
+| 类型     | 文档                                                                 | 状态         | 说明                                                                           |
+| -------- | -------------------------------------------------------------------- | ------------ | ------------------------------------------------------------------------------ |
+| 需求     | [Issues 看板与会话](requirements/Issues看板与会话.md)                | ready        | 独立目标、范围、分级与 REQ-001～REQ-030                                        |
+| 交互     | -                                                                    | not-required | 本次仅整理既有文档，不创建新交互设计或修改 UI                                  |
+| 方案     | [Issues 看板与会话技术说明](solutions/Issues看板与会话技术说明.md)   | ready        | 看板、真实会话行、绑定与恢复；标题现状以2026-09-08专项调研为准                 |
 | 测试用例 | [功能测试](tests/cases/Issues功能测试.md)                            | needs-update | 非命名/历史基线保留；受REQ-025/026/028影响的命名与过滤映射待同步，不含执行结果 |
-| 历史执行 | [2026-08-30 App 验证](tests/runs/2026-08-30-Issues历史App验证.md)    | completed    | 冻结隔离 App 的历史结果，不证明当前标题实现已验收                    |
-| 测试执行 | [2026-09-05 标题纯函数验证](tests/runs/2026-09-05-标题纯函数验证.md) | completed    | 原联合执行中的 5 项单测，仅迁移记录，没有重跑                        |
-| 公共依赖 | [会话命名与身份保护](../会话命名与身份保护/journal.md) | ready | 独立需求入口；Issues 只消费名称与身份，不拥有该功能 |
+| 历史执行 | [2026-08-30 App 验证](tests/runs/2026-08-30-Issues历史App验证.md)    | completed    | 冻结隔离 App 的历史结果，不证明当前标题实现已验收                              |
+| 测试执行 | [2026-09-05 标题纯函数验证](tests/runs/2026-09-05-标题纯函数验证.md) | completed    | 原联合执行中的 5 项单测，仅迁移记录，没有重跑                                  |
+| 公共依赖 | [会话命名与身份保护](../会话命名与身份保护/journal.md)               | ready        | 独立需求入口；Issues 只消费名称与身份，不拥有该功能                            |
 
 ready 只表示文档已按当前源码整理；本需求仍为 implementing，不等于当前产品已完成验收。
 
@@ -80,7 +80,6 @@ ready 只表示文档已按当前源码整理；本需求仍为 implementing，�
 - 验证证据：`.docs/upstream-sync-ui-validation/2026-10-09/`；首组冲突回归 65 项通过；合并提交后继续执行完整门禁与功能检查。
 - 未解决问题：完整同步检查仍在进行，结果以该目录 README 和日志为准；本次记录不改变此前未完成验收的状态。
 - 下一步：完成同步门禁后推送集成分支。
-
 
 ### 2026-10-06 移植上游“已删除 SSH 文件夹的会话续接”到 fork 续接链（testing）
 
@@ -198,3 +197,12 @@ ready 只表示文档已按当前源码整理；本需求仍为 implementing，�
 - 验证证据：本需求结构与链接校验、完整 REQ/TC 及正文保留校验记录在 `docs/maintenance/本地需求文档整理/2026-09-05-三需求拆分校验.md`；本次不重新执行功能测试。
 - 未解决问题：当前 App 标题链、并发刷新、迁移及真实 SSH/Windows/Linux/paired runtime 仍需按范围验收；Node-only orcad 的生产装配缺口和其他后续目标见需求与技术正文。
 - 下一步：后续仅在本 issue 内推进对应开发和验收，每次真实执行新增 Test Run。
+
+## 2026-10-21 上游 orcad 迁移（done）
+
+- 本轮目标：按用户确认迁移 fork 能力，并通过官方同步入口合入上游 `2eae220b2ef`。
+- 完成内容：orcad 复用 Issues 启动入口，以执行主机 profile 和 SQLite 保存记录，使用主机 hook store；支持就绪、降级和清理。
+- 代码或文档变更：注册表的接缝、依赖与测试随上游结构迁移；未删除或禁用已注册功能。详见集成分支的 `2026-10-21-orcad上游同步.md` 方案。
+- 验证证据：`.docs/upstream-sync-ui-validation/2026-10-21/evidence/`；四目标类型检查、最终 Web 类型复验、三项本地化、功能注册及全部注册功能回归通过；隐藏 Electron + 真实 SSH 隔离 orcad 验收通过。完整记录见 sync-upstream-gates.log、attachment-grant-matrix.log 与 remaining-feature-checks.log。
+- 未解决问题：本轮实现无未解决问题；提交后需从干净 integration 复核架构门禁并观察远端构建。不在本次安装用户应用或升级已有远程服务。
+- 下一步：推送通过门禁的 integration，跟踪远端检查；保留当前应用及会话。

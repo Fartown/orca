@@ -1,9 +1,9 @@
 ---
-title: "终端 ID 复制主机路由"
-slug: "终端ID复制主机路由"
+title: '终端 ID 复制主机路由'
+slug: '终端ID复制主机路由'
 status: done
 created: 2026-10-08
-updated: 2026-10-09
+updated: 2026-10-21
 external_ids: []
 ---
 
@@ -11,12 +11,12 @@ external_ids: []
 
 ## 1. 关键文档链接
 
-| 类型 | 文档 | 状态 | 说明 |
-| --- | --- | --- | --- |
-| 需求 | [需求](requirements/终端ID复制主机路由.md) | ready | REQ-901～REQ-903 |
-| 方案 | [方案](solutions/主机路由.md) | ready | 主机边界与协议复用 |
-| 测试记录 | [初次记录](tests/runs/2026-10-08.md) / [复审修复](tests/runs/2026-10-09.md) | completed | 单元与 macOS 真机证据 |
-| 测试用例 | [用例](tests/cases/主机路由.md) | ready | 本地、SSH、配对与失败隔离 |
+| 类型     | 文档                                                                        | 状态      | 说明                      |
+| -------- | --------------------------------------------------------------------------- | --------- | ------------------------- |
+| 需求     | [需求](requirements/终端ID复制主机路由.md)                                  | ready     | REQ-901～REQ-903          |
+| 方案     | [方案](solutions/主机路由.md)                                               | ready     | 主机边界与协议复用        |
+| 测试记录 | [初次记录](tests/runs/2026-10-08.md) / [复审修复](tests/runs/2026-10-09.md) | completed | 单元与 macOS 真机证据     |
+| 测试用例 | [用例](tests/cases/主机路由.md)                                             | ready     | 本地、SSH、配对与失败隔离 |
 
 ## 2. 决策点记录
 
@@ -43,3 +43,12 @@ external_ids: []
 - 验证证据：修复前 3 项新增边界失败，修复后功能及依赖共 47 项通过；完整类型检查和 e2e 构建通过。三项隐藏应用测试验证本地、配对、SSH 与 folder 的真实菜单及剪贴板；三项本地化、16 组架构、fork 注册与文档门禁、增量质量零新增均通过。证据位于 .docs/terminal-id-copy-ui-validation/2026-10-09/。
 - 未解决问题：运行中的安装包未替换；独立 reviewer 尚未批准。
 - 下一步：完成验证并更新原 PR。
+
+## 2026-10-21 上游 orcad 迁移（done）
+
+- 本轮目标：按用户确认迁移 fork 能力，并通过官方同步入口合入上游 `2eae220b2ef`。
+- 完成内容：保留按终端所属本地、SSH 或配对主机查询 ID 的逻辑；无法证明归属或失联时不回退本机。
+- 代码或文档变更：注册表的接缝、依赖与测试随上游结构迁移；未删除或禁用已注册功能。详见集成分支的 `2026-10-21-orcad上游同步.md` 方案。
+- 验证证据：`.docs/upstream-sync-ui-validation/2026-10-21/evidence/`；四目标类型检查、最终 Web 类型复验、三项本地化、功能注册及全部注册功能回归通过；隐藏 Electron + 真实 SSH 隔离 orcad 验收通过。完整记录见 sync-upstream-gates.log、attachment-grant-matrix.log 与 remaining-feature-checks.log。
+- 未解决问题：本轮实现无未解决问题；提交后需从干净 integration 复核架构门禁并观察远端构建。不在本次安装用户应用或升级已有远程服务。
+- 下一步：推送通过门禁的 integration，跟踪远端检查；保留当前应用及会话。

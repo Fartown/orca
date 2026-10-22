@@ -36,12 +36,15 @@ export function openFilePreviewInSourcePane(params: {
     state.groupsByWorktree[params.worktreeId]?.[0]?.id ??
     undefined
   if (plan.status === 'doc-preview') {
-    openDocPreviewTab(state, {
-      filePath: params.filePath,
-      worktreeId: params.worktreeId,
-      targetGroupId,
-      activate: true
-    })
+    openDocPreviewTab(
+      state,
+      {
+        filePath: params.filePath,
+        worktreeId: params.worktreeId,
+        activate: true
+      },
+      { targetGroupId }
+    )
     return
   }
   state.createBrowserTab(params.worktreeId, plan.url, {

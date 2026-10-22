@@ -44,7 +44,8 @@ function isIndependentlyResumableSubagent(session: AiVaultSession): boolean {
   )
 }
 
-type SectionProps = { session: AiVaultSession; resume?: AiVaultSubagentResumeActions }
+/** `resume` null: the lines offer no action at all, not even View Log. */
+type SectionProps = { session: AiVaultSession; resume?: AiVaultSubagentResumeActions | null }
 
 export function SessionSubagentsSection(props: SectionProps): React.JSX.Element | null {
   const expansion = useSubagentExpansion()
@@ -194,7 +195,7 @@ function SubagentSessionLine({
   disclosure
 }: {
   session: AiVaultSession
-  resume?: AiVaultSubagentResumeActions
+  resume?: AiVaultSubagentResumeActions | null
   disclosure?: React.ReactNode
 }): React.JSX.Element {
   const resumeState =
@@ -239,7 +240,7 @@ function SubagentSessionLine({
             <Play className="size-3.5" />
           </Button>
         ) : null}
-        {canOpenAiVaultSessionLogInOrca(session) ? (
+        {resume !== null && canOpenAiVaultSessionLogInOrca(session) ? (
           <Button
             type="button"
             variant="ghost"

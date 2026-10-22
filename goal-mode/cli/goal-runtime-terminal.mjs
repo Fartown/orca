@@ -3,7 +3,8 @@
 // 只在打成单文件的驱动里生效:它 import 的是 src/cli/runtime 的 TypeScript,
 // 由 config/scripts/build-goal-driver.mjs 一起打进去。CLI 路径(orca-goal 命令)不走这里。
 // 语义(单行校验、accepted 判定)留在 orca-terminal.mjs,这里只做传输。
-import { RuntimeClient, RuntimeRpcFailureError } from '../../src/cli/runtime/index.ts'
+import { RuntimeClient } from '../../src/cli/runtime/client.ts'
+import { RuntimeRpcFailureError } from '../../src/cli/runtime/types.ts'
 
 /**
  * @param {object} [options]

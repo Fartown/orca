@@ -9,11 +9,11 @@ import { TextInputModal } from '../components/TextInputModal'
 import { ConfirmModal } from '../components/ConfirmModal'
 import { CustomKeyModal } from '../components/CustomKeyModal'
 import { MobileDictationSetupSheet } from '../components/MobileDictationSetupSheet'
+import { useWorkspaceOnPairedHost } from '../navigation/workspace-execution-host'
 import { MobileBrowserTabActionSheet } from './MobileBrowserTabActionSheet'
 import { getMobileTerminalActionSheetActions } from './mobile-terminal-action-sheet-actions'
-import { getMobileSessionContinuationActions } from '../session-continuation/continuation-actions'
 import { useMobileSessionContinuationSheet } from '../session-continuation/MobileSessionContinuationSheet'
-import type { MobileSessionTab } from './mobile-session-route-types'
+import { getMobileNativeChatCliForkActions } from './mobile-native-chat-cli-fork'
 import {
   getRepoIdFromMobileWorktreeId,
   isTerminalPhoneDisplayMode
@@ -64,6 +64,7 @@ export function MobileSessionSheets({ controller }: { controller: MobileSessionC
     setShowDictationSetup,
     browserScreencastSupported,
     quickCommandsSupported,
+    quickCommandAgentPromptMaxLength,
     showToast,
     nativeChatTranscriptIsLocalReadable,
     nativeChatController,
@@ -97,7 +98,9 @@ export function MobileSessionSheets({ controller }: { controller: MobileSessionC
   // Why here and not in the controller chain: nothing downstream of that chain reads these,
   // and the controller is the hottest upstream file in this family — mounting the scope at its
   // only consumer keeps the feature off it.
-  const { openContinuation, continuationSheet } = useMobileSessionContinuationSheet(controller)
+  const { sessionContinuationActions, continuationSheet } =
+    useMobileSessionContinuationSheet(controller)
+  const onPairedHost = useWorkspaceOnPairedHost()
   return (
     <>
       <MobileSessionHeaderMoreActionsSheet
@@ -118,6 +121,7 @@ export function MobileSessionSheets({ controller }: { controller: MobileSessionC
             : getRepoIdFromMobileWorktreeId(worktreeId) || null
         }
         repoName={worktreeName || null}
+        agentPromptMaxLength={quickCommandAgentPromptMaxLength}
         onLaunch={launchQuickCommand}
       />
       <ActionSheetModal
@@ -151,14 +155,18 @@ export function MobileSessionSheets({ controller }: { controller: MobileSessionC
                     setShowCreateBrowserModal(true)
                   }
                 },
-                {
-                  label: 'Markdown Note',
-                  icon: FileText,
-                  onPress: () => {
-                    setShowCreateTabDrawer(false)
-                    void handleCreateMarkdownNote()
-                  }
-                }
+                ...(onPairedHost
+                  ? [
+                      {
+                        label: 'Markdown Note',
+                        icon: FileText,
+                        onPress: () => {
+                          setShowCreateTabDrawer(false)
+                          void handleCreateMarkdownNote()
+                        }
+                      }
+                    ]
+                  : [])
               ])
         ]}
         onClose={() => setShowCreateTabDrawer(false)}
@@ -210,16 +218,7 @@ export function MobileSessionSheets({ controller }: { controller: MobileSessionC
           onClose: (target) => void handleCloseTerminal(target),
           onCloseSessionTab: (tab) => void handleCloseSessionTab(tab),
           bulkCloseActions,
-          sessionContinuationActions: (terminalHandle, dismiss) =>
-            getMobileSessionContinuationActions({
-              terminalHandle,
-              tabs: sessionTabs.filter(
-                (tab): tab is Extract<MobileSessionTab, { type: 'terminal' }> =>
-                  tab.type === 'terminal'
-              ),
-              onDismiss: dismiss,
-              onOpen: openContinuation
-            })
+          sessionContinuationActions
         })}
         onClose={() => setActionTarget(null)}
       />
@@ -291,9 +290,15 @@ export function MobileSessionSheets({ controller }: { controller: MobileSessionC
       <ActionSheetModal
         visible={agentSessionActionTarget != null}
         title={agentSessionActionTarget?.title || 'Chat'}
-        actions={closeWithBulkActions(agentSessionActionTarget, () =>
-          setAgentSessionActionTarget(null)
-        )}
+        actions={[
+          ...getMobileNativeChatCliForkActions({
+            controller,
+            tab: agentSessionActionTarget,
+            workspaceOnPairedHost: onPairedHost,
+            onDismiss: () => setAgentSessionActionTarget(null)
+          }),
+          ...closeWithBulkActions(agentSessionActionTarget, () => setAgentSessionActionTarget(null))
+        ]}
         onClose={() => setAgentSessionActionTarget(null)}
       />
       <ActionSheetModal

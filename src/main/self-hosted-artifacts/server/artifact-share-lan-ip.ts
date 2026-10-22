@@ -75,7 +75,7 @@ export function rankArtifactShareIpCandidates(
 
 export async function listArtifactShareIpCandidates(): Promise<string[]> {
   const [interfaces, defaultRouteAddress] = await Promise.all([
-    getPairingNetworkInterfaces(),
+    getPairingNetworkInterfaces('0.0.0.0'),
     readDefaultRouteIPv4()
   ])
   return rankArtifactShareIpCandidates(interfaces, defaultRouteAddress)

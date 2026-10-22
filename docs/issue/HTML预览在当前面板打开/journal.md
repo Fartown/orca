@@ -1,9 +1,9 @@
 ---
-title: "HTML预览在当前面板打开"
-slug: "HTML预览在当前面板打开"
+title: 'HTML预览在当前面板打开'
+slug: 'HTML预览在当前面板打开'
 status: testing
 created: 2026-09-15
-updated: 2026-09-15
+updated: 2026-10-21
 external_ids: []
 ---
 
@@ -11,14 +11,14 @@ external_ids: []
 
 ## 1. 关键文档链接
 
-| 类型 | 文档 | 状态 | 说明 |
-| --- | --- | --- | --- |
-| 需求 | [requirements/HTML预览在当前面板打开.md](requirements/HTML预览在当前面板打开.md) | ready | REQ-401～REQ-406 |
-| 交互 | - | not-required | 复用既有预览 tab 样式，只改落位与按钮文案 |
-| 调研 | - | not-required | 链路已在上游 `src/renderer/src/lib/file-preview.ts` 内闭合，见决策点 D-101 |
-| 方案 | - | not-required | 改动集中在一个落位函数与两个调用点，方案要点记在 D-101、D-102 |
-| 测试用例 | [tests/cases/HTML预览在当前面板打开功能测试.md](tests/cases/HTML预览在当前面板打开功能测试.md) | ready | TC-601～TC-605 单元规格，TC-606 真机规格 |
-| 测试记录 | [tests/runs/2026-09-15-预览落位真机验证.md](tests/runs/2026-09-15-预览落位真机验证.md) | completed | TC-601～TC-606 全部通过 |
+| 类型     | 文档                                                                                           | 状态         | 说明                                                                       |
+| -------- | ---------------------------------------------------------------------------------------------- | ------------ | -------------------------------------------------------------------------- |
+| 需求     | [requirements/HTML预览在当前面板打开.md](requirements/HTML预览在当前面板打开.md)               | ready        | REQ-401～REQ-406                                                           |
+| 交互     | -                                                                                              | not-required | 复用既有预览 tab 样式，只改落位与按钮文案                                  |
+| 调研     | -                                                                                              | not-required | 链路已在上游 `src/renderer/src/lib/file-preview.ts` 内闭合，见决策点 D-101 |
+| 方案     | -                                                                                              | not-required | 改动集中在一个落位函数与两个调用点，方案要点记在 D-101、D-102              |
+| 测试用例 | [tests/cases/HTML预览在当前面板打开功能测试.md](tests/cases/HTML预览在当前面板打开功能测试.md) | ready        | TC-601～TC-605 单元规格，TC-606 真机规格                                   |
+| 测试记录 | [tests/runs/2026-09-15-预览落位真机验证.md](tests/runs/2026-09-15-预览落位真机验证.md)         | completed    | TC-601～TC-606 全部通过                                                    |
 
 ## 2. 决策点记录
 
@@ -76,3 +76,12 @@ external_ids: []
 - 验证证据：单元 222 文件 1532 用例通过；真机 TC-606 通过——点击预览前后面板数均为 1，预览标签落在源标签同一分组并成为活动标签，按钮无障碍名为 `Open Preview`。证据在 `.docs/html-preview-current-pane-ui-validation/2026-09-15/evidence/`。`pnpm tc`、`oxlint`、三项 `verify:localization-*`、`check:architecture-policies`、`check:fork-features`、`check:fork-docs` 通过；`check:code-quality:changed` 为 319 项，与分支基线逐项相同，未新增。
 - 未解决问题：远程工作区的预览落位只有单元证据（TC-603），真机需要远端主机；合并 diff 入口与编辑器共用实现，真机只验了编辑器一条。
 - 下一步：提 PR 合回 `fork/integration`。
+
+## 2026-10-21 上游 orcad 迁移（done）
+
+- 本轮目标：按用户确认迁移 fork 能力，并通过官方同步入口合入上游 `2eae220b2ef`。
+- 完成内容：保留当前面板打开预览的接缝，兼容上游文件预览解析与主机授权。
+- 代码或文档变更：注册表的接缝、依赖与测试随上游结构迁移；未删除或禁用已注册功能。详见集成分支的 `2026-10-21-orcad上游同步.md` 方案。
+- 验证证据：`.docs/upstream-sync-ui-validation/2026-10-21/evidence/`；四目标类型检查、最终 Web 类型复验、三项本地化、功能注册及全部注册功能回归通过；隐藏 Electron + 真实 SSH 隔离 orcad 验收通过。完整记录见 sync-upstream-gates.log、attachment-grant-matrix.log 与 remaining-feature-checks.log。
+- 未解决问题：本轮实现无未解决问题；提交后需从干净 integration 复核架构门禁并观察远端构建。不在本次安装用户应用或升级已有远程服务。
+- 下一步：推送通过门禁的 integration，跟踪远端检查；保留当前应用及会话。

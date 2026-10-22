@@ -1,10 +1,30 @@
 import { useAppStore } from '@/store'
 import { createWebRuntimeSessionTerminalResult as createTerminal } from '../runtime/web-runtime-terminal-create-operation'
-import { recordTerminalLaunchOrigin } from './launch-origin'
+import { recordTerminalLaunchOrigin, type TerminalLaunchOrigin } from './launch-origin'
 
 export function createWebRuntimeSessionTerminalResult(
-  args: Parameters<typeof createTerminal>[0]
+  args: Parameters<typeof createTerminal>[0],
+  origin: TerminalLaunchOrigin = 'paired-terminal-create'
 ): ReturnType<typeof createTerminal> {
-  recordTerminalLaunchOrigin('paired-terminal-create', args, useAppStore.getState())
-  return createTerminal(args)
+  recordTerminalLaunchOrigin(origin, args, useAppStore.getState())
+  const pending = createTerminal(args)
+  void pending.then(
+    (result) => {
+      try {
+        recordTerminalLaunchOrigin(
+          origin,
+          {
+            ...args,
+            tabId: result.hostTabId,
+            eventPhase: result.hostTabId ? 'created' : 'requested'
+          },
+          useAppStore.getState()
+        )
+      } catch {
+        // Observing completion must not create an unhandled rejection.
+      }
+    },
+    () => {}
+  )
+  return pending
 }

@@ -57,7 +57,13 @@ describe('native relaunch read-only evidence', () => {
     expect(source).toContain('configureDevUserDataPath(false)')
     expect(source).toContain('wrong-fixture-home')
     expect(source).toContain('wrongHomeRejected')
-    expect(source).not.toContain('node_modules')
+    // Deployment manifest paths are data; only Node built-ins and Electron may be loaded.
+    const imports = [...source.matchAll(/require\(["']([^"']+)["']\)/g)].map((match) => match[1])
+    expect(imports.length).toBeGreaterThan(0)
+    for (const module of imports) {
+      expect(module).toMatch(/^(?:node:|electron$)/)
+    }
+    expect(source).not.toMatch(/^\/\/ .*node_modules\//m)
     expect(source.length).toBeLessThan(12_000)
   })
   it('records a real thrown Error without swallowing it or changing an existing handler', () => {

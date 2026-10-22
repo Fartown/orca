@@ -13,7 +13,8 @@ import { toHostSessionTabId } from '../../../shared/terminal-surface-id'
 export async function copyWorkspaceTerminalHandle(
   worktreeId: string,
   tabId: string,
-  leafId: string
+  leafId: string,
+  ptyId?: string | null
 ): Promise<string> {
   const state = useAppStore.getState()
   const owner = resolveTerminalHostOwnership(state, worktreeId, 'teardown')
@@ -42,6 +43,7 @@ export async function copyWorkspaceTerminalHandle(
   return copyTerminalHandleForPane({
     tabId: environmentId ? toHostSessionTabId(tabId) : tabId,
     leafId,
+    ptyId,
     callRuntime: ({ method, params }) => {
       const request = { method, params: { ...params, worktreeId } }
       return environmentId

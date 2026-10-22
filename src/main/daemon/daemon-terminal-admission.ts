@@ -3,7 +3,10 @@ import {
   launchEvidence,
   launchReference
 } from '../../shared/terminal-launch-diagnostics/launch-evidence'
-import { traceDaemonTerminalLaunch } from '../terminal-launch-diagnostics/daemon-launch-trace'
+import {
+  recordDaemonLaunchDiagnosticsReady,
+  traceDaemonTerminalLaunch
+} from '../terminal-launch-diagnostics/daemon-launch-trace'
 import type { BackgroundTransientFactRelay } from './daemon-background-transient-facts'
 import type { DaemonClientConnections } from './daemon-client-connections'
 import type { DaemonEndpointLifecycle } from './daemon-endpoint-lifecycle'
@@ -19,6 +22,7 @@ import type { DaemonStreamDataBatcher } from './daemon-stream-data-batcher'
 import type { TerminalHistorySeedTransferRegistry } from './terminal-history-seed-transfer-registry'
 import type { CreateOrAttachOptions, CreateOrAttachResult, TerminalHost } from './terminal-host'
 import { isTuiAgent } from '../../shared/tui-agent-config'
+import { isSpawnIntent } from '../../shared/host-spawn-admission'
 import { parsePtyStartupIngressIntent } from '../../shared/pty-startup-ingress'
 import {
   isAgentSessionExecutionClaim,
@@ -27,6 +31,18 @@ import {
 import { type DaemonRequest, TerminalAttachCanceledError } from './types'
 
 type CreateOrAttachRequest = Extract<DaemonRequest, { type: 'createOrAttach' }>
+
+const MAX_SPAWN_ADMISSION_WINDOW_MS = 12_000
+
+// Why half, capped: a paced fork must finish before the caller's own cancellation fires,
+// and remote clients give up on a terminal create after 15 s.
+function resolveSpawnAdmissionDeadline(cancelAfterMs: unknown): number {
+  const windowMs =
+    Number.isSafeInteger(cancelAfterMs) && Number(cancelAfterMs) > 0
+      ? Math.min(Number(cancelAfterMs) / 2, MAX_SPAWN_ADMISSION_WINDOW_MS)
+      : MAX_SPAWN_ADMISSION_WINDOW_MS
+  return Date.now() + windowMs
+}
 
 type DaemonTerminalAdmissionOptions = {
   host: TerminalHost
@@ -48,7 +64,9 @@ export class DaemonTerminalAdmission {
   private static readonly INTERACTIVE_OUTPUT_MAX_CHARS = 1024
   private createOrAttachInFlight = 0
 
-  constructor(private readonly options: DaemonTerminalAdmissionOptions) {}
+  constructor(private readonly options: DaemonTerminalAdmissionOptions) {
+    recordDaemonLaunchDiagnosticsReady(options.log)
+  }
 
   get inFlight(): number {
     return this.createOrAttachInFlight
@@ -126,6 +144,11 @@ export class DaemonTerminalAdmission {
           ? { shellReadyTimeoutMs: payload.shellReadyTimeoutMs }
           : {}),
         ...(payload.agentSessionEnsure ? { agentSessionEnsure: payload.agentSessionEnsure } : {}),
+        spawnAdmission: {
+          clientId,
+          declaredIntent: isSpawnIntent(payload.spawnIntent) ? payload.spawnIntent : null,
+          deadlineAt: resolveSpawnAdmissionDeadline(payload.cancelAfterMs)
+        },
         isCanceled: () => spawnPreparation?.canceled === true,
         cancelSignal: spawnPreparation.controller.signal,
         onSessionResolved: (sessionId) => {

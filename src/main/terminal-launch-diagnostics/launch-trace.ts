@@ -67,7 +67,8 @@ export async function traceTerminalClaimOwnerLiveness(
 export async function traceTerminalLaunchRpc<T>(
   request: { method: string; id: string; params?: unknown },
   caller: { clientId?: string; connectionId?: string; clientKind?: string } | undefined,
-  invoke: () => Promise<T>
+  invoke: () => Promise<T>,
+  transport: 'unary' | 'streaming' = 'unary'
 ): Promise<T> {
   if (!METHODS.has(request.method)) {
     return invoke()
@@ -76,6 +77,7 @@ export async function traceTerminalLaunchRpc<T>(
     ...launchEvidence(request.params),
     diagnosticVersion: 1,
     method: request.method,
+    transport,
     requestRef: launchReference(request.id),
     clientRef: launchReference(caller?.clientId),
     callerConnectionRef: launchReference(caller?.connectionId),
@@ -107,7 +109,9 @@ export async function traceTerminalLaunchRpc<T>(
             leafId: launchField(terminal, 'leafId'),
             ptyId: launchField(terminal, 'ptyId'),
             handle: launchField(terminal, 'handle'),
-            incarnationId: launchField(terminal, 'incarnationId')
+            incarnationId: launchField(terminal, 'incarnationId'),
+            disposition: launchField(payload, 'disposition'),
+            agentSessionEnsure: launchField(payload, 'agentSessionEnsure')
           })
         )
         span.setAttribute('ok', launchField(result, 'ok') === true)
@@ -125,5 +129,33 @@ export async function traceTerminalLaunchRpc<T>(
       }
     },
     { attributes }
+  )
+}
+
+export async function traceTerminalStreamingLaunchRpc(
+  request: { method: string; id: string; params?: unknown },
+  caller: { clientId?: string; connectionId?: string; clientKind?: string } | undefined,
+  reply: (response: string) => void,
+  invoke: (reply: (response: string) => void) => Promise<void>
+): Promise<void> {
+  if (!METHODS.has(request.method)) {
+    return invoke(reply)
+  }
+  await traceTerminalLaunchRpc(
+    request,
+    caller,
+    async () => {
+      let result: unknown
+      await invoke((response) => {
+        try {
+          result = JSON.parse(response)
+        } catch {
+          // Invalid frames still reach the original transport unchanged.
+        }
+        reply(response)
+      })
+      return result
+    },
+    'streaming'
   )
 }
