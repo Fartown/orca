@@ -1453,7 +1453,8 @@
             "config/fork-features.jsonc",
             "config/architecture-policies.jsonc",
             "docs/issue/README.md",
-            ".gitignore"
+            ".gitignore",
+            "src/shared/host-operation-ownership.ts"
           ],
           "message": "Change is outside the mobile file attachment upload feature and its reviewed seams."
         }

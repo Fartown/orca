@@ -205,3 +205,12 @@ external_ids: []
 - 验证证据：`.docs/upstream-sync-ui-validation/2026-10-21/evidence/`；四目标类型检查、最终 Web 类型复验、三项本地化、功能注册及全部注册功能回归通过；隐藏 Electron + 真实 SSH 隔离 orcad 验收通过。完整记录见 sync-upstream-gates.log、attachment-grant-matrix.log 与 remaining-feature-checks.log。
 - 未解决问题：本轮实现无未解决问题；提交后需从干净 integration 复核架构门禁并观察远端构建。不在本次安装用户应用或升级已有远程服务。
 - 下一步：推送通过门禁的 integration，跟踪远端检查；保留当前应用及会话。
+
+## 2026-10-22 完整单测补齐（testing）
+
+- 本轮目标：修复五个完整单测分片收齐后的真实失败，不删测试、不增加基线条目。
+- 完成内容：附件上传 RPC 明确归持有上传目标的执行主机，不依赖客户端当前聚焦主机。
+- 代码或文档变更：功能实现、接缝、合同和回归登记。
+- 验证证据：原始五分片日志及本地复验归档在 .docs/ci-baseline-repair/2026-10-22/evidence/；最终同树验证待完成。
+- 未解决问题：最终 CI 尚未通过；未部署或重启生产应用、远程服务或终端。
+- 下一步：同树完整检查、隐藏应用与 SSH 验证、最终 CI 后合入。
