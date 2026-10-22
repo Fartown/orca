@@ -1,5 +1,5 @@
 ---
-title: "远程Tab发布血缘修复测试"
+title: '远程Tab发布血缘修复测试'
 document_type: test-case
 status: ready
 created: 2026-09-23
@@ -10,15 +10,15 @@ updated: 2026-09-24
 
 ## 测试功能清单
 
-| 功能 ID | 关联需求 | 功能点 | 是否测试 | 预期表现 | Test Case |
-| --- | --- | --- | --- | --- | --- |
-| F-701 | REQ-701/702 | 激活切换写路径 epoch | 是 | epoch 不变、version +1 | TC-701 |
-| F-702 | REQ-701/702 | Tab 拖动排序写路径 epoch | 是 | epoch 不变、version +1 | TC-702 |
-| F-703 | REQ-701/702 | Tab 属性(置顶/改色)写路径 epoch | 是 | epoch 不变、version +1 | TC-703 |
-| F-704 | REQ-701/702 | 分屏布局写路径 epoch | 是 | epoch 不变、version +1 | TC-704 |
-| F-705 | REQ-701/702 | 浏览器 Tab 退役写路径 epoch | 是 | epoch 不变、version +1 | TC-705 |
-| F-706 | REQ-703 | runtime 聚合回归 | 是 | 全部用例通过 | TC-706 |
-| F-707 | REQ-702/704 | 真机现场验收 | 是 | Tab 操作后发消息不弹重连横幅 | TC-707 |
+| 功能 ID | 关联需求    | 功能点                          | 是否测试 | 预期表现                     | Test Case |
+| ------- | ----------- | ------------------------------- | -------- | ---------------------------- | --------- |
+| F-701   | REQ-701/702 | 激活切换写路径 epoch            | 是       | epoch 不变、version +1       | TC-701    |
+| F-702   | REQ-701/702 | Tab 拖动排序写路径 epoch        | 是       | epoch 不变、version +1       | TC-702    |
+| F-703   | REQ-701/702 | Tab 属性(置顶/改色)写路径 epoch | 是       | epoch 不变、version +1       | TC-703    |
+| F-704   | REQ-701/702 | 分屏布局写路径 epoch            | 是       | epoch 不变、version +1       | TC-704    |
+| F-705   | REQ-701/702 | 浏览器 Tab 退役写路径 epoch     | 是       | epoch 不变、version +1       | TC-705    |
+| F-706   | REQ-703     | runtime 聚合回归                | 是       | 全部用例通过                 | TC-706    |
+| F-707   | REQ-702/704 | 真机现场验收                    | 是       | Tab 操作后发消息不弹重连横幅 | TC-707    |
 
 ## TC-701 激活切换沿用现任 epoch
 

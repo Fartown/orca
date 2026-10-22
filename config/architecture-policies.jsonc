@@ -1707,12 +1707,7 @@
             "src/shared/claude-session-ownership/**",
             "src/main/claude-session-ownership/**"
           ],
-          "exceptPaths": [
-            "**/*.test.ts",
-            "**/*.test.tsx",
-            "**/*.spec.ts",
-            "**/*.spec.tsx"
-          ],
+          "exceptPaths": ["**/*.test.ts", "**/*.test.tsx", "**/*.spec.ts", "**/*.spec.tsx"],
           "forbiddenTargets": [
             "src/main/issues/**",
             "src/shared/issues/**",
@@ -1720,9 +1715,7 @@
             "src/renderer/src/components/issues/**",
             "src/renderer/src/components/sidebar/issues/**"
           ],
-          "importTextHints": [
-            "issues"
-          ],
+          "importTextHints": ["issues"],
           "message": "Public session names must not depend on Issue records or assembly."
         }
       ]
