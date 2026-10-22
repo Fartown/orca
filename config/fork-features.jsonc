@@ -66,6 +66,26 @@
       ],
       "seams": [
         {
+          "file": ".github/workflows/ci-cache-warmup-platform-jobs.yml",
+          "mustContain": "github.repository == 'Fartown/orca'",
+          "why": "Warm the same Linux runtime dependency cache used by the fork's hosted PR runner."
+        },
+        {
+          "file": ".github/workflows/pr.yml",
+          "mustContain": "github.repository == 'Fartown/orca'",
+          "why": "Fork release PRs use available GitHub-hosted runners while retaining every required check and upstream runner choice."
+        },
+        {
+          "file": "config/scripts/pr-preflight-gates.test.mjs",
+          "mustContain": "github.repository == 'Fartown/orca'",
+          "why": "Keep the preflight runner contract aligned with the fork-specific hosted-runner route."
+        },
+        {
+          "file": "config/scripts/ci-dependency-download-cache.test.mjs",
+          "mustContain": "github.repository == 'Fartown/orca'",
+          "why": "Keep dependency-cache runner assertions accurate for the fork and upstream."
+        },
+        {
           "file": "mobile/app.config.js",
           "mustContain": "integration-builds",
           "why": "integration-only native version and build marker"

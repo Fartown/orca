@@ -3,11 +3,20 @@ title: 集成分支自动出包
 slug: 集成分支自动出包
 status: testing
 created: 2026-09-12
-updated: 2026-10-21
+updated: 2026-10-22
 external_ids: []
 ---
 
 # 集成分支自动出包 开发 Journal
+
+## 2026-10-22：补齐正式发布前的 PR 运行器入口（implementing）
+
+- 本轮目标：按用户要求合入并发布 Linux 包，以发布包覆盖原安装，后续不创建安装备份。
+- 完成内容：已确认 PR #61 的 Linux、macOS arm64、Android 实际构建成功；完整 PR 检查在 Blacksmith runner 排队，尚不能合并。
+- 代码或文档变更：登记 PR workflow 的 runner 选择接缝及对应合同测试；仅 Fartown/orca 使用 GitHub-hosted runner，上游仍用既有 Blacksmith 规格。
+- 验证证据：Actions 39766206400 的首个 job 119782178485 为 queued，标签 blacksmith-2vcpu-ubuntu-2404；Actions 39766206408 的三平台构建通过。
+- 未解决问题：完整 PR 与 aggregate 尚未执行完成，Linux release 未发布；实际网页的 Chat View 菜单缺少切换入口，独立记录该功能问题，不将启动成功视为全部功能正常。
+- 下一步：运行器/缓存/发布相关 217 项测试通过（1 项平台跳过），架构与 fork 功能门禁通过；推送修复后等待完整 PR，再合并发布、覆盖安装并复验。
 
 ## 1. 关键文档链接
 
