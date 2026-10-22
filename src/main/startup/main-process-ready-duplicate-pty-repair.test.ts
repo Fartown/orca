@@ -36,7 +36,13 @@ const fixture = vi.hoisted(() => {
 vi.mock('../../shared/layout-owner-switch', () => ({ ORCA_LAYOUT_OWNER_IS_MAIN: true }))
 vi.mock('../telemetry/client', () => ({ track: vi.fn() }))
 vi.mock('electron', () => ({
-  app: { isPackaged: false, on: vi.fn(), once: vi.fn(), getPath: () => fixture.userData },
+  app: {
+    isPackaged: false,
+    on: vi.fn(),
+    once: vi.fn(),
+    getPath: () => fixture.userData,
+    getAppPath: () => fixture.userData
+  },
   nativeTheme: {}
 }))
 vi.mock('@electron-toolkit/utils', () => ({ is: { dev: false } }))
