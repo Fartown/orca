@@ -2,8 +2,23 @@ import { readFileSync } from 'node:fs'
 import { runInNewContext } from 'node:vm'
 import { expect, it } from 'vitest'
 import { parse } from 'yaml'
+import { repositoryRunnerLabels } from './repository-runner-labels.mjs'
 
 const readWorkflow = (name) => parse(readFileSync(`.github/workflows/${name}.yml`, 'utf8'))
+
+it('only resolves literal repository runner choices, retaining both alternatives', () => {
+  expect(
+    repositoryRunnerLabels(
+      "${{ github.repository == 'upstream/orca' && 'ubuntu-24.04' || 'windows-2022' }}"
+    )
+  ).toEqual(['ubuntu-24.04', 'windows-2022'])
+  expect(repositoryRunnerLabels('${{ matrix.os }}')).toBeNull()
+  expect(
+    repositoryRunnerLabels(
+      "${{ github.repository == 'upstream/orca' && inputs.runner || 'ubuntu-24.04' }}"
+    )
+  ).toBeNull()
+})
 
 it.each(['stablyai/orca', 'Fartown/orca', 'another/orca'])(
   'keeps every required PR runner available for %s without changing upstream',

@@ -132,6 +132,16 @@
           "file": "config/scripts/check-path-literal-ratchet.mjs",
           "mustContain": "architectureLivePathReferences",
           "why": "Reuse existing contracts while keeping host inventory and historical path semantics explicit."
+        },
+        {
+          "file": "config/scripts/pr-preflight-gates.test.mjs",
+          "mustContain": "repositoryRunnerLabels",
+          "why": "Keep the feature contract and its exhaustive integration checks aligned."
+        },
+        {
+          "file": "config/scripts/win32-test-lane-registration.test.mjs",
+          "mustContain": "repositoryRunnerLabels",
+          "why": "Keep the feature contract and its exhaustive integration checks aligned."
         }
       ],
       "tests": [
@@ -147,11 +157,15 @@
         "src/main/integration-builds/integration-update-feed.test.ts",
         "mobile/src/integration-builds/update-controller.test.ts",
         "config/scripts/integration-builds/mobile-dependency-contract.test.mjs",
-        "config/scripts/integration-builds/architecture-live-path-references.test.mjs"
+        "config/scripts/integration-builds/architecture-live-path-references.test.mjs",
+        "config/scripts/pr-preflight-gates.test.mjs",
+        "config/scripts/win32-test-lane-registration.test.mjs",
+        "config/scripts/ci-pr-concurrency-keys.test.mjs"
       ],
       "checks": [
         "pnpm exec vitest run --config config/vitest.config.ts config/scripts/integration-builds src/shared/integration-builds src/main/integration-builds",
-        "pnpm --dir mobile exec vitest run src/integration-builds"
+        "pnpm --dir mobile exec vitest run src/integration-builds",
+        "ORCA_BACKGROUND_LAUNCH=1 pnpm exec vitest run --config config/vitest.config.ts config/scripts/pr-preflight-gates.test.mjs config/scripts/win32-test-lane-registration.test.mjs config/scripts/ci-pr-concurrency-keys.test.mjs"
       ]
     },
     {
