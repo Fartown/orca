@@ -52,6 +52,7 @@ vi.mock('lucide-react-native', () =>
       'ShieldQuestion',
       'ImagePlus',
       'Package',
+      'Paperclip',
       'Plus',
       'Mic',
       'Square',
