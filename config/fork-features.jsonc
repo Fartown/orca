@@ -1519,6 +1519,21 @@
           "file": "src/renderer/src/components/browser-pane/workspace-doc/HtmlDocPreview.toolbar.test.tsx",
           "mustContain": "Share on local network",
           "why": "exercise the owned network-share button beside upstream toolbar actions"
+        },
+        {
+          "file": "src/shared/host-operation-ownership.ts",
+          "mustContain": "HOST_OPERATION_OWNERSHIP",
+          "why": "Keep the feature contract and its exhaustive integration checks aligned."
+        },
+        {
+          "file": "src/main/startup/main-process-ready-duplicate-pty-repair.test.ts",
+          "mustContain": "getAppPath",
+          "why": "Keep the feature contract and its exhaustive integration checks aligned."
+        },
+        {
+          "file": "src/main/runtime/construction/runtime-composition-parity.test.ts",
+          "mustContain": "DECLARED_HOST_DIFFERENCES",
+          "why": "Keep the feature contract and its exhaustive integration checks aligned."
         }
       ],
       "tests": [
@@ -1540,11 +1555,15 @@
         "src/cli/index.test.ts",
         "src/renderer/src/hooks/useSettingsNavigationMetadata.test.ts",
         "src/renderer/src/components/settings/OrcaAccountSettingsPane.test.tsx",
-        "src/renderer/src/components/self-hosted-artifacts/page/lan-artifact-host-list.test.tsx"
+        "src/renderer/src/components/self-hosted-artifacts/page/lan-artifact-host-list.test.tsx",
+        "src/shared/host-operation-ownership.test.ts",
+        "src/main/startup/main-process-ready-duplicate-pty-repair.test.ts",
+        "src/main/runtime/construction/runtime-composition-parity.test.ts"
       ],
       "checks": [
         "pnpm exec vitest run --config config/vitest.config.ts src/main/self-hosted-artifacts src/cli/self-hosted-artifacts src/renderer/src/components/self-hosted-artifacts src/renderer/src/components/editor/EditorPanelHeader.test.tsx src/renderer/src/hooks/useSettingsNavigationMetadata.test.ts src/cli/index.test.ts src/renderer/src/components/browser-pane/workspace-doc src/renderer/src/components/settings/OrcaAccountSettingsPane.test.tsx src/renderer/src/components/unexpected-signout",
-        "pnpm run build:artifact-share-viewer"
+        "pnpm run build:artifact-share-viewer",
+        "ORCA_BACKGROUND_LAUNCH=1 pnpm exec vitest run --config config/vitest.config.ts src/shared/host-operation-ownership.test.ts src/main/startup/main-process-ready-duplicate-pty-repair.test.ts src/main/runtime/construction/runtime-composition-parity.test.ts"
       ]
     },
     {

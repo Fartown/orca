@@ -29,11 +29,6 @@ type DeclaredDifference = {
 
 const DECLARED_HOST_DIFFERENCES: readonly DeclaredDifference[] = [
   {
-    wiring: 'runtime.setArtifactService',
-    missingOn: 'orcad',
-    reason: 'Artifact sharing uses the desktop sign-in; a headless host has none yet.'
-  },
-  {
     wiring: 'runtime.setSkillCloudService',
     missingOn: 'orcad',
     reason: 'Skill sharing uses the desktop sign-in; installs from Git still work on orcad.',
