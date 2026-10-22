@@ -4,8 +4,14 @@ import { toHostSessionTabId, HOST_TERMINAL_SURFACE_SEPARATOR } from '../terminal
 
 export type LaunchEvidence = Record<string, string | number | boolean | null>
 
+type LaunchFieldRecord = Readonly<Record<string, unknown>>
+
+function isLaunchFieldRecord(value: unknown): value is LaunchFieldRecord {
+  return value !== null && typeof value === 'object'
+}
+
 export function launchField(value: unknown, key: string): unknown {
-  return value !== null && typeof value === 'object' ? Reflect.get(value, key) : undefined
+  return isLaunchFieldRecord(value) ? value[key] : undefined
 }
 
 export function launchReference(value: unknown): string | null {

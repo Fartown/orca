@@ -2,11 +2,21 @@ import { describe, expect, it } from 'vitest'
 import {
   launchCandidateEvidence,
   launchEvidence,
+  launchField,
   launchReference,
   providerReference
 } from './launch-evidence'
 
 describe('terminal launch diagnostic allowlist', () => {
+  it('reads object fields without accepting primitive values as evidence containers', () => {
+    for (const value of [null, undefined, 'private-command', 1, true]) {
+      expect(launchField(value, 'length')).toBeUndefined()
+    }
+    expect(launchField({ flag: false }, 'flag')).toBe(false)
+    expect(launchField({ nested: { id: 'session' } }, 'nested')).toEqual({ id: 'session' })
+    expect(launchField({}, 'missing')).toBeUndefined()
+  })
+
   it('joins existing placement and operation identities without changing wire data', () => {
     const request = {
       worktree: 'id:workspace',

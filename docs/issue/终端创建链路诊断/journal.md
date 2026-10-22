@@ -51,6 +51,15 @@ updated: 2026-10-22
 
 ## 3. 开发记录
 
+### 2026-10-22：完整 anti-slop 边界类型修正（testing）
+
+- 本轮目标：修复完整预检新增暴露的三项诊断类型规则错误，不豁免门禁。
+- 完成内容：用命名记录类型守卫替换 Reflect.get；provider 观察参数复用 RuntimePtySpawnArgs 和 PtySpawnResult；补充原始值不能作为字段容器的回归。
+- 代码或文档变更：launch-evidence、provider-launch-evidence、边界回归和类型依赖登记。
+- 验证证据：诊断与启动回归 8 文件 57 项通过；修正后四目标类型检查通过。全量 anti-slop 和 type-aware 检查已执行；native 检查另发现基线 runtime service 重复导入，由独立分享服务提交修正。
+- 未解决问题：最终完整 CI 尚未通过；没有部署或重启。
+- 下一步：合并重复导入修正，补跑全量门禁后更新同一个 PR。
+
 ### 2026-10-22：集成前置 CI 修复（testing）
 
 - 本轮目标：按用户“都一起修掉、合入”的确认，消除完整 CI 阻塞后再合入日志补齐。

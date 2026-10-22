@@ -1,7 +1,9 @@
+import type { RuntimePtySpawnArgs } from '../ipc/pty/runtime/spawn-state'
+import type { PtySpawnResult } from '../providers/pty-provider-contract'
 import { recordTerminalLaunchStage } from './launch-trace'
 
 export function recordTerminalProviderDispatch(
-  input: object,
+  input: RuntimePtySpawnArgs,
   ptyId?: string,
   candidatePtyId?: string
 ): void {
@@ -9,8 +11,8 @@ export function recordTerminalProviderDispatch(
 }
 
 export function recordTerminalProviderResult(
-  input: object,
-  result: { id: string; incarnationId?: string; isReattach?: boolean }
+  input: RuntimePtySpawnArgs,
+  result: PtySpawnResult
 ): void {
   recordTerminalLaunchStage('provider-returned', {
     ...input,
