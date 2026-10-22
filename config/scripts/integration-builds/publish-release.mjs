@@ -21,7 +21,8 @@ import {
 export const PACKAGE_NAMES = [
   'orca-integration-macos-arm64.dmg',
   'orca-integration-macos-arm64.zip',
-  'orca-integration-android.apk'
+  'orca-integration-android.apk',
+  'orca-integration-linux-x64.AppImage'
 ]
 const MAC_UPDATE_ZIP = 'orca-integration-macos-arm64.zip'
 
@@ -69,6 +70,7 @@ const INSTALL_NOTES = [
   '提供 Apple Silicon ZIP 与 latest-mac.yml，支持同一固定签名身份之间的原生自动更新。现有 ad-hoc 旧版需先手动安装一次 DMG，之后可应用内下载并确认重启更新。',
   `Intel 版已停止提供。${LEGACY_INTEL_PLACEHOLDER} 不是安装包，只是一份说明，让 2026-09-17 之前的集成包仍把本次发布识别为完整并继续自动更新。`,
   'Android 集成包自动检查 fork 更新，可在应用内下载 APK 后通过系统确认安装。旧版需先手动安装一次；不同签名安装不能覆盖。APK 使用 Expo debug 内测签名，不用于商店发布。',
+  'Linux x64 提供 AppImage 与 latest-linux.yml，复用上游原生依赖和 glibc 2.31 门槛。已解包运行的安装需要手动替换；安装前保留原应用和配置。',
   'build-info.json 和 SHA256SUMS.txt 记录来源及下载校验和。'
 ]
 
@@ -103,7 +105,7 @@ function buildNotes(
     foldedSection(
       '构建信息',
       bulletList([
-        `版本：macOS ${version}；Android ${android.version}（versionCode ${android.versionCode}）`,
+        `版本：macOS / Linux ${version}；Android ${android.version}（versionCode ${android.versionCode}）`,
         `提交：[\`${sha.slice(0, 12)}\`](https://github.com/${repo}/commit/${sha})`,
         `构建：${runUrl}`,
         since
@@ -232,11 +234,14 @@ export async function publishRelease({
     androidCertificateSha256: ANDROID_CERT_SHA256,
     macSigning: 'fixed self-signed publisher, not notarized',
     macCertificateSha256,
-    assets: published,
+    // Older clients reject unknown names in assets, but ignore optional manifest fields.
+    assets: published.filter((asset) => !asset.name.startsWith('orca-integration-linux-')),
+    linuxAssets: published.filter((asset) => asset.name.startsWith('orca-integration-linux-')),
     changes: manifestChanges(context.buildChanges, syncSummaries)
   }
   writeFileSync(join(directory, 'build-info.json'), `${JSON.stringify(manifest, null, 2)}\n`)
   writeFileSync(join(directory, 'latest-mac.yml'), macUpdateManifest(version, assets))
+  writeFileSync(join(directory, 'latest-linux.yml'), linuxUpdateManifest(version, assets))
   writeFileSync(
     join(directory, 'SHA256SUMS.txt'),
     published.map((a) => `${a.sha256}  ${a.name}\n`).join('')
@@ -304,6 +309,7 @@ export async function publishRelease({
       ...PACKAGE_NAMES,
       LEGACY_INTEL_PLACEHOLDER,
       'latest-mac.yml',
+      'latest-linux.yml',
       'build-info.json',
       'SHA256SUMS.txt'
     ].map((name) => join(directory, name))
@@ -337,9 +343,17 @@ export async function publishRelease({
 }
 
 export function macUpdateManifest(version, assets) {
-  const files = assets.filter((asset) => asset.name === MAC_UPDATE_ZIP)
+  return updateManifest(version, assets, MAC_UPDATE_ZIP)
+}
+
+export function linuxUpdateManifest(version, assets) {
+  return updateManifest(version, assets, 'orca-integration-linux-x64.AppImage')
+}
+
+function updateManifest(version, assets, name) {
+  const files = assets.filter((asset) => asset.name === name)
   if (files.length !== 1) {
-    throw new Error('The Apple Silicon update ZIP is required.')
+    throw new Error(`The update package is required: ${name}`)
   }
   return [
     `version: ${JSON.stringify(version)}`,

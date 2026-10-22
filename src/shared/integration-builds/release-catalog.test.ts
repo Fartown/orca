@@ -35,6 +35,46 @@ const atom = (...tags: string[]) =>
   )
 
 describe('fork integration release catalog', () => {
+  const linuxAsset = {
+    name: 'orca-integration-linux-x64.AppImage',
+    bytes: 1234,
+    sha256: 'c'.repeat(64)
+  }
+
+  it('keeps the legacy asset list readable while Linux uses its optional field', () => {
+    const value = { ...manifest, linuxAssets: [linuxAsset] }
+    expect(parseIntegrationRelease(value, tag).assets).toEqual(manifest.assets)
+    expect(parseIntegrationRelease(value, tag).linuxAssets).toEqual([linuxAsset])
+    expect(parseIntegrationRelease(manifest, tag).linuxAssets).toBeUndefined()
+  })
+
+  it('selects a complete Linux build even when a newer release is Mac-only', async () => {
+    const newer = { ...release, tag_name: 'integration-124-aaaaaaaaaaaa' }
+    const linuxRelease = {
+      ...release,
+      assets: [...release.assets, { name: 'latest-linux.yml' }, { name: linuxAsset.name }]
+    }
+    const fetcher = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(json([newer, linuxRelease]))
+      .mockResolvedValueOnce(json({ ...manifest, linuxAssets: [linuxAsset] }))
+    expect((await fetchIntegrationRelease('linux', fetcher)).tag).toBe(tag)
+    expect(fetcher.mock.calls[1][0]).toBe(integrationDownloadUrl(tag, 'build-info.json'))
+  })
+
+  it.each([
+    { linuxAssets: [] },
+    {
+      linuxAssets: [
+        { name: 'orca-integration-linux-x64.AppImage', bytes: 0, sha256: 'c'.repeat(64) }
+      ]
+    },
+    { linuxAssets: [{ name: 'orca-integration-linux-x64.AppImage', bytes: 123, sha256: 'bad' }] },
+    { linuxAssets: [{ name: 'other.AppImage', bytes: 123, sha256: 'c'.repeat(64) }] }
+  ])('rejects malformed optional Linux assets: %j', ({ linuxAssets }) => {
+    expect(() => parseIntegrationRelease({ ...manifest, linuxAssets }, tag)).toThrow()
+  })
+
   it.each([403, 429])('recovers from API HTTP %i using the public fork feed', async (status) => {
     const fetcher = vi
       .fn<typeof fetch>()

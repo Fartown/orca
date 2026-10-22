@@ -1,7 +1,7 @@
 ---
 title: 集成分支自动出包
 slug: 集成分支自动出包
-status: done
+status: testing
 created: 2026-09-12
 updated: 2026-10-21
 external_ids: []
@@ -74,6 +74,15 @@ external_ids: []
 - 影响范围：REQ-401、REQ-402、REQ-403；APK 沿用 Expo debug 签名并核验指纹，不生成密钥或暗改 versionCode。
 
 ## 3. 开发记录
+
+### 2026-10-22 Linux x64 集成包与本机安装（testing）
+
+- 本轮目标：REQ-413；补齐fork Linux x64安装包并将本机安装从上游切换到fork。
+- 完成内容：已核对上游AppImage摘要与当前运行路径；fork最新发布没有Linux；在独立feat/integration-linux-builds工作树扩展既有功能。
+- 代码或文档变更：先补需求与TC-414、登记标题；实现将复用Linux打包、glibc门槛与fork发布流程，Linux校验资料使用可选字段兼容旧客户端。
+- 验证证据：[Linux合同验证](tests/runs/2026-10-22-linux-contracts.md)：桌面148通过/1跳过、移动21通过、完整类型、三个本地化、16组架构、登记/文档和定向lint通过。产物与实际安装待验；原服务尚未退出。
+- 未解决问题：本地原生构建正在恢复容器网络；CI与实际安装尚未完成。
+- 下一步：实现、测试、生成PR，取得Linux产物后隔离验收并安装。
 
 ### 2026-10-06 上游同步：撤下 mobile 网页包打包工作流普查的接缝
 

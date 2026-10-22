@@ -208,6 +208,9 @@ describe('integration package identity and signing', () => {
     expect(config.mac.target).toEqual(['dmg', 'zip'])
     expect(config.extraMetadata.orcaUpdateChannel).toBe('integration')
     expect(config.extraMetadata.version).toBe(env.ORCA_LOCAL_BUILD_VERSION)
+    expect(config.linux.extraResources).toBe(upstream.linux.extraResources)
+    expect(config.linux.target).toEqual(['AppImage'])
+    expect(config.appImage.artifactName).toBe('orca-integration-linux-${arch}.${ext}')
   })
 
   it('refuses mixing formal release credentials and integration packaging', () => {
@@ -238,9 +241,22 @@ describe('complete, immutable fork prereleases', () => {
     const manifest = JSON.parse(readFileSync(join(directory, 'build-info.json'), 'utf8'))
     expect(manifest.sha).toBe(sha)
     expect(manifest.assets.map((asset) => asset.name)).toEqual([
-      ...PACKAGE_NAMES,
+      ...PACKAGE_NAMES.filter((name) => !name.includes('-linux-')),
       LEGACY_INTEL_PLACEHOLDER
     ])
+    expect(manifest.linuxAssets.map((asset) => asset.name)).toEqual([
+      'orca-integration-linux-x64.AppImage'
+    ])
+    const linuxUpdate = parse(readFileSync(join(directory, 'latest-linux.yml'), 'utf8'))
+    expect(linuxUpdate.version).toBe(env.ORCA_LOCAL_BUILD_VERSION)
+    expect(linuxUpdate.files).toEqual(
+      manifest.linuxAssets.map((asset) => ({
+        url: asset.name,
+        sha512: asset.sha512,
+        size: asset.bytes
+      }))
+    )
+    expect(gh.mock.calls[3][0]).toContain(join(directory, 'latest-linux.yml'))
     expect(manifest.androidVersionCode).toBe(androidConfig.androidVersionCode(timestamp))
     expect(manifest.desktopVersion).toBe('1.2.3-preview.2')
     expect(manifest.macCertificateSha256).toBe(signingCertificate().sha256)
@@ -284,15 +300,15 @@ describe('complete, immutable fork prereleases', () => {
     )
   })
 
-  it('does not create a release when one platform is missing or empty', async () => {
+  it.each(PACKAGE_NAMES)('does not publish when %s is missing or empty', async (name) => {
     const directory = packages()
     const gh = github()
-    writeFileSync(join(directory, PACKAGE_NAMES[2]), '')
+    writeFileSync(join(directory, name), '')
     await expect(publishRelease({ env, directory, mobile, gh, git: repository() })).rejects.toThrow(
       /empty/
     )
     expect(gh).not.toHaveBeenCalled()
-    rmSync(join(directory, PACKAGE_NAMES[2]))
+    rmSync(join(directory, name))
     await expect(hashPackages(directory)).rejects.toThrow()
   })
 
@@ -488,7 +504,7 @@ describe('workflow wiring', () => {
       "${{ github.event_name == 'pull_request' }}"
     )
     expect(workflow.jobs.identity.if).toContain("github.repository == 'Fartown/orca'")
-    for (const name of ['macos', 'android']) {
+    for (const name of ['macos', 'linux', 'android']) {
       const job = workflow.jobs[name]
       expect(job.needs).toBe('identity')
       expect(job.steps[0].with.ref).toBe('${{ needs.identity.outputs.sha }}')
@@ -504,7 +520,13 @@ describe('workflow wiring', () => {
         (step) => step.name === 'Package internal-test DMG and update ZIP'
       ).run
     ).toContain('--publish never')
-    expect(workflow.jobs.publish.needs).toEqual(['identity', 'macos', 'android', 'release-summary'])
+    expect(workflow.jobs.publish.needs).toEqual([
+      'identity',
+      'macos',
+      'linux',
+      'android',
+      'release-summary'
+    ])
     expect(workflow.jobs.macos.env.CSC_FOR_PULL_REQUEST).toBe('true')
     expect(workflow.jobs.publish.if).toContain("github.ref == 'refs/heads/fork/integration'")
     expect(workflow.jobs.publish.if).not.toContain('always()')

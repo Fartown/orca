@@ -15,8 +15,10 @@ import {
 } from './integration-update-feed'
 
 const platform = Object.getOwnPropertyDescriptor(process, 'platform')!
+const architecture = Object.getOwnPropertyDescriptor(process, 'arch')!
 afterEach(() => {
   Object.defineProperty(process, 'platform', platform)
+  Object.defineProperty(process, 'arch', architecture)
   mock.app.isPackaged = true
   vi.resetAllMocks()
 })
@@ -39,7 +41,7 @@ describe('integration-only default updater feed', () => {
     mock.readFileSync.mockReturnValue('{}')
     expect(await pinIntegrationReleaseFeed({} as AppUpdater)).toBe(false)
     fork()
-    Object.defineProperty(process, 'platform', { value: 'linux' })
+    Object.defineProperty(process, 'platform', { value: 'win32' })
     expect(isIntegrationBuild()).toBe(false)
     expect(mock.fetch).not.toHaveBeenCalled()
   })
@@ -65,7 +67,13 @@ describe('integration-only default updater feed', () => {
               tag_name: tag,
               draft: false,
               prerelease: true,
-              assets: [...assets, { name: 'build-info.json' }, { name: 'latest-mac.yml' }]
+              assets: [
+                ...assets,
+                { name: 'build-info.json' },
+                { name: 'latest-mac.yml' },
+                { name: 'latest-linux.yml' },
+                { name: 'orca-integration-linux-x64.AppImage' }
+              ]
             }
           ])
         )
@@ -85,6 +93,34 @@ describe('integration-only default updater feed', () => {
         )
       )
   }
+
+  it('pins packaged Linux builds to the fork Linux feed', async () => {
+    fork()
+    Object.defineProperty(process, 'platform', { value: 'linux' })
+    Object.defineProperty(process, 'arch', { value: 'x64' })
+    publish({
+      linuxAssets: [
+        { name: 'orca-integration-linux-x64.AppImage', bytes: 123, sha256: 'b'.repeat(64) }
+      ]
+    })
+    const updater = feedUpdater()
+    expect(isIntegrationBuild()).toBe(true)
+    expect(await pinIntegrationReleaseFeed(updater)).toBe(true)
+    expect(updater.setFeedURL).toHaveBeenCalledWith({
+      provider: 'generic',
+      url: `https://github.com/Fartown/orca/releases/download/${tag}`
+    })
+    expect(integrationChangelog(localVersion)?.release.description).toContain('Linux x64')
+    expect(updater.allowDowngrade).toBe(false)
+  })
+
+  it('does not offer an x64 package to an unsupported Linux architecture', () => {
+    fork()
+    Object.defineProperty(process, 'platform', { value: 'linux' })
+    Object.defineProperty(process, 'arch', { value: 'arm64' })
+    expect(isIntegrationBuild()).toBe(false)
+    expect(mock.fetch).not.toHaveBeenCalled()
+  })
 
   it('pins the concrete fork feed and matching notes without allowing downgrades', async () => {
     fork()
