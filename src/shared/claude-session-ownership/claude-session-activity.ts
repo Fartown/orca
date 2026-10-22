@@ -73,20 +73,38 @@ export function recordClaudeSessionActivity(
 export function checkOwnerAfterRefusedClaudeHook(
   state: HookListenerState,
   body: unknown,
-  checkOwner: (paneKey: string) => unknown
+  checkOwner: (
+    paneKey: string,
+    sender: AgentProcessIdentity,
+    owner: AgentHookEventPayload
+  ) => unknown
 ): void {
   if (typeof body !== 'object' || body === null || !('paneKey' in body)) {
     return
   }
   const paneKey = typeof body.paneKey === 'string' ? body.paneKey.trim() : ''
   const sender = readAgentProcessIdentity('agentProcess' in body ? body.agentProcess : undefined)
-  const owner = paneKey ? state.lastStatusByPaneKey.get(paneKey)?.agentPresence : undefined
-  if (sender && owner?.process && !owner.ended && !isSameAgentProcess(sender, owner.process)) {
-    void checkOwner(paneKey)
+  const row = paneKey ? state.lastStatusByPaneKey.get(paneKey) : undefined
+  const owner = row?.agentPresence
+  if (
+    row &&
+    sender &&
+    owner?.process &&
+    !owner.ended &&
+    !isSameAgentProcess(sender, owner.process)
+  ) {
+    void checkOwner(paneKey, sender, row)
   }
 }
 
-export function refusedHook(state: HookListenerState, checkOwner: (paneKey: string) => unknown) {
+export function refusedHook(
+  state: HookListenerState,
+  checkOwner: (
+    paneKey: string,
+    sender: AgentProcessIdentity,
+    owner: AgentHookEventPayload
+  ) => unknown
+) {
   return (body: unknown): void => checkOwnerAfterRefusedClaudeHook(state, body, checkOwner)
 }
 

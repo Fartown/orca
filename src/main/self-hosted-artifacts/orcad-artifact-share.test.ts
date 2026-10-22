@@ -11,18 +11,28 @@ vi.mock('../../shared/app-environment', () => ({
 }))
 let base: string
 let stop: () => Promise<void>
+const removeSettingsListener = vi.fn()
 beforeEach(async () => {
   base = await realpath(await mkdtemp(join(tmpdir(), 'orca-artifact-orcad-')))
   vi.stubEnv(ARTIFACT_SHARE_HOME_ENV, join(base, 'shares'))
   stop = startOrcadArtifactShare({
     getSettings: () => ({ artifactSharingEnabled: false }),
-    onSettingsChanged: () => undefined
+    onSettingsChanged: () => removeSettingsListener
   })
 })
 afterEach(async () => {
   await stop()
   vi.unstubAllEnvs()
   await rm(base, { recursive: true, force: true })
+  vi.clearAllMocks()
+})
+
+it('unsubscribes settings exactly once when the SSH runtime stops', async () => {
+  expect(removeSettingsListener).not.toHaveBeenCalled()
+  await stop()
+  expect(removeSettingsListener).toHaveBeenCalledOnce()
+  await stop()
+  expect(removeSettingsListener).toHaveBeenCalledOnce()
 })
 
 it('answers from the SSH runtime’s filesystem while sharing is disabled', async () => {

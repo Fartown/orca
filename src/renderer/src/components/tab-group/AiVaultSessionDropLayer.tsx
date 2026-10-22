@@ -17,7 +17,7 @@ import {
   buildAiVaultDropRepinStartup,
   getAiVaultAgentProviderSession
 } from '@/lib/ai-vault-resume-command'
-import { launchAiVaultSessionInNewTab } from '@/lib/launch-ai-vault-session'
+import { launchDroppedAiVaultSession as launchAiVaultSessionInNewTab } from '@/terminal-launch-diagnostics/history-session-launch'
 import { prepareAiVaultTerminalResumeRequest } from '@/lib/ai-vault-session-resume-preparation'
 import { describeAiVaultResumeFailure } from '@/lib/ai-vault-resume-refusal'
 import { useAppStore } from '@/store'

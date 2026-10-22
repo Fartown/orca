@@ -143,6 +143,7 @@ export function registerPtyConnectionAgentSessionResumeTests(): void {
       expect(mockStoreState.registerAgentLaunchConfig).toHaveBeenCalledWith(paneKey, launchConfig, {
         agentType: 'codex',
         launchToken,
+        providerSession: { key: 'session_id', id: 'codex-session-1' },
         tabId: 'tab-1',
         leafId: LEAF_1
       })
@@ -316,6 +317,7 @@ export function registerPtyConnectionAgentSessionResumeTests(): void {
       expect(mockStoreState.registerAgentLaunchConfig).toHaveBeenCalledWith(paneKey, launchConfig, {
         agentType: 'codex',
         launchToken: expect.stringMatching(new RegExp(`^${UUID_RE}$`)),
+        providerSession: { key: 'session_id', id: 'codex-session-1' },
         tabId: 'tab-1',
         leafId: LEAF_1
       })

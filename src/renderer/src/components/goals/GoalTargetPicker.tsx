@@ -42,7 +42,7 @@ export function GoalTargetPicker({
   const folderWorkspaces = useAppStore(selectFolderWorkspaces)
   const agentStatusByPaneKey = useAppStore((s) => s.agentStatusByPaneKey)
   const route = useGoalDomainStore((s) => s.routeExecutionHostId)
-  const hostWorktrees = useMemo(
+  const routeWorkspaces = useMemo(
     () =>
       [...worktrees, ...folderWorkspaces.map(folderWorkspaceToWorktree)]
         .filter(
@@ -80,7 +80,7 @@ export function GoalTargetPicker({
             align="start"
             className="w-(--radix-select-trigger-width) max-w-(--radix-select-content-available-width)"
           >
-            {hostWorktrees.map((worktree) => (
+            {routeWorkspaces.map((worktree) => (
               <SelectItem key={worktree.id} value={worktree.id} className="*:min-w-0">
                 <span className="min-w-0 truncate" title={worktree.path}>
                   {worktree.displayName || basename(worktree.path)}

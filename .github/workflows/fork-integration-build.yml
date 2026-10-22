@@ -18,6 +18,7 @@ on:
         type: boolean
         default: false
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review, converted_to_draft]
     branches: [fork/integration]
     paths:
       - .github/workflows/fork-integration-build.yml
@@ -38,7 +39,7 @@ env:
 
 jobs:
   identity:
-    if: github.repository == 'Fartown/orca' && !inputs.signing_probe_only && !inputs.orca_update_probe_only
+    if: github.repository == 'Fartown/orca' && (github.event_name != 'pull_request' || github.event.pull_request.draft != true) && !inputs.signing_probe_only && !inputs.orca_update_probe_only
     runs-on: ubuntu-latest
     timeout-minutes: 10
     outputs:

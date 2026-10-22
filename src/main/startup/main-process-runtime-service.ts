@@ -1,4 +1,4 @@
-import { listEnvironments } from '../../shared/runtime-environment-store'
+import { listEnvironments, resolveEnvironment } from '../../shared/runtime-environment-store'
 import { isRemoteRuntimeConnectionReady } from '../ipc/runtime-environments/runtime-environment-request-connections'
 import {
   applySessionSearchSettingsChange,
@@ -23,7 +23,6 @@ import { agentHookRuntimeDeps } from '../agent-hooks/agent-hook-runtime-deps'
 import { getDaemonProvider } from '../daemon/daemon-provider-state'
 import type { TerminalSideEffectBatch } from '../../shared/terminal-side-effect-facts'
 import type { OrchestrationEnvironmentTransport } from '../runtime/orchestration/environment-transport'
-import { resolveEnvironment } from '../../shared/runtime-environment-store'
 import { resolveTuiAgentLaunchEnv } from '../../shared/tui-agent-launch-defaults'
 import { getPreferredPairedRuntimeConnection } from '../../shared/runtime-environments'
 import { fingerprintOrchestrationPeer } from '../runtime/orchestration/environment-transport'

@@ -29,14 +29,14 @@ source_docs:
 
 ## 1. 状态与结论
 
-| 项目 | 结论 |
-| --- | --- |
-| 当前状态 | `approved`：用户 2026-09-11 确认进入实现；代码与登记已落地，见 Journal 开发记录 |
+| 项目     | 结论                                                                                                                                       |
+| -------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| 当前状态 | `approved`：用户 2026-09-11 确认进入实现；代码与登记已落地，见 Journal 开发记录                                                            |
 | 需求目标 | REQ-301～REQ-306：本地不变；SSH 在远端打开；远程按 POSIX 校验；worktree 外 SSH 文件带归属标记；fail closed；runtime 只放行 worktree 内路径 |
-| 推荐方案 | 增量扩展弹窗入口：新增功能自有的"绝对路径主机策略"模块，分类器、执行链、弹窗组件通过接缝消费它；复用终端链接入口已有的 SSH 打开约定 |
-| 不做的事 | 不新增 runtime RPC；不改 `isLocalPathOpenBlocked` 本身；不改 main 进程 fs IPC；不改 UI 视觉；不支持 Windows 远端 |
-| 关键风险 | 主机在授权和 stat 之间漂移导致打到错误主机；上游后续改动接缝文件时的同步冲突 |
-| 飞书归档 | 待创建 |
+| 推荐方案 | 增量扩展弹窗入口：新增功能自有的"绝对路径主机策略"模块，分类器、执行链、弹窗组件通过接缝消费它；复用终端链接入口已有的 SSH 打开约定        |
+| 不做的事 | 不新增 runtime RPC；不改 `isLocalPathOpenBlocked` 本身；不改 main 进程 fs IPC；不改 UI 视觉；不支持 Windows 远端                           |
+| 关键风险 | 主机在授权和 stat 之间漂移导致打到错误主机；上游后续改动接缝文件时的同步冲突                                                               |
+| 飞书归档 | 待创建                                                                                                                                     |
 
 ## 2. 需求调研
 
@@ -53,13 +53,13 @@ source_docs:
 
 ### 2.3 来源与输入
 
-| 来源 | 内容 |
-| --- | --- |
-| 需求文档 | [远程工作区绝对路径打开](../requirements/远程工作区绝对路径打开.md)：REQ-301～REQ-306、已确认结论 |
-| 用户 2026-09-11 描述与批注 | "输入文件地址能新建 tab 打开；远程开远程、本地开本地"；"不管windows"；"原来是啥样的 就啥样的吧"；"按issue来" |
-| 调研文档 | [标签栏新建Tab弹窗打开文件路径链路调研](../research/标签栏新建Tab弹窗打开文件路径链路调研.md) |
-| 上游设计基线 | PR #10222（`bd45d705b`）：本地工作区放行绝对路径，"remote and SSH workspaces stay blocked" |
-| 仓库规则 | `AGENTS.md`、`docs/reference/fork-maintenance.md`、`docs/reference/ssh-execution-boundary.md`、`docs/reference/remote-wire-compatibility.md` |
+| 来源                       | 内容                                                                                                                                         |
+| -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| 需求文档                   | [远程工作区绝对路径打开](../requirements/远程工作区绝对路径打开.md)：REQ-301～REQ-306、已确认结论                                            |
+| 用户 2026-09-11 描述与批注 | "输入文件地址能新建 tab 打开；远程开远程、本地开本地"；"不管windows"；"原来是啥样的 就啥样的吧"；"按issue来"                                 |
+| 调研文档                   | [标签栏新建Tab弹窗打开文件路径链路调研](../research/标签栏新建Tab弹窗打开文件路径链路调研.md)                                                |
+| 上游设计基线               | PR #10222（`bd45d705b`）：本地工作区放行绝对路径，"remote and SSH workspaces stay blocked"                                                   |
+| 仓库规则                   | `AGENTS.md`、`docs/reference/fork-maintenance.md`、`docs/reference/ssh-execution-boundary.md`、`docs/reference/remote-wire-compatibility.md` |
 
 ### 2.4 范围界定
 
@@ -80,23 +80,23 @@ Out of scope：
 
 ### 2.5 未决问题
 
-| 编号 | 问题 | 状态 | 负责人 | 结论 |
-| --- | --- | --- | --- | --- |
-| Q1 | 远端 SSH 主机是 Windows 时的路径校验 | closed | 用户 | 不考虑 Windows 远端；远程一律按 POSIX 校验（D-003） |
-| Q2 | runtime worktree 外路径的降级用状态行还是可点行 | closed | 用户 | 保持现状的状态行形式（D-004） |
-| Q3 | 功能登记的 id 与 `docs/issue/` 目录名 | closed | 用户 | 按 issue 流程：目录 `docs/issue/远程工作区绝对路径打开/`，功能 id `remote-workspace-absolute-path-open` |
-| Q4 | 是否同时把编辑器 tab 右键"在本机打开"改为远程下载后打开 | closed | 用户 | 不在本方案范围，另立需求 |
+| 编号 | 问题                                                    | 状态   | 负责人 | 结论                                                                                                    |
+| ---- | ------------------------------------------------------- | ------ | ------ | ------------------------------------------------------------------------------------------------------- |
+| Q1   | 远端 SSH 主机是 Windows 时的路径校验                    | closed | 用户   | 不考虑 Windows 远端；远程一律按 POSIX 校验（D-003）                                                     |
+| Q2   | runtime worktree 外路径的降级用状态行还是可点行         | closed | 用户   | 保持现状的状态行形式（D-004）                                                                           |
+| Q3   | 功能登记的 id 与 `docs/issue/` 目录名                   | closed | 用户   | 按 issue 流程：目录 `docs/issue/远程工作区绝对路径打开/`，功能 id `remote-workspace-absolute-path-open` |
+| Q4   | 是否同时把编辑器 tab 右键"在本机打开"改为远程下载后打开 | closed | 用户   | 不在本方案范围，另立需求                                                                                |
 
 ### 2.6 已确认结论
 
-| 结论 | 来源 |
-| --- | --- |
-| 相对路径在三种主机下都已能打开或创建，本方案只处理绝对路径 | 调研文档 §1、§4.3 |
-| SSH 主机的 fs IPC 带 `connectionId` 时不做 worktree 范围校验，终端链接入口已经这样打开远端绝对路径 | 调研文档 §4.4、§4.6 |
-| 远程 runtime 的 `files.*` RPC 只接受 worktree 相对路径 | 调研文档 §4.4 |
-| 编辑器已有 worktree 外 SSH 文件的表示与读取校验：`externalSshTargetId`、`expectedExternalSshTargetId` | 调研文档 §4.5、§4.6 |
-| 守卫 `isLocalPathOpenBlocked` 同时服务编辑器 tab 右键与 Markdown 链接，不能整体改动 | 调研文档 §6、§7.1 |
-| 不考虑 Windows 远端；runtime 外路径保持状态行；按 issue 流程管理 | 用户 2026-09-11 批注 |
+| 结论                                                                                                  | 来源                 |
+| ----------------------------------------------------------------------------------------------------- | -------------------- |
+| 相对路径在三种主机下都已能打开或创建，本方案只处理绝对路径                                            | 调研文档 §1、§4.3    |
+| SSH 主机的 fs IPC 带 `connectionId` 时不做 worktree 范围校验，终端链接入口已经这样打开远端绝对路径    | 调研文档 §4.4、§4.6  |
+| 远程 runtime 的 `files.*` RPC 只接受 worktree 相对路径                                                | 调研文档 §4.4        |
+| 编辑器已有 worktree 外 SSH 文件的表示与读取校验：`externalSshTargetId`、`expectedExternalSshTargetId` | 调研文档 §4.5、§4.6  |
+| 守卫 `isLocalPathOpenBlocked` 同时服务编辑器 tab 右键与 Markdown 链接，不能整体改动                   | 调研文档 §6、§7.1    |
+| 不考虑 Windows 远端；runtime 外路径保持状态行；按 issue 流程管理                                      | 用户 2026-09-11 批注 |
 
 ## 3. 技术调研
 
@@ -113,36 +113,36 @@ Out of scope：
 
 ### 3.2 已实现的相似代码与复用候选评估
 
-| 候选 | 位置 | 相似点 | 关键差异 | 结论 |
-| --- | --- | --- | --- | --- |
-| `openDetectedFilePath` | `src/renderer/src/components/terminal-pane/terminal-file-open-routing.ts` | 同样把绝对路径按主机 stat 后 `openFile`；已处理 SSH 授权跳过与 `externalSshTargetId` | 签名是 `(filePath, line, column, deps)` 且返回 `void`，内部 `catch { return }` 吞掉错误，无法把失败回显到弹窗；目标 group 不是参数；附带 HTML 走浏览器、目录走 OS 打开、行号 reveal 等终端语义 | 不直接复用整函数。复用其**约定**（授权条件、标记规则）和它依赖的公开谓词 `canClientOsOpenWorkspaceFile` |
-| `canClientOsOpenWorkspaceFile` | `src/renderer/src/lib/workspace-file-host-routing.ts` | 判定"客户端 OS 能否打开该路径"，即"是否需要本地授权" | 无 | **直接复用**，作为跳过 `authorizeExternalPath` 的判定 |
-| `buildWorkspaceFileContext` | 同上 | 构造 `RuntimeFileOperationArgs` | 只填 `connectionId`，不带 provenance 与 SSH 代际校验 | 不采用；弹窗继续用更严格的 `getTabEntryFileOperationContext` |
-| `getTabEntryFileOperationContext` / `getTabEntryAllowAbsolutePaths` / `createTabEntryAllowAbsolutePathsSelector` | `src/renderer/src/components/tab-bar/tab-create-entry-local-path.ts` | 现有归属解析与 12 切片记忆化 selector | 结果是布尔值，丢失主机种类 | **增量扩展**：selector 改为返回策略对象；`getTabEntryAllowAbsolutePaths` 保留为布尔包装 |
-| `relativePathInsideRoot` | `src/shared/cross-platform-path.ts` | 判定路径是否在 worktree 内并折算 | 无 | **直接复用**，用于远程 runtime 的协议边界预判 |
-| `useEditorPanelFileContentLoader` external 分支 | `src/renderer/src/components/editor/useEditorPanelFileContentLoader.ts` | 打开后的读取已支持 `externalSshTargetId ?? connectionId` | 无 | 不改，只保证弹窗按契约写入标记 |
+| 候选                                                                                                             | 位置                                                                      | 相似点                                                                               | 关键差异                                                                                                                                                                                       | 结论                                                                                                    |
+| ---------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `openDetectedFilePath`                                                                                           | `src/renderer/src/components/terminal-pane/terminal-file-open-routing.ts` | 同样把绝对路径按主机 stat 后 `openFile`；已处理 SSH 授权跳过与 `externalSshTargetId` | 签名是 `(filePath, line, column, deps)` 且返回 `void`，内部 `catch { return }` 吞掉错误，无法把失败回显到弹窗；目标 group 不是参数；附带 HTML 走浏览器、目录走 OS 打开、行号 reveal 等终端语义 | 不直接复用整函数。复用其**约定**（授权条件、标记规则）和它依赖的公开谓词 `canClientOsOpenWorkspaceFile` |
+| `canClientOsOpenWorkspaceFile`                                                                                   | `src/renderer/src/lib/workspace-file-host-routing.ts`                     | 判定"客户端 OS 能否打开该路径"，即"是否需要本地授权"                                 | 无                                                                                                                                                                                             | **直接复用**，作为跳过 `authorizeExternalPath` 的判定                                                   |
+| `buildWorkspaceFileContext`                                                                                      | 同上                                                                      | 构造 `RuntimeFileOperationArgs`                                                      | 只填 `connectionId`，不带 provenance 与 SSH 代际校验                                                                                                                                           | 不采用；弹窗继续用更严格的 `getTabEntryFileOperationContext`                                            |
+| `getTabEntryFileOperationContext` / `getTabEntryAllowAbsolutePaths` / `createTabEntryAllowAbsolutePathsSelector` | `src/renderer/src/components/tab-bar/tab-create-entry-local-path.ts`      | 现有归属解析与 12 切片记忆化 selector                                                | 结果是布尔值，丢失主机种类                                                                                                                                                                     | **增量扩展**：selector 改为返回策略对象；`getTabEntryAllowAbsolutePaths` 保留为布尔包装                 |
+| `relativePathInsideRoot`                                                                                         | `src/shared/cross-platform-path.ts`                                       | 判定路径是否在 worktree 内并折算                                                     | 无                                                                                                                                                                                             | **直接复用**，用于远程 runtime 的协议边界预判                                                           |
+| `useEditorPanelFileContentLoader` external 分支                                                                  | `src/renderer/src/components/editor/useEditorPanelFileContentLoader.ts`   | 打开后的读取已支持 `externalSshTargetId ?? connectionId`                             | 无                                                                                                                                                                                             | 不改，只保证弹窗按契约写入标记                                                                          |
 
 ### 3.3 候选技术思路
 
-| 思路 | 做法 | 优点 | 缺点 | 结论 |
-| --- | --- | --- | --- | --- |
-| A. 直接去掉守卫 | `getTabEntryAllowAbsolutePaths` 恒真 | 改动最小 | Windows 客户端连 Linux 主机被平台校验拒绝；`authorizeExternalPath` 污染本地授权表；tab 缺 `externalSshTargetId`；runtime 外路径报错误导性的「File not found」 | 否决 |
-| B. 增量扩展弹窗入口（推荐） | 布尔开关升级为主机策略对象；分类器加协议边界预判；执行链按策略跳过授权并打标记；平台按主机判定 | 只动接缝；复用既有 SSH 打开契约；runtime 降级在分类阶段明确 | 五个上游文件各有小改动，需登记 seam | 采用（D-001） |
-| C. 弹窗改调 `openDetectedFilePath` | 绝对路径分支直接委托终端链接入口 | 一份实现 | 无法回显错误、无法指定 group、附带终端语义；要改造终端入口签名反而扩大上游改动 | 否决 |
-| D. 为 runtime 新增绝对路径 RPC | 新增 `files.statAbsolute` 等 | 远程 runtime 也能开 worktree 外文件 | 触及 host 侧安全边界与混版兼容；与本需求主诉求（SSH）无关 | 不在本方案（D-002） |
+| 思路                               | 做法                                                                                           | 优点                                                        | 缺点                                                                                                                                                          | 结论                |
+| ---------------------------------- | ---------------------------------------------------------------------------------------------- | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------- |
+| A. 直接去掉守卫                    | `getTabEntryAllowAbsolutePaths` 恒真                                                           | 改动最小                                                    | Windows 客户端连 Linux 主机被平台校验拒绝；`authorizeExternalPath` 污染本地授权表；tab 缺 `externalSshTargetId`；runtime 外路径报错误导性的「File not found」 | 否决                |
+| B. 增量扩展弹窗入口（推荐）        | 布尔开关升级为主机策略对象；分类器加协议边界预判；执行链按策略跳过授权并打标记；平台按主机判定 | 只动接缝；复用既有 SSH 打开契约；runtime 降级在分类阶段明确 | 五个上游文件各有小改动，需登记 seam                                                                                                                           | 采用（D-001）       |
+| C. 弹窗改调 `openDetectedFilePath` | 绝对路径分支直接委托终端链接入口                                                               | 一份实现                                                    | 无法回显错误、无法指定 group、附带终端语义；要改造终端入口签名反而扩大上游改动                                                                                | 否决                |
+| D. 为 runtime 新增绝对路径 RPC     | 新增 `files.statAbsolute` 等                                                                   | 远程 runtime 也能开 worktree 外文件                         | 触及 host 侧安全边界与混版兼容；与本需求主诉求（SSH）无关                                                                                                     | 不在本方案（D-002） |
 
 ### 3.4 依赖调研与依赖接口
 
-| 依赖 | 接口 | 用途 | 状态 |
-| --- | --- | --- | --- |
-| `getEditorFileOperationContext` | 返回 `RuntimeFileOperationArgs`，含 `connectionId`、`settings.activeRuntimeEnvironmentId`、`expectedSshConnectionGeneration` | 归属与 SSH 代际 | 已有 |
-| `getResolvedExecutionHostIdForWorktree`、`getFolderWorkspaceConnectionId` | folder workspace 归属 | 已有 |
-| `statRuntimePath`、`window.api.fs.stat` | 按 `connectionId` 分流到 SSH provider | 远端 stat | 已有，不改 |
-| `state.openFile` | 接受 `externalSshTargetId` | 落 tab | 已有，不改 |
-| `canClientOsOpenWorkspaceFile` | 本地授权判定 | 跳过授权 | 已有，不改 |
-| `relativePathInsideRoot` | worktree 内路径折算 | runtime 边界预判 | 已有，不改 |
-| `translate` 与 6 个 locale | 新增/修改状态行文案 | 文案 | 已有；4 个 `verify:localization-*` 门禁 |
-| `config/fork-features.jsonc`、`config/architecture-policies.jsonc` | 功能登记与 seam 白名单 | 门禁 | 需新增条目 |
+| 依赖                                                                      | 接口                                                                                                                         | 用途             | 状态                                    |
+| ------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- | ---------------- | --------------------------------------- |
+| `getEditorFileOperationContext`                                           | 返回 `RuntimeFileOperationArgs`，含 `connectionId`、`settings.activeRuntimeEnvironmentId`、`expectedSshConnectionGeneration` | 归属与 SSH 代际  | 已有                                    |
+| `getResolvedExecutionHostIdForWorktree`、`getFolderWorkspaceConnectionId` | folder workspace 归属                                                                                                        | 已有             |
+| `statRuntimePath`、`window.api.fs.stat`                                   | 按 `connectionId` 分流到 SSH provider                                                                                        | 远端 stat        | 已有，不改                              |
+| `state.openFile`                                                          | 接受 `externalSshTargetId`                                                                                                   | 落 tab           | 已有，不改                              |
+| `canClientOsOpenWorkspaceFile`                                            | 本地授权判定                                                                                                                 | 跳过授权         | 已有，不改                              |
+| `relativePathInsideRoot`                                                  | worktree 内路径折算                                                                                                          | runtime 边界预判 | 已有，不改                              |
+| `translate` 与 6 个 locale                                                | 新增/修改状态行文案                                                                                                          | 文案             | 已有；4 个 `verify:localization-*` 门禁 |
+| `config/fork-features.jsonc`、`config/architecture-policies.jsonc`        | 功能登记与 seam 白名单                                                                                                       | 门禁             | 需新增条目                              |
 
 ### 3.5 关键约束
 
@@ -154,14 +154,14 @@ Out of scope：
 
 ### 3.6 调研未知项的处置
 
-| 调研未知项 | 处置 |
-| --- | --- |
-| 远程 runtime worktree 外绝对路径无 RPC | 转为本方案边界：分类阶段明确降级，不实现（D-002） |
-| SSH provider 对远端任意路径的权限、符号链接行为 | 转为前提假设：与终端链接入口一致，依赖 provider 返回的错误回显 |
-| SSH provider 对 Windows 远端的行为 | 不在范围（D-003） |
-| `expectedSshConnectionGeneration` 缺失的触发时机 | 保持现状：`getEditorFileOperationContext` 抛错即策略为 blocked |
-| 读写侧主机校验不对称 | 不在范围；本方案不改读写侧 |
-| `findWorkspaceFileRoute` 匹配范围 | 保持现状：弹窗按当前工作区打开，加载器可能把属于兄弟工作区的 external 文件迁移过去，与终端链接一致 |
+| 调研未知项                                       | 处置                                                                                               |
+| ------------------------------------------------ | -------------------------------------------------------------------------------------------------- |
+| 远程 runtime worktree 外绝对路径无 RPC           | 转为本方案边界：分类阶段明确降级，不实现（D-002）                                                  |
+| SSH provider 对远端任意路径的权限、符号链接行为  | 转为前提假设：与终端链接入口一致，依赖 provider 返回的错误回显                                     |
+| SSH provider 对 Windows 远端的行为               | 不在范围（D-003）                                                                                  |
+| `expectedSshConnectionGeneration` 缺失的触发时机 | 保持现状：`getEditorFileOperationContext` 抛错即策略为 blocked                                     |
+| 读写侧主机校验不对称                             | 不在范围；本方案不改读写侧                                                                         |
+| `findWorkspaceFileRoute` 匹配范围                | 保持现状：弹窗按当前工作区打开，加载器可能把属于兄弟工作区的 external 文件迁移过去，与终端链接一致 |
 
 ## 4. 交互链路
 
@@ -255,16 +255,16 @@ flowchart TD
 
 ### 5.2 仓库规范与现有逻辑
 
-| 规范 | 来源 | 本方案如何遵循 |
-| --- | --- | --- |
+| 规范                                               | 来源                                                                      | 本方案如何遵循                                                                            |
+| -------------------------------------------------- | ------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
 | 新代码进功能自有路径，上游文件只在 seam 改动并登记 | `AGENTS.md` Fork Maintenance；`docs/reference/fork-maintenance.md` §2、§6 | 策略模块放 `src/renderer/src/components/tab-entry-remote-path/`；五个上游文件登记为 seams |
-| Register before building | `AGENTS.md` Iteration Principles 1 | `docs/issue/远程工作区绝对路径打开/` 已建；实现前补 `fork-features.jsonc` 条目 |
-| 执行主机拥有文件系统，禁止本地静默替代 | `docs/reference/ssh-execution-boundary.md` | blocked 策略继续拒绝；SSH 分支不调用本地授权 |
-| 混版兼容 | `docs/reference/remote-wire-compatibility.md` | 不新增 RPC 方法与字段 |
-| 文件命名用具体领域概念 | `AGENTS.md` File and Module Naming | `absolute-path-host-policy.ts`，不用 helpers/utils |
-| 文案经 `translate`，同步 6 个 locale | `verify:localization-*` 门禁 | 新增 1 个 key、修改 1 个 key 的文案 |
-| 平台判断走运行时检查 | `AGENTS.md` Cross-Platform Support | 本地按 `getRendererAppPlatform()`；远程固定 POSIX，不硬编码客户端平台 |
-| 现有 fail-closed 模式 | PR #10222 的三次 `assertAbsolutePathAllowed` | 保留并升级为策略等价性断言 |
+| Register before building                           | `AGENTS.md` Iteration Principles 1                                        | `docs/issue/远程工作区绝对路径打开/` 已建；实现前补 `fork-features.jsonc` 条目            |
+| 执行主机拥有文件系统，禁止本地静默替代             | `docs/reference/ssh-execution-boundary.md`                                | blocked 策略继续拒绝；SSH 分支不调用本地授权                                              |
+| 混版兼容                                           | `docs/reference/remote-wire-compatibility.md`                             | 不新增 RPC 方法与字段                                                                     |
+| 文件命名用具体领域概念                             | `AGENTS.md` File and Module Naming                                        | `absolute-path-host-policy.ts`，不用 helpers/utils                                        |
+| 文案经 `translate`，同步 6 个 locale               | `verify:localization-*` 门禁                                              | 新增 1 个 key、修改 1 个 key 的文案                                                       |
+| 平台判断走运行时检查                               | `AGENTS.md` Cross-Platform Support                                        | 本地按 `getRendererAppPlatform()`；远程固定 POSIX，不硬编码客户端平台                     |
+| 现有 fail-closed 模式                              | PR #10222 的三次 `assertAbsolutePathAllowed`                              | 保留并升级为策略等价性断言                                                                |
 
 ### 5.3 复用与扩展策略
 
@@ -302,15 +302,15 @@ docs/issue/README.md                                        [修改] pnpm genera
 .docs/remote-workspace-absolute-path-open-ui-validation/DATE/ [新增] 真机验证证据(git 忽略)
 ```
 
-| 模块 | 职责 | 仓库落点 | 改动类型 | 复用基础 | 扩展方式 | 输入 → 输出 | 依赖 |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| 主机策略解析 | 由 worktreeId 得到 local / ssh / runtime / blocked 策略与路径平台 | `tab-entry-remote-path/absolute-path-host-policy.ts` | 新增 | `getTabEntryFileOperationContext`、folder 归属函数 | 新模块，被四个 seam import | `(state, worktreeId)` → 策略对象 | store、lib/editor-file-operation-owner、lib/renderer-app-platform |
-| 策略 selector | 记忆化地把策略交给 React | `tab-create-entry-local-path.ts` | 修改 | 现有 12 切片 memo | 结果类型改为策略 | store → 策略对象 | 主机策略解析 |
-| 分类器接入 | 按平台校验；runtime 下 worktree 外路径给状态行 | `tab-create-entry-classifier.ts` | 修改 | 现有 absolute 分支 | `TabEntryOptionsContext` 增加可选 `absolutePathScope` | query + context → options | `relativePathInsideRoot`、`translate` |
-| 执行链改造 | 条件授权、漂移断言、写标记 | `tab-create-entry-action.ts`、`tab-create-entry-absolute-file.ts` | 修改 | 现有 `openTabEntryWithOperations`/`openAbsoluteTabEntryFile` | 参数增加策略；`assertAbsolutePathAllowed` 改为策略等价断言 | classification + policy → 新 tab / Error | `canClientOsOpenWorkspaceFile`、`statRuntimePath`、`openFile` |
-| 弹窗接线 | 消费策略 selector，把平台与 scope 传给分类器 | `TabBarCreateEntry.tsx` | 修改 | 现有 `allowAbsolutePathsSelector` | 换 selector 与三个派生值 | store → props 给分类器 | 策略 selector |
-| 文案 | 新状态行与改写的封禁文案 | 6 个 locale | 修改 | 现有 key 体系 | 加 1 改 1 | — | localization 门禁 |
-| fork 登记与门禁 | 功能条目、seam、策略、白名单、测试文档 | `config/*.jsonc`、`docs/issue/...` | 新增/修改 | 现有三个功能的条目格式 | 新条目 | — | `check:fork-features`、`check:fork-docs` |
+| 模块            | 职责                                                              | 仓库落点                                                          | 改动类型  | 复用基础                                                     | 扩展方式                                                   | 输入 → 输出                              | 依赖                                                              |
+| --------------- | ----------------------------------------------------------------- | ----------------------------------------------------------------- | --------- | ------------------------------------------------------------ | ---------------------------------------------------------- | ---------------------------------------- | ----------------------------------------------------------------- |
+| 主机策略解析    | 由 worktreeId 得到 local / ssh / runtime / blocked 策略与路径平台 | `tab-entry-remote-path/absolute-path-host-policy.ts`              | 新增      | `getTabEntryFileOperationContext`、folder 归属函数           | 新模块，被四个 seam import                                 | `(state, worktreeId)` → 策略对象         | store、lib/editor-file-operation-owner、lib/renderer-app-platform |
+| 策略 selector   | 记忆化地把策略交给 React                                          | `tab-create-entry-local-path.ts`                                  | 修改      | 现有 12 切片 memo                                            | 结果类型改为策略                                           | store → 策略对象                         | 主机策略解析                                                      |
+| 分类器接入      | 按平台校验；runtime 下 worktree 外路径给状态行                    | `tab-create-entry-classifier.ts`                                  | 修改      | 现有 absolute 分支                                           | `TabEntryOptionsContext` 增加可选 `absolutePathScope`      | query + context → options                | `relativePathInsideRoot`、`translate`                             |
+| 执行链改造      | 条件授权、漂移断言、写标记                                        | `tab-create-entry-action.ts`、`tab-create-entry-absolute-file.ts` | 修改      | 现有 `openTabEntryWithOperations`/`openAbsoluteTabEntryFile` | 参数增加策略；`assertAbsolutePathAllowed` 改为策略等价断言 | classification + policy → 新 tab / Error | `canClientOsOpenWorkspaceFile`、`statRuntimePath`、`openFile`     |
+| 弹窗接线        | 消费策略 selector，把平台与 scope 传给分类器                      | `TabBarCreateEntry.tsx`                                           | 修改      | 现有 `allowAbsolutePathsSelector`                            | 换 selector 与三个派生值                                   | store → props 给分类器                   | 策略 selector                                                     |
+| 文案            | 新状态行与改写的封禁文案                                          | 6 个 locale                                                       | 修改      | 现有 key 体系                                                | 加 1 改 1                                                  | —                                        | localization 门禁                                                 |
+| fork 登记与门禁 | 功能条目、seam、策略、白名单、测试文档                            | `config/*.jsonc`、`docs/issue/...`                                | 新增/修改 | 现有三个功能的条目格式                                       | 新条目                                                     | —                                        | `check:fork-features`、`check:fork-docs`                          |
 
 ### 5.5 模块：主机策略解析
 
@@ -328,9 +328,14 @@ export type TabEntryAbsolutePathHostPolicy =
   | { kind: 'ssh'; connectionId: string; pathPlatform: 'posix' }
   | { kind: 'runtime'; environmentId: string; worktreePath: string; pathPlatform: 'posix' }
 
-export function resolveTabEntryAbsolutePathHostPolicy(state, worktreeId): TabEntryAbsolutePathHostPolicy
+export function resolveTabEntryAbsolutePathHostPolicy(
+  state,
+  worktreeId
+): TabEntryAbsolutePathHostPolicy
 export function isSameTabEntryAbsolutePathHost(a, b): boolean
-export function toTabEntryAbsolutePathContext(policy): Pick<TabEntryOptionsContext, 'allowAbsolutePaths' | 'localPlatform' | 'absolutePathScope'>
+export function toTabEntryAbsolutePathContext(
+  policy
+): Pick<TabEntryOptionsContext, 'allowAbsolutePaths' | 'localPlatform' | 'absolutePathScope'>
 ```
 
 - 核心流程：
@@ -461,40 +466,40 @@ stateDiagram-v2
 
 本功能是客户端本地交互，不新增埋点。可观测信号：
 
-| 信号 | 位置 | 用途 |
-| --- | --- | --- |
-| 弹窗错误行文案 | `TabBarCreateEntry` 的 `error` 状态 | 区分 File not found / 目录 / 主机漂移 / 协议边界 |
-| main 侧 `fs:stat` 的 `connectionId` 参数 | IPC 日志 | 验证 SSH 分支确实带连接而非本地 stat |
-| `authorizeExternalPath` 调用 | 单测断言 + IPC 日志 | 验证远程分支未污染本地授权表 |
-| `OpenFile.externalSshTargetId` | store devtools / 持久化快照 | 验证 worktree 外 SSH 文件被正确标记 |
+| 信号                                     | 位置                                | 用途                                             |
+| ---------------------------------------- | ----------------------------------- | ------------------------------------------------ |
+| 弹窗错误行文案                           | `TabBarCreateEntry` 的 `error` 状态 | 区分 File not found / 目录 / 主机漂移 / 协议边界 |
+| main 侧 `fs:stat` 的 `connectionId` 参数 | IPC 日志                            | 验证 SSH 分支确实带连接而非本地 stat             |
+| `authorizeExternalPath` 调用             | 单测断言 + IPC 日志                 | 验证远程分支未污染本地授权表                     |
+| `OpenFile.externalSshTargetId`           | store devtools / 持久化快照         | 验证 worktree 外 SSH 文件被正确标记              |
 
 ### 6.2 风险评估
 
-| 风险 | 等级 | 缓解 |
-| --- | --- | --- |
-| 授权与 stat 之间主机漂移，把请求打到错误主机 | 高 | 三次策略等价断言；策略比较包含 `connectionId` / `environmentId` |
-| 本地授权表被远程路径污染 | 高 | `canClientOsOpenWorkspaceFile` 门控；单测断言远程分支不调用授权 |
-| 上游后续改动五个接缝文件造成同步冲突 | 中 | seams 登记 + `report-upstream-seam-changes`；接缝改动保持最小 |
-| 远端为 Windows 主机时路径被 POSIX 校验拒绝 | 低 | 已确认不在范围（D-003）；用户会看到既有的平台不符文案 |
-| 远程 runtime 用户误以为能开任意路径 | 低 | 分类阶段明确状态行文案 |
-| 文案门禁失败 | 低 | 6 个 locale 同步；跑 4 个 `verify:localization-*` |
+| 风险                                         | 等级 | 缓解                                                            |
+| -------------------------------------------- | ---- | --------------------------------------------------------------- |
+| 授权与 stat 之间主机漂移，把请求打到错误主机 | 高   | 三次策略等价断言；策略比较包含 `connectionId` / `environmentId` |
+| 本地授权表被远程路径污染                     | 高   | `canClientOsOpenWorkspaceFile` 门控；单测断言远程分支不调用授权 |
+| 上游后续改动五个接缝文件造成同步冲突         | 中   | seams 登记 + `report-upstream-seam-changes`；接缝改动保持最小   |
+| 远端为 Windows 主机时路径被 POSIX 校验拒绝   | 低   | 已确认不在范围（D-003）；用户会看到既有的平台不符文案           |
+| 远程 runtime 用户误以为能开任意路径          | 低   | 分类阶段明确状态行文案                                          |
+| 文案门禁失败                                 | 低   | 6 个 locale 同步；跑 4 个 `verify:localization-*`               |
 
 ### 6.3 自测方案
 
 单元测试（vitest），实现时落为 `tests/cases/` 的 TC-501 起：
 
-| 用例 | 关联需求 | 断言 |
-| --- | --- | --- |
-| TC-501 本地 worktree 策略为 local，平台为客户端平台 | REQ-301 | 行为与改动前一致 |
-| TC-502 SSH worktree 策略为 ssh，平台为 posix，「打开文件」行出现 | REQ-302、REQ-303 | 不再出现远程封禁状态行 |
-| TC-503 Windows 客户端 + Linux SSH 主机，输入 POSIX 路径通过校验 | REQ-303 | 不再报「for this computer」 |
-| TC-504 SSH 分支不调用 `authorizeExternalPath`，stat 带 `connectionId` | REQ-302 | 对照终端链接既有用例 |
-| TC-505 SSH worktree 外路径 `openFile` 带 `externalSshTargetId`；worktree 内不带 | REQ-304 | 与终端链接契约一致 |
-| TC-506 归属未解析（SSH connecting、repo 未 hydrate、归属冲突）仍 blocked | REQ-305 | 状态行为新文案 |
-| TC-507 runtime worktree 内绝对路径放行并经 `files.stat` | REQ-306 | RPC 参数为相对路径 |
-| TC-508 runtime worktree 外路径分类为 `absolute-path-outside-workspace` | REQ-306 | 不发起 stat，状态行不可点 |
-| TC-509 stat 期间策略从 ssh 变为 local 或 connectionId 变化，提交中止 | REQ-305 | 抛主机漂移错误，未调用 `openFile` |
-| TC-510 folder workspace 的 SSH 归属得到 ssh 策略；混合归属 blocked | REQ-302、REQ-305 | 复用现有 folder 用例数据 |
+| 用例                                                                            | 关联需求         | 断言                              |
+| ------------------------------------------------------------------------------- | ---------------- | --------------------------------- |
+| TC-501 本地 worktree 策略为 local，平台为客户端平台                             | REQ-301          | 行为与改动前一致                  |
+| TC-502 SSH worktree 策略为 ssh，平台为 posix，「打开文件」行出现                | REQ-302、REQ-303 | 不再出现远程封禁状态行            |
+| TC-503 Windows 客户端 + Linux SSH 主机，输入 POSIX 路径通过校验                 | REQ-303          | 不再报「for this computer」       |
+| TC-504 SSH 分支不调用 `authorizeExternalPath`，stat 带 `connectionId`           | REQ-302          | 对照终端链接既有用例              |
+| TC-505 SSH worktree 外路径 `openFile` 带 `externalSshTargetId`；worktree 内不带 | REQ-304          | 与终端链接契约一致                |
+| TC-506 归属未解析（SSH connecting、repo 未 hydrate、归属冲突）仍 blocked        | REQ-305          | 状态行为新文案                    |
+| TC-507 runtime worktree 内绝对路径放行并经 `files.stat`                         | REQ-306          | RPC 参数为相对路径                |
+| TC-508 runtime worktree 外路径分类为 `absolute-path-outside-workspace`          | REQ-306          | 不发起 stat，状态行不可点         |
+| TC-509 stat 期间策略从 ssh 变为 local 或 connectionId 变化，提交中止            | REQ-305          | 抛主机漂移错误，未调用 `openFile` |
+| TC-510 folder workspace 的 SSH 归属得到 ssh 策略；混合归属 blocked              | REQ-302、REQ-305 | 复用现有 folder 用例数据          |
 
 真机验证（按 `AGENTS.md` Electron UI Validation，`ORCA_BACKGROUND_LAUNCH=1`，CDP 截图，不抢焦点）：
 

@@ -224,16 +224,23 @@ describe('runtime file client', () => {
             },
             _meta: { runtimeId: 'remote-runtime' }
           })
-        : Promise.resolve({
-            id: 'rpc-chunk',
-            ok: true,
-            result: {
-              contentBase64: globalThis.btoa(binary),
-              bytesRead: binary.length,
-              eof: true
-            },
-            _meta: { runtimeId: 'remote-runtime' }
-          })
+        : args.method === 'files.stat'
+          ? Promise.resolve({
+              id: 'rpc-stat',
+              ok: true,
+              result: { size: binary.length, mtime: 1, isDirectory: false },
+              _meta: { runtimeId: 'remote-runtime' }
+            })
+          : Promise.resolve({
+              id: 'rpc-chunk',
+              ok: true,
+              result: {
+                contentBase64: globalThis.btoa(binary),
+                bytesRead: binary.length,
+                eof: true
+              },
+              _meta: { runtimeId: 'remote-runtime' }
+            })
     )
 
     await expect(
@@ -277,7 +284,7 @@ describe('runtime file client', () => {
         relativePath: 'large.log',
         worktreeId: 'wt-1'
       })
-    ).rejects.toThrow('Update the Orca server to open files this size.')
+    ).rejects.toThrow('Update the server to open it.')
   })
 
   it('falls back to files.readPreview when a remote binary file is opened', async () => {

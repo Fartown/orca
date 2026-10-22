@@ -257,8 +257,8 @@ export async function createFolderWorkspaceAndActivate(
     if (!store) {
       throw new Error('E2E store unavailable')
     }
-    await store.getState().fetchProjectGroups()
-    await store.getState().fetchFolderWorkspaces()
+    await store.getState().fetchProjectGroups({ runtimeEnvironmentId: null })
+    await store.getState().fetchFolderWorkspaces({ runtimeEnvironmentId: null })
     store.getState().setActiveFolderWorkspace(workspace.id, 'local')
     return { id: workspace.id, name: workspace.name }
   }, folderPath)

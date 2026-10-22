@@ -2,7 +2,7 @@ import { createElement } from 'react'
 import { act, create } from 'react-test-renderer'
 import { expect, it, vi } from 'vitest'
 vi.mock('react-native', () => ({ Pressable: 'Pressable', ActivityIndicator: 'ActivityIndicator' }))
-vi.mock('lucide-react-native', () => ({ ImagePlus: 'ImagePlus', Mic: 'Mic' }))
+vi.mock('lucide-react-native', () => ({ Paperclip: 'Paperclip', Mic: 'Mic' }))
 import { MobileTerminalInputActions } from './MobileTerminalInputActions'
 
 it('removes the disabled microphone while keeping image attachment available', async () => {
@@ -28,14 +28,14 @@ it('removes the disabled microphone while keeping image attachment available', a
     renderer = create(createElement(MobileTerminalInputActions, props))
   })
   const buttons = () => renderer.root.findAll((node) => String(node.type) === 'Pressable')
-  expect(buttons().map((b) => b.props.accessibilityLabel)).toEqual(['Attach a photo'])
+  expect(buttons().map((b) => b.props.accessibilityLabel)).toEqual(['Attach'])
   await act(async () => buttons()[0]!.props.onPress())
   expect(attach).toHaveBeenCalledOnce()
   await act(async () =>
     renderer.update(createElement(MobileTerminalInputActions, { ...props, dictationEnabled: true }))
   )
   expect(buttons().map((b) => b.props.accessibilityLabel)).toEqual([
-    'Attach a photo',
+    'Attach',
     'Start voice dictation'
   ])
   await act(async () => renderer.unmount())

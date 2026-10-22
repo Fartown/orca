@@ -4,19 +4,14 @@ import { AlertCircle, Loader2, Search } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from '@/components/ui/select'
 import { useIssueDomainStore } from '@/issues/use-issue-domain-store'
 import { SidebarHostBadge } from '../sidebar-host-badge'
 import { useConversationSessionTitles } from '@/issues/conversation-session-titles'
 import { shouldShowIssueConversation } from '@/issues/issue-conversation-presentation'
 import type { IssueListFilter, IssueRouteExecutionHostId } from '../../../../../shared/issues/types'
-import { useSidebarHostScopeOptions } from '../use-sidebar-host-scope-options'
+import { useSidebarHostInventoryOptions } from '../use-sidebar-host-scope-options'
+import { HostCombobox } from '@/components/host-picker/HostCombobox'
+import { normalizeExecutionHostId } from '../../../../../shared/execution-host'
 import { buildIssueRows } from './build-issue-rows'
 import { IssueVirtualRow } from './issue-virtual-row'
 import { translate } from '@/i18n/i18n'
@@ -26,7 +21,7 @@ const FILTER_SEGMENT_CLASS =
   'h-6 px-1.5 text-[10px] data-[state=on]:bg-foreground/10 data-[state=on]:font-semibold data-[state=on]:text-foreground'
 
 export function IssueSidebar(): React.JSX.Element {
-  const { hostOptions } = useSidebarHostScopeOptions()
+  const hostOptions = useSidebarHostInventoryOptions()
   const partitions = useIssueDomainStore((state) => state.partitionsByRouteExecutionHostId)
   const filter = useIssueDomainStore((state) => state.filter)
   const searchQuery = useIssueDomainStore((state) => state.searchQuery)
@@ -200,30 +195,27 @@ export function IssueSidebar(): React.JSX.Element {
           </Button>
           {/* 只有一个主机时选择器是噪音,和分组头同一条规则(host-section-rows.ts:276) */}
           {hostOptions.length > 1 ? (
-            <Select
+            <HostCombobox
               value={selectedHost}
-              onValueChange={(value) => setSelectedHost(value as typeof selectedHost)}
-            >
-              <SelectTrigger
-                size="sm"
-                className="h-6 max-w-28 border-0 bg-transparent px-1.5 text-[10px] shadow-none"
-              >
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent align="end">
-                <SelectItem value="all" className="text-xs">
-                  {translate(
+              size="xs"
+              className="max-w-28"
+              options={[
+                {
+                  id: 'all',
+                  label: translate(
                     'auto.components.sidebar.issues.issue.sidebar.ca89b90323',
                     'All hosts'
-                  )}
-                </SelectItem>
-                {hostOptions.map((host) => (
-                  <SelectItem key={host.id} value={host.id} className="text-xs">
-                    {host.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+                  )
+                },
+                ...hostOptions
+              ]}
+              onChange={(value) => {
+                const hostId = value === 'all' ? 'all' : normalizeExecutionHostId(value)
+                if (hostId) {
+                  setSelectedHost(hostId)
+                }
+              }}
+            />
           ) : null}
         </div>
         {searchOpen || searchQuery ? (

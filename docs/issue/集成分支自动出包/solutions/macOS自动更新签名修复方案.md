@@ -27,24 +27,24 @@ updated: 2026-09-13
 
 ## 2. 候选方案及复用评估
 
-| 路线 | 改动与依赖 | 判断 |
-| --- | --- | --- |
-| 固定自签证书，保留原生更新 | 固定 PEM 公私钥；固定版本和摘要的 rcodesign；fork afterSign | 本机原生正反例已通过；不修改 trust/keychain，继续验完整 Orca |
-| Apple Developer ID，保留原生更新 | 用户持有的 Apple Developer 账号、证书私钥；公证另需凭据 | 面向正式分发的成熟路线；现无凭据，不能代用户购买账号或假造身份 |
-| 自建下载后替换 App 的安装器 | 重写退出协调、替换、恢复、权限、重启及签名认证 | 不推荐；重复现有 Squirrel，改动大且新增安装故障面 |
-| 去掉验签、只检查 bundle ID 或修改 ad-hoc 要求 | 改弱现有签名校验 | 不采用；不能验证更新来自同一签名方 |
+| 路线                                          | 改动与依赖                                                  | 判断                                                           |
+| --------------------------------------------- | ----------------------------------------------------------- | -------------------------------------------------------------- |
+| 固定自签证书，保留原生更新                    | 固定 PEM 公私钥；固定版本和摘要的 rcodesign；fork afterSign | 本机原生正反例已通过；不修改 trust/keychain，继续验完整 Orca   |
+| Apple Developer ID，保留原生更新              | 用户持有的 Apple Developer 账号、证书私钥；公证另需凭据     | 面向正式分发的成熟路线；现无凭据，不能代用户购买账号或假造身份 |
+| 自建下载后替换 App 的安装器                   | 重写退出协调、替换、恢复、权限、重启及签名认证              | 不推荐；重复现有 Squirrel，改动大且新增安装故障面              |
+| 去掉验签、只检查 bundle ID 或修改 ad-hoc 要求 | 改弱现有签名校验                                            | 不采用；不能验证更新来自同一签名方                             |
 
 已检查的复用基础：
 
-| 仓库路径 | 现有能力 | 本方案处理 |
-| --- | --- | --- |
-| `config/scripts/integration-builds/electron-builder.cjs` | 继承上游打包 hooks、资源、DMG/ZIP 目标 | 增量替换签名身份，不复制打包配置 |
-| `.github/workflows/fork-integration-build.yml` | 同 SHA 双架构构建及完整发布 | 增量插入签名准备、验签与清理 |
-| `src/main/updater/updater-release-feed.ts` 与自有 `integration-update-feed.ts` | fork feed、版本解析、原生更新器调用 | 复用；修复验签后不另建检查状态机 |
-| `src/main/updater-mac-install.ts` | 等待原生 staging，再执行安装交接 | 不改；必须观察其真实完成条件 |
-| `src/main/local-builds/local-build-switch.ts` | 本地包选择和兼容性检查 | 同样依赖有效同源签名，不是绕开当前问题的替代安装器 |
-| `src/cli/runtime/mac-app-update-bundle.ts` | 观察 bundle 替换后的目标版本 | 复用作为完整替换验收证据，不把它误认为安装器 |
-| 既有 `mac-signing-probe/scripts/` | 隔离 app、原生 feed、事件和截图 | 复用实验脚本，在 CI 补构建信任及正反例 |
+| 仓库路径                                                                       | 现有能力                               | 本方案处理                                         |
+| ------------------------------------------------------------------------------ | -------------------------------------- | -------------------------------------------------- |
+| `config/scripts/integration-builds/electron-builder.cjs`                       | 继承上游打包 hooks、资源、DMG/ZIP 目标 | 增量替换签名身份，不复制打包配置                   |
+| `.github/workflows/fork-integration-build.yml`                                 | 同 SHA 双架构构建及完整发布            | 增量插入签名准备、验签与清理                       |
+| `src/main/updater/updater-release-feed.ts` 与自有 `integration-update-feed.ts` | fork feed、版本解析、原生更新器调用    | 复用；修复验签后不另建检查状态机                   |
+| `src/main/updater-mac-install.ts`                                              | 等待原生 staging，再执行安装交接       | 不改；必须观察其真实完成条件                       |
+| `src/main/local-builds/local-build-switch.ts`                                  | 本地包选择和兼容性检查                 | 同样依赖有效同源签名，不是绕开当前问题的替代安装器 |
+| `src/cli/runtime/mac-app-update-bundle.ts`                                     | 观察 bundle 替换后的目标版本           | 复用作为完整替换验收证据，不把它误认为安装器       |
+| 既有 `mac-signing-probe/scripts/`                                              | 隔离 app、原生 feed、事件和截图        | 复用实验脚本，在 CI 补构建信任及正反例             |
 
 ## 3. 目标链路
 
@@ -144,14 +144,14 @@ docs/issue/集成分支自动出包/       [修改] 需求、用例和验收记�
 
 ## 5. 风险、监控与验收门槛
 
-| 风险/事实 | 处理与观测 |
-| --- | --- |
-| 最小探针不能覆盖完整产品 | P0 与 P2 为独立门槛；后者须验证真实 Orca 替换、重启和终端恢复 |
-| 密钥轮换导致指定要求不匹配 | 固定身份、备份；轮换另做迁移，不自动换证书冒充兼容 |
-| 首次 Gatekeeper/权限提示 | 明确未公证，不承诺免提示；不自动关闭 Gatekeeper |
-| 无法替换/重启 | 记录原生错误与目标版本；旧 App 可启动，禁止只看下载完成 |
-| 发布配置缺失 | 构建失败且不公开半套产物，不降级 ad-hoc 后继续发布 |
-| 影响原渠道或平台 | 回归现有 updater、local build、Android、混合版本客户端；无新 wire 契约 |
+| 风险/事实                  | 处理与观测                                                             |
+| -------------------------- | ---------------------------------------------------------------------- |
+| 最小探针不能覆盖完整产品   | P0 与 P2 为独立门槛；后者须验证真实 Orca 替换、重启和终端恢复          |
+| 密钥轮换导致指定要求不匹配 | 固定身份、备份；轮换另做迁移，不自动换证书冒充兼容                     |
+| 首次 Gatekeeper/权限提示   | 明确未公证，不承诺免提示；不自动关闭 Gatekeeper                        |
+| 无法替换/重启              | 记录原生错误与目标版本；旧 App 可启动，禁止只看下载完成                |
+| 发布配置缺失               | 构建失败且不公开半套产物，不降级 ad-hoc 后继续发布                     |
+| 影响原渠道或平台           | 回归现有 updater、local build、Android、混合版本客户端；无新 wire 契约 |
 
 每次实验记录：源 SHA、Electron/macOS/架构、证书指纹、旧/新 designated requirement、验签退出码、update-downloaded/native-ready 事件、旧/新进程 PID/版本、磁盘版本和清理结果。不记录私钥和密码。只有 P0 与 P2 都通过，才把 REQ-404 自动安装标为完成。
 

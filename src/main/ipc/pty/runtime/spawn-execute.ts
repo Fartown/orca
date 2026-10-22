@@ -1,4 +1,12 @@
 import type { PtySpawnResult } from '../../../providers/pty-provider-contract'
+import {
+  recordTerminalLaunchStage,
+  traceTerminalClaimOwnerLiveness
+} from '../../../terminal-launch-diagnostics/launch-trace'
+import {
+  recordTerminalProviderDispatch,
+  recordTerminalProviderResult
+} from '../../../terminal-launch-diagnostics/provider-launch-evidence'
 import { spawnWorktreeTarget } from '../../../../shared/worktree/host-qualified-identity'
 import { ptyIncarnationById } from '../provider/ownership-state'
 import { tryGetProviderForPty } from '../provider/registry'
@@ -58,6 +66,10 @@ export async function executeRuntimePtySpawn(ctx: RuntimePtySpawnState): Promise
             args.paneSpawnOperation?.absentOwner
           )
     if (stablePaneOwnerCandidate) {
+      recordTerminalLaunchStage('stable-pane-contention', {
+        ...args,
+        candidatePtyId: stablePaneOwnerCandidate.ptyId
+      })
       throw new PaneOwnerContentionError()
     }
     if (args.paneSpawnOperation?.mustExist && args.worktreeId && args.tabId && args.leafId) {
@@ -97,6 +109,10 @@ export async function executeRuntimePtySpawn(ctx: RuntimePtySpawnState): Promise
       // proven owners before deciding that an identity is absent.
       await reconcileAgentSessionOwnerListings()
       const recoveredOwner = agentSessionOwners.find(args.agentSessionEnsure.claim)
+      recordTerminalLaunchStage('claim-candidate', {
+        ...args,
+        candidatePtyId: recoveredOwner?.ptyId
+      })
       if (recoveredOwner && ctx.pendingRegistrationPtyId !== recoveredOwner.ptyId) {
         if (ctx.pendingRegistrationPtyId) {
           ctx.deps.runtime?.cancelPendingPtyRegistration?.(
@@ -117,7 +133,9 @@ export async function executeRuntimePtySpawn(ctx: RuntimePtySpawnState): Promise
         surface: args.agentSessionEnsure.surface,
         spawn: async () => {
           assertClientStillConnected()
+          recordTerminalProviderDispatch(args, expectedPtyId)
           providerResult = await ctx.provider.spawn(ctx.spawnOptions)
+          recordTerminalProviderResult(args, providerResult)
           ctx.rejectedRegistrationCandidate = providerResult
           // Why: a successful lower-owner return proves physical work committed even if admission sees an early exit.
           ctx.reportPtySpawnCommitted()
@@ -145,12 +163,19 @@ export async function executeRuntimePtySpawn(ctx: RuntimePtySpawnState): Promise
         isLive: async (owner) => {
           const ownerProvider = tryGetProviderForPty(owner.ptyId)
           if (!ownerProvider) {
+            recordTerminalLaunchStage('claim-owner-unverifiable', {
+              ...args,
+              candidatePtyId: owner.ptyId
+            })
             // Why: an owner on a host this process cannot reach is unknown, never absent.
             throw new Error('execution_owner_unavailable')
           }
-          return await isProviderAgentSessionOwnerLive(ownerProvider, owner)
+          return traceTerminalClaimOwnerLiveness({ ...args, candidatePtyId: owner.ptyId }, () =>
+            isProviderAgentSessionOwnerLive(ownerProvider, owner)
+          )
         },
         onJoin: () => {
+          recordTerminalLaunchStage('claim-join', args)
           awaitingAnotherStart = true
         }
       })
@@ -163,9 +188,16 @@ export async function executeRuntimePtySpawn(ctx: RuntimePtySpawnState): Promise
         incarnationId: ptyIncarnationById.get(ensured.owner.ptyId)
       }
       ctx.result.agentSessionEnsure = ensured
+      recordTerminalLaunchStage('claim-result', {
+        ...args,
+        ptyId: ensured.owner.ptyId,
+        disposition: ensured.disposition
+      })
     } else {
       assertClientStillConnected()
+      recordTerminalProviderDispatch(args, expectedPtyId)
       ctx.result = await ctx.provider.spawn(ctx.spawnOptions)
+      recordTerminalProviderResult(args, ctx.result)
       ctx.reportPtySpawnCommitted()
       ctx.stablePaneOwner = null
       ctx.rejectedRegistrationCandidate = ctx.result

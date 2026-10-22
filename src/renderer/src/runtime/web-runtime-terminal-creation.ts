@@ -4,6 +4,7 @@ import {
   seedNativeChatLaunchDraftForAgentTab
 } from '../lib/agent-launch-prompt-delivery'
 import { createWebRuntimeSessionTerminalResult } from './web-runtime-terminal-create-operation'
+import { observePairedTerminalLaunch } from '../terminal-launch-diagnostics/paired-terminal-launch'
 import { notifyWebRuntimeTerminalCreateFailure } from './web-runtime-terminal-create-failure-notice'
 import { toWebTerminalSurfaceTabId } from '../../../shared/terminal-surface-id'
 import type {
@@ -19,7 +20,7 @@ export async function createWebRuntimeSessionTerminal(
   args: CreateWebRuntimeSessionTerminalArgs,
   options: { notifyFailure?: boolean } = {}
 ): Promise<WebRuntimeTerminalCreateOutcome> {
-  const created = await createWebRuntimeSessionTerminalResult(args)
+  const created = await observePairedTerminalLaunch(args, createWebRuntimeSessionTerminalResult)
   if (
     created.hostFailed &&
     created.outcome.status === 'failed' &&
@@ -44,7 +45,7 @@ export async function createWebRuntimeAgentSessionTerminal(
   outcome: WebRuntimeTerminalCreateOutcome
   promptDelivered: boolean
 }> {
-  const created = await createWebRuntimeSessionTerminalResult(args)
+  const created = await observePairedTerminalLaunch(args, createWebRuntimeSessionTerminalResult)
   if (created.outcome.status === 'failed' || !created.hostTabId) {
     return { outcome: created.outcome, promptDelivered: false }
   }
@@ -70,7 +71,7 @@ export async function createWebRuntimeAgentSessionTerminalWithLaunchDraft(
     launchDraft: string
   }
 ): Promise<WebRuntimeTerminalCreateOutcome> {
-  const created = await createWebRuntimeSessionTerminalResult(args)
+  const created = await observePairedTerminalLaunch(args, createWebRuntimeSessionTerminalResult)
   if (created.outcome.status !== 'failed' && created.hostTabId) {
     seedNativeChatLaunchDraftForAgentTab({
       tabId: toWebTerminalSurfaceTabId(created.hostTabId),

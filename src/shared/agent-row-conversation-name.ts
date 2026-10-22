@@ -16,6 +16,7 @@ export type ConversationNameTab = Pick<
 >
 
 export type AgentRowConversationNameOptions = {
+  /** Omission keeps legacy lookup; explicit undefined means the caller found no owning session. */
   providerSessionId?: string
   userTitle?: string | null
   identityFallbackTitle?: string | null
@@ -131,8 +132,9 @@ export function getAgentRowConversationName(
   const liveTitle =
     paneLiveTitle === undefined ? (tab.title?.trim() ?? '') : (paneLiveTitle?.trim() ?? '')
   const slot =
-    options.providerSessionId !== undefined &&
-    (tab.aiVaultTitle?.sessionId !== options.providerSessionId ||
+    Object.hasOwn(options, 'providerSessionId') &&
+    (!options.providerSessionId ||
+      tab.aiVaultTitle?.sessionId !== options.providerSessionId ||
       tab.aiVaultTitle.agent !== agentType)
       ? undefined
       : tab.aiVaultTitle

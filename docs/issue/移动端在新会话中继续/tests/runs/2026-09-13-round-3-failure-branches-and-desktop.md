@@ -1,5 +1,5 @@
 ---
-title: "2026-09-13 第三轮：失败分支、桌面回归与首屏渲染"
+title: '2026-09-13 第三轮：失败分支、桌面回归与首屏渲染'
 document_type: test-run
 status: completed
 created: 2026-09-13
@@ -20,28 +20,28 @@ updated: 2026-09-13
 
 ## 2. 执行结果
 
-| Case ID | 实际结果 | 结论 | 证据 | 缺陷或遗留问题 |
-| --- | --- | --- | --- | --- |
-| TC-006 | 四个失败分支逐一注入并复现：`create-failed` 只走到 createTerminal，提示「Could not start a new Claude session.」；`create-no-handle` 只走到 createTerminal、`not-ready` 走到 wait、`send-rejected` 走到 send，三者均提示「The new Claude session started, but its context could not be sent.」。失败分支均未继续调用其后的 RPC。同一源 tab 连续四次触发，`clientMutationId` 恒为 `mobile-continuation:surface-claude:mtzujh5d` | PASS | `evidence/device/40~44-tc006-*.png`、`/tmp/mock6771.log` 入参 | - |
-| TC-007 | 三层验证全过：①差分回归 2304 组输入（4 agent × 4 标题 × 2 cwd × 2 transcript × 3 prompt × 3 回复 × 2 capturedText × 2 模式），上游实现与本分支实现输出零差异；②运行中的桌面 dev 构建里入口仍在（`aria-label="在新会话中继续…"`，终端面板头部浮层），对话框标题/描述/智能体/上下文/启动目录/按钮齐全，两种模式切换文案正确；③真点「启动新会话」拉起新 claude，其 transcript 首条 user message 与本分支实现、上游实现三方逐字一致（1395/1395/1395），且保留了移动端不传的 `Orca pane:` 字段 | PASS | `evidence/desktop/01~04*.png`、`evidence/prompts/desktop-received-full.txt`、`scripts/desktop-continuation-parity.ts`、`scripts/desktop-runtime-prompt-check.ts` | - |
-| TC-009 | App 冷启动后跑一次续接：新 tab 自动选中并持续渲染新 agent 输出直至给出回复，全程未切 tab；`[terminal-webview] engine error` 0 次，`DROPPED` 0 次 | PASS | `evidence/device/45-tc009-render-*.png`、`adb logcat -s ReactNativeJS` | - |
-| TC-008 | 未执行 | - | - | 需要一台旧版本 Orca 主机；本机只有 1.4.197 |
+| Case ID | 实际结果                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  | 结论 | 证据                                                                                                                                                             | 缺陷或遗留问题                             |
+| ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------ |
+| TC-006  | 四个失败分支逐一注入并复现：`create-failed` 只走到 createTerminal，提示「Could not start a new Claude session.」；`create-no-handle` 只走到 createTerminal、`not-ready` 走到 wait、`send-rejected` 走到 send，三者均提示「The new Claude session started, but its context could not be sent.」。失败分支均未继续调用其后的 RPC。同一源 tab 连续四次触发，`clientMutationId` 恒为 `mobile-continuation:surface-claude:mtzujh5d`                                                            | PASS | `evidence/device/40~44-tc006-*.png`、`/tmp/mock6771.log` 入参                                                                                                    | -                                          |
+| TC-007  | 三层验证全过：①差分回归 2304 组输入（4 agent × 4 标题 × 2 cwd × 2 transcript × 3 prompt × 3 回复 × 2 capturedText × 2 模式），上游实现与本分支实现输出零差异；②运行中的桌面 dev 构建里入口仍在（`aria-label="在新会话中继续…"`，终端面板头部浮层），对话框标题/描述/智能体/上下文/启动目录/按钮齐全，两种模式切换文案正确；③真点「启动新会话」拉起新 claude，其 transcript 首条 user message 与本分支实现、上游实现三方逐字一致（1395/1395/1395），且保留了移动端不传的 `Orca pane:` 字段 | PASS | `evidence/desktop/01~04*.png`、`evidence/prompts/desktop-received-full.txt`、`scripts/desktop-continuation-parity.ts`、`scripts/desktop-runtime-prompt-check.ts` | -                                          |
+| TC-009  | App 冷启动后跑一次续接：新 tab 自动选中并持续渲染新 agent 输出直至给出回复，全程未切 tab；`[terminal-webview] engine error` 0 次，`DROPPED` 0 次                                                                                                                                                                                                                                                                                                                                          | PASS | `evidence/device/45-tc009-render-*.png`、`adb logcat -s ReactNativeJS`                                                                                           | -                                          |
+| TC-008  | 未执行                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    | -    | -                                                                                                                                                                | 需要一台旧版本 Orca 主机；本机只有 1.4.197 |
 
 ## 3. 证据索引
 
-| 证据 | 类型 | 对应 Case | 说明 |
-| --- | --- | --- | --- |
-| `.docs/mobile-session-continuation-ui-validation/2026-09-13/evidence/device/40~45*.png` | 截图 | TC-006、TC-009 | 四个失败分支的用户提示；首屏实时渲染 |
-| `.docs/mobile-session-continuation-ui-validation/2026-09-13/evidence/desktop/01~04*.png` | 截图 | TC-007 | 桌面入口、对话框、两种模式、新会话 |
-| `.docs/mobile-session-continuation-ui-validation/2026-09-13/scripts/desktop-continuation-parity.ts` | 脚本 | TC-007 | 上游 vs 本分支 2304 组输入差分回归 |
-| `.docs/mobile-session-continuation-ui-validation/2026-09-13/scripts/desktop-runtime-prompt-check.ts` | 脚本 | TC-007 | 桌面运行时实际投递的 prompt 与两份实现三方比对 |
-| `.docs/mobile-session-continuation-ui-validation/2026-09-13/evidence/prompts/desktop-received-full.txt` | 日志 | TC-007 | 桌面新会话 transcript 的首条 user message |
+| 证据                                                                                                    | 类型 | 对应 Case      | 说明                                           |
+| ------------------------------------------------------------------------------------------------------- | ---- | -------------- | ---------------------------------------------- |
+| `.docs/mobile-session-continuation-ui-validation/2026-09-13/evidence/device/40~45*.png`                 | 截图 | TC-006、TC-009 | 四个失败分支的用户提示；首屏实时渲染           |
+| `.docs/mobile-session-continuation-ui-validation/2026-09-13/evidence/desktop/01~04*.png`                | 截图 | TC-007         | 桌面入口、对话框、两种模式、新会话             |
+| `.docs/mobile-session-continuation-ui-validation/2026-09-13/scripts/desktop-continuation-parity.ts`     | 脚本 | TC-007         | 上游 vs 本分支 2304 组输入差分回归             |
+| `.docs/mobile-session-continuation-ui-validation/2026-09-13/scripts/desktop-runtime-prompt-check.ts`    | 脚本 | TC-007         | 桌面运行时实际投递的 prompt 与两份实现三方比对 |
+| `.docs/mobile-session-continuation-ui-validation/2026-09-13/evidence/prompts/desktop-received-full.txt` | 日志 | TC-007         | 桌面新会话 transcript 的首条 user message      |
 
 ## 4. 缺陷与遗留问题
 
-| 问题 | 严重程度 | 对应 Case | 处理状态 |
-| --- | --- | --- | --- |
-| 旧主机 `cwd` 丢弃分支未触发 | 中 | TC-008 | open（已接受风险） |
+| 问题                        | 严重程度 | 对应 Case | 处理状态           |
+| --------------------------- | -------- | --------- | ------------------ |
+| 旧主机 `cwd` 丢弃分支未触发 | 中       | TC-008    | open（已接受风险） |
 
 前两轮记录的「新 tab 首屏停在启动行」已定位为移动端终端 WebView 的 xterm 打包缺陷并修复，本轮 TC-009 复验通过，关闭。
 

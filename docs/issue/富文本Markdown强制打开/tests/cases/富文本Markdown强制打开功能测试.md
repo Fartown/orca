@@ -1,6 +1,6 @@
 ---
-title: "富文本 Markdown 强制打开 功能测试"
-slug: "富文本Markdown强制打开功能测试"
+title: '富文本 Markdown 强制打开 功能测试'
+slug: '富文本Markdown强制打开功能测试'
 status: ready
 created: 2026-09-16
 updated: 2026-09-16

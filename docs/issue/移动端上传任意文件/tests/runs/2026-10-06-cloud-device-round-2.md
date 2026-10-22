@@ -1,5 +1,5 @@
 ---
-title: "2026-10-06 云真机第二轮（Android，网页版会话页）"
+title: '2026-10-06 云真机第二轮（Android，网页版会话页）'
 document_type: test-run
 status: completed
 created: 2026-10-06
@@ -19,16 +19,16 @@ updated: 2026-10-06
 
 ## 2. 执行结果
 
-| Case ID | 实际结果 | 结论 | 证据 | 缺陷或遗留问题 |
-| --- | --- | --- | --- | --- |
-| TC-001 | 网页版终端与聊天输入框点按回形针都弹出「Attach」菜单 | PASS | `.docs/mobile-file-attachment-upload-ui-validation/2026-10-06/evidence/device-round2/11-terminal-attach-menu.png`、`41-chat-attach-menu.png` | - |
-| TC-002 | 终端 Photo 写入图片路径；聊天 Photo 出现图片待发项 | PASS | `21-terminal-photo-after.png` | - |
-| TC-003 | pdf、txt、png、bin 均可选 | PASS | `12-file-picker.png` | 本轮设备上没有 zip，zip 由第一轮覆盖 |
-| TC-018 | `report.pdf` 在主机上名为 `report.pdf`，sha256 `c607d4ca…` 一致；62914560 字节的 `mid-60m.bin` sha256 `0859e377…` 一致，约 164 s（约 0.38 MB/s，受云真机网络限制） | PASS | `15-after-pdf.png`、`17-after-60m.png` | - |
-| TC-012（手机） | 106 MB 的 `huge.bin` 提示「File is over 100 MB」，主机无新目录 | PASS | `19-huge-toast-a.png` | - |
-| TC-010 | 聊天里 `notes.txt` 以不带 `@` 的绝对路径插入，`shot.png` 成为待发图片；点发送后直接提交，回复含 `MAGENTA-WALRUS-7` 与图片颜色 | PASS | `42-chat-notes.png`、`43-chat-png.png`、`47-chat-ready.png` | 路径以 `/` 开头时出现 Claude 的斜杠命令建议（未阻断提交）；已改为聊天路径一律加引号 |
-| Q-2 | 手动启动、`auto mode on` 的 Claude 读取上传的 PDF 时弹出「Read outside the working directories」，四个选项含「Yes, and keep allowing any reads outside the working directories」；选「Yes, but ask again next time」后回复含 `PELICAN-42` | 观察 | `33-q2-permission-prompt.png`、`q2-permission-dialog.txt`、`q2-reply.txt` | 非 bypass 模式下首次读取需要用户确认，见需求 Q-2 |
-| Q-3 | 未执行 | BLOCKED | - | 隔离的 `CODEX_HOME` 下 codex 仍显示已登录（凭据来自共享钥匙串），使用它可能刷新用户真实凭据 |
+| Case ID        | 实际结果                                                                                                                                                                                                                                  | 结论    | 证据                                                                                                                                         | 缺陷或遗留问题                                                                              |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| TC-001         | 网页版终端与聊天输入框点按回形针都弹出「Attach」菜单                                                                                                                                                                                      | PASS    | `.docs/mobile-file-attachment-upload-ui-validation/2026-10-06/evidence/device-round2/11-terminal-attach-menu.png`、`41-chat-attach-menu.png` | -                                                                                           |
+| TC-002         | 终端 Photo 写入图片路径；聊天 Photo 出现图片待发项                                                                                                                                                                                        | PASS    | `21-terminal-photo-after.png`                                                                                                                | -                                                                                           |
+| TC-003         | pdf、txt、png、bin 均可选                                                                                                                                                                                                                 | PASS    | `12-file-picker.png`                                                                                                                         | 本轮设备上没有 zip，zip 由第一轮覆盖                                                        |
+| TC-018         | `report.pdf` 在主机上名为 `report.pdf`，sha256 `c607d4ca…` 一致；62914560 字节的 `mid-60m.bin` sha256 `0859e377…` 一致，约 164 s（约 0.38 MB/s，受云真机网络限制）                                                                        | PASS    | `15-after-pdf.png`、`17-after-60m.png`                                                                                                       | -                                                                                           |
+| TC-012（手机） | 106 MB 的 `huge.bin` 提示「File is over 100 MB」，主机无新目录                                                                                                                                                                            | PASS    | `19-huge-toast-a.png`                                                                                                                        | -                                                                                           |
+| TC-010         | 聊天里 `notes.txt` 以不带 `@` 的绝对路径插入，`shot.png` 成为待发图片；点发送后直接提交，回复含 `MAGENTA-WALRUS-7` 与图片颜色                                                                                                             | PASS    | `42-chat-notes.png`、`43-chat-png.png`、`47-chat-ready.png`                                                                                  | 路径以 `/` 开头时出现 Claude 的斜杠命令建议（未阻断提交）；已改为聊天路径一律加引号         |
+| Q-2            | 手动启动、`auto mode on` 的 Claude 读取上传的 PDF 时弹出「Read outside the working directories」，四个选项含「Yes, and keep allowing any reads outside the working directories」；选「Yes, but ask again next time」后回复含 `PELICAN-42` | 观察    | `33-q2-permission-prompt.png`、`q2-permission-dialog.txt`、`q2-reply.txt`                                                                    | 非 bypass 模式下首次读取需要用户确认，见需求 Q-2                                            |
+| Q-3            | 未执行                                                                                                                                                                                                                                    | BLOCKED | -                                                                                                                                            | 隔离的 `CODEX_HOME` 下 codex 仍显示已登录（凭据来自共享钥匙串），使用它可能刷新用户真实凭据 |
 
 ## 3. 其他观测
 

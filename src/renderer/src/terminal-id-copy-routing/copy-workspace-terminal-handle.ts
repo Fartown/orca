@@ -1,13 +1,11 @@
 import { copyTerminalHandleForPane } from '@/components/terminal-pane/terminal-handle-copy'
 import { getReachableRuntimeEnvironmentIds } from '@/hooks/ipc-events/runtime-environment-subscription-selection'
 import { getResolvedExecutionHostIdForWorktree } from '@/lib/resolved-worktree-execution-host'
-import { resolveTerminalHostOwnership } from '@/lib/terminal-worktree-route'
-import { getExecutionHostIdForWorktree } from '@/lib/worktree-runtime-owner'
+import { resolveOwner } from '@/lib/resolve-owner'
 import { captureRuntimeEnvironmentRequestRevision } from '@/runtime/runtime-environment-revision'
 import { useAppStore } from '@/store'
 import { selectRuntimeAwareSshStatus } from '@/store/slices/runtime-environment-ssh-selectors'
 import { parseExecutionHostId } from '../../../shared/execution-host'
-import { parseWorkspaceKey } from '../../../shared/workspace-scope'
 import { toHostSessionTabId } from '../../../shared/terminal-surface-id'
 
 export async function copyWorkspaceTerminalHandle(
@@ -17,17 +15,20 @@ export async function copyWorkspaceTerminalHandle(
   ptyId?: string | null
 ): Promise<string> {
   const state = useAppStore.getState()
-  const owner = resolveTerminalHostOwnership(state, worktreeId, 'teardown')
-  // Teardown permits a local folder fallback; copying requires proven ownership.
-  const host = parseExecutionHostId(
-    parseWorkspaceKey(worktreeId)?.type === 'folder'
-      ? getResolvedExecutionHostIdForWorktree(state, worktreeId)
-      : getExecutionHostIdForWorktree(state, worktreeId)
-  )
-  if (owner.kind === 'unresolved' || !host) {
+  const host = parseExecutionHostId(getResolvedExecutionHostIdForWorktree(state, worktreeId))
+  if (!host) {
     throw new Error('Terminal owner unavailable')
   }
-  const environmentId = owner.runtimeEnvironmentId
+  const owner = resolveOwner(state, { workspaceId: worktreeId, hostId: host.id })
+  if (owner.kind === 'ambiguous') {
+    throw new Error('Terminal owner unavailable')
+  }
+  const environmentId =
+    owner.kind === 'resolved' && owner.owner.endpoint.kind === 'environment'
+      ? owner.owner.endpoint.environmentId
+      : host.kind === 'runtime'
+        ? host.environmentId
+        : null
   if (environmentId && !getReachableRuntimeEnvironmentIds(state).includes(environmentId)) {
     throw new Error('Terminal host unavailable')
   }

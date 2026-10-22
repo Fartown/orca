@@ -78,7 +78,15 @@ async function startSshPane(): Promise<SshPane> {
       const response = await fetch(`http://127.0.0.1:${port}/hook/claude`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-Orca-Agent-Hook-Token': token },
-        body: JSON.stringify(buildBody(payload))
+        body: JSON.stringify(
+          buildBody(payload, {
+            agentProcess: JSON.stringify({
+              pid: 4001,
+              platform: process.platform,
+              startTime: 'permission-fixture-process'
+            })
+          })
+        )
       })
       expect(response.status).toBe(204)
     }

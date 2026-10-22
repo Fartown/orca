@@ -7,6 +7,52 @@
   ],
   "policies": [
     {
+      "id": "terminal-launch-diagnostics",
+      "description": "Observational terminal launch tracing only; no runtime ownership or wire changes.",
+      "rules": [
+        {
+          "id": "terminal-launch-diagnostics-worktree-scope",
+          "type": "change-scope",
+          "comparison": "worktree",
+          "whenChanged": [
+            "src/shared/terminal-launch-diagnostics/**",
+            "src/main/terminal-launch-diagnostics/**",
+            "src/renderer/src/terminal-launch-diagnostics/**",
+            "docs/issue/终端创建链路诊断/**"
+          ],
+          "allowedPaths": [
+            "src/shared/terminal-launch-diagnostics/**",
+            "src/main/terminal-launch-diagnostics/**",
+            "src/renderer/src/terminal-launch-diagnostics/**",
+            "docs/issue/终端创建链路诊断/**",
+            "src/main/runtime/rpc/dispatcher.ts",
+            "src/main/ipc/pty/runtime/spawn.ts",
+            "src/main/ipc/pty/runtime/spawn-execute.ts",
+            "src/main/daemon/daemon-terminal-admission.ts",
+            "src/renderer/src/store/terminals/terminal-startup-queues.ts",
+            "src/renderer/src/runtime/web-runtime-terminal-creation.ts",
+            "src/main/observability/index.ts",
+            "src/renderer/src/lib/sleeping-agent-session-launch.ts",
+            "src/renderer/src/components/ai-vault-session-resume/session-terminal-launch.ts",
+            "src/renderer/src/components/tab-group/AiVaultSessionDropLayer.tsx",
+            "src/renderer/src/lib/launch-ai-vault-session-and-reveal.ts",
+            "src/renderer/src/components/terminal-pane/pty-connection/deferred-cold-restore-and-snapshot.ts",
+            "src/renderer/src/hooks/ipc-events/terminal-request-ipc-bridge.ts",
+            "src/renderer/src/store/terminals/terminal-tab-creation.ts",
+            "src/main/ipc/crash-reporting-renderer-breadcrumbs.ts",
+            "config/fork-features.jsonc",
+            "config/architecture-policies.jsonc",
+            ".gitignore",
+            "docs/issue/README.md",
+            "src/renderer/src/lib/launch-agent-in-new-tab-web-runtime.test.ts",
+            "src/renderer/src/components/terminal-pane/pty-connection-agent-session-resume.spec.ts",
+            "src/renderer/src/components/terminal-pane/pty-connection-sleeping-resume-banner.spec.ts"
+          ],
+          "message": "Change is outside terminal launch diagnostics."
+        }
+      ]
+    },
+    {
       "id": "integration-builds",
       "description": "Fork packages and integration-only application updates reuse upstream build and install machinery.",
       "rules": [
@@ -25,6 +71,10 @@
             "docs/issue/集成分支自动出包/**"
           ],
           "allowedPaths": [
+            "config/scripts/ci-draft-pr-admission.test.mjs",
+            ".github/workflows/pr.yml",
+            ".github/workflows/ci-closed-pr-caches.yml",
+            "config/scripts/ci-dependency-download-cache.test.mjs",
             ".github/workflows/fork-integration-build.yml",
             ".github/workflows/pr.yml",
             "config/scripts/pr-preflight-gates.test.mjs",
@@ -49,7 +99,11 @@
             "docs/issue/README.md",
             ".gitignore",
             "mobile/package.json",
-            "mobile/pnpm-lock.yaml"
+            "mobile/pnpm-lock.yaml",
+            "config/scripts/check-path-literal-ratchet.mjs",
+            "config/scripts/pr-preflight-gates.test.mjs",
+            "config/scripts/win32-test-lane-registration.test.mjs",
+            "config/scripts/ci-closed-pr-cancellation.test.mjs"
           ],
           "message": "Change is outside the integration build feature."
         }
@@ -92,7 +146,6 @@
             "docs/maintenance/**",
             "src/renderer/src/components/AiVaultTabTitleSyncGate.tsx",
             "src/renderer/src/components/right-sidebar/use-canonical-session-titles.ts",
-            "src/shared/pane-agent-identity-inventory.test.ts",
             "src/renderer/src/components/right-sidebar/AiVaultPanel.tsx",
             "src/renderer/src/components/right-sidebar/AiVaultSessionRow.tsx",
             "src/renderer/src/components/right-sidebar/AiVaultSessionVirtualList.tsx",
@@ -117,7 +170,6 @@
             "config/electron-builder.config.cjs",
             ".gitignore",
             "docs/requirements/Issues-*.md",
-            ".github/workflows/pr.yml",
             "config/scripts/pr-preflight-gates.test.mjs",
             "config/architecture-policies.jsonc",
             "docs/reference/architecture-policy-gates.md",
@@ -138,7 +190,6 @@
             "src/main/runtime/rpc/methods/issues.ts",
             "src/main/runtime/rpc/methods/issues.test.ts",
             "src/shared/protocol-version.ts",
-            // Remote Issue change streams are cancelled through the shared-control cleanup map.
             "src/shared/remote-runtime-shared-control-protocol.ts",
             "src/shared/rpc-contract/rpc-params-catalog.generated.ts",
             "src/renderer/src/app-shell/AppBackgroundServices.tsx",
@@ -155,8 +206,6 @@
             "src/renderer/src/components/right-sidebar/ai-vault-session-launch-actions.ts",
             "src/renderer/src/components/right-sidebar/ai-vault-session-launch-actions.test.ts",
             "src/renderer/src/lib/launch-agent-in-new-tab.ts",
-            "src/renderer/src/lib/agent-launch-routing-caller-census.test.ts",
-            "src/renderer/src/assets/worktree-card-active-style.test.ts",
             "config/scripts/pr-workflow-lint-parity.test.mjs",
             "src/renderer/src/lib/launch-agent-in-new-tab-web-runtime.test.ts",
             "src/renderer/src/lib/launch-agent-web-host-tab.ts",
@@ -169,7 +218,6 @@
             "tests/e2e/helpers/packaged-issues-journey.ts",
             "tests/e2e/helpers/runtime-types.ts",
             "tests/e2e/helpers/codex-test-executable*.ts",
-            "src/main/ipc/orca-profile-project-transfer-admission.ts",
             "src/main/ipc/orca-profiles.ts",
             "src/main/ipc/orca-profiles.test.ts",
             "src/main/local-worktree-filesystem.ts",
@@ -181,7 +229,6 @@
             "src/main/runtime/rpc/errors.test.ts",
             "src/renderer/src/components/dashboard/DashboardAgentRow.tsx",
             "src/renderer/src/components/dashboard/DashboardAgentRowTrailingControls.tsx",
-            "src/renderer/src/components/right-sidebar/AiVaultSessionRow.tsx",
             "src/renderer/src/components/right-sidebar/ai-vault-original-pane*.ts",
             "src/renderer/src/components/right-sidebar/ai-vault-original-pane*.tsx",
             "src/renderer/src/components/right-sidebar/ai-vault-session-identity*.ts",
@@ -189,8 +236,6 @@
             "src/renderer/src/components/sidebar/WorktreeCardAgents.tsx",
             "src/renderer/src/components/sidebar/WorktreeCardAgents.activation.test.tsx",
             "src/renderer/src/components/sidebar/WorktreeList.folder-workspace-rows.test.ts",
-            "src/renderer/src/components/sidebar/workspace-conversation-binding-rows*.tsx",
-            "src/renderer/src/components/sidebar/workspace-conversation-binding-rows*.ts",
             "src/renderer/src/components/sidebar/worktree-card-compact-agent-row.tsx",
             "src/renderer/src/components/sidebar/worktree-card-secondary-rows.tsx",
             "src/renderer/src/components/sidebar/worktree-list-lineage-card-test-harness.ts",
@@ -201,14 +246,10 @@
             "src/renderer/src/components/terminal-pane/pty-connection/sleeping-record-access.ts",
             "src/renderer/src/components/terminal-pane/pty-connection/deferred-cold-restore-and-snapshot.ts",
             "src/renderer/src/components/terminal-pane/pty-connection/resume-identity-launch-config.test.ts",
-            "src/renderer/src/components/terminal-pane/pty-connection-agent-session-resume.test.ts",
-            "src/renderer/src/components/terminal-pane/pty-connection-sleeping-resume-banner.test.ts",
             "src/renderer/src/lib/ai-vault-tab-title-batches.ts",
-            "src/renderer/src/lib/ai-vault-tab-title-sync.ts",
             "src/renderer/src/lib/launch-ai-vault-session.ts",
             "src/renderer/src/lib/launch-ai-vault-session.test.ts",
             "src/renderer/src/runtime/runtime-rpc-environment-call.ts",
-            "src/renderer/src/runtime/runtime-rpc-environment-call.test.ts",
             "src/renderer/src/runtime/runtime-rpc-client.ts",
             "src/renderer/src/store/index.ts",
             "src/renderer/src/i18n/locales/en.json",
@@ -217,11 +258,15 @@
             "src/shared/agent-hook-listener/listener-event.ts",
             "src/shared/agent-hook-listener-extraction-characterization.test.ts",
             "src/shared/plugins/plugin-host-api.ts",
-            "config/electron-builder.config.cjs",
             "config/scripts/clean-issue-shared-build-output*.mjs",
             "config/scripts/electron-builder-config.test.mjs",
             "config/scripts/verify-packaged-daemon-entry.cjs",
-            "config/scripts/verify-packaged-daemon-entry.test.mjs"
+            "config/scripts/verify-packaged-daemon-entry.test.mjs",
+            "src/shared/execution-host-registry.ts",
+            "src/renderer/src/components/sidebar/sidebar-host-options.ts",
+            "src/renderer/src/components/sidebar/use-sidebar-host-scope-options.ts",
+            "src/shared/host-operation-ownership.ts",
+            "src/shared/wsl-move/wsl-move-storage-dispositions.ts"
           ],
           "message": "Change is outside the reviewed Issue implementation or rollback surface."
         },
@@ -429,7 +474,37 @@
           // diff against the upstream commit it last merged, evaluated without a sync first.
           "requireBaseAncestor": false,
           "allowedPaths": [
+            "src/shared/terminal-launch-diagnostics/**",
+            "src/main/terminal-launch-diagnostics/**",
+            "src/renderer/src/terminal-launch-diagnostics/**",
+            "docs/issue/终端创建链路诊断/**",
+            "src/main/runtime/rpc/dispatcher.ts",
+            "src/renderer/src/store/terminals/terminal-startup-queues.ts",
+            "src/renderer/src/runtime/web-runtime-terminal-creation.ts",
+            "src/main/observability/index.ts",
+            "src/main/ipc/pty/runtime/spawn.ts",
+            "src/main/ipc/pty/runtime/spawn-execute.ts",
+            "src/main/daemon/daemon-terminal-admission.ts",
+            "src/renderer/src/lib/sleeping-agent-session-launch.ts",
+            "src/renderer/src/components/ai-vault-session-resume/session-terminal-launch.ts",
+            "src/renderer/src/components/tab-group/AiVaultSessionDropLayer.tsx",
+            "src/renderer/src/lib/launch-ai-vault-session-and-reveal.ts",
+            "src/renderer/src/components/terminal-pane/pty-connection/deferred-cold-restore-and-snapshot.ts",
+            "src/renderer/src/hooks/ipc-events/terminal-request-ipc-bridge.ts",
+            "src/renderer/src/store/terminals/terminal-tab-creation.ts",
+            "src/main/ipc/crash-reporting-renderer-breadcrumbs.ts",
+            ".github/workflows/pr.yml",
+            ".github/workflows/ci-closed-pr-caches.yml",
+            "config/scripts/ci-dependency-download-cache.test.mjs",
             "config/scripts/vitest-sqlite-database-runtime-files.mjs",
+            "config/scripts/ci-draft-pr-admission.test.mjs",
+            "src/main/orcad/orcad-push-startup.test.ts",
+            "mobile/src/session/MobileNativeChatComposer.test.ts",
+            "mobile/src/session/MobileNativeChatView.prompt-presentation.test.ts",
+            "mobile/src/session/mobile-dictation-disabled-controls.test.tsx",
+            "mobile/src/session/mobile-dictation-mode-refresh.test.tsx",
+            "mobile/src/session/mobile-native-chat-merged-snapshot-parity-hooks.test.tsx",
+            "mobile/src/session/MobileSessionSheets.test.tsx",
             "src/renderer/src/components/terminal-pane/terminal-pane-element-file-drop.test.tsx",
             "mobile/src/terminal/terminal-webview-payload-hash.test.ts",
             "mobile/scripts/build-terminal-webview-engine.mjs",
@@ -551,7 +626,6 @@
             "src/main/runtime/session-tabs/headless-tab-group-moves.ts",
             "src/main/runtime/session-tabs/headless-tab-properties.ts",
             "src/main/runtime/session-lifecycle/projection/apply-mobile-session-tab-navigation.ts",
-            "src/main/runtime/orca-runtime-close-structured-agent-session-tab.ts",
             "src/main/runtime/rpc/rpc-params-type-parity.ts",
             "src/shared/document-preview-size/**",
             "src/main/document-preview-size/**",
@@ -562,8 +636,6 @@
             "src/main/browser/doc-preview-protocol.test.ts",
             "src/main/runtime/files/file-reads.ts",
             "src/main/runtime/orca-runtime-files-preview-budget.test.ts",
-            "src/main/providers/ssh-filesystem-doc-preview.ts",
-            "src/main/providers/ssh-filesystem-doc-preview.test.ts",
             "src/relay/fs-handler.ts",
             ".docs/并行任务看板/**",
             "goal-mode/**",
@@ -594,7 +666,6 @@
             "src/renderer/src/components/terminal-pane/TerminalPaneHeaderOverlay.tsx",
             "src/renderer/src/components/terminal-pane/TerminalPaneSurface.tsx",
             "src/renderer/src/components/cmd-j/goal-quick-actions.ts",
-            "src/renderer/src/lib/worktree-activation-surface-caller-wiring.test.ts",
             "src/renderer/src/components/cmd-j/quick-actions.ts",
             "src/main/runtime/rpc/methods/client-ui-schemas.ts",
             "src/shared/rpc-contract/client-ui-params.ts",
@@ -603,7 +674,6 @@
             "src/renderer/src/app-shell/AppBackgroundServices.tsx",
             "src/renderer/src/store/right-sidebar-route.test.ts",
             "src/renderer/src/components/terminal-pane/TerminalPaneHeaderOverlay.test.tsx",
-            "src/renderer/src/components/right-sidebar/use-right-sidebar-activity-items.test.ts",
             "src/renderer/src/i18n/**",
             "config/scripts/build-goal-driver.mjs",
             "config/scripts/electron-builder-runtime-resources.test.mjs",
@@ -641,12 +711,10 @@
             "src/renderer/src/components/settings/OrcaAccountSettingsPane.tsx",
             "src/renderer/src/components/settings/OrcaAccountSettingsPane.test.tsx",
             "src/renderer/src/components/orca-profiles/OrcaProfileSignOutConfirmDialog.tsx",
-            "src/renderer/src/components/orca-profiles/OrcaProfileSignOutConfirmDialog.test.tsx",
             "src/renderer/src/components/UnexpectedSignoutCard.tsx",
             "src/renderer/src/components/settings/orca-account-settings-search.ts",
             "src/renderer/src/components/AiVaultTabTitleSyncGate.tsx",
             "src/renderer/src/components/right-sidebar/use-canonical-session-titles.ts",
-            "src/shared/pane-agent-identity-inventory.test.ts",
             "src/renderer/src/components/right-sidebar/AiVaultPanel.tsx",
             "src/renderer/src/components/right-sidebar/AiVaultSessionRow.tsx",
             "src/renderer/src/components/right-sidebar/AiVaultSessionVirtualList.tsx",
@@ -660,7 +728,6 @@
             "src/renderer/src/components/terminal-pane/agent-completion-coordinator-types.ts",
             "src/renderer/src/hooks/ipc-events/agent-status-event-applicator.ts",
             "src/renderer/src/runtime/web-session-tabs-sync/store-patch.ts",
-            "src/renderer/src/components/terminal-pane/pty-connection/direct-ssh-retry-status.ts",
             "src/main/ai-vault/session-scanner-claude-subagents.ts",
             "src/renderer/src/lib/ai-vault-tab-title-sync.ts",
             "src/renderer/src/lib/ai-vault-tab-title-sync.test.ts",
@@ -701,7 +768,6 @@
             "src/main/ai-vault/session-scanner-service-entry.ts",
             "src/main/ai-vault/session-scanner-parse-cache.ts",
             "src/main/ai-vault/session-parse-cache-persistence.ts",
-            "src/main/ai-vault/session-parse-cache-snapshot-serialization.ts",
             "src/main/session-names/**",
             "src/renderer/src/session-names/**",
             "src/renderer/src/lib/ai-vault-tab-title-batches.ts",
@@ -720,7 +786,6 @@
             "src/main/ai-vault/session-title-file-reader.test.ts",
             "src/main/ai-vault/session-title-file-reader-wsl-stall.test.ts",
             "src/main/ai-vault/session-scanner-codex-title-index.ts",
-            "src/main/ai-vault/remote-session-scanner-codex-index.ts",
             "src/main/ai-vault/session-parse-cache-persistence.test.ts",
             "src/shared/agent-session-fallback-title.ts",
             "src/shared/agent-session-fallback-title.test.ts",
@@ -739,7 +804,6 @@
             "config/electron-builder.config.cjs",
             ".gitignore",
             "docs/requirements/Issues-*.md",
-            ".github/workflows/pr.yml",
             "config/scripts/pr-preflight-gates.test.mjs",
             "config/architecture-policies.jsonc",
             "docs/reference/architecture-policy-gates.md",
@@ -776,8 +840,6 @@
             "src/wsl-guest/agent-hook-server.ts",
             "src/wsl-guest/agent-hook-event-admission.ts",
             "src/main/agent-hooks/server/server-ingest-normalization.ts",
-            "src/main/ssh/ssh-relay-session.ts",
-            "src/main/ssh/ssh-relay-session-agent-hooks.integration.test.ts",
             "src/wsl-guest/agent-hook-interrupt-reconciliation.test.ts",
             "src/wsl-guest/agent-hook-request.ts",
             "src/renderer/src/lib/local-file-access.test.ts",
@@ -804,13 +866,8 @@
             "src/renderer/src/components/right-sidebar/ai-vault-original-pane-index.ts",
             "src/renderer/src/components/right-sidebar/ai-vault-original-pane-index.test.ts",
             "src/renderer/src/components/terminal-pane/pty-connection/sleeping-record-access.ts",
-            "src/renderer/src/components/terminal-pane/pty-connection/deferred-cold-restore-and-snapshot.ts",
             "src/renderer/src/components/terminal-pane/pty-connection/resume-identity-launch-config.test.ts",
-            "src/renderer/src/components/terminal-pane/pty-connection-agent-session-resume.test.ts",
-            "src/renderer/src/components/terminal-pane/pty-connection-sleeping-resume-banner.test.ts",
             "src/renderer/src/lib/launch-agent-in-new-tab.ts",
-            "src/renderer/src/lib/agent-launch-routing-caller-census.test.ts",
-            "src/renderer/src/assets/worktree-card-active-style.test.ts",
             "config/scripts/pr-workflow-lint-parity.test.mjs",
             "src/renderer/src/lib/launch-agent-in-new-tab-web-runtime.test.ts",
             "src/renderer/src/lib/launch-agent-web-host-tab.ts",
@@ -837,7 +894,6 @@
             "src/renderer/src/components/tab-bar/TabBarCreateEntry.keyboard.test.tsx",
             "src/renderer/src/components/tab-bar/TabBarCreateEntry.tab-results.test.tsx",
             "src/relay/relay-agent-hook-runtime.ts",
-            "src/shared/relay-artifacts.ts",
             "config/scripts/build-relay.mjs",
             "src/main/orcad/orcad-entry.ts",
             "config/scripts/build-orcad.mjs",
@@ -863,7 +919,26 @@
             "src/renderer/src/components/browser-pane/workspace-doc/HtmlDocPreview.toolbar.test.tsx",
             "src/renderer/src/components/terminal-pane/pty-connection/pane-host-capability-flags.ts",
             "mobile/package.json",
-            "mobile/pnpm-lock.yaml"
+            "mobile/pnpm-lock.yaml",
+            "config/scripts/check-path-literal-ratchet.mjs",
+            "src/shared/execution-host-registry.ts",
+            "src/renderer/src/components/sidebar/sidebar-host-options.ts",
+            "src/renderer/src/components/sidebar/use-sidebar-host-scope-options.ts",
+            "src/renderer/src/components/terminal-pane/pty-connection-agent-session-resume.spec.ts",
+            "src/renderer/src/components/terminal-pane/pty-connection-sleeping-resume-banner.spec.ts",
+            "config/scripts/win32-test-lane-registration.test.mjs",
+            "src/shared/host-operation-ownership.ts",
+            "src/main/startup/main-process-ready-duplicate-pty-repair.test.ts",
+            "src/main/runtime/construction/runtime-composition-parity.test.ts",
+            "src/shared/wsl-move/wsl-move-storage-dispositions.ts",
+            "src/renderer/src/runtime/runtime-paged-file-read.ts",
+            "src/renderer/src/runtime/runtime-paged-file-read.test.ts",
+            "tests/e2e/paired-remote-large-file-open.spec.ts",
+            "src/main/agent-hooks/server-relayed-claude-permission-replay.test.ts",
+            "src/main/ai-vault/session-scanner-scope-walk.test.ts",
+            "src/main/runtime/runtime-orchestration-sender-names.test.ts",
+            "src/renderer/src/runtime/web-session-tabs-sync/terminal-build.ts",
+            "config/scripts/ci-closed-pr-cancellation.test.mjs"
           ],
           "message": "Branch changes an upstream path that no fork feature owns or registers as a seam; extend config/fork-features.jsonc and this allowlist, or move the change into a feature-owned path."
         }
@@ -894,7 +969,6 @@
             "src/renderer/src/goals/**",
             "src/renderer/src/components/goals/**",
             "src/renderer/src/components/cmd-j/goal-quick-actions.ts",
-            "src/renderer/src/lib/worktree-activation-surface-caller-wiring.test.ts",
             "src/main/runtime/rpc/methods/goals.ts",
             "src/main/runtime/rpc/methods/goals.test.ts",
             "src/main/startup/main-process-goals.ts",
@@ -910,7 +984,6 @@
             "src/main/persistence-ui-state.test.ts",
             "src/shared/ui-chrome-types.ts",
             "src/renderer/src/components/right-sidebar/use-right-sidebar-activity-items.ts",
-            "src/renderer/src/components/right-sidebar/use-right-sidebar-activity-items.test.ts",
             "src/renderer/src/components/right-sidebar/right-sidebar-panel-content.tsx",
             "src/renderer/src/app-shell/AppBackgroundServices.tsx",
             "src/renderer/src/components/terminal-pane/TerminalPaneHeaderOverlay.tsx",
@@ -951,7 +1024,6 @@
             "src/relay/relay-agent-hook-runtime.ts",
             "src/wsl-guest/agent-hook-server.ts",
             "src/wsl-guest/agent-hook-event-admission.ts",
-            "src/shared/relay-artifacts.ts",
             "config/scripts/build-relay.mjs",
             "src/main/orcad/orcad-entry.ts",
             "config/scripts/build-orcad.mjs",
@@ -960,7 +1032,9 @@
             "src/shared/runtime-worktree-contracts.ts",
             "src/main/runtime/runtime-worktree-agent-source.ts",
             "src/main/runtime/runtime-worktree-pty-agent-sources.ts",
-            "src/main/runtime/runtime-worktree-agent-rows.ts"
+            "src/main/runtime/runtime-worktree-agent-rows.ts",
+            "src/shared/host-operation-ownership.ts",
+            "src/shared/wsl-move/wsl-move-storage-dispositions.ts"
           ],
           "message": "Change is outside the Goal feature and its reviewed seams."
         },
@@ -1036,6 +1110,7 @@
             "docs/issue/自托管产物后端/**"
           ],
           "allowedPaths": [
+            "src/main/orcad/orcad-push-startup.test.ts",
             "src/main/self-hosted-artifacts/**",
             "src/shared/self-hosted-artifacts/**",
             "src/cli/self-hosted-artifacts/**",
@@ -1072,7 +1147,6 @@
             "src/renderer/src/components/settings/OrcaAccountSettingsPane.tsx",
             "src/renderer/src/components/settings/OrcaAccountSettingsPane.test.tsx",
             "src/renderer/src/components/orca-profiles/OrcaProfileSignOutConfirmDialog.tsx",
-            "src/renderer/src/components/orca-profiles/OrcaProfileSignOutConfirmDialog.test.tsx",
             "src/renderer/src/components/UnexpectedSignoutCard.tsx",
             "src/renderer/src/components/settings/orca-account-settings-search.ts",
             "src/renderer/src/i18n/locales/*.json",
@@ -1094,7 +1168,10 @@
             ".github/workflows/track-community-prs.yaml",
             "docs/reference/fork-maintenance.md",
             "docs/issue/**",
-            "docs/maintenance/**"
+            "docs/maintenance/**",
+            "src/shared/host-operation-ownership.ts",
+            "src/main/startup/main-process-ready-duplicate-pty-repair.test.ts",
+            "src/main/runtime/construction/runtime-composition-parity.test.ts"
           ],
           "message": "Change is outside local network artifact sharing and its journal."
         }
@@ -1233,7 +1310,10 @@
             "config/scripts/sync-upstream.mjs",
             "docs/reference/fork-maintenance.md",
             "docs/issue/**",
-            "docs/maintenance/**"
+            "docs/maintenance/**",
+            "src/renderer/src/runtime/runtime-paged-file-read.ts",
+            "src/renderer/src/runtime/runtime-paged-file-read.test.ts",
+            "tests/e2e/paired-remote-large-file-open.spec.ts"
           ],
           "message": "Change is outside the remote editor large-file read feature and its journal."
         }
@@ -1304,6 +1384,7 @@
             "docs/issue/移动端在新会话中继续/**"
           ],
           "allowedPaths": [
+            "mobile/src/session/MobileSessionSheets.test.tsx",
             "mobile/src/terminal/terminal-webview-payload-hash.test.ts",
             "mobile/scripts/build-terminal-webview-engine.mjs",
             "src/shared/agent-session-continuation/**",
@@ -1345,6 +1426,11 @@
             "docs/issue/移动端上传任意文件/**"
           ],
           "allowedPaths": [
+            "mobile/src/session/MobileNativeChatComposer.test.ts",
+            "mobile/src/session/MobileNativeChatView.prompt-presentation.test.ts",
+            "mobile/src/session/mobile-dictation-disabled-controls.test.tsx",
+            "mobile/src/session/mobile-dictation-mode-refresh.test.tsx",
+            "mobile/src/session/mobile-native-chat-merged-snapshot-parity-hooks.test.tsx",
             "src/shared/file-attachment-upload/**",
             "src/main/file-attachment-upload/**",
             "src/main/runtime/rpc/methods/file-attachment-upload.ts",
@@ -1385,7 +1471,8 @@
             "config/fork-features.jsonc",
             "config/architecture-policies.jsonc",
             "docs/issue/README.md",
-            ".gitignore"
+            ".gitignore",
+            "src/shared/host-operation-ownership.ts"
           ],
           "message": "Change is outside the mobile file attachment upload feature and its reviewed seams."
         }
@@ -1415,8 +1502,6 @@
             "src/main/browser/doc-preview-protocol.test.ts",
             "src/main/runtime/files/file-reads.ts",
             "src/main/runtime/orca-runtime-files-preview-budget.test.ts",
-            "src/main/providers/ssh-filesystem-doc-preview.ts",
-            "src/main/providers/ssh-filesystem-doc-preview.test.ts",
             "src/relay/fs-handler.ts",
             "src/shared/rpc-contract/files-params.ts",
             "src/main/runtime/rpc/methods/files.ts",
@@ -1447,7 +1532,6 @@
             "src/main/runtime/session-tabs/headless-tab-group-moves.ts",
             "src/main/runtime/session-tabs/headless-tab-properties.ts",
             "src/main/runtime/session-lifecycle/projection/apply-mobile-session-tab-navigation.ts",
-            "src/main/runtime/orca-runtime-close-structured-agent-session-tab.ts",
             "config/fork-features.jsonc",
             "config/architecture-policies.jsonc",
             "docs/issue/README.md",
@@ -1483,7 +1567,6 @@
             "tests/e2e/issues-session-name-file-chain.unit.test.ts",
             "tests/e2e/helpers/issues-session-name-file-chain.tsconfig.json",
             "docs/issue/会话命名与身份保护/**",
-            // Exact legacy paths for the approved, still-uncommitted naming-doc migration.
             ".gitignore",
             "config/scripts/check-fork-docs.mjs",
             "docs/issue/Issues看板与会话/research/会话命名现状调研.md",
@@ -1520,7 +1603,6 @@
             "src/renderer/src/components/terminal-pane/agent-completion-coordinator-types.ts",
             "src/renderer/src/hooks/ipc-events/agent-status-event-applicator.ts",
             "src/renderer/src/runtime/web-session-tabs-sync/store-patch.ts",
-            "src/renderer/src/components/terminal-pane/pty-connection/direct-ssh-retry-status.ts",
             "src/renderer/src/components/terminal-pane/use-notification-dispatch.ts",
             "src/shared/notification-settings-types.ts",
             "src/main/ipc/notification-options.ts",
@@ -1539,12 +1621,10 @@
             "src/renderer/src/lib/ai-vault-tab-title-sync-inputs.ts",
             "src/renderer/src/lib/ai-vault-tab-title-sync-inputs.test.ts",
             "src/renderer/src/store/slices/agent-generated-tab-title.test.ts",
-            "src/shared/pane-agent-identity-inventory.test.ts",
             "src/relay/ai-vault-handler.test.ts",
             "src/renderer/src/store/terminals/terminal-tab-presentation.ts",
             "src/shared/workspace-session-schema.ts",
             "src/main/ai-vault/session-scanner-codex-title-index.ts",
-            "src/main/ai-vault/remote-session-scanner-codex-index.ts",
             "src/main/ai-vault/session-parse-cache-persistence.test.ts",
             "src/shared/ai-vault-types.ts",
             "src/shared/ai-vault-session-title.ts",
@@ -1559,7 +1639,6 @@
             "src/main/ai-vault/session-list-result-validation.ts",
             "src/main/ai-vault/session-scanner-service-entry.ts",
             "src/main/ai-vault/session-parse-cache-persistence.ts",
-            "src/main/ai-vault/session-parse-cache-snapshot-serialization.ts",
             "src/main/ai-vault/session-scanner-parse-cache.ts",
             "config/electron-builder.config.cjs",
             "src/renderer/src/components/tab-group/useTabGroupItemProjections.ts",
@@ -1582,8 +1661,6 @@
             "src/wsl-guest/agent-hook-server.ts",
             "src/wsl-guest/agent-hook-event-admission.ts",
             "src/main/agent-hooks/server/server-ingest-normalization.ts",
-            "src/main/ssh/ssh-relay-session.ts",
-            "src/main/ssh/ssh-relay-session-agent-hooks.integration.test.ts",
             "src/wsl-guest/agent-hook-interrupt-reconciliation.test.ts",
             "src/wsl-guest/agent-hook-request.ts",
             "src/renderer/src/components/right-sidebar/use-canonical-session-titles.ts",
@@ -1614,7 +1691,11 @@
             "docs/issue/Issues看板与会话/journal.md",
             "docs/issue/Issues看板与会话/requirements/Issues看板与会话.md",
             "docs/issue/Issues看板与会话/solutions/Issues看板与会话技术说明.md",
-            "docs/issue/Issues看板与会话/tests/cases/Issues功能测试.md"
+            "docs/issue/Issues看板与会话/tests/cases/Issues功能测试.md",
+            "src/main/agent-hooks/server-relayed-claude-permission-replay.test.ts",
+            "src/main/ai-vault/session-scanner-scope-walk.test.ts",
+            "src/main/runtime/runtime-orchestration-sender-names.test.ts",
+            "src/renderer/src/runtime/web-session-tabs-sync/terminal-build.ts"
           ],
           "message": "Change is outside the public naming implementation and its consumer adapters."
         },
@@ -1629,12 +1710,7 @@
             "src/shared/claude-session-ownership/**",
             "src/main/claude-session-ownership/**"
           ],
-          "exceptPaths": [
-            "**/*.test.ts",
-            "**/*.test.tsx",
-            "**/*.spec.ts",
-            "**/*.spec.tsx"
-          ],
+          "exceptPaths": ["**/*.test.ts", "**/*.test.tsx", "**/*.spec.ts", "**/*.spec.tsx"],
           "forbiddenTargets": [
             "src/main/issues/**",
             "src/shared/issues/**",
@@ -1642,9 +1718,7 @@
             "src/renderer/src/components/issues/**",
             "src/renderer/src/components/sidebar/issues/**"
           ],
-          "importTextHints": [
-            "issues"
-          ],
+          "importTextHints": ["issues"],
           "message": "Public session names must not depend on Issue records or assembly."
         }
       ]

@@ -1,5 +1,5 @@
 ---
-title: "HTML预览在当前面板打开"
+title: 'HTML预览在当前面板打开'
 document_type: requirement
 status: ready
 created: 2026-09-15

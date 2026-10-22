@@ -11,6 +11,10 @@ import {
 } from './core'
 
 import { successResponse } from './errors'
+import {
+  traceTerminalLaunchRpc,
+  traceTerminalStreamingLaunchRpc
+} from '../../terminal-launch-diagnostics/launch-trace'
 import { ALL_RPC_METHODS } from './methods'
 import { emulatorProbe, emulatorProbeError } from '../../emulator/emulator-probe'
 import type { OrcaRuntimeService } from '../orca-runtime'
@@ -62,6 +66,13 @@ export class RpcDispatcher {
   }
 
   async dispatch(request: RpcRequest, options?: RpcDispatchStreamingOptions): Promise<RpcResponse> {
+    return traceTerminalLaunchRpc(request, options, () => this.dispatchRecorded(request, options))
+  }
+
+  private async dispatchRecorded(
+    request: RpcRequest,
+    options?: RpcDispatchStreamingOptions
+  ): Promise<RpcResponse> {
     const meta = this.meta()
     const pendingAdmission = this.admit(
       request,
@@ -94,6 +105,16 @@ export class RpcDispatcher {
 
   // Why: streaming dispatch sends multiple responses through the reply callback instead of a Promise.
   async dispatchStreaming(
+    rawRequest: RpcRequest,
+    reply: (response: string) => void,
+    options?: RpcDispatchStreamingOptions
+  ): Promise<void> {
+    return traceTerminalStreamingLaunchRpc(rawRequest, options, reply, (recordedReply) =>
+      this.dispatchRecordedStreaming(rawRequest, recordedReply, options)
+    )
+  }
+
+  private async dispatchRecordedStreaming(
     rawRequest: RpcRequest,
     reply: (response: string) => void,
     options?: RpcDispatchStreamingOptions
