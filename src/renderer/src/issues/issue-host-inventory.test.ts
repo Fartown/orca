@@ -8,12 +8,12 @@ import { sidebarHostOptionsFromInventory } from '../components/sidebar/sidebar-h
 
 describe('Issue host inventory', () => {
   it('uses configured and row-owned hosts, never a focus-only default', () => {
-    const input: ExecutionHostRegistryInput = {
+    const input = {
       repos: [{ executionHostId: 'runtime:owner', connectionId: null }],
       settings: { activeRuntimeEnvironmentId: 'focus-only' },
       runtimeEnvironments: [{ id: 'owner', name: 'Execution owner' }],
       sshTargetLabels: new Map([['ssh-owner', 'SSH owner']])
-    }
+    } satisfies ExecutionHostRegistryInput
     const inventory = buildExecutionHostInventory(input)
     expect(inventory.map((host) => host.id)).toEqual(['local', 'runtime:owner', 'ssh:ssh-owner'])
     expect(buildExecutionHostRegistry(input).some((host) => host.id === 'runtime:focus-only')).toBe(
