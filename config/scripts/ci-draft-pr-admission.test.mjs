@@ -11,12 +11,18 @@ const workflows = readdirSync('.github/workflows').flatMap((file) => {
     : []
 })
 
-function admitted(condition, draft, needs = {}, eventName = 'pull_request') {
+function admitted(
+  condition,
+  draft,
+  needs = {},
+  eventName = 'pull_request',
+  repository = 'stablyai/orca'
+) {
   return (
     compileAggregateExpression(condition ?? 'true', ['github', 'needs', 'inputs'])({
       github: {
         event_name: eventName,
-        repository: 'stablyai/orca',
+        repository,
         event: { pull_request: { draft } }
       },
       needs,
@@ -25,7 +31,7 @@ function admitted(condition, draft, needs = {}, eventName = 'pull_request') {
   )
 }
 
-it.each(workflows)('$file starts no CI jobs for a draft PR', ({ workflow }) => {
+it.each(workflows)('$file starts no CI jobs for a draft PR', ({ file, workflow }) => {
   const needs = Object.fromEntries(
     Object.keys(workflow.jobs).map((id) => [id, { result: 'skipped', outputs: {} }])
   )
@@ -34,27 +40,34 @@ it.each(workflows)('$file starts no CI jobs for a draft PR', ({ workflow }) => {
     if (job.needs && !/\b(?:cancelled|always|success|failure)\(/.test(job.if ?? '')) {
       continue
     }
-    expect(admitted(job.if, true, needs), id).toBe(false)
+    const repository = file === 'fork-integration-build.yml' ? 'Fartown/orca' : 'stablyai/orca'
+    expect(admitted(job.if, true, needs, 'pull_request', repository), id).toBe(false)
   }
 })
 
-it.each(workflows)('$file starts CI when ready and cancels it when drafted', ({ workflow }) => {
-  const types = workflow.on.pull_request.types
-  expect(types).toEqual(
-    expect.arrayContaining([
-      'opened',
-      'synchronize',
-      'reopened',
-      'ready_for_review',
-      'converted_to_draft'
-    ])
-  )
-  expect(Object.values(workflow.jobs).some((job) => !job.needs && admitted(job.if, false))).toBe(
-    true
-  )
-  const concurrency = workflow.concurrency['cancel-in-progress']
-  expect(typeof concurrency === 'boolean' ? concurrency : admitted(concurrency, true)).toBe(true)
-})
+it.each(workflows)(
+  '$file starts CI when ready and cancels it when drafted',
+  ({ file, workflow }) => {
+    const types = workflow.on.pull_request.types
+    expect(types).toEqual(
+      expect.arrayContaining([
+        'opened',
+        'synchronize',
+        'reopened',
+        'ready_for_review',
+        'converted_to_draft'
+      ])
+    )
+    const repository = file === 'fork-integration-build.yml' ? 'Fartown/orca' : 'stablyai/orca'
+    expect(
+      Object.values(workflow.jobs).some(
+        (job) => !job.needs && admitted(job.if, false, {}, 'pull_request', repository)
+      )
+    ).toBe(true)
+    const concurrency = workflow.concurrency['cancel-in-progress']
+    expect(typeof concurrency === 'boolean' ? concurrency : admitted(concurrency, true)).toBe(true)
+  }
+)
 
 it.each(workflows)('$file keeps its non-PR entry points eligible', ({ workflow }) => {
   const needs = Object.fromEntries(

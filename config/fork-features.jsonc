@@ -64,6 +64,26 @@
       ],
       "seams": [
         {
+          "file": "config/scripts/ci-draft-pr-admission.test.mjs",
+          "mustContain": "repository = 'stablyai/orca'",
+          "why": "Admission contracts evaluate the fork workflow with its actual repository identity."
+        },
+        {
+          "file": ".github/workflows/pr.yml",
+          "mustContain": "github.repository == 'stablyai/orca'",
+          "why": "Keep upstream runners while fork PR gates use available GitHub-hosted runners."
+        },
+        {
+          "file": ".github/workflows/ci-closed-pr-caches.yml",
+          "mustContain": "github.repository == 'stablyai/orca'",
+          "why": "Fork PR cleanup runs without upstream runner access."
+        },
+        {
+          "file": "config/scripts/ci-dependency-download-cache.test.mjs",
+          "mustContain": "repository === 'stablyai/orca'",
+          "why": "Cache preparation assertions cover both repository runner policies."
+        },
+        {
           "file": "mobile/app.config.js",
           "mustContain": "integration-builds",
           "why": "integration-only native version and build marker"
@@ -110,6 +130,7 @@
         }
       ],
       "tests": [
+        "config/scripts/integration-builds/pr-runner-portability.test.mjs",
         "config/scripts/integration-builds/integration-builds.test.mjs",
         "config/scripts/integration-builds/mac-signing.test.mjs",
         "config/scripts/integration-builds/mac-package-signature.test.mjs",
