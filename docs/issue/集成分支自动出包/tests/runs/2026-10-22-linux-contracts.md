@@ -19,3 +19,7 @@ updated: 2026-10-22
 - 真实Linux构建、CLI/headless/SSH与安装验证仍待完成。原工作树未提交的其他需求文档未动。
 
 首轮真实CI已运行Linux原生helper且glibc门槛通过；之后verify-computer-native的Python导入报Namespace Atspi not available。工作流补装python3-gi、gir1.2-gtk-3.0、gir1.2-atspi-2.0，保持原验证执行。JavaScript实际发布构建已在本机通过，包括CLI、主进程/renderer、Web投影、技能闭包与mobile-web校验；Linux实际打包/安装仍待验。
+
+实际本地AppImage打包确认electron-builder将Linux架构宏展开为x86_64，已将CI收集、发布清单和客户端资产名统一为orca-integration-linux-x86_64.AppImage，避免仅模拟配置测试通过而实际文件漏收。19个随包原生二进制的glibc门槛、打包Node PTY与daemon入口校验已通过。
+
+实际打包随后验证到上游static-appimage-package-contract只接受orca-linux.AppImage/orca-linux-arm64.AppImage。最终保留上游标准orca-linux.AppImage名称，fork身份由下载仓库、版本、渠道和SHA确定；同步统一CI、发布、清单和客户端资产名，不放宽或跳过静态AppImage契约。

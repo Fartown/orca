@@ -210,7 +210,7 @@ describe('integration package identity and signing', () => {
     expect(config.extraMetadata.version).toBe(env.ORCA_LOCAL_BUILD_VERSION)
     expect(config.linux.extraResources).toBe(upstream.linux.extraResources)
     expect(config.linux.target).toEqual(['AppImage'])
-    expect(config.appImage.artifactName).toBe('orca-integration-linux-${arch}.${ext}')
+    expect(config.appImage).toBe(upstream.appImage)
   })
 
   it('refuses mixing formal release credentials and integration packaging', () => {
@@ -241,11 +241,11 @@ describe('complete, immutable fork prereleases', () => {
     const manifest = JSON.parse(readFileSync(join(directory, 'build-info.json'), 'utf8'))
     expect(manifest.sha).toBe(sha)
     expect(manifest.assets.map((asset) => asset.name)).toEqual([
-      ...PACKAGE_NAMES.filter((name) => !name.includes('-linux-')),
+      ...PACKAGE_NAMES.filter((name) => name !== 'orca-linux.AppImage'),
       LEGACY_INTEL_PLACEHOLDER
     ])
     expect(manifest.linuxAssets.map((asset) => asset.name)).toEqual([
-      'orca-integration-linux-x64.AppImage'
+      'orca-linux.AppImage'
     ])
     const linuxUpdate = parse(readFileSync(join(directory, 'latest-linux.yml'), 'utf8'))
     expect(linuxUpdate.version).toBe(env.ORCA_LOCAL_BUILD_VERSION)

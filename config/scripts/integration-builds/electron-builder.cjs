@@ -37,11 +37,6 @@ module.exports = {
   },
   linux: {
     ...upstream.linux,
-    target: ['AppImage'],
-    artifactName: 'orca-integration-linux-${arch}.${ext}'
-  },
-  appImage: {
-    ...upstream.appImage,
-    artifactName: 'orca-integration-linux-${arch}.${ext}'
+    target: ['AppImage']
   }
 }

@@ -117,7 +117,7 @@ export function parseIntegrationRelease(value: unknown, tag: string): Integratio
     for (const asset of item.linuxAssets) {
       if (
         !asset ||
-        asset.name !== 'orca-integration-linux-x64.AppImage' ||
+        asset.name !== 'orca-linux.AppImage' ||
         names.has(asset.name) ||
         !Number.isSafeInteger(asset.bytes) ||
         asset.bytes <= 0 ||
@@ -224,7 +224,7 @@ export async function fetchIntegrationRelease(
     ...(platform === 'android'
       ? ['orca-integration-android.apk']
       : platform === 'linux'
-        ? ['latest-linux.yml', 'orca-integration-linux-x64.AppImage']
+        ? ['latest-linux.yml', 'orca-linux.AppImage']
         : ['latest-mac.yml', 'orca-integration-macos-arm64.zip'])
   ]
   let releases: unknown

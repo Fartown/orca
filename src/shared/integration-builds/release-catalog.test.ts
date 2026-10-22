@@ -36,7 +36,7 @@ const atom = (...tags: string[]) =>
 
 describe('fork integration release catalog', () => {
   const linuxAsset = {
-    name: 'orca-integration-linux-x64.AppImage',
+    name: 'orca-linux.AppImage',
     bytes: 1234,
     sha256: 'c'.repeat(64)
   }
@@ -66,10 +66,10 @@ describe('fork integration release catalog', () => {
     { linuxAssets: [] },
     {
       linuxAssets: [
-        { name: 'orca-integration-linux-x64.AppImage', bytes: 0, sha256: 'c'.repeat(64) }
+        { name: 'orca-linux.AppImage', bytes: 0, sha256: 'c'.repeat(64) }
       ]
     },
-    { linuxAssets: [{ name: 'orca-integration-linux-x64.AppImage', bytes: 123, sha256: 'bad' }] },
+    { linuxAssets: [{ name: 'orca-linux.AppImage', bytes: 123, sha256: 'bad' }] },
     { linuxAssets: [{ name: 'other.AppImage', bytes: 123, sha256: 'c'.repeat(64) }] }
   ])('rejects malformed optional Linux assets: %j', ({ linuxAssets }) => {
     expect(() => parseIntegrationRelease({ ...manifest, linuxAssets }, tag)).toThrow()

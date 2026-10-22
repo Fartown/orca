@@ -72,7 +72,7 @@ describe('integration-only default updater feed', () => {
                 { name: 'build-info.json' },
                 { name: 'latest-mac.yml' },
                 { name: 'latest-linux.yml' },
-                { name: 'orca-integration-linux-x64.AppImage' }
+                { name: 'orca-linux.AppImage' }
               ]
             }
           ])
@@ -100,7 +100,7 @@ describe('integration-only default updater feed', () => {
     Object.defineProperty(process, 'arch', { value: 'x64' })
     publish({
       linuxAssets: [
-        { name: 'orca-integration-linux-x64.AppImage', bytes: 123, sha256: 'b'.repeat(64) }
+        { name: 'orca-linux.AppImage', bytes: 123, sha256: 'b'.repeat(64) }
       ]
     })
     const updater = feedUpdater()

@@ -22,7 +22,7 @@ export const PACKAGE_NAMES = [
   'orca-integration-macos-arm64.dmg',
   'orca-integration-macos-arm64.zip',
   'orca-integration-android.apk',
-  'orca-integration-linux-x64.AppImage'
+  'orca-linux.AppImage'
 ]
 const MAC_UPDATE_ZIP = 'orca-integration-macos-arm64.zip'
 
@@ -235,8 +235,8 @@ export async function publishRelease({
     macSigning: 'fixed self-signed publisher, not notarized',
     macCertificateSha256,
     // Older clients reject unknown names in assets, but ignore optional manifest fields.
-    assets: published.filter((asset) => !asset.name.startsWith('orca-integration-linux-')),
-    linuxAssets: published.filter((asset) => asset.name.startsWith('orca-integration-linux-')),
+    assets: published.filter((asset) => asset.name !== 'orca-linux.AppImage'),
+    linuxAssets: published.filter((asset) => asset.name === 'orca-linux.AppImage'),
     changes: manifestChanges(context.buildChanges, syncSummaries)
   }
   writeFileSync(join(directory, 'build-info.json'), `${JSON.stringify(manifest, null, 2)}\n`)
@@ -347,7 +347,7 @@ export function macUpdateManifest(version, assets) {
 }
 
 export function linuxUpdateManifest(version, assets) {
-  return updateManifest(version, assets, 'orca-integration-linux-x64.AppImage')
+  return updateManifest(version, assets, 'orca-linux.AppImage')
 }
 
 function updateManifest(version, assets, name) {

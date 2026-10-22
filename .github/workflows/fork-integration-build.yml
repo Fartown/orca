@@ -247,11 +247,11 @@ jobs:
           pnpm run ensure:electron-runtime
           pnpm exec electron-builder --config config/scripts/integration-builds/electron-builder.cjs --linux AppImage --x64 --publish never
       - name: Verify packaged Linux CLI launch
-        run: node config/scripts/run-linux-cli-launch-contract-docker.mjs --appimage dist/orca-integration-linux-x64.AppImage
+        run: node config/scripts/run-linux-cli-launch-contract-docker.mjs --appimage dist/orca-linux.AppImage
       - uses: actions/upload-artifact@v7
         with:
           name: integration-linux-x64-${{ needs.identity.outputs.sha }}
-          path: dist/orca-integration-linux-x64.AppImage
+          path: dist/orca-linux.AppImage
           if-no-files-found: error
           compression-level: 0
           retention-days: 14
