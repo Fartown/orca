@@ -131,8 +131,9 @@ export function getAgentRowConversationName(
   const liveTitle =
     paneLiveTitle === undefined ? (tab.title?.trim() ?? '') : (paneLiveTitle?.trim() ?? '')
   const slot =
-    options.providerSessionId !== undefined &&
-    (tab.aiVaultTitle?.sessionId !== options.providerSessionId ||
+    Object.hasOwn(options, 'providerSessionId') &&
+    (!options.providerSessionId ||
+      tab.aiVaultTitle?.sessionId !== options.providerSessionId ||
       tab.aiVaultTitle.agent !== agentType)
       ? undefined
       : tab.aiVaultTitle

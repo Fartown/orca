@@ -69,13 +69,29 @@ export abstract class AgentHookServerIngestNormalization extends AgentHookServer
       return { event: normalizeHookPayload(this.state, source, body, this.env) }
     }
     const previousRunningTask = this.state.claudeRunningNonAgentTaskPaneKeys.has(paneKey)
+    if (this.agentExitedAtByPaneKey.has(this.resolvePaneKeyAlias(paneKey))) {
+      this.state.claudeSessionActivityByPaneKey.delete(paneKey)
+    }
     const previousActiveCron = this.state.claudeActiveSessionCronPaneKeys.has(paneKey)
     const event = normalizeHookPayload(this.state, source, body, this.env)
     const nextRunningTask = this.state.claudeRunningNonAgentTaskPaneKeys.has(paneKey)
     const nextActiveCron = this.state.claudeActiveSessionCronPaneKeys.has(paneKey)
     this.setClaudeBackgroundEvidence(paneKey, previousRunningTask, previousActiveCron)
     if (!event && !isReplay) {
-      checkOwnerAfterRefusedClaudeHook(this.state, body, (key) => this.checkAgentPresence(key))
+      checkOwnerAfterRefusedClaudeHook(this.state, body, (key, sender, owner) =>
+        this.checkAgentPresenceAfterHook(
+          {
+            ...owner,
+            paneKey: key,
+            agentPresence: {
+              ...owner.agentPresence,
+              agent: owner.agentPresence?.agent ?? 'claude',
+              process: sender
+            }
+          },
+          owner
+        )
+      )
     }
     if (!event || event.paneKey !== paneKey) {
       return { event }

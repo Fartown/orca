@@ -336,7 +336,10 @@ it('uses a cold parsed latest Codex cwd after its unlisted row is evicted', asyn
   const found = (await scan()).sessions.filter((row) => row.filePath === path)
   expect(found.map((row) => row.cwd)).toEqual(['/repo'])
   expect(read).toHaveBeenCalledWith(path)
-  expect(peekSessionParseCacheEntry(path)?.session).toBe(parsed)
+  expect(peekSessionParseCacheEntry(path)?.session).toEqual({
+    ...parsed,
+    providerName: { kind: 'absent' }
+  })
   expect(await stat(path)).toMatchObject({ mtimeMs, size: sizeBytes })
 })
 

@@ -926,7 +926,11 @@
             "src/shared/wsl-move/wsl-move-storage-dispositions.ts",
             "src/renderer/src/runtime/runtime-paged-file-read.ts",
             "src/renderer/src/runtime/runtime-paged-file-read.test.ts",
-            "tests/e2e/paired-remote-large-file-open.spec.ts"
+            "tests/e2e/paired-remote-large-file-open.spec.ts",
+            "src/main/agent-hooks/server-relayed-claude-permission-replay.test.ts",
+            "src/main/ai-vault/session-scanner-scope-walk.test.ts",
+            "src/main/runtime/runtime-orchestration-sender-names.test.ts",
+            "src/renderer/src/runtime/web-session-tabs-sync/terminal-build.ts"
           ],
           "message": "Branch changes an upstream path that no fork feature owns or registers as a seam; extend config/fork-features.jsonc and this allowlist, or move the change into a feature-owned path."
         }
@@ -1555,7 +1559,6 @@
             "tests/e2e/issues-session-name-file-chain.unit.test.ts",
             "tests/e2e/helpers/issues-session-name-file-chain.tsconfig.json",
             "docs/issue/会话命名与身份保护/**",
-            // Exact legacy paths for the approved, still-uncommitted naming-doc migration.
             ".gitignore",
             "config/scripts/check-fork-docs.mjs",
             "docs/issue/Issues看板与会话/research/会话命名现状调研.md",
@@ -1680,7 +1683,11 @@
             "docs/issue/Issues看板与会话/journal.md",
             "docs/issue/Issues看板与会话/requirements/Issues看板与会话.md",
             "docs/issue/Issues看板与会话/solutions/Issues看板与会话技术说明.md",
-            "docs/issue/Issues看板与会话/tests/cases/Issues功能测试.md"
+            "docs/issue/Issues看板与会话/tests/cases/Issues功能测试.md",
+            "src/main/agent-hooks/server-relayed-claude-permission-replay.test.ts",
+            "src/main/ai-vault/session-scanner-scope-walk.test.ts",
+            "src/main/runtime/runtime-orchestration-sender-names.test.ts",
+            "src/renderer/src/runtime/web-session-tabs-sync/terminal-build.ts"
           ],
           "message": "Change is outside the public naming implementation and its consumer adapters."
         },

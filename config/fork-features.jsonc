@@ -806,7 +806,8 @@
         "src/shared/tui-agent-config.ts",
         "src/main/ai-vault/session-parse-cache-database.ts",
         "src/shared/agent-title-decoration.ts",
-        "src/shared/agent-hook-listener/tool-input-preview.ts"
+        "src/shared/agent-hook-listener/tool-input-preview.ts",
+        "src/shared/tab-title-resolution.ts"
       ],
       "policyId": "session-names-native-feature",
       "ownedPaths": [
@@ -1247,6 +1248,26 @@
           "file": "src/renderer/src/components/terminal-pane/pty-connection/pane-host-capability-flags.ts",
           "mustContain": "providerSession: storedStatus.providerSession",
           "why": "completion notifications retain the current provider identity"
+        },
+        {
+          "file": "src/main/agent-hooks/server-relayed-claude-permission-replay.test.ts",
+          "mustContain": "permission-fixture-process",
+          "why": "Keep the feature contract and its exhaustive integration checks aligned."
+        },
+        {
+          "file": "src/main/ai-vault/session-scanner-scope-walk.test.ts",
+          "mustContain": "providerName: { kind: 'absent' }",
+          "why": "Keep the feature contract and its exhaustive integration checks aligned."
+        },
+        {
+          "file": "src/main/runtime/runtime-orchestration-sender-names.test.ts",
+          "mustContain": "providerName",
+          "why": "Keep the feature contract and its exhaustive integration checks aligned."
+        },
+        {
+          "file": "src/renderer/src/runtime/web-session-tabs-sync/terminal-build.ts",
+          "mustContain": "mirrorHostManualName",
+          "why": "Keep the feature contract and its exhaustive integration checks aligned."
         }
       ],
       "tests": [
@@ -1271,7 +1292,13 @@
         "src/main/claude-session-ownership/claude-session-activity.test.ts",
         "src/shared/agent-session-fallback-title.test.ts",
         "src/shared/ai-vault-session-filters.test.ts",
-        "src/renderer/src/components/terminal-pane/pty-connection/resume-identity-launch-config.test.ts"
+        "src/renderer/src/components/terminal-pane/pty-connection/resume-identity-launch-config.test.ts",
+        "src/main/agent-hooks/server-agent-presence.test.ts",
+        "src/main/agent-hooks/server-relayed-claude-permission-replay.test.ts",
+        "src/main/ai-vault/session-scanner-scope-walk.test.ts",
+        "src/main/runtime/runtime-orchestration-sender-names.test.ts",
+        "src/renderer/src/runtime/web-session-tabs-sync/mirrored-terminal-custom-title.test.ts",
+        "src/renderer/src/session-names/mirror-host-manual-name.test.ts"
       ],
       "checks": [
         "pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/components/activity src/renderer/src/lib/activity-thread-display.test.ts src/renderer/src/store/slices/agent-status-batch.test.ts src/renderer/src/store/slices/agent-status.test.ts src/renderer/src/runtime/web-session-tabs-sync-agent-status.test.ts src/renderer/src/runtime/sync-runtime-graph-agent-status-projection.test.ts src/renderer/src/runtime/sync-runtime-graph-agent-status-projection-join.test.ts",
@@ -1283,7 +1310,8 @@
         "pnpm exec vitest run --config config/vitest.config.ts src/main/session-names src/main/ai-vault/session-title-file-reader.test.ts src/main/ai-vault/session-title-file-reader-wsl-stall.test.ts src/main/ai-vault/session-scanner-parse-cache.test.ts src/main/ai-vault/session-parse-cache-persistence.test.ts src/shared/workspace-session-schema.test.ts src/renderer/src/lib/ai-vault-tab-title-sync.test.ts src/renderer/src/components/tab-bar/tab-title-tooltip.test.tsx",
         "pnpm exec vitest run --config config/vitest.config.ts src/shared/session-names src/shared/session-display-title.test.ts src/shared/agent-tab-title.test.ts src/shared/tab-title-resolution.test.ts src/shared/agent-row-conversation-name.test.ts",
         "pnpm exec vitest run --config config/vitest.config.ts src/shared/claude-session-ownership src/main/claude-session-ownership",
-        "pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/components/terminal-pane/pty-connection/resume-identity-launch-config.test.ts"
+        "pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/components/terminal-pane/pty-connection/resume-identity-launch-config.test.ts",
+        "ORCA_BACKGROUND_LAUNCH=1 pnpm exec vitest run --config config/vitest.config.ts src/main/agent-hooks/server-agent-presence.test.ts src/main/agent-hooks/server-relayed-claude-permission-replay.test.ts src/main/ai-vault/session-scanner-scope-walk.test.ts src/main/runtime/runtime-orchestration-sender-names.test.ts src/renderer/src/runtime/web-session-tabs-sync/mirrored-terminal-custom-title.test.ts src/renderer/src/session-names/mirror-host-manual-name.test.ts"
       ]
     },
     {
