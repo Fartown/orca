@@ -51,6 +51,15 @@ updated: 2026-10-22
 
 ## 3. 开发记录
 
+### 2026-10-22：CI 边界修正后的最新产物复验（testing）
+
+- 本轮目标：不以旧构建代替边界类型与分享清理修正后的实际运行验证。
+- 完成内容：重新构建 Electron、mobile-web 和完整 Node orcad；重新执行隐藏本地/paired 与真实 loopback SSH 两条验收，保留早先证据。
+- 代码或文档变更：仅本记录；新证据位于 `.docs/terminal-launch-diagnostics-ui-validation/2026-10-22/evidence/ci-repair-final/`，构建与测试日志见同根 `build/*ci-repair*`。
+- 验证证据：2 项通过（7.2s / 3.6s，总 15.9s），客户端入口、streaming RPC、provider、daemon 关联与唯一替身启动断言均通过；完整 anti-slop、native plugins、type-aware 全部退出 0；普通 lint 退出 0（既有 docs/site 建议警告保留）；四目标类型检查通过；全量 37,976 文件格式检查通过。完整 orcad 为 10.68 MB、6934 模块、无 Electron/node:sqlite 导入，使用 Node 24.21.0。
+- 未解决问题：新一轮远端完整 CI 与最终合入待完成；仍不声称历史重复 Tab 根因已修好或生产实例已更新。
+- 下一步：推送所有已验收提交，持续检查最终 HEAD，全部必需门禁通过后合入。
+
 ### 2026-10-22：完整 anti-slop 边界类型修正（testing）
 
 - 本轮目标：修复完整预检新增暴露的三项诊断类型规则错误，不豁免门禁。
