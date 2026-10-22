@@ -1,11 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { createWebRuntimeSessionTerminalResult } from './paired-terminal-launch'
+import { observePairedTerminalLaunch } from './paired-terminal-launch'
 
 const mocked = vi.hoisted(() => ({ create: vi.fn(), record: vi.fn(), state: { settings: {} } }))
 vi.mock('@/store', () => ({ useAppStore: { getState: () => mocked.state } }))
-vi.mock('../runtime/web-runtime-terminal-create-operation', () => ({
-  createWebRuntimeSessionTerminalResult: mocked.create
-}))
 vi.mock('./launch-origin', () => ({
   recordTerminalLaunchOrigin: mocked.record,
   currentTerminalLaunchOrigin: () => undefined
@@ -30,8 +27,8 @@ describe('paired terminal launch diagnostic seam', () => {
       hostTabId: 'tab-two'
     }))
     await Promise.all([
-      createWebRuntimeSessionTerminalResult(one, 'ai-vault-resume'),
-      createWebRuntimeSessionTerminalResult(two, 'ai-vault-resume')
+      observePairedTerminalLaunch(one, mocked.create, 'ai-vault-resume'),
+      observePairedTerminalLaunch(two, mocked.create, 'ai-vault-resume')
     ])
     for (const tabId of ['tab-one', 'tab-two']) {
       expect(mocked.record).toHaveBeenCalledWith(
@@ -50,7 +47,7 @@ describe('paired terminal launch diagnostic seam', () => {
     const result = { outcome: { status: 'created' } }
     const pending = Promise.resolve(result)
     mocked.create.mockReturnValue(pending)
-    expect(createWebRuntimeSessionTerminalResult(args)).toBe(pending)
+    expect(observePairedTerminalLaunch(args, mocked.create)).toBe(pending)
     expect(mocked.record).toHaveBeenCalledWith('paired-terminal-create', args, mocked.state)
     expect(mocked.record.mock.invocationCallOrder[0]).toBeLessThan(
       mocked.create.mock.invocationCallOrder[0]
@@ -63,7 +60,7 @@ describe('paired terminal launch diagnostic seam', () => {
     const error = new Error('host unavailable')
     mocked.create.mockRejectedValue(error)
     await expect(
-      createWebRuntimeSessionTerminalResult({ worktreeId: 'remote-workspace' })
+      observePairedTerminalLaunch({ worktreeId: 'remote-workspace' }, mocked.create)
     ).rejects.toBe(error)
     expect(mocked.create).toHaveBeenCalledOnce()
   })

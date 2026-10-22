@@ -2226,6 +2226,7 @@
         "src/renderer/src/terminal-launch-diagnostics/launch-origin.ts"
       ],
       "dependsOn": [
+        "src/renderer/src/runtime/web-runtime-session-types.ts",
         "src/main/ipc/pty/runtime/spawn-state.ts",
         "src/main/providers/pty-provider-contract.ts",
         "src/shared/sha256.ts",
