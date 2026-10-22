@@ -211,6 +211,52 @@ jobs:
           compression-level: 0
           retention-days: 14
 
+  linux:
+    needs: identity
+    runs-on: ubuntu-22.04
+    timeout-minutes: 90
+    env:
+      ORCA_LOCAL_BUILD_VERSION: ${{ needs.identity.outputs.version }}
+      ORCA_INTEGRATION_TAG: ${{ needs.identity.outputs.tag }}
+      ORCA_BUILD_COMMIT: ${{ needs.identity.outputs.sha }}
+      NODE_OPTIONS: --max-old-space-size=4096
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.identity.outputs.sha }}
+          persist-credentials: false
+      - uses: pnpm/setup@v2
+        with:
+          install: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: package.json
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - uses: ./.github/actions/install-mobile-dependencies
+      - uses: ./.github/actions/prepare-wayland-clipboard
+      - name: Test integration Linux build and update contracts
+        run: pnpm exec vitest run --config config/vitest.config.ts config/scripts/integration-builds/integration-builds.test.mjs src/shared/integration-builds/release-catalog.test.ts src/main/integration-builds/integration-update-feed.test.ts
+      - name: Install Linux accessibility verification dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends python3-gi gir1.2-gtk-3.0 gir1.2-atspi-2.0
+      - name: Build desktop and native helpers
+        run: pnpm run build:release
+      - name: Package Linux x64 AppImage
+        run: |
+          pnpm run ensure:electron-runtime
+          pnpm exec electron-builder --config config/scripts/integration-builds/electron-builder.cjs --linux AppImage --x64 --publish never
+      - name: Verify packaged Linux CLI launch
+        run: node config/scripts/run-linux-cli-launch-contract-docker.mjs --appimage dist/orca-linux.AppImage
+      - uses: actions/upload-artifact@v7
+        with:
+          name: integration-linux-x64-${{ needs.identity.outputs.sha }}
+          path: dist/orca-linux.AppImage
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 14
+
   android:
     needs: identity
     env:
@@ -318,7 +364,7 @@ jobs:
           retention-days: 14
 
   publish:
-    needs: [identity, macos, android, release-summary]
+    needs: [identity, macos, linux, android, release-summary]
     if: github.repository == 'Fartown/orca' && github.ref == 'refs/heads/fork/integration' && github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 20

@@ -1,13 +1,22 @@
 ---
 title: 集成分支自动出包
 slug: 集成分支自动出包
-status: done
+status: testing
 created: 2026-09-12
 updated: 2026-10-22
 external_ids: []
 ---
 
 # 集成分支自动出包 开发 Journal
+
+## 2026-10-22：补齐正式发布前的 PR 运行器入口（implementing）
+
+- 本轮目标：按用户要求合入并发布 Linux 包，以发布包覆盖原安装，后续不创建安装备份。
+- 完成内容：已确认 PR #61 的 Linux、macOS arm64、Android 实际构建成功；完整 PR 检查在 Blacksmith runner 排队，尚不能合并。
+- 代码或文档变更：登记 PR workflow 的 runner 选择接缝及对应合同测试；仅 Fartown/orca 使用 GitHub-hosted runner，上游仍用既有 Blacksmith 规格。
+- 验证证据：Actions 39766206400 的首个 job 119782178485 为 queued，标签 blacksmith-2vcpu-ubuntu-2404；Actions 39766206408 的三平台构建通过。
+- 未解决问题：runner 修复后完整 PR 已实际执行，Actions 39774725680 在全仓格式检查发现 97 个文件，aggregate 未通过，尚不能合并发布。已修正本次 Linux 新增测试的三处格式；其余仓库检查仍待处理。实际网页当前会话可通过快捷键切换并读取对话，恢复的历史标签缺少 provider session 关联而显示空白，终端右键入口仍缺失；这些功能问题未计为通过。
+- 下一步：运行器/缓存/发布相关 217 项测试通过（1 项平台跳过），架构与 fork 功能门禁通过；推送修复后等待完整 PR，再合并发布、覆盖安装并复验。
 
 ## 1. 关键文档链接
 
@@ -74,6 +83,24 @@ external_ids: []
 - 影响范围：REQ-401、REQ-402、REQ-403；APK 沿用 Expo debug 签名并核验指纹，不生成密钥或暗改 versionCode。
 
 ## 3. 开发记录
+
+### 2026-10-22：Linux PR 吸收最新集成修复（testing）
+
+- 本轮目标：完成 PR #61 合入，保留 Linux 同源打包与原位安装交付。
+- 完成内容：合并集成提交 3f0e3c1c；解决 runner、缓存合同、功能登记与文档冲突，复用新的通用 fork runner 策略。
+- 代码或文档变更：保留 Linux AppImage、兼容清单和更新源改动；缓存预热与 PR runner 在上游/fork 两种身份下保持一致。
+- 验证证据：370 项相关测试通过、1 项平台跳过；完整类型检查、全仓格式、17 组架构、功能/文档登记通过；按 CI 的 quality/type-aware/react-doctor 范围检查完整 fork 差异通过。
+- 未解决问题：最新远端 CI、最终合入和发布待完成；历史会话 Chat View 关联问题仍未修复。
+- 下一步：推送合并结果并完成 PR 合入，核对集成发布产物。
+
+### 2026-10-22 Linux x64 集成包与本机安装（testing）
+
+- 本轮目标：REQ-413；补齐fork Linux x64安装包并将本机安装从上游切换到fork。
+- 完成内容：已核对上游AppImage摘要与当前运行路径；fork最新发布没有Linux；在独立feat/integration-linux-builds工作树扩展既有功能。
+- 代码或文档变更：先补需求与TC-414、登记标题；实现将复用Linux打包、glibc门槛与fork发布流程，Linux校验资料使用可选字段兼容旧客户端。
+- 验证证据：[Linux合同验证](tests/runs/2026-10-22-linux-contracts.md)：桌面148通过/1跳过、移动21通过、完整类型、三个本地化、16组架构、登记/文档和定向lint通过。产物与实际安装待验；原服务尚未退出。
+- 未解决问题：首轮Linux CI在原生验证中缺Atspi typelib，已补runner的GTK/AT-SPI依赖，不跳过验证；本地原生构建仍在恢复容器网络。CI产物与实际安装尚未完成。
+- 下一步：实现、测试、生成PR，取得Linux产物后隔离验收并安装。
 
 ### 2026-10-22：Fork PR runner 与就绪状态契约修正（testing）
 

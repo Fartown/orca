@@ -41,7 +41,9 @@ export function integrationChangelog(version: string) {
         : `Orca Integration ${release.sha.slice(0, 12)}`,
       description:
         changeSummary(release) ??
-        'Fork integration build, signed by a fixed self-signed publisher and not notarized. Native updates work between builds with this identity. Older ad-hoc builds require one manual DMG installation first.',
+        (process.platform === 'linux'
+          ? 'Fork integration build for Linux x64. AppImage updates come from Fartown/orca. Extracted installations require manual replacement.'
+          : 'Fork integration build, signed by a fixed self-signed publisher and not notarized. Native updates work between builds with this identity. Older ad-hoc builds require one manual DMG installation first.'),
       releaseNotesUrl: `${INTEGRATION_RELEASES_URL}/tag/${release.tag}`
     }
   }
@@ -49,7 +51,10 @@ export function integrationChangelog(version: string) {
 
 export function isIntegrationBuild(): boolean {
   try {
-    if (!app.isPackaged || process.platform !== 'darwin') {
+    if (!app.isPackaged || !['darwin', 'linux'].includes(process.platform)) {
+      return false
+    }
+    if (process.platform === 'linux' && process.arch !== 'x64') {
       return false
     }
     return (
@@ -70,7 +75,10 @@ export async function pinIntegrationReleaseFeed(
   if (!isIntegrationBuild()) {
     return false
   }
-  const release = await fetchIntegrationRelease('mac', net.fetch.bind(net) as typeof fetch)
+  const release = await fetchIntegrationRelease(
+    process.platform === 'linux' ? 'linux' : 'mac',
+    (input, init) => net.fetch(input instanceof URL ? input.toString() : input, init)
+  )
   resolvedRelease = release
   updater.allowPrerelease = true
   updater.allowDowngrade = false

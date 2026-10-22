@@ -25,6 +25,7 @@ export type IntegrationRelease = {
   androidVersion: string
   androidVersionCode: number
   assets: IntegrationAsset[]
+  linuxAssets?: IntegrationAsset[]
   /** Unvalidated manifest list; read it through `integrationChanges`. */
   changes?: unknown
 }
@@ -109,6 +110,26 @@ export function parseIntegrationRelease(value: unknown, tag: string): Integratio
     }
     names.add(asset.name)
   }
+  if (item.linuxAssets !== undefined) {
+    if (!Array.isArray(item.linuxAssets) || !item.linuxAssets.length) {
+      throw new Error('Invalid integration Linux assets.')
+    }
+    for (const asset of item.linuxAssets) {
+      if (
+        !asset ||
+        asset.name !== 'orca-linux.AppImage' ||
+        names.has(asset.name) ||
+        !Number.isSafeInteger(asset.bytes) ||
+        asset.bytes <= 0 ||
+        asset.bytes > 2_000_000_000 ||
+        typeof asset.sha256 !== 'string' ||
+        !/^[a-f0-9]{64}$/.test(asset.sha256)
+      ) {
+        throw new Error('Invalid integration Linux asset.')
+      }
+      names.add(asset.name)
+    }
+  }
   return item as IntegrationRelease
 }
 
@@ -152,9 +173,10 @@ async function readManifest(tag: string, fetcher: typeof fetch): Promise<Integra
 }
 
 function hasPackages(release: IntegrationRelease, required: string[]): boolean {
+  const assets = [...release.assets, ...(release.linuxAssets ?? [])]
   return required
     .filter((name) => name.startsWith('orca-'))
-    .every((name) => release.assets.some((asset) => asset.name === name))
+    .every((name) => assets.some((asset) => asset.name === name))
 }
 
 async function fetchPublicRelease(required: string[], fetcher: typeof fetch) {
@@ -194,14 +216,16 @@ async function fetchPublicRelease(required: string[], fetcher: typeof fetch) {
 }
 
 export async function fetchIntegrationRelease(
-  platform: 'android' | 'mac',
+  platform: 'android' | 'mac' | 'linux',
   fetcher: typeof fetch = fetch
 ): Promise<IntegrationRelease> {
   const required = [
     'build-info.json',
     ...(platform === 'android'
       ? ['orca-integration-android.apk']
-      : ['latest-mac.yml', 'orca-integration-macos-arm64.zip'])
+      : platform === 'linux'
+        ? ['latest-linux.yml', 'orca-linux.AppImage']
+        : ['latest-mac.yml', 'orca-integration-macos-arm64.zip'])
   ]
   let releases: unknown
   try {
