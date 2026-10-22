@@ -2,13 +2,13 @@ import { useEffect, useRef } from 'react'
 import { useStore } from 'zustand'
 import { normalizeExecutionHostId } from '../../../shared/execution-host'
 import type { IssueRouteExecutionHostId } from '../../../shared/issues/types'
-import { useSidebarHostScopeOptions } from '../components/sidebar/use-sidebar-host-scope-options'
+import { useSidebarHostInventoryOptions } from '../components/sidebar/use-sidebar-host-scope-options'
 import { registerConversationCanonicalTitles } from './conversation-canonical-titles'
 import { startIssueDomainSync, type IssueDomainSync } from './issue-domain-sync'
 import { issueDomainStore } from './issues-domain-store'
 
 export function IssueDomainSyncGate(): null {
-  const { hostOptions } = useSidebarHostScopeOptions()
+  const hostOptions = useSidebarHostInventoryOptions()
   const sidebarRootMode = useStore(issueDomainStore, (state) => state.sidebarRootMode)
   const activeIssueRoute = useStore(issueDomainStore, (state) => state.activeIssueRoute)
   const filter = useStore(issueDomainStore, (state) => state.filter)

@@ -134,7 +134,6 @@
             "src/main/runtime/rpc/methods/issues.ts",
             "src/main/runtime/rpc/methods/issues.test.ts",
             "src/shared/protocol-version.ts",
-            // Remote Issue change streams are cancelled through the shared-control cleanup map.
             "src/shared/remote-runtime-shared-control-protocol.ts",
             "src/shared/rpc-contract/rpc-params-catalog.generated.ts",
             "src/renderer/src/app-shell/AppBackgroundServices.tsx",
@@ -177,7 +176,6 @@
             "src/main/runtime/rpc/errors.test.ts",
             "src/renderer/src/components/dashboard/DashboardAgentRow.tsx",
             "src/renderer/src/components/dashboard/DashboardAgentRowTrailingControls.tsx",
-            "src/renderer/src/components/right-sidebar/AiVaultSessionRow.tsx",
             "src/renderer/src/components/right-sidebar/ai-vault-original-pane*.ts",
             "src/renderer/src/components/right-sidebar/ai-vault-original-pane*.tsx",
             "src/renderer/src/components/right-sidebar/ai-vault-session-identity*.ts",
@@ -200,7 +198,6 @@
             "src/renderer/src/components/terminal-pane/pty-connection-agent-session-resume.test.ts",
             "src/renderer/src/components/terminal-pane/pty-connection-sleeping-resume-banner.test.ts",
             "src/renderer/src/lib/ai-vault-tab-title-batches.ts",
-            "src/renderer/src/lib/ai-vault-tab-title-sync.ts",
             "src/renderer/src/lib/launch-ai-vault-session.ts",
             "src/renderer/src/lib/launch-ai-vault-session.test.ts",
             "src/renderer/src/runtime/runtime-rpc-environment-call.ts",
@@ -213,11 +210,13 @@
             "src/shared/agent-hook-listener/listener-event.ts",
             "src/shared/agent-hook-listener-extraction-characterization.test.ts",
             "src/shared/plugins/plugin-host-api.ts",
-            "config/electron-builder.config.cjs",
             "config/scripts/clean-issue-shared-build-output*.mjs",
             "config/scripts/electron-builder-config.test.mjs",
             "config/scripts/verify-packaged-daemon-entry.cjs",
-            "config/scripts/verify-packaged-daemon-entry.test.mjs"
+            "config/scripts/verify-packaged-daemon-entry.test.mjs",
+            "src/shared/execution-host-registry.ts",
+            "src/renderer/src/components/sidebar/sidebar-host-options.ts",
+            "src/renderer/src/components/sidebar/use-sidebar-host-scope-options.ts"
           ],
           "message": "Change is outside the reviewed Issue implementation or rollback surface."
         },
@@ -857,7 +856,10 @@
             "src/renderer/src/components/browser-pane/workspace-doc/HtmlDocPreview.toolbar.test.tsx",
             "src/renderer/src/components/terminal-pane/pty-connection/pane-host-capability-flags.ts",
             "mobile/package.json",
-            "mobile/pnpm-lock.yaml"
+            "mobile/pnpm-lock.yaml",
+            "src/shared/execution-host-registry.ts",
+            "src/renderer/src/components/sidebar/sidebar-host-options.ts",
+            "src/renderer/src/components/sidebar/use-sidebar-host-scope-options.ts"
           ],
           "message": "Branch changes an upstream path that no fork feature owns or registers as a seam; extend config/fork-features.jsonc and this allowlist, or move the change into a feature-owned path."
         }
@@ -1623,12 +1625,7 @@
             "src/shared/claude-session-ownership/**",
             "src/main/claude-session-ownership/**"
           ],
-          "exceptPaths": [
-            "**/*.test.ts",
-            "**/*.test.tsx",
-            "**/*.spec.ts",
-            "**/*.spec.tsx"
-          ],
+          "exceptPaths": ["**/*.test.ts", "**/*.test.tsx", "**/*.spec.ts", "**/*.spec.tsx"],
           "forbiddenTargets": [
             "src/main/issues/**",
             "src/shared/issues/**",
@@ -1636,9 +1633,7 @@
             "src/renderer/src/components/issues/**",
             "src/renderer/src/components/sidebar/issues/**"
           ],
-          "importTextHints": [
-            "issues"
-          ],
+          "importTextHints": ["issues"],
           "message": "Public session names must not depend on Issue records or assembly."
         }
       ]
