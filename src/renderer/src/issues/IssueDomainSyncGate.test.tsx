@@ -12,7 +12,7 @@ const sync = vi.hoisted(() => ({ update: vi.fn(), stop: vi.fn() }))
 
 vi.mock('../components/sidebar/use-sidebar-host-scope-options', () => ({
   // A fresh array on every render, as the real hook returns on any host status change.
-  useSidebarHostScopeOptions: () => ({ hostOptions: hosts.state.ids.map((id) => ({ id })) })
+  useSidebarHostInventoryOptions: () => hosts.state.ids.map((id) => ({ id }))
 }))
 vi.mock('./issue-domain-sync', () => ({ startIssueDomainSync: () => sync }))
 vi.mock('./conversation-canonical-titles', () => ({
