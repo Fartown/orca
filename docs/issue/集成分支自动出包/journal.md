@@ -3,7 +3,7 @@ title: 集成分支自动出包
 slug: 集成分支自动出包
 status: done
 created: 2026-09-12
-updated: 2026-10-21
+updated: 2026-10-22
 external_ids: []
 ---
 
@@ -74,6 +74,15 @@ external_ids: []
 - 影响范围：REQ-401、REQ-402、REQ-403；APK 沿用 Expo debug 签名并核验指纹，不生成密钥或暗改 versionCode。
 
 ## 3. 开发记录
+
+### 2026-10-22：Fork PR runner 与就绪状态契约修正（testing）
+
+- 本轮目标：修复阻塞日志链路补齐合入的已查实问题。
+- 完成内容：Fork PR 使用 GitHub-hosted Ubuntu；上游仍用原 Blacksmith。补齐 fork 出包 workflow 的 ready/draft 事件和身份感知测试。
+- 代码或文档变更：PR 与清理 workflow、缓存和准入合同、runner 回归、接缝登记。
+- 验证证据：13 个测试文件 260 项通过；注册、文档和架构门禁此前通过，最终差异待复验。
+- 未解决问题：远端 CI 与合入尚未完成；没有部署或重启生产应用和远程服务。
+- 下一步：完成最终门禁，推送独立 PR；在合并代码上复核完整 CI。
 
 ### 2026-10-06 上游同步：撤下 mobile 网页包打包工作流普查的接缝
 
