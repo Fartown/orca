@@ -790,7 +790,6 @@
             "config/electron-builder.config.cjs",
             ".gitignore",
             "docs/requirements/Issues-*.md",
-            ".github/workflows/pr.yml",
             "config/scripts/pr-preflight-gates.test.mjs",
             "config/architecture-policies.jsonc",
             "docs/reference/architecture-policy-gates.md",
@@ -853,7 +852,6 @@
             "src/renderer/src/components/right-sidebar/ai-vault-original-pane-index.ts",
             "src/renderer/src/components/right-sidebar/ai-vault-original-pane-index.test.ts",
             "src/renderer/src/components/terminal-pane/pty-connection/sleeping-record-access.ts",
-            "src/renderer/src/components/terminal-pane/pty-connection/deferred-cold-restore-and-snapshot.ts",
             "src/renderer/src/components/terminal-pane/pty-connection/resume-identity-launch-config.test.ts",
             "src/renderer/src/lib/launch-agent-in-new-tab.ts",
             "config/scripts/pr-workflow-lint-parity.test.mjs",
@@ -911,7 +909,11 @@
             "config/scripts/check-path-literal-ratchet.mjs",
             "src/shared/execution-host-registry.ts",
             "src/renderer/src/components/sidebar/sidebar-host-options.ts",
-            "src/renderer/src/components/sidebar/use-sidebar-host-scope-options.ts"
+            "src/renderer/src/components/sidebar/use-sidebar-host-scope-options.ts",
+            "src/main/agent-hooks/server-relayed-claude-permission-replay.test.ts",
+            "src/main/ai-vault/session-scanner-scope-walk.test.ts",
+            "src/main/runtime/runtime-orchestration-sender-names.test.ts",
+            "src/renderer/src/runtime/web-session-tabs-sync/terminal-build.ts"
           ],
           "message": "Branch changes an upstream path that no fork feature owns or registers as a seam; extend config/fork-features.jsonc and this allowlist, or move the change into a feature-owned path."
         }
@@ -1531,7 +1533,6 @@
             "tests/e2e/issues-session-name-file-chain.unit.test.ts",
             "tests/e2e/helpers/issues-session-name-file-chain.tsconfig.json",
             "docs/issue/会话命名与身份保护/**",
-            // Exact legacy paths for the approved, still-uncommitted naming-doc migration.
             ".gitignore",
             "config/scripts/check-fork-docs.mjs",
             "docs/issue/Issues看板与会话/research/会话命名现状调研.md",
@@ -1656,7 +1657,11 @@
             "docs/issue/Issues看板与会话/journal.md",
             "docs/issue/Issues看板与会话/requirements/Issues看板与会话.md",
             "docs/issue/Issues看板与会话/solutions/Issues看板与会话技术说明.md",
-            "docs/issue/Issues看板与会话/tests/cases/Issues功能测试.md"
+            "docs/issue/Issues看板与会话/tests/cases/Issues功能测试.md",
+            "src/main/agent-hooks/server-relayed-claude-permission-replay.test.ts",
+            "src/main/ai-vault/session-scanner-scope-walk.test.ts",
+            "src/main/runtime/runtime-orchestration-sender-names.test.ts",
+            "src/renderer/src/runtime/web-session-tabs-sync/terminal-build.ts"
           ],
           "message": "Change is outside the public naming implementation and its consumer adapters."
         },

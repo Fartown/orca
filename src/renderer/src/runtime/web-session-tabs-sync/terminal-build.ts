@@ -8,6 +8,7 @@ import { toRemoteRuntimePtyId } from '../../../../shared/remote-runtime-pty-id'
 import { toWebTerminalSurfaceTabId } from '../../../../shared/terminal-surface-id'
 import type { MirroredTerminalTab, TerminalSurface, ReadyTerminalSurface } from './state'
 import { chooseRemoteTerminalLayout, isTerminalSurfaceTab } from './terminal-surfaces'
+import { mirrorHostManualName } from '../../session-names/mirror-host-manual-name'
 
 function pendingBindingBelongsToEnvironment(
   ptyId: string,
@@ -169,6 +170,7 @@ export function buildMirroredTerminalTabs(
     // Why: viewMode echoes back through host snapshots, so prefer the client's record during the echo window and adopt the host value only without a prior tab.
     const hostViewModeSurface = surfaces.find((surface) => surface.viewMode)
     const viewMode = existing ? existing.viewMode : hostViewModeSurface?.viewMode
+    const aiVaultTitle = mirrorHostManualName(existing?.aiVaultTitle, activeSurface.customTitle)
     return {
       tab: {
         id: localTabId,
@@ -179,7 +181,7 @@ export function buildMirroredTerminalTabs(
         // Why: the host transport carries no generated title, so rebuilding the tab
         // without this dropped the client's agent-prompt label on every snapshot.
         ...(existing?.generatedTitle ? { generatedTitle: existing.generatedTitle } : {}),
-        ...(existing?.aiVaultTitle ? { aiVaultTitle: existing.aiVaultTitle } : {}),
+        ...(aiVaultTitle ? { aiVaultTitle } : {}),
         // Why: the recovery ledger is client-local and the host carries none, so
         // rebuilding without it would restore this tab's remount allowance on
         // every snapshot — the counting loop recovery is meant to end (b5cfc6ca).
