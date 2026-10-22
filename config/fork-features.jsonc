@@ -1564,10 +1564,7 @@
       "title": "HTML 预览在当前面板打开：眼睛按钮不再强制右分屏",
       "goal": "预览 tab 建在发起操作的 pane 内并切过去，本地与远程工作区落位一致",
       "journal": "docs/issue/HTML预览在当前面板打开/journal.md",
-      "dependsOn": [
-        "src/renderer/src/lib/file-preview.ts",
-        "src/renderer/src/store/index.ts"
-      ],
+      "dependsOn": ["src/renderer/src/lib/file-preview.ts", "src/renderer/src/store/index.ts"],
       "policyId": "html-preview-in-pane",
       "ownedPaths": [
         "src/renderer/src/components/file-preview-pane/**",
@@ -1613,9 +1610,7 @@
           "why": "Chinese copy for the same button (REQ-406)"
         }
       ],
-      "tests": [
-        "src/renderer/src/components/file-preview-pane/open-file-preview-in-pane.test.ts"
-      ],
+      "tests": ["src/renderer/src/components/file-preview-pane/open-file-preview-in-pane.test.ts"],
       "checks": [
         "pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/components/file-preview-pane src/renderer/src/lib/file-preview.test.ts"
       ]
@@ -1636,9 +1631,7 @@
         "src/renderer/src/runtime-large-file/**",
         "docs/issue/远程大文件编辑器读取/**"
       ],
-      "requiredFiles": [
-        "src/renderer/src/runtime-large-file/assemble-runtime-file-chunks.ts"
-      ],
+      "requiredFiles": ["src/renderer/src/runtime-large-file/assemble-runtime-file-chunks.ts"],
       "seams": [
         {
           "file": "src/renderer/src/runtime/runtime-file-read-client.ts",
@@ -1938,9 +1931,7 @@
         "docs/issue/远程Tab发布血缘修复/**",
         "src/main/runtime/headless-sibling-writers-keep-publication-epoch.test.ts"
       ],
-      "requiredFiles": [
-        "src/main/runtime/headless-sibling-writers-keep-publication-epoch.test.ts"
-      ],
+      "requiredFiles": ["src/main/runtime/headless-sibling-writers-keep-publication-epoch.test.ts"],
       "seams": [
         {
           "file": "src/main/runtime/session-tabs/headless-tab-group-moves.ts",
@@ -1963,9 +1954,7 @@
           "why": "closing a chat edits content without replacing the publisher"
         }
       ],
-      "tests": [
-        "src/main/runtime/headless-sibling-writers-keep-publication-epoch.test.ts"
-      ],
+      "tests": ["src/main/runtime/headless-sibling-writers-keep-publication-epoch.test.ts"],
       "checks": [
         "pnpm exec vitest run --config config/vitest.config.ts src/main/runtime/headless-sibling-writers-keep-publication-epoch.test.ts src/main/runtime/runtime-headless-publication-contracts.test.ts"
       ]
@@ -2178,7 +2167,8 @@
         "src/shared/execution-host.ts",
         "src/renderer/src/runtime/runtime-environment-revision.ts",
         "src/renderer/src/store/slices/runtime-environment-ssh-selectors.ts",
-        "src/shared/terminal-surface-id.ts"
+        "src/shared/terminal-surface-id.ts",
+        "src/renderer/src/lib/resolve-owner.ts"
       ],
       "policyId": "terminal-id-copy-routing",
       "ownedPaths": [
@@ -2200,9 +2190,7 @@
           "why": "Pass the source workspace to the host-aware terminal handle copy operation"
         }
       ],
-      "tests": [
-        "src/renderer/src/terminal-id-copy-routing/copy-workspace-terminal-handle.test.ts"
-      ],
+      "tests": ["src/renderer/src/terminal-id-copy-routing/copy-workspace-terminal-handle.test.ts"],
       "checks": [
         "ORCA_BACKGROUND_LAUNCH=1 pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/terminal-id-copy-routing src/renderer/src/components/terminal-pane/terminal-handle-copy.test.ts"
       ]
