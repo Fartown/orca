@@ -34,7 +34,7 @@ vi.mock('react-native', () => ({
     }
   }
 }))
-vi.mock('lucide-react-native', () => ({ ImagePlus: 'ImagePlus', Mic: 'Mic' }))
+vi.mock('lucide-react-native', () => ({ Paperclip: 'Paperclip', Mic: 'Mic' }))
 vi.mock('@react-native-async-storage/async-storage', () => ({ default: {} }))
 vi.mock('../platform/haptics', () => ({ triggerError: () => {} }))
 vi.mock('./use-terminal-live-input-mode-preference', () => ({

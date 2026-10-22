@@ -44,6 +44,7 @@ vi.mock('lucide-react-native', () => ({
   FileText: 'FileText',
   Mic: 'Mic',
   Package: 'Package',
+  Paperclip: 'Paperclip',
   Plus: 'Plus',
   ShieldAlert: 'ShieldAlert',
   Square: 'Square',

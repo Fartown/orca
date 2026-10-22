@@ -1,7 +1,7 @@
 import { toast } from 'sonner'
 import { useAppStore } from '@/store'
 import { translate } from '@/i18n/i18n'
-import { launchAiVaultSessionInNewTab } from './launch-ai-vault-session'
+import { launchRevealedAiVaultSession as launchAiVaultSessionInNewTab } from '@/terminal-launch-diagnostics/history-session-launch'
 import { activateAiVaultResumeWorkspace } from '@/components/right-sidebar/ai-vault-session-resume-in-chat-launch'
 import { notifyAiVaultSessionQueued } from '@/components/right-sidebar/ai-vault-session-launch-feedback'
 import { agentLabel } from '@/components/right-sidebar/ai-vault-session-filters'

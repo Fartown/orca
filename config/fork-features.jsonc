@@ -64,6 +64,26 @@
       ],
       "seams": [
         {
+          "file": "config/scripts/ci-draft-pr-admission.test.mjs",
+          "mustContain": "repository = 'stablyai/orca'",
+          "why": "Admission contracts evaluate the fork workflow with its actual repository identity."
+        },
+        {
+          "file": ".github/workflows/pr.yml",
+          "mustContain": "github.repository == 'stablyai/orca'",
+          "why": "Keep upstream runners while fork PR gates use available GitHub-hosted runners."
+        },
+        {
+          "file": ".github/workflows/ci-closed-pr-caches.yml",
+          "mustContain": "github.repository == 'stablyai/orca'",
+          "why": "Fork PR cleanup runs without upstream runner access."
+        },
+        {
+          "file": "config/scripts/ci-dependency-download-cache.test.mjs",
+          "mustContain": "repository === 'stablyai/orca'",
+          "why": "Cache preparation assertions cover both repository runner policies."
+        },
+        {
           "file": "mobile/app.config.js",
           "mustContain": "integration-builds",
           "why": "integration-only native version and build marker"
@@ -107,9 +127,30 @@
           "file": "mobile/pnpm-lock.yaml",
           "mustContain": "zustand",
           "why": "The fork update UI requires its own mobile Zustand dependency; root resolution cannot supply Metro."
+        },
+        {
+          "file": "config/scripts/check-path-literal-ratchet.mjs",
+          "mustContain": "architectureLivePathReferences",
+          "why": "Reuse existing contracts while keeping host inventory and historical path semantics explicit."
+        },
+        {
+          "file": "config/scripts/pr-preflight-gates.test.mjs",
+          "mustContain": "repositoryRunnerLabels",
+          "why": "Keep the feature contract and its exhaustive integration checks aligned."
+        },
+        {
+          "file": "config/scripts/win32-test-lane-registration.test.mjs",
+          "mustContain": "repositoryRunnerLabels",
+          "why": "Keep the feature contract and its exhaustive integration checks aligned."
+        },
+        {
+          "file": "config/scripts/ci-closed-pr-cancellation.test.mjs",
+          "mustContain": "fork-integration-build-123-packages",
+          "why": "The exact cancellation census includes the fork package concurrency group."
         }
       ],
       "tests": [
+        "config/scripts/integration-builds/pr-runner-portability.test.mjs",
         "config/scripts/integration-builds/integration-builds.test.mjs",
         "config/scripts/integration-builds/mac-signing.test.mjs",
         "config/scripts/integration-builds/mac-package-signature.test.mjs",
@@ -120,11 +161,17 @@
         "src/shared/integration-builds/release-catalog.test.ts",
         "src/main/integration-builds/integration-update-feed.test.ts",
         "mobile/src/integration-builds/update-controller.test.ts",
-        "config/scripts/integration-builds/mobile-dependency-contract.test.mjs"
+        "config/scripts/integration-builds/mobile-dependency-contract.test.mjs",
+        "config/scripts/integration-builds/architecture-live-path-references.test.mjs",
+        "config/scripts/pr-preflight-gates.test.mjs",
+        "config/scripts/win32-test-lane-registration.test.mjs",
+        "config/scripts/ci-pr-concurrency-keys.test.mjs",
+        "config/scripts/ci-closed-pr-cancellation.test.mjs"
       ],
       "checks": [
         "pnpm exec vitest run --config config/vitest.config.ts config/scripts/integration-builds src/shared/integration-builds src/main/integration-builds",
-        "pnpm --dir mobile exec vitest run src/integration-builds"
+        "pnpm --dir mobile exec vitest run src/integration-builds",
+        "ORCA_BACKGROUND_LAUNCH=1 pnpm exec vitest run --config config/vitest.config.ts config/scripts/pr-preflight-gates.test.mjs config/scripts/win32-test-lane-registration.test.mjs config/scripts/ci-pr-concurrency-keys.test.mjs config/scripts/ci-closed-pr-cancellation.test.mjs"
       ]
     },
     {
@@ -450,6 +497,16 @@
           "file": "src/main/integration-builds/orcad-fork-services.ts",
           "mustContain": "startGoals",
           "why": "start each fork service on the owning headless runtime before RPC becomes available"
+        },
+        {
+          "file": "src/shared/host-operation-ownership.ts",
+          "mustContain": "HOST_OPERATION_OWNERSHIP",
+          "why": "Keep the feature contract and its exhaustive integration checks aligned."
+        },
+        {
+          "file": "src/shared/wsl-move/wsl-move-storage-dispositions.ts",
+          "mustContain": "SQLITE_SCHEMA_FILE_DATABASES",
+          "why": "Keep the feature contract and its exhaustive integration checks aligned."
         }
       ],
       "tests": [
@@ -490,11 +547,14 @@
         "src/renderer/src/goals/open-goal-document.test.ts",
         "src/renderer/src/components/goals/GoalEditor.test.tsx",
         "src/main/goals/orcad-goals.test.ts",
-        "src/main/goals/goal-driver-resources.test.ts"
+        "src/main/goals/goal-driver-resources.test.ts",
+        "src/shared/host-operation-ownership.test.ts",
+        "src/shared/wsl-move/wsl-move-dispositions.test.ts"
       ],
       "checks": [
         "pnpm exec vitest run --config config/vitest.config.ts src/main/goals src/shared/goals src/renderer/src/goals src/renderer/src/components/goals src/main/runtime/rpc/methods/goals.test.ts src/main/plugins/plugin-bundled-bootstrap.test.ts src/main/persistence-ui-state.test.ts src/renderer/src/components/terminal-pane/TerminalPaneHeaderOverlay.test.tsx src/renderer/src/components/terminal-pane/terminal-pane-element-file-drop.test.tsx src/main/goals/goal-driver-resources.test.ts",
-        "node --test --experimental-test-module-mocks goal-mode/cli/*.test.mjs"
+        "node --test --experimental-test-module-mocks goal-mode/cli/*.test.mjs",
+        "ORCA_BACKGROUND_LAUNCH=1 pnpm exec vitest run --config config/vitest.config.ts src/shared/host-operation-ownership.test.ts src/shared/wsl-move/wsl-move-dispositions.test.ts"
       ]
     },
     {
@@ -508,6 +568,7 @@
         "src/renderer/src/lib/ai-vault-session-resume-preparation.ts",
         "src/renderer/src/lib/activate-ai-vault-structured-session.ts",
         "src/renderer/src/lib/launch-ai-vault-session.ts",
+        "src/renderer/src/terminal-launch-diagnostics/history-session-launch.ts",
         "src/renderer/src/components/right-sidebar/ai-vault-session-filters.ts",
         "src/renderer/src/components/right-sidebar/ai-vault-session-resume.ts",
         "src/renderer/src/components/right-sidebar/ai-vault-session-resume-in-chat-launch.ts",
@@ -579,7 +640,8 @@
         "src/shared/runtime-client-target.ts",
         "src/shared/app-environment.ts",
         "src/main/orca-profiles/profile-index-store.ts",
-        "src/renderer/src/store/workspace-record-selectors.ts"
+        "src/renderer/src/store/workspace-record-selectors.ts",
+        "src/renderer/src/components/host-picker/HostCombobox.tsx"
       ],
       "policyId": "issues-existing-capability-reuse",
       "ownedPaths": [
@@ -660,6 +722,31 @@
           "file": "src/main/integration-builds/orcad-fork-services.ts",
           "mustContain": "startOrcadIssues",
           "why": "start each fork service on the owning headless runtime before RPC becomes available"
+        },
+        {
+          "file": "src/shared/execution-host-registry.ts",
+          "mustContain": "buildExecutionHostInventory",
+          "why": "Reuse existing contracts while keeping host inventory and historical path semantics explicit."
+        },
+        {
+          "file": "src/renderer/src/components/sidebar/sidebar-host-options.ts",
+          "mustContain": "sidebarHostOptionsFromInventory",
+          "why": "Reuse existing contracts while keeping host inventory and historical path semantics explicit."
+        },
+        {
+          "file": "src/renderer/src/components/sidebar/use-sidebar-host-scope-options.ts",
+          "mustContain": "useSidebarHostInventoryOptions",
+          "why": "Reuse existing contracts while keeping host inventory and historical path semantics explicit."
+        },
+        {
+          "file": "src/shared/host-operation-ownership.ts",
+          "mustContain": "HOST_OPERATION_OWNERSHIP",
+          "why": "Keep the feature contract and its exhaustive integration checks aligned."
+        },
+        {
+          "file": "src/shared/wsl-move/wsl-move-storage-dispositions.ts",
+          "mustContain": "SQLITE_SCHEMA_FILE_DATABASES",
+          "why": "Keep the feature contract and its exhaustive integration checks aligned."
         }
       ],
       "tests": [
@@ -676,11 +763,16 @@
         "src/main/issues/issue-change-feed.test.ts",
         "src/shared/issues/change-stream-cleanup.test.ts",
         "src/renderer/src/components/sidebar/issues/build-issue-rows.test.ts",
-        "src/main/issues/orcad-issues.test.ts"
+        "src/main/issues/orcad-issues.test.ts",
+        "src/renderer/src/issues/issue-host-inventory.test.ts",
+        "src/renderer/src/components/sidebar/issues/issue-host-picker.test.tsx",
+        "src/shared/host-operation-ownership.test.ts",
+        "src/shared/wsl-move/wsl-move-dispositions.test.ts"
       ],
       "checks": [
         "pnpm exec vitest run --config config/vitest.config.ts src/main/issues src/shared/issues src/renderer/src/issues src/renderer/src/components/issues src/renderer/src/components/sidebar/issues src/main/runtime/rpc/methods/issues.test.ts src/shared/agent-session-fallback-title.test.ts src/shared/ai-vault-session-filters.test.ts config/scripts/vitest-sqlite-runtime-boundary.test.ts",
-        "pnpm test src/main/issues/orcad-issues.test.ts"
+        "pnpm test src/main/issues/orcad-issues.test.ts",
+        "ORCA_BACKGROUND_LAUNCH=1 pnpm exec vitest run --config config/vitest.config.ts src/shared/host-operation-ownership.test.ts src/shared/wsl-move/wsl-move-dispositions.test.ts"
       ]
     },
     {
@@ -720,7 +812,8 @@
         "src/shared/tui-agent-config.ts",
         "src/main/ai-vault/session-parse-cache-database.ts",
         "src/shared/agent-title-decoration.ts",
-        "src/shared/agent-hook-listener/tool-input-preview.ts"
+        "src/shared/agent-hook-listener/tool-input-preview.ts",
+        "src/shared/tab-title-resolution.ts"
       ],
       "policyId": "session-names-native-feature",
       "ownedPaths": [
@@ -1161,6 +1254,26 @@
           "file": "src/renderer/src/components/terminal-pane/pty-connection/pane-host-capability-flags.ts",
           "mustContain": "providerSession: storedStatus.providerSession",
           "why": "completion notifications retain the current provider identity"
+        },
+        {
+          "file": "src/main/agent-hooks/server-relayed-claude-permission-replay.test.ts",
+          "mustContain": "permission-fixture-process",
+          "why": "Keep the feature contract and its exhaustive integration checks aligned."
+        },
+        {
+          "file": "src/main/ai-vault/session-scanner-scope-walk.test.ts",
+          "mustContain": "providerName: { kind: 'absent' }",
+          "why": "Keep the feature contract and its exhaustive integration checks aligned."
+        },
+        {
+          "file": "src/main/runtime/runtime-orchestration-sender-names.test.ts",
+          "mustContain": "providerName",
+          "why": "Keep the feature contract and its exhaustive integration checks aligned."
+        },
+        {
+          "file": "src/renderer/src/runtime/web-session-tabs-sync/terminal-build.ts",
+          "mustContain": "mirrorHostManualName",
+          "why": "Keep the feature contract and its exhaustive integration checks aligned."
         }
       ],
       "tests": [
@@ -1185,7 +1298,13 @@
         "src/main/claude-session-ownership/claude-session-activity.test.ts",
         "src/shared/agent-session-fallback-title.test.ts",
         "src/shared/ai-vault-session-filters.test.ts",
-        "src/renderer/src/components/terminal-pane/pty-connection/resume-identity-launch-config.test.ts"
+        "src/renderer/src/components/terminal-pane/pty-connection/resume-identity-launch-config.test.ts",
+        "src/main/agent-hooks/server-agent-presence.test.ts",
+        "src/main/agent-hooks/server-relayed-claude-permission-replay.test.ts",
+        "src/main/ai-vault/session-scanner-scope-walk.test.ts",
+        "src/main/runtime/runtime-orchestration-sender-names.test.ts",
+        "src/renderer/src/runtime/web-session-tabs-sync/mirrored-terminal-custom-title.test.ts",
+        "src/renderer/src/session-names/mirror-host-manual-name.test.ts"
       ],
       "checks": [
         "pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/components/activity src/renderer/src/lib/activity-thread-display.test.ts src/renderer/src/store/slices/agent-status-batch.test.ts src/renderer/src/store/slices/agent-status.test.ts src/renderer/src/runtime/web-session-tabs-sync-agent-status.test.ts src/renderer/src/runtime/sync-runtime-graph-agent-status-projection.test.ts src/renderer/src/runtime/sync-runtime-graph-agent-status-projection-join.test.ts",
@@ -1197,7 +1316,8 @@
         "pnpm exec vitest run --config config/vitest.config.ts src/main/session-names src/main/ai-vault/session-title-file-reader.test.ts src/main/ai-vault/session-title-file-reader-wsl-stall.test.ts src/main/ai-vault/session-scanner-parse-cache.test.ts src/main/ai-vault/session-parse-cache-persistence.test.ts src/shared/workspace-session-schema.test.ts src/renderer/src/lib/ai-vault-tab-title-sync.test.ts src/renderer/src/components/tab-bar/tab-title-tooltip.test.tsx",
         "pnpm exec vitest run --config config/vitest.config.ts src/shared/session-names src/shared/session-display-title.test.ts src/shared/agent-tab-title.test.ts src/shared/tab-title-resolution.test.ts src/shared/agent-row-conversation-name.test.ts",
         "pnpm exec vitest run --config config/vitest.config.ts src/shared/claude-session-ownership src/main/claude-session-ownership",
-        "pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/components/terminal-pane/pty-connection/resume-identity-launch-config.test.ts"
+        "pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/components/terminal-pane/pty-connection/resume-identity-launch-config.test.ts",
+        "ORCA_BACKGROUND_LAUNCH=1 pnpm exec vitest run --config config/vitest.config.ts src/main/agent-hooks/server-agent-presence.test.ts src/main/agent-hooks/server-relayed-claude-permission-replay.test.ts src/main/ai-vault/session-scanner-scope-walk.test.ts src/main/runtime/runtime-orchestration-sender-names.test.ts src/renderer/src/runtime/web-session-tabs-sync/mirrored-terminal-custom-title.test.ts src/renderer/src/session-names/mirror-host-manual-name.test.ts"
       ]
     },
     {
@@ -1254,7 +1374,11 @@
         "src/main/document-preview-size/document-preview-content-type.ts",
         "src/renderer/src/lib/doc-preview-grants.ts",
         "src/renderer/src/store/workspace-record-selectors.ts",
-        "src/shared/worktree/host-qualified-identity.ts"
+        "src/shared/worktree/host-qualified-identity.ts",
+        "src/renderer/src/components/host-picker/use-bounded-host-rows.ts",
+        "src/renderer/src/components/host-picker/HostListSearchField.tsx",
+        "src/renderer/src/components/host-picker/HostListOverflowNote.tsx",
+        "src/renderer/src/components/host-picker/host-picker-copy.ts"
       ],
       "policyId": "self-hosted-artifacts",
       "ownedPaths": [
@@ -1285,6 +1409,11 @@
         "config/scripts/build-artifact-share-viewer.mjs"
       ],
       "seams": [
+        {
+          "file": "src/main/orcad/orcad-push-startup.test.ts",
+          "mustContain": "toHaveBeenCalledTimes(2)",
+          "why": "Verify hook and artifact settings subscriptions are cleaned up on host shutdown."
+        },
         {
           "file": "src/main/startup/main-process-runtime-service.ts",
           "mustContain": "startArtifactShareForMainProcess",
@@ -1464,6 +1593,21 @@
           "file": "src/renderer/src/components/browser-pane/workspace-doc/HtmlDocPreview.toolbar.test.tsx",
           "mustContain": "Share on local network",
           "why": "exercise the owned network-share button beside upstream toolbar actions"
+        },
+        {
+          "file": "src/shared/host-operation-ownership.ts",
+          "mustContain": "HOST_OPERATION_OWNERSHIP",
+          "why": "Keep the feature contract and its exhaustive integration checks aligned."
+        },
+        {
+          "file": "src/main/startup/main-process-ready-duplicate-pty-repair.test.ts",
+          "mustContain": "getAppPath",
+          "why": "Keep the feature contract and its exhaustive integration checks aligned."
+        },
+        {
+          "file": "src/main/runtime/construction/runtime-composition-parity.test.ts",
+          "mustContain": "DECLARED_HOST_DIFFERENCES",
+          "why": "Keep the feature contract and its exhaustive integration checks aligned."
         }
       ],
       "tests": [
@@ -1484,11 +1628,16 @@
         "src/renderer/src/components/editor/EditorPanelHeader.test.tsx",
         "src/cli/index.test.ts",
         "src/renderer/src/hooks/useSettingsNavigationMetadata.test.ts",
-        "src/renderer/src/components/settings/OrcaAccountSettingsPane.test.tsx"
+        "src/renderer/src/components/settings/OrcaAccountSettingsPane.test.tsx",
+        "src/renderer/src/components/self-hosted-artifacts/page/lan-artifact-host-list.test.tsx",
+        "src/shared/host-operation-ownership.test.ts",
+        "src/main/startup/main-process-ready-duplicate-pty-repair.test.ts",
+        "src/main/runtime/construction/runtime-composition-parity.test.ts"
       ],
       "checks": [
         "pnpm exec vitest run --config config/vitest.config.ts src/main/self-hosted-artifacts src/cli/self-hosted-artifacts src/renderer/src/components/self-hosted-artifacts src/renderer/src/components/editor/EditorPanelHeader.test.tsx src/renderer/src/hooks/useSettingsNavigationMetadata.test.ts src/cli/index.test.ts src/renderer/src/components/browser-pane/workspace-doc src/renderer/src/components/settings/OrcaAccountSettingsPane.test.tsx src/renderer/src/components/unexpected-signout",
-        "pnpm run build:artifact-share-viewer"
+        "pnpm run build:artifact-share-viewer",
+        "ORCA_BACKGROUND_LAUNCH=1 pnpm exec vitest run --config config/vitest.config.ts src/shared/host-operation-ownership.test.ts src/main/startup/main-process-ready-duplicate-pty-repair.test.ts src/main/runtime/construction/runtime-composition-parity.test.ts"
       ]
     },
     {
@@ -1564,10 +1713,7 @@
       "title": "HTML 预览在当前面板打开：眼睛按钮不再强制右分屏",
       "goal": "预览 tab 建在发起操作的 pane 内并切过去，本地与远程工作区落位一致",
       "journal": "docs/issue/HTML预览在当前面板打开/journal.md",
-      "dependsOn": [
-        "src/renderer/src/lib/file-preview.ts",
-        "src/renderer/src/store/index.ts"
-      ],
+      "dependsOn": ["src/renderer/src/lib/file-preview.ts", "src/renderer/src/store/index.ts"],
       "policyId": "html-preview-in-pane",
       "ownedPaths": [
         "src/renderer/src/components/file-preview-pane/**",
@@ -1613,9 +1759,7 @@
           "why": "Chinese copy for the same button (REQ-406)"
         }
       ],
-      "tests": [
-        "src/renderer/src/components/file-preview-pane/open-file-preview-in-pane.test.ts"
-      ],
+      "tests": ["src/renderer/src/components/file-preview-pane/open-file-preview-in-pane.test.ts"],
       "checks": [
         "pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/components/file-preview-pane src/renderer/src/lib/file-preview.test.ts"
       ]
@@ -1629,16 +1773,16 @@
         "src/shared/runtime-types.ts",
         "src/renderer/src/runtime/runtime-file-client-types.ts",
         "src/renderer/src/runtime/runtime-rpc-client.ts",
-        "src/renderer/src/runtime/runtime-rpc-result.ts"
+        "src/renderer/src/runtime/runtime-rpc-result.ts",
+        "src/renderer/src/runtime/runtime-paged-file-read.ts",
+        "src/renderer/src/runtime/runtime-file-range-client.ts"
       ],
       "policyId": "remote-editor-large-file-read",
       "ownedPaths": [
         "src/renderer/src/runtime-large-file/**",
         "docs/issue/远程大文件编辑器读取/**"
       ],
-      "requiredFiles": [
-        "src/renderer/src/runtime-large-file/assemble-runtime-file-chunks.ts"
-      ],
+      "requiredFiles": ["src/renderer/src/runtime-large-file/assemble-runtime-file-chunks.ts"],
       "seams": [
         {
           "file": "src/renderer/src/runtime/runtime-file-read-client.ts",
@@ -1649,14 +1793,31 @@
           "file": "src/renderer/src/runtime/runtime-file-client.test.ts",
           "mustContain": "files.readChunk",
           "why": "the read path's own tests pin both the chunked completion and the old-host remedy (REQ-701, REQ-703)"
+        },
+        {
+          "file": "src/renderer/src/runtime/runtime-paged-file-read.ts",
+          "mustContain": "maxBytes = PAGED_REMOTE_FILE_MAX_BYTES",
+          "why": "Keep the feature contract and its exhaustive integration checks aligned."
+        },
+        {
+          "file": "src/renderer/src/runtime/runtime-paged-file-read.test.ts",
+          "mustContain": "RUNTIME_EDITOR_TEXT_MAX_BYTES",
+          "why": "Keep the feature contract and its exhaustive integration checks aligned."
+        },
+        {
+          "file": "tests/e2e/paired-remote-large-file-open.spec.ts",
+          "mustContain": "RUNTIME_EDITOR_TEXT_MAX_BYTES",
+          "why": "Keep the feature contract and its exhaustive integration checks aligned."
         }
       ],
       "tests": [
         "src/renderer/src/runtime-large-file/assemble-runtime-file-chunks.test.ts",
-        "src/renderer/src/runtime/runtime-file-client.test.ts"
+        "src/renderer/src/runtime/runtime-file-client.test.ts",
+        "src/renderer/src/runtime/runtime-paged-file-read.test.ts"
       ],
       "checks": [
-        "pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/runtime-large-file src/renderer/src/runtime/runtime-file-client.test.ts"
+        "pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/runtime-large-file src/renderer/src/runtime/runtime-file-client.test.ts",
+        "ORCA_BACKGROUND_LAUNCH=1 pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/runtime/runtime-paged-file-read.test.ts"
       ]
     },
     {
@@ -1801,6 +1962,11 @@
       ],
       "seams": [
         {
+          "file": "mobile/src/session/MobileSessionSheets.test.tsx",
+          "mustContain": "deviceTokenRef: { current: null }",
+          "why": "New Tab fixture supplies continuation scope without host requests."
+        },
+        {
           "file": "src/renderer/src/lib/agent-session-continuation.ts",
           "mustContain": "shared/agent-session-continuation/continuation-prompt",
           "why": "desktop keeps its import path while the prompt builder lives in shared"
@@ -1938,9 +2104,7 @@
         "docs/issue/远程Tab发布血缘修复/**",
         "src/main/runtime/headless-sibling-writers-keep-publication-epoch.test.ts"
       ],
-      "requiredFiles": [
-        "src/main/runtime/headless-sibling-writers-keep-publication-epoch.test.ts"
-      ],
+      "requiredFiles": ["src/main/runtime/headless-sibling-writers-keep-publication-epoch.test.ts"],
       "seams": [
         {
           "file": "src/main/runtime/session-tabs/headless-tab-group-moves.ts",
@@ -1963,9 +2127,7 @@
           "why": "closing a chat edits content without replacing the publisher"
         }
       ],
-      "tests": [
-        "src/main/runtime/headless-sibling-writers-keep-publication-epoch.test.ts"
-      ],
+      "tests": ["src/main/runtime/headless-sibling-writers-keep-publication-epoch.test.ts"],
       "checks": [
         "pnpm exec vitest run --config config/vitest.config.ts src/main/runtime/headless-sibling-writers-keep-publication-epoch.test.ts src/main/runtime/runtime-headless-publication-contracts.test.ts"
       ]
@@ -2039,6 +2201,31 @@
         "mobile/src/file-attachment-upload/native-file-verbs.ts"
       ],
       "seams": [
+        {
+          "file": "mobile/src/session/MobileNativeChatComposer.test.ts",
+          "mustContain": "Paperclip",
+          "why": "Composer fixture includes the attachment icon."
+        },
+        {
+          "file": "mobile/src/session/MobileNativeChatView.prompt-presentation.test.ts",
+          "mustContain": "Paperclip",
+          "why": "Prompt fixture includes the attachment icon."
+        },
+        {
+          "file": "mobile/src/session/mobile-dictation-disabled-controls.test.tsx",
+          "mustContain": "Paperclip",
+          "why": "Disabled dictation retains attachment actions."
+        },
+        {
+          "file": "mobile/src/session/mobile-dictation-mode-refresh.test.tsx",
+          "mustContain": "Paperclip",
+          "why": "Dictation fixture includes the attachment icon."
+        },
+        {
+          "file": "mobile/src/session/mobile-native-chat-merged-snapshot-parity-hooks.test.tsx",
+          "mustContain": "files: { isUploadingToChat: false",
+          "why": "Overlay fixture supplies the file attachment contract."
+        },
         {
           "file": "src/main/runtime/rpc/methods/index.ts",
           "mustContain": "...FILE_ATTACHMENT_UPLOAD_METHODS",
@@ -2138,6 +2325,11 @@
           "file": "config/scripts/mobile-web-app-held-press-probe-routes.mjs",
           "mustContain": "fileAttachments: { openTerminalSheet",
           "why": "the key-bar probe mounts the command dock, which now opens the attach sheet"
+        },
+        {
+          "file": "src/shared/host-operation-ownership.ts",
+          "mustContain": "HOST_OPERATION_OWNERSHIP",
+          "why": "Keep the feature contract and its exhaustive integration checks aligned."
         }
       ],
       "tests": [
@@ -2155,11 +2347,154 @@
         "mobile/src/file-attachment-upload/native-file-verbs.test.ts",
         "mobile/src/file-attachment-upload/attachment-base64-length.test.ts",
         "config/scripts/mobile-web-page-routes-contract.test.mjs",
-        "config/scripts/mobile-web-app-file-attachment-grant.test.mjs"
+        "config/scripts/mobile-web-app-file-attachment-grant.test.mjs",
+        "src/shared/host-operation-ownership.test.ts"
       ],
       "checks": [
         "pnpm exec vitest run --config config/vitest.config.ts src/shared/file-attachment-upload src/main/file-attachment-upload src/renderer/src/file-attachment-upload src/main/runtime/rpc/methods/file-attachment-upload.test.ts src/main/runtime/runtime-rpc/fork-mobile-rpc-method-allowlist.test.ts src/main/runtime/mobile-rpc-allowlist.test.ts config/scripts/mobile-web-page-routes-contract.test.mjs config/scripts/mobile-web-app-file-attachment-grant.test.mjs",
-        "pnpm --dir mobile exec vitest run src/file-attachment-upload src/session/use-mobile-native-chat-image-attachments.test.ts src/session/use-mobile-session-image-attachments.test.tsx src/mobile-web-shell/page-route-policy.test.ts src/mobile-web-shell/bridge-host-init.test.ts src/mobile-web-shell/bridge/bridge-media-verbs.test.ts"
+        "pnpm --dir mobile exec vitest run src/file-attachment-upload src/session/use-mobile-native-chat-image-attachments.test.ts src/session/use-mobile-session-image-attachments.test.tsx src/mobile-web-shell/page-route-policy.test.ts src/mobile-web-shell/bridge-host-init.test.ts src/mobile-web-shell/bridge/bridge-media-verbs.test.ts",
+        "ORCA_BACKGROUND_LAUNCH=1 pnpm exec vitest run --config config/vitest.config.ts src/shared/host-operation-ownership.test.ts"
+      ]
+    },
+    {
+      "id": "terminal-launch-diagnostics",
+      "title": "终端创建链路诊断：重复会话来源可追踪",
+      "goal": "记录恢复入口、RPC 调用方、旧终端候选及实际 PTY 创建结果，不改变会话行为",
+      "journal": "docs/issue/终端创建链路诊断/journal.md",
+      "policyId": "terminal-launch-diagnostics",
+      "ownedPaths": [
+        "src/shared/terminal-launch-diagnostics/**",
+        "src/main/terminal-launch-diagnostics/**",
+        "src/renderer/src/terminal-launch-diagnostics/**",
+        "docs/issue/终端创建链路诊断/**"
+      ],
+      "requiredFiles": [
+        "src/shared/terminal-launch-diagnostics/launch-evidence.ts",
+        "src/main/terminal-launch-diagnostics/launch-trace.ts",
+        "src/renderer/src/terminal-launch-diagnostics/launch-origin.ts"
+      ],
+      "dependsOn": [
+        "src/renderer/src/runtime/web-runtime-session-types.ts",
+        "src/main/ipc/pty/runtime/spawn-state.ts",
+        "src/main/providers/pty-provider-contract.ts",
+        "src/shared/sha256.ts",
+        "src/shared/stable-pane-id.ts",
+        "src/main/observability/tracer.ts",
+        "src/shared/terminal-surface-id.ts",
+        "src/main/observability/local-file-sink.ts",
+        "src/main/daemon/daemon-file-log.ts",
+        "src/renderer/src/lib/crash-breadcrumb-recorder.ts",
+        "src/renderer/src/store/index.ts",
+        "src/renderer/src/runtime/web-runtime-terminal-create-operation.ts",
+        "src/renderer/src/lib/launch-ai-vault-session.ts"
+      ],
+      "seams": [
+        {
+          "file": "src/main/runtime/rpc/dispatcher.ts",
+          "mustContain": "traceTerminalLaunchRpc",
+          "why": "capture creating/activating RPC callers, including rejected requests"
+        },
+        {
+          "file": "src/main/ipc/pty/runtime/spawn.ts",
+          "mustContain": "recordTerminalLaunchStage",
+          "why": "record every controller admission and early adoption"
+        },
+        {
+          "file": "src/main/ipc/pty/runtime/spawn-execute.ts",
+          "mustContain": "recordTerminalLaunchStage",
+          "why": "record the existing owner candidate and physical provider result"
+        },
+        {
+          "file": "src/main/daemon/daemon-terminal-admission.ts",
+          "mustContain": "launchEvidence",
+          "why": "join daemon requests and outcomes without changing the wire"
+        },
+        {
+          "file": "src/renderer/src/store/terminals/terminal-startup-queues.ts",
+          "mustContain": "recordTerminalLaunchOrigin",
+          "why": "capture all queued commands with safe compiled callsites, including explicit history resume"
+        },
+        {
+          "file": "src/renderer/src/lib/sleeping-agent-session-launch.ts",
+          "mustContain": "recordTerminalLaunchOrigin",
+          "why": "distinguish automatic new-tab resume"
+        },
+        {
+          "file": "src/renderer/src/components/terminal-pane/pty-connection/deferred-cold-restore-and-snapshot.ts",
+          "mustContain": "recordTerminalLaunchOrigin",
+          "why": "distinguish in-pane cold restore"
+        },
+        {
+          "file": "src/renderer/src/hooks/ipc-events/terminal-request-ipc-bridge.ts",
+          "mustContain": "recordTerminalLaunchOrigin",
+          "why": "join runtime-to-renderer tab creation by request identity"
+        },
+        {
+          "file": "src/renderer/src/store/terminals/terminal-tab-creation.ts",
+          "mustContain": "recordCreatedTerminalTab",
+          "why": "capture all renderer-created tabs, not only known resume entry points"
+        },
+        {
+          "file": "src/renderer/src/components/ai-vault-session-resume/session-terminal-launch.ts",
+          "mustContain": "terminal-launch-diagnostics/history-session-launch",
+          "why": "name the history resume entry explicitly on local and paired paths"
+        },
+        {
+          "file": "src/renderer/src/components/tab-group/AiVaultSessionDropLayer.tsx",
+          "mustContain": "launchDroppedAiVaultSession",
+          "why": "name the drag resume entry without changing the existing launch implementation"
+        },
+        {
+          "file": "src/renderer/src/lib/launch-ai-vault-session-and-reveal.ts",
+          "mustContain": "launchRevealedAiVaultSession",
+          "why": "name the resume-and-reveal shortcut without changing its behavior"
+        },
+        {
+          "file": "src/main/ipc/crash-reporting-renderer-breadcrumbs.ts",
+          "mustContain": "terminal_launch_origin",
+          "why": "flush low-frequency terminal origin evidence before a main-process crash"
+        },
+        {
+          "file": "src/renderer/src/runtime/web-runtime-terminal-creation.ts",
+          "mustContain": "terminal-launch-diagnostics/paired-terminal-launch",
+          "why": "record paired launch callsites before capability selection"
+        },
+        {
+          "file": "src/main/observability/index.ts",
+          "mustContain": "diagnostics-ready",
+          "why": "persist a startup marker so deployed diagnostics can be checked"
+        },
+        {
+          "file": ".gitignore",
+          "mustContain": "!docs/issue/终端创建链路诊断/**",
+          "why": "keep diagnostic audits and validation records tracked"
+        },
+        {
+          "file": "src/renderer/src/lib/launch-agent-in-new-tab-web-runtime.test.ts",
+          "mustContain": "request-local-token",
+          "why": "Keep the feature contract and its exhaustive integration checks aligned."
+        },
+        {
+          "file": "src/renderer/src/components/terminal-pane/pty-connection-agent-session-resume.spec.ts",
+          "mustContain": "codex-session-1",
+          "why": "Keep the feature contract and its exhaustive integration checks aligned."
+        },
+        {
+          "file": "src/renderer/src/components/terminal-pane/pty-connection-sleeping-resume-banner.spec.ts",
+          "mustContain": "codex-session-1",
+          "why": "Keep the feature contract and its exhaustive integration checks aligned."
+        }
+      ],
+      "tests": [
+        "src/shared/terminal-launch-diagnostics/launch-evidence.test.ts",
+        "src/main/terminal-launch-diagnostics/launch-trace.test.ts",
+        "src/renderer/src/terminal-launch-diagnostics/launch-origin.test.ts",
+        "src/renderer/src/lib/launch-agent-in-new-tab-web-runtime.test.ts",
+        "src/renderer/src/components/terminal-pane/pty-connection-restore-and-resume.test.ts"
+      ],
+      "checks": [
+        "ORCA_BACKGROUND_LAUNCH=1 pnpm exec vitest run --config config/vitest.config.ts src/shared/terminal-launch-diagnostics src/main/terminal-launch-diagnostics src/renderer/src/terminal-launch-diagnostics",
+        "ORCA_BACKGROUND_LAUNCH=1 pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/lib/launch-agent-in-new-tab-web-runtime.test.ts src/renderer/src/components/terminal-pane/pty-connection-restore-and-resume.test.ts"
       ]
     },
     {
@@ -2178,7 +2513,8 @@
         "src/shared/execution-host.ts",
         "src/renderer/src/runtime/runtime-environment-revision.ts",
         "src/renderer/src/store/slices/runtime-environment-ssh-selectors.ts",
-        "src/shared/terminal-surface-id.ts"
+        "src/shared/terminal-surface-id.ts",
+        "src/renderer/src/lib/resolve-owner.ts"
       ],
       "policyId": "terminal-id-copy-routing",
       "ownedPaths": [
@@ -2200,9 +2536,7 @@
           "why": "Pass the source workspace to the host-aware terminal handle copy operation"
         }
       ],
-      "tests": [
-        "src/renderer/src/terminal-id-copy-routing/copy-workspace-terminal-handle.test.ts"
-      ],
+      "tests": ["src/renderer/src/terminal-id-copy-routing/copy-workspace-terminal-handle.test.ts"],
       "checks": [
         "ORCA_BACKGROUND_LAUNCH=1 pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/terminal-id-copy-routing src/renderer/src/components/terminal-pane/terminal-handle-copy.test.ts"
       ]

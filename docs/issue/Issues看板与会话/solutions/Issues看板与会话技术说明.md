@@ -21,19 +21,19 @@ issue: Issues看板与会话
 
 ## 需求覆盖索引
 
-| 关联需求                                    | 技术章节与边界                                              |
-| ------------------------------------------- | ----------------------------------------------------------- |
-| REQ-001、REQ-006、REQ-010                   | §1、§2、§5、§6：身份、可信物化与运行投影                    |
-| REQ-002、REQ-003、REQ-008、REQ-020          | §4、§11：外部引用、树、绑定、归档与原生 Project transfer    |
-| REQ-004、REQ-017、REQ-019、REQ-022          | §8：查询、刷新、虚拟列表与原 Workspace 行；容量缺口见 §11   |
-| REQ-005、REQ-007、REQ-009、REQ-024 | §5：claim、可见性、重试/忘记；公共身份保护见独立需求，未接线边界见 §11 |
-| REQ-011、REQ-023、REQ-027                   | §9：AI Vault 恢复和 launch-config 原 pane 身份窗口          |
-| REQ-012、REQ-013                            | §6：Round 义务、去重、后续输入与重开                        |
-| REQ-014、REQ-016 | §3：事务、receipt、revision 与 schema v4；§10 仅作旧标题数据兼容参考 |
-| REQ-015、REQ-018                            | §7、§11：host/RPC 合同、readiness 和未完成的 Node-only 装配 |
-| [公共命名依赖](../../会话命名与身份保护/requirements/会话命名与身份保护.md) | 原 REQ-025/026/028 已迁出；Issues 消费公共名称和已接受身份 |
-| REQ-021、REQ-029                            | §11、§12：当前限制、后续目标与分层验收                      |
-| REQ-030                                     | §7.1、§8.4：变化通知流、读取时机与不可达主机                |
+| 关联需求                                                                    | 技术章节与边界                                                         |
+| --------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| REQ-001、REQ-006、REQ-010                                                   | §1、§2、§5、§6：身份、可信物化与运行投影                               |
+| REQ-002、REQ-003、REQ-008、REQ-020                                          | §4、§11：外部引用、树、绑定、归档与原生 Project transfer               |
+| REQ-004、REQ-017、REQ-019、REQ-022                                          | §8：查询、刷新、虚拟列表与原 Workspace 行；容量缺口见 §11              |
+| REQ-005、REQ-007、REQ-009、REQ-024                                          | §5：claim、可见性、重试/忘记；公共身份保护见独立需求，未接线边界见 §11 |
+| REQ-011、REQ-023、REQ-027                                                   | §9：AI Vault 恢复和 launch-config 原 pane 身份窗口                     |
+| REQ-012、REQ-013                                                            | §6：Round 义务、去重、后续输入与重开                                   |
+| REQ-014、REQ-016                                                            | §3：事务、receipt、revision 与 schema v4；§10 仅作旧标题数据兼容参考   |
+| REQ-015、REQ-018                                                            | §7、§11：host/RPC 合同、readiness 和未完成的 Node-only 装配            |
+| [公共命名依赖](../../会话命名与身份保护/requirements/会话命名与身份保护.md) | 原 REQ-025/026/028 已迁出；Issues 消费公共名称和已接受身份             |
+| REQ-021、REQ-029                                                            | §11、§12：当前限制、后续目标与分层验收                                 |
+| REQ-030                                                                     | §7.1、§8.4：变化通知流、读取时机与不可达主机                           |
 
 ## 1. 模块与数据所有权
 
@@ -221,7 +221,7 @@ TTL 后真实会话可在未归属区再次 Bind existing；原无 identity 预�
 | degraded    | storage ready，Hook disabled/failed；CRUD/显式 prepare 可用，普通启动无可信 Hook 不物化 |
 | unavailable | storage open/migration 失败；status-only registry 可读，其他 Issue 操作失败，不删库     |
 | unsupported | paired host 不含 capability；client 在 list/write 前拒绝                                |
-| offline     | route 不可用，禁写；不提供离线 mutation queue；paired host 不在联系时不发请求，直接显示  |
+| offline     | route 不可用，禁写；不提供离线 mutation queue；paired host 不在联系时不发请求，直接显示 |
 
 [IssueFeatureReadinessRegistry](../../../../src/main/issues/issue-feature-readiness.ts)保存 readiness，客户端还检验返回 authority selector。当前 `IssueDomainSyncGate.refreshRoute` 把所有非 Unsupported 异常归为 offline；类型中有 error，尚不能据此宣称独立 error/retry 流程完成。
 
@@ -407,23 +407,23 @@ Tab 既有 customTitle/quickCommandLabel/OpenCode 有意义标题优先；清人
 
 ## 11. 当前限制、撤回方案与风险
 
-| 项目                    | 已核实的边界                                                                                                             | 文档处理                                                                 |
-| ----------------------- | ------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------ |
-| SQL 容量 | 摘要使用 SQL 计数、当前页最新轮次；会话元数据和轮次详情仍有全量读取 | 局部实现，其余容量目标保留 |
-| 刷新调度                | 全局 sequence + setInterval；非 Issues 仍拉 Conversations                                                                | 保留真实周期，不宣称串行/零后台读取                                      |
-| 错误分类                | 非 unsupported 异常统一 offline                                                                                          | 独立 error/retry 保留待实现测试                                          |
-| Workspace 可用性        | query 默认 effectiveProject=null、workspaceAvailable=true，service 未注入真实 resolver                                   | 最终动作靠原生 target 校验；不要信其为在线证明                           |
-| Archive runtime waiting | repository 默认 probe=false                                                                                              | unresolved waiting Round 有防护；纯运行态窗口另测                        |
-| Forget replay           | grant 先检查且成功即消费                                                                                                 | 通用 receipt 不能证明该路径可 replay                                     |
-| Project move guard      | 当前 src 无旧 guard/错误码接线                                                                                           | 撤回，保留原 transfer 回归                                               |
-| 原生恢复                | 承接原 AI Vault 能力与错误边界                                                                                           | 不承诺第二套恢复状态机或全程幂等                                         |
-| Codex daemon 隔离旧方案 | 当前 src 未发现 `-c features.hooks=true` 注入或 codexHookDaemonIsolation 开关                                            | 历史候选原因留简述，不能列已实现                                         |
-| 标题输出                | refresh 日志当前包含 title JSON；隐私检查需按真实候选数据执行                                                            | 不先行宣称全日志无用户文本                                               |
-| Provider 快照覆盖率     | 历史覆盖率与“文件消失”因果未重新实证；缺快照不等于缺文件 | 以新调研的读取、快照和失败分支为准，不从NULL反推根因 |
-| 附着铸造                | 当前title只存人工覆盖；稳定fallback可由Provider identity推导，Issues纯展示已使用 | 不把未写minted当作抖动的必要原因，不恢复已撤回持久化提案 |
-| 内部调用纳管            | 当前仅有特定启发式过滤；历史调用方归属与88/89统计撤回 | 需要host、launch及事件证据，不能以prompt猜创建方 |
-| 远端装配与验证          | Node-only orcad 未见生产 bootstrap 调用，本轮也未连接 SSH/paired runtime 或执行 CDP                                      | 分开协议路由、宿主接线和真实成功；不能写 paired 已可用                   |
-| 真实 App                | 暂存 v4/标题代码未在本轮构建验收                                                                                         | 历史截图/包 hash 不能代表该工作树                                        |
+| 项目                    | 已核实的边界                                                                           | 文档处理                                                 |
+| ----------------------- | -------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| SQL 容量                | 摘要使用 SQL 计数、当前页最新轮次；会话元数据和轮次详情仍有全量读取                    | 局部实现，其余容量目标保留                               |
+| 刷新调度                | 全局 sequence + setInterval；非 Issues 仍拉 Conversations                              | 保留真实周期，不宣称串行/零后台读取                      |
+| 错误分类                | 非 unsupported 异常统一 offline                                                        | 独立 error/retry 保留待实现测试                          |
+| Workspace 可用性        | query 默认 effectiveProject=null、workspaceAvailable=true，service 未注入真实 resolver | 最终动作靠原生 target 校验；不要信其为在线证明           |
+| Archive runtime waiting | repository 默认 probe=false                                                            | unresolved waiting Round 有防护；纯运行态窗口另测        |
+| Forget replay           | grant 先检查且成功即消费                                                               | 通用 receipt 不能证明该路径可 replay                     |
+| Project move guard      | 当前 src 无旧 guard/错误码接线                                                         | 撤回，保留原 transfer 回归                               |
+| 原生恢复                | 承接原 AI Vault 能力与错误边界                                                         | 不承诺第二套恢复状态机或全程幂等                         |
+| Codex daemon 隔离旧方案 | 当前 src 未发现 `-c features.hooks=true` 注入或 codexHookDaemonIsolation 开关          | 历史候选原因留简述，不能列已实现                         |
+| 标题输出                | refresh 日志当前包含 title JSON；隐私检查需按真实候选数据执行                          | 不先行宣称全日志无用户文本                               |
+| Provider 快照覆盖率     | 历史覆盖率与“文件消失”因果未重新实证；缺快照不等于缺文件                               | 以新调研的读取、快照和失败分支为准，不从NULL反推根因     |
+| 附着铸造                | 当前title只存人工覆盖；稳定fallback可由Provider identity推导，Issues纯展示已使用       | 不把未写minted当作抖动的必要原因，不恢复已撤回持久化提案 |
+| 内部调用纳管            | 当前仅有特定启发式过滤；历史调用方归属与88/89统计撤回                                  | 需要host、launch及事件证据，不能以prompt猜创建方         |
+| 远端装配与验证          | Node-only orcad 未见生产 bootstrap 调用，本轮也未连接 SSH/paired runtime 或执行 CDP    | 分开协议路由、宿主接线和真实成功；不能写 paired 已可用   |
+| 真实 App                | 暂存 v4/标题代码未在本轮构建验收                                                       | 历史截图/包 hash 不能代表该工作树                        |
 
 旧 `_历史稿` 中的介入卡强分类、自报模板、收件箱出队、diff 快照、整理稿自动起草、Forge 同步、Dashboard 换底、移动端窄路径已不属于本需求当前产品范围。其有用原则归并为 Issue/会话分工、可下钻和明确 read/resolve；不保留平行需求口径。
 

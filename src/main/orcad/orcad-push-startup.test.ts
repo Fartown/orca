@@ -259,10 +259,10 @@ it('starts push after RPC identity is available and stops dispatch on shutdown',
   acquireProfileStateMaintenance(state.root).release()
   expect(state.controller.getListenerCount()).toBe(0)
   expect(state.rpcStarted).toBe(false)
-  expect(state.onSettingsChanged).toHaveBeenCalledOnce()
-  expect(state.removeSettingsListener).toHaveBeenCalledOnce()
+  expect(state.onSettingsChanged).toHaveBeenCalledTimes(2)
+  expect(state.removeSettingsListener).toHaveBeenCalledTimes(2)
   await host.stop()
-  expect(state.removeSettingsListener).toHaveBeenCalledOnce()
+  expect(state.removeSettingsListener).toHaveBeenCalledTimes(2)
   expect(await state.controller.registerPushDevice({} as never)).toMatchObject({
     registered: false
   })

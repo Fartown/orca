@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { ArtifactListToolbar } from '@/components/artifacts/ArtifactListToolbar'
 import { ArtifactsPageSkeleton } from '@/components/artifacts/ArtifactsPageSkeleton'
 import { ArtifactsPageErrorBanner } from '@/components/artifacts/ArtifactsPageStates'
@@ -7,6 +7,10 @@ import { translate } from '@/i18n/i18n'
 import { useAppStore } from '@/store'
 import { LanArtifactHostSection } from './LanArtifactHostSection'
 import { useLanArtifactHosts } from './use-lan-artifact-hosts'
+import { useBoundedHostRows } from '@/components/host-picker/use-bounded-host-rows'
+import { HostListSearchField } from '@/components/host-picker/HostListSearchField'
+import { HostListOverflowNote } from '@/components/host-picker/HostListOverflowNote'
+import { noHostsMatchLabel } from '@/components/host-picker/host-picker-copy'
 
 /** Shared workspaces grouped by the computer that serves them. */
 export default function LanArtifactsPage(): React.JSX.Element {
@@ -16,6 +20,16 @@ export default function LanArtifactsPage(): React.JSX.Element {
   const confirm = useConfirmationDialog()
   const { hosts, loading, error, stoppingToken, reload, stopWorkspace } = useLanArtifactHosts()
   const [query, setQuery] = useState('')
+  const hostChoices = useMemo(
+    () =>
+      hosts.map((listing) => ({
+        id: listing.host.executionHostId,
+        label: listing.host.label,
+        listing
+      })),
+    [hosts]
+  )
+  const rows = useBoundedHostRows(hostChoices)
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent): void {
@@ -63,6 +77,12 @@ export default function LanArtifactsPage(): React.JSX.Element {
         <ArtifactsPageSkeleton />
       ) : (
         <div className="scrollbar-sleek min-h-0 flex-1 space-y-6 overflow-y-auto px-3 pb-6 md:px-5">
+          {rows.searchable ? (
+            <HostListSearchField value={rows.query} onChange={rows.setQuery} />
+          ) : null}
+          {rows.query.trim() && rows.shown.length === 0 ? (
+            <p className="text-xs text-muted-foreground">{noHostsMatchLabel()}</p>
+          ) : null}
           {totalWorkspaces === 0 && hosts.every((host) => host.service.state !== 'unverifiable') ? (
             <p className="text-xs text-muted-foreground">
               {translate(
@@ -71,7 +91,7 @@ export default function LanArtifactsPage(): React.JSX.Element {
               )}
             </p>
           ) : null}
-          {hosts.map((listing) => (
+          {rows.shown.map(({ listing }) => (
             <LanArtifactHostSection
               key={listing.host.executionHostId}
               listing={listing}
@@ -107,6 +127,7 @@ export default function LanArtifactsPage(): React.JSX.Element {
               }
             />
           ))}
+          <HostListOverflowNote hiddenCount={rows.hiddenCount} />
         </div>
       )}
     </main>

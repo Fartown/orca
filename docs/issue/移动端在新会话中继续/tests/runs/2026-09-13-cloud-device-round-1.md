@@ -1,5 +1,5 @@
 ---
-title: "2026-09-13 云真机第一轮"
+title: '2026-09-13 云真机第一轮'
 document_type: test-run
 status: completed
 created: 2026-09-13
@@ -18,34 +18,34 @@ updated: 2026-09-13
 
 ## 2. 执行结果
 
-| Case ID | 实际结果 | 结论 | 证据 | 缺陷或遗留问题 |
-| --- | --- | --- | --- | --- |
-| TC-001 | 长按 `claude · add auth middleware` 后菜单第 2 项为「Continue in New Session…」，位于 Switch to chat view 与 Switch to Desktop 之间 | PASS | `evidence/device/14-longpress-menu.png` | - |
-| TC-002 | 长按 `zsh` 后菜单仅 Switch to Desktop / Rename / Clear Terminal / Close / Close Other Tabs | PASS | `evidence/device/21-zsh-longpress-no-entry.png` | - |
-| TC-003 | 面板标题为源 tab 标题，副标题 `Original agent: Claude`，含模式切换行与 Continue with Codex / Continue with Claude | PASS | `evidence/device/15-continuation-picker.png` | - |
-| TC-004 | 切到完整记录后文案改为「Switch to focused handoff / Now: full session transcript …」，重开面板回到 focused | PASS | `evidence/device/16-full-transcript-mode.png`、`19-picker-second-open.png` | - |
-| TC-005 | 两种模式各投递一次：RPC 依次为 createTerminal → wait → send，无其他方法；full 模式 prompt 1140 字节、focused 模式 1252 字节，均与共享内核输出逐字一致；投递后客户端订阅 `term-continuation` | PASS | `evidence/prompts/`、`evidence/device/17-after-continue-claude.png`、`20-after-continue-codex.png` | mock 的 `session.tabs.list` 不返回新建 tab，故 tab 条短暂只剩一个，属 fixture 局限 |
-| TC-006 | 仅验证幂等键：`clientMutationId = mobile-continuation:surface-claude:mtzo6qwy`，以源 tab id 为键；四个失败态未在真机复现 | BLOCKED | 同上日志 | 需要可注入失败的主机，留待下一轮 |
-| TC-007 | 未执行 | - | - | 需要桌面端 Orca 回归 |
-| TC-008 | 未执行 | - | - | 需要一台旧版本主机 |
+| Case ID | 实际结果                                                                                                                                                                                    | 结论    | 证据                                                                                               | 缺陷或遗留问题                                                                     |
+| ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- | -------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| TC-001  | 长按 `claude · add auth middleware` 后菜单第 2 项为「Continue in New Session…」，位于 Switch to chat view 与 Switch to Desktop 之间                                                         | PASS    | `evidence/device/14-longpress-menu.png`                                                            | -                                                                                  |
+| TC-002  | 长按 `zsh` 后菜单仅 Switch to Desktop / Rename / Clear Terminal / Close / Close Other Tabs                                                                                                  | PASS    | `evidence/device/21-zsh-longpress-no-entry.png`                                                    | -                                                                                  |
+| TC-003  | 面板标题为源 tab 标题，副标题 `Original agent: Claude`，含模式切换行与 Continue with Codex / Continue with Claude                                                                           | PASS    | `evidence/device/15-continuation-picker.png`                                                       | -                                                                                  |
+| TC-004  | 切到完整记录后文案改为「Switch to focused handoff / Now: full session transcript …」，重开面板回到 focused                                                                                  | PASS    | `evidence/device/16-full-transcript-mode.png`、`19-picker-second-open.png`                         | -                                                                                  |
+| TC-005  | 两种模式各投递一次：RPC 依次为 createTerminal → wait → send，无其他方法；full 模式 prompt 1140 字节、focused 模式 1252 字节，均与共享内核输出逐字一致；投递后客户端订阅 `term-continuation` | PASS    | `evidence/prompts/`、`evidence/device/17-after-continue-claude.png`、`20-after-continue-codex.png` | mock 的 `session.tabs.list` 不返回新建 tab，故 tab 条短暂只剩一个，属 fixture 局限 |
+| TC-006  | 仅验证幂等键：`clientMutationId = mobile-continuation:surface-claude:mtzo6qwy`，以源 tab id 为键；四个失败态未在真机复现                                                                    | BLOCKED | 同上日志                                                                                           | 需要可注入失败的主机，留待下一轮                                                   |
+| TC-007  | 未执行                                                                                                                                                                                      | -       | -                                                                                                  | 需要桌面端 Orca 回归                                                               |
+| TC-008  | 未执行                                                                                                                                                                                      | -       | -                                                                                                  | 需要一台旧版本主机                                                                 |
 
 ## 3. 证据索引
 
-| 证据 | 类型 | 对应 Case | 说明 |
-| --- | --- | --- | --- |
-| `.docs/mobile-session-continuation-ui-validation/2026-09-13/evidence/device/13~21*.png` | 截图 | TC-001 ~ TC-005 | 会话页、长按菜单、面板、两种模式、投递后状态、反例 |
-| `.docs/mobile-session-continuation-ui-validation/2026-09-13/evidence/prompts/device-received-full.txt` | 日志 | TC-005 | 真机在完整记录模式下实际投递出去的 prompt 全文 |
-| `.docs/mobile-session-continuation-ui-validation/2026-09-13/evidence/prompts/device-received-focused.txt` | 日志 | TC-005 | 真机在 focused 模式下实际投递出去的 prompt 全文 |
-| `.docs/mobile-session-continuation-ui-validation/2026-09-13/scripts/build-expected-prompt.ts` | 脚本 | TC-005 | 用共享内核复算期望 prompt 并逐字 diff |
-| `.docs/mobile-session-continuation-ui-validation/2026-09-13/README.md`「真机验证」 | 说明 | 全部 | 环境、临时改动与抓到的 RPC 入参 |
+| 证据                                                                                                      | 类型 | 对应 Case       | 说明                                               |
+| --------------------------------------------------------------------------------------------------------- | ---- | --------------- | -------------------------------------------------- |
+| `.docs/mobile-session-continuation-ui-validation/2026-09-13/evidence/device/13~21*.png`                   | 截图 | TC-001 ~ TC-005 | 会话页、长按菜单、面板、两种模式、投递后状态、反例 |
+| `.docs/mobile-session-continuation-ui-validation/2026-09-13/evidence/prompts/device-received-full.txt`    | 日志 | TC-005          | 真机在完整记录模式下实际投递出去的 prompt 全文     |
+| `.docs/mobile-session-continuation-ui-validation/2026-09-13/evidence/prompts/device-received-focused.txt` | 日志 | TC-005          | 真机在 focused 模式下实际投递出去的 prompt 全文    |
+| `.docs/mobile-session-continuation-ui-validation/2026-09-13/scripts/build-expected-prompt.ts`             | 脚本 | TC-005          | 用共享内核复算期望 prompt 并逐字 diff              |
+| `.docs/mobile-session-continuation-ui-validation/2026-09-13/README.md`「真机验证」                        | 说明 | 全部            | 环境、临时改动与抓到的 RPC 入参                    |
 
 ## 4. 缺陷与遗留问题
 
-| 问题 | 严重程度 | 对应 Case | 处理状态 |
-| --- | --- | --- | --- |
-| 失败分支未在真机复现 | 低 | TC-006 | open |
-| 桌面端 UI 回归未做 | 中 | TC-007 | open |
-| 旧版本主机兼容未实测 | 中 | TC-008 | open |
+| 问题                 | 严重程度 | 对应 Case | 处理状态 |
+| -------------------- | -------- | --------- | -------- |
+| 失败分支未在真机复现 | 低       | TC-006    | open     |
+| 桌面端 UI 回归未做   | 中       | TC-007    | open     |
+| 旧版本主机兼容未实测 | 中       | TC-008    | open     |
 
 ## 5. 本轮结论
 

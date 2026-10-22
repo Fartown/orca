@@ -227,6 +227,7 @@ async function mountPhone(): Promise<Phone> {
       controller,
       onOpenFile: () => {},
       images: OVERLAY_IMAGES,
+      files: { isUploadingToChat: false, openChatSheet: () => {} },
       onMicPress: () => {},
       micActive: false,
       dictationMode: 'toggle',

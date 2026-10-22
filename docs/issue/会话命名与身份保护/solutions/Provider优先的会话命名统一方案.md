@@ -25,26 +25,26 @@ issue: 会话命名与身份保护
 
 ## 1. 状态与结论
 
-| 决策 | 本轮结论 |
-| --- | --- |
-| 用户确认的方向 | Provider第一；无Provider名时保持可辨认的多层回退；所有入口一致；Issues不另造命名能力 |
-| 实现取舍 | 先做用户选定的WP0a活跃窗口保护；G0/严格WP0继续作为全量身份/过滤目标，之后WP1来源/排序及WP3/WP4接线；原WP2仍撤出 |
-| 保留/撤出 | 保留Provider证据四态、提示词质量规则及已有人工名回退；撤出新人工名持久化、编辑RPC、迁移；不恢复任何Tab/Issues排序特例 |
-| 难度 | WP0a限定既有listener与私有时间状态，不改DB/wire，但不承诺10行；严格WP0仍取决于归属证据，跨端接线中高 |
-| 完成边界 | WP0a规则级测试与完整headless效果分开；实测非SessionStart旁路后已扩展同窗准入，静默误放、快速重开误拦及同ID污染仍保留；长期身份/可见性/命名分别验收 |
+| 决策           | 本轮结论                                                                                                                                           |
+| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 用户确认的方向 | Provider第一；无Provider名时保持可辨认的多层回退；所有入口一致；Issues不另造命名能力                                                               |
+| 实现取舍       | 先做用户选定的WP0a活跃窗口保护；G0/严格WP0继续作为全量身份/过滤目标，之后WP1来源/排序及WP3/WP4接线；原WP2仍撤出                                    |
+| 保留/撤出      | 保留Provider证据四态、提示词质量规则及已有人工名回退；撤出新人工名持久化、编辑RPC、迁移；不恢复任何Tab/Issues排序特例                              |
+| 难度           | WP0a限定既有listener与私有时间状态，不改DB/wire，但不承诺10行；严格WP0仍取决于归属证据，跨端接线中高                                               |
+| 完成边界       | WP0a规则级测试与完整headless效果分开；实测非SessionStart旁路后已扩展同窗准入，静默误放、快速重开误拦及同ID污染仍保留；长期身份/可见性/命名分别验收 |
 
 ## 2. 需求与目标行为
 
 ### 2.1 唯一排序
 
-| 优先级 | 候选 | 准入规则 |
-| --- | --- | --- |
-| 1 | Provider名 | Provider明确命名字段，或同身份最后确认且未被明确撤销的缓存；经Provider适配器可靠确认的终端传输正式会话名也归此层，不按传输渠道降级；scanner首prompt不能冒充Provider名 |
-| 2 | 已有Orca会话人工名 | 经精确identity读取的旧人工值，仅兼容输入；有Provider名时不主显。不新增公共写入或将旧Tab别名批量认作人工会话名 |
-| 3 | 有效提示词派生名 | 优先Provider文件中首个通过质量门槛的真实任务请求摘要，其次同身份已捕获的首次有效请求/任务摘要；低信息、注入或清理后为空的候选直接跳过 |
-| 4 | 可信终端实时标题 | 复用现有清理：排除状态、spinner、cwd、Agent自称、默认Terminal标签；只使用该会话自身的pane标题 |
-| 5 | 已知任务/命令/历史容器标签 | 仅当有确定归属；旧customTitle或quick-command不得在链外抢占，父Tab标签不能赋给所有分屏会话 |
-| 6 | 稳定默认名 | 有identity用Agent＋短sessionId；identity未建立用Agent/Terminal/Chat默认名 |
+| 优先级 | 候选                       | 准入规则                                                                                                                                                              |
+| ------ | -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1      | Provider名                 | Provider明确命名字段，或同身份最后确认且未被明确撤销的缓存；经Provider适配器可靠确认的终端传输正式会话名也归此层，不按传输渠道降级；scanner首prompt不能冒充Provider名 |
+| 2      | 已有Orca会话人工名         | 经精确identity读取的旧人工值，仅兼容输入；有Provider名时不主显。不新增公共写入或将旧Tab别名批量认作人工会话名                                                         |
+| 3      | 有效提示词派生名           | 优先Provider文件中首个通过质量门槛的真实任务请求摘要，其次同身份已捕获的首次有效请求/任务摘要；低信息、注入或清理后为空的候选直接跳过                                 |
+| 4      | 可信终端实时标题           | 复用现有清理：排除状态、spinner、cwd、Agent自称、默认Terminal标签；只使用该会话自身的pane标题                                                                         |
+| 5      | 已知任务/命令/历史容器标签 | 仅当有确定归属；旧customTitle或quick-command不得在链外抢占，父Tab标签不能赋给所有分屏会话                                                                             |
+| 6      | 稳定默认名                 | 有identity用Agent＋短sessionId；identity未建立用Agent/Terminal/Chat默认名                                                                                             |
 
 缓存是来源的副本，不是独立排序层。Provider读取失败/断线与Provider明确撤销名字不同：失败保留同身份有效缓存；只有适配器明确识别的撤销证据才使旧名失效。空结果、文件未找到、字段缺失都不能自动解释为撤销。
 
@@ -52,16 +52,16 @@ issue: 会话命名与身份保护
 
 ### 2.2 使用面
 
-| 位置 | 目标行为 |
-| --- | --- |
-| Workspace与Issues左侧、Issue详情/绑定弹窗 | 对同身份订阅同一结果；Issues只筛选/分组/绑定，不再请求或解析自己的标题 |
-| 顶部Tab、分组/浮窗、Cmd+J、最近切换、拖拽、关闭确认 | 使用同一结果；Agent Tab的custom/quick不再抢占；无独立“Tab名称优先级” |
-| 分屏 | 每个pane/行用自己的session；父Tab显示活跃pane的结果，焦点变化不改变各session自己的名称 |
-| 普通Dashboard、弹出仪表盘、Agent Map | 同一显示名；任务、运行状态作为附加信息，不顶替会话主名 |
-| History主行、子会话、搜索、删除/接续/拖拽旁路 | 同一session用同名；子会话按自身identity解析，不继承父名。操作目标仍为ID/path |
-| Activity、通知 | 会话标识取相同结果；通知可以拼“名称＋已完成/等待输入”，Activity保留任务内容为另一字段 |
-| Goal目标选择、Notes发送对象 | 用同一会话名辨认目标，保留Provider、状态、位置 |
-| Mobile、headless、structured Chat | host提供相同投影，不要求桌面renderer运行；Chat通过现有provider handle关联，不能从默认字符串猜身份 |
+| 位置                                                | 目标行为                                                                                          |
+| --------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| Workspace与Issues左侧、Issue详情/绑定弹窗           | 对同身份订阅同一结果；Issues只筛选/分组/绑定，不再请求或解析自己的标题                            |
+| 顶部Tab、分组/浮窗、Cmd+J、最近切换、拖拽、关闭确认 | 使用同一结果；Agent Tab的custom/quick不再抢占；无独立“Tab名称优先级”                              |
+| 分屏                                                | 每个pane/行用自己的session；父Tab显示活跃pane的结果，焦点变化不改变各session自己的名称            |
+| 普通Dashboard、弹出仪表盘、Agent Map                | 同一显示名；任务、运行状态作为附加信息，不顶替会话主名                                            |
+| History主行、子会话、搜索、删除/接续/拖拽旁路       | 同一session用同名；子会话按自身identity解析，不继承父名。操作目标仍为ID/path                      |
+| Activity、通知                                      | 会话标识取相同结果；通知可以拼“名称＋已完成/等待输入”，Activity保留任务内容为另一字段             |
+| Goal目标选择、Notes发送对象                         | 用同一会话名辨认目标，保留Provider、状态、位置                                                    |
+| Mobile、headless、structured Chat                   | host提供相同投影，不要求桌面renderer运行；Chat通过现有provider handle关联，不能从默认字符串猜身份 |
 
 本期不新增会话备用名入口，不把Agent Tab/pane Rename改接到新写入系统。已有Conversation Rename/Clear及其revision、失败处理保留兼容；只调整必要说明，明确保存的是备用名，Provider存在时主名不会改变，不暗示写回Provider。旧Tab/pane编辑仍是容器标签，不能在公共链外压过会话名；普通shell操作保持。任何后续统一编辑入口或停用旧入口，均不在本期默认实施。
 
@@ -79,13 +79,13 @@ issue: 会话命名与身份保护
 4. 普通实时标题复用现有状态/spinner/cwd/Agent自称过滤。只有适配器通过已知Provider标题协议及当前session归属确认的正式名称才归Provider层；“文字看起来像名字”或“来自某Agent进程”都不足以升级。
 5. 本节质量过滤只约束prompt/live候选，不用“低信息词”规则否决Provider明确设置的名称或用户人工备用名；例如Provider明确命名为“继续”时仍尊重其原生名。
 
-| 输入情形（未说明时无Provider/人工名） | 名称选择 |
-| --- | --- |
-| 有效摘要“修复登录超时”，普通实时标题“执行回归测试” | 保持“修复登录超时”，当前执行步骤放预览 |
-| 只有提示词“继续”，实时标题为合格的任务描述 | 跳过派生名，使用实时标题 |
-| 首条是注入上下文，后续首个任务为“运行测试” | 使用“运行测试”的派生名；不把注入文本或“继续”锁为首问 |
-| 摘要已存在，后来经可靠适配确认终端传来Provider正式名 | 正式名进入Provider层，统一替换摘要 |
-| 无有效摘要，实时标题只有thinking/spinner/cwd | 两类候选都跳过，进入归属label或身份兜底 |
+| 输入情形（未说明时无Provider/人工名）                | 名称选择                                             |
+| ---------------------------------------------------- | ---------------------------------------------------- |
+| 有效摘要“修复登录超时”，普通实时标题“执行回归测试”   | 保持“修复登录超时”，当前执行步骤放预览               |
+| 只有提示词“继续”，实时标题为合格的任务描述           | 跳过派生名，使用实时标题                             |
+| 首条是注入上下文，后续首个任务为“运行测试”           | 使用“运行测试”的派生名；不把注入文本或“继续”锁为首问 |
+| 摘要已存在，后来经可靠适配确认终端传来Provider正式名 | 正式名进入Provider层，统一替换摘要                   |
+| 无有效摘要，实时标题只有thinking/spinner/cwd         | 两类候选都跳过，进入归属label或身份兜底              |
 
 实现成本限定为复用现有提示词清理、已知注入过滤、实时标题过滤，并将重复的短回复判定抽成共享纯函数；不新增数据库、消息总线或RPC。
 
@@ -93,19 +93,19 @@ issue: 会话命名与身份保护
 
 完整现状见[会话命名现状调研](../research/会话命名现状调研.md)。当前公共函数排序不等于统一数据源；Issues三个局部map、独立快照刷新、Tab单slot与row的不同归属检查，是本次收敛对象。
 
-| 候选实现 | 结论 | 理由 |
-| --- | --- | --- |
-| `src/main/ai-vault/session-title-resolver.ts`及parser/cache | 增量复用 | 已有文件发现、直读、增量、批次及host边界；补来源，不复制scanner |
-| `src/shared/session-display-title.ts`与`agent-session-fallback-title.ts` | 修改排序／复用兜底 | 保留纯函数；所有Agent会话入口传同一候选，不在UI再拼优先级 |
+| 候选实现                                                                                                  | 结论                               | 理由                                                                                                                   |
+| --------------------------------------------------------------------------------------------------------- | ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `src/main/ai-vault/session-title-resolver.ts`及parser/cache                                               | 增量复用                           | 已有文件发现、直读、增量、批次及host边界；补来源，不复制scanner                                                        |
+| `src/shared/session-display-title.ts`与`agent-session-fallback-title.ts`                                  | 修改排序／复用兜底                 | 保留纯函数；所有Agent会话入口传同一候选，不在UI再拼优先级                                                              |
 | `src/shared/agent-tab-title.ts`、`harness-injected-user-turns.ts`、renderer的`activity-thread-display.ts` | 复用清理与注入判断，抽取短回复判定 | 现有derive仅清理/截断，Activity有英文短回复规则；抽到共享候选质量模块后补中文/反例，避免main导入renderer或复制两份正则 |
-| `src/renderer/src/lib/canonical-session-titles.ts` | 复用可选兼容输入 | 只提供已有人工候选及变更通知，不再让调用者先行return；不为替换旧存储新建一套写服务 |
-| `ai-vault-tab-title-sync.ts`、Issues `conversation-session-titles.ts` | 抽共同请求和订阅内核 | 前者是tab写入器，后者是组件map，均不适合直接充当所有session的持久事实层 |
-| `src/main/persistence/loading-store/store.ts`与`src/shared/persisted-state-types.ts` | 不扩建人工名domain | 本次没有新人工名写入需求，不增加顶层字段、落盘屏障或迁移账本；现有profile隔离继续沿用 |
-| `src/main/runtime/agent-session-record-store.ts` | 复用身份关联，不承载所有旧会话名字 | 该store围绕durable session、lease与操作账本；给纯历史/legacy CLI起名不应创建一个执行lease |
-| Issues `conversation-title-writes.ts`及DB列 | 兼容保留，不扩建 | 旧人工值/旧端快照不直接删除或停写；新命名主链不能等待旧刷新器，不新增Provider证据列 |
-| live-entry builder、`pane-agent-owner.ts`、既有launch/worker/structured身份链 | 增量复用身份接缝 | builder采用新上报身份；pane owner只解决AgentType。已知worker与provider handle链各有范围，不能当通用主/辅助证明 |
-| `round-record-ingestor.ts`、`issue-conversation-presentation.ts` | 保留窄过滤，接入公共归属/角色决策 | REQ-028已有部分过滤，title_source还保护人工名；不删除保护，不扩建prompt黑名单来猜所有内部调用 |
-| Workspace真实行、原生恢复及各消费组件 | 直接复用，修改名称输入 | 保留状态/附件/lineage/恢复/发送等行为；不重写整个会话列表模型 |
+| `src/renderer/src/lib/canonical-session-titles.ts`                                                        | 复用可选兼容输入                   | 只提供已有人工候选及变更通知，不再让调用者先行return；不为替换旧存储新建一套写服务                                     |
+| `ai-vault-tab-title-sync.ts`、Issues `conversation-session-titles.ts`                                     | 抽共同请求和订阅内核               | 前者是tab写入器，后者是组件map，均不适合直接充当所有session的持久事实层                                                |
+| `src/main/persistence/loading-store/store.ts`与`src/shared/persisted-state-types.ts`                      | 不扩建人工名domain                 | 本次没有新人工名写入需求，不增加顶层字段、落盘屏障或迁移账本；现有profile隔离继续沿用                                  |
+| `src/main/runtime/agent-session-record-store.ts`                                                          | 复用身份关联，不承载所有旧会话名字 | 该store围绕durable session、lease与操作账本；给纯历史/legacy CLI起名不应创建一个执行lease                              |
+| Issues `conversation-title-writes.ts`及DB列                                                               | 兼容保留，不扩建                   | 旧人工值/旧端快照不直接删除或停写；新命名主链不能等待旧刷新器，不新增Provider证据列                                    |
+| live-entry builder、`pane-agent-owner.ts`、既有launch/worker/structured身份链                             | 增量复用身份接缝                   | builder采用新上报身份；pane owner只解决AgentType。已知worker与provider handle链各有范围，不能当通用主/辅助证明         |
+| `round-record-ingestor.ts`、`issue-conversation-presentation.ts`                                          | 保留窄过滤，接入公共归属/角色决策  | REQ-028已有部分过滤，title_source还保护人工名；不删除保护，不扩建prompt黑名单来猜所有内部调用                          |
+| Workspace真实行、原生恢复及各消费组件                                                                     | 直接复用，修改名称输入             | 保留状态/附件/lineage/恢复/发送等行为；不重写整个会话列表模型                                                          |
 
 新增公共模块只补“已确认绑定→候选→统一投影”的薄层，不管理新的人工元数据。现有resolver可查名但不能确认pane归属，现有Tab同步只有一个slot，现有canonical只供人工值；因此不能把任一个现成模块直接当完整会话中心。内部调用的归属入口必须位于运行态身份覆盖和持久纳管之前，不只在标题UI补救。
 
@@ -209,26 +209,26 @@ docs/issue/Issues看板与会话/                                   [修改] 方
 
 以下保留为**后续严格归属目标**，不冒充WP0a现有能力；其中“已确认绑定”“角色识别”“binding epoch”不由活跃窗口自动证明或生成。
 
-| 概念 | 权威/用途 | 不可混用 |
-| --- | --- | --- |
-| 原始观察 | 某次Hook/Provider事件带来的session、pane、host、启动上下文 | 最新观察不等于主会话绑定 |
+| 概念           | 权威/用途                                                               | 不可混用                                              |
+| -------------- | ----------------------------------------------------------------------- | ----------------------------------------------------- |
+| 原始观察       | 某次Hook/Provider事件带来的session、pane、host、启动上下文              | 最新观察不等于主会话绑定                              |
 | 已确认pane绑定 | 归属判定通过后的host/pane运行实例→Provider session映射，带binding epoch | 不能由“名字可解析”“同一launchToken”或首次到达自动建立 |
-| 会话角色 | 普通会话、合法委派worker、内部utility、unknown的证据判定 | 角色与主pane归属分开；worker可见不等于可顶替父pane |
-| 名称缓存/结果 | 按完整session identity存来源与结果revision | 名称读取不创建Conversation、绑定或执行lease |
+| 会话角色       | 普通会话、合法委派worker、内部utility、unknown的证据判定                | 角色与主pane归属分开；worker可见不等于可顶替父pane    |
+| 名称缓存/结果  | 按完整session identity存来源与结果revision                              | 名称读取不创建Conversation、绑定或执行lease           |
 
 归属判定复用现有启动、PTY实例、launch claim、已知worker关联和structured provider handle链，结果维护在既有运行身份生命周期，不新建另一套会话注册中心。renderer只消费确认结果；正常状态、sleeping/retained、标题请求与Issues纳管均使用同一绑定规则，不能只修标题slot而让其他路径继续把B写成主身份。
 
 **G0仍是后续严格WP0的前置，不再阻止用户选定的WP0a先行。**完整归属需要为Claude/Codex及受影响运行入口，记录“哪个实际字段、由谁产生、如何证明归属、何时失效”，并取得后台B插入与用户真实切B的对照序列。现有`AgentProviderSessionMetadata`没有通用主/辅助标记；launchToken、paneKey或进程实例可被子调用继承，单独出现均不充分。协议需要扩展时，先补具体可选字段、producer/validator、旧端降级及跨版本断言；这些不是WP0a的隐含扩建。
 
-| 情形 | 绑定决策 | 名称/纳管决策 |
-| --- | --- | --- |
-| 明确启动/恢复目标A，宿主证据确认与当前pane实例对应 | 首次建立A，递增epoch | 按A请求名称；普通会话按原规则纳管 |
-| A中出现经证据识别的内部B | 保持A；B不得覆盖主状态、恢复身份或生成摘要 | B不进入普通用户会话/轮次；A的合法在途结果仍可投影 |
-| A中出现合法委派worker B | 父pane保持A；B使用自身关联/身份，若有独立pane则绑定自己的pane | 按原lineage展示B自己的名字，不把它当utility隐藏 |
-| B归属未知，A绑定仍有效 | 保持A，B只保留原始观察/待判定信息；不新建一套可见“待确认会话中心” | 不因unknown批量隐藏既有行，不把B自动纳管为新普通会话，不使用B的prompt/OSC替换A候选 |
-| 宿主/启动/Provider边界证据确认A真正切到B | 结束A当前绑定，建立B并递增epoch，即使复用相同paneKey | 改查B；A晚到结果仅可留A缓存 |
-| pane实例已失效或重建，尚无可信新目标 | 旧绑定不能冒充当前主会话，进入未确认 | 当前显示Agent/Terminal默认名；旧A只保留在历史/恢复上下文 |
-| SSH失联/旧端证据缺失 | 不伪造新绑定；已有绑定作为未重新确认的历史投影 | 可保留已知名字但状态为unverifiable；无可信绑定走默认，不报exited |
+| 情形                                               | 绑定决策                                                          | 名称/纳管决策                                                                      |
+| -------------------------------------------------- | ----------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| 明确启动/恢复目标A，宿主证据确认与当前pane实例对应 | 首次建立A，递增epoch                                              | 按A请求名称；普通会话按原规则纳管                                                  |
+| A中出现经证据识别的内部B                           | 保持A；B不得覆盖主状态、恢复身份或生成摘要                        | B不进入普通用户会话/轮次；A的合法在途结果仍可投影                                  |
+| A中出现合法委派worker B                            | 父pane保持A；B使用自身关联/身份，若有独立pane则绑定自己的pane     | 按原lineage展示B自己的名字，不把它当utility隐藏                                    |
+| B归属未知，A绑定仍有效                             | 保持A，B只保留原始观察/待判定信息；不新建一套可见“待确认会话中心” | 不因unknown批量隐藏既有行，不把B自动纳管为新普通会话，不使用B的prompt/OSC替换A候选 |
+| 宿主/启动/Provider边界证据确认A真正切到B           | 结束A当前绑定，建立B并递增epoch，即使复用相同paneKey              | 改查B；A晚到结果仅可留A缓存                                                        |
+| pane实例已失效或重建，尚无可信新目标               | 旧绑定不能冒充当前主会话，进入未确认                              | 当前显示Agent/Terminal默认名；旧A只保留在历史/恢复上下文                           |
+| SSH失联/旧端证据缺失                               | 不伪造新绑定；已有绑定作为未重新确认的历史投影                    | 可保留已知名字但状态为unverifiable；无可信绑定走默认，不报exited                   |
 
 无显式启动目标的手工CLI首会话、Provider内原地新建会话、共享daemon、多窗口、重启恢复是G0必须单列的边界。若某入口无法区分，标记该适配未覆盖并补协议/证据，不能永久钉住首个ID，也不能用“每次切换都放行”回避问题。命名全量完成依赖这些边界闭合；排序纯函数可单独开发，但不算事故修复。
 
@@ -261,13 +261,13 @@ stateDiagram-v2
 
 名称key使用已解析profile/authority＋执行scope＋Provider＋session key/id；同host的WSL distro/account home按真实执行上下文隔离，不能用默认local折叠。已有人工名仅在旧身份可精确对应时输入，歧义不猜。Provider适配只读目标host的数据，保留缓存来源及自身有序读取代次。
 
-| 模块 | 输入→输出 | 复用与失败边界 |
-| --- | --- | --- |
-| AI Vault parser/cache | Provider记录→原生名证据、有效首问摘要 | 冷热/完整增量同规则；旧title语义保留 |
-| 公共候选质量 | 原始输入/来源→有效或跳过 | 复用注入/派生/实时清理，§2.3约束不变，不新增LLM |
-| session-name-service | 已确认identity＋Provider/合法运行候选＋可选旧人工值→统一结果 | 抽现有resolver/调度，不依赖Issues是否加载；一个host失败不影响其他host |
-| session-name-store | 结果/失效信号→共享只读订阅 | 无组件私有标题map；不承载新人工名持久化，不成为第二个运行身份权威 |
-| 显示适配器 | identity＋binding epoch→name | 所有入口同结果；非会话对象仍用自己的标题语义 |
+| 模块                  | 输入→输出                                                    | 复用与失败边界                                                        |
+| --------------------- | ------------------------------------------------------------ | --------------------------------------------------------------------- |
+| AI Vault parser/cache | Provider记录→原生名证据、有效首问摘要                        | 冷热/完整增量同规则；旧title语义保留                                  |
+| 公共候选质量          | 原始输入/来源→有效或跳过                                     | 复用注入/派生/实时清理，§2.3约束不变，不新增LLM                       |
+| session-name-service  | 已确认identity＋Provider/合法运行候选＋可选旧人工值→统一结果 | 抽现有resolver/调度，不依赖Issues是否加载；一个host失败不影响其他host |
+| session-name-store    | 结果/失效信号→共享只读订阅                                   | 无组件私有标题map；不承载新人工名持久化，不成为第二个运行身份权威     |
+| 显示适配器            | identity＋binding epoch→name                                 | 所有入口同结果；非会话对象仍用自己的标题语义                          |
 
 Provider缓存继续扩展AI Vault现有parse-cache/titleIndex，不新建标题DB。旧Issues providerTitle只有文本、无法证明是原生名，不提升至Provider层，也不作为新自动链的另一份权威；旧存储和旧端消费暂留兼容。Claude明确原生字段内部顺序维持本稿custom-title→ai-title→明确agent-name，注入文本不算agent-name；Codex新证据按有效index名→metadata名，并统一冷热路径。两者仅改变新证据投影，旧`title`仍保持旧读者约定。
 
@@ -293,7 +293,8 @@ export type AiVaultSessionNameEvidence = {
   providerNameEvidence: ProviderNameEvidence
   promptDerivedName?: string | null
 }
-export type AiVaultSessionTitlesResult = { // [修改] 既有结果
+export type AiVaultSessionTitlesResult = {
+  // [修改] 既有结果
   titles: AiVaultSessionTitle[] // [复用] 不重写旧title/source语义
   nameEvidence?: AiVaultSessionNameEvidence[] // [新增] 每批最多64，按请求identity对应
 }
@@ -324,14 +325,14 @@ export type SessionNamePublicationFields = {
 
 ### 5.5 Issues旧数据兼容：本期做什么、不做什么
 
-| 对象 | 本期处理 | 不得宣称 |
-| --- | --- | --- |
-| 已有人工title/title_source | 保留旧存储与Rename/Clear；可选适配按精确identity提供公共第2级候选，不单独排序 | 已迁入公共存储、无Issues也能编辑旧人工值 |
-| 旧provider_title与刷新器 | 新显示链不再依赖；旧端仍需要的字段生产者暂留隔离，后续停写须核验内容兼容 | “兼容留列”就可直接停写、旧文本天然是原生名 |
-| Issues局部map/轮询 | 新显示路径退出，改订阅公共结果；bind/unbind不另触发标题刷新 | 旧端适配仍运行等于新UI也可沿用两套请求 |
-| 无Issues运行 | Provider/有效prompt/live/fallback照常工作，旧人工适配缺席不阻塞 | 旧人工值缺席仍与具备该兼容数据的端完全同名 |
-| 历史Tab custom/quick | 保留容器字段；有确定归属才作第5级label，不在公共链外抢占 | 所有custom都由用户命名、可批量升级为第2级 |
-| 删列/迁库/新人工写系统 | 均不在本期；不碰运行数据 | 首期已经实现Issues零名称存储终态 |
+| 对象                       | 本期处理                                                                      | 不得宣称                                   |
+| -------------------------- | ----------------------------------------------------------------------------- | ------------------------------------------ |
+| 已有人工title/title_source | 保留旧存储与Rename/Clear；可选适配按精确identity提供公共第2级候选，不单独排序 | 已迁入公共存储、无Issues也能编辑旧人工值   |
+| 旧provider_title与刷新器   | 新显示链不再依赖；旧端仍需要的字段生产者暂留隔离，后续停写须核验内容兼容      | “兼容留列”就可直接停写、旧文本天然是原生名 |
+| Issues局部map/轮询         | 新显示路径退出，改订阅公共结果；bind/unbind不另触发标题刷新                   | 旧端适配仍运行等于新UI也可沿用两套请求     |
+| 无Issues运行               | Provider/有效prompt/live/fallback照常工作，旧人工适配缺席不阻塞               | 旧人工值缺席仍与具备该兼容数据的端完全同名 |
+| 历史Tab custom/quick       | 保留容器字段；有确定归属才作第5级label，不在公共链外抢占                      | 所有custom都由用户命名、可批量升级为第2级  |
+| 删列/迁库/新人工写系统     | 均不在本期；不碰运行数据                                                      | 首期已经实现Issues零名称存储终态           |
 
 兼容适配在公共服务装配时可选注册，不依赖Issues页面是否挂载；headless/paired没有该旧数据源时明确标出兼容覆盖缺口。主机已有旧人工源的场景需接到所有新消费面，不能只有Issues读得到。兼容编辑仍遵守现有revision/失败合同，成功后让共同候选失效，不新增迁移账本。
 
@@ -360,27 +361,27 @@ Activity行以当前会话身份命名，任务/工具/回复保持独立。历�
 
 ### 6.1 工作包与前置条件
 
-| 顺序 | 范围 | 难度/放行条件 |
-| --- | --- | --- |
-| WP0a（当前首期） | Claude在位会话活跃窗口保护 | 已实现W=30秒、冷恢复缺时沿用旧逻辑、main/relay接受后计时及全序列同窗准入；测试及后台App结果见首期Test Run，不承诺绝对隔离 |
-| G0（继续） | 可靠归属证据闭环与改动评估 | 不阻止WP0a先行；严格WP0仍需按Provider/入口核对实际字段、producer、失效和冲突，不把时间窗口或prompt分类当角色证明 |
-| WP0（后续严格目标） | 主会话绑定、REQ-028内部调用/合法worker边界 | 不因WP0a通过而自动完成；公共判定先于全事件主状态覆盖/纳管，A/B、重建、未知和旧人工保护反例通过 |
-| WP1 | Provider四态、公共排序、候选质量及缓存 | 中；复用AI Vault读入口，冷热一致；无原生名的摘要不冒充Provider；可单独做纯函数，但未过WP0不算身份问题已修复 |
-| WP2（撤出） | 公共人工名存储、编辑RPC与迁移 | 不实施；保留编号说明范围收缩，不建新profile字段、receipt/tombstone或迁移模块 |
-| WP3 | Workspace/Tab/Issues/History及搜索、弹窗旁路 | 中；WP0/WP1先通过，同身份同结果；新显示链的组件map/独立请求/外层抢占退出，旧人工值显式兼容 |
-| WP4 | Dashboard、通知、Activity、选择器、graph、mobile/headless/Chat | 中高；逐消费面/host装配接线，旧字段内容与新投影分开，不能前三处相同就宣布全部完成 |
-| 后续独立决策 | 完整Conversation模型合并、人工名能力是否继续扩展、旧字段/刷新器完全退场 | 不作为本期隐含工程；不自动删除既有数据/功能 |
+| 顺序                | 范围                                                                    | 难度/放行条件                                                                                                             |
+| ------------------- | ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| WP0a（当前首期）    | Claude在位会话活跃窗口保护                                              | 已实现W=30秒、冷恢复缺时沿用旧逻辑、main/relay接受后计时及全序列同窗准入；测试及后台App结果见首期Test Run，不承诺绝对隔离 |
+| G0（继续）          | 可靠归属证据闭环与改动评估                                              | 不阻止WP0a先行；严格WP0仍需按Provider/入口核对实际字段、producer、失效和冲突，不把时间窗口或prompt分类当角色证明          |
+| WP0（后续严格目标） | 主会话绑定、REQ-028内部调用/合法worker边界                              | 不因WP0a通过而自动完成；公共判定先于全事件主状态覆盖/纳管，A/B、重建、未知和旧人工保护反例通过                            |
+| WP1                 | Provider四态、公共排序、候选质量及缓存                                  | 中；复用AI Vault读入口，冷热一致；无原生名的摘要不冒充Provider；可单独做纯函数，但未过WP0不算身份问题已修复               |
+| WP2（撤出）         | 公共人工名存储、编辑RPC与迁移                                           | 不实施；保留编号说明范围收缩，不建新profile字段、receipt/tombstone或迁移模块                                              |
+| WP3                 | Workspace/Tab/Issues/History及搜索、弹窗旁路                            | 中；WP0/WP1先通过，同身份同结果；新显示链的组件map/独立请求/外层抢占退出，旧人工值显式兼容                                |
+| WP4                 | Dashboard、通知、Activity、选择器、graph、mobile/headless/Chat          | 中高；逐消费面/host装配接线，旧字段内容与新投影分开，不能前三处相同就宣布全部完成                                         |
+| 后续独立决策        | 完整Conversation模型合并、人工名能力是否继续扩展、旧字段/刷新器完全退场 | 不作为本期隐含工程；不自动删除既有数据/功能                                                                               |
 
 当前先执行WP0a的小范围准备、实现和验证，不要求先完成全部Provider的G0。完整命名统一仍走G0→严格WP0→WP3/WP4，并满足WP1来源/排序合同；WP1纯函数可独立推进。若完整目标需要扩展协议，另补IDL、兼容和估算，不把该工程塞进WP0a，也不把“某次标题没跳”当全量验收。
 
 正式实现前登记feature owned/seams/dependsOn，不改动本轮只修订文档的授权范围。以下问题不是让用户猜答案，由后续G0/WP承担核验：
 
-| 未闭合项 | 负责人/下一步 | 放行边界 |
-| --- | --- | --- |
-| Claude/Codex辅助调用是否有可靠主/父会话证据 | WP0实施者：采集启动/事件对照，列协议字段与反例 | 无证据的入口明确未覆盖，不盲目取首个或最新session |
-| 共享daemon、手工CLI、原地新会话与重启恢复 | WP0实施者：核对会话、连接、pane实例和失效事件 | 不把同pane/token或持久快照当当前主身份 |
-| Node-only/paired/SSH/WSL/account home与旧人工源 | WP4实施者：核对实际装配和scope，列端到端覆盖 | 不读本地替代远端，不宣称缺旧数据源的端已满足人工名一致 |
-| 旧端依赖的title/provider_title与status内容 | WP3/WP4实施者：双向兼容对照，隔离旧生产路径 | 未放行不得停写旧端仍读取的内容 |
+| 未闭合项                                        | 负责人/下一步                                  | 放行边界                                               |
+| ----------------------------------------------- | ---------------------------------------------- | ------------------------------------------------------ |
+| Claude/Codex辅助调用是否有可靠主/父会话证据     | WP0实施者：采集启动/事件对照，列协议字段与反例 | 无证据的入口明确未覆盖，不盲目取首个或最新session      |
+| 共享daemon、手工CLI、原地新会话与重启恢复       | WP0实施者：核对会话、连接、pane实例和失效事件  | 不把同pane/token或持久快照当当前主身份                 |
+| Node-only/paired/SSH/WSL/account home与旧人工源 | WP4实施者：核对实际装配和scope，列端到端覆盖   | 不读本地替代远端，不宣称缺旧数据源的端已满足人工名一致 |
+| 旧端依赖的title/provider_title与status内容      | WP3/WP4实施者：双向兼容对照，隔离旧生产路径    | 未放行不得停写旧端仍读取的内容                         |
 
 ### 6.2 验收矩阵
 
@@ -388,29 +389,29 @@ WP0a以[首期方案§6](Claude在位会话活跃窗口保护方案.md#6-风险�
 
 以下保留为**完整目标**的验收边界，不是已执行结果，不要求WP0a单独宣称全部达成，也不替代后续正式Test Case同步。
 
-| 场景 | 核心断言 |
-| --- | --- |
-| A请求在途时出现内部B | 绑定/请求目标仍是A；A响应可落地；B不覆盖A的摘要、状态、恢复身份，不新增普通用户会话/轮次 |
-| B也有合法Provider名字 | 可解析名字不构成主pane归属证据，B仍不能抢占A |
-| A真正切B，A响应晚到 | binding epoch更新；A仅留自己缓存，即使B读名失败也不能让A冒充B |
-| paneKey复用/分屏/切焦点 | 重建实例使旧绑定失效；各pane有独立名字，父Tab只取活跃pane |
-| 合法委派worker/subagent | 保留独立身份、名字与原lineage展示，不隐藏成utility，不继承父名或替换父pane |
-| 角色unknown | 不凭prompt/cwd/无文件推断；不批量隐藏已有行，不自动创建新普通会话或替换有效主绑定；无有效绑定显示默认 |
-| 旧人工保护与窄过滤 | titleSource=user及undefined非空title的旧兼容保护保持；null不误当undefined；Provider名不能代替人工保护；绑定/恢复等例外保留 |
-| 既有内部utility历史记录 | 仅在明确角色且无旧保护时从普通列表排除；不批量删库，不改变合法会话计数/用户保留语义 |
-| 所有候选并存/逐级缺失 | Provider→已有人工→有效稳定prompt→可信OSC→归属label→fallback；所有同scope、同候选revision消费面一致 |
-| scanner只有首prompt | 归prompt而非Provider；有旧人工值则人工优先；无旧人工源也能自动命名 |
-| 低信息与短有效任务 | “继续/好的”跳过，“继续修复登录超时/运行测试”不误删；首个有效任务稳定，普通后续轮次只改预览 |
-| 明确Provider/人工名恰为“继续/好的” | 不被prompt质量规则否决；可靠Provider正式名经终端传输仍归第一层，普通OSC不升级 |
-| named→absent/unavailable→cleared | 前两种保留同身份确认缓存；明确撤销后重排，旧named迟到不复活；清掉一个字段后仍有其他原生名则返回named |
-| Provider晚生成/索引改名/冷热路径 | 同identity订阅收敛，Codex transcript不变仍能更新，旧端title内容合同不被偷换 |
-| 旧人工Rename/Clear | 沿用旧写入与revision合同，不改Provider/身份；变更使公共候选失效，不要求新公共入口或迁移tombstone |
-| Issue绑定/解绑/删除与页面未挂载 | 新显示结果不因组织关系改变，不另请求名字；旧人工适配按session身份工作，不依赖Issues页面是否打开 |
-| Issues功能未装配、无旧人工数据源 | Provider/prompt/live/fallback可独立使用；不创建DB或补公共人工系统；旧人工跨端缺席明确列为兼容限制 |
-| 旧人工值/旧provider快照/模糊custom | 数据保留，不批量迁移或升级provenance，不把容器label变成人工会话名；普通shell改名保持 |
-| 关闭/恢复/profile/host切换与断线 | 身份与scope隔离；名字缓存不证明live，失联不报exited；旧实例不能冒充新实例 |
-| 所有消费旁路及通知 | Dashboard/Activity/选择器/graph/mobile/headless/Chat按矩阵逐一接线；通知比事件时结果；ID/path和执行操作不受名字改变影响 |
-| 新旧客户端/host双向组合 | 新字段可选，旧读路径内容不变；新端缺证据显式降级，旧端不计新排序通过；不提前停旧快照生产 |
+| 场景                               | 核心断言                                                                                                                   |
+| ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| A请求在途时出现内部B               | 绑定/请求目标仍是A；A响应可落地；B不覆盖A的摘要、状态、恢复身份，不新增普通用户会话/轮次                                   |
+| B也有合法Provider名字              | 可解析名字不构成主pane归属证据，B仍不能抢占A                                                                               |
+| A真正切B，A响应晚到                | binding epoch更新；A仅留自己缓存，即使B读名失败也不能让A冒充B                                                              |
+| paneKey复用/分屏/切焦点            | 重建实例使旧绑定失效；各pane有独立名字，父Tab只取活跃pane                                                                  |
+| 合法委派worker/subagent            | 保留独立身份、名字与原lineage展示，不隐藏成utility，不继承父名或替换父pane                                                 |
+| 角色unknown                        | 不凭prompt/cwd/无文件推断；不批量隐藏已有行，不自动创建新普通会话或替换有效主绑定；无有效绑定显示默认                      |
+| 旧人工保护与窄过滤                 | titleSource=user及undefined非空title的旧兼容保护保持；null不误当undefined；Provider名不能代替人工保护；绑定/恢复等例外保留 |
+| 既有内部utility历史记录            | 仅在明确角色且无旧保护时从普通列表排除；不批量删库，不改变合法会话计数/用户保留语义                                        |
+| 所有候选并存/逐级缺失              | Provider→已有人工→有效稳定prompt→可信OSC→归属label→fallback；所有同scope、同候选revision消费面一致                         |
+| scanner只有首prompt                | 归prompt而非Provider；有旧人工值则人工优先；无旧人工源也能自动命名                                                         |
+| 低信息与短有效任务                 | “继续/好的”跳过，“继续修复登录超时/运行测试”不误删；首个有效任务稳定，普通后续轮次只改预览                                 |
+| 明确Provider/人工名恰为“继续/好的” | 不被prompt质量规则否决；可靠Provider正式名经终端传输仍归第一层，普通OSC不升级                                              |
+| named→absent/unavailable→cleared   | 前两种保留同身份确认缓存；明确撤销后重排，旧named迟到不复活；清掉一个字段后仍有其他原生名则返回named                       |
+| Provider晚生成/索引改名/冷热路径   | 同identity订阅收敛，Codex transcript不变仍能更新，旧端title内容合同不被偷换                                                |
+| 旧人工Rename/Clear                 | 沿用旧写入与revision合同，不改Provider/身份；变更使公共候选失效，不要求新公共入口或迁移tombstone                           |
+| Issue绑定/解绑/删除与页面未挂载    | 新显示结果不因组织关系改变，不另请求名字；旧人工适配按session身份工作，不依赖Issues页面是否打开                            |
+| Issues功能未装配、无旧人工数据源   | Provider/prompt/live/fallback可独立使用；不创建DB或补公共人工系统；旧人工跨端缺席明确列为兼容限制                          |
+| 旧人工值/旧provider快照/模糊custom | 数据保留，不批量迁移或升级provenance，不把容器label变成人工会话名；普通shell改名保持                                       |
+| 关闭/恢复/profile/host切换与断线   | 身份与scope隔离；名字缓存不证明live，失联不报exited；旧实例不能冒充新实例                                                  |
+| 所有消费旁路及通知                 | Dashboard/Activity/选择器/graph/mobile/headless/Chat按矩阵逐一接线；通知比事件时结果；ID/path和执行操作不受名字改变影响    |
+| 新旧客户端/host双向组合            | 新字段可选，旧读路径内容不变；新端缺证据显式降级，旧端不计新排序通过；不提前停旧快照生产                                   |
 
 [原命名验收](../tests/cases/Provider优先命名验收.md)TC-231～254保留编号并标记needs-update；TC-236～241等人工名新系统要求已退出本期，TC-243/244等身份断言需按此矩阵修订。TC-200人工保护和TC-212/213历史v4回归必须保留。用户本轮仅要求改方案，因此不新增/重写正式用例、不生成Test Run；进入测试阶段前完成规格同步。
 

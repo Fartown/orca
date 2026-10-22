@@ -1,4 +1,5 @@
 import { requestBackgroundTerminalWorktreeMount } from '@/components/terminal/background-terminal-worktree-mount'
+import { recordTerminalLaunchOrigin } from '@/terminal-launch-diagnostics/launch-origin'
 import { resolveTerminalWorktreeRoute } from '@/lib/terminal-worktree-route'
 import { insertUnifiedTabAfterAnchor } from '@/lib/unified-tab-anchor-insertion'
 import { translate } from '@/i18n/i18n'
@@ -12,6 +13,7 @@ export function registerTerminalRequestIpcBridge(unsubs: (() => void)[]): void {
       try {
         const store = useAppStore.getState()
         const worktreeId = data.worktreeId ?? store.activeWorktreeId
+        recordTerminalLaunchOrigin('runtime-tab-create-request', { ...data, worktreeId }, store)
         if (!worktreeId) {
           window.api.ui.replyTerminalCreate({
             requestId: data.requestId,
@@ -83,6 +85,11 @@ export function registerTerminalRequestIpcBridge(unsubs: (() => void)[]): void {
           data.targetGroupId,
           data.shellOverride,
           pendingStartup ? { ...tabOptions, pendingStartup } : tabOptions
+        )
+        recordTerminalLaunchOrigin(
+          'runtime-tab-create-request',
+          { ...data, worktreeId, tabId: tab.id, eventPhase: 'created' },
+          useAppStore.getState()
         )
         if (!shouldActivate) {
           // Why: renderer-backed Codex startup must mount its new TerminalPane without switching UI or connecting every saved tab.

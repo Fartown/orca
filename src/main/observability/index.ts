@@ -49,6 +49,7 @@ import {
   type UploadBundleResult
 } from './diagnostic-bundle-upload'
 import { setActiveSink, startSpan } from './tracer'
+import { recordTerminalLaunchStage } from '../terminal-launch-diagnostics/launch-trace'
 import { setSecurePathHardeningReporter } from '../../shared/secure-path-hardening-report'
 
 const CI_ENV_VARS = [
@@ -144,6 +145,7 @@ function installLocalSink(filePath: string): void {
     const localSink = createLocalFileSink({ filePath })
     sink = localSink
     setActiveSink(localSink)
+    recordTerminalLaunchStage('diagnostics-ready', {})
   } catch (error) {
     // Diagnostics are optional: a logs folder that cannot be opened must not stop the app or host.
     console.warn(`[observability] tracing is off: cannot open ${filePath}`, error)

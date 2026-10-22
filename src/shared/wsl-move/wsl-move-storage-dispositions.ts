@@ -9,6 +9,10 @@ import {
  * until it is listed here.
  */
 export const LOCAL_STORAGE_MODULE_DISPOSITIONS: Record<string, WslMoveFieldDisposition> = {
+  'src/renderer/src/goals/GoalNoticeWatcher.tsx': notApplicableDisposition(
+    62,
+    'Client notice deduplication keyed by goal identity, not a project path.'
+  ),
   'src/renderer/src/lib/quick-open-file-history.ts': {
     disposition: 'rewrite-desktop',
     item: 42
@@ -95,6 +99,8 @@ export const LOCAL_STORAGE_MODULE_DISPOSITIONS: Record<string, WslMoveFieldDispo
 
 /** The database each schema file creates tables in; a new schema file fails the census. */
 export const SQLITE_SCHEMA_FILE_DATABASES: Record<string, string> = {
+  'src/main/issues/issue-database-core-schema.ts': 'issues',
+  'src/main/issues/issue-database-round-schema.ts': 'issues',
   'src/main/ai-vault-search/session-search-query-schema.ts': 'ai-vault-search',
   'src/main/ai-vault-search/session-search-schema.ts': 'ai-vault-search',
   'src/main/ai-vault-search/session-search-write-buffer.ts': 'ai-vault-search-staging',
@@ -135,6 +141,24 @@ const tables = (
 /** Tables by `<database>.<table>`. Migration copies (`*_new`, `*_v35`) sit with what they rebuild. */
 export const SQLITE_TABLE_DISPOSITIONS: Record<string, WslMoveFieldDisposition> =
   Object.fromEntries([
+    ...tables(
+      'issues',
+      [
+        'issue_authority_meta',
+        'issue_host_state',
+        'issues',
+        'conversations',
+        'conversation_provider_identities',
+        'conversation_launch_claims',
+        'issue_mutation_receipts',
+        'round_records',
+        'round_refs'
+      ],
+      notApplicableDisposition(
+        73,
+        'Issue and conversation history remains owned by its execution host; a project file move does not transfer this host-wide database.'
+      )
+    ),
     ...tables(
       'agent-session-journal',
       [

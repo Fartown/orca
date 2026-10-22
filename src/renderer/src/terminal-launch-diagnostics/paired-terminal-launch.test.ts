@@ -1,0 +1,67 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { observePairedTerminalLaunch } from './paired-terminal-launch'
+
+const mocked = vi.hoisted(() => ({ create: vi.fn(), record: vi.fn(), state: { settings: {} } }))
+vi.mock('@/store', () => ({ useAppStore: { getState: () => mocked.state } }))
+vi.mock('./launch-origin', () => ({
+  recordTerminalLaunchOrigin: mocked.record,
+  currentTerminalLaunchOrigin: () => undefined
+}))
+
+beforeEach(() => vi.clearAllMocks())
+
+describe('paired terminal launch diagnostic seam', () => {
+  it('joins concurrent history resumes to their own returned host tabs', async () => {
+    const one = {
+      worktreeId: 'remote-workspace',
+      environmentId: 'paired-host',
+      providerSession: { key: 'session_id' as const, id: 'same' }
+    }
+    const two = { ...one }
+    mocked.create.mockImplementationOnce(async () => ({
+      outcome: { status: 'created' },
+      hostTabId: 'tab-one'
+    }))
+    mocked.create.mockImplementationOnce(async () => ({
+      outcome: { status: 'created' },
+      hostTabId: 'tab-two'
+    }))
+    await Promise.all([
+      observePairedTerminalLaunch(one, mocked.create, 'ai-vault-resume'),
+      observePairedTerminalLaunch(two, mocked.create, 'ai-vault-resume')
+    ])
+    for (const tabId of ['tab-one', 'tab-two']) {
+      expect(mocked.record).toHaveBeenCalledWith(
+        'ai-vault-resume',
+        expect.objectContaining({
+          tabId,
+          eventPhase: 'created',
+          providerSession: one.providerSession
+        }),
+        mocked.state
+      )
+    }
+  })
+  it('records origin then returns the existing operation promise without changing its arguments', async () => {
+    const args = { worktreeId: 'remote-workspace', environmentId: 'paired-host' }
+    const result = { outcome: { status: 'created' } }
+    const pending = Promise.resolve(result)
+    mocked.create.mockReturnValue(pending)
+    expect(observePairedTerminalLaunch(args, mocked.create)).toBe(pending)
+    expect(mocked.record).toHaveBeenCalledWith('paired-terminal-create', args, mocked.state)
+    expect(mocked.record.mock.invocationCallOrder[0]).toBeLessThan(
+      mocked.create.mock.invocationCallOrder[0]
+    )
+    expect(mocked.create).toHaveBeenCalledExactlyOnceWith(args)
+    await expect(pending).resolves.toBe(result)
+  })
+
+  it('preserves a rejected host call without retrying or falling back', async () => {
+    const error = new Error('host unavailable')
+    mocked.create.mockRejectedValue(error)
+    await expect(
+      observePairedTerminalLaunch({ worktreeId: 'remote-workspace' }, mocked.create)
+    ).rejects.toBe(error)
+    expect(mocked.create).toHaveBeenCalledOnce()
+  })
+})

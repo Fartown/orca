@@ -74,6 +74,7 @@ vi.mock('@/runtime/web-runtime-session-environment', () => ({
 describe('launchAgentInNewTab paired web runtime', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    store.repos[0].executionHostId = 'runtime:web-runtime'
     store.settings = {
       agentCmdOverrides: {},
       agentDefaultArgs: {},
@@ -143,22 +144,28 @@ describe('launchAgentInNewTab paired web runtime', () => {
 
   it('passes the prepared launch token into local managed-agent startup', async () => {
     store.settings.activeRuntimeEnvironmentId = null
+    store.repos[0].executionHostId = 'local'
     mocks.isWebRuntimeSessionActive.mockReturnValue(false)
     mocks.createTab.mockReturnValue({ id: 'tab-local' })
     const { launchAgentInNewTab } = await import('./launch-agent-in-new-tab')
 
     launchAgentInNewTab({
       requestId: 'request-local-token',
+      requestedSurface: 'terminal',
       agent: 'codex',
       worktreeId: 'wt-1',
       launchToken: 'launch-token-0123456789-abcdefghijklmnopqrstuvwxyz'
     })
 
-    expect(mocks.queueTabStartupCommand).toHaveBeenCalledWith(
-      'tab-local',
+    expect(mocks.createTab).toHaveBeenCalledWith(
+      'wt-1',
+      undefined,
+      undefined,
       expect.objectContaining({
-        launchAgent: 'codex',
-        launchToken: 'launch-token-0123456789-abcdefghijklmnopqrstuvwxyz'
+        pendingStartup: expect.objectContaining({
+          launchAgent: 'codex',
+          launchToken: 'launch-token-0123456789-abcdefghijklmnopqrstuvwxyz'
+        })
       })
     )
   })

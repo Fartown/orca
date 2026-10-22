@@ -1,4 +1,5 @@
 import { warnIfZCodeCannotOpenSession } from '@/components/terminal-pane/zcode-missing-tui-notice'
+import { recordCreatedTerminalTab } from '@/terminal-launch-diagnostics/created-tab-origin'
 import { clearWorktreeSleepIntent } from '@/lib/worktree-sleep-intent'
 import type { TerminalTab } from '../../../../shared/terminal-tab-types'
 import { isValidHostTerminalTabId } from '../../../../shared/terminal-tab-id'
@@ -303,6 +304,7 @@ export function createTerminalTabCreationActions(
       if (splitGroupId) {
         get().recordFeatureInteraction?.('terminal-panes')
       }
+      recordCreatedTerminalTab(tab, worktreeId, options, get())
       return tab
     }
   }

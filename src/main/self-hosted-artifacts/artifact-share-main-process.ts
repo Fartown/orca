@@ -19,6 +19,7 @@ export type ArtifactShareSettingsSource = {
 }
 
 let server: ArtifactShareAppServer | null = null
+let removeSettingsListener: (() => void) | null = null
 
 /** Starts sharing for this app: it follows the settings toggle and stops when the app quits. */
 export function startArtifactShareForMainProcess(input: {
@@ -65,14 +66,18 @@ export function startArtifactShareForMainProcess(input: {
     }
   })
   void appServer.setEnabled(isArtifactSharingEnabled(input.settings.getSettings()))
-  input.settings.onSettingsChanged((updates, settings) => {
+  const unsubscribe = input.settings.onSettingsChanged((updates, settings) => {
     if ('artifactSharingEnabled' in updates) {
       void appServer.setEnabled(isArtifactSharingEnabled(settings))
     }
   })
+  removeSettingsListener = typeof unsubscribe === 'function' ? () => unsubscribe() : null
 }
 
 export async function stopArtifactShareForMainProcess(): Promise<void> {
+  const unsubscribe = removeSettingsListener
+  removeSettingsListener = null
+  unsubscribe?.()
   registerArtifactShareRuntime(null)
   await server?.stop()
 }

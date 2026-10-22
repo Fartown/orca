@@ -11,14 +11,14 @@ issue: 会话命名与身份保护
 
 仅覆盖 REQ-028 的 WP0a，不替代全量命名、严格身份和可见性验收。预期来源：用户在位者活动规则、继续验证修复的授权、[实施方案](../../solutions/Claude在位会话活跃窗口保护方案.md)及 D-005。W=30秒为当前实现常量，测试其边界，不将它视为最优值。
 
-| 功能 ID | 关联需求 | 功能点 | 是否测试 | 预期表现 | Test Case |
-| --- | --- | --- | --- | --- | --- |
-| F-255 | REQ-028 | 活跃在位者保护 | 是 | 竞争启动及后续事件均不能替换 | TC-255 |
-| F-256 | REQ-028 | 窗口及续期 | 是 | 小于W拒绝，达到W沿用旧逻辑 | TC-256 |
-| F-257 | REQ-028 | 原Provider行为 | 是 | 合法同ID子Agent、启动与其他Provider保留 | TC-257 |
-| F-258 | [Issues：SQLite 与迁移](../../../Issues看板与会话/requirements/Issues看板与会话.md#req-014-sqlite-与迁移)、REQ-028 | 冷恢复与生命周期 | 是 | 私有计时不重放、不跨实例、不假称liveness | TC-258 |
-| F-259 | [Issues：Authority 与 host](../../../Issues看板与会话/requirements/Issues看板与会话.md#req-015-authority-与-host)、REQ-028 | relay与旧端入口 | 是 | 复用窗口；不新增wire字段 | TC-259 |
-| F-260 | REQ-025、REQ-028 | 真实App投影 | 是 | 受保护身份对应标题与Issue attachment不跳 | TC-260 |
+| 功能 ID | 关联需求                                                                                                                   | 功能点           | 是否测试 | 预期表现                                 | Test Case |
+| ------- | -------------------------------------------------------------------------------------------------------------------------- | ---------------- | -------- | ---------------------------------------- | --------- |
+| F-255   | REQ-028                                                                                                                    | 活跃在位者保护   | 是       | 竞争启动及后续事件均不能替换             | TC-255    |
+| F-256   | REQ-028                                                                                                                    | 窗口及续期       | 是       | 小于W拒绝，达到W沿用旧逻辑               | TC-256    |
+| F-257   | REQ-028                                                                                                                    | 原Provider行为   | 是       | 合法同ID子Agent、启动与其他Provider保留  | TC-257    |
+| F-258   | [Issues：SQLite 与迁移](../../../Issues看板与会话/requirements/Issues看板与会话.md#req-014-sqlite-与迁移)、REQ-028         | 冷恢复与生命周期 | 是       | 私有计时不重放、不跨实例、不假称liveness | TC-258    |
+| F-259   | [Issues：Authority 与 host](../../../Issues看板与会话/requirements/Issues看板与会话.md#req-015-authority-与-host)、REQ-028 | relay与旧端入口  | 是       | 复用窗口；不新增wire字段                 | TC-259    |
+| F-260   | REQ-025、REQ-028                                                                                                           | 真实App投影      | 是       | 受保护身份对应标题与Issue attachment不跳 | TC-260    |
 
 ## TC-255 活跃在位者保护
 

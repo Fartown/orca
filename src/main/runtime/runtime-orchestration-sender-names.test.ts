@@ -123,7 +123,12 @@ function providerTitleTab(): NonNullable<Session['tabsByWorktree']>[string][numb
   return {
     id: 'tab_term_plain',
     title: '',
-    aiVaultTitle: { agent: 'claude', sessionId: 'current-session', title: 'Parser work' }
+    aiVaultTitle: {
+      agent: 'claude',
+      sessionId: 'current-session',
+      title: 'Parser work',
+      providerName: { kind: 'named', title: 'Parser work', field: 'test.nativeName' }
+    }
   }
 }
 
