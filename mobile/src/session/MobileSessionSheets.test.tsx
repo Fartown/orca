@@ -48,6 +48,10 @@ async function newTabLabels(executionHost?: string): Promise<string[]> {
   sheets.labelsByTitle.clear()
   const controller = mountFixture<Parameters<typeof MobileSessionSheets>[0]['controller']>({
     worktreeId: 'repo::/wt',
+    client: null,
+    deviceTokenRef: { current: null },
+    showToast: vi.fn(),
+    createTerminalWithResult: vi.fn(),
     isFolderWorkspaceRoute: false,
     isFloatingWorkspaceRoute: false,
     sessionTabs: [],

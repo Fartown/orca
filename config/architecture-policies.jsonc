@@ -502,6 +502,7 @@
             "mobile/src/session/mobile-dictation-disabled-controls.test.tsx",
             "mobile/src/session/mobile-dictation-mode-refresh.test.tsx",
             "mobile/src/session/mobile-native-chat-merged-snapshot-parity-hooks.test.tsx",
+            "mobile/src/session/MobileSessionSheets.test.tsx",
             "src/renderer/src/components/terminal-pane/terminal-pane-element-file-drop.test.tsx",
             "mobile/src/terminal/terminal-webview-payload-hash.test.ts",
             "mobile/scripts/build-terminal-webview-engine.mjs",
@@ -1375,6 +1376,7 @@
             "docs/issue/移动端在新会话中继续/**"
           ],
           "allowedPaths": [
+            "mobile/src/session/MobileSessionSheets.test.tsx",
             "mobile/src/terminal/terminal-webview-payload-hash.test.ts",
             "mobile/scripts/build-terminal-webview-engine.mjs",
             "src/shared/agent-session-continuation/**",
