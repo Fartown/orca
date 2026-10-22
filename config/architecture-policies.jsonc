@@ -42,6 +42,7 @@
             "src/main/ipc/crash-reporting-renderer-breadcrumbs.ts",
             "config/fork-features.jsonc",
             "config/architecture-policies.jsonc",
+            ".gitignore",
             "docs/issue/README.md"
           ],
           "message": "Change is outside terminal launch diagnostics."

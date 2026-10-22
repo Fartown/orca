@@ -2256,6 +2256,11 @@
           "file": "src/main/observability/index.ts",
           "mustContain": "diagnostics-ready",
           "why": "persist a startup marker so deployed diagnostics can be checked"
+        },
+        {
+          "file": ".gitignore",
+          "mustContain": "!docs/issue/终端创建链路诊断/**",
+          "why": "keep diagnostic audits and validation records tracked"
         }
       ],
       "tests": [

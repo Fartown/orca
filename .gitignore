@@ -263,6 +263,8 @@ ci-shards/
 
 !docs/issue/终端ID复制主机路由/
 !docs/issue/终端ID复制主机路由/**
+!docs/issue/终端创建链路诊断/
+!docs/issue/终端创建链路诊断/**
 # Paired CI timing reports and temporary baseline plugin.
 .build/preflight-benchmark/
 /.build/windows-native-benchmark/
