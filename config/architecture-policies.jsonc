@@ -497,6 +497,11 @@
             "config/scripts/vitest-sqlite-database-runtime-files.mjs",
             "config/scripts/ci-draft-pr-admission.test.mjs",
             "src/main/orcad/orcad-push-startup.test.ts",
+            "mobile/src/session/MobileNativeChatComposer.test.ts",
+            "mobile/src/session/MobileNativeChatView.prompt-presentation.test.ts",
+            "mobile/src/session/mobile-dictation-disabled-controls.test.tsx",
+            "mobile/src/session/mobile-dictation-mode-refresh.test.tsx",
+            "mobile/src/session/mobile-native-chat-merged-snapshot-parity-hooks.test.tsx",
             "src/renderer/src/components/terminal-pane/terminal-pane-element-file-drop.test.tsx",
             "mobile/src/terminal/terminal-webview-payload-hash.test.ts",
             "mobile/scripts/build-terminal-webview-engine.mjs",
@@ -1411,6 +1416,11 @@
             "docs/issue/移动端上传任意文件/**"
           ],
           "allowedPaths": [
+            "mobile/src/session/MobileNativeChatComposer.test.ts",
+            "mobile/src/session/MobileNativeChatView.prompt-presentation.test.ts",
+            "mobile/src/session/mobile-dictation-disabled-controls.test.tsx",
+            "mobile/src/session/mobile-dictation-mode-refresh.test.tsx",
+            "mobile/src/session/mobile-native-chat-merged-snapshot-parity-hooks.test.tsx",
             "src/shared/file-attachment-upload/**",
             "src/main/file-attachment-upload/**",
             "src/main/runtime/rpc/methods/file-attachment-upload.ts",

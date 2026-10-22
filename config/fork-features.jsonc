@@ -2056,6 +2056,31 @@
       ],
       "seams": [
         {
+          "file": "mobile/src/session/MobileNativeChatComposer.test.ts",
+          "mustContain": "Paperclip",
+          "why": "Composer fixture includes the attachment icon."
+        },
+        {
+          "file": "mobile/src/session/MobileNativeChatView.prompt-presentation.test.ts",
+          "mustContain": "Paperclip",
+          "why": "Prompt fixture includes the attachment icon."
+        },
+        {
+          "file": "mobile/src/session/mobile-dictation-disabled-controls.test.tsx",
+          "mustContain": "Paperclip",
+          "why": "Disabled dictation retains attachment actions."
+        },
+        {
+          "file": "mobile/src/session/mobile-dictation-mode-refresh.test.tsx",
+          "mustContain": "Paperclip",
+          "why": "Dictation fixture includes the attachment icon."
+        },
+        {
+          "file": "mobile/src/session/mobile-native-chat-merged-snapshot-parity-hooks.test.tsx",
+          "mustContain": "files: { isUploadingToChat: false",
+          "why": "Overlay fixture supplies the file attachment contract."
+        },
+        {
           "file": "src/main/runtime/rpc/methods/index.ts",
           "mustContain": "...FILE_ATTACHMENT_UPLOAD_METHODS",
           "why": "the host exposes the upload methods (REQ-002, REQ-004)"
