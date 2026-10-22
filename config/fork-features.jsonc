@@ -2349,15 +2349,33 @@
           "file": ".gitignore",
           "mustContain": "!docs/issue/终端创建链路诊断/**",
           "why": "keep diagnostic audits and validation records tracked"
+        },
+        {
+          "file": "src/renderer/src/lib/launch-agent-in-new-tab-web-runtime.test.ts",
+          "mustContain": "request-local-token",
+          "why": "Keep the feature contract and its exhaustive integration checks aligned."
+        },
+        {
+          "file": "src/renderer/src/components/terminal-pane/pty-connection-agent-session-resume.spec.ts",
+          "mustContain": "codex-session-1",
+          "why": "Keep the feature contract and its exhaustive integration checks aligned."
+        },
+        {
+          "file": "src/renderer/src/components/terminal-pane/pty-connection-sleeping-resume-banner.spec.ts",
+          "mustContain": "codex-session-1",
+          "why": "Keep the feature contract and its exhaustive integration checks aligned."
         }
       ],
       "tests": [
         "src/shared/terminal-launch-diagnostics/launch-evidence.test.ts",
         "src/main/terminal-launch-diagnostics/launch-trace.test.ts",
-        "src/renderer/src/terminal-launch-diagnostics/launch-origin.test.ts"
+        "src/renderer/src/terminal-launch-diagnostics/launch-origin.test.ts",
+        "src/renderer/src/lib/launch-agent-in-new-tab-web-runtime.test.ts",
+        "src/renderer/src/components/terminal-pane/pty-connection-restore-and-resume.test.ts"
       ],
       "checks": [
-        "ORCA_BACKGROUND_LAUNCH=1 pnpm exec vitest run --config config/vitest.config.ts src/shared/terminal-launch-diagnostics src/main/terminal-launch-diagnostics src/renderer/src/terminal-launch-diagnostics"
+        "ORCA_BACKGROUND_LAUNCH=1 pnpm exec vitest run --config config/vitest.config.ts src/shared/terminal-launch-diagnostics src/main/terminal-launch-diagnostics src/renderer/src/terminal-launch-diagnostics",
+        "ORCA_BACKGROUND_LAUNCH=1 pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/lib/launch-agent-in-new-tab-web-runtime.test.ts src/renderer/src/components/terminal-pane/pty-connection-restore-and-resume.test.ts"
       ]
     },
     {
