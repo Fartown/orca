@@ -142,6 +142,11 @@
           "file": "config/scripts/win32-test-lane-registration.test.mjs",
           "mustContain": "repositoryRunnerLabels",
           "why": "Keep the feature contract and its exhaustive integration checks aligned."
+        },
+        {
+          "file": "config/scripts/ci-closed-pr-cancellation.test.mjs",
+          "mustContain": "fork-integration-build-123-packages",
+          "why": "The exact cancellation census includes the fork package concurrency group."
         }
       ],
       "tests": [
@@ -160,12 +165,13 @@
         "config/scripts/integration-builds/architecture-live-path-references.test.mjs",
         "config/scripts/pr-preflight-gates.test.mjs",
         "config/scripts/win32-test-lane-registration.test.mjs",
-        "config/scripts/ci-pr-concurrency-keys.test.mjs"
+        "config/scripts/ci-pr-concurrency-keys.test.mjs",
+        "config/scripts/ci-closed-pr-cancellation.test.mjs"
       ],
       "checks": [
         "pnpm exec vitest run --config config/vitest.config.ts config/scripts/integration-builds src/shared/integration-builds src/main/integration-builds",
         "pnpm --dir mobile exec vitest run src/integration-builds",
-        "ORCA_BACKGROUND_LAUNCH=1 pnpm exec vitest run --config config/vitest.config.ts config/scripts/pr-preflight-gates.test.mjs config/scripts/win32-test-lane-registration.test.mjs config/scripts/ci-pr-concurrency-keys.test.mjs"
+        "ORCA_BACKGROUND_LAUNCH=1 pnpm exec vitest run --config config/vitest.config.ts config/scripts/pr-preflight-gates.test.mjs config/scripts/win32-test-lane-registration.test.mjs config/scripts/ci-pr-concurrency-keys.test.mjs config/scripts/ci-closed-pr-cancellation.test.mjs"
       ]
     },
     {
