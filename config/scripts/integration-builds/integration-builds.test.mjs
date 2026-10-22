@@ -244,9 +244,7 @@ describe('complete, immutable fork prereleases', () => {
       ...PACKAGE_NAMES.filter((name) => name !== 'orca-linux.AppImage'),
       LEGACY_INTEL_PLACEHOLDER
     ])
-    expect(manifest.linuxAssets.map((asset) => asset.name)).toEqual([
-      'orca-linux.AppImage'
-    ])
+    expect(manifest.linuxAssets.map((asset) => asset.name)).toEqual(['orca-linux.AppImage'])
     const linuxUpdate = parse(readFileSync(join(directory, 'latest-linux.yml'), 'utf8'))
     expect(linuxUpdate.version).toBe(env.ORCA_LOCAL_BUILD_VERSION)
     expect(linuxUpdate.files).toEqual(

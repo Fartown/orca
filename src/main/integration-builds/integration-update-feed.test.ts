@@ -99,9 +99,7 @@ describe('integration-only default updater feed', () => {
     Object.defineProperty(process, 'platform', { value: 'linux' })
     Object.defineProperty(process, 'arch', { value: 'x64' })
     publish({
-      linuxAssets: [
-        { name: 'orca-linux.AppImage', bytes: 123, sha256: 'b'.repeat(64) }
-      ]
+      linuxAssets: [{ name: 'orca-linux.AppImage', bytes: 123, sha256: 'b'.repeat(64) }]
     })
     const updater = feedUpdater()
     expect(isIntegrationBuild()).toBe(true)

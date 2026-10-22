@@ -65,9 +65,7 @@ describe('fork integration release catalog', () => {
   it.each([
     { linuxAssets: [] },
     {
-      linuxAssets: [
-        { name: 'orca-linux.AppImage', bytes: 0, sha256: 'c'.repeat(64) }
-      ]
+      linuxAssets: [{ name: 'orca-linux.AppImage', bytes: 0, sha256: 'c'.repeat(64) }]
     },
     { linuxAssets: [{ name: 'orca-linux.AppImage', bytes: 123, sha256: 'bad' }] },
     { linuxAssets: [{ name: 'other.AppImage', bytes: 123, sha256: 'c'.repeat(64) }] }
