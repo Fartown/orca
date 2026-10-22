@@ -9,6 +9,10 @@ import {
  * until it is listed here.
  */
 export const LOCAL_STORAGE_MODULE_DISPOSITIONS: Record<string, WslMoveFieldDisposition> = {
+  'src/renderer/src/goals/GoalNoticeWatcher.tsx': notApplicableDisposition(
+    62,
+    'Client notice deduplication keyed by goal identity, not a project path.'
+  ),
   'src/renderer/src/lib/quick-open-file-history.ts': {
     disposition: 'rewrite-desktop',
     item: 42

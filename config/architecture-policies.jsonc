@@ -1017,7 +1017,9 @@
             "src/shared/runtime-worktree-contracts.ts",
             "src/main/runtime/runtime-worktree-agent-source.ts",
             "src/main/runtime/runtime-worktree-pty-agent-sources.ts",
-            "src/main/runtime/runtime-worktree-agent-rows.ts"
+            "src/main/runtime/runtime-worktree-agent-rows.ts",
+            "src/shared/host-operation-ownership.ts",
+            "src/shared/wsl-move/wsl-move-storage-dispositions.ts"
           ],
           "message": "Change is outside the Goal feature and its reviewed seams."
         },

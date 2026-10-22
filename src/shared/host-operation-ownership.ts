@@ -33,6 +33,7 @@ export const HOST_OPERATION_OWNERSHIP = {
   git: 'host',
   github: 'credential',
   gitlab: 'credential',
+  goals: 'host',
   host: 'host',
   hostedReview: 'credential',
   jira: 'scope-picked',
