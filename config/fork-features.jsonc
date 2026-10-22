@@ -127,6 +127,11 @@
           "file": "mobile/pnpm-lock.yaml",
           "mustContain": "zustand",
           "why": "The fork update UI requires its own mobile Zustand dependency; root resolution cannot supply Metro."
+        },
+        {
+          "file": "config/scripts/check-path-literal-ratchet.mjs",
+          "mustContain": "architectureLivePathReferences",
+          "why": "Reuse existing contracts while keeping host inventory and historical path semantics explicit."
         }
       ],
       "tests": [
@@ -141,7 +146,8 @@
         "src/shared/integration-builds/release-catalog.test.ts",
         "src/main/integration-builds/integration-update-feed.test.ts",
         "mobile/src/integration-builds/update-controller.test.ts",
-        "config/scripts/integration-builds/mobile-dependency-contract.test.mjs"
+        "config/scripts/integration-builds/mobile-dependency-contract.test.mjs",
+        "config/scripts/integration-builds/architecture-live-path-references.test.mjs"
       ],
       "checks": [
         "pnpm exec vitest run --config config/vitest.config.ts config/scripts/integration-builds src/shared/integration-builds src/main/integration-builds",

@@ -2,6 +2,7 @@ import process from 'node:process'
 import { pathToFileURL } from 'node:url'
 import { parse } from 'jsonc-parser'
 import { listTrackedFiles, readTrackedSources, runEntryRatchet } from './ratchet-baseline.mjs'
+import { architectureLivePathReferences } from './integration-builds/architecture-live-path-references.mjs'
 
 // Ratchet on `src/...` path literals in CI config, workflows and e2e code that name nothing. A
 // moved or deleted file silently orphans these hand-kept references (routes, gate manifests,
@@ -130,7 +131,12 @@ export function collectUnresolvedPathLiterals(root = process.cwd()) {
   const resolves = createPathResolver(listTrackedFiles(root, ['src']))
   const entries = []
   for (const [rel, source] of readTrackedSources(root, SCAN_ROOTS, isScannedPath)) {
-    const text = rel === GATE_MANIFEST ? liveGateReferences(source) : source
+    const text =
+      rel === GATE_MANIFEST
+        ? liveGateReferences(source)
+        : rel === 'config/architecture-policies.jsonc'
+          ? architectureLivePathReferences(source)
+          : source
     for (const { literal, isImport } of extractPathLiterals(rel, text)) {
       if (!resolves(literal, isImport)) {
         entries.push(`${rel} ${literal}`)
