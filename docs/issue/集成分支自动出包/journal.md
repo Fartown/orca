@@ -443,3 +443,12 @@ external_ids: []
 - 验证证据：CI 39594208265 的 macOS 成功，Android 在 Metro 解析 IntegrationUpdateGate.tsx 时报告 Unable to resolve module zustand；本地依赖契约、21 项更新控制器回归、共享依赖版本、注册与架构检查通过，Metro 原生 Android 导出（完整 17 MB JS 包）和 mobile 类型检查通过。
 - 未解决问题：等待新提交的完整远端构建通过；旧失败日志保留于 .docs/upstream-sync-ui-validation/2026-10-21/evidence/android-ci-failure.log。
 - 下一步：通过本地验证后提交并推送同步修复，重新验证两端构建与发布。
+
+## 2026-10-22 完整门禁补齐（testing）
+
+- 本轮目标：修复同树完整检查暴露的问题，不降低门禁。
+- 完成内容：路径检查区分真实输入、禁止存在的旧路径及历史字节对照；原禁止和 parity 规则完整保留，只清理已失效的正向范围。
+- 代码或文档变更：功能源码、对应回归与登记；各能力保持独立提交。
+- 验证证据：定向测试及完整同树复验记录归集至 .docs/ci-baseline-repair/2026-10-22/；最终结果待集成复验。
+- 未解决问题：最终同树 CI 尚未完成；未部署或重启用户应用和远程服务。
+- 下一步：完整本地门禁、隐藏应用与 SSH 验证后，等待最终 CI 并合入。
