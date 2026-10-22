@@ -16,6 +16,7 @@ export type ConversationNameTab = Pick<
 >
 
 export type AgentRowConversationNameOptions = {
+  /** Omission keeps legacy lookup; explicit undefined means the caller found no owning session. */
   providerSessionId?: string
   userTitle?: string | null
   identityFallbackTitle?: string | null
