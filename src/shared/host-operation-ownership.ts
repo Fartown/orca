@@ -27,6 +27,7 @@ export const HOST_OPERATION_OWNERSHIP = {
   diagnostics: 'host',
   emulator: 'host',
   files: 'host',
+  fileAttachment: 'host',
   folderWorkspace: 'host',
   git: 'host',
   github: 'credential',
