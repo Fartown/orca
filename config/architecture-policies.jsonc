@@ -923,7 +923,10 @@
             "src/shared/host-operation-ownership.ts",
             "src/main/startup/main-process-ready-duplicate-pty-repair.test.ts",
             "src/main/runtime/construction/runtime-composition-parity.test.ts",
-            "src/shared/wsl-move/wsl-move-storage-dispositions.ts"
+            "src/shared/wsl-move/wsl-move-storage-dispositions.ts",
+            "src/renderer/src/runtime/runtime-paged-file-read.ts",
+            "src/renderer/src/runtime/runtime-paged-file-read.test.ts",
+            "tests/e2e/paired-remote-large-file-open.spec.ts"
           ],
           "message": "Branch changes an upstream path that no fork feature owns or registers as a seam; extend config/fork-features.jsonc and this allowlist, or move the change into a feature-owned path."
         }
@@ -1295,7 +1298,10 @@
             "config/scripts/sync-upstream.mjs",
             "docs/reference/fork-maintenance.md",
             "docs/issue/**",
-            "docs/maintenance/**"
+            "docs/maintenance/**",
+            "src/renderer/src/runtime/runtime-paged-file-read.ts",
+            "src/renderer/src/runtime/runtime-paged-file-read.test.ts",
+            "tests/e2e/paired-remote-large-file-open.spec.ts"
           ],
           "message": "Change is outside the remote editor large-file read feature and its journal."
         }

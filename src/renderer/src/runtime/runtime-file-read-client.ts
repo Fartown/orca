@@ -113,15 +113,7 @@ export async function readRuntimeFileContent({
     // Why not the truncated payload: saving it would overwrite the rest of the file. files.read
     // is preview-sized, so finish the job on files.readChunk — the same RPC the download path
     // already uses, so nothing new reaches the wire.
-    return {
-      content: await readWholeRuntimeFile(
-        remote.target,
-        remote.worktree,
-        remote.relativePath,
-        result
-      ),
-      isBinary: false
-    }
+    return readWholeRuntimeFile(remote)
   }
   return { content: result.content, isBinary: false }
 }

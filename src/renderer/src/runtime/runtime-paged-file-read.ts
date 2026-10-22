@@ -45,13 +45,17 @@ export function pinRemoteFileAddress(address: RuntimeRemoteFileAddress): Runtime
  * methods already exist on hosts that page CSVs and downloads.
  */
 export async function readRemoteFileInChunks(
-  address: RuntimeRemoteFileAddress
+  address: RuntimeRemoteFileAddress,
+  maxBytes = PAGED_REMOTE_FILE_MAX_BYTES
 ): Promise<PagedRemoteFileRead> {
   const remote = pinRemoteFileAddress(address)
-  return readFileInChunks({
-    stat: () => statRemoteRuntimeFile(remote),
-    readChunk: (offset, length) => readRemoteRuntimeFileChunk(remote, offset, length)
-  })
+  return readFileInChunks(
+    {
+      stat: () => statRemoteRuntimeFile(remote),
+      readChunk: (offset, length) => readRemoteRuntimeFileChunk(remote, offset, length)
+    },
+    maxBytes
+  )
 }
 
 /** Host calls for one file; a paired web client binds them to its own session. */
@@ -61,7 +65,10 @@ export type ChunkedFileReader = {
 }
 
 /** The paging loop behind `readRemoteFileInChunks`, over any way of calling the host. */
-export async function readFileInChunks(reader: ChunkedFileReader): Promise<PagedRemoteFileRead> {
+export async function readFileInChunks(
+  reader: ChunkedFileReader,
+  maxBytes = PAGED_REMOTE_FILE_MAX_BYTES
+): Promise<PagedRemoteFileRead> {
   const before = await nullWhenUnsupported(() => reader.stat())
   if (!before) {
     return { kind: 'unsupported' }
@@ -69,7 +76,7 @@ export async function readFileInChunks(reader: ChunkedFileReader): Promise<Paged
   if (before.isDirectory) {
     throw new Error('Remote path is a directory')
   }
-  if (before.size > PAGED_REMOTE_FILE_MAX_BYTES) {
+  if (before.size > maxBytes) {
     return { kind: 'too_large', size: before.size }
   }
   const bytes = new Uint8Array(before.size)

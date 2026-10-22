@@ -10,6 +10,7 @@ import {
 } from './helpers/paired-electron-client'
 import { createPdfFindFixture } from './helpers/pdf-find-fixture'
 import { waitForActiveWorktree, waitForSessionReady } from './helpers/store'
+import { RUNTIME_EDITOR_TEXT_MAX_BYTES } from '../../src/renderer/src/runtime-large-file/assemble-runtime-file-chunks'
 
 const MB = 1024 * 1024
 // Why: one paired reply carries 512 KiB of text (files.read) and about 3 MB of binary.
@@ -27,12 +28,15 @@ async function openExplorerFile(page: Page, name: string): Promise<void> {
   await row.click()
 }
 
-test('opens HTML and PDF files larger than one RPC reply on a paired runtime', async ({
+test('opens complete paired files within their caps and refuses oversized editable text', async ({
   orcaPage,
   testRepoPath,
   registerPostElectronShutdownCleanup
 }, testInfo) => {
   test.setTimeout(600_000)
+  await orcaPage.evaluate(() =>
+    window.__store!.getState().updateSettingsOrThrow({ uiLanguage: 'en' })
+  )
   const fixtures: { name: string; sizeMb: number; kind: 'pdf' | 'html' }[] = [
     ...PDF_SIZES_MB.map((sizeMb) => ({
       name: `large-${sizeMb}mb.pdf`,
@@ -63,6 +67,9 @@ test('opens HTML and PDF files larger than one RPC reply on a paired runtime', a
   try {
     client = await launchPairedElectronClient(offer, testInfo, 'Remote large file open')
     const { page, environmentId } = client
+    await page.evaluate(() =>
+      window.__store!.getState().updateSettingsOrThrow({ uiLanguage: 'en' })
+    )
     const findWorktreeId = (): Promise<string | null> =>
       page.evaluate(
         (repoPath) =>
@@ -110,6 +117,12 @@ test('opens HTML and PDF files larger than one RPC reply on a paired runtime', a
     await openFileExplorer(page)
     for (const fixture of fixtures) {
       await openExplorerFile(page, fixture.name)
+      if (fixture.kind === 'html' && fixture.sizeMb * MB > RUNTIME_EDITOR_TEXT_MAX_BYTES) {
+        await expect(page.getByText('Unable to load file', { exact: true })).toBeVisible()
+        await expect(page.getByText(/Remote file is too large to open in the editor/)).toBeVisible()
+        await page.screenshot({ path: testInfo.outputPath(`${fixture.name}-refused.png`) })
+        continue
+      }
       if (fixture.kind === 'pdf') {
         await expect(page.locator('.pdfViewer .page')).toHaveCount(3, { timeout: 120_000 })
         await expect(page.locator('.pdfViewer .page').first().locator('.textLayer')).toContainText(

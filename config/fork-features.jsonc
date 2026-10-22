@@ -1739,7 +1739,9 @@
         "src/shared/runtime-types.ts",
         "src/renderer/src/runtime/runtime-file-client-types.ts",
         "src/renderer/src/runtime/runtime-rpc-client.ts",
-        "src/renderer/src/runtime/runtime-rpc-result.ts"
+        "src/renderer/src/runtime/runtime-rpc-result.ts",
+        "src/renderer/src/runtime/runtime-paged-file-read.ts",
+        "src/renderer/src/runtime/runtime-file-range-client.ts"
       ],
       "policyId": "remote-editor-large-file-read",
       "ownedPaths": [
@@ -1757,14 +1759,31 @@
           "file": "src/renderer/src/runtime/runtime-file-client.test.ts",
           "mustContain": "files.readChunk",
           "why": "the read path's own tests pin both the chunked completion and the old-host remedy (REQ-701, REQ-703)"
+        },
+        {
+          "file": "src/renderer/src/runtime/runtime-paged-file-read.ts",
+          "mustContain": "maxBytes = PAGED_REMOTE_FILE_MAX_BYTES",
+          "why": "Keep the feature contract and its exhaustive integration checks aligned."
+        },
+        {
+          "file": "src/renderer/src/runtime/runtime-paged-file-read.test.ts",
+          "mustContain": "RUNTIME_EDITOR_TEXT_MAX_BYTES",
+          "why": "Keep the feature contract and its exhaustive integration checks aligned."
+        },
+        {
+          "file": "tests/e2e/paired-remote-large-file-open.spec.ts",
+          "mustContain": "RUNTIME_EDITOR_TEXT_MAX_BYTES",
+          "why": "Keep the feature contract and its exhaustive integration checks aligned."
         }
       ],
       "tests": [
         "src/renderer/src/runtime-large-file/assemble-runtime-file-chunks.test.ts",
-        "src/renderer/src/runtime/runtime-file-client.test.ts"
+        "src/renderer/src/runtime/runtime-file-client.test.ts",
+        "src/renderer/src/runtime/runtime-paged-file-read.test.ts"
       ],
       "checks": [
-        "pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/runtime-large-file src/renderer/src/runtime/runtime-file-client.test.ts"
+        "pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/runtime-large-file src/renderer/src/runtime/runtime-file-client.test.ts",
+        "ORCA_BACKGROUND_LAUNCH=1 pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/runtime/runtime-paged-file-read.test.ts"
       ]
     },
     {

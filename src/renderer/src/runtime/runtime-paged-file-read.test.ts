@@ -8,6 +8,7 @@ import {
 } from './runtime-file-client-test-harness'
 import { REMOTE_FILE_CHANGED_DURING_READ_MESSAGE } from './runtime-paged-file-read'
 import { replaceRuntimeEnvironmentRevisions } from './runtime-environment-revision'
+import { RUNTIME_EDITOR_TEXT_MAX_BYTES } from '../runtime-large-file/assemble-runtime-file-chunks'
 
 installRuntimeFileClientEnvironment()
 
@@ -131,17 +132,28 @@ const remote = (relativePath: string) => ({
 })
 
 describe('remote reads larger than one RPC reply', () => {
-  it.each([2, 5, 20])('opens a %i MB HTML file as complete editable text', async (sizeMb) => {
-    const bytes = htmlBytes(sizeMb * MB)
-    serveRemoteFile('report.html', { bytes })
+  it.each([2, 5, 20])(
+    'reads %i MB HTML completely within the editor cap, otherwise refuses it',
+    async (sizeMb) => {
+      const bytes = htmlBytes(sizeMb * MB)
+      serveRemoteFile('report.html', { bytes })
 
-    const result = await readRuntimeFileContent(remote('report.html'))
+      if (bytes.length > RUNTIME_EDITOR_TEXT_MAX_BYTES) {
+        await expect(readRuntimeFileContent(remote('report.html'))).rejects.toThrow(
+          'too large to open in the editor'
+        )
+        expect(methodCalls('files.readChunk')).toHaveLength(0)
+        return
+      }
 
-    // Byte equality also proves no multi-byte character was split at a chunk edge.
-    expect(result.isBinary).toBe(false)
-    expect(Buffer.from(result.content, 'utf8').equals(bytes)).toBe(true)
-    expect(methodCalls('files.readChunk').length).toBe(Math.ceil(bytes.length / (384 * 1024)))
-  })
+      const result = await readRuntimeFileContent(remote('report.html'))
+
+      // Byte equality also proves no multi-byte character was split at a chunk edge.
+      expect(result.isBinary).toBe(false)
+      expect(Buffer.from(result.content, 'utf8').equals(bytes)).toBe(true)
+      expect(methodCalls('files.readChunk').length).toBe(Math.ceil(bytes.length / (384 * 1024)))
+    }
+  )
 
   it('keeps a UTF-8 BOM so a save does not drop it', async () => {
     const bytes = Buffer.concat([Buffer.from([0xef, 0xbb, 0xbf]), htmlBytes(MB)])
