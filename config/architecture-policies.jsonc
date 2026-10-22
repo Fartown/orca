@@ -96,7 +96,9 @@
             ".gitignore",
             "mobile/package.json",
             "mobile/pnpm-lock.yaml",
-            "config/scripts/check-path-literal-ratchet.mjs"
+            "config/scripts/check-path-literal-ratchet.mjs",
+            "config/scripts/pr-preflight-gates.test.mjs",
+            "config/scripts/win32-test-lane-registration.test.mjs"
           ],
           "message": "Change is outside the integration build feature."
         }
@@ -914,7 +916,8 @@
             "src/renderer/src/components/sidebar/sidebar-host-options.ts",
             "src/renderer/src/components/sidebar/use-sidebar-host-scope-options.ts",
             "src/renderer/src/components/terminal-pane/pty-connection-agent-session-resume.spec.ts",
-            "src/renderer/src/components/terminal-pane/pty-connection-sleeping-resume-banner.spec.ts"
+            "src/renderer/src/components/terminal-pane/pty-connection-sleeping-resume-banner.spec.ts",
+            "config/scripts/win32-test-lane-registration.test.mjs"
           ],
           "message": "Branch changes an upstream path that no fork feature owns or registers as a seam; extend config/fork-features.jsonc and this allowlist, or move the change into a feature-owned path."
         }

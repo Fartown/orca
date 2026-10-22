@@ -4,6 +4,7 @@ import { expect, it } from 'vitest'
 import { runProcess } from '@orca/process-host'
 import { parse } from 'yaml'
 import { classifyPrJobs } from './pr-code-change-scope.mjs'
+import { repositoryRunnerLabels } from './integration-builds/repository-runner-labels.mjs'
 
 const workflow = parse(readFileSync('.github/workflows/pr.yml', 'utf8'))
 const preflight = workflow.jobs.preflight
@@ -16,7 +17,10 @@ it('shares one setup and overlaps the compiler only after type-aware checks fini
   expect(workflow.jobs.static_analysis).toBeUndefined()
   expect(workflow.jobs.typecheck).toBeUndefined()
   expect(preflight.needs).toEqual(['code_paths'])
-  expect(preflight['runs-on']).toBe('blacksmith-8vcpu-ubuntu-2404')
+  expect(repositoryRunnerLabels(preflight['runs-on'])).toEqual([
+    'blacksmith-8vcpu-ubuntu-2404',
+    'ubuntu-24.04'
+  ])
   const installs = steps.filter(
     (step) => step.uses === './.github/actions/install-node-dependencies'
   )

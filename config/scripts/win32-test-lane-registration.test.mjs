@@ -5,6 +5,7 @@ import { parse } from 'yaml'
 import { scanSourceTree, stripComments } from '../../src/shared/source-scan/source-tree-scan'
 import { classifyPrJobs } from './pr-code-change-scope.mjs'
 import { WINDOWS_BOUNDARY_TESTS } from './pr-package-test-paths.mjs'
+import { repositoryRunnerLabels } from './integration-builds/repository-runner-labels.mjs'
 
 /**
  * Every Windows-gated test file must be registered in the Windows CI lane.
@@ -278,7 +279,12 @@ export function couldRunOnWindows(runsOn) {
       : Array.isArray(runsOn)
         ? runsOn
         : [...(runsOn?.labels ?? []), runsOn?.group ?? ''].flat()
-  return labels.some((label) => /windows/i.test(String(label)) || String(label).includes('${{'))
+  return labels.some((label) => {
+    const choices = repositoryRunnerLabels(label)
+    return choices
+      ? choices.some((choice) => /windows/i.test(choice))
+      : /windows/i.test(String(label)) || String(label).includes('${{')
+  })
 }
 
 /** The Windows job's curated files: the boundary list plus any argv the lane steps spell out. */
