@@ -1282,7 +1282,11 @@
         "src/main/document-preview-size/document-preview-content-type.ts",
         "src/renderer/src/lib/doc-preview-grants.ts",
         "src/renderer/src/store/workspace-record-selectors.ts",
-        "src/shared/worktree/host-qualified-identity.ts"
+        "src/shared/worktree/host-qualified-identity.ts",
+        "src/renderer/src/components/host-picker/use-bounded-host-rows.ts",
+        "src/renderer/src/components/host-picker/HostListSearchField.tsx",
+        "src/renderer/src/components/host-picker/HostListOverflowNote.tsx",
+        "src/renderer/src/components/host-picker/host-picker-copy.ts"
       ],
       "policyId": "self-hosted-artifacts",
       "ownedPaths": [
@@ -1517,7 +1521,8 @@
         "src/renderer/src/components/editor/EditorPanelHeader.test.tsx",
         "src/cli/index.test.ts",
         "src/renderer/src/hooks/useSettingsNavigationMetadata.test.ts",
-        "src/renderer/src/components/settings/OrcaAccountSettingsPane.test.tsx"
+        "src/renderer/src/components/settings/OrcaAccountSettingsPane.test.tsx",
+        "src/renderer/src/components/self-hosted-artifacts/page/lan-artifact-host-list.test.tsx"
       ],
       "checks": [
         "pnpm exec vitest run --config config/vitest.config.ts src/main/self-hosted-artifacts src/cli/self-hosted-artifacts src/renderer/src/components/self-hosted-artifacts src/renderer/src/components/editor/EditorPanelHeader.test.tsx src/renderer/src/hooks/useSettingsNavigationMetadata.test.ts src/cli/index.test.ts src/renderer/src/components/browser-pane/workspace-doc src/renderer/src/components/settings/OrcaAccountSettingsPane.test.tsx src/renderer/src/components/unexpected-signout",
