@@ -3,7 +3,7 @@ title: '移动端在新会话中继续'
 slug: '移动端在新会话中继续'
 status: testing
 created: 2026-09-13
-updated: 2026-10-21
+updated: 2026-10-22
 external_ids: []
 ---
 
@@ -170,6 +170,15 @@ external_ids: []
 - 无
 
 ## 3. 开发记录
+
+### 2026-10-22 显式列出既有投递失败状态
+
+- 本轮目标：消除完整 fork 类型感知门禁发现的穷尽性错误，保持既有反馈行为。
+- 完成内容：将原 default 处理的 not-ready / send-rejected 显式列为 case，返回文案、ok 和投递行为不变；本地及 SSH 主机结果仍使用相同映射。
+- 代码或文档变更：移动端 outcome 映射、两种 agent 的等价回归、当前记录；与终端日志分支分开提交。
+- 验证证据：改前完整 fork type-aware 指向 use-mobile-session-continuation.ts:37；改后完整 fork 的 quality/type-aware/React Doctor 均零新增问题，移动端 7 文件 33 项回归通过，mobile tsc 无错误。该变更只把原默认分支显式列出，不需要重做无变化的 UI/SSH 交互验收。
+- 未解决问题：本轮不改变 UI、wire 或续接编排，不代替原功能未完成的整体验收。
+- 下一步：验证原返回值等价，独立 PR 合入后重跑日志分支全 fork 门禁。
 
 ### 2026-10-06 测试夹具跟上上游类型（testing）
 

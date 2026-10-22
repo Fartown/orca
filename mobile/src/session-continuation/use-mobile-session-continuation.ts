@@ -46,7 +46,8 @@ export function continuationOutcomeToast(
       return { message: CONTINUATION_COPY.deliveryFailed(agent), ok: false }
     case 'unknown':
       return { message: CONTINUATION_COPY.deliveryUnknown, ok: false }
-    default:
+    case 'not-ready':
+    case 'send-rejected':
       // not-ready and send-rejected both leave a live session without its context.
       return { message: CONTINUATION_COPY.deliveryFailed(agent), ok: false }
   }
