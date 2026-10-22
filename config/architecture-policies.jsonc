@@ -426,6 +426,7 @@
           "requireBaseAncestor": false,
           "allowedPaths": [
             "config/scripts/vitest-sqlite-database-runtime-files.mjs",
+            "src/main/orcad/orcad-push-startup.test.ts",
             "src/renderer/src/components/terminal-pane/terminal-pane-element-file-drop.test.tsx",
             "mobile/src/terminal/terminal-webview-payload-hash.test.ts",
             "mobile/scripts/build-terminal-webview-engine.mjs",
@@ -1030,6 +1031,7 @@
             "docs/issue/自托管产物后端/**"
           ],
           "allowedPaths": [
+            "src/main/orcad/orcad-push-startup.test.ts",
             "src/main/self-hosted-artifacts/**",
             "src/shared/self-hosted-artifacts/**",
             "src/cli/self-hosted-artifacts/**",

@@ -1286,6 +1286,11 @@
       ],
       "seams": [
         {
+          "file": "src/main/orcad/orcad-push-startup.test.ts",
+          "mustContain": "toHaveBeenCalledTimes(2)",
+          "why": "Verify hook and artifact settings subscriptions are cleaned up on host shutdown."
+        },
+        {
           "file": "src/main/startup/main-process-runtime-service.ts",
           "mustContain": "startArtifactShareForMainProcess",
           "why": "the share service follows the app and replaces the cloud artifact service"
