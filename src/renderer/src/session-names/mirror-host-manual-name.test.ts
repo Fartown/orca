@@ -10,7 +10,7 @@ it('uses the host manual fallback without promoting it above confirmed Provider 
     resolveTerminalTabTitle({ title: '', customTitle: null, aiVaultTitle: manual }, true)
   ).toBe('Host manual name')
   const native = mirrorHostManualName(
-    { ...slot, providerName: { kind: 'named', title: 'Provider name' } },
+    { ...slot, providerName: { kind: 'named', title: 'Provider name', field: 'test.nativeName' } },
     'Host manual name'
   )
   expect(

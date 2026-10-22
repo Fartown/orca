@@ -127,7 +127,7 @@ function providerTitleTab(): NonNullable<Session['tabsByWorktree']>[string][numb
       agent: 'claude',
       sessionId: 'current-session',
       title: 'Parser work',
-      providerName: { kind: 'named', title: 'Parser work' }
+      providerName: { kind: 'named', title: 'Parser work', field: 'test.nativeName' }
     }
   }
 }
