@@ -2353,7 +2353,8 @@
         "src/shared/execution-host.ts",
         "src/renderer/src/runtime/runtime-environment-revision.ts",
         "src/renderer/src/store/slices/runtime-environment-ssh-selectors.ts",
-        "src/shared/terminal-surface-id.ts"
+        "src/shared/terminal-surface-id.ts",
+        "src/renderer/src/lib/resolve-owner.ts"
       ],
       "policyId": "terminal-id-copy-routing",
       "ownedPaths": [
