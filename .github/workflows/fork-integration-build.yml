@@ -236,6 +236,10 @@ jobs:
       - uses: ./.github/actions/prepare-wayland-clipboard
       - name: Test integration Linux build and update contracts
         run: pnpm exec vitest run --config config/vitest.config.ts config/scripts/integration-builds/integration-builds.test.mjs src/shared/integration-builds/release-catalog.test.ts src/main/integration-builds/integration-update-feed.test.ts
+      - name: Install Linux accessibility verification dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends python3-gi gir1.2-gtk-3.0 gir1.2-atspi-2.0
       - name: Build desktop and native helpers
         run: pnpm run build:release
       - name: Package Linux x64 AppImage

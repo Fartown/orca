@@ -81,7 +81,7 @@ external_ids: []
 - 完成内容：已核对上游AppImage摘要与当前运行路径；fork最新发布没有Linux；在独立feat/integration-linux-builds工作树扩展既有功能。
 - 代码或文档变更：先补需求与TC-414、登记标题；实现将复用Linux打包、glibc门槛与fork发布流程，Linux校验资料使用可选字段兼容旧客户端。
 - 验证证据：[Linux合同验证](tests/runs/2026-10-22-linux-contracts.md)：桌面148通过/1跳过、移动21通过、完整类型、三个本地化、16组架构、登记/文档和定向lint通过。产物与实际安装待验；原服务尚未退出。
-- 未解决问题：本地原生构建正在恢复容器网络；CI与实际安装尚未完成。
+- 未解决问题：首轮Linux CI在原生验证中缺Atspi typelib，已补runner的GTK/AT-SPI依赖，不跳过验证；本地原生构建仍在恢复容器网络。CI产物与实际安装尚未完成。
 - 下一步：实现、测试、生成PR，取得Linux产物后隔离验收并安装。
 
 ### 2026-10-06 上游同步：撤下 mobile 网页包打包工作流普查的接缝

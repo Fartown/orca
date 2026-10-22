@@ -17,3 +17,5 @@ updated: 2026-10-22
 - 本机Node24与仓库指定pnpm放在忽略的验证目录，没有修改全局Node/pnpm。
 - Docker基础镜像直连超时；通过用户指定代理取回官方Ubuntu20.04 amd64清单/层，校验digest后导入Docker。容器bridge无法解析代理，改以host网络准备同一Dockerfile的构建缓存，未修改系统Docker配置或降低glibc要求。
 - 真实Linux构建、CLI/headless/SSH与安装验证仍待完成。原工作树未提交的其他需求文档未动。
+
+首轮真实CI已运行Linux原生helper且glibc门槛通过；之后verify-computer-native的Python导入报Namespace Atspi not available。工作流补装python3-gi、gir1.2-gtk-3.0、gir1.2-atspi-2.0，保持原验证执行。JavaScript实际发布构建已在本机通过，包括CLI、主进程/renderer、Web投影、技能闭包与mobile-web校验；Linux实际打包/安装仍待验。
