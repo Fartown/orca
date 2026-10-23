@@ -80,7 +80,7 @@ export function AiVaultVirtualRow({
   expandedSessionIds: ReadonlySet<string>
   vaultScope: AiVaultScope
   buildResumeStartup: (session: AiVaultSession, worktreeId?: string | null) => AiVaultResumeStartup
-  // Shared name projection for this identity, independent of Issue membership.
+  // Shared name projection for this session identity.
   getCanonicalTitle?: (session: AiVaultSession) => string | undefined
   getOriginalPaneTarget: (session: AiVaultSession) => AiVaultOriginalPaneTarget | null
   isStructuredSessionOpen: (session: AiVaultSession) => boolean

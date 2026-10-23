@@ -416,7 +416,7 @@ describe('aiVaultTitle slot ownership', () => {
   })
 
   it('lets a Conversation rename override the native Provider slot', () => {
-    canonicalTitleState.current = 'Named in Issues'
+    canonicalTitleState.current = 'Named in Session History'
     const tab = {
       id: 'tab-1',
       worktreeId: 'wt-1',
@@ -436,6 +436,6 @@ describe('aiVaultTitle slot ownership', () => {
       entry: { prompt: '', providerSession: { key: 'session_id', id: 'session-a' } }
     } as Partial<DashboardAgentRow>)
 
-    expect(useAgentRowConversationName(owner)).toBe('Named in Issues')
+    expect(useAgentRowConversationName(owner)).toBe('Named in Session History')
   })
 })

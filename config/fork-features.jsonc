@@ -907,8 +907,8 @@
         "src/renderer/src/session-names/**",
         "src/shared/claude-session-ownership/**",
         "src/main/claude-session-ownership/**",
-        "tests/e2e/issues-session-name-file-chain.unit.test.ts",
-        "tests/e2e/helpers/issues-session-name-file-chain.tsconfig.json",
+        "tests/e2e/session-name-file-chain.unit.test.ts",
+        "tests/e2e/helpers/session-name-file-chain.tsconfig.json",
         "docs/issue/会话命名与身份保护/**"
       ],
       "requiredFiles": [
@@ -1322,7 +1322,7 @@
         {
           "file": "src/shared/ai-vault-session-filters.ts",
           "mustContain": "filters.canonicalTitleBySessionKey?.get(",
-          "why": "history search retains Issue-pinned conversation titles alongside upstream filtering optimizations"
+          "why": "history search matches shared canonical session titles alongside upstream filtering optimizations"
         },
         {
           "file": "src/wsl-guest/agent-hook-provider-normalization.ts",
@@ -1363,7 +1363,7 @@
       "tests": [
         "src/main/codex-session-ownership/session-validation-package-contract.test.ts",
         "src/main/codex-session-ownership/codex-title-task-admission.test.ts",
-        "src/renderer/src/issues/provider-title-tab-projection.test.ts",
+        "src/renderer/src/session-names/provider-title-tab-projection.test.ts",
         "src/renderer/src/session-names/session-name-store.test.ts",
         "src/shared/session-names/session-name-priority.test.ts",
         "src/shared/session-names/session-name-slot.test.ts",
@@ -1374,8 +1374,8 @@
         "src/renderer/src/store/slices/agent-generated-tab-title.test.ts",
         "src/main/session-names/provider-name-evidence.test.ts",
         "src/main/session-names/provider-name-file-chain.test.ts",
-        "src/renderer/src/issues/provider-name-store-chain.test.ts",
-        "src/renderer/src/issues/dashboard-name-ownership.test.ts",
+        "src/renderer/src/session-names/provider-name-store-chain.test.ts",
+        "src/renderer/src/session-names/dashboard-name-ownership.test.ts",
         "src/main/ai-vault/session-title-file-reader.test.ts",
         "src/renderer/src/components/tab-bar/tab-title-tooltip.test.tsx",
         "src/main/codex-session-ownership/codex-nested-hook-guard.test.ts",
@@ -1394,8 +1394,8 @@
         "pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/components/activity src/renderer/src/lib/activity-thread-display.test.ts src/renderer/src/store/slices/agent-status-batch.test.ts src/renderer/src/store/slices/agent-status.test.ts src/renderer/src/runtime/web-session-tabs-sync-agent-status.test.ts src/renderer/src/runtime/sync-runtime-graph-agent-status-projection.test.ts src/renderer/src/runtime/sync-runtime-graph-agent-status-projection-join.test.ts",
         "pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/components/native-chat/StructuredAgentSessionStatusBridge.test.tsx src/renderer/src/lib/ai-vault-tab-title-sync-inputs.test.ts src/renderer/src/store/slices/agent-generated-tab-title.test.ts",
         "pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/components/terminal-pane/use-notification-dispatch.test.ts src/main/ipc/notifications-message-formatting.test.ts src/main/ipc/notifications-mobile-fanout.test.ts src/main/ipc/notifications-delivery-gating.test.ts src/main/ipc/notifications-retention-lifecycle.test.ts src/renderer/src/runtime/web-session-tabs-agent-completion-notifications.test.ts src/renderer/src/hooks/useIpcEvents-agent-status-turn-completion.test.ts src/renderer/src/hooks/agent-hook-completion-notifications.test.ts",
-        "pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/session-names src/renderer/src/issues/conversation-session-titles.test.ts src/renderer/src/issues/issue-conversation-presentation.test.ts src/renderer/src/components/right-sidebar/AiVaultSessionRow.test.tsx",
-        "pnpm exec tsc --noEmit -p tests/e2e/helpers/issues-session-name-file-chain.tsconfig.json && pnpm exec vitest run --config config/vitest.config.ts tests/e2e/issues-session-name-file-chain.unit.test.ts src/main/ai-vault/session-scanner-claude-subagents.test.ts src/renderer/src/components/right-sidebar/ai-vault-session-continuation.test.ts",
+        "pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/session-names src/renderer/src/components/right-sidebar/AiVaultSessionRow.test.tsx",
+        "pnpm exec tsc --noEmit -p tests/e2e/helpers/session-name-file-chain.tsconfig.json && pnpm exec vitest run --config config/vitest.config.ts tests/e2e/session-name-file-chain.unit.test.ts src/main/ai-vault/session-scanner-claude-subagents.test.ts src/renderer/src/components/right-sidebar/ai-vault-session-continuation.test.ts",
         "pnpm exec vitest run --config config/vitest.config.ts src/main/codex-session-ownership",
         "pnpm exec vitest run --config config/vitest.config.ts src/main/session-names src/main/ai-vault/session-title-file-reader.test.ts src/main/ai-vault/session-title-file-reader-wsl-stall.test.ts src/main/ai-vault/session-scanner-parse-cache.test.ts src/main/ai-vault/session-parse-cache-persistence.test.ts src/shared/workspace-session-schema.test.ts src/renderer/src/lib/ai-vault-tab-title-sync.test.ts src/renderer/src/components/tab-bar/tab-title-tooltip.test.tsx",
         "pnpm exec vitest run --config config/vitest.config.ts src/shared/session-names src/shared/session-display-title.test.ts src/shared/agent-tab-title.test.ts src/shared/tab-title-resolution.test.ts src/shared/agent-row-conversation-name.test.ts",
