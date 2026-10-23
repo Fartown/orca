@@ -60,6 +60,8 @@
       "goal": "同源发布 fork 内测包，并提供桌面更新清单和 Android 应用内更新",
       "journal": "docs/issue/集成分支自动出包/journal.md",
       "dependsOn": [
+        "src/shared/serve-update-handoff.ts",
+        "src/shared/serve-user-data-path.ts",
         "src/main/appimage-runtime-identity.ts",
         "src/cli/runtime/serve-appimage-update.ts",
         "src/cli/runtime/serve-supervisor-relocation.ts",
@@ -99,6 +101,8 @@
         "docs/issue/集成分支自动出包/**"
       ],
       "requiredFiles": [
+        "src/main/integration-builds/serve-update-handoff-path.ts",
+        "config/scripts/integration-builds/verify-linux-service.mjs",
         "src/cli/integration-builds/linux-serve-update.ts",
         "src/main/integration-builds/linux-serve-update-support.ts",
         "src/renderer/src/integration-builds/web-server-update.ts",
@@ -231,6 +235,8 @@
         }
       ],
       "tests": [
+        "src/main/integration-builds/serve-update-handoff-path.test.ts",
+        "config/scripts/integration-builds/verify-linux-service.test.mjs",
         "src/cli/integration-builds/linux-serve-update.test.ts",
         "src/main/integration-builds/linux-serve-update-support.test.ts",
         "src/renderer/src/integration-builds/web-server-update.test.ts",
