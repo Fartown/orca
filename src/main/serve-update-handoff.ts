@@ -1,25 +1,26 @@
 import { mkdirSync, readFileSync, renameSync, unlinkSync, writeFileSync } from 'node:fs'
-import { dirname, resolve } from 'node:path'
+import { dirname } from 'node:path'
 import { BROWSER_SIDECAR_OWNER_ENV } from '../shared/browser-sidecar-lifetime'
 import { app } from 'electron'
 import { quitProcess } from './startup/process-quit-request'
 import {
   SERVE_UPDATE_HANDOFF_PATH_ENV,
-  getServeUpdateHandoffPath,
   parseServeUpdateHandoffState,
   type ServeSupervisorMessage,
   type ServeUpdateHandoffState
 } from '../shared/serve-update-handoff'
 import { getCanonicalUserDataPath } from './persistence'
 import { hasLinuxServeUpdateSupervisor } from './integration-builds/linux-serve-update-support'
+import { resolveServeUpdateHandoffPath } from './integration-builds/serve-update-handoff-path'
 
 function getConfiguredHandoffPath(): string | null {
-  const configuredPath = process.env[SERVE_UPDATE_HANDOFF_PATH_ENV]
-  if (!configuredPath) {
+  if (!process.env[SERVE_UPDATE_HANDOFF_PATH_ENV]) {
     return null
   }
-  const expectedPath = getServeUpdateHandoffPath(getCanonicalUserDataPath())
-  return resolve(configuredPath) === resolve(expectedPath) ? expectedPath : null
+  return resolveServeUpdateHandoffPath(
+    process.env[SERVE_UPDATE_HANDOFF_PATH_ENV],
+    getCanonicalUserDataPath()
+  )
 }
 
 export function hasServeUpdateSupervisor(): boolean {

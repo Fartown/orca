@@ -573,6 +573,14 @@
             "docs/issue/终端ID复制主机路由/**",
             "src/renderer/src/components/terminal-pane/terminal-pane-menu-copy-actions.ts",
             "src/renderer/src/components/terminal-pane/use-terminal-pane-context-menu.ts",
+            "src/renderer/src/components/terminal-chat-view-button/**",
+            "src/renderer/src/components/terminal-pane/TerminalPaneHeaderOverlay.tsx",
+            "src/renderer/src/components/terminal-pane/TerminalPaneSurface.tsx",
+            "src/renderer/src/components/terminal-pane/use-terminal-pane-projection.ts",
+            "src/renderer/src/components/terminal-pane/TerminalContextMenu.tsx",
+            "src/renderer/src/components/terminal-pane/TerminalPaneResumeInChatButton.tsx",
+            "src/main/cli-writer-login-shell/**",
+            "src/main/runtime/structured-agent-cli-writers.ts",
             "mobile/src/session/mobile-session-terminal-create-request.ts",
             "src/wsl-guest/agent-hook-provider-normalization.ts",
             "src/renderer/src/components/browser-pane/workspace-doc/HtmlDocPreview.tsx",
@@ -1390,6 +1398,63 @@
             ".gitignore"
           ],
           "message": "Change is outside terminal ID copy routing."
+        }
+      ]
+    },
+    {
+      "id": "cli-writer-login-shell",
+      "description": "终端写者核查穿过 macOS login 包装检查真正的 shell，agent 退出后可在聊天界面继续同一段对话",
+      "rules": [
+        {
+          "id": "cli-writer-login-shell-worktree-scope",
+          "type": "change-scope",
+          "comparison": "worktree",
+          "whenChanged": [
+            "src/main/cli-writer-login-shell/**",
+            "docs/issue/终端对话转聊天退出判定/**"
+          ],
+          "allowedPaths": [
+            "src/main/cli-writer-login-shell/**",
+            "docs/issue/终端对话转聊天退出判定/**",
+            "src/main/runtime/structured-agent-cli-writers.ts",
+            "config/fork-features.jsonc",
+            "config/architecture-policies.jsonc",
+            "docs/issue/README.md",
+            ".gitignore"
+          ],
+          "message": "Change is outside the terminal writer login-shell fix."
+        }
+      ]
+    },
+    {
+      "id": "terminal-chat-view-button",
+      "description": "终端窗格头部新增「切到聊天视图」，与「在新聊天中接管」并存且名字区分",
+      "rules": [
+        {
+          "id": "terminal-chat-view-button-worktree-scope",
+          "type": "change-scope",
+          "comparison": "worktree",
+          "whenChanged": [
+            "src/renderer/src/components/terminal-chat-view-button/**",
+            "docs/issue/终端头部切到聊天视图/**"
+          ],
+          "allowedPaths": [
+            "src/renderer/src/components/terminal-chat-view-button/**",
+            "docs/issue/终端头部切到聊天视图/**",
+            "src/renderer/src/components/terminal-pane/TerminalPaneHeaderOverlay.tsx",
+            "src/renderer/src/components/terminal-pane/TerminalPaneSurface.tsx",
+            "src/renderer/src/components/terminal-pane/use-terminal-pane-projection.ts",
+            "src/renderer/src/components/terminal-pane/TerminalContextMenu.tsx",
+            "src/renderer/src/components/terminal-pane/TerminalPaneResumeInChatButton.tsx",
+            "src/renderer/src/native-chat-view-recovery/TerminalTabViewSwitch.tsx",
+            "src/renderer/src/i18n/locales/en.json",
+            "src/renderer/src/i18n/locales/zh.json",
+            "config/fork-features.jsonc",
+            "config/architecture-policies.jsonc",
+            "docs/issue/README.md",
+            ".gitignore"
+          ],
+          "message": "Change is outside the terminal chat view button."
         }
       ]
     }

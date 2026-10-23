@@ -13,6 +13,7 @@ import { isShellProcess } from '../../shared/shell-process-detection'
 import type { PtyIncarnationId } from '../../shared/pty-incarnation'
 import type { AgentProcessIdentity } from '../../shared/agent-process-presence'
 import { probeAgentProcessPresence } from '../../shared/agent-process-presence-probe'
+import { ptyShellRow } from '../cli-writer-login-shell/login-wrapped-pty-shell'
 import {
   normalizeAgentProviderSession,
   type SleepingAgentSessionRecord
@@ -48,14 +49,14 @@ export type CliWriterHost = {
 /** Unlike foreground ownership, any job left in the shell's session refuses, background and suspended too. */
 export async function posixCliWriterShellAlone(rootPid: number): Promise<boolean> {
   const index = getProcessTableIndex(await getFreshShellForegroundSnapshot())
-  const root = index.byPid.get(rootPid)
+  const root = ptyShellRow(index, rootPid)
   const executable = root?.command.trim().replace(/^-/, '').split(/\s+/, 1)[0] ?? ''
   return (
     !!root &&
     isShellProcess(executable) &&
     root.stat.includes('+') &&
     // A session leader below the shell has left this terminal (a prompt's zpty worker); its jobs never do.
-    collectDescendantsFromIndex(index, rootPid, (row) => row.stat.includes('s')).length === 0
+    collectDescendantsFromIndex(index, root.pid, (row) => row.stat.includes('s')).length === 0
   )
 }
 

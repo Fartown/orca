@@ -284,11 +284,11 @@ describe('SortableTabContextMenu', () => {
     })
     const marker = getSurfaceSwitchMarker(container)
 
-    expect(getButton(container, 'Continue in Chat UI').compareDocumentPosition(marker)).toBe(
+    expect(getButton(container, 'Switch to Chat View').compareDocumentPosition(marker)).toBe(
       Node.DOCUMENT_POSITION_FOLLOWING
     )
     expect(marker.getAttribute('data-leading-separator')).toBe('false')
-    act(() => getButton(container, 'Continue in Chat UI').click())
+    act(() => getButton(container, 'Switch to Chat View').click())
     expect(onToggleViewMode).toHaveBeenCalledExactlyOnceWith()
     expect(onActivate).not.toHaveBeenCalled()
     expect(onClose).not.toHaveBeenCalled()
@@ -299,7 +299,7 @@ describe('SortableTabContextMenu', () => {
     (props) => {
       const { container } = renderMenu(props)
 
-      expect(container.textContent).not.toContain('Continue in Chat UI')
+      expect(container.textContent).not.toContain('Switch to Chat View')
       expect(container.textContent).not.toContain('Continue with Terminal Agent')
       expect(getSurfaceSwitchMarker(container).getAttribute('data-leading-separator')).toBe('true')
     }

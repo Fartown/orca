@@ -60,6 +60,8 @@
       "goal": "同源发布 fork 内测包，并提供桌面更新清单和 Android 应用内更新",
       "journal": "docs/issue/集成分支自动出包/journal.md",
       "dependsOn": [
+        "src/shared/serve-update-handoff.ts",
+        "src/shared/serve-user-data-path.ts",
         "src/main/appimage-runtime-identity.ts",
         "src/cli/runtime/serve-appimage-update.ts",
         "src/cli/runtime/serve-supervisor-relocation.ts",
@@ -98,6 +100,8 @@
         "docs/issue/集成分支自动出包/**"
       ],
       "requiredFiles": [
+        "src/main/integration-builds/serve-update-handoff-path.ts",
+        "config/scripts/integration-builds/verify-linux-service.mjs",
         "src/cli/integration-builds/linux-serve-update.ts",
         "src/main/integration-builds/linux-serve-update-support.ts",
         "src/renderer/src/integration-builds/web-server-update.ts",
@@ -230,6 +234,8 @@
         }
       ],
       "tests": [
+        "src/main/integration-builds/serve-update-handoff-path.test.ts",
+        "config/scripts/integration-builds/verify-linux-service.test.mjs",
         "src/cli/integration-builds/linux-serve-update.test.ts",
         "src/main/integration-builds/linux-serve-update-support.test.ts",
         "src/renderer/src/integration-builds/web-server-update.test.ts",
@@ -2399,6 +2405,101 @@
       "tests": ["src/renderer/src/terminal-id-copy-routing/copy-workspace-terminal-handle.test.ts"],
       "checks": [
         "ORCA_BACKGROUND_LAUNCH=1 pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/terminal-id-copy-routing src/renderer/src/components/terminal-pane/terminal-handle-copy.test.ts"
+      ]
+    },
+    {
+      "id": "cli-writer-login-shell",
+      "title": "终端对话转聊天退出判定：macOS 登录包装下识别 agent 已退出",
+      "goal": "macOS 终端里的 Codex 或 Claude 退出后，能在聊天界面继续同一段对话，不再一直报「无法确认已退出」",
+      "journal": "docs/issue/终端对话转聊天退出判定/journal.md",
+      "dependsOn": ["src/shared/process-table-index.ts", "src/shared/process-table-snapshot.ts"],
+      "policyId": "cli-writer-login-shell",
+      "ownedPaths": ["src/main/cli-writer-login-shell/**", "docs/issue/终端对话转聊天退出判定/**"],
+      "requiredFiles": ["src/main/cli-writer-login-shell/login-wrapped-pty-shell.ts"],
+      "seams": [
+        {
+          "file": "src/main/runtime/structured-agent-cli-writers.ts",
+          "mustContain": "const root = ptyShellRow(index, rootPid)",
+          "why": "The terminal-writer census inspects the shell below the macOS login wrapper, not login itself (REQ-1)"
+        }
+      ],
+      "tests": ["src/main/cli-writer-login-shell/login-wrapped-pty-shell.test.ts"],
+      "checks": [
+        "pnpm exec vitest run --config config/vitest.config.ts src/main/cli-writer-login-shell src/main/runtime/structured-agent-cli-writers.test.ts"
+      ]
+    },
+    {
+      "id": "terminal-chat-view-button",
+      "title": "终端头部切到聊天视图：新增按钮，与「在新聊天中接管」区分",
+      "goal": "终端窗格头部新增「切到聊天视图」，agent 运行中也能就地切换；原按钮中文改名「在新聊天中接管」，两个功能不再同名",
+      "journal": "docs/issue/终端头部切到聊天视图/journal.md",
+      "dependsOn": [
+        "src/renderer/src/i18n/i18n.ts",
+        "src/renderer/src/components/ui/button.tsx",
+        "src/renderer/src/components/ui/tooltip.tsx",
+        "src/renderer/src/components/ShortcutKeyCombo.tsx",
+        "src/renderer/src/components/native-chat/native-chat-shortcut.ts"
+      ],
+      "policyId": "terminal-chat-view-button",
+      "ownedPaths": [
+        "src/renderer/src/components/terminal-chat-view-button/**",
+        "docs/issue/终端头部切到聊天视图/**"
+      ],
+      "requiredFiles": [
+        "src/renderer/src/components/terminal-chat-view-button/TerminalPaneChatViewButton.tsx"
+      ],
+      "seams": [
+        {
+          "file": "src/renderer/src/components/terminal-pane/TerminalPaneHeaderOverlay.tsx",
+          "mustContain": "<TerminalPaneChatViewButton onSwitch={onSwitchToChatView} />",
+          "why": "The pane header offers the in-place chat view beside the move-to-new-chat button (REQ-1)"
+        },
+        {
+          "file": "src/renderer/src/components/terminal-pane/TerminalPaneSurface.tsx",
+          "mustContain": "onSwitchToChatView={activePaneCanToggleChat ? handleToggleNativeChat : undefined}",
+          "why": "The button reuses the pane's chat view eligibility and toggle, the same as right-click and Cmd/Ctrl+Shift+J (REQ-1)"
+        },
+        {
+          "file": "src/renderer/src/components/terminal-pane/use-terminal-pane-projection.ts",
+          "mustContain": "const activePaneCanToggleChat = canToggleChatForLeaf(activeLeafId)",
+          "why": "The active pane's chat view eligibility is projected like its other activePaneCan* flags (REQ-1)"
+        },
+        {
+          "file": "src/renderer/src/components/terminal-pane/TerminalContextMenu.tsx",
+          "mustContain": "translate('terminalChatViewButton.switchToChatView', 'Switch to Chat View')",
+          "why": "The pane right-click chat view item shares the header button's name (REQ-2)"
+        },
+        {
+          "file": "src/renderer/src/native-chat-view-recovery/TerminalTabViewSwitch.tsx",
+          "mustContain": "translate('terminalChatViewButton.switchToChatView', 'Switch to Chat View')",
+          "why": "The tab right-click chat view item shares the name too; the upstream key now reads as move-to-new-chat in Chinese (REQ-2)"
+        },
+        {
+          "file": "src/renderer/src/components/terminal-pane/TerminalPaneResumeInChatButton.tsx",
+          "mustContain": "'components.tab.bar.SortableTabContextMenu.switchToChatView'",
+          "why": "Guard: the move-to-new-chat button still reads the upstream key whose Chinese text this fork renames (REQ-2)"
+        },
+        {
+          "file": "src/renderer/src/i18n/locales/en.json",
+          "mustContain": "\"switchToChatView\": \"Switch to Chat View\"",
+          "why": "English name of the in-place chat view (REQ-2)"
+        },
+        {
+          "file": "src/renderer/src/i18n/locales/zh.json",
+          "mustContain": "\"switchToChatView\": \"切到聊天视图\"",
+          "why": "Chinese name of the in-place chat view (REQ-2)"
+        },
+        {
+          "file": "src/renderer/src/i18n/locales/zh.json",
+          "mustContain": "\"switchToChatView\": \"在新聊天中接管\"",
+          "why": "Chinese name of the upstream move-to-new-chat key (REQ-2)"
+        }
+      ],
+      "tests": [
+        "src/renderer/src/components/terminal-chat-view-button/TerminalPaneChatViewButton.test.tsx"
+      ],
+      "checks": [
+        "ORCA_BACKGROUND_LAUNCH=1 pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/components/terminal-chat-view-button src/renderer/src/components/terminal-pane/TerminalPaneHeaderOverlay.test.tsx"
       ]
     }
   ]
