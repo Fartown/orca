@@ -2624,6 +2624,27 @@
       "checks": [
         "ORCA_BACKGROUND_LAUNCH=1 pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/terminal-id-copy-routing src/renderer/src/components/terminal-pane/terminal-handle-copy.test.ts"
       ]
+    },
+    {
+      "id": "cli-writer-login-shell",
+      "title": "终端对话转聊天退出判定：macOS 登录包装下识别 agent 已退出",
+      "goal": "macOS 终端里的 Codex 或 Claude 退出后，能在聊天界面继续同一段对话，不再一直报「无法确认已退出」",
+      "journal": "docs/issue/终端对话转聊天退出判定/journal.md",
+      "dependsOn": ["src/shared/process-table-index.ts", "src/shared/process-table-snapshot.ts"],
+      "policyId": "cli-writer-login-shell",
+      "ownedPaths": ["src/main/cli-writer-login-shell/**", "docs/issue/终端对话转聊天退出判定/**"],
+      "requiredFiles": ["src/main/cli-writer-login-shell/login-wrapped-pty-shell.ts"],
+      "seams": [
+        {
+          "file": "src/main/runtime/structured-agent-cli-writers.ts",
+          "mustContain": "const root = ptyShellRow(index, rootPid)",
+          "why": "The terminal-writer census inspects the shell below the macOS login wrapper, not login itself (REQ-1)"
+        }
+      ],
+      "tests": ["src/main/cli-writer-login-shell/login-wrapped-pty-shell.test.ts"],
+      "checks": [
+        "pnpm exec vitest run --config config/vitest.config.ts src/main/cli-writer-login-shell src/main/runtime/structured-agent-cli-writers.test.ts"
+      ]
     }
   ]
 }
