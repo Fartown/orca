@@ -1790,7 +1790,10 @@
           "id": "cli-writer-login-shell-worktree-scope",
           "type": "change-scope",
           "comparison": "worktree",
-          "whenChanged": ["src/main/cli-writer-login-shell/**", "docs/issue/终端对话转聊天退出判定/**"],
+          "whenChanged": [
+            "src/main/cli-writer-login-shell/**",
+            "docs/issue/终端对话转聊天退出判定/**"
+          ],
           "allowedPaths": [
             "src/main/cli-writer-login-shell/**",
             "docs/issue/终端对话转聊天退出判定/**",
