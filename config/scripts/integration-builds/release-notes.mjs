@@ -12,8 +12,6 @@ const ENGINEERING_TYPES = new Set([
   'release'
 ])
 const TYPE_LABELS = { feat: '新功能', fix: '修复', perf: '性能', revert: '回退' }
-// Scopes that name a feature by something other than its registry id.
-const SCOPE_ALIASES = { issues: 'issues-board' }
 const PR_SUBJECT = /^Merge pull request #([1-9]\d*) from (\S+)$/
 const SYNC_SUBJECT =
   /^Merge (?:remote-tracking branch '(?:origin|upstream)\/main'|upstream main)(?:\s|$)/
@@ -102,9 +100,8 @@ export function loadFeatureGroups(path = 'config/fork-features.jsonc') {
 
 function groupOf(change, features) {
   for (const scope of change.scopes ?? []) {
-    const id = SCOPE_ALIASES[scope] ?? scope
-    if (features.has(id)) {
-      return features.get(id)
+    if (features.has(scope)) {
+      return features.get(scope)
     }
   }
   return OTHER_GROUP

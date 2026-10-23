@@ -519,3 +519,12 @@ external_ids: []
 - 验证证据：远端 `5fc81e0ae4b` 第 3 分片共 26,321 项通过、仅该清单一项失败，其余四分片通过；原始日志见 `.docs/ci-baseline-repair/2026-10-22/evidence/unit-sweep/shard3-5fc81e0.log`。本地完整出包与相关合同 19 文件 245 项通过，功能/文档/架构与改动文件格式检查通过。
 - 未解决问题：最终同树 CI 尚未完成；生产运行实例未动。
 - 下一步：定向检查后提交，再等待最终完整 CI 并合入。
+
+## 2026-10-23 随 Issues 下线收掉 orcad 与发布说明里的 Issues（done）
+
+- 本轮目标：Issues 下线后，orcad 不再启动它，发布说明不再把 `issues` 提交归到已删除的功能下。
+- 完成内容：`orcad-fork-services.ts` 只启动 Goals 与局域网分享；发布说明去掉 `issues → issues-board` 别名；更新探针合同不再读取已删的 Issues 打包夹具；dependsOn 去掉 `orcad-issues.ts`。
+- 代码或文档变更：`src/main/integration-builds/orcad-fork-services.ts`、`config/scripts/integration-builds/` 下的发布说明与探针合同测试、功能登记。
+- 验证证据：pnpm tc、全部 16 个功能的 38 条 checks、check:fork-features、check:fork-docs、本地化与 RPC 目录校验通过；隐藏 Electron 本机与 SSH（127.0.0.1:2222 上的 orcad）真机验收 5/5 通过，证据在 `.docs/issues-board-removal-ui-validation/2026-10-23/`。 S2 中远端 orcad 的 `issues.*` 返回 method_not_found，`goals.status` 为 ready。
+- 未解决问题：无。
+- 下一步：随 Issues 下线 PR 合入 fork/integration。
