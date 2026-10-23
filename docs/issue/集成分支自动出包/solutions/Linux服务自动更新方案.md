@@ -17,7 +17,7 @@ updated: 2026-10-23
 4. AppImage 的标准 `APPIMAGE_EXTRACT_AND_RUN=1` 支持没有 FUSE 的 Linux。缓存和租约沿用上游机制，不能删除活跃 daemon 的 payload。原安装位置的 AppImage 被覆盖，不生成安装备份。
 5. 网页普通检查入口打开并检查现有服务器更新对话框；服务版本使用共享连接层已验证的状态，不另行重连，不建立第二套更新界面。
 6. handoff 的目录身份复用 `isSameUserDataPath`，比较已存在的数据目录并核对固定文件名；handoff 文件首次写入前也支持目录符号链接。接缝只调用功能自有路径解析器，不放宽其他配置目录的边界。
-7. 安装验收复用独立的 `verify-linux-service.mjs` 断言真实服务版本、受监督自动更新支持及标签、PTY、已有 provider session 和 daemon 保留。初始化未完成或状态不满足时继续等待，不根据缺失字段判为成功。
+7. 安装验收复用独立的 `verify-linux-service.mjs` 断言真实服务版本、受监督自动更新支持及标签、PTY、已有 provider session 和 daemon 保留。PTY 同时比较 ID 与主机发布的 `incarnationId`，采集脚本保留该字段；同 ID 重建或生命周期证据缺失均失败，没有 PTY 的标签无需该字段。初始化未完成或状态不满足时继续等待，不根据缺失字段判为成功。
 
 ## 执行归属与兼容
 

@@ -39,6 +39,16 @@ SSH 使用 root sshd 与独立测试用户。包、profile、下载缓存、替�
 - 注册 CI 合同：98 通过；移动端集成更新：21 通过。
 - pnpm tc、架构、fork 功能、fork 文档、三项本地化、改动代码质量与格式检查通过；完整 PR CI 单独报告。
 
+## PR 代码审查补充
+
+审查覆盖全部改动、主进程与 CLI 接管调用链、目录隔离边界、真实 RPC 字段以及隔离升级脚本的断言。发现一项 P2：验收器只比较 PTY ID，遗漏主机发布的 incarnationId；同 ID 的终端被重建后仍可能通过。采集脚本现保留 incarnationId，验收器要求已有 PTY 在两份快照中提供相同且非空的生命周期身份；普通无 PTY 标签不要求该字段。
+
+两条新增回归在原验收器下失败，修复后通过；另增加无 PTY 标签通过的回归。验收器与接管相关 4 文件共 26 通过、2 项平台跳过。审查补丁仅修改安装验收，不修改应用运行代码；此前本地/SSH 实机升级的构建与运行证据仍对应上述产品提交，没有重新打包或操作生产实例。
+
+审查前提交 `560338baf72fd130ed9e3699dd01b9263569ba94` 的完整 PR CI、Headless Node 与 Fork Integration Build 已全部通过；审查补丁的检查按新提交单独记录。
+
+本轮复跑：出包、更新与接管相关 21 文件 189 通过、3 项平台跳过；移动端 21 通过；注册 CI 合同 98 通过，共 308 通过。pnpm tc、架构、fork 功能、fork 文档、三项本地化、按 PR 基线检查的代码质量与修改文件格式检查通过。脚本与日志位于相同证据目录的 review-checks.py、review-tests-_、review-gates-_、review-typecheck-*；没有重跑与本次验收器修改无关的实机打包升级。
+
 ## 证据与运行边界
 
 证据在 `.docs/linux-update-paths-ui-validation/2026-10-23/`：scripts 含隔离构建与本地/SSH 驱动；evidence 含 build-identity、local/ssh-alias-update-result、完成截图、旧验收记录拒绝结果与门禁日志。

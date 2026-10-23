@@ -5,7 +5,14 @@ function snapshots() {
   const expectedVersion = '1.4.214-preview.55'
   const before = {
     terminal_daemon_retained: true,
-    tabs: [{ id: 'tab-1', ptyId: 'pty-1', providerSessionId: 'session-1' }]
+    tabs: [
+      {
+        id: 'tab-1',
+        ptyId: 'pty-1',
+        incarnationId: 'incarnation-1',
+        providerSessionId: 'session-1'
+      }
+    ]
   }
   const after = {
     ...structuredClone(before),
@@ -39,6 +46,26 @@ describe('Linux replacement service acceptance', () => {
     const fixture = snapshots()
     fixture.after.updater.support = support
     expect(() => assertLinuxServiceReplacement(fixture)).toThrow('supervised automatic updates')
+  })
+
+  it('rejects a recreated terminal even when its tab, PTY and provider IDs are unchanged', () => {
+    const fixture = snapshots()
+    fixture.after.tabs[0].incarnationId = 'replacement-incarnation'
+    expect(() => assertLinuxServiceReplacement(fixture)).toThrow()
+  })
+
+  it('requires live PTY identity evidence in both snapshots', () => {
+    const fixture = snapshots()
+    delete fixture.before.tabs[0].incarnationId
+    delete fixture.after.tabs[0].incarnationId
+    expect(() => assertLinuxServiceReplacement(fixture)).toThrow()
+  })
+
+  it('accepts retained tabs without a PTY', () => {
+    const fixture = snapshots()
+    fixture.before.tabs.push({ id: 'editor-1' })
+    fixture.after.tabs.push({ id: 'editor-1' })
+    expect(() => assertLinuxServiceReplacement(fixture)).not.toThrow()
   })
 
   it.each([

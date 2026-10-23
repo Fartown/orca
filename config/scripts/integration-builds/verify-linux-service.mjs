@@ -37,11 +37,15 @@ export function assertLinuxServiceReplacement({ expectedVersion, before, after }
         !id ||
         !retained ||
         retained.ptyId !== tab.ptyId ||
+        (tab.ptyId &&
+          (typeof tab.incarnationId !== 'string' ||
+            tab.incarnationId.length === 0 ||
+            retained.incarnationId !== tab.incarnationId)) ||
         (tab.providerSessionId && retained.providerSessionId !== tab.providerSessionId)
       )
     })
   ) {
-    throw new Error('An existing terminal or provider session was not retained.')
+    throw new Error('An existing terminal identity or provider session could not be verified.')
   }
 }
 
