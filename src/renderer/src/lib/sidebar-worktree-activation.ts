@@ -10,27 +10,23 @@ import type { ExecutionHostId } from '../../../shared/execution-host'
 export async function activateWorktreeFromSidebar(
   worktreeId: string,
   executionHostId?: ExecutionHostId
-): Promise<boolean> {
+): Promise<void> {
   const workspaceScope = parseWorkspaceKey(worktreeId)
   if (workspaceScope?.type === 'folder') {
-    const activated = activateAndRevealFolderWorkspace(workspaceScope.folderWorkspaceId, {
+    activateAndRevealFolderWorkspace(workspaceScope.folderWorkspaceId, {
       navigationIntent: 'user-open',
       ...(executionHostId ? { executionHostId } : {})
     })
-    return activated !== false
+    return
   }
   // Keep navigation independent from an optional runtime wake IPC.
-  const activated = activateAndRevealWorktree(worktreeId, {
+  activateAndRevealWorktree(worktreeId, {
     navigationIntent: 'user-open',
     revealInSidebar: false,
     ...(executionHostId ? { executionHostId } : {})
   })
-  if (activated === false) {
-    return false
-  }
 
   await resumeEphemeralVmWorkspace(worktreeId)
-  return true
 }
 
 /** Wakes the per-workspace VM behind a worktree, if it has one. */

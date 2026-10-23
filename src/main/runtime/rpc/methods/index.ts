@@ -63,7 +63,6 @@ import { STRUCTURED_AGENT_SESSION_AGENTS_METHODS } from './structured-agent-sess
 import { MANAGED_RUNTIME_INSTALL_METHODS } from './managed-runtime-install'
 import { ARTIFACT_METHODS } from './artifacts'
 import { ARTIFACT_SHARE_METHODS } from './artifact-share'
-import { ISSUE_METHODS } from './issues'
 import { GOAL_METHODS } from './goals'
 import { FILE_ATTACHMENT_UPLOAD_METHODS } from './file-attachment-upload'
 import { AGENT_HOOK_METHODS } from './agent-hooks'
@@ -87,7 +86,6 @@ export const ALL_RPC_METHODS = [
   ...AI_VAULT_METHODS,
   ...ARTIFACT_METHODS,
   ...ARTIFACT_SHARE_METHODS,
-  ...ISSUE_METHODS,
   ...GOAL_METHODS,
   ...FILE_ATTACHMENT_UPLOAD_METHODS,
   ...AUTOMATION_METHODS,

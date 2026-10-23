@@ -15,10 +15,6 @@ import { initializeMainProcessReady } from './startup/main-process-ready'
 import { installMainProcessQuitHandlers } from './startup/main-process-quit'
 import { shouldActivateDesktopForSecondInstance } from './startup/single-instance-lock'
 import {
-  startIssueFeatureForMainProcess,
-  stopIssueFeatureForMainProcess
-} from './issues/issue-main-process-lifecycle'
-import {
   startGoalFeatureForMainProcess,
   stopGoalFeatureForMainProcess
 } from './startup/main-process-goals'
@@ -138,7 +134,6 @@ if (preflightReady) {
   // Why no publish: nothing is listening this early, so the first renderer pulls these on mount.
   state.osOpenedDocuments.capture(process.argv)
   registerMainProcessIpcHandlers()
-  app.once('will-quit', stopIssueFeatureForMainProcess)
   app.once('will-quit', stopGoalFeatureForMainProcess)
   installMainProcessQuitHandlers()
   void app.whenReady().then(async () => {
@@ -146,10 +141,7 @@ if (preflightReady) {
       await initializeMainProcessReady({
         openMainWindow,
         handleMacAppActivation,
-        afterTerminalRuntimeStartup: async () => {
-          await startIssueFeatureForMainProcess()
-          await startGoalFeatureForMainProcess()
-        }
+        afterTerminalRuntimeStartup: startGoalFeatureForMainProcess
       })
     } catch (error) {
       const message =

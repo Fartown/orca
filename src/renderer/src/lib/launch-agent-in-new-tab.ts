@@ -16,7 +16,10 @@ import {
 import { runtimeEnvironmentIdWithLegacyFallbackUnlessTwin } from '@/lib/worktree-runtime-owner'
 import { isWebRuntimeSessionActive } from '@/runtime/web-runtime-session-environment'
 import { launchAgentInWebHostTab } from '@/lib/launch-agent-web-host-tab'
-import * as launchDefaults from '../../../shared/tui-agent-launch-defaults'
+import {
+  resolveTuiAgentLaunchArgs,
+  resolveTuiAgentLaunchEnv
+} from '../../../shared/tui-agent-launch-defaults'
 import { TUI_AGENT_CONFIG } from '../../../shared/tui-agent-config'
 import type { TuiAgent } from '../../../shared/tui-agent'
 import type { LaunchSource } from '../../../shared/telemetry-events'
@@ -47,7 +50,6 @@ export type LaunchAgentInNewTabArgs = LaunchAgentInNewTabRequest & {
   selectedExecutionHostId?: AgentSessionLaunchRequest['selectedExecutionHostId']
   agent: TuiAgent
   worktreeId: string
-  launchToken?: string
   /** Captured at a new-chat action before the host can delay route selection. */
   focusIntent?: NativeChatComposerFocusIntent
   /** Tab group the user launched from; keeps split-group launches in that pane instead of the active group. */
@@ -147,7 +149,8 @@ function launchAgentInNewTabInternal(args: LaunchAgentInNewTabArgs): LaunchAgent
   const effectiveAgentArgs =
     agentArgs !== undefined
       ? agentArgs
-      : launchDefaults.resolveTuiAgentLaunchArgs(agent, store.settings?.agentDefaultArgs)
+      : resolveTuiAgentLaunchArgs(agent, store.settings?.agentDefaultArgs)
+  const agentEnv = resolveTuiAgentLaunchEnv(agent, store.settings?.agentDefaultEnv)
   const trimmedPrompt = prompt?.trim() ?? ''
   const hasPrompt = trimmedPrompt.length > 0
   const isFollowupPath = TUI_AGENT_CONFIG[agent].promptInjectionMode === 'stdin-after-start'
@@ -161,7 +164,7 @@ function launchAgentInNewTabInternal(args: LaunchAgentInNewTabArgs): LaunchAgent
     shell: queuedShell,
     isRemote,
     agentArgs: effectiveAgentArgs,
-    agentEnv: launchDefaults.resolveTuiAgentLaunchEnv(agent, store.settings?.agentDefaultEnv)
+    agentEnv
   }
   const { startupPlan, pasteDraftAfterLaunch, submitPastedPrompt } = planLaunchAgentStartupPrompt({
     base: startupPlanBase,
@@ -227,7 +230,6 @@ function launchAgentInNewTabInternal(args: LaunchAgentInNewTabArgs): LaunchAgent
     const webHostDelivery = launchAgentInWebHostTab({
       agent,
       worktreeId,
-      launchToken: args.launchToken,
       environmentId: runtimeEnvironmentId,
       groupId,
       cwd: initialCwd,
@@ -294,7 +296,6 @@ function launchAgentInNewTabInternal(args: LaunchAgentInNewTabArgs): LaunchAgent
       ...(startupPlan.env ? { env: startupPlan.env } : {}),
       launchConfig: startupPlan.launchConfig,
       launchAgent: agent,
-      ...(args.launchToken ? { launchToken: args.launchToken } : {}),
       ...(agentArgs !== undefined ? { agentArgsOverride: agentArgs } : {}),
       ...(startupPlan.startupCommandDelivery
         ? { startupCommandDelivery: startupPlan.startupCommandDelivery }

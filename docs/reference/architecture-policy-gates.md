@@ -70,7 +70,7 @@ one test fixture unless those details are themselves part of the reviewed contra
 
 `fork-upstream-diff-budget` is the fork-level rule: the branch's whole diff against `origin/main`
 must stay inside its allowlist, which is the union of every fork feature's owned paths and
-seams. Feature policies (`goals-native-feature`, `issues-existing-capability-reuse`,
+seams. Feature policies (`goals-native-feature`, `session-names-native-feature`,
 `self-hosted-artifacts`) use `comparison: worktree` rules so a working tree edits one feature at
 a time. `config/fork-features.jsonc` lists the features; `pnpm check:fork-features` cross-checks it
 against the budget allowlist. See [`fork-maintenance.md`](./fork-maintenance.md).
@@ -82,5 +82,5 @@ against the budget allowlist. See [`fork-maintenance.md`](./fork-maintenance.md)
 - `check-architecture-policies.mjs` evaluates rules and emits local or GitHub annotations.
 - `check-architecture-policies.test.mjs` verifies the engine against isolated temporary repositories.
 
-The first repository policy protects the Issue conversation design. Its Issue-specific paths and
-terms belong only to the manifest; the engine and tests remain reusable for other domains.
+Feature-specific paths and terms belong only to the manifest; the engine and tests remain reusable
+for any domain.

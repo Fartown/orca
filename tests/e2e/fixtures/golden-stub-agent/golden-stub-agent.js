@@ -1,8 +1,5 @@
 #!/usr/bin/env node
 
-const { randomUUID } = require('node:crypto')
-const path = require('node:path')
-
 const READY_MARKER = 'GOLDEN_STUB_AGENT_READY'
 const EXIT_MARKER = 'GOLDEN_STUB_AGENT_EXITED'
 
@@ -20,54 +17,6 @@ const keyboardProtocolAgent = process.argv.includes('--grok') ? 'Grok' : 'Codex'
 // CSI/SS3 sequence. Shift+Enter is matched before either is consulted.
 const INCOMPLETE_ESCAPE_TAIL_RE = /^(?:\[[0-9;?]*|O)?$/
 const ESCAPE_TAIL_RE = /^(?:\[[0-9;?]*[ -/]*[@-~]|O[@-~])/
-const resumeArgIndex = process.argv.indexOf('resume')
-const resumedSessionId = resumeArgIndex !== -1 ? process.argv[resumeArgIndex + 1]?.trim() : ''
-const issueJourneySessionId = resumedSessionId || randomUUID()
-const issueJourneyTranscriptPath = process.env.ORCA_E2E_GOLDEN_STUB_TRANSCRIPT_ROOT
-  ? path.join(
-      process.env.ORCA_E2E_GOLDEN_STUB_TRANSCRIPT_ROOT,
-      `rollout-2026-08-25T00-00-00-${issueJourneySessionId}.jsonl`
-    )
-  : ''
-
-function postIssueJourneyHook(hookEventName, fields = {}) {
-  if (
-    process.env.ORCA_E2E_ISSUES_HOOK !== '1' ||
-    !process.env.ORCA_AGENT_HOOK_PORT ||
-    !process.env.ORCA_AGENT_HOOK_TOKEN ||
-    !process.env.ORCA_PANE_KEY
-  ) {
-    return
-  }
-  const payload = new URLSearchParams({
-    paneKey: process.env.ORCA_PANE_KEY,
-    tabId: process.env.ORCA_TAB_ID || '',
-    worktreeId: process.env.ORCA_WORKTREE_ID || '',
-    launchToken: process.env.ORCA_AGENT_LAUNCH_TOKEN || '',
-    env: process.env.ORCA_AGENT_HOOK_ENV || 'test',
-    version: process.env.ORCA_AGENT_HOOK_VERSION || '1',
-    payload: JSON.stringify({
-      hook_event_name: hookEventName,
-      session_id: issueJourneySessionId,
-      turn_id: 'issues-e2e-turn',
-      ...(issueJourneyTranscriptPath ? { transcript_path: issueJourneyTranscriptPath } : {}),
-      ...fields
-    })
-  }).toString()
-  const request = require('node:http').request({
-    host: '127.0.0.1',
-    port: Number(process.env.ORCA_AGENT_HOOK_PORT),
-    path: '/hook/codex',
-    method: 'POST',
-    headers: {
-      'content-type': 'application/x-www-form-urlencoded',
-      'content-length': Buffer.byteLength(payload),
-      'x-orca-agent-hook-token': process.env.ORCA_AGENT_HOOK_TOKEN
-    }
-  })
-  request.on('error', () => {})
-  request.end(payload)
-}
 
 let composer = ''
 let lastSubmission = ''
@@ -186,10 +135,3 @@ if (process.stdout.isTTY) {
 
 process.stdout.write('\x1b[?1049h')
 render()
-postIssueJourneyHook('SessionStart')
-setTimeout(() => {
-  postIssueJourneyHook('Stop', {
-    prompt: 'Verify the Issues journey',
-    last_assistant_message: 'Issues journey hook completed'
-  })
-}, 250).unref()

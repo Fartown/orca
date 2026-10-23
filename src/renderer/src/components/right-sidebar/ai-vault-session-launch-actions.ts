@@ -1,8 +1,7 @@
 import {
-  launchAiVaultSessionInTerminal,
   notifyAiVaultSessionPreparationFailure,
   resolveAiVaultSessionLaunchTargetOrNotify
-} from '@/components/ai-vault-session-resume/session-terminal-launch'
+} from './ai-vault-session-launch-feedback'
 import { useCallback, useState } from 'react'
 import { toast } from 'sonner'
 import {
@@ -16,6 +15,7 @@ import {
   buildAiVaultCopiedSessionStartupForWorktree,
   buildAiVaultForkStartupForWorktree
 } from '@/lib/ai-vault-session-fork-startup'
+import { launchAiVaultSessionAndReveal } from '@/lib/launch-ai-vault-session-and-reveal'
 import { useAppStore } from '@/store'
 import type { AiVaultAgent, AiVaultSession } from '../../../../shared/ai-vault-types'
 import {
@@ -88,7 +88,7 @@ export function useAiVaultSessionLaunchActions({
           )
         )
       } catch (error) {
-        notifyAiVaultSessionPreparationFailure(error)
+        notifyAiVaultSessionPreparationFailure(error, session.agent)
       }
     },
     [buildResumeCommand]
@@ -101,14 +101,26 @@ export function useAiVaultSessionLaunchActions({
       prepareStartup: (worktreeId: string) => Promise<AiVaultResumeStartup>,
       describeFailure: (message: string) => string = (message) => message
     ): void => {
-      void launchAiVaultSessionInTerminal({
-        session,
+      const targetId = resolveAiVaultSessionLaunchTargetOrNotify({
+        sessionFilePath: session.filePath,
+        sessionExecutionHostId: session.executionHostId,
         activeWorktreeId: activeWorktreeId ?? activeWorktree?.id ?? null,
         targetWorktreeId,
-        targetState,
-        prepareStartup,
-        describeFailure
+        targetState
       })
+      if (!targetId) {
+        return
+      }
+      void prepareStartup(targetId.worktreeId)
+        .then((startup) =>
+          launchAiVaultSessionAndReveal(
+            { agent: session.agent, worktreeId: targetId.worktreeId, ...startup },
+            describeFailure
+          )
+        )
+        .catch((error: unknown) =>
+          notifyAiVaultSessionPreparationFailure(error, session.agent, describeFailure)
+        )
     },
     [activeWorktree?.id, activeWorktreeId, targetState]
   )
@@ -255,5 +267,3 @@ export function useAiVaultSessionLaunchActions({
     handleContinuationDialogOpenChange
   }
 }
-
-export { resumeAiVaultSession } from '@/components/ai-vault-session-resume/session-terminal-launch'
