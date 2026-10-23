@@ -36,9 +36,7 @@
         "src/renderer/src/native-chat-view-recovery/**",
         "docs/issue/终端聊天视图恢复/**"
       ],
-      "requiredFiles": [
-        "src/renderer/src/native-chat-view-recovery/TerminalTabViewSwitch.tsx"
-      ],
+      "requiredFiles": ["src/renderer/src/native-chat-view-recovery/TerminalTabViewSwitch.tsx"],
       "seams": [
         {
           "file": "src/renderer/src/components/tab-bar/SortableTabContextMenu.tsx",
@@ -51,9 +49,7 @@
           "why": "Keep the existing menu behavior contract aligned with the restored entry."
         }
       ],
-      "tests": [
-        "src/renderer/src/components/tab-bar/SortableTabContextMenu.test.tsx"
-      ],
+      "tests": ["src/renderer/src/components/tab-bar/SortableTabContextMenu.test.tsx"],
       "checks": [
         "pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/components/tab-bar/SortableTabContextMenu.test.tsx src/renderer/src/components/tab-bar/native-chat-tab-agent-evidence.test.ts"
       ]
