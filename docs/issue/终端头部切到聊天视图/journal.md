@@ -67,3 +67,12 @@ updated: 2026-10-23
 - 验证证据：`terminal-pane` 与功能目录 556 个测试文件 5594 用例通过；i18n、标签栏、右侧栏 404 个测试文件通过；`pnpm tc` 通过。
 - 未解决问题：无新增。
 - 下一步：合入最新 `fork/integration` 后重推，等 CI。
+
+### 2026-10-23 合入「终端聊天视图恢复」后统一标签右键的名字
+
+- 本轮目标：合入最新 `fork/integration`（含 PR #66 恢复的终端标签右键就地切换项），保证三个就地切换入口同名、与接管项不同名。
+- 完成内容：PR #66 的就地切换项读上游 key，而本功能把该 key 的中文改成了「在新聊天中接管」，合流后中文会把就地切换显示成接管，英文则与接管项同名。把该项改读本功能的 `terminalChatViewButton.switchToChatView`；改的是 fork 文件 `TerminalTabViewSwitch.tsx`，不增加上游接缝；它在 `SortableTabContextMenu.test.tsx` 新增的三处断言跟随新名字；登记表为该文件加守护接缝。该改动单独提交在「终端聊天视图恢复」范围内，并记入其 journal。
+- 代码或文档变更：`src/renderer/src/native-chat-view-recovery/TerminalTabViewSwitch.tsx`、`SortableTabContextMenu.test.tsx`、`config/fork-features.jsonc`；本目录需求、方案、测试用例与测试记录；`docs/issue/终端聊天视图恢复/` 的需求与 journal。
+- 验证证据：`tab-bar`、`terminal-pane`、i18n 与两个功能目录共 6457 用例通过，反向对照失败；fork 功能、fork 文档、架构策略、三项本地化门禁通过；本机与 SSH 真机标签右键为「切到聊天视图 ⌘⇧J」，本机另有「在新聊天中接管」，见[测试记录](tests/runs/2026-10-23-本机与SSH真机验证.md)。
+- 未解决问题：SSH 夹具首次连接失败一次，重跑通过；切回终端的标签菜单项仍是上游文案「Continue with Terminal Agent」（中文沿用上游翻译），未纳入本次改名。
+- 下一步：推送 PR #65，等 CI。

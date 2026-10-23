@@ -1855,6 +1855,7 @@
             "src/renderer/src/components/terminal-pane/use-terminal-pane-projection.ts",
             "src/renderer/src/components/terminal-pane/TerminalContextMenu.tsx",
             "src/renderer/src/components/terminal-pane/TerminalPaneResumeInChatButton.tsx",
+            "src/renderer/src/native-chat-view-recovery/TerminalTabViewSwitch.tsx",
             "src/renderer/src/i18n/locales/en.json",
             "src/renderer/src/i18n/locales/zh.json",
             "config/fork-features.jsonc",

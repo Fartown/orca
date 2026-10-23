@@ -12,7 +12,7 @@ updated: 2026-10-23
 
 | 功能           | 入口                                                                             | 行为                                        | 可用条件                                                                   |
 | -------------- | -------------------------------------------------------------------------------- | ------------------------------------------- | -------------------------------------------------------------------------- |
-| 就地 chat view | 窗格右键、⌘⇧J（`handleToggleNativeChat`）                                        | 同一标签切成聊天视图，agent 继续运行        | `canToggleChatForLeaf`：agent 支持聊天视图（Codex、Claude 等），本机或 SSH |
+| 就地 chat view | 窗格右键、⌘⇧J（`handleToggleNativeChat`）、终端标签右键 `TerminalTabViewSwitch`  | 同一标签切成聊天视图，agent 继续运行        | `canToggleChatForLeaf`：agent 支持聊天视图（Codex、Claude 等），本机或 SSH |
 | 新聊天接管     | 头部按钮 `TerminalPaneResumeInChatButton`、终端标签右键 `CliChatResumeMenuItems` | 新开聊天标签接管对话，要求终端 agent 已退出 | 只对本机执行的终端                                                         |
 
 两者都用上游 key `components.tab.bar.SortableTabContextMenu.switchToChatView`（「在聊天界面中继续」）。上游 #27184（2026-10-12）有意把头部的就地 chat view 换成了新聊天接管，并在 `TerminalPaneHeaderOverlay.test.tsx` 断言头部不再有「Show chat view」。本功能按用户决定在头部加回就地切换，方向与上游相反（新按钮的名字不同，上游该断言仍成立）。
@@ -26,7 +26,8 @@ updated: 2026-10-23
   - `TerminalPaneSurface.tsx`：`onSwitchToChatView = activePaneCanToggleChat ? handleToggleNativeChat : undefined`，与右键菜单、快捷键同一判断、同一动作。Surface 只读投影出的布尔值，不直接调函数：上游测试 `terminal-pane-element-file-drop.test.tsx` 用部分字段的 controller 渲染 Surface，直接调用会抛错。不复用 `onShowTerminal`：上游若把它改成只切回终端，按钮会无声失效。
   - `TerminalContextMenu.tsx`：就地 chat view 项只换文案 key 与默认值。
   - `en.json`、`zh.json`：在文件末尾的 fork 块（`goals` 之后）新增 `terminalChatViewButton.switchToChatView`；`zh.json` 把上游 key 的中文改为「在新聊天中接管」。
-- 接管按钮与终端标签菜单的代码不动，仍读上游 key；登记表里为 `TerminalPaneResumeInChatButton.tsx` 加了守护接缝，上游换 key 时门禁会报红，而不是中文名无声失效。
+- 终端标签右键的就地切换项 `src/renderer/src/native-chat-view-recovery/TerminalTabViewSwitch.tsx`（fork 文件，属「终端聊天视图恢复」）改读 `terminalChatViewButton.switchToChatView`：它原本读上游 key，本功能改了这个 key 的中文后会显示成「在新聊天中接管」。改的是 fork 文件，不增加上游接缝；该功能在 `SortableTabContextMenu.test.tsx` 里新增的断言跟随新名字。
+- 接管按钮与终端标签菜单里的接管项代码不动，仍读上游 key；登记表里为 `TerminalPaneResumeInChatButton.tsx` 加了守护接缝，上游换 key 时门禁会报红，而不是中文名无声失效。
 
 ## 3. 在哪台机器上
 
