@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { NO_WORKSPACE_ROW_FILTERS } from '../../../../src/shared/workspace-view/workspace-row-filters'
+import { NO_WORKSPACE_ROW_FILTERS } from '../../../src/shared/workspace-view/workspace-row-filters'
 import {
   NO_PROJECT_SECTION_CATALOG,
   buildSections,
@@ -10,11 +10,11 @@ import {
 describe('same-name project sections', () => {
   it('groups three host directories and separates a renamed one without changing native IDs', () => {
     const ids = ['local', 'mini', 'dbox']
-    const rows: Worktree[] = ids.map((id) => ({
+    const rows = ids.map<Worktree>((id) => ({
       repoId: id,
       worktreeId: `${id}::/workspace`,
       repo: 'workspace',
-      workspaceKind: 'folder',
+      workspaceKind: 'folder-workspace',
       hostId: id === 'local' ? 'local' : `ssh:${id}`,
       branch: 'main',
       displayName: 'workspace',
