@@ -270,3 +270,6 @@ ci-shards/
 /.build/windows-native-benchmark/
 
 .local/static-analysis-research/
+
+!docs/issue/终端聊天视图恢复/
+!docs/issue/终端聊天视图恢复/**
