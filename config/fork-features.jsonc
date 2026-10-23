@@ -2626,6 +2626,27 @@
       ]
     },
     {
+      "id": "cli-writer-login-shell",
+      "title": "终端对话转聊天退出判定：macOS 登录包装下识别 agent 已退出",
+      "goal": "macOS 终端里的 Codex 或 Claude 退出后，能在聊天界面继续同一段对话，不再一直报「无法确认已退出」",
+      "journal": "docs/issue/终端对话转聊天退出判定/journal.md",
+      "dependsOn": ["src/shared/process-table-index.ts", "src/shared/process-table-snapshot.ts"],
+      "policyId": "cli-writer-login-shell",
+      "ownedPaths": ["src/main/cli-writer-login-shell/**", "docs/issue/终端对话转聊天退出判定/**"],
+      "requiredFiles": ["src/main/cli-writer-login-shell/login-wrapped-pty-shell.ts"],
+      "seams": [
+        {
+          "file": "src/main/runtime/structured-agent-cli-writers.ts",
+          "mustContain": "const root = ptyShellRow(index, rootPid)",
+          "why": "The terminal-writer census inspects the shell below the macOS login wrapper, not login itself (REQ-1)"
+        }
+      ],
+      "tests": ["src/main/cli-writer-login-shell/login-wrapped-pty-shell.test.ts"],
+      "checks": [
+        "pnpm exec vitest run --config config/vitest.config.ts src/main/cli-writer-login-shell src/main/runtime/structured-agent-cli-writers.test.ts"
+      ]
+    },
+    {
       "id": "sidebar-project-merge",
       "title": "侧栏项目合并：同仓库沿用，同显示名称归并",
       "goal": "复用原仓库归并和显示名称，将同名项目区块合并展示；改名拆分，保留业务归属",
