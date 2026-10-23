@@ -19,8 +19,8 @@ const HIDDEN_POLL_MS = 30_000
 const PENDING_OPERATION_POLL_MS = 1_000
 
 /**
- * Same shape as IssueDomainSyncGate: route-driven polling with a sequence guard
- * so a late response never overwrites a newer one. Hidden panels still refresh
+ * Route-driven polling with a sequence guard so a late response never
+ * overwrites a newer one. Hidden panels still refresh
  * slowly so the pane header can tell a bound session from an unbound one.
  */
 export function GoalDomainSyncGate(): React.JSX.Element {

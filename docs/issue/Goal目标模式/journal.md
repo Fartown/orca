@@ -542,3 +542,12 @@ external_ids: []
 - 验证证据：原始五分片日志及本地复验归档在 .docs/ci-baseline-repair/2026-10-22/evidence/；最终同树验证待完成。
 - 未解决问题：最终 CI 尚未通过；未部署或重启生产应用、远程服务或终端。
 - 下一步：同树完整检查、隐藏应用与 SSH 验证、最终 CI 后合入。
+
+## 2026-10-23 随 Issues 下线登记启动接缝（done）
+
+- 本轮目标：Issues 下线后，`afterTerminalRuntimeStartup` 钩子只剩 Goal 使用，接缝改由 Goal 登记，注释不再以 Issues 为参照。
+- 完成内容：`main-process-runtime-launch.ts` 只保留这个钩子（其余重构还原为上游），并登记为 Goal 接缝；main 入口直接传 `startGoalFeatureForMainProcess`；就绪注册表、主进程生命周期、控制合同里引用 Issues 的注释改写。行为不变。
+- 代码或文档变更：`config/fork-features.jsonc` 的 Goal 接缝，Goal 模块中三处注释与同步门注释。
+- 验证证据：pnpm tc、全部 16 个功能的 38 条 checks、check:fork-features、check:fork-docs、本地化与 RPC 目录校验通过；隐藏 Electron 本机与 SSH（127.0.0.1:2222 上的 orcad）真机验收 5/5 通过，证据在 `.docs/issues-board-removal-ui-validation/2026-10-23/`。 L2 本机与 S2 远端 `goals.status` 均返回 ready。
+- 未解决问题：无。
+- 下一步：随 Issues 下线 PR 合入 fork/integration。

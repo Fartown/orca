@@ -467,6 +467,11 @@
           "why": "the host service starts after the terminal runtime"
         },
         {
+          "file": "src/main/startup/main-process-runtime-launch.ts",
+          "mustContain": "afterTerminalRuntimeStartup",
+          "why": "the Goal host starts after terminal startup"
+        },
+        {
           "file": "src/shared/rpc-contract/client-ui-params.ts",
           "mustContain": "'goals'",
           "why": "the right-sidebar tab id is part of the client UI schema (moved here upstream in #19961)"
