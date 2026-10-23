@@ -7,6 +7,32 @@
   ],
   "policies": [
     {
+      "id": "native-chat-view-recovery",
+      "description": "Restore the existing terminal/chat view action without creating or resuming provider sessions.",
+      "rules": [
+        {
+          "id": "native-chat-view-recovery-worktree-scope",
+          "type": "change-scope",
+          "comparison": "worktree",
+          "whenChanged": [
+            "src/renderer/src/native-chat-view-recovery/**",
+            "docs/issue/终端聊天视图恢复/**"
+          ],
+          "allowedPaths": [
+            "src/renderer/src/native-chat-view-recovery/**",
+            "docs/issue/终端聊天视图恢复/**",
+            "src/renderer/src/components/tab-bar/SortableTabContextMenu.tsx",
+            "src/renderer/src/components/tab-bar/SortableTabContextMenu.test.tsx",
+            "config/fork-features.jsonc",
+            "config/architecture-policies.jsonc",
+            "docs/issue/README.md",
+            ".gitignore"
+          ],
+          "message": "Change is outside terminal chat view recovery."
+        }
+      ]
+    },
+    {
       "id": "terminal-launch-diagnostics",
       "description": "Observational terminal launch tracing only; no runtime ownership or wire changes.",
       "rules": [
@@ -61,6 +87,9 @@
           "type": "change-scope",
           "comparison": "worktree",
           "whenChanged": [
+            "src/cli/integration-builds/**",
+            "src/renderer/src/integration-builds/**",
+
             ".github/workflows/fork-integration-build.yml",
             "config/scripts/mobile-web-bundle-packaging-workflow-contract.test.mjs",
             "config/scripts/integration-builds/**",
@@ -71,6 +100,14 @@
             "docs/issue/集成分支自动出包/**"
           ],
           "allowedPaths": [
+            "src/cli/integration-builds/**",
+            "src/renderer/src/integration-builds/**",
+            "src/main/serve-update-handoff.ts",
+            "src/cli/runtime/launch.ts",
+            "src/cli/runtime/serve-orcad-launch.ts",
+            "src/cli/runtime/serve-update-supervisor.ts",
+            "src/renderer/src/web/preload-api/web-updater-api.ts",
+
             "config/scripts/ci-draft-pr-admission.test.mjs",
             ".github/workflows/pr.yml",
             ".github/workflows/ci-closed-pr-caches.yml",
@@ -481,6 +518,18 @@
             "src/renderer/src/components/sidebar/worktree-list/navigation/use-pending-reveal.ts",
             "src/renderer/src/components/sidebar/worktree-list/navigation/reveal-ancestors.ts",
             "src/renderer/src/sidebar-project-merge/**",
+            "src/renderer/src/native-chat-view-recovery/**",
+            "docs/issue/终端聊天视图恢复/**",
+            "src/renderer/src/components/tab-bar/SortableTabContextMenu.tsx",
+            "src/renderer/src/components/tab-bar/SortableTabContextMenu.test.tsx",
+            "src/cli/integration-builds/**",
+            "src/renderer/src/integration-builds/**",
+            "src/main/serve-update-handoff.ts",
+            "src/cli/runtime/launch.ts",
+            "src/cli/runtime/serve-orcad-launch.ts",
+            "src/cli/runtime/serve-update-supervisor.ts",
+            "src/renderer/src/web/preload-api/web-updater-api.ts",
+
             "src/shared/terminal-launch-diagnostics/**",
             "src/main/terminal-launch-diagnostics/**",
             "src/renderer/src/terminal-launch-diagnostics/**",

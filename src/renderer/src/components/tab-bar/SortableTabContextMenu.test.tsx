@@ -274,11 +274,36 @@ describe('SortableTabContextMenu', () => {
     expect(container.textContent).not.toContain('Continue in Chat UI')
   })
 
-  it('hides switching a terminal-view tab into chat view', () => {
-    const { container } = renderMenu({ canToggleViewMode: true, onToggleViewMode: vi.fn() })
+  it('switches an eligible terminal tab into chat view through its existing callback', () => {
+    const onToggleViewMode = vi.fn()
+    const onClose = vi.fn()
+    const { container, onActivate } = renderMenu({
+      canToggleViewMode: true,
+      onToggleViewMode,
+      onClose
+    })
+    const marker = getSurfaceSwitchMarker(container)
 
-    expect(container.textContent).not.toContain('Continue in Chat UI')
+    expect(getButton(container, 'Continue in Chat UI').compareDocumentPosition(marker)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING
+    )
+    expect(marker.getAttribute('data-leading-separator')).toBe('false')
+    act(() => getButton(container, 'Continue in Chat UI').click())
+    expect(onToggleViewMode).toHaveBeenCalledExactlyOnceWith()
+    expect(onActivate).not.toHaveBeenCalled()
+    expect(onClose).not.toHaveBeenCalled()
   })
+
+  it.each([{ canToggleViewMode: true }, { canToggleViewMode: false, onToggleViewMode: vi.fn() }])(
+    'hides an unavailable view switch: %j',
+    (props) => {
+      const { container } = renderMenu(props)
+
+      expect(container.textContent).not.toContain('Continue in Chat UI')
+      expect(container.textContent).not.toContain('Continue with Terminal Agent')
+      expect(getSurfaceSwitchMarker(container).getAttribute('data-leading-separator')).toBe('true')
+    }
+  )
 
   it('keeps the way back for a tab already in chat view, in the chat/CLI move section', () => {
     const onToggleViewMode = vi.fn()

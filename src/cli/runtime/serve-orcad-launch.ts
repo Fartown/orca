@@ -28,9 +28,16 @@ export async function resolveLocalServeRuntime(
     appRoot: string
     userDataPath: string
     usesMacUpdateHandoff: boolean
+    usesLinuxUpdateHandoff?: boolean
   },
   run: typeof runProcess = runProcess
 ): Promise<ServeRuntimeSelection> {
+  if (options.usesLinuxUpdateHandoff) {
+    return {
+      kind: 'electron',
+      reason: 'AppImage serve uses the Electron updater and CLI update supervisor'
+    }
+  }
   // Why: only packaged macOS serve can take a remote app update, through Electron's updater and
   // this CLI's supervisor; orcad has no updater, so switching would drop that.
   if (options.usesMacUpdateHandoff) {
