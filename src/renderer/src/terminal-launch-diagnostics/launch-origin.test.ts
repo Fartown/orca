@@ -5,7 +5,7 @@ afterEach(() => vi.unstubAllGlobals())
 
 describe('terminal origin breadcrumbs', () => {
   it.each([
-    'ai-vault-resume',
+    'ai-vault-reveal-resume',
     'queued-startup',
     'paired-terminal-create',
     'automatic-sleeping-resume',

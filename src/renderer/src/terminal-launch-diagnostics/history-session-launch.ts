@@ -6,12 +6,6 @@ import {
   type TerminalLaunchOrigin
 } from './launch-origin'
 
-export function launchAiVaultSessionInNewTab(
-  args: Parameters<typeof launchHistory>[0]
-): ReturnType<typeof launchHistory> {
-  return launchObservedHistory('ai-vault-resume', args)
-}
-
 export function launchDroppedAiVaultSession(
   args: Parameters<typeof launchHistory>[0]
 ): ReturnType<typeof launchHistory> {
