@@ -34,5 +34,9 @@ module.exports = {
   dmg: {
     ...upstream.dmg,
     artifactName: 'orca-integration-macos-${arch}.${ext}'
+  },
+  linux: {
+    ...upstream.linux,
+    target: ['AppImage']
   }
 }
