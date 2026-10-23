@@ -19,6 +19,7 @@ import {
   normalizeExecutionHostOrder
 } from '../../../shared/execution-host'
 import { normalizeManualRepoOrder } from '../../../shared/manual-repo-order'
+import { normalizeSidebarProjectMerges } from '../../../shared/sidebar-project-merge/sidebar-project-merges'
 import { normalizeBrowserPageZoomLevel } from '../../../shared/browser-page-zoom'
 import { normalizeFeatureTipIds } from '../../../shared/feature-tips'
 import { normalizeContextualTourIds } from '../../../shared/contextual-tours'
@@ -69,6 +70,7 @@ export function getPersistedUI(
     agentsVisibleHostIds: normalizeVisibleExecutionHostIds(state.ui?.agentsVisibleHostIds),
     workspaceHostOrder: normalizeExecutionHostOrder(state.ui?.workspaceHostOrder),
     manualRepoOrder: normalizeManualRepoOrder(state.ui?.manualRepoOrder),
+    sidebarProjectMerges: normalizeSidebarProjectMerges(state.ui?.sidebarProjectMerges),
     browserDefaultZoomLevel: normalizeBrowserPageZoomLevel(state.ui?.browserDefaultZoomLevel),
     explorerDisplayRootByWorktree: normalizeExplorerDisplayRootByWorktree(
       state.ui?.explorerDisplayRootByWorktree

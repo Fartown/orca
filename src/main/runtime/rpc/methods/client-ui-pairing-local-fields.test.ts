@@ -41,6 +41,16 @@ describe('client UI RPC pairing-local field seams', () => {
   // Driven off the census so a field added to PAIRING_LOCAL_UI_FIELDS without wiring a seam
   // fails here rather than shipping. Sample values are what a paired web client actually sends.
   const pairingLocalSamples: Record<(typeof PAIRING_LOCAL_UI_FIELDS)[number], unknown> = {
+    sidebarProjectMerges: [
+      {
+        id: 'browser',
+        name: 'Browser projects',
+        members: [
+          { hostId: 'local', repoId: 'a' },
+          { hostId: 'runtime:web-env-1', repoId: 'b' }
+        ]
+      }
+    ],
     automationHostFilter: { kind: 'host', hostKey: 'authority:desktop|selector:self' },
     hideWorkspacesFromOtherDevices: true,
     manualRepoOrder: [

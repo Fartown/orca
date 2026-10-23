@@ -10,7 +10,7 @@ import {
 } from '../../../../../../shared/managed-orcad-execution-host'
 import {
   buildProjectGroupingIndex,
-  getProjectGroupingForRepo,
+  getDisplayedProjectGroupingForRepo,
   type ProjectGroupingModel
 } from '../../../../../../shared/project-section-grouping'
 import type { Repo } from '../../../../../../shared/repo-types'
@@ -54,7 +54,7 @@ export function getProjectHeaderHostContexts(args: {
     )
   const hostsByProjectKey = new Map<string, Set<ExecutionHostId>>()
   for (const repo of args.repoMap.values()) {
-    const key = getProjectGroupingForRepo(repo.id, args.repoMap, projectIndex).key
+    const key = getDisplayedProjectGroupingForRepo(repo.id, args.repoMap, projectIndex).key
     const hostId = repoHostId(repo)
     const projectHosts = hostsByProjectKey.get(key) ?? new Set<ExecutionHostId>()
     projectHosts.add(hostId)

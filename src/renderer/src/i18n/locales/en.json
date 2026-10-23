@@ -1,4 +1,8 @@
 {
+  "sidebarProjectName": {
+    "chooseDirectory": "Choose a directory",
+    "directoryDescription": "Select the computer and directory for this action."
+  },
   "csv": {
     "detectingDelimiter": "Detecting delimiter…",
     "indexProgress": "Indexing CSV… {{percent}}%",
@@ -21347,5 +21351,20 @@
       "complete": "Goal complete: {{value0}}",
       "budget": "Budget used up: {{value0}}"
     }
+  },
+  "sidebarProjectMerge": {
+    "editorTitle": "Merge sidebar projects",
+    "editorDescription": "Choose the projects to show under one title. Their workspaces keep running on their current computers.",
+    "name": "Project name",
+    "search": "Search projects",
+    "selected": "{{count}} projects selected. Select at least two.",
+    "cancel": "Cancel",
+    "save": "Save merge",
+    "title": "Sidebar project merges",
+    "description": "Show selected projects and their workspaces under one project title.",
+    "edit": "Edit",
+    "unmerge": "Unmerge",
+    "add": "Merge projects",
+    "unsupported": "Project display merges are unavailable on this Orca host."
   }
 }

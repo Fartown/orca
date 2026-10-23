@@ -1,3 +1,5 @@
+import { buildProjectGroupingIndex } from '../../../../shared/project-section-grouping'
+import { toggleSidebarProjectNameGroup } from '../../../../shared/sidebar-project-merge/sidebar-project-name-groups'
 import React, { useCallback, useMemo } from 'react'
 import { useAppStore } from '@/store'
 import { useShallow } from 'zustand/react/shallow'
@@ -94,7 +96,7 @@ const WorktreeList = React.memo(function WorktreeList({
   const clearPendingRevealWorktreeId = useAppStore((s) => s.clearPendingRevealWorktreeId)
   const clearPendingRevealSidebarRow = useAppStore((s) => s.clearPendingRevealSidebarRow)
   const collapsedGroups = useAppStore((s) => s.collapsedGroups)
-  const toggleGroup = useAppStore((s) => s.toggleCollapsedGroup)
+  const toggleOriginalGroup = useAppStore((s) => s.toggleCollapsedGroup)
   const projectGroups = useAppStore((s) => s.projectGroups ?? EMPTY_PROJECT_GROUPS)
   const folderWorkspaces = useAppStore((s) => selectFolderWorkspaces(s))
   const settings = useAppStore((s) => s.settings)
@@ -111,6 +113,21 @@ const WorktreeList = React.memo(function WorktreeList({
       projectHostSetups: projectHostSetupProjection.setups
     }),
     [projectHostSetupProjection]
+  )
+  const projectNameIndex = useMemo(
+    () => buildProjectGroupingIndex(projectGrouping),
+    [projectGrouping]
+  )
+  const toggleGroup = useCallback(
+    (key: string) => {
+      toggleSidebarProjectNameGroup(
+        key,
+        useAppStore.getState().collapsedGroups,
+        projectNameIndex?.nameGroups ?? new Map(),
+        toggleOriginalGroup
+      )
+    },
+    [projectNameIndex, toggleOriginalGroup]
   )
 
   const agentSendTargetWorktreeId = useAgentSendTargetWorktreeId()

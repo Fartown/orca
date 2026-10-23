@@ -8,6 +8,10 @@ import {
 
 /** UI fields that name a repo, worktree, pane or path. Everything else in the UI state is global. */
 export const UI_STATE_DISPOSITIONS = {
+  sidebarProjectMerges: notApplicableDisposition(
+    38,
+    'Explicit display bindings stay on the client and retain their selected execution hosts.'
+  ),
   lastActiveRepoId: notApplicableDisposition(38, 'repoId is kept.'),
   lastActiveWorktreeId: moveDisposition(38, { rewriteDesktopCopy: true }),
   manualRepoOrder: moveDisposition(38, {

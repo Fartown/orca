@@ -5,6 +5,12 @@ import type { ProjectOrderBy } from './ui-chrome-types'
 import { toSshExecutionHostId } from './execution-host'
 import type { Project, ProjectHostSetup } from './project-types'
 import type { Repo } from './repo-types'
+import { isSidebarMergedProjectId } from './sidebar-project-merge/sidebar-project-merges'
+import {
+  buildSidebarProjectNameGroups,
+  mergeSidebarProjectNameSections,
+  type SidebarProjectNameGroup
+} from './sidebar-project-merge/sidebar-project-name-groups'
 import { parseWslUncPath } from './wsl-paths'
 import { isWindowsAbsolutePathLike, normalizeRuntimePathForComparison } from './cross-platform-path'
 
@@ -33,6 +39,7 @@ export type ProjectGroupingIndex = {
   projectById: Map<string, ProjectSectionProject>
   setupByRepoId: Map<string, ProjectSectionSetup>
   surfaceKeysRequiringSetupGroups: Set<string>
+  nameGroups: ReadonlyMap<string, SidebarProjectNameGroup>
 }
 
 /** The repo fields section grouping, labelling and ordering read. */
@@ -126,11 +133,26 @@ export function buildProjectGroupingIndex(
       surfaceKeysRequiringSetupGroups.add(surfaceKey)
     }
   }
-  const index = {
+  const index: ProjectGroupingIndex = {
     projectById: new Map(projects.map((project) => [project.id, project])),
     setupByRepoId: new Map(projectHostSetups.map((setup) => [setup.repoId, setup])),
-    surfaceKeysRequiringSetupGroups
+    surfaceKeysRequiringSetupGroups,
+    nameGroups: new Map()
   }
+  const names = new Map(projectHostSetups.map((setup) => [setup.repoId, setup]))
+  index.nameGroups = buildSidebarProjectNameGroups(
+    projectHostSetups
+      .filter((setup) => index.projectById.has(setup.projectId))
+      .map((setup) => {
+        const target = getProjectGroupingForRepo(setup.repoId, names, index)
+        return {
+          key: target.key,
+          label: target.label,
+          repoId: setup.repoId,
+          protectedCheckout: isCheckoutScopedProjectSetup(setup, index)
+        }
+      })
+  )
   projectGroupingIndexCache.set(model, index)
   return index
 }
@@ -168,7 +190,11 @@ export function getProjectGroupingForRepo<R extends Pick<ProjectSectionRepo, 'di
       repo
     }
   }
-  if (projectIndex && isCheckoutScopedProjectSetup(setup, projectIndex)) {
+  if (
+    projectIndex &&
+    !isSidebarMergedProjectId(project.id) &&
+    isCheckoutScopedProjectSetup(setup, projectIndex)
+  ) {
     // Why: only the ambiguous surface needs checkout-specific headers.
     return {
       key: `project:${project.id}::setup:${repoId}`,
@@ -192,7 +218,23 @@ export function getProjectHeaderRevealTarget(
   repoMap: Map<string, Repo>,
   projectGrouping?: ProjectGroupingModel
 ): ProjectHeaderRevealTarget {
-  return getProjectGroupingForRepo(repoId, repoMap, buildProjectGroupingIndex(projectGrouping))
+  return getDisplayedProjectGroupingForRepo(
+    repoId,
+    repoMap,
+    buildProjectGroupingIndex(projectGrouping)
+  )
+}
+
+export function getDisplayedProjectGroupingForRepo<
+  R extends Pick<ProjectSectionRepo, 'displayName'>
+>(
+  repoId: string,
+  repoMap: ReadonlyMap<string, R>,
+  projectIndex: ProjectGroupingIndex | null
+): ProjectHeaderRevealTarget<R> {
+  const target = getProjectGroupingForRepo(repoId, repoMap, projectIndex)
+  const group = projectIndex?.nameGroups.get(target.key)
+  return group ? { ...target, key: group.key, label: group.label } : target
 }
 
 /** Actual membership, independent of where a lineage occurrence is displayed. */
@@ -311,5 +353,10 @@ export function buildProjectSections<
   for (const [key, section] of sections) {
     section.activityItems = ownership.get(key)?.items ?? []
   }
-  return orderProjectSections(sections, repoMap, args.repoOrder, args.projectOrderBy)
+  return orderProjectSections(
+    mergeSidebarProjectNameSections(sections, projectIndex?.nameGroups ?? new Map()),
+    repoMap,
+    args.repoOrder,
+    args.projectOrderBy
+  )
 }

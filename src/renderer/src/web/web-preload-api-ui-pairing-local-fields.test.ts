@@ -36,6 +36,16 @@ describe('web UI preload API pairing-local fields', () => {
 
   // Different host samples expose any missing browser-local pin.
   const browserLocalUiSamples: Record<PairingLocalUiField, unknown> = {
+    sidebarProjectMerges: [
+      {
+        id: 'browser',
+        name: 'Browser projects',
+        members: [
+          { hostId: 'local', repoId: 'a' },
+          { hostId: 'runtime:web-env-1', repoId: 'b' }
+        ]
+      }
+    ],
     automationHostFilter: { kind: 'host', hostKey: 'browser-local-host-key' },
     hideWorkspacesFromOtherDevices: true,
     manualRepoOrder: [{ hostId: 'runtime:web-env-1', repoId: 'repo-b' }],
@@ -55,6 +65,7 @@ describe('web UI preload API pairing-local fields', () => {
     manuallyUnreadTurnsByPaneKey: { 'tab-1:leaf-1': 321 }
   }
   const hostUiSamples: Record<PairingLocalUiField, unknown> = {
+    sidebarProjectMerges: [],
     automationHostFilter: { kind: 'all' },
     hideWorkspacesFromOtherDevices: false,
     manualRepoOrder: [{ hostId: 'local', repoId: 'repo-a' }],

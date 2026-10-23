@@ -1,3 +1,5 @@
+import { buildProjectGroupingIndex } from '../../../../../../shared/project-section-grouping'
+import { getSidebarProjectNameCollapsedGroups } from '../../../../../../shared/sidebar-project-merge/sidebar-project-name-groups'
 import { useMemo } from 'react'
 import type { WorktreeOccurrencePlan } from '../../../../../../shared/worktree-occurrence-plan'
 import { getWorktreeRevealCollapsedGroupKeys } from '../navigation/worktree-reveal-group-keys'
@@ -38,7 +40,7 @@ export function useEffectiveCollapsedGroups(args: {
 }): Set<string> {
   const {
     occurrencePlan,
-    collapsedGroups,
+    collapsedGroups: persistedCollapsedGroups,
     hostScopedGroups = false,
     agentSendTargetWorktreeId,
     groupBy,
@@ -56,6 +58,16 @@ export function useEffectiveCollapsedGroups(args: {
     folderWorkspaces,
     defaultHostId
   } = args
+  const collapsedGroups = useMemo(
+    () =>
+      groupBy === 'repo'
+        ? getSidebarProjectNameCollapsedGroups(
+            persistedCollapsedGroups,
+            buildProjectGroupingIndex(projectGrouping)?.nameGroups ?? new Map()
+          )
+        : persistedCollapsedGroups,
+    [persistedCollapsedGroups, projectGrouping, groupBy]
+  )
   return useMemo(() => {
     if (!agentSendTargetWorktreeId) {
       return collapsedGroups

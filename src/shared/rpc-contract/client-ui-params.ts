@@ -1,3 +1,4 @@
+import { normalizeSidebarProjectMerges } from '../sidebar-project-merge/sidebar-project-merges'
 import { z } from 'zod'
 import { isFeatureTipId } from '../feature-tips'
 import {
@@ -123,6 +124,7 @@ export const TopLevelViewSchema = z.enum([
 
 export const UiUpdateFields = z
   .object({
+    sidebarProjectMerges: z.unknown().transform(normalizeSidebarProjectMerges).optional(),
     lastActiveRepoId: NullableString.optional(),
     lastActiveWorktreeId: NullableString.optional(),
     // Why: sync hydration ignores this persisted startup view, so paired windows stay put.

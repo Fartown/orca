@@ -1,3 +1,4 @@
+import { getSidebarProjectNameCollapsedGroups } from '../sidebar-project-merge/sidebar-project-name-groups'
 import type { FolderWorkspace } from '../folder-workspace-types'
 import type { ProjectGroup } from '../project-group-types'
 import type { Repo } from '../repo-types'
@@ -14,7 +15,10 @@ import {
   getMixedWorktreeHostContextLabels,
   getNoticeHostContextLabels
 } from './host-labels'
-import { buildProjectGroupingIndex, getProjectGroupingForRepo } from '../project-section-grouping'
+import {
+  buildProjectGroupingIndex,
+  getDisplayedProjectGroupingForRepo
+} from '../project-section-grouping'
 import {
   buildWorktreeOccurrencePlan,
   type WorktreeOccurrenceSection
@@ -124,7 +128,7 @@ export function planSidebarRows(inputs: SidebarRowPlanInputs) {
     isPinned: (worktree) => worktree.isPinned === true,
     duplicatePinned: pinnedDisplayPolicy === 'duplicate-in-groups',
     owningSectionOf: (worktree) =>
-      getProjectGroupingForRepo(worktree.repoId, repoMap, projectIndex),
+      getDisplayedProjectGroupingForRepo(worktree.repoId, repoMap, projectIndex),
     projectIdOf: (worktree) => worktree.repoId,
     sectionsOf: ({ pinned, natural, displayRootByIdentity }) => {
       const groups: OrderedGroupEntry[] =
@@ -173,7 +177,11 @@ export function planSidebarRows(inputs: SidebarRowPlanInputs) {
     .filter((section) => section.key !== PINNED_GROUP_KEY)
     .map((section) => [section.key, section.group])
   const naturalWorktrees = orderedGroups.flatMap(([, group]) => group.items)
-  const render = (collapsedGroups: Set<string>): Row[] => {
+  const render = (persistedCollapsedGroups: Set<string>): Row[] => {
+    const collapsedGroups = getSidebarProjectNameCollapsedGroups(
+      persistedCollapsedGroups,
+      projectIndex?.nameGroups ?? new Map()
+    )
     const result: Row[] = []
     if (groupBy !== 'repo') {
       for (const creation of pendingCreations) {

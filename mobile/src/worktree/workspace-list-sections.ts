@@ -31,7 +31,7 @@ import type { ExecutionHostId } from '../../../src/shared/execution-host'
 import {
   buildProjectGroupingIndex,
   buildProjectSections,
-  getProjectGroupingForRepo,
+  getDisplayedProjectGroupingForRepo,
   type ProjectSectionModel
 } from '../../../src/shared/project-section-grouping'
 import { withRepoSectionDisplayLabels } from '../../../src/shared/project-section-order'
@@ -206,7 +206,7 @@ export function buildMobileWorkspacePlan(
     isPinned: (worktree) => isWorktreePinned(worktree, pinnedIds),
     duplicatePinned: showPinnedInGroups,
     owningSectionOf: (worktree) =>
-      getProjectGroupingForRepo(worktree.repoId, repoMap, projectIndex),
+      getDisplayedProjectGroupingForRepo(worktree.repoId, repoMap, projectIndex),
     projectIdOf: (worktree) => worktree.repoId,
     sectionsOf: ({ pinned, natural: canonicalGroupWorktrees, displayRootByIdentity }) => {
       const sections: Section[] = []

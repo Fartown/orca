@@ -7,7 +7,10 @@ import {
   getWorkspaceStatusGroupKey
 } from '../workspace-statuses'
 import { ALL_GROUP_KEY, getPRLaneKey, getProjectGroupHeaderKey } from './group-keys'
-import { buildProjectGroupingIndex, getProjectGroupingForRepo } from '../project-section-grouping'
+import {
+  buildProjectGroupingIndex,
+  getDisplayedProjectGroupingForRepo
+} from '../project-section-grouping'
 import type { ProjectSectionModel } from '../project-section-grouping'
 import type { SidebarPRGroupReader, WorktreeGroupBy } from './row-types'
 
@@ -27,7 +30,7 @@ export function getGroupKeyForWorktree(
     return getWorkspaceStatusGroupKey(getWorkspaceStatus(worktree, workspaceStatuses))
   }
   if (groupBy === 'repo') {
-    return getProjectGroupingForRepo(
+    return getDisplayedProjectGroupingForRepo(
       worktree.repoId,
       repoMap,
       buildProjectGroupingIndex(projectGrouping)
@@ -59,7 +62,12 @@ export function getGroupKeysForWorktree(
   if (groupBy !== 'repo') {
     return [groupKey]
   }
-  const repo = repoMap.get(worktree.repoId)
+  const index = buildProjectGroupingIndex(projectGrouping)
+  const nameGroup = [...(index?.nameGroups.values() ?? [])].find((group) => group.key === groupKey)
+  const anchor = nameGroup
+    ? [...repoMap.values()].find((repo) => nameGroup.repoIds.has(repo.id))
+    : undefined
+  const repo = anchor ?? repoMap.get(worktree.repoId)
   const groupIds: string[] = []
   const groupsById = new Map(projectGroups.map((group) => [group.id, group]))
   const visited = new Set<string>()

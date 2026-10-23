@@ -27,8 +27,10 @@ import type {
 } from './ui-chrome-types'
 import type { WorkspaceStatusDefinition } from './worktree/types'
 import type { PersistedAutomationHostFilter } from './automation-host-filter'
+import type { SidebarProjectMerge } from './sidebar-project-merge/sidebar-project-merges'
 
 export type PersistedUIState = {
+  sidebarProjectMerges?: SidebarProjectMerge[]
   jiraSavedFilterState?: JiraSavedFilterState
   jiraQuickFilterState?: JiraQuickFilterState
   lastActiveRepoId: string | null
