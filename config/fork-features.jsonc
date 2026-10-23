@@ -2667,6 +2667,11 @@
           "why": "The pane right-click chat view item shares the header button's name (REQ-2)"
         },
         {
+          "file": "src/renderer/src/native-chat-view-recovery/TerminalTabViewSwitch.tsx",
+          "mustContain": "translate('terminalChatViewButton.switchToChatView', 'Switch to Chat View')",
+          "why": "The tab right-click chat view item shares the name too; the upstream key now reads as move-to-new-chat in Chinese (REQ-2)"
+        },
+        {
           "file": "src/renderer/src/components/terminal-pane/TerminalPaneResumeInChatButton.tsx",
           "mustContain": "'components.tab.bar.SortableTabContextMenu.switchToChatView'",
           "why": "Guard: the move-to-new-chat button still reads the upstream key whose Chinese text this fork renames (REQ-2)"
