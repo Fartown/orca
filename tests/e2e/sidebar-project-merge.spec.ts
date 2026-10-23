@@ -11,6 +11,8 @@ import { decodePairingOffer, encodePairingOffer } from '../../src/shared/pairing
 import { launchHeadlessPairedRuntimeHost } from './helpers/headless-paired-runtime-host'
 import { launchPairedElectronClient } from './helpers/paired-electron-client'
 import { projectHostSetupProjectionFromRepos } from '../../src/shared/project-host-setup-projection'
+import { quotePosixShell } from '../../src/shared/shell-argument-quoting'
+import { quotePowerShellLiteral } from '../../src/shared/powershell-native-argument'
 import type { Repo } from '../../src/shared/repo-types'
 import type { Worktree } from '../../src/shared/worktree/types'
 
@@ -506,7 +508,13 @@ test('merges local and paired-host folders while preserving the remote workspace
     expect(afterTerminals.every((terminal) => terminal.connected && terminal.writable)).toBe(true)
     const token = String(Date.now())
     await focusActiveTerminalInput(client.page)
-    await client.page.keyboard.type(`printf %s%s ORCA_NAME_GROUP_ ${token}`)
+    const nodeCommand =
+      process.platform === 'win32'
+        ? `& ${quotePowerShellLiteral(process.execPath)}`
+        : quotePosixShell(process.execPath)
+    await client.page.keyboard.type(
+      `${nodeCommand} -e "console.log('ORCA_NAME_GROUP_' + '${token}')"`
+    )
     await client.page.keyboard.press('Enter')
     await expect.poll(() => getTerminalContent(client!.page)).toContain(`ORCA_NAME_GROUP_${token}`)
     await testInfo.attach('preserved-terminal-identities', {
