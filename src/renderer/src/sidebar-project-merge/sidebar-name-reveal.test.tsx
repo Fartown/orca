@@ -6,7 +6,7 @@ import type { Repo } from '../../../shared/repo-types'
 import type { ProjectGroup } from '../../../shared/project-group-types'
 import { projectHostSetupProjectionFromRepos } from '../../../shared/project-host-setup-projection'
 import { getSidebarRowRevealAncestorKeys } from '../components/sidebar/worktree-list/navigation/reveal-ancestors'
-import { resolveSidebarProjectNameRevealKey } from './sidebar-name-reveal'
+import { resolveSidebarNameReveal, resolveSidebarProjectNameRevealKey } from './sidebar-name-reveal'
 import { resolveProjectGroupHeaderColor } from '../components/sidebar/project-header-color'
 import { useSidebarRevealRequests } from '../components/sidebar/worktree-list/navigation/use-reveal-requests'
 
@@ -129,6 +129,19 @@ describe('display-name header reveal', () => {
     const model = { projects: projection.projects, projectHostSetups: projection.setups }
     const repoMap = new Map(repos.map((repo) => [repo.id, repo]))
     const combined = new Map([['sidebar-name:workspace', []]])
+    const request = { rowKey: 'project:repo:a', behavior: 'smooth' }
+    expect(resolveSidebarNameReveal(request, { sectionKeys: combined, repoMap, model })).toEqual({
+      ...request,
+      rowKey: 'sidebar-name:workspace'
+    })
+    expect(resolveSidebarNameReveal(null, { sectionKeys: combined, repoMap, model })).toBeNull()
+    expect(
+      resolveSidebarNameReveal(request, {
+        sectionKeys: new Map([[request.rowKey, []]]),
+        repoMap,
+        model
+      })
+    ).toBe(request)
     const hostView = new Map([
       ['sidebar-name:workspace::host:local', []],
       ['project:repo:remote', []]

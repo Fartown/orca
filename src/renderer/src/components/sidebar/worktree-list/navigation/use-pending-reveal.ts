@@ -1,4 +1,4 @@
-import { resolveSidebarProjectNameRevealKey } from '@/sidebar-project-merge/sidebar-name-reveal'
+import { resolveSidebarNameReveal } from '@/sidebar-project-merge/sidebar-name-reveal'
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { useAppStore } from '@/store'
@@ -34,7 +34,6 @@ export function usePendingSidebarReveal(args: PendingSidebarRevealArgs): void {
 
   const {
     pendingRevealWorktree,
-    pendingRevealSidebarRow: nativePendingSidebarRow,
     clearPendingRevealWorktreeId,
     clearPendingRevealSidebarRow,
     renderRows,
@@ -46,20 +45,15 @@ export function usePendingSidebarReveal(args: PendingSidebarRevealArgs): void {
     pinnedDisplayPolicy
   } = args
 
-  const pendingRevealSidebarRow = useMemo(() => {
-    if (!nativePendingSidebarRow) {
-      return null
-    }
-    const rowKey = resolveSidebarProjectNameRevealKey(
-      nativePendingSidebarRow.rowKey,
-      args.occurrencePlan?.bySection,
-      args.repoMap,
-      args.projectGrouping
-    )
-    return rowKey === nativePendingSidebarRow.rowKey
-      ? nativePendingSidebarRow
-      : { ...nativePendingSidebarRow, rowKey }
-  }, [nativePendingSidebarRow, args.occurrencePlan, args.repoMap, args.projectGrouping])
+  const pendingRevealSidebarRow = useMemo(
+    () =>
+      resolveSidebarNameReveal(args.pendingRevealSidebarRow, {
+        sectionKeys: args.occurrencePlan?.bySection,
+        repoMap: args.repoMap,
+        model: args.projectGrouping
+      }),
+    [args.pendingRevealSidebarRow, args.occurrencePlan, args.repoMap, args.projectGrouping]
+  )
 
   const scheduleRetryTick = useCallback(
     (cancelled: () => boolean) => {

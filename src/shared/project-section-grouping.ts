@@ -7,6 +7,7 @@ import type { Project, ProjectHostSetup } from './project-types'
 import type { Repo } from './repo-types'
 import {
   buildSidebarProjectNameGroupsForSetups,
+  getProjectNameGroupingCache,
   mergeSidebarProjectNameSections,
   type SidebarProjectNameGroup
 } from './sidebar-project-merge/sidebar-project-name-groups'
@@ -64,10 +65,6 @@ export type ProjectSectionEntry<Item, R extends ProjectSectionRepo = Repo> = {
 }
 
 const defaultGroupingRepos = new Map<string, ProjectSectionRepo>()
-const projectGroupingIndexCache = new WeakMap<
-  ProjectSectionModel,
-  WeakMap<ReadonlyMap<string, ProjectSectionRepo>, ProjectGroupingIndex | null>
->()
 
 // Why: provisioned and folder setups are not independent Git checkouts.
 function isDistinctUserCheckout(setup: ProjectSectionSetup): boolean {
@@ -110,11 +107,7 @@ export function buildProjectGroupingIndex(
   if (!model) {
     return null
   }
-  let cache = projectGroupingIndexCache.get(model)
-  if (!cache) {
-    cache = new WeakMap()
-    projectGroupingIndexCache.set(model, cache)
-  }
+  const cache = getProjectNameGroupingCache(model)
   const cached = cache.get(repos)
   if (cached !== undefined) {
     return cached

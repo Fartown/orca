@@ -522,11 +522,27 @@
             "src/cli/runtime/serve-orcad-launch.ts",
             "src/cli/runtime/serve-update-supervisor.ts",
             "src/renderer/src/web/preload-api/web-updater-api.ts",
-
             "src/shared/terminal-launch-diagnostics/**",
             "src/main/terminal-launch-diagnostics/**",
             "src/renderer/src/terminal-launch-diagnostics/**",
             "docs/issue/终端创建链路诊断/**",
+            "src/renderer/src/components/sidebar/worktree-list/listing/use-section-rows.ts",
+            "src/shared/sidebar-list/sidebar-feed-rows.ts",
+            "src/renderer/src/components/sidebar/project-header-color.ts",
+            "src/renderer/src/components/sidebar/worktree-list/navigation/use-reveal-requests.ts",
+            "src/renderer/src/components/sidebar/worktree-list/navigation/use-pending-reveal.ts",
+            "src/renderer/src/components/sidebar/worktree-list/navigation/reveal-ancestors.ts",
+            "src/renderer/src/sidebar-project-merge/**",
+            "src/shared/sidebar-project-merge/**",
+            "docs/issue/侧栏项目合并/**",
+            "src/shared/project-section-grouping.ts",
+            "src/renderer/src/components/sidebar/worktree-list-groups-section-label-disambiguation.test.ts",
+            "tests/e2e/sidebar-project-merge.spec.ts",
+            "src/shared/sidebar-list/sidebar-row-plan.ts",
+            "src/shared/sidebar-list/worktree-group-keys.ts",
+            "src/renderer/src/components/sidebar/worktree-list/rows/project-header-host-context.ts",
+            "mobile/src/worktree/workspace-list-sections.ts",
+            "mobile/src/sidebar-project-merge/**",
             "src/main/runtime/rpc/dispatcher.ts",
             "src/renderer/src/store/terminals/terminal-startup-queues.ts",
             "src/renderer/src/runtime/web-runtime-terminal-creation.ts",
@@ -989,7 +1005,26 @@
             "src/main/ai-vault/session-scanner-scope-walk.test.ts",
             "src/main/runtime/runtime-orchestration-sender-names.test.ts",
             "src/renderer/src/runtime/web-session-tabs-sync/terminal-build.ts",
-            "config/scripts/ci-closed-pr-cancellation.test.mjs",
+            "config/scripts/ci-closed-pr-cancellation.test.mjs"
+          ],
+          "message": "Branch changes an upstream path that no fork feature owns or registers as a seam; extend config/fork-features.jsonc and this allowlist, or move the change into a feature-owned path."
+        }
+      ]
+    },
+    {
+      "id": "sidebar-project-merge",
+      "description": "Only sidebar classification changes; native actions and ownership remain unchanged.",
+      "rules": [
+        {
+          "id": "sidebar-project-merge-worktree-scope",
+          "type": "change-scope",
+          "comparison": "worktree",
+          "whenChanged": [
+            "mobile/src/sidebar-project-merge/**",
+            "src/shared/sidebar-project-merge/**",
+            "docs/issue/侧栏项目合并/**"
+          ],
+          "allowedPaths": [
             "src/renderer/src/components/sidebar/worktree-list/listing/use-section-rows.ts",
             "src/shared/sidebar-list/sidebar-feed-rows.ts",
             "src/renderer/src/components/sidebar/project-header-color.ts",
@@ -1000,7 +1035,11 @@
             "src/shared/sidebar-project-merge/**",
             "docs/issue/侧栏项目合并/**",
             "src/shared/project-section-grouping.ts",
+            "config/fork-features.jsonc",
+            "config/architecture-policies.jsonc",
+            "docs/issue/README.md",
             "src/renderer/src/components/sidebar/worktree-list-groups-section-label-disambiguation.test.ts",
+            ".gitignore",
             "tests/e2e/sidebar-project-merge.spec.ts",
             "src/shared/sidebar-list/sidebar-row-plan.ts",
             "src/shared/sidebar-list/worktree-group-keys.ts",
@@ -1008,7 +1047,7 @@
             "mobile/src/worktree/workspace-list-sections.ts",
             "mobile/src/sidebar-project-merge/**"
           ],
-          "message": "Branch changes an upstream path that no fork feature owns or registers as a seam; extend config/fork-features.jsonc and this allowlist, or move the change into a feature-owned path."
+          "message": "Change is outside sidebar project merge scope."
         }
       ]
     },
@@ -1870,46 +1909,6 @@
             ".gitignore"
           ],
           "message": "Change is outside the terminal writer login-shell fix."
-        }
-      ]
-    },
-    {
-      "id": "sidebar-project-merge",
-      "description": "Only sidebar classification changes; native actions and ownership remain unchanged.",
-      "rules": [
-        {
-          "id": "sidebar-project-merge-worktree-scope",
-          "type": "change-scope",
-          "comparison": "worktree",
-          "whenChanged": [
-            "mobile/src/sidebar-project-merge/**",
-            "src/shared/sidebar-project-merge/**",
-            "docs/issue/侧栏项目合并/**"
-          ],
-          "allowedPaths": [
-            "src/renderer/src/components/sidebar/worktree-list/listing/use-section-rows.ts",
-            "src/shared/sidebar-list/sidebar-feed-rows.ts",
-            "src/renderer/src/components/sidebar/project-header-color.ts",
-            "src/renderer/src/components/sidebar/worktree-list/navigation/use-reveal-requests.ts",
-            "src/renderer/src/components/sidebar/worktree-list/navigation/use-pending-reveal.ts",
-            "src/renderer/src/components/sidebar/worktree-list/navigation/reveal-ancestors.ts",
-            "src/renderer/src/sidebar-project-merge/**",
-            "src/shared/sidebar-project-merge/**",
-            "docs/issue/侧栏项目合并/**",
-            "src/shared/project-section-grouping.ts",
-            "config/fork-features.jsonc",
-            "config/architecture-policies.jsonc",
-            "docs/issue/README.md",
-            "src/renderer/src/components/sidebar/worktree-list-groups-section-label-disambiguation.test.ts",
-            ".gitignore",
-            "tests/e2e/sidebar-project-merge.spec.ts",
-            "src/shared/sidebar-list/sidebar-row-plan.ts",
-            "src/shared/sidebar-list/worktree-group-keys.ts",
-            "src/renderer/src/components/sidebar/worktree-list/rows/project-header-host-context.ts",
-            "mobile/src/worktree/workspace-list-sections.ts",
-            "mobile/src/sidebar-project-merge/**"
-          ],
-          "message": "Change is outside sidebar project merge scope."
         }
       ]
     }

@@ -1,9 +1,36 @@
 import type {
   ProjectGroupingIndex,
   ProjectSectionEntry,
+  ProjectSectionModel,
   ProjectSectionRepo,
   ProjectSectionSetup
 } from '../project-section-grouping'
+
+const projectNameGroupingCache = new WeakMap<
+  ProjectSectionModel,
+  WeakMap<ReadonlyMap<string, ProjectSectionRepo>, ProjectGroupingIndex | null>
+>()
+
+export function getProjectNameGroupingCache(model: ProjectSectionModel) {
+  let cache = projectNameGroupingCache.get(model)
+  if (!cache) {
+    cache = new WeakMap()
+    projectNameGroupingCache.set(model, cache)
+  }
+  return cache
+}
+
+export function withNameGroupHostScope(
+  model: ProjectSectionModel | undefined,
+  view: { workspaceHostScope: string; visibleWorkspaceHostIds: readonly string[] | null }
+): ProjectSectionModel | undefined {
+  return (
+    model && {
+      ...model,
+      groupNamesByHost: view.workspaceHostScope !== 'all' || view.visibleWorkspaceHostIds !== null
+    }
+  )
+}
 
 export type SidebarProjectNameTarget = {
   key: string

@@ -21,3 +21,23 @@ export function resolveSidebarProjectNameRevealKey(
   }
   return nativeKey
 }
+
+export function resolveSidebarNameReveal<T extends { rowKey: string }>(
+  pending: T | null,
+  args: {
+    sectionKeys: ReadonlyMap<string, unknown> | undefined
+    repoMap: Map<string, Repo>
+    model?: ProjectSectionModel
+  }
+): T | null {
+  if (!pending) {
+    return null
+  }
+  const rowKey = resolveSidebarProjectNameRevealKey(
+    pending.rowKey,
+    args.sectionKeys,
+    args.repoMap,
+    args.model
+  )
+  return rowKey === pending.rowKey ? pending : { ...pending, rowKey }
+}

@@ -259,6 +259,111 @@
       ]
     },
     {
+      "id": "sidebar-project-merge",
+      "title": "侧栏项目合并：同仓库沿用，同显示名称归并",
+      "goal": "复用原仓库归并和显示名称，将同名项目区块合并展示；改名拆分，保留业务归属",
+      "journal": "docs/issue/侧栏项目合并/journal.md",
+      "dependsOn": [
+        "src/shared/project-types.ts",
+        "src/shared/project-host-setup-projection.ts",
+        "src/shared/execution-host.ts",
+        "src/shared/project-section-grouping.ts",
+        "src/shared/project-section-order.ts",
+        "src/shared/repo-types.ts",
+        "src/shared/project-group-types.ts",
+        "src/renderer/src/components/sidebar/worktree-list/navigation/use-reveal-requests.ts",
+        "src/renderer/src/components/sidebar/worktree-list/navigation/reveal-ancestors.ts",
+        "src/renderer/src/components/sidebar/project-header-color.ts"
+      ],
+      "policyId": "sidebar-project-merge",
+      "ownedPaths": [
+        "src/shared/sidebar-project-merge/**",
+        "src/renderer/src/sidebar-project-merge/**",
+        "mobile/src/sidebar-project-merge/**",
+        "docs/issue/侧栏项目合并/**",
+        "tests/e2e/sidebar-project-merge.spec.ts"
+      ],
+      "requiredFiles": ["src/shared/sidebar-project-merge/sidebar-project-name-groups.ts"],
+      "seams": [
+        {
+          "file": "src/renderer/src/components/sidebar/worktree-list-groups-section-label-disambiguation.test.ts",
+          "mustContain": "sidebar-name:api",
+          "why": "Verify same-name grouping while retaining protected-checkout path labels."
+        },
+        {
+          "file": ".gitignore",
+          "mustContain": "!docs/issue/侧栏项目合并/**",
+          "why": "Track the feature requirements, design, journal and validation records."
+        },
+        {
+          "file": "src/shared/project-section-grouping.ts",
+          "mustContain": "buildSidebarProjectNameGroups",
+          "why": "Add display-name section composition while retaining native identity and action targets."
+        },
+        {
+          "file": "src/shared/sidebar-list/sidebar-row-plan.ts",
+          "mustContain": "getDisplayedProjectGroupingForRepo",
+          "why": "Add display-name section composition while retaining native identity and action targets."
+        },
+        {
+          "file": "src/shared/sidebar-list/worktree-group-keys.ts",
+          "mustContain": "getDisplayedProjectGroupingForRepo",
+          "why": "Add display-name section composition while retaining native identity and action targets."
+        },
+        {
+          "file": "src/renderer/src/components/sidebar/worktree-list/rows/project-header-host-context.ts",
+          "mustContain": "getDisplayedProjectGroupingForRepo",
+          "why": "Add display-name section composition while retaining native identity and action targets."
+        },
+        {
+          "file": "mobile/src/worktree/workspace-list-sections.ts",
+          "mustContain": "getDisplayedProjectGroupingForRepo",
+          "why": "Add display-name section composition while retaining native identity and action targets."
+        },
+        {
+          "file": "src/renderer/src/components/sidebar/worktree-list/navigation/use-reveal-requests.ts",
+          "mustContain": "sidebar-name:",
+          "why": "Recognize the displayed project key in existing reveal and ancestor resolution."
+        },
+        {
+          "file": "src/renderer/src/components/sidebar/worktree-list/navigation/use-pending-reveal.ts",
+          "mustContain": "sidebar-name:",
+          "why": "Recognize the displayed project key in existing reveal and ancestor resolution."
+        },
+        {
+          "file": "src/renderer/src/components/sidebar/worktree-list/navigation/reveal-ancestors.ts",
+          "mustContain": "sidebar-name:",
+          "why": "Recognize the displayed project key in existing reveal and ancestor resolution."
+        },
+        {
+          "file": "src/renderer/src/components/sidebar/worktree-list/listing/use-section-rows.ts",
+          "mustContain": "groupNamesByHost",
+          "why": "Pass the existing host-container mode into display-only grouping."
+        },
+        {
+          "file": "src/shared/sidebar-list/sidebar-feed-rows.ts",
+          "mustContain": "withNameGroupHostScope",
+          "why": "Keep the shared feed inside its existing host containers."
+        },
+        {
+          "file": "src/renderer/src/components/sidebar/project-header-color.ts",
+          "mustContain": "sidebar-name:",
+          "why": "Keep the original representative repo color for displayed project headers."
+        }
+      ],
+      "tests": [
+        "tests/e2e/sidebar-project-merge.spec.ts",
+        "src/shared/sidebar-project-merge/sidebar-project-name-groups.test.ts",
+        "src/renderer/src/components/sidebar/worktree-list-groups-section-label-disambiguation.test.ts",
+        "mobile/src/sidebar-project-merge/workspace-list-sections.test.ts",
+        "src/renderer/src/sidebar-project-merge/sidebar-name-reveal.test.tsx"
+      ],
+      "checks": [
+        "ORCA_BACKGROUND_LAUNCH=1 pnpm exec vitest run --config config/vitest.config.ts src/shared/sidebar-project-merge src/renderer/src/components/sidebar/worktree-list-groups-section-label-disambiguation.test.ts src/renderer/src/sidebar-project-merge",
+        "ORCA_BACKGROUND_LAUNCH=1 pnpm exec vitest run --config mobile/vitest.config.ts mobile/src/worktree/workspace-list-sections.test.ts mobile/src/sidebar-project-merge"
+      ]
+    },
+    {
       "id": "document-preview-size",
       "title": "文档预览大小：本地、SSH 与配对预览支持 20 MiB",
       "goal": "扩大文档文本预览上限，不扩大普通文件读取和 paired RPC 预算",
@@ -2644,111 +2749,6 @@
       "tests": ["src/main/cli-writer-login-shell/login-wrapped-pty-shell.test.ts"],
       "checks": [
         "pnpm exec vitest run --config config/vitest.config.ts src/main/cli-writer-login-shell src/main/runtime/structured-agent-cli-writers.test.ts"
-      ]
-    },
-    {
-      "id": "sidebar-project-merge",
-      "title": "侧栏项目合并：同仓库沿用，同显示名称归并",
-      "goal": "复用原仓库归并和显示名称，将同名项目区块合并展示；改名拆分，保留业务归属",
-      "journal": "docs/issue/侧栏项目合并/journal.md",
-      "dependsOn": [
-        "src/shared/project-types.ts",
-        "src/shared/project-host-setup-projection.ts",
-        "src/shared/execution-host.ts",
-        "src/shared/project-section-grouping.ts",
-        "src/shared/project-section-order.ts",
-        "src/shared/repo-types.ts",
-        "src/shared/project-group-types.ts",
-        "src/renderer/src/components/sidebar/worktree-list/navigation/use-reveal-requests.ts",
-        "src/renderer/src/components/sidebar/worktree-list/navigation/reveal-ancestors.ts",
-        "src/renderer/src/components/sidebar/project-header-color.ts"
-      ],
-      "policyId": "sidebar-project-merge",
-      "ownedPaths": [
-        "src/shared/sidebar-project-merge/**",
-        "src/renderer/src/sidebar-project-merge/**",
-        "mobile/src/sidebar-project-merge/**",
-        "docs/issue/侧栏项目合并/**",
-        "tests/e2e/sidebar-project-merge.spec.ts"
-      ],
-      "requiredFiles": ["src/shared/sidebar-project-merge/sidebar-project-name-groups.ts"],
-      "seams": [
-        {
-          "file": "src/renderer/src/components/sidebar/worktree-list-groups-section-label-disambiguation.test.ts",
-          "mustContain": "sidebar-name:api",
-          "why": "Verify same-name grouping while retaining protected-checkout path labels."
-        },
-        {
-          "file": ".gitignore",
-          "mustContain": "!docs/issue/侧栏项目合并/**",
-          "why": "Track the feature requirements, design, journal and validation records."
-        },
-        {
-          "file": "src/shared/project-section-grouping.ts",
-          "mustContain": "buildSidebarProjectNameGroups",
-          "why": "Add display-name section composition while retaining native identity and action targets."
-        },
-        {
-          "file": "src/shared/sidebar-list/sidebar-row-plan.ts",
-          "mustContain": "getDisplayedProjectGroupingForRepo",
-          "why": "Add display-name section composition while retaining native identity and action targets."
-        },
-        {
-          "file": "src/shared/sidebar-list/worktree-group-keys.ts",
-          "mustContain": "getDisplayedProjectGroupingForRepo",
-          "why": "Add display-name section composition while retaining native identity and action targets."
-        },
-        {
-          "file": "src/renderer/src/components/sidebar/worktree-list/rows/project-header-host-context.ts",
-          "mustContain": "getDisplayedProjectGroupingForRepo",
-          "why": "Add display-name section composition while retaining native identity and action targets."
-        },
-        {
-          "file": "mobile/src/worktree/workspace-list-sections.ts",
-          "mustContain": "getDisplayedProjectGroupingForRepo",
-          "why": "Add display-name section composition while retaining native identity and action targets."
-        },
-        {
-          "file": "src/renderer/src/components/sidebar/worktree-list/navigation/use-reveal-requests.ts",
-          "mustContain": "sidebar-name:",
-          "why": "Recognize the displayed project key in existing reveal and ancestor resolution."
-        },
-        {
-          "file": "src/renderer/src/components/sidebar/worktree-list/navigation/use-pending-reveal.ts",
-          "mustContain": "sidebar-name:",
-          "why": "Recognize the displayed project key in existing reveal and ancestor resolution."
-        },
-        {
-          "file": "src/renderer/src/components/sidebar/worktree-list/navigation/reveal-ancestors.ts",
-          "mustContain": "sidebar-name:",
-          "why": "Recognize the displayed project key in existing reveal and ancestor resolution."
-        },
-        {
-          "file": "src/renderer/src/components/sidebar/worktree-list/listing/use-section-rows.ts",
-          "mustContain": "groupNamesByHost",
-          "why": "Pass the existing host-container mode into display-only grouping."
-        },
-        {
-          "file": "src/shared/sidebar-list/sidebar-feed-rows.ts",
-          "mustContain": "groupNamesByHost",
-          "why": "Keep the shared feed inside its existing host containers."
-        },
-        {
-          "file": "src/renderer/src/components/sidebar/project-header-color.ts",
-          "mustContain": "sidebar-name:",
-          "why": "Keep the original representative repo color for displayed project headers."
-        }
-      ],
-      "tests": [
-        "tests/e2e/sidebar-project-merge.spec.ts",
-        "src/shared/sidebar-project-merge/sidebar-project-name-groups.test.ts",
-        "src/renderer/src/components/sidebar/worktree-list-groups-section-label-disambiguation.test.ts",
-        "mobile/src/sidebar-project-merge/workspace-list-sections.test.ts",
-        "src/renderer/src/sidebar-project-merge/sidebar-name-reveal.test.tsx"
-      ],
-      "checks": [
-        "ORCA_BACKGROUND_LAUNCH=1 pnpm exec vitest run --config config/vitest.config.ts src/shared/sidebar-project-merge src/renderer/src/components/sidebar/worktree-list-groups-section-label-disambiguation.test.ts src/renderer/src/sidebar-project-merge",
-        "ORCA_BACKGROUND_LAUNCH=1 pnpm exec vitest run --config mobile/vitest.config.ts mobile/src/worktree/workspace-list-sections.test.ts mobile/src/sidebar-project-merge"
       ]
     }
   ]
