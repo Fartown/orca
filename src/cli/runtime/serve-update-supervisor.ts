@@ -11,7 +11,8 @@ import {
   WILL_QUIT_TEARDOWN_DEADLINE_MS
 } from '../../shared/quit-teardown-deadline'
 import { serveSignalExitError } from './serve-signal-exit-diagnostic'
-import { waitForMacBundleVersion } from './mac-app-update-bundle'
+import { awaitServeUpdateHandoff } from '../integration-builds/linux-serve-update'
+import { resolveAppImageBuildWatch } from './serve-appimage-update'
 import {
   mayRespawn,
   supervisedStopSignal,
@@ -41,37 +42,18 @@ type ServeSupervisorArgs = {
 export async function resumeInterruptedServeUpdate(
   args: ServeSupervisorArgs & { handoffPath: string; handoff: InstallRequestedHandoff }
 ): Promise<number> {
-  const expectedHandoff = await awaitInstalledHandoff(
-    args.spec.program,
-    args.handoffPath,
-    args.handoff
-  )
+  const expectedHandoff = await awaitServeUpdateHandoff({
+    executable: args.spec.program,
+    handoffPath: args.handoffPath,
+    handoff: args.handoff,
+    signal: supervisedStopSignal(),
+    recordFailure: recordServeUpdateHandoffFailure
+  })
   if (!(await mayRespawn())) {
     return 0
   }
   const child = args.spawnChild(args.spec)
   return superviseForegroundServe({ ...args, child, expectedHandoff })
-}
-
-async function awaitInstalledHandoff(
-  executable: string,
-  handoffPath: string,
-  handoff: InstallRequestedHandoff
-): Promise<InstallRequestedHandoff | null> {
-  const stop = supervisedStopSignal()
-  if (await waitForMacBundleVersion(executable, handoff.targetVersion, undefined, stop)) {
-    return handoff
-  }
-  if (stop.aborted) {
-    // A stop is not a failed update: the next start resumes this handoff.
-    return null
-  }
-  await recordServeUpdateHandoffFailure(
-    handoffPath,
-    handoff,
-    `Timed out waiting for Orca ${handoff.targetVersion} to be installed.`
-  )
-  return null
 }
 
 export async function superviseForegroundServe(
@@ -82,6 +64,7 @@ export async function superviseForegroundServe(
 ): Promise<number> {
   let child = args.child
   let expectedHandoff = args.expectedHandoff
+  const appImageWatch = resolveAppImageBuildWatch(args.spec.program)
 
   while (true) {
     const result = await waitForForegroundChild(
@@ -115,11 +98,14 @@ export async function superviseForegroundServe(
         if (!args.handoffPath) {
           return 1
         }
-        expectedHandoff = await awaitInstalledHandoff(
-          args.spec.program,
-          args.handoffPath,
-          decision.handoff
-        )
+        expectedHandoff = await awaitServeUpdateHandoff({
+          executable: args.spec.program,
+          handoffPath: args.handoffPath,
+          handoff: decision.handoff,
+          signal: supervisedStopSignal(),
+          watch: appImageWatch,
+          recordFailure: recordServeUpdateHandoffFailure
+        })
         if (!(await mayRespawn())) {
           return 0
         }
