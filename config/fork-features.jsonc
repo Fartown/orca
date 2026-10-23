@@ -64,6 +64,16 @@
       "goal": "同源发布 fork 内测包，并提供桌面更新清单和 Android 应用内更新",
       "journal": "docs/issue/集成分支自动出包/journal.md",
       "dependsOn": [
+        "src/main/appimage-runtime-identity.ts",
+        "src/cli/runtime/serve-appimage-update.ts",
+        "src/cli/runtime/serve-supervisor-relocation.ts",
+        "src/cli/runtime/mac-app-update-bundle.ts",
+        "src/cli/runtime/serve-supervisor-policy.ts",
+        "src/shared/appimage-cache-identity.ts",
+        "src/renderer/src/store/index.ts",
+        "src/renderer/src/web/preload-api/web-runtime-session.ts",
+        "src/shared/update-status-types.ts",
+
         "config/electron-builder.config.cjs",
         "config/scripts/build-mac-local.mjs",
         "config/scripts/build-wayland-clipboard.mjs",
@@ -81,6 +91,9 @@
       ],
       "policyId": "integration-builds",
       "ownedPaths": [
+        "src/cli/integration-builds/**",
+        "src/renderer/src/integration-builds/**",
+
         ".github/workflows/fork-integration-build.yml",
         "config/scripts/integration-builds/**",
         "src/shared/integration-builds/**",
@@ -90,6 +103,9 @@
         "docs/issue/集成分支自动出包/**"
       ],
       "requiredFiles": [
+        "src/cli/integration-builds/linux-serve-update.ts",
+        "src/main/integration-builds/linux-serve-update-support.ts",
+        "src/renderer/src/integration-builds/web-server-update.ts",
         ".github/workflows/fork-integration-build.yml",
         "config/scripts/integration-builds/electron-builder.cjs",
         "config/scripts/integration-builds/build-identity.mjs",
@@ -101,6 +117,32 @@
         "config/scripts/integration-builds/ai-release-summary.mjs"
       ],
       "seams": [
+        {
+          "file": "src/main/serve-update-handoff.ts",
+          "mustContain": "hasLinuxServeUpdateSupervisor",
+          "why": "Reuse the existing updater and service supervisor for Linux AppImage services."
+        },
+        {
+          "file": "src/cli/runtime/launch.ts",
+          "mustContain": "linuxServeUpdateEnvironment",
+          "why": "Reuse the existing updater and service supervisor for Linux AppImage services."
+        },
+        {
+          "file": "src/cli/runtime/serve-orcad-launch.ts",
+          "mustContain": "usesLinuxUpdateHandoff",
+          "why": "Reuse the existing updater and service supervisor for Linux AppImage services."
+        },
+        {
+          "file": "src/cli/runtime/serve-update-supervisor.ts",
+          "mustContain": "awaitServeUpdateHandoff",
+          "why": "Reuse the existing updater and service supervisor for Linux AppImage services."
+        },
+        {
+          "file": "src/renderer/src/web/preload-api/web-updater-api.ts",
+          "mustContain": "openWebServerUpdate",
+          "why": "Reuse the existing updater and service supervisor for Linux AppImage services."
+        },
+
         {
           "file": ".github/workflows/ci-cache-warmup-platform-jobs.yml",
           "mustContain": "github.repository == 'stablyai/orca'",
@@ -193,6 +235,9 @@
         }
       ],
       "tests": [
+        "src/cli/integration-builds/linux-serve-update.test.ts",
+        "src/main/integration-builds/linux-serve-update-support.test.ts",
+        "src/renderer/src/integration-builds/web-server-update.test.ts",
         "config/scripts/integration-builds/pr-runner-portability.test.mjs",
         "config/scripts/integration-builds/integration-builds.test.mjs",
         "config/scripts/integration-builds/mac-signing.test.mjs",
@@ -212,7 +257,7 @@
         "config/scripts/ci-closed-pr-cancellation.test.mjs"
       ],
       "checks": [
-        "pnpm exec vitest run --config config/vitest.config.ts config/scripts/integration-builds src/shared/integration-builds src/main/integration-builds",
+        "pnpm exec vitest run --config config/vitest.config.ts config/scripts/integration-builds src/shared/integration-builds src/main/integration-builds src/cli/integration-builds src/renderer/src/integration-builds",
         "pnpm --dir mobile exec vitest run src/integration-builds",
         "ORCA_BACKGROUND_LAUNCH=1 pnpm exec vitest run --config config/vitest.config.ts config/scripts/pr-preflight-gates.test.mjs config/scripts/win32-test-lane-registration.test.mjs config/scripts/ci-pr-concurrency-keys.test.mjs config/scripts/ci-closed-pr-cancellation.test.mjs"
       ]

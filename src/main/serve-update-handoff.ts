@@ -11,6 +11,7 @@ import {
   type ServeUpdateHandoffState
 } from '../shared/serve-update-handoff'
 import { getCanonicalUserDataPath } from './persistence'
+import { hasLinuxServeUpdateSupervisor } from './integration-builds/linux-serve-update-support'
 
 function getConfiguredHandoffPath(): string | null {
   const configuredPath = process.env[SERVE_UPDATE_HANDOFF_PATH_ENV]
@@ -22,7 +23,10 @@ function getConfiguredHandoffPath(): string | null {
 }
 
 export function hasServeUpdateSupervisor(): boolean {
-  return process.platform === 'darwin' && getConfiguredHandoffPath() !== null
+  return (
+    (process.platform === 'darwin' || hasLinuxServeUpdateSupervisor()) &&
+    getConfiguredHandoffPath() !== null
+  )
 }
 
 export function requestServeUpdateHandoff(targetVersion: string): boolean {
