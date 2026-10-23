@@ -61,6 +61,9 @@
           "type": "change-scope",
           "comparison": "worktree",
           "whenChanged": [
+            "src/cli/integration-builds/**",
+            "src/renderer/src/integration-builds/**",
+
             ".github/workflows/fork-integration-build.yml",
             "config/scripts/mobile-web-bundle-packaging-workflow-contract.test.mjs",
             "config/scripts/integration-builds/**",
@@ -71,6 +74,14 @@
             "docs/issue/集成分支自动出包/**"
           ],
           "allowedPaths": [
+            "src/cli/integration-builds/**",
+            "src/renderer/src/integration-builds/**",
+            "src/main/serve-update-handoff.ts",
+            "src/cli/runtime/launch.ts",
+            "src/cli/runtime/serve-orcad-launch.ts",
+            "src/cli/runtime/serve-update-supervisor.ts",
+            "src/renderer/src/web/preload-api/web-updater-api.ts",
+
             "config/scripts/ci-draft-pr-admission.test.mjs",
             ".github/workflows/pr.yml",
             ".github/workflows/ci-closed-pr-caches.yml",
@@ -474,6 +485,14 @@
           // diff against the upstream commit it last merged, evaluated without a sync first.
           "requireBaseAncestor": false,
           "allowedPaths": [
+            "src/cli/integration-builds/**",
+            "src/renderer/src/integration-builds/**",
+            "src/main/serve-update-handoff.ts",
+            "src/cli/runtime/launch.ts",
+            "src/cli/runtime/serve-orcad-launch.ts",
+            "src/cli/runtime/serve-update-supervisor.ts",
+            "src/renderer/src/web/preload-api/web-updater-api.ts",
+
             "src/shared/terminal-launch-diagnostics/**",
             "src/main/terminal-launch-diagnostics/**",
             "src/renderer/src/terminal-launch-diagnostics/**",

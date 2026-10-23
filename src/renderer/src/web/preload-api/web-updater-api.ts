@@ -1,6 +1,7 @@
 import type { PreloadApi } from '../../../../preload/api-types'
 import { translate } from '@/i18n/i18n'
 import { noopUnsubscribe } from './web-storage'
+import { openWebServerUpdate, webServerVersion } from '../../integration-builds/web-server-update'
 
 export function createUpdaterApi(): NonNullable<Partial<PreloadApi>['updater']> {
   // Why: the linux-package-install recovery status can only originate in the native main process, so
@@ -8,9 +9,9 @@ export function createUpdaterApi(): NonNullable<Partial<PreloadApi>['updater']> 
   // A fresh Error per rejection: one shared instance would carry this function's stack, not the caller's.
   const desktopOnlyMessage = 'Linux package install recovery is only available in the desktop app.'
   return {
-    getVersion: () => Promise.resolve('web'),
+    getVersion: () => Promise.resolve(webServerVersion()),
     getStatus: () => Promise.resolve({ state: 'idle' } as never),
-    check: () => Promise.resolve(),
+    check: openWebServerUpdate,
     download: () => Promise.resolve(),
     quitAndInstall: () => Promise.resolve(),
     dismissNudge: () => Promise.resolve(),

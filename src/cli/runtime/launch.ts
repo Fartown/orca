@@ -48,6 +48,7 @@ import {
   restartThisServeSupervisorIfReplaced
 } from './serve-replaced-app-restart'
 import { isSupervisedSpawnHeld } from './serve-supervised-stop'
+import { linuxServeUpdateEnvironment } from '../integration-builds/linux-serve-update'
 import { openServeBundlePark } from '../../shared/serve-bundle-park'
 import {
   redactingSpawn,
@@ -184,7 +185,10 @@ async function serveWithSelectedRuntime(
     executable,
     appRoot: resolveAppRoot(),
     userDataPath,
-    usesMacUpdateHandoff: args.recipeJson !== true && getMacAppBundlePath(executable) !== null
+    usesMacUpdateHandoff: args.recipeJson !== true && getMacAppBundlePath(executable) !== null,
+    usesLinuxUpdateHandoff:
+      args.recipeJson !== true &&
+      linuxServeUpdateEnvironment(executable, args.supervise === true) !== null
   })
   if (selection.kind === 'orcad') {
     // Why only supervised: orcad refuses a held profile as a configuration fault (exit 78), which
@@ -239,11 +243,16 @@ function spawnElectronServe(
   // foreground process on the Keychain authorization prompt before it advertises readiness (#25453).
   childArgs.push(...foregroundServeIsolatedProfileSwitches())
   childArgs.push(...headlessServeOzonePlatformSwitches(process.platform))
+  const linuxUpdateEnv =
+    args.recipeJson !== true
+      ? linuxServeUpdateEnvironment(executable, args.supervise === true)
+      : null
   const handoffPath =
-    args.recipeJson !== true && getMacAppBundlePath(executable)
+    args.recipeJson !== true && (getMacAppBundlePath(executable) || linuxUpdateEnv)
       ? getServeUpdateHandoffPath(userDataPath)
       : null
   const childEnv = pinned.env
+  Object.assign(childEnv, linuxUpdateEnv)
   if (handoffPath) {
     childEnv[SERVE_UPDATE_HANDOFF_PATH_ENV] = handoffPath
   }

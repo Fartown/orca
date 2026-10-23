@@ -3,7 +3,7 @@ title: 集成分支自动出包
 slug: 集成分支自动出包
 status: testing
 created: 2026-09-12
-updated: 2026-10-22
+updated: 2026-10-23
 external_ids: []
 ---
 
@@ -19,6 +19,10 @@ external_ids: []
 - 下一步：运行器/缓存/发布相关 217 项测试通过（1 项平台跳过），架构与 fork 功能门禁通过；推送修复后等待完整 PR，再合并发布、覆盖安装并复验。
 
 ## 1. 关键文档链接
+
+- [Linux 服务自动更新方案](solutions/Linux服务自动更新方案.md)：REQ-414，复用 AppImage 原生更新和 CLI 接管。
+- [Linux 服务自动更新用例](tests/cases/Linux服务自动更新.md)：TC-415，本地与 SSH 的真实包升级验证。
+- [Linux 服务自动更新验收](tests/runs/2026-10-23-linux-auto-update.md)：本地和 SSH 真实包 A→B、坏包拒绝及终端连续性通过。
 
 | 类型     | 文档                                                                   | 状态         | 说明                                                                              |
 | -------- | ---------------------------------------------------------------------- | ------------ | --------------------------------------------------------------------------------- |
@@ -83,6 +87,24 @@ external_ids: []
 - 影响范围：REQ-401、REQ-402、REQ-403；APK 沿用 Expo debug 签名并核验指纹，不生成密钥或暗改 versionCode。
 
 ## 3. 开发记录
+
+### 2026-10-23：Linux AppImage 原生升级及网页入口（testing）
+
+- 本轮目标：完成 REQ-414 的代码与真实安装包验证。
+- 完成内容：网页普通检查入口接入现有服务器更新对话框；Linux 受监督 AppImage 使用原生下载、摘要校验与原路径替换，CLI 核验新版并等待 ready。挂载启动在替换前捕获旧包标识，避免误认新文件为当前运行版本。
+- 代码或文档变更：integration-builds 自有 CLI、主进程及网页模块，五处上游接缝；登记测试、依赖和 TC-415。
+- 验证证据：317 项测试通过、10 项平台跳过，移动端 21 项通过；完整类型、三个本地化、架构和登记检查通过；按 CI 范围检查完整 fork 差异通过。本地真实包 A→B 已通过，校验损坏包被拒绝，原终端在升级后继续输出且接受新命令。证据目录 `.docs/linux-auto-update-ui-validation/2026-10-23/`。
+- 未解决问题：远端 CI、正式发布和原位安装仍待完成；用户运行的服务仍为 preview.54。SSH 完整升级、同一终端升级后执行命令及摘要核验已通过。
+- 下一步：合入并部署正式发布包，再处理独立的 Chat View 功能线。
+
+### 2026-10-23：补齐 Linux 服务自动更新（designing）
+
+- 本轮目标：REQ-414；让已安装的 fork Linux 服务在应用内完成检查、下载、安装和恢复，不能只说明手动更新限制。
+- 完成内容：PR #61 已合入0adbdab8，正式preview.54发布及原路径覆盖完成；确认当前服务直接启动AppRun，macOS限定的handoff和缺失APPIMAGE来源使Linux更新不可用，网页普通检查入口还是空实现。
+- 代码或文档变更：新增REQ-414；独立feat/integration-linux-auto-update工作树，优先复用electron-updater、AppImage缓存和服务监督器。
+- 验证证据：preview.54正式包原位安装及网页验收见此前工作树`.docs/integration-linux-ui-validation/2026-10-23/evidence/validation-report.json`；本轮尚未修改产品代码或重启服务。
+- 未解决问题：Linux完整更新接管、网页检查入口；Chat View问题在独立功能线处理。
+- 下一步：完成设计及TC-415，注册接缝，实现并跑本地/SSH真实更新。
 
 ### 2026-10-22：Linux PR 吸收最新集成修复（testing）
 
