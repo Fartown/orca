@@ -6,6 +6,7 @@ import { runProcessSync } from '@orca/process-host'
 import { test, expect } from './helpers/orca-app'
 import { waitForSessionReady, waitForStartupWorktreeRefresh } from './helpers/store'
 import { reserveLocalPort } from './helpers/reserve-local-port'
+import { focusActiveTerminalInput, getTerminalContent } from './helpers/terminal'
 import { decodePairingOffer, encodePairingOffer } from '../../src/shared/pairing'
 import { launchHeadlessPairedRuntimeHost } from './helpers/headless-paired-runtime-host'
 import { launchPairedElectronClient } from './helpers/paired-electron-client'
@@ -67,7 +68,9 @@ test('groups equal display names, keeps native identities, and separates on rena
   const seed = async (nextRepos = repos) => {
     const projection = projectHostSetupProjectionFromRepos(nextRepos)
     await orcaPage.evaluate(
-      ({ repos, projection, worktrees }) => {
+      async ({ repos, projection, worktrees }) => {
+        const collapsed = repos.map((repo) => `project:repo:${repo.id}`)
+        await window.api.ui.set({ collapsedGroups: collapsed })
         window.__store!.setState({
           repos,
           projects: [...projection.projects],
@@ -80,7 +83,7 @@ test('groups equal display names, keeps native identities, and separates on rena
           ),
           groupBy: 'repo',
           projectOrderBy: 'manual',
-          collapsedGroups: new Set(repos.map((repo) => `project:repo:${repo.id}`)),
+          collapsedGroups: new Set(collapsed),
           filterRepoIds: [],
           visibleWorkspaceHostIds: null,
           workspaceHostScope: 'all',
@@ -144,6 +147,60 @@ test('groups equal display names, keeps native identities, and separates on rena
   })
   await orcaPage.evaluate(() => window.__store!.setState({ visibleWorkspaceHostIds: null }))
   await expect(rows()).toHaveCount(3)
+  const nestedRepos = repos.map((repo) =>
+    repo.id.startsWith('workspace-') ? { ...repo, projectGroupId: 'child' } : repo
+  )
+  const nestedProjection = projectHostSetupProjectionFromRepos(nestedRepos)
+  await orcaPage.evaluate(
+    ({ repos, projection }) => {
+      window.__store!.setState({
+        repos,
+        projects: [...projection.projects],
+        projectHostSetups: [...projection.setups],
+        projectGroups: ['parent', 'child'].map((id) => ({
+          id,
+          name: id,
+          parentGroupId: id === 'child' ? 'parent' : null,
+          parentPath: null,
+          createdFrom: 'migration',
+          tabOrder: 0,
+          isCollapsed: false,
+          color: null,
+          createdAt: 1,
+          updatedAt: 1
+        })),
+        collapsedGroups: new Set([
+          'project-group:parent',
+          'project-group:child',
+          'sidebar-name:workspace::group:child'
+        ])
+      })
+      window.__store!.getState().revealSidebarRow('project:repo:workspace-0')
+    },
+    { repos: nestedRepos, projection: nestedProjection }
+  )
+  await expect(workspaceHeader).toBeVisible()
+  await expect
+    .poll(() => orcaPage.evaluate(() => window.__store!.getState().pendingRevealSidebarRow))
+    .toBeNull()
+  expect(await orcaPage.evaluate(() => [...window.__store!.getState().collapsedGroups])).toEqual([
+    'sidebar-name:workspace::group:child'
+  ])
+  await orcaPage.evaluate(
+    ({ id, host }) => {
+      window.__store!.getState().revealWorktreeInSidebar(id, { executionHostId: host })
+    },
+    { id: worktrees[2].id, host: hosts[2] }
+  )
+  await expect(
+    orcaPage.locator('[data-worktree-section-key="sidebar-name:workspace::group:child"]')
+  ).toHaveCount(3)
+  await orcaPage.screenshot({
+    path: testInfo.outputPath('nested-group-reveal.png'),
+    animations: 'disabled'
+  })
+  await orcaPage.evaluate(() => window.__store!.setState({ projectGroups: [] }))
+  await seed()
   const original = await orcaPage.evaluate(() => ({
     projects: window.__store!.getState().projects.map(({ id }) => id),
     setups: window
@@ -447,6 +504,11 @@ test('merges local and paired-host folders while preserving the remote workspace
       afterTerminals.map(({ handle, ptyId, incarnationId }) => ({ handle, ptyId, incarnationId }))
     ).toEqual(beforeTerminals)
     expect(afterTerminals.every((terminal) => terminal.connected && terminal.writable)).toBe(true)
+    const token = String(Date.now())
+    await focusActiveTerminalInput(client.page)
+    await client.page.keyboard.type(`printf %s%s ORCA_NAME_GROUP_ ${token}`)
+    await client.page.keyboard.press('Enter')
+    await expect.poll(() => getTerminalContent(client!.page)).toContain(`ORCA_NAME_GROUP_${token}`)
     await testInfo.attach('preserved-terminal-identities', {
       body: JSON.stringify(beforeTerminals),
       contentType: 'application/json'
@@ -464,6 +526,11 @@ test('merges local and paired-host folders while preserving the remote workspace
         )
       )
       .toBe('workspace-dbox')
+    await expect(
+      client.page.locator(
+        `[data-worktree-id="${remoteWorktree.id}"][data-worktree-section-key="project:repo:${remote.result.repo.id}"]`
+      )
+    ).toHaveCount(1)
     const afterRename = await host.client.call<{ worktrees: Worktree[] }>('worktree.list', {
       repo: `id:${remote.result.repo.id}`
     })
