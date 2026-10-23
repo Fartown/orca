@@ -2621,8 +2621,13 @@
         },
         {
           "file": "src/renderer/src/components/terminal-pane/TerminalPaneSurface.tsx",
-          "mustContain": "? handleToggleNativeChat : undefined",
+          "mustContain": "onSwitchToChatView={activePaneCanToggleChat ? handleToggleNativeChat : undefined}",
           "why": "The button reuses the pane's chat view eligibility and toggle, the same as right-click and Cmd/Ctrl+Shift+J (REQ-1)"
+        },
+        {
+          "file": "src/renderer/src/components/terminal-pane/use-terminal-pane-projection.ts",
+          "mustContain": "const activePaneCanToggleChat = canToggleChatForLeaf(activeLeafId)",
+          "why": "The active pane's chat view eligibility is projected like its other activePaneCan* flags (REQ-1)"
         },
         {
           "file": "src/renderer/src/components/terminal-pane/TerminalContextMenu.tsx",

@@ -20,9 +20,10 @@ updated: 2026-10-23
 ## 2. 改动（以最少的上游接缝为准）
 
 - 功能目录 `src/renderer/src/components/terminal-chat-view-button/TerminalPaneChatViewButton.tsx`：`ghost` + `icon-xs`，与相邻按钮同一 `pane-title-split-trigger` 显隐规则，图标 `MessageSquare`（与右键菜单的 chat view 项一致；接管按钮是 `MessagesSquare`），提示框尾随 `ShortcutKeyCombo`（⌘⇧J / Ctrl+Shift+J），文案 key `terminalChatViewButton.switchToChatView`。
-- 上游接缝（5 个文件）：
+- 上游接缝（6 个文件）：
   - `TerminalPaneHeaderOverlay.tsx`：新增一个可选回调 `onSwitchToChatView`，存在且不在聊天视图时在活动窗格渲染新按钮；import 放在已有的 Goal 接缝旁。
-  - `TerminalPaneSurface.tsx`：`onSwitchToChatView = canToggleChatForLeaf(活动窗格) ? handleToggleNativeChat : undefined`，与右键菜单、快捷键同一判断、同一动作。不复用 `onShowTerminal`：上游若把它改成只切回终端，按钮会无声失效。
+  - `use-terminal-pane-projection.ts`：照 `activePaneCanResumeInChat` 的做法预先算出 `activePaneCanToggleChat = canToggleChatForLeaf(activeLeafId)`。
+  - `TerminalPaneSurface.tsx`：`onSwitchToChatView = activePaneCanToggleChat ? handleToggleNativeChat : undefined`，与右键菜单、快捷键同一判断、同一动作。Surface 只读投影出的布尔值，不直接调函数：上游测试 `terminal-pane-element-file-drop.test.tsx` 用部分字段的 controller 渲染 Surface，直接调用会抛错。不复用 `onShowTerminal`：上游若把它改成只切回终端，按钮会无声失效。
   - `TerminalContextMenu.tsx`：就地 chat view 项只换文案 key 与默认值。
   - `en.json`、`zh.json`：在文件末尾的 fork 块（`goals` 之后）新增 `terminalChatViewButton.switchToChatView`；`zh.json` 把上游 key 的中文改为「在新聊天中接管」。
 - 接管按钮与终端标签菜单的代码不动，仍读上游 key；登记表里为 `TerminalPaneResumeInChatButton.tsx` 加了守护接缝，上游换 key 时门禁会报红，而不是中文名无声失效。

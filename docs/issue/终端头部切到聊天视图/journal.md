@@ -58,3 +58,12 @@ updated: 2026-10-23
 - 验证证据：功能 checks 与相关上游测试 72 用例通过；两个反向对照分别失败；本机与 SSH 真机重跑通过，详见[测试记录](tests/runs/2026-10-23-本机与SSH真机验证.md)。
 - 未解决问题：英文界面接管按钮仍叫「Continue in Chat UI」；三个对话类图标外观接近，只能靠提示区分。
 - 下一步：更新 PR #65，等 CI。
+
+### 2026-10-23 PR CI 暴露的回归
+
+- 本轮目标：修复 PR #65 CI 中 `terminal-pane-element-file-drop.test.tsx` 的 19 个失败。
+- 完成内容：失败原因是 `TerminalPaneSurface` 直接调用 controller 上的 `canToggleChatForLeaf`，而该上游测试用部分字段的 controller 渲染 Surface（类型断言绕过了类型检查）。改为照 `activePaneCanResumeInChat` 的模式在 `use-terminal-pane-projection.ts` 预先算出 `activePaneCanToggleChat`，Surface 只读布尔值；上游测试无需改动。教训：改动终端窗格时要跑整个 `src/renderer/src/components/terminal-pane` 目录，而不只是直接相关的测试文件。
+- 代码或文档变更：`use-terminal-pane-projection.ts`（新增接缝）、`TerminalPaneSurface.tsx`；登记表与策略白名单；方案 §2。
+- 验证证据：`terminal-pane` 与功能目录 556 个测试文件 5594 用例通过；i18n、标签栏、右侧栏 404 个测试文件通过；`pnpm tc` 通过。
+- 未解决问题：无新增。
+- 下一步：合入最新 `fork/integration` 后重推，等 CI。
