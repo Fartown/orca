@@ -74,6 +74,23 @@ updated: 2026-10-23
 
 - [测试记录](tests/runs/2026-10-23-本机与SSH真机验证.md)
 
+### D-4 这是上游缺陷，fork 补丁在上游修复后撤除
+
+- 日期：2026-10-23
+- 背景：被修的函数来自上游 #29242，`origin/main` 与 fork 完全一致，上游 macOS 用户默认都会遇到；上游迟早会改这几行，届时与 fork 接缝冲突。
+- 最终决定：同样的修复建议提给 stablyai/orca（待用户确认后再提）。上游合入后，按 fork 规则 6 先在 `config/fork-features.jsonc` 删除本功能登记并在此记录，再删除 `src/main/cli-writer-login-shell/` 与接缝改动。
+- 原因：上游修掉才是冲突最少的做法；fork 补丁只是在此之前让用户能用。
+- 影响范围：功能登记、接缝、本 journal。
+
+#### 备选项
+
+- 只在 fork 修
+- fork 先修并提给上游（采纳）
+
+#### 关联文档与需求点
+
+- [方案 §4](solutions/overview.md)
+
 ## 3. 开发记录
 
 ### 2026-10-23 复现、修复与真机验证
@@ -84,3 +101,12 @@ updated: 2026-10-23
 - 验证证据：TC-1～TC-5 全部通过，详见[测试记录](tests/runs/2026-10-23-本机与SSH真机验证.md)；`pnpm tc` 通过；反向对照证实测试能抓到该缺陷。
 - 未解决问题：Codex 运行中点窗格按钮必然失败、退出后按钮又消失的交互问题未处理（需求 Out of Scope）；`run-terminal-shell-alone.ts` 中相近写法未验证。
 - 下一步：提交 PR 合入 `fork/integration`，出包后在正式应用中复验。
+
+### 2026-10-23 独立代码审查
+
+- 本轮目标：请独立审查确认正确性、可复用的上游实现与上游冲突面。
+- 完成内容：审查结论为可合，上游改动已是 fork 内最小（1 个文件 3 行）；确认 `confirmShellForegroundProcess` 与 `inspectSpawnFileChildProcessesFromRows` 都不能直接复用；补上「login 包装下 shell 有后台或挂起任务时拒绝」以及窗格入口的断言；方案补充第二个被否决的备选；记录 D-4 撤除条件。
+- 代码或文档变更：`login-wrapped-pty-shell.test.ts`；本目录方案与 journal。
+- 验证证据：功能 checks 2 个文件 5 用例通过（新增的后台、挂起任务与窗格入口断言均通过）；`check:fork-features`、`check:fork-docs` 通过。
+- 未解决问题：向上游提交修复需用户确认；`run-terminal-shell-alone.ts` 同类写法未处理。
+- 下一步：用户确认后向 stablyai/orca 提交同样的修复。

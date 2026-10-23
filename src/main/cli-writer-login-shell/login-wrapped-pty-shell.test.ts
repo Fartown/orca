@@ -77,8 +77,16 @@ describe.skipIf(process.platform === 'win32')(
       await expect(pane.fromHistory()).resolves.toBeUndefined()
       await expect(pane.fromPane()).resolves.toBeUndefined()
 
+      // A background or suspended job under the shell still holds the terminal.
+      for (const stat of ['SN', 'T']) {
+        snapshot.mockResolvedValue([login, shell, { ...codex, stat }])
+        await expect(pane.fromHistory()).rejects.toMatchObject(refusal)
+        await expect(pane.fromPane()).rejects.toMatchObject(refusal)
+      }
+
       snapshot.mockResolvedValue([login, shell, { ...codex, ppid: login.pid, stat: 'S' }])
       await expect(pane.fromHistory()).rejects.toMatchObject(refusal)
+      await expect(pane.fromPane()).rejects.toMatchObject(refusal)
     })
   }
 )
