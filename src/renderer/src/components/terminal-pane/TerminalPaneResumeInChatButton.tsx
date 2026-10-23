@@ -2,10 +2,10 @@ import { useShallow } from 'zustand/react/shallow'
 import { MessagesSquare } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { translate } from '@/i18n/i18n'
 import { useAppStore } from '@/store'
 import { resolveCliChatResumeSource } from '../tab-bar/cli-chat-resume-source'
 import { runCliChatResume, useCliChatResumePending } from '../tab-bar/cli-chat-resume-run'
+import { takeOverInNewChatLabel } from '../terminal-chat-view-button/chat-surface-labels'
 
 export function TerminalPaneResumeInChatButton({
   tabId,
@@ -25,10 +25,7 @@ export function TerminalPaneResumeInChatButton({
     )
   )
   const pending = useCliChatResumePending(source)
-  const label = translate(
-    'components.tab.bar.SortableTabContextMenu.switchToChatView',
-    'Continue in Chat UI'
-  )
+  const label = takeOverInNewChatLabel()
 
   return (
     <Tooltip>

@@ -9,6 +9,7 @@ import { isImeCompositionKeyDown } from '@/lib/ime-composition-keyboard-event'
 import type { PtyTransport } from './pty-transport-types'
 import { TerminalPaneHeaderDropSurface } from './TerminalPaneHeaderDropSurface'
 import { TerminalPaneResumeInChatButton } from './TerminalPaneResumeInChatButton'
+import { TerminalPaneChatViewButton } from '../terminal-chat-view-button/TerminalPaneChatViewButton'
 import { makePaneKey } from '../../../../shared/stable-pane-id'
 import { GoalSessionAction } from '@/components/goals/GoalSessionAction'
 
@@ -47,6 +48,9 @@ type TerminalPaneHeaderOverlayProps = {
   onShowTerminal?: () => void
   /** Offers the tab menu's "Switch to Chat" for the active pane's own conversation. */
   canResumeInNewNativeChat?: boolean
+  /** Offers the in-place chat view of the active pane's live agent. */
+  canSwitchToChatView?: boolean
+  onSwitchToChatView?: () => void
   canContinueAgentSessionInNewSession?: boolean
   onContinueAgentSessionInNewSession?: (pane: ManagedPane) => void
   onSplitPane: (pane: ManagedPane, direction: 'vertical' | 'horizontal') => void
@@ -86,6 +90,8 @@ export default function TerminalPaneHeaderOverlay({
   canShowTerminal,
   onShowTerminal,
   canResumeInNewNativeChat,
+  canSwitchToChatView,
+  onSwitchToChatView,
   canContinueAgentSessionInNewSession,
   onContinueAgentSessionInNewSession,
   onSplitPane,
@@ -249,6 +255,9 @@ export default function TerminalPaneHeaderOverlay({
                         )}
                       </TooltipContent>
                     </Tooltip>
+                  ) : null}
+                  {!canShowTerminal && canSwitchToChatView && isActivePane && onSwitchToChatView ? (
+                    <TerminalPaneChatViewButton onSwitch={onSwitchToChatView} />
                   ) : null}
                   {canShowTerminal && isActivePane ? (
                     <Tooltip>

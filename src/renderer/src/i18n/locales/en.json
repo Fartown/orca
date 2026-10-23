@@ -20139,6 +20139,10 @@
       "stepDownload": "Download",
       "stepUnpack": "Unpack",
       "stepCheck": "Check"
+    },
+    "terminal-chat-view-button": {
+      "switchToChatView": "Switch to Chat View",
+      "takeOverInNewChat": "Move to New Chat"
     }
   },
   "dashboardPopout": {

@@ -19860,6 +19860,10 @@
       "stepDownload": "下载",
       "stepUnpack": "解压",
       "stepCheck": "检查"
+    },
+    "terminal-chat-view-button": {
+      "switchToChatView": "切到聊天视图",
+      "takeOverInNewChat": "在新聊天中接管"
     }
   },
   "dashboardPopout": {
