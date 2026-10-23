@@ -38,11 +38,7 @@ import {
   ProjectGroupCreateWorkspaceButton,
   ProjectGroupHeaderMenu
 } from './project-group-header-actions'
-import {
-  RepoHeaderCreateWorkspaceButton,
-  RepoHeaderProjectActionsMenu,
-  type RepoHeaderProjectActions
-} from './repo-header-project-actions'
+import type { RepoHeaderProjectActions } from './repo-header-project-actions'
 import {
   handleRepoHeaderCollapseAffordancePointerDown,
   shouldIgnoreRepoHeaderToggle
@@ -392,7 +388,7 @@ export function renderWorktreeSectionHeaderRow(args: {
               />
             ) : null}
 
-            {row.repo && ctx.groupBy === 'repo' && row.key.startsWith('sidebar-name:') ? (
+            {row.repo && ctx.groupBy === 'repo' ? (
               <SidebarProjectNameActions
                 repo={row.repo}
                 label={label}
@@ -403,22 +399,6 @@ export function renderWorktreeSectionHeaderRow(args: {
                 projectGroups={ctx.projectGroups}
                 actions={ctx.projectActions}
               />
-            ) : null}
-            {row.repo && ctx.groupBy === 'repo' && !row.key.startsWith('sidebar-name:') ? (
-              <>
-                <RepoHeaderProjectActionsMenu
-                  repo={row.repo}
-                  label={label}
-                  projectGroups={ctx.projectGroups}
-                  actions={ctx.projectActions}
-                />
-                <RepoHeaderCreateWorkspaceButton
-                  repo={row.repo}
-                  label={label}
-                  createState={createState}
-                  onCreateForRepo={ctx.projectActions.onCreateForRepo}
-                />
-              </>
             ) : null}
           </ProjectHeaderActions>
         </div>

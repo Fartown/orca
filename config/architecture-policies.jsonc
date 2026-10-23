@@ -963,7 +963,7 @@
             "src/renderer/src/components/sidebar/worktree-list/viewport/virtual-row-context.ts",
             "src/renderer/src/components/sidebar/worktree-list/listing/use-collapsed-groups.ts",
             "mobile/src/worktree/workspace-list-sections.ts",
-            "mobile/src/worktree/workspace-list-sections.test.ts"
+            "mobile/src/sidebar-project-merge/**"
           ],
           "message": "Branch changes an upstream path that no fork feature owns or registers as a seam; extend config/fork-features.jsonc and this allowlist, or move the change into a feature-owned path."
         }
@@ -1814,6 +1814,7 @@
           "type": "change-scope",
           "comparison": "worktree",
           "whenChanged": [
+            "mobile/src/sidebar-project-merge/**",
             "src/shared/sidebar-project-merge/**",
             "src/renderer/src/sidebar-project-merge/**",
             "docs/issue/侧栏项目合并/**"
@@ -1851,7 +1852,7 @@
             "src/renderer/src/components/sidebar/worktree-list/viewport/virtual-row-context.ts",
             "src/renderer/src/components/sidebar/worktree-list/listing/use-collapsed-groups.ts",
             "mobile/src/worktree/workspace-list-sections.ts",
-            "mobile/src/worktree/workspace-list-sections.test.ts"
+            "mobile/src/sidebar-project-merge/**"
           ],
           "message": "Change is outside sidebar project merge scope."
         }

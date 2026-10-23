@@ -2577,6 +2577,7 @@
       "ownedPaths": [
         "src/shared/sidebar-project-merge/**",
         "src/renderer/src/sidebar-project-merge/**",
+        "mobile/src/sidebar-project-merge/**",
         "docs/issue/侧栏项目合并/**",
         "tests/e2e/sidebar-project-merge.spec.ts"
       ],
@@ -2690,11 +2691,6 @@
           "file": "mobile/src/worktree/workspace-list-sections.ts",
           "mustContain": "getDisplayedProjectGroupingForRepo",
           "why": "Add display-name section composition while retaining native identity and action targets."
-        },
-        {
-          "file": "mobile/src/worktree/workspace-list-sections.test.ts",
-          "mustContain": "same-name project sections",
-          "why": "Assert mobile display composition without changing its catalog or workspace IDs."
         }
       ],
       "tests": [
@@ -2702,11 +2698,11 @@
         "src/renderer/src/sidebar-project-merge/sidebar-project-merge-persistence.test.ts",
         "tests/e2e/sidebar-project-merge.spec.ts",
         "src/shared/sidebar-project-merge/sidebar-project-name-groups.test.ts",
-        "mobile/src/worktree/workspace-list-sections.test.ts"
+        "mobile/src/sidebar-project-merge/workspace-list-sections.test.ts"
       ],
       "checks": [
         "pnpm exec vitest run --config config/vitest.config.ts src/shared/sidebar-project-merge src/renderer/src/sidebar-project-merge",
-        "pnpm exec vitest run --config mobile/vitest.config.ts mobile/src/worktree/workspace-list-sections.test.ts"
+        "pnpm exec vitest run --config mobile/vitest.config.ts mobile/src/worktree/workspace-list-sections.test.ts mobile/src/sidebar-project-merge"
       ]
     }
   ]

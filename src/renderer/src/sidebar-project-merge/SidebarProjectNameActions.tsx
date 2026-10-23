@@ -25,7 +25,7 @@ import {
   type RepoHeaderProjectActions
 } from '@/components/sidebar/worktree-list/rows/repo-header-project-actions'
 
-export function SidebarProjectNameActions(props: {
+type SidebarProjectNameActionsProps = {
   sectionKey: string
   repo: Repo
   label: string
@@ -34,7 +34,38 @@ export function SidebarProjectNameActions(props: {
   getRepoSshGate: RepoSshGateResolver
   actions: RepoHeaderProjectActions
   createState: ReturnType<typeof getRepoHeaderCreateState> | null
-}): React.JSX.Element {
+}
+
+function NativeProjectActions(props: SidebarProjectNameActionsProps): React.JSX.Element {
+  return (
+    <>
+      <RepoHeaderProjectActionsMenu
+        repo={props.repo}
+        label={props.label}
+        projectGroups={props.projectGroups}
+        actions={props.actions}
+      />
+      <RepoHeaderCreateWorkspaceButton
+        repo={props.repo}
+        label={props.label}
+        createState={props.createState}
+        onCreateForRepo={props.actions.onCreateForRepo}
+      />
+    </>
+  )
+}
+
+export function SidebarProjectNameActions(
+  props: SidebarProjectNameActionsProps
+): React.JSX.Element {
+  return props.sectionKey.startsWith('sidebar-name:') ? (
+    <NameGroupDirectoryActions {...props} />
+  ) : (
+    <NativeProjectActions {...props} />
+  )
+}
+
+function NameGroupDirectoryActions(props: SidebarProjectNameActionsProps): React.JSX.Element {
   const [picker, setPicker] = useState<'settings' | 'create' | null>(null)
   const repoMap = useRepoMap()
   const choices = useMemo(() => {
@@ -52,23 +83,8 @@ export function SidebarProjectNameActions(props: {
       choices.map((repo) => selectExecutionHostDisplayLabel(state, getRepoExecutionHostId(repo)))
     )
   )
-  if (!props.sectionKey.startsWith('sidebar-name:') || choices.length < 2) {
-    return (
-      <>
-        <RepoHeaderProjectActionsMenu
-          repo={props.repo}
-          label={props.label}
-          projectGroups={props.projectGroups}
-          actions={props.actions}
-        />
-        <RepoHeaderCreateWorkspaceButton
-          repo={props.repo}
-          label={props.label}
-          createState={props.createState}
-          onCreateForRepo={props.actions.onCreateForRepo}
-        />
-      </>
-    )
+  if (choices.length < 2) {
+    return <NativeProjectActions {...props} />
   }
   function closeThen<Args extends unknown[]>(action: (...args: Args) => void) {
     return (...args: Args) => {

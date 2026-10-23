@@ -1,4 +1,9 @@
-import type { ProjectSectionEntry, ProjectSectionRepo } from '../project-section-grouping'
+import type {
+  ProjectGroupingIndex,
+  ProjectSectionEntry,
+  ProjectSectionRepo,
+  ProjectSectionSetup
+} from '../project-section-grouping'
 
 export type SidebarProjectNameTarget = {
   key: string
@@ -12,6 +17,28 @@ export type SidebarProjectNameGroup = {
   label: string
   sourceKeys: ReadonlySet<string>
   repoIds: ReadonlySet<string>
+}
+
+export function buildSidebarProjectNameGroupsForSetups(
+  setups: readonly ProjectSectionSetup[],
+  index: ProjectGroupingIndex,
+  getGrouping: (
+    repoId: string,
+    repos: ReadonlyMap<string, ProjectSectionSetup>,
+    index: ProjectGroupingIndex
+  ) => { key: string; label: string },
+  isProtected: (setup: ProjectSectionSetup, index: ProjectGroupingIndex) => boolean
+): ReadonlyMap<string, SidebarProjectNameGroup> {
+  const names = new Map(setups.map((setup) => [setup.repoId, setup]))
+  return buildSidebarProjectNameGroups(
+    setups
+      .filter((setup) => index.projectById.has(setup.projectId))
+      .map((setup) => ({
+        ...getGrouping(setup.repoId, names, index),
+        repoId: setup.repoId,
+        protectedCheckout: isProtected(setup, index)
+      }))
+  )
 }
 
 export function buildSidebarProjectNameGroups(

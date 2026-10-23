@@ -7,7 +7,7 @@ import type { Project, ProjectHostSetup } from './project-types'
 import type { Repo } from './repo-types'
 import { isSidebarMergedProjectId } from './sidebar-project-merge/sidebar-project-merges'
 import {
-  buildSidebarProjectNameGroups,
+  buildSidebarProjectNameGroupsForSetups,
   mergeSidebarProjectNameSections,
   type SidebarProjectNameGroup
 } from './sidebar-project-merge/sidebar-project-name-groups'
@@ -139,19 +139,11 @@ export function buildProjectGroupingIndex(
     surfaceKeysRequiringSetupGroups,
     nameGroups: new Map()
   }
-  const names = new Map(projectHostSetups.map((setup) => [setup.repoId, setup]))
-  index.nameGroups = buildSidebarProjectNameGroups(
-    projectHostSetups
-      .filter((setup) => index.projectById.has(setup.projectId))
-      .map((setup) => {
-        const target = getProjectGroupingForRepo(setup.repoId, names, index)
-        return {
-          key: target.key,
-          label: target.label,
-          repoId: setup.repoId,
-          protectedCheckout: isCheckoutScopedProjectSetup(setup, index)
-        }
-      })
+  index.nameGroups = buildSidebarProjectNameGroupsForSetups(
+    projectHostSetups,
+    index,
+    getProjectGroupingForRepo,
+    isCheckoutScopedProjectSetup
   )
   projectGroupingIndexCache.set(model, index)
   return index
