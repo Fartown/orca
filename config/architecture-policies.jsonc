@@ -59,7 +59,6 @@
             "src/renderer/src/runtime/web-runtime-terminal-creation.ts",
             "src/main/observability/index.ts",
             "src/renderer/src/lib/sleeping-agent-session-launch.ts",
-            "src/renderer/src/components/ai-vault-session-resume/session-terminal-launch.ts",
             "src/renderer/src/components/tab-group/AiVaultSessionDropLayer.tsx",
             "src/renderer/src/lib/launch-ai-vault-session-and-reveal.ts",
             "src/renderer/src/components/terminal-pane/pty-connection/deferred-cold-restore-and-snapshot.ts",

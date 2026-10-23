@@ -2519,11 +2519,6 @@
           "why": "capture all renderer-created tabs, not only known resume entry points"
         },
         {
-          "file": "src/renderer/src/components/ai-vault-session-resume/session-terminal-launch.ts",
-          "mustContain": "terminal-launch-diagnostics/history-session-launch",
-          "why": "name the history resume entry explicitly on local and paired paths"
-        },
-        {
           "file": "src/renderer/src/components/tab-group/AiVaultSessionDropLayer.tsx",
           "mustContain": "launchDroppedAiVaultSession",
           "why": "name the drag resume entry without changing the existing launch implementation"
@@ -2552,11 +2547,6 @@
           "file": ".gitignore",
           "mustContain": "!docs/issue/终端创建链路诊断/**",
           "why": "keep diagnostic audits and validation records tracked"
-        },
-        {
-          "file": "src/renderer/src/lib/launch-agent-in-new-tab-web-runtime.test.ts",
-          "mustContain": "request-local-token",
-          "why": "Keep the feature contract and its exhaustive integration checks aligned."
         },
         {
           "file": "src/renderer/src/components/terminal-pane/pty-connection-agent-session-resume.spec.ts",
