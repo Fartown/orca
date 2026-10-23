@@ -235,10 +235,7 @@ function TerminalContextMenuItems({
                 'components.tab.bar.SortableTabContextMenu.switchToTerminalView',
                 'Continue with Terminal Agent'
               )
-            : translate(
-                'components.tab.bar.SortableTabContextMenu.switchToChatView',
-                'Continue in Chat UI'
-              )}
+            : translate('terminalChatViewButton.switchToChatView', 'Switch to Chat View')}
           <DropdownMenuShortcut>{shortcuts.nativeChat}</DropdownMenuShortcut>
         </DropdownMenuItem>
       ) : null}

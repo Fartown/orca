@@ -11,6 +11,7 @@ import { TerminalPaneHeaderDropSurface } from './TerminalPaneHeaderDropSurface'
 import { TerminalPaneResumeInChatButton } from './TerminalPaneResumeInChatButton'
 import { makePaneKey } from '../../../../shared/stable-pane-id'
 import { GoalSessionAction } from '@/components/goals/GoalSessionAction'
+import { TerminalPaneChatViewButton } from '@/components/terminal-chat-view-button/TerminalPaneChatViewButton'
 
 export type PaneTitleOverlayRect = {
   left: number
@@ -47,6 +48,8 @@ type TerminalPaneHeaderOverlayProps = {
   onShowTerminal?: () => void
   /** Offers the tab menu's "Switch to Chat" for the active pane's own conversation. */
   canResumeInNewNativeChat?: boolean
+  /** Present when the active pane's agent can show the in-place chat view. */
+  onSwitchToChatView?: () => void
   canContinueAgentSessionInNewSession?: boolean
   onContinueAgentSessionInNewSession?: (pane: ManagedPane) => void
   onSplitPane: (pane: ManagedPane, direction: 'vertical' | 'horizontal') => void
@@ -86,6 +89,7 @@ export default function TerminalPaneHeaderOverlay({
   canShowTerminal,
   onShowTerminal,
   canResumeInNewNativeChat,
+  onSwitchToChatView,
   canContinueAgentSessionInNewSession,
   onContinueAgentSessionInNewSession,
   onSplitPane,
@@ -249,6 +253,9 @@ export default function TerminalPaneHeaderOverlay({
                         )}
                       </TooltipContent>
                     </Tooltip>
+                  ) : null}
+                  {!canShowTerminal && isActivePane && onSwitchToChatView ? (
+                    <TerminalPaneChatViewButton onSwitch={onSwitchToChatView} />
                   ) : null}
                   {canShowTerminal && isActivePane ? (
                     <Tooltip>
