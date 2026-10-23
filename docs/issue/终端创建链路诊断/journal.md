@@ -131,3 +131,12 @@ updated: 2026-10-22
 - 验证证据：原始五分片日志及本地复验归档在 .docs/ci-baseline-repair/2026-10-22/evidence/；最终同树验证待完成。
 - 未解决问题：最终 CI 尚未通过；未部署或重启生产应用、远程服务或终端。
 - 下一步：同树完整检查、隐藏应用与 SSH 验证、最终 CI 后合入。
+
+## 2026-10-23 随 Issues 下线改挂上游续接入口（done）
+
+- 本轮目标：Issues 抽出的 `ai-vault-session-resume/session-terminal-launch.ts` 随 Issues 删除，历史续接的诊断记录改由上游入口承担。
+- 完成内容：AI Vault 面板恢复回到上游 `launchAiVaultSessionAndReveal`，经 `launchRevealedAiVaultSession` 记为 `ai-vault-reveal-resume`；覆盖合同改查 `launch-ai-vault-session-and-reveal.ts`；去掉指向已删文件和已还原测试（`request-local-token`）的两个接缝。
+- 代码或文档变更：`launch-seam-coverage.test.ts`、功能登记与工作区范围白名单。
+- 验证证据：pnpm tc、全部 16 个功能的 38 条 checks、check:fork-features、check:fork-docs、本地化与 RPC 目录校验通过；隐藏 Electron 本机与 SSH（127.0.0.1:2222 上的 orcad）真机验收 5/5 通过，证据在 `.docs/issues-board-removal-ui-validation/2026-10-23/`。 L3 用桩 agent 在 Session History 恢复会话，新开一个终端标签。
+- 未解决问题：无。代码评审后删除了已无调用方的 `launchAiVaultSessionInNewTab` 包装和 `ai-vault-resume` 来源；Session History 恢复与原生聊天「在 CLI 中打开」共用 `ai-vault-reveal-resume`，两者由记录里的调用栈帧区分。
+- 下一步：随 Issues 下线 PR 合入 fork/integration。

@@ -18,7 +18,7 @@ import { listOfficialReleases, summarizeUpstreamSync } from './upstream-summary.
 
 const features = new Map([
   ['goals', 'Goal 目标模式'],
-  ['issues-board', 'Issues 看板与会话']
+  ['session-names', '会话命名与身份保护']
 ])
 const commit = (message, parents = ['p'.repeat(40)], sha = 'c'.repeat(40)) =>
   classifyCommit({ sha, parents, message })
@@ -81,7 +81,7 @@ describe('release note sections', () => {
   it('groups user-facing changes by feature and folds engineering work', () => {
     const changes = [
       commit('feat(goals): pause a goal'),
-      commit('fix(issues): keep the launch agent'),
+      commit('fix(session-names): keep the launch agent'),
       commit('perf: faster start'),
       commit('docs(goals): record the sync'),
       sync
@@ -99,7 +99,7 @@ describe('release note sections', () => {
         '',
         '- 新功能：pause a goal',
         '',
-        '### Issues 看板与会话',
+        '### 会话命名与身份保护',
         '',
         '- 修复：keep the launch agent',
         '',

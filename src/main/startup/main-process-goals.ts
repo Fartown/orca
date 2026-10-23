@@ -6,7 +6,7 @@ import { mainProcessState as state } from './main-process-state'
 
 let unregister: (() => void) | null = null
 
-/** Same lifecycle shape as the Issues feature: composed after the local PTY startup, torn down on quit. */
+/** Composed after the local PTY startup, torn down on quit. */
 export async function startGoalFeatureForMainProcess(): Promise<void> {
   const runtime = state.runtime
   const store = state.store

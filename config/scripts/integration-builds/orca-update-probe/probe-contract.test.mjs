@@ -260,11 +260,7 @@ describe('real Orca update acceptance contract', () => {
     const build = readFileSync(new URL('./probe-package.mjs', import.meta.url), 'utf8')
     const run = readFileSync(new URL('./run-probe.mjs', import.meta.url), 'utf8')
     const runtime = readFileSync(new URL('./probe-runtime.mjs', import.meta.url), 'utf8')
-    const packagedFixture = readFileSync('tests/e2e/helpers/packaged-issues-journey.ts', 'utf8')
     expect(runtime).toContain("process.platform === 'darwin' ? ['--use-mock-keychain'] : []")
-    expect(packagedFixture).toContain(
-      "process.platform === 'darwin' ? ['--use-mock-keychain'] : []"
-    )
     const native = readFileSync(new URL('./probe-native-relaunch.mjs', import.meta.url), 'utf8')
     expect(native).toContain(
       "mockKeychainArgumentRetained: native.command.includes('--use-mock-keychain')"

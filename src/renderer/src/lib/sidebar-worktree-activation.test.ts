@@ -16,8 +16,6 @@ describe('sidebar worktree activation', () => {
   beforeEach(() => {
     mocks.activateAndRevealWorktree.mockClear()
     mocks.activateAndRevealFolderWorkspace.mockClear()
-    mocks.activateAndRevealWorktree.mockReturnValue({ primaryTabId: null })
-    mocks.activateAndRevealFolderWorkspace.mockReturnValue({ primaryTabId: null })
   })
 
   afterEach(() => {
@@ -77,21 +75,5 @@ describe('sidebar worktree activation', () => {
       navigationIntent: 'user-open'
     })
     expect(mocks.activateAndRevealWorktree).not.toHaveBeenCalled()
-  })
-
-  it('reports a missing worktree without waking an ephemeral runtime', async () => {
-    const resumeWorkspace = vi.fn()
-    vi.stubGlobal('window', { api: { ephemeralVm: { resumeWorkspace } } })
-    mocks.activateAndRevealWorktree.mockReturnValueOnce(false)
-
-    await expect(activateWorktreeFromSidebar('wt-missing')).resolves.toBe(false)
-
-    expect(resumeWorkspace).not.toHaveBeenCalled()
-  })
-
-  it('reports a blocked folder workspace', async () => {
-    mocks.activateAndRevealFolderWorkspace.mockReturnValueOnce(false)
-
-    await expect(activateWorktreeFromSidebar('folder:folder-workspace-1')).resolves.toBe(false)
   })
 })

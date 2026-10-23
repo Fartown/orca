@@ -60,7 +60,6 @@ export const GoalMutationEnvelopeSchema = z.object({
   payloadFingerprint: PayloadFingerprint
 })
 
-// Same admission parameter as issues.*; handlers apply the same second-hop rule.
 export const GoalExecutionHostSchema = z.object({
   authorityExecutionHostId: z.union([
     z.literal('local'),

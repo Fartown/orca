@@ -60,11 +60,12 @@ export type MainProcessRuntimeLaunchOptions = {
 
 function settleDesktopActivation(): void {
   const gate = state.desktopActivationGate
-  if (gate) {
-    settleServeDesktopActivation(gate, {
-      hasPersistentPtyProvider: !(getLocalPtyProvider() instanceof LocalPtyProvider)
-    })
+  if (!gate) {
+    return
   }
+  settleServeDesktopActivation(gate, {
+    hasPersistentPtyProvider: !(getLocalPtyProvider() instanceof LocalPtyProvider)
+  })
 }
 
 function installRuntimeRpc(
@@ -257,7 +258,8 @@ async function launchDesktopMode(
 export async function initializeMainProcessRuntimeLaunch(
   options: MainProcessRuntimeLaunchOptions
 ): Promise<void> {
-  const { runtime, windowsShellPathHydration: shellPathHydration } = state
+  const runtime = state.runtime
+  const shellPathHydration = state.windowsShellPathHydration
   if (!runtime || !shellPathHydration) {
     throw new Error('Runtime and shell-path services must be initialized before launch')
   }

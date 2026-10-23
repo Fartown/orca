@@ -78,7 +78,27 @@ export function useAiVaultOriginalPaneActions(): {
       if (session.structuredSession && isStructuredSessionOpen(session)) {
         return activateAiVaultStructuredSession(session)
       }
-      return jumpToAiVaultOriginalPane(session) === 'focused'
+      const target = findOriginalAiVaultSessionPane(useAppStore.getState(), session)
+      if (!target) {
+        toast.error(
+          translate(
+            'auto.components.right.sidebar.AiVaultPanel.originalPaneUnavailable',
+            'Original pane is no longer available.'
+          )
+        )
+        return false
+      }
+
+      if (!revealSessionWorkspace(target.worktreeId)) {
+        return false
+      }
+      const state = useAppStore.getState()
+      state.setActiveTabType('terminal', target.worktreeId)
+      activateTabAndFocusPane(target.tabId, target.leafId, {
+        flashFocusedPane: true,
+        scrollToBottomIfOutputSinceLastView: true
+      })
+      return true
     },
     [isStructuredSessionOpen]
   )
@@ -94,36 +114,6 @@ export function useAiVaultOriginalPaneActions(): {
     jumpToOriginalPane,
     jumpToWorktree
   }
-}
-
-export type AiVaultOriginalPaneJumpResult = 'focused' | 'missing' | 'workspace-unavailable'
-
-export function jumpToAiVaultOriginalPane(
-  session: AiVaultSession,
-  options: { notifyWhenMissing?: boolean } = {}
-): AiVaultOriginalPaneJumpResult {
-  const target = findOriginalAiVaultSessionPane(useAppStore.getState(), session)
-  if (!target) {
-    if (options.notifyWhenMissing !== false) {
-      toast.error(
-        translate(
-          'auto.components.right.sidebar.AiVaultPanel.originalPaneUnavailable',
-          'Original pane is no longer available.'
-        )
-      )
-    }
-    return 'missing'
-  }
-
-  if (!revealSessionWorkspace(target.worktreeId)) {
-    return 'workspace-unavailable'
-  }
-  useAppStore.getState().setActiveTabType('terminal', target.worktreeId)
-  activateTabAndFocusPane(target.tabId, target.leafId, {
-    flashFocusedPane: true,
-    scrollToBottomIfOutputSinceLastView: true
-  })
-  return 'focused'
 }
 
 function revealSessionWorkspace(workspaceId: string): boolean {

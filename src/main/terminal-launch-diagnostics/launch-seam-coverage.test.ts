@@ -10,7 +10,7 @@ describe('terminal launch coverage contract', () => {
     ['src/main/daemon/daemon-terminal-admission.ts', 'traceDaemonTerminalLaunch'],
     ['src/renderer/src/store/terminals/terminal-tab-creation.ts', 'recordCreatedTerminalTab'],
     [
-      'src/renderer/src/components/ai-vault-session-resume/session-terminal-launch.ts',
+      'src/renderer/src/lib/launch-ai-vault-session-and-reveal.ts',
       'terminal-launch-diagnostics/history-session-launch'
     ],
     ['src/renderer/src/store/terminals/terminal-startup-queues.ts', 'queued-startup'],
