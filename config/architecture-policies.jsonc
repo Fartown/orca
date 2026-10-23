@@ -911,6 +911,8 @@
             "docs/issue/终端ID复制主机路由/**",
             "src/renderer/src/components/terminal-pane/terminal-pane-menu-copy-actions.ts",
             "src/renderer/src/components/terminal-pane/use-terminal-pane-context-menu.ts",
+            "src/main/cli-writer-login-shell/**",
+            "src/main/runtime/structured-agent-cli-writers.ts",
             "mobile/src/session/mobile-session-terminal-create-request.ts",
             "src/wsl-guest/agent-hook-provider-normalization.ts",
             "src/renderer/src/components/browser-pane/workspace-doc/HtmlDocPreview.tsx",
@@ -1777,6 +1779,28 @@
             ".gitignore"
           ],
           "message": "Change is outside terminal ID copy routing."
+        }
+      ]
+    },
+    {
+      "id": "cli-writer-login-shell",
+      "description": "终端写者核查穿过 macOS login 包装检查真正的 shell，agent 退出后可在聊天界面继续同一段对话",
+      "rules": [
+        {
+          "id": "cli-writer-login-shell-worktree-scope",
+          "type": "change-scope",
+          "comparison": "worktree",
+          "whenChanged": ["src/main/cli-writer-login-shell/**", "docs/issue/终端对话转聊天退出判定/**"],
+          "allowedPaths": [
+            "src/main/cli-writer-login-shell/**",
+            "docs/issue/终端对话转聊天退出判定/**",
+            "src/main/runtime/structured-agent-cli-writers.ts",
+            "config/fork-features.jsonc",
+            "config/architecture-policies.jsonc",
+            "docs/issue/README.md",
+            ".gitignore"
+          ],
+          "message": "Change is outside the terminal writer login-shell fix."
         }
       ]
     }
