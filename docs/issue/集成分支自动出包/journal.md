@@ -15,8 +15,8 @@ external_ids: []
 - 完成内容：正式 .55 包在同一隔离配置下仅改变数据目录写法，真实路径/符号链接/再次真实路径的自动更新支持依次为 true/false/true；确认安装脚本读取不存在的 unsupportedReason，未拦截 automatic:false。
 - 代码或文档变更：补充 REQ-414 与 TC-415；实现将复用现有目录身份比较，保留固定 handoff 文件名和配置隔离；安装验收改用可测试的状态及会话断言。
 - 验证证据：原复现位于相邻 orca-linux-update worktree 的 `.docs/linux-auto-update-ui-validation/2026-10-23/evidence/review-profile-alias.json`；生产当前 .55 返回 unsupported-headless-serve。
-- 未解决问题：代码与回归已完成，真实包本地/SSH 验证和新 PR 尚待完成。生产配置恢复尝试未通过并撤回；用户要求所有测试在隔离实例完成，后续不再变更生产运行实例。
-- 下一步：完成带符号链接配置的隔离本地及 SSH 升级验收，提交独立 PR；不直接合入。
+- 未解决问题：代码、回归与带符号链接 profile 的本地/SSH 真实升级均通过；PR #67 待用户审查及完整 CI。生产配置恢复尝试未通过并撤回；按用户要求，后续构建和所有有效实机验证使用隔离实例。
+- 下一步：清理测试实例和密钥，保持 PR #67 待审查；不直接合入，不将测试包安装到生产。
 
 ## 2026-10-22：补齐正式发布前的 PR 运行器入口（implementing）
 
@@ -32,6 +32,7 @@ external_ids: []
 - [Linux 服务自动更新方案](solutions/Linux服务自动更新方案.md)：REQ-414，复用 AppImage 原生更新和 CLI 接管。
 - [Linux 服务自动更新用例](tests/cases/Linux服务自动更新.md)：TC-415，本地与 SSH 的真实包升级验证。
 - [Linux 服务自动更新验收](tests/runs/2026-10-23-linux-auto-update.md)：本地和 SSH 真实包 A→B、坏包拒绝及终端连续性通过。
+- [Linux 目录别名与验收修复](tests/runs/2026-10-23-linux-update-paths.md)：PR #67；真实符号链接 profile 下，本地与 SSH 升级及原 shell PID 保留通过。
 
 | 类型     | 文档                                                                   | 状态         | 说明                                                                              |
 | -------- | ---------------------------------------------------------------------- | ------------ | --------------------------------------------------------------------------------- |
