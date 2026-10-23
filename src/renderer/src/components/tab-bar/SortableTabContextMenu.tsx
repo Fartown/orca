@@ -1,13 +1,4 @@
-import {
-  PanelLeftClose,
-  PanelRightClose,
-  Pin,
-  PinOff,
-  Pencil,
-  SquareTerminal,
-  X,
-  ListX
-} from 'lucide-react'
+import { PanelLeftClose, PanelRightClose, Pin, PinOff, Pencil, X, ListX } from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -26,6 +17,7 @@ import type { NativeChatTabSession } from './tab-session-history-switch'
 import { TAB_CONTEXT_MENU_CONTENT_CLASS } from './tab-context-menu-sizing'
 import { CopyTabIdMenuItem } from './CopyTabIdMenuItem'
 import { CloseSplitPaneMenuItem } from './CloseSplitPaneMenuItem'
+import { TerminalTabViewSwitch } from '@/native-chat-view-recovery/TerminalTabViewSwitch'
 
 const TAB_COLORS = [
   {
@@ -162,9 +154,7 @@ export function SortableTabContextMenu({
 
   const closeShortcut = useOptionalShortcutLabel('tab.close')
   const renameShortcut = useOptionalShortcutLabel('tab.rename')
-  // Why: switching a tab into chat view is hidden while that toggle is removed; a tab already in
-  // chat view keeps its way back.
-  const showTerminalViewSwitch = canToggleViewMode && isChatView && onToggleViewMode !== undefined
+  const showTerminalViewSwitch = canToggleViewMode && onToggleViewMode !== undefined
 
   return (
     <DropdownMenu open={open} onOpenChange={onOpenChange} modal={false}>
@@ -190,13 +180,7 @@ export function SortableTabContextMenu({
         {showTerminalViewSwitch ? (
           <>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onSelect={onToggleViewMode}>
-              <SquareTerminal className="size-3.5 shrink-0" />
-              {translate(
-                'components.tab.bar.SortableTabContextMenu.switchToTerminalView',
-                'Continue with Terminal Agent'
-              )}
-            </DropdownMenuItem>
+            <TerminalTabViewSwitch isChatView={isChatView} onToggleViewMode={onToggleViewMode} />
           </>
         ) : null}
         <TabSessionSurfaceSwitchMenuItems
