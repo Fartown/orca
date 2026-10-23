@@ -5,7 +5,6 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { translate } from '@/i18n/i18n'
 import { LoadingSpinner } from '@/components/LoadingSpinner'
 import { ResumeInNewCliTooltipText } from './ai-vault-session-cli-fork-copy'
-import { takeOverInNewChatLabel } from '../terminal-chat-view-button/chat-surface-labels'
 
 /** History opens a new tab; active-tab controls switch surfaces. */
 export function AiVaultSessionSurfaceSwitchMenuItems({
@@ -40,7 +39,10 @@ export function AiVaultSessionSurfaceSwitchMenuItems({
                 'auto.components.right.sidebar.AiVaultSessionRow.resumeInNewNativeChat',
                 'Resume in New Chat'
               )
-            : takeOverInNewChatLabel()}
+            : translate(
+                'components.tab.bar.SortableTabContextMenu.switchToChatView',
+                'Continue in Chat UI'
+              )}
         </Item>
       ) : null}
       {onResumeInNewCli ? (

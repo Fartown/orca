@@ -3371,13 +3371,6 @@
           "readyOneOne": "1 workspace found, with 1 cleanup suggestion."
         }
       }
-    },
-    "tab": {
-      "bar": {
-        "SortableTabContextMenu": {
-          "switchToChatView": "Continue in Chat UI"
-        }
-      }
     }
   },
   "dashboard": {

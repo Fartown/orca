@@ -33,7 +33,7 @@ vi.mock('@/store', () => {
   }
 })
 vi.mock('../terminal-pane/TerminalPaneResumeInChatButton', () => ({
-  TerminalPaneResumeInChatButton: () => <button type="button">Move to New Chat</button>
+  TerminalPaneResumeInChatButton: () => null
 }))
 
 const mounted: { container: HTMLDivElement; root: Root }[] = []
@@ -59,6 +59,7 @@ function makePane(id: number): ManagedPane {
   } as unknown as ManagedPane
 }
 
+// The surface passes the toggle whenever the pane can flip either way, chat view included.
 function renderHeader(canShowTerminal: boolean) {
   const onSwitchToChatView = vi.fn()
   const container = document.createElement('div')
@@ -91,8 +92,6 @@ function renderHeader(canShowTerminal: boolean) {
         paneTransportsRef={{ current: new Map<number, PtyTransport>() }}
         canShowTerminal={canShowTerminal}
         onShowTerminal={vi.fn()}
-        canResumeInNewNativeChat
-        canSwitchToChatView
         onSwitchToChatView={onSwitchToChatView}
         onSplitPane={vi.fn()}
         onBeginPaneDrag={vi.fn()}
@@ -113,23 +112,20 @@ function renderHeader(canShowTerminal: boolean) {
 }
 
 describe('terminal pane header chat view button', () => {
-  it('sits beside Move to New Chat on the active pane and switches to chat view', () => {
+  it('offers one Switch to Chat View, on the active pane, that runs the pane toggle', () => {
     const { container, onSwitchToChatView } = renderHeader(false)
     const switches = container.querySelectorAll<HTMLButtonElement>(
       'button[aria-label="Switch to Chat View"]'
     )
     expect(switches).toHaveLength(1)
-    const activeBar = switches[0]?.closest('.pane-title-bar')
-    expect(activeBar?.hasAttribute('data-active-pane')).toBe(true)
-    expect(activeBar?.textContent).toContain('Move to New Chat')
+    expect(switches[0]?.closest('.pane-title-bar')?.hasAttribute('data-active-pane')).toBe(true)
 
     act(() => switches[0]?.click())
     expect(onSwitchToChatView).toHaveBeenCalledTimes(1)
   })
 
-  it('leaves only the way back to the terminal while chat view is showing', () => {
+  it('stays hidden while the pane already shows chat view', () => {
     const { container } = renderHeader(true)
     expect(container.querySelector('button[aria-label="Switch to Chat View"]')).toBeNull()
-    expect(container.querySelector('button[aria-label="Show terminal"]')).not.toBeNull()
   })
 })

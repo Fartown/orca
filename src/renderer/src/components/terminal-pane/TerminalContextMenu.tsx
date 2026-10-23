@@ -31,7 +31,6 @@ import { formatPrimaryShortcutLabel } from '@/hooks/useShortcutLabel'
 import type { KeybindingOverrides } from '../../../../shared/keybindings'
 import { translate } from '@/i18n/i18n'
 import { isMacPlatform, nativeChatToggleShortcutLabel } from '../native-chat/native-chat-shortcut'
-import { switchToChatViewLabel } from '../terminal-chat-view-button/chat-surface-labels'
 import { AgentSessionContinuationMenuItem } from './AgentSessionContinuationMenuItem'
 import { AgentSessionContextCopyMenuItem } from './AgentSessionContextCopyMenuItem'
 import { ClearPaneTitleMenuItem } from './ClearPaneTitleMenuItem'
@@ -236,7 +235,7 @@ function TerminalContextMenuItems({
                 'components.tab.bar.SortableTabContextMenu.switchToTerminalView',
                 'Continue with Terminal Agent'
               )
-            : switchToChatViewLabel()}
+            : translate('terminalChatViewButton.switchToChatView', 'Switch to Chat View')}
           <DropdownMenuShortcut>{shortcuts.nativeChat}</DropdownMenuShortcut>
         </DropdownMenuItem>
       ) : null}

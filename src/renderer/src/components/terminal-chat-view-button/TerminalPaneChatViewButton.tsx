@@ -3,14 +3,14 @@ import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { ShortcutKeyCombo } from '@/components/ShortcutKeyCombo'
 import { isMacPlatform } from '@/components/native-chat/native-chat-shortcut'
-import { switchToChatViewLabel } from './chat-surface-labels'
+import { translate } from '@/i18n/i18n'
 
 export function TerminalPaneChatViewButton({
   onSwitch
 }: {
   onSwitch: () => void
 }): React.JSX.Element {
-  const label = switchToChatViewLabel()
+  const label = translate('terminalChatViewButton.switchToChatView', 'Switch to Chat View')
   const isMac = isMacPlatform()
   return (
     <Tooltip>

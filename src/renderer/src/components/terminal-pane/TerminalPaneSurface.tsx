@@ -345,10 +345,9 @@ export function TerminalPaneSurface({
         canShowTerminal={activePaneIsChatLeaf}
         onShowTerminal={handleToggleNativeChat}
         canResumeInNewNativeChat={activePaneCanResumeInChat}
-        canSwitchToChatView={
-          !activePaneIsChatLeaf && canToggleChatForLeaf(activePane?.leafId ?? null)
+        onSwitchToChatView={
+          canToggleChatForLeaf(activePane?.leafId ?? null) ? handleToggleNativeChat : undefined
         }
-        onSwitchToChatView={handleToggleNativeChat}
         canContinueAgentSessionInNewSession={activePaneCanContinueInNewSession}
         onContinueAgentSessionInNewSession={(pane) =>
           contextMenu.runForPane(pane.id, contextMenu.onContinueAgentSessionInNewSession)

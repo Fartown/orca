@@ -19340,7 +19340,7 @@
       "bar": {
         "SortableTabContextMenu": {
           "switchToTerminalView": "使用终端智能体继续",
-          "switchToChatView": "在聊天界面中继续",
+          "switchToChatView": "在新聊天中接管",
           "closeTabsToLeft": "关闭左侧的所有选项卡"
         },
         "BrowserTab": {
@@ -19860,10 +19860,6 @@
       "stepDownload": "下载",
       "stepUnpack": "解压",
       "stepCheck": "检查"
-    },
-    "terminal-chat-view-button": {
-      "switchToChatView": "切到聊天视图",
-      "takeOverInNewChat": "在新聊天中接管"
     }
   },
   "dashboardPopout": {
@@ -21126,5 +21122,8 @@
       "complete": "目标完成：{{value0}}",
       "budget": "预算已用完：{{value0}}"
     }
+  },
+  "terminalChatViewButton": {
+    "switchToChatView": "切到聊天视图"
   }
 }

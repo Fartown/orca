@@ -20139,10 +20139,6 @@
       "stepDownload": "Download",
       "stepUnpack": "Unpack",
       "stepCheck": "Check"
-    },
-    "terminal-chat-view-button": {
-      "switchToChatView": "Switch to Chat View",
-      "takeOverInNewChat": "Move to New Chat"
     }
   },
   "dashboardPopout": {
@@ -21351,5 +21347,8 @@
       "complete": "Goal complete: {{value0}}",
       "budget": "Budget used up: {{value0}}"
     }
+  },
+  "terminalChatViewButton": {
+    "switchToChatView": "Switch to Chat View"
   }
 }

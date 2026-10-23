@@ -2551,7 +2551,7 @@
     {
       "id": "terminal-chat-view-button",
       "title": "终端头部切到聊天视图：新增按钮，与「在新聊天中接管」区分",
-      "goal": "终端窗格头部新增「切到聊天视图」，agent 运行中也能就地切换；原按钮改名「在新聊天中接管」，两个功能不再同名",
+      "goal": "终端窗格头部新增「切到聊天视图」，agent 运行中也能就地切换；原按钮中文改名「在新聊天中接管」，两个功能不再同名",
       "journal": "docs/issue/终端头部切到聊天视图/journal.md",
       "dependsOn": [
         "src/renderer/src/i18n/i18n.ts",
@@ -2566,66 +2566,50 @@
         "docs/issue/终端头部切到聊天视图/**"
       ],
       "requiredFiles": [
-        "src/renderer/src/components/terminal-chat-view-button/TerminalPaneChatViewButton.tsx",
-        "src/renderer/src/components/terminal-chat-view-button/chat-surface-labels.ts"
+        "src/renderer/src/components/terminal-chat-view-button/TerminalPaneChatViewButton.tsx"
       ],
       "seams": [
         {
           "file": "src/renderer/src/components/terminal-pane/TerminalPaneHeaderOverlay.tsx",
           "mustContain": "<TerminalPaneChatViewButton onSwitch={onSwitchToChatView} />",
-          "why": "The pane header offers the in-place chat view beside the existing move-to-new-chat button (REQ-1)"
+          "why": "The pane header offers the in-place chat view beside the move-to-new-chat button (REQ-1)"
         },
         {
           "file": "src/renderer/src/components/terminal-pane/TerminalPaneSurface.tsx",
-          "mustContain": "onSwitchToChatView={handleToggleNativeChat}",
-          "why": "The button reuses the pane's existing chat view eligibility and toggle (REQ-1)"
-        },
-        {
-          "file": "src/renderer/src/components/terminal-pane/TerminalPaneResumeInChatButton.tsx",
-          "mustContain": "takeOverInNewChatLabel()",
-          "why": "The move-to-new-chat button gets its own name (REQ-2)"
-        },
-        {
-          "file": "src/renderer/src/components/right-sidebar/AiVaultSessionSurfaceSwitchMenuItems.tsx",
-          "mustContain": "takeOverInNewChatLabel()",
-          "why": "The terminal tab menu's move-to-new-chat item gets the same name as the header button (REQ-2)"
+          "mustContain": "? handleToggleNativeChat : undefined",
+          "why": "The button reuses the pane's chat view eligibility and toggle, the same as right-click and Cmd/Ctrl+Shift+J (REQ-1)"
         },
         {
           "file": "src/renderer/src/components/terminal-pane/TerminalContextMenu.tsx",
-          "mustContain": "switchToChatViewLabel()",
+          "mustContain": "translate('terminalChatViewButton.switchToChatView', 'Switch to Chat View')",
           "why": "The pane right-click chat view item shares the header button's name (REQ-2)"
         },
         {
-          "file": "src/renderer/src/components/terminal-pane/TerminalPaneResumeInChatButton.test.tsx",
-          "mustContain": "name: 'Move to New Chat'",
-          "why": "Upstream test follows the renamed button"
-        },
-        {
-          "file": "src/renderer/src/components/tab-bar/TabSessionSurfaceSwitchMenuItems.test.tsx",
-          "mustContain": "name: 'Move to New Chat'",
-          "why": "Upstream test follows the renamed menu item"
+          "file": "src/renderer/src/components/terminal-pane/TerminalPaneResumeInChatButton.tsx",
+          "mustContain": "'components.tab.bar.SortableTabContextMenu.switchToChatView'",
+          "why": "Guard: the move-to-new-chat button still reads the upstream key whose Chinese text this fork renames (REQ-2)"
         },
         {
           "file": "src/renderer/src/i18n/locales/en.json",
-          "mustContain": "\"takeOverInNewChat\": \"Move to New Chat\"",
-          "why": "English copy for the two names"
+          "mustContain": "\"switchToChatView\": \"Switch to Chat View\"",
+          "why": "English name of the in-place chat view (REQ-2)"
         },
         {
           "file": "src/renderer/src/i18n/locales/zh.json",
           "mustContain": "\"switchToChatView\": \"切到聊天视图\"",
-          "why": "Chinese copy for the two names"
+          "why": "Chinese name of the in-place chat view (REQ-2)"
         },
         {
-          "file": "src/renderer/src/i18n/en-runtime-required.json",
-          "mustContain": "\"switchToChatView\": \"Continue in Chat UI\"",
-          "why": "Upstream's shared label lost its last call site, so it ships from the runtime catalog"
+          "file": "src/renderer/src/i18n/locales/zh.json",
+          "mustContain": "\"switchToChatView\": \"在新聊天中接管\"",
+          "why": "Chinese name of the upstream move-to-new-chat key (REQ-2)"
         }
       ],
       "tests": [
         "src/renderer/src/components/terminal-chat-view-button/TerminalPaneChatViewButton.test.tsx"
       ],
       "checks": [
-        "ORCA_BACKGROUND_LAUNCH=1 pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/components/terminal-chat-view-button src/renderer/src/components/terminal-pane/TerminalPaneHeaderOverlay.test.tsx src/renderer/src/components/terminal-pane/TerminalPaneResumeInChatButton.test.tsx src/renderer/src/components/tab-bar/TabSessionSurfaceSwitchMenuItems.test.tsx src/renderer/src/components/tab-bar/SortableTabContextMenu.test.tsx"
+        "ORCA_BACKGROUND_LAUNCH=1 pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/components/terminal-chat-view-button src/renderer/src/components/terminal-pane/TerminalPaneHeaderOverlay.test.tsx"
       ]
     }
   ]
