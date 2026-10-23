@@ -23,6 +23,38 @@
   "dependsOnIgnore": ["src/renderer/src/components/ui/**"],
   "features": [
     {
+      "id": "native-chat-view-recovery",
+      "title": "终端聊天视图恢复",
+      "goal": "恢复已有终端标签的聊天视图切换，保留同一终端与会话绑定",
+      "journal": "docs/issue/终端聊天视图恢复/journal.md",
+      "dependsOn": [
+        "src/renderer/src/i18n/i18n.ts",
+        "src/renderer/src/components/native-chat/native-chat-shortcut.ts"
+      ],
+      "policyId": "native-chat-view-recovery",
+      "ownedPaths": [
+        "src/renderer/src/native-chat-view-recovery/**",
+        "docs/issue/终端聊天视图恢复/**"
+      ],
+      "requiredFiles": ["src/renderer/src/native-chat-view-recovery/TerminalTabViewSwitch.tsx"],
+      "seams": [
+        {
+          "file": "src/renderer/src/components/tab-bar/SortableTabContextMenu.tsx",
+          "mustContain": "TerminalTabViewSwitch",
+          "why": "Expose the existing same-pane view toggle in both directions."
+        },
+        {
+          "file": "src/renderer/src/components/tab-bar/SortableTabContextMenu.test.tsx",
+          "mustContain": "switches an eligible terminal tab into chat view",
+          "why": "Keep the existing menu behavior contract aligned with the restored entry."
+        }
+      ],
+      "tests": ["src/renderer/src/components/tab-bar/SortableTabContextMenu.test.tsx"],
+      "checks": [
+        "pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/components/tab-bar/SortableTabContextMenu.test.tsx src/renderer/src/components/tab-bar/native-chat-tab-agent-evidence.test.ts"
+      ]
+    },
+    {
       "id": "integration-builds",
       "title": "集成分支自动出包：同一提交的 macOS、Linux 与 Android 内测包",
       "goal": "同源发布 fork 内测包，并提供桌面更新清单和 Android 应用内更新",
