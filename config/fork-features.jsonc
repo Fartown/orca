@@ -2613,6 +2613,16 @@
           "why": "Keep host-qualified display membership on the client that owns the catalog."
         },
         {
+          "file": "src/shared/pairing-local-ui-fields.test.ts",
+          "mustContain": "sidebarProjectMerges",
+          "why": "Retain the exact pairing-local field census and omission coverage."
+        },
+        {
+          "file": "src/renderer/src/components/sidebar/worktree-list-groups-section-label-disambiguation.test.ts",
+          "mustContain": "sidebar-name:api",
+          "why": "Verify same-name grouping while retaining protected-checkout path labels."
+        },
+        {
           "file": ".gitignore",
           "mustContain": "!docs/issue/侧栏项目合并/**",
           "why": "Preserve project display merge persistence, localization, and client-local host ownership."
@@ -2698,10 +2708,12 @@
         "src/renderer/src/sidebar-project-merge/sidebar-project-merge-persistence.test.ts",
         "tests/e2e/sidebar-project-merge.spec.ts",
         "src/shared/sidebar-project-merge/sidebar-project-name-groups.test.ts",
+        "src/shared/pairing-local-ui-fields.test.ts",
+        "src/renderer/src/components/sidebar/worktree-list-groups-section-label-disambiguation.test.ts",
         "mobile/src/sidebar-project-merge/workspace-list-sections.test.ts"
       ],
       "checks": [
-        "pnpm exec vitest run --config config/vitest.config.ts src/shared/sidebar-project-merge src/renderer/src/sidebar-project-merge",
+        "pnpm exec vitest run --config config/vitest.config.ts src/shared/sidebar-project-merge src/renderer/src/sidebar-project-merge src/shared/pairing-local-ui-fields.test.ts src/renderer/src/components/sidebar/worktree-list-groups-section-label-disambiguation.test.ts",
         "pnpm exec vitest run --config mobile/vitest.config.ts mobile/src/worktree/workspace-list-sections.test.ts mobile/src/sidebar-project-merge"
       ]
     }
