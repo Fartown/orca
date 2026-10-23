@@ -78,7 +78,6 @@ export function buildWorktreeVirtualRowContext(args: BuildArgs): WorktreeVirtual
     onWorkspaceStatusDragLeave: statusDrag.handleWorkspaceStatusDragLeave,
     onWorkspaceStatusDrop: statusDrag.handleWorkspaceStatusDrop,
     header: {
-      visibleProjectRepoIdsBySection: props.visibleProjectRepoIdsBySection,
       groupBy: props.groupBy,
       collapsedGroups: props.collapsedGroups,
       workspaceStatuses: props.workspaceStatuses,

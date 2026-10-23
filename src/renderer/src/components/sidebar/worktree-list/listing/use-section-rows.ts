@@ -169,7 +169,7 @@ export function useSidebarSectionRows(args: SectionRowsArgs) {
         importedWorktreesByRepo: args.importedWorktreesByRepo,
         newExternalWorktreesInboxByRepo: args.newExternalWorktreesInboxByRepo,
         pendingCreations,
-        projectGrouping: args.projectGrouping,
+        projectGrouping: { ...args.projectGrouping, groupNamesByHost: hostScopedGroups },
         folderWorkspaces: args.visibleFolderWorkspacesForRows,
         hostLabelById,
         defaultHostId,
@@ -178,6 +178,7 @@ export function useSidebarSectionRows(args: SectionRowsArgs) {
       }),
     [
       args.groupBy,
+      hostScopedGroups,
       worktrees,
       repoMap,
       args.prCache,

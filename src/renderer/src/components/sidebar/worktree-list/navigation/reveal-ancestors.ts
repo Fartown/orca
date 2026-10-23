@@ -1,7 +1,10 @@
 import type { ProjectGroup } from '../../../../../../shared/project-group-types'
 import type { Repo } from '../../../../../../shared/repo-types'
 import { getProjectGroupHeaderKey } from '../../../../../../shared/sidebar-list/group-keys'
-import type { ProjectGroupingModel } from '../../../../../../shared/project-section-grouping'
+import {
+  buildProjectGroupingIndex,
+  type ProjectGroupingModel
+} from '../../../../../../shared/project-section-grouping'
 
 function getProjectIdFromHeaderRowKey(rowKey: string): string | null {
   if (!rowKey.startsWith('project:')) {
@@ -17,6 +20,15 @@ function getRepoIdsFromHeaderRowKey(
   repoMap: Map<string, Repo>,
   projectGrouping?: ProjectGroupingModel
 ): string[] {
+  if (rowKey.startsWith('sidebar-name:')) {
+    const model =
+      rowKey.includes('::host:') && projectGrouping
+        ? { ...projectGrouping, groupNamesByHost: true }
+        : projectGrouping
+    const groups = buildProjectGroupingIndex(model, repoMap)?.nameGroups
+    const group = groups && [...groups.values()].find((candidate) => candidate.key === rowKey)
+    return group ? [...group.repoIds].filter((id) => repoMap.has(id)) : []
+  }
   if (rowKey.startsWith('repo:')) {
     return [rowKey.slice('repo:'.length)]
   }

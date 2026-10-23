@@ -8,10 +8,6 @@ import {
   getDisplayedProjectGroupingForRepo,
   getProjectGroupingForRepo
 } from '../project-section-grouping'
-import {
-  getSidebarProjectNameCollapsedGroups,
-  toggleSidebarProjectNameGroup
-} from './sidebar-project-name-groups'
 
 function folder(id: string, name = 'workspace', host: Repo['executionHostId'] = 'local'): Repo {
   return {
@@ -27,11 +23,14 @@ function folder(id: string, name = 'workspace', host: Repo['executionHostId'] = 
 
 function catalog(repos: Repo[]) {
   const projection = projectHostSetupProjectionFromRepos(repos)
-  const projectIndex = buildProjectGroupingIndex({
-    projects: projection.projects,
-    projectHostSetups: projection.setups
-  })
   const repoMap = new Map(repos.map((repo) => [repo.id, repo]))
+  const projectIndex = buildProjectGroupingIndex(
+    {
+      projects: projection.projects,
+      projectHostSetups: projection.setups
+    },
+    repoMap
+  )
   const items = repos.map((repo, index) => ({
     id: `${repo.id}::${repo.path}`,
     repoId: repo.id,
@@ -142,25 +141,197 @@ describe('project sections grouped by display name', () => {
     expect(result.sections.every(([key]) => !key.startsWith('sidebar-name:'))).toBe(true)
   })
 
-  it('inherits collapsed sources and clears their aliases when the merged header expands', () => {
-    const result = catalog([folder('a'), folder('b')])
-    const groups = result.projectIndex!.nameGroups
-    const saved = new Set(['project:repo:a', 'project:repo:b'])
-    expect(getSidebarProjectNameCollapsedGroups(saved, groups).has('sidebar-name:workspace')).toBe(
-      true
-    )
-    const toggle = (key: string) => {
-      if (!saved.delete(key)) {
-        saved.add(key)
-      }
+  it('uses the same canonical setup as native grouping when a repo ID exists on two hosts', () => {
+    const upstream = { owner: 'one', repo: 'workspace' }
+    const result = catalog([
+      {
+        ...folder('reused', 'workspace', 'ssh:remote'),
+        path: '/remote/workspace',
+        kind: 'git',
+        upstream
+      },
+      { ...folder('reused'), path: '/local/workspace', kind: 'git', upstream },
+      { ...folder('second'), path: '/local/workspace-copy', kind: 'git', upstream },
+      folder('ordinary', 'workspace', 'runtime:other')
+    ])
+    expect(result.sections).toHaveLength(3)
+    expect(result.sections.every(([key]) => !key.startsWith('sidebar-name:'))).toBe(true)
+  })
+
+  it('merges only within the original manual group and keeps singleton section keys', () => {
+    const repos = [
+      { ...folder('a'), projectGroupId: 'one' },
+      { ...folder('b'), projectGroupId: 'one' },
+      { ...folder('c'), projectGroupId: 'two' },
+      folder('d')
+    ]
+    const result = catalog(repos)
+    expect(result.sections.map(([key]) => key)).toEqual([
+      'sidebar-name:workspace::group:one',
+      'project:repo:c',
+      'project:repo:d'
+    ])
+    expect(result.sections[0][1].repoIds).toEqual(new Set(['a', 'b']))
+    for (const repo of repos) {
+      const display = getDisplayedProjectGroupingForRepo(
+        repo.id,
+        result.repoMap,
+        result.projectIndex
+      )
+      expect(result.sections.find(([key]) => key === display.key)?.[1].repoIds.has(repo.id)).toBe(
+        true
+      )
     }
-    toggleSidebarProjectNameGroup('sidebar-name:workspace', saved, groups, toggle)
-    expect(getSidebarProjectNameCollapsedGroups(saved, groups).has('sidebar-name:workspace')).toBe(
-      false
-    )
-    toggleSidebarProjectNameGroup('sidebar-name:workspace', saved, groups, toggle)
-    expect(saved.has('sidebar-name:workspace')).toBe(true)
-    toggleSidebarProjectNameGroup('sidebar-name:workspace', saved, groups, toggle)
-    expect(saved.size).toBe(0)
+  })
+
+  it('retains the native project when its original directories span manual groups', () => {
+    const upstream = { owner: 'one', repo: 'workspace' }
+    const result = catalog([
+      { ...folder('a'), kind: 'git', upstream, projectGroupId: 'one' },
+      { ...folder('b', 'workspace', 'ssh:other'), kind: 'git', upstream, projectGroupId: 'two' },
+      { ...folder('c'), projectGroupId: 'one' }
+    ])
+    expect(result.sections.map(([key]) => key)).toEqual([
+      'project:github:one/workspace',
+      'project:repo:c'
+    ])
+    expect(result.sections[0][1].repoIds).toEqual(new Set(['a', 'b']))
+  })
+
+  it('keeps the original global section ordering and action anchor', () => {
+    const result = catalog([folder('a'), folder('between', 'other'), folder('c')])
+    const sections = buildProjectSections({
+      ...result.args,
+      placeholderRepoIds: [],
+      repoOrder: new Map([
+        ['c', 0],
+        ['between', 1],
+        ['a', 2]
+      ]),
+      projectOrderBy: 'manual'
+    })
+    expect(sections.map(([key]) => key)).toEqual(['sidebar-name:workspace', 'project:repo:between'])
+    expect(sections[0][1].repo?.id).toBe('c')
+    expect(sections[0][1].items.map((item) => item.repoId)).toEqual(['c', 'a'])
+    expect(sections[0][1].repoIds).toEqual(new Set(['c', 'a']))
+  })
+
+  it('retains the original fallback sections when the project model is unavailable', () => {
+    const result = catalog([folder('a'), folder('b')])
+    const sections = buildProjectSections({
+      ...result.args,
+      projectIndex: null,
+      placeholderRepoIds: [],
+      repoOrder: new Map(),
+      projectOrderBy: 'manual'
+    })
+    expect(sections.map(([key]) => key)).toEqual(['repo:a', 'repo:b'])
+  })
+
+  it.each([true, false])(
+    'preserves notice fallback containers with a missing catalog (empty: %s)',
+    (empty) => {
+      const repos = [
+        { ...folder('a'), projectGroupId: 'one' },
+        { ...folder('b'), projectGroupId: 'two' }
+      ]
+      const result = catalog(repos)
+      const repoMap = new Map((empty ? [] : repos.slice(0, 1)).map((repo) => [repo.id, repo]))
+      const sections = buildProjectSections({
+        ...result.args,
+        items: [],
+        repoMap,
+        projectIndex: buildProjectGroupingIndex(
+          {
+            projects: result.projection.projects,
+            projectHostSetups: result.projection.setups
+          },
+          repoMap
+        ),
+        placeholderRepoIds: [],
+        noticeRepos: repos.map((repo) => [repo.id, repo] as const),
+        repoOrder: new Map(),
+        projectOrderBy: 'manual'
+      })
+      expect(sections.map(([key]) => key)).toEqual(['project:repo:a', 'project:repo:b'])
+      expect(sections.map(([, section]) => section.repo?.projectGroupId)).toEqual(['one', 'two'])
+    }
+  )
+
+  it('does not name-merge an incomplete native project through a known sibling', () => {
+    const upstream = { owner: 'one', repo: 'workspace' }
+    const repos = [
+      { ...folder('a'), kind: 'git' as const, upstream, projectGroupId: 'one' },
+      {
+        ...folder('b', 'workspace', 'ssh:other'),
+        kind: 'git' as const,
+        upstream,
+        projectGroupId: 'two'
+      },
+      { ...folder('c'), projectGroupId: 'one' }
+    ]
+    const result = catalog(repos)
+    const repoMap = new Map([repos[0], repos[2]].map((repo) => [repo.id, repo]))
+    const sections = buildProjectSections({
+      ...result.args,
+      items: [],
+      repoMap,
+      projectIndex: buildProjectGroupingIndex(
+        { projects: result.projection.projects, projectHostSetups: result.projection.setups },
+        repoMap
+      ),
+      placeholderRepoIds: ['c'],
+      noticeRepos: [['b', repos[1]]],
+      repoOrder: new Map(),
+      projectOrderBy: 'manual'
+    })
+    expect(sections).toHaveLength(2)
+    expect(sections.every(([key]) => !key.startsWith('sidebar-name:'))).toBe(true)
+    expect(sections.find(([key]) => key === 'project:github:one/workspace')?.[1].repo?.id).toBe('b')
+  })
+
+  it('keeps the existing host containers while grouping names within each host', () => {
+    const repos = [folder('a'), folder('b'), folder('remote', 'workspace', 'ssh:mini')]
+    const result = catalog(repos)
+    const sections = buildProjectSections({
+      ...result.args,
+      projectIndex: buildProjectGroupingIndex(
+        {
+          projects: result.projection.projects,
+          projectHostSetups: result.projection.setups,
+          groupNamesByHost: true
+        },
+        result.repoMap
+      ),
+      placeholderRepoIds: [],
+      repoOrder: new Map(),
+      projectOrderBy: 'manual'
+    })
+    expect(sections.map(([key]) => key)).toEqual([
+      'sidebar-name:workspace::host:local',
+      'project:repo:remote'
+    ])
+    expect(sections.map(([, section]) => section.repoIds)).toEqual([
+      new Set(['a', 'b']),
+      new Set(['remote'])
+    ])
+  })
+
+  it('chooses the original recent section as the action anchor without modifying activity', () => {
+    const result = catalog([folder('a'), folder('between', 'other'), folder('c')])
+    const sections = buildProjectSections({
+      ...result.args,
+      placeholderRepoIds: [],
+      repoOrder: new Map([
+        ['a', 0],
+        ['between', 1],
+        ['c', 2]
+      ]),
+      projectOrderBy: 'recent'
+    })
+    expect(sections.map(([key]) => key)).toEqual(['sidebar-name:workspace', 'project:repo:between'])
+    expect(sections[0][1].repo?.id).toBe('c')
+    expect(sections[0][1].items).toEqual([result.items[2], result.items[0]])
+    expect(sections[0][1].activityItems).toEqual([result.items[2], result.items[0]])
   })
 })

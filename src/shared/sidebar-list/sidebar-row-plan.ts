@@ -1,4 +1,3 @@
-import { getSidebarProjectNameCollapsedGroups } from '../sidebar-project-merge/sidebar-project-name-groups'
 import type { FolderWorkspace } from '../folder-workspace-types'
 import type { ProjectGroup } from '../project-group-types'
 import type { Repo } from '../repo-types'
@@ -107,7 +106,7 @@ export function planSidebarRows(inputs: SidebarRowPlanInputs) {
     pinnedDisplayPolicy,
     filterRepoIds
   } = inputs
-  const projectIndex = buildProjectGroupingIndex(projectGrouping)
+  const projectIndex = buildProjectGroupingIndex(projectGrouping, repoMap)
   // Membership is decided once, above the groupBy switch: every mode renders the
   // same set of folder workspaces and only chooses where they land (#15362).
   const renderableFolderWorkspaces = getRenderableFolderWorkspaces(folderWorkspaces, projectGroups)
@@ -177,11 +176,7 @@ export function planSidebarRows(inputs: SidebarRowPlanInputs) {
     .filter((section) => section.key !== PINNED_GROUP_KEY)
     .map((section) => [section.key, section.group])
   const naturalWorktrees = orderedGroups.flatMap(([, group]) => group.items)
-  const render = (persistedCollapsedGroups: Set<string>): Row[] => {
-    const collapsedGroups = getSidebarProjectNameCollapsedGroups(
-      persistedCollapsedGroups,
-      projectIndex?.nameGroups ?? new Map()
-    )
+  const render = (collapsedGroups: Set<string>): Row[] => {
     const result: Row[] = []
     if (groupBy !== 'repo') {
       for (const creation of pendingCreations) {

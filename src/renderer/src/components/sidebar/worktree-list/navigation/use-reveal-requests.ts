@@ -72,6 +72,7 @@ export function useSidebarRevealRequests(args: {
     }
     const rowKey = pendingRevealSidebarRow.rowKey
     const isProjectHeaderTarget =
+      rowKey.startsWith('sidebar-name:') ||
       rowKey.startsWith('project-group:') ||
       rowKey.startsWith('project:') ||
       rowKey.startsWith('repo:')

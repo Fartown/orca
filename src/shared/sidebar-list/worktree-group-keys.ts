@@ -33,7 +33,7 @@ export function getGroupKeyForWorktree(
     return getDisplayedProjectGroupingForRepo(
       worktree.repoId,
       repoMap,
-      buildProjectGroupingIndex(projectGrouping)
+      buildProjectGroupingIndex(projectGrouping, repoMap)
     ).key
   }
   return getPRLaneKey(prGroupOf?.(worktree) ?? 'in-progress')
@@ -62,12 +62,7 @@ export function getGroupKeysForWorktree(
   if (groupBy !== 'repo') {
     return [groupKey]
   }
-  const index = buildProjectGroupingIndex(projectGrouping)
-  const nameGroup = [...(index?.nameGroups.values() ?? [])].find((group) => group.key === groupKey)
-  const anchor = nameGroup
-    ? [...repoMap.values()].find((repo) => nameGroup.repoIds.has(repo.id))
-    : undefined
-  const repo = anchor ?? repoMap.get(worktree.repoId)
+  const repo = repoMap.get(worktree.repoId)
   const groupIds: string[] = []
   const groupsById = new Map(projectGroups.map((group) => [group.id, group]))
   const visited = new Set<string>()

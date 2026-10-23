@@ -80,7 +80,7 @@ test('groups equal display names, keeps native identities, and separates on rena
           ),
           groupBy: 'repo',
           projectOrderBy: 'manual',
-          collapsedGroups: new Set(),
+          collapsedGroups: new Set(repos.map((repo) => `project:repo:${repo.id}`)),
           filterRepoIds: [],
           visibleWorkspaceHostIds: null,
           workspaceHostScope: 'all',
@@ -101,9 +101,49 @@ test('groups equal display names, keeps native identities, and separates on rena
   await expect(rows()).toHaveCount(0)
   await workspaceHeader.press('Enter')
   await expect(rows()).toHaveCount(3)
+  expect(await orcaPage.evaluate(() => [...window.__store!.getState().collapsedGroups])).toEqual(
+    repos.map((repo) => `project:repo:${repo.id}`)
+  )
+  for (const mode of ['none', 'workspace-status', 'pr-status'] as const) {
+    await orcaPage.evaluate((groupBy) => {
+      window.__store!.getState().setGroupBy(groupBy)
+      window.__store!.getState().revealSidebarRow('project:repo:workspace-0')
+    }, mode)
+    await expect
+      .poll(() => orcaPage.evaluate(() => window.__store!.getState().groupBy))
+      .toBe('repo')
+    await expect
+      .poll(() => orcaPage.evaluate(() => window.__store!.getState().pendingRevealSidebarRow))
+      .toBeNull()
+  }
+  await workspaceHeader.press('Enter')
+  await expect(rows()).toHaveCount(0)
+  await orcaPage.evaluate(
+    ({ id, host }) => {
+      window.__store!.getState().revealWorktreeInSidebar(id, { executionHostId: host })
+    },
+    { id: worktrees[2].id, host: hosts[2] }
+  )
+  await expect(rows()).toHaveCount(3)
   await expect(
     orcaPage.locator('[data-worktree-section-key="project:github:mangi-11/eta"]')
   ).toHaveCount(2)
+  await orcaPage.evaluate(() =>
+    window.__store!.setState({
+      visibleWorkspaceHostIds: ['local', 'ssh:mini', 'runtime:dbox'],
+      collapsedGroups: new Set()
+    })
+  )
+  await expect(orcaPage.locator('[data-repo-header-id^="workspace-"]')).toHaveCount(3)
+  for (const id of ['workspace-0', 'workspace-1', 'workspace-2']) {
+    await expect(orcaPage.locator(`[data-repo-header-id="${id}"]`)).toBeVisible()
+  }
+  await orcaPage.screenshot({
+    path: testInfo.outputPath('original-host-containers.png'),
+    animations: 'disabled'
+  })
+  await orcaPage.evaluate(() => window.__store!.setState({ visibleWorkspaceHostIds: null }))
+  await expect(rows()).toHaveCount(3)
   const original = await orcaPage.evaluate(() => ({
     projects: window.__store!.getState().projects.map(({ id }) => id),
     setups: window
@@ -125,9 +165,10 @@ test('groups equal display names, keeps native identities, and separates on rena
     )
   )
   await expect(rows()).toHaveCount(2)
-  await expect(
-    orcaPage.locator('[data-worktree-section-key="project:repo:workspace-2"]')
-  ).toHaveCount(1)
+  const separatedRows = orcaPage.locator('[data-worktree-section-key="project:repo:workspace-2"]')
+  await expect(separatedRows).toHaveCount(0)
+  await orcaPage.locator('[data-repo-header-id="workspace-2"]').press('Enter')
+  await expect(separatedRows).toHaveCount(1)
   await orcaPage.screenshot({
     path: testInfo.outputPath('renamed-directory-separated.png'),
     animations: 'disabled'
@@ -263,7 +304,7 @@ test('merges local and paired-host folders while preserving the remote workspace
       })
     }
     client = await launchPairedElectronClient(offer, testInfo, 'merge-host')
-    const localId = await client.page.evaluate(async (localPath) => {
+    await client.page.evaluate(async (localPath) => {
       const added = await window.api.repos.add({ path: localPath, kind: 'folder' })
       if ('error' in added) {
         throw new Error(added.error)
@@ -289,17 +330,23 @@ test('merges local and paired-host folders while preserving the remote workspace
         )
       )
       .toBe(true)
-    await client.page.evaluate(() => {
-      window.__store!.getState().updateSettings({ uiLanguage: 'en' })
+    await client.page.evaluate(async (remoteId) => {
+      const state = window.__store!.getState()
+      await state.reorderRepos([
+        remoteId,
+        ...state.repos.filter((repo) => repo.id !== remoteId).map((repo) => repo.id)
+      ])
+      state.updateSettings({ uiLanguage: 'en' })
       window.__store!.setState({
         groupBy: 'repo',
+        projectOrderBy: 'manual',
         visibleWorkspaceHostIds: null,
         workspaceHostScope: 'all',
         showSleepingWorkspaces: true,
         hideDefaultBranchWorkspace: false,
         collapsedGroups: new Set()
       })
-    })
+    }, remote.result.repo.id)
     const sectionKey = 'sidebar-name:workspace'
     const rows = client.page.locator(`[data-worktree-section-key="${sectionKey}"]`)
     await expect(rows).toHaveCount(2)
@@ -357,18 +404,18 @@ test('merges local and paired-host folders while preserving the remote workspace
     const beforeRename = (
       await host.client.call<{ repo: Repo }>('repo.show', { repo: `id:${remote.result.repo.id}` })
     ).result.repo
-    const header = client.page
-      .locator('[data-repo-header-id]')
-      .filter({ hasText: 'workspace' })
-      .first()
+    const header = client.page.locator(`[data-repo-header-id="${remote.result.repo.id}"]`)
+    await expect(header).toBeVisible()
     await header.hover()
-    expect([localId, remote.result.repo.id]).toContain(
-      await header.getAttribute('data-repo-header-id')
-    )
     await header.getByRole('button', { name: 'Project actions for workspace', exact: true }).click()
-    const chooser = client.page.getByRole('dialog', { name: 'Choose a directory' })
-    await expect(chooser).toBeVisible()
-    await chooser.getByRole('button').filter({ hasText: remotePath }).click()
+    const settings = client.page.getByRole('menuitem', { name: 'Project Settings', exact: true })
+    await expect(settings).toBeVisible()
+    await expect(client.page.getByRole('menuitem').filter({ hasText: remotePath })).toHaveCount(0)
+    await client.page.screenshot({
+      path: testInfo.outputPath('original-project-actions-menu.png'),
+      animations: 'disabled'
+    })
+    await settings.click()
     const nameInput = client.page.getByLabel('Display Name', { exact: true })
     await expect(nameInput).toHaveValue('workspace')
     await expect(client.page.getByText(remotePath, { exact: true }).first()).toBeVisible()

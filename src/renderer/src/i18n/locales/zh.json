@@ -1,8 +1,4 @@
 {
-  "sidebarProjectName": {
-    "chooseDirectory": "选择目录",
-    "directoryDescription": "选择本次操作对应的电脑和目录。"
-  },
   "app": {
     "saving": {
       "delayedTitle": "配置存储操作耗时比平时更长",
@@ -21126,20 +21122,5 @@
       "complete": "目标完成：{{value0}}",
       "budget": "预算已用完：{{value0}}"
     }
-  },
-  "sidebarProjectMerge": {
-    "editorTitle": "合并侧栏项目",
-    "editorDescription": "选择放在同一标题下的项目。各工作区继续在原来的机器上运行。",
-    "name": "项目名称",
-    "search": "搜索项目",
-    "selected": "已选择 {{count}} 个项目，至少选择两个。",
-    "cancel": "取消",
-    "save": "保存合并",
-    "title": "侧栏项目合并",
-    "description": "将选中的项目及其工作区显示在同一个项目标题下。",
-    "edit": "编辑",
-    "unmerge": "取消合并",
-    "add": "合并项目",
-    "unsupported": "此 Orca 主机暂不支持项目展示合并。"
   }
 }

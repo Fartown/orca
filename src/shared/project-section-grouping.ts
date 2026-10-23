@@ -5,7 +5,6 @@ import type { ProjectOrderBy } from './ui-chrome-types'
 import { toSshExecutionHostId } from './execution-host'
 import type { Project, ProjectHostSetup } from './project-types'
 import type { Repo } from './repo-types'
-import { isSidebarMergedProjectId } from './sidebar-project-merge/sidebar-project-merges'
 import {
   buildSidebarProjectNameGroupsForSetups,
   mergeSidebarProjectNameSections,
@@ -33,6 +32,7 @@ export type ProjectGroupingModel = {
 export type ProjectSectionModel = {
   projects: readonly ProjectSectionProject[]
   projectHostSetups: readonly ProjectSectionSetup[]
+  groupNamesByHost?: boolean
 }
 
 export type ProjectGroupingIndex = {
@@ -50,6 +50,7 @@ export type ProjectSectionRepo = {
   addedAt?: number
   connectionId?: string | null
   executionHostId?: ExecutionHostId | null
+  projectGroupId?: string | null
 }
 
 /** One project section: its rows, the repo that anchors its header, and every repo it holds. */
@@ -62,7 +63,11 @@ export type ProjectSectionEntry<Item, R extends ProjectSectionRepo = Repo> = {
   repoIds: Set<string>
 }
 
-const projectGroupingIndexCache = new WeakMap<ProjectSectionModel, ProjectGroupingIndex | null>()
+const defaultGroupingRepos = new Map<string, ProjectSectionRepo>()
+const projectGroupingIndexCache = new WeakMap<
+  ProjectSectionModel,
+  WeakMap<ReadonlyMap<string, ProjectSectionRepo>, ProjectGroupingIndex | null>
+>()
 
 // Why: provisioned and folder setups are not independent Git checkouts.
 function isDistinctUserCheckout(setup: ProjectSectionSetup): boolean {
@@ -99,19 +104,25 @@ function getPathSurface(setup: ProjectSectionSetup): string {
 }
 
 export function buildProjectGroupingIndex(
-  model?: ProjectSectionModel
+  model?: ProjectSectionModel,
+  repos: ReadonlyMap<string, ProjectSectionRepo> = defaultGroupingRepos
 ): ProjectGroupingIndex | null {
   if (!model) {
     return null
   }
-  const cached = projectGroupingIndexCache.get(model)
+  let cache = projectGroupingIndexCache.get(model)
+  if (!cache) {
+    cache = new WeakMap()
+    projectGroupingIndexCache.set(model, cache)
+  }
+  const cached = cache.get(repos)
   if (cached !== undefined) {
     return cached
   }
   const projects = model.projects ?? []
   const projectHostSetups = model.projectHostSetups ?? []
   if (projects.length === 0 || projectHostSetups.length === 0) {
-    projectGroupingIndexCache.set(model, null)
+    cache.set(repos, null)
     return null
   }
   const checkoutsByProjectSurface = new Map<string, Set<string>>()
@@ -140,12 +151,13 @@ export function buildProjectGroupingIndex(
     nameGroups: new Map()
   }
   index.nameGroups = buildSidebarProjectNameGroupsForSetups(
-    projectHostSetups,
     index,
+    repos,
     getProjectGroupingForRepo,
-    isCheckoutScopedProjectSetup
+    isCheckoutScopedProjectSetup,
+    model.groupNamesByHost
   )
-  projectGroupingIndexCache.set(model, index)
+  cache.set(repos, index)
   return index
 }
 
@@ -182,11 +194,7 @@ export function getProjectGroupingForRepo<R extends Pick<ProjectSectionRepo, 'di
       repo
     }
   }
-  if (
-    projectIndex &&
-    !isSidebarMergedProjectId(project.id) &&
-    isCheckoutScopedProjectSetup(setup, projectIndex)
-  ) {
+  if (projectIndex && isCheckoutScopedProjectSetup(setup, projectIndex)) {
     // Why: only the ambiguous surface needs checkout-specific headers.
     return {
       key: `project:${project.id}::setup:${repoId}`,
@@ -210,11 +218,7 @@ export function getProjectHeaderRevealTarget(
   repoMap: Map<string, Repo>,
   projectGrouping?: ProjectGroupingModel
 ): ProjectHeaderRevealTarget {
-  return getDisplayedProjectGroupingForRepo(
-    repoId,
-    repoMap,
-    buildProjectGroupingIndex(projectGrouping)
-  )
+  return getProjectGroupingForRepo(repoId, repoMap, buildProjectGroupingIndex(projectGrouping))
 }
 
 export function getDisplayedProjectGroupingForRepo<
@@ -345,10 +349,10 @@ export function buildProjectSections<
   for (const [key, section] of sections) {
     section.activityItems = ownership.get(key)?.items ?? []
   }
-  return orderProjectSections(
-    mergeSidebarProjectNameSections(sections, projectIndex?.nameGroups ?? new Map()),
-    repoMap,
-    args.repoOrder,
-    args.projectOrderBy
-  )
+  return [
+    ...mergeSidebarProjectNameSections(
+      new Map(orderProjectSections(sections, repoMap, args.repoOrder, args.projectOrderBy)),
+      projectIndex?.nameGroups ?? new Map()
+    )
+  ]
 }

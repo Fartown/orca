@@ -47,7 +47,7 @@ export function getProjectHeaderHostContexts(args: {
   const hostsById = indexExecutionHostsById([...hostRegistry.values()])
   const canonicalHostId = (hostId: ExecutionHostId): ExecutionHostId =>
     hostsById.get(hostId)?.id ?? hostId
-  const projectIndex = buildProjectGroupingIndex(args.projectGrouping)
+  const projectIndex = buildProjectGroupingIndex(args.projectGrouping, args.repoMap)
   const repoHostId = (repo: Repo): ExecutionHostId =>
     canonicalHostId(
       projectIndex?.setupByRepoId.get(repo.id)?.hostId ?? getRepoExecutionHostId(repo)

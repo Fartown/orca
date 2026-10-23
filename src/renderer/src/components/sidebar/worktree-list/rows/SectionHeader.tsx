@@ -1,5 +1,4 @@
 import React from 'react'
-import { SidebarProjectNameActions } from '@/sidebar-project-merge/SidebarProjectNameActions'
 import { ChevronDown } from 'lucide-react'
 import { ProjectHeaderHostLabel, ProjectHeaderHostTooltip } from './ProjectHeaderHostLabel'
 import type { ProjectHeaderHostContext } from './project-header-host-context'
@@ -38,7 +37,11 @@ import {
   ProjectGroupCreateWorkspaceButton,
   ProjectGroupHeaderMenu
 } from './project-group-header-actions'
-import type { RepoHeaderProjectActions } from './repo-header-project-actions'
+import {
+  RepoHeaderCreateWorkspaceButton,
+  RepoHeaderProjectActionsMenu,
+  type RepoHeaderProjectActions
+} from './repo-header-project-actions'
 import {
   handleRepoHeaderCollapseAffordancePointerDown,
   shouldIgnoreRepoHeaderToggle
@@ -49,7 +52,6 @@ import { getWorktreeOptionId } from './option-dom'
 export type SectionHeaderRowContext = {
   groupBy: WorktreeGroupBy
   projectHeaderHostContexts?: ReadonlyMap<string, ProjectHeaderHostContext>
-  visibleProjectRepoIdsBySection?: ReadonlyMap<string, ReadonlySet<string>>
   collapsedGroups: Set<string>
   workspaceStatuses: readonly WorkspaceStatusDefinition[]
   projectGroups: readonly ProjectGroup[]
@@ -389,15 +391,20 @@ export function renderWorktreeSectionHeaderRow(args: {
             ) : null}
 
             {row.repo && ctx.groupBy === 'repo' ? (
-              <SidebarProjectNameActions
+              <RepoHeaderProjectActionsMenu
                 repo={row.repo}
                 label={label}
-                sectionKey={row.key}
-                repoIds={ctx.visibleProjectRepoIdsBySection?.get(row.key)}
-                getRepoSshGate={ctx.getRepoSshGate}
-                createState={createState}
                 projectGroups={ctx.projectGroups}
                 actions={ctx.projectActions}
+              />
+            ) : null}
+
+            {row.repo && ctx.groupBy === 'repo' ? (
+              <RepoHeaderCreateWorkspaceButton
+                repo={row.repo}
+                label={label}
+                createState={createState}
+                onCreateForRepo={ctx.projectActions.onCreateForRepo}
               />
             ) : null}
           </ProjectHeaderActions>

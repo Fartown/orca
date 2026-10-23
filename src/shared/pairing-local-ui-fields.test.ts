@@ -6,7 +6,6 @@ describe('pairing-local UI fields', () => {
   // preload, so a field added here without wiring every seam would otherwise ship silently.
   it('census: the set is exactly the fields no pairing may exchange', () => {
     expect([...PAIRING_LOCAL_UI_FIELDS]).toEqual([
-      'sidebarProjectMerges',
       'automationHostFilter',
       'hideWorkspacesFromOtherDevices',
       'manualRepoOrder',
@@ -29,7 +28,6 @@ describe('pairing-local UI fields', () => {
 
   it('omits every member and keeps everything else', () => {
     const state = {
-      sidebarProjectMerges: [],
       hideWorkspacesFromOtherDevices: true,
       manualRepoOrder: [{ hostId: 'local' as const, repoId: 'repo-a' }],
       workspaceHostOrder: ['local' as const],

@@ -21,7 +21,6 @@ import {
 } from '../../../shared/execution-host'
 import { workspaceHostScopeForVisibleHosts } from '../../../shared/workspace-view/workspace-host-visibility'
 import { normalizeManualRepoOrder } from '../../../shared/manual-repo-order'
-import { normalizeSidebarProjectMerges } from '../../../shared/sidebar-project-merge/sidebar-project-merges'
 import { normalizeBrowserPageZoomLevel } from '../../../shared/browser-page-zoom'
 import { normalizeFeatureTipIds } from '../../../shared/feature-tips'
 import { normalizeContextualTourIds } from '../../../shared/contextual-tours'
@@ -184,9 +183,6 @@ export function updatePersistedUI(
       sanitizedUpdates.manualRepoOrder !== undefined
         ? normalizeManualRepoOrder(sanitizedUpdates.manualRepoOrder)
         : normalizeManualRepoOrder(operations.state.ui?.manualRepoOrder),
-    sidebarProjectMerges: normalizeSidebarProjectMerges(
-      sanitizedUpdates.sidebarProjectMerges ?? operations.state.ui?.sidebarProjectMerges
-    ),
     browserDefaultZoomLevel: normalizeBrowserPageZoomLevel(
       sanitizedUpdates.browserDefaultZoomLevel ?? operations.state.ui?.browserDefaultZoomLevel
     ),

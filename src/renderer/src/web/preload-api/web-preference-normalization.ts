@@ -70,7 +70,6 @@ export function mergeHostWebUIState(
   // Why `satisfies Record<...>` rather than a `Pick<...>` annotation: every member is optional in
   // PersistedUIState, so Pick would accept a literal that silently skipped a newly added member.
   const pinned = {
-    sidebarProjectMerges: local.sidebarProjectMerges,
     automationHostFilter: local.automationHostFilter,
     hideWorkspacesFromOtherDevices: local.hideWorkspacesFromOtherDevices === true,
     manualRepoOrder: local.manualRepoOrder,

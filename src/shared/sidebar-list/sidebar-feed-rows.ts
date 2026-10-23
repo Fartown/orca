@@ -243,7 +243,12 @@ export function planSidebarFeedRows(
     importedWorktreesByRepo: extras.importedWorktreesByRepo ?? new Map(),
     newExternalWorktreesInboxByRepo: extras.newExternalWorktreesInboxByRepo ?? new Map(),
     pendingCreations,
-    projectGrouping: catalog.projectGrouping,
+    projectGrouping: {
+      ...catalog.projectGrouping,
+      groupNamesByHost:
+        view.workspaceHostScope !== ALL_EXECUTION_HOSTS_SCOPE ||
+        view.visibleWorkspaceHostIds !== null
+    },
     folderWorkspaces: visibleFolderWorkspaces,
     hostLabelById: new Map(hostOptions.map((host) => [host.id, host.label])),
     defaultHostId,

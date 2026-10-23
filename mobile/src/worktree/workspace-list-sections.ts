@@ -198,7 +198,7 @@ export function buildMobileWorkspacePlan(
       : worktrees
   )
   const repoMap = buildSectionRepoMap(projectCatalog.repos, worktrees)
-  const projectIndex = buildProjectGroupingIndex(projectCatalog.grouping ?? undefined)
+  const projectIndex = buildProjectGroupingIndex(projectCatalog.grouping ?? undefined, repoMap)
   const occurrencePlan = buildWorktreeOccurrencePlan({
     rows: sorted,
     childrenByParentIdentity,
