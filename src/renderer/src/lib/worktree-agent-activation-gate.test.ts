@@ -230,7 +230,6 @@ describe('worktree agent activation gate', () => {
           boundPtyId: `${WORKTREE_ID}@@other-pty`
         })
     ],
-    ['the recorded tab is gone', () => {}],
     // A closed split or a replaced layout leaves the record naming a leaf the tab no longer has.
     [
       'the recorded leaf is no longer in the tab layout',
@@ -266,6 +265,29 @@ describe('worktree agent activation gate', () => {
     expect(deps.getState().terminalLayoutsByTabId['tab-live']).toEqual(recordedLayoutBefore)
     expect(deps.getState().ptyIdsByTabId['tab-live']).toBeUndefined()
   })
+
+  windowOwnedIt(
+    'restores the recorded tab and leaf when this renderer lacks that tab',
+    async () => {
+      const ptyId = `${WORKTREE_ID}@@live-pty`
+      const recorded = { paneKey: `tab-live:${LIVE_LEAF_ID}`, ptyId, tabId: 'tab-live' }
+      const { deps, createTab } = testDeps({
+        sessions: [listed(ptyId)],
+        surfaceOwners: new Map([[ptyId, { unowned: true, recorded }]])
+      })
+
+      await expect(runWorktreeAgentActivationGate(WORKTREE_ID, deps)).resolves.toBe('adopted')
+
+      expect(createTab).toHaveBeenCalledOnce()
+      expect(createTab).toHaveBeenCalledWith(WORKTREE_ID, undefined, undefined, {
+        id: 'tab-live',
+        initialLeafId: LIVE_LEAF_ID,
+        initialPtyId: ptyId,
+        activate: false,
+        recordInteraction: false
+      })
+    }
+  )
 
   // Layout-owner build: 'adopts a daemon PTY main placed for a folder workspace'.
   windowOwnedIt('adopts a daemon PTY minted for a folder workspace', async () => {

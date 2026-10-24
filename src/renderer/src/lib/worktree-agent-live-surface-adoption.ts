@@ -1,4 +1,5 @@
 import { ORCA_LAYOUT_OWNER_IS_MAIN } from '../../../shared/layout-owner-switch'
+import type { ClosedTerminalTabTombstonesByTabId } from '../../../shared/closed-terminal-tab-tombstones'
 import { parsePaneKey } from '../../../shared/stable-pane-id'
 import { worktreeIdsEqual } from '../../../shared/worktree/id'
 import type { useAppStore } from '@/store'
@@ -13,6 +14,7 @@ import type {
   LiveTerminalSurfaceOwner,
   LiveTerminalSurfaceOwnerIndex
 } from './worktree-live-terminal-surface-owners'
+import { restoreRecordedLiveTerminalSurface } from '../mobile-terminal-surface-recovery/recorded-live-terminal-surface'
 
 export type LiveSurfaceAdoptionStore = WorktreeOperationRouteState &
   Pick<
@@ -24,7 +26,10 @@ export type LiveSurfaceAdoptionStore = WorktreeOperationRouteState &
     | 'terminalLayoutsByTabId'
     | 'updateTabPtyId'
     | 'replaceTerminalLayoutPanePtyId'
-  >
+  > & {
+    closedTerminalTabTombstonesByTabId?: ClosedTerminalTabTombstonesByTabId
+    recentlyClosedAgentStatusTabIds?: Record<string, true>
+  }
 
 function layoutContainsLeaf(
   root: LiveSurfaceAdoptionStore['terminalLayoutsByTabId'][string]['root'],
@@ -243,7 +248,14 @@ export async function adoptLiveWorkspacePtySurfaces(
       continue
     }
     surfaced = true
-    if (owner.recorded && bindToRecordedSurface(getState(), worktreeId, owner.recorded)) {
+    const recorded = owner.recorded
+    if (
+      recorded &&
+      (bindToRecordedSurface(getState(), worktreeId, recorded) ||
+        restoreRecordedLiveTerminalSurface(getState, worktreeId, recorded, () =>
+          bindLivePtyToExactSurface(getState(), worktreeId, recorded)
+        ))
+    ) {
       continue
     }
     getState().createTab(worktreeId, undefined, undefined, {

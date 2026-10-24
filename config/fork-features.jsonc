@@ -23,6 +23,50 @@
   "dependsOnIgnore": ["src/renderer/src/components/ui/**"],
   "features": [
     {
+      "id": "mobile-terminal-surface-recovery",
+      "title": "手机打开工作区终端身份恢复",
+      "goal": "手机打开工作区时恢复宿主有记录而桌面缺标签的 live 终端原 tab/leaf，避免该路径重复生成空 shell",
+      "journal": "docs/issue/手机打开工作区终端身份恢复/journal.md",
+      "dependsOn": [
+        "src/renderer/src/lib/worktree-agent-live-surface-adoption.ts",
+        "src/renderer/src/lib/worktree-live-terminal-surface-owners.ts",
+        "src/shared/stable-pane-id.ts",
+        "src/shared/closed-terminal-tab-tombstones.ts",
+        "src/shared/terminal-tab-id.ts"
+      ],
+      "policyId": "mobile-terminal-surface-recovery",
+      "ownedPaths": [
+        "src/renderer/src/mobile-terminal-surface-recovery/**",
+        "docs/issue/手机打开工作区终端身份恢复/**"
+      ],
+      "requiredFiles": [
+        "docs/issue/手机打开工作区终端身份恢复/journal.md",
+        "docs/issue/手机打开工作区终端身份恢复/requirements/手机打开工作区终端身份恢复.md",
+        "docs/issue/手机打开工作区终端身份恢复/research/手机激活终端认领证据.md",
+        "docs/issue/手机打开工作区终端身份恢复/solutions/手机工作区原终端身份恢复方案.md",
+        "src/renderer/src/mobile-terminal-surface-recovery/recorded-live-terminal-surface.ts"
+      ],
+      "seams": [
+        {
+          "file": "src/renderer/src/lib/worktree-agent-live-surface-adoption.ts",
+          "mustContain": "restoreRecordedLiveTerminalSurface",
+          "why": "Route unowned recorded live PTYs through the feature-owned original-surface admission policy."
+        },
+        {
+          "file": "src/renderer/src/lib/worktree-agent-activation-gate.test.ts",
+          "mustContain": "restores the recorded tab and leaf when this renderer lacks that tab",
+          "why": "Prove exact restoration only when the recorded tab is missing while retaining legacy fallback cases."
+        }
+      ],
+      "tests": [
+        "src/renderer/src/mobile-terminal-surface-recovery/recorded-live-terminal-surface.test.ts",
+        "src/renderer/src/lib/worktree-agent-activation-gate.test.ts"
+      ],
+      "checks": [
+        "pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/mobile-terminal-surface-recovery/recorded-live-terminal-surface.test.ts src/renderer/src/lib/worktree-agent-activation-gate.test.ts"
+      ]
+    },
+    {
       "id": "native-chat-view-recovery",
       "title": "终端聊天视图恢复",
       "goal": "恢复已有终端标签的聊天视图切换，保留同一终端与会话绑定",
