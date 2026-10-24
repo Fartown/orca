@@ -50,7 +50,7 @@ gitGraph
 ## 3. 门禁:`config/architecture-policies.jsonc`
 
 - **`fork-upstream-diff-budget`**:`fork-integration-scope` 规则把分支相对**上次合并的上游提交(merge-base)**的全部改动限制在一张白名单里 —— 用 merge-base 而不是 `origin/main` 顶端,是为了上游往前跑时本地门禁不会无故变红。这张表就是 fork 对上游的改动预算:新功能只能新建自己的目录,碰上游文件只能碰表里列出的接缝。每次同步上游,冲突只会出现在这些接缝上。
-- **每功能一个策略**(`goals-native-feature`、`issues-existing-capability-reuse`、`self-hosted-artifacts`):`comparison: worktree` 的规则只看当前未提交改动。改了某功能自己的文件,工作区里其余改动必须落在该功能的 owned 路径、接缝或 fork 基础设施文件里。这保证一个会话一次只动一条功能线。
+- **每功能一个策略**(`goals-native-feature`、`session-names-native-feature`、`self-hosted-artifacts`):`comparison: worktree` 的规则只看当前未提交改动。改了某功能自己的文件,工作区里其余改动必须落在该功能的 owned 路径、接缝或 fork 基础设施文件里。这保证一个会话一次只动一条功能线。
 - 依赖边界规则保证上游原生模块不 import fork 功能的领域模块;`forbidden-path` 保证已删除的旧实现(如内置 Goal 插件)不会被重新引入。
 
 新增功能时,在 `fork-features.jsonc` 加记录,在策略文件加它的策略,并把它的 owned 路径与接缝加进 `fork-integration-scope` 的白名单;`check:fork-features` 会核对两边一致。
@@ -100,7 +100,7 @@ Fork 的增量代码质量和 React Doctor 检查以 `HEAD` 与纯上游镜像 `
 
 1. 一条功能一个 worktree、一个分支、一个 `docs/issue/<需求>/`。不同 agent 会话不共用工作区。
 2. 改上游文件前先问:能不能放进自己的目录?必须碰上游时,只碰接缝,并把接缝登记到 `fork-features.jsonc` 的 `seams`;新 import 到的上游模块登记到 `dependsOn`。
-3. 提交要小、要按功能打前缀(`feat(goals)`、`fix(issues)`),不要把几条线攒成一个大提交。
+3. 提交要小、要按功能打前缀(`feat(goals)`、`fix(session-names)`),不要把几条线攒成一个大提交。
 4. 纯格式化不要带进上游文件的 diff:整仓 `oxfmt` 之后,用 `git checkout origin/main -- <文件>` 把只有格式差异的上游文件恢复原样。
    提交钩子仍对全部暂存源码运行两组 lint；格式化入口 `format-fork-staged-files.mjs` 保留与已合入上游逐字相同的文件（合并提交时也包括另一侧已合入的上游，例如把已同步的 `fork/integration` 合进功能分支），避免再次引入刚撤回的格式差异。新文件与语义改动仍正常格式化；上游引用不可用时沿用普通格式化。
 5. 真机验证产物放 `.docs/<主题>-ui-validation/<日期>/{scripts,evidence,build}`,`.docs` 不进仓库;文档里引用完整相对路径。

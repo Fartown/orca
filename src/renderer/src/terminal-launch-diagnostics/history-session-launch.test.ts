@@ -1,9 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import {
-  launchAiVaultSessionInNewTab,
-  launchDroppedAiVaultSession,
-  launchRevealedAiVaultSession
-} from './history-session-launch'
+import { launchDroppedAiVaultSession, launchRevealedAiVaultSession } from './history-session-launch'
 import { currentTerminalLaunchOrigin, withTerminalLaunchOrigin } from './launch-origin'
 
 const mocked = vi.hoisted(() => ({ launch: vi.fn(), state: {} }))
@@ -13,7 +9,6 @@ beforeEach(() => vi.clearAllMocks())
 
 describe('history entry diagnostic decorators', () => {
   it.each([
-    [launchAiVaultSessionInNewTab, 'ai-vault-resume'],
     [launchDroppedAiVaultSession, 'ai-vault-drop-resume'],
     [launchRevealedAiVaultSession, 'ai-vault-reveal-resume']
   ] as const)('keeps launch arguments and return identity while naming %s', (launch, origin) => {
@@ -35,7 +30,7 @@ describe('history entry diagnostic decorators', () => {
     })
     withTerminalLaunchOrigin('queued-startup', () => {
       expect(() =>
-        launchAiVaultSessionInNewTab({ agent: 'claude', worktreeId: 'wt', command: '' })
+        launchRevealedAiVaultSession({ agent: 'claude', worktreeId: 'wt', command: '' })
       ).toThrow(error)
       expect(currentTerminalLaunchOrigin()).toBe('queued-startup')
     })

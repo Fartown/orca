@@ -17,8 +17,8 @@ export class GoalFeatureUnavailableError extends Error {
 }
 
 /**
- * Same shape as the Issues readiness registry: `goals.status` stays answerable
- * while the service is absent, and every other method fails with one code.
+ * `goals.status` stays answerable while the service is absent, and every other
+ * method fails with one code.
  */
 export class GoalFeatureReadinessRegistry<TService> {
   private service: TService | null = null

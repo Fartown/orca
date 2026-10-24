@@ -1,5 +1,3 @@
-import { ORCA_ISSUES_RUNTIME_CAPABILITY } from './issues/constants'
-export { ORCA_ISSUES_RUNTIME_CAPABILITY } from './issues/constants'
 import { ACCOUNT_RUNTIME_CAPABILITIES } from './account-runtime-capabilities'
 import * as agentLaunchCapabilities from './agent-launch-runtime-capability'
 import {
@@ -137,7 +135,6 @@ export const NATIVE_REMOTE_RUNTIME_CLIENT_CAPABILITIES = [
 
 // Each area lists what it publishes in its own module; a new capability edits only that module.
 export const RUNTIME_CAPABILITIES = [
-  ORCA_ISSUES_RUNTIME_CAPABILITY,
   ...HOST_RUNTIME_CAPABILITIES,
   ...DEVICE_KEY_RUNTIME_CAPABILITIES,
   ...MOBILE_RUNTIME_CAPABILITIES,

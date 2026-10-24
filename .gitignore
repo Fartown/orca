@@ -211,14 +211,9 @@ tests/e2e/.cross-version-checkouts/
 # vendored gems.
 /mobile/vendor/
 
-# Local task scratch directories; only the tracked feature docs under .docs/并行任务看板 belong in git.
+# Local task scratch directories.
 .docs/*
-!.docs/并行任务看板/
 mcp-gateway/
-
-# Issues feature requirement baseline is tracked despite the broad docs/** ignore above.
-!docs/requirements/
-!docs/requirements/Issues-会话展示与关闭会话恢复需求.md
 
 # Consolidated feature requirements and their lightweight index.
 !docs/issue/
@@ -226,8 +221,6 @@ mcp-gateway/
 !docs/issue/侧栏项目合并/
 !docs/issue/侧栏项目合并/**
 docs/issue/侧栏项目合并/**/.DS_Store
-!docs/issue/Issues看板与会话/
-!docs/issue/Issues看板与会话/**
 !docs/issue/会话命名与身份保护/
 !docs/issue/会话命名与身份保护/**
 !docs/issue/Goal目标模式/

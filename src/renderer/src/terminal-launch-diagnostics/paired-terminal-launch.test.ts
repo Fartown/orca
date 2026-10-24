@@ -27,12 +27,12 @@ describe('paired terminal launch diagnostic seam', () => {
       hostTabId: 'tab-two'
     }))
     await Promise.all([
-      observePairedTerminalLaunch(one, mocked.create, 'ai-vault-resume'),
-      observePairedTerminalLaunch(two, mocked.create, 'ai-vault-resume')
+      observePairedTerminalLaunch(one, mocked.create, 'ai-vault-reveal-resume'),
+      observePairedTerminalLaunch(two, mocked.create, 'ai-vault-reveal-resume')
     ])
     for (const tabId of ['tab-one', 'tab-two']) {
       expect(mocked.record).toHaveBeenCalledWith(
-        'ai-vault-resume',
+        'ai-vault-reveal-resume',
         expect.objectContaining({
           tabId,
           eventPhase: 'created',

@@ -415,8 +415,8 @@ describe('aiVaultTitle slot ownership', () => {
     expect(useAgentRowConversationName(sibling)).not.toBe('Fix auth bug')
   })
 
-  it('lets a Conversation rename override the native Provider slot', () => {
-    canonicalTitleState.current = 'Named in Issues'
+  it('lets a manual name override the native Provider slot', () => {
+    canonicalTitleState.current = 'Manual override name'
     const tab = {
       id: 'tab-1',
       worktreeId: 'wt-1',
@@ -436,6 +436,6 @@ describe('aiVaultTitle slot ownership', () => {
       entry: { prompt: '', providerSession: { key: 'session_id', id: 'session-a' } }
     } as Partial<DashboardAgentRow>)
 
-    expect(useAgentRowConversationName(owner)).toBe('Named in Issues')
+    expect(useAgentRowConversationName(owner)).toBe('Manual override name')
   })
 })

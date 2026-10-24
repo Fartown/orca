@@ -7,7 +7,6 @@ import { WorkspacePortScanner } from '../components/ports/WorkspacePortScanner'
 import { SavedHostScopeWidenGate } from '../components/sidebar/SavedHostScopeWidenGate'
 import { MacosTccPromptNoticeHost } from '../hooks/MacosTccPromptNoticeHost'
 import { useAppStore } from '../store'
-import { IssueDomainSyncGate } from '../issues/IssueDomainSyncGate'
 import { GoalDomainSyncGate } from '../goals/GoalDomainSyncGate'
 import { StructuredAgentSessionAttentionBridge } from '../components/native-chat/StructuredAgentSessionAttentionBridge'
 import { StructuredAgentSessionStatusBridge } from '../components/native-chat/StructuredAgentSessionStatusBridge'
@@ -27,7 +26,6 @@ export function AppBackgroundServices(): React.JSX.Element {
   return (
     <>
       <WorkspacePortScanner enabled={workspaceSessionReady} />
-      <IssueDomainSyncGate />
       <GoalDomainSyncGate />
       {/* Why: plugin language-pack discovery must not re-render the App shell. */}
       <MacosTccPromptNoticeHost />

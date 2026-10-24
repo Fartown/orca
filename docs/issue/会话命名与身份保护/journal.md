@@ -447,3 +447,12 @@ external_ids: []
 - 验证证据：原始五分片日志及本地复验归档在 .docs/ci-baseline-repair/2026-10-22/evidence/；最终同树验证待完成。
 - 未解决问题：最终 CI 尚未通过；未部署或重启生产应用、远程服务或终端。
 - 下一步：同树完整检查、隐藏应用与 SSH 验证、最终 CI 后合入。
+
+## 2026-10-23 随 Issues 下线调整测试位置（done）
+
+- 本轮目标：Issues 看板整体下线后，会话命名的测试和登记不再依赖 Issues 目录。
+- 完成内容：顶部名称投影、Provider 名称存储链、Dashboard 名称归属三个测试从 `src/renderer/src/issues/` 移到 `src/renderer/src/session-names/`；`issues-session-name-file-chain` 文件链测试改名为 `session-name-file-chain`；checks 去掉两个只测 Issues 会话展示的用例；注释与测试数据不再提 Issues。名称逻辑本身不变。
+- 代码或文档变更：上述测试文件、`config/fork-features.jsonc` 与 `config/architecture-policies.jsonc` 的会话命名条目、顶部名称投影测试用例文档；需求文档去掉 Issues 消费方与失效链接，注明「已有 Orca 会话人工名」一档在 Issues 移除后暂无来源。
+- 验证证据：pnpm tc、全部 16 个功能的 38 条 checks、check:fork-features、check:fork-docs、本地化与 RPC 目录校验通过；隐藏 Electron 本机与 SSH（127.0.0.1:2222 上的 orcad）真机验收 5/5 通过，证据在 `.docs/issues-board-removal-ui-validation/2026-10-23/`。
+- 未解决问题：无。
+- 下一步：随 Issues 下线 PR 合入 fork/integration。

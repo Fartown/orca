@@ -5,9 +5,9 @@
  * Codex only emits a hook when a turn completes, so a pane resumed into an idle
  * agent names its provider session nowhere the original-pane finder used to
  * look: `agentStatusByPaneKey` is empty for it, and resume already consumed the
- * sleeping record. Both the Session History panel and the Issues shortcut then
- * offered Resume for a session that was already open, and codex refused the
- * second writer with `already has an active writer (code -32600)`.
+ * sleeping record. The Session History panel then offered Resume for a session
+ * that was already open, and codex refused the second writer with
+ * `already has an active writer (code -32600)`.
  *
  * Run:
  *   pnpm exec playwright test tests/e2e/ai-vault-hook-silent-resume-original-pane.spec.ts \

@@ -18,9 +18,6 @@ import { useWorkspaceRevealBodyRedirect } from './use-workspace-reveal-body-redi
 import { resolveLeftSidebarStyleVariables } from '@/lib/left-sidebar-appearance'
 import { useSystemPrefersDark } from '@/components/terminal-pane/use-system-prefers-dark'
 import { lazyWithRetry } from '@/lib/lazy-with-retry'
-import { useIssueDomainStore } from '@/issues/use-issue-domain-store'
-import { SidebarRootModeBar } from './issues/sidebar-root-mode-bar'
-import { IssueSidebar } from './issues/issue-sidebar'
 import { LocalGitToolchainScanBanner } from './LocalGitToolchainScanBanner'
 import { SeveredTerminalDaemonBanner } from './SeveredTerminalDaemonBanner'
 import { StalledTerminalDaemonBanner } from './StalledTerminalDaemonBanner'
@@ -96,7 +93,6 @@ function Sidebar({
   const fetchAllWorktrees = useAppStore((s) => s.fetchAllWorktrees)
   const activeModal = useAppStore((s) => s.activeModal)
   const statusBarVisible = useAppStore((s) => s.statusBarVisible)
-  const sidebarRootMode = useIssueDomainStore((state) => state.sidebarRootMode)
   const systemPrefersDark = useSystemPrefersDark()
   const leftSidebarStyle = useMemo(
     () => resolveLeftSidebarStyleVariables(settings, systemPrefersDark),
@@ -176,59 +172,52 @@ function Sidebar({
           <>
             {/* Fixed controls */}
             <SidebarNav />
+            <SidebarHeader
+              onWorkspaceBoardMenuOpenChange={setWorkspaceBoardMenuOpen}
+              activityOptionsTarget={setAgentOptionsTarget}
+            />
             <SeveredTerminalDaemonBanner />
             <StalledTerminalDaemonBanner />
-            <SidebarRootModeBar />
-            {sidebarRootMode === 'workspaces' ? (
-              <>
-                <SidebarHeader
-                  onWorkspaceBoardMenuOpenChange={setWorkspaceBoardMenuOpen}
-                  activityOptionsTarget={setAgentOptionsTarget}
-                />
-                {sidebarBody === 'agents' ? (
-                  <React.Suspense fallback={<div className="min-h-0 flex-1" />}>
-                    <ActivityThreadCollapseContext.Provider value={agentsCollapseState}>
-                      <SidebarAgentsList
-                        readFilter={agentReadFilter}
-                        setReadFilter={setAgentReadFilter}
-                        groupBy={agentGroupBy}
-                        setGroupBy={setAgentGroupBy}
-                        query={agentQuery}
-                        setQuery={setAgentQuery}
-                        optionsTarget={agentOptionsTarget}
-                        scrollTopRef={agentsScrollTopRef}
-                      />
-                    </ActivityThreadCollapseContext.Provider>
-                  </React.Suspense>
-                ) : (
-                  <>
-                    <LocalGitToolchainScanBanner />
-                    <WorktreeList
-                      scrollOffsetRef={worktreeScrollOffsetRef}
-                      scrollAnchorRef={worktreeScrollAnchorRef}
-                      workspaceBoardOpen={workspaceBoardOpen}
-                      onWorktreeCardClick={closeWorkspaceBoard}
-                      onWorkspaceBoardDragPreviewStart={previewWorkspaceBoardFromDrag}
-                      onWorkspaceBoardDragPreviewCommit={solidifyWorkspaceBoardFromDrag}
-                      onWorkspaceBoardDragPreviewCancel={cancelWorkspaceBoardDragPreview}
-                    />
-                  </>
-                )}
-
-                <div className="relative shrink-0">
-                  <SetupScriptPromptCard />
-
-                  {/* Fixed bottom toolbar */}
-                  <SidebarToolbar
-                    workspaceBoardOpen={workspaceBoardOpen}
-                    workspaceBoardDragPreviewOpen={workspaceBoardDragPreviewOpen}
-                    onWorkspaceBoardToggle={toggleWorkspaceBoard}
+            {sidebarBody === 'agents' ? (
+              <React.Suspense fallback={<div className="min-h-0 flex-1" />}>
+                <ActivityThreadCollapseContext.Provider value={agentsCollapseState}>
+                  <SidebarAgentsList
+                    readFilter={agentReadFilter}
+                    setReadFilter={setAgentReadFilter}
+                    groupBy={agentGroupBy}
+                    setGroupBy={setAgentGroupBy}
+                    query={agentQuery}
+                    setQuery={setAgentQuery}
+                    optionsTarget={agentOptionsTarget}
+                    scrollTopRef={agentsScrollTopRef}
                   />
-                </div>
-              </>
+                </ActivityThreadCollapseContext.Provider>
+              </React.Suspense>
             ) : (
-              <IssueSidebar />
+              <>
+                <LocalGitToolchainScanBanner />
+                <WorktreeList
+                  scrollOffsetRef={worktreeScrollOffsetRef}
+                  scrollAnchorRef={worktreeScrollAnchorRef}
+                  workspaceBoardOpen={workspaceBoardOpen}
+                  onWorktreeCardClick={closeWorkspaceBoard}
+                  onWorkspaceBoardDragPreviewStart={previewWorkspaceBoardFromDrag}
+                  onWorkspaceBoardDragPreviewCommit={solidifyWorkspaceBoardFromDrag}
+                  onWorkspaceBoardDragPreviewCancel={cancelWorkspaceBoardDragPreview}
+                />
+              </>
             )}
+
+            <div className="relative shrink-0">
+              <SetupScriptPromptCard />
+
+              {/* Fixed bottom toolbar */}
+              <SidebarToolbar
+                workspaceBoardOpen={workspaceBoardOpen}
+                workspaceBoardDragPreviewOpen={workspaceBoardDragPreviewOpen}
+                onWorkspaceBoardToggle={toggleWorkspaceBoard}
+              />
+            </div>
           </>
         )}
 

@@ -9,6 +9,16 @@ external_ids: []
 
 # 集成分支自动出包 开发 Journal
 
+## 2026-10-23：修复数据目录别名与安装验收误判（testing）
+
+- 本轮目标：修复重新审查发现的 Linux 服务更新接管及验收误判，单独开 PR 供用户查看，不直接合入。
+- 完成内容：正式 .55 包在同一隔离配置下仅改变数据目录写法，真实路径/符号链接/再次真实路径的自动更新支持依次为 true/false/true；确认安装脚本读取不存在的 unsupportedReason，未拦截 automatic:false。
+- 代码或文档变更：补充 REQ-414 与 TC-415；实现将复用现有目录身份比较，保留固定 handoff 文件名和配置隔离；安装验收改用可测试的状态及会话断言。
+- 代码审查：逐项检查 PR #67 的路径接管、RPC 契约、验收采集与测试证据。发现 P2：验收仅比较 PTY ID，未使用执行主机提供的 incarnationId，可能把同 ID 的重建终端误判为保留；已补采集与校验，缺失生命周期证据也不得通过。新增两条回归先在原验收器失败，再在修复后通过；另核对无 PTY 标签不会误拒绝。
+- 验证证据：原复现位于相邻 orca-linux-update worktree 的 `.docs/linux-auto-update-ui-validation/2026-10-23/evidence/review-profile-alias.json`；生产当前 .55 返回 unsupported-headless-serve。
+- 未解决问题：代码、回归与带符号链接 profile 的本地/SSH 真实升级均通过；PR #67 待用户审查及完整 CI。生产配置恢复尝试未通过并撤回；按用户要求，后续构建和所有有效实机验证使用隔离实例。
+- 下一步：测试实例和密钥已清理；补充审查结果及验收器回归，保持 PR #67 待审查，不直接合入，不将测试包安装到生产。
+
 ## 2026-10-22：补齐正式发布前的 PR 运行器入口（implementing）
 
 - 本轮目标：按用户要求合入并发布 Linux 包，以发布包覆盖原安装，后续不创建安装备份。
@@ -23,6 +33,7 @@ external_ids: []
 - [Linux 服务自动更新方案](solutions/Linux服务自动更新方案.md)：REQ-414，复用 AppImage 原生更新和 CLI 接管。
 - [Linux 服务自动更新用例](tests/cases/Linux服务自动更新.md)：TC-415，本地与 SSH 的真实包升级验证。
 - [Linux 服务自动更新验收](tests/runs/2026-10-23-linux-auto-update.md)：本地和 SSH 真实包 A→B、坏包拒绝及终端连续性通过。
+- [Linux 目录别名与验收修复](tests/runs/2026-10-23-linux-update-paths.md)：PR #67；真实符号链接 profile 下，本地与 SSH 升级及原 shell PID 保留通过。
 
 | 类型     | 文档                                                                   | 状态         | 说明                                                                              |
 | -------- | ---------------------------------------------------------------------- | ------------ | --------------------------------------------------------------------------------- |
@@ -519,3 +530,12 @@ external_ids: []
 - 验证证据：远端 `5fc81e0ae4b` 第 3 分片共 26,321 项通过、仅该清单一项失败，其余四分片通过；原始日志见 `.docs/ci-baseline-repair/2026-10-22/evidence/unit-sweep/shard3-5fc81e0.log`。本地完整出包与相关合同 19 文件 245 项通过，功能/文档/架构与改动文件格式检查通过。
 - 未解决问题：最终同树 CI 尚未完成；生产运行实例未动。
 - 下一步：定向检查后提交，再等待最终完整 CI 并合入。
+
+## 2026-10-23 随 Issues 下线收掉 orcad 与发布说明里的 Issues（done）
+
+- 本轮目标：Issues 下线后，orcad 不再启动它，发布说明不再把 `issues` 提交归到已删除的功能下。
+- 完成内容：`orcad-fork-services.ts` 只启动 Goals 与局域网分享；发布说明去掉 `issues → issues-board` 别名；更新探针合同不再读取已删的 Issues 打包夹具；dependsOn 去掉 `orcad-issues.ts`。
+- 代码或文档变更：`src/main/integration-builds/orcad-fork-services.ts`、`config/scripts/integration-builds/` 下的发布说明与探针合同测试、功能登记。
+- 验证证据：pnpm tc、全部 16 个功能的 38 条 checks、check:fork-features、check:fork-docs、本地化与 RPC 目录校验通过；隐藏 Electron 本机与 SSH（127.0.0.1:2222 上的 orcad）真机验收 5/5 通过，证据在 `.docs/issues-board-removal-ui-validation/2026-10-23/`。 S2 中远端 orcad 的 `issues.*` 返回 method_not_found，`goals.status` 为 ready。
+- 未解决问题：无。
+- 下一步：随 Issues 下线 PR 合入 fork/integration。

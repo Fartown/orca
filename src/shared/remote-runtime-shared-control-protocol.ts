@@ -95,12 +95,6 @@ export function getCleanupRequest(
       params: { subscriptionId: subscription.requestId }
     }
   }
-  if (subscription.method === 'issues.subscribeChanges') {
-    return {
-      method: 'issues.unsubscribeChanges',
-      params: { subscriptionId: subscription.requestId }
-    }
-  }
   return null
 }
 
