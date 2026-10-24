@@ -7,6 +7,32 @@
   ],
   "policies": [
     {
+      "id": "mobile-terminal-surface-recovery",
+      "description": "Original-surface recovery for mobile workspace activation, with one product seam and feature-owned admission policy.",
+      "rules": [
+        {
+          "id": "mobile-terminal-surface-recovery-worktree-scope",
+          "type": "change-scope",
+          "comparison": "worktree",
+          "whenChanged": [
+            "src/renderer/src/mobile-terminal-surface-recovery/**",
+            "docs/issue/手机打开工作区终端身份恢复/**"
+          ],
+          "allowedPaths": [
+            "src/renderer/src/mobile-terminal-surface-recovery/**",
+            "src/renderer/src/lib/worktree-agent-live-surface-adoption.ts",
+            "src/renderer/src/lib/worktree-agent-activation-gate.test.ts",
+            "docs/issue/手机打开工作区终端身份恢复/**",
+            "docs/issue/README.md",
+            "config/fork-features.jsonc",
+            "config/architecture-policies.jsonc",
+            ".gitignore"
+          ],
+          "message": "Change is outside the mobile terminal surface recovery feature scope."
+        }
+      ]
+    },
+    {
       "id": "native-chat-view-recovery",
       "description": "Restore the existing terminal/chat view action without creating or resuming provider sessions.",
       "rules": [
@@ -158,6 +184,10 @@
           // diff against the upstream commit it last merged, evaluated without a sync first.
           "requireBaseAncestor": false,
           "allowedPaths": [
+            "src/renderer/src/mobile-terminal-surface-recovery/**",
+            "src/renderer/src/lib/worktree-agent-live-surface-adoption.ts",
+            "src/renderer/src/lib/worktree-agent-activation-gate.test.ts",
+            "docs/issue/手机打开工作区终端身份恢复/**",
             "src/renderer/src/native-chat-view-recovery/**",
             "docs/issue/终端聊天视图恢复/**",
             "src/renderer/src/components/tab-bar/SortableTabContextMenu.tsx",
