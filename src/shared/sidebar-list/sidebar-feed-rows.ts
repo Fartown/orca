@@ -1,5 +1,5 @@
+import { withNameGroupHostScope } from '../sidebar-project-merge/sidebar-project-name-groups'
 import {
-  ALL_EXECUTION_HOSTS_SCOPE,
   getWorktreeExecutionHostId,
   normalizeExecutionHostOrder,
   parseExecutionHostId,
@@ -243,7 +243,7 @@ export function planSidebarFeedRows(
     importedWorktreesByRepo: extras.importedWorktreesByRepo ?? new Map(),
     newExternalWorktreesInboxByRepo: extras.newExternalWorktreesInboxByRepo ?? new Map(),
     pendingCreations,
-    projectGrouping: catalog.projectGrouping,
+    projectGrouping: withNameGroupHostScope(catalog.projectGrouping, view),
     folderWorkspaces: visibleFolderWorkspaces,
     hostLabelById: new Map(hostOptions.map((host) => [host.id, host.label])),
     defaultHostId,
@@ -262,8 +262,7 @@ export function planSidebarFeedRows(
       hostOptions,
       normalizeExecutionHostOrder(view.workspaceHostOrder ?? domains.desktop?.workspaceHostOrder)
     ),
-    hostScoped:
-      view.workspaceHostScope !== ALL_EXECUTION_HOSTS_SCOPE || view.visibleWorkspaceHostIds !== null
+    hostScoped: visibleHostIdSet !== null
   }
 }
 

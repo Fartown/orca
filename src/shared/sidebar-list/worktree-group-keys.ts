@@ -7,7 +7,10 @@ import {
   getWorkspaceStatusGroupKey
 } from '../workspace-statuses'
 import { ALL_GROUP_KEY, getPRLaneKey, getProjectGroupHeaderKey } from './group-keys'
-import { buildProjectGroupingIndex, getProjectGroupingForRepo } from '../project-section-grouping'
+import {
+  buildProjectGroupingIndex,
+  getDisplayedProjectGroupingForRepo
+} from '../project-section-grouping'
 import type { ProjectSectionModel } from '../project-section-grouping'
 import type { SidebarPRGroupReader, WorktreeGroupBy } from './row-types'
 
@@ -27,10 +30,10 @@ export function getGroupKeyForWorktree(
     return getWorkspaceStatusGroupKey(getWorkspaceStatus(worktree, workspaceStatuses))
   }
   if (groupBy === 'repo') {
-    return getProjectGroupingForRepo(
+    return getDisplayedProjectGroupingForRepo(
       worktree.repoId,
       repoMap,
-      buildProjectGroupingIndex(projectGrouping)
+      buildProjectGroupingIndex(projectGrouping, repoMap)
     ).key
   }
   return getPRLaneKey(prGroupOf?.(worktree) ?? 'in-progress')

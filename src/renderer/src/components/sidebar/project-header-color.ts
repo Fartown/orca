@@ -25,7 +25,8 @@ export function resolveProjectGroupHeaderColor(args: {
   if (
     args.groupBy !== 'repo' ||
     (!args.headerKey.startsWith(PROJECT_GROUP_HEADER_KEY_PREFIX) &&
-      !args.headerKey.startsWith(PROVIDER_PROJECT_HEADER_KEY_PREFIX))
+      !args.headerKey.startsWith(PROVIDER_PROJECT_HEADER_KEY_PREFIX) &&
+      !args.headerKey.startsWith('sidebar-name:'))
   ) {
     return undefined
   }

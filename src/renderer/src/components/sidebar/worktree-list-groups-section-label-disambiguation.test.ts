@@ -1,9 +1,6 @@
 /**
- * Sidebar section headers disambiguate identical display names by appending
- * parent path segments. Every tracked repo is projected into a project, so
- * `project:` headers — not just `repo:` ones — are where collisions surface;
- * stabilising which model layer supplies the label (#16127) must not turn the
- * disambiguation off.
+ * Same-name projects share a header; protected checkouts and untracked repos
+ * keep path disambiguation when their native sections stay separate.
  */
 import { describe, expect, it } from 'vitest'
 import { buildRows } from './worktree-list/grouping/build-rows.test-fixture'
@@ -61,16 +58,31 @@ describe('sidebar section headers with colliding display names', () => {
   const workRepo: Repo = { ...repo, id: 'repo-work', path: '/work/api', displayName: 'api' }
   const ossRepo: Repo = { ...repo, id: 'repo-oss', path: '/oss/api', displayName: 'api' }
 
-  it('path-disambiguates two project headers that share a display name', () => {
+  it('merges two native project sections that share a display name', () => {
     expect(
       buildHeaders(
         [workRepo, ossRepo],
         [makeProject('github:acme/api', workRepo.id), makeProject('gitlab:me/api', ossRepo.id)],
         [makeSetup(workRepo, 'github:acme/api'), makeSetup(ossRepo, 'gitlab:me/api')]
       )
+    ).toMatchObject([{ key: 'sidebar-name:api', label: 'api', count: 2 }])
+  })
+
+  it('keeps path labels for checkouts protected by the native grouping rule', () => {
+    expect(
+      buildHeaders(
+        [workRepo, ossRepo],
+        [
+          {
+            ...makeProject('github:acme/api', workRepo.id),
+            sourceRepoIds: [workRepo.id, ossRepo.id]
+          }
+        ],
+        [makeSetup(workRepo, 'github:acme/api'), makeSetup(ossRepo, 'github:acme/api')]
+      )
     ).toMatchObject([
-      { key: 'project:github:acme/api', label: 'work/api' },
-      { key: 'project:gitlab:me/api', label: 'oss/api' }
+      { key: 'project:github:acme/api::setup:repo-work', label: 'work/api' },
+      { key: 'project:github:acme/api::setup:repo-oss', label: 'oss/api' }
     ])
   })
 

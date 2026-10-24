@@ -14,7 +14,10 @@ import {
   getMixedWorktreeHostContextLabels,
   getNoticeHostContextLabels
 } from './host-labels'
-import { buildProjectGroupingIndex, getProjectGroupingForRepo } from '../project-section-grouping'
+import {
+  buildProjectGroupingIndex,
+  getDisplayedProjectGroupingForRepo
+} from '../project-section-grouping'
 import {
   buildWorktreeOccurrencePlan,
   type WorktreeOccurrenceSection
@@ -103,7 +106,7 @@ export function planSidebarRows(inputs: SidebarRowPlanInputs) {
     pinnedDisplayPolicy,
     filterRepoIds
   } = inputs
-  const projectIndex = buildProjectGroupingIndex(projectGrouping)
+  const projectIndex = buildProjectGroupingIndex(projectGrouping, repoMap)
   // Membership is decided once, above the groupBy switch: every mode renders the
   // same set of folder workspaces and only chooses where they land (#15362).
   const renderableFolderWorkspaces = getRenderableFolderWorkspaces(folderWorkspaces, projectGroups)
@@ -124,7 +127,7 @@ export function planSidebarRows(inputs: SidebarRowPlanInputs) {
     isPinned: (worktree) => worktree.isPinned === true,
     duplicatePinned: pinnedDisplayPolicy === 'duplicate-in-groups',
     owningSectionOf: (worktree) =>
-      getProjectGroupingForRepo(worktree.repoId, repoMap, projectIndex),
+      getDisplayedProjectGroupingForRepo(worktree.repoId, repoMap, projectIndex),
     projectIdOf: (worktree) => worktree.repoId,
     sectionsOf: ({ pinned, natural, displayRootByIdentity }) => {
       const groups: OrderedGroupEntry[] =
