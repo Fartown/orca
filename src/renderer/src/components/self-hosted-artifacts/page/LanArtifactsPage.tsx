@@ -2,11 +2,11 @@ import { useEffect, useMemo, useState } from 'react'
 import { ArtifactListToolbar } from '@/components/artifacts/ArtifactListToolbar'
 import { ArtifactsPageSkeleton } from '@/components/artifacts/ArtifactsPageSkeleton'
 import { ArtifactsPageErrorBanner } from '@/components/artifacts/ArtifactsPageStates'
-import { useConfirmationDialog } from '@/components/confirmation-dialog-context'
 import { translate } from '@/i18n/i18n'
 import { useAppStore } from '@/store'
 import { LanArtifactHostSection } from './LanArtifactHostSection'
 import { useLanArtifactHosts } from './use-lan-artifact-hosts'
+import { useConfirmStopSharing } from '../use-confirm-stop-sharing'
 import { useBoundedHostRows } from '@/components/host-picker/use-bounded-host-rows'
 import { HostListSearchField } from '@/components/host-picker/HostListSearchField'
 import { HostListOverflowNote } from '@/components/host-picker/HostListOverflowNote'
@@ -17,7 +17,7 @@ export default function LanArtifactsPage(): React.JSX.Element {
   const closePage = useAppStore((state) => state.closeArtifactsPage)
   const openSettingsPage = useAppStore((state) => state.openSettingsPage)
   const openSettingsTarget = useAppStore((state) => state.openSettingsTarget)
-  const confirm = useConfirmationDialog()
+  const confirmStop = useConfirmStopSharing()
   const { hosts, loading, error, stoppingToken, reload, stopWorkspace } = useLanArtifactHosts()
   const [query, setQuery] = useState('')
   const hostChoices = useMemo(
@@ -102,24 +102,7 @@ export default function LanArtifactsPage(): React.JSX.Element {
                 openSettingsPage()
               }}
               onStopWorkspace={(workspace) =>
-                void confirm({
-                  title: translate(
-                    'auto.components.selfHostedArtifacts.stopDialog.title',
-                    'Stop sharing {{workspace}}?',
-                    {
-                      workspace: workspace.label
-                    }
-                  ),
-                  description: translate(
-                    'auto.components.selfHostedArtifacts.stopDialog.description',
-                    'Every link to files in this workspace will stop working. Sharing it again creates new links.'
-                  ),
-                  confirmLabel: translate(
-                    'auto.components.selfHostedArtifacts.stopDialog.confirm',
-                    'Stop sharing'
-                  ),
-                  confirmVariant: 'destructive'
-                }).then((accepted) =>
+                void confirmStop(workspace.label).then((accepted) =>
                   accepted
                     ? stopWorkspace(listing.host.executionHostId, workspace.token)
                     : undefined

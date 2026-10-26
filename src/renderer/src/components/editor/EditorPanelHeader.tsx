@@ -20,8 +20,6 @@ import { useShortcutKeyDetails } from '@/hooks/useShortcutLabel'
 import { ShortcutKeyCombo } from '@/components/ShortcutKeyCombo'
 import type { ArtifactWriteRequest } from '../../../../shared/artifacts'
 import { EditorFileLanShareButton } from '@/components/self-hosted-artifacts/share-button/LanArtifactShareEntryButtons'
-import { ArtifactPublishButton } from '@/components/artifacts/ArtifactPublishButton'
-import { editorArtifactSourceKey } from './editor-artifact-upload'
 
 type EditorPanelHeaderProps = {
   activeFile: OpenFile
@@ -314,15 +312,8 @@ export function EditorPanelHeader({
           </Tooltip>
         </TooltipProvider>
       )}
-      {isMarkdown && !isDiffSurface && createArtifactRequest ? (
+      {!isDiffSurface && createArtifactRequest ? (
         <EditorFileLanShareButton file={activeFile} className="size-6 [&_svg]:size-3.5!" />
-      ) : null}
-      {!isMarkdown && !isDiffSurface && createArtifactRequest ? (
-        <ArtifactPublishButton
-          sourceKey={editorArtifactSourceKey(activeFile)}
-          className="size-6 [&_svg]:size-3.5!"
-          createRequest={createArtifactRequest}
-        />
       ) : null}
       <EditorPanelActionsMenu
         fileLocationActions={

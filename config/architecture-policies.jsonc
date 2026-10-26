@@ -254,6 +254,8 @@
             "src/renderer/src/lib/file-preview.ts",
             "src/renderer/src/components/editor/EditorPanel.tsx",
             "src/renderer/src/components/editor/EditorPanelHeader.tsx",
+            "src/renderer/src/components/native-chat/NativeChatInlineVisual.tsx",
+            "src/renderer/src/components/native-chat/NativeChatInlineVisual.open-as-file.test.tsx",
             "src/renderer/src/components/editor/DiffSectionHeader.tsx",
             "src/renderer/src/components/editor/combined-diff/review-controls/use-combined-diff-section-actions.ts",
             "src/renderer/src/runtime-large-file/**",
@@ -878,6 +880,8 @@
             "src/shared/rpc-contract/rpc-params-catalog.generated.ts",
             "src/renderer/src/components/editor/EditorPanelHeader.tsx",
             "src/renderer/src/components/editor/EditorPanelHeader.test.tsx",
+            "src/renderer/src/components/native-chat/NativeChatInlineVisual.tsx",
+            "src/renderer/src/components/native-chat/NativeChatInlineVisual.open-as-file.test.tsx",
             "src/renderer/src/components/browser-pane/assemble-chrome/browser-page-toolbar.tsx",
             "src/renderer/src/components/browser-pane/assemble-chrome/browser-chrome-toolbar.tsx",
             "src/renderer/src/components/browser-pane/workspace-doc/doc-preview-toolbar.tsx",
@@ -926,6 +930,21 @@
             "src/main/runtime/construction/runtime-composition-parity.test.ts"
           ],
           "message": "Change is outside local network artifact sharing and its journal."
+        },
+        {
+          "id": "self-hosted-artifacts-no-cloud-share-entries",
+          "type": "dependency-boundary",
+          "sourceFiles": ["src/renderer/src/**/*.ts", "src/renderer/src/**/*.tsx"],
+          "exceptPaths": [
+            "src/renderer/src/components/artifacts/**",
+            // Unreachable fallback: docPreviewLanShareControl returns a control whenever this one would.
+            "src/renderer/src/components/browser-pane/workspace-doc/doc-preview-artifact-share.tsx",
+            "**/*.test.ts",
+            "**/*.test.tsx"
+          ],
+          "forbiddenTargets": ["src/renderer/src/components/artifacts/ArtifactPublishButton.tsx"],
+          "importTextHints": ["ArtifactPublishButton"],
+          "message": "This fork never registers the cloud artifact service, so the cloud Share as artifact button can only fail. Use the local network share entries in src/renderer/src/components/self-hosted-artifacts/share-button/."
         }
       ]
     },
