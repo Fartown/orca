@@ -3,7 +3,7 @@ title: 自托管产物后端
 slug: 自托管产物后端
 status: testing
 created: 2026-09-05
-updated: 2026-10-22
+updated: 2026-10-25
 external_ids: []
 ---
 
@@ -17,7 +17,7 @@ external_ids: []
 | 交互     | [局域网 Artifact 分享服务重构方案 第 4 节](solutions/局域网Artifact分享服务重构方案.md) | ready      | 分享弹层、Artifacts 页、设置页、CLI 的交互与状态                                                  |
 | 方案     | [局域网 Artifact 分享服务重构方案](solutions/局域网Artifact分享服务重构方案.md)         | ready      | 已实施；与原稿不同的实现细节（WP0 取消、错误码接缝、启动注入等）见第 8 节变更记录                 |
 | 方案     | [自托管产物后端技术说明](solutions/自托管产物后端技术说明.md)                           | superseded | 外挂服务与固定本地地址的历史说明，已被重构方案替代                                                |
-| 测试用例 | [功能测试](tests/cases/自托管产物后端功能测试.md)                                       | ready      | AT-01～AT-13 自动化用例；TC-01～TC-21 两台电脑的真机用例                                          |
+| 测试用例 | [功能测试](tests/cases/自托管产物后端功能测试.md)                                       | ready      | AT-01～AT-15 自动化用例；TC-01～TC-21 两台电脑的真机用例                                          |
 | 调研     | [局域网 Artifact 分享服务重构方案 第 5 节](solutions/局域网Artifact分享服务重构方案.md) | ready      | 现状、候选方案对比、复用的已有代码                                                                |
 | 测试执行 | [2026-09-17 双实例 SSH 真机验证](tests/runs/2026-09-17-双实例SSH真机验证.md)            | completed  | 独立构建两个实例经 SSH 互连，TC-01～TC-21 中 17 项通过、2 项部分、2 项未执行；发现并修复 VPN 选址 |
 | 测试执行 | [2026-09-17 局域网分享自动化与冒烟](tests/runs/2026-09-17-局域网分享自动化与冒烟.md)    | completed  | 自动化回归、门禁与本机浏览器冒烟                                                                  |
@@ -91,6 +91,31 @@ external_ids: []
 - 影响范围：需求、技术说明、测试规格及本需求的执行证据。
 
 ## 3. 开发记录
+
+### 2026-10-25：补齐遗漏的云端分享入口（testing）
+
+- 本轮目标：修复编辑器里分享 HTML 时显示「无法检查现有链接」的问题，并排查其他遗漏的场景。
+- 完成内容：
+  - 编辑器顶栏的分享入口改为局域网分享。此前上游 #27608（10-21 合入）给 HTML 等非 Markdown 文件留了云端按钮。
+  - 聊天内联可视化的分享改为局域网分享，由运行这次聊天的电脑提供。
+  - 弹层和 Artifacts 页的停止分享改用同一个确认 hook，并遵守「常规 → 删除工件前确认」。
+  - 新增架构门禁，禁止 renderer 引用云端分享按钮。
+  - 排查中发现 orcad 执行的 SSH 主机打不开分享开关，REQ-301 改为部分实现。
+- 代码或文档变更：
+  - `EditorPanelHeader.tsx` 与 `NativeChatInlineVisual.tsx` 两处接缝，及其测试。
+  - `LanArtifactShareEntryButtons.tsx`、`LanArtifactShareButton.tsx`、`LanArtifactsPage.tsx`。
+  - 新增 `use-confirm-stop-sharing.ts`、`lan-artifacts-page-stop-confirm.test.tsx`。
+  - `config/architecture-policies.jsonc`、`config/fork-features.jsonc`。
+  - 需求 REQ-301/306/309，测试用例 AT-09、AT-15。
+- 验证证据：
+  - `pnpm tc`、三项本地化、`check:fork-features`、`check:fork-docs`、变更代码质量检查均通过。功能登记的 checks 通过（258 + 11 项）。
+  - 架构门禁只剩两个与本次无关、不提交的 mobile 生成文件。新门禁用临时文件实测能拦截。
+  - 真机证据在 `.docs/self-hosted-artifacts-cloud-entries-ui-validation/2026-10-25/`。本地 6 步全部通过：编辑器 HTML、聊天可视化的链接返回 200，停止确认与跳过确认符合设置。SSH 工作区的分享由 SSH 主机判定，没有云端错误。
+- 未解决问题：
+  - orcad 执行的 SSH 主机无法开启局域网分享，因此 SSH 工作区里的文件拿不到链接。上游禁止经 RPC 授予这个能力，修复方式需要用户定方案。
+  - 聊天可视化分享的工作区名显示为 scratch 目录的哈希，停止按钮文字超出弹层宽度。
+  - 常规设置里的说明文字仍是上游的「断开公开链接」。
+- 下一步：用户确认后提交并开 PR；另行确定 SSH 主机分享开关的方案。
 
 ### 2026-10-22：分享服务停止时注销设置监听（testing）
 

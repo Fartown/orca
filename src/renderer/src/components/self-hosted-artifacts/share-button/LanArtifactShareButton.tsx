@@ -1,7 +1,15 @@
-import { useCallback, useEffect, useReducer, useRef, useState, type RefObject } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useReducer,
+  useRef,
+  useState,
+  type ComponentProps,
+  type RefObject
+} from 'react'
 import { Loader2, Share2 } from 'lucide-react'
 import { toast } from 'sonner'
-import { useConfirmationDialog } from '@/components/confirmation-dialog-context'
+import { useConfirmStopSharing } from '../use-confirm-stop-sharing'
 import { Button } from '@/components/ui/button'
 import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
@@ -43,6 +51,8 @@ export function LanArtifactShareButton({
   resolveTarget,
   hasUnsavedChanges = false,
   className,
+  variant = 'ghost',
+  size = 'icon-sm',
   anchorRef,
   open: controlledOpen,
   onOpenChange
@@ -50,6 +60,8 @@ export function LanArtifactShareButton({
   resolveTarget: () => LanArtifactShareTargetResolution
   hasUnsavedChanges?: boolean
   className?: string
+  variant?: ComponentProps<typeof Button>['variant']
+  size?: ComponentProps<typeof Button>['size']
 } & LanArtifactShareControl): React.JSX.Element {
   const [ownOpen, setOwnOpen] = useState(false)
   const open = controlledOpen ?? ownOpen
@@ -153,8 +165,8 @@ export function LanArtifactShareButton({
             <PopoverTrigger asChild>
               <Button
                 type="button"
-                variant="ghost"
-                size="icon-sm"
+                variant={variant}
+                size={size}
                 className={cn('shrink-0', className)}
                 aria-label={label}
               >
@@ -211,7 +223,7 @@ function LanArtifactSharePopoverBody({
   onStop: (workspace: ArtifactSharedWorkspace) => void
   onClose: () => void
 }): React.JSX.Element {
-  const confirm = useConfirmationDialog()
+  const confirmStop = useConfirmStopSharing()
   const openSettingsTarget = useAppStore((store) => store.openSettingsTarget)
   const openSettingsPage = useAppStore((store) => store.openSettingsPage)
   const view = state.view
@@ -222,23 +234,7 @@ function LanArtifactSharePopoverBody({
     if (!workspace) {
       return
     }
-    const accepted = await confirm({
-      title: translate(
-        'auto.components.selfHostedArtifacts.stopDialog.title',
-        'Stop sharing {{workspace}}?',
-        { workspace: workspace.label }
-      ),
-      description: translate(
-        'auto.components.selfHostedArtifacts.stopDialog.description',
-        'Every link to files in this workspace will stop working. Sharing it again creates new links.'
-      ),
-      confirmLabel: translate(
-        'auto.components.selfHostedArtifacts.stopDialog.confirm',
-        'Stop sharing'
-      ),
-      confirmVariant: 'destructive'
-    })
-    if (accepted) {
+    if (await confirmStop(workspace.label)) {
       onStop(workspace)
     }
   }

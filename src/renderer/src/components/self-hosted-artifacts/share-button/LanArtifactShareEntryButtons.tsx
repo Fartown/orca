@@ -11,8 +11,10 @@ import {
   resolveDocPreviewShareTarget
 } from './lan-artifact-share-target'
 import { LanArtifactShareButton, type LanArtifactShareControl } from './LanArtifactShareButton'
+import type { NativeChatVisualOwner } from '@/components/native-chat/native-chat-visual-owner'
+import { getRuntimeTargetHostId } from '@/runtime/runtime-client-target'
 
-/** Markdown editor header: the open tab already knows which computer owns the file. */
+/** Editor header, for any shareable document: the open tab already knows which computer owns the file. */
 export function EditorFileLanShareButton({
   file,
   className
@@ -85,6 +87,39 @@ export function DocPreviewLanShareButton({
     [identity.absolutePath, location]
   )
   return <LanArtifactShareButton resolveTarget={resolveTarget} className={className} {...control} />
+}
+
+/**
+ * A visual in a chat reply lives on the computer that runs the chat. No workspace root: that
+ * computer scopes the share to an already-shared folder holding the file, else the file's folder.
+ */
+export function NativeChatVisualLanShareButton({
+  owner,
+  filePath,
+  className,
+  ...control
+}: {
+  owner: NativeChatVisualOwner
+  filePath: string
+  className?: string
+} & LanArtifactShareControl): React.JSX.Element {
+  const { target } = owner
+  const resolveTarget = useCallback(
+    () => ({
+      ok: true as const,
+      target: { executionHostId: getRuntimeTargetHostId(target), sourcePath: filePath }
+    }),
+    [filePath, target]
+  )
+  return (
+    <LanArtifactShareButton
+      resolveTarget={resolveTarget}
+      variant="outline"
+      size="icon-xs"
+      className={className}
+      {...control}
+    />
+  )
 }
 
 // Why built here: a render function declared inside the toolbar component reads as a nested
