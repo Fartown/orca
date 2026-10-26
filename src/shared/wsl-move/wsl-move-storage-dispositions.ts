@@ -105,6 +105,7 @@ export const SQLITE_SCHEMA_FILE_DATABASES: Record<string, string> = {
   'src/main/ai-vault/session-parse-cache-database.ts': 'ai-vault-parse-cache',
   'src/main/ai-vault/session-scope-cwds-table.ts': 'ai-vault-parse-cache',
   'src/main/browser/browser-cookie-staged-import.ts': 'browser-cookie-import',
+  'src/main/local-tasks/local-tasks-schema.ts': 'local-tasks',
   'src/main/native-chat/agent-session-attachments/agent-session-attachment-claims.ts':
     'agent-session-journal',
   'src/main/native-chat/agent-session-journal/command-receipt-schema.ts': 'agent-session-journal',
@@ -139,6 +140,29 @@ const tables = (
 /** Tables by `<database>.<table>`. Migration copies (`*_new`, `*_v35`) sit with what they rebuild. */
 export const SQLITE_TABLE_DISPOSITIONS: Record<string, WslMoveFieldDisposition> =
   Object.fromEntries([
+    ...tables(
+      'local-tasks',
+      [
+        'local_task_meta',
+        'local_task_projects',
+        'local_task_project_prefixes',
+        'local_task_statuses',
+        'local_tasks',
+        'local_task_aliases',
+        'local_task_labels',
+        'local_task_events',
+        'local_task_workspaces',
+        'local_task_sessions',
+        'local_task_attention_state',
+        'local_task_pending_replies',
+        'local_task_mutation_receipts',
+        'local_task_preferences'
+      ],
+      notApplicableDisposition(
+        52,
+        'Local task library: owned by the desktop task host, not by a project, so a move leaves it.'
+      )
+    ),
     ...tables(
       'agent-session-journal',
       [

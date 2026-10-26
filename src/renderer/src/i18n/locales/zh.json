@@ -20955,5 +20955,330 @@
   },
   "terminalChatViewButton": {
     "switchToChatView": "切到聊天视图"
+  },
+  "localTasks": {
+    "quickActions": {
+      "newTask": "新建任务…",
+      "newTaskDescription": "在本地任务里记下一件要做的事。",
+      "verbs": {
+        "newTask": "新建任务",
+        "createTask": "创建任务",
+        "openTask": "打开任务",
+        "findTask": "查找任务"
+      },
+      "openTask": "打开任务…",
+      "openTaskDescription": "按编号或标题查找本地任务。",
+      "taskDescription": "本地任务 · {{project}}"
+    },
+    "activity": {
+      "commentPlaceholder": "写评论…",
+      "commentLabel": "评论",
+      "edited": "（已编辑）",
+      "commentActions": "评论操作",
+      "editComment": "编辑",
+      "deleteComment": "删除",
+      "saveComment": "保存",
+      "title": "评论与动态",
+      "submitComment": "评论",
+      "actor": {
+        "desktop": "我",
+        "mobile": "我（手机）",
+        "cli": "Orca CLI",
+        "rule": "自动规则"
+      },
+      "removedStatus": "已删除的状态",
+      "deletedTask": "已删除的任务",
+      "labelsChanged": "{{actor}} 添加了标签 {{added}}，移除了 {{removed}}",
+      "labelsAdded": "{{actor}} 添加了标签 {{added}}",
+      "labelsRemoved": "{{actor}} 移除了标签 {{removed}}",
+      "parentRemoved": "{{actor}} 把它从 {{from}} 下移出",
+      "parentSet": "{{actor}} 把它设为 {{to}} 的子任务",
+      "commented": "{{actor}} 发表了评论",
+      "created": "{{actor}} 创建了任务",
+      "renamed": "{{actor}} 把标题改为「{{title}}」",
+      "description": "{{actor}} 编辑了描述",
+      "criteria": "{{actor}} 编辑了完成标准",
+      "status": "{{actor}} 修改了状态：{{from}} → {{to}}",
+      "priority": "{{actor}} 修改了优先级：{{from}} → {{to}}",
+      "moved": "{{actor}} 移动了任务：{{from}} → {{to}}"
+    },
+    "common": {
+      "cancel": "取消"
+    },
+    "batch": {
+      "label": "已选任务",
+      "count": "已选 {{count}} 项",
+      "status": "状态",
+      "priority": "优先级",
+      "labels": "标签",
+      "clear": "清除选择"
+    },
+    "list": {
+      "addInGroup": "在「{{group}}」新建任务",
+      "noMatches": "没有符合这个视图的任务。",
+      "showAll": "显示全部任务",
+      "empty": "还没有任务。按 C 记下第一件。"
+    },
+    "board": {
+      "canceledHidden": "「已取消」列已隐藏，可在「筛选」里打开。"
+    },
+    "bootstrap": {
+      "title": "开始使用本地任务",
+      "description": "任务按项目归类，每个任务项目对应一个 Orca 项目。勾选要跟踪的项目，确认编号前缀后创建。任务数据只存在这台电脑上。"
+    },
+    "create": {
+      "created": "已创建 {{ref}}",
+      "title": "新建任务",
+      "titlePlaceholder": "任务标题",
+      "titleLabel": "标题",
+      "descriptionPlaceholder": "添加描述…",
+      "descriptionLabel": "描述",
+      "criteriaLabel": "完成标准（可选）",
+      "keepCreating": "继续创建",
+      "submit": "创建任务"
+    },
+    "criteria": {
+      "item": "完成标准第 {{number}} 条",
+      "remove": "删除这条标准",
+      "add": "添加一条标准"
+    },
+    "delete": {
+      "done": "已删除 {{ref}}",
+      "title": "删除 {{ref}}？",
+      "withSubtasks": "它的子任务（{{count}} 个）会一起删除。只删除任务记录，工作区和会话不受影响。",
+      "single": "只删除任务记录，工作区和会话不受影响。",
+      "confirm": "删除"
+    },
+    "detail": {
+      "previous": "上一个任务",
+      "next": "下一个任务",
+      "missing": "这个任务已不存在。",
+      "backToList": "返回任务列表",
+      "criteria": "完成标准",
+      "moved": "{{from}} 现在是 {{to}}",
+      "moveTo": "移到其他项目",
+      "created": "创建于 {{when}}",
+      "updated": "更新于 {{when}}",
+      "delete": "删除任务…",
+      "actions": "任务操作",
+      "conflict": "已被其他设备修改，你的内容保留在这里。",
+      "conflictOverwrite": "用我的覆盖",
+      "conflictDiscard": "放弃我的修改"
+    },
+    "field": {
+      "status": "状态",
+      "priority": "优先级",
+      "labels": "标签",
+      "parent": "父任务",
+      "project": "项目",
+      "noParent": "无父任务"
+    },
+    "picker": {
+      "labelPlaceholder": "查找或添加标签",
+      "empty": "没有匹配项。",
+      "createLabel": "添加标签「{{label}}」",
+      "parentPlaceholder": "查找任务",
+      "taskCount": "{{count}} 个任务",
+      "priorityTitle": "优先级 · {{subject}}",
+      "labelsTitle": "标签 · {{subject}}",
+      "statusTitle": "状态 · {{subject}}",
+      "placeholder": "输入以筛选"
+    },
+    "filter": {
+      "activeCount": "筛选 · {{count}}",
+      "trigger": "筛选",
+      "priority": "优先级",
+      "category": "状态类别",
+      "labels": "标签",
+      "noLabels": "还没有标签",
+      "showCanceledColumn": "显示「已取消」列",
+      "clear": "清除筛选"
+    },
+    "state": {
+      "failed": "无法连接任务库。",
+      "ended": "任务库已停止推送更新。",
+      "starting": "正在打开任务库…",
+      "unavailable": "本地任务现在无法查看或修改。",
+      "notTaskHost": "本地任务保存在桌面 Orca 上，这个窗口无法访问。",
+      "retry": "重新连接",
+      "technicalDetails": "技术详情",
+      "readOnlyNotice": "只读：这些任务由更新版本的 Orca 写入，当前版本只能查看，不能修改。升级 Orca 后即可编辑。",
+      "reasonPermission": "Orca 无法写入这台电脑上的任务库文件。请检查 Orca 数据目录的权限，然后重启 Orca。",
+      "reasonDiskFull": "磁盘空间已满，任务库无法打开。请清理空间后重启 Orca。",
+      "reasonCorrupt": "任务库文件已损坏，Orca 无法读取。",
+      "reasonLocked": "另一个 Orca 进程正占用任务库。请退出它，然后重启 Orca。",
+      "reasonUnknown": "这台电脑上的某个问题让 Orca 无法打开任务库。"
+    },
+    "keys": {
+      "move": "移动",
+      "open": "打开",
+      "preview": "预览",
+      "select": "选中",
+      "status": "状态",
+      "priority": "优先级",
+      "labels": "标签",
+      "layout": "列表 / 看板",
+      "filter": "筛选",
+      "search": "搜索",
+      "create": "新建任务"
+    },
+    "nav": {
+      "label": "任务视图",
+      "projects": "项目",
+      "manageProjects": "管理项目与状态",
+      "allProjects": "全部项目"
+    },
+    "page": {
+      "loading": "正在加载任务…"
+    },
+    "preview": {
+      "label": "任务预览",
+      "close": "关闭预览",
+      "open": "打开任务"
+    },
+    "projects": {
+      "noOrcaProjects": "请先在 Orca 里添加项目；每个任务项目对应一个 Orca 项目。",
+      "allLinked": "每个 Orca 项目都已有任务项目。",
+      "prefixFor": "{{name}} 的前缀",
+      "create": "创建所选（{{count}}）"
+    },
+    "row": {
+      "subtaskProgress": "已完成子任务：{{done}} / {{total}}",
+      "select": "选中 {{ref}}"
+    },
+    "source": {
+      "label": "本地任务",
+      "summary": "本地任务 · 项目 {{projects}} · 任务 {{tasks}}"
+    },
+    "subtasks": {
+      "added": "已添加 {{count}} 个子任务",
+      "title": "子任务",
+      "placeholder": "添加子任务——粘贴多行可一次添加多个",
+      "add": "添加子任务"
+    },
+    "toolbar": {
+      "searchPlaceholder": "按编号或标题搜索",
+      "search": "搜索任务",
+      "layout": "布局",
+      "list": "列表",
+      "board": "看板",
+      "newTask": "新建任务"
+    },
+    "settings": {
+      "projectRemoved": "已删除 {{name}}",
+      "removeTitle": "删除 {{name}}？",
+      "removeDescription": "它的任务（{{count}} 个）会一起删除。Orca 项目及其工作区和会话不受影响。",
+      "removeConfirm": "删除项目",
+      "name": "名称",
+      "orcaProject": "Orca 项目",
+      "orcaProjectHelp": "一个 Orca 项目最多对应一个任务项目。本机项目和 SSH 项目用法相同。",
+      "orcaProjectMissing": "不在当前 Orca profile 中",
+      "prefix": "编号前缀",
+      "prefixHelp": "修改后旧前缀保留为别名：旧编号仍能搜索和打开，其他项目也不能再使用它。",
+      "savePrefix": "修改前缀",
+      "aliases": "别名：{{aliases}}",
+      "removeHint": "删除项目会删除它的任务。工作区和会话保留。",
+      "removeProject": "删除项目…",
+      "removeStatusTitle": "删除「{{name}}」？",
+      "removeStatusInUse": "使用这个状态的任务：{{count}} 个。请选择把它们移到哪里。",
+      "removeStatusUnused": "没有任务使用这个状态。",
+      "moveTasksTo": "把任务移到",
+      "removeStatusConfirm": "删除状态",
+      "statusColor": "状态颜色",
+      "statusName": "状态名称",
+      "statusUsage": "任务：{{count}}",
+      "moveUp": "上移",
+      "moveDown": "下移",
+      "removeStatus": "删除状态",
+      "newStatusName": "新状态",
+      "statusesTitle": "状态",
+      "statusesHelp": "6 个类别是固定的。状态不能换类别，每个类别至少保留一个状态。看板的列就是这些状态。",
+      "addStatus": "添加状态",
+      "newProject": "新建任务项目",
+      "newProjectDescription": "每个任务项目对应一个 Orca 项目。勾选项目并确认编号前缀。",
+      "noProjects": "还没有任务项目。",
+      "projectsTitle": "任务项目",
+      "projectsSearchDescription": "新建任务项目、改名、修改编号前缀。",
+      "keywordTasks": "任务",
+      "keywordProject": "项目",
+      "keywordPrefix": "前缀",
+      "statusesSearchDescription": "在每个类别里新增、改名、改颜色、排序和删除状态。",
+      "keywordStatus": "状态",
+      "keywordBoard": "看板",
+      "title": "本地任务",
+      "description": "保存在这台电脑上的任务：任务项目、编号前缀与状态。"
+    },
+    "failure": {
+      "lastStatusInCategory": "每个类别至少要保留一个状态。",
+      "notFound": "这一项已不存在。",
+      "stale": "它已在别处先被修改。现在显示的是最新内容，请重新修改一次。",
+      "readOnly": "任务库是更新版本的 Orca 写入的，这里只能查看。",
+      "prefixTakenBy": "这个前缀已被项目「{{project}}」使用（当前前缀或旧前缀）。",
+      "prefixTaken": "这个前缀已被其他项目使用。",
+      "prefixInvalid": "前缀需为 1–10 位字母或数字，并以字母开头。",
+      "orcaProjectLinkedTo": "这个 Orca 项目已属于任务项目「{{project}}」。",
+      "orcaProjectLinked": "这个 Orca 项目已属于某个任务项目。",
+      "parentInvalid": "父任务必须是同一项目里的顶层任务；已有子任务的任务不能再成为子任务。",
+      "statusInvalid": "这个状态不属于该任务所在的项目。",
+      "statusInUse": "仍有任务使用这个状态，请先选择要把它们移到哪个状态。",
+      "commentNotEditable": "只有评论可以编辑。",
+      "workspaceLinked": "这个任务关联了工作区或会话，请先取消关联再试。",
+      "callFailed": "无法保存修改：{{message}}"
+    },
+    "category": {
+      "backlog": "待规划",
+      "unstarted": "未开始",
+      "started": "进行中",
+      "review": "评审",
+      "completed": "已完成",
+      "canceled": "已取消"
+    },
+    "views": {
+      "all": "全部"
+    },
+    "priority": {
+      "none": "无优先级",
+      "urgent": "紧急",
+      "high": "高",
+      "medium": "中",
+      "low": "低"
+    },
+    "color": {
+      "gray": "灰色",
+      "blue": "蓝色",
+      "yellow": "黄色",
+      "orange": "橙色",
+      "green": "绿色",
+      "red": "红色",
+      "purple": "紫色"
+    },
+    "defaultStatus": {
+      "backlog": "待规划",
+      "unstarted": "待办",
+      "started": "进行中",
+      "review": "评审中",
+      "completed": "已完成",
+      "canceled": "已取消"
+    },
+    "groups": {
+      "all": "全部任务"
+    },
+    "view": {
+      "groupStatus": "状态",
+      "groupPriority": "优先级",
+      "groupProject": "项目",
+      "groupNone": "不分组",
+      "sortUpdated": "更新时间",
+      "sortCreated": "创建时间",
+      "sortPriority": "优先级",
+      "sortNumber": "编号",
+      "groupTrigger": "分组：{{choice}}",
+      "groupBy": "分组方式",
+      "sortTrigger": "排序：{{choice}}",
+      "sortBy": "排序方式"
+    },
+    "time": {
+      "justNow": "刚刚"
+    }
   }
 }

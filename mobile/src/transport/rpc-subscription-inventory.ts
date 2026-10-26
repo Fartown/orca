@@ -72,6 +72,13 @@ export const RPC_SUBSCRIPTION_SITES: readonly RpcSubscriptionSite[] = [
       wall: 'Writes to a webview terminal/browser ref this runner has no substitute for, and a substitute that shaped what the stream delivered would be inventing the device.'
     }
   },
+  // Fork local-tasks: the task library's change notices. Pure callbacks over guarded frames.
+  {
+    file: 'src/local-tasks/local-tasks-change-feed.ts',
+    method: 'localTasks.subscribeChanges',
+    release: 'ready-id',
+    coverage: { kind: 'unwritten-scenario' }
+  },
   {
     file: 'src/notifications/mobile-notifications.ts',
     method: 'notifications.subscribe',

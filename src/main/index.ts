@@ -18,6 +18,10 @@ import {
   startGoalFeatureForMainProcess,
   stopGoalFeatureForMainProcess
 } from './startup/main-process-goals'
+import {
+  startLocalTasksForMainProcess,
+  stopLocalTasksForMainProcess
+} from './startup/main-process-local-tasks'
 import { resolveOsOpenedDocuments } from './startup/os-opened-documents'
 import {
   formatProfileStateStartupFailure,
@@ -135,13 +139,17 @@ if (preflightReady) {
   state.osOpenedDocuments.capture(process.argv)
   registerMainProcessIpcHandlers()
   app.once('will-quit', stopGoalFeatureForMainProcess)
+  app.once('will-quit', stopLocalTasksForMainProcess)
   installMainProcessQuitHandlers()
   void app.whenReady().then(async () => {
     try {
       await initializeMainProcessReady({
         openMainWindow,
         handleMacAppActivation,
-        afterTerminalRuntimeStartup: startGoalFeatureForMainProcess
+        afterTerminalRuntimeStartup: async () => {
+          startLocalTasksForMainProcess()
+          await startGoalFeatureForMainProcess()
+        }
       })
     } catch (error) {
       const message =

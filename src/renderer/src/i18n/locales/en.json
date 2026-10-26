@@ -21180,5 +21180,330 @@
   },
   "terminalChatViewButton": {
     "switchToChatView": "Switch to Chat View"
+  },
+  "localTasks": {
+    "quickActions": {
+      "newTask": "New task…",
+      "newTaskDescription": "Write down a task in the local task list.",
+      "verbs": {
+        "newTask": "new task",
+        "createTask": "create task",
+        "openTask": "open task",
+        "findTask": "find task"
+      },
+      "openTask": "Open task…",
+      "openTaskDescription": "Find a local task by ref or title.",
+      "taskDescription": "Local task · {{project}}"
+    },
+    "activity": {
+      "commentPlaceholder": "Write a comment…",
+      "commentLabel": "Comment",
+      "edited": "(edited)",
+      "commentActions": "Comment actions",
+      "editComment": "Edit",
+      "deleteComment": "Delete",
+      "saveComment": "Save",
+      "title": "Comments and activity",
+      "submitComment": "Comment",
+      "actor": {
+        "desktop": "You",
+        "mobile": "You (phone)",
+        "cli": "Orca CLI",
+        "rule": "Automatic rule"
+      },
+      "removedStatus": "a removed status",
+      "deletedTask": "a deleted task",
+      "labelsChanged": "{{actor}} added labels {{added}} and removed {{removed}}",
+      "labelsAdded": "{{actor}} added labels {{added}}",
+      "labelsRemoved": "{{actor}} removed labels {{removed}}",
+      "parentRemoved": "{{actor}} detached it from {{from}}",
+      "parentSet": "{{actor}} made it a subtask of {{to}}",
+      "commented": "{{actor}} commented",
+      "created": "{{actor}} created the task",
+      "renamed": "{{actor}} renamed it to “{{title}}”",
+      "description": "{{actor}} edited the description",
+      "criteria": "{{actor}} edited the done criteria",
+      "status": "{{actor}} changed status: {{from}} → {{to}}",
+      "priority": "{{actor}} changed priority: {{from}} → {{to}}",
+      "moved": "{{actor}} moved it: {{from}} → {{to}}"
+    },
+    "common": {
+      "cancel": "Cancel"
+    },
+    "batch": {
+      "label": "Selected tasks",
+      "count": "{{count}} selected",
+      "status": "Status",
+      "priority": "Priority",
+      "labels": "Labels",
+      "clear": "Clear selection"
+    },
+    "list": {
+      "addInGroup": "New task in {{group}}",
+      "noMatches": "No tasks match this view.",
+      "showAll": "Show all tasks",
+      "empty": "No tasks yet. Press C to write down the first one."
+    },
+    "board": {
+      "canceledHidden": "The Canceled column is hidden. Turn it on under Filter."
+    },
+    "bootstrap": {
+      "title": "Set up local tasks",
+      "description": "Tasks are grouped into projects, one per Orca project. Pick the projects you want to track, check their prefixes, and create them. Tasks stay on this computer."
+    },
+    "create": {
+      "created": "Created {{ref}}",
+      "title": "New task",
+      "titlePlaceholder": "Task title",
+      "titleLabel": "Title",
+      "descriptionPlaceholder": "Add a description…",
+      "descriptionLabel": "Description",
+      "criteriaLabel": "Done criteria (optional)",
+      "keepCreating": "Create another",
+      "submit": "Create task"
+    },
+    "criteria": {
+      "item": "Done criterion {{number}}",
+      "remove": "Remove criterion",
+      "add": "Add a criterion"
+    },
+    "delete": {
+      "done": "Deleted {{ref}}",
+      "title": "Delete {{ref}}?",
+      "withSubtasks": "Its subtasks ({{count}}) are deleted with it. Only task records are removed; workspaces and sessions are not touched.",
+      "single": "Only the task record is removed; workspaces and sessions are not touched.",
+      "confirm": "Delete"
+    },
+    "detail": {
+      "previous": "Previous task",
+      "next": "Next task",
+      "missing": "This task no longer exists.",
+      "backToList": "Back to tasks",
+      "criteria": "Done criteria",
+      "moved": "{{from}} is now {{to}}",
+      "moveTo": "Move to another project",
+      "created": "Created {{when}}",
+      "updated": "Updated {{when}}",
+      "delete": "Delete task…",
+      "actions": "Task actions",
+      "conflict": "Changed on another device while you were editing. Your text is kept here.",
+      "conflictOverwrite": "Overwrite with mine",
+      "conflictDiscard": "Discard mine"
+    },
+    "field": {
+      "status": "Status",
+      "priority": "Priority",
+      "labels": "Labels",
+      "parent": "Parent task",
+      "project": "Project",
+      "noParent": "No parent"
+    },
+    "picker": {
+      "labelPlaceholder": "Find or add a label",
+      "empty": "Nothing matches.",
+      "createLabel": "Add label “{{label}}”",
+      "parentPlaceholder": "Find a task",
+      "taskCount": "{{count}} tasks",
+      "priorityTitle": "Priority · {{subject}}",
+      "labelsTitle": "Labels · {{subject}}",
+      "statusTitle": "Status · {{subject}}",
+      "placeholder": "Type to filter"
+    },
+    "filter": {
+      "activeCount": "Filter · {{count}}",
+      "trigger": "Filter",
+      "priority": "Priority",
+      "category": "Status category",
+      "labels": "Labels",
+      "noLabels": "No labels yet",
+      "showCanceledColumn": "Show the Canceled column",
+      "clear": "Clear filters"
+    },
+    "state": {
+      "failed": "Could not reach the task library.",
+      "ended": "The task library stopped sending updates.",
+      "starting": "Opening the task library…",
+      "unavailable": "Local tasks cannot be shown or changed right now.",
+      "notTaskHost": "Local tasks are kept by the desktop Orca, and this window cannot reach them.",
+      "retry": "Reconnect",
+      "technicalDetails": "Technical details",
+      "readOnlyNotice": "Read only: a newer version of Orca saved these tasks, so this version can show them but not change them. Update Orca to edit them again.",
+      "reasonPermission": "Orca cannot write to the task library file on this computer. Check the permissions of the Orca data folder, then restart Orca.",
+      "reasonDiskFull": "The disk is full, so the task library cannot be opened. Free up space, then restart Orca.",
+      "reasonCorrupt": "The task library file is damaged, so Orca cannot read it.",
+      "reasonLocked": "Another Orca process is holding the task library. Quit it, then restart Orca.",
+      "reasonUnknown": "Something on this computer stopped Orca from opening the task library."
+    },
+    "keys": {
+      "move": "Move",
+      "open": "Open",
+      "preview": "Preview",
+      "select": "Select",
+      "status": "Status",
+      "priority": "Priority",
+      "labels": "Labels",
+      "layout": "List / board",
+      "filter": "Filter",
+      "search": "Search",
+      "create": "New task"
+    },
+    "nav": {
+      "label": "Task views",
+      "projects": "Projects",
+      "manageProjects": "Manage projects and statuses",
+      "allProjects": "All projects"
+    },
+    "page": {
+      "loading": "Loading tasks…"
+    },
+    "preview": {
+      "label": "Task preview",
+      "close": "Close preview",
+      "open": "Open task"
+    },
+    "projects": {
+      "noOrcaProjects": "Add a project to Orca first; each task project belongs to one Orca project.",
+      "allLinked": "Every Orca project already has a task project.",
+      "prefixFor": "Prefix for {{name}}",
+      "create": "Create selected ({{count}})"
+    },
+    "row": {
+      "subtaskProgress": "Subtasks done: {{done}} of {{total}}",
+      "select": "Select {{ref}}"
+    },
+    "source": {
+      "label": "Local tasks",
+      "summary": "Local tasks · Projects: {{projects}} · Tasks: {{tasks}}"
+    },
+    "subtasks": {
+      "added": "Added {{count}} subtasks",
+      "title": "Subtasks",
+      "placeholder": "Add a subtask — paste several lines to add one per line",
+      "add": "Add subtask"
+    },
+    "toolbar": {
+      "searchPlaceholder": "Search by ref or title",
+      "search": "Search tasks",
+      "layout": "Layout",
+      "list": "List",
+      "board": "Board",
+      "newTask": "New task"
+    },
+    "settings": {
+      "projectRemoved": "Deleted {{name}}",
+      "removeTitle": "Delete {{name}}?",
+      "removeDescription": "Its tasks ({{count}}) are deleted with it. The Orca project, its workspaces and sessions are not touched.",
+      "removeConfirm": "Delete project",
+      "name": "Name",
+      "orcaProject": "Orca project",
+      "orcaProjectHelp": "One Orca project has at most one task project. It works the same for local and SSH projects.",
+      "orcaProjectMissing": "Not in this Orca profile",
+      "prefix": "Ref prefix",
+      "prefixHelp": "Changing it keeps the old prefix as an alias: old refs still search and open, and no other project can take it.",
+      "savePrefix": "Change prefix",
+      "aliases": "Aliases: {{aliases}}",
+      "removeHint": "Deleting the project deletes its tasks. Workspaces and sessions stay.",
+      "removeProject": "Delete project…",
+      "removeStatusTitle": "Remove “{{name}}”?",
+      "removeStatusInUse": "Tasks using this status: {{count}}. Choose where they go.",
+      "removeStatusUnused": "No task uses this status.",
+      "moveTasksTo": "Move tasks to",
+      "removeStatusConfirm": "Remove status",
+      "statusColor": "Status color",
+      "statusName": "Status name",
+      "statusUsage": "Tasks: {{count}}",
+      "moveUp": "Move up",
+      "moveDown": "Move down",
+      "removeStatus": "Remove status",
+      "newStatusName": "New status",
+      "statusesTitle": "Statuses",
+      "statusesHelp": "The six categories are fixed. A status never changes category, and each category keeps at least one. Board columns are these statuses.",
+      "addStatus": "Add status",
+      "newProject": "New task project",
+      "newProjectDescription": "Each task project belongs to one Orca project. Pick projects and check their prefixes.",
+      "noProjects": "No task projects yet.",
+      "projectsTitle": "Task projects",
+      "projectsSearchDescription": "Create task projects, rename them and change their ref prefix.",
+      "keywordTasks": "tasks",
+      "keywordProject": "project",
+      "keywordPrefix": "prefix",
+      "statusesSearchDescription": "Add, rename, recolor, reorder and remove the statuses in each category.",
+      "keywordStatus": "status",
+      "keywordBoard": "board",
+      "title": "Local Tasks",
+      "description": "Task projects, ref prefixes and statuses for tasks kept on this computer."
+    },
+    "failure": {
+      "lastStatusInCategory": "Each category needs at least one status.",
+      "notFound": "This item no longer exists.",
+      "stale": "This was changed somewhere else first. The latest version is shown now; make your change again.",
+      "readOnly": "Tasks are read-only here because a newer version of Orca wrote them.",
+      "prefixTakenBy": "The prefix is already used by project \"{{project}}\", now or as an earlier prefix.",
+      "prefixTaken": "The prefix is already used by another project.",
+      "prefixInvalid": "Use 1–10 letters or digits for the prefix, starting with a letter.",
+      "orcaProjectLinkedTo": "This Orca project already belongs to task project \"{{project}}\".",
+      "orcaProjectLinked": "This Orca project already belongs to a task project.",
+      "parentInvalid": "A parent must be a top-level task in the same project, and a task with subtasks cannot become a subtask.",
+      "statusInvalid": "That status does not belong to this task’s project.",
+      "statusInUse": "Tasks still use this status. Choose a status to move them to first.",
+      "commentNotEditable": "Only comments can be edited.",
+      "workspaceLinked": "This task has a linked workspace or session. Unlink it first, then try again.",
+      "callFailed": "Could not save the change: {{message}}"
+    },
+    "category": {
+      "backlog": "Backlog",
+      "unstarted": "Unstarted",
+      "started": "In progress",
+      "review": "Review",
+      "completed": "Completed",
+      "canceled": "Canceled"
+    },
+    "views": {
+      "all": "All"
+    },
+    "priority": {
+      "none": "No priority",
+      "urgent": "Urgent",
+      "high": "High",
+      "medium": "Medium",
+      "low": "Low"
+    },
+    "color": {
+      "gray": "Gray",
+      "blue": "Blue",
+      "yellow": "Yellow",
+      "orange": "Orange",
+      "green": "Green",
+      "red": "Red",
+      "purple": "Purple"
+    },
+    "defaultStatus": {
+      "backlog": "Backlog",
+      "unstarted": "Todo",
+      "started": "In Progress",
+      "review": "In Review",
+      "completed": "Done",
+      "canceled": "Canceled"
+    },
+    "groups": {
+      "all": "All tasks"
+    },
+    "view": {
+      "groupStatus": "Status",
+      "groupPriority": "Priority",
+      "groupProject": "Project",
+      "groupNone": "No grouping",
+      "sortUpdated": "Last updated",
+      "sortCreated": "Created",
+      "sortPriority": "Priority",
+      "sortNumber": "Ref number",
+      "groupTrigger": "Group: {{choice}}",
+      "groupBy": "Group by",
+      "sortTrigger": "Sort: {{choice}}",
+      "sortBy": "Sort by"
+    },
+    "time": {
+      "justNow": "just now"
+    }
   }
 }

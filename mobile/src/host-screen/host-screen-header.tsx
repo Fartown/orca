@@ -19,6 +19,7 @@ import { classifyConnection, type ConnectionVerdict } from '../transport/connect
 import { colors } from '../theme/mobile-theme'
 import { hostScreenStyles as styles } from './host-screen-styles'
 import type { HostScreenController } from './use-host-screen-controller'
+import { LocalTasksHostEntryButton } from '../local-tasks/LocalTasksHostEntryButton'
 
 function isErrorVerdict(v: ConnectionVerdict): boolean {
   return v.kind === 'warning' || v.kind === 'unreachable' || v.kind === 'auth-failed'
@@ -196,6 +197,7 @@ export function HostScreenHeader({ controller }: { controller: HostScreenControl
                 color={connState === 'connected' ? colors.textSecondary : colors.textMuted}
               />
             </Pressable>
+            <LocalTasksHostEntryButton controller={controller} variant="embedded" />
 
             {floatingWorkspaceEnabled ? (
               <Pressable
@@ -293,6 +295,7 @@ export function HostScreenHeader({ controller }: { controller: HostScreenControl
               color={connState === 'connected' ? colors.textSecondary : colors.textMuted}
             />
           </Pressable>
+          <LocalTasksHostEntryButton controller={controller} variant="toolbar" />
 
           <Pressable
             style={styles.searchToggle}

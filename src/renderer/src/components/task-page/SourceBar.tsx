@@ -14,6 +14,11 @@ import {
   SelectContent,
   SelectItem
 } from '@/components/ui/select'
+import {
+  LocalTaskSourceButton,
+  LocalTaskSourceSummary,
+  useLocalTaskSourceActive
+} from '@/components/local-tasks/LocalTaskSource'
 export function TaskPageSourceBar({
   model
 }: {
@@ -53,6 +58,7 @@ export function TaskPageSourceBar({
     handleLinearTeamSelectionChange,
     handleLinearScopeOpen
   } = model
+  const localActive = useLocalTaskSourceActive()
   const sourceSummary =
     taskSource === 'github' && githubMode === 'project'
       ? getGitHubProjectSourceSummary({
@@ -87,8 +93,9 @@ export function TaskPageSourceBar({
           </TooltipContent>
         </Tooltip>
         <div className="mx-1 h-5 w-px bg-border/50" aria-hidden />
+        <LocalTaskSourceButton />
         {visibleSourceOptions.map((source) => {
-          const active = taskSource === source.id
+          const active = !localActive && taskSource === source.id
           const sourceAvailabilityNotice = taskSourceAvailabilityNoticeByProvider[source.id] ?? null
           const sourceDisabled = source.disabled || sourceAvailabilityNotice?.blocking
           return (
@@ -141,14 +148,18 @@ export function TaskPageSourceBar({
             </Tooltip>
           )
         })}
-        <div
-          className="hidden min-w-0 max-w-[min(420px,40vw)] items-center rounded-md border border-border/50 bg-muted/35 px-2 py-1 text-xs text-muted-foreground sm:flex"
-          title={sourceSummary.title}
-        >
-          <span className="truncate">{sourceSummary.label}</span>
-        </div>
+        {localActive ? (
+          <LocalTaskSourceSummary />
+        ) : (
+          <div
+            className="hidden min-w-0 max-w-[min(420px,40vw)] items-center rounded-md border border-border/50 bg-muted/35 px-2 py-1 text-xs text-muted-foreground sm:flex"
+            title={sourceSummary.title}
+          >
+            <span className="truncate">{sourceSummary.label}</span>
+          </div>
+        )}
       </div>
-      {taskSource === 'linear' && linearConnected ? (
+      {!localActive && taskSource === 'linear' && linearConnected ? (
         <div className="flex items-center gap-2">
           <LinearScopeSelector
             workspaces={linearWorkspaces}
@@ -206,7 +217,7 @@ export function TaskPageSourceBar({
           </Tooltip>
         </div>
       ) : null}
-      {taskSource === 'jira' && jiraConnected ? (
+      {!localActive && taskSource === 'jira' && jiraConnected ? (
         <div className="flex items-center gap-2">
           {jiraSites.length > 1 ? (
             <Select

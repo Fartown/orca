@@ -9,7 +9,30 @@ export const FORK_MOBILE_RPC_METHOD_ALLOWLIST = new Set([
   'fileAttachment.abortUpload',
   'fileAttachment.appendUploadChunk',
   'fileAttachment.commitUpload',
-  'fileAttachment.startUpload'
+  'fileAttachment.startUpload',
+  'localTasks.events.addComment',
+  'localTasks.events.editComment',
+  'localTasks.events.list',
+  'localTasks.events.removeComment',
+  'localTasks.projects.create',
+  'localTasks.projects.list',
+  'localTasks.projects.remove',
+  'localTasks.projects.update',
+  'localTasks.statuses.remove',
+  'localTasks.statuses.reorder',
+  'localTasks.statuses.upsert',
+  'localTasks.status',
+  'localTasks.subscribeChanges',
+  'localTasks.tasks.batchUpdate',
+  'localTasks.tasks.create',
+  'localTasks.tasks.createSubtasks',
+  'localTasks.tasks.get',
+  'localTasks.tasks.list',
+  'localTasks.tasks.move',
+  'localTasks.tasks.remove',
+  'localTasks.tasks.search',
+  'localTasks.tasks.update',
+  'localTasks.unsubscribeChanges'
 ])
 
 export function isMobileRpcMethodAllowed(method: string): boolean {
