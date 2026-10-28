@@ -104,6 +104,7 @@
       "goal": "同源发布 fork 内测包，并提供桌面更新清单和 Android 应用内更新",
       "journal": "docs/issue/集成分支自动出包/journal.md",
       "dependsOn": [
+        "src/main/local-tasks/orcad-local-tasks.ts",
         "src/shared/serve-update-handoff.ts",
         "src/shared/serve-user-data-path.ts",
         "src/main/appimage-runtime-identity.ts",
@@ -3103,6 +3104,11 @@
           "file": "src/main/runtime/runtime-rpc/runtime-rpc-websocket-dispatch.ts",
           "mustContain": "isForkExecutionHostRelayMethod(request.method))",
           "why": "The relay entry admits the fork's task methods alongside upstream's relayed methods"
+        },
+        {
+          "file": "src/main/integration-builds/orcad-fork-services.ts",
+          "mustContain": "registerCleanup(startOrcadLocalTasks(runtime))",
+          "why": "An SSH host's managed orcad holds the task library of its own projects"
         },
         {
           "file": "src/renderer/src/components/sidebar/worktree-list/rows/virtual-row-dispatch.tsx",
