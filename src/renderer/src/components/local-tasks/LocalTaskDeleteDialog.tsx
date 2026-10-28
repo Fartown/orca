@@ -16,15 +16,16 @@ import { localTasksClient } from '@/local-tasks/local-tasks-runtime-client'
 import { runLocalTaskWrite } from '@/local-tasks/local-task-writes'
 import { useLocalTaskEscapeLayer } from './use-local-task-page-keys'
 
-/** Deleting a task deletes its subtasks too; the dialog says how many (REQ-004). */
+/** Deleting a task deletes its whole subtree; the dialog says how many go with it (REQ-004). */
 export function LocalTaskDeleteDialog({
   task,
-  subtaskCount,
+  descendantCount,
   open,
   onOpenChange
 }: {
   task: LocalTask
-  subtaskCount: number
+  /** Every level below the task. */
+  descendantCount: number
   open: boolean
   onOpenChange: (open: boolean) => void
 }): React.JSX.Element {
@@ -49,11 +50,11 @@ export function LocalTaskDeleteDialog({
             {translate('localTasks.delete.title', 'Delete {{ref}}?', { ref: task.ref })}
           </DialogTitle>
           <DialogDescription>
-            {subtaskCount > 0
+            {descendantCount > 0
               ? translate(
                   'localTasks.delete.withSubtasks',
-                  'Its subtasks ({{count}}) are deleted with it. Only task records are removed; workspaces and sessions are not touched.',
-                  { count: subtaskCount }
+                  'Its subtasks at every level ({{count}}) are deleted with it. Only task records are removed; workspaces and sessions are not touched.',
+                  { count: descendantCount }
                 )
               : translate(
                   'localTasks.delete.single',

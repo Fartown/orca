@@ -26,6 +26,9 @@ export function upsertLocalTaskStatus(
     if (!existing || (input.category && input.category !== existing.category)) {
       return { ok: false, code: 'status_invalid' }
     }
+    if (existing.name === input.name && existing.color === input.color) {
+      return { ok: true, statusId: existing.id }
+    }
     db.prepare('UPDATE local_task_statuses SET name = ?, color = ? WHERE id = ?').run(
       input.name,
       input.color,
@@ -68,8 +71,15 @@ export function reorderLocalTaskStatuses(
   }
   const known = new Set(project.statuses.map((status) => status.id))
   const requested = new Set(input.orderedStatusIds)
-  if (requested.size !== known.size || [...requested].some((statusId) => !known.has(statusId))) {
+  if (
+    input.orderedStatusIds.length !== known.size ||
+    requested.size !== known.size ||
+    [...requested].some((statusId) => !known.has(statusId))
+  ) {
     return { ok: false, code: 'status_invalid' }
+  }
+  if (input.orderedStatusIds.every((id, index) => project.statuses[index]?.id === id)) {
+    return { ok: true }
   }
   const update = db.prepare('UPDATE local_task_statuses SET position = ? WHERE id = ?')
   input.orderedStatusIds.forEach((statusId, index) => update.run(index, statusId))

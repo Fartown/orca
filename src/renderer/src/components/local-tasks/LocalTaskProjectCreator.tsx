@@ -8,10 +8,18 @@ import { useAppStore } from '@/store'
 import { getExecutionHostLabel } from '../../../../shared/execution-host'
 import { normalizeLocalTaskPrefix } from '../../../../shared/local-tasks/local-task-model'
 import { describeLocalTaskFailure } from '@/local-tasks/local-task-failure-copy'
-import { recommendLocalTaskProjects } from '@/local-tasks/local-task-project-recommendations'
+import {
+  localTaskEndpointForOrcaProject,
+  recommendLocalTaskProjects
+} from '@/local-tasks/local-task-project-recommendations'
 import { localTaskDefaultStatusNames } from '@/local-tasks/local-task-vocabulary-copy'
+import { orcaProjectHostIds } from '@/local-tasks/local-task-workspace-resolution'
 import { localTasksClient } from '@/local-tasks/local-tasks-runtime-client'
-import { localTasksDomainStore, useLocalTasksDomain } from '@/local-tasks/local-tasks-domain-store'
+import {
+  isLocalTasksWritable,
+  localTasksDomainStore,
+  useLocalTasksDomain
+} from '@/local-tasks/local-tasks-domain-store'
 
 type RowState = { selected: boolean; prefix: string; error: string | null }
 
@@ -38,9 +46,11 @@ function useHostLabelsByProject(): Map<string, string[]> {
  * user ticks (REQ-001). Prefixes are editable; conflicts come back per row.
  */
 export function LocalTaskProjectCreator({
+  onStart,
   onDone,
   writable
 }: {
+  onStart?: () => void
   onDone?: () => void
   writable: boolean
 }): React.JSX.Element {
@@ -53,6 +63,7 @@ export function LocalTaskProjectCreator({
   )
   const [rows, setRows] = useState<Record<string, RowState>>({})
   const [busy, setBusy] = useState(false)
+  const [createdCount, setCreatedCount] = useState(0)
   const rowOf = (projectId: string, prefix: string): RowState =>
     rows[projectId] ?? { selected: false, prefix, error: null }
   const patchRow = (projectId: string, prefix: string, patch: Partial<RowState>): void =>
@@ -63,45 +74,56 @@ export function LocalTaskProjectCreator({
   const chosen = recommendations.filter(({ project, prefix }) => rowOf(project.id, prefix).selected)
 
   const create = async (): Promise<void> => {
+    onStart?.()
     setBusy(true)
     const statusNames = localTaskDefaultStatusNames()
-    let created = 0
+    let failed = false
     for (const { project, prefix: suggested } of chosen) {
       const prefix = normalizeLocalTaskPrefix(rowOf(project.id, suggested).prefix)
       if (!prefix) {
+        failed = true
         patchRow(project.id, suggested, {
           error: describeLocalTaskFailure({ ok: false, code: 'prefix_invalid' })
         })
         continue
       }
+      const endpoint = localTaskEndpointForOrcaProject(
+        orcaProjectHostIds(useAppStore.getState(), project.id),
+        (candidate) => isLocalTasksWritable(localTasksDomainStore.getState(), candidate)
+      )
+      if (!endpoint) {
+        failed = true
+        patchRow(project.id, suggested, {
+          error: translate(
+            'localTasks.projects.noLibrary',
+            'None of this project’s hosts has a task library that is connected and writable.'
+          )
+        })
+        continue
+      }
       try {
-        const result = await localTasksClient.createProject({
+        const result = await localTasksClient.createProject(endpoint, {
           name: project.displayName,
           prefix,
-          orcaProjectId: project.id,
+          repos: [project.id],
           statusNames
         })
         if (result.ok) {
-          created += 1
-          localTasksDomainStore
-            .getState()
-            .applyProjects([
-              ...localTasksDomainStore
-                .getState()
-                .projects.filter((item) => item.id !== result.project.id),
-              result.project
-            ])
+          setCreatedCount((count) => count + 1)
+          localTasksDomainStore.getState().upsertProject(result.project)
         } else {
+          failed = true
           patchRow(project.id, suggested, { error: describeLocalTaskFailure(result) })
         }
       } catch (error) {
+        failed = true
         patchRow(project.id, suggested, {
           error: error instanceof Error ? error.message : String(error)
         })
       }
     }
     setBusy(false)
-    if (created > 0) {
+    if (!failed) {
       onDone?.()
     }
   }
@@ -112,11 +134,11 @@ export function LocalTaskProjectCreator({
         {orcaProjects.length === 0
           ? translate(
               'localTasks.projects.noOrcaProjects',
-              'Add a project to Orca first; each task project belongs to one Orca project.'
+              'No repositories in Orca yet. Make an empty project, or add a repository to Orca first.'
             )
           : translate(
               'localTasks.projects.allLinked',
-              'Every Orca project already has a task project.'
+              'Every repository already has a task project. More projects can share one from settings.'
             )}
       </p>
     )
@@ -167,6 +189,11 @@ export function LocalTaskProjectCreator({
         })}
       </ul>
       <div className="flex justify-end">
+        {createdCount > 0 ? (
+          <Button variant="ghost" size="sm" disabled={busy} onClick={onDone}>
+            {translate('localTasks.projects.continue', 'Continue with created projects')}
+          </Button>
+        ) : null}
         <Button
           size="sm"
           disabled={!writable || busy || chosen.length === 0}

@@ -14,7 +14,7 @@ import {
   statusPayload
 } from './local-task-mutation-rules'
 import { readLocalTaskProject } from './local-task-project-store'
-import { readLocalTask, readLocalTaskChildren } from './local-task-store'
+import { readLocalTask } from './local-task-store'
 
 /** Applies only the fields that changed, one activity entry per changed field. */
 export function updateLocalTask(
@@ -38,18 +38,14 @@ export function updateLocalTask(
   ) {
     return { ok: false, code: 'status_invalid' }
   }
-  if (patch.parentId !== undefined && patch.parentId !== task.parentId && patch.parentId !== null) {
-    // Why: two levels only — a task that already has subtasks cannot become one.
-    if (
-      !isValidParent(db, patch.parentId, project.id, task.id) ||
-      readLocalTaskChildren(db, task.id).length > 0
-    ) {
-      return { ok: false, code: 'parent_invalid' }
-    }
-    // Why: a subtask uses its parent's workspace, so it cannot keep its own.
-    if (db.prepare('SELECT 1 FROM local_task_workspaces WHERE task_id = ?').get(task.id)) {
-      return { ok: false, code: 'workspace_linked' }
-    }
+  // Why: any depth, but never under itself or its own subtree; its links stay as they name work.
+  if (
+    patch.parentId !== undefined &&
+    patch.parentId !== task.parentId &&
+    patch.parentId !== null &&
+    !isValidParent(db, patch.parentId, project.id, task.id)
+  ) {
+    return { ok: false, code: 'parent_invalid' }
   }
   const event = (kind: LocalTaskEventKind, payload?: Record<string, unknown>): string =>
     appendLocalTaskEvent(db, { taskId: task.id, kind, source, payload: payload ?? null, now })
@@ -98,7 +94,9 @@ export function updateLocalTask(
     )
     event('parent', { from: task.parentId, to: patch.parentId })
   }
-  db.touch('tasks')
   const updated = readLocalTask(db, task.id)
+  if (updated && updated.revision !== task.revision) {
+    db.touch('tasks')
+  }
   return updated ? { ok: true, task: updated } : { ok: false, code: 'not_found' }
 }

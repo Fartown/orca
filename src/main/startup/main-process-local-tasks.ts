@@ -1,22 +1,30 @@
+import { bindLocalTaskHostSessions } from '../local-tasks/local-task-host-session-binding'
 import { startLocalTasksHost } from '../local-tasks/local-tasks-host-lifecycle'
 import { getCanonicalUserDataPath } from '../persistence'
+import { isOrcadSidecarLaunch } from '../window/foreground-activation-policy'
 import { mainProcessState as state } from './main-process-state'
 
 let stopLocalTasks: (() => void) | null = null
 
-/** Only the desktop app hosts a task library; `--serve` (incl. the orcad sidecar) never does. */
+/**
+ * The desktop app and Electron `orca serve` each keep their profile's task library (D-008).
+ * orcad's browser sidecar is a `--serve` on a throwaway profile: opening one there would advertise
+ * a second, empty library. orcad itself starts its library through `startOrcadForkServices`.
+ */
 export function startLocalTasksForMainProcess(): void {
-  if (state.isServeMode) {
+  if (isOrcadSidecarLaunch()) {
     return
   }
   const profile = state.activeOrcaProfile
-  if (!profile) {
-    throw new Error('Local tasks need the active Orca profile before runtime launch')
+  const runtime = state.runtime
+  if (!profile || !runtime) {
+    throw new Error('Local tasks need the active Orca profile and runtime before runtime launch')
   }
   stopLocalTasks?.()
   stopLocalTasks = startLocalTasksHost({
     profileId: profile.profile.id,
-    userDataPath: getCanonicalUserDataPath()
+    userDataPath: getCanonicalUserDataPath(),
+    sessions: bindLocalTaskHostSessions(runtime)
   })
 }
 

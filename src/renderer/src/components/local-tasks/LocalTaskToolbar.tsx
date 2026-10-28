@@ -8,7 +8,7 @@ import { ShortcutKeyCombo } from '@/components/ShortcutKeyCombo'
 import { translate } from '@/i18n/i18n'
 import { localTaskPageStore, useLocalTaskPage } from '@/local-tasks/local-task-page-store'
 import { localTaskViewLabel } from '@/local-tasks/local-task-vocabulary-copy'
-import { isLocalTasksWritable, useLocalTasksDomain } from '@/local-tasks/local-tasks-domain-store'
+import { useCanCreateLocalTask } from '@/local-tasks/local-task-write-access'
 import { LocalTaskFilterPopover } from './LocalTaskFilterPopover'
 import { LocalTaskViewOptions } from './LocalTaskViewOptions'
 import type { LocalTaskListModel } from './use-local-task-list-model'
@@ -18,9 +18,10 @@ function SearchField(): React.JSX.Element {
   const focusRequest = useLocalTaskPage((state) => state.searchFocusRequest)
   const inputRef = useRef<HTMLInputElement>(null)
   useEffect(() => {
-    if (focusRequest > 0) {
+    if (focusRequest > localTaskPageStore.getState().consumedSearchFocusRequest) {
       inputRef.current?.focus()
       inputRef.current?.select()
+      localTaskPageStore.getState().consumeSearchFocus(focusRequest)
     }
   }, [focusRequest])
   return (
@@ -38,7 +39,7 @@ function SearchField(): React.JSX.Element {
 export function LocalTaskToolbar({ model }: { model: LocalTaskListModel }): React.JSX.Element {
   const view = useLocalTaskPage((state) => state.view)
   const layout = useLocalTaskPage((state) => state.layout)
-  const writable = useLocalTasksDomain(isLocalTasksWritable)
+  const writable = useCanCreateLocalTask(model.scopeProjectId)
   const scopeLabel =
     model.scopeProject?.name ?? translate('localTasks.nav.allProjects', 'All projects')
   return (
@@ -46,7 +47,10 @@ export function LocalTaskToolbar({ model }: { model: LocalTaskListModel }): Reac
       <h2 className="mr-1 min-w-0 truncate text-sm font-medium text-foreground">
         {scopeLabel}
         <span className="ml-1.5 font-normal text-muted-foreground">
-          · {localTaskViewLabel(view)}
+          ·{' '}
+          {view === 'needs-you'
+            ? translate('localTasks.needsYou.title', 'Needs you')
+            : localTaskViewLabel(view)}
         </span>
       </h2>
       <ToggleGroup

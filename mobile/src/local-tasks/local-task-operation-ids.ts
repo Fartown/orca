@@ -4,7 +4,7 @@ import type { LocalTaskWriteOutcome } from './local-tasks-api'
 /**
  * One `clientOperationId` per user operation, kept across resends of that same operation.
  *
- * The desktop replays its first answer for an id it has seen, so a resend after a dropped answer
+ * The host replays its first answer for an id it has seen, so a resend after a dropped answer
  * can never apply a write twice. The id is held only while the outcome leaves room for that doubt:
  * a definite answer (applied or refused) ends the operation, and the next submit is a new one even
  * with the same payload — "Create more" with an unchanged title is two tasks, and a refusal whose
@@ -23,7 +23,7 @@ export function createLocalTaskOperationIds(
     idFor(payload) {
       const key = JSON.stringify(payload)
       if (held?.key !== key) {
-        // Why a changed payload is a new operation: the desktop would replay the old one's answer.
+        // Why a changed payload is a new operation: the host would replay the old one's answer.
         held = { key, id: newId() }
       }
       return held.id

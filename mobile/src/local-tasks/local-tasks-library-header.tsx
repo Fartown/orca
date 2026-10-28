@@ -1,5 +1,13 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native'
-import { ChevronDown, ChevronLeft, Columns3, Layers, List, Settings } from 'lucide-react-native'
+import {
+  ChevronDown,
+  ChevronLeft,
+  Columns3,
+  Layers,
+  List,
+  Server,
+  Settings
+} from 'lucide-react-native'
 import type { LocalTaskProject } from '../../../src/shared/local-tasks/local-task-types'
 import { colors } from '../theme/mobile-theme'
 import { localTasksCopy } from './local-tasks-copy'
@@ -7,10 +15,13 @@ import { localTaskStyles } from './local-tasks-styles'
 
 export type LocalTasksViewMode = 'list' | 'board'
 
-/** Back, settings and the list/board toggle, then the title with the project switch. */
+/** Back, settings and the list/board toggle, then the title with the host and project switches. */
 export function LocalTasksLibraryHeader(props: {
   project: LocalTaskProject | null
   hasProjects: boolean
+  /** Shown only while the page reaches more than one host's library (D-008). */
+  hostLabel: string | null
+  onPickHost: () => void
   view: LocalTasksViewMode
   onExit: () => void
   onSettings: () => void
@@ -59,6 +70,21 @@ export function LocalTasksLibraryHeader(props: {
       </View>
       <View style={localTaskStyles.titleRow}>
         <Text style={localTaskStyles.heading}>{copy.title}</Text>
+        {props.hostLabel !== null ? (
+          <Pressable
+            style={localTaskStyles.chip}
+            onPress={props.onPickHost}
+            accessibilityRole="button"
+            accessibilityLabel={copy.switchHost}
+            testID="local-tasks-host-switch"
+          >
+            <Server size={14} color={colors.textSecondary} />
+            <Text style={localTaskStyles.chipText} numberOfLines={1}>
+              {props.hostLabel}
+            </Text>
+            <ChevronDown size={14} color={colors.textMuted} />
+          </Pressable>
+        ) : null}
         {props.hasProjects ? (
           <Pressable
             style={localTaskStyles.chip}

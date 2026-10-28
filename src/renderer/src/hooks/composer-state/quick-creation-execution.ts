@@ -121,7 +121,9 @@ export function useQuickCreationExecution(input: QuickCreationExecutionInput) {
       const promptLinkedWorkItem = agent === null ? null : submitLinkedWorkItem
 
       const { prompt: quickPrompt, draftPrompt: quickDraftPrompt } =
-        resolveQuickCreateLinkedWorkItemPrompt(promptLinkedWorkItem, trimmedNote)
+        options?.launchPrompt && agent
+          ? { prompt: options.launchPrompt, draftPrompt: null }
+          : resolveQuickCreateLinkedWorkItemPrompt(promptLinkedWorkItem, trimmedNote)
 
       const {
         startupPlan,
@@ -250,7 +252,8 @@ export function useQuickCreationExecution(input: QuickCreationExecutionInput) {
         clearNewWorkspaceDraft()
       }
 
-      runBackgroundWorktreeCreation(request)
+      const creationId = runBackgroundWorktreeCreation(request)
+      options?.onCreationStarted?.(creationId)
 
       if (createMultiple) {
         resetForNextCreate()

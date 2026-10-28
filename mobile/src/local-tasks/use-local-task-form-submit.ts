@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import type { LocalTask } from '../../../src/shared/local-tasks/local-task-types'
 import type { LocalTasksApi, LocalTaskWriteOutcome } from './local-tasks-api'
 import { localTasksCopy } from './local-tasks-copy'
@@ -13,6 +13,7 @@ import {
 } from './local-task-form-state'
 import { createLocalTaskOperationIds, sendLocalTaskWrite } from './local-task-operation-ids'
 import type { LocalTasksLibrary } from './use-local-tasks-library'
+import { useLocalTaskSubtaskBatch } from './use-local-task-subtask-batch'
 
 /**
  * The form's writes. Each step owns its operation ids, so a resend after a dropped answer replays
@@ -24,14 +25,14 @@ export function useLocalTaskFormSubmit(api: LocalTasksApi, library: LocalTasksLi
     create: createLocalTaskOperationIds(),
     subtasks: createLocalTaskOperationIds(),
     update: createLocalTaskOperationIds(),
-    move: createLocalTaskOperationIds(),
-    batch: createLocalTaskOperationIds()
+    move: createLocalTaskOperationIds()
   }))
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<{ text: string; taskId: string } | null>(null)
   // The version the draft was edited from, held while another device's change awaits a decision.
   const [conflict, setConflict] = useState<LocalTask | null>(null)
+  const editBase = useRef<LocalTask | null>(null)
 
   const fail = (outcome: LocalTaskWriteOutcome<unknown>) => {
     setError(localTaskWriteMessage(copy, outcome))
@@ -47,6 +48,8 @@ export function useLocalTaskFormSubmit(api: LocalTasksApi, library: LocalTasksLi
       library.reload(['tasks'])
     }
   }
+
+  const subtaskBatch = useLocalTaskSubtaskBatch(api, library, copy, run, setError)
 
   const sendEdit = async (
     base: LocalTask,
@@ -75,8 +78,8 @@ export function useLocalTaskFormSubmit(api: LocalTasksApi, library: LocalTasksLi
   }
 
   const saveEdit = async (task: LocalTask, draft: LocalTaskDraft): Promise<string | null> => {
-    let current = task
-    if (draft.projectId !== task.projectId) {
+    let current = editBase.current?.id === task.id ? editBase.current : task
+    if (draft.projectId !== current.projectId) {
       const moved = await sendLocalTaskWrite(
         ids.move,
         { taskId: task.id, targetProjectId: draft.projectId },
@@ -87,9 +90,15 @@ export function useLocalTaskFormSubmit(api: LocalTasksApi, library: LocalTasksLi
         return null
       }
       current = moved.value.task
+      editBase.current = current
       library.acceptTasks([current])
     }
-    return sendEdit(current, current.revision, localTaskPatchFor(draft, current))
+    const patch = localTaskPatchFor(draft, current)
+    const saved = await sendEdit(current, current.revision, patch)
+    if (saved) {
+      editBase.current = null
+    }
+    return saved
   }
 
   const saveNew = async (draft: LocalTaskDraft): Promise<string | null> => {
@@ -128,32 +137,7 @@ export function useLocalTaskFormSubmit(api: LocalTasksApi, library: LocalTasksLi
     notice: notice?.text ?? null,
     save: (mode: LocalTaskFormMode, draft: LocalTaskDraft) =>
       run(() => (mode.kind === 'edit' ? saveEdit(mode.task, draft) : saveNew(draft))),
-    /** A pasted block as subtasks; the form's status and priority then apply to all of them. */
-    createSubtasks: (parent: LocalTask, titles: string[], draft: LocalTaskDraft) =>
-      run(async () => {
-        const created = await sendLocalTaskWrite(
-          ids.subtasks,
-          { parentId: parent.id, titles },
-          api.createSubtasks
-        )
-        if (created.kind !== 'ok') {
-          fail(created)
-          return false
-        }
-        library.acceptTasks(created.value.tasks)
-        const taskIds = created.value.tasks.map((task) => task.id)
-        const patch = {
-          ...(draft.statusId ? { statusId: draft.statusId } : {}),
-          ...(draft.priority !== 0 ? { priority: draft.priority } : {})
-        }
-        if (taskIds.length > 0 && Object.keys(patch).length > 0) {
-          const updated = await sendLocalTaskWrite(ids.batch, { taskIds, patch }, api.batchUpdate)
-          if (updated.kind !== 'ok') {
-            fail(updated)
-          }
-        }
-        return true
-      }),
+    ...subtaskBatch,
     conflict: conflict !== null,
     /** Writes the user's own changes over the latest version. */
     overwrite: (draft: LocalTaskDraft) => {

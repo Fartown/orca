@@ -4,7 +4,7 @@ import type {
 } from '../../shared/local-tasks/local-task-types'
 import type { LocalTasksDatabase } from './local-tasks-database'
 import { appendLocalTaskEvent } from './local-task-event-store'
-import { readLocalTask, writeLocalTaskLabels } from './local-task-store'
+import { readLocalTask, readLocalTaskSubtreeIds, writeLocalTaskLabels } from './local-task-store'
 
 export function defaultStatusId(project: LocalTaskProject): string {
   const status =
@@ -15,7 +15,7 @@ export function defaultStatusId(project: LocalTaskProject): string {
   return status.id
 }
 
-/** A parent is a top-level task of the same project, and never the task itself. */
+/** A parent is any task of the same project that is neither the child nor one of its descendants. */
 export function isValidParent(
   db: LocalTasksDatabase,
   parentId: string,
@@ -23,9 +23,10 @@ export function isValidParent(
   childId: string | null
 ): boolean {
   const parent = readLocalTask(db, parentId)
-  return Boolean(
-    parent && parent.projectId === projectId && parent.parentId === null && parent.id !== childId
-  )
+  if (!parent || parent.projectId !== projectId) {
+    return false
+  }
+  return childId === null || !readLocalTaskSubtreeIds(db, childId).includes(parent.id)
 }
 
 export function hasWorkspaceOrSessions(db: LocalTasksDatabase, taskIds: string[]): boolean {
@@ -78,5 +79,6 @@ export function recordLabelChange(
     now,
     taskId
   )
+  db.touch('tasks')
   appendLocalTaskEvent(db, { taskId, kind: 'labels', source, payload: { added, removed }, now })
 }

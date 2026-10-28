@@ -12,6 +12,10 @@ function persist(active: boolean): void {
 }
 
 export function activateLocalTaskSource(): void {
+  const taskPageData = useAppStore.getState().taskPageData
+  if (taskPageData.taskSource) {
+    useAppStore.setState({ taskPageData: { ...taskPageData, taskSource: undefined } })
+  }
   localTaskPageStore.getState().setLocalActive(true)
   persist(true)
 }
@@ -37,7 +41,10 @@ export function bindLocalTaskSourceActivation(): () => void {
     }
   })
   const stopUpstreamSource = useAppStore.subscribe((state, previous) => {
-    if (state.taskPageData !== previous.taskPageData && state.taskPageData.taskSource) {
+    if (
+      state.taskPageData.taskSource &&
+      state.taskPageData.taskSource !== previous.taskPageData.taskSource
+    ) {
       deactivateLocalTaskSource()
     }
   })

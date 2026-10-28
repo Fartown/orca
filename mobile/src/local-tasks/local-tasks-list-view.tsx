@@ -8,7 +8,11 @@ import type {
 } from '../../../src/shared/local-tasks/local-task-types'
 import { colors, spacing, typography } from '../theme/mobile-theme'
 import { formatLocalTaskAgo, localTasksCopy } from './local-tasks-copy'
-import type { LocalTaskListGroup, LocalTaskListRow } from './local-task-list-projection'
+import {
+  unfoldedLocalTaskLines,
+  type LocalTaskListGroup,
+  type LocalTaskListRow
+} from './local-task-list-projection'
 import { localTaskStyles } from './local-tasks-styles'
 import { LocalTaskPriorityIcon, LocalTaskStatusIcon } from './local-tasks-visuals'
 
@@ -84,8 +88,8 @@ export function LocalTasksListView(props: Props) {
                     row={row}
                     lookup={props.lookup}
                     now={props.now}
-                    expanded={!foldedParents.has(row.task.id)}
-                    onToggle={() => setFoldedParents((previous) => toggle(previous, row.task.id))}
+                    folded={foldedParents}
+                    onToggle={(taskId) => setFoldedParents((previous) => toggle(previous, taskId))}
                     onOpen={props.onOpen}
                   />
                 ))}
@@ -100,13 +104,14 @@ function LocalTaskListRowView(props: {
   row: LocalTaskListRow
   lookup: Map<string, LocalTaskStatusDef>
   now: number
-  expanded: boolean
-  onToggle: () => void
+  folded: ReadonlySet<string>
+  onToggle: (taskId: string) => void
   onOpen: (taskId: string) => void
 }) {
   const copy = localTasksCopy()
   const { task } = props.row
   const status = props.lookup.get(task.statusId) ?? null
+  const expanded = !props.folded.has(task.id)
   return (
     <View style={styles.rowBlock}>
       <Pressable
@@ -131,16 +136,16 @@ function LocalTaskListRowView(props: {
             {props.row.subtaskTotal > 0 || props.row.subtasks.length > 0 ? (
               <Pressable
                 style={styles.subtaskChip}
-                onPress={props.onToggle}
+                onPress={() => props.onToggle(task.id)}
                 hitSlop={6}
                 accessibilityRole="button"
-                accessibilityState={{ expanded: props.expanded }}
+                accessibilityState={{ expanded }}
               >
                 <ListTodo size={11} color={colors.textMuted} />
                 <Text style={localTaskStyles.meta}>
                   {props.row.subtaskDone}/{props.row.subtaskTotal}
                 </Text>
-                {props.expanded ? (
+                {expanded ? (
                   <ChevronDown size={11} color={colors.textMuted} />
                 ) : (
                   <ChevronRight size={11} color={colors.textMuted} />
@@ -153,12 +158,15 @@ function LocalTaskListRowView(props: {
           {formatLocalTaskAgo(copy, task.updatedAt, props.now)}
         </Text>
       </Pressable>
-      {props.expanded
-        ? props.row.subtasks.map((child) => (
+      {expanded
+        ? unfoldedLocalTaskLines(props.row.subtasks, props.folded).map((line) => (
             <LocalTaskSubtaskRow
-              key={child.id}
-              task={child}
-              status={props.lookup.get(child.statusId) ?? null}
+              key={line.task.id}
+              task={line.task}
+              status={props.lookup.get(line.task.statusId) ?? null}
+              depth={line.depth}
+              folded={line.childCount > 0 ? props.folded.has(line.task.id) : undefined}
+              onToggle={() => props.onToggle(line.task.id)}
               onOpen={props.onOpen}
             />
           ))
@@ -167,14 +175,27 @@ function LocalTaskListRowView(props: {
   )
 }
 
+// Why capped: past a few levels the indent would leave no room for the title on a phone.
+const MAX_INDENT_DEPTH = 4
+
 export function LocalTaskSubtaskRow(props: {
   task: LocalTask
   status: LocalTaskStatusDef | null
+  /** 1 under a top-level row; deeper lines indent further. */
+  depth?: number
+  /** Set only for a line with shown children: whether they are folded away. */
+  folded?: boolean
+  onToggle?: () => void
   onOpen: (taskId: string) => void
 }) {
+  const indent = (Math.min(props.depth ?? 1, MAX_INDENT_DEPTH) - 1) * spacing.lg
   return (
     <Pressable
-      style={({ pressed }) => [styles.subtaskRow, pressed && styles.rowPressed]}
+      style={({ pressed }) => [
+        styles.subtaskRow,
+        indent > 0 && { paddingLeft: spacing.xl + spacing.lg + indent },
+        pressed && styles.rowPressed
+      ]}
       onPress={() => props.onOpen(props.task.id)}
       accessibilityRole="button"
       accessibilityLabel={`${props.task.ref} ${props.task.title}`}
@@ -188,6 +209,21 @@ export function LocalTaskSubtaskRow(props: {
       <Text style={styles.subtaskTitle} numberOfLines={1}>
         {props.task.title}
       </Text>
+      {props.folded !== undefined ? (
+        <Pressable
+          testID={`local-task-fold-${props.task.id}`}
+          onPress={props.onToggle}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityState={{ expanded: !props.folded }}
+        >
+          {props.folded ? (
+            <ChevronRight size={13} color={colors.textMuted} />
+          ) : (
+            <ChevronDown size={13} color={colors.textMuted} />
+          )}
+        </Pressable>
+      ) : null}
     </Pressable>
   )
 }

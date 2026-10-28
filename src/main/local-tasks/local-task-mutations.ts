@@ -17,8 +17,8 @@ import { appendLocalTaskEvent } from './local-task-event-store'
 import { readLocalTaskProject } from './local-task-project-store'
 import {
   readLocalTask,
-  readLocalTaskChildren,
   readLocalTaskLabels,
+  readLocalTaskSubtreeIds,
   writeLocalTaskLabels
 } from './local-task-store'
 import {
@@ -75,9 +75,6 @@ export function createLocalSubtasks(
   if (!parent || !project) {
     return { ok: false, code: 'not_found' }
   }
-  if (parent.parentId !== null) {
-    return { ok: false, code: 'parent_invalid' }
-  }
   const tasks: LocalTask[] = []
   for (const title of input.titles) {
     const taskId = insertTask(db, {
@@ -106,7 +103,7 @@ export function batchUpdateLocalTasks(
   source: LocalTaskEventSource,
   now: number
 ): LocalTaskResult<{ updated: number }> {
-  const tasks = input.taskIds.map((taskId) => readLocalTask(db, taskId))
+  const tasks = [...new Set(input.taskIds)].map((taskId) => readLocalTask(db, taskId))
   if (tasks.some((task) => task === null)) {
     return { ok: false, code: 'not_found' }
   }
@@ -124,8 +121,19 @@ export function batchUpdateLocalTasks(
   ) {
     return { ok: false, code: 'status_invalid' }
   }
+  if (addLabels || removeLabels) {
+    const removed = new Set(removeLabels ?? [])
+    for (const task of present) {
+      const merged = new Set([...task.labels, ...(addLabels ?? [])])
+      if ([...merged].filter((label) => !removed.has(label)).length > 20) {
+        return { ok: false, code: 'invalid_argument' }
+      }
+    }
+  }
   for (const task of present) {
+    let changed = false
     if (statusId && statusId !== task.statusId) {
+      changed = true
       setTaskColumn(db, task.id, 'status_id', statusId, now)
       appendLocalTaskEvent(db, {
         taskId: task.id,
@@ -136,6 +144,7 @@ export function batchUpdateLocalTasks(
       })
     }
     if (priority !== undefined && priority !== task.priority) {
+      changed = true
       setTaskColumn(db, task.id, 'priority', priority, now)
       appendLocalTaskEvent(db, {
         taskId: task.id,
@@ -151,14 +160,20 @@ export function batchUpdateLocalTasks(
       const after = [...new Set([...before, ...(addLabels ?? [])])].filter(
         (label) => !removed.has(label)
       )
+      changed ||= after.length !== before.length || after.some((label) => !before.includes(label))
       recordLabelChange(db, task.id, before, after, source, now)
     }
+    if (changed) {
+      db.touch('tasks')
+    }
   }
-  db.touch('tasks')
   return { ok: true, updated: present.length }
 }
 
-/** Moves a top-level task with its subtasks; each gets the next number in the target project. */
+/**
+ * Moves a task with its whole subtree; each gets the next number in the target project and keeps
+ * its old ref as an alias. The moved task becomes top-level there. Links stay, as they name work.
+ */
 export function moveLocalTask(
   db: LocalTasksDatabase,
   input: LocalTasksTasksMoveInput,
@@ -171,20 +186,18 @@ export function moveLocalTask(
   if (!task || !from || !to) {
     return { ok: false, code: 'not_found' }
   }
-  if (task.parentId !== null || from.id === to.id) {
+  if (from.id === to.id) {
     return { ok: false, code: 'parent_invalid' }
   }
-  const family = [task, ...readLocalTaskChildren(db, task.id)]
-  if (
-    hasWorkspaceOrSessions(
-      db,
-      family.map((member) => member.id)
-    )
-  ) {
-    return { ok: false, code: 'workspace_linked' }
-  }
+  const subtree = readLocalTaskSubtreeIds(db, task.id).flatMap((id) => {
+    const member = readLocalTask(db, id)
+    return member ? [member] : []
+  })
   const oldPrefixes = [from.prefix, ...from.aliases]
-  for (const member of family) {
+  const alias = db.prepare(
+    'INSERT OR REPLACE INTO local_task_aliases (alias, task_id) VALUES (?, ?)'
+  )
+  for (const member of subtree) {
     const category = from.statuses.find((status) => status.id === member.statusId)?.category
     const target = to.statuses.find((status) => status.category === category) ?? to.statuses[0]
     const taskNumber = allocateNumber(db, to.id)
@@ -192,9 +205,6 @@ export function moveLocalTask(
       `UPDATE local_tasks SET project_id = ?, number = ?, status_id = ?, updated_at = ?,
          revision = revision + 1 WHERE id = ?`
     ).run(to.id, taskNumber, target.id, now, member.id)
-    const alias = db.prepare(
-      'INSERT OR REPLACE INTO local_task_aliases (alias, task_id) VALUES (?, ?)'
-    )
     for (const prefix of oldPrefixes) {
       alias.run(formatLocalTaskRef(prefix, member.number), member.id)
     }
@@ -203,6 +213,17 @@ export function moveLocalTask(
       kind: 'moved',
       source,
       payload: { from: member.ref, to: formatLocalTaskRef(to.prefix, taskNumber) },
+      now
+    })
+  }
+  if (task.parentId !== null) {
+    // Why: a parent stays in its own project; the moved task heads its subtree in the new one.
+    db.prepare('UPDATE local_tasks SET parent_id = NULL WHERE id = ?').run(task.id)
+    appendLocalTaskEvent(db, {
+      taskId: task.id,
+      kind: 'parent',
+      source,
+      payload: { from: task.parentId, to: null },
       now
     })
   }
@@ -218,11 +239,18 @@ export function removeLocalTask(
   if (!task) {
     return { ok: false, code: 'not_found' }
   }
-  const removed = 1 + readLocalTaskChildren(db, taskId).length
+  const subtree = readLocalTaskSubtreeIds(db, taskId)
+  // Why: foreign keys cascade the subtree's links, sessions and attention marks; the caches that
+  // read those scopes must be told, or a deleted task's workspace chip lingers (D2).
+  const hadLinks = hasWorkspaceOrSessions(db, subtree)
   // Why: only task-library rows go; linked workspaces and sessions on any host are left untouched.
   db.prepare('DELETE FROM local_tasks WHERE id = ?').run(taskId)
   db.touch('tasks')
-  return { ok: true, removed }
+  if (hadLinks) {
+    db.touch('links')
+    db.touch('attention')
+  }
+  return { ok: true, removed: subtree.length }
 }
 
 type InsertTaskInput = {

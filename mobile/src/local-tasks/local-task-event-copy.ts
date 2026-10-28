@@ -1,23 +1,21 @@
 import {
-  LOCAL_TASK_PRIORITIES,
-  type LocalTaskPriority
-} from '../../../src/shared/local-tasks/local-task-model'
+  localTaskEventText as text,
+  localTaskEventTexts,
+  localTaskEventPriority
+} from '../../../src/shared/local-tasks/local-task-event-payload'
 import type {
   LocalTaskEvent,
   LocalTaskStatusDef
 } from '../../../src/shared/local-tasks/local-task-types'
 import type { LocalTasksCopy } from './local-tasks-copy'
 
-function text(payload: Record<string, unknown> | null, key: string): string | null {
-  const value = payload?.[key]
-  return typeof value === 'string' && value.length > 0 ? value : null
-}
-
-function priorityName(copy: LocalTasksCopy, value: unknown): string {
-  const priority: LocalTaskPriority | undefined = LOCAL_TASK_PRIORITIES.find(
-    (candidate) => candidate === value
-  )
-  return priority === undefined ? '?' : (copy.priorities[priority] ?? '?')
+function priorityName(
+  copy: LocalTasksCopy,
+  payload: Record<string, unknown> | null,
+  key: string
+): string {
+  const priority = localTaskEventPriority(payload, key)
+  return priority === null ? '?' : (copy.priorities[priority] ?? '?')
 }
 
 /**
@@ -47,16 +45,13 @@ export function describeLocalTaskEvent(
       return copy.eventStatus(name('fromName', 'from'), name('toName', 'to'))
     }
     case 'priority':
-      return copy.eventPriority(priorityName(copy, payload?.from), priorityName(copy, payload?.to))
+      return copy.eventPriority(
+        priorityName(copy, payload, 'from'),
+        priorityName(copy, payload, 'to')
+      )
     case 'labels': {
-      const list = (key: string): string[] => {
-        const value: unknown = payload?.[key]
-        return Array.isArray(value)
-          ? value.filter((label): label is string => typeof label === 'string')
-          : []
-      }
-      const added = list('added').map((label) => `+${label}`)
-      const removed = list('removed').map((label) => `−${label}`)
+      const added = localTaskEventTexts(payload, 'added').map((label) => `+${label}`)
+      const removed = localTaskEventTexts(payload, 'removed').map((label) => `−${label}`)
       const changes = [...added, ...removed].join(' ')
       return changes ? `${copy.eventLabels} ${changes}` : copy.eventLabels
     }
@@ -64,5 +59,17 @@ export function describeLocalTaskEvent(
       return copy.eventParent
     case 'moved':
       return copy.eventMoved(text(payload, 'from') ?? '?', text(payload, 'to') ?? '?')
+    case 'workspace-linked':
+      return copy.eventWorkspaceLinked(text(payload, 'name') ?? text(payload, 'branch') ?? '?')
+    case 'workspace-unlinked':
+      return copy.eventWorkspaceUnlinked(text(payload, 'name') ?? text(payload, 'branch') ?? '?')
+    case 'workspace-host':
+      return copy.eventWorkspaceHost(
+        text(payload, 'toHostLabel') ?? text(payload, 'toHostId') ?? '?'
+      )
+    case 'session-linked':
+      return copy.eventSessionLinked(text(payload, 'agent') ?? '?')
+    case 'session-unlinked':
+      return copy.eventSessionUnlinked(text(payload, 'agent') ?? '?')
   }
 }

@@ -15,6 +15,8 @@ import { formatLocalTaskTime } from '@/local-tasks/local-task-time'
 import type { LocalTask } from '../../../../shared/local-tasks/local-task-types'
 import { collectLocalTaskLabels, type LocalTaskIndex } from '@/local-tasks/local-task-grouping'
 import { localTasksClient } from '@/local-tasks/local-tasks-runtime-client'
+import { localTaskIdEndpoint } from '@/local-tasks/local-task-endpoints'
+import { localTaskParentCandidates } from '@/local-tasks/local-task-hierarchy'
 import { localTasksDomainStore } from '@/local-tasks/local-tasks-domain-store'
 import {
   runLocalTaskWrite,
@@ -65,33 +67,33 @@ export function LocalTaskDetailProperties({
   task,
   index,
   allTasks,
-  writable
+  writable,
+  workspace
 }: {
   task: LocalTask
   index: LocalTaskIndex
   allTasks: readonly LocalTask[]
   writable: boolean
+  /** The 工作区 card (REQ-012) heads the column. */
+  workspace?: React.ReactNode
 }): React.JSX.Element {
   const now = useNow(60_000)
   const project = index.projectsById.get(task.projectId)
-  const hasChildren = index.childrenByParentId.has(task.id)
   const suggestions = useMemo(() => collectLocalTaskLabels(allTasks), [allTasks])
   const parents = useMemo(
-    () =>
-      allTasks.filter(
-        (candidate) =>
-          candidate.projectId === task.projectId &&
-          candidate.parentId === null &&
-          candidate.id !== task.id
-      ),
-    [allTasks, task.projectId, task.id]
+    () => localTaskParentCandidates(task, task.projectId, allTasks, index),
+    [allTasks, index, task]
   )
+  // Why one library: each Orca numbers its own tasks, so a task moves only within its library.
   const otherProjects = [...index.projectsById.values()].filter(
-    (candidate) => candidate.id !== task.projectId
+    (candidate) =>
+      candidate.id !== task.projectId &&
+      localTaskIdEndpoint(candidate.id) === localTaskIdEndpoint(task.projectId)
   )
 
   return (
-    <aside className="flex w-72 shrink-0 flex-col gap-3 border-l border-border/60 pl-5">
+    <aside className="flex w-72 shrink-0 flex-col gap-3 overflow-y-auto border-l border-border/60 pl-5 scrollbar-sleek">
+      {workspace ? <div className="border-b border-border/60 pb-3">{workspace}</div> : null}
       <Property label={translate('localTasks.field.status', 'Status')}>
         <LocalTaskStatusSelect
           project={project}
@@ -119,8 +121,7 @@ export function LocalTaskDetailProperties({
         <LocalTaskParentPicker
           candidates={parents}
           value={task.parentId}
-          // Why: two levels only; a task that has subtasks cannot become one.
-          disabled={!writable || hasChildren}
+          disabled={!writable}
           onChange={(parentId) => void updateLocalTaskFields(task, { parentId })}
         />
       </Property>
@@ -128,7 +129,7 @@ export function LocalTaskDetailProperties({
         <div className="flex items-center gap-1">
           <span className="min-w-0 truncate text-xs text-foreground">{project?.name}</span>
           <span className="font-mono text-2xs text-muted-foreground">{project?.prefix}</span>
-          {task.parentId === null && otherProjects.length > 0 ? (
+          {otherProjects.length > 0 ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild disabled={!writable}>
                 <Button

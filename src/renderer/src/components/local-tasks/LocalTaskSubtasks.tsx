@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Plus } from 'lucide-react'
 import { toast } from 'sonner'
+import { Button } from '@/components/ui/button'
 import { ImeInput } from '@/lib/ime-text-field'
 import { translate } from '@/i18n/i18n'
 import { isImeCompositionKeyDown } from '@/lib/ime-composition-keyboard-event'
@@ -14,8 +15,9 @@ import { localTaskPageStore } from '@/local-tasks/local-task-page-store'
 import { createLocalSubtasks, parseSubtaskLines } from '@/local-tasks/local-task-writes'
 import { LocalTaskPriorityIcon, LocalTaskStatusIcon } from './LocalTaskIcons'
 import { LocalTaskSubtaskProgress } from './LocalTaskRow'
+import { LocalTaskProgressBadges } from './LocalTaskProgress'
 
-/** Subtasks of a top-level task; pasting several lines adds one subtask per line (REQ-004). */
+/** Direct subtasks of a task at any level; pasting several lines adds one per line (REQ-004). */
 export function LocalTaskSubtasks({
   task,
   index,
@@ -27,26 +29,35 @@ export function LocalTaskSubtasks({
 }): React.JSX.Element {
   const [draft, setDraft] = useState('')
   const [busy, setBusy] = useState(false)
+  const [pendingTitles, setPendingTitles] = useState<string[]>([])
   const children = index.childrenByParentId.get(task.id) ?? []
 
   const add = async (titles: string[]): Promise<void> => {
-    const batch = titles
-      .map((title) => title.slice(0, LOCAL_TASK_TITLE_MAX))
-      .slice(0, LOCAL_TASK_BATCH_MAX)
+    const batch = titles.map((title) => title.slice(0, LOCAL_TASK_TITLE_MAX))
     if (batch.length === 0 || busy) {
       return
     }
     setBusy(true)
-    const created = await createLocalSubtasks(task, batch)
-    setBusy(false)
-    if (!created) {
-      return
+    let createdCount = 0
+    for (let offset = 0; offset < batch.length; offset += LOCAL_TASK_BATCH_MAX) {
+      const created = await createLocalSubtasks(
+        task,
+        batch.slice(offset, offset + LOCAL_TASK_BATCH_MAX)
+      )
+      if (!created) {
+        setPendingTitles(batch.slice(offset))
+        setBusy(false)
+        return
+      }
+      createdCount += created.length
     }
+    setBusy(false)
     setDraft('')
-    if (created.length > 1) {
+    setPendingTitles([])
+    if (createdCount > 1) {
       toast.success(
         translate('localTasks.subtasks.added', 'Added {{count}} subtasks', {
-          count: created.length
+          count: createdCount
         })
       )
     }
@@ -76,6 +87,8 @@ export function LocalTaskSubtasks({
                 {child.ref}
               </span>
               <span className="min-w-0 flex-1 truncate text-foreground">{child.title}</span>
+              <LocalTaskSubtaskProgress task={child} index={index} />
+              <LocalTaskProgressBadges task={child} index={index} />
               <span className="shrink-0 text-2xs text-muted-foreground">{status?.name}</span>
             </button>
           )
@@ -85,7 +98,7 @@ export function LocalTaskSubtasks({
             <Plus className="size-3.5 shrink-0 text-muted-foreground" />
             <ImeInput
               value={draft}
-              disabled={busy}
+              disabled={busy || pendingTitles.length > 0}
               maxLength={LOCAL_TASK_TITLE_MAX}
               onChange={(event) => setDraft(event.target.value)}
               onPaste={(event) => {
@@ -111,6 +124,19 @@ export function LocalTaskSubtasks({
           </div>
         ) : null}
       </div>
+      {pendingTitles.length > 0 ? (
+        <Button
+          variant="outline"
+          size="xs"
+          className="w-fit"
+          disabled={busy}
+          onClick={() => void add(pendingTitles)}
+        >
+          {translate('localTasks.subtasks.retryRemaining', 'Retry remaining {{count}} subtasks', {
+            count: pendingTitles.length
+          })}
+        </Button>
+      ) : null}
     </section>
   )
 }

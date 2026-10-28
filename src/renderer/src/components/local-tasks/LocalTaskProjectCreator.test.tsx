@@ -1,0 +1,126 @@
+// @vitest-environment happy-dom
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { afterEach, beforeEach, expect, it, vi } from 'vitest'
+
+const fixture = vi.hoisted(() => ({
+  projects: [
+    { id: 'one', displayName: 'One' },
+    { id: 'two', displayName: 'Two' }
+  ],
+  createProject: vi.fn()
+}))
+vi.mock('@/store', () => {
+  const state = { projects: fixture.projects, projectHostSetups: [] }
+  return {
+    useAppStore: Object.assign((select: (value: unknown) => unknown) => select(state), {
+      getState: () => state
+    })
+  }
+})
+vi.mock('@/components/sidebar/use-sidebar-host-scope-options', () => ({
+  useSidebarHostScopeOptions: () => ({ hostOptions: [] })
+}))
+vi.mock('@/local-tasks/local-task-project-recommendations', () => ({
+  recommendLocalTaskProjects: (projects: typeof fixture.projects, linked: { repos: string[] }[]) =>
+    projects
+      .filter((project) => !linked.some((item) => item.repos.includes(project.id)))
+      .map((project) => ({ project, prefix: project.id === 'one' ? 'ONE' : 'TWO' })),
+  localTaskEndpointForOrcaProject: () => 'local'
+}))
+vi.mock('@/local-tasks/local-task-workspace-resolution', () => ({ orcaProjectHostIds: () => [] }))
+vi.mock('@/local-tasks/local-tasks-runtime-client', () => ({
+  localTasksClient: { createProject: fixture.createProject }
+}))
+
+import { LocalTaskProjectCreator } from './LocalTaskProjectCreator'
+import { LocalTaskPage } from './LocalTaskPage'
+import { LocalTasksSettingsPane } from './settings/LocalTasksSettingsPane'
+import { localTasksDomainStore } from '@/local-tasks/local-tasks-domain-store'
+
+beforeEach(() => {
+  fixture.createProject.mockReset()
+  localTasksDomainStore.setState(localTasksDomainStore.getInitialState())
+  localTasksDomainStore.getState().openEndpoint('local')
+  const library = localTasksDomainStore.getState().writer('local')
+  library.setConnection('live')
+  library.setHostState('ready', null)
+  library.applyProjects([])
+  library.applyTasks([])
+  fixture.createProject.mockImplementation(
+    async (_endpoint: string, input: { prefix: string; repos: string[] }) =>
+      input.prefix === 'DUP'
+        ? { ok: false, code: 'prefix_taken', detail: 'One' }
+        : {
+            ok: true,
+            project: {
+              id: `task-${input.repos[0]}`,
+              repos: input.repos,
+              defaultRepoId: input.repos[0],
+              name: input.repos[0] === 'one' ? 'One' : 'Two',
+              prefix: input.prefix,
+              aliases: [],
+              rules: { startMovesToInProgress: true, prMergedCompletes: true },
+              statuses: [],
+              revision: 1
+            }
+          }
+  )
+})
+afterEach(cleanup)
+
+it('retains failed rows for correction and retries only projects not already created', async () => {
+  const done = vi.fn()
+  render(<LocalTaskProjectCreator writable onDone={done} />)
+  fireEvent.click(screen.getByRole('checkbox', { name: 'One' }))
+  fireEvent.click(screen.getByRole('checkbox', { name: 'Two' }))
+  fireEvent.change(screen.getByRole('textbox', { name: 'Prefix for Two' }), {
+    target: { value: 'DUP' }
+  })
+  fireEvent.click(screen.getByRole('button', { name: 'Create selected (2)' }))
+  await waitFor(() => expect(fixture.createProject).toHaveBeenCalledTimes(2))
+  expect(done).not.toHaveBeenCalled()
+  expect(screen.getByText(/One.*prefix/i)).toBeTruthy()
+  expect(screen.queryByRole('checkbox', { name: 'One' })).toBeNull()
+
+  fireEvent.change(screen.getByRole('textbox', { name: 'Prefix for Two' }), {
+    target: { value: 'FIX' }
+  })
+  fireEvent.click(screen.getByRole('button', { name: 'Create selected (1)' }))
+  await waitFor(() => expect(done).toHaveBeenCalledTimes(1))
+  expect(fixture.createProject.mock.calls.map(([, input]) => input.repos[0])).toEqual([
+    'one',
+    'two',
+    'two'
+  ])
+})
+
+it('keeps the initial setup visible when its first project succeeds but another fails', async () => {
+  render(<LocalTaskPage sourceBar={null} />)
+  fireEvent.click(screen.getByRole('checkbox', { name: 'One' }))
+  fireEvent.click(screen.getByRole('checkbox', { name: 'Two' }))
+  fireEvent.change(screen.getByRole('textbox', { name: 'Prefix for Two' }), {
+    target: { value: 'DUP' }
+  })
+  fireEvent.click(screen.getByRole('button', { name: 'Create selected (2)' }))
+  await waitFor(() => expect(fixture.createProject).toHaveBeenCalledTimes(2))
+  expect(screen.getByRole('textbox', { name: 'Prefix for Two' })).toBeTruthy()
+  expect(screen.getByRole('textbox', { name: 'Prefix for Two' }).getAttribute('aria-invalid')).toBe(
+    'true'
+  )
+})
+
+it('keeps the settings dialog open for a failed row after another project succeeds', async () => {
+  render(<LocalTasksSettingsPane />)
+  fireEvent.click(screen.getByRole('button', { name: 'New task project' }))
+  fireEvent.click(screen.getByRole('checkbox', { name: 'One' }))
+  fireEvent.click(screen.getByRole('checkbox', { name: 'Two' }))
+  fireEvent.change(screen.getByRole('textbox', { name: 'Prefix for Two' }), {
+    target: { value: 'DUP' }
+  })
+  fireEvent.click(screen.getByRole('button', { name: 'Create selected (2)' }))
+  await waitFor(() => expect(fixture.createProject).toHaveBeenCalledTimes(2))
+  expect(screen.getByRole('dialog')).toBeTruthy()
+  expect(screen.getByRole('textbox', { name: 'Prefix for Two' }).getAttribute('aria-invalid')).toBe(
+    'true'
+  )
+})

@@ -15,6 +15,10 @@ export type LocalTaskPageKeyAction =
   | 'toggle-layout'
   | 'filter'
   | 'search'
+  | 'acknowledge'
+  | 'snooze'
+  | 'start-work'
+  | 'open-session'
 
 const KEY_ACTIONS: Readonly<Record<string, LocalTaskPageKeyAction>> = {
   c: 'create',
@@ -28,7 +32,11 @@ const KEY_ACTIONS: Readonly<Record<string, LocalTaskPageKeyAction>> = {
   l: 'labels',
   v: 'toggle-layout',
   f: 'filter',
-  '/': 'search'
+  '/': 'search',
+  e: 'acknowledge',
+  h: 'snooze',
+  i: 'start-work',
+  a: 'open-session'
 }
 
 // The upstream task page leaves Esc to these surfaces; so does this router.
@@ -63,7 +71,13 @@ function isOnLocalTaskPage(target: EventTarget | null): boolean {
 
 /** Maps a keydown to a page command, or null when the key belongs to whatever has focus. */
 export function resolveLocalTaskPageKey(event: KeyboardEvent): LocalTaskPageKeyAction | null {
-  if (event.metaKey || event.ctrlKey || event.altKey || isImeOwnedKeyboardEvent(event)) {
+  if (
+    event.metaKey ||
+    event.ctrlKey ||
+    event.altKey ||
+    event.shiftKey ||
+    isImeOwnedKeyboardEvent(event)
+  ) {
     return null
   }
   const target = event.target
@@ -144,6 +158,18 @@ function onKeyDown(event: KeyboardEvent): void {
   }
   if (event.key === 'Escape') {
     handleEscape(event)
+    return
+  }
+  if (
+    event.key.toLowerCase() === 'f' &&
+    (navigator.userAgent.includes('Mac') ? event.metaKey : event.ctrlKey) &&
+    !event.altKey &&
+    !event.shiftKey &&
+    isOnLocalTaskPage(event.target)
+  ) {
+    event.preventDefault()
+    event.stopPropagation()
+    pageHandler('search')
     return
   }
   const action = resolveLocalTaskPageKey(event)

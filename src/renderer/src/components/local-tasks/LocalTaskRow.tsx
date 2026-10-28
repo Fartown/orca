@@ -1,4 +1,5 @@
-import { useEffect, useRef } from 'react'
+import { memo, useEffect, useRef } from 'react'
+import { ChevronDown, ChevronRight } from 'lucide-react'
 import { Checkbox } from '@/components/ui/checkbox'
 import { translate } from '@/i18n/i18n'
 import { formatLocalTaskTime } from '@/local-tasks/local-task-time'
@@ -7,7 +8,9 @@ import { localTaskSubtaskProgress, type LocalTaskIndex } from '@/local-tasks/loc
 import { LOCAL_TASK_ROW_ATTRIBUTE } from '@/local-tasks/local-task-page-keys'
 import { localTaskPageStore, useLocalTaskPage } from '@/local-tasks/local-task-page-store'
 import type { LocalTask } from '../../../../shared/local-tasks/local-task-types'
+import { LocalTaskHostTag } from './LocalTaskHostTag'
 import { LocalTaskPriorityIcon, LocalTaskStatusIcon } from './LocalTaskIcons'
+import { LocalTaskProgressBadges } from './LocalTaskProgress'
 
 export function LocalTaskLabelChips({
   labels,
@@ -60,19 +63,53 @@ export function LocalTaskSubtaskProgress({
   )
 }
 
-/** One list row; the status chip hides when it would repeat a status heading (`groupLabel`). */
-export function LocalTaskRow({
+const INDENT_BASE_PX = 12
+const INDENT_STEP_PX = 20
+// Why capped: past a few levels deeper indent only squeezes the title.
+const INDENT_DEPTH_MAX = 4
+
+function FoldToggle({ task, folded }: { task: LocalTask; folded: boolean }): React.JSX.Element {
+  const Icon = folded ? ChevronRight : ChevronDown
+  return (
+    <button
+      type="button"
+      aria-expanded={!folded}
+      aria-label={
+        folded
+          ? translate('localTasks.row.unfold', 'Show subtasks of {{ref}}', { ref: task.ref })
+          : translate('localTasks.row.fold', 'Hide subtasks of {{ref}}', { ref: task.ref })
+      }
+      onClick={(event) => {
+        event.stopPropagation()
+        localTaskPageStore.getState().toggleTaskCollapsed(task.id)
+      }}
+      className="flex size-4 shrink-0 items-center justify-center rounded-sm text-muted-foreground hover:text-foreground"
+    >
+      <Icon className="size-3.5" />
+    </button>
+  )
+}
+
+/**
+ * One list row, indented by its depth in the task tree; the status chip hides when it would
+ * repeat a status heading (`groupLabel`). `folded` is null for a row with no shown subtasks.
+ */
+export const LocalTaskRow = memo(function LocalTaskRow({
   task,
   index,
   groupLabel,
-  nested,
-  now
+  depth,
+  folded,
+  now,
+  hostLabels
 }: {
   task: LocalTask
   index: LocalTaskIndex
   groupLabel: string | null
-  nested: boolean
+  depth: number
+  folded: boolean | null
   now: number
+  hostLabels?: ReadonlyMap<string, string>
 }): React.JSX.Element {
   const isCursor = useLocalTaskPage((state) => state.cursorTaskId === task.id)
   const isSelected = useLocalTaskPage((state) => state.selectedTaskIds.includes(task.id))
@@ -98,9 +135,11 @@ export function LocalTaskRow({
           localTaskPageStore.getState().setCursor(task.id)
         }
       }}
+      style={{
+        paddingLeft: `${INDENT_BASE_PX + Math.min(depth, INDENT_DEPTH_MAX) * INDENT_STEP_PX}px`
+      }}
       className={cn(
         'group/row flex h-9 cursor-pointer items-center gap-2.5 border-b border-border/40 pr-3 text-[13px] transition-colors last:border-b-0 hover:bg-accent/60',
-        nested ? 'pl-10' : 'pl-3',
         isCursor && 'bg-accent',
         isSelected && 'bg-accent/80'
       )}
@@ -118,10 +157,16 @@ export function LocalTaskRow({
           aria-label={translate('localTasks.row.select', 'Select {{ref}}', { ref: task.ref })}
         />
       </span>
+      {folded === null ? (
+        <span className="size-4 shrink-0" />
+      ) : (
+        <FoldToggle task={task} folded={folded} />
+      )}
       <LocalTaskPriorityIcon priority={task.priority} />
       <span className="w-16 shrink-0 truncate font-mono text-xs text-muted-foreground">
         {task.ref}
       </span>
+      <LocalTaskHostTag id={task.id} labels={hostLabels} className="max-w-24 shrink-0" />
       {status ? <LocalTaskStatusIcon category={status.category} color={status.color} /> : null}
       <span className="min-w-0 truncate text-foreground">{task.title}</span>
       {status && status.name !== groupLabel ? (
@@ -130,6 +175,7 @@ export function LocalTaskRow({
         </span>
       ) : null}
       <LocalTaskSubtaskProgress task={task} index={index} />
+      <LocalTaskProgressBadges task={task} index={index} />
       <span className="min-w-0 flex-1" />
       <LocalTaskLabelChips labels={task.labels} />
       <span className="w-20 shrink-0 text-right text-2xs text-muted-foreground">
@@ -137,4 +183,4 @@ export function LocalTaskRow({
       </span>
     </div>
   )
-}
+})

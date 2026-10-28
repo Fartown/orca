@@ -28,6 +28,7 @@ import { translate } from '@/i18n/i18n'
 import { getWorkspaceComposerInitialFocusTarget } from '@/lib/workspace-composer-initial-focus'
 import { getFolderWorkspacePrimaryActionLabel } from '@/components/sidebar/folder-workspace-composer-helpers'
 import type { WorkspaceCreationTargetHint } from '@/lib/project-host-workspace-target'
+import type { Repo } from '../../../shared/repo-types'
 import { addAppKeyListener, removeAppKeyListener } from '@/lib/app-keyboard-router'
 
 // Why: match App-level AddRepoDialog loading — the add flow is off the hot
@@ -39,6 +40,7 @@ const HostedAddRepoDialog = lazyWithRetry(() => import('@/components/sidebar/Add
 type ComposerModalData = {
   prefilledName?: string
   initialRepoId?: string
+  initialTaskRepo?: Repo
   initialEphemeralVmRecipeId?: string
   initialProjectGroupId?: string
   linkedWorkItem?: LinkedWorkItemSummary | null
@@ -55,6 +57,8 @@ type ComposerModalData = {
   telemetrySource?: WorkspaceCreateTelemetrySource
   contextualTourSource?: string
   setupGuideTourRequestId?: string
+  launchPrompt?: string
+  onCreationStarted?: (creationId: string) => void
 }
 
 export default function NewWorkspaceComposerModal(): React.JSX.Element | null {
@@ -145,6 +149,7 @@ function QuickTabBody({
     initialTaskSourceContext: modalData.taskSourceContext ?? null,
     initialWorkspaceTarget: modalData.initialWorkspaceTarget ?? null,
     initialRepoId: modalData.initialRepoId,
+    initialTaskRepo: modalData.initialTaskRepo,
     initialEphemeralVmRecipeId: modalData.initialEphemeralVmRecipeId,
     initialProjectGroupId: modalData.initialProjectGroupId,
     initialWorkspaceStatus: modalData.initialWorkspaceStatus,
@@ -202,8 +207,9 @@ function QuickTabBody({
   }, [])
 
   const handleCreate = useCallback(async (): Promise<void> => {
-    await submitQuick(quickAgent, { setupOnly: quickSetupOnly })
-  }, [quickAgent, quickSetupOnly, submitQuick])
+    const { launchPrompt, onCreationStarted } = modalData
+    await submitQuick(quickAgent, { setupOnly: quickSetupOnly, launchPrompt, onCreationStarted })
+  }, [modalData, quickAgent, quickSetupOnly, submitQuick])
   // Why: Add Project layers over the composer as a nested dialog instead of
   // replacing it in the activeModal slot — closing the composer mid-flow (and
   // losing the typed name/prompt) was the old, abrupt behavior. Once opened it

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { LocalTaskProject } from '../../../shared/local-tasks/local-task-types'
 import type { Project } from '../../../shared/project-types'
 import {
+  localTaskEndpointForOrcaProject,
   recommendLocalTaskProjects,
   suggestLocalTaskPrefix,
   takenLocalTaskPrefixes
@@ -24,7 +25,7 @@ function taskProject(orcaProjectId: string, prefix: string, aliases: string[]): 
     name: prefix,
     prefix,
     aliases,
-    orcaProjectId,
+    repos: [orcaProjectId],
     defaultRepoId: null,
     lastExecutionHostId: null,
     rules: { startMovesToInProgress: true, prMergedCompletes: true },
@@ -58,5 +59,15 @@ describe('task project recommendations (REQ-001, REQ-002)', () => {
       ['orca-2', 'SHOP2'],
       ['orca-3', 'SHOP3']
     ])
+  })
+
+  it('keeps a new task project in the library of the Orca that serves its project', () => {
+    const all = () => true
+    // This app serves its local and SSH hosts, so its own library comes first.
+    expect(localTaskEndpointForOrcaProject(['runtime:env-1', 'ssh:minizc'], all)).toBe('local')
+    expect(localTaskEndpointForOrcaProject(['runtime:env-1'], all)).toBe('runtime:env-1')
+    expect(
+      localTaskEndpointForOrcaProject(['runtime:env-1'], (endpoint) => endpoint === 'local')
+    ).toBeNull()
   })
 })

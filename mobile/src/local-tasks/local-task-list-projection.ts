@@ -1,7 +1,6 @@
-import {
-  LOCAL_TASK_STATUS_CATEGORIES,
-  type LocalTaskStatusCategory,
-  type LocalTaskStatusColor
+import type {
+  LocalTaskStatusCategory,
+  LocalTaskStatusColor
 } from '../../../src/shared/local-tasks/local-task-model'
 import type {
   LocalTask,
@@ -9,34 +8,45 @@ import type {
   LocalTaskStatusDef
 } from '../../../src/shared/local-tasks/local-task-types'
 import {
-  localTaskExactRefMatch,
-  localTaskMatchesFilter,
-  type LocalTaskFilter
-} from './local-task-filter'
+  buildLocalTaskIndex,
+  countLocalTaskViews,
+  isExactLocalTaskRef,
+  isLocalTaskVisible,
+  localTaskSubtaskProgress,
+  tasksInScope,
+  type LocalTaskIndex,
+  type LocalTaskVisibility
+} from '../../../src/shared/local-tasks/local-task-grouping'
+import { localTaskAncestors } from '../../../src/shared/local-tasks/local-task-tree'
+import {
+  buildLocalTaskBoardColumns,
+  groupLocalTasksForList,
+  statusHeadCategory
+} from '../../../src/shared/local-tasks/local-task-list-groups'
+import { EMPTY_LOCAL_TASK_FILTER, type LocalTaskFilter } from './local-task-filter'
 
 export type LocalTaskSegment = 'started' | 'all'
-
+/** One descendant under a list row, any depth (D-008). */
+export type LocalTaskTreeLine = {
+  task: LocalTask
+  /** 1 for a direct subtask of the row's task, 2 below that, and so on. */
+  depth: number
+  /** Shown children under this line; it folds only when there are some. */
+  childCount: number
+}
 export type LocalTaskListRow = {
   task: LocalTask
-  /** Subtasks drawn under this row; they are not counted in their own group. */
-  subtasks: LocalTask[]
+  /** Every shown descendant, in tree order (each line after its parent). */
+  subtasks: LocalTaskTreeLine[]
   subtaskDone: number
   subtaskTotal: number
 }
-
 export type LocalTaskListGroup = {
-  /** A status id in one project, `category:<name>` across projects, or `unknown`. */
   key: string
   status: LocalTaskStatusDef | null
   category: LocalTaskStatusCategory | null
   rows: LocalTaskListRow[]
 }
-
-const CATEGORY_RANK = new Map(
-  LOCAL_TASK_STATUS_CATEGORIES.map((category, index) => [category, index])
-)
-// Urgent first and "no priority" last, which is what 0..4 does not sort to on its own.
-const PRIORITY_RANK = [4, 0, 1, 2, 3]
 
 export function localTaskStatusLookup(
   projects: readonly LocalTaskProject[]
@@ -47,31 +57,24 @@ export function localTaskStatusLookup(
 }
 
 export function orderedLocalTaskStatuses(project: LocalTaskProject): LocalTaskStatusDef[] {
-  return [...project.statuses].sort(
-    (a, b) =>
-      (CATEGORY_RANK.get(a.category) ?? 0) - (CATEGORY_RANK.get(b.category) ?? 0) ||
-      a.position - b.position
-  )
+  return buildLocalTaskBoardColumns(
+    [],
+    buildLocalTaskIndex([project], []),
+    project.id,
+    { view: 'all', query: '', filters: EMPTY_LOCAL_TASK_FILTER },
+    { sortBy: 'priority', showCanceled: true }
+  ).flatMap((head) => (head.kind === 'status' ? [head.status] : []))
 }
 
-export function localTasksInScope(tasks: readonly LocalTask[], projectId: string | null) {
-  return projectId === null ? [...tasks] : tasks.filter((task) => task.projectId === projectId)
-}
+export const localTasksInScope = tasksInScope
 
-/** Scope totals count subtasks too, which is the rule every count outside a list group follows. */
 export function countLocalTasksInCategory(
   tasks: readonly LocalTask[],
   projects: readonly LocalTaskProject[],
   category: LocalTaskStatusCategory
 ): number {
-  const lookup = localTaskStatusLookup(projects)
-  return tasks.filter((task) => lookup.get(task.statusId)?.category === category).length
-}
-
-function compareRows(a: LocalTask, b: LocalTask): number {
-  return (
-    (PRIORITY_RANK[a.priority] ?? 0) - (PRIORITY_RANK[b.priority] ?? 0) || b.updatedAt - a.updatedAt
-  )
+  const index = buildLocalTaskIndex(projects, tasks)
+  return tasks.filter((task) => index.statusesById.get(task.statusId)?.category === category).length
 }
 
 type GroupInput = {
@@ -79,103 +82,122 @@ type GroupInput = {
   projects: readonly LocalTaskProject[]
   projectId: string | null
   segment: LocalTaskSegment
-  /** Narrows the rows only; scope totals elsewhere ignore it (REQ-006). */
   filter?: LocalTaskFilter
 }
 
-function emptyGroups(input: GroupInput): LocalTaskListGroup[] {
-  const project =
-    input.projectId === null ? null : input.projects.find((entry) => entry.id === input.projectId)
-  const segmentCategories: readonly LocalTaskStatusCategory[] =
-    input.segment === 'started' ? ['started'] : LOCAL_TASK_STATUS_CATEGORIES
-  const picked = input.filter?.categories ?? []
-  const categories =
-    picked.length > 0
-      ? segmentCategories.filter((category) => picked.includes(category))
-      : segmentCategories
-  if (project) {
-    return orderedLocalTaskStatuses(project)
-      .filter((status) => categories.includes(status.category))
-      .map((status) => ({ key: status.id, status, category: status.category, rows: [] }))
+/**
+ * The shown descendants below a list row's direct children, depth first. The shared grouping nests
+ * one level; deeper tasks whose parent is shown ride here instead of becoming rows of their own,
+ * and a searched ref stays a row of its own as it does there.
+ */
+function treeLines(
+  children: readonly LocalTask[],
+  index: LocalTaskIndex,
+  shown: (task: LocalTask) => boolean,
+  depth = 1,
+  seen = new Set<string>()
+): LocalTaskTreeLine[] {
+  const lines: LocalTaskTreeLine[] = []
+  for (const child of children) {
+    if (seen.has(child.id)) {
+      continue
+    }
+    seen.add(child.id)
+    const grandchildren = (index.childrenByParentId.get(child.id) ?? []).filter(shown)
+    lines.push({ task: child, depth, childCount: grandchildren.length })
+    lines.push(...treeLines(grandchildren, index, shown, depth + 1, seen))
   }
-  return categories.map((category) => ({
-    key: `category:${category}`,
-    status: null,
-    category,
-    rows: []
-  }))
+  return lines
 }
 
-/**
- * The groups a list or board shows. A list nests a subtask under its parent when the parent is
- * shown too, and then the group does not count it; a board shows every task as its own card.
- */
+function nestedShown(
+  scope: readonly LocalTask[],
+  index: LocalTaskIndex,
+  visibility: LocalTaskVisibility
+): (task: LocalTask) => boolean {
+  const visible = new Set(
+    scope.filter((task) => isLocalTaskVisible(task, index, visibility)).map((task) => task.id)
+  )
+  return (task) =>
+    visible.has(task.id) &&
+    !isExactLocalTaskRef(task, index.projectsById.get(task.projectId), visibility.query)
+}
+
 export function buildLocalTaskGroups(
   input: GroupInput & { nestSubtasks: boolean; keepEmpty: boolean }
 ): LocalTaskListGroup[] {
-  const lookup = localTaskStatusLookup(input.projects)
-  const scope = localTasksInScope(input.tasks, input.projectId)
-  const filter = input.filter
-  const context = { statuses: lookup, projects: new Map(input.projects.map((p) => [p.id, p])) }
-  const visible = scope.filter(
-    (task) =>
-      (input.segment === 'all' || lookup.get(task.statusId)?.category === 'started') &&
-      (!filter || localTaskMatchesFilter(task, filter, context))
-  )
-  const visibleIds = new Set(visible.map((task) => task.id))
-  // Why: searching SHOP-1 must put SHOP-1 first, not wherever SHOP-12 and SHOP-10 sort.
-  const exactId = filter
-    ? (visible.find((task) => localTaskExactRefMatch(task, filter.query, context))?.id ?? null)
-    : null
-  const childrenOf = new Map<string, LocalTask[]>()
-  for (const task of scope) {
-    if (task.parentId !== null) {
-      childrenOf.set(task.parentId, [...(childrenOf.get(task.parentId) ?? []), task])
-    }
+  const index = buildLocalTaskIndex(input.projects, input.tasks)
+  const scope = tasksInScope(input.tasks, input.projectId)
+  const filter = input.filter ?? EMPTY_LOCAL_TASK_FILTER
+  const visibility = { view: input.segment, filters: filter, query: filter.query }
+  const row = (task: LocalTask, subtasks: LocalTaskTreeLine[]): LocalTaskListRow => {
+    const progress = localTaskSubtaskProgress(task, index)
+    return { task, subtasks, subtaskDone: progress?.done ?? 0, subtaskTotal: progress?.total ?? 0 }
   }
-  const groups = emptyGroups(input)
-  const byKey = new Map(groups.map((group) => [group.key, group]))
-  const unknown: LocalTaskListGroup = { key: 'unknown', status: null, category: null, rows: [] }
-  for (const task of visible) {
-    const nested = task.parentId !== null && visibleIds.has(task.parentId) && task.id !== exactId
-    if (input.nestSubtasks && nested) {
-      continue
-    }
-    const status = lookup.get(task.statusId)
-    const key = !status
-      ? 'unknown'
-      : input.projectId === null
-        ? `category:${status.category}`
-        : status.id
-    const children = childrenOf.get(task.id) ?? []
-    const counted = children.filter((child) => lookup.get(child.statusId)?.category !== 'canceled')
-    const row: LocalTaskListRow = {
-      task,
-      subtasks: input.nestSubtasks
-        ? children
-            .filter((child) => visibleIds.has(child.id) && child.id !== exactId)
-            .sort((a, b) => a.number - b.number)
-        : [],
-      subtaskDone: counted.filter((child) => lookup.get(child.statusId)?.category === 'completed')
-        .length,
-      subtaskTotal: counted.length
-    }
-    const target = byKey.get(key) ?? unknown
-    target.rows.push(row)
+  if (!input.nestSubtasks) {
+    return buildLocalTaskBoardColumns(scope, index, input.projectId, visibility, {
+      sortBy: 'priority',
+      showCanceled: true
+    })
+      .map((head) => ({
+        key: head.kind === 'status' ? head.key : `category:${head.category}`,
+        status: head.kind === 'status' ? head.status : null,
+        category: statusHeadCategory(head),
+        rows: head.tasks.map((task) => row(task, []))
+      }))
+      .filter(
+        (group) =>
+          (input.segment === 'all' || group.category === input.segment) &&
+          (filter.categories.length === 0 ||
+            (group.category !== null && filter.categories.includes(group.category))) &&
+          (input.keepEmpty || group.rows.length > 0)
+      )
   }
-  const exactFirst = (a: LocalTaskListRow, b: LocalTaskListRow) =>
-    Number(b.task.id === exactId) - Number(a.task.id === exactId)
-  for (const group of [...groups, unknown]) {
-    group.rows.sort((a, b) => exactFirst(a, b) || compareRows(a.task, b.task))
+  const shown = nestedShown(scope, index, visibility)
+  return groupLocalTasksForList(scope, index, input.projectId, visibility, {
+    groupBy: 'status',
+    sortBy: 'priority'
+  }).map((head) => ({
+    key: head.kind === 'category' ? `category:${head.category}` : head.key,
+    status: head.kind === 'status' ? head.status : null,
+    category:
+      head.kind === 'status'
+        ? head.status.category
+        : head.kind === 'category'
+          ? head.category
+          : null,
+    rows: head.entries.map((entry) =>
+      row(entry.task, treeLines(entry.children, index, shown, 1, new Set([entry.task.id])))
+    )
+  }))
+}
+
+/** The tree lines still shown once folded tasks hide everything below them. */
+export function unfoldedLocalTaskLines(
+  lines: readonly LocalTaskTreeLine[],
+  folded: ReadonlySet<string>
+): LocalTaskTreeLine[] {
+  const hidden = new Set<string>()
+  return lines.filter((line) => {
+    const parentId = line.task.parentId
+    if (parentId !== null && (hidden.has(parentId) || folded.has(parentId))) {
+      hidden.add(line.task.id)
+      return false
+    }
+    return true
+  })
+}
+
+/** A task's ancestors root first, as its "SHOP-1 › SHOP-4" path reads. */
+export function localTaskPathFromRoot(
+  task: LocalTask,
+  tasksById: ReadonlyMap<string, LocalTask>
+): LocalTask[] {
+  const path: LocalTask[] = []
+  for (const ancestor of localTaskAncestors(task, tasksById)) {
+    path.unshift(ancestor)
   }
-  const ordered = unknown.rows.length > 0 ? [...groups, unknown] : groups
-  // A list lifts the exact match's group to the top; a board keeps its columns in status order.
-  const holdsExact = (group: LocalTaskListGroup) =>
-    group.rows.some((row) => row.task.id === exactId)
-  const all = input.keepEmpty
-    ? ordered
-    : [...ordered.filter(holdsExact), ...ordered.filter((group) => !holdsExact(group))]
-  return input.keepEmpty ? all : all.filter((group) => group.rows.length > 0)
+  return path
 }
 
 export function localTaskSegmentCounts(
@@ -183,8 +205,11 @@ export function localTaskSegmentCounts(
   projects: readonly LocalTaskProject[],
   projectId: string | null
 ): Record<LocalTaskSegment, number> {
-  const scope = localTasksInScope(tasks, projectId)
-  return { started: countLocalTasksInCategory(scope, projects, 'started'), all: scope.length }
+  const counts = countLocalTaskViews(
+    tasksInScope(tasks, projectId),
+    buildLocalTaskIndex(projects, tasks)
+  )
+  return { all: counts.all, started: counts.started }
 }
 
 export function localTaskStatusColorOf(status: LocalTaskStatusDef | null): LocalTaskStatusColor {

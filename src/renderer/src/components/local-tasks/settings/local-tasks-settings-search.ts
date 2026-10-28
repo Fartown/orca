@@ -11,7 +11,7 @@ export const getLocalTasksSettingsSearchEntries = createLocalizedCatalog(() => [
     title: translate('localTasks.settings.projectsTitle', 'Task projects'),
     description: translate(
       'localTasks.settings.projectsSearchDescription',
-      'Create task projects, rename them and change their ref prefix.'
+      'Create task projects, link repositories, rename them and change their ref prefix.'
     ),
     keywords: [
       ...translateSearchKeyword('localTasks.settings.keywordTasks', 'tasks'),
@@ -32,22 +32,17 @@ export const getLocalTasksSettingsSearchEntries = createLocalizedCatalog(() => [
   }
 ])
 
-/** Section metadata; browser clients cannot reach this desktop's task library. */
-export function getLocalTasksSettingsSections({
-  isWebClient
-}: {
+/** Section metadata; a browser client manages the task library of the host it is paired with. */
+export function getLocalTasksSettingsSections(_context: {
   isWebClient: boolean
 }): SettingsNavSection[] {
-  if (isWebClient) {
-    return []
-  }
   return [
     {
       id: LOCAL_TASKS_SETTINGS_SECTION_ID,
       title: translate('localTasks.settings.title', 'Local Tasks'),
       description: translate(
         'localTasks.settings.description',
-        'Task projects, ref prefixes and statuses for tasks kept on this computer.'
+        'Task projects, their repositories, ref prefixes and statuses.'
       ),
       icon: ListTodo,
       searchEntries: getLocalTasksSettingsSearchEntries(),

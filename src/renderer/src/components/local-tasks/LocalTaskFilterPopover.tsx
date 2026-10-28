@@ -71,7 +71,11 @@ export function LocalTaskFilterPopover({
   const layout = useLocalTaskPage((state) => state.layout)
   const showCanceled = useLocalTaskPage((state) => state.showCanceledColumn)
   const labels = useMemo(() => collectLocalTaskLabels(model.scopeTasks), [model.scopeTasks])
-  const activeCount = filters.priorities.length + filters.labels.length + filters.categories.length
+  const activeCount =
+    filters.priorities.length +
+    filters.labels.length +
+    filters.categories.length +
+    (filters.needsYou ? 1 : 0)
   const update = (next: Partial<LocalTaskFilters>): void =>
     localTaskPageStore.getState().setFilters({ ...filters, ...next })
   return (
@@ -93,6 +97,12 @@ export function LocalTaskFilterPopover({
       </PopoverTrigger>
       <PopoverContent align="end" className="w-64">
         <div className="flex flex-col gap-3 p-2">
+          <FilterOption
+            checked={filters.needsYou}
+            onToggle={() => update({ needsYou: !filters.needsYou })}
+          >
+            {translate('localTasks.needsYou.filter', 'A session is waiting on me')}
+          </FilterOption>
           <Section title={translate('localTasks.filter.priority', 'Priority')}>
             {LOCAL_TASK_PRIORITIES.map((priority) => (
               <FilterOption

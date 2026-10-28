@@ -117,3 +117,5 @@ const styles = StyleSheet.create({
   },
   providerButtonPressed: { backgroundColor: colors.bgRaised }
 })
+
+export const mobileHomeTasksCardStyles = styles

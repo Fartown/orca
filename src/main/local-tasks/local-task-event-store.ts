@@ -25,7 +25,12 @@ const EVENT_KINDS: readonly LocalTaskEventKind[] = [
   'priority',
   'labels',
   'parent',
-  'moved'
+  'moved',
+  'workspace-linked',
+  'workspace-unlinked',
+  'workspace-host',
+  'session-linked',
+  'session-unlinked'
 ]
 const EVENT_SOURCES: readonly LocalTaskEventSource[] = ['desktop', 'mobile', 'cli', 'rule']
 
@@ -66,7 +71,10 @@ export function listLocalTaskEvents(db: LocalTasksDatabase, taskId: string): Loc
        FROM local_task_events WHERE task_id = ? ORDER BY created_at, rowid`
     )
     .all(taskId)
-    .map(toEvent)
+    .flatMap((row) => {
+      const event = toEvent(row)
+      return event ? [event] : []
+    })
 }
 
 export function addLocalTaskComment(
@@ -94,6 +102,10 @@ export function editLocalTaskComment(
   const failure = requireComment(db, eventId)
   if (failure) {
     return failure
+  }
+  const current = db.prepare('SELECT body FROM local_task_events WHERE id = ?').get(eventId)
+  if (current && rowNullableString(current, 'body') === body) {
+    return { ok: true }
   }
   db.prepare('UPDATE local_task_events SET body = ?, edited_at = ? WHERE id = ?').run(
     body,
@@ -129,14 +141,19 @@ function requireComment(
   return rowString(row, 'kind') === 'comment' ? null : { ok: false, code: 'comment_not_editable' }
 }
 
-function toEvent(row: SqliteRow): LocalTaskEvent {
+function toEvent(row: SqliteRow): LocalTaskEvent | null {
   const kind = rowString(row, 'kind')
   const source = rowString(row, 'source')
+  const knownKind = EVENT_KINDS.find((candidate) => candidate === kind)
+  const knownSource = EVENT_SOURCES.find((candidate) => candidate === source)
+  if (!knownKind || !knownSource) {
+    return null
+  }
   return {
     id: rowString(row, 'id'),
     taskId: rowString(row, 'task_id'),
-    kind: EVENT_KINDS.find((candidate) => candidate === kind) ?? 'comment',
-    source: EVENT_SOURCES.find((candidate) => candidate === source) ?? 'desktop',
+    kind: knownKind,
+    source: knownSource,
     body: rowNullableString(row, 'body'),
     payload: rowJsonObject(row, 'payload'),
     createdAt: rowNumber(row, 'created_at'),

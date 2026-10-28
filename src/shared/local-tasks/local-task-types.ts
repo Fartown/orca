@@ -24,9 +24,14 @@ export type LocalTaskProject = {
   prefix: string
   /** Earlier prefixes; refs written with them still resolve to this project. */
   aliases: string[]
-  /** Orca's cross-host Project id; one Orca project maps to at most one task project. */
-  orcaProjectId: string
+  /**
+   * Orca project ids (the sidebar's projects, e.g. `github:acme/shop`) on this library's host, in
+   * link order; empty for a project that only tracks tasks. Several task projects may share one.
+   */
+  repos: string[]
+  /** One of `repos`, the one Start preselects; null exactly when `repos` is empty. */
   defaultRepoId: string | null
+  /** Host-relative (`local` / `ssh:{t}`) host the last Start ran on. */
   lastExecutionHostId: string | null
   rules: LocalTaskProjectRules
   statuses: LocalTaskStatusDef[]
@@ -51,6 +56,8 @@ export type LocalTask = {
   createdAt: number
   updatedAt: number
   revision: number
+  /** Refs it had before moving to another project, e.g. `SHOP-1`; absent when it never moved. */
+  formerRefs?: string[]
 }
 
 export type LocalTaskEventKind =
@@ -64,6 +71,11 @@ export type LocalTaskEventKind =
   | 'labels'
   | 'parent'
   | 'moved'
+  | 'workspace-linked'
+  | 'workspace-unlinked'
+  | 'workspace-host'
+  | 'session-linked'
+  | 'session-unlinked'
 
 export type LocalTaskEventSource = 'desktop' | 'mobile' | 'cli' | 'rule'
 
@@ -92,21 +104,30 @@ export type LocalTasksStatus = {
   revision: number
   /** Identity of this task library; a rebuilt database gets a new one. */
   taskHostId: string | null
+  /** Optional for older hosts; counts tasks whose status category is started. */
+  inProgressCount?: number
 }
 
 export type LocalTaskFailureCode =
+  | 'invalid_argument'
   | 'not_found'
   | 'stale'
   | 'read_only'
   | 'prefix_taken'
+  | 'prefix_history_in_project'
   | 'prefix_invalid'
-  | 'orca_project_linked'
   | 'parent_invalid'
   | 'status_invalid'
   | 'status_in_use'
   | 'last_status_in_category'
   | 'comment_not_editable'
-  | 'workspace_linked'
+  | 'workspace_already_linked'
+  | 'task_has_workspace'
+  | 'workspace_required'
+  | 'session_already_linked'
+  | 'host_not_owned'
+  | 'desktop_only'
+  | 'attention_item_mismatch'
 
 export type LocalTaskFailure = {
   ok: false
@@ -117,7 +138,13 @@ export type LocalTaskFailure = {
 
 export type LocalTaskResult<T> = ({ ok: true } & T) | LocalTaskFailure
 
-export type LocalTaskChangeScope = 'projects' | 'tasks' | 'events' | 'preferences'
+export type LocalTaskChangeScope =
+  | 'projects'
+  | 'tasks'
+  | 'events'
+  | 'preferences'
+  | 'links'
+  | 'attention'
 
 export type LocalTaskChangeMessage =
   | { type: 'ready'; subscriptionId: string; revision: number; state: LocalTasksHostState }

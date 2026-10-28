@@ -10,43 +10,55 @@ import type {
 import type { RpcClient } from '../transport/rpc-client'
 import { createLocalTasksApi, type LocalTasksApi } from './local-tasks-api'
 import { startLocalTasksChangeFeed } from './local-tasks-change-feed'
+import { useLocalTaskWork, type LocalTaskWork } from './use-local-task-work'
 
 export type LocalTasksLibrary = {
   api: LocalTasksApi | null
   status: LocalTasksStatus | null
   projects: LocalTaskProject[]
   tasks: LocalTask[]
-  /** Both lists have answered at least once on this connection. */
+  /** Both lists have answered at least once for this host. */
   loaded: boolean
   error: string | null
   /** Bumps whenever activity may have changed, so an open detail re-reads its events. */
   eventsVersion: number
+  live: boolean
+  streamEnded: boolean
   reload: (scopes?: readonly LocalTaskChangeScope[]) => void
+  retryFailed: () => void
+  resubscribe: () => void
   /** Shows tasks a write just returned, ahead of the re-read that confirms them. */
   acceptTasks: (tasks: readonly LocalTask[]) => void
+  /** Links and the host's live "Needs you" judgement. */
+  work: LocalTaskWork
 }
 
 type LibraryData = {
+  hostKey: string | null
   /** The api instance that read this; data another one read belongs to another connection. */
   owner: LocalTasksApi | null
   status: LocalTasksStatus | null
   projects: LocalTaskProject[] | null
   tasks: LocalTask[] | null
-  error: string | null
+  errors: { status: string | null; projects: string | null; tasks: string | null }
   eventsVersion: number
 }
 
 const EMPTY: LibraryData = {
+  hostKey: null,
   owner: null,
   status: null,
   projects: null,
   tasks: null,
-  error: null,
+  errors: { status: null, projects: null, tasks: null },
   eventsVersion: 0
 }
 
-function ownedBy(data: LibraryData, owner: LocalTasksApi): LibraryData {
-  return data.owner === owner ? data : { ...EMPTY, owner }
+function ownedBy(data: LibraryData, owner: LocalTasksApi, hostKey: string | null): LibraryData {
+  if (data.hostKey !== hostKey) {
+    return { ...EMPTY, hostKey, owner }
+  }
+  return data.owner === owner ? data : { ...data, owner }
 }
 
 function message(error: unknown): string {
@@ -54,27 +66,37 @@ function message(error: unknown): string {
 }
 
 /**
- * The task library of one host, for as long as `enabled` holds (the host is connected and
- * advertised `local-tasks.v1`). Re-subscribing on every reconnect is what triggers the re-read; no
- * timer polls the desktop, and nothing is read while the host is out of contact.
+ * The task library of one host. A lost connection keeps its last successful view while writes
+ * are disabled; reconnect re-subscribes and re-reads without a timer.
  */
 export function useLocalTasksLibrary(
   client: RpcClient | null,
-  enabled: boolean
+  enabled: boolean,
+  hostKey: string | null = null
 ): LocalTasksLibrary {
-  const api = useMemo(
+  const activeApi = useMemo(
     () => (client && enabled ? createLocalTasksApi(client) : null),
-    [client, enabled]
+    [client, enabled, hostKey]
   )
   const [data, setData] = useState<LibraryData>(EMPTY)
+  const work = useLocalTaskWork(activeApi, hostKey)
+  const reloadWork = work.reload
+  const [live, setLive] = useState(false)
+  const [streamEnded, setStreamEnded] = useState(false)
+  const [subscriptionEpoch, setSubscriptionEpoch] = useState(0)
+  const activeApiRef = useRef(activeApi)
+  activeApiRef.current = activeApi
+  const current = data.hostKey === hostKey ? data : EMPTY
+  const api = activeApi ?? current.owner
   // Why per resource: a slower earlier read must not overwrite a later one.
   const sequence = useRef({ status: 0, projects: 0, tasks: 0 })
 
   const reload = useCallback(
     (scopes?: readonly LocalTaskChangeScope[]) => {
-      if (!api) {
+      if (!activeApi) {
         return
       }
+      const api = activeApi
       const wants = (scope: LocalTaskChangeScope) => !scopes || scopes.includes(scope)
       const track = <T>(
         key: 'status' | 'projects' | 'tasks',
@@ -84,13 +106,19 @@ export function useLocalTasksLibrary(
         const turn = ++sequence.current[key]
         request().then(
           (value) => {
-            if (turn === sequence.current[key]) {
-              setData((previous) => ({ ...apply(ownedBy(previous, api), value), error: null }))
+            if (turn === sequence.current[key] && activeApiRef.current === api) {
+              setData((previous) => {
+                const own = ownedBy(previous, api, hostKey)
+                return { ...apply(own, value), errors: { ...own.errors, [key]: null } }
+              })
             }
           },
           (error: unknown) => {
-            if (turn === sequence.current[key]) {
-              setData((previous) => ({ ...ownedBy(previous, api), error: message(error) }))
+            if (turn === sequence.current[key] && activeApiRef.current === api) {
+              setData((previous) => {
+                const own = ownedBy(previous, api, hostKey)
+                return { ...own, errors: { ...own.errors, [key]: message(error) } }
+              })
             }
           }
         )
@@ -116,24 +144,26 @@ export function useLocalTasksLibrary(
           (previous, tasks) => ({ ...previous, tasks })
         )
       }
+      reloadWork(scopes)
       if (wants('events') || wants('tasks')) {
         setData((previous) => {
-          const own = ownedBy(previous, api)
+          const own = ownedBy(previous, api, hostKey)
           return { ...own, eventsVersion: own.eventsVersion + 1 }
         })
       }
     },
-    [api]
+    [activeApi, hostKey, reloadWork]
   )
   const acceptTasks = useCallback(
     (accepted: readonly LocalTask[]) => {
-      if (!api) {
+      if (!activeApi) {
         return
       }
+      const api = activeApi
       // Why bump: a read already in flight predates this write and must not paint over it.
       sequence.current.tasks += 1
       setData((previous) => {
-        const own = ownedBy(previous, api)
+        const own = ownedBy(previous, api, hostKey)
         if (!own.tasks) {
           return own
         }
@@ -144,7 +174,7 @@ export function useLocalTasksLibrary(
         return { ...own, tasks: [...byId.values()] }
       })
     },
-    [api]
+    [activeApi, hostKey]
   )
   const reloadRef = useRef(reload)
   useEffect(() => {
@@ -159,23 +189,53 @@ export function useLocalTasksLibrary(
       client,
       appState: AppState,
       onFullReload: () => reloadRef.current(),
-      onScopes: (scopes) => reloadRef.current(scopes)
+      onScopes: (scopes) => reloadRef.current(scopes),
+      onLiveChange: (next) => {
+        setLive(next)
+        setStreamEnded(!next)
+      }
     })
-  }, [client, enabled])
+  }, [client, enabled, hostKey, subscriptionEpoch])
 
-  // Why derived: a reconnect or a lost capability makes a new api, and what the old one read is
-  // never shown for it — the phone keeps no cache of a desktop out of contact.
-  const current = api && data.owner === api ? data : EMPTY
+  // A route changing hosts never inherits the previous host's cached library.
   return {
     api,
     status: current.status,
     projects: current.projects ?? [],
     tasks: current.tasks ?? [],
     loaded: current.projects !== null && current.tasks !== null,
-    error: current.error,
+    error: current.errors.status ?? current.errors.projects ?? current.errors.tasks,
     eventsVersion: current.eventsVersion,
+    live: enabled && live,
+    streamEnded: enabled && streamEnded,
     reload,
-    acceptTasks
+    retryFailed: () => {
+      if (!activeApi) {
+        return
+      }
+      work.retry()
+      if (current.errors.status) {
+        reload()
+        return
+      }
+      const scopes: LocalTaskChangeScope[] = []
+      if (current.errors.projects) {
+        scopes.push('projects')
+      }
+      if (current.errors.tasks) {
+        scopes.push('tasks')
+      }
+      if (scopes.length > 0) {
+        reload(scopes)
+      }
+    },
+    resubscribe: () => {
+      if (activeApi) {
+        setSubscriptionEpoch((epoch) => epoch + 1)
+      }
+    },
+    acceptTasks,
+    work: { links: work.links, progress: work.progress, error: work.error }
   }
 }
 
@@ -184,8 +244,10 @@ export function useLocalTaskEvents(
   api: LocalTasksApi | null,
   taskId: string,
   version: number
-): { events: LocalTaskEvent[]; loaded: boolean } {
+): { events: LocalTaskEvent[]; loaded: boolean; error: boolean; retry: () => void } {
   const [state, setState] = useState<{ taskId: string; events: LocalTaskEvent[] } | null>(null)
+  const [error, setError] = useState(false)
+  const [retryVersion, setRetryVersion] = useState(0)
   useEffect(() => {
     if (!api) {
       return
@@ -195,14 +257,24 @@ export function useLocalTaskEvents(
       (events) => {
         if (current) {
           setState({ taskId, events })
+          setError(false)
         }
       },
-      () => {}
+      () => {
+        if (current) {
+          setError(true)
+        }
+      }
     )
     return () => {
       current = false
     }
-  }, [api, taskId, version])
+  }, [api, taskId, version, retryVersion])
   const own = state?.taskId === taskId ? state : null
-  return { events: own?.events ?? [], loaded: own !== null }
+  return {
+    events: own?.events ?? [],
+    loaded: own !== null,
+    error,
+    retry: () => setRetryVersion((value) => value + 1)
+  }
 }

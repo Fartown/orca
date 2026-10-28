@@ -1,100 +1,262 @@
 import { createStore } from 'zustand/vanilla'
 import { useStore } from 'zustand'
-import type {
-  LocalTask,
-  LocalTaskEvent,
-  LocalTaskProject,
-  LocalTasksHostState
-} from '../../../shared/local-tasks/local-task-types'
+import { useShallow } from 'zustand/react/shallow'
+import type { LocalTask, LocalTaskProject } from '../../../shared/local-tasks/local-task-types'
+import {
+  SELF_LOCAL_TASK_ENDPOINT,
+  localTaskIdEndpoint,
+  type LocalTaskEndpointKey
+} from './local-task-endpoints'
+import { createDerive, type LocalTasksDerived } from './local-tasks-derived-state'
+import {
+  emptyLocalTasksPartition,
+  type LocalTasksPartition,
+  type PartitionWriter
+} from './local-tasks-partition'
 
-/** How this renderer's change stream stands; `ended` means the host closed it (app quitting). */
-export type LocalTasksConnection = 'connecting' | 'live' | 'ended' | 'failed'
+/** One library's data and writers, as `createLocalTasksSync` reads and applies them. */
+export type LocalTasksPartitionView = LocalTasksPartition & PartitionWriter
 
-export type LocalTasksDomainState = {
-  connection: LocalTasksConnection
-  hostState: LocalTasksHostState | null
-  hostReason: string | null
-  /** Last read failure; cleared by the next successful read. */
-  readError: string | null
-  projects: LocalTaskProject[]
-  projectsLoaded: boolean
-  tasks: LocalTask[]
-  tasksLoaded: boolean
-  eventsByTaskId: Record<string, LocalTaskEvent[]>
-  preferences: Record<string, string | null>
-  /** Bumped by the user's explicit retry; the sync gate re-subscribes when it changes. */
-  subscriptionEpoch: number
-  setConnection: (connection: LocalTasksConnection, reason?: string | null) => void
-  setHostState: (state: LocalTasksHostState, reason: string | null) => void
-  setReadError: (message: string | null) => void
-  applyProjects: (projects: LocalTaskProject[]) => void
-  applyTasks: (tasks: LocalTask[]) => void
+export type LocalTasksDomainState = LocalTasksDerived & {
+  /** This app's own library first (none in a browser client), then each paired Orca's. */
+  partitions: readonly LocalTasksPartition[]
+  openEndpoint: (endpoint: LocalTaskEndpointKey) => void
+  closeEndpoint: (endpoint: LocalTaskEndpointKey) => void
+  setEndpointContact: (endpoint: LocalTaskEndpointKey, inContact: boolean) => void
+  /** A write's own result lands before the change notice, so the UI reflects it without a gap. */
   upsertTasks: (tasks: LocalTask[]) => void
-  applyEvents: (taskId: string, events: LocalTaskEvent[]) => void
-  dropEvents: (taskId: string) => void
-  applyPreferences: (values: Record<string, string | null>) => void
-  retry: () => void
+  upsertProject: (project: LocalTaskProject) => void
+  /** UI choices kept in the page's own library, applied before the host confirms them. */
+  applyHomePreferences: (values: Record<string, string | null>) => void
+  writer: (endpoint: LocalTaskEndpointKey) => PartitionWriter
+  retry: (endpoint?: LocalTaskEndpointKey) => void
 }
 
-export const localTasksDomainStore = createStore<LocalTasksDomainState>((set) => ({
-  connection: 'connecting',
-  hostState: null,
-  hostReason: null,
-  readError: null,
-  projects: [],
-  projectsLoaded: false,
-  tasks: [],
-  tasksLoaded: false,
-  eventsByTaskId: {},
-  preferences: {},
-  subscriptionEpoch: 0,
-  setConnection: (connection, reason = null) =>
-    set(connection === 'failed' ? { connection, hostReason: reason } : { connection }),
-  setHostState: (hostState, hostReason) => set({ hostState, hostReason }),
-  setReadError: (readError) => set({ readError }),
-  applyProjects: (projects) => set({ projects, projectsLoaded: true, readError: null }),
-  applyTasks: (tasks) => set({ tasks, tasksLoaded: true, readError: null }),
-  // Why: a write's own result lands before the change notice, so the UI reflects it without a gap.
-  upsertTasks: (incoming) =>
-    set((state) => {
-      const byId = new Map(incoming.map((task) => [task.id, task]))
-      const merged = state.tasks.map((task) => byId.get(task.id) ?? task)
-      for (const task of incoming) {
-        if (!state.tasks.some((existing) => existing.id === task.id)) {
-          merged.push(task)
+function mergeTasks(current: LocalTask[], incoming: LocalTask[]): LocalTask[] {
+  const byId = new Map(incoming.map((task) => [task.id, task]))
+  const merged = current.map((task) => {
+    const candidate = byId.get(task.id)
+    return candidate && candidate.revision >= task.revision ? candidate : task
+  })
+  for (const task of incoming) {
+    if (!current.some((existing) => existing.id === task.id)) {
+      merged.push(task)
+    }
+  }
+  return merged
+}
+
+export function createLocalTasksDomainStore() {
+  const derive = createDerive()
+  return createStore<LocalTasksDomainState>((set, get) => {
+    const commit = (partitions: readonly LocalTasksPartition[]) => ({
+      partitions,
+      ...derive(partitions)
+    })
+    const update = (
+      endpoint: LocalTaskEndpointKey,
+      change: (partition: LocalTasksPartition) => Partial<LocalTasksPartition> | null
+    ): void =>
+      set((state) => {
+        let changed = false
+        const partitions = state.partitions.map((partition) => {
+          if (partition.endpoint !== endpoint) {
+            return partition
+          }
+          const patch = change(partition)
+          if (!patch) {
+            return partition
+          }
+          changed = true
+          return { ...partition, ...patch }
+        })
+        return changed ? commit(partitions) : state
+      })
+    const writers = new Map<LocalTaskEndpointKey, PartitionWriter>()
+    const writer = (endpoint: LocalTaskEndpointKey): PartitionWriter => {
+      const existing = writers.get(endpoint)
+      if (existing) {
+        return existing
+      }
+      const created: PartitionWriter = {
+        setConnection: (connection, reason = null) =>
+          update(endpoint, () =>
+            connection === 'failed' ? { connection, hostReason: reason } : { connection }
+          ),
+        setHostState: (hostState, hostReason) =>
+          update(endpoint, () => ({ hostState, hostReason })),
+        setReadError: (resource, message) =>
+          update(endpoint, (partition) => {
+            if (message === null && !(resource in partition.readErrors)) {
+              return null
+            }
+            const readErrors = { ...partition.readErrors }
+            if (message === null) {
+              delete readErrors[resource]
+            } else {
+              readErrors[resource] = message
+            }
+            return { readErrors }
+          }),
+        applyProjects: (projects) => update(endpoint, () => ({ projects, projectsLoaded: true })),
+        applyTasks: (tasks) =>
+          update(endpoint, (partition) => {
+            const previous = new Map(partition.tasks.map((task) => [task.id, task]))
+            return {
+              tasks: tasks.map((task) => {
+                const current = previous.get(task.id)
+                return current && current.revision > task.revision ? current : task
+              }),
+              tasksLoaded: true
+            }
+          }),
+        applyEvents: (taskId, events) =>
+          update(endpoint, (partition) => ({
+            eventsByTaskId: { ...partition.eventsByTaskId, [taskId]: events }
+          })),
+        dropEvents: (taskId) =>
+          update(endpoint, (partition) =>
+            taskId in partition.eventsByTaskId
+              ? {
+                  eventsByTaskId: Object.fromEntries(
+                    Object.entries(partition.eventsByTaskId).filter(([id]) => id !== taskId)
+                  )
+                }
+              : null
+          ),
+        applyPreferences: (values) =>
+          update(endpoint, (partition) => ({
+            preferences: { ...partition.preferences, ...values }
+          })),
+        applyLinks: (links) => update(endpoint, () => ({ links, linksLoaded: true })),
+        applyProgress: (progress) => update(endpoint, () => ({ progress }))
+      }
+      writers.set(endpoint, created)
+      return created
+    }
+    return {
+      ...commit([]),
+      openEndpoint: (endpoint) =>
+        set((state) =>
+          state.partitions.some((partition) => partition.endpoint === endpoint)
+            ? state
+            : commit(
+                endpoint === SELF_LOCAL_TASK_ENDPOINT
+                  ? [emptyLocalTasksPartition(endpoint), ...state.partitions]
+                  : [...state.partitions, emptyLocalTasksPartition(endpoint)]
+              )
+        ),
+      closeEndpoint: (endpoint) =>
+        set((state) =>
+          state.partitions.some((partition) => partition.endpoint === endpoint)
+            ? commit(state.partitions.filter((partition) => partition.endpoint !== endpoint))
+            : state
+        ),
+      setEndpointContact: (endpoint, inContact) =>
+        update(endpoint, (partition) => (partition.inContact === inContact ? null : { inContact })),
+      upsertTasks: (incoming) => {
+        const byEndpoint = new Map<LocalTaskEndpointKey, LocalTask[]>()
+        for (const task of incoming) {
+          const endpoint = localTaskIdEndpoint(task.id)
+          byEndpoint.set(endpoint, [...(byEndpoint.get(endpoint) ?? []), task])
+        }
+        for (const [endpoint, tasks] of byEndpoint) {
+          update(endpoint, (partition) => ({ tasks: mergeTasks(partition.tasks, tasks) }))
+        }
+      },
+      upsertProject: (project) =>
+        update(localTaskIdEndpoint(project.id), (partition) => ({
+          projects: partition.projects.some((candidate) => candidate.id === project.id)
+            ? partition.projects.map((candidate) =>
+                candidate.id === project.id && candidate.revision <= project.revision
+                  ? project
+                  : candidate
+              )
+            : [...partition.projects, project]
+        })),
+      applyHomePreferences: (values) => {
+        const { home } = get()
+        if (home) {
+          writer(home).applyPreferences(values)
+        }
+      },
+      writer,
+      retry: (endpoint) => {
+        const target = endpoint ?? get().home
+        if (target) {
+          update(target, (partition) => ({
+            connection: 'connecting',
+            subscriptionEpoch: partition.subscriptionEpoch + 1
+          }))
         }
       }
-      return { tasks: merged }
-    }),
-  applyEvents: (taskId, events) =>
-    set((state) => ({ eventsByTaskId: { ...state.eventsByTaskId, [taskId]: events } })),
-  dropEvents: (taskId) =>
-    set((state) => ({
-      eventsByTaskId: Object.fromEntries(
-        Object.entries(state.eventsByTaskId).filter(([id]) => id !== taskId)
-      )
-    })),
-  applyPreferences: (values) =>
-    set((state) => ({ preferences: { ...state.preferences, ...values } })),
-  retry: () =>
-    set((state) => ({
-      connection: 'connecting',
-      readError: null,
-      subscriptionEpoch: state.subscriptionEpoch + 1
-    }))
-}))
+    }
+  })
+}
+
+export const localTasksDomainStore = createLocalTasksDomainStore()
 
 export function useLocalTasksDomain<T>(selector: (state: LocalTasksDomainState) => T): T {
   return useStore(localTasksDomainStore, selector)
 }
 
-/** Writes need a live stream and a writable library; read-only libraries come from a newer Orca. */
-export function isLocalTasksWritable(state: LocalTasksDomainState): boolean {
-  return state.connection === 'live' && state.hostState === 'ready'
+export function selectLocalTasksPartition(
+  state: Pick<LocalTasksDomainState, 'partitions'>,
+  endpoint: LocalTaskEndpointKey | null
+): LocalTasksPartition | undefined {
+  return endpoint === null
+    ? undefined
+    : state.partitions.find((partition) => partition.endpoint === endpoint)
 }
 
-export function isLocalTasksReadable(state: LocalTasksDomainState): boolean {
+/**
+ * Writes need a live stream, a writable library and its Orca in contact; read-only libraries come
+ * from a newer Orca. Without an endpoint this asks about the page's own library.
+ */
+export function isLocalTasksWritable(
+  state: Pick<LocalTasksDomainState, 'partitions' | 'home'>,
+  endpoint?: LocalTaskEndpointKey
+): boolean {
+  const partition = selectLocalTasksPartition(state, endpoint ?? state.home)
   return (
-    state.connection === 'live' && (state.hostState === 'ready' || state.hostState === 'read-only')
+    partition?.inContact === true &&
+    partition.connection === 'live' &&
+    partition.hostState === 'ready'
+  )
+}
+
+export function isLocalTasksReadable(
+  state: Pick<LocalTasksDomainState, 'partitions' | 'home'>,
+  endpoint?: LocalTaskEndpointKey
+): boolean {
+  const partition = selectLocalTasksPartition(state, endpoint ?? state.home)
+  return (
+    partition?.connection === 'live' &&
+    (partition.hostState === 'ready' || partition.hostState === 'read-only')
+  )
+}
+
+/** Whether the library that owns this row (task, project, session) takes writes now. */
+export function isLocalTaskRowWritable(
+  state: Pick<LocalTasksDomainState, 'partitions' | 'home'>,
+  clientId: string
+): boolean {
+  return isLocalTasksWritable(state, localTaskIdEndpoint(clientId))
+}
+
+export function useLocalTaskRowWritable(clientId: string | null): boolean {
+  return useLocalTasksDomain((state) =>
+    clientId === null ? false : isLocalTaskRowWritable(state, clientId)
+  )
+}
+
+/** Libraries that take writes now, for lists whose rows span several. */
+export function useWritableLocalTaskEndpoints(): readonly LocalTaskEndpointKey[] {
+  return useLocalTasksDomain(
+    useShallow((state) =>
+      state.partitions
+        .filter((partition) => isLocalTasksWritable(state, partition.endpoint))
+        .map((partition) => partition.endpoint)
+    )
   )
 }

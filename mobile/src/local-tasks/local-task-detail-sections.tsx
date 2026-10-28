@@ -19,7 +19,7 @@ function keyedLines(lines: readonly string[]): { key: string; text: string }[] {
   })
 }
 
-/** Description, done criteria and, for a top-level task, its subtasks. */
+/** Description, done criteria and the task's direct subtasks; any level may have them (D-008). */
 export function LocalTaskDetailSections(props: {
   task: LocalTask
   subtasks: LocalTask[]
@@ -58,35 +58,28 @@ export function LocalTaskDetailSections(props: {
           ))}
         </>
       ) : null}
-      {task.parentId === null ? (
-        <>
-          <View style={localTaskStyles.sectionHeaderRow}>
-            <Text style={styles.sectionTitle}>
-              {copy.subtasks} {done.length}/{props.subtasks.length}
-            </Text>
-            {props.readOnly ? null : (
-              <Pressable
-                style={localTaskStyles.sectionAction}
-                onPress={() => props.onAddSubtask(task)}
-              >
-                <Plus size={12} color={colors.textSecondary} />
-                <Text style={localTaskStyles.sectionActionText}>{copy.addSubtask}</Text>
-              </Pressable>
-            )}
-          </View>
-          {props.subtasks.length > 0 ? (
-            <View style={localTaskStyles.card}>
-              {props.subtasks.map((child) => (
-                <LocalTaskSubtaskRow
-                  key={child.id}
-                  task={child}
-                  status={props.statuses.get(child.statusId) ?? null}
-                  onOpen={props.onOpenTask}
-                />
-              ))}
-            </View>
-          ) : null}
-        </>
+      <View style={localTaskStyles.sectionHeaderRow}>
+        <Text style={styles.sectionTitle}>
+          {copy.subtasks} {done.length}/{props.subtasks.length}
+        </Text>
+        {props.readOnly ? null : (
+          <Pressable style={localTaskStyles.sectionAction} onPress={() => props.onAddSubtask(task)}>
+            <Plus size={12} color={colors.textSecondary} />
+            <Text style={localTaskStyles.sectionActionText}>{copy.addSubtask}</Text>
+          </Pressable>
+        )}
+      </View>
+      {props.subtasks.length > 0 ? (
+        <View style={localTaskStyles.card}>
+          {props.subtasks.map((child) => (
+            <LocalTaskSubtaskRow
+              key={child.id}
+              task={child}
+              status={props.statuses.get(child.statusId) ?? null}
+              onOpen={props.onOpenTask}
+            />
+          ))}
+        </View>
       ) : null}
     </>
   )

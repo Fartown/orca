@@ -2,6 +2,7 @@ import { z } from 'zod'
 import { LOCAL_TASK_STATUS_CATEGORIES, LOCAL_TASK_STATUS_COLORS } from './local-task-model'
 import type {
   LocalTask,
+  LocalTaskChangeScope,
   LocalTaskEvent,
   LocalTaskEventKind,
   LocalTaskEventSource,
@@ -12,6 +13,13 @@ import type {
   LocalTasksHostState,
   LocalTasksStatus
 } from './local-task-types'
+import type {
+  LocalTaskLinkOrigin,
+  LocalTaskSessionLink,
+  LocalTaskSessionSurface,
+  LocalTaskWorkspaceKind,
+  LocalTaskWorkspaceLink
+} from './local-task-link-types'
 
 /** Lists every member of `T`; leaving one out is a type error. */
 function everyMember<T extends string>() {
@@ -22,18 +30,25 @@ function everyMember<T extends string>() {
 
 // Why tuples here: the shared vocabulary is type-only, and clients must reject shapes they cannot render.
 const FAILURE_CODES = everyMember<LocalTaskFailureCode>()([
+  'invalid_argument',
   'not_found',
   'stale',
   'read_only',
   'prefix_taken',
+  'prefix_history_in_project',
   'prefix_invalid',
-  'orca_project_linked',
   'parent_invalid',
   'status_invalid',
   'status_in_use',
   'last_status_in_category',
   'comment_not_editable',
-  'workspace_linked'
+  'workspace_already_linked',
+  'task_has_workspace',
+  'workspace_required',
+  'session_already_linked',
+  'host_not_owned',
+  'desktop_only',
+  'attention_item_mismatch'
 ])
 
 const EVENT_KINDS = everyMember<LocalTaskEventKind>()([
@@ -46,10 +61,24 @@ const EVENT_KINDS = everyMember<LocalTaskEventKind>()([
   'priority',
   'labels',
   'parent',
-  'moved'
+  'moved',
+  'workspace-linked',
+  'workspace-unlinked',
+  'workspace-host',
+  'session-linked',
+  'session-unlinked'
 ])
 
 const EVENT_SOURCES = everyMember<LocalTaskEventSource>()(['desktop', 'mobile', 'cli', 'rule'])
+
+const CHANGE_SCOPES = everyMember<LocalTaskChangeScope>()([
+  'projects',
+  'tasks',
+  'events',
+  'preferences',
+  'links',
+  'attention'
+])
 
 const HOST_STATES = everyMember<LocalTasksHostState>()([
   'not-task-host',
@@ -66,7 +95,8 @@ export const statusResultSchema: z.ZodType<LocalTasksStatus> = z.object({
   state: hostStateSchema,
   reason: z.string().nullable(),
   revision: z.number(),
-  taskHostId: z.string().nullable()
+  taskHostId: z.string().nullable(),
+  inProgressCount: z.number().int().nonnegative().optional()
 })
 
 const statusDefSchema: z.ZodType<LocalTaskStatusDef> = z.object({
@@ -83,7 +113,7 @@ export const projectSchema: z.ZodType<LocalTaskProject> = z.object({
   name: z.string(),
   prefix: z.string(),
   aliases: z.array(z.string()),
-  orcaProjectId: z.string(),
+  repos: z.array(z.string()),
   defaultRepoId: z.string().nullable(),
   lastExecutionHostId: z.string().nullable(),
   rules: z.object({ startMovesToInProgress: z.boolean(), prMergedCompletes: z.boolean() }),
@@ -107,7 +137,8 @@ export const taskSchema: z.ZodType<LocalTask> = z.object({
   parentId: z.string().nullable(),
   createdAt: z.number(),
   updatedAt: z.number(),
-  revision: z.number()
+  revision: z.number(),
+  formerRefs: z.array(z.string()).optional()
 })
 
 export const eventSchema: z.ZodType<LocalTaskEvent> = z.object({
@@ -127,6 +158,39 @@ export const failureSchema: z.ZodType<LocalTaskFailure> = z.object({
   detail: z.string().optional()
 })
 
+const linkedVia = z.enum(everyMember<LocalTaskLinkOrigin>()(['start', 'manual']))
+
+export const workspaceLinkSchema: z.ZodType<LocalTaskWorkspaceLink> = z.object({
+  taskId: z.string(),
+  hostId: z.string(),
+  kind: z.enum(everyMember<LocalTaskWorkspaceKind>()(['git-worktree', 'folder'])),
+  instanceId: z.string().nullable(),
+  worktreeId: z.string().nullable(),
+  folderWorkspaceId: z.string().nullable(),
+  repoId: z.string().nullable(),
+  branchSnapshot: z.string().nullable(),
+  nameSnapshot: z.string().nullable(),
+  hostLabelSnapshot: z.string().nullable(),
+  linkedVia,
+  linkedAt: z.number()
+})
+
+export const sessionLinkSchema: z.ZodType<LocalTaskSessionLink> = z.object({
+  id: z.string(),
+  taskId: z.string(),
+  hostId: z.string(),
+  worktreeId: z.string().nullable(),
+  instanceId: z.string().nullable(),
+  surface: z.enum(everyMember<LocalTaskSessionSurface>()(['terminal', 'chat'])),
+  tabId: z.string().nullable(),
+  paneKey: z.string().nullable(),
+  sessionId: z.string().nullable(),
+  providerSession: z.string().nullable(),
+  agent: z.string().nullable(),
+  linkedVia,
+  openedAt: z.number()
+})
+
 /** A write either succeeds with `shape` or fails with a business code; anything else is a broken host. */
 export function writeResultSchema<T extends z.ZodRawShape>(shape: T) {
   return z.union([z.object({ ok: z.literal(true), ...shape }), failureSchema])
@@ -142,7 +206,7 @@ export const changeMessageSchema = z.union([
   z.object({
     type: z.literal('changed'),
     revision: z.number(),
-    scopes: z.array(z.enum(['projects', 'tasks', 'events', 'preferences'])).nullable()
+    scopes: z.array(z.enum(CHANGE_SCOPES)).nullable()
   }),
   z.object({ type: z.literal('end') })
 ])

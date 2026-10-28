@@ -1,4 +1,4 @@
-import { FolderKanban, Layers, ListTodo, Settings } from 'lucide-react'
+import { BellDot, FolderKanban, Layers, ListTodo, Settings } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { translate } from '@/i18n/i18n'
@@ -11,6 +11,9 @@ import {
 } from '@/local-tasks/local-task-page-store'
 import { localTaskViewLabel } from '@/local-tasks/local-task-vocabulary-copy'
 import { openLocalTasksSettings } from '@/local-tasks/local-task-navigation'
+import { liveLocalTaskItems } from '@/local-tasks/local-task-needs-you-rows'
+import { useLocalTasksDomain } from '@/local-tasks/local-tasks-domain-store'
+import { localTaskHostLabelFor } from '@/local-tasks/local-task-endpoint-labels'
 import { LocalTaskStatusIcon } from './LocalTaskIcons'
 import type { LocalTaskListModel } from './use-local-task-list-model'
 
@@ -64,16 +67,22 @@ function ViewIcon({ view }: { view: LocalTaskView }): React.JSX.Element {
 export function LocalTaskNav({ model }: { model: LocalTaskListModel }): React.JSX.Element {
   const view = useLocalTaskPage((state) => state.view)
   const scopeProjectId = model.scopeProjectId
-  const taskCountByProject = new Map<string, number>()
-  for (const task of model.tasks) {
-    taskCountByProject.set(task.projectId, (taskCountByProject.get(task.projectId) ?? 0) + 1)
-  }
+  const needsYouCount = useLocalTasksDomain(
+    (state) => liveLocalTaskItems(state.progress, model.index.tasksById, scopeProjectId).length
+  )
   return (
     <nav
       aria-label={translate('localTasks.nav.label', 'Task views')}
       className="flex w-52 shrink-0 flex-col gap-4 overflow-y-auto scrollbar-sleek"
     >
       <div className="flex flex-col gap-0.5">
+        <NavRow
+          active={view === 'needs-you'}
+          icon={<BellDot className="size-3.5" />}
+          label={translate('localTasks.needsYou.title', 'Needs you')}
+          count={needsYouCount}
+          onSelect={() => localTaskPageStore.getState().setView('needs-you')}
+        />
         {LOCAL_TASK_VIEWS.map((candidate) => (
           <NavRow
             key={candidate}
@@ -122,8 +131,10 @@ export function LocalTaskNav({ model }: { model: LocalTaskListModel }): React.JS
             active={scopeProjectId === project.id}
             icon={<FolderKanban className="size-3.5" />}
             label={project.name}
-            detail={project.prefix}
-            count={taskCountByProject.get(project.id) ?? 0}
+            detail={[project.prefix, localTaskHostLabelFor(model.hostLabels, project.id)]
+              .filter(Boolean)
+              .join(' · ')}
+            count={model.taskCountByProject.get(project.id) ?? 0}
             onSelect={() => localTaskPageStore.getState().setScope(project.id)}
           />
         ))}

@@ -56,6 +56,9 @@ export type QuickCreationRequestInput = {
 
 export type QuickSubmitOptions = {
   setupOnly?: boolean
+  /** Replaces the linked-work-item prompt when an agent is chosen. */
+  launchPrompt?: string
+  onCreationStarted?: (creationId: string) => void
 }
 
 export function buildQuickCreationRequest(

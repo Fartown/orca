@@ -7,6 +7,7 @@ let release: () => void = () => {}
 
 beforeEach(() => {
   localTasksDomainStore.setState(localTasksDomainStore.getInitialState())
+  localTasksDomainStore.getState().openEndpoint('local')
   localTaskPageStore.setState(localTaskPageStore.getInitialState())
   release = bindLocalTaskViewPreferences()
 })
@@ -17,16 +18,16 @@ describe('bindLocalTaskViewPreferences', () => {
   it('applies the grouping and sort stored in the task library', () => {
     localTasksDomainStore
       .getState()
-      .applyPreferences({ taskPageGroupBy: 'project', taskPageSortBy: 'number' })
+      .applyHomePreferences({ taskPageGroupBy: 'project', taskPageSortBy: 'number' })
     expect(localTaskPageStore.getState().groupBy).toBe('project')
     expect(localTaskPageStore.getState().sortBy).toBe('number')
   })
 
   it('falls back to the defaults for a cleared or unknown value', () => {
-    localTasksDomainStore.getState().applyPreferences({ taskPageGroupBy: 'priority' })
+    localTasksDomainStore.getState().applyHomePreferences({ taskPageGroupBy: 'priority' })
     localTasksDomainStore
       .getState()
-      .applyPreferences({ taskPageGroupBy: null, taskPageSortBy: 'assignee' })
+      .applyHomePreferences({ taskPageGroupBy: null, taskPageSortBy: 'assignee' })
     expect(localTaskPageStore.getState().groupBy).toBe('status')
     expect(localTaskPageStore.getState().sortBy).toBe('updated')
   })

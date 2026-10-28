@@ -28,6 +28,7 @@ import {
 import {
   initialLocalTaskDraft,
   isMultiLinePaste,
+  localTaskParentCandidates,
   nextLocalTaskDraft,
   splitPastedLines,
   type LocalTaskDraft,
@@ -44,6 +45,7 @@ type Props = {
   library: LocalTasksLibrary
   api: LocalTasksApi
   mode: LocalTaskFormMode
+  readOnly: boolean
   onClose: () => void
   /** The task the form created or saved, which the caller then shows. */
   onDone: (taskId: string) => void
@@ -65,17 +67,14 @@ export function LocalTaskFormView(props: Props) {
   const lookup = localTaskStatusLookup(library.projects)
   const status = draft.statusId ? (lookup.get(draft.statusId) ?? null) : null
   const editing = mode.kind === 'edit' ? mode.task : null
-  const hasChildren = editing ? library.tasks.some((task) => task.parentId === editing.id) : false
-  const parentCandidates = library.tasks.filter(
-    (task) =>
-      task.projectId === draft.projectId && task.parentId === null && task.id !== editing?.id
-  )
+  const parentCandidates = localTaskParentCandidates(library.tasks, draft.projectId, editing?.id)
   const parent = draft.parentId
     ? (library.tasks.find((task) => task.id === draft.parentId) ?? null)
     : null
   const title =
     mode.kind === 'edit' ? copy.editTask : mode.kind === 'subtask' ? copy.newSubtask : copy.newTask
-  const canSubmit = draft.title.trim().length > 0 && !submit.busy
+  const canSubmit =
+    !props.readOnly && draft.title.trim().length > 0 && !submit.busy && !submit.subtaskRetryPending
 
   const leaveNotice = () => {
     const taskId = submit.dismissNotice()
@@ -112,12 +111,7 @@ export function LocalTaskFormView(props: Props) {
           </View>
         ) : (
           <Pressable
-            style={[
-              localTaskStyles.chip,
-              styles.contextChip,
-              editing?.parentId ? localTaskStyles.disabled : null
-            ]}
-            disabled={Boolean(editing?.parentId)}
+            style={[localTaskStyles.chip, styles.contextChip]}
             onPress={() => setPicker('project')}
             accessibilityRole="button"
             accessibilityLabel={copy.project}
@@ -191,11 +185,7 @@ export function LocalTaskFormView(props: Props) {
             />
           </LocalTaskPropertyRow>
           {mode.kind === 'subtask' ? null : (
-            <LocalTaskPropertyRow
-              label={copy.parent}
-              disabled={hasChildren}
-              onPress={() => setPicker('parent')}
-            >
+            <LocalTaskPropertyRow label={copy.parent} onPress={() => setPicker('parent')}>
               <Text
                 style={parent ? localTaskStyles.rowValue : localTaskStyles.rowValueMuted}
                 numberOfLines={1}
@@ -207,6 +197,32 @@ export function LocalTaskFormView(props: Props) {
         </View>
         {submit.error ? (
           <Text style={[localTaskStyles.errorText, styles.gap]}>{submit.error}</Text>
+        ) : null}
+        {mode.kind === 'subtask' && submit.subtaskRetryPending ? (
+          <View style={styles.partialActions}>
+            <Pressable
+              style={localTaskStyles.secondaryButton}
+              disabled={submit.busy}
+              onPress={() =>
+                void submit
+                  .retrySubtasks(mode.parent, draft)
+                  .then((ok) => ok && finish(mode.parent.id))
+              }
+              accessibilityRole="button"
+            >
+              <Text style={localTaskStyles.secondaryButtonText}>{copy.retrySavingSubtasks}</Text>
+            </Pressable>
+            {submit.partialTaskId ? (
+              <Pressable
+                style={localTaskStyles.secondaryButton}
+                disabled={submit.busy || props.readOnly}
+                onPress={() => props.onDone(mode.parent.id)}
+                accessibilityRole="button"
+              >
+                <Text style={localTaskStyles.secondaryButtonText}>{copy.viewCreatedSubtasks}</Text>
+              </Pressable>
+            ) : null}
+          </View>
         ) : null}
         {mode.kind === 'edit' ? null : (
           <Text style={[localTaskStyles.hint, styles.gap]}>{copy.formHint}</Text>
@@ -251,7 +267,7 @@ export function LocalTaskFormView(props: Props) {
       />
       {mode.kind === 'subtask' ? (
         <LocalTaskPasteChoice
-          lines={pasted}
+          lines={props.readOnly ? null : pasted}
           parentRef={mode.parent.ref}
           onSubtasks={(lines) =>
             void submit
@@ -265,7 +281,7 @@ export function LocalTaskFormView(props: Props) {
       <LocalTaskFormPrompts
         notice={submit.notice}
         onLeaveNotice={leaveNotice}
-        conflict={submit.conflict}
+        conflict={submit.conflict && !props.readOnly}
         onOverwrite={() => void submit.overwrite(draft).then((taskId) => taskId && finish(taskId))}
         onDiscard={() => {
           submit.discard()
@@ -285,5 +301,6 @@ const styles = StyleSheet.create({
   description: { minHeight: 60, lineHeight: 21, textAlignVertical: 'top' },
   labels: { flex: 1 },
   gap: { marginTop: spacing.md },
-  continueRow: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.sm }
+  continueRow: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  partialActions: { gap: spacing.sm }
 })

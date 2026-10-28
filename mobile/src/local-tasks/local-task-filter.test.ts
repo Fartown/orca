@@ -21,8 +21,8 @@ const project: LocalTaskProject = {
   name: 'Mall',
   prefix: 'MALL',
   aliases: ['SHOP'],
-  orcaProjectId: 'orca-mall',
-  defaultRepoId: null,
+  repos: ['orca-mall'],
+  defaultRepoId: 'orca-mall',
   lastExecutionHostId: null,
   rules: { startMovesToInProgress: true, prMergedCompletes: true },
   statuses: categories.map((category) => ({
@@ -80,7 +80,10 @@ function shown(filter: LocalTaskFilter, nestSubtasks = true, list = tasks): stri
     nestSubtasks,
     keepEmpty: false
   }).flatMap((group) =>
-    group.rows.flatMap((row) => [row.task.ref, ...row.subtasks.map((child) => `>${child.ref}`)])
+    group.rows.flatMap((row) => [
+      row.task.ref,
+      ...row.subtasks.map((child) => `>${child.task.ref}`)
+    ])
   )
 }
 

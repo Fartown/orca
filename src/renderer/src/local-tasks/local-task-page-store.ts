@@ -8,6 +8,8 @@ import type {
 /** Left-rail views; every one but `all` is one status category (REQ-006). */
 export const LOCAL_TASK_VIEWS = ['all', 'started', 'backlog', 'completed', 'canceled'] as const
 export type LocalTaskView = (typeof LOCAL_TASK_VIEWS)[number]
+/** What the rail shows: a status view, or the sessions waiting on the user (REQ-014). */
+export type LocalTaskPageView = LocalTaskView | 'needs-you'
 
 /** List grouping; `status` means statuses in one project and categories across projects. */
 export const LOCAL_TASK_GROUP_BYS = ['status', 'priority', 'project', 'none'] as const
@@ -21,6 +23,8 @@ export type LocalTaskFilters = {
   priorities: LocalTaskPriority[]
   labels: string[]
   categories: LocalTaskStatusCategory[]
+  /** Only tasks with a session in Needs you (REQ-012). */
+  needsYou: boolean
 }
 
 export type LocalTaskPickerKind = 'status' | 'priority' | 'labels'
@@ -35,14 +39,15 @@ export type LocalTaskCreateDefaults = {
 export const EMPTY_LOCAL_TASK_FILTERS: LocalTaskFilters = {
   priorities: [],
   labels: [],
-  categories: []
+  categories: [],
+  needsYou: false
 }
 
 export type LocalTaskPageState = {
   /** Whether the task page shows the local source; persisted as `taskPageLocalActive`. */
   localActive: boolean
   scopeProjectId: string | null
-  view: LocalTaskView
+  view: LocalTaskPageView
   layout: 'list' | 'board'
   groupBy: LocalTaskGroupBy
   sortBy: LocalTaskSortBy
@@ -53,14 +58,20 @@ export type LocalTaskPageState = {
   detailTaskId: string | null
   previewOpen: boolean
   selectedTaskIds: string[]
+  collapsedGroupKeys: string[]
+  /** Tasks whose subtree the list folds away (REQ-004). */
+  collapsedTaskIds: string[]
+  commentBusyTaskIds: string[]
+  commentDrafts: Record<string, string>
   create: { open: boolean; defaults: LocalTaskCreateDefaults }
   picker: { kind: LocalTaskPickerKind; taskIds: string[] } | null
   filterOpen: boolean
   /** Bumped to ask the toolbar to focus its search field. */
   searchFocusRequest: number
+  consumedSearchFocusRequest: number
   setLocalActive: (localActive: boolean) => void
-  setScope: (scopeProjectId: string | null, view?: LocalTaskView) => void
-  setView: (view: LocalTaskView) => void
+  setScope: (scopeProjectId: string | null, view?: LocalTaskPageView) => void
+  setView: (view: LocalTaskPageView) => void
   setLayout: (layout: 'list' | 'board') => void
   setGroupBy: (groupBy: LocalTaskGroupBy) => void
   setSortBy: (sortBy: LocalTaskSortBy) => void
@@ -72,12 +83,18 @@ export type LocalTaskPageState = {
   setPreviewOpen: (open: boolean) => void
   toggleSelected: (taskId: string) => void
   clearSelection: () => void
+  toggleGroupCollapsed: (key: string) => void
+  toggleTaskCollapsed: (taskId: string) => void
+  setCommentBusy: (taskId: string, busy: boolean) => void
+  setCommentDraft: (taskId: string, body: string) => void
+  clearTransientUi: () => void
   openCreate: (defaults?: Partial<LocalTaskCreateDefaults>) => void
   closeCreate: () => void
   openPicker: (kind: LocalTaskPickerKind, taskIds: string[]) => void
   closePicker: () => void
   setFilterOpen: (open: boolean) => void
   requestSearchFocus: () => void
+  consumeSearchFocus: (request: number) => void
 }
 
 export const localTaskPageStore = createStore<LocalTaskPageState>((set) => ({
@@ -94,6 +111,10 @@ export const localTaskPageStore = createStore<LocalTaskPageState>((set) => ({
   detailTaskId: null,
   previewOpen: false,
   selectedTaskIds: [],
+  collapsedGroupKeys: [],
+  collapsedTaskIds: [],
+  commentBusyTaskIds: [],
+  commentDrafts: {},
   create: {
     open: false,
     defaults: { projectId: null, statusId: null, priority: null, parentId: null }
@@ -101,6 +122,7 @@ export const localTaskPageStore = createStore<LocalTaskPageState>((set) => ({
   picker: null,
   filterOpen: false,
   searchFocusRequest: 0,
+  consumedSearchFocusRequest: 0,
   setLocalActive: (localActive) => set({ localActive }),
   setScope: (scopeProjectId, view) =>
     set((state) => ({
@@ -131,6 +153,38 @@ export const localTaskPageStore = createStore<LocalTaskPageState>((set) => ({
         : [...state.selectedTaskIds, taskId]
     })),
   clearSelection: () => set({ selectedTaskIds: [] }),
+  toggleGroupCollapsed: (key) =>
+    set((state) => ({
+      collapsedGroupKeys: state.collapsedGroupKeys.includes(key)
+        ? state.collapsedGroupKeys.filter((item) => item !== key)
+        : [...state.collapsedGroupKeys, key]
+    })),
+  toggleTaskCollapsed: (taskId) =>
+    set((state) => ({
+      collapsedTaskIds: state.collapsedTaskIds.includes(taskId)
+        ? state.collapsedTaskIds.filter((id) => id !== taskId)
+        : [...state.collapsedTaskIds, taskId]
+    })),
+  setCommentBusy: (taskId, busy) =>
+    set((state) => ({
+      commentBusyTaskIds: busy
+        ? [...new Set([...state.commentBusyTaskIds, taskId])]
+        : state.commentBusyTaskIds.filter((id) => id !== taskId)
+    })),
+  setCommentDraft: (taskId, body) =>
+    set((state) => ({ commentDrafts: { ...state.commentDrafts, [taskId]: body } })),
+  clearTransientUi: () =>
+    set((state) => ({
+      cursorTaskId: null,
+      detailTaskId: null,
+      previewOpen: false,
+      selectedTaskIds: [],
+      create: { ...state.create, open: false },
+      picker: null,
+      filterOpen: false,
+      commentDrafts: {},
+      searchFocusRequest: state.consumedSearchFocusRequest
+    })),
   openCreate: (defaults) =>
     set({
       create: {
@@ -147,7 +201,11 @@ export const localTaskPageStore = createStore<LocalTaskPageState>((set) => ({
   openPicker: (kind, taskIds) => set(taskIds.length > 0 ? { picker: { kind, taskIds } } : {}),
   closePicker: () => set({ picker: null }),
   setFilterOpen: (filterOpen) => set({ filterOpen }),
-  requestSearchFocus: () => set((state) => ({ searchFocusRequest: state.searchFocusRequest + 1 }))
+  requestSearchFocus: () => set((state) => ({ searchFocusRequest: state.searchFocusRequest + 1 })),
+  consumeSearchFocus: (request) =>
+    set((state) => ({
+      consumedSearchFocusRequest: Math.max(state.consumedSearchFocusRequest, request)
+    }))
 }))
 
 export function useLocalTaskPage<T>(selector: (state: LocalTaskPageState) => T): T {

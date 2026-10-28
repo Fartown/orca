@@ -1,12 +1,8 @@
 import type { LocalTaskChangeScope } from '../../../src/shared/local-tasks/local-task-types'
+import { changeMessageSchema } from '../../../src/shared/local-tasks/local-task-result-schemas'
 import type { RpcClient } from '../transport/rpc-client'
-
-const KNOWN_SCOPES: ReadonlySet<string> = new Set<LocalTaskChangeScope>([
-  'projects',
-  'tasks',
-  'events',
-  'preferences'
-])
+import { runRpcOperation } from '../transport/rpc-operation'
+import { localTaskChangesUnsubscribe } from './local-tasks-operations'
 
 // React Native's AppState, narrowed to what this reads so it also runs off the device.
 type FeedAppState = {
@@ -14,7 +10,7 @@ type FeedAppState = {
 }
 
 type LocalTasksChangeFeedArgs = {
-  client: Pick<RpcClient, 'subscribe'>
+  client: Pick<RpcClient, 'subscribe' | 'sendRequest'>
   appState: FeedAppState
   /** Every view re-reads: a `ready` (first or replayed after a reconnect), or back in front. */
   onFullReload: () => void
@@ -29,57 +25,79 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 /**
  * Follows `localTasks.subscribeChanges` while a page is open.
  *
- * The desktop queues nothing for a dropped socket, so each `ready` re-reads everything; a `changed`
+ * The host queues nothing for a dropped socket, so each `ready` re-reads everything; a `changed`
  * re-reads only the scopes it names, and `null` scopes mean everything. No timer backs this up:
  * a missed notice is covered by the next `ready` or by coming back to the foreground.
  */
 export function startLocalTasksChangeFeed(args: LocalTasksChangeFeedArgs): () => void {
   let stopped = false
+  let subscriptionId: string | null = null
+  const released = new Set<string>()
+  const release = (id: string): void => {
+    if (released.has(id)) {
+      return
+    }
+    released.add(id)
+    void runRpcOperation(args.client, localTaskChangesUnsubscribe, { subscriptionId: id }).catch(
+      () => {}
+    )
+  }
   const appStateSubscription = args.appState.addEventListener('change', (state) => {
     if (!stopped && state === 'active') {
       args.onFullReload()
     }
   })
   const unsubscribe = args.client.subscribe('localTasks.subscribeChanges', null, (payload) => {
-    if (stopped || !isRecord(payload)) {
+    const parsed = changeMessageSchema.safeParse(payload)
+    if (stopped) {
+      // Why: an older transport keeps delivering after release, so a late `ready` names a
+      // registration only this feed can still free.
+      if (parsed.success && parsed.data.type === 'ready') {
+        release(parsed.data.subscriptionId)
+      }
       return
     }
-    if (payload.type === 'ready') {
+    if (!parsed.success) {
+      if (isRecord(payload) && payload.type === 'changed') {
+        args.onFullReload()
+      }
+      if (isRecord(payload) && payload.type === 'error') {
+        args.onLiveChange?.(false)
+        args.onFullReload()
+      }
+      return
+    }
+    const message = parsed.data
+    if (message.type === 'ready') {
+      subscriptionId = message.subscriptionId
       args.onLiveChange?.(true)
       args.onFullReload()
       return
     }
-    if (payload.type === 'changed') {
-      const scopes = payload.scopes
-      if (!Array.isArray(scopes)) {
+    if (message.type === 'changed') {
+      if (message.scopes === null) {
         args.onFullReload()
         return
       }
-      const known = scopes.filter(
-        (scope): scope is LocalTaskChangeScope =>
-          typeof scope === 'string' && KNOWN_SCOPES.has(scope)
-      )
-      // Why: a scope this build cannot name may cover anything, so it reads as "everything".
-      if (known.length < scopes.length) {
-        args.onFullReload()
-      } else if (known.length > 0) {
-        args.onScopes(known)
+      if (message.scopes.length > 0) {
+        args.onScopes(message.scopes)
       }
       return
     }
-    if (payload.type === 'end') {
+    if (message.type === 'end') {
+      subscriptionId = null
       args.onLiveChange?.(false)
-      return
-    }
-    if (payload.type === 'error') {
-      // Why one read: a refused stream would otherwise leave the page empty until the next ready.
-      args.onLiveChange?.(false)
-      args.onFullReload()
     }
   })
   return () => {
+    if (stopped) {
+      return
+    }
     stopped = true
     appStateSubscription.remove()
     unsubscribe()
+    if (subscriptionId) {
+      release(subscriptionId)
+    }
   }
 }

@@ -8,6 +8,7 @@ import { styles } from './mobile-session-styles'
 import { useHostSidebarReveal } from '../layout/host-sidebar-reveal'
 import { useResponsiveLayout } from '../layout/responsive-layout'
 import type { MobileSessionController } from './use-mobile-session-controller'
+import { LocalTaskSessionStrip } from '../local-tasks/LocalTaskSessionStrip'
 
 export function MobileSessionHeader({ controller }: { controller: MobileSessionController }) {
   const {
@@ -98,6 +99,7 @@ export function MobileSessionHeader({ controller }: { controller: MobileSessionC
           />
         ) : null}
       </View>
+      <LocalTaskSessionStrip controller={controller} />
 
       {tabsInTopBar ? null : tabStrip}
     </SafeAreaView>

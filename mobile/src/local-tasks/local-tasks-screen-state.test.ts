@@ -23,6 +23,28 @@ const ready = {
 }
 
 describe('what the task page says about the library state', () => {
+  it('uses a connection message without exposing a host id', () => {
+    expect(
+      localTasksScreenState(copy, {
+        ...ready,
+        access: 'offline',
+        machineName: '',
+        loaded: false,
+        ready: false,
+        status: null
+      })
+    ).toMatchObject({ kind: 'gate', title: '无法连接这台主机的 Orca' })
+    expect(
+      localTasksScreenState(copy, {
+        ...ready,
+        access: 'offline',
+        authFailed: true,
+        loaded: false,
+        ready: false,
+        status: null
+      })
+    ).toMatchObject({ kind: 'gate', title: copy.pairingInvalid })
+  })
   it('words an unavailable library plainly and keeps the raw error behind details', () => {
     const raw = 'SQLITE_CANTOPEN: unable to open database file'
     const screen = localTasksScreenState(copy, {
@@ -44,5 +66,15 @@ describe('what the task page says about the library state', () => {
       readOnly: true,
       notice: '只读：这个任务库由更新版本的 Orca 写入，这里只能查看，不能修改。'
     })
+  })
+
+  it('keeps the loaded page but disables writes when the change stream ends', () => {
+    expect(
+      localTasksScreenState(copy, {
+        ...ready,
+        status: status('ready'),
+        streamEnded: true
+      })
+    ).toEqual({ kind: 'library', readOnly: true, notice: copy.streamEnded })
   })
 })

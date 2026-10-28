@@ -24,14 +24,46 @@ export function localTasksScreenState(
     ready: boolean
     loaded: boolean
     error: string | null
+    authFailed?: boolean
+    streamEnded?: boolean
   }
 ): LocalTasksScreenState {
   const { access, status } = input
+  if (input.loaded) {
+    const readOnly =
+      access !== 'ready' || status?.state !== 'ready' || !input.ready || input.streamEnded === true
+    return {
+      kind: 'library',
+      readOnly,
+      notice: input.authFailed
+        ? copy.pairingInvalid
+        : access === 'offline'
+          ? copy.desktopDisconnected(input.machineName)
+          : access === 'checking'
+            ? copy.checking
+            : access === 'unsupported'
+              ? copy.unsupported
+              : access === 'unreadable'
+                ? copy.statusUnreadable
+                : !status
+                  ? copy.checking
+                  : status.state === 'starting'
+                    ? copy.libraryStarting
+                    : status?.state === 'unavailable'
+                      ? copy.libraryUnavailable
+                      : input.error
+                        ? copy.loadFailed
+                        : input.streamEnded
+                          ? copy.streamEnded
+                          : readOnly
+                            ? copy.libraryReadOnly
+                            : null
+    }
+  }
   if (access === 'offline') {
     return {
       kind: 'gate',
-      title: copy.desktopClosed(input.machineName),
-      message: copy.desktopClosedHint(input.machineName)
+      title: input.authFailed ? copy.pairingInvalid : copy.desktopDisconnected(input.machineName)
     }
   }
   if (access === 'unsupported' || status?.state === 'not-task-host') {
@@ -64,10 +96,5 @@ export function localTasksScreenState(
       busy: true
     }
   }
-  const readOnly = status?.state === 'read-only'
-  return {
-    kind: 'library',
-    readOnly,
-    notice: readOnly ? copy.libraryReadOnly : input.error ? copy.loadFailed : null
-  }
+  return { kind: 'library', readOnly: false, notice: null }
 }

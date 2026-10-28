@@ -4,6 +4,15 @@ import { firstStatusInCategory } from '@/local-tasks/local-task-grouping'
 import type { LocalTaskGroupHead } from '@/local-tasks/local-task-list-groups'
 import { localTaskPageStore } from '@/local-tasks/local-task-page-store'
 import {
+  isLocalTaskRowWritable,
+  localTasksDomainStore,
+  type LocalTasksDomainState
+} from '@/local-tasks/local-tasks-domain-store'
+import {
+  canCreateLocalTask,
+  writableLocalTaskProjects
+} from '@/local-tasks/local-task-write-access'
+import {
   localTaskCategoryLabel,
   localTaskPriorityLabel
 } from '@/local-tasks/local-task-vocabulary-copy'
@@ -40,9 +49,22 @@ export function LocalTaskGroupIcon({ head }: { head: LocalTaskGroupHead }): Reac
   }
 }
 
-/** Opens New task preset to what the group stands for, in the scoped project or the first one. */
+/** Whether the group's + can open New task: its project's, or some project's, library takes writes. */
+export function canCreateInGroup(
+  state: Pick<LocalTasksDomainState, 'partitions' | 'home' | 'projects'>,
+  head: LocalTaskGroupHead,
+  model: Pick<LocalTaskListModel, 'scopeProjectId'>
+): boolean {
+  return head.kind === 'project'
+    ? isLocalTaskRowWritable(state, head.project.id)
+    : canCreateLocalTask(state, model.scopeProjectId)
+}
+
+/** Opens New task preset to what the group stands for, in the scoped project or a writable one. */
 export function openCreateInGroup(head: LocalTaskGroupHead, model: LocalTaskListModel): void {
-  const project = (head.kind === 'project' ? head.project : model.scopeProject) ?? model.projects[0]
+  const project =
+    (head.kind === 'project' ? head.project : model.scopeProject) ??
+    writableLocalTaskProjects(localTasksDomainStore.getState(), model.projects)[0]
   const statusId =
     head.kind === 'status'
       ? head.status.id

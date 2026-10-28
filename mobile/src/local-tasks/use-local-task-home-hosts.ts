@@ -2,20 +2,22 @@ import { useCallback, useEffect, useState } from 'react'
 import { useFocusEffect } from 'expo-router'
 import { taskRuntimeStatusRead } from '../tasks/mobile-task-runtime-operations'
 import { useRpcClientContext } from '../transport/client-context'
+import {
+  relaysToServers,
+  scopeRpcClientToExecutionHost
+} from '../transport/execution-host-scoped-rpc-client'
 import { loadHosts } from '../transport/host-store'
 import type { RpcClient } from '../transport/rpc-client'
 import type { ConnectionState, HostProfile } from '../transport/types'
-import { hostAdvertisesLocalTasks, readLocalTasksInProgress } from './local-tasks-access'
-import {
-  loadRememberedLocalTaskHosts,
-  recordLocalTaskHostAdvertisement,
-  type RememberedLocalTaskHosts
-} from './local-task-host-memory'
+import { relayHostsFeed } from '../worktree/relay-hosts-feed'
+import { createLocalTasksApi } from './local-tasks-api'
+import { hostAdvertisesLocalTasks, localTaskHostMachineName } from './local-tasks-access'
+import { readLocalTaskHomeLibrary, type LocalTaskHomeLibrary } from './local-task-home-attention'
 
 export type LocalTaskHomeHost =
-  /** A connected task host; `inProgress` is null until its library answers. */
-  | { kind: 'ready'; host: HostProfile; inProgress: number | null }
-  /** A host that advertised before and is out of contact now: its Orca is not open. */
+  /** A connected host with local tasks: its own library and each relayed server's that has one. */
+  | { kind: 'ready'; host: HostProfile; libraries: LocalTaskHomeLibrary[] }
+  /** A host that had local tasks earlier in this session and is out of contact now. */
   | { kind: 'closed'; host: HostProfile }
 
 // Why not "connecting": a host still dialing at app start is not evidence its Orca is closed.
@@ -23,25 +25,66 @@ function isOutOfContact(state: ConnectionState | null): boolean {
   return state === 'disconnected' || state === 'reconnecting' || state === 'auth-failed'
 }
 
-type HostReading = { advertises: boolean; inProgress: number | null }
+type HostReading = { advertises: boolean; libraries: LocalTaskHomeLibrary[] }
 
-async function readHomeHost(client: RpcClient, hostId: string): Promise<HostReading> {
-  const reply = await taskRuntimeStatusRead.requestSingleFlight(client, hostId)
-  const capabilities = taskRuntimeStatusRead.interpret(reply).capabilities
-  return {
-    advertises: hostAdvertisesLocalTasks(capabilities),
-    // Why caught here: a failed count still leaves a known task host, shown without a number.
-    inProgress: await readLocalTasksInProgress(client, capabilities).catch(() => null)
-  }
+async function advertisesLocalTasks(client: RpcClient, flightKey: string): Promise<boolean> {
+  const reply = await taskRuntimeStatusRead.requestSingleFlight(client, flightKey)
+  return hostAdvertisesLocalTasks(taskRuntimeStatusRead.interpret(reply).capabilities)
 }
 
 /**
- * Which paired desktops host a task library, read when home gains focus or a host connects. Only a
- * connected host is asked; one out of contact is listed from memory and never read.
+ * The servers the paired host relays to now that have local tasks (D-008), each read through it.
+ * Asked once per home read; a server the paired host cannot reach is never asked.
+ */
+async function readServerLibraries(
+  client: RpcClient,
+  capabilities: readonly string[]
+): Promise<LocalTaskHomeLibrary[]> {
+  if (!relaysToServers(client, capabilities)) {
+    return []
+  }
+  const servers = (await relayHostsFeed(client).read()) ?? []
+  const libraries = await Promise.all(
+    servers
+      .filter((server) => server.relay === 'ready')
+      .map(async (server) => {
+        const serverClient = scopeRpcClientToExecutionHost(client, server.hostId)
+        const advertises = await advertisesLocalTasks(serverClient, server.hostId).catch(
+          () => false
+        )
+        return advertises
+          ? readLocalTaskHomeLibrary(createLocalTasksApi(serverClient), {
+              executionHost: server.hostId,
+              label: server.label
+            })
+          : null
+      })
+  )
+  return libraries.flatMap((library) => (library ? [library] : []))
+}
+
+async function readHomeHost(client: RpcClient, host: HostProfile): Promise<HostReading> {
+  const reply = await taskRuntimeStatusRead.requestSingleFlight(client, host.id)
+  const capabilities = taskRuntimeStatusRead.interpret(reply).capabilities ?? []
+  if (!hostAdvertisesLocalTasks(capabilities)) {
+    return { advertises: false, libraries: [] }
+  }
+  const [own, servers] = await Promise.all([
+    readLocalTaskHomeLibrary(createLocalTasksApi(client), {
+      label: localTaskHostMachineName(host)
+    }),
+    readServerLibraries(client, capabilities).catch(() => [])
+  ])
+  return { advertises: true, libraries: [own, ...servers] }
+}
+
+/**
+ * Which paired hosts have local tasks, read when home gains focus or a host connects, each with the
+ * libraries of the servers it relays to. Only a connected host is asked; one out of contact is
+ * listed from what this session already read, and never read.
  */
 export function useLocalTaskHomeHosts(connectedHosts: HostProfile[]): LocalTaskHomeHost[] {
   const ctx = useRpcClientContext()
-  const [remembered, setRemembered] = useState<RememberedLocalTaskHosts>({})
   const [catalog, setCatalog] = useState<HostProfile[]>([])
   const [readings, setReadings] = useState<Record<string, HostReading>>({})
   const [focusCount, setFocusCount] = useState(0)
@@ -49,9 +92,8 @@ export function useLocalTaskHomeHosts(connectedHosts: HostProfile[]): LocalTaskH
   useFocusEffect(
     useCallback(() => {
       let current = true
-      void Promise.all([loadRememberedLocalTaskHosts(), loadHosts()]).then(([memory, hosts]) => {
+      void loadHosts().then((hosts) => {
         if (current) {
-          setRemembered(memory)
           setCatalog(hosts)
         }
       })
@@ -70,17 +112,11 @@ export function useLocalTaskHomeHosts(connectedHosts: HostProfile[]): LocalTaskH
       if (!client) {
         continue
       }
-      readHomeHost(client, host.id).then(
+      readHomeHost(client, host).then(
         (reading) => {
-          if (!current) {
-            return
+          if (current) {
+            setReadings((previous) => ({ ...previous, [host.id]: reading }))
           }
-          setReadings((previous) => ({ ...previous, [host.id]: reading }))
-          void recordLocalTaskHostAdvertisement(host.id, reading.advertises).then((memory) => {
-            if (current) {
-              setRemembered(memory)
-            }
-          })
         },
         () => {}
       )
@@ -92,14 +128,15 @@ export function useLocalTaskHomeHosts(connectedHosts: HostProfile[]): LocalTaskH
   }, [connectedKey, focusCount, ctx])
 
   const connectedIds = new Set(connectedHosts.map((host) => host.id))
-  const ready: LocalTaskHomeHost[] = connectedHosts
-    .filter((host) => readings[host.id]?.advertises === true)
-    .map((host) => ({ kind: 'ready', host, inProgress: readings[host.id]?.inProgress ?? null }))
+  const ready: LocalTaskHomeHost[] = connectedHosts.flatMap((host) => {
+    const reading = readings[host.id]
+    return reading?.advertises ? [{ kind: 'ready', host, libraries: reading.libraries }] : []
+  })
   const closed: LocalTaskHomeHost[] = catalog
     .filter(
       (host) =>
         !connectedIds.has(host.id) &&
-        Object.hasOwn(remembered, host.id) &&
+        readings[host.id]?.advertises === true &&
         isOutOfContact(ctx.getKnownState(host.id))
     )
     .map((host) => ({ kind: 'closed', host }))

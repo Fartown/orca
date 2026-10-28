@@ -20,7 +20,9 @@ import {
   type LocalTaskCreateDefaults
 } from '@/local-tasks/local-task-page-store'
 import { localTasksClient } from '@/local-tasks/local-tasks-runtime-client'
-import { localTasksDomainStore } from '@/local-tasks/local-tasks-domain-store'
+import { localTasksDomainStore, useLocalTasksDomain } from '@/local-tasks/local-tasks-domain-store'
+import { localTaskParentCandidates } from '@/local-tasks/local-task-hierarchy'
+import { writableLocalTaskProjects } from '@/local-tasks/local-task-write-access'
 import { runLocalTaskWrite } from '@/local-tasks/local-task-writes'
 import {
   cleanLocalTaskCriteria,
@@ -34,14 +36,34 @@ import {
   LocalTaskProjectSelect,
   LocalTaskStatusSelect
 } from './LocalTaskFieldPickers'
-import { useLocalTaskIndex } from './use-local-task-list-model'
+import type { LocalTaskListModel } from './use-local-task-list-model'
 import { useLocalTaskEscapeLayer } from './use-local-task-page-keys'
 
 const IS_MAC = navigator.userAgent.includes('Mac')
 
-function CreateBody({ defaults }: { defaults: LocalTaskCreateDefaults }): React.JSX.Element {
-  const { projects, tasks } = useLocalTaskIndex()
-  const [projectId, setProjectId] = useState(defaults.projectId ?? projects[0]?.id ?? null)
+function CreateBody({
+  defaults,
+  model
+}: {
+  defaults: LocalTaskCreateDefaults
+  model: LocalTaskListModel
+}): React.JSX.Element {
+  const { tasks } = model
+  // Why writable only: each project's library takes its own writes; a read-only one cannot.
+  const writableIds = useLocalTasksDomain((state) =>
+    writableLocalTaskProjects(state, model.projects)
+      .map((project) => project.id)
+      .join('\n')
+  )
+  const projects = useMemo(() => {
+    const ids = new Set(writableIds.split('\n'))
+    return model.projects.filter((project) => ids.has(project.id))
+  }, [model.projects, writableIds])
+  const [projectId, setProjectId] = useState(
+    projects.some((candidate) => candidate.id === defaults.projectId)
+      ? defaults.projectId
+      : (projects[0]?.id ?? null)
+  )
   const project = projects.find((candidate) => candidate.id === projectId)
   const defaultStatusId = (firstStatusInCategory(project, 'unstarted') ?? project?.statuses[0])?.id
   const [statusId, setStatusId] = useState(defaults.statusId ?? defaultStatusId ?? null)
@@ -56,8 +78,8 @@ function CreateBody({ defaults }: { defaults: LocalTaskCreateDefaults }): React.
   const titleRef = useRef<HTMLInputElement>(null)
   const suggestions = useMemo(() => collectLocalTaskLabels(tasks), [tasks])
   const parents = useMemo(
-    () => tasks.filter((task) => task.projectId === projectId && task.parentId === null),
-    [tasks, projectId]
+    () => localTaskParentCandidates(null, projectId, tasks, model.index),
+    [tasks, projectId, model.index]
   )
 
   const submit = async (): Promise<void> => {
@@ -196,7 +218,7 @@ function CreateBody({ defaults }: { defaults: LocalTaskCreateDefaults }): React.
 }
 
 /** New task (REQ-004): project, title, description, done criteria, status, priority, labels, parent. */
-export function LocalTaskCreateDialog(): React.JSX.Element {
+export function LocalTaskCreateDialog({ model }: { model: LocalTaskListModel }): React.JSX.Element {
   const create = useLocalTaskPage((state) => state.create)
   const close = (): void => localTaskPageStore.getState().closeCreate()
   useLocalTaskEscapeLayer('dialog', create.open, close)
@@ -214,7 +236,7 @@ export function LocalTaskCreateDialog(): React.JSX.Element {
         aria-describedby={undefined}
         className="sm:max-w-2xl"
       >
-        {create.open ? <CreateBody defaults={create.defaults} /> : null}
+        {create.open ? <CreateBody defaults={create.defaults} model={model} /> : null}
       </DialogContent>
     </Dialog>
   )

@@ -167,7 +167,12 @@ function CriteriaField({
     <div className="flex flex-col gap-1">
       <LocalTaskCriteriaEditor
         items={field.value}
-        onItemsChange={field.edit}
+        onItemsChange={(items) => {
+          field.edit(items)
+          if (items.length === 0) {
+            void field.commitValue(items)
+          }
+        }}
         disabled={!writable}
         onLeave={() => void field.commit()}
       />

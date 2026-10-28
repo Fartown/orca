@@ -103,6 +103,7 @@ export const localTaskStyles = StyleSheet.create({
     fontSize: typography.metaSize
   },
   hint: { color: colors.textMuted, fontSize: typography.metaSize, lineHeight: 18 },
+  attentionStale: { paddingHorizontal: spacing.lg, paddingVertical: spacing.sm },
   input: {
     color: colors.textPrimary,
     fontSize: TEXT_INPUT_FONT_SIZE,

@@ -10,6 +10,7 @@ import {
   localTaskEventsRead,
   localTaskMove,
   localTaskProjectCreate,
+  localTaskProjectRemove,
   localTaskProjectUpdate,
   localTaskProjectsRead,
   localTaskRemove,
@@ -20,13 +21,21 @@ import {
   localTaskStatusUpsert,
   localTaskSubtasksCreate,
   localTaskUpdate,
-  localTaskBatchUpdate
+  localTaskBatchUpdate,
+  localTaskAttentionAcknowledge,
+  localTaskAttentionSnooze,
+  localTaskLinksRead,
+  localTaskProgressRead,
+  localTaskSessionRecord,
+  localTaskSessionUnlink,
+  localTaskWorkspaceLink,
+  localTaskWorkspaceUnlink
 } from './local-tasks-operations'
 import type { LocalTaskWriteRefusal } from './local-tasks-reply-schema'
 
 /**
  * What a write came to. `unknown` is the one a caller must not call a failure: the request
- * reached the wire and the answer was lost, so the desktop may have applied it. Retrying with the
+ * reached the wire and the answer was lost, so the host may have applied it. Retrying with the
  * same `clientOperationId` returns the first result instead of applying it twice.
  */
 export type LocalTaskWriteOutcome<T> =
@@ -52,7 +61,7 @@ export async function settleLocalTaskWrite<T extends object>(
   }
 }
 
-/** The phone's whole surface on a task host, bound to one client. */
+/** The phone's whole surface on one Orca's task library, bound to the client that reaches it. */
 export function createLocalTasksApi(client: UnvalidatedRpcRequestPort) {
   return {
     status: () => runRpcOperation(client, localTasksStatusRead),
@@ -63,6 +72,8 @@ export function createLocalTasksApi(client: UnvalidatedRpcRequestPort) {
       settleLocalTaskWrite(runRpcOperation(client, localTaskProjectCreate, params)),
     updateProject: (params: RpcSendParams<'localTasks.projects.update'>) =>
       settleLocalTaskWrite(runRpcOperation(client, localTaskProjectUpdate, params)),
+    removeProject: (params: RpcSendParams<'localTasks.projects.remove'>) =>
+      settleLocalTaskWrite(runRpcOperation(client, localTaskProjectRemove, params)),
     upsertStatus: (params: RpcSendParams<'localTasks.statuses.upsert'>) =>
       settleLocalTaskWrite(runRpcOperation(client, localTaskStatusUpsert, params)),
     reorderStatuses: (params: RpcSendParams<'localTasks.statuses.reorder'>) =>
@@ -86,7 +97,21 @@ export function createLocalTasksApi(client: UnvalidatedRpcRequestPort) {
     editComment: (params: RpcSendParams<'localTasks.events.editComment'>) =>
       settleLocalTaskWrite(runRpcOperation(client, localTaskCommentEdit, params)),
     removeComment: (params: RpcSendParams<'localTasks.events.removeComment'>) =>
-      settleLocalTaskWrite(runRpcOperation(client, localTaskCommentRemove, params))
+      settleLocalTaskWrite(runRpcOperation(client, localTaskCommentRemove, params)),
+    links: () => runRpcOperation(client, localTaskLinksRead, {}),
+    progress: () => runRpcOperation(client, localTaskProgressRead, {}),
+    linkWorkspace: (params: RpcSendParams<'localTasks.links.linkWorkspace'>) =>
+      settleLocalTaskWrite(runRpcOperation(client, localTaskWorkspaceLink, params)),
+    unlinkWorkspace: (params: RpcSendParams<'localTasks.links.unlinkWorkspace'>) =>
+      settleLocalTaskWrite(runRpcOperation(client, localTaskWorkspaceUnlink, params)),
+    recordSession: (params: RpcSendParams<'localTasks.links.recordSession'>) =>
+      settleLocalTaskWrite(runRpcOperation(client, localTaskSessionRecord, params)),
+    unlinkSession: (params: RpcSendParams<'localTasks.links.unlinkSession'>) =>
+      settleLocalTaskWrite(runRpcOperation(client, localTaskSessionUnlink, params)),
+    acknowledge: (params: RpcSendParams<'localTasks.attention.acknowledge'>) =>
+      settleLocalTaskWrite(runRpcOperation(client, localTaskAttentionAcknowledge, params)),
+    snooze: (params: RpcSendParams<'localTasks.attention.snooze'>) =>
+      settleLocalTaskWrite(runRpcOperation(client, localTaskAttentionSnooze, params))
   }
 }
 

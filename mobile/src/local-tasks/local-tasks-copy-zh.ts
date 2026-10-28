@@ -1,4 +1,5 @@
 import type { LocalTasksCopy } from './local-tasks-copy-en'
+import { LOCAL_TASKS_WORK_COPY_ZH } from './local-tasks-work-copy-zh'
 
 /** 简体中文；结构由英文表决定，漏一个 key 就编译不过。 */
 export const LOCAL_TASKS_COPY_ZH: LocalTasksCopy = {
@@ -6,6 +7,7 @@ export const LOCAL_TASKS_COPY_ZH: LocalTasksCopy = {
   home: '首页',
   back: '返回',
   retry: '重试',
+  reconnect: '重新连接',
   cancel: '取消',
   save: '保存',
   create: '创建',
@@ -16,21 +18,31 @@ export const LOCAL_TASKS_COPY_ZH: LocalTasksCopy = {
   homeCardTitle: '本地任务',
   homeCardInProgress: (count) => `进行中 ${count}`,
   homeCardLoading: '正在读取任务…',
-  pickHostTitle: '在哪台桌面打开本地任务',
+  homeCardError: '任务数量读取失败',
+  pickHostTitle: '在哪台主机打开本地任务',
+  switchHost: '切换主机',
+  showHostTasks: (machine) => `查看 ${machine} 的任务`,
   hostEntryLabel: '本地任务',
-  desktopClosed: (machine) => `${machine} 的 Orca 未打开`,
+  desktopClosed: (machine) => (machine ? `${machine} 的 Orca 未打开` : '这台主机的 Orca 未打开'),
+  desktopDisconnected: (machine) =>
+    machine ? `无法连接 ${machine} 的 Orca` : '无法连接这台主机的 Orca',
+  pairingInvalid: '配对已失效，请重新配对这台主机',
   desktopClosedHint: (machine) =>
-    `本地任务存在 ${machine} 的桌面 Orca 上，手机通过它读写。打开 ${machine} 上的 Orca 后，这里会显示任务。`,
-  unsupported: '这台桌面 Orca 不支持本地任务，请先更新桌面 Orca。',
-  statusUnreadable: '读不到桌面的状态，等连接稳定后再试。',
-  checking: '正在确认桌面…',
+    machine
+      ? `每台 Orca 各存自己的任务，手机通过 ${machine} 的 Orca 读写它的任务。打开 ${machine} 上的 Orca 后，这里会显示任务。`
+      : '每台 Orca 各存自己的任务。打开这台主机的 Orca 后，这里会显示任务。',
+  unsupported: '这台主机的 Orca 还不支持本地任务，请先更新它的 Orca。',
+  statusUnreadable: '读不到这台主机的状态，等连接稳定后再试。',
+  checking: '正在确认主机…',
   libraryStarting: '任务库正在启动…',
-  libraryUnavailable: '桌面上的任务库打不开。',
+  libraryUnavailable: '这台主机的 Orca 上的任务库打不开。',
   libraryUnavailableHint:
-    '读不了它的数据文件（可能是磁盘、权限问题或文件损坏）。Orca 的其他功能不受影响，可以在桌面上重启 Orca 后再试。',
+    '读不了它的数据文件（可能是磁盘、权限问题或文件损坏）。Orca 的其他功能不受影响，可以重启这台主机的 Orca 后再试。',
   libraryReadOnly: '只读：这个任务库由更新版本的 Orca 写入，这里只能查看，不能修改。',
   loadFailed: '任务读取失败。',
   loadFailedHint: '可能是连接不稳定，可以重试。',
+  eventsLoadFailed: '动态刷新失败',
+  streamEnded: '实时更新已停止，请重新连接后刷新。',
   showDetails: '显示详情',
   hideDetails: '收起详情',
   conflictTitle: '已被其他设备修改',
@@ -47,11 +59,11 @@ export const LOCAL_TASKS_COPY_ZH: LocalTasksCopy = {
   newSubtask: '新建子任务',
   editTask: '编辑任务',
   noProjects: '还没有项目',
-  noProjectsHint: '一个项目对应一个 Orca 项目。建一个项目后就可以记录任务。',
+  noProjectsHint: '项目装任务，可以关联这台主机上的 Orca 仓库。建一个项目后就可以记录任务。',
   createProject: '新建项目',
   projectSettings: '项目设置',
   switchProject: '切换项目',
-  switchProjectHint: '一个项目对应一个 Orca 项目',
+  switchProjectHint: '这台主机的项目',
   projectTaskCount: (count) => `${count} 个任务`,
   allProjectsHint: (count) => `${count} 个任务 · 看板按状态类别出列`,
   emptyList: '这里还没有任务',
@@ -114,9 +126,9 @@ export const LOCAL_TASKS_COPY_ZH: LocalTasksCopy = {
   edited: '已编辑',
   taskMissing: '这个任务已经不存在了。',
   deleteTaskTitle: (ref) => `删除 ${ref}？`,
-  deleteTaskMessage: (subtasks) =>
-    subtasks > 0
-      ? `它的 ${subtasks} 个子任务会一起删除。关联的工作区和会话都不动。`
+  deleteTaskMessage: (below) =>
+    below > 0
+      ? `它下面各层共 ${below} 个任务会一起删除。关联的工作区和会话都不动。`
       : '关联的工作区和会话都不动。',
   eventSources: {
     desktop: '桌面',
@@ -133,6 +145,11 @@ export const LOCAL_TASKS_COPY_ZH: LocalTasksCopy = {
   eventLabels: '改了标签',
   eventParent: '改了父任务',
   eventMoved: (from, to) => `移动 ${from} → ${to}`,
+  eventWorkspaceLinked: (name) => `关联了工作区 ${name}`,
+  eventWorkspaceUnlinked: (name) => `取消关联工作区 ${name}`,
+  eventWorkspaceHost: (host) => `工作区移至 ${host}`,
+  eventSessionLinked: (agent) => `关联了 ${agent} 会话`,
+  eventSessionUnlinked: (agent) => `取消关联 ${agent} 会话`,
   eventComment: '评论',
   titlePlaceholder: '任务标题',
   descriptionPlaceholder: '添加描述…',
@@ -149,10 +166,19 @@ export const LOCAL_TASKS_COPY_ZH: LocalTasksCopy = {
   pasteAsTitle: '当成一个标题',
   pasteAsTitleHint: '换行合并成空格',
   savedPartially: '任务已保存，但子任务没有建上。可以在任务详情里再添加。',
+  subtasksPartiallySaved: '子任务已创建，但部分属性未保存。',
+  subtasksAlreadyCreated: '这些子任务已创建。请继续保存属性，或从父任务查看它们。',
+  retrySavingSubtasks: '重试保存属性',
+  viewCreatedSubtasks: '查看已建子任务',
   settingsTitle: '设置',
   projectSection: '项目',
   name: '名称',
-  repository: 'Orca 项目',
+  reposSection: '仓库',
+  defaultRepo: '默认',
+  noReposHint: '没有关联仓库：这个项目只做任务管理，开始做时从这台主机的全部仓库里选。',
+  addRepo: '添加仓库',
+  makeDefaultRepo: '设为默认',
+  removeRepo: '从项目移除',
   prefix: '编号前缀',
   prefixHint: (aliases) =>
     aliases
@@ -162,6 +188,11 @@ export const LOCAL_TASKS_COPY_ZH: LocalTasksCopy = {
   renameProject: '修改项目名称',
   changePrefix: '修改编号前缀',
   changePrefixConfirm: (from, to) => `把 ${from} 改成 ${to}？${from} 会保留为这个项目的别名。`,
+  deleteProject: '删除项目…',
+  deleteProjectTitle: (name) => `删除「${name}」？`,
+  deleteProjectMessage: (count) =>
+    `会删除其中 ${count} 条任务记录。Orca 项目、仓库、工作区和会话均不受影响。`,
+  confirmDeleteProject: '删除项目',
   statusesSection: '状态',
   statusesHint:
     '6 个类别固定。类别里的状态可以新增、改名、改颜色、排序，不能换到别的类别；每个类别至少留一个。看板的列就是这些状态。',
@@ -175,28 +206,39 @@ export const LOCAL_TASKS_COPY_ZH: LocalTasksCopy = {
   deleteStatus: '删除状态',
   moveTasksTitle: (count) => `把它的 ${count} 个任务移到`,
   newProjectTitle: '新建项目',
-  newProjectHint: '一个项目对应一个 Orca 项目。从下面选一个，确认后才会创建。',
-  orcaProjectsUnavailable: '桌面窗口没有打开，读不到 Orca 项目列表。打开窗口后再试。',
-  orcaProjectLinked: (name) => `已是项目「${name}」`,
+  newProjectHint: '从这台主机的一个仓库开始，或者新建空项目，仓库可以之后再加。确认后才会创建。',
+  emptyProject: '空项目',
+  emptyProjectHint: '先只记任务，之后再关联仓库',
+  orcaProjectsUnavailable: '这台主机还没有提供项目列表，暂时列不出仓库，请稍后再试。',
+  orcaProjectLinked: (name) => `也在项目「${name}」里`,
   noOrcaProjects: '没有可选的 Orca 项目。',
   confirmCreateProject: (name, prefix) => `创建项目「${name}」，前缀 ${prefix}？`,
   confirmCreateProjectMessage: '会带上默认的 6 个状态，之后可以再改。',
   failures: {
     not_found: '它已经不存在了，列表已刷新。',
     stale: '这期间有人改过它。已显示最新内容，请再试一次。',
-    read_only: '这台桌面上的任务库是只读的。',
+    read_only: '这台主机的 Orca 上的任务库是只读的。',
+    invalid_argument: '这台主机的 Orca 拒绝了这些输入，请检查表单后重试。',
     prefix_taken: (owner) => (owner ? `这个前缀属于项目「${owner}」。` : '这个前缀已经被用了。'),
     prefix_invalid: '用 1～10 个大写字母或数字，以字母开头。',
-    orca_project_linked: (owner) =>
-      owner ? `这个 Orca 项目已经属于项目「${owner}」。` : '这个 Orca 项目已经有任务项目了。',
-    parent_invalid: '父任务必须是同一个项目里的顶层任务。',
+    prefix_history_in_project: '这个项目的历史任务编号已使用此前缀。',
+    parent_invalid: '上级必须在同一个项目里，且不能是它自己或它的下级。',
     status_invalid: '这个状态不属于这个项目。',
     status_in_use: (count) => `还有 ${count} 个任务在用这个状态，先选好把它们移到哪里。`,
     last_status_in_category: '每个类别至少保留一个状态。',
     comment_not_editable: '只有评论可以编辑。',
-    workspace_linked: '它关联了工作区，先取消关联再移到别的项目。'
+    workspace_already_linked: (ref) =>
+      ref ? `这个工作区已属于 ${ref}。` : '这个工作区已属于别的任务。',
+    task_has_workspace: (name) =>
+      name ? `这个任务已在「${name}」里做，先取消关联。` : '这个任务已有工作区，先取消关联。',
+    workspace_required: '请先给任务开始做或关联工作区。',
+    session_already_linked: (ref) => (ref ? `这个会话已关联到 ${ref}。` : '这个会话已经关联过。'),
+    host_not_owned: '这个工作区或会话在另一台 Orca 上，请在那台主机的任务里关联。',
+    desktop_only: '这件事只能在桌面或网页端做，手机不行。',
+    attention_item_mismatch: '这条提醒属于另一个会话，没有做任何标记。'
   },
-  failureGeneric: (code) => `桌面拒绝了这次操作（${code}）。`,
-  deliveryUnknown: '桌面回复前连接断了。可以再试一次，不会重复执行。',
-  writeError: (message) => `连不上桌面：${message}`
+  failureGeneric: (code) => `这台主机的 Orca 拒绝了这次操作（${code}）。`,
+  deliveryUnknown: '这台主机的 Orca 回复前连接断了。可以再试一次，不会重复执行。',
+  writeError: (message) => `连不上这台主机的 Orca：${message}`,
+  work: LOCAL_TASKS_WORK_COPY_ZH
 }

@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react'
-import { Check, Plus } from 'lucide-react'
 import {
   Command,
   CommandEmpty,
@@ -11,7 +10,6 @@ import {
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { translate } from '@/i18n/i18n'
 import {
-  LOCAL_TASK_LABEL_MAX,
   LOCAL_TASK_PRIORITIES,
   LOCAL_TASK_STATUS_CATEGORIES
 } from '../../../../shared/local-tasks/local-task-model'
@@ -32,15 +30,22 @@ import {
   toggleLocalTasksLabel
 } from '@/local-tasks/local-task-writes'
 import { LocalTaskPriorityIcon, LocalTaskStatusIcon } from './LocalTaskIcons'
-import { useLocalTaskIndex } from './use-local-task-list-model'
+import type { LocalTaskListModel } from './use-local-task-list-model'
 import { useLocalTaskEscapeLayer } from './use-local-task-page-keys'
+import { LocalTaskLabelOptions } from './LocalTaskFieldPickers'
 
 function close(): void {
   localTaskPageStore.getState().closePicker()
 }
 
-function StatusOptions({ targets }: { targets: LocalTask[] }): React.JSX.Element {
-  const { index } = useLocalTaskIndex()
+function StatusOptions({
+  targets,
+  model
+}: {
+  targets: LocalTask[]
+  model: LocalTaskListModel
+}): React.JSX.Element {
+  const { index } = model
   const projectIds = new Set(targets.map((task) => task.projectId))
   const project = projectIds.size === 1 ? index.projectsById.get([...projectIds][0]) : undefined
   if (project) {
@@ -84,48 +89,33 @@ function StatusOptions({ targets }: { targets: LocalTask[] }): React.JSX.Element
 
 function LabelOptions({
   targets,
-  query
+  query,
+  model
 }: {
   targets: LocalTask[]
   query: string
+  model: LocalTaskListModel
 }): React.JSX.Element {
-  const { tasks } = useLocalTaskIndex()
+  const { tasks } = model
   const labels = useMemo(() => collectLocalTaskLabels(tasks), [tasks])
-  const typed = query.trim().slice(0, LOCAL_TASK_LABEL_MAX)
   return (
-    <CommandGroup>
-      {labels.map((label) => {
-        const onAll = targets.every((task) => task.labels.includes(label))
-        return (
-          <CommandItem
-            key={label}
-            value={label}
-            onSelect={() => void toggleLocalTasksLabel(targets, label)}
-          >
-            <Check className={onAll ? 'size-3.5' : 'size-3.5 opacity-0'} />
-            {label}
-          </CommandItem>
-        )
-      })}
-      {typed && !labels.includes(typed) ? (
-        <CommandItem
-          value={`+ ${typed}`}
-          onSelect={() => void toggleLocalTasksLabel(targets, typed)}
-        >
-          <Plus className="size-3.5" />
-          {translate('localTasks.picker.createLabel', 'Add label “{{label}}”', { label: typed })}
-        </CommandItem>
-      ) : null}
-    </CommandGroup>
+    <LocalTaskLabelOptions
+      labels={labels}
+      query={query}
+      checked={(label) => targets.every((task) => task.labels.includes(label))}
+      onToggle={(label) => void toggleLocalTasksLabel(targets, label)}
+    />
   )
 }
 
 function PickerBody({
   kind,
-  targets
+  targets,
+  model
 }: {
   kind: LocalTaskPickerKind
   targets: LocalTask[]
+  model: LocalTaskListModel
 }): React.JSX.Element {
   const [query, setQuery] = useState('')
   const subject =
@@ -154,8 +144,10 @@ function PickerBody({
         />
         <CommandList>
           <CommandEmpty>{translate('localTasks.picker.empty', 'Nothing matches.')}</CommandEmpty>
-          {kind === 'status' ? <StatusOptions targets={targets} /> : null}
-          {kind === 'labels' ? <LabelOptions targets={targets} query={query} /> : null}
+          {kind === 'status' ? <StatusOptions targets={targets} model={model} /> : null}
+          {kind === 'labels' ? (
+            <LabelOptions targets={targets} query={query} model={model} />
+          ) : null}
           {kind === 'priority' ? (
             <CommandGroup>
               {LOCAL_TASK_PRIORITIES.map((priority) => (
@@ -180,9 +172,9 @@ function PickerBody({
 }
 
 /** The S / P / L picker for the focused task or the selection. */
-export function LocalTaskQuickPicker(): React.JSX.Element {
+export function LocalTaskQuickPicker({ model }: { model: LocalTaskListModel }): React.JSX.Element {
   const picker = useLocalTaskPage((state) => state.picker)
-  const { index } = useLocalTaskIndex()
+  const { index } = model
   const targets = (picker?.taskIds ?? []).flatMap((taskId) => {
     const task = index.tasksById.get(taskId)
     return task ? [task] : []
@@ -204,7 +196,7 @@ export function LocalTaskQuickPicker(): React.JSX.Element {
         showCloseButton={false}
         className="sm:max-w-sm"
       >
-        {picker ? <PickerBody kind={picker.kind} targets={targets} /> : null}
+        {picker ? <PickerBody kind={picker.kind} targets={targets} model={model} /> : null}
       </DialogContent>
     </Dialog>
   )

@@ -4,6 +4,7 @@ import {
   LOCAL_TASK_TITLE_MAX,
   type LocalTaskPriority
 } from '../../../src/shared/local-tasks/local-task-model'
+import { localTaskDescendantIds } from '../../../src/shared/local-tasks/local-task-tree'
 import type { LocalTask } from '../../../src/shared/local-tasks/local-task-types'
 
 export type LocalTaskFormMode =
@@ -170,4 +171,28 @@ export function localTaskOverwrite(draft: LocalTaskDraft, base: LocalTask, lates
 /** What "Create more" keeps: the properties, not the content. */
 export function nextLocalTaskDraft(draft: LocalTaskDraft): LocalTaskDraft {
   return { ...draft, title: '', description: '', criteria: [], subtasks: [] }
+}
+
+/**
+ * Tasks of the project the task can be put under: any level (D-008), never itself or one of its
+ * own descendants, which the host would refuse as a cycle.
+ */
+export function localTaskParentCandidates(
+  tasks: readonly LocalTask[],
+  projectId: string,
+  editingId: string | undefined
+): LocalTask[] {
+  const childrenByParentId = new Map<string, LocalTask[]>()
+  for (const task of tasks) {
+    if (task.parentId) {
+      childrenByParentId.set(task.parentId, [
+        ...(childrenByParentId.get(task.parentId) ?? []),
+        task
+      ])
+    }
+  }
+  const excluded = new Set(
+    editingId ? [editingId, ...localTaskDescendantIds(editingId, childrenByParentId)] : []
+  )
+  return tasks.filter((task) => task.projectId === projectId && !excluded.has(task.id))
 }

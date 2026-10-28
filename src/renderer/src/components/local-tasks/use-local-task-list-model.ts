@@ -12,6 +12,8 @@ import {
 } from '@/local-tasks/local-task-list-groups'
 import { useLocalTasksDomain } from '@/local-tasks/local-tasks-domain-store'
 import { useLocalTaskPage } from '@/local-tasks/local-task-page-store'
+import { localTaskIdsNeedingYou } from '@/local-tasks/local-task-needs-you-rows'
+import { useLocalTaskEndpointLabels } from '@/local-tasks/local-task-endpoint-labels'
 import type { LocalTask, LocalTaskProject } from '../../../../shared/local-tasks/local-task-types'
 
 export function useLocalTaskIndex(): {
@@ -28,6 +30,7 @@ export function useLocalTaskIndex(): {
 /** Everything the list, board, rail and keyboard read; derived once per store change. */
 export function useLocalTaskListModel() {
   const { projects, tasks, index } = useLocalTaskIndex()
+  const hostLabels = useLocalTaskEndpointLabels()
   const requestedScope = useLocalTaskPage((state) => state.scopeProjectId)
   const view = useLocalTaskPage((state) => state.view)
   const filters = useLocalTaskPage((state) => state.filters)
@@ -36,12 +39,34 @@ export function useLocalTaskListModel() {
   const showCanceled = useLocalTaskPage((state) => state.showCanceledColumn)
   const groupBy = useLocalTaskPage((state) => state.groupBy)
   const sortBy = useLocalTaskPage((state) => state.sortBy)
+  const collapsedGroupKeys = useLocalTaskPage((state) => state.collapsedGroupKeys)
+  const collapsedTaskIds = useLocalTaskPage((state) => state.collapsedTaskIds)
+  const foldedTaskIds = useMemo(() => new Set(collapsedTaskIds), [collapsedTaskIds])
   // Why: a project removed elsewhere falls back to all projects instead of an empty page.
   const scopeProjectId =
     requestedScope && index.projectsById.has(requestedScope) ? requestedScope : null
   const scopeTasks = useMemo(() => tasksInScope(tasks, scopeProjectId), [tasks, scopeProjectId])
   const counts = useMemo(() => countLocalTaskViews(scopeTasks, index), [scopeTasks, index])
-  const visibility = useMemo(() => ({ view, filters, query }), [view, filters, query])
+  const taskCountByProject = useMemo(() => {
+    const counts = new Map<string, number>()
+    for (const task of tasks) {
+      counts.set(task.projectId, (counts.get(task.projectId) ?? 0) + 1)
+    }
+    return counts
+  }, [tasks])
+  const needsYouProgress = useLocalTasksDomain((state) =>
+    filters.needsYou ? state.progress : null
+  )
+  const visibility = useMemo(
+    () => ({
+      // The Needs you view draws its own rows; the list behind it keeps the full set.
+      view: view === 'needs-you' ? 'all' : view,
+      filters,
+      query,
+      ...(filters.needsYou ? { onlyTaskIds: localTaskIdsNeedingYou(needsYouProgress) } : {})
+    }),
+    [view, filters, query, needsYouProgress]
+  )
   const groups = useMemo(
     () =>
       layout === 'list'
@@ -65,9 +90,12 @@ export function useLocalTaskListModel() {
   const orderedTaskIds = useMemo(
     () =>
       layout === 'list'
-        ? flattenLocalTaskGroups(groups)
+        ? flattenLocalTaskGroups(
+            groups.filter((group) => !collapsedGroupKeys.includes(group.key)),
+            foldedTaskIds
+          )
         : columns.flatMap((column) => column.tasks.map((task) => task.id)),
-    [layout, groups, columns]
+    [layout, groups, columns, collapsedGroupKeys, foldedTaskIds]
   )
   return {
     projects,
@@ -77,10 +105,13 @@ export function useLocalTaskListModel() {
     scopeProject: scopeProjectId ? index.projectsById.get(scopeProjectId) : undefined,
     scopeTasks,
     counts,
+    taskCountByProject,
     groups,
     columns,
     orderedTaskIds,
-    layout
+    foldedTaskIds,
+    layout,
+    hostLabels
   }
 }
 

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { ChevronLeft, ChevronRight, Layers, Plus } from 'lucide-react-native'
+import { ChevronLeft, ChevronRight, Layers, Plus, Trash2 } from 'lucide-react-native'
 import { normalizeLocalTaskPrefix } from '../../../src/shared/local-tasks/local-task-model'
 import type { LocalTaskProject } from '../../../src/shared/local-tasks/local-task-types'
 import { ConfirmModal } from '../components/ConfirmModal'
@@ -13,6 +13,8 @@ import { localTaskWriteMessage } from './local-task-failure-message'
 import { LocalTaskFormPrompts, LocalTaskPropertyRow } from './local-task-form-fields'
 import { createLocalTaskOperationIds, sendLocalTaskWrite } from './local-task-operation-ids'
 import { LocalTasksStatusSection } from './local-tasks-status-section'
+import { LocalTaskReposSection } from './local-task-repos-section'
+import { LocalTaskRulesSection } from './local-task-rules-section'
 import { localTaskStyles } from './local-tasks-styles'
 import type { OrcaProjectChoices } from './use-orca-project-choices'
 import type { LocalTasksLibrary } from './use-local-tasks-library'
@@ -27,9 +29,9 @@ type Props = {
   onBack: () => void
   onOpenProject: (projectId: string) => void
   onCreateProject: () => void
+  onDeletedProject: () => void
 }
 
-// Why no rules: the two automatic rules act only from slice 2, so their switches stay hidden.
 type ProjectPatch = { name?: string; prefix?: string }
 type ProjectField = 'name' | 'prefix'
 
@@ -58,9 +60,6 @@ export function LocalTasksSettingsView(props: Props) {
       <ScrollView
         contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + spacing.xl }]}
       >
-        {props.readOnly ? (
-          <Text style={[localTaskStyles.hint, styles.below]}>{copy.libraryReadOnly}</Text>
-        ) : null}
         {project ? (
           <LocalTaskProjectSettings {...props} project={project} />
         ) : (
@@ -104,7 +103,10 @@ export function LocalTasksSettingsView(props: Props) {
 function LocalTaskProjectSettings(props: Props & { project: LocalTaskProject }) {
   const copy = localTasksCopy()
   const { project } = props
-  const [ids] = useState(() => createLocalTaskOperationIds())
+  const [ids] = useState(() => ({
+    update: createLocalTaskOperationIds(),
+    remove: createLocalTaskOperationIds()
+  }))
   // Why captured on open: a push while the field is open must neither reset what the user is
   // typing nor move the revision the edit is checked against.
   const [editing, setEditing] = useState<{
@@ -118,10 +120,11 @@ function LocalTaskProjectSettings(props: Props & { project: LocalTaskProject }) 
   )
   const [conflict, setConflict] = useState<{ field: ProjectField; value: string } | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const orcaName =
-    props.orcaProjects.state === 'ready'
-      ? props.orcaProjects.projects.find((entry) => entry.id === project.orcaProjectId)?.displayName
-      : undefined
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [busyDelete, setBusyDelete] = useState(false)
+  const projectTaskCount = props.library.tasks.filter(
+    (task) => task.projectId === project.id
+  ).length
   const taskCounts = new Map<string, number>()
   for (const task of props.library.tasks) {
     taskCounts.set(task.statusId, (taskCounts.get(task.statusId) ?? 0) + 1)
@@ -130,7 +133,7 @@ function LocalTaskProjectSettings(props: Props & { project: LocalTaskProject }) 
   const update = async (field: ProjectField, value: string, expectedRevision: number) => {
     const patch: ProjectPatch = field === 'name' ? { name: value } : { prefix: value }
     const outcome = await sendLocalTaskWrite(
-      ids,
+      ids.update,
       { projectId: project.id, expectedRevision, ...patch },
       props.api.updateProject
     )
@@ -142,6 +145,24 @@ function LocalTaskProjectSettings(props: Props & { project: LocalTaskProject }) 
   const open = (field: ProjectField, value?: string) => {
     const initial = field === 'name' ? project.name : project.prefix
     setEditing({ field, initial, value: value ?? initial, revision: project.revision })
+  }
+
+  const remove = async () => {
+    if (props.readOnly || busyDelete) {
+      return
+    }
+    setBusyDelete(true)
+    const outcome = await sendLocalTaskWrite(
+      ids.remove,
+      { projectId: project.id },
+      props.api.removeProject
+    )
+    setBusyDelete(false)
+    setError(localTaskWriteMessage(copy, outcome))
+    props.library.reload(['projects', 'tasks'])
+    if (outcome.kind === 'ok') {
+      props.onDeletedProject()
+    }
   }
 
   return (
@@ -156,11 +177,6 @@ function LocalTaskProjectSettings(props: Props & { project: LocalTaskProject }) 
         >
           <Text style={localTaskStyles.rowValue}>{project.name}</Text>
         </LocalTaskPropertyRow>
-        <LocalTaskPropertyRow label={copy.repository}>
-          <Text style={localTaskStyles.rowValue} numberOfLines={1}>
-            {orcaName ?? project.orcaProjectId}
-          </Text>
-        </LocalTaskPropertyRow>
         <LocalTaskPropertyRow
           label={copy.prefix}
           disabled={props.readOnly}
@@ -173,12 +189,48 @@ function LocalTaskProjectSettings(props: Props & { project: LocalTaskProject }) 
         {copy.prefixHint(project.aliases.join('、'))}
       </Text>
       {error ? <Text style={[localTaskStyles.errorText, styles.below]}>{error}</Text> : null}
+      <LocalTaskReposSection
+        project={project}
+        api={props.api}
+        orcaProjects={props.orcaProjects}
+        readOnly={props.readOnly}
+        onChanged={() => props.library.reload(['projects'])}
+      />
       <LocalTasksStatusSection
         api={props.api}
         project={project}
         taskCounts={taskCounts}
         readOnly={props.readOnly}
         onChanged={() => props.library.reload(['projects', 'tasks'])}
+      />
+      <LocalTaskRulesSection
+        project={project}
+        api={props.api}
+        readOnly={props.readOnly}
+        onChanged={() => props.library.reload(['projects'])}
+      />
+      <Pressable
+        style={[
+          localTaskStyles.secondaryButton,
+          styles.create,
+          (props.readOnly || busyDelete) && localTaskStyles.disabled
+        ]}
+        disabled={props.readOnly || busyDelete}
+        onPress={() => setConfirmDelete(true)}
+        accessibilityRole="button"
+      >
+        <Trash2 size={16} color={colors.statusRed} />
+        <Text style={localTaskStyles.secondaryButtonText}>{copy.deleteProject}</Text>
+      </Pressable>
+      <ConfirmModal
+        visible={confirmDelete}
+        title={copy.deleteProjectTitle(project.name)}
+        message={copy.deleteProjectMessage(projectTaskCount)}
+        confirmLabel={copy.confirmDeleteProject}
+        cancelLabel={copy.cancel}
+        destructive
+        onConfirm={() => void remove()}
+        onCancel={() => setConfirmDelete(false)}
       />
       <TextInputModal
         visible={editing !== null}

@@ -5,7 +5,16 @@ import {
   type LocalTaskPageKeyAction
 } from '@/local-tasks/local-task-page-keys'
 import { localTaskPageStore } from '@/local-tasks/local-task-page-store'
-import { isLocalTasksWritable, localTasksDomainStore } from '@/local-tasks/local-tasks-domain-store'
+import {
+  isLocalTaskRowWritable,
+  localTasksDomainStore
+} from '@/local-tasks/local-tasks-domain-store'
+import { canCreateLocalTask, canWriteLocalTaskRows } from '@/local-tasks/local-task-write-access'
+import {
+  currentLocalTaskNeedsYouRows,
+  runLocalTaskNeedsYouKey
+} from '@/local-tasks/local-task-needs-you-actions'
+import { runLocalTaskWorkKey } from '@/local-tasks/local-task-work-actions'
 import type { LocalTaskListModel } from './use-local-task-list-model'
 
 function step(ids: readonly string[], from: string | null, delta: 1 | -1): string | null {
@@ -21,14 +30,21 @@ function step(ids: readonly string[], from: string | null, delta: 1 | -1): strin
 
 function runAction(action: LocalTaskPageKeyAction, model: LocalTaskListModel): void {
   const page = localTaskPageStore.getState()
-  const writable = isLocalTasksWritable(localTasksDomainStore.getState())
-  const ids = model.orderedTaskIds
+  // Why per row: the page lists several libraries, and each takes writes on its own.
+  const domain = localTasksDomainStore.getState()
+  const needsYou = page.view === 'needs-you' && page.detailTaskId === null
+  const ids = needsYou
+    ? currentLocalTaskNeedsYouRows().map((row) => row.task.id)
+    : model.orderedTaskIds
   const cursor = page.cursorTaskId && ids.includes(page.cursorTaskId) ? page.cursorTaskId : null
+  if (needsYou && runLocalTaskNeedsYouKey(action, cursor)) {
+    return
+  }
   const inDetail = page.detailTaskId !== null
   const current = page.detailTaskId ?? cursor
   switch (action) {
     case 'create':
-      if (writable) {
+      if (canCreateLocalTask(domain, model.scopeProjectId)) {
         page.openCreate({ projectId: model.scopeProjectId })
       }
       return
@@ -59,16 +75,15 @@ function runAction(action: LocalTaskPageKeyAction, model: LocalTaskListModel): v
     case 'status':
     case 'priority':
     case 'labels': {
-      if (!writable) {
-        return
-      }
       const targets =
         !inDetail && page.selectedTaskIds.length > 0
           ? page.selectedTaskIds
           : current
             ? [current]
             : []
-      page.openPicker(action, targets)
+      if (canWriteLocalTaskRows(domain, targets)) {
+        page.openPicker(action, targets)
+      }
       return
     }
     case 'toggle-layout':
@@ -80,7 +95,17 @@ function runAction(action: LocalTaskPageKeyAction, model: LocalTaskListModel): v
       if (!inDetail) {
         page.setFilterOpen(true)
       }
-      return
+      break
+    case 'acknowledge':
+    case 'snooze':
+      // Only items in Needs you take these.
+      break
+    case 'start-work':
+    case 'open-session':
+      if (current && isLocalTaskRowWritable(domain, current)) {
+        runLocalTaskWorkKey(action, current, model.index)
+      }
+      break
     case 'search':
       page.openDetail(null)
       page.requestSearchFocus()

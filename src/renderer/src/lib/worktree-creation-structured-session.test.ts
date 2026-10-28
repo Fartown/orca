@@ -20,8 +20,13 @@ const mocks = vi.hoisted(() => {
       listener = value
     },
     unsubscribe: vi.fn<() => void>(),
-    beginStructuredAgentSessionProvisionalLaunch:
-      vi.fn<(args: BeginArgs) => { sessionId: string; tab: { id: string } } | null>(),
+    beginStructuredAgentSessionProvisionalLaunch: vi.fn<
+      (args: BeginArgs) => {
+        sessionId: string
+        tab: { id: string } | null
+        settlement: Promise<{ kind: 'structured'; sessionId: string } | { kind: 'terminal' }>
+      } | null
+    >(),
     activateAndRevealWorktree: vi.fn<(worktreeId: string, options?: unknown) => unknown>()
   }
 })
@@ -79,7 +84,11 @@ describe('launchStructuredWorktreeSession', () => {
     mocks.activateAndRevealWorktree.mockReturnValue({ primaryTabId: null })
     mocks.beginStructuredAgentSessionProvisionalLaunch.mockImplementation((args) => {
       args.beforeOpen?.('session-1')
-      return { sessionId: 'session-1', tab: { id: 'agent-session:session-1' } }
+      return {
+        sessionId: 'session-1',
+        tab: { id: 'agent-session:session-1' },
+        settlement: Promise.resolve({ kind: 'structured', sessionId: 'session-1' })
+      }
     })
   })
 
@@ -93,15 +102,21 @@ describe('launchStructuredWorktreeSession', () => {
       order.push('begin')
       args.beforeOpen?.('session-1')
       order.push('open')
-      return { sessionId: 'session-1', tab: { id: 'agent-session:session-1' } }
+      return {
+        sessionId: 'session-1',
+        tab: { id: 'agent-session:session-1' },
+        settlement: Promise.resolve({ kind: 'structured', sessionId: 'session-1' })
+      }
     })
 
-    await expect(launchStructuredWorktreeSession(baseArgs)).resolves.toEqual({
+    const launched = await launchStructuredWorktreeSession(baseArgs)
+    expect(launched).toMatchObject({
       accepted: true,
       cancelled: false,
       activation: { primaryTabId: null },
       primaryTabId: 'agent-session:session-1'
     })
+    await expect(launched.sessionOutcome).resolves.toEqual({ kind: 'chat', sessionId: 'session-1' })
     expect(order).toEqual(['begin', 'reveal', 'open'])
     expect(mocks.beginStructuredAgentSessionProvisionalLaunch).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -141,6 +156,16 @@ describe('launchStructuredWorktreeSession', () => {
     )
   })
 
+  it('reports a host-declined terminal instead of claiming a chat', async () => {
+    mocks.beginStructuredAgentSessionProvisionalLaunch.mockReturnValue({
+      sessionId: 'session-1',
+      tab: null,
+      settlement: Promise.resolve({ kind: 'terminal' })
+    })
+    const launched = await launchStructuredWorktreeSession(baseArgs)
+    await expect(launched.sessionOutcome).resolves.toEqual({ kind: 'terminal', tabId: null })
+  })
+
   it('does not open a tab when cancellation races the reveal callback', async () => {
     mocks.beginStructuredAgentSessionProvisionalLaunch.mockImplementation((args) => {
       const pending = mocks.state.pendingWorktreeCreations
@@ -150,7 +175,11 @@ describe('launchStructuredWorktreeSession', () => {
       const allowed = args.beforeOpen?.('session-1')
       return allowed === false
         ? null
-        : { sessionId: 'session-1', tab: { id: 'agent-session:session-1' } }
+        : {
+            sessionId: 'session-1',
+            tab: { id: 'agent-session:session-1' },
+            settlement: Promise.resolve({ kind: 'structured', sessionId: 'session-1' })
+          }
     })
 
     await expect(launchStructuredWorktreeSession(baseArgs)).resolves.toMatchObject({

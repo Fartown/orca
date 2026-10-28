@@ -7,7 +7,7 @@ import {
   useLocalTaskPage,
   type LocalTaskPickerKind
 } from '@/local-tasks/local-task-page-store'
-import { isLocalTasksWritable, useLocalTasksDomain } from '@/local-tasks/local-tasks-domain-store'
+import { useCanWriteLocalTaskRows } from '@/local-tasks/local-task-write-access'
 import type { LocalTaskListModel } from './use-local-task-list-model'
 
 function PickerButton({
@@ -39,9 +39,10 @@ function PickerButton({
 /** Multi-select actions: one batch write per change (REQ-006). */
 export function LocalTaskBatchBar({ model }: { model: LocalTaskListModel }): React.JSX.Element {
   const selected = useLocalTaskPage((state) => state.selectedTaskIds)
-  const writable = useLocalTasksDomain(isLocalTasksWritable)
   // Why: a task deleted elsewhere drops out of the batch instead of failing it.
   const taskIds = selected.filter((taskId) => model.index.tasksById.has(taskId))
+  // Why every task: a batch spanning a read-only or unreachable library would fail part-way.
+  const writable = useCanWriteLocalTaskRows(taskIds)
   return (
     <div
       role="toolbar"

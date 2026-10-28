@@ -1,16 +1,18 @@
 import { describe, expect, it, vi } from 'vitest'
 import { LOCAL_TASKS_RUNTIME_CAPABILITY } from '../../../src/shared/local-tasks/local-tasks-capability'
 import type { RpcResponse } from '../transport/types'
-import { readLocalTasksInProgress, resolveLocalTasksAccess } from './local-tasks-access'
+import { createLocalTasksApi } from './local-tasks-api'
+import { readLocalTasksInProgress } from './local-task-home-attention'
+import { resolveLocalTasksAccess } from './local-tasks-access'
 
 const connected = { connState: 'connected' as const, statusPending: false, statusReadable: true }
 
 describe('which hosts the phone treats as task hosts', () => {
-  it('opens the library only for a connected desktop that advertised local-tasks.v1', () => {
+  it('opens the library only for a connected host that advertised local-tasks.v1', () => {
     expect(
       resolveLocalTasksAccess({ ...connected, capabilities: [LOCAL_TASKS_RUNTIME_CAPABILITY] })
     ).toBe('ready')
-    // An older desktop, or a server: no capability, so no task entry and no request.
+    // An older Orca: no capability, so no task entry and no request.
     expect(resolveLocalTasksAccess({ ...connected, capabilities: ['mobile.tasks.v1'] })).toBe(
       'unsupported'
     )
@@ -23,7 +25,7 @@ describe('which hosts the phone treats as task hosts', () => {
     )
   })
 
-  it('calls a desktop out of contact not open, even one that advertised before', () => {
+  it('calls a host out of contact not open, even one that advertised before', () => {
     for (const connState of ['disconnected', 'reconnecting', 'auth-failed'] as const) {
       expect(
         resolveLocalTasksAccess({
@@ -33,13 +35,6 @@ describe('which hosts the phone treats as task hosts', () => {
         })
       ).toBe('offline')
     }
-  })
-
-  it('sends no localTasks request to a host without the capability', async () => {
-    const sendRequest = vi.fn<(method: string) => Promise<RpcResponse>>()
-    await expect(readLocalTasksInProgress({ sendRequest }, ['mobile.tasks.v1'])).resolves.toBeNull()
-    await expect(readLocalTasksInProgress({ sendRequest }, undefined)).resolves.toBeNull()
-    expect(sendRequest).not.toHaveBeenCalled()
   })
 
   it('counts Started tasks, subtasks included, on a host that has it', async () => {
@@ -66,7 +61,7 @@ describe('which hosts the phone treats as task hosts', () => {
       name: 'P',
       prefix: 'P',
       aliases: [],
-      orcaProjectId: 'o',
+      repos: [],
       defaultRepoId: null,
       lastExecutionHostId: null,
       rules: { startMovesToInProgress: true, prMergedCompletes: true },
@@ -92,6 +87,13 @@ describe('which hosts the phone treats as task hosts', () => {
       revision: 0
     })
     const replies: Record<string, unknown> = {
+      'localTasks.status': {
+        taskHost: true,
+        state: 'ready',
+        revision: 1,
+        reason: null,
+        taskHostId: 'h'
+      },
       'localTasks.projects.list': { projects: [project] },
       'localTasks.tasks.list': {
         tasks: [task('a', 'doing'), task('b', 'doing', 'a'), task('c', 'todo')]
@@ -100,12 +102,29 @@ describe('which hosts the phone treats as task hosts', () => {
     const sendRequest = vi.fn((method: string) =>
       Promise.resolve<RpcResponse>({ id: method, ok: true, result: replies[method] })
     )
-    await expect(
-      readLocalTasksInProgress({ sendRequest }, [LOCAL_TASKS_RUNTIME_CAPABILITY])
-    ).resolves.toBe(2)
+    await expect(readLocalTasksInProgress(createLocalTasksApi({ sendRequest }))).resolves.toBe(2)
     expect(sendRequest.mock.calls.map(([method]) => method).sort()).toEqual([
       'localTasks.projects.list',
+      'localTasks.status',
       'localTasks.tasks.list'
     ])
+  })
+
+  it('uses the optional host count without downloading the library', async () => {
+    const sendRequest = vi.fn(async (_method: string) => ({
+      id: 'status',
+      ok: true as const,
+      result: {
+        taskHost: true,
+        state: 'ready',
+        revision: 1,
+        reason: null,
+        taskHostId: 'h',
+        inProgressCount: 4
+      }
+    }))
+    await expect(readLocalTasksInProgress(createLocalTasksApi({ sendRequest }))).resolves.toBe(4)
+    expect(sendRequest).toHaveBeenCalledOnce()
+    expect(sendRequest.mock.calls[0]?.[0]).toBe('localTasks.status')
   })
 })

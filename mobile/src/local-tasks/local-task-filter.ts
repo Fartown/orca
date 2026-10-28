@@ -1,7 +1,10 @@
 import {
-  formatLocalTaskRef,
-  type LocalTaskPriority,
-  type LocalTaskStatusCategory
+  isExactLocalTaskRef,
+  matchesLocalTaskQuery
+} from '../../../src/shared/local-tasks/local-task-grouping'
+import type {
+  LocalTaskPriority,
+  LocalTaskStatusCategory
 } from '../../../src/shared/local-tasks/local-task-model'
 import type {
   LocalTask,
@@ -41,35 +44,12 @@ export type LocalTaskFilterContext = {
   projects: Map<string, LocalTaskProject>
 }
 
-function matchesQuery(task: LocalTask, query: string, context: LocalTaskFilterContext): boolean {
-  const needle = query.trim().toLowerCase()
-  if (!needle) {
-    return true
-  }
-  if (task.title.toLowerCase().includes(needle) || task.ref.toLowerCase().includes(needle)) {
-    return true
-  }
-  // Why aliases: after SHOP became MALL, searching SHOP-12 must still find MALL-12 (REQ-002).
-  const aliases = context.projects.get(task.projectId)?.aliases ?? []
-  return aliases.some((alias) =>
-    formatLocalTaskRef(alias, task.number).toLowerCase().includes(needle)
-  )
-}
-
-/** Whether the search is this task's ref exactly, in its current or an earlier prefix. */
 export function localTaskExactRefMatch(
   task: LocalTask,
   query: string,
   context: LocalTaskFilterContext
 ): boolean {
-  const needle = query.trim().toLowerCase()
-  if (!needle) {
-    return false
-  }
-  const aliases = context.projects.get(task.projectId)?.aliases ?? []
-  return [task.ref, ...aliases.map((alias) => formatLocalTaskRef(alias, task.number))].some(
-    (ref) => ref.toLowerCase() === needle
-  )
+  return isExactLocalTaskRef(task, context.projects.get(task.projectId), query)
 }
 
 export function localTaskMatchesFilter(
@@ -89,7 +69,7 @@ export function localTaskMatchesFilter(
       return false
     }
   }
-  return matchesQuery(task, filter.query, context)
+  return matchesLocalTaskQuery(task, context.projects.get(task.projectId), filter.query)
 }
 
 /** The labels offered: those in scope, plus any still selected so it can be turned off. */

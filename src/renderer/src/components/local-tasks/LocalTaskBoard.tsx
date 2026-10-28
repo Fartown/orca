@@ -3,15 +3,23 @@ import { CornerDownRight, EyeOff, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { translate } from '@/i18n/i18n'
 import { cn } from '@/lib/utils'
+import { LocalTaskHostTag } from './LocalTaskHostTag'
 import type { LocalTaskIndex } from '@/local-tasks/local-task-grouping'
 import { statusHeadCategory, type LocalTaskBoardColumn } from '@/local-tasks/local-task-list-groups'
 import { localTaskPageStore, useLocalTaskPage } from '@/local-tasks/local-task-page-store'
 import { setLocalTasksStatus } from '@/local-tasks/local-task-writes'
-import { isLocalTasksWritable, useLocalTasksDomain } from '@/local-tasks/local-tasks-domain-store'
+import {
+  isLocalTaskRowWritable,
+  localTasksDomainStore,
+  useLocalTaskRowWritable,
+  useLocalTasksDomain
+} from '@/local-tasks/local-tasks-domain-store'
+import { localTaskPathFromRoot, localTaskPathLabel } from '@/local-tasks/local-task-hierarchy'
 import type { LocalTask } from '../../../../shared/local-tasks/local-task-types'
 import { LocalTaskPriorityIcon, LocalTaskStatusIcon } from './LocalTaskIcons'
 import { LocalTaskLabelChips, LocalTaskSubtaskProgress } from './LocalTaskRow'
-import { localTaskGroupLabel, openCreateInGroup } from './LocalTaskGroupHead'
+import { LocalTaskProgressBadges } from './LocalTaskProgress'
+import { canCreateInGroup, localTaskGroupLabel, openCreateInGroup } from './LocalTaskGroupHead'
 import type { LocalTaskListModel } from './use-local-task-list-model'
 
 const DRAG_TYPE = 'application/x-orca-local-task'
@@ -19,14 +27,15 @@ const DRAG_TYPE = 'application/x-orca-local-task'
 function BoardCard({
   task,
   index,
-  draggable
+  hostLabels
 }: {
   task: LocalTask
   index: LocalTaskIndex
-  draggable: boolean
+  hostLabels: ReadonlyMap<string, string> | undefined
 }): React.JSX.Element {
   const isCursor = useLocalTaskPage((state) => state.cursorTaskId === task.id)
-  const parent = task.parentId ? index.tasksById.get(task.parentId) : undefined
+  const draggable = useLocalTaskRowWritable(task.id)
+  const path = localTaskPathFromRoot(task, index.tasksById)
   return (
     <div
       role="button"
@@ -51,15 +60,16 @@ function BoardCard({
       )}
     >
       <div className="flex items-center justify-between gap-2">
-        <span className="font-mono text-2xs text-muted-foreground">{task.ref}</span>
+        <span className="flex min-w-0 items-center gap-1.5">
+          <span className="shrink-0 font-mono text-2xs text-muted-foreground">{task.ref}</span>
+          <LocalTaskHostTag id={task.id} labels={hostLabels} />
+        </span>
         <LocalTaskPriorityIcon priority={task.priority} />
       </div>
-      {parent ? (
+      {path.length > 0 ? (
         <span className="flex min-w-0 items-center gap-1 text-2xs text-muted-foreground">
           <CornerDownRight className="size-3 shrink-0" />
-          <span className="truncate">
-            {parent.ref} {parent.title}
-          </span>
+          <span className="truncate">{localTaskPathLabel(path)}</span>
         </span>
       ) : null}
       <span className="line-clamp-2 text-[13px] font-medium leading-snug text-foreground">
@@ -71,27 +81,35 @@ function BoardCard({
           <LocalTaskSubtaskProgress task={task} index={index} />
         </div>
       ) : null}
+      <LocalTaskProgressBadges task={task} index={index} />
     </div>
+  )
+}
+
+/** A card lands where its own library takes writes and the column's status belongs to it. */
+function acceptsDrop(column: LocalTaskBoardColumn, task: LocalTask): boolean {
+  return (
+    isLocalTaskRowWritable(localTasksDomainStore.getState(), task.id) &&
+    (column.kind !== 'status' || column.status.projectId === task.projectId)
   )
 }
 
 function BoardColumn({
   column,
-  model,
-  writable
+  model
 }: {
   column: LocalTaskBoardColumn
   model: LocalTaskListModel
-  writable: boolean
 }): React.JSX.Element {
   const [dragOver, setDragOver] = useState(false)
+  const writable = useLocalTasksDomain((state) => canCreateInGroup(state, column, model))
   const label = localTaskGroupLabel(column)
   const color = column.kind === 'status' ? column.status.color : 'gray'
   return (
     <section
       aria-label={label}
       onDragOver={(event) => {
-        if (writable && event.dataTransfer.types.includes(DRAG_TYPE)) {
+        if (event.dataTransfer.types.includes(DRAG_TYPE)) {
           event.preventDefault()
           setDragOver(true)
         }
@@ -100,10 +118,17 @@ function BoardColumn({
       onDrop={(event) => {
         setDragOver(false)
         const task = model.index.tasksById.get(event.dataTransfer.getData(DRAG_TYPE))
-        if (!task) {
+        if (!task || !acceptsDrop(column, task)) {
           return
         }
         event.preventDefault()
+        const target =
+          column.kind === 'status'
+            ? column.status.id
+            : model.index.statusesById.get(task.statusId)?.category
+        if (column.kind === 'status' ? task.statusId === target : target === column.category) {
+          return
+        }
         void setLocalTasksStatus(
           [task],
           column.kind === 'status' ? { statusId: column.status.id } : { category: column.category }
@@ -134,7 +159,7 @@ function BoardColumn({
       </div>
       <div className="flex min-h-16 flex-1 flex-col gap-2 overflow-y-auto p-2 scrollbar-sleek">
         {column.tasks.map((task) => (
-          <BoardCard key={task.id} task={task} index={model.index} draggable={writable} />
+          <BoardCard key={task.id} task={task} index={model.index} hostLabels={model.hostLabels} />
         ))}
       </div>
     </section>
@@ -143,13 +168,12 @@ function BoardColumn({
 
 /** Columns are statuses, or categories across projects; drop a card to change its status. */
 export function LocalTaskBoard({ model }: { model: LocalTaskListModel }): React.JSX.Element {
-  const writable = useLocalTasksDomain(isLocalTasksWritable)
   const showCanceled = useLocalTaskPage((state) => state.showCanceledColumn)
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-2">
       <div className="flex min-h-0 flex-1 gap-3 overflow-x-auto pb-1 scrollbar-sleek">
         {model.columns.map((column) => (
-          <BoardColumn key={column.key} column={column} model={model} writable={writable} />
+          <BoardColumn key={column.key} column={column} model={model} />
         ))}
       </div>
       {showCanceled ? null : (

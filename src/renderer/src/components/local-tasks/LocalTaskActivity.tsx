@@ -19,7 +19,9 @@ import { describeLocalTaskEvent, localTaskEventActor } from '@/local-tasks/local
 import { localTasksClient } from '@/local-tasks/local-tasks-runtime-client'
 import { useLocalTasksDomain } from '@/local-tasks/local-tasks-domain-store'
 import { localTasksSync } from '@/local-tasks/local-tasks-sync'
+import { localTaskPageStore, useLocalTaskPage } from '@/local-tasks/local-task-page-store'
 import { runLocalTaskWrite } from '@/local-tasks/local-task-writes'
+import { LocalTaskReadErrorPanel } from './LocalTaskHostStatePanel'
 
 const IS_MAC = navigator.userAgent.includes('Mac')
 
@@ -33,17 +35,25 @@ function isSubmitKey(event: React.KeyboardEvent): boolean {
 
 function CommentComposer({
   initial,
+  draft,
   submitLabel,
   onSubmit,
-  onCancel
+  onCancel,
+  busyState
 }: {
   initial: string
+  draft?: { body: string; onChange: (body: string) => void }
   submitLabel: string
   onSubmit: (body: string) => Promise<boolean>
   onCancel?: () => void
+  busyState?: { busy: boolean; setBusy: (busy: boolean) => void }
 }): React.JSX.Element {
-  const [body, setBody] = useState(initial)
-  const [busy, setBusy] = useState(false)
+  const [ownBody, setOwnBody] = useState(initial)
+  const body = draft?.body ?? ownBody
+  const setBody = draft?.onChange ?? setOwnBody
+  const [ownBusy, setOwnBusy] = useState(false)
+  const busy = busyState?.busy ?? ownBusy
+  const setBusy = busyState?.setBusy ?? setOwnBusy
   const submit = async (): Promise<void> => {
     if (!body.trim() || busy) {
       return
@@ -59,6 +69,7 @@ function CommentComposer({
     <div className="flex flex-col gap-2">
       <Textarea
         value={body}
+        disabled={busy}
         maxLength={LOCAL_TASK_COMMENT_MAX}
         onChange={(event) => setBody(event.target.value)}
         onKeyDown={(event) => {
@@ -168,19 +179,34 @@ export function LocalTaskActivity({
 }): React.JSX.Element {
   useEffect(() => localTasksSync.watchEvents(taskId), [taskId])
   const events = useLocalTasksDomain((state) => state.eventsByTaskId[taskId])
+  const readError = useLocalTasksDomain((state) => state.readErrors[`events:${taskId}`])
+  const draft = useLocalTaskPage((state) => state.commentDrafts[taskId] ?? '')
+  const commentBusy = useLocalTaskPage((state) => state.commentBusyTaskIds.includes(taskId))
   const now = useNow(60_000)
   return (
     <section className="flex flex-col gap-3">
       <h3 className="text-xs font-medium text-muted-foreground">
         {translate('localTasks.activity.title', 'Comments and activity')}
       </h3>
-      {events === undefined ? (
+      {readError ? (
+        <LocalTaskReadErrorPanel
+          detail={readError}
+          onRetry={() => void localTasksSync.retryEvents(taskId)}
+          compact
+        />
+      ) : null}
+      {events === undefined && !readError ? (
         <LoaderCircle className="size-4 animate-spin text-muted-foreground motion-reduce:animate-none" />
-      ) : (
+      ) : events !== undefined ? (
         <ul className="flex flex-col gap-2">
           {events.map((event) =>
             event.kind === 'comment' ? (
-              <CommentEntry key={event.id} event={event} now={now} writable={writable} />
+              <CommentEntry
+                key={`${taskId}:${event.id}`}
+                event={event}
+                now={now}
+                writable={writable}
+              />
             ) : (
               <li
                 key={event.id}
@@ -194,10 +220,19 @@ export function LocalTaskActivity({
             )
           )}
         </ul>
-      )}
+      ) : null}
       {writable ? (
         <CommentComposer
+          key={taskId}
           initial=""
+          draft={{
+            body: draft,
+            onChange: (body) => localTaskPageStore.getState().setCommentDraft(taskId, body)
+          }}
+          busyState={{
+            busy: commentBusy,
+            setBusy: (busy) => localTaskPageStore.getState().setCommentBusy(taskId, busy)
+          }}
           submitLabel={translate('localTasks.activity.submitComment', 'Comment')}
           onSubmit={async (body) =>
             (await runLocalTaskWrite(() => localTasksClient.addComment(taskId, body))) !== null

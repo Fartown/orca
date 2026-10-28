@@ -2,23 +2,18 @@ import { ListTodo } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { translate } from '@/i18n/i18n'
 import { cn } from '@/lib/utils'
-import { isWebClientLocation } from '@/lib/web-client-location'
 import { useLocalTasksDomain } from '@/local-tasks/local-tasks-domain-store'
 import { useLocalTaskPage } from '@/local-tasks/local-task-page-store'
 import { activateLocalTaskSource } from '@/local-tasks/local-task-source-activation'
 
-/** True while the task page shows the Local source; a browser client never does. */
+/** True while the task page shows the Local source; a browser client shows its host's library. */
 export function useLocalTaskSourceActive(): boolean {
-  const active = useLocalTaskPage((state) => state.localActive)
-  return active && !isWebClientLocation()
+  return useLocalTaskPage((state) => state.localActive)
 }
 
 /** Sits before the upstream sources and matches their button recipe (REQ-008). */
-export function LocalTaskSourceButton(): React.JSX.Element | null {
+export function LocalTaskSourceButton(): React.JSX.Element {
   const active = useLocalTaskSourceActive()
-  if (isWebClientLocation()) {
-    return null
-  }
   const label = translate('localTasks.source.label', 'Local tasks')
   return (
     <Tooltip>

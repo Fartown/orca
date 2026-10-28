@@ -1,33 +1,21 @@
-import { translate } from '@/i18n/i18n'
 import {
-  LOCAL_TASK_PRIORITIES,
-  type LocalTaskPriority
-} from '../../../shared/local-tasks/local-task-model'
+  localTaskEventText as text,
+  localTaskEventTexts as texts,
+  localTaskEventPriority as priority
+} from '../../../shared/local-tasks/local-task-event-payload'
+import { translate } from '@/i18n/i18n'
 import type {
   LocalTaskEvent,
   LocalTaskEventSource
 } from '../../../shared/local-tasks/local-task-types'
 import type { LocalTaskIndex } from './local-task-grouping'
 import { localTaskPriorityLabel } from './local-task-vocabulary-copy'
+import {
+  describeLocalTaskLinkEvent,
+  describeLocalTaskRuleStatus
+} from './local-task-link-event-copy'
 
 type Payload = Record<string, unknown> | null
-
-function text(payload: Payload, key: string): string | null {
-  const value = payload?.[key]
-  return typeof value === 'string' && value.length > 0 ? value : null
-}
-
-function texts(payload: Payload, key: string): string[] {
-  const value = payload?.[key]
-  return Array.isArray(value)
-    ? value.filter((item): item is string => typeof item === 'string')
-    : []
-}
-
-function priority(payload: Payload, key: string): LocalTaskPriority | null {
-  const value = payload?.[key]
-  return LOCAL_TASK_PRIORITIES.find((candidate) => candidate === value) ?? null
-}
 
 export function localTaskEventActor(source: LocalTaskEventSource): string {
   switch (source) {
@@ -121,16 +109,18 @@ export function describeLocalTaskEvent(event: LocalTaskEvent, index: LocalTaskIn
       return translate('localTasks.activity.criteria', '{{actor}} edited the done criteria', {
         actor
       })
-    case 'status':
-      return translate(
-        'localTasks.activity.status',
-        '{{actor}} changed status: {{from}} → {{to}}',
-        {
+    case 'status': {
+      const from = statusName(payload, 'fromName', 'from', index)
+      const to = statusName(payload, 'toName', 'to', index)
+      return (
+        describeLocalTaskRuleStatus(payload, from, to) ??
+        translate('localTasks.activity.status', '{{actor}} changed status: {{from}} → {{to}}', {
           actor,
-          from: statusName(payload, 'fromName', 'from', index),
-          to: statusName(payload, 'toName', 'to', index)
-        }
+          from,
+          to
+        })
       )
+    }
     case 'priority': {
       const from = priority(payload, 'from')
       const to = priority(payload, 'to')
@@ -154,5 +144,11 @@ export function describeLocalTaskEvent(event: LocalTaskEvent, index: LocalTaskIn
         from: text(payload, 'from') ?? '?',
         to: text(payload, 'to') ?? '?'
       })
+    case 'workspace-linked':
+    case 'workspace-unlinked':
+    case 'workspace-host':
+    case 'session-linked':
+    case 'session-unlinked':
+      return describeLocalTaskLinkEvent(event.kind, actor, payload)
   }
 }

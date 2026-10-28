@@ -7,17 +7,14 @@ import { LocalTasksSettingsPane } from './LocalTasksSettingsPane'
 export function renderLocalTasksSettingsSection(
   context: SettingsRenderContext
 ): React.JSX.Element | null {
-  const { model, navigation, view } = context
-  if (model.isWebClient) {
-    return null
-  }
+  const { navigation, view } = context
   return (
     <SettingsSection
       id={LOCAL_TASKS_SETTINGS_SECTION_ID}
       title={translate('localTasks.settings.title', 'Local Tasks')}
       description={translate(
         'localTasks.settings.description',
-        'Task projects, ref prefixes and statuses for tasks kept on this computer.'
+        'Task projects, their repositories, ref prefixes and statuses.'
       )}
       searchEntries={navigation.getSectionSearchEntries(LOCAL_TASKS_SETTINGS_SECTION_ID)}
     >

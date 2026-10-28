@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { ChevronLeft, CornerDownRight, Ellipsis, Layers, Pencil, Trash2 } from 'lucide-react-native'
+import { localTaskDescendantIds } from '../../../src/shared/local-tasks/local-task-tree'
 import type { LocalTask } from '../../../src/shared/local-tasks/local-task-types'
 import { ActionSheetModal } from '../components/ActionSheetModal'
 import { ConfirmModal } from '../components/ConfirmModal'
@@ -10,13 +11,15 @@ import type { LocalTasksApi } from './local-tasks-api'
 import { formatLocalTaskAgo, localTasksCopy } from './local-tasks-copy'
 import { LocalTaskActivitySection } from './local-task-activity-section'
 import { localTaskWriteMessage } from './local-task-failure-message'
-import { localTaskStatusLookup } from './local-task-list-projection'
+import { localTaskPathFromRoot, localTaskStatusLookup } from './local-task-list-projection'
 import { LocalTaskDetailSections } from './local-task-detail-sections'
 import { createLocalTaskOperationIds, sendLocalTaskWrite } from './local-task-operation-ids'
 import { LocalTaskPriorityPicker, LocalTaskStatusPicker } from './local-task-pickers'
 import { localTaskStyles } from './local-tasks-styles'
 import { LocalTaskPriorityIcon, LocalTaskStatusIcon } from './local-tasks-visuals'
 import type { LocalTasksLibrary } from './use-local-tasks-library'
+import type { LocalTaskSite } from './local-task-endpoint'
+import { LocalTaskWorkSection } from './local-task-work-section'
 
 type Props = {
   library: LocalTasksLibrary
@@ -24,10 +27,14 @@ type Props = {
   taskId: string
   now: number
   readOnly: boolean
+  canRead: boolean
   onBack: () => void
   onOpenTask: (taskId: string) => void
   onEdit: (task: LocalTask) => void
   onAddSubtask: (parent: LocalTask) => void
+  site: LocalTaskSite
+  onOpenSession: (taskSessionId: string) => void
+  onNavigate: (href: string) => void
 }
 
 export function LocalTaskDetailView(props: Props) {
@@ -48,14 +55,23 @@ export function LocalTaskDetailView(props: Props) {
     : null
   const lookup = localTaskStatusLookup(library.projects)
   const status = task ? (lookup.get(task.statusId) ?? null) : null
-  const parent = task?.parentId
-    ? (library.tasks.find((entry) => entry.id === task.parentId) ?? null)
-    : null
+  const tasksById = new Map(library.tasks.map((entry) => [entry.id, entry]))
+  const ancestors = task ? localTaskPathFromRoot(task, tasksById) : []
   const subtasks = task
     ? library.tasks
         .filter((entry) => entry.parentId === task.id)
         .sort((a, b) => a.number - b.number)
     : []
+  const childrenByParentId = new Map<string, LocalTask[]>()
+  for (const entry of library.tasks) {
+    if (entry.parentId) {
+      childrenByParentId.set(entry.parentId, [
+        ...(childrenByParentId.get(entry.parentId) ?? []),
+        entry
+      ])
+    }
+  }
+  const descendantCount = task ? localTaskDescendantIds(task.id, childrenByParentId).length : 0
 
   const update = async (patch: { statusId?: string; priority?: LocalTask['priority'] }) => {
     if (!task) {
@@ -131,9 +147,6 @@ export function LocalTaskDetailView(props: Props) {
           contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + spacing.xl }]}
           keyboardShouldPersistTaps="handled"
         >
-          {props.readOnly ? (
-            <Text style={[localTaskStyles.hint, styles.readOnly]}>{copy.libraryReadOnly}</Text>
-          ) : null}
           <View style={styles.metaRow}>
             <Layers size={12} color={colors.textMuted} />
             <Text style={localTaskStyles.meta}>
@@ -169,15 +182,27 @@ export function LocalTaskDetailView(props: Props) {
               </View>
             ))}
           </View>
-          {parent ? (
-            <Pressable style={styles.parentRow} onPress={() => props.onOpenTask(parent.id)}>
+          {ancestors.length > 0 ? (
+            <View style={styles.parentRow} testID="local-task-ancestor-path">
               <CornerDownRight size={14} color={colors.textMuted} />
-              <Text style={localTaskStyles.meta}>{copy.parent}</Text>
-              <Text style={localTaskStyles.mono}>{parent.ref}</Text>
-              <Text style={styles.parentTitle} numberOfLines={1}>
-                {parent.title}
-              </Text>
-            </Pressable>
+              {ancestors.map((ancestor, index) => (
+                <Pressable
+                  key={ancestor.id}
+                  style={styles.ancestor}
+                  onPress={() => props.onOpenTask(ancestor.id)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${ancestor.ref} ${ancestor.title}`}
+                >
+                  {index > 0 ? <Text style={localTaskStyles.meta}>›</Text> : null}
+                  <Text style={localTaskStyles.mono}>{ancestor.ref}</Text>
+                  {index === ancestors.length - 1 ? (
+                    <Text style={styles.parentTitle} numberOfLines={1}>
+                      {ancestor.title}
+                    </Text>
+                  ) : null}
+                </Pressable>
+              ))}
+            </View>
           ) : null}
           {error ? <Text style={[localTaskStyles.errorText, styles.error]}>{error}</Text> : null}
           <LocalTaskDetailSections
@@ -189,6 +214,15 @@ export function LocalTaskDetailView(props: Props) {
             onAddSubtask={props.onAddSubtask}
             onOpenTask={props.onOpenTask}
           />
+          <LocalTaskWorkSection
+            task={task}
+            library={library}
+            api={props.api}
+            site={props.site}
+            canWrite={props.canRead && !props.readOnly}
+            onOpenSession={props.onOpenSession}
+            onNavigate={props.onNavigate}
+          />
           <LocalTaskActivitySection
             api={props.api}
             taskId={task.id}
@@ -196,6 +230,7 @@ export function LocalTaskDetailView(props: Props) {
             statuses={lookup}
             now={props.now}
             readOnly={props.readOnly}
+            canRead={props.canRead}
             onChanged={() => library.reload(['events'])}
           />
         </ScrollView>
@@ -230,7 +265,7 @@ export function LocalTaskDetailView(props: Props) {
       <ConfirmModal
         visible={confirmDelete}
         title={copy.deleteTaskTitle(task?.ref ?? '')}
-        message={copy.deleteTaskMessage(subtasks.length)}
+        message={copy.deleteTaskMessage(descendantCount)}
         confirmLabel={copy.delete}
         cancelLabel={copy.cancel}
         destructive
@@ -265,8 +300,14 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     marginTop: spacing.md
   },
-  parentRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: spacing.md },
-  parentTitle: { flex: 1, color: colors.textSecondary, fontSize: 12 },
-  error: { marginTop: spacing.sm },
-  readOnly: { marginBottom: spacing.sm }
+  parentRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: spacing.md
+  },
+  ancestor: { flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 1 },
+  parentTitle: { flexShrink: 1, color: colors.textSecondary, fontSize: 12 },
+  error: { marginTop: spacing.sm }
 })

@@ -23,12 +23,17 @@ type Props = {
   statuses: Map<string, LocalTaskStatusDef>
   now: number
   readOnly: boolean
+  canRead: boolean
   onChanged: () => void
 }
 
 export function LocalTaskActivitySection(props: Props) {
   const copy = localTasksCopy()
-  const { events } = useLocalTaskEvents(props.api, props.taskId, props.eventsVersion)
+  const {
+    events,
+    error: eventsError,
+    retry
+  } = useLocalTaskEvents(props.canRead ? props.api : null, props.taskId, props.eventsVersion)
   const [ids] = useState(() => ({
     add: createLocalTaskOperationIds(),
     edit: createLocalTaskOperationIds(),
@@ -102,6 +107,13 @@ export function LocalTaskActivitySection(props: Props) {
           </View>
         </Pressable>
       ))}
+      {eventsError && props.canRead ? (
+        <Pressable onPress={retry} accessibilityRole="button" style={styles.error}>
+          <Text style={localTaskStyles.errorText}>
+            {copy.eventsLoadFailed} · {copy.retry}
+          </Text>
+        </Pressable>
+      ) : null}
       {error ? <Text style={[localTaskStyles.errorText, styles.error]}>{error}</Text> : null}
       {props.readOnly ? null : (
         <View>

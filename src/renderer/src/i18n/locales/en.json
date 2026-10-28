@@ -21182,6 +21182,52 @@
     "switchToChatView": "Switch to Chat View"
   },
   "localTasks": {
+    "needsYou": {
+      "title": "Needs you",
+      "description": "Sessions on tasks that wait for an approval or an answer, are blocked, or finished a turn you have not seen. Disconnected hosts are left out until they are back.",
+      "loading": "Reading session status…",
+      "empty": "No session on a task is waiting on you.",
+      "openFailed": "This session could not be opened from here.",
+      "filter": "A session is waiting on me",
+      "sidebarCount": "{{count}} sessions need you",
+      "kind": {
+        "approval": "Waiting for your approval",
+        "question": "Waiting for your answer",
+        "blocked": "Blocked",
+        "unreadDone": "Finished a turn you have not seen"
+      },
+      "item": {
+        "open": "Open session",
+        "reply": "Reply",
+        "seen": "Mark as seen",
+        "stopped": "{{agent}} stopped. Last words: {{message}}",
+        "left": "No longer waiting on you",
+        "unverifiable": "Host not connected; cannot confirm"
+      },
+      "reply": {
+        "label": "Reply",
+        "placeholder": "Next instruction for the agent…",
+        "send": "Send",
+        "close": "Close",
+        "moved": "The session moved on, so this reply would not reach the turn you saw. Your text is kept.",
+        "sending": "Sending…"
+      },
+      "snooze": {
+        "trigger": "Snooze",
+        "hour": "For 1 hour",
+        "tonight": "Until tonight",
+        "tomorrow": "Until tomorrow",
+        "nextWeek": "Until next week",
+        "custom": "Until a time you pick",
+        "apply": "Snooze until then"
+      },
+      "unverifiableHosts": "Nothing is waiting on you on the hosts in contact. Sessions on hosts that are not connected can’t be confirmed until they are back."
+    },
+    "sidebar": {
+      "groupByTask": "Task",
+      "noTaskGroup": "No task",
+      "openTask": "Open {{ref}}"
+    },
     "quickActions": {
       "newTask": "New task…",
       "newTaskDescription": "Write down a task in the local task list.",
@@ -21225,7 +21271,19 @@
       "criteria": "{{actor}} edited the done criteria",
       "status": "{{actor}} changed status: {{from}} → {{to}}",
       "priority": "{{actor}} changed priority: {{from}} → {{to}}",
-      "moved": "{{actor}} moved it: {{from}} → {{to}}"
+      "moved": "{{actor}} moved it: {{from}} → {{to}}",
+      "unnamedWorkspace": "a workspace",
+      "unknownAgent": "an agent",
+      "workspaceStartedOn": "{{actor}} started work in {{name}} on {{host}}",
+      "workspaceStarted": "{{actor}} started work in {{name}}",
+      "workspaceLinked": "{{actor}} linked workspace {{name}}",
+      "workspaceUnlinked": "{{actor}} unlinked workspace {{name}}",
+      "workspaceMoved": "Workspace {{name}} now runs on {{to}} (was {{from}})",
+      "sessionOpened": "{{actor}} opened a {{agent}} session",
+      "sessionLinked": "{{actor}} linked a {{agent}} session",
+      "sessionUnlinked": "{{actor}} unlinked a {{agent}} session",
+      "ruleStart": "Work started, so the status moved: {{from}} → {{to}}",
+      "rulePrMerged": "#{{number}} was merged, so the task completed: {{from}} → {{to}}"
     },
     "common": {
       "cancel": "Cancel"
@@ -21249,7 +21307,8 @@
     },
     "bootstrap": {
       "title": "Set up local tasks",
-      "description": "Tasks are grouped into projects, one per Orca project. Pick the projects you want to track, check their prefixes, and create them. Tasks stay on this computer."
+      "description": "Tasks are grouped into projects. Pick the repositories to track, one project each, check their prefixes and create them; or start an empty project and add repositories later. Each project is kept by the Orca whose repositories it tracks.",
+      "emptyTitle": "Or start an empty project"
     },
     "create": {
       "created": "Created {{ref}}",
@@ -21270,7 +21329,7 @@
     "delete": {
       "done": "Deleted {{ref}}",
       "title": "Delete {{ref}}?",
-      "withSubtasks": "Its subtasks ({{count}}) are deleted with it. Only task records are removed; workspaces and sessions are not touched.",
+      "withSubtasks": "Its subtasks at every level ({{count}}) are deleted with it. Only task records are removed; workspaces and sessions are not touched.",
       "single": "Only the task record is removed; workspaces and sessions are not touched.",
       "confirm": "Delete"
     },
@@ -21321,18 +21380,24 @@
     },
     "state": {
       "failed": "Could not reach the task library.",
+      "readFailed": "Could not load local tasks.",
       "ended": "The task library stopped sending updates.",
       "starting": "Opening the task library…",
       "unavailable": "Local tasks cannot be shown or changed right now.",
-      "notTaskHost": "Local tasks are kept by the desktop Orca, and this window cannot reach them.",
+      "notTaskHost": "No task library is reachable here. Connect to an Orca that keeps one, or update it.",
       "retry": "Reconnect",
+      "retryRead": "Retry",
       "technicalDetails": "Technical details",
       "readOnlyNotice": "Read only: a newer version of Orca saved these tasks, so this version can show them but not change them. Update Orca to edit them again.",
       "reasonPermission": "Orca cannot write to the task library file on this computer. Check the permissions of the Orca data folder, then restart Orca.",
       "reasonDiskFull": "The disk is full, so the task library cannot be opened. Free up space, then restart Orca.",
       "reasonCorrupt": "The task library file is damaged, so Orca cannot read it.",
       "reasonLocked": "Another Orca process is holding the task library. Quit it, then restart Orca.",
-      "reasonUnknown": "Something on this computer stopped Orca from opening the task library."
+      "reasonUnknown": "Something on this computer stopped Orca from opening the task library.",
+      "unsupported": "The Orca on this host needs an update before it can keep tasks.",
+      "pairedUnsupported": "{{host}}: the Orca there needs an update to share its tasks.",
+      "pairedOutOfContact": "{{host}} is not connected. Its tasks are shown as last read, and its sessions can’t be confirmed.",
+      "pairedFailed": "Could not read the tasks on {{host}}."
     },
     "keys": {
       "move": "Move",
@@ -21362,14 +21427,23 @@
       "open": "Open task"
     },
     "projects": {
-      "noOrcaProjects": "Add a project to Orca first; each task project belongs to one Orca project.",
-      "allLinked": "Every Orca project already has a task project.",
+      "noOrcaProjects": "No repositories in Orca yet. Make an empty project, or add a repository to Orca first.",
+      "allLinked": "Every repository already has a task project. More projects can share one from settings.",
       "prefixFor": "Prefix for {{name}}",
-      "create": "Create selected ({{count}})"
+      "create": "Create selected ({{count}})",
+      "continue": "Continue with created projects",
+      "noLibrary": "None of this project’s hosts has a task library that is connected and writable.",
+      "createEmpty": "Create empty project",
+      "emptyHost": "Kept on",
+      "emptyName": "Project name",
+      "emptyNamePlaceholder": "e.g. Research",
+      "noWritableLibrary": "No Orca in contact can take a new project right now."
     },
     "row": {
       "subtaskProgress": "Subtasks done: {{done}} of {{total}}",
-      "select": "Select {{ref}}"
+      "select": "Select {{ref}}",
+      "fold": "Hide subtasks of {{ref}}",
+      "unfold": "Show subtasks of {{ref}}"
     },
     "source": {
       "label": "Local tasks",
@@ -21379,7 +21453,8 @@
       "added": "Added {{count}} subtasks",
       "title": "Subtasks",
       "placeholder": "Add a subtask — paste several lines to add one per line",
-      "add": "Add subtask"
+      "add": "Add subtask",
+      "retryRemaining": "Retry remaining {{count}} subtasks"
     },
     "toolbar": {
       "searchPlaceholder": "Search by ref or title",
@@ -21390,14 +21465,16 @@
       "newTask": "New task"
     },
     "settings": {
+      "rules": "Automatic status rules",
+      "ruleStart": "Starting work moves the task to In Progress",
+      "ruleStartHelp": "When a workspace or the first session is linked, a Backlog or Todo task moves to the first In Progress status.",
+      "rulePrMerged": "A merged PR completes the task",
+      "rulePrMergedHelp": "When the PR of the task’s workspace is merged at the workspace’s head, the task moves to the first Done status. Each PR does this once.",
       "projectRemoved": "Deleted {{name}}",
       "removeTitle": "Delete {{name}}?",
       "removeDescription": "Its tasks ({{count}}) are deleted with it. The Orca project, its workspaces and sessions are not touched.",
       "removeConfirm": "Delete project",
       "name": "Name",
-      "orcaProject": "Orca project",
-      "orcaProjectHelp": "One Orca project has at most one task project. It works the same for local and SSH projects.",
-      "orcaProjectMissing": "Not in this Orca profile",
       "prefix": "Ref prefix",
       "prefixHelp": "Changing it keeps the old prefix as an alias: old refs still search and open, and no other project can take it.",
       "savePrefix": "Change prefix",
@@ -21420,10 +21497,10 @@
       "statusesHelp": "The six categories are fixed. A status never changes category, and each category keeps at least one. Board columns are these statuses.",
       "addStatus": "Add status",
       "newProject": "New task project",
-      "newProjectDescription": "Each task project belongs to one Orca project. Pick projects and check their prefixes.",
+      "newProjectDescription": "Make one task project per repository, or an empty one for tasks only; repositories can be added later.",
       "noProjects": "No task projects yet.",
       "projectsTitle": "Task projects",
-      "projectsSearchDescription": "Create task projects, rename them and change their ref prefix.",
+      "projectsSearchDescription": "Create task projects, link repositories, rename them and change their ref prefix.",
       "keywordTasks": "tasks",
       "keywordProject": "project",
       "keywordPrefix": "prefix",
@@ -21431,7 +21508,19 @@
       "keywordStatus": "status",
       "keywordBoard": "board",
       "title": "Local Tasks",
-      "description": "Task projects, ref prefixes and statuses for tasks kept on this computer."
+      "description": "Task projects, their repositories, ref prefixes and statuses.",
+      "repos": "Repositories",
+      "reposHelp": "Start creates workspaces in these repositories, the default one first, on this project’s host. Several task projects can share a repository.",
+      "reposNone": "None: this project only tracks tasks",
+      "addRepo": "Add repository",
+      "defaultRepo": "Default",
+      "makeDefaultRepo": "Make default",
+      "newEmpty": "Empty project",
+      "newFromRepos": "One per repository",
+      "noRepoCandidates": "No other repository in Orca on this project’s host.",
+      "removeRepo": "Remove from project",
+      "repoActions": "Actions for {{name}}",
+      "repoAlsoIn": "Also in {{projects}}"
     },
     "failure": {
       "lastStatusInCategory": "Each category needs at least one status.",
@@ -21441,14 +21530,23 @@
       "prefixTakenBy": "The prefix is already used by project \"{{project}}\", now or as an earlier prefix.",
       "prefixTaken": "The prefix is already used by another project.",
       "prefixInvalid": "Use 1–10 letters or digits for the prefix, starting with a letter.",
-      "orcaProjectLinkedTo": "This Orca project already belongs to task project \"{{project}}\".",
-      "orcaProjectLinked": "This Orca project already belongs to a task project.",
-      "parentInvalid": "A parent must be a top-level task in the same project, and a task with subtasks cannot become a subtask.",
       "statusInvalid": "That status does not belong to this task’s project.",
       "statusInUse": "Tasks still use this status. Choose a status to move them to first.",
       "commentNotEditable": "Only comments can be edited.",
-      "workspaceLinked": "This task has a linked workspace or session. Unlink it first, then try again.",
-      "callFailed": "Could not save the change: {{message}}"
+      "workspaceAlreadyLinkedTo": "This workspace already belongs to {{name}}. Unlink it there first.",
+      "workspaceAlreadyLinked": "This workspace already belongs to another task.",
+      "taskHasWorkspaceNamed": "This task already works in “{{name}}”. Unlink it first, or start over to replace it.",
+      "taskHasWorkspace": "This task already has a workspace. Unlink it first, or start over to replace it.",
+      "sessionAlreadyLinkedTo": "This session is already linked to {{task}}.",
+      "sessionAlreadyLinked": "This session is already linked to a task.",
+      "invalidArgument": "This change could not be saved. Check the fields and try again.",
+      "prefixHistoryInProject": "This prefix was used by tasks moved into this project. Choose another prefix to keep their refs unambiguous.",
+      "callFailed": "Could not save the change: {{message}}",
+      "parentInvalidTree": "A parent must be in the same project, and a task cannot go under itself or one of its own subtasks.",
+      "workspaceRequiredTree": "Start or link a workspace for this task or one of its parents first.",
+      "hostNotOwned": "This workspace runs on another Orca, so it can’t be linked to a task kept here.",
+      "notFromPhone": "This can’t be done from the phone.",
+      "attentionItemMismatch": "This item belongs to another session, so nothing was marked."
     },
     "category": {
       "backlog": "Backlog",
@@ -21504,6 +21602,93 @@
     },
     "time": {
       "justNow": "just now"
+    },
+    "links": {
+      "currentTask": "Linked to {{ref}} · {{title}}",
+      "hasWorkspace": "Has {{name}}",
+      "linkSessionTo": "Link this session to",
+      "linkWorkspaceFirst": "Link workspace to a task…",
+      "menuLink": "Link to task…",
+      "menuLinked": "Task {{ref}}…",
+      "noTasksForWorkspace": "No tasks on this workspace’s host yet.",
+      "openTask": "Open task {{ref}}",
+      "openTaskShort": "Open task",
+      "parentTask": "Parent task",
+      "pickTaskTitle": "Link {{name}} to a task",
+      "unlink": "Unlink",
+      "workspaceNotLinked": "This workspace is not linked to a task yet. Link the workspace first.",
+      "state": {
+        "working": "Working",
+        "waiting": "Waiting for you",
+        "blocked": "Blocked",
+        "done": "Finished a turn",
+        "idle": "Idle",
+        "exited": "Ended",
+        "missing": "Session not found",
+        "unknown": "Status unknown",
+        "unverifiable": "Can’t confirm"
+      },
+      "review": {
+        "merged": "{{label}} merged",
+        "closed": "{{label}} closed",
+        "draft": "{{label}} draft",
+        "open": "{{label}} open",
+        "unverifiable": "{{label}} state can’t be confirmed"
+      },
+      "checks": {
+        "success": "Checks passing",
+        "failure": "Checks failing",
+        "pending": "Checks running"
+      },
+      "workspaceGone": "The workspace was deleted.",
+      "workspaceUnverifiableNamed": "{{name}} · can’t confirm",
+      "agent": "Agent",
+      "location": "Location",
+      "delivery": "Prompt",
+      "deliverySend": "Send now",
+      "deliveryDraft": "Put in the input box",
+      "openSession": "Open session",
+      "openSessionTitle": "Open session · {{ref}}",
+      "workspaceUnverifiable": "The workspace cannot be reached now.",
+      "sessionMissingHint": "Session not found — open the workspace",
+      "sessionActions": "Session actions",
+      "unlinkSession": "Unlink session",
+      "sessions": "Sessions",
+      "noSessions": "No sessions yet.",
+      "changes": "Changes",
+      "changedFiles": "{{count}} files vs {{base}}",
+      "workspaceActions": "Workspace actions",
+      "unlinkWorkspace": "Unlink workspace",
+      "restart": "Start again",
+      "useExisting": "Use existing workspace",
+      "host": "Host",
+      "notConnected": "(not connected)",
+      "branch": "Branch",
+      "openWorkspace": "Open workspace",
+      "viewChanges": "View changes",
+      "mergeRequest": "MR",
+      "pullRequest": "PR",
+      "start": "Start",
+      "workspace": "Workspace",
+      "pickWorkspaceTitle": "Use an existing workspace for {{ref}}",
+      "noWorkspaces": "No workspaces on this project’s host.",
+      "ownedBy": "Belongs to {{ref}}",
+      "sessionFailed": "The agent could not be started.",
+      "noRepo": "This project has no Git repository in Orca, so a workspace cannot be created for it.",
+      "otherProjectNotLinked": "The workspace was created in another project, so it was not linked to the task.",
+      "hostOffline": "{{host}} is not connected",
+      "hostOfflineUnnamed": "The workspace’s host is not connected",
+      "noRepoShort": "No Git repository in Orca for this project",
+      "workspaceUnlinked": "Workspace unlinked",
+      "sessionUnlinked": "Session unlinked",
+      "inheritedWorkspace": "Uses the workspace of {{ref}}",
+      "otherTasks": "Other projects",
+      "otherWorkspaces": "Other repositories",
+      "projectWorkspaces": "This project’s repositories",
+      "relatedTasks": "Projects tracking this repository",
+      "startIn": "{{action}} in {{repo}}",
+      "startInRepo": "Start in another repository",
+      "startOwn": "Start separately"
     }
   }
 }

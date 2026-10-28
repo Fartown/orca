@@ -6,6 +6,7 @@ import { localTasksSync } from '@/local-tasks/local-tasks-sync'
 import { saveLocalTaskPatch, type LocalTaskPatchOutcome } from '@/local-tasks/local-task-writes'
 
 type Draft<E> = { value: E; base: E; baseRevision: number }
+type RevisionedFieldEntity = { id: string; revision: number }
 
 export type LocalTaskFieldDraft<E> = {
   value: E
@@ -13,6 +14,7 @@ export type LocalTaskFieldDraft<E> = {
   saving: boolean
   edit: (next: E) => void
   commit: () => Promise<void>
+  commitValue: (next: E) => Promise<void>
   overwrite: () => Promise<void>
   discard: () => void
 }
@@ -26,18 +28,24 @@ function latestTask(taskId: string): LocalTask | undefined {
  * draft it keeps the user's text, saves against the revision the edit started from, and on `stale`
  * keeps the draft and asks whether to overwrite or discard (REQ-017).
  */
-export function useLocalTaskFieldDraft<E>({
+export function useRevisionedFieldDraft<E, T extends RevisionedFieldEntity, P>({
   task,
   stored,
   read,
   same,
-  toPatch
+  toPatch,
+  save,
+  latest,
+  refresh
 }: {
-  task: LocalTask
+  task: T
   stored: E
-  read: (task: LocalTask) => E
+  read: (task: T) => E
   same: (a: E, b: E) => boolean
-  toPatch: (value: E) => LocalTasksTasksUpdateInput['patch']
+  toPatch: (value: E) => P
+  save: (id: string, patch: P, revision: number) => Promise<LocalTaskPatchOutcome>
+  latest: (id: string) => T | undefined
+  refresh: () => Promise<void>
 }): LocalTaskFieldDraft<E> {
   const [draft, setDraft] = useState<Draft<E> | null>(null)
   const [conflict, setConflict] = useState(false)
@@ -45,46 +53,65 @@ export function useLocalTaskFieldDraft<E>({
 
   const settle = (outcome: LocalTaskPatchOutcome, committed: E): void => {
     if (outcome === 'saved') {
+      const currentEntity = latest(task.id)
+      if (currentEntity && !same(read(currentEntity), committed)) {
+        setConflict(true)
+        return
+      }
       setConflict(false)
-      setDraft((current) => (current && same(current.value, committed) ? null : current))
+      setDraft((current) => {
+        if (!current) {
+          return null
+        }
+        if (same(current.value, committed)) {
+          return null
+        }
+        return {
+          ...current,
+          base: committed,
+          baseRevision: currentEntity?.revision ?? current.baseRevision
+        }
+      })
     } else if (outcome === 'stale') {
       setConflict(true)
     }
   }
 
-  const commit = async (): Promise<void> => {
-    if (!draft || saving || conflict) {
+  const commitValue = async (value: E): Promise<void> => {
+    if (saving || conflict) {
       return
     }
-    if (same(draft.value, stored)) {
+    const editing = draft ?? { value, base: stored, baseRevision: task.revision }
+    if (same(value, stored)) {
       setDraft(null)
       return
     }
     setSaving(true)
-    const committed = draft.value
-    let outcome = await saveLocalTaskPatch(task.id, toPatch(committed), draft.baseRevision)
+    const committed = value
+    let outcome = await save(task.id, toPatch(committed), editing.baseRevision)
     if (outcome === 'stale') {
-      await localTasksSync.refresh(['tasks'])
-      const latest = latestTask(task.id)
+      await refresh()
+      const currentTask = latest(task.id)
       // Why: the revision covers the whole task; another field changing elsewhere is no conflict.
-      if (latest && same(read(latest), draft.base)) {
-        outcome = await saveLocalTaskPatch(task.id, toPatch(committed), latest.revision)
+      if (currentTask && same(read(currentTask), editing.base)) {
+        outcome = await save(task.id, toPatch(committed), currentTask.revision)
       }
     }
     setSaving(false)
     settle(outcome, committed)
   }
+  const commit = (): Promise<void> => (draft ? commitValue(draft.value) : Promise.resolve())
 
   const overwrite = async (): Promise<void> => {
-    const latest = latestTask(task.id)
-    if (!draft || !latest || saving) {
+    const currentTask = latest(task.id)
+    if (!draft || !currentTask || saving) {
       return
     }
     setSaving(true)
     const committed = draft.value
-    const outcome = await saveLocalTaskPatch(task.id, toPatch(committed), latest.revision)
+    const outcome = await save(task.id, toPatch(committed), currentTask.revision)
     if (outcome === 'stale') {
-      await localTasksSync.refresh(['tasks'])
+      await refresh()
     }
     setSaving(false)
     settle(outcome, committed)
@@ -101,10 +128,36 @@ export function useLocalTaskFieldDraft<E>({
           : { value: next, base: stored, baseRevision: task.revision }
       ),
     commit,
+    commitValue,
     overwrite,
     discard: () => {
       setDraft(null)
       setConflict(false)
     }
   }
+}
+
+export function useLocalTaskFieldDraft<E>({
+  task,
+  stored,
+  read,
+  same,
+  toPatch
+}: {
+  task: LocalTask
+  stored: E
+  read: (task: LocalTask) => E
+  same: (a: E, b: E) => boolean
+  toPatch: (value: E) => LocalTasksTasksUpdateInput['patch']
+}): LocalTaskFieldDraft<E> {
+  return useRevisionedFieldDraft({
+    task,
+    stored,
+    read,
+    same,
+    toPatch,
+    save: saveLocalTaskPatch,
+    latest: latestTask,
+    refresh: () => localTasksSync.refresh(['tasks'])
+  })
 }

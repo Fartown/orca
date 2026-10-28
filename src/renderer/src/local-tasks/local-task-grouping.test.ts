@@ -40,7 +40,7 @@ function project(
     name: prefix,
     prefix,
     aliases,
-    orcaProjectId: `orca-${id}`,
+    repos: [`orca-${id}`],
     defaultRepoId: null,
     lastExecutionHostId: null,
     rules: { startMovesToInProgress: true, prMergedCompletes: true },
@@ -255,5 +255,93 @@ describe('local task counts and groups (REQ-006)', () => {
     expect(matchesLocalTaskQuery(tasks[0], shop, 'mall-12')).toBe(true)
     expect(matchesLocalTaskQuery(tasks[0], shop, 'csv export')).toBe(true)
     expect(matchesLocalTaskQuery(tasks[0], shop, 'refund')).toBe(false)
+  })
+
+  it('finds a task moved from another project by its old ref, ahead of near matches', () => {
+    const moved = task(orca, 31, 'orc-doing', { formerRefs: ['SHOP-1'] })
+    const library = [...tasks, moved]
+    const libraryIndex = buildLocalTaskIndex([shop, orca], library)
+    const groups = groupLocalTasksForList(
+      library,
+      libraryIndex,
+      null,
+      { ...ALL, query: 'SHOP-1' },
+      BY_STATUS
+    )
+    expect(flattenLocalTaskGroups(groups)[0]).toBe('ORC-31')
+  })
+
+  it('reads a zero-padded ref as the ref the host resolves', () => {
+    expect(matchesLocalTaskQuery(tasks[0], shop, 'shop-012')).toBe(true)
+    expect(matchesLocalTaskQuery(tasks[0], shop, 'MALL-0012 csv')).toBe(true)
+    const groups = groupLocalTasksForList(
+      tasks,
+      index,
+      'shop',
+      { ...ALL, query: 'shop-07' },
+      BY_STATUS
+    )
+    expect(flattenLocalTaskGroups(groups)).toEqual(['SHOP-7'])
+  })
+})
+
+describe('task tree in the list (REQ-004, D-008)', () => {
+  // SHOP-20 › SHOP-21 › SHOP-22 › SHOP-23, plus SHOP-24 under SHOP-20; statuses spread across groups.
+  const tree = [
+    task(shop, 20, 'shop-doing'),
+    task(shop, 21, 'shop-todo', { parentId: 'SHOP-20' }),
+    task(shop, 22, 'shop-done', { parentId: 'SHOP-21' }),
+    task(shop, 23, 'shop-doing', { parentId: 'SHOP-22' }),
+    task(shop, 24, 'shop-doing', { parentId: 'SHOP-20' })
+  ]
+  const treeIndex = buildLocalTaskIndex([shop], tree)
+  const groups = groupLocalTasksForList(tree, treeIndex, 'shop', ALL, BY_STATUS)
+
+  it('nests every depth under its shown root, whatever group the descendants’ statuses name', () => {
+    expect(groups.flatMap((group) => group.entries.map((entry) => entry.task.id))).toEqual([
+      'SHOP-20'
+    ])
+    const [entry] = groups[0].entries
+    expect(entry.children.map((child) => child.id)).toEqual(['SHOP-21', 'SHOP-24'])
+    expect(entry.lines.map((line) => [line.task.id, line.depth, line.childCount])).toEqual([
+      ['SHOP-21', 1, 1],
+      ['SHOP-22', 2, 1],
+      ['SHOP-23', 3, 0],
+      ['SHOP-24', 1, 0]
+    ])
+  })
+
+  it('walks J/K in tree order and skips everything a folded task hides', () => {
+    expect(flattenLocalTaskGroups(groups)).toEqual([
+      'SHOP-20',
+      'SHOP-21',
+      'SHOP-22',
+      'SHOP-23',
+      'SHOP-24'
+    ])
+    expect(flattenLocalTaskGroups(groups, new Set(['SHOP-21']))).toEqual([
+      'SHOP-20',
+      'SHOP-21',
+      'SHOP-24'
+    ])
+    expect(flattenLocalTaskGroups(groups, new Set(['SHOP-20']))).toEqual(['SHOP-20'])
+  })
+
+  it('lifts a deep task to a row of its own once its parent is filtered out', () => {
+    const doing = groupLocalTasksForList(
+      tree,
+      treeIndex,
+      'shop',
+      { ...ALL, view: 'started' },
+      BY_STATUS
+    )
+    expect(
+      doing.flatMap((group) =>
+        group.entries.map((entry) => [entry.task.id, entry.lines.map((line) => line.task.id)])
+      )
+    ).toEqual([
+      ['SHOP-23', []],
+      ['SHOP-20', ['SHOP-24']]
+    ])
   })
 })

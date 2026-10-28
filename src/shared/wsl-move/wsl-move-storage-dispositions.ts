@@ -145,6 +145,8 @@ export const SQLITE_TABLE_DISPOSITIONS: Record<string, WslMoveFieldDisposition> 
       [
         'local_task_meta',
         'local_task_projects',
+        'local_task_projects_v4',
+        'local_task_project_repos',
         'local_task_project_prefixes',
         'local_task_statuses',
         'local_tasks',
@@ -154,13 +156,13 @@ export const SQLITE_TABLE_DISPOSITIONS: Record<string, WslMoveFieldDisposition> 
         'local_task_workspaces',
         'local_task_sessions',
         'local_task_attention_state',
-        'local_task_pending_replies',
         'local_task_mutation_receipts',
-        'local_task_preferences'
+        'local_task_preferences',
+        'local_task_pr_triggers'
       ],
       notApplicableDisposition(
         52,
-        'Local task library: owned by the desktop task host, not by a project, so a move leaves it.'
+        'Each Orca keeps its own task library in its profile. Workspace links key by host and instance id; a client re-resolves a moved workspace (localTasks.links.resolveWorkspace), so the mover writes nothing.'
       )
     ),
     ...tables(

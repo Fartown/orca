@@ -14,6 +14,7 @@ import { hostScreenStyles as styles } from './host-screen-styles'
 import { WorkspaceOptionsSheet } from './workspace-options-sheet'
 import { WorkspaceDetailsSheet } from './workspace-details-sheet'
 import type { HostScreenController } from './use-host-screen-controller'
+import { useLocalTaskHostLinkAction } from '../local-tasks/use-local-task-host-link-action'
 
 export function HostScreenOverlays({ controller }: { controller: HostScreenController }) {
   const {
@@ -35,6 +36,7 @@ export function HostScreenOverlays({ controller }: { controller: HostScreenContr
     desktopCapabilities: hostCapabilities,
     executionHost: actionTarget?.hostId
   })
+  const taskLink = useLocalTaskHostLinkAction({ client, connState, hostCapabilities })
 
   return (
     <>
@@ -101,6 +103,7 @@ export function HostScreenOverlays({ controller }: { controller: HostScreenContr
                       navigate: actions.navigateFromHostList,
                       onDone: () => state.setActionTarget(null)
                     }),
+                    ...taskLink.actionsFor(actionTarget, () => state.setActionTarget(null)),
                     // Server sleep is not offered yet; the desktop would sleep its own id.
                     ...(actionServer.server
                       ? []
@@ -143,6 +146,8 @@ export function HostScreenOverlays({ controller }: { controller: HostScreenContr
           </ActionSheetContent>
         )}
       </BottomDrawer>
+
+      {taskLink.sheet}
 
       {/* Host remove confirmation */}
       <ConfirmModal

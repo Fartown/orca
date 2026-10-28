@@ -28,7 +28,8 @@ import {
   renderWorktreeLineageDescendants,
   type WorktreeItemRowContext
 } from './item-row'
-import { renderWorktreeSectionHeaderRow, type SectionHeaderRowContext } from './SectionHeader'
+import type { SectionHeaderRowContext } from './SectionHeader'
+import { renderSectionOrTaskHeaderRow } from '@/components/local-tasks/LocalTaskSidebarHeader'
 import type { WorktreeRowDragState } from '../drag/row-state'
 
 export type WorktreeVirtualRowContext = {
@@ -157,7 +158,7 @@ export function renderWorktreeVirtualRow(
   }
 
   if (row.type === 'header') {
-    return renderWorktreeSectionHeaderRow({
+    return renderSectionOrTaskHeaderRow({
       ctx: ctx.header,
       row,
       vItem,

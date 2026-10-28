@@ -7,15 +7,20 @@ import {
   matchesLocalTaskQuery
 } from '@/local-tasks/local-task-grouping'
 import { openLocalTaskPage } from '@/local-tasks/local-task-navigation'
-import { useLocalTasksDomain } from '@/local-tasks/local-tasks-domain-store'
+import { localTasksDomainStore, useLocalTasksDomain } from '@/local-tasks/local-tasks-domain-store'
+import {
+  localTaskHostLabelFor,
+  useLocalTaskEndpointLabels
+} from '@/local-tasks/local-task-endpoint-labels'
+import type { LocalTask, LocalTaskProject } from '../../../../shared/local-tasks/local-task-types'
 import type { CmdJQuickAction } from './quick-actions'
 import type { CmdJQuickActionContext } from './quick-action-context'
 
 const SEARCH_RESULT_MAX = 50
 
-// Why: the task library belongs to this desktop; a paired web client cannot reach it.
-function availability(ctx: CmdJQuickActionContext) {
-  if (ctx.runtimeMode !== 'local-desktop') {
+// Why: a browser client reads its paired host's library, so only a window with none opens lacks it.
+function availability(_ctx: CmdJQuickActionContext) {
+  if (localTasksDomainStore.getState().home === null) {
     return { available: false, reason: 'client-action-unsupported' } as const
   }
   return { available: true } as const
@@ -70,45 +75,69 @@ export function getLocalTaskQuickActions(): CmdJQuickAction[] {
 }
 
 /**
- * One action per matching task while the palette has a query, capped at 50. Keywords cover the
- * current ref, the same number under earlier prefixes, and the title (REQ-002, REQ-007).
+ * One action per task the task page's own search matches, the exact ref first, capped at 50.
+ * Keywords cover every ref the task answers to and its title (REQ-002, REQ-007).
  */
+export function buildLocalTaskSearchActions(
+  projects: readonly LocalTaskProject[],
+  tasks: readonly LocalTask[],
+  query: string,
+  hostLabels?: ReadonlyMap<string, string>
+): CmdJQuickAction[] {
+  const trimmed = query.trim()
+  if (!trimmed) {
+    return []
+  }
+  const projectsById = new Map(projects.map((project) => [project.id, project]))
+  const matches = tasks.filter((task) =>
+    matchesLocalTaskQuery(task, projectsById.get(task.projectId), trimmed)
+  )
+  // Why: the task the query names exactly must survive the cap, whatever order the store holds.
+  const exactIds = new Set(
+    matches
+      .filter((task) => isExactLocalTaskRef(task, projectsById.get(task.projectId), trimmed))
+      .map((task) => task.id)
+  )
+  const ranked = [
+    ...matches.filter((task) => exactIds.has(task.id)),
+    ...matches.filter((task) => !exactIds.has(task.id))
+  ]
+  return ranked.slice(0, SEARCH_RESULT_MAX).map((task): CmdJQuickAction => {
+    const project = projectsById.get(task.projectId)
+    const host = localTaskHostLabelFor(hostLabels, task.id)
+    return {
+      // Why the client id: it carries the library, so the same ref on two hosts stays two rows.
+      id: `local-task:${task.id}`,
+      kind: 'action',
+      title: `${task.ref} ${task.title}`,
+      description: translate(
+        'localTasks.quickActions.taskDescription',
+        'Local task · {{project}}',
+        {
+          project: host ? `${project?.name ?? ''} · ${host}` : (project?.name ?? '')
+        }
+      ),
+      icon: ListTodo,
+      // Why the query itself: the palette re-ranks by its own tokens, which cannot tell that a
+      // zero-padded `shop-01` names SHOP-1.
+      verbKeywords: [
+        ...localTaskRefs(task, project),
+        task.title,
+        ...(exactIds.has(task.id) ? [trimmed] : [])
+      ],
+      sourceQuery: trimmed,
+      isAvailable: availability,
+      run: guarded(() => openLocalTaskPage({ taskId: task.id }))
+    }
+  })
+}
+
 export function useLocalTaskSearchActions(query: string): CmdJQuickAction[] {
   const projects = useLocalTasksDomain((state) => state.projects)
   const tasks = useLocalTasksDomain((state) => state.tasks)
-  return useMemo(() => {
-    const trimmed = query.trim()
-    if (!trimmed) {
-      return []
-    }
-    const projectsById = new Map(projects.map((project) => [project.id, project]))
-    const matches = tasks.filter((task) =>
-      matchesLocalTaskQuery(task, projectsById.get(task.projectId), trimmed)
-    )
-    // Why: the task the query names exactly must survive the cap, whatever order the store holds.
-    const exact = matches.filter((task) =>
-      isExactLocalTaskRef(task, projectsById.get(task.projectId), trimmed)
-    )
-    const ranked = [...exact, ...matches.filter((task) => !exact.includes(task))]
-    return ranked.slice(0, SEARCH_RESULT_MAX).map((task): CmdJQuickAction => {
-      const project = projectsById.get(task.projectId)
-      return {
-        id: `local-task:${task.id}`,
-        kind: 'action',
-        title: `${task.ref} ${task.title}`,
-        description: translate(
-          'localTasks.quickActions.taskDescription',
-          'Local task · {{project}}',
-          {
-            project: project?.name ?? ''
-          }
-        ),
-        icon: ListTodo,
-        verbKeywords: [...localTaskRefs(task, project), task.title],
-        sourceQuery: trimmed,
-        isAvailable: availability,
-        run: guarded(() => openLocalTaskPage({ taskId: task.id }))
-      }
-    })
-  }, [projects, tasks, query])
+  const hostLabels = useLocalTaskEndpointLabels()
+  return useMemo(
+    () => buildLocalTaskSearchActions(projects, tasks, query, hostLabels),
+    [projects, tasks, query, hostLabels]
+  )
 }

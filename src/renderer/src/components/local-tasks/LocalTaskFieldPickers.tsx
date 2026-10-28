@@ -149,6 +149,47 @@ export function LocalTaskProjectSelect({
 }
 
 /** Toggle existing labels or type a new one; `suggestions` are labels used anywhere. */
+export function LocalTaskLabelOptions({
+  labels,
+  query,
+  checked,
+  onToggle,
+  canAdd = true
+}: {
+  labels: readonly string[]
+  query: string
+  checked: (label: string) => boolean
+  onToggle: (label: string) => void
+  canAdd?: boolean
+}): React.JSX.Element {
+  const typed = query.trim().slice(0, LOCAL_TASK_LABEL_MAX)
+  return (
+    <CommandGroup>
+      {labels.map((label) => {
+        const selected = checked(label)
+        return (
+          <CommandItem
+            key={label}
+            value={label}
+            disabled={!selected && !canAdd}
+            onSelect={() => onToggle(label)}
+          >
+            <Check className={cn('size-3.5', !selected && 'opacity-0')} />
+            {label}
+          </CommandItem>
+        )
+      })}
+      {typed && !labels.includes(typed) && canAdd ? (
+        <CommandItem value={`+ ${typed}`} onSelect={() => onToggle(typed)}>
+          <Plus className="size-3.5" />
+          {translate('localTasks.picker.createLabel', 'Add label “{{label}}”', { label: typed })}
+        </CommandItem>
+      ) : null}
+    </CommandGroup>
+  )
+}
+
+/** Toggle existing labels or type a new one; `suggestions` are labels used anywhere. */
 export function LocalTaskLabelsPicker({
   value,
   suggestions,
@@ -161,7 +202,6 @@ export function LocalTaskLabelsPicker({
   disabled?: boolean
 }): React.JSX.Element {
   const [query, setQuery] = useState('')
-  const typed = query.trim().slice(0, LOCAL_TASK_LABEL_MAX)
   const options = [...new Set([...value, ...suggestions])]
   const full = value.length >= LOCAL_TASK_LABELS_MAX
   return (
@@ -183,30 +223,13 @@ export function LocalTaskLabelsPicker({
           />
           <CommandList>
             <CommandEmpty>{translate('localTasks.picker.empty', 'Nothing matches.')}</CommandEmpty>
-            <CommandGroup>
-              {options.map((label) => {
-                const checked = value.includes(label)
-                return (
-                  <CommandItem
-                    key={label}
-                    value={label}
-                    disabled={!checked && full}
-                    onSelect={() => onToggle(label)}
-                  >
-                    <Check className={cn('size-3.5', !checked && 'opacity-0')} />
-                    {label}
-                  </CommandItem>
-                )
-              })}
-              {typed && !options.includes(typed) && !full ? (
-                <CommandItem value={`+ ${typed}`} onSelect={() => onToggle(typed)}>
-                  <Plus className="size-3.5" />
-                  {translate('localTasks.picker.createLabel', 'Add label “{{label}}”', {
-                    label: typed
-                  })}
-                </CommandItem>
-              ) : null}
-            </CommandGroup>
+            <LocalTaskLabelOptions
+              labels={options}
+              query={query}
+              checked={(label) => value.includes(label)}
+              onToggle={onToggle}
+              canAdd={!full}
+            />
           </CommandList>
         </Command>
       </PopoverContent>

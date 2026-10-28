@@ -52,6 +52,7 @@ export const LOCAL_TASK_COMMENT_MAX = 20_000
 export const LOCAL_TASK_PROJECT_NAME_MAX = 80
 export const LOCAL_TASK_STATUS_NAME_MAX = 40
 export const LOCAL_TASK_BATCH_MAX = 100
+export const LOCAL_TASK_PROJECT_REPOS_MAX = 50
 
 const PREFIX_PATTERN = /^[A-Z][A-Z0-9]{0,9}$/
 

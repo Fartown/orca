@@ -14,10 +14,13 @@ import type { WorkspaceSource as WorkspaceCreateTelemetrySource } from '../../..
 import type { LinkedWorkItemSummary } from '@/lib/new-workspace'
 import type { ComposerDecisions } from './composer-decisions'
 import type { WorkspaceCreationTargetHint } from '@/lib/project-host-workspace-target'
+import type { Repo } from '../../../../shared/repo-types'
+import { resolveLocalTaskComposerCatalog } from '@/local-tasks/local-task-composer-catalog'
 import { selectWorktreesByRepo } from '@/store/workspace-record-selectors'
 
 export type ComposerStateInput = {
   initialRepoId?: string
+  initialTaskRepo?: Repo
   initialEphemeralVmRecipeId?: string
   initialProjectGroupId?: string
   initialName?: string
@@ -42,6 +45,7 @@ const NEVER_CANCEL_COMPOSER_SUBMIT = (): boolean => false
 export function useComposerTargetStore(options: ComposerStateInput, decisions: ComposerDecisions) {
   const {
     initialRepoId,
+    initialTaskRepo,
     initialEphemeralVmRecipeId,
     initialName = '',
     initialPrompt = '',
@@ -91,13 +95,23 @@ export function useComposerTargetStore(options: ComposerStateInput, decisions: C
     fetchSparsePresets
   } = actions
 
-  const repos = useAppStore((s) => s.repos)
-
+  const catalogRepos = useAppStore((s) => s.repos)
   const projects = useAppStore((s) => s.projects)
 
   const projectGroups = useAppStore((s) => s.projectGroups)
 
-  const projectHostSetups = useAppStore((s) => s.projectHostSetups)
+  const catalogSetups = useAppStore((s) => s.projectHostSetups)
+  const { repos, projectHostSetups } = useMemo(
+    () =>
+      resolveLocalTaskComposerCatalog({
+        catalogRepos,
+        catalogSetups,
+        initialRepoId,
+        initialTaskRepo,
+        initialWorkspaceTarget
+      }),
+    [catalogRepos, catalogSetups, initialRepoId, initialTaskRepo, initialWorkspaceTarget]
+  )
 
   const activeRepoId = useAppStore((s) => s.activeRepoId)
 

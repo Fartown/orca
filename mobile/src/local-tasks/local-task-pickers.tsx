@@ -68,7 +68,7 @@ export function LocalTaskPriorityPicker(props: {
 
 const NO_PARENT = ''
 
-/** Top-level tasks of the same project; the desktop refuses anything else with parent_invalid. */
+/** Tasks of the same project at any level, the task and its own descendants left out. */
 export function LocalTaskParentPicker(props: {
   visible: boolean
   candidates: readonly LocalTask[]

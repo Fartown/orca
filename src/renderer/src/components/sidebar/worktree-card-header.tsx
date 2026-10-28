@@ -14,6 +14,7 @@ import type { WorktreeCardPresentation } from './worktree-card-presentation'
 import { WorktreeCardSshHostControl } from './WorktreeCardSshHostControl'
 import { WorktreeTitleInlineRename } from './WorktreeTitleInlineRename'
 import type { WorktreeCardController } from './use-worktree-card-controller'
+import { LocalTaskWorkspaceChip } from '@/components/local-tasks/LocalTaskWorkspaceChip'
 
 // Why: pinned and compact inline project cues share this chip so both read as the same affordance.
 function RepoIdentityChip({
@@ -268,6 +269,7 @@ export function WorktreeCardHeader({
           </Tooltip>
         )}
 
+        <LocalTaskWorkspaceChip worktree={worktree} />
         {showTitleRowIndicators && titleRowIndicators}
       </div>
 

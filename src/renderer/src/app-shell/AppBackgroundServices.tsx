@@ -9,6 +9,7 @@ import { MacosTccPromptNoticeHost } from '../hooks/MacosTccPromptNoticeHost'
 import { useAppStore } from '../store'
 import { GoalDomainSyncGate } from '../goals/GoalDomainSyncGate'
 import { LocalTasksSyncGate } from '../local-tasks/LocalTasksSyncGate'
+import { LocalTaskLinkMaintenance } from '../local-tasks/LocalTaskLinkMaintenance'
 import { StructuredAgentSessionAttentionBridge } from '../components/native-chat/StructuredAgentSessionAttentionBridge'
 import { StructuredAgentSessionStatusBridge } from '../components/native-chat/StructuredAgentSessionStatusBridge'
 
@@ -29,6 +30,8 @@ export function AppBackgroundServices(): React.JSX.Element {
       <WorkspacePortScanner enabled={workspaceSessionReady} />
       <GoalDomainSyncGate />
       <LocalTasksSyncGate />
+      {/* Why: start-work linking, pane-key identity and PR-merged rules run off this window's state. */}
+      <LocalTaskLinkMaintenance />
       {/* Why: plugin language-pack discovery must not re-render the App shell. */}
       <MacosTccPromptNoticeHost />
       {/* Why: leaf-mounted retention sync keeps agent-status subscriptions out of the App render tree. */}

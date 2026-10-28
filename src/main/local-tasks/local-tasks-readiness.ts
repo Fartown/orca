@@ -4,11 +4,7 @@ import type {
 } from '../../shared/local-tasks/local-task-types'
 import type { LocalTasksService } from './local-tasks-service'
 
-export const LOCAL_TASKS_UNAVAILABLE_CODE = 'local_tasks_unavailable'
-
 export class LocalTasksUnavailableError extends Error {
-  readonly code = LOCAL_TASKS_UNAVAILABLE_CODE
-
   constructor(readonly state: LocalTasksHostState) {
     super(
       state === 'not-task-host'
@@ -20,8 +16,9 @@ export class LocalTasksUnavailableError extends Error {
 }
 
 /**
- * One per process. Servers (orcad, `orca serve`) never register, so they stay `not-task-host`
- * even though the shared RPC registry lists the `localTasks.*` methods there too.
+ * One per process. Every Orca that keeps a profile registers its library: the desktop app,
+ * `orca serve` and orcad (D-008). Only orcad's browser sidecar never does, so it stays
+ * `not-task-host` although the shared RPC registry lists the `localTasks.*` methods there too.
  */
 export class LocalTasksReadinessRegistry {
   private service: LocalTasksService | null = null
@@ -52,7 +49,8 @@ export class LocalTasksReadinessRegistry {
       state: this.state,
       reason: this.reason,
       revision: this.service?.revision() ?? 0,
-      taskHostId: this.service?.taskHostId() ?? null
+      taskHostId: this.service?.taskHostId() ?? null,
+      inProgressCount: this.service?.inProgressCount()
     }
   }
 

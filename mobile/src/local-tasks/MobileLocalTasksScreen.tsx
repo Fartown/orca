@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { ActivityIndicator, Pressable, Text, View } from 'react-native'
 import { useLocalSearchParams } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -9,11 +9,18 @@ import { firstParam } from '../navigation/route-param-reader'
 import { colors } from '../theme/mobile-theme'
 import { useHostClient } from '../transport/host-client-hooks'
 import { loadHosts } from '../transport/host-store'
-import { localTaskHostMachineName, resolveLocalTasksAccess } from './local-tasks-access'
+import {
+  localTaskEndpointFor,
+  SELF_LOCAL_TASK_ENDPOINT,
+  type LocalTaskEndpoint,
+  type LocalTaskSite
+} from './local-task-endpoint'
+import { localTaskHostMachineName } from './local-tasks-access'
 import { localTasksScreenState } from './local-tasks-screen-state'
 import { localTasksCopy } from './local-tasks-copy'
 import { LocalTasksLibraryScreen } from './local-tasks-library-screen'
 import { localTaskStyles } from './local-tasks-styles'
+import { useLocalTaskEndpoints } from './use-local-task-endpoints'
 import { useLocalTasksLibrary } from './use-local-tasks-library'
 
 function useHostMachineName(hostId: string | undefined): string {
@@ -34,35 +41,59 @@ function useHostMachineName(hostId: string | undefined): string {
 }
 
 /**
- * The local task library of one paired desktop. Drawn by the page, so every prompt is a drawer
- * (Alert is a no-op on React Native Web) and Back is the handoff's.
+ * The task libraries one paired host reaches: its own, and those of the servers it relays to
+ * (D-008), one shown at a time. Drawn by the page, so every prompt is a drawer (Alert is a no-op on
+ * React Native Web) and Back is the handoff's.
  */
 export function MobileLocalTasksScreen() {
   const copy = localTasksCopy()
+  const insets = useSafeAreaInsets()
   const router = useRouteHandoff()
-  const params = useLocalSearchParams<{ hostId?: string | string[] }>()
+  const params = useLocalSearchParams<{
+    hostId?: string | string[]
+    view?: string | string[]
+    taskId?: string | string[]
+    executionHost?: string | string[]
+  }>()
   const hostId = firstParam(params.hostId)
   const { client, state: connState } = useHostClient(hostId)
   const gates = useOptionalHostProtocolGates()
-  const machineName = useHostMachineName(hostId) || (hostId ?? '')
-  const access = resolveLocalTasksAccess({
+  const machineName = useHostMachineName(hostId)
+  const routeExecutionHost = firstParam(params.executionHost)
+  // Null until the user switches: the route's library, and its focus, until then.
+  const [chosen, setChosen] = useState<LocalTaskEndpoint | null>(null)
+  // Why memoized: hooks below key their reads on the endpoint's identity.
+  const active = useMemo(
+    () => chosen ?? localTaskEndpointFor(routeExecutionHost),
+    [chosen, routeExecutionHost]
+  )
+  const { choices, active: reach } = useLocalTaskEndpoints({
+    client,
     connState,
-    statusPending: gates?.statusPending ?? true,
-    statusReadable: gates?.statusReadable ?? false,
-    capabilities: gates?.hostCapabilities ?? []
+    gates,
+    machineName,
+    active
   })
-  const library = useLocalTasksLibrary(client, access === 'ready')
+  const access = reach.access
+  const library = useLocalTasksLibrary(
+    reach.client,
+    access === 'ready',
+    `${hostId ?? ''}|${active.key}`
+  )
   const exit = () => router.back()
+  const showOwn = active.executionHost ? () => setChosen(SELF_LOCAL_TASK_ENDPOINT) : undefined
 
   const screen = localTasksScreenState(copy, {
     access,
-    machineName,
+    machineName: reach.accessLabel,
     status: library.status,
-    ready: access === 'ready' && client !== null && library.api !== null,
+    ready: access === 'ready' && reach.client !== null && library.api !== null,
     loaded: library.loaded,
-    error: library.error
+    error: library.error,
+    authFailed: connState === 'auth-failed',
+    streamEnded: library.streamEnded
   })
-  if (screen.kind === 'gate' || !client || !library.api) {
+  if (screen.kind === 'gate' || !library.api) {
     return (
       <LocalTasksGate
         title={screen.kind === 'gate' ? screen.title : copy.checking}
@@ -70,19 +101,64 @@ export function MobileLocalTasksScreen() {
         details={screen.kind === 'gate' ? screen.details : undefined}
         busy={screen.kind === 'gate' ? screen.busy : true}
         onRetry={screen.kind === 'gate' && screen.retry ? () => library.reload() : undefined}
+        ownLabel={showOwn && machineName ? copy.showHostTasks(machineName) : undefined}
+        onShowOwn={showOwn}
         onBack={exit}
       />
     )
   }
+  const canRead = access === 'ready' && reach.client !== null
+  const action =
+    canRead && library.error
+      ? library.retryFailed
+      : canRead && library.streamEnded
+        ? library.resubscribe
+        : null
+  const actionLabel = library.error ? copy.retry : copy.reconnect
+  const site: LocalTaskSite = {
+    hostId: hostId ?? '',
+    pairedClient: client,
+    endpoint: active,
+    client: reach.client,
+    connState: reach.connState,
+    capabilities: reach.capabilities,
+    label: reach.label
+  }
   return (
-    <LocalTasksLibraryScreen
-      client={client}
-      api={library.api}
-      library={library}
-      readOnly={screen.readOnly}
-      notice={screen.notice}
-      onExit={exit}
-    />
+    <View style={localTaskStyles.screen}>
+      <LocalTasksLibraryScreen
+        key={`${hostId ?? ''}|${active.key}`}
+        site={site}
+        hosts={choices}
+        onSwitchHost={setChosen}
+        api={library.api}
+        library={library}
+        readOnly={screen.readOnly}
+        canRead={canRead}
+        onExit={exit}
+        onNavigate={(href) => router.push(href)}
+        initialView={
+          chosen === null && firstParam(params.view) === 'attention' ? 'attention' : undefined
+        }
+        initialTaskId={chosen === null ? firstParam(params.taskId) : undefined}
+      />
+      {screen.notice ? (
+        <View style={[localTaskStyles.notice, { marginBottom: insets.bottom }]}>
+          <Text style={localTaskStyles.noticeText}>{screen.notice}</Text>
+          {action ? (
+            <Pressable
+              testID="local-tasks-notice-action"
+              style={localTaskStyles.secondaryButton}
+              accessibilityRole="button"
+              accessibilityLabel={actionLabel}
+              onPress={action}
+            >
+              <Text style={localTaskStyles.secondaryButtonText}>{actionLabel}</Text>
+            </Pressable>
+          ) : null}
+        </View>
+      ) : null}
+    </View>
   )
 }
 
@@ -92,6 +168,9 @@ function LocalTasksGate(props: {
   details?: string
   busy?: boolean
   onRetry?: () => void
+  /** Back to the paired host's own library from a server's that cannot open. */
+  ownLabel?: string
+  onShowOwn?: () => void
   onBack: () => void
 }) {
   const copy = localTasksCopy()
@@ -140,6 +219,15 @@ function LocalTasksGate(props: {
             accessibilityRole="button"
           >
             <Text style={localTaskStyles.secondaryButtonText}>{copy.retry}</Text>
+          </Pressable>
+        ) : null}
+        {props.onShowOwn && props.ownLabel ? (
+          <Pressable
+            style={localTaskStyles.secondaryButton}
+            onPress={props.onShowOwn}
+            accessibilityRole="button"
+          >
+            <Text style={localTaskStyles.secondaryButtonText}>{props.ownLabel}</Text>
           </Pressable>
         ) : null}
       </View>

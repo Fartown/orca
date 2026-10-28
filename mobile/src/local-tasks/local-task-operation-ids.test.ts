@@ -24,8 +24,10 @@ const createdTask = {
 /** A desktop that drops the first answer after the frame left, then answers the resend. */
 function flakyDesktop(replies: (() => Promise<RpcResponse>)[]) {
   const ids: unknown[] = []
+  const methods: string[] = []
   const port = {
-    sendRequest: (_method: string, params?: unknown): Promise<RpcResponse> => {
+    sendRequest: (method: string, params?: unknown): Promise<RpcResponse> => {
+      methods.push(method)
       ids.push(
         typeof params === 'object' && params !== null
           ? Reflect.get(params, 'clientOperationId')
@@ -38,7 +40,7 @@ function flakyDesktop(replies: (() => Promise<RpcResponse>)[]) {
       return next()
     }
   }
-  return { ids, api: createLocalTasksApi(port) }
+  return { ids, methods, api: createLocalTasksApi(port) }
 }
 
 const lost = () => Promise.reject(markRpcDeliveryUnknown(new Error('socket closed')))
@@ -76,5 +78,19 @@ describe('clientOperationId across resends', () => {
     await sendLocalTaskWrite(operation, payload, desktop.api.createTask)
     await sendLocalTaskWrite(operation, { ...payload, title: 'Export TSV' }, desktop.api.createTask)
     expect(desktop.ids[1]).not.toBe(desktop.ids[0])
+  })
+
+  it('sends project deletion through the existing desktop RPC and accepts its write reply', async () => {
+    const desktop = flakyDesktop([
+      () => Promise.resolve({ id: 'r', ok: true, result: { ok: true } })
+    ])
+    const result = await sendLocalTaskWrite(
+      createLocalTaskOperationIds(),
+      { projectId: 'p1' },
+      desktop.api.removeProject
+    )
+    expect(result.kind).toBe('ok')
+    expect(desktop.methods).toEqual(['localTasks.projects.remove'])
+    expect(desktop.ids[0]).toEqual(expect.any(String))
   })
 })

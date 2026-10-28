@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import type { LocalTaskStatusCategory } from '../../../src/shared/local-tasks/local-task-model'
 import type { LocalTask, LocalTaskProject } from '../../../src/shared/local-tasks/local-task-types'
-import { buildLocalTaskGroups, localTaskSegmentCounts } from './local-task-list-projection'
+import {
+  buildLocalTaskGroups,
+  localTaskSegmentCounts,
+  unfoldedLocalTaskLines
+} from './local-task-list-projection'
 
 const categories: LocalTaskStatusCategory[] = [
   'backlog',
@@ -16,8 +20,8 @@ const project: LocalTaskProject = {
   name: 'Shop',
   prefix: 'SHOP',
   aliases: [],
-  orcaProjectId: 'orca-shop',
-  defaultRepoId: null,
+  repos: ['orca-shop'],
+  defaultRepoId: 'orca-shop',
   lastExecutionHostId: null,
   rules: { startMovesToInProgress: true, prMergedCompletes: true },
   statuses: [
@@ -102,7 +106,11 @@ describe('local task counts (REQ-006)', () => {
       completed: ['SHOP-7']
     })
     const parent = groups.find((group) => group.key === 'started')?.rows[0]
-    expect(parent?.subtasks.map((child) => child.ref)).toEqual(['SHOP-13', 'SHOP-14', 'SHOP-15'])
+    expect(parent?.subtasks.map((child) => child.task.ref)).toEqual([
+      'SHOP-13',
+      'SHOP-14',
+      'SHOP-15'
+    ])
     expect([parent?.subtaskDone, parent?.subtaskTotal]).toEqual([0, 3])
   })
 
@@ -118,7 +126,10 @@ describe('local task counts (REQ-006)', () => {
     expect(
       list
         .flatMap((group) =>
-          group.rows.flatMap((row) => [row.task.ref, ...row.subtasks.map((child) => child.ref)])
+          group.rows.flatMap((row) => [
+            row.task.ref,
+            ...row.subtasks.map((child) => child.task.ref)
+          ])
         )
         .sort()
     ).toEqual(['SHOP-10', 'SHOP-12', 'SHOP-13', 'SHOP-14', 'SHOP-17'])
@@ -152,5 +163,34 @@ describe('local task counts (REQ-006)', () => {
       keepEmpty: true
     })
     expect(board.find((column) => column.key === 'category:started')?.rows).toHaveLength(5)
+  })
+
+  it('nests every level under its root row, indented, and folding a level hides all below it', () => {
+    // SHOP-12 › SHOP-13 › SHOP-20 › SHOP-21, beside SHOP-14 and SHOP-15 (D-008: any depth).
+    const deep = [...tasks, task(20, 'started', 'SHOP-13'), task(21, 'unstarted', 'SHOP-20')]
+    const groups = buildLocalTaskGroups({
+      tasks: deep,
+      projects: [project],
+      projectId: 'shop',
+      segment: 'all',
+      nestSubtasks: true,
+      keepEmpty: false
+    })
+    const root = groups.flatMap((group) => group.rows).find((row) => row.task.ref === 'SHOP-12')
+    const lines = root?.subtasks ?? []
+    expect(lines.map((line) => [line.task.ref, line.depth, line.childCount])).toEqual([
+      ['SHOP-13', 1, 1],
+      ['SHOP-20', 2, 1],
+      ['SHOP-21', 3, 0],
+      ['SHOP-14', 1, 0],
+      ['SHOP-15', 1, 0]
+    ])
+    // Deeper tasks ride under their root, never as rows of their own.
+    expect(groups.flatMap((group) => group.rows.map((row) => row.task.ref))).not.toContain(
+      'SHOP-20'
+    )
+    expect(
+      unfoldedLocalTaskLines(lines, new Set(['SHOP-13'])).map((line) => line.task.ref)
+    ).toEqual(['SHOP-13', 'SHOP-14', 'SHOP-15'])
   })
 })

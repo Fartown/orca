@@ -8,6 +8,7 @@ import {
   LOCAL_TASK_LABEL_MAX,
   LOCAL_TASK_LABELS_MAX,
   LOCAL_TASK_PROJECT_NAME_MAX,
+  LOCAL_TASK_PROJECT_REPOS_MAX,
   LOCAL_TASK_STATUS_CATEGORIES,
   LOCAL_TASK_STATUS_COLORS,
   LOCAL_TASK_STATUS_NAME_MAX,
@@ -32,6 +33,11 @@ const projectName = z.string().trim().min(1).max(LOCAL_TASK_PROJECT_NAME_MAX)
 const statusName = z.string().trim().min(1).max(LOCAL_TASK_STATUS_NAME_MAX)
 const prefix = z.string().trim().min(1).max(10)
 const hostId = z.string().min(1).max(512)
+/** Orca project ids on the library's host; order is link order, duplicates are refused. */
+const repos = z
+  .array(id)
+  .max(LOCAL_TASK_PROJECT_REPOS_MAX)
+  .refine((values) => new Set(values).size === values.length, { message: 'Duplicate repo' })
 
 export const LocalTasksUnsubscribeChangesParams = z.object({ subscriptionId: id })
 
@@ -39,7 +45,9 @@ export const LocalTasksProjectsCreateParams = z.object({
   clientOperationId,
   name: projectName,
   prefix,
-  orcaProjectId: id,
+  /** Omit or `[]` for a project without repos. */
+  repos: repos.optional(),
+  /** One of `repos`; defaults to the first. */
   defaultRepoId: id.nullable().optional(),
   lastExecutionHostId: hostId.nullable().optional(),
   /** Translated default status names from the creating client, keyed by category. */
@@ -58,6 +66,9 @@ export const LocalTasksProjectsUpdateParams = z.object({
       prMergedCompletes: z.boolean().optional()
     })
     .optional(),
+  /** The whole new list; the default stays when still listed, else moves to the first. */
+  repos: repos.optional(),
+  /** One of the resulting `repos`, or null only when that list is empty. */
   defaultRepoId: id.nullable().optional(),
   lastExecutionHostId: hostId.nullable().optional()
 })
@@ -142,6 +153,7 @@ export const LocalTasksTasksBatchUpdateParams = z.object({
   })
 })
 
+/** Moves the task's whole subtree; the moved task becomes top-level in the target project. */
 export const LocalTasksTasksMoveParams = z.object({
   clientOperationId,
   taskId: id,

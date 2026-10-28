@@ -26,8 +26,7 @@ export class LocalTasksDatabase {
   private constructor(
     readonly path: string,
     private readonly database: SyncDatabase,
-    readonly readOnly: boolean,
-    private readonly persistent: boolean
+    readonly readOnly: boolean
   ) {}
 
   static open(profileId: string, userDataPath?: string): LocalTasksDatabase {
@@ -51,7 +50,7 @@ export class LocalTasksDatabase {
         probe.close()
         transferred = true
         const readOnly = new SyncDatabase(path, { readonly: true, fileMustExist: true })
-        return new LocalTasksDatabase(path, readOnly, true, persistent)
+        return new LocalTasksDatabase(path, readOnly, true)
       }
       probe.pragma('journal_mode = WAL')
       probe.pragma('synchronous = NORMAL')
@@ -60,11 +59,23 @@ export class LocalTasksDatabase {
       if (Number(probe.pragma('foreign_keys', { simple: true })) !== 1) {
         throw new Error('local tasks: foreign key enforcement could not be enabled')
       }
+      if (Number(probe.pragma('auto_vacuum', { simple: true })) !== 2) {
+        probe.pragma('auto_vacuum = INCREMENTAL')
+        if (stored > 0) {
+          probe.exec('VACUUM')
+        }
+      }
       if (stored < LOCAL_TASKS_SCHEMA_VERSION) {
+        // Why off: a rebuilt parent table must not cascade into its children; checked before COMMIT.
+        probe.pragma('foreign_keys = OFF')
         runImmediate(probe, () => {
           applyLocalTasksSchema(probe, stored)
+          if (probe.prepare('PRAGMA foreign_key_check').all().length > 0) {
+            throw new Error('local tasks: schema upgrade left dangling references')
+          }
           probe.pragma(`user_version = ${LOCAL_TASKS_SCHEMA_VERSION}`)
         })
+        probe.pragma('foreign_keys = ON')
       }
       runImmediate(probe, () => {
         probe
@@ -78,7 +89,7 @@ export class LocalTasksDatabase {
         hardenSqliteDatabaseFiles(path)
       }
       transferred = true
-      return new LocalTasksDatabase(path, probe, false, persistent)
+      return new LocalTasksDatabase(path, probe, false)
     } finally {
       if (!transferred) {
         probe.close()
@@ -116,9 +127,6 @@ export class LocalTasksDatabase {
         return value
       })
       this.pendingScopes = null
-      if (this.persistent) {
-        hardenSqliteDatabaseFiles(this.path)
-      }
       if (scopes.size > 0) {
         this.notify({ revision: this.revision(), scopes: [...scopes] })
       }
@@ -153,9 +161,6 @@ export class LocalTasksDatabase {
       return
     }
     this.database.close()
-    if (this.persistent && !this.readOnly) {
-      hardenSqliteDatabaseFiles(this.path)
-    }
     this.commitListeners.clear()
     this.closed = true
   }

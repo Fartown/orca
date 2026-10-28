@@ -7,13 +7,23 @@ import type {
 } from '../../../src/shared/local-tasks/local-task-types'
 import { colors, radii, spacing, typography } from '../theme/mobile-theme'
 import { formatLocalTaskAgo, localTasksCopy } from './local-tasks-copy'
-import type { LocalTaskListGroup, LocalTaskListRow } from './local-task-list-projection'
+import {
+  localTaskPathFromRoot,
+  type LocalTaskListGroup,
+  type LocalTaskListRow
+} from './local-task-list-projection'
 import { localTaskStyles } from './local-tasks-styles'
 import { LocalTaskPriorityIcon, LocalTaskStatusIcon } from './local-tasks-visuals'
 
 const COLUMN_GAP = spacing.md
 // Why the peek: the next column's edge is what tells a phone user the board scrolls sideways.
 const NEXT_COLUMN_PEEK = 48
+
+/** "SHOP-1 › SHOP-4 Parent title": every ancestor's ref, root first, then the parent's title. */
+export function localTaskPathLabel(ancestors: readonly LocalTask[]): string {
+  const parent = ancestors[ancestors.length - 1]
+  return parent ? `${ancestors.map((ancestor) => ancestor.ref).join(' › ')} ${parent.title}` : ''
+}
 
 type Props = {
   groups: LocalTaskListGroup[]
@@ -74,7 +84,7 @@ export function LocalTasksBoardView(props: Props) {
               <LocalTaskBoardCard
                 key={row.task.id}
                 row={row}
-                parent={row.task.parentId ? (props.tasksById.get(row.task.parentId) ?? null) : null}
+                ancestors={localTaskPathFromRoot(row.task, props.tasksById)}
                 status={group.status}
                 now={props.now}
                 onOpen={props.onOpen}
@@ -100,7 +110,8 @@ export function LocalTasksBoardView(props: Props) {
 
 function LocalTaskBoardCard(props: {
   row: LocalTaskListRow
-  parent: LocalTask | null
+  /** Root first: the card reads "SHOP-1 › SHOP-4 › parent title" above its own title. */
+  ancestors: LocalTask[]
   status: LocalTaskStatusDef | null
   now: number
   onOpen: (taskId: string) => void
@@ -119,11 +130,11 @@ function LocalTaskBoardCard(props: {
         <View style={localTaskStyles.topBarSpacer} />
         <LocalTaskPriorityIcon priority={task.priority} />
       </View>
-      {props.parent ? (
+      {props.ancestors.length > 0 ? (
         <View style={styles.parentHint}>
           <CornerDownRight size={12} color={colors.textMuted} />
           <Text style={localTaskStyles.meta} numberOfLines={1}>
-            {props.parent.ref} {props.parent.title}
+            {localTaskPathLabel(props.ancestors)}
           </Text>
         </View>
       ) : null}

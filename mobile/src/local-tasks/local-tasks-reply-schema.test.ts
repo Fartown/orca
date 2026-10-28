@@ -44,8 +44,8 @@ const project = {
   name: 'Shop',
   prefix: 'SHOP',
   aliases: ['MALL'],
-  orcaProjectId: 'orca-1',
-  defaultRepoId: null,
+  repos: ['orca-1'],
+  defaultRepoId: 'orca-1',
   lastExecutionHostId: null,
   rules: { startMovesToInProgress: true, prMergedCompletes: false },
   statuses: [
@@ -109,7 +109,7 @@ describe('local task reply readers', () => {
     expect(read?.aliases).toEqual(['MALL'])
   })
 
-  it('drops an activity kind it cannot describe and keeps an unknown source as other', async () => {
+  it('keeps supported workspace activity, drops unknown kinds, and normalizes unknown sources', async () => {
     const event = {
       id: 'e1',
       taskId: 't1',
@@ -124,12 +124,14 @@ describe('local task reply readers', () => {
       events: [
         event,
         { ...event, id: 'e2', kind: 'workspace-linked' },
-        { ...event, id: 'e3', source: 'robot' }
+        { ...event, id: 'e3', source: 'robot' },
+        { ...event, id: 'e4', kind: 'future-event' }
       ]
     })
     const events = await runRpcOperation(port, localTaskEventsRead, { taskId: 't1' })
     expect(events.map((entry) => [entry.id, entry.source])).toEqual([
       ['e1', 'mobile'],
+      ['e2', 'mobile'],
       ['e3', 'cli']
     ])
   })

@@ -1,16 +1,13 @@
 import { LOCAL_TASKS_RUNTIME_CAPABILITY } from '../../../src/shared/local-tasks/local-tasks-capability'
 import type { ConnectionState, HostProfile } from '../transport/types'
-import type { UnvalidatedRpcRequestPort } from '../transport/unvalidated-rpc-request-port'
-import { createLocalTasksApi } from './local-tasks-api'
-import { countLocalTasksInCategory } from './local-task-list-projection'
 
 /**
- * Whether this page may talk to the host's task library at all.
+ * Whether this page may talk to a host's task library at all.
  *
- * Only a desktop that advertised `local-tasks.v1` in `status.get` is a task host: an older desktop
- * and every server (orcad, `orca serve`) leave it out, and none of them is sent a `localTasks.*`
- * request. A host out of contact is "not open" rather than "unsupported" — the phone does not
- * show a cached library for it, because a cached one is stale by definition.
+ * Every Orca keeps its own library and advertises `local-tasks.v1` in `status.get` (D-008); an older
+ * one leaves it out and is never sent a `localTasks.*` request. A host out of contact is "not open"
+ * rather than "unsupported" — the phone does not show a cached library for it, because a cached one
+ * is stale by definition.
  */
 export type LocalTasksAccess = 'checking' | 'offline' | 'unsupported' | 'unreadable' | 'ready'
 
@@ -36,28 +33,11 @@ export function resolveLocalTasksAccess(input: {
   if (hostAdvertisesLocalTasks(input.capabilities)) {
     return 'ready'
   }
-  // Why two answers: an unread status is "cannot tell", never "this desktop is too old".
+  // Why two answers: an unread status is "cannot tell", never "this Orca is too old".
   return input.statusReadable ? 'unsupported' : 'unreadable'
 }
 
-/** The name the desktop calls itself, which is what "{name}'s Orca is not open" means. */
+/** The name the host calls itself, which is what "{name}'s Orca is not open" means. */
 export function localTaskHostMachineName(host: Pick<HostProfile, 'name' | 'lastKnownMachineName'>) {
   return host.lastKnownMachineName ?? host.name
-}
-
-/**
- * The home card's one number: tasks in the Started category on this host.
- *
- * Null, and no request at all, when the host did not advertise the capability.
- */
-export async function readLocalTasksInProgress(
-  client: UnvalidatedRpcRequestPort,
-  capabilities: readonly string[] | undefined
-): Promise<number | null> {
-  if (!hostAdvertisesLocalTasks(capabilities)) {
-    return null
-  }
-  const api = createLocalTasksApi(client)
-  const [projects, tasks] = await Promise.all([api.projects(), api.tasks()])
-  return countLocalTasksInCategory(tasks, projects, 'started')
 }

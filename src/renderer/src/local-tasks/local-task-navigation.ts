@@ -1,6 +1,7 @@
 import { useAppStore } from '@/store'
 import { activateLocalTaskSource } from './local-task-source-activation'
 import { localTaskPageStore } from './local-task-page-store'
+import { localTasksDomainStore } from './local-tasks-domain-store'
 
 /** Opens the task page on the Local source; `taskId` lands on that task's detail. */
 export function openLocalTaskPage(
@@ -15,7 +16,12 @@ export function openLocalTaskPage(
   }
   if (intent.create) {
     page.openDetail(null)
-    page.openCreate({ projectId: page.scopeProjectId })
+    const scopeProjectId = localTasksDomainStore
+      .getState()
+      .projects.some((project) => project.id === page.scopeProjectId)
+      ? page.scopeProjectId
+      : null
+    page.openCreate({ projectId: scopeProjectId })
   }
   if (intent.focusSearch) {
     page.openDetail(null)

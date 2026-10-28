@@ -1,4 +1,3 @@
-import type { LocalTaskEventSource } from '../../../../shared/local-tasks/local-task-types'
 import {
   LocalTasksEventsAddCommentParams,
   LocalTasksEventsEditCommentParams,
@@ -28,21 +27,13 @@ import {
   streamLocalTaskChanges
 } from '../../../local-tasks/local-tasks-change-subscription'
 import { localTasksReadiness } from '../../../local-tasks/local-tasks-readiness'
+import { sourceOf } from '../../../local-tasks/local-tasks-rpc-caller'
 import type { LocalTasksService } from '../../../local-tasks/local-tasks-service'
-import { defineMethod, defineStreamingMethod, type RpcContext } from '../core'
+import { defineMethod, defineStreamingMethod } from '../core'
+import { LOCAL_TASK_LINK_METHODS } from './local-task-link-methods'
 
 function service(): LocalTasksService {
   return localTasksReadiness.requireService()
-}
-
-/** Activity names who made a change; the transport, never the params, says who that is. */
-export function sourceOf(context: Pick<RpcContext, 'clientKind' | 'caller'>): LocalTaskEventSource {
-  if (context.clientKind === 'mobile') {
-    return 'mobile'
-  }
-  return context.caller?.kind === 'desktop' || context.caller?.kind === 'paired-device'
-    ? 'desktop'
-    : 'cli'
 }
 
 export const LOCAL_TASK_METHODS = [
@@ -195,5 +186,6 @@ export const LOCAL_TASK_METHODS = [
     name: 'localTasks.preferences.set',
     params: LocalTasksPreferencesSetParams,
     handler: (params) => service().setPreference(params.key, params.value)
-  })
+  }),
+  ...LOCAL_TASK_LINK_METHODS
 ]
