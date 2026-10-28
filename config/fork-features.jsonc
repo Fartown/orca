@@ -1352,6 +1352,8 @@
       "goal": "文件在哪台电脑就由那台电脑的 Orca 在局域网提供链接，本机文件与 SSH 主机上的文件走同一套规则",
       "journal": "docs/issue/自托管产物后端/journal.md",
       "dependsOn": [
+        "src/renderer/src/components/native-chat/native-chat-visual-owner.tsx",
+        "src/renderer/src/runtime/runtime-client-target.ts",
         "src/cli/dispatch.ts",
         "src/cli/format.ts",
         "src/cli/remote-selection-flag-rejection.ts",
@@ -1468,12 +1470,22 @@
         {
           "file": "src/renderer/src/components/editor/EditorPanelHeader.tsx",
           "mustContain": "EditorFileLanShareButton",
-          "why": "Markdown editor share entry"
+          "why": "Editor share entry for every shareable document (Markdown and HTML); the cloud button upstream added for HTML can only fail here"
         },
         {
           "file": "src/renderer/src/components/editor/EditorPanelHeader.test.tsx",
           "mustContain": "LanArtifactShareEntryButtons",
           "why": "header test mocks the LAN share entry"
+        },
+        {
+          "file": "src/renderer/src/components/native-chat/NativeChatInlineVisual.tsx",
+          "mustContain": "NativeChatVisualLanShareButton",
+          "why": "A chat reply's visual shares on the local network from the computer running the chat, not through the cloud"
+        },
+        {
+          "file": "src/renderer/src/components/native-chat/NativeChatInlineVisual.open-as-file.test.tsx",
+          "mustContain": "'artifactShare.lookup'",
+          "why": "The visual's share asks its chat host on the local network and never calls artifacts.*"
         },
         {
           "file": "src/renderer/src/components/browser-pane/assemble-chrome/browser-page-toolbar.tsx",
@@ -1661,7 +1673,7 @@
         "src/main/runtime/construction/runtime-composition-parity.test.ts"
       ],
       "checks": [
-        "pnpm exec vitest run --config config/vitest.config.ts src/main/self-hosted-artifacts src/cli/self-hosted-artifacts src/renderer/src/components/self-hosted-artifacts src/renderer/src/components/editor/EditorPanelHeader.test.tsx src/renderer/src/hooks/useSettingsNavigationMetadata.test.ts src/cli/index.test.ts src/renderer/src/components/browser-pane/workspace-doc src/renderer/src/components/settings/OrcaAccountSettingsPane.test.tsx src/renderer/src/components/unexpected-signout",
+        "pnpm exec vitest run --config config/vitest.config.ts src/main/self-hosted-artifacts src/cli/self-hosted-artifacts src/renderer/src/components/self-hosted-artifacts src/renderer/src/components/editor/EditorPanelHeader.test.tsx src/renderer/src/components/native-chat/NativeChatInlineVisual.open-as-file.test.tsx src/renderer/src/hooks/useSettingsNavigationMetadata.test.ts src/cli/index.test.ts src/renderer/src/components/browser-pane/workspace-doc src/renderer/src/components/settings/OrcaAccountSettingsPane.test.tsx src/renderer/src/components/unexpected-signout",
         "pnpm run build:artifact-share-viewer",
         "ORCA_BACKGROUND_LAUNCH=1 pnpm exec vitest run --config config/vitest.config.ts src/shared/host-operation-ownership.test.ts src/main/startup/main-process-ready-duplicate-pty-repair.test.ts src/main/runtime/construction/runtime-composition-parity.test.ts"
       ]

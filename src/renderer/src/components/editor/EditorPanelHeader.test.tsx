@@ -52,7 +52,7 @@ vi.mock('@/components/artifacts/ArtifactPublishButton', () => ({
 }))
 
 vi.mock('@/components/self-hosted-artifacts/share-button/LanArtifactShareEntryButtons', () => ({
-  EditorFileLanShareButton: () => <button data-artifact-publish />
+  EditorFileLanShareButton: () => <button data-lan-share />
 }))
 
 vi.mock('./diff-navigation-context', () => ({
@@ -145,28 +145,35 @@ describe('EditorPanelHeader', () => {
     expect(html).toContain('aria-label="Next change"')
   })
 
-  it('offers artifact sharing on non-diff surfaces given a shareable document', () => {
+  it.each([false, true])(
+    'shares a shareable document on the local network, never through the cloud (markdown: %s)',
+    (isMarkdown) => {
+      const html = renderHeader({
+        isDiffSurface: false,
+        isMarkdown,
+        createArtifactRequest: vi.fn()
+      })
+      expect(html).toContain('data-lan-share="true"')
+      // This fork never registers the cloud artifact service, so its button can only fail.
+      expect(html).not.toContain('data-artifact-publish')
+    }
+  )
+
+  it('offers no share entry on diff surfaces or for unshareable documents', () => {
     const createRequest = vi.fn()
 
-    expect(
-      renderHeader({
-        isDiffSurface: false,
-        isMarkdown: false,
-        createArtifactRequest: createRequest
-      })
-    ).toContain('data-artifact-publish="true"')
     expect(
       renderHeader({
         isDiffSurface: true,
         isMarkdown: true,
         createArtifactRequest: createRequest
       })
-    ).not.toContain('data-artifact-publish')
+    ).not.toContain('data-lan-share')
     expect(
       renderHeader({
         isDiffSurface: false,
         isMarkdown: true
       })
-    ).not.toContain('data-artifact-publish')
+    ).not.toContain('data-lan-share')
   })
 })
