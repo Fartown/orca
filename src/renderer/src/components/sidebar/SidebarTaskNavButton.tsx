@@ -21,6 +21,7 @@ import {
   restoreAvailableDefaultTaskProvider,
   resolveVisibleTaskProvider
 } from '../../../../shared/task-providers'
+import { LocalTaskNeedsYouCount } from '@/components/local-tasks/LocalTaskNeedsYouCount'
 
 function HideTaskSidebarMenu({ onHide }: { onHide: () => void }): React.JSX.Element {
   return (
@@ -183,6 +184,7 @@ export function SidebarTaskNavButton(): React.JSX.Element | null {
               {translate('auto.components.sidebar.SidebarNav.fee535205b', 'Tasks')}
             </span>
           </button>
+          <LocalTaskNeedsYouCount />
           <span className="absolute right-2 top-1/2 flex -translate-y-1/2 items-center gap-1 can-hover:pointer-events-none can-hover:opacity-0 can-hover:group-hover:pointer-events-auto can-hover:group-hover:opacity-100 can-hover:group-focus-within:pointer-events-auto can-hover:group-focus-within:opacity-100">
             {visibleTaskProviders.includes('github') ? (
               <TaskProviderShortcut

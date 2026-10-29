@@ -39,6 +39,7 @@ import {
   selectDetectedWorktreesByRepo,
   selectFolderWorkspaces
 } from '@/store/workspace-record-selectors'
+import { useSidebarTaskGroupBy, withSidebarTaskGroups } from '@/local-tasks/local-task-sidebar'
 
 type WorktreeListProps = {
   scrollOffsetRef: React.MutableRefObject<number>
@@ -51,10 +52,11 @@ type WorktreeListProps = {
 }
 
 // Switch point: this host's window lists main's inputs; a paired web client builds its own view.
-const useSidebarListModel =
+const useBaseSidebarListModel =
   ORCA_SIDEBAR_INPUTS_IS_MAIN && !isPairedWebClientWindow()
     ? useMainSidebarListModel
     : useWindowSidebarListModel
+const useSidebarListModel = withSidebarTaskGroups(useBaseSidebarListModel)
 
 const WorktreeList = React.memo(function WorktreeList({
   scrollOffsetRef,
@@ -80,7 +82,7 @@ const WorktreeList = React.memo(function WorktreeList({
     () => getActiveSidebarWorkspaceId(activeWorkspaceKey, activeWorktreeId),
     [activeWorkspaceKey, activeWorktreeId]
   )
-  const groupBy = useAppStore((s) => s.groupBy)
+  const groupBy = useSidebarTaskGroupBy()
   const workspaceStatuses = useAppStore((s) => s.workspaceStatuses)
   const sortBy = useAppStore((s) => s.sortBy)
   const projectOrderBy = useAppStore((s) => s.projectOrderBy)

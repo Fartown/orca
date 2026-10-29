@@ -15,6 +15,7 @@ import type { RpcBinarySender } from '../rpc/rpc-binary-sender'
 import { limitRuntimeRpcReplySize } from './runtime-rpc-reply-size-limit'
 import { MOBILE_RPC_METHOD_ALLOWLIST } from './runtime-rpc-mobile-method-allowlist'
 import { MOBILE_RPC_METHOD_ROUTES } from './runtime-rpc-mobile-method-routing'
+import { isForkExecutionHostRelayMethod } from './fork-mobile-rpc-method-allowlist'
 import { parseExecutionHostId } from '../../../shared/execution-host'
 
 // Why: status.get has no per-connection context in the dispatcher, so stamp the scope here at the transport boundary.
@@ -51,7 +52,11 @@ export class RuntimeRpcWebSocketDispatch extends RuntimeRpcMobileDevices {
       return request
     }
     // Why: the phone tags every call on a workspace screen; only this Mac's routing table decides.
-    if (target && MOBILE_RPC_METHOD_ROUTES.get(request.method) !== 'execution-host') {
+    if (
+      target &&
+      MOBILE_RPC_METHOD_ROUTES.get(request.method) !== 'execution-host' &&
+      !isForkExecutionHostRelayMethod(request.method)
+    ) {
       return request
     }
     const local = target && this.mobileDesktopRelay?.localRequestFor(request, target.environmentId)
@@ -161,7 +166,11 @@ export class RuntimeRpcWebSocketDispatch extends RuntimeRpcMobileDevices {
     const callerScope = callerScopeOf(device)
 
     // Why: relayed calls skip this dispatcher's scope check, so only allowlisted methods may relay.
-    if (device.scope === 'mobile' && MOBILE_RPC_METHOD_ALLOWLIST.has(request.method)) {
+    if (
+      device.scope === 'mobile' &&
+      (MOBILE_RPC_METHOD_ALLOWLIST.has(request.method) ||
+        isForkExecutionHostRelayMethod(request.method))
+    ) {
       // Why: the phone's open server sockets must see the same capabilities the desktop does.
       if (authenticatedSocket && request.method === 'runtime.clientCapabilities.update') {
         this.mobileDesktopRelay?.forwardClientCapabilities(

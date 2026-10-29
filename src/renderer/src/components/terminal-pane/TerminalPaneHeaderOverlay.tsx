@@ -11,6 +11,7 @@ import { TerminalPaneHeaderDropSurface } from './TerminalPaneHeaderDropSurface'
 import { TerminalPaneResumeInChatButton } from './TerminalPaneResumeInChatButton'
 import { makePaneKey } from '../../../../shared/stable-pane-id'
 import { GoalSessionAction } from '@/components/goals/GoalSessionAction'
+import { LocalTaskSessionChip } from '@/components/local-tasks/LocalTaskSessionChip'
 import { TerminalPaneChatViewButton } from '@/components/terminal-chat-view-button/TerminalPaneChatViewButton'
 
 export type PaneTitleOverlayRect = {
@@ -223,6 +224,12 @@ export default function TerminalPaneHeaderOverlay({
                   </button>
                 ) : null}
                 <div className="pane-title-actions ml-auto flex shrink-0 items-center gap-0">
+                  {isActivePane ? (
+                    <LocalTaskSessionChip
+                      pane={{ worktreeId, paneKey: makePaneKey(tabId, pane.leafId) }}
+                      compact={isChromeless}
+                    />
+                  ) : null}
                   {isActivePane ? (
                     <GoalSessionAction worktreeId={worktreeId} tabId={tabId} leafId={pane.leafId} />
                   ) : null}

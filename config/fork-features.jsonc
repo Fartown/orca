@@ -104,6 +104,7 @@
       "goal": "同源发布 fork 内测包，并提供桌面更新清单和 Android 应用内更新",
       "journal": "docs/issue/集成分支自动出包/journal.md",
       "dependsOn": [
+        "src/main/local-tasks/orcad-local-tasks.ts",
         "src/shared/serve-update-handoff.ts",
         "src/shared/serve-user-data-path.ts",
         "src/main/appimage-runtime-identity.ts",
@@ -2040,12 +2041,12 @@
         },
         {
           "file": "config/scripts/verify-mobile-web-app-bundle.mjs",
-          "mustContain": "['./h/_layout.tsx', 78]",
+          "mustContain": "['./h/_layout.tsx', 90]",
           "why": "the route-prefix sweep records continuation's measured chunk-sharing change"
         },
         {
           "file": "config/scripts/build-mobile-web-app-bundle.test.mjs",
-          "mustContain": "assertAssetCeilingFitsShell(25, 42, MOBILE_WEB_BUNDLE_MAX_ASSETS)).toBe(245)",
+          "mustContain": "assertAssetCeilingFitsShell(23, 42, MOBILE_WEB_BUNDLE_MAX_ASSETS)).toBe(242)",
           "why": "the asset-ceiling boundary follows the re-measured route-prefix sweep"
         },
         {
@@ -2661,6 +2662,622 @@
       ],
       "checks": [
         "ORCA_BACKGROUND_LAUNCH=1 pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/components/terminal-chat-view-button src/renderer/src/components/terminal-pane/TerminalPaneHeaderOverlay.test.tsx"
+      ]
+    },
+    {
+      "id": "local-tasks",
+      "title": "本地任务管理：以任务为中心，挂接 Orca 的工作区与会话",
+      "goal": "在 Orca 里记录、拆分、跟踪任务；从任务一键开工作区和会话，任务上看到会话进展，会话需要人时进入「需要你」",
+      "journal": "docs/issue/本地任务管理/journal.md",
+      "dependsOn": [
+        "src/main/orca-profiles/profile-storage-paths.ts",
+        "src/main/sqlite/harden-database-files.ts",
+        "src/main/sqlite/sync-database.ts",
+        "src/main/sqlite/sqlite-statement.ts",
+        "src/main/runtime/rpc/core.ts",
+        "src/main/persistence.ts",
+        "src/main/startup/main-process-state.ts",
+        "mobile/src/components/ActionSheetModal.tsx",
+        "mobile/src/components/BottomDrawer.tsx",
+        "mobile/src/components/ConfirmModal.tsx",
+        "mobile/src/components/MobileSegmentedControl.tsx",
+        "mobile/src/components/MobileSwitch.tsx",
+        "mobile/src/components/PickerListDrawer.tsx",
+        "mobile/src/components/PickerModal.tsx",
+        "mobile/src/components/TextInputModal.tsx",
+        "mobile/src/components/host-protocol-gates-context.ts",
+        "mobile/src/components/use-connected-host-picker.ts",
+        "mobile/src/host-screen/host-screen-styles.ts",
+        "mobile/src/host-screen/use-host-screen-controller.ts",
+        "mobile/src/mobile-web-shell/MobileWebShellScreen.tsx",
+        "mobile/src/mobile-web-shell/PageRouteUnavailableScreen.tsx",
+        "mobile/src/mobile-web-shell/shell-screen-route.ts",
+        "mobile/src/navigation/host-stack-navigation.ts",
+        "mobile/src/navigation/route-handoff.ts",
+        "mobile/src/navigation/route-param-reader.ts",
+        "mobile/src/navigation/use-back-claim.ts",
+        "mobile/src/navigation/use-open-host-stack-route.ts",
+        "mobile/src/platform/random-v4-uuid.ts",
+        "mobile/src/platform/text-input-font-size.ts",
+        "mobile/src/tasks/mobile-task-runtime-operations.ts",
+        "mobile/src/theme/mobile-theme.ts",
+        "mobile/src/transport/client-context.tsx",
+        "mobile/src/transport/host-client-hooks.ts",
+        "mobile/src/transport/host-store.ts",
+        "mobile/src/transport/rpc-client.ts",
+        "mobile/src/transport/rpc-delivery-ambiguity.ts",
+        "mobile/src/transport/rpc-operation-result-reader.ts",
+        "mobile/src/transport/rpc-operation.ts",
+        "mobile/src/transport/rpc-params-contract.ts",
+        "mobile/src/transport/types.ts",
+        "mobile/src/transport/unvalidated-rpc-request-port.ts",
+        "mobile/src/worktree/project-sections-operations.ts",
+        "src/shared/zod-salvage.ts",
+        "src/renderer/src/components/ShortcutKeyCombo.tsx",
+        "src/renderer/src/components/cmd-j/quick-action-context.ts",
+        "src/renderer/src/components/settings/SettingsSection.tsx",
+        "src/renderer/src/components/settings/settings-render-context.ts",
+        "src/renderer/src/components/settings/settings-search-keywords.ts",
+        "src/renderer/src/components/sidebar/use-sidebar-host-scope-options.ts",
+        "src/renderer/src/hooks/use-now.ts",
+        "src/renderer/src/i18n/i18n.ts",
+        "src/renderer/src/i18n/localized-catalog.ts",
+        "src/renderer/src/i18n/relative-time-format.ts",
+        "src/renderer/src/lib/app-keyboard-router.ts",
+        "src/renderer/src/lib/browser-uuid.ts",
+        "src/renderer/src/lib/ime-composition-keyboard-event.ts",
+        "src/renderer/src/lib/ime-text-field.tsx",
+        "src/renderer/src/lib/utils.ts",
+        "src/renderer/src/lib/web-client-location.ts",
+        "src/renderer/src/runtime/runtime-rpc-client.ts",
+        "src/renderer/src/runtime/runtime-rpc-subscribe.ts",
+        "src/renderer/src/store/index.ts",
+        "src/shared/execution-host.ts",
+        "src/shared/project-types.ts",
+        "mobile/src/components/AgentStateDot.tsx",
+        "mobile/src/host-screen/host-screen-operations.ts",
+        "mobile/src/navigation/workspace-execution-host.ts",
+        "mobile/src/session/mobile-created-structured-sessions.ts",
+        "mobile/src/session/mobile-existing-agent-launch.ts",
+        "mobile/src/session/mobile-new-tab-agent-loader.ts",
+        "mobile/src/session/mobile-new-tab-agent-options.ts",
+        "mobile/src/session/mobile-session-route-helpers.ts",
+        "mobile/src/session/mobile-session-route-types.ts",
+        "mobile/src/session/structured-session-operation-id.ts",
+        "mobile/src/tasks/agent-launch-request.ts",
+        "mobile/src/tasks/mobile-tui-agents.ts",
+        "mobile/src/tasks/mobile-workspace-create-operations.ts",
+        "mobile/src/tasks/mobile-workspace-source-operations.ts",
+        "mobile/src/tasks/replay-on-ambiguous-delivery.ts",
+        "mobile/src/tasks/workspace-create-timeout.ts",
+        "mobile/src/transport/execution-host-scoped-rpc-client.ts",
+        "mobile/src/transport/settings-read-operations.ts",
+        "mobile/src/worktree/agent-row-display.ts",
+        "mobile/src/worktree/use-reachable-server-clients.ts",
+        "src/shared/runtime-client-events.ts",
+        "src/main/agent-hooks/server.ts",
+        "src/main/ssh/targets/ssh-target-registry.ts",
+        "src/shared/app-environment.ts",
+        "src/main/orca-profiles/profile-index-store.ts",
+        "src/shared/agent-status-freshness.ts",
+        "src/shared/agent-row-decay-state.ts",
+        "src/shared/native-chat-ask.ts",
+        "src/shared/host-authority.ts",
+        "src/main/window/foreground-activation-policy.ts",
+        "src/renderer/src/components/native-chat/NativeChatComposerNotices.tsx",
+        "src/renderer/src/components/native-chat/use-native-chat-host-outage.ts",
+        "src/renderer/src/components/native-chat/use-native-chat-host-outage-notice.ts",
+        "src/shared/runtime-client-target.ts",
+        "src/renderer/src/store/slices/runtime-status-connection-generation.ts",
+        "src/renderer/src/hooks/runtime-client-events-sync.ts",
+        "src/renderer/src/runtime/runtime-environment-revision.ts",
+        "mobile/src/session/mobile-native-chat-send.ts",
+        "mobile/src/session/mobile-native-chat-stale-input.ts",
+        "mobile/src/session/mobile-structured-agent-session-rpc.ts",
+        "mobile/src/session/mobile-structured-agent-session-send.ts",
+        "mobile/src/transport/use-workspace-client.ts",
+        "mobile/src/transport/workspace-server.ts",
+        "src/shared/agent-session-wire.ts",
+        "mobile/src/worktree/relay-hosts-feed.ts",
+        "mobile/src/worktree/workspace-list-types.ts",
+        "mobile/src/worktree/worktree-catalog-operations.ts",
+        "mobile/src/worktree/worktree-catalog-snapshot-client.ts",
+        "src/renderer/src/components/AgentStateDot.tsx",
+        "src/renderer/src/components/agent/AgentCombobox.tsx",
+        "src/renderer/src/components/sidebar/ProjectHeaderActions.tsx",
+        "src/renderer/src/components/sidebar/SidebarGroupByToggle.tsx",
+        "src/renderer/src/components/sidebar/repo-header-action-button-class.ts",
+        "src/renderer/src/components/sidebar/sidebar-workspace-option-items.ts",
+        "src/renderer/src/components/sidebar/workspace-detached-review-request.ts",
+        "src/renderer/src/components/sidebar/worktree-card-pr-display.ts",
+        "src/renderer/src/components/sidebar/worktree-list/listing/rendered-row-keys.ts",
+        "src/renderer/src/components/sidebar/worktree-list/listing/sidebar-list-model.ts",
+        "src/renderer/src/components/sidebar/worktree-list/rows/SectionHeader.tsx",
+        "src/renderer/src/components/sidebar/worktree-list/rows/header-event-guards.ts",
+        "src/renderer/src/components/sidebar/worktree-list/rows/indentation.ts",
+        "src/renderer/src/components/sidebar/worktree-list/rows/option-dom.ts",
+        "src/renderer/src/components/sidebar/worktree-list/viewport/virtual-rows.ts",
+        "src/renderer/src/components/sidebar/worktree-review-helpers.tsx",
+        "src/renderer/src/hooks/ipc-events/runtime-environment-subscription-selection.ts",
+        "src/renderer/src/hooks/useAgentDetectionTarget.ts",
+        "src/renderer/src/hooks/useDetectedAgents.ts",
+        "src/renderer/src/hooks/useVirtualizedScrollAnchor.ts",
+        "src/renderer/src/lib/active-agent-note-send-result.ts",
+        "src/renderer/src/lib/agent-catalog.tsx",
+        "src/renderer/src/lib/agent-launch-request-id.ts",
+        "src/renderer/src/lib/agent-launch-route-input.ts",
+        "src/renderer/src/lib/agent-message-send.ts",
+        "src/renderer/src/lib/agent-session-launch-plan.ts",
+        "src/renderer/src/lib/execution-host-display-label.ts",
+        "src/renderer/src/lib/hook-command-delayed-delivery.ts",
+        "src/renderer/src/lib/launch-agent-in-new-tab.ts",
+        "src/renderer/src/lib/pending-worktree-creation.ts",
+        "src/renderer/src/lib/project-host-workspace-target.ts",
+        "src/renderer/src/lib/reveal-terminal-pane.ts",
+        "src/renderer/src/lib/running-agent-targets.ts",
+        "src/renderer/src/lib/structured-agent-launch-settlement.ts",
+        "src/renderer/src/lib/structured-agent-session-launch-admission.ts",
+        "src/renderer/src/lib/structured-agent-session-tab-activation.ts",
+        "src/renderer/src/lib/worktree-activation.ts",
+        "src/renderer/src/lib/worktree-runtime-owner.ts",
+        "src/renderer/src/store/slices/hosted-review-cache-identity.ts",
+        "src/renderer/src/store/slices/worktrees/listing/authoritative-worktree-removal-memory.ts",
+        "src/renderer/src/store/slices/worktrees/listing/detected-worktree-meta.ts",
+        "src/renderer/src/store/types.ts",
+        "src/renderer/src/store/workspace-record-selectors.ts",
+        "src/renderer/src/store/worktree-repo-index.ts",
+        "src/shared/agent-launch-intent.ts",
+        "src/shared/agent-launch-replay-refusal.ts",
+        "src/shared/agent-status-types.ts",
+        "src/shared/agent-type-label.ts",
+        "src/shared/folder-workspace-execution-host.ts",
+        "src/shared/folder-workspace-worktree.ts",
+        "src/shared/github/github-cache-key.ts",
+        "src/shared/hosted-review-github.ts",
+        "src/shared/hosted-review.ts",
+        "src/shared/project-host-setup-lookup.ts",
+        "src/shared/repo-kind.ts",
+        "src/shared/repo-types.ts",
+        "src/shared/sidebar-list/folder-workspace-host-id.ts",
+        "src/shared/sidebar-list/group-keys.ts",
+        "src/shared/sidebar-list/host-section-rows.ts",
+        "src/shared/sidebar-list/row-types.ts",
+        "src/shared/stable-pane-id.ts",
+        "src/shared/structured-agent-session-projection.ts",
+        "src/shared/tab-types.ts",
+        "src/shared/terminal-surface-id.ts",
+        "src/shared/tui-agent-config.ts",
+        "src/shared/tui-agent-selection.ts",
+        "src/shared/tui-agent.ts",
+        "src/shared/workspace-name.ts",
+        "src/shared/workspace-scope.ts",
+        "src/shared/worktree/git-identity-display.ts",
+        "src/shared/worktree/host-context-labels.ts",
+        "src/shared/worktree/host-qualified-identity.ts",
+        "src/shared/worktree/id.ts",
+        "src/shared/worktree/types.ts",
+        "mobile/src/tasks/worktree-create-retry.ts",
+        "src/renderer/src/hooks/composer-state/composer-target-store.ts",
+        "mobile/src/tasks/worktree-create-capability.ts"
+      ],
+      "policyId": "local-tasks",
+      "ownedPaths": [
+        "src/main/local-tasks/**",
+        "src/shared/local-tasks/**",
+        "src/main/startup/main-process-local-tasks.ts",
+        "src/main/runtime/rpc/methods/local-tasks.ts",
+        "src/main/runtime/rpc/methods/local-tasks.test.ts",
+        "src/renderer/src/local-tasks/**",
+        "src/renderer/src/components/local-tasks/**",
+        "src/renderer/src/components/cmd-j/local-task-quick-actions.ts",
+        "mobile/app/h/[hostId]/local-tasks.tsx",
+        "mobile/app/h/[hostId]/local-tasks.web.tsx",
+        "mobile/src/local-tasks/**",
+        "docs/issue/本地任务管理/**",
+        "src/main/runtime/rpc/methods/local-task-link-methods.ts"
+      ],
+      "requiredFiles": [
+        "src/main/local-tasks/local-tasks-service.ts",
+        "src/main/local-tasks/local-tasks-database.ts",
+        "src/main/startup/main-process-local-tasks.ts",
+        "src/main/runtime/rpc/methods/local-tasks.ts",
+        "src/shared/local-tasks/local-tasks-rpc-params.ts",
+        "src/shared/local-tasks/local-tasks-capability.ts",
+        "src/renderer/src/local-tasks/LocalTasksSyncGate.tsx",
+        "src/renderer/src/components/local-tasks/LocalTaskPage.tsx",
+        "src/renderer/src/components/local-tasks/LocalTaskSource.tsx",
+        "mobile/app/h/[hostId]/local-tasks.web.tsx",
+        "mobile/src/local-tasks/MobileHomeLocalTasksCard.tsx",
+        "mobile/src/local-tasks/LocalTasksHostEntryButton.tsx",
+        "docs/issue/本地任务管理/journal.md",
+        "docs/issue/本地任务管理/requirements/本地任务管理.md",
+        "src/main/runtime/rpc/methods/local-task-link-methods.ts",
+        "src/main/local-tasks/local-task-execution-service.ts"
+      ],
+      "seams": [
+        {
+          "file": "src/main/index.ts",
+          "mustContain": "startLocalTasksForMainProcess()",
+          "why": "The desktop app opens the task library before the RPC server binds (REQ-018)"
+        },
+        {
+          "file": "src/main/index.ts",
+          "mustContain": "app.once('will-quit', stopLocalTasksForMainProcess)",
+          "why": "The task library closes its database on quit (REQ-018)"
+        },
+        {
+          "file": "src/main/runtime/rpc/methods/index.ts",
+          "mustContain": "...LOCAL_TASK_METHODS,",
+          "why": "Desktop renderer and phone reach the task library through runtime RPC (REQ-001～REQ-008, REQ-017)"
+        },
+        {
+          "file": "src/shared/rpc-contract/rpc-params-catalog.generated.ts",
+          "mustContain": "'localTasks.status': null",
+          "why": "Generated params catalog gives the phone the localTasks parameter types (REQ-017)"
+        },
+        {
+          "file": "src/shared/host-operation-ownership.ts",
+          "mustContain": "localTasks: 'host',",
+          "why": "The task library is owned by the desktop task host (REQ-018)"
+        },
+        {
+          "file": "src/shared/wsl-move/wsl-move-storage-dispositions.ts",
+          "mustContain": "'src/main/local-tasks/local-tasks-schema.ts': 'local-tasks',",
+          "why": "The SQLite census lists the task library; a project move leaves it with the desktop (REQ-018)"
+        },
+        {
+          "file": "src/main/runtime/orca-runtime-get-status.ts",
+          "mustContain": "capabilities.push(...localTasksRuntimeCapabilities())",
+          "why": "Only a desktop that hosts a task library advertises local-tasks.v1; servers never do (REQ-017, REQ-018)"
+        },
+        {
+          "file": "src/main/runtime/runtime-rpc/fork-mobile-rpc-method-allowlist.ts",
+          "mustContain": "'localTasks.tasks.list',",
+          "why": "A paired phone may call the task library on the desktop it is paired with (REQ-017)"
+        },
+        {
+          "file": "config/scripts/mobile-web-page-routes.mjs",
+          "mustContain": "pathname: '/h/[hostId]/local-tasks',",
+          "why": "The desktop ships the phone's task page as a web route (REQ-017)"
+        },
+        {
+          "file": "config/scripts/mobile-web-app-page-route-modules.mjs",
+          "mustContain": "['/h/[hostId]/local-tasks', 'app/h/[hostId]/local-tasks.tsx'],",
+          "why": "The route's module is listed so the grant and haptics censuses cover it (REQ-017)"
+        },
+        {
+          "file": "config/scripts/mobile-web-app-session-dictation-capture.test.mjs",
+          "mustContain": "'app/h/[hostId]/local-tasks.tsx',",
+          "why": "The census rule's registered-pathname list names the task page's module (REQ-017)"
+        },
+        {
+          "file": "config/scripts/verify-mobile-web-app-bundle.mjs",
+          "mustContain": "['./h/[hostId]/local-tasks.tsx', 46],",
+          "why": "The route-prefix sweep is re-measured with the task page's route in the tree (REQ-017)"
+        },
+        {
+          "file": "config/scripts/build-mobile-web-app-bundle.test.mjs",
+          "mustContain": "expect(Math.max(...MOBILE_WEB_APP_BUNDLE_ROUTE_SCRIPT_SPREAD)).toBe(15)",
+          "why": "The task page's route makes `tasks` the worst swept route at fifteen scripts (REQ-017)"
+        },
+        {
+          "file": "mobile/src/transport/rpc-client-server-subscription.ts",
+          "mustContain": "['localTasks.subscribeChanges', 'localTasks.unsubscribeChanges']",
+          "why": "The phone releases its task change subscription on the host (REQ-017)"
+        },
+        {
+          "file": "mobile/src/transport/rpc-subscription-inventory.ts",
+          "mustContain": "file: 'src/local-tasks/local-tasks-change-feed.ts',",
+          "why": "The task change subscription is a registered phone subscription site (REQ-017)"
+        },
+        {
+          "file": "mobile/src/home/MobileHomeListFooter.tsx",
+          "mustContain": "<MobileHomeLocalTasksCard connectedHosts={props.connectedHosts} />",
+          "why": "The phone home shows the task library card (REQ-017)"
+        },
+        {
+          "file": "mobile/src/home/MobileHomeListFooter.test.tsx",
+          "mustContain": "vi.mock('../local-tasks/MobileHomeLocalTasksCard'",
+          "why": "The footer test renders without the card's router and RPC providers (REQ-017)"
+        },
+        {
+          "file": "mobile/src/layout/host-sidebar-reveal.test.tsx",
+          "mustContain": "vi.mock('../local-tasks/LocalTaskSessionStrip'",
+          "why": "The session header test renders without the task strip's router and RPC providers (REQ-017)"
+        },
+        {
+          "file": "mobile/src/host-screen/host-screen-header.tsx",
+          "mustContain": "{localTaskHostHeaderActions(controller)}",
+          "why": "The host page, shipped by the desktop, opens the task page even on an older app (REQ-017); one call per toolbar, ready to join upstream's hostListActions"
+        },
+        {
+          "file": "src/renderer/src/app-shell/AppBackgroundServices.tsx",
+          "mustContain": "<LocalTasksSyncGate />",
+          "why": "The desktop keeps its task store in sync with the library's change notices, without polling (REQ-001～REQ-008)"
+        },
+        {
+          "file": "src/renderer/src/app-shell/AppBackgroundServices.tsx",
+          "mustContain": "<LocalTaskLinkMaintenance />",
+          "why": "Start-work linking, workspace link upkeep and the PR-merged rule run from this window (REQ-009～REQ-013)"
+        },
+        {
+          "file": "src/renderer/src/components/task-page/SourceBar.tsx",
+          "mustContain": "<LocalTaskSourceButton />",
+          "why": "The task page offers a Local source ahead of GitHub, GitLab, Linear and Jira (REQ-008)"
+        },
+        {
+          "file": "src/renderer/src/components/task-page/SourceBar.tsx",
+          "mustContain": "const active = !localActive && taskSource === source.id",
+          "why": "An upstream source button is not highlighted while Local is active (REQ-008)"
+        },
+        {
+          "file": "src/renderer/src/components/task-page/SourceBar.tsx",
+          "mustContain": "{!localActive && taskSource === 'linear' && linearConnected ? (",
+          "why": "Linear-only controls hide while Local is active (REQ-008)"
+        },
+        {
+          "file": "src/renderer/src/components/task-page/SourceBar.tsx",
+          "mustContain": "{!localActive && taskSource === 'jira' && jiraConnected ? (",
+          "why": "Jira-only controls hide while Local is active (REQ-008)"
+        },
+        {
+          "file": "src/renderer/src/components/task-page/Frame.tsx",
+          "mustContain": "{localActive ? <LocalTaskPage sourceBar={<TaskPageSourceBar model={model} />} /> : null}",
+          "why": "The task page renders the local task library while Local is active (REQ-006, REQ-008)"
+        },
+        {
+          "file": "src/renderer/src/components/cmd-j/quick-actions.ts",
+          "mustContain": "...getLocalTaskQuickActions(),",
+          "why": "Cmd+J offers New task and Open task (REQ-007)"
+        },
+        {
+          "file": "src/renderer/src/components/use-worktree-jump-palette-project-targets.ts",
+          "mustContain": "const localTaskActions = useLocalTaskSearchActions(hasQuery ? deferredQuery : '')",
+          "why": "Cmd+J searches local tasks by ref, earlier refs and title (REQ-007)"
+        },
+        {
+          "file": "src/renderer/src/hooks/settings-navigation-workflow-sections.ts",
+          "mustContain": "...getLocalTasksSettingsSections(),",
+          "why": "Settings lists the local tasks section (REQ-001, REQ-003)"
+        },
+        {
+          "file": "src/renderer/src/components/settings/settings-page-renderer.tsx",
+          "mustContain": "{renderLocalTasksSettingsSection(context)}",
+          "why": "Settings renders project, prefix and status management (REQ-001～REQ-003)"
+        },
+        {
+          "file": "src/renderer/src/lib/settings-navigation-types.ts",
+          "mustContain": "'local-tasks',",
+          "why": "The task page deep-links to its settings section (REQ-001)"
+        },
+        {
+          "file": "src/renderer/src/i18n/locales/en.json",
+          "mustContain": "\"localTasks\": {",
+          "why": "English copy of the local tasks feature"
+        },
+        {
+          "file": "src/renderer/src/i18n/locales/zh.json",
+          "mustContain": "\"localTasks\": {",
+          "why": "Chinese copy of the local tasks feature"
+        },
+        {
+          "file": "mobile/src/host-screen/host-screen-overlays.tsx",
+          "mustContain": "...taskLink.actionsFor(actionTarget,",
+          "why": "The workspace action sheet registers the local task linking action"
+        },
+        {
+          "file": "mobile/src/session/MobileSessionHeader.tsx",
+          "mustContain": "<LocalTaskSessionStrip controller={controller} />",
+          "why": "The mobile session header mounts the task link strip"
+        },
+        {
+          "file": "src/renderer/src/app-shell/use-visible-review-refresh-reporting.ts",
+          "mustContain": "...localTaskReviewRefreshWorktreeIds(state)",
+          "why": "Task-linked workspaces join the existing review refresh reporting path"
+        },
+        {
+          "file": "src/renderer/src/components/NewWorkspaceComposerModal.tsx",
+          "mustContain": "launchPrompt, onCreationStarted",
+          "why": "The composer accepts the task launch prompt and creation callback"
+        },
+        {
+          "file": "src/renderer/src/components/sidebar/SidebarTaskNavButton.tsx",
+          "mustContain": "<LocalTaskNeedsYouCount />",
+          "why": "The task sidebar button shows the local task attention count"
+        },
+        {
+          "file": "src/renderer/src/components/sidebar/worktree-card-header.tsx",
+          "mustContain": "<LocalTaskWorkspaceChip worktree={worktree} />",
+          "why": "A sidebar workspace card names the local task it is linked to"
+        },
+        {
+          "file": "src/renderer/src/components/sidebar/WorktreeContextMenuView.tsx",
+          "mustContain": "<LocalTaskWorkspaceMenuItem worktree={worktree} disabled={isDeleting} />",
+          "why": "A workspace's context menu links it to a local task"
+        },
+        {
+          "file": "src/renderer/src/components/terminal-pane/TerminalPaneHeaderOverlay.tsx",
+          "mustContain": "pane={{ worktreeId, paneKey: makePaneKey(tabId, pane.leafId) }}",
+          "why": "A terminal session header shows its local task chip"
+        },
+        {
+          "file": "src/renderer/src/components/native-chat/NativeChatStructuredSession.tsx",
+          "mustContain": "pane={{ worktreeId: ownerWorktreeId, paneKey, sessionId: props.sessionId }}",
+          "why": "A structured chat session shows its local task chip"
+        },
+        {
+          "file": "src/renderer/src/components/sidebar/WorktreeList.tsx",
+          "mustContain": "withSidebarTaskGroups(useBaseSidebarListModel)",
+          "why": "The sidebar list registers task grouping through the feature wrapper"
+        },
+        {
+          "file": "src/renderer/src/components/sidebar/workspace-options-menu-items.tsx",
+          "mustContain": "<LocalTaskSidebarGroupByToggle",
+          "why": "The workspace options register the task grouping toggle"
+        },
+        {
+          "file": "src/renderer/src/components/sidebar/workspace-options-menu-items.tsx",
+          "mustContain": "const groupBy = useSidebarTaskGroupBy()",
+          "why": "Options that only apply to upstream grouping hide while the sidebar groups by task"
+        },
+        {
+          "file": "src/main/runtime/runtime-rpc/runtime-rpc-websocket-dispatch.ts",
+          "mustContain": "!isForkExecutionHostRelayMethod(request.method)",
+          "why": "A phone's task request for one of the desktop's servers is relayed like other host operations"
+        },
+        {
+          "file": "src/main/runtime/runtime-rpc/runtime-rpc-websocket-dispatch.ts",
+          "mustContain": "isForkExecutionHostRelayMethod(request.method))",
+          "why": "The relay entry admits the fork's task methods alongside upstream's relayed methods"
+        },
+        {
+          "file": "src/main/integration-builds/orcad-fork-services.ts",
+          "mustContain": "registerCleanup(startOrcadLocalTasks(runtime))",
+          "why": "An SSH host's managed orcad holds the task library of its own projects"
+        },
+        {
+          "file": "src/renderer/src/components/sidebar/worktree-list/rows/virtual-row-dispatch.tsx",
+          "mustContain": "return renderSectionOrTaskHeaderRow({",
+          "why": "The virtual row dispatcher registers local task group headers"
+        },
+        {
+          "file": "src/renderer/src/hooks/composer-state/quick-creation-execution.ts",
+          "mustContain": "options?.onCreationStarted",
+          "why": "Task creation observes the existing workspace creation request"
+        },
+        {
+          "file": "src/renderer/src/hooks/composer-state/quick-creation-request.ts",
+          "mustContain": "onCreationStarted?: (creationId: string) => void",
+          "why": "The creation options carry an optional local task callback"
+        },
+        {
+          "file": "src/renderer/src/lib/worktree-creation-completion.ts",
+          "mustContain": "notifyWorktreeCreationCompleted(args)",
+          "why": "The creation completion path publishes a local task association notice"
+        },
+        {
+          "file": "src/shared/rpc-contract/rpc-params-catalog.generated.ts",
+          "mustContain": "'localTasks.links.list': LocalTasksLinksListParams,",
+          "why": "Generated params include the existing task link protocol"
+        },
+        {
+          "file": "src/main/runtime/runtime-rpc/fork-mobile-rpc-method-allowlist.ts",
+          "mustContain": "'localTasks.links.list',",
+          "why": "The paired phone can read the desktop task links"
+        },
+        {
+          "file": "src/renderer/src/lib/worktree-creation-flow-execute.ts",
+          "mustContain": "structuredSessionOutcome = structuredSession.sessionOutcome",
+          "why": "Forward the actual structured launch settlement to task creation completion."
+        },
+        {
+          "file": "src/renderer/src/lib/worktree-creation-structured-session.ts",
+          "mustContain": "sessionOutcome?: Promise<StructuredCreationSessionOutcome>",
+          "why": "Expose the actual chat, terminal fallback, or failed outcome without changing legacy acceptance semantics."
+        },
+        {
+          "file": "src/renderer/src/lib/worktree-creation-structured-session.test.ts",
+          "mustContain": "reports a host-declined terminal instead of claiming a chat",
+          "why": "Keep task session association aligned with structured launch fallback."
+        },
+        {
+          "file": "src/renderer/src/components/NewWorkspaceComposerModal.tsx",
+          "mustContain": "initialTaskRepo: modalData.initialTaskRepo",
+          "why": "Forward a task-selected ready host setup into the existing composer when its repo is absent from the desktop catalog."
+        },
+        {
+          "file": "src/renderer/src/hooks/useComposerState.ts",
+          "mustContain": "initialTaskRepo?: Repo",
+          "why": "Accept an optional task-scoped repo without changing the shared repo catalog or ordinary callers."
+        },
+        {
+          "file": "src/renderer/src/hooks/composer-state/composer-target-store.ts",
+          "mustContain": "resolveLocalTaskComposerCatalog({",
+          "why": "Delegate the optional task-scoped repo and host guard to feature-owned code, keeping ordinary callers unchanged."
+        },
+        {
+          "file": "src/renderer/src/components/sidebar/SidebarGroupByToggle.tsx",
+          "mustContain": "export type SidebarGroupByExtraChoice =",
+          "why": "The task grouping choice renders inside the upstream toggle, so it keeps the upstream item style (REQ-016)"
+        },
+        {
+          "file": "src/renderer/src/components/sidebar/use-worktree-card-review-details.ts",
+          "mustContain": "export function resolveWorktreeCardReview(",
+          "why": "The PR-merged rule reads the same review the workspace card shows, from one shared resolver (REQ-013)"
+        }
+      ],
+      "tests": [
+        "mobile/src/local-tasks/local-task-filter.test.ts",
+        "mobile/src/local-tasks/local-task-form-state.test.ts",
+        "mobile/src/local-tasks/local-task-list-projection.test.ts",
+        "mobile/src/local-tasks/local-task-operation-ids.test.ts",
+        "mobile/src/local-tasks/local-tasks-access.test.ts",
+        "mobile/src/local-tasks/local-tasks-change-feed.test.ts",
+        "mobile/src/local-tasks/local-tasks-operations.test.ts",
+        "mobile/src/local-tasks/local-tasks-screen-state.test.ts",
+        "mobile/src/local-tasks/local-tasks-failure-recovery.test.tsx",
+        "mobile/src/local-tasks/local-tasks-settings-view.test.tsx",
+        "src/main/local-tasks/local-tasks-service.test.ts",
+        "src/main/runtime/rpc/methods/local-tasks.test.ts",
+        "src/renderer/src/components/local-tasks/LocalTaskDetailBody.test.tsx",
+        "src/renderer/src/components/local-tasks/LocalTaskActivity.test.tsx",
+        "src/renderer/src/components/local-tasks/LocalTaskProjectCreator.test.tsx",
+        "src/renderer/src/components/local-tasks/LocalTaskPage.test.tsx",
+        "src/renderer/src/local-tasks/local-task-failure-copy.test.ts",
+        "src/renderer/src/local-tasks/local-task-grouping.test.ts",
+        "src/renderer/src/local-tasks/local-task-host-state-copy.test.ts",
+        "src/renderer/src/local-tasks/local-task-page-keys.test.ts",
+        "src/renderer/src/local-tasks/local-task-project-recommendations.test.ts",
+        "src/renderer/src/local-tasks/local-task-time.test.ts",
+        "src/renderer/src/local-tasks/local-task-view-preferences.test.ts",
+        "src/renderer/src/local-tasks/local-task-writes.test.ts",
+        "src/renderer/src/local-tasks/local-tasks-sync.test.ts",
+        "src/main/local-tasks/local-tasks-change-subscription.test.ts",
+        "src/main/local-tasks/local-tasks-review.test.ts",
+        "src/renderer/src/local-tasks/local-task-source-activation.test.ts",
+        "src/renderer/src/components/local-tasks/LocalTaskToolbar.test.tsx",
+        "src/renderer/src/components/local-tasks/settings/LocalTaskProjectSettings.test.tsx",
+        "mobile/src/local-tasks/MobileLocalTasksScreen.test.tsx",
+        "mobile/src/local-tasks/local-task-events-recovery.test.tsx",
+        "mobile/src/local-tasks/local-task-failure-message.test.ts",
+        "mobile/src/local-tasks/local-task-work-navigation.test.ts",
+        "src/renderer/src/local-tasks/local-tasks-domain-store.test.ts",
+        "src/renderer/src/components/local-tasks/LocalTaskSubtasks.test.tsx",
+        "mobile/src/local-tasks/use-local-tasks-library-retry.test.tsx",
+        "src/main/local-tasks/local-task-execution-service.test.ts",
+        "src/main/local-tasks/local-tasks-schema.test.ts",
+        "src/main/local-tasks/local-tasks-relay-routing.test.ts",
+        "src/shared/local-tasks/local-task-hierarchy.test.ts",
+        "src/renderer/src/local-tasks/local-task-start-targets.test.ts",
+        "src/renderer/src/local-tasks/local-task-write-access.test.ts",
+        "src/renderer/src/local-tasks/local-task-seen-forwarding.test.ts",
+        "src/renderer/src/local-tasks/local-tasks-runtime-client.test.ts",
+        "src/renderer/src/local-tasks/local-tasks-sync-gate.test.tsx",
+        "src/renderer/src/local-tasks/local-task-session-reveal.test.ts",
+        "src/renderer/src/components/local-tasks/LocalTaskReplyBox.test.tsx",
+        "mobile/src/local-tasks/use-local-task-endpoints.test.tsx",
+        "mobile/src/local-tasks/local-task-reply-send.test.ts",
+        "mobile/src/local-tasks/local-task-project-setups.test.ts",
+        "mobile/src/local-tasks/local-tasks-attention-view.test.tsx",
+        "src/renderer/src/local-tasks/local-task-cmdj-search.test.ts",
+        "src/renderer/src/local-tasks/local-task-link-upkeep.test.ts",
+        "src/renderer/src/local-tasks/local-task-workspace-creation-seam.test.tsx",
+        "mobile/src/local-tasks/local-task-agent-launch.test.ts",
+        "mobile/src/local-tasks/local-task-host-contact.test.ts",
+        "mobile/src/local-tasks/use-local-task-session-acknowledge.test.tsx",
+        "mobile/src/local-tasks/local-task-link-to-task-sheet.test.tsx",
+        "mobile/src/local-tasks/local-task-agent-options.test.ts",
+        "src/renderer/src/local-tasks/local-task-background-services.test.tsx",
+        "src/renderer/src/lib/worktree-creation-structured-session.test.ts",
+        "src/renderer/src/components/local-tasks/LocalTaskPage.execution.test.tsx",
+        "src/renderer/src/local-tasks/local-task-remote-creation-target.test.tsx",
+        "src/renderer/src/local-tasks/local-task-start-work.test.ts",
+        "src/renderer/src/local-tasks/local-task-launch-agent-tab.test.ts"
+      ],
+      "checks": [
+        "pnpm exec vitest run --config config/vitest.config.ts src/main/local-tasks src/shared/local-tasks src/main/runtime/rpc/methods/local-tasks.test.ts src/shared/host-operation-ownership.test.ts src/shared/wsl-move src/main/runtime/runtime-rpc/fork-mobile-rpc-method-allowlist.test.ts src/main/runtime/mobile-rpc-allowlist.test.ts",
+        "ORCA_BACKGROUND_LAUNCH=1 pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/local-tasks src/renderer/src/components/local-tasks src/renderer/src/components/task-page src/renderer/src/components/cmd-j src/renderer/src/lib/worktree-creation-structured-session.test.ts",
+        "pnpm --dir mobile exec vitest run src/local-tasks src/home/MobileHomeListFooter.test.tsx src/transport/rpc-subscription-boundary.test.ts"
       ]
     }
   ]

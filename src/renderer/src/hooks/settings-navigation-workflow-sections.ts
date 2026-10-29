@@ -9,6 +9,7 @@ import { getQuickCommandsPaneSearchEntries } from '@/components/settings/quick-c
 import { getShareSkillsSettingsSearchEntries } from '@/components/settings/share-skills-settings-search'
 import { getTasksPaneSearchEntries } from '@/components/settings/tasks-search'
 import { getLanArtifactsSettingsSearchEntries } from '@/components/self-hosted-artifacts/settings/lan-artifacts-settings-search'
+import { getLocalTasksSettingsSections } from '@/components/local-tasks/settings/local-tasks-settings-search'
 import { translate } from '@/i18n/i18n'
 import type { SettingsNavSection } from '@/lib/settings-navigation-types'
 import {
@@ -119,6 +120,7 @@ export function buildWorkflowSettingsSections(
       searchEntries: getTasksPaneSearchEntries(),
       group: 'workflows'
     },
+    ...getLocalTasksSettingsSections(),
     {
       id: 'terminal',
       title: translate('auto.hooks.useSettingsNavigationMetadata.a9fb10afca', 'Terminal'),

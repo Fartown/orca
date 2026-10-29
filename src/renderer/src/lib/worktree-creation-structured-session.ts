@@ -16,7 +16,13 @@ export type WorktreeCreationStructuredSessionResult = {
   cancelled: boolean
   activation: ActivateAndRevealResult | false
   primaryTabId: string | null
+  sessionOutcome?: Promise<StructuredCreationSessionOutcome>
 }
+
+export type StructuredCreationSessionOutcome =
+  | { kind: 'chat'; sessionId: string }
+  | { kind: 'terminal'; tabId: string | null }
+  | { kind: 'none' }
 
 type LaunchStructuredWorktreeSessionArgs = {
   creationId: string
@@ -61,13 +67,14 @@ function openBackgroundDeclinedTerminal(
     { activateCreatedTabs: false, createNewTerminalForStartup: true }
   )
   mountCreatedWorktreeStartupTabsInBackground(args.worktreeId)
-  return { opened: tabId !== null }
+  return { opened: tabId !== null, ...(tabId ? { tabId } : {}) }
 }
 
 export async function launchStructuredWorktreeSession(
   args: LaunchStructuredWorktreeSessionArgs
 ): Promise<WorktreeCreationStructuredSessionResult> {
   let { activation, primaryTabId } = args
+  let declinedTerminalTabId: string | null = null
   const settled = { accepted: true, cancelled: false }
   const { agent } = args.request
   // The composer's route already asked the host whether it runs this agent as a chat.
@@ -105,7 +112,13 @@ export async function launchStructuredWorktreeSession(
       activate: args.shouldActivateOnCompletion,
       ...(args.shouldActivateOnCompletion
         ? {}
-        : { onHostDeclined: (host) => openBackgroundDeclinedTerminal(args, host) }),
+        : {
+            onHostDeclined: (host) => {
+              const terminal = openBackgroundDeclinedTerminal(args, host)
+              declinedTerminalTabId = terminal.tabId ?? null
+              return terminal
+            }
+          }),
       beforeOpen: () => {
         // Why: cancellation can arrive through the launch signal while reveal is running, before
         // the pending-creation store snapshot has caught up.
@@ -134,6 +147,19 @@ export async function launchStructuredWorktreeSession(
     ownershipTransferred = launch !== null
     if (launch) {
       primaryTabId = launch.tab?.id ?? primaryTabId
+      const sessionOutcome = launch.settlement.then(
+        (settlement): StructuredCreationSessionOutcome => {
+          if (settlement.kind === 'structured') {
+            return { kind: 'chat', sessionId: settlement.sessionId }
+          }
+          if (settlement.kind === 'terminal') {
+            return { kind: 'terminal', tabId: declinedTerminalTabId }
+          }
+          return { kind: 'none' }
+        },
+        (): StructuredCreationSessionOutcome => ({ kind: 'none' })
+      )
+      return { ...settled, activation, primaryTabId, sessionOutcome }
     }
   } catch (error) {
     // Why: nothing awaits this creation's caller, so an escaped throw would strand the panel

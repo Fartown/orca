@@ -26,6 +26,7 @@ vi.mock('./MobileHomeAccountUsageCards', () => ({
 }))
 
 vi.mock('../components/PickerModal', () => ({ PickerModal: 'PickerModal' }))
+vi.mock('../local-tasks/MobileHomeLocalTasksCard', () => ({ MobileHomeLocalTasksCard: () => null }))
 
 function host(id: string, name: string, endpoint: string): HostProfile {
   return {

@@ -45,6 +45,7 @@ import {
   shouldUseNativeContextMenu
 } from './worktree-context-menu-policy'
 import { CLOSE_ALL_CONTEXT_MENUS_EVENT } from '@/lib/close-all-context-menus'
+import { LocalTaskWorkspaceMenuItem } from '@/components/local-tasks/LocalTaskWorkspaceChip'
 
 export default function WorktreeContextMenuView({ model }: { model: WorktreeContextMenuModel }) {
   const {
@@ -189,6 +190,7 @@ export default function WorktreeContextMenuView({ model }: { model: WorktreeCont
                   'Copy Worktree Name'
                 )}
               </DropdownMenuItem>
+              <LocalTaskWorkspaceMenuItem worktree={worktree} disabled={isDeleting} />
               <DropdownMenuSeparator />
               <DropdownMenuItem onSelect={handleTogglePin} disabled={isDeleting}>
                 {worktree.isPinned ? <PinOff className="size-3.5" /> : <Pin className="size-3.5" />}

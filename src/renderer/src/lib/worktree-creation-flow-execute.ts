@@ -284,6 +284,7 @@ export async function executeWorktreeCreation(
   }
 
   let structuredLaunchAccepted = structuredLaunch
+  let structuredSessionOutcome: WorktreeCreationStructuredSessionResult['sessionOutcome']
   const { agentLaunchRoute } = preparedRequest
   if (agentLaunchRoute === 'structured-native-chat' && preparedRequest.agent) {
     let structuredSession: WorktreeCreationStructuredSessionResult | null = null
@@ -304,6 +305,7 @@ export async function executeWorktreeCreation(
     }
     if (structuredSession) {
       structuredLaunchAccepted = structuredSession.accepted
+      structuredSessionOutcome = structuredSession.sessionOutcome
       activation = structuredSession.activation
       primaryTabId = structuredSession.primaryTabId
       if (structuredSession.cancelled) {
@@ -328,6 +330,7 @@ export async function executeWorktreeCreation(
     request: preparedRequest,
     worktreeId: worktree.id,
     structuredLaunchAccepted,
+    structuredSessionOutcome,
     activation,
     primaryTabId,
     startupTerminalTabId: result.startupTerminal?.tabId,

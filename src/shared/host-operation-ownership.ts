@@ -34,6 +34,7 @@ export const HOST_OPERATION_OWNERSHIP = {
   github: 'credential',
   gitlab: 'credential',
   goals: 'host',
+  localTasks: 'host',
   host: 'host',
   hostedReview: 'credential',
   jira: 'scope-picked',

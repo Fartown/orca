@@ -10,6 +10,7 @@ import type { HomeResumeCard } from '../worktree/home-resume-card'
 import { MobileHomeAccountUsageCards } from './MobileHomeAccountUsageCards'
 import { MobileHomeResumeCard } from './MobileHomeResumeCard'
 import { MobileHomeTasksCard } from './MobileHomeTasksCard'
+import { MobileHomeLocalTasksCard } from '../local-tasks/MobileHomeLocalTasksCard'
 
 const DEFAULT_TASK_PROVIDERS: TaskProvider[] = ['github']
 
@@ -55,6 +56,7 @@ export function MobileHomeListFooter(props: {
         providers={providers}
         onOpen={openTasks}
       />
+      <MobileHomeLocalTasksCard connectedHosts={props.connectedHosts} />
       <PickerModal title="Open Tasks On" {...tasksHostPicker.pickerProps} />
       <MobileHomeQuickActions
         connectedHosts={props.connectedHosts}

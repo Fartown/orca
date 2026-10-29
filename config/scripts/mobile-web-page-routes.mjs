@@ -59,6 +59,11 @@ export const MOBILE_WEB_PAGE_ROUTES = [
     pathname: '/h/[hostId]/accounts',
     grants: ['navigate', 'storage', 'externalLink', 'haptics']
   },
+  // Fork local-tasks: the accounts route's four, for the same layout-wide reasons.
+  {
+    pathname: '/h/[hostId]/local-tasks',
+    grants: ['navigate', 'storage', 'externalLink', 'haptics']
+  },
   // The file explorer. `navigate` because its Back pops the native stack. `storage` for the shared
   // components the host layout renders above it.
   //

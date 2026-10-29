@@ -20,6 +20,7 @@ const SETTINGS_NAV_TARGETS = [
   'browser',
   'git',
   'tasks',
+  'local-tasks',
   'appearance',
   'chat',
   'input',

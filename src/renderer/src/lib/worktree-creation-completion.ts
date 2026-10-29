@@ -4,12 +4,15 @@ import { queueWorkspaceActivationTerminalFocus } from '@/lib/workspace-activatio
 import { seedAgentTabStateAfterWorktreeCreate } from '@/lib/worktree-creation-agent-seeds'
 import type { ActivateAndRevealResult } from '@/lib/worktree-activation'
 import type { WorktreeCreationRequest } from '@/lib/pending-worktree-creation'
+import { notifyWorktreeCreationCompleted } from '@/local-tasks/local-task-creation-events'
+import type { StructuredCreationSessionOutcome } from '@/lib/worktree-creation-structured-session'
 
 export async function completeWorktreeCreation(args: {
   creationId: string
   request: WorktreeCreationRequest
   worktreeId: string
   structuredLaunchAccepted: boolean
+  structuredSessionOutcome?: Promise<StructuredCreationSessionOutcome>
   activation: ActivateAndRevealResult | false
   primaryTabId: string | null
   startupTerminalTabId?: string
@@ -17,6 +20,7 @@ export async function completeWorktreeCreation(args: {
   focusOnCompletion: boolean
 }): Promise<void> {
   const { request } = args
+  notifyWorktreeCreationCompleted(args)
   // Why: clearing synchronously after activation lets React commit the panel-to-terminal swap in one frame.
   useAppStore.getState().removePendingWorktreeCreation(args.creationId, { cleanupVm: false })
   if (!args.structuredLaunchAccepted) {

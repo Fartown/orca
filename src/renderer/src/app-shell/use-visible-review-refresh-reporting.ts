@@ -12,9 +12,13 @@ import {
   REVIEW_REFRESH_COOLDOWN_MS
 } from '../../../shared/review-refresh-policy'
 import { selectWorktreesByRepo } from '@/store/workspace-record-selectors'
+import { localTaskReviewRefreshWorktreeIds } from '@/local-tasks/local-task-review-refresh'
 
 export function visibleReviewWorktreeIdsForState(state: AppState): string[] {
-  const ids = new Set(state.visibleReviewCardWorktreeIds ?? [])
+  const ids = new Set([
+    ...(state.visibleReviewCardWorktreeIds ?? []),
+    ...localTaskReviewRefreshWorktreeIds(state)
+  ])
   const repos = getIndexedRepoMap(state.repos)
   if (state.activeWorktreeId && rightSidebarShowsPullRequestData(state)) {
     ids.add(state.activeWorktreeId)

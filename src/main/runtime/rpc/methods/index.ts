@@ -64,6 +64,7 @@ import { MANAGED_RUNTIME_INSTALL_METHODS } from './managed-runtime-install'
 import { ARTIFACT_METHODS } from './artifacts'
 import { ARTIFACT_SHARE_METHODS } from './artifact-share'
 import { GOAL_METHODS } from './goals'
+import { LOCAL_TASK_METHODS } from './local-tasks'
 import { FILE_ATTACHMENT_UPLOAD_METHODS } from './file-attachment-upload'
 import { AGENT_HOOK_METHODS } from './agent-hooks'
 import { AGENT_LAUNCH_METHODS } from './agent-launch'
@@ -87,6 +88,7 @@ export const ALL_RPC_METHODS = [
   ...ARTIFACT_METHODS,
   ...ARTIFACT_SHARE_METHODS,
   ...GOAL_METHODS,
+  ...LOCAL_TASK_METHODS,
   ...FILE_ATTACHMENT_UPLOAD_METHODS,
   ...AUTOMATION_METHODS,
   ...REPO_METHODS,
