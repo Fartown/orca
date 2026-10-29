@@ -40,7 +40,8 @@ export function withLocalTaskReceipt<T extends { ok: boolean }>(
     .prepare('DELETE FROM local_task_mutation_receipts WHERE created_at < ?')
     .run(now - RECEIPT_TTL_MS)
   if (expired.changes > 0) {
-    db.prepare('PRAGMA incremental_vacuum(64)').run()
+    // Why all(): the pragma frees one page per step; run() takes a single step.
+    db.prepare('PRAGMA incremental_vacuum(64)').all()
   }
   const stored = db
     .prepare(

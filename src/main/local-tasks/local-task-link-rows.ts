@@ -141,6 +141,10 @@ export function readLocalTaskLinks(db: LocalTasksDatabase): LocalTaskLinks {
   }
 }
 
+export function hasLocalTaskSessionLinks(db: LocalTasksDatabase): boolean {
+  return db.prepare('SELECT 1 FROM local_task_sessions LIMIT 1').get() !== undefined
+}
+
 export function readWorkspaceLink(
   db: LocalTasksDatabase,
   taskId: string

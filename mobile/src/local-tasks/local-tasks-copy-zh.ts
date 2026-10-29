@@ -21,14 +21,9 @@ export const LOCAL_TASKS_COPY_ZH: LocalTasksCopy = {
   switchHost: '切换主机',
   showHostTasks: (machine) => `查看 ${machine} 的任务`,
   hostEntryLabel: '本地任务',
-  desktopClosed: (machine) => (machine ? `${machine} 的 Orca 未打开` : '这台主机的 Orca 未打开'),
   desktopDisconnected: (machine) =>
     machine ? `无法连接 ${machine} 的 Orca` : '无法连接这台主机的 Orca',
   pairingInvalid: '配对已失效，请重新配对这台主机',
-  desktopClosedHint: (machine) =>
-    machine
-      ? `每台 Orca 各存自己的任务，手机通过 ${machine} 的 Orca 读写它的任务。打开 ${machine} 上的 Orca 后，这里会显示任务。`
-      : '每台 Orca 各存自己的任务。打开这台主机的 Orca 后，这里会显示任务。',
   unsupported: '这台主机的 Orca 还不支持本地任务，请先更新它的 Orca。',
   statusUnreadable: '读不到这台主机的状态，等连接稳定后再试。',
   checking: '正在确认主机…',

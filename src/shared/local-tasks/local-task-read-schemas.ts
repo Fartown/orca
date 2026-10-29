@@ -125,6 +125,7 @@ const localTaskEventSchema: z.ZodType<LocalTaskEvent, unknown> = z.object({
 export const localTasksStatusSchema: z.ZodType<LocalTasksStatus, unknown> = z.object({
   taskHost: z.boolean(),
   inProgressCount: z.number().optional(),
+  projectCount: z.number().optional(),
   state: openEnum(STATE_ARMS, 'unavailable'),
   reason: withDefault('reason', z.string().nullable(), () => null),
   revision: z.number(),

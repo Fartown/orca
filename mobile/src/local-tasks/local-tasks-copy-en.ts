@@ -28,15 +28,9 @@ export const LOCAL_TASKS_COPY_EN = {
   switchHost: 'Switch host',
   showHostTasks: (machine: string): string => `Show ${machine}'s tasks`,
   hostEntryLabel: 'Local tasks',
-  desktopClosed: (machine: string): string =>
-    machine ? `Orca on ${machine} is not open` : "This host's Orca is not open",
   desktopDisconnected: (machine: string): string =>
     machine ? `Cannot connect to Orca on ${machine}` : "Cannot connect to this host's Orca",
   pairingInvalid: 'Pairing invalid — re-pair with this host',
-  desktopClosedHint: (machine: string): string =>
-    machine
-      ? `Each Orca keeps its own tasks; the phone reads and writes ${machine}'s through its Orca. Open Orca on ${machine} to see them here.`
-      : "Each Orca keeps its own tasks. Open this host's Orca to see them here.",
   unsupported: "This host's Orca does not support local tasks yet. Update Orca on it.",
   statusUnreadable: "Could not read this host's status. Try again once the connection settles.",
   checking: 'Checking the host…',

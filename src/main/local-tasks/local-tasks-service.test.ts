@@ -1,7 +1,7 @@
 import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 // Why a value import: the Bun runner only moves SQLite tests to Node when they import this directly.
 import SyncDatabase from '../sqlite/sync-database'
 import {
@@ -9,6 +9,7 @@ import {
   LocalTasksDatabase,
   type LocalTasksCommit
 } from './local-tasks-database'
+import { LocalTasksReadinessRegistry } from './local-tasks-readiness'
 import { LocalTasksService } from './local-tasks-service'
 import {
   buildLocalTaskIndex,
@@ -563,8 +564,15 @@ describe('LocalTasksService', () => {
   it('opens a library written by a newer Orca read-only and refuses writes', () => {
     const userDataPath = mkdtempSync(join(tmpdir(), 'local-tasks-'))
     tempDirs.push(userDataPath)
-    LocalTasksDatabase.open('profile-a', userDataPath).close()
-    const raw = new SyncDatabase(getLocalTasksDatabasePath('profile-a', userDataPath))
+    const writable = LocalTasksDatabase.open('profile-a', userDataPath)
+    new LocalTasksService(writable).createProject({
+      clientOperationId: op(),
+      name: 'y',
+      prefix: 'Y'
+    })
+    writable.close()
+    const path = getLocalTasksDatabasePath('profile-a', userDataPath)
+    const raw = new SyncDatabase(path)
     raw.pragma('user_version = 99')
     raw.close()
     const db = LocalTasksDatabase.open('profile-a', userDataPath)
@@ -573,6 +581,54 @@ describe('LocalTasksService', () => {
     expect(
       service.createProject({ clientOperationId: op(), name: 'x', prefix: 'X', repos: ['p'] })
     ).toEqual({ ok: false, code: 'read_only' })
+    const readiness = new LocalTasksReadinessRegistry()
+    readiness.register(service)
+    expect(readiness.status()).toMatchObject({ state: 'read-only', projectCount: 1 })
+    db.close()
+
+    // A newer layout this build cannot count: the optional summaries are left out, status still reads.
+    const renamed = new SyncDatabase(path)
+    renamed.exec('ALTER TABLE local_task_projects RENAME TO local_task_projects_v99')
+    renamed.close()
+    const newer = LocalTasksDatabase.open('profile-a', userDataPath)
+    readiness.register(new LocalTasksService(newer))
+    expect(readiness.status().projectCount).toBeUndefined()
+    expect(readiness.status()).toMatchObject({ state: 'read-only', taskHost: true })
+    newer.close()
+  })
+
+  it('creates its file with incremental auto-vacuum and never VACUUMs it on a later open', () => {
+    const userDataPath = mkdtempSync(join(tmpdir(), 'local-tasks-vacuum-'))
+    tempDirs.push(userDataPath)
+    LocalTasksDatabase.open('profile-a', userDataPath).close()
+    const raw = new SyncDatabase(getLocalTasksDatabasePath('profile-a', userDataPath), {
+      readonly: true
+    })
+    expect(raw.pragma('auto_vacuum', { simple: true })).toBe(2)
+    raw.close()
+    const exec = vi.spyOn(SyncDatabase.prototype, 'exec')
+    try {
+      LocalTasksDatabase.open('profile-a', userDataPath).close()
+      expect(exec.mock.calls.filter(([sql]) => /VACUUM/i.test(sql))).toEqual([])
+    } finally {
+      exec.mockRestore()
+    }
+  })
+
+  it('returns a batch of free pages, not one, once expired receipts are cleared', () => {
+    let clock = 1_000
+    const db = LocalTasksDatabase.openTransient()
+    const service = new LocalTasksService(db, () => clock)
+    const created = service.createProject({ clientOperationId: op(), name: '回执', prefix: 'GC' })
+    const projectId = created.ok ? created.project.id : ''
+    // About 30 pages of receipts: more than the one page run() freed, fewer than one batch of 64.
+    for (let index = 0; index < 10; index++) {
+      const description = `${index}`.padEnd(3000, '描')
+      service.createTask({ clientOperationId: op(), projectId, title: '大', description }, 'mobile')
+    }
+    clock += 25 * 60 * 60 * 1000
+    createTask(service, projectId, '过期后的写入')
+    expect(db.prepare('PRAGMA freelist_count').get()).toEqual({ freelist_count: 0 })
     db.close()
   })
 })

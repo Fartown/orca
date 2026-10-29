@@ -96,7 +96,8 @@ export const statusResultSchema: z.ZodType<LocalTasksStatus> = z.object({
   reason: z.string().nullable(),
   revision: z.number(),
   taskHostId: z.string().nullable(),
-  inProgressCount: z.number().int().nonnegative().optional()
+  inProgressCount: z.number().int().nonnegative().optional(),
+  projectCount: z.number().int().nonnegative().optional()
 })
 
 const statusDefSchema: z.ZodType<LocalTaskStatusDef> = z.object({

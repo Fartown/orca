@@ -1,5 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { AppState } from 'react-native'
+import { useEffect, useState } from 'react'
 import type {
   LocalTaskLinks,
   LocalTaskProgressSnapshot,
@@ -7,6 +6,7 @@ import type {
   LocalTaskWorkspaceLink
 } from '../../../src/shared/local-tasks/local-task-link-types'
 import type { LocalTask } from '../../../src/shared/local-tasks/local-task-types'
+import { localTaskEffectiveWorkspace } from '../../../src/shared/local-tasks/local-task-tree'
 import { makePaneKey } from '../../../src/shared/stable-pane-id'
 import { worktreeIdsEqual } from '../../../src/shared/worktree/id'
 import { useOptionalHostProtocolGates } from '../components/host-protocol-gates-context'
@@ -14,10 +14,9 @@ import type { MobileSessionTab } from '../session/mobile-session-route-types'
 import { taskRuntimeStatusRead } from '../tasks/mobile-task-runtime-operations'
 import { useHostClient } from '../transport/host-client-hooks'
 import { useWorkspaceClient } from '../transport/use-workspace-client'
-import { createLocalTasksApi } from './local-tasks-api'
 import { hostAdvertisesLocalTasks } from './local-tasks-access'
-import { startLocalTasksChangeFeed } from './local-tasks-change-feed'
 import type { LocalTaskEndpoint } from './local-task-endpoint'
+import { useLocalTaskSessionLibrary } from './local-task-session-library'
 import { localTaskWorkspaceRouteId } from './local-task-work-navigation'
 
 /** A pane key from listed ids, or null when the leaf is not one this build can key. */
@@ -76,27 +75,40 @@ type StripData = {
 }
 
 /**
- * What the session header's task strip reads: links, tasks and "Needs you" from the library of the Orca the
- * workspace runs on (D-008), the paired host's or a server's, through the route's own client and
- * gates. A server's library is read only through a paired host that has local tasks itself, so an
- * older one never answers a relayed task call from its own library. Re-read on the change feed and
- * on coming back to the foreground; nothing is read on a timer.
+ * The task a session screen names — its open session's, else its workspace's — with that
+ * workspace's link and, for linking a session, the workspace's task and every task below it that
+ * works in this same workspace (REQ-011). Null when neither is linked.
  */
-export function useLocalTaskSessionStrip(hostId: string | undefined, endpoint: LocalTaskEndpoint) {
-  const desktop = useHostClient(hostId)
-  const { client, state } = useWorkspaceClient(hostId)
-  const gates = useOptionalHostProtocolGates()
-  const [desktopProbe, setDesktopProbe] = useState<{ client: unknown; advertises: boolean } | null>(
-    null
-  )
-  const [data, setData] = useState<StripData | null>(null)
-  const connected = state === 'connected' && client !== null
-  const viaServer = endpoint.executionHost !== undefined
-  const desktopAdvertises =
-    !viaServer || (desktopProbe?.client === desktop.client && desktopProbe.advertises)
-  const advertised = hostAdvertisesLocalTasks(gates?.hostCapabilities) && desktopAdvertises
-  const sequence = useRef(0)
+export function localTaskStripLine(
+  data: StripData,
+  worktreeId: string,
+  openSession: LocalTaskSessionLink | null
+) {
+  const workspace = localTaskWorkspaceForRoute(data.links.workspaces, worktreeId)
+  const taskId = openSession?.taskId ?? workspace?.taskId
+  const task = data.tasks.find((entry) => entry.id === taskId)
+  if (!task) {
+    return null
+  }
+  const tasksById = new Map(data.tasks.map((entry) => [entry.id, entry]))
+  const workspacesByTaskId = new Map(data.links.workspaces.map((link) => [link.taskId, link]))
+  const sessionChoices = workspace
+    ? data.tasks
+        .filter(
+          (entry) => localTaskEffectiveWorkspace(entry, tasksById, workspacesByTaskId) === workspace
+        )
+        .sort((a, b) => a.number - b.number)
+    : []
+  return { task, workspace, sessionChoices }
+}
 
+/**
+ * For a server's workspace, whether the paired host relaying to it has local tasks itself, so an
+ * older one is never sent a relayed task call; true for the paired host's own workspaces.
+ */
+function useRelayingHostHasLocalTasks(hostId: string | undefined, viaServer: boolean): boolean {
+  const desktop = useHostClient(hostId)
+  const [probe, setProbe] = useState<{ client: unknown; advertises: boolean } | null>(null)
   useEffect(() => {
     if (!viaServer || desktop.state !== 'connected' || !desktop.client || !hostId) {
       return
@@ -106,7 +118,7 @@ export function useLocalTaskSessionStrip(hostId: string | undefined, endpoint: L
     taskRuntimeStatusRead.requestSingleFlight(probed, hostId).then(
       (reply) => {
         if (current) {
-          setDesktopProbe({
+          setProbe({
             client: probed,
             advertises: hostAdvertisesLocalTasks(
               taskRuntimeStatusRead.interpret(reply).capabilities
@@ -120,44 +132,54 @@ export function useLocalTaskSessionStrip(hostId: string | undefined, endpoint: L
       current = false
     }
   }, [viaServer, desktop.client, desktop.state, hostId])
+  return !viaServer || (probe?.client === desktop.client && probe.advertises)
+}
 
-  const reload = useCallback(() => {
-    if (!client || !connected || !advertised) {
-      return
-    }
-    const turn = ++sequence.current
-    const api = createLocalTasksApi(client)
-    Promise.all([api.links(), api.tasks(), api.progress().catch(() => null)]).then(
-      ([links, tasks, progress]) => {
-        if (turn === sequence.current) {
-          setData({ links, tasks, progress })
-        }
-      },
-      () => {}
-    )
-  }, [client, connected, advertised])
-
-  useEffect(() => {
-    if (!client || !connected || !advertised) {
-      return
-    }
-    return startLocalTasksChangeFeed({
-      client,
-      appState: AppState,
-      onFullReload: reload,
-      onScopes: (scopes) => {
-        if (scopes.includes('links') || scopes.includes('tasks') || scopes.includes('attention')) {
-          reload()
-        }
-      }
-    })
-  }, [client, connected, advertised, reload])
-
+/**
+ * What the session header's task strip reads: links, tasks and "Needs you" from the library of the Orca the
+ * workspace runs on (D-008), the paired host's or a server's, through the route's own client and
+ * gates. A server's library is read only through a paired host that has local tasks itself, so an
+ * older one never answers a relayed task call from its own library. Every session screen of a
+ * library shares one watch of it (`local-task-session-library.ts`); nothing is read on a timer.
+ *
+ * The line outlives contact: out of contact it is the last read, with `live` false.
+ */
+export function useLocalTaskSessionStrip(
+  hostId: string | undefined,
+  endpoint: LocalTaskEndpoint,
+  route: { worktreeId: string; activeSessionTab: MobileSessionTab | null }
+) {
+  const { client, state } = useWorkspaceClient(hostId)
+  const gates = useOptionalHostProtocolGates()
+  const relayingHostHasTasks = useRelayingHostHasLocalTasks(
+    hostId,
+    endpoint.executionHost !== undefined
+  )
+  const connected = state === 'connected' && client !== null
+  const advertised = hostAdvertisesLocalTasks(gates?.hostCapabilities) && relayingHostHasTasks
+  const library = useLocalTaskSessionLibrary(
+    hostId ? `${hostId}\u0000${endpoint.key}` : null,
+    advertised ? client : null,
+    connected
+  )
+  const shown = library.data
+  const data: StripData | null =
+    shown?.links && shown.tasks
+      ? { links: shown.links, tasks: shown.tasks, progress: shown.progress }
+      : null
+  const live = connected && advertised && library.fresh && data !== null
+  const openSession = data
+    ? localTaskSessionForTab(data.links.sessions, route.activeSessionTab)
+    : null
   return {
     client,
-    desktopClient: desktop.client,
-    advertised: connected && advertised,
-    data,
-    reload
+    /** In contact and following the library, so what the line says is current. */
+    live,
+    openSession,
+    /** What the strip names, or null when neither the session nor its workspace is linked. */
+    line: data ? localTaskStripLine(data, route.worktreeId, openSession) : null,
+    /** Only a current snapshot, which is what may mark items seen. */
+    liveProgress: live ? (data?.progress ?? null) : null,
+    reload: library.reload
   }
 }

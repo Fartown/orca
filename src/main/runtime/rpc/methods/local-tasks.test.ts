@@ -99,16 +99,22 @@ describe('localTasks RPC', () => {
 
   it('is no task host and advertises nothing until a library is registered', () => {
     expect(localTasksReadiness.status()).toMatchObject({ taskHost: false, state: 'not-task-host' })
+    expect(localTasksReadiness.status().projectCount).toBeUndefined()
     expect(localTasksRuntimeCapabilities()).toEqual([])
     expect(() => localTasksReadiness.requireService()).toThrow(/does not host a task library/)
   })
 
   it('serves the profile library once started and keeps its rows in that file', () => {
     const userDataPath = startHost()
-    expect(localTasksReadiness.status()).toMatchObject({ taskHost: true, state: 'ready' })
+    expect(localTasksReadiness.status()).toMatchObject({
+      taskHost: true,
+      state: 'ready',
+      projectCount: 0
+    })
     expect(localTasksRuntimeCapabilities()).toEqual([LOCAL_TASKS_RUNTIME_CAPABILITY])
     const service = localTasksReadiness.requireService()
     const project = service.createProject({ clientOperationId: 'p1', name: '调研', prefix: 'RS' })
+    expect(localTasksReadiness.status()).toMatchObject({ projectCount: 1 })
     const task = service.createTask(
       { clientOperationId: 't1', projectId: project.ok ? project.project.id : '', title: '竞品' },
       'mobile'
@@ -124,7 +130,7 @@ describe('localTasks RPC', () => {
 })
 
 describe('orcad task library', () => {
-  it('opens the orcad profile’s library and watches the host’s status until closed', () => {
+  it('opens the orcad profile’s library and watches the host only while a session is linked', () => {
     const userDataPath = mkdtempSync(join(tmpdir(), 'local-tasks-orcad-'))
     const previous = hasAppEnvironment() ? getAppEnvironment() : null
     setAppEnvironment({
@@ -152,6 +158,24 @@ describe('orcad task library', () => {
     })
     expect(localTasksReadiness.status()).toMatchObject({ taskHost: true, state: 'ready' })
     expect(localTasksRuntimeCapabilities()).toEqual([LOCAL_TASKS_RUNTIME_CAPABILITY])
+    // No linked session yet: the host's status changes are not even subscribed.
+    expect(watching.size).toBe(0)
+    const service = localTasksReadiness.requireService()
+    const project = service.createProject({ clientOperationId: 'p', name: '商城', prefix: 'SHOP' })
+    const task = service.createTask(
+      { clientOperationId: 't', projectId: project.ok ? project.project.id : '', title: '导出' },
+      'desktop'
+    )
+    const taskId = task.ok ? task.task.id : ''
+    const place = { hostId: 'local', worktreeId: 'repo::/work/shop', linkedVia: 'start' as const }
+    service.execution.linkWorkspace(
+      { clientOperationId: 'w', taskId, kind: 'git-worktree', ...place },
+      'desktop'
+    )
+    service.execution.recordSession(
+      { clientOperationId: 's', taskId, surface: 'terminal', tabId: 'tab-1', ...place },
+      'desktop'
+    )
     expect(watching.has('client-events')).toBe(true)
     const profileId = ensureActiveOrcaProfile(userDataPath).profile.id
     expect(existsSync(getLocalTasksDatabasePath(profileId, userDataPath))).toBe(true)

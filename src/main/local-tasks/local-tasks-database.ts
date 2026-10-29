@@ -54,6 +54,11 @@ export class LocalTasksDatabase {
         const readOnly = new SyncDatabase(path, { readonly: true, fileMustExist: true })
         return new LocalTasksDatabase(path, readOnly, true)
       }
+      const incremental = Number(probe.pragma('auto_vacuum', { simple: true })) === 2
+      // Why before WAL: switching journal mode writes page 1, which fixes a new file's auto_vacuum.
+      if (!incremental) {
+        probe.pragma('auto_vacuum = INCREMENTAL')
+      }
       probe.pragma('journal_mode = WAL')
       probe.pragma('synchronous = NORMAL')
       probe.pragma('busy_timeout = 5000')
@@ -61,11 +66,9 @@ export class LocalTasksDatabase {
       if (Number(probe.pragma('foreign_keys', { simple: true })) !== 1) {
         throw new Error('local tasks: foreign key enforcement could not be enabled')
       }
-      if (Number(probe.pragma('auto_vacuum', { simple: true })) !== 2) {
-        probe.pragma('auto_vacuum = INCREMENTAL')
-        if (stored > 0) {
-          probe.exec('VACUUM')
-        }
+      if (!incremental && stored > 0) {
+        // Why: only a library from before incremental auto-vacuum converts, once; new files never do.
+        probe.exec('VACUUM')
       }
       if (stored < LOCAL_TASKS_SCHEMA_VERSION) {
         // Why off: a rebuilt parent table must not cascade into its children; checked before COMMIT.

@@ -3,7 +3,7 @@ title: 本地任务管理
 slug: 本地任务管理
 status: implementing
 created: 2026-10-26
-updated: 2026-10-29
+updated: 2026-10-30
 ---
 
 # 本地任务管理 开发 Journal
@@ -144,6 +144,46 @@ updated: 2026-10-29
 - 验证完再一起做两个切片
 
 ## 3. 开发记录
+
+### 2026-10-30 修复本地任务对已有功能的影响
+
+- 本轮目标：PR #71 合入后，系统评审（`.docs/local-tasks-ui-validation/2026-10-29/deep-review/`）发现一批不用任务功能的用户也会碰到的问题，这一轮把它们全部修掉。只影响任务用户的缺陷留到下一轮。
+- 完成内容：
+  - 统一原则「没有项目就不打扰」：`localTasks.status` 新增可选的 `projectCount`；旧主机不报这个字段，按「有项目」处理。库里没有项目时，不显示附加入口、不开变更流、不跑判定。只保留四个发现入口：任务页来源栏、设置分区、Cmd+J（排在上游动作之后）、手机主机页按钮。
+  - 主进程：
+    - 新库先设 `auto_vacuum` 再切 WAL，第二次启动不再执行 VACUUM；旧库仍做一次转换。
+    - 没有会话关联时，判定器不订阅主机状态、不查库。
+    - 回执清理每次只释放 1 页的问题已修。
+    - 判定缓存只保留仍有关联的 pane。
+  - 桌面：
+    - Cmd+J 输入 `create` 时，第一条恢复为 Create Worktree；偏好恢复为「本地」后，点 GitHub 可以切回。
+    - 右键菜单的「关联到任务…」只在库有项目时出现；设置分区移到工作流分组末尾。
+    - 能力探测失败不再触发共享层的退避重订，改为沿用上游的 `hostContactEpoch`，等「主机回来了」再重订。
+    - 没有项目的配对库只读 status，不开流；打开任务页或任务设置时才开流。
+    - 订阅回调统一隔离异常，两个后台组件就近加错误边界。
+    - Cmd+J 的空结果改为稳定引用；没有关联时不再收集输入。
+  - 手机：
+    - 会话页任务条只在有关联时出现；断线时保留内容并标「无法确认」，页头高度不变；横屏不占行。同一库的会话页共用一份订阅；没有项目时零请求。
+    - 首页不再把重连、配对失效说成「Orca 未打开」，卡片只在有项目时显示，并去掉了重复读取。
+    - 长按菜单的新项放到最后，且只在所属库有项目时出现。
+    - 主机页按钮的明暗与相邻按钮一致，加载时不再挤动其他图标。
+  - 撤回了一项：曾把上游任务列表改成切到「本地」时隐藏而不卸载，结果 GitHub Project 工具栏的全局 Cmd+F 监听会抢走本地任务页的 Cmd+F，所以恢复为卸载。上游在两个来源之间切换时本来也会卸载。
+  - 设置页搜 `local`、`tasks` 时，「本地任务」排第一，这一点接受：分区标题本身含这两个词；而且在加入本地任务之前，搜 `tasks` 排第一的也不是上游的 Tasks 分区。
+- 代码或文档变更：
+  - `src/main/local-tasks/**`（新增 `local-task-pane-memory.ts`）、`src/shared/local-tasks/` 的状态类型与 schema；
+  - `src/renderer/src/local-tasks/**`（新增 `local-task-app-store-subscription.ts`、`local-task-library-viewers.ts`）、`src/renderer/src/components/local-tasks/**`；
+  - 接缝 `quick-actions.ts`、`settings-navigation-workflow-sections.ts`、`settings-page-renderer.tsx`；
+  - `mobile/src/local-tasks/**`（新增 `local-task-session-library.ts`、`local-task-library-presence.ts`），接缝 `host-screen-overlays.tsx`。
+- 验证证据：
+  - 每条修复都有回归测试，多数已在修复前的代码上实测失败。
+  - CI 静态分析各项都在本 worktree 目录下跑过。
+  - 门禁结果在 `.docs/local-tasks-ui-validation/2026-10-30/existing-feature-fixes/gates/`。
+- 未解决问题：
+  - 旧版原生 App 搭配 fork 桌面时，有项目的用户每弹出一个页面，会残留一条订阅，直到连接断开；新版 App 正常退订。
+  - 已关联的会话页首次打开时，终端仍可能多 refit 一次。
+  - 别处建出第一个项目后，这台桌面要等重新联系或打开任务页时才会察觉。
+  - 「任务功能自身」一类的问题（WSL 或 orcad 迁移后关联断开、大库超过 4 MiB 等）留到下一轮。
+- 下一步：提 PR，跑完整 CI；全部通过后合入。
 
 ### 2026-10-29 修 PR #71 卡住 CI 的两条 ratchet
 

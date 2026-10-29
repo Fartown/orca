@@ -18,6 +18,7 @@ import {
 } from '@/local-tasks/local-tasks-domain-store'
 import { localTaskIdEndpoint } from '@/local-tasks/local-task-endpoints'
 import { useLocalTaskEndpointLabels } from '@/local-tasks/local-task-endpoint-labels'
+import { useLocalTaskLibraryViewer } from '@/local-tasks/local-task-library-viewers'
 import { LocalTaskHostTag } from '../LocalTaskHostTag'
 import {
   LocalTaskHostStatePanel,
@@ -87,6 +88,7 @@ function NewProjectDialog({
 
 /** Settings → Local Tasks: projects, prefixes and statuses (REQ-001, REQ-002, REQ-003). */
 export function LocalTasksSettingsPane(): React.JSX.Element {
+  useLocalTaskLibraryViewer()
   const connection = useLocalTasksDomain((state) => state.connection)
   const readable = useLocalTasksDomain(isLocalTasksReadable)
   const hostState = useLocalTasksDomain((state) => state.hostState)

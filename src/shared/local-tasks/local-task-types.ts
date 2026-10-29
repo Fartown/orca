@@ -106,6 +106,8 @@ export type LocalTasksStatus = {
   taskHostId: string | null
   /** Optional for older hosts; counts tasks whose status category is started. */
   inProgressCount?: number
+  /** Optional for older hosts, read as "has projects"; 0 keeps every task surface out of the way. */
+  projectCount?: number
 }
 
 export type LocalTaskFailureCode =

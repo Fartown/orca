@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { RecoverableRenderErrorBoundary } from '@/components/error-boundaries/RecoverableRenderErrorBoundary'
 import { isWebClientLocation } from '@/lib/web-client-location'
 import { useAppStore } from '@/store'
 import type { AppState } from '@/store/types'
@@ -19,11 +20,16 @@ import {
   selectLocalTasksPartition,
   useLocalTasksDomain
 } from './local-tasks-domain-store'
+import { localTasksReportProjects } from './local-tasks-partition'
 import { closeLocalTasksSync, localTasksSyncFor } from './local-tasks-sync'
+import { localTaskLibraryViewerStore } from './local-task-library-viewers'
+import { subscribeLocalTaskAppStore } from './local-task-app-store-subscription'
 import { installLocalTaskPageKeyRouter } from './local-task-page-keys'
 import { bindLocalTaskSourceActivation } from './local-task-source-activation'
 import { bindLocalTaskViewPreferences } from './local-task-view-preferences'
 import { localTaskPageStore } from './local-task-page-store'
+
+const NO_STREAM = { unsubscribe: () => {} }
 
 /** This app's own library: one stream that stays closed until the user retries. */
 function useSelfLibraryStream(): void {
@@ -77,62 +83,116 @@ function useSelfLibraryStream(): void {
   }, [epoch])
 }
 
-function environmentEpoch(environmentId: string): number {
-  return (
-    selectLocalTasksPartition(
-      localTasksDomainStore.getState(),
-      localTaskEnvironmentEndpoint(environmentId)
-    )?.subscriptionEpoch ?? 0
+function pairedPartition(environmentId: string) {
+  return selectLocalTasksPartition(
+    localTasksDomainStore.getState(),
+    localTaskEnvironmentEndpoint(environmentId)
   )
 }
 
 /**
- * Paired Orcas' libraries (D-008): one stream per environment the shared connection layer has in
- * contact and that advertises `local-tasks.v1`. Leaving contact keeps what was read, marked
- * unverifiable; the next `ready` after contact returns re-reads everything. Never probes or
- * reconnects on its own.
+ * Whether a paired library gets a change stream (D6): while it holds a project, or while a surface
+ * that can add one is on screen. Otherwise only its status is read, each time the subscription is
+ * made again: on returning to contact, and when that demand changes (opening the Local page or
+ * Settings → Local Tasks, leaving them after adding a project here). A project made elsewhere
+ * meanwhile shows up at the next of those. A browser client's paired library is its own.
+ */
+function pairedLibraryStreamed(environmentId: string): boolean {
+  if (isWebClientLocation() || localTaskLibraryViewerStore.getState().viewers > 0) {
+    return true
+  }
+  const partition = pairedPartition(environmentId)
+  return localTasksReportProjects(partition) || (partition?.projects.length ?? 0) > 0
+}
+
+function pairedSubscriptionKey(environmentId: string): string {
+  const epoch = pairedPartition(environmentId)?.subscriptionEpoch ?? 0
+  const mode = pairedLibraryStreamed(environmentId) ? 'stream' : 'status'
+  return `${getRuntimeEnvironmentConnectionGeneration(environmentId)}:${getRuntimeEnvironmentRevision(environmentId) ?? 'unknown'}:${epoch}:${mode}`
+}
+
+function hostContactEpoch(state: AppState, environmentId: string): number {
+  return state.runtimeStatusByEnvironmentId.get(environmentId)?.hostContactEpoch ?? 0
+}
+
+/**
+ * Paired Orcas' libraries (D-008): one subscription per environment the shared connection layer has
+ * in contact and that advertises `local-tasks.v1`. Leaving contact keeps what was read, marked
+ * unverifiable; the next `ready` (or status read) after contact returns re-reads everything. Never
+ * probes, retries or reconnects on its own.
  */
 function bindPairedLibraryStreams(): () => void {
+  // A failed subscribe waits for the shared layer's "host is back" edge, not for a timer: the
+  // contact epoch it failed under, and the epoch last folded into each key. A same-runtime return
+  // moves only `hostContactEpoch`, not the connection generation or the pairing revision.
+  const failedUnderContact = new Map<string, number>()
+  const contactMarks = new Map<string, number>()
+  const subscriptionKey = (environmentId: string): string =>
+    `${pairedSubscriptionKey(environmentId)}:${contactMarks.get(environmentId) ?? 0}`
+
   const events = createRuntimeClientEventsSync({
     getDesiredEnvironmentIds: () => getReachableRuntimeEnvironmentIds(useAppStore.getState()),
-    getSubscriptionKey: (environmentId) =>
-      `${getRuntimeEnvironmentConnectionGeneration(environmentId)}:${getRuntimeEnvironmentRevision(environmentId) ?? 'unknown'}:${environmentEpoch(environmentId)}`,
+    getSubscriptionKey: subscriptionKey,
     subscribe: async (environmentId, _onEvent, onError, isCurrent) => {
+      failedUnderContact.delete(environmentId)
       const endpoint = localTaskEnvironmentEndpoint(environmentId)
       const sync = localTasksSyncFor(endpoint)
       const writer = localTasksDomainStore.getState().writer(endpoint)
-      writer.setConnection('connecting')
-      if (
-        !(await runtimeEnvironmentSupportsCapability(environmentId, LOCAL_TASKS_RUNTIME_CAPABILITY))
-      ) {
-        if (isCurrent()) {
-          writer.setConnection('unsupported')
+      const streamed = pairedLibraryStreamed(environmentId)
+      writer.setConnection(streamed ? 'connecting' : 'idle')
+      try {
+        if (
+          !(await runtimeEnvironmentSupportsCapability(
+            environmentId,
+            LOCAL_TASKS_RUNTIME_CAPABILITY
+          ))
+        ) {
+          if (isCurrent()) {
+            writer.setConnection('unsupported')
+          }
+          return NO_STREAM
         }
-        return { unsubscribe: () => {} }
-      }
-      return subscribeRuntimeRpc(
-        { kind: 'environment', environmentId },
-        'localTasks.subscribeChanges',
-        null,
-        {
-          onEvent: (frame) => {
-            if (isCurrent()) {
-              sync.receive(frame)
-            }
-          },
-          onError: (error) => {
-            if (isCurrent()) {
-              sync.fail(error)
-            }
-            onError(error)
-          },
-          onClose: () => {
-            if (isCurrent()) {
-              writer.setConnection('ended')
+        if (!streamed) {
+          if (isCurrent()) {
+            await sync.readStatus()
+          }
+          return NO_STREAM
+        }
+        return await subscribeRuntimeRpc(
+          { kind: 'environment', environmentId },
+          'localTasks.subscribeChanges',
+          null,
+          {
+            onEvent: (frame) => {
+              if (isCurrent()) {
+                sync.receive(frame)
+              }
+            },
+            onError: (error) => {
+              if (isCurrent()) {
+                sync.fail(error)
+              }
+              onError(error)
+            },
+            onClose: () => {
+              if (isCurrent()) {
+                writer.setConnection('ended')
+              }
             }
           }
+        )
+      } catch (error) {
+        // Why not rethrown: the shared layer would re-probe on its backoff timer while nothing
+        // changed. What was read stays, unconfirmed; the user's Retry or regained contact goes next.
+        if (isCurrent()) {
+          failedUnderContact.set(
+            environmentId,
+            hostContactEpoch(useAppStore.getState(), environmentId)
+          )
+          sync.fail(error)
         }
-      )
+        return NO_STREAM
+      }
     },
     // Why unused: frames go straight to the library's sync, guarded by `isCurrent`.
     onEvent: () => {}
@@ -144,12 +204,21 @@ function bindPairedLibraryStreams(): () => void {
     for (const environmentId of reachable) {
       localTasksSyncFor(localTaskEnvironmentEndpoint(environmentId))
     }
+    for (const [environmentId, epoch] of failedUnderContact) {
+      const current = hostContactEpoch(state, environmentId)
+      if (current !== epoch) {
+        failedUnderContact.delete(environmentId)
+        contactMarks.set(environmentId, current)
+      }
+    }
     for (const partition of localTasksDomainStore.getState().partitions) {
       const environmentId = localTaskEndpointEnvironmentId(partition.endpoint)
       if (environmentId === null) {
         continue
       }
       if (!paired.has(environmentId) && !reachable.has(environmentId)) {
+        failedUnderContact.delete(environmentId)
+        contactMarks.delete(environmentId)
         closeLocalTasksSync(partition.endpoint)
         continue
       }
@@ -162,7 +231,7 @@ function bindPairedLibraryStreams(): () => void {
 
   let previous = useAppStore.getState()
   reconcile(previous)
-  const stopApp = useAppStore.subscribe((state) => {
+  const stopApp = subscribeLocalTaskAppStore('paired library contact', (state) => {
     if (
       state.runtimeStatusByEnvironmentId === previous.runtimeStatusByEnvironmentId &&
       state.runtimeEnvironments === previous.runtimeEnvironments
@@ -172,35 +241,42 @@ function bindPairedLibraryStreams(): () => void {
     previous = state
     reconcile(state)
   })
-  const epochs = (): string =>
+  const demand = (): string =>
     localTasksDomainStore
       .getState()
-      .partitions.map((partition) => `${partition.endpoint}:${partition.subscriptionEpoch}`)
+      .partitions.map((partition) => {
+        const environmentId = localTaskEndpointEnvironmentId(partition.endpoint)
+        return environmentId === null
+          ? `${partition.endpoint}:${partition.subscriptionEpoch}`
+          : `${partition.endpoint}:${subscriptionKey(environmentId)}`
+      })
       .join('\n')
-  let previousEpochs = epochs()
-  // Why: an explicit retry bumps a partition's epoch, which is part of its subscription key.
+  let previousDemand = demand()
+  // Why: a retry bumps the epoch, and a project count or list decides stream or status alone.
   const stopDomain = localTasksDomainStore.subscribe(() => {
-    const next = epochs()
-    if (next !== previousEpochs) {
-      previousEpochs = next
+    const next = demand()
+    if (next !== previousDemand) {
+      previousDemand = next
       events.sync()
     }
   })
+  const stopViewers = localTaskLibraryViewerStore.subscribe(() => events.sync())
   return () => {
     stopApp()
     stopDomain()
+    stopViewers()
     events.stop()
   }
 }
 
 /** Holds every task library this window reads; reads follow each host's notices only. */
-export function LocalTasksSyncGate(): null {
+function LocalTasksLibraries(): null {
   useEffect(() => installLocalTaskPageKeyRouter(), [])
   useEffect(() => bindLocalTaskSourceActivation(), [])
   useEffect(() => bindLocalTaskViewPreferences(), [])
   useEffect(
     () =>
-      useAppStore.subscribe((state, previous) => {
+      subscribeLocalTaskAppStore('leaving the task page', (state, previous) => {
         if (previous.activeView === 'tasks' && state.activeView !== 'tasks') {
           localTaskPageStore.getState().clearTransientUi()
         }
@@ -210,4 +286,17 @@ export function LocalTasksSyncGate(): null {
   useSelfLibraryStream()
   useEffect(() => bindPairedLibraryStreams(), [])
   return null
+}
+
+/** A failure here costs the task libraries only, never the rest of the window. */
+export function LocalTasksSyncGate(): React.JSX.Element {
+  return (
+    <RecoverableRenderErrorBoundary
+      boundaryId="local-tasks.sync-gate"
+      surface="overlay"
+      fallback={() => null}
+    >
+      <LocalTasksLibraries />
+    </RecoverableRenderErrorBoundary>
+  )
 }

@@ -10,7 +10,11 @@ import { openLocalTaskPage } from '@/local-tasks/local-task-navigation'
 import { useLocalTaskSidebarGrouping } from '@/local-tasks/local-task-sidebar-grouping'
 import { localTaskWorktreeHostId } from '@/local-tasks/local-task-workspace-resolution'
 import { localTaskEndpointForHost } from '@/local-tasks/local-task-endpoints'
-import { isLocalTasksReadable, useLocalTasksDomain } from '@/local-tasks/local-tasks-domain-store'
+import {
+  isLocalTasksReadable,
+  selectLocalTasksPartition,
+  useLocalTasksDomain
+} from '@/local-tasks/local-tasks-domain-store'
 
 type WorkspaceRef = Pick<Worktree, 'id' | 'hostId' | 'instanceId'>
 
@@ -89,12 +93,17 @@ export function LocalTaskWorkspaceMenuItem({
 }): React.JSX.Element | null {
   const task = useWorkspaceTask(worktree)
   const hostId = useAppStore((state) => localTaskWorktreeHostId(state, worktree))
-  // Why the host's library: only the Orca serving this workspace can link it to a task.
-  const readable = useLocalTasksDomain((state) => {
+  // Why the host's library: only the Orca serving this workspace can link it to a task. Without a
+  // task project there it has nothing to offer, so the menu stays as upstream built it.
+  const offered = useLocalTasksDomain((state) => {
     const endpoint = localTaskEndpointForHost(hostId)
-    return endpoint !== null && isLocalTasksReadable(state, endpoint)
+    return (
+      endpoint !== null &&
+      isLocalTasksReadable(state, endpoint) &&
+      (selectLocalTasksPartition(state, endpoint)?.projects.length ?? 0) > 0
+    )
   })
-  if (!readable) {
+  if (!offered) {
     return null
   }
   return (

@@ -44,13 +44,15 @@ export class LocalTasksReadinessRegistry {
   }
 
   status(): LocalTasksStatus {
+    const service = this.service
     return {
       taskHost: this.state !== 'not-task-host',
       state: this.state,
       reason: this.reason,
-      revision: this.service?.revision() ?? 0,
-      taskHostId: this.service?.taskHostId() ?? null,
-      inProgressCount: this.service?.inProgressCount()
+      revision: service?.revision() ?? 0,
+      taskHostId: service?.taskHostId() ?? null,
+      inProgressCount: service ? readableCount(() => service.inProgressCount()) : undefined,
+      projectCount: service ? readableCount(() => service.projectCount()) : undefined
     }
   }
 
@@ -106,6 +108,15 @@ export class LocalTasksReadinessRegistry {
     for (const listener of this.listeners) {
       listener()
     }
+  }
+}
+
+/** Optional summary counts are left out when a library (say, a newer one read-only) cannot answer. */
+function readableCount(read: () => number): number | undefined {
+  try {
+    return read()
+  } catch {
+    return undefined
   }
 }
 

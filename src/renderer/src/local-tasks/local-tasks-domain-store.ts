@@ -87,6 +87,12 @@ export function createLocalTasksDomainStore() {
           ),
         setHostState: (hostState, hostReason) =>
           update(endpoint, () => ({ hostState, hostReason })),
+        applyStatus: (status) =>
+          update(endpoint, () => ({
+            hostState: status.state,
+            hostReason: status.reason,
+            projectCount: status.projectCount ?? 'unreported'
+          })),
         setReadError: (resource, message) =>
           update(endpoint, (partition) => {
             if (message === null && !(resource in partition.readErrors)) {

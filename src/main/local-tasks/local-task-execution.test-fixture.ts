@@ -51,7 +51,15 @@ export function fakeHost() {
     })
     listener?.()
   }
-  return { source, rows, live, contact, report, emit: () => listener?.() }
+  return {
+    source,
+    rows,
+    live,
+    contact,
+    report,
+    emit: () => listener?.(),
+    watched: () => listener !== null
+  }
 }
 
 export function setup(options: { clock?: () => number; host?: ReturnType<typeof fakeHost> } = {}) {

@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { LOCAL_TASKS_RUNTIME_CAPABILITY } from '../../../src/shared/local-tasks/local-tasks-capability'
 import type { RpcResponse } from '../transport/types'
 import { createLocalTasksApi } from './local-tasks-api'
-import { readLocalTasksInProgress } from './local-task-home-attention'
+import { readLocalTaskHomeLibrary } from './local-task-home-attention'
 import { resolveLocalTasksAccess } from './local-tasks-access'
 
 const connected = { connState: 'connected' as const, statusPending: false, statusReadable: true }
@@ -25,7 +25,7 @@ describe('which hosts the phone treats as task hosts', () => {
     )
   })
 
-  it('calls a host out of contact not open, even one that advertised before', () => {
+  it('calls a host out of contact offline, even one that advertised before', () => {
     for (const connState of ['disconnected', 'reconnecting', 'auth-failed'] as const) {
       expect(
         resolveLocalTasksAccess({
@@ -86,24 +86,16 @@ describe('which hosts the phone treats as task hosts', () => {
       updatedAt: 0,
       revision: 0
     })
-    const replies: Record<string, unknown> = {
-      'localTasks.status': {
-        taskHost: true,
-        state: 'ready',
-        revision: 1,
-        reason: null,
-        taskHostId: 'h'
-      },
+    const { library, methods } = await readHome({
+      'localTasks.status': STATUS,
       'localTasks.projects.list': { projects: [project] },
       'localTasks.tasks.list': {
         tasks: [task('a', 'doing'), task('b', 'doing', 'a'), task('c', 'todo')]
       }
-    }
-    const sendRequest = vi.fn((method: string) =>
-      Promise.resolve<RpcResponse>({ id: method, ok: true, result: replies[method] })
-    )
-    await expect(readLocalTasksInProgress(createLocalTasksApi({ sendRequest }))).resolves.toBe(2)
-    expect(sendRequest.mock.calls.map(([method]) => method).sort()).toEqual([
+    })
+    expect(library?.inProgress).toBe(2)
+    expect(methods).toEqual([
+      'localTasks.attention.get',
       'localTasks.projects.list',
       'localTasks.status',
       'localTasks.tasks.list'
@@ -111,20 +103,38 @@ describe('which hosts the phone treats as task hosts', () => {
   })
 
   it('uses the optional host count without downloading the library', async () => {
-    const sendRequest = vi.fn(async (_method: string) => ({
-      id: 'status',
-      ok: true as const,
-      result: {
-        taskHost: true,
-        state: 'ready',
-        revision: 1,
-        reason: null,
-        taskHostId: 'h',
-        inProgressCount: 4
-      }
-    }))
-    await expect(readLocalTasksInProgress(createLocalTasksApi({ sendRequest }))).resolves.toBe(4)
-    expect(sendRequest).toHaveBeenCalledOnce()
-    expect(sendRequest.mock.calls[0]?.[0]).toBe('localTasks.status')
+    const { library, methods } = await readHome({
+      'localTasks.status': { ...STATUS, inProgressCount: 4 }
+    })
+    expect(library?.inProgress).toBe(4)
+    expect(methods).toEqual(['localTasks.attention.get', 'localTasks.status'])
+  })
+
+  it('leaves out, after its status alone, a library with no project or one not open', async () => {
+    for (const status of [
+      { ...STATUS, projectCount: 0, inProgressCount: 0 },
+      { ...STATUS, state: 'starting' },
+      { ...STATUS, state: 'unavailable', reason: 'disk' }
+    ]) {
+      const { library, methods } = await readHome({ 'localTasks.status': status })
+      expect(library).toBeNull()
+      expect(methods).toEqual(['localTasks.status'])
+    }
   })
 })
+
+const STATUS = { taskHost: true, state: 'ready', revision: 1, reason: null, taskHostId: 'h' }
+
+async function readHome(replies: Record<string, unknown>) {
+  const answers: Record<string, unknown> = {
+    'localTasks.attention.get': { observedAt: 1, sessions: [], items: [] },
+    ...replies
+  }
+  const sendRequest = vi.fn((method: string) =>
+    Promise.resolve<RpcResponse>({ id: method, ok: true, result: answers[method] })
+  )
+  const library = await readLocalTaskHomeLibrary(createLocalTasksApi({ sendRequest }), {
+    label: 'h'
+  })
+  return { library, methods: sendRequest.mock.calls.map(([method]) => method).sort() }
+}

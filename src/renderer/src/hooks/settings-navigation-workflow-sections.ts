@@ -120,7 +120,6 @@ export function buildWorkflowSettingsSections(
       searchEntries: getTasksPaneSearchEntries(),
       group: 'workflows'
     },
-    ...getLocalTasksSettingsSections(),
     {
       id: 'terminal',
       title: translate('auto.hooks.useSettingsNavigationMetadata.a9fb10afca', 'Terminal'),
@@ -193,6 +192,8 @@ export function buildWorkflowSettingsSections(
         includeBrowser: showDesktopOnlySettings
       }),
       group: 'workflows'
-    }
+    },
+    // Why last: an equal search match is ordered by position, and upstream sections keep the lead.
+    ...getLocalTasksSettingsSections()
   ]
 }

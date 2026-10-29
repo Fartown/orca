@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { RecoverableRenderErrorBoundary } from '@/components/error-boundaries/RecoverableRenderErrorBoundary'
 import { useAppStore } from '@/store'
 import type { AppState } from '@/store/types'
 import {
@@ -11,6 +12,7 @@ import { localTasksClient } from './local-tasks-runtime-client'
 import { isLocalTasksWritable, localTasksDomainStore } from './local-tasks-domain-store'
 import { bindLocalTaskStartWork } from './local-task-start-work'
 import { bindLocalTaskSeenForwarding } from './local-task-seen-forwarding'
+import { subscribeLocalTaskAppStore } from './local-task-app-store-subscription'
 import { LocalTaskWorkspaceTaskPickerHost } from '@/components/local-tasks/LocalTaskWorkspaceTaskPicker'
 import {
   findLocalTaskPrMergedTriggers,
@@ -40,7 +42,7 @@ function sameInputs(left: readonly unknown[], right: readonly unknown[]): boolea
  * host of linked workspaces, and the PR-merged rule, each in the library that holds the link.
  * Each write is attempted once per value; a failure waits for the next change rather than a retry.
  */
-export function LocalTaskLinkMaintenance(): React.JSX.Element {
+function LocalTaskLinkUpkeep(): React.JSX.Element {
   useEffect(() => bindLocalTaskStartWork(), [])
   // Why here: a session seen from the sidebar or a tab counts as seen in its library too.
   useEffect(() => bindLocalTaskSeenForwarding(), [])
@@ -99,8 +101,16 @@ export function LocalTaskLinkMaintenance(): React.JSX.Element {
     }
 
     const runIfChanged = (): void => {
-      const inputs = appInputs(useAppStore.getState())
       const library = localTasksDomainStore.getState().partitions
+      // Why: every fix, rule and review id starts from a workspace link; with none, app store
+      // churn has nothing to act on, so its inputs are not even gathered.
+      if (
+        library === previousLibrary &&
+        !library.some((partition) => partition.links.workspaces.length > 0)
+      ) {
+        return
+      }
+      const inputs = appInputs(useAppStore.getState())
       if (sameInputs(inputs, previousInputs) && library === previousLibrary) {
         return
       }
@@ -109,7 +119,7 @@ export function LocalTaskLinkMaintenance(): React.JSX.Element {
       run()
     }
 
-    const unsubscribeApp = useAppStore.subscribe(runIfChanged)
+    const unsubscribeApp = subscribeLocalTaskAppStore('link upkeep', runIfChanged)
     const unsubscribeLibrary = localTasksDomainStore.subscribe(runIfChanged)
     document.addEventListener('visibilitychange', run)
     runIfChanged()
@@ -122,4 +132,17 @@ export function LocalTaskLinkMaintenance(): React.JSX.Element {
 
   // Why here: a sidebar menu opens this picker after the menu itself has closed.
   return <LocalTaskWorkspaceTaskPickerHost />
+}
+
+/** A failure here costs link upkeep and its picker only, never the rest of the window. */
+export function LocalTaskLinkMaintenance(): React.JSX.Element {
+  return (
+    <RecoverableRenderErrorBoundary
+      boundaryId="local-tasks.link-maintenance"
+      surface="overlay"
+      fallback={() => null}
+    >
+      <LocalTaskLinkUpkeep />
+    </RecoverableRenderErrorBoundary>
+  )
 }
