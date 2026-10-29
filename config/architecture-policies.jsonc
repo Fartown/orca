@@ -691,7 +691,6 @@
             "src/renderer/src/components/sidebar/worktree-list/rows/virtual-row-dispatch.tsx",
             "src/renderer/src/hooks/composer-state/quick-creation-execution.ts",
             "src/renderer/src/hooks/composer-state/quick-creation-request.ts",
-            "src/renderer/src/lib/worktree-creation-agent-seeds.ts",
             "src/renderer/src/lib/worktree-creation-completion.ts",
             "src/renderer/src/lib/worktree-creation-flow-execute.ts",
             "src/renderer/src/lib/worktree-creation-structured-session.ts",
@@ -1694,7 +1693,6 @@
             "src/renderer/src/components/sidebar/worktree-list/rows/virtual-row-dispatch.tsx",
             "src/renderer/src/hooks/composer-state/quick-creation-execution.ts",
             "src/renderer/src/hooks/composer-state/quick-creation-request.ts",
-            "src/renderer/src/lib/worktree-creation-agent-seeds.ts",
             "src/renderer/src/lib/worktree-creation-completion.ts",
             "src/renderer/src/lib/worktree-creation-flow-execute.ts",
             "src/renderer/src/lib/worktree-creation-structured-session.ts",
@@ -1760,7 +1758,6 @@
             "src/renderer/src/components/sidebar/worktree-list/rows/virtual-row-dispatch.tsx",
             "src/renderer/src/hooks/composer-state/quick-creation-execution.ts",
             "src/renderer/src/hooks/composer-state/quick-creation-request.ts",
-            "src/renderer/src/lib/worktree-creation-agent-seeds.ts",
             "src/renderer/src/lib/worktree-creation-completion.ts",
             "src/renderer/src/hooks/composer-state/composer-target-store.ts"
           ],

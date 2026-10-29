@@ -18,7 +18,7 @@ type SeedRequest = Pick<WorktreeCreationRequest, 'agent' | 'startupPlan' | 'laun
  * (e.g. "dev server", "logs", "shell") the worktree's first tab runs no agent,
  * and activation's `primaryTabId` is only the worktree's primary tab.
  */
-export function resolveLaunchAgentTabId(
+function resolveLaunchAgentTabId(
   state: AppStoreSnapshot,
   args: {
     agent: TuiAgent

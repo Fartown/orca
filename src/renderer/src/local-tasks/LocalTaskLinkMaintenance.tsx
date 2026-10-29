@@ -1,7 +1,11 @@
 import { useEffect } from 'react'
 import { useAppStore } from '@/store'
 import type { AppState } from '@/store/types'
-import { selectWorktreesByRepo } from '@/store/workspace-record-selectors'
+import {
+  selectDetectedWorktreesByRepo,
+  selectFolderWorkspaces,
+  selectWorktreesByRepo
+} from '@/store/workspace-record-selectors'
 import { getReachableRuntimeEnvironmentIds } from '../hooks/ipc-events/runtime-environment-subscription-selection'
 import { localTasksClient } from './local-tasks-runtime-client'
 import { isLocalTasksWritable, localTasksDomainStore } from './local-tasks-domain-store'
@@ -17,8 +21,8 @@ import {
 function appInputs(state: AppState): readonly unknown[] {
   return [
     selectWorktreesByRepo(state),
-    state.detectedWorktreesByRepo,
-    state.folderWorkspaces,
+    selectDetectedWorktreesByRepo(state),
+    selectFolderWorkspaces(state),
     state.repos,
     state.sshConnectionStates,
     getReachableRuntimeEnvironmentIds(state).join('\n'),

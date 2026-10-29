@@ -145,6 +145,22 @@ updated: 2026-10-29
 
 ## 3. 开发记录
 
+### 2026-10-29 修 PR #71 卡住 CI 的两条 ratchet
+
+- 本轮目标：PR #71 的「static analysis and typecheck」停在「Enforce ratchets」：焦点读取 ratchet 和工作区记录读取 ratchet 各有超出。按上游「按拥有者路由」的规则改代码，不改基线、不加白名单；并在本机把 `pr.yml` 里 ratchet 之后的各步骤跑一遍。不提交、不推送。
+- 完成内容：
+  - 撤回上游接缝：`worktree-creation-agent-seeds.ts` 恢复原样（`resolveLaunchAgentTabId` 不再导出）。它的旧版兜底会读焦点服务器，导出后同文件的调用也被计数。
+  - 「开始做」定位智能体 tab 改用 fork 的 `local-task-launch-agent-tab.ts`：顺序与上游相同，是否转成 `web-terminal-` 只看新工作区自己的执行主机。配对服务器加前缀；本机和本机直连的 SSH 主机不加。
+  - 从 Orca 项目批量建任务项目：主机列表改按该项目的仓库行和已就绪 setup 列出，名字用 `selectExecutionHostDisplayLabel`，不再用会读焦点的 `useSidebarHostScopeOptions`。库默认放在本机（项目在本机或本机直连的 SSH 主机上时），否则放在目录顺序里第一台在联系、可写的配对服务器。
+  - 关联维护和工作区判定的三处记录字段读取改走 `workspace-record-selectors.ts`，行为不变。
+- 代码或文档变更：
+  - 本功能：`local-task-launch-agent-tab.ts`（新）及测试、`local-task-start-work.ts` 及测试、`LocalTaskProjectCreator.tsx` 及测试、`LocalTaskLinkMaintenance.tsx`、`local-task-workspace-resolution.ts`、`local-task-project-recommendations.ts`（注释）、`local-task-background-services.test.tsx`（选择器 mock）；
+  - 登记：`fork-features.jsonc` 删去该接缝及 `dependsOn` 里的这一项，补登两份测试；`architecture-policies.jsonc` 从 `fork-integration-scope`、`local-tasks-worktree-scope` 两份允许清单和依赖边界的例外里删去该文件；
+  - 方案 §8.3、§17.2 与「切片 2 实现调整」同步。
+- 验证证据：`.docs/local-tasks-ui-validation/2026-10-29/ci-ratchets/README.md`。
+- 未解决问题：`local-tasks-worktree-scope` 只比较未提交的改动，撤回接缝在提交前会被它报为越界；提交后这处差异消失。本机按 `Fartown/main` 跑的是基准比较的规则，没有其他违规。
+- 下一步：用户确认后提交并推送到 PR #71，看 CI 的静态检查和后续任务。
+
 ### 2026-10-29 修 PR #71 的 CI 检查并核对是否影响现有功能
 
 - 本轮目标：PR #71 的 CI 在静态检查就失败，全量单元测试、打包、e2e 都没跑；修掉本功能引起的失败，并核对有没有改坏现有功能。

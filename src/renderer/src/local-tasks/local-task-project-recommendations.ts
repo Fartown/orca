@@ -36,9 +36,10 @@ export function recommendLocalTaskProjects(
 }
 
 /**
- * The library a new task project for this Orca project goes to: the Orca serving one of the hosts
- * it is set up on (this app for local and its own SSH hosts, a paired server for its runtime).
- * This app's own library first; a host picker is the creation dialog's to add.
+ * The library a new task project for this Orca project goes to, chosen by the hosts the project is
+ * on and never by the focused server: this app's own when it serves one of them (this machine or
+ * an SSH target it dials), since that library needs no connection; else the first paired server in
+ * catalog order whose library is connected and writable.
  */
 export function localTaskEndpointForOrcaProject(
   hostIds: readonly string[],

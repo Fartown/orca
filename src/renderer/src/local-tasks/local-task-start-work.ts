@@ -2,7 +2,6 @@ import { toast } from 'sonner'
 import { translate } from '@/i18n/i18n'
 import { useAppStore } from '@/store'
 import type { AppState } from '@/store/types'
-import { resolveLaunchAgentTabId } from '@/lib/worktree-creation-agent-seeds'
 import { queueHookCommandsForFirstWorktreeTab } from '@/lib/hook-command-delayed-delivery'
 import { getExecutionHostIdForWorktree } from '@/lib/worktree-runtime-owner'
 import {
@@ -14,6 +13,7 @@ import { getRepoIdFromWorktreeId } from '../../../shared/worktree/id'
 import type { TuiAgent } from '../../../shared/tui-agent'
 import { suggestLocalTaskWorkspaceName } from '../../../shared/local-tasks/local-task-model'
 import { localTaskPromptFor } from './local-task-session-launch'
+import { localTaskLaunchAgentTabId } from './local-task-launch-agent-tab'
 import type { LocalTask, LocalTaskProject } from '../../../shared/local-tasks/local-task-types'
 import {
   subscribeWorktreeCreationCompleted,
@@ -132,9 +132,10 @@ function recordCreatedTerminal(
   completed: WorktreeCreationCompleted
 ): void {
   const resolve = (state: AppState): string | null =>
-    resolveLaunchAgentTabId(state, {
+    localTaskLaunchAgentTabId(state, {
       agent,
       worktreeId: completed.worktreeId,
+      hostId: target.hostId,
       primaryTabId: completed.primaryTabId,
       startupTerminalTabId: completed.startupTerminalTabId,
       backendSpawned: completed.backendSpawned

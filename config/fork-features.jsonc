@@ -2819,7 +2819,6 @@
         "src/renderer/src/lib/structured-agent-session-launch-admission.ts",
         "src/renderer/src/lib/structured-agent-session-tab-activation.ts",
         "src/renderer/src/lib/worktree-activation.ts",
-        "src/renderer/src/lib/worktree-creation-agent-seeds.ts",
         "src/renderer/src/lib/worktree-runtime-owner.ts",
         "src/renderer/src/store/slices/hosted-review-cache-identity.ts",
         "src/renderer/src/store/slices/worktrees/listing/authoritative-worktree-removal-memory.ts",
@@ -3152,11 +3151,6 @@
           "why": "The creation options carry an optional local task callback"
         },
         {
-          "file": "src/renderer/src/lib/worktree-creation-agent-seeds.ts",
-          "mustContain": "export function resolveLaunchAgentTabId(",
-          "why": "The feature reuses the upstream agent tab identity resolver"
-        },
-        {
           "file": "src/renderer/src/lib/worktree-creation-completion.ts",
           "mustContain": "notifyWorktreeCreationCompleted(args)",
           "why": "The creation completion path publishes a local task association notice"
@@ -3276,7 +3270,9 @@
         "src/renderer/src/local-tasks/local-task-background-services.test.tsx",
         "src/renderer/src/lib/worktree-creation-structured-session.test.ts",
         "src/renderer/src/components/local-tasks/LocalTaskPage.execution.test.tsx",
-        "src/renderer/src/local-tasks/local-task-remote-creation-target.test.tsx"
+        "src/renderer/src/local-tasks/local-task-remote-creation-target.test.tsx",
+        "src/renderer/src/local-tasks/local-task-start-work.test.ts",
+        "src/renderer/src/local-tasks/local-task-launch-agent-tab.test.ts"
       ],
       "checks": [
         "pnpm exec vitest run --config config/vitest.config.ts src/main/local-tasks src/shared/local-tasks src/main/runtime/rpc/methods/local-tasks.test.ts src/shared/host-operation-ownership.test.ts src/shared/wsl-move src/main/runtime/runtime-rpc/fork-mobile-rpc-method-allowlist.test.ts src/main/runtime/mobile-rpc-allowlist.test.ts",

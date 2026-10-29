@@ -1,11 +1,11 @@
 import { useMemo, useState } from 'react'
+import { useShallow } from 'zustand/react/shallow'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
-import { useSidebarHostScopeOptions } from '@/components/sidebar/use-sidebar-host-scope-options'
 import { translate } from '@/i18n/i18n'
+import { selectExecutionHostDisplayLabel } from '@/lib/execution-host-display-label'
 import { useAppStore } from '@/store'
-import { getExecutionHostLabel } from '../../../../shared/execution-host'
 import { normalizeLocalTaskPrefix } from '../../../../shared/local-tasks/local-task-model'
 import { describeLocalTaskFailure } from '@/local-tasks/local-task-failure-copy'
 import {
@@ -23,22 +23,34 @@ import {
 
 type RowState = { selected: boolean; prefix: string; error: string | null }
 
-function useHostLabelsByProject(): Map<string, string[]> {
-  const setups = useAppStore((state) => state.projectHostSetups)
-  const { hostOptions } = useSidebarHostScopeOptions()
+/**
+ * Each Orca project's hosts by its own repo rows and ready setups, the ones `create` picks a library
+ * from, named by the host-label selector; neither reads the focused server.
+ */
+function useHostLabelsByProject(projectIds: readonly string[]): ReadonlyMap<string, string[]> {
+  const repos = useAppStore((state) => state.repos)
+  const projectHostSetups = useAppStore((state) => state.projectHostSetups)
+  const hostIdsByProject = useMemo(
+    () =>
+      projectIds.map((id) => [id, orcaProjectHostIds({ repos, projectHostSetups }, id)] as const),
+    [projectIds, repos, projectHostSetups]
+  )
+  const hostIds = useMemo(
+    () => [...new Set(hostIdsByProject.flatMap(([, ids]) => ids))],
+    [hostIdsByProject]
+  )
+  const labels = useAppStore(
+    useShallow((state) => hostIds.map((hostId) => selectExecutionHostDisplayLabel(state, hostId)))
+  )
   return useMemo(() => {
-    const labelById = new Map(hostOptions.map((host) => [host.id, host.label]))
-    const byProject = new Map<string, string[]>()
-    for (const setup of setups) {
-      const label = labelById.get(setup.hostId) ?? getExecutionHostLabel(setup.hostId)
-      const labels = byProject.get(setup.projectId) ?? []
-      if (!labels.includes(label)) {
-        labels.push(label)
-      }
-      byProject.set(setup.projectId, labels)
-    }
-    return byProject
-  }, [setups, hostOptions])
+    const labelOf = new Map(hostIds.map((hostId, at) => [hostId, labels[at] ?? hostId]))
+    return new Map(
+      hostIdsByProject.map(([id, ids]) => [
+        id,
+        [...new Set(ids.map((hostId) => labelOf.get(hostId) ?? hostId))]
+      ])
+    )
+  }, [hostIdsByProject, hostIds, labels])
 }
 
 /**
@@ -56,11 +68,15 @@ export function LocalTaskProjectCreator({
 }): React.JSX.Element {
   const orcaProjects = useAppStore((state) => state.projects)
   const taskProjects = useLocalTasksDomain((state) => state.projects)
-  const hostLabels = useHostLabelsByProject()
   const recommendations = useMemo(
     () => recommendLocalTaskProjects(orcaProjects, taskProjects),
     [orcaProjects, taskProjects]
   )
+  const projectIds = useMemo(
+    () => recommendations.map(({ project }) => project.id),
+    [recommendations]
+  )
+  const hostLabels = useHostLabelsByProject(projectIds)
   const [rows, setRows] = useState<Record<string, RowState>>({})
   const [busy, setBusy] = useState(false)
   const [createdCount, setCreatedCount] = useState(0)

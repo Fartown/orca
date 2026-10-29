@@ -32,7 +32,11 @@ vi.mock('@/store', () => ({
     subscribe: () => vi.fn()
   })
 }))
-vi.mock('../store/workspace-record-selectors', () => ({ selectWorktreesByRepo: () => [] }))
+vi.mock('../store/workspace-record-selectors', () => ({
+  selectWorktreesByRepo: () => [],
+  selectDetectedWorktreesByRepo: (app: MockAppState) => app.detectedWorktreesByRepo,
+  selectFolderWorkspaces: (app: MockAppState) => app.folderWorkspaces
+}))
 vi.mock('../hooks/ipc-events/runtime-environment-subscription-selection', () => ({
   getReachableRuntimeEnvironmentIds: () => []
 }))

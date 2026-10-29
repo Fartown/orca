@@ -1,6 +1,10 @@
 import type { AppState } from '@/store/types'
 import { getAuthoritativelyRemovedWorktreeIds } from '@/store/slices/worktrees/listing/authoritative-worktree-removal-memory'
-import { selectFolderWorkspaces, selectWorktreesByRepo } from '@/store/workspace-record-selectors'
+import {
+  selectDetectedWorktreesByRepo,
+  selectFolderWorkspaces,
+  selectWorktreesByRepo
+} from '@/store/workspace-record-selectors'
 import { getExecutionHostIdForWorktree } from '@/lib/worktree-runtime-owner'
 import {
   getRepoWorkspaceCreationTargetHint,
@@ -87,7 +91,7 @@ function isProvenRemoved(state: AppState, link: LinkPlace, hostId: ExecutionHost
     return true
   }
   const repoId = link.repoId ?? getRepoIdFromWorktreeId(workspaceId)
-  const listing = state.detectedWorktreesByRepo?.[repoId]
+  const listing = selectDetectedWorktreesByRepo(state)?.[repoId]
   if (listing?.authoritative !== true) {
     return false
   }
@@ -142,8 +146,8 @@ export function orcaProjectIdForRepo(
 }
 
 /** Hosts an Orca project is on in this window: its repo rows and its ready host setups. */
-export function orcaProjectHostIds(state: CatalogState, orcaProjectId: string): string[] {
-  const hosts = new Set<string>()
+export function orcaProjectHostIds(state: CatalogState, orcaProjectId: string): ExecutionHostId[] {
+  const hosts = new Set<ExecutionHostId>()
   for (const repo of state.repos) {
     if (orcaProjectIdForRepo(state, repo) === orcaProjectId) {
       hosts.add(getRepoExecutionHostId(repo))

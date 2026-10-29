@@ -2,32 +2,44 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 
-const fixture = vi.hoisted(() => ({
-  projects: [
-    { id: 'one', displayName: 'One' },
-    { id: 'two', displayName: 'Two' }
-  ],
-  createProject: vi.fn()
-}))
-vi.mock('@/store', () => {
-  const state = { projects: fixture.projects, projectHostSetups: [] }
+const fixture = vi.hoisted(() => {
+  const setup = (projectId: string, hostId: string) => ({
+    id: `setup-${projectId}`,
+    projectId,
+    hostId,
+    repoId: projectId,
+    setupState: 'ready'
+  })
   return {
-    useAppStore: Object.assign((select: (value: unknown) => unknown) => select(state), {
-      getState: () => state
-    })
+    state: {
+      projects: [
+        { id: 'one', displayName: 'One' },
+        { id: 'two', displayName: 'Two' },
+        { id: 'three', displayName: 'Three' }
+      ],
+      repos: [],
+      projectHostSetups: [
+        setup('one', 'local'),
+        setup('two', 'ssh:minizc'),
+        setup('three', 'runtime:env-build')
+      ],
+      // The focused server holds none of these projects, so nothing may land in its library.
+      settings: { activeRuntimeEnvironmentId: 'env-focused' },
+      runtimeEnvironments: [
+        { id: 'env-focused', name: 'Focused server' },
+        { id: 'env-build', name: 'Build server' }
+      ],
+      sshTargetLabels: new Map([['minizc', 'Mini']]),
+      removedSshTargetLabels: new Map()
+    },
+    createProject: vi.fn()
   }
 })
-vi.mock('@/components/sidebar/use-sidebar-host-scope-options', () => ({
-  useSidebarHostScopeOptions: () => ({ hostOptions: [] })
+vi.mock('@/store', () => ({
+  useAppStore: Object.assign((select: (value: unknown) => unknown) => select(fixture.state), {
+    getState: () => fixture.state
+  })
 }))
-vi.mock('@/local-tasks/local-task-project-recommendations', () => ({
-  recommendLocalTaskProjects: (projects: typeof fixture.projects, linked: { repos: string[] }[]) =>
-    projects
-      .filter((project) => !linked.some((item) => item.repos.includes(project.id)))
-      .map((project) => ({ project, prefix: project.id === 'one' ? 'ONE' : 'TWO' })),
-  localTaskEndpointForOrcaProject: () => 'local'
-}))
-vi.mock('@/local-tasks/local-task-workspace-resolution', () => ({ orcaProjectHostIds: () => [] }))
 vi.mock('@/local-tasks/local-tasks-runtime-client', () => ({
   localTasksClient: { createProject: fixture.createProject }
 }))
@@ -40,12 +52,14 @@ import { localTasksDomainStore } from '@/local-tasks/local-tasks-domain-store'
 beforeEach(() => {
   fixture.createProject.mockReset()
   localTasksDomainStore.setState(localTasksDomainStore.getInitialState())
-  localTasksDomainStore.getState().openEndpoint('local')
-  const library = localTasksDomainStore.getState().writer('local')
-  library.setConnection('live')
-  library.setHostState('ready', null)
-  library.applyProjects([])
-  library.applyTasks([])
+  for (const endpoint of ['local', 'runtime:env-focused', 'runtime:env-build'] as const) {
+    localTasksDomainStore.getState().openEndpoint(endpoint)
+    const library = localTasksDomainStore.getState().writer(endpoint)
+    library.setConnection('live')
+    library.setHostState('ready', null)
+    library.applyProjects([])
+    library.applyTasks([])
+  }
   fixture.createProject.mockImplementation(
     async (_endpoint: string, input: { prefix: string; repos: string[] }) =>
       input.prefix === 'DUP'
@@ -67,6 +81,25 @@ beforeEach(() => {
   )
 })
 afterEach(cleanup)
+
+it('names each project’s own hosts and creates it in the library serving them, not the focused one', async () => {
+  render(<LocalTaskProjectCreator writable />)
+  expect(screen.getByText('Mini')).toBeTruthy()
+  expect(screen.getByText('Build server')).toBeTruthy()
+  expect(screen.queryByText('Focused server')).toBeNull()
+  for (const name of ['One', 'Two', 'Three']) {
+    fireEvent.click(screen.getByRole('checkbox', { name }))
+  }
+  fireEvent.click(screen.getByRole('button', { name: 'Create selected (3)' }))
+  await waitFor(() => expect(fixture.createProject).toHaveBeenCalledTimes(3))
+  expect(
+    fixture.createProject.mock.calls.map(([endpoint, input]) => [input.repos[0], endpoint])
+  ).toEqual([
+    ['one', 'local'],
+    ['two', 'local'],
+    ['three', 'runtime:env-build']
+  ])
+})
 
 it('retains failed rows for correction and retries only projects not already created', async () => {
   const done = vi.fn()

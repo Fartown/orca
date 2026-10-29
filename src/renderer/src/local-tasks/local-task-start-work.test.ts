@@ -20,6 +20,7 @@ vi.mock('./local-tasks-runtime-client', () => ({
 
 import { useAppStore } from '@/store'
 import { makeWorktree } from '@/store/slices/worktrees-slice-test-fixtures'
+import { getDefaultSettings } from '../../../shared/constants'
 import { notifyWorktreeCreationCompleted } from './local-task-creation-events'
 import { localTasksDomainStore } from './local-tasks-domain-store'
 import {
@@ -65,6 +66,7 @@ let unbind: () => void = () => {}
 
 beforeEach(() => {
   useAppStore.setState({
+    settings: null,
     repos: [{ id: 'repo1', path: '/repo1', displayName: 'Shop', badgeColor: '#000', addedAt: 0 }],
     worktreesByRepo: {
       repo1: [
@@ -114,6 +116,30 @@ it('links the created workspace and records the agent tab once creation complete
     expect.objectContaining({ taskId: 'task-12', surface: 'terminal', tabId: 'tab-agent' })
   )
 })
+
+it.each([
+  ['this app', 'local', 'host-agent-tab'],
+  ['an SSH target this app dials', 'ssh:minizc', 'host-agent-tab'],
+  ['a paired server', 'runtime:env-1', 'web-terminal-host-agent-tab']
+] as const)(
+  'records the agent tab main spawned on %s by the workspace host, not the focused server',
+  async (_host, hostId, tabId) => {
+    useAppStore.setState({
+      settings: { ...getDefaultSettings('/home/test'), activeRuntimeEnvironmentId: 'env-focused' }
+    })
+    notifyWorktreeCreationCompleted(
+      completed({
+        request: { agent: 'claude', executionHostId: hostId, workspaceRunContext: null },
+        backendSpawned: true,
+        startupTerminalTabId: 'host-agent-tab'
+      })
+    )
+    await vi.waitFor(() => expect(fixture.recordSession).toHaveBeenCalledOnce())
+    expect(fixture.recordSession.mock.calls[0][0]).toEqual(
+      expect.objectContaining({ hostId, surface: 'terminal', tabId })
+    )
+  }
+)
 
 it('writes nothing for a creation it did not start, as when one failed or was cancelled', async () => {
   notifyWorktreeCreationCompleted(completed({ creationId: 'someone-else' }))
