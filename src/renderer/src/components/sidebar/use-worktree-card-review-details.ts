@@ -5,6 +5,7 @@ import { getWorkspaceAttachmentSourceContext } from './workspace-attachment-sour
 import { getWorkspaceReferenceLinearWorkspaceId } from './workspace-reference-details'
 import { getWorktreeGitIdentityDisplay } from '../../../../shared/worktree/git-identity-display'
 import { useAppStore } from '@/store'
+import type { AppState } from '@/store/types'
 import { getGitHubPRCacheKey } from '../../../../shared/github/github-cache-key'
 import { issueCacheKey as getIssueCacheKey } from '@/store/github/cache-identity'
 import { getHostedReviewCacheKey } from '@/store/slices/hosted-review-cache-identity'
@@ -20,6 +21,93 @@ import type { WorktreeCardProps } from './worktree-card-model'
 import type { useWorktreeCardFoundation } from './use-worktree-card-foundation'
 
 type Foundation = ReturnType<typeof useWorktreeCardFoundation>
+
+/** The review a workspace card shows, from its hosted-review and branch-PR cache entries. */
+export function resolveWorktreeCardReview(
+  worktree: WorktreeCardProps['worktree'],
+  hostedReviewEntry: AppState['hostedReviewCache'][string] | undefined,
+  prCacheEntry: AppState['prCache'][string] | undefined
+) {
+  const hostedReview: HostedReviewInfo | null | undefined =
+    hostedReviewEntry !== undefined ? hostedReviewEntry.data : undefined
+  const linkedGitHubPR = worktree.linkedPR ?? null
+  const linkedGitLabMR = worktree.linkedGitLabMR ?? null
+  const linkedBitbucketPR = worktree.linkedBitbucketPR ?? null
+  const linkedAzureDevOpsPR = worktree.linkedAzureDevOpsPR ?? null
+  const linkedGiteaPR = worktree.linkedGiteaPR ?? null
+  const hasNonGitHubLinkedReview =
+    linkedGitLabMR !== null ||
+    linkedBitbucketPR !== null ||
+    linkedAzureDevOpsPR !== null ||
+    linkedGiteaPR !== null
+  const hasLinkedReview =
+    linkedGitHubPR !== null ||
+    linkedGitLabMR !== null ||
+    linkedBitbucketPR !== null ||
+    linkedAzureDevOpsPR !== null ||
+    linkedGiteaPR !== null
+  // Why: a newer hosted-review miss trusts the merged-PR cache only when the stored head proves it still describes the current commit.
+  const cachedBranchPR = prCacheEntry?.data
+  const cachedBranchPRFetchedAt = prCacheEntry?.fetchedAt
+  const cachedMergedBranchPRMatchesCurrentHead = isCachedMergedBranchPRCurrentForWorktree(
+    cachedBranchPR,
+    worktree
+  )
+  const cachedBranchFallbackGitHubPRNumber =
+    linkedGitHubPR === null &&
+    !hasNonGitHubLinkedReview &&
+    cachedBranchPR?.number !== undefined &&
+    (cachedBranchPR.state !== 'merged' || cachedMergedBranchPRMatchesCurrentHead)
+      ? cachedBranchPR.number
+      : null
+  const cachedBranchPRCanDriveDisplay =
+    cachedBranchPR?.state !== 'merged' || cachedMergedBranchPRMatchesCurrentHead
+  const hostedReviewMatchesHeadMatchedCachedMergedPR =
+    cachedMergedBranchPRMatchesCurrentHead &&
+    cachedBranchPR !== null &&
+    cachedBranchPR !== undefined &&
+    hostedReview?.provider === 'github' &&
+    hostedReview.number === cachedBranchPR.number
+  const useCachedBranchReview =
+    cachedBranchPR !== undefined &&
+    cachedBranchPR !== null &&
+    !hasNonGitHubLinkedReview &&
+    cachedBranchPRCanDriveDisplay &&
+    (hostedReview === undefined ||
+      (cachedMergedBranchPRMatchesCurrentHead && !hostedReviewMatchesHeadMatchedCachedMergedPR) ||
+      (hostedReview === null &&
+        ((cachedBranchPRFetchedAt !== undefined &&
+          cachedBranchPRFetchedAt > (hostedReviewEntry?.fetchedAt ?? 0)) ||
+          cachedMergedBranchPRMatchesCurrentHead)))
+  const cachedBranchReview = useCachedBranchReview
+    ? hostedReviewInfoFromGitHubPRInfo(cachedBranchPR)
+    : hostedReview
+  // Why: branch provenance does not supersede the head-ownership gate for merged PRs.
+  const branchLookupGitHubPRNumber =
+    hostedReview?.provider === 'github' &&
+    hostedReview.state === 'merged' &&
+    !isCachedMergedBranchPRCurrentForWorktree(hostedReview, worktree)
+      ? null
+      : hostedReviewEntry?.branchLookupGitHubPRNumber
+  const prDisplay = getWorktreeCardPrDisplay(
+    cachedBranchReview,
+    linkedGitHubPR,
+    linkedGitLabMR,
+    linkedBitbucketPR,
+    linkedAzureDevOpsPR,
+    linkedGiteaPR,
+    {
+      reviewHintKey:
+        (useCachedBranchReview || cachedMergedBranchPRMatchesCurrentHead) && !hasLinkedReview
+          ? ''
+          : hostedReviewEntry?.linkedReviewHintKey,
+      branchLookupGitHubPRNumber,
+      suppressedGitHubPR: worktree.suppressedGitHubPR ?? null
+    }
+  )
+
+  return { prDisplay, cachedBranchFallbackGitHubPRNumber }
+}
 
 export function useWorktreeCardReviewDetails({
   worktree,
@@ -117,82 +205,15 @@ export function useWorktreeCardReviewDetails({
       : undefined
   )
 
-  const hostedReview: HostedReviewInfo | null | undefined =
-    hostedReviewEntry !== undefined ? hostedReviewEntry.data : undefined
   const linkedGitHubPR = worktree.linkedPR ?? null
   const linkedGitLabMR = worktree.linkedGitLabMR ?? null
   const linkedBitbucketPR = worktree.linkedBitbucketPR ?? null
   const linkedAzureDevOpsPR = worktree.linkedAzureDevOpsPR ?? null
   const linkedGiteaPR = worktree.linkedGiteaPR ?? null
-  const hasNonGitHubLinkedReview =
-    linkedGitLabMR !== null ||
-    linkedBitbucketPR !== null ||
-    linkedAzureDevOpsPR !== null ||
-    linkedGiteaPR !== null
-  const hasLinkedReview =
-    linkedGitHubPR !== null ||
-    linkedGitLabMR !== null ||
-    linkedBitbucketPR !== null ||
-    linkedAzureDevOpsPR !== null ||
-    linkedGiteaPR !== null
-  // Why: a newer hosted-review miss trusts the merged-PR cache only when the stored head proves it still describes the current commit.
-  const cachedBranchPR = prCacheEntry?.data
-  const cachedBranchPRFetchedAt = prCacheEntry?.fetchedAt
-  const cachedMergedBranchPRMatchesCurrentHead = isCachedMergedBranchPRCurrentForWorktree(
-    cachedBranchPR,
-    worktree
-  )
-  const cachedBranchFallbackGitHubPRNumber =
-    linkedGitHubPR === null &&
-    !hasNonGitHubLinkedReview &&
-    cachedBranchPR?.number !== undefined &&
-    (cachedBranchPR.state !== 'merged' || cachedMergedBranchPRMatchesCurrentHead)
-      ? cachedBranchPR.number
-      : null
-  const cachedBranchPRCanDriveDisplay =
-    cachedBranchPR?.state !== 'merged' || cachedMergedBranchPRMatchesCurrentHead
-  const hostedReviewMatchesHeadMatchedCachedMergedPR =
-    cachedMergedBranchPRMatchesCurrentHead &&
-    cachedBranchPR !== null &&
-    cachedBranchPR !== undefined &&
-    hostedReview?.provider === 'github' &&
-    hostedReview.number === cachedBranchPR.number
-  const useCachedBranchReview =
-    cachedBranchPR !== undefined &&
-    cachedBranchPR !== null &&
-    !hasNonGitHubLinkedReview &&
-    cachedBranchPRCanDriveDisplay &&
-    (hostedReview === undefined ||
-      (cachedMergedBranchPRMatchesCurrentHead && !hostedReviewMatchesHeadMatchedCachedMergedPR) ||
-      (hostedReview === null &&
-        ((cachedBranchPRFetchedAt !== undefined &&
-          cachedBranchPRFetchedAt > (hostedReviewEntry?.fetchedAt ?? 0)) ||
-          cachedMergedBranchPRMatchesCurrentHead)))
-  const cachedBranchReview = useCachedBranchReview
-    ? hostedReviewInfoFromGitHubPRInfo(cachedBranchPR)
-    : hostedReview
-  // Why: branch provenance does not supersede the head-ownership gate for merged PRs.
-  const branchLookupGitHubPRNumber =
-    hostedReview?.provider === 'github' &&
-    hostedReview.state === 'merged' &&
-    !isCachedMergedBranchPRCurrentForWorktree(hostedReview, worktree)
-      ? null
-      : hostedReviewEntry?.branchLookupGitHubPRNumber
-  const prDisplay = getWorktreeCardPrDisplay(
-    cachedBranchReview,
-    linkedGitHubPR,
-    linkedGitLabMR,
-    linkedBitbucketPR,
-    linkedAzureDevOpsPR,
-    linkedGiteaPR,
-    {
-      reviewHintKey:
-        (useCachedBranchReview || cachedMergedBranchPRMatchesCurrentHead) && !hasLinkedReview
-          ? ''
-          : hostedReviewEntry?.linkedReviewHintKey,
-      branchLookupGitHubPRNumber,
-      suppressedGitHubPR: worktree.suppressedGitHubPR ?? null
-    }
+  const { prDisplay, cachedBranchFallbackGitHubPRNumber } = resolveWorktreeCardReview(
+    worktree,
+    hostedReviewEntry,
+    prCacheEntry
   )
 
   return {

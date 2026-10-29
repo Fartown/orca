@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { useShallow } from 'zustand/react/shallow'
 import { CheckCheck, LoaderCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ShortcutKeyCombo } from '@/components/ShortcutKeyCombo'
@@ -7,7 +8,7 @@ import { translate } from '@/i18n/i18n'
 import { cn } from '@/lib/utils'
 import {
   acknowledgeLocalTaskItems,
-  liveEntriesOf
+  writableEntriesOf
 } from '@/local-tasks/local-task-needs-you-actions'
 import {
   buildLocalTaskNeedsYouRows,
@@ -21,9 +22,8 @@ import {
 import { localTaskPageStore, useLocalTaskPage } from '@/local-tasks/local-task-page-store'
 import { formatLocalTaskTime } from '@/local-tasks/local-task-time'
 import { useLocalTasksDomain } from '@/local-tasks/local-tasks-domain-store'
-import { localTasksSync } from '@/local-tasks/local-tasks-sync'
 import type { LocalTaskSessionLink } from '../../../../shared/local-tasks/local-task-link-types'
-import { LocalTaskReadErrorPanel } from './LocalTaskHostStatePanel'
+import { LocalTaskReadErrorPanel, refreshHomeLibrary } from './LocalTaskHostStatePanel'
 import { LocalTaskNeedsYouItem } from './LocalTaskNeedsYouItem'
 import { LocalTaskSnoozeMenu } from './LocalTaskSnoozeMenu'
 import type { LocalTaskListModel } from './use-local-task-list-model'
@@ -40,10 +40,10 @@ function NeedsYouRow({
   const { task } = row
   const atCursor = useLocalTaskPage((state) => state.cursorTaskId === task.id)
   const snoozeOpen = useLocalTaskNeedsYou((state) => state.snoozeTaskId === task.id)
-  const live = liveEntriesOf(row)
+  const writable = useLocalTasksDomain(useShallow((state) => writableEntriesOf(row, state)))
   return (
     <section
-      onClick={() => localTaskPageStore.getState().setCursor(task.id)}
+      onClick={() => localTaskPageStore.getState().setCursor(task.id, 'pointer')}
       className={cn(
         'flex flex-col gap-1 rounded-lg border border-border/60 p-2',
         atCursor && 'border-ring/60 bg-accent/30'
@@ -69,8 +69,8 @@ function NeedsYouRow({
         <Button
           variant="ghost"
           size="xs"
-          disabled={live.length === 0}
-          onClick={() => void acknowledgeLocalTaskItems(live)}
+          disabled={writable.length === 0}
+          onClick={() => void acknowledgeLocalTaskItems(writable)}
         >
           <CheckCheck className="size-3.5" />
           {translate('localTasks.needsYou.item.seen', 'Mark as seen')}
@@ -81,7 +81,7 @@ function NeedsYouRow({
           />
         </Button>
         <LocalTaskSnoozeMenu
-          items={live}
+          items={writable}
           open={snoozeOpen}
           onOpenChange={(open) =>
             localTaskNeedsYouStore.getState().setSnoozeTaskId(open ? task.id : null)
@@ -156,7 +156,7 @@ export function LocalTaskNeedsYouView({ model }: { model: LocalTaskListModel }):
     body = (
       <LocalTaskReadErrorPanel
         detail={readError}
-        onRetry={() => void localTasksSync.refresh(['attention'])}
+        onRetry={() => void refreshHomeLibrary(['attention'])}
       />
     )
   } else if (progress === null) {
@@ -203,7 +203,7 @@ export function LocalTaskNeedsYouView({ model }: { model: LocalTaskListModel }):
       {readError && progress !== null ? (
         <LocalTaskReadErrorPanel
           detail={readError}
-          onRetry={() => void localTasksSync.refresh(['attention'])}
+          onRetry={() => void refreshHomeLibrary(['attention'])}
           compact
         />
       ) : null}

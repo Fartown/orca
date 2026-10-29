@@ -1,5 +1,4 @@
 import { createStore } from 'zustand/vanilla'
-import { useStore } from 'zustand'
 import { SIDEBAR_GROUP_BY_TASK_PREFERENCE_KEY } from './local-task-preference-keys'
 import { localTasksClient } from './local-tasks-runtime-client'
 import {
@@ -67,7 +66,3 @@ export const localTaskSidebarCollapseStore = createStore<LocalTaskSidebarCollaps
       return { collapsed }
     })
 }))
-
-export function useLocalTaskSidebarCollapsed(): ReadonlySet<string> {
-  return useStore(localTaskSidebarCollapseStore, (state) => state.collapsed)
-}

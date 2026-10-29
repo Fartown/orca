@@ -30,7 +30,7 @@ export function AppBackgroundServices(): React.JSX.Element {
       <WorkspacePortScanner enabled={workspaceSessionReady} />
       <GoalDomainSyncGate />
       <LocalTasksSyncGate />
-      {/* Why: start-work linking, pane-key identity and PR-merged rules run off this window's state. */}
+      {/* Why: start-work linking, workspace link upkeep and the PR-merged rule read this window's state. */}
       <LocalTaskLinkMaintenance />
       {/* Why: plugin language-pack discovery must not re-render the App shell. */}
       <MacosTccPromptNoticeHost />

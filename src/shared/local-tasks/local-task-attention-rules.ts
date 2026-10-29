@@ -140,7 +140,7 @@ export type LocalTaskAttentionEvidence = {
   unread: boolean
 }
 
-/** The four §9.1 rules; null means "does not need you". */
+/** The four "needs you" kinds; null means "does not need you". */
 export function classifyLocalTaskAttention(
   evidence: LocalTaskAttentionEvidence
 ): LocalTaskAttentionKind | null {
@@ -185,7 +185,7 @@ export function localTaskAttentionItem(
     agent: agent && agent !== 'unknown' ? agent.slice(0, AGENT_LABEL_MAX) : null,
     lastMessage: evidence.lastMessage,
     since: row.stateStartedAt,
-    // A7: only a finished turn takes typed input; every wait is answered inside the session.
+    // Why: only a finished turn takes typed input; every wait is answered inside the session.
     replyable: kind === 'unread-done'
   }
 }

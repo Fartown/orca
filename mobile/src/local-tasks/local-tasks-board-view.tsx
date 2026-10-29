@@ -5,25 +5,19 @@ import type {
   LocalTask,
   LocalTaskStatusDef
 } from '../../../src/shared/local-tasks/local-task-types'
-import { colors, radii, spacing, typography } from '../theme/mobile-theme'
-import { formatLocalTaskAgo, localTasksCopy } from './local-tasks-copy'
 import {
   localTaskPathFromRoot,
-  type LocalTaskListGroup,
-  type LocalTaskListRow
-} from './local-task-list-projection'
+  localTaskPathLabel
+} from '../../../src/shared/local-tasks/local-task-hierarchy'
+import { colors, radii, spacing, typography } from '../theme/mobile-theme'
+import { formatLocalTaskAgo, localTasksCopy } from './local-tasks-copy'
+import type { LocalTaskListGroup, LocalTaskListRow } from './local-task-list-projection'
 import { localTaskStyles } from './local-tasks-styles'
 import { LocalTaskPriorityIcon, LocalTaskStatusIcon } from './local-tasks-visuals'
 
 const COLUMN_GAP = spacing.md
 // Why the peek: the next column's edge is what tells a phone user the board scrolls sideways.
 const NEXT_COLUMN_PEEK = 48
-
-/** "SHOP-1 › SHOP-4 Parent title": every ancestor's ref, root first, then the parent's title. */
-export function localTaskPathLabel(ancestors: readonly LocalTask[]): string {
-  const parent = ancestors[ancestors.length - 1]
-  return parent ? `${ancestors.map((ancestor) => ancestor.ref).join(' › ')} ${parent.title}` : ''
-}
 
 type Props = {
   groups: LocalTaskListGroup[]

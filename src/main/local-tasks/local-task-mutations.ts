@@ -241,7 +241,7 @@ export function removeLocalTask(
   }
   const subtree = readLocalTaskSubtreeIds(db, taskId)
   // Why: foreign keys cascade the subtree's links, sessions and attention marks; the caches that
-  // read those scopes must be told, or a deleted task's workspace chip lingers (D2).
+  // read those scopes must be told, or a deleted task's workspace chip lingers.
   const hadLinks = hasWorkspaceOrSessions(db, subtree)
   // Why: only task-library rows go; linked workspaces and sessions on any host are left untouched.
   db.prepare('DELETE FROM local_tasks WHERE id = ?').run(taskId)

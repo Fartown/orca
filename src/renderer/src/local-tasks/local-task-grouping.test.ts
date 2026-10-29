@@ -18,6 +18,7 @@ import {
   groupLocalTasksForList
 } from './local-task-list-groups'
 import { EMPTY_LOCAL_TASK_FILTERS } from './local-task-page-store'
+import { clampLocalTaskCursor } from './local-task-cursor'
 
 function status(
   projectId: string,
@@ -325,6 +326,16 @@ describe('task tree in the list (REQ-004, D-008)', () => {
       'SHOP-24'
     ])
     expect(flattenLocalTaskGroups(groups, new Set(['SHOP-20']))).toEqual(['SHOP-20'])
+  })
+
+  it('moves a cursor that a fold or a collapsed group hid to the nearest row still shown', () => {
+    const all = flattenLocalTaskGroups(groups)
+    const foldedAt21 = flattenLocalTaskGroups(groups, new Set(['SHOP-21']))
+    expect(clampLocalTaskCursor('SHOP-23', all, foldedAt21)).toBe('SHOP-21')
+    expect(clampLocalTaskCursor('SHOP-24', all, foldedAt21)).toBe('SHOP-24')
+    expect(clampLocalTaskCursor('SHOP-21', all, ['SHOP-24'])).toBe('SHOP-24')
+    expect(clampLocalTaskCursor('SHOP-21', all, [])).toBeNull()
+    expect(clampLocalTaskCursor('elsewhere', all, foldedAt21)).toBe('elsewhere')
   })
 
   it('lifts a deep task to a row of its own once its parent is filtered out', () => {

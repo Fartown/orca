@@ -32,8 +32,8 @@ import {
 
 /*
  * A library row as this client holds it: ids keyed by endpoint, hosts and terminal tabs spelled
- * the way this client's own stores spell them (CONTRACT §2.2). This app's own rows pass through
- * unchanged, so they keep their identity.
+ * the way this client's own stores spell them (solution doc §17.2). This app's own rows pass
+ * through unchanged, so they keep their identity.
  */
 
 function isSelf(endpoint: LocalTaskEndpointKey): boolean {

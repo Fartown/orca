@@ -56,19 +56,30 @@ export function localTaskOwnerHostNow(
   return localTaskOwnerHostId(useAppStore.getState().repos ?? [], endpoint, hostId, repoId)
 }
 
+const failureEndpoints = new WeakMap<object, LocalTaskEndpointKey>()
+
+/** The library that refused a write, so a re-read after it touches that library alone. */
+export function localTaskFailureEndpoint(failure: LocalTaskFailure): LocalTaskEndpointKey | null {
+  return failureEndpoints.get(failure) ?? null
+}
+
 /** Every write gets a fresh operation id, so a replayed request returns the first result. */
-export function writeLocalTasks<TSchema extends z.ZodType>(
+export async function writeLocalTasks<TSchema extends z.ZodType>(
   endpoint: LocalTaskEndpointKey,
   method: string,
   params: Record<string, unknown>,
   schema: TSchema
 ): Promise<z.infer<TSchema>> {
-  return callLocalTasks(
+  const result = await callLocalTasks(
     endpoint,
     method,
     { ...params, clientOperationId: createBrowserUuid() },
     schema
   )
+  if (typeof result === 'object' && result !== null && 'ok' in result && result.ok === false) {
+    failureEndpoints.set(result, endpoint)
+  }
+  return result
 }
 
 /** Reads of one library, already in this client's ids; what each endpoint's sync calls. */

@@ -5,7 +5,7 @@ import { activateStructuredAgentSessionTab } from '@/lib/structured-agent-sessio
 import { parseExecutionHostId } from '../../../shared/execution-host'
 import { parsePaneKey } from '../../../shared/stable-pane-id'
 import type { LocalTaskSessionLink } from '../../../shared/local-tasks/local-task-link-types'
-import { localTasksClient } from './local-tasks-runtime-client'
+import { acknowledgeLocalTaskItemOnce } from './local-task-seen-forwarding'
 import { localTasksDomainStore } from './local-tasks-domain-store'
 
 /**
@@ -41,13 +41,13 @@ export function revealLocalTaskSession(link: LocalTaskSessionLink): boolean {
   return revealTerminalPane({ worktreeId, tabId, leafId: pane?.leafId ?? null, executionHostId })
 }
 
-/** Opening a session is seeing it (CONTRACT §5.4): its items are marked seen in its library. */
+/** Opening a session is seeing it: its items are marked seen in its library. */
 export function acknowledgeLocalTaskSessionItems(sessionLinkId: string): void {
   const items = (localTasksDomainStore.getState().progress?.items ?? []).filter(
     (item) => item.taskSessionId === sessionLinkId
   )
   for (const item of items) {
-    void localTasksClient.acknowledgeAttention(item.key, item.taskSessionId).catch(() => {})
+    acknowledgeLocalTaskItemOnce(item)
   }
 }
 

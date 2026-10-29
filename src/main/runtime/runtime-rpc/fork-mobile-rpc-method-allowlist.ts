@@ -34,11 +34,9 @@ export const FORK_MOBILE_RPC_METHOD_ALLOWLIST = new Set([
   'localTasks.tasks.batchUpdate',
   'localTasks.tasks.create',
   'localTasks.tasks.createSubtasks',
-  'localTasks.tasks.get',
   'localTasks.tasks.list',
   'localTasks.tasks.move',
   'localTasks.tasks.remove',
-  'localTasks.tasks.search',
   'localTasks.tasks.update',
   'localTasks.unsubscribeChanges'
 ])

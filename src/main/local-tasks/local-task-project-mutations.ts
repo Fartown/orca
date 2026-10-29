@@ -3,13 +3,18 @@ import {
   DEFAULT_LOCAL_TASK_STATUSES,
   normalizeLocalTaskPrefix
 } from '../../shared/local-tasks/local-task-model'
+import { toLocalTaskOwnedHostId } from '../../shared/local-tasks/local-task-endpoint-ids'
 import type { LocalTaskProject, LocalTaskResult } from '../../shared/local-tasks/local-task-types'
 import type {
   LocalTasksProjectsCreateInput,
   LocalTasksProjectsUpdateInput
 } from '../../shared/local-tasks/local-tasks-rpc-params'
 import type { LocalTasksDatabase } from './local-tasks-database'
-import { changeProjectPrefix, prefixOwnerName } from './local-task-project-prefixes'
+import {
+  applyProjectPrefixChange,
+  checkProjectPrefixChange,
+  prefixOwnerName
+} from './local-task-project-prefixes'
 import { readLocalTaskProject } from './local-task-project-store'
 
 export function createLocalTaskProject(
@@ -30,12 +35,16 @@ export function createLocalTaskProject(
   if (defaultRepoId === undefined) {
     return { ok: false, code: 'invalid_argument' }
   }
+  const lastExecutionHostId = ownedLastHost(input.lastExecutionHostId ?? null)
+  if (lastExecutionHostId === undefined) {
+    return { ok: false, code: 'host_not_owned' }
+  }
   const projectId = randomUUID()
   db.prepare(
     `INSERT INTO local_task_projects (id, name, default_repo_id, last_execution_host_id,
        next_number, rule_start_moves, rule_pr_merged_completes, created_at, updated_at, revision)
      VALUES (?, ?, ?, ?, 1, 1, 1, ?, ?, 0)`
-  ).run(projectId, input.name, defaultRepoId, input.lastExecutionHostId ?? null, now, now)
+  ).run(projectId, input.name, defaultRepoId, lastExecutionHostId, now, now)
   writeProjectRepos(db, projectId, repos)
   db.prepare(
     'INSERT INTO local_task_project_prefixes (prefix, project_id, is_current, created_at) VALUES (?, ?, 1, ?)'
@@ -67,13 +76,11 @@ export function updateLocalTaskProject(
   if (input.expectedRevision !== undefined && input.expectedRevision !== project.revision) {
     return { ok: false, code: 'stale' }
   }
-  const prefixChanged =
-    input.prefix !== undefined && normalizeLocalTaskPrefix(input.prefix) !== project.prefix
-  if (input.prefix !== undefined) {
-    const changed = changeProjectPrefix(db, project, input.prefix, now)
-    if (changed) {
-      return changed
-    }
+  // Why every check before the first write: a refused update must leave the project as it was.
+  const prefixChange =
+    input.prefix === undefined ? null : checkProjectPrefixChange(db, project, input.prefix)
+  if (prefixChange && !prefixChange.ok) {
+    return prefixChange
   }
   const rules = { ...project.rules, ...input.rules }
   const name = input.name ?? project.name
@@ -86,9 +93,12 @@ export function updateLocalTaskProject(
   const lastExecutionHostId =
     input.lastExecutionHostId === undefined
       ? project.lastExecutionHostId
-      : input.lastExecutionHostId
+      : ownedLastHost(input.lastExecutionHostId)
+  if (lastExecutionHostId === undefined) {
+    return { ok: false, code: 'host_not_owned' }
+  }
   if (
-    !prefixChanged &&
+    !prefixChange &&
     name === project.name &&
     rules.startMovesToInProgress === project.rules.startMovesToInProgress &&
     rules.prMergedCompletes === project.rules.prMergedCompletes &&
@@ -97,6 +107,9 @@ export function updateLocalTaskProject(
     lastExecutionHostId === project.lastExecutionHostId
   ) {
     return { ok: true, project }
+  }
+  if (prefixChange) {
+    applyProjectPrefixChange(db, project.id, prefixChange, now)
   }
   if (reposChanged) {
     writeProjectRepos(db, project.id, repos)
@@ -116,7 +129,7 @@ export function updateLocalTaskProject(
     project.id
   )
   db.touch('projects')
-  if (prefixChanged) {
+  if (prefixChange) {
     db.touch('tasks')
   }
   const updated = readLocalTaskProject(db, project.id)
@@ -131,7 +144,7 @@ export function removeLocalTaskProject(
     return { ok: false, code: 'not_found' }
   }
   // Why: the project's tasks may own workspace/session links that cascade away; the link and
-  // attention caches read those scopes and must be told, or a deleted project's chips linger (D2).
+  // attention caches read those scopes and must be told, or a deleted project's chips linger.
   const hadLinks =
     db
       .prepare(
@@ -155,6 +168,11 @@ export function removeLocalTaskProject(
     db.touch('attention')
   }
   return { ok: true }
+}
+
+/** A last host as stored; undefined when it is no host this Orca owns. */
+function ownedLastHost(requested: string | null): string | null | undefined {
+  return requested === null ? null : (toLocalTaskOwnedHostId(requested) ?? undefined)
 }
 
 /**

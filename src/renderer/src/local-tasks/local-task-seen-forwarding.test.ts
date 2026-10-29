@@ -16,7 +16,10 @@ vi.mock('./local-tasks-runtime-client', () => ({
 
 import { useAppStore } from '@/store'
 import { localTasksDomainStore } from './local-tasks-domain-store'
-import { bindLocalTaskSeenForwarding } from './local-task-seen-forwarding'
+import {
+  acknowledgeLocalTaskItemOnce,
+  bindLocalTaskSeenForwarding
+} from './local-task-seen-forwarding'
 
 const SERVER = 'runtime:env-1'
 
@@ -113,4 +116,11 @@ it('leaves a library that takes no writes alone, and asks again only after the h
     .writer('local')
     .applyProgress({ observedAt: 2, sessions: [], items: [item('s1', 'tab-1:leaf-1@100', 100)] })
   expect(fixture.acknowledgeAttention).toHaveBeenCalledTimes(2)
+})
+
+it('marks an item seen once when opening its session also acknowledges its pane', () => {
+  acknowledgeLocalTaskItemOnce(item('s1', 'tab-1:leaf-1@100', 100))
+  expect(fixture.acknowledgeAttention).toHaveBeenCalledOnce()
+  useAppStore.setState({ acknowledgedAgentsByPaneKey: { 'tab-1:leaf-1': 100 } })
+  expect(fixture.acknowledgeAttention).toHaveBeenCalledOnce()
 })

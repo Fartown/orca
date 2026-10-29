@@ -31,7 +31,7 @@ import {
   localTaskWorkspaceLink,
   localTaskWorkspaceUnlink
 } from './local-tasks-operations'
-import type { LocalTaskWriteRefusal } from './local-tasks-reply-schema'
+import type { LocalTaskWriteRefusal } from '../../../src/shared/local-tasks/local-task-read-schemas'
 
 /**
  * What a write came to. `unknown` is the one a caller must not call a failure: the request

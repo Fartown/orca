@@ -28,6 +28,10 @@ import { SIDEBAR_GROUP_BY_TASK_PREFERENCE_KEY } from './local-task-preference-ke
 import { localTaskSidebarCollapseStore } from './local-task-sidebar-grouping'
 import { useLocalTaskGroupedRowModel } from './local-task-sidebar'
 import {
+  localTaskIdForStartedWorkspace,
+  type LocalTaskStartedWorkspace
+} from './local-task-started-workspaces'
+import {
   findLocalTaskSidebarGroupKey,
   planLocalTaskSidebarGroups,
   renderLocalTaskSidebarGroups,
@@ -148,9 +152,16 @@ function flatRows(options: FlatOptions): Row[] {
 function input(
   tasks: LocalTask[],
   workspaces: LocalTaskWorkspaceLink[],
-  taskIdForCreation: (creationId: string) => string | null = () => null
+  taskIdForCreation: (creationId: string) => string | null = () => null,
+  started: readonly LocalTaskStartedWorkspace[] = []
 ): LocalTaskSidebarGroupingInput {
-  return { tasks, links: { workspaces, sessions: [] }, defaultHostId: 'local', taskIdForCreation }
+  return {
+    tasks,
+    links: { workspaces, sessions: [] },
+    defaultHostId: 'local',
+    taskIdForCreation,
+    taskIdForStartedWorkspace: (workspace) => localTaskIdForStartedWorkspace(started, workspace)
+  }
 }
 
 /** `header:<key>` for task headers, the workspace name for cards, the row type otherwise. */
@@ -188,6 +199,23 @@ describe('planLocalTaskSidebarGroups', () => {
     expect(rows[0]).toMatchObject({ localTaskId: shop12.id, count: 1 })
     // Drag groups and selection read the item's section as its group.
     expect(rows[1]).toMatchObject({ sectionKey: 'local-task:task:task-12' })
+  })
+
+  it('keeps a workspace a Start just created under its task until the library links it', () => {
+    const created = makeWorktree('shop-12-order-export')
+    const loose = makeWorktree('refund-webhook')
+    const plan = planLocalTaskSidebarGroups(
+      flatRows({ worktrees: [loose, created] }),
+      input([shop12], [], undefined, [
+        { worktreeId: created.id, hostId: 'local', taskId: shop12.id }
+      ])
+    )
+    expect(outline(renderLocalTaskSidebarGroups(plan, new Set()))).toEqual([
+      'header:local-task:task:task-12',
+      'shop-12-order-export',
+      'header:local-task:none',
+      'refund-webhook'
+    ])
   })
 
   it('shows a pinned workspace once, inside its task group, under either pinned policy', () => {

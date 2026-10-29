@@ -9,6 +9,7 @@ import { worktreeIdsEqual } from '../../../src/shared/worktree/id'
 import { parseWorkspaceKey } from '../../../src/shared/workspace-scope'
 import { salvagedOptional, salvagingArray } from '../../../src/shared/zod-salvage'
 import type { RpcSendParams } from '../transport/rpc-params-contract'
+import { localTaskOwnerHostId, type LocalTaskEndpoint } from './local-task-endpoint'
 import type { LocalTaskSetup } from './local-task-project-setups'
 
 /** A workspace the desktop lists, as far as linking it to a task needs. */
@@ -55,6 +56,26 @@ export function readLocalTaskWorkspaceCandidates(rows: unknown): LocalTaskWorksp
         folderWorkspaceId: scope?.type === 'folder' ? scope.folderWorkspaceId : null
       }
     })
+}
+
+/**
+ * A workspace the phone lists, as its library's owner names it. The paired host lists a server's
+ * workspaces only as `runtime:E`, so which of the server's hosts holds one (its machine or one of
+ * its SSH targets) comes from the server's own list; null until that list names it.
+ */
+export function localTaskOwnCandidate(
+  endpoint: LocalTaskEndpoint,
+  listed: LocalTaskWorkspaceCandidate,
+  serverRows: readonly LocalTaskWorkspaceCandidate[] | null
+): LocalTaskWorkspaceCandidate | null {
+  const ownerHostId = localTaskOwnerHostId(endpoint, listed.hostId)
+  if (ownerHostId === null) {
+    return null
+  }
+  if (!endpoint.executionHost) {
+    return { ...listed, hostId: ownerHostId }
+  }
+  return serverRows?.find((row) => worktreeIdsEqual(row.worktreeId, listed.worktreeId)) ?? null
 }
 
 /** Rows that belong to one task project: its repositories, and its folder workspaces. */

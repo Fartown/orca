@@ -52,7 +52,8 @@ const taskResult = writeResultSchema({ task: taskSchema })
 
 /**
  * Writes take this client's ids and go to the library that owns them, so a row is always written
- * where it lives; ids, hosts and terminal tabs go out in the owner's own spelling (CONTRACT §2.2).
+ * where it lives; ids, hosts and terminal tabs go out in the owner's own spelling
+ * (solution doc §17.2).
  */
 export const localTasksClient = {
   /** UI choices follow the library this window opens first: its own, or the paired host's. */
@@ -280,5 +281,3 @@ export const localTasksClient = {
     ),
   ...localTaskLinksClient
 }
-
-export type LocalTasksClient = typeof localTasksClient

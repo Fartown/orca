@@ -4,20 +4,22 @@ import { defineRpcOperation } from '../transport/rpc-operation'
 import { rpcResultVariant } from '../transport/rpc-operation-result-reader'
 import type { RpcMethodName } from '../transport/rpc-params-contract'
 import {
-  localTaskEventsReplySchema,
   localTaskLinksReplySchema,
   localTaskProgressSnapshotSchema,
-  localTaskProjectsReplySchema,
   localTaskSessionLinkSchema,
+  localTaskWorkspaceLinkSchema
+} from '../../../src/shared/local-tasks/local-task-link-read-schemas'
+import {
+  localTaskEventsReplySchema,
+  localTaskProjectsReplySchema,
   localTasksReplySchema,
   localTasksStatusSchema,
-  localTaskWorkspaceLinkSchema,
   localTaskWriteSchema,
   writeAnySuccess,
   writeProjectSuccess,
   writeTasksSuccess,
   writeTaskSuccess
-} from './local-tasks-reply-schema'
+} from '../../../src/shared/local-tasks/local-task-read-schemas'
 
 // Every `localTasks.*` call the phone makes. Each runs on the Orca whose library it reads: the
 // paired host itself, or one of its servers when the client's envelope names `executionHost`.

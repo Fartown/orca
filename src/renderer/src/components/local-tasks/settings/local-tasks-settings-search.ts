@@ -33,9 +33,7 @@ export const getLocalTasksSettingsSearchEntries = createLocalizedCatalog(() => [
 ])
 
 /** Section metadata; a browser client manages the task library of the host it is paired with. */
-export function getLocalTasksSettingsSections(_context: {
-  isWebClient: boolean
-}): SettingsNavSection[] {
+export function getLocalTasksSettingsSections(): SettingsNavSection[] {
   return [
     {
       id: LOCAL_TASKS_SETTINGS_SECTION_ID,

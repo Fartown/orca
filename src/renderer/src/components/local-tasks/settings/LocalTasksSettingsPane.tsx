@@ -21,15 +21,16 @@ import { useLocalTaskEndpointLabels } from '@/local-tasks/local-task-endpoint-la
 import { LocalTaskHostTag } from '../LocalTaskHostTag'
 import {
   LocalTaskHostStatePanel,
+  LocalTaskLibraryNotices,
   LocalTaskReadErrorPanel,
-  LocalTaskReadOnlyNotice
+  LocalTaskReadOnlyNotice,
+  refreshHomeLibrary
 } from '../LocalTaskHostStatePanel'
 import { LocalTaskProjectCreator } from '../LocalTaskProjectCreator'
 import { LocalTaskEmptyProjectForm } from '../LocalTaskEmptyProjectForm'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { LocalTaskProjectSettings } from './LocalTaskProjectSettings'
 import { LocalTaskStatusSettings } from './LocalTaskStatusSettings'
-import { localTasksSync } from '@/local-tasks/local-tasks-sync'
 
 function NewProjectDialog({
   open,
@@ -100,7 +101,7 @@ export function LocalTasksSettingsPane(): React.JSX.Element {
   const [creating, setCreating] = useState(false)
   const cachedReadable = projectsLoaded && (hostState === 'ready' || hostState === 'read-only')
   const retryRead = (): void => {
-    void localTasksSync.refresh(
+    void refreshHomeLibrary(
       localTasksDomainStore.getState().readErrors.status ? null : ['projects']
     )
   }
@@ -124,6 +125,7 @@ export function LocalTasksSettingsPane(): React.JSX.Element {
   return (
     <div className="flex flex-col gap-6">
       <LocalTaskReadOnlyNotice />
+      <LocalTaskLibraryNotices />
       {readError ? (
         <LocalTaskReadErrorPanel detail={readError} onRetry={retryRead} compact />
       ) : null}

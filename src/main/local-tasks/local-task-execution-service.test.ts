@@ -1,147 +1,28 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 // Why: the Bun runner only moves SQLite tests to Node when they import this directly.
 import '../sqlite/sync-database'
-import type { LocalTaskStatusRow } from '../../shared/local-tasks/local-task-attention-rules'
 import type { LocalTaskChangeScope } from '../../shared/local-tasks/local-task-types'
 import {
   structuredAgentSessionPaneKey,
   structuredAgentSessionTabId
 } from '../../shared/structured-agent-session-projection'
 import { readLocalTaskAttentionStates } from './local-task-attention-store'
-import type { LocalTaskHostSessionSource } from './local-task-host-session-source'
-import { LocalTasksDatabase } from './local-tasks-database'
-import { LocalTasksService } from './local-tasks-service'
-
-let opId = 0
-const op = (): string => `op-${++opId}`
-const HOST = 'local'
-const SHOP = 'repo-shop::/Users/me/shop'
-const LEAF = '11111111-1111-4111-8111-111111111111'
-const NOW = 1_000_000
-
-const disposers: (() => void)[] = []
+import {
+  disposeLocalTaskExecutionFixtures,
+  HOST,
+  LEAF,
+  linkWorktree,
+  NOW,
+  op,
+  recordTerminal,
+  setup,
+  SHOP
+} from './local-task-execution.test-fixture'
 
 afterEach(() => {
-  for (const dispose of disposers.splice(0)) {
-    dispose()
-  }
+  disposeLocalTaskExecutionFixtures()
   vi.useRealTimers()
 })
-
-/** This host's agent status, as the binding hands it to the library. */
-function fakeHost() {
-  const rows = new Map<string, LocalTaskStatusRow>()
-  const live = new Set<string>()
-  const contact = new Set([HOST])
-  let listener: (() => void) | null = null
-  const source: LocalTaskHostSessionSource = {
-    rowsForPane: (paneKey) => {
-      const row = rows.get(paneKey)
-      return row ? [row] : []
-    },
-    paneKeys: () => [...rows.keys()],
-    terminalLive: (paneKey) => live.has(paneKey),
-    inContact: (hostId) => contact.has(hostId),
-    subscribe: (onChange) => {
-      listener = onChange
-      return () => {
-        listener = null
-      }
-    }
-  }
-  const report = (paneKey: string, row: Partial<LocalTaskStatusRow>): void => {
-    rows.set(paneKey, {
-      paneKey,
-      state: 'working',
-      stateStartedAt: NOW - 10,
-      receivedAt: NOW - 10,
-      ...row
-    })
-    listener?.()
-  }
-  return { source, rows, live, contact, report, emit: () => listener?.() }
-}
-
-function setup(options: { clock?: () => number; host?: ReturnType<typeof fakeHost> } = {}) {
-  const db = LocalTasksDatabase.openTransient()
-  const volatile: LocalTaskChangeScope[][] = []
-  const host = options.host ?? fakeHost()
-  const service = new LocalTasksService(
-    db,
-    options.clock ?? (() => NOW),
-    (scopes) => volatile.push(scopes),
-    host.source
-  )
-  disposers.push(() => service.execution.dispose())
-  const created = service.createProject({
-    clientOperationId: op(),
-    name: '商城',
-    prefix: 'SHOP',
-    repos: ['orca-project-shop']
-  })
-  if (!created.ok) {
-    throw new Error(created.code)
-  }
-  const project = created.project
-  const status = (category: string) =>
-    project.statuses.find((candidate) => candidate.category === category)?.id ?? ''
-  const task = (title: string, parentId?: string) => {
-    const result = service.createTask(
-      { clientOperationId: op(), projectId: project.id, title, parentId },
-      'desktop'
-    )
-    if (!result.ok) {
-      throw new Error(result.code)
-    }
-    return result.task
-  }
-  const statusOf = (taskId: string) => service.getTask(taskId).task?.statusId
-  return { db, service, work: service.execution, project, status, task, statusOf, volatile, host }
-}
-
-function linkWorktree(
-  work: LocalTasksService['execution'],
-  taskId: string,
-  worktreeId: string,
-  extra: { replace?: boolean; instanceId?: string; hostId?: string } = {}
-) {
-  return work.linkWorkspace(
-    {
-      clientOperationId: op(),
-      taskId,
-      hostId: HOST,
-      kind: 'git-worktree',
-      worktreeId,
-      nameSnapshot: worktreeId.split('/').at(-1),
-      linkedVia: 'start',
-      ...extra
-    },
-    'desktop'
-  )
-}
-
-function recordTerminal(
-  work: LocalTasksService['execution'],
-  taskId: string,
-  ids: { paneKey?: string; tabId?: string }
-) {
-  const result = work.recordSession(
-    {
-      clientOperationId: op(),
-      taskId,
-      hostId: HOST,
-      surface: 'terminal',
-      ...ids,
-      agent: 'claude',
-      linkedVia: 'start'
-    },
-    'desktop'
-  )
-  if (!result.ok) {
-    throw new Error(result.code)
-  }
-  return result.session
-}
 
 describe('task workspace links', () => {
   it('publishes cascade scopes after removing a task with a session and a mark', () => {
@@ -222,6 +103,33 @@ describe('task workspace links', () => {
       )
     expect(folder(task('第三个').id).ok).toBe(true)
     expect(folder(task('第四个').id)).toMatchObject({ code: 'workspace_already_linked' })
+  })
+
+  it('stores one spelling per host, so another spelling cannot claim a linked workspace', () => {
+    const { work, task } = setup()
+    const [local, localAgain, remote, remoteAgain] = ['一', '二', '三', '四'].map((t) => task(t))
+    expect(linkWorktree(work, local.id, SHOP, { hostId: ' local ' })).toMatchObject({
+      ok: true,
+      workspace: { hostId: 'local' }
+    })
+    expect(linkWorktree(work, localAgain.id, SHOP)).toMatchObject({
+      code: 'workspace_already_linked'
+    })
+    expect(
+      work.resolveWorkspace({ clientOperationId: op(), taskId: local.id, hostId: ' local ' }, 'cli')
+    ).toMatchObject({ ok: true, workspace: { hostId: 'local' } })
+    const remoteTree = 'repo-shop::/home/me/shop'
+    expect(linkWorktree(work, remote.id, remoteTree, { hostId: 'ssh:a/b' })).toMatchObject({
+      ok: true,
+      workspace: { hostId: 'ssh:a%2Fb' }
+    })
+    expect(linkWorktree(work, remoteAgain.id, remoteTree, { hostId: 'ssh:a%2Fb' })).toMatchObject({
+      code: 'workspace_already_linked'
+    })
+    expect(recordTerminal(work, remote.id, { tabId: 'tab-r', hostId: 'ssh:a/b' }).hostId).toBe(
+      'ssh:a%2Fb'
+    )
+    expect(work.listLinks().workspaces.map((link) => link.hostId)).toEqual(['local', 'ssh:a%2Fb'])
   })
 
   it('starts the task that began work, at any level, unless the project turned the rule off', () => {
@@ -347,7 +255,7 @@ describe('task workspace links', () => {
     })
   })
 
-  it('keeps one task per terminal tab while its pane key is still unknown (D5)', () => {
+  it('keeps one task per terminal tab while its pane key is still unknown', () => {
     const { work, task } = setup()
     const parent = task('订单导出')
     const other = task('另一个')
@@ -471,7 +379,7 @@ describe('task workspace links', () => {
     const first = task('订单导出')
     const second = task('登录超时')
     expect(linkWorktree(work, first.id, SHOP, { instanceId: 'inst-1' }).ok).toBe(true)
-    // Learned on another host, the same instance is still the first task's (D3).
+    // Learned on another host, the same instance is still the first task's.
     expect(
       linkWorktree(work, second.id, SHOP, { instanceId: 'inst-1', hostId: 'ssh:mini' })
     ).toEqual({ ok: false, code: 'workspace_already_linked', detail: first.ref })
@@ -663,7 +571,7 @@ describe('host attention judgment', () => {
     expect(work.getProgress().items).toMatchObject([{ key: second.key }])
   })
 
-  /** Two finished turns on two tasks' sessions, as V01 reproduced the crossed marks. */
+  /** Two finished turns on two tasks' sessions, where a mark could land on the wrong one. */
   function twoDoneSessions() {
     const context = setup()
     const panes = [`tab-a:${LEAF}`, `tab-b:${LEAF}`]
@@ -782,6 +690,47 @@ describe('host attention judgment', () => {
     ])
     expect(commits).toEqual([['links']])
     expect(work.getProgress().items).toMatchObject([{ taskSessionId: session.id }])
+  })
+
+  it('claims no pane while a split tab reports several, and the one left once the others go', () => {
+    vi.useFakeTimers()
+    const context = setup()
+    const { work, host } = context
+    const { session } = linkedSession(context, { tabId: 'tab-1' })
+    const split = `tab-1:22222222-2222-4222-8222-222222222222`
+    host.report(`tab-1:${LEAF}`, { state: 'working' })
+    host.report(split, { state: 'waiting' })
+    const paneOf = () => work.listLinks().sessions.find((s) => s.id === session.id)?.paneKey
+    work.start()
+    expect(paneOf()).toBeNull()
+    expect(work.getProgress()).toMatchObject({ items: [], sessions: [{ state: 'unknown' }] })
+    host.rows.delete(split)
+    host.emit()
+    vi.advanceTimersByTime(200)
+    expect(paneOf()).toBe(`tab-1:${LEAF}`)
+  })
+
+  it('keeps a seen finished turn hidden after a later mark prunes month-old marks', () => {
+    let now = NOW
+    const context = setup({ clock: () => now })
+    const { db, work, host } = context
+    const panes = [`tab-a:${LEAF}`, `tab-b:${LEAF}`]
+    const [a, b] = panes.map((paneKey) => linkedSession(context, { paneKey }).session)
+    for (const paneKey of panes) {
+      host.report(paneKey, { state: 'done' })
+    }
+    const keyOf = (taskSessionId: string) =>
+      work.getProgress().items.find((item) => item.taskSessionId === taskSessionId)?.key ?? ''
+    const seenKey = keyOf(a.id)
+    expect(
+      work.acknowledge({ clientOperationId: op(), itemKey: seenKey, taskSessionId: a.id })
+    ).toEqual({ ok: true })
+    now = NOW + 31 * 24 * 60 * 60 * 1000
+    expect(
+      work.acknowledge({ clientOperationId: op(), itemKey: keyOf(b.id), taskSessionId: b.id })
+    ).toEqual({ ok: true })
+    expect(work.getProgress().items).toEqual([])
+    expect(readLocalTaskAttentionStates(db).get(seenKey)).toMatchObject({ seenAt: NOW })
   })
 
   it('says unverifiable for an SSH target out of contact and ended once a pane stops reporting', () => {

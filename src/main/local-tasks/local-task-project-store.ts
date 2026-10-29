@@ -3,6 +3,7 @@ import {
   LOCAL_TASK_STATUS_COLORS,
   type LocalTaskStatusColor
 } from '../../shared/local-tasks/local-task-model'
+import { toLocalTaskOwnedHostId } from '../../shared/local-tasks/local-task-endpoint-ids'
 import type {
   LocalTaskProject,
   LocalTaskStatusDef
@@ -91,7 +92,8 @@ function toProject(
       .filter((repo) => rowString(repo, 'project_id') === id)
       .map((repo) => rowString(repo, 'orca_project_id')),
     defaultRepoId: rowNullableString(row, 'default_repo_id'),
-    lastExecutionHostId: rowNullableString(row, 'last_execution_host_id'),
+    // Why: a library holds only its own Orca's host spellings; anything else reads as no last host.
+    lastExecutionHostId: toLocalTaskOwnedHostId(rowNullableString(row, 'last_execution_host_id')),
     rules: {
       startMovesToInProgress: rowNumber(row, 'rule_start_moves') === 1,
       prMergedCompletes: rowNumber(row, 'rule_pr_merged_completes') === 1

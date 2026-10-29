@@ -39,7 +39,7 @@ const LIVE_STATES: readonly LocalTaskSessionState[] = ['working', 'waiting', 'bl
 
 type Judgment = {
   sessions: LocalTaskSessionProgress[]
-  /** Before seen and snoozed marks are applied. */
+  /** Every item the rules raise, seen, snoozed or not; marks on any other key may be pruned. */
   candidates: LocalTaskAttentionItem[]
   items: LocalTaskAttentionItem[]
   staleAt: number | null
@@ -219,21 +219,20 @@ export class LocalTaskAttentionMonitor {
     const state = localTaskRowState(row, this.source.terminalLive(paneKey), now)
     const key = localTaskAttentionKey(row.paneKey, row.stateStartedAt)
     const mark = marks.get(key)
-    const unread =
-      state === 'done' &&
-      row.sessionBoundary !== true &&
-      row.restoredUnconfirmed !== true &&
-      (mark?.seenAt ?? null) === null
+    const finishedTurn =
+      state === 'done' && row.sessionBoundary !== true && row.restoredUnconfirmed !== true
+    const unread = finishedTurn && (mark?.seenAt ?? null) === null
     const staleAt = localTaskRowStaleAt(row)
     if (staleAt !== null && staleAt > now) {
       judgment.staleAt = Math.min(judgment.staleAt ?? staleAt, staleAt)
     }
     judgment.sessions.push(progress(state, row, unread))
+    // Why finishedTurn, not unread: a seen turn stays a candidate, so its seen mark is never pruned.
     const item = localTaskAttentionItem(link, {
       state,
       row: LIVE_STATES.includes(state) ? row : null,
       structured: link.surface === 'chat' || row.structuredHost !== undefined,
-      unread,
+      unread: finishedTurn,
       lastMessage: localTaskRowWords(row, this.proseByPane.get(paneKey) ?? null)
     })
     if (!item) {
@@ -260,11 +259,11 @@ export class LocalTaskAttentionMonitor {
     if (!link.tabId) {
       return null
     }
-    return (
-      knownPaneKeys().find(
-        (paneKey) => parsePaneKey(paneKey)?.tabId === link.tabId && !claimedPanes.has(paneKey)
-      ) ?? null
+    // Why only a lone candidate: in a split tab any reporting pane may be another agent's.
+    const candidates = knownPaneKeys().filter(
+      (paneKey) => parsePaneKey(paneKey)?.tabId === link.tabId && !claimedPanes.has(paneKey)
     )
+    return candidates.length === 1 ? candidates[0] : null
   }
 
   private armDeadline(judgment: Judgment, now: number): void {

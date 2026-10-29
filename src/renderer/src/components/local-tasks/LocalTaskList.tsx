@@ -1,8 +1,8 @@
-import { memo } from 'react'
+import { memo, useEffect } from 'react'
 import { ChevronDown, ChevronRight, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { useNow } from '@/hooks/use-now'
 import { translate } from '@/i18n/i18n'
+import { clampLocalTaskCursor } from '@/local-tasks/local-task-cursor'
 import {
   unfoldedLocalTaskLines,
   type LocalTaskListGroup
@@ -104,7 +104,13 @@ export const LocalTaskList = memo(function LocalTaskList({
 }): React.JSX.Element {
   const collapsed = useLocalTaskPage((state) => state.collapsedGroupKeys)
   const folded = model.foldedTaskIds
-  const now = useNow(60_000)
+  useEffect(() => {
+    const page = localTaskPageStore.getState()
+    const cursor = clampLocalTaskCursor(page.cursorTaskId, model.listTaskIds, model.orderedTaskIds)
+    if (cursor !== page.cursorTaskId) {
+      page.setCursor(cursor)
+    }
+  }, [model.listTaskIds, model.orderedTaskIds])
   if (model.groups.length === 0) {
     return <EmptyList hasTasks={model.scopeTasks.length > 0} />
   }
@@ -133,7 +139,6 @@ export const LocalTaskList = memo(function LocalTaskList({
                       groupLabel={statusHeading}
                       depth={0}
                       folded={entry.children.length > 0 ? folded.has(entry.task.id) : null}
-                      now={now}
                       hostLabels={model.hostLabels}
                     />
                     {unfoldedLocalTaskLines(entry.lines, folded).map((line) => (
@@ -144,7 +149,6 @@ export const LocalTaskList = memo(function LocalTaskList({
                         groupLabel={statusHeading}
                         depth={line.depth}
                         folded={line.childCount > 0 ? folded.has(line.task.id) : null}
-                        now={now}
                         hostLabels={model.hostLabels}
                       />
                     ))}

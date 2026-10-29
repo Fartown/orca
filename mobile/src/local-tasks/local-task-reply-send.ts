@@ -1,6 +1,6 @@
 /**
  * A "Needs you" reply goes straight into the session, the way the phone's chat composer sends
- * (D-008, RESEARCH-2 §1.6): one request, never sent twice, nothing kept on any host. A refused send
+ * (技术方案 §17.3): one request, never sent twice, nothing kept on any host. A refused send
  * hands the text back; a lost answer is "sent, not confirmed" and is left alone.
  */
 import { z } from 'zod'

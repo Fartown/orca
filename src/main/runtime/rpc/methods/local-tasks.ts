@@ -14,11 +14,9 @@ import {
   LocalTasksTasksBatchUpdateParams,
   LocalTasksTasksCreateParams,
   LocalTasksTasksCreateSubtasksParams,
-  LocalTasksTasksGetParams,
   LocalTasksTasksListParams,
   LocalTasksTasksMoveParams,
   LocalTasksTasksRemoveParams,
-  LocalTasksTasksSearchParams,
   LocalTasksTasksUpdateParams,
   LocalTasksUnsubscribeChangesParams
 } from '../../../../shared/local-tasks/local-tasks-rpc-params'
@@ -102,18 +100,6 @@ export const LOCAL_TASK_METHODS = [
     name: 'localTasks.tasks.list',
     params: LocalTasksTasksListParams,
     handler: (params) => service().listTasks(params.projectId)
-  }),
-  defineMethod({
-    permission: 'workspace',
-    name: 'localTasks.tasks.get',
-    params: LocalTasksTasksGetParams,
-    handler: (params) => service().getTask(params.ref)
-  }),
-  defineMethod({
-    permission: 'workspace',
-    name: 'localTasks.tasks.search',
-    params: LocalTasksTasksSearchParams,
-    handler: (params) => service().searchTasks(params.query, params.limit)
   }),
   defineMethod({
     permission: 'workspace',

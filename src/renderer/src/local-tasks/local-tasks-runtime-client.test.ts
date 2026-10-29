@@ -16,6 +16,8 @@ import { toWebTerminalSurfaceTabId } from '../../../shared/terminal-surface-id'
 import type { LocalTask } from '../../../shared/local-tasks/local-task-types'
 import { localTasksEndpointReads } from './local-tasks-endpoint-calls'
 import { localTasksClient } from './local-tasks-runtime-client'
+import { localTasksDomainStore } from './local-tasks-domain-store'
+import { updateLocalTaskFields } from './local-task-writes'
 
 const SERVER = { kind: 'environment', environmentId: 'env-1' }
 const LEAF = '11111111-1111-4111-8111-111111111111'
@@ -190,4 +192,27 @@ it('reads a server’s links as this client sees them: its host, its terminal mi
     hostId: 'runtime:env-1',
     worktreeId: 'repo1::/w'
   })
+})
+
+it('re-reads only the library that refused a write as stale', async () => {
+  const domain = localTasksDomainStore.getState()
+  for (const endpoint of ['local', 'runtime:env-1'] as const) {
+    domain.openEndpoint(endpoint)
+    domain.writer(endpoint).setConnection('live')
+    domain.writer(endpoint).setHostState('ready', null)
+  }
+  host.call.mockImplementation(async (_target, method) =>
+    method === 'localTasks.tasks.update' ? { ok: false, code: 'stale' } : []
+  )
+  const saved = await updateLocalTaskFields(
+    { ...rawTask('runtime:env-1/t1'), projectId: 'runtime:env-1/p1' },
+    { title: 'Renamed' }
+  )
+  expect(saved).toBe(false)
+  await vi.waitFor(() => expect(host.call).toHaveBeenCalledTimes(3))
+  expect(host.call.mock.calls.map(([target, method]) => [target, method])).toEqual([
+    [SERVER, 'localTasks.tasks.update'],
+    [SERVER, 'localTasks.projects.list'],
+    [SERVER, 'localTasks.tasks.list']
+  ])
 })

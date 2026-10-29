@@ -6,14 +6,15 @@ import type {
   LocalTaskSessionState,
   LocalTaskWorkspaceLink
 } from '../../../src/shared/local-tasks/local-task-link-types'
+import { buildLocalTaskIndex } from '../../../src/shared/local-tasks/local-task-grouping'
 import {
   localTaskDescendantIds,
   localTaskEffectiveWorkspace
 } from '../../../src/shared/local-tasks/local-task-tree'
 import type { LocalTask } from '../../../src/shared/local-tasks/local-task-types'
 
-// What the phone shows of the library host's judgement (CONTRACT §5). Every state here is the
-// host's; the phone only groups, filters and orders it, and says "can't confirm" out of contact.
+// What the phone shows of the library host's judgement. Every state here is the host's; the phone
+// only groups, filters and orders it, and says "can't confirm" out of contact.
 
 /** One task's "Needs you" items, merged into a single row. */
 export type LocalTaskAttentionRow = {
@@ -86,15 +87,7 @@ export function localTaskSessionViews(args: {
   snapshot: LocalTaskProgressSnapshot | null
   inContact: boolean
 }): LocalTaskSessionView[] {
-  const tasksById = new Map(args.tasks.map((entry) => [entry.id, entry]))
-  const childrenByParentId = new Map<string, LocalTask[]>()
-  for (const entry of args.tasks) {
-    if (entry.parentId) {
-      const siblings = childrenByParentId.get(entry.parentId) ?? []
-      siblings.push(entry)
-      childrenByParentId.set(entry.parentId, siblings)
-    }
-  }
+  const { tasksById, childrenByParentId } = buildLocalTaskIndex([], args.tasks)
   const own = new Set([args.task.id, ...localTaskDescendantIds(args.task.id, childrenByParentId)])
   const progress = new Map(
     (args.snapshot?.sessions ?? []).map((entry) => [entry.taskSessionId, entry])
@@ -113,10 +106,25 @@ export function localTaskSessionViews(args: {
     })
 }
 
-/** The items one session holds, which opening that session marks seen (CONTRACT §5.4). */
+/** The items one session holds, which opening that session marks seen (技术方案 §9.2). */
 export function localTaskItemsForSession(
   snapshot: LocalTaskProgressSnapshot | null,
   taskSessionId: string
 ): LocalTaskAttentionItem[] {
   return (snapshot?.items ?? []).filter((item) => item.taskSessionId === taskSessionId)
+}
+
+/**
+ * The items a session in view has shown its user: those already waiting when it came into view,
+ * the way the desktop forwards only items seen at or after their `since`. One that arrives later
+ * waits for the next time the session comes into view.
+ */
+export function localTaskItemsSeenInSession(
+  snapshot: LocalTaskProgressSnapshot | null,
+  taskSessionId: string,
+  visibleSince: number
+): LocalTaskAttentionItem[] {
+  return localTaskItemsForSession(snapshot, taskSessionId).filter(
+    (item) => item.since <= visibleSince
+  )
 }

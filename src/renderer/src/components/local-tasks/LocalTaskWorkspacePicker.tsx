@@ -30,6 +30,7 @@ import {
   orcaProjectIdsForWorktree
 } from '@/local-tasks/local-task-workspace-resolution'
 import { localTaskIdEndpoint } from '@/local-tasks/local-task-endpoints'
+import { useLocalTaskEscapeLayer } from './use-local-task-page-keys'
 
 export type LocalTaskWorkspaceChoice = {
   worktree: Worktree
@@ -44,8 +45,8 @@ export type LocalTaskWorkspaceChoice = {
 
 /**
  * Workspaces and folder workspaces on the hosts the project's library serves, a library holding
- * only its own hosts (CONTRACT §2.1). Those of the project's Orca projects come first; the rest
- * stay choosable (REQ-011).
+ * only its own hosts (solution doc §17.1). Those of the project's Orca projects come first; the
+ * rest stay choosable (REQ-011).
  */
 export function listLocalTaskWorkspaceChoices(
   state: AppState,
@@ -149,6 +150,7 @@ export function LocalTaskWorkspacePicker({
       ),
     [folderWorkspaces, links, project, task.id, tasks, worktreesByRepo]
   )
+  useLocalTaskEscapeLayer('dialog', true, onClose)
   const related = choices.filter((choice) => choice.related)
   const others = choices.filter((choice) => !choice.related)
   const pick = async (choice: LocalTaskWorkspaceChoice): Promise<void> => {

@@ -14,6 +14,8 @@ import {
   LOCAL_TASK_DESCRIPTION_MAX,
   LOCAL_TASK_TITLE_MAX
 } from '../../../src/shared/local-tasks/local-task-model'
+import { buildLocalTaskIndex } from '../../../src/shared/local-tasks/local-task-grouping'
+import { localTaskParentCandidates } from '../../../src/shared/local-tasks/local-task-hierarchy'
 import { MobileSwitch } from '../components/MobileSwitch'
 import { colors, spacing } from '../theme/mobile-theme'
 import type { LocalTasksApi } from './local-tasks-api'
@@ -28,7 +30,6 @@ import {
 import {
   initialLocalTaskDraft,
   isMultiLinePaste,
-  localTaskParentCandidates,
   nextLocalTaskDraft,
   splitPastedLines,
   type LocalTaskDraft,
@@ -67,7 +68,12 @@ export function LocalTaskFormView(props: Props) {
   const lookup = localTaskStatusLookup(library.projects)
   const status = draft.statusId ? (lookup.get(draft.statusId) ?? null) : null
   const editing = mode.kind === 'edit' ? mode.task : null
-  const parentCandidates = localTaskParentCandidates(library.tasks, draft.projectId, editing?.id)
+  const parentCandidates = localTaskParentCandidates(
+    editing,
+    draft.projectId,
+    library.tasks,
+    buildLocalTaskIndex([], library.tasks)
+  )
   const parent = draft.parentId
     ? (library.tasks.find((task) => task.id === draft.parentId) ?? null)
     : null

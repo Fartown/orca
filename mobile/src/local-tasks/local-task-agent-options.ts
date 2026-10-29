@@ -35,12 +35,15 @@ function normalizeDefault(value: string): MobileNewTabAgentSettings['defaultTuiA
 
 /**
  * The agents a launch can pick, the user's default first, as the "+" new-tab sheet lists them. An
- * existing workspace asks its own host; Start asks the host the new workspace goes on.
+ * existing workspace asks its own host; Start asks the host the new workspace goes on. Preferences
+ * are the paired host's, as the relay answers `settings.get` for a server too.
  */
 export async function loadLocalTaskAgentOptions(args: {
   client: RpcClient
+  /** The library's Orca: the paired host, or a server's scoped view. */
   launchClient: RpcClient
   hostCapabilities: readonly string[]
+  /** `hostId` as the library's owner names it: a server's SSH target is that server's to detect. */
   target: { kind: 'existing'; routeId: string } | { kind: 'create'; hostId: string }
 }): Promise<MobileNewTabAgentOption[]> {
   if (args.target.kind === 'existing') {
@@ -55,7 +58,7 @@ export async function loadLocalTaskAgentOptions(args: {
     newTabSettingsRead.request(args.client),
     host?.kind === 'ssh'
       ? remoteAgentDetectionRead
-          .request(args.client, { connectionId: host.targetId })
+          .request(args.launchClient, { connectionId: host.targetId })
           .then((reply) => remoteAgentDetectionRead.interpret(reply))
       : localAgentDetectionRead
           .request(args.launchClient)

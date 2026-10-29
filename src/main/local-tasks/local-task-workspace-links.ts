@@ -1,4 +1,4 @@
-import { isLocalTaskOwnedHostId } from '../../shared/local-tasks/local-task-endpoint-ids'
+import { toLocalTaskOwnedHostId } from '../../shared/local-tasks/local-task-endpoint-ids'
 import type {
   LocalTaskSessionLink,
   LocalTaskWorkspaceLink
@@ -39,12 +39,14 @@ export function linkLocalTaskWorkspace(
   if (!task) {
     return { ok: false, code: 'not_found' }
   }
-  // Why: this Orca can judge and reach only its own machine and its own SSH targets.
-  if (!isLocalTaskOwnedHostId(input.hostId)) {
+  // Why: this Orca can judge and reach only its own machine and its own SSH targets. One spelling
+  // per host, so `findWorkspaceOwner` and the identity index see the same workspace as the same.
+  const hostId = toLocalTaskOwnedHostId(input.hostId)
+  if (!hostId) {
     return { ok: false, code: 'host_not_owned' }
   }
   const place: LocalTaskWorkspacePlace = {
-    hostId: input.hostId,
+    hostId,
     kind: input.kind,
     instanceId: input.instanceId ?? null,
     worktreeId: input.worktreeId ?? null,
@@ -117,12 +119,13 @@ export function resolveLocalTaskWorkspace(
   if (!existing) {
     return { ok: false, code: 'not_found' }
   }
-  if (input.hostId !== undefined && !isLocalTaskOwnedHostId(input.hostId)) {
+  const hostId = input.hostId === undefined ? existing.hostId : toLocalTaskOwnedHostId(input.hostId)
+  if (!hostId) {
     return { ok: false, code: 'host_not_owned' }
   }
   const next: LocalTaskWorkspaceLink = {
     ...existing,
-    hostId: input.hostId ?? existing.hostId,
+    hostId,
     instanceId: input.instanceId ?? existing.instanceId,
     worktreeId: input.worktreeId ?? existing.worktreeId,
     branchSnapshot: input.branchSnapshot ?? existing.branchSnapshot,

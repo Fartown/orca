@@ -352,7 +352,7 @@ export function LocalTasksLibraryScreen(props: Props) {
   )
 }
 
-/** Opening a session is seeing it: its items are marked seen on the library's host (CONTRACT §5.4). */
+/** Opening a session is seeing it: its items are marked seen on the library's host (技术方案 §9.2). */
 function acknowledgeOpened(
   api: LocalTasksApi,
   library: Pick<LocalTasksLibrary, 'work' | 'reload'>,

@@ -15,7 +15,7 @@ import {
   useLocalTaskEffectiveWorkspace,
   useLocalTaskWorkspaceLink
 } from '@/local-tasks/local-task-link-selectors'
-import { localTaskPathFromRoot } from '@/local-tasks/local-task-hierarchy'
+import { localTaskPathFromRoot } from '../../../../shared/local-tasks/local-task-hierarchy'
 import { useLocalTaskRowWritable } from '@/local-tasks/local-tasks-domain-store'
 import { localTaskDescendantIds } from '../../../../shared/local-tasks/local-task-tree'
 import { LocalTaskStatusIcon } from './LocalTaskIcons'

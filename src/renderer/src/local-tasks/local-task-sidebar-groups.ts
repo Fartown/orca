@@ -25,6 +25,8 @@ export type LocalTaskSidebarGroupingInput = {
   defaultHostId: ExecutionHostId
   /** The task a workspace creation still in flight was started for. */
   taskIdForCreation: (creationId: string) => string | null
+  /** The task a just-created workspace was started for, until the links name it. */
+  taskIdForStartedWorkspace: (workspace: { id: string; hostId: string }) => string | null
 }
 
 type Unit = { rows: Row[]; taskId: string | null; dropped: boolean }
@@ -153,7 +155,10 @@ function resolveUnitTasks(units: Unit[], input: LocalTaskSidebarGroupingInput): 
     for (const row of unit.rows) {
       const workspace = rowWorkspace(row, input.defaultHostId)
       const taskId = workspace
-        ? topLevel(findLocalTaskLinkForWorkspace(input.links, workspace)?.taskId)
+        ? topLevel(
+            findLocalTaskLinkForWorkspace(input.links, workspace)?.taskId ??
+              input.taskIdForStartedWorkspace(workspace)
+          )
         : null
       if (taskId) {
         unit.taskId = taskId

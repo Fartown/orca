@@ -12,6 +12,7 @@ import {
 import { LocalTasksService } from './local-tasks-service'
 import {
   buildLocalTaskIndex,
+  isExactLocalTaskRef,
   isLocalTaskVisible
 } from '../../shared/local-tasks/local-task-grouping'
 
@@ -55,6 +56,22 @@ function createTask(
     throw new Error(result.code)
   }
   return result.task
+}
+
+/** The task a client finds by this id or ref, current or earlier, from what the library lists. */
+function findTask(service: LocalTasksService, idOrRef: string) {
+  const { projects } = service.listProjects()
+  return (
+    service.listTasks().tasks.find(
+      (task) =>
+        task.id === idOrRef ||
+        isExactLocalTaskRef(
+          task,
+          projects.find((project) => project.id === task.projectId),
+          idOrRef
+        )
+    ) ?? null
+  )
 }
 
 describe('LocalTasksService', () => {
@@ -149,8 +166,8 @@ describe('LocalTasksService', () => {
       prefix: 'MALL'
     })
     expect(renamed.ok && renamed.project.aliases).toEqual(['SHOP'])
-    expect(service.getTask('SHOP-1').task?.id).toBe(first.id)
-    expect(service.getTask('mall-1').task?.ref).toBe('MALL-1')
+    expect(findTask(service, 'SHOP-1')?.id).toBe(first.id)
+    expect(findTask(service, 'mall-1')?.ref).toBe('MALL-1')
     const reuse = service.createProject({
       clientOperationId: op(),
       name: 'Other',
@@ -193,7 +210,7 @@ describe('LocalTasksService', () => {
     expect(service.removeProject({ clientOperationId: op(), projectId: project.id })).toEqual({
       ok: true
     })
-    expect(service.getTask('SHOP-1').task?.id).toBe(movedTask.id)
+    expect(findTask(service, 'SHOP-1')?.id).toBe(movedTask.id)
 
     expect(
       service.updateProject({
@@ -227,13 +244,13 @@ describe('LocalTasksService', () => {
         prefix: 'SHOP'
       })
     ).toEqual({ ok: false, code: 'prefix_taken', detail: '目标' })
-    expect(service.getTask('SHOP-1').task?.id).toBe(movedTask.id)
+    expect(findTask(service, 'SHOP-1')?.id).toBe(movedTask.id)
 
     expect(service.removeTask({ clientOperationId: op(), taskId: movedTask.id })).toEqual({
       ok: true,
       removed: 1
     })
-    expect(service.getTask('SHOP-1').task).toBeNull()
+    expect(findTask(service, 'SHOP-1')).toBeNull()
     const released = service.updateProject({
       clientOperationId: op(),
       projectId: other.project.id,
@@ -393,7 +410,7 @@ describe('LocalTasksService', () => {
       'desktop'
     )
     expect(removed.ok).toBe(true)
-    expect(service.getTask(task.id).task?.statusId).toBe(addedId)
+    expect(findTask(service, task.id)?.statusId).toBe(addedId)
   })
 
   it('moves a whole subtree, renumbers it and resolves the refs it used to have', () => {
@@ -426,10 +443,10 @@ describe('LocalTasksService', () => {
       'desktop'
     )
     expect(moved).toMatchObject({ ok: true, task: { ref: 'ORC-1', parentId: null } })
-    expect(service.getTask('SHOP-2').task?.ref).toBe('ORC-1')
-    expect(service.getTask('SHOP-3').task).toMatchObject({ ref: 'ORC-2', parentId: middle.id })
-    expect(service.getTask('SHOP-1').task?.projectId).toBe(project.id)
-    expect(service.getTask('SHOP-4').task?.projectId).toBe(project.id)
+    expect(findTask(service, 'SHOP-2')?.ref).toBe('ORC-1')
+    expect(findTask(service, 'SHOP-3')).toMatchObject({ ref: 'ORC-2', parentId: middle.id })
+    expect(findTask(service, 'SHOP-1')?.projectId).toBe(project.id)
+    expect(findTask(service, 'SHOP-4')?.projectId).toBe(project.id)
     // Its workspace stays linked: links name work, not projects.
     expect(service.execution.listLinks().workspaces.map((link) => link.taskId)).toEqual([middle.id])
     const listed = service.listTasks(targetId).tasks

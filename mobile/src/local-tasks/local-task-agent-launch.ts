@@ -2,7 +2,7 @@
  * Start and Open-a-session from a task, through the library host's own `agent.launch` (D-008: the
  * library, its workspaces and its sessions are on one Orca). The link is written afterwards, as its
  * own step: when that step is lost, the task simply has no link and the user links the workspace
- * again (PLAN A12). Kept free of React so every outcome tests in node.
+ * again. Kept free of React so every outcome tests in node.
  */
 
 import type { AgentLaunchPrompt, AgentLaunchResult } from '../../../src/shared/agent-launch-intent'

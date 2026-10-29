@@ -662,8 +662,8 @@
             "mobile/src/transport/rpc-client-server-subscription.ts",
             "mobile/src/transport/rpc-subscription-inventory.ts",
             "mobile/src/home/MobileHomeListFooter.tsx",
-            "mobile/src/home/MobileHomeTasksCard.tsx",
             "mobile/src/home/MobileHomeListFooter.test.tsx",
+            "mobile/src/layout/host-sidebar-reveal.test.tsx",
             "mobile/src/host-screen/host-screen-header.tsx",
             "src/renderer/src/local-tasks/**",
             "src/renderer/src/components/local-tasks/**",
@@ -696,7 +696,9 @@
             "src/renderer/src/lib/worktree-creation-structured-session.ts",
             "src/renderer/src/lib/worktree-creation-structured-session.test.ts",
             "src/renderer/src/hooks/useComposerState.ts",
-            "src/renderer/src/hooks/composer-state/composer-target-store.ts"
+            "src/renderer/src/hooks/composer-state/composer-target-store.ts",
+            "src/renderer/src/components/sidebar/SidebarGroupByToggle.tsx",
+            "src/renderer/src/components/sidebar/use-worktree-card-review-details.ts"
           ],
           "message": "Branch changes an upstream path that no fork feature owns or registers as a seam; extend config/fork-features.jsonc and this allowlist, or move the change into a feature-owned path."
         }
@@ -1664,8 +1666,8 @@
             "mobile/src/transport/rpc-client-server-subscription.ts",
             "mobile/src/transport/rpc-subscription-inventory.ts",
             "mobile/src/home/MobileHomeListFooter.tsx",
-            "mobile/src/home/MobileHomeTasksCard.tsx",
             "mobile/src/home/MobileHomeListFooter.test.tsx",
+            "mobile/src/layout/host-sidebar-reveal.test.tsx",
             "mobile/src/host-screen/host-screen-header.tsx",
             "config/fork-features.jsonc",
             "config/architecture-policies.jsonc",
@@ -1694,7 +1696,9 @@
             "src/renderer/src/lib/worktree-creation-structured-session.ts",
             "src/renderer/src/lib/worktree-creation-structured-session.test.ts",
             "src/renderer/src/hooks/useComposerState.ts",
-            "src/renderer/src/hooks/composer-state/composer-target-store.ts"
+            "src/renderer/src/hooks/composer-state/composer-target-store.ts",
+            "src/renderer/src/components/sidebar/SidebarGroupByToggle.tsx",
+            "src/renderer/src/components/sidebar/use-worktree-card-review-details.ts"
           ],
           "message": "Change is outside the local tasks feature."
         },

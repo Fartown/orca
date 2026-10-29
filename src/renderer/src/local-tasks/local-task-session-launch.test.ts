@@ -93,7 +93,7 @@ afterEach(() => {
   fixture.recordSession.mockReset()
 })
 
-describe('open session (REQ-010, A1)', () => {
+describe('open session (REQ-010)', () => {
   it('plans the route before launching and records a terminal by its tab', async () => {
     fixture.launch.mockReturnValue({ surface: { kind: 'local-terminal', tabId: 'tab-1' } })
     expect(launch()).toBe(true)

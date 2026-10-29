@@ -23,8 +23,11 @@ export type LocalTasksDomainState = LocalTasksDerived & {
   openEndpoint: (endpoint: LocalTaskEndpointKey) => void
   closeEndpoint: (endpoint: LocalTaskEndpointKey) => void
   setEndpointContact: (endpoint: LocalTaskEndpointKey, inContact: boolean) => void
-  /** A write's own result lands before the change notice, so the UI reflects it without a gap. */
-  upsertTasks: (tasks: LocalTask[]) => void
+  /**
+   * A write's own result lands before the change notice, so the UI reflects it without a gap. Only
+   * a create adds rows: a late reply to an edit must not revive a task removed meanwhile.
+   */
+  upsertTasks: (tasks: LocalTask[], options?: { created?: boolean }) => void
   upsertProject: (project: LocalTaskProject) => void
   /** UI choices kept in the page's own library, applied before the host confirms them. */
   applyHomePreferences: (values: Record<string, string | null>) => void
@@ -32,16 +35,15 @@ export type LocalTasksDomainState = LocalTasksDerived & {
   retry: (endpoint?: LocalTaskEndpointKey) => void
 }
 
-function mergeTasks(current: LocalTask[], incoming: LocalTask[]): LocalTask[] {
+function mergeTasks(current: LocalTask[], incoming: LocalTask[], created: boolean): LocalTask[] {
   const byId = new Map(incoming.map((task) => [task.id, task]))
   const merged = current.map((task) => {
     const candidate = byId.get(task.id)
     return candidate && candidate.revision >= task.revision ? candidate : task
   })
-  for (const task of incoming) {
-    if (!current.some((existing) => existing.id === task.id)) {
-      merged.push(task)
-    }
+  if (created) {
+    const known = new Set(current.map((task) => task.id))
+    merged.push(...incoming.filter((task) => !known.has(task.id)))
   }
   return merged
 }
@@ -154,14 +156,16 @@ export function createLocalTasksDomainStore() {
         ),
       setEndpointContact: (endpoint, inContact) =>
         update(endpoint, (partition) => (partition.inContact === inContact ? null : { inContact })),
-      upsertTasks: (incoming) => {
+      upsertTasks: (incoming, options) => {
         const byEndpoint = new Map<LocalTaskEndpointKey, LocalTask[]>()
         for (const task of incoming) {
           const endpoint = localTaskIdEndpoint(task.id)
           byEndpoint.set(endpoint, [...(byEndpoint.get(endpoint) ?? []), task])
         }
         for (const [endpoint, tasks] of byEndpoint) {
-          update(endpoint, (partition) => ({ tasks: mergeTasks(partition.tasks, tasks) }))
+          update(endpoint, (partition) => ({
+            tasks: mergeTasks(partition.tasks, tasks, options?.created === true)
+          }))
         }
       },
       upsertProject: (project) =>

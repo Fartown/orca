@@ -5,7 +5,11 @@ import type { AppState } from '@/store/types'
 import { resolveLaunchAgentTabId } from '@/lib/worktree-creation-agent-seeds'
 import { queueHookCommandsForFirstWorktreeTab } from '@/lib/hook-command-delayed-delivery'
 import { getExecutionHostIdForWorktree } from '@/lib/worktree-runtime-owner'
-import { getRepoExecutionHostId, normalizeExecutionHostId } from '../../../shared/execution-host'
+import {
+  getRepoExecutionHostId,
+  normalizeExecutionHostId,
+  type ExecutionHostId
+} from '../../../shared/execution-host'
 import { getRepoIdFromWorktreeId } from '../../../shared/worktree/id'
 import type { TuiAgent } from '../../../shared/tui-agent'
 import { suggestLocalTaskWorkspaceName } from '../../../shared/local-tasks/local-task-model'
@@ -25,15 +29,17 @@ import {
   findChatTabForSession,
   recordLocalTaskSession,
   terminalSessionIds,
-  whenAppStoreAnswers,
   type LocalTaskSessionTarget
 } from './local-task-session-recording'
 import { localTasksDomainStore } from './local-tasks-domain-store'
+import {
+  forgetLocalTaskStartedWorkspace,
+  rememberLocalTaskStartedWorkspace,
+  settleLocalTaskStartedWorkspaces
+} from './local-task-started-workspaces'
 
 type PendingStart = {
   taskId: string
-  /** The task the composer's agent session belongs to: the task, or the subtask that asked. */
-  sessionTaskId: string
   /** The task project's Orca projects; a workspace made in another is not linked. Empty: any. */
   orcaProjectIds: readonly string[]
   replace: boolean
@@ -53,6 +59,28 @@ function rememberStart(creationId: string, start: PendingStart): void {
   }
 }
 
+const TASK_COMPOSER_KEYS: ReadonlySet<string> = new Set([
+  'initialTaskRepo',
+  'launchPrompt',
+  'onCreationStarted'
+])
+
+/**
+ * "Create another" keeps the composer open: only its first workspace belongs to the task, so the
+ * task's prompt, repo and callback leave the composer once that creation has started.
+ */
+function releaseTaskComposer(data: Record<string, unknown>): void {
+  const app = useAppStore.getState()
+  if (app.activeModal !== 'new-workspace-composer' || app.modalData !== data) {
+    return
+  }
+  useAppStore.setState({
+    modalData: Object.fromEntries(
+      Object.entries(data).filter(([key]) => !TASK_COMPOSER_KEYS.has(key))
+    )
+  })
+}
+
 /**
  * Opens Orca's own new-workspace composer for a task of any level (REQ-009): repo and run location
  * from the project (the default repo unless `orcaProjectId` picks another), a name from the ref
@@ -61,7 +89,7 @@ function rememberStart(creationId: string, start: PendingStart): void {
 export function startLocalTaskWork(
   task: LocalTask,
   project: LocalTaskProject,
-  options: { replace?: boolean; sessionTask?: LocalTask; orcaProjectId?: string } = {}
+  options: { replace?: boolean; orcaProjectId?: string } = {}
 ): boolean {
   const state = useAppStore.getState()
   const start = resolveLocalTaskStartTarget(state, project, options.orcaProjectId)
@@ -74,7 +102,7 @@ export function startLocalTaskWork(
     )
     return false
   }
-  state.openModal('new-workspace-composer', {
+  const data = {
     initialRepoId: start.repo.id,
     ...(state.repos.some(
       (repo) => repo.id === start.repo.id && getRepoExecutionHostId(repo) === start.target.hostId
@@ -83,16 +111,18 @@ export function startLocalTaskWork(
       : { initialTaskRepo: start.repo }),
     initialWorkspaceTarget: start.target,
     prefilledName: suggestLocalTaskWorkspaceName(task.ref, task.title),
-    launchPrompt: localTaskPromptFor(options.sessionTask ?? task),
+    launchPrompt: localTaskPromptFor(task),
     telemetrySource: 'unknown',
-    onCreationStarted: (creationId: string) =>
+    onCreationStarted: (creationId: string) => {
       rememberStart(creationId, {
         taskId: task.id,
-        sessionTaskId: options.sessionTask?.id ?? task.id,
         orcaProjectIds: project.repos,
         replace: options.replace === true
       })
-  })
+      releaseTaskComposer(data)
+    }
+  }
+  state.openModal('new-workspace-composer', data)
   return true
 }
 
@@ -131,23 +161,26 @@ function recordCreatedTerminal(
   })
 }
 
+/** Recorded as soon as the launch settles; the host names the chat by its session alone. */
 function recordCreatedChat(target: LocalTaskSessionTarget, sessionId: string): void {
-  whenAppStoreAnswers(
-    target.worktreeId,
-    (state) => findChatTabForSession(state, target.worktreeId, sessionId),
-    (tab) => void recordLocalTaskSession(target, chatSessionIds(tab.id, tab.entityId))
+  const tab = findChatTabForSession(useAppStore.getState(), target.worktreeId, sessionId)
+  void recordLocalTaskSession(target, chatSessionIds(tab?.id ?? null, sessionId))
+}
+
+function createdWorkspaceHostId(completed: WorktreeCreationCompleted): ExecutionHostId {
+  return (
+    normalizeExecutionHostId(
+      completed.request.workspaceRunContext?.hostId ?? completed.request.executionHostId
+    ) ?? getExecutionHostIdForWorktree(useAppStore.getState(), completed.worktreeId)
   )
 }
 
 async function linkCreatedWorkspace(
   start: PendingStart,
-  completed: WorktreeCreationCompleted
-): Promise<void> {
+  completed: WorktreeCreationCompleted,
+  hostId: ExecutionHostId
+): Promise<boolean> {
   const state = useAppStore.getState()
-  const hostId =
-    normalizeExecutionHostId(
-      completed.request.workspaceRunContext?.hostId ?? completed.request.executionHostId
-    ) ?? getExecutionHostIdForWorktree(state, completed.worktreeId)
   const known = state.getKnownWorktreeById(completed.worktreeId, hostId)
   const worktree = known ?? {
     id: completed.worktreeId,
@@ -166,7 +199,7 @@ async function linkCreatedWorkspace(
         'The workspace was created in another project, so it was not linked to the task.'
       )
     )
-    return
+    return false
   }
   const linked = await linkLocalTaskWorkspace(state, {
     taskId: start.taskId,
@@ -177,10 +210,10 @@ async function linkCreatedWorkspace(
   })
   const agent: TuiAgent | null = completed.request.agent
   if (!linked || !agent) {
-    return
+    return linked
   }
   const target: LocalTaskSessionTarget = {
-    taskId: start.sessionTaskId,
+    taskId: start.taskId,
     hostId,
     worktreeId: completed.worktreeId,
     instanceId: known?.instanceId ?? null,
@@ -202,6 +235,7 @@ async function linkCreatedWorkspace(
   } else if (!completed.structuredLaunchAccepted) {
     recordCreatedTerminal(target, agent, completed)
   }
+  return true
 }
 
 export function handleLocalTaskCreationCompleted(completed: WorktreeCreationCompleted): void {
@@ -214,11 +248,31 @@ export function handleLocalTaskCreationCompleted(completed: WorktreeCreationComp
   if (!localTasksDomainStore.getState().tasks.some((task) => task.id === start.taskId)) {
     return
   }
-  void linkCreatedWorkspace(start, completed)
+  const hostId = createdWorkspaceHostId(completed)
+  const workspace = { id: completed.worktreeId, hostId }
+  // Why before the link is written: the sidebar drops the pending row as soon as this returns.
+  rememberLocalTaskStartedWorkspace({ worktreeId: workspace.id, hostId, taskId: start.taskId })
+  void linkCreatedWorkspace(start, completed, hostId).then(
+    (linked) => {
+      if (!linked) {
+        forgetLocalTaskStartedWorkspace(workspace)
+      }
+    },
+    () => forgetLocalTaskStartedWorkspace(workspace)
+  )
 }
 
 export function bindLocalTaskStartWork(): () => void {
-  return subscribeWorktreeCreationCompleted(handleLocalTaskCreationCompleted)
+  const unsubscribeCreations = subscribeWorktreeCreationCompleted(handleLocalTaskCreationCompleted)
+  const unsubscribeLinks = localTasksDomainStore.subscribe((state, previous) => {
+    if (state.links !== previous.links) {
+      settleLocalTaskStartedWorkspaces(state.links)
+    }
+  })
+  return () => {
+    unsubscribeCreations()
+    unsubscribeLinks()
+  }
 }
 
 /** The task a creation still in flight was started for, so the sidebar can group its row. */

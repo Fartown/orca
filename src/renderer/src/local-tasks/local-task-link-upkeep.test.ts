@@ -50,7 +50,7 @@ function state(patch: Partial<AppState>): AppState {
   return store.getState()
 }
 
-describe('workspace deleted (A3)', () => {
+describe('workspace deleted', () => {
   it('is missing only when the repo’s own host listed it authoritatively without it', () => {
     const listing = (authoritative: boolean): Partial<AppState> => ({
       repos: [REPO],

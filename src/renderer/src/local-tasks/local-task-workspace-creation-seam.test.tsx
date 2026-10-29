@@ -90,3 +90,34 @@ it('reports the started creation after starting it', async () => {
   expect(creation.run).toHaveBeenCalledOnce()
   expect(onCreationStarted).toHaveBeenCalledWith('creation-1')
 })
+
+it('sends the note typed in the composer after the task prompt', async () => {
+  const { result } = renderHook(() =>
+    useQuickCreationExecution({
+      ...input,
+      prepareQuickSubmit: async () => ({
+        ...prepared,
+        agent: 'claude',
+        trimmedNote: 'Keep the CSV header as is.'
+      }),
+      selectedRepoAgentLaunchFact: { kind: 'known', platform: 'darwin', hostKind: 'local' }
+    })
+  )
+
+  await act(async () => {
+    await result.current.executeQuickCreation(
+      { kind: 'none' },
+      'claude',
+      'workspace',
+      null,
+      'repo-1',
+      {
+        launchPrompt: 'SHOP-12 Order export'
+      }
+    )
+  })
+
+  expect(creation.run).toHaveBeenCalledWith(
+    expect.objectContaining({ quickPrompt: 'SHOP-12 Order export\n\nKeep the CSV header as is.' })
+  )
+})

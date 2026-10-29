@@ -22,11 +22,11 @@ import { translate } from '@/i18n/i18n'
 import { useAppStore } from '@/store'
 import { LOCAL_TASK_PROJECT_REPOS_MAX } from '../../../../../shared/local-tasks/local-task-model'
 import type { LocalTaskProject } from '../../../../../shared/local-tasks/local-task-types'
+import { localTaskRepoCandidates } from '@/local-tasks/local-task-project-repos'
 import {
-  localTaskRepoCandidates,
   localTaskReposPatch,
   type LocalTaskRepoEdit
-} from '@/local-tasks/local-task-project-repos'
+} from '../../../../../shared/local-tasks/local-task-repos-patch'
 import { localTasksClient } from '@/local-tasks/local-tasks-runtime-client'
 import { localTasksDomainStore, useLocalTasksDomain } from '@/local-tasks/local-tasks-domain-store'
 import { runLocalTaskWrite } from '@/local-tasks/local-task-writes'

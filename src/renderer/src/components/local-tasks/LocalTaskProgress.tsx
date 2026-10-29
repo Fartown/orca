@@ -18,7 +18,7 @@ import {
   useLocalTaskSessionLinks,
   useLocalTaskWorkspaceLink
 } from '@/local-tasks/local-task-link-selectors'
-import { localTaskWorkspaceFamilyIds } from '@/local-tasks/local-task-hierarchy'
+import { localTaskWorkspaceFamilyIds } from '../../../../shared/local-tasks/local-task-hierarchy'
 import { useLocalTasksDomain } from '@/local-tasks/local-tasks-domain-store'
 import { useLocalTaskSessionProgress } from '@/local-tasks/local-task-session-progress'
 import {

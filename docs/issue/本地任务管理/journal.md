@@ -3,7 +3,7 @@ title: 本地任务管理
 slug: 本地任务管理
 status: implementing
 created: 2026-10-26
-updated: 2026-10-27
+updated: 2026-10-29
 ---
 
 # 本地任务管理 开发 Journal
@@ -144,6 +144,75 @@ updated: 2026-10-27
 - 验证完再一起做两个切片
 
 ## 3. 开发记录
+
+### 2026-10-29 修复 PR #71 修复复核的三项发现
+
+- 本轮目标：修 Codex 复核（`.docs/local-tasks-ui-validation/2026-10-29/codex-pr-review-verify/README.md`，28 项中 25 通过、2 未修好、1 未能验证）里的 N01～N03。不提交、不推送。
+- 完成内容：
+  - N01：库升到 v5，打开时把已有工作区关联、会话关联的主机标识统一成规范写法并重算身份键。统一后撞同一身份的关联只留最早一条，连带删掉它的会话和标记。项目「上次运行主机」的规范化也挪进这一步。
+  - N03：手机网页的主机栈用的自定义 Navigator 没有包 `NavigationContent`，所以 `useIsFocused()` 在网页上永远是 false，会话页从来不算可见，一次确认都不会发；上一轮「被盖住不确认」是假通过。改用 `useFocusEffect` 维护可见。
+  - N02：可见时间按当前会话分段，同一屏切换会话 tab 也算一次新的可见。
+- 代码或文档变更：
+  - `src/main/local-tasks/local-tasks-owned-host-migration.ts`（新）、`local-tasks-schema.ts`、`local-tasks-schema.test.ts`；
+  - `mobile/src/local-tasks/use-local-task-session-acknowledge.ts` 及其测试；
+  - 方案 §17.4 补上开发库去重策略。
+- 验证证据：
+  - N01：Codex 的落盘探针按 v5 改写后通过（`.docs/local-tasks-ui-validation/2026-10-29/backend-v5-fix/`）。
+  - N03：在 Codex 的同一条真实手机网页路径上做了三次对照：修复前返回后 0 次确认；修复后被盖住期间 0 次、返回后 1 次，主机条目随之消失（`.docs/local-tasks-ui-validation/2026-10-29/mobile-ack-fix/`）。
+  - 门禁结果在 `.docs/local-tasks-ui-validation/2026-10-29/fix-round2-gates/`。
+- 未解决问题：
+  - 原生手机没有实机验证。
+  - 「服务器自己的 SSH 仓库」这种拓扑在现有 serve/orcad 上没能构造出来，只有测试覆盖。
+  - 网页版 `useIsFocused()` 恒为 false 是上游主机栈的问题，可能也影响上游其他用到它的页面；本功能已绕开，没有改上游。
+- 下一步：交原 Codex 对话复测 N01～N03；用户确认后提交并推送到 PR #71。
+
+### 2026-10-29 修复 PR #71 三路评审的发现
+
+- 本轮目标：修复 PR #71 三路评审（后端、桌面渲染层、手机；原文在 `.docs/local-tasks-ui-validation/2026-10-28/pr-review/`）确认的 4 个 P1 缺陷和全部行为类 P2，去掉重复实现和死代码；同步上游才会出现的问题写进方案 §17.6，本轮不改。不提交、不推送。
+- 完成内容：
+  - 后端：
+    - `projects.update` 先校验完再写；写入层用 SAVEPOINT，业务结果失败时回滚，只保留回执。
+    - 「做完一轮」的已看标记不再 30 天后被清掉。
+    - 项目的上次运行主机必须是拥有者形式；主机标识统一写法后入库。
+    - 同一 tab 有多个候选 pane 时不认领。
+    - 删除 `tasks.get`、`tasks.search` 和其他死代码。
+  - 桌面：
+    - 三个弹窗按 Esc 只关自己。
+    - 本机库和配对主机读失败时可以手动重试；配对主机不可用、只读、读失败各有提示，远端错误不再算到本机库头上。
+    - 新建弹窗里的备注接在任务提示词后面；「继续创建」只有第一个工作区挂任务；新工作区不再先闪进「未关联任务」组；开工时的聊天会话结算后立即记录。
+    - 「需要你」的按钮只对可写条目可用。
+    - 分组切换复用上游组件。
+    - 列表悬停不再滚动，折叠后光标落到可见行，时间显示不再让整张列表每分钟重渲染。
+    - 写入冲突只刷新出错的端点。
+    - 卡片的 PR 判定抽成上游纯函数，和规则 2 共用。
+    - 同一条目只发一次「看过」；会话 chip 按 instanceId 加主机匹配工作区；迟到的更新回包不再把已删除任务加回来。
+  - 手机：
+    - 会话页被盖住或在后台时不确认「需要你」，只确认会话变为可见前已出现的条目。
+    - 服务器自己的 SSH 仓库不再算进桌面库；服务器库上开工时，按仓库所在主机检测智能体。
+    - 长按服务器工作区、任务条后备候选时，主机由服务器自己的工作区列表确定，查不到就不让关联，不再猜成 `local`。
+    - 状态读取失败时显示读取失败。
+    - 树形展开、层级工具、仓库补丁改用共享层。
+    - 主机页接缝收成一行。
+    - 撤掉导出上游首页卡片样式的接缝。
+    - 删除死代码和没用到的文案。
+    - 修好一个被任务条拖累、在导入阶段就失败的上游测试。
+- 代码或文档变更：
+  - 代码：`src/main/local-tasks/**`、`src/shared/local-tasks/**`（层级工具从 renderer 搬入，新增 `local-task-repos-patch.ts`）、`src/renderer/src/local-tasks/**`、`src/renderer/src/components/local-tasks/**`、`mobile/src/local-tasks/**`、RPC 参数目录、手机中转白名单。
+  - 新增上游接缝：`SidebarGroupByToggle.tsx`、`use-worktree-card-review-details.ts`、`mobile/src/layout/host-sidebar-reveal.test.tsx`。
+  - 撤掉的上游接缝：`mobile/src/home/MobileHomeTasksCard.tsx`。
+  - 文档：方案 §17.5（补删除方法）和 §17.6（同步上游待办）。
+- 验证证据：
+  - 每条修复都有回归测试；后端的新测试确认过去掉修复会失败。
+  - 12 项门禁 exit 0（`check:fork-docs` 在重新生成需求索引后重跑通过），功能检查 main/shared 89、renderer 908、mobile 103；结果在 `.docs/local-tasks-ui-validation/2026-10-28/pr-review-fix/gates/`。
+  - 三路修复说明与后端证据在 `.docs/local-tasks-ui-validation/2026-10-28/pr-review-fix/`。
+  - 本轮未启动应用。
+- 未解决问题：
+  - 列表虚拟化没做：侧栏的虚拟列表和它自己的行模型绑定，无法直接套用。
+  - 会话自己的 pane 还没上报、分屏出来的 pane 先上报时，仍会认领到后者。
+  - 规则 2 关闭期间合并的 PR 不记录，重新打开后会补算。
+  - 暂缓的时间由客户端算、主机判，两边时钟偏差大时会被拒。
+  - 方案 §17.6 列出的同步待办。
+- 下一步：交原 Codex 对话复核；用户确认后提交并推送到 PR #71。
 
 ### 2026-10-28 修复 D-008 验证复核的发现
 

@@ -4,12 +4,15 @@ import type { LocalTasksDatabase } from './local-tasks-database'
 import { projectIdForPrefix } from './local-task-project-store'
 import { rowString } from './local-tasks-sqlite-row'
 
-export function changeProjectPrefix(
+/** A checked prefix change; `reuse` switches back to one of the project's earlier prefixes. */
+export type LocalTaskPrefixChange = { prefix: string; reuse: boolean }
+
+/** Checks a requested prefix without writing; null when it already is the current one. */
+export function checkProjectPrefixChange(
   db: LocalTasksDatabase,
   project: LocalTaskProject,
-  requested: string,
-  now: number
-): LocalTaskResult<never> | null {
+  requested: string
+): LocalTaskResult<LocalTaskPrefixChange> | null {
   const prefix = normalizeLocalTaskPrefix(requested)
   if (!prefix) {
     return { ok: false, code: 'prefix_invalid' }
@@ -29,18 +32,28 @@ export function changeProjectPrefix(
         : { ok: false, code: 'prefix_taken', detail: aliasOwner.name }
     }
   }
+  return { ok: true, prefix, reuse: owner === project.id }
+}
+
+export function applyProjectPrefixChange(
+  db: LocalTasksDatabase,
+  projectId: string,
+  change: LocalTaskPrefixChange,
+  now: number
+): void {
   db.prepare('UPDATE local_task_project_prefixes SET is_current = 0 WHERE project_id = ?').run(
-    project.id
+    projectId
   )
-  if (owner === project.id) {
+  if (change.reuse) {
     // Why: switching back to an earlier prefix reuses its row, so old refs keep resolving.
-    db.prepare('UPDATE local_task_project_prefixes SET is_current = 1 WHERE prefix = ?').run(prefix)
+    db.prepare('UPDATE local_task_project_prefixes SET is_current = 1 WHERE prefix = ?').run(
+      change.prefix
+    )
   } else {
     db.prepare(
       'INSERT INTO local_task_project_prefixes (prefix, project_id, is_current, created_at) VALUES (?, ?, 1, ?)'
-    ).run(prefix, project.id, now)
+    ).run(change.prefix, projectId, now)
   }
-  return null
 }
 
 export function prefixOwnerName(db: LocalTasksDatabase, prefix: string): string | null {

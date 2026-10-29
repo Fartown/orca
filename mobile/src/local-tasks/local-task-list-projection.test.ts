@@ -1,11 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import type { LocalTaskStatusCategory } from '../../../src/shared/local-tasks/local-task-model'
 import type { LocalTask, LocalTaskProject } from '../../../src/shared/local-tasks/local-task-types'
-import {
-  buildLocalTaskGroups,
-  localTaskSegmentCounts,
-  unfoldedLocalTaskLines
-} from './local-task-list-projection'
+import { unfoldedLocalTaskLines } from '../../../src/shared/local-tasks/local-task-list-groups'
+import { buildLocalTaskGroups, localTaskSegmentCounts } from './local-task-list-projection'
 
 const categories: LocalTaskStatusCategory[] = [
   'backlog',
@@ -66,7 +63,7 @@ function task(number: number, statusId: string, parentId: string | null = null):
   }
 }
 
-// The m4 design data: SHOP-12 in progress with three subtasks, one of them still Todo.
+// SHOP-12 in progress with three subtasks, one of them still Todo.
 const tasks = [
   task(12, 'started'),
   task(13, 'started', 'SHOP-12'),

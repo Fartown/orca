@@ -120,7 +120,7 @@ export function buildWorkflowSettingsSections(
       searchEntries: getTasksPaneSearchEntries(),
       group: 'workflows'
     },
-    ...getLocalTasksSettingsSections({ isWebClient }),
+    ...getLocalTasksSettingsSections(),
     {
       id: 'terminal',
       title: translate('auto.hooks.useSettingsNavigationMetadata.a9fb10afca', 'Terminal'),

@@ -47,14 +47,17 @@ describe('localTasks RPC', () => {
       names.length
     )
     expect(names).toEqual(expect.arrayContaining([...LOCAL_TASK_DESKTOP_ONLY_METHODS]))
-    // Removed with D-008: the host judges and claims for itself, and clients send replies directly.
+    // Removed: the host judges and claims for itself, clients send replies directly and search
+    // their own copy of the library with the shared matcher.
     for (const gone of [
       'localTasks.attention.publish',
       'localTasks.links.resolveSession',
       'localTasks.replies.list',
       'localTasks.replies.enqueue',
       'localTasks.replies.cancel',
-      'localTasks.replies.settle'
+      'localTasks.replies.settle',
+      'localTasks.tasks.get',
+      'localTasks.tasks.search'
     ]) {
       expect(names).not.toContain(gone)
     }

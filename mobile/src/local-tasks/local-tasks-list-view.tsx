@@ -6,13 +6,10 @@ import type {
   LocalTask,
   LocalTaskStatusDef
 } from '../../../src/shared/local-tasks/local-task-types'
+import { unfoldedLocalTaskLines } from '../../../src/shared/local-tasks/local-task-list-groups'
 import { colors, spacing, typography } from '../theme/mobile-theme'
 import { formatLocalTaskAgo, localTasksCopy } from './local-tasks-copy'
-import {
-  unfoldedLocalTaskLines,
-  type LocalTaskListGroup,
-  type LocalTaskListRow
-} from './local-task-list-projection'
+import type { LocalTaskListGroup, LocalTaskListRow } from './local-task-list-projection'
 import { localTaskStyles } from './local-tasks-styles'
 import { LocalTaskPriorityIcon, LocalTaskStatusIcon } from './local-tasks-visuals'
 

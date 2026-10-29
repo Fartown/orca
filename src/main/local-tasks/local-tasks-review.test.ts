@@ -3,6 +3,9 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import SyncDatabase from '../sqlite/sync-database'
+import { writeResultSchema } from '../../shared/local-tasks/local-task-result-schemas'
+import type { LocalTaskFailure } from '../../shared/local-tasks/local-task-types'
+import { runLocalTaskWrite } from './local-task-mutation-receipts'
 import { getLocalTasksDatabasePath, LocalTasksDatabase } from './local-tasks-database'
 import { LocalTasksService } from './local-tasks-service'
 
@@ -94,7 +97,9 @@ describe('local tasks review regressions', () => {
       'desktop'
     )
     expect(updated).toEqual({ ok: true, updated: 1 })
-    expect(service.getTask(task.id).task?.revision).toBe(task.revision + 1)
+    expect(service.listTasks().tasks.find((t) => t.id === task.id)?.revision).toBe(
+      task.revision + 1
+    )
     const labels = Array.from({ length: 20 }, (_, index) => `L${index}`)
     const labeled = service.updateTask(
       { clientOperationId: 'labels', taskId: task.id, patch: { labels } },
@@ -113,7 +118,7 @@ describe('local tasks review regressions', () => {
       )
     ).toEqual({ ok: false, code: 'invalid_argument' })
     expect(service.revision()).toBe(revision)
-    expect(service.getTask(task.id).task?.priority).toBe(2)
+    expect(service.listTasks().tasks.find((t) => t.id === task.id)?.priority).toBe(2)
     db.close()
   })
 
@@ -152,6 +157,72 @@ describe('local tasks review regressions', () => {
     expect(service.revision()).toBe(revision)
     expect(commits).toEqual([])
     stop()
+    db.close()
+  })
+
+  it('leaves the prefix alone when a project update is refused for its default repo', () => {
+    const { db, service, project } = fixture()
+    const commits: unknown[] = []
+    db.onCommit((commit) => commits.push(commit))
+    for (const defaultRepoId of ['not-listed', null]) {
+      expect(
+        service.updateProject({
+          clientOperationId: `refused-${defaultRepoId}`,
+          projectId: project.id,
+          prefix: 'NEW',
+          defaultRepoId
+        })
+      ).toEqual({ ok: false, code: 'invalid_argument' })
+    }
+    expect(service.listProjects().projects).toMatchObject([{ prefix: 'PROJ', aliases: [] }])
+    expect(commits).toEqual([])
+    db.close()
+  })
+
+  it('keeps the receipt of a refused write but none of its writes or change notices', () => {
+    const { db, service } = fixture()
+    const commits: unknown[] = []
+    db.onCommit((commit) => commits.push(commit))
+    let runs = 0
+    const refuse = () =>
+      runLocalTaskWrite(db, 2_000, 'refused', 'test.refuse', {}, writeResultSchema({}), () => {
+        runs += 1
+        db.prepare("INSERT INTO local_task_preferences (key, value) VALUES ('probe', 'x')").run()
+        db.touch('preferences')
+        const refused: LocalTaskFailure = { ok: false, code: 'invalid_argument' }
+        return refused
+      })
+    expect(refuse()).toEqual({ ok: false, code: 'invalid_argument' })
+    expect(refuse()).toEqual({ ok: false, code: 'invalid_argument' })
+    expect(runs).toBe(1)
+    expect(service.getPreferences(['probe']).values).toEqual({ probe: null })
+    expect(commits).toEqual([])
+    db.close()
+  })
+
+  it('keeps a project’s last host only in this Orca’s own spelling', () => {
+    const { db, service, project } = fixture()
+    const create = (lastExecutionHostId: string) =>
+      service.createProject({
+        clientOperationId: `create-${lastExecutionHostId}`,
+        name: 'Other',
+        prefix: 'OTH',
+        lastExecutionHostId
+      })
+    const update = (lastExecutionHostId: string | null) =>
+      service.updateProject({
+        clientOperationId: `update-${lastExecutionHostId}`,
+        projectId: project.id,
+        lastExecutionHostId
+      })
+    expect(create('runtime:env-1')).toEqual({ ok: false, code: 'host_not_owned' })
+    expect(update('runtime:env-1')).toEqual({ ok: false, code: 'host_not_owned' })
+    expect(create('ssh:a/b')).toMatchObject({
+      ok: true,
+      project: { lastExecutionHostId: 'ssh:a%2Fb' }
+    })
+    expect(update(' local ')).toMatchObject({ ok: true, project: { lastExecutionHostId: 'local' } })
+    expect(update(null)).toMatchObject({ ok: true, project: { lastExecutionHostId: null } })
     db.close()
   })
 

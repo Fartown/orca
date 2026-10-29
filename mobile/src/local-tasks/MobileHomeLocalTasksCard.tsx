@@ -2,9 +2,8 @@ import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { ChevronRight, ClipboardList, Monitor } from 'lucide-react-native'
 import { PickerModal } from '../components/PickerModal'
 import { useConnectedHostPicker } from '../components/use-connected-host-picker'
-import { mobileHomeTasksCardStyles as cardStyles } from '../home/MobileHomeTasksCard'
 import { useOpenHostStackRoute } from '../navigation/use-open-host-stack-route'
-import { colors, spacing, typography } from '../theme/mobile-theme'
+import { colors, radii, spacing, typography } from '../theme/mobile-theme'
 import type { HostProfile } from '../transport/types'
 import { localTaskHostMachineName } from './local-tasks-access'
 import { localTasksCopy } from './local-tasks-copy'
@@ -105,9 +104,9 @@ export function MobileHomeLocalTasksCard(props: { connectedHosts: HostProfile[] 
   return (
     <View style={styles.stack}>
       {ready.length > 0 ? (
-        <View style={[cardStyles.card, styles.column]}>
+        <View style={[styles.card, styles.column]}>
           <Pressable
-            style={({ pressed }) => [styles.header, pressed && cardStyles.cardPressed]}
+            style={({ pressed }) => [styles.header, pressed && styles.cardPressed]}
             onPress={() =>
               picker.pickHost(
                 (hostId) => {
@@ -122,12 +121,12 @@ export function MobileHomeLocalTasksCard(props: { connectedHosts: HostProfile[] 
             accessibilityRole="button"
             accessibilityLabel={copy.homeCardTitle}
           >
-            <View style={cardStyles.icon}>
+            <View style={styles.icon}>
               <ClipboardList size={18} color={colors.textSecondary} />
             </View>
-            <View style={cardStyles.main}>
-              <Text style={cardStyles.title}>{copy.homeCardTitle}</Text>
-              <Text style={cardStyles.subtitle} numberOfLines={1}>
+            <View style={styles.main}>
+              <Text style={styles.title}>{copy.homeCardTitle}</Text>
+              <Text style={styles.subtitle} numberOfLines={1}>
                 {summary.subtitle}
               </Text>
             </View>
@@ -136,7 +135,7 @@ export function MobileHomeLocalTasksCard(props: { connectedHosts: HostProfile[] 
           {summary.rows.map((row) => (
             <Pressable
               key={`${row.hostId}:${row.executionHost ?? ''}:${row.taskId}`}
-              style={({ pressed }) => [styles.row, pressed && cardStyles.cardPressed]}
+              style={({ pressed }) => [styles.row, pressed && styles.cardPressed]}
               onPress={() => openRow(row)}
               accessibilityRole="button"
             >
@@ -152,15 +151,13 @@ export function MobileHomeLocalTasksCard(props: { connectedHosts: HostProfile[] 
         </View>
       ) : null}
       {closed.map((host) => (
-        <View key={host.id} style={cardStyles.card}>
-          <View style={cardStyles.icon}>
+        <View key={host.id} style={styles.card}>
+          <View style={styles.icon}>
             <Monitor size={18} color={colors.statusAmber} />
           </View>
-          <View style={cardStyles.main}>
-            <Text style={cardStyles.title}>
-              {copy.desktopClosed(localTaskHostMachineName(host))}
-            </Text>
-            <Text style={cardStyles.subtitle}>
+          <View style={styles.main}>
+            <Text style={styles.title}>{copy.desktopClosed(localTaskHostMachineName(host))}</Text>
+            <Text style={styles.subtitle}>
               {copy.desktopClosedHint(localTaskHostMachineName(host))}
             </Text>
           </View>
@@ -171,7 +168,32 @@ export function MobileHomeLocalTasksCard(props: { connectedHosts: HostProfile[] 
   )
 }
 
+// Why these values: the card sits under home's task card and matches its frame, icon and type.
 const styles = StyleSheet.create({
+  card: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.bgPanel,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+    borderRadius: radii.card,
+    minHeight: 72,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 12
+  },
+  cardPressed: { backgroundColor: colors.bgRaised },
+  icon: {
+    width: 46,
+    height: 46,
+    borderRadius: 13,
+    backgroundColor: colors.bgRaised,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 14
+  },
+  main: { flex: 1, minWidth: 0 },
+  title: { fontSize: 13, fontWeight: '600', color: colors.textPrimary },
+  subtitle: { fontSize: 12, color: colors.textSecondary, marginTop: 3 },
   stack: { gap: spacing.sm, marginTop: spacing.sm },
   column: { flexDirection: 'column', alignItems: 'stretch' },
   header: { flexDirection: 'row', alignItems: 'center' },

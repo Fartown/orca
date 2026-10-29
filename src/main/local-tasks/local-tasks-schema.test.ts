@@ -141,9 +141,10 @@ CREATE TABLE IF NOT EXISTS local_task_preferences (
 );
 `
 
-// Two tasks a slice-1 build linked to one worktree, and a seen mark that names no session.
+// Two tasks a slice-1 build linked to one worktree, a seen mark that names no session, and a last
+// host on a paired server.
 const SLICE_1_ROWS = `
-INSERT INTO local_task_projects VALUES ('p', 'Shop', 'orca-shop', NULL, NULL, 3, 1, 1, 1, 1, 0);
+INSERT INTO local_task_projects VALUES ('p', 'Shop', 'orca-shop', NULL, 'runtime:env-1', 3, 1, 1, 1, 1, 0);
 INSERT INTO local_task_project_prefixes VALUES ('SHOP', 'p', 1, 1);
 INSERT INTO local_task_statuses VALUES ('todo', 'p', 'unstarted', 'Todo', 'gray', 0),
   ('doing', 'p', 'started', 'Doing', 'yellow', 0);
@@ -241,6 +242,9 @@ describe('local tasks schema upgrade', () => {
       { id: 'p', prefix: 'SHOP', repos: ['orca-shop'], defaultRepoId: 'orca-shop' }
     ])
     expect(service.listTasks().tasks.map((task) => task.ref)).toEqual(['SHOP-1', 'SHOP-2'])
+    expect(db.prepare('SELECT last_execution_host_id FROM local_task_projects').all()).toEqual([
+      { last_execution_host_id: null }
+    ])
     // Only links to this Orca's own hosts remain; the earlier of two links to one worktree wins.
     expect(work.listLinks().workspaces.map((link) => [link.taskId, link.hostId])).toEqual([
       ['t1', 'local']
@@ -301,5 +305,158 @@ describe('local tasks schema upgrade', () => {
       count: 6
     })
     db.close()
+  })
+
+  it('reads a stored last host in this Orca’s own spelling, and any other host as none', () => {
+    const db = LocalTasksDatabase.openTransient()
+    const service = new LocalTasksService(db, () => 1_000_000)
+    const created = service.createProject({ clientOperationId: 'p', name: 'Shop', prefix: 'SHOP' })
+    const store = db.prepare('UPDATE local_task_projects SET last_execution_host_id = ?')
+    const lastHost = () => service.listProjects().projects[0]?.lastExecutionHostId
+    expect(created.ok).toBe(true)
+    store.run('runtime:env-1')
+    expect(lastHost()).toBeNull()
+    store.run(' ssh:a/b ')
+    expect(lastHost()).toBe('ssh:a%2Fb')
+    db.close()
+  })
+})
+
+const TREE = 'repo::/work/tree'
+
+function identityOf(hostId: string, worktreeId: string): string {
+  return workspaceIdentityKey({
+    hostId,
+    kind: 'git-worktree',
+    instanceId: null,
+    worktreeId,
+    folderWorkspaceId: null
+  })
+}
+
+/** Rows a v4 build stored as the client spelled the host, before writes respelled it. */
+function hostSpelledV4Library() {
+  const directory = mkdtempSync(join(tmpdir(), 'local-tasks-v4-'))
+  directories.push(directory)
+  const db = LocalTasksDatabase.open('profile', directory)
+  const service = new LocalTasksService(db, () => 1_000)
+  const project = service.createProject({ clientOperationId: 'p', name: 'Shop', prefix: 'SHOP' })
+  if (!project.ok) {
+    throw new Error(project.code)
+  }
+  const [a, b, c] = ['a', 'b', 'c'].map((title) => {
+    const created = service.createTask(
+      { clientOperationId: title, projectId: project.project.id, title },
+      'desktop'
+    )
+    if (!created.ok) {
+      throw new Error(created.code)
+    }
+    return created.task.id
+  })
+  const link = db.prepare(
+    `INSERT INTO local_task_workspaces (task_id, host_id, kind, identity_key, worktree_id,
+       linked_via, linked_at) VALUES (?, ?, 'git-worktree', ?, ?, 'manual', ?)`
+  )
+  link.run(a, 'ssh:a/b', identityOf('ssh:a/b', TREE), TREE, 1)
+  link.run(b, 'ssh:a%2Fb', identityOf('ssh:a%2Fb', TREE), TREE, 2)
+  link.run(c, ' local ', identityOf(' local ', SHOP_WORKTREE), SHOP_WORKTREE, 3)
+  const session = db.prepare(
+    `INSERT INTO local_task_sessions (id, task_id, host_id, worktree_id, surface, session_id,
+       linked_via, opened_at) VALUES (?, ?, ?, ?, 'chat', ?, 'start', ?)`
+  )
+  session.run('sa', a, 'ssh:a/b', TREE, 'chat-a', 1)
+  session.run('sb', b, 'ssh:a%2Fb', TREE, 'chat-b', 2)
+  session.run('sc1', c, ' local ', SHOP_WORKTREE, 'chat-c', 3)
+  session.run('sc2', c, 'local', SHOP_WORKTREE, 'chat-c', 4)
+  const mark = db.prepare(
+    'INSERT INTO local_task_attention_state (item_key, task_session_id, seen_at, created_at) VALUES (?, ?, 5, 5)'
+  )
+  for (const sessionId of ['sa', 'sb', 'sc2']) {
+    mark.run(`${sessionId}@5`, sessionId)
+  }
+  db.close()
+  stampVersion(directory, 4)
+  return { directory, a, b, c }
+}
+
+function stampVersion(directory: string, version: number): void {
+  const raw = new SyncDatabase(getLocalTasksDatabasePath('profile', directory))
+  raw.pragma(`user_version = ${version}`)
+  raw.close()
+}
+
+function linkRows(db: LocalTasksDatabase) {
+  return {
+    workspaces: db
+      .prepare(
+        'SELECT task_id, host_id, identity_key FROM local_task_workspaces ORDER BY linked_at'
+      )
+      .all(),
+    sessions: db.prepare('SELECT id, host_id FROM local_task_sessions ORDER BY opened_at').all(),
+    marks: db.prepare('SELECT item_key FROM local_task_attention_state ORDER BY item_key').all()
+  }
+}
+
+describe('local tasks v5 host spellings', () => {
+  it('respells a v4 library and keeps the earliest of two links that become one', () => {
+    const { directory, a, b, c } = hostSpelledV4Library()
+    const db = LocalTasksDatabase.open('profile', directory)
+    const work = new LocalTasksService(db, () => 2_000).execution
+    expect(db.prepare('PRAGMA user_version').get()).toEqual({
+      user_version: LOCAL_TASKS_SCHEMA_VERSION
+    })
+    // The later link to the same workspace goes with its session and that session's mark.
+    expect(linkRows(db)).toEqual({
+      workspaces: [
+        { task_id: a, host_id: 'ssh:a%2Fb', identity_key: identityOf('ssh:a%2Fb', TREE) },
+        { task_id: c, host_id: 'local', identity_key: identityOf('local', SHOP_WORKTREE) }
+      ],
+      sessions: [
+        { id: 'sa', host_id: 'ssh:a%2Fb' },
+        { id: 'sc1', host_id: 'local' }
+      ],
+      marks: [{ item_key: 'sa@5' }]
+    })
+    for (const hostId of ['ssh:a/b', 'ssh:a%2Fb']) {
+      expect(
+        work.linkWorkspace(
+          {
+            clientOperationId: `again-${hostId}`,
+            taskId: b,
+            hostId,
+            kind: 'git-worktree',
+            worktreeId: TREE,
+            linkedVia: 'manual'
+          },
+          'desktop'
+        )
+      ).toMatchObject({ ok: false, code: 'workspace_already_linked' })
+    }
+    expect(
+      work.recordSession(
+        {
+          clientOperationId: 'old-link-session',
+          taskId: a,
+          hostId: 'ssh:a/b',
+          surface: 'terminal',
+          tabId: 'tab-new',
+          linkedVia: 'manual'
+        },
+        'desktop'
+      )
+    ).toMatchObject({ ok: true, session: { hostId: 'ssh:a%2Fb', worktreeId: TREE } })
+    db.close()
+  })
+
+  it('changes nothing when it runs again over a respelled library', () => {
+    const { directory } = hostSpelledV4Library()
+    const first = LocalTasksDatabase.open('profile', directory)
+    const respelled = linkRows(first)
+    first.close()
+    stampVersion(directory, 4)
+    const again = LocalTasksDatabase.open('profile', directory)
+    expect(linkRows(again)).toEqual(respelled)
+    again.close()
   })
 })

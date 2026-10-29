@@ -1,4 +1,3 @@
-import { useAppStore } from '@/store'
 import type { AppState } from '@/store/types'
 import { findStructuredAgentSessionTab } from '@/lib/structured-agent-session-tab-activation'
 import type { ExecutionHostId } from '../../../shared/execution-host'
@@ -67,37 +66,5 @@ export function findChatTabForSession(
   return findStructuredAgentSessionTab(state.unifiedTabsByWorktree, {
     workspaceId: worktreeId,
     sessionId
-  })
-}
-
-/**
- * Runs `found` once `select` answers. Store-driven only: a host-published chat tab lands when its
- * host publishes it; the wait ends if the workspace leaves this window.
- */
-export function whenAppStoreAnswers<T>(
-  worktreeId: string,
-  select: (state: AppState) => T | null,
-  found: (value: T) => void
-): void {
-  const initial = select(useAppStore.getState())
-  if (initial !== null) {
-    found(initial)
-    return
-  }
-  let previousTabs = useAppStore.getState().unifiedTabsByWorktree
-  const unsubscribe = useAppStore.subscribe((state) => {
-    if (state.unifiedTabsByWorktree === previousTabs) {
-      return
-    }
-    previousTabs = state.unifiedTabsByWorktree
-    if (!state.getKnownWorktreeById(worktreeId)) {
-      unsubscribe()
-      return
-    }
-    const value = select(state)
-    if (value !== null) {
-      unsubscribe()
-      found(value)
-    }
   })
 }

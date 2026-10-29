@@ -3,12 +3,11 @@ import { getHostedReviewCacheKey } from '@/store/slices/hosted-review-cache-iden
 import { getIndexedRepoMap } from '@/store/worktree-repo-index'
 import { getDetachedWorkspaceReviewRequest } from '@/components/sidebar/workspace-detached-review-request'
 import {
-  getWorktreeCardPrDisplay,
   isCachedMergedBranchPRCurrentForWorktree,
   type WorktreeCardPrDisplay
 } from '@/components/sidebar/worktree-card-pr-display'
+import { resolveWorktreeCardReview } from '@/components/sidebar/use-worktree-card-review-details'
 import { getGitHubPRCacheKey } from '../../../shared/github/github-cache-key'
-import { hostedReviewInfoFromGitHubPRInfo } from '../../../shared/hosted-review-github'
 import type { HostedReviewInfo } from '../../../shared/hosted-review'
 import { getWorktreeGitIdentityDisplay } from '../../../shared/worktree/git-identity-display'
 import type { Repo } from '../../../shared/repo-types'
@@ -60,65 +59,13 @@ export function localTaskRepoForWorktree(state: AppState, worktree: Worktree): R
   return getIndexedRepoMap(state.repos).get(worktree.repoId)
 }
 
-/**
- * The review the sidebar card shows for a workspace, from the same two caches and the same rule:
- * a merged branch PR counts only while the workspace head still belongs to it.
- */
+/** The review the sidebar card shows for a workspace, by the card's own rule. */
 export function resolveLocalTaskReview(
   worktree: Worktree,
   hostedEntry: HostedEntry,
   prEntry: PrEntry
 ): WorktreeCardPrDisplay | null {
-  const hostedReview = hostedEntry === undefined ? undefined : hostedEntry.data
-  const links = {
-    github: worktree.linkedPR ?? null,
-    gitlab: worktree.linkedGitLabMR ?? null,
-    bitbucket: worktree.linkedBitbucketPR ?? null,
-    azure: worktree.linkedAzureDevOpsPR ?? null,
-    gitea: worktree.linkedGiteaPR ?? null
-  }
-  const hasNonGitHubLink =
-    links.gitlab !== null ||
-    links.bitbucket !== null ||
-    links.azure !== null ||
-    links.gitea !== null
-  const hasLink = links.github !== null || hasNonGitHubLink
-  const cachedPR = prEntry?.data
-  const mergedMatchesHead = isCachedMergedBranchPRCurrentForWorktree(cachedPR, worktree)
-  const hostedMatchesCachedMerged =
-    mergedMatchesHead &&
-    cachedPR != null &&
-    hostedReview?.provider === 'github' &&
-    hostedReview.number === cachedPR.number
-  const useCachedPR =
-    cachedPR != null &&
-    !hasNonGitHubLink &&
-    (cachedPR.state !== 'merged' || mergedMatchesHead) &&
-    (hostedReview === undefined ||
-      (mergedMatchesHead && !hostedMatchesCachedMerged) ||
-      (hostedReview === null &&
-        ((prEntry?.fetchedAt ?? 0) > (hostedEntry?.fetchedAt ?? 0) || mergedMatchesHead)))
-  const review = useCachedPR ? hostedReviewInfoFromGitHubPRInfo(cachedPR) : hostedReview
-  const branchLookupGitHubPRNumber =
-    hostedReview?.provider === 'github' &&
-    hostedReview.state === 'merged' &&
-    !isCachedMergedBranchPRCurrentForWorktree(hostedReview, worktree)
-      ? null
-      : hostedEntry?.branchLookupGitHubPRNumber
-  return getWorktreeCardPrDisplay(
-    review,
-    links.github,
-    links.gitlab,
-    links.bitbucket,
-    links.azure,
-    links.gitea,
-    {
-      reviewHintKey:
-        (useCachedPR || mergedMatchesHead) && !hasLink ? '' : hostedEntry?.linkedReviewHintKey,
-      branchLookupGitHubPRNumber,
-      suppressedGitHubPR: worktree.suppressedGitHubPR ?? null
-    }
-  )
+  return resolveWorktreeCardReview(worktree, hostedEntry, prEntry).prDisplay
 }
 
 export function selectLocalTaskReview(

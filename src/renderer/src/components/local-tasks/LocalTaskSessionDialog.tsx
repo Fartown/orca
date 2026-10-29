@@ -28,6 +28,7 @@ import {
 import { localTaskWorktreeHostId } from '@/local-tasks/local-task-workspace-resolution'
 import type { Worktree } from '../../../../shared/worktree/types'
 import { useLocalTaskWorkspace } from './LocalTaskProgress'
+import { useLocalTaskEscapeLayer } from './use-local-task-page-keys'
 
 function SessionForm({
   task,
@@ -139,6 +140,7 @@ export function LocalTaskSessionDialog({
 }): React.JSX.Element {
   const located = useLocalTaskWorkspace(link)
   const worktree = located !== null && typeof located !== 'string' ? located : null
+  useLocalTaskEscapeLayer('dialog', true, onClose)
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent data-local-task-overlay="" className="sm:max-w-md">

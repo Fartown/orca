@@ -8,7 +8,7 @@ import type {
   LocalTaskResult
 } from '../../shared/local-tasks/local-task-types'
 import type { LocalTasksLinksRecordSessionInput } from '../../shared/local-tasks/local-tasks-link-rpc-params'
-import { isLocalTaskOwnedHostId } from '../../shared/local-tasks/local-task-endpoint-ids'
+import { toLocalTaskOwnedHostId } from '../../shared/local-tasks/local-task-endpoint-ids'
 import type { LocalTasksDatabase } from './local-tasks-database'
 import { appendLocalTaskEvent } from './local-task-event-store'
 import {
@@ -49,7 +49,8 @@ export function recordLocalTaskSession(
   if (!task) {
     return { ok: false, code: 'not_found' }
   }
-  if (!isLocalTaskOwnedHostId(input.hostId)) {
+  const hostId = toLocalTaskOwnedHostId(input.hostId)
+  if (!hostId) {
     return { ok: false, code: 'host_not_owned' }
   }
   const workspace = readEffectiveWorkspaceLink(db, task.id)
@@ -57,12 +58,11 @@ export function recordLocalTaskSession(
     return { ok: false, code: 'workspace_required' }
   }
   // Why: a session the task shows must run in its effective workspace. A host/worktree/instance that
-  // is none of the workspace's is rejected, so a mismatched caller cannot attach foreign work (D4).
+  // is none of the workspace's is rejected, so a mismatched caller cannot attach foreign work.
   // A reparented task's existing sessions keep their own rows, never recorded anew here.
-  const inWorkspaceHost = input.hostId === workspace.hostId
   const claimsForeignPlace = !isPlaceInWorkspace(
     {
-      hostId: input.hostId,
+      hostId,
       worktreeId: input.worktreeId ?? null,
       instanceId: input.instanceId ?? null
     },
@@ -75,7 +75,7 @@ export function recordLocalTaskSession(
     db,
     {
       paneKey: input.paneKey ?? null,
-      hostId: input.hostId,
+      hostId,
       sessionId: input.sessionId ?? null,
       tabId: input.tabId ?? null
     },
@@ -95,9 +95,9 @@ export function recordLocalTaskSession(
   ).run(
     id,
     task.id,
-    input.hostId,
-    input.worktreeId ?? (inWorkspaceHost ? workspace.worktreeId : null),
-    input.instanceId ?? (inWorkspaceHost ? workspace.instanceId : null),
+    hostId,
+    input.worktreeId ?? workspace.worktreeId,
+    input.instanceId ?? workspace.instanceId,
     input.surface,
     input.tabId ?? null,
     input.paneKey ?? null,
@@ -115,7 +115,7 @@ export function recordLocalTaskSession(
       sessionLinkId: id,
       agent: input.agent ?? null,
       surface: input.surface,
-      hostId: input.hostId,
+      hostId,
       via: input.linkedVia
     },
     now

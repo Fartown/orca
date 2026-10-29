@@ -14,7 +14,10 @@ import {
   useLocalTaskRowWritable,
   useLocalTasksDomain
 } from '@/local-tasks/local-tasks-domain-store'
-import { localTaskPathFromRoot, localTaskPathLabel } from '@/local-tasks/local-task-hierarchy'
+import {
+  localTaskPathFromRoot,
+  localTaskPathLabel
+} from '../../../../shared/local-tasks/local-task-hierarchy'
 import type { LocalTask } from '../../../../shared/local-tasks/local-task-types'
 import { LocalTaskPriorityIcon, LocalTaskStatusIcon } from './LocalTaskIcons'
 import { LocalTaskLabelChips, LocalTaskSubtaskProgress } from './LocalTaskRow'
@@ -50,7 +53,7 @@ function BoardCard({
       onClick={() => localTaskPageStore.getState().openDetail(task.id)}
       onMouseMove={() => {
         if (!isCursor) {
-          localTaskPageStore.getState().setCursor(task.id)
+          localTaskPageStore.getState().setCursor(task.id, 'pointer')
         }
       }}
       className={cn(

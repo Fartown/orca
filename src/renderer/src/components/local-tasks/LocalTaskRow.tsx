@@ -1,6 +1,7 @@
 import { memo, useEffect, useRef } from 'react'
 import { ChevronDown, ChevronRight } from 'lucide-react'
 import { Checkbox } from '@/components/ui/checkbox'
+import { useNow } from '@/hooks/use-now'
 import { translate } from '@/i18n/i18n'
 import { formatLocalTaskTime } from '@/local-tasks/local-task-time'
 import { cn } from '@/lib/utils'
@@ -100,7 +101,6 @@ export const LocalTaskRow = memo(function LocalTaskRow({
   groupLabel,
   depth,
   folded,
-  now,
   hostLabels
 }: {
   task: LocalTask
@@ -108,18 +108,21 @@ export const LocalTaskRow = memo(function LocalTaskRow({
   groupLabel: string | null
   depth: number
   folded: boolean | null
-  now: number
   hostLabels?: ReadonlyMap<string, string>
 }): React.JSX.Element {
   const isCursor = useLocalTaskPage((state) => state.cursorTaskId === task.id)
+  // Why not on hover: scrolling a half-shown row under the pointer would hover the next one.
+  const reveal = useLocalTaskPage(
+    (state) => state.cursorTaskId === task.id && !state.cursorFromPointer
+  )
   const isSelected = useLocalTaskPage((state) => state.selectedTaskIds.includes(task.id))
   const rowRef = useRef<HTMLDivElement>(null)
   const status = index.statusesById.get(task.statusId)
   useEffect(() => {
-    if (isCursor) {
+    if (reveal) {
       rowRef.current?.scrollIntoView({ block: 'nearest' })
     }
-  }, [isCursor])
+  }, [reveal])
   const open = (): void => localTaskPageStore.getState().openDetail(task.id)
   return (
     <div
@@ -132,7 +135,7 @@ export const LocalTaskRow = memo(function LocalTaskRow({
       onClick={open}
       onMouseMove={() => {
         if (!isCursor) {
-          localTaskPageStore.getState().setCursor(task.id)
+          localTaskPageStore.getState().setCursor(task.id, 'pointer')
         }
       }}
       style={{
@@ -178,9 +181,17 @@ export const LocalTaskRow = memo(function LocalTaskRow({
       <LocalTaskProgressBadges task={task} index={index} />
       <span className="min-w-0 flex-1" />
       <LocalTaskLabelChips labels={task.labels} />
-      <span className="w-20 shrink-0 text-right text-2xs text-muted-foreground">
-        {formatLocalTaskTime(task.updatedAt, now)}
-      </span>
+      <LocalTaskUpdatedAt at={task.updatedAt} />
     </div>
   )
 })
+
+/** Ticks on its own, so the minute clock never re-renders the whole row or list. */
+function LocalTaskUpdatedAt({ at }: { at: number }): React.JSX.Element {
+  const now = useNow(60_000)
+  return (
+    <span className="w-20 shrink-0 text-right text-2xs text-muted-foreground">
+      {formatLocalTaskTime(at, now)}
+    </span>
+  )
+}

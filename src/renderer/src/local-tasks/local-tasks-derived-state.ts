@@ -128,9 +128,14 @@ export function createDerive(): (partitions: readonly LocalTasksPartition[]) => 
         () => {
           const merged: Record<string, string> = {}
           for (const partition of partitions) {
-            Object.assign(merged, partition.readErrors)
+            for (const [key, message] of Object.entries(partition.readErrors)) {
+              // Why: an activity read names its task, so it cannot pass for another library's.
+              if (key.startsWith('events:')) {
+                merged[key] = message
+              }
+            }
           }
-          // Why home last: its errors win the page's single notice.
+          // Why home only: the page's notice speaks for its own library; others get their own line.
           if (home) {
             Object.assign(merged, home.readErrors)
           }

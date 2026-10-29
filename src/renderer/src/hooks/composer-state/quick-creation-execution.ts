@@ -122,7 +122,10 @@ export function useQuickCreationExecution(input: QuickCreationExecutionInput) {
 
       const { prompt: quickPrompt, draftPrompt: quickDraftPrompt } =
         options?.launchPrompt && agent
-          ? { prompt: options.launchPrompt, draftPrompt: null }
+          ? {
+              prompt: [options.launchPrompt, trimmedNote].filter(Boolean).join('\n\n'),
+              draftPrompt: null
+            }
           : resolveQuickCreateLinkedWorkItemPrompt(promptLinkedWorkItem, trimmedNote)
 
       const {

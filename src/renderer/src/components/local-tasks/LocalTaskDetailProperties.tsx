@@ -16,7 +16,7 @@ import type { LocalTask } from '../../../../shared/local-tasks/local-task-types'
 import { collectLocalTaskLabels, type LocalTaskIndex } from '@/local-tasks/local-task-grouping'
 import { localTasksClient } from '@/local-tasks/local-tasks-runtime-client'
 import { localTaskIdEndpoint } from '@/local-tasks/local-task-endpoints'
-import { localTaskParentCandidates } from '@/local-tasks/local-task-hierarchy'
+import { localTaskParentCandidates } from '../../../../shared/local-tasks/local-task-hierarchy'
 import { localTasksDomainStore } from '@/local-tasks/local-tasks-domain-store'
 import {
   runLocalTaskWrite,

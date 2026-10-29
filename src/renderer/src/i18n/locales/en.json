@@ -21397,7 +21397,9 @@
       "unsupported": "The Orca on this host needs an update before it can keep tasks.",
       "pairedUnsupported": "{{host}}: the Orca there needs an update to share its tasks.",
       "pairedOutOfContact": "{{host}} is not connected. Its tasks are shown as last read, and its sessions can’t be confirmed.",
-      "pairedFailed": "Could not read the tasks on {{host}}."
+      "pairedFailed": "Could not read the tasks on {{host}}.",
+      "pairedUnavailable": "{{host}}: its task library cannot be opened right now, so its tasks are not shown.",
+      "pairedReadOnly": "{{host}}: read only. A newer version of Orca saved these tasks; update Orca on {{host}} to edit them."
     },
     "keys": {
       "move": "Move",

@@ -10,13 +10,15 @@ import { describeLocalTaskFailure } from './local-task-failure-copy'
 import { localTasksClient } from './local-tasks-runtime-client'
 import { localTasksDomainStore } from './local-tasks-domain-store'
 import { localTasksSync } from './local-tasks-sync'
+import { localTaskFailureEndpoint } from './local-tasks-endpoint-calls'
 import { firstStatusInCategory } from './local-task-grouping'
 
 export function reportLocalTaskFailure(failure: LocalTaskFailure): void {
   toast.error(describeLocalTaskFailure(failure))
-  // Why: these two mean the shown copy is behind the library; re-read so the next try starts fresh.
-  if (failure.code === 'stale' || failure.code === 'not_found') {
-    void localTasksSync.refresh(['projects', 'tasks'])
+  // Why: these two mean the shown copy is behind that library; re-read it so the next try is fresh.
+  const endpoint = localTaskFailureEndpoint(failure)
+  if (endpoint && (failure.code === 'stale' || failure.code === 'not_found')) {
+    void localTasksSync.refresh(['projects', 'tasks'], endpoint)
   }
 }
 
@@ -41,8 +43,8 @@ export async function runLocalTaskWrite<T extends { ok: true }>(
   }
 }
 
-function upsert(tasks: LocalTask[]): void {
-  localTasksDomainStore.getState().upsertTasks(tasks)
+function upsert(tasks: LocalTask[], options?: { created?: boolean }): void {
+  localTasksDomainStore.getState().upsertTasks(tasks, options)
 }
 
 export async function updateLocalTaskFields(
@@ -167,7 +169,7 @@ export async function createLocalSubtasks(
     localTasksClient.createSubtasks({ parentId: parent.id, titles })
   )
   if (result) {
-    upsert(result.tasks)
+    upsert(result.tasks, { created: true })
   }
   return result?.tasks ?? null
 }

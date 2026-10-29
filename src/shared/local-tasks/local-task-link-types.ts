@@ -5,7 +5,7 @@ export type LocalTaskLinkOrigin = 'start' | 'manual'
 
 /**
  * A task's own workspace; any level may hold one. Host ids here and on sessions are relative to the
- * Orca that owns the library: `local` or one of its SSH targets `ssh:{t}` (see CONTRACT D-008).
+ * Orca that owns the library: `local` or one of its SSH targets `ssh:{t}`, one spelling per host.
  */
 export type LocalTaskWorkspaceLink = {
   taskId: string

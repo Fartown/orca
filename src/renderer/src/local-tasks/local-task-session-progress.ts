@@ -5,8 +5,8 @@ import type {
 import { useLocalTasksDomain, type LocalTasksDomainState } from './local-tasks-domain-store'
 
 /**
- * A linked session as its library's host judged it (`attention.get`, CONTRACT §5); a library out
- * of contact reads unverifiable. Null until the host answered.
+ * A linked session as its library's host judged it (`attention.get`, solution doc §9.1); a
+ * library out of contact reads unverifiable. Null until the host answered.
  */
 export function selectLocalTaskSessionProgress(
   state: Pick<LocalTasksDomainState, 'progress'>,

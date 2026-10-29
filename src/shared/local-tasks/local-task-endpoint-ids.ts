@@ -4,28 +4,30 @@
  * write, the way `endpoint-catalog-adoption.ts` adopts a server's projects. Shared so the phone
  * and every desktop convert alike.
  */
-import { parseExecutionHostId, toRuntimeExecutionHostId } from '../execution-host'
-import type { HostAuthority, HostAuthorityEndpoint } from '../host-authority'
+import {
+  parseExecutionHostId,
+  toRuntimeExecutionHostId,
+  toSshExecutionHostId
+} from '../execution-host'
+import type { HostAuthorityEndpoint } from '../host-authority'
 import { makePaneKey, parsePaneKey } from '../stable-pane-id'
 import { toHostSessionTabId, toWebTerminalSurfaceTabId } from '../terminal-surface-id'
 import type { LocalTaskSessionLink } from './local-task-link-types'
 
-/** Host ids a library may hold: the owner itself or one of the owner's SSH targets. */
-export function isLocalTaskOwnedHostId(hostId: string): boolean {
-  const kind = parseExecutionHostId(hostId)?.kind
-  return kind === 'local' || kind === 'ssh'
+/**
+ * The one spelling a library stores for a host it may hold, the owner itself or one of its SSH
+ * targets; null for any other host. `ssh:a/b` and `ssh:a%2Fb` both become `ssh:a%2Fb`.
+ */
+export function toLocalTaskOwnedHostId(hostId: string | null | undefined): string | null {
+  const host = parseExecutionHostId(hostId)
+  if (host?.kind === 'local') {
+    return host.id
+  }
+  return host?.kind === 'ssh' ? toSshExecutionHostId(host.targetId) : null
 }
 
-/** Who serves a library row's host, as the client reading `endpoint` must reach it. */
-export function localTaskRowAuthority(
-  endpoint: HostAuthorityEndpoint,
-  hostId: string
-): HostAuthority | null {
-  const host = parseExecutionHostId(hostId)
-  if (host?.kind === 'local' || host?.kind === 'ssh') {
-    return { endpoint, at: host.id }
-  }
-  return null
+export function isLocalTaskOwnedHostId(hostId: string): boolean {
+  return toLocalTaskOwnedHostId(hostId) !== null
 }
 
 /**

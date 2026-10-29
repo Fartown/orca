@@ -8,11 +8,12 @@ import {
   projectSectionsRead,
   readServedProjectSections
 } from '../worktree/project-sections-operations'
+import { useRelayHosts } from '../worktree/relay-hosts-feed'
 import { createLocalTasksApi } from './local-tasks-api'
 import { hostAdvertisesLocalTasks } from './local-tasks-access'
 import { localTasksCopy } from './local-tasks-copy'
 import { LocalTaskChoiceSheet } from './local-task-choice-sheet'
-import { localTaskEndpointFor, localTaskOwnerHostId } from './local-task-endpoint'
+import { localTaskEndpointFor } from './local-task-endpoint'
 import { localTaskWriteMessage } from './local-task-failure-message'
 import { localTaskStatusLookup } from './local-task-list-projection'
 import { createLocalTaskOperationIds, sendLocalTaskWrite } from './local-task-operation-ids'
@@ -20,8 +21,10 @@ import { localTaskOrcaProjectForRepo } from './local-task-project-setups'
 import {
   localTaskLinkHolding,
   localTaskLinkParamsFor,
+  localTaskOwnCandidate,
   type LocalTaskWorkspaceCandidate
 } from './local-task-workspace-candidates'
+import { useLocalTaskWorkspaceCandidates } from './use-local-task-workspace-candidates'
 
 type Library = { projects: LocalTaskProject[]; tasks: LocalTask[]; links: LocalTaskLinks }
 
@@ -49,7 +52,9 @@ export function localTaskLinkChoices(library: Library, related: ReadonlySet<stri
 
 /**
  * "Link to task…" for one workspace, in the library of the Orca that owns it (D-008): the paired
- * host's own, or a server's through the paired host. Everything is read once, when the sheet opens.
+ * host's own, or a server's through the paired host. Everything is read once, when the sheet opens
+ * and the library is in contact: a server only while the paired host can relay to it. A server's
+ * own workspace list says which of its hosts the workspace is on, which the link records.
  */
 export function LocalTaskLinkToTaskSheet(props: {
   /** The workspace with its host as the phone lists it (`runtime:E` for a server's). */
@@ -66,13 +71,36 @@ export function LocalTaskLinkToTaskSheet(props: {
   const [error, setError] = useState<string | null>(null)
   const { target, client } = props
   const endpoint = localTaskEndpointFor(target?.hostId)
-  const ownerHostId = target ? localTaskOwnerHostId(endpoint, target.hostId) : null
   const libraryClient =
     client && endpoint.executionHost
       ? scopeRpcClientToExecutionHost(client, endpoint.executionHost)
       : client
+  // The host list keeps a server's rows while it is out of contact, so they can still be pressed.
+  const relayHosts = useRelayHosts(target && endpoint.executionHost ? client : null)
+  const relay = relayHosts?.find((host) => host.hostId === endpoint.executionHost)
+  const contact = !endpoint.executionHost
+    ? 'ready'
+    : relayHosts === null
+      ? 'pending'
+      : relay?.relay === 'ready'
+        ? 'ready'
+        : 'offline'
+  const serverRows = useLocalTaskWorkspaceCandidates({
+    client: endpoint.executionHost ? libraryClient : null,
+    key: endpoint.executionHost ?? '',
+    open: target !== null && contact === 'ready'
+  })
+  const ownTarget = target
+    ? localTaskOwnCandidate(
+        endpoint,
+        target,
+        serverRows.status === 'ready' ? serverRows.candidates : null
+      )
+    : null
+  // Why: a server's row is linkable only once its own list said where it is.
+  const ownPending = endpoint.executionHost !== undefined && serverRows.status === 'loading'
   useEffect(() => {
-    if (!target || !client || !libraryClient) {
+    if (!target || !client || !libraryClient || contact !== 'ready') {
       return
     }
     let current = true
@@ -126,15 +154,14 @@ export function LocalTaskLinkToTaskSheet(props: {
     return () => {
       current = false
     }
-  }, [target, client, libraryClient, endpoint.executionHost])
+  }, [target, client, libraryClient, endpoint.executionHost, contact])
 
-  const ready = reading.status === 'ready' ? reading : null
-  const ownTarget = target && ownerHostId ? { ...target, hostId: ownerHostId } : null
+  const ready = reading.status === 'ready' && contact === 'ready' ? reading : null
   const holder = ready && ownTarget ? localTaskLinkHolding(ready.library.links, ownTarget) : null
   const holderRef = holder
     ? ready?.library.tasks.find((task) => task.id === holder.taskId)?.ref
     : null
-  const tasks = ready ? localTaskLinkChoices(ready.library, ready.related) : []
+  const tasks = ready && ownTarget ? localTaskLinkChoices(ready.library, ready.related) : []
   const link = async (task: LocalTask) => {
     if (!ownTarget || !libraryClient) {
       return
@@ -155,20 +182,28 @@ export function LocalTaskLinkToTaskSheet(props: {
     }
   }
   const message =
-    reading.status === 'failed'
-      ? copy.loadFailed
-      : reading.status === 'unsupported' || (target && !ownerHostId)
-        ? copy.unsupported
-        : holderRef
-          ? copy.work.workspaceTaken(holderRef)
-          : ready && tasks.length === 0
-            ? copy.work.noOpenTasks
-            : null
+    contact === 'offline'
+      ? copy.work.hostOffline(props.hostLabel || relay?.label || (target?.hostId ?? ''))
+      : reading.status === 'failed' || (endpoint.executionHost && serverRows.status === 'failed')
+        ? copy.loadFailed
+        : reading.status === 'unsupported'
+          ? copy.unsupported
+          : target && !ownPending && !ownTarget
+            ? copy.work.workspaceNotListed
+            : holderRef
+              ? copy.work.workspaceTaken(holderRef)
+              : ready && tasks.length === 0
+                ? copy.work.noOpenTasks
+                : null
   return (
     <LocalTaskChoiceSheet
       visible={target !== null}
       title={copy.work.linkToTaskTitle}
-      loading={target !== null && reading.status === 'loading'}
+      loading={
+        target !== null &&
+        (contact === 'pending' ||
+          (contact === 'ready' && (reading.status === 'loading' || ownPending)))
+      }
       message={message}
       error={error}
       choices={tasks.map((task) => {

@@ -99,16 +99,6 @@ export const LocalTasksStatusesRemoveParams = z.object({
 
 export const LocalTasksTasksListParams = z.object({ projectId: id.optional() })
 
-export const LocalTasksTasksGetParams = z.object({
-  /** Task id, or a ref such as `SHOP-12` written with the current or an earlier prefix. */
-  ref: z.string().trim().min(1).max(128)
-})
-
-export const LocalTasksTasksSearchParams = z.object({
-  query: z.string().trim().min(1).max(200),
-  limit: z.number().int().min(1).max(100).optional()
-})
-
 export const LocalTasksTasksCreateParams = z.object({
   clientOperationId,
   projectId: id,

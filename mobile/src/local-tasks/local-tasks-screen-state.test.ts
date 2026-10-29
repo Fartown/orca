@@ -68,6 +68,12 @@ describe('what the task page says about the library state', () => {
     })
   })
 
+  it('says the status read failed, not that it is still checking, beside a loaded list', () => {
+    expect(
+      localTasksScreenState(copy, { ...ready, status: null, error: 'status timed out' })
+    ).toEqual({ kind: 'library', readOnly: true, notice: copy.loadFailed })
+  })
+
   it('keeps the loaded page but disables writes when the change stream ends', () => {
     expect(
       localTasksScreenState(copy, {

@@ -1,7 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { ClipboardList } from 'lucide-react-native'
-import type { LocalTaskProgressSnapshot } from '../../../src/shared/local-tasks/local-task-link-types'
 import { localTaskEffectiveWorkspace } from '../../../src/shared/local-tasks/local-task-tree'
 import { parseWorkspaceKey } from '../../../src/shared/workspace-scope'
 import { useWorkspaceExecutionHost } from '../navigation/workspace-execution-host'
@@ -9,7 +8,6 @@ import { useRouteHandoff } from '../navigation/route-handoff'
 import type { MobileSessionTab } from '../session/mobile-session-route-types'
 import { getRepoIdFromMobileWorktreeId } from '../session/mobile-session-route-helpers'
 import { colors, spacing, typography } from '../theme/mobile-theme'
-import type { RpcClient } from '../transport/rpc-client'
 import { worktreeCatalogRead } from '../worktree/worktree-catalog-operations'
 import { WORKTREE_PS_FULL_LIMIT } from '../worktree/worktree-catalog-snapshot-client'
 import { createLocalTasksApi } from './local-tasks-api'
@@ -20,7 +18,6 @@ import { localTaskEndpointFor } from './local-task-endpoint'
 import { localTaskWriteMessage } from './local-task-failure-message'
 import { LocalTaskLinkToTaskSheet } from './local-task-link-to-task-sheet'
 import { createLocalTaskOperationIds, sendLocalTaskWrite } from './local-task-operation-ids'
-import { localTaskItemsForSession } from './local-task-progress-projection'
 import {
   readLocalTaskWorkspaceCandidates,
   type LocalTaskWorkspaceCandidate
@@ -31,6 +28,7 @@ import {
   safePaneKey,
   useLocalTaskSessionStrip
 } from './use-local-task-session-strip'
+import { useAcknowledgeOpenSession } from './use-local-task-session-acknowledge'
 
 type StripController = {
   hostId: string | undefined
@@ -53,34 +51,6 @@ function sessionIdsFor(tab: MobileSessionTab | null | undefined) {
   const tabId = tab.parentTabId ?? tab.id
   const paneKey = tab.leafId ? safePaneKey(tabId, tab.leafId) : null
   return { surface: 'terminal' as const, tabId, ...(paneKey ? { paneKey } : {}) }
-}
-
-/**
- * Looking at a linked session is seeing it: its "Needs you" items are marked seen on the library's
- * host, once per item, wherever the session was opened from (CONTRACT §5.4).
- */
-function useAcknowledgeOpenSession(
-  client: RpcClient | null,
-  taskSessionId: string | null,
-  progress: LocalTaskProgressSnapshot | null
-) {
-  const acknowledged = useRef(new Set<string>())
-  useEffect(() => {
-    if (!client || !taskSessionId) {
-      return
-    }
-    const api = createLocalTasksApi(client)
-    for (const item of localTaskItemsForSession(progress, taskSessionId)) {
-      if (!acknowledged.current.has(item.key)) {
-        acknowledged.current.add(item.key)
-        void sendLocalTaskWrite(
-          createLocalTaskOperationIds(),
-          { itemKey: item.key, taskSessionId: item.taskSessionId },
-          api.acknowledge
-        )
-      }
-    }
-  }, [client, taskSessionId, progress])
 }
 
 /**
@@ -116,10 +86,13 @@ export function LocalTaskSessionStrip({ controller }: { controller: StripControl
   const linkable = workspace && !session ? sessionIdsFor(controller.activeSessionTab) : null
 
   const openLinkSheet = async () => {
+    // A server's workspace goes as `runtime:E` and the sheet asks that server which of its hosts it
+    // is on. On the paired host no host is guessed: `local` would misfile an SSH workspace, so one
+    // its own list does not name stays unlinkable.
     const fallback: LocalTaskWorkspaceCandidate = {
       worktreeId: controller.worktreeId,
       repoId: getRepoIdFromMobileWorktreeId(controller.worktreeId),
-      hostId: executionHost ?? 'local',
+      hostId: executionHost ?? '',
       displayName: controller.worktreeName || controller.worktreeId,
       branch: '',
       instanceId: null,

@@ -4,7 +4,6 @@ import { LOCAL_TASKS_WORK_COPY_ZH } from './local-tasks-work-copy-zh'
 /** 简体中文；结构由英文表决定，漏一个 key 就编译不过。 */
 export const LOCAL_TASKS_COPY_ZH: LocalTasksCopy = {
   title: '任务',
-  home: '首页',
   back: '返回',
   retry: '重试',
   reconnect: '重新连接',
@@ -17,7 +16,6 @@ export const LOCAL_TASKS_COPY_ZH: LocalTasksCopy = {
   send: '发送',
   homeCardTitle: '本地任务',
   homeCardInProgress: (count) => `进行中 ${count}`,
-  homeCardLoading: '正在读取任务…',
   homeCardError: '任务数量读取失败',
   pickHostTitle: '在哪台主机打开本地任务',
   switchHost: '切换主机',
@@ -63,9 +61,6 @@ export const LOCAL_TASKS_COPY_ZH: LocalTasksCopy = {
   createProject: '新建项目',
   projectSettings: '项目设置',
   switchProject: '切换项目',
-  switchProjectHint: '这台主机的项目',
-  projectTaskCount: (count) => `${count} 个任务`,
-  allProjectsHint: (count) => `${count} 个任务 · 看板按状态类别出列`,
   emptyList: '这里还没有任务',
   filteredEmpty: '没有符合搜索或筛选的任务',
   searchPlaceholder: '搜索编号或标题',

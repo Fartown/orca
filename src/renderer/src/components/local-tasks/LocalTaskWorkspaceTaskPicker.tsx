@@ -37,6 +37,7 @@ import {
 } from '@/local-tasks/local-task-workspace-resolution'
 import { localTaskIdEndpoint } from '@/local-tasks/local-task-endpoints'
 import { LocalTaskStatusIcon } from './LocalTaskIcons'
+import { useLocalTaskEscapeLayer } from './use-local-task-page-keys'
 
 export type LocalTaskTaskChoice = {
   task: LocalTask
@@ -254,11 +255,13 @@ export function LocalTaskWorkspaceTaskPickerHost(): React.JSX.Element | null {
         )
       : undefined
   )
+  const close = (): void => localTaskLinkDialogStore.getState().close()
+  useLocalTaskEscapeLayer('dialog', target !== null && worktree !== undefined, close)
   if (!target || !worktree) {
     return null
   }
   return (
-    <Dialog open onOpenChange={(open) => !open && localTaskLinkDialogStore.getState().close()}>
+    <Dialog open onOpenChange={(open) => !open && close()}>
       <DialogContent
         data-local-task-overlay=""
         aria-describedby={undefined}

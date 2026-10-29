@@ -1,9 +1,7 @@
-import {
-  localTaskAncestors,
-  localTaskDescendantIds
-} from '../../../shared/local-tasks/local-task-tree'
-import type { LocalTask } from '../../../shared/local-tasks/local-task-types'
+// Shared so the desktop and the phone offer the same parents and read the same paths.
 import type { LocalTaskIndex } from './local-task-grouping'
+import { localTaskAncestors, localTaskDescendantIds } from './local-task-tree'
+import type { LocalTask } from './local-task-types'
 
 type TreeIndex = Pick<LocalTaskIndex, 'tasksById' | 'childrenByParentId'>
 

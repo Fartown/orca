@@ -94,10 +94,7 @@ export function useLocalTaskLaunch(args: {
         client: pairedClient,
         launchClient,
         hostCapabilities: site.capabilities,
-        target: routeId
-          ? { kind: 'existing', routeId }
-          : // Why `local` for a server: its SSH targets are its own, detected through its client.
-            { kind: 'create', hostId: site.endpoint.executionHost ? 'local' : hostId }
+        target: routeId ? { kind: 'existing', routeId } : { kind: 'create', hostId }
       }).then(
         (options) => current && setAgents({ status: 'ready', agents: options }),
         () => current && setAgents({ status: 'failed' })

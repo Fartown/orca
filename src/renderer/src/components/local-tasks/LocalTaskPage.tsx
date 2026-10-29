@@ -10,9 +10,10 @@ import {
 import { localTaskPageStore, useLocalTaskPage } from '@/local-tasks/local-task-page-store'
 import {
   LocalTaskHostStatePanel,
-  LocalTaskPairedHostNotices,
+  LocalTaskLibraryNotices,
   LocalTaskReadErrorPanel,
-  LocalTaskReadOnlyNotice
+  LocalTaskReadOnlyNotice,
+  refreshHomeLibrary
 } from './LocalTaskHostStatePanel'
 import { LocalTaskBootstrap } from './LocalTaskBootstrap'
 import { LocalTaskNav } from './LocalTaskNav'
@@ -28,7 +29,6 @@ import { LocalTaskLinkDialogHost } from './LocalTaskLinkDialogHost'
 import { LocalTaskKeyHints } from './LocalTaskKeyHints'
 import { LocalTaskNeedsYouView } from './LocalTaskNeedsYouView'
 import { useLocalTaskListModel, type LocalTaskListModel } from './use-local-task-list-model'
-import { localTasksSync } from '@/local-tasks/local-tasks-sync'
 import { useLocalTaskEscapeLayer, useLocalTaskPageKeys } from './use-local-task-page-keys'
 
 /** The task page's Local source: rail, list or board, and task detail (REQ-006, REQ-008). */
@@ -54,15 +54,15 @@ export function LocalTaskPage({ sourceBar }: { sourceBar: ReactNode }): React.JS
   const retryRead = (): void => {
     const errors = localTasksDomainStore.getState().readErrors
     if (errors.status) {
-      void localTasksSync.refresh(null)
+      void refreshHomeLibrary(null)
     } else if (errors.projects) {
-      void localTasksSync.refresh(['projects'])
+      void refreshHomeLibrary(['projects'])
     } else if (errors.tasks) {
-      void localTasksSync.refresh(['tasks'])
+      void refreshHomeLibrary(['tasks'])
     } else if (errors.preferences) {
-      void localTasksSync.refresh(['preferences'])
+      void refreshHomeLibrary(['preferences'])
     } else if (errors.links) {
-      void localTasksSync.refresh(['links'])
+      void refreshHomeLibrary(['links'])
     }
   }
   useLocalTaskPageKeys(model, ready)
@@ -99,7 +99,7 @@ export function LocalTaskPage({ sourceBar }: { sourceBar: ReactNode }): React.JS
     >
       {detailTaskId && ready ? null : sourceBar}
       <LocalTaskReadOnlyNotice />
-      <LocalTaskPairedHostNotices />
+      <LocalTaskLibraryNotices />
       {readError && cachedReadable ? (
         <LocalTaskReadErrorPanel detail={readError} onRetry={retryRead} compact />
       ) : null}

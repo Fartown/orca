@@ -60,14 +60,14 @@ beforeEach(() => {
   fixture.acknowledge.mockClear()
   localTasksDomainStore.setState(localTasksDomainStore.getInitialState())
   localTasksDomainStore.getState().openEndpoint('runtime:env-1')
-  localTasksDomainStore
-    .getState()
-    .writer('runtime:env-1')
-    .applyProgress({
-      observedAt: 5,
-      sessions: [],
-      items: [item(SESSION, `tab-1:${LEAF}@5`), item('runtime:env-1/s-2', 'other@5')]
-    })
+  const library = localTasksDomainStore.getState().writer('runtime:env-1')
+  library.setConnection('live')
+  library.setHostState('ready', null)
+  library.applyProgress({
+    observedAt: 5,
+    sessions: [],
+    items: [item(SESSION, `tab-1:${LEAF}@5`), item('runtime:env-1/s-2', 'other@5')]
+  })
 })
 
 it('marks what an opened session waited for as seen, in its own library', () => {

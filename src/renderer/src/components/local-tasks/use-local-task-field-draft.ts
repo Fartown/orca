@@ -3,6 +3,7 @@ import type { LocalTask } from '../../../../shared/local-tasks/local-task-types'
 import type { LocalTasksTasksUpdateInput } from '../../../../shared/local-tasks/local-tasks-rpc-params'
 import { localTasksDomainStore } from '@/local-tasks/local-tasks-domain-store'
 import { localTasksSync } from '@/local-tasks/local-tasks-sync'
+import { localTaskIdEndpoint } from '@/local-tasks/local-task-endpoints'
 import { saveLocalTaskPatch, type LocalTaskPatchOutcome } from '@/local-tasks/local-task-writes'
 
 type Draft<E> = { value: E; base: E; baseRevision: number }
@@ -158,6 +159,6 @@ export function useLocalTaskFieldDraft<E>({
     toPatch,
     save: saveLocalTaskPatch,
     latest: latestTask,
-    refresh: () => localTasksSync.refresh(['tasks'])
+    refresh: () => localTasksSync.refresh(['tasks'], localTaskIdEndpoint(task.id))
   })
 }

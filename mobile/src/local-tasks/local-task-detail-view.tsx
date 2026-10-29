@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { ChevronLeft, CornerDownRight, Ellipsis, Layers, Pencil, Trash2 } from 'lucide-react-native'
+import { buildLocalTaskIndex } from '../../../src/shared/local-tasks/local-task-grouping'
+import { localTaskPathFromRoot } from '../../../src/shared/local-tasks/local-task-hierarchy'
 import { localTaskDescendantIds } from '../../../src/shared/local-tasks/local-task-tree'
 import type { LocalTask } from '../../../src/shared/local-tasks/local-task-types'
 import { ActionSheetModal } from '../components/ActionSheetModal'
@@ -11,7 +13,7 @@ import type { LocalTasksApi } from './local-tasks-api'
 import { formatLocalTaskAgo, localTasksCopy } from './local-tasks-copy'
 import { LocalTaskActivitySection } from './local-task-activity-section'
 import { localTaskWriteMessage } from './local-task-failure-message'
-import { localTaskPathFromRoot, localTaskStatusLookup } from './local-task-list-projection'
+import { localTaskStatusLookup } from './local-task-list-projection'
 import { LocalTaskDetailSections } from './local-task-detail-sections'
 import { createLocalTaskOperationIds, sendLocalTaskWrite } from './local-task-operation-ids'
 import { LocalTaskPriorityPicker, LocalTaskStatusPicker } from './local-task-pickers'
@@ -55,23 +57,12 @@ export function LocalTaskDetailView(props: Props) {
     : null
   const lookup = localTaskStatusLookup(library.projects)
   const status = task ? (lookup.get(task.statusId) ?? null) : null
-  const tasksById = new Map(library.tasks.map((entry) => [entry.id, entry]))
-  const ancestors = task ? localTaskPathFromRoot(task, tasksById) : []
-  const subtasks = task
-    ? library.tasks
-        .filter((entry) => entry.parentId === task.id)
-        .sort((a, b) => a.number - b.number)
-    : []
-  const childrenByParentId = new Map<string, LocalTask[]>()
-  for (const entry of library.tasks) {
-    if (entry.parentId) {
-      childrenByParentId.set(entry.parentId, [
-        ...(childrenByParentId.get(entry.parentId) ?? []),
-        entry
-      ])
-    }
-  }
-  const descendantCount = task ? localTaskDescendantIds(task.id, childrenByParentId).length : 0
+  const index = buildLocalTaskIndex(library.projects, library.tasks)
+  const ancestors = task ? localTaskPathFromRoot(task, index.tasksById) : []
+  const subtasks = task ? (index.childrenByParentId.get(task.id) ?? []) : []
+  const descendantCount = task
+    ? localTaskDescendantIds(task.id, index.childrenByParentId).length
+    : 0
 
   const update = async (patch: { statusId?: string; priority?: LocalTask['priority'] }) => {
     if (!task) {

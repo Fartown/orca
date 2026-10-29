@@ -56,7 +56,7 @@ import {
   reorderLocalTaskStatuses,
   upsertLocalTaskStatus
 } from './local-task-status-store'
-import { readLocalTasks, resolveLocalTaskRef, searchLocalTasks } from './local-task-store'
+import { readLocalTasks } from './local-task-store'
 import { updateLocalTask } from './local-task-update'
 import { rowNumber, rowString } from './local-tasks-sqlite-row'
 
@@ -114,14 +114,6 @@ export class LocalTasksService {
 
   listTasks(projectId?: string): { tasks: LocalTask[] } {
     return { tasks: readLocalTasks(this.db, projectId) }
-  }
-
-  getTask(ref: string): { task: LocalTask | null } {
-    return { task: resolveLocalTaskRef(this.db, ref) }
-  }
-
-  searchTasks(query: string, limit = 20): { tasks: LocalTask[] } {
-    return { tasks: searchLocalTasks(this.db, query, limit) }
   }
 
   listEvents(taskId: string): { events: LocalTaskEvent[] } {
@@ -248,7 +240,7 @@ export class LocalTasksService {
     )
   }
 
-  private write<T>(
+  private write<T extends { ok: boolean }>(
     clientOperationId: string,
     method: string,
     params: unknown,

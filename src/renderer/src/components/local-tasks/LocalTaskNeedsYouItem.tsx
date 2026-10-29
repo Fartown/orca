@@ -17,6 +17,7 @@ import {
   useLocalTaskNeedsYou
 } from '@/local-tasks/local-task-needs-you-store'
 import { formatLocalTaskTime } from '@/local-tasks/local-task-time'
+import { useLocalTaskRowWritable } from '@/local-tasks/local-tasks-domain-store'
 import { formatAgentTypeLabel } from '../../../../shared/agent-type-label'
 import type { LocalTaskSessionLink } from '../../../../shared/local-tasks/local-task-link-types'
 import { LocalTaskReplyBox } from './LocalTaskReplyBox'
@@ -48,6 +49,7 @@ export function LocalTaskNeedsYouItem({
   const { item, standing } = entry
   const replyOpen = useLocalTaskNeedsYou((state) => localTaskItemClientKey(item) in state.drafts)
   const [snoozeOpen, setSnoozeOpen] = useState(false)
+  const writable = useLocalTaskRowWritable(item.taskSessionId)
   const agent = formatAgentTypeLabel(item.agent)
   return (
     <div className="flex flex-col gap-1.5 rounded-md px-2 py-1.5 hover:bg-accent/40">
@@ -95,13 +97,14 @@ export function LocalTaskNeedsYouItem({
             <Button
               variant="ghost"
               size="xs"
+              disabled={!writable}
               onClick={() => void acknowledgeLocalTaskItems([item])}
             >
               <CheckCheck className="size-3.5" />
               {translate('localTasks.needsYou.item.seen', 'Mark as seen')}
             </Button>
             <LocalTaskSnoozeMenu
-              items={[item]}
+              items={writable ? [item] : []}
               open={snoozeOpen}
               onOpenChange={setSnoozeOpen}
               now={now}

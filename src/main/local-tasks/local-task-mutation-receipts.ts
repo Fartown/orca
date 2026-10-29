@@ -22,10 +22,11 @@ function canonical(value: unknown): string {
 
 /**
  * Replays the first outcome for a repeated client operation id. Runs inside the caller's write
- * transaction, so the receipt and the change it records commit together. The stored copy is parsed
- * with the operation's result schema, so a receipt written by another build cannot leak a bad shape.
+ * transaction, so the receipt and the change it records commit together; a refused operation keeps
+ * its receipt but none of its writes. The stored copy is parsed with the operation's result schema,
+ * so a receipt written by another build cannot leak a bad shape.
  */
-export function withLocalTaskReceipt<T>(
+export function withLocalTaskReceipt<T extends { ok: boolean }>(
   db: LocalTasksDatabase,
   clientOperationId: string,
   method: string,
@@ -62,7 +63,7 @@ export function withLocalTaskReceipt<T>(
     }
     return { ok: false, code: 'invalid_argument' }
   }
-  const result = operation()
+  const result = db.savepoint(operation, (outcome) => outcome.ok)
   db.prepare(
     'INSERT INTO local_task_mutation_receipts (client_operation_id, method, params_hash, result, created_at) VALUES (?, ?, ?, ?, ?)'
   ).run(clientOperationId, method, paramsHash, JSON.stringify(result), now)
@@ -70,7 +71,7 @@ export function withLocalTaskReceipt<T>(
 }
 
 /** One receipted write: refused when read-only, otherwise one transaction with its receipt. */
-export function runLocalTaskWrite<T>(
+export function runLocalTaskWrite<T extends { ok: boolean }>(
   db: LocalTasksDatabase,
   now: number,
   clientOperationId: string,

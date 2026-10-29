@@ -25,7 +25,6 @@ export const LOCAL_TASKS_WORK_COPY_EN = {
   agentSaid: (agent: string, message: string): string => `${agent}: “${message}”`,
   agentStopped: (agent: string): string => `${agent} stopped`,
   someAgent: 'The agent',
-  moreItems: (count: number): string => `+${count} more`,
   reply: 'Reply',
   replyTitle: (ref: string): string => `Reply in ${ref}`,
   replyPlaceholder: 'Next instruction for the agent',
@@ -79,6 +78,7 @@ export const LOCAL_TASKS_WORK_COPY_EN = {
   linkExistingTitle: (ref: string): string => `Link a workspace to ${ref}`,
   noWorkspacesToLink: 'This host lists no workspace of this project.',
   workspaceTaken: (ref: string): string => `Belongs to ${ref}`,
+  workspaceNotListed: 'This host no longer lists this workspace.',
   unlinkWorkspace: 'Unlink workspace',
   unlinkWorkspaceTitle: 'Unlink this workspace?',
   unlinkWorkspaceMessage:

@@ -1,9 +1,10 @@
 import type SyncDatabase from '../sqlite/sync-database'
 import type { LocalTaskWorkspaceKind } from '../../shared/local-tasks/local-task-link-types'
 import { workspaceIdentityKey } from './local-task-link-rows'
+import { keepOwnedHostSpellings } from './local-tasks-owned-host-migration'
 import { rowNullableString, rowString } from './local-tasks-sqlite-row'
 
-export const LOCAL_TASKS_SCHEMA_VERSION = 4
+export const LOCAL_TASKS_SCHEMA_VERSION = 5
 
 // Why default_repo_id is an Orca project id: since v4 it names one of the project's linked repos.
 const PROJECT_COLUMNS = `  id TEXT PRIMARY KEY,
@@ -217,7 +218,8 @@ function upgradeSliceOneTables(database: SyncDatabase): void {
 /**
  * v3 → v4 (D-008), lossy as unpublished development libraries allow: a project links any number of
  * Orca projects, and the library holds only host ids its own Orca owns. Replies, links to another
- * Orca's hosts and receipts of the old result shapes go. The caller turned foreign keys off.
+ * Orca's hosts and receipts of the old result shapes go; v5 then respells what is left. The caller
+ * turned foreign keys off.
  */
 function upgradeToHostOwnedLibrary(database: SyncDatabase): void {
   database.exec('DROP TABLE IF EXISTS local_task_pending_replies')
@@ -263,4 +265,8 @@ export function applyLocalTasksSchema(database: SyncDatabase, storedVersion: num
     upgradeToHostOwnedLibrary(database)
   }
   database.exec(SCHEMA)
+  // Why after SCHEMA: every table it reads and cleans exists by then, whichever version this was.
+  if (storedVersion >= 1 && storedVersion < 5) {
+    keepOwnedHostSpellings(database)
+  }
 }

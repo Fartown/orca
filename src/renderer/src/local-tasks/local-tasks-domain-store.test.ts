@@ -66,16 +66,23 @@ beforeEach(() => {
 })
 
 it('keeps a newer local task against an older read or write response', () => {
-  localTasksDomainStore.getState().upsertTasks([task])
+  localTasksDomainStore.getState().upsertTasks([task], { created: true })
   library('local').applyTasks([{ ...task, title: 'Old read', revision: 4 }])
   expect(localTasksDomainStore.getState().tasks[0]).toEqual(task)
   localTasksDomainStore.getState().upsertTasks([{ ...task, title: 'Old write', revision: 3 }])
   expect(localTasksDomainStore.getState().tasks[0]).toEqual(task)
 })
 
+it('does not revive a task removed elsewhere when a late edit reply arrives', () => {
+  library('local').applyTasks([task])
+  library('local').applyTasks([])
+  localTasksDomainStore.getState().upsertTasks([{ ...task, title: 'Late edit', revision: 6 }])
+  expect(localTasksDomainStore.getState().tasks).toEqual([])
+})
+
 it('files a write result under the library its id names', () => {
   const remote = { ...task, id: `${REMOTE}/task-1`, projectId: `${REMOTE}/project-1` }
-  localTasksDomainStore.getState().upsertTasks([task, remote])
+  localTasksDomainStore.getState().upsertTasks([task, remote], { created: true })
   const [own, paired] = localTasksDomainStore.getState().partitions
   expect(own?.tasks.map((row) => row.id)).toEqual(['task-1'])
   expect(paired?.tasks.map((row) => row.id)).toEqual([`${REMOTE}/task-1`])

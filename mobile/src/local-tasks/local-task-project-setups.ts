@@ -1,4 +1,4 @@
-import type { ExecutionHostId } from '../../../src/shared/execution-host'
+import { parseExecutionHostId, type ExecutionHostId } from '../../../src/shared/execution-host'
 import { projectGroupIdFromRepoId } from '../../../src/shared/folder-workspace-worktree'
 import type { LocalTaskProject } from '../../../src/shared/local-tasks/local-task-types'
 import type { ServedProjectSections } from '../worktree/project-sections-operations'
@@ -19,6 +19,25 @@ export type LocalTaskSetup = {
   projectGroupId: string | null
 }
 
+type CatalogSetup = ServedProjectSections['setups'][number]
+
+/**
+ * A catalog checkout's host as the library's owner names it, null when this library does not own
+ * it. The paired host lists a server's checkouts under `runtime:E` and keeps the server's own SSH
+ * target in `executionHostId`, so `hostId` picks the library and `executionHostId` the host in it.
+ */
+function localTaskSetupOwnerHostId(
+  endpoint: LocalTaskEndpoint,
+  setup: Pick<CatalogSetup, 'hostId' | 'executionHostId'>
+): string | null {
+  const owner = localTaskOwnerHostId(endpoint, setup.hostId)
+  if (owner === null || !endpoint.executionHost) {
+    return owner
+  }
+  const nested = parseExecutionHostId(setup.executionHostId)
+  return nested?.kind === 'ssh' ? nested.id : owner
+}
+
 /**
  * The checkouts on the library's own host of the given Orca projects, in that order; every project
  * on the host when the list is empty, for a project without repos (REQ-001, REQ-009).
@@ -32,14 +51,13 @@ export function localTaskSetupsFor(
   const rank = new Map(orcaProjectIds.map((id, index) => [id, index]))
   return catalog.setups
     .flatMap((setup): LocalTaskSetup[] => {
-      const hostId = setup.executionHostId ?? setup.hostId
-      const ownerHostId = localTaskOwnerHostId(endpoint, hostId)
+      const ownerHostId = localTaskSetupOwnerHostId(endpoint, setup)
       if (ownerHostId === null || (rank.size > 0 && !rank.has(setup.projectId))) {
         return []
       }
       return [
         {
-          hostId,
+          hostId: setup.hostId,
           ownerHostId,
           orcaProjectId: setup.projectId,
           repoId: setup.repoId,

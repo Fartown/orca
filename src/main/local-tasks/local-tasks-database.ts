@@ -10,6 +10,8 @@ import { rowNumber, rowString } from './local-tasks-sqlite-row'
 
 export type LocalTasksCommit = { revision: number; scopes: LocalTaskChangeScope[] }
 
+const OPERATION_SAVEPOINT = 'local_task_operation'
+
 export function getLocalTasksDatabasePath(profileId: string, userDataPath?: string): string {
   return join(
     getOrcaProfileDirectory(profileId, userDataPath),
@@ -134,6 +136,29 @@ export class LocalTasksDatabase {
     } finally {
       this.pendingScopes = null
     }
+  }
+
+  /**
+   * Runs `operation` inside the open transaction; when `keep` refuses its result, its writes and
+   * the scopes it marked are undone and the transaction goes on. A throw is left to the transaction.
+   */
+  savepoint<T>(operation: () => T, keep: (value: T) => boolean): T {
+    const scopes = this.pendingScopes
+    if (!scopes) {
+      throw new Error('local tasks: a savepoint needs an open transaction')
+    }
+    const before = new Set(scopes)
+    this.database.exec(`SAVEPOINT ${OPERATION_SAVEPOINT}`)
+    const value = operation()
+    if (!keep(value)) {
+      this.database.exec(`ROLLBACK TO ${OPERATION_SAVEPOINT}`)
+      scopes.clear()
+      for (const scope of before) {
+        scopes.add(scope)
+      }
+    }
+    this.database.exec(`RELEASE ${OPERATION_SAVEPOINT}`)
+    return value
   }
 
   /** Marks what the current transaction changed; ignored outside one. */

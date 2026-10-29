@@ -87,6 +87,8 @@ export function useLocalTaskListModel() {
         : [],
     [layout, scopeTasks, index, scopeProjectId, visibility, sortBy, showCanceled]
   )
+  // Every list row with nothing folded or collapsed; what a hidden cursor falls back along.
+  const listTaskIds = useMemo(() => flattenLocalTaskGroups(groups), [groups])
   const orderedTaskIds = useMemo(
     () =>
       layout === 'list'
@@ -109,6 +111,7 @@ export function useLocalTaskListModel() {
     groups,
     columns,
     orderedTaskIds,
+    listTaskIds,
     foldedTaskIds,
     layout,
     hostLabels

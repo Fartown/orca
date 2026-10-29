@@ -11,7 +11,6 @@ import { LOCAL_TASKS_WORK_COPY_EN } from './local-tasks-work-copy-en'
 /** English copy; the shape every other language must fill. Mirrors desktop `localTasks.*`. */
 export const LOCAL_TASKS_COPY_EN = {
   title: 'Tasks',
-  home: 'Home',
   back: 'Back',
   retry: 'Retry',
   reconnect: 'Reconnect',
@@ -24,7 +23,6 @@ export const LOCAL_TASKS_COPY_EN = {
   send: 'Send',
   homeCardTitle: 'Local tasks',
   homeCardInProgress: (count: number): string => `${count} in progress`,
-  homeCardLoading: 'Reading tasks…',
   homeCardError: 'Could not read task count',
   pickHostTitle: 'Open local tasks on',
   switchHost: 'Switch host',
@@ -73,9 +71,6 @@ export const LOCAL_TASKS_COPY_EN = {
   createProject: 'New project',
   projectSettings: 'Project settings',
   switchProject: 'Switch project',
-  switchProjectHint: 'Projects of this host',
-  projectTaskCount: (count: number): string => `${count} tasks`,
-  allProjectsHint: (count: number): string => `${count} tasks · board columns by category`,
   emptyList: 'No tasks here yet',
   filteredEmpty: 'No tasks match the search or filter',
   searchPlaceholder: 'Search ref or title',

@@ -21,7 +21,7 @@ import {
 } from '@/local-tasks/local-task-page-store'
 import { localTasksClient } from '@/local-tasks/local-tasks-runtime-client'
 import { localTasksDomainStore, useLocalTasksDomain } from '@/local-tasks/local-tasks-domain-store'
-import { localTaskParentCandidates } from '@/local-tasks/local-task-hierarchy'
+import { localTaskParentCandidates } from '../../../../shared/local-tasks/local-task-hierarchy'
 import { writableLocalTaskProjects } from '@/local-tasks/local-task-write-access'
 import { runLocalTaskWrite } from '@/local-tasks/local-task-writes'
 import {
@@ -103,7 +103,7 @@ function CreateBody({
     if (!result) {
       return
     }
-    localTasksDomainStore.getState().upsertTasks([result.task])
+    localTasksDomainStore.getState().upsertTasks([result.task], { created: true })
     toast.success(
       translate('localTasks.create.created', 'Created {{ref}}', { ref: result.task.ref })
     )

@@ -55,6 +55,8 @@ export type LocalTaskPageState = {
   filters: LocalTaskFilters
   query: string
   cursorTaskId: string | null
+  /** The pointer put the cursor there; only a cursor moved some other way scrolls into view. */
+  cursorFromPointer: boolean
   detailTaskId: string | null
   previewOpen: boolean
   selectedTaskIds: string[]
@@ -78,7 +80,7 @@ export type LocalTaskPageState = {
   setShowCanceledColumn: (show: boolean) => void
   setFilters: (filters: LocalTaskFilters) => void
   setQuery: (query: string) => void
-  setCursor: (taskId: string | null) => void
+  setCursor: (taskId: string | null, via?: 'pointer') => void
   openDetail: (taskId: string | null) => void
   setPreviewOpen: (open: boolean) => void
   toggleSelected: (taskId: string) => void
@@ -108,6 +110,7 @@ export const localTaskPageStore = createStore<LocalTaskPageState>((set) => ({
   filters: EMPTY_LOCAL_TASK_FILTERS,
   query: '',
   cursorTaskId: null,
+  cursorFromPointer: false,
   detailTaskId: null,
   previewOpen: false,
   selectedTaskIds: [],
@@ -138,12 +141,13 @@ export const localTaskPageStore = createStore<LocalTaskPageState>((set) => ({
   setShowCanceledColumn: (showCanceledColumn) => set({ showCanceledColumn }),
   setFilters: (filters) => set({ filters }),
   setQuery: (query) => set({ query }),
-  setCursor: (cursorTaskId) => set({ cursorTaskId }),
+  setCursor: (cursorTaskId, via) => set({ cursorTaskId, cursorFromPointer: via === 'pointer' }),
   openDetail: (detailTaskId) =>
     set((state) => ({
       detailTaskId,
       previewOpen: false,
-      cursorTaskId: detailTaskId ?? state.cursorTaskId
+      cursorTaskId: detailTaskId ?? state.cursorTaskId,
+      cursorFromPointer: false
     })),
   setPreviewOpen: (previewOpen) => set({ previewOpen }),
   toggleSelected: (taskId) =>

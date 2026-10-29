@@ -6,11 +6,14 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { translate } from '@/i18n/i18n'
 import { describeLocalTasksUnavailableReason } from '@/local-tasks/local-task-host-state-copy'
 import { localTasksDomainStore, useLocalTasksDomain } from '@/local-tasks/local-tasks-domain-store'
-import type { LocalTasksPartition } from '@/local-tasks/local-tasks-partition'
-import type { LocalTaskEndpointKey } from '@/local-tasks/local-task-endpoints'
+import {
+  describeLocalTaskLibraryNotices,
+  type LocalTaskLibraryNotice
+} from '@/local-tasks/local-task-library-notices'
 import { selectExecutionHostDisplayLabel } from '@/lib/execution-host-display-label'
 import { cn } from '@/lib/utils'
 import { useAppStore } from '@/store'
+import type { LocalTaskChangeScope } from '../../../../shared/local-tasks/local-task-types'
 import { localTasksSync } from '@/local-tasks/local-tasks-sync'
 
 type PanelCopy = {
@@ -18,7 +21,8 @@ type PanelCopy = {
   message: string
   explanation: string | null
   detail: string | null
-  retry: boolean
+  /** The button that opens the stream again; only the user's click does. */
+  retry: string | null
 }
 
 function usePanelCopy(): PanelCopy {
@@ -31,7 +35,7 @@ function usePanelCopy(): PanelCopy {
       message: translate('localTasks.state.failed', 'Could not reach the task library.'),
       explanation: null,
       detail: reason,
-      retry: false
+      retry: translate('localTasks.state.retryRead', 'Retry')
     }
   }
   if (connection === 'unsupported') {
@@ -43,7 +47,7 @@ function usePanelCopy(): PanelCopy {
       ),
       explanation: null,
       detail: null,
-      retry: false
+      retry: null
     }
   }
   if (connection === 'ended') {
@@ -52,7 +56,7 @@ function usePanelCopy(): PanelCopy {
       message: translate('localTasks.state.ended', 'The task library stopped sending updates.'),
       explanation: null,
       detail: null,
-      retry: true
+      retry: translate('localTasks.state.retry', 'Reconnect')
     }
   }
   if (connection === 'connecting' || hostState === null || hostState === 'starting') {
@@ -61,7 +65,7 @@ function usePanelCopy(): PanelCopy {
       message: translate('localTasks.state.starting', 'Opening the task library…'),
       explanation: null,
       detail: null,
-      retry: false
+      retry: null
     }
   }
   if (hostState === 'unavailable') {
@@ -73,7 +77,7 @@ function usePanelCopy(): PanelCopy {
       ),
       explanation: describeLocalTasksUnavailableReason(reason),
       detail: reason,
-      retry: false
+      retry: null
     }
   }
   return {
@@ -84,7 +88,7 @@ function usePanelCopy(): PanelCopy {
     ),
     explanation: null,
     detail: null,
-    retry: false
+    retry: null
   }
 }
 
@@ -130,12 +134,18 @@ export function LocalTaskHostStatePanel(): React.JSX.Element {
             size="sm"
             onClick={() => localTasksDomainStore.getState().retry()}
           >
-            {translate('localTasks.state.retry', 'Reconnect')}
+            {copy.retry}
           </Button>
         ) : null}
       </div>
     </div>
   )
+}
+
+/** Re-reads the page's own library; another Orca's failures retry from their own line. */
+export function refreshHomeLibrary(scopes: LocalTaskChangeScope[] | null): Promise<void> {
+  const { home } = localTasksDomainStore.getState()
+  return home ? localTasksSync.refresh(scopes, home) : Promise.resolve()
 }
 
 /** A failed read needs an explicit retry because reads only follow host change notices. */
@@ -174,7 +184,7 @@ export function LocalTaskReadErrorPanel({
         <Button
           variant="outline"
           size="sm"
-          onClick={() => (onRetry ? onRetry() : void localTasksSync.refresh(null))}
+          onClick={() => (onRetry ? onRetry() : void refreshHomeLibrary(null))}
         >
           {translate('localTasks.state.retryRead', 'Retry')}
         </Button>
@@ -207,56 +217,16 @@ export function LocalTaskReadOnlyNotice(): React.JSX.Element | null {
   )
 }
 
-type PairedNotice = {
-  endpoint: LocalTaskEndpointKey
-  tone: 'muted' | 'warning'
-  text: string
-  detail: string | null
-  retry: boolean
+function runLibraryRetry(notice: LocalTaskLibraryNotice): void {
+  if (notice.retry?.kind === 'resubscribe') {
+    localTasksDomainStore.getState().retry(notice.endpoint)
+  } else if (notice.retry?.kind === 'read') {
+    void localTasksSync.refresh(notice.retry.scopes, notice.endpoint)
+  }
 }
 
-function pairedNotice(partition: LocalTasksPartition, host: string): PairedNotice | null {
-  const base = { endpoint: partition.endpoint, detail: null, retry: false }
-  if (partition.connection === 'unsupported') {
-    return {
-      ...base,
-      tone: 'muted',
-      text: translate(
-        'localTasks.state.pairedUnsupported',
-        '{{host}}: the Orca there needs an update to share its tasks.',
-        { host }
-      )
-    }
-  }
-  if (!partition.inContact) {
-    return partition.projectsLoaded
-      ? {
-          ...base,
-          tone: 'muted',
-          text: translate(
-            'localTasks.state.pairedOutOfContact',
-            '{{host}} is not connected. Its tasks are shown as last read, and its sessions can’t be confirmed.',
-            { host }
-          )
-        }
-      : null
-  }
-  if (partition.connection === 'failed' || partition.connection === 'ended') {
-    return {
-      endpoint: partition.endpoint,
-      tone: 'warning',
-      text: translate('localTasks.state.pairedFailed', 'Could not read the tasks on {{host}}.', {
-        host
-      }),
-      detail: partition.connection === 'failed' ? partition.hostReason : null,
-      retry: partition.connection === 'ended'
-    }
-  }
-  return null
-}
-
-/** One line per paired Orca whose library cannot be read now; the page's own library is above. */
-export function LocalTaskPairedHostNotices(): React.JSX.Element | null {
+/** One line per library the page cannot fully show now, each with its own retry. */
+export function LocalTaskLibraryNotices(): React.JSX.Element | null {
   const partitions = useLocalTasksDomain((state) => state.partitions)
   const home = useLocalTasksDomain((state) => state.home)
   const labels = useAppStore(
@@ -264,13 +234,12 @@ export function LocalTaskPairedHostNotices(): React.JSX.Element | null {
       partitions.map((partition) => selectExecutionHostDisplayLabel(state, partition.endpoint))
     )
   )
-  const notices = partitions.flatMap((partition, index) => {
-    const notice =
-      partition.endpoint === home
-        ? null
-        : pairedNotice(partition, labels[index] ?? partition.endpoint)
-    return notice ? [notice] : []
-  })
+  const notices = describeLocalTaskLibraryNotices(
+    partitions,
+    home,
+    (endpoint) =>
+      labels[partitions.findIndex((partition) => partition.endpoint === endpoint)] ?? endpoint
+  )
   if (notices.length === 0) {
     return null
   }
@@ -288,12 +257,8 @@ export function LocalTaskPairedHostNotices(): React.JSX.Element | null {
           <span className="min-w-0 flex-1">{notice.text}</span>
           {notice.detail ? <TechnicalDetail detail={notice.detail} /> : null}
           {notice.retry ? (
-            <Button
-              variant="ghost"
-              size="xs"
-              onClick={() => localTasksDomainStore.getState().retry(notice.endpoint)}
-            >
-              {translate('localTasks.state.retry', 'Reconnect')}
+            <Button variant="ghost" size="xs" onClick={() => runLibraryRetry(notice)}>
+              {translate('localTasks.state.retryRead', 'Retry')}
             </Button>
           ) : null}
         </div>

@@ -13,6 +13,11 @@ import type { LocalTask } from '../../../shared/local-tasks/local-task-types'
 import { useLocalTasksDomain } from './local-tasks-domain-store'
 import { localTaskIdForCreation } from './local-task-start-work'
 import {
+  localTaskIdForStartedWorkspace,
+  localTaskStartedWorkspaceStore,
+  type LocalTaskStartedWorkspace
+} from './local-task-started-workspaces'
+import {
   chooseLocalTaskSidebarGrouping,
   localTaskSidebarCollapseStore,
   useLocalTaskSidebarGrouping
@@ -30,6 +35,7 @@ type SidebarRowModel = SidebarListModel['rowModel']
 const NO_TASKS: LocalTask[] = []
 const NO_LINKS: LocalTaskLinks = { workspaces: [], sessions: [] }
 const NO_COLLAPSED: ReadonlySet<string> = new Set()
+const NO_STARTED: readonly LocalTaskStartedWorkspace[] = []
 // Upstream reveals these headers by switching to Project grouping, which task grouping would mask.
 const PROJECT_HEADER_ROW_PREFIXES = ['sidebar-name:', 'project-group:', 'project:', 'repo:']
 
@@ -57,11 +63,21 @@ export function useLocalTaskGroupedRowModel(
   const collapsed = useStore(localTaskSidebarCollapseStore, (state) =>
     enabled ? state.collapsed : NO_COLLAPSED
   )
+  const started = useStore(localTaskStartedWorkspaceStore, (state) =>
+    enabled ? state.started : NO_STARTED
+  )
   const pendingRevealWorktree = useAppStore((s) => s.pendingRevealWorktree)
   const pendingRevealSidebarRow = useAppStore((s) => s.pendingRevealSidebarRow)
   const input = useMemo(
-    () => ({ tasks, links, defaultHostId, taskIdForCreation: localTaskIdForCreation }),
-    [tasks, links, defaultHostId]
+    () => ({
+      tasks,
+      links,
+      defaultHostId,
+      taskIdForCreation: localTaskIdForCreation,
+      taskIdForStartedWorkspace: (workspace: { id: string; hostId: string }) =>
+        localTaskIdForStartedWorkspace(started, workspace)
+    }),
+    [tasks, links, defaultHostId, started]
   )
   const plan = useMemo(
     () => (enabled ? planLocalTaskSidebarGroups(rowModel.sectionRows, input) : null),

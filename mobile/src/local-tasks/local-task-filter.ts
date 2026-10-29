@@ -1,16 +1,8 @@
-import {
-  isExactLocalTaskRef,
-  matchesLocalTaskQuery
-} from '../../../src/shared/local-tasks/local-task-grouping'
 import type {
   LocalTaskPriority,
   LocalTaskStatusCategory
 } from '../../../src/shared/local-tasks/local-task-model'
-import type {
-  LocalTask,
-  LocalTaskProject,
-  LocalTaskStatusDef
-} from '../../../src/shared/local-tasks/local-task-types'
+import type { LocalTask } from '../../../src/shared/local-tasks/local-task-types'
 
 /**
  * The task page's filter, applied on the phone to tasks already loaded; it sends no request.
@@ -37,39 +29,6 @@ export function localTaskFilterCount(filter: LocalTaskFilter): number {
 
 export function isLocalTaskFilterActive(filter: LocalTaskFilter): boolean {
   return filter.query.trim().length > 0 || localTaskFilterCount(filter) > 0
-}
-
-export type LocalTaskFilterContext = {
-  statuses: Map<string, LocalTaskStatusDef>
-  projects: Map<string, LocalTaskProject>
-}
-
-export function localTaskExactRefMatch(
-  task: LocalTask,
-  query: string,
-  context: LocalTaskFilterContext
-): boolean {
-  return isExactLocalTaskRef(task, context.projects.get(task.projectId), query)
-}
-
-export function localTaskMatchesFilter(
-  task: LocalTask,
-  filter: LocalTaskFilter,
-  context: LocalTaskFilterContext
-): boolean {
-  if (filter.priorities.length > 0 && !filter.priorities.includes(task.priority)) {
-    return false
-  }
-  if (filter.labels.length > 0 && !task.labels.some((label) => filter.labels.includes(label))) {
-    return false
-  }
-  if (filter.categories.length > 0) {
-    const category = context.statuses.get(task.statusId)?.category
-    if (!category || !filter.categories.includes(category)) {
-      return false
-    }
-  }
-  return matchesLocalTaskQuery(task, context.projects.get(task.projectId), filter.query)
 }
 
 /** The labels offered: those in scope, plus any still selected so it can be turned off. */

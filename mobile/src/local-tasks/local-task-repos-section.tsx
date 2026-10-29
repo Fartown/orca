@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { Check, GitBranch, Plus } from 'lucide-react-native'
 import { LOCAL_TASK_PROJECT_REPOS_MAX } from '../../../src/shared/local-tasks/local-task-model'
+import { localTaskReposPatch } from '../../../src/shared/local-tasks/local-task-repos-patch'
 import type { LocalTaskProject } from '../../../src/shared/local-tasks/local-task-types'
 import { ActionSheetModal } from '../components/ActionSheetModal'
 import { PickerListDrawer } from '../components/PickerListDrawer'
@@ -12,24 +13,6 @@ import { localTaskWriteMessage } from './local-task-failure-message'
 import { createLocalTaskOperationIds, sendLocalTaskWrite } from './local-task-operation-ids'
 import { localTaskStyles } from './local-tasks-styles'
 import type { OrcaProjectChoices } from './use-orca-project-choices'
-
-type RepoPatch = { repos?: string[]; defaultRepoId?: string | null }
-
-/** The next repo list after one edit; the host keeps the default while it is still listed. */
-export function localTaskReposPatch(
-  project: Pick<LocalTaskProject, 'repos' | 'defaultRepoId'>,
-  edit: { kind: 'add' | 'remove' | 'default'; repoId: string }
-): RepoPatch | null {
-  const listed = project.repos.includes(edit.repoId)
-  switch (edit.kind) {
-    case 'add':
-      return listed ? null : { repos: [...project.repos, edit.repoId] }
-    case 'remove':
-      return listed ? { repos: project.repos.filter((repo) => repo !== edit.repoId) } : null
-    case 'default':
-      return listed && project.defaultRepoId !== edit.repoId ? { defaultRepoId: edit.repoId } : null
-  }
-}
 
 /** A project's Orca repos (REQ-001): none, one or several, one of them the default for Start. */
 export function LocalTaskReposSection(props: {

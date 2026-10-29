@@ -64,9 +64,9 @@ function workspaceFix(state: AppState, link: LocalTaskWorkspaceLink): LocalTaskW
 }
 
 /**
- * What this window learned about linked workspaces (§7.1): a missing instance id, a host the
- * workspace moved to (matched by instance id on a host in contact), or renamed branch and name.
- * Session panes are the session host's to fill (CONTRACT §5.5).
+ * What this window learned about linked workspaces (solution doc §7.1): a missing instance id, a
+ * host the workspace moved to (matched by instance id on a host in contact), or renamed branch
+ * and name. Session panes are the session host's to fill (solution doc §17.3).
  */
 export function findLocalTaskWorkspaceFixes(
   state: AppState,
@@ -92,7 +92,7 @@ function openLinkedTask(
   return isTerminalLocalTaskCategory(status.category) ? null : { task, project }
 }
 
-/** Worktrees of open tasks that hold a workspace; their PRs refresh like visible cards (A4). */
+/** Worktrees of open tasks that hold a workspace; their PRs refresh like visible cards. */
 export function selectLocalTaskReviewWorktreeIds(state: AppState, library: Library): string[] {
   const ids: string[] = []
   for (const link of library.links.workspaces) {

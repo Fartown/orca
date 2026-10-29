@@ -5,8 +5,8 @@ import { useAppStore } from '@/store'
 import { getExecutionHostIdForWorktree } from '@/lib/worktree-runtime-owner'
 import { parsePaneKey } from '../../../../shared/stable-pane-id'
 import { isTuiAgent } from '../../../../shared/tui-agent-config'
+import type { ExecutionHostId } from '../../../../shared/execution-host'
 import type {
-  LocalTaskLinks,
   LocalTaskSessionLink,
   LocalTaskWorkspaceLink
 } from '../../../../shared/local-tasks/local-task-link-types'
@@ -19,13 +19,13 @@ import {
   terminalSessionIds
 } from '@/local-tasks/local-task-session-recording'
 import { unlinkLocalTaskSession } from '@/local-tasks/local-task-workspace-linking'
-import { localTaskLinkWorkspaceId } from '@/local-tasks/local-task-workspace-resolution'
+import { findLocalTaskLinkForWorkspace } from '@/local-tasks/local-task-link-selectors'
 import {
   useLocalTaskRowWritable,
   useLocalTasksDomain
 } from '@/local-tasks/local-tasks-domain-store'
 import { buildLocalTaskIndex } from '@/local-tasks/local-task-grouping'
-import { localTaskWorkspaceFamilyIds } from '@/local-tasks/local-task-hierarchy'
+import { localTaskWorkspaceFamilyIds } from '../../../../shared/local-tasks/local-task-hierarchy'
 import type { LocalTaskSessionPane } from './LocalTaskSessionChip'
 
 function TaskLine({ task, onOpen }: { task: LocalTask; onOpen: () => void }): React.JSX.Element {
@@ -95,16 +95,23 @@ function LinkedCard({
   )
 }
 
-function workspaceLinkOnHost(
-  links: LocalTaskLinks,
-  worktreeId: string,
-  hostId: string
-): LocalTaskWorkspaceLink | null {
-  return (
-    links.workspaces.find(
-      (link) => link.hostId === hostId && localTaskLinkWorkspaceId(link) === worktreeId
-    ) ?? null
+/** A pane's workspace link, matched as the sidebar card matches it: instance, then host and id. */
+export function useLocalTaskPaneWorkspaceLink(worktreeId: string): {
+  hostId: ExecutionHostId
+  link: LocalTaskWorkspaceLink | null
+} {
+  const hostId = useAppStore((state) => getExecutionHostIdForWorktree(state, worktreeId))
+  const instanceId = useAppStore(
+    (state) => state.getKnownWorktreeById(worktreeId, hostId)?.instanceId
   )
+  const link = useLocalTasksDomain((state) =>
+    findLocalTaskLinkForWorkspace(state.links, {
+      id: worktreeId,
+      hostId,
+      ...(instanceId ? { instanceId } : {})
+    })
+  )
+  return { hostId, link }
 }
 
 /**
@@ -118,11 +125,8 @@ function LinkChooser({
   pane: LocalTaskSessionPane
   onDone: () => void
 }): React.JSX.Element {
-  const hostId = useAppStore((state) => getExecutionHostIdForWorktree(state, pane.worktreeId))
+  const { hostId, link } = useLocalTaskPaneWorkspaceLink(pane.worktreeId)
   const agentType = useAppStore((state) => state.agentStatusByPaneKey[pane.paneKey]?.agentType)
-  const link = useLocalTasksDomain((state) =>
-    workspaceLinkOnHost(state.links, pane.worktreeId, hostId)
-  )
   const tasks = useLocalTasksDomain((state) => state.tasks)
   const workspaces = useLocalTasksDomain((state) => state.links.workspaces)
   const writable = useLocalTaskRowWritable(link?.taskId ?? null)

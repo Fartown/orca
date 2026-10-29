@@ -46,7 +46,9 @@ export function localTasksScreenState(
               : access === 'unreadable'
                 ? copy.statusUnreadable
                 : !status
-                  ? copy.checking
+                  ? input.error
+                    ? copy.loadFailed
+                    : copy.checking
                   : status.state === 'starting'
                     ? copy.libraryStarting
                     : status?.state === 'unavailable'

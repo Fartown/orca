@@ -60,11 +60,9 @@ import {
   LocalTasksTasksBatchUpdateParams,
   LocalTasksTasksCreateParams,
   LocalTasksTasksCreateSubtasksParams,
-  LocalTasksTasksGetParams,
   LocalTasksTasksListParams,
   LocalTasksTasksMoveParams,
   LocalTasksTasksRemoveParams,
-  LocalTasksTasksSearchParams,
   LocalTasksTasksUpdateParams,
   LocalTasksUnsubscribeChangesParams
 } from '../local-tasks/local-tasks-rpc-params'
@@ -1231,11 +1229,9 @@ export const RPC_PARAMS_BY_METHOD = {
   'localTasks.tasks.batchUpdate': LocalTasksTasksBatchUpdateParams,
   'localTasks.tasks.create': LocalTasksTasksCreateParams,
   'localTasks.tasks.createSubtasks': LocalTasksTasksCreateSubtasksParams,
-  'localTasks.tasks.get': LocalTasksTasksGetParams,
   'localTasks.tasks.list': LocalTasksTasksListParams,
   'localTasks.tasks.move': LocalTasksTasksMoveParams,
   'localTasks.tasks.remove': LocalTasksTasksRemoveParams,
-  'localTasks.tasks.search': LocalTasksTasksSearchParams,
   'localTasks.tasks.update': LocalTasksTasksUpdateParams,
   'localTasks.unsubscribeChanges': LocalTasksUnsubscribeChangesParams,
   'managedRuntime.cancel': ManagedRuntimeCancelParams,

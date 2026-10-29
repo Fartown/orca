@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { LocalTask } from '../../../shared/local-tasks/local-task-types'
+import type { LocalTask } from './local-task-types'
 import { buildLocalTaskIndex } from './local-task-grouping'
 import {
   localTaskParentCandidates,

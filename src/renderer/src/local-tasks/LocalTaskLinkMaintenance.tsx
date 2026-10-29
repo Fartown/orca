@@ -54,7 +54,7 @@ export function LocalTaskLinkMaintenance(): React.JSX.Element {
       attempted.add(key)
       // Why clear on failure: a transient RPC error (brief disconnect, service not ready) must not
       // block the same fix forever; the next change re-attempts it. Idempotent receipts and the PR
-      // trigger table keep a late success from applying twice (D6).
+      // trigger table keep a late success from applying twice.
       void write().catch((error: unknown) => {
         attempted.delete(key)
         console.error('local tasks: link upkeep failed', error)

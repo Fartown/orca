@@ -6,12 +6,10 @@ import { cn } from '@/lib/utils'
 import { parsePaneKey } from '../../../../shared/stable-pane-id'
 import type {
   LocalTaskLinks,
-  LocalTaskSessionLink,
-  LocalTaskWorkspaceLink
+  LocalTaskSessionLink
 } from '../../../../shared/local-tasks/local-task-link-types'
-import { localTaskLinkWorkspaceId } from '@/local-tasks/local-task-workspace-resolution'
 import { useLocalTasksDomain } from '@/local-tasks/local-tasks-domain-store'
-import { LocalTaskSessionChipCard } from './LocalTaskSessionChipCard'
+import { LocalTaskSessionChipCard, useLocalTaskPaneWorkspaceLink } from './LocalTaskSessionChipCard'
 
 export type LocalTaskSessionPane = {
   worktreeId: string
@@ -38,18 +36,10 @@ export function findLocalTaskSessionForPane(
   )
 }
 
-/** Workspace links on this worktree id; the host is checked once the card opens. */
-function findWorkspaceLinksById(
-  links: LocalTaskLinks,
-  worktreeId: string
-): LocalTaskWorkspaceLink[] {
-  return links.workspaces.filter((link) => localTaskLinkWorkspaceId(link) === worktreeId)
-}
-
 /**
  * The task chip in a session's header (REQ-016): `SHOP-13 · title` when the session is linked,
- * otherwise 关联到任务… on a session whose workspace belongs to a task. Reads only the task
- * library until opened, so headers of unrelated sessions stay untouched.
+ * otherwise 关联到任务… on a session whose workspace belongs to a task. Reads nothing else while
+ * no library holds a link, so headers stay untouched until tasks are in use.
  */
 type LocalTaskSessionChipProps = {
   pane: LocalTaskSessionPane
@@ -75,7 +65,14 @@ export function LocalTaskSessionChip({
 const CHAT_CHIP_CLASS =
   'absolute top-2 left-4 z-20 border border-border bg-popover/95 shadow-xs backdrop-blur-sm'
 
-function SessionChip({
+function SessionChip(props: LocalTaskSessionChipProps): React.JSX.Element | null {
+  const anyLinked = useLocalTasksDomain(
+    (state) => state.links.workspaces.length > 0 || state.links.sessions.length > 0
+  )
+  return anyLinked ? <LinkedSessionChip {...props} /> : null
+}
+
+function LinkedSessionChip({
   pane,
   compact = false,
   className
@@ -85,9 +82,7 @@ function SessionChip({
   const task = useLocalTasksDomain((state) =>
     session ? state.tasks.find((candidate) => candidate.id === session.taskId) : undefined
   )
-  const workspaceLinked = useLocalTasksDomain(
-    (state) => findWorkspaceLinksById(state.links, pane.worktreeId).length > 0
-  )
+  const workspaceLinked = useLocalTaskPaneWorkspaceLink(pane.worktreeId).link !== null
   if (!task && !workspaceLinked) {
     return null
   }

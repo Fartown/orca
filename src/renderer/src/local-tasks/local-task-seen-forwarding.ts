@@ -24,7 +24,7 @@ function seenPaneKeys(link: SeenSession): string[] {
 /**
  * Items whose session upstream recorded as seen (`acknowledgedAgentsByPaneKey`, the turn start the
  * user acknowledged) at or after the turn the item waits on: the user looked at it from the
- * sidebar, a tab or anywhere else (CONTRACT §5.4).
+ * sidebar, a tab or anywhere else.
  */
 export function findLocalTaskItemsSeenElsewhere(
   items: readonly LocalTaskAttentionItem[],
@@ -41,14 +41,35 @@ export function findLocalTaskItemsSeenElsewhere(
   })
 }
 
+// Per item: 'sent', or the progress view a failed attempt saw. Shared by every path that marks
+// an item seen, so opening a session and the pane it shows never mark the same item twice.
+const attempted = new Map<string, 'sent' | LocalTaskProgressView | null>()
+
+/** Marks one item seen in its library unless this window already did. */
+export function acknowledgeLocalTaskItemOnce(item: LocalTaskAttentionItem): void {
+  const domain = localTasksDomainStore.getState()
+  const key = localTaskItemClientKey(item)
+  if (attempted.get(key) === 'sent' || !isLocalTaskRowWritable(domain, item.taskSessionId)) {
+    return
+  }
+  const view = domain.progress
+  attempted.set(key, 'sent')
+  void localTasksClient.acknowledgeAttention(item.key, item.taskSessionId).then(
+    (result) => {
+      if (!result.ok) {
+        attempted.set(key, view)
+      }
+    },
+    () => attempted.set(key, view)
+  )
+}
+
 /**
  * Tells each library about items its user already saw elsewhere, once per item. A failed call is
  * not retried on its own: it waits for the next answer from the hosts (a new attention snapshot or
  * a change of contact), never for unrelated churn in this window.
  */
 export function bindLocalTaskSeenForwarding(): () => void {
-  // 'sent', or the progress view a failed attempt saw.
-  const attempted = new Map<string, 'sent' | LocalTaskProgressView | null>()
   let lastInputs: readonly unknown[] = []
 
   const run = (): void => {
@@ -72,24 +93,10 @@ export function bindLocalTaskSeenForwarding(): () => void {
       domain.links.sessions,
       acknowledged
     )) {
-      const key = localTaskItemClientKey(item)
-      const previous = attempted.get(key)
-      if (
-        previous === 'sent' ||
-        (previous !== undefined && previous === view) ||
-        !isLocalTaskRowWritable(domain, item.taskSessionId)
-      ) {
-        continue
+      const previous = attempted.get(localTaskItemClientKey(item))
+      if (previous === undefined || (previous !== 'sent' && previous !== view)) {
+        acknowledgeLocalTaskItemOnce(item)
       }
-      attempted.set(key, 'sent')
-      void localTasksClient.acknowledgeAttention(item.key, item.taskSessionId).then(
-        (result) => {
-          if (!result.ok) {
-            attempted.set(key, view)
-          }
-        },
-        () => attempted.set(key, view)
-      )
     }
   }
 
@@ -99,5 +106,6 @@ export function bindLocalTaskSeenForwarding(): () => void {
   return () => {
     unsubscribeApp()
     unsubscribeLibrary()
+    attempted.clear()
   }
 }

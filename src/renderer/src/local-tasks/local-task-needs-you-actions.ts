@@ -15,7 +15,11 @@ import { localTaskPageStore } from './local-task-page-store'
 import { openLocalTaskSession } from './local-task-session-reveal'
 import { runLocalTaskWrite } from './local-task-writes'
 import { localTasksClient } from './local-tasks-runtime-client'
-import { isLocalTaskRowWritable, localTasksDomainStore } from './local-tasks-domain-store'
+import {
+  isLocalTaskRowWritable,
+  localTasksDomainStore,
+  type LocalTasksDomainState
+} from './local-tasks-domain-store'
 
 /** The rows the view shows right now, for the page's single keys. */
 export function currentLocalTaskNeedsYouRows(): LocalTaskNeedsYouRow[] {
@@ -29,13 +33,15 @@ export function currentLocalTaskNeedsYouRows(): LocalTaskNeedsYouRow[] {
 }
 
 /** Items the host still lists; entries kept for a reply box are not acknowledgeable facts. */
-export function liveEntriesOf(row: LocalTaskNeedsYouRow): LocalTaskAttentionItem[] {
+function liveEntriesOf(row: LocalTaskNeedsYouRow): LocalTaskAttentionItem[] {
   return row.entries.filter((entry) => entry.standing === 'listed').map((entry) => entry.item)
 }
 
-/** Live items whose library takes writes now, for the E and H keys. */
-function writableEntriesOf(row: LocalTaskNeedsYouRow): LocalTaskAttentionItem[] {
-  const domain = localTasksDomainStore.getState()
+/** Live items whose library takes writes now; the row's buttons and the E and H keys act on these. */
+export function writableEntriesOf(
+  row: LocalTaskNeedsYouRow,
+  domain: Pick<LocalTasksDomainState, 'partitions' | 'home'> = localTasksDomainStore.getState()
+): LocalTaskAttentionItem[] {
   return liveEntriesOf(row).filter((item) => isLocalTaskRowWritable(domain, item.taskSessionId))
 }
 
@@ -89,7 +95,7 @@ export function localTaskReplyTarget(
 
 /**
  * Sends a reply straight to the session the way Orca sends any message to an agent: once, with
- * no queue and no resend (RESEARCH-2 §1.6). Anything but `sent` leaves the text with the caller.
+ * no queue and no resend. Anything but `sent` leaves the text with the caller.
  */
 export async function sendLocalTaskReply(
   link: LocalTaskSessionLink,

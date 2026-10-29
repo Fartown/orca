@@ -181,7 +181,7 @@ export class LocalTaskExecutionService {
     this.attention.dispose()
   }
 
-  private write<T>(
+  private write<T extends { ok: boolean }>(
     clientOperationId: string,
     method: string,
     params: unknown,

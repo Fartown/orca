@@ -52,7 +52,7 @@ export function isSameWorkspace(
   right: LocalTaskWorkspacePlace
 ): boolean {
   // Why instance first: a durable instance id is the one identity that survives a host move, so two
-  // links that share it are the same workspace even after it is reassigned to another host (D3).
+  // links that share it are the same workspace even after it is reassigned to another host.
   if (left.instanceId && right.instanceId && left.instanceId === right.instanceId) {
     return true
   }
@@ -74,7 +74,7 @@ export function findWorkspaceOwner(
   exceptTaskId: string
 ): string | null {
   // Why the instance clause: a workspace moved to another host keeps its durable instance id, so a
-  // second task must not claim it there while the first still holds the pre-move host row (D3).
+  // second task must not claim it there while the first still holds the pre-move host row.
   const rows = db
     .prepare(
       `SELECT ${WORKSPACE_COLUMNS} FROM local_task_workspaces
@@ -206,7 +206,7 @@ export function findSessionConflict(
         )
       : []),
     // Why pane_key IS NULL: once a pane key lands the pane_key index owns dedup; this only closes the
-    // window where a terminal tab is recorded for two tasks before either resolves its pane (D5).
+    // window where a terminal tab is recorded for two tasks before either resolves its pane.
     ...(claim.tabId && !claim.paneKey
       ? readSessionRows(
           db,
