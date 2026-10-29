@@ -8,7 +8,8 @@ const upkeep = vi.hoisted(() => {
   return {
     linksLoaded: false,
     fixes,
-    resolveWorkspace: vi.fn<(input: object, repoId: string | null) => Promise<unknown>>()
+    resolveWorkspace:
+      vi.fn<(input: { taskId: string }, repoId: string | null) => Promise<unknown>>()
   }
 })
 const state = {
@@ -24,8 +25,9 @@ const state = {
   prCache: {},
   hostedReviewCache: {}
 }
+type MockAppState = typeof state
 vi.mock('@/store', () => ({
-  useAppStore: Object.assign((select: (state: object) => unknown) => select(state), {
+  useAppStore: Object.assign((select: (state: MockAppState) => unknown) => select(state), {
     getState: () => state,
     subscribe: () => vi.fn()
   })

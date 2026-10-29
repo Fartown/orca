@@ -15,6 +15,23 @@ import { createLocalTaskOperationIds, sendLocalTaskWrite } from './local-task-op
 import type { LocalTasksLibrary } from './use-local-tasks-library'
 import { useLocalTaskSubtaskBatch } from './use-local-task-subtask-batch'
 
+/** One form write at a time: busy while it runs, and the task list re-read once it settles. */
+function useLocalTaskFormWriteRun(library: LocalTasksLibrary) {
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const run = async <T>(work: () => Promise<T>): Promise<T> => {
+    setBusy(true)
+    setError(null)
+    try {
+      return await work()
+    } finally {
+      setBusy(false)
+      library.reload(['tasks'])
+    }
+  }
+  return { busy, error, setError, run }
+}
+
 /**
  * The form's writes. Each step owns its operation ids, so a resend after a dropped answer replays
  * that step's first result: "Save" pressed twice after a lost reply moves and edits the task once.
@@ -27,29 +44,18 @@ export function useLocalTaskFormSubmit(api: LocalTasksApi, library: LocalTasksLi
     update: createLocalTaskOperationIds(),
     move: createLocalTaskOperationIds()
   }))
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  // Why called through `write.`: React Doctor reads a destructured callback from a hook holding state as a state setter.
+  const write = useLocalTaskFormWriteRun(library)
   const [notice, setNotice] = useState<{ text: string; taskId: string } | null>(null)
   // The version the draft was edited from, held while another device's change awaits a decision.
   const [conflict, setConflict] = useState<LocalTask | null>(null)
   const editBase = useRef<LocalTask | null>(null)
 
   const fail = (outcome: LocalTaskWriteOutcome<unknown>) => {
-    setError(localTaskWriteMessage(copy, outcome))
+    write.setError(localTaskWriteMessage(copy, outcome))
   }
 
-  const run = async <T>(work: () => Promise<T>): Promise<T> => {
-    setBusy(true)
-    setError(null)
-    try {
-      return await work()
-    } finally {
-      setBusy(false)
-      library.reload(['tasks'])
-    }
-  }
-
-  const subtaskBatch = useLocalTaskSubtaskBatch(api, library, copy, run, setError)
+  const subtaskBatch = useLocalTaskSubtaskBatch(api, library, copy, write.run, write.setError)
 
   const sendEdit = async (
     base: LocalTask,
@@ -132,11 +138,11 @@ export function useLocalTaskFormSubmit(api: LocalTasksApi, library: LocalTasksLi
   }
 
   return {
-    busy,
-    error,
+    busy: write.busy,
+    error: write.error,
     notice: notice?.text ?? null,
     save: (mode: LocalTaskFormMode, draft: LocalTaskDraft) =>
-      run(() => (mode.kind === 'edit' ? saveEdit(mode.task, draft) : saveNew(draft))),
+      write.run(() => (mode.kind === 'edit' ? saveEdit(mode.task, draft) : saveNew(draft))),
     ...subtaskBatch,
     conflict: conflict !== null,
     /** Writes the user's own changes over the latest version. */
@@ -145,11 +151,11 @@ export function useLocalTaskFormSubmit(api: LocalTasksApi, library: LocalTasksLi
       setConflict(null)
       const latest = base ? library.tasks.find((task) => task.id === base.id) : undefined
       if (!base || !latest) {
-        setError(copy.failures.not_found)
+        write.setError(copy.failures.not_found)
         return Promise.resolve(null)
       }
       const plan = localTaskOverwrite(draft, base, latest)
-      return run(() => sendEdit(base, plan.expectedRevision, plan.patch))
+      return write.run(() => sendEdit(base, plan.expectedRevision, plan.patch))
     },
     discard: () => setConflict(null),
     /** Closes the notice and hands back the task it was about, for the caller to open. */

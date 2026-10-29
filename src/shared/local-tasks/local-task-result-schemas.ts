@@ -191,9 +191,9 @@ export const sessionLinkSchema: z.ZodType<LocalTaskSessionLink> = z.object({
   openedAt: z.number()
 })
 
-/** A write either succeeds with `shape` or fails with a business code; anything else is a broken host. */
-export function writeResultSchema<T extends z.ZodRawShape>(shape: T) {
-  return z.union([z.object({ ok: z.literal(true), ...shape }), failureSchema])
+/** A write either succeeds with `successFields` or fails with a business code; anything else is a broken host. */
+export function writeResultSchema<T extends Record<string, z.ZodType>>(successFields: T) {
+  return z.union([z.object({ ok: z.literal(true), ...successFields }), failureSchema])
 }
 
 export const changeMessageSchema = z.union([

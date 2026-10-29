@@ -84,7 +84,7 @@ export function LocalTasksLibraryScreen(props: Props) {
   const [pickerOpen, setPickerOpen] = useState(false)
   const [hostPickerOpen, setHostPickerOpen] = useState(false)
   const [filter, setFilter] = useState<LocalTaskFilter>(EMPTY_LOCAL_TASK_FILTER)
-  const top = stack.length > 0 ? stack[stack.length - 1] : null
+  const top = stack.at(-1) ?? null
   const { site } = props
   const orcaProjects = useOrcaProjectChoices(
     top?.kind === 'settings' || top?.kind === 'newProject' ? site.pairedClient : null,

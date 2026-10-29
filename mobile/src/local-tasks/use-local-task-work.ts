@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type {
   LocalTaskLinks,
   LocalTaskProgressSnapshot
@@ -51,7 +51,9 @@ export function useLocalTaskWork(
   const [data, setData] = useState<WorkData>(() => emptyFor(hostKey))
   const sequence = useRef<Record<WorkKey, number>>({ links: 0, progress: 0 })
   const apiRef = useRef(api)
-  apiRef.current = api
+  useEffect(() => {
+    apiRef.current = api
+  }, [api])
 
   const reload = useCallback(
     (scopes?: readonly LocalTaskChangeScope[]) => {

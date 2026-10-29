@@ -145,6 +145,27 @@ updated: 2026-10-29
 
 ## 3. 开发记录
 
+### 2026-10-29 修 PR #71 的 CI 检查并核对是否影响现有功能
+
+- 本轮目标：PR #71 的 CI 在静态检查就失败，全量单元测试、打包、e2e 都没跑；修掉本功能引起的失败，并核对有没有改坏现有功能。
+- 完成内容：
+  - anti-slop 的 6 条：测试里的 `Reflect.get` 和宽泛的 `object` 参数、schema 里以 shape 命名的符号。
+  - React Doctor 的 5 个错误：
+    - 两处渲染期间写 ref，改为在 effect 里写；
+    - 取数组末尾改用 `at(-1)`；
+    - 两处被误判为「状态更新函数有副作用」：表单写入改由一个小 hook 提供，经 `write.` 调用。
+  - 手机网页包：路由清单补上 `/local-tasks`，按规定逐前缀重测脚本数并更新表格。
+  - 本机全量单元测试，失败逐个归因：除路由清单两项外，没有本功能引起的失败。
+- 代码或文档变更：
+  - 本功能 6 个文件；
+  - `config/scripts/verify-mobile-web-app-bundle.mjs`（表格）、`config/scripts/mobile-web-app-session-dictation-capture.test.mjs`（清单），登记为接缝；
+  - `mobile-session-continuation` 接缝里的表格末行同步为实测值。
+- 验证证据：
+  - 全量单元测试归因：`.docs/local-tasks-ui-validation/2026-10-29/full-unit/README.md`；
+  - 网页包重测：`.docs/local-tasks-ui-validation/2026-10-29/mobile-bundle-sweep/`。
+- 未解决问题：新路由让会话、评审、源代码管理、任务四个页面多切出 8 个脚本块，单条路由最大增量从 12 变为 15；按上游的资源上限公式，可容纳的路由数从 25 降到 23。用户选择接受重测值，上游打包测试的这两个固定值已改为 15 和「23 条 = 242、24 条超限」，并登记为接缝。
+- 下一步：推送后等 CI 完整跑完；全绿才合入，先出包给用户测试。
+
 ### 2026-10-29 修复 PR #71 修复复核的三项发现
 
 - 本轮目标：修 Codex 复核（`.docs/local-tasks-ui-validation/2026-10-29/codex-pr-review-verify/README.md`，28 项中 25 通过、2 未修好、1 未能验证）里的 N01～N03。不提交、不推送。

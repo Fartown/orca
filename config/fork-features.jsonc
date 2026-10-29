@@ -2041,12 +2041,12 @@
         },
         {
           "file": "config/scripts/verify-mobile-web-app-bundle.mjs",
-          "mustContain": "['./h/_layout.tsx', 78]",
+          "mustContain": "['./h/_layout.tsx', 90]",
           "why": "the route-prefix sweep records continuation's measured chunk-sharing change"
         },
         {
           "file": "config/scripts/build-mobile-web-app-bundle.test.mjs",
-          "mustContain": "assertAssetCeilingFitsShell(25, 42, MOBILE_WEB_BUNDLE_MAX_ASSETS)).toBe(245)",
+          "mustContain": "assertAssetCeilingFitsShell(23, 42, MOBILE_WEB_BUNDLE_MAX_ASSETS)).toBe(242)",
           "why": "the asset-ceiling boundary follows the re-measured route-prefix sweep"
         },
         {
@@ -2945,6 +2945,21 @@
           "file": "config/scripts/mobile-web-app-page-route-modules.mjs",
           "mustContain": "['/h/[hostId]/local-tasks', 'app/h/[hostId]/local-tasks.tsx'],",
           "why": "The route's module is listed so the grant and haptics censuses cover it (REQ-017)"
+        },
+        {
+          "file": "config/scripts/mobile-web-app-session-dictation-capture.test.mjs",
+          "mustContain": "'app/h/[hostId]/local-tasks.tsx',",
+          "why": "The census rule's registered-pathname list names the task page's module (REQ-017)"
+        },
+        {
+          "file": "config/scripts/verify-mobile-web-app-bundle.mjs",
+          "mustContain": "['./h/[hostId]/local-tasks.tsx', 46],",
+          "why": "The route-prefix sweep is re-measured with the task page's route in the tree (REQ-017)"
+        },
+        {
+          "file": "config/scripts/build-mobile-web-app-bundle.test.mjs",
+          "mustContain": "expect(Math.max(...MOBILE_WEB_APP_BUNDLE_ROUTE_SCRIPT_SPREAD)).toBe(15)",
+          "why": "The task page's route makes `tasks` the worst swept route at fifteen scripts (REQ-017)"
         },
         {
           "file": "mobile/src/transport/rpc-client-server-subscription.ts",

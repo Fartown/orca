@@ -85,7 +85,9 @@ export function useLocalTasksLibrary(
   const [streamEnded, setStreamEnded] = useState(false)
   const [subscriptionEpoch, setSubscriptionEpoch] = useState(0)
   const activeApiRef = useRef(activeApi)
-  activeApiRef.current = activeApi
+  useEffect(() => {
+    activeApiRef.current = activeApi
+  }, [activeApi])
   const current = data.hostKey === hostKey ? data : EMPTY
   const api = activeApi ?? current.owner
   // Why per resource: a slower earlier read must not overwrite a later one.

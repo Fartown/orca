@@ -29,8 +29,8 @@ function flakyDesktop(replies: (() => Promise<RpcResponse>)[]) {
     sendRequest: (method: string, params?: unknown): Promise<RpcResponse> => {
       methods.push(method)
       ids.push(
-        typeof params === 'object' && params !== null
-          ? Reflect.get(params, 'clientOperationId')
+        typeof params === 'object' && params !== null && 'clientOperationId' in params
+          ? params.clientOperationId
           : undefined
       )
       const next = replies.shift()
