@@ -104,6 +104,11 @@ export class LocalTasksService {
     return row ? rowNumber(row, 'count') : 0
   }
 
+  projectCount(): number {
+    const row = this.db.prepare('SELECT COUNT(*) AS count FROM local_task_projects').get()
+    return row ? rowNumber(row, 'count') : 0
+  }
+
   taskHostId(): string | null {
     return this.db.taskHostId()
   }

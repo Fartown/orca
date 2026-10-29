@@ -21233,9 +21233,7 @@
       "newTaskDescription": "Write down a task in the local task list.",
       "verbs": {
         "newTask": "new task",
-        "createTask": "create task",
-        "openTask": "open task",
-        "findTask": "find task"
+        "openTask": "open task"
       },
       "openTask": "Open task…",
       "openTaskDescription": "Find a local task by ref or title.",
@@ -21506,6 +21504,7 @@
       "keywordTasks": "tasks",
       "keywordProject": "project",
       "keywordPrefix": "prefix",
+      "statusesSearchTitle": "Task statuses",
       "statusesSearchDescription": "Add, rename, recolor, reorder and remove the statuses in each category.",
       "keywordStatus": "status",
       "keywordBoard": "board",

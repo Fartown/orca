@@ -31,11 +31,28 @@ import {
   bindLocalTaskSourceActivation
 } from './local-task-source-activation'
 import { localTaskPageStore } from './local-task-page-store'
+import { localTasksDomainStore } from './local-tasks-domain-store'
+import { LOCAL_ACTIVE_PREFERENCE_KEY } from './local-task-preference-keys'
 
 beforeEach(() => {
   appStore.setState({ taskPageData: { taskSource: 'github' } })
   localTaskPageStore.setState({ localActive: false })
+  localTasksDomainStore.setState(localTasksDomainStore.getInitialState())
+  localTasksDomainStore.getState().openEndpoint('local')
   fixture.setPreference.mockClear()
+})
+
+it('leaves Local for the upstream source picked before the stored choice turned Local on', () => {
+  const release = bindLocalTaskSourceActivation()
+  localTasksDomainStore
+    .getState()
+    .writer('local')
+    .applyPreferences({ [LOCAL_ACTIVE_PREFERENCE_KEY]: '1' })
+  expect(localTaskPageStore.getState().localActive).toBe(true)
+  // The user picks GitHub again; openTaskPage writes the same source value it held before.
+  appStore.setState({ taskPageData: { taskSource: 'github' } })
+  expect(localTaskPageStore.getState().localActive).toBe(false)
+  release()
 })
 
 it('clears the upstream source on Local activation and ignores a replay of the same source', () => {

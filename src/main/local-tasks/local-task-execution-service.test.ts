@@ -710,6 +710,53 @@ describe('host attention judgment', () => {
     expect(paneOf()).toBe(`tab-1:${LEAF}`)
   })
 
+  it('reads nothing on a status change while no session is linked', () => {
+    vi.useFakeTimers()
+    const { db, work, host } = setup()
+    work.start()
+    const reads = vi.spyOn(db, 'prepare')
+    host.report(`tab-1:${LEAF}`, { state: 'waiting' })
+    host.emit()
+    vi.advanceTimersByTime(200)
+    expect(reads).not.toHaveBeenCalled()
+    expect(host.watched()).toBe(false)
+  })
+
+  it('judges from the first linked session on and lets go after the last one', () => {
+    vi.useFakeTimers()
+    const context = setup()
+    const { work, host, volatile } = context
+    const paneKey = `tab-1:${LEAF}`
+    work.start()
+    const { session } = linkedSession(context, { paneKey })
+    expect(host.watched()).toBe(true)
+    host.report(paneKey, { state: 'waiting' })
+    vi.advanceTimersByTime(200)
+    expect(volatile).toEqual([['attention']])
+    work.unlinkSession({ clientOperationId: op(), sessionLinkId: session.id }, 'desktop')
+    expect(host.watched()).toBe(false)
+  })
+
+  it('forgets what a pane said once no linked session holds it', () => {
+    vi.useFakeTimers()
+    const context = setup()
+    const { work, host } = context
+    const [kept, freed] = [`tab-a:${LEAF}`, `tab-b:${LEAF}`]
+    linkedSession(context, { paneKey: kept })
+    const { session } = linkedSession(context, { paneKey: freed })
+    work.start()
+    host.report(freed, { state: 'done', lastAssistantMessage: '导出接口好了' })
+    vi.advanceTimersByTime(200)
+    work.unlinkSession({ clientOperationId: op(), sessionLinkId: session.id }, 'desktop')
+    vi.advanceTimersByTime(200)
+    // A later link on that pane inherits neither the old words nor an "ended" verdict.
+    host.rows.delete(freed)
+    const relinked = linkedSession(context, { paneKey: freed }).session
+    expect(
+      work.getProgress().sessions.find((entry) => entry.taskSessionId === relinked.id)
+    ).toMatchObject({ state: 'unknown', lastMessage: null })
+  })
+
   it('keeps a seen finished turn hidden after a later mark prunes month-old marks', () => {
     let now = NOW
     const context = setup({ clock: () => now })

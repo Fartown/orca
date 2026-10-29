@@ -2741,7 +2741,7 @@
         "mobile/src/session/mobile-existing-agent-launch.ts",
         "mobile/src/session/mobile-new-tab-agent-loader.ts",
         "mobile/src/session/mobile-new-tab-agent-options.ts",
-        "mobile/src/session/mobile-session-route-helpers.ts",
+        "mobile/src/layout/responsive-layout.ts",
         "mobile/src/session/mobile-session-route-types.ts",
         "mobile/src/session/structured-session-operation-id.ts",
         "mobile/src/tasks/agent-launch-request.ts",
@@ -2858,7 +2858,8 @@
         "src/shared/worktree/types.ts",
         "mobile/src/tasks/worktree-create-retry.ts",
         "src/renderer/src/hooks/composer-state/composer-target-store.ts",
-        "mobile/src/tasks/worktree-create-capability.ts"
+        "mobile/src/tasks/worktree-create-capability.ts",
+        "src/renderer/src/components/error-boundaries/RecoverableRenderErrorBoundary.tsx"
       ],
       "policyId": "local-tasks",
       "ownedPaths": [
@@ -3027,8 +3028,8 @@
         },
         {
           "file": "src/renderer/src/components/cmd-j/quick-actions.ts",
-          "mustContain": "...getLocalTaskQuickActions(),",
-          "why": "Cmd+J offers New task and Open task (REQ-007)"
+          "mustContain": "...getLocalTaskQuickActions()",
+          "why": "Cmd+J offers New task and Open task after every upstream action, so an equal match ranks upstream first (REQ-007)"
         },
         {
           "file": "src/renderer/src/components/use-worktree-jump-palette-project-targets.ts",
@@ -3037,8 +3038,8 @@
         },
         {
           "file": "src/renderer/src/hooks/settings-navigation-workflow-sections.ts",
-          "mustContain": "...getLocalTasksSettingsSections(),",
-          "why": "Settings lists the local tasks section (REQ-001, REQ-003)"
+          "mustContain": "...getLocalTasksSettingsSections()",
+          "why": "Settings lists the local tasks section after the upstream workflow sections, so an equal search match ranks upstream first (REQ-001, REQ-003)"
         },
         {
           "file": "src/renderer/src/components/settings/settings-page-renderer.tsx",
@@ -3062,8 +3063,8 @@
         },
         {
           "file": "mobile/src/host-screen/host-screen-overlays.tsx",
-          "mustContain": "...taskLink.actionsFor(actionTarget,",
-          "why": "The workspace action sheet registers the local task linking action"
+          "mustContain": "...taskLink.actionsFor(actionTarget, () => state.setActionTarget(null))\n                  ]",
+          "why": "The workspace action sheet registers the local task linking action last, after Sleep, Pin and Delete, so upstream's items keep their places"
         },
         {
           "file": "mobile/src/session/MobileSessionHeader.tsx",

@@ -1,4 +1,6 @@
 import type { LocalTaskAttentionItem } from '../../../src/shared/local-tasks/local-task-link-types'
+import type { LocalTasksStatus } from '../../../src/shared/local-tasks/local-task-types'
+import { localTaskLibraryHasProjects } from './local-tasks-access'
 import type { LocalTasksApi } from './local-tasks-api'
 import { countLocalTasksInCategory } from './local-task-list-projection'
 import {
@@ -54,8 +56,10 @@ export async function readLocalTaskHomeAttention(
 }
 
 /** Tasks in the Started category, from the host's own count when it gives one. */
-export async function readLocalTasksInProgress(api: LocalTasksApi): Promise<number> {
-  const status = await api.status()
+async function readLocalTasksInProgress(
+  api: LocalTasksApi,
+  status: LocalTasksStatus
+): Promise<number> {
   if (status.inProgressCount !== undefined) {
     return status.inProgressCount
   }
@@ -63,13 +67,25 @@ export async function readLocalTasksInProgress(api: LocalTasksApi): Promise<numb
   return countLocalTasksInCategory(tasks, projects, 'started')
 }
 
-/** Both of one library's home numbers; a failed half still leaves the library listed. */
+/**
+ * Both of one library's home numbers, or null for a library home leaves out: one with no project,
+ * one that is not open (starting, unavailable), or one whose status could not be read. Only its
+ * status is read in those cases, since the rest would be refused or count nothing.
+ */
 export async function readLocalTaskHomeLibrary(
   api: LocalTasksApi,
   where: Pick<LocalTaskHomeLibrary, 'executionHost' | 'label'>
-): Promise<LocalTaskHomeLibrary> {
+): Promise<LocalTaskHomeLibrary | null> {
+  const status = await api.status().catch(() => null)
+  if (
+    !status ||
+    (status.state !== 'ready' && status.state !== 'read-only') ||
+    !localTaskLibraryHasProjects(status)
+  ) {
+    return null
+  }
   const [inProgress, attention] = await Promise.all([
-    readLocalTasksInProgress(api).catch(() => 'error' as const),
+    readLocalTasksInProgress(api, status).catch(() => 'error' as const),
     readLocalTaskHomeAttention(api).catch(() => 'error' as const)
   ])
   return { ...where, inProgress, attention }

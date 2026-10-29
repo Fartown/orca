@@ -31,6 +31,8 @@ export type LocalTasksSync = {
   fail: (error: unknown) => void
   /** Re-reads the given scopes; `null` re-reads status and everything. */
   refresh: (scopes: readonly LocalTaskChangeScope[] | null) => Promise<void>
+  /** Reads the host's status alone, for a library that is not streamed. */
+  readStatus: () => Promise<void>
   /** Keeps a task's activity loaded while something shows it; returns the release. */
   watchEvents: (taskId: string) => () => void
   retryEvents: (taskId: string) => Promise<void>
@@ -114,8 +116,15 @@ export function createLocalTasksSync(
       case 'links':
         return [guarded('links', () => client.listLinks(), state.applyLinks)]
       case 'attention':
-        return [guarded('attention', () => client.getProgress(), state.applyProgress)]
+        // Why: the host judges sessions on every call, and a library with no project has none.
+        return state.projectCount === 0 && state.projects.length === 0
+          ? []
+          : [guarded('attention', () => client.getProgress(), state.applyProgress)]
     }
+  }
+
+  function readStatus(): Promise<void> {
+    return guarded('status', () => client.status(), store.getState().applyStatus)
   }
 
   async function refresh(scopes: readonly LocalTaskChangeScope[] | null): Promise<void> {
@@ -123,11 +132,7 @@ export function createLocalTasksSync(
       return
     }
     if (scopes === null) {
-      await guarded(
-        'status',
-        () => client.status(),
-        (status) => store.getState().setHostState(status.state, status.reason)
-      )
+      await readStatus()
     }
     if (!readable()) {
       return
@@ -157,6 +162,11 @@ export function createLocalTasksSync(
     },
     fail: (error) => store.getState().setConnection('failed', describe(error)),
     refresh,
+    readStatus: async () => {
+      if (store.getState().inContact) {
+        await readStatus()
+      }
+    },
     retryEvents: readEvents,
     watchEvents: (taskId) => {
       const count = watchers.get(taskId) ?? 0

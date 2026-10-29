@@ -131,7 +131,6 @@ export const getCmdJQuickActions = createLocalizedCatalog((): CmdJQuickAction[] 
   },
   ...getNativeChatSplitQuickActions(),
   ...getGoalQuickActions(),
-  ...getLocalTaskQuickActions(),
   {
     id: CREATE_WORKSPACE_QUICK_ACTION_ID,
     kind: 'action',
@@ -198,5 +197,7 @@ export const getCmdJQuickActions = createLocalizedCatalog((): CmdJQuickAction[] 
       ctx.openAddQuickCommand()
       return { status: 'ok' }
     }
-  }
+  },
+  // Why last: on an equal match the catalog order decides, and upstream actions keep the lead.
+  ...getLocalTaskQuickActions()
 ])

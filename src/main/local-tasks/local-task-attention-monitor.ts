@@ -27,7 +27,8 @@ import {
   type LocalTaskAttentionState
 } from './local-task-attention-store'
 import type { LocalTaskHostSessionSource } from './local-task-host-session-source'
-import { readLocalTaskLinks } from './local-task-link-rows'
+import { hasLocalTaskSessionLinks, readLocalTaskLinks } from './local-task-link-rows'
+import { LocalTaskPaneMemory } from './local-task-pane-memory'
 import { claimLocalTaskSessionPane } from './local-task-session-links'
 import type { LocalTasksDatabase } from './local-tasks-database'
 
@@ -52,16 +53,15 @@ type Judgment = {
  * Judges every linked session from this host's own agent status (REQ-014, D-008): progress, the
  * "needs you" items and the panes of sessions recorded by tab alone. Re-judges when the host
  * pushes a status, pane or contact change, and at its own snooze and staleness deadlines.
+ * Watches the host only while some session is linked; link writes switch that, never a timer.
  */
 export class LocalTaskAttentionMonitor {
-  /** Last prose per pane, so a session keeps its words once the agent moves on to a tool. */
-  private readonly proseByPane = new Map<string, string>()
-  /** Panes that reported this process: their row vanishing means the agent ended or the tab closed. */
-  private readonly reportedPanes = new Set<string>()
+  private readonly panes = new LocalTaskPaneMemory()
   private published: string | null = null
   private coalesceTimer: ReturnType<typeof setTimeout> | null = null
   private deadlineTimer: ReturnType<typeof setTimeout> | null = null
   private stopSource: (() => void) | null = null
+  private stopCommits: (() => void) | null = null
 
   constructor(
     private readonly db: LocalTasksDatabase,
@@ -71,14 +71,18 @@ export class LocalTaskAttentionMonitor {
   ) {}
 
   start(): void {
-    this.stopSource ??= this.source.subscribe(() => this.schedule())
-    this.refresh()
+    this.stopCommits ??= this.db.onCommit((commit) => {
+      if (commit.scopes.includes('links')) {
+        this.followLinks()
+      }
+    })
+    this.followLinks()
   }
 
   dispose(): void {
-    this.stopSource?.()
-    this.stopSource = null
-    this.clearTimers()
+    this.stopCommits?.()
+    this.stopCommits = null
+    this.stopWatching()
   }
 
   snapshot(): LocalTaskProgressSnapshot {
@@ -111,6 +115,26 @@ export class LocalTaskAttentionMonitor {
       this.refresh()
     }, REFRESH_COALESCE_MS)
     this.coalesceTimer.unref?.()
+  }
+
+  /** No link, no host subscription: a status change then costs this library nothing (orcad too). */
+  private followLinks(): void {
+    if (!hasLocalTaskSessionLinks(this.db)) {
+      this.stopWatching()
+    } else if (this.stopSource) {
+      this.schedule()
+    } else {
+      this.stopSource = this.source.subscribe(() => this.schedule())
+      this.refresh()
+    }
+  }
+
+  private stopWatching(): void {
+    this.stopSource?.()
+    this.stopSource = null
+    this.clearTimers()
+    this.published = null
+    this.panes.clear()
   }
 
   // Why caught: it runs from timers, where a throw would reach the process's uncaught handler.
@@ -168,6 +192,7 @@ export class LocalTaskAttentionMonitor {
       judgment.panes.set(link.id, paneKey)
       this.judgeSession(link, paneKey, marks, now, judgment)
     }
+    this.panes.keepOnly(judgment.panes.values())
     judgment.items.sort((a, b) => b.since - a.since || a.key.localeCompare(b.key))
     return judgment
   }
@@ -179,7 +204,7 @@ export class LocalTaskAttentionMonitor {
     now: number,
     judgment: Judgment
   ): void {
-    const prose = paneKey ? (this.proseByPane.get(paneKey) ?? null) : null
+    const prose = paneKey ? this.panes.proseOf(paneKey) : null
     const progress = (
       state: LocalTaskSessionState,
       row: LocalTaskStatusRow | null = null,
@@ -204,7 +229,7 @@ export class LocalTaskAttentionMonitor {
     if (!row) {
       // Why: only a pane that reported this process can be said to have stopped; a quiet one may
       // be an agent without status hooks, or a pane the window has not reattached yet.
-      if (!this.reportedPanes.has(paneKey)) {
+      if (!this.panes.hasReported(paneKey)) {
         judgment.sessions.push(progress('unknown'))
       } else {
         const shellRemains = link.surface === 'chat' || this.source.terminalLive(paneKey)
@@ -212,10 +237,7 @@ export class LocalTaskAttentionMonitor {
       }
       return
     }
-    this.reportedPanes.add(paneKey)
-    if (row.lastAssistantMessage?.trim() && !row.lastAssistantMessageIsToolOutput) {
-      this.proseByPane.set(paneKey, row.lastAssistantMessage)
-    }
+    this.panes.heard(paneKey, row)
     const state = localTaskRowState(row, this.source.terminalLive(paneKey), now)
     const key = localTaskAttentionKey(row.paneKey, row.stateStartedAt)
     const mark = marks.get(key)
@@ -233,7 +255,7 @@ export class LocalTaskAttentionMonitor {
       row: LIVE_STATES.includes(state) ? row : null,
       structured: link.surface === 'chat' || row.structuredHost !== undefined,
       unread: finishedTurn,
-      lastMessage: localTaskRowWords(row, this.proseByPane.get(paneKey) ?? null)
+      lastMessage: localTaskRowWords(row, this.panes.proseOf(paneKey))
     })
     if (!item) {
       return

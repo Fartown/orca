@@ -36,7 +36,10 @@ function guarded(run: () => void) {
   }
 }
 
-/** Static Cmd+J entries (REQ-007); the shortcut chip comes from the palette itself. */
+/**
+ * Static Cmd+J entries (REQ-007); the shortcut chip comes from the palette itself. Each answers
+ * only to its own title's words, so a bare `create` or `find` keeps upstream's results.
+ */
 export function getLocalTaskQuickActions(): CmdJQuickAction[] {
   return [
     {
@@ -48,10 +51,7 @@ export function getLocalTaskQuickActions(): CmdJQuickAction[] {
         'Write down a task in the local task list.'
       ),
       icon: SquarePen,
-      verbKeywords: [
-        translate('localTasks.quickActions.verbs.newTask', 'new task'),
-        translate('localTasks.quickActions.verbs.createTask', 'create task')
-      ],
+      verbKeywords: [translate('localTasks.quickActions.verbs.newTask', 'new task')],
       isAvailable: availability,
       run: guarded(() => openLocalTaskPage({ create: true }))
     },
@@ -64,15 +64,15 @@ export function getLocalTaskQuickActions(): CmdJQuickAction[] {
         'Find a local task by ref or title.'
       ),
       icon: ListTodo,
-      verbKeywords: [
-        translate('localTasks.quickActions.verbs.openTask', 'open task'),
-        translate('localTasks.quickActions.verbs.findTask', 'find task')
-      ],
+      verbKeywords: [translate('localTasks.quickActions.verbs.openTask', 'open task')],
       isAvailable: availability,
       run: guarded(() => openLocalTaskPage({ focusSearch: true }))
     }
   ]
 }
+
+// Why one shared list: a query matching no task must not hand the palette a new array per keystroke.
+const NO_SEARCH_ACTIONS: readonly CmdJQuickAction[] = []
 
 /**
  * One action per task the task page's own search matches, the exact ref first, capped at 50.
@@ -83,15 +83,18 @@ export function buildLocalTaskSearchActions(
   tasks: readonly LocalTask[],
   query: string,
   hostLabels?: ReadonlyMap<string, string>
-): CmdJQuickAction[] {
+): readonly CmdJQuickAction[] {
   const trimmed = query.trim()
   if (!trimmed) {
-    return []
+    return NO_SEARCH_ACTIONS
   }
   const projectsById = new Map(projects.map((project) => [project.id, project]))
   const matches = tasks.filter((task) =>
     matchesLocalTaskQuery(task, projectsById.get(task.projectId), trimmed)
   )
+  if (matches.length === 0) {
+    return NO_SEARCH_ACTIONS
+  }
   // Why: the task the query names exactly must survive the cap, whatever order the store holds.
   const exactIds = new Set(
     matches
@@ -132,7 +135,7 @@ export function buildLocalTaskSearchActions(
   })
 }
 
-export function useLocalTaskSearchActions(query: string): CmdJQuickAction[] {
+export function useLocalTaskSearchActions(query: string): readonly CmdJQuickAction[] {
   const projects = useLocalTasksDomain((state) => state.projects)
   const tasks = useLocalTasksDomain((state) => state.tasks)
   const hostLabels = useLocalTaskEndpointLabels()

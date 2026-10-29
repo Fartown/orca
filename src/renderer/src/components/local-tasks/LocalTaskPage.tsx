@@ -8,6 +8,7 @@ import {
   useLocalTasksDomain
 } from '@/local-tasks/local-tasks-domain-store'
 import { localTaskPageStore, useLocalTaskPage } from '@/local-tasks/local-task-page-store'
+import { useLocalTaskLibraryViewer } from '@/local-tasks/local-task-library-viewers'
 import {
   LocalTaskHostStatePanel,
   LocalTaskLibraryNotices,
@@ -33,6 +34,7 @@ import { useLocalTaskEscapeLayer, useLocalTaskPageKeys } from './use-local-task-
 
 /** The task page's Local source: rail, list or board, and task detail (REQ-006, REQ-008). */
 export function LocalTaskPage({ sourceBar }: { sourceBar: ReactNode }): React.JSX.Element {
+  useLocalTaskLibraryViewer()
   const connection = useLocalTasksDomain((state) => state.connection)
   const readable = useLocalTasksDomain(isLocalTasksReadable)
   const hostState = useLocalTasksDomain((state) => state.hostState)

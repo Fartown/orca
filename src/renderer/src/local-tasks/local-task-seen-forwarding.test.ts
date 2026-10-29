@@ -118,6 +118,20 @@ it('leaves a library that takes no writes alone, and asks again only after the h
   expect(fixture.acknowledgeAttention).toHaveBeenCalledTimes(2)
 })
 
+it('fails alone: a throw while forwarding still lets every later app store listener hear', () => {
+  const later = vi.fn()
+  const stopLater = useAppStore.subscribe(later)
+  const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+  fixture.acknowledgeAttention.mockImplementationOnce(() => {
+    throw new Error('client not ready')
+  })
+  useAppStore.setState({ acknowledgedAgentsByPaneKey: { 'tab-1:leaf-1': 100 } })
+  expect(later).toHaveBeenCalledOnce()
+  expect(consoleError).toHaveBeenCalledOnce()
+  stopLater()
+  consoleError.mockRestore()
+})
+
 it('marks an item seen once when opening its session also acknowledges its pane', () => {
   acknowledgeLocalTaskItemOnce(item('s1', 'tab-1:leaf-1@100', 100))
   expect(fixture.acknowledgeAttention).toHaveBeenCalledOnce()

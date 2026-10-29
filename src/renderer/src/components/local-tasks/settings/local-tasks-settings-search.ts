@@ -20,7 +20,8 @@ export const getLocalTasksSettingsSearchEntries = createLocalizedCatalog(() => [
     ]
   },
   {
-    title: translate('localTasks.settings.statusesTitle', 'Statuses'),
+    // Why not the pane's "Statuses" heading: a bare `status` search would rank it above upstream's.
+    title: translate('localTasks.settings.statusesSearchTitle', 'Task statuses'),
     description: translate(
       'localTasks.settings.statusesSearchDescription',
       'Add, rename, recolor, reorder and remove the statuses in each category.'

@@ -61,7 +61,7 @@ export class LocalTaskExecutionService {
     this.attention = new LocalTaskAttentionMonitor(db, now, sessions, onVolatileChange)
   }
 
-  /** Listens to the host's status changes; until then judgments happen only on reads. */
+  /** Listens to the host's status changes while a session is linked; else judges only on reads. */
   start(): void {
     this.attention.start()
   }
@@ -103,17 +103,15 @@ export class LocalTaskExecutionService {
     )
   }
 
+  /** Its commit re-arms judgment, so a session recorded by tab alone gets its pane claimed. */
   recordSession(input: LocalTasksLinksRecordSessionInput, source: LocalTaskEventSource) {
-    const result = this.write(
+    return this.write(
       input.clientOperationId,
       'links.recordSession',
       input,
       SESSION_RESULT,
       (now) => recordLocalTaskSession(this.db, input, source, now)
     )
-    // Why: a session recorded by tab alone is claimed once its pane is judged.
-    this.attention.schedule()
-    return result
   }
 
   unlinkSession(

@@ -158,6 +158,26 @@ describe('createLocalTasksSync', () => {
     expect(localTasksDomainStore.getState().eventsByTaskId.t1).toBeUndefined()
   })
 
+  it('keeps the reported project count and asks a library with none nothing about sessions', async () => {
+    const asked: string[] = []
+    const client = {
+      status: async () => ({ ...READY, projectCount: 0 }),
+      listProjects: async () => [],
+      listTasks: async () => [],
+      listEvents: async () => [],
+      getPreferences: async () => ({}),
+      listLinks: async () => ({ workspaces: [], sessions: [] }),
+      getProgress: async () => {
+        asked.push('attention')
+        return { observedAt: 0, sessions: [], items: [] }
+      }
+    }
+    const sync = createLocalTasksSync(client, ownLibrary())
+    await sync.refresh(null)
+    expect(asked).toEqual([])
+    expect(localTasksDomainStore.getState().partitions[0]?.projectCount).toBe(0)
+  })
+
   it('reads nothing from a library whose Orca is out of contact', async () => {
     const host = scriptedHost()
     localTasksDomainStore.getState().openEndpoint('runtime:env-1')

@@ -78,8 +78,9 @@ function homeEntryTarget(host: ReadyHost) {
 }
 
 /**
- * Home's entry to local tasks. Renders nothing until some host has advertised `local-tasks.v1`, so
- * a phone paired only with older hosts never sees it.
+ * Home's entry to local tasks. Renders nothing until a host in contact has a task library with a
+ * project, so a phone paired only with older hosts, or with hosts nobody created a project on,
+ * never sees it. A host that had one and is out of contact now gets a "cannot connect" line.
  */
 export function MobileHomeLocalTasksCard(props: { connectedHosts: HostProfile[] }) {
   const copy = localTasksCopy()
@@ -87,8 +88,8 @@ export function MobileHomeLocalTasksCard(props: { connectedHosts: HostProfile[] 
   const openHostStackRoute = useOpenHostStackRoute()
   const picker = useConnectedHostPicker(props.connectedHosts)
   const ready = hosts.flatMap((entry) => (entry.kind === 'ready' ? [entry] : []))
-  const closed = hosts.flatMap((entry) => (entry.kind === 'closed' ? [entry.host] : []))
-  if (ready.length === 0 && closed.length === 0) {
+  const unreachable = hosts.flatMap((entry) => (entry.kind === 'unreachable' ? [entry] : []))
+  if (ready.length === 0 && unreachable.length === 0) {
     return null
   }
   const summary = summarizeLocalTaskHomeHosts(ready)
@@ -150,16 +151,16 @@ export function MobileHomeLocalTasksCard(props: { connectedHosts: HostProfile[] 
           ))}
         </View>
       ) : null}
-      {closed.map((host) => (
+      {unreachable.map(({ host, pairingInvalid }) => (
         <View key={host.id} style={styles.card}>
           <View style={styles.icon}>
             <Monitor size={18} color={colors.statusAmber} />
           </View>
           <View style={styles.main}>
-            <Text style={styles.title}>{copy.desktopClosed(localTaskHostMachineName(host))}</Text>
-            <Text style={styles.subtitle}>
-              {copy.desktopClosedHint(localTaskHostMachineName(host))}
+            <Text style={styles.title}>
+              {copy.desktopDisconnected(localTaskHostMachineName(host))}
             </Text>
+            {pairingInvalid ? <Text style={styles.subtitle}>{copy.pairingInvalid}</Text> : null}
           </View>
         </View>
       ))}

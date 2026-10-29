@@ -147,12 +147,12 @@ export function renderSettingsPage(context: SettingsRenderContext): React.JSX.El
                   {renderSessionHistorySettingsSection(context)}
                   {renderGitSettingsSection(context)}
                   {renderTasksSettingsSection(context)}
-                  {renderLocalTasksSettingsSection(context)}
                   {renderTerminalSettingsSection(context)}
                   {renderQuickCommandsSettingsSection(context)}
                   {renderBrowserSettingsSection(context)}
                   {renderMobileEmulatorSettingsSection(context)}
                   {renderFloatingWorkspaceSettingsSection(context)}
+                  {renderLocalTasksSettingsSection(context)}
                   {renderAppearanceSettingsSection(context)}
                   {renderChatSettingsSection(context)}
                   {renderInputSettingsSection(context)}

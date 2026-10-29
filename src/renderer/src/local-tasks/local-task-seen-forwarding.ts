@@ -8,6 +8,7 @@ import { localTaskItemClientKey } from './local-task-needs-you-rows'
 import { localTasksClient } from './local-tasks-runtime-client'
 import { isLocalTaskRowWritable, localTasksDomainStore } from './local-tasks-domain-store'
 import type { LocalTaskProgressView } from './local-tasks-derived-state'
+import { subscribeLocalTaskAppStore } from './local-task-app-store-subscription'
 
 type SeenSession = Pick<LocalTaskSessionLink, 'id' | 'surface' | 'paneKey' | 'tabId' | 'sessionId'>
 
@@ -100,7 +101,7 @@ export function bindLocalTaskSeenForwarding(): () => void {
     }
   }
 
-  const unsubscribeApp = useAppStore.subscribe(run)
+  const unsubscribeApp = subscribeLocalTaskAppStore('seen forwarding', run)
   const unsubscribeLibrary = localTasksDomainStore.subscribe(run)
   run()
   return () => {

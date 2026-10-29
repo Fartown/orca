@@ -36,7 +36,13 @@ export function HostScreenOverlays({ controller }: { controller: HostScreenContr
     desktopCapabilities: hostCapabilities,
     executionHost: actionTarget?.hostId
   })
-  const taskLink = useLocalTaskHostLinkAction({ client, connState, hostCapabilities })
+  const taskLink = useLocalTaskHostLinkAction({
+    client,
+    connState,
+    hostCapabilities,
+    target: actionTarget,
+    server: actionServer.server
+  })
 
   return (
     <>
@@ -103,7 +109,6 @@ export function HostScreenOverlays({ controller }: { controller: HostScreenContr
                       navigate: actions.navigateFromHostList,
                       onDone: () => state.setActionTarget(null)
                     }),
-                    ...taskLink.actionsFor(actionTarget, () => state.setActionTarget(null)),
                     // Server sleep is not offered yet; the desktop would sleep its own id.
                     ...(actionServer.server
                       ? []
@@ -129,7 +134,8 @@ export function HostScreenOverlays({ controller }: { controller: HostScreenContr
                       label: 'Delete',
                       destructive: true,
                       onPress: () => state.setConfirmDelete(actionTarget)
-                    }
+                    },
+                    ...taskLink.actionsFor(actionTarget, () => state.setActionTarget(null))
                   ]
                 : []
             }

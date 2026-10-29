@@ -1,13 +1,25 @@
 // @vitest-environment happy-dom
-import { render } from '@testing-library/react'
+import { act, cleanup, render, screen } from '@testing-library/react'
 import { afterEach, expect, it, vi } from 'vitest'
 
 const bind = vi.hoisted(() => vi.fn(() => vi.fn()))
 const upkeep = vi.hoisted(() => {
   const fixes: { input: { taskId: string }; repoId: string | null }[] = []
+  const library = (workspaces: unknown[]) => [
+    {
+      endpoint: 'local',
+      linksLoaded: true,
+      links: { workspaces, sessions: [] },
+      tasks: [],
+      projects: []
+    }
+  ]
   return {
-    linksLoaded: false,
+    library,
+    partitions: library([]),
     fixes,
+    appInputReads: 0,
+    appListeners: new Set<() => void>(),
     resolveWorkspace:
       vi.fn<(input: { taskId: string }, repoId: string | null) => Promise<unknown>>()
   }
@@ -29,11 +41,17 @@ type MockAppState = typeof state
 vi.mock('@/store', () => ({
   useAppStore: Object.assign((select: (state: MockAppState) => unknown) => select(state), {
     getState: () => state,
-    subscribe: () => vi.fn()
+    subscribe: (listener: () => void) => {
+      upkeep.appListeners.add(listener)
+      return () => upkeep.appListeners.delete(listener)
+    }
   })
 }))
 vi.mock('../store/workspace-record-selectors', () => ({
-  selectWorktreesByRepo: () => [],
+  selectWorktreesByRepo: () => {
+    upkeep.appInputReads += 1
+    return []
+  },
   selectDetectedWorktreesByRepo: (app: MockAppState) => app.detectedWorktreesByRepo,
   selectFolderWorkspaces: (app: MockAppState) => app.folderWorkspaces
 }))
@@ -50,11 +68,7 @@ vi.mock('./local-task-link-maintenance', () => ({
 vi.mock('./local-tasks-domain-store', () => ({
   localTasksDomainStore: {
     subscribe: () => vi.fn(),
-    getState: () => ({
-      partitions: [
-        { endpoint: 'local', linksLoaded: upkeep.linksLoaded, links: {}, tasks: [], projects: [] }
-      ]
-    })
+    getState: () => ({ partitions: upkeep.partitions })
   },
   isLocalTasksWritable: () => true
 }))
@@ -81,11 +95,20 @@ vi.mock('../components/native-chat/StructuredAgentSessionStatusBridge', () => ({
 
 import { AppBackgroundServices } from '../app-shell/AppBackgroundServices'
 
+function publishAppChange(): void {
+  for (const listener of upkeep.appListeners) {
+    listener()
+  }
+}
+
 afterEach(() => {
-  upkeep.linksLoaded = false
+  cleanup()
+  upkeep.partitions = upkeep.library([])
   upkeep.fixes = []
+  upkeep.appInputReads = 0
   upkeep.resolveWorkspace.mockReset()
-  bind.mockClear()
+  bind.mockReset()
+  bind.mockImplementation(() => vi.fn())
 })
 
 it('mounts task link maintenance from the real background service tree', () => {
@@ -95,7 +118,6 @@ it('mounts task link maintenance from the real background service tree', () => {
 })
 
 it('retries a transient link RPC failure on a later visibility event', async () => {
-  upkeep.linksLoaded = true
   upkeep.fixes = [{ input: { taskId: 'task-1' }, repoId: null }]
   upkeep.resolveWorkspace.mockRejectedValueOnce(new Error('host temporarily unavailable'))
   upkeep.resolveWorkspace.mockResolvedValueOnce({ ok: true })
@@ -106,5 +128,37 @@ it('retries a transient link RPC failure on a later visibility event', async () 
   document.dispatchEvent(new Event('visibilitychange'))
   await vi.waitFor(() => expect(upkeep.resolveWorkspace).toHaveBeenCalledTimes(2))
   unmount()
+  consoleError.mockRestore()
+})
+
+it('gathers nothing from the app store on its changes while no workspace is linked', () => {
+  const { unmount } = render(<AppBackgroundServices />)
+  const afterMount = upkeep.appInputReads
+  publishAppChange()
+  publishAppChange()
+  expect(upkeep.appInputReads).toBe(afterMount)
+  unmount()
+
+  upkeep.partitions = upkeep.library([{ kind: 'git-worktree', taskId: 'task-1' }])
+  const linked = render(<AppBackgroundServices />)
+  const linkedAfterMount = upkeep.appInputReads
+  publishAppChange()
+  expect(upkeep.appInputReads).toBe(linkedAfterMount + 1)
+  linked.unmount()
+})
+
+it('keeps the window up when link upkeep itself throws', () => {
+  const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+  bind.mockImplementation(() => {
+    throw new Error('start-work binding failed')
+  })
+  render(
+    <>
+      <AppBackgroundServices />
+      <p>workspace</p>
+    </>
+  )
+  act(() => {})
+  expect(screen.getByText('workspace')).toBeTruthy()
   consoleError.mockRestore()
 })
