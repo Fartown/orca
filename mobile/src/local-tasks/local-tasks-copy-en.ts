@@ -8,7 +8,7 @@ import type {
 } from '../../../src/shared/local-tasks/local-task-model'
 import { LOCAL_TASKS_WORK_COPY_EN } from './local-tasks-work-copy-en'
 
-/** English copy; the shape every other language must fill. Mirrors desktop `localTasks.*`. */
+/** The phone's copy, inline English like the rest of the app. Mirrors desktop `localTasks.*`. */
 export const LOCAL_TASKS_COPY_EN = {
   title: 'Tasks',
   back: 'Back',
@@ -18,6 +18,7 @@ export const LOCAL_TASKS_COPY_EN = {
   save: 'Save',
   create: 'Create',
   edit: 'Edit',
+  moreActions: 'More actions',
   delete: 'Delete',
   none: 'None',
   send: 'Send',
@@ -27,7 +28,11 @@ export const LOCAL_TASKS_COPY_EN = {
   pickHostTitle: 'Open local tasks on',
   switchHost: 'Switch host',
   showHostTasks: (machine: string): string => `Show ${machine}'s tasks`,
-  hostEntryLabel: 'Local tasks',
+  sourceLabel: 'Local tasks',
+  sourceSubtitle: 'Tasks you write down in Orca',
+  workspaceTask: 'Local task',
+  workspaceTaskGlyph: (title: string): string => `Local task: ${title}`,
+  openWorkspaceTask: (title: string): string => `Open local task ${title}`,
   desktopDisconnected: (machine: string): string =>
     machine ? `Cannot connect to Orca on ${machine}` : "Cannot connect to this host's Orca",
   pairingInvalid: 'Pairing invalid — re-pair with this host',
@@ -61,7 +66,7 @@ export const LOCAL_TASKS_COPY_EN = {
   editTask: 'Edit task',
   noProjects: 'No projects yet',
   noProjectsHint:
-    'A project holds tasks and may link Orca repos on this host. Create one to start recording tasks.',
+    'Create a project to start tracking tasks. A project can link Orca repositories on this host.',
   createProject: 'New project',
   projectSettings: 'Project settings',
   switchProject: 'Switch project',
@@ -124,7 +129,7 @@ export const LOCAL_TASKS_COPY_EN = {
   deleteCommentConfirm: 'Delete this comment?',
   edited: 'edited',
   taskMissing: 'This task no longer exists.',
-  deleteTaskTitle: (ref: string): string => `Delete ${ref}?`,
+  deleteTaskTitle: (title: string): string => `Delete “${title}”?`,
   deleteTaskMessage: (below: number): string =>
     below > 0
       ? `The ${below} tasks under it, at every level, are deleted too. Linked workspaces and sessions are left alone.`
@@ -162,7 +167,7 @@ export const LOCAL_TASKS_COPY_EN = {
     'Creating a task only records it; it does not open a workspace. Paste several lines into the subtask field to add several at once.',
   pastedLines: (count: number): string => `Pasted ${count} lines`,
   pasteAsSubtasks: (count: number): string => `Create ${count} subtasks`,
-  pasteAsSubtasksHint: (ref: string): string => `One per line, under ${ref}`,
+  pasteAsSubtasksHint: (title: string): string => `One per line, under “${title}”`,
   pasteAsTitle: 'Use as one title',
   pasteAsTitleHint: 'Line breaks become spaces',
   savedPartially: 'The task was saved, but its subtasks were not. Add them from the task.',
@@ -179,6 +184,7 @@ export const LOCAL_TASKS_COPY_EN = {
   noReposHint:
     'No repo: this project only tracks tasks. Start then picks from every repo on this host.',
   addRepo: 'Add repo',
+  noRepoCandidates: 'No other repo on this host to add.',
   makeDefaultRepo: 'Make default',
   removeRepo: 'Remove from project',
   prefix: 'Prefix',

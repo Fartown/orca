@@ -88,6 +88,7 @@ export function LocalTasksSettingsView(props: Props) {
               <Pressable
                 style={[localTaskStyles.secondaryButton, styles.create]}
                 onPress={props.onCreateProject}
+                accessibilityRole="button"
               >
                 <Plus size={16} color={colors.textPrimary} />
                 <Text style={localTaskStyles.secondaryButtonText}>{copy.createProject}</Text>

@@ -2,9 +2,11 @@ import {
   LOCAL_TASK_PRIORITIES,
   type LocalTaskPriority
 } from '../../../src/shared/local-tasks/local-task-model'
+import { Plus } from 'lucide-react-native'
 import type { LocalTask, LocalTaskProject } from '../../../src/shared/local-tasks/local-task-types'
 import { PickerListDrawer } from '../components/PickerListDrawer'
 import { PickerModal } from '../components/PickerModal'
+import { colors } from '../theme/mobile-theme'
 import type { LocalTaskDraft } from './local-task-form-state'
 import { localTasksCopy } from './local-tasks-copy'
 import { orderedLocalTaskStatuses } from './local-task-list-projection'
@@ -99,25 +101,37 @@ export function LocalTaskProjectPicker(props: {
   selected: string | null
   /** Offered first when set: the board and list then span every project. */
   allProjectsLabel?: string
+  /** Offered last when set, so a new project is one tap from the picker. */
+  onCreateProject?: () => void
   onSelect: (projectId: string | null) => void
   onClose: () => void
 }) {
+  const copy = localTasksCopy()
   const ALL = '\u0000all'
+  const NEW = '\u0000new'
   const items = [
     ...(props.allProjectsLabel ? [{ id: ALL, label: props.allProjectsLabel }] : []),
     ...props.projects.map((project) => ({
       id: project.id,
       label: project.name,
       detail: project.prefix
-    }))
+    })),
+    ...(props.onCreateProject ? [{ id: NEW, label: copy.createProject }] : [])
   ]
   return (
     <PickerListDrawer
       visible={props.visible}
-      title={localTasksCopy().switchProject}
+      title={copy.switchProject}
       items={items}
       selectedId={props.selected ?? ALL}
-      onSelect={(item) => props.onSelect(item.id === ALL ? null : item.id)}
+      renderIcon={(item) =>
+        item.id === NEW ? <Plus size={16} color={colors.textSecondary} /> : null
+      }
+      onSelect={(item) =>
+        item.id === NEW
+          ? props.onCreateProject?.()
+          : props.onSelect(item.id === ALL ? null : item.id)
+      }
       onClose={props.onClose}
     />
   )

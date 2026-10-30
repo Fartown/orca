@@ -130,12 +130,12 @@ export function HostScreenOverlays({ controller }: { controller: HostScreenContr
                         state.setActionTarget(null)
                       }
                     },
+                    ...taskLink.actionsFor(actionTarget, () => state.setActionTarget(null)),
                     {
                       label: 'Delete',
                       destructive: true,
                       onPress: () => state.setConfirmDelete(actionTarget)
-                    },
-                    ...taskLink.actionsFor(actionTarget, () => state.setActionTarget(null))
+                    }
                   ]
                 : []
             }

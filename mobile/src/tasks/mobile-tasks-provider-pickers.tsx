@@ -23,6 +23,7 @@ import {
 } from './mobile-tasks-legacy-foundation'
 import { styles } from './mobile-tasks-legacy-styles'
 import { normalizeJiraFilter } from './mobile-jira-issue-filters'
+import { withLocalTaskSource } from '../local-tasks/local-task-source-option'
 
 export function renderMobileTasksProviderPicker(model: ConnectionPresentationModel) {
   const {
@@ -50,7 +51,7 @@ export function renderMobileTasksProviderPicker(model: ConnectionPresentationMod
       title="Task Source"
       options={providerOptions}
       selected={provider}
-      onSelect={(next) => {
+      onSelect={withLocalTaskSource(model, (next) => {
         const resume = taskResumeRef.current
         persistTaskSource(next)
         setProvider(next)
@@ -90,7 +91,7 @@ export function renderMobileTasksProviderPicker(model: ConnectionPresentationMod
           setQuery('')
           setAppliedQuery('')
         }
-      }}
+      })}
       onClose={() => setShowProviderPicker(false)}
     />
   )

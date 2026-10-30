@@ -13,7 +13,6 @@ import { isLocalTasksWritable, localTasksDomainStore } from './local-tasks-domai
 import { bindLocalTaskStartWork } from './local-task-start-work'
 import { bindLocalTaskSeenForwarding } from './local-task-seen-forwarding'
 import { subscribeLocalTaskAppStore } from './local-task-app-store-subscription'
-import { LocalTaskWorkspaceTaskPickerHost } from '@/components/local-tasks/LocalTaskWorkspaceTaskPicker'
 import {
   findLocalTaskPrMergedTriggers,
   findLocalTaskWorkspaceFixes,
@@ -42,7 +41,7 @@ function sameInputs(left: readonly unknown[], right: readonly unknown[]): boolea
  * host of linked workspaces, and the PR-merged rule, each in the library that holds the link.
  * Each write is attempted once per value; a failure waits for the next change rather than a retry.
  */
-function LocalTaskLinkUpkeep(): React.JSX.Element {
+function LocalTaskLinkUpkeep(): null {
   useEffect(() => bindLocalTaskStartWork(), [])
   // Why here: a session seen from the sidebar or a tab counts as seen in its library too.
   useEffect(() => bindLocalTaskSeenForwarding(), [])
@@ -130,11 +129,10 @@ function LocalTaskLinkUpkeep(): React.JSX.Element {
     }
   }, [])
 
-  // Why here: a sidebar menu opens this picker after the menu itself has closed.
-  return <LocalTaskWorkspaceTaskPickerHost />
+  return null
 }
 
-/** A failure here costs link upkeep and its picker only, never the rest of the window. */
+/** A failure here costs link upkeep only, never the rest of the window. */
 export function LocalTaskLinkMaintenance(): React.JSX.Element {
   return (
     <RecoverableRenderErrorBoundary

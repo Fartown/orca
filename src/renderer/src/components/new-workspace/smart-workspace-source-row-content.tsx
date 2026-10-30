@@ -13,6 +13,11 @@ import { cn } from '@/lib/utils'
 import { translate } from '@/i18n/i18n'
 import type { JiraSite } from '../../../../shared/jira-types'
 import type { RowEntry, SmartWorkspaceNameSelection } from './smart-workspace-name-field-model'
+import {
+  LocalTaskSourceRowIcon,
+  LocalTaskSourceRowLabel,
+  LocalTaskSourceSelectionIcon
+} from '@/components/local-tasks/LocalTaskSourceRowContent'
 
 const ROW_ITEM_CLASS_NAME = 'gap-2 px-3 py-2 text-xs'
 
@@ -55,6 +60,9 @@ export function RowIcon({ row }: { row: RowEntry }): React.JSX.Element {
   if (row.kind === 'jira' || row.kind === 'jira-account') {
     return <JiraIcon className="size-3.5 shrink-0 text-muted-foreground" />
   }
+  if (row.kind === 'local-task') {
+    return <LocalTaskSourceRowIcon row={row} />
+  }
   return <LinearIcon className="size-3.5 shrink-0 text-muted-foreground" />
 }
 
@@ -77,6 +85,9 @@ export function SelectionIcon({
   }
   if (kind === 'jira') {
     return <JiraIcon className="size-3.5 shrink-0 text-muted-foreground" />
+  }
+  if (kind === 'local-task') {
+    return <LocalTaskSourceSelectionIcon />
   }
   return <LinearIcon className="size-3.5 shrink-0 text-muted-foreground" />
 }
@@ -159,6 +170,9 @@ export function RowLabel({
         {row.site.email ? ` — ${row.site.email}` : ''}
       </span>
     )
+  }
+  if (row.kind === 'local-task') {
+    return <LocalTaskSourceRowLabel row={row} />
   }
   return (
     <span className="min-w-0 truncate">

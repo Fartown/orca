@@ -194,11 +194,14 @@ export function LocalTaskLabelsPicker({
   value,
   suggestions,
   onToggle,
+  emptyText,
   disabled
 }: {
   value: readonly string[]
   suggestions: readonly string[]
   onToggle: (label: string) => void
+  /** Said when nothing is set; defaults to the field's name, as in the create dialog. */
+  emptyText?: string
   disabled?: boolean
 }): React.JSX.Element {
   const [query, setQuery] = useState('')
@@ -209,29 +212,37 @@ export function LocalTaskLabelsPicker({
       <PopoverTrigger asChild disabled={disabled}>
         <Button variant="outline" size="xs" className={TRIGGER}>
           <Tag className="size-3.5" />
-          <span className="truncate">
-            {value.length > 0 ? value.join(', ') : translate('localTasks.field.labels', 'Labels')}
+          <span
+            className={cn('truncate', value.length === 0 && emptyText && 'text-muted-foreground')}
+          >
+            {value.length > 0
+              ? value.join(', ')
+              : (emptyText ?? translate('localTasks.field.labels', 'Labels'))}
           </span>
         </Button>
       </PopoverTrigger>
       <PopoverContent align="start" className="w-60">
-        <Command surface="inline" density="menu">
-          <CommandInput
-            value={query}
-            onValueChange={setQuery}
-            placeholder={translate('localTasks.picker.labelPlaceholder', 'Find or add a label')}
-          />
-          <CommandList>
-            <CommandEmpty>{translate('localTasks.picker.empty', 'Nothing matches.')}</CommandEmpty>
-            <LocalTaskLabelOptions
-              labels={options}
-              query={query}
-              checked={(label) => value.includes(label)}
-              onToggle={onToggle}
-              canAdd={!full}
+        <div className="p-1">
+          <Command surface="inline" density="menu">
+            <CommandInput
+              value={query}
+              onValueChange={setQuery}
+              placeholder={translate('localTasks.picker.labelPlaceholder', 'Find or add a label')}
             />
-          </CommandList>
-        </Command>
+            <CommandList>
+              <CommandEmpty>
+                {translate('localTasks.picker.empty', 'Nothing matches.')}
+              </CommandEmpty>
+              <LocalTaskLabelOptions
+                labels={options}
+                query={query}
+                checked={(label) => value.includes(label)}
+                onToggle={onToggle}
+                canAdd={!full}
+              />
+            </CommandList>
+          </Command>
+        </div>
       </PopoverContent>
     </Popover>
   )
@@ -242,11 +253,14 @@ export function LocalTaskParentPicker({
   candidates,
   value,
   onChange,
+  emptyText,
   disabled
 }: {
   candidates: readonly LocalTask[]
   value: string | null
   onChange: (parentId: string | null) => void
+  /** Said when there is no parent; defaults to the field's name, as in the create dialog. */
+  emptyText?: string
   disabled?: boolean
 }): React.JSX.Element {
   const [open, setOpen] = useState(false)
@@ -260,39 +274,45 @@ export function LocalTaskParentPicker({
       <PopoverTrigger asChild disabled={disabled}>
         <Button variant="outline" size="xs" className={TRIGGER}>
           <CornerDownRight className="size-3.5" />
-          <span className="truncate">
+          <span className={cn('truncate', !current && emptyText && 'text-muted-foreground')}>
             {current
-              ? `${current.ref} ${current.title}`
-              : translate('localTasks.field.parent', 'Parent task')}
+              ? current.title
+              : (emptyText ?? translate('localTasks.field.parent', 'Parent task'))}
           </span>
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-72">
-        <Command surface="inline" density="menu">
-          <CommandInput
-            placeholder={translate('localTasks.picker.parentPlaceholder', 'Find a task')}
-          />
-          <CommandList>
-            <CommandEmpty>{translate('localTasks.picker.empty', 'Nothing matches.')}</CommandEmpty>
-            <CommandGroup>
-              <CommandItem value="-" onSelect={() => choose(null)}>
-                <Check className={cn('size-3.5', value !== null && 'opacity-0')} />
-                {translate('localTasks.field.noParent', 'No parent')}
-              </CommandItem>
-              {candidates.map((task) => (
-                <CommandItem
-                  key={task.id}
-                  value={`${task.ref} ${task.title}`}
-                  onSelect={() => choose(task.id)}
-                >
-                  <Check className={cn('size-3.5', task.id !== value && 'opacity-0')} />
-                  <span className="font-mono text-2xs text-muted-foreground">{task.ref}</span>
-                  <span className="truncate">{task.title}</span>
+      <PopoverContent align="start" className="w-80">
+        <div className="p-1">
+          <Command surface="inline" density="menu">
+            <CommandInput
+              placeholder={translate('localTasks.picker.parentPlaceholder', 'Find a task')}
+            />
+            <CommandList>
+              <CommandEmpty>
+                {translate('localTasks.picker.empty', 'Nothing matches.')}
+              </CommandEmpty>
+              <CommandGroup>
+                <CommandItem value="-" onSelect={() => choose(null)}>
+                  <Check className={cn('size-3.5', value !== null && 'opacity-0')} />
+                  {translate('localTasks.field.noParent', 'No parent')}
                 </CommandItem>
-              ))}
-            </CommandGroup>
-          </CommandList>
-        </Command>
+                {candidates.map((task) => (
+                  <CommandItem
+                    key={task.id}
+                    value={`${task.ref} ${task.title}`}
+                    onSelect={() => choose(task.id)}
+                  >
+                    <Check className={cn('size-3.5', task.id !== value && 'opacity-0')} />
+                    <span className="shrink-0 whitespace-nowrap font-mono text-2xs text-muted-foreground">
+                      {task.ref}
+                    </span>
+                    <span className="min-w-0 truncate">{task.title}</span>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </CommandList>
+          </Command>
+        </div>
       </PopoverContent>
     </Popover>
   )

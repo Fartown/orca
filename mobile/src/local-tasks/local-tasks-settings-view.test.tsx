@@ -3,7 +3,7 @@ import { act, create, type ReactTestRenderer } from 'react-test-renderer'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { LocalTask, LocalTaskProject } from '../../../src/shared/local-tasks/local-task-types'
 import { createLocalTasksApi, type LocalTasksApi } from './local-tasks-api'
-import { localTasksCopyFor } from './local-tasks-copy'
+import { localTasksCopy } from './local-tasks-copy'
 import { LocalTasksSettingsView } from './local-tasks-settings-view'
 import type { LocalTasksLibrary } from './use-local-tasks-library'
 
@@ -131,7 +131,7 @@ describe('mobile project deletion', () => {
           node.findAll(
             (child) =>
               String(child.type) === 'Text' &&
-              child.children.includes(localTasksCopyFor('en').deleteProject)
+              child.children.includes(localTasksCopy().deleteProject)
           ).length > 0
       )[0]
     await act(async () => deleteButton()?.props.onPress())
@@ -182,8 +182,7 @@ describe('mobile project deletion', () => {
         node.props.disabled &&
         node.findAll(
           (child) =>
-            String(child.type) === 'Text' &&
-            child.children.includes(localTasksCopyFor('en').deleteProject)
+            String(child.type) === 'Text' && child.children.includes(localTasksCopy().deleteProject)
         ).length > 0
     )[0]
     expect(deleteButton).toBeDefined()

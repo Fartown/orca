@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import type { LocalTasksStatus } from '../../../src/shared/local-tasks/local-task-types'
-import { localTasksCopyFor } from './local-tasks-copy'
+import { localTasksCopy } from './local-tasks-copy'
 import { localTasksScreenState } from './local-tasks-screen-state'
 
-const copy = localTasksCopyFor('zh-CN')
+const copy = localTasksCopy()
 const status = (
   state: LocalTasksStatus['state'],
   reason: string | null = null
@@ -33,7 +33,7 @@ describe('what the task page says about the library state', () => {
         ready: false,
         status: null
       })
-    ).toMatchObject({ kind: 'gate', title: '无法连接这台主机的 Orca' })
+    ).toMatchObject({ kind: 'gate', title: "Cannot connect to this host's Orca" })
     expect(
       localTasksScreenState(copy, {
         ...ready,
@@ -64,7 +64,7 @@ describe('what the task page says about the library state', () => {
     expect(localTasksScreenState(copy, { ...ready, status: status('read-only') })).toEqual({
       kind: 'library',
       readOnly: true,
-      notice: '只读：这个任务库由更新版本的 Orca 写入，这里只能查看，不能修改。'
+      notice: copy.libraryReadOnly
     })
   })
 

@@ -16,6 +16,7 @@ import { useSmartWorkspaceGithubSearch } from './use-smart-workspace-github-sear
 import { useSmartWorkspaceGitlabSearch } from './use-smart-workspace-gitlab-search'
 import { useWorkItemSourcePresentation } from './use-work-item-source-presentation'
 import { useSmartWorkspaceSecondarySearches } from './use-smart-workspace-secondary-searches'
+import { useLocalTaskSourceSearch } from '@/local-tasks/use-local-task-source-search'
 
 export function useWorkItemSourceSearch({
   jiraSourceContext = null,
@@ -118,10 +119,12 @@ export function useWorkItemSourceSearch({
     sourceQueryWithinLimit,
     shouldQueryGitlab
   })
+  const localTaskSource = useLocalTaskSourceSearch(foundation)
   const presentation = useWorkItemSourcePresentation(foundation, {
     linearUrlIntent,
     linearUrlIntentOwnsInput,
-    linearQuery
+    linearQuery,
+    localTaskRows: localTaskSource.rows
   })
   const resolveRow = useCallback(
     (row: (typeof presentation.rows)[number]) =>
@@ -148,6 +151,7 @@ export function useWorkItemSourceSearch({
     ...foundation,
     ...presentation,
     resolveRow,
+    localTaskSource,
     linearStatusId: foundation.linearStatusId
   }
 }

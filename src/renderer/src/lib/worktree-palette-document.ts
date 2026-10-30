@@ -17,6 +17,7 @@ import {
   resolveWorktreeDisplayName
 } from './worktree-default-display-name'
 import type { HostedReviewInfo } from '../../../shared/hosted-review'
+import type { LocalTaskWorkspaceEvidence } from '@/local-tasks/local-task-palette-evidence'
 import type { Repo } from '../../../shared/repo-types'
 import { getWorkspaceAttachments } from '../../../shared/workspace-attachments'
 import { getWorkspaceAttachmentKey } from '../../../shared/workspace-attachment-normalization'
@@ -53,6 +54,7 @@ export type WorktreePaletteDocumentSources = {
   checksReviewByWorktree?: ReadonlyMap<Worktree, HostedReviewInfo | null>
   hostLabelByWorktreeId?: ReadonlyMap<string, string>
   evidencePolicy?: WorktreePaletteEvidencePolicy
+  localTaskEvidence?: LocalTaskWorkspaceEvidence
 }
 
 function resolveReviewSource(
@@ -127,6 +129,7 @@ function buildEvidence(
     comment,
     buildWorktreeAutomationEvidence(worktree),
     buildWorktreeLinkedTaskEvidence(worktree),
+    sources.localTaskEvidence?.(worktree) ?? null,
     buildWorktreeReviewEvidence(resolveReviewSource(worktree, repo, sources)),
     buildWorktreeIssueEvidence({
       number: worktree.linkedIssue,

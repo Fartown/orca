@@ -19,6 +19,7 @@ import {
   getWorktreeCardDisplayOptions
 } from './sidebar-workspace-option-items'
 import { translate } from '@/i18n/i18n'
+import { LocalTaskCardOptionItem } from '@/components/local-tasks/LocalTaskCardOptionItem'
 
 type CardMenuItemProps = {
   preserveWorkspaceBoardOpen: boolean
@@ -74,6 +75,7 @@ export function WorktreeCardDisplayMenuItem({
             {opt.label}
           </DropdownMenuCheckboxItem>
         ))}
+        <LocalTaskCardOptionItem />
       </DropdownMenuSubContent>
     </DropdownMenuSub>
   )
@@ -169,6 +171,7 @@ export function WorktreeCardPropertiesMenuItem({
             {opt.label}
           </DropdownMenuCheckboxItem>
         ))}
+        <LocalTaskCardOptionItem />
         <DropdownMenuSeparator />
         <DropdownMenuLabel className="px-2 py-1 text-[11px] font-medium text-muted-foreground">
           {translate(

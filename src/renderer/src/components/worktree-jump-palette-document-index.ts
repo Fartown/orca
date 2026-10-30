@@ -1,7 +1,10 @@
 import { getPaletteHostBadge } from '@/components/cmd-j/palette-host-badge'
 import type { SidebarHostOption } from '@/components/sidebar/sidebar-host-options'
 import { getWorkspacePortsByWorktreeId } from '@/lib/workspace-port-groups'
-import { buildWorktreePaletteDocuments } from '@/lib/worktree-palette-document'
+import {
+  buildWorktreePaletteDocuments,
+  type WorktreePaletteDocumentSources
+} from '@/lib/worktree-palette-document'
 import {
   getPaletteWorktreeIdentity,
   getPaletteWorktreeExecutionHostId,
@@ -24,7 +27,8 @@ export function buildWorktreeJumpPaletteDocumentIndex({
   prCache,
   issueCache,
   workspacePortScan,
-  checksReviewByWorktree
+  checksReviewByWorktree,
+  localTaskEvidence
 }: {
   worktrees: readonly Worktree[]
   repoMap: ReadonlyMap<string, Repo>
@@ -35,7 +39,7 @@ export function buildWorktreeJumpPaletteDocumentIndex({
   issueCache: AppState['issueCache'] | null
   workspacePortScan: WorkspacePortScanResult | null
   checksReviewByWorktree: ReadonlyMap<Worktree, HostedReviewInfo | null>
-}): Map<string, PaletteDocument> {
+} & Pick<WorktreePaletteDocumentSources, 'localTaskEvidence'>): Map<string, PaletteDocument> {
   const hostLabelByWorktreeId = new Map<string, string>()
   for (const worktree of worktrees) {
     const repo = resolvePaletteRepoForWorktree(worktree, repoMap, repoByHostIdentity)
@@ -57,7 +61,8 @@ export function buildWorktreeJumpPaletteDocumentIndex({
       issueCache,
       workspacePortsByWorktreeId: getWorkspacePortsByWorktreeId(workspacePortScan),
       checksReviewByWorktree,
-      hostLabelByWorktreeId
+      hostLabelByWorktreeId,
+      localTaskEvidence
     }
   )
 }

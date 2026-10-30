@@ -20975,6 +20975,7 @@
         "open": "打开会话",
         "reply": "回复",
         "seen": "标记已看",
+        "seenAll": "全部标记已看",
         "stopped": "{{agent}} 停下了，最后一句：{{message}}",
         "left": "已不在等你",
         "unverifiable": "主机未连接，无法确认"
@@ -20989,6 +20990,7 @@
       },
       "snooze": {
         "trigger": "暂缓",
+        "triggerAll": "全部暂缓",
         "hour": "1 小时",
         "tonight": "到今晚",
         "tomorrow": "到明天",
@@ -21001,7 +21003,7 @@
     "sidebar": {
       "groupByTask": "任务",
       "noTaskGroup": "未关联任务",
-      "openTask": "打开 {{ref}}"
+      "openTask": "打开「{{title}}」"
     },
     "quickActions": {
       "newTask": "新建任务…",
@@ -21011,8 +21013,21 @@
         "openTask": "打开任务"
       },
       "openTask": "打开任务…",
-      "openTaskDescription": "按编号或标题查找本地任务。",
-      "taskDescription": "本地任务 · {{project}}"
+      "openTaskDescription": "按编号或标题查找本地任务。"
+    },
+    "card": {
+      "option": "本地任务"
+    },
+    "hover": {
+      "section": "本地任务",
+      "rowDetail": "{{detail}} · 本地任务",
+      "statusUnverifiable": "状态无法确认"
+    },
+    "palette": {
+      "source": "本地任务"
+    },
+    "cleanup": {
+      "ticketSource": "本地任务"
     },
     "activity": {
       "commentPlaceholder": "写评论…",
@@ -21084,7 +21099,7 @@
       "emptyTitle": "或者先建一个空项目"
     },
     "create": {
-      "created": "已创建 {{ref}}",
+      "created": "已创建「{{title}}」· {{ref}}",
       "title": "新建任务",
       "titlePlaceholder": "任务标题",
       "titleLabel": "标题",
@@ -21100,8 +21115,8 @@
       "add": "添加一条标准"
     },
     "delete": {
-      "done": "已删除 {{ref}}",
-      "title": "删除 {{ref}}？",
+      "done": "已删除「{{title}}」",
+      "title": "删除「{{title}}」？",
       "withSubtasks": "它下面各层的子任务（共 {{count}} 个）会一起删除。只删除任务记录，工作区和会话不受影响。",
       "single": "只删除任务记录，工作区和会话不受影响。",
       "confirm": "删除"
@@ -21128,7 +21143,8 @@
       "labels": "标签",
       "parent": "父任务",
       "project": "项目",
-      "noParent": "无父任务"
+      "noParent": "无父任务",
+      "noLabels": "无标签"
     },
     "picker": {
       "labelPlaceholder": "查找或添加标签",
@@ -21222,7 +21238,13 @@
     },
     "source": {
       "label": "本地任务",
-      "summary": "本地任务 · 项目 {{projects}} · 任务 {{tasks}}"
+      "summary": "本地任务 · 项目 {{projects}} · 任务 {{tasks}}",
+      "openShortcut": "打开本地任务",
+      "settingsDescription": "在 Orca 里记下的任务，每台 Orca 各自保存在自己的机器上，不需要连接。",
+      "projectsStepTitle": "项目与状态",
+      "projectsStepCount": "项目 {{count}} 个。状态、仓库和规则按项目设置。",
+      "projectsStepEmpty": "先建一个项目再记录任务；项目可以关联 Orca 仓库。",
+      "visibilityFailed": "没能保存本地任务的显示设置。"
     },
     "subtasks": {
       "added": "已添加 {{count}} 个子任务",
@@ -21232,7 +21254,7 @@
       "retryRemaining": "重试剩余 {{count}} 个子任务"
     },
     "toolbar": {
-      "searchPlaceholder": "按编号或标题搜索",
+      "searchPlaceholder": "按标题或编号搜索",
       "search": "搜索任务",
       "layout": "布局",
       "list": "列表",
@@ -21379,18 +21401,27 @@
     "time": {
       "justNow": "刚刚"
     },
+    "sourceTab": {
+      "label": "本地",
+      "placeholder": "按标题或编号搜索本地任务",
+      "unavailable": "任务库暂时不可用。",
+      "offline": "{{host}} 未连接，暂时不能关联任务。",
+      "readOnly": "这个任务库在这里只读，更新 Orca 后才能关联任务。",
+      "saveFailed": "任务关联没有保存，再点一次「保存」重试。",
+      "replaces": "将替换「{{title}}」",
+      "rowDetail": "{{ref}} · 本地任务 · {{project}}",
+      "unlinkTask": "取消关联 {{title}}",
+      "unlinkHint": "从工作区取消关联；这个任务在本工作区的会话关联也会一并取消"
+    },
     "links": {
-      "currentTask": "已关联 {{ref}} · {{title}}",
       "hasWorkspace": "已有 {{name}}",
       "linkSessionTo": "把这个会话关联到",
       "linkWorkspaceFirst": "把工作区关联到任务…",
       "menuLink": "关联到任务…",
-      "menuLinked": "任务 {{ref}}…",
-      "noTasksForWorkspace": "这个工作区所在的主机上还没有任务。",
-      "openTask": "打开任务 {{ref}}",
+      "menuLinked": "任务：{{title}}…",
+      "openTask": "打开任务 {{title}}",
       "openTaskShort": "打开任务",
       "parentTask": "父任务",
-      "pickTaskTitle": "把 {{name}} 关联到任务",
       "unlink": "取消关联",
       "workspaceNotLinked": "这个工作区还没关联任务，请先关联工作区。",
       "state": {
@@ -21418,13 +21449,17 @@
       },
       "workspaceGone": "工作区已被删除。",
       "workspaceUnverifiableNamed": "{{name}} · 无法确认",
+      "workspaceMarker": "工作区 · {{name}}",
+      "sessionDot": "会话 · {{state}}",
+      "surfaceChat": "聊天",
+      "surfaceTerminal": "终端",
       "agent": "智能体",
       "location": "位置",
       "delivery": "提示词",
       "deliverySend": "立即发送",
       "deliveryDraft": "放入输入框",
       "openSession": "打开会话",
-      "openSessionTitle": "打开会话 · {{ref}}",
+      "openSessionTitle": "开一个会话",
       "workspaceUnverifiable": "当前无法访问工作区。",
       "sessionMissingHint": "找不到会话——请打开工作区",
       "sessionActions": "会话操作",
@@ -21446,9 +21481,9 @@
       "pullRequest": "PR",
       "start": "开始",
       "workspace": "工作区",
-      "pickWorkspaceTitle": "为 {{ref}} 使用已有工作区",
+      "pickWorkspaceTitle": "为「{{title}}」使用已有工作区",
       "noWorkspaces": "这个项目所在的主机上没有工作区。",
-      "ownedBy": "属于 {{ref}}",
+      "ownedBy": "属于「{{title}}」",
       "sessionFailed": "无法启动智能体。",
       "noRepo": "Orca 中此项目没有 Git 仓库，无法为它创建工作区。",
       "otherProjectNotLinked": "工作区建在另一个项目中，因此没有关联到任务。",
@@ -21457,11 +21492,9 @@
       "noRepoShort": "Orca 中此项目没有 Git 仓库",
       "workspaceUnlinked": "已取消关联工作区",
       "sessionUnlinked": "已取消关联会话",
-      "inheritedWorkspace": "沿用 {{ref}} 的工作区",
-      "otherTasks": "其他项目",
+      "inheritedWorkspace": "沿用「{{title}}」的工作区",
       "otherWorkspaces": "其他仓库",
       "projectWorkspaces": "本项目的仓库",
-      "relatedTasks": "关联了这个仓库的项目",
       "startIn": "在 {{repo}} 中{{action}}",
       "startInRepo": "在其他仓库开始做",
       "startOwn": "单独开始做"

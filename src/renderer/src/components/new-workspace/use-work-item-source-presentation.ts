@@ -31,6 +31,7 @@ export function useWorkItemSourcePresentation(
     linearUrlIntent?: ReturnType<typeof parseBoundedSmartWorkspaceLinearIssueUrlIntent>
     linearUrlIntentOwnsInput?: boolean
     linearQuery?: string
+    localTaskRows?: readonly RowEntry[]
   }
 ) {
   const {
@@ -83,7 +84,11 @@ export function useWorkItemSourcePresentation(
         : null,
     [mode, value]
   )
+  const localTaskRows = options?.localTaskRows
   const rows = useMemo<RowEntry[]>(() => {
+    if (mode === 'local') {
+      return localTaskRows ? [...localTaskRows] : []
+    }
     if (jiraSource.intent && jiraSource.accountChoices.length > 0) {
       return jiraSource.accountChoices.map((site) => ({
         kind: 'jira-account' as const,
@@ -155,6 +160,7 @@ export function useWorkItemSourcePresentation(
     linearIssues,
     linearUrlIntentOwnsInput,
     linearUrlLookupFailed,
+    localTaskRows,
     mode,
     selectedRepo?.id,
     value
@@ -219,7 +225,9 @@ export function useWorkItemSourcePresentation(
   })
   const resolvedCommandValue = resolveSmartWorkspaceCommandValue({
     currentValue: commandValue,
-    rows,
+    // Why: a local task row that cannot be picked, or the notice above them, never takes the highlight.
+    rows:
+      mode === 'local' ? rows.filter((row) => row.kind !== 'local-task' || !row.disabled) : rows,
     isQueryStale,
     sourceIntent
   })

@@ -146,9 +146,7 @@ export function LocalTaskSessionDialog({
       <DialogContent data-local-task-overlay="" className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>
-            {translate('localTasks.links.openSessionTitle', 'Open session · {{ref}}', {
-              ref: task.ref
-            })}
+            {translate('localTasks.links.openSessionTitle', 'Open a session')}
           </DialogTitle>
           <DialogDescription>{task.title}</DialogDescription>
         </DialogHeader>

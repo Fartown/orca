@@ -127,7 +127,7 @@ describe('local task counts and groups (REQ-006)', () => {
     expect(countLocalTaskViews(tasksInScope(tasks, 'shop'), index).all).toBe(6)
   })
 
-  it('rides subtasks under a shown parent and leaves them out of the group count', () => {
+  it('rides subtasks under a shown parent yet counts each in its own status, as the board does', () => {
     const groups = groupLocalTasksForList(
       tasksInScope(tasks, 'shop'),
       index,
@@ -141,6 +141,16 @@ describe('local task counts and groups (REQ-006)', () => {
       ['shop-todo', ['SHOP-11']],
       ['shop-done', ['SHOP-7']]
     ])
+    // SHOP-13 rides under SHOP-12 in its own status; SHOP-15 rides there too but is Todo.
+    expect(groups.map((group) => [group.key, group.count])).toEqual([
+      ['shop-doing', 2],
+      ['shop-todo', 2],
+      ['shop-done', 1]
+    ])
+    const board = buildLocalTaskBoardColumns(tasksInScope(tasks, 'shop'), index, 'shop', ALL, BOARD)
+    for (const group of groups) {
+      expect(board.find((column) => column.key === group.key)?.tasks.length).toBe(group.count)
+    }
     expect(groups[0].entries[0].children.map((child) => child.id)).toEqual([
       'SHOP-13',
       'SHOP-14',

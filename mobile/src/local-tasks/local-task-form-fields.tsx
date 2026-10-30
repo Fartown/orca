@@ -17,6 +17,7 @@ import {
   splitPastedLines,
   type LocalTaskDraftEntry
 } from './local-task-form-state'
+import { LocalTaskGrowingInput } from './local-task-growing-input'
 import { localTaskStyles } from './local-tasks-styles'
 
 export function LocalTaskCriteriaEditor(props: {
@@ -32,19 +33,21 @@ export function LocalTaskCriteriaEditor(props: {
         {copy.criteria} <Text style={localTaskStyles.meta}>{copy.criteriaOptional}</Text>
       </Text>
       {props.criteria.map((entry) => (
-        <View key={entry.id} style={styles.lineRow}>
-          <Text style={localTaskStyles.meta}>•</Text>
-          <TextInput
-            style={[localTaskStyles.bareInput, styles.lineInput]}
+        <View key={entry.id} style={[styles.lineRow, styles.criterionRow]}>
+          <Text style={[localTaskStyles.meta, styles.criterionBullet]}>•</Text>
+          <LocalTaskGrowingInput
+            style={[localTaskStyles.bareInput, styles.lineInput, styles.criterionInput]}
+            minHeight={CRITERION_LINE_HEIGHT}
             value={entry.text}
             maxLength={LOCAL_TASK_CRITERION_MAX}
-            onChangeText={(text) => set(entry.id, text)}
+            // Why: a criterion is one line of the stored list; Return must not split it.
+            onChangeText={(text) => set(entry.id, text.replace(/\r?\n/g, ' '))}
             placeholder={copy.criterionPlaceholder}
             placeholderTextColor={colors.textMuted}
           />
           <Pressable
+            style={[styles.removeButton, styles.criterionRemove]}
             onPress={() => props.onChange(props.criteria.filter((other) => other.id !== entry.id))}
-            hitSlop={8}
             accessibilityRole="button"
             accessibilityLabel={copy.delete}
           >
@@ -56,6 +59,7 @@ export function LocalTaskCriteriaEditor(props: {
         <Pressable
           style={styles.addRow}
           onPress={() => props.onChange([...props.criteria, newLocalTaskDraftEntry()])}
+          accessibilityRole="button"
         >
           <Plus size={14} color={colors.textSecondary} />
           <Text style={localTaskStyles.sectionActionText}>{copy.addCriterion}</Text>
@@ -86,8 +90,8 @@ export function LocalTaskSubtaskEntries(props: {
           <ListTodo size={14} color={colors.textMuted} />
           <Text style={[localTaskStyles.body, styles.lineInput]}>{entry.text}</Text>
           <Pressable
+            style={styles.removeButton}
             onPress={() => props.onChange(props.entries.filter((other) => other.id !== entry.id))}
-            hitSlop={8}
             accessibilityRole="button"
             accessibilityLabel={copy.delete}
           >
@@ -146,7 +150,7 @@ export function LocalTaskPropertyRow(props: {
 /** The choice a multi-line title paste offers in a subtask form. */
 export function LocalTaskPasteChoice(props: {
   lines: string[] | null
-  parentRef: string
+  parentTitle: string
   onSubtasks: (lines: string[]) => void
   onSingleTitle: (title: string) => void
   onClose: () => void
@@ -160,7 +164,7 @@ export function LocalTaskPasteChoice(props: {
       actions={[
         {
           label: copy.pasteAsSubtasks(lines.length),
-          hint: copy.pasteAsSubtasksHint(props.parentRef),
+          hint: copy.pasteAsSubtasksHint(props.parentTitle),
           icon: ListTodo,
           onPress: () => props.onSubtasks(lines)
         },
@@ -229,9 +233,26 @@ export function LocalTaskFormPrompts(props: {
   )
 }
 
+const CRITERION_LINE_HEIGHT = 21
+
 const styles = StyleSheet.create({
   lineRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: 6 },
   lineInput: { flex: 1 },
+  // A criterion wraps, so the bullet and the remove button stay on its first line.
+  criterionRow: { alignItems: 'flex-start' },
+  criterionBullet: { lineHeight: CRITERION_LINE_HEIGHT },
+  criterionInput: { lineHeight: CRITERION_LINE_HEIGHT },
+  criterionRemove: { marginTop: (CRITERION_LINE_HEIGHT - 32) / 2 },
+  // Why 32pt with negative margins: big enough to hit (the page ignores hitSlop) without
+  // making the row taller than its text.
+  removeButton: {
+    width: 32,
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginVertical: -9,
+    marginRight: -9
+  },
   addRow: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: spacing.sm },
   propertyValue: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }
 })

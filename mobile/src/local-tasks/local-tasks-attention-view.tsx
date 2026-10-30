@@ -33,7 +33,7 @@ type Props = {
   onOpenSession: (item: LocalTaskAttentionItem) => void
 }
 
-/** "Needs you": the library host's judgement, one row per task, swipe for seen or snooze. */
+/** "Needs you": the library host's judgement, one row per task; seen and snooze per item or by swipe. */
 export function LocalTasksAttentionView(props: Props) {
   const copy = localTasksCopy()
   const work = copy.work
@@ -45,7 +45,7 @@ export function LocalTasksAttentionView(props: Props) {
   })
   const [snoozing, setSnoozing] = useState<LocalTaskAttentionItem[] | null>(null)
   const [menuFor, setMenuFor] = useState<LocalTaskAttentionRow | null>(null)
-  const [replying, setReplying] = useState<{ item: LocalTaskAttentionItem; ref: string } | null>(
+  const [replying, setReplying] = useState<{ item: LocalTaskAttentionItem; title: string } | null>(
     null
   )
   // Why kept per item in memory: a reply the agent never got must not lose what the user wrote.
@@ -89,8 +89,11 @@ export function LocalTasksAttentionView(props: Props) {
     onOpenSession: props.onOpenSession,
     onReply: (item: LocalTaskAttentionItem) => {
       const row = props.rows.find((entry) => entry.items.includes(item))
-      setReplying({ item, ref: row?.task.ref ?? '' })
-    }
+      setReplying({ item, title: row?.task.title ?? '' })
+    },
+    canWrite: props.canWrite,
+    onMarkSeen: (item: LocalTaskAttentionItem) => void actions.markSeen([item]),
+    onSnooze: (item: LocalTaskAttentionItem) => setSnoozing([item])
   }
   const now = new Date(props.now)
   const swipeActions = (row: LocalTaskAttentionRow) =>
@@ -129,7 +132,7 @@ export function LocalTasksAttentionView(props: Props) {
       </ScrollView>
       <ActionSheetModal
         visible={menuFor !== null}
-        title={menuFor ? `${menuFor.task.ref} · ${work.itemActions}` : undefined}
+        title={menuFor ? menuFor.task.title : undefined}
         actions={[
           { label: work.markSeen, onPress: () => menuFor && void actions.markSeen(menuFor.items) },
           { label: work.snooze, onPress: () => menuFor && setSnoozing(menuFor.items) }
@@ -149,7 +152,7 @@ export function LocalTasksAttentionView(props: Props) {
       />
       <LocalTaskReplyDrawer
         visible={replying !== null}
-        title={replying ? work.replyTitle(replying.ref) : ''}
+        title={replying ? work.replyTitle(replying.title) : ''}
         message={replying ? localTaskAttentionLine(replying.item) : undefined}
         draft={replying ? (drafts[replying.item.key] ?? '') : ''}
         connected={connected}

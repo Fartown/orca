@@ -167,6 +167,17 @@ export function classifyLocalTaskAttention(
   }
 }
 
+/**
+ * Whether looking at the session clears the item (REQ-014): only a finished turn is done once
+ * read. An approval, a question or a block still waits after a glance, until the agent moves on
+ * or the user marks it seen on purpose (REQ-015).
+ */
+export function localTaskAttentionClearsOnView(
+  item: Pick<LocalTaskAttentionItem, 'kind'>
+): boolean {
+  return item.kind === 'unread-done'
+}
+
 export function localTaskAttentionItem(
   link: Pick<LocalTaskSessionLink, 'id' | 'taskId' | 'agent'>,
   evidence: LocalTaskAttentionEvidence & { lastMessage: string | null }

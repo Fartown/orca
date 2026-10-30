@@ -71,11 +71,16 @@ export async function linkLocalTaskWorkspace(
   return result !== null
 }
 
-export async function unlinkLocalTaskWorkspace(taskId: string): Promise<void> {
+/** `announce: false` when the caller's own surface already shows the outcome. */
+export async function unlinkLocalTaskWorkspace(
+  taskId: string,
+  options: { announce?: boolean } = {}
+): Promise<boolean> {
   const result = await runLocalTaskWrite(() => localTasksClient.unlinkWorkspace(taskId))
-  if (result) {
+  if (result && options.announce !== false) {
     toast.success(translate('localTasks.links.workspaceUnlinked', 'Workspace unlinked'))
   }
+  return result !== null
 }
 
 export async function unlinkLocalTaskSession(sessionLinkId: string): Promise<void> {

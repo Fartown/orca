@@ -17,7 +17,7 @@ import {
   refreshHomeLibrary
 } from './LocalTaskHostStatePanel'
 import { LocalTaskBootstrap } from './LocalTaskBootstrap'
-import { LocalTaskNav } from './LocalTaskNav'
+import { LocalTaskNav, LocalTaskScopeMenu } from './LocalTaskNav'
 import { LocalTaskToolbar } from './LocalTaskToolbar'
 import { LocalTaskList } from './LocalTaskList'
 import { LocalTaskBoard } from './LocalTaskBoard'
@@ -127,10 +127,13 @@ function LocalTaskOverview({ model }: { model: LocalTaskListModel }): React.JSX.
     localTaskPageStore.getState().setPreviewOpen(false)
   )
   return (
-    <div className="flex min-h-0 flex-1 gap-4 pt-2">
+    <div className="@container/local-task-page relative flex min-h-0 flex-1 gap-4 pt-2">
       <LocalTaskNav model={model} />
       {needsYou ? (
-        <LocalTaskNeedsYouView model={model} />
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2">
+          <LocalTaskScopeMenu model={model} className="self-start @3xl/local-task-page:hidden" />
+          <LocalTaskNeedsYouView model={model} />
+        </div>
       ) : (
         <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2">
           <LocalTaskToolbar model={model} />

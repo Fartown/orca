@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 import { translate } from '@/i18n/i18n'
 import { createBrowserUuid } from '@/lib/browser-uuid'
 import { isImeCompositionKeyDown } from '@/lib/ime-composition-keyboard-event'
-import { ImeInput } from '@/lib/ime-text-field'
+import { ImeTextarea } from '@/lib/ime-text-field'
 import { cn } from '@/lib/utils'
 import {
   LOCAL_TASK_CRITERIA_MAX,
@@ -52,7 +52,7 @@ export function LocalTaskCriteriaEditor({
   onLeave?: () => void
   disabled?: boolean
 }): React.JSX.Element {
-  const inputs = useRef(new Map<string, HTMLInputElement>())
+  const inputs = useRef(new Map<string, HTMLTextAreaElement>())
   const [focusId, setFocusId] = useState<string | null>(null)
   useEffect(() => {
     if (focusId !== null) {
@@ -82,11 +82,15 @@ export function LocalTaskCriteriaEditor({
       }}
     >
       {items.map((item, position) => (
-        <div key={item.id} className="group/criterion flex items-center gap-2">
-          <span aria-hidden="true" className="w-3 shrink-0 text-center text-muted-foreground">
+        <div key={item.id} className="group/criterion flex items-start gap-2">
+          <span
+            aria-hidden="true"
+            className="w-3 shrink-0 text-center text-[13px] leading-7 text-muted-foreground"
+          >
             •
           </span>
-          <ImeInput
+          <ImeTextarea
+            rows={1}
             ref={(node) => {
               if (node) {
                 inputs.current.set(item.id, node)
@@ -100,7 +104,9 @@ export function LocalTaskCriteriaEditor({
             onChange={(event) =>
               onItemsChange(
                 items.map((current) =>
-                  current.id === item.id ? { ...current, text: event.target.value } : current
+                  current.id === item.id
+                    ? { ...current, text: event.target.value.replace(/\r?\n/g, ' ') }
+                    : current
                 )
               )
             }
@@ -119,9 +125,13 @@ export function LocalTaskCriteriaEditor({
             aria-label={translate('localTasks.criteria.item', 'Done criterion {{number}}', {
               number: position + 1
             })}
-            className={cn(LOCAL_TASK_INLINE_FIELD, 'h-7 text-[13px] text-foreground')}
+            // field-sizing:content wraps a long criterion instead of scrolling it out of view.
+            className={cn(
+              LOCAL_TASK_INLINE_FIELD,
+              'block min-h-7 resize-none overflow-hidden py-1 text-[13px] leading-5 text-foreground [field-sizing:content]'
+            )}
           />
-          <span className="opacity-0 transition-opacity group-hover/criterion:opacity-100 focus-within:opacity-100">
+          <span className="pt-0.5 opacity-0 transition-opacity group-hover/criterion:opacity-100 focus-within:opacity-100">
             <Button
               variant="ghost"
               size="icon-xs"

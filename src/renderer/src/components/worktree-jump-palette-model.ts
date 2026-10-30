@@ -17,6 +17,7 @@ import { CREATE_WORKSPACE_QUICK_ACTION_ID } from '@/components/cmd-j/quick-actio
 import type { CREATE_WORKTREE_ITEM_ID } from '@/lib/worktree-palette-create-action'
 
 import type { CmdJTaskSearchResult } from './cmd-j/task-search-results'
+import type { LocalTaskPaletteItem } from '@/local-tasks/local-task-palette-items'
 
 export type TaskPaletteItem = { id: string; type: 'task'; result: CmdJTaskSearchResult }
 
@@ -77,6 +78,7 @@ export type CreateWorktreePaletteItem = {
 
 export type PaletteItem =
   | TaskPaletteItem
+  | LocalTaskPaletteItem
   | WorktreePaletteItem
   | ProjectTargetPaletteItem
   | SettingsPaletteItem

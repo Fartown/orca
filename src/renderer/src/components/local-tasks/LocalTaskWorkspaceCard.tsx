@@ -377,9 +377,13 @@ export function LocalTaskWorkspaceCard({
           {workspace ? (
             <>
               <p className="text-xs text-muted-foreground">
-                {translate('localTasks.links.inheritedWorkspace', 'Uses the workspace of {{ref}}', {
-                  ref: inheritedFrom?.ref ?? '?'
-                })}
+                {translate(
+                  'localTasks.links.inheritedWorkspace',
+                  'Uses the workspace of “{{title}}”',
+                  {
+                    title: inheritedFrom?.title ?? '?'
+                  }
+                )}
               </p>
               <LinkedWorkspace
                 link={workspace}

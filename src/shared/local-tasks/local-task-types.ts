@@ -108,6 +108,10 @@ export type LocalTasksStatus = {
   inProgressCount?: number
   /** Optional for older hosts, read as "has projects"; 0 keeps every task surface out of the way. */
   projectCount?: number
+  /** Optional for older hosts, read as shown; true once Settings → Task sources hides Local. */
+  sourceHidden?: boolean
+  /** Optional for older hosts, read as shown; true once Display properties hides the card task. */
+  cardTaskHidden?: boolean
 }
 
 export type LocalTaskFailureCode =

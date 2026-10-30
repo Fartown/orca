@@ -11,7 +11,7 @@ import type {
   LocalTaskWorkspaceLink
 } from '../../../../shared/local-tasks/local-task-link-types'
 import type { LocalTask } from '../../../../shared/local-tasks/local-task-types'
-import { localTaskLinkDialogStore } from '@/local-tasks/local-task-link-dialog-store'
+import { openLocalTaskWorkspaceDetails } from '@/local-tasks/local-task-workspace-details'
 import { openLocalTaskPage } from '@/local-tasks/local-task-navigation'
 import {
   chatSessionIds,
@@ -33,7 +33,7 @@ function TaskLine({ task, onOpen }: { task: LocalTask; onOpen: () => void }): Re
     <button
       type="button"
       onClick={onOpen}
-      className="flex w-full min-w-0 items-center gap-1.5 rounded px-1 py-0.5 text-left text-xs hover:bg-accent"
+      className="-mx-1 flex min-w-0 items-center gap-1.5 rounded px-1 py-0.5 text-left text-xs hover:bg-accent"
     >
       <span className="shrink-0 font-mono text-2xs text-muted-foreground">{task.ref}</span>
       <span className="min-w-0 truncate text-foreground">{task.title}</span>
@@ -61,19 +61,23 @@ function LinkedCard({
     openLocalTaskPage({ taskId })
   }
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-2.5">
       <div className="flex flex-col gap-0.5">
         <span className="font-mono text-2xs text-muted-foreground">{task.ref}</span>
-        <span className="text-sm font-medium leading-snug text-foreground">{task.title}</span>
+        <span className="break-words text-sm font-medium leading-snug text-foreground">
+          {task.title}
+        </span>
       </div>
       {parent ? (
-        <div className="flex items-center gap-1 text-2xs text-muted-foreground">
-          <CornerDownRight className="size-3 shrink-0" />
-          {translate('localTasks.links.parentTask', 'Parent task')}
+        <div className="flex flex-col gap-0.5">
+          <span className="flex items-center gap-1 text-2xs text-muted-foreground">
+            <CornerDownRight className="size-3 shrink-0" />
+            {translate('localTasks.links.parentTask', 'Parent task')}
+          </span>
           <TaskLine task={parent} onOpen={() => open(parent.id)} />
         </div>
       ) : null}
-      <div className="flex gap-1.5">
+      <div className="flex gap-1.5 border-t border-border pt-2.5">
         <Button size="xs" variant="outline" onClick={() => open(task.id)}>
           <ExternalLink className="size-3" />
           {translate('localTasks.links.openTaskShort', 'Open task')}
@@ -143,9 +147,7 @@ function LinkChooser({
           className="w-fit"
           onClick={() => {
             onDone()
-            localTaskLinkDialogStore
-              .getState()
-              .open({ kind: 'pick-task', worktreeId: pane.worktreeId, hostId })
+            openLocalTaskWorkspaceDetails({ worktreeId: pane.worktreeId, hostId })
           }}
         >
           {translate('localTasks.links.linkWorkspaceFirst', 'Link workspace to a task…')}

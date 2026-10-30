@@ -30,6 +30,9 @@ import { getFolderWorkspacePrimaryActionLabel } from '@/components/sidebar/folde
 import type { WorkspaceCreationTargetHint } from '@/lib/project-host-workspace-target'
 import type { Repo } from '../../../shared/repo-types'
 import { addAppKeyListener, removeAppKeyListener } from '@/lib/app-keyboard-router'
+import type { LocalTaskComposerStart } from '@/local-tasks/local-task-start-work'
+import { LocalTaskSourceTabContext } from '@/local-tasks/local-task-source-tab'
+import { useLocalTaskComposerSource } from '@/local-tasks/use-local-task-composer-source'
 
 // Why: match App-level AddRepoDialog loading — the add flow is off the hot
 // path for the composer, so keep its clone/SSH machinery out of the entry render.
@@ -57,8 +60,7 @@ type ComposerModalData = {
   telemetrySource?: WorkspaceCreateTelemetrySource
   contextualTourSource?: string
   setupGuideTourRequestId?: string
-  launchPrompt?: string
-  onCreationStarted?: (creationId: string) => void
+  initialLocalTask?: LocalTaskComposerStart
 }
 
 export default function NewWorkspaceComposerModal(): React.JSX.Element | null {
@@ -160,6 +162,7 @@ function QuickTabBody({
     ...(modalData.telemetrySource ? { telemetrySource: modalData.telemetrySource } : {}),
     enableIssueAutomation: modalData.enableIssueAutomation === true
   })
+  const localTaskSource = useLocalTaskComposerSource(modalData.initialLocalTask, cardProps)
   // Why: the composer's built-in `onOpenAgentSettings` handler navigates to
   // the settings page and closes the modal. For the quick-create flow we want
   // a less disruptive affordance — a nested dialog layered over the composer
@@ -206,10 +209,10 @@ function QuickTabBody({
     setQuickSelectionCleared(true)
   }, [])
 
+  const localTaskSubmitOptions = localTaskSource.submitOptions
   const handleCreate = useCallback(async (): Promise<void> => {
-    const { launchPrompt, onCreationStarted } = modalData
-    await submitQuick(quickAgent, { setupOnly: quickSetupOnly, launchPrompt, onCreationStarted })
-  }, [modalData, quickAgent, quickSetupOnly, submitQuick])
+    await submitQuick(quickAgent, { setupOnly: quickSetupOnly, ...localTaskSubmitOptions() })
+  }, [localTaskSubmitOptions, quickAgent, quickSetupOnly, submitQuick])
   // Why: Add Project layers over the composer as a nested dialog instead of
   // replacing it in the activeModal slot — closing the composer mid-flow (and
   // losing the typed name/prompt) was the old, abrupt behavior. Once opened it
@@ -296,7 +299,7 @@ function QuickTabBody({
   }, [active, composerRef, createDisabled, handleCreate, nestedDialogOpen])
 
   return (
-    <>
+    <LocalTaskSourceTabContext.Provider value={localTaskSource.tab}>
       <DialogHeader className="gap-1">
         <DialogTitle className="text-base font-semibold">
           {isFolderWorkspaceTarget
@@ -326,6 +329,7 @@ function QuickTabBody({
         quickSetupOnly={quickSetupOnly}
         onQuickSetupOnlySelect={handleQuickSetupOnlySelect}
         {...cardProps}
+        {...localTaskSource.cardOverrides}
         primaryActionLabel={primaryActionLabel}
         onOpenAgentSettings={() => setAgentSettingsOpen(true)}
         onCreate={() => void handleCreate()}
@@ -338,6 +342,6 @@ function QuickTabBody({
           <HostedAddRepoDialog hosted={addProjectController} />
         </Suspense>
       ) : null}
-    </>
+    </LocalTaskSourceTabContext.Provider>
   )
 }

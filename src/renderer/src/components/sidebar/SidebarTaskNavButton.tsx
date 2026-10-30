@@ -22,6 +22,7 @@ import {
   resolveVisibleTaskProvider
 } from '../../../../shared/task-providers'
 import { LocalTaskNeedsYouCount } from '@/components/local-tasks/LocalTaskNeedsYouCount'
+import { LocalTaskProviderShortcut } from '@/components/local-tasks/LocalTaskProviderShortcut'
 
 function HideTaskSidebarMenu({ onHide }: { onHide: () => void }): React.JSX.Element {
   return (
@@ -230,6 +231,7 @@ export function SidebarTaskNavButton(): React.JSX.Element | null {
                 <JiraIcon className="size-3.5" />
               </TaskProviderShortcut>
             ) : null}
+            <LocalTaskProviderShortcut />
           </span>
         </div>
       </ContextMenuTrigger>

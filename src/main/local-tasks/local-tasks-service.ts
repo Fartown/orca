@@ -57,6 +57,8 @@ import {
   upsertLocalTaskStatus
 } from './local-task-status-store'
 import { readLocalTasks } from './local-task-store'
+import { LOCAL_TASK_SOURCE_HIDDEN_PREFERENCE_KEY } from '../../shared/local-tasks/local-task-source-visibility'
+import { LOCAL_TASK_CARD_SHOW_PREFERENCE_KEY } from '../../shared/local-tasks/local-task-card-display'
 import { updateLocalTask } from './local-task-update'
 import { rowNumber, rowString } from './local-tasks-sqlite-row'
 
@@ -107,6 +109,16 @@ export class LocalTasksService {
   projectCount(): number {
     const row = this.db.prepare('SELECT COUNT(*) AS count FROM local_task_projects').get()
     return row ? rowNumber(row, 'count') : 0
+  }
+
+  sourceHidden(): boolean {
+    const keys = [LOCAL_TASK_SOURCE_HIDDEN_PREFERENCE_KEY]
+    return this.getPreferences(keys).values[LOCAL_TASK_SOURCE_HIDDEN_PREFERENCE_KEY] === '1'
+  }
+
+  cardTaskHidden(): boolean {
+    const keys = [LOCAL_TASK_CARD_SHOW_PREFERENCE_KEY]
+    return this.getPreferences(keys).values[LOCAL_TASK_CARD_SHOW_PREFERENCE_KEY] === '0'
   }
 
   taskHostId(): string | null {

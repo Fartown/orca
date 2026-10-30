@@ -91,7 +91,7 @@ it('reports the started creation after starting it', async () => {
   expect(onCreationStarted).toHaveBeenCalledWith('creation-1')
 })
 
-it('sends the note typed in the composer after the task prompt', async () => {
+it('leaves the task in the agent’s input as a draft after the note, as upstream does for an issue', async () => {
   const { result } = renderHook(() =>
     useQuickCreationExecution({
       ...input,
@@ -118,6 +118,10 @@ it('sends the note typed in the composer after the task prompt', async () => {
   })
 
   expect(creation.run).toHaveBeenCalledWith(
-    expect.objectContaining({ quickPrompt: 'SHOP-12 Order export\n\nKeep the CSV header as is.' })
+    expect.objectContaining({
+      quickPrompt: '',
+      launchDraftPrompt: 'Keep the CSV header as is.\n\nSHOP-12 Order export',
+      promptDelivery: 'draft'
+    })
   )
 })

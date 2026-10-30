@@ -78,6 +78,19 @@ it('marks what an opened session waited for as seen, in its own library', () => 
   expect(fixture.acknowledge.mock.calls).toEqual([[`tab-1:${LEAF}@5`, SESSION]])
 })
 
+it('leaves a question the opened session still waits on in Needs you (REQ-014)', () => {
+  localTasksDomainStore
+    .getState()
+    .writer('runtime:env-1')
+    .applyProgress({
+      observedAt: 6,
+      sessions: [],
+      items: [{ ...item(SESSION, `tab-1:${LEAF}@6`), kind: 'question', replyable: false }]
+    })
+  expect(openLocalTaskSession(link)).toBe(true)
+  expect(fixture.acknowledge).not.toHaveBeenCalled()
+})
+
 it('marks nothing seen when the session could not be shown', () => {
   fixture.reveal.mockReturnValueOnce(false)
   expect(openLocalTaskSession(link)).toBe(false)

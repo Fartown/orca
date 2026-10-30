@@ -12,7 +12,7 @@ updated: 2026-10-30
 
 | 类型     | 文档                                                                             | 状态      | 说明                                                                     |
 | -------- | -------------------------------------------------------------------------------- | --------- | ------------------------------------------------------------------------ |
-| 需求     | [requirements/本地任务管理.md](requirements/本地任务管理.md)                     | ready     | REQ-001～REQ-018，2026-10-26 用户确认                                    |
+| 需求     | [requirements/本地任务管理.md](requirements/本地任务管理.md)                     | ready     | REQ-001～REQ-019；REQ-001～REQ-018 于 2026-10-26 用户确认                |
 | 交互     | -                                                                                | approved  | 设计稿在本机 `.docs/本地任务管理调研/2026-10-24/prototype-v4/`，不进仓库 |
 | 调研     | -                                                                                | completed | 产品与代码调研在本机 `.docs/本地任务管理调研/`，不进仓库；结论已并入方案 |
 | 方案     | [solutions/本地任务管理技术方案.md](solutions/本地任务管理技术方案.md)           | approved  | 数据层、RPC、推送、桌面与手机接入、需要你、35 处接缝、开工前验证         |
@@ -144,6 +144,77 @@ updated: 2026-10-30
 - 验证完再一起做两个切片
 
 ## 3. 开发记录
+
+### 2026-10-30 界面走查修复，并接入 Orca 原有的工作项入口
+
+- 本轮目标：
+  - 用户要求自己把桌面和手机的界面全部走查一遍，一次改完，不再「说一个改一个」。
+  - 期间用户又提了三点：列表行有效信息太少；任务的主要信息是标题而不是编号，要定成产品规则；工作区详情「添加引用」等 Orca 原有的工作项入口里没有本地任务。
+  - 用户选定：开始做时提示词放进草稿；卡片上显示任务标题；P0、P1、P2 全做。
+- 完成内容：
+  - 标题优先规则写进需求 §4「任务怎么展示」，桌面和手机逐处改为标题为主、编号为辅；对话框和提示条只写标题。
+  - 「设置 → 任务来源」新增「本地任务」卡片，可显示或隐藏（REQ-008）。隐藏后，任务页来源、侧栏快捷入口、任务按钮上的数字、Cmd+J、右键菜单、手机任务页来源一起隐藏。主机通过 `localTasks.status.sourceHidden` 报告这个值，旧主机不报，按显示处理。
+  - 接入上游工作项入口（关联仍存在任务库，见方案「2026-10-30 已决」）：
+    - P0：工作区详情「已链接的工作 → 添加引用」新增「本地」标签；新建工作区「创建自」新增「本地」标签，选中任务后建好的工作区自动关联，提示词放进草稿；右键「关联到任务…」改为打开工作区详情的「本地」标签。
+    - P1：卡片「显示属性」新增「本地任务」开关，悬停详情列出任务；Cmd+J 的任务结果并入上游「任务」分组。
+    - P2：PR 描述生成带上任务上下文，工作区清理可按任务筛选，CLI 新增本地任务命令（REQ-019）。
+    - 手机：任务页来源新增「本地」，工作区长按详情显示所属任务，工作区行显示任务图标。图标跟随桌面「显示属性 → 本地任务」，主机通过 `localTasks.status.cardTaskHidden` 报告。
+  - 列表与详情：
+    - 行内补上会话摘要和工作区名，按容器宽度逐级显示或隐藏。
+    - 工具栏收成一行；窄窗口下导航收进标题下拉，预览改为浮层。
+    - 分组计数包含嵌套的子任务（REQ-006）。
+    - 标题与验收标准输入框随内容增高；空字段写明「No labels」「No parent」。
+  - 「需要你」：只有「做完一轮，你还没看」会在查看时清除（REQ-014）；多条时提供「全部标为已看」「全部稍后」。
+  - 弹层和菜单的内边距统一放在内层容器，不再改 shadcn 组件本身的样式。
+  - 两路各写了一个「查工作区所属任务」的 hook，已合并为 `useLocalTaskOfWorkspace`。
+  - 手机主机页顶栏的本地任务按钮已去掉，入口改为任务页来源；`host-screen-header.tsx` 恢复为上游版本。
+  - 手机文案统一用英文，删除中文文案文件。
+  - 最终逐屏复验（桌面本机、桌面 SSH、手机三路）发现的问题，修了以下几处：
+    - Cmd+J 里按 Cmd/Ctrl+Enter 原来不会开始做：上游面板的可选中类型清单里没有本地任务，高亮停在任务行时选中项为空，按键落成了 Enter。修法是把 `local-task` 加进清单，登记为接缝。上游自己的 `task` 类型同样不在清单里，上游最新 main 也是如此，本功能不改。
+    - 文件夹项目在 Cmd+J 里按 Cmd+Enter 时，先打开任务页，再弹出「用已有工作区」。
+    - 默认卡片样式下，只关联了任务的工作区显示链接徽标，悬停能看到任务。
+    - 任务详情会话列表的行尾改为显示标签页名字，两条同类会话能区分开。
+    - 会话 chip 弹层打开时不再自动聚焦第一行；900 宽详情头部的长路径会截断，不再挤出编号；侧栏任务 chip 至少显示几个字。
+    - 看板卡片的父级改为标题：桌面只显示直接父任务的标题，手机从开头截断。
+    - 新建工作区和工作区详情的页签名改为一个词「Local」（中文「本地」），「Name」页签不再被挤掉；工作区详情的「本地」页签使用自己的搜索提示。
+    - 断线时，页签里的提示行不再被画成选中项。
+    - 预览浮层底部给全局浮动按钮留出空间。
+    - 手机：隐藏来源后，已关联任务的工作区仍显示图标、长按详情里的任务行和「Link to Task…」，和桌面一致；编辑表单的标签输入框随内容换行；列表「0/1」子任务按钮的触摸区放大，外观不变。
+- 代码或文档变更：
+  - 共享与主进程：`src/shared/local-tasks/`（新增 `local-task-source-visibility.ts`、`local-task-card-display.ts`、`local-task-pull-request-context.ts`、`local-task-workspace-match.ts`），`src/main/local-tasks/`（新增 `local-task-pull-request-context.ts`），`src/cli/local-tasks/`。
+  - 桌面：`src/renderer/src/local-tasks/**`、`src/renderer/src/components/local-tasks/**`（新增设置卡片、工作区详情「本地」标签、悬停详情、Cmd+J 行等）。
+  - 删除：`LocalTaskWorkspaceTaskPicker.tsx`，由工作区详情的「本地」标签取代。
+  - 上游接缝：设置任务来源、侧栏任务按钮、工作区详情与「添加引用」、新建工作区「创建自」、卡片显示属性与悬停详情、Cmd+J、工作区清理、PR 描述生成、CLI 注册。逐处已登记在 `config/fork-features.jsonc` 和 `config/architecture-policies.jsonc`。
+  - 手机：`mobile/src/local-tasks/**`（新增 `local-task-source-option.tsx`、`local-task-host-rows.ts`、`LocalTaskHostRowsProvider.tsx`、`LocalTaskWorkspaceGlyph.tsx`、`local-task-workspace-detail-rows.tsx`、`local-task-growing-input.tsx`）。
+  - 手机删除：`LocalTasksHostEntryButton.tsx`、`local-tasks-copy-zh.ts`、`local-tasks-work-copy-zh.ts`。
+  - 手机接缝：任务页来源与选择器、工作区详情、主机页列表行。
+  - 文档：需求 §4、REQ-006～REQ-009、REQ-011、REQ-014、REQ-016、REQ-017，新增 REQ-019；方案的手机接缝说明和「2026-10-30 已决」；调研与接缝清单在 `.docs/local-tasks-ui-validation/2026-10-30/upstream-work-item-design.md`。
+- 验证证据：
+  - 本机门禁全部通过，均在本 worktree 目录下运行：
+    - 类型检查：`tc:web`、`tc:node`、`tc:cli`、手机 tsc；
+    - 登记与策略：`check:fork-features`、`check:fork-docs`、`check:architecture-policies -- --base Fartown/main`；
+    - 多语言三项；
+    - 代码质量：改动代码质量与 React Doctor（基准 880ee74550），以及整个 fork 差异的代码质量（基准为上游 merge-base），均为 0 条新增；
+    - CI 静态步骤：完整 oxlint、anti-slop、focused plugins、type-aware baseline、ratchets、`oxfmt --check .`、RPC 参数目录、bundled skill guides、import boundaries、main sync spawn、Zustand fan-out、reliability gates、dead design-system classes。
+  - 测试：
+    - 本功能登记的三条检查：主进程与共享 15 个文件、渲染层 127 个文件、手机 31 个文件，全部通过；
+    - 修复后，侧栏、本地任务、新建工作区、Cmd+J 等相关目录 478 个文件通过；手机全量 1122 个文件通过；手机网页包检查 50 个文件通过。
+  - 桌面全量单元测试在本机没有跑完，跑满一小时被中止。失败的文件单独重跑后，归为三类：
+    - 一部分单独跑能通过；
+    - 一部分是本机环境造成的：macOS 自带 bash 3.2 没有 `mapfile`、空数组触发 `unbound variable`，临时目录是 `/private/var` 与 `/var` 的差异，以及依赖真实 zsh 配置；
+    - 退出时更新否决的测试，在不含本功能的 fork/integration 上同样失败。
+    - 远程布局快照的源码扫描测试，在本分支上超时，在主仓库目录 9 秒通过，原因未查明。它与本功能无关，以 PR 的 Linux CI 为准。
+  - 真实界面：
+    - 桌面本机、桌面 SSH、手机三路逐屏复验，证据在 `.docs/local-tasks-ui-validation/2026-10-30/ui-final/{desktop,ssh,mobile}/`。
+    - SSH 一路确认：关联、创建自、开始做、Cmd+J 都读写 SSH 主机自己的任务库；断线 45 秒内没有任何 `localTasks.*` 调用，恢复后只重读一次。
+    - 修复后的定点复查在 `ui-recheck/`：桌面 R1～R10、手机 M1～M5 全部通过。手机看板的父任务行第一次复查没过，原因是网页版不支持从开头截断；改为只显示直接父任务后，重跑通过。
+- 未解决问题：
+  - REQ-019 的 PR 描述生成，需要真实 AI 生成器才能端到端触发，目前只有单元测试。
+  - 会话 chip 卡片里的「关联工作区到任务…」入口没能实测：工作区未关联时，会话无法记录到任务上，所以这个状态在测试里造不出来。
+  - Cmd+J 搜编号时，「任务」分组排在设置项后面。这是上游的分组顺序，本功能跟随，不改。
+  - 会话列表里的标签页名字要等该工作区的标签页加载后才有。这个窗口还没打开过的工作区，会话行先显示智能体名称。
+  - 发现但不属于本功能：SSH 主机断线后，上游会话同步约每秒 0.8 次读取失联主机，违背「不读已失联主机」的规则；上游任务行在 Cmd+J 里同样不可选中。
+- 下一步：提交并开 PR，跑完整 CI，全部通过后合入。
 
 ### 2026-10-30 修复本地任务对已有功能的影响
 

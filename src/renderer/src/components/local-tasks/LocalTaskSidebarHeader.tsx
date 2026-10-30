@@ -57,10 +57,10 @@ function LocalTaskSidebarGroupHeader({
   )
   const collapsed = useStore(localTaskSidebarCollapseStore, (state) => state.collapsed.has(row.key))
   const label = task
-    ? `${task.ref} ${task.title}`
+    ? `${task.title} · ${task.ref}`
     : translate('localTasks.sidebar.noTaskGroup', 'No task')
   const openLabel = task
-    ? translate('localTasks.sidebar.openTask', 'Open {{ref}}', { ref: task.ref })
+    ? translate('localTasks.sidebar.openTask', 'Open “{{title}}”', { title: task.title })
     : ''
   return (
     <div
@@ -94,10 +94,8 @@ function LocalTaskSidebarGroupHeader({
             <CircleDashed className="size-3" />
           )}
         </div>
-        {task ? (
-          <span className="shrink-0 font-mono text-xs text-muted-foreground">{task.ref}</span>
-        ) : null}
-        <span className="min-w-0 truncate text-[13px] font-semibold leading-4">
+        {/* Why title only: the sidebar is narrow, and a task is known by its title (ref in tooltip). */}
+        <span className="min-w-0 truncate text-[13px] font-semibold leading-4" title={label}>
           {task ? task.title : label}
         </span>
       </div>

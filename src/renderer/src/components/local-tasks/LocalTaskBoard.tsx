@@ -72,7 +72,11 @@ function BoardCard({
       {path.length > 0 ? (
         <span className="flex min-w-0 items-center gap-1 text-2xs text-muted-foreground">
           <CornerDownRight className="size-3 shrink-0" />
-          <span className="truncate">{localTaskPathLabel(path)}</span>
+          {/* Why the parent alone: a narrow card would cut it off the end of the full path. */}
+          <span className="truncate" title={localTaskPathLabel(path)}>
+            {path.length > 1 ? '… › ' : ''}
+            {path.at(-1)?.title}
+          </span>
         </span>
       ) : null}
       <span className="line-clamp-2 text-[13px] font-medium leading-snug text-foreground">

@@ -55,7 +55,11 @@ export function WorktreeJumpPaletteSurface({
           ) {
             event.preventDefault()
             event.stopPropagation()
-            controller.handleSelectTask(selectedTask.result, true)
+            if (selectedTask.type === 'local-task') {
+              controller.handleSelectLocalTask(selectedTask, true)
+            } else {
+              controller.handleSelectTask(selectedTask.result, true)
+            }
             return
           }
           if (

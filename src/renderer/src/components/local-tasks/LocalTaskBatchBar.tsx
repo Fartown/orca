@@ -47,9 +47,9 @@ export function LocalTaskBatchBar({ model }: { model: LocalTaskListModel }): Rea
     <div
       role="toolbar"
       aria-label={translate('localTasks.batch.label', 'Selected tasks')}
-      className="flex items-center gap-2 rounded-md border border-border/60 bg-muted/30 px-2 py-1"
+      className="flex items-center gap-2 overflow-hidden rounded-md border border-border/60 bg-muted/30 px-2 py-1"
     >
-      <span className="text-xs text-foreground">
+      <span className="shrink-0 whitespace-nowrap text-xs text-foreground">
         {translate('localTasks.batch.count', '{{count}} selected', { count: taskIds.length })}
       </span>
       <PickerButton

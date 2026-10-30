@@ -3,7 +3,7 @@ import { translate } from '@/i18n/i18n'
 
 function Hint({ keys, label }: { keys: string[]; label: string }): React.JSX.Element {
   return (
-    <span className="flex items-center gap-1">
+    <span className="flex shrink-0 items-center gap-1 whitespace-nowrap">
       <ShortcutKeyCombo
         keys={keys}
         className="gap-0.5"
@@ -18,7 +18,7 @@ function Hint({ keys, label }: { keys: string[]; label: string }): React.JSX.Ele
 /** The page's single keys; they apply only while focus is outside text fields (REQ-007). */
 export function LocalTaskKeyHints(): React.JSX.Element {
   return (
-    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-2xs text-muted-foreground">
+    <div className="hidden flex-wrap items-center gap-x-3 gap-y-1 text-2xs text-muted-foreground @3xl/local-task-page:flex">
       <Hint keys={['J', 'K']} label={translate('localTasks.keys.move', 'Move')} />
       <Hint keys={['↵']} label={translate('localTasks.keys.open', 'Open')} />
       <Hint keys={['Space']} label={translate('localTasks.keys.preview', 'Preview')} />

@@ -141,8 +141,8 @@ export function MobileHomeLocalTasksCard(props: { connectedHosts: HostProfile[] 
               accessibilityRole="button"
             >
               <Text style={styles.rowTitle} numberOfLines={1}>
-                {row.hostLabel ? `${row.hostLabel} · ` : ''}
-                {row.ref} {row.title}
+                {row.title}
+                {row.hostLabel ? ` · ${row.hostLabel}` : ''}
               </Text>
               <Text style={styles.rowMeta} numberOfLines={1}>
                 {copy.work.attentionKinds[row.item.kind]} · {localTaskAttentionLine(row.item)}

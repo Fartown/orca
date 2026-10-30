@@ -21200,6 +21200,7 @@
         "open": "Open session",
         "reply": "Reply",
         "seen": "Mark as seen",
+        "seenAll": "Mark all as seen",
         "stopped": "{{agent}} stopped. Last words: {{message}}",
         "left": "No longer waiting on you",
         "unverifiable": "Host not connected; cannot confirm"
@@ -21214,6 +21215,7 @@
       },
       "snooze": {
         "trigger": "Snooze",
+        "triggerAll": "Snooze all",
         "hour": "For 1 hour",
         "tonight": "Until tonight",
         "tomorrow": "Until tomorrow",
@@ -21226,7 +21228,7 @@
     "sidebar": {
       "groupByTask": "Task",
       "noTaskGroup": "No task",
-      "openTask": "Open {{ref}}"
+      "openTask": "Open “{{title}}”"
     },
     "quickActions": {
       "newTask": "New task…",
@@ -21236,8 +21238,21 @@
         "openTask": "open task"
       },
       "openTask": "Open task…",
-      "openTaskDescription": "Find a local task by ref or title.",
-      "taskDescription": "Local task · {{project}}"
+      "openTaskDescription": "Find a local task by ref or title."
+    },
+    "card": {
+      "option": "Local task"
+    },
+    "hover": {
+      "section": "Local task",
+      "rowDetail": "{{detail}} · Local task",
+      "statusUnverifiable": "Status can’t be confirmed"
+    },
+    "palette": {
+      "source": "Local task"
+    },
+    "cleanup": {
+      "ticketSource": "Local task"
     },
     "activity": {
       "commentPlaceholder": "Write a comment…",
@@ -21309,7 +21324,7 @@
       "emptyTitle": "Or start an empty project"
     },
     "create": {
-      "created": "Created {{ref}}",
+      "created": "Created “{{title}}” · {{ref}}",
       "title": "New task",
       "titlePlaceholder": "Task title",
       "titleLabel": "Title",
@@ -21325,8 +21340,8 @@
       "add": "Add a criterion"
     },
     "delete": {
-      "done": "Deleted {{ref}}",
-      "title": "Delete {{ref}}?",
+      "done": "Deleted “{{title}}”",
+      "title": "Delete “{{title}}”?",
       "withSubtasks": "Its subtasks at every level ({{count}}) are deleted with it. Only task records are removed; workspaces and sessions are not touched.",
       "single": "Only the task record is removed; workspaces and sessions are not touched.",
       "confirm": "Delete"
@@ -21353,7 +21368,8 @@
       "labels": "Labels",
       "parent": "Parent task",
       "project": "Project",
-      "noParent": "No parent"
+      "noParent": "No parent",
+      "noLabels": "No labels"
     },
     "picker": {
       "labelPlaceholder": "Find or add a label",
@@ -21447,7 +21463,13 @@
     },
     "source": {
       "label": "Local tasks",
-      "summary": "Local tasks · Projects: {{projects}} · Tasks: {{tasks}}"
+      "summary": "Local tasks · Projects: {{projects}} · Tasks: {{tasks}}",
+      "openShortcut": "Open local tasks",
+      "settingsDescription": "Tasks you write down in Orca, kept by each Orca for its own machine. Nothing to connect.",
+      "projectsStepTitle": "Projects and statuses",
+      "projectsStepCount": "Projects: {{count}}. Statuses, repositories and rules are set per project.",
+      "projectsStepEmpty": "Create a project to start writing down tasks; it can link Orca repositories.",
+      "visibilityFailed": "Could not save whether Local tasks are shown."
     },
     "subtasks": {
       "added": "Added {{count}} subtasks",
@@ -21457,7 +21479,7 @@
       "retryRemaining": "Retry remaining {{count}} subtasks"
     },
     "toolbar": {
-      "searchPlaceholder": "Search by ref or title",
+      "searchPlaceholder": "Search title or ref",
       "search": "Search tasks",
       "layout": "Layout",
       "list": "List",
@@ -21604,18 +21626,27 @@
     "time": {
       "justNow": "just now"
     },
+    "sourceTab": {
+      "label": "Local",
+      "placeholder": "Search local tasks by title or ref",
+      "unavailable": "The task library is not available now.",
+      "offline": "{{host}} is not connected, so tasks cannot be linked now.",
+      "readOnly": "This task library is read-only here. Update Orca to link tasks.",
+      "saveFailed": "The task link was not saved. Save again to retry.",
+      "replaces": "Replaces “{{title}}”",
+      "rowDetail": "{{ref}} · Local task · {{project}}",
+      "unlinkTask": "Unlink {{title}}",
+      "unlinkHint": "Unlink from workspace; the task’s sessions here are unlinked too"
+    },
     "links": {
-      "currentTask": "Linked to {{ref}} · {{title}}",
       "hasWorkspace": "Has {{name}}",
       "linkSessionTo": "Link this session to",
       "linkWorkspaceFirst": "Link workspace to a task…",
       "menuLink": "Link to task…",
-      "menuLinked": "Task {{ref}}…",
-      "noTasksForWorkspace": "No tasks on this workspace’s host yet.",
-      "openTask": "Open task {{ref}}",
+      "menuLinked": "Task: {{title}}…",
+      "openTask": "Open task {{title}}",
       "openTaskShort": "Open task",
       "parentTask": "Parent task",
-      "pickTaskTitle": "Link {{name}} to a task",
       "unlink": "Unlink",
       "workspaceNotLinked": "This workspace is not linked to a task yet. Link the workspace first.",
       "state": {
@@ -21643,13 +21674,17 @@
       },
       "workspaceGone": "The workspace was deleted.",
       "workspaceUnverifiableNamed": "{{name}} · can’t confirm",
+      "workspaceMarker": "Workspace · {{name}}",
+      "sessionDot": "Session · {{state}}",
+      "surfaceChat": "Chat",
+      "surfaceTerminal": "Terminal",
       "agent": "Agent",
       "location": "Location",
       "delivery": "Prompt",
       "deliverySend": "Send now",
       "deliveryDraft": "Put in the input box",
       "openSession": "Open session",
-      "openSessionTitle": "Open session · {{ref}}",
+      "openSessionTitle": "Open a session",
       "workspaceUnverifiable": "The workspace cannot be reached now.",
       "sessionMissingHint": "Session not found — open the workspace",
       "sessionActions": "Session actions",
@@ -21671,9 +21706,9 @@
       "pullRequest": "PR",
       "start": "Start",
       "workspace": "Workspace",
-      "pickWorkspaceTitle": "Use an existing workspace for {{ref}}",
+      "pickWorkspaceTitle": "Use an existing workspace for “{{title}}”",
       "noWorkspaces": "No workspaces on this project’s host.",
-      "ownedBy": "Belongs to {{ref}}",
+      "ownedBy": "Belongs to “{{title}}”",
       "sessionFailed": "The agent could not be started.",
       "noRepo": "This project has no Git repository in Orca, so a workspace cannot be created for it.",
       "otherProjectNotLinked": "The workspace was created in another project, so it was not linked to the task.",
@@ -21682,11 +21717,9 @@
       "noRepoShort": "No Git repository in Orca for this project",
       "workspaceUnlinked": "Workspace unlinked",
       "sessionUnlinked": "Session unlinked",
-      "inheritedWorkspace": "Uses the workspace of {{ref}}",
-      "otherTasks": "Other projects",
+      "inheritedWorkspace": "Uses the workspace of “{{title}}”",
       "otherWorkspaces": "Other repositories",
       "projectWorkspaces": "This project’s repositories",
-      "relatedTasks": "Projects tracking this repository",
       "startIn": "{{action}} in {{repo}}",
       "startInRepo": "Start in another repository",
       "startOwn": "Start separately"

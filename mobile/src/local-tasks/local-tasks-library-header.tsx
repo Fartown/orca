@@ -23,6 +23,8 @@ export function LocalTasksLibraryHeader(props: {
   hostLabel: string | null
   onPickHost: () => void
   view: LocalTasksViewMode
+  /** Off where list and board mean nothing: with no project, and in "Needs you". */
+  showViewToggle: boolean
   onExit: () => void
   onSettings: () => void
   onView: (view: LocalTasksViewMode) => void
@@ -41,32 +43,36 @@ export function LocalTasksLibraryHeader(props: {
           <Text style={localTaskStyles.backLabel}>{copy.back}</Text>
         </Pressable>
         <View style={localTaskStyles.topBarSpacer} />
-        <Pressable
-          style={localTaskStyles.iconButton}
-          onPress={props.onSettings}
-          accessibilityRole="button"
-          accessibilityLabel={copy.projectSettings}
-        >
-          <Settings size={18} color={colors.textSecondary} />
-        </Pressable>
-        <View style={styles.viewToggle}>
-          {(['list', 'board'] as const).map((mode) => {
-            const Icon = mode === 'list' ? List : Columns3
-            const active = props.view === mode
-            return (
-              <Pressable
-                key={mode}
-                style={[localTaskStyles.iconButton, active && localTaskStyles.iconButtonActive]}
-                onPress={() => props.onView(mode)}
-                accessibilityRole="button"
-                accessibilityState={{ selected: active }}
-                accessibilityLabel={mode === 'list' ? copy.viewList : copy.viewBoard}
-              >
-                <Icon size={17} color={active ? colors.textPrimary : colors.textMuted} />
-              </Pressable>
-            )
-          })}
-        </View>
+        {props.hasProjects ? (
+          <Pressable
+            style={localTaskStyles.iconButton}
+            onPress={props.onSettings}
+            accessibilityRole="button"
+            accessibilityLabel={copy.projectSettings}
+          >
+            <Settings size={18} color={colors.textSecondary} />
+          </Pressable>
+        ) : null}
+        {props.showViewToggle ? (
+          <View style={styles.viewToggle}>
+            {(['list', 'board'] as const).map((mode) => {
+              const Icon = mode === 'list' ? List : Columns3
+              const active = props.view === mode
+              return (
+                <Pressable
+                  key={mode}
+                  style={[localTaskStyles.iconButton, active && localTaskStyles.iconButtonActive]}
+                  onPress={() => props.onView(mode)}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: active }}
+                  accessibilityLabel={mode === 'list' ? copy.viewList : copy.viewBoard}
+                >
+                  <Icon size={17} color={active ? colors.textPrimary : colors.textMuted} />
+                </Pressable>
+              )
+            })}
+          </View>
+        ) : null}
       </View>
       <View style={localTaskStyles.titleRow}>
         <Text style={localTaskStyles.heading}>{copy.title}</Text>

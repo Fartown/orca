@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import { localTaskWriteMessage } from './local-task-failure-message'
-import { localTasksCopyFor } from './local-tasks-copy'
+import { localTasksCopy } from './local-tasks-copy'
 
 describe('mobile local task refusal copy', () => {
   it('explains invalid input and prefix history, and falls back for a newer host code', () => {
-    const copy = localTasksCopyFor('en')
+    const copy = localTasksCopy()
     expect(
       localTaskWriteMessage(copy, { kind: 'refused', code: 'invalid_argument', detail: null })
     ).toBe(copy.failures.invalid_argument)

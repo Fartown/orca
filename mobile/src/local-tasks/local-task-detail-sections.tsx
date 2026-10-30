@@ -52,15 +52,19 @@ export function LocalTaskDetailSections(props: {
         <>
           <Text style={[styles.sectionTitle, styles.sectionGap]}>{copy.criteria}</Text>
           {keyedLines(task.criteria).map((line) => (
-            <Text key={line.key} style={[localTaskStyles.body, styles.bullet]}>
-              • {line.text}
-            </Text>
+            // Hanging indent: the bullet keeps its own column, wrapped lines align with the text.
+            <View key={line.key} style={styles.bulletRow}>
+              <Text style={[localTaskStyles.body, styles.bulletMark]}>•</Text>
+              <Text style={[localTaskStyles.body, styles.bulletText]}>{line.text}</Text>
+            </View>
           ))}
         </>
       ) : null}
       <View style={localTaskStyles.sectionHeaderRow}>
         <Text style={styles.sectionTitle}>
-          {copy.subtasks} {done.length}/{props.subtasks.length}
+          {props.subtasks.length > 0
+            ? `${copy.subtasks} ${done.length}/${props.subtasks.length}`
+            : copy.subtasks}
         </Text>
         {props.readOnly ? null : (
           <Pressable style={localTaskStyles.sectionAction} onPress={() => props.onAddSubtask(task)}>
@@ -76,6 +80,7 @@ export function LocalTaskDetailSections(props: {
               key={child.id}
               task={child}
               status={props.statuses.get(child.statusId) ?? null}
+              inCard
               onOpen={props.onOpenTask}
             />
           ))}
@@ -88,5 +93,7 @@ export function LocalTaskDetailSections(props: {
 const styles = StyleSheet.create({
   sectionTitle: { color: colors.textMuted, fontSize: 12, fontWeight: '600' },
   sectionGap: { marginTop: spacing.lg, marginBottom: spacing.sm },
-  bullet: { marginBottom: 4 }
+  bulletRow: { flexDirection: 'row', marginBottom: 4 },
+  bulletMark: { width: 14 },
+  bulletText: { flex: 1 }
 })

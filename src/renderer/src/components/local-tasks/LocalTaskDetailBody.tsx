@@ -3,7 +3,7 @@ import { AlertTriangle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { translate } from '@/i18n/i18n'
 import { isImeCompositionKeyDown } from '@/lib/ime-composition-keyboard-event'
-import { ImeInput, ImeTextarea } from '@/lib/ime-text-field'
+import { ImeTextarea } from '@/lib/ime-text-field'
 import { cn } from '@/lib/utils'
 import {
   LOCAL_TASK_DESCRIPTION_MAX,
@@ -74,11 +74,13 @@ function TitleField({ task, writable }: { task: LocalTask; writable: boolean }):
   })
   return (
     <div className="flex flex-col gap-1">
-      <ImeInput
+      <ImeTextarea
         value={field.value}
         readOnly={!writable}
+        rows={1}
         maxLength={LOCAL_TASK_TITLE_MAX}
-        onChange={(event) => field.edit(event.target.value)}
+        // Why: a title is one line of text; a pasted newline would only be stripped on save.
+        onChange={(event) => field.edit(event.target.value.replace(/\r?\n/g, ' '))}
         onBlur={() => {
           // Why: an emptied title is not saved; the stored one comes back.
           if (field.value.trim()) {
@@ -94,7 +96,11 @@ function TitleField({ task, writable }: { task: LocalTask; writable: boolean }):
           }
         }}
         aria-label={translate('localTasks.create.titleLabel', 'Title')}
-        className={cn(LOCAL_TASK_INLINE_FIELD, 'py-1 text-xl font-semibold text-foreground')}
+        // field-sizing:content wraps a long title onto more lines instead of cutting it off.
+        className={cn(
+          LOCAL_TASK_INLINE_FIELD,
+          'block resize-none overflow-hidden py-1 text-xl font-semibold leading-snug text-foreground [field-sizing:content]'
+        )}
       />
       <FieldConflict field={field} />
     </div>

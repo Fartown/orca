@@ -33,6 +33,8 @@ import { WorktreeCardCliDetailSection } from './WorktreeCardCliDetailSection'
 import { WorktreeCardIssueDetailSection } from './WorktreeCardIssueDetailSection'
 import { WorktreeCardHoverIdentityHeader } from './WorktreeCardHoverIdentityHeader'
 import { CommentMarkdownAsync, preloadCommentMarkdown } from './comment-markdown-lazy'
+import { LocalTaskHoverRow, LocalTaskHoverSection } from '../local-tasks/LocalTaskHoverDetails'
+import { useLocalTaskOfWorkspace } from '@/local-tasks/local-task-workspace-task'
 
 const COMMENT_MARKDOWN_CLASS_NAME =
   'text-[11.5px] text-foreground break-words leading-normal [&_.comment-md-p]:block [&_.comment-md-p+.comment-md-p]:mt-1'
@@ -168,13 +170,15 @@ export function WorktreeCardDetailsHover({
 
   const showIdentityHeader = Boolean(branchName || workspaceTitle)
   const attachments = getWorkspaceAttachments(workspace ?? {})
+  const localTask = useLocalTaskOfWorkspace(workspace)
   const showAttachmentCollection =
-    attachments.length > 1 ||
+    attachments.length + (localTask ? 1 : 0) > 1 ||
     (attachments.length === 1 && !issue && !linearIssue && !jiraIssue && !review)
 
   if (
     !showIdentityHeader &&
     attachments.length === 0 &&
+    !localTask &&
     !onManageLinks &&
     !hasWorktreeCardDetails({
       issue,
@@ -334,6 +338,8 @@ export function WorktreeCardDetailsHover({
                 </WorktreeCardDetailSection>
               )}
 
+              {localTask && <LocalTaskHoverSection linked={localTask} onOpen={closeHover} />}
+
               <WorktreeCardReviewDetailSection
                 review={review}
                 reviewMenuOpen={reviewMenuOpen}
@@ -356,6 +362,7 @@ export function WorktreeCardDetailsHover({
             linearIssue={linearIssue}
             jiraIssue={jiraIssue}
             showItems={showAttachmentCollection}
+            localTaskRow={localTask && <LocalTaskHoverRow linked={localTask} onOpen={closeHover} />}
             onManage={onManageLinks ? dismissAndRun(onManageLinks) : undefined}
             onOpen={(url) => {
               closeHover()

@@ -1,4 +1,5 @@
 import { useWorktreeJumpPaletteTaskSelection } from './use-worktree-jump-palette-task-selection'
+import { useLocalTaskPaletteSelection } from '@/local-tasks/local-task-palette-selection'
 import type { WorktreeJumpPaletteTaskSearch } from './use-worktree-jump-palette-task-search'
 import { useCallback } from 'react'
 import { toast } from 'sonner'
@@ -256,19 +257,22 @@ export function useWorktreeJumpPaletteSelectionActions({
       revealSidebarRow
     ]
   )
-  const handleSelectTask = useWorktreeJumpPaletteTaskSelection({
+  const taskSelection = {
     visible,
     taskItems,
-    workspaces,
     handleSelectWorktree,
     recordFeatureInteraction,
     skipRestoreFocusRef,
     setSelectedItemId
-  })
+  }
+  const handleSelectTask = useWorktreeJumpPaletteTaskSelection({ ...taskSelection, workspaces })
+  const handleSelectLocalTask = useLocalTaskPaletteSelection({ ...taskSelection, closeModal })
   const handleSelectItem = useCallback(
     (item: PaletteItem) => {
       if (item.type === 'worktree') {
         handleSelectWorktree(item.worktree)
+      } else if (item.type === 'local-task') {
+        handleSelectLocalTask(item)
       } else if (item.type === 'project-target') {
         handleSelectProjectTarget(item.result)
       } else if (item.type === 'browser-page') {
@@ -287,6 +291,7 @@ export function useWorktreeJumpPaletteSelectionActions({
     },
     [
       handleSelectTask,
+      handleSelectLocalTask,
       handleSelectBrowserPage,
       handleSelectProjectTarget,
       handleSelectQuickAction,
@@ -296,7 +301,7 @@ export function useWorktreeJumpPaletteSelectionActions({
       handleSelectWorktree
     ]
   )
-  return { handleSelectItem, handleSelectTask }
+  return { handleSelectItem, handleSelectTask, handleSelectLocalTask }
 }
 
 export type WorktreeJumpPaletteSelectionActions = ReturnType<

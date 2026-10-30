@@ -13,7 +13,11 @@ import { colors, radii, spacing, typography } from '../theme/mobile-theme'
 import { formatLocalTaskAgo, localTasksCopy } from './local-tasks-copy'
 import type { LocalTaskListGroup, LocalTaskListRow } from './local-task-list-projection'
 import { localTaskStyles } from './local-tasks-styles'
-import { LocalTaskPriorityIcon, LocalTaskStatusIcon } from './local-tasks-visuals'
+import {
+  LocalTaskPriorityIcon,
+  LocalTaskStatusIcon,
+  localTaskCategoryColor
+} from './local-tasks-visuals'
 
 const COLUMN_GAP = spacing.md
 // Why the peek: the next column's edge is what tells a phone user the board scrolls sideways.
@@ -52,7 +56,13 @@ export function LocalTasksBoardView(props: Props) {
       {columns.map((group) => (
         <View key={group.key} style={{ width: columnWidth }}>
           <View style={styles.columnHeader}>
-            <LocalTaskStatusIcon category={group.category} color={group.status?.color ?? 'gray'} />
+            <LocalTaskStatusIcon
+              category={group.category}
+              color={
+                group.status?.color ??
+                (group.category ? localTaskCategoryColor(group.category) : 'gray')
+              }
+            />
             <Text style={styles.columnTitle} numberOfLines={1}>
               {group.status?.name ??
                 (group.category ? copy.categories[group.category] : copy.unknownStatus)}
@@ -104,7 +114,7 @@ export function LocalTasksBoardView(props: Props) {
 
 function LocalTaskBoardCard(props: {
   row: LocalTaskListRow
-  /** Root first: the card reads "SHOP-1 › SHOP-4 › parent title" above its own title. */
+  /** Root first: the card reads "… › Parent title" above its own title. */
   ancestors: LocalTask[]
   status: LocalTaskStatusDef | null
   now: number
@@ -127,8 +137,14 @@ function LocalTaskBoardCard(props: {
       {props.ancestors.length > 0 ? (
         <View style={styles.parentHint}>
           <CornerDownRight size={12} color={colors.textMuted} />
-          <Text style={localTaskStyles.meta} numberOfLines={1}>
-            {localTaskPathLabel(props.ancestors)}
+          {/* Why the parent alone: the web build ignores head ellipsis, so a full path lost it. */}
+          <Text
+            style={[localTaskStyles.meta, styles.parentPath]}
+            numberOfLines={1}
+            accessibilityLabel={localTaskPathLabel(props.ancestors)}
+          >
+            {props.ancestors.length > 1 ? '… › ' : ''}
+            {props.ancestors.at(-1)?.title}
           </Text>
         </View>
       ) : null}
@@ -187,6 +203,7 @@ const styles = StyleSheet.create({
   cardPressed: { backgroundColor: colors.bgRaised },
   cardTop: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   parentHint: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  parentPath: { flexShrink: 1, minWidth: 0 },
   cardTitle: { color: colors.textPrimary, fontSize: typography.bodySize, fontWeight: '600' },
   labels: { flexDirection: 'row', flexWrap: 'wrap', gap: 4 },
   cardFooter: {

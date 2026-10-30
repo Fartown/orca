@@ -12,7 +12,6 @@ import {
 import { getRepoIdFromWorktreeId } from '../../../shared/worktree/id'
 import type { TuiAgent } from '../../../shared/tui-agent'
 import { suggestLocalTaskWorkspaceName } from '../../../shared/local-tasks/local-task-model'
-import { localTaskPromptFor } from './local-task-session-launch'
 import { localTaskLaunchAgentTabId } from './local-task-launch-agent-tab'
 import type { LocalTask, LocalTaskProject } from '../../../shared/local-tasks/local-task-types'
 import {
@@ -38,18 +37,22 @@ import {
   settleLocalTaskStartedWorkspaces
 } from './local-task-started-workspaces'
 
-type PendingStart = {
+/** What a creation started for a task links once it completes; also the composer's task pick. */
+export type LocalTaskComposerStart = {
   taskId: string
   /** The task project's Orca projects; a workspace made in another is not linked. Empty: any. */
   orcaProjectIds: readonly string[]
   replace: boolean
 }
 
+/** `modalData` key of the task Start preselects in the composer's Local tasks tab. */
+export const LOCAL_TASK_COMPOSER_KEY = 'initialLocalTask'
+
 // Why memory only: a creation that never completes (failed, cancelled, app closed) leaves nothing.
-const pendingStarts = new Map<string, PendingStart>()
+const pendingStarts = new Map<string, LocalTaskComposerStart>()
 const PENDING_START_LIMIT = 32
 
-function rememberStart(creationId: string, start: PendingStart): void {
+export function rememberLocalTaskStart(creationId: string, start: LocalTaskComposerStart): void {
   pendingStarts.set(creationId, start)
   for (const oldest of pendingStarts.keys()) {
     if (pendingStarts.size <= PENDING_START_LIMIT) {
@@ -61,48 +64,46 @@ function rememberStart(creationId: string, start: PendingStart): void {
 
 const TASK_COMPOSER_KEYS: ReadonlySet<string> = new Set([
   'initialTaskRepo',
-  'launchPrompt',
-  'onCreationStarted'
+  LOCAL_TASK_COMPOSER_KEY
 ])
 
 /**
  * "Create another" keeps the composer open: only its first workspace belongs to the task, so the
- * task's prompt, repo and callback leave the composer once that creation has started.
+ * task and its repo leave the composer once that creation has started.
  */
-function releaseTaskComposer(data: Record<string, unknown>): void {
+export function releaseLocalTaskComposer(): void {
   const app = useAppStore.getState()
-  if (app.activeModal !== 'new-workspace-composer' || app.modalData !== data) {
+  if (app.activeModal !== 'new-workspace-composer' || !(LOCAL_TASK_COMPOSER_KEY in app.modalData)) {
     return
   }
   useAppStore.setState({
     modalData: Object.fromEntries(
-      Object.entries(data).filter(([key]) => !TASK_COMPOSER_KEYS.has(key))
+      Object.entries(app.modalData).filter(([key]) => !TASK_COMPOSER_KEYS.has(key))
     )
   })
 }
 
 /**
- * Opens Orca's own new-workspace composer for a task of any level (REQ-009): repo and run location
- * from the project (the default repo unless `orcaProjectId` picks another), a name from the ref
- * and title, and the task as the agent's prompt.
+ * The composer for a task of any level (REQ-009): repo and run location from the project (the
+ * default repo unless `orcaProjectId` picks another), a name from the ref and title, and the task
+ * preselected in the Local tasks tab; null when the project has no Git repository here.
  */
-export function startLocalTaskWork(
+export function buildLocalTaskComposerData(
+  state: AppState,
   task: LocalTask,
   project: LocalTaskProject,
   options: { replace?: boolean; orcaProjectId?: string } = {}
-): boolean {
-  const state = useAppStore.getState()
+): Record<string, unknown> | null {
   const start = resolveLocalTaskStartTarget(state, project, options.orcaProjectId)
   if (!start) {
-    toast.error(
-      translate(
-        'localTasks.links.noRepo',
-        'This project has no Git repository in Orca, so a workspace cannot be created for it.'
-      )
-    )
-    return false
+    return null
   }
-  const data = {
+  const pick: LocalTaskComposerStart = {
+    taskId: task.id,
+    orcaProjectIds: project.repos,
+    replace: options.replace === true
+  }
+  return {
     initialRepoId: start.repo.id,
     ...(state.repos.some(
       (repo) => repo.id === start.repo.id && getRepoExecutionHostId(repo) === start.target.hostId
@@ -111,16 +112,27 @@ export function startLocalTaskWork(
       : { initialTaskRepo: start.repo }),
     initialWorkspaceTarget: start.target,
     prefilledName: suggestLocalTaskWorkspaceName(task.ref, task.title),
-    launchPrompt: localTaskPromptFor(task),
     telemetrySource: 'unknown',
-    onCreationStarted: (creationId: string) => {
-      rememberStart(creationId, {
-        taskId: task.id,
-        orcaProjectIds: project.repos,
-        replace: options.replace === true
-      })
-      releaseTaskComposer(data)
-    }
+    [LOCAL_TASK_COMPOSER_KEY]: pick
+  }
+}
+
+/** Start: Orca's own composer with the task's pill, as upstream's task page starts from an issue. */
+export function startLocalTaskWork(
+  task: LocalTask,
+  project: LocalTaskProject,
+  options: { replace?: boolean; orcaProjectId?: string } = {}
+): boolean {
+  const state = useAppStore.getState()
+  const data = buildLocalTaskComposerData(state, task, project, options)
+  if (!data) {
+    toast.error(
+      translate(
+        'localTasks.links.noRepo',
+        'This project has no Git repository in Orca, so a workspace cannot be created for it.'
+      )
+    )
+    return false
   }
   state.openModal('new-workspace-composer', data)
   return true
@@ -177,7 +189,7 @@ function createdWorkspaceHostId(completed: WorktreeCreationCompleted): Execution
 }
 
 async function linkCreatedWorkspace(
-  start: PendingStart,
+  start: LocalTaskComposerStart,
   completed: WorktreeCreationCompleted,
   hostId: ExecutionHostId
 ): Promise<boolean> {
@@ -284,5 +296,3 @@ export function localTaskIdForCreation(creationId: string): string | null {
 export function resetLocalTaskStartWorkForTests(): void {
   pendingStarts.clear()
 }
-
-export { rememberStart as rememberLocalTaskStartForTests }

@@ -19,8 +19,17 @@ import {
   useLocalTaskWorkspaceLink
 } from '@/local-tasks/local-task-link-selectors'
 import { localTaskWorkspaceFamilyIds } from '../../../../shared/local-tasks/local-task-hierarchy'
-import { useLocalTasksDomain } from '@/local-tasks/local-tasks-domain-store'
-import { useLocalTaskSessionProgress } from '@/local-tasks/local-task-session-progress'
+import {
+  useLocalTasksDomain,
+  type LocalTasksDomainState
+} from '@/local-tasks/local-tasks-domain-store'
+import {
+  selectLocalTaskSessionProgress,
+  useLocalTaskSessionProgress
+} from '@/local-tasks/local-task-session-progress'
+import { localTaskAttentionKindLabel } from '@/local-tasks/local-task-attention-copy'
+import { getAgentLabel } from '@/lib/agent-catalog'
+import { isTuiAgent } from '../../../../shared/tui-agent-config'
 import {
   selectLocalTaskWorkspace,
   localTaskWorktreeHostId
@@ -94,7 +103,9 @@ export function LocalTaskSessionDot({
     <AgentStateDot
       state={dotState(progress.state)}
       size={size}
-      title={localTaskSessionStateLabel(progress.state)}
+      title={translate('localTasks.links.sessionDot', 'Session · {{state}}', {
+        state: localTaskSessionStateLabel(progress.state)
+      })}
     />
   )
 }
@@ -217,14 +228,16 @@ function WorkspaceMarker({
         ? translate('localTasks.links.workspaceUnverifiableNamed', '{{name}} · can’t confirm', {
             name: name ?? link.hostLabelSnapshot ?? ''
           })
-        : (name ?? '')
+        : translate('localTasks.links.workspaceMarker', 'Workspace · {{name}}', {
+            name: name ?? ''
+          })
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <span className="inline-flex shrink-0 items-center">
+        <span className="inline-flex min-w-0 items-center gap-1 text-2xs text-muted-foreground">
           <Icon
             className={cn(
-              'size-3',
+              'size-3 shrink-0',
               located === 'missing'
                 ? 'text-destructive'
                 : typeof located === 'string' || !inContact
@@ -233,6 +246,12 @@ function WorkspaceMarker({
             )}
             aria-label={label}
           />
+          {/* Why: a wide list row has room to say which workspace; elsewhere the icon stands alone. */}
+          {name ? (
+            <span className="hidden max-w-32 truncate @5xl/local-task-list:inline" aria-hidden>
+              {name}
+            </span>
+          ) : null}
         </span>
       </TooltipTrigger>
       <TooltipContent side="bottom" sideOffset={4}>
@@ -258,7 +277,7 @@ function WorkspaceProgress({
     return null
   }
   return (
-    <span className="flex shrink-0 items-center gap-1.5">
+    <span className="flex min-w-0 shrink items-center gap-2">
       {link && located ? (
         <WorkspaceMarker link={link} located={located} inContact={inContact} />
       ) : null}
@@ -268,18 +287,59 @@ function WorkspaceProgress({
   )
 }
 
+const SUMMARY_STATE_ORDER: readonly LocalTaskSessionState[] = ['working', 'done', 'idle']
+
+/**
+ * What the task's sessions are doing, in words: whatever waits on the user first, then one at
+ * work, then the newest. A primitive, so the row re-renders only when the words change.
+ */
+function selectSessionSummary(
+  state: Pick<LocalTasksDomainState, 'progress'>,
+  sessions: readonly LocalTaskSessionLink[]
+): string | null {
+  const agentOf = (link: LocalTaskSessionLink): string | null =>
+    isTuiAgent(link.agent) ? getAgentLabel(link.agent) : null
+  const say = (link: LocalTaskSessionLink, what: string): string =>
+    [agentOf(link), what].filter(Boolean).join(' · ')
+  const items = state.progress?.items ?? []
+  for (const link of sessions) {
+    const item = items.find((candidate) => candidate.taskSessionId === link.id)
+    if (item) {
+      return say(link, localTaskAttentionKindLabel(item.kind))
+    }
+  }
+  for (const wanted of SUMMARY_STATE_ORDER) {
+    const link = sessions.findLast(
+      (candidate) => selectLocalTaskSessionProgress(state, candidate)?.state === wanted
+    )
+    if (link) {
+      return say(link, localTaskSessionStateLabel(wanted))
+    }
+  }
+  return null
+}
+
 function SessionDots({ sessions }: { sessions: LocalTaskSessionLink[] }): React.JSX.Element | null {
+  const summary = useLocalTasksDomain((state) => selectSessionSummary(state, sessions))
   if (sessions.length === 0) {
     return null
   }
   return (
-    <span className="flex items-center gap-0.5">
-      {sessions.slice(-SESSION_DOTS_MAX).map((session) => (
-        <LocalTaskSessionDot key={session.id} link={session} />
-      ))}
-      {sessions.length > SESSION_DOTS_MAX ? (
-        <span className="text-2xs text-muted-foreground">
-          +{sessions.length - SESSION_DOTS_MAX}
+    <span className="flex min-w-0 items-center gap-1">
+      <span className="flex shrink-0 items-center gap-0.5">
+        {sessions.slice(-SESSION_DOTS_MAX).map((session) => (
+          <LocalTaskSessionDot key={session.id} link={session} />
+        ))}
+        {sessions.length > SESSION_DOTS_MAX ? (
+          <span className="text-2xs text-muted-foreground">
+            +{sessions.length - SESSION_DOTS_MAX}
+          </span>
+        ) : null}
+      </span>
+      {/* Why: the dots alone say nothing at a glance; a wide list row spells the state out. */}
+      {summary ? (
+        <span className="hidden max-w-44 truncate text-2xs text-muted-foreground @3xl/local-task-list:inline">
+          {summary}
         </span>
       ) : null}
     </span>

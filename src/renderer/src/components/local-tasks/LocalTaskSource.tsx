@@ -5,16 +5,24 @@ import { cn } from '@/lib/utils'
 import { useLocalTasksDomain } from '@/local-tasks/local-tasks-domain-store'
 import { useLocalTaskPage } from '@/local-tasks/local-task-page-store'
 import { activateLocalTaskSource } from '@/local-tasks/local-task-source-activation'
+import { useLocalTaskSourceVisible } from '@/local-tasks/local-task-source-visibility'
 
 /** True while the task page shows the Local source; a browser client shows its host's library. */
 export function useLocalTaskSourceActive(): boolean {
   return useLocalTaskPage((state) => state.localActive)
 }
 
-/** Sits before the upstream sources and matches their button recipe (REQ-008). */
-export function LocalTaskSourceButton(): React.JSX.Element {
+/**
+ * Sits before the upstream sources and matches their button recipe (REQ-008); like them it goes
+ * once Settings → Task sources hides it.
+ */
+export function LocalTaskSourceButton(): React.JSX.Element | null {
   const active = useLocalTaskSourceActive()
+  const visible = useLocalTaskSourceVisible()
   const label = translate('localTasks.source.label', 'Local tasks')
+  if (!visible && !active) {
+    return null
+  }
   return (
     <Tooltip>
       <TooltipTrigger asChild>

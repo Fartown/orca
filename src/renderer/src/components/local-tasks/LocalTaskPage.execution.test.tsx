@@ -86,7 +86,7 @@ it('renders the real workspace picker when the detail action opens its dialog', 
     </TooltipProvider>
   )
   act(() => localTaskLinkDialogStore.getState().open({ kind: 'pick-workspace', taskId: task.id }))
-  expect(screen.getByRole('dialog', { name: 'Use an existing workspace for ONE-1' })).toBeTruthy()
+  expect(screen.getByRole('dialog', { name: 'Use an existing workspace for “Task”' })).toBeTruthy()
 })
 
 const linkedWorkspace = {
@@ -105,8 +105,8 @@ const linkedWorkspace = {
 } as const
 
 it.each([
-  ['pick-workspace', 'Use an existing workspace for ONE-1'],
-  ['session', 'Open session · ONE-1']
+  ['pick-workspace', 'Use an existing workspace for “Task”'],
+  ['session', 'Open a session']
 ] as const)('closes only the %s dialog on Esc, keeping the detail and the page', (kind, name) => {
   localTasksDomainStore
     .getState()
@@ -149,11 +149,18 @@ it('renders the real session dialog when Open session selects a linked task', ()
     </TooltipProvider>
   )
   act(() => localTaskLinkDialogStore.getState().open({ kind: 'session', taskId: task.id }))
-  expect(screen.getByRole('dialog', { name: 'Open session · ONE-1' })).toBeTruthy()
+  expect(screen.getByRole('dialog', { name: 'Open a session' })).toBeTruthy()
 })
 
 function child(number: number, parentId: string): LocalTask {
-  return { ...task, id: `task-${number}`, number, ref: `ONE-${number}`, parentId }
+  return {
+    ...task,
+    id: `task-${number}`,
+    number,
+    ref: `ONE-${number}`,
+    title: `Task ${number}`,
+    parentId
+  }
 }
 
 it('shows a deep subtask working in its root’s workspace, with its path and its own Start', () => {
@@ -166,9 +173,9 @@ it('shows a deep subtask working in its root’s workspace, with its path and it
       <LocalTaskPage sourceBar={null} />
     </TooltipProvider>
   )
-  expect(screen.getByRole('button', { name: 'ONE-1' })).toBeTruthy()
-  expect(screen.getByRole('button', { name: 'ONE-2' })).toBeTruthy()
-  expect(screen.getByText('Uses the workspace of ONE-1')).toBeTruthy()
+  expect(screen.getByTitle('Task · ONE-1').tagName).toBe('BUTTON')
+  expect(screen.getByTitle('Task 2 · ONE-2').tagName).toBe('BUTTON')
+  expect(screen.getByText('Uses the workspace of “Task”')).toBeTruthy()
   expect(screen.getByRole('button', { name: 'Start separately' })).toBeTruthy()
   expect(screen.getByRole('button', { name: 'Use existing workspace' })).toBeTruthy()
 })
@@ -186,7 +193,7 @@ it('counts every level below a task in its delete confirmation', () => {
   const actions = screen.getByRole('button', { name: 'Task actions' })
   fireEvent.pointerDown(actions, { button: 0, ctrlKey: false })
   fireEvent.click(screen.getByRole('menuitem', { name: 'Delete task…' }))
-  expect(screen.getByRole('dialog', { name: 'Delete ONE-1?' }).textContent).toContain('(3)')
+  expect(screen.getByRole('dialog', { name: 'Delete “Task”?' }).textContent).toContain('(3)')
 })
 
 it.each([

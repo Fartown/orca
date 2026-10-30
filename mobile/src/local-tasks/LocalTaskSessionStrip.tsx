@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { ClipboardList } from 'lucide-react-native'
 import type { LocalTask } from '../../../src/shared/local-tasks/local-task-types'
+import { AgentStateDot } from '../components/AgentStateDot'
 import { useResponsiveLayout } from '../layout/responsive-layout'
 import { useWorkspaceExecutionHost } from '../navigation/workspace-execution-host'
 import { useRouteHandoff } from '../navigation/route-handoff'
@@ -72,12 +73,17 @@ export function LocalTaskSessionStrip({ controller }: { controller: StripControl
   const hostId = controller.hostId
   const { task, workspace, sessionChoices } = strip.line
   const linkable = strip.live && workspace && !strip.openSession ? sessionIdsFor(activeTab) : null
+  const openState = strip.openSession
+    ? strip.liveProgress?.sessions.find((entry) => entry.taskSessionId === strip.openSession?.id)
+        ?.state
+    : undefined
+  const waiting = openState === 'waiting' || openState === 'blocked' ? openState : null
 
   return (
     <View style={styles.strip}>
       <ClipboardList size={12} color={colors.textMuted} />
       <Pressable
-        style={styles.grow}
+        style={styles.task}
         accessibilityRole="button"
         onPress={() =>
           router.push(
@@ -89,11 +95,19 @@ export function LocalTaskSessionStrip({ controller }: { controller: StripControl
           )
         }
       >
-        <Text style={styles.task} numberOfLines={1}>
-          {task.ref} · {task.title}
+        <Text style={styles.taskText} numberOfLines={1}>
+          {task.title}
         </Text>
       </Pressable>
-      {/* Same line height as the task, so going out of contact never changes the row. */}
+      {/* The row's height is fixed, so a state appearing or contact dropping never refits the terminal. */}
+      {waiting ? (
+        <View style={styles.state} testID="local-task-strip-state">
+          <AgentStateDot state={waiting} />
+          <Text style={styles.stateText} numberOfLines={1}>
+            {copy.work.sessionStates[waiting]}
+          </Text>
+        </View>
+      ) : null}
       {strip.live ? null : (
         <Text style={styles.action} numberOfLines={1}>
           {copy.work.sessionStates.unverifiable}
@@ -143,7 +157,7 @@ function LinkSessionAction(props: {
   }
   return (
     <>
-      <Pressable accessibilityRole="button" onPress={() => setOpen(true)}>
+      <Pressable style={styles.target} accessibilityRole="button" onPress={() => setOpen(true)}>
         <Text style={styles.action}>{copy.work.linkSessionToTask}</Text>
       </Pressable>
       <LocalTaskChoiceSheet
@@ -152,7 +166,8 @@ function LinkSessionAction(props: {
         error={error}
         choices={props.choices.map((entry) => ({
           key: entry.id,
-          label: `${entry.ref} · ${entry.title}`,
+          label: entry.title,
+          subtitle: entry.ref,
           onPress: () => void linkSession(entry.id)
         }))}
         onClose={() => {
@@ -164,15 +179,22 @@ function LinkSessionAction(props: {
   )
 }
 
+// Why a fixed height: the terminal below is sized off the header, so the strip may never grow
+// or shrink with what it shows; 32 is also the smallest comfortable touch target.
+const STRIP_HEIGHT = 32
+
 const styles = StyleSheet.create({
   strip: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
-    paddingHorizontal: spacing.md,
-    paddingBottom: spacing.xs
+    height: STRIP_HEIGHT,
+    paddingHorizontal: spacing.md
   },
-  grow: { flex: 1, minWidth: 0 },
-  task: { color: colors.textSecondary, fontSize: typography.metaSize },
+  task: { flex: 1, minWidth: 0, alignSelf: 'stretch', justifyContent: 'center' },
+  target: { alignSelf: 'stretch', justifyContent: 'center' },
+  taskText: { color: colors.textSecondary, fontSize: typography.metaSize },
+  state: { flexDirection: 'row', alignItems: 'center', gap: 4, flexShrink: 0 },
+  stateText: { color: colors.textSecondary, fontSize: typography.metaSize },
   action: { color: colors.textMuted, fontSize: typography.metaSize }
 })

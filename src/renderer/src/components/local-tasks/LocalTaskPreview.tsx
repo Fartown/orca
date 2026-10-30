@@ -22,7 +22,9 @@ export function LocalTaskPreview({
   return (
     <aside
       aria-label={translate('localTasks.preview.label', 'Task preview')}
-      className="flex w-80 shrink-0 flex-col gap-3 overflow-y-auto rounded-md border border-border/60 bg-card p-4 scrollbar-sleek"
+      // Why overlay when narrow: beside the list it left the toolbar and titles a few letters wide.
+      // Why pb-16: the app's bottom-right floating button otherwise covers Open task.
+      className="absolute top-2 right-0 bottom-0 z-20 flex w-72 flex-col gap-3 overflow-y-auto rounded-md border border-border/60 bg-card p-4 pb-16 shadow-floating scrollbar-sleek @4xl/local-task-page:static @4xl/local-task-page:w-64 @4xl/local-task-page:shrink-0 @4xl/local-task-page:shadow-none @5xl/local-task-page:w-80"
     >
       <div className="flex items-center gap-2">
         <span className="font-mono text-xs text-muted-foreground">{task.ref}</span>

@@ -5,6 +5,7 @@ import { HostScreenHeader } from './host-screen-header'
 import { HostScreenOverlays } from './host-screen-overlays'
 import { HostWorkspaceList } from './host-workspace-list'
 import type { HostScreenController } from './use-host-screen-controller'
+import { LocalTaskHostRowsProvider } from '../local-tasks/LocalTaskHostRowsProvider'
 
 export function HostScreenView({ controller }: { controller: HostScreenController }) {
   if (controller.state.error) {
@@ -20,8 +21,10 @@ export function HostScreenView({ controller }: { controller: HostScreenControlle
       <SafeAreaView style={styles.topChromeSafeArea} edges={['top']}>
         <HostScreenHeader controller={controller} />
       </SafeAreaView>
-      <HostWorkspaceList controller={controller} />
-      <HostScreenOverlays controller={controller} />
+      <LocalTaskHostRowsProvider controller={controller}>
+        <HostWorkspaceList controller={controller} />
+        <HostScreenOverlays controller={controller} />
+      </LocalTaskHostRowsProvider>
     </View>
   )
 }

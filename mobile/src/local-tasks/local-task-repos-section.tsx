@@ -4,7 +4,8 @@ import { Check, GitBranch, Plus } from 'lucide-react-native'
 import { LOCAL_TASK_PROJECT_REPOS_MAX } from '../../../src/shared/local-tasks/local-task-model'
 import { localTaskReposPatch } from '../../../src/shared/local-tasks/local-task-repos-patch'
 import type { LocalTaskProject } from '../../../src/shared/local-tasks/local-task-types'
-import { ActionSheetModal } from '../components/ActionSheetModal'
+import { ActionSheetContent, ActionSheetModal } from '../components/ActionSheetModal'
+import { BottomDrawer } from '../components/BottomDrawer'
 import { PickerListDrawer } from '../components/PickerListDrawer'
 import { colors, spacing } from '../theme/mobile-theme'
 import type { LocalTasksApi } from './local-tasks-api'
@@ -108,7 +109,7 @@ export function LocalTaskReposSection(props: {
         onClose={() => setMenuFor(null)}
       />
       <PickerListDrawer
-        visible={adding}
+        visible={adding && addable.length > 0}
         title={copy.addRepo}
         items={addable.map((choice) => ({
           id: choice.id,
@@ -119,6 +120,14 @@ export function LocalTaskReposSection(props: {
         onSelect={(item) => void edit('add', item.id)}
         onClose={() => setAdding(false)}
       />
+      {/* Every repo is already in the project, or the host has none: say so, not an empty box. */}
+      <BottomDrawer visible={adding && addable.length === 0} onClose={() => setAdding(false)}>
+        <ActionSheetContent title={copy.addRepo} actions={[]}>
+          <View style={styles.emptyChoices}>
+            <Text style={localTaskStyles.hint}>{copy.noRepoCandidates}</Text>
+          </View>
+        </ActionSheetContent>
+      </BottomDrawer>
     </>
   )
 }
@@ -127,5 +136,11 @@ const styles = StyleSheet.create({
   grow: { flex: 1 },
   defaultBadge: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   add: { marginTop: spacing.sm },
-  below: { marginTop: spacing.sm }
+  below: { marginTop: spacing.sm },
+  emptyChoices: {
+    backgroundColor: colors.bgPanel,
+    borderRadius: 12,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md + 2
+  }
 })

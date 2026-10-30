@@ -61,43 +61,45 @@ function AddRepo({
         </Button>
       </PopoverTrigger>
       <PopoverContent align="start" className="w-80">
-        <Command surface="inline" density="menu">
-          <CommandInput
-            placeholder={translate('localTasks.picker.placeholder', 'Type to filter')}
-          />
-          <CommandList>
-            <CommandEmpty>
-              {translate(
-                'localTasks.settings.noRepoCandidates',
-                'No other repository in Orca on this project’s host.'
-              )}
-            </CommandEmpty>
-            <CommandGroup>
-              {candidates.map((candidate) => (
-                <CommandItem
-                  key={candidate.orcaProjectId}
-                  value={`${candidate.label} ${candidate.orcaProjectId}`}
-                  onSelect={() => {
-                    setOpen(false)
-                    onAdd(candidate.orcaProjectId)
-                  }}
-                >
-                  <GitBranch className="size-3.5 text-muted-foreground" />
-                  <span className="flex min-w-0 flex-1 flex-col">
-                    <span className="truncate">{candidate.label}</span>
-                    {candidate.alsoIn.length > 0 ? (
-                      <span className="truncate text-2xs text-muted-foreground">
-                        {translate('localTasks.settings.repoAlsoIn', 'Also in {{projects}}', {
-                          projects: candidate.alsoIn.join(', ')
-                        })}
-                      </span>
-                    ) : null}
-                  </span>
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          </CommandList>
-        </Command>
+        <div className="p-1">
+          <Command surface="inline" density="menu">
+            <CommandInput
+              placeholder={translate('localTasks.picker.placeholder', 'Type to filter')}
+            />
+            <CommandList>
+              <CommandEmpty>
+                {translate(
+                  'localTasks.settings.noRepoCandidates',
+                  'No other repository in Orca on this project’s host.'
+                )}
+              </CommandEmpty>
+              <CommandGroup>
+                {candidates.map((candidate) => (
+                  <CommandItem
+                    key={candidate.orcaProjectId}
+                    value={`${candidate.label} ${candidate.orcaProjectId}`}
+                    onSelect={() => {
+                      setOpen(false)
+                      onAdd(candidate.orcaProjectId)
+                    }}
+                  >
+                    <GitBranch className="size-3.5 text-muted-foreground" />
+                    <span className="flex min-w-0 flex-1 flex-col">
+                      <span className="truncate">{candidate.label}</span>
+                      {candidate.alsoIn.length > 0 ? (
+                        <span className="truncate text-2xs text-muted-foreground">
+                          {translate('localTasks.settings.repoAlsoIn', 'Also in {{projects}}', {
+                            projects: candidate.alsoIn.join(', ')
+                          })}
+                        </span>
+                      ) : null}
+                    </span>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </CommandList>
+          </Command>
+        </div>
       </PopoverContent>
     </Popover>
   )
