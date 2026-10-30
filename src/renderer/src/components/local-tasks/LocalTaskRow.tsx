@@ -78,8 +78,10 @@ function FoldToggle({ task, folded }: { task: LocalTask; folded: boolean }): Rea
       aria-expanded={!folded}
       aria-label={
         folded
-          ? translate('localTasks.row.unfold', 'Show subtasks of {{ref}}', { ref: task.ref })
-          : translate('localTasks.row.fold', 'Hide subtasks of {{ref}}', { ref: task.ref })
+          ? translate('localTasks.row.unfold', 'Show subtasks of “{{title}}”', {
+              title: task.title
+            })
+          : translate('localTasks.row.fold', 'Hide subtasks of “{{title}}”', { title: task.title })
       }
       onClick={(event) => {
         event.stopPropagation()
@@ -181,7 +183,9 @@ export const LocalTaskRow = memo(function LocalTaskRow({
         <Checkbox
           checked={isSelected}
           onCheckedChange={() => localTaskPageStore.getState().toggleSelected(task.id)}
-          aria-label={translate('localTasks.row.select', 'Select {{ref}}', { ref: task.ref })}
+          aria-label={translate('localTasks.row.select', 'Select “{{title}}”', {
+            title: task.title
+          })}
         />
       </span>
       {folded === null ? (

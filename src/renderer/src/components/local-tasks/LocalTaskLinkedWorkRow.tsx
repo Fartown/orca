@@ -3,10 +3,9 @@ import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { translate } from '@/i18n/i18n'
 import { useLocalTaskSourceTab } from '@/local-tasks/local-task-source-tab'
-import {
-  useLocalTaskRowWritable,
-  useLocalTasksDomain
-} from '@/local-tasks/local-tasks-domain-store'
+import { useLocalTasksDomain } from '@/local-tasks/local-tasks-domain-store'
+import { useLocalTaskRowWriteReason } from '@/local-tasks/local-task-write-reason'
+import { LocalTaskActionTooltip } from './LocalTaskActionTooltip'
 
 function useDraftTaskId(): string | null {
   const tab = useLocalTaskSourceTab()
@@ -42,7 +41,7 @@ export function LocalTaskLinkedWorkRow({
       ? state.tasks.find((t) => t.id === linkedTaskId)
       : undefined
   )
-  const writable = useLocalTaskRowWritable(task?.id ?? null)
+  const writeReason = useLocalTaskRowWriteReason(task?.id ?? null)
   if (!tab?.draft || !task) {
     return null
   }
@@ -74,28 +73,27 @@ export function LocalTaskLinkedWorkRow({
           </p>
         </TooltipContent>
       </Tooltip>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-xs"
-            disabled={disabled || !writable}
-            aria-label={translate('localTasks.sourceTab.unlinkTask', 'Unlink {{title}}', {
-              title: task.title
-            })}
-            onClick={remove}
-          >
-            <X className="size-3" />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent>
-          {translate(
-            'localTasks.sourceTab.unlinkHint',
-            'Unlink from workspace; the task’s sessions here are unlinked too'
-          )}
-        </TooltipContent>
-      </Tooltip>
+      <LocalTaskActionTooltip
+        reason={writeReason}
+        side="top"
+        label={translate(
+          'localTasks.sourceTab.unlinkHint',
+          'Unlink from workspace; the task’s sessions here are unlinked too'
+        )}
+      >
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-xs"
+          disabled={disabled || writeReason !== null}
+          aria-label={translate('localTasks.sourceTab.unlinkTask', 'Unlink {{title}}', {
+            title: task.title
+          })}
+          onClick={remove}
+        >
+          <X className="size-3" />
+        </Button>
+      </LocalTaskActionTooltip>
     </div>
   )
 }

@@ -1,6 +1,25 @@
 import { describe, expect, it } from 'vitest'
-import type { LocalTaskFailureCode } from '../../../shared/local-tasks/local-task-types'
-import { describeLocalTaskFailure } from './local-task-failure-copy'
+import type { LocalTask, LocalTaskFailureCode } from '../../../shared/local-tasks/local-task-types'
+import type { LocalTaskEndpointKey } from './local-task-endpoints'
+import { describeLocalTaskFailure, localTaskTitleForRef } from './local-task-failure-copy'
+import { emptyLocalTasksPartition, type LocalTasksPartition } from './local-tasks-partition'
+
+const TASK: LocalTask = {
+  id: 't12',
+  projectId: 'shop',
+  number: 12,
+  ref: 'SHOP-12',
+  title: '',
+  description: '',
+  criteria: [],
+  statusId: 'todo',
+  priority: 0,
+  labels: [],
+  parentId: null,
+  createdAt: 0,
+  updatedAt: 0,
+  revision: 1
+}
 
 const CODES: LocalTaskFailureCode[] = [
   'invalid_argument',
@@ -34,6 +53,27 @@ describe('describeLocalTaskFailure', () => {
   it('tells every refusal apart', () => {
     const messages = CODES.map((code) => describeLocalTaskFailure({ ok: false, code }))
     expect(new Set(messages).size).toBe(CODES.length)
+  })
+
+  it('names the task a link refusal points at by the title the refusing library holds', () => {
+    const library = (endpoint: LocalTaskEndpointKey, title: string): LocalTasksPartition => ({
+      ...emptyLocalTasksPartition(endpoint),
+      tasks: [{ ...TASK, title }]
+    })
+    const state = {
+      tasks: [],
+      partitions: [library('local', 'Order export'), library('runtime:env-1', 'Ship labels')]
+    }
+    const refusal = { ok: false, code: 'workspace_already_linked', detail: 'SHOP-12' } as const
+    expect(
+      describeLocalTaskFailure(refusal, (ref) => localTaskTitleForRef(state, 'runtime:env-1', ref))
+    ).toBe('This workspace already belongs to “Ship labels”. Unlink it there first.')
+    expect(
+      describeLocalTaskFailure(
+        { ok: false, code: 'session_already_linked', detail: 'SHOP-9' },
+        (ref) => localTaskTitleForRef(state, 'local', ref)
+      )
+    ).toBe('This session is already linked to “SHOP-9”.')
   })
 
   it('keeps same-project historical prefixes distinct from another project and handles future codes', () => {

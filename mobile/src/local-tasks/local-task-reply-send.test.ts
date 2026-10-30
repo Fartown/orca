@@ -8,7 +8,15 @@ vi.mock('react-native', () => ({
 import type { LocalTaskSessionLink } from '../../../src/shared/local-tasks/local-task-link-types'
 import { FakeSession } from '../transport/mobile-endpoint-supervisor-test-fakes'
 import type { RpcResponse } from '../transport/types'
-import { sendLocalTaskReply } from './local-task-reply-send'
+import { sendLocalTaskReply, type LocalTaskReplyReasons } from './local-task-reply-send'
+
+const reasons: LocalTaskReplyReasons = {
+  missing: 'gone',
+  notConnected: 'offline',
+  inputNotCleared: 'stale input',
+  inputRefused: 'refused',
+  chatNotReady: 'no fence'
+}
 
 const LEAF_A = '11111111-1111-4111-8111-111111111111'
 const LEAF_B = '22222222-2222-4222-8222-222222222222'
@@ -61,7 +69,7 @@ describe('a "Needs you" reply into a terminal session', () => {
       client,
       session: terminalSession({}),
       text: 'run the tests',
-      missing: 'gone'
+      reasons
     })
     expect(outcome).toEqual({ kind: 'delivered' })
     const sends = client.sendRequest.mock.calls.filter(([method]) => method === 'terminal.send')
@@ -76,7 +84,7 @@ describe('a "Needs you" reply into a terminal session', () => {
         client,
         session: terminalSession({ paneKey: null }),
         text: 'x',
-        missing: 'gone'
+        reasons
       })
     ).toEqual({ kind: 'not-sent', reason: 'gone' })
     expect(client.sendRequest.mock.calls.some(([method]) => method === 'terminal.send')).toBe(false)
@@ -86,8 +94,16 @@ describe('a "Needs you" reply into a terminal session', () => {
         client: refusing,
         session: terminalSession({}),
         text: 'x',
-        missing: 'gone'
+        reasons
       })
-    ).toMatchObject({ kind: 'not-sent' })
+    ).toEqual({ kind: 'not-sent', reason: 'refused' })
+  })
+
+  it('says the host is not connected instead of sending, and asks it nothing', async () => {
+    const client = new FakeSession('reconnecting')
+    expect(
+      await sendLocalTaskReply({ client, session: terminalSession({}), text: 'x', reasons })
+    ).toEqual({ kind: 'not-sent', reason: 'offline' })
+    expect(client.sendRequest).not.toHaveBeenCalled()
   })
 })

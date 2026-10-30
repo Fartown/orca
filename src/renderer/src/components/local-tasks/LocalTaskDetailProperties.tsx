@@ -12,7 +12,7 @@ import {
 import { useNow } from '@/hooks/use-now'
 import { translate } from '@/i18n/i18n'
 import { formatLocalTaskTime } from '@/local-tasks/local-task-time'
-import type { LocalTask } from '../../../../shared/local-tasks/local-task-types'
+import type { LocalTask, LocalTaskProject } from '../../../../shared/local-tasks/local-task-types'
 import { collectLocalTaskLabels, type LocalTaskIndex } from '@/local-tasks/local-task-grouping'
 import { localTasksClient } from '@/local-tasks/local-tasks-runtime-client'
 import { localTaskIdEndpoint } from '@/local-tasks/local-task-endpoints'
@@ -25,6 +25,8 @@ import {
   toggleLocalTasksLabel,
   updateLocalTaskFields
 } from '@/local-tasks/local-task-writes'
+import { useLocalTaskRowWriteReason } from '@/local-tasks/local-task-write-reason'
+import { LocalTaskActionTooltip } from './LocalTaskActionTooltip'
 import {
   LocalTaskLabelsPicker,
   LocalTaskParentPicker,
@@ -34,29 +36,38 @@ import {
 
 function Property({
   label,
+  reason = null,
   children
 }: {
   label: string
-  children: React.ReactNode
+  /** Why the field is greyed, said on hover. */
+  reason?: string | null
+  children: React.ReactElement
 }): React.JSX.Element {
   return (
     <div className="grid grid-cols-[5.5rem_minmax(0,1fr)] items-center gap-2">
       <span className="text-xs text-muted-foreground">{label}</span>
-      <div className="min-w-0">{children}</div>
+      <div className="min-w-0">
+        <LocalTaskActionTooltip reason={reason} wrapperClassName="flex min-w-0">
+          {children}
+        </LocalTaskActionTooltip>
+      </div>
     </div>
   )
 }
 
-async function moveTask(task: LocalTask, targetProjectId: string): Promise<void> {
+async function moveTask(task: LocalTask, target: LocalTaskProject): Promise<void> {
   const result = await runLocalTaskWrite(() =>
-    localTasksClient.moveTask({ taskId: task.id, targetProjectId })
+    localTasksClient.moveTask({ taskId: task.id, targetProjectId: target.id })
   )
   if (result) {
     localTasksDomainStore.getState().upsertTasks([result.task])
+    // Why the title first: the new ref is news, but it is not what names the task (§4).
     toast.success(
-      translate('localTasks.detail.moved', '{{from}} is now {{to}}', {
-        from: task.ref,
-        to: result.task.ref
+      translate('localTasks.detail.moved', '“{{title}}” moved to {{project}} as {{ref}}', {
+        title: result.task.title,
+        project: target.name,
+        ref: result.task.ref
       })
     )
   }
@@ -78,6 +89,8 @@ export function LocalTaskDetailProperties({
   workspace?: React.ReactNode
 }): React.JSX.Element {
   const now = useNow(60_000)
+  const writeReason = useLocalTaskRowWriteReason(task.id)
+  const reason = writable ? null : writeReason
   const project = index.projectsById.get(task.projectId)
   const suggestions = useMemo(() => collectLocalTaskLabels(allTasks), [allTasks])
   const parents = useMemo(
@@ -92,9 +105,9 @@ export function LocalTaskDetailProperties({
   )
 
   return (
-    <aside className="flex w-full shrink-0 flex-col gap-3 border-t border-border/60 pt-4 scrollbar-sleek @3xl/local-task-detail:w-72 @3xl/local-task-detail:overflow-y-auto @3xl/local-task-detail:border-t-0 @3xl/local-task-detail:border-l @3xl/local-task-detail:pt-0 @3xl/local-task-detail:pl-5">
+    <aside className="flex w-full shrink-0 flex-col gap-3 border-t border-border/60 pt-4 scrollbar-sleek @3xl/local-task-detail:w-72 @3xl/local-task-detail:overflow-y-auto @3xl/local-task-detail:border-t-0 @3xl/local-task-detail:border-l @3xl/local-task-detail:pt-0 @3xl/local-task-detail:pb-16 @3xl/local-task-detail:pl-5">
       {workspace ? <div className="border-b border-border/60 pb-3">{workspace}</div> : null}
-      <Property label={translate('localTasks.field.status', 'Status')}>
+      <Property label={translate('localTasks.field.status', 'Status')} reason={reason}>
         <LocalTaskStatusSelect
           project={project}
           value={task.statusId}
@@ -102,14 +115,14 @@ export function LocalTaskDetailProperties({
           onChange={(statusId) => void setLocalTasksStatus([task], { statusId })}
         />
       </Property>
-      <Property label={translate('localTasks.field.priority', 'Priority')}>
+      <Property label={translate('localTasks.field.priority', 'Priority')} reason={reason}>
         <LocalTaskPrioritySelect
           value={task.priority}
           disabled={!writable}
           onChange={(priority) => void setLocalTasksPriority([task], priority)}
         />
       </Property>
-      <Property label={translate('localTasks.field.labels', 'Labels')}>
+      <Property label={translate('localTasks.field.labels', 'Labels')} reason={reason}>
         <LocalTaskLabelsPicker
           value={task.labels}
           suggestions={suggestions}
@@ -118,7 +131,7 @@ export function LocalTaskDetailProperties({
           onToggle={(label) => void toggleLocalTasksLabel([task], label)}
         />
       </Property>
-      <Property label={translate('localTasks.field.parent', 'Parent task')}>
+      <Property label={translate('localTasks.field.parent', 'Parent task')} reason={reason}>
         <LocalTaskParentPicker
           candidates={parents}
           value={task.parentId}
@@ -150,7 +163,7 @@ export function LocalTaskDetailProperties({
                 {otherProjects.map((candidate) => (
                   <DropdownMenuItem
                     key={candidate.id}
-                    onSelect={() => void moveTask(task, candidate.id)}
+                    onSelect={() => void moveTask(task, candidate)}
                   >
                     {candidate.name}
                     <span className="font-mono text-2xs text-muted-foreground">

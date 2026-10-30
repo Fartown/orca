@@ -12,9 +12,12 @@ import type { MobileComposerSource } from '../tasks/use-mobile-composer-source'
 import { colors, radii, spacing, typography } from '../theme/mobile-theme'
 import { TaskProviderLogo } from './TaskProviderLogo'
 import { TEXT_INPUT_FONT_SIZE } from '../platform/text-input-font-size'
+import { LocalTaskCreateSourcePill } from '../local-tasks/local-task-create-source-views'
+import type { LocalTaskCreateSource } from '../local-tasks/use-local-task-create-source'
 
 type Props = {
   composer: MobileComposerSource
+  localTaskSource?: LocalTaskCreateSource | null
   label: string
   disabled?: boolean
   onOpenExternalUrl: (url: string) => void
@@ -44,6 +47,7 @@ function SelectionIcon({ kind }: { kind: SmartNameSelection['kind'] }) {
 
 export function SmartWorkspaceSourceField({
   composer,
+  localTaskSource,
   label,
   disabled,
   onOpenExternalUrl,
@@ -66,7 +70,9 @@ export function SmartWorkspaceSourceField({
       <Text style={styles.label}>
         {label} <Text style={styles.labelHint}>[Optional]</Text>
       </Text>
-      {selection ? (
+      {localTaskSource?.picked ? (
+        <LocalTaskCreateSourcePill task={localTaskSource.picked} onClear={localTaskSource.clear} />
+      ) : selection ? (
         <View style={styles.pill}>
           <SelectionIcon kind={selection.kind} />
           <Text style={styles.pillLabel} numberOfLines={1}>

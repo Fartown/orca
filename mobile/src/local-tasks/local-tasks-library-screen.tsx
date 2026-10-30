@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { Pressable, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Plus } from 'lucide-react-native'
-import { localTaskAttentionClearsOnView } from '../../../src/shared/local-tasks/local-task-attention-rules'
+import { buildLocalTaskIndex } from '../../../src/shared/local-tasks/local-task-grouping'
+import type { LocalTask } from '../../../src/shared/local-tasks/local-task-types'
 import { MobileSegmentedControl } from '../components/MobileSegmentedControl'
 import { PickerListDrawer } from '../components/PickerListDrawer'
 import { useBackClaim } from '../navigation/use-back-claim'
@@ -35,11 +36,11 @@ import { LocalTasksAttentionView } from './local-tasks-attention-view'
 import {
   localTaskAttentionItemCount,
   localTaskAttentionRows,
-  localTaskItemsForSession,
-  localTaskWorkspaceLinkFor
+  localTaskIdsNeedingYou,
+  localTaskRowSessionStates
 } from './local-task-progress-projection'
-import { createLocalTaskOperationIds, sendLocalTaskWrite } from './local-task-operation-ids'
-import { localTaskSessionHref } from './local-task-work-navigation'
+import { openLinkedLocalTaskSession } from './local-task-session-open'
+import { useLocalTaskViewMemory } from './local-task-view-memory'
 import { LocalTasksProjectCreateView } from './local-tasks-project-create-view'
 import { LocalTasksSettingsView } from './local-tasks-settings-view'
 import { localTaskStyles } from './local-tasks-styles'
@@ -71,22 +72,32 @@ type Props = {
 
 type Segment = 'attention' | LocalTaskSegment
 
+/** A project id no library uses: the page has not been pointed at a project yet. */
+const UNCHOSEN_PROJECT = '\u0000first'
+
 export function LocalTasksLibraryScreen(props: Props) {
   const copy = localTasksCopy()
   const insets = useSafeAreaInsets()
-  const { library } = props
-  // Undefined until the user picks: then the first project, so a one-project library opens on it.
-  const [chosenProjectId, setChosenProjectId] = useState<string | null | undefined>(undefined)
-  const [segment, setSegment] = useState<Segment>(props.initialView ?? 'all')
-  const [view, setView] = useState<LocalTasksViewMode>('list')
+  const { library, site } = props
+  // Remembered per paired host and library. Home's "Needs you" opens on it with All projects,
+  // since home counts every project (REQ-006).
+  const [remembered, remember] = useLocalTaskViewMemory(
+    `${site.hostId}\u0000${site.endpoint.key}`,
+    { projectId: UNCHOSEN_PROJECT, segment: 'all', view: 'list' },
+    props.initialView === 'attention' ? { projectId: null, segment: 'attention' } : null
+  )
+  const { segment, view } = remembered
+  const setSegment = (next: Segment) => remember({ segment: next })
+  const setView = (next: LocalTasksViewMode) => remember({ view: next })
+  const setChosenProjectId = (next: string | null) => remember({ projectId: next })
   const [stack, setStack] = useState<Route[]>(() =>
     props.initialTaskId ? [{ kind: 'detail', taskId: props.initialTaskId }] : []
   )
   const [pickerOpen, setPickerOpen] = useState(false)
   const [hostPickerOpen, setHostPickerOpen] = useState(false)
   const [filter, setFilter] = useState<LocalTaskFilter>(EMPTY_LOCAL_TASK_FILTER)
+  const [notice, setNotice] = useState<string | null>(null)
   const top = stack.at(-1) ?? null
-  const { site } = props
   const orcaProjects = useOrcaProjectChoices(
     top?.kind === 'settings' || top?.kind === 'newProject' ? site.pairedClient : null,
     site.endpoint
@@ -103,8 +114,10 @@ export function LocalTasksLibraryScreen(props: Props) {
       : null
   )
 
+  const chosenProjectId = remembered.projectId
+  // Unchosen opens on the first project, so a one-project library opens on it.
   const projectId =
-    chosenProjectId === undefined
+    chosenProjectId === UNCHOSEN_PROJECT
       ? (library.projects[0]?.id ?? null)
       : library.projects.some((project) => project.id === chosenProjectId)
         ? chosenProjectId
@@ -117,39 +130,44 @@ export function LocalTasksLibraryScreen(props: Props) {
   }, [library.tasks, library.eventsVersion])
   const lookup = useMemo(() => localTaskStatusLookup(library.projects), [library.projects])
   const counts = localTaskSegmentCounts(library.tasks, library.projects, projectId)
+  const inContact = site.connState === 'connected'
+  // Scoped like the desktop view and the other segments (REQ-006); home's global card opens on All.
+  const attentionRows = localTaskAttentionRows({
+    snapshot: library.work.progress,
+    tasks: library.tasks,
+    projectId
+  })
   const groups = buildLocalTaskGroups({
     tasks: library.tasks,
     projects: library.projects,
     projectId,
     segment: segment === 'attention' ? 'all' : segment,
     filter,
+    // Out of contact nothing is confirmed as waiting, so the filter shows none.
+    needingYou: inContact ? localTaskIdsNeedingYou(attentionRows) : undefined,
     nestSubtasks: view === 'list',
     keepEmpty: view === 'board'
   })
   const openTask = (taskId: string) => push({ kind: 'detail', taskId })
   const tasksById = new Map(library.tasks.map((task) => [task.id, task]))
-  const attentionRows = localTaskAttentionRows({
-    snapshot: library.work.progress,
-    tasks: library.tasks,
-    projectId
-  })
-  const inContact = site.connState === 'connected'
-  const openSession = (taskSessionId: string) => {
-    const session = library.work.links.sessions.find((entry) => entry.id === taskSessionId)
-    const owner = session ? tasksById.get(session.taskId) : undefined
-    const href = session
-      ? localTaskSessionHref({
-          hostId: site.hostId,
-          endpoint: site.endpoint,
-          session,
-          workspace: owner ? localTaskWorkspaceLinkFor(owner, tasksById, library.work.links) : null
-        })
-      : null
-    if (href) {
-      acknowledgeOpened(props.api, library, taskSessionId)
-      props.onNavigate(href)
-    }
-  }
+  const index = buildLocalTaskIndex(library.projects, library.tasks)
+  const sessionsFor = (task: LocalTask) =>
+    localTaskRowSessionStates({
+      task,
+      index,
+      links: library.work.links,
+      snapshot: library.work.progress,
+      inContact
+    })
+  const openSession = (taskSessionId: string) =>
+    openLinkedLocalTaskSession({
+      site,
+      api: props.api,
+      library,
+      copy,
+      taskSessionId,
+      onNavigate: props.onNavigate
+    })
   const createIn = (statusId?: string) => {
     const target = project ?? library.projects[0]
     if (target) {
@@ -274,9 +292,20 @@ export function LocalTasksLibraryScreen(props: Props) {
                 { value: 'all', label: `${copy.segmentAll} ${counts.all}` }
               ]}
               selected={segment}
-              onSelect={setSegment}
+              onSelect={(next) => {
+                setNotice(null)
+                setSegment(next)
+              }}
             />
           </View>
+          {notice ? (
+            <Text
+              style={[localTaskStyles.errorText, localTaskStyles.attentionStale]}
+              testID="local-tasks-open-notice"
+            >
+              {notice}
+            </Text>
+          ) : null}
           {segment === 'attention' ? null : (
             <LocalTasksFilterBar
               filter={filter}
@@ -297,7 +326,7 @@ export function LocalTasksLibraryScreen(props: Props) {
               canWrite={props.canRead && !props.readOnly}
               bottomInset={insets.bottom}
               onOpenTask={openTask}
-              onOpenSession={(item) => openSession(item.taskSessionId)}
+              onOpenSession={(item) => setNotice(openSession(item.taskSessionId))}
             />
           ) : view === 'list' ? (
             <LocalTasksListView
@@ -306,6 +335,7 @@ export function LocalTasksLibraryScreen(props: Props) {
               now={now}
               bottomInset={insets.bottom}
               emptyText={isLocalTaskFilterActive(filter) ? copy.filteredEmpty : undefined}
+              sessionsFor={sessionsFor}
               onOpen={openTask}
             />
           ) : (
@@ -315,6 +345,7 @@ export function LocalTasksLibraryScreen(props: Props) {
               now={now}
               bottomInset={insets.bottom}
               onCreateIn={props.readOnly || !project ? undefined : createIn}
+              sessionsFor={sessionsFor}
               onOpen={openTask}
             />
           )}
@@ -354,31 +385,4 @@ export function LocalTasksLibraryScreen(props: Props) {
       />
     </View>
   )
-}
-
-/**
- * Opening a session is seeing it: the items a look settles (a finished turn, REQ-014) are marked
- * seen on the library's host (技术方案 §9.2); an approval or a question waits until handled.
- */
-function acknowledgeOpened(
-  api: LocalTasksApi,
-  library: Pick<LocalTasksLibrary, 'work' | 'reload'>,
-  taskSessionId: string
-) {
-  const items = localTaskItemsForSession(library.work.progress, taskSessionId).filter(
-    localTaskAttentionClearsOnView
-  )
-  if (items.length === 0) {
-    return
-  }
-  // Why fresh ids: each open is its own act; a lost answer leaves the item for the next open.
-  void Promise.all(
-    items.map((item) =>
-      sendLocalTaskWrite(
-        createLocalTaskOperationIds(),
-        { itemKey: item.key, taskSessionId: item.taskSessionId },
-        api.acknowledge
-      )
-    )
-  ).then(() => library.reload(['attention']))
 }

@@ -6,7 +6,11 @@ import type {
   LocalTaskSessionState,
   LocalTaskWorkspaceLink
 } from '../../../src/shared/local-tasks/local-task-link-types'
-import { buildLocalTaskIndex } from '../../../src/shared/local-tasks/local-task-grouping'
+import {
+  buildLocalTaskIndex,
+  type LocalTaskIndex
+} from '../../../src/shared/local-tasks/local-task-grouping'
+import { localTaskWorkspaceFamilyIds } from '../../../src/shared/local-tasks/local-task-hierarchy'
 import {
   localTaskDescendantIds,
   localTaskEffectiveWorkspace
@@ -104,6 +108,44 @@ export function localTaskSessionViews(args: {
         lastMessage: entry?.lastMessage ?? null
       }
     })
+}
+
+export type LocalTaskRowSession = { id: string; state: LocalTaskSessionState }
+
+/**
+ * The states a list row or board card shows as dots (REQ-012), oldest session first, picked as the
+ * desktop picks them: a task with its own workspace shows every session in it, those of descendants
+ * without one included; a task working in an ancestor's shows only the sessions it opened. Read from
+ * the snapshot already loaded, so it asks the host nothing; out of contact each is unverifiable.
+ */
+export function localTaskRowSessionStates(args: {
+  task: LocalTask
+  index: Pick<LocalTaskIndex, 'tasksById' | 'childrenByParentId'>
+  links: LocalTaskLinks
+  snapshot: LocalTaskProgressSnapshot | null
+  inContact: boolean
+}): LocalTaskRowSession[] {
+  const owners = new Set(args.links.workspaces.map((link) => link.taskId))
+  const family = new Set(
+    owners.has(args.task.id)
+      ? localTaskWorkspaceFamilyIds(args.task.id, args.index, (taskId) => owners.has(taskId))
+      : [args.task.id]
+  )
+  const progress = new Map(
+    (args.snapshot?.sessions ?? []).map((entry) => [entry.taskSessionId, entry.state])
+  )
+  return args.links.sessions
+    .filter((link) => family.has(link.taskId))
+    .sort((a, b) => a.openedAt - b.openedAt)
+    .map((link) => ({
+      id: link.id,
+      state: args.inContact ? (progress.get(link.id) ?? 'unknown') : 'unverifiable'
+    }))
+}
+
+/** The tasks with an item in "Needs you", for the "A session is waiting on me" filter. */
+export function localTaskIdsNeedingYou(rows: readonly LocalTaskAttentionRow[]): Set<string> {
+  return new Set(rows.map((row) => row.task.id))
 }
 
 /** The items one session holds, which opening that session marks seen (技术方案 §9.2). */

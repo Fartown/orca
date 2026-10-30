@@ -3,11 +3,11 @@ import { Kanban, List, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { ShortcutKeyCombo } from '@/components/ShortcutKeyCombo'
 import { translate } from '@/i18n/i18n'
 import { localTaskPageStore, useLocalTaskPage } from '@/local-tasks/local-task-page-store'
 import { useCanCreateLocalTask } from '@/local-tasks/local-task-write-access'
+import { useLocalTaskCreateWriteReason } from '@/local-tasks/local-task-write-reason'
+import { LocalTaskActionTooltip } from './LocalTaskActionTooltip'
 import { LocalTaskFilterPopover } from './LocalTaskFilterPopover'
 import { LocalTaskScopeMenu, LocalTaskScopeTitle } from './LocalTaskNav'
 import { LocalTaskViewOptions } from './LocalTaskViewOptions'
@@ -43,6 +43,7 @@ function SearchField(): React.JSX.Element {
 export function LocalTaskToolbar({ model }: { model: LocalTaskListModel }): React.JSX.Element {
   const layout = useLocalTaskPage((state) => state.layout)
   const writable = useCanCreateLocalTask(model.scopeProjectId)
+  const writeReason = useLocalTaskCreateWriteReason(model.scopeProjectId)
   const newTask = translate('localTasks.toolbar.newTask', 'New task')
   return (
     <div className="@container/local-task-toolbar">
@@ -82,28 +83,20 @@ export function LocalTaskToolbar({ model }: { model: LocalTaskListModel }): Reac
         <span className="min-w-0 flex-1" />
         <LocalTaskFilterPopover model={model} />
         <SearchField />
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              size="sm"
-              className="shrink-0"
-              disabled={!writable}
-              aria-label={newTask}
-              onClick={() =>
-                localTaskPageStore.getState().openCreate({ projectId: model.scopeProjectId })
-              }
-            >
-              <Plus className="size-3.5" />
-              <span className="hidden @2xl/local-task-toolbar:inline">{newTask}</span>
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="bottom" sideOffset={4}>
-            <span className="flex items-center gap-2">
-              {newTask}
-              <ShortcutKeyCombo keys={['C']} />
-            </span>
-          </TooltipContent>
-        </Tooltip>
+        <LocalTaskActionTooltip reason={writeReason} label={newTask} shortcut={['C']}>
+          <Button
+            size="sm"
+            className="shrink-0"
+            disabled={!writable}
+            aria-label={newTask}
+            onClick={() =>
+              localTaskPageStore.getState().openCreate({ projectId: model.scopeProjectId })
+            }
+          >
+            <Plus className="size-3.5" />
+            <span className="hidden @2xl/local-task-toolbar:inline">{newTask}</span>
+          </Button>
+        </LocalTaskActionTooltip>
       </div>
     </div>
   )

@@ -115,7 +115,7 @@ function RemoveProjectDialog({
           <DialogDescription>
             {translate(
               'localTasks.settings.removeDescription',
-              'Its tasks ({{count}}) are deleted with it. The Orca project, its workspaces and sessions are not touched.',
+              'Its tasks ({{count}}) are deleted with it. Its repositories, their workspaces and sessions are not touched.',
               { count: taskCount }
             )}
           </DialogDescription>

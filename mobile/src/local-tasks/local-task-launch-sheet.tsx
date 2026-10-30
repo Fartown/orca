@@ -1,18 +1,42 @@
 import { useState } from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
-import { Bot, ChevronRight, FolderPlus, MapPin, Send } from 'lucide-react-native'
+import { Bot, ChevronRight, FolderPlus, MapPin } from 'lucide-react-native'
 import { ActionSheetContent, type ActionSheetAction } from '../components/ActionSheetModal'
 import { BottomDrawer } from '../components/BottomDrawer'
-import { MobileSwitch } from '../components/MobileSwitch'
 import { PickerModal } from '../components/PickerModal'
 import { colors, spacing, typography } from '../theme/mobile-theme'
 import { localTasksCopy } from './local-tasks-copy'
 import type { LocalTaskSetup } from './local-task-project-setups'
 import type { LocalTaskLaunchController } from './use-local-task-launch'
 
-/** The host a launch runs on, as the user knows it. */
+/**
+ * The host a launch runs on, as the user knows it; empty when no name for it has been read, which
+ * callers word without one rather than show the host id (REQ-017).
+ */
 export function localTaskHostLabel(hostId: string, label: string | null | undefined): string {
-  return label?.trim() || (hostId === 'local' ? localTasksCopy().work.hostLocal : hostId)
+  return label?.trim() || (hostId === 'local' ? localTasksCopy().work.hostLocal : '')
+}
+
+/** What the sheet says in place of the agent list when there is none to pick from. */
+export function localTaskAgentsNotice(
+  agents: LocalTaskLaunchController['agents'],
+  hostLabel: string
+): string | null {
+  const work = localTasksCopy().work
+  if (agents.status === 'ready') {
+    return agents.agents.length === 0 ? work.noAgents : null
+  }
+  if (agents.status === 'loading') {
+    return null
+  }
+  switch (agents.reason) {
+    case 'offline':
+      return work.agentsHostOffline(hostLabel)
+    case 'unverifiable':
+      return work.hostUnknown
+    case 'read':
+      return work.agentsUnreadable
+  }
 }
 
 /** A checkout as Start lists it: its repo, and the host it runs on. */
@@ -69,11 +93,15 @@ export function LocalTaskLaunchSheet(props: {
         onPress: () => void launch.launch(option.agent, hostLabel)
       })
     }
-    if (
-      request?.mode !== 'start' &&
-      (launch.agents.status === 'failed' || launch.agents.agents.length === 0)
-    ) {
-      actions.push({ label: work.noAgents, disabled: true, onPress: () => {} })
+    // Why on both paths: Start still offers the workspace alone, but says why no agent is listed.
+    const notice = localTaskAgentsNotice(
+      launch.agents,
+      request?.mode === 'start'
+        ? localTaskHostLabel(request.setup.hostId, props.hostLabels.get(request.setup.hostId))
+        : props.workspaceHostLabel
+    )
+    if (notice) {
+      actions.push({ label: notice, disabled: true, onPress: () => {} })
     }
   }
   if (request?.mode === 'start') {
@@ -104,41 +132,25 @@ export function LocalTaskLaunchSheet(props: {
           actions={actions}
           onClose={launch.close}
         >
-          <View style={styles.settings}>
-            {canChangeLocation ? (
-              <>
-                <Pressable
-                  style={({ pressed }) => [styles.setting, pressed && styles.settingPressed]}
-                  onPress={() => setPhase('to-picker')}
-                  accessibilityRole="button"
-                >
-                  <MapPin size={16} color={colors.textSecondary} />
-                  <View style={styles.settingText}>
-                    <Text style={styles.settingLabel}>{work.changeLocation}</Text>
-                    <Text style={styles.settingHint} numberOfLines={1}>
-                      {hostLabel}
-                    </Text>
-                  </View>
-                  <ChevronRight size={16} color={colors.textMuted} />
-                </Pressable>
-                <View style={styles.separator} />
-              </>
-            ) : null}
-            <View style={styles.setting}>
-              <Send size={16} color={colors.textSecondary} />
-              <View style={styles.settingText}>
-                <Text style={styles.settingLabel}>{work.sendNow}</Text>
-                <Text style={styles.settingHint}>
-                  {launch.delivery === 'submit' ? work.sendNowOnHint : work.sendNowOffHint}
-                </Text>
-              </View>
-              <MobileSwitch
-                value={launch.delivery === 'submit'}
-                onValueChange={() => launch.toggleDelivery()}
-                accessibilityLabel={work.sendNow}
-              />
+          {/* No send-now switch: a host never delivers a draft, so the task is always sent. */}
+          {canChangeLocation ? (
+            <View style={styles.settings}>
+              <Pressable
+                style={({ pressed }) => [styles.setting, pressed && styles.settingPressed]}
+                onPress={() => setPhase('to-picker')}
+                accessibilityRole="button"
+              >
+                <MapPin size={16} color={colors.textSecondary} />
+                <View style={styles.settingText}>
+                  <Text style={styles.settingLabel}>{work.changeLocation}</Text>
+                  <Text style={styles.settingHint} numberOfLines={1}>
+                    {hostLabel}
+                  </Text>
+                </View>
+                <ChevronRight size={16} color={colors.textMuted} />
+              </Pressable>
             </View>
-          </View>
+          ) : null}
         </ActionSheetContent>
       </BottomDrawer>
       <PickerModal
@@ -192,10 +204,5 @@ const styles = StyleSheet.create({
   settingPressed: { backgroundColor: colors.bgRaised },
   settingText: { flex: 1, minWidth: 0 },
   settingLabel: { fontSize: typography.bodySize, fontWeight: '500', color: colors.textPrimary },
-  settingHint: { marginTop: 2, fontSize: typography.metaSize, color: colors.textMuted },
-  separator: {
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: colors.borderSubtle,
-    marginHorizontal: spacing.md
-  }
+  settingHint: { marginTop: 2, fontSize: typography.metaSize, color: colors.textMuted }
 })

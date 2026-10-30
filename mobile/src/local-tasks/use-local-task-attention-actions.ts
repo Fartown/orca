@@ -101,14 +101,21 @@ export function useLocalTaskAttentionActions(args: {
         (entry) => entry.id === item.taskSessionId
       )
       setReplies((previous) => ({ ...previous, [item.key]: { kind: 'sending' } }))
+      const work = args.copy.work
       const outcome: LocalTaskReplyOutcome = session
         ? await sendLocalTaskReply({
             client: args.client,
             session,
             text,
-            missing: args.copy.work.replySessionMissing
+            reasons: {
+              missing: work.replySessionMissing,
+              notConnected: work.replyNotConnected,
+              inputNotCleared: work.replyInputNotCleared,
+              inputRefused: work.replyInputRefused,
+              chatNotReady: work.replyChatNotReady
+            }
           })
-        : { kind: 'not-sent', reason: args.copy.work.replySessionMissing }
+        : { kind: 'not-sent', reason: work.replyNoSession }
       setReplies((previous) => ({ ...previous, [item.key]: outcome }))
       args.library.reload(['attention'])
       return outcome

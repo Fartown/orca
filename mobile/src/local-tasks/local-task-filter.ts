@@ -10,6 +10,8 @@ import type { LocalTask } from '../../../src/shared/local-tasks/local-task-types
  */
 export type LocalTaskFilter = {
   query: string
+  /** Only tasks with an item in "Needs you", as the desktop's "A session is waiting on me". */
+  needsYou: boolean
   priorities: readonly LocalTaskPriority[]
   labels: readonly string[]
   categories: readonly LocalTaskStatusCategory[]
@@ -17,14 +19,20 @@ export type LocalTaskFilter = {
 
 export const EMPTY_LOCAL_TASK_FILTER: LocalTaskFilter = {
   query: '',
+  needsYou: false,
   priorities: [],
   labels: [],
   categories: []
 }
 
-/** How many of the three pickers narrow the list; the search box shows itself. */
+/** How many choices in the filter sheet narrow the list; the search box shows itself. */
 export function localTaskFilterCount(filter: LocalTaskFilter): number {
-  return filter.priorities.length + filter.labels.length + filter.categories.length
+  return (
+    Number(filter.needsYou) +
+    filter.priorities.length +
+    filter.labels.length +
+    filter.categories.length
+  )
 }
 
 export function isLocalTaskFilterActive(filter: LocalTaskFilter): boolean {

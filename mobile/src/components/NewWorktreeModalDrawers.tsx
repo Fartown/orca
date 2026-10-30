@@ -3,6 +3,7 @@ import { getRepoExecutionHostId } from '../../../src/shared/execution-host'
 import type { SmartModeAvailabilityInput } from '../tasks/mobile-smart-source-modes'
 import type { PasteRepoCandidate } from '../tasks/smart-source-paste-intent'
 import type { useMobileComposerSource } from '../tasks/use-mobile-composer-source'
+import type { LocalTaskCreateSource } from '../local-tasks/use-local-task-create-source'
 import { HostKindIcon } from './HostKindIcon'
 import { MobileAgentIcon } from './MobileAgentIcon'
 import type { NewWorktreeAgentOption } from './new-worktree-agent-selection'
@@ -26,6 +27,7 @@ export function NewWorktreeModalDrawers(props: {
   drawerView: NewWorktreeDrawerView
   client: Parameters<typeof SmartWorkspaceSourceDrawer>[0]['client']
   composer: Composer
+  localTaskSource?: LocalTaskCreateSource | null
   sourceAvailability: SmartModeAvailabilityInput
   selectedRepo: MobileWorkspaceRepo | null
   /** The picked repo's host's repos: a source can switch repos only within that host. */
@@ -61,6 +63,7 @@ export function NewWorktreeModalDrawers(props: {
         jiraSiteId={props.jiraSiteId}
         jiraSites={props.jiraSites}
         sshReady={props.sshReady}
+        localTaskSource={props.localTaskSource}
         onRepoChange={(repoId) => {
           const nextRepo = props.repos.find((repo) => repo.id === repoId)
           if (nextRepo) {

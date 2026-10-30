@@ -144,4 +144,21 @@ describe('task page search and filter', () => {
       ['review', 1]
     ])
   })
+
+  it('narrows "A session is waiting on me" to the tasks Needs you holds, and none without', () => {
+    const waiting = (needingYou?: ReadonlySet<string>) =>
+      buildLocalTaskGroups({
+        tasks,
+        projects: [project],
+        projectId: 'mall',
+        segment: 'all',
+        filter: { ...EMPTY_LOCAL_TASK_FILTER, needsYou: true },
+        needingYou,
+        nestSubtasks: true,
+        keepEmpty: false
+      }).flatMap((group) => group.rows.map((row) => row.task.ref))
+    expect(waiting(new Set(['t13', 't9']))).toEqual(['MALL-13', 'MALL-9'])
+    // Out of contact the page passes no set: nothing can be confirmed as waiting.
+    expect(waiting()).toEqual([])
+  })
 })

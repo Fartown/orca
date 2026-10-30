@@ -209,7 +209,7 @@ async function linkCreatedWorkspace(
     toast.info(
       translate(
         'localTasks.links.otherProjectNotLinked',
-        'The workspace was created in another project, so it was not linked to the task.'
+        'The workspace was created in a repository outside this project, so it was not linked to the task.'
       )
     )
     return false

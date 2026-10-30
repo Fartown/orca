@@ -30,12 +30,20 @@ export type LocalTaskLaunchRequest =
       name: string
       setups: LocalTaskSetup[]
       setup: LocalTaskSetup
+      /** Start work again: the task's workspace was deleted, so the new link replaces its link. */
+      replace?: boolean
     }
   | { mode: 'session'; sessionTask: LocalTask; workspace: LocalTaskWorkspaceLink }
 
+/**
+ * Why a list could not be offered, kept apart from "no agent": the host is out of contact, its
+ * contact could not be confirmed, or it answered and the read failed.
+ */
+export type LocalTaskAgentsFailure = 'offline' | 'unverifiable' | 'read'
+
 export type LocalTaskAgentChoices =
   | { status: 'loading' }
-  | { status: 'failed' }
+  | { status: 'failed'; reason: LocalTaskAgentsFailure }
   | { status: 'ready'; agents: MobileNewTabAgentOption[] }
 
 /** The host a request runs on, as the library's owner names it. */
@@ -56,7 +64,6 @@ export function useLocalTaskLaunch(args: {
 }) {
   const [request, setRequest] = useState<LocalTaskLaunchRequest | null>(null)
   const [agents, setAgents] = useState<LocalTaskAgentChoices>({ status: 'loading' })
-  const [delivery, setDelivery] = useState<'submit' | 'draft'>('submit')
   const [busy, setBusy] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
   const [ids] = useState(() => ({
@@ -87,7 +94,10 @@ export function useLocalTaskLaunch(args: {
         return
       }
       if (contact.kind !== 'in-contact') {
-        setAgents({ status: 'failed' })
+        setAgents({
+          status: 'failed',
+          reason: contact.kind === 'out-of-contact' ? 'offline' : 'unverifiable'
+        })
         return
       }
       void loadLocalTaskAgentOptions({
@@ -97,7 +107,7 @@ export function useLocalTaskLaunch(args: {
         target: routeId ? { kind: 'existing', routeId } : { kind: 'create', hostId }
       }).then(
         (options) => current && setAgents({ status: 'ready', agents: options }),
-        () => current && setAgents({ status: 'failed' })
+        () => current && setAgents({ status: 'failed', reason: 'read' })
       )
     })
     return () => {
@@ -124,12 +134,14 @@ export function useLocalTaskLaunch(args: {
       return
     }
     const tasksById = new Map(args.library.tasks.map((task) => [task.id, task]))
+    // Why always submit: a host never delivers a draft, so a phone launch sends the task as the
+    // agent's first message, as upstream's phone launches do (2026-10-30, REQ-017).
     const prompt = {
       text: buildLocalTaskAgentPrompt(
         active.sessionTask,
         localTaskAncestors(active.sessionTask, tasksById)
       ),
-      delivery
+      delivery: 'submit' as const
     }
     setBusy(true)
     try {
@@ -149,7 +161,8 @@ export function useLocalTaskLaunch(args: {
           },
           name: active.name,
           agent,
-          prompt
+          prompt,
+          ...(active.replace ? { replace: true } : {})
         })
       } else {
         if (agent === null) {
@@ -168,10 +181,15 @@ export function useLocalTaskLaunch(args: {
       }
       setNotice(localTaskLaunchMessage(args.copy, outcome))
       args.library.reload(['links'])
+      // Why stay when the text was lost: leaving for the terminal would hide the notice that says so.
+      const textLost =
+        (outcome.kind === 'done' || outcome.kind === 'session-not-recorded') &&
+        outcome.promptNotDelivered === true
       if (
-        outcome.kind === 'done' ||
-        outcome.kind === 'session-not-recorded' ||
-        outcome.kind === 'workspace-created'
+        !textLost &&
+        (outcome.kind === 'done' ||
+          outcome.kind === 'session-not-recorded' ||
+          outcome.kind === 'workspace-created')
       ) {
         const href = localTaskWorkspaceHref({
           hostId: site.hostId,
@@ -196,7 +214,6 @@ export function useLocalTaskLaunch(args: {
   return {
     request,
     agents,
-    delivery,
     busy,
     notice,
     open: async (next: LocalTaskLaunchRequest, hostLabel: string) => {
@@ -218,7 +235,6 @@ export function useLocalTaskLaunch(args: {
       }
       setRequest((previous) => (previous?.mode === 'start' ? { ...previous, setup } : previous))
     },
-    toggleDelivery: () => setDelivery((value) => (value === 'submit' ? 'draft' : 'submit')),
     launch
   }
 }

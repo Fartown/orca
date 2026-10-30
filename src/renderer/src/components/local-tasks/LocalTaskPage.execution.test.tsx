@@ -74,8 +74,8 @@ it('renders Start, workspace linking and sessions in the actual task detail page
       <LocalTaskPage sourceBar={null} />
     </TooltipProvider>
   )
-  expect(screen.getByRole('button', { name: 'Start' })).toBeTruthy()
-  expect(screen.getByRole('button', { name: 'Use existing workspace' })).toBeTruthy()
+  expect(screen.getByRole('button', { name: 'Start work' })).toBeTruthy()
+  expect(screen.getByRole('button', { name: 'Link an existing workspace' })).toBeTruthy()
   expect(screen.getByText('Sessions')).toBeTruthy()
 })
 
@@ -86,7 +86,7 @@ it('renders the real workspace picker when the detail action opens its dialog', 
     </TooltipProvider>
   )
   act(() => localTaskLinkDialogStore.getState().open({ kind: 'pick-workspace', taskId: task.id }))
-  expect(screen.getByRole('dialog', { name: 'Use an existing workspace for “Task”' })).toBeTruthy()
+  expect(screen.getByRole('dialog', { name: 'Link an existing workspace to “Task”' })).toBeTruthy()
 })
 
 const linkedWorkspace = {
@@ -105,8 +105,8 @@ const linkedWorkspace = {
 } as const
 
 it.each([
-  ['pick-workspace', 'Use an existing workspace for “Task”'],
-  ['session', 'Open a session']
+  ['pick-workspace', 'Link an existing workspace to “Task”'],
+  ['session', 'New session']
 ] as const)('closes only the %s dialog on Esc, keeping the detail and the page', (kind, name) => {
   localTasksDomainStore
     .getState()
@@ -138,7 +138,7 @@ it.each([
   }
 })
 
-it('renders the real session dialog when Open session selects a linked task', () => {
+it('renders the real session dialog when New session selects a linked task', () => {
   localTasksDomainStore
     .getState()
     .writer('local')
@@ -149,7 +149,7 @@ it('renders the real session dialog when Open session selects a linked task', ()
     </TooltipProvider>
   )
   act(() => localTaskLinkDialogStore.getState().open({ kind: 'session', taskId: task.id }))
-  expect(screen.getByRole('dialog', { name: 'Open a session' })).toBeTruthy()
+  expect(screen.getByRole('dialog', { name: 'New session' })).toBeTruthy()
 })
 
 function child(number: number, parentId: string): LocalTask {
@@ -176,8 +176,8 @@ it('shows a deep subtask working in its root’s workspace, with its path and it
   expect(screen.getByTitle('Task · ONE-1').tagName).toBe('BUTTON')
   expect(screen.getByTitle('Task 2 · ONE-2').tagName).toBe('BUTTON')
   expect(screen.getByText('Uses the workspace of “Task”')).toBeTruthy()
-  expect(screen.getByRole('button', { name: 'Start separately' })).toBeTruthy()
-  expect(screen.getByRole('button', { name: 'Use existing workspace' })).toBeTruthy()
+  expect(screen.getByRole('button', { name: 'Start work separately' })).toBeTruthy()
+  expect(screen.getByRole('button', { name: 'Link an existing workspace' })).toBeTruthy()
 })
 
 it('counts every level below a task in its delete confirmation', () => {

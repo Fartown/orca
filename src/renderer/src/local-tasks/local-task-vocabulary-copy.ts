@@ -13,7 +13,7 @@ export function localTaskCategoryLabel(category: LocalTaskStatusCategory): strin
     case 'unstarted':
       return translate('localTasks.category.unstarted', 'Unstarted')
     case 'started':
-      return translate('localTasks.category.started', 'In progress')
+      return translate('localTasks.category.started', 'In Progress')
     case 'review':
       return translate('localTasks.category.review', 'Review')
     case 'completed':

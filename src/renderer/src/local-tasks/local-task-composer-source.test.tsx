@@ -12,11 +12,14 @@ vi.mock('@/components/ui/tooltip', () => ({
 vi.mock('@/runtime/runtime-linear-client', () => ({
   linearStatus: vi.fn(async () => ({ connected: false, viewer: null }))
 }))
+const toastInfo = vi.hoisted(() => vi.fn())
+vi.mock('sonner', () => ({ toast: { info: toastInfo, error: vi.fn(), success: vi.fn() } }))
 
 import { useAppStore } from '@/store'
 import SmartWorkspaceNameField from '@/components/new-workspace/SmartWorkspaceNameField'
 import type { SmartWorkspaceNameSelection } from '@/components/new-workspace/smart-workspace-name-field-model'
 import { localTasksDomainStore } from './local-tasks-domain-store'
+import { localTaskLibraryViewerStore } from './local-task-library-viewers'
 import { LocalTaskSourceTabContext, type LocalTaskSourceTab } from './local-task-source-tab'
 import { localTaskIdForCreation, resetLocalTaskStartWorkForTests } from './local-task-start-work'
 import { useLocalTaskComposerSource } from './use-local-task-composer-source'
@@ -129,28 +132,38 @@ describe('the composer’s Local tasks pick (REQ-009)', () => {
     expect(result.current.submitOptions()).toEqual({})
   })
 
-  it('hides the pick on a target served by another Orca and offers no tab to a folder', () => {
+  it('sets the pick aside, saying why, on a target served by another Orca or a folder', () => {
     const start = { taskId: 't12', orcaProjectIds: [], replace: false }
+    toastInfo.mockClear()
     const paired = renderHook(() =>
       useLocalTaskComposerSource(start, card({ selectedRepoExecutionHostId: 'runtime:env-1' }))
     )
     expect(paired.result.current.cardOverrides).toEqual({})
     expect(paired.result.current.submitOptions()).toEqual({})
+    expect(toastInfo).toHaveBeenLastCalledWith(
+      expect.stringMatching(/^“Order export” is kept on .+, so it can’t start work on this host\./)
+    )
     const folder = renderHook(() =>
       useLocalTaskComposerSource(start, card({ selectedRepoIsGit: false }))
     )
     expect(folder.result.current.tab).toBeNull()
+    expect(toastInfo).toHaveBeenLastCalledWith(
+      'A folder can’t start work on “Order export”, so the task is set aside. Switch back to a Git repository to keep it.'
+    )
+    expect(toastInfo).toHaveBeenCalledTimes(2)
   })
 })
 
 function Field({
   tab,
-  selectedSource = null
+  selectedSource = null,
+  initialValue = ''
 }: {
   tab: LocalTaskSourceTab
   selectedSource?: SmartWorkspaceNameSelection | null
+  initialValue?: string
 }) {
-  const [value, setValue] = useState('')
+  const [value, setValue] = useState(initialValue)
   return (
     <LocalTaskSourceTabContext.Provider value={tab}>
       <SmartWorkspaceNameField
@@ -192,6 +205,20 @@ describe('the composer’s Create From field shares the Local tasks tab', () => 
     fireEvent.mouseDown(screen.getByRole('tab', { name: 'Local' }))
     fireEvent.click(await screen.findByRole('option', { name: /Order export/ }))
     expect(tab.select).toHaveBeenCalledWith(task)
+  })
+
+  it('asks paired libraries for their projects while the field is open', () => {
+    const view = render(<Field tab={composerTab()} />)
+    expect(localTaskLibraryViewerStore.getState().viewers).toBe(1)
+    view.unmount()
+    expect(localTaskLibraryViewerStore.getState().viewers).toBe(0)
+  })
+
+  it('still lists tasks when the name in the box is one a set-aside pick wrote', async () => {
+    const tab = composerTab({ pickedName: 'shop-12-order-export' })
+    render(<Field tab={tab} initialValue="shop-12-order-export" />)
+    fireEvent.mouseDown(screen.getByRole('tab', { name: 'Local' }))
+    expect(await screen.findByRole('option', { name: /Order export/ })).toBeTruthy()
   })
 
   it('shows a picked task’s title in the pill with its ref beside it', () => {

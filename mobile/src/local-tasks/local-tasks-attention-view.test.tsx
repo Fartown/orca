@@ -77,7 +77,7 @@ const session: LocalTaskSessionLink = {
 
 const snapshot: LocalTaskProgressSnapshot = { observedAt: 2_000, sessions: [], items: [done] }
 
-function library(): LocalTasksLibrary {
+function library(progress: LocalTaskProgressSnapshot = snapshot): LocalTasksLibrary {
   return {
     api: null,
     status: null,
@@ -92,7 +92,7 @@ function library(): LocalTasksLibrary {
     retryFailed: vi.fn(),
     resubscribe: vi.fn(),
     acceptTasks: vi.fn(),
-    work: { links: { workspaces: [], sessions: [session] }, progress: snapshot, error: null }
+    work: { links: { workspaces: [], sessions: [session] }, progress, error: null }
   }
 }
 
@@ -105,18 +105,18 @@ afterEach(() => {
   renderer = null
 })
 
-function render(connState: ConnectionState) {
+function render(connState: ConnectionState, progress: LocalTaskProgressSnapshot = snapshot) {
   act(() => {
     renderer = create(
       createElement(LocalTasksAttentionView, {
-        library: library(),
+        library: library(progress),
         api: createLocalTasksApi({
           sendRequest: async () => {
             throw new Error('unexpected RPC')
           }
         }),
         site: { client: null, connState, label: 'minizc' },
-        rows: localTaskAttentionRows({ snapshot, tasks: [task], projectId: null }),
+        rows: localTaskAttentionRows({ snapshot: progress, tasks: [task], projectId: null }),
         now: 60_000,
         canWrite: connState === 'connected',
         bottomInset: 0,
@@ -150,6 +150,9 @@ describe('replying from "Needs you"', () => {
     expect(input(tree).props.editable).toBe(false)
     expect(input(tree).props.placeholder).toBe(localTasksCopy().work.replyReconnecting)
     expect(tree.root.findByProps({ testID: 'local-task-reply-send' }).props.disabled).toBe(true)
+    expect(tree.root.findByProps({ testID: 'local-task-reply-offline' }).props.children).toBe(
+      localTasksCopy().work.replyDisconnected('minizc')
+    )
   })
 
   it('puts the text back when nothing reached the agent, and sends only once', async () => {
@@ -180,5 +183,34 @@ describe('replying from "Needs you"', () => {
     expect(tree.root.findByProps({ testID: `reply-state-${done.key}` }).props.children).toBe(
       localTasksCopy().work.replyStates.unconfirmed
     )
+  })
+})
+
+describe('an empty "Needs you"', () => {
+  const message = (tree: ReactTestRenderer) =>
+    tree.root.findByProps({ testID: 'local-tasks-attention-message' }).props.children
+
+  it('does not call it empty while a session runs on a host the library cannot reach', () => {
+    const unreachable: LocalTaskProgressSnapshot = {
+      observedAt: 2_000,
+      sessions: [
+        {
+          taskSessionId: session.id,
+          state: 'unverifiable',
+          lastMessage: null,
+          stateSince: null,
+          unread: false
+        }
+      ],
+      items: []
+    }
+    expect(message(render('connected', unreachable))).toBe(
+      localTasksCopy().work.attentionUnverifiableHosts
+    )
+  })
+
+  it('is empty only when every session it reads can be confirmed', () => {
+    const quiet: LocalTaskProgressSnapshot = { observedAt: 2_000, sessions: [], items: [] }
+    expect(message(render('connected', quiet))).toBe(localTasksCopy().work.attentionEmpty)
   })
 })

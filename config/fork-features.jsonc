@@ -2804,6 +2804,9 @@
         "mobile/src/worktree/workspace-list-types.ts",
         "mobile/src/worktree/worktree-catalog-operations.ts",
         "mobile/src/worktree/worktree-catalog-snapshot-client.ts",
+        "mobile/src/storage/mirrored-storage-keys.ts",
+        "mobile/src/components/WorktreeMetaGlyphs.tsx",
+        "src/shared/github/pull-request-types.ts",
         "src/renderer/src/components/AgentStateDot.tsx",
         "src/renderer/src/components/agent/AgentCombobox.tsx",
         "src/renderer/src/components/sidebar/ProjectHeaderActions.tsx",
@@ -2882,6 +2885,10 @@
         "src/shared/task-providers.ts",
         "src/renderer/src/hooks/composer-state/composer-target-store.ts",
         "mobile/src/tasks/worktree-create-capability.ts",
+        "mobile/src/tasks/workspace-create-params.ts",
+        "mobile/src/tasks/use-mobile-composer-source.ts",
+        "mobile/src/components/new-worktree-modal-types.ts",
+        "src/shared/project-host-setup-projection.ts",
         "src/renderer/src/components/error-boundaries/RecoverableRenderErrorBoundary.tsx",
         "src/renderer/src/components/new-workspace/smart-workspace-localized-options.tsx",
         "src/shared/new-workspace/smart-workspace-source-results.ts",
@@ -2897,7 +2904,12 @@
         "src/cli/flags.ts",
         "src/cli/format.ts",
         "src/cli/runtime/types.ts",
-        "src/cli/selectors.ts"
+        "src/cli/selectors.ts",
+        "src/renderer/src/components/sidebar/workspace-status.ts",
+        "src/shared/workspace-statuses.ts",
+        "src/renderer/src/session-names/session-name-prompt-projection.ts",
+        "src/shared/agent-row-conversation-name.ts",
+        "src/shared/agent-tab-title.ts"
       ],
       "policyId": "local-tasks",
       "ownedPaths": [
@@ -3055,6 +3067,76 @@
           "file": "mobile/src/components/WorktreeListRow.tsx",
           "mustContain": "<LocalTaskWorkspaceGlyph item={item} />",
           "why": "A host-list row shows a task icon after upstream's presence glyphs when its workspace belongs to a local task (REQ-016, REQ-017)"
+        },
+        {
+          "file": "mobile/src/tasks/mobile-smart-source-modes.ts",
+          "mustContain": "{ id: 'local', label: 'Local', icon: { type: 'lucide', name: 'list-todo' } },",
+          "why": "The phone's Create From lists Local right after Smart, as the desktop composer does (REQ-009, REQ-017)"
+        },
+        {
+          "file": "mobile/src/tasks/mobile-smart-source-modes.ts",
+          "mustContain": "return input.localTaskSourceOffered === true",
+          "why": "Local is offered only where the target repo's Orca advertises local tasks, has a project and shows Local; never for a folder or non-git repo (REQ-008, REQ-009, REQ-017)"
+        },
+        {
+          "file": "mobile/src/components/SmartSourceModeIcon.tsx",
+          "mustContain": "return <ListTodo size={14} color={color} />",
+          "why": "The Local tab carries the task icon the Task Source picker uses (REQ-017)"
+        },
+        {
+          "file": "mobile/src/components/SmartWorkspaceSourceDrawer.tsx",
+          "mustContain": "const localTasks = useLocalTaskCreateSourceTab(localTaskSource, effectiveMode, composer.name)",
+          "why": "The Local tab reads the target repo's task library and searches it by title or ref (REQ-009, REQ-017)"
+        },
+        {
+          "file": "mobile/src/components/SmartWorkspaceSourceDrawer.tsx",
+          "mustContain": "isLocalTaskCreateSourceRow(item) ? (",
+          "why": "Local rows lead with the title, the ref small and muted; a task with a workspace is greyed with the reason (REQ-009, REQ-011, REQ-017)"
+        },
+        {
+          "file": "mobile/src/components/SmartWorkspaceSourceField.tsx",
+          "mustContain": "<LocalTaskCreateSourcePill task={localTaskSource.picked} onClear={localTaskSource.clear} />",
+          "why": "The picked task shows as the source pill; clearing it clears the pick (REQ-009, REQ-017)"
+        },
+        {
+          "file": "mobile/src/components/NewWorktreeFormSheet.tsx",
+          "mustContain": "localTaskSource={props.localTaskSource}",
+          "why": "The create form hands the task pick to the source field (REQ-009, REQ-017)"
+        },
+        {
+          "file": "mobile/src/components/NewWorktreeModalDrawers.tsx",
+          "mustContain": "localTaskSource={props.localTaskSource}",
+          "why": "The sheet's drawers hand the task pick to the source drawer (REQ-009, REQ-017)"
+        },
+        {
+          "file": "mobile/src/components/NewWorktreeModal.tsx",
+          "mustContain": "const localTaskSource = useLocalTaskCreateSource({",
+          "why": "The new-workspace sheet owns the Local source for its target repo's library: the paired Orca's for its machine and relay SSH targets, a server's or orcad's for theirs (REQ-009, REQ-017)"
+        },
+        {
+          "file": "mobile/src/components/NewWorktreeModal.tsx",
+          "mustContain": "localTaskSourceOffered: localTaskSource.offered",
+          "why": "Create From's tab list includes Local while it is offered (REQ-009, REQ-017)"
+        },
+        {
+          "file": "mobile/src/components/NewWorktreeModal.tsx",
+          "mustContain": "localTaskCreate: localTaskSource.create,",
+          "why": "A workspace created for a picked task goes through the task's own create (REQ-009, REQ-017)"
+        },
+        {
+          "file": "mobile/src/components/use-new-workspace-create-submit.ts",
+          "mustContain": "const created = await args.localTaskCreate({",
+          "why": "Create runs the task's Start with the sheet's agent, setup choice and note: the link is written in the workspace's library and the task waits in the agent's input as a draft (REQ-009, REQ-017)"
+        },
+        {
+          "file": "mobile/src/test-support/rpc-recording/adapters/workspace-settings-mounts.ts",
+          "mustContain": "localTaskCreate: null,",
+          "why": "The recorded submit scenario names the new optional member, so it keeps the upstream create path it pins"
+        },
+        {
+          "file": "mobile/src/mobile-web-shell/page-storage-keys.ts",
+          "mustContain": "'orca:localTasksView'",
+          "why": "The phone's task page, served as a web route, remembers each library's project, segment and layout in the app's store (REQ-017)"
         },
         {
           "file": "src/renderer/src/app-shell/AppBackgroundServices.tsx",
@@ -3367,6 +3449,11 @@
           "why": "The task sidebar button's provider shortcuts include Local while it is shown (REQ-008)"
         },
         {
+          "file": "src/renderer/src/components/sidebar/SidebarTaskNavButton.tsx",
+          "mustContain": "resolvedDefaultTaskSource !== 'github' || isLocalTaskSourceActive()",
+          "why": "Hovering Tasks does not warm GitHub work items while the task page opens on Local (REQ-008)"
+        },
+        {
           "file": "src/renderer/src/components/settings/TasksPane.tsx",
           "mustContain": "<LocalTasksSourceCard />",
           "why": "Settings → Task sources lists Local tasks after the upstream providers, shown or hidden like them (REQ-008)"
@@ -3555,6 +3642,8 @@
         "mobile/src/local-tasks/local-task-agent-options.test.ts",
         "mobile/src/local-tasks/local-task-source-option.test.tsx",
         "mobile/src/local-tasks/local-task-host-rows.test.tsx",
+        "mobile/src/local-tasks/local-task-create-source-start.test.ts",
+        "mobile/src/local-tasks/use-local-task-create-source.test.tsx",
         "src/renderer/src/local-tasks/local-task-background-services.test.tsx",
         "src/renderer/src/lib/worktree-creation-structured-session.test.ts",
         "src/renderer/src/components/local-tasks/LocalTaskPage.execution.test.tsx",

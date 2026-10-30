@@ -84,7 +84,7 @@ function usePanelCopy(): PanelCopy {
     busy: false,
     message: translate(
       'localTasks.state.notTaskHost',
-      'No task library is reachable here. Connect to an Orca that keeps one, or update it.'
+      'No task library is connected here. Connect to an Orca that keeps one, or update it.'
     ),
     explanation: null,
     detail: null,

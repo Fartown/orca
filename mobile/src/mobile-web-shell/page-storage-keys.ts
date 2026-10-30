@@ -36,7 +36,9 @@ export const PAGE_STORAGE_EXACT_KEYS = [
   /** Whether the terminal's command inputs offer autocorrect. */
   'orca:terminalAutocompleteEnabled',
   /** Whether a terminal link opens in Orca's browser or the phone's. */
-  'orca:terminalLinkOpenMode'
+  'orca:terminalLinkOpenMode',
+  /** Fork local-tasks: the project, segment and layout each task library's page was left on. */
+  'orca:localTasksView'
 ] as const
 
 export const PAGE_STORAGE_KEY_PREFIXES = [

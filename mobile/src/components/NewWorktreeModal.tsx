@@ -10,6 +10,7 @@ import { useMobileComposerSource } from '../tasks/use-mobile-composer-source'
 import { useNewWorktreeRuntimeCapabilities } from '../tasks/worktree-create-capability'
 import { useWorktreeCreateBasePrefetch } from '../tasks/use-worktree-create-base-prefetch'
 import { useHostDescriptor } from '../transport/host-descriptor-store'
+import { useLocalTaskCreateSource } from '../local-tasks/use-local-task-create-source'
 import { isSameMobileWorkspaceRepo } from '../worktree/new-workspace-dialog-repo-selection'
 import {
   buildRetiredWorktreeNamesRefreshKey,
@@ -114,6 +115,16 @@ function NewWorktreeModalContent(props: NewWorktreeModalProps) {
     onError: setError
   })
   const selectedRepoIsGit = selectedRepo ? selectedRepo.kind !== 'folder' : true
+  const localTaskSource = useLocalTaskCreateSource({
+    visible,
+    desktopClient,
+    client,
+    repo: selectedRepo,
+    repoIsGit: selectedRepoIsGit,
+    hostLabelById,
+    hostPlatform: desktopPlatform,
+    composer
+  })
   useWorktreeCreateBasePrefetch({
     client: visible ? client : null,
     repoId: selectedRepo?.id ?? null,
@@ -145,6 +156,7 @@ function NewWorktreeModalContent(props: NewWorktreeModalProps) {
     detectedAgentIds: executionTarget.detectedAgentIds,
     sshGate: executionTarget.sshGate,
     composer,
+    localTaskCreate: localTaskSource.create,
     note,
     existingWorktreePaths,
     retiredWorktreeNames,
@@ -170,7 +182,8 @@ function NewWorktreeModalContent(props: NewWorktreeModalProps) {
     githubAvailable: runtime.availableProviders.includes('github'),
     gitlabAvailable: runtime.availableProviders.includes('gitlab'),
     linearAvailable: runtime.availableProviders.includes('linear'),
-    jiraAvailable: runtime.jiraConnection.connected && runtime.availableProviders.includes('jira')
+    jiraAvailable: runtime.jiraConnection.connected && runtime.availableProviders.includes('jira'),
+    localTaskSourceOffered: localTaskSource.offered
   }
   // Why one client's: a source's repo switch is looked up through the picked repo's client.
   const hostRepos = useMemo(
@@ -246,6 +259,7 @@ function NewWorktreeModalContent(props: NewWorktreeModalProps) {
         selectedRepoName={selectedRepo?.displayName ?? 'Remote repository'}
         sshGate={executionTarget.sshGate}
         composer={composer}
+        localTaskSource={localTaskSource}
         selectedAgent={agentSelection.selectedAgent}
         showAdvanced={setupScript.showAdvanced}
         note={note}
@@ -277,6 +291,7 @@ function NewWorktreeModalContent(props: NewWorktreeModalProps) {
         drawerView={navigation.drawerView}
         client={client}
         composer={composer}
+        localTaskSource={localTaskSource}
         sourceAvailability={sourceAvailability}
         selectedRepo={selectedRepo}
         repos={hostRepos}

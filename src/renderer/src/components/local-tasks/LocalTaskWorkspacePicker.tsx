@@ -166,7 +166,7 @@ export function LocalTaskWorkspacePicker({
   }
   const title = translate(
     'localTasks.links.pickWorkspaceTitle',
-    'Use an existing workspace for “{{title}}”',
+    'Link an existing workspace to “{{title}}”',
     { title: task.title }
   )
   return (

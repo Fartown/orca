@@ -187,7 +187,7 @@ function LocalTaskProjectSettings(props: Props & { project: LocalTaskProject }) 
         </LocalTaskPropertyRow>
       </View>
       <Text style={[localTaskStyles.hint, styles.below]}>
-        {copy.prefixHint(project.aliases.join('、'))}
+        {copy.prefixHint(project.aliases.join(', '))}
       </Text>
       {error ? <Text style={[localTaskStyles.errorText, styles.below]}>{error}</Text> : null}
       <LocalTaskReposSection
@@ -221,7 +221,9 @@ function LocalTaskProjectSettings(props: Props & { project: LocalTaskProject }) 
         accessibilityRole="button"
       >
         <Trash2 size={16} color={colors.statusRed} />
-        <Text style={localTaskStyles.secondaryButtonText}>{copy.deleteProject}</Text>
+        <Text style={localTaskStyles.secondaryButtonText}>
+          {busyDelete ? copy.deletingProject : copy.deleteProject}
+        </Text>
       </Pressable>
       <ConfirmModal
         visible={confirmDelete}
@@ -237,7 +239,7 @@ function LocalTaskProjectSettings(props: Props & { project: LocalTaskProject }) 
         visible={editing !== null}
         title={editing?.field === 'prefix' ? copy.changePrefix : copy.renameProject}
         message={
-          editing?.field === 'prefix' ? copy.prefixHint(project.aliases.join('、')) : undefined
+          editing?.field === 'prefix' ? copy.prefixHint(project.aliases.join(', ')) : undefined
         }
         defaultValue={editing?.value ?? ''}
         submitLabel={copy.save}

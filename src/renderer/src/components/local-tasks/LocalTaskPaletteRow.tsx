@@ -19,7 +19,9 @@ export function LocalTaskPaletteRow({
     translate('localTasks.palette.source', 'Local task'),
     entry.projectName,
     entry.hostLabel,
-    entry.status?.name
+    entry.status?.name,
+    // Why last: the status before it is only what was read before the host went out of contact.
+    entry.unverifiable ? translate('localTasks.links.state.unverifiable', 'Can’t confirm') : null
   ].filter(Boolean)
   return (
     <CommandItem

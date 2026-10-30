@@ -131,6 +131,17 @@ it('uses a ready SSH setup when the local repo catalog has not listed its repo',
   ).toBe(true)
 })
 
+it('says the linked repositories left Orca, apart from a project that never linked one', () => {
+  const state = { ...useAppStore.getState(), repos: [], projects: [], projectHostSetups: [] }
+  expect(selectLocalTaskStartState(state, taskProject, null).reason).toBe(
+    'This project’s repositories were removed from Orca'
+  )
+  expect(
+    selectLocalTaskStartState(state, { ...taskProject, repos: [], defaultRepoId: null }, null)
+      .reason
+  ).toBe('No Git repository in Orca for this project')
+})
+
 it('prefers the last execution host when one repo id exists on local and SSH hosts', () => {
   const localRepo = {
     id: setup.repoId,

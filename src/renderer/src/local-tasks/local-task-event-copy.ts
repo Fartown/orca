@@ -44,11 +44,12 @@ function statusName(
   )
 }
 
-function taskRef(id: string | null, index: LocalTaskIndex): string {
-  return (
-    (id ? index.tasksById.get(id)?.ref : undefined) ??
-    translate('localTasks.activity.deletedTask', 'a deleted task')
-  )
+/** The parent by its title (§4); the ref is only what identifies it, not what names it. */
+function taskName(id: string | null, index: LocalTaskIndex): string {
+  const task = id ? index.tasksById.get(id) : undefined
+  return task
+    ? translate('localTasks.activity.taskTitle', '“{{title}}”', { title: task.title })
+    : translate('localTasks.activity.deletedTask', 'a deleted task')
 }
 
 function describeLabels(actor: string, payload: Payload): string {
@@ -78,12 +79,12 @@ function describeParent(actor: string, payload: Payload, index: LocalTaskIndex):
   if (!to) {
     return translate('localTasks.activity.parentRemoved', '{{actor}} detached it from {{from}}', {
       actor,
-      from: taskRef(from, index)
+      from: taskName(from, index)
     })
   }
   return translate('localTasks.activity.parentSet', '{{actor}} made it a subtask of {{to}}', {
     actor,
-    to: taskRef(to, index)
+    to: taskName(to, index)
   })
 }
 

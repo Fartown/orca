@@ -31,6 +31,7 @@ import { localTasksClient } from '@/local-tasks/local-tasks-runtime-client'
 import { useLocalTasksDomain } from '@/local-tasks/local-tasks-domain-store'
 import { runLocalTaskWrite } from '@/local-tasks/local-task-writes'
 import { LocalTaskStatusIcon, localTaskStatusColorVar } from '../LocalTaskIcons'
+import { LocalTaskActionTooltip } from '../LocalTaskActionTooltip'
 import { LocalTaskStatusRemoveDialog } from './LocalTaskStatusRemoveDialog'
 import { LOCAL_TASK_INLINE_FIELD } from '../local-task-inline-field'
 
@@ -147,42 +148,61 @@ function StatusRow({
       <span className="w-16 shrink-0 text-right text-2xs text-muted-foreground">
         {translate('localTasks.settings.statusUsage', 'Tasks: {{count}}', { count: usage })}
       </span>
-      <Button
-        variant="ghost"
-        size="icon-xs"
-        disabled={!writable || position === 0}
-        onClick={() => reorder(project, status, -1)}
-        aria-label={translate('localTasks.settings.moveUp', 'Move up')}
+      <LocalTaskActionTooltip
+        reason={
+          writable && position === 0
+            ? translate('localTasks.settings.alreadyFirst', 'Already first in its category')
+            : null
+        }
       >
-        <ArrowUp className="size-3.5" />
-      </Button>
-      <Button
-        variant="ghost"
-        size="icon-xs"
-        disabled={!writable || position === siblings - 1}
-        onClick={() => reorder(project, status, 1)}
-        aria-label={translate('localTasks.settings.moveDown', 'Move down')}
+        <Button
+          variant="ghost"
+          size="icon-xs"
+          disabled={!writable || position === 0}
+          onClick={() => reorder(project, status, -1)}
+          aria-label={translate('localTasks.settings.moveUp', 'Move up')}
+        >
+          <ArrowUp className="size-3.5" />
+        </Button>
+      </LocalTaskActionTooltip>
+      <LocalTaskActionTooltip
+        reason={
+          writable && position === siblings - 1
+            ? translate('localTasks.settings.alreadyLast', 'Already last in its category')
+            : null
+        }
       >
-        <ArrowDown className="size-3.5" />
-      </Button>
-      <Button
-        variant="ghost"
-        size="icon-xs"
+        <Button
+          variant="ghost"
+          size="icon-xs"
+          disabled={!writable || position === siblings - 1}
+          onClick={() => reorder(project, status, 1)}
+          aria-label={translate('localTasks.settings.moveDown', 'Move down')}
+        >
+          <ArrowDown className="size-3.5" />
+        </Button>
+      </LocalTaskActionTooltip>
+      <LocalTaskActionTooltip
         // Why: each category keeps at least one status (REQ-003).
-        disabled={!writable || siblings <= 1}
-        onClick={onRemove}
-        aria-label={translate('localTasks.settings.removeStatus', 'Remove status')}
-        title={
-          siblings <= 1
+        reason={
+          writable && siblings <= 1
             ? translate(
                 'localTasks.failure.lastStatusInCategory',
                 'Each category needs at least one status.'
               )
-            : undefined
+            : null
         }
       >
-        <Trash2 className="size-3.5" />
-      </Button>
+        <Button
+          variant="ghost"
+          size="icon-xs"
+          disabled={!writable || siblings <= 1}
+          onClick={onRemove}
+          aria-label={translate('localTasks.settings.removeStatus', 'Remove status')}
+        >
+          <Trash2 className="size-3.5" />
+        </Button>
+      </LocalTaskActionTooltip>
     </div>
   )
 }

@@ -198,13 +198,21 @@ export function LocalTaskProjectRepos({
           {translate('localTasks.settings.reposNone', 'None: this project only tracks tasks')}
         </p>
       )}
-      {writable && project.repos.length < LOCAL_TASK_PROJECT_REPOS_MAX ? (
+      {!writable ? null : project.repos.length < LOCAL_TASK_PROJECT_REPOS_MAX ? (
         <AddRepo project={project} onAdd={(repoId) => void edit({ kind: 'add', repoId })} />
-      ) : null}
+      ) : (
+        <p className="text-xs text-muted-foreground">
+          {translate(
+            'localTasks.settings.reposFull',
+            'A project links up to {{count}} repositories. Remove one to add another.',
+            { count: LOCAL_TASK_PROJECT_REPOS_MAX }
+          )}
+        </p>
+      )}
       <p className="text-xs text-muted-foreground">
         {translate(
           'localTasks.settings.reposHelp',
-          'Start creates workspaces in these repositories, the default one first, on this project’s host. Several task projects can share a repository.'
+          'Start work creates workspaces in these repositories, the default one first, on this project’s host. Several projects can share a repository.'
         )}
       </p>
     </div>

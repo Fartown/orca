@@ -70,9 +70,11 @@ export function LocalTasksAttentionView(props: Props) {
   const message = !snapshot
     ? work.attentionLoading
     : props.rows.length === 0
-      ? connected
-        ? work.attentionEmpty
-        : work.attentionUnverifiable(props.site.label)
+      ? !connected
+        ? work.attentionUnverifiable(props.site.label)
+        : snapshot.sessions.some((session) => session.state === 'unverifiable')
+          ? work.attentionUnverifiableHosts
+          : work.attentionEmpty
       : null
   if (message) {
     return (
@@ -139,6 +141,7 @@ export function LocalTasksAttentionView(props: Props) {
         ]}
         onClose={() => setMenuFor(null)}
       />
+      {/* No "Pick a time…" here: the phone has no date-time picker to offer one with. */}
       <ActionSheetModal
         visible={snoozing !== null}
         title={work.snoozeTitle}
@@ -156,6 +159,7 @@ export function LocalTasksAttentionView(props: Props) {
         message={replying ? localTaskAttentionLine(replying.item) : undefined}
         draft={replying ? (drafts[replying.item.key] ?? '') : ''}
         connected={connected}
+        hostLabel={props.site.label}
         onChangeDraft={(draft) => {
           const key = replying?.item.key
           if (key) {

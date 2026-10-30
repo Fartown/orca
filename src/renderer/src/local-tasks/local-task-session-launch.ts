@@ -11,6 +11,7 @@ import { launchAgentInNewTab, type LaunchAgentInNewTabResult } from '@/lib/launc
 import type { StructuredLaunchTerminal } from '@/lib/structured-agent-session-launch-admission'
 import type { StructuredAgentLaunchSettlement } from '@/lib/structured-agent-launch-settlement'
 import { activateAndRevealWorkspace } from '@/lib/worktree-activation'
+import { selectExecutionHostDisplayLabel } from '@/lib/execution-host-display-label'
 import type { TuiAgent } from '../../../shared/tui-agent'
 import { buildLocalTaskAgentPrompt } from '../../../shared/local-tasks/local-task-agent-prompt'
 import { localTaskAncestors } from '../../../shared/local-tasks/local-task-tree'
@@ -104,17 +105,16 @@ export function launchLocalTaskSession(args: LocalTaskSessionLaunchArgs): boolea
     toast.error(
       located === 'missing'
         ? translate('localTasks.links.workspaceGone', 'The workspace was deleted.')
-        : translate(
-            'localTasks.links.workspaceUnverifiable',
-            'The workspace cannot be reached now.'
-          )
+        : translate('localTasks.links.workspaceUnverifiable', 'Can’t confirm the workspace now.')
     )
     return false
   }
   const hostId = localTaskWorktreeHostId(state, located)
   if (!isLocalTaskHostInContact(state, hostId)) {
     toast.error(
-      translate('localTasks.links.workspaceUnverifiable', 'The workspace cannot be reached now.')
+      translate('localTasks.links.hostOffline', '{{host}} is not connected', {
+        host: selectExecutionHostDisplayLabel(state, hostId)
+      })
     )
     return false
   }
