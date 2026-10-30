@@ -92,7 +92,7 @@ export async function restartFromNewAppImage(
   deps: AppImageRestartDeps
 ): Promise<string> {
   deps.log(`[serve] ${watch.appImagePath} holds a new Orca build; restarting from it.`)
-  const env = appImageEnv(deps.env)
+  const env = appImageLaunchEnvironment(deps.env)
   // Why probe first: a host without FUSE cannot mount it, and an exec that fails there would
   // turn into a service restart loop instead of a server still running the old build.
   const refusal = await (deps.probe ?? probeAppImage)(watch.appImagePath, env)
@@ -135,7 +135,7 @@ async function probeAppImage(appImagePath: string, env: NodeJS.ProcessEnv): Prom
 }
 
 /** The AppImage sets up its own mount and node mode; this build's state must not leak into it. */
-function appImageEnv(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
+export function appImageLaunchEnvironment(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
   const next = { ...env }
   for (const name of [
     'ELECTRON_RUN_AS_NODE',

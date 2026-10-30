@@ -3,7 +3,7 @@ title: 集成分支自动出包
 slug: 集成分支自动出包
 status: testing
 created: 2026-09-12
-updated: 2026-10-23
+updated: 2026-10-30
 external_ids: []
 ---
 
@@ -29,6 +29,10 @@ external_ids: []
 - 下一步：运行器/缓存/发布相关 217 项测试通过（1 项平台跳过），架构与 fork 功能门禁通过；推送修复后等待完整 PR，再合并发布、覆盖安装并复验。
 
 ## 1. 关键文档链接
+
+- [Linux 桌面更新入口方案](solutions/Linux桌面更新入口方案.md)：REQ-415，公共 CLI 启动来源与可用性判断。
+- [Linux 桌面更新入口用例](tests/cases/Linux桌面更新入口.md)：TC-416，本地与 SSH 真实升级和正式安装边界。
+- [Linux 桌面更新入口验收](tests/runs/2026-10-30-linux-desktop-update.md)：真实升级、保留原终端、再次检查及正式实例恢复。
 
 - [Linux 服务自动更新方案](solutions/Linux服务自动更新方案.md)：REQ-414，复用 AppImage 原生更新和 CLI 接管。
 - [Linux 服务自动更新用例](tests/cases/Linux服务自动更新.md)：TC-415，本地与 SSH 的真实包升级验证。
@@ -98,6 +102,15 @@ external_ids: []
 - 影响范围：REQ-401、REQ-402、REQ-403；APK 沿用 Expo debug 签名并核验指纹，不生成密钥或暗改 versionCode。
 
 ## 3. 开发记录
+
+### 2026-10-30 Linux 桌面更新入口（testing）
+
+- 本轮目标：修复桌面经 orca open 丢失 AppImage 来源与更新器禁用被误报为无更新，完成真实本地和 SSH 升级及本机安装验收。
+- 完成内容：公共 CLI 从原 AppImage 启动；来源身份无效时检查报错，配对客户端得到 automatic:false。本地与 SSH 的真实 9101→9102 升级通过，原 PTY 生命周期与 shell PID 保留；本地公共 CLI 再次打开与普通检查通过。真实解包程序的禁用身份错误界面回归通过。当前正式 .55 进程已恢复来源身份，并通过真实发布源发现 .66。
+- 代码或文档变更：登记 REQ-415、TC-416、桌面入口方案与实机记录；复用 AppImage 来源解析和环境清理，增加身份可用性检查，提取既有终端保留验收供桌面正式升级复用。
+- 验证证据：.docs/linux-desktop-update-ui-validation/2026-10-30/；345 项相关回归、21 项移动端、17 项验收器复跑通过；完整类型、架构、登记、文档、本地化与 PR 范围代码质量检查通过；标准构建与两份真实 AppImage 出包通过。详见 [隔离验收](tests/runs/2026-10-30-linux-desktop-update.md)。
+- 未解决问题：正式安装仍为 .55，修复代码待 PR/CI/发布，尚未退出当前应用或安装新版本。
+- 下一步：完成 PR 检查与发布，使用原生更新器正式升级，按保存的 8 个 PTY 标签身份和新版本再次验收。
 
 ### 2026-10-23：Linux AppImage 原生升级及网页入口（testing）
 
