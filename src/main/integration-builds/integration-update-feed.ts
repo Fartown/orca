@@ -2,6 +2,7 @@ import { app, net } from 'electron'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import type { AppUpdater } from 'electron-updater'
+import { linuxAppImageUpdateUnavailableMessage } from './linux-appimage-update-availability'
 import {
   fetchIntegrationRelease,
   integrationChanges,
@@ -66,6 +67,10 @@ export function isIntegrationBuild(): boolean {
   }
 }
 
+export function integrationUpdateUnavailableMessage(): string | null {
+  return isIntegrationBuild() ? linuxAppImageUpdateUnavailableMessage() : null
+}
+
 export async function pinIntegrationReleaseFeed(
   updater: Pick<
     AppUpdater,
@@ -74,6 +79,10 @@ export async function pinIntegrationReleaseFeed(
 ): Promise<boolean> {
   if (!isIntegrationBuild()) {
     return false
+  }
+  const unavailableMessage = linuxAppImageUpdateUnavailableMessage()
+  if (unavailableMessage) {
+    throw new Error(unavailableMessage)
   }
   const release = await fetchIntegrationRelease(
     process.platform === 'linux' ? 'linux' : 'mac',

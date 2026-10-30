@@ -1,13 +1,17 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { AppUpdater } from 'electron-updater'
 
 const mock = vi.hoisted(() => ({
   app: { isPackaged: true, getAppPath: () => '/isolated-app' },
   readFileSync: vi.fn(),
-  fetch: vi.fn()
+  fetch: vi.fn(),
+  unavailable: vi.fn<() => string | null>()
 }))
 vi.mock('electron', () => ({ app: mock.app, net: { fetch: mock.fetch } }))
 vi.mock('node:fs', () => ({ readFileSync: mock.readFileSync }))
+vi.mock('./linux-appimage-update-availability', () => ({
+  linuxAppImageUpdateUnavailableMessage: mock.unavailable
+}))
 import {
   integrationChangelog,
   isIntegrationBuild,
@@ -16,6 +20,7 @@ import {
 
 const platform = Object.getOwnPropertyDescriptor(process, 'platform')!
 const architecture = Object.getOwnPropertyDescriptor(process, 'arch')!
+beforeEach(() => mock.unavailable.mockReturnValue(null))
 afterEach(() => {
   Object.defineProperty(process, 'platform', platform)
   Object.defineProperty(process, 'arch', architecture)
@@ -36,6 +41,17 @@ function fork() {
 }
 
 describe('integration-only default updater feed', () => {
+  it('reports a disabled AppImage updater before requesting a release feed', async () => {
+    fork()
+    Object.defineProperty(process, 'platform', { value: 'linux' })
+    Object.defineProperty(process, 'arch', { value: 'x64' })
+    mock.unavailable.mockReturnValue('Reopen Orca from its original AppImage.')
+    await expect(pinIntegrationReleaseFeed(feedUpdater())).rejects.toThrow(
+      'Reopen Orca from its original AppImage.'
+    )
+    expect(mock.fetch).not.toHaveBeenCalled()
+  })
+
   it('leaves unmarked builds and unsupported platforms unchanged', async () => {
     fork()
     mock.readFileSync.mockReturnValue('{}')

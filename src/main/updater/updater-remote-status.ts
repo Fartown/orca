@@ -8,6 +8,7 @@ import type {
 } from '../../shared/remote-server-update'
 import { hasServeUpdateSupervisor } from '../serve-update-handoff'
 import { getLinuxPackageType } from '../linux-update-package-type'
+import { integrationUpdateUnavailableMessage } from '../integration-builds/integration-update-feed'
 import { UpdaterNudge } from './updater-nudge'
 import type { UpdateInstallMode } from './updater-state'
 
@@ -35,6 +36,7 @@ export abstract class UpdaterRemoteStatus extends UpdaterNudge {
     const linuxPackageType = getLinuxPackageType()
     if (
       this.updateInstallMode === 'unsupported-headless-serve' ||
+      integrationUpdateUnavailableMessage() !== null ||
       linuxPackageType === 'deb' ||
       linuxPackageType === 'rpm' ||
       linuxPackageType === 'unusable'
