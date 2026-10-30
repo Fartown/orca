@@ -1,4 +1,4 @@
-import { execFileSync } from 'node:child_process'
+import { runProcessSync } from '@orca/process-host'
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
@@ -75,9 +75,9 @@ test('retains a named remote editor through catalog removal and client restart',
           ? ['-o', `UserKnownHostsFile=${process.env.ORCA_E2E_RECOVERY_SSH_KNOWN_HOSTS}`]
           : [])
       ]
-      execFileSync(
-        'ssh',
-        [
+      const tunnel = runProcessSync({
+        program: 'ssh',
+        args: [
           ...sshArgs,
           '-M',
           '-fNT',
@@ -88,13 +88,22 @@ test('retains a named remote editor through catalog removal and client restart',
           `127.0.0.1:${reservation.port}:${endpoint.hostname}:${endpoint.port}`,
           sshTarget
         ],
-        { timeout: 15_000, stdio: 'pipe' }
-      )
+        timeoutMs: 15_000,
+        maxOutputBytes: 1024 * 1024
+      })
+      if (tunnel.code !== 0) {
+        throw new Error(`SSH tunnel failed: ${tunnel.stderr}`)
+      }
       closeTunnel = () => {
-        execFileSync('ssh', [...sshArgs, '-O', 'exit', sshTarget], {
-          timeout: 5_000,
-          stdio: 'pipe'
+        const closed = runProcessSync({
+          program: 'ssh',
+          args: [...sshArgs, '-O', 'exit', sshTarget],
+          timeoutMs: 5_000,
+          maxOutputBytes: 1024 * 1024
         })
+        if (closed.code !== 0) {
+          throw new Error(`SSH tunnel close failed: ${closed.stderr}`)
+        }
       }
       endpoint.hostname = '127.0.0.1'
       endpoint.port = String(reservation.port)
