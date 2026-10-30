@@ -22,6 +22,10 @@ export function assertLinuxServiceReplacement({ expectedVersion, before, after }
   if (before?.terminal_daemon_retained && after.terminal_daemon_retained !== true) {
     throw new Error('The existing terminal daemon was lost.')
   }
+  assertRetainedTerminalTabs({ before, after })
+}
+
+export function assertRetainedTerminalTabs({ before, after }) {
   if (!Array.isArray(before?.tabs) || !Array.isArray(after.tabs)) {
     throw new Error('The before and after terminal snapshots are required.')
   }

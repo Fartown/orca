@@ -49,6 +49,7 @@ import {
 } from './serve-replaced-app-restart'
 import { isSupervisedSpawnHeld } from './serve-supervised-stop'
 import { linuxServeUpdateEnvironment } from '../integration-builds/linux-serve-update'
+import { linuxDesktopAppImageLaunch } from '../integration-builds/linux-desktop-launch'
 import { openServeBundlePark } from '../../shared/serve-bundle-park'
 import {
   redactingSpawn,
@@ -95,12 +96,14 @@ export function launchOrcaApp(): void {
       }
     }
 
+    const appImageLaunch = linuxDesktopAppImageLaunch(process.execPath)
+    const executable = appImageLaunch?.executable ?? process.execPath
     const pinned = pinLaunchUserDataPath(
-      getExecutableAppArgs(process.execPath),
-      stripElectronRunAsNode(process.env),
+      getExecutableAppArgs(executable),
+      stripElectronRunAsNode(appImageLaunch?.env ?? process.env),
       userDataPath
     )
-    spawnDetached(process.execPath, pinned.args, { env: pinned.env })
+    spawnDetached(executable, pinned.args, { env: pinned.env })
     return
   }
 

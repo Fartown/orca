@@ -164,10 +164,12 @@
         "src/shared/serve-update-handoff.ts",
         "src/shared/serve-user-data-path.ts",
         "src/main/appimage-runtime-identity.ts",
+        "src/main/linux-update-package-type.ts",
         "src/cli/runtime/serve-appimage-update.ts",
         "src/cli/runtime/serve-supervisor-relocation.ts",
         "src/cli/runtime/mac-app-update-bundle.ts",
         "src/cli/runtime/serve-supervisor-policy.ts",
+        "src/cli/runtime/types.ts",
         "src/shared/appimage-cache-identity.ts",
         "src/renderer/src/store/index.ts",
         "src/renderer/src/web/preload-api/web-runtime-session.ts",
@@ -201,6 +203,8 @@
         "docs/issue/集成分支自动出包/**"
       ],
       "requiredFiles": [
+        "src/cli/integration-builds/linux-desktop-launch.ts",
+        "src/main/integration-builds/linux-appimage-update-availability.ts",
         "src/main/integration-builds/serve-update-handoff-path.ts",
         "config/scripts/integration-builds/verify-linux-service.mjs",
         "src/cli/integration-builds/linux-serve-update.ts",
@@ -217,6 +221,16 @@
         "config/scripts/integration-builds/ai-release-summary.mjs"
       ],
       "seams": [
+        {
+          "file": "src/cli/runtime/serve-appimage-update.ts",
+          "mustContain": "appImageLaunchEnvironment",
+          "why": "Reuse source-aware AppImage launch environment cleanup for desktop launches."
+        },
+        {
+          "file": "src/main/updater/updater-remote-status.ts",
+          "mustContain": "integrationUpdateUnavailableMessage",
+          "why": "Report unavailable AppImage updates truthfully to local and paired clients."
+        },
         {
           "file": "src/main/serve-update-handoff.ts",
           "mustContain": "hasLinuxServeUpdateSupervisor",
@@ -335,6 +349,9 @@
         }
       ],
       "tests": [
+        "src/cli/integration-builds/linux-desktop-launch.test.ts",
+        "src/main/integration-builds/linux-appimage-update-availability.test.ts",
+        "src/main/integration-builds/linux-desktop-updater.test.ts",
         "src/main/integration-builds/serve-update-handoff-path.test.ts",
         "config/scripts/integration-builds/verify-linux-service.test.mjs",
         "src/cli/integration-builds/linux-serve-update.test.ts",
