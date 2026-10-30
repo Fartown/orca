@@ -277,3 +277,6 @@ ci-shards/
 !docs/issue/手机打开工作区终端身份恢复/**
 !docs/issue/本地任务管理/
 !docs/issue/本地任务管理/**
+
+!docs/issue/工作区恢复占位收敛/
+!docs/issue/工作区恢复占位收敛/**

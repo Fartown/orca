@@ -23,6 +23,62 @@
   "dependsOnIgnore": ["src/renderer/src/components/ui/**"],
   "features": [
     {
+      "id": "workspace-session-recovery",
+      "title": "工作区恢复占位收敛",
+      "goal": "历史选择不复活工作区，按在线主机目录收敛恢复占位并保留可恢复内容",
+      "journal": "docs/issue/工作区恢复占位收敛/journal.md",
+      "policyId": "workspace-session-recovery",
+      "ownedPaths": [
+        "src/shared/workspace-session-recovery/**",
+        "src/renderer/src/workspace-session-recovery/**",
+        "docs/issue/工作区恢复占位收敛/**",
+        "tests/e2e/workspace-session-recovery.spec.ts"
+      ],
+      "requiredFiles": [
+        "src/shared/workspace-session-recovery/restorable-workspaces.ts",
+        "src/renderer/src/workspace-session-recovery/restored-workspace-catalog.ts"
+      ],
+      "dependsOn": [
+        "src/shared/workspace-scope.ts",
+        "src/shared/execution-host.ts",
+        "src/shared/repo-types.ts",
+        "src/shared/worktree/types.ts",
+        "src/renderer/src/store/types.ts",
+        "src/renderer/src/store/workspace-record-selectors.ts",
+        "src/renderer/src/store/terminals/workspace-terminal-placeholders.ts"
+      ],
+      "seams": [
+        {
+          "file": "src/renderer/src/store/terminals/workspace-terminal-hydration.ts",
+          "mustContain": "restorableRuntimeSessionOwners",
+          "why": "Integrate recovery content checks and host-scoped catalog settlement."
+        },
+        {
+          "file": "src/renderer/src/store/repos/all-host-repo-catalog-actions.ts",
+          "mustContain": "reconcileRestoredWorkspaceCatalog",
+          "why": "Integrate recovery content checks and host-scoped catalog settlement."
+        },
+        {
+          "file": "src/renderer/src/store/repos/runtime-repo-catalog-actions.ts",
+          "mustContain": "reconcileRestoredWorkspaceCatalog",
+          "why": "Integrate recovery content checks and host-scoped catalog settlement."
+        },
+        {
+          "file": ".gitignore",
+          "mustContain": "!docs/issue/工作区恢复占位收敛/**",
+          "why": "Integrate recovery content checks and host-scoped catalog settlement."
+        }
+      ],
+      "tests": [
+        "src/shared/workspace-session-recovery/restorable-workspaces.test.ts",
+        "src/renderer/src/workspace-session-recovery/restored-workspace-catalog.test.ts",
+        "tests/e2e/workspace-session-recovery.spec.ts"
+      ],
+      "checks": [
+        "ORCA_BACKGROUND_LAUNCH=1 pnpm exec vitest run --config config/vitest.config.ts src/shared/workspace-session-recovery src/renderer/src/workspace-session-recovery src/renderer/src/store/terminals/workspace-terminal-placeholders.test.ts src/renderer/src/lib/workspace-session-host-persistence.test.ts src/renderer/src/lib/workspace-session-ssh-partition-ownership.test.ts src/renderer/src/store/slices/repos-all-hosts.test.ts src/renderer/src/store/slices/repos-catalog-reconciliation.test.ts"
+      ]
+    },
+    {
       "id": "mobile-terminal-surface-recovery",
       "title": "手机打开工作区终端身份恢复",
       "goal": "手机打开工作区时恢复宿主有记录而桌面缺标签的 live 终端原 tab/leaf，避免该路径重复生成空 shell",

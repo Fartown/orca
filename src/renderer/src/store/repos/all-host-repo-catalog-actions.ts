@@ -33,6 +33,7 @@ import {
 import { getRuntimeTargetHostId } from '../../runtime/runtime-client-target'
 import { mergeFetchedHostProjectCatalog } from '../../../../shared/project-compatibility-host-merge'
 import { scheduleSafeAutoForkSync } from './safe-auto-fork-sync'
+import { reconcileRestoredWorkspaceCatalog } from '../../workspace-session-recovery/restored-workspace-catalog'
 
 export function createAllHostRepoCatalogActions(
   set: Parameters<StateCreator<AppState>>[0],
@@ -65,7 +66,13 @@ export function createAllHostRepoCatalogActions(
           }
           const result = mergeFetchedRepoCatalog(catalog, s.repos)
           const reconciliation = reconcileSupersededSshRepos(result.repos, s)
-          const finalizedRepos = applyManualRepoOrder(reconciliation.repos, s.manualRepoOrder)
+          const readopted = reconcileReadoptedSshWorktreeState(s, s.pendingSshRepoReadoptions)
+          const recovered = reconcileRestoredWorkspaceCatalog(
+            { ...s, ...readopted },
+            reconciliation.repos,
+            result.hostId
+          )
+          const finalizedRepos = applyManualRepoOrder(recovered.repos, s.manualRepoOrder)
           const mergedProjectCompatibility = mergeFetchedHostProjectCatalog({
             previous: {
               projects: s.projects,
@@ -83,9 +90,10 @@ export function createAllHostRepoCatalogActions(
             (repo) => getRepoExecutionHostId(repo) === result.hostId
           )
           return {
+            ...readopted,
+            ...recovered,
             repos: finalizedRepos,
             pendingSshRepoReadoptions: reconciliation.pendingReadoptions,
-            ...reconcileReadoptedSshWorktreeState(s, s.pendingSshRepoReadoptions),
             ...mergedProjectCompatibility,
             ...(arrayElementsUnchanged(finalizedRepos, s.repos)
               ? {}
