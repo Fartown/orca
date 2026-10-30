@@ -184,7 +184,7 @@ describe('host screen long-press "Link to task…"', () => {
     })
     const hidden = library(2, true)
     const rows = { hostId: 'h', libraries, open: () => {} }
-    const linked = { ...row, hostId: 'local' }
+    const linked: Worktree = { ...row, hostId: 'local' }
     expect(await actionsFor({ client: hidden.client, target: linked, rows })).toHaveLength(1)
   })
 

@@ -1,4 +1,3 @@
-import { createElement, Fragment } from 'react'
 import { act, create, type ReactTestInstance, type ReactTestRenderer } from 'react-test-renderer'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { LocalTaskWorkspaceLink } from '../../../src/shared/local-tasks/local-task-link-types'
@@ -240,28 +239,21 @@ async function showHostList(args: {
   rows: Worktree[]
   sheetFor?: Worktree
 }) {
-  const element = createElement(
-    LocalTaskHostRowsProvider,
-    {
-      controller: {
-        hostId: args.hostId,
-        client: args.client,
-        connState: args.connState ?? 'connected',
-        hostCapabilities: args.capabilities ?? [LOCAL_TASKS_RUNTIME_CAPABILITY],
-        actions: { navigateFromHostList },
-        state: { setActionTarget }
-      }
-    },
-    createElement(
-      Fragment,
-      null,
-      ...args.rows.map((item) =>
-        createElement(LocalTaskWorkspaceGlyph, { key: item.worktreeId, item })
-      ),
-      args.sheetFor
-        ? createElement(WorkspaceDetailsSheet, { row: args.sheetFor, onOpenLink: () => {} })
-        : null
-    )
+  const controller = {
+    hostId: args.hostId,
+    client: args.client,
+    connState: args.connState ?? 'connected',
+    hostCapabilities: args.capabilities ?? [LOCAL_TASKS_RUNTIME_CAPABILITY],
+    actions: { navigateFromHostList },
+    state: { setActionTarget }
+  }
+  const element = (
+    <LocalTaskHostRowsProvider controller={controller}>
+      {args.rows.map((item) => (
+        <LocalTaskWorkspaceGlyph key={item.worktreeId} item={item} />
+      ))}
+      {args.sheetFor ? <WorkspaceDetailsSheet row={args.sheetFor} onOpenLink={() => {}} /> : null}
+    </LocalTaskHostRowsProvider>
   )
   await act(async () => {
     if (renderer) {
