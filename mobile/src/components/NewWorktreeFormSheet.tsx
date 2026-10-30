@@ -3,6 +3,7 @@ import { ChevronDown, ChevronUp } from 'lucide-react-native'
 import type { WorkspaceCreateSetupDecision } from '../tasks/workspace-create-params'
 import type { WorkspaceSshGate } from '../tasks/workspace-ssh-gate'
 import type { useMobileComposerSource } from '../tasks/use-mobile-composer-source'
+import type { LocalTaskCreateSource } from '../local-tasks/use-local-task-create-source'
 import { colors } from '../theme/mobile-theme'
 import { BottomDrawer } from './BottomDrawer'
 import { MobileAgentIcon } from './MobileAgentIcon'
@@ -31,6 +32,7 @@ export function NewWorktreeFormSheet(props: {
   selectedRepoName: string
   sshGate: WorkspaceSshGate
   composer: Composer
+  localTaskSource?: LocalTaskCreateSource | null
   selectedAgent: NewWorktreeAgentOption
   showAdvanced: boolean
   note: string
@@ -82,6 +84,7 @@ export function NewWorktreeFormSheet(props: {
 
           <SmartWorkspaceSourceField
             composer={props.composer}
+            localTaskSource={props.localTaskSource}
             label={props.selectedRepoIsGit ? "Name or 'Create From'" : 'Workspace name'}
             disabled={props.sshGate.requiresConnection}
             interactive={props.interactive}

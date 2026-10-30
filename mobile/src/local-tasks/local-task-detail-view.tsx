@@ -17,6 +17,7 @@ import { localTaskStatusLookup } from './local-task-list-projection'
 import { LocalTaskDetailSections } from './local-task-detail-sections'
 import { createLocalTaskOperationIds, sendLocalTaskWrite } from './local-task-operation-ids'
 import { LocalTaskPriorityPicker, LocalTaskStatusPicker } from './local-task-pickers'
+import { localTaskRowSessionStates } from './local-task-progress-projection'
 import { localTaskStyles } from './local-tasks-styles'
 import { LocalTaskPriorityIcon, LocalTaskStatusIcon } from './local-tasks-visuals'
 import type { LocalTasksLibrary } from './use-local-tasks-library'
@@ -35,7 +36,8 @@ type Props = {
   onEdit: (task: LocalTask) => void
   onAddSubtask: (parent: LocalTask) => void
   site: LocalTaskSite
-  onOpenSession: (taskSessionId: string) => void
+  /** Opens a linked session's screen; returns why it can't, when it can't. */
+  onOpenSession: (taskSessionId: string) => string | null
   onNavigate: (href: string) => void
 }
 
@@ -198,6 +200,15 @@ export function LocalTaskDetailView(props: Props) {
             subtasks={subtasks}
             statuses={lookup}
             readOnly={props.readOnly}
+            sessionsFor={(child) =>
+              localTaskRowSessionStates({
+                task: child,
+                index,
+                links: library.work.links,
+                snapshot: library.work.progress,
+                inContact: props.site.connState === 'connected'
+              })
+            }
             onEdit={props.onEdit}
             onAddSubtask={props.onAddSubtask}
             onOpenTask={props.onOpenTask}
@@ -216,6 +227,7 @@ export function LocalTaskDetailView(props: Props) {
             taskId={task.id}
             eventsVersion={library.eventsVersion}
             statuses={lookup}
+            tasksById={index.tasksById}
             now={props.now}
             readOnly={props.readOnly}
             canRead={props.canRead}
@@ -272,9 +284,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 6
   },
+  // The ref only says where the page is; the title below is the task's name (§4), so it stays muted.
   ref: {
-    color: colors.textPrimary,
-    fontWeight: '700',
+    color: colors.textMuted,
     fontFamily: typography.monoFamily,
     fontSize: 13
   },

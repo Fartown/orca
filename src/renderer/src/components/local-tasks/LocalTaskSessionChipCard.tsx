@@ -11,7 +11,6 @@ import type {
   LocalTaskWorkspaceLink
 } from '../../../../shared/local-tasks/local-task-link-types'
 import type { LocalTask } from '../../../../shared/local-tasks/local-task-types'
-import { openLocalTaskWorkspaceDetails } from '@/local-tasks/local-task-workspace-details'
 import { openLocalTaskPage } from '@/local-tasks/local-task-navigation'
 import {
   chatSessionIds,
@@ -20,10 +19,8 @@ import {
 } from '@/local-tasks/local-task-session-recording'
 import { unlinkLocalTaskSession } from '@/local-tasks/local-task-workspace-linking'
 import { findLocalTaskLinkForWorkspace } from '@/local-tasks/local-task-link-selectors'
-import {
-  useLocalTaskRowWritable,
-  useLocalTasksDomain
-} from '@/local-tasks/local-tasks-domain-store'
+import { useLocalTasksDomain } from '@/local-tasks/local-tasks-domain-store'
+import { useLocalTaskRowWriteReason } from '@/local-tasks/local-task-write-reason'
 import { buildLocalTaskIndex } from '@/local-tasks/local-task-grouping'
 import { localTaskWorkspaceFamilyIds } from '../../../../shared/local-tasks/local-task-hierarchy'
 import type { LocalTaskSessionPane } from './LocalTaskSessionChip'
@@ -52,7 +49,7 @@ function LinkedCard({
   const parent = useLocalTasksDomain((state) =>
     task?.parentId ? state.tasks.find((t) => t.id === task.parentId) : undefined
   )
-  const writable = useLocalTaskRowWritable(session.id)
+  const writeReason = useLocalTaskRowWriteReason(session.id)
   if (!task) {
     return null
   }
@@ -85,7 +82,7 @@ function LinkedCard({
         <Button
           size="xs"
           variant="ghost"
-          disabled={!writable}
+          disabled={writeReason !== null}
           onClick={() => {
             onDone()
             void unlinkLocalTaskSession(session.id)
@@ -95,6 +92,8 @@ function LinkedCard({
           {translate('localTasks.links.unlink', 'Unlink')}
         </Button>
       </div>
+      {/* Why in the card: no page notice is on screen in a session header. */}
+      {writeReason ? <p className="text-2xs text-muted-foreground">{writeReason}</p> : null}
     </div>
   )
 }
@@ -128,32 +127,15 @@ function LinkChooser({
 }: {
   pane: LocalTaskSessionPane
   onDone: () => void
-}): React.JSX.Element {
+}): React.JSX.Element | null {
   const { hostId, link } = useLocalTaskPaneWorkspaceLink(pane.worktreeId)
   const agentType = useAppStore((state) => state.agentStatusByPaneKey[pane.paneKey]?.agentType)
   const tasks = useLocalTasksDomain((state) => state.tasks)
   const workspaces = useLocalTasksDomain((state) => state.links.workspaces)
-  const writable = useLocalTaskRowWritable(link?.taskId ?? null)
+  const writeReason = useLocalTaskRowWriteReason(link?.taskId ?? null)
+  // Why nothing: the chip shows no entry on a workspace without a task (REQ-011, REQ-016).
   if (!link) {
-    return (
-      <div className="flex flex-col gap-2 text-xs text-muted-foreground">
-        {translate(
-          'localTasks.links.workspaceNotLinked',
-          'This workspace is not linked to a task yet. Link the workspace first.'
-        )}
-        <Button
-          size="xs"
-          variant="outline"
-          className="w-fit"
-          onClick={() => {
-            onDone()
-            openLocalTaskWorkspaceDetails({ worktreeId: pane.worktreeId, hostId })
-          }}
-        >
-          {translate('localTasks.links.linkWorkspaceFirst', 'Link workspace to a task…')}
-        </Button>
-      </div>
-    )
+    return null
   }
   const owner = tasks.find((task) => task.id === link.taskId)
   const owners = new Set(workspaces.map((workspace) => workspace.taskId))
@@ -190,11 +172,12 @@ function LinkChooser({
       <span className="px-1 text-2xs text-muted-foreground">
         {translate('localTasks.links.linkSessionTo', 'Link this session to')}
       </span>
+      {writeReason ? <p className="px-1 text-2xs text-muted-foreground">{writeReason}</p> : null}
       {family.map((task) => (
         <button
           key={task.id}
           type="button"
-          disabled={!writable}
+          disabled={writeReason !== null}
           onClick={() => void pick(task)}
           className="flex w-full min-w-0 items-center gap-1.5 rounded px-1 py-1 text-left text-xs hover:bg-accent disabled:opacity-50"
         >

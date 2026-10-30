@@ -12,6 +12,7 @@ import {
   localTaskSourceBlockedReason,
   type LocalTaskSourceRow
 } from './local-task-source-rows'
+import { useLocalTaskLibraryViewer } from './local-task-library-viewers'
 import { useLocalTaskSourceTab } from './local-task-source-tab'
 import { selectLocalTasksPartition, useLocalTasksDomain } from './local-tasks-domain-store'
 
@@ -57,6 +58,9 @@ export function useLocalTaskSourceSearch(source: {
   setMode: (mode: SmartNameMode) => void
 }): LocalTaskSourceSearch {
   const tab = useLocalTaskSourceTab()
+  // Why: a library that reported no project when last asked holds none here until it is streamed;
+  // a project made there since would leave the tab missing (D6).
+  useLocalTaskLibraryViewer(tab !== null)
   const active = tab !== null && source.mode === 'local'
   const projects = useLocalTasksDomain((state) => (active ? state.projects : NO_PROJECTS))
   const tasks = useLocalTasksDomain((state) => (active ? state.tasks : NO_TASKS))
@@ -65,7 +69,8 @@ export function useLocalTaskSourceSearch(source: {
     active ? selectLocalTasksPartition(state, localTaskEndpointForHost(tab.hostId)) : undefined
   )
   const blocked = active ? localTaskSourceBlockedReason(partition, tab.libraryLabel) : null
-  const query = source.value
+  // Why: a pick set aside by a host switch leaves its name in the box, which would match nothing.
+  const query = tab?.pickedName === source.value ? '' : source.value
   const rows = useMemo(
     () =>
       tab && active

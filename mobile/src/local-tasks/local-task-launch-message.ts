@@ -9,6 +9,7 @@ export function localTaskLaunchMessage(
 ): string | null {
   switch (outcome.kind) {
     case 'done':
+      return outcome.promptNotDelivered ? copy.work.promptNotDelivered : null
     case 'workspace-created':
       return null
     case 'failed':
@@ -24,6 +25,8 @@ export function localTaskLaunchMessage(
       return why ? `${copy.work.startedNotLinked} ${why}` : copy.work.startedNotLinked
     }
     case 'session-not-recorded':
-      return copy.work.sessionNotRecorded
+      return outcome.promptNotDelivered
+        ? `${copy.work.sessionNotRecorded} ${copy.work.promptNotDelivered}`
+        : copy.work.sessionNotRecorded
   }
 }

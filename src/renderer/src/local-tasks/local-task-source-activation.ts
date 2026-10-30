@@ -22,6 +22,11 @@ function showLocalTaskSource(): void {
   localTaskPageStore.getState().setLocalActive(true)
 }
 
+/** Whether the task page opens on Local, so nothing should warm an upstream source for it. */
+export function isLocalTaskSourceActive(): boolean {
+  return localTaskPageStore.getState().localActive
+}
+
 export function activateLocalTaskSource(): void {
   showLocalTaskSource()
   persist(true)

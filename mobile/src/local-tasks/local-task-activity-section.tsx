@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
 import { Pencil, Send, Trash2, X } from 'lucide-react-native'
 import type {
+  LocalTask,
   LocalTaskEvent,
   LocalTaskStatusDef
 } from '../../../src/shared/local-tasks/local-task-types'
@@ -21,6 +22,7 @@ type Props = {
   taskId: string
   eventsVersion: number
   statuses: Map<string, LocalTaskStatusDef>
+  tasksById: ReadonlyMap<string, LocalTask>
   now: number
   readOnly: boolean
   canRead: boolean
@@ -81,32 +83,39 @@ export function LocalTaskActivitySection(props: Props) {
   return (
     <View>
       <Text style={localTaskStyles.sectionLabel}>{copy.activity}</Text>
-      {ordered.map((event) => (
-        <Pressable
-          key={event.id}
-          style={styles.entry}
-          disabled={event.kind !== 'comment' || props.readOnly}
-          onLongPress={() => setMenuFor(event)}
-          delayLongPress={350}
-        >
-          <View style={styles.dot} />
-          <View style={styles.entryMain}>
-            <Text style={styles.entryText}>
-              <Text style={styles.entrySource}>{copy.eventSources[event.source]}</Text>{' '}
-              {describeLocalTaskEvent(copy, event, props.statuses)}{' '}
-              <Text style={localTaskStyles.meta}>
-                {formatLocalTaskAgo(copy, event.createdAt, props.now)}
-                {event.editedAt ? ` · ${copy.edited}` : ''}
+      {ordered.map((event) => {
+        const line = describeLocalTaskEvent(copy, event, props.statuses, props.tasksById)
+        return (
+          <Pressable
+            key={event.id}
+            style={styles.entry}
+            disabled={event.kind !== 'comment' || props.readOnly}
+            onLongPress={() => setMenuFor(event)}
+            delayLongPress={350}
+          >
+            <View style={styles.dot} />
+            <View style={styles.entryMain}>
+              <Text style={styles.entryText}>
+                {line.actor ? (
+                  <>
+                    <Text style={styles.entrySource}>{line.actor}</Text>{' '}
+                  </>
+                ) : null}
+                {line.text}{' '}
+                <Text style={localTaskStyles.meta}>
+                  {formatLocalTaskAgo(copy, event.createdAt, props.now)}
+                  {event.editedAt ? ` · ${copy.edited}` : ''}
+                </Text>
               </Text>
-            </Text>
-            {event.kind === 'comment' && event.body ? (
-              <View style={styles.bubble}>
-                <Text style={localTaskStyles.body}>{event.body}</Text>
-              </View>
-            ) : null}
-          </View>
-        </Pressable>
-      ))}
+              {event.kind === 'comment' && event.body ? (
+                <View style={styles.bubble}>
+                  <Text style={localTaskStyles.body}>{event.body}</Text>
+                </View>
+              ) : null}
+            </View>
+          </Pressable>
+        )
+      })}
       {eventsError && props.canRead ? (
         <Pressable onPress={retry} accessibilityRole="button" style={styles.error}>
           <Text style={localTaskStyles.errorText}>

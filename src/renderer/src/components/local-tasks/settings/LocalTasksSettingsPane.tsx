@@ -47,13 +47,11 @@ function NewProjectDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-xl">
         <DialogHeader>
-          <DialogTitle>
-            {translate('localTasks.settings.newProject', 'New task project')}
-          </DialogTitle>
+          <DialogTitle>{translate('localTasks.settings.newProject', 'New project')}</DialogTitle>
           <DialogDescription>
             {translate(
               'localTasks.settings.newProjectDescription',
-              'Make one task project per repository, or an empty one for tasks only; repositories can be added later.'
+              'Make one project per repository, or an empty one for tasks only; repositories can be added later.'
             )}
           </DialogDescription>
         </DialogHeader>
@@ -158,7 +156,7 @@ export function LocalTasksSettingsPane(): React.JSX.Element {
           onClick={() => setCreating(true)}
         >
           <Plus className="size-3.5" />
-          {translate('localTasks.settings.newProject', 'New task project')}
+          {translate('localTasks.settings.newProject', 'New project')}
         </Button>
       </div>
       {project ? (
@@ -168,7 +166,7 @@ export function LocalTasksSettingsPane(): React.JSX.Element {
         </div>
       ) : (
         <p className="text-sm text-muted-foreground">
-          {translate('localTasks.settings.noProjects', 'No task projects yet.')}
+          {translate('localTasks.settings.noProjects', 'No projects yet.')}
         </p>
       )}
       <NewProjectDialog

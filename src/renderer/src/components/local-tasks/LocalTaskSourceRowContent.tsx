@@ -27,14 +27,18 @@ export function LocalTaskSourceRowIcon({ row }: { row: LocalTaskSourceRow }): Re
 /** The title leads; the ref follows small and grey, and why a row is greyed comes last. */
 export function LocalTaskSourceRowLabel({ row }: { row: LocalTaskSourceRow }): React.JSX.Element {
   if (!row.task) {
-    return <span className="min-w-0 truncate text-muted-foreground">{row.note}</span>
+    // Why wrapped: the notice is the only place that says why every row below is greyed.
+    return <span className="min-w-0 whitespace-normal text-muted-foreground">{row.note}</span>
   }
   return (
     <>
       <span className="min-w-0 truncate text-foreground">{row.task.title}</span>
       <span className="shrink-0 font-mono text-2xs text-muted-foreground">{row.task.ref}</span>
       {row.note ? (
-        <span className="ml-auto max-w-32 shrink-0 truncate text-2xs text-muted-foreground">
+        <span
+          className="ml-auto max-w-32 shrink-0 truncate text-2xs text-muted-foreground"
+          title={row.note}
+        >
           {row.note}
         </span>
       ) : null}

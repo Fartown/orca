@@ -118,7 +118,9 @@ describe("the Task Source picker's Local row", () => {
     env.client = away.client
     env.state = 'reconnecting'
     const options = await sourceOptions()
-    expect(options.map((option) => option.disabled)).toEqual([true])
+    expect(options.map(({ disabled, subtitle }) => ({ disabled, subtitle }))).toEqual([
+      { disabled: true, subtitle: 'This host’s Orca is not connected' }
+    ])
     expect(away.calls).toEqual([])
   })
 

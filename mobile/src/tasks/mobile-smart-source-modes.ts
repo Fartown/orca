@@ -4,7 +4,7 @@ import type { MrStateFilter, SmartNameMode } from './mobile-composer-source-type
 // SVGs (TaskProviderLogo) for the provider modes since lucide dropped its brand
 // icons.
 export type SmartModeIcon =
-  | { type: 'lucide'; name: 'sparkles' | 'git-branch' | 'case-sensitive' }
+  | { type: 'lucide'; name: 'sparkles' | 'git-branch' | 'case-sensitive' | 'list-todo' }
   | { type: 'provider'; provider: 'github' | 'gitlab' | 'linear' | 'jira' }
 
 export type SmartModeOption = {
@@ -17,6 +17,7 @@ export type SmartModeOption = {
 // Smart · GitHub · Linear · Jira · GitLab · Branch · Name.
 export const SMART_MODE_OPTIONS: readonly SmartModeOption[] = [
   { id: 'smart', label: 'Smart', icon: { type: 'lucide', name: 'sparkles' } },
+  { id: 'local', label: 'Local', icon: { type: 'lucide', name: 'list-todo' } },
   { id: 'github', label: 'GitHub', icon: { type: 'provider', provider: 'github' } },
   { id: 'linear', label: 'Linear', icon: { type: 'provider', provider: 'linear' } },
   { id: 'jira', label: 'Jira', icon: { type: 'provider', provider: 'jira' } },
@@ -33,6 +34,7 @@ export type SmartModeAvailabilityInput = {
   gitlabAvailable: boolean
   linearAvailable: boolean
   jiraAvailable: boolean
+  localTaskSourceOffered?: boolean
 }
 
 // Faithful port of the desktop availableModes filter. Non-git repos collapse to
@@ -47,6 +49,8 @@ export function resolveAvailableSmartModes(input: SmartModeAvailabilityInput): S
     switch (option.id) {
       case 'smart':
         return input.tasksSupported
+      case 'local':
+        return input.localTaskSourceOffered === true
       case 'github':
         return input.tasksSupported && input.hasRepo && input.githubAvailable
       case 'gitlab':

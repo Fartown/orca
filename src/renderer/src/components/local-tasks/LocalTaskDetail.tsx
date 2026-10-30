@@ -169,7 +169,8 @@ export function LocalTaskDetail({
         ) : null}
       </header>
       {/* Why: below 48rem the properties stack under the body, so neither squeezes the other. */}
-      <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto scrollbar-sleek @3xl/local-task-detail:flex-row @3xl/local-task-detail:overflow-visible">
+      {/* Why pb-16: the app's bottom-right floating button otherwise covers the last rows. */}
+      <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto pb-16 scrollbar-sleek @3xl/local-task-detail:flex-row @3xl/local-task-detail:overflow-visible @3xl/local-task-detail:pb-0">
         <div className="min-w-0 pr-2 scrollbar-sleek @3xl/local-task-detail:min-h-0 @3xl/local-task-detail:flex-1 @3xl/local-task-detail:overflow-y-auto">
           <div className="mx-auto flex max-w-3xl flex-col gap-6 pb-8">
             <LocalTaskDetailBody key={task.id} task={task} writable={writable} />

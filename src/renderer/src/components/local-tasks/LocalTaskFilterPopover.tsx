@@ -104,7 +104,7 @@ export function LocalTaskFilterPopover({
             checked={filters.needsYou}
             onToggle={() => update({ needsYou: !filters.needsYou })}
           >
-            {translate('localTasks.needsYou.filter', 'A session is waiting on me')}
+            {translate('localTasks.needsYou.filter', 'A session is waiting on you')}
           </FilterOption>
           <Section title={translate('localTasks.filter.priority', 'Priority')}>
             {LOCAL_TASK_PRIORITIES.map((priority) => (

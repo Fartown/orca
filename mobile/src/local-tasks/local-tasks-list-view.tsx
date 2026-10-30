@@ -10,6 +10,8 @@ import { unfoldedLocalTaskLines } from '../../../src/shared/local-tasks/local-ta
 import { colors, spacing, typography } from '../theme/mobile-theme'
 import { formatLocalTaskAgo, localTasksCopy } from './local-tasks-copy'
 import type { LocalTaskListGroup, LocalTaskListRow } from './local-task-list-projection'
+import type { LocalTaskRowSession } from './local-task-progress-projection'
+import { LocalTaskSessionDots } from './local-task-session-dots'
 import { localTaskStyles } from './local-tasks-styles'
 import {
   LocalTaskPriorityIcon,
@@ -31,6 +33,8 @@ type Props = {
   bottomInset: number
   /** Said when there is nothing to show; defaults to "no tasks here yet". */
   emptyText?: string
+  /** The session dots a task shows, from what the page already loaded. */
+  sessionsFor: (task: LocalTask) => LocalTaskRowSession[]
   onOpen: (taskId: string) => void
 }
 
@@ -93,6 +97,7 @@ export function LocalTasksListView(props: Props) {
                     lookup={props.lookup}
                     now={props.now}
                     folded={foldedParents}
+                    sessionsFor={props.sessionsFor}
                     onToggle={(taskId) => setFoldedParents((previous) => toggle(previous, taskId))}
                     onOpen={props.onOpen}
                   />
@@ -109,6 +114,7 @@ function LocalTaskListRowView(props: {
   lookup: Map<string, LocalTaskStatusDef>
   now: number
   folded: ReadonlySet<string>
+  sessionsFor: (task: LocalTask) => LocalTaskRowSession[]
   onToggle: (taskId: string) => void
   onOpen: (taskId: string) => void
 }) {
@@ -134,6 +140,7 @@ function LocalTaskListRowView(props: {
             <Text style={[localTaskStyles.mono, styles.rowRef]} numberOfLines={1}>
               {task.ref}
             </Text>
+            <LocalTaskSessionDots sessions={props.sessionsFor(task)} />
             {props.row.subtaskTotal > 0 || props.row.subtasks.length > 0 ? (
               <Pressable
                 style={styles.subtaskChipHit}
@@ -177,6 +184,7 @@ function LocalTaskListRowView(props: {
               status={props.lookup.get(line.task.statusId) ?? null}
               depth={line.depth}
               folded={line.childCount > 0 ? props.folded.has(line.task.id) : undefined}
+              sessions={props.sessionsFor(line.task)}
               onToggle={() => props.onToggle(line.task.id)}
               onOpen={props.onOpen}
             />
@@ -199,6 +207,8 @@ export function LocalTaskSubtaskRow(props: {
   onToggle?: () => void
   /** Inside a card, which pads its own rows: no list indent under a parent's status icon. */
   inCard?: boolean
+  /** The sessions this subtask opened, drawn as dots after its title (REQ-012). */
+  sessions?: readonly LocalTaskRowSession[]
   onOpen: (taskId: string) => void
 }) {
   const indent = (Math.min(props.depth ?? 1, MAX_INDENT_DEPTH) - 1) * spacing.lg
@@ -213,7 +223,7 @@ export function LocalTaskSubtaskRow(props: {
       ]}
       onPress={() => props.onOpen(props.task.id)}
       accessibilityRole="button"
-      accessibilityLabel={`${props.task.ref} ${props.task.title}`}
+      accessibilityLabel={`${props.task.title} ${props.task.ref}`}
     >
       <LocalTaskStatusIcon
         category={props.status?.category ?? null}
@@ -224,6 +234,7 @@ export function LocalTaskSubtaskRow(props: {
       <Text style={styles.subtaskTitle} numberOfLines={1}>
         {props.task.title}
       </Text>
+      {props.sessions ? <LocalTaskSessionDots sessions={props.sessions} /> : null}
       {props.folded !== undefined ? (
         <Pressable
           testID={`local-task-fold-${props.task.id}`}

@@ -131,20 +131,22 @@ export function LocalTaskCriteriaEditor({
               'block min-h-7 resize-none overflow-hidden py-1 text-[13px] leading-5 text-foreground [field-sizing:content]'
             )}
           />
-          <span className="pt-0.5 opacity-0 transition-opacity group-hover/criterion:opacity-100 focus-within:opacity-100">
-            <Button
-              variant="ghost"
-              size="icon-xs"
-              disabled={disabled}
-              onClick={() => remove(position)}
-              aria-label={translate('localTasks.criteria.remove', 'Remove criterion')}
-            >
-              <X className="size-3" />
-            </Button>
-          </span>
+          {/* Why hidden, not greyed: like Add below, a list that can't change offers no edit. */}
+          {disabled ? null : (
+            <span className="pt-0.5 opacity-0 transition-opacity group-hover/criterion:opacity-100 focus-within:opacity-100">
+              <Button
+                variant="ghost"
+                size="icon-xs"
+                onClick={() => remove(position)}
+                aria-label={translate('localTasks.criteria.remove', 'Remove criterion')}
+              >
+                <X className="size-3" />
+              </Button>
+            </span>
+          )}
         </div>
       ))}
-      {items.length < LOCAL_TASK_CRITERIA_MAX && !disabled ? (
+      {disabled ? null : items.length < LOCAL_TASK_CRITERIA_MAX ? (
         <Button
           variant="ghost"
           size="xs"
@@ -154,7 +156,14 @@ export function LocalTaskCriteriaEditor({
           <Plus className="size-3.5" />
           {translate('localTasks.criteria.add', 'Add a criterion')}
         </Button>
-      ) : null}
+      ) : (
+        // Why: Enter on the last item does nothing at the cap; this line says why.
+        <p className="text-2xs text-muted-foreground">
+          {translate('localTasks.criteria.full', 'A task holds up to {{count}} criteria.', {
+            count: LOCAL_TASK_CRITERIA_MAX
+          })}
+        </p>
+      )}
     </div>
   )
 }

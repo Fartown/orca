@@ -88,6 +88,7 @@ export function workspaceSettingsMounts(
         detectedAgentIds: new Set(['codex']),
         sshGate: { requiresConnection: false },
         composer: { name: 'recorded', createSelection: null, isNameAutoManaged: false },
+        localTaskCreate: null,
         note: '',
         retiredWorktreeNames: {},
         setupCommand: null,

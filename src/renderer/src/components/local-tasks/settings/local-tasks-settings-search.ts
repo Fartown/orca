@@ -8,10 +8,10 @@ export const LOCAL_TASKS_SETTINGS_SECTION_ID = 'local-tasks'
 
 export const getLocalTasksSettingsSearchEntries = createLocalizedCatalog(() => [
   {
-    title: translate('localTasks.settings.projectsTitle', 'Task projects'),
+    title: translate('localTasks.settings.projectsTitle', 'Projects'),
     description: translate(
       'localTasks.settings.projectsSearchDescription',
-      'Create task projects, link repositories, rename them and change their ref prefix.'
+      'Create projects, link repositories, rename them and change their ref prefix.'
     ),
     keywords: [
       ...translateSearchKeyword('localTasks.settings.keywordTasks', 'tasks'),
@@ -38,10 +38,10 @@ export function getLocalTasksSettingsSections(): SettingsNavSection[] {
   return [
     {
       id: LOCAL_TASKS_SETTINGS_SECTION_ID,
-      title: translate('localTasks.settings.title', 'Local Tasks'),
+      title: translate('localTasks.settings.title', 'Local tasks'),
       description: translate(
         'localTasks.settings.description',
-        'Task projects, their repositories, ref prefixes and statuses.'
+        'Projects, their repositories, ref prefixes and statuses.'
       ),
       icon: ListTodo,
       searchEntries: getLocalTasksSettingsSearchEntries(),

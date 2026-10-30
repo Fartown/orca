@@ -154,7 +154,7 @@ export function LocalTaskProjectCreator({
             )
           : translate(
               'localTasks.projects.allLinked',
-              'Every repository already has a task project. More projects can share one from settings.'
+              'Every repository already has a project. More projects can share one from settings.'
             )}
       </p>
     )

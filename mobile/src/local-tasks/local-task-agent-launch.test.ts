@@ -239,4 +239,60 @@ describe('Start with an agent', () => {
       paneKey: HOST_PANE
     })
   })
+
+  it('says so when the agent started but the task text was not delivered', async () => {
+    const { agentLaunchReplayRun } = await import('../tasks/mobile-workspace-create-operations')
+    vi.mocked(agentLaunchReplayRun.interpret).mockReturnValueOnce({
+      worktreeId: 'repo::/shop-12',
+      outcome: { kind: 'terminal', handle: 'term_1', paneKey: HOST_PANE },
+      receipt: { mode: 'terminal', preferred: 'terminal', reason: 'user_default', detail: '' },
+      // A submit the agent never took, e.g. while its own trust prompt held the terminal.
+      prompt: { delivery: 'submit', outcome: 'not-delivered' }
+    })
+    const api = createLocalTasksApi({
+      sendRequest: async () => {
+        throw new Error('unexpected RPC')
+      }
+    })
+    vi.spyOn(api, 'linkWorkspace').mockResolvedValue({
+      kind: 'ok',
+      value: {
+        ok: true,
+        workspace: {
+          taskId: 'shop-12',
+          hostId: 'local',
+          kind: 'git-worktree',
+          instanceId: null,
+          worktreeId: 'repo::/shop-12',
+          folderWorkspaceId: null,
+          repoId: 'repo',
+          branchSnapshot: null,
+          nameSnapshot: 'shop-12',
+          hostLabelSnapshot: null,
+          linkedVia: 'start',
+          linkedAt: 1
+        }
+      }
+    })
+    vi.spyOn(api, 'recordSession').mockResolvedValue({ kind: 'unknown' })
+    const result = await startLocalTaskInNewWorkspace({
+      launchClient: new FakeSession('connected'),
+      hostCapabilities: [
+        AGENT_LAUNCH_RUNTIME_CAPABILITY,
+        AGENT_LAUNCH_REPLAY_REQUIRED_RUNTIME_CAPABILITY
+      ],
+      api,
+      ids: { link: createLocalTaskOperationIds(), record: createLocalTaskOperationIds() },
+      workspaceTaskId: 'shop-12',
+      sessionTaskId: 'shop-12',
+      setup: { hostId: 'local', repoId: 'repo', label: '' },
+      name: 'shop-12',
+      agent: 'claude',
+      prompt: { text: 'Task SHOP-12', delivery: 'submit' }
+    })
+    expect(result).toMatchObject({ promptNotDelivered: true })
+    expect(localTaskLaunchMessage(localTasksCopy(), result)).toContain(
+      localTasksCopy().work.promptNotDelivered
+    )
+  })
 })

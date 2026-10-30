@@ -6,6 +6,7 @@ import type {
 } from '../../../src/shared/local-tasks/local-task-types'
 import { colors, spacing } from '../theme/mobile-theme'
 import { localTasksCopy } from './local-tasks-copy'
+import type { LocalTaskRowSession } from './local-task-progress-projection'
 import { LocalTaskSubtaskRow } from './local-tasks-list-view'
 import { localTaskStyles } from './local-tasks-styles'
 
@@ -25,6 +26,8 @@ export function LocalTaskDetailSections(props: {
   subtasks: LocalTask[]
   statuses: Map<string, LocalTaskStatusDef>
   readOnly: boolean
+  /** The sessions a subtask's line shows as dots (REQ-012). */
+  sessionsFor: (task: LocalTask) => LocalTaskRowSession[]
   onEdit: (task: LocalTask) => void
   onAddSubtask: (parent: LocalTask) => void
   onOpenTask: (taskId: string) => void
@@ -81,6 +84,7 @@ export function LocalTaskDetailSections(props: {
               task={child}
               status={props.statuses.get(child.statusId) ?? null}
               inCard
+              sessions={props.sessionsFor(child)}
               onOpen={props.onOpenTask}
             />
           ))}

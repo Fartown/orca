@@ -165,7 +165,7 @@ export function localTaskSourceBlockedReason(
   if (!partition.inContact) {
     return translate(
       'localTasks.sourceTab.offline',
-      '{{host}} is not connected, so tasks cannot be linked now.',
+      '{{host}} is not connected, so tasks can’t be linked now. The tasks below are as last read.',
       { host: libraryLabel }
     )
   }

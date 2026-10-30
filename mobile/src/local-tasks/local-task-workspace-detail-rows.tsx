@@ -20,7 +20,7 @@ const ICON_SIZE = 16
 
 /**
  * The long-press sheet's row for the local task its workspace belongs to, drawn with the sheet's
- * own row and text styles: the title, then "SHOP-12 · Local task", or "Can't confirm" for a library
+ * own row and text styles: the title, then "SHOP-12 · Local task", or "Can’t confirm" for a library
  * out of contact. Tapping it opens the task. None off the host list or for a workspace with no task.
  */
 export function useLocalTaskDetailRows(

@@ -91,7 +91,15 @@ export function LocalTaskReplyBox({
         aria-label={translate('localTasks.needsYou.reply.label', 'Reply')}
         className="min-h-14"
       />
-      {movedOn ? (
+      {/* Why unlinked first: an unlinked session's turn is gone too, and only this says where. */}
+      {link === undefined ? (
+        <span className="text-xs text-muted-foreground">
+          {translate(
+            'localTasks.needsYou.reply.noSession',
+            'This session is no longer linked to the task, so there is nowhere to send the reply. Your text is kept.'
+          )}
+        </span>
+      ) : movedOn ? (
         <span className="text-xs text-muted-foreground">
           {translate(
             'localTasks.needsYou.reply.moved',

@@ -33,7 +33,7 @@ describe('what the task page says about the library state', () => {
         ready: false,
         status: null
       })
-    ).toMatchObject({ kind: 'gate', title: "Cannot connect to this host's Orca" })
+    ).toMatchObject({ kind: 'gate', title: 'This host’s Orca is not connected' })
     expect(
       localTasksScreenState(copy, {
         ...ready,
