@@ -51,8 +51,10 @@ export class LocalTasksReadinessRegistry {
       reason: this.reason,
       revision: service?.revision() ?? 0,
       taskHostId: service?.taskHostId() ?? null,
-      inProgressCount: service ? readableCount(() => service.inProgressCount()) : undefined,
-      projectCount: service ? readableCount(() => service.projectCount()) : undefined
+      inProgressCount: service ? readable(() => service.inProgressCount()) : undefined,
+      projectCount: service ? readable(() => service.projectCount()) : undefined,
+      sourceHidden: service ? readable(() => service.sourceHidden()) : undefined,
+      cardTaskHidden: service ? readable(() => service.cardTaskHidden()) : undefined
     }
   }
 
@@ -111,8 +113,8 @@ export class LocalTasksReadinessRegistry {
   }
 }
 
-/** Optional summary counts are left out when a library (say, a newer one read-only) cannot answer. */
-function readableCount(read: () => number): number | undefined {
+/** Optional summary fields are left out when a library (say, a newer one read-only) cannot answer. */
+function readable<T>(read: () => T): T | undefined {
   try {
     return read()
   } catch {

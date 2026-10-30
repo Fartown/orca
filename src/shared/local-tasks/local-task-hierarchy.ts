@@ -5,7 +5,7 @@ import type { LocalTask } from './local-task-types'
 
 type TreeIndex = Pick<LocalTaskIndex, 'tasksById' | 'childrenByParentId'>
 
-/** A task's ancestors root first, the way its "SHOP-1 › SHOP-4" path reads. */
+/** A task's ancestors root first, the way its path reads. */
 export function localTaskPathFromRoot(
   task: LocalTask,
   tasksById: ReadonlyMap<string, LocalTask>
@@ -13,10 +13,9 @@ export function localTaskPathFromRoot(
   return localTaskAncestors(task, tasksById).toReversed()
 }
 
-/** "SHOP-1 › SHOP-4 Parent title": every ancestor's ref, root first, then the parent's title. */
+/** "Root title › Parent title": every ancestor by its title, root first, as the desktop breadcrumb. */
 export function localTaskPathLabel(path: readonly LocalTask[]): string {
-  const parent = path.at(-1)
-  return parent ? `${path.map((ancestor) => ancestor.ref).join(' › ')} ${parent.title}` : ''
+  return path.map((ancestor) => ancestor.title).join(' › ')
 }
 
 /**

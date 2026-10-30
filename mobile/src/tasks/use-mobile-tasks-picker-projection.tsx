@@ -18,6 +18,7 @@ import {
 import { styles } from './mobile-tasks-legacy-styles'
 import { PROVIDER_LABELS } from './mobile-task-view-options'
 import { jiraSiteLabel } from './jira-mobile-connection'
+import { useLocalTaskSourceOptions } from '../local-tasks/local-task-source-option'
 
 export function useMobileTasksPickerProjection(model: DetailCommentRenderersModel) {
   const {
@@ -88,9 +89,13 @@ export function useMobileTasksPickerProjection(model: DetailCommentRenderersMode
     ],
     [jiraConnection.sites]
   )
+  const localTaskSourceOptions = useLocalTaskSourceOptions(model)
   const providerOptions = useMemo(
-    () => PROVIDER_OPTIONS.filter((option) => visibleProviders.includes(option.value)),
-    [visibleProviders]
+    () => [
+      ...localTaskSourceOptions,
+      ...PROVIDER_OPTIONS.filter((option) => visibleProviders.includes(option.value))
+    ],
+    [localTaskSourceOptions, visibleProviders]
   )
   const selectedCreateRepo =
     provider === 'github' || provider === 'gitlab'

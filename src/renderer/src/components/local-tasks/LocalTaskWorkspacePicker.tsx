@@ -38,7 +38,7 @@ export type LocalTaskWorkspaceChoice = {
   hostLabel: string
   branch: string | null
   /** Ref of the task that already owns this workspace; such a choice is shown but disabled. */
-  ownerRef: string | null
+  ownerTitle: string | null
   /** In one of the task project's Orca projects (always, for a project that links none). */
   related: boolean
 }
@@ -77,9 +77,9 @@ export function listLocalTaskWorkspaceChoices(
         hostId,
         hostLabel: selectExecutionHostDisplayLabel(state, hostId),
         branch: localTaskBranchName(worktree),
-        ownerRef:
+        ownerTitle:
           owner && owner.taskId !== taskId
-            ? (tasks.find((task) => task.id === owner.taskId)?.ref ?? '?')
+            ? (tasks.find((task) => task.id === owner.taskId)?.title ?? '?')
             : null,
         related: project.repos.length === 0 || project.repos.some((id) => projects.has(id))
       }
@@ -98,7 +98,7 @@ function WorkspaceChoiceItem({
   return (
     <CommandItem
       value={`${choice.worktree.displayName} ${choice.branch ?? ''} ${choice.hostLabel} ${choice.worktree.id}`}
-      disabled={choice.ownerRef !== null}
+      disabled={choice.ownerTitle !== null}
       onSelect={() => onPick(choice)}
     >
       <Icon className="size-3.5 text-muted-foreground" />
@@ -108,10 +108,10 @@ function WorkspaceChoiceItem({
           {[choice.branch, choice.hostLabel].filter(Boolean).join(' · ')}
         </span>
       </span>
-      {choice.ownerRef ? (
-        <span className="shrink-0 text-2xs text-muted-foreground">
-          {translate('localTasks.links.ownedBy', 'Belongs to {{ref}}', {
-            ref: choice.ownerRef
+      {choice.ownerTitle ? (
+        <span className="max-w-40 shrink-0 truncate text-2xs text-muted-foreground">
+          {translate('localTasks.links.ownedBy', 'Belongs to “{{title}}”', {
+            title: choice.ownerTitle
           })}
         </span>
       ) : null}
@@ -166,10 +166,8 @@ export function LocalTaskWorkspacePicker({
   }
   const title = translate(
     'localTasks.links.pickWorkspaceTitle',
-    'Use an existing workspace for {{ref}}',
-    {
-      ref: task.ref
-    }
+    'Use an existing workspace for “{{title}}”',
+    { title: task.title }
   )
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>

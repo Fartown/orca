@@ -31,6 +31,8 @@ export type LocalTaskListGroup = {
   status: LocalTaskStatusDef | null
   category: LocalTaskStatusCategory | null
   rows: LocalTaskListRow[]
+  /** Tasks in this status, subtasks nested under another group included (REQ-006). */
+  count: number
 }
 
 export function localTaskStatusLookup(
@@ -90,7 +92,8 @@ export function buildLocalTaskGroups(
         key: head.kind === 'status' ? head.key : `category:${head.category}`,
         status: head.kind === 'status' ? head.status : null,
         category: statusHeadCategory(head),
-        rows: head.tasks.map((task) => row(task, []))
+        rows: head.tasks.map((task) => row(task, [])),
+        count: head.tasks.length
       }))
       .filter(
         (group) =>
@@ -112,7 +115,8 @@ export function buildLocalTaskGroups(
         : head.kind === 'category'
           ? head.category
           : null,
-    rows: head.entries.map((entry) => row(entry.task, entry.lines))
+    rows: head.entries.map((entry) => row(entry.task, entry.lines)),
+    count: head.count
   }))
 }
 

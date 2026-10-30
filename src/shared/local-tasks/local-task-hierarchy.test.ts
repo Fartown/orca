@@ -44,10 +44,10 @@ describe('task tree for one task (REQ-004)', () => {
     expect(ids(localTaskParentCandidates(null, 'shop', tasks, index))).toHaveLength(5)
   })
 
-  it('reads the path root first, the parent’s title last', () => {
+  it('reads the path by titles, root first, the parent last', () => {
     const path = localTaskPathFromRoot(task(4, 3), index.tasksById)
     expect(path.map((ancestor) => ancestor.id)).toEqual(['t1', 't2', 't3'])
-    expect(localTaskPathLabel(path)).toBe('SHOP-1 › SHOP-2 › SHOP-3 Task 3')
+    expect(localTaskPathLabel(path)).toBe('Task 1 › Task 2 › Task 3')
   })
 
   it('takes descendants into a workspace until one has a workspace of its own', () => {

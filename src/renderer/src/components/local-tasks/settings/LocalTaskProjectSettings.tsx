@@ -290,7 +290,7 @@ export function LocalTaskProjectSettings({
           )}
         </p>
         <Button
-          variant="destructive"
+          variant="destructive-chip"
           size="sm"
           disabled={!writable}
           onClick={() => setRemoving(true)}

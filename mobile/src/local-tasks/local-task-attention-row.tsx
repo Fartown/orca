@@ -1,4 +1,5 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native'
+import { formatAgentTypeLabel } from '../../../src/shared/agent-type-label'
 import type { LocalTaskAttentionItem } from '../../../src/shared/local-tasks/local-task-link-types'
 import { colors, spacing, typography } from '../theme/mobile-theme'
 import { formatLocalTaskAgo, localTasksCopy } from './local-tasks-copy'
@@ -11,12 +12,16 @@ type ItemHandlers = {
   replyFor: (itemKey: string) => LocalTaskReplyStatus | null
   onOpenSession: (item: LocalTaskAttentionItem) => void
   onReply: (item: LocalTaskAttentionItem) => void
+  /** Both write to the library, so they are off while it cannot take writes. */
+  canWrite: boolean
+  onMarkSeen: (item: LocalTaskAttentionItem) => void
+  onSnooze: (item: LocalTaskAttentionItem) => void
 }
 
 /** What an agent said, as the item states it: "finished a turn" names the agent, never the task. */
 export function localTaskAttentionLine(item: LocalTaskAttentionItem): string {
   const work = localTasksCopy().work
-  const agent = item.agent ?? work.someAgent
+  const agent = item.agent ? formatAgentTypeLabel(item.agent) : work.someAgent
   if (item.lastMessage) {
     return work.agentSaid(agent, item.lastMessage)
   }
@@ -43,6 +48,30 @@ function ReplyState(props: { item: LocalTaskAttentionItem; reply: LocalTaskReply
   )
 }
 
+function ItemButton(props: {
+  label: string
+  testID?: string
+  disabled?: boolean
+  onPress: () => void
+}) {
+  return (
+    <Pressable
+      testID={props.testID}
+      style={[localTaskStyles.smallButton, props.disabled && localTaskStyles.disabled]}
+      disabled={props.disabled}
+      accessibilityRole="button"
+      onPress={props.onPress}
+    >
+      <Text style={localTaskStyles.smallButtonText}>{props.label}</Text>
+    </Pressable>
+  )
+}
+
+/**
+ * One item: what it waits for and whose it is on one line, as other rows pair an agent with its
+ * state, then its last words and every action in view. Swiping the row still marks or snoozes it
+ * whole; the buttons are what a page without swipe hints can be seen to offer.
+ */
 function AttentionItemLine(props: { item: LocalTaskAttentionItem; handlers: ItemHandlers }) {
   const work = localTasksCopy().work
   const { item, handlers } = props
@@ -51,31 +80,39 @@ function AttentionItemLine(props: { item: LocalTaskAttentionItem; handlers: Item
   const sending = reply?.kind === 'sending'
   return (
     <View style={styles.item}>
-      <Text style={styles.kind}>{work.attentionKinds[item.kind]}</Text>
-      <Text style={localTaskStyles.body} numberOfLines={3}>
-        {localTaskAttentionLine(item)}
+      <Text style={styles.kind} numberOfLines={1}>
+        {work.attentionKinds[item.kind]}
+        {item.agent ? (
+          <Text style={styles.agent}> · {formatAgentTypeLabel(item.agent)}</Text>
+        ) : null}
       </Text>
+      {item.lastMessage ? (
+        <Text style={localTaskStyles.body} numberOfLines={3}>
+          {item.lastMessage}
+        </Text>
+      ) : null}
       <View style={styles.actions}>
         {item.replyable ? (
-          <Pressable
+          <ItemButton
             testID={`reply-${item.key}`}
-            style={[localTaskStyles.smallButton, sending && localTaskStyles.disabled]}
+            label={reply?.kind === 'not-sent' ? work.editReply : work.reply}
             disabled={sending}
-            accessibilityRole="button"
             onPress={() => handlers.onReply(item)}
-          >
-            <Text style={localTaskStyles.smallButtonText}>
-              {reply?.kind === 'not-sent' ? work.editReply : work.reply}
-            </Text>
-          </Pressable>
+          />
         ) : null}
-        <Pressable
-          style={localTaskStyles.smallButton}
-          accessibilityRole="button"
-          onPress={() => handlers.onOpenSession(item)}
-        >
-          <Text style={localTaskStyles.smallButtonText}>{work.openSession}</Text>
-        </Pressable>
+        <ItemButton label={work.openSession} onPress={() => handlers.onOpenSession(item)} />
+        <ItemButton
+          testID={`mark-seen-${item.key}`}
+          label={work.markSeen}
+          disabled={!handlers.canWrite}
+          onPress={() => handlers.onMarkSeen(item)}
+        />
+        <ItemButton
+          testID={`snooze-${item.key}`}
+          label={work.snooze}
+          disabled={!handlers.canWrite}
+          onPress={() => handlers.onSnooze(item)}
+        />
       </View>
       {reply ? <ReplyState item={item} reply={reply} /> : null}
       {error ? <Text style={localTaskStyles.errorText}>{error}</Text> : null}
@@ -129,5 +166,6 @@ const styles = StyleSheet.create({
   title: { flex: 1, color: colors.textPrimary, fontSize: typography.bodySize, fontWeight: '600' },
   item: { gap: 4 },
   kind: { color: colors.statusAmber, fontSize: typography.metaSize, fontWeight: '600' },
-  actions: { flexDirection: 'row', gap: spacing.sm, marginTop: 2 }
+  agent: { color: colors.textSecondary, fontWeight: '400' },
+  actions: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: 2 }
 })

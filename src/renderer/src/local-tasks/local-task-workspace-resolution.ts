@@ -20,11 +20,12 @@ import { getProjectHostSetupForRepo } from '../../../shared/project-host-setup-l
 import { findFolderWorkspaceCandidateRepos } from '../../../shared/folder-workspace-execution-host'
 import { isFolderRepo } from '../../../shared/repo-kind'
 import type { Repo } from '../../../shared/repo-types'
-import { folderWorkspaceKey, parseWorkspaceKey } from '../../../shared/workspace-scope'
+import { parseWorkspaceKey } from '../../../shared/workspace-scope'
 import { getRepoIdFromWorktreeId } from '../../../shared/worktree/id'
 import type { Worktree } from '../../../shared/worktree/types'
 import type { LocalTaskWorkspaceLink } from '../../../shared/local-tasks/local-task-link-types'
 import type { LocalTaskProject } from '../../../shared/local-tasks/local-task-types'
+import { localTaskLinkWorkspaceId } from '../../../shared/local-tasks/local-task-workspace-match'
 import { isLocalTaskHostInContact } from './local-task-host-contact'
 import {
   localTaskEndpointForHost,
@@ -37,13 +38,7 @@ type LinkPlace = Pick<
   'hostId' | 'kind' | 'instanceId' | 'worktreeId' | 'folderWorkspaceId' | 'repoId'
 >
 
-/** The sidebar id of a linked workspace: a worktree id, or `folder:<id>` for a folder workspace. */
-export function localTaskLinkWorkspaceId(link: LinkPlace): string | null {
-  if (link.kind === 'folder') {
-    return link.folderWorkspaceId ? folderWorkspaceKey(link.folderWorkspaceId) : null
-  }
-  return link.worktreeId
-}
+export { localTaskLinkWorkspaceId }
 
 export function localTaskWorktreeHostId(
   state: AppState,

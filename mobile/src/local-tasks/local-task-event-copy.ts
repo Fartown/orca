@@ -7,7 +7,13 @@ import type {
   LocalTaskEvent,
   LocalTaskStatusDef
 } from '../../../src/shared/local-tasks/local-task-types'
+import { formatAgentTypeLabel } from '../../../src/shared/agent-type-label'
 import type { LocalTasksCopy } from './local-tasks-copy'
+
+/** "Claude", as the rest of the app names it, not the payload's `claude`. */
+function agentName(agent: string | null): string {
+  return agent ? formatAgentTypeLabel(agent) : '?'
+}
 
 function priorityName(
   copy: LocalTasksCopy,
@@ -68,8 +74,8 @@ export function describeLocalTaskEvent(
         text(payload, 'toHostLabel') ?? text(payload, 'toHostId') ?? '?'
       )
     case 'session-linked':
-      return copy.eventSessionLinked(text(payload, 'agent') ?? '?')
+      return copy.eventSessionLinked(agentName(text(payload, 'agent')))
     case 'session-unlinked':
-      return copy.eventSessionUnlinked(text(payload, 'agent') ?? '?')
+      return copy.eventSessionUnlinked(agentName(text(payload, 'agent')))
   }
 }

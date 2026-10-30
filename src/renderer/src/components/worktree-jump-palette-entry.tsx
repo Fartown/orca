@@ -1,4 +1,5 @@
 import { WorktreeJumpPaletteTaskRow } from './worktree-jump-palette-task-row'
+import { LocalTaskPaletteRow } from '@/components/local-tasks/LocalTaskPaletteRow'
 import type React from 'react'
 import { flushSync } from 'react-dom'
 import { CommandItem } from '@/components/ui/command'
@@ -87,6 +88,9 @@ export function WorktreeJumpPaletteEntry({
     return (
       <WorktreeJumpPaletteTaskRow entry={entry} renderKey={renderKey} controller={controller} />
     )
+  }
+  if (entry.type === 'local-task') {
+    return <LocalTaskPaletteRow entry={entry} renderKey={renderKey} controller={controller} />
   }
   if (entry.type === 'project-target') {
     return (

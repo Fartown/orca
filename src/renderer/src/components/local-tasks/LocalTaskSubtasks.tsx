@@ -77,7 +77,7 @@ export function LocalTaskSubtasks({
               key={child.id}
               type="button"
               onClick={() => localTaskPageStore.getState().openDetail(child.id)}
-              className="flex h-9 w-full items-center gap-2.5 border-b border-border/40 px-3 text-left text-[13px] transition-colors hover:bg-accent"
+              className="flex h-9 w-full min-w-0 items-center gap-2.5 overflow-hidden border-b border-border/40 px-3 text-left text-[13px] transition-colors hover:bg-accent"
             >
               <LocalTaskPriorityIcon priority={child.priority} />
               {status ? (
@@ -86,10 +86,12 @@ export function LocalTaskSubtasks({
               <span className="w-16 shrink-0 truncate font-mono text-xs text-muted-foreground">
                 {child.ref}
               </span>
-              <span className="min-w-0 flex-1 truncate text-foreground">{child.title}</span>
+              <span className="min-w-16 flex-1 truncate text-foreground">{child.title}</span>
               <LocalTaskSubtaskProgress task={child} index={index} />
               <LocalTaskProgressBadges task={child} index={index} />
-              <span className="shrink-0 text-2xs text-muted-foreground">{status?.name}</span>
+              <span className="hidden shrink-0 text-2xs text-muted-foreground @xl/local-task-detail:inline">
+                {status?.name}
+              </span>
             </button>
           )
         })}

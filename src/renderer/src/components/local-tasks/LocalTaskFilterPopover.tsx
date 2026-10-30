@@ -76,21 +76,24 @@ export function LocalTaskFilterPopover({
     filters.labels.length +
     filters.categories.length +
     (filters.needsYou ? 1 : 0)
+  const triggerLabel =
+    activeCount > 0
+      ? translate('localTasks.filter.activeCount', 'Filter · {{count}}', { count: activeCount })
+      : translate('localTasks.filter.trigger', 'Filter')
   const update = (next: Partial<LocalTaskFilters>): void =>
     localTaskPageStore.getState().setFilters({ ...filters, ...next })
   return (
     <Popover open={open} onOpenChange={(next) => localTaskPageStore.getState().setFilterOpen(next)}>
       <PopoverTrigger asChild>
-        <Button variant="outline" size="sm">
+        <Button variant="outline" size="sm" className="shrink-0" aria-label={triggerLabel}>
           <ListFilter className="size-3.5" />
-          {activeCount > 0
-            ? translate('localTasks.filter.activeCount', 'Filter · {{count}}', {
-                count: activeCount
-              })
-            : translate('localTasks.filter.trigger', 'Filter')}
+          <span className="hidden @2xl/local-task-toolbar:inline">{triggerLabel}</span>
+          {activeCount > 0 ? (
+            <span className="tabular-nums @2xl/local-task-toolbar:hidden">{activeCount}</span>
+          ) : null}
           <ShortcutKeyCombo
             keys={['F']}
-            className="ml-1"
+            className="ml-1 hidden @4xl/local-task-toolbar:inline-flex"
             keyCapClassName="min-w-5 px-1 py-0 text-2xs"
           />
         </Button>

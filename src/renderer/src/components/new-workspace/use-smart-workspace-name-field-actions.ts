@@ -47,6 +47,7 @@ export function useSmartWorkspaceNameFieldActions(
 ) {
   const {
     resolveRow,
+    localTaskSource,
     onBranchSelect,
     onGitHubItemSelect,
     onGitLabItemSelect,
@@ -100,12 +101,17 @@ export function useSmartWorkspaceNameFieldActions(
           return
         }
         onJiraIssueSelect?.(row.issue, sourceContext)
+      } else if (row.kind === 'local-task') {
+        if (!localTaskSource.select(row)) {
+          return
+        }
       } else {
         onLinearIssueSelect(row.issue)
       }
       setOpen(false)
     },
     [
+      localTaskSource,
       resolveRow,
       onBranchSelect,
       onGitHubItemSelect,

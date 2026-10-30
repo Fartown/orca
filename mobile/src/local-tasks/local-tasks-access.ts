@@ -25,6 +25,15 @@ export function localTaskLibraryHasProjects(status: Pick<LocalTasksStatus, 'proj
   return status.projectCount !== 0
 }
 
+/**
+ * Whether the host's user keeps local tasks among the desktop's task sources. Hidden there, the
+ * entries into it (home card, Task Source option, long-press item, host-list task icon and sheet
+ * row) stay away; a page or strip already open stays. A host too old to say counts as showing them.
+ */
+export function localTaskSourceShown(status: Pick<LocalTasksStatus, 'sourceHidden'>) {
+  return status.sourceHidden !== true
+}
+
 export function resolveLocalTasksAccess(input: {
   connState: ConnectionState
   statusPending: boolean

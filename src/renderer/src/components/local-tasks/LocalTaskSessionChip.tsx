@@ -37,7 +37,7 @@ export function findLocalTaskSessionForPane(
 }
 
 /**
- * The task chip in a session's header (REQ-016): `SHOP-13 · title` when the session is linked,
+ * The task chip in a session's header (REQ-016): the task's title when the session is linked,
  * otherwise 关联到任务… on a session whose workspace belongs to a task. Reads nothing else while
  * no library holds a link, so headers stay untouched until tasks are in use.
  */
@@ -87,7 +87,7 @@ function LinkedSessionChip({
     return null
   }
   const label = task
-    ? `${task.ref} · ${task.title}`
+    ? `${task.title} · ${task.ref}`
     : translate('localTasks.links.menuLink', 'Link to task…')
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -105,18 +105,25 @@ function LinkedSessionChip({
         >
           <ListTodo className="size-3 shrink-0" />
           {compact ? null : task ? (
-            <>
-              <span className="shrink-0 font-mono">{task.ref}</span>
-              <span className="min-w-0 truncate">· {task.title}</span>
-            </>
+            <span className="min-w-0 truncate">{task.title}</span>
           ) : (
             <span className="truncate">{label}</span>
           )}
         </button>
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-72" onClick={(event) => event.stopPropagation()}>
+      <PopoverContent
+        // Why: the chat chip sits at the transcript's left edge; opening leftward covers the sidebar.
+        align={pane.sessionId ? 'start' : 'end'}
+        collisionPadding={8}
+        className="w-80"
+        // Why: focusing the first row on open drew a focus ring on Parent task before any key press.
+        onOpenAutoFocus={(event) => event.preventDefault()}
+        onClick={(event) => event.stopPropagation()}
+      >
         {open ? (
-          <LocalTaskSessionChipCard pane={pane} session={session} onDone={() => setOpen(false)} />
+          <div className="p-3">
+            <LocalTaskSessionChipCard pane={pane} session={session} onDone={() => setOpen(false)} />
+          </div>
         ) : null}
       </PopoverContent>
     </Popover>

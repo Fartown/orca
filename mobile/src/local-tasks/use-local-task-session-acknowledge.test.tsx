@@ -38,16 +38,21 @@ vi.mock('react-native', () => ({
   }
 }))
 
-function item(key: string, since: number, taskSessionId = 's1'): LocalTaskAttentionItem {
+function item(
+  key: string,
+  since: number,
+  taskSessionId = 's1',
+  kind: LocalTaskAttentionItem['kind'] = 'unread-done'
+): LocalTaskAttentionItem {
   return {
     key,
     taskId: 't1',
     taskSessionId,
-    kind: 'approval',
+    kind,
     agent: 'claude',
     lastMessage: null,
     since,
-    replyable: false
+    replyable: kind === 'unread-done'
   }
 }
 
@@ -145,6 +150,19 @@ describe('opening a linked session marks its "Needs you" items seen', () => {
     vi.setSystemTime(3_000)
     await show(snapshot([item('s2-old', 1_500, 's2'), item('s2-new', 2_500, 's2')]), 's2')
     expect(acknowledged).toEqual(['s2-old'])
+  })
+
+  it('leaves an approval, a question or a block waiting: a look settles only a finished turn', async () => {
+    vi.setSystemTime(1_000)
+    await show(
+      snapshot([
+        item('approval', 500, 's1', 'approval'),
+        item('question', 500, 's1', 'question'),
+        item('blocked', 500, 's1', 'blocked'),
+        item('done', 500, 's1', 'unread-done')
+      ])
+    )
+    expect(acknowledged).toEqual(['done'])
   })
 
   it('marks nothing while the app is in the background', async () => {

@@ -46,7 +46,7 @@ export function LocalTaskWorkspaceLinkSheet(props: {
     localTaskListedHostId(site.endpoint, ownerHostId) ?? ownerHostId
   const labelOf = (ownerHostId: string) =>
     localTaskHostLabel(listedOf(ownerHostId), props.hostLabels.get(listedOf(ownerHostId)))
-  const refs = new Map(props.tasks.map((task) => [task.id, task.ref]))
+  const titles = new Map(props.tasks.map((task) => [task.id, task.title]))
   const candidates =
     state.status === 'ready' ? localTaskCandidatesForProject(state.candidates, props.setups) : []
   const link = async (index: number) => {
@@ -74,7 +74,7 @@ export function LocalTaskWorkspaceLinkSheet(props: {
   return (
     <LocalTaskChoiceSheet
       visible={props.visible}
-      title={copy.work.linkExistingTitle(props.task.ref)}
+      title={copy.work.linkExistingTitle(props.task.title)}
       loading={state.status === 'loading'}
       message={
         state.status === 'failed'
@@ -91,7 +91,7 @@ export function LocalTaskWorkspaceLinkSheet(props: {
           key: `${candidate.hostId}|${candidate.worktreeId}`,
           label: candidate.displayName,
           subtitle: holder
-            ? copy.work.workspaceTaken(refs.get(holder.taskId) ?? '')
+            ? copy.work.workspaceTaken(titles.get(holder.taskId) ?? '')
             : [host, candidate.branch].filter(Boolean).join(' · '),
           disabled: holder !== null,
           onPress: () => void link(index)

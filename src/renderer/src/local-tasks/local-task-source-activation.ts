@@ -3,6 +3,7 @@ import { localTasksClient } from './local-tasks-runtime-client'
 import { localTasksDomainStore } from './local-tasks-domain-store'
 import { localTaskPageStore } from './local-task-page-store'
 import { LOCAL_ACTIVE_PREFERENCE_KEY } from './local-task-preference-keys'
+import { LOCAL_TASK_SOURCE_HIDDEN_PREFERENCE_KEY } from '../../../shared/local-tasks/local-task-source-visibility'
 import { subscribeLocalTaskAppStore } from './local-task-app-store-subscription'
 
 function persist(active: boolean): void {
@@ -45,7 +46,8 @@ export function bindLocalTaskSourceActivation(): () => void {
     if (value === previous.preferences[LOCAL_ACTIVE_PREFERENCE_KEY]) {
       return
     }
-    if (value === '1') {
+    // Why: a hidden source does not come back as the page's last choice.
+    if (value === '1' && state.preferences[LOCAL_TASK_SOURCE_HIDDEN_PREFERENCE_KEY] !== '1') {
       showLocalTaskSource()
     } else {
       localTaskPageStore.getState().setLocalActive(false)

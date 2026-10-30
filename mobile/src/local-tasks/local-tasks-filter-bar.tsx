@@ -12,7 +12,11 @@ import {
   type LocalTaskFilter
 } from './local-task-filter'
 import { localTaskStyles } from './local-tasks-styles'
-import { LocalTaskPriorityIcon, LocalTaskStatusIcon } from './local-tasks-visuals'
+import {
+  LocalTaskPriorityIcon,
+  LocalTaskStatusIcon,
+  localTaskCategoryColor
+} from './local-tasks-visuals'
 
 // The order the priority picker uses: urgent first, "no priority" last.
 const PRIORITY_ORDER = [1, 2, 3, 4, 0] as const
@@ -79,7 +83,13 @@ export function LocalTasksFilterBar(props: {
             <FilterChip
               key={category}
               label={copy.categories[category]}
-              icon={<LocalTaskStatusIcon category={category} color="gray" size={13} />}
+              icon={
+                <LocalTaskStatusIcon
+                  category={category}
+                  color={localTaskCategoryColor(category)}
+                  size={13}
+                />
+              }
               selected={filter.categories.includes(category)}
               onPress={() =>
                 set({ categories: toggleLocalTaskFilterValue(filter.categories, category) })

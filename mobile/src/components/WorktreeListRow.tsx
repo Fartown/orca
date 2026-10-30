@@ -15,6 +15,7 @@ import { HostKindIcon } from './HostKindIcon'
 import { MobileRepoIcon } from './MobileRepoIcon'
 import { WorktreeAgentList } from './WorktreeAgentList'
 import { WorktreeMetaGlyphs, prStateColor } from './WorktreeMetaGlyphs'
+import { LocalTaskWorkspaceGlyph } from '../local-tasks/LocalTaskWorkspaceGlyph'
 
 // Strip the refs/heads/ prefix for display, matching the desktop sidebar
 // (WorktreeCardHelpers.formatBranchName).
@@ -143,6 +144,7 @@ function WorktreeListRowComponent({
             </View>
           )}
           <WorktreeMetaGlyphs presence={getWorktreeMetaGlyphPresence(item, cardDetails)} />
+          <LocalTaskWorkspaceGlyph item={item} />
         </View>
         {cardDetails.metaRow && (
           <View style={styles.worktreeMetaRow}>

@@ -8,6 +8,7 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { translate } from '@/i18n/i18n'
 import {
   LOCAL_TASK_GROUP_BYS,
@@ -47,6 +48,31 @@ function sortByLabel(sortBy: LocalTaskSortBy): string {
   }
 }
 
+/** A toolbar menu button whose label folds into its icon on a narrow toolbar. */
+function OptionTrigger({
+  icon,
+  label
+}: {
+  icon: React.ReactNode
+  label: string
+}): React.JSX.Element {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" size="sm" className="shrink-0" aria-label={label}>
+            {icon}
+            <span className="hidden @5xl/local-task-toolbar:inline">{label}</span>
+          </Button>
+        </DropdownMenuTrigger>
+      </TooltipTrigger>
+      <TooltipContent side="bottom" sideOffset={4}>
+        {label}
+      </TooltipContent>
+    </Tooltip>
+  )
+}
+
 /** Grouping (list only; board columns are statuses) and sort order (both), REQ-006. */
 export function LocalTaskViewOptions(): React.JSX.Element {
   const layout = useLocalTaskPage((state) => state.layout)
@@ -56,14 +82,12 @@ export function LocalTaskViewOptions(): React.JSX.Element {
     <>
       {layout === 'list' ? (
         <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm">
-              <Rows3 />
-              {translate('localTasks.view.groupTrigger', 'Group: {{choice}}', {
-                choice: groupByLabel(groupBy)
-              })}
-            </Button>
-          </DropdownMenuTrigger>
+          <OptionTrigger
+            icon={<Rows3 />}
+            label={translate('localTasks.view.groupTrigger', 'Group: {{choice}}', {
+              choice: groupByLabel(groupBy)
+            })}
+          />
           <DropdownMenuContent align="start">
             <DropdownMenuLabel>
               {translate('localTasks.view.groupBy', 'Group by')}
@@ -87,14 +111,12 @@ export function LocalTaskViewOptions(): React.JSX.Element {
         </DropdownMenu>
       ) : null}
       <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="sm">
-            <ArrowDownUp />
-            {translate('localTasks.view.sortTrigger', 'Sort: {{choice}}', {
-              choice: sortByLabel(sortBy)
-            })}
-          </Button>
-        </DropdownMenuTrigger>
+        <OptionTrigger
+          icon={<ArrowDownUp />}
+          label={translate('localTasks.view.sortTrigger', 'Sort: {{choice}}', {
+            choice: sortByLabel(sortBy)
+          })}
+        />
         <DropdownMenuContent align="start">
           <DropdownMenuLabel>{translate('localTasks.view.sortBy', 'Sort by')}</DropdownMenuLabel>
           <DropdownMenuRadioGroup

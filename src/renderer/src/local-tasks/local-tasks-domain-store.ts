@@ -2,6 +2,7 @@ import { createStore } from 'zustand/vanilla'
 import { useStore } from 'zustand'
 import { useShallow } from 'zustand/react/shallow'
 import type { LocalTask, LocalTaskProject } from '../../../shared/local-tasks/local-task-types'
+import { LOCAL_TASK_SOURCE_HIDDEN_PREFERENCE_KEY } from '../../../shared/local-tasks/local-task-source-visibility'
 import {
   SELF_LOCAL_TASK_ENDPOINT,
   localTaskIdEndpoint,
@@ -88,10 +89,21 @@ export function createLocalTasksDomainStore() {
         setHostState: (hostState, hostReason) =>
           update(endpoint, () => ({ hostState, hostReason })),
         applyStatus: (status) =>
-          update(endpoint, () => ({
+          update(endpoint, (partition) => ({
             hostState: status.state,
             hostReason: status.reason,
-            projectCount: status.projectCount ?? 'unreported'
+            projectCount: status.projectCount ?? 'unreported',
+            // Why only until preferences are read: a library with no project never reads them, and
+            // once read, the preference stream owns the value so a stale status cannot undo a write.
+            ...(status.sourceHidden !== undefined &&
+            !(LOCAL_TASK_SOURCE_HIDDEN_PREFERENCE_KEY in partition.preferences)
+              ? {
+                  preferences: {
+                    ...partition.preferences,
+                    [LOCAL_TASK_SOURCE_HIDDEN_PREFERENCE_KEY]: status.sourceHidden ? '1' : null
+                  }
+                }
+              : {})
           })),
         setReadError: (resource, message) =>
           update(endpoint, (partition) => {

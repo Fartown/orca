@@ -124,7 +124,7 @@ export function LocalTaskDetailView(props: Props) {
           disabled={!task || props.readOnly}
           onPress={() => setMenuOpen(true)}
           accessibilityRole="button"
-          accessibilityLabel={copy.edit}
+          accessibilityLabel={copy.moreActions}
         >
           <Ellipsis size={18} color={colors.textSecondary} />
         </Pressable>
@@ -182,15 +182,12 @@ export function LocalTaskDetailView(props: Props) {
                   style={styles.ancestor}
                   onPress={() => props.onOpenTask(ancestor.id)}
                   accessibilityRole="button"
-                  accessibilityLabel={`${ancestor.ref} ${ancestor.title}`}
+                  accessibilityLabel={`${ancestor.title} ${ancestor.ref}`}
                 >
                   {index > 0 ? <Text style={localTaskStyles.meta}>›</Text> : null}
-                  <Text style={localTaskStyles.mono}>{ancestor.ref}</Text>
-                  {index === ancestors.length - 1 ? (
-                    <Text style={styles.parentTitle} numberOfLines={1}>
-                      {ancestor.title}
-                    </Text>
-                  ) : null}
+                  <Text style={styles.parentTitle} numberOfLines={1}>
+                    {ancestor.title}
+                  </Text>
                 </Pressable>
               ))}
             </View>
@@ -241,7 +238,7 @@ export function LocalTaskDetailView(props: Props) {
       />
       <ActionSheetModal
         visible={menuOpen}
-        title={task?.ref}
+        title={task?.title}
         actions={[
           { label: copy.edit, icon: Pencil, onPress: () => task && props.onEdit(task) },
           {
@@ -255,7 +252,7 @@ export function LocalTaskDetailView(props: Props) {
       />
       <ConfirmModal
         visible={confirmDelete}
-        title={copy.deleteTaskTitle(task?.ref ?? '')}
+        title={copy.deleteTaskTitle(task?.title ?? '')}
         message={copy.deleteTaskMessage(descendantCount)}
         confirmLabel={copy.delete}
         cancelLabel={copy.cancel}

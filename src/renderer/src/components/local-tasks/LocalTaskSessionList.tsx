@@ -8,12 +8,16 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { ShortcutKeyCombo } from '@/components/ShortcutKeyCombo'
-import { AgentIcon } from '@/lib/agent-catalog'
+import { useNow } from '@/hooks/use-now'
+import { AgentIcon, getAgentLabel } from '@/lib/agent-catalog'
 import { translate } from '@/i18n/i18n'
+import { formatLocalTaskTime } from '@/local-tasks/local-task-time'
 import { cn } from '@/lib/utils'
 import type { LocalTaskIndex } from '@/local-tasks/local-task-grouping'
 import { useLocalTaskSessionLinks } from '@/local-tasks/local-task-link-selectors'
 import { useLocalTaskSessionProgress } from '@/local-tasks/local-task-session-progress'
+import { selectLocalTaskSessionTabLabel } from '@/local-tasks/local-task-session-tab-label'
+import { useAppStore } from '@/store'
 import { openLocalTaskSession } from '@/local-tasks/local-task-session-reveal'
 import { unlinkLocalTaskSession } from '@/local-tasks/local-task-workspace-linking'
 import {
@@ -44,6 +48,8 @@ function SessionRow({
   writable: boolean
 }): React.JSX.Element {
   const progress = useLocalTaskSessionProgress(session)
+  const tabLabel = useAppStore((state) => selectLocalTaskSessionTabLabel(state, session))
+  const now = useNow(60_000)
   const state = progress?.state ?? 'unknown'
   const agent = isTuiAgent(session.agent) ? session.agent : null
   const exceptional =
@@ -54,6 +60,15 @@ function SessionRow({
       : exceptional
         ? localTaskSessionStateLabel(state)
         : (progress?.lastMessage ?? localTaskSessionStateLabel(state))
+  const meta = [
+    tabLabel ?? (agent ? getAgentLabel(agent) : null),
+    session.surface === 'chat'
+      ? translate('localTasks.links.surfaceChat', 'Chat')
+      : translate('localTasks.links.surfaceTerminal', 'Terminal'),
+    formatLocalTaskTime(session.openedAt, now)
+  ]
+    .filter(Boolean)
+    .join(' · ')
   return (
     <div className="group/session flex min-h-9 items-center gap-2 border-b border-border/40 px-3 py-1.5 last:border-b-0 hover:bg-accent/60">
       <button
@@ -69,7 +84,12 @@ function SessionRow({
         <LocalTaskSessionDot link={session} />
         <AgentIcon agent={agent} size={14} />
         {showOwner && owner ? (
-          <span className="shrink-0 font-mono text-2xs text-muted-foreground">{owner.ref}</span>
+          <span
+            className="max-w-32 shrink-0 truncate text-2xs text-muted-foreground"
+            title={`${owner.title} · ${owner.ref}`}
+          >
+            {owner.title}
+          </span>
         ) : null}
         <span
           className={cn(
@@ -79,6 +99,11 @@ function SessionRow({
           title={detail}
         >
           {detail}
+        </span>
+        {/* Why: two sessions in one state read the same; the tab's name, surface and age tell them
+            apart, and the icon already names the agent. */}
+        <span className="min-w-0 max-w-[45%] truncate text-2xs text-muted-foreground" title={meta}>
+          {meta}
         </span>
       </button>
       {writable ? (

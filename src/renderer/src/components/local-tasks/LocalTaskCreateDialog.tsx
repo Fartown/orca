@@ -105,7 +105,10 @@ function CreateBody({
     }
     localTasksDomainStore.getState().upsertTasks([result.task], { created: true })
     toast.success(
-      translate('localTasks.create.created', 'Created {{ref}}', { ref: result.task.ref })
+      translate('localTasks.create.created', 'Created “{{title}}” · {{ref}}', {
+        title: result.task.title,
+        ref: result.task.ref
+      })
     )
     if (keepCreating) {
       setTitle('')

@@ -96,9 +96,10 @@ export function WorkspaceAttachmentSearch({
     jiraSourceContext: contexts.jira
   })
   const toAttachment = controller.resolveRow
+  const localTasks = controller.localTaskSource
   const linked = (row: RowEntry): boolean => {
     const item = toAttachment(row)
-    return item ? isWorkspaceAttachmentLinked(props.items, item) : false
+    return item ? isWorkspaceAttachmentLinked(props.items, item) : localTasks.isSelected(row)
   }
   const selectRow = (row: RowEntry): void => {
     if (controller.isQueryStale) {
@@ -108,13 +109,19 @@ export function WorkspaceAttachmentSearch({
       controller.selectJiraAccount(row.site.id)
       return
     }
+    if (localTasks.select(row)) {
+      onQueryChange('')
+      setSelection('')
+      props.inputRef.current?.focus()
+      return
+    }
     const item = toAttachment(row)
     if (item && !isWorkspaceAttachmentLinked(props.items, item)) {
       add(item)
     }
   }
   const rows = controller.rows
-  const parsedDirect = parseWorkspaceAttachmentInput(query, kind)
+  const parsedDirect = localTasks.active ? null : parseWorkspaceAttachmentInput(query, kind)
   const resolvedDirectRow =
     !controller.isQueryStale && parsedDirect
       ? rows.find((row) => {
@@ -181,10 +188,14 @@ export function WorkspaceAttachmentSearch({
           ref={props.inputRef}
           id={inputId}
           value={query}
-          placeholder={translate(
-            'workspace.links.searchReferences',
-            'Search reviews and tasks, or paste a link'
-          )}
+          placeholder={
+            localTasks.active
+              ? translate('localTasks.sourceTab.placeholder', 'Search local tasks by title or ref')
+              : translate(
+                  'workspace.links.searchReferences',
+                  'Search reviews and tasks, or paste a link'
+                )
+          }
           variant="framed"
           disabled={props.disabled}
           trailing={
@@ -240,7 +251,7 @@ export function WorkspaceAttachmentSearch({
             if (event.key === 'Enter') {
               event.preventDefault()
               event.stopPropagation()
-              if (!query.trim()) {
+              if (!query.trim() && !localTasks.active) {
                 return
               }
               if (commandValue === directValue && direct && directEnabled) {
@@ -255,7 +266,7 @@ export function WorkspaceAttachmentSearch({
           }}
         />
       </div>
-      {query.trim() ? (
+      {query.trim() || localTasks.active ? (
         <div className="mt-2 flex max-h-60 min-h-0 shrink flex-col overflow-hidden">
           <SmartWorkspaceSourceResultList
             // Why: a Jira URL's status row owns the message; a Linear read of the URL text says nothing about it.
@@ -305,7 +316,7 @@ export function WorkspaceAttachmentSearch({
             error={props.error ?? scopeError}
             onRetry={onRetry}
           />
-          {/^[#!]?\d+$|^[a-z][a-z0-9]*-\d+$/i.test(query.trim()) ? (
+          {!localTasks.active && /^[#!]?\d+$|^[a-z][a-z0-9]*-\d+$/i.test(query.trim()) ? (
             <DropdownMenu modal={false}>
               <DropdownMenuTrigger asChild>
                 <Button type="button" variant="ghost" size="xs">

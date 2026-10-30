@@ -8,6 +8,8 @@ import {
 } from './smart-workspace-name-field-model'
 import { canUseGitLabSmartSource } from './smart-workspace-provider-availability'
 import type { useWorkItemSourceState } from './use-work-item-source-state'
+import { useLocalTaskSourceTabOffered } from '@/local-tasks/local-task-source-tab'
+import { withLocalTaskSourceMode } from '@/local-tasks/use-local-task-source-search'
 
 type FieldState = ReturnType<typeof useWorkItemSourceState>
 
@@ -60,7 +62,8 @@ export function useSmartWorkspaceFieldAvailability({
     [gitlabSourceAvailable, linearStatus.connected]
   )
   const linearAvailable = availableTaskProviders.includes('linear')
-  const availableModes = getSmartWorkspaceNameModes().filter((item) => {
+  const localTaskTabOffered = useLocalTaskSourceTabOffered()
+  const upstreamModes = getSmartWorkspaceNameModes().filter((item) => {
     if (textOnly) {
       return item.id === 'text'
     }
@@ -81,6 +84,7 @@ export function useSmartWorkspaceFieldAvailability({
     }
     return item.id !== 'text' || props.typedTextEnabled === true
   })
+  const availableModes = withLocalTaskSourceMode(upstreamModes, localTaskTabOffered && !textOnly)
   const mode = availableModes.some((item) => item.id === storedMode)
     ? storedMode
     : (availableModes[0]?.id ?? 'text')

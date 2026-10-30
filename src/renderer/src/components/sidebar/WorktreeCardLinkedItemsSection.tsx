@@ -36,6 +36,7 @@ export function WorktreeCardLinkedItemsSection({
   linearIssue,
   jiraIssue,
   showItems,
+  localTaskRow,
   onManage,
   onOpen
 }: {
@@ -46,6 +47,8 @@ export function WorktreeCardLinkedItemsSection({
   linearIssue?: WorktreeCardLinearIssueDisplay | null
   jiraIssue?: WorktreeCardJiraIssueDisplay | null
   showItems: boolean
+  /** The workspace's local task, kept in the task library rather than in `linkedItems`. */
+  localTaskRow?: React.ReactNode
   onManage?: (event: React.MouseEvent) => void
   onOpen?: (url: string) => void
 }): React.JSX.Element | null {
@@ -65,9 +68,10 @@ export function WorktreeCardLinkedItemsSection({
     },
     {
       label: translate('workspace.links.tasks', 'Issues & tasks'),
-      items: items.filter((item) => item.type === 'issue')
+      items: items.filter((item) => item.type === 'issue'),
+      localTaskRow
     }
-  ].filter((group) => group.items.length)
+  ].filter((group) => group.items.length || group.localTaskRow)
   const open = (item: WorkspaceAttachment, event: React.MouseEvent): void => {
     event.stopPropagation()
     if (item.url) {
@@ -87,9 +91,10 @@ export function WorktreeCardLinkedItemsSection({
             <div key={group.label} className="space-y-1.5">
               <DetailHeader
                 icon={<Link2 className="size-3" />}
-                label={`${group.label} · ${group.items.length}`}
+                label={`${group.label} · ${group.items.length + (group.localTaskRow ? 1 : 0)}`}
               />
               <div className="divide-y divide-border">
+                {group.localTaskRow}
                 {group.items.map((item) => {
                   const key = getWorkspaceAttachmentKey(item)
                   const label = workspaceAttachmentLabel(item)
@@ -194,7 +199,7 @@ export function WorktreeCardLinkedItemsSection({
           onKeyDown={(event) => event.stopPropagation()}
         >
           <Plus />
-          {items.length
+          {items.length || localTaskRow
             ? translate('workspace.links.manage', 'Manage links…')
             : translate('workspace.links.addReference', 'Add reference')}
         </Button>

@@ -45,7 +45,7 @@ export function buildWorktreeCardPresentation(card: WorktreeCardController) {
     cardProps,
     cardDetails,
     cacheStartedAt,
-    hasDetails,
+    hasDetails: cardHasDetails,
     hasPorts,
     showStatus,
     showInlineAgentList,
@@ -86,6 +86,8 @@ export function buildWorktreeCardPresentation(card: WorktreeCardController) {
     detailsHoverControl,
     showDeleteQuickAction
   } = card
+  // Why: a workspace whose only link is its task still gets the linked badge and its details (REQ-016).
+  const hasDetails = cardHasDetails || card.localTaskLinked
 
   // Why: pinned trees mix repos, so ordinary rows lead with the project chip; cross-repo children keep the regular project badge.
   const showPinnedRepoIcon = inPinnedSection && !!repo && !showProjectName
@@ -151,7 +153,8 @@ export function buildWorktreeCardPresentation(card: WorktreeCardController) {
   const hasHoverIdentity = Boolean(hoverWorkspaceTitle || hoverBranchName)
   const hasHoverDetails =
     (newCardStyle || compactCards) &&
-    (getWorkspaceAttachments(worktree).length > 0 ||
+    (card.localTaskLinked ||
+      getWorkspaceAttachments(worktree).length > 0 ||
       hasWorktreeCardDetails({
         issue: hoverIssue,
         linearIssue: hoverLinearIssue,
@@ -197,7 +200,7 @@ export function buildWorktreeCardPresentation(card: WorktreeCardController) {
         {hasPorts && <WorktreeCardPortsTrigger ports={workspacePorts} />}
         {hasDetails && (
           <WorktreeCardMetaBadges
-            linkedItemCount={allReferenceItems.length}
+            linkedItemCount={allReferenceItems.length + (card.localTaskLinked ? 1 : 0)}
             referenceItems={referenceItems}
             referenceDetails={referenceDetails}
             issue={metaIssue}

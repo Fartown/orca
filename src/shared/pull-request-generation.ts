@@ -1,6 +1,10 @@
 import { truncateDiffForPrompt } from './commit-message-prompt'
 import { assertJsonTextStructureWithinLimits } from './json-text-structure-limit'
 import type { HostedReviewProvider } from './hosted-review'
+import {
+  localTaskPullRequestPromptLines,
+  type PullRequestLinkedLocalTask
+} from './local-tasks/local-task-pull-request-context'
 
 export const GENERATED_PULL_REQUEST_JSON_STRUCTURE_LIMITS = {
   structuralTokens: 64,
@@ -21,6 +25,7 @@ export type PullRequestDraftContext = {
   linkedIssue?: number | null
   provider?: HostedReviewProvider | null
   linkedIssueDetails?: PullRequestLinkedIssue | null
+  linkedLocalTask?: PullRequestLinkedLocalTask | null
 }
 
 export type PullRequestLinkedIssue = {
@@ -110,6 +115,7 @@ export function buildPullRequestFieldsPrompt(
     ...(linkedIssue
       ? ['Issue description:', limitSection(linkedIssue.description || '(empty)', 4_000)]
       : []),
+    ...localTaskPullRequestPromptLines(context.linkedLocalTask),
     '',
     'Commits:',
     limitSection(context.commitSummary || '(none)', 8_000),

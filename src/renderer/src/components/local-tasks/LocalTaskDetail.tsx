@@ -101,7 +101,7 @@ export function LocalTaskDetail({
   const path = localTaskPathFromRoot(task, model.index.tasksById)
   const position = model.orderedTaskIds.indexOf(task.id)
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-3">
+    <div className="@container/local-task-detail flex min-h-0 flex-1 flex-col gap-3">
       <header className="flex items-center gap-2 border-b border-border/60 pb-2">
         <Button
           variant="ghost"
@@ -111,26 +111,34 @@ export function LocalTaskDetail({
         >
           <ArrowLeft className="size-4" />
         </Button>
-        <span className="text-xs text-muted-foreground">{project?.name}</span>
+        <span className="max-w-40 shrink-0 truncate text-xs text-muted-foreground">
+          {project?.name}
+        </span>
         <span className="text-xs text-muted-foreground">/</span>
-        {path.map((ancestor) => (
-          <span key={ancestor.id} className="flex items-center gap-2">
-            <button
-              type="button"
-              title={ancestor.title}
-              className="font-mono text-xs text-muted-foreground hover:text-foreground"
-              onClick={() => localTaskPageStore.getState().openDetail(ancestor.id)}
-            >
-              {ancestor.ref}
-            </button>
-            <span className="text-xs text-muted-foreground">›</span>
-          </span>
-        ))}
+        {/* Why one shrinking run: a deep path gives way before the task's own ref does. */}
+        <span className="flex min-w-0 items-center gap-2 overflow-hidden">
+          {path.map((ancestor) => (
+            <span key={ancestor.id} className="flex min-w-0 items-center gap-2">
+              <button
+                type="button"
+                title={`${ancestor.title} · ${ancestor.ref}`}
+                className="min-w-0 max-w-48 truncate text-xs text-muted-foreground hover:text-foreground"
+                onClick={() => localTaskPageStore.getState().openDetail(ancestor.id)}
+              >
+                {ancestor.title}
+              </button>
+              <span className="shrink-0 text-xs text-muted-foreground">›</span>
+            </span>
+          ))}
+        </span>
         {status ? <LocalTaskStatusIcon category={status.category} color={status.color} /> : null}
-        <span className="font-mono text-xs font-medium text-foreground">{task.ref}</span>
+        {/* Why muted: the title below is the task's name; the ref here only places it. */}
+        <span className="shrink-0 whitespace-nowrap font-mono text-xs text-muted-foreground">
+          {task.ref}
+        </span>
         <LocalTaskHostTag id={task.id} labels={model.hostLabels} />
         {position !== -1 ? (
-          <span className="ml-1 flex items-center gap-0.5 text-2xs text-muted-foreground">
+          <span className="ml-1 flex shrink-0 items-center gap-0.5 whitespace-nowrap text-2xs text-muted-foreground">
             <StepButton
               direction="previous"
               targetId={model.orderedTaskIds[position - 1] ?? null}
@@ -160,8 +168,9 @@ export function LocalTaskDetail({
           </DropdownMenu>
         ) : null}
       </header>
-      <div className="flex min-h-0 flex-1 gap-5">
-        <div className="min-h-0 min-w-0 flex-1 overflow-y-auto pr-2 scrollbar-sleek">
+      {/* Why: below 48rem the properties stack under the body, so neither squeezes the other. */}
+      <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto scrollbar-sleek @3xl/local-task-detail:flex-row @3xl/local-task-detail:overflow-visible">
+        <div className="min-w-0 pr-2 scrollbar-sleek @3xl/local-task-detail:min-h-0 @3xl/local-task-detail:flex-1 @3xl/local-task-detail:overflow-y-auto">
           <div className="mx-auto flex max-w-3xl flex-col gap-6 pb-8">
             <LocalTaskDetailBody key={task.id} task={task} writable={writable} />
             <LocalTaskSessionList

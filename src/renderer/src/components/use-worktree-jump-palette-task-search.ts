@@ -13,6 +13,7 @@ import type { WorktreeJumpPaletteLocalState } from './use-worktree-jump-palette-
 import type { WorktreeJumpPaletteFilter } from './use-worktree-jump-palette-filter'
 import { getRepoExecutionHostId } from '../../../shared/execution-host'
 import { TASK_SEARCH_DEBOUNCE_MS } from './task-page-source-context'
+import { useLocalTaskPaletteItems } from '@/local-tasks/local-task-palette-items'
 
 type Input = Pick<WorktreeJumpPaletteStoreState, 'visible' | 'repos' | 'settings'> &
   Pick<WorktreeJumpPaletteLocalState, 'query' | 'filter'> &
@@ -151,14 +152,17 @@ export function useWorktreeJumpPaletteTaskSearch({
   }, [searchEnabled, session, requestKey])
   const current =
     searchEnabled && snapshot?.key === requestKey && snapshot.session === session ? snapshot : null
+  const localTaskItems = useLocalTaskPaletteItems(visible ? query : '')
   const taskItems = useMemo(
-    () =>
-      (current?.results ?? EMPTY_RESULTS).map((result) => ({
+    () => [
+      ...localTaskItems,
+      ...(current?.results ?? EMPTY_RESULTS).map((result) => ({
         id: result.id,
         type: 'task' as const,
         result
-      })),
-    [current?.results]
+      }))
+    ],
+    [localTaskItems, current?.results]
   )
   const retryTaskSearch = (): void => setRetryNonce((value) => value + 1)
   return {

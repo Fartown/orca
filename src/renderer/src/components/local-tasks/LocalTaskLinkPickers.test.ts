@@ -8,7 +8,7 @@ import type {
 import type { LocalTask, LocalTaskProject } from '../../../../shared/local-tasks/local-task-types'
 import { describeLocalTaskFailure } from '@/local-tasks/local-task-failure-copy'
 import { listLocalTaskWorkspaceChoices } from './LocalTaskWorkspacePicker'
-import { listLocalTaskChoicesForWorkspace } from './LocalTaskWorkspaceTaskPicker'
+import { listLocalTaskChoicesForWorkspace } from '@/local-tasks/local-task-source-rows'
 
 function project(id: string, orcaProjectId: string): LocalTaskProject {
   return {
@@ -138,9 +138,11 @@ describe('workspace picker for a task (REQ-011)', () => {
       [task('t9', 'shop', 9)],
       't12'
     )
-    expect(choices.map((choice) => [choice.worktree.id, choice.ownerRef, choice.related])).toEqual([
+    expect(
+      choices.map((choice) => [choice.worktree.id, choice.ownerTitle, choice.related])
+    ).toEqual([
       [free.id, null, true],
-      [taken.id, 'SHOP-9', true],
+      [taken.id, 't9', true],
       [elsewhere.id, null, false]
     ])
   })

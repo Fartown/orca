@@ -6,6 +6,11 @@ import type { ActionSheetAction } from '../components/ActionSheetModal'
 import type { RpcClient } from '../transport/rpc-client'
 import type { ConnectionState, RpcResponse } from '../transport/types'
 import type { Worktree } from '../worktree/workspace-list-types'
+import {
+  createLocalTaskHostLibraries,
+  LocalTaskHostRowsContext,
+  type LocalTaskHostRows
+} from './local-task-host-rows'
 import { useLocalTaskHostLinkAction } from './use-local-task-host-link-action'
 
 vi.mock('lucide-react-native', () => ({ ClipboardList: 'ClipboardList' }))
@@ -27,7 +32,7 @@ const row: Worktree = {
 }
 
 /** A library that counts its projects, and the calls the long-press made to it. */
-function library(projectCount: number) {
+function library(projectCount: number, sourceHidden?: boolean) {
   const calls: string[] = []
   const client: RpcClient = {
     sendRequest: async (method: string): Promise<RpcResponse> => {
@@ -41,7 +46,8 @@ function library(projectCount: number) {
           reason: null,
           revision: 1,
           taskHostId: 'h',
-          projectCount
+          projectCount,
+          ...(sourceHidden === undefined ? {} : { sourceHidden })
         }
       }
     },
@@ -69,6 +75,8 @@ async function actionsFor(args: {
   hostCapabilities?: string[]
   target?: Worktree
   server?: { client: RpcClient; capabilities: string[] }
+  /** What the host list knows of the row's library: set when its row is linked to a task. */
+  rows?: LocalTaskHostRows
 }): Promise<string[]> {
   const target = args.target ?? row
   let actions: ActionSheetAction[] = []
@@ -90,7 +98,13 @@ async function actionsFor(args: {
     return null
   }
   await act(async () => {
-    renderer = create(createElement(Probe))
+    renderer = create(
+      createElement(
+        LocalTaskHostRowsContext.Provider,
+        { value: args.rows ?? null },
+        createElement(Probe)
+      )
+    )
   })
   await act(async () => {
     await Promise.resolve()
@@ -115,6 +129,63 @@ describe('host screen long-press "Link to task…"', () => {
     expect(await actionsFor({ client: desktop.client })).toEqual([])
     expect(await actionsFor({ client: desktop.client })).toEqual([])
     expect(desktop.calls).toEqual(['localTasks.status', 'localTasks.status'])
+  })
+
+  // A host too old to report `sourceHidden` is the first case above: offered.
+  it('is absent while the desktop hides local tasks, and offered when it shows them', async () => {
+    const hidden = library(2, true)
+    expect(await actionsFor({ client: hidden.client })).toEqual([])
+    const shown = library(2, false)
+    expect(await actionsFor({ client: shown.client })).toHaveLength(1)
+  })
+
+  it('stays on a row already linked to a task while the desktop hides local tasks, as on the desktop', async () => {
+    const libraries = createLocalTaskHostLibraries()
+    libraries.set('self', {
+      links: {
+        workspaces: [
+          {
+            taskId: 't12',
+            kind: 'git-worktree',
+            hostId: 'local',
+            instanceId: null,
+            worktreeId: row.worktreeId,
+            folderWorkspaceId: null,
+            repoId: 'repo',
+            branchSnapshot: null,
+            nameSnapshot: null,
+            hostLabelSnapshot: null,
+            linkedVia: 'manual',
+            linkedAt: 1
+          }
+        ],
+        sessions: []
+      },
+      tasks: [
+        {
+          id: 't12',
+          projectId: 'p',
+          number: 12,
+          ref: 'SHOP-12',
+          title: 'Export API',
+          description: '',
+          criteria: [],
+          statusId: 's',
+          priority: 0,
+          labels: [],
+          parentId: null,
+          createdAt: 0,
+          updatedAt: 0,
+          revision: 1
+        }
+      ],
+      live: true,
+      glyphShown: true
+    })
+    const hidden = library(2, true)
+    const rows = { hostId: 'h', libraries, open: () => {} }
+    const linked: Worktree = { ...row, hostId: 'local' }
+    expect(await actionsFor({ client: hidden.client, target: linked, rows })).toHaveLength(1)
   })
 
   it('asks nothing of a desktop without local tasks, out of contact, or for a folder', async () => {

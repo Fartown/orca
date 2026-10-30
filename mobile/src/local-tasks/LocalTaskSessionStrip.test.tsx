@@ -1,7 +1,11 @@
 import { createElement, Fragment } from 'react'
 import { act, create, type ReactTestRenderer } from 'react-test-renderer'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { LocalTaskWorkspaceLink } from '../../../src/shared/local-tasks/local-task-link-types'
+import type {
+  LocalTaskSessionLink,
+  LocalTaskWorkspaceLink
+} from '../../../src/shared/local-tasks/local-task-link-types'
+import type { MobileSessionTab } from '../session/mobile-session-route-types'
 import type { RpcClient } from '../transport/rpc-client'
 import type { ConnectionState, RpcResponse } from '../transport/types'
 
@@ -41,6 +45,7 @@ vi.mock('../components/host-protocol-gates-context', async () => {
 })
 vi.mock('./use-local-task-session-acknowledge', () => ({ useAcknowledgeOpenSession: () => {} }))
 vi.mock('./local-task-choice-sheet', () => ({ LocalTaskChoiceSheet: () => null }))
+vi.mock('../components/AgentStateDot', () => ({ AgentStateDot: () => null }))
 
 import { localTasksCopy } from './local-tasks-copy'
 import { LocalTaskSessionStrip } from './LocalTaskSessionStrip'
@@ -79,8 +84,33 @@ const task = {
   revision: 1
 }
 
+/** The agent tab open on the session screen, linked to SHOP-13 as `session`. */
+const agentTab: MobileSessionTab = {
+  type: 'terminal',
+  id: 'tab-1',
+  title: 'Claude',
+  terminal: null,
+  isActive: true
+}
+
+const session: LocalTaskSessionLink = {
+  id: 'session-1',
+  taskId: 't13',
+  hostId: 'local',
+  worktreeId: WORKTREE,
+  instanceId: null,
+  surface: 'terminal',
+  tabId: 'tab-1',
+  paneKey: null,
+  sessionId: null,
+  providerSession: null,
+  agent: 'claude',
+  linkedVia: 'start',
+  openedAt: 1
+}
+
 /** A host's library: what it answers, and every call the strip made to it. */
-function library(options: { projectCount: number; linked: boolean }) {
+function library(options: { projectCount: number; linked: boolean; waiting?: boolean }) {
   const calls: string[] = []
   const feeds: ((payload: unknown) => void)[] = []
   const answers: Record<string, unknown> = {
@@ -92,9 +122,26 @@ function library(options: { projectCount: number; linked: boolean }) {
       taskHostId: 'h',
       projectCount: options.projectCount
     },
-    'localTasks.links.list': { workspaces: options.linked ? [link] : [], sessions: [] },
+    'localTasks.links.list': {
+      workspaces: options.linked ? [link] : [],
+      sessions: options.waiting ? [session] : []
+    },
     'localTasks.tasks.list': { tasks: options.linked ? [task] : [] },
-    'localTasks.attention.get': { observedAt: 1, sessions: [], items: [] },
+    'localTasks.attention.get': {
+      observedAt: 1,
+      sessions: options.waiting
+        ? [
+            {
+              taskSessionId: session.id,
+              state: 'waiting',
+              lastMessage: null,
+              stateSince: 1,
+              unread: false
+            }
+          ]
+        : [],
+      items: []
+    },
     'localTasks.unsubscribeChanges': { unsubscribed: true }
   }
   const client: RpcClient = {
@@ -141,9 +188,9 @@ async function settle() {
   }
 }
 
-function strip(hostId: string) {
+function strip(hostId: string, activeSessionTab: MobileSessionTab | null = null) {
   return createElement(LocalTaskSessionStrip, {
-    controller: { hostId, worktreeId: WORKTREE, activeSessionTab: null }
+    controller: { hostId, worktreeId: WORKTREE, activeSessionTab }
   })
 }
 
@@ -176,7 +223,7 @@ describe('the session header task strip', () => {
     await host.ready()
     const unverifiable = localTasksCopy().work.sessionStates.unverifiable
     const row = tree()
-    expect(texts()).toEqual(['SHOP-13 · Export API'])
+    expect(texts()).toEqual(['Export API'])
 
     for (const state of ['reconnecting', 'disconnected', 'connected'] as const) {
       env.state = state
@@ -188,11 +235,27 @@ describe('the session header task strip', () => {
         !row || Array.isArray(row) ? undefined : row.props.style
       )
       // Still marked once connected: nothing is vouched for until the resubscription is ready.
-      expect(texts()).toEqual(['SHOP-13 · Export API', unverifiable])
+      expect(texts()).toEqual(['Export API', unverifiable])
     }
     // Back in contact the feed resubscribes and its `ready` re-reads, which clears the mark.
     await host.ready()
-    expect(texts()).toEqual(['SHOP-13 · Export API'])
+    expect(texts()).toEqual(['Export API'])
+  })
+
+  it('says the open session waits for you, in the same frame as the plain line', async () => {
+    const host = library({ projectCount: 1, linked: true, waiting: true })
+    env.client = host.client
+    await show(strip('h-waiting'))
+    await host.ready()
+    const plain = tree()
+    expect(texts()).toEqual(['Export API'])
+
+    await show(strip('h-waiting', agentTab))
+    const shown = tree()
+    expect(texts()).toEqual(['Export API', localTasksCopy().work.sessionStates.waiting])
+    expect(!shown || Array.isArray(shown) ? null : shown.props.style).toEqual(
+      !plain || Array.isArray(plain) ? undefined : plain.props.style
+    )
   })
 
   it('renders nothing for an unlinked workspace, or on a sideways phone', async () => {
@@ -242,6 +305,6 @@ describe('the session header task strip', () => {
       'localTasks.subscribeChanges',
       'localTasks.tasks.list'
     ])
-    expect(texts()).toEqual(['SHOP-13 · Export API', 'SHOP-13 · Export API'])
+    expect(texts()).toEqual(['Export API', 'Export API'])
   })
 })

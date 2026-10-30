@@ -11,6 +11,7 @@ import type {
   SmartNameMode,
   SmartWorkspaceSourceRow
 } from '../../../../shared/new-workspace/smart-workspace-source-results'
+import type { LocalTaskSourceRow } from '@/local-tasks/local-task-source-rows'
 
 export type RepoOption = ReturnType<typeof useAppStore.getState>['repos'][number]
 
@@ -48,7 +49,15 @@ export type SmartWorkspaceNameFieldProps = {
 }
 
 export type SmartWorkspaceNameSelection = {
-  kind: 'github-pr' | 'github-issue' | 'gitlab-mr' | 'gitlab-issue' | 'branch' | 'linear' | 'jira'
+  kind:
+    | 'github-pr'
+    | 'github-issue'
+    | 'gitlab-mr'
+    | 'gitlab-issue'
+    | 'branch'
+    | 'linear'
+    | 'jira'
+    | 'local-task'
   label: string
   url?: string
 }
@@ -56,6 +65,7 @@ export type SmartWorkspaceNameSelection = {
 export type RowEntry =
   | SmartWorkspaceSourceRow
   | { kind: 'jira-account'; value: string; site: JiraSite }
+  | LocalTaskSourceRow
 
 export type RepoBackedSearchTarget = {
   repo: RepoOption

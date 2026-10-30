@@ -17,7 +17,7 @@ export function LocalTaskLinkDialogHost({
 }): React.JSX.Element | null {
   const dialog = useLocalTaskLinkDialog()
   const links = useLocalTasksDomain((state) => state.links)
-  if (!dialog || dialog.kind === 'pick-task') {
+  if (!dialog) {
     return null
   }
   const task = model.index.tasksById.get(dialog.taskId)

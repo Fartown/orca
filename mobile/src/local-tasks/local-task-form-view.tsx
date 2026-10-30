@@ -1,13 +1,5 @@
 import { useState } from 'react'
-import {
-  ActivityIndicator,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View
-} from 'react-native'
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Check, ChevronDown, CornerDownRight, Layers } from 'lucide-react-native'
 import {
@@ -35,7 +27,8 @@ import {
   type LocalTaskDraft,
   type LocalTaskFormMode
 } from './local-task-form-state'
-import { localTaskStatusLookup } from './local-task-list-projection'
+import { localTaskStatusLookup, orderedLocalTaskStatuses } from './local-task-list-projection'
+import { LocalTaskGrowingInput } from './local-task-growing-input'
 import { LocalTaskDraftPickers, type LocalTaskDraftPicker } from './local-task-pickers'
 import { localTaskStyles } from './local-tasks-styles'
 import { LocalTaskPriorityIcon, LocalTaskStatusIcon } from './local-tasks-visuals'
@@ -67,6 +60,12 @@ export function LocalTaskFormView(props: Props) {
   const project = library.projects.find((entry) => entry.id === draft.projectId) ?? null
   const lookup = localTaskStatusLookup(library.projects)
   const status = draft.statusId ? (lookup.get(draft.statusId) ?? null) : null
+  // An unset status is the project's first Unstarted one, which the desktop applies on create.
+  const shownStatus =
+    status ??
+    (project
+      ? (orderedLocalTaskStatuses(project).find((entry) => entry.category === 'unstarted') ?? null)
+      : null)
   const editing = mode.kind === 'edit' ? mode.task : null
   const parentCandidates = localTaskParentCandidates(
     editing,
@@ -130,10 +129,10 @@ export function LocalTaskFormView(props: Props) {
             <ChevronDown size={13} color={colors.textMuted} />
           </Pressable>
         )}
-        <TextInput
-          style={localTaskStyles.titleInput}
+        <LocalTaskGrowingInput
+          style={[localTaskStyles.titleInput, styles.title]}
+          minHeight={TITLE_LINE_HEIGHT}
           value={draft.title}
-          multiline
           autoFocus={mode.kind !== 'edit'}
           maxLength={LOCAL_TASK_TITLE_MAX * 20}
           placeholder={copy.titlePlaceholder}
@@ -147,10 +146,10 @@ export function LocalTaskFormView(props: Props) {
           }}
         />
         {mode.kind === 'subtask' ? null : (
-          <TextInput
+          <LocalTaskGrowingInput
             style={[localTaskStyles.bareInput, styles.description]}
+            minHeight={60}
             value={draft.description}
-            multiline
             maxLength={LOCAL_TASK_DESCRIPTION_MAX}
             placeholder={copy.descriptionPlaceholder}
             placeholderTextColor={colors.textMuted}
@@ -170,11 +169,13 @@ export function LocalTaskFormView(props: Props) {
         <Text style={localTaskStyles.sectionLabel}>{copy.properties}</Text>
         <View style={localTaskStyles.card}>
           <LocalTaskPropertyRow label={copy.status} first onPress={() => setPicker('status')}>
-            {status ? (
-              <LocalTaskStatusIcon category={status.category} color={status.color} size={14} />
-            ) : null}
-            <Text style={status ? localTaskStyles.rowValue : localTaskStyles.rowValueMuted}>
-              {status?.name ?? copy.defaultStatusNames.unstarted}
+            <LocalTaskStatusIcon
+              category={shownStatus?.category ?? 'unstarted'}
+              color={shownStatus?.color ?? 'gray'}
+              size={14}
+            />
+            <Text style={localTaskStyles.rowValue}>
+              {shownStatus?.name ?? copy.defaultStatusNames.unstarted}
             </Text>
           </LocalTaskPropertyRow>
           <LocalTaskPropertyRow label={copy.priority} onPress={() => setPicker('priority')}>
@@ -182,10 +183,14 @@ export function LocalTaskFormView(props: Props) {
             <Text style={localTaskStyles.rowValue}>{copy.priorities[draft.priority]}</Text>
           </LocalTaskPropertyRow>
           <LocalTaskPropertyRow label={copy.labels}>
-            <TextInput
+            <LocalTaskGrowingInput
               style={[localTaskStyles.bareInput, styles.labels]}
+              minHeight={21}
+              blurOnSubmit
               value={draft.labelsText}
-              onChangeText={(labelsText) => patch({ labelsText })}
+              onChangeText={(labelsText) =>
+                patch({ labelsText: labelsText.replace(/\r?\n/g, ' ') })
+              }
               placeholder={copy.labelsPlaceholder}
               placeholderTextColor={colors.textMuted}
             />
@@ -196,7 +201,7 @@ export function LocalTaskFormView(props: Props) {
                 style={parent ? localTaskStyles.rowValue : localTaskStyles.rowValueMuted}
                 numberOfLines={1}
               >
-                {parent ? `${parent.ref} ${parent.title}` : copy.none}
+                {parent ? parent.title : copy.none}
               </Text>
             </LocalTaskPropertyRow>
           )}
@@ -274,7 +279,7 @@ export function LocalTaskFormView(props: Props) {
       {mode.kind === 'subtask' ? (
         <LocalTaskPasteChoice
           lines={props.readOnly ? null : pasted}
-          parentRef={mode.parent.ref}
+          parentTitle={mode.parent.title}
           onSubtasks={(lines) =>
             void submit
               .createSubtasks(mode.parent, lines, draft)
@@ -299,13 +304,16 @@ export function LocalTaskFormView(props: Props) {
   )
 }
 
+const TITLE_LINE_HEIGHT = 24
+
 const styles = StyleSheet.create({
   cancel: { color: colors.textSecondary, fontSize: 14 },
+  title: { lineHeight: TITLE_LINE_HEIGHT },
   topBarBalance: { width: 40 },
   content: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xl, gap: spacing.sm },
   contextChip: { alignSelf: 'flex-start', marginBottom: spacing.sm, maxWidth: '100%' },
   description: { minHeight: 60, lineHeight: 21, textAlignVertical: 'top' },
-  labels: { flex: 1 },
+  labels: { flex: 1, lineHeight: 21 },
   gap: { marginTop: spacing.md },
   continueRow: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   partialActions: { gap: spacing.sm }

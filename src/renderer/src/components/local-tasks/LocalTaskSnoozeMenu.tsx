@@ -25,13 +25,15 @@ export function LocalTaskSnoozeMenu({
   open,
   onOpenChange,
   now,
-  showKey = false
+  showKey = false,
+  label
 }: {
   items: readonly LocalTaskAttentionItem[]
   open: boolean
   onOpenChange: (open: boolean) => void
   now: number
   showKey?: boolean
+  label?: string
 }): React.JSX.Element {
   const currentTime = new Date(now)
   const [custom, setCustom] = useState(() => localInputValue(now + 2 * 60 * 60 * 1000))
@@ -45,7 +47,7 @@ export function LocalTaskSnoozeMenu({
       <PopoverTrigger asChild>
         <Button variant="ghost" size="xs" disabled={items.length === 0}>
           <AlarmClock className="size-3.5" />
-          {translate('localTasks.needsYou.snooze.trigger', 'Snooze')}
+          {label ?? translate('localTasks.needsYou.snooze.trigger', 'Snooze')}
           {showKey ? (
             <ShortcutKeyCombo
               keys={['H']}
@@ -56,7 +58,7 @@ export function LocalTaskSnoozeMenu({
         </Button>
       </PopoverTrigger>
       <PopoverContent align="end" className="w-60">
-        <div className="flex flex-col">
+        <div className="flex flex-col p-1">
           {LOCAL_TASK_SNOOZE_PRESETS.map((preset) => {
             const until = localTaskSnoozeUntil(preset, currentTime)
             return until === null ? null : (

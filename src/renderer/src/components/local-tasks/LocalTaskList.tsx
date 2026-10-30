@@ -13,13 +13,14 @@ import {
   useLocalTaskPage
 } from '@/local-tasks/local-task-page-store'
 import { useLocalTasksDomain } from '@/local-tasks/local-tasks-domain-store'
+import { useCanCreateLocalTask } from '@/local-tasks/local-task-write-access'
 import {
   LocalTaskGroupIcon,
   canCreateInGroup,
   localTaskGroupLabel,
   openCreateInGroup
 } from './LocalTaskGroupHead'
-import { LocalTaskRow } from './LocalTaskRow'
+import { LocalTaskRow, localTaskStatusHeading } from './LocalTaskRow'
 import type { LocalTaskListModel } from './use-local-task-list-model'
 
 function GroupHeader({
@@ -49,7 +50,7 @@ function GroupHeader({
         )}
         <LocalTaskGroupIcon head={group} />
         <span className="truncate">{localTaskGroupLabel(group)}</span>
-        <span className="text-2xs tabular-nums text-muted-foreground">{group.entries.length}</span>
+        <span className="text-2xs tabular-nums text-muted-foreground">{group.count}</span>
       </button>
       {writable ? (
         <Button
@@ -67,7 +68,14 @@ function GroupHeader({
   )
 }
 
-function EmptyList({ hasTasks }: { hasTasks: boolean }): React.JSX.Element {
+function EmptyList({
+  hasTasks,
+  scopeProjectId
+}: {
+  hasTasks: boolean
+  scopeProjectId: string | null
+}): React.JSX.Element {
+  const writable = useCanCreateLocalTask(scopeProjectId)
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-2 p-8 text-center text-sm text-muted-foreground">
       {hasTasks ? (
@@ -87,7 +95,20 @@ function EmptyList({ hasTasks }: { hasTasks: boolean }): React.JSX.Element {
           </Button>
         </>
       ) : (
-        translate('localTasks.list.empty', 'No tasks yet. Press C to write down the first one.')
+        <>
+          {translate('localTasks.list.empty', 'No tasks yet. Press C to write down the first one.')}
+          {writable ? (
+            <Button
+              size="sm"
+              onClick={() =>
+                localTaskPageStore.getState().openCreate({ projectId: scopeProjectId })
+              }
+            >
+              <Plus className="size-3.5" />
+              {translate('localTasks.toolbar.newTask', 'New task')}
+            </Button>
+          ) : null}
+        </>
       )}
     </div>
   )
@@ -112,15 +133,19 @@ export const LocalTaskList = memo(function LocalTaskList({
     }
   }, [model.listTaskIds, model.orderedTaskIds])
   if (model.groups.length === 0) {
-    return <EmptyList hasTasks={model.scopeTasks.length > 0} />
+    return (
+      <EmptyList hasTasks={model.scopeTasks.length > 0} scopeProjectId={model.scopeProjectId} />
+    )
   }
   return (
-    <div className="min-h-0 flex-1 overflow-y-auto rounded-md border border-border/60 scrollbar-sleek">
+    <div className="@container/local-task-list min-h-0 flex-1 overflow-y-auto rounded-md border border-border/60 scrollbar-sleek">
       {model.groups.map((group) => {
         const isCollapsed = collapsed.includes(group.key)
         const label = localTaskGroupLabel(group)
-        // Why: a status chip only repeats the heading when rows are grouped by status.
-        const statusHeading = group.kind === 'status' || group.kind === 'category' ? label : null
+        const statusHeading =
+          group.kind === 'status' || group.kind === 'category'
+            ? localTaskStatusHeading(group)
+            : null
         return (
           <section key={group.key} aria-label={label}>
             <GroupHeader
@@ -136,7 +161,7 @@ export const LocalTaskList = memo(function LocalTaskList({
                     <LocalTaskRow
                       task={entry.task}
                       index={model.index}
-                      groupLabel={statusHeading}
+                      statusHeading={statusHeading}
                       depth={0}
                       folded={entry.children.length > 0 ? folded.has(entry.task.id) : null}
                       hostLabels={model.hostLabels}
@@ -146,7 +171,7 @@ export const LocalTaskList = memo(function LocalTaskList({
                         key={line.task.id}
                         task={line.task}
                         index={model.index}
-                        groupLabel={statusHeading}
+                        statusHeading={statusHeading}
                         depth={line.depth}
                         folded={line.childCount > 0 ? folded.has(line.task.id) : null}
                         hostLabels={model.hostLabels}

@@ -33,6 +33,7 @@ import {
   isImeOwnedKeyboardEvent,
   useImeEnterGestureOwnership
 } from '@/lib/ime-composition-keyboard-event'
+import { useLocalTaskSourceTab } from '@/local-tasks/local-task-source-tab'
 
 const WorktreeMetaDialogDraft = React.memo(function WorktreeMetaDialogDraft() {
   const activeModal = useAppStore((s) => s.activeModal)
@@ -98,6 +99,7 @@ const WorktreeMetaDialogDraft = React.memo(function WorktreeMetaDialogDraft() {
   const focusNotesOnMountRef = useRef(false)
   const mountedRef = useMountedRef()
   const commentIme = useImeEnterGestureOwnership()
+  const localTaskDraft = useLocalTaskSourceTab()?.draft
 
   const handleSave = async (): Promise<void> => {
     if (!worktreeId || !worktree || saving) {
@@ -133,6 +135,14 @@ const WorktreeMetaDialogDraft = React.memo(function WorktreeMetaDialogDraft() {
         if (mountedRef.current) {
           setSaveError(result.error)
         }
+        return
+      }
+      const localTaskError = await localTaskDraft?.commit()
+      if (!mountedRef.current) {
+        return
+      }
+      if (localTaskError) {
+        setSaveError(localTaskError)
         return
       }
       closeModal()

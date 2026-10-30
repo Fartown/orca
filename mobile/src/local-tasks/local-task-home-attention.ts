@@ -1,6 +1,6 @@
 import type { LocalTaskAttentionItem } from '../../../src/shared/local-tasks/local-task-link-types'
 import type { LocalTasksStatus } from '../../../src/shared/local-tasks/local-task-types'
-import { localTaskLibraryHasProjects } from './local-tasks-access'
+import { localTaskLibraryHasProjects, localTaskSourceShown } from './local-tasks-access'
 import type { LocalTasksApi } from './local-tasks-api'
 import { countLocalTasksInCategory } from './local-task-list-projection'
 import {
@@ -69,8 +69,9 @@ async function readLocalTasksInProgress(
 
 /**
  * Both of one library's home numbers, or null for a library home leaves out: one with no project,
- * one that is not open (starting, unavailable), or one whose status could not be read. Only its
- * status is read in those cases, since the rest would be refused or count nothing.
+ * one its host's user hid from the desktop's task sources, one that is not open (starting,
+ * unavailable), or one whose status could not be read. Only its status is read in those cases,
+ * since the rest would be refused, count nothing, or not be shown.
  */
 export async function readLocalTaskHomeLibrary(
   api: LocalTasksApi,
@@ -80,7 +81,8 @@ export async function readLocalTaskHomeLibrary(
   if (
     !status ||
     (status.state !== 'ready' && status.state !== 'read-only') ||
-    !localTaskLibraryHasProjects(status)
+    !localTaskLibraryHasProjects(status) ||
+    !localTaskSourceShown(status)
   ) {
     return null
   }

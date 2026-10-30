@@ -179,7 +179,7 @@ export function LocalTaskWorkSection(props: {
               </Text>
               {inheritedFrom ? (
                 <Text style={localTaskStyles.hint} numberOfLines={1}>
-                  {work.inheritedWorkspace(inheritedFrom.ref)}
+                  {work.inheritedWorkspace(inheritedFrom.title)}
                 </Text>
               ) : null}
             </Pressable>
@@ -251,7 +251,7 @@ export function LocalTaskWorkSection(props: {
                   <Text style={localTaskStyles.rowValue} numberOfLines={1}>
                     {[
                       agentLabel(view.link.agent),
-                      view.task && view.task.id !== task.id ? work.ofSubtask(view.task.ref) : '',
+                      view.task && view.task.id !== task.id ? work.ofSubtask(view.task.title) : '',
                       work.sessionStates[view.state]
                     ]
                       .filter(Boolean)

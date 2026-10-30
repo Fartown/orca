@@ -2670,6 +2670,7 @@
       "goal": "在 Orca 里记录、拆分、跟踪任务；从任务一键开工作区和会话，任务上看到会话进展，会话需要人时进入「需要你」",
       "journal": "docs/issue/本地任务管理/journal.md",
       "dependsOn": [
+        "src/renderer/src/store/pinned-tab-close-guard.ts",
         "src/main/orca-profiles/profile-storage-paths.ts",
         "src/main/sqlite/harden-database-files.ts",
         "src/main/sqlite/sync-database.ts",
@@ -2677,6 +2678,10 @@
         "src/main/runtime/rpc/core.ts",
         "src/main/persistence.ts",
         "src/main/startup/main-process-state.ts",
+        "src/renderer/src/components/settings/TaskSourceProviderCard.tsx",
+        "src/renderer/src/components/settings/TaskSourceShowInTasksStep.tsx",
+        "src/renderer/src/components/settings/TaskSourceStepRow.tsx",
+        "src/renderer/src/components/settings/task-source-setup-state.ts",
         "mobile/src/components/ActionSheetModal.tsx",
         "mobile/src/components/BottomDrawer.tsx",
         "mobile/src/components/ConfirmModal.tsx",
@@ -2857,9 +2862,25 @@
         "src/shared/worktree/id.ts",
         "src/shared/worktree/types.ts",
         "mobile/src/tasks/worktree-create-retry.ts",
+        "src/shared/task-providers.ts",
         "src/renderer/src/hooks/composer-state/composer-target-store.ts",
         "mobile/src/tasks/worktree-create-capability.ts",
-        "src/renderer/src/components/error-boundaries/RecoverableRenderErrorBoundary.tsx"
+        "src/renderer/src/components/error-boundaries/RecoverableRenderErrorBoundary.tsx",
+        "src/renderer/src/components/new-workspace/smart-workspace-localized-options.tsx",
+        "src/shared/new-workspace/smart-workspace-source-results.ts",
+        "src/renderer/src/components/sidebar/use-worktree-meta-workspace.ts",
+        "src/renderer/src/components/sidebar/WorktreeCardDetailSection.tsx",
+        "src/renderer/src/components/sidebar/WorktreeCardMetadataControls.tsx",
+        "src/renderer/src/components/use-worktree-jump-palette-controller.ts",
+        "src/renderer/src/lib/palette-match/evidence-composer.ts",
+        "src/shared/runtime-types.ts",
+        "src/shared/runtime-rpc-envelope.ts",
+        "src/cli/args.ts",
+        "src/cli/dispatch.ts",
+        "src/cli/flags.ts",
+        "src/cli/format.ts",
+        "src/cli/runtime/types.ts",
+        "src/cli/selectors.ts"
       ],
       "policyId": "local-tasks",
       "ownedPaths": [
@@ -2875,7 +2896,8 @@
         "mobile/app/h/[hostId]/local-tasks.web.tsx",
         "mobile/src/local-tasks/**",
         "docs/issue/本地任务管理/**",
-        "src/main/runtime/rpc/methods/local-task-link-methods.ts"
+        "src/main/runtime/rpc/methods/local-task-link-methods.ts",
+        "src/cli/local-tasks/**"
       ],
       "requiredFiles": [
         "src/main/local-tasks/local-tasks-service.ts",
@@ -2889,7 +2911,8 @@
         "src/renderer/src/components/local-tasks/LocalTaskSource.tsx",
         "mobile/app/h/[hostId]/local-tasks.web.tsx",
         "mobile/src/local-tasks/MobileHomeLocalTasksCard.tsx",
-        "mobile/src/local-tasks/LocalTasksHostEntryButton.tsx",
+        "mobile/src/local-tasks/local-task-source-option.tsx",
+        "mobile/src/local-tasks/LocalTaskHostRowsProvider.tsx",
         "docs/issue/本地任务管理/journal.md",
         "docs/issue/本地任务管理/requirements/本地任务管理.md",
         "src/main/runtime/rpc/methods/local-task-link-methods.ts",
@@ -2987,9 +3010,34 @@
           "why": "The session header test renders without the task strip's router and RPC providers (REQ-017)"
         },
         {
-          "file": "mobile/src/host-screen/host-screen-header.tsx",
-          "mustContain": "{localTaskHostHeaderActions(controller)}",
-          "why": "The host page, shipped by the desktop, opens the task page even on an older app (REQ-017); one call per toolbar, ready to join upstream's hostListActions"
+          "file": "mobile/src/tasks/use-mobile-tasks-picker-projection.tsx",
+          "mustContain": "...localTaskSourceOptions,",
+          "why": "The phone's Task Source picker lists Local ahead of the upstream sources, as the desktop's source bar does; it replaces the host page's own Local button (REQ-008, REQ-017)"
+        },
+        {
+          "file": "mobile/src/tasks/mobile-tasks-provider-pickers.tsx",
+          "mustContain": "onSelect={withLocalTaskSource(model, (next) => {",
+          "why": "Picking Local opens the local tasks page and leaves the host's defaultTaskSource on an upstream provider (REQ-017)"
+        },
+        {
+          "file": "mobile/src/tasks/mobile-tasks-dependencies.ts",
+          "mustContain": "  ListTodo,\n",
+          "why": "The Local row's icon comes through the Tasks screen's icon barrel, as every icon that screen draws does (REQ-017)"
+        },
+        {
+          "file": "mobile/src/host-screen/host-screen-view.tsx",
+          "mustContain": "<LocalTaskHostRowsProvider controller={controller}>",
+          "why": "The host list and its long-press overlays read the task libraries their rows belong to, the paired host's and its servers' (REQ-017)"
+        },
+        {
+          "file": "mobile/src/host-screen/workspace-details-sheet.tsx",
+          "mustContain": "const localTaskRows = useLocalTaskDetailRows(row, DetailRow, styles)",
+          "why": "The long-press sheet names the workspace's local task after its reviews and before upstream's tasks (REQ-017)"
+        },
+        {
+          "file": "mobile/src/components/WorktreeListRow.tsx",
+          "mustContain": "<LocalTaskWorkspaceGlyph item={item} />",
+          "why": "A host-list row shows a task icon after upstream's presence glyphs when its workspace belongs to a local task (REQ-016, REQ-017)"
         },
         {
           "file": "src/renderer/src/app-shell/AppBackgroundServices.tsx",
@@ -3032,9 +3080,129 @@
           "why": "Cmd+J offers New task and Open task after every upstream action, so an equal match ranks upstream first (REQ-007)"
         },
         {
-          "file": "src/renderer/src/components/use-worktree-jump-palette-project-targets.ts",
-          "mustContain": "const localTaskActions = useLocalTaskSearchActions(hasQuery ? deferredQuery : '')",
-          "why": "Cmd+J searches local tasks by ref, earlier refs and title (REQ-007)"
+          "file": "src/renderer/src/components/use-worktree-jump-palette-task-search.ts",
+          "mustContain": "const localTaskItems = useLocalTaskPaletteItems(visible ? query : '')",
+          "why": "Cmd+J's Tasks group lists local tasks ahead of upstream's provider results, found by ref, earlier refs and title (REQ-007)"
+        },
+        {
+          "file": "src/renderer/src/components/worktree-jump-palette-model.ts",
+          "mustContain": "| LocalTaskPaletteItem",
+          "why": "A local task is its own palette item type; CmdJTask stays the four upstream providers (REQ-007)"
+        },
+        {
+          "file": "src/renderer/src/components/worktree-jump-palette-entry.tsx",
+          "mustContain": "<LocalTaskPaletteRow entry={entry} renderKey={renderKey} controller={controller} />",
+          "why": "A local task row in the Tasks group leads with its title, the ref as the gray prefix (REQ-007)"
+        },
+        {
+          "file": "src/renderer/src/components/use-worktree-jump-palette-selection-actions.ts",
+          "mustContain": "const handleSelectLocalTask = useLocalTaskPaletteSelection({",
+          "why": "Enter on a local task goes to its workspace, else opens the task, as upstream task results do (REQ-007)"
+        },
+        {
+          "file": "src/renderer/src/components/worktree-jump-palette-surface.tsx",
+          "mustContain": "controller.handleSelectLocalTask(selectedTask, true)",
+          "why": "Cmd/Ctrl+Enter on a local task starts work, as it creates a workspace for an upstream task (REQ-007)"
+        },
+        {
+          "file": "src/renderer/src/lib/worktree-palette-create-action.ts",
+          "mustContain": "'local-task'\n] as const",
+          "why": "A local task row keeps the palette's selection, so the footer offers Cmd/Ctrl+Enter and it starts work (REQ-007)"
+        },
+        {
+          "file": "src/renderer/src/lib/worktree-palette-document.ts",
+          "mustContain": "sources.localTaskEvidence?.(worktree) ?? null",
+          "why": "A workspace row matches its task's ref and title, so searching SHOP-12 finds the workspace (REQ-007)"
+        },
+        {
+          "file": "src/renderer/src/components/worktree-jump-palette-document-index.ts",
+          "mustContain": "Pick<WorktreePaletteDocumentSources, 'localTaskEvidence'>",
+          "why": "The palette's document index passes the task evidence through to each workspace document (REQ-007)"
+        },
+        {
+          "file": "src/renderer/src/components/use-worktree-jump-palette-worktrees.ts",
+          "mustContain": "const localTaskEvidence = useLocalTaskWorkspaceEvidence()",
+          "why": "Workspace documents rebuild when a linked task's ref or title changes (REQ-007)"
+        },
+        {
+          "file": "src/renderer/src/components/sidebar/worktree-card-option-items.tsx",
+          "mustContain": "<LocalTaskCardOptionItem />",
+          "why": "Show properties and Card display each list a Local task row that shows or hides the card's task chip (REQ-016)"
+        },
+        {
+          "file": "src/renderer/src/components/sidebar/WorktreeCardMeta.tsx",
+          "mustContain": "const localTask = useLocalTaskOfWorkspace(workspace)",
+          "why": "The hover card names the workspace's task: its own section alone, a row of Issues & tasks with other links (REQ-016)"
+        },
+        {
+          "file": "src/renderer/src/components/sidebar/WorktreeCardLinkedItemsSection.tsx",
+          "mustContain": "{group.localTaskRow}",
+          "why": "Issues & tasks leads with the workspace's task, counted with the other links (REQ-016)"
+        },
+        {
+          "file": "src/renderer/src/components/sidebar/use-worktree-card-controller.ts",
+          "mustContain": "const localTaskLinked = useLocalTaskWorkspaceLinked(worktree)",
+          "why": "A card knows whether its workspace belongs to a task, so a workspace linked only to one has hover details (REQ-016)"
+        },
+        {
+          "file": "src/renderer/src/components/sidebar/worktree-card-presentation.tsx",
+          "mustContain": "(card.localTaskLinked ||",
+          "why": "Compact and new-style cards open hover details for a workspace whose only link is its task (REQ-016)"
+        },
+        {
+          "file": "src/renderer/src/components/workspace-cleanup/workspace-cleanup-facets.ts",
+          "mustContain": "...localTaskCleanupTicketSources({",
+          "why": "Workspace cleanup counts a task link as a ticket source"
+        },
+        {
+          "file": "src/renderer/src/components/workspace-cleanup/workspace-cleanup-facet-labels.ts",
+          "mustContain": "case 'local-task':",
+          "why": "The ticket source filter names Local tasks"
+        },
+        {
+          "file": "src/renderer/src/components/workspace-cleanup/workspace-cleanup-git-review-facets.tsx",
+          "mustContain": "useLocalTaskCleanupTicketSourceValues(",
+          "why": "The Local task ticket filter is offered only while Local is shown and a library has a project"
+        },
+        {
+          "file": "src/shared/workspace-cleanup-filter-model.ts",
+          "mustContain": "| 'local-task'",
+          "why": "Ticket sources gain local-task; older hosts drop the unknown value from saved filters"
+        },
+        {
+          "file": "src/shared/workspace-cleanup-facet-rankings.ts",
+          "mustContain": "'local-task'\n]",
+          "why": "The ticket source list, which the saved-filter codec checks against, includes local-task"
+        },
+        {
+          "file": "src/shared/pull-request-generation.ts",
+          "mustContain": "...localTaskPullRequestPromptLines(context.linkedLocalTask),",
+          "why": "AI pull request descriptions read the workspace's task title, description and done criteria"
+        },
+        {
+          "file": "src/main/ipc/filesystem/filesystem-git-pull-request-generation-handlers.ts",
+          "mustContain": "...linkedLocalTaskDraftContext({ id: args.worktreeId, path: args.worktreePath })",
+          "why": "The desktop reads its own library for its own checkouts when it generates PR details"
+        },
+        {
+          "file": "src/main/runtime/runtime-git-generation-commands.ts",
+          "mustContain": "...linkedLocalTaskDraftContext(target.worktree)",
+          "why": "A paired server or orcad reads its own library for its own checkouts when it generates PR details"
+        },
+        {
+          "file": "src/cli/specs/index.ts",
+          "mustContain": "...LOCAL_TASK_COMMAND_SPECS",
+          "why": "orca task list / show / current / comment / status are part of the CLI's command table"
+        },
+        {
+          "file": "src/cli/handler-group-manifest.ts",
+          "mustContain": "  LOCAL_TASK_HANDLER_GROUP\n]",
+          "why": "The orca task handlers load lazily like every other command group"
+        },
+        {
+          "file": "src/main/startup/cli-command-names.ts",
+          "mustContain": "'task',",
+          "why": "A direct orca task launch runs the CLI instead of booting the desktop app"
         },
         {
           "file": "src/renderer/src/hooks/settings-navigation-workflow-sections.ts",
@@ -3063,8 +3231,8 @@
         },
         {
           "file": "mobile/src/host-screen/host-screen-overlays.tsx",
-          "mustContain": "...taskLink.actionsFor(actionTarget, () => state.setActionTarget(null))\n                  ]",
-          "why": "The workspace action sheet registers the local task linking action last, after Sleep, Pin and Delete, so upstream's items keep their places"
+          "mustContain": "...taskLink.actionsFor(actionTarget, () => state.setActionTarget(null)),\n                    {\n                      label: 'Delete',",
+          "why": "The workspace action sheet registers the local task linking action after upstream's Sleep and Pin and before Delete, so the destructive item stays last"
         },
         {
           "file": "mobile/src/session/MobileSessionHeader.tsx",
@@ -3078,13 +3246,113 @@
         },
         {
           "file": "src/renderer/src/components/NewWorkspaceComposerModal.tsx",
-          "mustContain": "launchPrompt, onCreationStarted",
-          "why": "The composer accepts the task launch prompt and creation callback"
+          "mustContain": "await submitQuick(quickAgent, { setupOnly: quickSetupOnly, ...localTaskSubmitOptions() })",
+          "why": "A creation for the picked local task carries its draft prompt and creation callback (REQ-009)"
+        },
+        {
+          "file": "src/renderer/src/components/NewWorkspaceComposerModal.tsx",
+          "mustContain": "{...localTaskSource.cardOverrides}",
+          "why": "The picked local task shows as the composer's source pill; clearing it clears the pick (REQ-009)"
+        },
+        {
+          "file": "src/renderer/src/components/NewWorkspaceComposerModal.tsx",
+          "mustContain": "<LocalTaskSourceTabContext.Provider value={localTaskSource.tab}>",
+          "why": "Create From's Local tasks tab searches the target host's library and hands the pick to the composer (REQ-009)"
+        },
+        {
+          "file": "src/shared/new-workspace/smart-workspace-source-results.ts",
+          "mustContain": "local: 'No matching local tasks.'",
+          "why": "The work-item search has a Local tasks mode; its rows come from the fork, never from upstream's row builder (REQ-009, REQ-011)"
+        },
+        {
+          "file": "src/shared/new-workspace/smart-workspace-command-value.ts",
+          "mustContain": "| 'local-task'",
+          "why": "Local tasks rows take part in the search's highlighted-row logic (REQ-009, REQ-011)"
+        },
+        {
+          "file": "src/renderer/src/components/new-workspace/smart-workspace-name-field-model.ts",
+          "mustContain": "| LocalTaskSourceRow",
+          "why": "Result rows and the source pill include the Local tasks kind (REQ-009, REQ-011)"
+        },
+        {
+          "file": "src/renderer/src/components/new-workspace/use-smart-workspace-field-availability.ts",
+          "mustContain": "withLocalTaskSourceMode(upstreamModes, localTaskTabOffered && !textOnly)",
+          "why": "The Local tasks tab sits right after Smart wherever the host's library has a project and Local is shown (REQ-008, REQ-009, REQ-011)"
+        },
+        {
+          "file": "src/renderer/src/components/new-workspace/use-work-item-source-search.ts",
+          "mustContain": "const localTaskSource = useLocalTaskSourceSearch(foundation)",
+          "why": "One search engine serves workspace details and Create From, so both get the Local tasks tab (REQ-009, REQ-011)"
+        },
+        {
+          "file": "src/renderer/src/components/new-workspace/use-work-item-source-presentation.ts",
+          "mustContain": "if (mode === 'local') {",
+          "why": "The Local tasks tab lists the library's rows instead of upstream providers' (REQ-009, REQ-011)"
+        },
+        {
+          "file": "src/renderer/src/components/new-workspace/smart-workspace-source-row-content.tsx",
+          "mustContain": "<LocalTaskSourceRowLabel row={row} />",
+          "why": "Local tasks rows and the pill lead with the task title, the ref small beside it (REQ-009, REQ-011)"
+        },
+        {
+          "file": "src/renderer/src/components/new-workspace/use-smart-workspace-name-field-actions.ts",
+          "mustContain": "if (!localTaskSource.select(row)) {",
+          "why": "Picking a Local tasks row in Create From selects the task for the composer (REQ-009)"
+        },
+        {
+          "file": "src/renderer/src/components/new-workspace/smart-workspace-name-field-copy.ts",
+          "mustContain": "'localTasks.sourceTab.placeholder'",
+          "why": "Create From's placeholder says the Local tasks tab searches tasks (REQ-009)"
+        },
+        {
+          "file": "src/renderer/src/components/new-workspace/SmartWorkspaceSourceResultList.tsx",
+          "mustContain": "isLocalTaskSourceRowUnavailable(row)",
+          "why": "A task that has another workspace, or a library that cannot take the link, greys its rows (REQ-011)"
+        },
+        {
+          "file": "src/renderer/src/components/sidebar/WorkspaceAttachmentSearch.tsx",
+          "mustContain": "if (localTasks.select(row)) {",
+          "why": "Add reference → Local tasks puts the task in the workspace details draft (REQ-011)"
+        },
+        {
+          "file": "src/renderer/src/components/sidebar/WorktreeLinkedItemsField.tsx",
+          "mustContain": "<LocalTaskLinkedWorkRow disabled={disabled} />",
+          "why": "Linked work lists and counts the workspace's task under Issues & tasks (REQ-011)"
+        },
+        {
+          "file": "src/renderer/src/components/sidebar/WorktreeMetaDialogDraft.tsx",
+          "mustContain": "const localTaskError = await localTaskDraft?.commit()",
+          "why": "Save writes the task link after the rest of the details; a failed write keeps the dialog open (REQ-011)"
+        },
+        {
+          "file": "src/renderer/src/components/sidebar/WorktreeMetaDialog.tsx",
+          "mustContain": "<LocalTaskWorkspaceDetailsScope key={owner ?? 'closed'}>",
+          "why": "Workspace details holds the workspace's task as a draft for its Local tasks tab and linked list (REQ-011)"
+        },
+        {
+          "file": "src/renderer/src/hooks/ipc-events/new-workspace-command.ts",
+          "mustContain": "localTaskShortcutComposerData(state) ?? buildNewWorkspaceShortcutModalData(state)",
+          "why": "Cmd+N on an open local task preselects it, as Cmd+N on a Linear issue does (REQ-009)"
+        },
+        {
+          "file": "src/renderer/src/hooks/composer-state/quick-creation-execution.ts",
+          "mustContain": "draftPrompt: [trimmedNote, options.launchPrompt]",
+          "why": "The task reaches the agent as an unsent draft, as an issue picked in Create From does (REQ-009)"
         },
         {
           "file": "src/renderer/src/components/sidebar/SidebarTaskNavButton.tsx",
           "mustContain": "<LocalTaskNeedsYouCount />",
           "why": "The task sidebar button shows the local task attention count"
+        },
+        {
+          "file": "src/renderer/src/components/sidebar/SidebarTaskNavButton.tsx",
+          "mustContain": "<LocalTaskProviderShortcut />",
+          "why": "The task sidebar button's provider shortcuts include Local while it is shown (REQ-008)"
+        },
+        {
+          "file": "src/renderer/src/components/settings/TasksPane.tsx",
+          "mustContain": "<LocalTasksSourceCard />",
+          "why": "Settings → Task sources lists Local tasks after the upstream providers, shown or hidden like them (REQ-008)"
         },
         {
           "file": "src/renderer/src/components/sidebar/worktree-card-header.tsx",
@@ -3268,15 +3536,26 @@
         "mobile/src/local-tasks/use-local-task-session-acknowledge.test.tsx",
         "mobile/src/local-tasks/local-task-link-to-task-sheet.test.tsx",
         "mobile/src/local-tasks/local-task-agent-options.test.ts",
+        "mobile/src/local-tasks/local-task-source-option.test.tsx",
+        "mobile/src/local-tasks/local-task-host-rows.test.tsx",
         "src/renderer/src/local-tasks/local-task-background-services.test.tsx",
         "src/renderer/src/lib/worktree-creation-structured-session.test.ts",
         "src/renderer/src/components/local-tasks/LocalTaskPage.execution.test.tsx",
         "src/renderer/src/local-tasks/local-task-remote-creation-target.test.tsx",
         "src/renderer/src/local-tasks/local-task-start-work.test.ts",
-        "src/renderer/src/local-tasks/local-task-launch-agent-tab.test.ts"
+        "src/renderer/src/local-tasks/local-task-launch-agent-tab.test.ts",
+        "src/renderer/src/local-tasks/local-task-source-rows.test.ts",
+        "src/renderer/src/local-tasks/local-task-workspace-details-tab.test.tsx",
+        "src/renderer/src/local-tasks/local-task-composer-source.test.tsx",
+        "src/renderer/src/local-tasks/local-task-new-workspace-shortcut.test.ts",
+        "src/renderer/src/components/local-tasks/LocalTaskCardDisplay.test.tsx",
+        "src/renderer/src/local-tasks/local-task-palette.test.ts",
+        "src/renderer/src/local-tasks/local-task-cleanup-ticket-source.test.ts",
+        "src/main/local-tasks/local-task-pull-request-context.test.ts",
+        "src/cli/local-tasks/local-task-cli.test.ts"
       ],
       "checks": [
-        "pnpm exec vitest run --config config/vitest.config.ts src/main/local-tasks src/shared/local-tasks src/main/runtime/rpc/methods/local-tasks.test.ts src/shared/host-operation-ownership.test.ts src/shared/wsl-move src/main/runtime/runtime-rpc/fork-mobile-rpc-method-allowlist.test.ts src/main/runtime/mobile-rpc-allowlist.test.ts",
+        "pnpm exec vitest run --config config/vitest.config.ts src/main/local-tasks src/shared/local-tasks src/main/runtime/rpc/methods/local-tasks.test.ts src/shared/host-operation-ownership.test.ts src/shared/wsl-move src/main/runtime/runtime-rpc/fork-mobile-rpc-method-allowlist.test.ts src/main/runtime/mobile-rpc-allowlist.test.ts src/cli/local-tasks",
         "ORCA_BACKGROUND_LAUNCH=1 pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/local-tasks src/renderer/src/components/local-tasks src/renderer/src/components/task-page src/renderer/src/components/cmd-j src/renderer/src/lib/worktree-creation-structured-session.test.ts",
         "pnpm --dir mobile exec vitest run src/local-tasks src/home/MobileHomeListFooter.test.tsx src/transport/rpc-subscription-boundary.test.ts"
       ]

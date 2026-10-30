@@ -126,6 +126,8 @@ export const localTasksStatusSchema: z.ZodType<LocalTasksStatus, unknown> = z.ob
   taskHost: z.boolean(),
   inProgressCount: z.number().optional(),
   projectCount: z.number().optional(),
+  sourceHidden: z.boolean().optional(),
+  cardTaskHidden: z.boolean().optional(),
   state: openEnum(STATE_ARMS, 'unavailable'),
   reason: withDefault('reason', z.string().nullable(), () => null),
   revision: z.number(),

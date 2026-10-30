@@ -51,7 +51,7 @@ export function localTaskLinkChoices(library: Library, related: ReadonlySet<stri
 }
 
 /**
- * "Link to task…" for one workspace, in the library of the Orca that owns it (D-008): the paired
+ * "Link to Task…" for one workspace, in the library of the Orca that owns it (D-008): the paired
  * host's own, or a server's through the paired host. Everything is read once, when the sheet opens
  * and the library is in contact: a server only while the paired host can relay to it. A server's
  * own workspace list says which of its hosts the workspace is on, which the link records.
@@ -198,7 +198,7 @@ export function LocalTaskLinkToTaskSheet(props: {
   return (
     <LocalTaskChoiceSheet
       visible={target !== null}
-      title={copy.work.linkToTaskTitle}
+      title={copy.work.linkToTaskTitle(target?.displayName ?? '')}
       loading={
         target !== null &&
         (contact === 'pending' ||
@@ -210,8 +210,10 @@ export function LocalTaskLinkToTaskSheet(props: {
         const held = ready?.library.links.workspaces.find((entry) => entry.taskId === task.id)
         return {
           key: task.id,
-          label: `${task.ref} · ${task.title}`,
-          subtitle: held ? copy.work.hasWorkspace(held.nameSnapshot ?? '') : undefined,
+          label: task.title,
+          subtitle: [task.ref, held ? copy.work.hasWorkspace(held.nameSnapshot ?? '') : null]
+            .filter(Boolean)
+            .join(' · '),
           disabled: held !== undefined || holder !== null,
           onPress: () => void link(task)
         }

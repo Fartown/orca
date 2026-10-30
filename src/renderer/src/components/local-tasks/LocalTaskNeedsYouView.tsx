@@ -41,6 +41,8 @@ function NeedsYouRow({
   const atCursor = useLocalTaskPage((state) => state.cursorTaskId === task.id)
   const snoozeOpen = useLocalTaskNeedsYou((state) => state.snoozeTaskId === task.id)
   const writable = useLocalTasksDomain(useShallow((state) => writableEntriesOf(row, state)))
+  // Why "all": with several sessions each line has its own actions; the heading's act on every one.
+  const several = row.entries.length > 1
   return (
     <section
       onClick={() => localTaskPageStore.getState().setCursor(task.id, 'pointer')}
@@ -73,7 +75,9 @@ function NeedsYouRow({
           onClick={() => void acknowledgeLocalTaskItems(writable)}
         >
           <CheckCheck className="size-3.5" />
-          {translate('localTasks.needsYou.item.seen', 'Mark as seen')}
+          {several
+            ? translate('localTasks.needsYou.item.seenAll', 'Mark all as seen')
+            : translate('localTasks.needsYou.item.seen', 'Mark as seen')}
           <ShortcutKeyCombo
             keys={['E']}
             className="ml-0.5"
@@ -88,6 +92,9 @@ function NeedsYouRow({
           }
           now={now}
           showKey
+          label={
+            several ? translate('localTasks.needsYou.snooze.triggerAll', 'Snooze all') : undefined
+          }
         />
       </header>
       {row.entries.map((entry) => (
@@ -113,7 +120,7 @@ function Notice({ children }: { children: React.ReactNode }): React.JSX.Element 
 
 function NeedsYouKeyHints(): React.JSX.Element {
   const hint = (keys: string[], label: string): React.JSX.Element => (
-    <span key={label} className="flex items-center gap-1">
+    <span key={label} className="flex shrink-0 items-center gap-1 whitespace-nowrap">
       <ShortcutKeyCombo
         keys={keys}
         className="gap-0.5"

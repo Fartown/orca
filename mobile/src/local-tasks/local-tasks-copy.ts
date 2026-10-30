@@ -1,26 +1,11 @@
 import { LOCAL_TASKS_COPY_EN, type LocalTasksCopy } from './local-tasks-copy-en'
-import { LOCAL_TASKS_COPY_ZH } from './local-tasks-copy-zh'
 
 export type { LocalTasksCopy }
 
-// Why per device locale: mobile has no i18n catalog yet, and this feature ships Chinese and English.
-function deviceLocale(): string {
-  try {
-    return Intl.DateTimeFormat().resolvedOptions().locale
-  } catch {
-    return 'en'
-  }
-}
-
-export function localTasksCopyFor(locale: string): LocalTasksCopy {
-  return /^zh(?:[-_]|$)/i.test(locale) ? LOCAL_TASKS_COPY_ZH : LOCAL_TASKS_COPY_EN
-}
-
-let cached: LocalTasksCopy | null = null
-
+// Why English only: the rest of the phone app is inline English with no locale switch, so one
+// page in the device language would read half translated (see continuation-copy.ts).
 export function localTasksCopy(): LocalTasksCopy {
-  cached ??= localTasksCopyFor(deviceLocale())
-  return cached
+  return LOCAL_TASKS_COPY_EN
 }
 
 export function formatLocalTaskAgo(copy: LocalTasksCopy, at: number, now: number): string {

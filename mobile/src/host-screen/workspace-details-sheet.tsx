@@ -25,6 +25,7 @@ import {
   type WorkspaceOrigin
 } from '../worktree/workspace-details-model'
 import type { Worktree } from '../worktree/workspace-list-types'
+import { useLocalTaskDetailRows } from '../local-tasks/local-task-workspace-detail-rows'
 
 // The action rows' icon and gap, so both groups share one text column.
 const ICON_SIZE = 16
@@ -62,9 +63,12 @@ export function WorkspaceDetailsSheet(props: { row: Worktree; onOpenLink: (url: 
   const origin = buildWorkspaceOrigin(row)
   const OriginIcon = origin?.kind === 'automation' ? CalendarClock : SquareTerminal
   const notes = workspaceNotes(row)
-  const rows: ReactNode[] = buildWorkspaceDetailLinks(row).map((item) => (
+  const links = buildWorkspaceDetailLinks(row)
+  const rows: ReactNode[] = links.map((item) => (
     <LinkRow key={item.key} item={item} onOpen={onOpenLink} />
   ))
+  const localTaskRows = useLocalTaskDetailRows(row, DetailRow, styles)
+  rows.splice(links.filter((item) => item.type !== 'issue').length, 0, ...localTaskRows)
   if (notes) {
     rows.push(
       <DetailRow key="notes" icon={<StickyNote size={ICON_SIZE} color={colors.textSecondary} />}>

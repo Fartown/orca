@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Pressable, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Plus } from 'lucide-react-native'
+import { localTaskAttentionClearsOnView } from '../../../src/shared/local-tasks/local-task-attention-rules'
 import { MobileSegmentedControl } from '../components/MobileSegmentedControl'
 import { PickerListDrawer } from '../components/PickerListDrawer'
 import { useBackClaim } from '../navigation/use-back-claim'
@@ -235,6 +236,7 @@ export function LocalTasksLibraryScreen(props: Props) {
         hostLabel={showHosts ? site.label : null}
         onPickHost={() => setHostPickerOpen(true)}
         view={view}
+        showViewToggle={library.projects.length > 0 && segment !== 'attention'}
         onExit={props.onExit}
         onSettings={() => push({ kind: 'settings', projectId })}
         onView={setView}
@@ -248,6 +250,7 @@ export function LocalTasksLibraryScreen(props: Props) {
             <Pressable
               style={localTaskStyles.secondaryButton}
               onPress={() => push({ kind: 'newProject' })}
+              accessibilityRole="button"
             >
               <Plus size={16} color={colors.textPrimary} />
               <Text style={localTaskStyles.secondaryButtonText}>{copy.createProject}</Text>
@@ -332,6 +335,7 @@ export function LocalTasksLibraryScreen(props: Props) {
         projects={library.projects}
         selected={projectId}
         allProjectsLabel={copy.allProjects}
+        onCreateProject={props.readOnly ? undefined : () => push({ kind: 'newProject' })}
         onSelect={setChosenProjectId}
         onClose={() => setPickerOpen(false)}
       />
@@ -352,13 +356,18 @@ export function LocalTasksLibraryScreen(props: Props) {
   )
 }
 
-/** Opening a session is seeing it: its items are marked seen on the library's host (技术方案 §9.2). */
+/**
+ * Opening a session is seeing it: the items a look settles (a finished turn, REQ-014) are marked
+ * seen on the library's host (技术方案 §9.2); an approval or a question waits until handled.
+ */
 function acknowledgeOpened(
   api: LocalTasksApi,
   library: Pick<LocalTasksLibrary, 'work' | 'reload'>,
   taskSessionId: string
 ) {
-  const items = localTaskItemsForSession(library.work.progress, taskSessionId)
+  const items = localTaskItemsForSession(library.work.progress, taskSessionId).filter(
+    localTaskAttentionClearsOnView
+  )
   if (items.length === 0) {
     return
   }

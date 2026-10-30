@@ -11,6 +11,7 @@ import { useWorktreeCardLinkedDetails } from './use-worktree-card-linked-details
 import { useWorktreeCardReviewDetails } from './use-worktree-card-review-details'
 import { useWorktreeCardSecondaryDetails } from './use-worktree-card-secondary-details'
 import { useWorktreeCardWorkspaceActions } from './use-worktree-card-workspace-actions'
+import { useLocalTaskWorkspaceLinked } from '@/local-tasks/local-task-workspace-task'
 
 export function useWorktreeCardController(props: ResolvedWorktreeCardProps) {
   const { worktree, repo } = props
@@ -58,6 +59,7 @@ export function useWorktreeCardController(props: ResolvedWorktreeCardProps) {
     getWorkspaceAttachments(worktree),
     referenceDetails
   )
+  const localTaskLinked = useLocalTaskWorkspaceLinked(worktree)
 
   useWorktreeCardLifecycleEffects({
     worktree,
@@ -166,6 +168,7 @@ export function useWorktreeCardController(props: ResolvedWorktreeCardProps) {
     detailsHoverControl,
     referenceDetails,
     reviewChecks,
+    localTaskLinked,
     showStatus,
     showIssue,
     showLinearIssue,

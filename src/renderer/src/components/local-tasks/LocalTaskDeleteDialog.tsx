@@ -40,14 +40,14 @@ export function LocalTaskDeleteDialog({
     }
     onOpenChange(false)
     localTaskPageStore.getState().openDetail(null)
-    toast.success(translate('localTasks.delete.done', 'Deleted {{ref}}', { ref: task.ref }))
+    toast.success(translate('localTasks.delete.done', 'Deleted “{{title}}”', { title: task.title }))
   }
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent data-local-task-overlay="" size="compact">
         <DialogHeader>
           <DialogTitle>
-            {translate('localTasks.delete.title', 'Delete {{ref}}?', { ref: task.ref })}
+            {translate('localTasks.delete.title', 'Delete “{{title}}”?', { title: task.title })}
           </DialogTitle>
           <DialogDescription>
             {descendantCount > 0

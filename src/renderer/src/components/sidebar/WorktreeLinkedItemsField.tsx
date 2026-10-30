@@ -16,6 +16,10 @@ import {
   appendWorkspaceAttachment,
   isWorkspaceAttachmentLinked
 } from './workspace-attachment-source-result'
+import {
+  LocalTaskLinkedWorkRow,
+  useLocalTaskLinkedWorkCount
+} from '@/components/local-tasks/LocalTaskLinkedWorkRow'
 
 type Props = {
   items: readonly WorkspaceAttachment[]
@@ -100,23 +104,27 @@ export function WorktreeLinkedItemsField({
     const next = items.filter((item) => getWorkspaceAttachmentKey(item) !== key)
     onItemsChange(next)
   }
+  const localTaskCount = useLocalTaskLinkedWorkCount()
+  const count = items.length + localTaskCount
   const groups = [
     {
       label: translate('workspace.links.reviews', 'Reviews'),
-      items: items.filter((item) => item.type !== 'issue')
+      items: items.filter((item) => item.type !== 'issue'),
+      localTasks: 0
     },
     {
       label: translate('workspace.links.tasks', 'Issues & tasks'),
-      items: items.filter((item) => item.type === 'issue')
+      items: items.filter((item) => item.type === 'issue'),
+      localTasks: localTaskCount
     }
-  ].filter((group) => group.items.length > 0)
+  ].filter((group) => group.items.length + group.localTasks > 0)
 
   return (
     <div className="space-y-3" data-workspace-linked-items="">
       <div className="flex items-center justify-between gap-2">
         <Label>{translate('workspace.links.title', 'Linked work')}</Label>
         <span className="text-xs text-muted-foreground">
-          {translate('workspace.links.count', '{{count}} linked', { count: items.length })}
+          {translate('workspace.links.count', '{{count}} linked', { count })}
         </span>
       </div>
       <WorkspaceAttachmentComposer
@@ -133,7 +141,7 @@ export function WorktreeLinkedItemsField({
         getScopeError={getScopeError}
         error={error}
       />
-      {items.length === 0 ? (
+      {count === 0 ? (
         <div className="flex items-center gap-2 py-2 text-xs text-muted-foreground">
           <Link2 className="size-4 shrink-0" />
           <span>
@@ -148,9 +156,10 @@ export function WorktreeLinkedItemsField({
           {groups.map((group) => (
             <div key={group.label} className="space-y-1">
               <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                {group.label} · {group.items.length}
+                {group.label} · {group.items.length + group.localTasks}
               </p>
               <div className="divide-y divide-border">
+                {group.localTasks > 0 ? <LocalTaskLinkedWorkRow disabled={disabled} /> : null}
                 {group.items.map((item) => {
                   const key = getWorkspaceAttachmentKey(item)
                   return (

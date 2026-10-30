@@ -64,7 +64,7 @@ function host(id: string): HostProfile {
 }
 
 /** One paired desktop with local tasks, counting what home asked it. */
-function desktop(id: string, projectCount: number) {
+function desktop(id: string, projectCount: number, sourceHidden?: boolean) {
   const calls: string[] = []
   const answers: Record<string, unknown> = {
     'status.get': { capabilities: [LOCAL_TASKS_RUNTIME_CAPABILITY] },
@@ -75,7 +75,8 @@ function desktop(id: string, projectCount: number) {
       revision: 1,
       taskHostId: id,
       inProgressCount: 3,
-      projectCount
+      projectCount,
+      ...(sourceHidden === undefined ? {} : { sourceHidden })
     },
     'localTasks.attention.get': { observedAt: 1, sessions: [], items: [] }
   }
@@ -159,6 +160,24 @@ describe('the home local tasks card', () => {
     await show(['home-empty'])
     expect(tree()).toBeNull()
     expect(calls).toEqual(['status.get', 'localTasks.status'])
+  })
+
+  it('leaves out a host whose desktop hides local tasks, and counts one too old to say', async () => {
+    const copy = localTasksCopy()
+    const hidden = desktop('home-hidden', 2, true)
+    desktop('home-older', 1)
+    await show(['home-hidden', 'home-older'])
+    expect(hidden).toEqual(['status.get', 'localTasks.status'])
+    // Only the older host's 3 in progress: the hidden library is neither read further nor counted.
+    expect(texts()).toEqual([
+      copy.homeCardTitle,
+      `${copy.work.homeNeedsYou(0)} · ${copy.homeCardInProgress(3)}`
+    ])
+
+    // Out of contact later, a hidden library is no "cannot connect" line either.
+    env.states['home-hidden'] = 'disconnected'
+    await show(['home-older'])
+    expect(texts()).not.toContain(copy.desktopDisconnected('home-hidden'))
   })
 
   it('never calls an unreachable host closed, and says nothing while it reconnects', async () => {

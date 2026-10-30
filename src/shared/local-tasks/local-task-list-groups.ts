@@ -48,7 +48,11 @@ export type LocalTaskListEntry = {
   children: LocalTask[]
   lines: LocalTaskTreeLine[]
 }
-export type LocalTaskListGroup = LocalTaskGroupHead & { entries: LocalTaskListEntry[] }
+/** `count` is every shown task whose own value is this group's, nested under another group or not. */
+export type LocalTaskListGroup = LocalTaskGroupHead & {
+  entries: LocalTaskListEntry[]
+  count: number
+}
 export type LocalTaskBoardColumn = LocalTaskStatusHead & { tasks: LocalTask[] }
 
 export function statusHeadCategory(head: LocalTaskStatusHead): LocalTaskStatusCategory {
@@ -163,9 +167,10 @@ export function unfoldedLocalTaskLines(
 }
 
 /**
- * A subtask whose parent is shown rides under the parent, whatever the grouping, and is not
- * counted in the group (REQ-006). Subtasks keep their number order under the parent, at any
- * depth (D-008); `children` stays the first level so every client nests alike.
+ * A subtask whose parent is shown rides under the parent, whatever the grouping, yet counts in the
+ * group of its own value, so a heading agrees with the nav and the board (REQ-006). Subtasks keep
+ * their number order under the parent, at any depth (D-008); `children` stays the first level so
+ * every client nests alike.
  */
 export function groupLocalTasksForList(
   scopeTasks: readonly LocalTask[],
@@ -186,12 +191,14 @@ export function groupLocalTasksForList(
     visibleIds.has(task.id) &&
     !isExactLocalTaskRef(task, index.projectsById.get(task.projectId), visibility.query)
   const entriesByKey = new Map<string, LocalTaskListEntry[]>()
+  const countByKey = new Map<string, number>()
   for (const task of visible) {
-    if (task.parentId && visibleIds.has(task.parentId) && nests(task)) {
-      continue
-    }
     const key = headKeyFor(task, index, kind)
     if (key === null) {
+      continue
+    }
+    countByKey.set(key, (countByKey.get(key) ?? 0) + 1)
+    if (task.parentId && visibleIds.has(task.parentId) && nests(task)) {
       continue
     }
     const children = (index.childrenByParentId.get(task.id) ?? []).filter(nests)
@@ -212,7 +219,8 @@ export function groupLocalTasksForList(
     heads
       .map((head) => ({
         ...head,
-        entries: (entriesByKey.get(head.key) ?? []).sort((a, b) => compare(a.task, b.task))
+        entries: (entriesByKey.get(head.key) ?? []).sort((a, b) => compare(a.task, b.task)),
+        count: countByKey.get(head.key) ?? 0
       }))
       .filter((group) => group.entries.length > 0)
       // Why: the group holding the searched ref moves up too, so the match is the first row.

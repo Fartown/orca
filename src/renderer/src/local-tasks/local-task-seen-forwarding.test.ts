@@ -132,6 +132,19 @@ it('fails alone: a throw while forwarding still lets every later app store liste
   consoleError.mockRestore()
 })
 
+it('leaves an approval waiting after a glance; only a finished turn is done once seen (REQ-014)', () => {
+  localTasksDomainStore
+    .getState()
+    .writer('local')
+    .applyProgress({
+      observedAt: 3,
+      sessions: [],
+      items: [{ ...item('s1', 'tab-1:leaf-1@100', 100), kind: 'approval', replyable: false }]
+    })
+  useAppStore.setState({ acknowledgedAgentsByPaneKey: { 'tab-1:leaf-1': 100 } })
+  expect(fixture.acknowledgeAttention).not.toHaveBeenCalled()
+})
+
 it('marks an item seen once when opening its session also acknowledges its pane', () => {
   acknowledgeLocalTaskItemOnce(item('s1', 'tab-1:leaf-1@100', 100))
   expect(fixture.acknowledgeAttention).toHaveBeenCalledOnce()

@@ -118,6 +118,8 @@ export function getWorkspaceCleanupTicketSourceLabel(source: WorkspaceCleanupTic
       return translate('components.workspace.cleanup.browse.ticket.linear', 'Linear')
     case 'issue':
       return translate('components.workspace.cleanup.browse.ticket.issue', 'Issue')
+    case 'local-task':
+      return translate('localTasks.cleanup.ticketSource', 'Local task')
   }
 }
 

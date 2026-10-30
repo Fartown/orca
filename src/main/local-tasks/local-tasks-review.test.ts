@@ -243,6 +243,19 @@ describe('local tasks review regressions', () => {
     db.close()
   })
 
+  it('reports a hidden Local source for status, so a phone follows the desktop choice', () => {
+    const { db, service } = fixture()
+    expect(service.sourceHidden()).toBe(false)
+    expect(service.setPreference('taskSourceHidden', '1')).toEqual({ ok: true })
+    expect(service.sourceHidden()).toBe(true)
+    expect(service.setPreference('taskSourceHidden', null)).toEqual({ ok: true })
+    expect(service.sourceHidden()).toBe(false)
+    expect(service.cardTaskHidden()).toBe(false)
+    expect(service.setPreference('cardShowLocalTask', '0')).toEqual({ ok: true })
+    expect(service.cardTaskHidden()).toBe(true)
+    db.close()
+  })
+
   it('does not publish unchanged status, preference or comment edits', () => {
     const { db, service, project, task } = fixture()
     const status = project.statuses[0]

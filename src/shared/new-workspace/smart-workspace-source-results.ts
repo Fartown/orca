@@ -18,7 +18,16 @@ export {
   isSmartWorkspaceSourceQueryWithinLimit
 } from './smart-workspace-source-query'
 
-export type SmartNameMode = 'smart' | 'github' | 'gitlab' | 'branches' | 'linear' | 'jira' | 'text'
+// Why `local`: the fork's Local tasks tab; its rows come from the task library, never this module.
+export type SmartNameMode =
+  | 'smart'
+  | 'github'
+  | 'gitlab'
+  | 'branches'
+  | 'linear'
+  | 'jira'
+  | 'text'
+  | 'local'
 
 export type SmartWorkspaceSourceRow =
   | { kind: 'use-name'; value: string; name: string }
@@ -38,7 +47,8 @@ const EMPTY_HINT_BY_MODE: Record<SmartNameMode, string> = {
   branches: 'No matching branches.',
   linear: 'Start typing to search Linear issues.',
   jira: 'Start typing to search Jira issues, or paste an issue URL.',
-  text: ''
+  text: '',
+  local: 'No matching local tasks.'
 }
 
 export function getSmartWorkspaceEmptyHint(mode: SmartNameMode): string {
@@ -239,7 +249,7 @@ export function buildSmartWorkspaceSourceRows({
   if (jiraIntent) {
     return jiraIssue ? [toJiraSourceRow(jiraIssue)] : []
   }
-  if (!isSmartWorkspaceSourceQueryWithinLimit(value)) {
+  if (!isSmartWorkspaceSourceQueryWithinLimit(value) || mode === 'local') {
     return []
   }
   const resolvedLinearIssues = Array.isArray(linearIssues)

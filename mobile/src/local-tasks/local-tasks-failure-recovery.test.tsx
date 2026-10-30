@@ -6,7 +6,7 @@ import type { RpcClient } from '../transport/rpc-client'
 import type { RpcResponse } from '../transport/types'
 import { createLocalTasksApi, type LocalTasksApi } from './local-tasks-api'
 import { initialLocalTaskDraft } from './local-task-form-state'
-import { localTasksCopyFor } from './local-tasks-copy'
+import { localTasksCopy } from './local-tasks-copy'
 import { localTasksScreenState } from './local-tasks-screen-state'
 import { useLocalTaskFormSubmit } from './use-local-task-form-submit'
 import { useLocalTasksLibrary, type LocalTasksLibrary } from './use-local-tasks-library'
@@ -78,7 +78,7 @@ describe('mobile task failure recovery', () => {
   })
 
   it('keeps a loaded library mounted and read-only while the host reconnects', () => {
-    const state = localTasksScreenState(localTasksCopyFor('en'), {
+    const state = localTasksScreenState(localTasksCopy(), {
       access: 'checking',
       machineName: 'desk',
       status: null,
@@ -184,7 +184,7 @@ describe('mobile task failure recovery', () => {
     expect(model?.error).toBe('project read failed')
     expect(model?.loaded).toBe(false)
     expect(
-      localTasksScreenState(localTasksCopyFor('en'), {
+      localTasksScreenState(localTasksCopy(), {
         access: 'ready',
         machineName: 'desk',
         status: model?.status ?? null,
@@ -246,7 +246,7 @@ describe('mobile task failure recovery', () => {
     expect(model?.projects).toEqual([])
     expect(model?.error).toBe('later failure')
     expect(
-      localTasksScreenState(localTasksCopyFor('en'), {
+      localTasksScreenState(localTasksCopy(), {
         access: 'ready',
         machineName: 'desk',
         status: model?.status ?? null,
@@ -254,7 +254,7 @@ describe('mobile task failure recovery', () => {
         loaded: model?.loaded ?? false,
         error: model?.error ?? null
       })
-    ).toMatchObject({ kind: 'library', notice: localTasksCopyFor('en').loadFailed })
+    ).toMatchObject({ kind: 'library', notice: localTasksCopy().loadFailed })
   })
 
   it('writes all pasted subtask properties and retries a failed second step without creating again', async () => {
@@ -294,7 +294,7 @@ describe('mobile task failure recovery', () => {
     })
     expect(first).toBe(false)
     expect(model?.partialTaskId).toBe('parent')
-    expect(model?.error).toContain(localTasksCopyFor('en').subtasksPartiallySaved)
+    expect(model?.error).toContain(localTasksCopy().subtasksPartiallySaved)
     expect(updateTask).not.toHaveBeenCalled()
     let second: boolean | undefined
     await act(async () => {

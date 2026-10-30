@@ -24,8 +24,10 @@ import { getDefaultSettings } from '../../../shared/constants'
 import { notifyWorktreeCreationCompleted } from './local-task-creation-events'
 import { localTasksDomainStore } from './local-tasks-domain-store'
 import {
+  LOCAL_TASK_COMPOSER_KEY,
   bindLocalTaskStartWork,
-  rememberLocalTaskStartForTests,
+  releaseLocalTaskComposer,
+  rememberLocalTaskStart,
   resetLocalTaskStartWorkForTests,
   startLocalTaskWork
 } from './local-task-start-work'
@@ -83,7 +85,7 @@ beforeEach(() => {
   localTasksDomainStore.getState().writer('local').applyTasks([task])
   fixture.linkWorkspace.mockResolvedValue({ ok: true, workspace: {} })
   fixture.recordSession.mockResolvedValue({ ok: true, session: {} })
-  rememberLocalTaskStartForTests('creation-1', {
+  rememberLocalTaskStart('creation-1', {
     taskId: 'task-12',
     orcaProjectIds: ['orca-shop'],
     replace: false
@@ -162,7 +164,7 @@ it('links but records no session when the chat launch settled with nothing', asy
 
 it('does not link a workspace the composer created in another project', async () => {
   resetLocalTaskStartWorkForTests()
-  rememberLocalTaskStartForTests('creation-1', {
+  rememberLocalTaskStart('creation-1', {
     taskId: 'task-12',
     orcaProjectIds: ['orca-other'],
     replace: false
@@ -174,7 +176,7 @@ it('does not link a workspace the composer created in another project', async ()
 
 it('links whatever repo the composer used when the task project links none', async () => {
   resetLocalTaskStartWorkForTests()
-  rememberLocalTaskStartForTests('creation-1', {
+  rememberLocalTaskStart('creation-1', {
     taskId: 'task-12',
     orcaProjectIds: [],
     replace: false
@@ -238,7 +240,7 @@ it('lets a created workspace go when its link could not be written', async () =>
   await vi.waitFor(() => expect(localTaskStartedWorkspaceStore.getState().started).toEqual([]))
 })
 
-it('gives only the first workspace of a Create another run to the task', () => {
+it('starts in the composer with the task preselected, and lets go of it once a creation starts', () => {
   const project: LocalTaskProject = {
     id: 'p',
     name: 'Shop',
@@ -272,16 +274,18 @@ it('gives only the first workspace of a Create another run to the task', () => {
       }
     ]
   })
-  expect(startLocalTaskWork(task, project)).toBe(true)
-  const started = useAppStore.getState().modalData.onCreationStarted
-  if (typeof started !== 'function') {
-    throw new Error('Expected the task composer to observe its creation')
-  }
-  started('creation-2')
+  expect(startLocalTaskWork(task, project, { replace: true })).toBe(true)
+  expect(useAppStore.getState().activeModal).toBe('new-workspace-composer')
+  expect(useAppStore.getState().modalData).toMatchObject({
+    initialRepoId: 'repo1',
+    prefilledName: 'shop-12-order-export',
+    [LOCAL_TASK_COMPOSER_KEY]: { taskId: 'task-12', orcaProjectIds: [], replace: true }
+  })
+  // Why no prompt here: the composer hands the task to the agent as a draft, from its own pick.
+  expect(useAppStore.getState().modalData).not.toHaveProperty('launchPrompt')
+  releaseLocalTaskComposer()
   const { activeModal, modalData } = useAppStore.getState()
   expect(activeModal).toBe('new-workspace-composer')
   expect(modalData).toMatchObject({ initialRepoId: 'repo1' })
-  expect(modalData).not.toHaveProperty('launchPrompt')
-  expect(modalData).not.toHaveProperty('onCreationStarted')
-  expect(modalData).not.toHaveProperty('initialTaskRepo')
+  expect(modalData).not.toHaveProperty(LOCAL_TASK_COMPOSER_KEY)
 })

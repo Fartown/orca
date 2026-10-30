@@ -58,7 +58,8 @@ const SELECTABLE_ENTRY_TYPES = [
   'workspace-tab',
   'simulator-tab',
   'project-target',
-  'hint'
+  'hint',
+  'local-task'
 ] as const
 
 type WorktreePaletteSelectableEntryType = (typeof SELECTABLE_ENTRY_TYPES)[number]

@@ -1,13 +1,16 @@
 import { translate } from '@/i18n/i18n'
 import { useLocalTasksDomain } from '@/local-tasks/local-tasks-domain-store'
+import { selectLocalTaskSourceVisible } from '@/local-tasks/local-task-source-visibility'
 
 /**
  * The global Needs you count on the sidebar's Tasks button (§8.2). Reads only the feature's own
  * store, so it mounts without a provider. It fades while the row's source shortcuts show, and
- * stays hidden where those shortcuts are always shown (no hover).
+ * stays hidden where those shortcuts are always shown (no hover), or once Local is hidden.
  */
 export function LocalTaskNeedsYouCount(): React.JSX.Element | null {
-  const count = useLocalTasksDomain((state) => state.progress?.items.length ?? 0)
+  const count = useLocalTasksDomain((state) =>
+    selectLocalTaskSourceVisible(state) ? (state.progress?.items.length ?? 0) : 0
+  )
   if (count === 0) {
     return null
   }

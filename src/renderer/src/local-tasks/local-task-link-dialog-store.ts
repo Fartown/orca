@@ -1,11 +1,13 @@
 import { createStore } from 'zustand/vanilla'
 import { useStore } from 'zustand'
 
-/** Which link dialog is open; opened from the task page, a workspace menu or a session chip. */
+/**
+ * Which task-side link dialog is open, from the task page. Linking from a workspace goes through
+ * Orca's own workspace details instead (`local-task-workspace-details.ts`).
+ */
 export type LocalTaskLinkDialog =
   | { kind: 'session'; taskId: string }
   | { kind: 'pick-workspace'; taskId: string }
-  | { kind: 'pick-task'; worktreeId: string; hostId: string }
 
 type LocalTaskLinkDialogState = {
   dialog: LocalTaskLinkDialog | null

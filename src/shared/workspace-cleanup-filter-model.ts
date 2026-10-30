@@ -19,7 +19,8 @@ export type WorkspaceCleanupGitState = 'clean' | 'dirty' | 'unpushed' | 'unknown
 export type WorkspaceCleanupAgentState = 'working' | 'permission' | 'idle'
 /** `draft` is a review STATE, not a separate flag. */
 export type WorkspaceCleanupReviewState = 'open' | 'draft' | 'merged' | 'closed' | 'unknown'
-export type WorkspaceCleanupTicketSource = 'work-item' | 'linear' | 'issue'
+/** `local-task`: the fork's task library links the workspace (it is not in `linkedItems`). */
+export type WorkspaceCleanupTicketSource = 'work-item' | 'linear' | 'issue' | 'local-task'
 export type WorkspaceCleanupBlockerMode = 'any-of' | 'none-of'
 
 export type WorkspaceCleanupSortField =

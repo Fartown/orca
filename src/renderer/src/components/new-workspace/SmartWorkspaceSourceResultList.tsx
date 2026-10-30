@@ -7,6 +7,7 @@ import { getSmartWorkspaceEmptyHint } from '../../../../shared/new-workspace/sma
 import { getRowItemClassName, RowIcon, RowLabel } from './smart-workspace-source-row-content'
 import type { RowEntry } from './smart-workspace-name-field-model'
 import type { WorkItemSourceSearch } from './use-work-item-source-search'
+import { isLocalTaskSourceRowUnavailable } from '@/local-tasks/local-task-source-rows'
 
 export function SmartWorkspaceSourceResultList({
   model,
@@ -154,7 +155,9 @@ export function SmartWorkspaceSourceResultList({
                 selection="palette"
                 key={row.value}
                 value={row.value}
-                disabled={isLinked?.(row) || isRowDisabled?.(row)}
+                disabled={
+                  isLinked?.(row) || isRowDisabled?.(row) || isLocalTaskSourceRowUnavailable(row)
+                }
                 onSelect={() => onSelect(row)}
                 className={getRowItemClassName(row)}
               >

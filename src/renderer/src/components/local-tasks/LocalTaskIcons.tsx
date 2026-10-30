@@ -125,7 +125,7 @@ export function LocalTaskPriorityIcon({
             height="1.5"
             rx=".6"
             fill="var(--muted-foreground)"
-            opacity=".7"
+            opacity=".45"
           />
         ))}
       </svg>

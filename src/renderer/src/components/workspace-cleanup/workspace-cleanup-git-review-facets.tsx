@@ -28,6 +28,7 @@ import {
   getWorkspaceCleanupTriStateLabel
 } from './workspace-cleanup-facet-labels'
 import type { WorkspaceCleanupFacetGroupProps } from './workspace-cleanup-facet-panel-model'
+import { useLocalTaskCleanupTicketSourceValues } from '@/local-tasks/local-task-cleanup-ticket-source'
 
 /** Git, review/PR, tickets, location/host, and safety blockers. */
 export function WorkspaceCleanupGitReviewFacets({
@@ -37,6 +38,10 @@ export function WorkspaceCleanupGitReviewFacets({
   options,
   onPatch
 }: WorkspaceCleanupFacetGroupProps): React.JSX.Element {
+  const ticketSources = useLocalTaskCleanupTicketSourceValues(
+    WORKSPACE_CLEANUP_TICKET_SOURCE_VALUES,
+    filters.ticket.sources
+  )
   return (
     <>
       <FacetSection
@@ -123,7 +128,7 @@ export function WorkspaceCleanupGitReviewFacets({
           onChange={(presence) => onPatch('ticket', { presence })}
         />
         <FacetToggleList
-          values={WORKSPACE_CLEANUP_TICKET_SOURCE_VALUES}
+          values={ticketSources}
           selected={filters.ticket.sources}
           getLabel={getWorkspaceCleanupTicketSourceLabel}
           onChange={(sources) => onPatch('ticket', { sources })}

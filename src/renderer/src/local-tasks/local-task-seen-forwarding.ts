@@ -1,5 +1,6 @@
 import { useAppStore } from '@/store'
 import { structuredAgentSessionPaneKey } from '../../../shared/structured-agent-session-projection'
+import { localTaskAttentionClearsOnView } from '../../../shared/local-tasks/local-task-attention-rules'
 import type {
   LocalTaskAttentionItem,
   LocalTaskSessionLink
@@ -23,9 +24,9 @@ function seenPaneKeys(link: SeenSession): string[] {
 }
 
 /**
- * Items whose session upstream recorded as seen (`acknowledgedAgentsByPaneKey`, the turn start the
- * user acknowledged) at or after the turn the item waits on: the user looked at it from the
- * sidebar, a tab or anywhere else.
+ * Finished turns whose session upstream recorded as seen (`acknowledgedAgentsByPaneKey`, the turn
+ * start the user acknowledged) at or after the turn: the user read it from the sidebar, a tab or
+ * anywhere else. Other kinds still wait after a glance (REQ-014).
  */
 export function findLocalTaskItemsSeenElsewhere(
   items: readonly LocalTaskAttentionItem[],
@@ -36,6 +37,7 @@ export function findLocalTaskItemsSeenElsewhere(
   return items.filter((item) => {
     const link = byId.get(item.taskSessionId)
     return (
+      localTaskAttentionClearsOnView(item) &&
       link !== undefined &&
       seenPaneKeys(link).some((paneKey) => (acknowledgedAt[paneKey] ?? 0) >= item.since)
     )

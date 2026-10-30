@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { AppState } from 'react-native'
 import { useFocusEffect } from 'expo-router'
+import { localTaskAttentionClearsOnView } from '../../../src/shared/local-tasks/local-task-attention-rules'
 import type { LocalTaskProgressSnapshot } from '../../../src/shared/local-tasks/local-task-link-types'
 import type { RpcClient } from '../transport/rpc-client'
 import { createLocalTasksApi } from './local-tasks-api'
@@ -52,7 +53,9 @@ function useSessionVisibleSince(taskSessionId: string | null): number | null {
 
 /**
  * Looking at a linked session is seeing it: the "Needs you" items it already held when it came
- * into view are marked seen on the library's host, once per item (技术方案 §9.2).
+ * into view are marked seen on the library's host, once per item (技术方案 §9.2). Only those a
+ * look settles (REQ-014): a finished turn. An approval, a question or a block keeps waiting until
+ * it is handled or marked seen on purpose (REQ-015).
  */
 export function useAcknowledgeOpenSession(
   client: RpcClient | null,
@@ -67,7 +70,7 @@ export function useAcknowledgeOpenSession(
     }
     const api = createLocalTasksApi(client)
     for (const item of localTaskItemsSeenInSession(progress, taskSessionId, visibleSince)) {
-      if (!acknowledged.current.has(item.key)) {
+      if (localTaskAttentionClearsOnView(item) && !acknowledged.current.has(item.key)) {
         acknowledged.current.add(item.key)
         void sendLocalTaskWrite(
           createLocalTaskOperationIds(),

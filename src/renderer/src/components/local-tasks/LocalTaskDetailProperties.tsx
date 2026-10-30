@@ -92,7 +92,7 @@ export function LocalTaskDetailProperties({
   )
 
   return (
-    <aside className="flex w-72 shrink-0 flex-col gap-3 overflow-y-auto border-l border-border/60 pl-5 scrollbar-sleek">
+    <aside className="flex w-full shrink-0 flex-col gap-3 border-t border-border/60 pt-4 scrollbar-sleek @3xl/local-task-detail:w-72 @3xl/local-task-detail:overflow-y-auto @3xl/local-task-detail:border-t-0 @3xl/local-task-detail:border-l @3xl/local-task-detail:pt-0 @3xl/local-task-detail:pl-5">
       {workspace ? <div className="border-b border-border/60 pb-3">{workspace}</div> : null}
       <Property label={translate('localTasks.field.status', 'Status')}>
         <LocalTaskStatusSelect
@@ -113,6 +113,7 @@ export function LocalTaskDetailProperties({
         <LocalTaskLabelsPicker
           value={task.labels}
           suggestions={suggestions}
+          emptyText={translate('localTasks.field.noLabels', 'No labels')}
           disabled={!writable}
           onToggle={(label) => void toggleLocalTasksLabel([task], label)}
         />
@@ -121,6 +122,7 @@ export function LocalTaskDetailProperties({
         <LocalTaskParentPicker
           candidates={parents}
           value={task.parentId}
+          emptyText={translate('localTasks.field.noParent', 'No parent')}
           disabled={!writable}
           onChange={(parentId) => void updateLocalTaskFields(task, { parentId })}
         />
