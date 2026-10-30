@@ -13,6 +13,7 @@ import {
 } from '../../../../shared/worktree/degraded-repo-worktree-validity'
 import type { TerminalSlice, TerminalStoreGet, TerminalStoreSet } from './terminal-state'
 import { buildRuntimeSessionPlaceholders } from './workspace-terminal-placeholders'
+import { restorableRuntimeSessionOwners } from '../../../../shared/workspace-session-recovery/restorable-workspaces'
 import {
   targetScopedWorkspaceHydrationPatch,
   transferNormalizedTerminalLayoutPtyOwnership,
@@ -44,7 +45,10 @@ export function createWorkspaceTerminalHydrationActions(
       set((s) => {
         const runtimeSessionPlaceholders = buildRuntimeSessionPlaceholders({
           repos: s.repos,
-          runtimeHostIdByWorkspaceSessionKey: options?.runtimeHostIdByWorkspaceSessionKey ?? {},
+          runtimeHostIdByWorkspaceSessionKey: restorableRuntimeSessionOwners(
+            session,
+            options?.runtimeHostIdByWorkspaceSessionKey ?? {}
+          ),
           worktreesByRepo: s.worktreesByRepo
         })
         const validWorktreeIds = buildValidWorktreeIdsForSessionHydration(

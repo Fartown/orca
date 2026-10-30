@@ -21,6 +21,7 @@ import {
 import { getRuntimeTargetHostId } from '../../runtime/runtime-client-target'
 import { mergeFetchedHostProjectCatalog } from '../../../../shared/project-compatibility-host-merge'
 import { scheduleSafeAutoForkSync } from './safe-auto-fork-sync'
+import { reconcileRestoredWorkspaceCatalog } from '../../workspace-session-recovery/restored-workspace-catalog'
 
 export function createRuntimeRepoCatalogActions(
   set: Parameters<StateCreator<AppState>>[0],
@@ -52,7 +53,13 @@ export function createRuntimeRepoCatalogActions(
           }
           const result = mergeFetchedRepoCatalog(catalog, s.repos)
           const reconciliation = reconcileSupersededSshRepos(result.repos, s)
-          const finalizedRepos = applyManualRepoOrder(reconciliation.repos, s.manualRepoOrder)
+          const readopted = reconcileReadoptedSshWorktreeState(s, s.pendingSshRepoReadoptions)
+          const recovered = reconcileRestoredWorkspaceCatalog(
+            { ...s, ...readopted },
+            reconciliation.repos,
+            result.hostId
+          )
+          const finalizedRepos = applyManualRepoOrder(recovered.repos, s.manualRepoOrder)
           const validRepoIds = new Set(finalizedRepos.map((repo) => repo.id))
           const validRepoHostIdentities = new Set(finalizedRepos.map(getRepoHostIdentity))
           const mergedProjectCompatibility = mergeFetchedHostProjectCatalog({
@@ -72,6 +79,8 @@ export function createRuntimeRepoCatalogActions(
             (repo) => getRepoExecutionHostId(repo) === result.hostId
           )
           return {
+            ...readopted,
+            ...recovered,
             repos: finalizedRepos,
             ...(visibilityDefaults === undefined
               ? {}
@@ -105,7 +114,6 @@ export function createRuntimeRepoCatalogActions(
                 : {}
               : {}),
             pendingSshRepoReadoptions: reconciliation.pendingReadoptions,
-            ...reconcileReadoptedSshWorktreeState(s, s.pendingSshRepoReadoptions),
             ...mergedProjectCompatibility,
             activeRepoId:
               s.activeRepoId && validRepoIds.has(s.activeRepoId) ? s.activeRepoId : null,

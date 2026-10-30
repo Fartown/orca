@@ -7,6 +7,40 @@
   ],
   "policies": [
     {
+      "id": "workspace-session-recovery",
+      "description": "Recover workspace content without resurrecting historical selections or crossing host ownership.",
+      "rules": [
+        {
+          "id": "workspace-session-recovery-worktree-scope",
+          "type": "change-scope",
+          "comparison": "worktree",
+          "whenChanged": [
+            "src/shared/workspace-session-recovery/**",
+            "src/renderer/src/workspace-session-recovery/**",
+            "docs/issue/工作区恢复占位收敛/**",
+            "tests/e2e/workspace-session-recovery.spec.ts",
+            "src/renderer/src/store/terminals/workspace-terminal-hydration.ts",
+            "src/renderer/src/store/repos/all-host-repo-catalog-actions.ts",
+            "src/renderer/src/store/repos/runtime-repo-catalog-actions.ts"
+          ],
+          "allowedPaths": [
+            "src/shared/workspace-session-recovery/**",
+            "src/renderer/src/workspace-session-recovery/**",
+            "docs/issue/工作区恢复占位收敛/**",
+            "tests/e2e/workspace-session-recovery.spec.ts",
+            "src/renderer/src/store/terminals/workspace-terminal-hydration.ts",
+            "src/renderer/src/store/repos/all-host-repo-catalog-actions.ts",
+            "src/renderer/src/store/repos/runtime-repo-catalog-actions.ts",
+            ".gitignore",
+            "config/fork-features.jsonc",
+            "config/architecture-policies.jsonc",
+            "docs/issue/README.md"
+          ],
+          "message": "Change is outside workspace session recovery."
+        }
+      ]
+    },
+    {
       "id": "mobile-terminal-surface-recovery",
       "description": "Original-surface recovery for mobile workspace activation, with one product seam and feature-owned admission policy.",
       "rules": [
@@ -184,6 +218,13 @@
           "baseRef": "$base",
           "requireBaseAncestor": false,
           "allowedPaths": [
+            "src/shared/workspace-session-recovery/**",
+            "src/renderer/src/workspace-session-recovery/**",
+            "docs/issue/工作区恢复占位收敛/**",
+            "tests/e2e/workspace-session-recovery.spec.ts",
+            "src/renderer/src/store/terminals/workspace-terminal-hydration.ts",
+            "src/renderer/src/store/repos/all-host-repo-catalog-actions.ts",
+            "src/renderer/src/store/repos/runtime-repo-catalog-actions.ts",
             "src/renderer/src/mobile-terminal-surface-recovery/**",
             "src/renderer/src/lib/worktree-agent-live-surface-adoption.ts",
             "src/renderer/src/lib/worktree-agent-activation-gate.test.ts",
