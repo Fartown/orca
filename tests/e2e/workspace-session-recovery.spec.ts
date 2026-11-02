@@ -43,6 +43,7 @@ test('history-only restoration keeps local workspaces without extra sidebar rows
 test('retains a named remote editor through catalog removal and client restart', async ({
   orcaAppExtraEnv
 }, testInfo) => {
+  // Why: boots a headless paired host and launches the paired client twice across a restart.
   test.setTimeout(240_000)
   const root = mkdtempSync(path.join(os.tmpdir(), 'orca-workspace-recovery-'))
   const projectPath = path.join(root, 'recovered-project')
