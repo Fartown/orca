@@ -1377,6 +1377,11 @@
           "file": "src/renderer/src/components/right-sidebar/AiVaultSessionRow.test.tsx",
           "mustContain": "agentLaunchConfigByPaneKey: {}",
           "why": "session-name row reads launch configs from the store"
+        },
+        {
+          "file": "src/renderer/src/components/activity/activity-answered-ask-timeline.test.tsx",
+          "mustContain": "tabAutoGenerateTitle: true",
+          "why": "Activity names follow the fork rule: no prompt-derived name while auto-generation is off"
         }
       ],
       "tests": [

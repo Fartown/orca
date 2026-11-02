@@ -9,6 +9,7 @@ import type {
   AgentSessionStatusSummary
 } from '../../../../shared/agent-session/agent-session-wire'
 import type { Tab } from '../../../../shared/tab-types'
+import { createGlobalSettingsFixture } from '../../../../shared/global-settings-test-fixture'
 import type { AppState } from '@/store/types'
 import { makeRepo, makeWorktree } from './ActivityPrototypePage-test-fixtures'
 import { activityThreadRowCopy, activityThreadStatusId } from './activity-thread-presentation'
@@ -165,6 +166,8 @@ describe("an answered subagent ask on a settled parent's Activity row", () => {
     const unrelated = { ...structuredTab, id: 'other-tab', entityId: 'other-session' }
     const terminal: Tab = { ...structuredTab, id: 'terminal', contentType: 'terminal' }
     useAppStore.setState({
+      // Fork (session-names): an unnamed chat falls back to its prompt only with generation on.
+      settings: createGlobalSettingsFixture({ tabAutoGenerateTitle: true }),
       unifiedTabsByWorktree: { 'wt-1': [structuredTab, unrelated, terminal] },
       groupsByWorktree: {
         'wt-1': [

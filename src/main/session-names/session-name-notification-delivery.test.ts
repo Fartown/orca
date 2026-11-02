@@ -61,6 +61,7 @@ it.each([true, false])(
       source: 'agent-task-complete',
       worktreeId: 'folder:f',
       notificationId: 'captured-event-A',
+      paneKey: 'pane-A',
       title: 'Provider name · Folder - Codex finished',
       body: 'The patch is ready.',
       agentState: 'done'

@@ -797,7 +797,8 @@
             "skill-guides/orca-cli/references/skill-sharing.md",
             "src/renderer/src/components/right-sidebar/AiVaultSessionRow.test.tsx",
             "src/renderer/src/components/worktree-jump/use-worktree-jump-palette-task-search.test.tsx",
-            "src/shared/plugins/languages/protected-copy-keys.json"
+            "src/shared/plugins/languages/protected-copy-keys.json",
+            "src/renderer/src/components/activity/activity-answered-ask-timeline.test.tsx"
           ],
           "message": "Branch changes an upstream path that no fork feature owns or registers as a seam; extend config/fork-features.jsonc and this allowlist, or move the change into a feature-owned path."
         }
@@ -1605,7 +1606,8 @@
             "src/main/runtime/runtime-orchestration-sender-names.test.ts",
             "src/main/runtime/runtime-orchestration-sender-names.ts",
             "src/renderer/src/runtime/web-session-tabs-sync/terminal-build.ts",
-            "src/renderer/src/components/right-sidebar/AiVaultSessionRow.test.tsx"
+            "src/renderer/src/components/right-sidebar/AiVaultSessionRow.test.tsx",
+            "src/renderer/src/components/activity/activity-answered-ask-timeline.test.tsx"
           ],
           "message": "Change is outside the public naming implementation and its consumer adapters."
         }

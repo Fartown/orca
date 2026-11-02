@@ -3,7 +3,7 @@ title: 会话命名与身份保护
 slug: 会话命名与身份保护
 status: implementing
 created: 2026-09-08
-updated: 2026-10-21
+updated: 2026-11-02
 external_ids: []
 ---
 
@@ -102,6 +102,25 @@ external_ids: []
 - 影响范围：REQ-028、Codex managed脚本的local/posix模板与feature-owned小模块及测试；同时清理local/daemon/relay新PTY继承的外层CODEX_THREAD_ID，避免由Codex启动Orca时误拦正常新pane。未知旧版本无标识、外部手工污染环境等仍需披露。既有失败记录保持原样。
 
 ## 3. 开发记录
+
+### 2026-11-02 同步上游 c9845c5f9c：接入主机保存的聊天名
+
+- 本轮目标：合并上游后保住会话名的一致性与身份保护。
+- 完成内容：
+  - 上游 #31602 把原生聊天的名字改为保存在执行主机上。Activity 现在把它当作「人工名」一级参与排序，与标签页、Dashboard 一致（REQ-025）。
+  - 上游 #31780 在处理 hook 前就会探测原主是否存活。fork 在上游已探测时跳过自己那次，拿不准时仍会探测；本机和 relay 两侧都已覆盖。
+  - 接缝跟随上游搬家：local-pty、agent-status 子目录。三个超行文件里的 fork 代码移进功能自有模块，行为不变。
+- 代码或文档变更：
+  - `use-activity-session-names.ts`
+  - `claude-session-activity.ts`
+  - `session-name-live-entry.ts`
+  - `session-ownership-listener-caches.ts`
+  - 相关测试与本记录
+- 验证证据：本功能登记的 11 条 checks 全部通过，记录在 `.docs/upstream-sync-ui-validation/2026-11-02/evidence/feature-checks/`。
+- 未解决问题：
+  - 上游新增的 `agent-generated-tab-titles.ts` 遇到手动名就跳过，与 fork 在渲染进程的做法相反，需要真机确认。
+  - 上游的 `codex-ephemeral-threads.ts` 与 `codex-title-task-admission` 有重叠，暂时保留 fork 实现。
+- 下一步：真机验证 Activity、标签页和通知三处的名字是否一致。
 
 ### 2026-10-09 同步上游 main 13c9f1fcc8
 

@@ -1,6 +1,7 @@
 import type { AgentHookEventPayload } from '../agent-hook-listener/listener-event'
 import type { HookListenerState } from '../agent-hook-listener/listener-state'
 import {
+  hasOtherAgentProcessOwner,
   isSameAgentProcess,
   readAgentProcessIdentity,
   type AgentProcessIdentity
@@ -91,10 +92,32 @@ export function checkOwnerAfterRefusedClaudeHook(
     sender &&
     owner?.process &&
     !owner.ended &&
-    !isSameAgentProcess(sender, owner.process)
+    !isSameAgentProcess(sender, owner.process) &&
+    !askedBeforeNormalization(row, sender, 'worktreeId' in body ? body.worktreeId : undefined)
   ) {
     void checkOwner(paneKey, sender, row)
   }
+}
+
+/**
+ * Upstream's pre-normalization owner check (#31780) already asked the host about a local owner
+ * that another same-provider process reports against; stricter than it so a doubt still probes.
+ */
+function askedBeforeNormalization(
+  row: AgentHookEventPayload,
+  sender: AgentProcessIdentity,
+  hookWorktreeId: unknown
+): boolean {
+  const worktreeId = typeof hookWorktreeId === 'string' ? hookWorktreeId.trim() : ''
+  return (
+    !row.providerSessionOnly &&
+    (row.connectionId ?? null) === null &&
+    (!worktreeId || !row.worktreeId || worktreeId === row.worktreeId) &&
+    hasOtherAgentProcessOwner(row.agentPresence && { ...row.agentPresence, suspended: undefined }, {
+      agent: 'claude',
+      process: sender
+    })
+  )
 }
 
 /** The relay asks its own presence check, looked up per call, whether the owner exited. */

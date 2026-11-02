@@ -34,6 +34,15 @@ export function useActivitySessionNames(
     }))
   )
   const hostIndex = useMemo(() => buildActivityTabHostIndex(state.tabs), [state.tabs])
+  const chatTabIds = useMemo(
+    () =>
+      new Set(
+        Object.values(state.tabs ?? {}).flatMap((tabs) =>
+          tabs.filter((tab) => tab.contentType === 'agent-session').map((tab) => tab.id)
+        )
+      ),
+    [state.tabs]
+  )
   const hostFor = useCallback(
     (target: ActivitySessionNameTarget) =>
       resolveActivityExecutionHostId(
@@ -88,15 +97,19 @@ export function useActivitySessionNames(
       const paneLiveTitle = ownsCurrent
         ? resolveAgentRowPaneLiveTitle(layout, state.paneTitles[tab.id], pane?.leafId)
         : null
+      // A native chat's projected customTitle is its host-saved name, the one its tab shows.
+      const chatSavedName = chatTabIds.has(tab.id) ? tab.customTitle : null
       return getActivitySessionName(entry, tab, state.generated, {
         record,
         manualTitle:
-          agent && sessionId ? getCanonicalSessionTitle(host, agent, sessionId) : undefined,
+          (agent && sessionId ? getCanonicalSessionTitle(host, agent, sessionId) : undefined) ??
+          chatSavedName ??
+          undefined,
         ownsContainer,
         paneLiveTitle
       })
       // Public name changes are independent of Activity status/tab writes.
     },
-    [state, hostFor, names]
+    [state, hostFor, names, chatTabIds]
   )
 }
