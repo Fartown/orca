@@ -781,7 +781,23 @@
             "src/cli/specs/index.ts",
             "src/cli/handler-group-manifest.ts",
             "config/scripts/check-test-file-runners.mjs",
-            "config/scripts/check-has-restyle-scope.mjs"
+            "config/scripts/check-has-restyle-scope.mjs",
+            "mobile/src/i18n/locales/de.json",
+            "mobile/src/i18n/locales/en.json",
+            "mobile/src/i18n/locales/es.json",
+            "mobile/src/i18n/locales/fr.json",
+            "mobile/src/i18n/locales/ja.json",
+            "mobile/src/i18n/locales/ko.json",
+            "mobile/src/i18n/locales/pt.json",
+            "mobile/src/i18n/locales/ru.json",
+            "mobile/src/i18n/locales/tr.json",
+            "mobile/src/i18n/locales/zh-Hant.json",
+            "mobile/src/i18n/locales/zh.json",
+            "mobile/src/session/MobileNativeChatView.streaming-rows.test.ts",
+            "skill-guides/orca-cli/references/skill-sharing.md",
+            "src/renderer/src/components/right-sidebar/AiVaultSessionRow.test.tsx",
+            "src/renderer/src/components/worktree-jump/use-worktree-jump-palette-task-search.test.tsx",
+            "src/shared/plugins/languages/protected-copy-keys.json"
           ],
           "message": "Branch changes an upstream path that no fork feature owns or registers as a seam; extend config/fork-features.jsonc and this allowlist, or move the change into a feature-owned path."
         }
@@ -916,7 +932,8 @@
             "src/main/runtime/runtime-worktree-agent-rows.ts",
             "src/shared/host-operation-ownership.ts",
             "src/shared/wsl-move/wsl-move-storage-dispositions.ts",
-            "config/scripts/check-test-file-runners.mjs"
+            "config/scripts/check-test-file-runners.mjs",
+            "src/shared/plugins/languages/protected-copy-keys.json"
           ],
           "message": "Change is outside the Goal feature and its reviewed seams."
         },
@@ -1056,7 +1073,8 @@
             "src/shared/host-operation-ownership.ts",
             "src/main/startup/main-process-ready-duplicate-pty-repair.test.ts",
             "src/main/runtime/construction/runtime-composition-parity.test.ts",
-            "config/scripts/check-has-restyle-scope.mjs"
+            "config/scripts/check-has-restyle-scope.mjs",
+            "skill-guides/orca-cli/references/skill-sharing.md"
           ],
           "message": "Change is outside local network artifact sharing and its journal."
         },
@@ -1373,7 +1391,19 @@
             "config/architecture-policies.jsonc",
             "docs/issue/README.md",
             ".gitignore",
-            "src/shared/host-operation-ownership.ts"
+            "src/shared/host-operation-ownership.ts",
+            "mobile/src/i18n/locales/de.json",
+            "mobile/src/i18n/locales/en.json",
+            "mobile/src/i18n/locales/es.json",
+            "mobile/src/i18n/locales/fr.json",
+            "mobile/src/i18n/locales/ja.json",
+            "mobile/src/i18n/locales/ko.json",
+            "mobile/src/i18n/locales/pt.json",
+            "mobile/src/i18n/locales/ru.json",
+            "mobile/src/i18n/locales/tr.json",
+            "mobile/src/i18n/locales/zh-Hant.json",
+            "mobile/src/i18n/locales/zh.json",
+            "mobile/src/session/MobileNativeChatView.streaming-rows.test.ts"
           ],
           "message": "Change is outside the mobile file attachment upload feature and its reviewed seams."
         }
@@ -1574,7 +1604,8 @@
             "src/main/ai-vault/session-scanner-scope-walk.test.ts",
             "src/main/runtime/runtime-orchestration-sender-names.test.ts",
             "src/main/runtime/runtime-orchestration-sender-names.ts",
-            "src/renderer/src/runtime/web-session-tabs-sync/terminal-build.ts"
+            "src/renderer/src/runtime/web-session-tabs-sync/terminal-build.ts",
+            "src/renderer/src/components/right-sidebar/AiVaultSessionRow.test.tsx"
           ],
           "message": "Change is outside the public naming implementation and its consumer adapters."
         }
@@ -1810,7 +1841,9 @@
             "src/renderer/src/components/sidebar/WorktreeLinkedItemsField.tsx",
             "src/renderer/src/components/sidebar/WorktreeMetaDialogDraft.tsx",
             "src/renderer/src/components/sidebar/WorktreeMetaDialog.tsx",
-            "src/renderer/src/hooks/ipc-events/new-workspace-command.ts"
+            "src/renderer/src/hooks/ipc-events/new-workspace-command.ts",
+            "src/renderer/src/components/worktree-jump/use-worktree-jump-palette-task-search.test.tsx",
+            "src/shared/plugins/languages/protected-copy-keys.json"
           ],
           "message": "Change is outside the local tasks feature."
         },

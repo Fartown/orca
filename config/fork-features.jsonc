@@ -813,6 +813,11 @@
           "file": "config/scripts/check-test-file-runners.mjs",
           "mustContain": "include: ['goal-mode/cli/*.test.mjs']",
           "why": "upstream test-runner gate knows the goal-mode CLI tests run by the goals checks"
+        },
+        {
+          "file": "src/shared/plugins/languages/protected-copy-keys.json",
+          "mustContain": "\"goals.",
+          "why": "fork copy keys protected from plugin language packs"
         }
       ],
       "tests": [
@@ -1367,6 +1372,11 @@
           "file": "src/renderer/src/runtime/web-session-tabs-sync/terminal-build.ts",
           "mustContain": "mirrorHostManualName",
           "why": "Keep the feature contract and its exhaustive integration checks aligned."
+        },
+        {
+          "file": "src/renderer/src/components/right-sidebar/AiVaultSessionRow.test.tsx",
+          "mustContain": "agentLaunchConfigByPaneKey: {}",
+          "why": "session-name row reads launch configs from the store"
         }
       ],
       "tests": [
@@ -1713,6 +1723,11 @@
           "file": "config/scripts/check-has-restyle-scope.mjs",
           "mustContain": "':(exclude)src/renderer/src/components/self-hosted-artifacts/share-viewer'",
           "why": "the share viewer is a standalone page, not renderer CSS"
+        },
+        {
+          "file": "skill-guides/orca-cli/references/skill-sharing.md",
+          "mustContain": "skill sharing fails with `sharing_unavailable_on_host`",
+          "why": "LAN artifact sharing works on headless hosts; only skill sharing is unavailable there"
         }
       ],
       "tests": [
@@ -2437,6 +2452,66 @@
           "file": "src/shared/host-operation-ownership.ts",
           "mustContain": "HOST_OPERATION_OWNERSHIP",
           "why": "Keep the feature contract and its exhaustive integration checks aligned."
+        },
+        {
+          "file": "mobile/src/i18n/locales/de.json",
+          "mustContain": "\"sendingAttachment\"",
+          "why": "mobile copy for the attachment entry (also carries fork integration-build and local-task strings)"
+        },
+        {
+          "file": "mobile/src/i18n/locales/en.json",
+          "mustContain": "\"sendingAttachment\"",
+          "why": "mobile copy for the attachment entry (also carries fork integration-build and local-task strings)"
+        },
+        {
+          "file": "mobile/src/i18n/locales/es.json",
+          "mustContain": "\"sendingAttachment\"",
+          "why": "mobile copy for the attachment entry (also carries fork integration-build and local-task strings)"
+        },
+        {
+          "file": "mobile/src/i18n/locales/fr.json",
+          "mustContain": "\"sendingAttachment\"",
+          "why": "mobile copy for the attachment entry (also carries fork integration-build and local-task strings)"
+        },
+        {
+          "file": "mobile/src/i18n/locales/ja.json",
+          "mustContain": "\"sendingAttachment\"",
+          "why": "mobile copy for the attachment entry (also carries fork integration-build and local-task strings)"
+        },
+        {
+          "file": "mobile/src/i18n/locales/ko.json",
+          "mustContain": "\"sendingAttachment\"",
+          "why": "mobile copy for the attachment entry (also carries fork integration-build and local-task strings)"
+        },
+        {
+          "file": "mobile/src/i18n/locales/pt.json",
+          "mustContain": "\"sendingAttachment\"",
+          "why": "mobile copy for the attachment entry (also carries fork integration-build and local-task strings)"
+        },
+        {
+          "file": "mobile/src/i18n/locales/ru.json",
+          "mustContain": "\"sendingAttachment\"",
+          "why": "mobile copy for the attachment entry (also carries fork integration-build and local-task strings)"
+        },
+        {
+          "file": "mobile/src/i18n/locales/tr.json",
+          "mustContain": "\"sendingAttachment\"",
+          "why": "mobile copy for the attachment entry (also carries fork integration-build and local-task strings)"
+        },
+        {
+          "file": "mobile/src/i18n/locales/zh-Hant.json",
+          "mustContain": "\"sendingAttachment\"",
+          "why": "mobile copy for the attachment entry (also carries fork integration-build and local-task strings)"
+        },
+        {
+          "file": "mobile/src/i18n/locales/zh.json",
+          "mustContain": "\"sendingAttachment\"",
+          "why": "mobile copy for the attachment entry (also carries fork integration-build and local-task strings)"
+        },
+        {
+          "file": "mobile/src/session/MobileNativeChatView.streaming-rows.test.ts",
+          "mustContain": "openChatSheet: vi.fn()",
+          "why": "chat view props include the fork attachment sheet"
         }
       ],
       "tests": [
@@ -3521,6 +3596,16 @@
           "file": "src/renderer/src/components/sidebar/use-worktree-card-review-details.ts",
           "mustContain": "export function resolveWorktreeCardReview(",
           "why": "The PR-merged rule reads the same review the workspace card shows, from one shared resolver (REQ-013)"
+        },
+        {
+          "file": "src/renderer/src/components/worktree-jump/use-worktree-jump-palette-task-search.test.tsx",
+          "mustContain": "item.type === 'task'",
+          "why": "the palette task list also carries local task items"
+        },
+        {
+          "file": "src/shared/plugins/languages/protected-copy-keys.json",
+          "mustContain": "\"localTasks.",
+          "why": "fork copy keys protected from plugin language packs"
         }
       ],
       "tests": [
