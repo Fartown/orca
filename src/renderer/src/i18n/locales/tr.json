@@ -20520,6 +20520,9 @@
         "finished": "Geçici orkestrasyon çalışanı tamamlandı · {{countdown}} içinde kapanır",
         "keepOpen": "Açık tut"
       }
+    },
+    "wslHostMark": {
+      "runsOn": "WSL üzerinde çalışır: {{distro}} (Linux)"
     }
   },
   "dashboardPopout": {
