@@ -210,7 +210,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.bgPanel,
     borderWidth: 1,
     borderColor: colors.borderSubtle,
-    borderRadius: radii.card,
+    borderRadius: radii.surface,
     padding: spacing.md
   },
   error: { marginTop: spacing.sm },
@@ -226,7 +226,7 @@ const styles = StyleSheet.create({
     minHeight: 40,
     maxHeight: 140,
     backgroundColor: colors.bgPanel,
-    borderRadius: radii.composer,
+    borderRadius: radii.floating,
     borderWidth: 1,
     borderColor: colors.borderSubtle,
     paddingHorizontal: spacing.lg,

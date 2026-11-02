@@ -17,6 +17,7 @@ import { useWorktreeMetaWorkspace } from './use-worktree-meta-workspace'
 import { getScreenSubmitShortcutLabel, isScreenSubmitShortcut } from '@/lib/screen-submit-shortcut'
 import { useMountedRef } from '@/hooks/useMountedRef'
 import { translate } from '@/i18n/i18n'
+import { useUiLanguageRevision } from '@/i18n/use-ui-language-revision'
 import {
   getWorktreeExecutionHostId,
   parseExecutionHostId,
@@ -36,6 +37,7 @@ import {
 import { useLocalTaskSourceTab } from '@/local-tasks/local-task-source-tab'
 
 const WorktreeMetaDialogDraft = React.memo(function WorktreeMetaDialogDraft() {
+  useUiLanguageRevision()
   const activeModal = useAppStore((s) => s.activeModal)
   const modalData = useAppStore((s) => s.modalData)
   const closeModal = useAppStore((s) => s.closeModal)
@@ -217,7 +219,8 @@ const WorktreeMetaDialogDraft = React.memo(function WorktreeMetaDialogDraft() {
             )}
           </DialogDescription>
         </DialogHeader>
-        <div className="min-h-0 space-y-4 overflow-y-auto scrollbar-sleek">
+        {/* Why: overflow clips the fields' 3px focus ring; -mx-1/px-1 makes room without shifting them. */}
+        <div className="-mx-1 min-h-0 space-y-4 overflow-y-auto px-1 scrollbar-sleek">
           <WorktreeDisplayNameField
             disabled={saving}
             inputRef={displayNameInputRef}
@@ -296,7 +299,7 @@ const WorktreeMetaDialogDraft = React.memo(function WorktreeMetaDialogDraft() {
                     event.currentTarget.dataset.imeComposing = 'true'
                   }}
                   onCompositionEnd={(event) => {
-                    commentIme.setComposing(false)
+                    commentIme.setComposing(false, event.data)
                     delete event.currentTarget.dataset.imeComposing
                   }}
                   onBlur={(event) => {

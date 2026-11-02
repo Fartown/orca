@@ -112,7 +112,11 @@ export const SettingsUpdate = z
       .enum(['issues', 'my-issues', 'prs', 'my-prs', 'review', 'all'])
       .optional(),
     experimentalNewWorktreeCardStyle: z.boolean().optional(),
+    /** No UI: the host-side switch for connectors, so a headless server can be turned on. */
+    experimentalConnectors: z.boolean().optional(),
     agentStatusHooksEnabled: z.boolean().optional(),
+    codexShareHistoryAcrossAccounts: z.boolean().optional(),
+    claudeSubagentNavigationEnabled: z.boolean().optional(),
     defaultRepoSelection: z.array(z.string()).nullable().optional(),
     defaultLinearTeamSelection: z.array(z.string()).nullable().optional(),
     compactWorktreeCards: z.boolean().optional(),
@@ -125,6 +129,7 @@ export const SettingsUpdate = z
       .unknown()
       .transform((value) => normalizePRBotAuthorOverrides(value))
       .optional(),
+    nativeChatAutoContinueAfterUsageLimit: z.boolean().optional(),
     nativeChatPermissionMode: z.enum(AGENT_CHAT_PERMISSION_MODES).optional()
   })
   .strict()

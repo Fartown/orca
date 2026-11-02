@@ -1,7 +1,10 @@
 import { expect, it, vi } from 'vitest'
 import {
+  runAfterEditorFramesFlush,
+  flushClosingEditorBuffers,
   flushPendingEditorBuffer,
   hasPendingEditorBufferChange,
+  registerEditorFrameFlush,
   registerPendingEditorFlush
 } from './editor-pending-flush'
 import { EMPTY_EDITOR_BUFFER_VIEW_INDEX as NO_SHARING } from '@/store/slices/editor/buffers/editor-buffer-views'
@@ -42,4 +45,60 @@ it('checks pending changes across panes and retains the remaining registration o
     removeLater()
   }
   expect(hasPendingEditorBufferChange(NO_SHARING, 'panes')).toBe(false)
+})
+
+it('flushes every pane of closing files and leaves other files editing', () => {
+  vi.spyOn(console, 'error').mockImplementation(() => {})
+  const failingPane = vi.fn(() => {
+    throw new Error('serialize failed')
+  })
+  const typingPane = vi.fn()
+  const keepFailedInput = vi.fn()
+  const keepTypedInput = vi.fn()
+  const closingCell = vi.fn()
+  const survivingCell = vi.fn()
+  const removers = [
+    registerPendingEditorFlush('rich', typingPane, undefined, keepTypedInput),
+    registerPendingEditorFlush('rich', failingPane, undefined, keepFailedInput),
+    registerPendingEditorFlush('csv', closingCell, () => false),
+    registerPendingEditorFlush('survivor', survivingCell, () => true)
+  ]
+  try {
+    flushClosingEditorBuffers(NO_SHARING, ['rich', 'csv'])
+    expect(typingPane).toHaveBeenCalledTimes(1)
+    expect(failingPane).toHaveBeenCalledTimes(1)
+    expect(keepFailedInput).toHaveBeenCalledTimes(1)
+    expect(keepTypedInput).not.toHaveBeenCalled()
+    expect(closingCell).toHaveBeenCalledTimes(1)
+    expect(survivingCell).not.toHaveBeenCalled()
+  } finally {
+    removers.forEach((remove) => remove())
+  }
+})
+
+const drainMicrotasks = () => new Promise((resolve) => setImmediate(resolve))
+
+it('closes at once without frames, and after every frame of the closing files settles', async () => {
+  const close = vi.fn()
+  runAfterEditorFramesFlush(NO_SHARING, ['plain'], close)
+  expect(close).toHaveBeenCalledWith(false)
+
+  let answer: (flushed: boolean) => void = () => {}
+  const removers = [
+    registerEditorFrameFlush('frame', () => new Promise((resolve) => (answer = resolve))),
+    registerEditorFrameFlush('broken', () => Promise.reject(new Error('gone'))),
+    registerEditorFrameFlush('other', () => new Promise(() => {}))
+  ]
+  try {
+    const deferred = vi.fn()
+    runAfterEditorFramesFlush(NO_SHARING, ['frame', 'broken'], deferred)
+    await drainMicrotasks()
+    expect(deferred).not.toHaveBeenCalled()
+    // A failed or unanswered flush still closes; only the closing files' frames are asked.
+    answer(false)
+    await drainMicrotasks()
+    expect(deferred).toHaveBeenCalledWith(true)
+  } finally {
+    removers.forEach((remove) => remove())
+  }
 })

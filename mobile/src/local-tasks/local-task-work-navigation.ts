@@ -6,7 +6,7 @@ import { parsePaneKey } from '../../../src/shared/stable-pane-id'
 import {
   structuredAgentSessionPaneKey,
   structuredAgentSessionTabId
-} from '../../../src/shared/structured-agent-session-projection'
+} from '../../../src/shared/agent-session/view/structured-agent-session-projection'
 import { folderWorkspaceKey } from '../../../src/shared/workspace-scope'
 import { workspaceRouteHref } from '../navigation/workspace-execution-host'
 import { localTaskRouteExecutionHost, type LocalTaskEndpoint } from './local-task-endpoint'

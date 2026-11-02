@@ -1,7 +1,8 @@
-import type { RpcFailure, RpcSuccess } from '../transport/types'
+import type { RpcSuccess } from '../transport/types'
 import { terminalCreateFeedback } from '../session-continuation/terminal-create-feedback'
 import { sessionTabCreateTerminal } from './mobile-session-write-operations'
 import { triggerSuccess, triggerError } from '../platform/haptics'
+import { terminalCreateCopy } from './mobile-session-terminal-create-copy'
 import { buildTerminalSendParams } from '../terminal/terminal-send-request'
 import { terminalRecordsEqual } from './mobile-terminal-records'
 import type { MobileNewTabAgentOption } from './mobile-new-tab-agent-options'
@@ -12,7 +13,6 @@ import {
   mobileChatForkRequestFailureMessage
 } from './mobile-chat-fork-create-feedback'
 import type { MobileSessionTab, Terminal } from './mobile-session-route-types'
-
 import type {
   CreateOutcome,
   MobileTerminalCreateOptions,
@@ -24,7 +24,7 @@ import { useMobileTerminalCreateRouteOwner } from './use-mobile-terminal-create-
 import { launchMobileSessionQuickCommand } from './mobile-session-quick-command-launch'
 import type { TerminalQuickCommand } from '../../../src/shared/terminal-quick-command-types'
 import { requestMobileSessionTerminalCreate } from './mobile-session-terminal-create-request'
-import { isAgentSessionHandleProvider } from '../../../src/shared/agent-session-provider-handle'
+import { isAgentSessionHandleProvider } from '../../../src/shared/agent-session/lifecycle/agent-session-provider-handle'
 import { createMobileStructuredAgentSession } from './mobile-structured-agent-session-launch'
 import { launchesThroughHost, launchNewTabAgentThroughHost } from './new-tab-agent-host-launch'
 import * as selection from './pending-session-selection'
@@ -75,24 +75,24 @@ export function useMobileSessionTerminalCreateActions(scope: MobileSessionAttach
       ...scope,
       isCurrent,
       isFork: Boolean(sourceFork),
-      errorToast: options?.errorToast
+      errorToast: options?.errorToast,
+      createFailedMessage: terminalCreateCopy.createFailed()
     })
     if (
       !client ||
       (sourceFork && (!hostSupportsMobileChatFork(hostCapabilities) || !isCurrent()))
     ) {
-      reportFork(`Open the ${agentName} chat on a connected, updated host and try again.`)
+      reportFork(terminalCreateCopy.forkUnavailable(agentName))
       return sourceOutcome('unavailable')
     }
     if (creatingTerminalRef.current) {
-      reportFork(`Another terminal is opening. Wait, then retry the ${agentName} chat.`)
+      reportFork(terminalCreateCopy.forkBusy(agentName))
       return sourceOutcome('busy')
     }
-    // Why: idempotency key so a transport retry (reconnect replay) resolves to the same terminal, not a duplicate; kept compact (no worktree id) for the schema length cap.
+    // Use a compact idempotency key so reconnect retries resolve the same terminal within schema length limits.
     const clientMutationId =
       options?.clientMutationId ??
       `mobile-create:${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`
-    // Also names the "+" lock, which a launch frees when its tab lands.
     creatingTerminalRef.current = clientMutationId
     setCreating(true)
     setCreateError('')
@@ -125,12 +125,10 @@ export function useMobileSessionTerminalCreateActions(scope: MobileSessionAttach
       // COMPAT(agent.launch.v2): hosts before v1.4.206 keep the paths below; remove once none remain.
       // Bare structured-provider launches follow host createSupport; prompted launches keep their startup semantics.
       if (isAgentSessionHandleProvider(agent) && options === undefined) {
-        // Armed before asking with nothing to match yet, so a tab picked meanwhile still wins.
+        // Arm before requesting so later user tab picks supersede the launch.
         pendingSelectionRef.current = selection.launchedSelection(clientMutationId, {}, null)
         const structured = await createMobileStructuredAgentSession(client, worktreeId, agent)
         if (structured.kind === 'created') {
-          // Found by session in the next snapshot, never by a predicted tab id; the current tab stays
-          // live until then, as on the launch path above.
           const reply = { sessionId: structured.sessionId }
           pendingSelectionRef.current = selection.withLaunchReply(
             pendingSelectionRef.current,
@@ -142,7 +140,6 @@ export function useMobileSessionTerminalCreateActions(scope: MobileSessionAttach
           return sourceOutcome('accepted')
         }
         if (structured.kind === 'unknown') {
-          // Never create a legacy sibling when the host may already have committed.
           setCreateError(structured.message)
           triggerError()
           showToast(structured.message, 1800)
@@ -178,7 +175,7 @@ export function useMobileSessionTerminalCreateActions(scope: MobileSessionAttach
       if (forkMessage) {
         reportFork(forkMessage)
       }
-      // Why: unsubscribe the old terminal so the server restores its desktop dims; otherwise its restore timer is never set.
+      // Unsubscribe the old terminal to arm restoration of its desktop dimensions.
       const prev = activeHandleRef.current
       if (prev) {
         unsubscribeTerminal(prev)
@@ -207,7 +204,7 @@ export function useMobileSessionTerminalCreateActions(scope: MobileSessionAttach
         const createdHandle = created.terminal
         createResult = { kind: 'terminal', handle: createdHandle }
         defaultTerminalHandlesToLiveInput([createdHandle])
-        // Why: snapshots lag the create RPC; without this marker applySessionTabs reverts the active handle, blanking the new pane.
+        // Protect the new active handle until host snapshots catch up or the pane can blank.
         pendingSelectionRef.current = { kind: 'terminal', handle: createdHandle, tabId: created.id }
         activeHandleRef.current = createdHandle
         setActiveHandle(createdHandle)
@@ -218,7 +215,7 @@ export function useMobileSessionTerminalCreateActions(scope: MobileSessionAttach
           const existing = prev.find((terminal) => terminal.handle === createdHandle)
           const createdTerminal: Terminal = {
             handle: createdHandle,
-            title: created.title || existing?.title || 'Terminal',
+            title: created.title || existing?.title || terminalCreateCopy.terminalTitle(),
             terminalTheme: created.terminalTheme ?? existing?.terminalTheme,
             isActive: true
           }
@@ -247,24 +244,23 @@ export function useMobileSessionTerminalCreateActions(scope: MobileSessionAttach
             )
             .then((sendResponse) => {
               if (!sendResponse.ok) {
-                throw new Error(
-                  (sendResponse as RpcFailure).error.message || 'Failed to send notes'
-                )
+                throw new Error(sendResponse.error.message || terminalCreateCopy.sendNotesFailed())
               }
               const result = (sendResponse as RpcSuccess).result as {
                 send?: { accepted?: boolean }
               }
               if (result.send?.accepted === false) {
-                throw new Error('Terminal input is locked by another client.')
+                throw new Error(terminalCreateCopy.inputLocked())
               }
               triggerSuccess()
-              showToast(options.successToast ?? 'Notes sent')
+              showToast(options.successToast ?? terminalCreateCopy.notesSent())
               options.onPromptSent?.()
             })
             .catch((err) => {
               triggerError()
               showToast(
-                options.errorToast ?? (err instanceof Error ? err.message : "Couldn't send notes"),
+                options.errorToast ??
+                  (err instanceof Error ? err.message : terminalCreateCopy.sendNotesError()),
                 1800
               )
             })
@@ -274,7 +270,7 @@ export function useMobileSessionTerminalCreateActions(scope: MobileSessionAttach
         }
       } else {
         createResult = { kind: 'terminal-without-handle' }
-        // Why: a prior pending handle must not outlive a create that returned no terminal; web-ready subscribe gates on this ref.
+        // Clear old pending handles when create returns none so WebView-ready cannot subscribe stale state.
         pendingSelectionRef.current = selection.withoutPendingHandle(pendingSelectionRef.current)
         activeHandleRef.current = null
         setActiveHandle(null)
@@ -303,12 +299,10 @@ export function useMobileSessionTerminalCreateActions(scope: MobileSessionAttach
     }
   }
 
-  async function handleCreateTerminal(...args: Parameters<typeof createTerminal>) {
-    return (await createTerminal(...args)).outcome
-  }
-  async function createTerminalWithResult(...args: Parameters<typeof createTerminal>) {
-    return (await createTerminal(...args)).result
-  }
+  const handleCreateTerminal = async (...args: Parameters<typeof createTerminal>) =>
+    (await createTerminal(...args)).outcome
+  const createTerminalWithResult = async (...args: Parameters<typeof createTerminal>) =>
+    (await createTerminal(...args)).result
 
   return {
     handleCreateTerminal,

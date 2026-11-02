@@ -22,7 +22,9 @@ const row = {
 
 describe('dashboard session title ownership', () => {
   it('does not reuse a different session name from its shared tab', () => {
-    expect(rowConversationName(row, true, undefined, undefined)).toBe('Live own task')
+    expect(rowConversationName(row, true, undefined, undefined, new Map(), undefined)).toBe(
+      'Live own task'
+    )
   })
   it('uses native evidence when the row owns it', () => {
     expect(
@@ -33,13 +35,22 @@ describe('dashboard session title ownership', () => {
         },
         true,
         undefined,
+        undefined,
+        new Map(),
         undefined
       )
     ).toBe('Sibling native name')
   })
   it('does not let synthetic children inherit the parent slot', () => {
     expect(
-      rowConversationName({ ...row, rowSource: 'subagent' }, true, undefined, undefined)
+      rowConversationName(
+        { ...row, rowSource: 'subagent' },
+        true,
+        undefined,
+        undefined,
+        new Map(),
+        undefined
+      )
     ).toBeUndefined()
   })
 })

@@ -1,4 +1,5 @@
 import { hasOtherAgentProcessOwner } from '../shared/agent-process-presence'
+import { isOwnerProviderGuestHook } from '../shared/agent-hook-owner-presence'
 import { sameAgentStatusTerminalOwner } from '../shared/agent-status-terminal-owner'
 import { normalizeHookPayload } from '../shared/agent-hook-listener'
 import {
@@ -22,6 +23,10 @@ export class RelayProviderHookNormalization {
     env: string,
     options: Parameters<typeof normalizeHookPayload>[4] = {}
   ): AgentHookEventPayload | null {
+    // Why: the owner's own provider folds would take the guest's prompt and tools.
+    if (isOwnerProviderGuestHook(canonical, source, body, env)) {
+      return null
+    }
     let state = this.states.get(source)
     if (!state) {
       state = createHookListenerState()
@@ -36,7 +41,8 @@ export class RelayProviderHookNormalization {
     }
     const event = normalizeHookPayload(view, source, body, env, {
       ...options,
-      claudeSessionOwnerState: canonical
+      claudeSessionOwnerState: canonical,
+      bindingStatusByPaneKey: canonical.lastStatusByPaneKey
     })
     if (event) {
       const providerState = state
@@ -48,7 +54,10 @@ export class RelayProviderHookNormalization {
         owner &&
         !owner.providerSessionOnly &&
         sameAgentStatusTerminalOwner(owner, event) &&
-        hasOtherAgentProcessOwner(owner.agentPresence, source)
+        hasOtherAgentProcessOwner(owner.agentPresence, {
+          agent: source,
+          process: event.agentPresence?.process
+        })
       ) {
         return event
       }

@@ -1,9 +1,9 @@
 ---
 title: '终端对话转聊天退出判定'
 slug: '终端对话转聊天退出判定'
-status: testing
+status: done
 created: 2026-10-23
-updated: 2026-10-23
+updated: 2026-11-02
 ---
 
 # 终端对话转聊天退出判定 开发 Journal
@@ -110,3 +110,12 @@ updated: 2026-10-23
 - 验证证据：功能 checks 2 个文件 5 用例通过（新增的后台、挂起任务与窗格入口断言均通过）；`check:fork-features`、`check:fork-docs` 通过。
 - 未解决问题：向上游提交修复需用户确认；`run-terminal-shell-alone.ts` 同类写法未处理。
 - 下一步：用户确认后向 stablyai/orca 提交同样的修复。
+
+### 2026-11-02 随上游同步下线
+
+- 本轮目标：同步上游到 a444233103 时，按 D-4 撤除本 fork 补丁。
+- 完成内容：上游重写了 `src/main/runtime/structured-agent-cli-writers.ts`，删掉 `posixCliWriterShellAlone` 的根进程与「shell 独占」核查，改为只有执行主机状态里的写者进程被观测为 `live` 时才拒绝；macOS login 包装导致的误拒不再可能出现，本功能接缝随之消失，`ptyShellRow` 无调用方。合并时该文件整份采用上游；从 `config/fork-features.jsonc` 删除 `cli-writer-login-shell` 登记，从 `config/architecture-policies.jsonc` 删除同名策略及差异预算里的两条路径，再删除 `src/main/cli-writer-login-shell/`。本目录文档保留作历史记录。
+- 代码或文档变更：删除 `src/main/cli-writer-login-shell/login-wrapped-pty-shell.ts` 与 `login-wrapped-pty-shell.test.ts`；`config/fork-features.jsonc`、`config/architecture-policies.jsonc`；本 journal。
+- 验证证据：合并后的 `structured-agent-cli-writers.ts` 与上游 a444233103 逐字一致（`git diff MERGE_HEAD` 无输出）；仓库内已无对 `login-wrapped-pty-shell` 的引用；`node config/scripts/check-fork-features.mjs` 结果见同步记录 `.docs/upstream-sync-ui-validation/2026-11-02/`。
+- 未解决问题：上游新逻辑尚未在 macOS 正式包（PTY 根进程为 login）和 SSH 场景复验；`run-terminal-shell-alone.ts` 同类写法仍未验证。
+- 下一步：同步合入并出包后，在正式应用中按 TC-1～TC-4 复验终端 Codex/Claude 退出后转聊天。

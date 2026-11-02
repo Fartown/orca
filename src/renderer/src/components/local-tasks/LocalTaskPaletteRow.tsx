@@ -1,6 +1,6 @@
 import { ListTodo } from 'lucide-react'
 import { CommandItem } from '@/components/ui/command'
-import type { WorktreeJumpPaletteController } from '@/components/use-worktree-jump-palette-controller'
+import type { WorktreeJumpPaletteController } from '@/components/worktree-jump/use-worktree-jump-palette-controller'
 import { translate } from '@/i18n/i18n'
 import type { LocalTaskPaletteItem } from '@/local-tasks/local-task-palette-items'
 import { LocalTaskStatusIcon } from './LocalTaskIcons'

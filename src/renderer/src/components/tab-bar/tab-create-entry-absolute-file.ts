@@ -1,5 +1,9 @@
 import { detectLanguage } from '@/lib/language-detect'
-import { toWorktreeRelativePath } from '@/lib/terminal-links'
+import {
+  getTabEntryCannotOpenDirectoryMessage,
+  getTabEntryFileNotFoundMessage
+} from './tab-create-entry-copy'
+import { toWorktreeRelativePath } from '../../../../shared/terminal-links'
 import type { RuntimeFileOperationArgs } from '@/runtime/runtime-file-client-types'
 import { resolveAbsoluteTabEntryReach } from '../../runtime-host-path/host-path-grant-seams'
 import type { OpenFile } from '@/store/slices/editor'
@@ -44,6 +48,10 @@ export async function openAbsoluteTabEntryFile(args: {
       const stat = await args.operations.statUserOpenedPath(context, path)
       escapesWorktree = stat.escapesWorktree
       return stat
+    },
+    copy: {
+      fileNotFound: getTabEntryFileNotFoundMessage,
+      cannotOpenDirectory: getTabEntryCannotOpenDirectoryMessage
     }
   })
   args.operations.assertAbsolutePathAllowed()

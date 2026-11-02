@@ -1,7 +1,7 @@
 import { app } from 'electron'
 import { resolveGoalDriverEntry } from '../goals/goal-driver-launch'
 import { registerRuntimeGoals } from '../goals/goal-runtime-registration'
-import { getCanonicalUserDataPath } from '../persistence'
+import { getCanonicalUserDataPath } from '../persistence/loading-store/user-data-path'
 import { mainProcessState as state } from './main-process-state'
 
 let unregister: (() => void) | null = null

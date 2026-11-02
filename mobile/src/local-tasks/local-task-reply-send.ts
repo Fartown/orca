@@ -4,15 +4,15 @@
  * hands the text back; a lost answer is "sent, not confirmed" and is left alone.
  */
 import { z } from 'zod'
-import type { AgentSessionHistoryResult } from '../../../src/shared/agent-session-wire'
+import type { AgentSessionHistoryResult } from '../../../src/shared/agent-session/agent-session-wire'
 import type { LocalTaskSessionLink } from '../../../src/shared/local-tasks/local-task-link-types'
 import { parsePaneKey } from '../../../src/shared/stable-pane-id'
 import { salvagingArray } from '../../../src/shared/zod-salvage'
 import {
   openMobileNativeChatSendBudget,
   sendMobileNativeChatMessageWithOutcome
-} from '../session/mobile-native-chat-send'
-import { healMobileNativeChatStaleInput } from '../session/mobile-native-chat-stale-input'
+} from '../session/native-chat/mobile-native-chat-send'
+import { healMobileNativeChatStaleInput } from '../session/native-chat/mobile-native-chat-stale-input'
 import { sendMobileStructuredAgentSessionMessage } from '../session/mobile-structured-agent-session-send'
 import { callAgentSession } from '../session/mobile-structured-agent-session-rpc'
 import { structuredSessionOperationId } from '../session/structured-session-operation-id'

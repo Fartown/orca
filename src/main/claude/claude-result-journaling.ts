@@ -1,22 +1,17 @@
-// Journaling ONE Claude `result` frame: the end of the root turn it settles, and the diagnostic
-// row a failed or unrecognised result leaves.
-//
-// Split out of the translator when that file reached its line budget; the translator still owns
-// the open turn and every collaborator this writes through.
-
 import { writeClaudeTerminalFailure } from './claude-terminal-failure'
 import type { ClaudeContextFacts } from './claude-context-facts'
 import { claudeCommandResultEnd } from './claude-command-turn'
 import type { ClaudeMessageJournalContext } from './claude-message-journaling'
-import type { ClaudeJournalPrompts } from './claude-structured-journal-prompts'
+import type { ClaudeJournalPrompts } from './structured/journal/claude-structured-journal-prompts'
 import {
   claudeProviderFrameKind,
   claudeResultFailure,
   isSettledClaudeResultKind
-} from './claude-structured-provider-fallback'
+} from './structured/launch/claude-structured-provider-fallback'
 import { claudeTurnEndForResult } from './claude-turn-lifecycle-item'
 import { claudeFrameParentRef, isRootClaudeFrame } from './claude-turn-opening'
 import type { ClaudeGoalBackgroundWork } from './claude-background-task-tracker'
+import type { ClaudeJournalTranslatorDeps } from './claude-journal-translator-contract'
 
 export type ClaudeResultJournalContext = Pick<
   ClaudeMessageJournalContext,
@@ -26,13 +21,27 @@ export type ClaudeResultJournalContext = Pick<
   | 'providerFallback'
   | 'corrections'
   | 'turn'
-  | 'authenticationFailures'
+  | 'assistantFailures'
   | 'usageLimits'
   | 'threadGoal'
 > & {
   prompts: ClaudeJournalPrompts
   context: ClaudeContextFacts
   goalBackgroundWork: () => ClaudeGoalBackgroundWork
+  acceptStartupFailure?: ClaudeJournalTranslatorDeps['acceptStartupFailure']
+}
+
+const namesClaudeInput = (value: unknown): boolean => typeof value === 'string' && value !== ''
+
+/** Input it answered (receipts, a resumed turn) or model round-trips mean the result is a turn's own. */
+function claudeResultShowsTurnWork(message: Record<string, unknown>): boolean {
+  return (
+    namesClaudeInput(message.user_message_uuid) ||
+    (Array.isArray(message.user_message_uuids) &&
+      message.user_message_uuids.some(namesClaudeInput)) ||
+    namesClaudeInput(message.resume_reason) ||
+    (typeof message.num_turns === 'number' && message.num_turns > 0)
+  )
 }
 
 export function journalClaudeResult(
@@ -45,18 +54,16 @@ export function journalClaudeResult(
     turn,
     prompts,
     context,
-    authenticationFailures,
+    assistantFailures,
     usageLimits,
     threadGoal,
-    goalBackgroundWork
+    goalBackgroundWork,
+    acceptStartupFailure
   }: ClaudeResultJournalContext,
   message: Record<string, unknown>,
   observedAt: number
 ): void {
-  // Every turn this translator opens is root by construction, so a nested
-  // result settles the child that produced it and never the turn. The
-  // diagnostic below still runs: a child's failure is reportable even when
-  // it ends no turn.
+  // Child results can report failures but must never settle the root turn.
   const settlesTurn = isRootClaudeFrame(message)
   const endedTurnScope = turn.turnScope
   const endedTurnIdentity = turn.identity
@@ -82,6 +89,7 @@ export function journalClaudeResult(
   if (settlesTurn) {
     turn.suppressReopenOnFailure(message.is_error === true)
     corrections.abandon()
+    streamedText.finish({ completedAt: observedAt })
     context.settle(message, commandEnd ?? claudeTurnEndForResult(message, observedAt, leftToStop))
     streamedBlocks.clear()
     streamedText.settle()
@@ -103,7 +111,19 @@ export function journalClaudeResult(
   if (usageLimit && endedTurnIdentity) {
     return
   }
-  const alreadyShown = authenticationFailures.resultAlreadyShown(message)
+  const alreadyShown = assistantFailures.resultAlreadyShown(message)
+  // Only a still-starting acquisition that fails its open with this failure may take over its row.
+  if (
+    failure &&
+    settlesTurn &&
+    endedTurnIdentity === null &&
+    !usageLimit &&
+    !alreadyShown &&
+    !claudeResultShowsTurnWork(message) &&
+    acceptStartupFailure?.(message) === true
+  ) {
+    return
+  }
   if ((failure || !isSettledClaudeResultKind(kind)) && !alreadyShown) {
     providerFallback.append(
       kind,
@@ -111,8 +131,6 @@ export function journalClaudeResult(
       usageLimit ?? failure?.text,
       undefined,
       { reportsFailure: failure !== null },
-      // A result that settles no turn is a CHILD's result: this
-      // translator only ever opens root turns.
       settlesTurn
         ? () => ({ turnScope: endedTurnScope })
         : corrections.stampFor(claudeFrameParentRef(message))

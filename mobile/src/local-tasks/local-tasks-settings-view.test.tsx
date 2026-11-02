@@ -27,6 +27,7 @@ vi.mock('lucide-react-native', () => ({
 }))
 vi.mock('../components/ConfirmModal', () => ({ ConfirmModal: 'ConfirmModal' }))
 vi.mock('../components/TextInputModal', () => ({ TextInputModal: 'TextInputModal' }))
+vi.mock('../components/MobileSwitch', () => ({ MobileSwitch: 'MobileSwitch' }))
 vi.mock('./local-tasks-status-section', () => ({ LocalTasksStatusSection: () => null }))
 vi.mock('./local-task-repos-section', () => ({ LocalTaskReposSection: () => null }))
 vi.mock('./local-task-form-fields', () => ({

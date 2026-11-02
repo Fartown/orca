@@ -2,7 +2,7 @@ import { hostWorktreeTarget } from '../../../shared/worktree/host-qualified-iden
 import { parseExecutionHostId, type ExecutionHostId } from '../../../shared/execution-host'
 import { getConnectionIdForFileFromState } from '@/lib/connection-owner-resolution'
 import { userNamedFileAccess } from '@/lib/local-file-access'
-import { toWorktreeRelativePath } from '@/lib/terminal-links'
+import { toWorktreeRelativePath } from '../../../shared/terminal-links'
 import { activateAndRevealWorkspace } from '@/lib/worktree-activation'
 import { requestHostPathGrantForContext } from '@/runtime-host-path/host-path-file-client'
 import { resolveAbsoluteTabEntryReach } from '@/runtime-host-path/host-path-grant-seams'

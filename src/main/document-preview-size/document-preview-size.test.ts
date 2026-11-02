@@ -14,7 +14,7 @@ import { callRuntimeEnvironment } from '../ipc/runtime-environments/runtime-envi
 import { RpcDispatcher } from '../runtime/rpc/dispatcher'
 import { FILE_METHODS } from '../runtime/rpc/methods/files'
 import type { OrcaRuntimeService } from '../runtime/orca-runtime'
-import { serializeRemoteRuntimePayload } from '../../shared/remote-runtime-memory-limits'
+import { serializeRemoteRuntimePayload } from '../../shared/remote-runtime/remote-runtime-memory-limits'
 import {
   mintDocPreviewGrant,
   revokeAllDocPreviewGrants

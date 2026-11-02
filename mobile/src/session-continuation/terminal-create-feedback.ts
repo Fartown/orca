@@ -4,6 +4,8 @@ export function terminalCreateFeedback(scope: {
   isCurrent: () => boolean
   isFork: boolean
   errorToast?: string
+  /** Localized fallback when the host names no reason. */
+  createFailedMessage: string
   setCreateError: (message: string) => void
   showToast: (message: string, duration: number) => void
 }) {
@@ -22,7 +24,7 @@ export function terminalCreateFeedback(scope: {
       }
     },
     reportCreateFailure: (hostReason: string): void => {
-      const reason = hostReason.trim() || scope.errorToast || 'Failed to create terminal'
+      const reason = hostReason.trim() || scope.errorToast || scope.createFailedMessage
       report(reason, scope.errorToast ?? reason, 1800)
     }
   }

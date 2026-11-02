@@ -1,13 +1,17 @@
 import { readFile, realpath, stat } from 'node:fs/promises'
 import { isAbsolute, join, relative, sep } from 'node:path'
 import { z } from 'zod'
-import { isQualifiedPluginKey } from '../../shared/plugins/plugin-manifest'
-import { pluginRelativeDirectorySchema } from '../../shared/plugins/plugin-manifest-fields'
-import { isOfficialPluginIdentity } from '../../shared/plugins/plugin-marketplace'
+import { isQualifiedPluginKey } from '../../shared/plugins/manifest/plugin-manifest'
+import { pluginRelativeDirectorySchema } from '../../shared/plugins/manifest/plugin-manifest-fields'
+import { hasOfficialPluginPublisher } from '../../shared/plugins/catalog/plugin-marketplace'
 import { getPluginsDataDir, getUserPluginsDir } from './plugin-discovery'
-import { installBundledPlugin, readPluginLockfile, removeInstalledPlugin } from './plugin-install'
-import { inspectPluginInstallTree } from './plugin-install-staging'
-import { readPluginCurrentPointer } from './plugin-current-pointer'
+import {
+  installBundledPlugin,
+  readPluginLockfile,
+  retireBundledPlugin
+} from './installation/plugin-install'
+import { inspectPluginInstallTree } from './installation/plugin-install-staging'
+import { readPluginCurrentPointer } from './installation/plugin-current-pointer'
 import { hashPluginTree } from './plugin-content-hash'
 
 export const BUNDLED_PLUGIN_INDEX_FILENAME = 'bundled-plugins.json'
@@ -23,7 +27,10 @@ const bundledPluginIndexSchema = z
             pluginKey: z
               .string()
               .refine(isQualifiedPluginKey, 'invalid qualified plugin identity')
-              .refine(isOfficialPluginIdentity, 'bundled plugins must use an official identity'),
+              .refine(
+                hasOfficialPluginPublisher,
+                'bundled plugins must use the official publisher'
+              ),
             path: pluginRelativeDirectorySchema,
             contentHash: z.string().regex(/^[0-9a-f]{64}$/)
           })
@@ -49,7 +56,7 @@ const bundledPluginIndexSchema = z
 export type PluginBundledBootstrapResult = {
   installed: string[]
   unchanged: string[]
-  /** Bundled installs dropped from the release index and uninstalled. */
+  /** Previously bundled plugins this release stopped shipping, now uninstalled. */
   retired: string[]
   errors: { pluginKey: string; error: string }[]
 }
@@ -64,6 +71,18 @@ export function resolveBundledPluginRoot(options: {
     : join(options.appPath, 'resources', 'plugins', 'launch')
 }
 
+/** The running app's bundled plugin root. */
+export function bundledPluginRootForApp(app: {
+  isPackaged: boolean
+  getAppPath(): string
+}): string {
+  return resolveBundledPluginRoot({
+    isPackaged: app.isPackaged,
+    resourcesPath: process.resourcesPath,
+    appPath: app.getAppPath()
+  })
+}
+
 async function readBundledPluginIndex(
   root: string
 ): Promise<z.infer<typeof bundledPluginIndexSchema>> {
@@ -73,6 +92,15 @@ async function readBundledPluginIndex(
     throw new Error(`bundled plugin index exceeds ${BUNDLED_PLUGIN_INDEX_MAX_BYTES} bytes`)
   }
   return bundledPluginIndexSchema.parse(JSON.parse(await readFile(indexPath, 'utf8')))
+}
+
+/** Whether this release ships the plugin; false when the index can't be read. */
+export async function isBundledPluginKey(root: string, pluginKey: string): Promise<boolean> {
+  if (!hasOfficialPluginPublisher(pluginKey)) {
+    return false
+  }
+  const index = await readBundledPluginIndex(root).catch(() => null)
+  return index?.plugins.some((entry) => entry.pluginKey === pluginKey) ?? false
 }
 
 async function resolveBundlePath(root: string, path: string): Promise<string> {
@@ -105,8 +133,10 @@ export async function bootstrapBundledPlugins(options: {
   userDataPath: string
   hostVersion: string
   blockedPluginReason?: (pluginKey: string) => string | null
-  /** Runs before a retired bundled plugin is removed (deactivate its worker). */
-  beforeRetire?: (pluginKey: string) => Promise<void>
+  /** Runs before a retired plugin's files are deleted, e.g. to revoke its consent. */
+  beforeRetire?: (pluginKey: string) => void | Promise<void>
+  /** Runs after a retired plugin's files are gone, e.g. to clear its frame storage. */
+  afterRetire?: (pluginKey: string) => void | Promise<void>
 }): Promise<PluginBundledBootstrapResult> {
   const index = await readBundledPluginIndex(options.root)
   const pluginsDir = getUserPluginsDir(options.userDataPath)
@@ -119,6 +149,10 @@ export async function bootstrapBundledPlugins(options: {
   }
   for (const entry of index.plugins) {
     const locked = lock.plugins[entry.pluginKey]
+    // Why: a catalog install or update of the same plugin is the user's choice; never downgrade it.
+    if (locked && locked.source.kind !== 'bundled') {
+      continue
+    }
     if (
       locked?.source.kind === 'bundled' &&
       locked.source.bundleId === entry.pluginKey &&
@@ -133,7 +167,7 @@ export async function bootstrapBundledPlugins(options: {
       const inspection = await inspectPluginInstallTree({
         rootDir: sourcePath,
         hostVersion: options.hostVersion,
-        expectedPluginKey: entry.pluginKey
+        identity: { pluginKey: entry.pluginKey }
       })
       if (!inspection.ok) {
         throw new Error(inspection.error)
@@ -159,22 +193,23 @@ export async function bootstrapBundledPlugins(options: {
       })
     }
   }
-  // Why: a bundled plugin dropped from the release index would otherwise stay
-  // installed from an earlier bootstrap and keep contributing commands and panels.
-  const indexed = new Set(index.plugins.map((entry) => entry.pluginKey))
+  // Why: a release that drops a bundled plugin must not leave it installed but unremovable.
+  const shipped = new Set(index.plugins.map((entry) => entry.pluginKey))
   for (const [pluginKey, locked] of Object.entries(lock.plugins)) {
-    if (locked.source.kind !== 'bundled' || indexed.has(pluginKey)) {
+    if (locked.source.kind !== 'bundled' || shipped.has(pluginKey)) {
       continue
     }
     try {
-      await options.beforeRetire?.(pluginKey)
-      await removeInstalledPlugin({
+      const retired = await retireBundledPlugin({
         pluginsDir,
         pluginsDataDir: getPluginsDataDir(options.userDataPath),
         pluginKey,
-        allowBundled: true
+        beforeRemove: () => options.beforeRetire?.(pluginKey)
       })
-      result.retired.push(pluginKey)
+      if (retired) {
+        result.retired.push(pluginKey)
+        await options.afterRetire?.(pluginKey)
+      }
     } catch (error) {
       result.errors.push({
         pluginKey,

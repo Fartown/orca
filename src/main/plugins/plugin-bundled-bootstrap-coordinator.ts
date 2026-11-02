@@ -9,6 +9,8 @@ export class PluginBundledBootstrapCoordinator {
   private readonly options: PluginBundledBootstrapRequest & {
     isEnabled: () => boolean
     refreshPlugins: () => Promise<void>
+    /** Turns on shipped plugins that are content only; anything else waits for review. */
+    approveContentPlugins?: (pluginKeys: readonly string[]) => Promise<void>
     bootstrap?: typeof bootstrapBundledPlugins
   }
   private pending: Promise<void> = Promise.resolve()
@@ -19,8 +21,7 @@ export class PluginBundledBootstrapCoordinator {
 
   request(): Promise<PluginBundledBootstrapResult | null> {
     const run = this.pending.then(() => this.runOnce())
-    // Why: feature-toggle and startup requests can overlap; preserve their
-    // order even when one resource read fails.
+    // Preserve overlapping startup/toggle request order even after resource-read failure.
     this.pending = run.then(
       () => undefined,
       () => undefined
@@ -39,11 +40,13 @@ export class PluginBundledBootstrapCoordinator {
       ...(this.options.blockedPluginReason
         ? { blockedPluginReason: this.options.blockedPluginReason }
         : {}),
-      ...(this.options.beforeRetire ? { beforeRetire: this.options.beforeRetire } : {})
+      ...(this.options.beforeRetire ? { beforeRetire: this.options.beforeRetire } : {}),
+      ...(this.options.afterRetire ? { afterRetire: this.options.afterRetire } : {})
     })
     if (result.installed.length > 0 || result.retired.length > 0) {
       await this.options.refreshPlugins()
     }
+    await this.options.approveContentPlugins?.([...result.installed, ...result.unchanged])
     return result
   }
 }

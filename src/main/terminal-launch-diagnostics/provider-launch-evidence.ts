@@ -1,9 +1,12 @@
-import type { RuntimePtySpawnArgs } from '../ipc/pty/runtime/spawn-state'
+import type { PtySpawnOperationState } from '../ipc/pty/spawn-operation-state'
 import type { PtySpawnResult } from '../providers/pty-provider-contract'
 import { recordTerminalLaunchStage } from './launch-trace'
 
+// Spawn arguments are only read through launchEvidence's allowlist, so secrets never leave here.
+type ProviderSpawnArgs = PtySpawnOperationState['args']
+
 export function recordTerminalProviderDispatch(
-  input: RuntimePtySpawnArgs,
+  input: ProviderSpawnArgs,
   ptyId?: string,
   candidatePtyId?: string
 ): void {
@@ -11,7 +14,7 @@ export function recordTerminalProviderDispatch(
 }
 
 export function recordTerminalProviderResult(
-  input: RuntimePtySpawnArgs,
+  input: ProviderSpawnArgs,
   result: PtySpawnResult
 ): void {
   recordTerminalLaunchStage('provider-returned', {

@@ -21,7 +21,9 @@ const mocks = vi.hoisted(() => ({
   userDataPath: vi.fn()
 }))
 vi.mock('electron', () => ({ app: mocks.app }))
-vi.mock('../persistence', () => ({ getCanonicalUserDataPath: mocks.userDataPath }))
+vi.mock('../persistence/loading-store/user-data-path', () => ({
+  getCanonicalUserDataPath: mocks.userDataPath
+}))
 vi.mock('./linux-serve-update-support', () => ({ hasLinuxServeUpdateSupervisor: () => true }))
 import {
   hasServeUpdateSupervisor,

@@ -7,8 +7,7 @@ import {
 import { agentVerdictFields } from './agent-main-agent-verdict'
 import { captureSessionNameHistory } from './session-names/session-name-history'
 
-/** The history a live entry carries after this write, and when its state was first observed. A
- *  state switch moves the previous state into history; a session boundary is never recorded. */
+/** Move the previous state into history on switches and retain its first-observed clock; never record session boundaries. */
 export function resolveAgentStatusLiveEntryStateHistory(
   existing: AgentStatusEntry | undefined,
   payload: Pick<ParsedAgentStatusPayload, 'state' | 'sessionBoundary'>,

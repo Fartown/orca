@@ -30,7 +30,6 @@ import {
 import type { WorkspaceCleanupFacetGroupProps } from './workspace-cleanup-facet-panel-model'
 import { useLocalTaskCleanupTicketSourceValues } from '@/local-tasks/local-task-cleanup-ticket-source'
 
-/** Git, review/PR, tickets, location/host, and safety blockers. */
 export function WorkspaceCleanupGitReviewFacets({
   filters,
   counts,

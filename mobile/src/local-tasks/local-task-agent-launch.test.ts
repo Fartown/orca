@@ -45,6 +45,8 @@ describe('workspace-only Start', () => {
       tasksSupported: true,
       worktreeCreateIdempotency: { dedupeTtlMs: 60_000 },
       agentLaunch: false,
+      branchIntentV2: false,
+      branchIntentV2Request: false,
       hostPlatform: null
     })
     vi.mocked(createWorktreeWithNameRetry).mockResolvedValue({

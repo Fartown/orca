@@ -1,6 +1,6 @@
 import { bindLocalTaskHostSessions } from '../local-tasks/local-task-host-session-binding'
 import { startLocalTasksHost } from '../local-tasks/local-tasks-host-lifecycle'
-import { getCanonicalUserDataPath } from '../persistence'
+import { getCanonicalUserDataPath } from '../persistence/loading-store/user-data-path'
 import { isOrcadSidecarLaunch } from '../window/foreground-activation-policy'
 import { mainProcessState as state } from './main-process-state'
 

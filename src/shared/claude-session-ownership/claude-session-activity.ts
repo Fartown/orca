@@ -97,15 +97,13 @@ export function checkOwnerAfterRefusedClaudeHook(
   }
 }
 
+/** The relay asks its own presence check, looked up per call, whether the owner exited. */
 export function refusedHook(
   state: HookListenerState,
-  checkOwner: (
-    paneKey: string,
-    sender: AgentProcessIdentity,
-    owner: AgentHookEventPayload
-  ) => unknown
+  relay: { checkAgentPresence: (paneKey: string) => unknown }
 ) {
-  return (body: unknown): void => checkOwnerAfterRefusedClaudeHook(state, body, checkOwner)
+  return (body: unknown): void =>
+    checkOwnerAfterRefusedClaudeHook(state, body, (paneKey) => relay.checkAgentPresence(paneKey))
 }
 
 export function cacheRecorder(

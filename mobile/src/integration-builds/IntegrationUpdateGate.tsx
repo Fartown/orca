@@ -3,6 +3,8 @@ import { Alert, AppState, Pressable, Text } from 'react-native'
 import { useRouter } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useStore } from 'zustand'
+import { translate } from '../i18n/mobile-i18n'
+import { useMobileTranslation } from '../i18n/use-mobile-translation'
 import { colors, spacing, typography } from '../theme/mobile-theme'
 import {
   downloadAndInstallUpdate,
@@ -14,6 +16,7 @@ let announcedTag: string | null = null
 
 export function IntegrationUpdateGate() {
   const router = useRouter()
+  const t = useMobileTranslation()
   // Why: this banner mounts above the navigator in the root layout, so nothing else pads it
   // away from the status bar and the notch — the label rendered under both.
   const insets = useSafeAreaInsets()
@@ -34,12 +37,16 @@ export function IntegrationUpdateGate() {
       }
       announcedTag = release.tag
       Alert.alert(
-        'Orca update available',
-        `Integration ${release.sha.slice(0, 12)} is available. Download the APK now? Android will ask you to confirm installation. You can also update later in Settings → About.`,
+        translate('integrationBuilds.updateGate.availableTitle', 'Orca update available'),
+        translate(
+          'integrationBuilds.updateGate.availableMessage',
+          'Integration {{sha}} is available. Download the APK now? Android will ask you to confirm installation. You can also update later in Settings → About.',
+          { sha: release.sha.slice(0, 12) }
+        ),
         [
-          { text: 'Later', style: 'cancel' },
+          { text: translate('integrationBuilds.updateGate.later', 'Later'), style: 'cancel' },
           {
-            text: 'Download',
+            text: translate('integrationBuilds.updateGate.download', 'Download'),
             onPress: () => {
               void downloadAndInstallUpdate()
             }
@@ -71,12 +78,17 @@ export function IntegrationUpdateGate() {
   }
   const label =
     stage === 'downloading'
-      ? `Downloading Orca update… ${Math.floor(progress)}%`
+      ? t('integrationBuilds.updateGate.downloading', 'Downloading Orca update… {{percent}}%', {
+          percent: Math.floor(progress)
+        })
       : stage === 'verifying'
-        ? 'Verifying Orca update…'
+        ? t('integrationBuilds.updateGate.verifying', 'Verifying Orca update…')
         : stage === 'error'
-          ? 'Orca update failed — tap to retry'
-          : 'Orca update ready — tap to continue installation'
+          ? t('integrationBuilds.updateGate.failed', 'Orca update failed — tap to retry')
+          : t(
+              'integrationBuilds.updateGate.ready',
+              'Orca update ready — tap to continue installation'
+            )
   return (
     <Pressable
       accessibilityRole="button"

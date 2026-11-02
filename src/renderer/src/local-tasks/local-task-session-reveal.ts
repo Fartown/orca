@@ -1,7 +1,7 @@
 import { useAppStore } from '@/store'
 import { revealTerminalPane } from '@/lib/reveal-terminal-pane'
 import { activateAndRevealWorkspace } from '@/lib/worktree-activation'
-import { activateStructuredAgentSessionTab } from '@/lib/structured-agent-session-tab-activation'
+import { activateStructuredAgentSessionTab } from '@/lib/agent-session/structured-agent-session-tab-activation'
 import { parseExecutionHostId } from '../../../shared/execution-host'
 import { parsePaneKey } from '../../../shared/stable-pane-id'
 import type { LocalTaskSessionLink } from '../../../shared/local-tasks/local-task-link-types'

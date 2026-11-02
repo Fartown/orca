@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { LaunchAgentInNewTabArgs } from '@/lib/launch-agent-in-new-tab'
-import { structuredAgentSessionPaneKey } from '../../../shared/structured-agent-session-projection'
+import { structuredAgentSessionPaneKey } from '../../../shared/agent-session/view/structured-agent-session-projection'
 import type { LocalTaskWorkspaceLink } from '../../../shared/local-tasks/local-task-link-types'
 import type { LocalTask } from '../../../shared/local-tasks/local-task-types'
 

@@ -89,6 +89,11 @@ export async function resolveAbsoluteTabEntryReach(args: {
     context: RuntimeFileOperationArgs,
     filePath: string
   ) => Promise<{ isDirectory: boolean }>
+  /** The caller's localized refusals; English when omitted. */
+  copy?: {
+    fileNotFound: (path: string) => string
+    cannotOpenDirectory: (path: string) => string
+  }
 }): Promise<AbsoluteTabEntryReach> {
   const needsGrant = args.context.target.kind === 'environment' && !args.worktreeRelativePath
   if (needsGrant) {
@@ -101,10 +106,12 @@ export async function resolveAbsoluteTabEntryReach(args: {
   try {
     stat = await args.statRuntimePath(args.context, args.filePath)
   } catch {
-    throw new Error(`File not found: ${args.filePath}`)
+    throw new Error(args.copy?.fileNotFound(args.filePath) ?? `File not found: ${args.filePath}`)
   }
   if (stat.isDirectory) {
-    throw new Error(`Cannot open a directory: ${args.filePath}`)
+    throw new Error(
+      args.copy?.cannotOpenDirectory(args.filePath) ?? `Cannot open a directory: ${args.filePath}`
+    )
   }
   return { openedPath: args.filePath }
 }

@@ -1,204 +1,100 @@
-import type { AgentSessionClaimedSpawnResult } from '../../../../shared/agent-session-host-authority'
 import {
   recordTerminalLaunchStage,
   traceTerminalPtyAdmission
 } from '../../../terminal-launch-diagnostics/launch-trace'
-import { isTerminalLeafId, parsePaneKey } from '../../../../shared/stable-pane-id'
-import { isValidTerminalTabId } from '../../../../shared/terminal-tab-id'
-import { rejectPaneSpawnReservation } from '../pane/spawn-reservation'
-import { restoreProvisionalPtySize } from '../spawn-options-assembly'
+import { runPtySpawn, normalizePtySpawnSessionId } from '../spawn-operation'
+import { requireAcceptedSpawn } from '../spawn-outcome'
 import type { PtyRuntimeControllerDeps } from './controller-deps'
-import { adoptMaterializedRuntimePtySpawn } from './spawn-early'
 import { prepareRuntimePtySpawn } from './spawn-preflight'
+import { applyAgentLaunchPluginHook } from '../spawn-agent-launch-plugin-hook'
 import { buildRuntimePtySpawnOptions } from './spawn-options'
-import { executeRuntimePtySpawn } from './spawn-execute'
 import { commitRuntimePtySpawn } from './spawn-commit'
 import { createRuntimePtySpawnState, type RuntimePtySpawnArgs } from './spawn-state'
 import {
   commitRuntimeSpawnHiddenDelivery,
+  markRuntimeSpawnHiddenBeforeSpawn,
   releaseRuntimeSpawnPreSpawnHiddenMark
 } from './spawn-hidden-delivery'
 
-function toRuntimeSpawnReply(result: {
-  id: string
-  incarnationId?: string
-  wslDistro?: string | null
-  stablePaneOwner?: { handle: string; tabId: string; leafId: string }
-  agentSessionEnsure?: AgentSessionClaimedSpawnResult
-}) {
-  return {
-    id: result.id,
-    ...(result.incarnationId ? { incarnationId: result.incarnationId } : {}),
-    ...(typeof result.wslDistro === 'string' ? { wslDistro: result.wslDistro } : {}),
-    ...(result.stablePaneOwner ? { stablePaneOwner: result.stablePaneOwner } : {}),
-    ...(result.agentSessionEnsure ? { agentSessionEnsure: result.agentSessionEnsure } : {})
-  }
-}
-
+/** Runtime projection stays inside the admitted start, so a rejected start withdraws its new pane. */
 export async function spawnPtyFromRuntimeController(
   deps: PtyRuntimeControllerDeps,
-  args: RuntimePtySpawnArgs
+  request: RuntimePtySpawnArgs
 ) {
-  return traceTerminalPtyAdmission(args, () => spawnRecordedPty(deps, args))
+  return traceTerminalPtyAdmission(request, () => spawnRecordedPty(deps, request))
 }
 
-async function spawnRecordedPty(deps: PtyRuntimeControllerDeps, args: RuntimePtySpawnArgs) {
-  recordTerminalLaunchStage('pty-request', args)
-  if (
-    args.paneSpawnOperation ||
-    !args.tabId ||
-    !args.leafId ||
-    !isValidTerminalTabId(args.tabId) ||
-    !isTerminalLeafId(args.leafId)
-  ) {
-    return spawnFreshPtyFromRuntimeController(deps, args)
-  }
-  let freshResult: Awaited<ReturnType<typeof spawnFreshPtyFromRuntimeController>> | undefined
-  const adopted = await deps.adoptStablePane({
-    cols: args.cols,
-    rows: args.rows,
-    cwd: args.cwd,
-    worktreeId: args.worktreeId,
-    tabId: args.tabId,
-    leafId: args.leafId,
-    connectionId: args.connectionId,
-    preAllocatedHandle: args.preAllocatedHandle,
-    signal: args.signal,
-    completed: args.adoptedStablePane,
-    spawnFresh: async (operation) => {
-      freshResult = await spawnFreshPtyFromRuntimeController(deps, {
-        ...args,
-        paneSpawnOperation: operation
-      })
-      return freshResult
-    }
-  })
-  if (!adopted) {
-    return toRuntimeSpawnReply(freshResult!)
-  }
-  recordTerminalLaunchStage('adopt-stable-pane', {
-    ...args,
-    ptyId: adopted.result.id,
-    incarnationId: adopted.result.incarnationId
-  })
-  if (!args.worktreeId) {
-    return toRuntimeSpawnReply(adopted.result)
-  }
-  const completed = await adoptMaterializedRuntimePtySpawn(
-    createRuntimePtySpawnState(deps, { ...args, adoptedStablePane: adopted })
-  )
-  return toRuntimeSpawnReply(completed ?? adopted.result)
-}
-
-async function spawnFreshPtyFromRuntimeController(
-  deps: PtyRuntimeControllerDeps,
-  args: RuntimePtySpawnArgs
-) {
+async function spawnRecordedPty(deps: PtyRuntimeControllerDeps, request: RuntimePtySpawnArgs) {
+  recordTerminalLaunchStage('pty-request', request)
+  const args = { ...request, sessionId: normalizePtySpawnSessionId(request.sessionId) }
   const ctx = createRuntimePtySpawnState(deps, args)
-
-  try {
-    const materializedOrPromise = adoptMaterializedRuntimePtySpawn(ctx)
-    const materialized =
-      materializedOrPromise instanceof Promise ? await materializedOrPromise : materializedOrPromise
-    if (materialized) {
-      recordTerminalLaunchStage('adopt-materialized', {
-        ...args,
-        ptyId: materialized.id,
-        incarnationId: materialized.incarnationId
-      })
-      return toRuntimeSpawnReply(materialized)
-    }
-    const earlyAdopt = await prepareRuntimePtySpawn(ctx)
-    if (earlyAdopt) {
-      recordTerminalLaunchStage('adopt-preflight', {
-        ...args,
-        ptyId: earlyAdopt.id,
-        incarnationId: earlyAdopt.incarnationId
-      })
-      return toRuntimeSpawnReply(earlyAdopt)
-    }
-    const earlyReserved = await buildRuntimePtySpawnOptions(ctx).catch((error: unknown) => {
-      restoreProvisionalPtySize({
-        sessionId: ctx.sessionId,
-        sessionAppId: ctx.effectiveSessionAppId,
-        hadSessionSizeBeforeAttach: ctx.hadSessionSizeBeforeAttach,
-        sessionSizeBeforeAttach: ctx.sessionSizeBeforeAttach
-      })
-      throw error
-    })
-    if (earlyReserved) {
-      recordTerminalLaunchStage('adopt-reservation', {
-        ...args,
-        ptyId: earlyReserved.id,
-        incarnationId: earlyReserved.incarnationId
-      })
-      return toRuntimeSpawnReply(earlyReserved)
-    }
-    const complete = async (operation = args.paneSpawnOperation) => {
-      ctx.args.paneSpawnOperation = operation
-      await executeRuntimePtySpawn(ctx)
-      const committed = await commitRuntimePtySpawn(ctx)
-      commitRuntimeSpawnHiddenDelivery(ctx)
-      recordTerminalLaunchStage('pty-committed', {
-        ...ctx.args,
-        ptyId: committed.id,
-        incarnationId: committed.incarnationId,
-        isReattach: ctx.result.isReattach
-      })
-      return committed
-    }
-    const latePane =
-      !args.paneSpawnOperation && ctx.spawnIdentityPaneKey
-        ? parsePaneKey(ctx.spawnIdentityPaneKey)
-        : null
-    if (latePane) {
-      ctx.args = { ...ctx.args, ...latePane }
-      let result: Awaited<ReturnType<typeof complete>> | undefined
-      const adopted = await deps.adoptStablePane({
-        cols: args.cols,
-        rows: args.rows,
-        cwd: args.cwd,
-        worktreeId: args.worktreeId,
-        connectionId: args.connectionId,
-        ...latePane,
-        signal: args.signal,
-        preAllocatedHandle: args.preAllocatedHandle,
-        spawnFresh: async (operation) => (result = await complete(operation))
-      })
-      if (adopted) {
-        recordTerminalLaunchStage('adopt-late-stable-pane', {
-          ...ctx.args,
-          ptyId: adopted.result.id,
-          incarnationId: adopted.result.incarnationId
+  const outcome = await runPtySpawn({
+    state: ctx,
+    prepare: async () => {
+      ctx.args = await applyAgentLaunchPluginHook(ctx.args, deps.runtime)
+      await prepareRuntimePtySpawn(ctx)
+      await buildRuntimePtySpawnOptions(ctx)
+    },
+    facts: () => ({
+      sessionId: ctx.sessionId,
+      savedResumePaneKey: ctx.spawnIdentityPaneKey,
+      launchConfig: ctx.args.launchConfig,
+      suppressRefusedLaunch: () => {
+        ctx.launchCommand = undefined
+        ctx.env = ctx.spawnOptions.env
+      },
+      paneKey: ctx.spawnIdentityPaneKey,
+      preAllocatedHandle: args.preAllocatedHandle,
+      beforeProviderSpawn: () => markRuntimeSpawnHiddenBeforeSpawn(ctx),
+      reportPtySpawnCommitted: () => ctx.reportPtySpawnCommitted()
+    }),
+    commit: () => {
+      if (!ctx.result.isReattach) {
+        Object.assign(ctx.result, {
+          ...(ctx.agentResumeUnavailable ? { agentResumeUnavailable: true as const } : {}),
+          launchConfig: ctx.args.launchConfig,
+          launchAgent: ctx.args.launchAgent,
+          launchToken: ctx.args.launchToken,
+          resumeProviderSession: ctx.codexResumeArgvDropped
+            ? undefined
+            : ctx.args.resumeProviderSession
         })
       }
-      return toRuntimeSpawnReply(adopted?.result ?? result!)
+      return commitRuntimePtySpawn(ctx)
+    },
+    onCommitted: () => commitRuntimeSpawnHiddenDelivery(ctx),
+    // Diagnostics only: every settled start, including early and late pane adoption.
+    onOutcome: (settled) =>
+      recordTerminalLaunchStage(`pty-${settled.kind}`, {
+        ...ctx.args,
+        ptyId: settled.result.id,
+        incarnationId: settled.result.incarnationId,
+        isReattach: settled.result.isReattach
+      }),
+    onError: (error) => {
+      recordTerminalLaunchStage('pty-failed', {
+        ...ctx.args,
+        ptyId: ctx.result.id || ctx.pendingRegistrationPtyId
+      })
+      return error
+    },
+    releaseHiddenMark: () => releaseRuntimeSpawnPreSpawnHiddenMark(ctx),
+    adoption: () => ({ completed: args.adoptedStablePane })
+  })
+  const result = requireAcceptedSpawn(outcome)
+  let stablePaneOwner = result.stablePaneOwner
+  if (outcome.owner && args.worktreeId) {
+    const handle = stablePaneOwner?.handle ?? outcome.owner.handle ?? args.preAllocatedHandle
+    if (!handle) {
+      throw new Error('terminal_pane_owner_unknown')
     }
-    return await complete()
-  } catch (err) {
-    recordTerminalLaunchStage('pty-failed', {
-      ...ctx.args,
-      ptyId: ctx.result?.id ?? ctx.pendingRegistrationPtyId
-    })
-    releaseRuntimeSpawnPreSpawnHiddenMark(ctx)
-    if (ctx.pendingRegistrationPtyId) {
-      deps.runtime?.cancelPendingPtyRegistration?.(
-        ctx.pendingRegistrationPtyId,
-        ctx.rejectedRegistrationCandidate?.incarnationId,
-        ctx.pendingRegistrationClaim
-      )
-      ctx.pendingRegistrationPtyId = null
-    }
-    // Why: once the reservation is created, any later throw — spawn
-    // failure, persist failure, or a post-spawn helper such as
-    // registerPty/rememberPaneKeyForPty/track — must settle it. Otherwise
-    // it lingers in paneSpawnReservationsByOwnerKey and every future spawn
-    // for this pane awaits a promise that never resolves. reject is a
-    // no-op once the reservation has already resolved.
-    rejectPaneSpawnReservation(ctx.paneSpawnReservationKey, ctx.paneSpawnReservation, err)
-    throw err
-  } finally {
-    ctx.releaseWorktreeSpawn?.()
-    ctx.finishTerminalInstall()
+    stablePaneOwner = { handle, tabId: outcome.owner.tabId, leafId: outcome.owner.leafId }
+  }
+  return {
+    ...result,
+    wslDistro: result.wslDistro ?? undefined,
+    ...(stablePaneOwner ? { stablePaneOwner } : {}),
+    ...(result.agentSessionEnsure ? { agentSessionEnsure: result.agentSessionEnsure } : {}),
+    ...(result.startupCwdFallback ? { startupCwdFallback: result.startupCwdFallback } : {})
   }
 }

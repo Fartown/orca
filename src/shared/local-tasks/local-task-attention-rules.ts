@@ -8,7 +8,7 @@ import {
   agentStatusAuthorityObservedAt
 } from '../agent-status-freshness'
 import { resolveDecayedAgentRowState } from '../agent-row-decay-state'
-import { parseAskFromStatus } from '../native-chat-ask'
+import { parseAskFromStatus } from '../native-chat/input/native-chat-ask'
 import type {
   LocalTaskAttentionItem,
   LocalTaskAttentionKind,

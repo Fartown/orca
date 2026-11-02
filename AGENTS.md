@@ -1,28 +1,42 @@
 # Useful Commands
 
 - **Typecheck**: `pnpm tc` (or `tc:node` / `tc:cli` / `tc:web`)
-- **Test**: `pnpm test [path/to/file.test.ts]`
-- **Lint**: `oxlint`, or `pnpm run check:code-quality:changed` for changed files (full `pnpm lint` is slow); format with `pnpm format`
-- **Design system**: `pnpm run lint:design-system` for the full renderer report (not a gate); the changed-lines gate above is what CI enforces
+- **Test**: `pnpm test [path/to/file.test.ts] --maxWorkers=2`; incremental: `pnpm test:changed [path] --maxWorkers=2` ([details](.github/CONTRIBUTING.md#targeting-local-tests)). Separate rendered UI E2E checks need explicit, reproducible viewport/state.
+- **Lint/format**: Basic: `pnpm exec oxlint <files>`; full lint gate: `pnpm lint`; formatting: `pnpm exec oxfmt --check <files>` (fix: `--write`). Applicable gates include `pnpm check:code-quality:changed <base>` and `pnpm check:flaky-test-pattern-ratchet`.
+
+> [!IMPORTANT]
+> Run `pnpm check:changed` after your last edit/rebase, right before every push. Never `--no-verify`.
+
+If selection fans out excessively, use scoped checks and report limits. Use the PR base (default `origin/main`; `ORCA_CODE_QUALITY_BASE=<ref>` for stacks). `--base=HEAD` and dirty-only checks provide incremental evidence only.
+
+# Don't Poll the CI
+
+Use `gh run watch <run-id> --compact --exit-status` or `gh pr checks --watch` to prevent token waste
+
+# Repo Rules
+
+- Ensure main is always releasable
+- Never break the CI. If it's broken borken, merge fixes.
+- Avoid low-value tests (see [Anti-patterns](./docs/agents-md-refs/test-antipatterns.md))
 
 # Design System
 
-All UI work — layout, color, typography, spacing, component selection, UX behavior — must follow [`docs/STYLEGUIDE.md`](./docs/STYLEGUIDE.md). Use the tokens defined in `src/renderer/src/assets/main.css` (the canonical source) and the shadcn primitives in `src/renderer/src/components/ui/`. Don't invent new color values, font sizes, or shadow tiers when a documented one already covers the role. When STYLEGUIDE.md is silent, follow the resolution order in its final section.
+All UI work — layout, color, typography, spacing, component selection, UX behavior — must follow [`docs/STYLEGUIDE.md`](./docs/STYLEGUIDE.md). Use the tokens defined in `src/renderer/src/assets/main.css` (the canonical source) and the shadcn primitives in `src/renderer/src/components/ui/`. Don't invent new color values, font sizes, or shadow tiers when a documented one already covers the role.
 
 # Electron UI Validation
 
-Always run tests and agent-launched apps in the background with `ORCA_BACKGROUND_LAUNCH=1`.
-Never steal monitor focus or reveal test windows: no `show()`, `showInactive()`, `bringToFront()`,
-`app.focus()`, or OS activation. Use CDP screenshots of hidden renderers. Keep native-focus and visible-window tests paused on the user's desktop; run them on an isolated display or CI.
-Rebuild modified launch-policy code before running an app; stale build wrappers are not safe.
-
-Use the `$electron` skill and Playwright CDP for rendered Orca UI checks. Do not use computer-use for Orca UI validation.
+- Always run tests and agent-launched apps in the background with `ORCA_BACKGROUND_LAUNCH=1`.
+- Never steal monitor focus or reveal test windows: no `show()`, `showInactive()`, `bringToFront()`, `app.focus()`, or OS activation. Use CDP screenshots of hidden renderers.
+- Keep native-focus and visible-window tests paused on the user's desktop; run them on an isolated display or CI.
+- Rebuild modified launch-policy code before running an app (stale build wrappers are not safe).
+- Use the `$electron` skill and Playwright CDP for rendered Orca UI checks. Do not use computer-use for Orca UI validation.
+- Screenshot presentational components without Electron: `pnpm fixtures:shot <id>` ([fixtures](docs/agents-md-refs/component-fixtures.md)).
 
 # Code Style
 
 ## Reuse Before Reimplementing
 
-Before writing new logic at any scale — a function, component, IPC channel, state store, or whole subsystem/flow — check whether an existing implementation already does the job. Extend or generalize it instead of building a parallel version.
+Before writing new logic at any scale extend or generalize it instead of building a parallel version.
 
 ## Avoid Comments
 
@@ -33,25 +47,19 @@ Before writing new logic at any scale — a function, component, IPC channel, st
 
 Never use vague names like `helpers`, `utils`, `common`, `misc`, or `shared-stuff` for files, folders, or modules. They carry zero info and tend to become dumping grounds. Name files after what they _actually_ contain — prefer the concrete domain concept (e.g. `tab-group-state.ts`, `terminal-orphan-cleanup.ts`) over the generic role (`tabs-helpers.ts`, `terminal-utils.ts`). If you find yourself reaching for `helpers`, the file probably has more than one responsibility and should be split, or there's a better name hiding in the code that describes what the functions operate on.
 
-## Type Assertions: Prefer Checked Types
-
-Avoid type assertions except `as const`. Unavoidable casts need a line-specific `SAFETY:` explanation:
-
 # First Class Citizens
 
 Every change must consider these areas:
 
-## Cross-Platform Support
+1. Cross-Platform Support (mac/linux/windows)
+   - Guard platform-specific behavior at runtime; use platform-aware shortcuts, paths, and existing process wrappers. Before changing platform-specific code, processes, shells, shortcuts, paths, or native modules, read [`docs/agents-md-refs/cross-platform-support.md`](./docs/agents-md-refs/cross-platform-support.md).
+2. Remote hosts
+   - Features should work locally and on remote hosts
+3. Mobile
+4. Folder Workspaces
+   - Don't assume every workspace is a git worktree.
 
-Support macOS, Linux, and Windows. Guard platform-specific behavior at runtime; use platform-aware shortcuts, paths, and existing process wrappers. Before changing platform-specific code, processes, shells, shortcuts, paths, or native modules, read [`docs/reference/cross-platform-support.md`](./docs/reference/cross-platform-support.md).
-
-## Remote Use Case
-
-Support remote execution as well as local. Clients and servers update independently; preserve compatibility across mixed versions.
-
-## Mobile
-
-Any feature should be considered for parity on mobile
+## SSH Use Case
 
 All changes must consider the SSH use case. Don't assume local-only execution. Before changing anything that reports on, stops, or lists remote work, the execution host owns everything that touches execution, and loss of contact is never evidence of process death — the verdict vocabulary is `live` / `unverifiable` / `exited`, with no synonyms.
 
@@ -73,49 +81,13 @@ A feature never reconnects, retries, or backs off against a host on its own, and
 
 Why: a feature that re-requested on every failure turned one unreachable host into ~900 requests/s and froze the client (Issues, 2026-09).
 
-## Folder Workspace Use Case
+# Footguns
 
-All changes must consider folder workspaces as well as git worktrees. Don't assume every workspace is a git worktree.
+## Git / GitHub
 
-# Git / GitHub
+If changing code around `git`, `gh`, source-control, or review behavior read [`docs/agents-md-refs/git-workflow.md`](./docs/agents-md-refs/git-workflow.md).
 
-If changing code around `git`, `gh`, source-control, or review behavior read [`docs/reference/git-workflow.md`](./docs/reference/git-workflow.md).
-
-# Tests
-
-A rule that reads what an agent CLI paints on a terminal — readiness, blocked prompts, idle — must be written against a captured transcript, not a remembered screen. Use `config/scripts/capture-agent-pty-transcript.mjs` to keep escapes and wrapping intact and scrub account identifiers before they reach git.
-
-## Remote Wire Compatibility
-
-Clients and remote Orca servers update independently, so mixed versions are the normal state. Before changing anything a paired client and host exchange — RPC params, stream frames, or the content either side publishes over them — preserve compatibility with older peers. A new optional field is safe; a new stream opcode must be capability-negotiated because decoders drop unknown opcodes silently; and changing what the host publishes reaches old clients even with no wire change.
-
-## Git Binary Compatibility
-
-Orca runs the user's Git binary on native, WSL, and SSH hosts, which may all have different versions. Treat Git 2.25 as the core-workflow baseline.
-
-When adding or changing a Git command:
-
-- Check when every subcommand and option was introduced. For newer behavior, keep a baseline-compatible fallback or degrade safely.
-- Use `GitCapabilityCache` with a narrow unsupported-error predicate so recurring operations do not retry a known-invalid command. Do not rely only on `git --version`; wrappers such as `simple-git` do not remove host-version differences.
-- Scope capability state to the host that executes Git: native, WSL distro, SSH provider, or relay connection. Cover the first fallback, later cached calls, concurrent probes, and relevant host isolation in tests.
-- Keep the real-binary compatibility contract in PR CI current. When adopting a newer Git feature, add its version boundary so the preferred command and fallback both run against representative Git releases.
-- Preserve commands that begin with global Git options such as `-c` before the subcommand, including auto-maintenance suppression used by worktree-create fetches.
-
-## Git Scan Safety
-
-- Never enumerate every ref and then run `git ls-tree -r` or `git show` once per ref. That ref × tree fan-out can retain gigabytes of output before a downstream `sort -u` or search can make progress.
-- Prefer `rg` over the checked-out files for source searches. For history or refs, use a named ref, an explicit namespace/path, `--max-count`, and a bounded output; do not use an unqualified `--all` scan as a first diagnostic.
-- Keep repository-wide commands targeted to the current repository and worktree. If an unbounded scan is genuinely required, measure the ref count first, explain the cost, and get confirmation before running it.
-
-## Git Provider Compatibility
-
-Source-control and review changes must consider GitLab and other supported git providers, not only GitHub. Keep provider-specific behavior behind explicit checks, and avoid GitHub-only naming for generic review concepts.
-
-## GitHub CLI Usage
-
-Be mindful of the user's `gh` CLI API rate limit — batch requests where possible and avoid unnecessary calls. All code, commands, and scripts must be compatible with macOS, Linux, and Windows.
-
-## Fork Maintenance
+# Fork Maintenance
 
 This checkout is the `Fartown/orca` fork of `stablyai/orca` (`origin`). It carries its own features on top of upstream; the full rules are in [`docs/reference/fork-maintenance.md`](./docs/reference/fork-maintenance.md).
 
@@ -126,7 +98,7 @@ This checkout is the `Fartown/orca` fork of `stablyai/orca` (`origin`). It carri
 - **Formatting churn is not a change.** After a repository-wide `oxfmt`, restore upstream files whose diff is whitespace-only with `git checkout origin/main -- <file>` before committing.
 - **Validation artifacts** go under `.docs/<topic>-ui-validation/<date>/{scripts,evidence,build}` (ignored by git) with a README; consolidate throwaway probes into one named script and delete the rest.
 
-### Iteration Principles
+## Iteration Principles
 
 Every rule below has a gate that turns red when it is broken; the gate, not this text, is what holds.
 
@@ -137,5 +109,3 @@ Every rule below has a gate that turns red when it is broken; the gate, not this
 5. **Goals are facts, not aspirations.** A `REQ-<n>` marked 已实现 must be referenced by a test-case document; journal status uses the task-leader vocabulary (clarifying / designing / implementing / testing / done / blocked); `docs/issue/README.md` is generated (`pnpm generate:issue-index`), never edited by hand. Gate: `pnpm check:fork-docs`.
 6. **Never** delete or stub a registered feature to make something pass, run a repository-wide formatter and commit the churn, quit the user's running app without asking, or bundle several features into one commit.
 7. **Upstream comes in only through `pnpm sync:upstream` or the weekly workflow.** Read the seam-and-dependency report it prints before merging; on conflicts keep every registered feature, commit the merge, re-run the script; a seam that moved to a new upstream file is registered, not dropped.
-
-Avoid adding low-value tests. These might be fine for development but offer low value when checked in. [Anti-patterns](./docs/reference/test-antipatterns.md)

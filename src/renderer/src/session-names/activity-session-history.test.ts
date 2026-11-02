@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest'
-import { buildAgentStatusLiveEntry } from '../store/slices/agent-status-live-entry-builder'
+import { buildAgentStatusLiveEntry } from '../store/slices/agent-status/agent-status-live-entry-builder'
 import { createTestStore } from '../store/slices/store-test-helpers'
 import { buildPaneActivityEvents } from '../components/activity/activity-pane-events'
 import { agentStatusEntryEqual } from '../runtime/web-session-tabs-sync/state-equality-core'

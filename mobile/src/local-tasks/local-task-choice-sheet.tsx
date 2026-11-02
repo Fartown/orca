@@ -1,5 +1,5 @@
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native'
-import { BottomDrawer } from '../components/BottomDrawer'
+import { BottomDrawer } from '../components/bottom-drawer/BottomDrawer'
 import { colors, spacing, typography } from '../theme/mobile-theme'
 import { localTaskStyles } from './local-tasks-styles'
 

@@ -38,7 +38,7 @@ const entry: AgentStatusEntry = {
 
 it('agent-session projection preserves native, generated and container candidates separately', () => {
   const projected = projectActivityTabs({ folder: [tab] }, null)
-  const context = buildActivityTabContext({}, projected).get(tab.id)!
+  const context = buildActivityTabContext({}, projected, new Map()).get(tab.id)!
   expect(context.tab).toMatchObject({
     title: 'Codex',
     generatedTitle: '首个任务',
@@ -56,31 +56,35 @@ it('agent-session projection preserves native, generated and container candidate
 })
 
 it('an evidence-only rename invalidates projection while a focus-only update retains it', () => {
-  const previous = projectActivityTabs({ folder: [tab] }, null)
-  const focusOnly = projectActivityTabs({ folder: [{ ...tab, lastFocusedAt: 100 }] }, previous)
+  const renamedSlot: NonNullable<Tab['aiVaultTitle']> = {
+    ...tab.aiVaultTitle!,
+    providerName: { kind: 'named', title: '新的原生名', field: 'session_index.thread_name' }
+  }
+  // Only terminal tabs are reused across focus-only writes; native chats keep their current objects.
+  const terminal: Tab = { ...tab, contentType: 'terminal' }
+  const previous = projectActivityTabs({ folder: [terminal] }, null)
+  const focusOnly = projectActivityTabs({ folder: [{ ...terminal, lastFocusedAt: 100 }] }, previous)
   expect(focusOnly).toBe(previous)
-  const rename = projectActivityTabs(
-    {
-      folder: [
-        {
-          ...tab,
-          aiVaultTitle: {
-            ...tab.aiVaultTitle!,
-            providerName: { kind: 'named', title: '新的原生名', field: 'session_index.thread_name' }
-          }
-        }
-      ]
-    },
+  const renamedTerminal = projectActivityTabs(
+    { folder: [{ ...terminal, aiVaultTitle: renamedSlot }] },
     previous
   )
-  expect(rename).not.toBe(previous)
+  expect(renamedTerminal).not.toBe(previous)
+  const rename = projectActivityTabs(
+    { folder: [{ ...tab, aiVaultTitle: renamedSlot }] },
+    projectActivityTabs({ folder: [tab] }, null)
+  )
   expect(
-    getActivitySessionName(entry, buildActivityTabContext({}, rename).get(tab.id)!.tab, true)
+    getActivitySessionName(
+      entry,
+      buildActivityTabContext({}, rename, new Map()).get(tab.id)!.tab,
+      true
+    )
   ).toBe('新的原生名')
 })
 
 it('only owned history seeds a stable prompt; newer or another session prompts cannot replace it', () => {
-  const context = buildActivityTabContext({}, { folder: [tab] }).get(tab.id)!
+  const context = buildActivityTabContext({}, { folder: [tab] }, new Map()).get(tab.id)!
   const history = [
     {
       state: 'done' as const,
@@ -105,7 +109,7 @@ it('only owned history seeds a stable prompt; newer or another session prompts c
 })
 
 it('disabling renderer generation leaves scanner prompt evidence intact but never derives from a hook prompt', () => {
-  const terminal = buildActivityTabContext({}, { folder: [tab] }).get(tab.id)!.tab
+  const terminal = buildActivityTabContext({}, { folder: [tab] }, new Map()).get(tab.id)!.tab
   expect(
     getActivitySessionName(
       { ...entry, prompt: '只能由renderer派生的任务' },

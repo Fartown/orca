@@ -5,7 +5,7 @@ import type { LocalTaskChangeScope } from '../../shared/local-tasks/local-task-t
 import {
   structuredAgentSessionPaneKey,
   structuredAgentSessionTabId
-} from '../../shared/structured-agent-session-projection'
+} from '../../shared/agent-session/view/structured-agent-session-projection'
 import { readLocalTaskAttentionStates } from './local-task-attention-store'
 import {
   disposeLocalTaskExecutionFixtures,

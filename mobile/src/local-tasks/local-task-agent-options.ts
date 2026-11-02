@@ -47,11 +47,12 @@ export async function loadLocalTaskAgentOptions(args: {
   target: { kind: 'existing'; routeId: string } | { kind: 'create'; hostId: string }
 }): Promise<MobileNewTabAgentOption[]> {
   if (args.target.kind === 'existing') {
-    return loadMobileNewTabAgentOptions({
+    const inventory = await loadMobileNewTabAgentOptions({
       client: args.launchClient,
       worktreeId: args.target.routeId,
       hostRefusesOtherRuntime: hostRefusesOtherRuntimeWorkspace(args.hostCapabilities)
     })
+    return inventory.options
   }
   const host = parseExecutionHostId(args.target.hostId)
   const [settingsReply, detected] = await Promise.all([

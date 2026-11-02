@@ -10,14 +10,15 @@ import { sessionNameSlotCandidates } from './session-names/session-name-slot'
 export function resolveTerminalTabTitle(
   tab: Pick<
     TerminalTab,
-    | 'customTitle'
     | 'quickCommandLabel'
     | 'aiVaultTitle'
     | 'generatedTitle'
     | 'title'
     | 'defaultTitle'
     | 'launchAgent'
-  >,
+  > & {
+    customTitle?: string | null
+  },
   generatedTitlesEnabled: boolean,
   fallback = ''
 ): string {

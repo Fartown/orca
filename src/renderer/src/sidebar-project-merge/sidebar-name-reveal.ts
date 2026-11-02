@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import {
   buildProjectGroupingIndex,
   type ProjectSectionModel
@@ -40,4 +41,23 @@ export function resolveSidebarNameReveal<T extends { rowKey: string }>(
     args.model
   )
   return rowKey === pending.rowKey ? pending : { ...pending, rowKey }
+}
+
+/** The pending sidebar row reveal, retargeted to the displayed name group that renders it. */
+export function useSidebarNameReveal<T extends { rowKey: string }>(args: {
+  pendingRevealSidebarRow: T | null
+  occurrencePlan?: { bySection: ReadonlyMap<string, unknown> }
+  repoMap: Map<string, Repo>
+  projectGrouping?: ProjectSectionModel
+}): T | null {
+  const { pendingRevealSidebarRow, occurrencePlan, repoMap, projectGrouping } = args
+  return useMemo(
+    () =>
+      resolveSidebarNameReveal(pendingRevealSidebarRow, {
+        sectionKeys: occurrencePlan?.bySection,
+        repoMap,
+        model: projectGrouping
+      }),
+    [pendingRevealSidebarRow, occurrencePlan, repoMap, projectGrouping]
+  )
 }

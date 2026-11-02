@@ -104,8 +104,7 @@ describe('native relaunch read-only evidence', () => {
         process.execPath,
         [
           '-e',
-          failedCwd +
-            withExceptionMonitor(handler + "throw new Error('original-cwd-error')", destination)
+          `${failedCwd}${withExceptionMonitor(`${handler}throw new Error('original-cwd-error')`, destination)}`
         ],
         { encoding: 'utf8', timeout: 5_000 }
       )

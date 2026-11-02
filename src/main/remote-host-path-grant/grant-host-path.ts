@@ -5,7 +5,6 @@ import { requireLocalRuntimeFileRoute } from '../runtime/files/file-target'
 import {
   hostGrantPathCandidate,
   HOST_PATH_GRANT_DIRECTORY_MESSAGE,
-  HOST_PATH_GRANT_PROVENANCE,
   HOST_PATH_GRANT_REQUIRES_ABSOLUTE_MESSAGE
 } from './host-path-grant-policy'
 
@@ -26,10 +25,8 @@ export async function grantHostPath(
   const artifactPath = await canonicalPathForArtifactComparison(candidate)
   const resolution = await artifacts.resolveAbsoluteFileGrant({
     worktreeId: target.worktree.id,
-    artifactPath,
-    clientId,
-    readOnly: false,
-    provenance: HOST_PATH_GRANT_PROVENANCE
+    absolutePath: artifactPath,
+    clientId
   })
   if (resolution.isDirectory) {
     throw new Error(HOST_PATH_GRANT_DIRECTORY_MESSAGE)

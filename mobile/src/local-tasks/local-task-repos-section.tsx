@@ -5,7 +5,7 @@ import { LOCAL_TASK_PROJECT_REPOS_MAX } from '../../../src/shared/local-tasks/lo
 import { localTaskReposPatch } from '../../../src/shared/local-tasks/local-task-repos-patch'
 import type { LocalTaskProject } from '../../../src/shared/local-tasks/local-task-types'
 import { ActionSheetContent, ActionSheetModal } from '../components/ActionSheetModal'
-import { BottomDrawer } from '../components/BottomDrawer'
+import { BottomDrawer } from '../components/bottom-drawer/BottomDrawer'
 import { PickerListDrawer } from '../components/PickerListDrawer'
 import { colors, spacing } from '../theme/mobile-theme'
 import type { LocalTasksApi } from './local-tasks-api'

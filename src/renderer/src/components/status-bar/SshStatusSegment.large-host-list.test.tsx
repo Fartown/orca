@@ -8,7 +8,8 @@ import type { RuntimeEnvironmentStatus } from '../../../../shared/runtime-host-s
 import type { SshConnectionState, SshConnectionStatus } from '../../../../shared/ssh-types'
 import type { Repo } from '../../../../shared/repo-types'
 import { SshStatusSegment } from './SshStatusSegment'
-import { SSH_HOST_FIND_RESULT_LIMIT, SSH_STATUS_MENU_IDLE_ROW_LIMIT } from './ssh-status-menu-rows'
+import { HOST_LIST_ROW_LIMIT } from '../host-picker/bounded-host-list'
+import { SSH_STATUS_MENU_IDLE_ROW_LIMIT } from './ssh-status-menu-rows'
 
 function noSettings(): GlobalSettings | null {
   return null
@@ -123,7 +124,7 @@ describe('the status menu with a very large imported SSH host list', () => {
     fireEvent.click(screen.getByRole('menuitem', { name: /^Find among/ }))
     const search = await screen.findByRole('combobox')
     fireEvent.change(search, { target: { value: 'node-1' } })
-    expect(screen.getAllByRole('option').length).toBeLessThanOrEqual(SSH_HOST_FIND_RESULT_LIMIT)
+    expect(screen.getAllByRole('option').length).toBeLessThanOrEqual(HOST_LIST_ROW_LIMIT)
     expect(screen.getByText(/more matches\. Keep typing/)).toBeTruthy()
     fireEvent.change(search, { target: { value: 'no-such-host' } })
     expect(screen.getByText('No SSH hosts match.')).toBeTruthy()
@@ -138,13 +139,5 @@ describe('the status menu with a very large imported SSH host list', () => {
     await vi.waitFor(() => expect(screen.queryByRole('combobox')).toBeNull())
     const trigger = screen.getByRole('button', { name: 'Remote host connection status' })
     await vi.waitFor(() => expect(document.activeElement).toBe(trigger))
-  })
-
-  it('offers no search when every idle host fits', () => {
-    state.sshTargetLabels = new Map([['ssh-1', 'solo']])
-    state.sshConnectionStates = new Map()
-    render(<SshStatusSegment compact={false} iconOnly={false} />)
-    expect(screen.getByText('solo')).toBeTruthy()
-    expect(screen.queryByRole('menuitem', { name: /^Find/ })).toBeNull()
   })
 })

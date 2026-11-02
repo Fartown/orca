@@ -95,7 +95,7 @@ export function useMobileSessionContinuation(args: {
         return
       }
       void loadMobileNewTabAgentOptions({ client, worktreeId: args.worktreeId })
-        .then((options) => {
+        .then(({ options }) => {
           if (seq !== loadSeqRef.current) {
             return
           }

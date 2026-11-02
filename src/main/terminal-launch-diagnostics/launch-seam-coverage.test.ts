@@ -6,7 +6,7 @@ describe('terminal launch coverage contract', () => {
   it.each([
     ['src/main/runtime/rpc/dispatcher.ts', 'traceTerminalLaunchRpc'],
     ['src/main/ipc/pty/runtime/spawn.ts', 'traceTerminalPtyAdmission'],
-    ['src/main/ipc/pty/runtime/spawn-execute.ts', 'recordTerminalProviderDispatch'],
+    ['src/main/ipc/pty/spawn-execute.ts', 'recordTerminalProviderDispatch'],
     ['src/main/daemon/daemon-terminal-admission.ts', 'traceDaemonTerminalLaunch'],
     ['src/renderer/src/store/terminals/terminal-tab-creation.ts', 'recordCreatedTerminalTab'],
     [

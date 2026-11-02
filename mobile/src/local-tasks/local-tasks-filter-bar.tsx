@@ -2,7 +2,7 @@ import { useState, type ReactNode } from 'react'
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
 import { ListFilter, Search, X } from 'lucide-react-native'
 import { LOCAL_TASK_STATUS_CATEGORIES } from '../../../src/shared/local-tasks/local-task-model'
-import { BottomDrawer } from '../components/BottomDrawer'
+import { BottomDrawer } from '../components/bottom-drawer/BottomDrawer'
 import { colors, radii, spacing } from '../theme/mobile-theme'
 import { localTasksCopy } from './local-tasks-copy'
 import {
@@ -176,7 +176,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.bgPanel,
     borderWidth: 1,
     borderColor: colors.borderSubtle,
-    borderRadius: radii.input,
+    borderRadius: radii.control,
     paddingHorizontal: spacing.sm,
     minHeight: 36
   },
@@ -187,7 +187,7 @@ const styles = StyleSheet.create({
     gap: 4,
     minHeight: 36,
     paddingHorizontal: spacing.sm,
-    borderRadius: radii.input,
+    borderRadius: radii.control,
     borderWidth: 1,
     borderColor: colors.borderSubtle,
     backgroundColor: colors.bgPanel

@@ -1,6 +1,8 @@
 import { defineMethod, defineStreamingMethod } from '../core'
 import { runFileWatchStream } from './file-watch-stream-lifecycle'
 import { FILE_MUTATION_METHODS } from './files-mutation-methods'
+import { dirListingPageCache } from './files-read-dir-page'
+import { FILE_STAGED_SAVE_METHODS } from './files-staged-save-methods'
 import {
   assertDirListingWithinRemoteBudget,
   remoteFileContentBudget
@@ -12,21 +14,25 @@ import {
   WorktreeSelector
 } from '../../../../shared/rpc-contract/files-target-params'
 import { FILE_TERMINAL_ARTIFACT_METHODS } from './files-terminal-artifact-methods'
+import { HOST_PATH_GRANT_METHODS } from '../../../remote-host-path-grant/host-path-grant-rpc-methods'
 import {
+  ChatImageRead,
   FilePathsExist,
   DocPreviewFileRead,
+  DocPreviewFileReadChunk,
   FileListAll,
   FileOpenDiff,
   FileOpenTab,
   FilePathSearch,
   FileReadChunk,
   FileSearch,
+  FileDirRead,
   FileTreePath,
   FileUnwatch,
-  HostPathGrant,
   ResolveTerminalPath,
   ServerDirectoryBrowse
 } from '../../../../shared/rpc-contract/files-params'
+import { limitSearchResultToContentBudget } from '../../../../shared/search-result-transport-budget'
 
 let filesWatchSubscriptionSeq = 0
 
@@ -87,7 +93,8 @@ export const FILE_METHODS = [
         params.worktree,
         params.relativePath,
         params.staged === true,
-        params.navigation
+        params.navigation,
+        ...(params.oldPath ? ([params.oldPath] as const) : [])
       )
   }),
   defineMethod({
@@ -113,6 +120,21 @@ export const FILE_METHODS = [
       )
   }),
   defineMethod({
+    name: 'files.readDocPreviewChunk',
+    permission: 'workspace',
+    params: DocPreviewFileReadChunk,
+    handler: async (params, { runtime }) =>
+      runtime.readDocPreviewChunk(
+        params.worktree,
+        params.relativePath,
+        params.entryRelativePath,
+        params.implicitRootRelativePath,
+        params.authorizedRootRelativePaths,
+        params.offset,
+        params.length
+      )
+  }),
+  defineMethod({
     name: 'files.resolveTerminalPath',
     permission: 'workspace',
     params: ResolveTerminalPath,
@@ -127,13 +149,7 @@ export const FILE_METHODS = [
         params.nativeChatContext ?? null
       )
   }),
-  defineMethod({
-    permission: 'workspace',
-    name: 'files.grantHostPath',
-    params: HostPathGrant,
-    handler: async (params, { runtime, clientId }) =>
-      runtime.grantHostPath(params.worktree, params.absolutePath, clientId)
-  }),
+  ...HOST_PATH_GRANT_METHODS,
   ...FILE_TERMINAL_ARTIFACT_METHODS,
   defineMethod({
     name: 'files.readPreview',
@@ -145,6 +161,17 @@ export const FILE_METHODS = [
         ? runtime.readFileExplorerPreview(params.worktree, params.relativePath)
         : runtime.readFileExplorerPreview(params.worktree, params.relativePath, budget)
     }
+  }),
+  defineMethod({
+    name: 'files.readChatImage',
+    permission: 'workspace',
+    params: ChatImageRead,
+    handler: async (params, { runtime, clientKind, requestId }) =>
+      runtime.readChatImagePreview(
+        params.worktree,
+        params.path,
+        remoteFileContentBudget(clientKind, requestId)
+      )
   }),
   defineMethod({
     name: 'files.readChunk',
@@ -161,16 +188,22 @@ export const FILE_METHODS = [
   defineMethod({
     name: 'files.readDir',
     permission: 'workspace',
-    params: FileTreePath,
-    handler: async (params, { runtime, clientKind, requestId }) =>
-      assertDirListingWithinRemoteBudget(
+    params: FileDirRead,
+    handler: async (params, { runtime, clientKind, requestId, connectionId }) => {
+      const list = () =>
         params.followSymlinks === undefined
-          ? await runtime.readFileExplorerDir(params.worktree, params.relativePath)
-          : await runtime.readFileExplorerDir(params.worktree, params.relativePath, {
+          ? runtime.readFileExplorerDir(params.worktree, params.relativePath)
+          : runtime.readFileExplorerDir(params.worktree, params.relativePath, {
               followSymlinks: params.followSymlinks
-            }),
-        remoteFileContentBudget(clientKind, requestId)
-      )
+            })
+      const budget = remoteFileContentBudget(clientKind, requestId)
+      if (params.after === undefined && params.limit === undefined) {
+        return assertDirListingWithinRemoteBudget(await list(), budget)
+      }
+      const page = await dirListingPageCache.readPage(connectionId, params, list)
+      assertDirListingWithinRemoteBudget(page.entries, budget)
+      return page
+    }
   }),
   defineMethod({
     name: 'files.browseServerDir',
@@ -179,23 +212,27 @@ export const FILE_METHODS = [
     handler: async (params, { runtime }) => runtime.browseServerDir(params.path)
   }),
   ...FILE_MUTATION_METHODS,
+  ...FILE_STAGED_SAVE_METHODS,
   defineMethod({
     name: 'files.search',
     permission: 'workspace',
     params: FileSearch,
-    handler: async (params, { runtime, signal }) =>
-      runtime.searchRuntimeFiles(
-        params.worktree,
-        {
-          query: params.query,
-          caseSensitive: params.caseSensitive,
-          wholeWord: params.wholeWord,
-          useRegex: params.useRegex,
-          includePattern: params.includePattern,
-          excludePattern: params.excludePattern,
-          maxResults: params.maxResults
-        },
-        { signal }
+    handler: async (params, { runtime, clientKind, requestId, signal }) =>
+      limitSearchResultToContentBudget(
+        await runtime.searchRuntimeFiles(
+          params.worktree,
+          {
+            query: params.query,
+            caseSensitive: params.caseSensitive,
+            wholeWord: params.wholeWord,
+            useRegex: params.useRegex,
+            includePattern: params.includePattern,
+            excludePattern: params.excludePattern,
+            maxResults: params.maxResults
+          },
+          { signal }
+        ),
+        remoteFileContentBudget(clientKind, requestId)
       )
   }),
   defineMethod({

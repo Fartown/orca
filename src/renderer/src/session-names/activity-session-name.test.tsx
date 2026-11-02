@@ -134,6 +134,7 @@ it('a substantive follow-up does not replace the Provider first-prompt fallback'
 it('unknown legacy history never inherits the replacement session identity', () => {
   const entry = useAppStore.getState().agentStatusByPaneKey[PANE_KEY]
   const result = buildActivityEvents({
+    chatNames: new Map(),
     agentStatusByPaneKey: {
       [PANE_KEY]: {
         ...entry,

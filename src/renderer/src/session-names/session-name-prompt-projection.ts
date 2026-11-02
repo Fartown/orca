@@ -1,6 +1,6 @@
 import type { AgentStatusEntry } from '../../../shared/agent-status-types'
 import { deriveGeneratedTabTitle } from '../../../shared/agent-tab-title'
-import { isOrcaDispatchPrompt } from '../lib/agent-row-primary-text'
+import { isOrcaDispatchPrompt } from '../../../shared/agent-row-primary-text'
 import type { AiVaultTitleRequest } from '../lib/ai-vault-tab-title-requests'
 import type { AppState } from '../store/types'
 

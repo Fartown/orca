@@ -43,7 +43,7 @@ const ShareCode: NonNullable<Components['code']> = function ShareCode({
 }) {
   const isDark = React.useContext(ShareDarkContext)
   return /language-mermaid/.test(className || '') ? (
-    <MermaidBlock content={String(children).trimEnd()} isDark={isDark} htmlLabels={false} />
+    <MermaidBlock content={String(children).trimEnd()} isDark={isDark} />
   ) : (
     <code className={className} {...props}>
       {children}
