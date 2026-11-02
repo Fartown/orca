@@ -83,7 +83,7 @@ export function useTerminalPaneLayoutBindings(controller: TerminalPaneLayoutCont
       }
       setTabLayout(tabId, nextLayout)
     },
-    [setTabLayout, tabId, paneTransportsRef]
+    [setTabLayout, tabId, paneTransportsRef, managerRef]
   )
   const writePanePtyLayoutBinding = useCallback(
     (paneId: number, ptyId: string | null, repairActiveLeafOnClear: boolean): void => {
