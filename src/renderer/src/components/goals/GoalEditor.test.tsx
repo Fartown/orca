@@ -48,7 +48,7 @@ beforeEach(() => {
       editorDraftId: input.editorDraftId,
       revision: input.expectedRevision + 1,
       createdAt: 1,
-      updatedAt: Date.now(),
+      updatedAt: input.expectedRevision + 1,
       documentPath:
         filePaths && input.content.fields.acceptanceDocument
           ? `/draft/acceptance-${input.expectedRevision + 1}.md`
@@ -73,7 +73,7 @@ beforeEach(() => {
       document: mode === 'ready' ? DOC : null,
       documentPath: filePaths && mode === 'ready' ? '/generated/acceptance.md' : undefined,
       error: mode === 'failed' ? 'Guard not signed in' : null,
-      startedAt: Date.now()
+      startedAt: 1
     }
     results.set(input.draftId, result)
     return result
