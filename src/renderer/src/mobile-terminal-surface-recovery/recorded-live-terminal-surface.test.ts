@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { CLOSED_TERMINAL_TAB_TOMBSTONE_TTL_MS } from '../../../shared/closed-terminal-tab-tombstones'
 import { isValidHostTerminalTabId } from '../../../shared/terminal-tab-id'
 import { createTestStore } from '../store/slices/store-test-helpers'
@@ -17,6 +17,10 @@ vi.mock('../../../shared/layout-owner-switch', () => ({ ORCA_LAYOUT_OWNER_IS_MAI
 
 const ptyId = `${WORKTREE_ID}@@recorded-live`
 const recorded = { paneKey: `tab-recorded:${LIVE_LEAF_ID}`, ptyId, tabId: 'tab-recorded' }
+const TAB_CLOSED_AT = 1_700_000_000_000
+afterEach(() => {
+  vi.useRealTimers()
+})
 
 describe('recorded live terminal surface recovery', () => {
   it('restores the host-recorded tab and leaf once across three sweeps', async () => {
@@ -81,9 +85,11 @@ describe('recorded live terminal surface recovery', () => {
     const { deps, createTab } = testDeps({
       surfaceOwners: new Map([[ptyId, { unowned: true, recorded }]])
     })
+    // Pin the clock so the close record is inside its TTL.
+    vi.setSystemTime(TAB_CLOSED_AT)
     Object.assign(deps.getState(), {
       closedTerminalTabTombstonesByTabId: {
-        'tab-recorded': { closedAt: Date.now(), worktreeId: WORKTREE_ID }
+        'tab-recorded': { closedAt: TAB_CLOSED_AT, worktreeId: WORKTREE_ID }
       }
     })
     await expect(
@@ -100,10 +106,11 @@ describe('recorded live terminal surface recovery', () => {
     const { deps, createTab } = testDeps({
       surfaceOwners: new Map([[ptyId, { unowned: true, recorded }]])
     })
+    vi.setSystemTime(TAB_CLOSED_AT)
     Object.assign(deps.getState(), {
       closedTerminalTabTombstonesByTabId: {
         'tab-recorded': {
-          closedAt: Date.now() - CLOSED_TERMINAL_TAB_TOMBSTONE_TTL_MS - 1,
+          closedAt: TAB_CLOSED_AT - CLOSED_TERMINAL_TAB_TOMBSTONE_TTL_MS - 1,
           worktreeId: WORKTREE_ID
         }
       }
@@ -129,9 +136,10 @@ describe('recorded live terminal surface recovery', () => {
       [ptyId],
       listSurfaceOwners
     )
+    vi.setSystemTime(TAB_CLOSED_AT)
     Object.assign(deps.getState(), {
       closedTerminalTabTombstonesByTabId: {
-        'tab-recorded': { closedAt: Date.now(), worktreeId: WORKTREE_ID }
+        'tab-recorded': { closedAt: TAB_CLOSED_AT, worktreeId: WORKTREE_ID }
       }
     })
     answer(new Map([[ptyId, { unowned: true, recorded }]]))
