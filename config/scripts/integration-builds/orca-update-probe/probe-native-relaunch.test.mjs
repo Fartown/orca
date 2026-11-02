@@ -51,8 +51,8 @@ describe('native relaunch read-only evidence', () => {
       rmSync(directory, { recursive: true, force: true })
     }
   })
-  it('bundles the actual production home guard into the small LaunchServices preflight', () => {
-    const source = launchIsolationFixtureSource('/fixture/home', '/fixture/result.json')
+  it('bundles the actual production home guard into the small LaunchServices preflight', async () => {
+    const source = await launchIsolationFixtureSource('/fixture/home', '/fixture/result.json')
     expect(source).toContain('Refusing to start E2E outside its disposable home boundary')
     expect(source).toContain('configureDevUserDataPath(false)')
     expect(source).toContain('wrong-fixture-home')

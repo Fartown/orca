@@ -3,7 +3,7 @@ title: 集成分支自动出包
 slug: 集成分支自动出包
 status: testing
 created: 2026-09-12
-updated: 2026-10-30
+updated: 2026-11-02
 external_ids: []
 ---
 
@@ -102,6 +102,30 @@ external_ids: []
 - 影响范围：REQ-401、REQ-402、REQ-403；APK 沿用 Expo debug 签名并核验指纹，不生成密钥或暗改 versionCode。
 
 ## 3. 开发记录
+
+### 2026-11-02 同步上游 c9845c5f9c（3216 个提交）（testing）
+
+- 本轮目标：用 `pnpm sync:upstream` 把上游合进 fork/integration，保住全部已登记功能；顺带带进手机历史直接打开聊天的修复（上游 #36315）。
+- 完成内容：
+  - 先合并 a444233103，共 179 个冲突（其中 15 个是「fork 改过、上游删了」），按功能分 7 组解完；之后又自动合进了 15 个新的上游提交。
+  - 接缝跟随上游搬家，登记和架构策略同步更新。
+  - 下线 cli-writer-login-shell：上游现在只在确认 CLI 写入进程存活时才拒绝。
+  - fork 代码适配上游改名的模块和新 API，手机端文案改为走上游新加的 i18n。
+  - 11 个超出行数上限的上游文件，把 fork 代码移进功能自有模块。
+  - 各功能 checks 里因上游有意改动而过时的测试，已按上游行为调整。
+- 代码或文档变更：
+  - 合并提交 d63ba9083e
+  - 登记修正 7d4979b4a6
+  - 随后按功能提交的修正
+  - 证据目录 `.docs/upstream-sync-ui-validation/2026-11-02/`
+- 验证证据：
+  - 通过：`pnpm tc`、三项桌面本地化与两项手机本地化门禁、`check:fork-features`、`check:fork-docs`、`check:architecture-policies`、两套 oxlint。
+  - 各功能 checks 记录在 `evidence/feature-checks/summary.tsv`。
+- 未解决问题：
+  - 本机的 `win32-test-lane-registration` 检查被 git 忽略的 `tmp/tasks` 干扰，CI 上没有这个目录。
+  - 上游已覆盖部分作用的 fork 功能有两个，是否下线待定：mobile-terminal-surface-recovery、remote-host-path-open。
+  - 改了界面的地方还要逐屏截图。
+- 下一步：用户确认后推送 Fartown，等集成包出包。
 
 ### 2026-10-30 Linux 桌面更新入口（testing）
 
