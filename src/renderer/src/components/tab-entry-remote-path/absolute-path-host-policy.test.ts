@@ -277,12 +277,13 @@ describe('resolveTabEntryAbsolutePathHostPolicy', () => {
       sshConnectionStates: connectedSsh('ssh-1')
     })
 
+    // The store lookup itself no longer surfaces a folder workspace whose host is ambiguous.
     expect(
       resolveTabEntryAbsolutePathHostPolicy(
         useAppStore.getState(),
         folderWorkspaceKey(folderWorkspace.id)
       )
-    ).toEqual({ kind: 'blocked', reason: 'unresolved' })
+    ).toEqual({ kind: 'blocked', reason: 'unknown-worktree' })
   })
 
   it('blocks folder workspaces until their project group owner is hydrated', () => {
