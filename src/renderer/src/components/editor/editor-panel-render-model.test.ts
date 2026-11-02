@@ -288,10 +288,10 @@ describe('getEditorPanelRenderModel rich-mode unsupported override', () => {
     }).inlineMarkdownRenderState
   }
 
-  it('falls back to source with an explanation until the user overrides', () => {
+  it('falls back to preview with an explanation until the user overrides', () => {
     const state = richModel(unverifiedHtml, false)
 
-    expect(state?.renderMode).toBe('source')
+    expect(state?.renderMode).toBe('preview')
     expect(state?.richModeUnsupportedMessage).toEqual(expect.any(String))
     expect(state?.richModeUnsupportedOverrideActive).toBe(false)
   })

@@ -13,7 +13,7 @@ updated: 2026-09-16
 ### TC-601 未覆盖时保持回落（REQ-401）
 
 - 前置：富文本视图，正文为 50,001 字符前缀 + `<span>text</span>`（超过往返验证预算，因此必然按不支持处理）。
-- 期望：`renderMode` 为 `source`，`richModeUnsupportedMessage` 非空，`richModeUnsupportedOverrideActive` 为 `false`。
+- 期望：`renderMode` 为 `preview`（上游 4597d3f249 起的默认回落；此前为 `source`），`richModeUnsupportedMessage` 非空，`richModeUnsupportedOverrideActive` 为 `false`，回落横幅里有「仍然打开」。
 - 覆盖：`editor-panel-render-model.test.ts`。
 
 ### TC-602 覆盖后交给富文本编辑器（REQ-401）
