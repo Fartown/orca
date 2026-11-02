@@ -186,7 +186,8 @@ describe('recorded live terminal surface recovery', () => {
     })
   })
 
-  it('keeps the upstream fallback for another recorded leaf after the tab was restored', async () => {
+  // Upstream #33978 now binds a later recorded leaf into the restored tab, closing the old multi-leaf residual.
+  it('restores another recorded leaf into the same tab after the tab was restored', async () => {
     const siblingPtyId = `${WORKTREE_ID}@@recorded-sibling`
     const sibling = {
       paneKey: `tab-recorded:${SIBLING_LEAF_ID}`,
@@ -207,14 +208,11 @@ describe('recorded live terminal surface recovery', () => {
         deps.listSurfaceOwners
       )
     ).resolves.toEqual({ surfaced: true, declinedPtyIds: [] })
-    expect(createTab).toHaveBeenCalledTimes(2)
+    expect(createTab).toHaveBeenCalledTimes(1)
+    expect(Object.keys(deps.getState().terminalLayoutsByTabId)).toEqual(['tab-recorded'])
     expect(deps.getState().terminalLayoutsByTabId['tab-recorded'].ptyIdsByLeafId).toEqual({
-      [LIVE_LEAF_ID]: ptyId
-    })
-    expect(createTab).toHaveBeenNthCalledWith(2, WORKTREE_ID, undefined, undefined, {
-      initialPtyId: siblingPtyId,
-      activate: false,
-      recordInteraction: false
+      [LIVE_LEAF_ID]: ptyId,
+      [SIBLING_LEAF_ID]: siblingPtyId
     })
   })
 })
