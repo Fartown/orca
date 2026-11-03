@@ -98,8 +98,9 @@ describe('observed agent session row origin', () => {
       )
     expect(publish(1).map((row) => row.entry.providerSession?.id)).toEqual(['A', 'quiet'])
     write(7000, 'working', 'B', { stateStartedAt: 1000, evidenceObservedAt: 6000 })
+    // Fork (session-names): B does not inherit A's state clock; ordering still uses B's origin.
     expect(store.getState().agentStatusByPaneKey[pane]).toMatchObject({
-      stateStartedAt: 1000,
+      stateStartedAt: 7000,
       firstStateStartedAt: 6000,
       updatedAt: 7000,
       evidenceObservedAt: 6000
@@ -107,7 +108,7 @@ describe('observed agent session row origin', () => {
     expect(rows().map((row) => row.entry.providerSession?.id)).toEqual(['quiet', 'B'])
     const mirrored = publish(2)
     expect(mirrored.map((row) => row.entry.providerSession?.id)).toEqual(['quiet', 'B'])
-    expect(mirrored[1].entry).toMatchObject({ stateStartedAt: 1000, firstStateStartedAt: 6000 })
+    expect(mirrored[1].entry).toMatchObject({ stateStartedAt: 7000, firstStateStartedAt: 6000 })
   })
 
   it.each(['pi', 'claude', 'codex'])(

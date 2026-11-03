@@ -3,7 +3,7 @@ title: 会话命名与身份保护
 slug: 会话命名与身份保护
 status: implementing
 created: 2026-09-08
-updated: 2026-11-02
+updated: 2026-11-03
 external_ids: []
 ---
 
@@ -102,6 +102,19 @@ external_ids: []
 - 影响范围：REQ-028、Codex managed脚本的local/posix模板与feature-owned小模块及测试；同时清理local/daemon/relay新PTY继承的外层CODEX_THREAD_ID，避免由Codex启动Orca时误拦正常新pane。未知旧版本无标识、外部手工污染环境等仍需披露。既有失败记录保持原样。
 
 ## 3. 开发记录
+
+### 2026-11-03 同步后与上游新测试的冲突：先处理不涉及取舍的两组（implementing）
+
+- 本轮目标：处理同步上游到 8cd6a7e5ee 后，上游新测试和本功能冲突的 7 个用例。诊断报告在 `.docs/upstream-sync-ui-validation/2026-11-02/evidence/session-names-ci-conflicts.md`。
+- 完成内容：
+  - C 组：Activity 没把原生聊天标签当成会话的容器，显示成泛泛的 `Codex`，而 Dashboard 显示 `Codex Chat`。这是合并时没跟上上游 #31602，违反 REQ-025「各入口用同一规则」。已改 fork 自有的 `use-activity-session-names.ts`：原生聊天标签一律算作会话容器。
+  - D 组：换会话后，fork 有意不让新会话沿用旧会话的状态时钟；`activity-session-history.test.ts` 也断言了同一规则，以免 Activity 把两次会话的事件合在一起。所以上游 #14654 用例里的两处 `stateStartedAt` 期望改为 7000，侧栏排序的断言保持不动，并登记为接缝。
+- 代码或文档变更：上述 fork 文件、上游测试 `agent-status-row-order-origin.test.ts`，以及接缝登记和架构策略。
+- 验证证据：C 组相关的 60 个文件 404 条用例通过；D 组用例和 `activity-session-history.test.ts` 共 14 条通过；`check:fork-features` 和 `check:architecture-policies` 通过。
+- 未解决问题：
+  - A 组（Codex 新开的 ephemeral 会话能否接管 pane，涉及 D-009）待用户决定；
+  - B 组（Agent 标签手动改名后，排在实时标题之后，涉及 REQ-025）待用户确认是否保留。
+- 下一步：用户决定 A、B 两组后再改，然后一起推送。
 
 ### 2026-11-02 同步上游 c9845c5f9c：接入主机保存的聊天名
 
