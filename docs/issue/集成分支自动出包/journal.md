@@ -103,6 +103,15 @@ external_ids: []
 
 ## 3. 开发记录
 
+### 2026-11-03 上游根布局测试 mock 掉 Android 更新提示（testing）
+
+- 本轮目标：修掉同步后手机端 `native-root-recovery.test.tsx` 在文件级的失败。
+- 完成内容：fork 在 `app/_layout.tsx` 挂载了 `IntegrationUpdateGate`，它一导入就会加载更新相关的原生模块，上游这条新测试渲染根布局时因此崩溃。按用户选的方案 C2，在这个上游测试里加一行 mock，写法和它 mock 上游 `app-update-runtime` 的方式一致。Android 上更新提示的实际行为不变。
+- 代码或文档变更：上游测试加一行 mock 和一行注释；登记为本功能接缝，并加入预算白名单和工作区范围。
+- 验证证据：该测试本地通过；`check:fork-features` 和 `check:architecture-policies` 通过。完整手机端 CI 测试与其他手机端修正一起跑。
+- 未解决问题：无。
+- 下一步：与其他同步修正一起推送。
+
 ### 2026-11-03 上游同步复核：缓存预热不再排上 Blacksmith（testing）
 
 - 本轮目标：复核 2026-11-02 上游同步，修掉推送后会在 fork 上永远排队的 CI 任务。

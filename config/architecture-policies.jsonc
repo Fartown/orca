@@ -158,6 +158,7 @@
             "docs/issue/集成分支自动出包/**"
           ],
           "allowedPaths": [
+            "mobile/src/navigation/native-root-recovery.test.tsx",
             "src/cli/integration-builds/**",
             "src/renderer/src/integration-builds/**",
             "src/main/serve-update-handoff.ts",
@@ -372,6 +373,7 @@
             ".github/workflows/ssh-windows-hosts.yml",
             "src/main/managed-server/posix-host-op-byte-budget.test.ts",
             "src/renderer/src/store/slices/agent-status/agent-status-row-order-origin.test.ts",
+            "mobile/src/navigation/native-root-recovery.test.tsx",
             "config/scripts/integration-builds/**",
             "src/shared/integration-builds/**",
             "src/main/integration-builds/**",

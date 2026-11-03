@@ -95,6 +95,10 @@ vi.mock('../theme/mobile-appearance', () => ({ startMobileAppearance: async () =
 vi.mock('../i18n/use-follow-device-ui-locale', () => ({ useFollowDeviceUiLocale: () => {} }))
 vi.mock('../i18n/ui-language-preference', () => ({ startMobileUiLanguage: async () => {} }))
 vi.mock('../app-update/app-update-runtime', () => ({ appUpdateChecker: { start: () => () => {} } }))
+// Fork (integration-builds): the Android update gate loads native update modules at import.
+vi.mock('../integration-builds/IntegrationUpdateGate', () => ({
+  IntegrationUpdateGate: () => null
+}))
 
 import RootLayout, { ErrorBoundary } from '../../app/_layout'
 

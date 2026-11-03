@@ -221,6 +221,11 @@
       ],
       "seams": [
         {
+          "file": "mobile/src/navigation/native-root-recovery.test.tsx",
+          "mustContain": "vi.mock('../integration-builds/IntegrationUpdateGate'",
+          "why": "the root layout test renders without the Android update gate's native modules"
+        },
+        {
           "file": "src/cli/runtime/serve-appimage-update.ts",
           "mustContain": "appImageLaunchEnvironment",
           "why": "Reuse source-aware AppImage launch environment cleanup for desktop launches."
