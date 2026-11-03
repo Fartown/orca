@@ -2860,6 +2860,7 @@
         "src/renderer/src/i18n/i18n.ts",
         "src/renderer/src/i18n/localized-catalog.ts",
         "src/renderer/src/i18n/relative-time-format.ts",
+        "src/renderer/src/i18n/use-ui-language-revision.ts",
         "src/renderer/src/lib/app-keyboard-router.ts",
         "src/renderer/src/lib/browser-uuid.ts",
         "src/renderer/src/lib/ime-composition-keyboard-event.ts",

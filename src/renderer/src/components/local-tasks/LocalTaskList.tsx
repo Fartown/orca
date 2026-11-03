@@ -2,6 +2,7 @@ import { memo, useEffect } from 'react'
 import { ChevronDown, ChevronRight, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { translate } from '@/i18n/i18n'
+import { useUiLanguageRevision } from '@/i18n/use-ui-language-revision'
 import { clampLocalTaskCursor } from '@/local-tasks/local-task-cursor'
 import {
   unfoldedLocalTaskLines,
@@ -123,6 +124,7 @@ export const LocalTaskList = memo(function LocalTaskList({
 }: {
   model: LocalTaskListModel
 }): React.JSX.Element {
+  useUiLanguageRevision()
   const collapsed = useLocalTaskPage((state) => state.collapsedGroupKeys)
   const folded = model.foldedTaskIds
   useEffect(() => {
