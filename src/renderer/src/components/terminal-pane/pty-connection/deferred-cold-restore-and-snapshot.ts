@@ -1,5 +1,5 @@
 import { useAppStore } from '@/store'
-import { recordTerminalLaunchOrigin } from '@/terminal-launch-diagnostics/launch-origin'
+import { recordColdRestoreResumeOrigin } from '@/terminal-launch-diagnostics/cold-restore-origin'
 import type { PtyReplayDataMeta } from '../pty-transport-types'
 import { INITIAL_MODE_2031_REPLY_SCAN_STATE } from '../../../../../shared/terminal-color-scheme-protocol'
 import { waitForTerminalOutputParsed } from '@/lib/pane-manager/pane-terminal-output-scheduler'
@@ -94,17 +94,7 @@ export function bindDeferredColdRestoreAndSnapshot(session: ConnectPanePtySessio
     if (startup?.resumeSource?.cancelled) {
       return Promise.resolve(null)
     }
-    recordTerminalLaunchOrigin(
-      'cold-restore-resume',
-      {
-        ...startup,
-        tabId: session.deps.tabId,
-        leafId: session.pane.leafId,
-        paneKey: session.cacheKey,
-        worktreeId: session.deps.worktreeId
-      },
-      useAppStore.getState()
-    )
+    recordColdRestoreResumeOrigin(session, startup)
     const mainPane = mainResumedSleepPane(session, startup)
     if (mainPane && startup?.sleepingRecordEntry) {
       return attachToMainResumedSleepPane(session, mainPane, startup, options, automatic)

@@ -21,7 +21,7 @@ describe('terminal launch coverage contract', () => {
     ['src/renderer/src/lib/sleeping-agent-session-launch.ts', 'automatic-sleeping-resume'],
     [
       'src/renderer/src/components/terminal-pane/pty-connection/deferred-cold-restore-and-snapshot.ts',
-      'cold-restore-resume'
+      'recordColdRestoreResumeOrigin'
     ],
     [
       'src/renderer/src/hooks/ipc-events/terminal-request-ipc-bridge.ts',

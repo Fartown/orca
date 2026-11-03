@@ -2562,6 +2562,7 @@
       ],
       "dependsOn": [
         "src/renderer/src/runtime/web-runtime-session-types.ts",
+        "src/renderer/src/components/terminal-pane/pty-connection/fresh-spawn-types.ts",
         "src/main/ipc/pty/runtime/spawn-state.ts",
         "src/main/providers/pty-provider-contract.ts",
         "src/shared/sha256.ts",
@@ -2609,7 +2610,7 @@
         },
         {
           "file": "src/renderer/src/components/terminal-pane/pty-connection/deferred-cold-restore-and-snapshot.ts",
-          "mustContain": "recordTerminalLaunchOrigin",
+          "mustContain": "recordColdRestoreResumeOrigin",
           "why": "distinguish in-pane cold restore"
         },
         {
