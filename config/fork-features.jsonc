@@ -262,6 +262,11 @@
           "why": "Warm the Linux dependency cache on the same available runners used by fork PR checks."
         },
         {
+          "file": ".github/workflows/ci-cache-warmup.yml",
+          "mustContain": "github.repository == 'stablyai/orca'",
+          "why": "The scheduled warmup runs on fork/integration; a Blacksmith leg would stay queued."
+        },
+        {
           "file": "config/scripts/ci-draft-pr-admission.test.mjs",
           "mustContain": "repository = 'stablyai/orca'",
           "why": "Admission contracts evaluate the fork workflow with its actual repository identity."

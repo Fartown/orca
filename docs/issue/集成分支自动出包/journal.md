@@ -3,7 +3,7 @@ title: 集成分支自动出包
 slug: 集成分支自动出包
 status: testing
 created: 2026-09-12
-updated: 2026-11-02
+updated: 2026-11-03
 external_ids: []
 ---
 
@@ -102,6 +102,26 @@ external_ids: []
 - 影响范围：REQ-401、REQ-402、REQ-403；APK 沿用 Expo debug 签名并核验指纹，不生成密钥或暗改 versionCode。
 
 ## 3. 开发记录
+
+### 2026-11-03 上游同步复核：缓存预热不再排上 Blacksmith（testing）
+
+- 本轮目标：复核 2026-11-02 上游同步，修掉推送后会在 fork 上永远排队的 CI 任务。
+- 完成内容：
+  - 上游给 `ci-cache-warmup.yml` 的 `warm` 和 `ci-cache-warmup-platform-jobs.yml` 的 `warm-linux-package-fixtures` 加了 `blacksmith-4vcpu-ubuntu-2404` 矩阵项，没有仓库判断。
+  - fork/integration 是 Fartown 的默认分支，每 6 小时的定时预热会留下一条排不上的任务；同步前，`main` 镜像上已有 3 条同类任务排了 12～18 小时。
+  - 两处改成与 `warm-linux-runtime` 相同的写法：只有 `stablyai/orca` 用 Blacksmith，fork 只剩 `ubuntu-24.04`。
+- 代码或文档变更：
+  - 两个工作流各改一处；
+  - `ci-cache-warmup.yml` 登记为本功能接缝，并加入预算白名单和工作区范围；
+  - `pr-runner-portability.test.mjs` 从只查 `warm-linux-runtime` 扩到两个预热工作流的全部任务。
+- 验证证据：
+  - runner 可移植性测试 5 条通过；
+  - 临时还原 `ci-cache-warmup.yml` 后，Fartown 和其他 fork 两个用例失败，确认测试能拦住；
+  - 复核记录见 `.docs/upstream-sync-ui-validation/2026-11-02/evidence/conflict-review-2026-11-03.md`。
+- 未解决问题：
+  - `main` 镜像上已排队的 3 条任务与本次无关，需在 Actions 页面手动取消。
+  - `ci-xterm-cache.yml` 也有未守卫的矩阵，但只在 `main` 上运行，fork/integration 的定时任务会跳过它。
+- 下一步：随同步一起推送，观察下一次定时预热的结果。
 
 ### 2026-11-02 同步上游 c9845c5f9c（3216 个提交）（testing）
 

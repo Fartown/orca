@@ -32,18 +32,41 @@ it('starts every PR check and its cleanup on runners a fork can use', () => {
   expect(runners.filter((runner) => String(runner).includes('blacksmith-'))).toEqual([])
 })
 
+const jobRunners = (job, repository) => {
+  const choice = job.strategy?.matrix?.runner ?? job['runs-on']
+  if (Array.isArray(choice)) {
+    return choice
+  }
+  if (typeof choice !== 'string') {
+    return []
+  }
+  if (!choice.startsWith('${{')) {
+    return [choice]
+  }
+  return choice.includes('github.repository')
+    ? runInNewContext(choice.slice(3, -2), { github: { repository }, fromJSON: JSON.parse })
+    : []
+}
+
+// The warmups run on fork/integration's schedule, where a Blacksmith leg queues until GitHub drops it.
 it.each(['stablyai/orca', 'Fartown/orca', 'another/orca'])(
-  'warms Blacksmith runtime caches only for upstream: %s',
+  'warms Blacksmith caches only for upstream: %s',
   (repository) => {
-    const expression = readWorkflow('ci-cache-warmup-platform-jobs').jobs['warm-linux-runtime']
-      .strategy.matrix.runner
-    const runners = runInNewContext(expression.slice(3, -2), {
-      github: { repository },
-      fromJSON: JSON.parse
-    })
-    expect(runners).toEqual(expect.arrayContaining(['ubuntu-24.04-arm', 'ubuntu-22.04']))
+    const jobs = ['ci-cache-warmup', 'ci-cache-warmup-platform-jobs'].flatMap((name) =>
+      Object.values(readWorkflow(name).jobs)
+    )
+    for (const job of jobs.filter((candidate) => candidate.strategy?.matrix?.runner)) {
+      expect(jobRunners(job, repository).length).toBeGreaterThan(0)
+    }
+    const runners = jobs.flatMap((job) => jobRunners(job, repository))
     expect(runners.some((runner) => runner.startsWith('blacksmith-'))).toBe(
       repository === 'stablyai/orca'
     )
+    expect(
+      jobRunners(
+        readWorkflow('ci-cache-warmup-platform-jobs').jobs['warm-linux-runtime'],
+        repository
+      )
+    ).toEqual(expect.arrayContaining(['ubuntu-24.04-arm', 'ubuntu-22.04']))
   }
 )
