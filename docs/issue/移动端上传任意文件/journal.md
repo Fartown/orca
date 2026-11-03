@@ -3,7 +3,7 @@ title: '移动端上传任意文件'
 slug: '移动端上传任意文件'
 status: testing
 created: 2026-10-06
-updated: 2026-10-22
+updated: 2026-11-03
 external_ids: []
 ---
 
@@ -106,6 +106,18 @@ external_ids: []
 - 影响范围：REQ-002、REQ-006；Q-2（工作目录外文件的权限确认）待真机验证
 
 ## 3. 开发记录
+
+### 2026-11-03：同步后上游新加的手机端测试不再被附件改动打断（testing）
+
+- 本轮目标：修掉同步上游到 8cd6a7e5ee 后 Mobile verify 里由本功能造成的失败：`TerminalPaneView`、`mobile-terminal-layout-choice` 和 `MobileSessionCommandDock` 的两条用例。
+- 完成内容：
+  - 「照片 / 文件」选择面板从 `MobileSessionActiveContent` 挪到 `MobileSessionSheets`，和会话的其他面板一起挂载；拿不到附件控制器时不渲染。上游测试渲染 ActiveContent 时不再碰到 fork 字段。
+  - 指令栏的附件回调改回点击时才取值，和上游的写法一致。
+  - 上游测试 `mobile-session-terminal-frame-layout.test.tsx` 退回原样。
+- 代码或文档变更：上述 3 个手机端文件；接缝登记里 ActiveContent 的 mustContain 改成 `files={fileAttachments}`，新增 `MobileSessionSheets.tsx` 接缝；架构策略同步更新。
+- 验证证据：手机端类型检查和测试类型检查都通过；完整的手机端 CI 测试（node 和 bun 两组）结果见 `.docs/upstream-sync-ui-validation/2026-11-02/evidence/mobile-ci-tests-local.log`。
+- 未解决问题：面板挂载位置变了，还要在真机上看一遍「照片 / 文件」选择面板的弹出和遮挡效果。
+- 下一步：随同步修正一起推送，等 CI 验证。
 
 ### 2026-10-22：附件接入后的既有测试夹具补齐（testing）
 

@@ -6,7 +6,6 @@ import { saveTerminalTextScale } from '../storage/preferences'
 import { MobileBrowserPane } from '../browser/MobileBrowserPane'
 import { TerminalPaneView } from './TerminalPaneView'
 import { MobileNativeChatOverlay } from './native-chat/MobileNativeChatOverlay'
-import { MobileAttachmentSourceSheet } from '../file-attachment-upload/MobileAttachmentSourceSheet'
 import { MobileAgentMessageProvider } from './native-chat/transcript/MobileAgentMessageProvider'
 import { useMobileAgentMessageNavigation } from './use-mobile-agent-message-navigation'
 import { MobileNativeChatDictationPreviewContext } from './native-chat/composer/mobile-native-chat-dictation-preview-context'
@@ -354,7 +353,6 @@ export function MobileSessionActiveContent({
             </MobileAgentMessageProvider>
           </MobileDictationMeterContext.Provider>
         </MobileNativeChatDictationPreviewContext.Provider>
-        <MobileAttachmentSourceSheet {...fileAttachments.sheet} />
         {toastMessage && (
           <Animated.View pointerEvents="none" style={[styles.toast, toastAnimatedStyle]}>
             <Text style={styles.toastText}>{toastMessage}</Text>

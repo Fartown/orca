@@ -20,6 +20,7 @@ import { isTerminalPhoneDisplayMode } from './mobile-session-route-helpers'
 import type { MobileSessionController } from './use-mobile-session-controller'
 import { useMobileAllowAutoCloseActions } from './mobile-worker-auto-close'
 import { MobileAgentSessionTabActionSheet } from './MobileAgentSessionTabActionSheet'
+import { MobileAttachmentSourceSheet } from '../file-attachment-upload/MobileAttachmentSourceSheet'
 
 export function MobileSessionSheets({ controller }: { controller: MobileSessionController }) {
   const t = useMobileTranslation()
@@ -90,7 +91,8 @@ export function MobileSessionSheets({ controller }: { controller: MobileSessionC
     bulkCloseConfirm,
     closeWithBulkActions,
     createTabAgentActions,
-    sendDiffNotesAgentActions
+    sendDiffNotesAgentActions,
+    fileAttachments
   } = controller
   const clipboard = useClipboardWriter()
   // Why here and not in the controller chain: nothing downstream of that chain reads these,
@@ -229,6 +231,7 @@ export function MobileSessionSheets({ controller }: { controller: MobileSessionC
         onClose={() => setActionTarget(null)}
       />
       {continuationSheet}
+      {fileAttachments ? <MobileAttachmentSourceSheet {...fileAttachments.sheet} /> : null}
       <ActionSheetModal
         visible={markdownActionTarget != null}
         title={markdownActionTarget?.title || t('session.sheets.markdown', 'Markdown')}

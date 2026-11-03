@@ -38,9 +38,6 @@ vi.mock('../storage/preferences', () => ({ saveTerminalTextScale: () => Promise.
 vi.mock('../browser/MobileBrowserPane', () => ({ MobileBrowserPane: () => null }))
 vi.mock('./TerminalPaneView', () => ({ TerminalPaneView: () => null }))
 vi.mock('./native-chat/MobileNativeChatOverlay', () => ({ MobileNativeChatOverlay: () => null }))
-vi.mock('../file-attachment-upload/MobileAttachmentSourceSheet', () => ({
-  MobileAttachmentSourceSheet: () => null
-}))
 vi.mock('../transport/use-host-profile', () => ({ useHostProfile: () => null }))
 vi.mock('./MobileSessionFileReader', () => ({ FileReader: () => null }))
 vi.mock('./MobileSessionMarkdownReader', () => ({ MarkdownReader: () => null }))
@@ -66,8 +63,7 @@ function controller(
     sessionTabs: [],
     notifyTerminalFrame,
     dictation: { isRecording: false },
-    nativeChatSendError: { message: null, clear: () => {} },
-    fileAttachments: { sheet: { visible: false } }
+    nativeChatSendError: { message: null, clear: () => {} }
   }
   // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the loading and terminal-frame branches read only these members; every other branch is off.
   return scope as unknown as Controller

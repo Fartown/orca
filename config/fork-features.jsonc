@@ -2390,8 +2390,13 @@
         },
         {
           "file": "mobile/src/session/MobileSessionActiveContent.tsx",
+          "mustContain": "files={fileAttachments}",
+          "why": "the native chat composer receives the attachment controller (REQ-001)"
+        },
+        {
+          "file": "mobile/src/session/MobileSessionSheets.tsx",
           "mustContain": "<MobileAttachmentSourceSheet",
-          "why": "the Photo / File sheet mounts where both inputs can open it (REQ-001)"
+          "why": "the Photo / File sheet mounts with the session's other sheets, outside upstream render tests (REQ-001)"
         },
         {
           "file": "mobile/src/session/__mocks__/mobile-prompt-controller.ts",

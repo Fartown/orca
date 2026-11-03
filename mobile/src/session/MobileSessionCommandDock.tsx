@@ -91,8 +91,8 @@ export function MobileSessionCommandDock({ controller }: { controller: MobileSes
     canSend,
     isAttaching,
     // Tap offers Photo or File; long-press goes straight to File.
-    onAttachImage: fileAttachments.openTerminalSheet,
-    onAttachFile: fileAttachments.attachFileToTerminal
+    onAttachImage: () => fileAttachments.openTerminalSheet(),
+    onAttachFile: () => fileAttachments.attachFileToTerminal()
   }
   const dictationProps = {
     canSend,
