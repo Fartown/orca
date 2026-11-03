@@ -374,6 +374,7 @@
             "src/main/managed-server/posix-host-op-byte-budget.test.ts",
             "src/renderer/src/store/slices/agent-status/agent-status-row-order-origin.test.ts",
             "mobile/src/navigation/native-root-recovery.test.tsx",
+            "src/main/browser/doc-preview-terminal-file-reader.test.ts",
             "config/scripts/integration-builds/**",
             "src/shared/integration-builds/**",
             "src/main/integration-builds/**",
@@ -1431,6 +1432,7 @@
             "docs/issue/文档预览大小/**"
           ],
           "allowedPaths": [
+            "src/main/browser/doc-preview-terminal-file-reader.test.ts",
             "src/shared/document-preview-size/**",
             "src/main/document-preview-size/**",
             "docs/issue/文档预览大小/**",

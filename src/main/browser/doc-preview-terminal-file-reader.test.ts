@@ -203,11 +203,12 @@ describe('outside-workspace HTML preview', () => {
       ok: true,
       bytes: bundle
     })
+    // Fork (document-preview-size): a scoped read may also carry its chunk request.
     expect(mocks.call).toHaveBeenCalledWith(
       '/user-data',
       'vps',
       'files.readDocPreview',
-      workspaceParams,
+      expect.objectContaining(workspaceParams),
       15_000
     )
   })
@@ -239,13 +240,13 @@ describe('outside-workspace HTML preview', () => {
         '/user-data',
         'vps',
         'files.readDocPreview',
-        {
+        expect.objectContaining({
           worktree: 'id:source-workspace',
           relativePath: 'assets/app.js',
           entryRelativePath,
           implicitRootRelativePath: null,
           authorizedRootRelativePaths
-        },
+        }),
         15_000
       )
     }

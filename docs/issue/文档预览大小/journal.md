@@ -3,7 +3,7 @@ title: 文档预览大小
 document_type: journal
 status: testing
 created: 2026-09-12
-updated: 2026-10-21
+updated: 2026-11-03
 issue: 文档预览大小
 external_ids: []
 ---
@@ -49,6 +49,17 @@ external_ids: []
 - 影响范围：REQ-401 与 TC-401 描述已同步；生产代码没有因此变更。
 
 ## 3. 开发记录
+
+### 2026-11-03 上游预览测试放宽到接受 fork 的分块参数（testing）
+
+- 本轮目标：修掉同步后 `doc-preview-terminal-file-reader.test.ts` 里的 3 个用例（工作区外 HTML 预览）。
+- 完成内容：
+  - 失败原因：本功能在远端读取 `files.readDocPreview` 时会带上自己的 `chunk` 参数，而上游测试要求参数完全一致。实际行为没问题：读到 `file_too_large` 后会退回上游自己的 `files.readDocPreviewChunk` 分页。
+  - 按用户的决定，这次保留 fork 的分块方式，只把这 3 处精确匹配改成「包含」。
+- 代码或文档变更：上游测试两处断言改用 `expect.objectContaining`，并加一行注释；登记为本功能接缝，并加入预算白名单和工作区范围。
+- 验证证据：按 CI 方式（bun）运行该测试，11 条全部通过；`check:fork-features` 通过。
+- 未解决问题：fork 的分块和上游的分页现在并存。以后精简 fork 改动时，再评估是否整体改用上游分页。代价是 11-02 之前的 fork 主机没有 `files.readDocPreviewChunk`，在升级前无法预览大文件。
+- 下一步：与其他同步修正一起推送。
 
 ### 2026-10-06 同步上游 d17351401d：测试 mock 跟随上游删除的模块（testing）
 

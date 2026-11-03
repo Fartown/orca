@@ -502,6 +502,11 @@
       ],
       "seams": [
         {
+          "file": "src/main/browser/doc-preview-terminal-file-reader.test.ts",
+          "mustContain": "a scoped read may also carry its chunk request",
+          "why": "upstream's outside-workspace preview tests accept the fork's chunked read parameters"
+        },
+        {
           "file": "src/shared/doc-preview-file-access.ts",
           "mustContain": "DOCUMENT_PREVIEW_TEXT_MAX_BYTES",
           "why": "the execution host accepts the document-specific text limit"
