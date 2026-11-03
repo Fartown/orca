@@ -3,7 +3,7 @@ title: '远程Tab发布血缘修复'
 slug: '远程Tab发布血缘修复'
 status: testing
 created: 2026-09-23
-updated: 2026-10-21
+updated: 2026-11-03
 external_ids: ['stablyai/orca#19860']
 ---
 
@@ -133,3 +133,21 @@ external_ids: ['stablyai/orca#19860']
 - 验证证据：`.docs/upstream-sync-ui-validation/2026-10-21/evidence/`；四目标类型检查、最终 Web 类型复验、三项本地化、功能注册及全部注册功能回归通过；隐藏 Electron + 真实 SSH 隔离 orcad 验收通过。完整记录见 sync-upstream-gates.log、attachment-grant-matrix.log 与 remaining-feature-checks.log。
 - 未解决问题：本轮实现无未解决问题；提交后需从干净 integration 复核架构门禁并观察远端构建。不在本次安装用户应用或升级已有远程服务。
 - 下一步：推送通过门禁的 integration，跟踪远端检查；保留当前应用及会话。
+
+### 2026-11-03 上游同步复核：浏览器 Tab 退役改用上游 epoch 规则（testing）
+
+- 本轮目标：复核 2026-11-02 上游同步的冲突解决，纠正 `retireRuntimeOwnedBrowserSessionTab` 处静默丢掉的上游规则。
+- 完成内容：
+  - 同步时这处冲突保留了 fork 的 `snapshot.publicationEpoch`，丢了上游 #31665 的 `getMobileSessionPublicationEpochAfterHeadlessBrowserClose`。
+  - 上游方法对 renderer 发布沿用 epoch，这正是 REQ-701 要保证的；只有 headless 发布才重新打 epoch，此时没有 renderer 世代会被围栏。
+  - 现在改用上游方法，`structured-session-tab-close.ts` 与上游完全一致。
+- 代码或文档变更：
+  - 撤掉该文件的接缝登记和架构白名单条目；
+  - `headless-sibling-writers-keep-publication-epoch.test.ts` 新增 headless 发布重新打 epoch 的用例，renderer 世代沿用的原用例不变；
+  - 需求变更记录补一条。
+- 验证证据：
+  - 回归测试 6 条通过；
+  - 临时还原旧写法后新用例失败，确认它能拦住这次的丢失；
+  - 复核记录见 `.docs/upstream-sync-ui-validation/2026-11-02/evidence/conflict-review-2026-11-03.md`。
+- 未解决问题：TC-707 真机验收仍未完成。
+- 下一步：随同步一起推送，等待远端 CI。

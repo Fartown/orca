@@ -662,7 +662,6 @@
             "src/wsl-guest/agent-hook-provider-normalization.ts",
             "src/renderer/src/components/browser-pane/workspace-doc/HtmlDocPreview.tsx",
             "src/main/runtime/orchestration/orchestration-sender-name.ts",
-            "src/main/runtime/session-tabs/structured-session-tab-close.ts",
             "src/renderer/src/components/browser-pane/workspace-doc/HtmlDocPreview.toolbar.test.tsx",
             "src/renderer/src/components/terminal-pane/pty-connection/pane-host-capability-flags.ts",
             "mobile/package.json",

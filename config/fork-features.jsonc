@@ -2241,11 +2241,6 @@
           "file": "src/main/runtime/session-lifecycle/projection/apply-mobile-session-tab-navigation.ts",
           "mustContain": "publicationEpoch: snapshot.publicationEpoch",
           "why": "tab activation carries the incumbent epoch instead of minting one (REQ-701)"
-        },
-        {
-          "file": "src/main/runtime/session-tabs/structured-session-tab-close.ts",
-          "mustContain": "publicationEpoch: snapshot.publicationEpoch",
-          "why": "closing a chat edits content without replacing the publisher"
         }
       ],
       "tests": ["src/main/runtime/headless-sibling-writers-keep-publication-epoch.test.ts"],
