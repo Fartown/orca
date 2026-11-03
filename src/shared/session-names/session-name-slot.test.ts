@@ -16,34 +16,35 @@ const named = {
 }
 
 describe('shared session name projection', () => {
-  it('keeps the native name and the legacy manual candidate separately', () => {
+  it('shows the manual name while keeping the native name as separate evidence', () => {
     const slot = projectSessionNameSlot({ ...identity, title: named, manualTitle: 'Old manual' })!
-    expect(slot.title).toBe('Provider name')
+    expect(slot.title).toBe('Old manual')
     expect(slot.manualTitle).toBe('Old manual')
-    expect(resolveSessionDisplayTitle(sessionNameSlotCandidates(slot))?.source).toBe('provider')
+    expect(slot.providerName).toMatchObject({ kind: 'named', title: 'Provider name' })
+    expect(resolveSessionDisplayTitle(sessionNameSlotCandidates(slot))?.source).toBe('user')
   })
 
-  it('absence and unavailability retain native evidence; explicit clear reveals the manual fallback', () => {
-    const previous = projectSessionNameSlot({
-      ...identity,
-      title: named,
-      manualTitle: 'Old manual'
-    })!
+  it('absence and unavailability retain native evidence; explicit clear drops it', () => {
+    const previous = projectSessionNameSlot({ ...identity, title: named, manualTitle: null })!
     for (const kind of ['absent', 'unavailable'] as const) {
       expect(
         projectSessionNameSlot({
           ...identity,
           previous,
           evidence: { ...identity, providerName: { kind } },
-          manualTitle: 'Old manual'
+          manualTitle: null
         })?.title
       ).toBe('Provider name')
     }
+    const cleared = { ...identity, providerName: { kind: 'cleared' as const } }
+    expect(
+      projectSessionNameSlot({ ...identity, previous, evidence: cleared, manualTitle: null })?.title
+    ).toBe('运行测试')
     expect(
       projectSessionNameSlot({
         ...identity,
         previous,
-        evidence: { ...identity, providerName: { kind: 'cleared' } },
+        evidence: cleared,
         manualTitle: 'Old manual'
       })?.title
     ).toBe('Old manual')
@@ -78,10 +79,7 @@ describe('shared session name projection', () => {
       manualTitle: null
     })!
     expect(
-      resolveTerminalTabTitle(
-        { aiVaultTitle: slot, title: 'Live step', customTitle: 'Container' },
-        false
-      )
+      resolveTerminalTabTitle({ aiVaultTitle: slot, title: 'Live step', customTitle: null }, false)
     ).toBe('运行测试')
   })
 })

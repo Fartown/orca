@@ -124,7 +124,10 @@ export function WorktreeLinkedItemsField({
       <div className="flex items-center justify-between gap-2">
         <Label>{translate('workspace.links.title', 'Linked work')}</Label>
         <span className="text-xs text-muted-foreground">
-          {translate('workspace.links.count', '{{count}} linked', { count })}
+          {translate('workspace.links.linkedCount', '{{count}} linked', {
+            count,
+            defaultValue_one: '{{count}} linked'
+          })}
         </span>
       </div>
       <WorkspaceAttachmentComposer

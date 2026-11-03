@@ -1,5 +1,4 @@
 import { app } from 'electron'
-import { is } from '@electron-toolkit/utils'
 import type { UpdateCheckOptions, UpdateStatus } from '../../shared/update-status-types'
 import type {
   RemoteServerUpdateInstallResult,
@@ -12,14 +11,13 @@ import { integrationUpdateUnavailableMessage } from '../integration-builds/integ
 import { UpdaterNudge } from './updater-nudge'
 import type { UpdateInstallMode } from './updater-state'
 
-/** Exposes updater state to runtime RPC callers without leaking internal mutators. */
 export abstract class UpdaterRemoteStatus extends UpdaterNudge {
   protected getUpdateStatus(): UpdateStatus {
     return this.currentStatus
   }
 
   protected getRemoteServerUpdateSupport(): RemoteServerUpdateSupport {
-    if (!app.isPackaged || is.dev) {
+    if (!app.isPackaged) {
       return {
         installMode: this.updateInstallMode,
         automatic: false,

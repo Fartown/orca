@@ -10,6 +10,7 @@ import type { AgentHookRelayEnvelope } from '../../shared/agent-hook-relay'
 const PANE = makePaneKey('relay-window', '11111111-1111-4111-8111-111111111111')
 const A = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
 const B = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'
+const SPOOLED_AT = 1_700_000_000_000
 
 describe('Claude window across the real relay HTTP transport', () => {
   let dir: string
@@ -30,6 +31,7 @@ describe('Claude window across the real relay HTTP transport', () => {
   afterEach(() => {
     relay.stop()
     main.stop()
+    vi.useRealTimers()
     vi.restoreAllMocks()
     rmSync(dir, { recursive: true, force: true })
   })
@@ -70,6 +72,9 @@ describe('Claude window across the real relay HTTP transport', () => {
   })
 
   it('does not turn relay spool replay into a fresh activity observation', async () => {
+    // Pin Date so the spooled record stays inside the replay age window.
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(SPOOLED_AT)
     mkdirSync(join(dir, 'spool'))
     writeFileSync(
       join(dir, 'spool', 'pane-claude.jsonl'),
@@ -79,7 +84,7 @@ describe('Claude window across the real relay HTTP transport', () => {
         env: 'remote',
         version: '1',
         hookEventName: 'UserPromptSubmit',
-        receivedAt: Date.now(),
+        receivedAt: SPOOLED_AT,
         payload: { hook_event_name: 'UserPromptSubmit', session_id: A, prompt: 'spooled' }
       })}\n`
     )

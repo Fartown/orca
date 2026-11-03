@@ -1,21 +1,19 @@
 import { MessageSquare, SquareTerminal } from 'lucide-react'
-import { DropdownMenuItem, DropdownMenuShortcut } from '@/components/ui/dropdown-menu'
-import {
-  isMacPlatform,
-  nativeChatToggleShortcutLabel
-} from '@/components/native-chat/native-chat-shortcut'
+import { ContextMenuItem, ContextMenuShortcut } from '@/components/ui/context-menu'
 import { translate } from '@/i18n/i18n'
 
 export function TerminalTabViewSwitch({
   isChatView,
-  onToggleViewMode
+  onToggleViewMode,
+  shortcut
 }: {
   isChatView: boolean
   onToggleViewMode: () => void
+  /** The remappable terminal.toggleNativeChat label; null when unbound. */
+  shortcut: string | null
 }): React.JSX.Element {
-  const shortcut = nativeChatToggleShortcutLabel(isMacPlatform())
   return (
-    <DropdownMenuItem onSelect={onToggleViewMode}>
+    <ContextMenuItem onSelect={onToggleViewMode}>
       {isChatView ? (
         <SquareTerminal className="size-3.5 shrink-0" />
       ) : (
@@ -27,7 +25,7 @@ export function TerminalTabViewSwitch({
             'Continue with Terminal Agent'
           )
         : translate('terminalChatViewButton.switchToChatView', 'Switch to Chat View')}
-      <DropdownMenuShortcut>{shortcut}</DropdownMenuShortcut>
-    </DropdownMenuItem>
+      {shortcut ? <ContextMenuShortcut>{shortcut}</ContextMenuShortcut> : null}
+    </ContextMenuItem>
   )
 }

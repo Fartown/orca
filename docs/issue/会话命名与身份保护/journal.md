@@ -3,7 +3,7 @@ title: 会话命名与身份保护
 slug: 会话命名与身份保护
 status: implementing
 created: 2026-09-08
-updated: 2026-10-21
+updated: 2026-11-03
 external_ids: []
 ---
 
@@ -37,6 +37,27 @@ external_ids: []
 | 回归摘要执行   | [Codex回归摘要命名](tests/runs/2026-09-14-Codex回归摘要命名.md)               | completed  | 接收层结构判据回归与真实 Hook 取证，未做真机 App 验证               |
 
 ## 2. 决策点记录
+
+### D-011 保留 D-009：不写 rollout 的新 Codex 会话不接管 pane
+
+- 日期：2026-11-03。
+- 背景：上游 #33275（`05165e759d`）与 #33746（`4c9a6a4055`）让不写 rollout 的 ephemeral Codex 新会话能接管 pane：先扣住它以 `startup` 开头的 SessionStart，等第一条提示词出来，命中标题或 recap 的固定前缀就丢弃，否则当作新会话接管。fork 的 D-009 在上游分类之前就按结构拒收这类会话，于是上游 3 条用例失败（`server-codex-side-thread.test.ts` 2 条、`wsl-guest/agent-hook-server-codex-side-thread.test.ts` 1 条）。诊断见 `.docs/upstream-sync-ui-validation/2026-11-02/evidence/session-names-ci-conflicts.md`。
+- 备选项：在上游负责分类的两个时刻放行，并保留 fork 自己的 recap 识别；或保留 D-009 原样，把 3 条上游用例改成 fork 的预期。
+- 最终决定：用户决定保留 D-009，不改准入代码；3 条上游用例改成「不带 rollout 的会话不顶替带 rollout 的在位行」，并在用例上方加注释 `// Fork (session-names): D-009 keeps a rollout-less Codex session from replacing a backed row.`。
+- 原因：防止 Codex 的内部线程（标题生成、recap，以及以后可能新增、措辞不在任何名单里的内部任务）顶替主会话。上游按提示词前缀识别；fork 在 2026-09-14 采集的 recap 措辞（`… returning to this Codex task`）就与上游前缀（`… returning to this task.`）对不上。
+- 已知限制：同一 pane 里已有带 rollout 的 Codex 会话时，用户自己新开的、不写 rollout 的 ephemeral Codex 会话不会接管 pane，侧栏、标签和 Dashboard 会停在旧任务上；本地和 SSH/WSL relay 都一样。这是 REQ-028 第 3 条的已知例外，已在需求文档注明。
+- 与上游的差异：上游会让这类新会话接管（#33275 的「新会话可以替换行」，#33746 的「扣住 start、按提示词判定」）；fork 一律拒收，上游的扣住和分类逻辑在 fork 上碰不到这类事件。上游以后若改动 `codex-ephemeral-threads.ts`，同步时要先核对这 3 条用例。
+- 影响范围：REQ-028、TC-266/267 的边界说明不变；`shouldRejectUnbackedCodexSessionEvent` 不改。
+
+### D-010 手动名优先
+
+- 日期：2026-11-03。
+- 背景：原 REQ-025 排序为 Provider 原生名第一、已有 Orca 会话人工名第二，Agent 标签的手动改名只算第 5 档「容器标签」，排在实时标题之后。用户在 Agent 标签上改名，只要有可用的实时标题或 Provider 名就看不到手动名，桌面标签和手机会话列表都一样；上游测试 `orca-runtime-hook-agent-status-projection.test.ts`（#31358）因此失败。
+- 备选项：保留原规则、只改上游测试的期望；或改为手动名优先，与上游「tab customTitle 优先」一致。
+- 最终决定：用户决定手动名优先。新排序为：手动名（单 pane Agent 标签的改名在前，会话级人工名在后；后者包括主机保存的聊天名、镜像来的主机手动名和旧人工名）→ Provider 原生名 → 有效提示词派生名 → 可信实时标题 → 有归属的已有标签（只剩 quick-command）→ 身份兜底。
+- 原因：手动改名是用户最明确的意图，不应被自动名字盖住；与上游一致，减少每次同步时对上游测试的改动。
+- 保持不变：普通 shell 标签的命名不变；quick-command 不算手动名；分屏时父标签的改名不赋给各 pane 的会话，以免兄弟 pane 串名（REQ-025 分屏条款）。
+- 影响范围：REQ-025、方案 §0/§1/§2.1/§2.2/§4；公共排序 `session-display-title.ts`、`tab-title-resolution.ts`、`agent-row-conversation-name.ts`；Activity 的已确认原生名捷径；fork 契约测试按新规则更新。`tests/cases/Provider优先命名验收.md` 中涉及 Provider 与人工名先后的预期待更新。
 
 ### D-009 内部轮次按结构判据拒绝，不再逐条枚举提示词
 
@@ -102,6 +123,59 @@ external_ids: []
 - 影响范围：REQ-028、Codex managed脚本的local/posix模板与feature-owned小模块及测试；同时清理local/daemon/relay新PTY继承的外层CODEX_THREAD_ID，避免由Codex启动Orca时误拦正常新pane。未知旧版本无标识、外部手工污染环境等仍需披露。既有失败记录保持原样。
 
 ## 3. 开发记录
+
+### 2026-11-03 手动名优先，并保留 D-009 的 Codex 准入（implementing）
+
+- 本轮目标：按 D-010 把手动名提到排序第一；按 D-011 保留 D-009，把 3 条上游 ephemeral 接管用例改成 fork 的预期。即上一条记录里待定的 B、A 两组。
+- 完成内容：
+  - 公共排序把 `user` 提到第一；Agent 标签的 `customTitle`/`customLabel` 作为手动名，先于会话级人工名；`labelTitle` 只剩 quick-command。
+  - `getAgentRowConversationName` 在单 pane 时把标签改名作为手动名，Dashboard、Activity、通知、编排发件人名都走这里。
+  - Activity 的「已确认原生名」捷径在标签自带手动名（含原生聊天的保存名）时让路。
+  - fork 契约测试按新规则更新，新增「Agent 标签手动名高于 Provider 名和实时标题」和 Activity 挂载用例；上游 #31358 的手动改名用例不改即通过。
+  - 3 条上游 ephemeral 接管用例改为断言旧行不变，并加 D-009 注释。
+- 代码或文档变更：
+  - `src/shared/session-display-title.ts`、`src/shared/tab-title-resolution.ts`、`src/shared/agent-row-conversation-name.ts`、`src/renderer/src/session-names/use-activity-session-names.ts`
+  - fork 测试：`session-name-priority`、`session-name-slot`、`session-display-title`、`tab-title-resolution`、`agent-row-conversation-name`、`activity-session-name`、`mirror-host-manual-name`、`history-session-name`、`provider-name-store-chain`、`session-name-cache-projection`、`session-name-notification`、`session-name-history-actions`、`provider-name-file-chain`、`ai-vault-tab-title-sync`、`tab-title-tooltip`
+  - 上游测试：`src/main/agent-hooks/server-codex-side-thread.test.ts`、`src/wsl-guest/agent-hook-server-codex-side-thread.test.ts`
+  - 需求 REQ-025/REQ-028、方案 §0/§1/§2.1/§2.2/§4/§8、本 journal
+- 验证证据：本功能登记的 checks 涉及路径、原 7 条失败用例所在 5 个文件、`src/shared`、`src/renderer/src/components/dashboard` 用 `node config/scripts/run-vitest.mjs`（bun）跑过；`pnpm tc:web`、`pnpm tc:node` 通过。
+- 未解决问题：
+  - `tests/cases/Provider优先命名验收.md` 中 Provider 与人工名先后的预期还是旧规则，需标记 needs-update 并改写；
+  - 没有真机截图验证桌面标签与手机会话列表；
+  - ephemeral Codex 新会话不接管 pane 是 D-011 接受的已知限制。
+- 下一步：登记新接缝；真机逐屏确认手动改名在桌面标签、Dashboard、Activity、通知和手机列表一致。
+
+### 2026-11-03 同步后与上游新测试的冲突：先处理不涉及取舍的两组（implementing）
+
+- 本轮目标：处理同步上游到 8cd6a7e5ee 后，上游新测试和本功能冲突的 7 个用例。诊断报告在 `.docs/upstream-sync-ui-validation/2026-11-02/evidence/session-names-ci-conflicts.md`。
+- 完成内容：
+  - C 组：Activity 没把原生聊天标签当成会话的容器，显示成泛泛的 `Codex`，而 Dashboard 显示 `Codex Chat`。这是合并时没跟上上游 #31602，违反 REQ-025「各入口用同一规则」。已改 fork 自有的 `use-activity-session-names.ts`：原生聊天标签一律算作会话容器。
+  - D 组：换会话后，fork 有意不让新会话沿用旧会话的状态时钟；`activity-session-history.test.ts` 也断言了同一规则，以免 Activity 把两次会话的事件合在一起。所以上游 #14654 用例里的两处 `stateStartedAt` 期望改为 7000，侧栏排序的断言保持不动，并登记为接缝。
+- 代码或文档变更：上述 fork 文件、上游测试 `agent-status-row-order-origin.test.ts`，以及接缝登记和架构策略。
+- 验证证据：C 组相关的 60 个文件 404 条用例通过；D 组用例和 `activity-session-history.test.ts` 共 14 条通过；`check:fork-features` 和 `check:architecture-policies` 通过。
+- 未解决问题：
+  - A 组（Codex 新开的 ephemeral 会话能否接管 pane，涉及 D-009）待用户决定；
+  - B 组（Agent 标签手动改名后，排在实时标题之后，涉及 REQ-025）待用户确认是否保留。
+- 下一步：用户决定 A、B 两组后再改，然后一起推送。
+
+### 2026-11-02 同步上游 c9845c5f9c：接入主机保存的聊天名
+
+- 本轮目标：合并上游后保住会话名的一致性与身份保护。
+- 完成内容：
+  - 上游 #31602 把原生聊天的名字改为保存在执行主机上。Activity 现在把它当作「人工名」一级参与排序，与标签页、Dashboard 一致（REQ-025）。
+  - 上游 #31780 在处理 hook 前就会探测原主是否存活。fork 在上游已探测时跳过自己那次，拿不准时仍会探测；本机和 relay 两侧都已覆盖。
+  - 接缝跟随上游搬家：local-pty、agent-status 子目录。三个超行文件里的 fork 代码移进功能自有模块，行为不变。
+- 代码或文档变更：
+  - `use-activity-session-names.ts`
+  - `claude-session-activity.ts`
+  - `session-name-live-entry.ts`
+  - `session-ownership-listener-caches.ts`
+  - 相关测试与本记录
+- 验证证据：本功能登记的 11 条 checks 全部通过，记录在 `.docs/upstream-sync-ui-validation/2026-11-02/evidence/feature-checks/`。
+- 未解决问题：
+  - 上游新增的 `agent-generated-tab-titles.ts` 遇到手动名就跳过，与 fork 在渲染进程的做法相反，需要真机确认。
+  - 上游的 `codex-ephemeral-threads.ts` 与 `codex-title-task-admission` 有重叠，暂时保留 fork 实现。
+- 下一步：真机验证 Activity、标签页和通知三处的名字是否一致。
 
 ### 2026-10-09 同步上游 main 13c9f1fcc8
 

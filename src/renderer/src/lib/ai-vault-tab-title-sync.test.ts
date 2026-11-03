@@ -705,17 +705,17 @@ describe('canonical conversation title projection', () => {
       expect(store.getState().tabsByWorktree['worktree-1'][0].aiVaultTitle).toEqual({
         agent: 'codex',
         sessionId: 'codex-session',
-        title: 'Old scanner name',
+        title: 'Renamed by user',
         manualTitle: 'Renamed by user',
         providerName: { kind: 'named', title: 'Old scanner name', field: 'test.nativeName' },
-        source: 'provider'
+        source: 'conversation-override'
       })
     )
     expect(resolveSessionTitles).not.toHaveBeenCalled()
     stop()
   })
 
-  it('keeps a canonical manual fallback without replacing a fresh native name', async () => {
+  it('shows the canonical manual name while keeping the fresh native name as evidence', async () => {
     const store = makeState({
       executionHostId: 'ssh:dev-box',
       worktreeId: 'worktree-1',
@@ -731,10 +731,10 @@ describe('canonical conversation title projection', () => {
       expect(store.getState().tabsByWorktree['worktree-1'][0].aiVaultTitle).toEqual({
         agent: 'codex',
         sessionId: 'codex-session',
-        title: 'Scanner value',
+        title: 'Canonical value',
         manualTitle: 'Canonical value',
         providerName: { kind: 'named', title: 'Scanner value', field: 'test.nativeName' },
-        source: 'provider'
+        source: 'conversation-override'
       })
     )
     stop()

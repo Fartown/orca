@@ -14,7 +14,7 @@ import { callRuntimeEnvironment } from '../ipc/runtime-environments/runtime-envi
 import { RpcDispatcher } from '../runtime/rpc/dispatcher'
 import { FILE_METHODS } from '../runtime/rpc/methods/files'
 import type { OrcaRuntimeService } from '../runtime/orca-runtime'
-import { serializeRemoteRuntimePayload } from '../../shared/remote-runtime-memory-limits'
+import { serializeRemoteRuntimePayload } from '../../shared/remote-runtime/remote-runtime-memory-limits'
 import {
   mintDocPreviewGrant,
   revokeAllDocPreviewGrants
@@ -27,7 +27,7 @@ vi.mock(
   '../runtime/file-watcher-host',
   async () => (await import('../runtime/orca-runtime-files-mock-registry')).fileWatcherHostMock
 )
-vi.mock('../ipc/filesystem-auth', async () =>
+vi.mock('../ipc/filesystem/filesystem-auth', async () =>
   (await import('../runtime/orca-runtime-files-mock-registry')).filesystemAuthModuleMock()
 )
 vi.mock('../git/runner', async () =>
@@ -40,6 +40,9 @@ vi.mock(
 )
 vi.mock('../ipc/runtime-environments/runtime-environment-transport-routing', () => ({
   callRuntimeEnvironment: vi.fn()
+}))
+vi.mock('../ipc/runtime-environments/runtime-environment-registry-root', () => ({
+  getRuntimeEnvironmentRegistryRoot: () => '/unused-user-data'
 }))
 vi.mock('../persistence', () => ({ getCanonicalUserDataPath: () => '/unused-user-data' }))
 
@@ -98,15 +101,18 @@ describe('document preview text size', () => {
       const dispatcher = new RpcDispatcher({
         runtime: {
           getRuntimeId: () => 'preview-test',
-          readDocPreviewFile: commands.readDocPreviewFile.bind(commands)
+          readDocPreviewFile: commands.readDocPreviewFile.bind(commands),
+          readDocPreviewChunk: commands.readDocPreviewChunk.bind(commands)
         } as unknown as OrcaRuntimeService,
         methods: FILE_METHODS
       })
       let requestCount = 0
       let largestReply = 0
+      const calledMethods: string[] = []
       vi.mocked(callRuntimeEnvironment).mockImplementation(
         async (_store, _owner, method, params) => {
           requestCount++
+          calledMethods.push(method)
           const response = await dispatcher.dispatch(
             {
               id: `preview-${requestCount}`,
@@ -135,7 +141,8 @@ describe('document preview text size', () => {
       const result = await readDocPreviewFile(grant, 'index.html')
       if (size > TEXT_CAP) {
         expect(result).toMatchObject({ ok: false, status: 413, reason: 'too-large' })
-        expect(requestCount).toBe(1)
+        // The chunked read refuses, then the ranged fallback for hosts without it refuses too.
+        expect(calledMethods).toEqual(['files.readDocPreview', 'files.readDocPreviewChunk'])
       } else {
         expect(result.ok).toBe(true)
         if (!result.ok) {
@@ -143,6 +150,7 @@ describe('document preview text size', () => {
         }
         expect(result.bytes.toString('utf8') === content).toBe(true)
         expect(requestCount).toBe(Math.ceil(size / (256 * 1024)))
+        expect(new Set(calledMethods)).toEqual(new Set(['files.readDocPreview']))
       }
       expect(largestReply).toBeLessThan(512 * 1024)
     }

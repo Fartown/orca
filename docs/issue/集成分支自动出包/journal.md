@@ -3,7 +3,7 @@ title: 集成分支自动出包
 slug: 集成分支自动出包
 status: testing
 created: 2026-09-12
-updated: 2026-10-30
+updated: 2026-11-03
 external_ids: []
 ---
 
@@ -102,6 +102,59 @@ external_ids: []
 - 影响范围：REQ-401、REQ-402、REQ-403；APK 沿用 Expo debug 签名并核验指纹，不生成密钥或暗改 versionCode。
 
 ## 3. 开发记录
+
+### 2026-11-03 上游根布局测试 mock 掉 Android 更新提示（testing）
+
+- 本轮目标：修掉同步后手机端 `native-root-recovery.test.tsx` 在文件级的失败。
+- 完成内容：fork 在 `app/_layout.tsx` 挂载了 `IntegrationUpdateGate`，它一导入就会加载更新相关的原生模块，上游这条新测试渲染根布局时因此崩溃。按用户选的方案 C2，在这个上游测试里加一行 mock，写法和它 mock 上游 `app-update-runtime` 的方式一致。Android 上更新提示的实际行为不变。
+- 代码或文档变更：上游测试加一行 mock 和一行注释；登记为本功能接缝，并加入预算白名单和工作区范围。
+- 验证证据：该测试本地通过；`check:fork-features` 和 `check:architecture-policies` 通过。完整手机端 CI 测试与其他手机端修正一起跑。
+- 未解决问题：无。
+- 下一步：与其他同步修正一起推送。
+
+### 2026-11-03 上游同步复核：缓存预热不再排上 Blacksmith（testing）
+
+- 本轮目标：复核 2026-11-02 上游同步，修掉推送后会在 fork 上永远排队的 CI 任务。
+- 完成内容：
+  - 上游给 `ci-cache-warmup.yml` 的 `warm` 和 `ci-cache-warmup-platform-jobs.yml` 的 `warm-linux-package-fixtures` 加了 `blacksmith-4vcpu-ubuntu-2404` 矩阵项，没有仓库判断。
+  - fork/integration 是 Fartown 的默认分支，每 6 小时的定时预热会留下一条排不上的任务；同步前，`main` 镜像上已有 3 条同类任务排了 12～18 小时。
+  - 两处改成与 `warm-linux-runtime` 相同的写法：只有 `stablyai/orca` 用 Blacksmith，fork 只剩 `ubuntu-24.04`。
+- 代码或文档变更：
+  - 两个工作流各改一处；
+  - `ci-cache-warmup.yml` 登记为本功能接缝，并加入预算白名单和工作区范围；
+  - `pr-runner-portability.test.mjs` 从只查 `warm-linux-runtime` 扩到两个预热工作流的全部任务。
+- 验证证据：
+  - runner 可移植性测试 5 条通过；
+  - 临时还原 `ci-cache-warmup.yml` 后，Fartown 和其他 fork 两个用例失败，确认测试能拦住；
+  - 复核记录见 `.docs/upstream-sync-ui-validation/2026-11-02/evidence/conflict-review-2026-11-03.md`。
+- 未解决问题：
+  - `main` 镜像上已排队的 3 条任务与本次无关，需在 Actions 页面手动取消。
+  - `ci-xterm-cache.yml` 也有未守卫的矩阵，但只在 `main` 上运行，fork/integration 的定时任务会跳过它。
+- 下一步：随同步一起推送，观察下一次定时预热的结果。
+
+### 2026-11-02 同步上游 c9845c5f9c（3216 个提交）（testing）
+
+- 本轮目标：用 `pnpm sync:upstream` 把上游合进 fork/integration，保住全部已登记功能；顺带带进手机历史直接打开聊天的修复（上游 #36315）。
+- 完成内容：
+  - 先合并 a444233103，共 179 个冲突（其中 15 个是「fork 改过、上游删了」），按功能分 7 组解完；之后又自动合进了 15 个新的上游提交。
+  - 接缝跟随上游搬家，登记和架构策略同步更新。
+  - 下线 cli-writer-login-shell：上游现在只在确认 CLI 写入进程存活时才拒绝。
+  - fork 代码适配上游改名的模块和新 API，手机端文案改为走上游新加的 i18n。
+  - 11 个超出行数上限的上游文件，把 fork 代码移进功能自有模块。
+  - 各功能 checks 里因上游有意改动而过时的测试，已按上游行为调整。
+- 代码或文档变更：
+  - 合并提交 d63ba9083e
+  - 登记修正 7d4979b4a6
+  - 随后按功能提交的修正
+  - 证据目录 `.docs/upstream-sync-ui-validation/2026-11-02/`
+- 验证证据：
+  - 通过：`pnpm tc`、三项桌面本地化与两项手机本地化门禁、`check:fork-features`、`check:fork-docs`、`check:architecture-policies`、两套 oxlint。
+  - 各功能 checks 记录在 `evidence/feature-checks/summary.tsv`。
+- 未解决问题：
+  - 本机的 `win32-test-lane-registration` 检查被 git 忽略的 `tmp/tasks` 干扰，CI 上没有这个目录。
+  - 上游已覆盖部分作用的 fork 功能有两个，是否下线待定：mobile-terminal-surface-recovery、remote-host-path-open。
+  - 改了界面的地方还要逐屏截图。
+- 下一步：用户确认后推送 Fartown，等集成包出包。
 
 ### 2026-10-30 Linux 桌面更新入口（testing）
 

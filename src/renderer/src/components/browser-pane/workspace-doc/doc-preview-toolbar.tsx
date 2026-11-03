@@ -14,16 +14,12 @@ import { DocPreviewOverflowMenu } from './doc-preview-overflow-menu'
 import { docPreviewLanShareControl } from '@/components/self-hosted-artifacts/share-button/LanArtifactShareEntryButtons'
 import { lanShareLabel } from '@/components/self-hosted-artifacts/share-button/lan-artifact-share-copy'
 
-/**
- * Binds the shared browser chrome to a workspace document: the address bar becomes a read-only
- * identity chip, because a preview shows a path the reader cannot retype into something else.
- */
+/** Use document identity until editing begins; committed addresses can convert the preview into a URL page. */
 export function DocPreviewToolbar({
   identity,
   previewId,
   worktreeId,
   history,
-  loading,
   onReload,
   onHardReload,
   onCopyPath,
@@ -42,7 +38,6 @@ export function DocPreviewToolbar({
   previewId: string
   worktreeId: string
   history: DocPreviewHistory
-  loading: boolean
   onReload: () => void
   /** Drops the grant and mints a new one — the preview's equivalent of ignoring every cache. */
   onHardReload: () => void
@@ -69,11 +64,10 @@ export function DocPreviewToolbar({
       controls={{
         canGoBack: history.canGoBack,
         canGoForward: history.canGoForward,
-        loading,
         goBack: history.goBack,
         goForward: history.goForward,
         reload: onReload,
-        // Why a no-op: the identity chip has nothing to submit, so nothing can reach this.
+        // The custom address slot owns submission; the shared chrome callback is unreachable.
         navigate: () => {}
       }}
       addressSlot={
@@ -84,7 +78,6 @@ export function DocPreviewToolbar({
           menuOpen={reloadMenuOpen}
           onMenuOpenChange={setReloadMenuOpen}
           label={reloadLabel}
-          loading={loading}
           showShortcutHint={false}
           reloadShortcut=""
           hardReloadShortcut=""
@@ -93,8 +86,7 @@ export function DocPreviewToolbar({
           onHardReload={onHardReload}
         />
       }
-      // Cookie import is a browsing-session action; a preview reads workspace disk over a grant
-      // and has no session for cookies to land in.
+      // Preview grants read workspace disk without a browsing session to receive imported cookies.
       importControl={null}
       shareLabel={lanShareLabel()}
       elementTools={elementTools}
@@ -102,9 +94,7 @@ export function DocPreviewToolbar({
         active: markupActive,
         disabled: markupDisabled,
         onToggle: onToggleMarkup,
-        // Why false on a surface that is plainly visible: the draw-tool nudge fires once per
-        // install, and it belongs to the browsing pane. A reader who opened a document should not
-        // be the one who spends it.
+        // Reserve the once-per-install draw hint for browsing panes.
         canShowDiscoveryHint: false
       }}
       shareControl={docPreviewLanShareControl(identity, shareLocation) ?? shareControl}

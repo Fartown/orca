@@ -12,8 +12,11 @@ import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { translate } from '@/i18n/i18n'
 import { useAppStore } from '@/store'
 import type { AppState } from '@/store/types'
-import { selectFolderWorkspaces, selectWorktreesByRepo } from '@/store/workspace-record-selectors'
-import { getFolderWorkspaceWorktree } from '@/store/slices/worktrees/listing/detected-worktree-meta'
+import {
+  getFolderWorkspaceWorktree,
+  selectFolderWorkspaces,
+  selectWorktreesByRepo
+} from '@/store/workspace-record-selectors'
 import { selectExecutionHostDisplayLabel } from '@/lib/execution-host-display-label'
 import type { Worktree } from '../../../../shared/worktree/types'
 import type { LocalTaskLinks } from '../../../../shared/local-tasks/local-task-link-types'
@@ -141,7 +144,7 @@ export function LocalTaskWorkspacePicker({
         useAppStore.getState(),
         [
           ...Object.values(worktreesByRepo).flat(),
-          ...folderWorkspaces.map(getFolderWorkspaceWorktree)
+          ...folderWorkspaces.map((folder) => getFolderWorkspaceWorktree(folder))
         ],
         project,
         links,

@@ -132,7 +132,7 @@ describe('tab title resolution', () => {
     ).toBe('Codex 01a0420e')
   })
 
-  it('keeps Provider names ahead of manual container and quick-command labels', () => {
+  it('puts a manual rename ahead of Provider names, and those ahead of quick-command labels', () => {
     const aiVaultTitle = {
       agent: 'claude' as const,
       sessionId: 'claude-session',
@@ -148,7 +148,7 @@ describe('tab title resolution', () => {
         },
         false
       )
-    ).toBe('Claude conversation')
+    ).toBe('Manual label')
     expect(
       resolveTerminalTabTitle(
         {
@@ -223,7 +223,7 @@ describe('tab title resolution', () => {
     ).toBe('OC | Native Stable Session')
   })
 
-  it('keeps native OpenCode names ahead of container and command labels', () => {
+  it('puts a manual label ahead of native OpenCode names, and those ahead of command labels', () => {
     expect(
       resolveUnifiedTabLabel(
         {
@@ -234,7 +234,7 @@ describe('tab title resolution', () => {
         },
         true
       )
-    ).toBe('OC | Native Stable Session')
+    ).toBe('Manual label')
     expect(
       resolveUnifiedTabLabel(
         {

@@ -80,7 +80,10 @@ describe('real title store and workspace serialization seams', () => {
     }
     expect(restored.value.tabsByWorktree.wt[0].aiVaultTitle).toEqual(native)
     expect(restored.value.unifiedTabs?.wt[0].aiVaultTitle).toEqual(native)
-    expect(resolveTerminalTabTitle(restored.value.tabsByWorktree.wt[0], false)).toBe('继续')
-    expect(resolveUnifiedTabLabel(restored.value.unifiedTabs?.wt[0], false)).toBe('继续')
+    // Manual names outrank the restored native one: tab rename, then the slot's manual name.
+    const restoredTab = restored.value.tabsByWorktree.wt[0]
+    expect(resolveTerminalTabTitle(restoredTab, false)).toBe('Container')
+    expect(resolveUnifiedTabLabel(restored.value.unifiedTabs?.wt[0], false)).toBe('Container')
+    expect(resolveTerminalTabTitle({ ...restoredTab, customTitle: null }, false)).toBe('Old manual')
   })
 })

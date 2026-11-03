@@ -76,6 +76,7 @@ vi.mock('./local-tasks-runtime-client', () => ({
   localTasksClient: { resolveWorkspace: upkeep.resolveWorkspace }
 }))
 vi.mock('../lib/web-client-location', () => ({ isWebClientLocation: () => false }))
+vi.mock('../app-shell/ActiveWorkspaceSyncGate', () => ({ ActiveWorkspaceSyncGate: () => null }))
 vi.mock('../components/AgentHibernationGate', () => ({ AgentHibernationGate: () => null }))
 vi.mock('../components/AiVaultTabTitleSyncGate', () => ({ AiVaultTabTitleSyncGate: () => null }))
 vi.mock('../components/dashboard/RetainedAgentsSyncGate', () => ({ default: () => null }))

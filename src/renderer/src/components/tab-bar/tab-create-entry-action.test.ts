@@ -1,26 +1,11 @@
 import { describe, expect, it, vi } from 'vitest'
 import {
-  classifyTabEntryQuery,
-  getTabEntryOptions,
   openTabEntryWithOperations,
-  TAB_ENTRY_ABSOLUTE_PATH_REMOTE_BLOCKED_MESSAGE,
-  validateNewTabEntryAbsolutePath,
-  validateNewTabEntryRelativePath,
+  getTabEntryAbsolutePathRemoteBlockedMessage,
   type TabEntryOperations
 } from './tab-create-entry-action'
-import * as classifier from './tab-create-entry-classifier'
 
 const readyFiles = (files: string[]) => ({ files, loading: false, loadError: null })
-
-it('keeps the pure classifier available through the tab action module', () => {
-  expect(classifyTabEntryQuery).toBe(classifier.classifyTabEntryQuery)
-  expect(getTabEntryOptions).toBe(classifier.getTabEntryOptions)
-  expect(TAB_ENTRY_ABSOLUTE_PATH_REMOTE_BLOCKED_MESSAGE).toBe(
-    classifier.TAB_ENTRY_ABSOLUTE_PATH_REMOTE_BLOCKED_MESSAGE
-  )
-  expect(validateNewTabEntryAbsolutePath).toBe(classifier.validateNewTabEntryAbsolutePath)
-  expect(validateNewTabEntryRelativePath).toBe(classifier.validateNewTabEntryRelativePath)
-})
 
 describe('openTabEntryWithOperations', () => {
   function makeOperations(overrides: Partial<TabEntryOperations> = {}): TabEntryOperations {
@@ -48,7 +33,7 @@ describe('openTabEntryWithOperations', () => {
     fileList: readyFiles(['src/index.ts']),
     worktreeId: 'wt-1',
     groupId: 'group-1',
-    getFileContext: () => ({ worktreePath: '/repo', runtimeContext }),
+    getFileContext: () => ({ worktreePath: '/repo', runtimeContext, assertCurrent: () => {} }),
     allowAbsolutePaths: true,
     localPlatform: 'posix' as const,
     searchEngine: 'google' as const
@@ -366,7 +351,7 @@ describe('openTabEntryWithOperations', () => {
         query: '/tmp/notes.md',
         operations
       })
-    ).rejects.toThrow(TAB_ENTRY_ABSOLUTE_PATH_REMOTE_BLOCKED_MESSAGE)
+    ).rejects.toThrow(getTabEntryAbsolutePathRemoteBlockedMessage())
 
     expect(operations.statUserOpenedPath).not.toHaveBeenCalled()
     expect(operations.createRuntimePath).not.toHaveBeenCalled()
@@ -395,7 +380,7 @@ describe('openTabEntryWithOperations', () => {
     await openTabEntryWithOperations({
       ...baseArgs,
       localPlatform: 'windows',
-      getFileContext: () => ({ worktreePath: 'C:/repo', runtimeContext }),
+      getFileContext: () => ({ worktreePath: 'C:/repo', runtimeContext, assertCurrent: () => {} }),
       classification: { kind: 'absolute-file', filePath: 'C:\\tmp\\notes.md' },
       query: 'C:\\tmp\\notes.md',
       operations
@@ -416,7 +401,7 @@ describe('openTabEntryWithOperations', () => {
       statUserOpenedPath: vi.fn(() => statResult),
       assertAbsolutePathAllowed: vi.fn(() => {
         if (!allowed) {
-          throw new Error(TAB_ENTRY_ABSOLUTE_PATH_REMOTE_BLOCKED_MESSAGE)
+          throw new Error(getTabEntryAbsolutePathRemoteBlockedMessage())
         }
       })
     })
@@ -428,9 +413,7 @@ describe('openTabEntryWithOperations', () => {
       operations
     })
     await vi.waitFor(() => expect(operations.statUserOpenedPath).toHaveBeenCalledTimes(1))
-    const rejection = expect(opening).rejects.toThrow(
-      TAB_ENTRY_ABSOLUTE_PATH_REMOTE_BLOCKED_MESSAGE
-    )
+    const rejection = expect(opening).rejects.toThrow(getTabEntryAbsolutePathRemoteBlockedMessage())
     allowed = false
     releaseStat?.()
     await rejection
@@ -448,7 +431,11 @@ describe('openTabEntryWithOperations', () => {
 
     await openTabEntryWithOperations({
       ...baseArgs,
-      getFileContext: () => ({ worktreePath: '/home/me/repo', runtimeContext }),
+      getFileContext: () => ({
+        worktreePath: '/home/me/repo',
+        runtimeContext,
+        assertCurrent: () => {}
+      }),
       classification: { kind: 'absolute-file', filePath: '/home/me/notes.md' },
       query: '/home/me/notes.md',
       operations
@@ -478,7 +465,8 @@ describe('openTabEntryWithOperations', () => {
           worktreeId: 'wt-1',
           worktreePath: '/home/me/repo',
           connectionId: 'ssh-1'
-        }
+        },
+        assertCurrent: () => {}
       }),
       classification: { kind: 'absolute-file', filePath: '/home/me/repo/src/index.ts' },
       query: '/home/me/repo/src/index.ts',
@@ -504,7 +492,7 @@ describe('openTabEntryWithOperations', () => {
 
     await openTabEntryWithOperations({
       ...baseArgs,
-      getFileContext: () => ({ worktreePath: '/repo', runtimeContext }),
+      getFileContext: () => ({ worktreePath: '/repo', runtimeContext, assertCurrent: () => {} }),
       query: '/tmp/notes.md',
       operations
     })
@@ -539,7 +527,8 @@ describe('openTabEntryWithOperations', () => {
             target: { kind: 'environment' as const, environmentId: 'hub-a' },
             worktreeId: 'wt-1',
             worktreePath: '/repo'
-          }
+          },
+          assertCurrent: () => {}
         }),
         query: '/tmp/gone.md',
         operations
@@ -558,7 +547,7 @@ describe('openTabEntryWithOperations', () => {
 
     await openTabEntryWithOperations({
       ...baseArgs,
-      getFileContext: () => ({ worktreePath: '/repo', runtimeContext }),
+      getFileContext: () => ({ worktreePath: '/repo', runtimeContext, assertCurrent: () => {} }),
       query: '/repo/src/index.ts',
       operations
     })

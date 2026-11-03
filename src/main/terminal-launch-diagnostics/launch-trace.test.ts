@@ -1,9 +1,9 @@
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
+import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createLocalFileSink } from '../observability/local-file-sink'
-import { setActiveSink } from '../observability/tracer'
+import { flushActiveSink, setActiveSink } from '../observability/tracer'
 import { createDaemonFileLog } from '../daemon/daemon-file-log'
 import { traceDaemonTerminalLaunch } from './daemon-launch-trace'
 import { launchReference } from '../../shared/terminal-launch-diagnostics/launch-evidence'
@@ -226,7 +226,9 @@ describe('durable launch tracing', () => {
       undefined,
       invoke
     )
-    expect(readFileSync(file, 'utf8')).toBe('')
+    flushActiveSink()
+    // The sink only creates its file on the first append.
+    expect(existsSync(file) ? readFileSync(file, 'utf8') : '').toBe('')
   })
 
   it('records daemon requests and actual creation/attachment/failure on disk', async () => {
@@ -249,7 +251,12 @@ describe('durable launch tracing', () => {
         throw new Error('private-failure')
       })
     ).rejects.toThrow('private-failure')
-    const output = readFileSync(file, 'utf8')
+    // The daemon log appends off the event loop; wait for the batch to land on disk.
+    const output = await vi.waitFor(() => {
+      const written = readFileSync(file, 'utf8')
+      expect(written).toContain('terminal-launch-failed')
+      return written
+    })
     for (const event of [
       'terminal-launch-request',
       'terminal-launch-created',

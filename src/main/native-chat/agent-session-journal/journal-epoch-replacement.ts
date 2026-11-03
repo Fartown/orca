@@ -1,20 +1,30 @@
-// Republishing a live item set into a fresh epoch.
-//
-// One transaction: discard the old epoch's rows, insert the epoch row plus the
-// replacement items, and move the session projection.
+import { journalInputOrder } from './journal-input-order'
+import { journalOutcomeSource } from './journal-outcome-format'
+import { publishJournalOutcomeEpoch } from './journal-outcome-write'
+import {
+  journalItemEchoFields,
+  journalItemEchoRestatement,
+  type JournalItemEcho
+} from './journal-item-echo'
 
-import { isQueuedAgentJournalSubmission } from '../../../shared/agent-session-queued-submission'
-import { agentJournalSubmissionKey } from '../../../shared/agent-session-journal-item-key'
+import { sameJournalConversation } from './journal-history-origin'
+import { isQueuedAgentJournalSubmission } from '../../../shared/agent-session/requests/agent-session-queued-submission'
+import {
+  agentJournalItemKey,
+  agentJournalSubmissionKey
+} from '../../../shared/agent-session/journal/agent-session-journal-item-key'
 
 import type {
   AgentJournalCursor,
-  AgentJournalItemBody,
   AgentJournalItemIdentity,
-  AgentJournalProducerLinkage,
-  AgentJournalTurnScope,
   AgentSessionJournalIdentity
-} from '../../../shared/agent-session-journal-types'
-import { agentSessionJournalProviderHandle } from '../../../shared/agent-session-provider-handle-encoding'
+} from '../../../shared/agent-session/journal/agent-session-journal-identity'
+import type {
+  AgentJournalItemBody,
+  AgentJournalProducerLinkage
+} from '../../../shared/agent-session/journal/agent-session-journal-types'
+import type { AgentJournalTurnScope } from '../../../shared/agent-session/journal/agent-session-journal-turn-scope'
+import { agentSessionJournalProviderHandle } from '../../../shared/agent-session/lifecycle/agent-session-provider-handle-encoding'
 import type { JournalHostDatabase } from './journal-host-database'
 import type { JournalLoad } from './journal-open'
 import {
@@ -27,6 +37,8 @@ import {
   buildJournalSubmissionRow,
   journalRowBase
 } from './journal-row-builders'
+import { buildJournalQueueRow } from './journal-queue-events'
+import type { JournalQueueRestatement } from './journal-queued-messages'
 import {
   buildJournalQueueReopenRow,
   buildJournalQueueClearRow,
@@ -36,50 +48,78 @@ import {
 import type { JournalQueuePauseRestatement } from './queued-message-pause'
 import {
   deleteJournalEpochRows,
-  insertJournalRow,
   publishJournalSessionEpoch,
   readJournalSessionEpoch
 } from './journal-row-table'
 import type { AgentJournalEpochReason, JournalRow } from './journal-row-schema'
-import { assertJournalFence } from './journal-write-guards'
+import { AgentSessionJournalError, assertJournalFence } from './journal-write-guards'
 import type { JournalOperationReceipt } from './journal-row-writer'
 
+import type { JournalAttachmentClaim } from './journal-submission-hook'
+import { copyJournalNativeState } from './journal-input-conversion'
+import { journalInputAcceptance, journalQueueRebase } from './journal-input-provenance'
+
 export type JournalReplacementItem = AgentJournalProducerLinkage & {
+  echoOf?: JournalItemEcho['echoOf']
   identity: AgentJournalItemIdentity
   body: AgentJournalItemBody
   observedAt?: number
-  /** Absent for history rebuilt from a source that never stated one: derived from position, as
-   *  a legacy row's is, and then written down. */
+  /** Derive absent legacy scopes from timeline position before persisting them. */
   turnScope?: AgentJournalTurnScope
-  /** Carried from the epoch it came from (`JournalItemRow.ownerFence`), never the replacing
-   *  writer's fence: replacing history does not make it the current generation's work. */
+  /** Preserve original execution provenance; history replacement is not new work. */
   ownerFence: number
-  /** Carried the same way (`JournalItemRow.executionOwner`). */
   executionOwner?: number
 }
 
+/** Survivors are restated from the open chat. That loses nothing another build wrote: a chat holding
+ * a key this build does not declare refuses to open, so no handle can reach here. */
 export function replaceJournalEpoch(input: {
   database: JournalHostDatabase
   identity: AgentSessionJournalIdentity
   reason: AgentJournalEpochReason
   fence: number
   items: readonly JournalReplacementItem[]
+  /** The caller's completion receipt writes after the new epoch's records, in the same
+   * transaction, so it can restore the replaced conversation on `db`. */
   receipt?: (cursor: AgentJournalCursor) => JournalOperationReceipt
+  isLiveGoal?: (id: string) => boolean
+  claimAttachments?: JournalAttachmentClaim
   previous?: JournalReducerState
-  /** Restated in the new epoch, or the rewind would release cards the person stopped, or bring
-   *  back a /clear pause they already lifted. */
+  /** Preserve Stop/Resume state so rewinds cannot release held cards or resurrect lifted pauses. */
   queuePause: JournalQueuePauseRestatement
+  /** Restate cards before carried submissions relink their handoffs. */
+  queue: JournalQueueRestatement
   now: () => number
   mintEpoch: () => string
-  /** Called the instant the transaction commits, before any fallible follow-up. */
+  /** Adopt committed state before fallible follow-up work. */
   onPublished: (loaded: JournalLoad) => void
 }): void {
   const epoch = input.mintEpoch()
-  const state = createJournalReducerState(input.identity.sessionId, epoch)
+  const state = createJournalReducerState(input.identity.sessionId, epoch, (id) =>
+    journalInputAcceptance(input.database.db, input.identity.sessionId, id)
+  )
+  if (input.previous) {
+    copyJournalNativeState(input.previous, state)
+  }
+  journalInputOrder(state).beginReconstruction()
+  const providerHandle = agentSessionJournalProviderHandle(input.identity)
+  const previousOrigin = input.previous?.historyOrigin
+  const restate =
+    input.reason !== 'legacy_import' &&
+    input.reason !== 'session_created' &&
+    previousOrigin &&
+    sameJournalConversation(previousOrigin.providerHandle, providerHandle)
+  const queued = [...(input.previous?.submissions.values() ?? [])]
+    .filter(isQueuedAgentJournalSubmission)
+    .sort((a, b) => a.submittedSequence! - b.submittedSequence!)
   const epochRow: JournalRow = {
     kind: 'epoch',
-    reason: input.reason,
-    providerHandle: agentSessionJournalProviderHandle(input.identity),
+    reason:
+      input.reason === 'legacy_import' && input.items.length === 0
+        ? 'session_created'
+        : input.reason,
+    providerHandle,
+    ...(restate ? { historyOrigin: previousOrigin.raw } : {}),
     ...journalRowBase(epoch, 1, input.fence, input.now())
   }
   const rows: JournalRow[] = [epochRow]
@@ -89,6 +129,14 @@ export function replaceJournalEpoch(input: {
       state,
       identity: item.identity,
       body: item.body,
+      ...journalItemEchoFields(item),
+      ...(input.previous && input.reason !== 'legacy_import' && input.reason !== 'session_created'
+        ? journalItemEchoRestatement(
+            input.previous.itemEchoes,
+            input.previous.aliases.get(agentJournalItemKey(item.identity)) ??
+              agentJournalItemKey(item.identity)
+          )
+        : {}),
       seq: state.lastSequence + 1,
       fence: input.fence,
       ownerFence: item.ownerFence,
@@ -101,10 +149,12 @@ export function replaceJournalEpoch(input: {
     applyJournalRow(state, row)
     rows.push(row)
   }
-  // An accepted message that never reached the agent survives a provider history replacement.
-  const queued = [...(input.previous?.submissions.values() ?? [])]
-    .filter(isQueuedAgentJournalSubmission)
-    .sort((a, b) => (a.acceptedSequence ?? 0) - (b.acceptedSequence ?? 0))
+  const appendQueue = (messageId: string, change: Parameters<typeof buildJournalQueueRow>[2]) => {
+    const row = buildJournalQueueRow(state, messageId, change, state.lastSequence + 1, input.now())
+    applyJournalRow(state, row)
+    rows.push(row)
+  }
+  const rebuilt = new Map<string, number>()
   for (const submission of queued) {
     const body = input.previous?.items.get(
       agentJournalSubmissionKey(submission.clientMessageId)
@@ -123,6 +173,34 @@ export function replaceJournalEpoch(input: {
     })
     applyJournalRow(state, row)
     rows.push(row)
+    rebuilt.set(submission.clientMessageId, row.seq)
+  }
+  const rebase = journalQueueRebase(
+    input.database.db,
+    input.identity.sessionId,
+    epoch,
+    input.previous?.epoch,
+    queued,
+    rebuilt
+  )
+  for (const { messageId, change } of input.queue.cards) {
+    if (!change) {
+      continue
+    }
+    const prior = input.previous?.queue.cards.get(messageId)
+    const queuedAt = change.op === 'queued' ? rebase(change.queuedAt) : null
+    appendQueue(
+      messageId,
+      change.op === 'queued'
+        ? {
+            ...change,
+            queuedAt,
+            ...(prior?.state === 'dispatched' && prior.consumedAs
+              ? { attempt: prior.consumedAs }
+              : {})
+          }
+        : change
+    )
   }
   const { lifted, liveStop, reopened } = input.queuePause
   const place = () => ({ state, seq: state.lastSequence + 1, fence: input.fence, ts: input.now() })
@@ -147,24 +225,59 @@ export function replaceJournalEpoch(input: {
     rows.push(row)
   }
 
+  journalInputOrder(state).restore(state)
+  journalInputOrder(state).finishReconstruction(state)
   const { sessionId } = input.identity
   const receipt = input.receipt?.({ epoch, sequence: state.lastSequence })
-  input.database.transaction((db) => {
-    const retired = readJournalSessionEpoch(db, sessionId)
-    if (retired !== null) {
-      deleteJournalEpochRows(db, sessionId, retired)
-    }
-    for (const row of rows) {
-      insertJournalRow(db, sessionId, row)
-    }
-    publishJournalSessionEpoch(db, input.identity, epoch)
-    receipt?.write(db)
-  })
-
-  // COMMIT landed: on disk the superseded rows are gone and this epoch is the
-  // live one. The caller adopts that immediately, or a later failure leaves the
-  // live store writing into an epoch whose rows were just deleted.
+  const claimsCommitted: (() => void)[] = []
   state.oldestSequence = 1
-  input.onPublished({ state, newer: null, damage: null })
+  input.database.transaction(
+    (db) => {
+      const retired = readJournalSessionEpoch(db, sessionId)
+      // The new epoch was built from the live one; refuse if another write replaced it meanwhile.
+      if (input.previous && retired !== input.previous.epoch) {
+        throw new AgentSessionJournalError('journal_row_rejected', 'the chat epoch changed')
+      }
+      if (retired !== null) {
+        journalOutcomeSource(db, sessionId, retired)
+      }
+      if (retired !== null) {
+        deleteJournalEpochRows(db, sessionId, retired)
+      }
+      for (const row of rows) {
+        const body = row.kind === 'item' || row.kind === 'submission' ? row.body : null
+        if (
+          body?.kind === 'message' &&
+          body.role === 'user' &&
+          !(row.kind === 'item' && input.isLiveGoal?.(row.itemId))
+        ) {
+          const commit = input.claimAttachments?.(db, body, false)
+          if (commit) {
+            claimsCommitted.push(commit)
+          }
+        }
+      }
+      input.queue.receipt.write(db)
+      publishJournalSessionEpoch(db, input.identity, epoch)
+      const publication = publishJournalOutcomeEpoch(
+        db,
+        sessionId,
+        state.epoch,
+        rows,
+        input.previous
+      )
+      receipt?.write(db)
+      return publication
+    },
+    false,
+    (publication) => {
+      // Adopt, then finish the nonthrowing ownership bookkeeping, before the fallible publication.
+      const state = publication.adopt()
+      claimsCommitted.forEach((commit) => commit())
+      input.queue.receipt.committed()
+      input.onPublished({ state, newer: null, damage: null })
+    }
+  )
+
   receipt?.committed()
 }

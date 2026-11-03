@@ -179,7 +179,7 @@ describe('a task-linked workspace card', () => {
 
     expect(screen.getByText('Local task')).toBeTruthy()
     expect(screen.getByText('SHOP-12 · In Progress')).toBeTruthy()
-    expect(screen.getByRole('button', { name: 'Manage links…' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Add reference' })).toBeTruthy()
 
     fireEvent.click(screen.getAllByRole('button', { name: 'Open task Export orders as CSV' })[1])
     expect(fixture.openLocalTaskPage).toHaveBeenCalledWith({ taskId: 'task-12' })

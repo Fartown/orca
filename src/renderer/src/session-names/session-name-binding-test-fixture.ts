@@ -66,6 +66,7 @@ export function fixture() {
             stateStartedAt: 1
           }
         },
+        agentLaunchConfigByPaneKey: {},
         sleepingAgentSessionsByPaneKey: {},
         retainedAgentsByPaneKey: {},
         worktreesByRepo: {},

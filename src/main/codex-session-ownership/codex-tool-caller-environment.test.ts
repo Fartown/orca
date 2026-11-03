@@ -7,7 +7,7 @@ import {
 import {
   buildLocalPtySpawnEnvironment,
   enforceLocalPtySpawnEnvironmentOverrides
-} from '../providers/local-pty-spawn-environment'
+} from '../providers/local-pty/local-pty-spawn-environment'
 
 afterEach(() => {
   vi.unstubAllEnvs()

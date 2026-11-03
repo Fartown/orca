@@ -3,6 +3,7 @@ import { ChevronDown, ChevronRight } from 'lucide-react'
 import { Checkbox } from '@/components/ui/checkbox'
 import { useNow } from '@/hooks/use-now'
 import { translate } from '@/i18n/i18n'
+import { useUiLanguageRevision } from '@/i18n/use-ui-language-revision'
 import { formatLocalTaskTime } from '@/local-tasks/local-task-time'
 import { cn } from '@/lib/utils'
 import { localTaskSubtaskProgress, type LocalTaskIndex } from '@/local-tasks/local-task-grouping'
@@ -134,6 +135,7 @@ export const LocalTaskRow = memo(function LocalTaskRow({
   folded: boolean | null
   hostLabels?: ReadonlyMap<string, string>
 }): React.JSX.Element {
+  useUiLanguageRevision()
   const isCursor = useLocalTaskPage((state) => state.cursorTaskId === task.id)
   // Why not on hover: scrolling a half-shown row under the pointer would hover the next one.
   const reveal = useLocalTaskPage(

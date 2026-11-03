@@ -1,7 +1,7 @@
 import { triggerError, triggerSelection } from '../platform/haptics'
 import type { MobileImageSource } from '../platform/media-picker-contract'
 import type { MobileSessionAccessorySelectionModel } from '../session/use-mobile-session-accessory-selection'
-import type { MobileNativeChatImageAttachments } from '../session/use-mobile-native-chat-image-attachments'
+import type { MobileNativeChatImageAttachments } from '../session/native-chat/composer/use-mobile-native-chat-image-attachments'
 import { useMobileFileAttachments, type MobileFileAttachments } from './use-mobile-file-attachments'
 
 type SessionAttachmentParts = {

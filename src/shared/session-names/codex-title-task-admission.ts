@@ -1,5 +1,5 @@
 import type { HookListenerState } from '../agent-hook-listener/listener-state'
-import type { AgentProviderSessionMetadata } from '../agent-session-resume'
+import type { AgentProviderSessionMetadata } from '../agent-session/lifecycle/agent-session-resume'
 import { isCodexThreadTitleGenerationPrompt } from '../codex-thread-title-generation'
 
 const MAX_TITLE_TASKS_PER_PANE = 64

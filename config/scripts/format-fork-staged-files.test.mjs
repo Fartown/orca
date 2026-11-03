@@ -17,11 +17,12 @@ it('retains both lint checks before the fork-aware formatter', () => {
   const tasks = Object.values(manifest['lint-staged']).find((commands) =>
     commands.includes('node config/scripts/format-fork-staged-files.mjs')
   )
-  expect(tasks).toEqual([
-    'oxlint',
-    'oxlint --config config/oxlint-react-doctor.json',
-    'node config/scripts/format-fork-staged-files.mjs'
-  ])
+  // Upstream adds checks over time; only its oxfmt step is swapped for the fork formatter.
+  expect(tasks.at(-1)).toBe('node config/scripts/format-fork-staged-files.mjs')
+  expect(tasks.filter((command) => command.startsWith('oxfmt'))).toEqual([])
+  expect(tasks).toEqual(
+    expect.arrayContaining(['oxlint', 'oxlint --config config/oxlint-react-doctor.json'])
+  )
 })
 
 function fixture() {

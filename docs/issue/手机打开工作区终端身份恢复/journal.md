@@ -3,7 +3,7 @@ title: '手机打开工作区终端身份恢复'
 slug: '手机打开工作区终端身份恢复'
 status: testing
 created: 2026-10-24
-updated: 2026-10-24
+updated: 2026-11-02
 external_ids: ['STA-3859']
 ---
 
@@ -92,6 +92,19 @@ external_ids: ['STA-3859']
 - 关联文档：[需求](requirements/手机打开工作区终端身份恢复.md)、[方案](solutions/手机工作区原终端身份恢复方案.md)、[用例](tests/cases/手机终端原身份恢复.md)。
 
 ## 3. 开发记录
+
+### 2026-11-02 同步上游 c9845c5f9c：多窗格残留已由上游修复（testing）
+
+- 本轮目标：合并上游 #33978（396e3f1b2f）后保住原终端身份恢复，并核对已声明的残留 P2-4（多 leaf 记录标签的第二个起的 leaf 仍会循环）。
+- 完成内容：
+  - 以上游代码为底，只让「缺标签」那条分支经过 `restoreRecordedLiveTerminalSurface`。
+  - 实测：同一标签的第二个 live leaf，现在按原 leaf id 并进已恢复的标签，`createTab` 只调用一次，不再多出随机标签。原测试断言的是残留行为，已改为断言新行为。
+- 代码或文档变更：`worktree-agent-live-surface-adoption.ts`（接缝）、`recorded-live-terminal-surface.test.ts` 与本记录。
+- 验证证据：`recorded-live-terminal-surface.test.ts` 与 `worktree-agent-activation-gate.test.ts` 共 48 个用例通过。
+- 未解决问题：
+  - 上游已覆盖本功能的主要场景，本功能现在只多一道准入检查（tab id 是否有效、是否刚关闭）。是否下线待用户决定。
+  - 手机真机还没复验。
+- 下一步：装上合并后的包，在手机上复验打开工作区。
 
 ### 2026-10-25 最终代码复核与窄版真实验证
 

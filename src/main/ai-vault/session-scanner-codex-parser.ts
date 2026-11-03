@@ -102,8 +102,7 @@ function consumeCodexRecordLine(state: CodexSessionParseState, line: string): vo
   updateTimeline(accumulator, extractString(record.timestamp))
 
   const payload = asRecord(record.payload)
-  // Codex keeps the first session_meta canonical; a fork copies its parent's in after it, and
-  // such a later one is ignored below like any other record type this parser does not read.
+  // Forks may copy parent metadata later; the first session_meta defines this thread.
   if (record.type === 'session_meta' && payload && !state.sawSessionMeta) {
     state.nonUserOrigin = readCodexNonUserOrigin(payload)
     if (state.nonUserOrigin) {
@@ -216,9 +215,7 @@ async function finalizeCodexParseState(
   const snapshot = cloneCodexParseState(state)
   snapshot.accumulator.providerName ??= { kind: 'absent' }
   snapshot.accumulator.generatedTitle ??= null
-  // Why: Codex names threads lazily in session_index.jsonl, so the lookup runs
-  // per finalize (the index read is signature-cached) — a title that appears
-  // after the transcript was first parsed must still replace the raw prompt.
+  // Recheck the signature-cached index: a title can arrive after the transcript stops growing.
   if (snapshot.sawSessionMeta) {
     const evidence = await readProviderNameEvidence(
       args.titleReader,
@@ -299,7 +296,6 @@ async function parseCodexSessionLines(args: {
   for await (const line of args.lines) {
     consumeCodexRecordLine(state, line)
     if (state.nonUserOrigin) {
-      // Worker transcripts are excluded outright; stop reading early.
       return null
     }
   }

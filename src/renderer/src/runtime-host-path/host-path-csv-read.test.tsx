@@ -16,6 +16,11 @@ vi.mock('@/components/editor/csv/csv-file-content', () => ({
 vi.mock('@/lib/runtime-workspace-file-route', () => ({
   findWorkspaceFileRoute: mocks.findWorkspaceFileRoute
 }))
+// Upstream now asks the host to re-grant a restored outside-workspace file; this host declines.
+vi.mock('@/runtime/runtime-terminal-artifact-grant', () => ({
+  renewTerminalArtifactGrant: vi.fn(async () => null),
+  hostSavesGrantedFiles: vi.fn(async () => false)
+}))
 vi.mock('@/lib/connection-context', async (importOriginal) => ({
   ...(await importOriginal<object>()),
   getConnectionIdForFile: () => null,

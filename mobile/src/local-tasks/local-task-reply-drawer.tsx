@@ -1,5 +1,5 @@
 import { Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
-import { BottomDrawer } from '../components/BottomDrawer'
+import { BottomDrawer } from '../components/bottom-drawer/BottomDrawer'
 import { TEXT_INPUT_FONT_SIZE } from '../platform/text-input-font-size'
 import { colors, radii, spacing, typography } from '../theme/mobile-theme'
 import { localTasksCopy } from './local-tasks-copy'
@@ -73,7 +73,7 @@ const styles = StyleSheet.create({
   input: {
     backgroundColor: colors.bgRaised,
     color: colors.textPrimary,
-    borderRadius: radii.input,
+    borderRadius: radii.surface,
     paddingHorizontal: spacing.md,
     paddingVertical: Platform.OS === 'ios' ? spacing.sm + 2 : spacing.sm,
     fontSize: TEXT_INPUT_FONT_SIZE,
@@ -91,13 +91,13 @@ const styles = StyleSheet.create({
   cancelButton: {
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
-    borderRadius: radii.button
+    borderRadius: radii.control
   },
   sendButton: {
     backgroundColor: colors.textPrimary,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
-    borderRadius: radii.button
+    borderRadius: radii.control
   },
   pressed: { opacity: 0.7 },
   disabled: { opacity: 0.4 },

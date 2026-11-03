@@ -213,4 +213,18 @@ describe('headless sibling writers keep the incumbent publication epoch', () => 
     expect(published.publicationEpoch).toBe(LIVE_EPOCH)
     expect(published.snapshotVersion).toBe(5)
   })
+
+  // Upstream #31665: a host-built publication has no renderer generation to fence, so it re-stamps.
+  it('browser tab retirement re-stamps a host-built publication', () => {
+    const internals = runtimeWith({
+      ...storedSnapshot([terminalTab('tab-a', LEAF_ID), browserTab('browser-1', 'page-1')]),
+      publicationEpoch: 'headless:stored'
+    })
+    const published = publishedAfter(internals, () => {
+      internals.retireRuntimeOwnedBrowserSessionTab(WORKTREE_ID, 'page-1')
+    })
+    expect(published.publicationEpoch).toMatch(/^headless:/)
+    expect(published.publicationEpoch).not.toBe('headless:stored')
+    expect(published.snapshotVersion).toBe(5)
+  })
 })

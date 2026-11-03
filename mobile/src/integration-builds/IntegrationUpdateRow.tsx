@@ -1,5 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { useStore } from 'zustand'
+import { useMobileTranslation } from '../i18n/use-mobile-translation'
 import { colors, radii, spacing, typography } from '../theme/mobile-theme'
 import {
   downloadAndInstallUpdate,
@@ -9,6 +10,7 @@ import {
 
 export function IntegrationUpdateRow() {
   const { stage, progress, error, release } = useStore(mobileUpdates.store)
+  const t = useMobileTranslation()
   if (!integrationUpdatesEnabled) {
     return null
   }
@@ -16,20 +18,22 @@ export function IntegrationUpdateRow() {
   const installable = ['ready', 'permission', 'installer-opened'].includes(stage)
   const label =
     stage === 'checking'
-      ? 'Checking for updates…'
+      ? t('integrationBuilds.updateRow.checking', 'Checking for updates…')
       : stage === 'downloading'
-        ? `Downloading update… ${Math.floor(progress)}%`
+        ? t('integrationBuilds.updateRow.downloading', 'Downloading update… {{percent}}%', {
+            percent: Math.floor(progress)
+          })
         : stage === 'verifying'
-          ? 'Verifying APK…'
+          ? t('integrationBuilds.updateRow.verifying', 'Verifying APK…')
           : stage === 'installing'
-            ? 'Opening Android installer…'
+            ? t('integrationBuilds.updateRow.installing', 'Opening Android installer…')
             : installable
-              ? 'Install downloaded update'
+              ? t('integrationBuilds.updateRow.install', 'Install downloaded update')
               : stage === 'available'
-                ? 'Download and install update'
+                ? t('integrationBuilds.updateRow.download', 'Download and install update')
                 : stage === 'error' && release
-                  ? 'Retry update'
-                  : 'Check for updates'
+                  ? t('integrationBuilds.updateRow.retry', 'Retry update')
+                  : t('integrationBuilds.updateRow.check', 'Check for updates')
   return (
     <View style={styles.section}>
       <Pressable
@@ -49,19 +53,30 @@ export function IntegrationUpdateRow() {
         <Text style={styles.label}>{label}</Text>
       </Pressable>
       <Text style={styles.detail}>
-        Fork integration updates · Android installation requires confirmation.
+        {t(
+          'integrationBuilds.updateRow.channelNote',
+          'Fork integration updates · Android installation requires confirmation.'
+        )}
       </Text>
       {stage === 'latest' && (
-        <Text style={styles.detail}>You have the latest integration build.</Text>
+        <Text style={styles.detail}>
+          {t('integrationBuilds.updateRow.latest', 'You have the latest integration build.')}
+        </Text>
       )}
       {stage === 'permission' && (
         <Text style={styles.detail}>
-          Allow updates from Orca in Android Settings, then return here and tap Install.
+          {t(
+            'integrationBuilds.updateRow.permission',
+            'Allow updates from Orca in Android Settings, then return here and tap Install.'
+          )}
         </Text>
       )}
       {stage === 'installer-opened' && (
         <Text style={styles.detail}>
-          Installer opened. Confirm installation in Android; cancelling keeps the current app.
+          {t(
+            'integrationBuilds.updateRow.installerOpened',
+            'Installer opened. Confirm installation in Android; cancelling keeps the current app.'
+          )}
         </Text>
       )}
       {error && (
@@ -75,7 +90,7 @@ export function IntegrationUpdateRow() {
 
 const styles = StyleSheet.create({
   section: { gap: spacing.sm, marginTop: spacing.lg },
-  button: { backgroundColor: colors.bgRaised, borderRadius: radii.button, padding: spacing.md },
+  button: { backgroundColor: colors.bgRaised, borderRadius: radii.control, padding: spacing.md },
   label: { color: colors.textPrimary, fontSize: typography.bodySize, textAlign: 'center' },
   detail: { color: colors.textSecondary, fontSize: typography.metaSize },
   error: { color: colors.statusRed, fontSize: typography.metaSize }

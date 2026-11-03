@@ -8,7 +8,8 @@ const workerCases: [string, Record<string, unknown>, boolean][] = [
   ['camel case user', { threadSource: 'user' }, false],
   ['normalized user', { thread_source: ' USER ' }, false],
   ['snake case worker', { thread_source: 'subagent' }, true],
-  ['camel case worker', { threadSource: 'memory' }, true],
+  ['camel case worker', { threadSource: 'memory_consolidation' }, true],
+  ['client feature label', { threadSource: 'automation' }, false],
   ['legacy worker', { source: { subagent: { thread_spawn: {} } } }, true],
   ['empty legacy worker', { source: { subagent: {} } }, true],
   // The outer `subagent` tag alone classifies the thread, whatever its payload.

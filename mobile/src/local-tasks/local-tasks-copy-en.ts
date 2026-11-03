@@ -8,9 +8,8 @@ import type {
 } from '../../../src/shared/local-tasks/local-task-model'
 import { LOCAL_TASKS_WORK_COPY_EN } from './local-tasks-work-copy-en'
 
-/** The phone's copy, inline English like the rest of the app. Mirrors desktop `localTasks.*`. */
+/** The phone's copy not yet in the mobile catalog, inline English. Mirrors desktop `localTasks.*`. */
 export const LOCAL_TASKS_COPY_EN = {
-  title: 'Tasks',
   back: 'Back',
   retry: 'Retry',
   reconnect: 'Reconnect',
@@ -116,7 +115,6 @@ export const LOCAL_TASKS_COPY_EN = {
   labels: 'Labels',
   parent: 'Parent',
   project: 'Project',
-  description: 'Description',
   noDescription: 'No description',
   criteria: 'Done when',
   criteriaOptional: 'optional',
@@ -263,5 +261,3 @@ export const LOCAL_TASKS_COPY_EN = {
   writeError: (message: string): string => `Could not reach this host's Orca: ${message}`,
   work: LOCAL_TASKS_WORK_COPY_EN
 }
-
-export type LocalTasksCopy = typeof LOCAL_TASKS_COPY_EN

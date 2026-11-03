@@ -324,12 +324,17 @@ it.each(['ssh:folder-box', 'runtime:paired-box'] as const)(
   }
 )
 
-it.each(['Provider task name', '继续'])(
-  'captures native %s without replacing raw event content',
-  (title) => {
-    const index = new Map([
-      [canonicalSessionTitleKey('ssh:dev-box', 'codex', 'A'), 'Manual fallback']
-    ])
+it.each([
+  { native: 'Provider task name', manual: null, title: 'Provider task name' },
+  { native: '继续', manual: null, title: '继续' },
+  // A manual name outranks the native one (REQ-025).
+  { native: 'Provider task name', manual: 'Manual name', title: 'Manual name' }
+])(
+  'captures $title over native $native without replacing raw event content',
+  ({ native, manual, title }) => {
+    const index = new Map<string, string>(
+      manual ? [[canonicalSessionTitleKey('ssh:dev-box', 'codex', 'A'), manual]] : []
+    )
     stops.push(
       registerCanonicalSessionTitleProvider({
         get: (host, agent, id) => index.get(canonicalSessionTitleKey(host, agent, id)),
@@ -338,7 +343,7 @@ it.each(['Provider task name', '继续'])(
       })
     )
     sessionNameStore.publish('local', nativeResult('Wrong local name'))
-    sessionNameStore.publish('ssh:dev-box', nativeResult(title))
+    sessionNameStore.publish('ssh:dev-box', nativeResult(native))
     send()
     expect(dispatch).toHaveBeenCalledWith(
       expect.objectContaining({

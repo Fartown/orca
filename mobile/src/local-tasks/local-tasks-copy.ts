@@ -1,11 +1,16 @@
-import { LOCAL_TASKS_COPY_EN, type LocalTasksCopy } from './local-tasks-copy-en'
+import { translate } from '../i18n/mobile-i18n'
+import { LOCAL_TASKS_COPY_EN } from './local-tasks-copy-en'
 
-export type { LocalTasksCopy }
+export type LocalTasksCopy = typeof LOCAL_TASKS_COPY_EN & { title: string; description: string }
 
-// Why English only: the rest of the phone app is inline English with no locale switch, so one
-// page in the device language would read half translated (see continuation-copy.ts).
+// Why mostly English: this copy predates the mobile catalog; entries move to translate() as
+// they are localized.
 export function localTasksCopy(): LocalTasksCopy {
-  return LOCAL_TASKS_COPY_EN
+  return {
+    ...LOCAL_TASKS_COPY_EN,
+    title: translate('localTasks.title', 'Tasks'),
+    description: translate('localTasks.description', 'Description')
+  }
 }
 
 export function formatLocalTaskAgo(copy: LocalTasksCopy, at: number, now: number): string {

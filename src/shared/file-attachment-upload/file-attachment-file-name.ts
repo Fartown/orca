@@ -9,7 +9,8 @@ const FALLBACK_EXTENSION = '.bin'
 // oxlint-disable-next-line no-control-regex -- control characters are exactly what this strips
 const UNSAFE_CHARACTERS = /[\u0000-\u001f\u007f\\/:*?"<>|]/g
 // Windows reserves these names before the first dot (`nul.tar.gz` too), trailing spaces aside.
-const WINDOWS_RESERVED_BASE = /^(con|prn|aux|nul|conin\$|conout\$|com[0-9¹²³]|lpt[0-9¹²³]) *$/i
+const WINDOWS_RESERVED_BASE =
+  /^(con|prn|aux|nul|conin\$|conout\$|com[0-9\u00b9\u00b2\u00b3]|lpt[0-9\u00b9\u00b2\u00b3]) *$/i
 
 const EXTENSION_BY_MIME: Readonly<Record<string, string>> = {
   'application/pdf': '.pdf',

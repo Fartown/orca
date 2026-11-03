@@ -1,7 +1,7 @@
 import { readString } from '../agent-hook-listener/tool-input-preview'
 import type { HookListenerState } from '../agent-hook-listener/listener-state'
 import type { AgentHookSource } from '../agent-hook-relay'
-import type { AgentProviderSessionMetadata } from '../agent-session-resume'
+import type { AgentProviderSessionMetadata } from '../agent-session/lifecycle/agent-session-resume'
 import { readAgentProcessIdentity } from '../agent-process-presence'
 import { shouldRejectClaudeSessionReplacement } from '../claude-session-ownership/claude-session-activity'
 import {

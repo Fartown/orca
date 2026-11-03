@@ -104,14 +104,14 @@ describe.skipIf(process.platform === 'win32')('Codex nested hook delivery', () =
   })
 })
 
-it('routes Windows nested hooks to the existing stdin drain before posting', () => {
+it('skips Windows nested hooks before posting without parking in a stdin drain', () => {
   vi.spyOn(process, 'platform', 'get').mockReturnValue('win32')
   try {
     const script = getManagedScript('local')
-    const guard = 'if defined CODEX_THREAD_ID goto :orca_agent_hook_drain_stdin'
+    const guard = 'if defined CODEX_THREAD_ID exit /b 0'
     expect(script).toContain(guard)
     expect(script.indexOf(guard)).toBeLessThan(script.indexOf('curl.exe'))
-    expect(script).toContain(':orca_agent_hook_drain_stdin')
+    expect(script).not.toContain('orca_agent_hook_drain_stdin')
   } finally {
     vi.restoreAllMocks()
   }

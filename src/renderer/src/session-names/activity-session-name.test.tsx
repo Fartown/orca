@@ -19,6 +19,7 @@ import type {
 } from '../../../shared/ai-vault-session-title'
 
 const initial = useAppStore.getInitialState()
+const NOW = 1_700_000_000_000
 let nativeName = 'Provider 原生名'
 const request = { executionHostId: 'local' as const, agent: 'codex' as const, sessionId: 'A' }
 const resolve = vi.fn(
@@ -37,6 +38,9 @@ const resolve = vi.fn(
 )
 
 beforeEach(() => {
+  // Freeze Date only so the status rows stay fresh; waitFor still runs on real timers.
+  vi.useFakeTimers({ toFake: ['Date'] })
+  vi.setSystemTime(NOW)
   useAppStore.setState(initial, true)
   sessionNameStore.reset()
   nativeName = 'Provider 原生名'
@@ -67,8 +71,8 @@ beforeEach(() => {
         state: 'working',
         prompt: '继续',
         stateHistory: [],
-        updatedAt: Date.now(),
-        stateStartedAt: Date.now(),
+        updatedAt: NOW,
+        stateStartedAt: NOW,
         toolName: 'Bash',
         toolInput: 'pnpm test'
       }
@@ -79,6 +83,7 @@ afterEach(() => {
   cleanup()
   sessionNameStore.reset()
   useAppStore.setState(initial, true)
+  vi.useRealTimers()
 })
 
 function mountThreads() {
@@ -97,6 +102,17 @@ it('the mounted Activity pipeline reads its own Provider name without a winning 
     })
   )
   expect(result.current.allThreads[0]?.responsePreview).toContain('pnpm test')
+})
+
+it('a tab rename outranks the confirmed Provider name in the mounted Activity row', async () => {
+  await sessionNameStore.read([request], true)
+  useAppStore.setState({
+    tabsByWorktree: {
+      'wt-1': [{ ...makeTab(), title: '正在处理实时内容', customTitle: '手动改名' }]
+    }
+  })
+  const { result } = mountThreads()
+  await waitFor(() => expect(result.current.allThreads[0]?.paneTitle).toBe('手动改名'))
 })
 
 it('a name-only public refresh changes the mounted row with no status, tab or freshness write', async () => {
@@ -134,6 +150,7 @@ it('a substantive follow-up does not replace the Provider first-prompt fallback'
 it('unknown legacy history never inherits the replacement session identity', () => {
   const entry = useAppStore.getState().agentStatusByPaneKey[PANE_KEY]
   const result = buildActivityEvents({
+    chatNames: new Map(),
     agentStatusByPaneKey: {
       [PANE_KEY]: {
         ...entry,
@@ -145,7 +162,7 @@ it('unknown legacy history never inherits the replacement session identity', () 
     worktreeMap: new Map([['wt-1', makeWorktree()]]),
     repoMap: new Map([['repo-1', makeRepo()]]),
     acknowledgedAgentsByPaneKey: {},
-    now: Date.now()
+    now: NOW
   })
   const history = result.events.find((event) => event.timestamp === 100)
   expect(history).toBeDefined()
@@ -232,7 +249,7 @@ it('a retained row without a live tab still reads its own name', async () => {
         worktreeId: 'wt-1',
         tab: makeTab(),
         agentType: 'codex',
-        startedAt: Date.now()
+        startedAt: NOW
       }
     }
   }))
@@ -266,7 +283,7 @@ it('a runtime tab stamp owns the read even when the row carries connectionId nul
 })
 
 it('real IPC timing through the mounted Activity cache keeps latest B and historical A distinct', async () => {
-  const start = Date.now()
+  const start = NOW
   useAppStore.setState({ workspaceSessionReady: true, agentStatusByPaneKey: {} })
   const apply = createAgentStatusEventApplicator({
     pendingAgentStatusEvents: [],

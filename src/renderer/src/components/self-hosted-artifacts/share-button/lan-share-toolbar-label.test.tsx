@@ -33,7 +33,6 @@ function foldedShareLabel(shareLabel?: string): string | undefined {
       controls={{
         canGoBack: false,
         canGoForward: false,
-        loading: false,
         goBack: vi.fn(),
         goForward: vi.fn(),
         reload: vi.fn(),

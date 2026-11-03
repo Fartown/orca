@@ -1,3 +1,7 @@
+import {
+  textGenerationFailure,
+  textGenerationFailureCodeFields
+} from '../../../shared/text-generation-failure-copy'
 import { ipcMain } from 'electron'
 import type { GlobalSettings } from '../../../shared/global-settings-types'
 import type { ResolvedSourceControlAiGenerationParams } from '../../../shared/source-control-ai'
@@ -70,7 +74,11 @@ export function registerFilesystemGitPullRequestGenerationHandlers(
             await getRepoForSourceControlAi(store, args)
           )
       if (!resolvedSettings.ok) {
-        return { success: false, error: resolvedSettings.error }
+        return {
+          success: false,
+          error: resolvedSettings.error,
+          ...textGenerationFailureCodeFields(resolvedSettings)
+        }
       }
       if (args.connectionId) {
         return { success: false, error: SSH_HOST_NOT_SERVED_MESSAGE }
@@ -123,7 +131,7 @@ export function registerFilesystemGitPullRequestGenerationHandlers(
         }
       }
       if (!context) {
-        return { success: false, error: 'No branch changes to summarize.' }
+        return { success: false, ...textGenerationFailure('noBranchChanges') }
       }
       const linkedIssueDetails = await linkedIssueDetailsPromise
       context = {

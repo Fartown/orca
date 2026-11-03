@@ -26,7 +26,7 @@ export const localTaskStyles = StyleSheet.create({
   iconButton: {
     width: 34,
     height: 34,
-    borderRadius: radii.button,
+    borderRadius: radii.control,
     alignItems: 'center',
     justifyContent: 'center'
   },
@@ -79,7 +79,7 @@ export const localTaskStyles = StyleSheet.create({
     backgroundColor: colors.bgPanel,
     borderWidth: 1,
     borderColor: colors.borderSubtle,
-    borderRadius: radii.card,
+    borderRadius: radii.surface,
     overflow: 'hidden'
   },
   cardRow: {
@@ -110,7 +110,7 @@ export const localTaskStyles = StyleSheet.create({
     backgroundColor: colors.bgPanel,
     borderWidth: 1,
     borderColor: colors.borderSubtle,
-    borderRadius: radii.input,
+    borderRadius: radii.control,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm
   },
@@ -127,7 +127,7 @@ export const localTaskStyles = StyleSheet.create({
     justifyContent: 'center',
     gap: 6,
     backgroundColor: colors.surfaceBright,
-    borderRadius: radii.card,
+    borderRadius: radii.surface,
     paddingHorizontal: spacing.xl,
     paddingVertical: spacing.md
   },
@@ -138,7 +138,7 @@ export const localTaskStyles = StyleSheet.create({
     justifyContent: 'center',
     gap: 6,
     backgroundColor: colors.bgRaised,
-    borderRadius: radii.card,
+    borderRadius: radii.surface,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md
   },
@@ -171,7 +171,7 @@ export const localTaskStyles = StyleSheet.create({
     marginHorizontal: spacing.lg,
     marginBottom: spacing.sm,
     padding: spacing.md,
-    borderRadius: radii.card,
+    borderRadius: radii.surface,
     backgroundColor: colors.bgPanel,
     borderWidth: 1,
     borderColor: colors.borderSubtle

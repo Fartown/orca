@@ -48,7 +48,6 @@ describe('History actions share the row name without changing operation identity
     async (title) => {
       const session = scannedSession()
       const original = structuredClone(session)
-      manualTitle('Manual fallback')
       sessionNameStore.publish('local', {
         titles: [],
         nameEvidence: [

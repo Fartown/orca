@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { translate } from '@/i18n/i18n'
+import { getIntlLocale, translate } from '@/i18n/i18n'
 import { activateTabAndFocusPane } from '@/lib/activate-tab-and-focus-pane'
 import { activateAndRevealWorktree } from '@/lib/worktree-activation'
 import { useAppStore } from '@/store'
@@ -263,7 +263,7 @@ function VersionsSection({
               {version.specRevision === specRevision
                 ? ` · ${translate('goals.detail.currentRevision', 'current')}`
                 : null}
-              {` · ${new Date(version.savedAt).toLocaleString()}`}
+              {` · ${new Date(version.savedAt).toLocaleString(getIntlLocale())}`}
               <p className="truncate">{version.spec.objective}</p>
               {version.spec.acceptanceDocument ? (
                 <CommentMarkdown content={version.spec.acceptanceDocument} variant="document" />

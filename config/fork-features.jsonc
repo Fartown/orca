@@ -127,10 +127,7 @@
       "title": "终端聊天视图恢复",
       "goal": "恢复已有终端标签的聊天视图切换，保留同一终端与会话绑定",
       "journal": "docs/issue/终端聊天视图恢复/journal.md",
-      "dependsOn": [
-        "src/renderer/src/i18n/i18n.ts",
-        "src/renderer/src/components/native-chat/native-chat-shortcut.ts"
-      ],
+      "dependsOn": ["src/renderer/src/i18n/i18n.ts"],
       "policyId": "native-chat-view-recovery",
       "ownedPaths": [
         "src/renderer/src/native-chat-view-recovery/**",
@@ -187,7 +184,9 @@
         "tests/e2e/helpers/electron-process-shutdown.ts",
         "src/main/goals/orcad-goals.ts",
         "src/main/self-hosted-artifacts/orcad-artifact-share.ts",
-        "config/scripts/pnpm-lockfile-root-importer.mjs"
+        "config/scripts/pnpm-lockfile-root-importer.mjs",
+        "mobile/src/i18n/mobile-i18n.ts",
+        "mobile/src/i18n/use-mobile-translation.ts"
       ],
       "policyId": "integration-builds",
       "ownedPaths": [
@@ -221,6 +220,11 @@
         "config/scripts/integration-builds/ai-release-summary.mjs"
       ],
       "seams": [
+        {
+          "file": "mobile/src/navigation/native-root-recovery.test.tsx",
+          "mustContain": "vi.mock('../integration-builds/IntegrationUpdateGate'",
+          "why": "the root layout test renders without the Android update gate's native modules"
+        },
         {
           "file": "src/cli/runtime/serve-appimage-update.ts",
           "mustContain": "appImageLaunchEnvironment",
@@ -263,24 +267,24 @@
           "why": "Warm the Linux dependency cache on the same available runners used by fork PR checks."
         },
         {
+          "file": ".github/workflows/ci-cache-warmup.yml",
+          "mustContain": "github.repository == 'stablyai/orca'",
+          "why": "The scheduled warmup runs on fork/integration; a Blacksmith leg would stay queued."
+        },
+        {
           "file": "config/scripts/ci-draft-pr-admission.test.mjs",
           "mustContain": "repository = 'stablyai/orca'",
           "why": "Admission contracts evaluate the fork workflow with its actual repository identity."
         },
         {
           "file": ".github/workflows/pr.yml",
-          "mustContain": "github.repository == 'stablyai/orca'",
-          "why": "Keep upstream runners while fork PR gates use available GitHub-hosted runners."
+          "mustContain": "pnpm run check:fork-features",
+          "why": "Fork PR gates run the fork registry, docs and fork-diff quality checks in one block."
         },
         {
           "file": ".github/workflows/ci-closed-pr-caches.yml",
-          "mustContain": "github.repository == 'stablyai/orca'",
-          "why": "Fork PR cleanup runs without upstream runner access."
-        },
-        {
-          "file": "config/scripts/ci-dependency-download-cache.test.mjs",
-          "mustContain": "repository === 'stablyai/orca'",
-          "why": "Cache preparation assertions cover both repository runner policies."
+          "mustContain": "['fork-integration-build', 'fork-integration-build.yml', '-packages']",
+          "why": "Closing a fork PR also cancels its package build concurrency group."
         },
         {
           "file": "mobile/app.config.js",
@@ -333,16 +337,6 @@
           "why": "Reuse existing contracts while keeping host inventory and historical path semantics explicit."
         },
         {
-          "file": "config/scripts/pr-preflight-gates.test.mjs",
-          "mustContain": "repositoryRunnerLabels",
-          "why": "Keep the feature contract and its exhaustive integration checks aligned."
-        },
-        {
-          "file": "config/scripts/win32-test-lane-registration.test.mjs",
-          "mustContain": "repositoryRunnerLabels",
-          "why": "Keep the feature contract and its exhaustive integration checks aligned."
-        },
-        {
           "file": "config/scripts/ci-closed-pr-cancellation.test.mjs",
           "mustContain": "fork-integration-build-123-packages",
           "why": "The exact cancellation census includes the fork package concurrency group."
@@ -370,7 +364,6 @@
         "mobile/src/integration-builds/update-controller.test.ts",
         "config/scripts/integration-builds/mobile-dependency-contract.test.mjs",
         "config/scripts/integration-builds/architecture-live-path-references.test.mjs",
-        "config/scripts/pr-preflight-gates.test.mjs",
         "config/scripts/win32-test-lane-registration.test.mjs",
         "config/scripts/ci-pr-concurrency-keys.test.mjs",
         "config/scripts/ci-closed-pr-cancellation.test.mjs"
@@ -378,7 +371,7 @@
       "checks": [
         "pnpm exec vitest run --config config/vitest.config.ts config/scripts/integration-builds src/shared/integration-builds src/main/integration-builds src/cli/integration-builds src/renderer/src/integration-builds",
         "pnpm --dir mobile exec vitest run src/integration-builds",
-        "ORCA_BACKGROUND_LAUNCH=1 pnpm exec vitest run --config config/vitest.config.ts config/scripts/pr-preflight-gates.test.mjs config/scripts/win32-test-lane-registration.test.mjs config/scripts/ci-pr-concurrency-keys.test.mjs config/scripts/ci-closed-pr-cancellation.test.mjs"
+        "ORCA_BACKGROUND_LAUNCH=1 pnpm exec vitest run --config config/vitest.config.ts config/scripts/win32-test-lane-registration.test.mjs config/scripts/ci-pr-concurrency-keys.test.mjs config/scripts/ci-closed-pr-cancellation.test.mjs"
       ]
     },
     {
@@ -509,6 +502,11 @@
       ],
       "seams": [
         {
+          "file": "src/main/browser/doc-preview-terminal-file-reader.test.ts",
+          "mustContain": "a scoped read may also carry its chunk request",
+          "why": "upstream's outside-workspace preview tests accept the fork's chunked read parameters"
+        },
+        {
           "file": "src/shared/doc-preview-file-access.ts",
           "mustContain": "DOCUMENT_PREVIEW_TEXT_MAX_BYTES",
           "why": "the execution host accepts the document-specific text limit"
@@ -569,7 +567,8 @@
         "src/shared/workspace-scope.ts",
         "src/main/agent-hooks/server.ts",
         "src/main/daemon/daemon-process-inspection.ts",
-        "src/main/persistence.ts",
+        "src/main/persistence/loading-store/store.ts",
+        "src/main/persistence/loading-store/user-data-path.ts",
         "src/main/runtime/rpc/core.ts",
         "src/main/startup/main-process-state.ts",
         "src/main/windows/windows-process-table.ts",
@@ -580,7 +579,7 @@
         "src/renderer/src/lib/activate-tab-and-focus-pane.ts",
         "src/renderer/src/lib/browser-uuid.ts",
         "src/renderer/src/lib/connection-owner-resolution.ts",
-        "src/renderer/src/lib/terminal-links.ts",
+        "src/shared/terminal-links.ts",
         "src/renderer/src/runtime-host-path/host-path-file-client.ts",
         "src/renderer/src/runtime-host-path/host-path-grant-seams.ts",
         "src/renderer/src/runtime/runtime-file-metadata-client.ts",
@@ -610,7 +609,7 @@
         "src/main/native-chat/transcript-line-decoders-codex.ts",
         "src/main/native-chat/transcript-turn-markers.ts",
         "src/shared/harness-injected-user-turns.ts",
-        "src/shared/native-chat-types.ts",
+        "src/shared/native-chat/native-chat-types.ts",
         "src/cli/runtime/client.ts",
         "src/cli/runtime/types.ts",
         "src/shared/runtime-client-target.ts",
@@ -666,6 +665,16 @@
       ],
       "seams": [
         {
+          "file": "src/main/managed-server/posix-host-op-byte-budget.test.ts",
+          "mustContain": "Fork: the goals and LAN artifact-share orcad artifacts add 297 bytes.",
+          "why": "the cached WSL slot probe lists every orcad artifact, including the fork's six"
+        },
+        {
+          "file": ".github/workflows/ssh-windows-hosts.yml",
+          "mustContain": "goal-mode",
+          "why": "the sparse Windows checkout must include the goal driver sources the orcad build bundles"
+        },
+        {
           "file": "src/packages/process-host/src/run-process.ts",
           "mustContain": "spec.onStdout?.(chunk)",
           "why": "observe structured draft activity through the canonical process runner"
@@ -711,7 +720,7 @@
           "why": "host UI normalization preserves Goals during persistence and state broadcasts"
         },
         {
-          "file": "src/main/persistence-ui-state.test.ts",
+          "file": "src/main/persistence/applying-settings/persistence-ui-state.test.ts",
           "mustContain": "'goals'",
           "why": "real Store loading and partial UI updates retain the Goals route"
         },
@@ -824,12 +833,22 @@
           "file": "src/shared/wsl-move/wsl-move-storage-dispositions.ts",
           "mustContain": "SQLITE_SCHEMA_FILE_DATABASES",
           "why": "Keep the feature contract and its exhaustive integration checks aligned."
+        },
+        {
+          "file": "config/scripts/check-test-file-runners.mjs",
+          "mustContain": "include: ['goal-mode/cli/*.test.mjs']",
+          "why": "upstream test-runner gate knows the goal-mode CLI tests run by the goals checks"
+        },
+        {
+          "file": "src/shared/plugins/languages/protected-copy-keys.json",
+          "mustContain": "\"goals.",
+          "why": "fork copy keys protected from plugin language packs"
         }
       ],
       "tests": [
         "src/renderer/src/components/terminal-pane/TerminalPaneHeaderOverlay.test.tsx",
         "src/renderer/src/components/terminal-pane/terminal-pane-element-file-drop.test.tsx",
-        "src/main/persistence-ui-state.test.ts",
+        "src/main/persistence/applying-settings/persistence-ui-state.test.ts",
         "src/main/goals/goal-control-service.test.ts",
         "src/main/goals/goal-driver-launch.test.ts",
         "src/main/goals/goal-revision-control.test.ts",
@@ -865,13 +884,12 @@
         "src/renderer/src/components/goals/GoalEditor.test.tsx",
         "src/main/goals/orcad-goals.test.ts",
         "src/main/goals/goal-driver-resources.test.ts",
-        "src/shared/host-operation-ownership.test.ts",
-        "src/shared/wsl-move/wsl-move-dispositions.test.ts"
+        "src/shared/host-operation-ownership.test.ts"
       ],
       "checks": [
-        "pnpm exec vitest run --config config/vitest.config.ts src/main/goals src/shared/goals src/renderer/src/goals src/renderer/src/components/goals src/main/runtime/rpc/methods/goals.test.ts src/main/plugins/plugin-bundled-bootstrap.test.ts src/main/persistence-ui-state.test.ts src/renderer/src/components/terminal-pane/TerminalPaneHeaderOverlay.test.tsx src/renderer/src/components/terminal-pane/terminal-pane-element-file-drop.test.tsx src/main/goals/goal-driver-resources.test.ts",
+        "pnpm exec vitest run --config config/vitest.config.ts src/main/goals src/shared/goals src/renderer/src/goals src/renderer/src/components/goals src/main/runtime/rpc/methods/goals.test.ts src/main/plugins/plugin-bundled-bootstrap.test.ts src/main/persistence/applying-settings/persistence-ui-state.test.ts src/renderer/src/components/terminal-pane/TerminalPaneHeaderOverlay.test.tsx src/renderer/src/components/terminal-pane/terminal-pane-element-file-drop.test.tsx src/main/goals/goal-driver-resources.test.ts",
         "node --test --experimental-test-module-mocks goal-mode/cli/*.test.mjs",
-        "ORCA_BACKGROUND_LAUNCH=1 pnpm exec vitest run --config config/vitest.config.ts src/shared/host-operation-ownership.test.ts src/shared/wsl-move/wsl-move-dispositions.test.ts"
+        "ORCA_BACKGROUND_LAUNCH=1 pnpm exec vitest run --config config/vitest.config.ts src/shared/host-operation-ownership.test.ts"
       ]
     },
     {
@@ -880,6 +898,7 @@
       "goal": "同一会话在各入口使用一致名称，后台调用不顶替主身份",
       "journal": "docs/issue/会话命名与身份保护/journal.md",
       "dependsOn": [
+        "src/shared/agent-hook-listener/pane-scoped-cache-entries.ts",
         "src/main/agent-hooks/hook-stdin-contract.ts",
         "src/shared/agent-process-presence.ts",
         "src/main/agent-hooks/server/server-remote-envelope-normalization.ts",
@@ -891,7 +910,7 @@
         "src/main/ai-vault/session-transcript-consumers.ts",
         "src/renderer/src/components/activity/activity-thread-types.ts",
         "src/renderer/src/components/dashboard/agent-row-pane-live-title.ts",
-        "src/renderer/src/lib/agent-row-primary-text.ts",
+        "src/shared/agent-row-primary-text.ts",
         "src/renderer/src/lib/canonical-session-titles.ts",
         "src/renderer/src/lib/pane-agent-evidence.ts",
         "src/renderer/src/lib/worktree-runtime-owner.ts",
@@ -899,7 +918,7 @@
         "src/renderer/src/store/types.ts",
         "src/shared/agent-hook-listener/listener-event.ts",
         "src/shared/agent-session-fallback-title.ts",
-        "src/shared/agent-session-resume.ts",
+        "src/shared/agent-session/lifecycle/agent-session-resume.ts",
         "src/shared/agent-type-label.ts",
         "src/shared/codex-thread-title-generation.ts",
         "src/shared/execution-host.ts",
@@ -934,6 +953,21 @@
         "src/main/codex-session-ownership/codex-nested-hook-guard.ts"
       ],
       "seams": [
+        {
+          "file": "src/main/agent-hooks/server-codex-side-thread.test.ts",
+          "mustContain": "D-009 keeps a rollout-less Codex session from replacing a backed row",
+          "why": "upstream's ephemeral-takeover cases pin the fork's kept D-009 rule (D-011)"
+        },
+        {
+          "file": "src/wsl-guest/agent-hook-server-codex-side-thread.test.ts",
+          "mustContain": "D-009 keeps a rollout-less Codex session from replacing a backed row",
+          "why": "the relay-side ephemeral-takeover case pins the same kept D-009 rule (D-011)"
+        },
+        {
+          "file": "src/renderer/src/store/slices/agent-status/agent-status-row-order-origin.test.ts",
+          "mustContain": "B does not inherit A's state clock",
+          "why": "a replacement session keeps its own state clock while sidebar order still follows its origin"
+        },
         {
           "file": "src/renderer/src/components/activity/ActivityPrototypePage.test.ts",
           "mustContain": "stable prompt outranks a container alias",
@@ -990,8 +1024,8 @@
           "why": "historical events keep their own identity rather than inheriting the current pane"
         },
         {
-          "file": "src/renderer/src/store/slices/agent-status-live-entry-builder.ts",
-          "mustContain": "sessionNameIdentityReplaced",
+          "file": "src/renderer/src/store/slices/agent-status/agent-status-live-entry-builder.ts",
+          "mustContain": "resolveSessionNameLiveEntryState",
           "why": "a provider session replacement counts as a state switch"
         },
         {
@@ -1085,7 +1119,7 @@
           "why": "low-information generated text and container labels cannot block the first valid task"
         },
         {
-          "file": "src/renderer/src/store/slices/agent-status-pane-key-tab-binding.ts",
+          "file": "src/renderer/src/store/slices/agent-status/agent-status-pane-key-tab-binding.ts",
           "mustContain": "isEligibleSessionNamePrompt",
           "why": "live prompt admission uses the same quality rule as final title writes"
         },
@@ -1207,7 +1241,7 @@
         {
           "file": "src/shared/session-display-title.ts",
           "mustContain": "resolveSessionDisplayTitle",
-          "why": "one provider-first candidate order is shared by conversation consumers"
+          "why": "one candidate order, manual name first, is shared by conversation consumers (D-010)"
         },
         {
           "file": "src/shared/agent-tab-title.ts",
@@ -1217,7 +1251,7 @@
         {
           "file": "src/shared/tab-title-resolution.ts",
           "mustContain": "resolveSessionDisplayTitle",
-          "why": "agent tabs use the same order without custom or command-label overrides"
+          "why": "agent tabs use the same order: their manual name ranks first, quick-command labels stay in the label tier (D-010)"
         },
         {
           "file": "src/shared/agent-row-conversation-name.ts",
@@ -1240,7 +1274,7 @@
           "why": "the CLI-managed hook installer typechecks the same generated guard"
         },
         {
-          "file": "src/main/providers/local-pty-spawn-environment.ts",
+          "file": "src/main/providers/local-pty/local-pty-spawn-environment.ts",
           "mustContain": "removeCodexToolCallerIdentity",
           "why": "a newly owned local pane cannot inherit its host's Codex tool caller"
         },
@@ -1261,8 +1295,8 @@
         },
         {
           "file": "src/shared/agent-hook-listener/listener-state.ts",
-          "mustContain": "sessionOwnershipCaches",
-          "why": "the activity window follows the existing listener and pane lifecycle"
+          "mustContain": "sessionOwnershipCaches.clearPane(state, paneKey)",
+          "why": "the activity window follows the existing listener and pane lifecycle; the session-names module takes over the listener's lead-session owner map lines so the guards add no lines to this file"
         },
         {
           "file": "src/main/agent-hooks/server/server-status-update.ts",
@@ -1370,9 +1404,24 @@
           "why": "Keep the feature contract and its exhaustive integration checks aligned."
         },
         {
+          "file": "src/main/runtime/runtime-orchestration-sender-names.ts",
+          "mustContain": "{ providerSessionId: source.providerSessionId }",
+          "why": "Upstream's orchestration sender-name call passes provider identity in the fork's session-name options shape."
+        },
+        {
           "file": "src/renderer/src/runtime/web-session-tabs-sync/terminal-build.ts",
           "mustContain": "mirrorHostManualName",
           "why": "Keep the feature contract and its exhaustive integration checks aligned."
+        },
+        {
+          "file": "src/renderer/src/components/right-sidebar/AiVaultSessionRow.test.tsx",
+          "mustContain": "agentLaunchConfigByPaneKey: {}",
+          "why": "session-name row reads launch configs from the store"
+        },
+        {
+          "file": "src/renderer/src/components/activity/activity-answered-ask-timeline.test.tsx",
+          "mustContain": "tabAutoGenerateTitle: true",
+          "why": "Activity names follow the fork rule: no prompt-derived name while auto-generation is off"
         }
       ],
       "tests": [
@@ -1406,9 +1455,9 @@
         "src/renderer/src/session-names/mirror-host-manual-name.test.ts"
       ],
       "checks": [
-        "pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/components/activity src/renderer/src/lib/activity-thread-display.test.ts src/renderer/src/store/slices/agent-status-batch.test.ts src/renderer/src/store/slices/agent-status.test.ts src/renderer/src/runtime/web-session-tabs-sync-agent-status.test.ts src/renderer/src/runtime/sync-runtime-graph-agent-status-projection.test.ts src/renderer/src/runtime/sync-runtime-graph-agent-status-projection-join.test.ts",
+        "pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/components/activity src/renderer/src/lib/activity-thread-display.test.ts src/renderer/src/store/slices/agent-status/agent-status-batch.test.ts src/renderer/src/store/slices/agent-status/agent-status.test.ts src/renderer/src/runtime/web-session-tabs-sync-agent-status.test.ts src/renderer/src/runtime/sync-runtime-graph-agent-status-projection-join.test.ts",
         "pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/components/native-chat/StructuredAgentSessionStatusBridge.test.tsx src/renderer/src/lib/ai-vault-tab-title-sync-inputs.test.ts src/renderer/src/store/slices/agent-generated-tab-title.test.ts",
-        "pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/components/terminal-pane/use-notification-dispatch.test.ts src/main/ipc/notifications-message-formatting.test.ts src/main/ipc/notifications-mobile-fanout.test.ts src/main/ipc/notifications-delivery-gating.test.ts src/main/ipc/notifications-retention-lifecycle.test.ts src/renderer/src/runtime/web-session-tabs-agent-completion-notifications.test.ts src/renderer/src/hooks/useIpcEvents-agent-status-turn-completion.test.ts src/renderer/src/hooks/agent-hook-completion-notifications.test.ts",
+        "pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/components/terminal-pane/use-notification-dispatch.test.ts src/main/ipc/notifications-message-formatting.test.ts src/main/ipc/notifications-mobile-fanout.test.ts src/main/ipc/notifications-delivery-gating.test.ts src/main/ipc/notifications-retention-lifecycle.test.ts src/renderer/src/runtime/web-session-tabs-agent-completion-notifications.test.ts src/renderer/src/hooks/agent-hook-completion-notifications.test.ts",
         "pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/session-names src/renderer/src/components/right-sidebar/AiVaultSessionRow.test.tsx",
         "pnpm exec tsc --noEmit -p tests/e2e/helpers/session-name-file-chain.tsconfig.json && pnpm exec vitest run --config config/vitest.config.ts tests/e2e/session-name-file-chain.unit.test.ts src/main/ai-vault/session-scanner-claude-subagents.test.ts src/renderer/src/components/right-sidebar/ai-vault-session-continuation.test.ts",
         "pnpm exec vitest run --config config/vitest.config.ts src/main/codex-session-ownership",
@@ -1616,7 +1665,7 @@
           "why": "agents learn the local network sharing gate"
         },
         {
-          "file": "skill-guides/orca-cli/references/publishing.md",
+          "file": "skill-guides/orca-cli/references/artifacts.md",
           "mustContain": "ORCA artifacts service status",
           "why": "agents learn the local network artifact commands"
         },
@@ -1634,11 +1683,6 @@
           "file": "src/renderer/src/i18n/locales/zh.json",
           "mustContain": "\"selfHostedArtifacts\"",
           "why": "Chinese copy for sharing UI"
-        },
-        {
-          "file": "src/renderer/src/i18n/en-runtime-required.json",
-          "mustContain": "artifactsDescription",
-          "why": "generated boot catalog keeps retired upstream artifacts copy shippable"
         },
         {
           "file": "src/cli/index.test.ts",
@@ -1719,6 +1763,16 @@
           "file": "src/main/runtime/construction/runtime-composition-parity.test.ts",
           "mustContain": "DECLARED_HOST_DIFFERENCES",
           "why": "Keep the feature contract and its exhaustive integration checks aligned."
+        },
+        {
+          "file": "config/scripts/check-has-restyle-scope.mjs",
+          "mustContain": "':(exclude)src/renderer/src/components/self-hosted-artifacts/share-viewer'",
+          "why": "the share viewer is a standalone page, not renderer CSS"
+        },
+        {
+          "file": "skill-guides/orca-cli/references/skill-sharing.md",
+          "mustContain": "skill sharing fails with `sharing_unavailable_on_host`",
+          "why": "LAN artifact sharing works on headless hosts; only skill sharing is unavailable there"
         }
       ],
       "tests": [
@@ -1945,7 +1999,8 @@
         "src/main/runtime/terminal/artifacts/terminal-artifacts.ts",
         "src/main/runtime/terminal/artifacts/artifact-integrity.ts",
         "src/main/runtime/files/file-target.ts",
-        "src/shared/runtime-client-target.ts"
+        "src/shared/runtime-client-target.ts",
+        "src/main/runtime/rpc/core.ts"
       ],
       "policyId": "remote-host-path-open",
       "ownedPaths": [
@@ -1962,7 +2017,7 @@
       "seams": [
         {
           "file": "src/main/runtime/rpc/methods/files.ts",
-          "mustContain": "files.grantHostPath",
+          "mustContain": "...HOST_PATH_GRANT_METHODS,",
           "why": "the host exposes the grant request as an RPC (REQ-801)"
         },
         {
@@ -2114,13 +2169,8 @@
         },
         {
           "file": "config/scripts/verify-mobile-web-app-bundle.mjs",
-          "mustContain": "['./h/_layout.tsx', 90]",
+          "mustContain": "['./h/_layout.tsx', 142]",
           "why": "the route-prefix sweep records continuation's measured chunk-sharing change"
-        },
-        {
-          "file": "config/scripts/build-mobile-web-app-bundle.test.mjs",
-          "mustContain": "assertAssetCeilingFitsShell(23, 42, MOBILE_WEB_BUNDLE_MAX_ASSETS)).toBe(242)",
-          "why": "the asset-ceiling boundary follows the re-measured route-prefix sweep"
         },
         {
           "file": "mobile/src/session/mobile-session-terminal-create-request.ts",
@@ -2133,13 +2183,13 @@
         "mobile/src/session-continuation/continuation-delivery.test.ts",
         "mobile/src/session-continuation/continuation-source.test.ts",
         "mobile/src/session-continuation/terminal-engine-request-mode.test.ts",
-        "config/scripts/mobile-web-app-session-terminal-closure.test.mjs",
+        "config/scripts/mobile-web-app/mobile-web-app-session-terminal-closure.test.mjs",
         "config/scripts/build-mobile-web-app-bundle.test.mjs"
       ],
       "checks": [
         "pnpm exec vitest run --config config/vitest.config.ts src/shared/agent-session-continuation src/renderer/src/lib/agent-session-fork-context.test.ts src/renderer/src/lib/launch-agent-session-continuation.test.ts src/renderer/src/components/agent-session-continuation src/renderer/src/components/terminal-pane/terminal-agent-session-continuation.test.ts src/renderer/src/components/right-sidebar/ai-vault-session-continuation.test.ts",
         "pnpm --dir mobile exec vitest run src/session-continuation src/session/mobile-terminal-action-sheet-actions.test.ts",
-        "pnpm exec vitest run --config config/vitest.config.ts config/scripts/mobile-web-app-session-terminal-closure.test.mjs config/scripts/build-mobile-web-app-bundle.test.mjs"
+        "pnpm exec vitest run --config config/vitest.config.ts config/scripts/mobile-web-app/mobile-web-app-session-terminal-closure.test.mjs config/scripts/build-mobile-web-app-bundle.test.mjs"
       ]
     },
     {
@@ -2231,11 +2281,6 @@
           "file": "src/main/runtime/session-lifecycle/projection/apply-mobile-session-tab-navigation.ts",
           "mustContain": "publicationEpoch: snapshot.publicationEpoch",
           "why": "tab activation carries the incumbent epoch instead of minting one (REQ-701)"
-        },
-        {
-          "file": "src/main/runtime/session-tabs/structured-session-tab-close.ts",
-          "mustContain": "publicationEpoch: snapshot.publicationEpoch",
-          "why": "closing a chat edits content without replacing the publisher"
         }
       ],
       "tests": ["src/main/runtime/headless-sibling-writers-keep-publication-epoch.test.ts"],
@@ -2263,7 +2308,7 @@
         "mobile/src/platform/media-picker-contract.ts",
         "mobile/src/session/mobile-clipboard-image.ts",
         "mobile/src/session/mobile-session-write-operations.ts",
-        "mobile/src/session/use-mobile-native-chat-image-attachments.ts",
+        "mobile/src/session/native-chat/composer/use-mobile-native-chat-image-attachments.ts",
         "mobile/src/session/use-mobile-session-accessory-selection.ts",
         "mobile/src/transport/base64-byte-codec.ts",
         "mobile/src/transport/rpc-client.ts",
@@ -2272,7 +2317,6 @@
         "mobile/src/transport/types.ts",
         "src/shared/clipboard-image.ts",
         "src/shared/image-paste-following-text.ts",
-        "src/main/providers/ssh-filesystem-dispatch.ts",
         "src/main/ssh/targets/ssh-target-registry.ts",
         "src/main/providers/filesystem-provider-contract.ts",
         "src/main/runtime/orca-runtime.ts",
@@ -2282,7 +2326,9 @@
         "src/shared/agent-image-paste.ts",
         "src/shared/app-environment.ts",
         "src/shared/cross-platform-path.ts",
-        "src/shared/rpc-contract/files-mutation-params.ts"
+        "src/shared/rpc-contract/files-mutation-params.ts",
+        "mobile/src/i18n/mobile-i18n.ts",
+        "mobile/src/i18n/use-mobile-translation.ts"
       ],
       "policyId": "mobile-file-attachment-upload",
       "ownedPaths": [
@@ -2313,12 +2359,12 @@
       ],
       "seams": [
         {
-          "file": "mobile/src/session/MobileNativeChatComposer.test.ts",
+          "file": "mobile/src/session/native-chat/composer/MobileNativeChatComposer.test.ts",
           "mustContain": "Paperclip",
           "why": "Composer fixture includes the attachment icon."
         },
         {
-          "file": "mobile/src/session/MobileNativeChatView.prompt-presentation.test.ts",
+          "file": "mobile/src/session/native-chat/MobileNativeChatView.prompt-presentation.test.ts",
           "mustContain": "Paperclip",
           "why": "Prompt fixture includes the attachment icon."
         },
@@ -2333,7 +2379,7 @@
           "why": "Dictation fixture includes the attachment icon."
         },
         {
-          "file": "mobile/src/session/mobile-native-chat-merged-snapshot-parity-hooks.test.tsx",
+          "file": "mobile/src/session/native-chat/mobile-native-chat-merged-snapshot-parity-hooks.test.tsx",
           "mustContain": "files: { isUploadingToChat: false",
           "why": "Overlay fixture supplies the file attachment contract."
         },
@@ -2346,11 +2392,6 @@
           "file": "src/main/runtime/rpc/rpc-caller-scope.ts",
           "mustContain": "isMobileRpcMethodAllowed(methodName)",
           "why": "the central dispatcher admits the existing fork mobile methods (REQ-001)"
-        },
-        {
-          "file": "src/main/runtime/mobile-rpc-allowlist.test.ts",
-          "mustContain": "FORK_MOBILE_RPC_METHOD_ALLOWLIST",
-          "why": "the mobile allowlist census reads the fork list beside the upstream one"
         },
         {
           "file": "src/shared/rpc-contract/rpc-params-catalog.generated.ts",
@@ -2374,8 +2415,13 @@
         },
         {
           "file": "mobile/src/session/MobileSessionActiveContent.tsx",
+          "mustContain": "files={fileAttachments}",
+          "why": "the native chat composer receives the attachment controller (REQ-001)"
+        },
+        {
+          "file": "mobile/src/session/MobileSessionSheets.tsx",
           "mustContain": "<MobileAttachmentSourceSheet",
-          "why": "the Photo / File sheet mounts where both inputs can open it (REQ-001)"
+          "why": "the Photo / File sheet mounts with the session's other sheets, outside upstream render tests (REQ-001)"
         },
         {
           "file": "mobile/src/session/__mocks__/mobile-prompt-controller.ts",
@@ -2383,17 +2429,27 @@
           "why": "the upstream prompt controller fixture supplies the fork attachment contract"
         },
         {
-          "file": "mobile/src/session/MobileNativeChatOverlay.tsx",
+          "file": "mobile/src/session/__mocks__/mobile-prompt-render-mocks.ts",
+          "mustContain": "'Paperclip'",
+          "why": "the upstream prompt render icon mock includes the attachment icon"
+        },
+        {
+          "file": "mobile/src/session/MobileTerminalMoreKeysSheet.tsx",
+          "mustContain": "fileAttachments.attachFileToTerminal",
+          "why": "the terminal more-keys sheet attaches a file through the fork attachment flow (REQ-001)"
+        },
+        {
+          "file": "mobile/src/session/native-chat/MobileNativeChatOverlay.tsx",
           "mustContain": "files.openChatSheet",
           "why": "the chat attach button offers Photo or File (REQ-001)"
         },
         {
-          "file": "mobile/src/session/MobileNativeChatComposer.tsx",
+          "file": "mobile/src/session/native-chat/composer/MobileNativeChatComposer.tsx",
           "mustContain": "Paperclip",
           "why": "the chat attach button reads as attach, not photo (REQ-001)"
         },
         {
-          "file": "mobile/src/session/use-mobile-native-chat-image-attachments.ts",
+          "file": "mobile/src/session/native-chat/composer/use-mobile-native-chat-image-attachments.ts",
           "mustContain": "readonly addUploadedImages",
           "why": "an image picked as File joins the chat chips like a photo (REQ-003)"
         },
@@ -2423,7 +2479,7 @@
           "why": "the session page may use native.file.pick where the shell has it and falls back where not (REQ-005)"
         },
         {
-          "file": "config/scripts/mobile-web-app-page-grant-call-sites.mjs",
+          "file": "config/scripts/mobile-web-app/mobile-web-app-page-grant-call-sites.mjs",
           "mustContain": "mobile-web-app-file-attachment-grant.test.mjs",
           "why": "the grant census counts native.file.pick as censused by the feature's own test"
         },
@@ -2433,7 +2489,7 @@
           "why": "the page build lists the web picker that keeps the native document picker out of the bundle"
         },
         {
-          "file": "config/scripts/mobile-web-app-held-press-probe-routes.mjs",
+          "file": "config/scripts/mobile-web-app/preview/mobile-web-app-held-press-probe-routes.mjs",
           "mustContain": "fileAttachments: { openTerminalSheet",
           "why": "the key-bar probe mounts the command dock, which now opens the attach sheet"
         },
@@ -2441,6 +2497,66 @@
           "file": "src/shared/host-operation-ownership.ts",
           "mustContain": "HOST_OPERATION_OWNERSHIP",
           "why": "Keep the feature contract and its exhaustive integration checks aligned."
+        },
+        {
+          "file": "mobile/src/i18n/locales/de.json",
+          "mustContain": "\"sendingAttachment\"",
+          "why": "mobile copy for the attachment entry (also carries fork integration-build and local-task strings)"
+        },
+        {
+          "file": "mobile/src/i18n/locales/en.json",
+          "mustContain": "\"sendingAttachment\"",
+          "why": "mobile copy for the attachment entry (also carries fork integration-build and local-task strings)"
+        },
+        {
+          "file": "mobile/src/i18n/locales/es.json",
+          "mustContain": "\"sendingAttachment\"",
+          "why": "mobile copy for the attachment entry (also carries fork integration-build and local-task strings)"
+        },
+        {
+          "file": "mobile/src/i18n/locales/fr.json",
+          "mustContain": "\"sendingAttachment\"",
+          "why": "mobile copy for the attachment entry (also carries fork integration-build and local-task strings)"
+        },
+        {
+          "file": "mobile/src/i18n/locales/ja.json",
+          "mustContain": "\"sendingAttachment\"",
+          "why": "mobile copy for the attachment entry (also carries fork integration-build and local-task strings)"
+        },
+        {
+          "file": "mobile/src/i18n/locales/ko.json",
+          "mustContain": "\"sendingAttachment\"",
+          "why": "mobile copy for the attachment entry (also carries fork integration-build and local-task strings)"
+        },
+        {
+          "file": "mobile/src/i18n/locales/pt.json",
+          "mustContain": "\"sendingAttachment\"",
+          "why": "mobile copy for the attachment entry (also carries fork integration-build and local-task strings)"
+        },
+        {
+          "file": "mobile/src/i18n/locales/ru.json",
+          "mustContain": "\"sendingAttachment\"",
+          "why": "mobile copy for the attachment entry (also carries fork integration-build and local-task strings)"
+        },
+        {
+          "file": "mobile/src/i18n/locales/tr.json",
+          "mustContain": "\"sendingAttachment\"",
+          "why": "mobile copy for the attachment entry (also carries fork integration-build and local-task strings)"
+        },
+        {
+          "file": "mobile/src/i18n/locales/zh-Hant.json",
+          "mustContain": "\"sendingAttachment\"",
+          "why": "mobile copy for the attachment entry (also carries fork integration-build and local-task strings)"
+        },
+        {
+          "file": "mobile/src/i18n/locales/zh.json",
+          "mustContain": "\"sendingAttachment\"",
+          "why": "mobile copy for the attachment entry (also carries fork integration-build and local-task strings)"
+        },
+        {
+          "file": "mobile/src/session/MobileNativeChatView.streaming-rows.test.ts",
+          "mustContain": "openChatSheet: vi.fn()",
+          "why": "chat view props include the fork attachment sheet"
         }
       ],
       "tests": [
@@ -2462,8 +2578,8 @@
         "src/shared/host-operation-ownership.test.ts"
       ],
       "checks": [
-        "pnpm exec vitest run --config config/vitest.config.ts src/shared/file-attachment-upload src/main/file-attachment-upload src/renderer/src/file-attachment-upload src/main/runtime/rpc/methods/file-attachment-upload.test.ts src/main/runtime/runtime-rpc/fork-mobile-rpc-method-allowlist.test.ts src/main/runtime/mobile-rpc-allowlist.test.ts config/scripts/mobile-web-page-routes-contract.test.mjs config/scripts/mobile-web-app-file-attachment-grant.test.mjs",
-        "pnpm --dir mobile exec vitest run src/file-attachment-upload src/session/use-mobile-native-chat-image-attachments.test.ts src/session/use-mobile-session-image-attachments.test.tsx src/mobile-web-shell/page-route-policy.test.ts src/mobile-web-shell/bridge-host-init.test.ts src/mobile-web-shell/bridge/bridge-media-verbs.test.ts",
+        "pnpm exec vitest run --config config/vitest.config.ts src/shared/file-attachment-upload src/main/file-attachment-upload src/renderer/src/file-attachment-upload src/main/runtime/rpc/methods/file-attachment-upload.test.ts src/main/runtime/runtime-rpc/fork-mobile-rpc-method-allowlist.test.ts config/scripts/mobile-web-page-routes-contract.test.mjs config/scripts/mobile-web-app-file-attachment-grant.test.mjs",
+        "pnpm --dir mobile exec vitest run src/file-attachment-upload src/session/native-chat/composer/use-mobile-native-chat-image-attachments.test.ts src/session/use-mobile-session-image-attachments.test.tsx src/mobile-web-shell/page-route-policy.test.ts src/mobile-web-shell/bridge-host-init.test.ts src/mobile-web-shell/bridge/bridge-media-verbs.test.ts",
         "ORCA_BACKGROUND_LAUNCH=1 pnpm exec vitest run --config config/vitest.config.ts src/shared/host-operation-ownership.test.ts"
       ]
     },
@@ -2486,6 +2602,7 @@
       ],
       "dependsOn": [
         "src/renderer/src/runtime/web-runtime-session-types.ts",
+        "src/renderer/src/components/terminal-pane/pty-connection/fresh-spawn-types.ts",
         "src/main/ipc/pty/runtime/spawn-state.ts",
         "src/main/providers/pty-provider-contract.ts",
         "src/shared/sha256.ts",
@@ -2497,7 +2614,8 @@
         "src/renderer/src/lib/crash-breadcrumb-recorder.ts",
         "src/renderer/src/store/index.ts",
         "src/renderer/src/runtime/web-runtime-terminal-create-operation.ts",
-        "src/renderer/src/lib/launch-ai-vault-session.ts"
+        "src/renderer/src/lib/launch-ai-vault-session.ts",
+        "src/main/ipc/pty/spawn-operation-state.ts"
       ],
       "seams": [
         {
@@ -2511,7 +2629,7 @@
           "why": "record every controller admission and early adoption"
         },
         {
-          "file": "src/main/ipc/pty/runtime/spawn-execute.ts",
+          "file": "src/main/ipc/pty/spawn-execute.ts",
           "mustContain": "recordTerminalLaunchStage",
           "why": "record the existing owner candidate and physical provider result"
         },
@@ -2532,7 +2650,7 @@
         },
         {
           "file": "src/renderer/src/components/terminal-pane/pty-connection/deferred-cold-restore-and-snapshot.ts",
-          "mustContain": "recordTerminalLaunchOrigin",
+          "mustContain": "recordColdRestoreResumeOrigin",
           "why": "distinguish in-pane cold restore"
         },
         {
@@ -2590,12 +2708,11 @@
         "src/shared/terminal-launch-diagnostics/launch-evidence.test.ts",
         "src/main/terminal-launch-diagnostics/launch-trace.test.ts",
         "src/renderer/src/terminal-launch-diagnostics/launch-origin.test.ts",
-        "src/renderer/src/lib/launch-agent-in-new-tab-web-runtime.test.ts",
         "src/renderer/src/components/terminal-pane/pty-connection-restore-and-resume.test.ts"
       ],
       "checks": [
         "ORCA_BACKGROUND_LAUNCH=1 pnpm exec vitest run --config config/vitest.config.ts src/shared/terminal-launch-diagnostics src/main/terminal-launch-diagnostics src/renderer/src/terminal-launch-diagnostics",
-        "ORCA_BACKGROUND_LAUNCH=1 pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/lib/launch-agent-in-new-tab-web-runtime.test.ts src/renderer/src/components/terminal-pane/pty-connection-restore-and-resume.test.ts"
+        "ORCA_BACKGROUND_LAUNCH=1 pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/components/terminal-pane/pty-connection-restore-and-resume.test.ts"
       ]
     },
     {
@@ -2640,27 +2757,6 @@
       "tests": ["src/renderer/src/terminal-id-copy-routing/copy-workspace-terminal-handle.test.ts"],
       "checks": [
         "ORCA_BACKGROUND_LAUNCH=1 pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/terminal-id-copy-routing src/renderer/src/components/terminal-pane/terminal-handle-copy.test.ts"
-      ]
-    },
-    {
-      "id": "cli-writer-login-shell",
-      "title": "终端对话转聊天退出判定：macOS 登录包装下识别 agent 已退出",
-      "goal": "macOS 终端里的 Codex 或 Claude 退出后，能在聊天界面继续同一段对话，不再一直报「无法确认已退出」",
-      "journal": "docs/issue/终端对话转聊天退出判定/journal.md",
-      "dependsOn": ["src/shared/process-table-index.ts", "src/shared/process-table-snapshot.ts"],
-      "policyId": "cli-writer-login-shell",
-      "ownedPaths": ["src/main/cli-writer-login-shell/**", "docs/issue/终端对话转聊天退出判定/**"],
-      "requiredFiles": ["src/main/cli-writer-login-shell/login-wrapped-pty-shell.ts"],
-      "seams": [
-        {
-          "file": "src/main/runtime/structured-agent-cli-writers.ts",
-          "mustContain": "const root = ptyShellRow(index, rootPid)",
-          "why": "The terminal-writer census inspects the shell below the macOS login wrapper, not login itself (REQ-1)"
-        }
-      ],
-      "tests": ["src/main/cli-writer-login-shell/login-wrapped-pty-shell.test.ts"],
-      "checks": [
-        "pnpm exec vitest run --config config/vitest.config.ts src/main/cli-writer-login-shell src/main/runtime/structured-agent-cli-writers.test.ts"
       ]
     },
     {
@@ -2743,20 +2839,24 @@
       "goal": "在 Orca 里记录、拆分、跟踪任务；从任务一键开工作区和会话，任务上看到会话进展，会话需要人时进入「需要你」",
       "journal": "docs/issue/本地任务管理/journal.md",
       "dependsOn": [
+        "src/renderer/src/components/native-chat/NativeChatPaneHeader.tsx",
         "src/renderer/src/store/pinned-tab-close-guard.ts",
         "src/main/orca-profiles/profile-storage-paths.ts",
         "src/main/sqlite/harden-database-files.ts",
         "src/main/sqlite/sync-database.ts",
         "src/main/sqlite/sqlite-statement.ts",
         "src/main/runtime/rpc/core.ts",
-        "src/main/persistence.ts",
+        "src/shared/wsl-move/wsl-move-dispositions.ts",
+        "src/main/persistence/loading-store/user-data-path.ts",
         "src/main/startup/main-process-state.ts",
+        "src/renderer/src/lib/launch-agent-in-new-tab-host-agents.ts",
+        "mobile/src/components/list/ListGroup.tsx",
         "src/renderer/src/components/settings/TaskSourceProviderCard.tsx",
         "src/renderer/src/components/settings/TaskSourceShowInTasksStep.tsx",
         "src/renderer/src/components/settings/TaskSourceStepRow.tsx",
         "src/renderer/src/components/settings/task-source-setup-state.ts",
         "mobile/src/components/ActionSheetModal.tsx",
-        "mobile/src/components/BottomDrawer.tsx",
+        "mobile/src/components/bottom-drawer/BottomDrawer.tsx",
         "mobile/src/components/ConfirmModal.tsx",
         "mobile/src/components/MobileSegmentedControl.tsx",
         "mobile/src/components/MobileSwitch.tsx",
@@ -2801,6 +2901,7 @@
         "src/renderer/src/i18n/i18n.ts",
         "src/renderer/src/i18n/localized-catalog.ts",
         "src/renderer/src/i18n/relative-time-format.ts",
+        "src/renderer/src/i18n/use-ui-language-revision.ts",
         "src/renderer/src/lib/app-keyboard-router.ts",
         "src/renderer/src/lib/browser-uuid.ts",
         "src/renderer/src/lib/ime-composition-keyboard-event.ts",
@@ -2839,7 +2940,7 @@
         "src/main/orca-profiles/profile-index-store.ts",
         "src/shared/agent-status-freshness.ts",
         "src/shared/agent-row-decay-state.ts",
-        "src/shared/native-chat-ask.ts",
+        "src/shared/native-chat/input/native-chat-ask.ts",
         "src/shared/host-authority.ts",
         "src/main/window/foreground-activation-policy.ts",
         "src/renderer/src/components/native-chat/NativeChatComposerNotices.tsx",
@@ -2849,13 +2950,13 @@
         "src/renderer/src/store/slices/runtime-status-connection-generation.ts",
         "src/renderer/src/hooks/runtime-client-events-sync.ts",
         "src/renderer/src/runtime/runtime-environment-revision.ts",
-        "mobile/src/session/mobile-native-chat-send.ts",
-        "mobile/src/session/mobile-native-chat-stale-input.ts",
+        "mobile/src/session/native-chat/mobile-native-chat-send.ts",
+        "mobile/src/session/native-chat/mobile-native-chat-stale-input.ts",
         "mobile/src/session/mobile-structured-agent-session-rpc.ts",
         "mobile/src/session/mobile-structured-agent-session-send.ts",
         "mobile/src/transport/use-workspace-client.ts",
         "mobile/src/transport/workspace-server.ts",
-        "src/shared/agent-session-wire.ts",
+        "src/shared/agent-session/agent-session-wire.ts",
         "mobile/src/worktree/relay-hosts-feed.ts",
         "mobile/src/worktree/workspace-list-types.ts",
         "mobile/src/worktree/worktree-catalog-operations.ts",
@@ -2894,8 +2995,8 @@
         "src/renderer/src/lib/reveal-terminal-pane.ts",
         "src/renderer/src/lib/running-agent-targets.ts",
         "src/renderer/src/lib/structured-agent-launch-settlement.ts",
-        "src/renderer/src/lib/structured-agent-session-launch-admission.ts",
-        "src/renderer/src/lib/structured-agent-session-tab-activation.ts",
+        "src/renderer/src/lib/agent-session/launch/structured-agent-session-launch-admission.ts",
+        "src/renderer/src/lib/agent-session/structured-agent-session-tab-activation.ts",
         "src/renderer/src/lib/worktree-activation.ts",
         "src/renderer/src/lib/worktree-runtime-owner.ts",
         "src/renderer/src/store/slices/hosted-review-cache-identity.ts",
@@ -2921,7 +3022,7 @@
         "src/shared/sidebar-list/host-section-rows.ts",
         "src/shared/sidebar-list/row-types.ts",
         "src/shared/stable-pane-id.ts",
-        "src/shared/structured-agent-session-projection.ts",
+        "src/shared/agent-session/view/structured-agent-session-projection.ts",
         "src/shared/tab-types.ts",
         "src/shared/terminal-surface-id.ts",
         "src/shared/tui-agent-config.ts",
@@ -2944,8 +3045,8 @@
         "src/renderer/src/components/sidebar/use-worktree-meta-workspace.ts",
         "src/renderer/src/components/sidebar/WorktreeCardDetailSection.tsx",
         "src/renderer/src/components/sidebar/WorktreeCardMetadataControls.tsx",
-        "src/renderer/src/components/use-worktree-jump-palette-controller.ts",
-        "src/renderer/src/lib/palette-match/evidence-composer.ts",
+        "src/renderer/src/components/worktree-jump/use-worktree-jump-palette-controller.ts",
+        "src/shared/palette-match/evidence-composer.ts",
         "src/shared/runtime-types.ts",
         "src/shared/runtime-rpc-envelope.ts",
         "src/cli/args.ts",
@@ -2953,7 +3054,8 @@
         "src/cli/flags.ts",
         "src/cli/format.ts",
         "src/cli/runtime/types.ts",
-        "src/cli/selectors.ts"
+        "src/cli/selectors.ts",
+        "mobile/src/i18n/mobile-i18n.ts"
       ],
       "policyId": "local-tasks",
       "ownedPaths": [
@@ -3038,24 +3140,14 @@
           "why": "The desktop ships the phone's task page as a web route (REQ-017)"
         },
         {
-          "file": "config/scripts/mobile-web-app-page-route-modules.mjs",
+          "file": "config/scripts/mobile-web-app/mobile-web-app-page-route-modules.mjs",
           "mustContain": "['/h/[hostId]/local-tasks', 'app/h/[hostId]/local-tasks.tsx'],",
           "why": "The route's module is listed so the grant and haptics censuses cover it (REQ-017)"
         },
         {
-          "file": "config/scripts/mobile-web-app-session-dictation-capture.test.mjs",
-          "mustContain": "'app/h/[hostId]/local-tasks.tsx',",
-          "why": "The census rule's registered-pathname list names the task page's module (REQ-017)"
-        },
-        {
           "file": "config/scripts/verify-mobile-web-app-bundle.mjs",
-          "mustContain": "['./h/[hostId]/local-tasks.tsx', 46],",
+          "mustContain": "['./h/[hostId]/local-tasks.tsx', 64],",
           "why": "The route-prefix sweep is re-measured with the task page's route in the tree (REQ-017)"
-        },
-        {
-          "file": "config/scripts/build-mobile-web-app-bundle.test.mjs",
-          "mustContain": "expect(Math.max(...MOBILE_WEB_APP_BUNDLE_ROUTE_SCRIPT_SPREAD)).toBe(15)",
-          "why": "The task page's route makes `tasks` the worst swept route at fifteen scripts (REQ-017)"
         },
         {
           "file": "mobile/src/transport/rpc-client-server-subscription.ts",
@@ -3063,24 +3155,14 @@
           "why": "The phone releases its task change subscription on the host (REQ-017)"
         },
         {
-          "file": "mobile/src/transport/rpc-subscription-inventory.ts",
-          "mustContain": "file: 'src/local-tasks/local-tasks-change-feed.ts',",
-          "why": "The task change subscription is a registered phone subscription site (REQ-017)"
-        },
-        {
-          "file": "mobile/src/home/MobileHomeListFooter.tsx",
+          "file": "mobile/src/home/MobileHomeTasksAndAutomations.tsx",
           "mustContain": "<MobileHomeLocalTasksCard connectedHosts={props.connectedHosts} />",
           "why": "The phone home shows the task library card (REQ-017)"
         },
         {
-          "file": "mobile/src/home/MobileHomeListFooter.test.tsx",
+          "file": "mobile/src/home/MobileHomeTasksAndAutomations.test.tsx",
           "mustContain": "vi.mock('../local-tasks/MobileHomeLocalTasksCard'",
-          "why": "The footer test renders without the card's router and RPC providers (REQ-017)"
-        },
-        {
-          "file": "mobile/src/layout/host-sidebar-reveal.test.tsx",
-          "mustContain": "vi.mock('../local-tasks/LocalTaskSessionStrip'",
-          "why": "The session header test renders without the task strip's router and RPC providers (REQ-017)"
+          "why": "The home tasks section test renders without the card's router and RPC providers (REQ-017)"
         },
         {
           "file": "mobile/src/tasks/use-mobile-tasks-picker-projection.tsx",
@@ -3088,7 +3170,7 @@
           "why": "The phone's Task Source picker lists Local ahead of the upstream sources, as the desktop's source bar does; it replaces the host page's own Local button (REQ-008, REQ-017)"
         },
         {
-          "file": "mobile/src/tasks/mobile-tasks-provider-pickers.tsx",
+          "file": "mobile/src/tasks/mobile-tasks-screen-chrome.tsx",
           "mustContain": "onSelect={withLocalTaskSource(model, (next) => {",
           "why": "Picking Local opens the local tasks page and leaves the host's defaultTaskSource on an upstream provider (REQ-017)"
         },
@@ -3104,7 +3186,7 @@
         },
         {
           "file": "mobile/src/host-screen/workspace-details-sheet.tsx",
-          "mustContain": "const localTaskRows = useLocalTaskDetailRows(row, DetailRow, styles)",
+          "mustContain": "const localTaskRows = useLocalTaskDetailRows(row)",
           "why": "The long-press sheet names the workspace's local task after its reviews and before upstream's tasks (REQ-017)"
         },
         {
@@ -3153,27 +3235,27 @@
           "why": "Cmd+J offers New task and Open task after every upstream action, so an equal match ranks upstream first (REQ-007)"
         },
         {
-          "file": "src/renderer/src/components/use-worktree-jump-palette-task-search.ts",
+          "file": "src/renderer/src/components/worktree-jump/use-worktree-jump-palette-task-search.ts",
           "mustContain": "const localTaskItems = useLocalTaskPaletteItems(visible ? query : '')",
           "why": "Cmd+J's Tasks group lists local tasks ahead of upstream's provider results, found by ref, earlier refs and title (REQ-007)"
         },
         {
-          "file": "src/renderer/src/components/worktree-jump-palette-model.ts",
+          "file": "src/renderer/src/components/worktree-jump/worktree-jump-palette-model.ts",
           "mustContain": "| LocalTaskPaletteItem",
           "why": "A local task is its own palette item type; CmdJTask stays the four upstream providers (REQ-007)"
         },
         {
-          "file": "src/renderer/src/components/worktree-jump-palette-entry.tsx",
+          "file": "src/renderer/src/components/worktree-jump/worktree-jump-palette-entry.tsx",
           "mustContain": "<LocalTaskPaletteRow entry={entry} renderKey={renderKey} controller={controller} />",
           "why": "A local task row in the Tasks group leads with its title, the ref as the gray prefix (REQ-007)"
         },
         {
-          "file": "src/renderer/src/components/use-worktree-jump-palette-selection-actions.ts",
+          "file": "src/renderer/src/components/worktree-jump/use-worktree-jump-palette-selection-actions.ts",
           "mustContain": "const handleSelectLocalTask = useLocalTaskPaletteSelection({",
           "why": "Enter on a local task goes to its workspace, else opens the task, as upstream task results do (REQ-007)"
         },
         {
-          "file": "src/renderer/src/components/worktree-jump-palette-surface.tsx",
+          "file": "src/renderer/src/components/worktree-jump/worktree-jump-palette-surface.tsx",
           "mustContain": "controller.handleSelectLocalTask(selectedTask, true)",
           "why": "Cmd/Ctrl+Enter on a local task starts work, as it creates a workspace for an upstream task (REQ-007)"
         },
@@ -3188,12 +3270,12 @@
           "why": "A workspace row matches its task's ref and title, so searching SHOP-12 finds the workspace (REQ-007)"
         },
         {
-          "file": "src/renderer/src/components/worktree-jump-palette-document-index.ts",
+          "file": "src/renderer/src/components/worktree-jump/worktree-jump-palette-document-index.ts",
           "mustContain": "Pick<WorktreePaletteDocumentSources, 'localTaskEvidence'>",
           "why": "The palette's document index passes the task evidence through to each workspace document (REQ-007)"
         },
         {
-          "file": "src/renderer/src/components/use-worktree-jump-palette-worktrees.ts",
+          "file": "src/renderer/src/components/worktree-jump/use-worktree-jump-palette-worktrees.ts",
           "mustContain": "const localTaskEvidence = useLocalTaskWorkspaceEvidence()",
           "why": "Workspace documents rebuild when a linked task's ref or title changes (REQ-007)"
         },
@@ -3304,13 +3386,23 @@
         },
         {
           "file": "mobile/src/host-screen/host-screen-overlays.tsx",
-          "mustContain": "...taskLink.actionsFor(actionTarget, () => state.setActionTarget(null)),\n                    {\n                      label: 'Delete',",
+          "mustContain": "...taskLink.actionsFor(actionTarget, () => state.setActionTarget(null)),\n                      {\n                        id: 'delete',",
           "why": "The workspace action sheet registers the local task linking action after upstream's Sleep and Pin and before Delete, so the destructive item stays last"
         },
         {
           "file": "mobile/src/session/MobileSessionHeader.tsx",
-          "mustContain": "<LocalTaskSessionStrip controller={controller} />",
-          "why": "The mobile session header mounts the task link strip"
+          "mustContain": "<LocalTaskSessionStripMount controller={controller} />",
+          "why": "The mobile session header mounts the task link strip slot; upstream header tests import no task strip"
+        },
+        {
+          "file": "mobile/app/h/[hostId]/session/[worktreeId].web.tsx",
+          "mustContain": "<LocalTaskSessionStripProvider>",
+          "why": "The session route fills the header's task strip slot (REQ-017)"
+        },
+        {
+          "file": "mobile/src/navigation/workspace-route.test.tsx",
+          "mustContain": "vi.mock('../local-tasks/local-task-session-strip-provider'",
+          "why": "The every-route test renders the session route without the task strip's native graph (REQ-017)"
         },
         {
           "file": "src/renderer/src/app-shell/use-visible-review-refresh-reporting.ts",
@@ -3319,7 +3411,7 @@
         },
         {
           "file": "src/renderer/src/components/NewWorkspaceComposerModal.tsx",
-          "mustContain": "await submitQuick(quickAgent, { setupOnly: quickSetupOnly, ...localTaskSubmitOptions() })",
+          "mustContain": "...localTaskSubmitOptions()",
           "why": "A creation for the picked local task carries its draft prompt and creation callback (REQ-009)"
         },
         {
@@ -3444,8 +3536,8 @@
         },
         {
           "file": "src/renderer/src/components/native-chat/NativeChatStructuredSession.tsx",
-          "mustContain": "pane={{ worktreeId: ownerWorktreeId, paneKey, sessionId: props.sessionId }}",
-          "why": "A structured chat session shows its local task chip"
+          "mustContain": "import { nativeChatPaneHeader } from '@/components/local-tasks/local-task-chat-pane-header'",
+          "why": "A structured chat session shows its local task chip beside its pane header"
         },
         {
           "file": "src/renderer/src/components/sidebar/WorktreeList.tsx",
@@ -3493,6 +3585,16 @@
           "why": "The creation options carry an optional local task callback"
         },
         {
+          "file": "src/renderer/src/hooks/composer-state/quick-startup-plan.ts",
+          "mustContain": "prompts?: { prompt: string; draftPrompt: string | null }",
+          "why": "The picked local task supplies the startup prompt and draft instead of the linked work item (REQ-009)"
+        },
+        {
+          "file": "src/renderer/src/lib/composer-create-handoff.ts",
+          "mustContain": "start: (request: WorktreeCreationRequest) => string | null",
+          "why": "The composer handoff returns the owning creation id so task creation can observe it"
+        },
+        {
           "file": "src/renderer/src/lib/worktree-creation-completion.ts",
           "mustContain": "notifyWorktreeCreationCompleted(args)",
           "why": "The creation completion path publishes a local task association notice"
@@ -3509,7 +3611,7 @@
         },
         {
           "file": "src/renderer/src/lib/worktree-creation-flow-execute.ts",
-          "mustContain": "structuredSessionOutcome = structuredSession.sessionOutcome",
+          "mustContain": "structuredSessionOutcome: structuredSession?.sessionOutcome",
           "why": "Forward the actual structured launch settlement to task creation completion."
         },
         {
@@ -3546,6 +3648,16 @@
           "file": "src/renderer/src/components/sidebar/use-worktree-card-review-details.ts",
           "mustContain": "export function resolveWorktreeCardReview(",
           "why": "The PR-merged rule reads the same review the workspace card shows, from one shared resolver (REQ-013)"
+        },
+        {
+          "file": "src/renderer/src/components/worktree-jump/use-worktree-jump-palette-task-search.test.tsx",
+          "mustContain": "item.type === 'task'",
+          "why": "the palette task list also carries local task items"
+        },
+        {
+          "file": "src/shared/plugins/languages/protected-copy-keys.json",
+          "mustContain": "\"localTasks.",
+          "why": "fork copy keys protected from plugin language packs"
         }
       ],
       "tests": [
@@ -3628,9 +3740,9 @@
         "src/cli/local-tasks/local-task-cli.test.ts"
       ],
       "checks": [
-        "pnpm exec vitest run --config config/vitest.config.ts src/main/local-tasks src/shared/local-tasks src/main/runtime/rpc/methods/local-tasks.test.ts src/shared/host-operation-ownership.test.ts src/shared/wsl-move src/main/runtime/runtime-rpc/fork-mobile-rpc-method-allowlist.test.ts src/main/runtime/mobile-rpc-allowlist.test.ts src/cli/local-tasks",
+        "pnpm exec vitest run --config config/vitest.config.ts src/main/local-tasks src/shared/local-tasks src/main/runtime/rpc/methods/local-tasks.test.ts src/shared/host-operation-ownership.test.ts src/main/runtime/runtime-rpc/fork-mobile-rpc-method-allowlist.test.ts src/cli/local-tasks",
         "ORCA_BACKGROUND_LAUNCH=1 pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/local-tasks src/renderer/src/components/local-tasks src/renderer/src/components/task-page src/renderer/src/components/cmd-j src/renderer/src/lib/worktree-creation-structured-session.test.ts",
-        "pnpm --dir mobile exec vitest run src/local-tasks src/home/MobileHomeListFooter.test.tsx src/transport/rpc-subscription-boundary.test.ts"
+        "pnpm --dir mobile exec vitest run src/local-tasks src/home/MobileHomeTasksAndAutomations.test.tsx"
       ]
     },
     {

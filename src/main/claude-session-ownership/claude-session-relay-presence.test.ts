@@ -81,11 +81,16 @@ describe('relay Claude activity window with process presence', () => {
     await post('UserPromptSubmit', 'session-a', OWNER_PID)
     await post('SessionStart', 'session-b', OTHER_PID)
     await vi.waitFor(() =>
-      expect(forward.mock.lastCall?.[0]).toMatchObject({
-        hookEventName: 'AgentProcessExit',
-        agentPresence: { ended: true, process: { pid: OWNER_PID } }
-      })
+      expect(
+        forward.mock.calls.find(([envelope]) => envelope.hookEventName === 'AgentProcessExit')?.[0]
+      ).toMatchObject({ agentPresence: { ended: true, process: { pid: OWNER_PID } } })
     )
+    // The owner check before normalization (#31780) publishes the exit, then admits the relaunch.
+    expect(forward.mock.lastCall?.[0]).toMatchObject({
+      hookEventName: 'SessionStart',
+      providerSession: { id: 'session-b' },
+      agentPresence: { process: { pid: OTHER_PID } }
+    })
     await post('UserPromptSubmit', 'session-b', OTHER_PID)
     expect(forward.mock.lastCall?.[0]).toMatchObject({
       providerSession: { id: 'session-b' },

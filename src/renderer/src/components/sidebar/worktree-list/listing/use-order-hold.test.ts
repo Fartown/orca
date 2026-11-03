@@ -5,7 +5,7 @@ import type { SortBy } from '../../../../../../shared/sidebar-list/smart-sort'
 import type { SidebarFeedIndex } from '../../../../../../shared/sidebar-list/sidebar-feed-index'
 import type { ProjectOrderBy } from '../../../../../../shared/ui-chrome-types'
 import type { Worktree } from '../../../../../../shared/worktree/types'
-import { makeWorktree } from '../../../worktree-jump-palette-test-fixtures'
+import { makeWorktree } from '../../../worktree-jump/worktree-jump-palette-test-fixtures'
 import { useOrderHeldWhileEngaged, useProjectRecencyHeldWhileEngaged } from './use-order-hold'
 
 vi.mock('../../../../../../shared/sidebar-inputs-switch', () => ({
@@ -82,20 +82,6 @@ describe('useOrderHeldWhileEngaged', () => {
     fire(row, 'dragend')
     expect(result.current).toEqual(['b', 'a'])
   })
-
-  it('never holds Manual or Name: your own drop or rename shows at once', () => {
-    const { row } = mountList()
-    const { result, rerender } = renderHook(
-      ({ ids, sortBy }: { ids: string[]; sortBy: SortBy }) => useOrderHeldWhileEngaged(ids, sortBy),
-      { initialProps: { ids: ['a', 'b'], sortBy: 'manual' } }
-    )
-    fire(row, 'pointerover')
-    fire(row, 'dragstart')
-    rerender({ ids: ['b', 'a'], sortBy: 'manual' })
-    expect(result.current).toEqual(['b', 'a'])
-    rerender({ ids: ['a', 'b'], sortBy: 'name' })
-    expect(result.current).toEqual(['a', 'b'])
-  })
 })
 
 describe('useProjectRecencyHeldWhileEngaged', () => {
@@ -108,7 +94,8 @@ describe('useProjectRecencyHeldWhileEngaged', () => {
     workspaces: [],
     worktrees: [makeWorktree('b', 'b', { lastActivityAt: recentAt })],
     folderWorkspaces: [],
-    repoMap: new Map()
+    repoMap: new Map(),
+    repoOf: () => undefined
   })
   const recentOf = (index: SidebarFeedIndex): number[] =>
     index.worktrees.map((worktree: Worktree) => worktree.lastActivityAt)

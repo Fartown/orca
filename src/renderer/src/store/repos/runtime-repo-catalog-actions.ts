@@ -15,13 +15,19 @@ import {
   fetchRepoCatalogForTarget,
   filterSetupsForPrunedRepoRows,
   mergeFetchedRepoCatalog,
-  reconcileReadoptedSshWorktreeState,
+  reconcileFetchedCatalogWorktreeState,
   reconcileSupersededSshRepos
 } from './repo-catalog-merge'
 import { getRuntimeTargetHostId } from '../../runtime/runtime-client-target'
 import { mergeFetchedHostProjectCatalog } from '../../../../shared/project-compatibility-host-merge'
 import { scheduleSafeAutoForkSync } from './safe-auto-fork-sync'
+import { noteLiveRepoCatalogApplied } from './saved-host-catalog-rows'
+import {
+  withWslMovedRepoIds,
+  withWslMovedSetupScriptDismissals
+} from './wsl-moved-repo-ui-retention'
 import { reconcileRestoredWorkspaceCatalog } from '../../workspace-session-recovery/restored-workspace-catalog'
+import { selectWorktreesByRepo } from '../workspace-record-selectors'
 
 export function createRuntimeRepoCatalogActions(
   set: Parameters<StateCreator<AppState>>[0],
@@ -35,7 +41,7 @@ export function createRuntimeRepoCatalogActions(
       const fence = claimHostCatalogFence(get, 'repos', target)
       try {
         const [catalog, visibilitySnapshot] = await Promise.all([
-          fetchRepoCatalogForTarget(target),
+          fetchRepoCatalogForTarget(target, get().repos),
           readRuntimeWorktreeVisibilitySnapshot(environmentId)
         ])
         const visibilityDefaults = visibilitySnapshot.defaults
@@ -53,9 +59,9 @@ export function createRuntimeRepoCatalogActions(
           }
           const result = mergeFetchedRepoCatalog(catalog, s.repos)
           const reconciliation = reconcileSupersededSshRepos(result.repos, s)
-          const readopted = reconcileReadoptedSshWorktreeState(s, s.pendingSshRepoReadoptions)
+          // Recovery settles only this runtime host's rows; SSH re-adoption below never touches them.
           const recovered = reconcileRestoredWorkspaceCatalog(
-            { ...s, ...readopted },
+            s,
             reconciliation.repos,
             result.hostId
           )
@@ -79,8 +85,6 @@ export function createRuntimeRepoCatalogActions(
             (repo) => getRepoExecutionHostId(repo) === result.hostId
           )
           return {
-            ...readopted,
-            ...recovered,
             repos: finalizedRepos,
             ...(visibilityDefaults === undefined
               ? {}
@@ -114,16 +118,34 @@ export function createRuntimeRepoCatalogActions(
                 : {}
               : {}),
             pendingSshRepoReadoptions: reconciliation.pendingReadoptions,
+            ...reconcileFetchedCatalogWorktreeState(
+              {
+                ...s,
+                worktreesByRepo: selectWorktreesByRepo(recovered),
+                sortEpoch: recovered.sortEpoch
+              },
+              catalog,
+              finalizedRepos,
+              reconciliation.pendingReadoptions
+            ),
             ...mergedProjectCompatibility,
             activeRepoId:
               s.activeRepoId && validRepoIds.has(s.activeRepoId) ? s.activeRepoId : null,
-            filterRepoIds: retainValidFilterRepoIds(s.filterRepoIds, validRepoIds),
-            setupScriptPromptDismissedRepoIds: filterSetupScriptPromptDismissalsToValidRepos(
+            filterRepoIds: retainValidFilterRepoIds(
+              s.filterRepoIds,
+              withWslMovedRepoIds(validRepoIds, s.wslMovedProjects)
+            ),
+            setupScriptPromptDismissedRepoIds: withWslMovedSetupScriptDismissals(
               s.setupScriptPromptDismissedRepoIds,
-              validRepoHostIdentities
+              filterSetupScriptPromptDismissalsToValidRepos(
+                s.setupScriptPromptDismissedRepoIds,
+                validRepoHostIdentities
+              ),
+              s.wslMovedProjects
             )
           }
         })
+        noteLiveRepoCatalogApplied(get, targetHostId)
         scheduleSafeAutoForkSync(finalizedHostRepos)
         return finalizedHostRepos
       } catch (err) {

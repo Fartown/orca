@@ -32,7 +32,7 @@ function rows(snapshot: Partial<AgentStatusIpcPayload>): RuntimeWorktreePsSummar
   const summaries = new Map([[WORKTREE_ID, summary]])
   attachRuntimeWorktreeAgentRows({
     summaries,
-    workingTerminalEvidenceByWorktreeId: new Map(),
+    terminalTitleEvidenceByWorktreeId: new Map(),
     rowSources: collectRuntimeWorktreeAgentSources({
       mirroredWorktreeIdByTabId: new Map(),
       connectedPtyEvidence: {

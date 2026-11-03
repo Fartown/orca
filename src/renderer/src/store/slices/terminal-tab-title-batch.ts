@@ -222,6 +222,7 @@ export function applyGeneratedTabTitleUpdates(
     const stage = getOwnerStage(state, stages, ownerWorktreeId)
     const tabIndexes = stage.tabIndexesById.get(tabId)
     const currentTab = tabIndexes ? stage.tabs[tabIndexes[0]] : undefined
+    // Fork (session-names): protected titles stay separate candidates, so the task title is still recorded.
     if (!currentTab || !tabIndexes) {
       continue
     }

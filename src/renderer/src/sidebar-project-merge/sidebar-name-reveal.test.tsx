@@ -17,7 +17,9 @@ const state = vi.hoisted(() => ({
   revealWorktreeInSidebar: vi.fn()
 }))
 vi.mock('@/store', () => ({
-  useAppStore: (selector: (value: typeof state) => unknown) => selector(state)
+  useAppStore: Object.assign((selector: (value: typeof state) => unknown) => selector(state), {
+    getState: () => state
+  })
 }))
 vi.mock('@/components/confirmation-dialog-context', () => ({
   useConfirmationDialog: () => vi.fn()

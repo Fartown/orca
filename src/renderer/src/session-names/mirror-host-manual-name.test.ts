@@ -4,17 +4,24 @@ import { resolveTerminalTabTitle } from '../../../shared/tab-title-resolution'
 
 const slot = { agent: 'codex', sessionId: 's-1', title: 'Cached generated name' } as const
 
-it('uses the host manual fallback without promoting it above confirmed Provider evidence', () => {
+it('puts the host manual name above confirmed Provider evidence', () => {
   const manual = mirrorHostManualName(slot, 'Host manual name')
   expect(
     resolveTerminalTabTitle({ title: '', customTitle: null, aiVaultTitle: manual }, true)
   ).toBe('Host manual name')
-  const native = mirrorHostManualName(
-    { ...slot, providerName: { kind: 'named', title: 'Provider name', field: 'test.nativeName' } },
-    'Host manual name'
-  )
+  const nativeSlot = {
+    ...slot,
+    providerName: { kind: 'named', title: 'Provider name', field: 'test.nativeName' }
+  } as const
+  const native = mirrorHostManualName(nativeSlot, 'Host manual name')
   expect(
     resolveTerminalTabTitle({ title: '', customTitle: null, aiVaultTitle: native }, true)
+  ).toBe('Host manual name')
+  expect(
+    resolveTerminalTabTitle(
+      { title: '', customTitle: null, aiVaultTitle: mirrorHostManualName(nativeSlot, null) },
+      true
+    )
   ).toBe('Provider name')
 })
 

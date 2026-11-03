@@ -11,8 +11,8 @@ import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import { mobileWebAppRouteClosure } from './build-mobile-web-app-bundle.mjs'
-import { mobileWebAppDependenciesPresent } from './mobile-web-app-bundle-dependencies.mjs'
-import { PAGE_ROUTE_MODULES } from './mobile-web-app-page-route-modules.mjs'
+import { mobileWebAppDependenciesPresent } from './mobile-web-app/mobile-web-app-bundle-dependencies.mjs'
+import { PAGE_ROUTE_MODULES } from './mobile-web-app/mobile-web-app-page-route-modules.mjs'
 import { MOBILE_WEB_PAGE_ROUTES } from './mobile-web-page-routes.mjs'
 
 const mobileDir = fileURLToPath(new URL('../../mobile/', import.meta.url))

@@ -34,6 +34,15 @@ export function useActivitySessionNames(
     }))
   )
   const hostIndex = useMemo(() => buildActivityTabHostIndex(state.tabs), [state.tabs])
+  const chatTabIds = useMemo(
+    () =>
+      new Set(
+        Object.values(state.tabs ?? {}).flatMap((tabs) =>
+          tabs.filter((tab) => tab.contentType === 'agent-session').map((tab) => tab.id)
+        )
+      ),
+    [state.tabs]
+  )
   const hostFor = useCallback(
     (target: ActivitySessionNameTarget) =>
       resolveActivityExecutionHostId(
@@ -71,11 +80,6 @@ export function useActivitySessionNames(
       const host = hostFor(target)
       const key = agent && sessionId ? canonicalSessionTitleKey(host, agent, sessionId) : null
       const record = key ? sessionNameStore.getSnapshot().get(key) : undefined
-      const confirmedName =
-        key && record?.providerName?.kind === 'named' ? names.get(key) : undefined
-      if (confirmedName) {
-        return confirmedName
-      }
       const pane = parsePaneKey(entry.paneKey)
       const layout = state.layouts[tab.id]
       const current = state.status[entry.paneKey]
@@ -83,20 +87,34 @@ export function useActivitySessionNames(
         current?.agentType === agent &&
         current?.providerSession?.id === sessionId &&
         current?.stateStartedAt === entry.stateStartedAt
+      const isChatTab = chatTabIds.has(tab.id)
+      // A native chat tab holds exactly one session, so its label names that session.
       const ownsContainer =
-        ownsCurrent && layout?.root?.type === 'leaf' && layout.root.leafId === pane?.leafId
+        isChatTab ||
+        (ownsCurrent && layout?.root?.type === 'leaf' && layout.root.leafId === pane?.leafId)
       const paneLiveTitle = ownsCurrent
         ? resolveAgentRowPaneLiveTitle(layout, state.paneTitles[tab.id], pane?.leafId)
         : null
+      // A native chat's projected customTitle is its host-saved name, the one its tab shows.
+      const chatSavedName = isChatTab ? tab.customTitle : null
+      // The confirmed index already ranks shared manual names; a tab-level one still outranks it.
+      const tabManualName = ownsContainer ? tab.customTitle?.trim() : undefined
+      const confirmedName =
+        !tabManualName && key && record?.providerName?.kind === 'named' ? names.get(key) : undefined
+      if (confirmedName) {
+        return confirmedName
+      }
       return getActivitySessionName(entry, tab, state.generated, {
         record,
         manualTitle:
-          agent && sessionId ? getCanonicalSessionTitle(host, agent, sessionId) : undefined,
+          (agent && sessionId ? getCanonicalSessionTitle(host, agent, sessionId) : undefined) ??
+          chatSavedName ??
+          undefined,
         ownsContainer,
         paneLiveTitle
       })
       // Public name changes are independent of Activity status/tab writes.
     },
-    [state, hostFor, names]
+    [state, hostFor, names, chatTabIds]
   )
 }

@@ -177,7 +177,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.bgPanel,
     borderWidth: 1,
     borderColor: colors.borderSubtle,
-    borderRadius: radii.card,
+    borderRadius: radii.surface,
     minHeight: 72,
     paddingHorizontal: spacing.md,
     paddingVertical: 12

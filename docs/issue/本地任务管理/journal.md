@@ -3,7 +3,7 @@ title: 本地任务管理
 slug: 本地任务管理
 status: implementing
 created: 2026-10-26
-updated: 2026-10-30
+updated: 2026-11-03
 ---
 
 # 本地任务管理 开发 Journal
@@ -144,6 +144,24 @@ updated: 2026-10-30
 - 验证完再一起做两个切片
 
 ## 3. 开发记录
+
+### 2026-11-03 上游同步后的两处适配（testing）
+
+- 本轮目标：处理同步上游到 8cd6a7e5ee 后，本功能触发的上游新规则和新测试。
+- 完成内容：
+  - 桌面端：上游新规则要求 memo 组件里的翻译订阅语言版本。`LocalTaskList` 和 `LocalTaskRow` 已加上订阅，切换语言后文字会刷新（提交 `d1fb80826e`）。
+  - 手机端：会话顶栏直接引入任务条，会把 expo-router 等原生模块带进上游新加的 4 个顶栏测试，导致它们在文件级失败。按用户选的方案，改成插槽注入：
+    - 顶栏只引入一个只依赖 React 的插槽；
+    - 真正的任务条由会话路由 `[worktreeId].web.tsx` 注入；
+    - 原生 App 的会话页是加载网页壳，同样走这个路由。
+  - 上游测试 `host-sidebar-reveal.test.tsx` 退回原样。另外，上游的逐路由测试 `workspace-route.test.tsx` 需要加一行 mock，因为它会逐个渲染路由文件。所以 fork 改动的上游测试数量不变，以后上游再加顶栏测试也不会再被撞到。
+- 代码或文档变更：
+  - 新增 `local-task-session-strip-slot.tsx` 和 `local-task-session-strip-provider.tsx`；
+  - 改动顶栏和会话路由各一处；
+  - 接缝登记和架构策略同步更新。
+- 验证证据：手机端类型检查、测试类型检查和测试类型检查 ratchet 都通过；手机端 CI 测试（node 和 bun 两组）的结果见 `.docs/upstream-sync-ui-validation/2026-11-02/evidence/mobile-ci-tests-local-3.log`。
+- 未解决问题：需要在真机上确认关联了任务的工作区里，会话顶栏仍然显示任务条，本地和 SSH 工作区都要看。
+- 下一步：与其他同步修正一起推送。
 
 ### 2026-10-30 界面走查修复，并接入 Orca 原有的工作项入口
 

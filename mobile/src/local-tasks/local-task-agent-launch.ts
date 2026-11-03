@@ -232,7 +232,7 @@ async function createLocalTaskWorkspaceOnly(args: {
     created = await createWorktreeWithNameRetry({
       client: args.launchClient,
       baseName: args.name,
-      worktreeCreateIdempotency: capabilities.worktreeCreateIdempotency,
+      worktreeCreateIdempotency: capabilities?.worktreeCreateIdempotency ?? false,
       buildParams: (name) => ({
         repo: `id:${args.setup.repoId}`,
         name,

@@ -12,7 +12,7 @@ import {
   NATIVE_CHAT_INTERRUPTED_STATUS_TEXT,
   isTextBlock,
   type NativeChatMessage
-} from '../../shared/native-chat-types'
+} from '../../shared/native-chat/native-chat-types'
 
 export type GoalTranscriptFamily = 'claude' | 'codex'
 

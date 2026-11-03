@@ -1,5 +1,5 @@
 import { useAppStore } from '@/store'
-import { structuredAgentSessionPaneKey } from '../../../shared/structured-agent-session-projection'
+import { structuredAgentSessionPaneKey } from '../../../shared/agent-session/view/structured-agent-session-projection'
 import { localTaskAttentionClearsOnView } from '../../../shared/local-tasks/local-task-attention-rules'
 import type {
   LocalTaskAttentionItem,

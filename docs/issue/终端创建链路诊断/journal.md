@@ -2,7 +2,7 @@
 title: 终端创建链路诊断
 status: implementing
 created: 2026-10-09
-updated: 2026-10-22
+updated: 2026-11-03
 ---
 
 # 终端创建链路诊断
@@ -50,6 +50,17 @@ updated: 2026-10-22
 - 影响范围：REQ-801～803及部署后的现场验收。
 
 ## 3. 开发记录
+
+### 2026-11-03：冷恢复重试不再每次扫描全部标签（testing）
+
+- 本轮目标：让 2026-11-02 上游同步后新增的上游单测 `bounds unknown retry work`（`pty-connection-spawn-deferred-sleep.test.ts`）通过。
+- 完成内容：
+  - 原因：`cold-restore-resume` 的候选证据 `launchCandidateEvidence` 会用 `some` 和 `find` 把工作区的标签列表扫两遍。每次冷恢复重试都会扫一次，上游要求重试的工作量有上限。实测 100 个标签时读了 800 行，上限是 600 行。
+  - 修正：把记录挪到 fork 自有的 `cold-restore-origin.ts`，每个窗格会话只在第一次带扫描证据，之后的重试只记来源和启动证据，诊断仍然能看到每一次重试。
+- 代码或文档变更：上游文件 `deferred-cold-restore-and-snapshot.ts` 的诊断调用从 11 行收成 1 行；接缝 mustContain 和 `launch-seam-coverage.test.ts` 的标记改为 `recordColdRestoreResumeOrigin`。
+- 验证证据：上游这条单测、本功能登记的两组检查、`pty-connection-restore-and-resume.test.ts` 共 163 条通过；`tc:web` 和 `check:fork-features` 通过。
+- 未解决问题：重试时的候选证据，比如来源窗格此刻是否还有标签，不再记录。
+- 下一步：随同步推送，等远端 CI。
 
 ### 2026-10-22：CI 边界修正后的最新产物复验（testing）
 

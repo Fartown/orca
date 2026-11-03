@@ -3,7 +3,7 @@ title: '富文本Markdown强制打开'
 slug: '富文本Markdown强制打开'
 status: done
 created: 2026-09-16
-updated: 2026-10-21
+updated: 2026-11-02
 external_ids: []
 ---
 
@@ -47,6 +47,21 @@ external_ids: []
 - 影响范围：REQ-402；用 muted token + `TriangleAlert` 图标，不用同文件预览分支那套 raw amber（STYLEGUIDE 明确不复制既有债）
 
 ## 3. 开发记录
+
+### 2026-11-02 同步上游 c9845c5f9c：默认回落改为预览
+
+- 本轮目标：上游 4597d3f249 把不支持语法时的默认回落从源码模式改为预览模式，让「仍然打开」在新默认下继续可用。
+- 完成内容：
+  - 采用上游的预览回落，「仍然打开」放进预览顶部的回落横幅；横幅改为横排。
+  - REQ-401 的约束「默认行为不变」改为「跟随上游默认」，TC-601 的期望改为 `preview`。
+- 代码或文档变更：
+  - `EditorMarkdownFileSurface.tsx`
+  - `EditorContent.markdown-classification.test.tsx`
+  - `editor-panel-render-model.test.ts`
+  - 需求、测试用例与本记录
+- 验证证据：本功能登记的 checks 全部通过，记录在 `.docs/upstream-sync-ui-validation/2026-11-02/evidence/feature-checks/`。
+- 未解决问题：预览横幅里的「仍然打开」还没逐屏截图。
+- 下一步：用合并后的构建截图确认横幅与按钮。
 
 ### 2026-10-09 同步上游 Markdown 透传支持
 

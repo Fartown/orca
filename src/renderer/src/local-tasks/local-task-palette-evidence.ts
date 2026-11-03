@@ -1,10 +1,11 @@
 import { useMemo } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import { useAppStore } from '@/store'
+import { translate } from '@/i18n/i18n'
 import {
   composePaletteEvidence,
   type PaletteComposedEvidence
-} from '@/lib/palette-match/evidence-composer'
+} from '../../../shared/palette-match/evidence-composer'
 import type { Worktree } from '../../../shared/worktree/types'
 import type { LocalTaskLinks } from '../../../shared/local-tasks/local-task-link-types'
 import type { LocalTask } from '../../../shared/local-tasks/local-task-types'
@@ -38,7 +39,7 @@ export function buildLocalTaskWorkspaceEvidence(
     return composePaletteEvidence({
       id: `local-task:${task.id}`,
       kind: 'task',
-      accessibilityLabel: 'Linked local task',
+      accessibilityLabel: translate('localTasks.links.paletteEvidence', 'Linked local task'),
       parts: [
         { key: 'identifier', text: task.ref, profile: 'identifier', identifier: { kind: 'key' } },
         { key: 'title', text: task.title, profile: 'prose' }
