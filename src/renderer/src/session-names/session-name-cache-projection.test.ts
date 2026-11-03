@@ -36,29 +36,34 @@ it.each(['ssh:dev-box', 'local'] as const)(
         scheduleReconcile: () => () => undefined
       })
     )
+    // The manual name stays on top (REQ-025); native evidence still projects without another read.
+    const nativeName = (slot = store.slot()) =>
+      slot?.providerName?.kind === 'named' ? slot.providerName.title : undefined
     names.publish(host, nativeResult('New native'))
-    expect(store.slot()).toMatchObject({ title: 'New native', manualTitle: 'Manual fallback' })
-    expect(store.getState().unifiedTabsByWorktree.workspace[0].aiVaultTitle?.title).toBe(
+    expect(store.slot()).toMatchObject({ title: 'Manual fallback', manualTitle: 'Manual fallback' })
+    expect(nativeName()).toBe('New native')
+    expect(nativeName(store.getState().unifiedTabsByWorktree.workspace[0].aiVaultTitle)).toBe(
       'New native'
     )
     expect(resolve).not.toHaveBeenCalled()
 
     names.publish(host === 'local' ? 'ssh:other' : 'local', nativeResult('Other host'))
-    expect(store.slot()?.title).toBe('New native')
+    expect(nativeName()).toBe('New native')
     store.replaceIdentity('B')
     names.publish(host, nativeResult('Late A'))
-    expect(store.slot()?.title).not.toBe('Late A')
+    expect(nativeName()).not.toBe('Late A')
     names.publish(host, nativeResult('Native B', 'B'))
-    expect(store.slot()?.title).toBe('Native B')
+    expect(nativeName()).toBe('Native B')
     names.publish(host, {
       titles: [],
       nameEvidence: [{ agent: 'codex', sessionId: 'B', providerName: { kind: 'unavailable' } }]
     })
-    expect(store.slot()?.title).toBe('Native B')
+    expect(nativeName()).toBe('Native B')
     names.publish(host, {
       titles: [],
       nameEvidence: [{ agent: 'codex', sessionId: 'B', providerName: { kind: 'cleared' } }]
     })
+    expect(nativeName()).toBeUndefined()
     expect(store.slot()?.title).toBe('Manual fallback')
   }
 )

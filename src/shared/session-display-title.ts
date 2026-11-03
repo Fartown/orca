@@ -29,10 +29,11 @@ export function resolveSessionDisplayTitle(
   candidates: SessionDisplayTitleCandidates
 ): SessionDisplayTitleResult | null {
   const fallback = normalized(candidates.identityFallbackTitle)
+  // A name the user gave in Orca outranks every automatic name (REQ-025).
   const ranked: [SessionDisplayTitleSource, string | null][] = [
+    ['user', normalized(candidates.userTitle)],
     ['provider', withoutFallback(candidates.providerTitle, fallback)],
     ['provider-snapshot', withoutFallback(candidates.providerTitleSnapshot, fallback)],
-    ['user', normalized(candidates.userTitle)],
     ['generated', eligiblePromptTitle(candidates.generatedTitle)],
     ['live', normalized(candidates.liveTitle)],
     ['label', normalized(candidates.labelTitle)],

@@ -72,7 +72,8 @@ it('keeps the main Codex turn working through a /side chat after Orca restarts',
   }
 })
 
-it('lets a new ephemeral Codex conversation take over a pane whose last turn finished', async () => {
+// Fork (session-names): D-009 keeps a rollout-less Codex session from replacing a backed row.
+it('keeps the backed row when a new ephemeral Codex conversation follows a finished turn', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'codex-side-thread-'))
   dirs.push(dir)
   const server = new AgentHookServer()
@@ -97,9 +98,9 @@ it('lets a new ephemeral Codex conversation take over a pane whose last turn fin
       '/hook/codex'
     )
     expect(server.getStatusSnapshot()[0]).toMatchObject({
-      state: 'working',
-      prompt: 'next task',
-      providerSession: { id: SIDE }
+      state: 'done',
+      prompt: 'main task',
+      providerSession: { id: MAIN }
     })
   } finally {
     server.stop()
@@ -148,7 +149,8 @@ it.each([
   }
 })
 
-it('lets a new ephemeral Codex conversation take over a row still working, without its old prompt', async () => {
+// Fork (session-names): D-009 keeps a rollout-less Codex session from replacing a backed row.
+it('keeps a still-working backed row when a new ephemeral Codex conversation starts', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'codex-side-thread-'))
   dirs.push(dir)
   const server = new AgentHookServer()
@@ -162,8 +164,8 @@ it('lets a new ephemeral Codex conversation take over a row still working, witho
     await post({ ...TITLE_THREAD, hook_event_name: 'UserPromptSubmit', prompt: 'next task' })
     expect(server.getStatusSnapshot()[0]).toMatchObject({
       state: 'working',
-      prompt: 'next task',
-      providerSession: { id: SIDE }
+      prompt: 'main task',
+      providerSession: { id: MAIN }
     })
   } finally {
     server.stop()

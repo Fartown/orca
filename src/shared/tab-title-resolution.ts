@@ -32,6 +32,8 @@ export function resolveTerminalTabTitle(
   const sessionNames = sessionNameSlotCandidates(sessionTitle)
   const resolved = resolveSessionDisplayTitle({
     ...sessionNames,
+    // The tab rename is the user's explicit name for this pane's session.
+    userTitle: (agent && tab.customTitle?.trim()) || sessionNames.userTitle,
     providerTitle:
       sessionNames.providerTitle ??
       (agent === 'opencode' && isMeaningfulOpenCodeTerminalTitle(liveTitle) ? liveTitle : null),
@@ -40,7 +42,7 @@ export function resolveTerminalTabTitle(
     liveTitle: agent
       ? resolveAgentConversationLiveTitle(liveTitle, agent, tab.defaultTitle)
       : liveTitle,
-    labelTitle: agent ? tab.customTitle?.trim() || tab.quickCommandLabel : null,
+    labelTitle: agent ? tab.quickCommandLabel : null,
     identityFallbackTitle: sessionTitle
       ? mintAgentSessionFallbackTitle(sessionTitle.agent, sessionTitle.sessionId)
       : // Slotless agent panes have no session id to mint from; the tab's own label is the
@@ -73,13 +75,14 @@ export function resolveUnifiedTabLabel(
   const sessionNames = sessionNameSlotCandidates(sessionTitle)
   const resolved = resolveSessionDisplayTitle({
     ...sessionNames,
+    userTitle: (agent && tab?.customLabel?.trim()) || sessionNames.userTitle,
     providerTitle:
       sessionNames.providerTitle ??
       (agent === 'opencode' && isMeaningfulOpenCodeTerminalTitle(liveLabel) ? liveLabel : null),
     generatedTitle:
       sessionNames.generatedTitle ?? (generatedTitlesEnabled ? tab?.generatedLabel : null),
     liveTitle: agent ? resolveAgentConversationLiveTitle(liveLabel, agent, undefined) : liveLabel,
-    labelTitle: agent ? tab?.customLabel?.trim() || tab?.quickCommandLabel : null,
+    labelTitle: agent ? tab?.quickCommandLabel : null,
     identityFallbackTitle: sessionTitle
       ? mintAgentSessionFallbackTitle(sessionTitle.agent, sessionTitle.sessionId)
       : null

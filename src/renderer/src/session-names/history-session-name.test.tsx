@@ -38,12 +38,13 @@ const session = {
   subagent: null
 } as AiVaultSession
 let stopManual: () => void
+let manual: Map<string, string>
 beforeEach(() => {
   sessionNameStore.reset()
-  const manual = new Map([[key, '旧人工名']])
+  manual = new Map()
   stopManual = registerCanonicalSessionTitleProvider({
     index: () => manual,
-    get: () => '旧人工名',
+    get: (host, agent, id) => manual.get(canonicalSessionTitleKey(host, agent, id)),
     subscribe: () => () => {}
   })
   Object.assign(window, {
@@ -111,19 +112,23 @@ it('renders and drags the same name without displaying a stale scanner title nex
       />
     </TooltipProvider>
   )
-  const title = screen.getByText('Provider 会话名')
+  // The row's manual name outranks the native one (REQ-025).
+  const title = screen.getByText('旧人工名')
+  expect(screen.queryByText('Provider 会话名')).toBeNull()
   expect(screen.queryByText('继续')).toBeNull()
   const dataTransfer = { setData: vi.fn(), effectAllowed: '' }
   fireEvent.dragStart(title, { dataTransfer })
   expect(
     dataTransfer.setData.mock.calls.some(
-      ([, value]) => typeof value === 'string' && value.includes('Provider 会话名')
+      ([, value]) => typeof value === 'string' && value.includes('旧人工名')
     )
   ).toBe(true)
 })
 
-it('retains a newer direct native name across stale scans and uses legacy manual only after a clear', () => {
+it('puts the legacy manual name first and retains a newer native clear across stale scans', () => {
+  manual.set(key, '旧人工名')
   sessionNameStore.seed([session])
+  expect(getScannedSessionDisplayName(session)).toBe('旧人工名')
   sessionNameStore.publish('local', {
     nameEvidence: [{ agent: 'codex', sessionId: 's1', providerName: { kind: 'cleared' } }],
     titles: []

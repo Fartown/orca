@@ -256,22 +256,34 @@ function makeEditorFile(overrides: Partial<OpenFile & { tabId?: string }> = {}):
 }
 
 describe('tab title tooltips', () => {
-  it.each([null, 'codex'] as const)(
-    'uses the shared title for visible label and tooltip (%s)',
-    (agent) => {
-      const expectedTitle = agent ? '✳ Provider name' : 'Custom terminal title'
+  // A manual rename outranks the Provider name; without one the native title keeps its glyph.
+  it.each([
+    { agent: null, customTitle: 'Custom terminal title', expectedTitle: 'Custom terminal title' },
+    {
+      agent: 'codex',
+      customTitle: 'Custom terminal title',
+      expectedTitle: 'Custom terminal title'
+    },
+    { agent: 'codex', customTitle: null, expectedTitle: '✳ Provider name' }
+  ] as const)(
+    'uses the shared title for visible label and tooltip ($agent: $expectedTitle)',
+    ({ agent, customTitle, expectedTitle }) => {
       const markup = renderToStaticMarkup(
         <SortableTab
           agent={agent}
           tab={makeTerminalTab({
-            customTitle: 'Custom terminal title',
+            customTitle,
             aiVaultTitle: agent
               ? {
                   agent,
                   sessionId: 'session-a',
                   title: 'Stale scanner fallback',
                   source: 'provider',
-                  providerName: { kind: 'named', title: expectedTitle, field: 'test.nativeName' }
+                  providerName: {
+                    kind: 'named',
+                    title: '✳ Provider name',
+                    field: 'test.nativeName'
+                  }
                 }
               : null
           })}
@@ -298,7 +310,7 @@ describe('tab title tooltips', () => {
 
       expectTooltipContent(markup, expectedTitle)
       if (agent) {
-        expect(markup).not.toContain('Custom terminal title')
+        expect(markup).not.toContain(customTitle ? 'Provider name' : 'Custom terminal title')
       }
       expect(markup).not.toContain('Runtime terminal title')
       expect(markup).toContain('data-tooltip-trigger="true"')

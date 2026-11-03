@@ -104,6 +104,17 @@ it('the mounted Activity pipeline reads its own Provider name without a winning 
   expect(result.current.allThreads[0]?.responsePreview).toContain('pnpm test')
 })
 
+it('a tab rename outranks the confirmed Provider name in the mounted Activity row', async () => {
+  await sessionNameStore.read([request], true)
+  useAppStore.setState({
+    tabsByWorktree: {
+      'wt-1': [{ ...makeTab(), title: '正在处理实时内容', customTitle: '手动改名' }]
+    }
+  })
+  const { result } = mountThreads()
+  await waitFor(() => expect(result.current.allThreads[0]?.paneTitle).toBe('手动改名'))
+})
+
 it('a name-only public refresh changes the mounted row with no status, tab or freshness write', async () => {
   await sessionNameStore.read([request], true)
   const { result } = mountThreads()

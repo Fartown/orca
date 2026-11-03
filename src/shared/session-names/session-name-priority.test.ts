@@ -4,8 +4,8 @@ import { getAgentRowConversationName } from '../agent-row-conversation-name'
 import { resolveSessionDisplayTitle } from '../session-display-title'
 import { resolveTerminalTabTitle, resolveUnifiedTabLabel } from '../tab-title-resolution'
 
-describe('REQ-025 provider-first naming contract', () => {
-  it('uses Provider, manual, stable prompt, live, owned label, then identity fallback', () => {
+describe('REQ-025 manual-first naming contract', () => {
+  it('uses manual, Provider, stable prompt, live, owned label, then identity fallback', () => {
     const candidates = {
       providerTitle: 'Provider name',
       userTitle: 'Manual name',
@@ -14,9 +14,9 @@ describe('REQ-025 provider-first naming contract', () => {
       labelTitle: 'Launch label',
       identityFallbackTitle: 'Codex abcd1234'
     }
-    expect(resolveSessionDisplayTitle(candidates)?.title).toBe('Provider name')
-    expect(resolveSessionDisplayTitle({ ...candidates, providerTitle: null })?.title).toBe(
-      'Manual name'
+    expect(resolveSessionDisplayTitle(candidates)?.title).toBe('Manual name')
+    expect(resolveSessionDisplayTitle({ ...candidates, userTitle: null })?.title).toBe(
+      'Provider name'
     )
     expect(
       resolveSessionDisplayTitle({ ...candidates, providerTitle: null, userTitle: null })?.title
@@ -38,17 +38,17 @@ describe('REQ-025 provider-first naming contract', () => {
     ).toBe('Codex abcd1234')
   })
 
-  it('keeps a confirmed Provider snapshot above a manual fallback', () => {
+  it('keeps a manual name above a confirmed Provider snapshot', () => {
     expect(
       resolveSessionDisplayTitle({
         providerTitleSnapshot: 'Known Provider name',
         userTitle: 'Manual name'
       })?.title
-    ).toBe('Known Provider name')
+    ).toBe('Manual name')
   })
 
   it.each(['claude', 'codex'] as const)(
-    'does not let %s tab labels override the Provider name',
+    'lets a %s tab rename, but not its quick-command label, override the Provider name',
     (agent) => {
       const aiVaultTitle = {
         agent,
@@ -58,17 +58,16 @@ describe('REQ-025 provider-first naming contract', () => {
         source: 'provider' as const
       }
       const tab = {
-        customTitle: 'Container alias',
+        customTitle: 'Tab rename',
         quickCommandLabel: 'Launch label',
         aiVaultTitle,
         generatedTitle: 'Fix login',
         title: 'Running tests'
       }
-      expect(resolveTerminalTabTitle(tab, true)).toBe('Provider name')
-      expect(
+      const unified = (customLabel: string | null) =>
         resolveUnifiedTabLabel(
           {
-            customLabel: tab.customTitle,
+            customLabel,
             quickCommandLabel: tab.quickCommandLabel,
             aiVaultTitle,
             generatedLabel: tab.generatedTitle,
@@ -76,12 +75,43 @@ describe('REQ-025 provider-first naming contract', () => {
           },
           true
         )
-      ).toBe('Provider name')
+      expect(resolveTerminalTabTitle(tab, true)).toBe('Tab rename')
+      expect(unified(tab.customTitle)).toBe('Tab rename')
+      // The rename on the tab itself outranks a shared manual name for the session.
       expect(
         getAgentRowConversationName(tab, agent, true, undefined, { userTitle: 'Manual name' })
-      ).toBe('Provider name')
+      ).toBe('Tab rename')
+      const unnamed = { ...tab, customTitle: null }
+      expect(resolveTerminalTabTitle(unnamed, true)).toBe('Provider name')
+      expect(unified(null)).toBe('Provider name')
+      expect(
+        getAgentRowConversationName(unnamed, agent, true, undefined, { userTitle: 'Manual name' })
+      ).toBe('Manual name')
+      expect(getAgentRowConversationName(unnamed, agent, true)).toBe('Provider name')
     }
   )
+
+  it('puts an Agent tab manual rename above the Provider name and the live title', () => {
+    const named = {
+      agent: 'claude' as const,
+      sessionId: 'session-a',
+      title: 'Provider name',
+      providerName: { kind: 'named' as const, title: 'Provider name', field: 'test.nativeName' }
+    }
+    for (const aiVaultTitle of [named, undefined]) {
+      const tab = {
+        customTitle: 'ANSWER HERE: gate 004',
+        launchAgent: 'claude' as const,
+        aiVaultTitle,
+        title: '✳ gate question'
+      }
+      expect(resolveTerminalTabTitle(tab, true, tab.title)).toBe('ANSWER HERE: gate 004')
+      expect(getAgentRowConversationName(tab, 'claude', true)).toBe('ANSWER HERE: gate 004')
+      expect(resolveTerminalTabTitle({ ...tab, customTitle: null }, true, tab.title)).toBe(
+        aiVaultTitle ? 'Provider name' : 'gate question'
+      )
+    }
+  })
 
   it.each(['继续', '好的', 'OK!', 'continue', '谢谢。', 'please', 'hello'])(
     'rejects prompt-only %s without rejecting an explicit name',

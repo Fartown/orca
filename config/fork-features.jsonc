@@ -954,6 +954,16 @@
       ],
       "seams": [
         {
+          "file": "src/main/agent-hooks/server-codex-side-thread.test.ts",
+          "mustContain": "D-009 keeps a rollout-less Codex session from replacing a backed row",
+          "why": "upstream's ephemeral-takeover cases pin the fork's kept D-009 rule (D-011)"
+        },
+        {
+          "file": "src/wsl-guest/agent-hook-server-codex-side-thread.test.ts",
+          "mustContain": "D-009 keeps a rollout-less Codex session from replacing a backed row",
+          "why": "the relay-side ephemeral-takeover case pins the same kept D-009 rule (D-011)"
+        },
+        {
           "file": "src/renderer/src/store/slices/agent-status/agent-status-row-order-origin.test.ts",
           "mustContain": "B does not inherit A's state clock",
           "why": "a replacement session keeps its own state clock while sidebar order still follows its origin"
@@ -1231,7 +1241,7 @@
         {
           "file": "src/shared/session-display-title.ts",
           "mustContain": "resolveSessionDisplayTitle",
-          "why": "one provider-first candidate order is shared by conversation consumers"
+          "why": "one candidate order, manual name first, is shared by conversation consumers (D-010)"
         },
         {
           "file": "src/shared/agent-tab-title.ts",
@@ -1241,7 +1251,7 @@
         {
           "file": "src/shared/tab-title-resolution.ts",
           "mustContain": "resolveSessionDisplayTitle",
-          "why": "agent tabs use the same order without custom or command-label overrides"
+          "why": "agent tabs use the same order: their manual name ranks first, quick-command labels stay in the label tier (D-010)"
         },
         {
           "file": "src/shared/agent-row-conversation-name.ts",

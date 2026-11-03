@@ -68,7 +68,8 @@ it('keeps a remote main Codex turn working through /side chats across relay rest
   }
 })
 
-it('lets a new remote ephemeral Codex conversation replace a row left working', async () => {
+// Fork (session-names): D-009 keeps a rollout-less Codex session from replacing a backed row.
+it('keeps a remote backed row left working when a new ephemeral Codex conversation starts', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'relay-codex-new-'))
   const desktop = new AgentHookServer()
   const relay = new RelayAgentHookServer({
@@ -96,8 +97,8 @@ it('lets a new remote ephemeral Codex conversation replace a row left working', 
     await post({ ...next, hook_event_name: 'UserPromptSubmit', prompt: 'new task' })
     expect(desktop.getStatusSnapshot()[0]).toMatchObject({
       state: 'working',
-      prompt: 'new task',
-      providerSession: { id: 'new-session' }
+      prompt: 'old task',
+      providerSession: { id: 'old-session' }
     })
   } finally {
     relay.stop()

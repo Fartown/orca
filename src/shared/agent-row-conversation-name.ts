@@ -1,4 +1,4 @@
-// Conversation names share the Provider-first order; task/status previews remain separate.
+// Conversation names share the manual-then-Provider order; task/status previews remain separate.
 import type { AgentType } from './agent-status-types'
 import { isClaudeManagementTitle } from './agent-title-core'
 import { stripLeadingAgentTitleDecorationOrEmpty } from './agent-title-decoration'
@@ -127,9 +127,11 @@ export function getAgentRowConversationName(
       ? undefined
       : tab.aiVaultTitle
   const sessionNames = sessionNameSlotCandidates(slot)
+  // A tab rename names only a single-pane tab's session; split siblings cannot inherit it.
+  const tabRename = paneLiveTitle === undefined ? tab.customTitle?.trim() : null
   const resolved = resolveSessionDisplayTitle({
     ...sessionNames,
-    userTitle: options.userTitle ?? sessionNames.userTitle,
+    userTitle: tabRename || (options.userTitle ?? sessionNames.userTitle),
     providerTitle:
       sessionNames.providerTitle ??
       (agentType === 'opencode' && isMeaningfulOpenCodeTerminalTitle(liveTitle) ? liveTitle : null),
@@ -139,8 +141,7 @@ export function getAgentRowConversationName(
     liveTitle: liveTitle
       ? resolveAgentConversationLiveTitle(liveTitle, agentType, tab.defaultTitle)
       : null,
-    labelTitle:
-      paneLiveTitle === undefined ? tab.customTitle?.trim() || tab.quickCommandLabel : null,
+    labelTitle: paneLiveTitle === undefined ? tab.quickCommandLabel : null,
     identityFallbackTitle: options.identityFallbackTitle
   })
   return resolved?.title ?? null

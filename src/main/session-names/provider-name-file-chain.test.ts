@@ -63,11 +63,12 @@ describe('file to parser to transport to shared presentation', () => {
       jsonl([{ type: 'custom-title', customTitle: '继续', sessionId: 'session' }])
     )
     const native = await read()
+    // No manual name here: a manual name outranks the native one (REQ-025).
     const slot = projectSessionNameSlot({
       ...request,
       title: native.titles[0],
       evidence: native.nameEvidence?.[0],
-      manualTitle: 'Old manual'
+      manualTitle: null
     })!
     expect(slot.providerName).toEqual({
       kind: 'named',
@@ -76,7 +77,7 @@ describe('file to parser to transport to shared presentation', () => {
     })
     expect(
       resolveTerminalTabTitle(
-        { title: 'Testing step', customTitle: 'Container', aiVaultTitle: slot },
+        { title: 'Testing step', customTitle: null, aiVaultTitle: slot },
         false
       )
     ).toBe('继续')
@@ -89,7 +90,7 @@ describe('file to parser to transport to shared presentation', () => {
         ...request,
         previous: slot,
         evidence: unavailable.nameEvidence?.[0],
-        manualTitle: 'Old manual'
+        manualTitle: null
       })?.title
     ).toBe('继续')
     const mismatch = await readAiVaultSessionTitlesFromFiles([
@@ -129,7 +130,7 @@ describe('file to parser to transport to shared presentation', () => {
       ...request,
       title: next.titles[0],
       evidence: next.nameEvidence?.[0],
-      manualTitle: 'Old manual'
+      manualTitle: null
     })!
     expect(
       resolveTerminalTabTitle({ title: 'Live title', customTitle: null, aiVaultTitle: slot }, false)

@@ -80,11 +80,6 @@ export function useActivitySessionNames(
       const host = hostFor(target)
       const key = agent && sessionId ? canonicalSessionTitleKey(host, agent, sessionId) : null
       const record = key ? sessionNameStore.getSnapshot().get(key) : undefined
-      const confirmedName =
-        key && record?.providerName?.kind === 'named' ? names.get(key) : undefined
-      if (confirmedName) {
-        return confirmedName
-      }
       const pane = parsePaneKey(entry.paneKey)
       const layout = state.layouts[tab.id]
       const current = state.status[entry.paneKey]
@@ -102,6 +97,13 @@ export function useActivitySessionNames(
         : null
       // A native chat's projected customTitle is its host-saved name, the one its tab shows.
       const chatSavedName = isChatTab ? tab.customTitle : null
+      // The confirmed index already ranks shared manual names; a tab-level one still outranks it.
+      const tabManualName = ownsContainer ? tab.customTitle?.trim() : undefined
+      const confirmedName =
+        !tabManualName && key && record?.providerName?.kind === 'named' ? names.get(key) : undefined
+      if (confirmedName) {
+        return confirmedName
+      }
       return getActivitySessionName(entry, tab, state.generated, {
         record,
         manualTitle:

@@ -9,14 +9,14 @@ function makeTab(overrides: Partial<ConversationNameTab> = {}): ConversationName
 }
 
 describe('getAgentRowConversationName', () => {
-  it('keeps a stable prompt ahead of a container alias', () => {
+  it('prefers the manual tab rename over every other source', () => {
     const tab = makeTab({
       customTitle: 'Patient sync spike',
       quickCommandLabel: 'Run tests',
       generatedTitle: 'Fix intake flow',
       title: '✳ Investigate replay bug'
     })
-    expect(getAgentRowConversationName(tab, 'claude', true)).toBe('Fix intake flow')
+    expect(getAgentRowConversationName(tab, 'claude', true)).toBe('Patient sync spike')
   })
 
   it('keeps a meaningful live name ahead of the quick-command label', () => {
