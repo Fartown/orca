@@ -149,6 +149,15 @@ external_ids: []
 - 未解决问题：无。
 - 下一步：推送后看 Windows hosts 任务的结果。
 
+### 2026-11-03 orcad 槽位探测命令的字节上限随 fork 产物调高（testing）
+
+- 本轮目标：修掉同步后 `posix-host-op-byte-budget.test.ts` 的 `cachedOrcadSlotProbeCommand` 用例。
+- 完成内容：这条探测命令会逐个列出 orcad 产物。fork 加了 goals 的 3 个产物和局域网分享的 3 个产物，实测 7366 字节，超过上游设的上限 7069。这条命令只通过 wsl.exe 的参数发送，不走 SSH，所以不受网关约 10 KB 截断的限制（#30491）。上限调到 7366，并在代码里注明原因。
+- 代码或文档变更：上游测试改一行上限加一行注释；登记为本功能接缝，并加入预算白名单和工作区范围。
+- 验证证据：该测试 65 条全部通过，`check:fork-features` 和 `check:architecture-policies` 通过。
+- 未解决问题：以后 fork 再给 orcad 加产物，这个上限还要跟着调。
+- 下一步：随修正一起推送。
+
 ### 2026-10-09 修复同步基线的测试运行边界（testing）
 
 - 本轮目标：消除 PR #53 全仓库 CI 暴露的既有测试配置缺口，独立于摘要性能修改。

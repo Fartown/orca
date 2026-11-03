@@ -104,7 +104,8 @@ const OVER_BUDGET_CEILINGS: Readonly<Record<string, number>> = {
   // WSL-only: wsl.exe argv, never SSH-framed; carries the Node bridge as its fallback.
   orcadBashStdioBridgeCommand: 6_300,
   // WSL-only (sent only under recordedNodeRuntimeProbe): wsl.exe argv, never SSH-framed.
-  cachedOrcadSlotProbeCommand: 7_069
+  // Fork: the goals and LAN artifact-share orcad artifacts add 297 bytes.
+  cachedOrcadSlotProbeCommand: 7_366
 }
 
 type HostCase = { host: RemoteHostPlatform; target: NodeRuntimeTarget; nodePath: string }

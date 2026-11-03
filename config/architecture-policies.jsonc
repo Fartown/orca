@@ -371,6 +371,7 @@
             ".github/workflows/ci-cache-warmup-platform-jobs.yml",
             ".github/workflows/ci-cache-warmup.yml",
             ".github/workflows/ssh-windows-hosts.yml",
+            "src/main/managed-server/posix-host-op-byte-budget.test.ts",
             "config/scripts/integration-builds/**",
             "src/shared/integration-builds/**",
             "src/main/integration-builds/**",
@@ -863,6 +864,7 @@
           ],
           "allowedPaths": [
             ".github/workflows/ssh-windows-hosts.yml",
+            "src/main/managed-server/posix-host-op-byte-budget.test.ts",
             "src/shared/rpc-contract/rpc-params-catalog.generated.ts",
             "src/main/runtime/rpc/rpc-params-type-parity.ts",
             "src/packages/process-host/src/run-process.ts",

@@ -655,6 +655,11 @@
       ],
       "seams": [
         {
+          "file": "src/main/managed-server/posix-host-op-byte-budget.test.ts",
+          "mustContain": "Fork: the goals and LAN artifact-share orcad artifacts add 297 bytes.",
+          "why": "the cached WSL slot probe lists every orcad artifact, including the fork's six"
+        },
+        {
           "file": ".github/workflows/ssh-windows-hosts.yml",
           "mustContain": "goal-mode",
           "why": "the sparse Windows checkout must include the goal driver sources the orcad build bundles"
