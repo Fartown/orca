@@ -134,10 +134,12 @@ jobs:
           # All of src: the orcad-convert cell builds the full e2e app and the bundled CLI.
           # mobile: the template ships the mobile web page, which builds from mobile/.
           # cloud: config/tsconfig.vitest-transform.json references the cloud projects, so vitest needs them.
+          # goal-mode: the fork's orcad build bundles the goal driver from it.
           sparse-checkout: |
             .github
             cloud
             config
+            goal-mode
             mobile
             native
             resources

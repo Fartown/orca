@@ -370,6 +370,7 @@
             "config/scripts/mobile-web-bundle-packaging-workflow-contract.test.mjs",
             ".github/workflows/ci-cache-warmup-platform-jobs.yml",
             ".github/workflows/ci-cache-warmup.yml",
+            ".github/workflows/ssh-windows-hosts.yml",
             "config/scripts/integration-builds/**",
             "src/shared/integration-builds/**",
             "src/main/integration-builds/**",
@@ -861,6 +862,7 @@
             "goal-mode/**"
           ],
           "allowedPaths": [
+            ".github/workflows/ssh-windows-hosts.yml",
             "src/shared/rpc-contract/rpc-params-catalog.generated.ts",
             "src/main/runtime/rpc/rpc-params-type-parity.ts",
             "src/packages/process-host/src/run-process.ts",

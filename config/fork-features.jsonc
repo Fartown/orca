@@ -655,6 +655,11 @@
       ],
       "seams": [
         {
+          "file": ".github/workflows/ssh-windows-hosts.yml",
+          "mustContain": "goal-mode",
+          "why": "the sparse Windows checkout must include the goal driver sources the orcad build bundles"
+        },
+        {
           "file": "src/packages/process-host/src/run-process.ts",
           "mustContain": "spec.onStdout?.(chunk)",
           "why": "observe structured draft activity through the canonical process runner"

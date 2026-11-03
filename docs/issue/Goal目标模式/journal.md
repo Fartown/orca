@@ -3,7 +3,7 @@ title: Goal 目标模式
 slug: Goal目标模式
 status: testing
 created: 2026-09-05
-updated: 2026-10-21
+updated: 2026-11-03
 external_ids: []
 ---
 
@@ -139,6 +139,15 @@ external_ids: []
 - 影响范围：需求、技术说明、测试规格及本需求的执行证据。
 
 ## 3. 开发记录
+
+### 2026-11-03 Windows 主机 CI 的稀疏检出补上 goal-mode（testing）
+
+- 本轮目标：修掉 2026-11-02 上游同步后 `ssh-windows-hosts.yml` 的 4 个 Windows hosts 任务。
+- 完成内容：这个工作流用稀疏检出，只取 `.github`、`cloud`、`config`、`mobile`、`native`、`resources`、`tests`、`src`。fork 的 orcad 构建会打包 `goal-mode/cli/goal-driver-entry.mjs`，所以 esbuild 报 Could not resolve。已在检出列表里补上 `goal-mode`。
+- 代码或文档变更：上述工作流加一行；该文件登记为本功能接缝，并加入预算白名单和工作区范围。
+- 验证证据：引用该工作流的 3 个测试（110 条）通过；`check:fork-features`、`check:architecture-policies` 通过。Windows 实跑以下一次 CI 为准。
+- 未解决问题：无。
+- 下一步：推送后看 Windows hosts 任务的结果。
 
 ### 2026-10-09 修复同步基线的测试运行边界（testing）
 
