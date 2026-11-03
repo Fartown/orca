@@ -9,6 +9,10 @@ vi.mock('../git/runner', () => ({
 vi.mock('../source-control/pull-request-template', () => ({
   readHostedPullRequestTemplate: vi.fn(async () => '')
 }))
+// Host verification is covered by its own tests; these exercise the client once a host is Gitea.
+vi.mock('../gitea-host-verification/gitea-host-probe', () => ({
+  confirmGiteaRepoRef: async <T>(repo: T): Promise<T> => repo
+}))
 
 import {
   getGiteaPullRequestForBranch,

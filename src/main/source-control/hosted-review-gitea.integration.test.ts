@@ -44,6 +44,11 @@ describe('Gitea hosted review integration', () => {
         authorization: req.headers.authorization
       })
 
+      if (url.pathname === '/api/v1/version') {
+        sendJson(res, { version: '1.22.0' })
+        return
+      }
+
       if (url.pathname === '/api/v1/repos/team/repo/pulls') {
         sendJson(res, [
           {
@@ -102,11 +107,16 @@ describe('Gitea hosted review integration', () => {
       })
 
       expect(seen.map((request) => request.pathname)).toEqual([
+        '/api/v1/version',
         '/api/v1/repos/team/repo/pulls',
         '/api/v1/repos/team/repo/commits/abc123/status'
       ])
-      expect(seen.every((request) => request.authorization === 'token local-token')).toBe(true)
-      expect(new URLSearchParams(seen[0].search).get('state')).toBe('all')
+      // The host probe runs before the host is known to be Gitea, so it must not carry the token.
+      expect(seen[0].authorization).toBeUndefined()
+      expect(seen.slice(1).every((request) => request.authorization === 'token local-token')).toBe(
+        true
+      )
+      expect(new URLSearchParams(seen[1].search).get('state')).toBe('all')
     } finally {
       await rm(repoPath, { recursive: true, force: true })
       await new Promise<void>((resolve, reject) => {

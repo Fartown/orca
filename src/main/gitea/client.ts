@@ -14,6 +14,7 @@ import {
   type HostedReviewExecutionOptions
 } from '../source-control/hosted-review-git-options'
 import { cancelUnreadResponseBody } from '../lib/unread-response-body'
+import { confirmGiteaRepoRef } from '../gitea-host-verification/gitea-host-probe'
 
 const REQUEST_TIMEOUT_MS = 5000
 // Why: self-hosted Forgejo can take ~5s to serve one /pulls page (it loads
@@ -334,5 +335,10 @@ export async function getGiteaRepoSlug(
   connectionId?: string | null,
   options: HostedReviewExecutionOptions = {}
 ): Promise<GiteaRepoRef | null> {
-  return getGiteaRepoRef(repoPath, connectionId, getHostedReviewLocalGitOptions(options))
+  const repo = await getGiteaRepoRef(
+    repoPath,
+    connectionId,
+    getHostedReviewLocalGitOptions(options)
+  )
+  return confirmGiteaRepoRef(repo, { apiBaseConfigured: getAuthConfig().apiBaseUrl !== null })
 }
