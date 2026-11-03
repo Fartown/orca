@@ -58,6 +58,10 @@ vi.mock('../files/MobileFilePreviewScreen', () => ({ MobileFilePreviewScreen: Pr
 vi.mock('../source-control/MobileSourceControlPanel', () => ({ MobileSourceControlPanel: Probe }))
 vi.mock('../session/MobileDiffReviewRouteScreen', () => ({ MobileDiffReviewRouteScreen: Probe }))
 vi.mock('../session/MobileSessionRouteScreen', () => ({ MobileSessionRouteScreen: Probe }))
+// Fork (local-tasks): the session route fills the header's task strip slot.
+vi.mock('../local-tasks/local-task-session-strip-provider', () => ({
+  LocalTaskSessionStripProvider: ({ children }: { children: ReactElement }) => children
+}))
 vi.mock('../agent-history/MobileAgentSessionHistoryPanel', () => ({
   MobileAgentSessionHistoryPanel: Probe
 }))

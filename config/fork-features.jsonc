@@ -3155,11 +3155,6 @@
           "why": "The home tasks section test renders without the card's router and RPC providers (REQ-017)"
         },
         {
-          "file": "mobile/src/layout/host-sidebar-reveal.test.tsx",
-          "mustContain": "vi.mock('../local-tasks/LocalTaskSessionStrip'",
-          "why": "The session header test renders without the task strip's router and RPC providers (REQ-017)"
-        },
-        {
           "file": "mobile/src/tasks/use-mobile-tasks-picker-projection.tsx",
           "mustContain": "...localTaskSourceOptions,",
           "why": "The phone's Task Source picker lists Local ahead of the upstream sources, as the desktop's source bar does; it replaces the host page's own Local button (REQ-008, REQ-017)"
@@ -3386,8 +3381,18 @@
         },
         {
           "file": "mobile/src/session/MobileSessionHeader.tsx",
-          "mustContain": "<LocalTaskSessionStrip controller={controller} />",
-          "why": "The mobile session header mounts the task link strip"
+          "mustContain": "<LocalTaskSessionStripMount controller={controller} />",
+          "why": "The mobile session header mounts the task link strip slot; upstream header tests import no task strip"
+        },
+        {
+          "file": "mobile/app/h/[hostId]/session/[worktreeId].web.tsx",
+          "mustContain": "<LocalTaskSessionStripProvider>",
+          "why": "The session route fills the header's task strip slot (REQ-017)"
+        },
+        {
+          "file": "mobile/src/navigation/workspace-route.test.tsx",
+          "mustContain": "vi.mock('../local-tasks/local-task-session-strip-provider'",
+          "why": "The every-route test renders the session route without the task strip's native graph (REQ-017)"
         },
         {
           "file": "src/renderer/src/app-shell/use-visible-review-refresh-reporting.ts",

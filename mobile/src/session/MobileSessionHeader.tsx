@@ -17,7 +17,7 @@ import { useResponsiveLayout } from '../layout/responsive-layout'
 import type { MobileSessionController } from './use-mobile-session-controller'
 import { useTopChromeSpace } from '../layout/use-top-chrome-space'
 import { useShellSideRail } from '../layout/use-shell-side-rail'
-import { LocalTaskSessionStrip } from '../local-tasks/LocalTaskSessionStrip'
+import { LocalTaskSessionStripMount } from '../local-tasks/local-task-session-strip-slot'
 
 export function MobileSessionHeader({
   controller,
@@ -162,7 +162,7 @@ export function MobileSessionHeader({
             />
           )}
         </View>
-        <LocalTaskSessionStrip controller={controller} />
+        <LocalTaskSessionStripMount controller={controller} />
         {tabsInTopBar ? null : tabStrip}
       </SafeAreaView>
       <MobileSessionHeaderMoreMenu

@@ -75,7 +75,6 @@ vi.mock('./use-top-chrome-space', () => ({ useTopChromeSpace: () => ({}) }))
 vi.mock('../session/MobileSessionHeaderMoreMenu', () => ({
   MobileSessionHeaderMoreMenu: () => null
 }))
-vi.mock('../local-tasks/LocalTaskSessionStrip', () => ({ LocalTaskSessionStrip: () => null }))
 vi.mock('../platform/haptics', () => ({ triggerMediumImpact: () => {} }))
 vi.mock('../transport/host-client-hooks', () => ({
   useDisconnectHostClient: vi.fn(),
