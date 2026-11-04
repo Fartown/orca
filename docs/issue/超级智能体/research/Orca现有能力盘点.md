@@ -80,7 +80,9 @@
 - 身份：`paneKey`（`src/shared/stable-pane-id.ts`）、`ORCA_TERMINAL_HANDLE`、`ORCA_AGENT_SESSION_ID`、provider 自己的会话号。
 - 状态：`working | blocked | waiting | done`（`src/shared/agent-status-types.ts:50`），来自各智能体的托管钩子（本机回环 HTTP 钩子服务），PTY 的 OSC 7501 作兜底；`agent-turn-idle-verdict.ts` 判定一轮结束。
 - 结构化会话（Orca 管进程）：Claude 经 `@anthropic-ai/claude-agent-sdk` 驱动用户自己的 CLI，Codex 经 `codex app-server`，Pi 经 RPC，Grok/OpenCode/OMP/Antigravity 经 ACP；界面 `src/renderer/src/components/native-chat/`，接口 `agentSession.*`。
-- 限制：Claude 结构化会话固定 `claude_code` 预设、`settingSources user/project/local`，`--system-prompt` 被剥掉；ACP 的 `mcpServers` 恒为空。**但工作目录里的 `CLAUDE.md`/`AGENTS.md`、`.claude/settings.json`、技能都会生效**——总管的身份与规则可以写在它自己的工作区里，不需要改上游启动参数。
+- 限制：Claude 结构化会话固定 `claude_code` 预设、`settingSources user/project/local`，`--system-prompt` 被剥掉；ACP 的 `mcpServers` 恒为空。
+- **订阅限制**：Anthropic 的 Agent SDK 文档写明，未经事先批准，第三方开发者不能让基于 Agent SDK 的产品使用 claude.ai 登录或订阅额度，应使用 API Key。Claude 结构化会话正是经 Agent SDK 启动（`src/main/claude/structured/launch/claude-structured-launch-resolution.ts`），所以**总管不能建在它上面**。官方 `claude` 的交互式终端会话就是用户自己在用 Claude Code，不受此限。
+- 终端会话也有聊天视图：桌面的终端聊天视图读同一会话的记录渲染成对话（`claude`、`codex` 等在 `src/shared/native-chat/native-chat-agent-support.ts` 名单里），输入经终端写入；手机同样能把终端里的智能体会话显示成聊天（`mobile/src/session/use-mobile-native-chat-terminal-turn.ts`）。交互式 `claude` / `codex` 本来就读工作目录里的 `CLAUDE.md` / `AGENTS.md`、项目权限设置与技能——总管的身份与规则写在它自己的工作区里即可。
 - Orca 自己**不直接调用任何大模型 API**；文本生成一律以一次性方式调用智能体 CLI（`src/main/text-generation/`）。凭据是各 CLI 自己的登录。
 - Orca **没有对智能体暴露 MCP 服务**；智能体靠 `orca` CLI 加内置技能（`skill-guides/` 编进 `src/cli/bundled-skill-guides.ts`，`orca skills get <name>`）控制 Orca。
 - 注入终端的环境：`ORCA_PANE_KEY`、`ORCA_TAB_ID`、`ORCA_WORKTREE_ID`、`ORCA_TERMINAL_HANDLE`、`ORCA_WORKSPACE_ID`、`ORCA_CLI_COMMAND`、`ORCA_USER_DATA_PATH` 等。
@@ -92,7 +94,7 @@
 - 手机连桌面 Orca 或 `orca serve`/orcad（直连 E2EE WebSocket 或经 Orca Cloud 中继）；手机可调 `agentSession.*`（`runtime-rpc-mobile-agent-session-methods.ts`）、`agent.launch`、`terminal.*`、`worktree.*`、`automation.*`，编排只有 worker 级的少数方法。
 - 手机会话页能显示结构化会话的原生聊天（`mobile/src/session/MobileNativeChat*`）。
 
-**含义**：总管如果是结构化会话，手机上**现在就能和它聊天**；总管等你回答时，现有的 `needs-input` 推送也会响。
+**含义**：总管用官方 CLI 的终端会话时，手机上**现在就能以聊天视图和它对话**；总管等你回答时，现有的 `needs-input` 推送也会响。
 
 ## 8. 外部渠道与插件
 
