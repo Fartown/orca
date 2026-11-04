@@ -11,14 +11,15 @@ external_ids: []
 
 ## 1. 关键文档链接
 
-| 类型 | 文档                                                               | 状态             | 说明                                                                          |
-| ---- | ------------------------------------------------------------------ | ---------------- | ----------------------------------------------------------------------------- |
-| 需求 | [requirements/超级智能体.md](requirements/超级智能体.md)           | draft            | REQ-2301～REQ-2313，全部待确认                                                |
-| 调研 | [research/参考产品调研.md](research/参考产品调研.md)               | completed        | DeepSeek Super-agent、agent-autoloop、Muse、Dots、Cue、OpenClaw               |
-| 调研 | [research/Orca现有能力盘点.md](research/Orca现有能力盘点.md)       | completed        | CLI/RPC、编排、本地任务、Goal、自动化、结构化会话、通知与手机、缺口           |
-| 方案 | [solutions/超级智能体总体方案.md](solutions/超级智能体总体方案.md) | pending-decision | 总管会话 + 总管内核；事件、裁决、卡片、时间、机器归属、分期                   |
-| 方案 | [solutions/典型任务走查.md](solutions/典型任务走查.md)             | draft            | 盯监控、PR 催审合入、开发、调查、通知、一天后问进度；五个保证；各切片验收剧本 |
-| 测试 | -                                                                  | not-required     | 方案确认后、切片 0 开工前编写                                                 |
+| 类型 | 文档                                                               | 状态             | 说明                                                                                                                                   |
+| ---- | ------------------------------------------------------------------ | ---------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| 需求 | [requirements/超级智能体.md](requirements/超级智能体.md)           | draft            | REQ-2301～REQ-2313，全部待确认                                                                                                         |
+| 调研 | [research/参考产品调研.md](research/参考产品调研.md)               | completed        | DeepSeek Super-agent、agent-autoloop、Muse、Dots、Cue、OpenClaw                                                                        |
+| 调研 | [research/Orca现有能力盘点.md](research/Orca现有能力盘点.md)       | completed        | CLI/RPC、编排、本地任务、Goal、自动化、结构化会话、通知与手机、缺口                                                                    |
+| 方案 | [solutions/超级智能体总体方案.md](solutions/超级智能体总体方案.md) | pending-decision | 总管会话 + 总管内核；事件、裁决、卡片、时间、机器归属、分期                                                                            |
+| 方案 | [solutions/超级智能体技术方案.md](solutions/超级智能体技术方案.md) | draft            | 代码布局、账本表、RPC 与调用方识别、总管会话建立与恢复、唤醒投递、派工与回执、探查执行器、观察器、卡片送达、接缝、开工前验证、切片任务 |
+| 方案 | [solutions/典型任务走查.md](solutions/典型任务走查.md)             | draft            | 盯监控、PR 催审合入、开发、调查、通知、一天后问进度；五个保证；各切片验收剧本                                                          |
+| 测试 | -                                                                  | not-required     | 方案确认后、切片 0 开工前编写                                                                                                          |
 
 ## 2. 决策点记录
 
@@ -287,3 +288,20 @@ D-001～D-006、D-008～D-011 **待用户确认**，「推荐」是方案的默�
 - 验证证据：三道门禁与改动文件的 `oxfmt --check` 通过。
 - 未解决问题：D-011 待确认；V-10 待切片 0 开工前在两种 CLI 与 SSH 夹具上实测（含 `codex exec resume` 是否接受 `--output-schema`）。
 - 下一步：同上一条记录。
+
+### 2026-11-04 designing（技术方案）
+
+- 本轮目标：用户问「有技术方案了吗」。总体方案只到架构层，补一份能照着开工的技术方案。
+- 完成内容：
+  - 调研编排内部接口：`createRun`、`insertMessage` + `notifyMessageArrived`、`startWorker`、`task.result`、`crewChanges`、调用方证据；
+  - 调研启动与恢复：`agent.launch` 的建文件夹工作区目标、`viewMode`、冷恢复续接；
+  - 调研无界面运行：Goal 的 `runProcess`、`claudeBackgroundArgs`；
+  - 调研托管评审读取与合入：`hostedReview.forBranch`、`github.mergePR`、`gitlab.mergeMR`；
+  - 调研通知与联系：`notifications:dispatch`、`dispatchMobileNotification`、`getRegisteredSshState`；
+  - 写出技术方案 §1～§20。V-2 已解决，V-1、V-6、V-7 代码已明，新增 V-13～V-18。
+  - 发现并修正一处错误：初稿说 SSH 主机上的命令型监控直接用自动化的 precheck，但 precheck 每次通过都会拉起智能体、且不记状态；改为两步（内核调度的主机侧检查，再加带状态的 `orca super watch-check` 自动化），并同步总体方案 §4.9、需求 REQ-2315、走查 §1。
+  - 另发现 `workerTerminalUserInput` 已是空操作，用户直接对 worker 说话改由钩子记录的提交识别（V-12）。
+- 代码或文档变更：新增 `solutions/超级智能体技术方案.md`；总体方案 §4.9、需求 REQ-2315、走查 §1、本 journal。
+- 验证证据：三道门禁与改动文件的 `oxfmt --check` 通过；接口调用点按文中「已核实」标注逐项读过代码。
+- 未解决问题：决策点 D-001～D-006、D-008～D-011 待确认；V-3～V-5、V-8～V-18 待开工前验证。
+- 下一步：用户确认决策点后，按技术方案 §17 做开工前验证，编写切片 0 的测试用例，开工切片 0。
