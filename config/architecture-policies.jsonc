@@ -807,7 +807,13 @@
             "src/renderer/src/components/right-sidebar/AiVaultSessionRow.test.tsx",
             "src/renderer/src/components/worktree-jump/use-worktree-jump-palette-task-search.test.tsx",
             "src/shared/plugins/languages/protected-copy-keys.json",
-            "src/renderer/src/components/activity/activity-answered-ask-timeline.test.tsx"
+            "src/renderer/src/components/activity/activity-answered-ask-timeline.test.tsx",
+            "src/main/gitea-host-verification/**",
+            "docs/issue/Gitea主机识别校验/**",
+            "src/main/gitea/client.ts",
+            "src/main/gitea/client.test.ts",
+            "src/main/gitea/client-scan-invalidation.test.ts",
+            "src/main/source-control/hosted-review-gitea.integration.test.ts"
           ],
           "message": "Branch changes an upstream path that no fork feature owns or registers as a seam; extend config/fork-features.jsonc and this allowlist, or move the change into a feature-owned path."
         }
@@ -1956,6 +1962,31 @@
           ],
           "importTextHints": ["local-tasks", "local-task-quick-actions"],
           "message": "A native renderer module imports the local task feature; mount it through a registered seam instead."
+        }
+      ]
+    },
+    {
+      "id": "gitea-host-verification",
+      "description": "只把确认是 Gitea 的主机当 Gitea；无法确认时保持原行为，探测不带令牌",
+      "rules": [
+        {
+          "id": "gitea-host-verification-worktree-scope",
+          "type": "change-scope",
+          "comparison": "worktree",
+          "whenChanged": ["src/main/gitea-host-verification/**", "docs/issue/Gitea主机识别校验/**"],
+          "allowedPaths": [
+            "src/main/gitea-host-verification/**",
+            "docs/issue/Gitea主机识别校验/**",
+            "src/main/gitea/client.ts",
+            "src/main/gitea/client.test.ts",
+            "src/main/gitea/client-scan-invalidation.test.ts",
+            "src/main/source-control/hosted-review-gitea.integration.test.ts",
+            "config/fork-features.jsonc",
+            "config/architecture-policies.jsonc",
+            "docs/issue/README.md",
+            ".gitignore"
+          ],
+          "message": "Change is outside Gitea host verification."
         }
       ]
     }

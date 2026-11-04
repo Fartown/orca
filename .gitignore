@@ -251,3 +251,6 @@ ci-shards/
 
 !docs/issue/工作区恢复占位收敛/
 !docs/issue/工作区恢复占位收敛/**
+
+!docs/issue/Gitea主机识别校验/
+!docs/issue/Gitea主机识别校验/**

@@ -3744,6 +3744,47 @@
         "ORCA_BACKGROUND_LAUNCH=1 pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/local-tasks src/renderer/src/components/local-tasks src/renderer/src/components/task-page src/renderer/src/components/cmd-j src/renderer/src/lib/worktree-creation-structured-session.test.ts",
         "pnpm --dir mobile exec vitest run src/local-tasks src/home/MobileHomeTasksAndAutomations.test.tsx"
       ]
+    },
+    {
+      "id": "gitea-host-verification",
+      "title": "Gitea 主机识别校验",
+      "goal": "不认识的自建代码平台先确认是不是 Gitea，明确不是时不再冒充 Gitea 发请求，真 Gitea 不受影响",
+      "journal": "docs/issue/Gitea主机识别校验/journal.md",
+      "dependsOn": [
+        "src/main/git/coalesced-probe.ts",
+        "src/main/git/remote-ref-probe-cache.ts",
+        "src/main/gitea/repository-ref.ts",
+        "src/main/lib/unread-response-body.ts"
+      ],
+      "policyId": "gitea-host-verification",
+      "ownedPaths": ["src/main/gitea-host-verification/**", "docs/issue/Gitea主机识别校验/**"],
+      "requiredFiles": ["src/main/gitea-host-verification/gitea-host-probe.ts"],
+      "seams": [
+        {
+          "file": "src/main/gitea/client.ts",
+          "mustContain": "confirmGiteaRepoRef(repo, { apiBaseConfigured: getAuthConfig().apiBaseUrl !== null })",
+          "why": "Confirm an unclaimed host is Gitea before treating its remote as a Gitea repository"
+        },
+        {
+          "file": "src/main/gitea/client.test.ts",
+          "mustContain": "vi.mock('../gitea-host-verification/gitea-host-probe'",
+          "why": "Scan-cache tests run after detection; host verification has its own tests"
+        },
+        {
+          "file": "src/main/gitea/client-scan-invalidation.test.ts",
+          "mustContain": "vi.mock('../gitea-host-verification/gitea-host-probe'",
+          "why": "Scan-cache tests run after detection; host verification has its own tests"
+        },
+        {
+          "file": "src/main/source-control/hosted-review-gitea.integration.test.ts",
+          "mustContain": "url.pathname === '/api/v1/version'",
+          "why": "The fake Gitea answers the host probe, and the probe must not carry the token"
+        }
+      ],
+      "tests": ["src/main/gitea-host-verification/gitea-host-probe.test.ts"],
+      "checks": [
+        "pnpm exec vitest run --config config/vitest.config.ts src/main/gitea-host-verification src/main/gitea src/main/source-control/hosted-review-gitea.integration.test.ts src/main/source-control/forge-provider.test.ts src/main/source-control/hosted-review.test.ts"
+      ]
     }
   ]
 }
