@@ -832,6 +832,7 @@
             "docs/reference/plugin-host-api.md",
             "resources/plugins/types/orca-host.d.ts",
             "resources/plugins/declarative/orca.d.ts",
+            "resources/plugins/declarative/orca-testing.mjs",
             "skill-guides/orca-plugin-authoring/references/events.md",
             "skill-guides/orca-plugin-authoring/references/host-api.md",
             "src/cli/bundled-skill-guides.ts"
@@ -2044,6 +2045,7 @@
             "docs/reference/plugin-host-api.md",
             "resources/plugins/types/orca-host.d.ts",
             "resources/plugins/declarative/orca.d.ts",
+            "resources/plugins/declarative/orca-testing.mjs",
             "skill-guides/orca-plugin-authoring/references/events.md",
             "skill-guides/orca-plugin-authoring/references/host-api.md",
             "src/cli/bundled-skill-guides.ts",

@@ -3903,12 +3903,18 @@
           "file": "src/cli/bundled-skill-guides.ts",
           "mustContain": "remote?: { name: string; url: string }",
           "why": "Generated from the host API table; regenerate instead of editing"
+        },
+        {
+          "file": "resources/plugins/declarative/orca-testing.mjs",
+          "mustContain": ",remote:",
+          "why": "The plugin testing kit bundles the host API schemas; regenerate with pnpm generate:plugin-declarative-runtime"
         }
       ],
       "tests": [
         "src/shared/plugin-workspace-remote/plugin-workspace-remote.test.ts",
         "src/main/plugin-workspace-remote/plugin-workspace-remote.test.ts",
         "src/main/plugin-workspace-remote/plugin-focused-workspace.test.ts",
+        "src/main/plugin-workspace-remote/plugin-testing-kit-remote.test.ts",
         "src/renderer/src/plugin-workspace-remote/plugin-focused-workspace.test.ts"
       ],
       "checks": [
