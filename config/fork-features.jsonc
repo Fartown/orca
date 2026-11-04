@@ -3785,6 +3785,141 @@
       "checks": [
         "pnpm exec vitest run --config config/vitest.config.ts src/main/gitea-host-verification src/main/gitea src/main/source-control/hosted-review-gitea.integration.test.ts src/main/source-control/forge-provider.test.ts src/main/source-control/hosted-review.test.ts"
       ]
+    },
+    {
+      "id": "plugin-workspace-remote",
+      "title": "插件读取工作区远程仓库",
+      "goal": "插件能拿到聚焦工作区（本地与 SSH）及工作区列表各行所属仓库的远程地址（去掉凭据），不必在主机上执行命令",
+      "journal": "docs/issue/插件读取工作区远程仓库/journal.md",
+      "dependsOn": [
+        "src/shared/git-remote-error.ts",
+        "src/shared/git-remote-identity.ts",
+        "src/shared/repo-types.ts",
+        "src/shared/worktree/id.ts",
+        "src/renderer/src/store/index.ts",
+        "src/renderer/src/store/worktree-repo-index.ts",
+        "src/renderer/src/store/workspace-record-selectors.ts"
+      ],
+      "policyId": "plugin-workspace-remote",
+      "ownedPaths": [
+        "src/shared/plugin-workspace-remote/**",
+        "src/main/plugin-workspace-remote/**",
+        "src/renderer/src/plugin-workspace-remote/**",
+        "docs/issue/插件读取工作区远程仓库/**"
+      ],
+      "requiredFiles": ["src/shared/plugin-workspace-remote/plugin-workspace-remote.ts"],
+      "seams": [
+        {
+          "file": "src/shared/plugins/workers/plugin-host-api.ts",
+          "mustContain": "remote: pluginWorkspaceRemoteSchema.optional()",
+          "why": "The focused-workspace context plugins read and receive in workspace.changed carries the recorded remote"
+        },
+        {
+          "file": "src/shared/plugins/workers/plugin-host-api-workspace-methods.ts",
+          "mustContain": "remote: pluginWorkspaceRemoteSchema.optional()",
+          "why": "Each workspace.list row carries its repository's recorded remote"
+        },
+        {
+          "file": "src/main/plugins/plugin-runtime-binding.ts",
+          "mustContain": "withPluginWorkspaceRemote(",
+          "why": "The plugin delegate adds the remote once, for readContext and workspace.changed alike"
+        },
+        {
+          "file": "src/main/plugins/workers/plugin-host-service-bindings.ts",
+          "mustContain": "...(context.remote ? { remote: context.remote } : {})",
+          "why": "The host services keep the remote when they narrow the runtime context"
+        },
+        {
+          "file": "src/main/plugins/workers/plugin-workspace-projection.ts",
+          "mustContain": "...(context.remote ? { remote: context.remote } : {})",
+          "why": "The public context projection passes the remote through"
+        },
+        {
+          "file": "src/main/plugins/workers/plugin-host-method-bindings.ts",
+          "mustContain": "remote?: PluginWorkspaceRemote",
+          "why": "The host context type names the optional remote"
+        },
+        {
+          "file": "src/main/plugins/workers/plugin-host-workspace-method-bindings.ts",
+          "mustContain": "pluginWorkspaceRemoteForRepo(listedRepos, worktree.repoId)",
+          "why": "workspace.list reads each row's remote from the repo list it already fetches"
+        },
+        {
+          "file": "src/main/plugins/workers/plugin-host-method-bindings.ts",
+          "mustContain": "return readPluginFocusedWorkspaceElsewhere(services.renderer)",
+          "why": "readContext asks the window when main's runtime does not own the focused workspace (an orcad-managed SSH host)"
+        },
+        {
+          "file": "src/main/plugins/plugin-runtime-binding.ts",
+          "mustContain": "return { context: await readPluginFocusedWorkspaceElsewhere(renderer) }",
+          "why": "workspace.changed and panel replays ask the window the same way"
+        },
+        {
+          "file": "src/shared/plugins/view/plugin-view-protocol.ts",
+          "mustContain": "| { kind: 'read-focused-workspace' }",
+          "why": "The window request that reads the focused worktree record"
+        },
+        {
+          "file": "src/main/plugins/view/plugin-view-reply-schema.ts",
+          "mustContain": "workspace: pluginFocusedWorkspaceSchema.nullable().optional()",
+          "why": "Main's reply check keeps the window's answer instead of stripping it"
+        },
+        {
+          "file": "src/main/plugins/view/plugin-host-renderer-actions.ts",
+          "mustContain": "askForReply({ kind: 'read-focused-workspace' })",
+          "why": "The plugin host's window actions expose the read"
+        },
+        {
+          "file": "src/renderer/src/components/plugins/view/plugin-view-request-handler.ts",
+          "mustContain": "return readPluginFocusedWorkspace(request)",
+          "why": "The window answers the read from its own workspace records"
+        },
+        {
+          "file": "docs/reference/plugin-host-api.md",
+          "mustContain": "remote?: { name: string; url: string }",
+          "why": "Generated from the host API table; regenerate instead of editing"
+        },
+        {
+          "file": "resources/plugins/types/orca-host.d.ts",
+          "mustContain": "remote?: { name: string; url: string }",
+          "why": "Generated from the host API table; regenerate instead of editing"
+        },
+        {
+          "file": "resources/plugins/declarative/orca.d.ts",
+          "mustContain": "remote?: { name: string; url: string }",
+          "why": "Generated from the host API table; regenerate instead of editing"
+        },
+        {
+          "file": "skill-guides/orca-plugin-authoring/references/events.md",
+          "mustContain": "remote?: { name: string; url: string }",
+          "why": "Generated from the host API table; regenerate instead of editing"
+        },
+        {
+          "file": "skill-guides/orca-plugin-authoring/references/host-api.md",
+          "mustContain": "remote?: { name: string; url: string }",
+          "why": "Generated from the host API table; regenerate instead of editing"
+        },
+        {
+          "file": "src/cli/bundled-skill-guides.ts",
+          "mustContain": "remote?: { name: string; url: string }",
+          "why": "Generated from the host API table; regenerate instead of editing"
+        },
+        {
+          "file": "resources/plugins/declarative/orca-testing.mjs",
+          "mustContain": ",remote:",
+          "why": "The plugin testing kit bundles the host API schemas; regenerate with pnpm generate:plugin-declarative-runtime"
+        }
+      ],
+      "tests": [
+        "src/shared/plugin-workspace-remote/plugin-workspace-remote.test.ts",
+        "src/main/plugin-workspace-remote/plugin-workspace-remote.test.ts",
+        "src/main/plugin-workspace-remote/plugin-focused-workspace.test.ts",
+        "src/main/plugin-workspace-remote/plugin-testing-kit-remote.test.ts",
+        "src/renderer/src/plugin-workspace-remote/plugin-focused-workspace.test.ts"
+      ],
+      "checks": [
+        "ORCA_BACKGROUND_LAUNCH=1 pnpm exec vitest run --config config/vitest.config.ts src/shared/plugin-workspace-remote src/main/plugin-workspace-remote src/renderer/src/plugin-workspace-remote src/main/plugins src/shared/plugins src/renderer/src/components/plugins"
+      ]
     }
   ]
 }

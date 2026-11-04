@@ -1,7 +1,13 @@
+import {
+  withPluginWorkspaceRemote,
+  type PluginWorkspaceRemoteSource
+} from '../../shared/plugin-workspace-remote/plugin-workspace-remote'
 import type { PluginEventName } from '../../shared/plugins/manifest/plugin-manifest'
 import type { PluginAgentStatusChangedPayload } from '../../shared/plugins/events/plugin-events'
 import { PLUGIN_WORKSPACE_TERMINAL_LIMIT } from '../../shared/plugins/workers/plugin-host-api'
 import type { PluginRuntimeDelegate } from './workers/plugin-host-service-bindings'
+import { readPluginFocusedWorkspaceElsewhere } from '../plugin-workspace-remote/plugin-focused-workspace'
+import { getPluginHostRendererActions } from './view/plugin-host-renderer-actions'
 import type { PluginService } from './plugin-service'
 import { installPluginHookRunner } from './hooks/plugin-hook-participants'
 import type { OrcaRuntimeService } from '../runtime/orca-runtime'
@@ -22,7 +28,8 @@ type PluginEvents = {
   wantsEvent(event: PluginEventName): boolean
 }
 
-type RuntimeDelegateSource = Omit<PluginRuntimeDelegate, 'listAgentStatuses' | 'callRuntime'>
+type RuntimeDelegateSource = Omit<PluginRuntimeDelegate, 'listAgentStatuses' | 'callRuntime'> &
+  PluginWorkspaceRemoteSource
 
 const WORKSPACE_CHANGE_DEBOUNCE_MS = 150
 
@@ -34,7 +41,11 @@ export function pluginRuntimeDelegate(
 ): PluginRuntimeDelegate {
   return {
     ...(callRuntime ? { callRuntime } : {}),
-    resolveActiveWorktreeContext: () => runtime.resolveActiveWorktreeContext(),
+    resolveActiveWorktreeContext: async () =>
+      withPluginWorkspaceRemote(
+        await runtime.resolveActiveWorktreeContext(),
+        runtime.listVisibleRepos?.() ?? []
+      ),
     listTerminals: (...args) => runtime.listTerminals(...args),
     sendTerminal: (...args) => runtime.sendTerminal(...args),
     dispatchPluginNotification: (input) => runtime.dispatchPluginNotification(input),
@@ -103,9 +114,13 @@ export function createPluginAgentStatusForwarder(
 
 /** The `workspace.changed` payload for the context as it is now. */
 export async function readPluginWorkspaceChange(
-  delegate: PluginRuntimeDelegate
+  delegate: PluginRuntimeDelegate,
+  renderer = getPluginHostRendererActions()
 ): Promise<{ context: PluginWorkspaceContext }> {
   const context = await delegate.resolveActiveWorktreeContext().catch(() => null)
+  if (!context) {
+    return { context: await readPluginFocusedWorkspaceElsewhere(renderer) }
+  }
   const terminals = context
     ? await listWorkspaceTerminals(delegate, context.worktreeId).catch(() => [])
     : []

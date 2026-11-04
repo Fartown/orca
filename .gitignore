@@ -254,3 +254,6 @@ ci-shards/
 
 !docs/issue/Gitea主机识别校验/
 !docs/issue/Gitea主机识别校验/**
+
+!docs/issue/插件读取工作区远程仓库/
+!docs/issue/插件读取工作区远程仓库/**
