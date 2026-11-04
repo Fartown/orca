@@ -44,7 +44,7 @@ Methods whose capability is `none` need no capability but still need the plugin 
 Branch, name and terminal ids of the focused workspace, or null when none is focused.
 
 ```ts
-(params?: {}) => { branch: string; displayName: string; terminals: { id: string; title?: string }[] } | null
+(params?: {}) => { branch: string; displayName: string; terminals: { id: string; title?: string }[]; remote?: { name: string; url: string } } | null
 ```
 
 ### `terminal.sendText`
@@ -196,7 +196,7 @@ Changes one of the plugin's `contributes.statusBarItems` (named by `id`): fields
 Lists every workspace, Git worktrees and folders, on every host Orca reaches.
 
 ```ts
-(params?: {}) => { workspaces: { id: string; kind: "worktree" | "folder"; name: string; path: string; branch: string | null; hostId: string | null }[]; truncated: boolean }
+(params?: {}) => { workspaces: { id: string; kind: "worktree" | "folder"; name: string; path: string; branch: string | null; hostId: string | null; remote?: { name: string; url: string } }[]; truncated: boolean }
 ```
 
 ### `workspace.open`
@@ -256,7 +256,7 @@ A worker receives the events its manifest lists in `contributes.events` through 
 | `workspace.created` | `{ workspaceId: string; kind: "worktree" \| "folder"; path: string; branch: string }` | A worktree workspace was created. |
 | `workspace.removed` | `{ workspaceId: string; kind: "worktree" \| "folder"; path: string }` | A worktree workspace was removed. |
 | `agent.status.changed` | `{ workspaceId: string \| null; paneKey: string; terminalId?: string; title?: string; state: "working" \| "blocked" \| "waiting" \| "done"; receivedAt: number; mainAgent?: { state: "working" \| "blocked" \| "waiting" \| "done"; outcome?: "success" \| "failure" \| "cancellation" \| "superseded" \| "interruption" \| "unconfirmed"; stateStartedAt: number } }` | An agent in a terminal pane changed status; `workspaceId` is null when Orca cannot tie the pane to a workspace, and `terminalId` names its terminal when Orca lists it. |
-| `workspace.changed` | `{ context: { branch: string; displayName: string; terminals: { id: string; title?: string }[] } \| null }` | The focused workspace changed, or its terminals were opened, closed or renamed; `context` is what `workspace.readContext` now answers. Each new subscriber first gets the current context. |
+| `workspace.changed` | `{ context: { branch: string; displayName: string; terminals: { id: string; title?: string }[]; remote?: { name: string; url: string } } \| null }` | The focused workspace changed, or its terminals were opened, closed or renamed; `context` is what `workspace.readContext` now answers. Each new subscriber first gets the current context. |
 
 ## Hooks
 

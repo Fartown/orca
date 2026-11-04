@@ -807,7 +807,28 @@
             "src/renderer/src/components/right-sidebar/AiVaultSessionRow.test.tsx",
             "src/renderer/src/components/worktree-jump/use-worktree-jump-palette-task-search.test.tsx",
             "src/shared/plugins/languages/protected-copy-keys.json",
-            "src/renderer/src/components/activity/activity-answered-ask-timeline.test.tsx"
+            "src/renderer/src/components/activity/activity-answered-ask-timeline.test.tsx",
+            "src/shared/plugin-workspace-remote/**",
+            "src/main/plugin-workspace-remote/**",
+            "src/renderer/src/plugin-workspace-remote/**",
+            "docs/issue/插件读取工作区远程仓库/**",
+            "src/shared/plugins/view/plugin-view-protocol.ts",
+            "src/main/plugins/view/plugin-view-reply-schema.ts",
+            "src/main/plugins/view/plugin-host-renderer-actions.ts",
+            "src/renderer/src/components/plugins/view/plugin-view-request-handler.ts",
+            "src/shared/plugins/workers/plugin-host-api.ts",
+            "src/shared/plugins/workers/plugin-host-api-workspace-methods.ts",
+            "src/main/plugins/plugin-runtime-binding.ts",
+            "src/main/plugins/workers/plugin-host-service-bindings.ts",
+            "src/main/plugins/workers/plugin-workspace-projection.ts",
+            "src/main/plugins/workers/plugin-host-method-bindings.ts",
+            "src/main/plugins/workers/plugin-host-workspace-method-bindings.ts",
+            "docs/reference/plugin-host-api.md",
+            "resources/plugins/types/orca-host.d.ts",
+            "resources/plugins/declarative/orca.d.ts",
+            "skill-guides/orca-plugin-authoring/references/events.md",
+            "skill-guides/orca-plugin-authoring/references/host-api.md",
+            "src/cli/bundled-skill-guides.ts"
           ],
           "message": "Branch changes an upstream path that no fork feature owns or registers as a seam; extend config/fork-features.jsonc and this allowlist, or move the change into a feature-owned path."
         }
@@ -1956,6 +1977,51 @@
           ],
           "importTextHints": ["local-tasks", "local-task-quick-actions"],
           "message": "A native renderer module imports the local task feature; mount it through a registered seam instead."
+        }
+      ]
+    },
+    {
+      "id": "plugin-workspace-remote",
+      "description": "插件读到聚焦工作区（本地与 SSH）及工作区列表各行所属仓库的远程地址（去掉凭据），不必在主机上执行命令",
+      "rules": [
+        {
+          "id": "plugin-workspace-remote-worktree-scope",
+          "type": "change-scope",
+          "comparison": "worktree",
+          "whenChanged": [
+            "src/shared/plugin-workspace-remote/**",
+            "src/main/plugin-workspace-remote/**",
+            "src/renderer/src/plugin-workspace-remote/**",
+            "docs/issue/插件读取工作区远程仓库/**"
+          ],
+          "allowedPaths": [
+            "src/shared/plugin-workspace-remote/**",
+            "src/main/plugin-workspace-remote/**",
+            "src/renderer/src/plugin-workspace-remote/**",
+            "docs/issue/插件读取工作区远程仓库/**",
+            "src/shared/plugins/view/plugin-view-protocol.ts",
+            "src/main/plugins/view/plugin-view-reply-schema.ts",
+            "src/main/plugins/view/plugin-host-renderer-actions.ts",
+            "src/renderer/src/components/plugins/view/plugin-view-request-handler.ts",
+            "src/shared/plugins/workers/plugin-host-api.ts",
+            "src/shared/plugins/workers/plugin-host-api-workspace-methods.ts",
+            "src/main/plugins/plugin-runtime-binding.ts",
+            "src/main/plugins/workers/plugin-host-service-bindings.ts",
+            "src/main/plugins/workers/plugin-workspace-projection.ts",
+            "src/main/plugins/workers/plugin-host-method-bindings.ts",
+            "src/main/plugins/workers/plugin-host-workspace-method-bindings.ts",
+            "docs/reference/plugin-host-api.md",
+            "resources/plugins/types/orca-host.d.ts",
+            "resources/plugins/declarative/orca.d.ts",
+            "skill-guides/orca-plugin-authoring/references/events.md",
+            "skill-guides/orca-plugin-authoring/references/host-api.md",
+            "src/cli/bundled-skill-guides.ts",
+            "config/fork-features.jsonc",
+            "config/architecture-policies.jsonc",
+            "docs/issue/README.md",
+            ".gitignore"
+          ],
+          "message": "Change is outside plugin workspace remote."
         }
       ]
     }

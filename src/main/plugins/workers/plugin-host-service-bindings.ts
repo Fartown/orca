@@ -1,3 +1,4 @@
+import type { PluginWorkspaceRemote } from '../../../shared/plugin-workspace-remote/plugin-workspace-remote'
 import { PLUGIN_WORKSPACE_TERMINAL_LIMIT } from '../../../shared/plugins/workers/plugin-host-api'
 import type { PluginHostServices } from './plugin-host-methods'
 import type { PluginDesktopFrameServices } from './plugin-host-method-bindings'
@@ -21,6 +22,7 @@ export type PluginRuntimeDelegate = {
     path: string
     branch: string
     displayName: string
+    remote?: PluginWorkspaceRemote
   } | null>
   listTerminals(
     worktreeSelector?: string,
@@ -83,7 +85,8 @@ export function bindPluginHostServices(input: {
       return {
         worktreeId: context.worktreeId,
         branch: context.branch,
-        displayName: context.displayName
+        displayName: context.displayName,
+        ...(context.remote ? { remote: context.remote } : {})
       }
     },
     listWorktreeTerminals: async (worktreeId) => {

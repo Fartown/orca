@@ -1,3 +1,5 @@
+import type { PluginWorkspaceRemote } from '../../../shared/plugin-workspace-remote/plugin-workspace-remote'
+import { readPluginFocusedWorkspaceElsewhere } from '../../plugin-workspace-remote/plugin-focused-workspace'
 import {
   isPluginHostMethodName,
   PLUGIN_HOST_API,
@@ -34,6 +36,7 @@ export type PluginWorktreeContext = {
   worktreeId: string
   branch: string
   displayName: string
+  remote?: PluginWorkspaceRemote
 }
 
 /** Desktop-only sinks for frame methods; absent in headless serve. */
@@ -114,6 +117,9 @@ const OK = { ok: true } as const
 const HANDLERS: Record<PluginHostMethodName, BoundPluginHostMethod> = {
   'workspace.readContext': bind(api['workspace.readContext'], async (_params, { services }) => {
     const context = await services.resolveActiveWorktreeContext()
+    if (!context) {
+      return readPluginFocusedWorkspaceElsewhere(services.renderer)
+    }
     const terminals = context ? await services.listWorktreeTerminals(context.worktreeId) : []
     return projectPluginWorkspaceContext(context, terminals)
   }),

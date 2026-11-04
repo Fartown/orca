@@ -5,12 +5,15 @@ import {
 } from '../../../shared/plugins/view/plugin-view-protocol'
 import type { PluginCommandAliasActionId } from '../../../shared/plugins/contributions/plugin-command-actions'
 import { PluginHostCallError } from '../workers/plugin-host-call-scope'
+import type { PluginFocusedWorkspace } from '../../../shared/plugin-workspace-remote/plugin-workspace-remote'
 
 /** What a worker's `editor.open` and `commands.run` ask of Orca's window. */
 export type PluginHostRendererActions = {
   openFile(worktreeId: string, relativePath: string): Promise<void>
   runAction(action: PluginCommandAliasActionId): Promise<void>
   openFolderWorkspace(folderWorkspaceId: string): Promise<void>
+  /** The window's focused worktree, for one main's runtime does not own; null when none. */
+  readFocusedWorkspace?(): Promise<PluginFocusedWorkspace | null>
 }
 
 /** Sends one request to the main window's renderer; null when there is no window to ask. */
@@ -25,7 +28,9 @@ export function setPluginHostRendererRequest(next: PluginHostRendererRequest | n
   request = next
 }
 
-async function ask(body: PluginViewRequestBody): Promise<void> {
+async function askForReply(
+  body: PluginViewRequestBody
+): Promise<Extract<PluginViewReply, { ok: true }>> {
   const pending = request?.(body) ?? null
   if (!pending) {
     throw new PluginHostCallError('unavailable', 'Orca has no window open to do this in')
@@ -41,6 +46,11 @@ async function ask(body: PluginViewRequestBody): Promise<void> {
       reply.code === PLUGIN_VIEW_NO_WORKSPACE_CODE || reply.code === 'action_unavailable'
     throw new PluginHostCallError(unavailable ? 'unavailable' : 'action_failed', reply.message)
   }
+  return reply
+}
+
+async function ask(body: PluginViewRequestBody): Promise<void> {
+  await askForReply(body)
 }
 
 export function getPluginHostRendererActions(): PluginHostRendererActions | null {
@@ -50,7 +60,9 @@ export function getPluginHostRendererActions(): PluginHostRendererActions | null
           ask({ kind: 'open-file', worktreeId, relativePath }),
         runAction: (action) => ask({ kind: 'run-action', action }),
         openFolderWorkspace: (folderWorkspaceId) =>
-          ask({ kind: 'open-folder-workspace', folderWorkspaceId })
+          ask({ kind: 'open-folder-workspace', folderWorkspaceId }),
+        readFocusedWorkspace: async () =>
+          (await askForReply({ kind: 'read-focused-workspace' })).workspace ?? null
       }
     : null
 }

@@ -2,6 +2,7 @@ import { z } from 'zod'
 import { isTuiAgent } from '../../tui-agent-config'
 import { PLUGIN_COMMAND_ALIAS_ACTION_IDS } from '../contributions/plugin-command-actions'
 import { spec, WORKER_ONLY } from './plugin-host-method-spec'
+import { pluginWorkspaceRemoteSchema } from '../../plugin-workspace-remote/plugin-workspace-remote'
 
 /**
  * Orca state and actions a full-access worker cannot reach from Node: its workspaces, terminals
@@ -32,7 +33,9 @@ const workspaceListResult = z.object({
         path: z.string().max(ID_MAX),
         branch: z.string().max(512).nullable(),
         /** The execution host; null for this machine on hosts that do not record one. */
-        hostId: z.string().max(ID_MAX).nullable()
+        hostId: z.string().max(ID_MAX).nullable(),
+        /** The repository's Git remote as Orca recorded it; absent when none is known. */
+        remote: pluginWorkspaceRemoteSchema.optional()
       })
     )
     .max(PLUGIN_WORKSPACE_LIST_LIMIT),
