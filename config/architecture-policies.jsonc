@@ -835,7 +835,8 @@
             "resources/plugins/declarative/orca-testing.mjs",
             "skill-guides/orca-plugin-authoring/references/events.md",
             "skill-guides/orca-plugin-authoring/references/host-api.md",
-            "src/cli/bundled-skill-guides.ts"
+            "src/cli/bundled-skill-guides.ts",
+            "docs/issue/超级智能体/**"
           ],
           "message": "Branch changes an upstream path that no fork feature owns or registers as a seam; extend config/fork-features.jsonc and this allowlist, or move the change into a feature-owned path."
         }
@@ -2055,6 +2056,26 @@
             ".gitignore"
           ],
           "message": "Change is outside plugin workspace remote."
+        }
+      ]
+    },
+    {
+      "id": "super-agent",
+      "description": "超级智能体：常驻总管会话加主进程内核，替用户派活、跟进、问人、定时与复查；设计阶段只有文档",
+      "rules": [
+        {
+          "id": "super-agent-worktree-scope",
+          "type": "change-scope",
+          "comparison": "worktree",
+          "whenChanged": ["docs/issue/超级智能体/**"],
+          "allowedPaths": [
+            "docs/issue/超级智能体/**",
+            "config/fork-features.jsonc",
+            "config/architecture-policies.jsonc",
+            "docs/issue/README.md",
+            ".gitignore"
+          ],
+          "message": "Change is outside the super agent feature."
         }
       ]
     }

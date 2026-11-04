@@ -3920,6 +3920,29 @@
       "checks": [
         "ORCA_BACKGROUND_LAUNCH=1 pnpm exec vitest run --config config/vitest.config.ts src/shared/plugin-workspace-remote src/main/plugin-workspace-remote src/renderer/src/plugin-workspace-remote src/main/plugins src/shared/plugins src/renderer/src/components/plugins"
       ]
+    },
+    {
+      // Design stage: only the documents exist. Code paths, seams, tests and checks are added per slice.
+      "id": "super-agent",
+      "title": "超级智能体：只和总管对话，由它驱动会话、任务与工作区",
+      "goal": "常驻总管会话加主进程内核，替用户派活、跟进、问人、定时与复查，本地与 SSH 主机同一套规则",
+      "journal": "docs/issue/超级智能体/journal.md",
+      "policyId": "super-agent",
+      "ownedPaths": ["docs/issue/超级智能体/**"],
+      "requiredFiles": [
+        "docs/issue/超级智能体/journal.md",
+        "docs/issue/超级智能体/requirements/超级智能体.md",
+        "docs/issue/超级智能体/solutions/超级智能体总体方案.md"
+      ],
+      "seams": [
+        {
+          "file": ".gitignore",
+          "mustContain": "!docs/issue/超级智能体/**",
+          "why": "Track the feature's task-leader documents."
+        }
+      ],
+      "tests": [],
+      "checks": []
     }
   ]
 }
