@@ -194,6 +194,7 @@
         "src/renderer/src/integration-builds/**",
 
         ".github/workflows/fork-integration-build.yml",
+        ".github/workflows/fork-pr-linked-issue.yml",
         "config/scripts/integration-builds/**",
         "src/shared/integration-builds/**",
         "src/main/integration-builds/**",
@@ -348,6 +349,7 @@
         "src/main/integration-builds/linux-desktop-updater.test.ts",
         "src/main/integration-builds/serve-update-handoff-path.test.ts",
         "config/scripts/integration-builds/verify-linux-service.test.mjs",
+        "config/scripts/integration-builds/pr-linked-issue.test.mjs",
         "src/cli/integration-builds/linux-serve-update.test.ts",
         "src/main/integration-builds/linux-serve-update-support.test.ts",
         "src/renderer/src/integration-builds/web-server-update.test.ts",
