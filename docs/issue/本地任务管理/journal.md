@@ -337,6 +337,27 @@ updated: 2026-11-05
 
 ## 3. 开发记录
 
+### 2026-11-05 总管跨任务库，SSH 场景真机验证通过
+
+- 本轮目标：用户回复「继续吧」，补上 SSH 验证暴露的跨任务库缺口，然后重跑 SSH 场景。
+- 完成内容：
+  - 派活：`start`、`record` 按工作区所在的主机找项目、建任务，任务进那台主机的库；`subtask`、`link`、`append`、`stop` 按编号或 id 在所有已同步的库里找任务。
+  - 会话：`append`、`stop` 在主机不在联系时回报「无法确认」，不重连、不重试。只有一个会话时可以不写会话号。
+  - 盯着与转发：其他库的任务记在桌面库的 v7 表里。渲染层只读已同步的数据，把这些任务的新动态转进桌面库，收件箱和台账页一并列出。主机失去或恢复联系时各记一条。
+  - 技术方案 M13 改写「其他库的任务」：原设想把盯着的记录存在任务所在的库里，实际存桌面库，理由写在方案里。
+  - SSH 重跑时发现，SSH 主机按自己的智能体设置启动会话，桌面的命令覆盖不会带过去。这是夹具问题，脚本改为在那台主机上设假智能体。
+- 代码或文档变更：
+  - 提交 7b1cc4e6a：v7 表 `local_task_conversation_remote_watches`、`local_task_conversation_facts`；桌面接口 `localTasks.dispatcher.recordFacts`；`local-task-dispatcher-remote.ts`、`local-task-dispatcher-forwarding.ts`、`local-task-proposal-session-items.ts`；共享的收件箱文案 `local-task-inbox-copy.ts`。
+  - 本次文档：需求 REQ-030、REQ-031 状态；技术方案 M13 与变更记录；测试记录的 SSH 一节。
+- 验证证据：
+  - SSH 场景真机重跑通过：派活到 SSH 工作区、SSH 窗格里 `orca task show` / `progress`、动态转进收件箱、台账页、失联提示、失联时追加回报「无法确认」。
+  - 证据在 `.docs/本地任务管理-ui-validation/2026-11-05/evidence/ssh/`；单测、类型检查和门禁见提交 7b1cc4e6a 的记录。
+- 未解决问题：
+  - 恢复联系的提示只有单元测试；
+  - 配对服务器没有真机验证；
+  - `task list --all-hosts`、`task show --events N`、对话历史、时间线回链仍未做。
+- 下一步：用户试用；按需补配对服务器的真机验证。
+
 ### 2026-11-05 总管改为聊天界面、加总管台账、处理代码审查
 
 - 本轮目标：用户问「代码 review 了吗」「超级智能体肯定是 chat UI 吧，允许切到 terminal」「总管的动线在哪里」「怎么知道它记录了哪些任务、跟踪了哪些事」，并选定「浮动面板 + 台账页」。
