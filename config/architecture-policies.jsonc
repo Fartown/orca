@@ -42,7 +42,7 @@
     },
     {
       "id": "mobile-terminal-surface-recovery",
-      "description": "Original-surface recovery for mobile workspace activation, with one product seam and feature-owned admission policy.",
+      "description": "Host-authoritative original-surface recovery and non-spawning activation admission.",
       "rules": [
         {
           "id": "mobile-terminal-surface-recovery-worktree-scope",
@@ -53,9 +53,34 @@
             "docs/issue/手机打开工作区终端身份恢复/**"
           ],
           "allowedPaths": [
+            "src/main/runtime/workspaces/workspace-activation.ts",
+            "src/renderer/src/hooks/ipc-events/worktree-event-runtime.ts",
+            "src/renderer/src/hooks/ipc-events/worktree-event-runtime-activation.test.ts",
+            "src/renderer/src/hooks/ipc-events/worktree-event-lineage-refresh.test.ts",
+
+            "src/main/runtime/runtime-terminal-list.ts",
+            "src/main/runtime/project-group-folder-workspace-selectors.test.ts",
+
+            "src/renderer/src/components/terminal-pane/pty-connection-reattach-mode-reset.spec.ts",
+            "src/renderer/src/components/terminal-pane/pty-connection-agent-session-resume.spec.ts",
+            "src/renderer/src/components/terminal-pane/pty-connection-hidden-sleeping-resume.spec.ts",
+            "src/renderer/src/components/terminal-pane/pty-connection-reattach-binding.test.ts",
+            "src/renderer/src/components/terminal-pane/pty-connection-sleeping-resume-banner.spec.ts",
+            "src/renderer/src/components/terminal-pane/pty-connection-spawn-deferred-sleep.test.ts",
+
+            "src/renderer/src/components/terminal-pane/pty-connection/reattach-result-handler.ts",
+            "src/renderer/src/components/terminal-pane/pty-connection/deferred-session-reattach-connect.ts",
+            "src/renderer/src/components/terminal-pane/pty-connection/deferred-session-reattach-choice.ts",
+            "src/renderer/src/components/terminal-pane/pty-connection/reattach-success-settle.test.ts",
+            "src/renderer/src/components/terminal-pane/pty-connection/deferred-session-reattach-newer-daemon-hold.test.ts",
+            "src/renderer/src/components/terminal-pane/pty-connection/deferred-session-reattach-live-bookmark.test.ts",
+
+            "tests/e2e/mobile-terminal-surface-recovery.spec.ts",
             "src/renderer/src/mobile-terminal-surface-recovery/**",
             "src/renderer/src/lib/worktree-agent-live-surface-adoption.ts",
+            "src/renderer/src/lib/worktree-agent-activation-gate.ts",
             "src/renderer/src/lib/worktree-agent-activation-gate.test.ts",
+            "src/renderer/src/lib/worktree-agent-activation-seam.test.ts",
             "docs/issue/手机打开工作区终端身份恢复/**",
             "docs/issue/README.md",
             "config/fork-features.jsonc",
@@ -215,6 +240,28 @@
           "baseRef": "$base",
           "requireBaseAncestor": false,
           "allowedPaths": [
+            "src/main/runtime/workspaces/workspace-activation.ts",
+            "src/renderer/src/hooks/ipc-events/worktree-event-runtime.ts",
+            "src/renderer/src/hooks/ipc-events/worktree-event-runtime-activation.test.ts",
+            "src/renderer/src/hooks/ipc-events/worktree-event-lineage-refresh.test.ts",
+
+            "src/main/runtime/runtime-terminal-list.ts",
+            "src/main/runtime/project-group-folder-workspace-selectors.test.ts",
+
+            "src/renderer/src/components/terminal-pane/pty-connection-reattach-mode-reset.spec.ts",
+            "src/renderer/src/components/terminal-pane/pty-connection-agent-session-resume.spec.ts",
+            "src/renderer/src/components/terminal-pane/pty-connection-hidden-sleeping-resume.spec.ts",
+            "src/renderer/src/components/terminal-pane/pty-connection-reattach-binding.test.ts",
+            "src/renderer/src/components/terminal-pane/pty-connection-sleeping-resume-banner.spec.ts",
+            "src/renderer/src/components/terminal-pane/pty-connection-spawn-deferred-sleep.test.ts",
+
+            "src/renderer/src/components/terminal-pane/pty-connection/reattach-result-handler.ts",
+            "src/renderer/src/components/terminal-pane/pty-connection/deferred-session-reattach-connect.ts",
+            "src/renderer/src/components/terminal-pane/pty-connection/deferred-session-reattach-choice.ts",
+            "src/renderer/src/components/terminal-pane/pty-connection/reattach-success-settle.test.ts",
+            "src/renderer/src/components/terminal-pane/pty-connection/deferred-session-reattach-newer-daemon-hold.test.ts",
+            "src/renderer/src/components/terminal-pane/pty-connection/deferred-session-reattach-live-bookmark.test.ts",
+
             "src/shared/workspace-session-recovery/**",
             "src/renderer/src/workspace-session-recovery/**",
             "docs/issue/工作区恢复占位收敛/**",
@@ -223,8 +270,11 @@
             "src/renderer/src/store/repos/all-host-repo-catalog-actions.ts",
             "src/renderer/src/store/repos/runtime-repo-catalog-actions.ts",
             "src/renderer/src/mobile-terminal-surface-recovery/**",
+            "tests/e2e/mobile-terminal-surface-recovery.spec.ts",
             "src/renderer/src/lib/worktree-agent-live-surface-adoption.ts",
+            "src/renderer/src/lib/worktree-agent-activation-gate.ts",
             "src/renderer/src/lib/worktree-agent-activation-gate.test.ts",
+            "src/renderer/src/lib/worktree-agent-activation-seam.test.ts",
             "docs/issue/手机打开工作区终端身份恢复/**",
             "src/renderer/src/native-chat-view-recovery/**",
             "docs/issue/终端聊天视图恢复/**",

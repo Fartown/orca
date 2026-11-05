@@ -419,7 +419,7 @@ export function registerPtyConnectionReattachModeResetTests(): void {
       transport.getPtyId.mockImplementation(() => activePtyId)
       transport.connect.mockImplementation(async ({ sessionId }: { sessionId?: string }) => {
         if (sessionId === 'tab-pty') {
-          throw new Error('restored session is gone')
+          return { id: sessionId, sessionExpired: true }
         }
         // Main’s start adopted a durable session; answer the window’s attach with that payload.
         activePtyId = 'adopted-pty'

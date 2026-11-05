@@ -278,8 +278,10 @@ export function registerPtyConnectionHiddenSleepingResumeTests(): void {
       const { requestSleepingAgentWakeOnMount } = await import('@/lib/sleeping-agent-wake-requests')
       requestSleepingAgentWakeOnMount('wt-1', ['tab-1'])
       const transport = createMockTransport()
-      // The reattach comes back with no PTY, so the pane falls back to a fresh resume.
-      transport.connect.mockResolvedValueOnce(undefined).mockResolvedValue('resumed-pty')
+      // The host confirms the previous PTY exited before the fresh resume.
+      transport.connect
+        .mockResolvedValueOnce({ id: DEAD_SESSION_ID, sessionExpired: true })
+        .mockResolvedValue('resumed-pty')
       transportFactoryQueue.push(transport)
       connectPane(
         buildPaneConnectionDeps(() => mockStoreState, {
@@ -408,13 +410,15 @@ export function registerPtyConnectionHiddenSleepingResumeTests(): void {
       const { transport, binding, isVisibleRef } = connectHiddenPane(DEAD_SESSION_ID)
       await flushAsyncTicks(10)
       const fallback = createDeferred<string>()
-      // The reattach comes back with no PTY; the fallback spawn is still starting.
-      transport.connect.mockResolvedValueOnce(undefined).mockImplementationOnce(() =>
-        fallback.promise.then((ptyId) => {
-          transport.getPtyId.mockReturnValue(ptyId)
-          return ptyId
-        })
-      )
+      // The previous PTY exited; its replacement is still starting.
+      transport.connect
+        .mockResolvedValueOnce({ id: DEAD_SESSION_ID, sessionExpired: true })
+        .mockImplementationOnce(() =>
+          fallback.promise.then((ptyId) => {
+            transport.getPtyId.mockReturnValue(ptyId)
+            return ptyId
+          })
+        )
 
       isVisibleRef.current = true
       binding.noteVisibilityResume()

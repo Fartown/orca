@@ -568,7 +568,7 @@ export function registerPtyConnectionAgentSessionResumeTests(): void {
       const transport = createMockTransport()
       transport.connect.mockImplementation(async (opts: { sessionId?: string }) => {
         if (opts.sessionId) {
-          return undefined
+          return { id: opts.sessionId, sessionExpired: true }
         }
         const onPtySpawn = createdTransportOptions[0]?.onPtySpawn as
           | ((ptyId: string) => void)
