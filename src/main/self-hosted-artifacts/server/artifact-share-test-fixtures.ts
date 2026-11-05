@@ -65,7 +65,7 @@ export function fetchLocal(
 }> {
   return new Promise((resolve, reject) => {
     const request = httpRequest(
-      { host: '127.0.0.1', port, path, method, headers: init.headers },
+      { host: '127.0.0.1', port, path, method, headers: init.headers, agent: false },
       (response) => {
         const chunks: Buffer[] = []
         response.on('data', (chunk: Buffer) => chunks.push(chunk))

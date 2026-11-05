@@ -9,6 +9,15 @@ external_ids: []
 
 # 自托管产物后端 Journal
 
+## 2026-11-05 服务交接测试的连接复用竞争
+
+- 本轮目标：testing；修正服务交接回归中的测试客户端连接竞争，保持实际服务行为与原断言。
+- 完成内容：测试 HTTP 客户端使用独立连接，避免 owner 停止并关闭连接后，接管检查复用 Node 全局 agent 中尚未收到关闭事件的旧 socket。
+- 代码或文档变更：仅 `artifact-share-test-fixtures.ts` 的请求选项和本记录；独立分支、独立 PR，不与手机终端恢复产品代码混合。
+- 验证证据：PR #82 工作流 41986997017 的 job 127110566334 与重跑 127114988206 均在交接后的 `fetchLocal` 报 ECONNRESET；同文件的其他 4 项通过，原先 CI 和本机该文件 5 项通过。现有产品 `probeArtifactShareIdentity` 与测试客户端共用默认全局 agent，owner.stop 明确关闭全部连接。本轮修改后的门禁见忽略目录 `.docs/self-hosted-artifacts-ui-validation/2026-11-05/`。
+- 未解决问题：本轮 CI 尚待运行；不据此扩大分享功能的验收结论。
+- 下一步：验证已有服务交接与 HTTP handler 回归，通过 PR 检查后合并，以便终端恢复 PR 在该基准上重新验收。
+
 ## 1. 关键文档链接
 
 | 类型     | 文档                                                                                    | 状态       | 说明                                                                                              |
