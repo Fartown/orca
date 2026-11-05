@@ -336,6 +336,36 @@ updated: 2026-11-05
 
 ## 3. 开发记录
 
+### 2026-11-05 实现总管（切片 3c 及其 3a、3b 前置）
+
+- 本轮目标：用户说「开始做吧」，选择把代码放在本 PR 的分支、直接做 3c 的总管（调度会话、提案、收件箱与唤醒），连同它要用的 3a、3b 前置。
+- 完成内容：
+  - 回写进展（REQ-022 的一部分）：`orca task progress`，进展是带标记的普通评论；任务读取带最新进展；从任务开会话时第一句指令附任务说明，`orca task guide` 打印规则；CLI 不能把任务标完成。
+  - 任务库 v6（REQ-030、REQ-031）：总管对话、提案、盯着的任务三张表；RPC 与 CLI：`task propose`、`task inbox [--ack]`、`task watch`、`task unwatch`、`task needs-you`；收件箱只列确定的事（回写、状态、会话挂上或解开、等你、提案结果），每条结果写明做成了什么。
+  - 渲染层：在「需要你」视图顶部打开总管，Claude 以终端启动，不走 Agent SDK；标签重开沿用原对话；提案卡逐项保留、确认或不要；确认后执行六类提案项并回报结果；总管空闲且收件箱有新内容时写一行指针。
+  - 手机可列出和决定提案；登记总管与回报结果只限桌面；总管自己的 CLI 调用不对手机开放。
+- 代码或文档变更：
+  - 提交 7dbee8153、a1af9003a、1d5e4407c；
+  - 新文件在 `src/main/local-tasks/`、`src/shared/local-tasks/`、`src/cli/local-tasks/`、`src/renderer/src/local-tasks/`、`src/renderer/src/components/local-tasks/`；
+  - 上游接缝只有已登记的 RPC 方法表和手机方法白名单；
+  - `local-tasks` 的 `dependsOn` 加了 `src/cli/command-body-input.ts`、`src/renderer/src/lib/focus-terminal-tab-surface.ts`、`src/shared/constants.ts`；
+  - 需求里 REQ-022、REQ-030、REQ-031 改为「部分实现」并写明做了和没做的。
+  - 与方案用词的出入：命令是 `orca task propose --body-file`（不是 `orca dispatch propose --file`），因为 `task` 命令组已有 `--body` / `--body-file` 读正文的约定。
+- 验证证据：
+  - `tsc` 三个工程（node、cli、web）通过；
+  - 本地任务相关的 main、CLI、渲染层与运行时 RPC 测试 95 个文件、521 条全部通过，其中新增总管、提案执行、唤醒、提案卡的测试；
+  - RPC 方法测试中 `agent-launch-replay`、`agent-launch-restart-replay` 有 11 条失败，去掉本轮改动后同样失败，与本功能无关；
+  - `oxlint`、`oxfmt --check`、`check-changed-code-quality`（以本 PR 上一提交为基线）、三个本地化检查、`check-architecture-policies`、`check-fork-features`、`check-fork-docs`、RPC 参数目录检查、几项相关 ratchet 均通过；
+  - 本环境装不全依赖（`anti-slop` 的下载被网络策略拒绝），`pnpm check:changed` 没法整体跑，以上是逐项跑的。
+- 未解决问题：
+  - 真机验证未做：本机场景和 SSH 场景（`127.0.0.1:2222` 夹具）都还没在真实 Orca 里走一遍，截图证据未存；
+  - 唤醒不知道你是否正在总管输入框里打字，可能和你正在打的字混在一起（技术方案验证项）；设置里还没有关掉唤醒的开关；
+  - 「停会话」只停独占一个标签的终端会话，聊天会话和分屏里的会话会报失败；
+  - 一次执行里只有第一个「新工作区」开新建面板，其余只建任务、由你在任务上点开始；
+  - 对话历史、聊天视图、时间线回链、直接执行、逐项修改、跨任务库（orcad 主机、配对服务器）都没做；
+  - D-015 与技术方案的 5 个待定问题仍待用户审阅。
+- 下一步：在真实 Orca 里按本机和 SSH 两个场景验证总管，存证据到 `.docs/本地任务管理-ui-validation/`；再补唤醒的打字判断与开关、卡片上的最新进展。
+
 ### 2026-11-05 调度会话即总管（不写代码）
 
 - 本轮目标：用户要求在本 PR 上先做一个能分配、管理任务与会话、能感知的总管，并想好任务和会话给它的接口，复用已有的；用户选择直接提交到本 PR 的分支。
