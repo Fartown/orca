@@ -21,6 +21,7 @@ import type {
 } from '../../shared/local-tasks/local-tasks-rpc-params'
 import { z, type ZodType } from 'zod'
 import type {
+  LocalTasksDispatcherRegisterInput,
   LocalTasksProposalsCreateInput,
   LocalTasksProposalsDecideInput,
   LocalTasksProposalsRecordResultsInput
@@ -272,13 +273,13 @@ export class LocalTasksService {
     )
   }
 
-  registerDispatcher(input: { clientOperationId: string; paneKey: string; agent?: string }) {
+  registerDispatcher(input: LocalTasksDispatcherRegisterInput) {
     return this.write(
       input.clientOperationId,
       'dispatcher.register',
       input,
       CONVERSATION_RESULT,
-      (now) => this.dispatcher.register(input.paneKey, input.agent, now)
+      (now) => this.dispatcher.register(input.paneKey, input.agent, now, input.previousPaneKey)
     )
   }
 

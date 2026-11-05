@@ -14,6 +14,7 @@ import { activateAndRevealWorkspace } from '@/lib/worktree-activation'
 import { selectExecutionHostDisplayLabel } from '@/lib/execution-host-display-label'
 import type { TuiAgent } from '../../../shared/tui-agent'
 import { buildLocalTaskAgentPrompt } from '../../../shared/local-tasks/local-task-agent-prompt'
+import { buildLocalTaskBrief } from '../../../shared/local-tasks/local-task-brief'
 import { localTaskAncestors } from '../../../shared/local-tasks/local-task-tree'
 import type { LocalTaskWorkspaceLink } from '../../../shared/local-tasks/local-task-link-types'
 import type { LocalTask } from '../../../shared/local-tasks/local-task-types'
@@ -33,13 +34,17 @@ import {
 
 export type LocalTaskPromptDelivery = 'auto-submit' | 'draft'
 
-/** The task as the agent's prompt, with every ancestor's title for context (nearest first). */
+/**
+ * The task as the agent's prompt, with every ancestor's title for context (nearest first), and the
+ * brief that tells the agent how to write its results back (REQ-022).
+ */
 export function localTaskPromptFor(task: LocalTask): string {
   const tasks = localTasksDomainStore.getState().tasks
-  return buildLocalTaskAgentPrompt(
+  const prompt = buildLocalTaskAgentPrompt(
     task,
     localTaskAncestors(task, new Map(tasks.map((candidate) => [candidate.id, candidate])))
   )
+  return `${prompt}\n\n${buildLocalTaskBrief(task.ref)}`
 }
 
 export type LocalTaskSessionLaunchArgs = {

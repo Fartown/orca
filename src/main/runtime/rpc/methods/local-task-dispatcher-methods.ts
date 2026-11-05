@@ -16,6 +16,21 @@ import { defineMethod } from '../core'
 
 const DESKTOP_ONLY: LocalTaskFailure = { ok: false, code: 'desktop_only' }
 
+/** A desktop window registers its dispatcher pane and reports what it executed. */
+export const LOCAL_TASK_DISPATCHER_DESKTOP_METHODS: readonly string[] = [
+  'localTasks.dispatcher.register',
+  'localTasks.proposals.recordResults'
+]
+
+/** The dispatcher session's own CLI calls; a phone speaks for the person, never as the dispatcher. */
+export const LOCAL_TASK_DISPATCHER_SESSION_METHODS: readonly string[] = [
+  'localTasks.dispatcher.inbox',
+  'localTasks.dispatcher.ack',
+  'localTasks.dispatcher.watch',
+  'localTasks.dispatcher.unwatch',
+  'localTasks.proposals.create'
+]
+
 function service(): LocalTasksService {
   return localTasksReadiness.requireService()
 }

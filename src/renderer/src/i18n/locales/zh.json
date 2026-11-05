@@ -21001,6 +21001,29 @@
       },
       "unverifiableHosts": "已连接的主机上没有等你处理的会话。未连接主机上的会话要等它恢复连接后才能确认。"
     },
+    "dispatcher": {
+      "openFailed": "无法启动总管会话。",
+      "reportFailed": "执行结果没能记下来。",
+      "ran": "完成 {{done}}/{{total}} 项",
+      "untitled": "{{count}} 个步骤",
+      "running": "正在执行…",
+      "dismiss": "不要了",
+      "confirm": "确认 {{count}} 项",
+      "run": "执行",
+      "hint": "把想做的事告诉总管：它在这里提出步骤，并替你跟进任务。",
+      "intro": "总管是一个替你分配和跟进任务的智能体会话。它只提建议，由你在这里确认。",
+      "show": "显示总管",
+      "open": "打开总管",
+      "item": {
+        "startIn": "在 {{place}} 新建任务“{{title}}”",
+        "startNew": "在 {{place}} 的新工作区新建任务“{{title}}”",
+        "subtask": "{{ref}} 的子任务：“{{title}}”",
+        "append": "给 {{ref}} 的会话追加一句",
+        "stop": "停掉 {{ref}} 的会话",
+        "link": "把 {{ref}} 关联到 {{place}}",
+        "record": "把 {{place}} 里的工作记成任务“{{title}}”"
+      }
+    },
     "sidebar": {
       "groupByTask": "任务",
       "noTaskGroup": "未关联任务",

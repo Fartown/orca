@@ -54,10 +54,18 @@ export class LocalTaskDispatcher {
   register(
     paneKey: string,
     agent: string | undefined,
-    now: number
+    now: number,
+    previousPaneKey?: string
   ): LocalTaskResult<{ conversation: LocalTaskConversation }> {
     const existing = this.conversationFor(paneKey)
-    if (existing) {
+    const previous = !existing && previousPaneKey ? this.conversationFor(previousPaneKey) : null
+    if (previous) {
+      this.db
+        .prepare(
+          'UPDATE local_task_conversations SET pane_key = ?, agent = ?, updated_at = ? WHERE id = ?'
+        )
+        .run(paneKey, agent ?? previous.agent, now, previous.id)
+    } else if (existing) {
       this.db
         .prepare('UPDATE local_task_conversations SET agent = ?, updated_at = ? WHERE id = ?')
         .run(agent ?? existing.agent, now, existing.id)

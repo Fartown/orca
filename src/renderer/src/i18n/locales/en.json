@@ -21226,6 +21226,29 @@
       },
       "unverifiableHosts": "Nothing is waiting on you on the hosts in contact. Sessions on hosts that are not connected can’t be confirmed until they are back."
     },
+    "dispatcher": {
+      "openFailed": "Could not start the dispatcher session.",
+      "reportFailed": "The results could not be recorded.",
+      "ran": "Done {{done}} of {{total}}",
+      "untitled": "{{count}} steps",
+      "running": "Running…",
+      "dismiss": "Dismiss",
+      "confirm": "Confirm {{count}}",
+      "run": "Run",
+      "hint": "Tell the dispatcher what you want done; it proposes the steps here and follows the tasks for you.",
+      "intro": "The dispatcher is an agent session that assigns and follows your tasks. It only proposes; you confirm here.",
+      "show": "Show dispatcher",
+      "open": "Open dispatcher",
+      "item": {
+        "startIn": "New task “{{title}}” in {{place}}",
+        "startNew": "New task “{{title}}” in a new workspace of {{place}}",
+        "subtask": "Subtask of {{ref}}: “{{title}}”",
+        "append": "Tell the session on {{ref}}",
+        "stop": "Stop the session on {{ref}}",
+        "link": "Link {{ref}} to {{place}}",
+        "record": "Record the work in {{place}} as task “{{title}}”"
+      }
+    },
     "sidebar": {
       "groupByTask": "Task",
       "noTaskGroup": "No task",

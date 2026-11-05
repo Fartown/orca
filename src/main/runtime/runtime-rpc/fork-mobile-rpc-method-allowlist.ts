@@ -26,6 +26,8 @@ export const FORK_MOBILE_RPC_METHOD_ALLOWLIST = new Set([
   'localTasks.projects.list',
   'localTasks.projects.remove',
   'localTasks.projects.update',
+  'localTasks.proposals.decide',
+  'localTasks.proposals.list',
   'localTasks.statuses.remove',
   'localTasks.statuses.reorder',
   'localTasks.statuses.upsert',

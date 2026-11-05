@@ -49,7 +49,9 @@ export const LocalTaskProposalItemSchema = z.discriminatedUnion('kind', [
 export const LocalTasksDispatcherRegisterParams = z.object({
   clientOperationId,
   paneKey,
-  agent: agent.optional()
+  agent: agent.optional(),
+  /** The dispatcher's pane before it was reopened: its conversation, watches and inbox carry over. */
+  previousPaneKey: paneKey.optional()
 })
 
 export const LocalTasksProposalsCreateParams = z.object({
@@ -101,6 +103,7 @@ export const LocalTasksDispatcherAckParams = z.object({
 })
 
 export type LocalTaskProposalItem = z.infer<typeof LocalTaskProposalItemSchema>
+export type LocalTasksDispatcherRegisterInput = z.infer<typeof LocalTasksDispatcherRegisterParams>
 export type LocalTasksProposalsCreateInput = z.infer<typeof LocalTasksProposalsCreateParams>
 export type LocalTasksProposalsDecideInput = z.infer<typeof LocalTasksProposalsDecideParams>
 export type LocalTasksProposalsRecordResultsInput = z.infer<

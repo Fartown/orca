@@ -127,13 +127,12 @@ export function describeSettledProposal(proposal: LocalTaskProposal): string {
   if (proposal.status === 'dismissed') {
     return `The user dismissed your proposal: ${what}`
   }
-  const results = proposal.results ?? []
-  const failed = results.filter((result) => !result.ok)
-  const done = results.length - failed.length
-  const failures = failed
-    .map((result) => `item ${result.index + 1}: ${result.detail ?? 'failed'}`)
-    .join('; ')
-  return `The user confirmed your proposal (${what}); ${done} done${
-    failed.length ? `, ${failed.length} failed — ${failures}` : ''
-  }`
+  // Why every item: a done item names the task it made, which the dispatcher follows next.
+  const items = (proposal.results ?? []).map(
+    (result) =>
+      `item ${result.index + 1} ${result.ok ? 'done' : 'failed'}${
+        result.detail ? ` (${result.detail})` : ''
+      }`
+  )
+  return `The user confirmed your proposal (${what}): ${items.join('; ') || 'nothing ran'}`
 }

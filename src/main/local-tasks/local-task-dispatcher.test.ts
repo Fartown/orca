@@ -97,6 +97,23 @@ describe('dispatcher conversation and proposals (REQ-030)', () => {
     expect(inbox(service).items).toEqual([])
   })
 
+  it('carries the conversation, its watches and inbox over to a reopened dispatcher pane', () => {
+    const { service, task } = setup()
+    const first = register(service)
+    const watched = task('Keep following')
+    service.watchTask({ clientOperationId: op(), paneKey: PANE, taskId: watched.id })
+    const moved = service.registerDispatcher({
+      clientOperationId: op(),
+      paneKey: 'tab-e:pane-e',
+      agent: 'codex',
+      previousPaneKey: PANE
+    })
+    expect(moved).toMatchObject({ ok: true, conversation: { id: first.id, agent: 'codex' } })
+    expect(service.dispatcher.inbox(PANE)).toMatchObject({ ok: false })
+    const box = service.dispatcher.inbox('tab-e:pane-e')
+    expect(box.ok && box.inbox.watchedTaskCount).toBe(1)
+  })
+
   it('refuses proposals and inbox reads from a pane that is not the dispatcher', () => {
     const { service } = setup()
     expect(
@@ -153,7 +170,7 @@ describe('dispatcher conversation and proposals (REQ-030)', () => {
     const box = inbox(service)
     expect(box.watchedTaskCount).toBe(1)
     expect(box.items.map((item) => item.summary)).toEqual([
-      'The user confirmed your proposal (Investigate retries); 1 done, 1 failed — item 2: host out of contact'
+      'The user confirmed your proposal (Investigate retries): item 1 done; item 2 failed (host out of contact)'
     ])
     expect(
       service.ackInbox({ clientOperationId: op(), paneKey: PANE, cursor: box.cursor }).ok
