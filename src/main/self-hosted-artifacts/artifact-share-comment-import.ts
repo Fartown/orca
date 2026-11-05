@@ -9,6 +9,7 @@ import {
   listArtifactShareCommentFiles,
   readArtifactShareCommentImportLedger,
   recordArtifactShareCommentImports,
+  type ArtifactShareCommentImportRecord,
   type StoredArtifactShareCommentFile
 } from './store/artifact-share-comments'
 import {
@@ -49,7 +50,9 @@ function toReviewNote(
     lineNumber: comment.endLine,
     ...(comment.quote ? { selectedText: comment.quote } : {}),
     // Why the name in the body: notes have no author field, and the agent should know who asked.
-    body: `${comment.author} via share link: ${comment.body}`,
+    body: comment.author
+      ? `${comment.author} via share link: ${comment.body}`
+      : `Via share link: ${comment.body}`,
     createdAt: Number.isFinite(createdAt) ? createdAt : Date.now(),
     side: 'modified'
   }
@@ -60,9 +63,26 @@ function isOnThisComputer(worktree: ImportWorktree): boolean {
   return !worktree.hostId || parseExecutionHostId(worktree.hostId)?.kind === 'local'
 }
 
+const DELETED_VERSION = 'deleted'
+
+type Ledger = ReadonlyMap<string, ArtifactShareCommentImportRecord>
+
+function commentVersion(comment: ArtifactShareComment): string {
+  return comment.updatedAt ?? comment.createdAt
+}
+
+/** A note follows its comment only while it still holds exactly what the import wrote. */
+function isUntouched(
+  note: DiffComment | undefined,
+  record: ArtifactShareCommentImportRecord
+): boolean {
+  return note !== undefined && record.noteBody !== null && note.body === record.noteBody
+}
+
 /**
- * Turns reader comments into review notes of the workspace that holds the file. Comments for files
- * no workspace here contains wait, so they arrive once that workspace is added.
+ * Keeps review notes in step with reader comments: new comments become notes, an author's edit
+ * or delete follows to a note nobody changed in Orca. Comments for files no workspace here
+ * contains wait, so they arrive once that workspace is added.
  */
 export async function importArtifactShareComments(input: {
   home: string
@@ -70,61 +90,98 @@ export async function importArtifactShareComments(input: {
   runtime: ArtifactShareCommentImportRuntime
 }): Promise<number> {
   const ledger = readArtifactShareCommentImportLedger(input.ledgerPath)
-  const handled: string[] = []
+  const records = new Map<string, ArtifactShareCommentImportRecord>()
   const failures: unknown[] = []
-  let added = 0
+  let changed = 0
   for (const file of listArtifactShareCommentFiles(input.home)) {
     try {
-      const imported = await importCommentFile(input.runtime, file, ledger)
-      handled.push(...imported.handled)
-      added += imported.added
+      changed += await syncCommentFile(input.runtime, file, ledger, records)
     } catch (error) {
       // Why: one workspace that cannot be written must not hold back notes for the others.
       failures.push(error)
     }
   }
-  if (handled.length > 0) {
-    await recordArtifactShareCommentImports(input.ledgerPath, handled)
+  if (records.size > 0) {
+    await recordArtifactShareCommentImports(input.ledgerPath, records)
   }
   if (failures.length > 0) {
     throw failures[0]
   }
-  return added
+  return changed
 }
 
-async function importCommentFile(
+async function syncCommentFile(
   runtime: ArtifactShareCommentImportRuntime,
   file: StoredArtifactShareCommentFile,
-  ledger: ReadonlySet<string>
-): Promise<{ handled: string[]; added: number }> {
-  const skipped = { handled: [], added: 0 }
-  const pending = file.comments.filter((comment) => !ledger.has(comment.id))
-  if (pending.length === 0) {
-    return skipped
+  ledger: Ledger,
+  records: Map<string, ArtifactShareCommentImportRecord>
+): Promise<number> {
+  const added = file.comments.filter((comment) => !ledger.has(comment.id))
+  const edited = file.comments.filter((comment) => {
+    const record = ledger.get(comment.id)
+    return (
+      record !== undefined && record.noteBody !== null && record.version !== commentVersion(comment)
+    )
+  })
+  const deleted = file.deletedIds.filter((id) => {
+    const record = ledger.get(id)
+    return record !== undefined && record.version !== DELETED_VERSION
+  })
+  if (added.length + edited.length + deleted.length === 0) {
+    return 0
   }
   const absolutePath = join(file.rootPath, file.relativePath)
   const owner = await runtime.resolveWorktreeForContainedPath(absolutePath)
   if (!owner || !isOnThisComputer(owner)) {
-    return skipped
+    return 0
   }
   const worktree = await runtime.showManagedWorktree(`id:${owner.id}`, 'local')
   const filePath = relativePathInsideRoot(worktree.path, absolutePath)
   if (!filePath) {
-    return skipped
+    return 0
   }
   const base = worktree.diffComments ?? []
-  const present = new Set(base.map((note) => note.id))
-  const notes = pending
-    .filter((comment) => !present.has(artifactShareReviewNoteId(comment.id)))
-    .map((comment) => toReviewNote(worktree.id, filePath, comment))
-  if (notes.length > 0) {
+  const notesById = new Map(base.map((note) => [note.id, note]))
+  let next = [...base]
+  let changes = 0
+  for (const comment of added) {
+    const note = toReviewNote(worktree.id, filePath, comment)
+    if (!notesById.has(note.id)) {
+      next.push(note)
+      changes += 1
+    }
+    records.set(comment.id, { version: commentVersion(comment), noteBody: note.body })
+  }
+  for (const comment of edited) {
+    const record = ledger.get(comment.id)
+    const noteId = artifactShareReviewNoteId(comment.id)
+    const current = notesById.get(noteId)
+    if (record && isUntouched(current, record)) {
+      const body = toReviewNote(worktree.id, filePath, comment).body
+      next = next.map((note) => (note.id === noteId ? { ...note, body, sentAt: undefined } : note))
+      records.set(comment.id, { version: commentVersion(comment), noteBody: body })
+      changes += 1
+    } else {
+      records.set(comment.id, { version: commentVersion(comment), noteBody: null })
+    }
+  }
+  for (const id of deleted) {
+    const record = ledger.get(id)
+    const noteId = artifactShareReviewNoteId(id)
+    if (record && isUntouched(notesById.get(noteId), record)) {
+      next = next.filter((note) => note.id !== noteId)
+      changes += 1
+    }
+    records.set(id, { version: DELETED_VERSION, noteBody: null })
+  }
+  if (changes > 0) {
     // Why the base: the owner merges, so notes another client added meanwhile are kept.
     await runtime.updateManagedWorktreeMeta(`id:${worktree.id}`, {
-      diffComments: [...base, ...notes],
+      diffComments: next,
       diffCommentsBase: base
     })
   }
-  return { handled: pending.map((comment) => comment.id), added: notes.length }
+  return changes
 }
 
 /**

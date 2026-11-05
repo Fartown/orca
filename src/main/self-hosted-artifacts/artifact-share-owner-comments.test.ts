@@ -59,12 +59,13 @@ function ownerWithNotes() {
 }
 
 async function leave(body: string, line: number) {
-  return addArtifactShareComment(
+  const created = await addArtifactShareComment(
     home,
     { rootPath: workspace, relativePath: 'docs/plan.md' },
     { author: '张三', body, startLine: line, endLine: line },
     new Date(`2026-11-05T08:0${line}:00Z`)
   )
+  return created.comment
 }
 
 describe('reading and deleting comments on the computer that holds the file', () => {
@@ -98,7 +99,7 @@ describe('reading and deleting comments on the computer that holds the file', ()
       deletedComments: 1,
       removedNotes: 1
     })
-    expect(listArtifactShareCommentFiles(home)).toEqual([])
+    expect(listArtifactShareCommentFiles(home).flatMap((file) => file.comments)).toEqual([])
     expect(state.notes).toEqual([])
   })
 

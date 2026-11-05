@@ -4,9 +4,10 @@ import { ArtifactShareFileRequest, ArtifactShareHostLabel } from './artifact-sha
 export const ARTIFACT_SHARE_COMMENT_LIMITS = {
   author: 64,
   body: 4_000,
-  quote: 300,
+  /** The exact text a reader selected; Orca highlights it in the page and in the review note. */
+  quote: 2_000,
   perFile: 500,
-  requestBytes: 16 * 1024
+  requestBytes: 32 * 1024
 } as const
 
 /** Readers post to `/_share/comments/<token>/<path>`; the page shares the path after its own token. */
@@ -16,7 +17,8 @@ const SourceLine = z.number().int().min(1).max(10_000_000)
 
 export const ArtifactShareCommentInput = z
   .object({
-    author: z.string().trim().min(1).max(ARTIFACT_SHARE_COMMENT_LIMITS.author),
+    /** Optional: a share link has no sign-in, so a reader may stay anonymous. */
+    author: z.string().trim().max(ARTIFACT_SHARE_COMMENT_LIMITS.author).optional(),
     body: z.string().trim().min(1).max(ARTIFACT_SHARE_COMMENT_LIMITS.body),
     startLine: SourceLine,
     endLine: SourceLine,
@@ -30,12 +32,14 @@ const CommentId = z.string().regex(/^[A-Za-z0-9_-]{16}$/)
 /** Lines are 1-based source lines of the shared file, the same anchors Orca's review notes use. */
 export const ArtifactShareComment = z.object({
   id: CommentId,
-  author: z.string().min(1).max(ARTIFACT_SHARE_COMMENT_LIMITS.author),
+  author: z.string().min(1).max(ARTIFACT_SHARE_COMMENT_LIMITS.author).optional(),
   body: z.string().min(1).max(ARTIFACT_SHARE_COMMENT_LIMITS.body),
   startLine: SourceLine,
   endLine: SourceLine,
   quote: z.string().max(ARTIFACT_SHARE_COMMENT_LIMITS.quote).optional(),
-  createdAt: z.string()
+  createdAt: z.string(),
+  /** Set when the author edits the text; Orca refreshes the review note it became. */
+  updatedAt: z.string().optional()
 })
 export type ArtifactShareComment = z.infer<typeof ArtifactShareComment>
 
@@ -70,3 +74,15 @@ export const ArtifactShareDeleteCommentsResult = z.object({
   removedNotes: z.number().int().min(0)
 })
 export type ArtifactShareDeleteCommentsResult = z.infer<typeof ArtifactShareDeleteCommentsResult>
+
+/** Only the browser that wrote a comment holds its token, so only it can change or remove it. */
+export const ARTIFACT_SHARE_COMMENT_TOKEN_HEADER = 'x-orca-comment-token'
+
+export const ArtifactShareCommentEdit = z.object({
+  body: z.string().trim().min(1).max(ARTIFACT_SHARE_COMMENT_LIMITS.body)
+})
+
+export const ArtifactShareCommentCreated = z.object({
+  comment: ArtifactShareComment,
+  editToken: z.string().min(16).max(128)
+})

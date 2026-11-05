@@ -2,14 +2,52 @@
 @import 'orca-share-viewer-app-styles.css';
 
 .orca-share-body {
+  position: relative;
+  box-sizing: content-box;
   max-width: 920px;
   margin: 0 auto;
   font-size: 14px;
 }
 
-/* The comment rail sits beside the text, so the page widens rather than squeezing the prose. */
-.orca-share-body-with-comments {
-  max-width: 1240px;
+/* The rich editor's review rail: cards sit in a column beside the text, never between its blocks. */
+.orca-share-body-with-rail {
+  padding-right: clamp(252px, 28%, 308px);
+}
+
+.orca-share-body-with-rail > .rich-markdown-review-note-layer {
+  right: 0;
+}
+
+.orca-share-comment-block {
+  position: relative;
+}
+
+.orca-share-comment-block:focus {
+  outline: none;
+}
+
+/* Same add button as the app's preview, in its gutter; higher specificity than its narrow-width rule. */
+.orca-share-comment-block > .markdown-annotation-add {
+  position: absolute;
+  top: 2px;
+  left: -26px;
+}
+
+.orca-share-comment-block:hover > .markdown-annotation-add,
+.orca-share-comment-block:focus-within > .markdown-annotation-add {
+  opacity: 1;
+}
+
+/* Why: a reader's name and date make a longer header than the app's notes; the actions must not be squeezed out. */
+.orca-share-body .orca-diff-comment-actions-pill {
+  flex-shrink: 0;
+}
+
+.orca-share-inline-comments {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 8px 0 16px;
 }
 
 .orca-share-orphan-comments {
@@ -22,6 +60,15 @@
   margin: 0 0 12px;
   border: 0;
   padding: 0;
+}
+
+/* Commented text, in the color the app's rich editor gives review notes. */
+::highlight(share-comment) {
+  background-color: color-mix(in srgb, var(--annotation-highlight) 22%, transparent);
+}
+
+::highlight(share-comment-active) {
+  background-color: color-mix(in srgb, var(--annotation-highlight) 44%, transparent);
 }
 
 /* Why: `.markdown-light .markdown-body code` outranks `.markdown-body pre code`, painting each code line as a chip. */

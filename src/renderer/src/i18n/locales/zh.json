@@ -18310,13 +18310,19 @@
           "commentRateLimited": "短时间内评论太多，请一分钟后再试。",
           "commentLimit": "这个文件的评论已达上限。",
           "commentFailed": "评论没有保存。请确认链接仍能打开后重试。",
-          "commentAuthor": "你的名字",
           "commentPlaceholder": "写评论",
           "commentCancel": "取消",
           "commentSaving": "保存中…",
           "commentSubmit": "评论",
           "addComment": "添加评论",
-          "orphanComments": "针对旧版本的评论"
+          "orphanComments": "针对旧版本的评论",
+          "anonymousReader": "匿名读者",
+          "commentAuthorOptional": "你的名字（选填）",
+          "commentSelection": "评论",
+          "imageTitle": "图片",
+          "comments": "评论",
+          "commentEditFailed": "修改没有保存。请确认链接仍能打开后重试。",
+          "commentDeleteFailed": "评论没有删除。请确认链接仍能打开后重试。"
         },
         "account": {
           "signedOut": "登录后可使用 Orca 的云端功能，包括 Orca Relay 和技能分享。",

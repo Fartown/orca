@@ -1,14 +1,20 @@
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import { extname } from 'node:path'
+import type { z } from 'zod'
 import {
   ARTIFACT_SHARE_COMMENT_LIMITS,
+  ARTIFACT_SHARE_COMMENT_TOKEN_HEADER,
+  ArtifactShareCommentEdit,
   ArtifactShareCommentInput
 } from '../../../shared/self-hosted-artifacts/artifact-share-comments-contract'
 import { readArtifactShareWorkspaces } from '../store/artifact-share-records'
 import {
   addArtifactShareComment,
   ArtifactShareCommentsFullError,
+  deleteOwnArtifactShareComment,
+  editArtifactShareComment,
   readArtifactShareComments,
+  type ArtifactShareCommentChange,
   type ArtifactShareCommentTarget
 } from '../store/artifact-share-comments'
 import { resolveArtifactShareRequestFile } from './artifact-share-request-path'
@@ -123,11 +129,15 @@ export async function handleArtifactShareCommentsRequest(input: {
         })
       : sendJson(request, response, 404, { error: 'not-found' })
   }
-  if (request.method !== 'POST') {
-    response.setHeader('Allow', 'GET, HEAD, POST')
+  const writes = new Set(['POST', 'PATCH', 'DELETE'])
+  if (!writes.has(request.method ?? '')) {
+    response.setHeader('Allow', 'GET, HEAD, POST, PATCH, DELETE')
     return sendJson(request, response, 405, { error: 'method-not-allowed' })
   }
-  if (!String(request.headers['content-type'] ?? '').startsWith('application/json')) {
+  if (
+    request.method !== 'DELETE' &&
+    !String(request.headers['content-type'] ?? '').startsWith('application/json')
+  ) {
     return sendJson(request, response, 415, { error: 'json-required' })
   }
   if (!isSameOriginWrite(request)) {
@@ -137,30 +147,87 @@ export async function handleArtifactShareCommentsRequest(input: {
   if (!input.allowWrite(request.socket.remoteAddress ?? 'unknown', now.getTime())) {
     return sendJson(request, response, 429, { error: 'rate-limited' })
   }
-  const raw = await readLimitedBody(request, ARTIFACT_SHARE_COMMENT_LIMITS.requestBytes)
-  if (raw === null) {
-    return sendJson(request, response, 413, { error: 'too-large' })
+  if (request.method !== 'POST') {
+    return changeOwnComment({ ...input, now })
   }
-  let parsed: ReturnType<typeof ArtifactShareCommentInput.safeParse>
-  try {
-    parsed = ArtifactShareCommentInput.safeParse(JSON.parse(raw))
-  } catch {
-    return sendJson(request, response, 400, { error: 'invalid-json' })
-  }
-  if (!parsed.success) {
-    return sendJson(request, response, 400, { error: 'invalid-comment' })
+  const parsed = await readJsonBody(request, ArtifactShareCommentInput)
+  if ('status' in parsed) {
+    return sendJson(request, response, parsed.status, { error: parsed.error })
   }
   const target = await resolveCommentTarget(input.home, input.token, input.segments)
   if (!target) {
     return sendJson(request, response, 404, { error: 'not-found' })
   }
   try {
-    const comment = await addArtifactShareComment(input.home, target, parsed.data, now)
-    return sendJson(request, response, 201, { comment })
+    const created = await addArtifactShareComment(input.home, target, parsed.data, now)
+    return sendJson(request, response, 201, created)
   } catch (error) {
     if (error instanceof ArtifactShareCommentsFullError) {
       return sendJson(request, response, 409, { error: 'too-many-comments' })
     }
     throw error
   }
+}
+
+async function readJsonBody<T>(
+  request: IncomingMessage,
+  schema: z.ZodType<T>
+): Promise<{ data: T } | { status: number; error: string }> {
+  const raw = await readLimitedBody(request, ARTIFACT_SHARE_COMMENT_LIMITS.requestBytes)
+  if (raw === null) {
+    return { status: 413, error: 'too-large' }
+  }
+  let json: unknown
+  try {
+    json = JSON.parse(raw)
+  } catch {
+    return { status: 400, error: 'invalid-json' }
+  }
+  const parsed = schema.safeParse(json)
+  return parsed.success ? { data: parsed.data } : { status: 400, error: 'invalid-comment' }
+}
+
+const CHANGE_STATUS: Record<Exclude<ArtifactShareCommentChange, 'changed'>, number> = {
+  'not-found': 404,
+  forbidden: 403
+}
+
+/** PATCH edits and DELETE removes `?id=`, only with the token the author's browser was given. */
+async function changeOwnComment(input: {
+  home: string
+  request: IncomingMessage
+  response: ServerResponse
+  token: string
+  segments: readonly string[]
+  now: Date
+}): Promise<CommentsOutcome> {
+  const { request, response } = input
+  const id = new URL(request.url ?? '/', 'http://artifact-share.invalid').searchParams.get('id')
+  const editToken = request.headers[ARTIFACT_SHARE_COMMENT_TOKEN_HEADER]
+  if (!id || typeof editToken !== 'string' || !editToken) {
+    return sendJson(request, response, 400, { error: 'comment-id-and-token-required' })
+  }
+  const target = await resolveCommentTarget(input.home, input.token, input.segments)
+  if (!target) {
+    return sendJson(request, response, 404, { error: 'not-found' })
+  }
+  if (request.method === 'DELETE') {
+    const result = await deleteOwnArtifactShareComment(input.home, target, { id, editToken })
+    return result === 'changed'
+      ? sendJson(request, response, 200, { deleted: id })
+      : sendJson(request, response, CHANGE_STATUS[result], { error: result })
+  }
+  const parsed = await readJsonBody(request, ArtifactShareCommentEdit)
+  if ('status' in parsed) {
+    return sendJson(request, response, parsed.status, { error: parsed.error })
+  }
+  const edited = await editArtifactShareComment(input.home, target, {
+    id,
+    editToken,
+    body: parsed.data.body,
+    now: input.now
+  })
+  return edited.result === 'changed'
+    ? sendJson(request, response, 200, { comment: edited.comment })
+    : sendJson(request, response, CHANGE_STATUS[edited.result], { error: edited.result })
 }

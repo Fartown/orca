@@ -8,7 +8,11 @@ import {
   importArtifactShareComments,
   type ArtifactShareCommentImportRuntime
 } from './artifact-share-comment-import'
-import { addArtifactShareComment } from './store/artifact-share-comments'
+import {
+  addArtifactShareComment,
+  deleteOwnArtifactShareComment,
+  editArtifactShareComment
+} from './store/artifact-share-comments'
 
 let root: string
 let home: string
@@ -114,5 +118,49 @@ describe('reader comments becoming review notes', () => {
     expect(opened.state.notes.map((note) => note.body)).toEqual([
       '张三 via share link: 等工作区打开'
     ])
+  })
+
+  it("follows the author's edit and delete only to notes nobody changed in Orca", async () => {
+    const owner = workspaceOwner()
+    const target = { rootPath: workspace, relativePath: 'docs/plan.md' }
+    const kept = await comment('第一处')
+    const changedInOrca = await comment('第二处')
+    await importArtifactShareComments({ home, ledgerPath, runtime: owner.runtime })
+    const noteBody = (id: string) =>
+      owner.state.notes.find((note) => note.id === `share-comment-${id}`)?.body
+    owner.state.notes = owner.state.notes.map((note) =>
+      note.id === `share-comment-${changedInOrca.comment.id}`
+        ? { ...note, body: '我在 Orca 里改过' }
+        : note
+    )
+
+    const later = new Date('2026-11-05T09:00:00Z')
+    for (const created of [kept, changedInOrca]) {
+      await editArtifactShareComment(home, target, {
+        id: created.comment.id,
+        editToken: created.editToken,
+        body: '作者改了',
+        now: later
+      })
+    }
+    await expect(
+      importArtifactShareComments({ home, ledgerPath, runtime: owner.runtime })
+    ).resolves.toBe(1)
+    expect(noteBody(kept.comment.id)).toBe('张三 via share link: 作者改了')
+    expect(noteBody(changedInOrca.comment.id)).toBe('我在 Orca 里改过')
+
+    for (const created of [kept, changedInOrca]) {
+      await deleteOwnArtifactShareComment(home, target, {
+        id: created.comment.id,
+        editToken: created.editToken
+      })
+    }
+    await expect(
+      importArtifactShareComments({ home, ledgerPath, runtime: owner.runtime })
+    ).resolves.toBe(1)
+    expect(owner.state.notes.map((note) => note.body)).toEqual(['我在 Orca 里改过'])
+    await expect(
+      importArtifactShareComments({ home, ledgerPath, runtime: owner.runtime })
+    ).resolves.toBe(0)
   })
 })

@@ -1,7 +1,8 @@
-import { existsSync, readdirSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { createArtifactShareOwnerService } from '../artifact-share-owner-service'
+import { listArtifactShareCommentFiles } from '../store/artifact-share-comments'
 import { ArtifactShareAppServer } from './artifact-share-app-server'
 import {
   createArtifactShareSandbox,
@@ -149,9 +150,9 @@ describe('reader comments on shared Markdown', () => {
       postComment(path, COMMENT, { 'content-type': 'text/plain' })
     ).resolves.toMatchObject({ status: 415 })
     await expect(
-      postComment(path, { ...COMMENT, body: 'x'.repeat(20_000) })
+      postComment(path, { ...COMMENT, body: 'x'.repeat(40_000) })
     ).resolves.toMatchObject({ status: 413 })
-    await expect(postComment(path, { ...COMMENT, author: ' ' })).resolves.toMatchObject({
+    await expect(postComment(path, { ...COMMENT, body: ' ' })).resolves.toMatchObject({
       status: 400
     })
     await expect(
@@ -164,7 +165,8 @@ describe('reader comments on shared Markdown', () => {
     ]) {
       await expect(postComment(target, COMMENT)).resolves.toMatchObject({ status: 404 })
     }
-    await expect(fetchLocal(port, path, 'DELETE')).resolves.toMatchObject({ status: 405 })
+    await expect(fetchLocal(port, path, 'PUT')).resolves.toMatchObject({ status: 405 })
+    await expect(fetchLocal(port, path, 'DELETE')).resolves.toMatchObject({ status: 400 })
 
     const statuses: number[] = []
     for (let index = 0; index < 25; index += 1) {
@@ -173,5 +175,41 @@ describe('reader comments on shared Markdown', () => {
     expect(statuses.filter((status) => status === 201).length).toBeLessThan(25)
     expect(statuses.at(-1)).toBe(429)
     await expect(fetchLocal(port, '/_share/identity')).resolves.toMatchObject({ status: 200 })
+  })
+
+  it('stores a blank name as anonymous and lets only the writing browser edit or delete', async () => {
+    const path = `/_share/comments/${token}/docs/plan.md`
+    const created = JSON.parse((await postComment(path, { ...COMMENT, author: ' ' })).body)
+    expect(created.comment).not.toHaveProperty('author')
+    const own = (method: string, editToken: string, body?: unknown) =>
+      fetchLocal(port, `${path}?id=${created.comment.id}`, method, {
+        headers: {
+          'x-orca-comment-token': editToken,
+          ...(body === undefined ? {} : { 'content-type': 'application/json' })
+        },
+        ...(body === undefined ? {} : { body: JSON.stringify(body) })
+      })
+
+    await expect(own('PATCH', 'not-the-token', { body: '改' })).resolves.toMatchObject({
+      status: 403
+    })
+    await expect(own('DELETE', 'not-the-token')).resolves.toMatchObject({ status: 403 })
+    const edited = await own('PATCH', created.editToken, { body: '改过了' })
+    expect(edited.status).toBe(200)
+    expect(JSON.parse(edited.body).comment).toMatchObject({
+      body: '改过了',
+      updatedAt: expect.any(String)
+    })
+    const commentsDir = join(sandbox.home, 'comments')
+    for (const name of readdirSync(commentsDir)) {
+      expect(readFileSync(join(commentsDir, name), 'utf8')).not.toContain(created.editToken)
+    }
+
+    await expect(own('DELETE', created.editToken)).resolves.toMatchObject({ status: 200 })
+    await expect(own('DELETE', created.editToken)).resolves.toMatchObject({ status: 404 })
+    const listed = JSON.parse((await fetchLocal(port, path)).body)
+    expect(listed.comments).toEqual([])
+    const [file] = listArtifactShareCommentFiles(sandbox.home)
+    expect(file?.deletedIds).toEqual([created.comment.id])
   })
 })

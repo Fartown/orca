@@ -1,23 +1,59 @@
 import React from 'react'
 import type { Components } from 'react-markdown'
+import CodeBlockCopyButton from '@/components/editor/CodeBlockCopyButton'
 import MermaidBlock from '@/components/editor/MermaidBlock'
+import { MARKDOWN_DOC_LINK_PREFIX } from '@/components/editor/markdown-doc-links'
+import { useMermaidDiagramExpand } from '@/components/editor/use-mermaid-diagram-expand'
 import { MarkdownGitHubCallout } from '@/components/markdown-github-callout'
 import { readGitHubCalloutKind } from '@/lib/remark-github-callouts'
 import { ShareCommentBlock, ShareCommentListItem } from './ShareCommentBlock'
+import { ShareImage } from './ShareImageViewer'
 import { isShareViewerLocalHref } from './viewer-document'
 
 // Why module-level: components declared inside the page get a new identity per render, so
 // react-markdown would remount every link and code block whenever the theme flips.
 export const ShareDarkContext = React.createContext(false)
 
-const ShareLink: NonNullable<Components['a']> = ({ node: _node, href, children, ...props }) =>
-  isShareViewerLocalHref(href) ? (
-    <span>{children}</span>
-  ) : (
-    <a {...props} href={href}>
+/** Scrolls the page's own scroller to a heading, footnote or other in-document anchor. */
+export const ShareAnchorContext = React.createContext<(anchor: string) => void>(() => {})
+
+const ShareLink: NonNullable<Components['a']> = function ShareLink({
+  node: _node,
+  href,
+  children,
+  ...props
+}) {
+  const navigateToAnchor = React.useContext(ShareAnchorContext)
+  // Why: local file links and `[[document]]` links resolve only inside Orca, not on a share link.
+  if (isShareViewerLocalHref(href) || href?.startsWith(MARKDOWN_DOC_LINK_PREFIX)) {
+    return <span>{children}</span>
+  }
+  if (href?.startsWith('#')) {
+    return (
+      <a
+        {...props}
+        href={href}
+        onClick={(event) => {
+          event.preventDefault()
+          navigateToAnchor(href.slice(1))
+        }}
+      >
+        {children}
+      </a>
+    )
+  }
+  // Like the app, a web link opens outside the document; files in this share stay in the tab.
+  const external = /^https?:/i.test(href ?? '')
+  return (
+    <a
+      {...props}
+      href={href}
+      {...(external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+    >
       {children}
     </a>
   )
+}
 
 const ShareCode: NonNullable<Components['code']> = function ShareCode({
   node: _node,
@@ -26,8 +62,9 @@ const ShareCode: NonNullable<Components['code']> = function ShareCode({
   ...props
 }) {
   const isDark = React.useContext(ShareDarkContext)
+  const expandDiagram = useMermaidDiagramExpand()
   return /language-mermaid/.test(className || '') ? (
-    <MermaidBlock content={String(children).trimEnd()} isDark={isDark} />
+    <MermaidBlock content={String(children).trimEnd()} isDark={isDark} onExpand={expandDiagram} />
   ) : (
     <code className={className} {...props}>
       {children}
@@ -35,15 +72,24 @@ const ShareCode: NonNullable<Components['code']> = function ShareCode({
   )
 }
 
+// Same copy button as the app's preview; a diagram keeps its source copy beside the expand button.
 const SharePre: NonNullable<Components['pre']> = ({ node, children, ...props }) => {
-  const child = React.Children.toArray(children)[0]
+  const isMermaid = Boolean(
+    node?.children.some(
+      (child) =>
+        child.type === 'element' &&
+        child.tagName === 'code' &&
+        Array.isArray(child.properties.className) &&
+        child.properties.className.some(
+          (name) => typeof name === 'string' && name === 'language-mermaid'
+        )
+    )
+  )
   return (
     <ShareCommentBlock node={node}>
-      {React.isValidElement(child) && child.type === MermaidBlock ? (
-        children
-      ) : (
-        <pre {...props}>{children}</pre>
-      )}
+      <CodeBlockCopyButton {...props} wrapInPre={!isMermaid}>
+        {children}
+      </CodeBlockCopyButton>
     </ShareCommentBlock>
   )
 }
@@ -112,5 +158,6 @@ export const SHARE_MARKDOWN_COMPONENTS: Components = {
   h5: ShareH5,
   h6: ShareH6,
   table: ShareTable,
+  img: ({ node: _node, ...props }) => <ShareImage {...props} />,
   li: ShareCommentListItem
 }
