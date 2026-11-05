@@ -475,6 +475,7 @@
             "src/renderer/src/components/self-hosted-artifacts/**",
             "src/main/runtime/rpc/methods/artifact-share.ts",
             "config/scripts/build-artifact-share-viewer.mjs",
+            "config/scripts/build-artifact-share-viewer.test.mjs",
             "src/main/startup/main-process-quit.ts",
             "src/main/runtime/rpc/dispatcher-error-response.ts",
             "src/renderer/src/components/editor/EditorPanelHeader.test.tsx",
@@ -1046,6 +1047,7 @@
             "src/renderer/src/components/self-hosted-artifacts/**",
             "src/main/runtime/rpc/methods/artifact-share.ts",
             "config/scripts/build-artifact-share-viewer.mjs",
+            "config/scripts/build-artifact-share-viewer.test.mjs",
             "docs/issue/自托管产物后端/**"
           ],
           "allowedPaths": [
@@ -1056,6 +1058,7 @@
             "src/renderer/src/components/self-hosted-artifacts/**",
             "src/main/runtime/rpc/methods/artifact-share.ts",
             "config/scripts/build-artifact-share-viewer.mjs",
+            "config/scripts/build-artifact-share-viewer.test.mjs",
             "docs/issue/自托管产物后端/**",
             "src/main/startup/main-process-runtime-service.ts",
             "src/main/startup/main-process-quit.ts",

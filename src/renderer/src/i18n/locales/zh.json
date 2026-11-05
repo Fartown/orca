@@ -18304,7 +18304,9 @@
           "unsupported": "这台电脑上的文件无法从这里分享。"
         },
         "shareViewer": {
-          "sharedFrom": "由 {{computer}} 上的 Orca 分享"
+          "sharedFrom": "由 {{computer}} 上的 Orca 分享",
+          "tableOfContents": "目录",
+          "viewSource": "查看 Markdown 源文件"
         },
         "account": {
           "signedOut": "登录后可使用 Orca 的云端功能，包括 Orca Relay 和技能分享。",

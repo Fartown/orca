@@ -1,29 +1,15 @@
-/* Theme tokens are extracted from assets/main.css at build time so the page matches Orca. */
-@import 'orca-share-viewer-tokens.css';
-@import 'katex/dist/katex.min.css';
-@import '../../../assets/markdown-preview.css';
+/* The app's own main.css, compiled for the classes this page renders (build-artifact-share-viewer.mjs). */
+@import 'orca-share-viewer-app-styles.css';
 
-html,
-body {
-  margin: 0;
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-sans);
-}
-
-.orca-share-page.markdown-preview {
-  box-sizing: border-box;
+.orca-share-body {
   max-width: 920px;
   margin: 0 auto;
-  font-size: 15px;
+  font-size: 14px;
 }
 
-.orca-share-footer {
-  margin-top: 48px;
-  padding-top: 16px;
-  border-top: 1px solid var(--border);
-  color: var(--muted-foreground);
-  font-size: 12px;
+/* Why: `.markdown-light .markdown-body code` outranks `.markdown-body pre code`, painting each code line as a chip. */
+.markdown-preview .markdown-body pre code {
+  background: none;
 }
 
 .orca-share-fallback {

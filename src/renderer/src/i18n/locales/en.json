@@ -19252,7 +19252,9 @@
           "unsupported": "Files on this computer can't be shared from here."
         },
         "shareViewer": {
-          "sharedFrom": "Shared from Orca on {{computer}}"
+          "sharedFrom": "Shared from Orca on {{computer}}",
+          "tableOfContents": "Table of Contents",
+          "viewSource": "View Markdown source"
         },
         "account": {
           "signedOut": "Sign in to extend Orca with cloud features, including Orca Relay and skill sharing.",
