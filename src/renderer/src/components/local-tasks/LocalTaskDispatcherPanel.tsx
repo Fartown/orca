@@ -3,6 +3,7 @@ import { useStore } from 'zustand'
 import { Bot, LoaderCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
+import { Switch } from '@/components/ui/switch'
 import { useNow } from '@/hooks/use-now'
 import { translate } from '@/i18n/i18n'
 import { cn } from '@/lib/utils'
@@ -23,7 +24,9 @@ import {
 } from '@/local-tasks/local-task-proposal-copy'
 import { resolveProposalAgent } from '@/local-tasks/local-task-proposal-targets'
 import { formatLocalTaskTime } from '@/local-tasks/local-task-time'
+import { LOCAL_TASK_DISPATCHER_WAKE_PREFERENCE_KEY } from '@/local-tasks/local-task-preference-keys'
 import { useLocalTasksDomain } from '@/local-tasks/local-tasks-domain-store'
+import { localTasksClient } from '@/local-tasks/local-tasks-runtime-client'
 import type { LocalTaskProposal } from '../../../../shared/local-tasks/local-task-dispatcher-types'
 
 function useProposalNames(): LocalTaskProposalNames {
@@ -163,6 +166,9 @@ export function LocalTaskDispatcherPanel(): React.JSX.Element {
   const unrun = useLocalTaskProposals((state) => state.unrun)
   const opening = useStore(localTaskDispatcherStore, (state) => state.opening)
   const { known, live } = useLocalTaskDispatcherPane()
+  const wakeOn = useLocalTasksDomain(
+    (state) => state.preferences[LOCAL_TASK_DISPATCHER_WAKE_PREFERENCE_KEY] !== '0'
+  )
   const names = useProposalNames()
   const now = useNow(60_000)
   const open = (): void => {
@@ -186,6 +192,20 @@ export function LocalTaskDispatcherPanel(): React.JSX.Element {
                 'The dispatcher is an agent session that assigns and follows your tasks. It only proposes; you confirm here.'
               )}
         </p>
+        {known ? (
+          <label className="flex shrink-0 items-center gap-1.5 text-2xs text-muted-foreground">
+            <Switch
+              checked={wakeOn}
+              onCheckedChange={(on) =>
+                void localTasksClient.setPreference(
+                  LOCAL_TASK_DISPATCHER_WAKE_PREFERENCE_KEY,
+                  on ? null : '0'
+                )
+              }
+            />
+            {translate('localTasks.dispatcher.wake', 'Wake on news')}
+          </label>
+        ) : null}
         <Button variant="outline" size="xs" disabled={opening} onClick={open}>
           {opening ? (
             <LoaderCircle className="size-3 animate-spin motion-reduce:animate-none" />

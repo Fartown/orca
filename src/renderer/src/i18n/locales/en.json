@@ -21247,7 +21247,8 @@
         "stop": "Stop the session on {{ref}}",
         "link": "Link {{ref}} to {{place}}",
         "record": "Record the work in {{place}} as task “{{title}}”"
-      }
+      },
+      "wake": "Wake on news"
     },
     "sidebar": {
       "groupByTask": "Task",

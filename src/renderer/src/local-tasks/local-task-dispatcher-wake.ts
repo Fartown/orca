@@ -7,6 +7,8 @@ import { refreshLocalTaskProposals } from './local-task-dispatcher-proposals'
 import { knownDispatcherPaneKey, liveDispatcherPaneKey } from './local-task-dispatcher-session'
 import { subscribeLocalTaskAppStore } from './local-task-app-store-subscription'
 import { subscribeSelfLocalTaskChanges } from './local-task-self-changes'
+import { LOCAL_TASK_DISPATCHER_WAKE_PREFERENCE_KEY } from './local-task-preference-keys'
+import { localTasksDomainStore } from './local-tasks-domain-store'
 
 export const LOCAL_TASK_DISPATCHER_WAKE_PROMPT =
   'Orca: the tasks you follow have news. Run `orca task inbox --json`, tell the user only what they need to know or decide, then ack.'
@@ -23,6 +25,22 @@ type WakeState = {
   again: boolean
 }
 
+/** True while the person's keyboard is in the dispatcher's terminal: a half-typed line must not meet the pointer. */
+export function isPersonInDispatcherTab(tabId: string): boolean {
+  if (typeof document === 'undefined' || !document.hasFocus()) {
+    return false
+  }
+  const active = document.activeElement
+  const tab = document.querySelector(`[data-terminal-tab-id="${CSS.escape(tabId)}"]`)
+  return Boolean(active && tab?.contains(active))
+}
+
+export function isLocalTaskDispatcherWakeOn(): boolean {
+  return (
+    localTasksDomainStore.getState().preferences[LOCAL_TASK_DISPATCHER_WAKE_PREFERENCE_KEY] !== '0'
+  )
+}
+
 function idleStretch(paneKey: string): string | null {
   const status = useAppStore.getState().agentStatusByPaneKey[paneKey]
   return status?.state === 'done' ? `${paneKey}@${status.stateStartedAt}` : null
@@ -30,29 +48,35 @@ function idleStretch(paneKey: string): string | null {
 
 /**
  * Wakes the dispatcher session when the tasks it follows change (REQ-031): at most one pointer per
- * idle stretch, only while it waits for input, and never again for an inbox it has already seen.
- * It follows host notices and the pane's agent status; nothing here runs on a timer.
+ * idle stretch, only while it waits for input and the person is not typing in it, and never again
+ * for an inbox it has already seen. It follows host notices, the pane's agent status and focus
+ * leaving the pane; nothing here runs on a timer.
  */
 export function createLocalTaskDispatcherWake(
-  send: typeof sendMessageToAgent = sendMessageToAgent
+  send: typeof sendMessageToAgent = sendMessageToAgent,
+  personInTab: (tabId: string) => boolean = isPersonInDispatcherTab
 ): { check: () => Promise<void> } {
   const wake: WakeState = { pointedIdle: null, pointedCursor: null, checking: false, again: false }
 
   async function checkOnce(): Promise<void> {
     const paneKey = liveDispatcherPaneKey()
+    const pane = paneKey ? parsePaneKey(paneKey) : null
     const idle = paneKey ? idleStretch(paneKey) : null
-    if (!paneKey || !idle || idle === wake.pointedIdle) {
+    if (!paneKey || !pane || !idle || idle === wake.pointedIdle || !isLocalTaskDispatcherWakeOn()) {
+      return
+    }
+    if (personInTab(pane.tabId)) {
       return
     }
     const result = await localTaskDispatcherClient.inbox(paneKey, WAKE_INBOX_LIMIT)
     if (!result.ok || result.inbox.items.length === 0) {
       return
     }
-    if (result.inbox.cursor === wake.pointedCursor || idleStretch(paneKey) !== idle) {
-      return
-    }
-    const pane = parsePaneKey(paneKey)
-    if (!pane) {
+    if (
+      result.inbox.cursor === wake.pointedCursor ||
+      idleStretch(paneKey) !== idle ||
+      personInTab(pane.tabId)
+    ) {
       return
     }
     const sent = await send({
@@ -98,7 +122,13 @@ export function bindLocalTaskDispatcher(): () => void {
     if (scopes === null || scopes.includes('events')) {
       void refreshLocalTaskProposals()
     }
-    if (scopes === null || scopes.includes('events') || scopes.includes('attention')) {
+    // Why preferences: turning waking back on delivers what waited while it was off.
+    if (
+      scopes === null ||
+      scopes.includes('events') ||
+      scopes.includes('attention') ||
+      scopes.includes('preferences')
+    ) {
       void wake.check()
     }
   })
@@ -114,8 +144,17 @@ export function bindLocalTaskDispatcher(): () => void {
       }
     }
   )
+  // Why focus: a pointer held back while the person typed in the dispatcher goes out once they leave.
+  const onFocusMoved = (): void => {
+    void wake.check()
+  }
+  const target = typeof window === 'undefined' ? null : window
+  target?.addEventListener('focusin', onFocusMoved)
+  target?.addEventListener('blur', onFocusMoved)
   return () => {
     unsubscribeChanges()
     unsubscribeStatus()
+    target?.removeEventListener('focusin', onFocusMoved)
+    target?.removeEventListener('blur', onFocusMoved)
   }
 }

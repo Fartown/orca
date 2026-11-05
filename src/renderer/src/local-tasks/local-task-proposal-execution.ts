@@ -97,7 +97,8 @@ async function linkWorkspace(
 function launch(task: LocalTask, link: LocalTaskWorkspaceLink, asked: string | undefined): Outcome {
   const agent = resolveProposalAgent(useAppStore.getState(), asked)
   const launched =
-    agent !== null && launchLocalTaskSession({ task, link, agent, promptDelivery: 'auto-submit' })
+    agent !== null &&
+    launchLocalTaskSession({ task, link, agent, promptDelivery: 'auto-submit', reveal: false })
   return launched
     ? { ok: true, taskId: task.id, detail: `started ${task.ref}` }
     : {

@@ -52,6 +52,8 @@ export type LocalTaskSessionLaunchArgs = {
   link: LocalTaskWorkspaceLink
   agent: TuiAgent
   promptDelivery: LocalTaskPromptDelivery
+  /** False opens the session in the background, leaving the person where they are. */
+  reveal?: boolean
 }
 
 function recordTerminal(
@@ -134,7 +136,8 @@ export function launchLocalTaskSession(args: LocalTaskSessionLaunchArgs): boolea
   }
   const prompt = localTaskPromptFor(args.task)
   const { agent, promptDelivery } = args
-  if (activateAndRevealWorkspace(worktreeId, { executionHostId: hostId }) === false) {
+  const reveal = args.reveal !== false
+  if (reveal && activateAndRevealWorkspace(worktreeId, { executionHostId: hostId }) === false) {
     return false
   }
   const plan = planAgentSessionLaunch(useAppStore.getState(), {
@@ -150,6 +153,7 @@ export function launchLocalTaskSession(args: LocalTaskSessionLaunchArgs): boolea
     prompt,
     promptDelivery,
     launchSource: 'unknown',
+    ...(reveal ? {} : { activate: false }),
     agentSessionLaunchPlan: plan,
     onStructuredHostDeclined: () =>
       recordTerminal(
@@ -160,6 +164,7 @@ export function launchLocalTaskSession(args: LocalTaskSessionLaunchArgs): boolea
           prompt,
           promptDelivery,
           launchSource: 'unknown',
+          ...(reveal ? {} : { activate: false }),
           agentSessionLaunchPlan: adoptAgentSessionLaunchVerdict({
             route: 'terminal-tui',
             requestId: plan.requestId,

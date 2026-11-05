@@ -21022,7 +21022,8 @@
         "stop": "停掉 {{ref}} 的会话",
         "link": "把 {{ref}} 关联到 {{place}}",
         "record": "把 {{place}} 里的工作记成任务“{{title}}”"
-      }
+      },
+      "wake": "有新动态时唤醒"
     },
     "sidebar": {
       "groupByTask": "任务",
