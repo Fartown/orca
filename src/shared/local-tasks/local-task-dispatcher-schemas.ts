@@ -3,6 +3,7 @@ import type {
   LocalTaskConversation,
   LocalTaskInbox,
   LocalTaskProposal,
+  LocalTaskProposalItemResult,
   LocalTaskWatch
 } from './local-task-dispatcher-types'
 import { LocalTaskProposalItemSchema } from './local-task-dispatcher-rpc-params'
@@ -16,6 +17,13 @@ export const conversationSchema: z.ZodType<LocalTaskConversation> = z.object({
   updatedAt: z.number()
 })
 
+export const proposalItemResultSchema: z.ZodType<LocalTaskProposalItemResult> = z.object({
+  index: z.number(),
+  ok: z.boolean(),
+  taskId: z.string().optional(),
+  detail: z.string().optional()
+})
+
 export const proposalSchema: z.ZodType<LocalTaskProposal> = z.object({
   id: z.string(),
   conversationId: z.string(),
@@ -23,16 +31,7 @@ export const proposalSchema: z.ZodType<LocalTaskProposal> = z.object({
   items: z.array(LocalTaskProposalItemSchema),
   status: z.enum(['pending', 'confirmed', 'executing', 'dismissed', 'executed']),
   keptItemIndexes: z.array(z.number()).nullable(),
-  results: z
-    .array(
-      z.object({
-        index: z.number(),
-        ok: z.boolean(),
-        taskId: z.string().optional(),
-        detail: z.string().optional()
-      })
-    )
-    .nullable(),
+  results: z.array(proposalItemResultSchema).nullable(),
   createdAt: z.number(),
   decidedAt: z.number().nullable(),
   decidedSource: z.enum(['desktop', 'mobile', 'cli', 'rule']).nullable()

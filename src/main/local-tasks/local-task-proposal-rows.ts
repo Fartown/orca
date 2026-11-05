@@ -5,9 +5,9 @@ import {
 } from '../../shared/local-tasks/local-task-dispatcher-rpc-params'
 import type {
   LocalTaskProposal,
-  LocalTaskProposalItemResult,
   LocalTaskProposalStatus
 } from '../../shared/local-tasks/local-task-dispatcher-types'
+import { proposalItemResultSchema } from '../../shared/local-tasks/local-task-dispatcher-schemas'
 import type { LocalTaskEventSource } from '../../shared/local-tasks/local-task-types'
 import type { SqliteRow } from '../sqlite/sqlite-statement'
 import type { LocalTasksDatabase } from './local-tasks-database'
@@ -104,7 +104,9 @@ function toLocalTaskProposal(row: SqliteRow): LocalTaskProposal | null {
     return null
   }
   const kept = jsonValue(rowNullableString(row, 'kept_items'))
-  const results = jsonValue(rowNullableString(row, 'results'))
+  const parsedResults = proposalItemResultSchema
+    .array()
+    .safeParse(jsonValue(rowNullableString(row, 'results')))
   const source = rowNullableString(row, 'decided_source')
   return {
     id: rowString(row, 'id'),
@@ -115,7 +117,7 @@ function toLocalTaskProposal(row: SqliteRow): LocalTaskProposal | null {
     keptItemIndexes: Array.isArray(kept)
       ? kept.filter((index): index is number => typeof index === 'number')
       : null,
-    results: Array.isArray(results) ? (results as LocalTaskProposalItemResult[]) : null,
+    results: parsedResults.success ? parsedResults.data : null,
     createdAt: rowNumber(row, 'created_at'),
     decidedAt: rowNullableNumber(row, 'decided_at'),
     decidedSource: SOURCES.find((candidate) => candidate === source) ?? null

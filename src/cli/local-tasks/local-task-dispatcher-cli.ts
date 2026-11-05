@@ -62,7 +62,7 @@ function resolveProposalRefs(library: TaskLibrary, item: unknown): unknown {
   if (!item || typeof item !== 'object') {
     return item
   }
-  const record = { ...(item as Record<string, unknown>) }
+  const record: Record<string, unknown> = Object.fromEntries(Object.entries(item))
   for (const key of ['taskId', 'parentTaskId']) {
     if (typeof record[key] === 'string') {
       record[key] = taskIdOf(library, record[key])
