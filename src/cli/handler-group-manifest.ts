@@ -5,6 +5,7 @@ import { LINEAR_HANDLER_GROUP } from './linear-handler-group'
 import { REFERENCE_HANDLER_GROUP } from './reference-handler-group'
 import { PLUGIN_HANDLER_GROUPS } from './plugin-handler-groups'
 import { LOCAL_TASK_HANDLER_GROUP } from './local-tasks/local-task-handler-group'
+import { ARTIFACT_SHARE_HANDLER_GROUP } from './self-hosted-artifacts/artifact-share-handler-group'
 
 export type HandlerGroup = {
   name: string
@@ -38,21 +39,7 @@ export const HANDLER_GROUPS: readonly HandlerGroup[] = [
     keys: ['account add', 'account list', 'account select', 'account rm'],
     load: async () => (await import('./handlers/account.js')).ACCOUNT_HANDLERS
   },
-  {
-    name: 'artifacts',
-    keys: [
-      'artifacts list',
-      'artifacts share',
-      'artifacts update',
-      'artifacts unshare',
-      'artifacts delete',
-      'artifacts service status'
-    ],
-    // Why: this fork shares files over the local network from the computer that holds them.
-    load: async () =>
-      (await import('./self-hosted-artifacts/artifact-share-cli-handlers.js'))
-        .ARTIFACT_SHARE_CLI_HANDLERS
-  },
+  ARTIFACT_SHARE_HANDLER_GROUP,
   {
     name: 'automations',
     keys: [

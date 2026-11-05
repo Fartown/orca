@@ -10,7 +10,8 @@ export const ARTIFACT_SHARE_MARKDOWN_PAGE_CSP = [
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: http: https:",
   "font-src 'self' data:",
-  "connect-src 'none'",
+  // Why: the page reads and posts reader comments to its own server, nowhere else.
+  "connect-src 'self'",
   "base-uri 'none'",
   "form-action 'none'"
 ].join('; ')

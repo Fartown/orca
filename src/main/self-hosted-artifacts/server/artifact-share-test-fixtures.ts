@@ -56,7 +56,8 @@ export async function occupyPort(port: number): Promise<() => Promise<void>> {
 export function fetchLocal(
   port: number,
   path: string,
-  method = 'GET'
+  method = 'GET',
+  init: { headers?: Record<string, string>; body?: string } = {}
 ): Promise<{
   status: number
   headers: Record<string, string | string[] | undefined>
@@ -64,7 +65,7 @@ export function fetchLocal(
 }> {
   return new Promise((resolve, reject) => {
     const request = httpRequest(
-      { host: '127.0.0.1', port, path, method, agent: false },
+      { host: '127.0.0.1', port, path, method, headers: init.headers, agent: false },
       (response) => {
         const chunks: Buffer[] = []
         response.on('data', (chunk: Buffer) => chunks.push(chunk))
@@ -78,6 +79,6 @@ export function fetchLocal(
       }
     )
     request.on('error', reject)
-    request.end()
+    request.end(init.body)
   })
 }

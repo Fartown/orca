@@ -13,3 +13,8 @@ export function translate(
     return typeof value === 'string' || typeof value === 'number' ? String(value) : match
   })
 }
+
+/** The page's copy is English, so dates follow it rather than the reader's OS. */
+export function getIntlLocale(): string {
+  return 'en-US'
+}

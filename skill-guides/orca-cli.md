@@ -284,7 +284,8 @@ A refused share fails before anything is recorded: `artifact_sharing_disabled` (
 `artifact_share_host_unreachable` (the SSH host is not connected). Do not retry; tell the user what
 the error names and re-run after they act.
 
-The `artifacts` commands are in `references/artifacts.md`. Load it before sharing.
+The `artifacts` commands, including reading and deleting reader comments, are in
+`references/artifacts.md`. Load it before sharing or handling comments.
 
 <!-- /host-capability -->
 

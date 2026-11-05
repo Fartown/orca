@@ -24,7 +24,7 @@ gitGraph
 | ---------------------- | --------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `main`                 | 上游镜像                                      | 永不直接提交;只由 `pnpm sync:upstream` 或周同步工作流 fast-forward 到 `origin/main`,再推到 `Fartown/main`                                           |
 | `fork/integration`     | 上游 + 全部 fork 功能;**fork 仓库的默认分支** | 打包和发布从这里出;只接受 merge(上游同步或功能 PR),不 rebase,不 squash。设为默认分支是因为 GitHub 的定时/手动工作流只从默认分支读取,PR 也默认指向它 |
-| `feat/<feature>`       | 一条功能一条分支                              | 从 `fork/integration` 切出;每条分支一个 worktree;以 PR 合回,PR 必须过门禁                                                                           |
+| 功能分支(名字不限)     | 一次改动一条分支                              | 从 `fork/integration` 切出;每条分支一个 worktree;以关联 issue 的 PR 合回,PR 必须过门禁。分支名不再要求 `feat/<feature>`(2026-11-05)                 |
 | `sync/upstream-<日期>` | 周同步工作流开出的合并分支                    | 门禁全绿则由工作流 fast-forward 到 `fork/integration` 并删除;有检查失败则保留下来,由人在本地修                                                      |
 
 远程:`origin` = 上游 `stablyai/orca`,`Fartown` = fork。这两个名字写在 `config/fork-features.jsonc` 里,脚本从那里读。
@@ -98,7 +98,7 @@ Fork 的增量代码质量和 React Doctor 检查以 `HEAD` 与纯上游镜像 `
 
 ## 6. 日常规则
 
-1. 一条功能一个 worktree、一个分支、一个 `docs/issue/<需求>/`。不同 agent 会话不共用工作区。
+1. 一条功能一个 worktree、一个分支(名字不限)、一个 `docs/issue/<需求>/`。不同 agent 会话不共用工作区。
 2. 改上游文件前先问:能不能放进自己的目录?必须碰上游时,只碰接缝,并把接缝登记到 `fork-features.jsonc` 的 `seams`;新 import 到的上游模块登记到 `dependsOn`。
 3. 提交要小、要按功能打前缀(`feat(goals)`、`fix(session-names)`),不要把几条线攒成一个大提交。
 4. 纯格式化不要带进上游文件的 diff:整仓 `oxfmt` 之后,用 `git checkout origin/main -- <文件>` 把只有格式差异的上游文件恢复原样。
@@ -111,3 +111,4 @@ Fork 的增量代码质量和 React Doctor 检查以 `HEAD` 与纯上游镜像 `
    - 测试:`tests/cases/*.md` 必须有 SSH 场景用例;真机验证要在 SSH 场景下跑一遍,不能只在本机验。
    - 反例:自托管产物后端(2026-09-10)把服务地址写死成 `127.0.0.1:8787`,只在装服务的那台机器上验过。SSH 场景下客户端把请求发给了自己本机的 8787,被那里的 llm-proxy 转发到内部上游服务,文档正文和 Orca 账号 token 一起发了出去,分享失败。
 8. 改动以 PR 合入 `fork/integration`;只有 `pnpm sync:upstream` 的同步合并,以及为让它过门禁而随同一次推送的修复可以直接提交。集成包的发布说明把 PR 标题按 `类型(功能 id)` 归到功能下给用户看,直接提交只剩一行提交标题。PR 标题写成 `fix(goals): 用户能看懂的一句话`。
+9. **每个新的 fork 改动先在 `Fartown/orca` 建 GitHub issue,PR 用关闭关键字关联它**(`Fixes #<issue>`,也认 `Closes`、`Resolves`、`Fartown/orca#<n>` 与 issue 链接;`Refs` 不算)。issue 写清要解决的问题与验收,需求文档仍在 `docs/issue/<需求>/`;把 issue 号记进该需求 journal 的 `external_ids`(如 `Fartown/orca#84`)。门禁:`.github/workflows/fork-pr-linked-issue.yml` 对每个指向 `fork/integration` 的 PR 检查描述里至少关联一个真实存在的 issue(关联到 PR 不算),PR 打开、编辑描述、推送时都会重跑;只有周同步工作流开的 `sync/upstream-*` PR 免检。2026-11-05 起执行。

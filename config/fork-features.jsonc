@@ -314,6 +314,7 @@
         "src/renderer/src/integration-builds/**",
 
         ".github/workflows/fork-integration-build.yml",
+        ".github/workflows/fork-pr-linked-issue.yml",
         "config/scripts/integration-builds/**",
         "src/shared/integration-builds/**",
         "src/main/integration-builds/**",
@@ -468,6 +469,7 @@
         "src/main/integration-builds/linux-desktop-updater.test.ts",
         "src/main/integration-builds/serve-update-handoff-path.test.ts",
         "config/scripts/integration-builds/verify-linux-service.test.mjs",
+        "config/scripts/integration-builds/pr-linked-issue.test.mjs",
         "src/cli/integration-builds/linux-serve-update.test.ts",
         "src/main/integration-builds/linux-serve-update-support.test.ts",
         "src/renderer/src/integration-builds/web-server-update.test.ts",
@@ -1648,7 +1650,20 @@
         "src/renderer/src/components/host-picker/use-bounded-host-rows.ts",
         "src/renderer/src/components/host-picker/HostListSearchField.tsx",
         "src/renderer/src/components/host-picker/HostListOverflowNote.tsx",
-        "src/renderer/src/components/host-picker/host-picker-copy.ts"
+        "src/renderer/src/components/host-picker/host-picker-copy.ts",
+        "src/renderer/src/components/editor/MarkdownTableOfContentsPanel.tsx",
+        "src/renderer/src/components/editor/markdown-anchor-scroll.ts",
+        "src/renderer/src/components/editor/markdown-table-of-contents.ts",
+        "src/renderer/src/components/markdown-github-callout.tsx",
+        "src/renderer/src/lib/remark-github-callouts.ts",
+        "src/shared/markdown-toc-panel-width.ts",
+        "src/shared/diff-comment-types.ts",
+        "src/shared/cross-platform-path.ts",
+        "src/renderer/src/lib/ime-text-field.tsx",
+        "src/renderer/src/lib/markdown-review-notes.ts",
+        "src/renderer/src/components/editor/markdown-preview-block-model.ts",
+        "src/renderer/src/components/editor/markdown-preview-types.ts",
+        "src/cli/flags.ts"
       ],
       "policyId": "self-hosted-artifacts",
       "ownedPaths": [
@@ -1658,7 +1673,8 @@
         "src/cli/self-hosted-artifacts/**",
         "src/renderer/src/components/self-hosted-artifacts/**",
         "src/main/runtime/rpc/methods/artifact-share.ts",
-        "config/scripts/build-artifact-share-viewer.mjs"
+        "config/scripts/build-artifact-share-viewer.mjs",
+        "config/scripts/build-artifact-share-viewer.test.mjs"
       ],
       "requiredFiles": [
         "src/main/self-hosted-artifacts/artifact-share-main-process.ts",
@@ -1761,8 +1777,8 @@
         },
         {
           "file": "src/cli/handler-group-manifest.ts",
-          "mustContain": "ARTIFACT_SHARE_CLI_HANDLERS",
-          "why": "orca artifacts commands share over the local network"
+          "mustContain": "ARTIFACT_SHARE_HANDLER_GROUP",
+          "why": "orca artifacts commands share over the local network; the group lives in the feature folder"
         },
         {
           "file": "src/cli/specs/artifacts.ts",
@@ -1907,6 +1923,10 @@
         "src/main/self-hosted-artifacts/artifact-share-rpc-error.test.ts",
         "src/main/self-hosted-artifacts/artifact-share-rpc-methods.test.ts",
         "src/main/self-hosted-artifacts/artifact-share-orcad-bundle.test.ts",
+        "src/main/self-hosted-artifacts/artifact-share-comment-import.test.ts",
+        "src/main/self-hosted-artifacts/artifact-share-owner-comments.test.ts",
+        "src/cli/self-hosted-artifacts/artifact-share-cli-comments.test.ts",
+        "config/scripts/build-artifact-share-viewer.test.mjs",
         "src/cli/self-hosted-artifacts/artifact-share-cli-target.test.ts",
         "src/renderer/src/components/self-hosted-artifacts/share-button/lan-artifact-share-machine.test.ts",
         "src/renderer/src/components/self-hosted-artifacts/share-button/lan-artifact-share-target.test.ts",
@@ -1920,7 +1940,7 @@
         "src/main/runtime/construction/runtime-composition-parity.test.ts"
       ],
       "checks": [
-        "pnpm exec vitest run --config config/vitest.config.ts src/main/self-hosted-artifacts src/cli/self-hosted-artifacts src/renderer/src/components/self-hosted-artifacts src/renderer/src/components/editor/EditorPanelHeader.test.tsx src/renderer/src/components/native-chat/NativeChatInlineVisual.open-as-file.test.tsx src/renderer/src/hooks/useSettingsNavigationMetadata.test.ts src/cli/index.test.ts src/renderer/src/components/browser-pane/workspace-doc src/renderer/src/components/settings/OrcaAccountSettingsPane.test.tsx src/renderer/src/components/unexpected-signout",
+        "pnpm exec vitest run --config config/vitest.config.ts src/main/self-hosted-artifacts src/cli/self-hosted-artifacts src/renderer/src/components/self-hosted-artifacts src/renderer/src/components/editor/EditorPanelHeader.test.tsx src/renderer/src/components/native-chat/NativeChatInlineVisual.open-as-file.test.tsx src/renderer/src/hooks/useSettingsNavigationMetadata.test.ts src/cli/index.test.ts src/renderer/src/components/browser-pane/workspace-doc src/renderer/src/components/settings/OrcaAccountSettingsPane.test.tsx src/renderer/src/components/unexpected-signout config/scripts/build-artifact-share-viewer.test.mjs",
         "pnpm run build:artifact-share-viewer",
         "ORCA_BACKGROUND_LAUNCH=1 pnpm exec vitest run --config config/vitest.config.ts src/shared/host-operation-ownership.test.ts src/main/startup/main-process-ready-duplicate-pty-repair.test.ts src/main/runtime/construction/runtime-composition-parity.test.ts"
       ]

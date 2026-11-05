@@ -124,5 +124,7 @@ export const ARTIFACT_SHARE_RELAY_METHODS = {
   lookup: 'artifactShare.lookup',
   share: 'artifactShare.share',
   stopWorkspace: 'artifactShare.stopWorkspace',
-  list: 'artifactShare.list'
+  list: 'artifactShare.list',
+  comments: 'artifactShare.comments',
+  deleteComments: 'artifactShare.deleteComments'
 } as const

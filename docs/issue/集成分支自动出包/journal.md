@@ -3,8 +3,8 @@ title: 集成分支自动出包
 slug: 集成分支自动出包
 status: testing
 created: 2026-09-12
-updated: 2026-11-03
-external_ids: []
+updated: 2026-11-05
+external_ids: ['Fartown/orca#85']
 ---
 
 # 集成分支自动出包 开发 Journal
@@ -102,6 +102,26 @@ external_ids: []
 - 影响范围：REQ-401、REQ-402、REQ-403；APK 沿用 Expo debug 签名并核验指纹，不生成密钥或暗改 versionCode。
 
 ## 3. 开发记录
+
+### 2026-11-05 Fork 改动必须关联 GitHub issue（testing）
+
+- 本轮目标：按用户要求改 fork 约束：每个新的 fork 改动先建 issue，PR 关联 issue；分支名不再强制 `feat/<feature>`（[Fartown/orca#85](https://github.com/Fartown/orca/issues/85)）。
+- 完成内容：
+  - 新增 `config/scripts/integration-builds/pr-linked-issue.mjs` 与 `.github/workflows/fork-pr-linked-issue.yml`：指向 `fork/integration` 的 PR 描述必须用关闭关键字关联至少一个真实存在的 issue（关联到 PR 不算），打开、编辑描述、推送时重跑，`sync/upstream-*` 免检。不改上游 `pr.yml`。
+  - `docs/reference/fork-maintenance.md` 分支表放宽分支名、日常规则新增第 9 条；`AGENTS.md` 迭代原则新增第 6 条。
+- 代码或文档变更：上述脚本、测试、workflow；功能登记 ownedPaths 与 tests；架构策略里本功能的范围与 fork 差异预算白名单。
+- 验证证据：`pr-linked-issue.test.mjs` 3 项通过；脚本对本地 API 桩实跑：`Fixes #84` 通过，空 `Fixes #` 与关联到 PR 均失败并输出 `::error`；`check:fork-features`、`check:architecture-policies` 通过。
+- 未解决问题：workflow 只在推到 GitHub 后由真实 PR 触发验证。
+- 下一步：本 PR 自身作为第一个受检 PR。
+
+### 2026-11-05 Orca Server 把 runtime 交给局域网分享（testing）
+
+- 本轮目标：让 SSH 主机上的 Orca Server 也能把分享页读者评论写成审阅笔记（自托管产物后端 REQ-311、D-008）。
+- 完成内容：`orcad-fork-services.ts` 调用 `startOrcadArtifactShare(store, runtime)`，`Runtime` 类型加上分享服务需要的那部分；其他功能的启动不变。
+- 代码或文档变更：只改这一个注册点和本记录；评论功能本身在自托管产物后端功能的提交里。
+- 验证证据：`tsconfig.node.json` 类型检查通过（`orcad-entry.ts` 传入的真实 runtime 满足接口）；`check:fork-features`、`check:architecture-policies` 通过。
+- 未解决问题：SSH 主机上的真机验证未执行（云端容器没有 sshd）。
+- 下一步：随自托管产物后端的评论一起推送。
 
 ### 2026-11-03 上游根布局测试 mock 掉 Android 更新提示（testing）
 

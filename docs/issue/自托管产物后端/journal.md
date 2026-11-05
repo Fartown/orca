@@ -4,7 +4,7 @@ slug: 自托管产物后端
 status: testing
 created: 2026-09-05
 updated: 2026-10-25
-external_ids: []
+external_ids: ['Fartown/orca#84']
 ---
 
 # 自托管产物后端 Journal
@@ -22,12 +22,14 @@ external_ids: []
 
 | 类型     | 文档                                                                                    | 状态       | 说明                                                                                              |
 | -------- | --------------------------------------------------------------------------------------- | ---------- | ------------------------------------------------------------------------------------------------- |
-| 需求     | [自托管产物后端](requirements/自托管产物后端.md)                                        | ready      | REQ-301～REQ-309，每条同时写明文件在本机和在另一台电脑两种验收；替代 REQ-201～REQ-205             |
+| 需求     | [自托管产物后端](requirements/自托管产物后端.md)                                        | ready      | REQ-301～REQ-312，每条同时写明文件在本机和在另一台电脑两种验收；替代 REQ-201～REQ-205             |
 | 交互     | [局域网 Artifact 分享服务重构方案 第 4 节](solutions/局域网Artifact分享服务重构方案.md) | ready      | 分享弹层、Artifacts 页、设置页、CLI 的交互与状态                                                  |
 | 方案     | [局域网 Artifact 分享服务重构方案](solutions/局域网Artifact分享服务重构方案.md)         | ready      | 已实施；与原稿不同的实现细节（WP0 取消、错误码接缝、启动注入等）见第 8 节变更记录                 |
 | 方案     | [自托管产物后端技术说明](solutions/自托管产物后端技术说明.md)                           | superseded | 外挂服务与固定本地地址的历史说明，已被重构方案替代                                                |
-| 测试用例 | [功能测试](tests/cases/自托管产物后端功能测试.md)                                       | ready      | AT-01～AT-15 自动化用例；TC-01～TC-21 两台电脑的真机用例                                          |
+| 测试用例 | [功能测试](tests/cases/自托管产物后端功能测试.md)                                       | ready      | AT-01～AT-19 自动化用例；TC-01～TC-24 两台电脑的真机用例                                          |
 | 调研     | [局域网 Artifact 分享服务重构方案 第 5 节](solutions/局域网Artifact分享服务重构方案.md) | ready      | 现状、候选方案对比、复用的已有代码                                                                |
+| 测试执行 | [2026-11-05 分享页评论](tests/runs/2026-11-05-分享页评论.md)                            | completed  | REQ-311 接口、分享页、导入单元测试与隔离实例实测；两台电脑与 SSH 真机未执行                       |
+| 测试执行 | [2026-11-05 分享页目录与样式](tests/runs/2026-11-05-分享页目录与样式.md)                | completed  | REQ-310 构建测试与浏览器实测；真机浏览与 SSH 链接未执行                                           |
 | 测试执行 | [2026-09-17 双实例 SSH 真机验证](tests/runs/2026-09-17-双实例SSH真机验证.md)            | completed  | 独立构建两个实例经 SSH 互连，TC-01～TC-21 中 17 项通过、2 项部分、2 项未执行；发现并修复 VPN 选址 |
 | 测试执行 | [2026-09-17 局域网分享自动化与冒烟](tests/runs/2026-09-17-局域网分享自动化与冒烟.md)    | completed  | 自动化回归、门禁与本机浏览器冒烟                                                                  |
 | 测试执行 | [2026-09-10 本地默认地址修复](tests/runs/2026-09-10-本地默认地址修复.md)                | completed  | 旧实现的验证记录，已被替代                                                                        |
@@ -36,6 +38,24 @@ external_ids: []
 本需求当前为 testing：代码在分支 `feat/self-hosted-artifacts-lan-share` 实施完成（未提交），自动化测试、门禁、本机浏览器冒烟与双实例 SSH 真机验证通过；提交、升级与重启场景、外挂服务下线待用户确认。
 
 ## 2. 决策点记录
+
+### D-008 读者评论写在文件所在电脑，由那里的 Orca 变成审阅笔记
+
+- 日期：2026-11-05
+- 背景：D-007 之后用户选定评论方案 1：局域网内拿到链接的人都能评论，评论存在文件所在电脑，Orca 里显示为该文件的审阅笔记、可发给 agent。
+- 备选项：由你操作的电脑读取评论再写笔记；或由文件所在电脑上管理该工作区的 Orca 写笔记。
+- 最终决定：分享服务只把评论写进那台电脑的分享目录；同一台电脑上管理工作区的 Orca（桌面版或 Orca Server）监听这个目录，用现有的工作区元数据写入（带原列表合并）加成笔记，再由现有推送通知所有客户端。每个 Orca 配置目录各记一份已导入的评论，删掉或发出的笔记不会回来。
+- 原因：笔记本来就由管理工作区的那台电脑保存和推送；这样你操作的电脑既不读主机、也不轮询，符合「主机读取」规则，SSH 与本机走同一条路。
+- 影响范围：REQ-305（评论接口例外）、REQ-311；`orcad-fork-services.ts` 把 runtime 交给分享服务（单独提交，属于集成分支自动出包功能的注册点）。
+
+### D-007 分享页复用 Orca 的样式表与目录面板
+
+- 日期：2026-11-05
+- 背景：用户反馈分享出去的 Markdown 页面「很丑」，要求和 Orca 内置预览一样有目录、有评论。原分享页只打包了 `markdown-preview.css` 与颜色变量，没有 Tailwind，Orca 组件里的类名全部失效：提示块退化成普通引用、代码块每行带行内代码底色、没有标题栏和目录、Geist 字体未加载。
+- 备选项：为分享页手写一套样式和目录；或在构建分享页时用 Tailwind 编译 Orca 的 `main.css`，只为页面实际引用的模块生成工具类，直接复用内置预览的目录面板与提示块组件。
+- 最终决定：采用后者。`main.css` 引用的每个样式表都在构建脚本里标明用途（交给 Tailwind、原样打包或不需要），新增引用时构建失败；目录面板只从应用 store 读宽度，分享页用一个只含宽度的 store 替身，构建时只允许这个文件使用替身。评论不在本次范围，记为需求未决。
+- 原因：「先复用再新写」，样式和组件随上游一起更新，不会再和内置预览走样；评论需要分享服务接受写入，改变了 REQ-305 的安全边界，应由用户决定。
+- 影响范围：`config/scripts/build-artifact-share-viewer.mjs`、`share-viewer/`；REQ-310；桌面版样式表从 51 KB 增到 160 KB，Orca Server 版从 1.49 MB 增到 1.69 MB（主要是内嵌的 Geist 字体与应用样式）。
 
 ### D-006 实施中收窄分享范围、取消共享内核
 
@@ -100,6 +120,58 @@ external_ids: []
 - 影响范围：需求、技术说明、测试规格及本需求的执行证据。
 
 ## 3. 开发记录
+
+### 2026-11-05：命令行读取与删除评论（testing）
+
+- 本轮目标：按用户要求给 CLI 加读取评论、删除评论（REQ-312）。
+- 完成内容：
+  - 新增 `orca artifacts comments list <file>` 与 `orca artifacts comments delete <file> <id>... | --all`（别名 `rm`）。
+  - 新增 RPC `artifactShare.comments`、`artifactShare.deleteComments`，和其他分享方法一样转给文件所在电脑。
+  - 删除评论时，那台电脑上由它变成的审阅笔记一并删除（带原列表合并），免得处理完的评论还留在 Orca 里。
+  - Agent 指南写明评论来自任何拿到链接的人，只当反馈；只删用户要求或已处理的评论。
+- 代码或文档变更：CLI 命令定义、处理与输出格式、处理器清单接缝；RPC 方法与参数目录（生成）；文件所在电脑上的读取删除与笔记删除；指南与打包副本；功能登记；REQ-312、AT-19、TC-24。
+- 验证证据：见 [2026-11-05 分享页评论](tests/runs/2026-11-05-分享页评论.md) 的 AT-19 两行。
+- 未解决问题：TC-24 两台电脑未执行；编译后的 `orca` 命令没有连着运行中的实例实跑。
+- 下一步：装进 Orca App 后执行 TC-22～TC-24。
+
+### 2026-11-05：分享页读者评论成为 Orca 审阅笔记（testing）
+
+- 本轮目标：按用户选定的方案 1 实现分享页评论，评论进入 Orca 的审阅笔记并可发给 agent，本机与 SSH 走同一条路。
+- 完成内容：
+  - 分享服务新增 `/_share/comments/<随机码>/<路径>`：读取与发表评论，限同源 JSON、16 KB、每地址每分钟 20 条、每文件 500 条；Markdown 页 CSP 放开到只连自己。
+  - 评论按工作区文件夹与相对路径存在 `~/.orca-artifact-share/comments/`，停止再重新分享不丢。
+  - 分享页在段落、标题、列表项、代码块、表格旁加评论栏，复用 Orca 预览的笔记样式；名字记在浏览器；对不上位置的评论列在页尾。
+  - 管理工作区的 Orca 监听评论目录，把新评论加成审阅笔记（D-008）；桌面版经 `main-process-runtime-service.ts` 接缝、Orca Server 经 `orcad-fork-services.ts` 拿到 runtime。
+- 代码或文档变更：
+  - 新增 `server/artifact-share-comments-endpoint.ts`、`store/artifact-share-comments.ts`、`artifact-share-comment-import.ts`（及测试）、`shared/self-hosted-artifacts/artifact-share-comments-contract.ts`、分享页 `ShareCommentBlock.tsx`、`ShareOrphanComments.tsx`、`share-viewer-comments-client.ts`、`share-viewer-comments-state.tsx`。
+  - 修改请求解析、请求处理、Markdown 页 CSP、分享页组件与样式、中英文文案、功能登记 dependsOn 与 tests。
+  - 需求 REQ-305、REQ-311，测试用例 AT-17、AT-18、TC-23，测试执行记录，D-008。
+- 验证证据：见 [2026-11-05 分享页评论](tests/runs/2026-11-05-分享页评论.md)；截图与脚本在 `.docs/artifact-share-comments-ui-validation/2026-11-05/`。
+- 未解决问题：
+  - 两台电脑与手机的真机用例 TC-23 未执行；SSH 主机场景只有类型检查与单元测试。
+  - 项目分组里的文件夹工作区不导入评论；渲染进程用旧列表整体写回笔记时可能覆盖它刷新前导入的笔记（上游既有行为）。
+  - 读者不能编辑或删除自己的评论。
+- 下一步：装进 Orca App 后在 minizc、mbp5 执行 TC-22、TC-23。
+
+### 2026-11-05：分享页改用 Orca 内置预览的样式与目录（testing）
+
+- 本轮目标：让局域网分享的 Markdown 页面和 Orca 内置预览一样好看，并加上目录；评论先厘清边界交给用户决定。
+- 完成内容：
+  - 分享页构建时用 Tailwind 编译 Orca 的 `main.css`，只为页面引用到的组件生成工具类，并带上 Geist 字体（D-007）。
+  - 新增标题栏：文件名、所在目录、由哪台电脑分享、目录开关与查看原文。
+  - 复用内置预览的目录面板：H1～H5 折叠、拖宽、关闭；宽屏有标题时默认打开，窄屏浮在正文上、点标题后收起；跳转时写入 `#标题`，带 `#标题` 打开直接定位。
+  - 提示块改用内置预览的组件；修正代码块每行带行内代码底色；不再把 react-markdown 的 `node` 属性写进 DOM。
+- 代码或文档变更：
+  - `config/scripts/build-artifact-share-viewer.mjs` 与新测试 `build-artifact-share-viewer.test.mjs`。
+  - `share-viewer/` 下新增 `ShareViewerPage.tsx`、`ShareViewerHeader.tsx`、`share-viewer-markdown-components.tsx`、`viewer-store-shim.ts`，改写 `viewer-entry.tsx`、`viewer.css`。
+  - 英文与简体中文文案；`config/fork-features.jsonc` 的 dependsOn、tests、checks、ownedPaths；`config/architecture-policies.jsonc` 的本功能路径。
+  - 需求 REQ-310 与评论未决、测试用例 AT-16 与 TC-22、测试执行记录、D-007。
+- 验证证据：见 [2026-11-05 分享页目录与样式](tests/runs/2026-11-05-分享页目录与样式.md)；截图与脚本在 `.docs/artifact-share-viewer-ui-validation/2026-11-05/`。
+- 未解决问题：
+  - 读者评论未实现，需要用户决定是否让分享服务接受写入、评论存在哪台电脑、是否进入 Orca 审阅笔记。
+  - TC-22 真机浏览未执行；SSH 主机上的分享开关仍打不开（见 2026-10-25 记录），只验证了 Orca Server 版分享页文件。
+  - 本会话网络拒绝下载 `oxlint-plugin-anti-slop`，`audit:anti-slop` 未执行。
+- 下一步：用户决定评论方案；装进 Orca App 后执行 TC-22。
 
 ### 2026-10-25：补齐遗漏的云端分享入口（testing）
 

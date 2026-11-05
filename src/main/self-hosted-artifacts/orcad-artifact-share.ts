@@ -1,4 +1,5 @@
 import { getAppEnvironment } from '../../shared/app-environment'
+import type { ArtifactShareCommentImportRuntime } from './artifact-share-comment-import'
 import { resolveOrcadInstallRoot } from '../orcad/orcad-app-paths'
 import {
   startArtifactShareForMainProcess,
@@ -12,10 +13,12 @@ import {
 
 /** The SSH runtime serves its own files and port; a desktop on the same host shares the lock. */
 export function startOrcadArtifactShare(
-  settings: ArtifactShareSettingsSource
+  settings: ArtifactShareSettingsSource,
+  commentRuntime?: ArtifactShareCommentImportRuntime
 ): () => Promise<void> {
   startArtifactShareForMainProcess({
     settings,
+    commentRuntime,
     userDataPath: getAppEnvironment().getPath('userData'),
     resourcesPath: undefined,
     appPath: resolveOrcadInstallRoot(),
