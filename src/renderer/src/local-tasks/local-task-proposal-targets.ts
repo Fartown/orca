@@ -1,10 +1,15 @@
 import type { AppState } from '@/store/types'
 import { getAgentCatalog } from '@/lib/agent-catalog'
-import { normalizeExecutionHostId } from '../../../shared/execution-host'
+import { getRepoExecutionHostId, normalizeExecutionHostId } from '../../../shared/execution-host'
 import { normalizeDisabledTuiAgents, pickTuiAgent } from '../../../shared/tui-agent-selection'
 import type { TuiAgent } from '../../../shared/tui-agent'
 import type { LocalTaskProject } from '../../../shared/local-tasks/local-task-types'
-import { localTaskIdEndpoint, SELF_LOCAL_TASK_ENDPOINT } from './local-task-endpoints'
+import {
+  localTaskEndpointForHost,
+  localTaskIdEndpoint,
+  SELF_LOCAL_TASK_ENDPOINT,
+  type LocalTaskEndpointKey
+} from './local-task-endpoints'
 import { orcaProjectIdForRepo, orcaProjectIdsForWorktree } from './local-task-workspace-resolution'
 
 /** Why a proposal item could not be placed, worded for the dispatcher that reads the result. */
@@ -16,9 +21,19 @@ export function isProposalMiss<T>(
   return typeof value === 'object' && value !== null && 'miss' in value
 }
 
-/** Proposals live in this window's own library, so only its own projects take their tasks. */
-export function ownLocalTaskProjects(projects: readonly LocalTaskProject[]): LocalTaskProject[] {
-  return projects.filter((project) => localTaskIdEndpoint(project.id) === SELF_LOCAL_TASK_ENDPOINT)
+/**
+ * A task goes in the library of the Orca that owns its workspace (D-008): this window's own for
+ * its hosts and SSH relays, a managed SSH host's or paired server's for theirs.
+ */
+export function proposalLibraryFor(hostId: string | null): LocalTaskEndpointKey {
+  return (hostId ? localTaskEndpointForHost(hostId) : null) ?? SELF_LOCAL_TASK_ENDPOINT
+}
+
+export function projectsOfLibrary(
+  projects: readonly LocalTaskProject[],
+  library: LocalTaskEndpointKey
+): LocalTaskProject[] {
+  return projects.filter((project) => localTaskIdEndpoint(project.id) === library)
 }
 
 function byName(projects: readonly LocalTaskProject[], name: string): LocalTaskProject[] {
@@ -38,9 +53,10 @@ function byName(projects: readonly LocalTaskProject[], name: string): LocalTaskP
 export function resolveProposalProject(
   projects: readonly LocalTaskProject[],
   named: string | undefined,
-  targetOrcaProjectIds: ReadonlySet<string> | null
+  targetOrcaProjectIds: ReadonlySet<string> | null,
+  library: LocalTaskEndpointKey = SELF_LOCAL_TASK_ENDPOINT
 ): LocalTaskProject | LocalTaskProposalMiss {
-  const own = ownLocalTaskProjects(projects)
+  const own = projectsOfLibrary(projects, library)
   if (named) {
     const found = byName(own, named)
     return found.length === 1 ? found[0] : { miss: `no single task project named "${named}"` }
@@ -54,7 +70,9 @@ export function resolveProposalProject(
   if (holding.length === 0 && own.length === 1) {
     return own[0]
   }
-  return { miss: 'name the task project: more than one could take this task' }
+  return own.length === 0 || (holding.length === 0 && targetOrcaProjectIds)
+    ? { miss: 'no task project here tracks this repository; ask the user to set one up' }
+    : { miss: 'name the task project: more than one could take this task' }
 }
 
 /** A workspace row this window lists, as the composer's creations hand it over. */
@@ -75,6 +93,12 @@ export function findProposalWorktree(
 
 export function proposalWorktreeProjects(state: AppState, worktree: ProposalWorktree): Set<string> {
   return orcaProjectIdsForWorktree(state, worktree)
+}
+
+/** The host a repository runs on, for the library its tasks belong in. */
+export function proposalRepoHostId(state: AppState, repoId: string): string | null {
+  const repo = state.repos.find((candidate) => candidate.id === repoId)
+  return repo ? getRepoExecutionHostId(repo) : null
 }
 
 export function proposalRepoProjects(state: AppState, repoId: string): Set<string> | null {

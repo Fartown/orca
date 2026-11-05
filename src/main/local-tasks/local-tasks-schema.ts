@@ -4,7 +4,7 @@ import { workspaceIdentityKey } from './local-task-link-rows'
 import { keepOwnedHostSpellings } from './local-tasks-owned-host-migration'
 import { rowNullableString, rowString } from './local-tasks-sqlite-row'
 
-export const LOCAL_TASKS_SCHEMA_VERSION = 6
+export const LOCAL_TASKS_SCHEMA_VERSION = 7
 
 // Why default_repo_id is an Orca project id: since v4 it names one of the project's linked repos.
 const PROJECT_COLUMNS = `  id TEXT PRIMARY KEY,
@@ -185,6 +185,26 @@ CREATE TABLE IF NOT EXISTS local_task_conversation_watches (
   added_at INTEGER NOT NULL,
   added_by TEXT NOT NULL,
   PRIMARY KEY (conversation_id, task_id)
+);
+CREATE TABLE IF NOT EXISTS local_task_conversation_remote_watches (
+  conversation_id TEXT NOT NULL REFERENCES local_task_conversations(id) ON DELETE CASCADE,
+  task_client_id TEXT NOT NULL,
+  added_at INTEGER NOT NULL,
+  added_by TEXT NOT NULL,
+  PRIMARY KEY (conversation_id, task_client_id)
+);
+CREATE TABLE IF NOT EXISTS local_task_conversation_facts (
+  conversation_id TEXT NOT NULL REFERENCES local_task_conversations(id) ON DELETE CASCADE,
+  source_id TEXT NOT NULL,
+  task_client_id TEXT,
+  task_ref TEXT,
+  kind TEXT NOT NULL,
+  at INTEGER NOT NULL,
+  summary TEXT NOT NULL,
+  needs_you TEXT,
+  finished INTEGER NOT NULL,
+  reported_at INTEGER,
+  UNIQUE (conversation_id, source_id)
 );
 `
 

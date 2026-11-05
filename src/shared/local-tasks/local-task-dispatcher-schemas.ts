@@ -48,7 +48,7 @@ export const inboxSchema: z.ZodType<LocalTaskInbox> = z.object({
   conversationId: z.string(),
   items: z.array(
     z.object({
-      kind: z.enum(['progress', 'status', 'session', 'comment', 'needs-you', 'proposal']),
+      kind: z.enum(['progress', 'status', 'session', 'comment', 'needs-you', 'proposal', 'host']),
       at: z.number(),
       taskId: z.string().nullable(),
       taskRef: z.string().nullable(),

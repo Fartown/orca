@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 // Why a value import: the Bun runner only moves SQLite tests to Node when they import this directly.
+import type { LocalTaskForwardedFact } from '../../shared/local-tasks/local-task-dispatcher-types'
 import SyncDatabase from '../sqlite/sync-database'
 import type { LocalTaskProgressSnapshot } from '../../shared/local-tasks/local-task-link-types'
 import { LocalTaskDispatcher } from './local-task-dispatcher'
@@ -364,5 +365,82 @@ describe('dispatcher proposal decisions', () => {
     expect(
       service.ackInbox({ clientOperationId: op(), paneKey: PANE, cursor: 'not-a-cursor' })
     ).toMatchObject({ ok: false, code: 'invalid_argument' })
+  })
+})
+
+describe('dispatcher following tasks in other libraries (D-008)', () => {
+  const REMOTE = 'runtime:env-ssh/task-7'
+
+  function fact(sourceId: string, extra: Partial<LocalTaskForwardedFact> = {}) {
+    return {
+      sourceId,
+      kind: 'progress' as const,
+      at: 50,
+      taskId: REMOTE,
+      taskRef: 'SSH-7',
+      summary: 'Investigate on SSH: found the cause',
+      ...extra
+    }
+  }
+
+  it('follows a task another library holds once its proposal ran there', () => {
+    const { service } = setup()
+    register(service)
+    const proposal = propose(service)
+    service.decideProposal(
+      { clientOperationId: op(), proposalId: proposal.id, decision: 'confirmed' },
+      'desktop'
+    )
+    service.claimProposal({ clientOperationId: op(), proposalId: proposal.id })
+    service.recordProposalResults({
+      clientOperationId: op(),
+      proposalId: proposal.id,
+      results: [{ index: 0, ok: true, taskId: REMOTE, detail: 'started SSH-7' }]
+    })
+    expect(service.dispatcher.watches(PANE)).toMatchObject({
+      ok: true,
+      watches: [{ taskId: REMOTE, addedBy: 'proposal' }]
+    })
+    expect(inbox(service).watchedTaskCount).toBe(1)
+  })
+
+  it('reports forwarded facts once, only for followed tasks, and stops following a finished task', () => {
+    const { service } = setup()
+    register(service)
+    service.watchTask({ clientOperationId: op(), paneKey: PANE, taskId: REMOTE })
+    service.recordDispatcherFacts({
+      clientOperationId: op(),
+      paneKey: PANE,
+      facts: [
+        fact('env-ssh/e1', { needsYou: 'Pick a timeout' }),
+        fact('env-ssh/e1'),
+        fact('env-other/e9', { taskId: 'runtime:env-other/task-1', taskRef: 'X-1' }),
+        {
+          sourceId: 'env-ssh/contact/1',
+          kind: 'host',
+          at: 60,
+          taskId: null,
+          taskRef: null,
+          summary: 'loopback sshd is out of contact'
+        }
+      ]
+    })
+    const first = inbox(service)
+    expect(first.items.map((item) => [item.kind, item.taskRef, item.needsYou ?? null])).toEqual([
+      ['progress', 'SSH-7', 'Pick a timeout'],
+      ['host', null, null]
+    ])
+    service.ackInbox({ clientOperationId: op(), paneKey: PANE, cursor: first.cursor })
+    expect(inbox(service).items).toEqual([])
+
+    service.recordDispatcherFacts({
+      clientOperationId: op(),
+      paneKey: PANE,
+      facts: [fact('env-ssh/e2', { kind: 'status', summary: 'moved to Done', finished: true })]
+    })
+    const second = inbox(service)
+    expect(second.watchedTaskCount).toBe(1)
+    service.ackInbox({ clientOperationId: op(), paneKey: PANE, cursor: second.cursor })
+    expect(inbox(service).watchedTaskCount).toBe(0)
   })
 })

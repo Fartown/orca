@@ -7,6 +7,7 @@ import { refreshLocalTaskProposals } from './local-task-dispatcher-proposals'
 import { knownDispatcherPaneKey, liveDispatcherPaneKey } from './local-task-dispatcher-session'
 import { subscribeLocalTaskAppStore } from './local-task-app-store-subscription'
 import { subscribeSelfLocalTaskChanges } from './local-task-self-changes'
+import { bindLocalTaskDispatcherForwarding } from './local-task-dispatcher-forwarding'
 import { LOCAL_TASK_DISPATCHER_WAKE_PREFERENCE_KEY } from './local-task-preference-keys'
 import { localTasksDomainStore } from './local-tasks-domain-store'
 
@@ -152,6 +153,7 @@ export function createLocalTaskDispatcherWake(
 /** Mounted once per window: proposals follow the library's notices, the wake follows both. */
 export function bindLocalTaskDispatcher(): () => void {
   const wake = createLocalTaskDispatcherWake()
+  const unbindForwarding = bindLocalTaskDispatcherForwarding()
   const unsubscribeChanges = subscribeSelfLocalTaskChanges((scopes) => {
     // Why: a library that never had a dispatcher has no proposals and nothing to wake.
     if (!knownDispatcherPaneKey()) {
@@ -205,6 +207,7 @@ export function bindLocalTaskDispatcher(): () => void {
   target?.addEventListener('blur', onFocusMoved)
   target?.addEventListener('keydown', onKey, true)
   return () => {
+    unbindForwarding()
     unsubscribeChanges()
     unsubscribeStatus()
     target?.removeEventListener('focusin', onFocusMoved)

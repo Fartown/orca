@@ -53,6 +53,24 @@ export type LocalTaskInboxKind =
   | 'comment'
   | 'needs-you'
   | 'proposal'
+  /** A host whose library holds followed tasks left or came back into contact. */
+  | 'host'
+
+/** A fact a desktop window read in another Orca's library and passed to the dispatcher. */
+export type LocalTaskForwardedFact = {
+  /** Unique per fact: the library and its event, or the host and the moment contact changed. */
+  sourceId: string
+  /** Settled proposals are this library's own and never forwarded. */
+  kind: Exclude<LocalTaskInboxKind, 'proposal'>
+  at: number
+  /** The task as this desktop keys it, `runtime:{env}/{id}`; null for a host fact. */
+  taskId: string | null
+  taskRef: string | null
+  summary: string
+  needsYou?: string
+  /** The task moved into a completed or canceled status: once reported, it stops being followed. */
+  finished?: boolean
+}
 
 /** One fact on a watched task, already worded as one line for the dispatcher (REQ-031). */
 export type LocalTaskInboxItem = {

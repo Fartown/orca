@@ -131,6 +131,25 @@ describe('resolveProposalProject', () => {
     ).toBe(shop)
   })
 
+  it("puts a task for a workspace on another host in that host's library", () => {
+    expect(
+      resolveProposalProject(
+        [shop, docs, paired],
+        undefined,
+        new Set(['github:acme/shop']),
+        'runtime:env-1'
+      )
+    ).toBe(paired)
+    expect(
+      resolveProposalProject(
+        [shop, docs],
+        undefined,
+        new Set(['github:acme/shop']),
+        'runtime:env-1'
+      )
+    ).toEqual({ miss: expect.stringContaining('no task project here tracks this repository') })
+  })
+
   it('asks instead of guessing when several projects could take the task', () => {
     const shop2 = project('p-shop-2', 'Shop ops', 'OPS', ['github:acme/shop'])
     expect(resolveProposalProject([shop, shop2], undefined, new Set(['github:acme/shop']))).toEqual(

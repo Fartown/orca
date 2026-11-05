@@ -21,6 +21,7 @@ import type {
 } from '../../shared/local-tasks/local-tasks-rpc-params'
 import { z, type ZodType } from 'zod'
 import type {
+  LocalTasksDispatcherRecordFactsInput,
   LocalTasksDispatcherRegisterInput,
   LocalTasksProposalsCreateInput,
   LocalTasksProposalsDecideInput,
@@ -302,12 +303,8 @@ export class LocalTasksService {
   }
 
   recordProposalResults(input: LocalTasksProposalsRecordResultsInput) {
-    return this.write(
-      input.clientOperationId,
-      'proposals.recordResults',
-      input,
-      PROPOSAL_RESULT,
-      (now) => this.dispatcher.recordResults(input, now)
+    return this.write(input.clientOperationId, 'proposals.results', input, PROPOSAL_RESULT, (now) =>
+      this.dispatcher.recordResults(input, now)
     )
   }
 
@@ -320,6 +317,12 @@ export class LocalTasksService {
   unwatchTask(input: { clientOperationId: string; paneKey: string; taskId: string }) {
     return this.write(input.clientOperationId, 'dispatcher.unwatch', input, EMPTY_RESULT, () =>
       this.dispatcher.unwatch(input.paneKey, input.taskId)
+    )
+  }
+
+  recordDispatcherFacts(input: LocalTasksDispatcherRecordFactsInput) {
+    return this.write(input.clientOperationId, 'dispatcher.recordFacts', input, EMPTY_RESULT, () =>
+      this.dispatcher.recordFacts(input.paneKey, input.facts)
     )
   }
 

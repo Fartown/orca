@@ -33,12 +33,13 @@ export const LocalTaskProposalItemSchema = z.discriminatedUnion('kind', [
     agent: agent.optional()
   }),
   // One more instruction for a session that finished a round.
-  z.object({ kind: z.literal('append'), taskId: id, sessionLinkId: id, text: prompt }),
+  // A session left out is the task's only one, found when the proposal runs.
+  z.object({ kind: z.literal('append'), taskId: id, sessionLinkId: id.optional(), text: prompt }),
   // Always confirmed, even when proposals run without asking.
   z.object({
     kind: z.literal('stop'),
     taskId: id,
-    sessionLinkId: id,
+    sessionLinkId: id.optional(),
     reason: z.string().trim().min(1).max(500)
   }),
   z.object({ kind: z.literal('link'), taskId: id, target: worktree }),
@@ -95,6 +96,29 @@ export const LocalTasksDispatcherWatchParams = z.object({ clientOperationId, pan
 
 export const LocalTasksDispatcherWatchesParams = z.object({ paneKey })
 
+const inboxKind = z.enum(['progress', 'status', 'session', 'comment', 'needs-you', 'host'])
+
+/** Facts a desktop window read in other libraries for the dispatcher (REQ-031, D-008). */
+export const LocalTasksDispatcherRecordFactsParams = z.object({
+  clientOperationId,
+  paneKey,
+  facts: z
+    .array(
+      z.object({
+        sourceId: z.string().min(1).max(512),
+        kind: inboxKind,
+        at: z.number().int().nonnegative(),
+        taskId: z.string().min(1).max(256).nullable(),
+        taskRef: z.string().max(64).nullable(),
+        summary: z.string().min(1).max(500),
+        needsYou: z.string().max(500).optional(),
+        finished: z.boolean().optional()
+      })
+    )
+    .min(1)
+    .max(100)
+})
+
 export const LocalTasksDispatcherInboxParams = z.object({
   paneKey,
   limit: z.number().int().min(1).max(100).optional()
@@ -108,6 +132,9 @@ export const LocalTasksDispatcherAckParams = z.object({
 
 export type LocalTaskProposalItem = z.infer<typeof LocalTaskProposalItemSchema>
 export type LocalTasksDispatcherRegisterInput = z.infer<typeof LocalTasksDispatcherRegisterParams>
+export type LocalTasksDispatcherRecordFactsInput = z.infer<
+  typeof LocalTasksDispatcherRecordFactsParams
+>
 export type LocalTasksProposalsCreateInput = z.infer<typeof LocalTasksProposalsCreateParams>
 export type LocalTasksProposalsDecideInput = z.infer<typeof LocalTasksProposalsDecideParams>
 export type LocalTasksProposalsRecordResultsInput = z.infer<

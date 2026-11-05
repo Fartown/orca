@@ -47,6 +47,8 @@ Write through proposals only:
   Items: start (new task + session), subtask, append (one line to a session that finished a
   round), stop (always confirmed), link (attach a workspace), record (turn a session into a task).
   Name tasks by ref. append and stop may leave out sessionLinkId when the task has one session.
+  A task in a workspace on another host (SSH) lives in that host's task library: orca task list
+  does not show it, but its ref works in proposals and its news reaches your inbox.
   Put the steps of one request into one proposal. The user confirms; Orca executes.
 - orca task watch <ref> / orca task unwatch <ref> when the user asks you to follow a task.
 

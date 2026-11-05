@@ -417,6 +417,15 @@ describe('orca task', () => {
       })
     })
 
+    it('passes on a ref of a task on another host for Orca to find when the proposal runs', async () => {
+      const items = [{ kind: 'append', taskId: 'SSH-7', text: 'Keep going' }]
+      host({ write: () => proposalReply([]) })
+      await inPane(() => main(['task', 'propose', '--body', JSON.stringify(items)], '/repo'))
+      expect(writeParams('localTasks.proposals.create')).toMatchObject({
+        items: [{ kind: 'append', taskId: 'SSH-7' }]
+      })
+    })
+
     it('explains a malformed proposal and never sends it', async () => {
       host()
       await inPane(() =>

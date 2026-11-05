@@ -4,18 +4,16 @@ import type {
   LocalTaskProposal,
   LocalTaskProposalItemResult
 } from '../../../shared/local-tasks/local-task-dispatcher-types'
-import type {
-  LocalTaskSessionLink,
-  LocalTaskWorkspaceLink
-} from '../../../shared/local-tasks/local-task-link-types'
+import type { LocalTaskWorkspaceLink } from '../../../shared/local-tasks/local-task-link-types'
 import type { LocalTask, LocalTaskFailure } from '../../../shared/local-tasks/local-task-types'
 import { localTaskDispatcherClient } from './local-task-dispatcher-client'
-import { isLocalTaskHostInContact } from './local-task-host-contact'
 import { findLocalTaskEffectiveWorkspace } from './local-task-link-selectors'
-import { sendLocalTaskReply } from './local-task-needs-you-actions'
+import { localTaskWorktreeHostId } from './local-task-workspace-resolution'
 import {
   findProposalWorktree,
   isProposalMiss,
+  proposalLibraryFor,
+  proposalRepoHostId,
   type ProposalWorktree,
   proposalRepoProjects,
   proposalWorktreeProjects,
@@ -24,12 +22,18 @@ import {
   type LocalTaskProposalMiss
 } from './local-task-proposal-targets'
 import { launchLocalTaskSession } from './local-task-session-launch'
+import {
+  failed,
+  findProposalTask,
+  runAppendItem,
+  runStopItem,
+  type Outcome
+} from './local-task-proposal-session-items'
 import { startLocalTaskWork } from './local-task-start-work'
 import { buildLocalTaskWorkspaceLinkInput } from './local-task-workspace-linking'
 import { localTasksClient } from './local-tasks-runtime-client'
 import { localTasksDomainStore } from './local-tasks-domain-store'
 
-type Outcome = Omit<LocalTaskProposalItemResult, 'index'>
 type Item<K extends LocalTaskProposalItem['kind']> = Extract<LocalTaskProposalItem, { kind: K }>
 /** One run of a confirmed proposal: the composer can show one new workspace at a time. */
 type ProposalRun = { composerOpened: boolean }
@@ -39,10 +43,6 @@ export type LocalTaskProposalExecutors = {
 }
 
 const DETAIL_MAX = 500
-
-function failed(miss: LocalTaskProposalMiss, taskId?: string): Outcome {
-  return { ok: false, ...(taskId ? { taskId } : {}), detail: miss.miss }
-}
 
 /** A library write whose refusal becomes the item's result instead of a toast. */
 async function write<T extends { ok: true }>(
@@ -108,28 +108,6 @@ function launch(task: LocalTask, link: LocalTaskWorkspaceLink, asked: string | u
       }
 }
 
-function taskById(taskId: string): LocalTask | undefined {
-  return localTasksDomainStore.getState().tasks.find((task) => task.id === taskId)
-}
-
-/** A session of the task, on a host this window is in contact with. */
-function liveSession(item: {
-  taskId: string
-  sessionLinkId: string
-}): LocalTaskSessionLink | LocalTaskProposalMiss {
-  const link = localTasksDomainStore
-    .getState()
-    .links.sessions.find(
-      (candidate) => candidate.id === item.sessionLinkId && candidate.taskId === item.taskId
-    )
-  if (!link) {
-    return { miss: 'the session is not linked to that task' }
-  }
-  return isLocalTaskHostInContact(useAppStore.getState(), link.hostId)
-    ? link
-    : { miss: 'the session’s host is out of contact (unverifiable)' }
-}
-
 async function runStart(item: Item<'start'>, run: ProposalRun): Promise<Outcome> {
   const state = useAppStore.getState()
   const { projects } = localTasksDomainStore.getState()
@@ -141,7 +119,8 @@ async function runStart(item: Item<'start'>, run: ProposalRun): Promise<Outcome>
     const project = resolveProposalProject(
       projects,
       item.project,
-      proposalWorktreeProjects(state, worktree)
+      proposalWorktreeProjects(state, worktree),
+      proposalLibraryFor(localTaskWorktreeHostId(state, worktree))
     )
     if (isProposalMiss(project)) {
       return failed(project)
@@ -157,7 +136,12 @@ async function runStart(item: Item<'start'>, run: ProposalRun): Promise<Outcome>
   if (!orcaProjects) {
     return failed({ miss: `repository ${item.target.repoId} is not in Orca` })
   }
-  const project = resolveProposalProject(projects, item.project, orcaProjects)
+  const project = resolveProposalProject(
+    projects,
+    item.project,
+    orcaProjects,
+    proposalLibraryFor(proposalRepoHostId(state, item.target.repoId))
+  )
   if (isProposalMiss(project)) {
     return failed(project)
   }
@@ -181,9 +165,9 @@ async function runStart(item: Item<'start'>, run: ProposalRun): Promise<Outcome>
 }
 
 async function runSubtask(item: Item<'subtask'>): Promise<Outcome> {
-  const parent = taskById(item.parentTaskId)
-  if (!parent) {
-    return failed({ miss: 'the parent task was not found' })
+  const parent = findProposalTask(item.parentTaskId)
+  if (isProposalMiss(parent)) {
+    return failed(parent)
   }
   const domain = localTasksDomainStore.getState()
   const workspace = findLocalTaskEffectiveWorkspace(
@@ -200,48 +184,19 @@ async function runSubtask(item: Item<'subtask'>): Promise<Outcome> {
     : { ok: false, taskId: task.id, detail: `created ${task.ref}; ${parent.ref} has no workspace` }
 }
 
-async function runAppend(item: Item<'append'>): Promise<Outcome> {
-  const link = liveSession(item)
-  if (isProposalMiss(link)) {
-    return failed(link, item.taskId)
-  }
-  const sent = await sendLocalTaskReply(link, item.text)
-  return sent.status === 'sent'
-    ? { ok: true, taskId: item.taskId, detail: 'sent' }
-    : failed({ miss: `not sent (${sent.status})` }, item.taskId)
-}
-
-async function runStop(item: Item<'stop'>): Promise<Outcome> {
-  const link = liveSession(item)
-  if (isProposalMiss(link)) {
-    return failed(link, item.taskId)
-  }
-  const state = useAppStore.getState()
-  const layout = link.tabId ? state.terminalLayoutsByTabId[link.tabId] : undefined
-  if (link.surface !== 'terminal' || !link.tabId || !layout) {
-    return failed({ miss: 'only an open terminal session can be stopped here' }, item.taskId)
-  }
-  // Why one pane only: closing a split tab would also end sessions the proposal never named.
-  if (layout.root?.type !== 'leaf') {
-    return failed({ miss: 'the session shares its tab; stop it there' }, item.taskId)
-  }
-  // Why the pane: a tab reused after the agent left, or a moved pane, holds another process.
-  if (!link.paneKey || `${link.tabId}:${layout.root.leafId}` !== link.paneKey) {
-    return failed({ miss: 'its tab no longer holds this session' }, item.taskId)
-  }
-  state.closeTab(link.tabId, { captureRecentlyClosed: true })
-  return { ok: true, taskId: item.taskId, detail: 'stopped' }
-}
-
 async function runLink(item: Item<'link'>): Promise<Outcome> {
+  const task = findProposalTask(item.taskId)
+  if (isProposalMiss(task)) {
+    return failed(task)
+  }
   const worktree = findProposalWorktree(useAppStore.getState(), item.target)
   if (isProposalMiss(worktree)) {
-    return failed(worktree, item.taskId)
+    return failed(worktree, task.id)
   }
-  const link = await linkWorkspace(item.taskId, worktree, 'manual')
+  const link = await linkWorkspace(task.id, worktree, 'manual')
   return isProposalMiss(link)
-    ? failed(link, item.taskId)
-    : { ok: true, taskId: item.taskId, detail: 'linked' }
+    ? failed(link, task.id)
+    : { ok: true, taskId: task.id, detail: `linked ${task.ref}` }
 }
 
 async function runRecord(item: Item<'record'>): Promise<Outcome> {
@@ -253,7 +208,8 @@ async function runRecord(item: Item<'record'>): Promise<Outcome> {
   const project = resolveProposalProject(
     localTasksDomainStore.getState().projects,
     item.project,
-    proposalWorktreeProjects(state, worktree)
+    proposalWorktreeProjects(state, worktree),
+    proposalLibraryFor(localTaskWorktreeHostId(state, worktree))
   )
   if (isProposalMiss(project)) {
     return failed(project)
@@ -271,8 +227,8 @@ async function runRecord(item: Item<'record'>): Promise<Outcome> {
 export const LOCAL_TASK_PROPOSAL_EXECUTORS: LocalTaskProposalExecutors = {
   start: runStart,
   subtask: runSubtask,
-  append: runAppend,
-  stop: runStop,
+  append: runAppendItem,
+  stop: runStopItem,
   link: runLink,
   record: runRecord
 }

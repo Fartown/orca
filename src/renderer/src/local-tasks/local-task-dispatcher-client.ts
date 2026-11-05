@@ -5,7 +5,10 @@ import {
   proposalSchema,
   watchSchema
 } from '../../../shared/local-tasks/local-task-dispatcher-schemas'
-import type { LocalTaskProposalItemResult } from '../../../shared/local-tasks/local-task-dispatcher-types'
+import type {
+  LocalTaskForwardedFact,
+  LocalTaskProposalItemResult
+} from '../../../shared/local-tasks/local-task-dispatcher-types'
 import { writeResultSchema } from '../../../shared/local-tasks/local-task-result-schemas'
 import { SELF_LOCAL_TASK_ENDPOINT } from './local-task-endpoints'
 import { callLocalTasks, writeLocalTasks } from './local-tasks-endpoint-calls'
@@ -66,6 +69,14 @@ export const localTaskDispatcherClient = {
       SELF_LOCAL_TASK_ENDPOINT,
       'localTasks.dispatcher.unwatch',
       { paneKey, taskId },
+      okResult
+    ),
+  /** Facts this window read in other libraries, for the dispatcher's inbox (REQ-031). */
+  recordFacts: (paneKey: string, facts: LocalTaskForwardedFact[]) =>
+    writeLocalTasks(
+      SELF_LOCAL_TASK_ENDPOINT,
+      'localTasks.dispatcher.recordFacts',
+      { paneKey, facts },
       okResult
     ),
   inbox: (paneKey: string, limit: number) =>

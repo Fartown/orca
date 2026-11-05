@@ -43,9 +43,18 @@ function dispatcherPane(): string {
 
 /** A task by its id or any ref the task page accepts. */
 function taskIdOf(library: TaskLibrary, value: string): string {
-  return library.tasks.some((task) => task.id === value)
-    ? value
-    : resolveTaskRef(library, value).task.id
+  if (library.tasks.some((task) => task.id === value)) {
+    return value
+  }
+  try {
+    return resolveTaskRef(library, value).task.id
+  } catch (error) {
+    // Why pass it on: a task on another host is in that host's library, read when the proposal runs.
+    if (error instanceof RuntimeClientError && error.code === 'not_found') {
+      return value
+    }
+    throw error
+  }
 }
 
 /** Lets a proposal name tasks by ref, as the dispatcher reads them in `orca task list`. */
@@ -68,7 +77,9 @@ function resolveProposalRefs(library: TaskLibrary, item: unknown): unknown {
 /** An append or stop may leave out the session when the task has exactly one. */
 function onlySessionOf(library: TaskLibrary, taskId: unknown): string | undefined {
   const sessions = library.links.sessions.filter((session) => session.taskId === taskId)
-  if (sessions.length === 1 || typeof taskId !== 'string') {
+  const here = library.tasks.some((task) => task.id === taskId)
+  // Why not for another library's task: Orca finds its only session when the proposal runs.
+  if (sessions.length === 1 || typeof taskId !== 'string' || !here) {
     return sessions[0]?.id
   }
   const ref = library.tasks.find((task) => task.id === taskId)?.ref ?? taskId
