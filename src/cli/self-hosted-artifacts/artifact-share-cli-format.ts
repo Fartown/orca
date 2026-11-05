@@ -1,4 +1,8 @@
 import type {
+  ArtifactShareCommentsResult,
+  ArtifactShareDeleteCommentsResult
+} from '../../shared/self-hosted-artifacts/artifact-share-comments-contract'
+import type {
   ArtifactShareListResult,
   ArtifactShareServiceStatus,
   ArtifactShareStatusResult
@@ -45,4 +49,32 @@ export function formatArtifactShareList(result: ArtifactShareListResult): string
       return [header, ...workspaces].join('\n')
     })
     .join('\n\n')
+}
+
+function lineLabel(startLine: number, endLine: number): string {
+  return startLine === endLine ? `L${startLine}` : `L${startLine}-${endLine}`
+}
+
+/** One block per comment: id first so it can be passed straight to `comments delete`. */
+export function formatArtifactShareComments(result: ArtifactShareCommentsResult): string {
+  if (result.comments.length === 0) {
+    return `No comments on this file on ${result.host.label}.`
+  }
+  return result.comments
+    .map((comment) =>
+      [
+        `${comment.id}  ${comment.author}  ${comment.createdAt}  ${lineLabel(comment.startLine, comment.endLine)}`,
+        ...(comment.quote ? [`  > ${comment.quote}`] : []),
+        ...comment.body.split('\n').map((line) => `  ${line}`)
+      ].join('\n')
+    )
+    .join('\n\n')
+}
+
+export function formatArtifactShareDeletedComments(
+  result: ArtifactShareDeleteCommentsResult
+): string {
+  const notes =
+    result.removedNotes > 0 ? `, and ${result.removedNotes} review note(s) they became` : ''
+  return `Deleted ${result.deletedComments} comment(s) on ${result.host.label}${notes}.`
 }

@@ -177,3 +177,29 @@ export function startArtifactShareCommentImport(input: {
     watcher?.close()
   }
 }
+
+/**
+ * Deleting a comment also deletes the review note it became here, so a handled comment does not
+ * linger in Orca. Notes in workspaces on other computers are theirs to keep.
+ */
+export async function removeArtifactShareReviewNotes(
+  runtime: ArtifactShareCommentImportRuntime,
+  absolutePath: string,
+  commentIds: readonly string[]
+): Promise<number> {
+  const owner = await runtime.resolveWorktreeForContainedPath(absolutePath)
+  if (!owner || !isOnThisComputer(owner) || commentIds.length === 0) {
+    return 0
+  }
+  const worktree = await runtime.showManagedWorktree(`id:${owner.id}`, 'local')
+  const noteIds = new Set(commentIds.map(artifactShareReviewNoteId))
+  const base = worktree.diffComments ?? []
+  const kept = base.filter((note) => !noteIds.has(note.id))
+  if (kept.length !== base.length) {
+    await runtime.updateManagedWorktreeMeta(`id:${worktree.id}`, {
+      diffComments: kept,
+      diffCommentsBase: base
+    })
+  }
+  return base.length - kept.length
+}

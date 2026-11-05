@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from 'node:crypto'
-import { readdirSync } from 'node:fs'
+import { readdirSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 import { z } from 'zod'
 import { writeDurableSecureJsonFile } from '../../../shared/secure-file'
@@ -101,6 +101,44 @@ export function listArtifactShareCommentFiles(home: string): StoredArtifactShare
     }
   }
   return files
+}
+
+/** Comment files for one file; a folder shared at different depths over time can hold several. */
+export function findArtifactShareCommentFiles(
+  home: string,
+  absolutePath: string
+): StoredArtifactShareCommentFile[] {
+  return listArtifactShareCommentFiles(home).filter(
+    (file) => join(file.rootPath, file.relativePath) === absolutePath
+  )
+}
+
+/** Removes the named comments, or every comment when `ids` is 'all'; returns what was removed. */
+export function deleteArtifactShareComments(
+  home: string,
+  target: ArtifactShareCommentTarget,
+  ids: ReadonlySet<string> | 'all'
+): Promise<ArtifactShareComment[]> {
+  const path = commentFilePath(home, target)
+  return withFileTransactionLock(path, async () => {
+    const comments = readVersionedArtifactShareFile(path, StoredCommentFile)?.comments ?? []
+    const removed = comments.filter((comment) => ids === 'all' || ids.has(comment.id))
+    const kept = comments.filter((comment) => !removed.includes(comment))
+    if (removed.length === 0) {
+      return []
+    }
+    if (kept.length === 0) {
+      rmSync(path, { force: true })
+    } else {
+      writeDurableSecureJsonFile(path, {
+        version: ARTIFACT_SHARE_FILE_VERSION,
+        rootPath: target.rootPath,
+        relativePath: target.relativePath,
+        comments: kept
+      })
+    }
+    return removed
+  })
 }
 
 const StoredImportLedger = z.object({

@@ -46,7 +46,9 @@ export const HANDLER_GROUPS: readonly HandlerGroup[] = [
       'artifacts update',
       'artifacts unshare',
       'artifacts delete',
-      'artifacts service status'
+      'artifacts service status',
+      'artifacts comments list',
+      'artifacts comments delete'
     ],
     // Why: this fork shares files over the local network from the computer that holds them.
     load: async () =>

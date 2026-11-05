@@ -1540,7 +1540,8 @@
         "src/renderer/src/lib/ime-text-field.tsx",
         "src/renderer/src/lib/markdown-review-notes.ts",
         "src/renderer/src/components/editor/markdown-preview-block-model.ts",
-        "src/renderer/src/components/editor/markdown-preview-types.ts"
+        "src/renderer/src/components/editor/markdown-preview-types.ts",
+        "src/cli/flags.ts"
       ],
       "policyId": "self-hosted-artifacts",
       "ownedPaths": [
@@ -1801,6 +1802,8 @@
         "src/main/self-hosted-artifacts/artifact-share-rpc-methods.test.ts",
         "src/main/self-hosted-artifacts/artifact-share-orcad-bundle.test.ts",
         "src/main/self-hosted-artifacts/artifact-share-comment-import.test.ts",
+        "src/main/self-hosted-artifacts/artifact-share-owner-comments.test.ts",
+        "src/cli/self-hosted-artifacts/artifact-share-cli-comments.test.ts",
         "config/scripts/build-artifact-share-viewer.test.mjs",
         "src/cli/self-hosted-artifacts/artifact-share-cli-target.test.ts",
         "src/renderer/src/components/self-hosted-artifacts/share-button/lan-artifact-share-machine.test.ts",
