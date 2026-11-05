@@ -28,6 +28,7 @@ import { localTasksReadiness } from '../../../local-tasks/local-tasks-readiness'
 import { sourceOf } from '../../../local-tasks/local-tasks-rpc-caller'
 import type { LocalTasksService } from '../../../local-tasks/local-tasks-service'
 import { defineMethod, defineStreamingMethod } from '../core'
+import { LOCAL_TASK_DISPATCHER_METHODS } from './local-task-dispatcher-methods'
 import { LOCAL_TASK_LINK_METHODS } from './local-task-link-methods'
 
 function service(): LocalTasksService {
@@ -173,5 +174,6 @@ export const LOCAL_TASK_METHODS = [
     params: LocalTasksPreferencesSetParams,
     handler: (params) => service().setPreference(params.key, params.value)
   }),
-  ...LOCAL_TASK_LINK_METHODS
+  ...LOCAL_TASK_LINK_METHODS,
+  ...LOCAL_TASK_DISPATCHER_METHODS
 ]

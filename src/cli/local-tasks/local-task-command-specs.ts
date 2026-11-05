@@ -88,5 +88,51 @@ export const LOCAL_TASK_COMMAND_SPECS: CommandSpec[] = [
     allowedFlags: [...GLOBAL_FLAGS, 'dispatcher'],
     notes: ['--dispatcher prints the rules for the dispatcher session instead.'],
     examples: ['orca task guide', 'orca task guide --dispatcher']
+  },
+  {
+    path: ['task', 'propose'],
+    summary: 'Propose tasks and sessions for the user to confirm (dispatcher only)',
+    usage: 'orca task propose (--body <json> | --body-file <path|->) [--json]',
+    allowedFlags: [...GLOBAL_FLAGS, 'body', 'body-file'],
+    notes: [
+      'Run inside the dispatcher session. The user confirms or dismisses in Orca, which then executes.',
+      'Items: start, subtask, append, stop, link, record. Name tasks by ref. See orca task guide --dispatcher.'
+    ],
+    examples: ['orca task propose --body-file proposal.json']
+  },
+  {
+    path: ['task', 'inbox'],
+    summary: 'Read what changed on the tasks the dispatcher watches',
+    usage: 'orca task inbox [--limit <n>] [--ack <cursor>] [--json]',
+    allowedFlags: [...GLOBAL_FLAGS, 'limit', 'ack'],
+    notes: [
+      'Run inside the dispatcher session. Reading changes nothing; pass the printed cursor to --ack once handled.'
+    ],
+    examples: ['orca task inbox --json', 'orca task inbox --ack <cursor>']
+  },
+  {
+    path: ['task', 'watch'],
+    summary: 'Have the dispatcher follow a local task',
+    usage: 'orca task watch <ref> [--json]',
+    allowedFlags: [...GLOBAL_FLAGS, 'ref'],
+    positionalArgs: ['ref'],
+    notes: ['Run inside the dispatcher session. Finished tasks stop being watched on their own.'],
+    examples: ['orca task watch SHOP-12']
+  },
+  {
+    path: ['task', 'unwatch'],
+    summary: 'Stop the dispatcher following a local task',
+    usage: 'orca task unwatch <ref> [--json]',
+    allowedFlags: [...GLOBAL_FLAGS, 'ref'],
+    positionalArgs: ['ref'],
+    examples: ['orca task unwatch SHOP-12']
+  },
+  {
+    path: ['task', 'needs-you'],
+    summary: 'List sessions and tasks waiting for the user',
+    usage: 'orca task needs-you [--json]',
+    allowedFlags: [...GLOBAL_FLAGS],
+    notes: [LIBRARY_NOTE],
+    examples: ['orca task needs-you --json']
   }
 ]

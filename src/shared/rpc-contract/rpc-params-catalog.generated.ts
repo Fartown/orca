@@ -33,6 +33,16 @@ import {
 import { GoalExecutionHostSchema } from '../goals/goal-control-contract'
 import { HostAccountLaunchEnvParams } from '../host-account-launch-env'
 import {
+  LocalTasksDispatcherAckParams,
+  LocalTasksDispatcherInboxParams,
+  LocalTasksDispatcherRegisterParams,
+  LocalTasksDispatcherWatchParams,
+  LocalTasksProposalsCreateParams,
+  LocalTasksProposalsDecideParams,
+  LocalTasksProposalsListParams,
+  LocalTasksProposalsRecordResultsParams
+} from '../local-tasks/local-task-dispatcher-rpc-params'
+import {
   LocalTasksAttentionAcknowledgeParams,
   LocalTasksAttentionGetParams,
   LocalTasksAttentionSnoozeParams,
@@ -1204,6 +1214,11 @@ export const RPC_PARAMS_BY_METHOD = {
   'localTasks.attention.acknowledge': LocalTasksAttentionAcknowledgeParams,
   'localTasks.attention.get': LocalTasksAttentionGetParams,
   'localTasks.attention.snooze': LocalTasksAttentionSnoozeParams,
+  'localTasks.dispatcher.ack': LocalTasksDispatcherAckParams,
+  'localTasks.dispatcher.inbox': LocalTasksDispatcherInboxParams,
+  'localTasks.dispatcher.register': LocalTasksDispatcherRegisterParams,
+  'localTasks.dispatcher.unwatch': LocalTasksDispatcherWatchParams,
+  'localTasks.dispatcher.watch': LocalTasksDispatcherWatchParams,
   'localTasks.events.addComment': LocalTasksEventsAddCommentParams,
   'localTasks.events.editComment': LocalTasksEventsEditCommentParams,
   'localTasks.events.list': LocalTasksEventsListParams,
@@ -1220,6 +1235,10 @@ export const RPC_PARAMS_BY_METHOD = {
   'localTasks.projects.list': null,
   'localTasks.projects.remove': LocalTasksProjectsRemoveParams,
   'localTasks.projects.update': LocalTasksProjectsUpdateParams,
+  'localTasks.proposals.create': LocalTasksProposalsCreateParams,
+  'localTasks.proposals.decide': LocalTasksProposalsDecideParams,
+  'localTasks.proposals.list': LocalTasksProposalsListParams,
+  'localTasks.proposals.recordResults': LocalTasksProposalsRecordResultsParams,
   'localTasks.rules.applyPrMerged': LocalTasksRulesApplyPrMergedParams,
   'localTasks.status': null,
   'localTasks.statuses.remove': LocalTasksStatusesRemoveParams,

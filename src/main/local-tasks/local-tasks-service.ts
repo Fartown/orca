@@ -20,6 +20,16 @@ import type {
   LocalTasksTasksUpdateInput
 } from '../../shared/local-tasks/local-tasks-rpc-params'
 import { z, type ZodType } from 'zod'
+import type {
+  LocalTasksProposalsCreateInput,
+  LocalTasksProposalsDecideInput,
+  LocalTasksProposalsRecordResultsInput
+} from '../../shared/local-tasks/local-task-dispatcher-rpc-params'
+import {
+  conversationSchema,
+  proposalSchema
+} from '../../shared/local-tasks/local-task-dispatcher-schemas'
+import { LocalTaskDispatcher } from './local-task-dispatcher'
 import {
   projectSchema,
   taskSchema,
@@ -72,6 +82,8 @@ const STATUS_RESULT = writeResultSchema({ statusId: z.string() })
 const UPDATED_RESULT = writeResultSchema({ updated: z.number() })
 const REMOVED_RESULT = writeResultSchema({ removed: z.number() })
 const EVENT_RESULT = writeResultSchema({ eventId: z.string() })
+const CONVERSATION_RESULT = writeResultSchema({ conversation: conversationSchema })
+const PROPOSAL_RESULT = writeResultSchema({ proposal: proposalSchema })
 
 /**
  * This Orca's task library (one per profile, D-008). Every write is one transaction keyed by the
@@ -80,6 +92,8 @@ const EVENT_RESULT = writeResultSchema({ eventId: z.string() })
 export class LocalTasksService {
   /** Links, the host's "needs you" judgment and rules. */
   readonly execution: LocalTaskExecutionService
+  /** The dispatcher session's conversation, proposals and inbox (REQ-030, REQ-031). */
+  readonly dispatcher: LocalTaskDispatcher
 
   constructor(
     private readonly db: LocalTasksDatabase,
@@ -88,6 +102,7 @@ export class LocalTasksService {
     sessions?: LocalTaskHostSessionSource
   ) {
     this.execution = new LocalTaskExecutionService(db, now, onVolatileChange, sessions)
+    this.dispatcher = new LocalTaskDispatcher(db, () => this.execution.getProgress())
   }
 
   get readOnly(): boolean {
@@ -254,6 +269,56 @@ export class LocalTasksService {
   removeComment(input: { clientOperationId: string; eventId: string }) {
     return this.write(input.clientOperationId, 'events.removeComment', input, EMPTY_RESULT, () =>
       removeLocalTaskComment(this.db, input.eventId)
+    )
+  }
+
+  registerDispatcher(input: { clientOperationId: string; paneKey: string; agent?: string }) {
+    return this.write(
+      input.clientOperationId,
+      'dispatcher.register',
+      input,
+      CONVERSATION_RESULT,
+      (now) => this.dispatcher.register(input.paneKey, input.agent, now)
+    )
+  }
+
+  createProposal(input: LocalTasksProposalsCreateInput) {
+    return this.write(input.clientOperationId, 'proposals.create', input, PROPOSAL_RESULT, (now) =>
+      this.dispatcher.createProposal(input, now)
+    )
+  }
+
+  decideProposal(input: LocalTasksProposalsDecideInput, source: LocalTaskEventSource) {
+    return this.write(input.clientOperationId, 'proposals.decide', input, PROPOSAL_RESULT, (now) =>
+      this.dispatcher.decide(input, source, now)
+    )
+  }
+
+  recordProposalResults(input: LocalTasksProposalsRecordResultsInput) {
+    return this.write(
+      input.clientOperationId,
+      'proposals.recordResults',
+      input,
+      PROPOSAL_RESULT,
+      (now) => this.dispatcher.recordResults(input, now)
+    )
+  }
+
+  watchTask(input: { clientOperationId: string; paneKey: string; taskId: string }) {
+    return this.write(input.clientOperationId, 'dispatcher.watch', input, EMPTY_RESULT, (now) =>
+      this.dispatcher.watch(input.paneKey, input.taskId, now)
+    )
+  }
+
+  unwatchTask(input: { clientOperationId: string; paneKey: string; taskId: string }) {
+    return this.write(input.clientOperationId, 'dispatcher.unwatch', input, EMPTY_RESULT, () =>
+      this.dispatcher.unwatch(input.paneKey, input.taskId)
+    )
+  }
+
+  ackInbox(input: { clientOperationId: string; paneKey: string; cursor: string }) {
+    return this.write(input.clientOperationId, 'dispatcher.ack', input, EMPTY_RESULT, (now) =>
+      this.dispatcher.ack(input.paneKey, input.cursor, now)
     )
   }
 

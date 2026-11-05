@@ -2910,6 +2910,7 @@
         "mobile/src/local-tasks/**",
         "docs/issue/本地任务管理/**",
         "src/main/runtime/rpc/methods/local-task-link-methods.ts",
+        "src/main/runtime/rpc/methods/local-task-dispatcher-methods.ts",
         "src/cli/local-tasks/**"
       ],
       "requiredFiles": [

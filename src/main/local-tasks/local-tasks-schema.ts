@@ -4,7 +4,7 @@ import { workspaceIdentityKey } from './local-task-link-rows'
 import { keepOwnedHostSpellings } from './local-tasks-owned-host-migration'
 import { rowNullableString, rowString } from './local-tasks-sqlite-row'
 
-export const LOCAL_TASKS_SCHEMA_VERSION = 5
+export const LOCAL_TASKS_SCHEMA_VERSION = 6
 
 // Why default_repo_id is an Orca project id: since v4 it names one of the project's linked repos.
 const PROJECT_COLUMNS = `  id TEXT PRIMARY KEY,
@@ -153,6 +153,38 @@ CREATE TABLE IF NOT EXISTS local_task_mutation_receipts (
 CREATE TABLE IF NOT EXISTS local_task_preferences (
   key TEXT PRIMARY KEY,
   value TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS local_task_conversations (
+  id TEXT PRIMARY KEY,
+  pane_key TEXT NOT NULL UNIQUE,
+  agent TEXT,
+  inbox_event_at INTEGER NOT NULL,
+  inbox_event_rowid INTEGER NOT NULL,
+  acked_attention TEXT NOT NULL,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL
+);
+CREATE TABLE IF NOT EXISTS local_task_proposals (
+  id TEXT PRIMARY KEY,
+  conversation_id TEXT NOT NULL REFERENCES local_task_conversations(id) ON DELETE CASCADE,
+  summary TEXT,
+  items TEXT NOT NULL,
+  status TEXT NOT NULL,
+  kept_items TEXT,
+  results TEXT,
+  created_at INTEGER NOT NULL,
+  decided_at INTEGER,
+  decided_source TEXT,
+  reported_at INTEGER
+);
+CREATE INDEX IF NOT EXISTS local_task_proposals_conversation
+  ON local_task_proposals(conversation_id, created_at);
+CREATE TABLE IF NOT EXISTS local_task_conversation_watches (
+  conversation_id TEXT NOT NULL REFERENCES local_task_conversations(id) ON DELETE CASCADE,
+  task_id TEXT NOT NULL REFERENCES local_tasks(id) ON DELETE CASCADE,
+  added_at INTEGER NOT NULL,
+  added_by TEXT NOT NULL,
+  PRIMARY KEY (conversation_id, task_id)
 );
 `
 
