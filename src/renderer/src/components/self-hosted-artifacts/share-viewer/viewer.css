@@ -7,6 +7,23 @@
   font-size: 14px;
 }
 
+/* The comment rail sits beside the text, so the page widens rather than squeezing the prose. */
+.orca-share-body-with-comments {
+  max-width: 1240px;
+}
+
+.orca-share-orphan-comments {
+  margin-top: 48px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.orca-share-orphan-comments > h2 {
+  margin: 0 0 12px;
+  border: 0;
+  padding: 0;
+}
+
 /* Why: `.markdown-light .markdown-body code` outranks `.markdown-body pre code`, painting each code line as a chip. */
 .markdown-preview .markdown-body pre code {
   background: none;

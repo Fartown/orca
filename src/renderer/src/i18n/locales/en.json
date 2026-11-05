@@ -19254,7 +19254,17 @@
         "shareViewer": {
           "sharedFrom": "Shared from Orca on {{computer}}",
           "tableOfContents": "Table of Contents",
-          "viewSource": "View Markdown source"
+          "viewSource": "View Markdown source",
+          "commentRateLimited": "Too many comments in a short time. Try again in a minute.",
+          "commentLimit": "This file has reached its comment limit.",
+          "commentFailed": "Couldn't save the comment. Check that the link still opens, then try again.",
+          "commentAuthor": "Your name",
+          "commentPlaceholder": "Add a comment",
+          "commentCancel": "Cancel",
+          "commentSaving": "Saving…",
+          "commentSubmit": "Comment",
+          "addComment": "Add comment",
+          "orphanComments": "Comments on an earlier version"
         },
         "account": {
           "signedOut": "Sign in to extend Orca with cloud features, including Orca Relay and skill sharing.",

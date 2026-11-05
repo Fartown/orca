@@ -3,7 +3,9 @@ import { MarkdownPreviewBody } from '@/components/editor/MarkdownPreviewBody'
 import { MarkdownTableOfContentsPanel } from '@/components/editor/MarkdownTableOfContentsPanel'
 import { scrollToAnchorInEditor } from '@/components/editor/markdown-anchor-scroll'
 import { buildMarkdownTableOfContents } from '@/components/editor/markdown-table-of-contents'
+import { ShareOrphanComments } from './ShareOrphanComments'
 import { ShareViewerHeader } from './ShareViewerHeader'
+import { ShareCommentsProvider, useShareComments } from './share-viewer-comments-state'
 import { SHARE_MARKDOWN_COMPONENTS, ShareDarkContext } from './share-viewer-markdown-components'
 import type { ShareDocument } from './viewer-document'
 
@@ -31,6 +33,15 @@ export function ShareViewerPage({
 }: {
   document: ShareDocument
 }): React.JSX.Element {
+  return (
+    <ShareCommentsProvider>
+      <ShareViewerLayout document={shared} />
+    </ShareCommentsProvider>
+  )
+}
+
+function ShareViewerLayout({ document: shared }: { document: ShareDocument }): React.JSX.Element {
+  const { available: commentsAvailable } = useShareComments()
   const isDark = usePrefersDark()
   const tableOfContents = useMemo(
     () => buildMarkdownTableOfContents(shared.markdown),
@@ -82,13 +93,18 @@ export function ShareViewerPage({
           className={`markdown-preview h-full min-h-0 overflow-auto scrollbar-editor ${isDark ? 'markdown-dark' : 'markdown-light'}`}
         >
           {/* Why: OS page translation can replace react-owned text nodes and crash reconciliation. */}
-          <div ref={bodyRef} className="markdown-body orca-share-body" translate="no">
+          <div
+            ref={bodyRef}
+            className={`markdown-body orca-share-body ${commentsAvailable ? 'orca-share-body-with-comments' : ''}`.trim()}
+            translate="no"
+          >
             <ShareDarkContext.Provider value={isDark}>
               <MarkdownPreviewBody
                 content={shared.markdown}
                 components={SHARE_MARKDOWN_COMPONENTS}
               />
             </ShareDarkContext.Provider>
+            <ShareOrphanComments bodyRef={bodyRef} markdown={shared.markdown} />
           </div>
         </div>
       </div>

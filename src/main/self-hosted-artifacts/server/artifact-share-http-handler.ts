@@ -5,6 +5,12 @@ import { extname, join } from 'node:path'
 import { docPreviewContentType } from '../../document-preview-size/document-preview-content-type'
 import { readArtifactShareWorkspaces } from '../store/artifact-share-records'
 import {
+  ARTIFACT_SHARE_MARKDOWN_EXTENSIONS,
+  createArtifactShareCommentRateLimiter,
+  handleArtifactShareCommentsRequest,
+  type ArtifactShareCommentRateLimiter
+} from './artifact-share-comments-endpoint'
+import {
   ARTIFACT_SHARE_MARKDOWN_PAGE_CSP,
   buildArtifactShareMarkdownPage
 } from './artifact-share-markdown-page'
@@ -17,10 +23,9 @@ import { ARTIFACT_SHARE_PROTOCOL, ARTIFACT_SHARE_SERVICE_NAME } from './artifact
 
 // Why: past this size the rendered page would embed megabytes of JSON; the raw file still streams.
 const MARKDOWN_PAGE_MAX_BYTES = 20 * 1024 * 1024
-const MARKDOWN_EXTENSIONS = new Set(['.md', '.markdown'])
 
 export type ArtifactShareRequestLogEntry = {
-  category: 'page' | 'file' | 'asset' | 'identity' | 'refused' | 'error'
+  category: 'page' | 'file' | 'asset' | 'identity' | 'comments' | 'refused' | 'error'
   status: number
   durationMs: number
 }
@@ -32,6 +37,7 @@ export type ArtifactShareHandlerOptions = {
   computerLabel: string
   viewer: ArtifactShareViewerAssets | null
   log?: ArtifactShareRequestLog
+  now?: () => Date
 }
 
 function setCommonHeaders(response: ServerResponse): void {
@@ -80,16 +86,29 @@ function streamFile(
 
 async function handle(
   options: ArtifactShareHandlerOptions,
+  allowCommentWrite: ArtifactShareCommentRateLimiter,
   request: IncomingMessage,
   response: ServerResponse
 ): Promise<Omit<ArtifactShareRequestLogEntry, 'durationMs'>> {
   setCommonHeaders(response)
+  const target = parseArtifactShareRequest(request.url)
+  if (target.kind === 'comments') {
+    const { status } = await handleArtifactShareCommentsRequest({
+      home: options.home,
+      request,
+      response,
+      token: target.token,
+      segments: target.segments,
+      allowWrite: allowCommentWrite,
+      now: options.now ?? (() => new Date())
+    })
+    return { category: 'comments', status }
+  }
   if (request.method !== 'GET' && request.method !== 'HEAD') {
     response.setHeader('Allow', 'GET, HEAD')
     sendText(response, 405, 'Method Not Allowed')
     return { category: 'refused', status: 405 }
   }
-  const target = parseArtifactShareRequest(request.url)
   if (target.kind === 'bad-request') {
     sendText(response, 400, 'Bad Request')
     return { category: 'refused', status: 400 }
@@ -135,7 +154,7 @@ async function handle(
     sendText(response, 404, 'Not Found')
     return { category: 'refused', status: 404 }
   }
-  const isMarkdown = MARKDOWN_EXTENSIONS.has(extname(file.absolutePath).toLowerCase())
+  const isMarkdown = ARTIFACT_SHARE_MARKDOWN_EXTENSIONS.has(extname(file.absolutePath).toLowerCase())
   if (isMarkdown && !target.raw && file.size <= MARKDOWN_PAGE_MAX_BYTES) {
     const markdown = await readFile(file.absolutePath, 'utf8')
     response.setHeader('Content-Security-Policy', ARTIFACT_SHARE_MARKDOWN_PAGE_CSP)
@@ -162,13 +181,14 @@ async function handle(
   return { category: 'file', status: 200 }
 }
 
-/** Read-only static handler: every failure is contained to its own request. */
+/** Static files plus reader comments on Markdown; every failure is contained to its own request. */
 export function createArtifactShareRequestHandler(
   options: ArtifactShareHandlerOptions
 ): RequestListener {
+  const allowCommentWrite = createArtifactShareCommentRateLimiter()
   return (request, response) => {
     const startedAt = Date.now()
-    handle(options, request, response)
+    handle(options, allowCommentWrite, request, response)
       .then((entry) => options.log?.({ ...entry, durationMs: Date.now() - startedAt }))
       .catch(() => {
         if (!response.headersSent) {

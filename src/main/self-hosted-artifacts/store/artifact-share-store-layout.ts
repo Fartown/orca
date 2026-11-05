@@ -27,3 +27,13 @@ export function artifactShareServingLockTarget(home: string): string {
 export function artifactShareLogPath(home: string): string {
   return join(home, 'logs', 'serve.log')
 }
+
+/** Reader comments live beside the share records, never inside the shared workspace. */
+export function artifactShareCommentsDir(home: string): string {
+  return join(home, 'comments')
+}
+
+/** Which comments one Orca profile already turned into review notes, so deleted notes stay deleted. */
+export function artifactShareCommentImportLedgerPath(home: string, profileKey: string): string {
+  return join(home, 'comment-imports', `${profileKey}.json`)
+}

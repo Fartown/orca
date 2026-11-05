@@ -1534,7 +1534,13 @@
         "src/renderer/src/components/editor/markdown-table-of-contents.ts",
         "src/renderer/src/components/markdown-github-callout.tsx",
         "src/renderer/src/lib/remark-github-callouts.ts",
-        "src/shared/markdown-toc-panel-width.ts"
+        "src/shared/markdown-toc-panel-width.ts",
+        "src/shared/diff-comment-types.ts",
+        "src/shared/cross-platform-path.ts",
+        "src/renderer/src/lib/ime-text-field.tsx",
+        "src/renderer/src/lib/markdown-review-notes.ts",
+        "src/renderer/src/components/editor/markdown-preview-block-model.ts",
+        "src/renderer/src/components/editor/markdown-preview-types.ts"
       ],
       "policyId": "self-hosted-artifacts",
       "ownedPaths": [
@@ -1794,6 +1800,7 @@
         "src/main/self-hosted-artifacts/artifact-share-rpc-error.test.ts",
         "src/main/self-hosted-artifacts/artifact-share-rpc-methods.test.ts",
         "src/main/self-hosted-artifacts/artifact-share-orcad-bundle.test.ts",
+        "src/main/self-hosted-artifacts/artifact-share-comment-import.test.ts",
         "config/scripts/build-artifact-share-viewer.test.mjs",
         "src/cli/self-hosted-artifacts/artifact-share-cli-target.test.ts",
         "src/renderer/src/components/self-hosted-artifacts/share-button/lan-artifact-share-machine.test.ts",
