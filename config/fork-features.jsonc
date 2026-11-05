@@ -1655,8 +1655,8 @@
         },
         {
           "file": "src/cli/handler-group-manifest.ts",
-          "mustContain": "ARTIFACT_SHARE_CLI_HANDLERS",
-          "why": "orca artifacts commands share over the local network"
+          "mustContain": "ARTIFACT_SHARE_HANDLER_GROUP",
+          "why": "orca artifacts commands share over the local network; the group lives in the feature folder"
         },
         {
           "file": "src/cli/specs/artifacts.ts",
