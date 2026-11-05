@@ -21025,6 +21025,11 @@
       },
       "wake": "有新动态时唤醒"
     },
+    "latestProgress": {
+      "title": "最新进展",
+      "needsYou": "需要你：{{text}}",
+      "chip": "需要你"
+    },
     "sidebar": {
       "groupByTask": "任务",
       "noTaskGroup": "未关联任务",

@@ -21250,6 +21250,11 @@
       },
       "wake": "Wake on news"
     },
+    "latestProgress": {
+      "title": "Latest progress",
+      "needsYou": "Needs you: {{text}}",
+      "chip": "Needs you"
+    },
     "sidebar": {
       "groupByTask": "Task",
       "noTaskGroup": "No task",

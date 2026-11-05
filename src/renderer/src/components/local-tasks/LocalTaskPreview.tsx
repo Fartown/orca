@@ -8,6 +8,7 @@ import { localTaskPriorityLabel } from '@/local-tasks/local-task-vocabulary-copy
 import type { LocalTask } from '../../../../shared/local-tasks/local-task-types'
 import { LocalTaskPriorityIcon, LocalTaskStatusIcon } from './LocalTaskIcons'
 import { LocalTaskLabelChips, LocalTaskSubtaskProgress } from './LocalTaskRow'
+import { LocalTaskLatestProgressCard } from './LocalTaskLatestProgress'
 
 /** Space toggles this read-only peek at the row under the cursor; Enter opens the full detail. */
 export function LocalTaskPreview({
@@ -54,6 +55,7 @@ export function LocalTaskPreview({
         <LocalTaskSubtaskProgress task={task} index={index} />
         <LocalTaskLabelChips labels={task.labels} max={4} />
       </div>
+      <LocalTaskLatestProgressCard task={task} compact />
       {task.description ? (
         <p className="whitespace-pre-wrap break-words text-xs leading-relaxed text-foreground">
           {task.description}
