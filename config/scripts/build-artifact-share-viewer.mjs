@@ -43,7 +43,7 @@ const STORE_SHIM_IMPORTERS = ['components/editor/MarkdownTableOfContentsPanel.ts
 /** Plain sheets stay esbuild imports so their url() fonts resolve from their own directories. */
 function splitMainCssImports(mainCss) {
   const plainImports = []
-  const tailwindCss = mainCss.replace(/^@import '([^']+)';\n/gm, (statement, specifier) => {
+  const tailwindCss = mainCss.replace(/^@import '([^']+)';\r?\n/gm, (statement, specifier) => {
     const role = MAIN_CSS_IMPORT_ROLES[specifier]
     if (!role) {
       throw new Error(`main.css imports '${specifier}'; classify it in MAIN_CSS_IMPORT_ROLES`)
