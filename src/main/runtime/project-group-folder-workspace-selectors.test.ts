@@ -108,6 +108,44 @@ const LINKED_LINEAR_TASK = {
   linearIdentifier: 'ENG-1'
 }
 
+describe('fresh terminal inventory for an independent folder workspace', () => {
+  it('activates it from a phone without requiring a repo row', async () => {
+    const { runtime } = runtimeWithFolderTerminal({})
+
+    await expect(
+      runtime.activateManagedWorktree(`id:${WORKSPACE_ID}`, {
+        clientKind: 'mobile',
+        navigation: 'caller'
+      })
+    ).resolves.toMatchObject({ worktreeId: WORKSPACE_ID, activated: true })
+  })
+
+  it('retains the live PTY when its provider only reports its working directory', async () => {
+    const { runtime, handle } = runtimeWithFolderTerminal({})
+    runtime.setPtyController({
+      write: () => true,
+      kill: () => true,
+      getForegroundProcess: async () => null,
+      listProcesses: async () => [
+        {
+          id: 'folder-pty',
+          cwd: FOLDER_PATH,
+          title: 'Folder terminal',
+          incarnationId: 'folder-incarnation'
+        }
+      ]
+    })
+
+    const listed = await runtime.listTerminals(`id:${WORKSPACE_ID}`, 20, {
+      requireFreshPtyLiveness: true
+    })
+
+    expect(listed.terminals).toEqual([
+      expect.objectContaining({ handle, ptyId: 'folder-pty', incarnationId: 'folder-incarnation' })
+    ])
+  })
+})
+
 describe('Linear --current from a project-group folder workspace terminal', () => {
   it('reads the folder workspace’s linked Linear issue', async () => {
     const { runtime, handle } = runtimeWithFolderTerminal({

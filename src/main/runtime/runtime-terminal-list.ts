@@ -5,6 +5,7 @@ import type {
 } from '../../shared/runtime-types'
 import type { ExecutionHostId } from '../../shared/execution-host'
 import { ORCA_LAYOUT_OWNER_IS_MAIN } from '../../shared/layout-owner-switch'
+import { parseWorkspaceKey } from '../../shared/workspace-scope'
 import type { PtyControllerInventory } from './runtime-pty-controller-contract'
 import type { ResolvedWorktreeSnapshot } from './runtime-resolved-worktree-cache'
 import type { RuntimeLeafRecord, RuntimePtyWorktreeRecord } from './runtime-terminal-state-records'
@@ -78,7 +79,7 @@ export class RuntimeTerminalList {
     const parsedTarget =
       explicitId && !cachedTarget ? this.deps.buildWorktreeFromId(explicitId) : null
     const target =
-      worktreeSelector && !explicitId
+      worktreeSelector && (!explicitId || parseWorkspaceKey(explicitId)?.type === 'folder')
         ? await this.deps.resolveWorktree(worktreeSelector)
         : (cachedTarget ?? parsedTarget)
     const targetId = explicitId ?? target?.id ?? null

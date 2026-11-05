@@ -208,6 +208,9 @@ function deferringTransport(reason = 'live_cap'): MockTransport {
       callbacks?: { onSpawnDeferred?: (reason: string) => void }
     }) => {
       // Why: the fixture tab names a PTY that is gone, so only the fresh restore reaches the gate.
+      if (opts.sessionId) {
+        return { id: opts.sessionId, sessionExpired: true }
+      }
       if (!opts.sessionId) {
         opts.callbacks?.onSpawnDeferred?.(reason)
       }

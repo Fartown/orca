@@ -228,6 +228,14 @@ function connectDeferredSessionReattach(
         session.deps.clearTabPtyId(session.deps.tabId, deferredReattachSessionId)
         return startFreshInstead()
       }
+      if (!result && !session.transport.getPtyId()) {
+        await abandonPendingSerializer()
+        armPaneOwnerRetry(session, outputCallbacks.generation, () =>
+          connectDeferredSessionReattach(session, deferredReattachSessionId)
+        )
+        session.settlePaneAttachAttempt('failed')
+        return NOT_REOPENED
+      }
       const accepted = await session.handleReattachResult(
         result,
         deferredReattachSessionId,
@@ -288,9 +296,11 @@ function connectDeferredSessionReattach(
         reason: message
       })
       session.reportError(message)
-      session.clearExitedPanePtyLayoutBinding(deferredReattachSessionId)
-      session.deps.clearTabPtyId(session.deps.tabId, deferredReattachSessionId)
-      return startFreshInstead()
+      armPaneOwnerRetry(session, outputCallbacks.generation, () =>
+        connectDeferredSessionReattach(session, deferredReattachSessionId)
+      )
+      session.settlePaneAttachAttempt('failed')
+      return NOT_REOPENED
     })
   void outcome.finally(() => {
     if (session.mainStartAttach === mainStartAttach) {
