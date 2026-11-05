@@ -23,6 +23,7 @@ jobs:
             const targets = [
               ['pr-checks', 'pr.yml'],
               ['fork-integration-build', 'fork-integration-build.yml', '-packages'],
+              ['fork-pr-linked-issue', 'fork-pr-linked-issue.yml'],
               ['dependency-security', 'dependency-security.yml'],
               ['node-server', 'node-server-tests.yml'],
               ['ssh-windows-hosts', 'ssh-windows-hosts.yml'],
