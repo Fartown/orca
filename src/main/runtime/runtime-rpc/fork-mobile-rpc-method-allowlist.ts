@@ -17,6 +17,7 @@ export const FORK_MOBILE_RPC_METHOD_ALLOWLIST = new Set([
   'localTasks.events.editComment',
   'localTasks.events.list',
   'localTasks.events.removeComment',
+  'localTasks.dispatcher.watches',
   'localTasks.links.linkWorkspace',
   'localTasks.links.list',
   'localTasks.links.recordSession',

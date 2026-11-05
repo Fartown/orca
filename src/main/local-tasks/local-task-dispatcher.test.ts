@@ -167,6 +167,10 @@ describe('dispatcher conversation and proposals (REQ-030)', () => {
       ]
     })
     expect(recorded).toMatchObject({ ok: true, proposal: { status: 'executed' } })
+    expect(service.dispatcher.watches(PANE)).toEqual({
+      ok: true,
+      watches: [{ taskId: started.id, addedAt: expect.any(Number), addedBy: 'proposal' }]
+    })
     const box = inbox(service)
     expect(box.watchedTaskCount).toBe(1)
     expect(box.items.map((item) => item.summary)).toEqual([

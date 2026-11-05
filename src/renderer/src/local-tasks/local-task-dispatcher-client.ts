@@ -2,7 +2,8 @@ import { z } from 'zod'
 import {
   conversationSchema,
   inboxSchema,
-  proposalSchema
+  proposalSchema,
+  watchSchema
 } from '../../../shared/local-tasks/local-task-dispatcher-schemas'
 import type { LocalTaskProposalItemResult } from '../../../shared/local-tasks/local-task-dispatcher-types'
 import { writeResultSchema } from '../../../shared/local-tasks/local-task-result-schemas'
@@ -13,6 +14,8 @@ import { callLocalTasks, writeLocalTasks } from './local-tasks-endpoint-calls'
 const conversationResult = writeResultSchema({ conversation: conversationSchema })
 const proposalResult = writeResultSchema({ proposal: proposalSchema })
 const inboxResult = writeResultSchema({ inbox: inboxSchema })
+const watchesResult = writeResultSchema({ watches: z.array(watchSchema) })
+const okResult = writeResultSchema({})
 
 export const localTaskDispatcherClient = {
   register: (paneKey: string, agent: string, previousPaneKey?: string | null) =>
@@ -22,7 +25,7 @@ export const localTaskDispatcherClient = {
       { paneKey, agent, ...(previousPaneKey ? { previousPaneKey } : {}) },
       conversationResult
     ),
-  list: (status: 'pending' | 'confirmed') =>
+  list: (status: 'pending' | 'confirmed' | 'executed') =>
     callLocalTasks(
       SELF_LOCAL_TASK_ENDPOINT,
       'localTasks.proposals.list',
@@ -42,6 +45,20 @@ export const localTaskDispatcherClient = {
       'localTasks.proposals.recordResults',
       { proposalId, results },
       proposalResult
+    ),
+  watches: (paneKey: string) =>
+    callLocalTasks(
+      SELF_LOCAL_TASK_ENDPOINT,
+      'localTasks.dispatcher.watches',
+      { paneKey },
+      watchesResult
+    ),
+  unwatch: (paneKey: string, taskId: string) =>
+    writeLocalTasks(
+      SELF_LOCAL_TASK_ENDPOINT,
+      'localTasks.dispatcher.unwatch',
+      { paneKey, taskId },
+      okResult
     ),
   inbox: (paneKey: string, limit: number) =>
     callLocalTasks(

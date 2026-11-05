@@ -33,6 +33,13 @@ export type LocalTaskProposal = {
   decidedSource: LocalTaskEventSource | null
 }
 
+/** A task the dispatcher follows: added when its proposal ran, or when it was asked to. */
+export type LocalTaskWatch = {
+  taskId: string
+  addedAt: number
+  addedBy: 'proposal' | 'dispatcher'
+}
+
 export type LocalTaskInboxKind =
   | 'progress'
   | 'status'

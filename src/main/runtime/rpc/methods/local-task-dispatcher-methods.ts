@@ -3,6 +3,7 @@ import {
   LocalTasksDispatcherInboxParams,
   LocalTasksDispatcherRegisterParams,
   LocalTasksDispatcherWatchParams,
+  LocalTasksDispatcherWatchesParams,
   LocalTasksProposalsCreateParams,
   LocalTasksProposalsDecideParams,
   LocalTasksProposalsListParams,
@@ -52,6 +53,12 @@ export const LOCAL_TASK_DISPATCHER_METHODS = [
     name: 'localTasks.dispatcher.inbox',
     params: LocalTasksDispatcherInboxParams,
     handler: (params) => service().dispatcher.inbox(params.paneKey, params.limit)
+  }),
+  defineMethod({
+    permission: 'workspace',
+    name: 'localTasks.dispatcher.watches',
+    params: LocalTasksDispatcherWatchesParams,
+    handler: (params) => service().dispatcher.watches(params.paneKey)
   }),
   defineMethod({
     permission: 'workspace',

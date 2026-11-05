@@ -30,6 +30,10 @@ function step(ids: readonly string[], from: string | null, delta: 1 | -1): strin
 
 function runAction(action: LocalTaskPageKeyAction, model: LocalTaskListModel): void {
   const page = localTaskPageStore.getState()
+  // Why: the ledger has no task rows; moving a cursor over the hidden list would act unseen.
+  if (page.view === 'dispatcher' && page.detailTaskId === null && action !== 'create') {
+    return
+  }
   const needsYou = page.view === 'needs-you' && page.detailTaskId === null
   const ids = needsYou
     ? currentLocalTaskNeedsYouRows().map((row) => row.task.id)

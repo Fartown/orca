@@ -1,10 +1,7 @@
 import { useMemo, useState } from 'react'
-import { useStore } from 'zustand'
-import { Bot, LoaderCircle } from 'lucide-react'
+import { LoaderCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Switch } from '@/components/ui/switch'
-import { useNow } from '@/hooks/use-now'
 import { translate } from '@/i18n/i18n'
 import { cn } from '@/lib/utils'
 import { useAppStore } from '@/store'
@@ -14,22 +11,15 @@ import {
   useLocalTaskProposals
 } from '@/local-tasks/local-task-dispatcher-proposals'
 import {
-  localTaskDispatcherStore,
-  openLocalTaskDispatcher,
-  useLocalTaskDispatcherPane
-} from '@/local-tasks/local-task-dispatcher-session'
-import {
   describeLocalTaskProposalItem,
   type LocalTaskProposalNames
 } from '@/local-tasks/local-task-proposal-copy'
-import { resolveProposalAgent } from '@/local-tasks/local-task-proposal-targets'
 import { formatLocalTaskTime } from '@/local-tasks/local-task-time'
-import { LOCAL_TASK_DISPATCHER_WAKE_PREFERENCE_KEY } from '@/local-tasks/local-task-preference-keys'
 import { useLocalTasksDomain } from '@/local-tasks/local-tasks-domain-store'
-import { localTasksClient } from '@/local-tasks/local-tasks-runtime-client'
 import type { LocalTaskProposal } from '../../../../shared/local-tasks/local-task-dispatcher-types'
 
-function useProposalNames(): LocalTaskProposalNames {
+/** Refs and names the proposal items point at, as this window knows them. */
+export function useProposalNames(): LocalTaskProposalNames {
   const tasks = useLocalTasksDomain((state) => state.tasks)
   const getWorktree = useAppStore((state) => state.getKnownWorktreeById)
   const repos = useAppStore((state) => state.repos)
@@ -43,7 +33,8 @@ function useProposalNames(): LocalTaskProposalNames {
   }, [tasks, getWorktree, repos])
 }
 
-function ProposalCard({
+/** One proposal: each item can be kept or dropped before the person confirms (REQ-030). */
+export function LocalTaskProposalCard({
   proposal,
   names,
   now
@@ -154,70 +145,5 @@ function ProposalCard({
         )}
       </footer>
     </section>
-  )
-}
-
-/**
- * The dispatcher on the Needs you view (REQ-030): its session one click away, and its proposals,
- * which wait on the person like any other decision.
- */
-export function LocalTaskDispatcherPanel(): React.JSX.Element {
-  const pending = useLocalTaskProposals((state) => state.pending)
-  const unrun = useLocalTaskProposals((state) => state.unrun)
-  const opening = useStore(localTaskDispatcherStore, (state) => state.opening)
-  const { known, live } = useLocalTaskDispatcherPane()
-  const wakeOn = useLocalTasksDomain(
-    (state) => state.preferences[LOCAL_TASK_DISPATCHER_WAKE_PREFERENCE_KEY] !== '0'
-  )
-  const names = useProposalNames()
-  const now = useNow(60_000)
-  const open = (): void => {
-    const agent = resolveProposalAgent(useAppStore.getState(), undefined)
-    if (agent) {
-      void openLocalTaskDispatcher(agent)
-    }
-  }
-  return (
-    <div className="flex flex-col gap-2">
-      <div className="flex items-center gap-2">
-        <Bot className="size-4 text-muted-foreground" />
-        <p className="min-w-0 flex-1 text-xs text-muted-foreground">
-          {known
-            ? translate(
-                'localTasks.dispatcher.hint',
-                'Tell the dispatcher what you want done; it proposes the steps here and follows the tasks for you.'
-              )
-            : translate(
-                'localTasks.dispatcher.intro',
-                'The dispatcher is an agent session that assigns and follows your tasks. It only proposes; you confirm here.'
-              )}
-        </p>
-        {known ? (
-          <label className="flex shrink-0 items-center gap-1.5 text-2xs text-muted-foreground">
-            <Switch
-              checked={wakeOn}
-              onCheckedChange={(on) =>
-                void localTasksClient.setPreference(
-                  LOCAL_TASK_DISPATCHER_WAKE_PREFERENCE_KEY,
-                  on ? null : '0'
-                )
-              }
-            />
-            {translate('localTasks.dispatcher.wake', 'Wake on news')}
-          </label>
-        ) : null}
-        <Button variant="outline" size="xs" disabled={opening} onClick={open}>
-          {opening ? (
-            <LoaderCircle className="size-3 animate-spin motion-reduce:animate-none" />
-          ) : null}
-          {live
-            ? translate('localTasks.dispatcher.show', 'Show dispatcher')
-            : translate('localTasks.dispatcher.open', 'Open dispatcher')}
-        </Button>
-      </div>
-      {[...pending, ...unrun].map((proposal) => (
-        <ProposalCard key={proposal.id} proposal={proposal} names={names} now={now} />
-      ))}
-    </div>
   )
 }

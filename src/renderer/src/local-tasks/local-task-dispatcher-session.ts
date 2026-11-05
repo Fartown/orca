@@ -44,13 +44,29 @@ export function liveDispatcherPaneKey(state: AppState = useAppStore.getState()):
 }
 
 /** Opens the floating workspace on the dispatcher's tab and puts the cursor in it. */
+function dispatcherUnifiedTab(state: AppState, tabId: string | undefined) {
+  return (state.unifiedTabsByWorktree[FLOATING_TERMINAL_WORKTREE_ID] ?? []).find(
+    (tab) => tab.contentType === 'terminal' && tab.entityId === tabId
+  )
+}
+
+/**
+ * A new dispatcher opens as a chat over its terminal session; the pane's header switches it back
+ * to the terminal, and that choice is kept when the dispatcher is shown again (REQ-030).
+ */
+function showDispatcherAsChat(paneKey: string): void {
+  const app = useAppStore.getState()
+  const unified = dispatcherUnifiedTab(app, parsePaneKey(paneKey)?.tabId)
+  if (unified && unified.viewMode !== 'chat') {
+    app.setTabViewMode(unified.id, 'chat')
+  }
+}
+
 function revealDispatcherPane(paneKey: string): void {
   const app = useAppStore.getState()
   const tabId = parsePaneKey(paneKey)?.tabId
   app.setFloatingWorkspacePanelOpen(true)
-  const unified = (app.unifiedTabsByWorktree[FLOATING_TERMINAL_WORKTREE_ID] ?? []).find(
-    (tab) => tab.contentType === 'terminal' && tab.entityId === tabId
-  )
+  const unified = dispatcherUnifiedTab(app, tabId)
   if (tabId && unified) {
     app.activateTab(unified.id)
     app.setActiveTab(tabId)
@@ -59,7 +75,11 @@ function revealDispatcherPane(paneKey: string): void {
 }
 
 /** The dispatcher's pane as the page shows it: known once it was opened, live while its tab is. */
-export function useLocalTaskDispatcherPane(): { known: boolean; live: boolean } {
+export function useLocalTaskDispatcherPane(): {
+  paneKey: string | null
+  known: boolean
+  live: boolean
+} {
   const opened = useStore(localTaskDispatcherStore, (state) => state.paneKey)
   const remembered = useLocalTasksDomain(
     (state) => state.preferences[LOCAL_TASK_DISPATCHER_PANE_PREFERENCE_KEY] ?? null
@@ -69,7 +89,7 @@ export function useLocalTaskDispatcherPane(): { known: boolean; live: boolean } 
     const tabId = paneKey ? parsePaneKey(paneKey)?.tabId : undefined
     return Boolean(tabId && state.terminalLayoutsByTabId[tabId])
   })
-  return { known: paneKey !== null, live }
+  return { paneKey, known: paneKey !== null, live }
 }
 
 function firstLeafPaneKey(state: AppState, tabId: string): string | null {
@@ -146,6 +166,7 @@ export async function openLocalTaskDispatcher(agent: TuiAgent): Promise<boolean>
     }
     localTaskDispatcherStore.setState({ paneKey })
     void localTasksClient.setPreference(LOCAL_TASK_DISPATCHER_PANE_PREFERENCE_KEY, paneKey)
+    showDispatcherAsChat(paneKey)
     revealDispatcherPane(paneKey)
     return true
   } finally {

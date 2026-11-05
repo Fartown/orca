@@ -24,7 +24,7 @@ import { formatLocalTaskTime } from '@/local-tasks/local-task-time'
 import { useLocalTasksDomain } from '@/local-tasks/local-tasks-domain-store'
 import type { LocalTaskSessionLink } from '../../../../shared/local-tasks/local-task-link-types'
 import { LocalTaskReadErrorPanel, refreshHomeLibrary } from './LocalTaskHostStatePanel'
-import { LocalTaskDispatcherPanel } from './LocalTaskDispatcherPanel'
+import { LocalTaskDispatcherNotice } from './LocalTaskDispatcherView'
 import { LocalTaskNeedsYouItem } from './LocalTaskNeedsYouItem'
 import { LocalTaskSnoozeMenu } from './LocalTaskSnoozeMenu'
 import type { LocalTaskListModel } from './use-local-task-list-model'
@@ -207,7 +207,7 @@ export function LocalTaskNeedsYouView({ model }: { model: LocalTaskListModel }):
           )}
         </p>
       </div>
-      <LocalTaskDispatcherPanel />
+      <LocalTaskDispatcherNotice />
       {body}
       {readError && progress !== null ? (
         <LocalTaskReadErrorPanel

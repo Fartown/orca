@@ -91,6 +91,8 @@ export const LocalTasksProposalsRecordResultsParams = z.object({
 
 export const LocalTasksDispatcherWatchParams = z.object({ clientOperationId, paneKey, taskId: id })
 
+export const LocalTasksDispatcherWatchesParams = z.object({ paneKey })
+
 export const LocalTasksDispatcherInboxParams = z.object({
   paneKey,
   limit: z.number().int().min(1).max(100).optional()

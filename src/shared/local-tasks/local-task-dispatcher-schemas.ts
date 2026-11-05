@@ -2,7 +2,8 @@ import { z } from 'zod'
 import type {
   LocalTaskConversation,
   LocalTaskInbox,
-  LocalTaskProposal
+  LocalTaskProposal,
+  LocalTaskWatch
 } from './local-task-dispatcher-types'
 import { LocalTaskProposalItemSchema } from './local-task-dispatcher-rpc-params'
 
@@ -35,6 +36,12 @@ export const proposalSchema: z.ZodType<LocalTaskProposal> = z.object({
   createdAt: z.number(),
   decidedAt: z.number().nullable(),
   decidedSource: z.enum(['desktop', 'mobile', 'cli', 'rule']).nullable()
+})
+
+export const watchSchema: z.ZodType<LocalTaskWatch> = z.object({
+  taskId: z.string(),
+  addedAt: z.number(),
+  addedBy: z.enum(['proposal', 'dispatcher'])
 })
 
 export const inboxSchema: z.ZodType<LocalTaskInbox> = z.object({

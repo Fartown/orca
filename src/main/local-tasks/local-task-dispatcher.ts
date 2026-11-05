@@ -8,7 +8,8 @@ import type {
   LocalTaskConversation,
   LocalTaskInbox,
   LocalTaskProposal,
-  LocalTaskProposalStatus
+  LocalTaskProposalStatus,
+  LocalTaskWatch
 } from '../../shared/local-tasks/local-task-dispatcher-types'
 import type { LocalTaskProgressSnapshot } from '../../shared/local-tasks/local-task-link-types'
 import type {
@@ -259,6 +260,28 @@ export class LocalTaskDispatcher {
       .run(conversationId)
     this.db.touch('events')
     return { ok: true }
+  }
+
+  /** What the dispatcher follows, newest first, for the person's ledger (REQ-031). */
+  watches(paneKey: string): LocalTaskResult<{ watches: LocalTaskWatch[] }> {
+    const conversation = this.conversationFor(paneKey)
+    if (!conversation) {
+      return NOT_DISPATCHER
+    }
+    const rows = this.db
+      .prepare(
+        `SELECT task_id, added_at, added_by FROM local_task_conversation_watches
+         WHERE conversation_id = ? ORDER BY added_at DESC`
+      )
+      .all(conversation.id)
+    return {
+      ok: true,
+      watches: rows.map((row) => ({
+        taskId: rowString(row, 'task_id'),
+        addedAt: rowNumber(row, 'added_at'),
+        addedBy: rowString(row, 'added_by') === 'proposal' ? 'proposal' : 'dispatcher'
+      }))
+    }
   }
 
   private watchedTaskIds(conversationId: string): string[] {

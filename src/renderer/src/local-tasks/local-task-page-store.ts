@@ -8,8 +8,11 @@ import type {
 /** Left-rail views; every one but `all` is one status category (REQ-006). */
 export const LOCAL_TASK_VIEWS = ['all', 'started', 'backlog', 'completed', 'canceled'] as const
 export type LocalTaskView = (typeof LOCAL_TASK_VIEWS)[number]
-/** What the rail shows: a status view, or the sessions waiting on the user (REQ-014). */
-export type LocalTaskPageView = LocalTaskView | 'needs-you'
+/**
+ * What the rail shows: a status view, the sessions waiting on the user (REQ-014), or the
+ * dispatcher's ledger (REQ-030, REQ-031).
+ */
+export type LocalTaskPageView = LocalTaskView | 'needs-you' | 'dispatcher'
 
 /** List grouping; `status` means statuses in one project and categories across projects. */
 export const LOCAL_TASK_GROUP_BYS = ['status', 'priority', 'project', 'none'] as const

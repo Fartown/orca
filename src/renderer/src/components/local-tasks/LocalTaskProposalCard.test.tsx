@@ -16,8 +16,15 @@ vi.mock('@/local-tasks/local-task-dispatcher-proposals', async (importOriginal) 
 })
 
 import { localTaskProposalsStore } from '@/local-tasks/local-task-dispatcher-proposals'
+import type { LocalTaskProposalNames } from '@/local-tasks/local-task-proposal-copy'
 import type { LocalTaskProposal } from '../../../../shared/local-tasks/local-task-dispatcher-types'
-import { LocalTaskDispatcherPanel } from './LocalTaskDispatcherPanel'
+import { LocalTaskProposalCard } from './LocalTaskProposalCard'
+
+const names: LocalTaskProposalNames = {
+  taskRef: (taskId) => taskId,
+  workspace: (worktreeId) => worktreeId,
+  repo: (repoId) => repoId
+}
 
 function proposal(overrides: Partial<LocalTaskProposal>): LocalTaskProposal {
   return {
@@ -50,10 +57,9 @@ afterEach(() => {
   run.mockClear()
 })
 
-describe('LocalTaskDispatcherPanel', () => {
+describe('LocalTaskProposalCard', () => {
   it('confirms only the steps the person kept', () => {
-    localTaskProposalsStore.setState({ pending: [proposal({})] })
-    render(<LocalTaskDispatcherPanel />)
+    render(<LocalTaskProposalCard proposal={proposal({})} names={names} now={0} />)
 
     expect(screen.getByText('New task “CSV export” in repo1::/w')).toBeTruthy()
     fireEvent.click(screen.getByRole('checkbox', { name: 'Stop the session on t-9' }))
@@ -64,8 +70,7 @@ describe('LocalTaskDispatcherPanel', () => {
 
   it('offers to run a proposal confirmed elsewhere instead of deciding it again', () => {
     const confirmed = proposal({ status: 'confirmed', decidedSource: 'mobile' })
-    localTaskProposalsStore.setState({ unrun: [confirmed] })
-    render(<LocalTaskDispatcherPanel />)
+    render(<LocalTaskProposalCard proposal={confirmed} names={names} now={0} />)
 
     expect(screen.queryByRole('checkbox')).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: 'Run' }))

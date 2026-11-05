@@ -21235,9 +21235,9 @@
       "dismiss": "Dismiss",
       "confirm": "Confirm {{count}}",
       "run": "Run",
-      "hint": "Tell the dispatcher what you want done; it proposes the steps here and follows the tasks for you.",
+      "hint": "Tell it what you want done in its conversation. It proposes the steps here, you confirm, Orca runs them; then it follows the tasks and reports back.",
       "intro": "The dispatcher is an agent session that assigns and follows your tasks. It only proposes; you confirm here.",
-      "show": "Show dispatcher",
+      "show": "Show conversation",
       "open": "Open dispatcher",
       "item": {
         "startIn": "New task “{{title}}” in {{place}}",
@@ -21248,7 +21248,39 @@
         "link": "Link {{ref}} to {{place}}",
         "record": "Record the work in {{place}} as task “{{title}}”"
       },
-      "wake": "Wake on news"
+      "wake": "Wake on news",
+      "title": "Dispatcher",
+      "notice": "The dispatcher has {{count}} proposal(s) waiting for you to confirm",
+      "status": {
+        "closed": "Not open",
+        "open": "Open",
+        "working": "Working",
+        "waiting": "Waiting on you",
+        "idle": "Idle"
+      },
+      "waiting": {
+        "title": "Waiting for you to confirm",
+        "empty": "No proposal is waiting."
+      },
+      "watches": {
+        "title": "Tasks it follows",
+        "empty": "Nothing yet. Tasks its proposals start are followed, and so is any task you ask it to watch.",
+        "byProposal": "From its proposal · {{time}}",
+        "byAsk": "You asked it to watch · {{time}}",
+        "unwatch": "Stop following {{ref}}"
+      },
+      "dispatched": {
+        "title": "What it dispatched",
+        "empty": "No confirmed proposal has run yet.",
+        "item": "Step {{n}}: {{detail}}"
+      },
+      "unread": {
+        "title": "News it has not handled",
+        "empty": "It has handled everything so far.",
+        "wakeOn": "Orca points it here the next time it finishes a turn.",
+        "wakeOff": "Waking is off: it reads these only when it checks its inbox itself.",
+        "more": "More are waiting behind these."
+      }
     },
     "latestProgress": {
       "title": "Latest progress",
