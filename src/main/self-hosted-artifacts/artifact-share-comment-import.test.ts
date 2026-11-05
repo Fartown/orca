@@ -27,7 +27,8 @@ afterEach(async () => {
 
 /** One workspace whose owner merges note writes against their base, like the real store. */
 function workspaceOwner(input: { hostId?: string; present?: boolean } = {}) {
-  const state = { notes: [] as DiffComment[], present: input.present ?? true }
+  const notes: DiffComment[] = []
+  const state = { notes, present: input.present ?? true }
   const worktree = () => ({
     id: 'repo::/work/orca-docs',
     path: workspace,

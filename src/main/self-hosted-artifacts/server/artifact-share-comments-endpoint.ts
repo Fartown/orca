@@ -92,10 +92,10 @@ async function resolveCommentTarget(
   token: string,
   segments: readonly string[]
 ): Promise<ArtifactShareCommentTarget | null> {
-  const workspace = readArtifactShareWorkspaces(home).find(
-    (candidate) => candidate.token === token
-  )
-  const file = workspace ? await resolveArtifactShareRequestFile(workspace.rootPath, segments) : null
+  const workspace = readArtifactShareWorkspaces(home).find((candidate) => candidate.token === token)
+  const file = workspace
+    ? await resolveArtifactShareRequestFile(workspace.rootPath, segments)
+    : null
   if (!workspace || !file) {
     return null
   }

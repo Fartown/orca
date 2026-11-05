@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ImeTextarea } from '@/lib/ime-text-field'
 import { formatMarkdownReviewCardQuote } from '@/lib/markdown-review-notes'
-import { translate } from '@/i18n/i18n'
+import { getIntlLocale, translate } from '@/i18n/i18n'
 import {
   getMarkdownPreviewAnnotationQuote,
   getMarkdownPreviewBlockRange,
@@ -19,12 +19,14 @@ import {
   type ShareCommentRange
 } from './share-viewer-comments-state'
 
-const COMMENT_TIME_FORMAT = new Intl.DateTimeFormat(undefined, {
-  month: 'short',
-  day: 'numeric',
-  hour: '2-digit',
-  minute: '2-digit'
-})
+function formatCommentTime(createdAt: string): string {
+  return new Intl.DateTimeFormat(getIntlLocale(), {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  }).format(new Date(createdAt))
+}
 
 function postErrorMessage(error: ShareCommentPostError): string {
   switch (error) {
@@ -59,7 +61,7 @@ export function ShareCommentCard({
         <div className="orca-diff-comment-content-col">
           <div className="orca-diff-comment-header">
             <div className="orca-diff-comment-meta-group">
-              {comment.author} {COMMENT_TIME_FORMAT.format(new Date(comment.createdAt))}
+              {comment.author} {formatCommentTime(comment.createdAt)}
             </div>
           </div>
           {quote ? (
@@ -104,7 +106,7 @@ function ShareCommentComposer({
   return (
     <div className="markdown-annotation-composer" onClick={(event) => event.stopPropagation()}>
       <Input
-        className="mb-2 h-7 text-xs"
+        className="mb-2"
         value={author}
         maxLength={64}
         placeholder={translate(

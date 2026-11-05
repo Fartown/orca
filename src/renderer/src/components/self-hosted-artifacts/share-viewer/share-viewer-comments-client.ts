@@ -28,7 +28,7 @@ export async function fetchShareComments(): Promise<ArtifactShareComment[] | nul
 
 export async function postShareComment(
   input: ArtifactShareCommentInput
-): Promise<{ comment: ArtifactShareComment } | { error: ShareCommentPostError }> {
+): Promise<{ comment: ArtifactShareComment } | { failure: ShareCommentPostError }> {
   try {
     const response = await fetch(commentsUrl(), {
       method: 'POST',
@@ -36,20 +36,20 @@ export async function postShareComment(
       body: JSON.stringify(input)
     })
     if (response.status === 429) {
-      return { error: 'rate-limited' }
+      return { failure: 'rate-limited' }
     }
     if (response.status === 409) {
-      return { error: 'too-many-comments' }
+      return { failure: 'too-many-comments' }
     }
     if (!response.ok) {
-      return { error: 'failed' }
+      return { failure: 'failed' }
     }
     const body: unknown = await response.json()
     const parsed = ArtifactShareComment.safeParse(
       body !== null && typeof body === 'object' && 'comment' in body ? body.comment : null
     )
-    return parsed.success ? { comment: parsed.data } : { error: 'failed' }
+    return parsed.success ? { comment: parsed.data } : { failure: 'failed' }
   } catch {
-    return { error: 'failed' }
+    return { failure: 'failed' }
   }
 }

@@ -154,7 +154,9 @@ async function handle(
     sendText(response, 404, 'Not Found')
     return { category: 'refused', status: 404 }
   }
-  const isMarkdown = ARTIFACT_SHARE_MARKDOWN_EXTENSIONS.has(extname(file.absolutePath).toLowerCase())
+  const isMarkdown = ARTIFACT_SHARE_MARKDOWN_EXTENSIONS.has(
+    extname(file.absolutePath).toLowerCase()
+  )
   if (isMarkdown && !target.raw && file.size <= MARKDOWN_PAGE_MAX_BYTES) {
     const markdown = await readFile(file.absolutePath, 'utf8')
     response.setHeader('Content-Security-Policy', ARTIFACT_SHARE_MARKDOWN_PAGE_CSP)

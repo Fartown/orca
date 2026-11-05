@@ -79,8 +79,8 @@ export function ShareCommentsProvider({
       endLine: input.range.endLine,
       ...(input.quote ? { quote: input.quote } : {})
     })
-    if ('error' in result) {
-      return result.error
+    if ('failure' in result) {
+      return result.failure
     }
     storeAuthor(input.author)
     setAuthor(input.author)

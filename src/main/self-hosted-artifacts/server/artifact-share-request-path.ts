@@ -56,7 +56,9 @@ function parseTokenPath(segments: string[]): { token: string; segments: string[]
   }
   // Why: a trailing slash names the directory itself; any other empty segment is an escape attempt.
   const pathSegments = rest.length > 0 && rest.at(-1) === '' ? rest.slice(0, -1) : rest
-  return pathSegments.some(isUnsafeArtifactSharePathSegment) ? null : { token, segments: pathSegments }
+  return pathSegments.some(isUnsafeArtifactSharePathSegment)
+    ? null
+    : { token, segments: pathSegments }
 }
 
 export type ResolvedArtifactShareFile = { absolutePath: string; relativePath: string; size: number }

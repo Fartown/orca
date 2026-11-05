@@ -16,7 +16,9 @@ export function ShareOrphanComments({
 
   useLayoutEffect(() => {
     const blocks = bodyRef.current?.querySelectorAll<HTMLElement>('[data-share-comment-block]')
-    setRenderedKeys(new Set([...(blocks ?? [])].map((block) => block.dataset.shareCommentBlock ?? '')))
+    setRenderedKeys(
+      new Set([...(blocks ?? [])].map((block) => block.dataset.shareCommentBlock ?? ''))
+    )
   }, [available, bodyRef, comments, markdown])
 
   const orphans = renderedKeys
