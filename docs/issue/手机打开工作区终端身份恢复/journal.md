@@ -240,3 +240,12 @@ external_ids: ['STA-3859']
 - 验证证据：`folder-inventory-before.log` 与 `folder-activation-before.log` 分别在修复前失败；`folder-inventory-after.log` 27 项通过，`folder-activation-after.log` 59 项通过。`final-connection-regressions.log` 75 个文件、1140 项通过、1 项原有跳过；`host-scope-regressions.log` 24 项通过。最终真实应用 `final-e2e.log` 六项全部通过：本机 Git/folder 的不可读 census 与旧 hostScope 缺失、三次串行及三次并发手机激活、无答复附着跨 reload、SSH Git 与独立文件夹手机激活/客户端导航/桌面重启。`evidence/final-real-app/` 保存实际截图与身份 JSON；SSH 两类均核对原 handle/tab/leaf/PTY/非空 incarnation、前后同一 shell PID、静止内容及后续输出。
 - 未解决问题：用户截图中的 acp-workspace 不在本机目录或当前项目清单，当前 `mobileRelay.hosts.list` 为空，不能读不在联系中的主机来猜现场。六项测试证明本轮覆盖路径；不构成所有关闭微竞态、所有旧服务端或真实手机客户端的全量认证。历史多余标签尚未按名称清理。发布/安装后与截图实际宿主的验收仍待完成。
 - 下一步：运行最后门禁，按 Fork PR 流程发布修复并核对实际安装结果；拿到截图实际宿主后对原标签与进程做现场验证。
+
+### 2026-11-05 PR 全量回归的 activation seam 校正
+
+- 本轮目标：testing；校正全量 CI 发现的旧集成测试契约，覆盖归属从不可验证到恢复的完整激活行为。
+- 完成内容：PR #82 的打包、静态检查和真实应用分片通过；全量单测第 11 分片有一项旧断言要求 unverifiable census 下新建空终端，与本轮修复目标冲突。改为先断言 blocked 且零替代标签，再恢复权威 census，断言 adopted 且唯一标签引用原 live PTY。
+- 代码或文档变更：只更新既有 activation seam 测试、登记和 TC-018；产品代码没有扩大。
+- 验证证据：原失败日志 `build/ci-unit-11.log`；本机 `build/activation-seam-after.log` 10 项通过。均在本轮忽略证据目录。修订提交的全量 CI 尚待运行。
+- 未解决问题：发布安装及截图实际宿主的验证仍待完成，不能标 done。
+- 下一步：完成修订提交门禁，待完整 PR 检查通过后合并发布，再按已有授权安装并检查实际版本和终端连续性。

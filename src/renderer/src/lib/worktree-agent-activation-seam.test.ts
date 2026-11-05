@@ -300,19 +300,23 @@ describe('worktree agent activation seam', () => {
     expect(useAppStore.getState().tabsByWorktree[worktree.id] ?? []).toHaveLength(0)
   })
 
-  // Paired-runtime/never-answered relay inventories omit owners; decline minting but still provide the user a usable surface.
-  it('still seeds a usable pane when the census cannot prove who owns a live PTY', async () => {
+  it('restores the live terminal after an unverifiable census becomes authoritative', async () => {
     const worktree = makeWorktree()
     const livePtyId = `${worktree.id}@@live-codex`
     useAppStore.setState(baseState())
     stubInventory({ livePtyId, unverifiableCensus: true })
 
     expect(activateAndRevealWorktree(worktree.id)).toEqual({ primaryTabId: null })
-    await waitForWorktreeAgentActivationGateForTests(worktree.id)
+    await expect(waitForWorktreeAgentActivationGateForTests(worktree.id)).resolves.toBe('blocked')
+    expect(useAppStore.getState().tabsByWorktree[worktree.id] ?? []).toHaveLength(0)
+
+    stubInventory({ livePtyId })
+    activateAndRevealWorktree(worktree.id)
+    await expect(waitForWorktreeAgentActivationGateForTests(worktree.id)).resolves.toBe('adopted')
 
     const tabs = useAppStore.getState().tabsByWorktree[worktree.id] ?? []
     expect(tabs).toHaveLength(1)
-    expect(tabs[0]?.ptyId).toBeNull()
+    expect(tabs[0]?.ptyId).toBe(livePtyId)
   })
 
   it('does not spawn before a structured chat tab hydrates', async () => {

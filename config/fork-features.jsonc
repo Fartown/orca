@@ -214,6 +214,11 @@
           "why": "Route unowned recorded live PTYs through the feature-owned original-surface admission policy."
         },
         {
+          "file": "src/renderer/src/lib/worktree-agent-activation-seam.test.ts",
+          "mustContain": "restores the live terminal after an unverifiable census becomes authoritative",
+          "why": "Verify activation withholds a replacement shell and later restores the original live PTY."
+        },
+        {
           "file": "src/renderer/src/lib/worktree-agent-activation-gate.test.ts",
           "mustContain": "restores the recorded tab and leaf when this renderer lacks that tab",
           "why": "Prove exact restoration only when the recorded tab is missing while retaining legacy fallback cases."
@@ -230,10 +235,11 @@
         "tests/e2e/mobile-terminal-surface-recovery.spec.ts",
         "src/renderer/src/mobile-terminal-surface-recovery/activation-live-inventory.test.ts",
         "src/renderer/src/mobile-terminal-surface-recovery/recorded-live-terminal-surface.test.ts",
+        "src/renderer/src/lib/worktree-agent-activation-seam.test.ts",
         "src/renderer/src/lib/worktree-agent-activation-gate.test.ts"
       ],
       "checks": [
-        "pnpm exec vitest run --config config/vitest.config.ts src/main/runtime/project-group-folder-workspace-selectors.test.ts src/renderer/src/hooks/ipc-events/worktree-event-runtime-activation.test.ts src/renderer/src/hooks/ipc-events/worktree-event-lineage-refresh.test.ts src/renderer/src/mobile-terminal-surface-recovery src/renderer/src/lib/worktree-agent-activation-gate.test.ts src/renderer/src/components/terminal-pane/pty-connection/reattach-success-settle.test.ts src/renderer/src/components/terminal-pane/pty-connection/deferred-session-reattach-newer-daemon-hold.test.ts src/renderer/src/components/terminal-pane/pty-connection/deferred-session-reattach-live-bookmark.test.ts"
+        "pnpm exec vitest run --config config/vitest.config.ts src/main/runtime/project-group-folder-workspace-selectors.test.ts src/renderer/src/hooks/ipc-events/worktree-event-runtime-activation.test.ts src/renderer/src/hooks/ipc-events/worktree-event-lineage-refresh.test.ts src/renderer/src/mobile-terminal-surface-recovery src/renderer/src/lib/worktree-agent-activation-gate.test.ts src/renderer/src/lib/worktree-agent-activation-seam.test.ts src/renderer/src/components/terminal-pane/pty-connection/reattach-success-settle.test.ts src/renderer/src/components/terminal-pane/pty-connection/deferred-session-reattach-newer-daemon-hold.test.ts src/renderer/src/components/terminal-pane/pty-connection/deferred-session-reattach-live-bookmark.test.ts"
       ]
     },
     {
