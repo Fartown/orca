@@ -69,6 +69,14 @@ const statuses = [
     name: 'In Review',
     color: 'blue',
     position: 2
+  },
+  {
+    id: 'done',
+    projectId: 'shop',
+    category: 'completed',
+    name: 'Done',
+    color: 'green',
+    position: 3
   }
 ]
 
@@ -126,7 +134,23 @@ const links = {
       linkedAt: 0
     }
   ],
-  sessions: []
+  sessions: [
+    {
+      id: 'link-12',
+      taskId: 'task-12',
+      hostId: 'local',
+      worktreeId: checkout.id,
+      instanceId: null,
+      surface: 'terminal',
+      tabId: 'tab-1',
+      paneKey: 'tab-1:pane-a',
+      sessionId: null,
+      providerSession: null,
+      agent: 'claude',
+      linkedVia: 'start',
+      openedAt: 0
+    }
+  ]
 }
 
 function host(
@@ -241,7 +265,7 @@ describe('orca task', () => {
     await main(['task', 'status', 'SHOP-12', 'Shipped'], '/repo')
     expect(writeParams('localTasks.tasks.update')).toBeUndefined()
     expect(console.error).toHaveBeenCalledWith(
-      expect.stringContaining('Statuses: Todo, In Progress, In Review')
+      expect.stringContaining('Statuses: Todo, In Progress, In Review, Done')
     )
   })
 
@@ -251,6 +275,67 @@ describe('orca task', () => {
     expect(console.error).toHaveBeenCalledWith(
       expect.stringContaining('has no local task library. Update Orca on that host')
     )
+  })
+
+  it('writes back progress tied to the session it runs in, with what it needs', async () => {
+    host()
+    process.env.ORCA_PANE_KEY = 'tab-1:pane-a'
+    try {
+      await main(
+        [
+          'task',
+          'progress',
+          'SHOP-12',
+          '--body',
+          'Found the retry loop',
+          '--needs-you',
+          'Pick a timeout'
+        ],
+        '/repo'
+      )
+    } finally {
+      delete process.env.ORCA_PANE_KEY
+    }
+    expect(writeParams('localTasks.events.addComment')).toMatchObject({
+      taskId: 'task-12',
+      body: 'Found the retry loop',
+      progress: { sessionLinkId: 'link-12', needsYou: 'Pick a timeout' }
+    })
+    expect(printed()).toBe('progress\tExport orders as CSV\tSHOP-12 · In Progress · Shop')
+  })
+
+  it('writes back without a session link outside a session of the task', async () => {
+    host()
+    await main(['task', 'progress', 'SHOP-13', '--body', 'Looked at refunds'], '/repo')
+    expect(writeParams('localTasks.events.addComment')).toMatchObject({
+      taskId: 'task-13',
+      progress: {}
+    })
+  })
+
+  it('refuses an empty writeback before touching the library', async () => {
+    host()
+    await main(['task', 'progress', 'SHOP-12', '--body', '   '], '/repo')
+    expect(writeParams('localTasks.events.addComment')).toBeUndefined()
+    expect(console.error).toHaveBeenCalledWith(expect.stringContaining('empty'))
+  })
+
+  it('refuses to complete a task, telling the agent what to do instead', async () => {
+    host()
+    await main(['task', 'status', 'SHOP-12', 'completed'], '/repo')
+    expect(writeParams('localTasks.tasks.update')).toBeUndefined()
+    expect(console.error).toHaveBeenCalledWith(
+      expect.stringContaining('Only the user completes a task')
+    )
+  })
+
+  it('prints the worker guide, and the dispatcher guide on request', async () => {
+    host()
+    await main(['task', 'guide'], '/repo')
+    expect(printed()).toContain('orca task progress <ref> --body-file <file>')
+    vi.mocked(console.log).mockClear()
+    await main(['task', 'guide', '--dispatcher'], '/repo')
+    expect(printed()).toContain('orca task propose --body-file <proposal.json>')
   })
 
   it('refuses to write to a library a newer Orca left read-only', async () => {

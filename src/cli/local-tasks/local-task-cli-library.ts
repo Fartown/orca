@@ -183,8 +183,13 @@ const REFUSAL_MESSAGES: Record<string, string> = {
   not_found: 'The task no longer exists.',
   stale: 'The task changed while this command ran. Run it again.',
   read_only: 'The task library is read-only on this host.',
-  status_invalid: 'That status does not belong to the task’s project.'
+  status_invalid: 'That status does not belong to the task’s project.',
+  comment_not_editable: 'That entry cannot be changed.'
 }
+
+/** Why an agent's status change was refused, written so the agent knows what to do next. */
+export const COMPLETED_FROM_CLI_MESSAGE =
+  'Only the user completes a task, in Orca. Move it at most to review, and leave a comment or a progress writeback instead; do not change the status again this round.'
 
 async function write<T extends object>(
   rpc: TaskLibraryRpc,
@@ -229,13 +234,28 @@ export async function setTaskStatus(
 export async function addTaskComment(
   rpc: TaskLibraryRpc,
   resolved: ResolvedTask,
-  body: string
+  body: string,
+  progress?: { sessionLinkId?: string; needsYou?: string }
 ): Promise<RuntimeRpcSuccess<unknown>> {
   const { envelope } = await write(
     rpc,
     'localTasks.events.addComment',
-    { taskId: resolved.task.id, body },
+    { taskId: resolved.task.id, body, ...(progress ? { progress } : {}) },
     writeAnySuccess
   )
   return envelope
+}
+
+/** The session link this process runs in, when it belongs to the task: matched by ORCA_PANE_KEY. */
+export function currentSessionLinkId(
+  library: TaskLibrary,
+  taskId: string,
+  paneKey: string | undefined = process.env.ORCA_PANE_KEY
+): string | undefined {
+  if (!paneKey) {
+    return undefined
+  }
+  return library.links.sessions.find(
+    (session) => session.taskId === taskId && session.paneKey === paneKey
+  )?.id
 }

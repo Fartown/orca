@@ -241,7 +241,7 @@ export class LocalTasksService {
 
   addComment(input: LocalTasksEventsAddCommentInput, source: LocalTaskEventSource) {
     return this.write(input.clientOperationId, 'events.addComment', input, EVENT_RESULT, (now) =>
-      addLocalTaskComment(this.db, input.taskId, input.body, source, now)
+      addLocalTaskComment(this.db, input.taskId, input.body, source, now, input.progress)
     )
   }
 

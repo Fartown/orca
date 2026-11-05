@@ -108,7 +108,18 @@ export const localTaskSchema: z.ZodType<LocalTask, unknown> = z.object({
   updatedAt: z.number(),
   revision: z.number(),
   // Why salvaged: a host from before moves were searchable sends none; a bad list only costs search.
-  formerRefs: salvagedOptional('formerRefs', salvagingArray(z.string()))
+  formerRefs: salvagedOptional('formerRefs', salvagingArray(z.string())),
+  // Why salvaged: hosts before writebacks send none; a bad one only hides the line on the card.
+  latestProgress: salvagedOptional(
+    'latestProgress',
+    z.object({
+      kind: z.literal('progress'),
+      body: z.string(),
+      at: z.number(),
+      sessionLinkId: z.string().nullable(),
+      needsYou: z.string().optional()
+    })
+  )
 })
 
 const localTaskEventSchema: z.ZodType<LocalTaskEvent, unknown> = z.object({

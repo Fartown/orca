@@ -5,6 +5,10 @@ import type {
   LocalTaskEventSource,
   LocalTaskResult
 } from '../../shared/local-tasks/local-task-types'
+import {
+  isLocalTaskProgressPayload,
+  localTaskProgressPayload
+} from '../../shared/local-tasks/local-task-progress'
 import type { SqliteRow } from '../sqlite/sqlite-statement'
 import type { LocalTasksDatabase } from './local-tasks-database'
 import {
@@ -82,15 +86,19 @@ export function addLocalTaskComment(
   taskId: string,
   body: string,
   source: LocalTaskEventSource,
-  now: number
+  now: number,
+  progress?: { sessionLinkId?: string; needsYou?: string }
 ): LocalTaskResult<{ eventId: string }> {
   if (!db.prepare('SELECT 1 FROM local_tasks WHERE id = ?').get(taskId)) {
     return { ok: false, code: 'not_found' }
   }
-  return {
-    ok: true,
-    eventId: appendLocalTaskEvent(db, { taskId, kind: 'comment', source, body, now })
+  const payload = progress ? localTaskProgressPayload(progress) : null
+  const eventId = appendLocalTaskEvent(db, { taskId, kind: 'comment', source, body, payload, now })
+  if (payload) {
+    // Why: the task row carries latestProgress, so task readers must refresh too.
+    db.touch('tasks')
   }
+  return { ok: true, eventId }
 }
 
 export function editLocalTaskComment(
@@ -129,16 +137,19 @@ export function removeLocalTaskComment(
   return { ok: true }
 }
 
-// Why: activity is history; only the user's own comments are editable.
+// Why: activity is history; only the user's own comments are editable, never an agent's writeback.
 function requireComment(
   db: LocalTasksDatabase,
   eventId: string
 ): { ok: false; code: 'not_found' | 'comment_not_editable' } | null {
-  const row = db.prepare('SELECT kind FROM local_task_events WHERE id = ?').get(eventId)
+  const row = db.prepare('SELECT kind, payload FROM local_task_events WHERE id = ?').get(eventId)
   if (!row) {
     return { ok: false, code: 'not_found' }
   }
-  return rowString(row, 'kind') === 'comment' ? null : { ok: false, code: 'comment_not_editable' }
+  const editable =
+    rowString(row, 'kind') === 'comment' &&
+    !isLocalTaskProgressPayload(rowJsonObject(row, 'payload'))
+  return editable ? null : { ok: false, code: 'comment_not_editable' }
 }
 
 function toEvent(row: SqliteRow): LocalTaskEvent | null {

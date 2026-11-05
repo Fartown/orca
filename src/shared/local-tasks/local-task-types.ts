@@ -40,6 +40,15 @@ export type LocalTaskProject = {
   revision: number
 }
 
+/** The newest agent writeback on a task (REQ-022); its session link when the CLI could match one. */
+export type LocalTaskLatestProgress = {
+  kind: 'progress'
+  body: string
+  at: number
+  sessionLinkId: string | null
+  needsYou?: string
+}
+
 export type LocalTask = {
   id: string
   projectId: string
@@ -58,6 +67,8 @@ export type LocalTask = {
   revision: number
   /** Refs it had before moving to another project, e.g. `SHOP-1`; absent when it never moved. */
   formerRefs?: string[]
+  /** Absent when no agent wrote back yet, and from hosts before writebacks. */
+  latestProgress?: LocalTaskLatestProgress
 }
 
 export type LocalTaskEventKind =

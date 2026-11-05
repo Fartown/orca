@@ -3,12 +3,21 @@ import { findLocalTaskLinkForWorkspace } from '../../shared/local-tasks/local-ta
 import type { LocalTask } from '../../shared/local-tasks/local-task-types'
 import type { RuntimeWorktreeRecord } from '../../shared/runtime-types'
 import type { CommandHandler, HandlerContext } from '../dispatch'
+import { LOCAL_TASK_COMMENT_MAX } from '../../shared/local-tasks/local-task-model'
+import {
+  LOCAL_TASK_DISPATCHER_GUIDE,
+  LOCAL_TASK_WORKER_GUIDE
+} from '../../shared/local-tasks/local-task-brief'
+import { LOCAL_TASK_NEEDS_YOU_MAX } from '../../shared/local-tasks/local-task-progress'
+import { readCommandBody } from '../command-body-input'
 import { getOptionalStringFlag, getRepeatedStringFlag, getRequiredStringFlag } from '../flags'
 import { printResult } from '../format'
 import { RuntimeClientError } from '../runtime/types'
 import { getOptionalWorktreeSelector, resolveCurrentWorktreeSelector } from '../selectors'
 import {
   addTaskComment,
+  COMPLETED_FROM_CLI_MESSAGE,
+  currentSessionLinkId,
   describeTask,
   readTaskLibrary,
   resolveTaskRef,
@@ -148,6 +157,9 @@ export const LOCAL_TASK_CLI_HANDLERS: Record<string, CommandHandler> = {
     const library = await readTaskLibrary(client, { access: 'write' })
     const resolved = resolveTaskRef(library, getRequiredStringFlag(flags, 'ref'))
     const status = resolveTaskStatus(resolved, name)
+    if (status.category === 'completed' && status.id !== resolved.task.statusId) {
+      throw new RuntimeClientError('invalid_argument', COMPLETED_FROM_CLI_MESSAGE)
+    }
     if (status.id === resolved.task.statusId) {
       printResult(
         { ...library.envelope, result: { task: summarizeTask(resolved), change: 'unchanged' } },
@@ -165,5 +177,40 @@ export const LOCAL_TASK_CLI_HANDLERS: Record<string, CommandHandler> = {
       json,
       formatTaskChange
     )
+  },
+  'task progress': async ({ client, flags, json, cwd }) => {
+    const body = (
+      await readCommandBody(flags, cwd, {
+        required: true,
+        maximumCharacters: LOCAL_TASK_COMMENT_MAX,
+        tooLargeCode: 'invalid_argument',
+        label: 'Progress'
+      })
+    ).trim()
+    if (!body) {
+      throw new RuntimeClientError('invalid_argument', 'The progress text is empty.')
+    }
+    const needsYou = getOptionalStringFlag(flags, 'needs-you')?.trim() || undefined
+    if (needsYou && needsYou.length > LOCAL_TASK_NEEDS_YOU_MAX) {
+      throw new RuntimeClientError(
+        'invalid_argument',
+        `--needs-you must be at most ${LOCAL_TASK_NEEDS_YOU_MAX} characters.`
+      )
+    }
+    const library = await readTaskLibrary(client, { access: 'write', links: true })
+    const resolved = resolveTaskRef(library, getRequiredStringFlag(flags, 'ref'))
+    const sessionLinkId = currentSessionLinkId(library, resolved.task.id)
+    const envelope = await addTaskComment(client, resolved, body, {
+      ...(sessionLinkId ? { sessionLinkId } : {}),
+      ...(needsYou ? { needsYou } : {})
+    })
+    printResult(
+      { ...envelope, result: { task: summarizeTask(resolved), change: 'progress' } },
+      json,
+      formatTaskChange
+    )
+  },
+  'task guide': async ({ flags }) => {
+    console.log(flags.has('dispatcher') ? LOCAL_TASK_DISPATCHER_GUIDE : LOCAL_TASK_WORKER_GUIDE)
   }
 }

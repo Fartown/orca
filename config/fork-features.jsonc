@@ -2886,6 +2886,7 @@
         "src/cli/dispatch.ts",
         "src/cli/flags.ts",
         "src/cli/format.ts",
+        "src/cli/command-body-input.ts",
         "src/cli/runtime/types.ts",
         "src/cli/selectors.ts",
         "src/renderer/src/components/sidebar/workspace-status.ts",

@@ -38,6 +38,15 @@ export function updateLocalTask(
   ) {
     return { ok: false, code: 'status_invalid' }
   }
+  // Why: the CLI cannot tell a person from an agent, so completing stays a click in the UI (REQ-022).
+  if (
+    source === 'cli' &&
+    patch.statusId !== undefined &&
+    patch.statusId !== task.statusId &&
+    project.statuses.find((status) => status.id === patch.statusId)?.category === 'completed'
+  ) {
+    return { ok: false, code: 'status_invalid', detail: 'completed-needs-ui' }
+  }
   // Why: any depth, but never under itself or its own subtree; its links stay as they name work.
   if (
     patch.parentId !== undefined &&

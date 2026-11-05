@@ -58,9 +58,35 @@ export const LOCAL_TASK_COMMAND_SPECS: CommandSpec[] = [
     variadicPositional: true,
     repeatableFlags: ['status'],
     notes: [
-      "Takes a status name of the task's project in any case, or a category such as completed.",
-      'Setting the status the task already has changes nothing.'
+      "Takes a status name of the task's project in any case, or a category such as review.",
+      'Setting the status the task already has changes nothing.',
+      'A completed status is refused: only the user completes a task, in Orca.'
     ],
-    examples: ['orca task status SHOP-12 "In Review"', 'orca task status SHOP-12 completed']
+    examples: ['orca task status SHOP-12 "In Review"', 'orca task status SHOP-12 review']
+  },
+  {
+    path: ['task', 'progress'],
+    summary: 'Write back the result of a round on a local task',
+    usage:
+      'orca task progress <ref> (--body <text> | --body-file <path|->) [--needs-you <text>] [--json]',
+    allowedFlags: [...GLOBAL_FLAGS, 'ref', 'body', 'body-file', 'needs-you'],
+    positionalArgs: ['ref'],
+    notes: [
+      'Three parts: what you did; the conclusion or output; the next step or what you need.',
+      'Write the text to a UTF-8 file and pass --body-file; inline multi-line text breaks in shells.',
+      'Inside a session started from the task, the writeback is tied to that session.'
+    ],
+    examples: [
+      'orca task progress SHOP-12 --body-file result.md',
+      'orca task progress SHOP-12 --body-file result.md --needs-you "Pick the retry timeout"'
+    ]
+  },
+  {
+    path: ['task', 'guide'],
+    summary: 'Print the rules an agent follows on a local task',
+    usage: 'orca task guide [--dispatcher]',
+    allowedFlags: [...GLOBAL_FLAGS, 'dispatcher'],
+    notes: ['--dispatcher prints the rules for the dispatcher session instead.'],
+    examples: ['orca task guide', 'orca task guide --dispatcher']
   }
 ]
