@@ -4,7 +4,7 @@ slug: 自托管产物后端
 status: testing
 created: 2026-09-05
 updated: 2026-10-25
-external_ids: ["Fartown/orca#84"]
+external_ids: ['Fartown/orca#84']
 ---
 
 # 自托管产物后端 Journal
