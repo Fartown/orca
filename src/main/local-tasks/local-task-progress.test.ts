@@ -118,7 +118,30 @@ describe('agent writebacks (REQ-022)', () => {
         'cli'
       )
     ).toMatchObject({ ok: false, code: 'status_invalid' })
+    expect(
+      service.createTask(
+        { clientOperationId: op(), projectId: project.id, title: 'Born done', statusId: done.id },
+        'cli'
+      )
+    ).toMatchObject({ ok: false, code: 'status_invalid' })
+    // Removing the status a task is in cannot move it into a completed one either.
+    const second = service.upsertStatus({
+      clientOperationId: op(),
+      projectId: project.id,
+      category: 'review',
+      name: 'Second look',
+      color: 'blue'
+    })
+    if (!second.ok) {
+      throw new Error('setup')
+    }
     expect(service.updateTask(patch(review.id), 'cli').ok).toBe(true)
+    expect(
+      service.removeStatus(
+        { clientOperationId: op(), statusId: review.id, moveTasksToStatusId: done.id },
+        'cli'
+      )
+    ).toMatchObject({ ok: false, code: 'status_invalid' })
     expect(service.updateTask(patch(done.id), 'desktop').ok).toBe(true)
   })
 

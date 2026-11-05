@@ -158,6 +158,19 @@ describe('dispatcher conversation and proposals (REQ-030)', () => {
       'desktop'
     )
     const started = task('Investigate retries')
+    const unclaimed = service.recordProposalResults({
+      clientOperationId: op(),
+      proposalId: proposal.id,
+      results: []
+    })
+    expect(unclaimed).toMatchObject({ ok: false, code: 'stale', detail: 'confirmed' })
+    expect(
+      service.claimProposal({ clientOperationId: op(), proposalId: proposal.id })
+    ).toMatchObject({ ok: true, proposal: { status: 'executing' } })
+    // A second window, a stale card or a reload cannot take it again.
+    expect(
+      service.claimProposal({ clientOperationId: op(), proposalId: proposal.id })
+    ).toMatchObject({ ok: false, code: 'stale', detail: 'executing' })
     const recorded = service.recordProposalResults({
       clientOperationId: op(),
       proposalId: proposal.id,
@@ -254,6 +267,58 @@ describe('dispatcher inbox (REQ-031)', () => {
     expect(box.items.map((item) => item.kind)).toEqual(['status'])
     service.ackInbox({ clientOperationId: op(), paneKey: PANE, cursor: box.cursor })
     expect(inbox(service).watchedTaskCount).toBe(0)
+  })
+
+  it('keeps following a finished task until the dispatcher has seen what came after its page', () => {
+    const { service, task, status } = setup()
+    register(service)
+    const watched = task('Ship it')
+    service.watchTask({ clientOperationId: op(), paneKey: PANE, taskId: watched.id })
+    service.addComment(
+      { clientOperationId: op(), taskId: watched.id, body: 'one', progress: {} },
+      'cli'
+    )
+    service.addComment(
+      { clientOperationId: op(), taskId: watched.id, body: 'two', progress: {} },
+      'cli'
+    )
+    service.updateTask(
+      { clientOperationId: op(), taskId: watched.id, patch: { statusId: status('completed') } },
+      'desktop'
+    )
+    const first = service.dispatcher.inbox(PANE, 1)
+    if (!first.ok) {
+      throw new Error('inbox refused')
+    }
+    expect(first.inbox.more).toBe(true)
+    service.ackInbox({ clientOperationId: op(), paneKey: PANE, cursor: first.inbox.cursor })
+    expect(inbox(service).items.map((item) => item.kind)).toEqual(['progress', 'status'])
+  })
+})
+
+describe('dispatcher proposal decisions', () => {
+  it('runs a repeated kept item once and follows a task whose session did not start', () => {
+    const { service, task } = setup()
+    register(service)
+    const proposal = propose(service)
+    const decided = service.decideProposal(
+      {
+        clientOperationId: op(),
+        proposalId: proposal.id,
+        decision: 'confirmed',
+        keepItemIndexes: [1, 0, 0]
+      },
+      'desktop'
+    )
+    expect(decided).toMatchObject({ ok: true, proposal: { keptItemIndexes: [0, 1] } })
+    service.claimProposal({ clientOperationId: op(), proposalId: proposal.id })
+    const created = task('Investigate retries')
+    service.recordProposalResults({
+      clientOperationId: op(),
+      proposalId: proposal.id,
+      results: [{ index: 0, ok: false, taskId: created.id, detail: 'created; start it' }]
+    })
+    expect(inbox(service).watchedTaskCount).toBe(1)
   })
 
   it('reports a session waiting for the user once, until it is judged again', () => {

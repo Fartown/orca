@@ -8,6 +8,7 @@ import type { CommandHandler } from '../dispatch'
 import { getOptionalStringFlag, getRequiredStringFlag } from '../flags'
 import { printResult } from '../format'
 import { RuntimeClientError } from '../runtime/types'
+import { cliTime } from './local-task-cli-format'
 import {
   callLibrary,
   readTaskLibrary,
@@ -58,22 +59,41 @@ function resolveProposalRefs(library: TaskLibrary, item: unknown): unknown {
       record[key] = taskIdOf(library, record[key])
     }
   }
+  if ((record.kind === 'append' || record.kind === 'stop') && !record.sessionLinkId) {
+    record.sessionLinkId = onlySessionOf(library, record.taskId)
+  }
   return record
 }
 
-/** UTC with the date, so an agent never guesses the zone. */
-function time(at: number): string {
-  return `${new Date(at).toISOString().slice(0, 16).replace('T', ' ')}Z`
+/** An append or stop may leave out the session when the task has exactly one. */
+function onlySessionOf(library: TaskLibrary, taskId: unknown): string | undefined {
+  const sessions = library.links.sessions.filter((session) => session.taskId === taskId)
+  if (sessions.length === 1 || typeof taskId !== 'string') {
+    return sessions[0]?.id
+  }
+  const ref = library.tasks.find((task) => task.id === taskId)?.ref ?? taskId
+  throw new RuntimeClientError(
+    'invalid_argument',
+    sessions.length === 0
+      ? `${ref} has no session to send to or stop.`
+      : `${ref} has ${sessions.length} sessions; name one with "sessionLinkId" (see orca task show ${ref}).`
+  )
 }
 
 function formatInbox(result: { inbox: LocalTaskInbox }): string {
   const { inbox } = result
+  // Why the cursor even when empty: hidden notes still use the page and must be acked past.
   if (inbox.items.length === 0) {
-    return `Nothing new on the ${inbox.watchedTaskCount} watched task(s).`
+    return [
+      `Nothing new on the ${inbox.watchedTaskCount} watched task(s).`,
+      ...(inbox.more
+        ? ['More items wait.', `Move past this page: orca task inbox --ack ${inbox.cursor}`]
+        : [])
+    ].join('\n')
   }
   const lines = inbox.items.map((item) => {
     const needs = item.needsYou ? `\n      needs the user: ${item.needsYou}` : ''
-    return `${time(item.at)}  ${item.kind}  ${item.taskRef ?? '-'}  ${item.summary}${needs}`
+    return `${cliTime(item.at)}  ${item.kind}  ${item.taskRef ?? '-'}  ${item.summary}${needs}`
   })
   const more = inbox.more ? ['More items wait; ack these, then read again.'] : []
   return [...lines, ...more, `When handled: orca task inbox --ack ${inbox.cursor}`].join('\n')
@@ -101,7 +121,7 @@ export const LOCAL_TASK_DISPATCHER_CLI_HANDLERS: Record<string, CommandHandler> 
         'Write the proposal as { "summary": "...", "items": [ ... ] } or as an array of items.'
       )
     }
-    const library = await readTaskLibrary(client, { access: 'write' })
+    const library = await readTaskLibrary(client, { access: 'write', links: true })
     const items = LocalTaskProposalItemSchema.array()
       .min(1)
       .max(20)

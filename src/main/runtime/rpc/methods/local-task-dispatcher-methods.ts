@@ -4,6 +4,7 @@ import {
   LocalTasksDispatcherRegisterParams,
   LocalTasksDispatcherWatchParams,
   LocalTasksDispatcherWatchesParams,
+  LocalTasksProposalsClaimParams,
   LocalTasksProposalsCreateParams,
   LocalTasksProposalsDecideParams,
   LocalTasksProposalsListParams,
@@ -17,9 +18,10 @@ import { defineMethod } from '../core'
 
 const DESKTOP_ONLY: LocalTaskFailure = { ok: false, code: 'desktop_only' }
 
-/** A desktop window registers its dispatcher pane and reports what it executed. */
+/** A desktop window registers its dispatcher pane, claims what it runs and reports the results. */
 export const LOCAL_TASK_DISPATCHER_DESKTOP_METHODS: readonly string[] = [
   'localTasks.dispatcher.register',
+  'localTasks.proposals.claim',
   'localTasks.proposals.recordResults'
 ]
 
@@ -95,6 +97,13 @@ export const LOCAL_TASK_DISPATCHER_METHODS = [
     name: 'localTasks.proposals.decide',
     params: LocalTasksProposalsDecideParams,
     handler: (params, context) => service().decideProposal(params, sourceOf(context))
+  }),
+  defineMethod({
+    permission: 'workspace',
+    name: 'localTasks.proposals.claim',
+    params: LocalTasksProposalsClaimParams,
+    handler: (params, context) =>
+      sourceOf(context) === 'desktop' ? service().claimProposal(params) : DESKTOP_ONLY
   }),
   defineMethod({
     permission: 'workspace',

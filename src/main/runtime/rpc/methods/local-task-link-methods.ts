@@ -93,7 +93,8 @@ export const LOCAL_TASK_LINK_METHODS = [
     permission: 'workspace',
     name: 'localTasks.rules.applyPrMerged',
     params: LocalTasksRulesApplyPrMergedParams,
+    // Why not the CLI: a merged PR completes tasks, and an agent must not complete its own.
     handler: (params, context) =>
-      isDesktopClientCaller(context) ? execution().applyPrMerged(params) : DESKTOP_ONLY
+      sourceOf(context) === 'desktop' ? execution().applyPrMerged(params) : DESKTOP_ONLY
   })
 ]

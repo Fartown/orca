@@ -21,7 +21,7 @@ export const proposalSchema: z.ZodType<LocalTaskProposal> = z.object({
   conversationId: z.string(),
   summary: z.string().nullable(),
   items: z.array(LocalTaskProposalItemSchema),
-  status: z.enum(['pending', 'confirmed', 'dismissed', 'executed']),
+  status: z.enum(['pending', 'confirmed', 'executing', 'dismissed', 'executed']),
   keptItemIndexes: z.array(z.number()).nullable(),
   results: z
     .array(

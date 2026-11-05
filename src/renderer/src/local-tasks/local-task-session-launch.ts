@@ -11,6 +11,7 @@ import { launchAgentInNewTab, type LaunchAgentInNewTabResult } from '@/lib/launc
 import type { StructuredLaunchTerminal } from '@/lib/structured-agent-session-launch-admission'
 import type { StructuredAgentLaunchSettlement } from '@/lib/structured-agent-launch-settlement'
 import { activateAndRevealWorkspace } from '@/lib/worktree-activation'
+import { requestBackgroundTerminalWorktreeMount } from '@/components/terminal/background-terminal-worktree-mount'
 import { selectExecutionHostDisplayLabel } from '@/lib/execution-host-display-label'
 import type { TuiAgent } from '../../../shared/tui-agent'
 import { buildLocalTaskAgentPrompt } from '../../../shared/local-tasks/local-task-agent-prompt'
@@ -140,6 +141,13 @@ export function launchLocalTaskSession(args: LocalTaskSessionLaunchArgs): boolea
   if (reveal && activateAndRevealWorkspace(worktreeId, { executionHostId: hostId }) === false) {
     return false
   }
+  // Why: a workspace this window never opened has no mounted terminals; ask for this tab's.
+  const mountHidden = (terminal: LaunchAgentInNewTabResult): LaunchAgentInNewTabResult => {
+    if (!reveal && terminal?.surface.kind === 'local-terminal') {
+      requestBackgroundTerminalWorktreeMount({ worktreeId, tabIds: [terminal.surface.tabId] })
+    }
+    return terminal
+  }
   const plan = planAgentSessionLaunch(useAppStore.getState(), {
     requestId: newAgentLaunchRequestId(),
     agent,
@@ -158,20 +166,22 @@ export function launchLocalTaskSession(args: LocalTaskSessionLaunchArgs): boolea
     onStructuredHostDeclined: () =>
       recordTerminal(
         target,
-        launchAgentInNewTab({
-          agent,
-          worktreeId,
-          prompt,
-          promptDelivery,
-          launchSource: 'unknown',
-          ...(reveal ? {} : { activate: false }),
-          agentSessionLaunchPlan: adoptAgentSessionLaunchVerdict({
-            route: 'terminal-tui',
-            requestId: plan.requestId,
+        mountHidden(
+          launchAgentInNewTab({
             agent,
-            worktreeId
+            worktreeId,
+            prompt,
+            promptDelivery,
+            launchSource: 'unknown',
+            ...(reveal ? {} : { activate: false }),
+            agentSessionLaunchPlan: adoptAgentSessionLaunchVerdict({
+              route: 'terminal-tui',
+              requestId: plan.requestId,
+              agent,
+              worktreeId
+            })
           })
-        })
+        )
       )
   })
   if (!result) {
@@ -185,7 +195,7 @@ export function launchLocalTaskSession(args: LocalTaskSessionLaunchArgs): boolea
       result.surface.kind === 'local-chat' ? result.surface.tabId : null
     )
   } else {
-    recordTerminal(target, result)
+    recordTerminal(target, mountHidden(result))
   }
   return true
 }

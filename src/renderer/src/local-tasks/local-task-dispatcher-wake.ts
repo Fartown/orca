@@ -21,9 +21,18 @@ type WakeState = {
   pointedIdle: string | null
   /** The inbox as it stood at the last pointer; an unacked inbox with nothing new stays quiet. */
   pointedCursor: string | null
+  /** When the person last pressed a key in the dispatcher's tab. */
+  typedAt: number | null
   checking: boolean
   again: boolean
 }
+
+// Why these count as written: the pointer may sit in the input already, so a retry would stack it.
+const POINTER_WRITTEN: ReadonlySet<string> = new Set([
+  'sent',
+  'partial-submit-failed',
+  'unconfirmed'
+])
 
 /** True while the person's keyboard is in the dispatcher's terminal: a half-typed line must not meet the pointer. */
 export function isPersonInDispatcherTab(tabId: string): boolean {
@@ -41,9 +50,15 @@ export function isLocalTaskDispatcherWakeOn(): boolean {
   )
 }
 
-function idleStretch(paneKey: string): string | null {
+/** The idle stretch the dispatcher is in; a session-start `done` is not a finished turn. */
+function idleStretch(paneKey: string): { key: string; turnStartedAt: number } | null {
   const status = useAppStore.getState().agentStatusByPaneKey[paneKey]
-  return status?.state === 'done' ? `${paneKey}@${status.stateStartedAt}` : null
+  return status?.state === 'done' && !status.sessionBoundary
+    ? {
+        key: `${paneKey}@${status.stateStartedAt}`,
+        turnStartedAt: status.turnStartedAt ?? status.stateStartedAt
+      }
+    : null
 }
 
 /**
@@ -55,17 +70,34 @@ function idleStretch(paneKey: string): string | null {
 export function createLocalTaskDispatcherWake(
   send: typeof sendMessageToAgent = sendMessageToAgent,
   personInTab: (tabId: string) => boolean = isPersonInDispatcherTab
-): { check: () => Promise<void> } {
-  const wake: WakeState = { pointedIdle: null, pointedCursor: null, checking: false, again: false }
+): { check: () => Promise<void>; noteTyping: (at: number) => void } {
+  const wake: WakeState = {
+    pointedIdle: null,
+    pointedCursor: null,
+    typedAt: null,
+    checking: false,
+    again: false
+  }
+
+  /** Keys pressed since the last turn began may be an unsent draft the pointer would join. */
+  function mayHoldDraft(idle: { turnStartedAt: number }): boolean {
+    return wake.typedAt !== null && wake.typedAt > idle.turnStartedAt
+  }
 
   async function checkOnce(): Promise<void> {
     const paneKey = liveDispatcherPaneKey()
     const pane = paneKey ? parsePaneKey(paneKey) : null
     const idle = paneKey ? idleStretch(paneKey) : null
-    if (!paneKey || !pane || !idle || idle === wake.pointedIdle || !isLocalTaskDispatcherWakeOn()) {
+    if (
+      !paneKey ||
+      !pane ||
+      !idle ||
+      idle.key === wake.pointedIdle ||
+      !isLocalTaskDispatcherWakeOn()
+    ) {
       return
     }
-    if (personInTab(pane.tabId)) {
+    if (personInTab(pane.tabId) || mayHoldDraft(idle)) {
       return
     }
     const result = await localTaskDispatcherClient.inbox(paneKey, WAKE_INBOX_LIMIT)
@@ -74,8 +106,9 @@ export function createLocalTaskDispatcherWake(
     }
     if (
       result.inbox.cursor === wake.pointedCursor ||
-      idleStretch(paneKey) !== idle ||
-      personInTab(pane.tabId)
+      idleStretch(paneKey)?.key !== idle.key ||
+      personInTab(pane.tabId) ||
+      mayHoldDraft(idle)
     ) {
       return
     }
@@ -84,8 +117,8 @@ export function createLocalTaskDispatcherWake(
       target: { kind: 'terminal', tabId: pane.tabId, leafId: pane.leafId },
       prompt: LOCAL_TASK_DISPATCHER_WAKE_PROMPT
     })
-    if (sent.status === 'sent') {
-      wake.pointedIdle = idle
+    if (POINTER_WRITTEN.has(sent.status)) {
+      wake.pointedIdle = idle.key
       wake.pointedCursor = result.inbox.cursor
     }
   }
@@ -108,7 +141,12 @@ export function createLocalTaskDispatcherWake(
     }
   }
 
-  return { check }
+  return {
+    check,
+    noteTyping: (at) => {
+      wake.typedAt = at
+    }
+  }
 }
 
 /** Mounted once per window: proposals follow the library's notices, the wake follows both. */
@@ -135,6 +173,10 @@ export function bindLocalTaskDispatcher(): () => void {
   const unsubscribeStatus = subscribeLocalTaskAppStore(
     'waking the dispatcher',
     (state, previous) => {
+      // Why first: this runs on every app-store write, and most never touch agent status.
+      if (state.agentStatusByPaneKey === previous.agentStatusByPaneKey) {
+        return
+      }
       const paneKey = liveDispatcherPaneKey(state)
       if (
         paneKey &&
@@ -148,13 +190,25 @@ export function bindLocalTaskDispatcher(): () => void {
   const onFocusMoved = (): void => {
     void wake.check()
   }
+  // Why keys: a draft left in the dispatcher's input must not be submitted with the pointer.
+  const onKey = (event: KeyboardEvent): void => {
+    const tabId = parsePaneKey(liveDispatcherPaneKey() ?? '')?.tabId
+    const tab = tabId
+      ? document.querySelector(`[data-terminal-tab-id="${CSS.escape(tabId)}"]`)
+      : null
+    if (tab && event.target instanceof Node && tab.contains(event.target)) {
+      wake.noteTyping(Date.now())
+    }
+  }
   const target = typeof window === 'undefined' ? null : window
   target?.addEventListener('focusin', onFocusMoved)
   target?.addEventListener('blur', onFocusMoved)
+  target?.addEventListener('keydown', onKey, true)
   return () => {
     unsubscribeChanges()
     unsubscribeStatus()
     target?.removeEventListener('focusin', onFocusMoved)
     target?.removeEventListener('blur', onFocusMoved)
+    target?.removeEventListener('keydown', onKey, true)
   }
 }

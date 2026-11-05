@@ -225,6 +225,10 @@ async function runStop(item: Item<'stop'>): Promise<Outcome> {
   if (layout.root?.type !== 'leaf') {
     return failed({ miss: 'the session shares its tab; stop it there' }, item.taskId)
   }
+  // Why the pane: a tab reused after the agent left, or a moved pane, holds another process.
+  if (!link.paneKey || `${link.tabId}:${layout.root.leafId}` !== link.paneKey) {
+    return failed({ miss: 'its tab no longer holds this session' }, item.taskId)
+  }
   state.closeTab(link.tabId, { captureRecentlyClosed: true })
   return { ok: true, taskId: item.taskId, detail: 'stopped' }
 }

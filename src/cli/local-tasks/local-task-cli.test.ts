@@ -226,8 +226,29 @@ describe('orca task', () => {
       'Shop owners need a file for their accountant.',
       '',
       'Done criteria:',
-      '- Columns match the order table'
+      '- Columns match the order table',
+      '',
+      'Sessions (sessionLinkId · agent · opened):',
+      '- link-12 · claude · 1970-01-01 00:00Z'
     ])
+  })
+
+  it("creates a subtask in its parent's project and renames a task", async () => {
+    host({
+      write: () => ({ ok: true, task: { ...tasks[0], id: 'task-13', title: 'Flaky retry' } })
+    })
+    await main(['task', 'create', 'Flaky', 'retry', '--parent', 'SHOP-12'], '/repo')
+    expect(writeParams('localTasks.tasks.create')).toMatchObject({
+      projectId: 'shop',
+      parentId: 'task-12',
+      title: 'Flaky retry'
+    })
+    await main(['task', 'update', 'SHOP-12', '--title', 'Retry on reconnect'], '/repo')
+    expect(writeParams('localTasks.tasks.update')).toMatchObject({
+      taskId: 'task-12',
+      expectedRevision: 7,
+      patch: { title: 'Retry on reconnect' }
+    })
   })
 
   it('names the task of the workspace the current directory is in', async () => {
@@ -385,6 +406,15 @@ describe('orca task', () => {
         ]
       })
       expect(printed()).toContain('The user confirms or dismisses it in Orca')
+    })
+
+    it('fills in the only session of a task an append names', async () => {
+      const items = [{ kind: 'append', taskId: 'SHOP-12', text: 'Write the repro' }]
+      host({ write: () => proposalReply([]) })
+      await inPane(() => main(['task', 'propose', '--body', JSON.stringify(items)], '/repo'))
+      expect(writeParams('localTasks.proposals.create')).toMatchObject({
+        items: [{ kind: 'append', taskId: 'task-12', sessionLinkId: 'link-12' }]
+      })
     })
 
     it('explains a malformed proposal and never sends it', async () => {

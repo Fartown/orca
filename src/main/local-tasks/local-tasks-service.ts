@@ -295,6 +295,12 @@ export class LocalTasksService {
     )
   }
 
+  claimProposal(input: { clientOperationId: string; proposalId: string }) {
+    return this.write(input.clientOperationId, 'proposals.claim', input, PROPOSAL_RESULT, (now) =>
+      this.dispatcher.claim(input.proposalId, now)
+    )
+  }
+
   recordProposalResults(input: LocalTasksProposalsRecordResultsInput) {
     return this.write(
       input.clientOperationId,
@@ -324,20 +330,12 @@ export class LocalTasksService {
   }
 
   private write<T extends { ok: boolean }>(
-    clientOperationId: string,
+    operationId: string,
     method: string,
     params: unknown,
-    resultSchema: ZodType<T>,
+    schema: ZodType<T>,
     operation: (now: number) => T
   ): T | LocalTaskFailure {
-    return runLocalTaskWrite(
-      this.db,
-      this.now(),
-      clientOperationId,
-      method,
-      params,
-      resultSchema,
-      operation
-    )
+    return runLocalTaskWrite(this.db, this.now(), operationId, method, params, schema, operation)
   }
 }

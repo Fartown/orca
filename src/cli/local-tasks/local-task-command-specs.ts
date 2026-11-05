@@ -39,6 +39,33 @@ export const LOCAL_TASK_COMMAND_SPECS: CommandSpec[] = [
     examples: ['orca task current', 'orca task current --worktree name:checkout --json']
   },
   {
+    path: ['task', 'create'],
+    summary: 'Create a local task, or a subtask of another with --parent',
+    usage:
+      'orca task create <title> [--parent <ref>] [--project <name-or-prefix>] [--body <text> | --body-file <path|->] [--json]',
+    allowedFlags: [...GLOBAL_FLAGS, 'title', 'parent', 'project', 'body', 'body-file'],
+    positionalArgs: ['title'],
+    variadicPositional: true,
+    repeatableFlags: ['title'],
+    notes: [
+      "A subtask joins its parent's project; without --parent, name the project unless there is only one.",
+      'Use it for a problem you will not handle now; the description is optional.'
+    ],
+    examples: [
+      'orca task create "Flaky retry test" --parent SHOP-12',
+      'orca task create "Audit the export" --project SHOP --body-file notes.md'
+    ]
+  },
+  {
+    path: ['task', 'update'],
+    summary: 'Rename a local task',
+    usage: 'orca task update <ref> --title <title> [--json]',
+    allowedFlags: [...GLOBAL_FLAGS, 'ref', 'title'],
+    positionalArgs: ['ref'],
+    notes: ['A task started from a one-line request gets a short title this way.'],
+    examples: ['orca task update SHOP-12 --title "Retry on reconnect"']
+  },
+  {
     path: ['task', 'comment'],
     summary: 'Add a comment to a local task',
     usage: 'orca task comment <ref> <text> [--json]',

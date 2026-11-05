@@ -30,7 +30,11 @@ import { createLocalTaskDispatcherWake } from './local-task-dispatcher-wake'
 const LEAF = '11111111-1111-4111-8111-111111111111'
 const PANE = `tab-d:${LEAF}`
 
-function setStatus(state: 'working' | 'done', stateStartedAt: number): void {
+function setStatus(
+  state: 'working' | 'done',
+  stateStartedAt: number,
+  extra: { turnStartedAt?: number; sessionBoundary?: boolean } = {}
+): void {
   useAppStore.setState({
     agentStatusByPaneKey: {
       [PANE]: {
@@ -39,7 +43,8 @@ function setStatus(state: 'working' | 'done', stateStartedAt: number): void {
         updatedAt: stateStartedAt,
         stateStartedAt,
         paneKey: PANE,
-        stateHistory: []
+        stateHistory: [],
+        ...extra
       }
     }
   })
@@ -151,5 +156,30 @@ describe('dispatcher wake', () => {
 
     expect(fixture.inbox).not.toHaveBeenCalled()
     expect(send).not.toHaveBeenCalled()
+  })
+
+  it('holds the pointer while an unsent draft may sit in its input, until the next turn', async () => {
+    fixture.inbox.mockResolvedValue(inboxWith('c1'))
+    const wake = createLocalTaskDispatcherWake(send, () => false)
+    setStatus('done', 200, { turnStartedAt: 100 })
+    wake.noteTyping(150)
+
+    await wake.check()
+    expect(send).not.toHaveBeenCalled()
+
+    // The person sent their message: a new turn began after the keys, and ended.
+    setStatus('done', 400, { turnStartedAt: 300 })
+    await wake.check()
+    expect(send).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not take a session-start done for a finished turn', async () => {
+    fixture.inbox.mockResolvedValue(inboxWith('c1'))
+    const wake = createLocalTaskDispatcherWake(send, () => false)
+    setStatus('done', 100, { sessionBoundary: true })
+
+    await wake.check()
+
+    expect(fixture.inbox).not.toHaveBeenCalled()
   })
 })

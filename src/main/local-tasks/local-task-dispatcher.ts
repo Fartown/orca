@@ -141,7 +141,10 @@ export class LocalTaskDispatcher {
     if (proposal.status !== 'pending') {
       return { ok: false, code: 'stale', detail: proposal.status }
     }
+    // Why sorted and unique: a repeated index would run the same item twice.
     const kept = input.keepItemIndexes
+      ? [...new Set(input.keepItemIndexes)].sort((a, b) => a - b)
+      : undefined
     if (kept && kept.some((index) => index >= proposal.items.length)) {
       return { ok: false, code: 'invalid_argument' }
     }
@@ -155,9 +158,12 @@ export class LocalTaskDispatcher {
     return this.proposalResult(proposal.id)
   }
 
-  /** The executing desktop's report; every task an item started or touched becomes watched. */
-  recordResults(input: LocalTasksProposalsRecordResultsInput, now: number): ProposalResult {
-    const proposal = readLocalTaskProposal(this.db, input.proposalId)
+  /**
+   * A desktop takes a confirmed proposal to run it. Only one claim succeeds, so a second window,
+   * a stale card or a reload never runs the same items again.
+   */
+  claim(proposalId: string, now: number): ProposalResult {
+    const proposal = readLocalTaskProposal(this.db, proposalId)
     if (!proposal) {
       return { ok: false, code: 'not_found' }
     }
@@ -165,10 +171,29 @@ export class LocalTaskDispatcher {
       return { ok: false, code: 'stale', detail: proposal.status }
     }
     this.db
+      .prepare(`UPDATE local_task_proposals SET status = 'executing', decided_at = ? WHERE id = ?`)
+      .run(proposal.decidedAt ?? now, proposal.id)
+    this.db.touch('events')
+    return this.proposalResult(proposal.id)
+  }
+
+  /**
+   * The claiming desktop's report; every task an item created becomes watched, even when its
+   * session did not start. An interrupted run is closed with whatever results are known.
+   */
+  recordResults(input: LocalTasksProposalsRecordResultsInput, now: number): ProposalResult {
+    const proposal = readLocalTaskProposal(this.db, input.proposalId)
+    if (!proposal) {
+      return { ok: false, code: 'not_found' }
+    }
+    if (proposal.status !== 'executing') {
+      return { ok: false, code: 'stale', detail: proposal.status }
+    }
+    this.db
       .prepare(`UPDATE local_task_proposals SET status = 'executed', results = ? WHERE id = ?`)
       .run(JSON.stringify(input.results), proposal.id)
     for (const result of input.results) {
-      if (result.ok && result.taskId && readLocalTask(this.db, result.taskId)) {
+      if (result.taskId && readLocalTask(this.db, result.taskId)) {
         this.addWatch(proposal.conversationId, result.taskId, 'proposal', now)
       }
     }
@@ -251,13 +276,16 @@ export class LocalTaskDispatcher {
     for (const proposalId of cursor.proposals) {
       report.run(now, proposalId, conversationId)
     }
+    // Why only covered tasks: a finished task's later events must still reach the dispatcher.
     this.db
       .prepare(
         `DELETE FROM local_task_conversation_watches WHERE conversation_id = ? AND task_id IN (
            SELECT t.id FROM local_tasks t JOIN local_task_statuses s ON s.id = t.status_id
-           WHERE s.category IN ('completed', 'canceled'))`
+           WHERE s.category IN ('completed', 'canceled') AND NOT EXISTS (
+             SELECT 1 FROM local_task_events e WHERE e.task_id = t.id
+               AND (e.created_at > ? OR (e.created_at = ? AND e.rowid > ?))))`
       )
-      .run(conversationId)
+      .run(conversationId, forward.at, forward.at, forward.rowid)
     this.db.touch('events')
     return { ok: true }
   }

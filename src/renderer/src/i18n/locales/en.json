@@ -21280,7 +21280,10 @@
         "wakeOn": "Orca points it here the next time it finishes a turn.",
         "wakeOff": "Waking is off: it reads these only when it checks its inbox itself.",
         "more": "More are waiting behind these."
-      }
+      },
+      "claimedElsewhere": "This proposal is already running or has run.",
+      "interrupted": "Running in another window, or its run was interrupted. Check the tasks before repeating anything.",
+      "finish": "Mark as finished"
     },
     "latestProgress": {
       "title": "Latest progress",

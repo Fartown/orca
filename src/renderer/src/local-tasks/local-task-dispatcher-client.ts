@@ -25,7 +25,7 @@ export const localTaskDispatcherClient = {
       { paneKey, agent, ...(previousPaneKey ? { previousPaneKey } : {}) },
       conversationResult
     ),
-  list: (status: 'pending' | 'confirmed' | 'executed') =>
+  list: (status: 'pending' | 'confirmed' | 'executing' | 'executed') =>
     callLocalTasks(
       SELF_LOCAL_TASK_ENDPOINT,
       'localTasks.proposals.list',
@@ -37,6 +37,14 @@ export const localTaskDispatcherClient = {
       SELF_LOCAL_TASK_ENDPOINT,
       'localTasks.proposals.decide',
       { proposalId, decision, ...(keep ? { keepItemIndexes: keep } : {}) },
+      proposalResult
+    ),
+  /** Takes a confirmed proposal for this window to run; only one window's claim succeeds. */
+  claim: (proposalId: string) =>
+    writeLocalTasks(
+      SELF_LOCAL_TASK_ENDPOINT,
+      'localTasks.proposals.claim',
+      { proposalId },
       proposalResult
     ),
   recordResults: (proposalId: string, results: LocalTaskProposalItemResult[]) =>

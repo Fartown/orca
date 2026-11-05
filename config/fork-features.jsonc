@@ -2888,6 +2888,7 @@
         "src/cli/format.ts",
         "src/cli/command-body-input.ts",
         "src/renderer/src/lib/focus-terminal-tab-surface.ts",
+        "src/renderer/src/components/terminal/background-terminal-worktree-mount.ts",
         "src/shared/constants.ts",
         "src/cli/runtime/types.ts",
         "src/cli/selectors.ts",

@@ -110,6 +110,10 @@ export function removeLocalTaskStatus(
     if (!target || target.id === status.id) {
       return { ok: false, code: 'status_in_use', detail: String(users.length) }
     }
+    // Why: moving open tasks into a completed status would complete them from the CLI.
+    if (source === 'cli' && target.category === 'completed' && status.category !== 'completed') {
+      return { ok: false, code: 'status_invalid' }
+    }
     const move = db.prepare(
       'UPDATE local_tasks SET status_id = ?, updated_at = ?, revision = revision + 1 WHERE id = ?'
     )

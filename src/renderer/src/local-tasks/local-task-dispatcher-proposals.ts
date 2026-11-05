@@ -9,8 +9,10 @@ import { runLocalTaskWrite } from './local-task-writes'
 
 type ProposalsState = {
   pending: LocalTaskProposal[]
-  /** Confirmed but never run here: the window closed while it ran, or another window confirmed. */
+  /** Confirmed on another device, or before this window could claim it. */
   unrun: LocalTaskProposal[]
+  /** Claimed and not reported: running somewhere, or interrupted while it ran. */
+  claimed: LocalTaskProposal[]
   /** Proposals this window is running now. */
   running: readonly string[]
 }
@@ -18,6 +20,7 @@ type ProposalsState = {
 export const localTaskProposalsStore = createStore<ProposalsState>(() => ({
   pending: [],
   unrun: [],
+  claimed: [],
   running: []
 }))
 
@@ -31,16 +34,26 @@ let latestRead = 0
 export async function refreshLocalTaskProposals(): Promise<void> {
   const sequence = ++latestRead
   try {
-    const [pending, confirmed] = await Promise.all([
+    const [pending, confirmed, executing] = await Promise.all([
       localTaskDispatcherClient.list('pending'),
-      localTaskDispatcherClient.list('confirmed')
+      localTaskDispatcherClient.list('confirmed'),
+      localTaskDispatcherClient.list('executing')
     ])
-    if (sequence === latestRead) {
-      localTaskProposalsStore.setState({
-        pending: pending.proposals,
-        unrun: confirmed.proposals
-      })
+    if (sequence !== latestRead) {
+      return
     }
+    // Why: a decision landing between the reads must not show one proposal twice.
+    const seen = new Set(pending.proposals.map((proposal) => proposal.id))
+    const unseen = (proposal: LocalTaskProposal): boolean => {
+      const fresh = !seen.has(proposal.id)
+      seen.add(proposal.id)
+      return fresh
+    }
+    localTaskProposalsStore.setState({
+      pending: pending.proposals,
+      unrun: confirmed.proposals.filter(unseen),
+      claimed: executing.proposals.filter(unseen)
+    })
   } catch (error) {
     console.error('local tasks: reading the dispatcher’s proposals failed', error)
   }
@@ -54,14 +67,27 @@ function setRunning(proposalId: string, running: boolean): void {
   }))
 }
 
-/** Runs a confirmed proposal once in this window and says how it went. */
+/**
+ * Claims a confirmed proposal, runs it once in this window and says how it went. The claim is
+ * what stops a second window, a stale card or a reload from running the same items again.
+ */
 export async function runLocalTaskProposal(proposal: LocalTaskProposal): Promise<void> {
   if (localTaskProposalsStore.getState().running.includes(proposal.id)) {
     return
   }
   setRunning(proposal.id, true)
   try {
-    const results = await executeLocalTaskProposal(proposal)
+    const claimed = await localTaskDispatcherClient.claim(proposal.id).catch(() => null)
+    if (!claimed?.ok) {
+      toast.info(
+        translate(
+          'localTasks.dispatcher.claimedElsewhere',
+          'This proposal is already running or has run.'
+        )
+      )
+      return
+    }
+    const results = await executeLocalTaskProposal(claimed.proposal)
     if (!results) {
       toast.error(
         translate('localTasks.dispatcher.reportFailed', 'The results could not be recorded.')
@@ -84,6 +110,14 @@ export async function runLocalTaskProposal(proposal: LocalTaskProposal): Promise
   }
 }
 
+/**
+ * Closes a proposal whose run was interrupted, without running anything again: some items may
+ * have run, so the person checks the tasks rather than repeating them.
+ */
+export async function finishInterruptedLocalTaskProposal(proposalId: string): Promise<void> {
+  await runLocalTaskWrite(() => localTaskDispatcherClient.recordResults(proposalId, []))
+  void refreshLocalTaskProposals()
+}
 /** A person's decision (REQ-030); `keep` names the items they kept, all when absent. */
 export async function decideLocalTaskProposal(
   proposalId: string,

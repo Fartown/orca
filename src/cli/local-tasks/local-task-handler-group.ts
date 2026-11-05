@@ -6,6 +6,8 @@ export const LOCAL_TASK_HANDLER_GROUP: HandlerGroup = {
     'task list',
     'task show',
     'task current',
+    'task create',
+    'task update',
     'task comment',
     'task status',
     'task progress',

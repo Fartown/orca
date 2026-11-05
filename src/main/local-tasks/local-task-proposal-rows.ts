@@ -21,6 +21,7 @@ import {
 const STATUSES: readonly LocalTaskProposalStatus[] = [
   'pending',
   'confirmed',
+  'executing',
   'dismissed',
   'executed'
 ]
@@ -134,5 +135,8 @@ export function describeSettledProposal(proposal: LocalTaskProposal): string {
         result.detail ? ` (${result.detail})` : ''
       }`
   )
-  return `The user confirmed your proposal (${what}): ${items.join('; ') || 'nothing ran'}`
+  return `The user confirmed your proposal (${what}): ${
+    items.join('; ') ||
+    'its run was interrupted and no results were recorded; check the tasks before repeating anything'
+  }`
 }

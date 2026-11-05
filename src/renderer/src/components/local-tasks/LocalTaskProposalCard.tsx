@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils'
 import { useAppStore } from '@/store'
 import {
   decideLocalTaskProposal,
+  finishInterruptedLocalTaskProposal,
   runLocalTaskProposal,
   useLocalTaskProposals
 } from '@/local-tasks/local-task-dispatcher-proposals'
@@ -138,6 +139,24 @@ export function LocalTaskProposalCard({
               })}
             </Button>
           </>
+        ) : proposal.status === 'executing' ? (
+          running ? null : (
+            <>
+              <span className="mr-auto px-1 text-2xs text-muted-foreground">
+                {translate(
+                  'localTasks.dispatcher.interrupted',
+                  'Running in another window, or its run was interrupted. Check the tasks before repeating anything.'
+                )}
+              </span>
+              <Button
+                variant="ghost"
+                size="xs"
+                onClick={() => void finishInterruptedLocalTaskProposal(proposal.id)}
+              >
+                {translate('localTasks.dispatcher.finish', 'Mark as finished')}
+              </Button>
+            </>
+          )
         ) : (
           <Button size="xs" disabled={running} onClick={() => void runLocalTaskProposal(proposal)}>
             {translate('localTasks.dispatcher.run', 'Run')}

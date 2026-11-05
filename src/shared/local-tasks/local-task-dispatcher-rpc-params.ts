@@ -63,7 +63,7 @@ export const LocalTasksProposalsCreateParams = z.object({
 
 export const LocalTasksProposalsListParams = z.object({
   conversationId: id.optional(),
-  status: z.enum(['pending', 'confirmed', 'dismissed', 'executed']).optional()
+  status: z.enum(['pending', 'confirmed', 'executing', 'dismissed', 'executed']).optional()
 })
 
 export const LocalTasksProposalsDecideParams = z.object({
@@ -88,6 +88,8 @@ export const LocalTasksProposalsRecordResultsParams = z.object({
     )
     .max(20)
 })
+
+export const LocalTasksProposalsClaimParams = z.object({ clientOperationId, proposalId: id })
 
 export const LocalTasksDispatcherWatchParams = z.object({ clientOperationId, paneKey, taskId: id })
 

@@ -31,7 +31,8 @@ import type { LocalTaskListModel } from './use-local-task-list-model'
 export function useLocalTaskDispatcherWaitingCount(): number {
   const pending = useLocalTaskProposals((state) => state.pending.length)
   const unrun = useLocalTaskProposals((state) => state.unrun.length)
-  return pending + unrun
+  const claimed = useLocalTaskProposals((state) => state.claimed.length)
+  return pending + unrun + claimed
 }
 
 function useDispatcherStatusLabel(paneKey: string | null, live: boolean): string {
@@ -111,13 +112,14 @@ export function LocalTaskDispatcherView({
   useEffect(() => followLocalTaskDispatcherLedger(), [])
   const pending = useLocalTaskProposals((state) => state.pending)
   const unrun = useLocalTaskProposals((state) => state.unrun)
+  const claimed = useLocalTaskProposals((state) => state.claimed)
   const { known } = useLocalTaskDispatcherPane()
   const wakeOn = useLocalTasksDomain(
     (state) => state.preferences[LOCAL_TASK_DISPATCHER_WAKE_PREFERENCE_KEY] !== '0'
   )
   const names = useProposalNames()
   const now = useNow(60_000)
-  const waiting = [...pending, ...unrun]
+  const waiting = [...pending, ...unrun, ...claimed]
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-3">
       <div className="flex flex-col gap-0.5">

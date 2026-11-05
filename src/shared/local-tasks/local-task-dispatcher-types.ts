@@ -10,7 +10,13 @@ export type LocalTaskConversation = {
   updatedAt: number
 }
 
-export type LocalTaskProposalStatus = 'pending' | 'confirmed' | 'dismissed' | 'executed'
+/** `executing`: a desktop claimed it and is running it, or was interrupted while it did. */
+export type LocalTaskProposalStatus =
+  | 'pending'
+  | 'confirmed'
+  | 'executing'
+  | 'dismissed'
+  | 'executed'
 
 export type LocalTaskProposalItemResult = {
   index: number

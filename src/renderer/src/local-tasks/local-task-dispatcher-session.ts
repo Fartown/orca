@@ -145,20 +145,21 @@ export async function openLocalTaskDispatcher(agent: TuiAgent): Promise<boolean>
       worktreeId: FLOATING_TERMINAL_WORKTREE_ID,
       prompt: LOCAL_TASK_DISPATCHER_OPENING_PROMPT,
       promptDelivery: 'auto-submit',
-      ...(agent === 'claude' ? { requestedSurface: 'terminal' as const } : {}),
+      // Why every agent: waking pastes into a terminal, and the chat view sits on that terminal.
+      requestedSurface: 'terminal',
       launchSource: 'unknown',
       activate: false
     })
     const tabId = launched?.surface.kind === 'local-terminal' ? launched.surface.tabId : null
     const paneKey = tabId ? await waitForPaneKey(tabId) : null
-    if (!paneKey) {
-      toast.error(
-        translate('localTasks.dispatcher.openFailed', 'Could not start the dispatcher session.')
-      )
-      return false
-    }
-    const registered = await localTaskDispatcherClient.register(paneKey, agent, previousPaneKey)
-    if (!registered.ok) {
+    const registered = paneKey
+      ? await localTaskDispatcherClient.register(paneKey, agent, previousPaneKey).catch(() => null)
+      : null
+    if (!paneKey || !registered?.ok) {
+      // Why close it: an unregistered session would run the opening prompt with no conversation.
+      if (tabId) {
+        useAppStore.getState().closeTab(tabId)
+      }
       toast.error(
         translate('localTasks.dispatcher.openFailed', 'Could not start the dispatcher session.')
       )
