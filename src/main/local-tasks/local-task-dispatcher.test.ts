@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import type { LocalTaskForwardedFact } from '../../shared/local-tasks/local-task-dispatcher-types'
 import SyncDatabase from '../sqlite/sync-database'
 import type { LocalTaskProgressSnapshot } from '../../shared/local-tasks/local-task-link-types'
+import type { LocalTasksEventsAddCommentInput } from '../../shared/local-tasks/local-tasks-rpc-params'
 import { LocalTaskDispatcher } from './local-task-dispatcher'
 import { LocalTasksDatabase } from './local-tasks-database'
 import { LocalTasksService } from './local-tasks-service'
@@ -204,7 +205,12 @@ describe('dispatcher inbox (REQ-031)', () => {
     const watched = task('Fix reconnect')
     const other = task('Unrelated')
     service.watchTask({ clientOperationId: op(), paneKey: PANE, taskId: watched.id })
-    const write = (taskId: string, body: string, progress?: object, source = 'cli' as const) =>
+    const write = (
+      taskId: string,
+      body: string,
+      progress?: LocalTasksEventsAddCommentInput['progress'],
+      source = 'cli' as const
+    ) =>
       service.addComment(
         { clientOperationId: op(), taskId, body, ...(progress ? { progress } : {}) },
         source
