@@ -17,6 +17,15 @@ import { localTaskStatusLookup } from './local-task-list-projection'
 import { LocalTaskDetailSections } from './local-task-detail-sections'
 import { createLocalTaskOperationIds, sendLocalTaskWrite } from './local-task-operation-ids'
 import { LocalTaskPriorityPicker, LocalTaskStatusPicker } from './local-task-pickers'
+import {
+  localTaskRowSessionStates,
+  localTaskSessionViews,
+  localTaskWorkspaceLinkFor
+} from './local-task-progress-projection'
+import { localTaskLatestLine } from './local-task-latest-line'
+import { LocalTaskSessionDrawer } from './local-task-session-drawer'
+import { LocalTaskReviewActions } from './local-task-review-actions'
+import { localTaskWorkspaceRouteId } from './local-task-work-navigation'
 import { localTaskStyles } from './local-tasks-styles'
 import { LocalTaskPriorityIcon, LocalTaskStatusIcon } from './local-tasks-visuals'
 import type { LocalTasksLibrary } from './use-local-tasks-library'
@@ -35,7 +44,8 @@ type Props = {
   onEdit: (task: LocalTask) => void
   onAddSubtask: (parent: LocalTask) => void
   site: LocalTaskSite
-  onOpenSession: (taskSessionId: string) => void
+  /** Opens a linked session's screen; returns why it can't, when it can't. */
+  onOpenSession: (taskSessionId: string) => string | null
   onNavigate: (href: string) => void
 }
 
@@ -50,6 +60,7 @@ export function LocalTaskDetailView(props: Props) {
   const [menuOpen, setMenuOpen] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [previewSessionId, setPreviewSessionId] = useState<string | null>(null)
   const { library } = props
   const task = library.tasks.find((candidate) => candidate.id === props.taskId) ?? null
   const project = task
@@ -63,10 +74,47 @@ export function LocalTaskDetailView(props: Props) {
   const descendantCount = task
     ? localTaskDescendantIds(task.id, index.childrenByParentId).length
     : 0
+  const latestLine = task
+    ? localTaskLatestLine(
+        task,
+        localTaskSessionViews({
+          task,
+          tasks: library.tasks,
+          links: library.work.links,
+          snapshot: library.work.progress,
+          inContact: props.site.connState === 'connected'
+        }),
+        localTaskDescendantIds(task.id, index.childrenByParentId).flatMap((id) => {
+          const child = index.tasksById.get(id)
+          return child ? [child] : []
+        })
+      )
+    : null
+  const previewSession =
+    library.work.links.sessions.find((session) => session.id === previewSessionId) ?? null
+  const previewOwner = previewSession ? (index.tasksById.get(previewSession.taskId) ?? null) : null
+  const previewWorkspace = previewOwner
+    ? localTaskWorkspaceLinkFor(previewOwner, index.tasksById, library.work.links)
+    : null
+  const previewWorktreeId =
+    previewSession?.worktreeId ??
+    (previewWorkspace ? localTaskWorkspaceRouteId(previewWorkspace) : null)
+  const openSession = (id: string) => {
+    const link = library.work.links.sessions.find((session) => session.id === id)
+    const owner = link ? index.tasksById.get(link.taskId) : null
+    const workspace = owner
+      ? localTaskWorkspaceLinkFor(owner, index.tasksById, library.work.links)
+      : null
+    if (link?.surface === 'chat' && (link.worktreeId || workspace)) {
+      setPreviewSessionId(id)
+      return null
+    }
+    return props.onOpenSession(id)
+  }
 
   const update = async (patch: { statusId?: string; priority?: LocalTask['priority'] }) => {
     if (!task) {
-      return
+      return false
     }
     const outcome = await sendLocalTaskWrite(
       ids.update,
@@ -78,6 +126,7 @@ export function LocalTaskDetailView(props: Props) {
       library.acceptTasks([outcome.value.task])
     }
     library.reload(['tasks'])
+    return outcome.kind === 'ok'
   }
 
   const remove = async () => {
@@ -193,14 +242,35 @@ export function LocalTaskDetailView(props: Props) {
             </View>
           ) : null}
           {error ? <Text style={[localTaskStyles.errorText, styles.error]}>{error}</Text> : null}
-          <LocalTaskDetailSections
+          <View style={[localTaskStyles.card, styles.nowCard]}>
+            <Text style={localTaskStyles.sectionLabel}>{copy.now}</Text>
+            <Pressable
+              disabled={!task.latestProgress?.sessionLinkId}
+              onPress={() =>
+                task.latestProgress?.sessionLinkId && openSession(task.latestProgress.sessionLinkId)
+              }
+              accessibilityRole={task.latestProgress?.sessionLinkId ? 'button' : undefined}
+            >
+              <Text style={latestLine ? localTaskStyles.body : localTaskStyles.meta}>
+                {latestLine ?? copy.noProgress}
+              </Text>
+            </Pressable>
+            {task.latestProgress ? (
+              <Text style={localTaskStyles.meta}>
+                {formatLocalTaskAgo(copy, task.latestProgress.at, props.now)}
+              </Text>
+            ) : null}
+          </View>
+          <LocalTaskReviewActions
             task={task}
-            subtasks={subtasks}
-            statuses={lookup}
+            project={project}
+            api={props.api}
+            site={props.site}
+            library={library}
+            copy={copy}
             readOnly={props.readOnly}
-            onEdit={props.onEdit}
-            onAddSubtask={props.onAddSubtask}
-            onOpenTask={props.onOpenTask}
+            onUpdateStatus={(statusId) => update({ statusId })}
+            onError={setError}
           />
           <LocalTaskWorkSection
             task={task}
@@ -208,14 +278,33 @@ export function LocalTaskDetailView(props: Props) {
             api={props.api}
             site={props.site}
             canWrite={props.canRead && !props.readOnly}
-            onOpenSession={props.onOpenSession}
+            onOpenSession={openSession}
             onNavigate={props.onNavigate}
+          />
+          <LocalTaskDetailSections
+            task={task}
+            subtasks={subtasks}
+            statuses={lookup}
+            readOnly={props.readOnly}
+            sessionsFor={(child) =>
+              localTaskRowSessionStates({
+                task: child,
+                index,
+                links: library.work.links,
+                snapshot: library.work.progress,
+                inContact: props.site.connState === 'connected'
+              })
+            }
+            onEdit={props.onEdit}
+            onAddSubtask={props.onAddSubtask}
+            onOpenTask={props.onOpenTask}
           />
           <LocalTaskActivitySection
             api={props.api}
             taskId={task.id}
             eventsVersion={library.eventsVersion}
             statuses={lookup}
+            tasksById={index.tasksById}
             now={props.now}
             readOnly={props.readOnly}
             canRead={props.canRead}
@@ -260,6 +349,14 @@ export function LocalTaskDetailView(props: Props) {
         onConfirm={() => void remove()}
         onCancel={() => setConfirmDelete(false)}
       />
+      <LocalTaskSessionDrawer
+        hostId={props.site.hostId}
+        worktreeId={previewWorktreeId}
+        session={previewSession}
+        api={props.api}
+        library={library}
+        onClose={() => setPreviewSessionId(null)}
+      />
     </View>
   )
 }
@@ -272,9 +369,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 6
   },
+  // The ref only says where the page is; the title below is the task's name (§4), so it stays muted.
   ref: {
-    color: colors.textPrimary,
-    fontWeight: '700',
+    color: colors.textMuted,
     fontFamily: typography.monoFamily,
     fontSize: 13
   },
@@ -297,5 +394,6 @@ const styles = StyleSheet.create({
   },
   ancestor: { flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 1 },
   parentTitle: { flexShrink: 1, color: colors.textSecondary, fontSize: 12 },
-  error: { marginTop: spacing.sm }
+  error: { marginTop: spacing.sm },
+  nowCard: { marginTop: spacing.lg, padding: spacing.md, gap: spacing.sm }
 })

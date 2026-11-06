@@ -56,14 +56,40 @@ function streamNotice(
  * read on screen, so the line says so and offers the retry the empty-page panel would.
  */
 function homeNotice(
-  partition: LocalTasksPartition
+  partition: LocalTasksPartition,
+  host: string
 ): Omit<LocalTaskLibraryNotice, 'endpoint'> | null {
   const shown =
     partition.projectsLoaded &&
     partition.tasksLoaded &&
     (partition.hostState === 'ready' || partition.hostState === 'read-only')
-  if (!shown || !partition.inContact) {
+  if (!shown) {
     return null
+  }
+  // Why these two: the controls grey out while the last read stays on screen, and without a line
+  // nothing says why. Neither offers a retry: contact and the reopened stream come back on their own.
+  if (!partition.inContact) {
+    return {
+      tone: 'muted',
+      text: translate(
+        'localTasks.state.homeOutOfContact',
+        '{{host}} is not connected. Tasks are shown as last read and can’t be changed until it is back.',
+        { host }
+      ),
+      detail: null,
+      retry: null
+    }
+  }
+  if (partition.connection === 'connecting') {
+    return {
+      tone: 'muted',
+      text: translate(
+        'localTasks.state.reconnecting',
+        'Reconnecting to the task library. Tasks are shown as last read and can’t be changed until it is back.'
+      ),
+      detail: null,
+      retry: null
+    }
   }
   if (partition.connection === 'failed') {
     return streamNotice(
@@ -159,7 +185,7 @@ export function describeLocalTaskLibraryNotices(
   return partitions.flatMap((partition) => {
     const notice =
       partition.endpoint === home
-        ? homeNotice(partition)
+        ? homeNotice(partition, hostLabel(partition.endpoint))
         : pairedNotice(partition, hostLabel(partition.endpoint))
     return notice ? [{ endpoint: partition.endpoint, ...notice }] : []
   })

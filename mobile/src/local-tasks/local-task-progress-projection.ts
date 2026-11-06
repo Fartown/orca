@@ -6,12 +6,18 @@ import type {
   LocalTaskSessionState,
   LocalTaskWorkspaceLink
 } from '../../../src/shared/local-tasks/local-task-link-types'
-import { buildLocalTaskIndex } from '../../../src/shared/local-tasks/local-task-grouping'
+import {
+  buildLocalTaskIndex,
+  type LocalTaskIndex
+} from '../../../src/shared/local-tasks/local-task-grouping'
+import { localTaskWorkspaceFamilyIds } from '../../../src/shared/local-tasks/local-task-hierarchy'
 import {
   localTaskDescendantIds,
   localTaskEffectiveWorkspace
 } from '../../../src/shared/local-tasks/local-task-tree'
 import type { LocalTask } from '../../../src/shared/local-tasks/local-task-types'
+import type { LocalTaskProject } from '../../../src/shared/local-tasks/local-task-types'
+import { localTaskNeedsReview } from '../../../src/shared/local-tasks/local-task-review-items'
 
 // What the phone shows of the library host's judgement. Every state here is the host's; the phone
 // only groups, filters and orders it, and says "can't confirm" out of contact.
@@ -19,6 +25,7 @@ import type { LocalTask } from '../../../src/shared/local-tasks/local-task-types
 /** One task's "Needs you" items, merged into a single row. */
 export type LocalTaskAttentionRow = {
   task: LocalTask
+  review: boolean
   /** Oldest first: the one waiting longest leads. */
   items: LocalTaskAttentionItem[]
   since: number
@@ -28,21 +35,32 @@ export type LocalTaskAttentionRow = {
 export function localTaskAttentionRows(args: {
   snapshot: LocalTaskProgressSnapshot | null
   tasks: readonly LocalTask[]
+  projects?: readonly LocalTaskProject[]
   projectId: string | null
 }): LocalTaskAttentionRow[] {
-  if (!args.snapshot) {
-    return []
-  }
   const tasksById = new Map(args.tasks.map((task) => [task.id, task]))
+  const projectsById = new Map((args.projects ?? []).map((project) => [project.id, project]))
   const rows = new Map<string, LocalTaskAttentionRow>()
-  for (const item of args.snapshot.items) {
+  for (const item of args.snapshot?.items ?? []) {
     const task = tasksById.get(item.taskId)
     if (!task || (args.projectId !== null && task.projectId !== args.projectId)) {
       continue
     }
-    const row = rows.get(task.id) ?? { task, items: [], since: item.since }
+    const row = rows.get(task.id) ?? { task, review: false, items: [], since: item.since }
     row.items.push(item)
     row.since = Math.min(row.since, item.since)
+    rows.set(task.id, row)
+  }
+  for (const task of args.tasks) {
+    if (
+      (args.projectId !== null && task.projectId !== args.projectId) ||
+      !localTaskNeedsReview(task, projectsById.get(task.projectId))
+    ) {
+      continue
+    }
+    const row = rows.get(task.id) ?? { task, review: true, items: [], since: task.updatedAt }
+    row.review = true
+    row.since = Math.min(row.since, task.updatedAt)
     rows.set(task.id, row)
   }
   return [...rows.values()]
@@ -50,8 +68,8 @@ export function localTaskAttentionRows(args: {
     .sort((a, b) => a.since - b.since || a.task.number - b.task.number)
 }
 
-export function localTaskAttentionItemCount(rows: readonly LocalTaskAttentionRow[]): number {
-  return rows.reduce((sum, row) => sum + row.items.length, 0)
+export function localTaskAttentionTaskCount(rows: readonly LocalTaskAttentionRow[]): number {
+  return rows.length
 }
 
 /** The workspace a task works in: its own, else the nearest ancestor's (REQ-009). */
@@ -104,6 +122,44 @@ export function localTaskSessionViews(args: {
         lastMessage: entry?.lastMessage ?? null
       }
     })
+}
+
+export type LocalTaskRowSession = { id: string; state: LocalTaskSessionState }
+
+/**
+ * The states a list row or board card shows as dots (REQ-012), oldest session first, picked as the
+ * desktop picks them: a task with its own workspace shows every session in it, those of descendants
+ * without one included; a task working in an ancestor's shows only the sessions it opened. Read from
+ * the snapshot already loaded, so it asks the host nothing; out of contact each is unverifiable.
+ */
+export function localTaskRowSessionStates(args: {
+  task: LocalTask
+  index: Pick<LocalTaskIndex, 'tasksById' | 'childrenByParentId'>
+  links: LocalTaskLinks
+  snapshot: LocalTaskProgressSnapshot | null
+  inContact: boolean
+}): LocalTaskRowSession[] {
+  const owners = new Set(args.links.workspaces.map((link) => link.taskId))
+  const family = new Set(
+    owners.has(args.task.id)
+      ? localTaskWorkspaceFamilyIds(args.task.id, args.index, (taskId) => owners.has(taskId))
+      : [args.task.id]
+  )
+  const progress = new Map(
+    (args.snapshot?.sessions ?? []).map((entry) => [entry.taskSessionId, entry.state])
+  )
+  return args.links.sessions
+    .filter((link) => family.has(link.taskId))
+    .sort((a, b) => a.openedAt - b.openedAt)
+    .map((link) => ({
+      id: link.id,
+      state: args.inContact ? (progress.get(link.id) ?? 'unknown') : 'unverifiable'
+    }))
+}
+
+/** The tasks with an item in "Needs you", for the "A session is waiting on me" filter. */
+export function localTaskIdsNeedingYou(rows: readonly LocalTaskAttentionRow[]): Set<string> {
+  return new Set(rows.map((row) => row.task.id))
 }
 
 /** The items one session holds, which opening that session marks seen (技术方案 §9.2). */

@@ -4,7 +4,7 @@ import { useFocusEffect } from 'expo-router'
 import { localTaskAttentionClearsOnView } from '../../../src/shared/local-tasks/local-task-attention-rules'
 import type { LocalTaskProgressSnapshot } from '../../../src/shared/local-tasks/local-task-link-types'
 import type { RpcClient } from '../transport/rpc-client'
-import { createLocalTasksApi } from './local-tasks-api'
+import { createLocalTasksApi, type LocalTasksApi } from './local-tasks-api'
 import { createLocalTaskOperationIds, sendLocalTaskWrite } from './local-task-operation-ids'
 import { localTaskItemsSeenInSession } from './local-task-progress-projection'
 
@@ -60,7 +60,8 @@ function useSessionVisibleSince(taskSessionId: string | null): number | null {
 export function useAcknowledgeOpenSession(
   client: RpcClient | null,
   taskSessionId: string | null,
-  progress: LocalTaskProgressSnapshot | null
+  progress: LocalTaskProgressSnapshot | null,
+  apiOverride?: LocalTasksApi
 ): void {
   const visibleSince = useSessionVisibleSince(taskSessionId)
   const acknowledged = useRef(new Set<string>())
@@ -68,7 +69,7 @@ export function useAcknowledgeOpenSession(
     if (!client || !taskSessionId || visibleSince === null) {
       return
     }
-    const api = createLocalTasksApi(client)
+    const api = apiOverride ?? createLocalTasksApi(client)
     for (const item of localTaskItemsSeenInSession(progress, taskSessionId, visibleSince)) {
       if (localTaskAttentionClearsOnView(item) && !acknowledged.current.has(item.key)) {
         acknowledged.current.add(item.key)
@@ -79,5 +80,5 @@ export function useAcknowledgeOpenSession(
         )
       }
     }
-  }, [client, taskSessionId, progress, visibleSince])
+  }, [client, taskSessionId, progress, visibleSince, apiOverride])
 }

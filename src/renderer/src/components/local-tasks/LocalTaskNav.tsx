@@ -20,8 +20,8 @@ import {
   type LocalTaskView
 } from '@/local-tasks/local-task-page-store'
 import { localTaskViewLabel } from '@/local-tasks/local-task-vocabulary-copy'
-import { openLocalTasksSettings } from '@/local-tasks/local-task-navigation'
-import { liveLocalTaskItems } from '@/local-tasks/local-task-needs-you-rows'
+import { openLocalTaskPage, openLocalTasksSettings } from '@/local-tasks/local-task-navigation'
+import { localTaskNeedsYouCount } from '@/local-tasks/local-task-needs-you-rows'
 import { useLocalTasksDomain } from '@/local-tasks/local-tasks-domain-store'
 import { localTaskHostLabelFor } from '@/local-tasks/local-task-endpoint-labels'
 import { LocalTaskStatusIcon } from './LocalTaskIcons'
@@ -74,10 +74,7 @@ function ViewIcon({ view }: { view: LocalTaskView }): React.JSX.Element {
 }
 
 function useNeedsYouCount(model: LocalTaskListModel): number {
-  return useLocalTasksDomain(
-    (state) =>
-      liveLocalTaskItems(state.progress, model.index.tasksById, model.scopeProjectId).length
-  )
+  return useLocalTasksDomain((state) => localTaskNeedsYouCount(state, model.scopeProjectId))
 }
 
 function useScopeLabel(model: LocalTaskListModel): { scope: string; view: string } {
@@ -205,14 +202,25 @@ function MenuOption({
 }
 
 /** Views count every task in the current project scope, subtasks included (REQ-006). */
-export function LocalTaskNav({ model }: { model: LocalTaskListModel }): React.JSX.Element {
+export function LocalTaskNav({
+  model,
+  sidebar = false
+}: {
+  model: LocalTaskListModel
+  sidebar?: boolean
+}): React.JSX.Element {
   const view = useLocalTaskPage((state) => state.view)
   const scopeProjectId = model.scopeProjectId
   const needsYouCount = useNeedsYouCount(model)
   return (
     <nav
       aria-label={translate('localTasks.nav.label', 'Task views')}
-      className="hidden w-52 shrink-0 flex-col gap-4 overflow-y-auto scrollbar-sleek @3xl/local-task-page:flex"
+      onClick={sidebar ? () => openLocalTaskPage() : undefined}
+      className={
+        sidebar
+          ? 'flex shrink-0 flex-col gap-2'
+          : 'hidden w-52 shrink-0 flex-col gap-4 overflow-y-auto scrollbar-sleek @3xl/local-task-page:flex'
+      }
     >
       <div className="flex flex-col gap-0.5">
         <NavRow
@@ -264,7 +272,7 @@ export function LocalTaskNav({ model }: { model: LocalTaskListModel }): React.JS
           count={model.tasks.length}
           onSelect={() => localTaskPageStore.getState().setScope(null)}
         />
-        {model.projects.map((project) => (
+        {(sidebar ? [] : model.projects).map((project) => (
           <NavRow
             key={project.id}
             active={scopeProjectId === project.id}

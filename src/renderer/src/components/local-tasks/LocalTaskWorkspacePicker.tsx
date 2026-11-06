@@ -127,11 +127,13 @@ export function LocalTaskWorkspacePicker({
   task,
   project,
   replace,
+  onLinked,
   onClose
 }: {
   task: LocalTask
   project: LocalTaskProject
   replace: boolean
+  onLinked?: () => void
   onClose: () => void
 }): React.JSX.Element {
   const links = useLocalTasksDomain((state) => state.links)
@@ -164,12 +166,16 @@ export function LocalTaskWorkspacePicker({
       replace
     })
     if (linked) {
-      onClose()
+      if (onLinked) {
+        onLinked()
+      } else {
+        onClose()
+      }
     }
   }
   const title = translate(
     'localTasks.links.pickWorkspaceTitle',
-    'Use an existing workspace for “{{title}}”',
+    'Link an existing workspace to “{{title}}”',
     { title: task.title }
   )
   return (

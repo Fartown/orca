@@ -239,7 +239,13 @@ describe('local tasks schema upgrade', () => {
     })
     // The project's one Orca project became its first and default repo; its tasks and statuses stayed.
     expect(service.listProjects().projects).toMatchObject([
-      { id: 'p', prefix: 'SHOP', repos: ['orca-shop'], defaultRepoId: 'orca-shop' }
+      {
+        id: 'p',
+        prefix: 'SHOP',
+        repos: ['orca-shop'],
+        defaultRepoId: 'orca-shop',
+        rules: { prMergedMode: 'review', prMergedCompletes: false }
+      }
     ])
     expect(service.listTasks().tasks.map((task) => task.ref)).toEqual(['SHOP-1', 'SHOP-2'])
     expect(db.prepare('SELECT last_execution_host_id FROM local_task_projects').all()).toEqual([

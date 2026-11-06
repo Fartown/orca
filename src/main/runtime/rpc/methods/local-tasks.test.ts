@@ -9,7 +9,10 @@ import {
   hasAppEnvironment,
   setAppEnvironment
 } from '../../../../shared/app-environment'
-import { LOCAL_TASKS_RUNTIME_CAPABILITY } from '../../../../shared/local-tasks/local-tasks-capability'
+import {
+  LOCAL_TASKS_RUNTIME_CAPABILITY,
+  LOCAL_TASKS_V2_RUNTIME_CAPABILITY
+} from '../../../../shared/local-tasks/local-tasks-capability'
 import { startOrcadLocalTasks } from '../../../local-tasks/orcad-local-tasks'
 import { ensureActiveOrcaProfile } from '../../../orca-profiles/profile-index-store'
 import { getLocalTasksDatabasePath } from '../../../local-tasks/local-tasks-database'
@@ -111,7 +114,10 @@ describe('localTasks RPC', () => {
       state: 'ready',
       projectCount: 0
     })
-    expect(localTasksRuntimeCapabilities()).toEqual([LOCAL_TASKS_RUNTIME_CAPABILITY])
+    expect(localTasksRuntimeCapabilities()).toEqual([
+      LOCAL_TASKS_RUNTIME_CAPABILITY,
+      LOCAL_TASKS_V2_RUNTIME_CAPABILITY
+    ])
     const service = localTasksReadiness.requireService()
     const project = service.createProject({ clientOperationId: 'p1', name: '调研', prefix: 'RS' })
     expect(localTasksReadiness.status()).toMatchObject({ projectCount: 1 })
@@ -157,7 +163,10 @@ describe('orcad task library', () => {
       }
     })
     expect(localTasksReadiness.status()).toMatchObject({ taskHost: true, state: 'ready' })
-    expect(localTasksRuntimeCapabilities()).toEqual([LOCAL_TASKS_RUNTIME_CAPABILITY])
+    expect(localTasksRuntimeCapabilities()).toEqual([
+      LOCAL_TASKS_RUNTIME_CAPABILITY,
+      LOCAL_TASKS_V2_RUNTIME_CAPABILITY
+    ])
     // No linked session yet: the host's status changes are not even subscribed.
     expect(watching.size).toBe(0)
     const service = localTasksReadiness.requireService()

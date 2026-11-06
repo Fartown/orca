@@ -3977,7 +3977,30 @@
     }
   },
   "localTasks": {
-    "title": "任务",
-    "description": "描述"
+    "title": "本地任务",
+    "description": "描述",
+    "now": "现在",
+    "noProgress": "暂无进展",
+    "systemRecords": "系统记录",
+    "prMergedRule": "PR 合并后",
+    "prMergedModes": { "none": "保持当前状态", "review": "移到待验收", "completed": "完成任务" },
+    "defaultStatus": { "review": "待验收" },
+    "acceptReview": "通过",
+    "rejectReview": "打回",
+    "rejectReason": "需要修改什么？",
+    "dispatchPlaceholder": "让智能体做什么？",
+    "dispatchButton": "开始任务",
+    "dispatchRunOn": "执行位置",
+    "dispatchNoSetup": "选择关联仓库的项目后派活",
+    "dispatchHost": "主机",
+    "dispatchRepo": "仓库",
+    "dispatchWorkspace": "工作区",
+    "dispatchTask": "任务",
+    "dispatchTarget": "目标",
+    "dispatchChooseTarget": "选择目标",
+    "sourceTab": {
+      "label": "本地",
+      "placeholder": "按标题或编号搜索本地任务"
+    }
   }
 }

@@ -1,3 +1,4 @@
+import { localTaskWorkflowPreferences } from './local-task-workflow-preferences'
 import { toast } from 'sonner'
 import { translate } from '@/i18n/i18n'
 import { useAppStore } from '@/store'
@@ -12,6 +13,7 @@ import type { LaunchAgentInNewTabResult } from '@/lib/launch-agent-in-new-tab-ho
 import type { StructuredLaunchTerminal } from '@/lib/agent-session/launch/structured-agent-session-launch-admission'
 import type { StructuredAgentLaunchSettlement } from '@/lib/structured-agent-launch-settlement'
 import { activateAndRevealWorkspace } from '@/lib/worktree-activation'
+import { selectExecutionHostDisplayLabel } from '@/lib/execution-host-display-label'
 import type { TuiAgent } from '../../../shared/tui-agent'
 import { buildLocalTaskAgentPrompt } from '../../../shared/local-tasks/local-task-agent-prompt'
 import { localTaskAncestors } from '../../../shared/local-tasks/local-task-tree'
@@ -38,7 +40,8 @@ export function localTaskPromptFor(task: LocalTask): string {
   const tasks = localTasksDomainStore.getState().tasks
   return buildLocalTaskAgentPrompt(
     task,
-    localTaskAncestors(task, new Map(tasks.map((candidate) => [candidate.id, candidate])))
+    localTaskAncestors(task, new Map(tasks.map((candidate) => [candidate.id, candidate]))),
+    { brief: localTaskWorkflowPreferences(task.id).brief }
   )
 }
 
@@ -47,6 +50,7 @@ export type LocalTaskSessionLaunchArgs = {
   link: LocalTaskWorkspaceLink
   agent: TuiAgent
   promptDelivery: LocalTaskPromptDelivery
+  prompt?: string
 }
 
 function recordTerminal(
@@ -105,17 +109,16 @@ export function launchLocalTaskSession(args: LocalTaskSessionLaunchArgs): boolea
     toast.error(
       located === 'missing'
         ? translate('localTasks.links.workspaceGone', 'The workspace was deleted.')
-        : translate(
-            'localTasks.links.workspaceUnverifiable',
-            'The workspace cannot be reached now.'
-          )
+        : translate('localTasks.links.workspaceUnverifiable', 'Can’t confirm the workspace now.')
     )
     return false
   }
   const hostId = localTaskWorktreeHostId(state, located)
   if (!isLocalTaskHostInContact(state, hostId)) {
     toast.error(
-      translate('localTasks.links.workspaceUnverifiable', 'The workspace cannot be reached now.')
+      translate('localTasks.links.hostOffline', '{{host}} is not connected', {
+        host: selectExecutionHostDisplayLabel(state, hostId)
+      })
     )
     return false
   }
@@ -128,7 +131,7 @@ export function launchLocalTaskSession(args: LocalTaskSessionLaunchArgs): boolea
     agent: args.agent,
     linkedVia: 'start'
   }
-  const prompt = localTaskPromptFor(args.task)
+  const prompt = args.prompt ?? localTaskPromptFor(args.task)
   const { agent, promptDelivery } = args
   if (activateAndRevealWorkspace(worktreeId, { executionHostId: hostId }) === false) {
     return false

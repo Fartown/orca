@@ -6,8 +6,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { ShortcutKeyCombo } from '@/components/ShortcutKeyCombo'
 import { useNow } from '@/hooks/use-now'
 import { AgentIcon, getAgentLabel } from '@/lib/agent-catalog'
 import { translate } from '@/i18n/i18n'
@@ -32,7 +30,9 @@ import type {
 } from '../../../../shared/local-tasks/local-task-link-types'
 import type { LocalTask, LocalTaskProject } from '../../../../shared/local-tasks/local-task-types'
 import { localTaskDescendantIds } from '../../../../shared/local-tasks/local-task-tree'
+import { useLocalTaskRowWriteReason } from '@/local-tasks/local-task-write-reason'
 import { LocalTaskSessionDot, localTaskSessionStateLabel } from './LocalTaskProgress'
+import { LocalTaskActionTooltip } from './LocalTaskActionTooltip'
 
 function SessionRow({
   session,
@@ -152,33 +152,27 @@ export function LocalTaskSessionList({
     ...localTaskDescendantIds(task.id, index.childrenByParentId)
   ])
   const action = useLocalTaskSessionState(project, workspace)
-  const label = translate('localTasks.links.openSession', 'Open session')
+  const writeReason = useLocalTaskRowWriteReason(task.id)
+  const reason = writeReason ?? action.reason
+  const label = translate('localTasks.links.newSession', 'New session')
   return (
     <section className="flex flex-col gap-1.5">
       <h3 className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
         {translate('localTasks.links.sessions', 'Sessions')}
         {action.mode !== 'hidden' && project ? (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span className="ml-auto">
-                <Button
-                  variant="ghost"
-                  size="xs"
-                  disabled={!writable || action.reason !== null}
-                  onClick={() => runLocalTaskSession(task, project, workspace)}
-                >
-                  <Plus className="size-3" />
-                  {label}
-                </Button>
-              </span>
-            </TooltipTrigger>
-            <TooltipContent side="bottom" sideOffset={4}>
-              <span className="flex items-center gap-2">
-                {action.reason ?? label}
-                {action.reason ? null : <ShortcutKeyCombo keys={['A']} />}
-              </span>
-            </TooltipContent>
-          </Tooltip>
+          <span className="ml-auto">
+            <LocalTaskActionTooltip reason={reason} label={label} shortcut={['A']}>
+              <Button
+                variant="ghost"
+                size="xs"
+                disabled={reason !== null}
+                onClick={() => runLocalTaskSession(task, project, workspace)}
+              >
+                <Plus className="size-3" />
+                {label}
+              </Button>
+            </LocalTaskActionTooltip>
+          </span>
         ) : null}
       </h3>
       {sessions.length > 0 ? (

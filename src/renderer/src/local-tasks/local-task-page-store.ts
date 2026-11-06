@@ -1,3 +1,4 @@
+import type { Worktree } from '../../../shared/worktree/types'
 import { createStore } from 'zustand/vanilla'
 import { useStore } from 'zustand'
 import type {
@@ -30,6 +31,14 @@ export type LocalTaskFilters = {
 export type LocalTaskPickerKind = 'status' | 'priority' | 'labels'
 
 export type LocalTaskCreateDefaults = {
+  source?: {
+    worktree: Worktree
+    paneKey: string
+    agent: string
+    title: string
+    sessionId?: string
+    tabId?: string
+  }
   projectId: string | null
   statusId: string | null
   priority: LocalTaskPriority | null
@@ -197,7 +206,8 @@ export const localTaskPageStore = createStore<LocalTaskPageState>((set) => ({
           projectId: defaults?.projectId ?? null,
           statusId: defaults?.statusId ?? null,
           priority: defaults?.priority ?? null,
-          parentId: defaults?.parentId ?? null
+          parentId: defaults?.parentId ?? null,
+          ...(defaults?.source ? { source: defaults.source } : {})
         }
       }
     }),

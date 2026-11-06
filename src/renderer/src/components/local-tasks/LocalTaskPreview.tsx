@@ -59,18 +59,6 @@ export function LocalTaskPreview({
           {task.description}
         </p>
       ) : null}
-      {task.criteria.length > 0 ? (
-        <div className="flex flex-col gap-1">
-          <span className="text-2xs font-semibold uppercase tracking-wider text-muted-foreground">
-            {translate('localTasks.detail.criteria', 'Done criteria')}
-          </span>
-          <ul className="list-disc space-y-0.5 pl-4 text-xs text-foreground">
-            {task.criteria.map((criterion, position) => (
-              <li key={`${position}-${criterion}`}>{criterion}</li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
       <Button
         variant="outline"
         size="sm"

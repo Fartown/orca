@@ -1,3 +1,4 @@
+import { localTaskWorkflowPreferences } from '@/local-tasks/local-task-workflow-preferences'
 import { useMemo, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import {
@@ -34,11 +35,13 @@ function SessionForm({
   task,
   link,
   worktree,
+  initialPrompt,
   onDone
 }: {
   task: LocalTask
   link: LocalTaskWorkspaceLink
   worktree: Worktree
+  initialPrompt?: string
   onDone: () => void
 }): React.JSX.Element {
   const settings = useAppStore((state) => state.settings)
@@ -47,7 +50,7 @@ function SessionForm({
   )
   const target = useAgentDetectionTargetForWorktree(worktree.id)
   const { detectedIds } = useDetectedAgents(target)
-  const agents = useMemo(() => {
+  const { agents, anyEnabled } = useMemo(() => {
     const catalog = getAgentCatalog()
     const enabled = new Set(
       filterEnabledTuiAgents(
@@ -55,9 +58,12 @@ function SessionForm({
         settings?.disabledTuiAgents
       )
     )
-    return catalog.filter(
-      (entry) => enabled.has(entry.id) && (detectedIds === null || detectedIds.includes(entry.id))
-    )
+    return {
+      agents: catalog.filter(
+        (entry) => enabled.has(entry.id) && (detectedIds === null || detectedIds.includes(entry.id))
+      ),
+      anyEnabled: enabled.size > 0
+    }
   }, [detectedIds, settings?.disabledTuiAgents])
   const preferred = pickTuiAgent(
     settings?.defaultTuiAgent,
@@ -66,13 +72,28 @@ function SessionForm({
   )
   const [chosen, setChosen] = useState<TuiAgent | null>(null)
   const agent = chosen ?? preferred
-  const [delivery, setDelivery] = useState<LocalTaskPromptDelivery>('auto-submit')
-  const prompt = useMemo(() => localTaskPromptFor(task), [task])
+  const [delivery, setDelivery] = useState<LocalTaskPromptDelivery>(
+    () => localTaskWorkflowPreferences(task.id).delivery
+  )
+  const prompt = useMemo(() => initialPrompt ?? localTaskPromptFor(task), [task, initialPrompt])
+  // Why spelled out: a greyed submit alone does not say whether to install or to turn one on.
+  const noAgent = agent
+    ? null
+    : anyEnabled
+      ? translate(
+          'localTasks.links.noAgentOnHost',
+          'No enabled agent was found on {{host}}. Install one there, or turn one on in Settings → Agents.',
+          { host: hostLabel }
+        )
+      : translate(
+          'localTasks.links.noAgentEnabled',
+          'Every agent is turned off in Settings → Agents. Turn one on to start a session.'
+        )
   const submit = (): void => {
     if (!agent) {
       return
     }
-    if (launchLocalTaskSession({ task, link, agent, promptDelivery: delivery })) {
+    if (launchLocalTaskSession({ task, link, agent, promptDelivery: delivery, prompt })) {
       onDone()
     }
   }
@@ -116,26 +137,33 @@ function SessionForm({
       <pre className="max-h-40 overflow-y-auto whitespace-pre-wrap rounded-md border border-border/60 bg-muted/30 p-2 font-sans text-xs text-muted-foreground scrollbar-sleek">
         {prompt}
       </pre>
+      {noAgent ? (
+        <p role="status" className="text-xs text-muted-foreground">
+          {noAgent}
+        </p>
+      ) : null}
       <DialogFooter>
         <Button variant="outline" size="sm" onClick={onDone}>
           {translate('localTasks.common.cancel', 'Cancel')}
         </Button>
         <Button size="sm" disabled={!agent} onClick={submit}>
-          {translate('localTasks.links.openSession', 'Open session')}
+          {translate('localTasks.links.newSession', 'New session')}
         </Button>
       </DialogFooter>
     </div>
   )
 }
 
-/** Open session (REQ-010): agent, the read-only workspace, and whether the prompt is sent. */
+/** New session (REQ-010): agent, the read-only workspace, and whether the prompt is sent. */
 export function LocalTaskSessionDialog({
   task,
   link,
+  initialPrompt,
   onClose
 }: {
   task: LocalTask
   link: LocalTaskWorkspaceLink
+  initialPrompt?: string
   onClose: () => void
 }): React.JSX.Element {
   const located = useLocalTaskWorkspace(link)
@@ -145,18 +173,22 @@ export function LocalTaskSessionDialog({
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent data-local-task-overlay="" className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>
-            {translate('localTasks.links.openSessionTitle', 'Open a session')}
-          </DialogTitle>
+          <DialogTitle>{translate('localTasks.links.newSessionTitle', 'New session')}</DialogTitle>
           <DialogDescription>{task.title}</DialogDescription>
         </DialogHeader>
         {worktree ? (
-          <SessionForm task={task} link={link} worktree={worktree} onDone={onClose} />
+          <SessionForm
+            task={task}
+            link={link}
+            worktree={worktree}
+            initialPrompt={initialPrompt}
+            onDone={onClose}
+          />
         ) : (
           <p className="text-xs text-muted-foreground">
             {translate(
               'localTasks.links.workspaceUnverifiable',
-              'The workspace cannot be reached now.'
+              'Can’t confirm the workspace now.'
             )}
           </p>
         )}

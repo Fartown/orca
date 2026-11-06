@@ -1,10 +1,12 @@
 import { useState } from 'react'
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
-import { Pencil, Send, Trash2, X } from 'lucide-react-native'
+import { ChevronDown, ChevronRight, Pencil, Send, Trash2, X } from 'lucide-react-native'
 import type {
+  LocalTask,
   LocalTaskEvent,
   LocalTaskStatusDef
 } from '../../../src/shared/local-tasks/local-task-types'
+import { isLocalTaskProgressPayload } from '../../../src/shared/local-tasks/local-task-progress'
 import { ActionSheetModal } from '../components/ActionSheetModal'
 import { ConfirmModal } from '../components/ConfirmModal'
 import { colors, radii, spacing, typography } from '../theme/mobile-theme'
@@ -21,6 +23,7 @@ type Props = {
   taskId: string
   eventsVersion: number
   statuses: Map<string, LocalTaskStatusDef>
+  tasksById: ReadonlyMap<string, LocalTask>
   now: number
   readOnly: boolean
   canRead: boolean
@@ -44,6 +47,7 @@ export function LocalTaskActivitySection(props: Props) {
   const [menuFor, setMenuFor] = useState<LocalTaskEvent | null>(null)
   const [removing, setRemoving] = useState<LocalTaskEvent | null>(null)
   const [busy, setBusy] = useState(false)
+  const [showSystemRecords, setShowSystemRecords] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const submit = async () => {
@@ -77,36 +81,88 @@ export function LocalTaskActivitySection(props: Props) {
     }
   }
 
-  const ordered = [...events].sort((a, b) => a.createdAt - b.createdAt)
+  const ordered = [...events]
+    .filter((event) => event.kind !== 'turn-ended')
+    .sort((a, b) => a.createdAt - b.createdAt)
+  const systemCount = ordered.filter((event) => event.kind !== 'comment').length
   return (
     <View>
       <Text style={localTaskStyles.sectionLabel}>{copy.activity}</Text>
-      {ordered.map((event) => (
-        <Pressable
-          key={event.id}
-          style={styles.entry}
-          disabled={event.kind !== 'comment' || props.readOnly}
-          onLongPress={() => setMenuFor(event)}
-          delayLongPress={350}
-        >
-          <View style={styles.dot} />
-          <View style={styles.entryMain}>
-            <Text style={styles.entryText}>
-              <Text style={styles.entrySource}>{copy.eventSources[event.source]}</Text>{' '}
-              {describeLocalTaskEvent(copy, event, props.statuses)}{' '}
-              <Text style={localTaskStyles.meta}>
-                {formatLocalTaskAgo(copy, event.createdAt, props.now)}
-                {event.editedAt ? ` · ${copy.edited}` : ''}
-              </Text>
-            </Text>
-            {event.kind === 'comment' && event.body ? (
-              <View style={styles.bubble}>
-                <Text style={localTaskStyles.body}>{event.body}</Text>
+      {ordered
+        .filter((event) => event.kind === 'comment')
+        .map((event) => {
+          const line = describeLocalTaskEvent(copy, event, props.statuses, props.tasksById)
+          return (
+            <Pressable
+              key={event.id}
+              style={styles.entry}
+              disabled={
+                event.kind !== 'comment' ||
+                props.readOnly ||
+                isLocalTaskProgressPayload(event.payload)
+              }
+              onLongPress={() => setMenuFor(event)}
+              delayLongPress={350}
+            >
+              <View style={styles.dot} />
+              <View style={styles.entryMain}>
+                <Text style={styles.entryText}>
+                  {line.actor ? (
+                    <>
+                      <Text style={styles.entrySource}>{line.actor}</Text>{' '}
+                    </>
+                  ) : null}
+                  {line.text}{' '}
+                  <Text style={localTaskStyles.meta}>
+                    {formatLocalTaskAgo(copy, event.createdAt, props.now)}
+                    {event.editedAt ? ` · ${copy.edited}` : ''}
+                  </Text>
+                </Text>
+                {event.kind === 'comment' && event.body ? (
+                  <View style={styles.bubble}>
+                    <Text style={localTaskStyles.body}>{event.body}</Text>
+                  </View>
+                ) : null}
               </View>
-            ) : null}
-          </View>
+            </Pressable>
+          )
+        })}
+      {systemCount > 0 ? (
+        <Pressable
+          onPress={() => setShowSystemRecords((shown) => !shown)}
+          accessibilityRole="button"
+          accessibilityState={{ expanded: showSystemRecords }}
+          style={styles.systemToggle}
+        >
+          {showSystemRecords ? (
+            <ChevronDown size={14} color={colors.textMuted} />
+          ) : (
+            <ChevronRight size={14} color={colors.textMuted} />
+          )}
+          <Text style={localTaskStyles.meta}>
+            {copy.systemRecords} · {systemCount}
+          </Text>
         </Pressable>
-      ))}
+      ) : null}
+      {showSystemRecords
+        ? ordered
+            .filter((event) => event.kind !== 'comment')
+            .map((event) => {
+              const line = describeLocalTaskEvent(copy, event, props.statuses, props.tasksById)
+              return (
+                <View key={event.id} style={styles.entry}>
+                  <View style={styles.dot} />
+                  <Text style={styles.entryText}>
+                    {line.actor ? `${line.actor} ` : ''}
+                    {line.text}{' '}
+                    <Text style={localTaskStyles.meta}>
+                      {formatLocalTaskAgo(copy, event.createdAt, props.now)}
+                    </Text>
+                  </Text>
+                </View>
+              )
+            })
+        : null}
       {eventsError && props.canRead ? (
         <Pressable onPress={retry} accessibilityRole="button" style={styles.error}>
           <Text style={localTaskStyles.errorText}>
@@ -194,6 +250,12 @@ export function LocalTaskActivitySection(props: Props) {
 }
 
 const styles = StyleSheet.create({
+  systemToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    paddingVertical: spacing.sm
+  },
   entry: { flexDirection: 'row', gap: spacing.sm, paddingVertical: 6 },
   dot: {
     width: 7,

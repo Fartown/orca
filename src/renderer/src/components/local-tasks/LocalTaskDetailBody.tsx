@@ -1,4 +1,3 @@
-import { useMemo } from 'react'
 import { AlertTriangle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { translate } from '@/i18n/i18n'
@@ -10,28 +9,12 @@ import {
   LOCAL_TASK_TITLE_MAX
 } from '../../../../shared/local-tasks/local-task-model'
 import type { LocalTask } from '../../../../shared/local-tasks/local-task-types'
-import {
-  cleanLocalTaskCriteria,
-  LocalTaskCriteriaEditor,
-  newLocalTaskCriterionDraft,
-  toLocalTaskCriterionDrafts,
-  type LocalTaskCriterionDraft
-} from './LocalTaskCriteriaEditor'
 import { LOCAL_TASK_INLINE_FIELD } from './local-task-inline-field'
 import { useLocalTaskFieldDraft, type LocalTaskFieldDraft } from './use-local-task-field-draft'
 
 const sameText = (a: string, b: string): boolean => a === b
 const readTitle = (task: LocalTask): string => task.title
 const readDescription = (task: LocalTask): string => task.description
-const readCriteria = (task: LocalTask): LocalTaskCriterionDraft[] =>
-  toLocalTaskCriterionDrafts(task.criteria)
-
-function sameCriteria(a: LocalTaskCriterionDraft[], b: LocalTaskCriterionDraft[]): boolean {
-  const left = cleanLocalTaskCriteria(a)
-  const right = cleanLocalTaskCriteria(b)
-  return left.length === right.length && left.every((text, index) => text === right[index])
-}
-
 /** Shown when the field was changed elsewhere while this edit was open. */
 function FieldConflict<E>({ field }: { field: LocalTaskFieldDraft<E> }): React.JSX.Element | null {
   if (!field.conflict) {
@@ -64,7 +47,13 @@ function FieldConflict<E>({ field }: { field: LocalTaskFieldDraft<E> }): React.J
   )
 }
 
-function TitleField({ task, writable }: { task: LocalTask; writable: boolean }): React.JSX.Element {
+export function LocalTaskDetailTitle({
+  task,
+  writable
+}: {
+  task: LocalTask
+  writable: boolean
+}): React.JSX.Element {
   const field = useLocalTaskFieldDraft({
     task,
     stored: task.title,
@@ -141,53 +130,6 @@ function DescriptionField({
   )
 }
 
-function CriteriaField({
-  task,
-  writable
-}: {
-  task: LocalTask
-  writable: boolean
-}): React.JSX.Element {
-  // Why: ids come from the text, so a re-read with equal criteria keeps the same rows mounted.
-  const stored = useMemo(() => toLocalTaskCriterionDrafts(task.criteria), [task.criteria])
-  const field = useLocalTaskFieldDraft({
-    task,
-    stored,
-    read: readCriteria,
-    same: sameCriteria,
-    toPatch: (criteria) => ({ criteria: cleanLocalTaskCriteria(criteria) })
-  })
-  if (field.value.length === 0) {
-    return (
-      <button
-        type="button"
-        disabled={!writable}
-        onClick={() => field.edit([newLocalTaskCriterionDraft()])}
-        className="w-fit text-left text-xs text-muted-foreground hover:text-foreground disabled:pointer-events-none"
-      >
-        {translate('localTasks.criteria.add', 'Add a criterion')}
-      </button>
-    )
-  }
-  return (
-    <div className="flex flex-col gap-1">
-      <LocalTaskCriteriaEditor
-        items={field.value}
-        onItemsChange={(items) => {
-          field.edit(items)
-          if (items.length === 0) {
-            void field.commitValue(items)
-          }
-        }}
-        disabled={!writable}
-        onLeave={() => void field.commit()}
-      />
-      <FieldConflict field={field} />
-    </div>
-  )
-}
-
-/** Title, description and done criteria (a plain list, REQ-004); each saves when left. */
 export function LocalTaskDetailBody({
   task,
   writable
@@ -195,16 +137,5 @@ export function LocalTaskDetailBody({
   task: LocalTask
   writable: boolean
 }): React.JSX.Element {
-  return (
-    <div className="flex flex-col gap-4">
-      <TitleField task={task} writable={writable} />
-      <DescriptionField task={task} writable={writable} />
-      <section className="flex flex-col gap-1.5">
-        <h3 className="text-xs font-medium text-muted-foreground">
-          {translate('localTasks.detail.criteria', 'Done criteria')}
-        </h3>
-        <CriteriaField task={task} writable={writable} />
-      </section>
-    </div>
-  )
+  return <DescriptionField task={task} writable={writable} />
 }

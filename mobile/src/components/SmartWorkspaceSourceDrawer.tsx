@@ -27,6 +27,14 @@ import {
 } from '../tasks/smart-source-paste-intent'
 import { useSmartWorkspaceSource } from '../tasks/use-smart-workspace-source'
 import type { MobileComposerSource } from '../tasks/use-mobile-composer-source'
+import { LOCAL_TASK_CREATE_SOURCE_COPY_EN } from '../local-tasks/local-task-create-source-copy'
+import {
+  isLocalTaskCreateSourceRow,
+  type LocalTaskCreateSourceRow
+} from '../local-tasks/local-task-create-source-rows'
+import { LocalTaskCreateSourceRowView } from '../local-tasks/local-task-create-source-views'
+import type { LocalTaskCreateSource } from '../local-tasks/use-local-task-create-source'
+import { useLocalTaskCreateSourceTab } from '../local-tasks/use-local-task-create-source-tab'
 import { colors, pressedStyle } from '../theme/mobile-theme'
 import { useMobileColorScheme } from '../theme/use-mobile-color-scheme'
 import { useMobileTranslation } from '../i18n/use-mobile-translation'
@@ -51,6 +59,7 @@ type Props = {
   jiraSiteId?: JiraSiteSelection | null
   jiraSites?: readonly JiraSite[]
   sshReady: boolean
+  localTaskSource?: LocalTaskCreateSource | null
   onRepoChange: (repoId: string) => void
   onClose: () => void
 }
@@ -68,6 +77,7 @@ export function SmartWorkspaceSourceDrawer({
   jiraSiteId,
   jiraSites = NO_JIRA_SITES,
   sshReady,
+  localTaskSource,
   onRepoChange,
   onClose
 }: Props) {
@@ -114,6 +124,7 @@ export function SmartWorkspaceSourceDrawer({
   // Only Linear/Jira search works without repo; other provider/branch searches need connected repo-backed target.
   const searchEnabled =
     visible && (effectiveMode === 'linear' || effectiveMode === 'jira' || jiraUrlIntent || sshReady)
+  const localTasks = useLocalTaskCreateSourceTab(localTaskSource, effectiveMode, composer.name)
 
   const {
     rows,
@@ -125,7 +136,7 @@ export function SmartWorkspaceSourceDrawer({
     dismissCrossRepoPrompt
   } = useSmartWorkspaceSource({
     client,
-    enabled: searchEnabled,
+    enabled: searchEnabled && effectiveMode !== 'local',
     mode: effectiveMode,
     query: composer.name,
     repoId,
@@ -190,8 +201,16 @@ export function SmartWorkspaceSourceDrawer({
     }
   }
 
+  const listRows: readonly (SourceRow | LocalTaskCreateSourceRow)[] = localTasks.active
+    ? localTasks.rows
+    : rows
+  const listLoading = loading || localTasks.loading
   const showEmpty =
-    !loading && !error && !needsGitHubRemote && effectiveMode !== 'text' && rows.length === 0
+    !listLoading &&
+    !error &&
+    !needsGitHubRemote &&
+    effectiveMode !== 'text' &&
+    listRows.length === 0
 
   const modeTabs = SMART_MODE_OPTIONS.filter((option: SmartModeOption) =>
     availableModes.includes(option.id)
@@ -260,6 +279,7 @@ export function SmartWorkspaceSourceDrawer({
 
           {!sshReady &&
           effectiveMode !== 'text' &&
+          effectiveMode !== 'local' &&
           effectiveMode !== 'linear' &&
           effectiveMode !== 'jira' &&
           !jiraUrlIntent ? (
@@ -281,7 +301,7 @@ export function SmartWorkspaceSourceDrawer({
           ) : null}
 
           <FlatList
-            data={rows}
+            data={listRows}
             keyExtractor={(row) => row.value}
             style={[styles.list, rows.length === 0 && styles.listEmpty]}
             contentContainerStyle={styles.listContent}
@@ -290,7 +310,7 @@ export function SmartWorkspaceSourceDrawer({
             nestedScrollEnabled
             ItemSeparatorComponent={SourceRowSeparator}
             ListFooterComponent={
-              loading ? (
+              listLoading ? (
                 <View style={styles.loading}>
                   <ActivityIndicator size="small" color={colors.textSecondary} />
                 </View>
@@ -308,9 +328,20 @@ export function SmartWorkspaceSourceDrawer({
                 </Text>
               ) : null
             }
-            renderItem={({ item }) => (
-              <SmartWorkspaceSourceRow row={item} onPress={() => handleSelectRow(item)} />
-            )}
+            renderItem={({ item }) =>
+              isLocalTaskCreateSourceRow(item) ? (
+                <LocalTaskCreateSourceRowView
+                  row={item}
+                  onPress={() => {
+                    if (localTasks.select(item)) {
+                      onClose()
+                    }
+                  }}
+                />
+              ) : (
+                <SmartWorkspaceSourceRow row={item} onPress={() => handleSelectRow(item)} />
+              )
+            }
           />
         </View>
 
@@ -365,10 +396,14 @@ export function SmartWorkspaceSourceDrawer({
             inputRef={inputRef}
             value={composer.name}
             onChangeText={composer.setName}
-            placeholder={t(
-              'components.smartWorkspaceSourceDrawer.searchPlaceholder',
-              'Type a name or search a source'
-            )}
+            placeholder={
+              localTasks.active
+                ? LOCAL_TASK_CREATE_SOURCE_COPY_EN.placeholder
+                : t(
+                    'components.smartWorkspaceSourceDrawer.searchPlaceholder',
+                    'Type a name or search a source'
+                  )
+            }
             autoCapitalize="none"
             autoCorrect={false}
             // Still request native auto-focus; the delayed ref focus is the reliable path.

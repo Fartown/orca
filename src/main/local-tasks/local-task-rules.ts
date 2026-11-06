@@ -53,7 +53,11 @@ export function applyLocalTaskPrMergedRule(
   }
   const ownsWorkspace =
     db.prepare('SELECT 1 FROM local_task_workspaces WHERE task_id = ?').get(task.id) !== undefined
-  if (!ownsWorkspace || !project.rules.prMergedCompletes) {
+  if (
+    !ownsWorkspace ||
+    project.rules.prMergedMode === 'none' ||
+    (project.rules.prMergedMode === undefined && !project.rules.prMergedCompletes)
+  ) {
     return { ok: true, applied: false }
   }
   const recorded = db
@@ -69,8 +73,14 @@ export function applyLocalTaskPrMergedRule(
      VALUES (?, ?, ?, ?, ?)`
   ).run(task.id, input.provider, input.prNumber, input.headSha, now)
   const current = project.statuses.find((status) => status.id === task.statusId)
-  const target = project.statuses.find((status) => status.category === 'completed')
-  if (!target || (current && FINISHED.includes(current.category))) {
+  const target = project.statuses.find(
+    (status) =>
+      status.category === (project.rules.prMergedMode === 'review' ? 'review' : 'completed')
+  )
+  if (
+    !target ||
+    (current && (FINISHED.includes(current.category) || current.category === target.category))
+  ) {
     return { ok: true, applied: false }
   }
   setTaskColumn(db, task.id, 'status_id', target.id, now)

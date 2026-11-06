@@ -6,6 +6,8 @@ import { getOrcaProfileDirectory } from '../orca-profiles/profile-storage-paths'
 import { hardenSqliteDatabaseFiles } from '../sqlite/harden-database-files'
 import SyncDatabase, { type SqliteStatement } from '../sqlite/sync-database'
 import { applyLocalTasksSchema, LOCAL_TASKS_SCHEMA_VERSION } from './local-tasks-schema'
+import { foldLocalTaskCriteriaIntoDescription } from './local-task-criteria-fold'
+import { migratePrMergedRuleToReview } from './local-task-pr-merged-rule-migration'
 import { rowNumber, rowString } from './local-tasks-sqlite-row'
 
 export type LocalTasksCommit = { revision: number; scopes: LocalTaskChangeScope[] }
@@ -89,6 +91,8 @@ export class LocalTasksDatabase {
              VALUES (1, ?, 0, ?)`
           )
           .run(randomUUID(), Date.now())
+        foldLocalTaskCriteriaIntoDescription(probe)
+        migratePrMergedRuleToReview(probe)
       })
       if (persistent) {
         hardenSqliteDatabaseFiles(path)

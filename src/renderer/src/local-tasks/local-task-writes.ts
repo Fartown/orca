@@ -6,7 +6,7 @@ import type {
 } from '../../../shared/local-tasks/local-task-model'
 import type { LocalTask, LocalTaskFailure } from '../../../shared/local-tasks/local-task-types'
 import type { LocalTasksTasksUpdateInput } from '../../../shared/local-tasks/local-tasks-rpc-params'
-import { describeLocalTaskFailure } from './local-task-failure-copy'
+import { describeLocalTaskFailure, localTaskTitleForRef } from './local-task-failure-copy'
 import { localTasksClient } from './local-tasks-runtime-client'
 import { localTasksDomainStore } from './local-tasks-domain-store'
 import { localTasksSync } from './local-tasks-sync'
@@ -14,9 +14,13 @@ import { localTaskFailureEndpoint } from './local-tasks-endpoint-calls'
 import { firstStatusInCategory } from './local-task-grouping'
 
 export function reportLocalTaskFailure(failure: LocalTaskFailure): void {
-  toast.error(describeLocalTaskFailure(failure))
-  // Why: these two mean the shown copy is behind that library; re-read it so the next try is fresh.
   const endpoint = localTaskFailureEndpoint(failure)
+  toast.error(
+    describeLocalTaskFailure(failure, (ref) =>
+      localTaskTitleForRef(localTasksDomainStore.getState(), endpoint, ref)
+    )
+  )
+  // Why: these two mean the shown copy is behind that library; re-read it so the next try is fresh.
   if (endpoint && (failure.code === 'stale' || failure.code === 'not_found')) {
     void localTasksSync.refresh(['projects', 'tasks'], endpoint)
   }

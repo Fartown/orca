@@ -23,6 +23,7 @@ import {
 } from '../../../../shared/task-providers'
 import { LocalTaskNeedsYouCount } from '@/components/local-tasks/LocalTaskNeedsYouCount'
 import { LocalTaskProviderShortcut } from '@/components/local-tasks/LocalTaskProviderShortcut'
+import { isLocalTaskSourceActive } from '@/local-tasks/local-task-source-activation'
 
 function HideTaskSidebarMenu({ onHide }: { onHide: () => void }): React.JSX.Element {
   return (
@@ -122,7 +123,7 @@ export function SidebarTaskNavButton(): React.JSX.Element | null {
   ])
 
   const handlePrefetch = React.useCallback(() => {
-    if (resolvedDefaultTaskSource !== 'github') {
+    if (resolvedDefaultTaskSource !== 'github' || isLocalTaskSourceActive()) {
       return
     }
     const activeRepo = activeRepoId ? (repoMap.get(activeRepoId) ?? null) : null

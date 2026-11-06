@@ -61,23 +61,23 @@ describeClosure(
         }
       }
       // Require nonempty route census; file-preview route has no HTML-preview closure and intentionally stays absent.
-      expect(asking).toEqual(['/h/[hostId]/session/[worktreeId]'])
+      expect(asking).toEqual(['/h/[hostId]/local-tasks', '/h/[hostId]/session/[worktreeId]'])
       expect([...routesDeclaring(externalNavigationGrantToken())].sort()).toEqual(
         [...asking].sort()
       )
     })
 
     it('declares it on the optional lane, so a shell without it keeps the screen on the page', () => {
-      const session = MOBILE_WEB_PAGE_ROUTES.find(
-        (route) => route.pathname === '/h/[hostId]/session/[worktreeId]'
-      )
-      if (!session) {
-        throw new Error('the manifest lost the session route this census is written against')
-      }
       const token = externalNavigationGrantToken()
-      expect(session.optionalGrants).toContain(token)
-      // Required grant would force entire session native on older shells; keep this optional.
-      expect(session.grants).not.toContain(token)
+      for (const pathname of ['/h/[hostId]/local-tasks', '/h/[hostId]/session/[worktreeId]']) {
+        const route = MOBILE_WEB_PAGE_ROUTES.find((entry) => entry.pathname === pathname)
+        if (!route) {
+          throw new Error(`the manifest lost ${pathname}`)
+        }
+        expect(route.optionalGrants).toContain(token)
+        // Required grant would force the whole page native on older shells.
+        expect(route.grants).not.toContain(token)
+      }
     })
 
     it('reaches the seam through its web sibling, and the caller is the preview', async () => {

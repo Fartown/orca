@@ -24,13 +24,14 @@ import { readNewWorktreeRuntimeCapabilities } from '../tasks/worktree-create-cap
 import { agentLaunchReplayRun } from '../tasks/mobile-workspace-create-operations'
 import { sendReplayingAmbiguousDelivery } from '../tasks/replay-on-ambiguous-delivery'
 import { WORKTREE_CREATE_TIMEOUT_MS } from '../tasks/workspace-create-timeout'
+import type { WorkspaceCreateParams } from '../tasks/workspace-create-params'
 import type { RpcClient } from '../transport/rpc-client'
 import type { LocalTasksApi, LocalTaskWriteOutcome } from './local-tasks-api'
 import { sendLocalTaskWrite, type LocalTaskOperationIds } from './local-task-operation-ids'
 
 export type LocalTaskLaunchOutcome =
   /** The agent runs and the task records it; `paneKey` opens its pane. */
-  | { kind: 'done'; worktreeId: string; paneKey: string | null }
+  | { kind: 'done'; worktreeId: string; paneKey: string | null; promptNotDelivered?: true }
   /** The workspace is created and linked, with no agent session by choice. */
   | { kind: 'workspace-created'; worktreeId: string }
   /** Nothing started. */
@@ -42,9 +43,24 @@ export type LocalTaskLaunchOutcome =
   /** The workspace exists, the link was not written: no link, no session record. */
   | { kind: 'not-linked'; worktreeId: string; write: LocalTaskWriteOutcome<unknown> }
   /** The agent runs in the linked workspace, but its session is not on the task. */
-  | { kind: 'session-not-recorded'; worktreeId: string; paneKey: string | null }
+  | {
+      kind: 'session-not-recorded'
+      worktreeId: string
+      paneKey: string | null
+      promptNotDelivered?: true
+    }
 
 export type LocalTaskLaunchIds = { link: LocalTaskOperationIds; record: LocalTaskOperationIds }
+
+/** Create From's own choices; Start leaves both to the host's defaults. */
+export type LocalTaskCreateChoices = Pick<WorkspaceCreateParams, 'setupDecision' | 'comment'>
+
+function createChoiceFields(choices: LocalTaskCreateChoices | undefined) {
+  return {
+    setupDecision: choices?.setupDecision ?? ('inherit' as const),
+    ...(choices?.comment ? { comment: choices.comment } : {})
+  }
+}
 
 type SessionTask = { taskId: string; hostId: string }
 
@@ -104,9 +120,12 @@ async function recordLaunchedSession(args: {
     args.api.recordSession
   )
   const paneKey = session.paneKey
+  // Why: the host keeps nothing it could not hand over; the user must hear the text did not land.
+  const lost =
+    args.result.prompt?.outcome === 'not-delivered' ? ({ promptNotDelivered: true } as const) : {}
   return write.kind === 'ok'
-    ? { kind: 'done', worktreeId: args.worktreeId, paneKey }
-    : { kind: 'session-not-recorded', worktreeId: args.worktreeId, paneKey }
+    ? { kind: 'done', worktreeId: args.worktreeId, paneKey, ...lost }
+    : { kind: 'session-not-recorded', worktreeId: args.worktreeId, paneKey, ...lost }
 }
 
 /** Start: one `agent.launchReplay` creates the workspace and starts the agent, then the links. */
@@ -126,6 +145,9 @@ export async function startLocalTaskInNewWorkspace(args: {
   agent: TuiAgent | null
   prompt: AgentLaunchPrompt
   reservation?: MobileAgentLaunchReservation
+  choices?: LocalTaskCreateChoices
+  /** Start work again: the link replaces the one to a deleted workspace. */
+  replace?: boolean
 }): Promise<LocalTaskLaunchOutcome> {
   if (args.agent === null) {
     return createLocalTaskWorkspaceOnly(args)
@@ -146,7 +168,7 @@ export async function startLocalTaskInNewWorkspace(args: {
         name: args.name,
         displayName: args.name,
         displayNameKind: 'user' as const,
-        setupDecision: 'inherit' as const
+        ...createChoiceFields(args.choices)
       })
     },
     prompt: args.prompt,
@@ -195,7 +217,8 @@ export async function startLocalTaskInNewWorkspace(args: {
       repoId: args.setup.repoId,
       nameSnapshot: args.name,
       ...(args.setup.label ? { hostLabelSnapshot: args.setup.label } : {}),
-      linkedVia: 'start' as const
+      linkedVia: 'start' as const,
+      ...(args.replace ? { replace: true } : {})
     },
     args.api.linkWorkspace
   )
@@ -225,6 +248,8 @@ async function createLocalTaskWorkspaceOnly(args: {
   workspaceTaskId: string
   setup: { hostId: string; repoId: string; label: string }
   name: string
+  choices?: LocalTaskCreateChoices
+  replace?: boolean
 }): Promise<LocalTaskLaunchOutcome> {
   let created
   try {
@@ -238,7 +263,7 @@ async function createLocalTaskWorkspaceOnly(args: {
         name,
         displayName: name,
         displayNameKind: 'user' as const,
-        setupDecision: 'inherit' as const
+        ...createChoiceFields(args.choices)
       })
     })
   } catch {
@@ -257,7 +282,8 @@ async function createLocalTaskWorkspaceOnly(args: {
       repoId: args.setup.repoId,
       nameSnapshot: args.name,
       ...(args.setup.label ? { hostLabelSnapshot: args.setup.label } : {}),
-      linkedVia: 'start' as const
+      linkedVia: 'start' as const,
+      ...(args.replace ? { replace: true } : {})
     },
     args.api.linkWorkspace
   )

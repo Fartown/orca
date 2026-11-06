@@ -1,8 +1,9 @@
-import { ListTodo, SquarePen } from 'lucide-react'
+import { ListTodo, Send, SquarePen } from 'lucide-react'
 import { translate } from '@/i18n/i18n'
 import { openLocalTaskPage } from '@/local-tasks/local-task-navigation'
 import { selectLocalTaskSourceVisible } from '@/local-tasks/local-task-source-visibility'
 import { localTasksDomainStore } from '@/local-tasks/local-tasks-domain-store'
+import { requestLocalTaskDispatchFocus } from '@/local-tasks/local-task-dispatch-focus'
 import type { CmdJQuickAction } from './quick-actions'
 import type { CmdJQuickActionContext } from './quick-action-context'
 
@@ -33,6 +34,22 @@ function guarded(run: () => void) {
  */
 export function getLocalTaskQuickActions(): CmdJQuickAction[] {
   return [
+    {
+      id: 'local-tasks-dispatch',
+      kind: 'action',
+      title: translate('localTasks.quickActions.dispatch', 'Dispatch a task…'),
+      description: translate(
+        'localTasks.quickActions.dispatchDescription',
+        'Send work to an agent in a workspace.'
+      ),
+      icon: Send,
+      verbKeywords: [translate('localTasks.quickActions.verbs.dispatch', 'dispatch task')],
+      isAvailable: availability,
+      run: guarded(() => {
+        openLocalTaskPage()
+        requestLocalTaskDispatchFocus()
+      })
+    },
     {
       id: 'local-tasks-new',
       kind: 'action',

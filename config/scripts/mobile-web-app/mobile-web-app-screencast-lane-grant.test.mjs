@@ -1,6 +1,6 @@
 // Census every route mounting browser pane against screencastBinary grant.
 // Web seam reads init.grants.native before wantsBinary; missing grant leaves live pane subscribed to a stream that never delivers frames.
-// Pane has no own route; session route supplies its manifest grant.
+// Pane has no own route; session and local-tasks drawer routes supply its manifest grant.
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -53,7 +53,7 @@ describeClosure(
         }
       }
       // Require nonempty route census; unresolved walk would also report no missing grants.
-      expect(asking).toEqual(['/h/[hostId]/session/[worktreeId]'])
+      expect(asking).toEqual(['/h/[hostId]/local-tasks', '/h/[hostId]/session/[worktreeId]'])
       const declared = MOBILE_WEB_PAGE_ROUTES.filter((route) =>
         route.grants.includes(screencastGrantToken())
       ).map((route) => route.pathname)

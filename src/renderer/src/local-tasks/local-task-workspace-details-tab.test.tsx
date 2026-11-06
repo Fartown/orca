@@ -283,7 +283,9 @@ describe('workspace details → linked work → Local tasks (REQ-011)', () => {
     library('runtime:env-1', [], false)
     openDetails({ ...WORKTREE, hostId: 'runtime:env-1' }, 'runtime:env-1')
     expect(
-      await screen.findByRole('option', { name: /is not connected, so tasks cannot be linked now/ })
+      await screen.findByRole('option', {
+        name: /is not connected, so tasks can’t be linked now\. The tasks below are as last read/
+      })
     ).toBeTruthy()
     const row = screen.getByRole('option', { name: /Order export/ })
     expect(row.getAttribute('data-disabled')).toBe('true')

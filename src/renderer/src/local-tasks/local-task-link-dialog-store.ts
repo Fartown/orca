@@ -6,8 +6,8 @@ import { useStore } from 'zustand'
  * Orca's own workspace details instead (`local-task-workspace-details.ts`).
  */
 export type LocalTaskLinkDialog =
-  | { kind: 'session'; taskId: string }
-  | { kind: 'pick-workspace'; taskId: string }
+  | { kind: 'session'; taskId: string; prompt?: string }
+  | { kind: 'pick-workspace'; taskId: string; prompt?: string }
 
 type LocalTaskLinkDialogState = {
   dialog: LocalTaskLinkDialog | null

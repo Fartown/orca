@@ -96,7 +96,13 @@ function toProject(
     lastExecutionHostId: toLocalTaskOwnedHostId(rowNullableString(row, 'last_execution_host_id')),
     rules: {
       startMovesToInProgress: rowNumber(row, 'rule_start_moves') === 1,
-      prMergedCompletes: rowNumber(row, 'rule_pr_merged_completes') === 1
+      prMergedCompletes: rowNumber(row, 'rule_pr_merged_completes') === 1,
+      prMergedMode:
+        rowNumber(row, 'rule_pr_merged_completes') === 1
+          ? 'completed'
+          : rowNumber(row, 'rule_pr_merged_completes') === 2
+            ? 'review'
+            : 'none'
     },
     statuses: sortStatuses(statuses.filter((status) => status.projectId === id)),
     createdAt: rowNumber(row, 'created_at'),

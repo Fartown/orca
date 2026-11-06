@@ -1,5 +1,7 @@
+import { LocalTaskLatestProgress } from './LocalTaskLatestProgress'
 import { useState } from 'react'
 import { CornerDownRight, EyeOff, Plus } from 'lucide-react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { translate } from '@/i18n/i18n'
 import { cn } from '@/lib/utils'
@@ -9,11 +11,10 @@ import { statusHeadCategory, type LocalTaskBoardColumn } from '@/local-tasks/loc
 import { localTaskPageStore, useLocalTaskPage } from '@/local-tasks/local-task-page-store'
 import { setLocalTasksStatus } from '@/local-tasks/local-task-writes'
 import {
-  isLocalTaskRowWritable,
-  localTasksDomainStore,
   useLocalTaskRowWritable,
   useLocalTasksDomain
 } from '@/local-tasks/local-tasks-domain-store'
+import { localTaskBoardDropRefusal } from '@/local-tasks/local-task-write-reason'
 import {
   localTaskPathFromRoot,
   localTaskPathLabel
@@ -88,16 +89,9 @@ function BoardCard({
           <LocalTaskSubtaskProgress task={task} index={index} />
         </div>
       ) : null}
+      <LocalTaskLatestProgress task={task} index={index} />
       <LocalTaskProgressBadges task={task} index={index} />
     </div>
-  )
-}
-
-/** A card lands where its own library takes writes and the column's status belongs to it. */
-function acceptsDrop(column: LocalTaskBoardColumn, task: LocalTask): boolean {
-  return (
-    isLocalTaskRowWritable(localTasksDomainStore.getState(), task.id) &&
-    (column.kind !== 'status' || column.status.projectId === task.projectId)
   )
 }
 
@@ -125,7 +119,16 @@ function BoardColumn({
       onDrop={(event) => {
         setDragOver(false)
         const task = model.index.tasksById.get(event.dataTransfer.getData(DRAG_TYPE))
-        if (!task || !acceptsDrop(column, task)) {
+        if (!task) {
+          return
+        }
+        const refusal = localTaskBoardDropRefusal(
+          column,
+          task,
+          (projectId) => model.index.projectsById.get(projectId)?.name ?? '?'
+        )
+        if (refusal) {
+          toast.error(refusal)
           return
         }
         event.preventDefault()

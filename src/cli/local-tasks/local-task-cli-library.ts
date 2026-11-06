@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import type { z } from 'zod'
 import { isExactLocalTaskRef } from '../../shared/local-tasks/local-task-grouping'
+import { findLocalTaskSessionForIdentity } from '../../shared/local-tasks/local-task-session-match'
 import { localTaskLinksReplySchema } from '../../shared/local-tasks/local-task-link-read-schemas'
 import type { LocalTaskLinks } from '../../shared/local-tasks/local-task-link-types'
 import {
@@ -183,8 +184,13 @@ const REFUSAL_MESSAGES: Record<string, string> = {
   not_found: 'The task no longer exists.',
   stale: 'The task changed while this command ran. Run it again.',
   read_only: 'The task library is read-only on this host.',
-  status_invalid: 'That status does not belong to the task’s project.'
+  status_invalid: 'That status does not belong to the task’s project.',
+  comment_not_editable: 'That entry cannot be changed.'
 }
+
+/** Why an agent's status change was refused, written so the agent knows what to do next. */
+export const COMPLETED_FROM_CLI_MESSAGE =
+  'Only the user completes a task, in Orca. Move it at most to review, and leave a comment or a progress writeback instead; do not change the status again this round.'
 
 async function write<T extends object>(
   rpc: TaskLibraryRpc,
@@ -229,13 +235,84 @@ export async function setTaskStatus(
 export async function addTaskComment(
   rpc: TaskLibraryRpc,
   resolved: ResolvedTask,
-  body: string
+  body: string,
+  progress?: { sessionLinkId?: string; needsYou?: string }
 ): Promise<RuntimeRpcSuccess<unknown>> {
   const { envelope } = await write(
     rpc,
     'localTasks.events.addComment',
-    { taskId: resolved.task.id, body },
+    { taskId: resolved.task.id, body, ...(progress ? { progress } : {}) },
     writeAnySuccess
   )
   return envelope
+}
+
+export async function createTask(
+  rpc: TaskLibraryRpc,
+  projectId: string,
+  title: string,
+  description?: string,
+  parentId?: string
+): Promise<{ task: LocalTask; envelope: RuntimeRpcSuccess<unknown> }> {
+  const { value, envelope } = await write(
+    rpc,
+    'localTasks.tasks.create',
+    {
+      projectId,
+      title,
+      ...(description ? { description } : {}),
+      ...(parentId ? { parentId } : {})
+    },
+    writeTaskSuccess
+  )
+  return { task: value.task, envelope }
+}
+
+export async function updateTaskTitle(
+  rpc: TaskLibraryRpc,
+  resolved: ResolvedTask,
+  title: string
+): Promise<{ task: LocalTask; envelope: RuntimeRpcSuccess<unknown> }> {
+  const { value, envelope } = await write(
+    rpc,
+    'localTasks.tasks.update',
+    { taskId: resolved.task.id, expectedRevision: resolved.task.revision, patch: { title } },
+    writeTaskSuccess
+  )
+  return { task: value.task, envelope }
+}
+
+export async function linkTaskWorkspace(
+  rpc: TaskLibraryRpc,
+  taskId: string,
+  workspace: {
+    hostId: string
+    worktreeId: string
+    instanceId?: string
+    repoId?: string
+    branchSnapshot?: string
+    nameSnapshot?: string
+  }
+): Promise<RuntimeRpcSuccess<unknown>> {
+  const { envelope } = await write(
+    rpc,
+    'localTasks.links.linkWorkspace',
+    { taskId, kind: 'git-worktree', linkedVia: 'manual', ...workspace },
+    writeAnySuccess
+  )
+  return envelope
+}
+
+/** The session link this process runs in, when it belongs to the task: matched by ORCA_PANE_KEY. */
+export function currentSessionLinkId(
+  library: TaskLibrary,
+  taskId: string,
+  paneKey: string | undefined = process.env.ORCA_PANE_KEY
+): string | undefined {
+  const session = findLocalTaskSessionForIdentity(library.links, {
+    paneKey,
+    sessionId: process.env.ORCA_AGENT_SESSION_ID,
+    tabId: process.env.ORCA_TAB_ID
+  })
+  return session?.taskId === taskId ? session.id : undefined
 }

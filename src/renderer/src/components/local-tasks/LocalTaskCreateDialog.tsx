@@ -1,3 +1,21 @@
+import { useAppStore } from '@/store'
+import { linkLocalTaskWorkspace } from '@/local-tasks/local-task-workspace-linking'
+import { recordLocalTaskSession, chatSessionIds } from '@/local-tasks/local-task-session-recording'
+import {
+  localTaskWorktreeHostId,
+  orcaProjectIdsForWorktree
+} from '@/local-tasks/local-task-workspace-resolution'
+import { isTuiAgent } from '../../../../shared/tui-agent-config'
+import { parsePaneKey } from '../../../../shared/stable-pane-id'
+import { localTaskLinkDialogStore } from '@/local-tasks/local-task-link-dialog-store'
+import { runLocalTaskStart } from '@/local-tasks/local-task-work-actions'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from '@/components/ui/select'
 import { useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -24,11 +42,6 @@ import { localTasksDomainStore, useLocalTasksDomain } from '@/local-tasks/local-
 import { localTaskParentCandidates } from '../../../../shared/local-tasks/local-task-hierarchy'
 import { writableLocalTaskProjects } from '@/local-tasks/local-task-write-access'
 import { runLocalTaskWrite } from '@/local-tasks/local-task-writes'
-import {
-  cleanLocalTaskCriteria,
-  LocalTaskCriteriaEditor,
-  type LocalTaskCriterionDraft
-} from './LocalTaskCriteriaEditor'
 import {
   LocalTaskLabelsPicker,
   LocalTaskParentPicker,
@@ -62,18 +75,26 @@ function CreateBody({
   const [projectId, setProjectId] = useState(
     projects.some((candidate) => candidate.id === defaults.projectId)
       ? defaults.projectId
-      : (projects[0]?.id ?? null)
+      : (projects.find(
+          (project) =>
+            defaults.source &&
+            project.repos.some((id) =>
+              orcaProjectIdsForWorktree(useAppStore.getState(), defaults.source!.worktree).has(id)
+            )
+        )?.id ??
+          projects[0]?.id ??
+          null)
   )
   const project = projects.find((candidate) => candidate.id === projectId)
   const defaultStatusId = (firstStatusInCategory(project, 'unstarted') ?? project?.statuses[0])?.id
   const [statusId, setStatusId] = useState(defaults.statusId ?? defaultStatusId ?? null)
-  const [title, setTitle] = useState('')
+  const [title, setTitle] = useState(defaults.source?.title ?? '')
   const [description, setDescription] = useState('')
-  const [criteria, setCriteria] = useState<LocalTaskCriterionDraft[]>([])
   const [priority, setPriority] = useState<LocalTaskPriority>(defaults.priority ?? 0)
   const [labels, setLabels] = useState<string[]>([])
   const [parentId, setParentId] = useState(defaults.parentId)
   const [keepCreating, setKeepCreating] = useState(false)
+  const [workspaceAction, setWorkspaceAction] = useState('later')
   const [submitting, setSubmitting] = useState(false)
   const titleRef = useRef<HTMLInputElement>(null)
   const suggestions = useMemo(() => collectLocalTaskLabels(tasks), [tasks])
@@ -92,7 +113,6 @@ function CreateBody({
         projectId,
         title: title.trim(),
         description,
-        criteria: cleanLocalTaskCriteria(criteria),
         statusId: statusId ?? undefined,
         priority,
         labels,
@@ -113,12 +133,42 @@ function CreateBody({
     if (keepCreating) {
       setTitle('')
       setDescription('')
-      setCriteria([])
       titleRef.current?.focus()
       return
     }
-    localTaskPageStore.getState().setCursor(result.task.id)
+    localTaskPageStore.getState().openDetail(result.task.id)
     localTaskPageStore.getState().closeCreate()
+    if (defaults.source) {
+      const { worktree, paneKey, agent, sessionId, tabId } = defaults.source
+      const linked = await linkLocalTaskWorkspace(useAppStore.getState(), {
+        taskId: result.task.id,
+        worktree,
+        linkedVia: 'manual'
+      })
+      const pane = parsePaneKey(paneKey)
+      if (linked && (pane || sessionId)) {
+        await recordLocalTaskSession(
+          {
+            taskId: result.task.id,
+            worktreeId: worktree.id,
+            instanceId: worktree.instanceId ?? null,
+            hostId: localTaskWorktreeHostId(useAppStore.getState(), worktree),
+            agent: isTuiAgent(agent) ? agent : null,
+            linkedVia: 'manual'
+          },
+          sessionId
+            ? chatSessionIds(tabId ?? null, sessionId)
+            : { surface: 'terminal', tabId: pane!.tabId, paneKey }
+        )
+      }
+      return
+    }
+    if (workspaceAction === 'new' && project) {
+      runLocalTaskStart(result.task, project, null)
+    }
+    if (workspaceAction === 'existing') {
+      localTaskLinkDialogStore.getState().open({ kind: 'pick-workspace', taskId: result.task.id })
+    }
   }
 
   return (
@@ -168,12 +218,6 @@ function CreateBody({
         aria-label={translate('localTasks.create.descriptionLabel', 'Description')}
         className="min-h-24"
       />
-      <div className="flex flex-col gap-1">
-        <span className="text-xs text-muted-foreground">
-          {translate('localTasks.create.criteriaLabel', 'Done criteria (optional)')}
-        </span>
-        <LocalTaskCriteriaEditor items={criteria} onItemsChange={setCriteria} />
-      </div>
       <div className="flex flex-wrap items-center gap-2">
         <LocalTaskStatusSelect project={project} value={statusId} onChange={setStatusId} />
         <LocalTaskPrioritySelect value={priority} onChange={setPriority} />
@@ -190,6 +234,24 @@ function CreateBody({
         />
         <LocalTaskParentPicker candidates={parents} value={parentId} onChange={setParentId} />
       </div>
+      {defaults.source ? null : (
+        <Select value={workspaceAction} onValueChange={setWorkspaceAction}>
+          <SelectTrigger aria-label={translate('localTasks.create.workspace', 'Workspace')}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="later">
+              {translate('localTasks.create.workspaceLater', 'Choose workspace later')}
+            </SelectItem>
+            <SelectItem value="existing">
+              {translate('localTasks.create.workspaceExisting', 'Use existing workspace')}
+            </SelectItem>
+            <SelectItem value="new">
+              {translate('localTasks.create.workspaceNew', 'Create a workspace next')}
+            </SelectItem>
+          </SelectContent>
+        </Select>
+      )}
       <div className="flex items-center gap-3 border-t border-border/60 pt-3">
         <label className="flex items-center gap-2 text-xs text-muted-foreground">
           <Switch checked={keepCreating} onCheckedChange={setKeepCreating} />
@@ -220,7 +282,7 @@ function CreateBody({
   )
 }
 
-/** New task (REQ-004): project, title, description, done criteria, status, priority, labels, parent. */
+/** New task (REQ-004): project, task details and the next workspace action. */
 export function LocalTaskCreateDialog({ model }: { model: LocalTaskListModel }): React.JSX.Element {
   const create = useLocalTaskPage((state) => state.create)
   const close = (): void => localTaskPageStore.getState().closeCreate()

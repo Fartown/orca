@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { toast } from 'sonner'
 import {
   claimLocalTaskPageKeys,
   pushLocalTaskEscapeLayer,
@@ -6,10 +7,9 @@ import {
 } from '@/local-tasks/local-task-page-keys'
 import { localTaskPageStore } from '@/local-tasks/local-task-page-store'
 import {
-  isLocalTaskRowWritable,
-  localTasksDomainStore
-} from '@/local-tasks/local-tasks-domain-store'
-import { canCreateLocalTask, canWriteLocalTaskRows } from '@/local-tasks/local-task-write-access'
+  localTaskCreateWriteReason,
+  localTaskRowsWriteReason
+} from '@/local-tasks/local-task-write-reason'
 import {
   currentLocalTaskNeedsYouRows,
   runLocalTaskNeedsYouKey
@@ -30,8 +30,6 @@ function step(ids: readonly string[], from: string | null, delta: 1 | -1): strin
 
 function runAction(action: LocalTaskPageKeyAction, model: LocalTaskListModel): void {
   const page = localTaskPageStore.getState()
-  // Why per row: the page lists several libraries, and each takes writes on its own.
-  const domain = localTasksDomainStore.getState()
   const needsYou = page.view === 'needs-you' && page.detailTaskId === null
   const ids = needsYou
     ? currentLocalTaskNeedsYouRows().map((row) => row.task.id)
@@ -43,11 +41,16 @@ function runAction(action: LocalTaskPageKeyAction, model: LocalTaskListModel): v
   const inDetail = page.detailTaskId !== null
   const current = page.detailTaskId ?? cursor
   switch (action) {
-    case 'create':
-      if (canCreateLocalTask(domain, model.scopeProjectId)) {
+    case 'create': {
+      // Why a toast: a single key past a greyed button would otherwise do nothing visible.
+      const reason = localTaskCreateWriteReason(model.scopeProjectId)
+      if (reason) {
+        toast.error(reason)
+      } else {
         page.openCreate({ projectId: model.scopeProjectId })
       }
       return
+    }
     case 'next':
     case 'previous': {
       const next = step(ids, current, action === 'next' ? 1 : -1)
@@ -81,7 +84,14 @@ function runAction(action: LocalTaskPageKeyAction, model: LocalTaskListModel): v
           : current
             ? [current]
             : []
-      if (canWriteLocalTaskRows(domain, targets)) {
+      if (targets.length === 0) {
+        return
+      }
+      // Why per row: the page lists several libraries, and each takes writes on its own.
+      const reason = localTaskRowsWriteReason(targets)
+      if (reason) {
+        toast.error(reason)
+      } else {
         page.openPicker(action, targets)
       }
       return
@@ -101,11 +111,18 @@ function runAction(action: LocalTaskPageKeyAction, model: LocalTaskListModel): v
       // Only items in Needs you take these.
       break
     case 'start-work':
-    case 'open-session':
-      if (current && isLocalTaskRowWritable(domain, current)) {
+    case 'open-session': {
+      if (!current) {
+        break
+      }
+      const reason = localTaskRowsWriteReason([current])
+      if (reason) {
+        toast.error(reason)
+      } else {
         runLocalTaskWorkKey(action, current, model.index)
       }
       break
+    }
     case 'search':
       page.openDetail(null)
       page.requestSearchFocus()

@@ -1,3 +1,10 @@
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from '@/components/ui/select'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { translate } from '@/i18n/i18n'
@@ -73,17 +80,62 @@ export function LocalTaskProjectRules({
         disabled={!writable}
         onChange={(on) => void setRule(project, 'startMovesToInProgress', on)}
       />
-      <RuleRow
-        id={`local-task-rule-merged-${project.id}`}
-        label={translate('localTasks.settings.rulePrMerged', 'A merged PR completes the task')}
-        help={translate(
-          'localTasks.settings.rulePrMergedHelp',
-          'When the PR of the task’s workspace is merged at the workspace’s head, the task moves to the first Done status. Each PR does this once.'
-        )}
-        checked={project.rules.prMergedCompletes}
-        disabled={!writable}
-        onChange={(on) => void setRule(project, 'prMergedCompletes', on)}
-      />
+      {project.rules.prMergedMode === undefined ? (
+        <RuleRow
+          id={`local-task-rule-merged-${project.id}`}
+          label={translate('localTasks.settings.rulePrMerged', 'A merged PR completes the task')}
+          help={translate(
+            'localTasks.settings.rulePrMergedHelp',
+            'When the PR of the task’s workspace is merged at the workspace’s head, the task moves to the first Done status. Each PR does this once.'
+          )}
+          checked={project.rules.prMergedCompletes}
+          disabled={!writable}
+          onChange={(on) => void setRule(project, 'prMergedCompletes', on)}
+        />
+      ) : (
+        <div className="flex flex-col gap-2">
+          <Label htmlFor={`local-task-rule-merged-${project.id}`}>
+            {translate('localTasks.settings.mergedAction', 'When the PR is merged')}
+          </Label>
+          <Select
+            value={
+              project.rules.prMergedMode ?? (project.rules.prMergedCompletes ? 'completed' : 'none')
+            }
+            disabled={!writable}
+            onValueChange={(mode) => {
+              if (mode !== 'none' && mode !== 'review' && mode !== 'completed') {
+                return
+              }
+              void runLocalTaskWrite(() =>
+                localTasksClient.updateProject({
+                  projectId: project.id,
+                  expectedRevision: project.revision,
+                  rules: { prMergedMode: mode }
+                })
+              ).then((result) => {
+                if (result) {
+                  localTasksDomainStore.getState().upsertProject(result.project)
+                }
+              })
+            }}
+          >
+            <SelectTrigger id={`local-task-rule-merged-${project.id}`}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="review">
+                {translate('localTasks.settings.mergedReview', 'Move to acceptance')}
+              </SelectItem>
+              <SelectItem value="completed">
+                {translate('localTasks.settings.mergedComplete', 'Mark completed')}
+              </SelectItem>
+              <SelectItem value="none">
+                {translate('localTasks.settings.mergedNone', 'Keep status unchanged')}
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      )}
     </div>
   )
 }

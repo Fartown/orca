@@ -4,27 +4,20 @@ import type {
   LocalTask,
   LocalTaskStatusDef
 } from '../../../src/shared/local-tasks/local-task-types'
-import { colors, spacing } from '../theme/mobile-theme'
+import { colors } from '../theme/mobile-theme'
 import { localTasksCopy } from './local-tasks-copy'
+import type { LocalTaskRowSession } from './local-task-progress-projection'
 import { LocalTaskSubtaskRow } from './local-tasks-list-view'
 import { localTaskStyles } from './local-tasks-styles'
 
-/** Keys a read-only line by its text and how many identical lines precede it, not by position. */
-function keyedLines(lines: readonly string[]): { key: string; text: string }[] {
-  const seen = new Map<string, number>()
-  return lines.map((text) => {
-    const occurrence = (seen.get(text) ?? 0) + 1
-    seen.set(text, occurrence)
-    return { key: `${occurrence}:${text}`, text }
-  })
-}
-
-/** Description, done criteria and the task's direct subtasks; any level may have them (D-008). */
+/** Description and the task's direct subtasks; any level may have them. */
 export function LocalTaskDetailSections(props: {
   task: LocalTask
   subtasks: LocalTask[]
   statuses: Map<string, LocalTaskStatusDef>
   readOnly: boolean
+  /** The sessions a subtask's line shows as dots (REQ-012). */
+  sessionsFor: (task: LocalTask) => LocalTaskRowSession[]
   onEdit: (task: LocalTask) => void
   onAddSubtask: (parent: LocalTask) => void
   onOpenTask: (taskId: string) => void
@@ -48,18 +41,6 @@ export function LocalTaskDetailSections(props: {
       <Text style={task.description ? localTaskStyles.body : localTaskStyles.meta}>
         {task.description || copy.noDescription}
       </Text>
-      {task.criteria.length > 0 ? (
-        <>
-          <Text style={[styles.sectionTitle, styles.sectionGap]}>{copy.criteria}</Text>
-          {keyedLines(task.criteria).map((line) => (
-            // Hanging indent: the bullet keeps its own column, wrapped lines align with the text.
-            <View key={line.key} style={styles.bulletRow}>
-              <Text style={[localTaskStyles.body, styles.bulletMark]}>•</Text>
-              <Text style={[localTaskStyles.body, styles.bulletText]}>{line.text}</Text>
-            </View>
-          ))}
-        </>
-      ) : null}
       <View style={localTaskStyles.sectionHeaderRow}>
         <Text style={styles.sectionTitle}>
           {props.subtasks.length > 0
@@ -81,6 +62,7 @@ export function LocalTaskDetailSections(props: {
               task={child}
               status={props.statuses.get(child.statusId) ?? null}
               inCard
+              sessions={props.sessionsFor(child)}
               onOpen={props.onOpenTask}
             />
           ))}
@@ -91,9 +73,5 @@ export function LocalTaskDetailSections(props: {
 }
 
 const styles = StyleSheet.create({
-  sectionTitle: { color: colors.textMuted, fontSize: 12, fontWeight: '600' },
-  sectionGap: { marginTop: spacing.lg, marginBottom: spacing.sm },
-  bulletRow: { flexDirection: 'row', marginBottom: 4 },
-  bulletMark: { width: 14 },
-  bulletText: { flex: 1 }
+  sectionTitle: { color: colors.textMuted, fontSize: 12, fontWeight: '600' }
 })

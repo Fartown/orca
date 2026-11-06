@@ -1,3 +1,4 @@
+import { bindLocalTaskStartupPage } from './local-task-startup-page'
 import { useEffect } from 'react'
 import { RecoverableRenderErrorBoundary } from '@/components/error-boundaries/RecoverableRenderErrorBoundary'
 import { isWebClientLocation } from '@/lib/web-client-location'
@@ -274,6 +275,7 @@ function LocalTasksLibraries(): null {
   useEffect(() => installLocalTaskPageKeyRouter(), [])
   useEffect(() => bindLocalTaskSourceActivation(), [])
   useEffect(() => bindLocalTaskViewPreferences(), [])
+  useEffect(() => bindLocalTaskStartupPage(), [])
   useEffect(
     () =>
       subscribeLocalTaskAppStore('leaving the task page', (state, previous) => {

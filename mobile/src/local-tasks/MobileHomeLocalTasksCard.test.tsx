@@ -78,7 +78,9 @@ function desktop(id: string, projectCount: number, sourceHidden?: boolean) {
       projectCount,
       ...(sourceHidden === undefined ? {} : { sourceHidden })
     },
-    'localTasks.attention.get': { observedAt: 1, sessions: [], items: [] }
+    'localTasks.attention.get': { observedAt: 1, sessions: [], items: [] },
+    'localTasks.tasks.list': { tasks: [] },
+    'localTasks.projects.list': { projects: [] }
   }
   const client: RpcClient = {
     sendRequest: async (method: string): Promise<RpcResponse> => {

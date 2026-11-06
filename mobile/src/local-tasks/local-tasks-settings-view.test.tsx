@@ -28,6 +28,7 @@ vi.mock('lucide-react-native', () => ({
 vi.mock('../components/ConfirmModal', () => ({ ConfirmModal: 'ConfirmModal' }))
 vi.mock('../components/TextInputModal', () => ({ TextInputModal: 'TextInputModal' }))
 vi.mock('../components/MobileSwitch', () => ({ MobileSwitch: 'MobileSwitch' }))
+vi.mock('../components/PickerModal', () => ({ PickerModal: 'PickerModal' }))
 vi.mock('./local-tasks-status-section', () => ({ LocalTasksStatusSection: () => null }))
 vi.mock('./local-task-repos-section', () => ({ LocalTaskReposSection: () => null }))
 vi.mock('./local-task-form-fields', () => ({
@@ -139,7 +140,7 @@ describe('mobile project deletion', () => {
     let confirm = renderer?.root.findAll(
       (node) => String(node.type) === 'ConfirmModal' && node.props.visible
     )[0]
-    expect(confirm?.props.message).toContain('1 task records')
+    expect(confirm?.props.message).toContain('Its tasks (1)')
     await act(async () => {
       confirm?.props.onConfirm()
       confirm?.props.onCancel()

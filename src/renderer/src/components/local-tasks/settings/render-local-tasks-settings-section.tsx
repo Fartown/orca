@@ -11,10 +11,10 @@ export function renderLocalTasksSettingsSection(
   return (
     <SettingsSection
       id={LOCAL_TASKS_SETTINGS_SECTION_ID}
-      title={translate('localTasks.settings.title', 'Local Tasks')}
+      title={translate('localTasks.settings.title', 'Local tasks')}
       description={translate(
         'localTasks.settings.description',
-        'Task projects, their repositories, ref prefixes and statuses.'
+        'Projects, their repositories, ref prefixes and statuses.'
       )}
       searchEntries={navigation.getSectionSearchEntries(LOCAL_TASKS_SETTINGS_SECTION_ID)}
     >

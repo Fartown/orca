@@ -1,14 +1,21 @@
-import { LOCAL_EXECUTION_HOST_ID } from '../../shared/execution-host'
 import { findLocalTaskLinkForWorkspace } from '../../shared/local-tasks/local-task-workspace-match'
+import { findLocalTaskSessionForIdentity } from '../../shared/local-tasks/local-task-session-match'
 import type { LocalTask } from '../../shared/local-tasks/local-task-types'
-import type { RuntimeWorktreeRecord } from '../../shared/runtime-types'
 import type { CommandHandler, HandlerContext } from '../dispatch'
+import { LOCAL_TASK_COMMENT_MAX } from '../../shared/local-tasks/local-task-model'
+import {
+  LOCAL_TASK_DISPATCHER_GUIDE,
+  LOCAL_TASK_WORKER_GUIDE
+} from '../../shared/local-tasks/local-task-brief'
+import { LOCAL_TASK_NEEDS_YOU_MAX } from '../../shared/local-tasks/local-task-progress'
+import { readCommandBody } from '../command-body-input'
 import { getOptionalStringFlag, getRepeatedStringFlag, getRequiredStringFlag } from '../flags'
 import { printResult } from '../format'
 import { RuntimeClientError } from '../runtime/types'
-import { getOptionalWorktreeSelector, resolveCurrentWorktreeSelector } from '../selectors'
 import {
   addTaskComment,
+  COMPLETED_FROM_CLI_MESSAGE,
+  currentSessionLinkId,
   describeTask,
   readTaskLibrary,
   resolveTaskRef,
@@ -16,6 +23,8 @@ import {
   setTaskStatus,
   type TaskLibrary
 } from './local-task-cli-library'
+import { LOCAL_TASK_CLI_WRITE_HANDLERS } from './local-task-cli-write-handlers'
+import { currentWorkspace } from './local-task-cli-workspace'
 import {
   detailTask,
   formatTaskChange,
@@ -68,23 +77,8 @@ function statusFilter(library: TaskLibrary, wanted: string): (task: LocalTask) =
   return (task) => ids.has(task.statusId)
 }
 
-async function currentWorkspace(context: HandlerContext): Promise<RuntimeWorktreeRecord> {
-  const { flags, client, cwd } = context
-  const explicit = await getOptionalWorktreeSelector(flags, 'worktree', cwd, client)
-  if (!explicit && client.isRemote) {
-    throw new RuntimeClientError(
-      'invalid_argument',
-      'orca task current reads this directory’s workspace; on a paired host pass --worktree <selector>.'
-    )
-  }
-  const selector = explicit ?? (await resolveCurrentWorktreeSelector(cwd, client))
-  const { result } = await client.call<{ worktree: RuntimeWorktreeRecord }>('worktree.show', {
-    worktree: selector
-  })
-  return result.worktree
-}
-
 export const LOCAL_TASK_CLI_HANDLERS: Record<string, CommandHandler> = {
+  ...LOCAL_TASK_CLI_WRITE_HANDLERS,
   'task list': async ({ client, flags, json }) => {
     const library = await readTaskLibrary(client)
     const project = getOptionalStringFlag(flags, 'project')
@@ -109,10 +103,29 @@ export const LOCAL_TASK_CLI_HANDLERS: Record<string, CommandHandler> = {
     )
   },
   'task current': async (context) => {
-    const [worktree, library] = await Promise.all([
-      currentWorkspace(context),
-      readTaskLibrary(context.client, { links: true })
-    ])
+    const library = await readTaskLibrary(context.client, { links: true })
+    const session = context.flags.has('worktree')
+      ? null
+      : findLocalTaskSessionForIdentity(library.links, {
+          paneKey: process.env.ORCA_PANE_KEY,
+          sessionId: process.env.ORCA_AGENT_SESSION_ID,
+          tabId: process.env.ORCA_TAB_ID
+        })
+    if (session) {
+      const task = library.tasks.find((candidate) => candidate.id === session.taskId)
+      if (task) {
+        printResult(
+          {
+            ...library.envelope,
+            result: { worktree: null, task: detailTask(describeTask(library, task), null) }
+          },
+          context.json,
+          formatTaskCurrent
+        )
+        return
+      }
+    }
+    const worktree = await currentWorkspace(context)
     // Why the runtime's own host id: links and its catalog both spell hosts relative to that Orca.
     const link = findLocalTaskLinkForWorkspace(library.links, {
       id: worktree.id,
@@ -148,6 +161,9 @@ export const LOCAL_TASK_CLI_HANDLERS: Record<string, CommandHandler> = {
     const library = await readTaskLibrary(client, { access: 'write' })
     const resolved = resolveTaskRef(library, getRequiredStringFlag(flags, 'ref'))
     const status = resolveTaskStatus(resolved, name)
+    if (status.category === 'completed' && status.id !== resolved.task.statusId) {
+      throw new RuntimeClientError('invalid_argument', COMPLETED_FROM_CLI_MESSAGE)
+    }
     if (status.id === resolved.task.statusId) {
       printResult(
         { ...library.envelope, result: { task: summarizeTask(resolved), change: 'unchanged' } },
@@ -165,5 +181,41 @@ export const LOCAL_TASK_CLI_HANDLERS: Record<string, CommandHandler> = {
       json,
       formatTaskChange
     )
+  },
+  'task progress': async ({ client, flags, json, cwd }) => {
+    const body = (
+      await readCommandBody(flags, cwd, {
+        required: true,
+        maximumCharacters: LOCAL_TASK_COMMENT_MAX,
+        tooLargeCode: 'invalid_argument',
+        label: 'Progress'
+      })
+    ).trim()
+    if (!body) {
+      throw new RuntimeClientError('invalid_argument', 'The progress text is empty.')
+    }
+    const needsYou = getOptionalStringFlag(flags, 'needs-you')?.trim() || undefined
+    if (needsYou && needsYou.length > LOCAL_TASK_NEEDS_YOU_MAX) {
+      throw new RuntimeClientError(
+        'invalid_argument',
+        `--needs-you must be at most ${LOCAL_TASK_NEEDS_YOU_MAX} characters.`
+      )
+    }
+    const library = await readTaskLibrary(client, { access: 'write', links: true })
+    const resolved = resolveTaskRef(library, getRequiredStringFlag(flags, 'ref'))
+    const sessionLinkId = currentSessionLinkId(library, resolved.task.id)
+    const envelope = await addTaskComment(client, resolved, body, {
+      ...(sessionLinkId ? { sessionLinkId } : {}),
+      ...(needsYou ? { needsYou } : {})
+    })
+    printResult(
+      { ...envelope, result: { task: summarizeTask(resolved), change: 'progress' } },
+      json,
+      formatTaskChange
+    )
+  },
+  'task guide': async ({ flags }) => {
+    console.log(flags.has('dispatcher') ? LOCAL_TASK_DISPATCHER_GUIDE : LOCAL_TASK_WORKER_GUIDE)
   }
 }
+import { LOCAL_EXECUTION_HOST_ID } from '../../shared/execution-host'

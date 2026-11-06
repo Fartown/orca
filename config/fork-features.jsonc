@@ -2879,6 +2879,8 @@
         "mobile/src/platform/text-input-font-size.ts",
         "mobile/src/tasks/mobile-task-runtime-operations.ts",
         "mobile/src/theme/mobile-theme.ts",
+        "mobile/src/theme/themed-styles.ts",
+        "mobile/src/theme/use-mobile-color-scheme.ts",
         "mobile/src/transport/client-context.tsx",
         "mobile/src/transport/host-client-hooks.ts",
         "mobile/src/transport/host-store.ts",
@@ -2961,6 +2963,9 @@
         "mobile/src/worktree/workspace-list-types.ts",
         "mobile/src/worktree/worktree-catalog-operations.ts",
         "mobile/src/worktree/worktree-catalog-snapshot-client.ts",
+        "mobile/src/storage/mirrored-storage-keys.ts",
+        "mobile/src/components/WorktreeMetaGlyphs.tsx",
+        "src/shared/github/pull-request-types.ts",
         "src/renderer/src/components/AgentStateDot.tsx",
         "src/renderer/src/components/agent/AgentCombobox.tsx",
         "src/renderer/src/components/sidebar/ProjectHeaderActions.tsx",
@@ -3022,6 +3027,7 @@
         "src/shared/sidebar-list/host-section-rows.ts",
         "src/shared/sidebar-list/row-types.ts",
         "src/shared/stable-pane-id.ts",
+        "src/shared/terminal-tab-types.ts",
         "src/shared/agent-session/view/structured-agent-session-projection.ts",
         "src/shared/tab-types.ts",
         "src/shared/terminal-surface-id.ts",
@@ -3039,6 +3045,10 @@
         "src/shared/task-providers.ts",
         "src/renderer/src/hooks/composer-state/composer-target-store.ts",
         "mobile/src/tasks/worktree-create-capability.ts",
+        "mobile/src/tasks/workspace-create-params.ts",
+        "mobile/src/tasks/use-mobile-composer-source.ts",
+        "mobile/src/components/new-worktree-modal-types.ts",
+        "src/shared/project-host-setup-projection.ts",
         "src/renderer/src/components/error-boundaries/RecoverableRenderErrorBoundary.tsx",
         "src/renderer/src/components/new-workspace/smart-workspace-localized-options.tsx",
         "src/shared/new-workspace/smart-workspace-source-results.ts",
@@ -3053,9 +3063,35 @@
         "src/cli/dispatch.ts",
         "src/cli/flags.ts",
         "src/cli/format.ts",
+        "src/cli/command-body-input.ts",
         "src/cli/runtime/types.ts",
         "src/cli/selectors.ts",
-        "mobile/src/i18n/mobile-i18n.ts"
+        "src/renderer/src/components/sidebar/workspace-status.ts",
+        "src/shared/workspace-statuses.ts",
+        "src/renderer/src/session-names/session-name-prompt-projection.ts",
+        "src/shared/agent-row-conversation-name.ts",
+        "src/shared/agent-tab-title.ts",
+        "mobile/src/i18n/mobile-i18n.ts",
+        "src/renderer/src/components/terminal/background-terminal-worktree-mount.ts",
+        "src/renderer/src/components/activity/activity-terminal-portal.ts",
+        "src/renderer/src/components/activity/activity-terminal-portal-status.ts",
+        "src/renderer/src/components/native-chat/NativeChatView.tsx",
+        "src/renderer/src/runtime/structured-agent-session-owner.ts",
+        "src/renderer/src/constants/terminal.ts",
+        "src/renderer/src/components/sidebar/useWorktreeAgentRows.ts",
+        "src/renderer/src/lib/scroll-to-current-workspace-status.ts",
+        "mobile/src/session/MobileSessionActiveContent.tsx",
+        "mobile/src/session/use-mobile-session-controller.ts",
+        "src/renderer/src/components/pull-request-page/mentions/query.ts",
+        "src/renderer/src/runtime/agent-session-operation-id.ts",
+        "src/shared/new-workspace/worktree-create-retry-policy.ts",
+        "src/renderer/src/runtime/structured-agent-session-close.ts",
+        "src/shared/runtime-terminal-contracts.ts",
+        "mobile/src/session/native-chat/mobile-native-chat-eligibility.ts",
+        "src/renderer/src/attention/agent-subject-read-actions.ts",
+        "src/renderer/src/components/terminal-pane/terminal-notification-pane-visibility.ts",
+        "src/renderer/src/hooks/agent-auto-ack-targets.ts",
+        "mobile/src/components/bottom-drawer/bottom-drawer-styles.ts"
       ],
       "policyId": "local-tasks",
       "ownedPaths": [
@@ -3091,7 +3127,10 @@
         "docs/issue/本地任务管理/journal.md",
         "docs/issue/本地任务管理/requirements/本地任务管理.md",
         "src/main/runtime/rpc/methods/local-task-link-methods.ts",
-        "src/main/local-tasks/local-task-execution-service.ts"
+        "src/main/local-tasks/local-task-execution-service.ts",
+        "src/renderer/src/components/local-tasks/LocalTaskSidebarTree.tsx",
+        "src/renderer/src/components/local-tasks/LocalTaskSessionPanelSlot.tsx",
+        "src/main/local-tasks/local-task-turn-records.ts"
       ],
       "seams": [
         {
@@ -3127,7 +3166,7 @@
         {
           "file": "src/main/runtime/orca-runtime-get-status.ts",
           "mustContain": "capabilities.push(...localTasksRuntimeCapabilities())",
-          "why": "Only a desktop that hosts a task library advertises local-tasks.v1; servers never do (REQ-017, REQ-018)"
+          "why": "Desktop, serve and orcad task hosts advertise local-tasks.v1/v2 while their own library is ready (REQ-017, REQ-018)"
         },
         {
           "file": "src/main/runtime/runtime-rpc/fork-mobile-rpc-method-allowlist.ts",
@@ -3193,6 +3232,76 @@
           "file": "mobile/src/components/WorktreeListRow.tsx",
           "mustContain": "<LocalTaskWorkspaceGlyph item={item} />",
           "why": "A host-list row shows a task icon after upstream's presence glyphs when its workspace belongs to a local task (REQ-016, REQ-017)"
+        },
+        {
+          "file": "mobile/src/tasks/mobile-smart-source-modes.ts",
+          "mustContain": "return translate('localTasks.sourceTab.label', 'Local')",
+          "why": "The phone's Create From lists Local right after Smart, as the desktop composer does (REQ-009, REQ-017)"
+        },
+        {
+          "file": "mobile/src/tasks/mobile-smart-source-modes.ts",
+          "mustContain": "return input.localTaskSourceOffered === true",
+          "why": "Local is offered only where the target repo's Orca advertises local tasks, has a project and shows Local; never for a folder or non-git repo (REQ-008, REQ-009, REQ-017)"
+        },
+        {
+          "file": "mobile/src/components/SmartSourceModeIcon.tsx",
+          "mustContain": "return <ListTodo size={14} color={color} />",
+          "why": "The Local tab carries the task icon the Task Source picker uses (REQ-017)"
+        },
+        {
+          "file": "mobile/src/components/SmartWorkspaceSourceDrawer.tsx",
+          "mustContain": "const localTasks = useLocalTaskCreateSourceTab(localTaskSource, effectiveMode, composer.name)",
+          "why": "The Local tab reads the target repo's task library and searches it by title or ref (REQ-009, REQ-017)"
+        },
+        {
+          "file": "mobile/src/components/SmartWorkspaceSourceDrawer.tsx",
+          "mustContain": "isLocalTaskCreateSourceRow(item) ? (",
+          "why": "Local rows lead with the title, the ref small and muted; a task with a workspace is greyed with the reason (REQ-009, REQ-011, REQ-017)"
+        },
+        {
+          "file": "mobile/src/components/SmartWorkspaceSourceField.tsx",
+          "mustContain": "<LocalTaskCreateSourcePill task={localTaskSource.picked} onClear={localTaskSource.clear} />",
+          "why": "The picked task shows as the source pill; clearing it clears the pick (REQ-009, REQ-017)"
+        },
+        {
+          "file": "mobile/src/components/NewWorktreeFormSheet.tsx",
+          "mustContain": "localTaskSource={props.localTaskSource}",
+          "why": "The create form hands the task pick to the source field (REQ-009, REQ-017)"
+        },
+        {
+          "file": "mobile/src/components/NewWorktreeModalDrawers.tsx",
+          "mustContain": "localTaskSource={props.localTaskSource}",
+          "why": "The sheet's drawers hand the task pick to the source drawer (REQ-009, REQ-017)"
+        },
+        {
+          "file": "mobile/src/components/NewWorktreeModal.tsx",
+          "mustContain": "const localTaskSource = useLocalTaskCreateSource({",
+          "why": "The new-workspace sheet owns the Local source for its target repo's library: the paired Orca's for its machine and relay SSH targets, a server's or orcad's for theirs (REQ-009, REQ-017)"
+        },
+        {
+          "file": "mobile/src/components/NewWorktreeModal.tsx",
+          "mustContain": "localTaskSourceOffered: localTaskSource.offered",
+          "why": "Create From's tab list includes Local while it is offered (REQ-009, REQ-017)"
+        },
+        {
+          "file": "mobile/src/components/NewWorktreeModal.tsx",
+          "mustContain": "localTaskCreate: localTaskSource.create,",
+          "why": "A workspace created for a picked task goes through the task's own create (REQ-009, REQ-017)"
+        },
+        {
+          "file": "mobile/src/components/use-new-workspace-create-submit.ts",
+          "mustContain": "const created = await args.localTaskCreate({",
+          "why": "Create runs the task's Start with the sheet's agent, setup choice and note: the link is written in the workspace's library and the task waits in the agent's input as a draft (REQ-009, REQ-017)"
+        },
+        {
+          "file": "mobile/src/test-support/rpc-recording/adapters/workspace-settings-mounts.ts",
+          "mustContain": "localTaskCreate: null,",
+          "why": "The recorded submit scenario names the new optional member, so it keeps the upstream create path it pins"
+        },
+        {
+          "file": "mobile/src/mobile-web-shell/page-storage-keys.ts",
+          "mustContain": "'orca:localTasksView'",
+          "why": "The phone's task page, served as a web route, remembers each library's project, segment and layout in the app's store (REQ-017)"
         },
         {
           "file": "src/renderer/src/app-shell/AppBackgroundServices.tsx",
@@ -3375,6 +3484,11 @@
           "why": "The task page deep-links to its settings section (REQ-001)"
         },
         {
+          "file": "src/renderer/src/i18n/en-runtime-required.json",
+          "mustContain": "sidebarCount_one",
+          "why": "Generated boot catalog includes task workflow copy; regenerate after changing translations"
+        },
+        {
           "file": "src/renderer/src/i18n/locales/en.json",
           "mustContain": "\"localTasks\": {",
           "why": "English copy of the local tasks feature"
@@ -3501,8 +3615,8 @@
         },
         {
           "file": "src/renderer/src/hooks/composer-state/quick-creation-execution.ts",
-          "mustContain": "draftPrompt: [trimmedNote, options.launchPrompt]",
-          "why": "The task reaches the agent as an unsent draft, as an issue picked in Create From does (REQ-009)"
+          "mustContain": "options.launchPromptDelivery",
+          "why": "Task prompt delivery follows the library preference while reusing workspace creation (REQ-009)"
         },
         {
           "file": "src/renderer/src/components/sidebar/SidebarTaskNavButton.tsx",
@@ -3513,6 +3627,11 @@
           "file": "src/renderer/src/components/sidebar/SidebarTaskNavButton.tsx",
           "mustContain": "<LocalTaskProviderShortcut />",
           "why": "The task sidebar button's provider shortcuts include Local while it is shown (REQ-008)"
+        },
+        {
+          "file": "src/renderer/src/components/sidebar/SidebarTaskNavButton.tsx",
+          "mustContain": "resolvedDefaultTaskSource !== 'github' || isLocalTaskSourceActive()",
+          "why": "Hovering Tasks does not warm GitHub work items while the task page opens on Local (REQ-008)"
         },
         {
           "file": "src/renderer/src/components/settings/TasksPane.tsx",
@@ -3658,6 +3777,81 @@
           "file": "src/shared/plugins/languages/protected-copy-keys.json",
           "mustContain": "\"localTasks.",
           "why": "fork copy keys protected from plugin language packs"
+        },
+        {
+          "file": "src/renderer/src/app-shell/AppWorkspaceShell.tsx",
+          "mustContain": "LocalTaskSessionPanelSlot",
+          "why": "Task-first navigation and session preview reuse the existing workspace/session surfaces (REQ-026, REQ-028)"
+        },
+        {
+          "file": "src/renderer/src/components/use-terminal-workspace-store-bindings.ts",
+          "mustContain": "localTaskSessionPanelOpen",
+          "why": "Task-first navigation and session preview reuse the existing workspace/session surfaces (REQ-026, REQ-028)"
+        },
+        {
+          "file": "src/renderer/src/components/sidebar/index.tsx",
+          "mustContain": "LocalTaskSidebarTree",
+          "why": "Task-first navigation and session preview reuse the existing workspace/session surfaces (REQ-026, REQ-028)"
+        },
+        {
+          "file": "src/renderer/src/components/sidebar/SidebarHeader.tsx",
+          "mustContain": "LocalTaskSidebarModeButton",
+          "why": "Task-first navigation and session preview reuse the existing workspace/session surfaces (REQ-026, REQ-028)"
+        },
+        {
+          "file": "mobile/src/session/use-mobile-session-foundation.ts",
+          "mustContain": "MobileSessionScopeOverride",
+          "why": "Task-first navigation and session preview reuse the existing workspace/session surfaces (REQ-026, REQ-028)"
+        },
+        {
+          "file": "mobile/src/session/use-mobile-session-controller.ts",
+          "mustContain": "useMobileSessionController(override",
+          "why": "Task-first navigation and session preview reuse the existing workspace/session surfaces (REQ-026, REQ-028)"
+        },
+        {
+          "file": "mobile/src/session/use-notification-pane-navigation.ts",
+          "mustContain": "paneKeyOverride",
+          "why": "Task-first navigation and session preview reuse the existing workspace/session surfaces (REQ-026, REQ-028)"
+        },
+        {
+          "file": "mobile/src/i18n/locales/en.json",
+          "mustContain": "\"localTasks\"",
+          "why": "Task-first mobile copy and optional explicit scope preserve the existing session route (REQ-017, REQ-028)"
+        },
+        {
+          "file": "mobile/src/i18n/locales/zh.json",
+          "mustContain": "\"localTasks\"",
+          "why": "Task-first mobile copy and optional explicit scope preserve the existing session route (REQ-017, REQ-028)"
+        },
+        {
+          "file": "mobile/src/session/use-notification-pane-navigation.test.tsx",
+          "mustContain": "paneKeyOverride",
+          "why": "Task-first mobile copy and optional explicit scope preserve the existing session route (REQ-017, REQ-028)"
+        },
+        {
+          "file": "config/scripts/mobile-web-app-file-attachment-grant.test.mjs",
+          "mustContain": "local-tasks",
+          "why": "The task chat drawer reuses session native operations; route grants and the closure census reflect the actual mounted content (REQ-017, REQ-028)"
+        },
+        {
+          "file": "config/scripts/mobile-web-app/mobile-web-app-page-grant-call-sites.test.mjs",
+          "mustContain": "local-tasks",
+          "why": "The task chat drawer reuses session native operations; route grants and the closure census reflect the actual mounted content (REQ-017, REQ-028)"
+        },
+        {
+          "file": "config/scripts/mobile-web-app/mobile-web-app-screencast-lane-grant.test.mjs",
+          "mustContain": "local-tasks",
+          "why": "The task chat drawer reuses session native operations; route grants and the closure census reflect the actual mounted content (REQ-017, REQ-028)"
+        },
+        {
+          "file": "config/scripts/mobile-web-app/mobile-web-app-external-navigation-grant.test.mjs",
+          "mustContain": "local-tasks",
+          "why": "The task chat drawer reuses session native operations; route grants and the closure census reflect the actual mounted content (REQ-017, REQ-028)"
+        },
+        {
+          "file": "mobile/src/components/bottom-drawer/bottom-drawer-styles.ts",
+          "mustContain": "overflow: Platform.OS === 'web' ? webClipOverflow : 'hidden'",
+          "why": "Task chat drawers must keep their full height after browser focus; CSS clip prevents the sheet itself from scrolling on web while native overflow stays unchanged"
         }
       ],
       "tests": [
@@ -3723,6 +3917,8 @@
         "mobile/src/local-tasks/local-task-agent-options.test.ts",
         "mobile/src/local-tasks/local-task-source-option.test.tsx",
         "mobile/src/local-tasks/local-task-host-rows.test.tsx",
+        "mobile/src/local-tasks/local-task-create-source-start.test.ts",
+        "mobile/src/local-tasks/use-local-task-create-source.test.tsx",
         "src/renderer/src/local-tasks/local-task-background-services.test.tsx",
         "src/renderer/src/lib/worktree-creation-structured-session.test.ts",
         "src/renderer/src/components/local-tasks/LocalTaskPage.execution.test.tsx",
@@ -3737,12 +3933,14 @@
         "src/renderer/src/local-tasks/local-task-palette.test.ts",
         "src/renderer/src/local-tasks/local-task-cleanup-ticket-source.test.ts",
         "src/main/local-tasks/local-task-pull-request-context.test.ts",
-        "src/cli/local-tasks/local-task-cli.test.ts"
+        "src/cli/local-tasks/local-task-cli.test.ts",
+        "mobile/src/local-tasks/local-task-session-drawer-style.test.ts"
       ],
       "checks": [
         "pnpm exec vitest run --config config/vitest.config.ts src/main/local-tasks src/shared/local-tasks src/main/runtime/rpc/methods/local-tasks.test.ts src/shared/host-operation-ownership.test.ts src/main/runtime/runtime-rpc/fork-mobile-rpc-method-allowlist.test.ts src/cli/local-tasks",
         "ORCA_BACKGROUND_LAUNCH=1 pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/local-tasks src/renderer/src/components/local-tasks src/renderer/src/components/task-page src/renderer/src/components/cmd-j src/renderer/src/lib/worktree-creation-structured-session.test.ts",
-        "pnpm --dir mobile exec vitest run src/local-tasks src/home/MobileHomeTasksAndAutomations.test.tsx"
+        "pnpm --dir mobile exec vitest run src/local-tasks src/home/MobileHomeTasksAndAutomations.test.tsx",
+        "pnpm exec vitest run --config config/vitest.config.ts config/scripts/mobile-web-app-file-attachment-grant.test.mjs config/scripts/mobile-web-app/mobile-web-app-session-dictation-capture.test.mjs config/scripts/mobile-web-app/mobile-web-app-page-grant-call-sites.test.mjs config/scripts/mobile-web-app/mobile-web-app-screencast-lane-grant.test.mjs config/scripts/mobile-web-app/mobile-web-app-external-navigation-grant.test.mjs"
       ]
     }
   ]

@@ -63,6 +63,8 @@ import { updateLocalTask } from './local-task-update'
 import { rowNumber, rowString } from './local-tasks-sqlite-row'
 
 const READ_ONLY: LocalTaskFailure = { ok: false, code: 'read_only' }
+export const LOCAL_TASK_BRIEF_PREFERENCE_KEY = 'taskBrief'
+export const LOCAL_TASK_SESSION_SEND_PREFERENCE_KEY = 'sessionSend'
 
 const PROJECT_RESULT = writeResultSchema({ project: projectSchema })
 const TASK_RESULT = writeResultSchema({ task: taskSchema })
@@ -119,6 +121,22 @@ export class LocalTasksService {
   cardTaskHidden(): boolean {
     const keys = [LOCAL_TASK_CARD_SHOW_PREFERENCE_KEY]
     return this.getPreferences(keys).values[LOCAL_TASK_CARD_SHOW_PREFERENCE_KEY] === '0'
+  }
+
+  taskBrief(): boolean {
+    return (
+      this.getPreferences([LOCAL_TASK_BRIEF_PREFERENCE_KEY]).values[
+        LOCAL_TASK_BRIEF_PREFERENCE_KEY
+      ] !== '0'
+    )
+  }
+
+  sessionSend(): 'submit' | 'draft' {
+    return this.getPreferences([LOCAL_TASK_SESSION_SEND_PREFERENCE_KEY]).values[
+      LOCAL_TASK_SESSION_SEND_PREFERENCE_KEY
+    ] === 'draft'
+      ? 'draft'
+      : 'submit'
   }
 
   taskHostId(): string | null {
@@ -241,7 +259,7 @@ export class LocalTasksService {
 
   addComment(input: LocalTasksEventsAddCommentInput, source: LocalTaskEventSource) {
     return this.write(input.clientOperationId, 'events.addComment', input, EVENT_RESULT, (now) =>
-      addLocalTaskComment(this.db, input.taskId, input.body, source, now)
+      addLocalTaskComment(this.db, input.taskId, input.body, source, now, input.progress)
     )
   }
 

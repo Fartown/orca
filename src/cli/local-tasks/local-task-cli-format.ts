@@ -16,7 +16,6 @@ export type TaskCliSummary = {
 
 export type TaskCliDetail = TaskCliSummary & {
   description: string
-  criteria: string[]
   workspace: {
     hostId: string
     kind: LocalTaskWorkspaceLink['kind']
@@ -53,7 +52,6 @@ export function detailTask(
   return {
     ...summarizeTask(resolved),
     description: resolved.task.description,
-    criteria: resolved.task.criteria,
     workspace: link
       ? {
           hostId: link.hostId,
@@ -87,9 +85,6 @@ export function formatTaskDetail(task: TaskCliDetail): string {
   if (task.description.trim()) {
     lines.push('', task.description.trim())
   }
-  if (task.criteria.length > 0) {
-    lines.push('', 'Done criteria:', ...task.criteria.map((item) => `- ${item}`))
-  }
   return lines.join('\n')
 }
 
@@ -98,12 +93,12 @@ export function formatTaskShow(result: { task: TaskCliDetail }): string {
 }
 
 export function formatTaskCurrent(result: {
-  worktree: { id: string; name: string | null }
+  worktree: { id: string; name: string | null } | null
   task: TaskCliDetail | null
 }): string {
   return result.task
     ? formatTaskDetail(result.task)
-    : `${result.worktree.name ?? result.worktree.id} is not linked to a task.`
+    : `${result.worktree?.name ?? result.worktree?.id ?? 'This session'} is not linked to a task.`
 }
 
 export function formatTaskChange(result: { task: TaskCliSummary; change: string }): string {

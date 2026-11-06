@@ -1,3 +1,6 @@
+import { LocalTaskReviewQueue } from './LocalTaskReviewQueue'
+import { LocalTaskDispatchBox } from './LocalTaskDispatchBox'
+import { useLocalTaskSidebarMode } from '@/local-tasks/local-task-sidebar-mode'
 import { useState, type ReactNode } from 'react'
 import { LoaderCircle } from 'lucide-react'
 import { translate } from '@/i18n/i18n'
@@ -83,10 +86,13 @@ export function LocalTaskPage({ sourceBar }: { sourceBar: ReactNode }): React.JS
     )
   } else if (!hasProjects || bootstrapCreating) {
     body = (
-      <LocalTaskBootstrap
-        onStart={() => setBootstrapCreating(true)}
-        onDone={() => setBootstrapCreating(false)}
-      />
+      <div className="flex min-h-0 flex-1 flex-col gap-3">
+        {!bootstrapCreating ? <LocalTaskDispatchBox /> : null}
+        <LocalTaskBootstrap
+          onStart={() => setBootstrapCreating(true)}
+          onDone={() => setBootstrapCreating(false)}
+        />
+      </div>
     )
   } else if (detailTaskId) {
     body = <LocalTaskDetail taskId={detailTaskId} model={model} />
@@ -114,6 +120,7 @@ export function LocalTaskPage({ sourceBar }: { sourceBar: ReactNode }): React.JS
 }
 
 function LocalTaskOverview({ model }: { model: LocalTaskListModel }): React.JSX.Element {
+  const sidebarTaskMode = useLocalTaskSidebarMode()
   const previewOpen = useLocalTaskPage((state) => state.previewOpen)
   const cursorTaskId = useLocalTaskPage((state) => (state.previewOpen ? state.cursorTaskId : null))
   const hasSelection = useLocalTaskPage((state) => state.selectedTaskIds.length > 0)
@@ -127,26 +134,31 @@ function LocalTaskOverview({ model }: { model: LocalTaskListModel }): React.JSX.
     localTaskPageStore.getState().setPreviewOpen(false)
   )
   return (
-    <div className="@container/local-task-page relative flex min-h-0 flex-1 gap-4 pt-2">
-      <LocalTaskNav model={model} />
-      {needsYou ? (
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2">
-          <LocalTaskScopeMenu model={model} className="self-start @3xl/local-task-page:hidden" />
-          <LocalTaskNeedsYouView model={model} />
-        </div>
-      ) : (
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2">
-          <LocalTaskToolbar model={model} />
-          {hasSelection ? <LocalTaskBatchBar model={model} /> : null}
-          {model.layout === 'list' ? (
-            <LocalTaskList model={model} />
-          ) : (
-            <LocalTaskBoard model={model} />
-          )}
-          <LocalTaskKeyHints />
-        </div>
-      )}
-      {previewTask ? <LocalTaskPreview task={previewTask} index={model.index} /> : null}
+    <div className="flex min-h-0 flex-1 flex-col gap-3">
+      <LocalTaskDispatchBox />
+      <div className="@container/local-task-page relative flex min-h-0 flex-1 gap-4 pt-2">
+        {sidebarTaskMode ? null : <LocalTaskNav model={model} />}
+        {needsYou ? (
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2">
+            <LocalTaskScopeMenu model={model} className="self-start @3xl/local-task-page:hidden" />
+            <LocalTaskReviewQueue model={model} />
+            <LocalTaskNeedsYouView model={model} />
+          </div>
+        ) : (
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2">
+            <LocalTaskReviewQueue model={model} />
+            <LocalTaskToolbar model={model} />
+            {hasSelection ? <LocalTaskBatchBar model={model} /> : null}
+            {model.layout === 'list' ? (
+              <LocalTaskList model={model} />
+            ) : (
+              <LocalTaskBoard model={model} />
+            )}
+            <LocalTaskKeyHints />
+          </div>
+        )}
+        {previewTask ? <LocalTaskPreview task={previewTask} index={model.index} /> : null}
+      </div>
     </div>
   )
 }

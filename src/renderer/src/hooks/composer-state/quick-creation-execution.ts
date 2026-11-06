@@ -89,13 +89,17 @@ export function useQuickCreationExecution(input: QuickCreationExecutionInput) {
         trimmedNote
       } = prepared
 
-      // A picked local task replaces the linked-work-item prompt and stays an unsent draft.
       const localTaskPrompts =
         options?.launchPrompt && agent
-          ? {
-              prompt: '',
-              draftPrompt: [trimmedNote, options.launchPrompt].filter(Boolean).join('\n\n')
-            }
+          ? options.launchPromptDelivery === 'auto-submit'
+            ? {
+                prompt: [trimmedNote, options.launchPrompt].filter(Boolean).join('\n\n'),
+                draftPrompt: null
+              }
+            : {
+                prompt: '',
+                draftPrompt: [trimmedNote, options.launchPrompt].filter(Boolean).join('\n\n')
+              }
           : undefined
 
       const {

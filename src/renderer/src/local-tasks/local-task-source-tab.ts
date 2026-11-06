@@ -20,6 +20,8 @@ export type LocalTaskSourceTab = LocalTaskSourceScope & {
   /** Open on this tab, as 关联到任务… and Start ask. */
   initialMode: boolean
   select: (task: LocalTask) => void
+  /** The composer's name the pick wrote into the shared search box: not a query of the user's. */
+  pickedName?: string
   /** Workspace details only: the saved link, dropping the task from the draft, and Save's write. */
   draft?: {
     linkedTaskId: string | null

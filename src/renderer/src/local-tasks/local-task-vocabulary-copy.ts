@@ -13,9 +13,9 @@ export function localTaskCategoryLabel(category: LocalTaskStatusCategory): strin
     case 'unstarted':
       return translate('localTasks.category.unstarted', 'Unstarted')
     case 'started':
-      return translate('localTasks.category.started', 'In progress')
+      return translate('localTasks.category.started', 'In Progress')
     case 'review':
-      return translate('localTasks.category.review', 'Review')
+      return translate('localTasks.category.review', 'Acceptance')
     case 'completed':
       return translate('localTasks.category.completed', 'Completed')
     case 'canceled':
@@ -67,7 +67,7 @@ export function localTaskDefaultStatusNames(): Record<LocalTaskStatusCategory, s
     backlog: translate('localTasks.defaultStatus.backlog', 'Backlog'),
     unstarted: translate('localTasks.defaultStatus.unstarted', 'Todo'),
     started: translate('localTasks.defaultStatus.started', 'In Progress'),
-    review: translate('localTasks.defaultStatus.review', 'In Review'),
+    review: translate('localTasks.defaultStatus.review', 'Ready for acceptance'),
     completed: translate('localTasks.defaultStatus.completed', 'Done'),
     canceled: translate('localTasks.defaultStatus.canceled', 'Canceled')
   }

@@ -8,6 +8,9 @@ import type { LocalTaskSessionLink } from '../../../shared/local-tasks/local-tas
 import { localTaskAttentionClearsOnView } from '../../../shared/local-tasks/local-task-attention-rules'
 import { acknowledgeLocalTaskItemOnce } from './local-task-seen-forwarding'
 import { localTasksDomainStore } from './local-tasks-domain-store'
+import { localTaskSessionPanelStore } from './local-task-session-panel-store'
+import { openLocalTaskPage } from './local-task-navigation'
+import { resolveAutoAckTabTargets } from '@/hooks/agent-auto-ack-targets'
 
 /**
  * Shows a linked session through Orca's own navigation: the pane for a terminal, the chat tab for a
@@ -42,7 +45,7 @@ export function revealLocalTaskSession(link: LocalTaskSessionLink): boolean {
   return revealTerminalPane({ worktreeId, tabId, leafId: pane?.leafId ?? null, executionHostId })
 }
 
-/** Opening a session reads its finished turn; what it waits on stays until handled (REQ-014). */
+/** A confirmed visible session reads its finished turn; what it waits on stays until handled (REQ-014). */
 export function acknowledgeLocalTaskSessionItems(sessionLinkId: string): void {
   const items = (localTasksDomainStore.getState().progress?.items ?? []).filter(
     (item) => item.taskSessionId === sessionLinkId && localTaskAttentionClearsOnView(item)
@@ -52,11 +55,26 @@ export function acknowledgeLocalTaskSessionItems(sessionLinkId: string): void {
   }
 }
 
-/** Reveals the session and, once shown, marks what it waited for as seen. */
+/** Opens the session beside its task. The mounted surface owns the seen acknowledgement. */
 export function openLocalTaskSession(link: LocalTaskSessionLink): boolean {
-  if (!revealLocalTaskSession(link)) {
+  if (!link.worktreeId || !(link.tabId || link.paneKey || link.sessionId)) {
     return false
   }
-  acknowledgeLocalTaskSessionItems(link.id)
+  const state = useAppStore.getState()
+  const pane = link.paneKey ? parsePaneKey(link.paneKey) : null
+  const visibleTabId = pane?.tabId ?? link.tabId
+  if (
+    state.activeView === 'terminal' &&
+    state.activeWorktreeId === link.worktreeId &&
+    visibleTabId &&
+    resolveAutoAckTabTargets(state).some(
+      (target) => target.worktreeId === link.worktreeId && target.tabId === visibleTabId
+    )
+  ) {
+    localTaskSessionPanelStore.getState().close()
+    return revealLocalTaskSession(link)
+  }
+  openLocalTaskPage({ taskId: link.taskId })
+  localTaskSessionPanelStore.getState().open(link)
   return true
 }

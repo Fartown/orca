@@ -1,11 +1,7 @@
 import { useRef, useState, type ReactNode } from 'react'
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
-import { ChevronRight, ListTodo, Pencil, Plus, Trash2, X } from 'lucide-react-native'
-import {
-  LOCAL_TASK_CRITERIA_MAX,
-  LOCAL_TASK_CRITERION_MAX,
-  LOCAL_TASK_TITLE_MAX
-} from '../../../src/shared/local-tasks/local-task-model'
+import { ChevronRight, ListTodo, Pencil, Trash2, X } from 'lucide-react-native'
+import { LOCAL_TASK_TITLE_MAX } from '../../../src/shared/local-tasks/local-task-model'
 import { ActionSheetModal } from '../components/ActionSheetModal'
 import { ConfirmModal } from '../components/ConfirmModal'
 import { colors, spacing } from '../theme/mobile-theme'
@@ -13,61 +9,10 @@ import { localTasksCopy } from './local-tasks-copy'
 import {
   isMultiLinePaste,
   localTaskDraftEntries,
-  newLocalTaskDraftEntry,
   splitPastedLines,
   type LocalTaskDraftEntry
 } from './local-task-form-state'
-import { LocalTaskGrowingInput } from './local-task-growing-input'
 import { localTaskStyles } from './local-tasks-styles'
-
-export function LocalTaskCriteriaEditor(props: {
-  criteria: LocalTaskDraftEntry[]
-  onChange: (criteria: LocalTaskDraftEntry[]) => void
-}) {
-  const copy = localTasksCopy()
-  const set = (id: string, text: string) =>
-    props.onChange(props.criteria.map((entry) => (entry.id === id ? { ...entry, text } : entry)))
-  return (
-    <View>
-      <Text style={localTaskStyles.sectionLabel}>
-        {copy.criteria} <Text style={localTaskStyles.meta}>{copy.criteriaOptional}</Text>
-      </Text>
-      {props.criteria.map((entry) => (
-        <View key={entry.id} style={[styles.lineRow, styles.criterionRow]}>
-          <Text style={[localTaskStyles.meta, styles.criterionBullet]}>•</Text>
-          <LocalTaskGrowingInput
-            style={[localTaskStyles.bareInput, styles.lineInput, styles.criterionInput]}
-            minHeight={CRITERION_LINE_HEIGHT}
-            value={entry.text}
-            maxLength={LOCAL_TASK_CRITERION_MAX}
-            // Why: a criterion is one line of the stored list; Return must not split it.
-            onChangeText={(text) => set(entry.id, text.replace(/\r?\n/g, ' '))}
-            placeholder={copy.criterionPlaceholder}
-            placeholderTextColor={colors.textMuted}
-          />
-          <Pressable
-            style={[styles.removeButton, styles.criterionRemove]}
-            onPress={() => props.onChange(props.criteria.filter((other) => other.id !== entry.id))}
-            accessibilityRole="button"
-            accessibilityLabel={copy.delete}
-          >
-            <X size={14} color={colors.textMuted} />
-          </Pressable>
-        </View>
-      ))}
-      {props.criteria.length < LOCAL_TASK_CRITERIA_MAX ? (
-        <Pressable
-          style={styles.addRow}
-          onPress={() => props.onChange([...props.criteria, newLocalTaskDraftEntry()])}
-          accessibilityRole="button"
-        >
-          <Plus size={14} color={colors.textSecondary} />
-          <Text style={localTaskStyles.sectionActionText}>{copy.addCriterion}</Text>
-        </Pressable>
-      ) : null}
-    </View>
-  )
-}
 
 /** Subtasks typed into a new task. A paste of several lines adds one entry per line. */
 export function LocalTaskSubtaskEntries(props: {
@@ -233,16 +178,9 @@ export function LocalTaskFormPrompts(props: {
   )
 }
 
-const CRITERION_LINE_HEIGHT = 21
-
 const styles = StyleSheet.create({
   lineRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: 6 },
   lineInput: { flex: 1 },
-  // A criterion wraps, so the bullet and the remove button stay on its first line.
-  criterionRow: { alignItems: 'flex-start' },
-  criterionBullet: { lineHeight: CRITERION_LINE_HEIGHT },
-  criterionInput: { lineHeight: CRITERION_LINE_HEIGHT },
-  criterionRemove: { marginTop: (CRITERION_LINE_HEIGHT - 32) / 2 },
   // Why 32pt with negative margins: big enough to hit (the page ignores hitSlop) without
   // making the row taller than its text.
   removeButton: {

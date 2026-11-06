@@ -11,7 +11,7 @@ const ICON_SIZE = 16
 
 /**
  * The long-press sheet's row for the local task its workspace belongs to, drawn as the sheet's
- * other link rows: the title, then "SHOP-12 · Local task", or "Can't confirm" for a library out of
+ * other link rows: the title, then "SHOP-12 · Local task", or "Can’t confirm" for a library out of
  * contact. Tapping it opens the task. None off the host list or for a workspace with no task.
  */
 export function useLocalTaskDetailRows(row: Worktree): ReactNode[] {

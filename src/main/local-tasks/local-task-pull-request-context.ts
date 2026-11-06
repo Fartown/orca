@@ -60,8 +60,7 @@ export function linkedLocalTaskDraftContext(workspace: GenerationWorkspace): {
           linkedLocalTask: {
             ref: task.ref,
             title: task.title,
-            description: task.description,
-            criteria: task.criteria
+            description: task.description
           }
         }
       : {}

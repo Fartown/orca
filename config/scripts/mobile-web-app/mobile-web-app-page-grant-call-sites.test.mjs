@@ -24,6 +24,7 @@ const mobileDir = fileURLToPath(new URL('../../../mobile/', import.meta.url))
 const describeClosure = mobileWebAppDependenciesPresent() ? describe : describe.skip
 
 const SESSION = '/h/[hostId]/session/[worktreeId]'
+const LOCAL_TASKS = '/h/[hostId]/local-tasks'
 
 // Memoize closures: each of eight repeated walks builds a bundle.
 const closures = new Map()
@@ -201,7 +202,7 @@ describeClosure(
       }
     })
 
-    it('finds the clipboard reader and the media picker on the session route alone', async () => {
+    it('finds the clipboard reader and media picker on both routes mounting chat', async () => {
       const readerRow = PAGE_GRANT_CALL_SITES[4]
       const mediaRow = PAGE_GRANT_CALL_SITES[5]
       const reaching = { reader: [], media: [] }
@@ -214,8 +215,8 @@ describeClosure(
           reaching.media.push(pathname)
         }
       }
-      expect(reaching.reader).toEqual([SESSION])
-      expect(reaching.media).toEqual([SESSION])
+      expect(reaching.reader).toEqual([LOCAL_TASKS, SESSION])
+      expect(reaching.media).toEqual([LOCAL_TASKS, SESSION])
     })
   },
   240_000

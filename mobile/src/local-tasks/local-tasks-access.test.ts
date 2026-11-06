@@ -97,17 +97,26 @@ describe('which hosts the phone treats as task hosts', () => {
     expect(methods).toEqual([
       'localTasks.attention.get',
       'localTasks.projects.list',
+      'localTasks.projects.list',
       'localTasks.status',
+      'localTasks.tasks.list',
       'localTasks.tasks.list'
     ])
   })
 
-  it('uses the optional host count without downloading the library', async () => {
+  it('uses the optional host count while still reading tasks for acceptance', async () => {
     const { library, methods } = await readHome({
-      'localTasks.status': { ...STATUS, inProgressCount: 4 }
+      'localTasks.status': { ...STATUS, inProgressCount: 4 },
+      'localTasks.tasks.list': { tasks: [] },
+      'localTasks.projects.list': { projects: [] }
     })
     expect(library?.inProgress).toBe(4)
-    expect(methods).toEqual(['localTasks.attention.get', 'localTasks.status'])
+    expect(methods).toEqual([
+      'localTasks.attention.get',
+      'localTasks.projects.list',
+      'localTasks.status',
+      'localTasks.tasks.list'
+    ])
   })
 
   it('leaves out, after its status alone, a library with no project or one not open', async () => {

@@ -405,6 +405,13 @@ describe('task workspace links', () => {
 describe('merged PR rule', () => {
   it('completes the task holding the PR’s workspace once and never re-completes it', () => {
     const { service, work, project, status, task, statusOf } = setup()
+    expect(
+      service.updateProject({
+        clientOperationId: op(),
+        projectId: project.id,
+        rules: { prMergedMode: 'completed' }
+      })
+    ).toMatchObject({ ok: true })
     const parent = task('订单导出')
     const child = task('后端', parent.id)
     linkWorktree(work, child.id, SHOP)
@@ -462,7 +469,6 @@ describe('host attention judgment', () => {
     linkWorktree(context.work, parent.id, `${SHOP}-${parent.number}`)
     return { task: parent, session: recordTerminal(context.work, parent.id, ids) }
   }
-
   it('sorts this host’s statuses into the four kinds and leaves the rest alone', () => {
     const context = setup()
     const { work, host } = context

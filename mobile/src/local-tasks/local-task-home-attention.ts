@@ -4,7 +4,7 @@ import { localTaskLibraryHasProjects, localTaskSourceShown } from './local-tasks
 import type { LocalTasksApi } from './local-tasks-api'
 import { countLocalTasksInCategory } from './local-task-list-projection'
 import {
-  localTaskAttentionItemCount,
+  localTaskAttentionTaskCount,
   localTaskAttentionRows
 } from './local-task-progress-projection'
 
@@ -14,8 +14,9 @@ export type LocalTaskHomeAttentionRow = {
   taskId: string
   ref: string
   title: string
+  latestLine: string | null
   /** The item waiting longest in this task, which is what the row says. */
-  item: LocalTaskAttentionItem
+  item: LocalTaskAttentionItem | null
   since: number
 }
 
@@ -38,18 +39,24 @@ export type LocalTaskHomeLibrary = {
 export async function readLocalTaskHomeAttention(
   api: LocalTasksApi
 ): Promise<LocalTaskHomeAttention> {
-  const snapshot = await api.progress()
-  if (snapshot.items.length === 0) {
-    return { count: 0, rows: [] }
-  }
-  const rows = localTaskAttentionRows({ snapshot, tasks: await api.tasks(), projectId: null })
+  const [snapshot, tasks, projects] = await Promise.all([
+    api.progress(),
+    api.tasks(),
+    api.projects()
+  ])
+  const rows = localTaskAttentionRows({ snapshot, tasks, projects, projectId: null })
   return {
-    count: localTaskAttentionItemCount(rows),
+    count: localTaskAttentionTaskCount(rows),
     rows: rows.slice(0, HOME_ROWS).map((row) => ({
       taskId: row.task.id,
       ref: row.task.ref,
       title: row.task.title,
-      item: row.items[0],
+      latestLine:
+        row.task.latestProgress?.body ??
+        snapshot.sessions.find((session) => session.taskSessionId === row.items[0]?.taskSessionId)
+          ?.lastMessage ??
+        null,
+      item: row.items[0] ?? null,
       since: row.since
     }))
   }

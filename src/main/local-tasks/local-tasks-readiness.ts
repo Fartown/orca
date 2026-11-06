@@ -54,7 +54,9 @@ export class LocalTasksReadinessRegistry {
       inProgressCount: service ? readable(() => service.inProgressCount()) : undefined,
       projectCount: service ? readable(() => service.projectCount()) : undefined,
       sourceHidden: service ? readable(() => service.sourceHidden()) : undefined,
-      cardTaskHidden: service ? readable(() => service.cardTaskHidden()) : undefined
+      cardTaskHidden: service ? readable(() => service.cardTaskHidden()) : undefined,
+      taskBrief: service ? readable(() => service.taskBrief()) : undefined,
+      sessionSend: service ? readable(() => service.sessionSend()) : undefined
     }
   }
 

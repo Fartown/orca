@@ -1,3 +1,5 @@
+import { LocalTaskSidebarModeButton } from '@/components/local-tasks/LocalTaskSidebarModeButton'
+import { useLocalTaskSidebarMode } from '@/local-tasks/local-task-sidebar-mode'
 import React, { useId } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAppStore } from '@/store'
@@ -27,6 +29,7 @@ const SidebarHeader = React.memo(function SidebarHeader({
   const setSidebarBody = useAppStore((s) => s.setSidebarBody)
   const updateSettings = useAppStore((s) => s.updateSettings)
   const agentsViewActive = sidebarBody === 'agents'
+  const taskMode = useLocalTaskSidebarMode() && !agentsViewActive
   const counts = useAgentBucketCounts()
   const activityBadgeId = useId()
   const activityCount = counts.attention || counts.working
@@ -63,10 +66,11 @@ const SidebarHeader = React.memo(function SidebarHeader({
           className="min-w-0 truncate select-none pl-2 pr-0.5 text-xs font-semibold text-muted-foreground/80"
           data-sidebar-section-title={groupBy === 'repo' ? 'projects' : 'workspaces'}
         >
-          {sidebarTitle}
+          {taskMode ? translate('localTasks.sidebar.title', 'Tasks') : sidebarTitle}
         </span>
       </div>
       <div className="flex shrink-0 items-center gap-1">
+        <LocalTaskSidebarModeButton />
         <Popover
           open={introOpen}
           onOpenChange={(open) => {

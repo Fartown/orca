@@ -19,12 +19,12 @@ import { localTaskPathFromRoot } from '../../../../shared/local-tasks/local-task
 import { useLocalTaskRowWritable } from '@/local-tasks/local-tasks-domain-store'
 import { localTaskDescendantIds } from '../../../../shared/local-tasks/local-task-tree'
 import { LocalTaskStatusIcon } from './LocalTaskIcons'
-import { LocalTaskDetailBody } from './LocalTaskDetailBody'
+import { LocalTaskDetailBody, LocalTaskDetailTitle } from './LocalTaskDetailBody'
 import { LocalTaskDetailProperties } from './LocalTaskDetailProperties'
 import { LocalTaskSubtasks } from './LocalTaskSubtasks'
 import { LocalTaskActivity } from './LocalTaskActivity'
 import { LocalTaskWorkspaceCard } from './LocalTaskWorkspaceCard'
-import { LocalTaskSessionList } from './LocalTaskSessionList'
+import { LocalTaskNowCard } from './LocalTaskNowCard'
 import { LocalTaskDeleteDialog } from './LocalTaskDeleteDialog'
 import { LocalTaskHostTag } from './LocalTaskHostTag'
 import type { LocalTaskListModel } from './use-local-task-list-model'
@@ -168,33 +168,16 @@ export function LocalTaskDetail({
           </DropdownMenu>
         ) : null}
       </header>
-      {/* Why: below 48rem the properties stack under the body, so neither squeezes the other. */}
-      <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto scrollbar-sleek @3xl/local-task-detail:flex-row @3xl/local-task-detail:overflow-visible">
-        <div className="min-w-0 pr-2 scrollbar-sleek @3xl/local-task-detail:min-h-0 @3xl/local-task-detail:flex-1 @3xl/local-task-detail:overflow-y-auto">
-          <div className="mx-auto flex max-w-3xl flex-col gap-6 pb-8">
-            <LocalTaskDetailBody key={task.id} task={task} writable={writable} />
-            <LocalTaskSessionList
+      <div className="min-h-0 flex-1 overflow-y-auto scrollbar-sleek">
+        <div key={task.id} className="mx-auto flex max-w-4xl flex-col gap-6 px-1 pb-10 pr-3">
+          <div className="flex flex-col gap-3">
+            <LocalTaskDetailTitle task={task} writable={writable} />
+            <LocalTaskDetailProperties
               task={task}
-              project={project}
-              workspace={workspace}
               index={model.index}
+              allTasks={model.tasks}
               writable={writable}
             />
-            <LocalTaskSubtasks key={task.id} task={task} index={model.index} writable={writable} />
-            <LocalTaskActivity
-              key={task.id}
-              taskId={task.id}
-              index={model.index}
-              writable={writable}
-            />
-          </div>
-        </div>
-        <LocalTaskDetailProperties
-          task={task}
-          index={model.index}
-          allTasks={model.tasks}
-          writable={writable}
-          workspace={
             <LocalTaskWorkspaceCard
               task={task}
               project={project}
@@ -202,9 +185,20 @@ export function LocalTaskDetail({
               workspace={workspace}
               index={model.index}
               writable={writable}
+              compact
             />
-          }
-        />
+          </div>
+          <LocalTaskNowCard
+            task={task}
+            project={project}
+            workspace={workspace}
+            index={model.index}
+            writable={writable}
+          />
+          <LocalTaskDetailBody task={task} writable={writable} />
+          <LocalTaskSubtasks task={task} index={model.index} writable={writable} />
+          <LocalTaskActivity taskId={task.id} index={model.index} writable={writable} />
+        </div>
       </div>
       <LocalTaskDeleteDialog
         task={task}

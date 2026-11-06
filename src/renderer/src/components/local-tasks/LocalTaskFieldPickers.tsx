@@ -165,6 +165,16 @@ export function LocalTaskLabelOptions({
   const typed = query.trim().slice(0, LOCAL_TASK_LABEL_MAX)
   return (
     <CommandGroup>
+      {canAdd ? null : (
+        // Why first: the other labels are greyed at the cap, and a long list would hide this line.
+        <p className="px-2 py-1.5 text-2xs text-muted-foreground">
+          {translate(
+            'localTasks.picker.labelsFull',
+            'A task holds up to {{count}} labels. Remove one to add another.',
+            { count: LOCAL_TASK_LABELS_MAX }
+          )}
+        </p>
+      )}
       {labels.map((label) => {
         const selected = checked(label)
         return (

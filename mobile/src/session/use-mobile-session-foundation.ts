@@ -18,20 +18,25 @@ import { useMissingWorktreeBounce } from './use-missing-worktree-bounce'
 import { hostRouteWithNotice } from '../host-route-notice'
 import { useHostProtocolGates } from '../components/host-protocol-gates-context'
 
-export function useMobileSessionFoundation() {
-  const {
-    hostId,
-    worktreeId,
-    name: routeWorktreeName,
-    created,
-    warning: createdWarning
-  } = useLocalSearchParams<{
+export type MobileSessionScopeOverride = {
+  hostId: string
+  worktreeId: string
+  paneKey: string | null
+}
+
+export function useMobileSessionFoundation(override?: MobileSessionScopeOverride) {
+  const params = useLocalSearchParams<{
     hostId: string
     worktreeId: string
     name?: string
     created?: string
     warning?: string
   }>()
+  const hostId = override?.hostId ?? params.hostId
+  const worktreeId = override?.worktreeId ?? params.worktreeId
+  const routeWorktreeName = override ? undefined : params.name
+  const created = override ? undefined : params.created
+  const createdWarning = override ? undefined : params.warning
   const isFolderWorkspaceRoute = worktreeId.startsWith('folder:')
   const isFloatingWorkspaceRoute = isFloatingWorkspaceWorktreeId(worktreeId)
   const router = useRouteHandoff()

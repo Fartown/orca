@@ -1,3 +1,4 @@
+import { openLocalTaskPage } from './local-task-navigation'
 import { toast } from 'sonner'
 import { translate } from '@/i18n/i18n'
 import { useAppStore } from '@/store'
@@ -40,6 +41,7 @@ import {
 /** What a creation started for a task links once it completes; also the composer's task pick. */
 export type LocalTaskComposerStart = {
   taskId: string
+  prompt?: string
   /** The task project's Orca projects; a workspace made in another is not linked. Empty: any. */
   orcaProjectIds: readonly string[]
   replace: boolean
@@ -92,7 +94,7 @@ export function buildLocalTaskComposerData(
   state: AppState,
   task: LocalTask,
   project: LocalTaskProject,
-  options: { replace?: boolean; orcaProjectId?: string } = {}
+  options: { replace?: boolean; orcaProjectId?: string; prompt?: string } = {}
 ): Record<string, unknown> | null {
   const start = resolveLocalTaskStartTarget(state, project, options.orcaProjectId)
   if (!start) {
@@ -100,6 +102,7 @@ export function buildLocalTaskComposerData(
   }
   const pick: LocalTaskComposerStart = {
     taskId: task.id,
+    ...(options.prompt ? { prompt: options.prompt } : {}),
     orcaProjectIds: project.repos,
     replace: options.replace === true
   }
@@ -121,7 +124,7 @@ export function buildLocalTaskComposerData(
 export function startLocalTaskWork(
   task: LocalTask,
   project: LocalTaskProject,
-  options: { replace?: boolean; orcaProjectId?: string } = {}
+  options: { replace?: boolean; orcaProjectId?: string; prompt?: string } = {}
 ): boolean {
   const state = useAppStore.getState()
   const data = buildLocalTaskComposerData(state, task, project, options)
@@ -209,7 +212,7 @@ async function linkCreatedWorkspace(
     toast.info(
       translate(
         'localTasks.links.otherProjectNotLinked',
-        'The workspace was created in another project, so it was not linked to the task.'
+        'The workspace was created in a repository outside this project, so it was not linked to the task.'
       )
     )
     return false
@@ -269,6 +272,8 @@ export function handleLocalTaskCreationCompleted(completed: WorktreeCreationComp
     (linked) => {
       if (!linked) {
         forgetLocalTaskStartedWorkspace(workspace)
+      } else {
+        openLocalTaskPage({ taskId: start.taskId })
       }
     },
     () => forgetLocalTaskStartedWorkspace(workspace)

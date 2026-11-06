@@ -1,6 +1,9 @@
-import { Platform, StyleSheet } from 'react-native'
+import { Platform, StyleSheet, type ViewStyle } from 'react-native'
 import { colors, radii, spacing } from '../../theme/mobile-theme'
 import { themedStyleSheet } from '../../theme/themed-styles'
+
+// oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: RN Web accepts CSS overflow:clip; the web-only branch never reaches native ViewStyle.
+const webClipOverflow = 'clip' as ViewStyle['overflow']
 
 export const bottomDrawerStyles = themedStyleSheet(() => ({
   overlay: {
@@ -42,7 +45,8 @@ export const bottomDrawerStyles = themedStyleSheet(() => ({
   },
   drawerFill: {
     // Give flex results/dock a height budget; fill height alone leaves staticContent content-sized.
-    overflow: 'hidden',
+    // Web hidden overflow still scrolls on focus/scrollIntoView and clips the chat above the sheet.
+    overflow: Platform.OS === 'web' ? webClipOverflow : 'hidden',
     flexDirection: 'column'
   },
   handle: {

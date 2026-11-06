@@ -18,6 +18,11 @@ const fixture = vi.hoisted(() => {
         { id: 'three', displayName: 'Three' }
       ],
       repos: [],
+      worktreesByRepo: {},
+      folderWorkspaces: [],
+      unifiedTabsByWorktree: {},
+      projectGroups: [],
+      sshConnectionStates: new Map(),
       projectHostSetups: [
         setup('one', 'local'),
         setup('two', 'ssh:minizc'),
@@ -144,7 +149,7 @@ it('keeps the initial setup visible when its first project succeeds but another 
 
 it('keeps the settings dialog open for a failed row after another project succeeds', async () => {
   render(<LocalTasksSettingsPane />)
-  fireEvent.click(screen.getByRole('button', { name: 'New task project' }))
+  fireEvent.click(screen.getByRole('button', { name: 'New project' }))
   fireEvent.click(screen.getByRole('checkbox', { name: 'One' }))
   fireEvent.click(screen.getByRole('checkbox', { name: 'Two' }))
   fireEvent.change(screen.getByRole('textbox', { name: 'Prefix for Two' }), {

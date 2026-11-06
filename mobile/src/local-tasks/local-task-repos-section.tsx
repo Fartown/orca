@@ -30,8 +30,10 @@ export function LocalTaskReposSection(props: {
   const [menuFor, setMenuFor] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const choices = props.orcaProjects.state === 'ready' ? props.orcaProjects.projects : []
+  // Never the raw id: unread names and repositories removed from Orca each say so (REQ-017).
   const nameOf = (repoId: string) =>
-    choices.find((choice) => choice.id === repoId)?.displayName ?? repoId
+    choices.find((choice) => choice.id === repoId)?.displayName ??
+    (props.orcaProjects.state === 'ready' ? copy.repoNotInOrca : copy.repoNameUnread)
   const addable = choices.filter((choice) => !project.repos.includes(choice.id))
 
   const edit = async (kind: 'add' | 'remove' | 'default', repoId: string) => {
@@ -78,12 +80,21 @@ export function LocalTaskReposSection(props: {
       ) : (
         <Text style={localTaskStyles.hint}>{copy.noReposHint}</Text>
       )}
-      {props.readOnly || project.repos.length >= LOCAL_TASK_PROJECT_REPOS_MAX ? null : (
+      {props.readOnly ? null : project.repos.length >= LOCAL_TASK_PROJECT_REPOS_MAX ? (
+        <Text style={[localTaskStyles.hint, styles.below]}>
+          {copy.reposAtLimit(LOCAL_TASK_PROJECT_REPOS_MAX)}
+        </Text>
+      ) : (
         <Pressable
-          style={[localTaskStyles.secondaryButton, styles.add]}
+          style={[
+            localTaskStyles.secondaryButton,
+            styles.add,
+            props.orcaProjects.state !== 'ready' && localTaskStyles.disabled
+          ]}
           disabled={props.orcaProjects.state !== 'ready'}
           onPress={() => setAdding(true)}
           accessibilityRole="button"
+          accessibilityState={{ disabled: props.orcaProjects.state !== 'ready' }}
         >
           <Plus size={16} color={colors.textPrimary} />
           <Text style={localTaskStyles.secondaryButtonText}>{copy.addRepo}</Text>

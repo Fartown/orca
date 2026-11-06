@@ -145,7 +145,10 @@ export function MobileHomeLocalTasksCard(props: { connectedHosts: HostProfile[] 
                 {row.hostLabel ? ` · ${row.hostLabel}` : ''}
               </Text>
               <Text style={styles.rowMeta} numberOfLines={1}>
-                {copy.work.attentionKinds[row.item.kind]} · {localTaskAttentionLine(row.item)}
+                {row.item
+                  ? row.latestLine ||
+                    `${copy.work.attentionKinds[row.item.kind]} · ${localTaskAttentionLine(row.item)}`
+                  : copy.defaultStatusNames.review}
               </Text>
             </Pressable>
           ))}

@@ -117,7 +117,7 @@ function CommentEntry({
         <span className="font-medium text-foreground">{localTaskEventActor(event.source)}</span>
         <span>{formatLocalTaskTime(event.createdAt, now)}</span>
         {event.editedAt ? <span>{translate('localTasks.activity.edited', '(edited)')}</span> : null}
-        {writable && !editing ? (
+        {writable && event.payload?.progress !== true && !editing ? (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
@@ -183,6 +183,12 @@ export function LocalTaskActivity({
   const draft = useLocalTaskPage((state) => state.commentDrafts[taskId] ?? '')
   const commentBusy = useLocalTaskPage((state) => state.commentBusyTaskIds.includes(taskId))
   const now = useNow(60_000)
+  const [showSystem, setShowSystem] = useState(false)
+  const systemEvents =
+    events?.filter((event) => event.kind !== 'comment' && event.kind !== 'turn-ended') ?? []
+  const visibleEvents = events?.filter(
+    (event) => event.kind === 'comment' || (showSystem && event.kind !== 'turn-ended')
+  )
   return (
     <section className="flex flex-col gap-3">
       <h3 className="text-xs font-medium text-muted-foreground">
@@ -199,7 +205,7 @@ export function LocalTaskActivity({
         <LoaderCircle className="size-4 animate-spin text-muted-foreground motion-reduce:animate-none" />
       ) : events !== undefined ? (
         <ul className="flex flex-col gap-2">
-          {events.map((event) =>
+          {visibleEvents?.map((event) =>
             event.kind === 'comment' ? (
               <CommentEntry
                 key={`${taskId}:${event.id}`}
@@ -221,6 +227,19 @@ export function LocalTaskActivity({
           )}
         </ul>
       ) : null}
+      {systemEvents.length > 0 ? (
+        <Button
+          variant="ghost"
+          size="xs"
+          className="self-start"
+          aria-expanded={showSystem}
+          onClick={() => setShowSystem(!showSystem)}
+        >
+          {translate('localTasks.activity.systemRecords', 'System records ({{count}})', {
+            count: systemEvents.length
+          })}
+        </Button>
+      ) : null}
       {writable ? (
         <CommentComposer
           key={taskId}
@@ -238,6 +257,20 @@ export function LocalTaskActivity({
             (await runLocalTaskWrite(() => localTasksClient.addComment(taskId, body))) !== null
           }
         />
+      ) : null}
+      {index.tasksById.get(taskId) ? (
+        <div className="flex flex-wrap gap-3 text-2xs text-muted-foreground">
+          <span>
+            {translate('localTasks.detail.created', 'Created {{when}}', {
+              when: formatLocalTaskTime(index.tasksById.get(taskId)!.createdAt, now)
+            })}
+          </span>
+          <span>
+            {translate('localTasks.detail.updated', 'Updated {{when}}', {
+              when: formatLocalTaskTime(index.tasksById.get(taskId)!.updatedAt, now)
+            })}
+          </span>
+        </div>
       ) : null}
     </section>
   )

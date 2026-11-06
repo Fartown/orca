@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { ClipboardList } from 'lucide-react-native'
+import { matchesLocalTaskQuery } from '../../../src/shared/local-tasks/local-task-grouping'
 import type { LocalTask } from '../../../src/shared/local-tasks/local-task-types'
 import { AgentStateDot } from '../components/AgentStateDot'
 import { useResponsiveLayout } from '../layout/responsive-layout'
@@ -82,9 +83,11 @@ export function LocalTaskSessionStrip({ controller }: { controller: StripControl
   return (
     <View style={styles.strip}>
       <ClipboardList size={12} color={colors.textMuted} />
+      {/* Room for one: the title, with the ref for a screen reader (§4). */}
       <Pressable
         style={styles.task}
         accessibilityRole="button"
+        accessibilityLabel={`${task.title}, ${task.ref}`}
         onPress={() =>
           router.push(
             localTasksRouteHref(
@@ -143,15 +146,23 @@ function LinkSessionAction(props: {
   const [open, setOpen] = useState(false)
   const [sessionIds] = useState(() => createLocalTaskOperationIds())
   const [error, setError] = useState<string | null>(null)
+  const [query, setQuery] = useState('')
+  // No project here to resolve an earlier prefix with; the current ref and the title still match.
+  const shown = props.choices.filter((entry) => matchesLocalTaskQuery(entry, undefined, query))
+  const close = () => {
+    setError(null)
+    setQuery('')
+    setOpen(false)
+  }
   const linkSession = async (taskId: string) => {
     const outcome = await sendLocalTaskWrite(
       sessionIds,
       { ...props.record, taskId, linkedVia: 'manual' as const },
       createLocalTasksApi(props.client).recordSession
     )
-    setError(localTaskWriteMessage(copy, outcome))
+    setError(localTaskWriteMessage(copy, outcome, props.choices))
     if (outcome.kind === 'ok') {
-      setOpen(false)
+      close()
       props.onLinked()
     }
   }
@@ -164,16 +175,18 @@ function LinkSessionAction(props: {
         visible={open}
         title={copy.work.linkSessionTitle}
         error={error}
-        choices={props.choices.map((entry) => ({
+        search={
+          props.choices.length > 1
+            ? { query, placeholder: copy.searchPlaceholder, onChange: setQuery }
+            : null
+        }
+        choices={shown.map((entry) => ({
           key: entry.id,
           label: entry.title,
           subtitle: entry.ref,
           onPress: () => void linkSession(entry.id)
         }))}
-        onClose={() => {
-          setError(null)
-          setOpen(false)
-        }}
+        onClose={close}
       />
     </>
   )

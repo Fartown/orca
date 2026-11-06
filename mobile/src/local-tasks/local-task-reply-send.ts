@@ -27,6 +27,19 @@ export type LocalTaskReplyOutcome =
   /** Nothing reached the agent; the text goes back to the reply box. */
   | { kind: 'not-sent'; reason: string | null }
 
+/** Why a reply did not go out, in the caller's words; each finishes "Not sent: …". */
+export type LocalTaskReplyReasons = {
+  /** The session's terminal is no longer listed, or a chat session has no id. */
+  missing: string
+  notConnected: string
+  /** Text left in the terminal's input could not be cleared, so nothing was typed after it. */
+  inputNotCleared: string
+  /** The host refused the typed text, as it does while the agent waits on a choice. */
+  inputRefused: string
+  /** The chat session gave no fence to send against. */
+  chatNotReady: string
+}
+
 // Why its own reader: the session screen's inventory keeps only handles, a reply needs the pane.
 const replyTerminalsRead = defineRpcOperation({
   name: 'terminal.list-for-task-reply',
@@ -74,16 +87,16 @@ async function replyInTerminal(
   client: RpcClient,
   session: LocalTaskSessionLink,
   text: string,
-  missing: string
+  reasons: LocalTaskReplyReasons
 ): Promise<LocalTaskReplyOutcome> {
   let handle: string | null
   try {
     handle = await terminalHandleFor(client, session)
   } catch (error) {
-    return { kind: 'not-sent', reason: message(error) }
+    return { kind: 'not-sent', reason: message(error) ?? reasons.notConnected }
   }
   if (!handle) {
-    return { kind: 'not-sent', reason: missing }
+    return { kind: 'not-sent', reason: reasons.missing }
   }
   const deadline = openMobileNativeChatSendBudget()
   if (
@@ -94,7 +107,7 @@ async function replyInTerminal(
       deadline
     }))
   ) {
-    return { kind: 'not-sent', reason: null }
+    return { kind: 'not-sent', reason: reasons.inputNotCleared }
   }
   const outcome = await sendMobileNativeChatMessageWithOutcome({
     client,
@@ -107,13 +120,14 @@ async function replyInTerminal(
     ? { kind: 'delivered' }
     : outcome === 'unknown'
       ? { kind: 'unconfirmed' }
-      : { kind: 'not-sent', reason: null }
+      : { kind: 'not-sent', reason: reasons.inputRefused }
 }
 
 async function replyInChat(
   client: RpcClient,
   sessionId: string,
-  text: string
+  text: string,
+  reasons: LocalTaskReplyReasons
 ): Promise<LocalTaskReplyOutcome> {
   let fence: number | undefined
   try {
@@ -127,10 +141,10 @@ async function replyInChat(
     )
     fence = history.page.fence ?? (history.ok ? undefined : history.fence)
   } catch (error) {
-    return { kind: 'not-sent', reason: message(error) }
+    return { kind: 'not-sent', reason: message(error) ?? reasons.notConnected }
   }
   if (typeof fence !== 'number') {
-    return { kind: 'not-sent', reason: null }
+    return { kind: 'not-sent', reason: reasons.chatNotReady }
   }
   let refusal: string | null = null
   const outcome = await sendMobileStructuredAgentSessionMessage({
@@ -149,26 +163,26 @@ async function replyInChat(
     ? { kind: 'delivered' }
     : outcome === 'unknown'
       ? { kind: 'unconfirmed' }
-      : { kind: 'not-sent', reason: refusal }
+      : { kind: 'not-sent', reason: refusal ?? reasons.inputRefused }
 }
 
 /**
- * Sends one reply into a linked session on the library's host. `missing` is said when the session's
- * terminal is no longer listed. The caller checks contact first; a disconnected client sends nothing.
+ * Sends one reply into a linked session on the library's host; every refusal says why. The caller
+ * checks contact first; a disconnected client sends nothing.
  */
 export async function sendLocalTaskReply(args: {
   client: RpcClient | null
   session: LocalTaskSessionLink
   text: string
-  missing: string
+  reasons: LocalTaskReplyReasons
 }): Promise<LocalTaskReplyOutcome> {
   if (!args.client || args.client.getState() !== 'connected') {
-    return { kind: 'not-sent', reason: null }
+    return { kind: 'not-sent', reason: args.reasons.notConnected }
   }
   if (args.session.surface === 'chat') {
     return args.session.sessionId
-      ? replyInChat(args.client, args.session.sessionId, args.text)
-      : { kind: 'not-sent', reason: args.missing }
+      ? replyInChat(args.client, args.session.sessionId, args.text, args.reasons)
+      : { kind: 'not-sent', reason: args.reasons.missing }
   }
-  return replyInTerminal(args.client, args.session, args.text, args.missing)
+  return replyInTerminal(args.client, args.session, args.text, args.reasons)
 }

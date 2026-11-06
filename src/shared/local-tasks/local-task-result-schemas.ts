@@ -53,6 +53,7 @@ const FAILURE_CODES = everyMember<LocalTaskFailureCode>()([
 
 const EVENT_KINDS = everyMember<LocalTaskEventKind>()([
   'comment',
+  'turn-ended',
   'created',
   'title',
   'description',
@@ -119,7 +120,11 @@ export const projectSchema: z.ZodType<LocalTaskProject> = z.object({
   repos: z.array(z.string()),
   defaultRepoId: z.string().nullable(),
   lastExecutionHostId: z.string().nullable(),
-  rules: z.object({ startMovesToInProgress: z.boolean(), prMergedCompletes: z.boolean() }),
+  rules: z.object({
+    startMovesToInProgress: z.boolean(),
+    prMergedCompletes: z.boolean(),
+    prMergedMode: z.enum(['none', 'review', 'completed']).optional()
+  }),
   statuses: z.array(statusDefSchema),
   createdAt: z.number(),
   updatedAt: z.number(),
@@ -141,7 +146,16 @@ export const taskSchema: z.ZodType<LocalTask> = z.object({
   createdAt: z.number(),
   updatedAt: z.number(),
   revision: z.number(),
-  formerRefs: z.array(z.string()).optional()
+  formerRefs: z.array(z.string()).optional(),
+  latestProgress: z
+    .object({
+      kind: z.enum(['progress', 'turn-ended']),
+      body: z.string(),
+      at: z.number(),
+      sessionLinkId: z.string().nullable(),
+      needsYou: z.string().optional()
+    })
+    .optional()
 })
 
 export const eventSchema: z.ZodType<LocalTaskEvent> = z.object({

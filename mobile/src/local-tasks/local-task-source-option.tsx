@@ -42,7 +42,8 @@ export function useLocalTaskSourceOptions(page: {
       {
         value: LOCAL_TASK_SOURCE_OPTION,
         label: copy.sourceLabel,
-        subtitle: copy.sourceSubtitle,
+        // A dimmed row says why, as the picker's other disabled rows do.
+        subtitle: connected ? copy.sourceSubtitle : copy.desktopDisconnected(''),
         disabled: !connected,
         renderIcon: (selected: boolean) => (
           <ListTodo size={16} color={selected ? colors.textPrimary : colors.textSecondary} />

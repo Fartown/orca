@@ -4545,7 +4545,34 @@
     }
   },
   "localTasks": {
-    "title": "Tasks",
-    "description": "Description"
+    "title": "Local tasks",
+    "description": "Description",
+    "now": "Now",
+    "noProgress": "No progress yet",
+    "systemRecords": "System records",
+    "prMergedRule": "When a PR merges",
+    "prMergedModes": {
+      "none": "Keep the current status",
+      "review": "Move to review",
+      "completed": "Complete the task"
+    },
+    "defaultStatus": { "review": "Ready for acceptance" },
+    "acceptReview": "Accept",
+    "rejectReview": "Send back",
+    "rejectReason": "What needs fixing?",
+    "dispatchPlaceholder": "What should the agent do?",
+    "dispatchButton": "Start task",
+    "dispatchRunOn": "Run on",
+    "dispatchNoSetup": "Choose a project with a repository to start work",
+    "dispatchHost": "Host",
+    "dispatchRepo": "Repository",
+    "dispatchWorkspace": "Workspace",
+    "dispatchTask": "Task",
+    "dispatchTarget": "Target",
+    "dispatchChooseTarget": "Choose a target",
+    "sourceTab": {
+      "label": "Local",
+      "placeholder": "Search local tasks by title or ref"
+    }
   }
 }

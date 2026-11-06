@@ -275,7 +275,6 @@ describe('mobile task failure recovery', () => {
     const library = testLibrary({ acceptTasks: vi.fn(), reload: vi.fn(), tasks: [parent] })
     const draft = {
       ...initialLocalTaskDraft({ kind: 'subtask' as const, parent }),
-      criteria: [{ id: 'c', text: 'passes review' }],
       labelsText: 'frontend',
       statusId: 'chosen',
       priority: 2 as const
@@ -307,75 +306,8 @@ describe('mobile task failure recovery', () => {
       taskIds: ['child'],
       patch: { statusId: 'chosen', priority: 2, addLabels: ['frontend'] }
     })
-    expect(updateTask).toHaveBeenCalledWith(
-      expect.objectContaining({
-        taskId: 'child',
-        patch: { criteria: ['passes review'] }
-      })
-    )
+    expect(updateTask).not.toHaveBeenCalled()
     expect(model?.partialTaskId).toBeNull()
-  })
-
-  it('applies edited fields to the same children after a later criterion fails', async () => {
-    const parent = task('parent')
-    const children = [task('first'), task('second')]
-    const createSubtasks = vi.fn<LocalTasksApi['createSubtasks']>(async () => ({
-      kind: 'ok',
-      value: { ok: true, tasks: children }
-    }))
-    const batchUpdate = vi.fn<LocalTasksApi['batchUpdate']>(async () => ({
-      kind: 'ok',
-      value: { ok: true }
-    }))
-    const updateTask = vi
-      .fn<LocalTasksApi['updateTask']>()
-      .mockResolvedValueOnce({ kind: 'ok', value: { ok: true, task: children[0] } })
-      .mockResolvedValueOnce({ kind: 'refused', code: 'stale', detail: null })
-      .mockResolvedValue({ kind: 'ok', value: { ok: true, task: children[0] } })
-    const library = testLibrary({ acceptTasks: vi.fn(), reload: vi.fn(), tasks: [parent] })
-    let model: ReturnType<typeof useLocalTaskFormSubmit> | undefined
-    function Probe() {
-      model = useLocalTaskFormSubmit(testApi({ createSubtasks, batchUpdate, updateTask }), library)
-      return null
-    }
-    const base = initialLocalTaskDraft({ kind: 'subtask', parent })
-    const firstDraft = {
-      ...base,
-      priority: 2 as const,
-      labelsText: 'old',
-      criteria: [{ id: 'c', text: 'old criterion' }]
-    }
-    const revised = {
-      ...base,
-      priority: 0 as const,
-      labelsText: 'new',
-      criteria: [{ id: 'c', text: 'new criterion' }]
-    }
-    await act(async () => {
-      renderer = create(createElement(Probe))
-    })
-    await act(async () => {
-      expect(await model?.createSubtasks(parent, ['one', 'two'], firstDraft)).toBe(false)
-    })
-    await act(async () => {
-      expect(await model?.retrySubtasks(parent, revised)).toBe(true)
-    })
-    expect(createSubtasks).toHaveBeenCalledOnce()
-    expect(batchUpdate).toHaveBeenCalledTimes(2)
-    expect(batchUpdate).toHaveBeenNthCalledWith(
-      2,
-      expect.objectContaining({
-        patch: expect.objectContaining({
-          priority: 0,
-          addLabels: ['new'],
-          removeLabels: ['old']
-        })
-      })
-    )
-    expect(updateTask.mock.calls.slice(2).map((call) => call[0])).toEqual([
-      expect.objectContaining({ taskId: 'first', patch: { criteria: ['new criterion'] } }),
-      expect.objectContaining({ taskId: 'second', patch: { criteria: ['new criterion'] } })
-    ])
   })
 
   it('retains the multi-line intent and operation id when the create reply is unknown', async () => {
@@ -452,54 +384,6 @@ describe('mobile task failure recovery', () => {
     )
     expect(batchUpdate.mock.calls[2]?.[0].clientOperationId).not.toBe(
       batchUpdate.mock.calls[0]?.[0].clientOperationId
-    )
-  })
-
-  it('settles an unknown criterion write before applying a changed criterion', async () => {
-    const parent = task('parent')
-    const child = task('child')
-    const createSubtasks = vi.fn<LocalTasksApi['createSubtasks']>(async () => ({
-      kind: 'ok',
-      value: { ok: true, tasks: [child] }
-    }))
-    const updateTask = vi
-      .fn<LocalTasksApi['updateTask']>()
-      .mockResolvedValueOnce({ kind: 'unknown' })
-      .mockResolvedValue({ kind: 'ok', value: { ok: true, task: child } })
-    const library = testLibrary({ acceptTasks: vi.fn(), reload: vi.fn(), tasks: [parent] })
-    let model: ReturnType<typeof useLocalTaskFormSubmit> | undefined
-    function Probe() {
-      model = useLocalTaskFormSubmit(testApi({ createSubtasks, updateTask }), library)
-      return null
-    }
-    const base = initialLocalTaskDraft({ kind: 'subtask', parent })
-    await act(async () => {
-      renderer = create(createElement(Probe))
-    })
-    await act(async () => {
-      expect(
-        await model?.createSubtasks(parent, ['one'], {
-          ...base,
-          criteria: [{ id: 'c', text: 'old' }]
-        })
-      ).toBe(false)
-    })
-    await act(async () => {
-      expect(
-        await model?.retrySubtasks(parent, {
-          ...base,
-          criteria: [{ id: 'c', text: 'new' }]
-        })
-      ).toBe(true)
-    })
-    expect(createSubtasks).toHaveBeenCalledOnce()
-    expect(updateTask).toHaveBeenCalledTimes(3)
-    expect(updateTask.mock.calls[1]?.[0].clientOperationId).toBe(
-      updateTask.mock.calls[0]?.[0].clientOperationId
-    )
-    expect(updateTask).toHaveBeenNthCalledWith(
-      3,
-      expect.objectContaining({ patch: { criteria: ['new'] } })
     )
   })
 })

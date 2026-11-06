@@ -144,6 +144,11 @@ export function LocalTaskAttentionCard(props: {
         </Text>
         <Text style={localTaskStyles.meta}>{formatLocalTaskAgo(copy, row.since, props.now)}</Text>
       </Pressable>
+      {row.review ? (
+        <Pressable onPress={() => props.onOpenTask(row.task.id)} accessibilityRole="button">
+          <Text style={styles.kind}>{copy.defaultStatusNames.review}</Text>
+        </Pressable>
+      ) : null}
       {row.items.map((item) => (
         <AttentionItemLine key={item.key} item={item} handlers={props.handlers} />
       ))}

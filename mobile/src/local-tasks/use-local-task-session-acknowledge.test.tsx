@@ -84,7 +84,7 @@ const client: RpcClient = {
   close: () => {}
 }
 
-function Probe(props: { taskSessionId: string; progress: LocalTaskProgressSnapshot }) {
+function Probe(props: { taskSessionId: string | null; progress: LocalTaskProgressSnapshot }) {
   useAcknowledgeOpenSession(client, props.taskSessionId, props.progress)
   return null
 }
@@ -101,7 +101,7 @@ afterEach(() => {
   vi.useRealTimers()
 })
 
-async function show(progress: LocalTaskProgressSnapshot, taskSessionId = 's1') {
+async function show(progress: LocalTaskProgressSnapshot, taskSessionId: string | null = 's1') {
   const element = createElement(Probe, { taskSessionId, progress })
   await act(async () => {
     if (renderer) {
@@ -113,6 +113,17 @@ async function show(progress: LocalTaskProgressSnapshot, taskSessionId = 's1') {
 }
 
 describe('opening a linked session marks its "Needs you" items seen', () => {
+  it('waits for a drawer chat to become visible and acknowledges it once', async () => {
+    vi.setSystemTime(1_000)
+    const progress = snapshot([item('a', 500)])
+    await show(progress, null)
+    expect(acknowledged).toEqual([])
+
+    await show(progress, 's1')
+    await show(progress, 's1')
+    expect(acknowledged).toEqual(['a'])
+  })
+
   it('marks nothing while a screen pushed over the session keeps it mounted', async () => {
     vi.setSystemTime(1_000)
     screen.focused = false

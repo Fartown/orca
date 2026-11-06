@@ -5,6 +5,34 @@ const LIBRARY_NOTE =
 
 export const LOCAL_TASK_COMMAND_SPECS: CommandSpec[] = [
   {
+    path: ['task', 'create'],
+    summary: 'Create a local task',
+    usage:
+      'orca task create <title> [--parent <ref>] [--project <name-or-prefix>] [--body-file <path|->] [--json]',
+    allowedFlags: [...GLOBAL_FLAGS, 'title', 'parent', 'project', 'body', 'body-file'],
+    positionalArgs: ['title'],
+    notes: ['Uses the current task project when run inside a linked session.'],
+    examples: ['orca task create "Investigate retry timeout" --parent SHOP-12']
+  },
+  {
+    path: ['task', 'update'],
+    summary: 'Update a local task title',
+    usage: 'orca task update <ref> --title <title> [--json]',
+    allowedFlags: [...GLOBAL_FLAGS, 'ref', 'title'],
+    positionalArgs: ['ref'],
+    notes: ['Uses the task revision so a concurrent change is refused.'],
+    examples: ['orca task update SHOP-12 --title "Export orders"']
+  },
+  {
+    path: ['task', 'link'],
+    summary: 'Link a local task to a workspace',
+    usage: 'orca task link <ref> [--worktree <selector>] [--json]',
+    allowedFlags: [...GLOBAL_FLAGS, 'ref', 'worktree'],
+    positionalArgs: ['ref'],
+    notes: ['Links the current workspace unless --worktree selects another.'],
+    examples: ['orca task link SHOP-12']
+  },
+  {
     path: ['task', 'list'],
     summary: 'List local tasks, title first',
     usage: 'orca task list [--project <name-or-prefix>] [--status <status-or-category>] [--json]',
@@ -17,7 +45,7 @@ export const LOCAL_TASK_COMMAND_SPECS: CommandSpec[] = [
   },
   {
     path: ['task', 'show'],
-    summary: 'Show one local task with its description and done criteria',
+    summary: 'Show one local task with its description',
     usage: 'orca task show <ref> [--json]',
     allowedFlags: [...GLOBAL_FLAGS, 'ref'],
     positionalArgs: ['ref'],
@@ -29,11 +57,11 @@ export const LOCAL_TASK_COMMAND_SPECS: CommandSpec[] = [
   },
   {
     path: ['task', 'current'],
-    summary: 'Show the local task the current workspace belongs to',
+    summary: 'Show the task linked to this session or workspace',
     usage: 'orca task current [--worktree <selector>] [--json]',
     allowedFlags: [...GLOBAL_FLAGS, 'worktree'],
     notes: [
-      'Resolves the Orca-managed workspace that contains the current directory; on a paired host pass --worktree.',
+      'Checks the current pane or agent session first, then resolves the workspace containing the current directory; on a paired host pass --worktree.',
       'A workspace belongs to at most one task; an unlinked workspace prints that it has none.'
     ],
     examples: ['orca task current', 'orca task current --worktree name:checkout --json']
@@ -58,9 +86,35 @@ export const LOCAL_TASK_COMMAND_SPECS: CommandSpec[] = [
     variadicPositional: true,
     repeatableFlags: ['status'],
     notes: [
-      "Takes a status name of the task's project in any case, or a category such as completed.",
-      'Setting the status the task already has changes nothing.'
+      "Takes a status name of the task's project in any case, or a category such as review.",
+      'Setting the status the task already has changes nothing.',
+      'A completed status is refused: only the user completes a task, in Orca.'
     ],
-    examples: ['orca task status SHOP-12 "In Review"', 'orca task status SHOP-12 completed']
+    examples: ['orca task status SHOP-12 "In Review"', 'orca task status SHOP-12 review']
+  },
+  {
+    path: ['task', 'progress'],
+    summary: 'Write back the result of a round on a local task',
+    usage:
+      'orca task progress <ref> (--body <text> | --body-file <path|->) [--needs-you <text>] [--json]',
+    allowedFlags: [...GLOBAL_FLAGS, 'ref', 'body', 'body-file', 'needs-you'],
+    positionalArgs: ['ref'],
+    notes: [
+      'Three parts: what you did; the conclusion or output; the next step or what you need.',
+      'Write the text to a UTF-8 file and pass --body-file; inline multi-line text breaks in shells.',
+      'Inside a session started from the task, the writeback is tied to that session.'
+    ],
+    examples: [
+      'orca task progress SHOP-12 --body-file result.md',
+      'orca task progress SHOP-12 --body-file result.md --needs-you "Pick the retry timeout"'
+    ]
+  },
+  {
+    path: ['task', 'guide'],
+    summary: 'Print the rules an agent follows on a local task',
+    usage: 'orca task guide [--dispatcher]',
+    allowedFlags: [...GLOBAL_FLAGS, 'dispatcher'],
+    notes: ['--dispatcher prints the rules for the dispatcher session instead.'],
+    examples: ['orca task guide', 'orca task guide --dispatcher']
   }
 ]

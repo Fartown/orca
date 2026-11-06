@@ -1,17 +1,35 @@
 import { beforeEach, expect, it, vi } from 'vitest'
 
-const fixture = vi.hoisted(() => ({
-  reveal: vi.fn(() => true),
-  acknowledge: vi.fn(async () => ({ ok: true }))
-}))
+const fixture = vi.hoisted(() => {
+  const activeWorktreeId = new Map<string, string>().get('active') ?? null
+  const visibleTargets: { worktreeId: string; tabId: string }[] = []
+  return {
+    reveal: vi.fn(() => true),
+    acknowledge: vi.fn(async () => ({ ok: true })),
+    openTaskPage: vi.fn(),
+    activeView: 'tasks',
+    activeWorktreeId,
+    visibleTargets
+  }
+})
 vi.mock('@/store', () => ({
-  useAppStore: { getState: () => ({ unifiedTabsByWorktree: {} }) }
+  useAppStore: {
+    getState: () => ({
+      unifiedTabsByWorktree: {},
+      activeView: fixture.activeView,
+      activeWorktreeId: fixture.activeWorktreeId
+    })
+  }
+}))
+vi.mock('@/hooks/agent-auto-ack-targets', () => ({
+  resolveAutoAckTabTargets: () => fixture.visibleTargets
 }))
 vi.mock('@/lib/reveal-terminal-pane', () => ({ revealTerminalPane: fixture.reveal }))
 vi.mock('@/lib/worktree-activation', () => ({ activateAndRevealWorkspace: () => true }))
 vi.mock('@/lib/structured-agent-session-tab-activation', () => ({
   activateStructuredAgentSessionTab: () => true
 }))
+vi.mock('./local-task-navigation', () => ({ openLocalTaskPage: fixture.openTaskPage }))
 vi.mock('./local-tasks-runtime-client', () => ({
   localTasksClient: { acknowledgeAttention: fixture.acknowledge }
 }))
@@ -21,7 +39,8 @@ import type {
   LocalTaskSessionLink
 } from '../../../shared/local-tasks/local-task-link-types'
 import { localTasksDomainStore } from './local-tasks-domain-store'
-import { openLocalTaskSession } from './local-task-session-reveal'
+import { acknowledgeLocalTaskSessionItems, openLocalTaskSession } from './local-task-session-reveal'
+import { localTaskSessionPanelStore } from './local-task-session-panel-store'
 
 const LEAF = '11111111-1111-4111-8111-111111111111'
 const SESSION = 'runtime:env-1/s-1'
@@ -58,6 +77,11 @@ function item(taskSessionId: string, key: string): LocalTaskAttentionItem {
 beforeEach(() => {
   fixture.reveal.mockClear()
   fixture.acknowledge.mockClear()
+  fixture.openTaskPage.mockClear()
+  fixture.activeView = 'tasks'
+  fixture.activeWorktreeId = null
+  fixture.visibleTargets = []
+  localTaskSessionPanelStore.getState().close()
   localTasksDomainStore.setState(localTasksDomainStore.getInitialState())
   localTasksDomainStore.getState().openEndpoint('runtime:env-1')
   const library = localTasksDomainStore.getState().writer('runtime:env-1')
@@ -70,12 +94,29 @@ beforeEach(() => {
   })
 })
 
-it('marks what an opened session waited for as seen, in its own library', () => {
+it('opens a preview without acknowledging before its surface is ready', () => {
   expect(openLocalTaskSession(link)).toBe(true)
-  expect(fixture.reveal).toHaveBeenCalledWith(
-    expect.objectContaining({ tabId: 'web-terminal-tab-1', leafId: LEAF })
-  )
+  expect(fixture.openTaskPage).toHaveBeenCalledWith({ taskId: link.taskId })
+  expect(localTaskSessionPanelStore.getState()).toMatchObject({
+    mode: 'narrow',
+    sessionLinkId: SESSION,
+    taskId: link.taskId
+  })
+  expect(fixture.reveal).not.toHaveBeenCalled()
+  expect(fixture.acknowledge).not.toHaveBeenCalled()
+  acknowledgeLocalTaskSessionItems(SESSION)
   expect(fixture.acknowledge.mock.calls).toEqual([[`tab-1:${LEAF}@5`, SESSION]])
+})
+
+it('reveals an already visible terminal tab without creating a second session surface', () => {
+  fixture.activeView = 'terminal'
+  fixture.activeWorktreeId = link.worktreeId
+  fixture.visibleTargets = [{ worktreeId: link.worktreeId!, tabId: link.tabId! }]
+  expect(openLocalTaskSession(link)).toBe(true)
+  expect(fixture.reveal).toHaveBeenCalledOnce()
+  expect(fixture.openTaskPage).not.toHaveBeenCalled()
+  expect(localTaskSessionPanelStore.getState().mode).toBe('closed')
+  expect(fixture.acknowledge).not.toHaveBeenCalled()
 })
 
 it('leaves a question the opened session still waits on in Needs you (REQ-014)', () => {
@@ -92,7 +133,7 @@ it('leaves a question the opened session still waits on in Needs you (REQ-014)',
 })
 
 it('marks nothing seen when the session could not be shown', () => {
-  fixture.reveal.mockReturnValueOnce(false)
-  expect(openLocalTaskSession(link)).toBe(false)
+  expect(openLocalTaskSession({ ...link, worktreeId: null })).toBe(false)
+  expect(localTaskSessionPanelStore.getState().mode).toBe('closed')
   expect(fixture.acknowledge).not.toHaveBeenCalled()
 })

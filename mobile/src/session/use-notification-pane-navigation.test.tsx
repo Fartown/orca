@@ -96,18 +96,21 @@ const switched: MobileSessionTab[] = []
 function Probe({
   terminalsLoaded,
   sessionTabs = TABS,
-  openNativeSession
+  openNativeSession,
+  paneKeyOverride
 }: {
   terminalsLoaded: boolean
   sessionTabs?: MobileSessionTab[]
   openNativeSession?: (source: StructuredSessionOpenSource) => Promise<void>
+  paneKeyOverride?: string | null
 }): null {
   useNotificationPaneNavigation({
     sessionTabs,
     terminalsLoaded,
     switchSessionTab: (tab) => switched.push(tab),
     worktreeId: 'wt-1',
-    openNativeSession
+    openNativeSession,
+    paneKeyOverride
   })
   return null
 }
@@ -141,6 +144,17 @@ beforeEach(() => {
 
 // Exercise the page hook: shell init carries pane requests because this document at / cannot edit the native route.
 describe('the page pane hook', () => {
+  it('uses an explicit drawer pane without consuming or following the page route', () => {
+    bridge.route = { pathname: '/h/host-1/local-tasks', params: { paneKey: `tab-a:${LEAF}` } }
+    pageUrl.params = { paneKey: `tab-a:${LEAF}` }
+    act(() => {
+      create(createElement(Probe, { terminalsLoaded: true, paneKeyOverride: `tab-b:${LEAF}` }))
+    })
+    expect(switched.map((tab) => tab.id)).toEqual(['second'])
+    expect(bridge.cleared).toEqual([])
+    expect(pageUrl.params.paneKey).toBe(`tab-a:${LEAF}`)
+    expect(bridge.listeners).toHaveLength(0)
+  })
   it('switches to the pane the page was opened on, which arrives in the first init', () => {
     bridge.route = { pathname: '/h/host-1/session/wt-1', params: { paneKey: `tab-b:${LEAF}` } }
     render(true)

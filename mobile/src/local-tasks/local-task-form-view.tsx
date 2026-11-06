@@ -13,7 +13,6 @@ import { colors, spacing } from '../theme/mobile-theme'
 import type { LocalTasksApi } from './local-tasks-api'
 import { localTasksCopy } from './local-tasks-copy'
 import {
-  LocalTaskCriteriaEditor,
   LocalTaskFormPrompts,
   LocalTaskPasteChoice,
   LocalTaskPropertyRow,
@@ -138,7 +137,9 @@ export function LocalTaskFormView(props: Props) {
           placeholder={copy.titlePlaceholder}
           placeholderTextColor={colors.textMuted}
           onChangeText={(next) => {
-            if (mode.kind === 'subtask' && isMultiLinePaste(draft.title, next)) {
+            // Read-only can't create subtasks, so a paste stays as one title instead of a choice
+            // that would never show.
+            if (!props.readOnly && mode.kind === 'subtask' && isMultiLinePaste(draft.title, next)) {
               setPasted(splitPastedLines(next))
               return
             }
@@ -156,10 +157,6 @@ export function LocalTaskFormView(props: Props) {
             onChangeText={(description) => patch({ description })}
           />
         )}
-        <LocalTaskCriteriaEditor
-          criteria={draft.criteria}
-          onChange={(criteria) => patch({ criteria })}
-        />
         {mode.kind === 'create' ? (
           <LocalTaskSubtaskEntries
             entries={draft.subtasks}
@@ -223,10 +220,11 @@ export function LocalTaskFormView(props: Props) {
             >
               <Text style={localTaskStyles.secondaryButtonText}>{copy.retrySavingSubtasks}</Text>
             </Pressable>
+            {/* Viewing them writes nothing, so a read-only library still lets the user go look. */}
             {submit.partialTaskId ? (
               <Pressable
                 style={localTaskStyles.secondaryButton}
-                disabled={submit.busy || props.readOnly}
+                disabled={submit.busy}
                 onPress={() => props.onDone(mode.parent.id)}
                 accessibilityRole="button"
               >

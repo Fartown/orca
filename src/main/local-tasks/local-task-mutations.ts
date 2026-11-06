@@ -52,7 +52,7 @@ export function createLocalTask(
     project,
     title: input.title,
     description: input.description ?? '',
-    criteria: input.criteria ?? [],
+    criteria: [],
     statusId,
     priority: input.priority ?? 0,
     parentId: input.parentId ?? null,
@@ -117,7 +117,14 @@ export function batchUpdateLocalTasks(
   const { statusId, priority, addLabels, removeLabels } = input.patch
   if (
     statusId &&
-    present.some((task) => !projects.get(task.projectId)?.statuses.some((s) => s.id === statusId))
+    present.some(
+      (task) =>
+        !projects.get(task.projectId)?.statuses.some((s) => s.id === statusId) ||
+        // Why: the CLI cannot tell a person from an agent, so completing stays a UI click.
+        (source === 'cli' &&
+          projects.get(task.projectId)?.statuses.find((s) => s.id === statusId)?.category ===
+            'completed')
+    )
   ) {
     return { ok: false, code: 'status_invalid' }
   }

@@ -37,7 +37,7 @@ export const DEFAULT_LOCAL_TASK_STATUSES: readonly DefaultLocalTaskStatus[] = [
   { category: 'backlog', name: 'Backlog', color: 'gray' },
   { category: 'unstarted', name: 'Todo', color: 'gray' },
   { category: 'started', name: 'In Progress', color: 'yellow' },
-  { category: 'review', name: 'In Review', color: 'blue' },
+  { category: 'review', name: 'Ready for acceptance', color: 'blue' },
   { category: 'completed', name: 'Done', color: 'green' },
   { category: 'canceled', name: 'Canceled', color: 'gray' }
 ]

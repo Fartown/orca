@@ -1,3 +1,4 @@
+import { LocalTaskLatestProgress } from './LocalTaskLatestProgress'
 import { memo, useEffect, useRef } from 'react'
 import { ChevronDown, ChevronRight } from 'lucide-react'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -79,8 +80,10 @@ function FoldToggle({ task, folded }: { task: LocalTask; folded: boolean }): Rea
       aria-expanded={!folded}
       aria-label={
         folded
-          ? translate('localTasks.row.unfold', 'Show subtasks of {{ref}}', { ref: task.ref })
-          : translate('localTasks.row.fold', 'Hide subtasks of {{ref}}', { ref: task.ref })
+          ? translate('localTasks.row.unfold', 'Show subtasks of “{{title}}”', {
+              title: task.title
+            })
+          : translate('localTasks.row.fold', 'Hide subtasks of “{{title}}”', { title: task.title })
       }
       onClick={(event) => {
         event.stopPropagation()
@@ -168,7 +171,7 @@ export const LocalTaskRow = memo(function LocalTaskRow({
         paddingLeft: `${INDENT_BASE_PX + Math.min(depth, INDENT_DEPTH_MAX) * INDENT_STEP_PX}px`
       }}
       className={cn(
-        'group/row flex h-9 min-w-0 cursor-pointer items-center gap-2.5 overflow-hidden border-b border-border/40 pr-3 text-[13px] transition-colors last:border-b-0 hover:bg-accent/60',
+        'group/row flex min-h-12 min-w-0 cursor-pointer items-center gap-2.5 overflow-hidden border-b border-border/40 pr-3 text-[13px] transition-colors last:border-b-0 hover:bg-accent/60',
         isCursor && 'bg-accent',
         isSelected && 'bg-accent/80'
       )}
@@ -183,7 +186,9 @@ export const LocalTaskRow = memo(function LocalTaskRow({
         <Checkbox
           checked={isSelected}
           onCheckedChange={() => localTaskPageStore.getState().toggleSelected(task.id)}
-          aria-label={translate('localTasks.row.select', 'Select {{ref}}', { ref: task.ref })}
+          aria-label={translate('localTasks.row.select', 'Select “{{title}}”', {
+            title: task.title
+          })}
         />
       </span>
       {folded === null ? (
@@ -201,7 +206,10 @@ export const LocalTaskRow = memo(function LocalTaskRow({
         className="hidden max-w-24 shrink-0 @2xl/local-task-list:block"
       />
       {status ? <LocalTaskStatusIcon category={status.category} color={status.color} /> : null}
-      <span className="min-w-16 flex-1 truncate text-foreground">{task.title}</span>
+      <span className="min-w-16 flex-1 py-1 text-foreground">
+        <span className="block truncate">{task.title}</span>
+        <LocalTaskLatestProgress task={task} index={index} />
+      </span>
       {status && !repeatsHeading(status, statusHeading, index, task.projectId) ? (
         <span className="hidden shrink-0 rounded-sm bg-muted px-1.5 text-2xs leading-4 text-muted-foreground @xl/local-task-list:inline">
           {status.name}

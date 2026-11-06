@@ -7,32 +7,36 @@ import {
   useLocalTaskPage,
   type LocalTaskPickerKind
 } from '@/local-tasks/local-task-page-store'
-import { useCanWriteLocalTaskRows } from '@/local-tasks/local-task-write-access'
+import { useLocalTaskRowsWriteReason } from '@/local-tasks/local-task-write-reason'
 import type { LocalTaskListModel } from './use-local-task-list-model'
+import { LocalTaskActionTooltip } from './LocalTaskActionTooltip'
 
 function PickerButton({
   kind,
   label,
   shortcut,
   taskIds,
-  disabled
+  reason
 }: {
   kind: LocalTaskPickerKind
   label: string
   shortcut: string
   taskIds: string[]
-  disabled: boolean
+  /** Why the whole batch is greyed: one selected task's library takes no change now. */
+  reason: string | null
 }): React.JSX.Element {
   return (
-    <Button
-      variant="outline"
-      size="xs"
-      disabled={disabled}
-      onClick={() => localTaskPageStore.getState().openPicker(kind, taskIds)}
-    >
-      {label}
-      <ShortcutKeyCombo keys={[shortcut]} keyCapClassName="min-w-4 px-1 py-0 text-3xs" />
-    </Button>
+    <LocalTaskActionTooltip reason={reason}>
+      <Button
+        variant="outline"
+        size="xs"
+        disabled={reason !== null || taskIds.length === 0}
+        onClick={() => localTaskPageStore.getState().openPicker(kind, taskIds)}
+      >
+        {label}
+        <ShortcutKeyCombo keys={[shortcut]} keyCapClassName="min-w-4 px-1 py-0 text-3xs" />
+      </Button>
+    </LocalTaskActionTooltip>
   )
 }
 
@@ -42,7 +46,7 @@ export function LocalTaskBatchBar({ model }: { model: LocalTaskListModel }): Rea
   // Why: a task deleted elsewhere drops out of the batch instead of failing it.
   const taskIds = selected.filter((taskId) => model.index.tasksById.has(taskId))
   // Why every task: a batch spanning a read-only or unreachable library would fail part-way.
-  const writable = useCanWriteLocalTaskRows(taskIds)
+  const reason = useLocalTaskRowsWriteReason(taskIds)
   return (
     <div
       role="toolbar"
@@ -57,21 +61,21 @@ export function LocalTaskBatchBar({ model }: { model: LocalTaskListModel }): Rea
         label={translate('localTasks.batch.status', 'Status')}
         shortcut="S"
         taskIds={taskIds}
-        disabled={!writable}
+        reason={reason}
       />
       <PickerButton
         kind="priority"
         label={translate('localTasks.batch.priority', 'Priority')}
         shortcut="P"
         taskIds={taskIds}
-        disabled={!writable}
+        reason={reason}
       />
       <PickerButton
         kind="labels"
         label={translate('localTasks.batch.labels', 'Labels')}
         shortcut="L"
         taskIds={taskIds}
-        disabled={!writable}
+        reason={reason}
       />
       <Button
         variant="ghost"
