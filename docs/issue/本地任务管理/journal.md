@@ -381,22 +381,10 @@ external_ids:
 - 本轮目标：按 D-018 防止跨窗口提前结案，准备 D-019 原生 Orca Goal 完整验收
 - 完成内容：补齐退休后排队 claim 的最终 signal 门控、数据库关闭前认领清理；issue #90 已创建，PR #76 已确认 Fixes 关联
 
-#### 代码或文档变更
-
-- 本地任务主进程/共享/渲染、ProposalCard、IPC/RPC 连接期窄接缝、双语目录、登记和 TC-310
-
-#### 验证证据
-
-- 核心与生命周期3文件28项、renderer3文件21项通过；日志 .docs/local-tasks-ui-validation/2026-11-06/consolidation/evidence/p1-core-final.log 和 p1-renderer-current.log
-- 独立源码复核确认晚到认领和 closed-DB 清理路径闭合；最后真实双窗口、SSH、手机与CI尚需在最终候选执行
-
-#### 未解决问题
-
-- 完整功能及原型对照验收未完成，不能沿用前候选1532项或旧CI称新候选通过
-
-#### 下一步
-
-- 正常提交并冻结写入，原生Orca Goal的Codex执行者继续；Codex守卫，最多600分钟、100轮，推送并跟进CI，不自动合入integration
+- 代码或文档变更：本地任务主进程/共享/渲染、ProposalCard、IPC/RPC 连接期窄接缝、双语目录、登记和 TC-311。
+- 验证证据：核心与生命周期 3 文件 28 项、renderer 3 文件 21 项通过；日志 `.docs/local-tasks-ui-validation/2026-11-06/consolidation/evidence/p1-core-final.log` 和 `p1-renderer-current.log`。独立源码复核确认晚到认领和 closed-DB 清理路径闭合；最后真实双窗口、SSH、手机与 CI 尚需在最终候选执行。
+- 未解决问题：完整功能及原型对照验收未完成，不能沿用前候选 1532 项或旧 CI 称新候选通过。
+- 下一步：正常提交并冻结写入，原生 Orca Goal 的 Codex 执行者继续；Codex 守卫，最多 600 分钟、100 轮，推送并跟进 CI，不自动合入 integration。
 
 ### 2026-11-06 SSH 浮层挂载时序修复（testing）
 
