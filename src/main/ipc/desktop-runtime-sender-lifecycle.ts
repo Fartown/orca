@@ -1,10 +1,15 @@
-import type { WebContents } from 'electron'
 import type { OrcaRuntimeService } from '../runtime/orca-runtime'
+
+type RuntimeSender = {
+  readonly id: number
+  on(event: 'did-navigate' | 'render-process-gone', listener: () => void): void
+  once(event: 'destroyed', listener: () => void): void
+}
 
 type SenderState = {
   connectionId: string
   connectionAbort: AbortController
-  sender: WebContents
+  sender: RuntimeSender
   subscriptions: Map<string, AbortController>
 }
 
@@ -16,25 +21,25 @@ export class DesktopRuntimeSenderLifecycle {
 
   constructor(private readonly runtime: CleanupRuntime) {}
 
-  connectionIdFor(sender: WebContents): string {
+  connectionIdFor(sender: RuntimeSender): string {
     return this.stateFor(sender).connectionId
   }
 
-  callScopeFor(sender: WebContents): { connectionId: string; connectionSignal: AbortSignal } {
+  callScopeFor(sender: RuntimeSender): { connectionId: string; connectionSignal: AbortSignal } {
     const state = this.stateFor(sender)
     return { connectionId: state.connectionId, connectionSignal: state.connectionAbort.signal }
   }
 
-  subscriptionsFor(sender: WebContents): Map<string, AbortController> {
+  subscriptionsFor(sender: RuntimeSender): Map<string, AbortController> {
     return this.stateFor(sender).subscriptions
   }
 
-  existingSubscriptionsFor(sender: WebContents): Map<string, AbortController> | null {
+  existingSubscriptionsFor(sender: RuntimeSender): Map<string, AbortController> | null {
     const state = this.senders.get(sender.id)
     return state?.sender === sender ? state.subscriptions : null
   }
 
-  private stateFor(sender: WebContents): SenderState {
+  private stateFor(sender: RuntimeSender): SenderState {
     const existing = this.senders.get(sender.id)
     if (existing?.sender === sender) {
       return existing

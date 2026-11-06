@@ -4050,7 +4050,7 @@
         },
         {
           "file": "src/main/ipc/desktop-runtime-sender-lifecycle.ts",
-          "mustContain": "callScopeFor(sender: WebContents)",
+          "mustContain": "callScopeFor(sender: RuntimeSender)",
           "why": "REQ-030: each desktop document has a retirement signal; a late claim cannot survive a retired window"
         },
         {

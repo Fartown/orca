@@ -1,5 +1,4 @@
 import { EventEmitter } from 'node:events'
-import type { WebContents } from 'electron'
 import { describe, expect, it } from 'vitest'
 import SyncDatabase from '../sqlite/sync-database'
 import { LocalTasksDatabase } from '../local-tasks/local-tasks-database'
@@ -21,7 +20,7 @@ function setup() {
     cleanupSubscriptionsForConnection: (connectionId: string) =>
       subscriptions.cleanupForConnection(connectionId)
   }
-  const sender = Object.assign(new EventEmitter(), { id: 7 }) as unknown as WebContents
+  const sender = Object.assign(new EventEmitter(), { id: 7 })
   const lifecycle = new DesktopRuntimeSenderLifecycle(runtime)
   const db = LocalTasksDatabase.openTransient()
   const service = new LocalTasksService(db, () => 1_000)
