@@ -3,11 +3,20 @@ title: 自托管产物后端
 slug: 自托管产物后端
 status: testing
 created: 2026-09-05
-updated: 2026-11-05
+updated: 2026-11-06
 external_ids: ['Fartown/orca#84', 'Fartown/orca#87']
 ---
 
 # 自托管产物后端 Journal
+
+## 2026-11-06 评论不再区分身份（Fartown/orca#87）
+
+- 本轮目标：testing；用户要求「不需要管是谁的评论，不需要身份」「都要可以删除」。
+- 完成内容：分享页去掉名字输入与浏览器里的作者凭证；任何读者都能编辑、删除任何评论，卡片头部只显示时间。接口的 PATCH/DELETE 不再要凭证，删除复用命令行删除评论的同一存储函数（留删除记录，Orca 照旧同步删除未改动的笔记）。存储读取时丢弃旧版本写下的凭证哈希；旧评论里的名字仍会出现在 Orca 笔记里。
+- 代码或文档变更：评论契约、存储、接口、分享页评论状态与卡片；去掉 `anonymousReader`、`commentAuthorOptional` 文案；REQ-305、REQ-311、AT-17、AT-20、TC-23 与走查记录。
+- 验证证据：本功能单元测试 15 个文件 63 项；`pnpm tc:web`、`tc:node`、`tc:cli` 通过；走查脚本桌面版与 Orca Server 版各 59/59，见 [分享页功能走查](tests/runs/2026-11-05-分享页功能走查.md)。
+- 未解决问题：同前一轮（真机与 SSH 主机真机未执行）。
+- 下一步：推送到 PR #88，等 CI 与用户决定合并。
 
 ## 2026-11-05 分享页按功能清单走查（Fartown/orca#87）
 

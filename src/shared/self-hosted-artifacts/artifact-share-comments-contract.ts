@@ -17,7 +17,7 @@ const SourceLine = z.number().int().min(1).max(10_000_000)
 
 export const ArtifactShareCommentInput = z
   .object({
-    /** Optional: a share link has no sign-in, so a reader may stay anonymous. */
+    /** Earlier pages sent a reader's name; the page no longer asks, since a link carries no identity. */
     author: z.string().trim().max(ARTIFACT_SHARE_COMMENT_LIMITS.author).optional(),
     body: z.string().trim().min(1).max(ARTIFACT_SHARE_COMMENT_LIMITS.body),
     startLine: SourceLine,
@@ -75,14 +75,9 @@ export const ArtifactShareDeleteCommentsResult = z.object({
 })
 export type ArtifactShareDeleteCommentsResult = z.infer<typeof ArtifactShareDeleteCommentsResult>
 
-/** Only the browser that wrote a comment holds its token, so only it can change or remove it. */
-export const ARTIFACT_SHARE_COMMENT_TOKEN_HEADER = 'x-orca-comment-token'
-
 export const ArtifactShareCommentEdit = z.object({
   body: z.string().trim().min(1).max(ARTIFACT_SHARE_COMMENT_LIMITS.body)
 })
 
-export const ArtifactShareCommentCreated = z.object({
-  comment: ArtifactShareComment,
-  editToken: z.string().min(16).max(128)
-})
+/** What a reader's add or edit returns: the comment as it is now stored. */
+export const ArtifactShareCommentSaved = z.object({ comment: ArtifactShareComment })

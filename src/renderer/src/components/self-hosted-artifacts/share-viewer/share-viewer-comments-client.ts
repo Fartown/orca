@@ -1,9 +1,8 @@
 import {
-  ARTIFACT_SHARE_COMMENT_TOKEN_HEADER,
   ARTIFACT_SHARE_COMMENTS_SEGMENT,
-  ArtifactShareComment,
-  ArtifactShareCommentCreated,
   ArtifactShareCommentList,
+  ArtifactShareCommentSaved,
+  type ArtifactShareComment,
   type ArtifactShareCommentInput
 } from '../../../../../shared/self-hosted-artifacts/artifact-share-comments-contract'
 
@@ -30,9 +29,7 @@ export async function fetchShareComments(): Promise<ArtifactShareComment[] | nul
 
 export async function postShareComment(
   input: ArtifactShareCommentInput
-): Promise<
-  { comment: ArtifactShareComment; editToken: string } | { failure: ShareCommentPostError }
-> {
+): Promise<{ comment: ArtifactShareComment } | { failure: ShareCommentPostError }> {
   try {
     const response = await fetch(commentsUrl(), {
       method: 'POST',
@@ -48,24 +45,18 @@ export async function postShareComment(
     if (!response.ok) {
       return { failure: 'failed' }
     }
-    const parsed = ArtifactShareCommentCreated.safeParse(await response.json())
+    const parsed = ArtifactShareCommentSaved.safeParse(await response.json())
     return parsed.success ? parsed.data : { failure: 'failed' }
   } catch {
     return { failure: 'failed' }
   }
 }
 
-function ownCommentRequest(
-  method: 'PATCH' | 'DELETE',
-  id: string,
-  editToken: string,
-  body?: string
-): Promise<Response> {
+function commentRequest(method: 'PATCH' | 'DELETE', id: string, body?: string): Promise<Response> {
   return fetch(`${commentsUrl()}?id=${encodeURIComponent(id)}`, {
     method,
     headers: {
       Accept: 'application/json',
-      [ARTIFACT_SHARE_COMMENT_TOKEN_HEADER]: editToken,
       ...(body === undefined ? {} : { 'Content-Type': 'application/json' })
     },
     ...(body === undefined ? {} : { body: JSON.stringify({ body }) })
@@ -74,31 +65,24 @@ function ownCommentRequest(
 
 export async function editShareComment(
   id: string,
-  editToken: string,
   body: string
 ): Promise<ArtifactShareComment | null> {
   try {
-    const response = await ownCommentRequest('PATCH', id, editToken, body)
+    const response = await commentRequest('PATCH', id, body)
     if (!response.ok) {
       return null
     }
-    const json: unknown = await response.json()
-    const parsed = ArtifactShareComment.safeParse(
-      json !== null && typeof json === 'object' && 'comment' in json ? json.comment : null
-    )
-    return parsed.success ? parsed.data : null
+    const parsed = ArtifactShareCommentSaved.safeParse(await response.json())
+    return parsed.success ? parsed.data.comment : null
   } catch {
     return null
   }
 }
 
-/** 'gone' when the file's owner already removed it, which the reader sees the same as deleted. */
-export async function deleteShareComment(
-  id: string,
-  editToken: string
-): Promise<'deleted' | 'gone' | 'failed'> {
+/** 'gone' when someone else already removed it, which the reader sees the same as deleted. */
+export async function deleteShareComment(id: string): Promise<'deleted' | 'gone' | 'failed'> {
   try {
-    const response = await ownCommentRequest('DELETE', id, editToken)
+    const response = await commentRequest('DELETE', id)
     return response.ok ? 'deleted' : response.status === 404 ? 'gone' : 'failed'
   } catch {
     return 'failed'

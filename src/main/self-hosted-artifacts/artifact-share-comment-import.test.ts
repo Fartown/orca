@@ -10,7 +10,7 @@ import {
 } from './artifact-share-comment-import'
 import {
   addArtifactShareComment,
-  deleteOwnArtifactShareComment,
+  deleteArtifactShareComments,
   editArtifactShareComment
 } from './store/artifact-share-comments'
 
@@ -120,7 +120,7 @@ describe('reader comments becoming review notes', () => {
     ])
   })
 
-  it("follows the author's edit and delete only to notes nobody changed in Orca", async () => {
+  it("follows a reader's edit and delete only to notes nobody changed in Orca", async () => {
     const owner = workspaceOwner()
     const target = { rootPath: workspace, relativePath: 'docs/plan.md' }
     const kept = await comment('第一处')
@@ -129,32 +129,20 @@ describe('reader comments becoming review notes', () => {
     const noteBody = (id: string) =>
       owner.state.notes.find((note) => note.id === `share-comment-${id}`)?.body
     owner.state.notes = owner.state.notes.map((note) =>
-      note.id === `share-comment-${changedInOrca.comment.id}`
-        ? { ...note, body: '我在 Orca 里改过' }
-        : note
+      note.id === `share-comment-${changedInOrca.id}` ? { ...note, body: '我在 Orca 里改过' } : note
     )
 
     const later = new Date('2026-11-05T09:00:00Z')
     for (const created of [kept, changedInOrca]) {
-      await editArtifactShareComment(home, target, {
-        id: created.comment.id,
-        editToken: created.editToken,
-        body: '作者改了',
-        now: later
-      })
+      await editArtifactShareComment(home, target, { id: created.id, body: '读者改了', now: later })
     }
     await expect(
       importArtifactShareComments({ home, ledgerPath, runtime: owner.runtime })
     ).resolves.toBe(1)
-    expect(noteBody(kept.comment.id)).toBe('张三 via share link: 作者改了')
-    expect(noteBody(changedInOrca.comment.id)).toBe('我在 Orca 里改过')
+    expect(noteBody(kept.id)).toBe('张三 via share link: 读者改了')
+    expect(noteBody(changedInOrca.id)).toBe('我在 Orca 里改过')
 
-    for (const created of [kept, changedInOrca]) {
-      await deleteOwnArtifactShareComment(home, target, {
-        id: created.comment.id,
-        editToken: created.editToken
-      })
-    }
+    await deleteArtifactShareComments(home, target, new Set([kept.id, changedInOrca.id]))
     await expect(
       importArtifactShareComments({ home, ledgerPath, runtime: owner.runtime })
     ).resolves.toBe(1)

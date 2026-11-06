@@ -1,7 +1,6 @@
 import React, { useCallback, useContext, useState } from 'react'
 import { CornerDownLeft, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { DiffCommentCard } from '@/components/diff-comments/DiffCommentCard'
 import { ImeTextarea } from '@/lib/ime-text-field'
 import { formatMarkdownReviewCardQuote } from '@/lib/markdown-review-notes'
@@ -57,7 +56,7 @@ function postErrorMessage(error: ShareCommentPostError): string {
   }
 }
 
-/** The app's review-note card; the browser that wrote a comment can edit and delete it. */
+/** The app's review-note card; a link carries no identity, so any reader may edit or delete. */
 export function ShareCommentCard({
   comment,
   onContentResize
@@ -65,25 +64,18 @@ export function ShareCommentCard({
   comment: ArtifactShareComment
   onContentResize?: () => void
 }): React.JSX.Element {
-  const { isOwnComment, editComment, deleteComment } = useShareComments()
-  const own = isOwnComment(comment.id)
+  const { editComment, deleteComment } = useShareComments()
   return (
     <DiffCommentCard
       lineNumber={comment.endLine}
       startLine={comment.startLine === comment.endLine ? undefined : comment.startLine}
       label={null}
-      author={
-        comment.author ??
-        translate(
-          'auto.components.selfHostedArtifacts.shareViewer.anonymousReader',
-          'Anonymous reader'
-        )
-      }
-      createdAtLabel={formatCommentTime(comment.updatedAt ?? comment.createdAt)}
+      // Why the time in the author slot: the card's header shows no name, and no "Note" fallback.
+      author={formatCommentTime(comment.updatedAt ?? comment.createdAt)}
       quote={formatMarkdownReviewCardQuote(comment.quote)}
       body={comment.body}
-      onDelete={own ? () => void deleteComment(comment.id) : undefined}
-      onSubmitEdit={own ? (body) => editComment(comment.id, body) : undefined}
+      onDelete={() => void deleteComment(comment.id)}
+      onSubmitEdit={(body) => editComment(comment.id, body)}
       onContentResize={onContentResize}
       observeRenderedSize={onContentResize !== undefined}
     />
@@ -137,8 +129,7 @@ export function ShareCommentCardFrame({
 }
 
 export function ShareCommentComposer(): React.JSX.Element {
-  const { author: savedAuthor, submit, cancelDraft, draft } = useShareComments()
-  const [author, setAuthor] = useState(savedAuthor)
+  const { submit, cancelDraft, draft } = useShareComments()
   const [body, setBody] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<ShareCommentPostError | null>(null)
@@ -152,7 +143,7 @@ export function ShareCommentComposer(): React.JSX.Element {
     }
     setSubmitting(true)
     setError(null)
-    const failure = await submit({ author: author.trim(), body: body.trim() })
+    const failure = await submit(body.trim())
     setSubmitting(false)
     setError(failure)
   }
@@ -195,20 +186,6 @@ export function ShareCommentComposer(): React.JSX.Element {
             void send()
           }
         }}
-      />
-      <Input
-        className="mt-2"
-        value={author}
-        maxLength={64}
-        placeholder={translate(
-          'auto.components.selfHostedArtifacts.shareViewer.commentAuthorOptional',
-          'Your name (optional)'
-        )}
-        aria-label={translate(
-          'auto.components.selfHostedArtifacts.shareViewer.commentAuthorOptional',
-          'Your name (optional)'
-        )}
-        onChange={(event) => setAuthor(event.target.value)}
       />
       {error ? (
         <p role="alert" className="mt-1 text-xs text-destructive">

@@ -3,7 +3,6 @@ import { extname } from 'node:path'
 import type { z } from 'zod'
 import {
   ARTIFACT_SHARE_COMMENT_LIMITS,
-  ARTIFACT_SHARE_COMMENT_TOKEN_HEADER,
   ArtifactShareCommentEdit,
   ArtifactShareCommentInput
 } from '../../../shared/self-hosted-artifacts/artifact-share-comments-contract'
@@ -11,10 +10,9 @@ import { readArtifactShareWorkspaces } from '../store/artifact-share-records'
 import {
   addArtifactShareComment,
   ArtifactShareCommentsFullError,
-  deleteOwnArtifactShareComment,
+  deleteArtifactShareComments,
   editArtifactShareComment,
   readArtifactShareComments,
-  type ArtifactShareCommentChange,
   type ArtifactShareCommentTarget
 } from '../store/artifact-share-comments'
 import { resolveArtifactShareRequestFile } from './artifact-share-request-path'
@@ -148,7 +146,7 @@ export async function handleArtifactShareCommentsRequest(input: {
     return sendJson(request, response, 429, { error: 'rate-limited' })
   }
   if (request.method !== 'POST') {
-    return changeOwnComment({ ...input, now })
+    return changeComment({ ...input, now })
   }
   const parsed = await readJsonBody(request, ArtifactShareCommentInput)
   if ('status' in parsed) {
@@ -159,8 +157,8 @@ export async function handleArtifactShareCommentsRequest(input: {
     return sendJson(request, response, 404, { error: 'not-found' })
   }
   try {
-    const created = await addArtifactShareComment(input.home, target, parsed.data, now)
-    return sendJson(request, response, 201, created)
+    const comment = await addArtifactShareComment(input.home, target, parsed.data, now)
+    return sendJson(request, response, 201, { comment })
   } catch (error) {
     if (error instanceof ArtifactShareCommentsFullError) {
       return sendJson(request, response, 409, { error: 'too-many-comments' })
@@ -187,13 +185,8 @@ async function readJsonBody<T>(
   return parsed.success ? { data: parsed.data } : { status: 400, error: 'invalid-comment' }
 }
 
-const CHANGE_STATUS: Record<Exclude<ArtifactShareCommentChange, 'changed'>, number> = {
-  'not-found': 404,
-  forbidden: 403
-}
-
-/** PATCH edits and DELETE removes `?id=`, only with the token the author's browser was given. */
-async function changeOwnComment(input: {
+/** PATCH edits and DELETE removes `?id=`; any reader with the link may, as no comment has an owner. */
+async function changeComment(input: {
   home: string
   request: IncomingMessage
   response: ServerResponse
@@ -203,31 +196,29 @@ async function changeOwnComment(input: {
 }): Promise<CommentsOutcome> {
   const { request, response } = input
   const id = new URL(request.url ?? '/', 'http://artifact-share.invalid').searchParams.get('id')
-  const editToken = request.headers[ARTIFACT_SHARE_COMMENT_TOKEN_HEADER]
-  if (!id || typeof editToken !== 'string' || !editToken) {
-    return sendJson(request, response, 400, { error: 'comment-id-and-token-required' })
+  if (!id) {
+    return sendJson(request, response, 400, { error: 'comment-id-required' })
   }
   const target = await resolveCommentTarget(input.home, input.token, input.segments)
   if (!target) {
     return sendJson(request, response, 404, { error: 'not-found' })
   }
   if (request.method === 'DELETE') {
-    const result = await deleteOwnArtifactShareComment(input.home, target, { id, editToken })
-    return result === 'changed'
+    const removed = await deleteArtifactShareComments(input.home, target, new Set([id]))
+    return removed.length > 0
       ? sendJson(request, response, 200, { deleted: id })
-      : sendJson(request, response, CHANGE_STATUS[result], { error: result })
+      : sendJson(request, response, 404, { error: 'not-found' })
   }
   const parsed = await readJsonBody(request, ArtifactShareCommentEdit)
   if ('status' in parsed) {
     return sendJson(request, response, parsed.status, { error: parsed.error })
   }
-  const edited = await editArtifactShareComment(input.home, target, {
+  const comment = await editArtifactShareComment(input.home, target, {
     id,
-    editToken,
     body: parsed.data.body,
     now: input.now
   })
-  return edited.result === 'changed'
-    ? sendJson(request, response, 200, { comment: edited.comment })
-    : sendJson(request, response, CHANGE_STATUS[edited.result], { error: edited.result })
+  return comment
+    ? sendJson(request, response, 200, { comment })
+    : sendJson(request, response, 404, { error: 'not-found' })
 }

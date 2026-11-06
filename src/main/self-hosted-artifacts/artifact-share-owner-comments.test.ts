@@ -59,13 +59,12 @@ function ownerWithNotes() {
 }
 
 async function leave(body: string, line: number) {
-  const created = await addArtifactShareComment(
+  return addArtifactShareComment(
     home,
     { rootPath: workspace, relativePath: 'docs/plan.md' },
     { author: '张三', body, startLine: line, endLine: line },
     new Date(`2026-11-05T08:0${line}:00Z`)
   )
-  return created.comment
 }
 
 describe('reading and deleting comments on the computer that holds the file', () => {

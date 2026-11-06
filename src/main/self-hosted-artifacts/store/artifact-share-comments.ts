@@ -1,4 +1,4 @@
-import { createHash, randomBytes, timingSafeEqual } from 'node:crypto'
+import { createHash, randomBytes } from 'node:crypto'
 import { readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { z } from 'zod'
@@ -15,15 +15,12 @@ import {
 } from './artifact-share-json-file'
 import { artifactShareCommentsDir } from './artifact-share-store-layout'
 
-/** Only a hash of the author's token is kept, so the comment file cannot be used to forge edits. */
-const StoredComment = ArtifactShareComment.extend({ editTokenHash: z.string().optional() })
-type StoredComment = z.infer<typeof StoredComment>
-
 const StoredCommentFile = z.object({
   version: z.number().int(),
   rootPath: z.string().min(1),
   relativePath: z.string().min(1),
-  comments: z.array(StoredComment),
+  // Why the plain schema: unknown fields from earlier versions (an author token hash) are dropped.
+  comments: z.array(ArtifactShareComment),
   /** Removed comment ids, so the Orca that imported them also removes their review notes. */
   deletedIds: z.array(z.string()).optional()
 })
@@ -40,8 +37,6 @@ export type ArtifactShareCommentTarget = { rootPath: string; relativePath: strin
 
 export class ArtifactShareCommentsFullError extends Error {}
 
-export type ArtifactShareCommentChange = 'changed' | 'not-found' | 'forbidden'
-
 /** Keyed by workspace folder, not token, so comments outlive stopping and re-sharing a workspace. */
 function commentFilePath(home: string, target: ArtifactShareCommentTarget): string {
   const key = createHash('sha256')
@@ -51,28 +46,11 @@ function commentFilePath(home: string, target: ArtifactShareCommentTarget): stri
   return join(artifactShareCommentsDir(home), `${key}.json`)
 }
 
-function hashToken(token: string): string {
-  return createHash('sha256').update(token).digest('hex')
-}
-
-function tokenMatches(stored: StoredComment, token: string): boolean {
-  if (!stored.editTokenHash) {
-    return false
-  }
-  const expected = Buffer.from(stored.editTokenHash, 'hex')
-  const actual = Buffer.from(hashToken(token), 'hex')
-  return expected.length === actual.length && timingSafeEqual(expected, actual)
-}
-
-function toPublic({ editTokenHash: _hash, ...comment }: StoredComment): ArtifactShareComment {
-  return comment
-}
-
 function toFile(stored: StoredCommentFileShape): StoredArtifactShareCommentFile {
   return {
     rootPath: stored.rootPath,
     relativePath: stored.relativePath,
-    comments: stored.comments.map(toPublic),
+    comments: stored.comments,
     deletedIds: stored.deletedIds ?? []
   }
 }
@@ -107,77 +85,52 @@ export function readArtifactShareComments(
   target: ArtifactShareCommentTarget
 ): ArtifactShareComment[] {
   const stored = readVersionedArtifactShareFile(commentFilePath(home, target), StoredCommentFile)
-  return stored ? stored.comments.map(toPublic) : []
+  return stored ? stored.comments : []
 }
 
-/** The returned token is the author's only way to edit or delete; it is never stored in clear. */
 export function addArtifactShareComment(
   home: string,
   target: ArtifactShareCommentTarget,
   input: ArtifactShareCommentInput,
   now: Date
-): Promise<{ comment: ArtifactShareComment; editToken: string }> {
+): Promise<ArtifactShareComment> {
   return mutateCommentFile(home, target, (file) => {
     if (file.comments.length >= ARTIFACT_SHARE_COMMENT_LIMITS.perFile) {
       throw new ArtifactShareCommentsFullError(`${target.relativePath} has too many comments`)
     }
-    const editToken = randomBytes(24).toString('base64url')
-    const comment: StoredComment = {
+    const comment: ArtifactShareComment = {
       id: randomBytes(12).toString('base64url'),
       ...(input.author ? { author: input.author } : {}),
       body: input.body,
       startLine: input.startLine,
       endLine: input.endLine,
       ...(input.quote ? { quote: input.quote } : {}),
-      createdAt: now.toISOString(),
-      editTokenHash: hashToken(editToken)
+      createdAt: now.toISOString()
     }
     file.comments.push(comment)
-    return { comment: toPublic(comment), editToken }
+    return comment
   })
 }
 
+/** Any reader with the link may change any comment; a share link carries no identity. */
 export function editArtifactShareComment(
   home: string,
   target: ArtifactShareCommentTarget,
-  change: { id: string; editToken: string; body: string; now: Date }
-): Promise<{ result: ArtifactShareCommentChange; comment?: ArtifactShareComment }> {
+  change: { id: string; body: string; now: Date }
+): Promise<ArtifactShareComment | null> {
   return mutateCommentFile(home, target, (file) => {
     const index = file.comments.findIndex((comment) => comment.id === change.id)
     const stored = file.comments[index]
     if (!stored) {
-      return { result: 'not-found' }
-    }
-    if (!tokenMatches(stored, change.editToken)) {
-      return { result: 'forbidden' }
+      return null
     }
     const updated = { ...stored, body: change.body, updatedAt: change.now.toISOString() }
     file.comments[index] = updated
-    return { result: 'changed', comment: toPublic(updated) }
+    return updated
   })
 }
 
-/** A reader removes their own comment with the token their browser kept. */
-export function deleteOwnArtifactShareComment(
-  home: string,
-  target: ArtifactShareCommentTarget,
-  change: { id: string; editToken: string }
-): Promise<ArtifactShareCommentChange> {
-  return mutateCommentFile(home, target, (file) => {
-    const stored = file.comments.find((comment) => comment.id === change.id)
-    if (!stored) {
-      return 'not-found'
-    }
-    if (!tokenMatches(stored, change.editToken)) {
-      return 'forbidden'
-    }
-    file.comments = file.comments.filter((comment) => comment !== stored)
-    file.deletedIds = [...(file.deletedIds ?? []), stored.id]
-    return 'changed'
-  })
-}
-
-/** The file's owner (CLI on that computer) removes any comments, or all of them. */
+/** Removes the listed comments, or all of them: a reader on the page, or the CLI on this computer. */
 export function deleteArtifactShareComments(
   home: string,
   target: ArtifactShareCommentTarget,
@@ -187,7 +140,7 @@ export function deleteArtifactShareComments(
     const removed = file.comments.filter((comment) => ids === 'all' || ids.has(comment.id))
     file.comments = file.comments.filter((comment) => !removed.includes(comment))
     file.deletedIds = [...(file.deletedIds ?? []), ...removed.map((comment) => comment.id)]
-    return removed.map(toPublic)
+    return removed
   })
 }
 
