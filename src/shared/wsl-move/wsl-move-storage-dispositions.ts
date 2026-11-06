@@ -166,6 +166,20 @@ export const SQLITE_TABLE_DISPOSITIONS: Record<string, WslMoveFieldDisposition> 
       )
     ),
     ...tables(
+      'local-tasks',
+      [
+        'local_task_conversations',
+        'local_task_proposals',
+        'local_task_conversation_watches',
+        'local_task_conversation_remote_watches',
+        'local_task_conversation_facts'
+      ],
+      notApplicableDisposition(
+        52,
+        "The dispatcher's records key by its own pane and by task ids. A proposal naming a moved workspace reports that workspace as missing when run, so the mover writes nothing."
+      )
+    ),
+    ...tables(
       'agent-session-journal',
       [
         'agent_session_records',
