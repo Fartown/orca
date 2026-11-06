@@ -23923,6 +23923,70 @@
       "sidebarCount_one": "{{count}} task needs you",
       "sidebarCount_other": "{{count}} tasks need you"
     },
+    "dispatcher": {
+      "openFailed": "Could not start the dispatcher session.",
+      "reportFailed": "The results could not be recorded.",
+      "ran": "Done {{done}} of {{total}}",
+      "untitled": "{{count}} steps",
+      "running": "Running…",
+      "dismiss": "Dismiss",
+      "confirm": "Confirm {{count}}",
+      "run": "Run",
+      "hint": "Tell it what you want done in its conversation. It proposes the steps here, you confirm, Orca runs them; then it follows the tasks and reports back.",
+      "intro": "The dispatcher is an agent session that assigns and follows your tasks. It only proposes; you confirm here.",
+      "show": "Show conversation",
+      "open": "Open dispatcher",
+      "item": {
+        "startIn": "New task “{{title}}” in {{place}}",
+        "startNew": "New task “{{title}}” in a new workspace of {{place}}",
+        "subtask": "Subtask of {{ref}}: “{{title}}”",
+        "append": "Tell the session on {{ref}}",
+        "stop": "Stop the session on {{ref}}",
+        "link": "Link {{ref}} to {{place}}",
+        "record": "Record the work in {{place}} as task “{{title}}”"
+      },
+      "wake": "Wake on news",
+      "title": "Dispatcher",
+      "notice": "The dispatcher has {{count}} proposal(s) waiting for you to confirm",
+      "status": {
+        "closed": "Not open",
+        "open": "Open",
+        "working": "Working",
+        "waiting": "Waiting on you",
+        "idle": "Idle"
+      },
+      "waiting": {
+        "title": "Waiting for you to confirm",
+        "empty": "No proposal is waiting."
+      },
+      "watches": {
+        "title": "Tasks it follows",
+        "empty": "Nothing yet. Tasks its proposals start are followed, and so is any task you ask it to watch.",
+        "byProposal": "From its proposal · {{time}}",
+        "byAsk": "You asked it to watch · {{time}}",
+        "unwatch": "Stop following {{ref}}"
+      },
+      "dispatched": {
+        "title": "What it dispatched",
+        "empty": "No confirmed proposal has run yet.",
+        "item": "Step {{n}}: {{detail}}"
+      },
+      "unread": {
+        "title": "News it has not handled",
+        "empty": "It has handled everything so far.",
+        "wakeOn": "Orca points it here the next time it finishes a turn.",
+        "wakeOff": "Waking is off: it reads these only when it checks its inbox itself.",
+        "more": "More are waiting behind these."
+      },
+      "claimedElsewhere": "This proposal is already running or has run.",
+      "interrupted": "Running in another window, or its run was interrupted. Check the tasks before repeating anything.",
+      "finish": "Mark as finished"
+    },
+    "latestProgress": {
+      "title": "Latest progress",
+      "needsYou": "Needs you: {{text}}",
+      "chip": "Needs you"
+    },
     "sidebar": {
       "groupByTask": "Task",
       "noTaskGroup": "No task",
@@ -24043,12 +24107,19 @@
       "titleLabel": "Title",
       "descriptionPlaceholder": "Add a description…",
       "descriptionLabel": "Description",
+      "criteriaLabel": "Done criteria (optional)",
       "keepCreating": "Create another",
       "submit": "Create task",
       "workspace": "Workspace",
       "workspaceLater": "Choose workspace later",
       "workspaceExisting": "Use existing workspace",
       "workspaceNew": "Create a workspace next"
+    },
+    "criteria": {
+      "item": "Done criterion {{number}}",
+      "remove": "Remove criterion",
+      "add": "Add a criterion",
+      "full": "A task holds up to {{count}} criteria."
     },
     "delete": {
       "done": "Deleted “{{title}}”",
@@ -24062,6 +24133,7 @@
       "next": "Next task",
       "missing": "This task no longer exists.",
       "backToList": "Back to tasks",
+      "criteria": "Done criteria",
       "moved": "“{{title}}” moved to {{project}} as {{ref}}",
       "moveTo": "Move to another project",
       "created": "Created {{when}}",

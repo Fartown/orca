@@ -9,6 +9,7 @@ import {
 } from '../../shared/local-tasks/local-task-brief'
 import { LOCAL_TASK_NEEDS_YOU_MAX } from '../../shared/local-tasks/local-task-progress'
 import { readCommandBody } from '../command-body-input'
+import { LOCAL_TASK_DISPATCHER_CLI_HANDLERS } from './local-task-dispatcher-cli'
 import { getOptionalStringFlag, getRepeatedStringFlag, getRequiredStringFlag } from '../flags'
 import { printResult } from '../format'
 import { RuntimeClientError } from '../runtime/types'
@@ -97,7 +98,10 @@ export const LOCAL_TASK_CLI_HANDLERS: Record<string, CommandHandler> = {
     const resolved = resolveTaskRef(library, getRequiredStringFlag(flags, 'ref'))
     const link = library.links.workspaces.find((candidate) => candidate.taskId === resolved.task.id)
     printResult(
-      { ...library.envelope, result: { task: detailTask(resolved, link ?? null) } },
+      {
+        ...library.envelope,
+        result: { task: detailTask(resolved, link ?? null, library.links.sessions) }
+      },
       json,
       formatTaskShow
     )
@@ -138,7 +142,10 @@ export const LOCAL_TASK_CLI_HANDLERS: Record<string, CommandHandler> = {
         ...library.envelope,
         result: {
           worktree: { id: worktree.id, name: worktree.displayName || null },
-          task: task && link ? detailTask(describeTask(library, task), link) : null
+          task:
+            task && link
+              ? detailTask(describeTask(library, task), link, library.links.sessions)
+              : null
         }
       },
       context.json,
@@ -216,6 +223,7 @@ export const LOCAL_TASK_CLI_HANDLERS: Record<string, CommandHandler> = {
   },
   'task guide': async ({ flags }) => {
     console.log(flags.has('dispatcher') ? LOCAL_TASK_DISPATCHER_GUIDE : LOCAL_TASK_WORKER_GUIDE)
-  }
+  },
+  ...LOCAL_TASK_DISPATCHER_CLI_HANDLERS
 }
 import { LOCAL_EXECUTION_HOST_ID } from '../../shared/execution-host'

@@ -7,6 +7,7 @@ import type {
 import type { LocalTasksTasksUpdateInput } from '../../shared/local-tasks/local-tasks-rpc-params'
 import type { LocalTasksDatabase } from './local-tasks-database'
 import { appendLocalTaskEvent } from './local-task-event-store'
+import { descriptionWithLegacyCriteria } from './local-task-criteria-fold'
 import {
   isValidParent,
   recordLabelChange,
@@ -68,10 +69,14 @@ export function updateLocalTask(
     )
     event('title', { from: task.title, to: patch.title })
   }
-  if (patch.description !== undefined && patch.description !== task.description) {
+  const description =
+    patch.criteria !== undefined
+      ? descriptionWithLegacyCriteria(patch.description ?? task.description, patch.criteria)
+      : patch.description
+  if (description !== undefined && description !== task.description) {
     touchRow(
       'UPDATE local_tasks SET description = ?, updated_at = ?, revision = revision + 1 WHERE id = ?',
-      patch.description
+      description
     )
     event('description')
   }

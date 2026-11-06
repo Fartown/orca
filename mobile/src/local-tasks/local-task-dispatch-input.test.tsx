@@ -175,18 +175,18 @@ function mount(state: 'done' | 'working', createTask: LocalTasksApi['createTask'
 
 async function chooseParentAndSend(tree: ReactTestRenderer) {
   await act(async () => {
-    tree.root.findByType('TextInput').props.onChangeText('@SHOP-1')
+    tree.root.find((node) => String(node.type) === 'TextInput').props.onChangeText('@SHOP-1')
   })
-  const sheet = tree.root.findByType('LocalTaskChoiceSheet')
+  const sheet = tree.root.find((node) => String(node.type) === 'LocalTaskChoiceSheet')
   await act(async () => {
     sheet.props.choices.find((choice: { key: string }) => choice.key === 'task:parent').onPress()
   })
   await act(async () => {
-    tree.root.findByType('TextInput').props.onChangeText('Fix the export')
+    tree.root.find((node) => String(node.type) === 'TextInput').props.onChangeText('Fix the export')
   })
   await act(async () => {
     tree.root
-      .findAllByType('Pressable')
+      .findAll((node) => String(node.type) === 'Pressable')
       .find((button) => button.props.accessibilityLabel === 'Start task')
       ?.props.onPress()
   })
@@ -241,13 +241,15 @@ describe('direct dispatch to an existing task', () => {
       }
     ]
     const { tree } = mount('done')
-    await act(async () => tree.root.findByType('TextInput').props.onChangeText('@'))
-    let sheet = tree.root.findByType('LocalTaskChoiceSheet')
+    await act(async () =>
+      tree.root.find((node) => String(node.type) === 'TextInput').props.onChangeText('@')
+    )
+    let sheet = tree.root.find((node) => String(node.type) === 'LocalTaskChoiceSheet')
     expect(sheet.props.choices.map((choice: { key: string }) => choice.key)).toContain(
       'workspace:ssh:box:wt-b'
     )
     await act(async () => sheet.props.search.onChange('work-b'))
-    sheet = tree.root.findByType('LocalTaskChoiceSheet')
+    sheet = tree.root.find((node) => String(node.type) === 'LocalTaskChoiceSheet')
     expect(sheet.props.choices.map((choice: { key: string }) => choice.key)).toContain(
       'workspace:ssh:box:wt-b'
     )
@@ -255,18 +257,18 @@ describe('direct dispatch to an existing task', () => {
       'workspace:local:wt-a'
     )
     await act(async () => sheet.props.search.onChange(''))
-    sheet = tree.root.findByType('LocalTaskChoiceSheet')
+    sheet = tree.root.find((node) => String(node.type) === 'LocalTaskChoiceSheet')
     await act(async () =>
       sheet.props.choices.find((choice: { key: string }) => choice.key === 'host:local').onPress()
     )
-    sheet = tree.root.findByType('LocalTaskChoiceSheet')
+    sheet = tree.root.find((node) => String(node.type) === 'LocalTaskChoiceSheet')
     expect(sheet.props.choices.map((choice: { key: string }) => choice.key)).not.toContain(
       'workspace:ssh:box:wt-b'
     )
     await act(async () =>
       sheet.props.choices.find((choice: { key: string }) => choice.key === 'repo:id:a').onPress()
     )
-    sheet = tree.root.findByType('LocalTaskChoiceSheet')
+    sheet = tree.root.find((node) => String(node.type) === 'LocalTaskChoiceSheet')
     expect(sheet.props.choices.map((choice: { key: string }) => choice.key)).toContain(
       'workspace:local:wt-a'
     )

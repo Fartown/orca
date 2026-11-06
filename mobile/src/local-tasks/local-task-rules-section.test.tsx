@@ -35,7 +35,7 @@ it('keeps the legacy PR switch when the host did not send prMergedMode', async (
     ...createLocalTasksApi({ sendRequest: async () => ({ id: 'test', ok: true, result: {} }) }),
     updateProject
   }
-  let renderer: ReactTestRenderer
+  let renderer!: ReactTestRenderer
   await act(async () => {
     renderer = create(
       createElement(LocalTaskRulesSection, {
@@ -47,10 +47,12 @@ it('keeps the legacy PR switch when the host did not send prMergedMode', async (
     )
   })
   const switchControl = renderer.root
-    .findAllByType('MobileSwitch')
+    .findAll((node) => String(node.type) === 'MobileSwitch')
     .find((node) => node.props.testID === 'local-task-rule-prMergedCompletes')
   expect(switchControl).toBeDefined()
-  expect(renderer.root.findByType('PickerModal').props.visible).toBe(false)
+  expect(renderer.root.find((node) => String(node.type) === 'PickerModal').props.visible).toBe(
+    false
+  )
   await act(async () => switchControl?.props.onValueChange(true))
   expect(updateProject.mock.calls[0]?.[0].rules).toEqual({ prMergedCompletes: true })
   act(() => renderer.unmount())

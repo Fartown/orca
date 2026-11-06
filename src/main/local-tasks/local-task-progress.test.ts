@@ -67,6 +67,13 @@ describe('agent writebacks (REQ-022)', () => {
     expect(
       service.listEvents(task.id).events.filter((event) => event.kind === 'turn-ended')
     ).toHaveLength(1)
+    db.transaction(() =>
+      writeLocalTaskTurnEnds(db, [{ ...turn, key: 'pane@200', body: 'Final result' }], 220)
+    )
+    expect(service.listTasks().tasks[0].latestProgress).toMatchObject({
+      kind: 'turn-ended',
+      body: 'Final result'
+    })
   })
 
   it('folds legacy criteria into description once and leaves the compatibility column empty', () => {
@@ -107,6 +114,49 @@ describe('agent writebacks (REQ-022)', () => {
     } finally {
       rmSync(directory, { recursive: true, force: true })
     }
+  })
+
+  it('preserves criteria from old create and update RPC calls with receipt and revision semantics', () => {
+    const { db, service, task } = setup()
+    const projectId = task.projectId
+    const create = {
+      clientOperationId: op(),
+      projectId,
+      title: 'Legacy create',
+      description: 'Check the result',
+      criteria: ['Looks correct']
+    }
+    const created = service.createTask(create, 'desktop')
+    expect(created).toMatchObject({
+      ok: true,
+      task: { description: 'Check the result\n\n完成标准\n- Looks correct', criteria: [] }
+    })
+    expect(service.createTask(create, 'desktop')).toEqual(created)
+    if (!created.ok) {
+      throw new Error('setup')
+    }
+    const update = {
+      clientOperationId: op(),
+      taskId: created.task.id,
+      expectedRevision: created.task.revision,
+      patch: { criteria: ['Can reopen'] }
+    }
+    const updated = service.updateTask(update, 'desktop')
+    expect(updated).toMatchObject({
+      ok: true,
+      task: {
+        description: 'Check the result\n\n完成标准\n- Looks correct\n\n完成标准\n- Can reopen',
+        criteria: [],
+        revision: created.task.revision + 1
+      }
+    })
+    expect(service.updateTask(update, 'desktop')).toEqual(updated)
+    expect(service.updateTask({ ...update, clientOperationId: op() }, 'desktop')).toMatchObject({
+      ok: false,
+      code: 'stale'
+    })
+    const row = db.prepare('SELECT criteria FROM local_tasks WHERE id = ?').get(created.task.id)
+    expect(row).toMatchObject({ criteria: '[]' })
   })
   it('records a writeback as a marked comment and surfaces the newest as latestProgress', () => {
     const { service, task } = setup()
@@ -192,7 +242,30 @@ describe('agent writebacks (REQ-022)', () => {
         'cli'
       )
     ).toMatchObject({ ok: false, code: 'status_invalid' })
+    expect(
+      service.createTask(
+        { clientOperationId: op(), projectId: project.id, title: 'Born done', statusId: done.id },
+        'cli'
+      )
+    ).toMatchObject({ ok: false, code: 'status_invalid' })
+    // Removing the status a task is in cannot move it into a completed one either.
+    const second = service.upsertStatus({
+      clientOperationId: op(),
+      projectId: project.id,
+      category: 'review',
+      name: 'Second look',
+      color: 'blue'
+    })
+    if (!second.ok) {
+      throw new Error('setup')
+    }
     expect(service.updateTask(patch(review.id), 'cli').ok).toBe(true)
+    expect(
+      service.removeStatus(
+        { clientOperationId: op(), statusId: review.id, moveTasksToStatusId: done.id },
+        'cli'
+      )
+    ).toMatchObject({ ok: false, code: 'status_invalid' })
     expect(service.updateTask(patch(done.id), 'desktop').ok).toBe(true)
   })
 
@@ -214,7 +287,6 @@ describe('agent writebacks (REQ-022)', () => {
       localTaskSchema.parse({ ...base, latestProgress: { kind: 'other' } }).latestProgress
     ).toBeUndefined()
   })
-
   it('drops an event kind older clients do not know without losing known events', () => {
     const events = localTaskEventsReplySchema.parse({
       events: [

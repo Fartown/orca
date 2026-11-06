@@ -223,8 +223,29 @@ describe('orca task', () => {
       'Priority: High',
       'Workspace: checkout on local',
       '',
-      'Shop owners need a file for their accountant.'
+      'Shop owners need a file for their accountant.',
+      '',
+      'Sessions (sessionLinkId · agent · opened):',
+      '- link-12 · claude · 1970-01-01 00:00Z'
     ])
+  })
+
+  it("creates a subtask in its parent's project and renames a task", async () => {
+    host({
+      write: () => ({ ok: true, task: { ...tasks[0], id: 'task-13', title: 'Flaky retry' } })
+    })
+    await main(['task', 'create', 'Flaky', 'retry', '--parent', 'SHOP-12'], '/repo')
+    expect(writeParams('localTasks.tasks.create')).toMatchObject({
+      projectId: 'shop',
+      parentId: 'task-12',
+      title: 'Flaky retry'
+    })
+    await main(['task', 'update', 'SHOP-12', '--title', 'Retry on reconnect'], '/repo')
+    expect(writeParams('localTasks.tasks.update')).toMatchObject({
+      taskId: 'task-12',
+      expectedRevision: 7,
+      patch: { title: 'Retry on reconnect' }
+    })
   })
 
   it('names the task of the workspace the current directory is in', async () => {
@@ -393,6 +414,163 @@ describe('orca task', () => {
     expect(printed()).toContain('orca task propose --body-file <proposal.json>')
   })
 
+  describe('dispatcher commands', () => {
+    const PANE = 'tab-d:pane-d'
+    const proposalReply = (items: unknown[]) => ({
+      ok: true,
+      proposal: {
+        id: 'p1',
+        conversationId: 'c1',
+        summary: 'Follow PRs',
+        items,
+        status: 'pending',
+        keptItemIndexes: null,
+        results: null,
+        createdAt: 1,
+        decidedAt: null,
+        decidedSource: null
+      }
+    })
+    async function inPane(run: () => Promise<void>) {
+      process.env.ORCA_PANE_KEY = PANE
+      try {
+        await run()
+      } finally {
+        delete process.env.ORCA_PANE_KEY
+      }
+    }
+
+    it('proposes items named by ref, resolved to task ids, from the dispatcher pane', async () => {
+      const items = [
+        { kind: 'append', taskId: 'SHOP-12', sessionLinkId: 'link-12', text: 'Write the repro' },
+        { kind: 'subtask', parentTaskId: 'store-12', title: 'Backend', prompt: 'Do it' }
+      ]
+      host({ write: () => proposalReply([]) })
+      await inPane(() =>
+        main(
+          ['task', 'propose', '--body', JSON.stringify({ summary: 'Follow PRs', items })],
+          '/repo'
+        )
+      )
+      expect(writeParams('localTasks.proposals.create')).toMatchObject({
+        paneKey: PANE,
+        summary: 'Follow PRs',
+        items: [
+          { kind: 'append', taskId: 'task-12' },
+          { kind: 'subtask', parentTaskId: 'task-12' }
+        ]
+      })
+      expect(printed()).toContain('The user confirms or dismisses it in Orca')
+    })
+
+    it('fills in the only session of a task an append names', async () => {
+      const items = [{ kind: 'append', taskId: 'SHOP-12', text: 'Write the repro' }]
+      host({ write: () => proposalReply([]) })
+      await inPane(() => main(['task', 'propose', '--body', JSON.stringify(items)], '/repo'))
+      expect(writeParams('localTasks.proposals.create')).toMatchObject({
+        items: [{ kind: 'append', taskId: 'task-12', sessionLinkId: 'link-12' }]
+      })
+    })
+
+    it('passes on a ref of a task on another host for Orca to find when the proposal runs', async () => {
+      const items = [{ kind: 'append', taskId: 'SSH-7', text: 'Keep going' }]
+      host({ write: () => proposalReply([]) })
+      await inPane(() => main(['task', 'propose', '--body', JSON.stringify(items)], '/repo'))
+      expect(writeParams('localTasks.proposals.create')).toMatchObject({
+        items: [{ kind: 'append', taskId: 'SSH-7' }]
+      })
+    })
+
+    it('explains a malformed proposal and never sends it', async () => {
+      host()
+      await inPane(() =>
+        main(['task', 'propose', '--body', '[{"kind":"start","title":"x"}]'], '/repo')
+      )
+      expect(writeParams('localTasks.proposals.create')).toBeUndefined()
+      expect(console.error).toHaveBeenCalledWith(
+        expect.stringContaining('orca task guide --dispatcher')
+      )
+    })
+
+    it('refuses dispatcher commands outside a session Orca started', async () => {
+      host()
+      await main(['task', 'inbox'], '/repo')
+      expect(console.error).toHaveBeenCalledWith(expect.stringContaining('ORCA_PANE_KEY'))
+    })
+
+    it('prints the inbox with its cursor, and acks that cursor', async () => {
+      host({
+        write: (method) =>
+          method === 'localTasks.dispatcher.inbox'
+            ? {
+                ok: true,
+                inbox: {
+                  conversationId: 'c1',
+                  items: [
+                    {
+                      kind: 'progress',
+                      at: Date.UTC(2026, 10, 5, 9, 30),
+                      taskId: 'task-12',
+                      taskRef: 'SHOP-12',
+                      summary: 'Export orders as CSV: Found the loop',
+                      needsYou: 'Pick a timeout'
+                    }
+                  ],
+                  cursor: 'CUR',
+                  more: false,
+                  watchedTaskCount: 1
+                }
+              }
+            : { ok: true }
+      })
+      await inPane(() => main(['task', 'inbox'], '/repo'))
+      expect(printed().split('\n')).toEqual([
+        '2026-11-05 09:30Z  progress  SHOP-12  Export orders as CSV: Found the loop',
+        '      needs the user: Pick a timeout',
+        'When handled: orca task inbox --ack CUR'
+      ])
+      await inPane(() => main(['task', 'inbox', '--ack', 'CUR'], '/repo'))
+      expect(writeParams('localTasks.dispatcher.ack')).toMatchObject({
+        paneKey: PANE,
+        cursor: 'CUR'
+      })
+    })
+
+    it('watches a task by ref', async () => {
+      host()
+      await inPane(() => main(['task', 'watch', 'SHOP-13'], '/repo'))
+      expect(writeParams('localTasks.dispatcher.watch')).toMatchObject({
+        paneKey: PANE,
+        taskId: 'task-13'
+      })
+    })
+
+    it('lists sessions waiting for the user and tasks waiting for review together', async () => {
+      host({
+        write: (method) =>
+          method === 'localTasks.attention.get'
+            ? {
+                observedAt: 1,
+                sessions: [],
+                items: [
+                  {
+                    key: 'k',
+                    taskId: 'task-13',
+                    taskSessionId: 's',
+                    kind: 'approval',
+                    agent: 'codex',
+                    lastMessage: 'Allow npm install?',
+                    since: 1,
+                    replyable: false
+                  }
+                ]
+              }
+            : { ok: true }
+      })
+      await main(['task', 'needs-you'], '/repo')
+      expect(printed()).toBe('SHOP-13  Refund flow: codex waits to approve — Allow npm install?')
+    })
+  })
   it('refuses to write to a library a newer Orca left read-only', async () => {
     host({ state: 'read-only' })
     await main(['task', 'comment', 'SHOP-12', 'hello'], '/repo')

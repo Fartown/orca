@@ -32,6 +32,7 @@ import { LocalTaskQuickPicker } from './LocalTaskQuickPicker'
 import { LocalTaskLinkDialogHost } from './LocalTaskLinkDialogHost'
 import { LocalTaskKeyHints } from './LocalTaskKeyHints'
 import { LocalTaskNeedsYouView } from './LocalTaskNeedsYouView'
+import { LocalTaskDispatcherView } from './LocalTaskDispatcherView'
 import { useLocalTaskListModel, type LocalTaskListModel } from './use-local-task-list-model'
 import { useLocalTaskEscapeLayer, useLocalTaskPageKeys } from './use-local-task-page-keys'
 
@@ -125,6 +126,7 @@ function LocalTaskOverview({ model }: { model: LocalTaskListModel }): React.JSX.
   const cursorTaskId = useLocalTaskPage((state) => (state.previewOpen ? state.cursorTaskId : null))
   const hasSelection = useLocalTaskPage((state) => state.selectedTaskIds.length > 0)
   const needsYou = useLocalTaskPage((state) => state.view === 'needs-you')
+  const dispatcher = useLocalTaskPage((state) => state.view === 'dispatcher')
   const previewTask =
     previewOpen && cursorTaskId ? model.index.tasksById.get(cursorTaskId) : undefined
   useLocalTaskEscapeLayer('panel', hasSelection, () =>
@@ -138,7 +140,12 @@ function LocalTaskOverview({ model }: { model: LocalTaskListModel }): React.JSX.
       <LocalTaskDispatchBox />
       <div className="@container/local-task-page relative flex min-h-0 flex-1 gap-4 pt-2">
         {sidebarTaskMode ? null : <LocalTaskNav model={model} />}
-        {needsYou ? (
+        {dispatcher ? (
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2">
+            <LocalTaskScopeMenu model={model} className="self-start @3xl/local-task-page:hidden" />
+            <LocalTaskDispatcherView model={model} />
+          </div>
+        ) : needsYou ? (
           <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2">
             <LocalTaskScopeMenu model={model} className="self-start @3xl/local-task-page:hidden" />
             <LocalTaskReviewQueue model={model} />
@@ -158,7 +165,7 @@ function LocalTaskOverview({ model }: { model: LocalTaskListModel }): React.JSX.
           </div>
         )}
         {previewTask ? <LocalTaskPreview task={previewTask} index={model.index} /> : null}
-      </div>
+      </div>{' '}
     </div>
   )
 }

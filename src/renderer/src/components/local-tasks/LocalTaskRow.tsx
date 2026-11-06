@@ -15,6 +15,7 @@ import type { LocalTask, LocalTaskStatusDef } from '../../../../shared/local-tas
 import { LocalTaskHostTag } from './LocalTaskHostTag'
 import { LocalTaskPriorityIcon, LocalTaskStatusIcon } from './LocalTaskIcons'
 import { LocalTaskProgressBadges } from './LocalTaskProgress'
+import { LocalTaskNeedsYouMarker } from './LocalTaskLatestProgress'
 
 export function LocalTaskLabelChips({
   labels,
@@ -216,6 +217,7 @@ export const LocalTaskRow = memo(function LocalTaskRow({
         </span>
       ) : null}
       <LocalTaskSubtaskProgress task={task} index={index} />
+      <LocalTaskNeedsYouMarker task={task} />
       <LocalTaskProgressBadges task={task} index={index} />
       <span className="hidden min-w-0 @3xl/local-task-list:flex">
         <LocalTaskLabelChips labels={task.labels} />

@@ -3,6 +3,20 @@ import { rowString } from './local-tasks-sqlite-row'
 
 const MARKER = 'criteriaFoldedIntoDescription'
 
+export function descriptionWithLegacyCriteria(
+  description: string,
+  criteria: readonly string[]
+): string {
+  const items = criteria.filter((item) => item.trim().length > 0)
+  if (items.length === 0) {
+    return description
+  }
+  const section = `完成标准\n${items.map((item) => `- ${item}`).join('\n')}`
+  return description.endsWith(section)
+    ? description
+    : `${description.trimEnd()}${description.trim() ? '\n\n' : ''}${section}`
+}
+
 /** Preserve old criteria once in the task description without changing the database version. */
 export function foldLocalTaskCriteriaIntoDescription(database: SyncDatabase): void {
   if (database.prepare('SELECT 1 FROM local_task_preferences WHERE key = ?').get(MARKER)) {
@@ -27,10 +41,7 @@ export function foldLocalTaskCriteriaIntoDescription(database: SyncDatabase): vo
         )
       : []
     const description = rowString(row, 'description')
-    const folded =
-      items.length > 0
-        ? `${description.trimEnd()}${description.trim() ? '\n\n' : ''}完成标准\n${items.map((item) => `- ${item}`).join('\n')}`
-        : description
+    const folded = descriptionWithLegacyCriteria(description, items)
     update.run(folded, rowString(row, 'id'))
   }
   if (rows.length > 0) {

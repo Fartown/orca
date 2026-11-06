@@ -45,7 +45,7 @@ function Property({
 }): React.JSX.Element {
   return (
     <div className="flex min-w-0 items-center gap-1.5">
-      <span className="sr-only">{label}</span>
+      <span className="sr-only">{label}</span>{' '}
       <div className="min-w-0">
         <LocalTaskActionTooltip reason={reason} wrapperClassName="flex min-w-0">
           {children}
@@ -106,6 +106,7 @@ export function LocalTaskDetailProperties({
 
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+      {' '}
       {workspace ? <div className="border-b border-border/60 pb-3">{workspace}</div> : null}
       <Property label={translate('localTasks.field.status', 'Status')} reason={reason}>
         <LocalTaskStatusSelect
@@ -145,7 +146,7 @@ export function LocalTaskDetailProperties({
             onChange={(parentId) => void updateLocalTaskFields(task, { parentId })}
           />
         </Property>
-      ) : null}
+      ) : null}{' '}
       <Property label={translate('localTasks.field.project', 'Project')}>
         <div className="flex items-center gap-1">
           <span className="min-w-0 truncate text-xs text-foreground">{project?.name}</span>

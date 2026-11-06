@@ -75,8 +75,7 @@ function SessionForm({
   const [delivery, setDelivery] = useState<LocalTaskPromptDelivery>(
     () => localTaskWorkflowPreferences(task.id).delivery
   )
-  const prompt = useMemo(() => initialPrompt ?? localTaskPromptFor(task), [task, initialPrompt])
-  // Why spelled out: a greyed submit alone does not say whether to install or to turn one on.
+  const prompt = useMemo(() => initialPrompt ?? localTaskPromptFor(task), [task, initialPrompt]) // Why spelled out: a greyed submit alone does not say whether to install or to turn one on.
   const noAgent = agent
     ? null
     : anyEnabled

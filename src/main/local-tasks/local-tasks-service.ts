@@ -36,6 +36,7 @@ import {
   LocalTaskExecutionService,
   type LocalTaskVolatileChange
 } from './local-task-execution-service'
+import { LocalTaskDispatcherService } from './local-task-dispatcher-service'
 import type { LocalTaskHostSessionSource } from './local-task-host-session-source'
 import { runLocalTaskWrite } from './local-task-mutation-receipts'
 import {
@@ -79,7 +80,7 @@ const EVENT_RESULT = writeResultSchema({ eventId: z.string() })
  * This Orca's task library (one per profile, D-008). Every write is one transaction keyed by the
  * client's operation id.
  */
-export class LocalTasksService {
+export class LocalTasksService extends LocalTaskDispatcherService {
   /** Links, the host's "needs you" judgment and rules. */
   readonly execution: LocalTaskExecutionService
 
@@ -89,7 +90,12 @@ export class LocalTasksService {
     onVolatileChange?: LocalTaskVolatileChange,
     sessions?: LocalTaskHostSessionSource
   ) {
+    super(db, now)
     this.execution = new LocalTaskExecutionService(db, now, onVolatileChange, sessions)
+  }
+
+  protected dispatcherProgress() {
+    return this.execution.getProgress()
   }
 
   get readOnly(): boolean {
@@ -276,20 +282,12 @@ export class LocalTasksService {
   }
 
   private write<T extends { ok: boolean }>(
-    clientOperationId: string,
+    operationId: string,
     method: string,
     params: unknown,
-    resultSchema: ZodType<T>,
+    schema: ZodType<T>,
     operation: (now: number) => T
   ): T | LocalTaskFailure {
-    return runLocalTaskWrite(
-      this.db,
-      this.now(),
-      clientOperationId,
-      method,
-      params,
-      resultSchema,
-      operation
-    )
+    return runLocalTaskWrite(this.db, this.now(), operationId, method, params, schema, operation)
   }
 }

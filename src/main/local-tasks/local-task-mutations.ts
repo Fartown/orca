@@ -14,6 +14,7 @@ import type {
 } from '../../shared/local-tasks/local-tasks-rpc-params'
 import type { LocalTasksDatabase } from './local-tasks-database'
 import { appendLocalTaskEvent } from './local-task-event-store'
+import { descriptionWithLegacyCriteria } from './local-task-criteria-fold'
 import { readLocalTaskProject } from './local-task-project-store'
 import {
   readLocalTask,
@@ -42,7 +43,9 @@ export function createLocalTask(
     return { ok: false, code: 'not_found' }
   }
   const statusId = input.statusId ?? defaultStatusId(project)
-  if (!project.statuses.some((status) => status.id === statusId)) {
+  const status = project.statuses.find((candidate) => candidate.id === statusId)
+  // Why: the CLI cannot tell a person from an agent, so completing stays a UI click.
+  if (!status || (source === 'cli' && status.category === 'completed')) {
     return { ok: false, code: 'status_invalid' }
   }
   if (input.parentId && !isValidParent(db, input.parentId, project.id, null)) {
@@ -51,7 +54,7 @@ export function createLocalTask(
   const taskId = insertTask(db, {
     project,
     title: input.title,
-    description: input.description ?? '',
+    description: descriptionWithLegacyCriteria(input.description ?? '', input.criteria ?? []),
     criteria: [],
     statusId,
     priority: input.priority ?? 0,

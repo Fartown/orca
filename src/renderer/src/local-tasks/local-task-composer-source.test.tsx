@@ -142,7 +142,6 @@ describe('the composer’s Local tasks pick (REQ-009)', () => {
     const { result } = renderHook(() => useLocalTaskComposerSource(start, card()))
     expect(result.current.submitOptions().launchPrompt).toBe(start.prompt)
   })
-
   it('sets the pick aside, saying why, on a target served by another Orca or a folder', () => {
     const start = { taskId: 't12', orcaProjectIds: [], replace: false }
     toastInfo.mockClear()

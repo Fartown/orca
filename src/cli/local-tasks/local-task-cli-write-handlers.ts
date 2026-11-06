@@ -6,7 +6,7 @@ import {
 } from '../../shared/local-tasks/local-task-model'
 import type { CommandHandler } from '../dispatch'
 import { readCommandBody } from '../command-body-input'
-import { getOptionalStringFlag, getRequiredStringFlag } from '../flags'
+import { getOptionalStringFlag, getRepeatedStringFlag, getRequiredStringFlag } from '../flags'
 import { printResult } from '../format'
 import { RuntimeClientError } from '../runtime/types'
 import {
@@ -22,7 +22,7 @@ import { currentWorkspace } from './local-task-cli-workspace'
 
 export const LOCAL_TASK_CLI_WRITE_HANDLERS: Record<string, CommandHandler> = {
   'task create': async ({ client, flags, json, cwd }) => {
-    const title = getRequiredStringFlag(flags, 'title').trim()
+    const title = getRepeatedStringFlag(flags, 'title').join(' ').trim()
     if (!title || title.length > LOCAL_TASK_TITLE_MAX) {
       throw new RuntimeClientError(
         'invalid_argument',

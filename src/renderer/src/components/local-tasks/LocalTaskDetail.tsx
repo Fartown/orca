@@ -20,6 +20,7 @@ import { useLocalTaskRowWritable } from '@/local-tasks/local-tasks-domain-store'
 import { localTaskDescendantIds } from '../../../../shared/local-tasks/local-task-tree'
 import { LocalTaskStatusIcon } from './LocalTaskIcons'
 import { LocalTaskDetailBody, LocalTaskDetailTitle } from './LocalTaskDetailBody'
+import { LocalTaskLatestProgressCard } from './LocalTaskLatestProgress'
 import { LocalTaskDetailProperties } from './LocalTaskDetailProperties'
 import { LocalTaskSubtasks } from './LocalTaskSubtasks'
 import { LocalTaskActivity } from './LocalTaskActivity'
@@ -195,6 +196,7 @@ export function LocalTaskDetail({
             index={model.index}
             writable={writable}
           />
+          <LocalTaskLatestProgressCard task={task} />
           <LocalTaskDetailBody task={task} writable={writable} />
           <LocalTaskSubtasks task={task} index={model.index} writable={writable} />
           <LocalTaskActivity taskId={task.id} index={model.index} writable={writable} />

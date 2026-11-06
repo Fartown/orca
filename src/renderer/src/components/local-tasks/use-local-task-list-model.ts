@@ -60,7 +60,7 @@ export function useLocalTaskListModel() {
   const visibility = useMemo(
     () => ({
       // The Needs you view draws its own rows; the list behind it keeps the full set.
-      view: view === 'needs-you' ? 'all' : view,
+      view: view === 'needs-you' || view === 'dispatcher' ? 'all' : view,
       filters,
       query,
       ...(filters.needsYou ? { onlyTaskIds: localTaskIdsNeedingYou(needsYouProgress) } : {})

@@ -2836,7 +2836,7 @@
     {
       "id": "local-tasks",
       "title": "本地任务管理：以任务为中心，挂接 Orca 的工作区与会话",
-      "goal": "在 Orca 里记录、拆分、跟踪任务；从任务一键开工作区和会话，任务上看到会话进展，会话需要人时进入「需要你」",
+      "goal": "管理各主机的任务、会话与进展，支持直接派活、人工验收和需确认的总管提案",
       "journal": "docs/issue/本地任务管理/journal.md",
       "dependsOn": [
         "src/renderer/src/components/native-chat/NativeChatPaneHeader.tsx",
@@ -3091,7 +3091,9 @@
         "src/renderer/src/attention/agent-subject-read-actions.ts",
         "src/renderer/src/components/terminal-pane/terminal-notification-pane-visibility.ts",
         "src/renderer/src/hooks/agent-auto-ack-targets.ts",
-        "mobile/src/components/bottom-drawer/bottom-drawer-styles.ts"
+        "mobile/src/components/bottom-drawer/bottom-drawer-styles.ts",
+        "src/renderer/src/lib/focus-terminal-tab-surface.ts",
+        "src/shared/constants.ts"
       ],
       "policyId": "local-tasks",
       "ownedPaths": [
@@ -3108,7 +3110,8 @@
         "mobile/src/local-tasks/**",
         "docs/issue/本地任务管理/**",
         "src/main/runtime/rpc/methods/local-task-link-methods.ts",
-        "src/cli/local-tasks/**"
+        "src/cli/local-tasks/**",
+        "src/main/runtime/rpc/methods/local-task-dispatcher-methods.ts"
       ],
       "requiredFiles": [
         "src/main/local-tasks/local-tasks-service.ts",
@@ -3937,9 +3940,9 @@
         "mobile/src/local-tasks/local-task-session-drawer-style.test.ts"
       ],
       "checks": [
-        "pnpm exec vitest run --config config/vitest.config.ts src/main/local-tasks src/shared/local-tasks src/main/runtime/rpc/methods/local-tasks.test.ts src/shared/host-operation-ownership.test.ts src/main/runtime/runtime-rpc/fork-mobile-rpc-method-allowlist.test.ts src/cli/local-tasks",
+        "pnpm exec vitest run --config config/vitest.config.ts src/main/local-tasks src/shared/local-tasks src/main/runtime/rpc/methods/local-tasks.test.ts src/shared/host-operation-ownership.test.ts src/shared/wsl-move src/main/runtime/runtime-rpc/fork-mobile-rpc-method-allowlist.test.ts src/main/runtime/mobile-rpc-allowlist.test.ts src/cli/local-tasks",
         "ORCA_BACKGROUND_LAUNCH=1 pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/local-tasks src/renderer/src/components/local-tasks src/renderer/src/components/task-page src/renderer/src/components/cmd-j src/renderer/src/lib/worktree-creation-structured-session.test.ts",
-        "pnpm --dir mobile exec vitest run src/local-tasks src/home/MobileHomeTasksAndAutomations.test.tsx",
+        "pnpm --dir mobile exec vitest run src/local-tasks src/home/MobileHomeTasksAndAutomations.test.tsx src/home/MobileHomeListFooter.test.tsx src/session/use-notification-pane-navigation.test.tsx src/transport/rpc-subscription-boundary.test.ts src/components/bottom-drawer",
         "pnpm exec vitest run --config config/vitest.config.ts config/scripts/mobile-web-app-file-attachment-grant.test.mjs config/scripts/mobile-web-app/mobile-web-app-session-dictation-capture.test.mjs config/scripts/mobile-web-app/mobile-web-app-page-grant-call-sites.test.mjs config/scripts/mobile-web-app/mobile-web-app-screencast-lane-grant.test.mjs config/scripts/mobile-web-app/mobile-web-app-external-navigation-grant.test.mjs"
       ]
     }

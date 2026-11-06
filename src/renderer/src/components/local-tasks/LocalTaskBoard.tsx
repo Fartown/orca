@@ -89,7 +89,7 @@ function BoardCard({
           <LocalTaskSubtaskProgress task={task} index={index} />
         </div>
       ) : null}
-      <LocalTaskLatestProgress task={task} index={index} />
+      <LocalTaskLatestProgress task={task} index={index} />{' '}
       <LocalTaskProgressBadges task={task} index={index} />
     </div>
   )

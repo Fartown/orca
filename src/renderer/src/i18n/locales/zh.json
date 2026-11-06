@@ -23190,6 +23190,70 @@
       },
       "unverifiableHosts": "已连接的主机上没有等你处理的会话。未连接主机上的会话要等它恢复连接后才能确认。"
     },
+    "dispatcher": {
+      "openFailed": "无法启动总管会话。",
+      "reportFailed": "执行结果没能记下来。",
+      "ran": "完成 {{done}}/{{total}} 项",
+      "untitled": "{{count}} 个步骤",
+      "running": "正在执行…",
+      "dismiss": "不要了",
+      "confirm": "确认 {{count}} 项",
+      "run": "执行",
+      "hint": "在它的对话里说你想做什么。它在这里提出步骤，你确认后由 Orca 执行；之后它跟进这些任务并向你汇报。",
+      "intro": "总管是一个替你分配和跟进任务的智能体会话。它只提建议，由你在这里确认。",
+      "show": "显示对话",
+      "open": "打开总管",
+      "item": {
+        "startIn": "在 {{place}} 新建任务“{{title}}”",
+        "startNew": "在 {{place}} 的新工作区新建任务“{{title}}”",
+        "subtask": "{{ref}} 的子任务：“{{title}}”",
+        "append": "给 {{ref}} 的会话追加一句",
+        "stop": "停掉 {{ref}} 的会话",
+        "link": "把 {{ref}} 关联到 {{place}}",
+        "record": "把 {{place}} 里的工作记成任务“{{title}}”"
+      },
+      "wake": "有新动态时唤醒",
+      "title": "总管",
+      "notice": "总管有 {{count}} 个提案等你确认",
+      "status": {
+        "closed": "未打开",
+        "open": "已打开",
+        "working": "工作中",
+        "waiting": "在等你",
+        "idle": "空闲"
+      },
+      "waiting": {
+        "title": "等你确认",
+        "empty": "没有等你确认的提案。"
+      },
+      "watches": {
+        "title": "它盯着的任务",
+        "empty": "还没有。它的提案开出的任务会自动盯上，你让它盯的任务也会出现在这里。",
+        "byProposal": "来自它的提案 · {{time}}",
+        "byAsk": "你让它盯的 · {{time}}",
+        "unwatch": "不再盯 {{ref}}"
+      },
+      "dispatched": {
+        "title": "它派出的",
+        "empty": "还没有执行过的提案。",
+        "item": "第 {{n}} 步：{{detail}}"
+      },
+      "unread": {
+        "title": "它还没处理的动态",
+        "empty": "目前都处理过了。",
+        "wakeOn": "它下次做完一轮时，Orca 会提醒它来看这些。",
+        "wakeOff": "唤醒已关闭：只有它自己查收件箱时才会看到这些。",
+        "more": "后面还有更多。"
+      },
+      "claimedElsewhere": "这份提案已经在执行或执行过了。",
+      "interrupted": "正在别的窗口执行，或执行被中断了。重复执行前先核对它建出的任务。",
+      "finish": "标记为已结束"
+    },
+    "latestProgress": {
+      "title": "最新进展",
+      "needsYou": "需要你：{{text}}",
+      "chip": "需要你"
+    },
     "sidebar": {
       "groupByTask": "任务",
       "noTaskGroup": "未关联任务",
@@ -23310,12 +23374,19 @@
       "titleLabel": "标题",
       "descriptionPlaceholder": "添加描述…",
       "descriptionLabel": "描述",
+      "criteriaLabel": "完成标准（可选）",
       "keepCreating": "继续创建",
       "submit": "创建任务",
       "workspace": "工作区",
       "workspaceLater": "稍后再定工作区",
       "workspaceExisting": "使用已有工作区",
       "workspaceNew": "下一步新建工作区"
+    },
+    "criteria": {
+      "item": "完成标准第 {{number}} 条",
+      "remove": "删除这条标准",
+      "add": "添加一条标准",
+      "full": "每个任务最多 {{count}} 条完成标准。"
     },
     "delete": {
       "done": "已删除「{{title}}」",
@@ -23329,6 +23400,7 @@
       "next": "下一个任务",
       "missing": "这个任务已不存在。",
       "backToList": "返回任务列表",
+      "criteria": "完成标准",
       "moved": "「{{title}}」已移到 {{project}}，编号为 {{ref}}",
       "moveTo": "移到其他项目",
       "created": "创建于 {{when}}",
