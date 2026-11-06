@@ -81,9 +81,13 @@
     {
       "id": "mobile-terminal-surface-recovery",
       "title": "手机打开工作区终端身份恢复",
-      "goal": "手机打开工作区时恢复宿主有记录而桌面缺标签的 live 终端原 tab/leaf，避免该路径重复生成空 shell",
+      "goal": "手机激活与自动恢复保留宿主原终端身份，未证实退出时不创建替代 shell，并收敛重复标签",
       "journal": "docs/issue/手机打开工作区终端身份恢复/journal.md",
       "dependsOn": [
+        "src/renderer/src/lib/worktree-activation.ts",
+        "src/renderer/src/store/index.ts",
+        "src/shared/execution-host.ts",
+        "src/shared/workspace-scope.ts",
         "src/renderer/src/lib/worktree-agent-live-surface-adoption.ts",
         "src/renderer/src/lib/worktree-live-terminal-surface-owners.ts",
         "src/shared/stable-pane-id.ts",
@@ -93,20 +97,126 @@
       "policyId": "mobile-terminal-surface-recovery",
       "ownedPaths": [
         "src/renderer/src/mobile-terminal-surface-recovery/**",
+        "tests/e2e/mobile-terminal-surface-recovery.spec.ts",
         "docs/issue/手机打开工作区终端身份恢复/**"
       ],
       "requiredFiles": [
+        "src/renderer/src/mobile-terminal-surface-recovery/notified-workspace-activation.ts",
         "docs/issue/手机打开工作区终端身份恢复/journal.md",
         "docs/issue/手机打开工作区终端身份恢复/requirements/手机打开工作区终端身份恢复.md",
         "docs/issue/手机打开工作区终端身份恢复/research/手机激活终端认领证据.md",
         "docs/issue/手机打开工作区终端身份恢复/solutions/手机工作区原终端身份恢复方案.md",
-        "src/renderer/src/mobile-terminal-surface-recovery/recorded-live-terminal-surface.ts"
+        "src/renderer/src/mobile-terminal-surface-recovery/recorded-live-terminal-surface.ts",
+        "src/renderer/src/mobile-terminal-surface-recovery/live-terminal-placement-verdict.ts"
       ],
       "seams": [
+        {
+          "file": "src/main/runtime/workspaces/workspace-activation.ts",
+          "mustContain": "resolveWorkspaceSelector(worktreeSelector)",
+          "why": "Activate independent folder workspaces on their owner without requiring a repo row."
+        },
+        {
+          "file": "src/renderer/src/hooks/ipc-events/worktree-event-runtime.ts",
+          "mustContain": "activateNotifiedWorkspace",
+          "why": "Activate independent folder workspaces on their owner without requiring a repo row."
+        },
+        {
+          "file": "src/renderer/src/hooks/ipc-events/worktree-event-runtime-activation.test.ts",
+          "mustContain": "activateAndRevealWorkspace",
+          "why": "Activate independent folder workspaces on their owner without requiring a repo row."
+        },
+        {
+          "file": "src/renderer/src/hooks/ipc-events/worktree-event-lineage-refresh.test.ts",
+          "mustContain": "activateAndRevealWorkspace",
+          "why": "Activate independent folder workspaces on their owner without requiring a repo row."
+        },
+
+        {
+          "file": "src/main/runtime/runtime-terminal-list.ts",
+          "mustContain": "parseWorkspaceKey(explicitId)",
+          "why": "Resolve independent folder workspace inventory on its execution host before classifying live terminals."
+        },
+        {
+          "file": "src/main/runtime/project-group-folder-workspace-selectors.test.ts",
+          "mustContain": "fresh terminal inventory",
+          "why": "Resolve independent folder workspace inventory on its execution host before classifying live terminals."
+        },
+
+        {
+          "file": "src/renderer/src/components/terminal-pane/pty-connection-reattach-mode-reset.spec.ts",
+          "mustContain": "sessionExpired",
+          "why": "Keep positive-exit recovery tests explicit about host authority."
+        },
+        {
+          "file": "src/renderer/src/components/terminal-pane/pty-connection-agent-session-resume.spec.ts",
+          "mustContain": "sessionExpired",
+          "why": "Keep positive-exit recovery tests explicit about host authority."
+        },
+        {
+          "file": "src/renderer/src/components/terminal-pane/pty-connection-hidden-sleeping-resume.spec.ts",
+          "mustContain": "sessionExpired",
+          "why": "Keep positive-exit recovery tests explicit about host authority."
+        },
+        {
+          "file": "src/renderer/src/components/terminal-pane/pty-connection-reattach-binding.test.ts",
+          "mustContain": "sessionExpired",
+          "why": "Keep positive-exit recovery tests explicit about host authority."
+        },
+        {
+          "file": "src/renderer/src/components/terminal-pane/pty-connection-sleeping-resume-banner.spec.ts",
+          "mustContain": "sessionExpired",
+          "why": "Keep positive-exit recovery tests explicit about host authority."
+        },
+        {
+          "file": "src/renderer/src/components/terminal-pane/pty-connection-spawn-deferred-sleep.test.ts",
+          "mustContain": "sessionExpired",
+          "why": "Keep positive-exit recovery tests explicit about host authority."
+        },
+
+        {
+          "file": "src/renderer/src/components/terminal-pane/pty-connection/reattach-result-handler.ts",
+          "mustContain": "bindHandleReattachResult",
+          "why": "Retain the recorded terminal binding when attach cannot establish an exit."
+        },
+        {
+          "file": "src/renderer/src/components/terminal-pane/pty-connection/deferred-session-reattach-connect.ts",
+          "mustContain": "connectDeferredSessionReattach",
+          "why": "Retain the recorded terminal binding when attach cannot establish an exit."
+        },
+        {
+          "file": "src/renderer/src/components/terminal-pane/pty-connection/deferred-session-reattach-choice.ts",
+          "mustContain": "runDeferredSessionReattachChoice",
+          "why": "Retain the recorded terminal binding when attach cannot establish an exit."
+        },
+        {
+          "file": "src/renderer/src/components/terminal-pane/pty-connection/reattach-success-settle.test.ts",
+          "mustContain": "handleReattachResult recovery settle",
+          "why": "Retain the recorded terminal binding when attach cannot establish an exit."
+        },
+        {
+          "file": "src/renderer/src/components/terminal-pane/pty-connection/deferred-session-reattach-newer-daemon-hold.test.ts",
+          "mustContain": "restored pane refused for a newer daemon",
+          "why": "Retain the recorded terminal binding when attach cannot establish an exit."
+        },
+        {
+          "file": "src/renderer/src/components/terminal-pane/pty-connection/deferred-session-reattach-live-bookmark.test.ts",
+          "mustContain": "deferred reattach choice:",
+          "why": "Retain the recorded terminal binding when attach cannot establish an exit."
+        },
+        {
+          "file": "src/renderer/src/lib/worktree-agent-activation-gate.ts",
+          "mustContain": "liveTerminalPlacementIsPending",
+          "why": "Keep live or unverifiable terminal recovery from authorizing empty-workspace seeding."
+        },
         {
           "file": "src/renderer/src/lib/worktree-agent-live-surface-adoption.ts",
           "mustContain": "restoreRecordedLiveTerminalSurface",
           "why": "Route unowned recorded live PTYs through the feature-owned original-surface admission policy."
+        },
+        {
+          "file": "src/renderer/src/lib/worktree-agent-activation-seam.test.ts",
+          "mustContain": "restores the live terminal after an unverifiable census becomes authoritative",
+          "why": "Verify activation withholds a replacement shell and later restores the original live PTY."
         },
         {
           "file": "src/renderer/src/lib/worktree-agent-activation-gate.test.ts",
@@ -115,11 +225,21 @@
         }
       ],
       "tests": [
+        "src/renderer/src/hooks/ipc-events/worktree-event-runtime-activation.test.ts",
+        "src/renderer/src/hooks/ipc-events/worktree-event-lineage-refresh.test.ts",
+
+        "src/main/runtime/project-group-folder-workspace-selectors.test.ts",
+        "src/renderer/src/components/terminal-pane/pty-connection/reattach-success-settle.test.ts",
+        "src/renderer/src/components/terminal-pane/pty-connection/deferred-session-reattach-newer-daemon-hold.test.ts",
+        "src/renderer/src/components/terminal-pane/pty-connection/deferred-session-reattach-live-bookmark.test.ts",
+        "tests/e2e/mobile-terminal-surface-recovery.spec.ts",
+        "src/renderer/src/mobile-terminal-surface-recovery/activation-live-inventory.test.ts",
         "src/renderer/src/mobile-terminal-surface-recovery/recorded-live-terminal-surface.test.ts",
+        "src/renderer/src/lib/worktree-agent-activation-seam.test.ts",
         "src/renderer/src/lib/worktree-agent-activation-gate.test.ts"
       ],
       "checks": [
-        "pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/mobile-terminal-surface-recovery/recorded-live-terminal-surface.test.ts src/renderer/src/lib/worktree-agent-activation-gate.test.ts"
+        "pnpm exec vitest run --config config/vitest.config.ts src/main/runtime/project-group-folder-workspace-selectors.test.ts src/renderer/src/hooks/ipc-events/worktree-event-runtime-activation.test.ts src/renderer/src/hooks/ipc-events/worktree-event-lineage-refresh.test.ts src/renderer/src/mobile-terminal-surface-recovery src/renderer/src/lib/worktree-agent-activation-gate.test.ts src/renderer/src/lib/worktree-agent-activation-seam.test.ts src/renderer/src/components/terminal-pane/pty-connection/reattach-success-settle.test.ts src/renderer/src/components/terminal-pane/pty-connection/deferred-session-reattach-newer-daemon-hold.test.ts src/renderer/src/components/terminal-pane/pty-connection/deferred-session-reattach-live-bookmark.test.ts"
       ]
     },
     {
@@ -194,6 +314,7 @@
         "src/renderer/src/integration-builds/**",
 
         ".github/workflows/fork-integration-build.yml",
+        ".github/workflows/fork-pr-linked-issue.yml",
         "config/scripts/integration-builds/**",
         "src/shared/integration-builds/**",
         "src/main/integration-builds/**",
@@ -348,6 +469,7 @@
         "src/main/integration-builds/linux-desktop-updater.test.ts",
         "src/main/integration-builds/serve-update-handoff-path.test.ts",
         "config/scripts/integration-builds/verify-linux-service.test.mjs",
+        "config/scripts/integration-builds/pr-linked-issue.test.mjs",
         "src/cli/integration-builds/linux-serve-update.test.ts",
         "src/main/integration-builds/linux-serve-update-support.test.ts",
         "src/renderer/src/integration-builds/web-server-update.test.ts",
@@ -1528,7 +1650,31 @@
         "src/renderer/src/components/host-picker/use-bounded-host-rows.ts",
         "src/renderer/src/components/host-picker/HostListSearchField.tsx",
         "src/renderer/src/components/host-picker/HostListOverflowNote.tsx",
-        "src/renderer/src/components/host-picker/host-picker-copy.ts"
+        "src/renderer/src/components/host-picker/host-picker-copy.ts",
+        "src/renderer/src/components/editor/MarkdownTableOfContentsPanel.tsx",
+        "src/renderer/src/components/editor/markdown-anchor-scroll.ts",
+        "src/renderer/src/components/editor/markdown-table-of-contents.ts",
+        "src/renderer/src/components/markdown-github-callout.tsx",
+        "src/renderer/src/lib/remark-github-callouts.ts",
+        "src/shared/markdown-toc-panel-width.ts",
+        "src/shared/diff-comment-types.ts",
+        "src/shared/cross-platform-path.ts",
+        "src/renderer/src/lib/ime-text-field.tsx",
+        "src/renderer/src/lib/markdown-review-notes.ts",
+        "src/renderer/src/components/editor/markdown-preview-block-model.ts",
+        "src/renderer/src/components/editor/markdown-preview-types.ts",
+        "src/cli/flags.ts",
+        "src/renderer/src/lib/dom-text-search-highlights.ts",
+        "src/renderer/src/components/editor/rich-markdown-review-note-layout.ts",
+        "src/renderer/src/components/editor/PanZoomImageDialog.tsx",
+        "src/renderer/src/components/diff-comments/DiffCommentCard.tsx",
+        "src/renderer/src/components/editor/DiagramViewerModal.tsx",
+        "src/renderer/src/components/editor/markdown-preview-anchor-navigation.ts",
+        "src/renderer/src/components/editor/markdown-navigation-details.ts",
+        "src/renderer/src/components/editor/markdown-rich-size-limit.ts",
+        "src/renderer/src/components/editor/CodeBlockCopyButton.tsx",
+        "src/renderer/src/components/editor/markdown-doc-links.ts",
+        "src/renderer/src/components/editor/use-mermaid-diagram-expand.ts"
       ],
       "policyId": "self-hosted-artifacts",
       "ownedPaths": [
@@ -1538,7 +1684,8 @@
         "src/cli/self-hosted-artifacts/**",
         "src/renderer/src/components/self-hosted-artifacts/**",
         "src/main/runtime/rpc/methods/artifact-share.ts",
-        "config/scripts/build-artifact-share-viewer.mjs"
+        "config/scripts/build-artifact-share-viewer.mjs",
+        "config/scripts/build-artifact-share-viewer.test.mjs"
       ],
       "requiredFiles": [
         "src/main/self-hosted-artifacts/artifact-share-main-process.ts",
@@ -1641,8 +1788,8 @@
         },
         {
           "file": "src/cli/handler-group-manifest.ts",
-          "mustContain": "ARTIFACT_SHARE_CLI_HANDLERS",
-          "why": "orca artifacts commands share over the local network"
+          "mustContain": "ARTIFACT_SHARE_HANDLER_GROUP",
+          "why": "orca artifacts commands share over the local network; the group lives in the feature folder"
         },
         {
           "file": "src/cli/specs/artifacts.ts",
@@ -1787,6 +1934,10 @@
         "src/main/self-hosted-artifacts/artifact-share-rpc-error.test.ts",
         "src/main/self-hosted-artifacts/artifact-share-rpc-methods.test.ts",
         "src/main/self-hosted-artifacts/artifact-share-orcad-bundle.test.ts",
+        "src/main/self-hosted-artifacts/artifact-share-comment-import.test.ts",
+        "src/main/self-hosted-artifacts/artifact-share-owner-comments.test.ts",
+        "src/cli/self-hosted-artifacts/artifact-share-cli-comments.test.ts",
+        "config/scripts/build-artifact-share-viewer.test.mjs",
         "src/cli/self-hosted-artifacts/artifact-share-cli-target.test.ts",
         "src/renderer/src/components/self-hosted-artifacts/share-button/lan-artifact-share-machine.test.ts",
         "src/renderer/src/components/self-hosted-artifacts/share-button/lan-artifact-share-target.test.ts",
@@ -1800,7 +1951,7 @@
         "src/main/runtime/construction/runtime-composition-parity.test.ts"
       ],
       "checks": [
-        "pnpm exec vitest run --config config/vitest.config.ts src/main/self-hosted-artifacts src/cli/self-hosted-artifacts src/renderer/src/components/self-hosted-artifacts src/renderer/src/components/editor/EditorPanelHeader.test.tsx src/renderer/src/components/native-chat/NativeChatInlineVisual.open-as-file.test.tsx src/renderer/src/hooks/useSettingsNavigationMetadata.test.ts src/cli/index.test.ts src/renderer/src/components/browser-pane/workspace-doc src/renderer/src/components/settings/OrcaAccountSettingsPane.test.tsx src/renderer/src/components/unexpected-signout",
+        "pnpm exec vitest run --config config/vitest.config.ts src/main/self-hosted-artifacts src/cli/self-hosted-artifacts src/renderer/src/components/self-hosted-artifacts src/renderer/src/components/editor/EditorPanelHeader.test.tsx src/renderer/src/components/native-chat/NativeChatInlineVisual.open-as-file.test.tsx src/renderer/src/hooks/useSettingsNavigationMetadata.test.ts src/cli/index.test.ts src/renderer/src/components/browser-pane/workspace-doc src/renderer/src/components/settings/OrcaAccountSettingsPane.test.tsx src/renderer/src/components/unexpected-signout config/scripts/build-artifact-share-viewer.test.mjs",
         "pnpm run build:artifact-share-viewer",
         "ORCA_BACKGROUND_LAUNCH=1 pnpm exec vitest run --config config/vitest.config.ts src/shared/host-operation-ownership.test.ts src/main/startup/main-process-ready-duplicate-pty-repair.test.ts src/main/runtime/construction/runtime-composition-parity.test.ts"
       ]
@@ -3944,6 +4095,182 @@
         "ORCA_BACKGROUND_LAUNCH=1 pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/local-tasks src/renderer/src/components/local-tasks src/renderer/src/components/task-page src/renderer/src/components/cmd-j src/renderer/src/lib/worktree-creation-structured-session.test.ts",
         "pnpm --dir mobile exec vitest run src/local-tasks src/home/MobileHomeTasksAndAutomations.test.tsx src/home/MobileHomeListFooter.test.tsx src/session/use-notification-pane-navigation.test.tsx src/transport/rpc-subscription-boundary.test.ts src/components/bottom-drawer",
         "pnpm exec vitest run --config config/vitest.config.ts config/scripts/mobile-web-app-file-attachment-grant.test.mjs config/scripts/mobile-web-app/mobile-web-app-session-dictation-capture.test.mjs config/scripts/mobile-web-app/mobile-web-app-page-grant-call-sites.test.mjs config/scripts/mobile-web-app/mobile-web-app-screencast-lane-grant.test.mjs config/scripts/mobile-web-app/mobile-web-app-external-navigation-grant.test.mjs"
+      ]
+    },
+    {
+      "id": "gitea-host-verification",
+      "title": "Gitea 主机识别校验",
+      "goal": "不认识的自建代码平台先确认是不是 Gitea，明确不是时不再冒充 Gitea 发请求，真 Gitea 不受影响",
+      "journal": "docs/issue/Gitea主机识别校验/journal.md",
+      "dependsOn": [
+        "src/main/git/coalesced-probe.ts",
+        "src/main/git/remote-ref-probe-cache.ts",
+        "src/main/gitea/repository-ref.ts",
+        "src/main/lib/unread-response-body.ts"
+      ],
+      "policyId": "gitea-host-verification",
+      "ownedPaths": ["src/main/gitea-host-verification/**", "docs/issue/Gitea主机识别校验/**"],
+      "requiredFiles": ["src/main/gitea-host-verification/gitea-host-probe.ts"],
+      "seams": [
+        {
+          "file": "src/main/gitea/client.ts",
+          "mustContain": "confirmGiteaRepoRef(repo, { apiBaseConfigured: getAuthConfig().apiBaseUrl !== null })",
+          "why": "Confirm an unclaimed host is Gitea before treating its remote as a Gitea repository"
+        },
+        {
+          "file": "src/main/gitea/client.test.ts",
+          "mustContain": "vi.mock('../gitea-host-verification/gitea-host-probe'",
+          "why": "Scan-cache tests run after detection; host verification has its own tests"
+        },
+        {
+          "file": "src/main/gitea/client-scan-invalidation.test.ts",
+          "mustContain": "vi.mock('../gitea-host-verification/gitea-host-probe'",
+          "why": "Scan-cache tests run after detection; host verification has its own tests"
+        },
+        {
+          "file": "src/main/source-control/hosted-review-gitea.integration.test.ts",
+          "mustContain": "url.pathname === '/api/v1/version'",
+          "why": "The fake Gitea answers the host probe, and the probe must not carry the token"
+        }
+      ],
+      "tests": ["src/main/gitea-host-verification/gitea-host-probe.test.ts"],
+      "checks": [
+        "pnpm exec vitest run --config config/vitest.config.ts src/main/gitea-host-verification src/main/gitea src/main/source-control/hosted-review-gitea.integration.test.ts src/main/source-control/forge-provider.test.ts src/main/source-control/hosted-review.test.ts"
+      ]
+    },
+    {
+      "id": "plugin-workspace-remote",
+      "title": "插件读取工作区远程仓库",
+      "goal": "插件能拿到聚焦工作区（本地与 SSH）及工作区列表各行所属仓库的远程地址（去掉凭据），不必在主机上执行命令",
+      "journal": "docs/issue/插件读取工作区远程仓库/journal.md",
+      "dependsOn": [
+        "src/shared/git-remote-error.ts",
+        "src/shared/git-remote-identity.ts",
+        "src/shared/repo-types.ts",
+        "src/shared/worktree/id.ts",
+        "src/renderer/src/store/index.ts",
+        "src/renderer/src/store/worktree-repo-index.ts",
+        "src/renderer/src/store/workspace-record-selectors.ts"
+      ],
+      "policyId": "plugin-workspace-remote",
+      "ownedPaths": [
+        "src/shared/plugin-workspace-remote/**",
+        "src/main/plugin-workspace-remote/**",
+        "src/renderer/src/plugin-workspace-remote/**",
+        "docs/issue/插件读取工作区远程仓库/**"
+      ],
+      "requiredFiles": ["src/shared/plugin-workspace-remote/plugin-workspace-remote.ts"],
+      "seams": [
+        {
+          "file": "src/shared/plugins/workers/plugin-host-api.ts",
+          "mustContain": "remote: pluginWorkspaceRemoteSchema.optional()",
+          "why": "The focused-workspace context plugins read and receive in workspace.changed carries the recorded remote"
+        },
+        {
+          "file": "src/shared/plugins/workers/plugin-host-api-workspace-methods.ts",
+          "mustContain": "remote: pluginWorkspaceRemoteSchema.optional()",
+          "why": "Each workspace.list row carries its repository's recorded remote"
+        },
+        {
+          "file": "src/main/plugins/plugin-runtime-binding.ts",
+          "mustContain": "withPluginWorkspaceRemote(",
+          "why": "The plugin delegate adds the remote once, for readContext and workspace.changed alike"
+        },
+        {
+          "file": "src/main/plugins/workers/plugin-host-service-bindings.ts",
+          "mustContain": "...(context.remote ? { remote: context.remote } : {})",
+          "why": "The host services keep the remote when they narrow the runtime context"
+        },
+        {
+          "file": "src/main/plugins/workers/plugin-workspace-projection.ts",
+          "mustContain": "...(context.remote ? { remote: context.remote } : {})",
+          "why": "The public context projection passes the remote through"
+        },
+        {
+          "file": "src/main/plugins/workers/plugin-host-method-bindings.ts",
+          "mustContain": "remote?: PluginWorkspaceRemote",
+          "why": "The host context type names the optional remote"
+        },
+        {
+          "file": "src/main/plugins/workers/plugin-host-workspace-method-bindings.ts",
+          "mustContain": "pluginWorkspaceRemoteForRepo(listedRepos, worktree.repoId)",
+          "why": "workspace.list reads each row's remote from the repo list it already fetches"
+        },
+        {
+          "file": "src/main/plugins/workers/plugin-host-method-bindings.ts",
+          "mustContain": "return readPluginFocusedWorkspaceElsewhere(services.renderer)",
+          "why": "readContext asks the window when main's runtime does not own the focused workspace (an orcad-managed SSH host)"
+        },
+        {
+          "file": "src/main/plugins/plugin-runtime-binding.ts",
+          "mustContain": "return { context: await readPluginFocusedWorkspaceElsewhere(renderer) }",
+          "why": "workspace.changed and panel replays ask the window the same way"
+        },
+        {
+          "file": "src/shared/plugins/view/plugin-view-protocol.ts",
+          "mustContain": "| { kind: 'read-focused-workspace' }",
+          "why": "The window request that reads the focused worktree record"
+        },
+        {
+          "file": "src/main/plugins/view/plugin-view-reply-schema.ts",
+          "mustContain": "workspace: pluginFocusedWorkspaceSchema.nullable().optional()",
+          "why": "Main's reply check keeps the window's answer instead of stripping it"
+        },
+        {
+          "file": "src/main/plugins/view/plugin-host-renderer-actions.ts",
+          "mustContain": "askForReply({ kind: 'read-focused-workspace' })",
+          "why": "The plugin host's window actions expose the read"
+        },
+        {
+          "file": "src/renderer/src/components/plugins/view/plugin-view-request-handler.ts",
+          "mustContain": "return readPluginFocusedWorkspace(request)",
+          "why": "The window answers the read from its own workspace records"
+        },
+        {
+          "file": "docs/reference/plugin-host-api.md",
+          "mustContain": "remote?: { name: string; url: string }",
+          "why": "Generated from the host API table; regenerate instead of editing"
+        },
+        {
+          "file": "resources/plugins/types/orca-host.d.ts",
+          "mustContain": "remote?: { name: string; url: string }",
+          "why": "Generated from the host API table; regenerate instead of editing"
+        },
+        {
+          "file": "resources/plugins/declarative/orca.d.ts",
+          "mustContain": "remote?: { name: string; url: string }",
+          "why": "Generated from the host API table; regenerate instead of editing"
+        },
+        {
+          "file": "skill-guides/orca-plugin-authoring/references/events.md",
+          "mustContain": "remote?: { name: string; url: string }",
+          "why": "Generated from the host API table; regenerate instead of editing"
+        },
+        {
+          "file": "skill-guides/orca-plugin-authoring/references/host-api.md",
+          "mustContain": "remote?: { name: string; url: string }",
+          "why": "Generated from the host API table; regenerate instead of editing"
+        },
+        {
+          "file": "src/cli/bundled-skill-guides.ts",
+          "mustContain": "remote?: { name: string; url: string }",
+          "why": "Generated from the host API table; regenerate instead of editing"
+        },
+        {
+          "file": "resources/plugins/declarative/orca-testing.mjs",
+          "mustContain": ",remote:",
+          "why": "The plugin testing kit bundles the host API schemas; regenerate with pnpm generate:plugin-declarative-runtime"
+        }
+      ],
+      "tests": [
+        "src/shared/plugin-workspace-remote/plugin-workspace-remote.test.ts",
+        "src/main/plugin-workspace-remote/plugin-workspace-remote.test.ts",
+        "src/main/plugin-workspace-remote/plugin-focused-workspace.test.ts",
+        "src/main/plugin-workspace-remote/plugin-testing-kit-remote.test.ts",
+        "src/renderer/src/plugin-workspace-remote/plugin-focused-workspace.test.ts"
+      ],
+      "checks": [
+        "ORCA_BACKGROUND_LAUNCH=1 pnpm exec vitest run --config config/vitest.config.ts src/shared/plugin-workspace-remote src/main/plugin-workspace-remote src/renderer/src/plugin-workspace-remote src/main/plugins src/shared/plugins src/renderer/src/components/plugins"
       ]
     }
   ]

@@ -41,7 +41,9 @@ beforeEach(async () => {
     lookup: vi.fn(),
     share: vi.fn(),
     stopWorkspace: vi.fn(),
-    list: async () => listing('mbp5')
+    list: async () => listing('mbp5'),
+    comments: vi.fn(),
+    deleteComments: vi.fn()
   }
   registerArtifactShareRuntime({
     owner,

@@ -204,6 +204,7 @@ export function configureRuntimeServices(runtime: OrcaRuntimeService): void {
     resourcesPath: process.resourcesPath,
     appPath: app.getAppPath(),
     callRuntimeEnvironment,
+    commentRuntime: runtime,
     isEnvironmentReachable: (id) => {
       const environment = listEnvironments(app.getPath('userData')).find((entry) => entry.id === id)
       return Boolean(

@@ -15,6 +15,11 @@ import {
   type ArtifactShareListResult
 } from '../../../../shared/self-hosted-artifacts/artifact-share-contract'
 import {
+  ArtifactShareCommentsResult,
+  ArtifactShareDeleteCommentsRequest,
+  ArtifactShareDeleteCommentsResult
+} from '../../../../shared/self-hosted-artifacts/artifact-share-comments-contract'
+import {
   ARTIFACT_SHARE_ERROR_CODES,
   ArtifactShareError
 } from '../../../../shared/self-hosted-artifacts/artifact-share-errors'
@@ -188,6 +193,34 @@ export const ARTIFACT_SHARE_METHODS = [
         context,
         runtimeEnvironment: runtimeEnvironmentAccess
       })
+  }),
+  defineMethod({
+    permission: 'workspace',
+    name: 'artifactShare.comments',
+    params: ArtifactShareFileRequest,
+    handler: ({ executionHostId, ...request }, context) =>
+      route(
+        executionHostId,
+        ARTIFACT_SHARE_RELAY_METHODS.comments,
+        request,
+        ArtifactShareCommentsResult,
+        () => requireArtifactShareRuntime().owner.comments(request),
+        context
+      )
+  }),
+  defineMethod({
+    permission: 'workspace',
+    name: 'artifactShare.deleteComments',
+    params: ArtifactShareDeleteCommentsRequest,
+    handler: ({ executionHostId, ...request }, context) =>
+      route(
+        executionHostId,
+        ARTIFACT_SHARE_RELAY_METHODS.deleteComments,
+        request,
+        ArtifactShareDeleteCommentsResult,
+        () => requireArtifactShareRuntime().owner.deleteComments(request),
+        context
+      )
   }),
   defineMethod({
     permission: 'workspace',

@@ -375,7 +375,9 @@ export function registerPtyConnectionSleepingResumeBannerTests(): void {
       const { connectPanePty } = await import('./pty-connection')
       const staleSessionId = 'wt-1@@stale-session'
       const transport = createMockTransport()
-      transport.connect.mockResolvedValue(undefined)
+      transport.connect.mockImplementation(async (opts: { sessionId?: string }) =>
+        opts.sessionId ? { id: opts.sessionId, sessionExpired: true } : undefined
+      )
       transportFactoryQueue.push(transport)
       const paneKey = makePaneKey('tab-1', LEAF_2)
       mockStoreState = {

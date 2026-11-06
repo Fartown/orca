@@ -4,6 +4,7 @@ import {
   PLUGIN_SHOT_MAX_ACTS,
   pluginShotActResultSchema
 } from '../../../shared/plugins/view/plugin-shot-acts'
+import { pluginFocusedWorkspaceSchema } from '../../../shared/plugin-workspace-remote/plugin-workspace-remote'
 
 const rectSchema = z.object({
   x: z.number().finite(),
@@ -33,7 +34,8 @@ export const pluginViewReplySchema: z.ZodType<PluginViewReply> = z.union([
     requestId: z.string().max(128),
     ok: z.literal(true),
     panel: drawnPanelSchema.optional(),
-    restored: z.boolean().optional()
+    restored: z.boolean().optional(),
+    workspace: pluginFocusedWorkspaceSchema.nullable().optional()
   }),
   z.object({
     requestId: z.string().max(128),

@@ -97,7 +97,7 @@ describe('handleReattachResult recovery settle', () => {
   })
 
   it('does not report success for a reattach that returned no PTY id', async () => {
-    // No-ID fallback cannot settle success before cold restore replaces its recovery ledger.
+    // An absent attach reply is not proof that the recorded terminal exited.
     const { session, settlePaneAttachAttempt } = buildSession({
       transport: {
         getPtyId: () => null,
@@ -110,7 +110,10 @@ describe('handleReattachResult recovery settle', () => {
     await expect(session.handleReattachResult(undefined, null)).resolves.toBe(false)
 
     expect(settlePaneAttachAttempt).not.toHaveBeenCalledWith('success')
-    expect(session.startFreshColdRestoreAgentResume).toHaveBeenCalledOnce()
+    expect(session.startFreshColdRestoreAgentResume).not.toHaveBeenCalled()
+    expect(session.deps.clearTabPtyId).not.toHaveBeenCalled()
+    expect(session.syncPanePtyLayoutBinding).not.toHaveBeenCalledWith(null)
+    expect(settlePaneAttachAttempt).toHaveBeenCalledWith('failed')
   })
 
   it('does not report success for an expired session', async () => {

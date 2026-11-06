@@ -1,29 +1,96 @@
-/* Theme tokens are extracted from assets/main.css at build time so the page matches Orca. */
-@import 'orca-share-viewer-tokens.css';
-@import 'katex/dist/katex.min.css';
-@import '../../../assets/markdown-preview.css';
+/* The app's own main.css, compiled for the classes this page renders (build-artifact-share-viewer.mjs). */
+@import 'orca-share-viewer-app-styles.css';
 
-html,
-body {
-  margin: 0;
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-sans);
-}
-
-.orca-share-page.markdown-preview {
-  box-sizing: border-box;
+.orca-share-body {
+  position: relative;
+  box-sizing: content-box;
   max-width: 920px;
   margin: 0 auto;
-  font-size: 15px;
+  font-size: 14px;
 }
 
-.orca-share-footer {
+/* The rich editor's review rail: cards sit in a column beside the text, never between its blocks. */
+.orca-share-body-with-rail {
+  padding-right: clamp(252px, 28%, 308px);
+}
+
+.orca-share-body-with-rail > .rich-markdown-review-note-layer {
+  right: 0;
+}
+
+.orca-share-comment-block {
+  position: relative;
+}
+
+.orca-share-comment-block:focus {
+  outline: none;
+}
+
+/* Same add button as the app's preview, in its gutter; higher specificity than its narrow-width rule. */
+.orca-share-comment-block > .markdown-annotation-add {
+  position: absolute;
+  top: 2px;
+  left: -26px;
+}
+
+.orca-share-comment-block:hover > .markdown-annotation-add,
+.orca-share-comment-block:focus-within > .markdown-annotation-add {
+  opacity: 1;
+}
+
+/* Why: a reader's name and date make a longer header than the app's notes; the actions must not be squeezed out. */
+.orca-share-body .orca-diff-comment-actions-pill {
+  flex-shrink: 0;
+}
+
+.orca-share-inline-comments {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 8px 0 16px;
+}
+
+.orca-share-orphan-comments {
   margin-top: 48px;
   padding-top: 16px;
   border-top: 1px solid var(--border);
-  color: var(--muted-foreground);
-  font-size: 12px;
+}
+
+.orca-share-orphan-comments > h2 {
+  margin: 0 0 12px;
+  border: 0;
+  padding: 0;
+}
+
+/* Commented text: a dashed rule drawn a little below each line (::highlight cannot offset an underline). */
+.orca-share-comment-underlines {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.orca-share-comment-underlines > span {
+  position: absolute;
+  height: 1px;
+  background-image: linear-gradient(
+    to right,
+    color-mix(in srgb, var(--foreground) 40%, transparent) 60%,
+    transparent 60%
+  );
+  background-size: 5px 1px;
+}
+
+.orca-share-comment-underlines > span.is-active {
+  background-image: linear-gradient(
+    to right,
+    color-mix(in srgb, var(--foreground) 80%, transparent) 60%,
+    transparent 60%
+  );
+}
+
+/* Why: `.markdown-light .markdown-body code` outranks `.markdown-body pre code`, painting each code line as a chip. */
+.markdown-preview .markdown-body pre code {
+  background: none;
 }
 
 .orca-share-fallback {

@@ -3,6 +3,7 @@ import type { PluginSurface } from '../frames/plugin-protocol'
 import * as stored from './plugin-host-api-storage-schemas'
 import { PLUGIN_PANEL_BRIDGE_API } from './plugin-host-api-panel-methods'
 import { PLUGIN_WORKER_ACTIONS_API } from './plugin-host-api-worker-actions'
+import { pluginWorkspaceRemoteSchema } from '../../plugin-workspace-remote/plugin-workspace-remote'
 import {
   ALL_SURFACES,
   FRAMES_ONLY,
@@ -54,11 +55,11 @@ export const pluginWorkspaceContextSchema = z
           })
           .strict()
       )
-      .max(PLUGIN_WORKSPACE_TERMINAL_LIMIT)
+      .max(PLUGIN_WORKSPACE_TERMINAL_LIMIT),
+    remote: pluginWorkspaceRemoteSchema.optional()
   })
   .strict()
   .nullable()
-const workspaceReadContextResult = pluginWorkspaceContextSchema
 
 const terminalSendTextParams = z.strictObject({
   /** Explicit target prevents delayed writes following focus changes into another pane. */
@@ -142,7 +143,7 @@ export const PLUGIN_HOST_API = {
     mutation: false,
     surfaces: ALL_SURFACES,
     params: workspaceReadContextParams,
-    result: workspaceReadContextResult
+    result: pluginWorkspaceContextSchema
   }),
   'terminal.sendText': spec({
     summary: 'Types text into one terminal named by id, optionally pressing Enter.',

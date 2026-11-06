@@ -767,6 +767,7 @@ import {
   WorktreeTeardownMissingTerminalsParams
 } from './worktree-params'
 import { WorktreeAdoptProvisionedRoot } from './worktree-provisioned-root-params'
+import { ArtifactShareDeleteCommentsRequest } from '../self-hosted-artifacts/artifact-share-comments-contract'
 import {
   ArtifactShareConfigureLocalRequest,
   ArtifactShareFileRequest,
@@ -896,7 +897,9 @@ export const RPC_PARAMS_BY_METHOD = {
   'aiVault.searchSessions': AiVaultSearchRequestSchema,
   'aiVault.searchStatus': AiVaultSearchStatusRequestSchema,
   'aiVault.setSearchEnabled': AiVaultSetSearchEnabledParamsSchema,
+  'artifactShare.comments': ArtifactShareFileRequest,
   'artifactShare.configureLocal': ArtifactShareConfigureLocalRequest,
+  'artifactShare.deleteComments': ArtifactShareDeleteCommentsRequest,
   'artifactShare.hostStatus': ArtifactShareHostRef,
   'artifactShare.list': ArtifactShareListRequest,
   'artifactShare.lookup': ArtifactShareFileRequest,

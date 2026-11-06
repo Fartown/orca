@@ -1,3 +1,4 @@
+import type { PluginWorkspaceRemote } from '../../../shared/plugin-workspace-remote/plugin-workspace-remote'
 import type { z } from 'zod'
 import { shortPluginBranchName } from '../../../shared/plugins/events/plugin-events'
 import {
@@ -31,7 +32,12 @@ export type PluginAgentStatusRow = {
 
 export type PluginWorkspaceContext = z.output<typeof pluginWorkspaceContextSchema>
 
-type Context = { worktreeId: string; branch: string; displayName: string }
+type Context = {
+  worktreeId: string
+  branch: string
+  displayName: string
+  remote?: PluginWorkspaceRemote
+}
 
 /** A pane's own name wins over the title its program sets. */
 export function pluginTerminalTitle(terminal: {
@@ -56,7 +62,8 @@ export function projectPluginWorkspaceContext(
     terminals: terminals
       .filter(({ id }) => id.length > 0 && id.length <= PLUGIN_TERMINAL_ID_MAX_LENGTH)
       .slice(0, PLUGIN_WORKSPACE_TERMINAL_LIMIT)
-      .map(({ id, title }) => (title ? { id, title } : { id }))
+      .map(({ id, title }) => (title ? { id, title } : { id })),
+    ...(context.remote ? { remote: context.remote } : {})
   }
 }
 

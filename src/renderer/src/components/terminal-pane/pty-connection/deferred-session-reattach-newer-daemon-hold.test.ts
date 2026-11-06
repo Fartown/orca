@@ -69,6 +69,7 @@ function createSession(opts: { runtimeEnvironmentId?: string } = {}) {
       .fn<(startup: unknown, options?: FreshSpawnOptions) => Promise<string>>()
       .mockResolvedValue('fresh-pty'),
     reportError: vi.fn(),
+    settlePaneAttachAttempt: vi.fn(),
     cols: 80,
     rows: 24,
     cacheKey: 'tab:leaf'
@@ -157,27 +158,18 @@ describe('restored pane refused for a newer daemon', () => {
     expect(fixture.writeReplayData).not.toHaveBeenCalled()
   })
 
-  it.each([false, true])(
-    'counts the fallback terminal without claiming an unavailable resume (%s)',
-    async (unavailable) => {
-      const { fixture, session, nextConnect } = createSession()
-      startDeferredSessionReattach(session, 'restored-pty')
-      await vi.waitFor(() => expect(isHeld()).toBe(true))
-      fixture.startFreshColdRestoreAgentResume.mockImplementation(async (_startup, options) => {
-        if (unavailable) {
-          options?.onAgentResumeUnavailable?.()
-        }
-        return 'fresh-pty'
-      })
-      nextConnect('throw')
-      await reopenHeldTerminals('tab:leaf')
-      expect(fixture.startFreshColdRestoreAgentResume).toHaveBeenCalledOnce()
-      expect(toast.success).toHaveBeenCalledWith(
-        'Reopened 1 terminal',
-        unavailable ? undefined : windowResumedDescription
-      )
-    }
-  )
+  it('retains a released pane when reattach throws without proving an exit', async () => {
+    const { fixture, session, nextConnect } = createSession()
+    startDeferredSessionReattach(session, 'restored-pty')
+    await vi.waitFor(() => expect(isHeld()).toBe(true))
+    nextConnect('throw')
+    await reopenHeldTerminals('tab:leaf')
+    expect(fixture.startFreshColdRestoreAgentResume).not.toHaveBeenCalled()
+    expect(fixture.deps.clearTabPtyId).not.toHaveBeenCalled()
+    expect(fixture.clearExitedPanePtyLayoutBinding).not.toHaveBeenCalled()
+    expect(fixture.settlePaneAttachAttempt).toHaveBeenCalledWith('failed')
+    expect(toast.success).not.toHaveBeenCalled()
+  })
 
   it.each([
     ['restored', { description: '1 agent session resumed.' }],

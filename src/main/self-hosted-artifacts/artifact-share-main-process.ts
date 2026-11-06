@@ -1,6 +1,11 @@
 import { homedir, hostname } from 'node:os'
 import { isArtifactSharingEnabled } from '../../shared/artifact-sharing-gate'
 import type { GlobalSettings } from '../../shared/global-settings-types'
+import {
+  removeArtifactShareReviewNotes,
+  startArtifactShareCommentImport,
+  type ArtifactShareCommentImportRuntime
+} from './artifact-share-comment-import'
 import { createArtifactShareOwnerService } from './artifact-share-owner-service'
 import {
   registerArtifactShareRuntime,
@@ -20,6 +25,7 @@ export type ArtifactShareSettingsSource = {
 
 let server: ArtifactShareAppServer | null = null
 let removeSettingsListener: (() => void) | null = null
+let stopCommentImport: (() => void) | null = null
 
 /** Starts sharing for this app: it follows the settings toggle and stops when the app quits. */
 export function startArtifactShareForMainProcess(input: {
@@ -29,8 +35,11 @@ export function startArtifactShareForMainProcess(input: {
   appPath: string | null
   callRuntimeEnvironment: ArtifactShareRuntimeEnvironmentCall
   isEnvironmentReachable: (environmentId: string) => boolean
+  /** The runtime owning this computer's workspaces; reader comments become its review notes. */
+  commentRuntime?: ArtifactShareCommentImportRuntime
 }): void {
   const home = resolveArtifactShareHome(process.env, homedir())
+  const commentRuntime = input.commentRuntime
   const computerLabel = hostname()
   const appServer = new ArtifactShareAppServer({
     home,
@@ -44,7 +53,11 @@ export function startArtifactShareForMainProcess(input: {
   const owner = createArtifactShareOwnerService({
     home,
     host: { executionHostId: 'local', label: computerLabel },
-    readStatus: () => appServer.status()
+    readStatus: () => appServer.status(),
+    removeReviewNotes: commentRuntime
+      ? (absolutePath, commentIds) =>
+          removeArtifactShareReviewNotes(commentRuntime, absolutePath, commentIds)
+      : undefined
   })
   server = appServer
   registerArtifactShareRuntime({
@@ -72,12 +85,22 @@ export function startArtifactShareForMainProcess(input: {
     }
   })
   removeSettingsListener = typeof unsubscribe === 'function' ? () => unsubscribe() : null
+  stopCommentImport = commentRuntime
+    ? startArtifactShareCommentImport({
+        home,
+        userDataPath: input.userDataPath,
+        runtime: commentRuntime,
+        onError: (error) => console.warn('[artifact-share] comment import failed', error)
+      })
+    : null
 }
 
 export async function stopArtifactShareForMainProcess(): Promise<void> {
   const unsubscribe = removeSettingsListener
   removeSettingsListener = null
   unsubscribe?.()
+  stopCommentImport?.()
+  stopCommentImport = null
   registerArtifactShareRuntime(null)
   await server?.stop()
 }

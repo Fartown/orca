@@ -70,7 +70,7 @@ HTML panels and custom editors get these CSS variables from Orca's active theme,
 ## Methods
 
 - `workspace.readContext` (capability `workspace:read`; worker, panel, editor; since 1.0): Branch, name and terminal ids of the focused workspace, or null when none is focused.
-  `(params?: {}) => { branch: string; displayName: string; terminals: { id: string; title?: string }[] } | null`
+  `(params?: {}) => { branch: string; displayName: string; terminals: { id: string; title?: string }[]; remote?: { name: string; url: string } } | null`
 - `terminal.sendText` (capability `terminal:send`; worker; since 1.0): Types text into one terminal named by id, optionally pressing Enter.
   `(params: { terminalId: string; text: string; enter?: boolean }) => { accepted: boolean }`
 - `notifications.show` (capability `notifications:show`; worker, panel, editor; since 1.0): Shows a desktop notification.
@@ -108,7 +108,7 @@ HTML panels and custom editors get these CSS variables from Orca's active theme,
 - `statusBar.update` (no capability; worker; since 1.2): Changes one of the plugin's `contributes.statusBarItems` (named by `id`): fields given replace their current value, `visible: false` hides it. Desktop app only; lasts until Orca restarts, and is hidden while the plugin is disabled.
   `(params: { id: string; text?: string; icon?: "activity" | "bar-chart-3" | "bell" | "blocks" | "book" | "bot" | "bug" | "calendar" | "cloud" | "code" | "database" | "file-text" | "flag" | "folder" | "gauge" | "globe" | "hammer" | "layers" | "lightbulb" | "package" | "plug" | "puzzle" | "rocket" | "star" | "terminal" | "wrench" | "zap" | "add" | "remove" | "delete" | "edit" | "refresh" | "search" | "settings" | "check" | "close" | "info" | "warning" | "error" | "open-external" | "copy" | "download" | "upload" | "play" | "pause" | "stop" | "more" | "expand" | "collapse" | "next" | "filter" | "branch" | "file" | "agent" | "link"; tone?: "neutral" | "accent" | "success" | "warning" | "danger"; tooltip?: string; visible?: boolean }) => { ok: true }`
 - `workspace.list` (capability `workspace:read`; worker; since 1.3): Lists every workspace, Git worktrees and folders, on every host Orca reaches.
-  `(params?: {}) => { workspaces: { id: string; kind: "worktree" | "folder"; name: string; path: string; branch: string | null; hostId: string | null }[]; truncated: boolean }`
+  `(params?: {}) => { workspaces: { id: string; kind: "worktree" | "folder"; name: string; path: string; branch: string | null; hostId: string | null; remote?: { name: string; url: string } }[]; truncated: boolean }`
 - `workspace.open` (capability `workspace:write`; worker; since 1.3): Shows a workspace in Orca, as clicking it in the sidebar does; a folder workspace needs the desktop app.
   `(params: { workspaceId: string }) => { opened: true }`
 - `terminal.create` (capability `terminal:send`; worker; since 1.3): Opens a terminal in a workspace, optionally running a command, in the background.

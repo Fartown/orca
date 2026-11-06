@@ -71,16 +71,17 @@ export abstract class OrcaRuntimeWithActivateManagedWorktree extends OrcaRuntime
     sleepingAgentWake: 'requested' | 'unsupported-headless' | 'not-applicable'
   }> {
     this.assertGraphReady()
-    const worktree = await this.resolveGitWorktreeSelector(worktreeSelector)
+    const worktree = await this.resolveWorkspaceSelector(worktreeSelector)
+    const folder = this.resolveFolderWorkspaceSelector(worktreeSelector)
     const repo = this.store?.getRepo(worktree.repoId)
-    if (!repo) {
+    if (!repo && !folder) {
       throw new Error('repo_not_found')
     }
     const navigation = resolveRuntimeNavigationTarget({ ...opts, defaultTarget: 'host' })
     const targetsHost = navigationTargetsHost(navigation)
     const targetsClients = navigationTargetsClients(navigation)
 
-    const target = this.store ? worktreeRowTarget(this.store, worktree) : undefined
+    const target = this.store && !folder ? worktreeRowTarget(this.store, worktree) : undefined
     if (
       !targetsHost &&
       target &&
@@ -88,7 +89,11 @@ export abstract class OrcaRuntimeWithActivateManagedWorktree extends OrcaRuntime
     ) {
       // Mobile/web activation bypasses renderer selection, so main must acknowledge unread state.
       this.store.setWorktreeMeta(target, { isUnread: false })
-      this.notifyWorktreesChanged(repo.id)
+      this.notifyWorktreesChanged(worktree.repoId)
+    }
+    if (!targetsHost && folder?.isUnread && this.store?.updateFolderWorkspace) {
+      this.store.updateFolderWorkspace(folder.id, { isUnread: false })
+      this.notifyFolderWorkspaceChanged()
     }
 
     let sleepingAgentWake: 'requested' | 'unsupported-headless' | 'not-applicable' =
@@ -96,10 +101,10 @@ export abstract class OrcaRuntimeWithActivateManagedWorktree extends OrcaRuntime
     if (targetsHost || targetsClients) {
       // Inactive renderer-owned panes may need desktop activation to gain PTYs.
       if (targetsHost) {
-        this.notifyHostActivateWorktree(repo.id, worktree.id)
+        this.notifyHostActivateWorktree(worktree.repoId, worktree.id)
       }
       if (targetsClients) {
-        this.notifyClientsActivateWorktree(repo.id, worktree.id, undefined, navigation)
+        this.notifyClientsActivateWorktree(worktree.repoId, worktree.id, undefined, navigation)
       }
     }
     if (!targetsHost) {
@@ -115,7 +120,11 @@ export abstract class OrcaRuntimeWithActivateManagedWorktree extends OrcaRuntime
         const worktreeId = worktree.id
         void this.queueSleepingAgentWake(worktreeId)
         // Wake records live in the repo host's partition, including SSH.
-        const records = this.store?.getWorkspaceSession?.(getRepoExecutionHostId(repo))
+        const records = this.store?.getWorkspaceSession?.(
+          repo
+            ? getRepoExecutionHostId(repo)
+            : this.getWorkspaceSessionHostIdForWorktree(worktree.id)
+        )
         sleepingAgentWake = phoneWakeReport(
           records?.sleepingAgentSessionsByPaneKey,
           worktreeId,
@@ -123,7 +132,7 @@ export abstract class OrcaRuntimeWithActivateManagedWorktree extends OrcaRuntime
         )
       }
     }
-    return { repoId: repo.id, worktreeId: worktree.id, activated: true, sleepingAgentWake }
+    return { repoId: worktree.repoId, worktreeId: worktree.id, activated: true, sleepingAgentWake }
   }
 
   /** Use buildStartupForDraft's selection so launches can name the agent before creation. */

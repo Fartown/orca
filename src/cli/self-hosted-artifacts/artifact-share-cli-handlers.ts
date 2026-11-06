@@ -1,10 +1,15 @@
 import type {
+  ArtifactShareCommentsResult,
+  ArtifactShareDeleteCommentsResult
+} from '../../shared/self-hosted-artifacts/artifact-share-comments-contract'
+import type {
   ArtifactShareListResult,
   ArtifactShareLookupResult,
   ArtifactShareShareResult,
   ArtifactShareStatusResult
 } from '../../shared/self-hosted-artifacts/artifact-share-contract'
 import type { CommandHandler, HandlerContext } from '../dispatch'
+import { getRepeatedStringFlag } from '../flags'
 import { printResult } from '../format'
 import { rejectRemoteSelectionFlags } from '../remote-selection-flag-rejection'
 import { RuntimeClientError } from '../runtime-client'
@@ -13,7 +18,12 @@ import {
   resolveArtifactShareCliHost,
   tokenFromArtifactShareLinkOrToken
 } from './artifact-share-cli-target'
-import { formatArtifactShareList, formatArtifactShareStatus } from './artifact-share-cli-format'
+import {
+  formatArtifactShareComments,
+  formatArtifactShareDeletedComments,
+  formatArtifactShareList,
+  formatArtifactShareStatus
+} from './artifact-share-cli-format'
 
 function stringFlag(ctx: HandlerContext, name: string): string | undefined {
   const value = ctx.flags.get(name)
@@ -107,6 +117,30 @@ export const ARTIFACT_SHARE_CLI_HANDLERS: Record<string, CommandHandler> = {
       token
     })
     printResult({ ...response, result: { stopped: true } }, ctx.json, () => 'Sharing stopped.')
+  },
+  'artifacts comments list': async (ctx) => {
+    reject(ctx)
+    const response = await ctx.client.call<ArtifactShareCommentsResult>(
+      'artifactShare.comments',
+      fileTarget(ctx)
+    )
+    printResult(response, ctx.json, formatArtifactShareComments)
+  },
+  'artifacts comments delete': async (ctx) => {
+    reject(ctx)
+    const commentIds = getRepeatedStringFlag(ctx.flags, 'id')
+    const all = ctx.flags.get('all') === true
+    if (all === commentIds.length > 0) {
+      throw new RuntimeClientError(
+        'invalid_argument',
+        'Pass comment ids from `orca artifacts comments list`, or --all, but not both.'
+      )
+    }
+    const response = await ctx.client.call<ArtifactShareDeleteCommentsResult>(
+      'artifactShare.deleteComments',
+      { ...fileTarget(ctx), ...(all ? { all: true } : { commentIds }) }
+    )
+    printResult(response, ctx.json, formatArtifactShareDeletedComments)
   },
   'artifacts service status': async (ctx) => {
     reject(ctx)

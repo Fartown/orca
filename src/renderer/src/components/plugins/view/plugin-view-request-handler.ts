@@ -38,6 +38,7 @@ import {
   openWorkspaceFile,
   runBuiltInAction
 } from './plugin-view-host-actions'
+import { readPluginFocusedWorkspace } from '../../../plugin-workspace-remote/plugin-focused-workspace'
 
 type Failure = Extract<PluginViewReply, { ok: false }>
 
@@ -237,6 +238,8 @@ export async function handlePluginViewRequest(
         return runBuiltInAction(request)
       case 'open-folder-workspace':
         return openFolderWorkspace(request)
+      case 'read-focused-workspace':
+        return readPluginFocusedWorkspace(request)
       case 'end-capture': {
         endPluginShotReplay()
         usePluginViewCaptureStore.getState().end(request.captureId)

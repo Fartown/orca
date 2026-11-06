@@ -7,6 +7,7 @@
 import type { PluginDeclarativeNode } from '../declarative/plugin-declarative-catalog'
 import type { PluginShotAct, PluginShotActResult } from './plugin-shot-acts'
 import type { PluginCommandAliasActionId } from '../contributions/plugin-command-actions'
+import type { PluginFocusedWorkspace } from '../../plugin-workspace-remote/plugin-workspace-remote'
 
 export const PLUGIN_VIEW_REQUEST_CHANNEL = 'plugins:viewRequest'
 export const PLUGIN_VIEW_REPLY_CHANNEL = 'plugins:viewReply'
@@ -77,6 +78,8 @@ export type PluginViewRequestBody =
   | { kind: 'run-action'; action: PluginCommandAliasActionId }
   /** A plugin worker's `workspace.open` of a folder workspace, which the runtime cannot activate. */
   | { kind: 'open-folder-workspace'; folderWorkspaceId: string }
+  /** `workspace.readContext` for a focused workspace main's runtime does not own (another host). */
+  | { kind: 'read-focused-workspace' }
 
 export type PluginViewReplay = {
   tree: PluginDeclarativeNode | null
@@ -113,7 +116,14 @@ export type PluginViewDrawnPanel = {
 
 export type PluginViewReply =
   /** `restored`: on `end-capture` after `--act`, whether the panel's atoms were put back. */
-  | { requestId: string; ok: true; panel?: PluginViewDrawnPanel; restored?: boolean }
+  | {
+      requestId: string
+      ok: true
+      panel?: PluginViewDrawnPanel
+      restored?: boolean
+      /** `read-focused-workspace`: null when the window focuses no Git worktree. */
+      workspace?: PluginFocusedWorkspace | null
+    }
   | { requestId: string; ok: false; code: string; message: string }
 
 /** The renderer could not show the view; `code` is a stable reason callers may branch on. */

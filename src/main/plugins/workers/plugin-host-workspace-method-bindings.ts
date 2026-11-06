@@ -13,6 +13,7 @@ import type { PluginHostServices } from './plugin-host-method-bindings'
 import { PluginHostCallError } from './plugin-host-call-scope'
 import type { PluginHostRendererActions } from '../view/plugin-host-renderer-actions'
 import { folderWorkspaceKey, parseWorkspaceKey } from '../../../shared/workspace-scope'
+import { pluginWorkspaceRemoteForRepo } from '../../../shared/plugin-workspace-remote/plugin-workspace-remote'
 
 /** The runtime RPC the `orca` CLI calls, run in process; rejects with the runtime's error.
  *  `beforeEffect` runs right before the runtime acts, after its own waits; a throw refuses it. */
@@ -42,7 +43,16 @@ const worktreeListAnswer = z.object({
   truncated: z.boolean().optional()
 })
 const repoListAnswer = z.object({
-  repos: z.array(z.object({ id: z.string(), kind: z.string().optional() }))
+  repos: z.array(
+    z.object({
+      id: z.string(),
+      kind: z.string().optional(),
+      gitRemoteIdentity: z
+        .object({ remoteName: z.string(), remoteUrl: z.string() })
+        .nullable()
+        .optional()
+    })
+  )
 })
 const folderListAnswer = z.object({
   folderWorkspaces: z.array(
@@ -113,21 +123,21 @@ export const PLUGIN_WORKSPACE_ACTION_HANDLERS = {
       call('folderWorkspace.list', undefined)
     ])
     const { worktrees, totalCount, truncated } = worktreeListAnswer.parse(listed)
+    const listedRepos = repoListAnswer.parse(repos).repos
     const folderRepos = new Set(
-      repoListAnswer
-        .parse(repos)
-        .repos.filter((repo) => repo.kind === 'folder')
-        .map((repo) => repo.id)
+      listedRepos.filter((repo) => repo.kind === 'folder').map((repo) => repo.id)
     )
     const worktreeRows = worktrees.slice(0, PLUGIN_WORKSPACE_LIST_LIMIT).map((worktree) => {
       const folder = folderRepos.has(worktree.repoId)
+      const remote = pluginWorkspaceRemoteForRepo(listedRepos, worktree.repoId)
       return {
         id: worktree.identity ? `identity:${worktree.identity.key}` : worktree.id,
         kind: folder ? ('folder' as const) : ('worktree' as const),
         name: worktree.displayName,
         path: worktree.path,
         branch: folder ? null : branchName(worktree.branch),
-        hostId: worktree.hostId ?? null
+        hostId: worktree.hostId ?? null,
+        ...(remote ? { remote } : {})
       }
     })
     // Project-group folders have no repo row; their key is what selectors take.

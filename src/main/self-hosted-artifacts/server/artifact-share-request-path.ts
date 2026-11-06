@@ -1,6 +1,7 @@
 import { realpath, stat } from 'node:fs/promises'
 import { join } from 'node:path'
 import { ARTIFACT_SHARE_TOKEN_PATTERN } from '../../../shared/self-hosted-artifacts/artifact-share-contract'
+import { ARTIFACT_SHARE_COMMENTS_SEGMENT } from '../../../shared/self-hosted-artifacts/artifact-share-comments-contract'
 import { isDeniedArtifactSharePath } from '../../../shared/self-hosted-artifacts/artifact-share-denied-paths'
 import { isUnsafeArtifactSharePathSegment } from '../../../shared/self-hosted-artifacts/artifact-share-url'
 import { relativePathInsideRoot } from '../artifact-share-owner-paths'
@@ -9,6 +10,7 @@ export type ArtifactShareRequestTarget =
   | { kind: 'identity' }
   | { kind: 'asset'; name: string }
   | { kind: 'file'; token: string; segments: string[]; raw: boolean }
+  | { kind: 'comments'; token: string; segments: string[] }
   | { kind: 'bad-request' }
   | { kind: 'not-found' }
 
@@ -35,18 +37,28 @@ export function parseArtifactShareRequest(rawUrl: string | undefined): ArtifactS
     if (segments.length === 3 && segments[1] === 'assets' && ASSET_NAME_PATTERN.test(segments[2])) {
       return { kind: 'asset', name: segments[2] }
     }
-    return { kind: 'not-found' }
+    if (segments[1] === ARTIFACT_SHARE_COMMENTS_SEGMENT) {
+      const target = parseTokenPath(segments.slice(2))
+      return target && target.segments.length > 0 ? { kind: 'comments', ...target } : NOT_FOUND
+    }
+    return NOT_FOUND
   }
+  const target = parseTokenPath(segments)
+  return target ? { kind: 'file', ...target, raw: url.searchParams.get('raw') === '1' } : NOT_FOUND
+}
+
+const NOT_FOUND = { kind: 'not-found' } as const
+
+function parseTokenPath(segments: string[]): { token: string; segments: string[] } | null {
   const [token, ...rest] = segments
   if (!token || !ARTIFACT_SHARE_TOKEN_PATTERN.test(token)) {
-    return { kind: 'not-found' }
+    return null
   }
   // Why: a trailing slash names the directory itself; any other empty segment is an escape attempt.
   const pathSegments = rest.length > 0 && rest.at(-1) === '' ? rest.slice(0, -1) : rest
-  if (pathSegments.some(isUnsafeArtifactSharePathSegment)) {
-    return { kind: 'not-found' }
-  }
-  return { kind: 'file', token, segments: pathSegments, raw: url.searchParams.get('raw') === '1' }
+  return pathSegments.some(isUnsafeArtifactSharePathSegment)
+    ? null
+    : { token, segments: pathSegments }
 }
 
 export type ResolvedArtifactShareFile = { absolutePath: string; relativePath: string; size: number }

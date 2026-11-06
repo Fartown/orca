@@ -17,6 +17,7 @@ import {
 import type { LiveTerminalSurfaceOwnerIndex } from './worktree-live-terminal-surface-owners'
 import { readWorktreeLiveTerminalSurfaceOwners } from './worktree-live-terminal-surface-owners'
 import { isStructuredAgentSyntheticSleepingRecord } from './structured-agent-synthetic-sleeping-record'
+import { liveTerminalPlacementIsPending } from '../mobile-terminal-surface-recovery/live-terminal-placement-verdict'
 import {
   readWorktreeStructuredActivationInventory,
   type StructuredActivationInventory
@@ -211,8 +212,12 @@ export async function runWorktreeAgentActivationGate(
     .filter((session) => session.exiting !== true)
     .map((session) => session.id)
   let liveSurfaceAdopted = false
+  let placement: { surfaced: boolean; declinedPtyIds: readonly string[] } = {
+    surfaced: false,
+    declinedPtyIds: []
+  }
   if (adoptablePtyIds.length > 0) {
-    // Unreadable census neither adopts nor mints; report empty so caller can provide a usable surface, not adopted-with-nothing (STA-5701).
+    // Uncertain ownership cannot authorize another default surface.
     const adoption = await adoptLiveWorkspacePtySurfaces(
       deps.getState,
       worktreeId,
@@ -220,6 +225,7 @@ export async function runWorktreeAgentActivationGate(
       deps.listSurfaceOwners
     )
     liveSurfaceAdopted = adoption.surfaced
+    placement = adoption
     // A live agent the user can no longer see has to be diagnosable from the console.
     if (adoption.declinedPtyIds.length > 0) {
       console.warn('[worktree-activation] live PTYs left without a surface', {
@@ -227,13 +233,17 @@ export async function runWorktreeAgentActivationGate(
         declinedPtyIds: adoption.declinedPtyIds
       })
     }
-    if (liveSurfaceAdopted && !workspaceHasSleepingAgentSessions(deps.getState(), worktreeId)) {
-      return 'adopted'
-    }
+  }
+  if (liveSurfaceAdopted && !workspaceHasSleepingAgentSessions(deps.getState(), worktreeId)) {
+    return 'adopted'
   }
 
   if (structured && !workspaceHasSleepingAgentSessions(deps.getState(), worktreeId)) {
     return 'structured'
+  }
+  const placementPending = liveTerminalPlacementIsPending(liveWorkspaceSessions.length, placement)
+  if (placementPending && !workspaceHasSleepingAgentSessions(deps.getState(), worktreeId)) {
+    return 'blocked'
   }
   const store = deps.getState()
   const claims = liveSleepingAgentClaims(
@@ -256,14 +266,16 @@ export async function runWorktreeAgentActivationGate(
     return 'blocked'
   }
   const launched = deps.resume(worktreeId, { skipClaimKeys: claims.keys })
-  // Empty directs caller to seed, not a claim the host has nothing; caller rechecks its own guards.
+  // Only an inventory without unresolved live work may authorize initial seeding.
   return launched > 0
     ? 'resumed'
     : liveSurfaceAdopted
       ? 'adopted'
       : structured
         ? 'structured'
-        : 'empty'
+        : placementPending
+          ? 'blocked'
+          : 'empty'
 }
 
 export function gateWorktreeAgentActivation(

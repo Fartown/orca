@@ -6,7 +6,10 @@ import {
   type ExecutionHostId
 } from '../../../../shared/execution-host'
 export const recentlyRenamedWorktreeIdExpiry = new Map<string, number>()
-import { activateAndRevealWorktree } from '@/lib/worktree-activation'
+import {
+  activateNotifiedWorkspace,
+  refreshNotifiedWorkspaceCatalog
+} from '@/mobile-terminal-surface-recovery/notified-workspace-activation'
 import type { RuntimeClientEvent } from '../../../../shared/runtime-client-events'
 import type { AppState } from '../../store/types'
 import { hostWorktreeTarget } from '../../../../shared/worktree/host-qualified-identity'
@@ -291,9 +294,7 @@ export function createWorktreeEventRuntime(
       useAppStore.getState().getKnownWorktreeById(worktreeId, options.executionHostId)
     )
     // Why: fetch first so activation can resolve the CLI-created worktree; it arrived from main, not yet in renderer state.
-    await (options.executionHostId
-      ? useAppStore.getState().fetchWorktrees(repoId, { executionHostId: options.executionHostId })
-      : useAppStore.getState().fetchWorktrees(repoId))
+    await refreshNotifiedWorkspaceCatalog(worktreeId, repoId, options.executionHostId)
     // A connection or bridge replacement during discovery revokes this navigation.
     if (options.isCurrent?.() === false) {
       return
@@ -302,7 +303,7 @@ export function createWorktreeEventRuntime(
       useAppStore.getState().getKnownWorktreeById(worktreeId, options.executionHostId)
     )
     // Canonical activation records CLI switches in back/forward history.
-    activateAndRevealWorktree(worktreeId, {
+    activateNotifiedWorkspace(worktreeId, {
       ...(setup ? { setup } : {}),
       ...(startup ? { startup } : {}),
       ...(defaultTabs ? { defaultTabs } : {}),

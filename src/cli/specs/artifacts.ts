@@ -44,6 +44,29 @@ export const ARTIFACT_COMMAND_SPECS: CommandSpec[] = [
     positionalArgs: ['id']
   },
   {
+    path: ['artifacts', 'comments', 'list'],
+    summary: 'List reader comments on a shared Markdown file',
+    usage: 'orca artifacts comments list <file> [--json]',
+    allowedFlags: [...LOCAL_COMMAND_FLAGS, 'file'],
+    positionalArgs: ['file'],
+    examples: ['orca artifacts comments list ./notes.md --json']
+  },
+  {
+    path: ['artifacts', 'comments', 'delete'],
+    aliases: [['artifacts', 'comments', 'rm']],
+    destructive: true,
+    summary: 'Delete reader comments on a shared file, and the review notes they became here',
+    usage: 'orca artifacts comments delete <file> (<comment-id>... | --all) [--json]',
+    allowedFlags: [...LOCAL_COMMAND_FLAGS, 'file', 'id', 'all'],
+    positionalArgs: ['file', 'id'],
+    variadicPositional: true,
+    repeatableFlags: ['id'],
+    examples: [
+      'orca artifacts comments delete ./notes.md Qx3vR0pL8sTy2KmA',
+      'orca artifacts comments delete ./notes.md --all'
+    ]
+  },
+  {
     path: ['artifacts', 'service', 'status'],
     summary: 'Show the local network share service on the computer running this command',
     usage: 'orca artifacts service status [--json]',

@@ -134,18 +134,8 @@ export function bindHandleReattachResult(sessionBag: ConnectPanePtySession): voi
         paneId: session.pane.id,
         ptyId: staleSessionId ?? null
       })
-      // Why: a stale restored session can fail reattach after mount; don't leave xterm alive without a backing PTY.
-      if (staleSessionId) {
-        session.clearExitedPanePtyLayoutBinding(staleSessionId)
-      } else {
-        session.syncPanePtyLayoutBinding(null)
-      }
-      if (staleSessionId) {
-        session.deps.clearTabPtyId(session.deps.tabId, staleSessionId)
-      }
-      session.startFreshColdRestoreAgentResume(coldRestoreStartup, {
-        forceBlankRestoredViewport: true
-      })
+      // A missing reply cannot retire the recorded terminal or authorize another writer.
+      session.settlePaneAttachAttempt('failed')
       return false
     }
     if (connectResult?.sessionExpired) {

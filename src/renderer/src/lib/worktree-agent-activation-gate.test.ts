@@ -587,8 +587,7 @@ describe('worktree agent activation gate', () => {
     }
   )
 
-  // Unreadable census must not claim adopted without a surface; fail-closed still returns caller seeding responsibility.
-  it('declines to mint but still asks for a seed when the host cannot answer', async () => {
+  it('blocks seeding when the host cannot place its live terminal', async () => {
     const livePtyId = `${WORKTREE_ID}@@live-agent`
     const { deps, createTab } = testDeps({
       sessions: [listed(livePtyId)],
@@ -596,12 +595,12 @@ describe('worktree agent activation gate', () => {
       resumeCount: 0
     })
 
-    await expect(runWorktreeAgentActivationGate(WORKTREE_ID, deps)).resolves.toBe('empty')
+    await expect(runWorktreeAgentActivationGate(WORKTREE_ID, deps)).resolves.toBe('blocked')
 
     expect(createTab).not.toHaveBeenCalled()
   })
 
-  it('declines to mint but still asks for a seed when two host surfaces claim one live PTY', async () => {
+  it('blocks seeding when two host surfaces claim one live PTY', async () => {
     const livePtyId = `${WORKTREE_ID}@@live-agent`
     const { deps, createTab } = testDeps({
       sessions: [listed(livePtyId)],
@@ -609,7 +608,7 @@ describe('worktree agent activation gate', () => {
       resumeCount: 0
     })
 
-    await expect(runWorktreeAgentActivationGate(WORKTREE_ID, deps)).resolves.toBe('empty')
+    await expect(runWorktreeAgentActivationGate(WORKTREE_ID, deps)).resolves.toBe('blocked')
 
     expect(createTab).not.toHaveBeenCalled()
   })
@@ -635,8 +634,7 @@ describe('worktree agent activation gate', () => {
       warn.mockRestore()
       return
     }
-    // The seam re-checks its own guard, so an existing tab is not re-seeded by 'empty'.
-    await expect(runWorktreeAgentActivationGate(WORKTREE_ID, deps)).resolves.toBe('empty')
+    await expect(runWorktreeAgentActivationGate(WORKTREE_ID, deps)).resolves.toBe('blocked')
 
     expect(createTab).not.toHaveBeenCalled()
     expect(warn).toHaveBeenCalledWith(

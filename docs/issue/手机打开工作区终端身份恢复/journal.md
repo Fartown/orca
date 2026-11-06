@@ -3,7 +3,7 @@ title: '手机打开工作区终端身份恢复'
 slug: '手机打开工作区终端身份恢复'
 status: testing
 created: 2026-10-24
-updated: 2026-11-02
+updated: 2026-11-05
 external_ids: ['STA-3859']
 ---
 
@@ -91,7 +91,24 @@ external_ids: ['STA-3859']
 - 影响范围：REQ-001 至 REQ-006 的部分 slice，TC-001/004/006/013/014 及未运行用例；整体需求未标 `done`。
 - 关联文档：[需求](requirements/手机打开工作区终端身份恢复.md)、[方案](solutions/手机工作区原终端身份恢复方案.md)、[用例](tests/cases/手机终端原身份恢复.md)。
 
+### D-008 按完整恢复链补齐并保留严格验收
+
+- 日期：2026-11-05
+- 背景：用户再次要求完成空 tab 修复。本机 .55→.71 实际安装后，原 8 个 PTY/incarnation 保留，但标签 8→11、live PTY 8→10，两个旧 terminal handle 失效；前后快照不能单独确定新增 shell 的调用点。
+- 最终决定：扩展本功能的恢复和激活接缝；先验证已知 live 但无法认领时不会返回 `empty`，再补原 surface 恢复、严格接回、关闭/冲突与失联边界。保留 daemon 的可用接回，不通过全局拒绝、暗开关、删除标签或放宽身份断言取得绿色结果。
+- 原因：旧窄版未覆盖已有 tab 的残缺布局及失败后的 seed/connect 路径。2026-11-02 上游已修好的同轮多 leaf 合并继续复用，不重复实现。
+- 影响范围：REQ-001～REQ-006；旧窄版批准只作为历史证据，新增范围须本地/SSH、Git/folder、多窗格、关闭竞态和旧 peer 的实际验证。
+
 ## 3. 开发记录
+
+### 2026-11-05 完整恢复链诊断与回归登记
+
+- 本轮目标：把仍能生成空 tab 的实际路径补齐并走到正式安装后验收。
+- 完成内容：基于正式 .71 建立独立 worktree；核对窄版边界、激活门的 `empty` 语义和底层 attach-only 能力，登记宿主认领未完成时的回归范围。
+- 代码或文档变更：扩展功能登记和激活接缝，新增 live inventory 回归；产品修改和整体 REQ 状态不得提前记为通过。
+- 验证证据：`.docs/mobile-terminal-recovery-ui-validation/2026-11-05/`；正式安装前后身份快照来自 `.docs/linux-desktop-update-ui-validation/2026-11-05/`，不代替新修复验收。
+- 未解决问题：新增 shell 的调用点、残缺/重复 surface、关闭竞态、SSH/旧 peer 边界均待证明；手机 acp-workspace 的连接主机尚未提供。
+- 下一步：先得到失败回归和受控复现，再实现、运行相关门禁与本地/SSH 实际验证。
 
 ### 2026-11-02 同步上游 c9845c5f9c：多窗格残留已由上游修复（testing）
 
@@ -205,3 +222,30 @@ external_ids: ['STA-3859']
 - 验证证据：文档与功能门禁通过；架构门禁的 13 条 reference-drift 与未改动 root 基线完全相同。原始输出记于 `.docs/mobile-terminal-surface-recovery-ui-validation/2026-10-24/build/`；本地调查原始证据见[调研](research/手机激活终端认领证据.md)。
 - 未解决问题：方案仍在评审；关闭竞态、旧 peer、SSH 与配对 runtime 未完成产品验收；所有 REQ 待实现。
 - 下一步：评审主方案；实施前按实际接线扩展 owned 源码、seams、测试和检查，再执行本机与 SSH 真机验证。
+
+### 2026-11-05 恢复链对照与失败回退修复
+
+- 本轮目标：把 live 归属未知、附着无答复与已确认退出分开，验证真实窗口行为和原进程连续性。
+- 完成内容：gate 拒绝把尚未安置的 live PTY 判成 empty；三个附着失败分支保留原绑定并沿用现有人工/连接层恢复入口；已附着 transport 的无返回值仍按成功 payload 处理；明确退出仍用原 cold restore。
+- 代码或文档变更：登记 activation gate 和三个 attach 接缝、修订旧测试中以 undefined/普通抛错模拟退出的夹具、补 TC-018～020 和真实 Electron E2E。复用 Nov 2 上游同轮多 leaf 修复，不复制实现或启用暗开关。
+- 验证证据：忽略目录 `.docs/mobile-terminal-recovery-ui-validation/2026-11-05/`：`baseline-e2e.log` 在正式基线复现额外 Terminal 1；`restart-baseline-e2e.log` 复现无答复转发 fresh 请求；修复后 `final-e2e.log` 的 Git/folder 重复手机激活与 reload 三项通过；PTY/incarnation/PID、tab/leaf 和输出均有断言。73 项定向单测通过；完整终端回归与本轮最终门禁尚在执行，不能据此写全量 done。
+- 未解决问题：SSH/旧 peer 与关闭/多 leaf 的本轮真机矩阵尚未完成；用户截图的 acp-workspace 不在当前 Linux 项目清单，尚未定位其实际宿主。现场快照证明身份投影变化，但不能单凭它归因新增进程；历史空 tab 不按名称删除。
+- 下一步：完成剩余回归、SSH 隔离真机与发布/安装后实际窗口验收，再更新已通过项；不把代码、下载或单次重载当作全部修复。
+
+### 2026-11-05 独立文件夹查询与激活补齐
+
+- 本轮目标：完成真实 SSH 矩阵中此前未通过的独立 `folder:<id>` 路径，保留主机、进程与窗口身份。
+- 完成内容：真实 SSH 先复现独立文件夹 live 终端清单为空，再复现 `worktree.activate` 的 `selector_not_found`。活性清单改为走现有 workspace 解析；激活复用 folder/worktree 解析、原执行主机 wake partition 和既有 folder UI 入口，文件夹目录刷新不请求不存在的 repo。
+- 代码或文档变更：登记 `runtime-terminal-list.ts`、`workspace-activation.ts` 和激活事件接缝及对应测试；不加 wire 字段、不改 opcode、不启用暗开关。原 Git 激活 host 解析保留既有路径。
+- 验证证据：`folder-inventory-before.log` 与 `folder-activation-before.log` 分别在修复前失败；`folder-inventory-after.log` 27 项通过，`folder-activation-after.log` 59 项通过。`final-connection-regressions.log` 75 个文件、1140 项通过、1 项原有跳过；`host-scope-regressions.log` 24 项通过。最终真实应用 `final-e2e.log` 六项全部通过：本机 Git/folder 的不可读 census 与旧 hostScope 缺失、三次串行及三次并发手机激活、无答复附着跨 reload、SSH Git 与独立文件夹手机激活/客户端导航/桌面重启。`evidence/final-real-app/` 保存实际截图与身份 JSON；SSH 两类均核对原 handle/tab/leaf/PTY/非空 incarnation、前后同一 shell PID、静止内容及后续输出。
+- 未解决问题：用户截图中的 acp-workspace 不在本机目录或当前项目清单，当前 `mobileRelay.hosts.list` 为空，不能读不在联系中的主机来猜现场。六项测试证明本轮覆盖路径；不构成所有关闭微竞态、所有旧服务端或真实手机客户端的全量认证。历史多余标签尚未按名称清理。发布/安装后与截图实际宿主的验收仍待完成。
+- 下一步：运行最后门禁，按 Fork PR 流程发布修复并核对实际安装结果；拿到截图实际宿主后对原标签与进程做现场验证。
+
+### 2026-11-05 PR 全量回归的 activation seam 校正
+
+- 本轮目标：testing；校正全量 CI 发现的旧集成测试契约，覆盖归属从不可验证到恢复的完整激活行为。
+- 完成内容：PR #82 的打包、静态检查和真实应用分片通过；全量单测第 11 分片有一项旧断言要求 unverifiable census 下新建空终端，与本轮修复目标冲突。改为先断言 blocked 且零替代标签，再恢复权威 census，断言 adopted 且唯一标签引用原 live PTY。
+- 代码或文档变更：只更新既有 activation seam 测试、登记和 TC-018；产品代码没有扩大。
+- 验证证据：原失败日志 `build/ci-unit-11.log`；本机 `build/activation-seam-after.log` 10 项通过。均在本轮忽略证据目录。修订提交的全量 CI 尚待运行。
+- 未解决问题：发布安装及截图实际宿主的验证仍待完成，不能标 done。
+- 下一步：完成修订提交门禁，待完整 PR 检查通过后合并发布，再按已有授权安装并检查实际版本和终端连续性。

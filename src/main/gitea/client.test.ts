@@ -8,6 +8,10 @@ const { gitExecFileAsyncMock } = vi.hoisted(() => ({
 vi.mock('../git/runner', () => ({
   gitExecFileAsync: gitExecFileAsyncMock
 }))
+// Host verification is covered by its own tests; these exercise the client once a host is Gitea.
+vi.mock('../gitea-host-verification/gitea-host-probe', () => ({
+  confirmGiteaRepoRef: async <T>(repo: T): Promise<T> => repo
+}))
 
 import {
   getGiteaAuthStatus,

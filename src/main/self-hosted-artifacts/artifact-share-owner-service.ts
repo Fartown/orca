@@ -9,10 +9,20 @@ import type {
   ArtifactShareStatusResult,
   ArtifactSharedWorkspace
 } from '../../shared/self-hosted-artifacts/artifact-share-contract'
+import type {
+  ArtifactShareCommentsResult,
+  ArtifactShareDeleteCommentsResult,
+  ArtifactShareOwnerDeleteCommentsRequest
+} from '../../shared/self-hosted-artifacts/artifact-share-comments-contract'
 import {
   ARTIFACT_SHARE_ERROR_CODES,
   ArtifactShareError
 } from '../../shared/self-hosted-artifacts/artifact-share-errors'
+import {
+  deleteArtifactShareFileComments,
+  listArtifactShareFileComments,
+  type ArtifactShareReviewNoteRemover
+} from './artifact-share-owner-comments'
 import {
   buildArtifactShareUrl,
   buildArtifactShareUrlBase
@@ -34,6 +44,10 @@ export type ArtifactShareOwnerService = {
   share: (request: ArtifactShareOwnerFileRequest) => Promise<ArtifactShareShareResult>
   stopWorkspace: (token: string) => Promise<{ stopped: boolean }>
   list: () => Promise<ArtifactShareHostListing>
+  comments: (request: ArtifactShareOwnerFileRequest) => Promise<ArtifactShareCommentsResult>
+  deleteComments: (
+    request: ArtifactShareOwnerDeleteCommentsRequest
+  ) => Promise<ArtifactShareDeleteCommentsResult>
 }
 
 function serviceUnavailableError(
@@ -127,6 +141,8 @@ export function createArtifactShareOwnerService(deps: {
   host: ArtifactShareHostLabel
   readStatus: () => Promise<ArtifactShareServiceStatus>
   now?: () => Date
+  /** Present where this Orca owns workspaces; deleted comments take their review notes along. */
+  removeReviewNotes?: ArtifactShareReviewNoteRemover
 }): ArtifactShareOwnerService {
   const now = deps.now ?? (() => new Date())
   return {
@@ -175,6 +191,14 @@ export function createArtifactShareOwnerService(deps: {
           toWorkspace(workspace, service)
         )
       }
-    }
+    },
+    comments: async (request) => ({
+      host: deps.host,
+      comments: await listArtifactShareFileComments(deps.home, request.sourcePath)
+    }),
+    deleteComments: async (request) => ({
+      host: deps.host,
+      ...(await deleteArtifactShareFileComments(deps.home, request, deps.removeReviewNotes))
+    })
   }
 }

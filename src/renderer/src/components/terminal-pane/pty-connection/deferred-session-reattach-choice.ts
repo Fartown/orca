@@ -14,6 +14,7 @@ import {
   isSessionOwnedByWorktree
 } from './paired-parked-terminal-restore'
 import { startDeferredSessionReattachUnlessHiddenAgentResume } from './hidden-agent-resume-deferral'
+import { armPaneOwnerRetry } from './pane-owner-recovery'
 
 import type { ConnectPanePtySession } from './connect-pane-pty-session'
 
@@ -122,7 +123,7 @@ export function runDeferredSessionReattachChoice(session: ConnectPanePtySession)
     const attachPtyId = detachedRemoteLeafPtyId ?? detachedLivePtyId ?? eagerLivePtyId!
     recordPtyConnectDiagnostic(`pane=${session.pane.id} -> ATTACH detached=${attachPtyId}`)
     session.allowInitialIdleCacheSeed = false
-    // Report synchronous attach failure and clear its stale binding before fresh spawn, or every remount retries the dead ID.
+    // A failed attach retains its binding until the host proves the terminal exited.
     try {
       session.clearPaneMode2031State()
       session.clearHiddenOutputRestoreState()
@@ -143,8 +144,10 @@ export function runDeferredSessionReattachChoice(session: ConnectPanePtySession)
       }
     } catch (err) {
       session.reportError(err instanceof Error ? err.message : String(err))
-      session.deps.clearTabPtyId(session.deps.tabId, attachPtyId)
-      session.startFreshSpawn()
+      armPaneOwnerRetry(session, session.transportStreamGeneration, () =>
+        runDeferredSessionReattachChoice(session)
+      )
+      session.settlePaneAttachAttempt('failed')
     }
   } else {
     session.allowInitialIdleCacheSeed = false

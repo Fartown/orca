@@ -1,0 +1,36 @@
+name: Fork PR Linked Issue
+
+# Every fork change starts as an issue and its PR links it (docs/reference/fork-maintenance.md, rule 9).
+# `edited` re-runs the check when the description gains the link, without re-running the full PR CI.
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened, ready_for_review, converted_to_draft]
+    branches: [fork/integration]
+
+permissions:
+  contents: read
+  issues: read
+  pull-requests: read
+
+concurrency:
+  group: fork-pr-linked-issue-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  linked-issue:
+    # Drafts wait: ready_for_review runs the check; the file exists only in the fork.
+    if: github.event.pull_request.draft != true
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          sparse-checkout: config/scripts/integration-builds/pr-linked-issue.mjs
+          sparse-checkout-cone-mode: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+      - name: Require a linked issue
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node config/scripts/integration-builds/pr-linked-issue.mjs

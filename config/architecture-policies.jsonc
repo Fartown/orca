@@ -42,7 +42,7 @@
     },
     {
       "id": "mobile-terminal-surface-recovery",
-      "description": "Original-surface recovery for mobile workspace activation, with one product seam and feature-owned admission policy.",
+      "description": "Host-authoritative original-surface recovery and non-spawning activation admission.",
       "rules": [
         {
           "id": "mobile-terminal-surface-recovery-worktree-scope",
@@ -53,9 +53,34 @@
             "docs/issue/手机打开工作区终端身份恢复/**"
           ],
           "allowedPaths": [
+            "src/main/runtime/workspaces/workspace-activation.ts",
+            "src/renderer/src/hooks/ipc-events/worktree-event-runtime.ts",
+            "src/renderer/src/hooks/ipc-events/worktree-event-runtime-activation.test.ts",
+            "src/renderer/src/hooks/ipc-events/worktree-event-lineage-refresh.test.ts",
+
+            "src/main/runtime/runtime-terminal-list.ts",
+            "src/main/runtime/project-group-folder-workspace-selectors.test.ts",
+
+            "src/renderer/src/components/terminal-pane/pty-connection-reattach-mode-reset.spec.ts",
+            "src/renderer/src/components/terminal-pane/pty-connection-agent-session-resume.spec.ts",
+            "src/renderer/src/components/terminal-pane/pty-connection-hidden-sleeping-resume.spec.ts",
+            "src/renderer/src/components/terminal-pane/pty-connection-reattach-binding.test.ts",
+            "src/renderer/src/components/terminal-pane/pty-connection-sleeping-resume-banner.spec.ts",
+            "src/renderer/src/components/terminal-pane/pty-connection-spawn-deferred-sleep.test.ts",
+
+            "src/renderer/src/components/terminal-pane/pty-connection/reattach-result-handler.ts",
+            "src/renderer/src/components/terminal-pane/pty-connection/deferred-session-reattach-connect.ts",
+            "src/renderer/src/components/terminal-pane/pty-connection/deferred-session-reattach-choice.ts",
+            "src/renderer/src/components/terminal-pane/pty-connection/reattach-success-settle.test.ts",
+            "src/renderer/src/components/terminal-pane/pty-connection/deferred-session-reattach-newer-daemon-hold.test.ts",
+            "src/renderer/src/components/terminal-pane/pty-connection/deferred-session-reattach-live-bookmark.test.ts",
+
+            "tests/e2e/mobile-terminal-surface-recovery.spec.ts",
             "src/renderer/src/mobile-terminal-surface-recovery/**",
             "src/renderer/src/lib/worktree-agent-live-surface-adoption.ts",
+            "src/renderer/src/lib/worktree-agent-activation-gate.ts",
             "src/renderer/src/lib/worktree-agent-activation-gate.test.ts",
+            "src/renderer/src/lib/worktree-agent-activation-seam.test.ts",
             "docs/issue/手机打开工作区终端身份恢复/**",
             "docs/issue/README.md",
             "config/fork-features.jsonc",
@@ -149,6 +174,7 @@
             "src/renderer/src/integration-builds/**",
 
             ".github/workflows/fork-integration-build.yml",
+            ".github/workflows/fork-pr-linked-issue.yml",
             "config/scripts/mobile-web-bundle-packaging-workflow-contract.test.mjs",
             "config/scripts/integration-builds/**",
             "src/shared/integration-builds/**",
@@ -173,6 +199,9 @@
             ".github/workflows/pr.yml",
             ".github/workflows/ci-closed-pr-caches.yml",
             ".github/workflows/fork-integration-build.yml",
+            ".github/workflows/fork-pr-linked-issue.yml",
+            "AGENTS.md",
+            "docs/reference/fork-maintenance.md",
             ".github/workflows/pr.yml",
             ".github/workflows/ci-cache-warmup-platform-jobs.yml",
             ".github/workflows/ci-cache-warmup.yml",
@@ -215,6 +244,28 @@
           "baseRef": "$base",
           "requireBaseAncestor": false,
           "allowedPaths": [
+            "src/main/runtime/workspaces/workspace-activation.ts",
+            "src/renderer/src/hooks/ipc-events/worktree-event-runtime.ts",
+            "src/renderer/src/hooks/ipc-events/worktree-event-runtime-activation.test.ts",
+            "src/renderer/src/hooks/ipc-events/worktree-event-lineage-refresh.test.ts",
+
+            "src/main/runtime/runtime-terminal-list.ts",
+            "src/main/runtime/project-group-folder-workspace-selectors.test.ts",
+
+            "src/renderer/src/components/terminal-pane/pty-connection-reattach-mode-reset.spec.ts",
+            "src/renderer/src/components/terminal-pane/pty-connection-agent-session-resume.spec.ts",
+            "src/renderer/src/components/terminal-pane/pty-connection-hidden-sleeping-resume.spec.ts",
+            "src/renderer/src/components/terminal-pane/pty-connection-reattach-binding.test.ts",
+            "src/renderer/src/components/terminal-pane/pty-connection-sleeping-resume-banner.spec.ts",
+            "src/renderer/src/components/terminal-pane/pty-connection-spawn-deferred-sleep.test.ts",
+
+            "src/renderer/src/components/terminal-pane/pty-connection/reattach-result-handler.ts",
+            "src/renderer/src/components/terminal-pane/pty-connection/deferred-session-reattach-connect.ts",
+            "src/renderer/src/components/terminal-pane/pty-connection/deferred-session-reattach-choice.ts",
+            "src/renderer/src/components/terminal-pane/pty-connection/reattach-success-settle.test.ts",
+            "src/renderer/src/components/terminal-pane/pty-connection/deferred-session-reattach-newer-daemon-hold.test.ts",
+            "src/renderer/src/components/terminal-pane/pty-connection/deferred-session-reattach-live-bookmark.test.ts",
+
             "src/shared/workspace-session-recovery/**",
             "src/renderer/src/workspace-session-recovery/**",
             "docs/issue/工作区恢复占位收敛/**",
@@ -223,8 +274,11 @@
             "src/renderer/src/store/repos/all-host-repo-catalog-actions.ts",
             "src/renderer/src/store/repos/runtime-repo-catalog-actions.ts",
             "src/renderer/src/mobile-terminal-surface-recovery/**",
+            "tests/e2e/mobile-terminal-surface-recovery.spec.ts",
             "src/renderer/src/lib/worktree-agent-live-surface-adoption.ts",
+            "src/renderer/src/lib/worktree-agent-activation-gate.ts",
             "src/renderer/src/lib/worktree-agent-activation-gate.test.ts",
+            "src/renderer/src/lib/worktree-agent-activation-seam.test.ts",
             "docs/issue/手机打开工作区终端身份恢复/**",
             "src/renderer/src/native-chat-view-recovery/**",
             "docs/issue/终端聊天视图恢复/**",
@@ -367,6 +421,7 @@
             "mobile/src/mobile-web-shell/page-route-policy.test.ts",
             "mobile/src/mobile-web-shell/bridge-host-init.test.ts",
             ".github/workflows/fork-integration-build.yml",
+            ".github/workflows/fork-pr-linked-issue.yml",
             "config/scripts/mobile-web-bundle-packaging-workflow-contract.test.mjs",
             ".github/workflows/ci-cache-warmup-platform-jobs.yml",
             ".github/workflows/ci-cache-warmup.yml",
@@ -475,6 +530,7 @@
             "src/renderer/src/components/self-hosted-artifacts/**",
             "src/main/runtime/rpc/methods/artifact-share.ts",
             "config/scripts/build-artifact-share-viewer.mjs",
+            "config/scripts/build-artifact-share-viewer.test.mjs",
             "src/main/startup/main-process-quit.ts",
             "src/main/runtime/rpc/dispatcher-error-response.ts",
             "src/renderer/src/components/editor/EditorPanelHeader.test.tsx",
@@ -829,7 +885,35 @@
             "config/scripts/mobile-web-app/mobile-web-app-page-grant-call-sites.test.mjs",
             "config/scripts/mobile-web-app/mobile-web-app-screencast-lane-grant.test.mjs",
             "config/scripts/mobile-web-app/mobile-web-app-external-navigation-grant.test.mjs",
-            "mobile/src/components/bottom-drawer/bottom-drawer-styles.ts"
+            "mobile/src/components/bottom-drawer/bottom-drawer-styles.ts",
+            "src/main/gitea-host-verification/**",
+            "docs/issue/Gitea主机识别校验/**",
+            "src/main/gitea/client.ts",
+            "src/main/gitea/client.test.ts",
+            "src/main/gitea/client-scan-invalidation.test.ts",
+            "src/main/source-control/hosted-review-gitea.integration.test.ts",
+            "src/shared/plugin-workspace-remote/**",
+            "src/main/plugin-workspace-remote/**",
+            "src/renderer/src/plugin-workspace-remote/**",
+            "docs/issue/插件读取工作区远程仓库/**",
+            "src/shared/plugins/view/plugin-view-protocol.ts",
+            "src/main/plugins/view/plugin-view-reply-schema.ts",
+            "src/main/plugins/view/plugin-host-renderer-actions.ts",
+            "src/renderer/src/components/plugins/view/plugin-view-request-handler.ts",
+            "src/shared/plugins/workers/plugin-host-api.ts",
+            "src/shared/plugins/workers/plugin-host-api-workspace-methods.ts",
+            "src/main/plugins/plugin-runtime-binding.ts",
+            "src/main/plugins/workers/plugin-host-service-bindings.ts",
+            "src/main/plugins/workers/plugin-workspace-projection.ts",
+            "src/main/plugins/workers/plugin-host-method-bindings.ts",
+            "src/main/plugins/workers/plugin-host-workspace-method-bindings.ts",
+            "docs/reference/plugin-host-api.md",
+            "resources/plugins/types/orca-host.d.ts",
+            "resources/plugins/declarative/orca.d.ts",
+            "resources/plugins/declarative/orca-testing.mjs",
+            "skill-guides/orca-plugin-authoring/references/events.md",
+            "skill-guides/orca-plugin-authoring/references/host-api.md",
+            "src/cli/bundled-skill-guides.ts"
           ],
           "message": "Branch changes an upstream path that no fork feature owns or registers as a seam; extend config/fork-features.jsonc and this allowlist, or move the change into a feature-owned path."
         }
@@ -1040,6 +1124,7 @@
             "src/renderer/src/components/self-hosted-artifacts/**",
             "src/main/runtime/rpc/methods/artifact-share.ts",
             "config/scripts/build-artifact-share-viewer.mjs",
+            "config/scripts/build-artifact-share-viewer.test.mjs",
             "docs/issue/自托管产物后端/**"
           ],
           "allowedPaths": [
@@ -1050,6 +1135,7 @@
             "src/renderer/src/components/self-hosted-artifacts/**",
             "src/main/runtime/rpc/methods/artifact-share.ts",
             "config/scripts/build-artifact-share-viewer.mjs",
+            "config/scripts/build-artifact-share-viewer.test.mjs",
             "docs/issue/自托管产物后端/**",
             "src/main/startup/main-process-runtime-service.ts",
             "src/main/startup/main-process-quit.ts",
@@ -2011,6 +2097,77 @@
           ],
           "importTextHints": ["local-tasks", "local-task-quick-actions"],
           "message": "A native renderer module imports the local task feature; mount it through a registered seam instead."
+        }
+      ]
+    },
+    {
+      "id": "gitea-host-verification",
+      "description": "只把确认是 Gitea 的主机当 Gitea；无法确认时保持原行为，探测不带令牌",
+      "rules": [
+        {
+          "id": "gitea-host-verification-worktree-scope",
+          "type": "change-scope",
+          "comparison": "worktree",
+          "whenChanged": ["src/main/gitea-host-verification/**", "docs/issue/Gitea主机识别校验/**"],
+          "allowedPaths": [
+            "src/main/gitea-host-verification/**",
+            "docs/issue/Gitea主机识别校验/**",
+            "src/main/gitea/client.ts",
+            "src/main/gitea/client.test.ts",
+            "src/main/gitea/client-scan-invalidation.test.ts",
+            "src/main/source-control/hosted-review-gitea.integration.test.ts",
+            "config/fork-features.jsonc",
+            "config/architecture-policies.jsonc",
+            "docs/issue/README.md",
+            ".gitignore"
+          ],
+          "message": "Change is outside Gitea host verification."
+        }
+      ]
+    },
+    {
+      "id": "plugin-workspace-remote",
+      "description": "插件读到聚焦工作区（本地与 SSH）及工作区列表各行所属仓库的远程地址（去掉凭据），不必在主机上执行命令",
+      "rules": [
+        {
+          "id": "plugin-workspace-remote-worktree-scope",
+          "type": "change-scope",
+          "comparison": "worktree",
+          "whenChanged": [
+            "src/shared/plugin-workspace-remote/**",
+            "src/main/plugin-workspace-remote/**",
+            "src/renderer/src/plugin-workspace-remote/**",
+            "docs/issue/插件读取工作区远程仓库/**"
+          ],
+          "allowedPaths": [
+            "src/shared/plugin-workspace-remote/**",
+            "src/main/plugin-workspace-remote/**",
+            "src/renderer/src/plugin-workspace-remote/**",
+            "docs/issue/插件读取工作区远程仓库/**",
+            "src/shared/plugins/view/plugin-view-protocol.ts",
+            "src/main/plugins/view/plugin-view-reply-schema.ts",
+            "src/main/plugins/view/plugin-host-renderer-actions.ts",
+            "src/renderer/src/components/plugins/view/plugin-view-request-handler.ts",
+            "src/shared/plugins/workers/plugin-host-api.ts",
+            "src/shared/plugins/workers/plugin-host-api-workspace-methods.ts",
+            "src/main/plugins/plugin-runtime-binding.ts",
+            "src/main/plugins/workers/plugin-host-service-bindings.ts",
+            "src/main/plugins/workers/plugin-workspace-projection.ts",
+            "src/main/plugins/workers/plugin-host-method-bindings.ts",
+            "src/main/plugins/workers/plugin-host-workspace-method-bindings.ts",
+            "docs/reference/plugin-host-api.md",
+            "resources/plugins/types/orca-host.d.ts",
+            "resources/plugins/declarative/orca.d.ts",
+            "resources/plugins/declarative/orca-testing.mjs",
+            "skill-guides/orca-plugin-authoring/references/events.md",
+            "skill-guides/orca-plugin-authoring/references/host-api.md",
+            "src/cli/bundled-skill-guides.ts",
+            "config/fork-features.jsonc",
+            "config/architecture-policies.jsonc",
+            "docs/issue/README.md",
+            ".gitignore"
+          ],
+          "message": "Change is outside plugin workspace remote."
         }
       ]
     }

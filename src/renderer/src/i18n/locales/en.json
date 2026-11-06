@@ -19252,7 +19252,23 @@
           "unsupported": "Files on this computer can't be shared from here."
         },
         "shareViewer": {
-          "sharedFrom": "Shared from Orca on {{computer}}"
+          "sharedFrom": "Shared from Orca on {{computer}}",
+          "tableOfContents": "Table of Contents",
+          "viewSource": "View Markdown source",
+          "commentRateLimited": "Too many comments in a short time. Try again in a minute.",
+          "commentLimit": "This file has reached its comment limit.",
+          "commentFailed": "Couldn't save the comment. Check that the link still opens, then try again.",
+          "commentPlaceholder": "Add a comment",
+          "commentCancel": "Cancel",
+          "commentSaving": "Saving…",
+          "commentSubmit": "Comment",
+          "addComment": "Add comment",
+          "orphanComments": "Comments on an earlier version",
+          "commentSelection": "Comment",
+          "imageTitle": "Image",
+          "comments": "Comments",
+          "commentEditFailed": "Couldn't save the change. Check that the link still opens, then try again.",
+          "commentDeleteFailed": "Couldn't delete the comment. Check that the link still opens, then try again."
         },
         "account": {
           "signedOut": "Sign in to extend Orca with cloud features, including Orca Relay and skill sharing.",

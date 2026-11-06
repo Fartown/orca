@@ -117,6 +117,7 @@ function buildSession(
     bindActivePanePty: vi.fn(),
     registerPaneSerializerFor: vi.fn(),
     reportError: vi.fn(),
+    settlePaneAttachAttempt: vi.fn(),
     startFreshSpawn: vi.fn(),
     startFreshColdRestoreAgentResume: vi.fn(),
     ...overrides
@@ -141,6 +142,21 @@ beforeEach(() => {
 })
 
 describe('deferred reattach choice: mirrored remote pane with a live crash-recovery bookmark', () => {
+  it('retains a live binding when transport attachment throws', () => {
+    setStore(null)
+    const session = buildSession()
+    vi.mocked(session.transport.attach).mockImplementation(() => {
+      throw new Error('connection interrupted')
+    })
+
+    runDeferredSessionReattachChoice(session)
+
+    expect(session.reportError).toHaveBeenCalledWith('connection interrupted')
+    expect(session.deps.clearTabPtyId).not.toHaveBeenCalled()
+    expect(session.startFreshSpawn).not.toHaveBeenCalled()
+    expect(session.settlePaneAttachAttempt).toHaveBeenCalledWith('failed')
+  })
+
   it('attaches to the restored remote PTY when there is no sleeping note', () => {
     setStore(null)
     const session = buildSession()
