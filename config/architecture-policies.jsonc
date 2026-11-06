@@ -925,7 +925,12 @@
             "src/renderer/src/components/editor/rich-markdown-review-note-positioning.ts",
             "src/renderer/src/components/editor/rich-markdown-review-note-layout.ts",
             "src/renderer/src/components/editor/RichMarkdownReviewNoteLayer.tsx",
-            "docs/issue/README.md"
+            "docs/issue/README.md",
+            "src/main/ipc/runtime.ts",
+            "src/main/ipc/desktop-runtime-sender-lifecycle.ts",
+            "src/main/runtime/rpc/core.ts",
+            "src/main/runtime/rpc/dispatcher-stream-options.ts",
+            "src/main/ipc/desktop-runtime-sender-lifecycle.test.ts"
           ],
           "message": "Branch changes an upstream path that no fork feature owns or registers as a seam; extend config/fork-features.jsonc and this allowlist, or move the change into a feature-owned path."
         }
@@ -2022,7 +2027,12 @@
             "src/shared/execution-host-registry.ts",
             "src/renderer/src/components/sidebar/sidebar-host-options.ts",
             "src/renderer/src/components/sidebar/sidebar-host-options.test.ts",
-            "src/shared/execution-host-registry.test.ts"
+            "src/shared/execution-host-registry.test.ts",
+            "src/main/ipc/runtime.ts",
+            "src/main/ipc/desktop-runtime-sender-lifecycle.ts",
+            "src/main/runtime/rpc/core.ts",
+            "src/main/runtime/rpc/dispatcher-stream-options.ts",
+            "src/main/ipc/desktop-runtime-sender-lifecycle.test.ts"
           ],
           "message": "Change is outside the local tasks feature."
         },

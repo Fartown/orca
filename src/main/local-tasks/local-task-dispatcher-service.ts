@@ -19,20 +19,30 @@ import type { LocalTasksDatabase } from './local-tasks-database'
 import { LocalTaskDispatcher } from './local-task-dispatcher'
 import { runLocalTaskWrite } from './local-task-mutation-receipts'
 import { writeResultSchema } from '../../shared/local-tasks/local-task-result-schemas'
+import type { OrcaRuntimeService } from '../runtime/orca-runtime'
 
 const EMPTY_RESULT = writeResultSchema({})
 const CONVERSATION_RESULT = writeResultSchema({ conversation: conversationSchema })
 const PROPOSAL_RESULT = writeResultSchema({ proposal: proposalSchema })
+type ClaimLifetime = Pick<OrcaRuntimeService, 'registerSubscriptionCleanup' | 'cleanupSubscription'>
+const claimSubscriptionId = (proposalId: string): string =>
+  `local-task-proposal-owner:${proposalId}`
 
 /** Receipt-backed writes for the dispatcher; task-library reads remain on LocalTasksService. */
 export abstract class LocalTaskDispatcherService {
   readonly dispatcher: LocalTaskDispatcher
+  private readonly claimLifetimes = new Map<string, ClaimLifetime>()
 
   constructor(
     private readonly dispatcherDb: LocalTasksDatabase,
     private readonly dispatcherNow: () => number
   ) {
     this.dispatcher = new LocalTaskDispatcher(dispatcherDb, () => this.dispatcherProgress())
+    dispatcherDb.onClose(() => {
+      for (const [proposalId, lifetime] of this.claimLifetimes) {
+        lifetime.cleanupSubscription(claimSubscriptionId(proposalId))
+      }
+    })
   }
 
   protected abstract dispatcherProgress(): LocalTaskProgressSnapshot
@@ -67,24 +77,83 @@ export abstract class LocalTaskDispatcherService {
     )
   }
 
-  claimProposal(input: { clientOperationId: string; proposalId: string }) {
-    return this.writeDispatcher(
+  claimProposal(
+    input: { clientOperationId: string; proposalId: string },
+    connectionId: string,
+    lifetime: ClaimLifetime,
+    connectionSignal?: AbortSignal
+  ) {
+    const current = this.dispatcher.proposalResult(input.proposalId)
+    if (
+      !connectionId ||
+      connectionSignal?.aborted ||
+      !current.ok ||
+      (current.proposal.status !== 'confirmed' &&
+        !(
+          current.proposal.status === 'executing' &&
+          this.dispatcher.ownership.ownerOf(input.proposalId) === connectionId
+        ))
+    ) {
+      return { ok: false as const, code: 'stale' as const, detail: 'execution-owner' }
+    }
+    const result = this.writeDispatcher(
       input.clientOperationId,
       'proposals.claim',
       input,
       PROPOSAL_RESULT,
-      (now) => this.dispatcher.claim(input.proposalId, now)
+      (now) => {
+        if (connectionSignal?.aborted) {
+          return { ok: false, code: 'stale', detail: 'execution-owner' }
+        }
+        const claimed = this.dispatcher.claim(input.proposalId, connectionId, now)
+        if (claimed.ok) {
+          lifetime.registerSubscriptionCleanup(
+            claimSubscriptionId(input.proposalId),
+            () => {
+              this.claimLifetimes.delete(input.proposalId)
+              this.dispatcher.ownership.retire(input.proposalId, connectionId)
+            },
+            connectionId
+          )
+          this.claimLifetimes.set(input.proposalId, lifetime)
+        }
+        return claimed
+      }
     )
+    return result.ok ? this.dispatcher.proposalResult(input.proposalId) : result
   }
 
-  recordProposalResults(input: LocalTasksProposalsRecordResultsInput) {
-    return this.writeDispatcher(
+  recordProposalResults(
+    input: LocalTasksProposalsRecordResultsInput,
+    connectionId: string,
+    lifetime: ClaimLifetime,
+    connectionSignal?: AbortSignal
+  ) {
+    const current = this.dispatcher.proposalResult(input.proposalId)
+    const owner = this.dispatcher.ownership.ownerOf(input.proposalId)
+    if (
+      !connectionId ||
+      connectionSignal?.aborted ||
+      !current.ok ||
+      current.proposal.status !== 'executing' ||
+      (owner ? owner !== connectionId : input.results.length > 0 || input.finalize === false)
+    ) {
+      return { ok: false as const, code: 'stale' as const, detail: 'execution-owner' }
+    }
+    const result = this.writeDispatcher(
       input.clientOperationId,
       'proposals.results',
       input,
       PROPOSAL_RESULT,
-      (now) => this.dispatcher.recordResults(input, now)
+      (now) => {
+        const recorded = this.dispatcher.recordResults(input, connectionId, now)
+        if (recorded.ok && recorded.proposal.status === 'executed' && owner) {
+          lifetime.cleanupSubscription(claimSubscriptionId(input.proposalId))
+        }
+        return recorded
+      }
     )
+    return result.ok ? this.dispatcher.proposalResult(input.proposalId) : result
   }
 
   watchTask(input: { clientOperationId: string; paneKey: string; taskId: string }) {

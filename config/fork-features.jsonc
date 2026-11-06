@@ -3251,7 +3251,9 @@
         "src/renderer/src/components/host-picker/use-bounded-host-rows.ts",
         "src/renderer/src/components/host-picker/HostListOverflowNote.tsx",
         "src/shared/host-setting-overrides.ts",
-        "mobile/src/i18n/use-mobile-translation.ts"
+        "mobile/src/i18n/use-mobile-translation.ts",
+        "src/main/runtime/orca-runtime.ts",
+        "src/main/ipc/desktop-runtime-sender-lifecycle.ts"
       ],
       "policyId": "local-tasks",
       "ownedPaths": [
@@ -3291,7 +3293,9 @@
         "src/main/local-tasks/local-task-execution-service.ts",
         "src/renderer/src/components/local-tasks/LocalTaskSidebarTree.tsx",
         "src/renderer/src/components/local-tasks/LocalTaskSessionPanelSlot.tsx",
-        "src/main/local-tasks/local-task-turn-records.ts"
+        "src/main/local-tasks/local-task-turn-records.ts",
+        "src/main/local-tasks/local-task-proposal-results.ts",
+        "src/main/local-tasks/local-task-proposal-ownership.ts"
       ],
       "seams": [
         {
@@ -4038,6 +4042,31 @@
           "file": "src/renderer/src/components/sidebar/sidebar-host-options.ts",
           "mustContain": "buildSidebarHostOptionsForAllHosts",
           "why": "任务派活复用主机健康和名称投影，不受当前焦点服务器影响（REQ-029）"
+        },
+        {
+          "file": "src/main/ipc/runtime.ts",
+          "mustContain": "connectionSignal: callScope.connectionSignal,",
+          "why": "REQ-030: a queued proposal claim retains its caller document lifetime after admission waits"
+        },
+        {
+          "file": "src/main/ipc/desktop-runtime-sender-lifecycle.ts",
+          "mustContain": "callScopeFor(sender: WebContents)",
+          "why": "REQ-030: each desktop document has a retirement signal; a late claim cannot survive a retired window"
+        },
+        {
+          "file": "src/main/runtime/rpc/core.ts",
+          "mustContain": "connectionSignal?: AbortSignal",
+          "why": "REQ-030: claim handlers inspect trusted transport lifetime at the final synchronous registration boundary"
+        },
+        {
+          "file": "src/main/runtime/rpc/dispatcher-stream-options.ts",
+          "mustContain": "connectionSignal: options?.connectionSignal,",
+          "why": "REQ-030: pass the existing connection lifetime to proposal handlers without replacing per-request cancellation"
+        },
+        {
+          "file": "src/main/runtime/runtime-rpc/runtime-rpc-websocket-dispatch.ts",
+          "mustContain": "connectionSignal: abortRegistration?.signal,",
+          "why": "REQ-030: paired desktop socket retirement invalidates a delayed claim before ownership registration"
         }
       ],
       "tests": [
@@ -4127,10 +4156,15 @@
         "src/renderer/src/lib/active-agent-note-send-delivery-guard.test.ts",
         "src/renderer/src/components/sidebar/sidebar-host-options.test.ts",
         "src/shared/execution-host-registry.test.ts",
-        "src/renderer/src/components/local-tasks/LocalTaskSessionPanelSlot.test.tsx"
+        "src/renderer/src/components/local-tasks/LocalTaskSessionPanelSlot.test.tsx",
+        "src/main/local-tasks/local-task-dispatcher.test.ts",
+        "src/renderer/src/components/local-tasks/LocalTaskProposalCard.test.tsx",
+        "src/renderer/src/local-tasks/local-task-dispatcher-proposals.test.ts",
+        "src/renderer/src/local-tasks/local-task-proposal-execution.test.ts",
+        "src/main/ipc/desktop-runtime-sender-lifecycle.test.ts"
       ],
       "checks": [
-        "pnpm exec vitest run --config config/vitest.config.ts src/main/local-tasks src/shared/local-tasks src/main/runtime/rpc/methods/local-tasks.test.ts src/shared/host-operation-ownership.test.ts src/main/runtime/runtime-rpc/fork-mobile-rpc-method-allowlist.test.ts src/main/runtime/runtime-rpc-mobile-method-allowlist.test.ts src/cli/local-tasks",
+        "pnpm exec vitest run --config config/vitest.config.ts src/main/local-tasks src/shared/local-tasks src/main/runtime/rpc/methods/local-tasks.test.ts src/shared/host-operation-ownership.test.ts src/main/runtime/runtime-rpc/fork-mobile-rpc-method-allowlist.test.ts src/main/runtime/runtime-rpc-mobile-method-allowlist.test.ts src/cli/local-tasks src/main/ipc/desktop-runtime-sender-lifecycle.test.ts",
         "ORCA_BACKGROUND_LAUNCH=1 pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/local-tasks src/renderer/src/components/local-tasks src/renderer/src/components/task-page src/renderer/src/components/cmd-j src/renderer/src/lib/worktree-creation-structured-session.test.ts src/renderer/src/lib/agent-message-send.test.ts src/renderer/src/lib/active-agent-note-send-delivery-guard.test.ts",
         "pnpm --dir mobile exec vitest run src/local-tasks src/home/MobileHomeTasksAndAutomations.test.tsx src/session/use-notification-pane-navigation.test.tsx src/components/bottom-drawer",
         "pnpm exec vitest run --config config/vitest.config.ts config/scripts/mobile-web-app-file-attachment-grant.test.mjs config/scripts/mobile-web-app/mobile-web-app-session-dictation-capture.test.mjs config/scripts/mobile-web-app/mobile-web-app-page-grant-call-sites.test.mjs config/scripts/mobile-web-app/mobile-web-app-screencast-lane-grant.test.mjs config/scripts/mobile-web-app/mobile-web-app-external-navigation-grant.test.mjs"

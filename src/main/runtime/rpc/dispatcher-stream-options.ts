@@ -29,7 +29,7 @@ export type RpcDispatchStreamingOptions = Pick<
 > & {
   /** What the transport proved the caller may do; absent means this host's owner. */
   callerScope?: RpcCallerScope
-  /** Aborts when the caller's connection closes; only for the dispatcher's own waits, never handlers. */
+  /** Aborts when the caller's connection closes; handlers that own work also check it before writes. */
   connectionSignal?: AbortSignal
   /** In-process callers: runs after admission and feature waits, just before the handler; a throw
    *  refuses the call (a plugin revoked while its call waited). */
@@ -46,6 +46,7 @@ export function rpcContextFromTransport(
   return {
     runtime,
     signal: options?.signal,
+    connectionSignal: options?.connectionSignal,
     requestId: request.id,
     connectionId: options?.connectionId,
     // Session tabs always need this fence. COMPAT(terminal request-addressed unsubscribe): terminal only for phones without `requestId`.

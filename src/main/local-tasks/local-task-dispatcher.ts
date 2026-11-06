@@ -20,13 +20,11 @@ import type {
 } from '../../shared/local-tasks/local-task-types'
 import type { LocalTasksDatabase } from './local-tasks-database'
 import { ackLocalTaskInbox, readLocalTaskInbox } from './local-task-dispatcher-inbox'
-import {
-  insertLocalTaskProposal,
-  listLocalTaskProposals,
-  readLocalTaskProposal
-} from './local-task-proposal-rows'
+import { insertLocalTaskProposal, readLocalTaskProposal } from './local-task-proposal-rows'
 import { readLocalTask } from './local-task-store'
 import { isOtherLibraryTaskId } from '../../shared/local-tasks/local-task-inbox-copy'
+import { recordLocalTaskProposalResults } from './local-task-proposal-results'
+import { LocalTaskProposalOwnership } from './local-task-proposal-ownership'
 import {
   addRemoteWatch,
   listDispatcherWatches,
@@ -53,10 +51,14 @@ type ProposalResult = LocalTaskResult<{ proposal: LocalTaskProposal }>
  * only record intent and decisions; a desktop client executes them and reports the results.
  */
 export class LocalTaskDispatcher {
+  readonly ownership: LocalTaskProposalOwnership
+
   constructor(
     private readonly db: LocalTasksDatabase,
     private readonly attention: () => LocalTaskProgressSnapshot
-  ) {}
+  ) {
+    this.ownership = new LocalTaskProposalOwnership(db)
+  }
 
   register(
     paneKey: string,
@@ -128,7 +130,7 @@ export class LocalTaskDispatcher {
   }
 
   listProposals(filter: { conversationId?: string; status?: LocalTaskProposalStatus }) {
-    return { proposals: listLocalTaskProposals(this.db, filter) }
+    return this.ownership.list(filter)
   }
 
   /** A person's decision; the CLI (an agent) never decides its own proposal. */
@@ -168,7 +170,7 @@ export class LocalTaskDispatcher {
    * A desktop takes a confirmed proposal to run it. Only one claim succeeds, so a second window,
    * a stale card or a reload never runs the same items again.
    */
-  claim(proposalId: string, now: number): ProposalResult {
+  claim(proposalId: string, connectionId: string, now: number): ProposalResult {
     const proposal = readLocalTaskProposal(this.db, proposalId)
     if (!proposal) {
       return { ok: false, code: 'not_found' }
@@ -179,6 +181,7 @@ export class LocalTaskDispatcher {
     this.db
       .prepare(`UPDATE local_task_proposals SET status = 'executing', decided_at = ? WHERE id = ?`)
       .run(proposal.decidedAt ?? now, proposal.id)
+    this.ownership.claim(proposal.id, connectionId)
     this.db.touch('events')
     return this.proposalResult(proposal.id)
   }
@@ -187,7 +190,11 @@ export class LocalTaskDispatcher {
    * The claiming desktop's report; every task an item created becomes watched, even when its
    * session did not start. An interrupted run is closed with whatever results are known.
    */
-  recordResults(input: LocalTasksProposalsRecordResultsInput, now: number): ProposalResult {
+  recordResults(
+    input: LocalTasksProposalsRecordResultsInput,
+    connectionId: string,
+    now: number
+  ): ProposalResult {
     const proposal = readLocalTaskProposal(this.db, input.proposalId)
     if (!proposal) {
       return { ok: false, code: 'not_found' }
@@ -195,17 +202,26 @@ export class LocalTaskDispatcher {
     if (proposal.status !== 'executing') {
       return { ok: false, code: 'stale', detail: proposal.status }
     }
-    this.db
-      .prepare(`UPDATE local_task_proposals SET status = 'executed', results = ? WHERE id = ?`)
-      .run(JSON.stringify(input.results), proposal.id)
-    for (const result of input.results) {
-      if (result.taskId && isOtherLibraryTaskId(result.taskId)) {
-        addRemoteWatch(this.db, proposal.conversationId, result.taskId, 'proposal', now)
-      } else if (result.taskId && readLocalTask(this.db, result.taskId)) {
-        this.addWatch(proposal.conversationId, result.taskId, 'proposal', now)
+    const recorded = recordLocalTaskProposalResults(
+      this.db,
+      proposal,
+      input,
+      this.ownership.ownerOf(proposal.id),
+      connectionId,
+      (taskId) => {
+        if (isOtherLibraryTaskId(taskId)) {
+          addRemoteWatch(this.db, proposal.conversationId, taskId, 'proposal', now)
+        } else if (readLocalTask(this.db, taskId)) {
+          this.addWatch(proposal.conversationId, taskId, 'proposal', now)
+        }
       }
+    )
+    if (!recorded.ok) {
+      return recorded
     }
-    this.db.touch('events')
+    if (recorded.finalized) {
+      this.ownership.release(proposal.id)
+    }
     return this.proposalResult(proposal.id)
   }
 
@@ -314,8 +330,7 @@ export class LocalTaskDispatcher {
     this.db.touch('events')
   }
 
-  private proposalResult(proposalId: string): ProposalResult {
-    const proposal = readLocalTaskProposal(this.db, proposalId)
-    return proposal ? { ok: true, proposal } : { ok: false, code: 'not_found' }
+  proposalResult(proposalId: string): ProposalResult {
+    return this.ownership.result(proposalId)
   }
 }

@@ -31,6 +31,8 @@ export type LocalTaskProposal = {
   summary: string | null
   items: LocalTaskProposalItem[]
   status: LocalTaskProposalStatus
+  /** Whether the claiming transport is still live on this host. Absent on older hosts. */
+  executionActive?: boolean
   /** The items a person kept when confirming; null keeps them all. */
   keptItemIndexes: number[] | null
   results: LocalTaskProposalItemResult[] | null

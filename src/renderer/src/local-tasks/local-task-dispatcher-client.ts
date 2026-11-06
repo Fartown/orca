@@ -50,11 +50,11 @@ export const localTaskDispatcherClient = {
       { proposalId },
       proposalResult
     ),
-  recordResults: (proposalId: string, results: LocalTaskProposalItemResult[]) =>
+  recordResults: (proposalId: string, results: LocalTaskProposalItemResult[], finalize = true) =>
     writeLocalTasks(
       SELF_LOCAL_TASK_ENDPOINT,
       'localTasks.proposals.recordResults',
-      { proposalId, results },
+      { proposalId, results, finalize },
       proposalResult
     ),
   watches: (paneKey: string) =>

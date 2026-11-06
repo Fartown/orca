@@ -79,6 +79,7 @@ export const LocalTasksProposalsDecideParams = z.object({
 export const LocalTasksProposalsRecordResultsParams = z.object({
   clientOperationId,
   proposalId: id,
+  finalize: z.boolean().optional(),
   results: z
     .array(
       z.object({

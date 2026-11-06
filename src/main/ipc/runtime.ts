@@ -73,6 +73,7 @@ export function registerRuntimeHandlers(runtime: OrcaRuntimeService): void {
       if (event.senderFrame !== event.sender.mainFrame) {
         throw new Error('Runtime RPC call must originate from the current main frame')
       }
+      const callScope = desktopSenders.callScopeFor(event.sender)
       return new RpcDispatcher({ runtime, methods: ALL_RPC_METHODS }).dispatch(
         {
           id: 'desktop-ipc',
@@ -84,7 +85,16 @@ export function registerRuntimeHandlers(runtime: OrcaRuntimeService): void {
           clientId: 'desktop-renderer',
           caller: DESKTOP_RPC_CALLER,
           clientKind: 'runtime',
-          connectionId: desktopSenders.connectionIdFor(event.sender),
+          connectionId: callScope.connectionId,
+          connectionSignal: callScope.connectionSignal,
+          beforeInvoke: () => {
+            if (
+              callScope.connectionSignal.aborted ||
+              event.senderFrame !== event.sender.mainFrame
+            ) {
+              throw new Error('Runtime RPC caller document retired before invocation')
+            }
+          },
           clientCapabilities: DESKTOP_RENDERER_RUNTIME_CLIENT_CAPABILITIES
         }
       )

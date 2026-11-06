@@ -112,13 +112,33 @@ export const LOCAL_TASK_DISPATCHER_METHODS = [
     name: 'localTasks.proposals.claim',
     params: LocalTasksProposalsClaimParams,
     handler: (params, context) =>
-      sourceOf(context) === 'desktop' ? service().claimProposal(params) : DESKTOP_ONLY
+      sourceOf(context) === 'desktop' &&
+      context.connectionId &&
+      context.connectionSignal &&
+      !context.connectionSignal.aborted
+        ? service().claimProposal(
+            params,
+            context.connectionId,
+            context.runtime,
+            context.connectionSignal
+          )
+        : DESKTOP_ONLY
   }),
   defineMethod({
     permission: 'workspace',
     name: 'localTasks.proposals.recordResults',
     params: LocalTasksProposalsRecordResultsParams,
     handler: (params, context) =>
-      sourceOf(context) === 'desktop' ? service().recordProposalResults(params) : DESKTOP_ONLY
+      sourceOf(context) === 'desktop' &&
+      context.connectionId &&
+      context.connectionSignal &&
+      !context.connectionSignal.aborted
+        ? service().recordProposalResults(
+            params,
+            context.connectionId,
+            context.runtime,
+            context.connectionSignal
+          )
+        : DESKTOP_ONLY
   })
 ]

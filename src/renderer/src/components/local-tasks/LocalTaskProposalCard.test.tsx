@@ -5,6 +5,7 @@ import type * as Proposals from '@/local-tasks/local-task-dispatcher-proposals'
 
 const decide = vi.hoisted(() => vi.fn(async () => undefined))
 const run = vi.hoisted(() => vi.fn(async () => undefined))
+const finish = vi.hoisted(() => vi.fn(async () => undefined))
 
 vi.mock('@/store', async () => {
   const { createTestStore } = await import('@/store/slices/store-test-helpers')
@@ -12,7 +13,12 @@ vi.mock('@/store', async () => {
 })
 vi.mock('@/local-tasks/local-task-dispatcher-proposals', async (importOriginal) => {
   const actual = await importOriginal<typeof Proposals>()
-  return { ...actual, decideLocalTaskProposal: decide, runLocalTaskProposal: run }
+  return {
+    ...actual,
+    decideLocalTaskProposal: decide,
+    runLocalTaskProposal: run,
+    finishInterruptedLocalTaskProposal: finish
+  }
 })
 
 import { localTaskProposalsStore } from '@/local-tasks/local-task-dispatcher-proposals'
@@ -52,9 +58,10 @@ function proposal(overrides: Partial<LocalTaskProposal>): LocalTaskProposal {
 
 afterEach(() => {
   cleanup()
-  localTaskProposalsStore.setState({ pending: [], unrun: [], running: [] })
+  localTaskProposalsStore.setState(localTaskProposalsStore.getInitialState(), true)
   decide.mockClear()
   run.mockClear()
+  finish.mockClear()
 })
 
 describe('LocalTaskProposalCard', () => {
@@ -78,4 +85,56 @@ describe('LocalTaskProposalCard', () => {
     expect(run).toHaveBeenCalledWith(confirmed)
     expect(decide).not.toHaveBeenCalled()
   })
+})
+
+it('shows an active execution in another window without offering manual finish', () => {
+  render(
+    <LocalTaskProposalCard
+      proposal={proposal({ status: 'executing', executionActive: true })}
+      names={names}
+      now={0}
+    />
+  )
+
+  expect(screen.getByText('Running…')).toBeTruthy()
+  expect(screen.queryByRole('button', { name: 'Mark as finished' })).toBeNull()
+})
+
+it('offers only finish after the execution connection retires, without a Run action', () => {
+  render(
+    <LocalTaskProposalCard
+      proposal={proposal({ status: 'executing', executionActive: false })}
+      names={names}
+      now={0}
+    />
+  )
+
+  fireEvent.click(screen.getByRole('button', { name: 'Mark as finished' }))
+
+  expect(finish).toHaveBeenCalledWith('p-1')
+  expect(screen.queryByRole('button', { name: 'Run' })).toBeNull()
+  expect(screen.getByText(/Recorded results are kept/)).toBeTruthy()
+})
+
+it('does not interpret an unknown owner on an older host as a retired window', () => {
+  render(
+    <LocalTaskProposalCard proposal={proposal({ status: 'executing' })} names={names} now={0} />
+  )
+
+  expect(screen.getByText(/Execution cannot be verified/)).toBeTruthy()
+  expect(screen.queryByRole('button', { name: 'Mark as finished' })).toBeNull()
+})
+
+it('keeps finish unavailable while this window runs despite a stale inactive snapshot', () => {
+  localTaskProposalsStore.setState({ running: ['p-1'] })
+  render(
+    <LocalTaskProposalCard
+      proposal={proposal({ status: 'executing', executionActive: false })}
+      names={names}
+      now={0}
+    />
+  )
+
+  expect(screen.getByText('Running…')).toBeTruthy()
+  expect(screen.queryByRole('button', { name: 'Mark as finished' })).toBeNull()
 })

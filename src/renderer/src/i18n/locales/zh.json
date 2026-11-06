@@ -23262,7 +23262,8 @@
         "more": "后面还有更多。"
       },
       "claimedElsewhere": "这份提案已经在执行或执行过了。",
-      "interrupted": "正在别的窗口执行，或执行被中断了。重复执行前先核对它建出的任务。",
+      "interrupted": "执行窗口已断开。收尾前请检查任务；已记录的结果会保留，不会重新执行步骤。",
+      "executionUnverifiable": "无法确认执行情况。重复操作前请先检查任务。",
       "finish": "标记为已结束"
     },
     "latestProgress": {

@@ -94,6 +94,8 @@ export type RpcContext = {
   signal?: AbortSignal
   // Cleanup is socket-scoped so sibling sockets sharing a device token survive.
   connectionId?: string
+  /** Transport lifetime, checked again by writes after dispatcher middleware awaits. */
+  connectionSignal?: AbortSignal
   // An unsubscribe cannot retire a registration created after its dispatch began.
   subscriptionRegistrationVersion?: number
   structuredAgentCliSourceEvidence?: StructuredAgentCliSourceEvidence

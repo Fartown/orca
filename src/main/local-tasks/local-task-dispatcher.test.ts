@@ -13,6 +13,32 @@ void SyncDatabase
 let opId = 0
 const op = (): string => `op-${++opId}`
 const PANE = 'tab-d:pane-d'
+const CONN_A = 'desktop-renderer:1:1'
+const CONN_B = 'desktop-renderer:2:1'
+
+function claimLifetime() {
+  const claims = new Map<string, { connectionId?: string; cleanup: () => void }>()
+  return {
+    registerSubscriptionCleanup(id: string, cleanup: () => void, connectionId?: string) {
+      claims.set(id, { connectionId, cleanup })
+    },
+    cleanupSubscription(id: string) {
+      const claim = claims.get(id)
+      claims.delete(id)
+      claim?.cleanup()
+    },
+    close(connectionId: string) {
+      for (const [id, claim] of claims) {
+        if (claim.connectionId === connectionId) {
+          this.cleanupSubscription(id)
+        }
+      }
+    },
+    size() {
+      return claims.size
+    }
+  }
+}
 
 function setup() {
   const db = LocalTasksDatabase.openTransient()
@@ -153,6 +179,7 @@ describe('dispatcher conversation and proposals (REQ-030)', () => {
 
   it('watches what an executed proposal started and tells the dispatcher how it went', () => {
     const { service, task } = setup()
+    const lifetime = claimLifetime()
     register(service)
     const proposal = propose(service)
     service.decideProposal(
@@ -160,27 +187,35 @@ describe('dispatcher conversation and proposals (REQ-030)', () => {
       'desktop'
     )
     const started = task('Investigate retries')
-    const unclaimed = service.recordProposalResults({
-      clientOperationId: op(),
-      proposalId: proposal.id,
-      results: []
-    })
-    expect(unclaimed).toMatchObject({ ok: false, code: 'stale', detail: 'confirmed' })
+    const unclaimed = service.recordProposalResults(
+      {
+        clientOperationId: op(),
+        proposalId: proposal.id,
+        results: []
+      },
+      CONN_A,
+      lifetime
+    )
+    expect(unclaimed).toMatchObject({ ok: false, code: 'stale' })
     expect(
-      service.claimProposal({ clientOperationId: op(), proposalId: proposal.id })
-    ).toMatchObject({ ok: true, proposal: { status: 'executing' } })
+      service.claimProposal({ clientOperationId: op(), proposalId: proposal.id }, CONN_A, lifetime)
+    ).toMatchObject({ ok: true, proposal: { status: 'executing', executionActive: true } })
     // A second window, a stale card or a reload cannot take it again.
     expect(
-      service.claimProposal({ clientOperationId: op(), proposalId: proposal.id })
-    ).toMatchObject({ ok: false, code: 'stale', detail: 'executing' })
-    const recorded = service.recordProposalResults({
-      clientOperationId: op(),
-      proposalId: proposal.id,
-      results: [
-        { index: 0, ok: true, taskId: started.id },
-        { index: 1, ok: false, detail: 'host out of contact' }
-      ]
-    })
+      service.claimProposal({ clientOperationId: op(), proposalId: proposal.id }, CONN_B, lifetime)
+    ).toMatchObject({ ok: false, code: 'stale' })
+    const recorded = service.recordProposalResults(
+      {
+        clientOperationId: op(),
+        proposalId: proposal.id,
+        results: [
+          { index: 0, ok: true, taskId: started.id },
+          { index: 1, ok: false, detail: 'host out of contact' }
+        ]
+      },
+      CONN_A,
+      lifetime
+    )
     expect(recorded).toMatchObject({ ok: true, proposal: { status: 'executed' } })
     expect(service.dispatcher.watches(PANE)).toEqual({
       ok: true,
@@ -308,8 +343,182 @@ describe('dispatcher inbox (REQ-031)', () => {
 })
 
 describe('dispatcher proposal decisions', () => {
+  it('keeps an active claim exclusive and checkpoints each kept item before owner completion', () => {
+    const { service } = setup()
+    const lifetime = claimLifetime()
+    register(service)
+    const proposal = propose(service)
+    service.decideProposal(
+      { clientOperationId: op(), proposalId: proposal.id, decision: 'confirmed' },
+      'desktop'
+    )
+    const claim = { clientOperationId: op(), proposalId: proposal.id }
+    expect(service.claimProposal(claim, CONN_A, lifetime)).toMatchObject({
+      ok: true,
+      proposal: { executionActive: true }
+    })
+    expect(lifetime.size()).toBe(1)
+    expect(service.claimProposal(claim, CONN_B, lifetime)).toMatchObject({
+      ok: false,
+      code: 'stale'
+    })
+    expect(lifetime.size()).toBe(1)
+    expect(
+      service.recordProposalResults(
+        { clientOperationId: op(), proposalId: proposal.id, results: [] },
+        CONN_B,
+        lifetime
+      )
+    ).toMatchObject({ ok: false, code: 'stale' })
+    const first = {
+      clientOperationId: op(),
+      proposalId: proposal.id,
+      finalize: false,
+      results: [{ index: 0, ok: true }]
+    }
+    expect(service.recordProposalResults(first, CONN_A, lifetime)).toMatchObject({
+      ok: true,
+      proposal: { status: 'executing', executionActive: true, results: first.results }
+    })
+    expect(service.recordProposalResults(first, CONN_A, lifetime)).toMatchObject({
+      ok: true,
+      proposal: { results: first.results }
+    })
+    expect(
+      service.recordProposalResults(
+        { clientOperationId: op(), proposalId: proposal.id, results: [] },
+        CONN_A,
+        lifetime
+      )
+    ).toMatchObject({ ok: false, code: 'invalid_argument', detail: 'incomplete-results' })
+    expect(
+      service.recordProposalResults(
+        {
+          clientOperationId: op(),
+          proposalId: proposal.id,
+          finalize: false,
+          results: [{ index: 0, ok: false }]
+        },
+        CONN_A,
+        lifetime
+      )
+    ).toMatchObject({ ok: false, code: 'stale', detail: 'result-conflict' })
+    expect(
+      service.recordProposalResults(
+        {
+          clientOperationId: op(),
+          proposalId: proposal.id,
+          finalize: false,
+          results: [{ index: 1, ok: false }]
+        },
+        CONN_A,
+        lifetime
+      )
+    ).toMatchObject({
+      ok: true,
+      proposal: { status: 'executing', results: [{ index: 0 }, { index: 1 }] }
+    })
+    expect(
+      service.recordProposalResults(
+        { clientOperationId: op(), proposalId: proposal.id, results: [] },
+        CONN_A,
+        lifetime
+      )
+    ).toMatchObject({
+      ok: true,
+      proposal: { status: 'executed', results: [{ index: 0 }, { index: 1 }] }
+    })
+    expect(lifetime.size()).toBe(0)
+  })
+
+  it.each([
+    ['desktop document reload', CONN_A],
+    ['paired desktop socket close', 'paired-desktop-socket:1']
+  ])('retires %s and lets another window seal known results', (_event, ownerConnection) => {
+    const { service } = setup()
+    const lifetime = claimLifetime()
+    register(service)
+    const proposal = propose(service)
+    service.decideProposal(
+      { clientOperationId: op(), proposalId: proposal.id, decision: 'confirmed' },
+      'desktop'
+    )
+    const claim = { clientOperationId: op(), proposalId: proposal.id }
+    service.claimProposal(claim, ownerConnection, lifetime)
+    const checkpoint = {
+      clientOperationId: op(),
+      proposalId: proposal.id,
+      finalize: false,
+      results: [{ index: 0, ok: true }]
+    }
+    service.recordProposalResults(checkpoint, ownerConnection, lifetime)
+    lifetime.close(ownerConnection)
+    expect(service.dispatcher.listProposals({ status: 'executing' }).proposals[0]).toMatchObject({
+      executionActive: false,
+      results: checkpoint.results
+    })
+    expect(service.claimProposal(claim, ownerConnection, lifetime)).toMatchObject({
+      ok: false,
+      code: 'stale'
+    })
+    expect(service.recordProposalResults(checkpoint, ownerConnection, lifetime)).toMatchObject({
+      ok: false,
+      code: 'stale'
+    })
+    expect(
+      service.recordProposalResults(
+        { clientOperationId: op(), proposalId: proposal.id, results: [{ index: 1, ok: true }] },
+        CONN_B,
+        lifetime
+      )
+    ).toMatchObject({ ok: false, code: 'stale' })
+    expect(
+      service.recordProposalResults(
+        { clientOperationId: op(), proposalId: proposal.id, results: [] },
+        CONN_B,
+        lifetime
+      )
+    ).toMatchObject({ ok: true, proposal: { status: 'executed', results: checkpoint.results } })
+  })
+
+  it('does not revive an executing claim when the server service restarts', () => {
+    const { db, service, now } = setup()
+    const lifetime = claimLifetime()
+    register(service)
+    const proposal = propose(service)
+    service.decideProposal(
+      { clientOperationId: op(), proposalId: proposal.id, decision: 'confirmed' },
+      'desktop'
+    )
+    service.claimProposal({ clientOperationId: op(), proposalId: proposal.id }, CONN_A, lifetime)
+    const checkpoint = {
+      clientOperationId: op(),
+      proposalId: proposal.id,
+      finalize: false,
+      results: [{ index: 0, ok: true }]
+    }
+    service.recordProposalResults(checkpoint, CONN_A, lifetime)
+    const restarted = new LocalTasksService(db, now)
+    expect(restarted.dispatcher.listProposals({ status: 'executing' }).proposals[0]).toMatchObject({
+      executionActive: false,
+      results: checkpoint.results
+    })
+    expect(restarted.recordProposalResults(checkpoint, CONN_A, claimLifetime())).toMatchObject({
+      ok: false,
+      code: 'stale'
+    })
+    expect(
+      restarted.recordProposalResults(
+        { clientOperationId: op(), proposalId: proposal.id, results: [] },
+        CONN_B,
+        claimLifetime()
+      )
+    ).toMatchObject({ ok: true, proposal: { status: 'executed', results: checkpoint.results } })
+  })
+
   it('runs a repeated kept item once and follows a task whose session did not start', () => {
     const { service, task } = setup()
+    const lifetime = claimLifetime()
     register(service)
     const proposal = propose(service)
     const decided = service.decideProposal(
@@ -322,13 +531,18 @@ describe('dispatcher proposal decisions', () => {
       'desktop'
     )
     expect(decided).toMatchObject({ ok: true, proposal: { keptItemIndexes: [0, 1] } })
-    service.claimProposal({ clientOperationId: op(), proposalId: proposal.id })
+    service.claimProposal({ clientOperationId: op(), proposalId: proposal.id }, CONN_A, lifetime)
     const created = task('Investigate retries')
-    service.recordProposalResults({
-      clientOperationId: op(),
-      proposalId: proposal.id,
-      results: [{ index: 0, ok: false, taskId: created.id, detail: 'created; start it' }]
-    })
+    service.recordProposalResults(
+      {
+        clientOperationId: op(),
+        proposalId: proposal.id,
+        finalize: false,
+        results: [{ index: 0, ok: false, taskId: created.id, detail: 'created; start it' }]
+      },
+      CONN_A,
+      lifetime
+    )
     expect(inbox(service).watchedTaskCount).toBe(1)
   })
 
@@ -395,18 +609,24 @@ describe('dispatcher following tasks in other libraries (D-008)', () => {
 
   it('follows a task another library holds once its proposal ran there', () => {
     const { service } = setup()
+    const lifetime = claimLifetime()
     register(service)
     const proposal = propose(service)
     service.decideProposal(
       { clientOperationId: op(), proposalId: proposal.id, decision: 'confirmed' },
       'desktop'
     )
-    service.claimProposal({ clientOperationId: op(), proposalId: proposal.id })
-    service.recordProposalResults({
-      clientOperationId: op(),
-      proposalId: proposal.id,
-      results: [{ index: 0, ok: true, taskId: REMOTE, detail: 'started SSH-7' }]
-    })
+    service.claimProposal({ clientOperationId: op(), proposalId: proposal.id }, CONN_A, lifetime)
+    service.recordProposalResults(
+      {
+        clientOperationId: op(),
+        proposalId: proposal.id,
+        finalize: false,
+        results: [{ index: 0, ok: true, taskId: REMOTE, detail: 'started SSH-7' }]
+      },
+      CONN_A,
+      lifetime
+    )
     expect(service.dispatcher.watches(PANE)).toMatchObject({
       ok: true,
       watches: [{ taskId: REMOTE, addedBy: 'proposal' }]

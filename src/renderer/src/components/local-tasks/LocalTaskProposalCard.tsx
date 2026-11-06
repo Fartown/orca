@@ -45,6 +45,7 @@ export function LocalTaskProposalCard({
   now: number
 }): React.JSX.Element {
   const running = useLocalTaskProposals((state) => state.running.includes(proposal.id))
+  const active = running || proposal.executionActive === true
   const [dropped, setDropped] = useState<ReadonlySet<number>>(() => new Set())
   const pending = proposal.status === 'pending'
   // Why the position is the id: a stored proposal never reorders or edits its items.
@@ -107,7 +108,7 @@ export function LocalTaskProposalCard({
         })}
       </ul>
       <footer className="flex items-center justify-end gap-1">
-        {running ? (
+        {active ? (
           <span className="mr-auto flex items-center gap-1 px-1 text-2xs text-muted-foreground">
             <LoaderCircle className="size-3 animate-spin motion-reduce:animate-none" />
             {translate('localTasks.dispatcher.running', 'Running…')}
@@ -140,12 +141,12 @@ export function LocalTaskProposalCard({
             </Button>
           </>
         ) : proposal.status === 'executing' ? (
-          running ? null : (
+          active ? null : proposal.executionActive === false ? (
             <>
               <span className="mr-auto px-1 text-2xs text-muted-foreground">
                 {translate(
                   'localTasks.dispatcher.interrupted',
-                  'Running in another window, or its run was interrupted. Check the tasks before repeating anything.'
+                  'The execution window is no longer connected. Check the tasks before finishing. Recorded results are kept; no steps are repeated.'
                 )}
               </span>
               <Button
@@ -156,6 +157,13 @@ export function LocalTaskProposalCard({
                 {translate('localTasks.dispatcher.finish', 'Mark as finished')}
               </Button>
             </>
+          ) : (
+            <span className="mr-auto px-1 text-2xs text-muted-foreground">
+              {translate(
+                'localTasks.dispatcher.executionUnverifiable',
+                'Execution cannot be verified. Check the tasks before repeating anything.'
+              )}
+            </span>
           )
         ) : (
           <Button size="xs" disabled={running} onClick={() => void runLocalTaskProposal(proposal)}>

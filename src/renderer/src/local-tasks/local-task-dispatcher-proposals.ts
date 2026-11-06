@@ -78,7 +78,7 @@ export async function runLocalTaskProposal(proposal: LocalTaskProposal): Promise
   setRunning(proposal.id, true)
   try {
     const claimed = await localTaskDispatcherClient.claim(proposal.id).catch(() => null)
-    if (!claimed?.ok) {
+    if (!claimed?.ok || claimed.proposal.executionActive !== true) {
       toast.info(
         translate(
           'localTasks.dispatcher.claimedElsewhere',
@@ -115,7 +115,14 @@ export async function runLocalTaskProposal(proposal: LocalTaskProposal): Promise
  * have run, so the person checks the tasks rather than repeating them.
  */
 export async function finishInterruptedLocalTaskProposal(proposalId: string): Promise<void> {
-  await runLocalTaskWrite(() => localTaskDispatcherClient.recordResults(proposalId, []))
+  const state = localTaskProposalsStore.getState()
+  if (
+    state.running.includes(proposalId) ||
+    state.claimed.find((proposal) => proposal.id === proposalId)?.executionActive !== false
+  ) {
+    return
+  }
+  await runLocalTaskWrite(() => localTaskDispatcherClient.recordResults(proposalId, [], true))
   void refreshLocalTaskProposals()
 }
 /** A person's decision (REQ-030); `keep` names the items they kept, all when absent. */

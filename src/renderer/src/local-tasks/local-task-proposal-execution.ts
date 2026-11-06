@@ -271,12 +271,19 @@ export async function executeLocalTaskProposal(
       ok: false,
       detail: error instanceof Error ? error.message : String(error)
     }))
-    results.push({
+    const result: LocalTaskProposalItemResult = {
       index,
       ...outcome,
       ...(outcome.detail ? { detail: outcome.detail.slice(0, DETAIL_MAX) } : {})
-    })
+    }
+    results.push(result)
+    const recorded = await write(() =>
+      localTaskDispatcherClient.recordResults(proposal.id, [result], false)
+    )
+    if (isProposalMiss(recorded)) {
+      return null
+    }
   }
-  const recorded = await write(() => localTaskDispatcherClient.recordResults(proposal.id, results))
+  const recorded = await write(() => localTaskDispatcherClient.recordResults(proposal.id, [], true))
   return isProposalMiss(recorded) ? null : results
 }

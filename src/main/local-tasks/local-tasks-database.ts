@@ -24,6 +24,7 @@ export function getLocalTasksDatabasePath(profileId: string, userDataPath?: stri
 
 export class LocalTasksDatabase {
   private readonly commitListeners = new Set<(commit: LocalTasksCommit) => void>()
+  private readonly closeListeners = new Set<() => void>()
   private pendingScopes: Set<LocalTaskChangeScope> | null = null
   private closed = false
 
@@ -192,9 +193,18 @@ export class LocalTasksDatabase {
     if (this.closed) {
       return
     }
+    for (const listener of this.closeListeners) {
+      listener()
+    }
+    this.closeListeners.clear()
     this.database.close()
     this.commitListeners.clear()
     this.closed = true
+  }
+
+  onClose(listener: () => void): () => void {
+    this.closeListeners.add(listener)
+    return () => this.closeListeners.delete(listener)
   }
 
   private notify(commit: LocalTasksCommit): void {

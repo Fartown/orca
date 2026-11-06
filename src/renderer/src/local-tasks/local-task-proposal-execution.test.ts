@@ -73,7 +73,7 @@ describe('executeLocalTaskProposal', () => {
       { index: 0, ok: true, detail: 'done' },
       { index: 2, ok: true, detail: 'done' }
     ])
-    expect(fixture.recordResults).toHaveBeenCalledWith('proposal-1', results)
+    expect(fixture.recordResults).toHaveBeenLastCalledWith('proposal-1', [], true)
   })
 
   it('turns a throwing item into a failed result and keeps running the rest', async () => {
@@ -94,7 +94,49 @@ describe('executeLocalTaskProposal', () => {
   it('returns null when the library refuses the results', async () => {
     fixture.recordResults.mockResolvedValue({ ok: false, code: 'stale', detail: 'executed' })
 
-    expect(await executeLocalTaskProposal(proposal(), executors())).toBeNull()
+    const run = executors()
+    expect(await executeLocalTaskProposal(proposal(), run)).toBeNull()
+    expect(run.append).not.toHaveBeenCalled()
+    expect(run.stop).not.toHaveBeenCalled()
+    expect(fixture.recordResults).toHaveBeenCalledTimes(1)
+  })
+
+  it('waits for a durable item result before starting the next side effect', async () => {
+    let acknowledge: () => void = () => {}
+    fixture.recordResults.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          acknowledge = () => resolve({ ok: true, proposal: proposal() })
+        })
+    )
+    const run = executors()
+    const executing = executeLocalTaskProposal(proposal(), run)
+    await vi.waitFor(() => expect(fixture.recordResults).toHaveBeenCalledTimes(1))
+    expect(run.start).toHaveBeenCalledTimes(1)
+    expect(run.append).not.toHaveBeenCalled()
+    expect(fixture.recordResults).toHaveBeenCalledWith(
+      'proposal-1',
+      [{ index: 0, ok: true, detail: 'done' }],
+      false
+    )
+    acknowledge()
+    await executing
+    expect(run.append).toHaveBeenCalledTimes(1)
+    expect(run.stop).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not repeat or continue after losing contact while saving an outcome', async () => {
+    fixture.recordResults
+      .mockResolvedValueOnce({ ok: true, proposal: proposal() })
+      .mockRejectedValueOnce(new Error('connection retired'))
+    const run = executors()
+
+    expect(await executeLocalTaskProposal(proposal(), run)).toBeNull()
+
+    expect(run.start).toHaveBeenCalledTimes(1)
+    expect(run.append).toHaveBeenCalledTimes(1)
+    expect(run.stop).not.toHaveBeenCalled()
+    expect(fixture.recordResults).toHaveBeenCalledTimes(2)
   })
 })
 
