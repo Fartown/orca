@@ -23880,5 +23880,8 @@
       "moreSelected": "另有 {{count}} 项已选择",
       "searchSelected": "搜索已选目标"
     }
+  },
+  "markdownReviewAnchorRecovery": {
+    "originalTextChanged": "原文已变更"
   }
 }

@@ -1,6 +1,6 @@
 import type { Editor } from '@tiptap/react'
 import type { DiffComment } from '../../../../shared/diff-comment-types'
-import { getRichMarkdownCommentAnchorTop } from './rich-markdown-review-annotations'
+import { resolveMarkdownReviewAnchorPosition } from '../markdown-review-anchor-recovery/review-anchor-position'
 import { getRichMarkdownCommentBlocks } from './rich-markdown-comment-blocks'
 import {
   stackRichMarkdownReviewNotePositions,
@@ -22,27 +22,16 @@ export function measureRichMarkdownReviewNotePositions({
 }: MeasureRichMarkdownReviewNotePositionsOptions): RichMarkdownReviewNotePosition[] {
   const containerRect = container.getBoundingClientRect()
   const blocks = getRichMarkdownCommentBlocks(editor)
-  const nextPositions = markdownComments
-    .map((comment): RichMarkdownReviewNotePosition | null => {
-      const bodyLineNumber = Math.max(1, comment.lineNumber - markdownSourceLineOffset)
-      const block = blocks.find(
-        (candidate) => candidate.startLine <= bodyLineNumber && bodyLineNumber <= candidate.endLine
-      )
-      if (!block) {
-        return null
-      }
-      const top = getRichMarkdownCommentAnchorTop(
-        editor,
-        comment,
-        block,
-        containerRect,
-        container.scrollTop,
-        markdownSourceLineOffset,
-        blocks
-      )
-      return top === null ? null : { comment, top }
+  const nextPositions = markdownComments.map((comment) =>
+    resolveMarkdownReviewAnchorPosition({
+      editor,
+      comment,
+      blocks,
+      containerRect,
+      scrollTop: container.scrollTop,
+      markdownSourceLineOffset
     })
-    .filter((position): position is RichMarkdownReviewNotePosition => position !== null)
+  )
   return stackRichMarkdownReviewNotePositions(
     nextPositions,
     measureReviewNoteHeights(container, nextPositions)

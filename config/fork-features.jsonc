@@ -4311,6 +4311,68 @@
       "checks": [
         "ORCA_BACKGROUND_LAUNCH=1 pnpm exec vitest run --config config/vitest.config.ts src/shared/plugin-workspace-remote src/main/plugin-workspace-remote src/renderer/src/plugin-workspace-remote src/main/plugins src/shared/plugins src/renderer/src/components/plugins"
       ]
+    },
+    {
+      "id": "markdown-review-anchor-recovery",
+      "title": "Markdown评论失效锚点恢复",
+      "goal": "原文变更后保留可查看、编辑和删除的评论卡片，恢复可匹配的引文定位",
+      "journal": "docs/issue/Markdown评论失效锚点恢复/journal.md",
+      "policyId": "markdown-review-anchor-recovery",
+      "ownedPaths": [
+        "src/renderer/src/components/markdown-review-anchor-recovery/**",
+        "docs/issue/Markdown评论失效锚点恢复/**",
+        "tests/e2e/markdown-review-anchor-recovery.spec.ts"
+      ],
+      "requiredFiles": [
+        "src/renderer/src/components/markdown-review-anchor-recovery/review-anchor-position.ts"
+      ],
+      "dependsOn": [
+        "src/shared/diff-comment-types.ts",
+        "src/renderer/src/components/editor/rich-markdown-review-annotations.ts",
+        "src/renderer/src/components/editor/rich-markdown-comment-blocks.ts",
+        "src/renderer/src/components/editor/rich-markdown-range-bounds.ts",
+        "src/renderer/src/components/editor/rich-markdown-review-note-layout.ts",
+        "src/renderer/src/i18n/i18n.ts"
+      ],
+      "seams": [
+        {
+          "file": "src/renderer/src/components/editor/rich-markdown-review-note-positioning.ts",
+          "mustContain": "resolveMarkdownReviewAnchorPosition",
+          "why": "Keep saved review notes accessible when source anchors change."
+        },
+        {
+          "file": "src/renderer/src/components/editor/rich-markdown-review-note-layout.ts",
+          "mustContain": "anchorUnresolved",
+          "why": "Keep saved review notes accessible when source anchors change."
+        },
+        {
+          "file": "src/renderer/src/components/editor/RichMarkdownReviewNoteLayer.tsx",
+          "mustContain": "getMarkdownReviewAnchorLabel",
+          "why": "Keep saved review notes accessible when source anchors change."
+        },
+        {
+          "file": "src/renderer/src/i18n/locales/en.json",
+          "mustContain": "markdownReviewAnchorRecovery",
+          "why": "Keep saved review notes accessible when source anchors change."
+        },
+        {
+          "file": "src/renderer/src/i18n/locales/zh.json",
+          "mustContain": "markdownReviewAnchorRecovery",
+          "why": "Keep saved review notes accessible when source anchors change."
+        },
+        {
+          "file": ".gitignore",
+          "mustContain": "!docs/issue/Markdown评论失效锚点恢复/**",
+          "why": "Keep saved review notes accessible when source anchors change."
+        }
+      ],
+      "tests": [
+        "src/renderer/src/components/markdown-review-anchor-recovery/review-anchor-position.test.ts",
+        "tests/e2e/markdown-review-anchor-recovery.spec.ts"
+      ],
+      "checks": [
+        "ORCA_BACKGROUND_LAUNCH=1 pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/components/markdown-review-anchor-recovery src/renderer/src/components/editor/rich-markdown-review-rail-blocks.test.ts src/renderer/src/components/editor/rich-markdown-review-note-layout.test.ts src/renderer/src/components/editor/rich-markdown-comment-blocks.test.ts"
+      ]
     }
   ]
 }

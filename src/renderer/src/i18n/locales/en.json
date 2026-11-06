@@ -24613,5 +24613,8 @@
       "moreSelected": "{{count}} more selected",
       "searchSelected": "Search selected targets"
     }
+  },
+  "markdownReviewAnchorRecovery": {
+    "originalTextChanged": "Original text changed"
   }
 }

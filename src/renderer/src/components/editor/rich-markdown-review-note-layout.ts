@@ -4,6 +4,7 @@ import { getCommentBodyLayoutLineCount } from '@/lib/comment-body-line-count'
 export type RichMarkdownReviewNotePosition = {
   comment: DiffComment
   top: number
+  anchorUnresolved?: boolean
 }
 
 export type RichMarkdownReviewRailState = {
