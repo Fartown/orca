@@ -4126,7 +4126,8 @@
         "src/renderer/src/local-tasks/local-task-proposal-session-items.test.ts",
         "src/renderer/src/lib/active-agent-note-send-delivery-guard.test.ts",
         "src/renderer/src/components/sidebar/sidebar-host-options.test.ts",
-        "src/shared/execution-host-registry.test.ts"
+        "src/shared/execution-host-registry.test.ts",
+        "src/renderer/src/components/local-tasks/LocalTaskSessionPanelSlot.test.tsx"
       ],
       "checks": [
         "pnpm exec vitest run --config config/vitest.config.ts src/main/local-tasks src/shared/local-tasks src/main/runtime/rpc/methods/local-tasks.test.ts src/shared/host-operation-ownership.test.ts src/main/runtime/runtime-rpc/fork-mobile-rpc-method-allowlist.test.ts src/main/runtime/runtime-rpc-mobile-method-allowlist.test.ts src/cli/local-tasks",

@@ -1,4 +1,8 @@
 import type { ActivityTerminalPortalTarget } from '@/components/activity/activity-terminal-portal'
+import type { AppState } from '@/store/types'
+import { selectWorkspaceByHostTarget } from '@/store/workspace-record-selectors'
+import { parseExecutionHostId } from '../../../shared/execution-host'
+import { hostWorktreeTarget } from '../../../shared/worktree/host-qualified-identity'
 import { isTerminalLeafId, makePaneKey, parsePaneKey } from '../../../shared/stable-pane-id'
 import type {
   TerminalLayoutSnapshot,
@@ -7,6 +11,27 @@ import type {
 import type { LocalTaskSessionLink } from '../../../shared/local-tasks/local-task-link-types'
 
 type PortalCandidate = Omit<ActivityTerminalPortalTarget, 'active'>
+
+type SessionMountState = Pick<
+  AppState,
+  'worktreesByRepo' | 'folderWorkspaces' | 'repos' | 'projectGroups' | 'tabsByWorktree'
+>
+
+export function localTaskSessionMountReady(
+  state: SessionMountState,
+  session: Pick<LocalTaskSessionLink, 'hostId' | 'worktreeId'>,
+  tabId: string | null
+): boolean {
+  const host = parseExecutionHostId(session.hostId)
+  const worktreeId = session.worktreeId
+  return Boolean(
+    host &&
+    worktreeId &&
+    tabId &&
+    selectWorkspaceByHostTarget(state, hostWorktreeTarget({ id: worktreeId, hostId: host.id })) &&
+    state.tabsByWorktree[worktreeId]?.some((tab) => tab.id === tabId)
+  )
+}
 
 function firstLeaf(node: TerminalPaneLayoutNode | null): string | null {
   if (!node) {

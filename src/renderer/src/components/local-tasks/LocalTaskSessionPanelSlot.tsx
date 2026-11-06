@@ -34,6 +34,7 @@ import {
   localTaskSessionPanelStore
 } from '@/local-tasks/local-task-session-panel-store'
 import {
+  localTaskSessionMountReady,
   planLocalTaskSessionPortal,
   resolveLocalTaskSessionPaneKey
 } from '@/local-tasks/local-task-session-panel-portal'
@@ -78,6 +79,7 @@ function LocalTaskSessionPanelContent({
   const terminalLayout = useAppStore((state) =>
     tabId ? state.terminalLayoutsByTabId[tabId] : undefined
   )
+  const mountReady = useAppStore((state) => localTaskSessionMountReady(state, session, tabId))
   const paneKey =
     resolveLocalTaskSessionPaneKey(session, terminalLayout) ??
     (!inContact &&
@@ -164,6 +166,7 @@ function LocalTaskSessionPanelContent({
         : null
     const plan = planLocalTaskSessionPortal(candidate, inContact, publishedPortal.current)
     if (
+      mountReady &&
       (plan.requestMount || (!candidate && !isChat && inContact)) &&
       session.worktreeId &&
       tabId
@@ -175,6 +178,7 @@ function LocalTaskSessionPanelContent({
   }, [
     inContact,
     isChat,
+    mountReady,
     paneKey,
     portalTarget,
     requestToken,
