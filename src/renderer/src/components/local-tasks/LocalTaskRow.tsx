@@ -1,4 +1,4 @@
-import { LocalTaskLatestProgress } from './LocalTaskLatestProgress'
+import { LocalTaskLatestProgress, LocalTaskNeedsYouMarker } from './LocalTaskLatestProgress'
 import { memo, useEffect, useRef } from 'react'
 import { ChevronDown, ChevronRight } from 'lucide-react'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -15,7 +15,6 @@ import type { LocalTask, LocalTaskStatusDef } from '../../../../shared/local-tas
 import { LocalTaskHostTag } from './LocalTaskHostTag'
 import { LocalTaskPriorityIcon, LocalTaskStatusIcon } from './LocalTaskIcons'
 import { LocalTaskProgressBadges } from './LocalTaskProgress'
-import { LocalTaskNeedsYouMarker } from './LocalTaskLatestProgress'
 
 export function LocalTaskLabelChips({
   labels,

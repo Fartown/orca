@@ -3244,7 +3244,14 @@
         "src/renderer/src/hooks/agent-auto-ack-targets.ts",
         "mobile/src/components/bottom-drawer/bottom-drawer-styles.ts",
         "src/renderer/src/lib/focus-terminal-tab-surface.ts",
-        "src/shared/constants.ts"
+        "src/shared/constants.ts",
+        "src/renderer/src/lib/terminal-input-activity-coalescing.ts",
+        "src/renderer/src/lib/active-agent-note-target.ts",
+        "src/renderer/src/components/sidebar/use-wsl-hosts-enabled.ts",
+        "src/renderer/src/components/host-picker/use-bounded-host-rows.ts",
+        "src/renderer/src/components/host-picker/HostListOverflowNote.tsx",
+        "src/shared/host-setting-overrides.ts",
+        "mobile/src/i18n/use-mobile-translation.ts"
       ],
       "policyId": "local-tasks",
       "ownedPaths": [
@@ -4006,6 +4013,31 @@
           "file": "mobile/src/components/bottom-drawer/bottom-drawer-styles.ts",
           "mustContain": "overflow: Platform.OS === 'web' ? webClipOverflow : 'hidden'",
           "why": "Task chat drawers must keep their full height after browser focus; CSS clip prevents the sheet itself from scrolling on web while native overflow stays unchanged"
+        },
+        {
+          "file": "src/renderer/src/lib/agent-message-send.ts",
+          "mustContain": "beforeTerminalSend",
+          "why": "总管唤醒在粘贴和提交前复核真实终端输入，保护未发送草稿（REQ-031）"
+        },
+        {
+          "file": "src/renderer/src/lib/active-agent-note-send.ts",
+          "mustContain": "beforeTerminalSend",
+          "why": "总管唤醒在粘贴和提交前复核真实终端输入，保护未发送草稿（REQ-031）"
+        },
+        {
+          "file": "src/renderer/src/lib/active-agent-note-send-delivery.ts",
+          "mustContain": "beforeTerminalSend",
+          "why": "总管唤醒在粘贴和提交前复核真实终端输入，保护未发送草稿（REQ-031）"
+        },
+        {
+          "file": "src/shared/execution-host-registry.ts",
+          "mustContain": "buildExecutionHostRegistryForAllHosts",
+          "why": "任务派活枚举全部所属主机，复用注册表且不由当前焦点决定执行目标（REQ-029）"
+        },
+        {
+          "file": "src/renderer/src/components/sidebar/sidebar-host-options.ts",
+          "mustContain": "buildSidebarHostOptionsForAllHosts",
+          "why": "任务派活复用主机健康和名称投影，不受当前焦点服务器影响（REQ-029）"
         }
       ],
       "tests": [
@@ -4088,12 +4120,18 @@
         "src/renderer/src/local-tasks/local-task-cleanup-ticket-source.test.ts",
         "src/main/local-tasks/local-task-pull-request-context.test.ts",
         "src/cli/local-tasks/local-task-cli.test.ts",
-        "mobile/src/local-tasks/local-task-session-drawer-style.test.ts"
+        "mobile/src/local-tasks/local-task-session-drawer-style.test.ts",
+        "src/shared/local-tasks/local-task-dispatcher-rpc-params.test.ts",
+        "src/shared/local-tasks/local-tasks-wsl-move-dispositions.test.ts",
+        "src/renderer/src/local-tasks/local-task-proposal-session-items.test.ts",
+        "src/renderer/src/lib/active-agent-note-send-delivery-guard.test.ts",
+        "src/renderer/src/components/sidebar/sidebar-host-options.test.ts",
+        "src/shared/execution-host-registry.test.ts"
       ],
       "checks": [
-        "pnpm exec vitest run --config config/vitest.config.ts src/main/local-tasks src/shared/local-tasks src/main/runtime/rpc/methods/local-tasks.test.ts src/shared/host-operation-ownership.test.ts src/shared/wsl-move src/main/runtime/runtime-rpc/fork-mobile-rpc-method-allowlist.test.ts src/main/runtime/mobile-rpc-allowlist.test.ts src/cli/local-tasks",
-        "ORCA_BACKGROUND_LAUNCH=1 pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/local-tasks src/renderer/src/components/local-tasks src/renderer/src/components/task-page src/renderer/src/components/cmd-j src/renderer/src/lib/worktree-creation-structured-session.test.ts",
-        "pnpm --dir mobile exec vitest run src/local-tasks src/home/MobileHomeTasksAndAutomations.test.tsx src/home/MobileHomeListFooter.test.tsx src/session/use-notification-pane-navigation.test.tsx src/transport/rpc-subscription-boundary.test.ts src/components/bottom-drawer",
+        "pnpm exec vitest run --config config/vitest.config.ts src/main/local-tasks src/shared/local-tasks src/main/runtime/rpc/methods/local-tasks.test.ts src/shared/host-operation-ownership.test.ts src/main/runtime/runtime-rpc/fork-mobile-rpc-method-allowlist.test.ts src/main/runtime/runtime-rpc-mobile-method-allowlist.test.ts src/cli/local-tasks",
+        "ORCA_BACKGROUND_LAUNCH=1 pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/local-tasks src/renderer/src/components/local-tasks src/renderer/src/components/task-page src/renderer/src/components/cmd-j src/renderer/src/lib/worktree-creation-structured-session.test.ts src/renderer/src/lib/agent-message-send.test.ts src/renderer/src/lib/active-agent-note-send-delivery-guard.test.ts",
+        "pnpm --dir mobile exec vitest run src/local-tasks src/home/MobileHomeTasksAndAutomations.test.tsx src/session/use-notification-pane-navigation.test.tsx src/components/bottom-drawer",
         "pnpm exec vitest run --config config/vitest.config.ts config/scripts/mobile-web-app-file-attachment-grant.test.mjs config/scripts/mobile-web-app/mobile-web-app-session-dictation-capture.test.mjs config/scripts/mobile-web-app/mobile-web-app-page-grant-call-sites.test.mjs config/scripts/mobile-web-app/mobile-web-app-screencast-lane-grant.test.mjs config/scripts/mobile-web-app/mobile-web-app-external-navigation-grant.test.mjs"
       ]
     },

@@ -22,7 +22,7 @@ import {
   localTaskSessionViews,
   localTaskWorkspaceLinkFor
 } from './local-task-progress-projection'
-import { localTaskLatestLine } from './local-task-latest-line'
+import { localTaskLatestLine, localTaskLatestProgress } from './local-task-latest-line'
 import { LocalTaskSessionDrawer } from './local-task-session-drawer'
 import { LocalTaskReviewActions } from './local-task-review-actions'
 import { localTaskWorkspaceRouteId } from './local-task-work-navigation'
@@ -74,6 +74,13 @@ export function LocalTaskDetailView(props: Props) {
   const descendantCount = task
     ? localTaskDescendantIds(task.id, index.childrenByParentId).length
     : 0
+  const descendants = task
+    ? localTaskDescendantIds(task.id, index.childrenByParentId).flatMap((id) => {
+        const child = index.tasksById.get(id)
+        return child ? [child] : []
+      })
+    : []
+  const latestProgress = task ? localTaskLatestProgress(task, descendants) : null
   const latestLine = task
     ? localTaskLatestLine(
         task,
@@ -84,10 +91,7 @@ export function LocalTaskDetailView(props: Props) {
           snapshot: library.work.progress,
           inContact: props.site.connState === 'connected'
         }),
-        localTaskDescendantIds(task.id, index.childrenByParentId).flatMap((id) => {
-          const child = index.tasksById.get(id)
-          return child ? [child] : []
-        })
+        descendants
       )
     : null
   const previewSession =
@@ -245,19 +249,19 @@ export function LocalTaskDetailView(props: Props) {
           <View style={[localTaskStyles.card, styles.nowCard]}>
             <Text style={localTaskStyles.sectionLabel}>{copy.now}</Text>
             <Pressable
-              disabled={!task.latestProgress?.sessionLinkId}
+              disabled={!latestProgress?.sessionLinkId}
               onPress={() =>
-                task.latestProgress?.sessionLinkId && openSession(task.latestProgress.sessionLinkId)
+                latestProgress?.sessionLinkId && openSession(latestProgress.sessionLinkId)
               }
-              accessibilityRole={task.latestProgress?.sessionLinkId ? 'button' : undefined}
+              accessibilityRole={latestProgress?.sessionLinkId ? 'button' : undefined}
             >
               <Text style={latestLine ? localTaskStyles.body : localTaskStyles.meta}>
                 {latestLine ?? copy.noProgress}
               </Text>
             </Pressable>
-            {task.latestProgress ? (
+            {latestProgress ? (
               <Text style={localTaskStyles.meta}>
-                {formatLocalTaskAgo(copy, task.latestProgress.at, props.now)}
+                {formatLocalTaskAgo(copy, latestProgress.at, props.now)}
               </Text>
             ) : null}
           </View>

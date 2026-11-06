@@ -5,6 +5,7 @@ import { LOCAL_TASK_TITLE_MAX } from './local-task-model'
 const clientOperationId = z.string().min(1).max(128)
 const id = z.string().min(1).max(128)
 const hostId = z.string().min(1).max(512)
+const worktreeId = z.string().min(1).max(4096)
 /** The dispatcher's own pane: CLI calls name it so the host finds the conversation. */
 const paneKey = z.string().min(1).max(256)
 const title = z.string().trim().min(1).max(LOCAL_TASK_TITLE_MAX)
@@ -12,7 +13,7 @@ const prompt = z.string().trim().min(1).max(8000)
 const agent = z.string().trim().min(1).max(64)
 /** A task project by name or prefix; the executor asks when it cannot tell. */
 const project = z.string().trim().min(1).max(64)
-const worktree = z.object({ worktreeId: id, hostId: hostId.optional() })
+const worktree = z.object({ worktreeId, hostId: hostId.optional() })
 
 export const LocalTaskProposalItemSchema = z.discriminatedUnion('kind', [
   // A new task with a session: in a workspace, or in a new workspace of a repo.

@@ -2032,6 +2032,7 @@
   },
   "localTasks": {
     "needsYou": {
+      "sidebarCount": "{{count}} tasks need you",
       "sidebarCount_one": "{{count}} task needs you",
       "sidebarCount_other": "{{count}} tasks need you"
     }

@@ -17,6 +17,31 @@ export function descriptionWithLegacyCriteria(
     : `${description.trimEnd()}${description.trim() ? '\n\n' : ''}${section}`
 }
 
+export function descriptionWithoutTrackedLegacyCriteria(
+  description: string,
+  criteria: readonly string[]
+): string {
+  const section = descriptionWithLegacyCriteria('', criteria)
+  if (!section) {
+    return description
+  }
+  if (description === section) {
+    return ''
+  }
+  return description.endsWith(`\n\n${section}`)
+    ? description.slice(0, -section.length - 2)
+    : description
+}
+
+export function readTrackedLegacyCriteria(text: string): string[] {
+  try {
+    const value: unknown = JSON.parse(text)
+    return Array.isArray(value) && value.every((item) => typeof item === 'string') ? value : []
+  } catch {
+    return []
+  }
+}
+
 /** Preserve old criteria once in the task description without changing the database version. */
 export function foldLocalTaskCriteriaIntoDescription(database: SyncDatabase): void {
   if (database.prepare('SELECT 1 FROM local_task_preferences WHERE key = ?').get(MARKER)) {
@@ -26,23 +51,13 @@ export function foldLocalTaskCriteriaIntoDescription(database: SyncDatabase): vo
     .prepare("SELECT id, description, criteria FROM local_tasks WHERE criteria != '[]'")
     .all()
   const update = database.prepare(
-    "UPDATE local_tasks SET description = ?, criteria = '[]', revision = revision + 1 WHERE id = ?"
+    'UPDATE local_tasks SET description = ?, criteria = ?, revision = revision + 1 WHERE id = ?'
   )
   for (const row of rows) {
-    let criteria: unknown
-    try {
-      criteria = JSON.parse(rowString(row, 'criteria'))
-    } catch {
-      criteria = null
-    }
-    const items = Array.isArray(criteria)
-      ? criteria.filter(
-          (item): item is string => typeof item === 'string' && item.trim().length > 0
-        )
-      : []
+    const items = readTrackedLegacyCriteria(rowString(row, 'criteria'))
     const description = rowString(row, 'description')
     const folded = descriptionWithLegacyCriteria(description, items)
-    update.run(folded, rowString(row, 'id'))
+    update.run(folded, folded === description ? '[]' : JSON.stringify(items), rowString(row, 'id'))
   }
   if (rows.length > 0) {
     database.prepare('UPDATE local_task_meta SET revision = revision + 1 WHERE singleton = 1').run()

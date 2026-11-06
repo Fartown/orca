@@ -47,6 +47,7 @@ export function LocalTaskDispatchInput(props: {
   const [error, setError] = useState<string | null>(null)
   const [ids] = useState(() => createLocalTaskOperationIds())
   const [linkIds] = useState(() => createLocalTaskOperationIds())
+  const [commentIds] = useState(() => createLocalTaskOperationIds())
   const [hostFilter, setHostFilter] = useState<string | null>(null)
   const [repoFilter, setRepoFilter] = useState<string | null>(null)
   const [target, setTarget] = useState<
@@ -202,9 +203,23 @@ export function LocalTaskDispatchInput(props: {
             chatNotReady: work.replyChatNotReady
           }
         })
-        setError(sent.kind === 'not-sent' ? work.replyNotSentBecause(sent.reason ?? '') : null)
-        if (sent.kind !== 'not-sent') {
-          setText('')
+        if (sent.kind === 'not-sent') {
+          setError(work.replyNotSentBecause(sent.reason ?? ''))
+          return
+        }
+        setText('')
+        if (sent.kind === 'delivered') {
+          const recorded = await sendLocalTaskWrite(
+            commentIds,
+            { taskId: targetTask.id, body: message },
+            props.api.addComment
+          )
+          setError(localTaskWriteMessage(copy, recorded))
+          if (recorded.kind === 'ok') {
+            props.library.reload(['events'])
+          }
+        } else {
+          setError(null)
         }
         return
       }

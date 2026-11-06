@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { ArrowUp, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
+import { Input } from '@/components/ui/input'
 import {
   Command,
   CommandEmpty,
@@ -11,12 +12,16 @@ import {
 } from '@/components/ui/command'
 import { translate } from '@/i18n/i18n'
 import { useAppStore } from '@/store'
-import type { AppState } from '@/store/types'
 import { getAgentCatalog } from '@/lib/agent-catalog'
 import { pickTuiAgent } from '../../../../shared/tui-agent-selection'
 import type { LocalTaskProject } from '../../../../shared/local-tasks/local-task-types'
 import { findMentionQuery } from '@/components/pull-request-page/mentions/query'
-import { useSidebarHostScopeOptions } from '@/components/sidebar/use-sidebar-host-scope-options'
+import { buildSidebarHostOptionsForAllHosts } from '@/components/sidebar/sidebar-host-options'
+import { selectWslHostsServing } from '@/components/sidebar/use-wsl-hosts-enabled'
+import { getHostDisplayLabelOverrides } from '../../../../shared/host-setting-overrides'
+import { useBoundedHostRows } from '@/components/host-picker/use-bounded-host-rows'
+import { HostListOverflowNote } from '@/components/host-picker/HostListOverflowNote'
+import { createDispatchAppSelector } from '@/local-tasks/local-task-dispatch-app-selector'
 import {
   localTaskDispatchCandidates,
   type LocalTaskDispatchCandidate
@@ -42,39 +47,6 @@ import {
 import { localTasksClient } from '@/local-tasks/local-tasks-runtime-client'
 import { LocalTaskDispatchReceipt } from './LocalTaskDispatchReceipt'
 
-function createDispatchAppSelector(): (state: AppState) => AppState {
-  let previous: { fields: readonly unknown[]; state: AppState } | null = null
-  return (state) => {
-    const fields = [
-      state.repos,
-      state.projects,
-      state.projectHostSetups,
-      state.worktreesByRepo,
-      state.folderWorkspaces,
-      state.detectedWorktreesByRepo,
-      state.projectGroups,
-      state.restoredRuntimeHostIdByWorkspaceSessionKey,
-      state.activeWorktreeId,
-      state.activeWorkspaceExecutionHostId,
-      state.runtimeEnvironments,
-      state.runtimeEnvironmentCatalogHydrated,
-      state.removedRuntimeEnvironmentIds,
-      state.runtimeStatusByEnvironmentId,
-      state.sshConnectionStates,
-      state.sshStateByEnvironment,
-      state.sshTargetLabels,
-      state.removedSshTargetLabels,
-      state.settings
-    ]
-    const snapshot = previous
-    if (snapshot && fields.every((field, index) => Object.is(field, snapshot.fields[index]))) {
-      return snapshot.state
-    }
-    previous = { fields, state }
-    return state
-  }
-}
-
 export function LocalTaskDispatchBox(): React.JSX.Element {
   const [text, setText] = useState('')
   const [targets, setTargets] = useState<LocalTaskDispatchCandidate[]>([])
@@ -86,8 +58,22 @@ export function LocalTaskDispatchBox(): React.JSX.Element {
   const [busy, setBusy] = useState(false)
   const input = useRef<HTMLTextAreaElement>(null)
   const focusRequest = useLocalTaskDispatchFocusRequest()
-  const { hostOptions } = useSidebarHostScopeOptions()
   const app = useAppStore(useMemo(() => createDispatchAppSelector(), []))
+  const hostOptions = useMemo(
+    () =>
+      buildSidebarHostOptionsForAllHosts({
+        repos: app.repos,
+        sshTargetLabels: app.sshTargetLabels,
+        sshConnectionStates: app.sshConnectionStates,
+        runtimeEnvironments: app.runtimeEnvironments,
+        runtimeStatusByEnvironmentId: app.runtimeStatusByEnvironmentId,
+        hostLabelOverrides: getHostDisplayLabelOverrides(app.settings),
+        wslHostStatuses: app.wslHostStatuses,
+        wslHostsEnabled: selectWslHostsServing(app),
+        wslHostServerFilesMissing: app.wslHostServerFiles === 'missing'
+      }),
+    [app]
+  )
   const tasks = useLocalTasksDomain((state) => state.tasks)
   const projects = useLocalTasksDomain((state) => state.projects)
   const links = useLocalTasksDomain((state) => state.links)
@@ -132,6 +118,7 @@ export function LocalTaskDispatchBox(): React.JSX.Element {
         !targets.some((selected) => selected.id === candidate.id)
     )
     .slice(0, 30)
+  const selectedRows = useBoundedHostRows(targets)
 
   useEffect(() => {
     if (focusRequest > 0) {
@@ -222,7 +209,7 @@ export function LocalTaskDispatchBox(): React.JSX.Element {
             <X className="size-3" />
           </Button>
         ) : null}
-        {targets.map((target) => (
+        {selectedRows.shown.map((target) => (
           <Button
             key={target.id}
             size="xs"
@@ -234,6 +221,28 @@ export function LocalTaskDispatchBox(): React.JSX.Element {
           </Button>
         ))}
       </div>
+      {targets.length > 0 ? (
+        <span className="text-xs text-muted-foreground">
+          {translate('localTasks.dispatch.selectedCount', '{{count}} selected', {
+            count: targets.length
+          })}
+        </span>
+      ) : null}
+      {selectedRows.searchable ? (
+        <Input
+          value={selectedRows.query}
+          onChange={(event) => selectedRows.setQuery(event.target.value)}
+          placeholder={translate('localTasks.dispatch.searchSelected', 'Search selected targets')}
+          aria-label={translate('localTasks.dispatch.searchSelected', 'Search selected targets')}
+          className="h-7"
+        />
+      ) : null}
+      <HostListOverflowNote
+        hiddenCount={selectedRows.hiddenCount}
+        label={(count) =>
+          translate('localTasks.dispatch.moreSelected', '{{count}} more selected', { count })
+        }
+      />
       <Textarea
         variant="composite"
         ref={input}

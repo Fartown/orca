@@ -11,7 +11,11 @@ export function useLocalTaskNeedsYouCount(): number {
 }
 
 export function localTaskNeedsYouCountLabel(count: number): string {
-  return translate('localTasks.needsYou.sidebarCount', '{{count}} tasks need you', { count })
+  return translate(
+    'localTasks.needsYou.sidebarCount',
+    count === 1 ? '{{count}} task needs you' : '{{count}} tasks need you',
+    { count }
+  )
 }
 
 function shownCount(count: number): string {

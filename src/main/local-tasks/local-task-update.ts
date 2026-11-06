@@ -7,7 +7,11 @@ import type {
 import type { LocalTasksTasksUpdateInput } from '../../shared/local-tasks/local-tasks-rpc-params'
 import type { LocalTasksDatabase } from './local-tasks-database'
 import { appendLocalTaskEvent } from './local-task-event-store'
-import { descriptionWithLegacyCriteria } from './local-task-criteria-fold'
+import {
+  descriptionWithLegacyCriteria,
+  descriptionWithoutTrackedLegacyCriteria,
+  readTrackedLegacyCriteria
+} from './local-task-criteria-fold'
 import {
   isValidParent,
   recordLabelChange,
@@ -16,6 +20,7 @@ import {
 } from './local-task-mutation-rules'
 import { readLocalTaskProject } from './local-task-project-store'
 import { readLocalTask } from './local-task-store'
+import { rowString } from './local-tasks-sqlite-row'
 
 /** Applies only the fields that changed, one activity entry per changed field. */
 export function updateLocalTask(
@@ -69,16 +74,27 @@ export function updateLocalTask(
     )
     event('title', { from: task.title, to: patch.title })
   }
-  const description =
-    patch.criteria !== undefined
-      ? descriptionWithLegacyCriteria(patch.description ?? task.description, patch.criteria)
-      : patch.description
-  if (description !== undefined && description !== task.description) {
-    touchRow(
-      'UPDATE local_tasks SET description = ?, updated_at = ?, revision = revision + 1 WHERE id = ?',
-      description
-    )
-    event('description')
+  if (patch.description !== undefined || patch.criteria !== undefined) {
+    const row = db.prepare('SELECT criteria FROM local_tasks WHERE id = ?').get(task.id)
+    const tracked = row ? readTrackedLegacyCriteria(rowString(row, 'criteria')) : []
+    const base =
+      patch.criteria !== undefined
+        ? descriptionWithoutTrackedLegacyCriteria(patch.description ?? task.description, tracked)
+        : (patch.description ?? task.description)
+    const description =
+      patch.criteria !== undefined ? descriptionWithLegacyCriteria(base, patch.criteria) : base
+    const nextTracked = patch.criteria !== undefined && description !== base ? patch.criteria : []
+    if (
+      description !== task.description ||
+      JSON.stringify(nextTracked) !== JSON.stringify(tracked)
+    ) {
+      db.prepare(
+        'UPDATE local_tasks SET description = ?, criteria = ?, updated_at = ?, revision = revision + 1 WHERE id = ?'
+      ).run(description, JSON.stringify(nextTracked), now, task.id)
+      if (description !== task.description) {
+        event('description')
+      }
+    }
   }
   if (patch.statusId !== undefined && patch.statusId !== task.statusId) {
     setTaskColumn(db, task.id, 'status_id', patch.statusId, now)

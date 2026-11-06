@@ -77,6 +77,7 @@ describe('dispatcher wake', () => {
     fixture.inbox.mockReset()
     delete fixture.preferences['dispatcher.wake']
     send = vi.fn<typeof sendMessageToAgent>(async () => ({ status: 'sent' }))
+    useAppStore.setState({ lastTerminalInputAtByPaneKey: {} })
   })
 
   it('points an idle dispatcher at its inbox once per idle stretch', async () => {
@@ -171,6 +172,28 @@ describe('dispatcher wake', () => {
     setStatus('done', 400, { turnStartedAt: 300 })
     await wake.check()
     expect(send).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps a pasted or IME committed draft from being submitted after focus leaves', async () => {
+    fixture.inbox.mockResolvedValue(inboxWith('c1'))
+    const wake = createLocalTaskDispatcherWake(send, () => false)
+    setStatus('done', 200, { turnStartedAt: 100 })
+    useAppStore.getState().recordTerminalInput(PANE, 150)
+
+    await wake.check()
+
+    expect(send).not.toHaveBeenCalled()
+  })
+
+  it('rechecks terminal input immediately before paste and submit', async () => {
+    fixture.inbox.mockResolvedValue(inboxWith('c1'))
+    const wake = createLocalTaskDispatcherWake(send, () => false)
+    setStatus('done', 200, { turnStartedAt: 100 })
+    await wake.check()
+    const guard = send.mock.calls[0][0].beforeTerminalSend
+    expect(guard?.('paste')).toBe(true)
+    useAppStore.getState().recordTerminalInput(PANE, 150)
+    expect(guard?.('submit')).toBe(false)
   })
 
   it('does not take a session-start done for a finished turn', async () => {

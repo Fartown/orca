@@ -50,7 +50,10 @@ export async function sendPromptWithGuardedPasteAndEnter(
   runtimeTarget: Parameters<typeof callRuntimeRpc>[0],
   terminalHandle: string,
   prompt: string,
-  options: { allowLegacyFallback: boolean }
+  options: {
+    allowLegacyFallback: boolean
+    beforeTerminalSend?: (phase: 'paste' | 'submit') => boolean
+  }
 ): Promise<ActiveAgentNotesSendResult> {
   const initialAgentStatus = await getTerminalAgentSendReadiness(
     runtimeTarget,
@@ -68,6 +71,9 @@ export async function sendPromptWithGuardedPasteAndEnter(
   }
 
   const pastePayload = `${BRACKETED_PASTE_BEGIN}${sanitizeTerminalPasteText(prompt)}${BRACKETED_PASTE_END}`
+  if (options.beforeTerminalSend?.('paste') === false) {
+    return { status: 'not-ready', code: 'terminal-send-refused' }
+  }
   try {
     const { send } = await callRuntimeRpc<{ send: RuntimeTerminalSend }>(
       runtimeTarget,
@@ -129,6 +135,9 @@ export async function sendPromptWithGuardedPasteAndEnter(
   }
 
   try {
+    if (options.beforeTerminalSend?.('submit') === false) {
+      return { status: 'partial-submit-failed', code: 'submit-send-refused' }
+    }
     const { send } = await callRuntimeRpc<{ send: RuntimeTerminalSend }>(
       runtimeTarget,
       'terminal.send',

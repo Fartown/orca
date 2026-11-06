@@ -136,7 +136,11 @@ const site: LocalTaskSite = {
   label: 'Desktop'
 }
 
-function mount(state: 'done' | 'working', createTask: LocalTasksApi['createTask'] = vi.fn()) {
+function mount(
+  state: 'done' | 'working',
+  createTask: LocalTasksApi['createTask'] = vi.fn(),
+  addComment: LocalTasksApi['addComment'] = vi.fn()
+) {
   const library: LocalTasksLibrary = {
     api: null,
     tasks: [parent],
@@ -163,7 +167,7 @@ function mount(state: 'done' | 'working', createTask: LocalTasksApi['createTask'
     retryFailed: vi.fn(),
     resubscribe: vi.fn()
   }
-  const api: LocalTasksApi = { ...createLocalTasksApi(client), createTask }
+  const api: LocalTasksApi = { ...createLocalTasksApi(client), createTask, addComment }
   let tree!: ReactTestRenderer
   act(() => {
     tree = create(
@@ -276,12 +280,38 @@ describe('direct dispatch to an existing task', () => {
   it('sends into a completed turn without creating another task', async () => {
     sent.reply.mockResolvedValue({ kind: 'delivered' })
     const createTask = vi.fn()
-    const { tree } = mount('done', createTask)
+    const addComment = vi.fn().mockResolvedValue({ kind: 'ok', value: { ok: true } })
+    const { tree, library } = mount('done', createTask, addComment)
     await chooseParentAndSend(tree)
     expect(sent.reply).toHaveBeenCalledWith(
       expect.objectContaining({ session, text: 'Fix the export' })
     )
     expect(createTask).not.toHaveBeenCalled()
+    expect(addComment).toHaveBeenCalledWith(
+      expect.objectContaining({ taskId: parent.id, body: 'Fix the export' })
+    )
+    expect(library.reload).toHaveBeenCalledWith(['events'])
+  })
+
+  it.each(['not-sent', 'unconfirmed'] as const)(
+    'does not write an activity record when the reply is %s',
+    async (kind) => {
+      sent.reply.mockResolvedValue({ kind, reason: 'Not connected' })
+      const addComment = vi.fn()
+      const { tree } = mount('done', vi.fn(), addComment)
+      await chooseParentAndSend(tree)
+      expect(addComment).not.toHaveBeenCalled()
+    }
+  )
+
+  it('does not resend a delivered instruction when its activity record fails', async () => {
+    sent.reply.mockResolvedValue({ kind: 'delivered' })
+    const addComment = vi.fn().mockResolvedValue({ kind: 'error', message: 'Write failed' })
+    const { tree } = mount('done', vi.fn(), addComment)
+    await chooseParentAndSend(tree)
+    expect(sent.reply).toHaveBeenCalledTimes(1)
+    expect(addComment).toHaveBeenCalledTimes(1)
+    expect(tree.root.find((node) => String(node.type) === 'TextInput').props.value).toBe('')
   })
 
   it('creates a child and opens a new session while the existing one works', async () => {

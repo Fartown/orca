@@ -1,11 +1,30 @@
 import { describe, expect, it } from 'vitest'
 import { getExecutionHostLabel } from './execution-host'
 import { MIN_COMPATIBLE_RUNTIME_SERVER_VERSION, RUNTIME_PROTOCOL_VERSION } from './protocol-version'
-import { buildExecutionHostRegistry } from './execution-host-registry'
+import {
+  buildExecutionHostRegistry,
+  buildExecutionHostRegistryForAllHosts
+} from './execution-host-registry'
 
 const LOCAL_HOST_LABEL = getExecutionHostLabel('local')
 
 describe('execution host registry', () => {
+  it('lists owned hosts without adding an active-only runtime', () => {
+    const args = {
+      repos: [{ connectionId: 'remote' }],
+      sshTargetLabels: new Map([['remote', 'Builder']]),
+      runtimeEnvironments: [{ id: 'paired', name: 'Paired' }]
+    }
+    const allHosts = buildExecutionHostRegistryForAllHosts(args)
+    const focused = buildExecutionHostRegistry({
+      ...args,
+      settings: { activeRuntimeEnvironmentId: 'focused-only' }
+    })
+
+    expect(allHosts.map((host) => host.id)).toEqual(['local', 'runtime:paired', 'ssh:remote'])
+    expect(allHosts.find((host) => host.id === 'ssh:remote')?.label).toBe('Builder')
+    expect(focused.map((host) => host.id)).toContain('runtime:focused-only')
+  })
   it('returns only the local host for local-only state', () => {
     expect(
       buildExecutionHostRegistry({

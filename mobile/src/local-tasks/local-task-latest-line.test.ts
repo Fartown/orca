@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { LocalTask } from '../../../src/shared/local-tasks/local-task-types'
-import { localTaskLatestLine } from './local-task-latest-line'
+import { localTaskLatestLine, localTaskLatestProgress } from './local-task-latest-line'
 
 const task = {
   id: 'parent',
@@ -27,7 +27,7 @@ describe('latest line on a parent task', () => {
         kind: 'progress' as const,
         body: 'Parent update',
         at: 10,
-        sessionLinkId: null
+        sessionLinkId: 'parent-session'
       }
     }
     const child = {
@@ -38,12 +38,24 @@ describe('latest line on a parent task', () => {
         kind: 'progress' as const,
         body: 'Child update',
         at: 20,
-        sessionLinkId: null
+        sessionLinkId: 'child-session'
       }
     }
     expect(localTaskLatestLine(parent, [{ lastMessage: 'older session line' }], [child])).toBe(
       'Child update'
     )
+    expect(localTaskLatestProgress(parent, [child])).toMatchObject({
+      taskId: 'child',
+      body: 'Child update',
+      at: 20,
+      sessionLinkId: 'child-session'
+    })
     expect(localTaskLatestLine(task, [{ lastMessage: 'session line' }])).toBe('session line')
+    expect(localTaskLatestProgress(task, [child])).toMatchObject({
+      taskId: 'child',
+      body: 'Child update',
+      at: 20,
+      sessionLinkId: 'child-session'
+    })
   })
 })

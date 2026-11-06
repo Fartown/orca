@@ -1,14 +1,13 @@
 import { toast } from 'sonner'
 import { translate } from '@/i18n/i18n'
 import { useAppStore } from '@/store'
-import { callRuntimeRpc } from '@/runtime/runtime-rpc-client'
 import { closeStructuredAgentSession } from '@/runtime/structured-agent-session-close'
 import { parsePaneKey } from '../../../shared/stable-pane-id'
-import type { RuntimeTerminalClose } from '../../../shared/runtime-terminal-contracts'
 import { isLocalTaskHostInContact } from './local-task-host-contact'
 import { isLocalTaskRowWritable, localTasksDomainStore } from './local-tasks-domain-store'
 import { localTaskEndpointForHost, localTaskEndpointTarget } from './local-task-endpoints'
 import { localTasksClient } from './local-tasks-runtime-client'
+import { stopLocalTaskTerminalOnHost } from './local-task-terminal-stop'
 import type { LocalTaskDispatchReceipt } from './local-task-dispatch-launch'
 import type { LocalTaskDispatchBatch } from './local-task-dispatch-multiple'
 
@@ -44,14 +43,7 @@ async function stopLaunchedSession(receipt: LocalTaskDispatchReceipt): Promise<b
         return false
       }
     } else {
-      const result = await callRuntimeRpc<{ close: RuntimeTerminalClose }>(
-        localTaskEndpointTarget(endpoint),
-        'terminal.close',
-        {
-          terminal: outcome.handle
-        }
-      )
-      if (result?.close?.handle !== outcome.handle || result.close.ptyKilled !== true) {
+      if (!(await stopLocalTaskTerminalOnHost(hostId, outcome.handle))) {
         return false
       }
     }

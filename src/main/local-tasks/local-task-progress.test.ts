@@ -76,7 +76,7 @@ describe('agent writebacks (REQ-022)', () => {
     })
   })
 
-  it('folds legacy criteria into description once and leaves the compatibility column empty', () => {
+  it('folds legacy criteria once and tracks the section for later replacement', () => {
     const directory = mkdtempSync(join(tmpdir(), 'local-task-criteria-'))
     try {
       const db = LocalTasksDatabase.open('profile', directory)
@@ -109,7 +109,10 @@ describe('agent writebacks (REQ-022)', () => {
       const row = database
         .prepare('SELECT description, criteria FROM local_tasks WHERE id = ?')
         .get(task.task.id)
-      expect(row).toMatchObject({ description: '完成标准\n- Check output', criteria: '[]' })
+      expect(row).toMatchObject({
+        description: '完成标准\n- Check output',
+        criteria: '["Check output"]'
+      })
       database.close()
     } finally {
       rmSync(directory, { recursive: true, force: true })
@@ -145,7 +148,7 @@ describe('agent writebacks (REQ-022)', () => {
     expect(updated).toMatchObject({
       ok: true,
       task: {
-        description: 'Check the result\n\n完成标准\n- Looks correct\n\n完成标准\n- Can reopen',
+        description: 'Check the result\n\n完成标准\n- Can reopen',
         criteria: [],
         revision: created.task.revision + 1
       }
@@ -156,7 +159,144 @@ describe('agent writebacks (REQ-022)', () => {
       code: 'stale'
     })
     const row = db.prepare('SELECT criteria FROM local_tasks WHERE id = ?').get(created.task.id)
-    expect(row).toMatchObject({ criteria: '[]' })
+    expect(row).toMatchObject({ criteria: '["Can reopen"]' })
+    if (!updated.ok) {
+      throw new Error('update failed')
+    }
+    const cleared = service.updateTask(
+      {
+        clientOperationId: op(),
+        taskId: created.task.id,
+        expectedRevision: updated.task.revision,
+        patch: { criteria: [] }
+      },
+      'desktop'
+    )
+    expect(cleared).toMatchObject({
+      ok: true,
+      task: { description: 'Check the result', criteria: [] }
+    })
+    expect(
+      db.prepare('SELECT criteria FROM local_tasks WHERE id = ?').get(created.task.id)
+    ).toMatchObject({
+      criteria: '[]'
+    })
+  })
+
+  it('replaces tracked criteria when a legacy client also sends the current description', () => {
+    const { service, task } = setup()
+    const created = service.createTask(
+      {
+        clientOperationId: op(),
+        projectId: task.projectId,
+        title: 'Legacy create',
+        description: 'User text',
+        criteria: ['Old']
+      },
+      'desktop'
+    )
+    if (!created.ok) {
+      throw new Error(created.code)
+    }
+    const changed = service.updateTask(
+      {
+        clientOperationId: op(),
+        taskId: created.task.id,
+        patch: { description: created.task.description, criteria: ['New'] }
+      },
+      'desktop'
+    )
+    expect(changed).toMatchObject({
+      ok: true,
+      task: { description: 'User text\n\n完成标准\n- New' }
+    })
+  })
+
+  it('replaces and clears criteria after a v5 library is upgraded and reopened', () => {
+    const directory = mkdtempSync(join(tmpdir(), 'local-task-criteria-v5-'))
+    try {
+      const initial = LocalTasksDatabase.open('profile', directory)
+      const service = new LocalTasksService(initial, () => 1_000)
+      const project = service.createProject({
+        clientOperationId: op(),
+        name: 'Shop',
+        prefix: 'shop'
+      })
+      if (!project.ok) {
+        throw new Error(project.code)
+      }
+      const task = service.createTask(
+        {
+          clientOperationId: op(),
+          projectId: project.project.id,
+          title: 'Legacy task',
+          description: 'User text'
+        },
+        'desktop'
+      )
+      if (!task.ok) {
+        throw new Error(task.code)
+      }
+      initial.close()
+      const raw = new SyncDatabase(getLocalTasksDatabasePath('profile', directory))
+      raw
+        .prepare("DELETE FROM local_task_preferences WHERE key = 'criteriaFoldedIntoDescription'")
+        .run()
+      raw.prepare('UPDATE local_tasks SET criteria = ? WHERE id = ?').run('["Old"]', task.task.id)
+      raw.pragma('user_version = 5')
+      raw.close()
+
+      const upgraded = LocalTasksDatabase.open('profile', directory)
+      const upgradedService = new LocalTasksService(upgraded, () => 2_000)
+      expect(upgradedService.listTasks().tasks[0].description).toBe('User text\n\n完成标准\n- Old')
+      const changed = upgradedService.updateTask(
+        { clientOperationId: op(), taskId: task.task.id, patch: { criteria: ['New'] } },
+        'desktop'
+      )
+      expect(changed).toMatchObject({
+        ok: true,
+        task: { description: 'User text\n\n完成标准\n- New' }
+      })
+      upgraded.close()
+
+      const reopened = LocalTasksDatabase.open('profile', directory)
+      const reopenedService = new LocalTasksService(reopened, () => 3_000)
+      expect(reopenedService.listTasks().tasks[0].description).toBe('User text\n\n完成标准\n- New')
+      const cleared = reopenedService.updateTask(
+        { clientOperationId: op(), taskId: task.task.id, patch: { criteria: [] } },
+        'desktop'
+      )
+      expect(cleared).toMatchObject({ ok: true, task: { description: 'User text', criteria: [] } })
+      reopened.close()
+    } finally {
+      rmSync(directory, { recursive: true, force: true })
+    }
+  })
+
+  it('keeps an already folded or handwritten section with no tracking value', () => {
+    const { db, service, task } = setup()
+    const description = 'User text\n\n完成标准\n- Existing text'
+    const described = service.updateTask(
+      { clientOperationId: op(), taskId: task.id, patch: { description } },
+      'desktop'
+    )
+    expect(described.ok).toBe(true)
+    const changed = service.updateTask(
+      { clientOperationId: op(), taskId: task.id, patch: { criteria: ['New'] } },
+      'desktop'
+    )
+    expect(changed).toMatchObject({
+      ok: true,
+      task: { description: `${description}\n\n完成标准\n- New` }
+    })
+    const cleared = service.updateTask(
+      { clientOperationId: op(), taskId: task.id, patch: { criteria: [] } },
+      'desktop'
+    )
+    expect(cleared).toMatchObject({ ok: true, task: { description } })
+    expect(db.prepare('SELECT criteria FROM local_tasks WHERE id = ?').get(task.id)).toMatchObject({
+      criteria: '[]'
+    })
   })
   it('records a writeback as a marked comment and surfaces the newest as latestProgress', () => {
     const { service, task } = setup()

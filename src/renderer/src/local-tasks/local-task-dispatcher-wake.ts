@@ -2,6 +2,7 @@ import { useAppStore } from '@/store'
 import { sendMessageToAgent } from '@/lib/agent-message-send'
 import { FLOATING_TERMINAL_WORKTREE_ID } from '../../../shared/constants'
 import { parsePaneKey } from '../../../shared/stable-pane-id'
+import { readLastTerminalInputAt } from '@/lib/terminal-input-activity-coalescing'
 import { localTaskDispatcherClient } from './local-task-dispatcher-client'
 import { refreshLocalTaskProposals } from './local-task-dispatcher-proposals'
 import { knownDispatcherPaneKey, liveDispatcherPaneKey } from './local-task-dispatcher-session'
@@ -80,9 +81,14 @@ export function createLocalTaskDispatcherWake(
     again: false
   }
 
-  /** Keys pressed since the last turn began may be an unsent draft the pointer would join. */
-  function mayHoldDraft(idle: { turnStartedAt: number }): boolean {
-    return wake.typedAt !== null && wake.typedAt > idle.turnStartedAt
+  /** The terminal input record includes paste, drop and IME commits, even before its store flush. */
+  function mayHoldDraft(paneKey: string, idle: { turnStartedAt: number }): boolean {
+    const state = useAppStore.getState()
+    const inputAt = readLastTerminalInputAt(state.lastTerminalInputAtByPaneKey ?? {}, paneKey)
+    return (
+      (wake.typedAt !== null && wake.typedAt >= idle.turnStartedAt) ||
+      (inputAt !== undefined && inputAt >= idle.turnStartedAt)
+    )
   }
 
   async function checkOnce(): Promise<void> {
@@ -98,7 +104,7 @@ export function createLocalTaskDispatcherWake(
     ) {
       return
     }
-    if (personInTab(pane.tabId) || mayHoldDraft(idle)) {
+    if (personInTab(pane.tabId) || mayHoldDraft(paneKey, idle)) {
       return
     }
     const result = await localTaskDispatcherClient.inbox(paneKey, WAKE_INBOX_LIMIT)
@@ -109,14 +115,21 @@ export function createLocalTaskDispatcherWake(
       result.inbox.cursor === wake.pointedCursor ||
       idleStretch(paneKey)?.key !== idle.key ||
       personInTab(pane.tabId) ||
-      mayHoldDraft(idle)
+      mayHoldDraft(paneKey, idle)
     ) {
       return
     }
+    const safeToSend = (): boolean =>
+      liveDispatcherPaneKey() === paneKey &&
+      idleStretch(paneKey)?.key === idle.key &&
+      isLocalTaskDispatcherWakeOn() &&
+      !personInTab(pane.tabId) &&
+      !mayHoldDraft(paneKey, idle)
     const sent = await send({
       worktreeId: FLOATING_TERMINAL_WORKTREE_ID,
       target: { kind: 'terminal', tabId: pane.tabId, leafId: pane.leafId },
-      prompt: LOCAL_TASK_DISPATCHER_WAKE_PROMPT
+      prompt: LOCAL_TASK_DISPATCHER_WAKE_PROMPT,
+      beforeTerminalSend: safeToSend
     })
     if (POINTER_WRITTEN.has(sent.status)) {
       wake.pointedIdle = idle.key

@@ -51,11 +51,13 @@ export function createLocalTask(
   if (input.parentId && !isValidParent(db, input.parentId, project.id, null)) {
     return { ok: false, code: 'parent_invalid' }
   }
+  const description = input.description ?? ''
+  const foldedDescription = descriptionWithLegacyCriteria(description, input.criteria ?? [])
   const taskId = insertTask(db, {
     project,
     title: input.title,
-    description: descriptionWithLegacyCriteria(input.description ?? '', input.criteria ?? []),
-    criteria: [],
+    description: foldedDescription,
+    criteria: foldedDescription === description ? [] : (input.criteria ?? []),
     statusId,
     priority: input.priority ?? 0,
     parentId: input.parentId ?? null,

@@ -24123,7 +24123,6 @@
       "titleLabel": "Title",
       "descriptionPlaceholder": "Add a description…",
       "descriptionLabel": "Description",
-      "criteriaLabel": "Done criteria (optional)",
       "keepCreating": "Create another",
       "submit": "Create task",
       "workspace": "Workspace",
@@ -24131,12 +24130,7 @@
       "workspaceExisting": "Use existing workspace",
       "workspaceNew": "Create a workspace next"
     },
-    "criteria": {
-      "item": "Done criterion {{number}}",
-      "remove": "Remove criterion",
-      "add": "Add a criterion",
-      "full": "A task holds up to {{count}} criteria."
-    },
+    "criteria": {},
     "delete": {
       "done": "Deleted “{{title}}”",
       "title": "Delete “{{title}}”?",
@@ -24149,7 +24143,6 @@
       "next": "Next task",
       "missing": "This task no longer exists.",
       "backToList": "Back to tasks",
-      "criteria": "Done criteria",
       "moved": "“{{title}}” moved to {{project}} as {{ref}}",
       "moveTo": "Move to another project",
       "created": "Created {{when}}",
@@ -24615,7 +24608,10 @@
       "agentLinkFailed": "Agent started but could not be linked",
       "chooseSameLibraryWorkspaces": "Choose unlinked workspaces on one task library",
       "createParentTaskFailed": "Could not create parent task",
-      "sessionStarted": "Session started"
+      "sessionStarted": "Session started",
+      "selectedCount": "{{count}} selected",
+      "moreSelected": "{{count}} more selected",
+      "searchSelected": "Search selected targets"
     }
   }
 }

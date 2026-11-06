@@ -43,6 +43,7 @@ export async function sendNotesToActiveAgentSession(args: {
   prompt: string
   noteTarget?: ActiveTerminalNoteTarget
   timeoutMs?: number
+  beforeTerminalSend?: (phase: 'paste' | 'submit') => boolean
 }): Promise<ActiveAgentNotesSendResult> {
   try {
     return await sendNotesToActiveAgentSessionInternal(args)
@@ -57,12 +58,14 @@ async function sendNotesToActiveAgentSessionInternal({
   worktreeId,
   prompt,
   noteTarget: explicitNoteTarget,
-  timeoutMs
+  timeoutMs,
+  beforeTerminalSend
 }: {
   worktreeId: string
   prompt: string
   noteTarget?: ActiveTerminalNoteTarget
   timeoutMs?: number
+  beforeTerminalSend?: (phase: 'paste' | 'submit') => boolean
 }): Promise<ActiveAgentNotesSendResult> {
   const trimmedPrompt = prompt.trim()
   if (!trimmedPrompt) {
@@ -90,7 +93,12 @@ async function sendNotesToActiveAgentSessionInternal({
   }
   if (explicitNoteTarget) {
     return reportNoteSendFailure(
-      await sendPromptToExplicitAgentTarget(runtimeTarget, terminal.handle, trimmedPrompt),
+      await sendPromptToExplicitAgentTarget(
+        runtimeTarget,
+        terminal.handle,
+        trimmedPrompt,
+        beforeTerminalSend
+      ),
       noteTarget
     )
   }
@@ -178,9 +186,11 @@ async function sendNotesToActiveAgentSessionInternal({
 async function sendPromptToExplicitAgentTarget(
   runtimeTarget: RuntimeClientTarget,
   terminalHandle: string,
-  prompt: string
+  prompt: string,
+  beforeTerminalSend?: (phase: 'paste' | 'submit') => boolean
 ): Promise<ActiveAgentNotesSendResult> {
   return await sendPromptWithGuardedPasteAndEnter(runtimeTarget, terminalHandle, prompt, {
-    allowLegacyFallback: false
+    allowLegacyFallback: false,
+    beforeTerminalSend
   })
 }

@@ -5,7 +5,10 @@ import { isExactLocalTaskRef } from '../../../shared/local-tasks/local-task-grou
 import type { LocalTaskSessionLink } from '../../../shared/local-tasks/local-task-link-types'
 import type { LocalTask } from '../../../shared/local-tasks/local-task-types'
 import { parsePaneKey } from '../../../shared/stable-pane-id'
+import { findActiveRuntimeTerminal } from '@/lib/active-agent-note-target'
 import { isLocalTaskHostInContact } from './local-task-host-contact'
+import { localTaskEndpointForHost, localTaskEndpointTarget } from './local-task-endpoints'
+import { stopLocalTaskTerminalOnHost } from './local-task-terminal-stop'
 import { sendLocalTaskReply } from './local-task-needs-you-actions'
 import { isProposalMiss, type LocalTaskProposalMiss } from './local-task-proposal-targets'
 import { localTasksDomainStore } from './local-tasks-domain-store'
@@ -106,6 +109,28 @@ export async function runStopItem(item: Item<'stop'>): Promise<Outcome> {
   if (!leafId || leafId !== layout.root.leafId) {
     return failed({ miss: 'its tab no longer holds this session' }, task.id)
   }
-  state.closeTab(link.tabId, { captureRecentlyClosed: true })
+  const endpoint = localTaskEndpointForHost(link.hostId)
+  if (
+    !endpoint ||
+    !link.worktreeId ||
+    !isLocalTaskHostInContact(useAppStore.getState(), link.hostId)
+  ) {
+    return failed({ miss: 'the session’s host is out of contact (unverifiable)' }, task.id)
+  }
+  let terminal: Awaited<ReturnType<typeof findActiveRuntimeTerminal>>
+  try {
+    terminal = await findActiveRuntimeTerminal(
+      localTaskEndpointTarget(endpoint),
+      link.worktreeId,
+      { tabId: link.tabId, leafId },
+      3000
+    )
+  } catch {
+    return failed({ miss: 'the session could not be confirmed (unverifiable)' }, task.id)
+  }
+  if (!terminal || !(await stopLocalTaskTerminalOnHost(link.hostId, terminal.handle))) {
+    return failed({ miss: 'the session stop could not be confirmed (unverifiable)' }, task.id)
+  }
+  state.closeTab(link.tabId, { captureRecentlyClosed: true, remoteCloseOwnedByHost: true })
   return { ok: true, taskId: task.id, detail: 'stopped' }
 }

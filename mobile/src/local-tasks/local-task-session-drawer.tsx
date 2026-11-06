@@ -3,6 +3,7 @@ import { useMobileColorScheme } from '../theme/use-mobile-color-scheme'
 import { Text, View } from 'react-native'
 import type { LocalTaskSessionLink } from '../../../src/shared/local-tasks/local-task-link-types'
 import { BottomDrawer } from '../components/bottom-drawer/BottomDrawer'
+import { useMobileTranslation } from '../i18n/use-mobile-translation'
 import { MobileSessionActiveContent } from '../session/MobileSessionActiveContent'
 import { resolveMobileNativeChatSessionId } from '../session/native-chat/mobile-native-chat-eligibility'
 import { useMobileSessionController } from '../session/use-mobile-session-controller'
@@ -20,6 +21,7 @@ function ChatContent(props: {
   library: Pick<LocalTasksLibrary, 'live' | 'work'>
 }) {
   useMobileColorScheme()
+  const t = useMobileTranslation()
   const controller = useMobileSessionController({
     hostId: props.hostId,
     worktreeId: props.worktreeId,
@@ -52,7 +54,7 @@ function ChatContent(props: {
   )
   return (
     <View style={styles.content}>
-      <Text style={styles.heading}>{props.session.agent ?? 'Chat'}</Text>
+      <Text style={styles.heading}>{props.session.agent ?? t('session.sheets.chat', 'Chat')}</Text>
       <MobileSessionActiveContent controller={controller} />
     </View>
   )

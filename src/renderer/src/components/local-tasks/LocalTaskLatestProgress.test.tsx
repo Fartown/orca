@@ -32,7 +32,7 @@ describe('latest progress on a task', () => {
           latestProgress: {
             kind: 'progress',
             body: 'Added the CSV button; tests pass.',
-            at: Date.now(),
+            at: 1_700_000_000_000,
             sessionLinkId: 's-1',
             needsYou: 'Pick the column order'
           }
