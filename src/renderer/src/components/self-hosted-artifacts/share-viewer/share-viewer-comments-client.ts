@@ -1,7 +1,8 @@
 import {
   ARTIFACT_SHARE_COMMENTS_SEGMENT,
-  ArtifactShareComment,
   ArtifactShareCommentList,
+  ArtifactShareCommentSaved,
+  type ArtifactShareComment,
   type ArtifactShareCommentInput
 } from '../../../../../shared/self-hosted-artifacts/artifact-share-comments-contract'
 
@@ -44,12 +45,46 @@ export async function postShareComment(
     if (!response.ok) {
       return { failure: 'failed' }
     }
-    const body: unknown = await response.json()
-    const parsed = ArtifactShareComment.safeParse(
-      body !== null && typeof body === 'object' && 'comment' in body ? body.comment : null
-    )
-    return parsed.success ? { comment: parsed.data } : { failure: 'failed' }
+    const parsed = ArtifactShareCommentSaved.safeParse(await response.json())
+    return parsed.success ? parsed.data : { failure: 'failed' }
   } catch {
     return { failure: 'failed' }
+  }
+}
+
+function commentRequest(method: 'PATCH' | 'DELETE', id: string, body?: string): Promise<Response> {
+  return fetch(`${commentsUrl()}?id=${encodeURIComponent(id)}`, {
+    method,
+    headers: {
+      Accept: 'application/json',
+      ...(body === undefined ? {} : { 'Content-Type': 'application/json' })
+    },
+    ...(body === undefined ? {} : { body: JSON.stringify({ body }) })
+  })
+}
+
+export async function editShareComment(
+  id: string,
+  body: string
+): Promise<ArtifactShareComment | null> {
+  try {
+    const response = await commentRequest('PATCH', id, body)
+    if (!response.ok) {
+      return null
+    }
+    const parsed = ArtifactShareCommentSaved.safeParse(await response.json())
+    return parsed.success ? parsed.data.comment : null
+  } catch {
+    return null
+  }
+}
+
+/** 'gone' when someone else already removed it, which the reader sees the same as deleted. */
+export async function deleteShareComment(id: string): Promise<'deleted' | 'gone' | 'failed'> {
+  try {
+    const response = await commentRequest('DELETE', id)
+    return response.ok ? 'deleted' : response.status === 404 ? 'gone' : 'failed'
+  } catch {
+    return 'failed'
   }
 }

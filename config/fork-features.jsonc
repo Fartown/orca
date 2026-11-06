@@ -1663,7 +1663,18 @@
         "src/renderer/src/lib/markdown-review-notes.ts",
         "src/renderer/src/components/editor/markdown-preview-block-model.ts",
         "src/renderer/src/components/editor/markdown-preview-types.ts",
-        "src/cli/flags.ts"
+        "src/cli/flags.ts",
+        "src/renderer/src/lib/dom-text-search-highlights.ts",
+        "src/renderer/src/components/editor/rich-markdown-review-note-layout.ts",
+        "src/renderer/src/components/editor/PanZoomImageDialog.tsx",
+        "src/renderer/src/components/diff-comments/DiffCommentCard.tsx",
+        "src/renderer/src/components/editor/DiagramViewerModal.tsx",
+        "src/renderer/src/components/editor/markdown-preview-anchor-navigation.ts",
+        "src/renderer/src/components/editor/markdown-navigation-details.ts",
+        "src/renderer/src/components/editor/markdown-rich-size-limit.ts",
+        "src/renderer/src/components/editor/CodeBlockCopyButton.tsx",
+        "src/renderer/src/components/editor/markdown-doc-links.ts",
+        "src/renderer/src/components/editor/use-mermaid-diagram-expand.ts"
       ],
       "policyId": "self-hosted-artifacts",
       "ownedPaths": [

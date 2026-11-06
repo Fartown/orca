@@ -1,13 +1,17 @@
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import { extname } from 'node:path'
+import type { z } from 'zod'
 import {
   ARTIFACT_SHARE_COMMENT_LIMITS,
+  ArtifactShareCommentEdit,
   ArtifactShareCommentInput
 } from '../../../shared/self-hosted-artifacts/artifact-share-comments-contract'
 import { readArtifactShareWorkspaces } from '../store/artifact-share-records'
 import {
   addArtifactShareComment,
   ArtifactShareCommentsFullError,
+  deleteArtifactShareComments,
+  editArtifactShareComment,
   readArtifactShareComments,
   type ArtifactShareCommentTarget
 } from '../store/artifact-share-comments'
@@ -123,11 +127,15 @@ export async function handleArtifactShareCommentsRequest(input: {
         })
       : sendJson(request, response, 404, { error: 'not-found' })
   }
-  if (request.method !== 'POST') {
-    response.setHeader('Allow', 'GET, HEAD, POST')
+  const writes = new Set(['POST', 'PATCH', 'DELETE'])
+  if (!writes.has(request.method ?? '')) {
+    response.setHeader('Allow', 'GET, HEAD, POST, PATCH, DELETE')
     return sendJson(request, response, 405, { error: 'method-not-allowed' })
   }
-  if (!String(request.headers['content-type'] ?? '').startsWith('application/json')) {
+  if (
+    request.method !== 'DELETE' &&
+    !String(request.headers['content-type'] ?? '').startsWith('application/json')
+  ) {
     return sendJson(request, response, 415, { error: 'json-required' })
   }
   if (!isSameOriginWrite(request)) {
@@ -137,18 +145,12 @@ export async function handleArtifactShareCommentsRequest(input: {
   if (!input.allowWrite(request.socket.remoteAddress ?? 'unknown', now.getTime())) {
     return sendJson(request, response, 429, { error: 'rate-limited' })
   }
-  const raw = await readLimitedBody(request, ARTIFACT_SHARE_COMMENT_LIMITS.requestBytes)
-  if (raw === null) {
-    return sendJson(request, response, 413, { error: 'too-large' })
+  if (request.method !== 'POST') {
+    return changeComment({ ...input, now })
   }
-  let parsed: ReturnType<typeof ArtifactShareCommentInput.safeParse>
-  try {
-    parsed = ArtifactShareCommentInput.safeParse(JSON.parse(raw))
-  } catch {
-    return sendJson(request, response, 400, { error: 'invalid-json' })
-  }
-  if (!parsed.success) {
-    return sendJson(request, response, 400, { error: 'invalid-comment' })
+  const parsed = await readJsonBody(request, ArtifactShareCommentInput)
+  if ('status' in parsed) {
+    return sendJson(request, response, parsed.status, { error: parsed.error })
   }
   const target = await resolveCommentTarget(input.home, input.token, input.segments)
   if (!target) {
@@ -163,4 +165,60 @@ export async function handleArtifactShareCommentsRequest(input: {
     }
     throw error
   }
+}
+
+async function readJsonBody<T>(
+  request: IncomingMessage,
+  schema: z.ZodType<T>
+): Promise<{ data: T } | { status: number; error: string }> {
+  const raw = await readLimitedBody(request, ARTIFACT_SHARE_COMMENT_LIMITS.requestBytes)
+  if (raw === null) {
+    return { status: 413, error: 'too-large' }
+  }
+  let json: unknown
+  try {
+    json = JSON.parse(raw)
+  } catch {
+    return { status: 400, error: 'invalid-json' }
+  }
+  const parsed = schema.safeParse(json)
+  return parsed.success ? { data: parsed.data } : { status: 400, error: 'invalid-comment' }
+}
+
+/** PATCH edits and DELETE removes `?id=`; any reader with the link may, as no comment has an owner. */
+async function changeComment(input: {
+  home: string
+  request: IncomingMessage
+  response: ServerResponse
+  token: string
+  segments: readonly string[]
+  now: Date
+}): Promise<CommentsOutcome> {
+  const { request, response } = input
+  const id = new URL(request.url ?? '/', 'http://artifact-share.invalid').searchParams.get('id')
+  if (!id) {
+    return sendJson(request, response, 400, { error: 'comment-id-required' })
+  }
+  const target = await resolveCommentTarget(input.home, input.token, input.segments)
+  if (!target) {
+    return sendJson(request, response, 404, { error: 'not-found' })
+  }
+  if (request.method === 'DELETE') {
+    const removed = await deleteArtifactShareComments(input.home, target, new Set([id]))
+    return removed.length > 0
+      ? sendJson(request, response, 200, { deleted: id })
+      : sendJson(request, response, 404, { error: 'not-found' })
+  }
+  const parsed = await readJsonBody(request, ArtifactShareCommentEdit)
+  if ('status' in parsed) {
+    return sendJson(request, response, parsed.status, { error: parsed.error })
+  }
+  const comment = await editArtifactShareComment(input.home, target, {
+    id,
+    body: parsed.data.body,
+    now: input.now
+  })
+  return comment
+    ? sendJson(request, response, 200, { comment })
+    : sendJson(request, response, 404, { error: 'not-found' })
 }

@@ -98,7 +98,7 @@ describe('reading and deleting comments on the computer that holds the file', ()
       deletedComments: 1,
       removedNotes: 1
     })
-    expect(listArtifactShareCommentFiles(home)).toEqual([])
+    expect(listArtifactShareCommentFiles(home).flatMap((file) => file.comments)).toEqual([])
     expect(state.notes).toEqual([])
   })
 

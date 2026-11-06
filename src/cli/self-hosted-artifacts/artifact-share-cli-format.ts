@@ -63,7 +63,7 @@ export function formatArtifactShareComments(result: ArtifactShareCommentsResult)
   return result.comments
     .map((comment) =>
       [
-        `${comment.id}  ${comment.author}  ${comment.createdAt}  ${lineLabel(comment.startLine, comment.endLine)}`,
+        `${comment.id}  ${comment.author ?? '(anonymous)'}  ${comment.createdAt}  ${lineLabel(comment.startLine, comment.endLine)}`,
         ...(comment.quote ? [`  > ${comment.quote}`] : []),
         ...comment.body.split('\n').map((line) => `  ${line}`)
       ].join('\n')

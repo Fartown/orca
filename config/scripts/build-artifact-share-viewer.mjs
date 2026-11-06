@@ -6,7 +6,7 @@
  * from extraResources when packaged. The Orca app serves these files; readers never need Orca.
  */
 import { build } from 'esbuild'
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { basename, dirname, join, resolve } from 'node:path'
 import { compile } from 'tailwindcss'
@@ -29,7 +29,7 @@ const MAIN_CSS_IMPORT_ROLES = {
   '../../../shared/styles/scrollbar-sleek.css': 'plain',
   'tw-animate-css': 'skip',
   '@xterm/xterm/css/xterm.css': 'skip',
-  './rich-markdown-editor.css': 'skip',
+  './rich-markdown-editor.css': 'plain',
   './terminal.css': 'skip',
   './mobile-page.css': 'skip'
 }
@@ -37,8 +37,34 @@ const MAIN_CSS_IMPORT_ROLES = {
 // Why: the browser fetches this 1 MB symbol font only for Nerd Font glyphs; never inline it.
 const LAZY_FONT_PATTERN = /SymbolsNerdFontMono-Regular\.woff2$/
 
-/** The page reuses the app's TOC panel, which reads only its width from the app store. */
-const STORE_SHIM_IMPORTERS = ['components/editor/MarkdownTableOfContentsPanel.tsx']
+/**
+ * App modules the page reuses import a few app-only modules; each is swapped for a stand-in that
+ * carries just what those importers use. Any other importer fails the build instead of shipping a
+ * stand-in it was never checked against.
+ */
+const VIEWER_STAND_INS = [
+  {
+    specifier: '@/store',
+    file: 'viewer-store-shim.ts',
+    importers: [
+      'components/editor/MarkdownTableOfContentsPanel.tsx',
+      'components/editor/use-mermaid-diagram-expand.ts',
+      'components/editor/DiagramViewerModal.tsx',
+      'components/editor/PanZoomImageDialog.tsx',
+      'components/self-hosted-artifacts/share-viewer/ShareViewerPage.tsx'
+    ]
+  },
+  {
+    specifier: '@/lib/floating-workspace-terminal-actions',
+    file: 'viewer-floating-panel-shim.ts',
+    importers: ['components/editor/viewer-zoom-request.ts']
+  },
+  {
+    specifier: '@/lib/app-http-link-open',
+    file: 'viewer-app-link-shim.ts',
+    importers: ['components/diff-comments/DiffCommentCard.tsx']
+  }
+]
 
 /** Plain sheets stay esbuild imports so their url() fonts resolve from their own directories. */
 function splitMainCssImports(mainCss) {
@@ -54,6 +80,42 @@ function splitMainCssImports(mainCss) {
     return role === 'tailwind' ? statement : ''
   })
   return { tailwindCss, plainImports }
+}
+
+const LOCALES_DIR = join(RENDERER_SRC, 'i18n', 'locales')
+const TRANSLATE_KEY = /\btranslate\(\s*['"]([^'"]+)['"]/g
+
+function lookupMessage(catalog, key) {
+  const nested = key.split('.').reduce((node, part) => node?.[part], catalog)
+  return typeof nested === 'string'
+    ? nested
+    : typeof catalog[key] === 'string'
+      ? catalog[key]
+      : null
+}
+
+/** Per language, the catalog entries for the keys the page's modules translate; English stays inline. */
+function collectViewerMessages(sources) {
+  const keys = new Set()
+  for (const source of sources) {
+    for (const match of source.matchAll(TRANSLATE_KEY)) {
+      keys.add(match[1])
+    }
+  }
+  const messages = {}
+  for (const file of readdirSync(LOCALES_DIR).filter((name) => name.endsWith('.json'))) {
+    const language = file.slice(0, -'.json'.length)
+    if (language === 'en') {
+      continue
+    }
+    const catalog = JSON.parse(readFileSync(join(LOCALES_DIR, file), 'utf8'))
+    const entries = [...keys].flatMap((key) => {
+      const value = lookupMessage(catalog, key)
+      return value === null ? [] : [[key, value]]
+    })
+    messages[language] = Object.fromEntries(entries)
+  }
+  return messages
 }
 
 /** Over-collects on purpose: Tailwind drops tokens that are not utilities. */
@@ -100,15 +162,18 @@ function viewerResolvePlugin(appStyles) {
       pluginBuild.onResolve({ filter: /^@\/i18n\/i18n$/ }, () => ({
         path: join(VIEWER_DIR, 'viewer-i18n-shim.ts')
       }))
-      pluginBuild.onResolve({ filter: /^@\/store$/ }, (args) => {
-        const importer = args.importer.split('\\').join('/')
-        if (!STORE_SHIM_IMPORTERS.some((allowed) => importer.endsWith(allowed))) {
-          throw new Error(
-            `${args.importer} needs the app store, which the share page does not ship`
-          )
-        }
-        return { path: join(VIEWER_DIR, 'viewer-store-shim.ts') }
-      })
+      for (const standIn of VIEWER_STAND_INS) {
+        const filter = new RegExp(`^${standIn.specifier.replace(/[/.]/g, '\\$&')}$`)
+        pluginBuild.onResolve({ filter }, (args) => {
+          const importer = args.importer.split('\\').join('/')
+          if (!standIn.importers.some((allowed) => importer.endsWith(allowed))) {
+            throw new Error(
+              `${args.importer} needs ${standIn.specifier}, which the share page does not ship`
+            )
+          }
+          return { path: join(VIEWER_DIR, standIn.file) }
+        })
+      }
       pluginBuild.onResolve({ filter: /^@\// }, (args) =>
         pluginBuild.resolve(`./${args.path.slice(2)}`, {
           resolveDir: RENDERER_SRC,
@@ -132,7 +197,7 @@ function viewerResolvePlugin(appStyles) {
   }
 }
 
-function viewerBuildOptions(outDir, portable, appStyles) {
+function viewerBuildOptions(outDir, portable, appStyles, messages = {}) {
   return {
     absWorkingDir: ROOT,
     entryPoints: [join(VIEWER_DIR, 'viewer-entry.tsx')],
@@ -151,7 +216,10 @@ function viewerBuildOptions(outDir, portable, appStyles) {
       '.woff2': portable ? 'dataurl' : 'file',
       '.ttf': portable ? 'dataurl' : 'file'
     },
-    define: { 'process.env.NODE_ENV': '"production"' },
+    define: {
+      'process.env.NODE_ENV': '"production"',
+      __ORCA_SHARE_VIEWER_MESSAGES__: JSON.stringify(messages)
+    },
     metafile: true,
     logLevel: 'warning',
     plugins: [viewerResolvePlugin(appStyles)]
@@ -174,7 +242,12 @@ export async function buildArtifactShareViewer(outDir = OUT_DIR, { portable = fa
   mkdirSync(outDir, { recursive: true })
   const sourceFiles = await collectViewerSourceFiles(outDir, portable)
   const result = await build(
-    viewerBuildOptions(outDir, portable, () => compileAppStyles(sourceFiles))
+    viewerBuildOptions(
+      outDir,
+      portable,
+      () => compileAppStyles(sourceFiles),
+      collectViewerMessages(sourceFiles.map((file) => readFileSync(file, 'utf8')))
+    )
   )
   const outputs = Object.keys(result.metafile.outputs).map((output) => basename(output))
   const script = outputs.find((name) => /^viewer\.[^.]+\.js$/.test(name))
