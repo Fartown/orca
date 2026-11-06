@@ -24436,5 +24436,8 @@
       "startOwn": "Start separately",
       "paletteEvidence": "Linked local task"
     }
+  },
+  "markdownReviewAnchorRecovery": {
+    "originalTextChanged": "Original text changed"
   }
 }

@@ -891,7 +891,14 @@
             "resources/plugins/declarative/orca-testing.mjs",
             "skill-guides/orca-plugin-authoring/references/events.md",
             "skill-guides/orca-plugin-authoring/references/host-api.md",
-            "src/cli/bundled-skill-guides.ts"
+            "src/cli/bundled-skill-guides.ts",
+            "src/renderer/src/components/markdown-review-anchor-recovery/**",
+            "docs/issue/Markdown评论失效锚点恢复/**",
+            "tests/e2e/markdown-review-anchor-recovery.spec.ts",
+            "src/renderer/src/components/editor/rich-markdown-review-note-positioning.ts",
+            "src/renderer/src/components/editor/rich-markdown-review-note-layout.ts",
+            "src/renderer/src/components/editor/RichMarkdownReviewNoteLayer.tsx",
+            "docs/issue/README.md"
           ],
           "message": "Branch changes an upstream path that no fork feature owns or registers as a seam; extend config/fork-features.jsonc and this allowlist, or move the change into a feature-owned path."
         }
@@ -2113,6 +2120,40 @@
             ".gitignore"
           ],
           "message": "Change is outside plugin workspace remote."
+        }
+      ]
+    },
+    {
+      "id": "markdown-review-anchor-recovery",
+      "description": "Preserve review note access after Markdown source changes.",
+      "rules": [
+        {
+          "id": "markdown-review-anchor-recovery-worktree-scope",
+          "type": "change-scope",
+          "comparison": "worktree",
+          "whenChanged": [
+            "src/renderer/src/components/markdown-review-anchor-recovery/**",
+            "docs/issue/Markdown评论失效锚点恢复/**",
+            "tests/e2e/markdown-review-anchor-recovery.spec.ts",
+            "src/renderer/src/components/editor/rich-markdown-review-note-positioning.ts",
+            "src/renderer/src/components/editor/rich-markdown-review-note-layout.ts",
+            "src/renderer/src/components/editor/RichMarkdownReviewNoteLayer.tsx"
+          ],
+          "allowedPaths": [
+            "src/renderer/src/components/markdown-review-anchor-recovery/**",
+            "docs/issue/Markdown评论失效锚点恢复/**",
+            "tests/e2e/markdown-review-anchor-recovery.spec.ts",
+            "src/renderer/src/components/editor/rich-markdown-review-note-positioning.ts",
+            "src/renderer/src/components/editor/rich-markdown-review-note-layout.ts",
+            "src/renderer/src/components/editor/RichMarkdownReviewNoteLayer.tsx",
+            "src/renderer/src/i18n/locales/en.json",
+            "src/renderer/src/i18n/locales/zh.json",
+            ".gitignore",
+            "config/fork-features.jsonc",
+            "config/architecture-policies.jsonc",
+            "docs/issue/README.md"
+          ],
+          "message": "Change is outside Markdown review anchor recovery."
         }
       ]
     }

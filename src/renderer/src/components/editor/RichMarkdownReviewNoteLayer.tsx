@@ -9,6 +9,7 @@ import {
 } from '@/lib/markdown-review-notes'
 import type { RichMarkdownReviewNotePosition } from './rich-markdown-review-note-layout'
 import { translate } from '@/i18n/i18n'
+import { getMarkdownReviewAnchorLabel } from '../markdown-review-anchor-recovery/review-anchor-position'
 
 function isRichMarkdownReviewNoteNavigationClick(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) {
@@ -56,7 +57,7 @@ export function RichMarkdownReviewNoteLayer({
         'Review notes'
       )}
     >
-      {positions.map(({ comment, top }) => (
+      {positions.map(({ comment, top, anchorUnresolved }) => (
         <div
           key={comment.id}
           data-rich-markdown-review-note-id={comment.id}
@@ -75,12 +76,13 @@ export function RichMarkdownReviewNoteLayer({
           <DiffCommentCard
             lineNumber={comment.lineNumber}
             startLine={comment.startLine}
-            label={null}
+            label={getMarkdownReviewAnchorLabel(anchorUnresolved)}
             quote={getMarkdownReviewCardQuote(markdownReviewContent, comment)}
             body={comment.body}
             sentAt={comment.sentAt}
             onDelete={() => onDeleteComment(comment.id)}
             onSubmitEdit={(body) => onSubmitEdit(comment.id, body)}
+            observeRenderedSize
             onContentResize={onContentResize}
             headerActions={
               <>

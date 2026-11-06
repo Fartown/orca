@@ -23705,5 +23705,8 @@
       "startOwn": "单独开始做",
       "paletteEvidence": "已关联的本地任务"
     }
+  },
+  "markdownReviewAnchorRecovery": {
+    "originalTextChanged": "原文已变更"
   }
 }
