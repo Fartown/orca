@@ -62,13 +62,30 @@
   padding: 0;
 }
 
-/* Commented text, in the color the app's rich editor gives review notes. */
-::highlight(share-comment) {
-  background-color: color-mix(in srgb, var(--annotation-highlight) 22%, transparent);
+/* Commented text: a dashed rule drawn a little below each line (::highlight cannot offset an underline). */
+.orca-share-comment-underlines {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
 }
 
-::highlight(share-comment-active) {
-  background-color: color-mix(in srgb, var(--annotation-highlight) 44%, transparent);
+.orca-share-comment-underlines > span {
+  position: absolute;
+  height: 1px;
+  background-image: linear-gradient(
+    to right,
+    color-mix(in srgb, var(--foreground) 40%, transparent) 60%,
+    transparent 60%
+  );
+  background-size: 5px 1px;
+}
+
+.orca-share-comment-underlines > span.is-active {
+  background-image: linear-gradient(
+    to right,
+    color-mix(in srgb, var(--foreground) 80%, transparent) 60%,
+    transparent 60%
+  );
 }
 
 /* Why: `.markdown-light .markdown-body code` outranks `.markdown-body pre code`, painting each code line as a chip. */

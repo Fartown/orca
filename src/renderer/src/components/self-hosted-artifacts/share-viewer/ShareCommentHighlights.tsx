@@ -1,12 +1,8 @@
-import React, { useEffect, useMemo, useRef, useState, type RefObject } from 'react'
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import { MessageSquarePlus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { translate } from '@/i18n/i18n'
-import {
-  createDomTextSearchHighlights,
-  findDomTextSearchRanges,
-  type DomTextSearchInstance
-} from '@/lib/dom-text-search-highlights'
+import { findDomTextSearchRanges } from '@/lib/dom-text-search-highlights'
 import { ARTIFACT_SHARE_COMMENT_LIMITS } from '../../../../../shared/self-hosted-artifacts/artifact-share-comments-contract'
 import {
   findShareCommentBlocks,
@@ -17,13 +13,9 @@ import {
 } from './share-comment-blocks'
 import { useShareComments, type ShareCommentDraft } from './share-viewer-comments-state'
 
-// Names match the ::highlight() rules in viewer.css.
-const highlights = createDomTextSearchHighlights({
-  match: 'share-comment',
-  active: 'share-comment-active'
-})
-const HIGHLIGHTS: DomTextSearchInstance = {}
 const DRAFT_ID = 'draft'
+// Space between a line's text and its underline.
+const UNDERLINE_GAP_PX = 2
 
 function isCommentChrome(element: HTMLElement): boolean {
   return element.closest(`[${SHARE_COMMENT_CHROME_ATTRIBUTE}]`) !== null
@@ -94,9 +86,86 @@ function caretAt(x: number, y: number): { node: Node; offset: number } | null {
   return range ? { node: range.startContainer, offset: range.startOffset } : null
 }
 
+type UnderlineSegment = { key: string; id: string; left: number; top: number; width: number }
+
+/** Each piece of a range's text; inline code is flagged, its smaller font must not set the line. */
+function textLineRects(range: Range): { rect: DOMRect; code: boolean }[] {
+  const root = range.commonAncestorContainer
+  const rects: { rect: DOMRect; code: boolean }[] = []
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT)
+  for (
+    let node = root.nodeType === Node.TEXT_NODE ? root : walker.nextNode();
+    node;
+    node = walker.nextNode()
+  ) {
+    if (!range.intersectsNode(node) || !node.textContent?.trim()) {
+      continue
+    }
+    const piece = document.createRange()
+    piece.selectNodeContents(node)
+    if (node === range.startContainer) {
+      piece.setStart(node, range.startOffset)
+    }
+    if (node === range.endContainer) {
+      piece.setEnd(node, range.endOffset)
+    }
+    const code = Boolean(node.parentElement?.closest('code'))
+    for (const rect of piece.getClientRects()) {
+      if (rect.width > 0) {
+        rects.push({ rect, code })
+      }
+    }
+    if (root.nodeType === Node.TEXT_NODE) {
+      break
+    }
+  }
+  return rects
+}
+
+/** One underline per visual line, just below its prose (code chips have their own padding). */
+function underlineSegments(id: string, ranges: Range[], origin: DOMRect): UnderlineSegment[] {
+  const lines: {
+    top: number
+    bottom: number
+    left: number
+    right: number
+    textBottom: number | null
+    codeBottom: number
+  }[] = []
+  for (const { rect, code } of ranges.flatMap(textLineRects)) {
+    const middle = (rect.top + rect.bottom) / 2
+    const line = lines.find((candidate) => middle > candidate.top && middle < candidate.bottom)
+    if (line) {
+      line.left = Math.min(line.left, rect.left)
+      line.right = Math.max(line.right, rect.right)
+      if (code) {
+        line.codeBottom = Math.max(line.codeBottom, rect.bottom)
+      } else {
+        line.textBottom = Math.max(line.textBottom ?? rect.bottom, rect.bottom)
+      }
+    } else {
+      lines.push({
+        top: rect.top,
+        bottom: rect.bottom,
+        left: rect.left,
+        right: rect.right,
+        textBottom: code ? null : rect.bottom,
+        codeBottom: code ? rect.bottom : -Infinity
+      })
+    }
+  }
+  return lines.map((line, index) => ({
+    key: `${id}:${index}`,
+    id,
+    left: line.left - origin.left,
+    top: (line.textBottom ?? line.codeBottom) - origin.top + UNDERLINE_GAP_PX,
+    width: line.right - line.left
+  }))
+}
+
 /**
- * Marks the text each comment is about with the app's review-note color. Clicking marked text
- * brings its card forward; hovering a card brightens its text.
+ * Draws a dashed underline a little below the text each comment is about. Clicking marked text
+ * brings its card forward; hovering a card darkens its underline.
  */
 export function ShareCommentHighlights({
   bodyRef,
@@ -104,13 +173,27 @@ export function ShareCommentHighlights({
 }: {
   bodyRef: RefObject<HTMLDivElement | null>
   markdown: string
-}): null {
+}): React.JSX.Element | null {
   const { available, comments, draft, activeCommentId, setActiveCommentId } = useShareComments()
   const rangesById = useRef(new Map<string, Range[]>())
+  const [segments, setSegments] = useState<UnderlineSegment[]>([])
+  const [layoutRevision, setLayoutRevision] = useState(0)
 
+  // Why: images, fonts and diagrams settle after first paint and move every line below them.
   useEffect(() => {
     const body = bodyRef.current
+    if (!body) {
+      return
+    }
+    const observer = new ResizeObserver(() => setLayoutRevision((revision) => revision + 1))
+    observer.observe(body)
+    return () => observer.disconnect()
+  }, [bodyRef])
+
+  useLayoutEffect(() => {
+    const body = bodyRef.current
     if (!body || !available) {
+      setSegments([])
       return
     }
     const next = new Map<string, Range[]>()
@@ -121,16 +204,9 @@ export function ShareCommentHighlights({
       next.set(DRAFT_ID, rangesForComment(body, draft))
     }
     rangesById.current = next
-    highlights.setMatches(HIGHLIGHTS, [...next.values()].flat())
-    return () => highlights.clear(HIGHLIGHTS)
-  }, [available, bodyRef, comments, draft, markdown])
-
-  useEffect(() => {
-    const active = draft ? DRAFT_ID : activeCommentId
-    const ranges = active ? rangesById.current.get(active) : undefined
-    // One active range is painted; a multi-line selection shows its first line brightest.
-    highlights.setActive(HIGHLIGHTS, ranges?.[0])
-  }, [activeCommentId, draft, comments])
+    const origin = body.getBoundingClientRect()
+    setSegments([...next].flatMap(([id, ranges]) => underlineSegments(id, ranges, origin)))
+  }, [available, bodyRef, comments, draft, markdown, layoutRevision])
 
   useEffect(() => {
     const body = bodyRef.current
@@ -162,7 +238,21 @@ export function ShareCommentHighlights({
     return () => body.removeEventListener('click', onClick)
   }, [bodyRef, setActiveCommentId])
 
-  return null
+  if (segments.length === 0) {
+    return null
+  }
+  const active = draft ? DRAFT_ID : activeCommentId
+  return (
+    <div className="orca-share-comment-underlines" aria-hidden="true">
+      {segments.map((segment) => (
+        <span
+          key={segment.key}
+          className={segment.id === active ? 'is-active' : undefined}
+          style={{ left: segment.left, top: segment.top, width: segment.width }}
+        />
+      ))}
+    </div>
+  )
 }
 
 type SelectionTarget = { draft: ShareCommentDraft; top: number; left: number }
