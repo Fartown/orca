@@ -257,3 +257,6 @@ ci-shards/
 
 !docs/issue/插件读取工作区远程仓库/
 !docs/issue/插件读取工作区远程仓库/**
+
+!docs/issue/Markdown评论失效锚点恢复/
+!docs/issue/Markdown评论失效锚点恢复/**
