@@ -2886,6 +2886,10 @@
         "src/cli/dispatch.ts",
         "src/cli/flags.ts",
         "src/cli/format.ts",
+        "src/cli/command-body-input.ts",
+        "src/renderer/src/lib/focus-terminal-tab-surface.ts",
+        "src/renderer/src/components/terminal/background-terminal-worktree-mount.ts",
+        "src/shared/constants.ts",
         "src/cli/runtime/types.ts",
         "src/cli/selectors.ts",
         "src/renderer/src/components/sidebar/workspace-status.ts",
@@ -2909,6 +2913,7 @@
         "mobile/src/local-tasks/**",
         "docs/issue/本地任务管理/**",
         "src/main/runtime/rpc/methods/local-task-link-methods.ts",
+        "src/main/runtime/rpc/methods/local-task-dispatcher-methods.ts",
         "src/cli/local-tasks/**"
       ],
       "requiredFiles": [

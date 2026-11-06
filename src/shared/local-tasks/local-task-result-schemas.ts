@@ -141,7 +141,16 @@ export const taskSchema: z.ZodType<LocalTask> = z.object({
   createdAt: z.number(),
   updatedAt: z.number(),
   revision: z.number(),
-  formerRefs: z.array(z.string()).optional()
+  formerRefs: z.array(z.string()).optional(),
+  latestProgress: z
+    .object({
+      kind: z.literal('progress'),
+      body: z.string(),
+      at: z.number(),
+      sessionLinkId: z.string().nullable(),
+      needsYou: z.string().optional()
+    })
+    .optional()
 })
 
 export const eventSchema: z.ZodType<LocalTaskEvent> = z.object({

@@ -11,9 +11,11 @@ import { launchAgentInNewTab, type LaunchAgentInNewTabResult } from '@/lib/launc
 import type { StructuredLaunchTerminal } from '@/lib/structured-agent-session-launch-admission'
 import type { StructuredAgentLaunchSettlement } from '@/lib/structured-agent-launch-settlement'
 import { activateAndRevealWorkspace } from '@/lib/worktree-activation'
+import { requestBackgroundTerminalWorktreeMount } from '@/components/terminal/background-terminal-worktree-mount'
 import { selectExecutionHostDisplayLabel } from '@/lib/execution-host-display-label'
 import type { TuiAgent } from '../../../shared/tui-agent'
 import { buildLocalTaskAgentPrompt } from '../../../shared/local-tasks/local-task-agent-prompt'
+import { buildLocalTaskBrief } from '../../../shared/local-tasks/local-task-brief'
 import { localTaskAncestors } from '../../../shared/local-tasks/local-task-tree'
 import type { LocalTaskWorkspaceLink } from '../../../shared/local-tasks/local-task-link-types'
 import type { LocalTask } from '../../../shared/local-tasks/local-task-types'
@@ -33,13 +35,17 @@ import {
 
 export type LocalTaskPromptDelivery = 'auto-submit' | 'draft'
 
-/** The task as the agent's prompt, with every ancestor's title for context (nearest first). */
+/**
+ * The task as the agent's prompt, with every ancestor's title for context (nearest first), and the
+ * brief that tells the agent how to write its results back (REQ-022).
+ */
 export function localTaskPromptFor(task: LocalTask): string {
   const tasks = localTasksDomainStore.getState().tasks
-  return buildLocalTaskAgentPrompt(
+  const prompt = buildLocalTaskAgentPrompt(
     task,
     localTaskAncestors(task, new Map(tasks.map((candidate) => [candidate.id, candidate])))
   )
+  return `${prompt}\n\n${buildLocalTaskBrief(task.ref)}`
 }
 
 export type LocalTaskSessionLaunchArgs = {
@@ -47,6 +53,8 @@ export type LocalTaskSessionLaunchArgs = {
   link: LocalTaskWorkspaceLink
   agent: TuiAgent
   promptDelivery: LocalTaskPromptDelivery
+  /** False opens the session in the background, leaving the person where they are. */
+  reveal?: boolean
 }
 
 function recordTerminal(
@@ -129,8 +137,16 @@ export function launchLocalTaskSession(args: LocalTaskSessionLaunchArgs): boolea
   }
   const prompt = localTaskPromptFor(args.task)
   const { agent, promptDelivery } = args
-  if (activateAndRevealWorkspace(worktreeId, { executionHostId: hostId }) === false) {
+  const reveal = args.reveal !== false
+  if (reveal && activateAndRevealWorkspace(worktreeId, { executionHostId: hostId }) === false) {
     return false
+  }
+  // Why: a workspace this window never opened has no mounted terminals; ask for this tab's.
+  const mountHidden = (terminal: LaunchAgentInNewTabResult): LaunchAgentInNewTabResult => {
+    if (!reveal && terminal?.surface.kind === 'local-terminal') {
+      requestBackgroundTerminalWorktreeMount({ worktreeId, tabIds: [terminal.surface.tabId] })
+    }
+    return terminal
   }
   const plan = planAgentSessionLaunch(useAppStore.getState(), {
     requestId: newAgentLaunchRequestId(),
@@ -145,23 +161,27 @@ export function launchLocalTaskSession(args: LocalTaskSessionLaunchArgs): boolea
     prompt,
     promptDelivery,
     launchSource: 'unknown',
+    ...(reveal ? {} : { activate: false }),
     agentSessionLaunchPlan: plan,
     onStructuredHostDeclined: () =>
       recordTerminal(
         target,
-        launchAgentInNewTab({
-          agent,
-          worktreeId,
-          prompt,
-          promptDelivery,
-          launchSource: 'unknown',
-          agentSessionLaunchPlan: adoptAgentSessionLaunchVerdict({
-            route: 'terminal-tui',
-            requestId: plan.requestId,
+        mountHidden(
+          launchAgentInNewTab({
             agent,
-            worktreeId
+            worktreeId,
+            prompt,
+            promptDelivery,
+            launchSource: 'unknown',
+            ...(reveal ? {} : { activate: false }),
+            agentSessionLaunchPlan: adoptAgentSessionLaunchVerdict({
+              route: 'terminal-tui',
+              requestId: plan.requestId,
+              agent,
+              worktreeId
+            })
           })
-        })
+        )
       )
   })
   if (!result) {
@@ -175,7 +195,7 @@ export function launchLocalTaskSession(args: LocalTaskSessionLaunchArgs): boolea
       result.surface.kind === 'local-chat' ? result.surface.tabId : null
     )
   } else {
-    recordTerminal(target, result)
+    recordTerminal(target, mountHidden(result))
   }
   return true
 }

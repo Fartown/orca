@@ -20,6 +20,7 @@ import { useLocalTaskRowWritable } from '@/local-tasks/local-tasks-domain-store'
 import { localTaskDescendantIds } from '../../../../shared/local-tasks/local-task-tree'
 import { LocalTaskStatusIcon } from './LocalTaskIcons'
 import { LocalTaskDetailBody } from './LocalTaskDetailBody'
+import { LocalTaskLatestProgressCard } from './LocalTaskLatestProgress'
 import { LocalTaskDetailProperties } from './LocalTaskDetailProperties'
 import { LocalTaskSubtasks } from './LocalTaskSubtasks'
 import { LocalTaskActivity } from './LocalTaskActivity'
@@ -173,6 +174,7 @@ export function LocalTaskDetail({
       <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto pb-16 scrollbar-sleek @3xl/local-task-detail:flex-row @3xl/local-task-detail:overflow-visible @3xl/local-task-detail:pb-0">
         <div className="min-w-0 pr-2 scrollbar-sleek @3xl/local-task-detail:min-h-0 @3xl/local-task-detail:flex-1 @3xl/local-task-detail:overflow-y-auto">
           <div className="mx-auto flex max-w-3xl flex-col gap-6 pb-8">
+            <LocalTaskLatestProgressCard task={task} />
             <LocalTaskDetailBody key={task.id} task={task} writable={writable} />
             <LocalTaskSessionList
               task={task}

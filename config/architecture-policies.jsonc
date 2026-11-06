@@ -674,6 +674,7 @@
             "src/renderer/src/lib/settings-navigation-types.ts",
             "docs/issue/本地任务管理/**",
             "src/main/runtime/rpc/methods/local-task-link-methods.ts",
+            "src/main/runtime/rpc/methods/local-task-dispatcher-methods.ts",
             "mobile/src/host-screen/host-screen-overlays.tsx",
             "mobile/src/tasks/use-mobile-tasks-picker-projection.tsx",
             "mobile/src/tasks/mobile-tasks-provider-pickers.tsx",
@@ -1686,6 +1687,7 @@
             "mobile/src/local-tasks/**",
             "docs/issue/本地任务管理/**",
             "src/main/runtime/rpc/methods/local-task-link-methods.ts",
+            "src/main/runtime/rpc/methods/local-task-dispatcher-methods.ts",
             "src/cli/local-tasks/**"
           ],
           "allowedPaths": [
@@ -1760,6 +1762,7 @@
             "docs/issue/README.md",
             ".gitignore",
             "src/main/runtime/rpc/methods/local-task-link-methods.ts",
+            "src/main/runtime/rpc/methods/local-task-dispatcher-methods.ts",
             "mobile/src/host-screen/host-screen-overlays.tsx",
             "mobile/src/tasks/use-mobile-tasks-picker-projection.tsx",
             "mobile/src/tasks/mobile-tasks-provider-pickers.tsx",
@@ -1837,6 +1840,7 @@
             "**/*.spec.ts",
             "**/*.spec.tsx",
             "src/main/runtime/rpc/methods/local-task-link-methods.ts",
+            "src/main/runtime/rpc/methods/local-task-dispatcher-methods.ts",
             "src/main/ipc/filesystem/filesystem-git-pull-request-generation-handlers.ts",
             "src/main/runtime/runtime-git-generation-commands.ts"
           ],

@@ -47,7 +47,7 @@ function isMethodNotFound(error: unknown): boolean {
   return error instanceof RuntimeClientError && error.code === 'method_not_found'
 }
 
-async function callLibrary<T>(
+export async function callLibrary<T>(
   rpc: TaskLibraryRpc,
   method: string,
   params: unknown,
@@ -183,10 +183,23 @@ const REFUSAL_MESSAGES: Record<string, string> = {
   not_found: 'The task no longer exists.',
   stale: 'The task changed while this command ran. Run it again.',
   read_only: 'The task library is read-only on this host.',
-  status_invalid: 'That status does not belong to the task’s project.'
+  status_invalid: 'That status does not belong to the task’s project.',
+  comment_not_editable: 'That entry cannot be changed.',
+  invalid_argument: 'The task library refused the request as malformed.',
+  desktop_only: 'Only a person can do that, in Orca.'
 }
 
-async function write<T extends object>(
+// Why by detail: the dispatcher refusal reuses not_found so older hosts need no new code.
+const REFUSAL_DETAIL_MESSAGES: Record<string, string> = {
+  dispatcher:
+    'Orca does not know this pane as the dispatcher. Run this inside the dispatcher session that Orca started.'
+}
+
+/** Why an agent's status change was refused, written so the agent knows what to do next. */
+export const COMPLETED_FROM_CLI_MESSAGE =
+  'Only the user completes a task, in Orca. Move it at most to review, and leave a comment or a progress writeback instead; do not change the status again this round.'
+
+export async function write<T extends object>(
   rpc: TaskLibraryRpc,
   method: string,
   params: Record<string, unknown>,
@@ -202,7 +215,9 @@ async function write<T extends object>(
   if (value.ok === false) {
     throw new RuntimeClientError(
       value.code,
-      REFUSAL_MESSAGES[value.code] ?? `The task library refused the change (${value.code}).`
+      (value.detail ? REFUSAL_DETAIL_MESSAGES[value.detail] : undefined) ??
+        REFUSAL_MESSAGES[value.code] ??
+        `The task library refused the change (${value.code}).`
     )
   }
   return { value, envelope }
@@ -229,13 +244,28 @@ export async function setTaskStatus(
 export async function addTaskComment(
   rpc: TaskLibraryRpc,
   resolved: ResolvedTask,
-  body: string
+  body: string,
+  progress?: { sessionLinkId?: string; needsYou?: string }
 ): Promise<RuntimeRpcSuccess<unknown>> {
   const { envelope } = await write(
     rpc,
     'localTasks.events.addComment',
-    { taskId: resolved.task.id, body },
+    { taskId: resolved.task.id, body, ...(progress ? { progress } : {}) },
     writeAnySuccess
   )
   return envelope
+}
+
+/** The session link this process runs in, when it belongs to the task: matched by ORCA_PANE_KEY. */
+export function currentSessionLinkId(
+  library: TaskLibrary,
+  taskId: string,
+  paneKey: string | undefined = process.env.ORCA_PANE_KEY
+): string | undefined {
+  if (!paneKey) {
+    return undefined
+  }
+  return library.links.sessions.find(
+    (session) => session.taskId === taskId && session.paneKey === paneKey
+  )?.id
 }

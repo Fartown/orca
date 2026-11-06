@@ -15,6 +15,7 @@ import {
   type LocalTaskEndpointKey
 } from './local-task-endpoints'
 import { LOCAL_TASK_PREFERENCE_KEYS } from './local-task-preference-keys'
+import { publishSelfLocalTaskChanges } from './local-task-self-changes'
 
 const ALL_SCOPES: readonly LocalTaskChangeScope[] = [
   'projects',
@@ -51,7 +52,11 @@ function describe(error: unknown): string {
 export function createLocalTasksSync(
   client: LocalTasksEndpointReads,
   store: PartitionStore,
-  options: { preferences: boolean } = { preferences: true }
+  options: {
+    preferences: boolean
+    /** Called after every notice is read, with the scopes it named. */
+    onChange?: (scopes: readonly LocalTaskChangeScope[] | null) => void
+  } = { preferences: true }
 ): LocalTasksSync {
   const latestRead = new Map<string, number>()
   const watchers = new Map<string, number>()
@@ -151,10 +156,10 @@ export function createLocalTasksSync(
         case 'ready':
           store.getState().setConnection('live')
           store.getState().setHostState(message.state, null)
-          void refresh(null)
+          void refresh(null).then(() => options.onChange?.(null))
           return
         case 'changed':
-          void refresh(message.scopes)
+          void refresh(message.scopes).then(() => options.onChange?.(message.scopes))
           return
         case 'end':
           store.getState().setConnection('ended')
@@ -219,7 +224,10 @@ export function localTasksSyncFor(endpoint: LocalTaskEndpointKey): LocalTasksSyn
       localTasksEndpointReads(endpoint),
       localTasksPartitionStore(localTasksDomainStore, endpoint),
       // Why: UI choices are kept in the page's own library; another Orca's are its user's.
-      { preferences: endpoint === SELF_LOCAL_TASK_ENDPOINT || isWebClientLocation() }
+      {
+        preferences: endpoint === SELF_LOCAL_TASK_ENDPOINT || isWebClientLocation(),
+        ...(endpoint === SELF_LOCAL_TASK_ENDPOINT ? { onChange: publishSelfLocalTaskChanges } : {})
+      }
     )
     syncs.set(endpoint, sync)
   }

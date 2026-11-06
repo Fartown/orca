@@ -21,6 +21,7 @@ import {
 import type { LocalTask } from '../../../../shared/local-tasks/local-task-types'
 import { LocalTaskPriorityIcon, LocalTaskStatusIcon } from './LocalTaskIcons'
 import { LocalTaskLabelChips, LocalTaskSubtaskProgress } from './LocalTaskRow'
+import { LocalTaskLatestProgressLine } from './LocalTaskLatestProgress'
 import { LocalTaskProgressBadges } from './LocalTaskProgress'
 import { canCreateInGroup, localTaskGroupLabel, openCreateInGroup } from './LocalTaskGroupHead'
 import type { LocalTaskListModel } from './use-local-task-list-model'
@@ -88,6 +89,7 @@ function BoardCard({
           <LocalTaskSubtaskProgress task={task} index={index} />
         </div>
       ) : null}
+      <LocalTaskLatestProgressLine task={task} />
       <LocalTaskProgressBadges task={task} index={index} />
     </div>
   )

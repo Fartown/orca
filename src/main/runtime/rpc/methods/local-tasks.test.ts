@@ -22,6 +22,10 @@ import {
 } from '../../runtime-rpc/fork-mobile-rpc-method-allowlist'
 import { isDesktopClientCaller, sourceOf } from '../../../local-tasks/local-tasks-rpc-caller'
 import { ALL_RPC_METHODS } from './index'
+import {
+  LOCAL_TASK_DISPATCHER_DESKTOP_METHODS,
+  LOCAL_TASK_DISPATCHER_SESSION_METHODS
+} from './local-task-dispatcher-methods'
 import { LOCAL_TASK_DESKTOP_ONLY_METHODS } from './local-task-link-methods'
 import { LOCAL_TASK_METHODS } from './local-tasks'
 
@@ -64,7 +68,9 @@ describe('localTasks RPC', () => {
     for (const name of names) {
       const phoneMay =
         !name.startsWith('localTasks.preferences.') &&
-        !LOCAL_TASK_DESKTOP_ONLY_METHODS.includes(name)
+        !LOCAL_TASK_DESKTOP_ONLY_METHODS.includes(name) &&
+        !LOCAL_TASK_DISPATCHER_DESKTOP_METHODS.includes(name) &&
+        !LOCAL_TASK_DISPATCHER_SESSION_METHODS.includes(name)
       expect(isMobileRpcMethodAllowed(name)).toBe(phoneMay)
       // What a phone may call it may also aim at a server through its desktop.
       expect(isForkExecutionHostRelayMethod(name)).toBe(phoneMay)

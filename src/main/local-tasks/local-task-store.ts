@@ -3,9 +3,10 @@ import {
   formatLocalTaskRef,
   type LocalTaskPriority
 } from '../../shared/local-tasks/local-task-model'
-import type { LocalTask } from '../../shared/local-tasks/local-task-types'
+import type { LocalTask, LocalTaskLatestProgress } from '../../shared/local-tasks/local-task-types'
 import type { SqliteRow } from '../sqlite/sqlite-statement'
 import type { LocalTasksDatabase } from './local-tasks-database'
+import { readLatestProgressByTask } from './local-task-latest-progress'
 import { rowNullableString, rowNumber, rowString, rowStringArray } from './local-tasks-sqlite-row'
 
 const TASK_COLUMNS = `t.id, t.project_id, t.number, t.title, t.description, t.criteria, t.status_id,
@@ -104,7 +105,8 @@ function hydrateTasks(db: LocalTasksDatabase, rows: SqliteRow[]): LocalTask[] {
   }
   if (rows.length === 1) {
     const taskId = rowString(rows[0], 'id')
-    return [toTask(rows[0], readLocalTaskLabels(db, taskId), readFormerRefs(db, taskId))]
+    const progress = readLatestProgressByTask(db, taskId).get(taskId)
+    return [toTask(rows[0], readLocalTaskLabels(db, taskId), readFormerRefs(db, taskId), progress)]
   }
   const labelsByTask = valuesByTask(
     db.prepare('SELECT task_id, label FROM local_task_labels ORDER BY label').all(),
@@ -114,13 +116,24 @@ function hydrateTasks(db: LocalTasksDatabase, rows: SqliteRow[]): LocalTask[] {
     db.prepare('SELECT task_id, alias FROM local_task_aliases ORDER BY rowid').all(),
     'alias'
   )
+  const progressByTask = readLatestProgressByTask(db)
   return rows.map((row) => {
     const taskId = rowString(row, 'id')
-    return toTask(row, labelsByTask.get(taskId) ?? [], formerRefsByTask.get(taskId) ?? [])
+    return toTask(
+      row,
+      labelsByTask.get(taskId) ?? [],
+      formerRefsByTask.get(taskId) ?? [],
+      progressByTask.get(taskId)
+    )
   })
 }
 
-function toTask(row: SqliteRow, labels: string[], formerRefs: string[]): LocalTask {
+function toTask(
+  row: SqliteRow,
+  labels: string[],
+  formerRefs: string[],
+  latestProgress?: LocalTaskLatestProgress
+): LocalTask {
   const taskNumber = rowNumber(row, 'number')
   return {
     id: rowString(row, 'id'),
@@ -137,7 +150,8 @@ function toTask(row: SqliteRow, labels: string[], formerRefs: string[]): LocalTa
     createdAt: rowNumber(row, 'created_at'),
     updatedAt: rowNumber(row, 'updated_at'),
     revision: rowNumber(row, 'revision'),
-    ...(formerRefs.length > 0 ? { formerRefs } : {})
+    ...(formerRefs.length > 0 ? { formerRefs } : {}),
+    ...(latestProgress ? { latestProgress } : {})
   }
 }
 

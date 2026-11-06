@@ -42,7 +42,9 @@ export function createLocalTask(
     return { ok: false, code: 'not_found' }
   }
   const statusId = input.statusId ?? defaultStatusId(project)
-  if (!project.statuses.some((status) => status.id === statusId)) {
+  const status = project.statuses.find((candidate) => candidate.id === statusId)
+  // Why: the CLI cannot tell a person from an agent, so completing stays a UI click.
+  if (!status || (source === 'cli' && status.category === 'completed')) {
     return { ok: false, code: 'status_invalid' }
   }
   if (input.parentId && !isValidParent(db, input.parentId, project.id, null)) {
@@ -117,7 +119,14 @@ export function batchUpdateLocalTasks(
   const { statusId, priority, addLabels, removeLabels } = input.patch
   if (
     statusId &&
-    present.some((task) => !projects.get(task.projectId)?.statuses.some((s) => s.id === statusId))
+    present.some(
+      (task) =>
+        !projects.get(task.projectId)?.statuses.some((s) => s.id === statusId) ||
+        // Why: the CLI cannot tell a person from an agent, so completing stays a UI click.
+        (source === 'cli' &&
+          projects.get(task.projectId)?.statuses.find((s) => s.id === statusId)?.category ===
+            'completed')
+    )
   ) {
     return { ok: false, code: 'status_invalid' }
   }

@@ -1,4 +1,4 @@
-import { BellDot, ChevronDown, FolderKanban, Layers, ListTodo, Settings } from 'lucide-react'
+import { BellDot, Bot, ChevronDown, FolderKanban, Layers, ListTodo, Settings } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -26,6 +26,7 @@ import { useLocalTasksDomain } from '@/local-tasks/local-tasks-domain-store'
 import { localTaskHostLabelFor } from '@/local-tasks/local-task-endpoint-labels'
 import { LocalTaskStatusIcon } from './LocalTaskIcons'
 import type { LocalTaskListModel } from './use-local-task-list-model'
+import { useLocalTaskDispatcherWaitingCount } from './LocalTaskDispatcherView'
 
 function NavRow({
   active,
@@ -87,7 +88,9 @@ function useScopeLabel(model: LocalTaskListModel): { scope: string; view: string
     view:
       view === 'needs-you'
         ? translate('localTasks.needsYou.title', 'Needs you')
-        : localTaskViewLabel(view)
+        : view === 'dispatcher'
+          ? translate('localTasks.dispatcher.title', 'Dispatcher')
+          : localTaskViewLabel(view)
   }
 }
 
@@ -120,6 +123,7 @@ export function LocalTaskScopeMenu({
 }): React.JSX.Element {
   const view = useLocalTaskPage((state) => state.view)
   const needsYouCount = useNeedsYouCount(model)
+  const dispatcherCount = useLocalTaskDispatcherWaitingCount()
   const label = useScopeLabel(model)
   const page = localTaskPageStore.getState()
   return (
@@ -135,8 +139,8 @@ export function LocalTaskScopeMenu({
         <DropdownMenuRadioGroup
           value={view}
           onValueChange={(next) => {
-            if (next === 'needs-you') {
-              page.setView('needs-you')
+            if (next === 'needs-you' || next === 'dispatcher') {
+              page.setView(next)
               return
             }
             const candidate = LOCAL_TASK_VIEWS.find((option) => option === next)
@@ -145,6 +149,10 @@ export function LocalTaskScopeMenu({
             }
           }}
         >
+          <MenuOption value="dispatcher" count={dispatcherCount}>
+            <Bot className="size-3.5" />
+            {translate('localTasks.dispatcher.title', 'Dispatcher')}
+          </MenuOption>
           <MenuOption value="needs-you" count={needsYouCount}>
             <BellDot className="size-3.5" />
             {translate('localTasks.needsYou.title', 'Needs you')}
@@ -209,12 +217,20 @@ export function LocalTaskNav({ model }: { model: LocalTaskListModel }): React.JS
   const view = useLocalTaskPage((state) => state.view)
   const scopeProjectId = model.scopeProjectId
   const needsYouCount = useNeedsYouCount(model)
+  const dispatcherCount = useLocalTaskDispatcherWaitingCount()
   return (
     <nav
       aria-label={translate('localTasks.nav.label', 'Task views')}
       className="hidden w-52 shrink-0 flex-col gap-4 overflow-y-auto scrollbar-sleek @3xl/local-task-page:flex"
     >
       <div className="flex flex-col gap-0.5">
+        <NavRow
+          active={view === 'dispatcher'}
+          icon={<Bot className="size-3.5" />}
+          label={translate('localTasks.dispatcher.title', 'Dispatcher')}
+          count={dispatcherCount}
+          onSelect={() => localTaskPageStore.getState().setView('dispatcher')}
+        />
         <NavRow
           active={view === 'needs-you'}
           icon={<BellDot className="size-3.5" />}

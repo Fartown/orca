@@ -10,7 +10,15 @@ export const SIDEBAR_GROUP_BY_TASK_PREFERENCE_KEY = 'sidebarGroupByTask'
 /** `'0'` while sidebar cards hide the task chip; absent (the default) shows it. */
 export const CARD_SHOW_LOCAL_TASK_PREFERENCE_KEY = LOCAL_TASK_CARD_SHOW_PREFERENCE_KEY
 
+/** The dispatcher's pane, so a restart finds the same dispatcher (REQ-030). */
+export const LOCAL_TASK_DISPATCHER_PANE_PREFERENCE_KEY = 'dispatcher.paneKey'
+
+/** `'0'` while Orca must not wake the dispatcher; absent (the default) wakes it (REQ-031). */
+export const LOCAL_TASK_DISPATCHER_WAKE_PREFERENCE_KEY = 'dispatcher.wake'
+
 export const LOCAL_TASK_PREFERENCE_KEYS = [
+  LOCAL_TASK_DISPATCHER_PANE_PREFERENCE_KEY,
+  LOCAL_TASK_DISPATCHER_WAKE_PREFERENCE_KEY,
   LOCAL_ACTIVE_PREFERENCE_KEY,
   GROUP_BY_PREFERENCE_KEY,
   SORT_BY_PREFERENCE_KEY,
