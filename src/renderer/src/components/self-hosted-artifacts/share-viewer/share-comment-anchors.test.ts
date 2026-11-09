@@ -82,8 +82,12 @@ describe('share comment anchors', () => {
     expect(draft).toMatchObject({
       range: { startLine: 3, endLine: 3 },
       quote: '评论',
-      anchor: { line: 3, length: 2 }
+      // Orca finds a note's text by first match, so the note carries enough to be unique.
+      anchor: { line: 3, length: 2, context: '二个' }
     })
+    expect(captureShareCommentSelection(page(), select(body, '乙二'))?.anchor).not.toHaveProperty(
+      'context'
+    )
     const placed = placeShareComment(page(), draft!)
     expect(placed.kind).toBe('text')
     const range = placed.kind === 'text' ? placed.ranges[0] : null

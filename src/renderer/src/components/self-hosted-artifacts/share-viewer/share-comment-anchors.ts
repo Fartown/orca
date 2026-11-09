@@ -103,14 +103,43 @@ export function captureShareCommentSelection(
     return null
   }
   const quote = parts.map((part) => part.map.text.slice(part.start, part.end)).join('\n')
+  const context = uniqueContext(first.map.text, first.start, first.end)
   return {
     range: {
       startLine: sourceLineAt(first.block, first.map, first.start),
       endLine: sourceLineAt(last.block, last.map, last.end - 1)
     },
     quote: quote.slice(0, ARTIFACT_SHARE_COMMENT_LIMITS.quote),
-    anchor: { line: blockLine(first.block), offset: first.start, length: quote.length }
+    anchor: {
+      line: blockLine(first.block),
+      offset: first.start,
+      length: quote.length,
+      ...(context ? { context } : {})
+    }
   }
+}
+
+function occurrences(text: string, needle: string): number {
+  let count = 0
+  for (let at = text.indexOf(needle); at !== -1; at = text.indexOf(needle, at + 1)) {
+    count += 1
+  }
+  return count
+}
+
+const CONTEXT_LIMIT = 200
+
+/**
+ * The fewest characters before [start, end) that make it occur once in its block, or '' when it
+ * already does. Orca's review notes find their text by its first match, so a repeated word needs
+ * this to land on the reader's occurrence there too.
+ */
+function uniqueContext(text: string, start: number, end: number): string {
+  let from = start
+  while (from > 0 && start - from < CONTEXT_LIMIT && occurrences(text, text.slice(from, end)) > 1) {
+    from -= 1
+  }
+  return text.slice(from, start)
 }
 
 /** A comment on a whole block: its text is the quote, so a changed file can still be checked. */
