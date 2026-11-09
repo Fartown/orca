@@ -97,6 +97,7 @@
       ],
       "policyId": "mobile-terminal-surface-recovery",
       "ownedPaths": [
+        "src/main/mobile-terminal-surface-recovery/**",
         "src/renderer/src/mobile-terminal-surface-recovery/**",
         "tests/e2e/mobile-terminal-surface-recovery.spec.ts",
         "docs/issue/手机打开工作区终端身份恢复/**"
@@ -111,6 +112,21 @@
         "src/renderer/src/mobile-terminal-surface-recovery/live-terminal-placement-verdict.ts"
       ],
       "seams": [
+        {
+          "file": "src/main/ipc/pty/spawn-operation.ts",
+          "mustContain": "assertNumericReattachMaySpawn",
+          "why": "A numeric restore without a stable owner cannot become a fresh local or SSH shell without host-proven absence."
+        },
+        {
+          "file": "src/main/ipc/pty/pty-dead-owner-respawn.test.ts",
+          "mustContain": "hasOwner",
+          "why": "Exercise numeric live, positive absence and missing-owner requests through the actual IPC handler."
+        },
+        {
+          "file": "src/renderer/src/components/terminal-pane/pty-connection-cold-restore-resume-command.spec.ts",
+          "mustContain": "keeps a live local reattach",
+          "why": "A hibernation note and empty replay cannot retire a live process."
+        },
         {
           "file": "src/main/runtime/workspaces/workspace-activation.ts",
           "mustContain": "resolveWorkspaceSelector(worktreeSelector)",
@@ -226,6 +242,8 @@
         }
       ],
       "tests": [
+        "src/main/ipc/pty/pty-dead-owner-respawn.test.ts",
+        "src/renderer/src/components/terminal-pane/pty-connection-restore-and-resume.test.ts",
         "src/renderer/src/hooks/ipc-events/worktree-event-runtime-activation.test.ts",
         "src/renderer/src/hooks/ipc-events/worktree-event-lineage-refresh.test.ts",
 
@@ -241,7 +259,7 @@
         "src/renderer/src/lib/worktree-agent-activation-gate.test.ts"
       ],
       "checks": [
-        "pnpm exec vitest run --config config/vitest.config.ts src/main/runtime/project-group-folder-workspace-selectors.test.ts src/renderer/src/hooks/ipc-events/worktree-event-runtime-activation.test.ts src/renderer/src/hooks/ipc-events/worktree-event-lineage-refresh.test.ts src/renderer/src/mobile-terminal-surface-recovery src/renderer/src/lib/worktree-agent-activation-gate.test.ts src/renderer/src/lib/worktree-agent-activation-seam.test.ts src/renderer/src/components/terminal-pane/pty-connection/reattach-success-settle.test.ts src/renderer/src/components/terminal-pane/pty-connection/deferred-session-reattach-newer-daemon-hold.test.ts src/renderer/src/components/terminal-pane/pty-connection/deferred-session-reattach-live-bookmark.test.ts"
+        "pnpm exec vitest run --config config/vitest.config.ts src/main/ipc/pty/pty-dead-owner-respawn.test.ts src/renderer/src/components/terminal-pane/pty-connection-restore-and-resume.test.ts src/main/runtime/project-group-folder-workspace-selectors.test.ts src/renderer/src/hooks/ipc-events/worktree-event-runtime-activation.test.ts src/renderer/src/hooks/ipc-events/worktree-event-lineage-refresh.test.ts src/renderer/src/mobile-terminal-surface-recovery src/renderer/src/lib/worktree-agent-activation-gate.test.ts src/renderer/src/lib/worktree-agent-activation-seam.test.ts src/renderer/src/components/terminal-pane/pty-connection/reattach-success-settle.test.ts src/renderer/src/components/terminal-pane/pty-connection/deferred-session-reattach-newer-daemon-hold.test.ts src/renderer/src/components/terminal-pane/pty-connection/deferred-session-reattach-live-bookmark.test.ts"
       ]
     },
     {

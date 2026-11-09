@@ -8,7 +8,6 @@ import {
   mainLayoutApplyTransport
 } from './pty-connection-test-main-pane-start-fixtures'
 import { flushAsyncTicks } from './pty-connection-test-async'
-import { UUID_RE } from './pty-connection-test-constants'
 import { temporarilySetNavigatorUserAgent } from './pty-connection-test-dom'
 import {
   LEAF_2,
@@ -61,8 +60,7 @@ export function registerPtyConnectionColdRestoreResumeCommandTests(): void {
       await restoreTerminalTestGlobals()
     })
 
-    it('re-runs the resume command when a hibernated local session reattaches with no payload', async () => {
-      // Why: the daemon drops startup commands on reattach, so a passive hibernation record must replace a contentless adopted shell.
+    it('keeps a live local reattach when a hibernation note has no replay', async () => {
       const pendingTimeouts: (() => void)[] = []
       const originalSetTimeout = globalThis.setTimeout
       globalThis.setTimeout = vi.fn((fn: () => void) => {
@@ -146,24 +144,12 @@ export function registerPtyConnectionColdRestoreResumeCommandTests(): void {
           expect(deps.clearExitedPanePtyLayoutBinding).not.toHaveBeenCalled()
           return
         }
-        expect(transport.disconnect).toHaveBeenCalledTimes(1)
-        expect(transport.connect).toHaveBeenCalledTimes(2)
-        expect(transport.connect).toHaveBeenNthCalledWith(
-          2,
-          expect.objectContaining({
-            command: "codex '-c' 'disable_paste_burst=true' 'resume' 'codex-session-1'",
-            env: expect.objectContaining({
-              ORCA_PANE_KEY: paneKey,
-              ORCA_AGENT_LAUNCH_TOKEN: expect.stringMatching(new RegExp(`^${UUID_RE}$`))
-            })
-          })
-        )
-        expect(deps.clearExitedPanePtyLayoutBinding).toHaveBeenCalledWith(2, 'restored-session')
-        expect(deps.clearTabPtyId).toHaveBeenCalledWith('tab-1', 'restored-session')
-        expect(deps.syncPanePtyLayoutBinding).not.toHaveBeenCalledWith(2, 'restored-session')
-        expect(deps.syncPanePtyLayoutBinding).toHaveBeenCalledWith(2, 'fresh-resume-pty')
-        expect(mockStoreState.clearSleepingAgentSession).toHaveBeenCalledWith(paneKey)
-        expect(window.api.pty.clearPendingPaneSerializer).toHaveBeenCalledWith(paneKey, 1)
+        expect(transport.disconnect).not.toHaveBeenCalled()
+        expect(transport.connect).toHaveBeenCalledTimes(1)
+        expect(deps.clearExitedPanePtyLayoutBinding).not.toHaveBeenCalled()
+        expect(deps.clearTabPtyId).not.toHaveBeenCalled()
+        expect(deps.syncPanePtyLayoutBinding).toHaveBeenCalledWith(2, 'restored-session')
+        expect(transport.sendInput).not.toHaveBeenCalled()
       } finally {
         globalThis.setTimeout = originalSetTimeout
       }

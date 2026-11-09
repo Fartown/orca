@@ -234,16 +234,16 @@ export async function runWorktreeAgentActivationGate(
       })
     }
   }
+  const placementPending = liveTerminalPlacementIsPending(liveWorkspaceSessions.length, placement)
+  if (placementPending && !workspaceHasSleepingAgentSessions(deps.getState(), worktreeId)) {
+    return 'blocked'
+  }
   if (liveSurfaceAdopted && !workspaceHasSleepingAgentSessions(deps.getState(), worktreeId)) {
     return 'adopted'
   }
 
   if (structured && !workspaceHasSleepingAgentSessions(deps.getState(), worktreeId)) {
     return 'structured'
-  }
-  const placementPending = liveTerminalPlacementIsPending(liveWorkspaceSessions.length, placement)
-  if (placementPending && !workspaceHasSleepingAgentSessions(deps.getState(), worktreeId)) {
-    return 'blocked'
   }
   const store = deps.getState()
   const claims = liveSleepingAgentClaims(
@@ -269,12 +269,12 @@ export async function runWorktreeAgentActivationGate(
   // Only an inventory without unresolved live work may authorize initial seeding.
   return launched > 0
     ? 'resumed'
-    : liveSurfaceAdopted
-      ? 'adopted'
-      : structured
-        ? 'structured'
-        : placementPending
-          ? 'blocked'
+    : placementPending
+      ? 'blocked'
+      : liveSurfaceAdopted
+        ? 'adopted'
+        : structured
+          ? 'structured'
           : 'empty'
 }
 

@@ -644,7 +644,7 @@ describe('worktree agent activation gate', () => {
     warn.mockRestore()
   })
 
-  windowOwnedIt('reports adopted only for the PTYs that actually landed on a surface', async () => {
+  windowOwnedIt('blocks activation while any live PTY remains without a surface', async () => {
     const adoptedPtyId = `${WORKTREE_ID}@@orphan-agent`
     const unverifiablePtyId = `${WORKTREE_ID}@@ambiguous-agent`
     const { deps } = testDeps({
@@ -656,7 +656,7 @@ describe('worktree agent activation gate', () => {
       resumeCount: 0
     })
 
-    await expect(runWorktreeAgentActivationGate(WORKTREE_ID, deps)).resolves.toBe('adopted')
+    await expect(runWorktreeAgentActivationGate(WORKTREE_ID, deps)).resolves.toBe('blocked')
   })
 
   it.each([

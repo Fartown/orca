@@ -49,6 +49,10 @@
           "type": "change-scope",
           "comparison": "worktree",
           "whenChanged": [
+            "src/main/mobile-terminal-surface-recovery/**",
+            "src/main/ipc/pty/spawn-operation.ts",
+            "src/main/ipc/pty/pty-dead-owner-respawn.test.ts",
+            "src/renderer/src/components/terminal-pane/pty-connection-cold-restore-resume-command.spec.ts",
             "src/renderer/src/mobile-terminal-surface-recovery/**",
             "docs/issue/手机打开工作区终端身份恢复/**"
           ],
@@ -76,6 +80,10 @@
             "src/renderer/src/components/terminal-pane/pty-connection/deferred-session-reattach-live-bookmark.test.ts",
 
             "tests/e2e/mobile-terminal-surface-recovery.spec.ts",
+            "src/main/mobile-terminal-surface-recovery/**",
+            "src/main/ipc/pty/spawn-operation.ts",
+            "src/main/ipc/pty/pty-dead-owner-respawn.test.ts",
+            "src/renderer/src/components/terminal-pane/pty-connection-cold-restore-resume-command.spec.ts",
             "src/renderer/src/mobile-terminal-surface-recovery/**",
             "src/renderer/src/lib/worktree-agent-live-surface-adoption.ts",
             "src/renderer/src/lib/worktree-agent-activation-gate.ts",
@@ -273,6 +281,10 @@
             "src/renderer/src/store/terminals/workspace-terminal-hydration.ts",
             "src/renderer/src/store/repos/all-host-repo-catalog-actions.ts",
             "src/renderer/src/store/repos/runtime-repo-catalog-actions.ts",
+            "src/main/mobile-terminal-surface-recovery/**",
+            "src/main/ipc/pty/spawn-operation.ts",
+            "src/main/ipc/pty/pty-dead-owner-respawn.test.ts",
+            "src/renderer/src/components/terminal-pane/pty-connection-cold-restore-resume-command.spec.ts",
             "src/renderer/src/mobile-terminal-surface-recovery/**",
             "tests/e2e/mobile-terminal-surface-recovery.spec.ts",
             "src/renderer/src/lib/worktree-agent-live-surface-adoption.ts",

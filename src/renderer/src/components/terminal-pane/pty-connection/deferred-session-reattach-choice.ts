@@ -156,7 +156,8 @@ export function runDeferredSessionReattachChoice(session: ConnectPanePtySession)
       const pendingGeneration = pendingSpawnGenerationByPaneKey.get(session.pendingSpawnKey)
       if (pendingGeneration !== undefined && pendingGeneration !== session.tabGeneration) {
         recordPtyConnectDiagnostic(`pane=${session.pane.id} -> STALE PENDING SPAWN`)
-        session.startFreshSpawn()
+        session.reportError('terminal_pane_owner_unverified')
+        session.settlePaneAttachAttempt('failed')
         scheduleRuntimeGraphSync()
         return
       }
@@ -170,17 +171,8 @@ export function runDeferredSessionReattachChoice(session: ConnectPanePtySession)
             return
           }
           if (!spawnedPtyId) {
-            // StrictMode remount must respawn after an empty completed spawn promise instead of attaching to a dead surface.
-            if (!isWebTerminalSurfaceTabId(session.deps.tabId)) {
-              console.warn(
-                `Pending PTY spawn for tab ${session.deps.tabId} resolved without a PTY id, retrying fresh spawn`
-              )
-            }
-            if (sleptRemoteColdRestoreStartup || resumesFromSleepingNote) {
-              session.startFreshColdRestoreAgentResume(sleptRemoteColdRestoreStartup ?? undefined)
-            } else {
-              session.startFreshSpawn()
-            }
+            session.reportError('terminal_pane_owner_unverified')
+            session.settlePaneAttachAttempt('failed')
             return
           }
           session.clearPaneMode2031State()
