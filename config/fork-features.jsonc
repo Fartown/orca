@@ -1940,6 +1940,7 @@
         "src/main/self-hosted-artifacts/artifact-share-owner-comments.test.ts",
         "src/cli/self-hosted-artifacts/artifact-share-cli-comments.test.ts",
         "config/scripts/build-artifact-share-viewer.test.mjs",
+        "src/renderer/src/components/self-hosted-artifacts/share-viewer/share-comment-anchors.test.ts",
         "src/cli/self-hosted-artifacts/artifact-share-cli-target.test.ts",
         "src/renderer/src/components/self-hosted-artifacts/share-button/lan-artifact-share-machine.test.ts",
         "src/renderer/src/components/self-hosted-artifacts/share-button/lan-artifact-share-target.test.ts",
