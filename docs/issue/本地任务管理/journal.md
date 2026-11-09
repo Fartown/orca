@@ -376,6 +376,16 @@ external_ids:
 
 ## 3. 开发记录
 
+### 2026-11-09 统一候选 CI 复核与移动包预算重测（testing）
+
+- 本轮目标：跟踪已授权推送的统一候选 PR #76，按新候选 CI 原始日志修复失败；保留逐 REQ 与物理手机的未验缺口，不自动合入。
+- 完成内容：确认 2fdb208f 的 Mobile verify / static analysis 因三个重复类型导入失败，合并同源导入；移动 Web 完整树实测 139 个非语言代码 chunk，旧表 142 造成未用余量 7 大于门禁 4，重新测量全部 18 个有序路由前缀并收紧上限至 143。
+- 代码或文档变更：三个 local-tasks 文件的 type import、既有移动包预算及两处实测数值登记、手机抽屉英文夹具的 locale 和窄测试接缝登记及本记录；不改变 chunk margin、原测试断言或产品执行逻辑。
+- 验证证据：`.docs/local-tasks-ui-validation/2026-11-09/resume/ci/` 保存三个新候选 job 原始日志、18 路由前缀测量和同命令复跑；全树 focused native-plugin deny-warnings 已通过。后续当前候选完整检查、重建与应用复测的实际状态以同目录 results.md 为准。
+- 失败定位：移动 Web 完整检查 497/498、抽屉单文件 2/3，两次 WebKit 等待英文 Dismiss drawer 超时。逐事件截图显示真实点击已打开中文抽屉；同构建显式 en-US 后英文标签出现且最终 transform 与底部位置正确，因此给现有英文夹具固定 locale，保留原失败证据。checks-04 中 17/18 通过，功能登记检查指出重测后两处 mustContain 数值仍旧，已同步实测登记，随后重新运行最终候选检查。
+- 未解决问题：2fdb208f 的最终 check:changed 正确 base 下 31/32 通过，related 单测扇出 30 分钟超时且有四项超时/失败标记，三相关文件同源定向 37/37 通过，整体仍非 PASS。物理 Pixel9 的新 release APK 安装哈希已读回、已配对并打开本地任务页，但 release 无本 App WebView CDP，实际 DOM 完整 buildId 尚未读回，业务仍 BLOCKED。真实旧库升级、混合版本及逐 REQ/原型状态仍按矩阵继续验收。
+- 下一步：按修复后的提交重建并回归后台终端与本机/SSH路径，最后执行 check:changed，正常推送 PR #76 后观察当前 head CI；保留设备及专用服务到 Goal 结束。
+
 ### 2026-11-09 后台终端速览的缺失 tab 复现与修复（testing）
 
 - 本轮目标：继续统一 Goal，优先定位 ui-13 的新后台终端速览空白；保持 Q1/Q2、现有后台创建行为及原 provider 会话不变。

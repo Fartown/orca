@@ -15,8 +15,7 @@ import {
   localTaskDescendantIds,
   localTaskEffectiveWorkspace
 } from '../../../src/shared/local-tasks/local-task-tree'
-import type { LocalTask } from '../../../src/shared/local-tasks/local-task-types'
-import type { LocalTaskProject } from '../../../src/shared/local-tasks/local-task-types'
+import type { LocalTask, LocalTaskProject } from '../../../src/shared/local-tasks/local-task-types'
 import { localTaskNeedsReview } from '../../../src/shared/local-tasks/local-task-review-items'
 
 // What the phone shows of the library host's judgement. Every state here is the host's; the phone

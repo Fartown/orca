@@ -8,9 +8,8 @@ import { selectExecutionHostDisplayLabel } from '@/lib/execution-host-display-la
 import { getRepoExecutionHostId, normalizeExecutionHostId } from '../../../shared/execution-host'
 import type { Repo } from '../../../shared/repo-types'
 import type { Worktree } from '../../../shared/worktree/types'
-import type { LocalTask } from '../../../shared/local-tasks/local-task-types'
+import type { LocalTask, LocalTaskProject } from '../../../shared/local-tasks/local-task-types'
 import type { LocalTaskLinks } from '../../../shared/local-tasks/local-task-link-types'
-import type { LocalTaskProject } from '../../../shared/local-tasks/local-task-types'
 import { isFolderRepo } from '../../../shared/repo-kind'
 import { isLocalTaskHostInContact } from './local-task-host-contact'
 import {

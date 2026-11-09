@@ -5,8 +5,7 @@ import {
   LOCAL_TASK_TITLE_MAX,
   suggestLocalTaskWorkspaceName
 } from '../../../src/shared/local-tasks/local-task-model'
-import type { LocalTask } from '../../../src/shared/local-tasks/local-task-types'
-import type { LocalTaskProject } from '../../../src/shared/local-tasks/local-task-types'
+import type { LocalTask, LocalTaskProject } from '../../../src/shared/local-tasks/local-task-types'
 import { colors, radii, spacing } from '../theme/mobile-theme'
 import type { LocalTasksApi } from './local-tasks-api'
 import { localTasksCopy } from './local-tasks-copy'

@@ -134,6 +134,7 @@ describeDrawer('the bottom drawer on the page', () => {
         // Reanimated latches media query at import; emulateMedia after goto cannot undo it.
         const page = await browser.newPage({
           viewport: VIEWPORT,
+          locale: 'en-US',
           reducedMotion: 'no-preference'
         })
         const errors = []
@@ -237,7 +238,11 @@ describeDrawer('the device Back key reaching a sheet on the page', () => {
   it('closes the sheet instead of leaving the screen', async () => {
     const browser = await ENGINES[0].launch()
     try {
-      const page = await browser.newPage({ viewport: VIEWPORT, reducedMotion: 'no-preference' })
+      const page = await browser.newPage({
+        viewport: VIEWPORT,
+        locale: 'en-US',
+        reducedMotion: 'no-preference'
+      })
       const errors = []
       page.on('pageerror', (error) => errors.push(`${error.name}: ${error.message}`))
       await page.addInitScript(installShellDouble, {
