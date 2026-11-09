@@ -15,7 +15,8 @@ import {
   readPaneIdentitySnapshot
 } from './helpers/terminal'
 import { worktreeRowSurface } from './worktree-row-locators'
-import { createRestartSession } from './helpers/orca-restart'
+import { dismissSetupScriptPrompts } from './helpers/sidebar-setup-prompt'
+import { attachRepoAndOpenTerminal, createRestartSession } from './helpers/orca-restart'
 import {
   launchManagedWorkspace,
   relaunchManagedApp,
@@ -222,6 +223,7 @@ for (const [kind, census] of [
       await Promise.all(
         [0, 1, 2].map(() => phone.call('worktree.activate', { worktree: `id:${workspace.id}` }))
       )
+      await dismissSetupScriptPrompts(orcaPage)
       await worktreeRowSurface(orcaPage, workspace.id).click()
       await expect.poll(() => declined).toBe(true)
       await orcaPage.evaluate(
@@ -239,7 +241,9 @@ for (const [kind, census] of [
       await censusProbe.evaluate((probe) => {
         probe.fault = false
       })
+      await dismissSetupScriptPrompts(orcaPage)
       await worktreeRowSurface(orcaPage, initialWorktreeId).click()
+      await dismissSetupScriptPrompts(orcaPage)
       await worktreeRowSurface(orcaPage, workspace.id).click()
       await expect.poll(() => getTerminalContent(orcaPage), { timeout: 30_000 }).toContain(marker)
       const after = await orcaPage.evaluate(async (worktreeId) => {
@@ -350,6 +354,157 @@ test('renderer restart retains a saved live terminal through an unanswered attac
   })
   expect(calls.every((call: { sessionId?: string }) => call.sessionId === ptyId)).toBe(true)
   await orcaPage.screenshot({ path: testInfo.outputPath('restart-original-terminal.png') })
+})
+
+test.describe('numeric fallback provider recovery', () => {
+  test.use({ orcaAppExtraEnv: { ORCA_E2E_DAEMON_INIT_DELAY_MS: '600000' } })
+
+  test('phone activation restores the original numeric terminal despite another workspace caching its ID', async ({
+    electronApp,
+    testRepoPath,
+    registerPostElectronShutdownCleanup
+  }, testInfo) => {
+    // The real local-provider fallback must outlast the 60-second daemon startup cap.
+    test.setTimeout(240_000)
+    const orcaPage = await electronApp.firstWindow()
+    await orcaPage.waitForLoadState('domcontentloaded')
+    await orcaPage.waitForFunction(
+      () => window.__store?.getState().workspaceSessionReady === true,
+      null,
+      { timeout: 90_000 }
+    )
+    const initialWorktreeId = await attachRepoAndOpenTerminal(orcaPage, testRepoPath)
+    const recoveryPath = mkdtempSync(path.join(os.tmpdir(), 'orca-numeric-recovery-'))
+    registerPostElectronShutdownCleanup(async () =>
+      rmSync(recoveryPath, { recursive: true, force: true })
+    )
+    const repoId = CreatedRepo.parse(
+      await orcaPage.evaluate(async (recoveryPath) => {
+        const response = await window.api.runtime.call({
+          method: 'repo.add',
+          params: { path: recoveryPath, kind: 'folder' }
+        })
+        if (!response.ok) {
+          throw new Error(response.error.message)
+        }
+        return response.result
+      }, recoveryPath)
+    ).repo.id
+    const workspace = await orcaPage.evaluate(async (repoId) => {
+      const store = window.__store!
+      await store.getState().fetchReposForAllHosts()
+      await store.getState().fetchWorktrees(repoId, { forceLocalOwner: true })
+      const worktree = store.getState().worktreesByRepo[repoId]?.[0]
+      if (!worktree) {
+        throw new Error('Numeric recovery workspace missing')
+      }
+      return { id: worktree.id, path: worktree.path }
+    }, repoId)
+    const tabId = randomUUID()
+    const leafId = randomUUID()
+    const original = await orcaPage.evaluate(
+      async ({ workspace, tabId, leafId }) => {
+        window.__store!.getState().createTab(workspace.id, undefined, undefined, {
+          id: tabId,
+          initialLeafId: leafId,
+          activate: false,
+          recordInteraction: false
+        })
+        return window.api.pty.spawn({
+          cols: 100,
+          rows: 30,
+          cwd: workspace.path,
+          worktreeId: workspace.id,
+          tabId,
+          leafId,
+          sessionId: '900001',
+          initiallyHidden: true
+        })
+      },
+      { workspace, tabId, leafId }
+    )
+    expect(original.id).toMatch(/^\d+$/)
+    expect(original.incarnationId).toBeTruthy()
+    const before = await orcaPage.evaluate(
+      async (id) => (await window.api.pty.listSessions()).find((s) => s.id === id),
+      original.id
+    )
+    expect(before?.rootProcessId).toBeGreaterThan(0)
+    const marker = `NUMERIC_RECOVERY_${randomUUID().replaceAll('-', '')}`
+    await orcaPage.evaluate(
+      ({ id, marker }) =>
+        window.api.pty.writeAccepted(
+          id,
+          `export ORCA_NUMERIC_NONCE=${marker}; echo "$ORCA_NUMERIC_NONCE"\r`,
+          'driving'
+        ),
+      { id: original.id, marker }
+    )
+    await orcaPage.evaluate(
+      ({ workspace, tabId, initialWorktreeId, ptyId }) => {
+        const store = window.__store!
+        const stale = store.getState().createTab(initialWorktreeId, undefined, undefined, {
+          activate: false,
+          recordInteraction: false
+        })
+        const s = store.getState()
+        const layouts = { ...s.terminalLayoutsByTabId }
+        const mounted = { ...s.ptyIdsByTabId, [stale.id]: [ptyId] }
+        delete layouts[tabId]
+        delete mounted[tabId]
+        store.setState({
+          tabsByWorktree: { ...s.tabsByWorktree, [workspace.id]: [] },
+          terminalLayoutsByTabId: layouts,
+          ptyIdsByTabId: mounted
+        })
+      },
+      { workspace, tabId, initialWorktreeId, ptyId: original.id }
+    )
+    const phone = pairMobileClient(await createDesktopMobilePairingOffer(orcaPage))
+    try {
+      for (let activation = 0; activation < 3; activation += 1) {
+        await phone.call('worktree.activate', { worktree: `id:${workspace.id}` })
+      }
+      await worktreeRowSurface(orcaPage, workspace.id).click()
+      await expect
+        .poll(async () => (await getWorktreeTabs(orcaPage, workspace.id)).map((t) => t.id), {
+          timeout: 30_000
+        })
+        .toEqual([tabId])
+      await expect.poll(() => getTerminalContent(orcaPage), { timeout: 30_000 }).toContain(marker)
+      await orcaPage.evaluate(
+        (id) => window.api.pty.writeAccepted(id, 'echo "$ORCA_NUMERIC_NONCE"\r', 'driving'),
+        original.id
+      )
+      const after = await orcaPage.evaluate(
+        async (worktreeId) =>
+          (await window.api.pty.listSessions()).filter((s) => s.worktreeId === worktreeId),
+        workspace.id
+      )
+      expect(after).toHaveLength(1)
+      expect(after[0]).toMatchObject({
+        id: original.id,
+        incarnationId: original.incarnationId,
+        rootProcessId: before?.rootProcessId
+      })
+      const identity = await readPaneIdentitySnapshot(orcaPage)
+      expect(identity?.tabId).toBe(tabId)
+      expect(
+        identity?.panes.some((pane) => pane.leafId === leafId && pane.ptyId === original.id)
+      ).toBe(true)
+      await orcaPage.screenshot({ path: testInfo.outputPath('numeric-original-terminal.png') })
+      await recordTerminalIdentity(testInfo, 'numeric-original-terminal', {
+        tabId,
+        leafId,
+        original,
+        before,
+        after,
+        identity
+      })
+    } finally {
+      phone.dispose()
+    }
+  })
 })
 
 test('SSH Git and folder terminals retain their surfaces through phone activation and desktop restart', async (// oxlint-disable-next-line no-empty-pattern -- The restart fixture owns both isolated launches.

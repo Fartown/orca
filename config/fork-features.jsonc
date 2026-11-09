@@ -92,7 +92,8 @@
         "src/renderer/src/lib/worktree-live-terminal-surface-owners.ts",
         "src/shared/stable-pane-id.ts",
         "src/shared/closed-terminal-tab-tombstones.ts",
-        "src/shared/terminal-tab-id.ts"
+        "src/shared/terminal-tab-id.ts",
+        "src/shared/worktree/id.ts"
       ],
       "policyId": "mobile-terminal-surface-recovery",
       "ownedPaths": [
@@ -211,7 +212,7 @@
         {
           "file": "src/renderer/src/lib/worktree-agent-live-surface-adoption.ts",
           "mustContain": "restoreRecordedLiveTerminalSurface",
-          "why": "Route unowned recorded live PTYs through the feature-owned original-surface admission policy."
+          "why": "Restore host-recorded surfaces despite stale numeric bindings in other workspaces; withhold identity-unsafe numeric fallback."
         },
         {
           "file": "src/renderer/src/lib/worktree-agent-activation-seam.test.ts",
@@ -235,6 +236,7 @@
         "tests/e2e/mobile-terminal-surface-recovery.spec.ts",
         "src/renderer/src/mobile-terminal-surface-recovery/activation-live-inventory.test.ts",
         "src/renderer/src/mobile-terminal-surface-recovery/recorded-live-terminal-surface.test.ts",
+        "src/renderer/src/mobile-terminal-surface-recovery/numeric-terminal-surface-recovery.test.ts",
         "src/renderer/src/lib/worktree-agent-activation-seam.test.ts",
         "src/renderer/src/lib/worktree-agent-activation-gate.test.ts"
       ],
