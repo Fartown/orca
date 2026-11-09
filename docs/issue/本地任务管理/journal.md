@@ -376,6 +376,15 @@ external_ids:
 
 ## 3. 开发记录
 
+### 2026-11-09 移动 Web 握手存储键的 CI 契约修复（testing）
+
+- 本轮目标：处理统一候选 4478ecc 的实际 CI 失败，保留已完成验收和未验边界。
+- 完成内容：本机复现握手测试 42 项中的 1 项失败；生产握手已按登记通告任务视图存储键，测试仍只期待旧键。补齐固定 wire 契约的精确期望，并登记该上游测试接缝及长期功能检查。
+- 代码或文档变更：`mobile/src/mobile-web-shell/bridge/bridge-rpc-client-frames.test.ts` 的存储键期望、fork 功能和架构登记、本 journal。
+- 验证证据：`.docs/local-tasks-ui-validation/2026-11-09/resume/ci/4478-failures/` 有当前 CI 原始日志与合并树等于候选树的证据；`ci/bridge-storage-contract-before-01/` 为本机修前复现。修后定向、完整移动测试与门禁以同目录后续原始结果为准，不用旧构建给新提交判通过。
+- 未解决问题：Android 在 Gradle 下载 10 秒超时前未编译，Linux AppImage 收到 HTTP 504，尚未证明源码故障；新候选仍需重新构建、真实回归、最后 check:changed、正常 push 和 CI。4478 的真机 Q2 原终端页/真实 Codex 聊天及闭合已读分支通过；31 REQ 与 111 原型其余动作继续保留缺口。
+- 下一步：完成修复候选的本地检查与新构建，按最终 SHA/build/host 复测并继续 CI，不自动合入 integration。
+
 ### 2026-11-09 统一候选 CI 复核与移动包预算重测（testing）
 
 - 本轮目标：跟踪已授权推送的统一候选 PR #76，按新候选 CI 原始日志修复失败；保留逐 REQ 与物理手机的未验缺口，不自动合入。
