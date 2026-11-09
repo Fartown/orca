@@ -14,6 +14,7 @@ export const ARTIFACT_SHARE_COMMENT_LIMITS = {
 export const ARTIFACT_SHARE_COMMENTS_SEGMENT = 'comments'
 
 const SourceLine = z.number().int().min(1).max(10_000_000)
+const ARTIFACT_SHARE_COMMENT_CONTEXT_LIMIT = 200
 
 /**
  * Where on the page a comment sits: the rendered block starting at `line`, `offset` characters
@@ -24,7 +25,13 @@ export const ArtifactShareCommentAnchor = z.object({
   line: SourceLine,
   offset: z.number().int().min(0).max(10_000_000),
   length: z.number().int().min(0).max(10_000_000),
-  whole: z.boolean().optional()
+  whole: z.boolean().optional(),
+  /**
+   * Text just before the selection, when the selected text also occurs earlier in its block:
+   * Orca finds a review note's text by its first match on the line, so the note carries enough
+   * of what precedes it to be found at the reader's occurrence.
+   */
+  context: z.string().max(ARTIFACT_SHARE_COMMENT_CONTEXT_LIMIT).optional()
 })
 export type ArtifactShareCommentAnchor = z.infer<typeof ArtifactShareCommentAnchor>
 
