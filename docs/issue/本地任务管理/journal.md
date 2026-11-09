@@ -376,6 +376,15 @@ external_ids:
 
 ## 3. 开发记录
 
+### 2026-11-09 原型内联脚本的 CI 质量修复（testing）
+
+- 本轮目标：修复统一候选 4478ecc 在 React Doctor changed-lines 门禁中的 363 条原型脚本错误，保留原型交互及现有门禁覆盖。
+- 完成内容：为单行分支补齐花括号，使用等价的数组末项、纯谓词查找和临时数组倒序写法；桌面、手机 HTML 的脚本以外内容逐字节不变。没有排除原型文件或更改门禁配置。
+- 代码或文档变更：`interaction/prototype-task-first/desktop.html`、`mobile.html` 的内联 JavaScript 和本记录。
+- 验证证据：`.docs/local-tasks-ui-validation/2026-11-09/resume/ci/prototype-react-doctor-01/` 保留修前 363 条诊断、原始文件、修后四段脚本零诊断及正式 React Doctor 门禁 exit 0。固定日期和随机源后，happy-dom 中 70 个路由、111 个原型状态的生成 DOM 完全一致；首次比较的 4 处随机操作 ID 差异保留原始失败与定位记录。该等价检查不证明浏览器布局或实际 Orca 应用验收通过。
+- 未解决问题：新提交尚需最终构建、本机/SSH/物理手机等实际回归、最后 check:changed 和推送后的新候选 CI；4478 的应用证据与 CI 结论仍仅属于原提交，逐 REQ 与原型矩阵的缺口保留。
+- 下一步：提交质量修复后构建新的统一候选，按现有脚本复测并继续剩余验收；正常推送 PR #76 并观察 CI，禁止自动合入 integration。
+
 ### 2026-11-09 移动 Web 握手存储键的 CI 契约修复（testing）
 
 - 本轮目标：处理统一候选 4478ecc 的实际 CI 失败，保留已完成验收和未验边界。

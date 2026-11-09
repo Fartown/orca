@@ -5778,10 +5778,10 @@
         const termType = (s, text) => {
           while (
             s.term.length &&
-            (s.term[s.term.length - 1] === '' ||
-              /&gt;<\/span> <span class="d">▌/.test(s.term[s.term.length - 1]))
-          )
+            (s.term.at(-1) === '' || /&gt;<\/span> <span class="d">▌/.test(s.term.at(-1)))
+          ) {
             s.term.pop()
+          }
           s.term.push(
             '',
             `<span class="d">&gt;</span> ${esc(text)}`,
@@ -5920,8 +5920,12 @@
             return this.host(this.repo(w.repo).host)
           }
           taskWs(t) {
-            if (t.ws) return this.ws(t.ws)
-            if (t.parent) return this.taskWs(this.task(t.parent))
+            if (t.ws) {
+              return this.ws(t.ws)
+            }
+            if (t.parent) {
+              return this.taskWs(this.task(t.parent))
+            }
             return null
           }
           taskHost(t) {
@@ -5956,7 +5960,9 @@
           // 子任务汇总一行（S9）：数量、会话状态、最新的那条。
           kidsLine(t) {
             const kids = (t.children || []).map((c) => this.task(c)).filter(Boolean)
-            if (!kids.length) return ''
+            if (!kids.length) {
+              return ''
+            }
             const ss = kids.flatMap((k) => this.sessionsOf(k.id))
             const st = !ss.length
               ? '还没有会话'
@@ -5966,13 +5972,15 @@
                   ? `${ss.filter((s) => s.state === 'waiting').length} 个等你回答`
                   : `${ss.filter((s) => s.state === 'working').length} 个工作中`
             const last = [...kids].sort((a, b) => (b.created || 0) - (a.created || 0))[0]
-            const lk = last.created ? last : kids[kids.length - 1]
+            const lk = last.created ? last : kids.at(-1)
             const lt = this.latest(lk)
             return `<div class="t-kids">${ic('corner-down-right')}<span>子任务 ${kids.length} · ${st} · 最新：</span><span class="tid">${lk.id}</span><span class="ell">${esc(lt ? lt.text : '')}</span></div>`
           }
           // 仓库还没有项目时按仓库建一个（桌面上是派活里的一步，手机直接建并记在时间线上）。
           ensureProject(repo) {
-            if (repo.project) return repo.project
+            if (repo.project) {
+              return repo.project
+            }
             const key = repo.id.slice(0, 4).toUpperCase()
             this.d.projects.push({ key, name: repo.id, repo: repo.id })
             repo.project = key
@@ -5987,8 +5995,10 @@
           }
           sesInfo(s) {
             const t = this.task(s.task)
-            if (t && this.offline(t)) return { dot: 'unverifiable', text: '无法确认', cls: 'c-unv' }
-            if (s.state === 'working')
+            if (t && this.offline(t)) {
+              return { dot: 'unverifiable', text: '无法确认', cls: 'c-unv' }
+            }
+            if (s.state === 'working') {
               return {
                 dot: 'working',
                 text:
@@ -5999,35 +6009,44 @@
                     : `工作中 · ${s.since}`,
                 cls: 'c-w'
               }
-            if (s.state === 'waiting')
+            }
+            if (s.state === 'waiting') {
               return {
                 dot: 'waiting',
                 text: s.reason === 'permission' ? '等你批准' : '等你回答',
                 cls: 'c-q'
               }
-            if (s.state === 'done') return { dot: 'done', text: '做完一轮', cls: 'muted' }
+            }
+            if (s.state === 'done') {
+              return { dot: 'done', text: '做完一轮', cls: 'muted' }
+            }
             return { dot: 'ended', text: '已结束', cls: 'faint' }
           }
           // 方案 §7.2：回写 → 最后一句话 → 只有会话状态。
           latest(t) {
             const p = t.progress[0]
             const s = this.leadSession(t)
-            if (p)
+            if (p) {
               return {
                 text: p.text + (this.needsOf(t, p) || ''),
                 src: p.source === 'orca' ? 'Orca 生成' : '回写',
                 time: p.time
               }
+            }
             // 刚回复过、智能体还没说话：卡片写明收到了你的话，不冒充回写。
-            if (s && s.replied && !s.last)
+            if (s && s.replied && !s.last) {
               return { text: `${s.agent} 收到你的话，工作中`, src: '', time: '刚刚' }
-            if (s && s.last)
+            }
+            if (s && s.last) {
               return {
                 text: s.last,
                 src: '最后一句话',
                 time: s.state === 'waiting' ? s.since : '刚刚'
               }
-            if (s) return { text: '会话已启动 · 等第一条回写', src: '', time: s.since, dim: true }
+            }
+            if (s) {
+              return { text: '会话已启动 · 等第一条回写', src: '', time: s.since, dim: true }
+            }
             return null
           }
           // 「验收：…」只在任务还待验收时算数；通过或打回后不再显示。
@@ -6037,12 +6056,19 @@
           needsYou() {
             const out = []
             for (const t of this.d.tasks) {
-              if (t.parent || t.snoozed || t.status === 'done' || this.offline(t)) continue
+              if (t.parent || t.snoozed || t.status === 'done' || this.offline(t)) {
+                continue
+              }
               const s = this.treeSessions(t).find((x) => x.state === 'waiting')
-              if (s) out.push({ t, s, kind: 'answer' })
+              if (s) {
+                out.push({ t, s, kind: 'answer' })
+              }
             }
-            for (const t of this.d.tasks)
-              if (!t.parent && !t.snoozed && t.status === 'review') out.push({ t, kind: 'review' })
+            for (const t of this.d.tasks) {
+              if (!t.parent && !t.snoozed && t.status === 'review') {
+                out.push({ t, kind: 'review' })
+              }
+            }
             return out
           }
 
@@ -6058,23 +6084,25 @@
             this.s.preview = null
           }
           back() {
-            if (this.s.stack.length) this.s.route = this.s.stack.pop()
-            else this.s.route = { name: 'home' }
+            this.s.route = this.s.stack.length ? this.s.stack.pop() : { name: 'home' }
             this.s.sheet = null
           }
           toast(text, icon = 'check') {
             this.s.toast = { text, icon }
             clearTimeout(this.toastTimer)
-            if (!SHOT)
+            if (!SHOT) {
               this.toastTimer = setTimeout(() => {
                 this.s.toast = null
                 this.render()
               }, 2600)
+            }
           }
 
           // ---------- conversations ----------
           conv(id) {
-            if (!this.convs[id]) this.convs[id] = this.buildConv(id)
+            if (!this.convs[id]) {
+              this.convs[id] = this.buildConv(id)
+            }
             return this.convs[id]
           }
           buildConv(id) {
@@ -6155,7 +6183,7 @@
             // 这台手机上现场发生的对话（派活输入框、展开对话），排在今天最前面。
             Object.values(this.convs)
               .filter((c) => !D.conversations.some((x) => x.id === c.id) && c.msgs.length)
-              .reverse()
+              .toReversed()
               .forEach((c) => {
                 const first = c.msgs.find((m) => m.type === 'me')
                 const ids = c.msgs
@@ -6180,10 +6208,11 @@
               if (c.id === 'c-today' && this.convs['c-today']) {
                 const p = this.convs['c-today'].msgs.find((m) => m.proposal)
                 const keys = this.convs['c-today'].msgs.filter((m) => m.keys).flatMap((m) => m.keys)
-                if (p && p.proposal.done)
+                if (p && p.proposal.done) {
                   result = p.proposal.cancelled
                     ? '提案已取消'
                     : `派出 ${keys.map((k) => this.cards[k].task).join('、')}`
+                }
               }
               list.push({ ...c, result })
             }
@@ -6214,7 +6243,9 @@
             let newWs = false
             if (target.type === 'ws') {
               w = this.ws(target.id)
-              if (w.task) parent = w.task
+              if (w.task) {
+                parent = w.task
+              }
             }
             if (target.type === 'task') {
               const pt = this.task(target.id)
@@ -6222,7 +6253,9 @@
               parent = pt.id
             }
             const repo = w ? this.repo(w.repo) : this.repo(target.id)
-            if (target.type === 'repo') newWs = true
+            if (target.type === 'repo') {
+              newWs = true
+            }
             const key = parent ? this.task(parent).project : repo.project
             const id = this.nextId(key)
             ;(this.used[key] = this.used[key] || []).push(+id.split('-')[1])
@@ -6315,8 +6348,9 @@
                 }
               ]
             }
-            if (!parent) w.task = id
-            else {
+            if (!parent) {
+              w.task = id
+            } else {
               const pt = this.task(parent)
               pt.children = [...(pt.children || []), id]
             }
@@ -6358,8 +6392,12 @@
           }
           // 仓库还没有项目：派活停在「建一个？」这一步（和桌面 d3-noproject 一样），确认后才建项目并派活。
           repoOfTarget(tg) {
-            if (tg.type === 'repo') return this.repo(tg.id)
-            if (tg.type === 'ws') return this.repo(this.ws(tg.id).repo)
+            if (tg.type === 'repo') {
+              return this.repo(tg.id)
+            }
+            if (tg.type === 'ws') {
+              return this.repo(this.ws(tg.id).repo)
+            }
             return null
           }
           projOk(key) {
@@ -6383,7 +6421,9 @@
               )
             } else {
               conv.msgs.forEach((m) => {
-                if (m.type === 'cards') m.keys = m.keys.map((k) => (k === key ? nc.key : k))
+                if (m.type === 'cards') {
+                  m.keys = m.keys.map((k) => (k === key ? nc.key : k))
+                }
               })
               this.s.scrollBottom = true
             }
@@ -6429,8 +6469,9 @@
                   origin: comp
                 }
                 this.cards[card.key] = card
-                if (comp === 'home') this.s.dispatched.unshift(card.key)
-                else {
+                if (comp === 'home') {
+                  this.s.dispatched.unshift(card.key)
+                } else {
                   conv.msgs.push({ type: 'cards', keys: [card.key] })
                   this.s.scrollBottom = true
                 }
@@ -6448,8 +6489,11 @@
                 { type: 'me', text, chips: clone(c.chips), time: '刚刚' },
                 { type: 'cards', keys: [card.key] }
               )
-              if (comp === 'home') this.s.dispatched.unshift(card.key)
-              else this.s.scrollBottom = true
+              if (comp === 'home') {
+                this.s.dispatched.unshift(card.key)
+              } else {
+                this.s.scrollBottom = true
+              }
               this.s.comp[comp] = { chips: [], text: '' }
               this.render()
               return card
@@ -6459,22 +6503,27 @@
               { type: 'thinking' }
             )
             this.s.comp[comp] = { chips: [], text: '' }
-            if (comp === 'home') this.go({ name: 'chat' })
+            if (comp === 'home') {
+              this.go({ name: 'chat' })
+            }
             this.s.scrollBottom = true
             const reply = () => {
               conv.msgs = conv.msgs.filter((m) => m.type !== 'thinking')
-              if (/PR|合/.test(text)) conv.msgs.push(this.proposalMsg())
-              else
+              if (/PR|合/.test(text)) {
+                conv.msgs.push(this.proposalMsg())
+              } else {
                 conv.msgs.push({
                   type: 'bot',
                   ro: D.proposal.readOnly.slice(0, 2),
                   text: '这句话没说在哪做，我也没看出要拆成几件事。要派活的话，@ 一个工作区或仓库；想让我先找，就说清楚找什么。'
                 })
+              }
               this.s.scrollBottom = true
               this.render()
             }
-            if (SHOT) reply()
-            else {
+            if (SHOT) {
+              reply()
+            } else {
               this.render()
               setTimeout(reply, 1400)
             }
@@ -6491,13 +6540,19 @@
               const pt = this.task(c.parent)
               pt.children = pt.children.filter((x) => x !== t.id)
             }
-            if (w.task === t.id) delete w.task
+            if (w.task === t.id) {
+              delete w.task
+            }
             const wsNote = c.newWs
               ? `新建的工作区 ${w.name} 留着，不用可以删。`
               : `${w.name} 原本就有，没动。`
             c.undoNote = `停了 ${s.agent} 会话，删了 ${t.id}。${wsNote}${c.origin === 'home' ? '原话已放回输入框。' : ''}`
-            if (c.origin === 'home') this.s.comp.home = { chips: c.chips, text: c.text }
-            if (this.s.route.name === 'task' && this.s.route.id === t.id) this.back()
+            if (c.origin === 'home') {
+              this.s.comp.home = { chips: c.chips, text: c.text }
+            }
+            if (this.s.route.name === 'task' && this.s.route.id === t.id) {
+              this.back()
+            }
             this.render()
           }
           confirmProposal(msg) {
@@ -6530,8 +6585,9 @@
           openPeek(sid) {
             this.s.sheet = { name: 'peek', sid, reply: '' }
             const s = this.ses(sid)
-            if (s && !this.offline(this.task(s.task)) && s.state !== 'ended')
+            if (s && !this.offline(this.task(s.task)) && s.state !== 'ended') {
               this.s.focus = 'peek-reply'
+            }
           }
           canSend(s) {
             return !this.offline(this.task(s.task)) && s.state !== 'ended'
@@ -6540,9 +6596,11 @@
           sendToSession(s, txt) {
             const t = this.task(s.task)
             const wasWaiting = s.state === 'waiting'
-            if (s.view === 'chat')
+            if (s.view === 'chat') {
               s.chat.push({ who: 'me', time: '刚刚', text: txt, delivered: true })
-            else termType(s, txt)
+            } else {
+              termType(s, txt)
+            }
             s.state = 'working'
             s.since = '刚刚'
             s.last = ''
@@ -6561,7 +6619,9 @@
               s.askedInReview = true
               if (s.id === 's-12') {
                 const answer = () => {
-                  if (s.state !== 'working' || s.view !== 'terminal') return
+                  if (s.state !== 'working' || s.view !== 'terminal') {
+                    return
+                  }
                   const spin = s.term.pop()
                   s.term.push(
                     ...D.reviewAnswer.term.map(
@@ -6573,35 +6633,43 @@
                   s.last = D.reviewAnswer.text
                   s.replied = false
                 }
-                if (SHOT) answer()
-                else
+                if (SHOT) {
+                  answer()
+                } else {
                   setTimeout(() => {
                     answer()
                     this.render()
                   }, 2200)
+                }
               }
             }
             if (wasWaiting && s.id === 's-38') {
               const reply = () => {
-                if (s.state !== 'working') return
+                if (s.state !== 'working') {
+                  return
+                }
                 const said = `好，未关联任务的工作区放在${txt.includes('最上面') ? '最上面' : '最下面'}，组头写「未关联任务」。我改一下。`
                 s.chat.push({ who: 'agent', time: '刚刚', text: said })
                 s.last = said
                 s.replied = false
               }
-              if (SHOT) reply()
-              else
+              if (SHOT) {
+                reply()
+              } else {
                 setTimeout(() => {
                   reply()
                   this.render()
                 }, 2200)
+              }
             }
           }
           peekSend() {
             const sh = this.s.sheet
             const txt = (sh.reply || '').trim()
             const s = this.ses(sh.sid)
-            if (!txt || !this.canSend(s)) return
+            if (!txt || !this.canSend(s)) {
+              return
+            }
             this.sendToSession(s, txt)
             sh.reply = ''
             this.s.focus = 'peek-reply'
@@ -6653,18 +6721,20 @@
             for (const { s } of targets) {
               s.state = 'working'
               s.since = '刚刚'
-              if (s.view === 'chat')
+              if (s.view === 'chat') {
                 s.chat.push({ who: 'me', time: '刚刚', text: `打回：${reason}`, delivered: true })
-              else termType(s, `打回：${reason}`)
+              } else {
+                termType(s, `打回：${reason}`)
+              }
             }
-            if (targets.length)
+            if (targets.length) {
               t.timeline.push({
                 who: '你',
                 kind: 'you',
                 time: '刚刚',
                 html: `打回原因作为下一句指令发给了 ${names} · 已送达`
               })
-            else {
+            } else {
               const w = this.taskWs(t)
               if (w) {
                 this.d.sessions.push({
@@ -6751,7 +6821,9 @@
             let parent = null
             if (f.where === 'existing') {
               w = this.ws(f.pick)
-              if (w.task) parent = w.task
+              if (w.task) {
+                parent = w.task
+              }
             }
             if (f.where === 'new') {
               const r = this.repo(f.repo)
@@ -6774,7 +6846,9 @@
                 { who: '你', kind: 'you', sys: true, time: '刚刚', html: '在手机上新建任务' }
               ]
             }
-            if (!existingTask) this.d.tasks.push(t)
+            if (!existingTask) {
+              this.d.tasks.push(t)
+            }
             const h = w && this.wsHost(w)
             if (w) {
               if (parent) {
@@ -6828,7 +6902,7 @@
                   html: `开了 ${f.agent} 会话，第一句「${esc(f.prompt)}」直接发送`
                 })
               }
-              if (t.status !== 'doing')
+              if (t.status !== 'doing') {
                 t.timeline.push({
                   who: '规则',
                   kind: 'rule',
@@ -6837,8 +6911,11 @@
                   html: `状态 ${STATUS_NAME[t.status || 'todo']} → <b>进行中</b>`,
                   rule: '开始做'
                 })
+              }
               t.status = 'doing'
-            } else t.status = t.status || 'todo'
+            } else {
+              t.status = t.status || 'todo'
+            }
             return { t, w, h }
           }
           createFromForm() {
@@ -6855,7 +6932,9 @@
           // views
           view() {
             const r = this.s.route
-            if (r.name === 'task' && !this.task(r.id)) this.s.route = { name: 'home' }
+            if (r.name === 'task' && !this.task(r.id)) {
+              this.s.route = { name: 'home' }
+            }
             switch (this.s.route.name) {
               case 'task':
                 return this.vTask(this.s.route.id)
@@ -6883,7 +6962,9 @@
               const w = this.ws(ch.id)
               label = `${w.repo}/${w.name}`
               const h = this.wsHost(w)
-              if (h.kind !== 'local') host = h.name
+              if (h.kind !== 'local') {
+                host = h.name
+              }
             }
             if (ch.type === 'repo') {
               icon = 'folder'
@@ -6919,38 +7000,46 @@
           }
           hint(comp) {
             const c = this.s.comp[comp]
-            if (!c.chips.length)
+            if (!c.chips.length) {
               return c.text.trim()
                 ? `${ic('sparkles', 's14')}<span>没有 @ 在哪做：交给调度智能体，先出方案，你确认后才动手</span>`
                 : ''
+            }
             const tg = c.chips.filter((ch) => ch.type !== 'host')
-            if (tg.length !== 1 || c.chips.length !== 1)
+            if (tg.length !== 1 || c.chips.length !== 1) {
               return `${ic('sparkles', 's14')}<span>提及了不止一处：交给调度智能体，先出方案</span>`
+            }
             const ch = tg[0]
             if (ch.type === 'ws') {
               const w = this.ws(ch.id)
               const h = this.wsHost(w)
-              if (w.task)
+              if (w.task) {
                 return `${ic('corner-down-right', 's14')}<span>${w.name} 属于 ${w.task}，发出后建成它的子任务，会话开在 ${w.name}</span>`
-              if (!this.repo(w.repo).project)
+              }
+              if (!this.repo(w.repo).project) {
                 return `${ic('folder', 's14')}<span>仓库 ${w.repo} 还没有项目：发出后先问要不要建项目，再在 ${w.name} 建任务</span>`
+              }
               return `${ic('play', 's14')}<span>发出后直接派活：在 ${w.name}（${h.name}）建任务，开 Claude 会话</span>`
             }
             if (ch.type === 'repo') {
-              if (!this.repo(ch.id).project)
+              if (!this.repo(ch.id).project) {
                 return `${ic('folder', 's14')}<span>仓库 ${ch.id} 还没有项目：发出后先问要不要建项目，再新建工作区来做</span>`
+              }
               return `${ic('play', 's14')}<span>发出后直接派活：在 ${ch.id}（${this.host(this.repo(ch.id).host).name}）新建工作区，开 Claude 会话</span>`
             }
             const t = this.task(ch.id)
-            if (!this.taskWs(t))
+            if (!this.taskWs(t)) {
               return `${ic('sparkles', 's14')}<span>「${esc(t.title)}」还没有工作区：交给调度智能体，先出方案</span>`
+            }
             return `${ic('corner-down-right', 's14')}<span>发出后建成「${esc(t.title)}」的子任务，会话开在 ${this.taskWs(t).name}</span>`
           }
 
           // ---------- 已派活卡 ----------
           vDisp(key) {
             const c = this.cards[key]
-            if (!c) return ''
+            if (!c) {
+              return ''
+            }
             if (c.kind === 'noproj') {
               const h = this.host(this.repo(c.repo).host)
               return `<div class="disp noproj" data-disp="${key}">
@@ -6999,10 +7088,12 @@
       </div>`
           }
           genTag(t, short = false) {
-            if (t.pendingTitle)
+            if (t.pendingTitle) {
               return `<span class="gen pending">${ic('sparkles')}${short ? '起标题中' : '正在起短标题'}</span>`
-            if (t.freshTitle)
+            }
+            if (t.freshTitle) {
               return `<span class="gen">${ic('sparkles')}${short ? '新标题' : '已换成生成的标题，点开可以改'}</span>`
+            }
             return ''
           }
 
@@ -7031,16 +7122,18 @@
             const s = this.leadSession(t)
             const lt = this.latest(t)
             let meta = `<span class="tid">${t.id}</span>`
-            if (t.status === 'done')
+            if (t.status === 'done') {
               meta += `<span class="sep">·</span><span>${t.doneNote || '完成'}</span>`
-            else if (w)
+            } else if (w) {
               meta += `<span class="sep">·</span><span class="ws">${w.name}</span><span class="sep">·</span><span>${h.name}</span>`
-            else meta += '<span class="sep">·</span><span>还没有工作区</span>'
+            } else {
+              meta += '<span class="sep">·</span><span>还没有工作区</span>'
+            }
             let foot = ''
             if (t.status !== 'done') {
-              if (off)
+              if (off) {
                 foot = `${stateDot('unverifiable', 12)}<span class="c-unv">${h.name} 未连接 · 上次进展 ${lt ? lt.time : ''}</span>`
-              else if (s) {
+              } else if (s) {
                 const info = this.sesInfo(s)
                 foot = `${stateDot(info.dot, 12)}<span>${s.agent} <span class="${info.cls}">${info.text}</span></span>${lt && lt.src ? `<span class="r">${lt.src} · ${lt.time}</span>` : ''}`
               }
@@ -7094,19 +7187,20 @@
               .join('')
             const nyRow = (it) => {
               const t = it.t
-              if (it.kind === 'review')
+              if (it.kind === 'review') {
                 return `<div class="lt-row" data-act="open-task" data-id="${t.id}">${statusIcon('review')}<div class="row-main"><div class="lt-l1"><span class="tid">${t.id}</span><span class="kind c-ok">待验收</span><span class="sp"></span><span class="t-time">${t.updated}</span></div><div class="lt-l2">${esc(t.title)} · PR #${t.merge.pr} 已合并，等你验收</div></div></div>`
+              }
               return `<div class="lt-row" data-act="open-task" data-id="${t.id}">${stateDot('waiting', 16)}<div class="row-main"><div class="lt-l1"><span class="tid">${t.id}</span><span class="kind c-q">等你回答</span><span class="sp"></span><span class="t-time">${it.s.since}</span></div><div class="lt-l2">${it.s.agent}：${esc(it.s.last)}</div></div></div>`
             }
             // 最新进展：需要你之外、最近有回写的那条。
-            const latestTask = this.d.tasks.filter(
+            const latestTask = this.d.tasks.find(
               (t) =>
                 !t.parent &&
                 t.status === 'doing' &&
                 !ny.some((x) => x.t.id === t.id) &&
                 t.progress.length &&
                 !this.offline(t)
-            )[0]
+            )
             const latestRow = latestTask
               ? (() => {
                   const lt = this.latest(latestTask)
@@ -7143,24 +7237,26 @@
               .sort((a, b) => (b.created || 0) - (a.created || 0))
             const tops = allTops.filter((t) => !nyIds.has(t.id))
             const group = (st, name, items, foldable) => {
-              if (!items.length) return ''
+              if (!items.length) {
+                return ''
+              }
               const fold = foldable && this.s.foldDone
               return `<div class="sec ${foldable ? 'clickable' : ''} ${fold ? 'collapsed' : ''}" data-anchor="sec-${st}" ${foldable ? 'data-act="fold-done"' : ''}>${foldable ? ic('chevron-down', 'tog') : ''}${statusIcon(st, 14)}${name}<span class="n">${items.length}</span></div>
           ${fold ? '' : `<div class="list-card">${items.map((t) => this.vCard(t)).join('')}</div>`}`
             }
             let body
-            if (seg === 'need')
+            if (seg === 'need') {
               body = ny.length
                 ? `<div class="list-card" style="margin-top:12px">${ny.map((it) => this.vNy(it)).join('')}</div>`
                 : '<div class="ses-empty" style="padding:24px 16px;text-align:center">没有在等你的</div>'
-            else if (seg === 'doing')
+            } else if (seg === 'doing') {
               body = group(
                 'doing',
                 '进行中',
                 allTops.filter((t) => t.status === 'doing'),
                 false
               )
-            else
+            } else {
               body = `${ny.length ? `<div class="sec" data-anchor="sec-ny">${ic('bell', 's14 c-q')}需要你<span class="n attn">${ny.length}</span></div><div class="list-card">${ny.map((it) => this.vNy(it)).join('')}</div>` : ''}
         ${[
           ['doing', '进行中'],
@@ -7177,6 +7273,7 @@
             )
           )
           .join('')}`
+            }
             const hint = this.hint('home')
             const segBtn = (k, name, n) =>
               `<button class="${seg === k ? 'on' : ''}" data-act="tseg" data-v="${k}">${name}${n != null ? `<span class="n">${n}</span>` : ''}</button>`
@@ -7235,15 +7332,20 @@
           }
           vResult(t) {
             const r = t.result
-            if (!r) return ''
-            if (r.kind === 'pass')
+            if (!r) {
+              return ''
+            }
+            if (r.kind === 'pass') {
               return `<div class="result-band">${ic('circle-check')}<div><div>你通过了验收 · 刚刚</div><div class="s">任务移到完成。会话不受影响，要收尾可以在会话里接着说。</div></div></div>`
+            }
             return `<div class="result-band">${ic('undo-2', 'c-q')}<div><div>已打回 · 刚刚</div><div class="s">原因记成评论${r.agent ? `，并作为下一句指令发给 ${r.agent}` : ''}。</div>${r.agent ? `<div class="dlv" style="margin-top:4px">${ic('check-check')}已送达 · 刚刚</div>` : ''}</div></div>`
           }
           // 工作区一行：工作区 · 主机 · 改动 · PR，没有的项不显示；点开有「打开工作区」「查看更改」。
           vWsLine(t) {
             const w = this.taskWs(t)
-            if (!w) return `<div class="ws-line faint">${ic('git-branch', 's12')}还没有工作区</div>`
+            if (!w) {
+              return `<div class="ws-line faint">${ic('git-branch', 's12')}还没有工作区</div>`
+            }
             const h = this.wsHost(w)
             const off = !h.online
             const parts = [
@@ -7253,23 +7355,32 @@
                 `${off ? stateDot('unverifiable', 10) : '<span class="host-dot"></span>'}${h.name}${off ? ' 未连接' : ''}`
               ]
             ]
-            if (w.diff)
+            if (w.diff) {
               parts.push([
                 '',
                 `${w.diff.files} 文件 <span class="c-ok">+${w.diff.add}</span> <span class="c-del">−${w.diff.del}</span>`
               ])
-            if (w.pr) parts.push(['', `${ic('git-merge', 's12')}${esc(w.pr.note)}`])
-            if (t.parent) parts.push(['faint', '用上级的'])
+            }
+            if (w.pr) {
+              parts.push(['', `${ic('git-merge', 's12')}${esc(w.pr.note)}`])
+            }
+            if (t.parent) {
+              parts.push(['faint', '用上级的'])
+            }
             // The dot travels with its item so a wrapped line never starts with a separator.
             return `<div class="ws-line" data-act="ws-open" data-id="${t.id}">${ic('git-branch', 's12')}${parts.map(([cls, inner], i) => `<span class="i ${cls}">${i ? '<span class="sep">·</span>' : ''}${inner}</span>`).join('')}</div>`
           }
           // 一个主按钮，按状态变：没有工作区 → 开始做；有工作区且不是待验收 → 开会话；待验收 → 验收；完成 / 取消 → 没有。
           vPrimary(t, w, h, off) {
-            if (t.status === 'done' || t.status === 'canceled') return ''
-            if (!w)
+            if (t.status === 'done' || t.status === 'canceled') {
+              return ''
+            }
+            if (!w) {
               return `<button class="btn primary" data-act="startwork-open" data-id="${t.id}">${ic('play')}开始做</button>`
-            if (t.status === 'review')
+            }
+            if (t.status === 'review') {
               return `<button class="btn primary" data-act="scroll-accept" data-id="${t.id}">${ic('check')}验收</button>`
+            }
             return `<button class="btn primary" data-act="start-open" data-id="${t.id}" ${off ? 'disabled' : ''}>${ic('plus')}开会话</button>${off ? `<span class="faint" style="font-size:12px;align-self:center">${h.name} 未连接，恢复联系后才能开</span>` : ''}`
           }
           // 「现在」卡：待验收的验收条在最上面，然后是在等你什么、最新进展、每个会话一行。
@@ -7482,7 +7593,7 @@
           }
           // 等你回答的聊天：最后一条提问带的选项。
           askOptions(s) {
-            const last = s.view === 'chat' && s.chat.length ? s.chat[s.chat.length - 1] : null
+            const last = s.view === 'chat' && s.chat.length ? s.chat.at(-1) : null
             return s.state === 'waiting' && this.canSend(s) && last && last.ask && last.options
               ? last.options
               : []
@@ -7493,8 +7604,9 @@
               : ''
           }
           vChatMsg(m, s) {
-            if (m.who === 'tool')
+            if (m.who === 'tool') {
               return `<div class="msg-tool">${ic('files', 's12')}${esc(m.text)}</div>`
+            }
             const who = m.who === 'me' ? '你' : s.agent
             return `<div class="msg ${m.who === 'me' ? 'me' : 'agent'} ${m.ask ? 'ask' : ''}"><div class="who">${who} · ${m.time}</div><div class="bub">${esc(m.text)}</div>${m.delivered ? `<div class="dlv">${ic('check-check')}已送达 · 刚刚</div>` : ''}</div>`
           }
@@ -7529,12 +7641,15 @@
             const meta = this.histList().find((c) => c.id === conv.id)
             const msgs = conv.msgs
               .map((m, mi) => {
-                if (m.type === 'me')
+                if (m.type === 'me') {
                   return `<div class="msg me"><div class="bub">${(m.chips || []).map((ch) => this.chipHTML(ch)).join(' ')} ${esc(m.text)}</div><div class="who">你 · ${m.time}</div></div>`
-                if (m.type === 'thinking')
+                }
+                if (m.type === 'thinking') {
                   return `<div class="bot"><div class="bot-av">${ic('sparkles')}</div><div class="bot-main"><div class="bot-who"><b>调度</b>· Claude</div><span class="thinking">${spinner(14)}只读查询中：orca worktree list、PR 状态…</span></div></div>`
-                if (m.type === 'cards')
+                }
+                if (m.type === 'cards') {
                   return `<div style="display:flex;flex-direction:column;gap:8px">${m.keys.map((k) => this.vDisp(k)).join('')}</div>`
+                }
                 return `<div class="bot"><div class="bot-av">${ic('sparkles')}</div><div class="bot-main"><div class="bot-who"><b>调度</b>· Claude · 跑在 MacBook Pro</div>
           ${m.ro ? `<div class="ro-list"><div class="h">${ic('eye', 's12')}只读查了这些，没改任何东西</div>${m.ro.map((x) => `<div class="li"><div><span class="${/^orca /.test(x.cmd) ? 'mono' : ''}">${esc(x.cmd)}</span><div class="out">${esc(x.out)}</div></div></div>`).join('')}${m.skipped ? `<div class="li skip"><div>${stateDot('unverifiable', 10)} ${esc(m.skipped)}</div></div>` : ''}</div>` : ''}
           ${m.text ? `<div class="bot-text">${esc(m.text)}</div>` : ''}
@@ -7593,22 +7708,25 @@
                 const rows = this.d.workspaces.filter(
                   (w) => w.repo === r.id && (!q || `${w.repo}/${w.name}`.includes(q))
                 )
-                if (!rows.length) return ''
-                return (
-                  `<div class="wgroup">${ic(h.kind === 'local' ? 'laptop' : 'server', 's12')}${r.id} · ${h.name}${h.online ? '' : `<span class="c-unv" style="margin-left:auto;font-weight:500">未连接</span>`}</div>` +
-                  rows
-                    .map((w) => {
-                      const owner = w.task && this.task(w.task)
-                      let sub = '空闲'
-                      if (!h.online)
-                        sub = `${stateDot('unverifiable', 10)}${h.name} 未连接 · ${h.lost}`
-                      else if (owner) sub = `属于 ${owner.id} · 会建成它的子任务`
-                      else if (w.pr) sub = w.pr.note
-                      else if (w.primary) sub = '主工作区'
-                      return `<div class="wpick ${h.online ? '' : 'dis'} ${f.pick === w.id ? 'on' : ''}" data-act="${h.online ? 'f-pick' : 'noop'}" data-form="${fk}" data-v="${w.id}"><span class="radio ${f.pick === w.id ? 'on' : ''}"></span><div class="row-main"><div class="mt">${w.name}</div><div class="ms">${sub}</div></div></div>`
-                    })
-                    .join('')
-                )
+                if (!rows.length) {
+                  return ''
+                }
+                return `<div class="wgroup">${ic(h.kind === 'local' ? 'laptop' : 'server', 's12')}${r.id} · ${h.name}${h.online ? '' : `<span class="c-unv" style="margin-left:auto;font-weight:500">未连接</span>`}</div>${rows
+                  .map((w) => {
+                    const owner = w.task && this.task(w.task)
+                    let sub = '空闲'
+                    if (!h.online) {
+                      sub = `${stateDot('unverifiable', 10)}${h.name} 未连接 · ${h.lost}`
+                    } else if (owner) {
+                      sub = `属于 ${owner.id} · 会建成它的子任务`
+                    } else if (w.pr) {
+                      sub = w.pr.note
+                    } else if (w.primary) {
+                      sub = '主工作区'
+                    }
+                    return `<div class="wpick ${h.online ? '' : 'dis'} ${f.pick === w.id ? 'on' : ''}" data-act="${h.online ? 'f-pick' : 'noop'}" data-form="${fk}" data-v="${w.id}"><span class="radio ${f.pick === w.id ? 'on' : ''}"></span><div class="row-main"><div class="mt">${w.name}</div><div class="ms">${sub}</div></div></div>`
+                  })
+                  .join('')}`
               })
               .join('')
             return groups || '<div class="ses-empty">没有匹配的工作区</div>'
@@ -7625,13 +7743,15 @@
       </div>`
           }
           formSummary(f) {
-            if (f.where === 'later')
+            if (f.where === 'later') {
               return { ok: !!f.title.trim(), label: '创建', hint: '只建任务，之后再开始做' }
+            }
             const agent = f.agent === 'none' ? null : f.agent
             if (f.where === 'existing') {
               const w = f.pick && this.ws(f.pick)
-              if (!w)
+              if (!w) {
                 return { ok: false, label: agent ? '创建并开工' : '创建', hint: '选一个工作区' }
+              }
               const h = this.wsHost(w)
               return {
                 ok: !!f.title.trim(),
@@ -7707,11 +7827,15 @@
           // ---------- overlays ----------
           overlayView() {
             let html = ''
-            if (this.s.preview) html += this.vPreview(this.s.preview)
-            if (this.s.sheet)
+            if (this.s.preview) {
+              html += this.vPreview(this.s.preview)
+            }
+            if (this.s.sheet) {
               html += `<div class="scrim" data-act="close-sheet"></div>${this.vSheet(this.s.sheet)}`
-            if (this.s.toast)
+            }
+            if (this.s.toast) {
               html += `<div class="toast">${ic(this.s.toast.icon, 's14')}${esc(this.s.toast.text)}</div>`
+            }
             return html
           }
           vPreview(pv) {
@@ -7864,10 +7988,11 @@
                 })
               )
             const add = (key, name, rows) => {
-              if ((sh.tab === 'all' || sh.tab === key) && rows.length)
+              if ((sh.tab === 'all' || sh.tab === key) && rows.length) {
                 groups.push(
                   `<div class="m-group" data-anchor="mg-${key}">${name}<span class="n">${rows.length}</span></div><div class="card" style="margin:0">${rows.join('')}</div>`
                 )
+              }
             }
             add('ws', '工作区', wsRows)
             add('repo', '仓库', repoRows)
@@ -8031,11 +8156,15 @@
 
           // ======================================================================
           render() {
-            if (!this.el) return
+            if (!this.el) {
+              return
+            }
             const vp = this.el.querySelector('.viewport')
             const ov = this.el.querySelector('.overlay')
             const sc = vp.querySelector('.scroll')
-            if (sc && this.lastRoute) this.scrollMem[this.routeKey(this.lastRoute)] = sc.scrollTop
+            if (sc && this.lastRoute) {
+              this.scrollMem[this.routeKey(this.lastRoute)] = sc.scrollTop
+            }
             const sb = ov.querySelector('.sheet-body')
             const sheetTop =
               sb && this.lastSheet === (this.s.sheet && this.s.sheet.name) ? sb.scrollTop : 0
@@ -8056,19 +8185,26 @@
               .classList.toggle('on-card', this.s.route.name === 'session')
             const sc2 = vp.querySelector('.scroll')
             const mem = this.scrollMem[this.routeKey(this.s.route)]
-            if (sc2 && mem) sc2.scrollTop = mem
+            if (sc2 && mem) {
+              sc2.scrollTop = mem
+            }
             if (sc2 && this.s.scrollBottom) {
               sc2.scrollTop = sc2.scrollHeight
               this.s.scrollBottom = false
             }
             if (sc2 && this.s.scrollTo) {
               const a = sc2.querySelector(`[data-anchor="${this.s.scrollTo}"]`)
-              if (a) sc2.scrollTop = offsetWithin(a, sc2) - 8
+              if (a) {
+                sc2.scrollTop = offsetWithin(a, sc2) - 8
+              }
               this.s.scrollTo = null
             }
             const sb2 = ov.querySelector('.sheet-body')
-            if (sb2 && sb2.hasAttribute('data-stick-bottom')) sb2.scrollTop = sb2.scrollHeight
-            else if (sb2 && sheetTop) sb2.scrollTop = sheetTop
+            if (sb2 && sb2.hasAttribute('data-stick-bottom')) {
+              sb2.scrollTop = sb2.scrollHeight
+            } else if (sb2 && sheetTop) {
+              sb2.scrollTop = sheetTop
+            }
             this.lastRoute = this.s.route
             this.lastSheet = this.s.sheet && this.s.sheet.name
             if (focus) {
@@ -8087,13 +8223,16 @@
           tick() {
             let full = false
             for (const c of Object.values(this.cards)) {
-              if (c.undone || c.historical || c.kind === 'noproj') continue
+              if (c.undone || c.historical || c.kind === 'noproj') {
+                continue
+              }
               const t = this.task(c.task)
               c.age++
               if (c.undoLeft > 0) {
                 c.undoLeft--
-                if (c.undoLeft === 0) full = true
-                else {
+                if (c.undoLeft === 0) {
+                  full = true
+                } else {
                   this.el.querySelectorAll(`[data-cd="${c.key}"]`).forEach((n) => {
                     n.textContent = c.undoLeft
                   })
@@ -8112,7 +8251,9 @@
                 full = true
               }
             }
-            if (full) this.render()
+            if (full) {
+              this.render()
+            }
           }
           form(fk) {
             return fk === 'sheet' ? this.s.sheet.form : this.s.form
@@ -8126,7 +8267,9 @@
                 btn.innerHTML = `${ic(sum.label === '创建' ? 'check' : 'play')}${sum.label}`
               }
               const hint = this.el.querySelector('[data-sum="hint"] span')
-              if (hint) hint.textContent = sum.hint
+              if (hint) {
+                hint.textContent = sum.hint
+              }
             }
           }
 
@@ -8151,7 +8294,9 @@
               this.s.comp[comp].text = v
               autosize(el)
               const send = this.el.querySelector(`.cb-send[data-comp="${comp}"]`)
-              if (send) send.classList.toggle('on', !!v.trim())
+              if (send) {
+                send.classList.toggle('on', !!v.trim())
+              }
               if (comp === 'home' && !ev.isComposing) {
                 const hint = this.hint('home')
                 let box = this.el.querySelector('.cb-hint')
@@ -8162,8 +8307,11 @@
                   box = this.el.querySelector('.cb-hint')
                 }
                 if (box) {
-                  if (hint) box.innerHTML = hint
-                  else box.remove()
+                  if (hint) {
+                    box.innerHTML = hint
+                  } else {
+                    box.remove()
+                  }
                 }
               }
               return
@@ -8171,7 +8319,9 @@
             if (k === 'mention-q') {
               this.s.sheet.q = v
               const list = this.el.querySelector('[data-mlist]')
-              if (list) list.innerHTML = this.mentionRows(this.s.sheet)
+              if (list) {
+                list.innerHTML = this.mentionRows(this.s.sheet)
+              }
               return
             }
             if (k === 'peek-reply') {
@@ -8200,21 +8350,31 @@
               return
             }
             const fk = el.dataset.form
-            if (!fk) return
+            if (!fk) {
+              return
+            }
             const f = this.form(fk)
             if (k === `${fk}-q`) {
               f.q = v
               const list = this.el.querySelector(`[data-wslist="${fk}"]`)
-              if (list) list.innerHTML = this.vWsList(f, fk)
+              if (list) {
+                list.innerHTML = this.vWsList(f, fk)
+              }
               return
             }
-            if (k === 'f-title') f.title = v
+            if (k === 'f-title') {
+              f.title = v
+            }
             if (k === 'f-desc') {
               f.desc = v
               autosize(el)
             }
-            if (k === `${fk}-ws`) f.wsName = v
-            if (k === `${fk}-prompt`) f.prompt = v
+            if (k === `${fk}-ws`) {
+              f.wsName = v
+            }
+            if (k === `${fk}-prompt`) {
+              f.prompt = v
+            }
             this.refreshForm(fk)
           }
 
@@ -8222,7 +8382,9 @@
             const id = el.dataset.id
             const fk = el.dataset.form
             // Any other tap closes the session switcher in the quick-view sheet.
-            if (name !== 'peek-sw' && this.s.sheet && this.s.sheet.sw) this.s.sheet.sw = false
+            if (name !== 'peek-sw' && this.s.sheet && this.s.sheet.sw) {
+              this.s.sheet.sw = false
+            }
             switch (name) {
               case 'noop':
                 return
@@ -8243,7 +8405,9 @@
                 const t = this.task(id)
                 const to = el.dataset.v
                 this.s.sheet = null
-                if (t.status === to) break
+                if (t.status === to) {
+                  break
+                }
                 t.timeline.push({
                   who: '你',
                   kind: 'you',
@@ -8288,8 +8452,11 @@
                 break
               case 'open-conv':
                 this.s.convId = id
-                if (this.s.route.name === 'chat') this.s.sheet = null
-                else this.go({ name: 'chat' })
+                if (this.s.route.name === 'chat') {
+                  this.s.sheet = null
+                } else {
+                  this.go({ name: 'chat' })
+                }
                 this.s.scrollBottom = true
                 break
               case 'new-conv':
@@ -8380,7 +8547,9 @@
               case 'sess-send': {
                 const s = this.ses(this.s.route.sid)
                 const txt = (this.s.sessReply || '').trim()
-                if (!txt || !this.canSend(s)) return
+                if (!txt || !this.canSend(s)) {
+                  return
+                }
                 this.sendToSession(s, txt)
                 this.s.sessReply = ''
                 this.s.scrollBottom = true
@@ -8415,7 +8584,9 @@
                 break
               case 'comment': {
                 const txt = (this.s.ui.comment[id] || '').trim()
-                if (!txt) return
+                if (!txt) {
+                  return
+                }
                 this.task(id).timeline.push({
                   who: '你',
                   kind: 'you',
@@ -8435,7 +8606,9 @@
                 this.s.focus = 'reject-text'
                 break
               case 'reject':
-                if (this.s.sheet.text.trim()) this.reject(id, this.s.sheet.text.trim())
+                if (this.s.sheet.text.trim()) {
+                  this.reject(id, this.s.sheet.text.trim())
+                }
                 break
               case 'accept-open':
                 this.s.sheet = { name: 'accept', tid: id }
@@ -8509,7 +8682,9 @@
               case 'startwork': {
                 const t = this.task(id)
                 const f = this.s.sheet.form
-                if (f.where === 'existing' && !f.pick) return
+                if (f.where === 'existing' && !f.pick) {
+                  return
+                }
                 const { w } = this.commitForm(f, t)
                 this.s.sheet = null
                 this.toast(w && f.agent !== 'none' ? `已开始做，${f.agent} 会话已启动` : '已开始做')
@@ -8551,7 +8726,9 @@
               case 'pp-edit': {
                 const p = this.conv(this.s.convId).msgs[+el.dataset.mi].proposal
                 p.editing = p.editing === el.dataset.key ? null : el.dataset.key
-                if (p.editing) this.s.focus = `pp-title-${p.editing}`
+                if (p.editing) {
+                  this.s.focus = `pp-title-${p.editing}`
+                }
                 break
               }
               case 'pp-agent': {
@@ -9007,27 +9184,36 @@
             const fr = frames[i]
             const p = new Phone()
             PHONES[i] = p
-            if (fr.init) fr.init(p)
+            if (fr.init) {
+              fr.init(p)
+            }
             p.el = el
             p.render()
             const sc = el.querySelector('.viewport .scroll')
             if (fr.scroll && sc) {
-              if (fr.scroll === 'bottom') sc.scrollTop = sc.scrollHeight
-              else {
+              if (fr.scroll === 'bottom') {
+                sc.scrollTop = sc.scrollHeight
+              } else {
                 const a = sc.querySelector(`[data-anchor="${fr.scroll}"]`)
-                if (a) sc.scrollTop = offsetWithin(a, sc) - 8
+                if (a) {
+                  sc.scrollTop = offsetWithin(a, sc) - 8
+                }
               }
             }
             const sb = el.querySelector('.overlay .sheet-body')
             if (fr.sheetScroll && sb) {
               const a = sb.querySelector(`[data-anchor="${fr.sheetScroll}"]`)
-              if (a) sb.scrollTop = offsetWithin(a, sb) - 4
+              if (a) {
+                sb.scrollTop = offsetWithin(a, sb) - 4
+              }
             }
           })
         }
         function fit() {
           const frames = stage.querySelector('.frames')
-          if (!frames || SHOT) return
+          if (!frames || SHOT) {
+            return
+          }
           frames.style.zoom = 1
           const avail = window.innerHeight - stage.getBoundingClientRect().top - 24
           frames.style.zoom = Math.max(
@@ -9068,41 +9254,57 @@
         }
         document.addEventListener('click', (e) => {
           const p = phoneOf(e.target)
-          if (!p) return
+          if (!p) {
+            return
+          }
           if (p.suppressClick) {
             p.suppressClick = false
             e.preventDefault()
             return
           }
           const el = e.target.closest('[data-act]')
-          if (!el || !p.el.contains(el)) return
+          if (!el || !p.el.contains(el)) {
+            return
+          }
           e.preventDefault()
-          if (el.disabled || el.hasAttribute('disabled')) return
+          if (el.disabled || el.hasAttribute('disabled')) {
+            return
+          }
           p.act(el.dataset.act, el)
         })
         document.addEventListener('input', (e) => {
           const p = phoneOf(e.target)
-          if (p && e.target.dataset.k) p.onInput(e.target, e)
+          if (p && e.target.dataset.k) {
+            p.onInput(e.target, e)
+          }
         })
         document.addEventListener('keydown', (e) => {
           const p = phoneOf(e.target)
-          if (!p || e.key !== 'Enter' || e.shiftKey || e.isComposing || !e.target.dataset.enter)
+          if (!p || e.key !== 'Enter' || e.shiftKey || e.isComposing || !e.target.dataset.enter) {
             return
+          }
           e.preventDefault()
           const el = e.target
-          if (el.dataset.enter === 'send') p.send(el.dataset.comp)
-          else p.act(el.dataset.enter, el)
+          if (el.dataset.enter === 'send') {
+            p.send(el.dataset.comp)
+          } else {
+            p.act(el.dataset.enter, el)
+          }
         })
         // 长按任务卡：看完整进展（方案 §5.1「悬停或长按可以展开完整摘要」）。
         let pressTimer = null
         document.addEventListener('pointerdown', (e) => {
           const card = e.target.closest('[data-press]')
           const p = phoneOf(e.target)
-          if (!card || !p || e.target.closest('button')) return
+          if (!card || !p || e.target.closest('button')) {
+            return
+          }
           clearTimeout(pressTimer)
           pressTimer = setTimeout(() => {
             const t = p.task(card.dataset.press)
-            if (!t || !p.leadSession(t) || !p.latest(t)) return
+            if (!t || !p.leadSession(t) || !p.latest(t)) {
+              return
+            }
             p.s.preview = { tid: t.id }
             p.suppressClick = true
             p.render()
@@ -9110,19 +9312,23 @@
         })
         ;['pointerup', 'pointerleave', 'pointercancel', 'pointermove'].forEach((ev) =>
           document.addEventListener(ev, (e) => {
-            if (ev !== 'pointermove' || Math.abs(e.movementX) + Math.abs(e.movementY) > 4)
+            if (ev !== 'pointermove' || Math.abs(e.movementX) + Math.abs(e.movementY) > 4) {
               clearTimeout(pressTimer)
+            }
           })
         )
         // 长按松手后的那次 click 可能落在已被替换的卡片上而不触发；只吞掉紧跟着的那一次。
         document.addEventListener('pointerup', (e) => {
           const p = phoneOf(e.target)
-          if (p && p.suppressClick)
+          if (p && p.suppressClick) {
             setTimeout(() => {
               p.suppressClick = false
             }, 0)
+          }
         })
-        if (!SHOT) setInterval(() => PHONES.forEach((p) => p && p.tick()), 1000)
+        if (!SHOT) {
+          setInterval(() => PHONES.forEach((p) => p && p.tick()), 1000)
+        }
         window.addEventListener('hashchange', render)
         window.addEventListener('resize', fit)
         render()

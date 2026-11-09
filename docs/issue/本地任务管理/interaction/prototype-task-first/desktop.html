@@ -10029,7 +10029,9 @@
         const catOf = (t) => STATUS[t.status].cat
         function wsOfTask(t) {
           let x = t
-          while (x && !x.workspace && x.parent) x = T(x.parent)
+          while (x && !x.workspace && x.parent) {
+            x = T(x.parent)
+          }
           return x && x.workspace ? W(x.workspace) : null
         }
         const sessionsOf = (id) => S.sessions.filter((s) => s.task === id)
@@ -10089,10 +10091,12 @@
         const stIcon = (t, s = 14) => catIcon(catOf(t), s)
         function prio(p, s = 14) {
           const v = `class="ic pr" width="${s}" height="${s}" viewBox="0 0 14 14" aria-hidden="true"`
-          if (p === 1)
+          if (p === 1) {
             return `<svg ${v}><rect x="1" y="1" width="12" height="12" rx="3" fill="var(--agent-question)"/><rect x="6.2" y="3.3" width="1.6" height="4.9" rx=".8" fill="var(--foreground)"/><circle cx="7" cy="10.2" r=".95" fill="var(--foreground)"/></svg>`
-          if (!p)
+          }
+          if (!p) {
             return `<svg ${v}>${[1.75, 5.75, 9.75].map((x) => `<rect x="${x}" y="6.25" width="2.5" height="1.5" rx=".6" fill="var(--muted-foreground)" opacity=".7"/>`).join('')}</svg>`
+          }
           const on = { 2: 3, 3: 2, 4: 1 }[p]
           return `<svg ${v}>${[0, 1, 2].map((i) => `<rect x="${1.5 + i * 4}" y="${12 - (4 + i * 3)}" width="3" height="${4 + i * 3}" rx="1" fill="var(--muted-foreground)" opacity="${i < on ? 1 : 0.3}"/>`).join('')}</svg>`
         }
@@ -10118,20 +10122,31 @@
           }
         }
         function av(agent, s = 14) {
-          if (agent === 'claude') return br('claude', s)
-          if (agent === 'codex') return br('openai', s, 'c-fg')
-          if (agent === 'me')
+          if (agent === 'claude') {
+            return br('claude', s)
+          }
+          if (agent === 'codex') {
+            return br('openai', s, 'c-fg')
+          }
+          if (agent === 'me') {
             return `<span class="me-av" style="width:${s + 2}px;height:${s + 2}px">我</span>`
+          }
           return ''
         }
         function sFact(s) {
-          if (s.state === 'ended') return 'exited'
+          if (s.state === 'ended') {
+            return 'exited'
+          }
           const h = hostOfWs(W(s.workspace))
-          if (!h.connected || s.fact === 'unverifiable') return 'unverifiable'
+          if (!h.connected || s.fact === 'unverifiable') {
+            return 'unverifiable'
+          }
           return 'live'
         }
         function sLabel(s) {
-          if (sFact(s) === 'unverifiable') return '无法确认'
+          if (sFact(s) === 'unverifiable') {
+            return '无法确认'
+          }
           return {
             working: '工作中',
             waiting: '等你回答',
@@ -10143,8 +10158,12 @@
           }[s.state]
         }
         function sAst(s, size = 12) {
-          if (sFact(s) === 'unverifiable') return ast('unverifiable', size)
-          if (s.state === 'starting') return ast('working', size)
+          if (sFact(s) === 'unverifiable') {
+            return ast('unverifiable', size)
+          }
+          if (s.state === 'starting') {
+            return ast('working', size)
+          }
           return ast(s.state, size)
         }
         const sWhen = (s) =>
@@ -10154,11 +10173,15 @@
               ? ` · ${s.lastAt}`
               : ''
         function prChip(pr, long = false) {
-          if (!pr) return ''
-          if (pr.state === 'merged')
+          if (!pr) {
+            return ''
+          }
+          if (pr.state === 'merged') {
             return `<span class="prc mg" title="${pr.note}">${ic('git-merge', 12)}#${pr.number}${long ? ' 已合并' : ''}</span>`
-          if (pr.state === 'failed')
+          }
+          if (pr.state === 'failed') {
             return `<span class="prc fail" title="${pr.note}">${ic('git-pull-request', 12)}#${pr.number}${ic('circle-x', 11)}${long ? ' CI 失败' : ''}</span>`
+          }
           return `<span class="prc op" title="${pr.note}">${ic('git-pull-request', 12)}#${pr.number}${long ? ' 未合并' : ''}</span>`
         }
         const hostTag = (h, { off = true } = {}) =>
@@ -10171,7 +10194,9 @@
         function toast(text) {
           S.toast = { text, at: Date.now() }
           later(2600, () => {
-            if (S.toast && Date.now() - S.toast.at >= 2500) S.toast = null
+            if (S.toast && Date.now() - S.toast.at >= 2500) {
+              S.toast = null
+            }
           })
         }
 
@@ -10179,7 +10204,9 @@
         function needsYou() {
           const out = []
           for (const t of S.tasks) {
-            if (t.parent || S.snoozed[t.id]) continue
+            if (t.parent || S.snoozed[t.id]) {
+              continue
+            }
             const fam = familySessions(t)
             const waiting = fam.find((s) => s.state === 'waiting' && sFact(s) === 'live')
             if (waiting) {
@@ -10193,7 +10220,9 @@
             const unread = fam.find(
               (s) => s.state === 'done' && S.unread[s.id] && sFact(s) === 'live'
             )
-            if (unread) out.push({ task: t, kind: 'turn', session: unread })
+            if (unread) {
+              out.push({ task: t, kind: 'turn', session: unread })
+            }
           }
           return out
         }
@@ -10213,25 +10242,30 @@
           const p = t.progress[0]
           const s = liveSessions(t)[0] || familySessions(t)[0]
           let r
-          if (p)
+          if (p) {
             r = {
               kind: p.source === 'orca' ? 'orca' : 'agent',
               tag: p.source === 'orca' ? 'Orca 生成' : '回写',
               text: joinProgress(p),
               at: p.at
             }
-          else if (s && s.state === 'starting')
+          } else if (s && s.state === 'starting') {
             r = { kind: 'start', tag: '', text: '会话已启动 · 等第一条回写', at: s.lastAt }
-          else if (s && s.last) r = { kind: 'last', tag: '最后一句话', text: s.last, at: s.lastAt }
-          else if (s) r = { kind: 'state', tag: '', text: `${sLabel(s)}${sWhen(s)}`, at: '' }
-          else
+          } else if (s && s.last) {
+            r = { kind: 'last', tag: '最后一句话', text: s.last, at: s.lastAt }
+          } else if (s) {
+            r = { kind: 'state', tag: '', text: `${sLabel(s)}${sWhen(s)}`, at: '' }
+          } else {
             r = {
               kind: 'none',
               tag: '',
               text: w ? '还没有会话' : `还没有工作区和会话 · ${t.createdBy}`,
               at: ''
             }
-          if (h && !h.connected) r.offline = h
+          }
+          if (h && !h.connected) {
+            r.offline = h
+          }
           return r
         }
 
@@ -10254,8 +10288,11 @@
           const h = hostOfWs(w)
           let lead = `<span class="ast" style="width:12px;height:12px"><span class="wdot ${sess.length && h.connected ? 'on' : ''}"></span></span>`
           const waiting = sess.find((s) => s.state === 'waiting')
-          if (!h.connected && sess.length) lead = ast('unverifiable', 12)
-          else if (waiting) lead = ast('waiting', 12)
+          if (!h.connected && sess.length) {
+            lead = ast('unverifiable', 12)
+          } else if (waiting) {
+            lead = ast('waiting', 12)
+          }
           const on = S.view === 'detail' && t && (S.detail === t.id || T(S.detail)?.parent === t.id)
           const strip = sess.length
             ? `<div class="wsr-s" ${h.connected ? `data-act="open-session" data-sid="${sess[0].id}"` : ''}>${sess.map((s) => `<span class="pair">${sAst(s, 11)}${av(s.agent, 11)}</span>`).join('')}<span class="lbl2">${sess.length === 1 ? sLabel(sess[0]) : `${sess.length} 个会话`}</span>${ic('chevron-right', 12, 'c-mute')}</div>`
@@ -10320,12 +10357,16 @@
         // A parent task's card and hover card carry one line about its subtasks (S9): count, session states, latest progress.
         function kidsSummary(t) {
           const kids = t.children.map(T).filter(Boolean)
-          if (!kids.length) return null
+          if (!kids.length) {
+            return null
+          }
           const ss = kids.flatMap((k) => sessionsOf(k.id)).filter((s) => s.state !== 'ended')
           let st
-          if (!ss.length) st = '还没有会话'
-          else if (ss.every((s) => s.state === 'done')) st = '都做完一轮'
-          else {
+          if (!ss.length) {
+            st = '还没有会话'
+          } else if (ss.every((s) => s.state === 'done')) {
+            st = '都做完一轮'
+          } else {
             const n = (pred, label) => {
               const c = ss.filter(pred).length
               return c ? `${c} 个${label}` : ''
@@ -10339,7 +10380,7 @@
               .join('、')
           }
           const latest = [...kids].sort((a, b) => (S.fresh[b.id] || 0) - (S.fresh[a.id] || 0))[0]
-          const lastKid = S.fresh[latest.id] ? latest : kids[kids.length - 1]
+          const lastKid = S.fresh[latest.id] ? latest : kids.at(-1)
           return { n: kids.length, st, kid: lastKid, text: progressInfo(lastKid).text }
         }
         const kidsLine = (t) => {
@@ -10362,14 +10403,16 @@
           const right = off ? ic('unplug', 12, 'c-unv') : lead ? sAst(lead, 12) : ''
           // The reason (needs-you) or the host warning gets its own small line so the title keeps the row's width.
           let note = ''
-          if (need && need.kind === 'answer')
+          if (need && need.kind === 'answer') {
             note = `${av(need.session.agent, 11)}<span class="tn-q">${AG[need.session.agent]} 等你回答</span><span class="tn-s">· ${need.session.lastAt}</span>`
-          else if (need && need.kind === 'review') {
+          } else if (need && need.kind === 'review') {
             const pr = w && w.pr
             note = `<span class="tn-ok">待验收</span>${pr ? `<span class="tn-s">· PR #${pr.number} ${pr.state === 'merged' ? '已合并' : '未合并'}</span>` : ''}`
-          } else if (need) note = '<span class="tn-s">做完一轮，你还没看</span>'
-          else if (off)
+          } else if (need) {
+            note = '<span class="tn-s">做完一轮，你还没看</span>'
+          } else if (off) {
             note = `<span class="tn-off">${ic('unplug', 11)}${h.name} 未连接</span><span class="tn-s">· 上次进展 ${progressInfo(t).at}</span>`
+          }
           // Opening from the tree lands on the session that waits on you, if any; otherwise on the overview.
           const act = `data-act="open" data-id="${t.id}" data-from="tree"`
           const on =
@@ -10378,7 +10421,9 @@
           let html = `<div class="tn tt ${note ? 'two' : ''} ${on ? 'on' : ''}" style="--d:${depth}" ${act} data-tip="${t.id}">
       <div class="tt-1">${expandable ? caret(key) : '<span class="exp"></span>'}${stIcon(t, 13)}<span class="tn-t">${esc(t.title)}</span><span class="tid">${t.id}</span><span class="fill"></span>${right}</div>
       ${note ? `<div class="tt-2">${note}</div>` : ''}</div>`
-          if (!S.tree[key]) return html
+          if (!S.tree[key]) {
+            return html
+          }
           html += sess.map((s) => treeSessionRow(s, depth + 1)).join('')
           html += kids.map((k) => treeTaskNode(k, depth + 1)).join('')
           return html
@@ -10469,7 +10514,9 @@
         }
         function treeTipHtml(id) {
           const t = T(id)
-          if (!t) return ''
+          if (!t) {
+            return ''
+          }
           const p = progressInfo(t)
           const w = wsOfTask(t)
           const s = liveSessions(t)[0]
@@ -10595,18 +10642,29 @@
         // Path A's forks (review §3 F8): @workspace / @repo / @task are rules, never a model call. 只问 always goes to the scheduler.
         function routeOf(d) {
           const text = d.text.replace(/@\S*$/, '').trim()
-          if (d.mode === 'ask') return { kind: 'ask', chips: d.chips }
-          if (!d.chips.length) return { kind: text ? 'B' : 'idle' }
-          if (d.chips.length > 1) return { kind: 'B', why: '提及了多个对象' }
+          if (d.mode === 'ask') {
+            return { kind: 'ask', chips: d.chips }
+          }
+          if (!d.chips.length) {
+            return { kind: text ? 'B' : 'idle' }
+          }
+          if (d.chips.length > 1) {
+            return { kind: 'B', why: '提及了多个对象' }
+          }
           const c = d.chips[0]
-          if (c.type === 'ws') return routeForWorkspace(W(c.id), false)
-          if (c.type === 'repo')
+          if (c.type === 'ws') {
+            return routeForWorkspace(W(c.id), false)
+          }
+          if (c.type === 'repo') {
             return R(c.id).project
               ? { kind: 'repo', repo: c.id }
               : { kind: 'repo', repo: c.id, noProject: true }
+          }
           const t = T(c.id)
           const w = wsOfTask(t)
-          if (!w) return { kind: 'task-start', task: t.id }
+          if (!w) {
+            return { kind: 'task-start', task: t.id }
+          }
           return {
             kind: 'A2',
             ws: w.id,
@@ -10616,9 +10674,13 @@
           }
         }
         function routeForWorkspace(w) {
-          if (!w.task) return { kind: 'A1', ws: w.id, noProject: !R(w.repo).project }
+          if (!w.task) {
+            return { kind: 'A1', ws: w.id, noProject: !R(w.repo).project }
+          }
           const idle = idleSessionIn(w.id)
-          if (idle) return { kind: 'A2-idle', ws: w.id, owner: w.task, session: idle.id }
+          if (idle) {
+            return { kind: 'A2-idle', ws: w.id, owner: w.task, session: idle.id }
+          }
           const busy = busySessionIn(w.id)
           return { kind: 'A2', ws: w.id, owner: w.task, busy: busy ? busy.id : null }
         }
@@ -10642,8 +10704,9 @@
             case 'A2': {
               const w = W(route.ws)
               const busy = route.busy ? SS(route.busy) : null
-              if (route.viaTask)
+              if (route.viaTask) {
                 return `${kb('↵')}在「${esc(T(route.owner).title)}」下面建子任务，会话开在 ${w.name}`
+              }
               return `${kb('↵')}${w.name} 属于 ${route.owner}，会建成它的子任务${busy ? `；${AG[busy.agent]} 还在工作中，另开一个会话` : ''}`
             }
             case 'A2-idle': {
@@ -10668,7 +10731,9 @@
             const w = W(c.id)
             return `${ic('git-branch', 12)}<b>${w.repo}/${w.name}</b>`
           }
-          if (c.type === 'repo') return `${ic('folder', 12)}<b>${c.id}</b>`
+          if (c.type === 'repo') {
+            return `${ic('folder', 12)}<b>${c.id}</b>`
+          }
           if (c.type === 'task') {
             const t = T(c.id)
             return `${stIcon(t, 12)}<b>${esc(t.title)}</b><span class="tid">${t.id}</span>`
@@ -10745,10 +10810,13 @@
             const owner = w.task ? T(w.task) : null
             const idle = owner && idleSessionIn(w.id)
             let right = '空闲'
-            if (owner) right = `属于 ${owner.id}${idle ? ` · ${AG[idle.agent]} 做完一轮` : ''}`
-            else if (w.pr)
+            if (owner) {
+              right = `属于 ${owner.id}${idle ? ` · ${AG[idle.agent]} 做完一轮` : ''}`
+            } else if (w.pr) {
               right = `PR #${w.pr.number} ${w.pr.state === 'failed' ? 'CI 失败' : '未合并'}`
-            else if (!R(w.repo).project) right = '仓库还没有项目'
+            } else if (!R(w.repo).project) {
+              right = '仓库还没有项目'
+            }
             return {
               type: 'ws',
               id: w.id,
@@ -10783,7 +10851,9 @@
               }
             })
           groups.push({ name: '仓库', items: repoItems, more: 0 })
-          if (hostFilter) return groups.filter((g) => g.items.length)
+          if (hostFilter) {
+            return groups.filter((g) => g.items.length)
+          }
           const taskItems = S.tasks
             .filter(
               (t) =>
@@ -10831,10 +10901,13 @@
           const flat = groups.flatMap((g) => g.items)
           const enabled = flat.filter((x) => !x.dis)
           S.pop.enabled = enabled
-          if (S.pop.index >= enabled.length) S.pop.index = Math.max(0, enabled.length - 1)
+          if (S.pop.index >= enabled.length) {
+            S.pop.index = Math.max(0, enabled.length - 1)
+          }
           const sel = enabled[S.pop.index]
-          if (!flat.length)
+          if (!flat.length) {
             return `<div class="popover mpop"><div class="mp-empty">没有匹配「${esc(S.pop.query)}」的${host ? `${H(host).name} 上的工作区或仓库` : '工作区、仓库、任务或主机'}</div></div>`
+          }
           const row = (x) => {
             const on = sel && x.type === sel.type && x.id === sel.id
             const right = x.dis
@@ -10853,12 +10926,18 @@
         }
         function refreshDispatch(where) {
           const host = document.getElementById(`pop-${where}`)
-          if (host) host.innerHTML = S.pop && S.pop.where === where ? mentionPopover() : ''
+          if (host) {
+            host.innerHTML = S.pop && S.pop.where === where ? mentionPopover() : ''
+          }
           const route = document.getElementById(`route-${where}`)
-          if (route) route.innerHTML = routeHint(routeOf(S.dispatch[where]))
+          if (route) {
+            route.innerHTML = routeHint(routeOf(S.dispatch[where]))
+          }
           const send = document.getElementById(`send-${where}`)
           const d = S.dispatch[where]
-          if (send) send.classList.toggle('on', !!(d.text.trim() || d.chips.length))
+          if (send) {
+            send.classList.toggle('on', !!(d.text.trim() || d.chips.length))
+          }
         }
         function pickMention(where, type, id) {
           const d = S.dispatch[where]
@@ -10946,14 +11025,14 @@
             progress: [],
             timeline: []
           }
-          if (by === '你')
+          if (by === '你') {
             t.timeline.push({
               at: '刚刚',
               kind: 'create',
               text: ws && agent !== 'none' ? '新建任务，并在同一步开工' : '新建任务',
               by: '你'
             })
-          else
+          } else {
             t.timeline.push({
               at: '刚刚',
               kind: 'dispatch',
@@ -10961,6 +11040,7 @@
               quote: text,
               by: '对话'
             })
+          }
           if (owner) {
             owner.children.push(id)
             S.expanded[owner.id] = true
@@ -10970,7 +11050,9 @@
               text: `${ws.name} 属于 ${owner.id}，建成它的子任务`,
               by: 'Orca'
             })
-          } else if (ws) ws.task = id
+          } else if (ws) {
+            ws.task = id
+          }
           S.tasks.push(t)
           S.fresh[id] = Date.now()
           if (ws && agent !== 'none') {
@@ -11001,7 +11083,9 @@
         }
         function addReceipt(list, r) {
           list.unshift(r)
-          if (list.length > 2) list.length = 2
+          if (list.length > 2) {
+            list.length = 2
+          }
           return r
         }
         function clearDispatch(d) {
@@ -11041,7 +11125,9 @@
             const s = SS(route.session)
             appendInstruction(s, text)
             clearDispatch(d)
-            if (silent) return null
+            if (silent) {
+              return null
+            }
             addReceipt(S.receipts, {
               id: rid(),
               kind: 'append',
@@ -11115,21 +11201,26 @@
             S.fresh[owner.id] = Date.now()
             started = owner.id
             newWs = w.name
-          } else w = W(route.ws)
+          } else {
+            w = W(route.ws)
+          }
           const owner =
             route.kind === 'A2' ? route.owner : route.kind === 'task-start' ? route.task : null
           const project = owner ? T(owner).project : R(w.repo).project
           const raw = firstSentence(text)
           const t = createTask({ project, text, title: raw, ws: w, parent: owner })
-          if (newWs && !started)
+          if (newWs && !started) {
             t.timeline.splice(1, 0, {
               at: '刚刚',
               kind: 'workspace',
               text: `开始做：在 ${hostOfWs(w).name} 新建工作区 ${w.name}`,
               by: 'Orca'
             })
+          }
           S.pop = null
-          if (silent) return t
+          if (silent) {
+            return t
+          }
           const busy = route.busy ? SS(route.busy) : null
           addReceipt(S.receipts, {
             id: rid(),
@@ -11154,11 +11245,9 @@
         // Types a line at the terminal's prompt: the idle prompt (`> `) is replaced, then the agent starts thinking.
         function termType(sid, text) {
           const lines = [...(S.terminals[sid] || [])]
-          while (
-            lines.length &&
-            (lines[lines.length - 1][1] === '> ' || lines[lines.length - 1][0] === '\n')
-          )
+          while (lines.length && (lines.at(-1)[1] === '> ' || lines.at(-1)[0] === '\n')) {
             lines.pop()
+          }
           S.terminals[sid] = [
             ...lines,
             ['\n'],
@@ -11188,13 +11277,15 @@
           s.since = '刚刚'
           s.last = ''
           s.lastAt = '刚刚'
-          if (s.view === 'chat')
-            (S.chats[s.id] = S.chats[s.id] || []).push({
+          if (s.view === 'chat') {
+            ;(S.chats[s.id] = S.chats[s.id] || []).push({
               who: 'you',
               text,
               status: '由对话追加 · 刚刚'
             })
-          else termType(s.id, text)
+          } else {
+            termType(s.id, text)
+          }
           t.timeline.push({
             at: '刚刚',
             kind: 'dispatch',
@@ -11208,11 +11299,17 @@
         }
         function revertAppend(s) {
           const p = s.prev
-          if (!p) return
+          if (!p) {
+            return
+          }
           const t = T(s.task)
           Object.assign(s, { state: p.state, since: p.since, last: p.last, lastAt: p.lastAt })
-          if (p.term) S.terminals[s.id] = p.term
-          if (S.chats[s.id]) S.chats[s.id].length = p.chatLen
+          if (p.term) {
+            S.terminals[s.id] = p.term
+          }
+          if (S.chats[s.id]) {
+            S.chats[s.id].length = p.chatLen
+          }
           t.timeline.length = p.tlLen
           t.updated = p.updated
           delete s.prev
@@ -11234,20 +11331,25 @@
               p.children = p.children.filter((c) => c !== t.id)
             }
             S.workspaces.forEach((w) => {
-              if (w.task === t.id) w.task = null
+              if (w.task === t.id) {
+                w.task = null
+              }
             })
             S.sessions = S.sessions.filter((s) => s.task !== t.id)
             S.tasks = S.tasks.filter((x) => x.id !== t.id)
             r.title = t.title
           }
           r.state = 'undone'
-          if (S.drawer && !SS(S.drawer.session)) S.drawer = null
+          if (S.drawer && !SS(S.drawer.session)) {
+            S.drawer = null
+          }
         }
         function receiptHtml(r) {
           const dismiss = `<button class="icon-btn sm" data-act="dismiss" data-rid="${r.id}" title="关闭">${ic('x', 14)}</button>`
           if (r.state === 'undone') {
-            if (r.kind === 'append')
+            if (r.kind === 'append') {
               return `<div class="rcpt undone">${ic('undo-2', 14, 'c-mute')}<span>已撤销：从 ${r.agentName} 的输入里撤回了「${esc(r.text)}」，${r.task} 时间线上那条『由对话追加指令』也删了。</span><span class="fill"></span>${dismiss}</div>`
+            }
             const tail = r.newWs
               ? `新建的工作区 ${r.newWs} 保留，不要的话可以在侧栏删除。`
               : `工作区 ${W(r.ws).name} 保留。`
@@ -11281,7 +11383,9 @@
       </div>`
           }
           const t = T(r.task)
-          if (!t) return ''
+          if (!t) {
+            return ''
+          }
           const w = W(r.ws)
           const s = SS(r.session)
           const head =
@@ -11301,14 +11405,15 @@
           let why = ''
           if (r.kind === 'A2') {
             const parent = T(r.parent)
-            if (r.started)
+            if (r.started) {
               why = `「${esc(parent.title)}」还没有工作区，先开始做：在 ${hostOfWs(w).name} 新建了工作区 ${w.name}，再在它下面建子任务，会话开在这里。`
-            else if (r.switched)
+            } else if (r.switched) {
               why = `你改成了建子任务：${w.name} 属于 ${r.parent}，这句话建成它的子任务，另开了一个会话。`
-            else if (r.viaTask)
+            } else if (r.viaTask) {
               why = `你 @ 的是任务「${esc(parent.title)}」，所以在它下面建子任务；会话开在它的工作区 ${w.name}。`
-            else
+            } else {
               why = `${w.name} 属于 ${r.parent}，所以建成它的子任务${r.busy ? `；${w.name} 里 ${r.busy} 还在工作中，所以另开了一个会话。` : '；会话开在同一个工作区。'}`
+            }
           }
           return `<div class="rcpt ${counting ? 'live' : ''}">
       <div class="rc-1">${ic('circle-check', 14, 'c-ok')}<b>已派活</b><span class="muted">${head}</span><span class="fill"></span>${undo}</div>
@@ -11322,13 +11427,21 @@
         function visibleTops() {
           const f = S.filter
           return S.tasks.filter((t) => {
-            if (t.parent) return false
-            if (f.project !== 'all' && t.project !== f.project) return false
+            if (t.parent) {
+              return false
+            }
+            if (f.project !== 'all' && t.project !== f.project) {
+              return false
+            }
             if (!f.offline) {
               const w = wsOfTask(t)
-              if (w && !hostOfWs(w).connected) return false
+              if (w && !hostOfWs(w).connected) {
+                return false
+              }
             }
-            if (f.waiting && !familySessions(t).some((s) => s.state === 'waiting')) return false
+            if (f.waiting && !familySessions(t).some((s) => s.state === 'waiting')) {
+              return false
+            }
             return true
           })
         }
@@ -11343,7 +11456,9 @@
         const byFresh = (a, b) => (S.fresh[b.id] || 0) - (S.fresh[a.id] || 0)
         function wsCell(t) {
           const w = wsOfTask(t)
-          if (!w) return `<span class="c-ws muted">还没有工作区</span><span class="c-host"></span>`
+          if (!w) {
+            return `<span class="c-ws muted">还没有工作区</span><span class="c-host"></span>`
+          }
           const h = hostOfWs(w)
           return `<span class="c-ws" title="工作区 ${w.name}">${ic('git-branch', 12, 'c-mute')}<span class="ell">${w.name}</span></span><span class="c-host">${hostTag(h)}</span>`
         }
@@ -11352,8 +11467,9 @@
           // A parent whose sessions all sit on its subtasks still shows one of them here.
           const ss = own.length ? own : liveSessions(t)
           if (!ss.length) {
-            if (t.status === 'todo' && !wsOfTask(t))
+            if (t.status === 'todo' && !wsOfTask(t)) {
               return `<span class="c-sess"><button class="btn ghost xs" data-act="start-work" data-id="${t.id}">${ic('play', 11)}开始做</button></span>`
+            }
             return '<span class="c-sess"></span>'
           }
           const s = ss[0]
@@ -11361,7 +11477,9 @@
         }
         function progressHover(t, p) {
           const pr = t.progress[0]
-          if (!pr) return ''
+          if (!pr) {
+            return ''
+          }
           const rows = [
             ['做了什么', pr.did],
             ['结论', pr.result],
@@ -11390,9 +11508,13 @@
         }
         // Task mode keeps the card about the task: the workspace and host drop to a faint tail on the second line.
         function wsFaint(t) {
-          if (S.sidebar !== 'tasks') return ''
+          if (S.sidebar !== 'tasks') {
+            return ''
+          }
           const w = wsOfTask(t)
-          if (!w) return '<span class="wsfaint">还没有工作区</span>'
+          if (!w) {
+            return '<span class="wsfaint">还没有工作区</span>'
+          }
           const h = hostOfWs(w)
           return `<span class="wsfaint ${h.connected ? '' : 'off'}" title="工作区 ${w.name}">${ic('folder-git-2', 11)}在 ${w.name} · ${h.name}</span>`
         }
@@ -11408,7 +11530,9 @@
       <div class="tr-2">${progressLine(t)}</div>
       ${open ? '' : kidsLine(t)}
     </div>`
-          if (!kids.length || !open) return row
+          if (!kids.length || !open) {
+            return row
+          }
           return (
             row +
             kids.map((k, i) => taskRow(k, { sub: true, last: i === kids.length - 1 })).join('')
@@ -11454,7 +11578,9 @@
           const all = needsYou()
           const tops = visibleTops().map((t) => t.id)
           const list = all.filter((n) => tops.includes(n.task.id))
-          if (!list.length) return { html: '', ids: [] }
+          if (!list.length) {
+            return { html: '', ids: [] }
+          }
           const waits = list.filter((n) => n.kind !== 'review')
           const reviews = list.filter((n) => n.kind === 'review')
           const sub = (name, items) =>
@@ -11472,19 +11598,26 @@
           let html = f.view === 'all' || f.view === 'need' ? need.html : ''
           if (f.view !== 'need') {
             for (const [st, name, cat] of GROUPS) {
-              if (f.view !== 'all' && f.view !== st) continue
+              if (f.view !== 'all' && f.view !== st) {
+                continue
+              }
               const items = tops.filter((t) => t.status === st).sort(byFresh)
-              if (!items.length) continue
+              if (!items.length) {
+                continue
+              }
               const key = st
               const collapsed = S.collapsed[key]
               const hidden =
                 st === 'doing' ? need.ids.filter((id) => T(id).status === 'doing').length : 0
               html += `<div class="lgrp ${collapsed ? 'collapsed' : ''}" data-act="collapse" data-g="${key}">${ic(collapsed ? 'chevron-right' : 'chevron-down', 14, 'c-mute')}${catIcon(cat)}<span>${name}</span><span class="cnt">${items.length}</span>${hidden ? `<span class="grule">另有 ${hidden} 个在「需要你」</span>` : ''}<span class="fill"></span>${ic('plus', 14, 'c-mute')}</div>`
-              if (!collapsed) html += items.map((t) => taskRow(t)).join('')
+              if (!collapsed) {
+                html += items.map((t) => taskRow(t)).join('')
+              }
             }
           }
-          if (!html)
+          if (!html) {
             html = `<div class="empty">${ic('list-checks', 18, 'c-mute')}<span>这里没有任务</span></div>`
+          }
           return `<div class="list">${html}</div>`
         }
 
@@ -11548,8 +11681,9 @@
         // One line: workspace · host · diff · PR; only what exists. Click opens 打开工作区 / 查看更改.
         function wsLine(t) {
           const w = wsOfTask(t)
-          if (!w)
+          if (!w) {
             return `<div class="wsline"><span class="wl-i muted">${ic('git-branch', 12)}还没有工作区</span></div>`
+          }
           const h = hostOfWs(w)
           const parts = [
             `<span class="wl-i">${ic('git-branch', 12)}<b>${w.name}</b></span>`,
@@ -11573,13 +11707,18 @@
         function primaryAction(t) {
           const w = wsOfTask(t)
           const h = w && hostOfWs(w)
-          if (t.status === 'done' || t.status === 'canceled') return ''
-          if (!w)
+          if (t.status === 'done' || t.status === 'canceled') {
+            return ''
+          }
+          if (!w) {
             return `<button class="btn primary" data-act="start-work" data-id="${t.id}">${ic('play', 14)}开始做</button>`
-          if (t.status === 'review')
+          }
+          if (t.status === 'review') {
             return `<button class="btn primary" data-act="accept-open" data-id="${t.id}">${ic('check-check', 14)}验收</button>`
-          if (!h.connected)
+          }
+          if (!h.connected) {
             return `<span class="peek-off">${ic('unplug', 12)}开会话不可用 · ${h.name} 未连接</span><button class="btn primary" disabled data-act="new-session">${ic('bot', 14)}开会话</button>`
+          }
           return `<button class="btn primary" data-act="new-session" data-id="${t.id}">${ic('bot', 14)}开会话</button>`
         }
         // The 「现在」 card: acceptance bar (待验收), what is waiting on you, the latest write-back, then one line per session.
@@ -11667,7 +11806,9 @@
         }
         function subtasksSect(t) {
           const kids = t.children.map(T).filter(Boolean)
-          if (!kids.length) return ''
+          if (!kids.length) {
+            return ''
+          }
           const rows = kids.map((k) => {
             const s = liveSessions(k)[0]
             return `<div class="kid" data-act="open" data-id="${k.id}">${stIcon(k)}<span class="ell">${esc(k.title)}</span>${tid(k)}<span class="fill"></span>${s ? `${sAst(s, 12)}${av(s.agent, 12)}<span class="muted">${sLabel(s)}</span>` : ''}</div>`
@@ -11735,7 +11876,9 @@
                 return `<div class="tlc"><div class="tlc-h">${av('me', 14)}<b>你</b><span class="by by-you">评论</span><span class="tl-at">${e.at}</span></div><div class="tlc-t">${esc(e.text)}</div></div>`
               }
               let text = esc(e.text)
-              if (e.kind === 'progress') text = `回写 #${e.n}：${esc(e.text)}`
+              if (e.kind === 'progress') {
+                text = `回写 #${e.n}：${esc(e.text)}`
+              }
               const quote = e.quote ? `<span class="q">「${esc(e.quote)}」</span>` : ''
               const link =
                 e.kind === 'dispatch'
@@ -11759,7 +11902,9 @@
             return `<div class="abar done ${ok ? 'ok' : 'back'}">${ok ? catIcon('completed') : ic('undo-2', 14)}<b>${ok ? '已通过' : '已打回'}</b><span class="muted">${ok ? '待验收 → 已完成 · 你 · 刚刚' : `待验收 → 进行中 · ${res.sent ? `原因已发给 ${res.sent} <span class="okt">${ic('check-check', 12)}已送达</span>` : '用原因开了一个新的 Claude 会话'}`}</span></div>`
           }
           const isReview = t.status === 'review'
-          if (!isReview && S.accept.open !== t.id) return ''
+          if (!isReview && S.accept.open !== t.id) {
+            return ''
+          }
           const w = wsOfTask(t)
           const where =
             w && w.pr && w.pr.state === 'merged'
@@ -11856,7 +12001,9 @@
         }
         function detailPage(id) {
           const t = T(id)
-          if (!t) return homePage()
+          if (!t) {
+            return homePage()
+          }
           const w = wsOfTask(t)
           const h = w && hostOfWs(w)
           const off = h && !h.connected
@@ -11951,16 +12098,20 @@
             .join('')
         }
         function chatMsgHtml(s, m, { where = '' } = {}) {
-          if (m.who === 'tool')
+          if (m.who === 'tool') {
             return `<div class="cm tool">${ic('file-diff', 12)}${esc(m.text)}</div>`
-          if (m.who === 'you')
+          }
+          if (m.who === 'you') {
             return `<div class="cm you"><div class="bub">${esc(m.text)}</div>${m.status ? `<div class="dstat">${ic('check-check', 12, 'c-ok')}<b>已送达</b>· ${where}${m.status}</div>` : ''}</div>`
+          }
           return `<div class="cm agent ${m.q ? 'ask' : ''}">${av(s.agent, 14)}<div class="bub">${m.q ? `<span class="askt">${ic('message-circle-question', 12)}在等你回答</span>` : ''}${esc(m.text)}</div></div>`
         }
         function drawerHtml() {
           const d = S.drawer
           const s = SS(d.session)
-          if (!s) return ''
+          if (!s) {
+            return ''
+          }
           const t = s.task ? T(s.task) : null
           const w = W(s.workspace)
           const h = hostOfWs(w)
@@ -11987,8 +12138,7 @@
           let input = ''
           if (live && !ended) {
             if (isChat) {
-              const lastQ =
-                allMsgs.length && allMsgs[allMsgs.length - 1].q ? allMsgs[allMsgs.length - 1] : null
+              const lastQ = allMsgs.length && allMsgs.at(-1).q ? allMsgs.at(-1) : null
               const opts = waiting && lastQ && lastQ.options ? lastQ.options : []
               input = `<div class="dr-in chat">${opts.length ? `<div class="dr-opts"><span class="muted">选一个，或在下面写：</span>${opts.map((o) => `<button class="btn sm" data-act="dr-opt" data-v="${esc(o)}">${esc(o)}</button>`).join('')}</div>` : ''}<div class="dr-row"><div class="schat-box"><input data-fk="cc-input" data-act-input="cc" data-sid="${s.id}" value="${esc(S.ccDraft)}" placeholder="回复 ${AG[s.agent]}，回车发送" autocomplete="off" spellcheck="false"></div>${stopBtn}</div></div>`
             } else {
@@ -11996,10 +12146,11 @@
             }
           }
           let note = ''
-          if (ended)
+          if (ended) {
             note = `<div class="dr-note">${ast('ended', 12)}<div>会话已结束。要继续就在任务上开会话。</div></div>`
-          else if (!live)
+          } else if (!live) {
             note = `<div class="dr-note">${ic('unplug', 14, 'c-unv')}<div>${h.name} 未连接，不能回复；上面是断开前最后读到的内容。</div></div>`
+          }
           const stop = d.stopping
             ? `<div class="dr-stop"><span>停止后这个会话结束，任务和工作区不变。</span><span class="fill"></span><button class="btn ghost sm" data-act="stop-cancel">取消</button><button class="btn sm danger" data-act="stop-ok">${ic('square', 12)}停止会话</button></div>`
             : ''
@@ -12043,7 +12194,9 @@
             ;(S.chats[s.id] = S.chats[s.id] || []).push({ who: 'you', text, status: '刚刚' })
             if (wasWaiting && s.id === 's38') {
               later(2200, () => {
-                if (s.state !== 'working') return
+                if (s.state !== 'working') {
+                  return
+                }
                 const said = `好，未关联任务的工作区放在${text.includes('最上面') ? '最上面' : '最下面'}，组头写「未关联任务」。我改一下。`
                 S.chats[s.id].push({ who: 'agent', text: said })
                 s.last = said
@@ -12051,11 +12204,9 @@
             }
           } else {
             const lines = [...(S.terminals[s.id] || [])]
-            while (
-              lines.length &&
-              (lines[lines.length - 1][1] === '> ' || lines[lines.length - 1][0] === '\n')
-            )
+            while (lines.length && (lines.at(-1)[1] === '> ' || lines.at(-1)[0] === '\n')) {
               lines.pop()
+            }
             S.terminals[s.id] = [
               ...lines,
               ['\n'],
@@ -12077,21 +12228,24 @@
           if (s.task) {
             const t = T(s.task)
             t.updated = '刚刚'
-            if (wasWaiting)
+            if (wasWaiting) {
               t.timeline.push({
                 at: '刚刚',
                 kind: 'comment',
                 text: `回答 ${AG[s.agent]} 的问题：${text}`,
                 by: '你'
               })
+            }
             // A question asked while accepting: the session works on it, the task stays 待验收.
             if (rootOf(t).status === 'review') {
               s.askedInReview = true
               if (s.id === 's12') {
                 later(2200, () => {
-                  if (s.state !== 'working' || s.view !== 'terminal') return
+                  if (s.state !== 'working' || s.view !== 'terminal') {
+                    return
+                  }
                   const lines = S.terminals[s.id]
-                  const spinner = lines.splice(lines.length - 2, 2)
+                  const spinner = lines.splice(-2, 2)
                   S.terminals[s.id] = [
                     ...lines,
                     ['w', '⏺ '],
@@ -12124,16 +12278,18 @@
             agentMenu: null
           }
           later(1500, () => {
-            if (S.chat && S.chat.stage === 'reading')
+            if (S.chat && S.chat.stage === 'reading') {
               S.chat.stage = ask ? 'answered' : demo ? 'proposal' : 'ask'
+            }
           })
         }
         // 只问: the scheduler reads with the chip's workspace as context and answers; it builds nothing (I1, S10).
         function askReads(c) {
           const w = c.chips.length === 1 && c.chips[0].type === 'ws' ? W(c.chips[0].id) : null
-          if (w && w.id === D.examples.ask.workspace)
+          if (w && w.id === D.examples.ask.workspace) {
             return { reads: D.examples.ask.reads, answer: D.examples.ask.answer, w }
-          if (w)
+          }
+          if (w) {
             return {
               reads: [
                 { cmd: `git log main..${w.branch} --oneline`, out: '读了最近的提交' },
@@ -12142,6 +12298,7 @@
               answer: `只读看了 ${w.name}（${hostOfWs(w).name}）最近的提交和未提交的改动，按你的问题回答在上面。没有建任务，也没有开会话。`,
               w
             }
+          }
           return {
             reads: D.scheduler.reads.slice(0, 2),
             answer:
@@ -12233,13 +12390,14 @@
           const you = `<div class="msg you"><div class="bub">${c.ask ? `<span class="askmode">${ic('message-circle-question', 11)}只问</span>` : ''}${c.chips.map((x) => `<span class="mchip in">${chipLabel(x)}</span>`).join('')}${esc(c.request)}</div></div>`
           if (c.ask) {
             const a = askReads(c)
-            if (c.stage === 'reading')
+            if (c.stage === 'reading') {
               return (
                 you +
                 schedulerMsg(
                   `<div class="m-t">${ast('working', 12)}只问模式：正在只读查询${a.w ? `，上下文是 ${a.w.name}` : ''}…</div><div class="reads">${a.reads.map((r) => `<div class="rd"><code>${esc(r.cmd)}</code><span class="muted">${ic('loader-circle', 11, 'spin-ic')}</span></div>`).join('')}</div>`
                 )
               )
+            }
             return (
               you +
               schedulerMsg(`<div class="m-t">只读查了这些，没有改动任何东西：</div>
@@ -12281,8 +12439,9 @@
               `<div class="m-t">已派活，会话都开起来了。之后的回写会出现在任务卡上。</div><div class="rcpts in-chat">${c.receipts.map(receiptHtml).join('')}</div>`
             )
           }
-          if (c.stage === 'dismissed')
+          if (c.stage === 'dismissed') {
             out += schedulerMsg('<div class="m-t">好，这次不建任务。</div>')
+          }
           return out
         }
         function chatPage() {
@@ -12316,7 +12475,9 @@
         // ---------- session view (d14): Orca's workspace view with tabs, pane header and the task chip ----------
         function sessionPage(sid) {
           const s = SS(sid)
-          if (!s) return homePage()
+          if (!s) {
+            return homePage()
+          }
           const t = s.task ? T(s.task) : null
           const w = W(s.workspace)
           const h = hostOfWs(w)
@@ -12521,7 +12682,9 @@
           let parent = null
           if (n.where === 'existing') {
             ws = W(n.pick)
-            if (ws.task) parent = ws.task
+            if (ws.task) {
+              parent = ws.task
+            }
           }
           const project = parent ? T(parent).project : ws ? R(ws.repo).project : R(n.repo).project
           const agent = n.where === 'later' || n.fromSession ? 'none' : n.agent
@@ -12536,8 +12699,10 @@
             send: n.send,
             description: n.desc
           })
-          if (!ws) t.status = 'todo'
-          if (ws && agent !== 'none')
+          if (!ws) {
+            t.status = 'todo'
+          }
+          if (ws && agent !== 'none') {
             t.timeline.push({
               at: '刚刚',
               kind: 'rule',
@@ -12545,6 +12710,7 @@
               note: '规则：开始做后移到进行中',
               by: '规则'
             })
+          }
           if (n.fromSession) {
             const s = SS(n.fromSession)
             s.task = t.id
@@ -12892,10 +13058,15 @@
             side = settingsSide()
             main = `<div class="titlebar"></div>${settingsPage()}`
             cls = 'settings'
-          } else if (S.view === 'detail') main = detailPage(S.detail)
-          else if (S.view === 'chat') main = chatPage()
-          else if (S.view === 'session') main = sessionPage(S.session)
-          else main = homePage()
+          } else if (S.view === 'detail') {
+            main = detailPage(S.detail)
+          } else if (S.view === 'chat') {
+            main = chatPage()
+          } else if (S.view === 'session') {
+            main = sessionPage(S.session)
+          } else {
+            main = homePage()
+          }
           const drawer = S.drawer && S.view !== 'settings' ? drawerHtml() : ''
           const overlay = S.newTask
             ? newTaskDialog()
@@ -12929,15 +13100,22 @@
           frame.innerHTML = `<section class="screen on" id="${current}">${windowHtml()}</section>`
           frame.querySelectorAll('[id$="scroll"], .home-scroll, .dr-body').forEach((el) => {
             const k = el.id || el.className
-            if (k in scrolls) el.scrollTop = scrolls[k]
+            if (k in scrolls) {
+              el.scrollTop = scrolls[k]
+            }
           })
           const term = frame.querySelector('.dterm')
-          if (term) term.scrollTop = term.scrollHeight
-          for (const el of frame.querySelectorAll('.chatv, .schat-in'))
+          if (term) {
+            term.scrollTop = term.scrollHeight
+          }
+          for (const el of frame.querySelectorAll('.chatv, .schat-in')) {
             el.scrollTop = el.scrollHeight
+          }
           if (S.scrollChat) {
             const cs = frame.querySelector('#chscroll')
-            if (cs) cs.scrollTop = cs.scrollHeight
+            if (cs) {
+              cs.scrollTop = cs.scrollHeight
+            }
             S.scrollChat = false
           }
           if (focusKey) {
@@ -12951,12 +13129,13 @@
                 /* not a text field */
               }
               // Opened by the page's own hash while still loading: the browser's fragment scroll blurs the input at load end.
-              if (document.readyState !== 'complete')
+              if (document.readyState !== 'complete') {
                 window.addEventListener(
                   'load',
                   () => setTimeout(() => el.isConnected && el.focus({ preventScroll: true }), 0),
                   { once: true }
                 )
+              }
             }
           }
           S.focus = null
@@ -12969,7 +13148,9 @@
           const s = SS(sid)
           S.drawer = { session: sid, level, stopping: false }
           S.ccDraft = ''
-          if (s && sFact(s) === 'live' && s.state !== 'ended') S.focus = 'cc-input'
+          if (s && sFact(s) === 'live' && s.state !== 'ended') {
+            S.focus = 'cc-input'
+          }
         }
         const ACTS = {
           home: () => {
@@ -13004,7 +13185,9 @@
           },
           'open-session': (el) => {
             const s = SS(el.dataset.sid)
-            if (!s || !hostOfWs(W(s.workspace)).connected) return
+            if (!s || !hostOfWs(W(s.workspace)).connected) {
+              return
+            }
             // From the task tree: land on the task's overview with the session in the quick-view drawer;
             // the drawer's 全屏 is what switches to its tab.
             if (el.dataset.from === 'tree' && S.sidebar === 'tasks' && s.task) {
@@ -13016,7 +13199,9 @@
               openPeek(s.id)
               return
             }
-            if (S.fullFrom && S.fullFrom.session !== s.id) S.fullFrom = null
+            if (S.fullFrom && S.fullFrom.session !== s.id) {
+              S.fullFrom = null
+            }
             S.view = 'session'
             S.session = s.id
             S.drawer = null
@@ -13032,7 +13217,9 @@
           },
           'proj-ok': (el) => {
             const r = S.receipts.find((x) => x.id === el.dataset.rid)
-            if (!r) return
+            if (!r) {
+              return
+            }
             const repo = R(r.repo)
             S.projects.push({ key: r.key, name: r.name, repo: repo.id, next: 1 })
             repo.project = r.key
@@ -13049,7 +13236,9 @@
           },
           'proj-cancel': (el) => {
             const r = S.receipts.find((x) => x.id === el.dataset.rid)
-            if (!r) return
+            if (!r) {
+              return
+            }
             S.receipts = S.receipts.filter((x) => x !== r)
             S.dispatch.home.chips = [r.ws ? { type: 'ws', id: r.ws } : { type: 'repo', id: r.repo }]
             S.dispatch.home.text = r.text
@@ -13057,7 +13246,9 @@
           },
           'append-to-sub': (el) => {
             const r = S.receipts.find((x) => x.id === el.dataset.rid)
-            if (!r || r.state !== 'counting') return
+            if (!r || r.state !== 'counting') {
+              return
+            }
             const s = SS(r.session)
             revertAppend(s)
             S.receipts = S.receipts.filter((x) => x !== r)
@@ -13116,7 +13307,9 @@
           },
           'start-work': (el) => {
             const t = T(el.dataset.id)
-            if (!t) return
+            if (!t) {
+              return
+            }
             S.view = 'detail'
             S.detail = t.id
             openComposer(t)
@@ -13185,7 +13378,9 @@
           },
           open: (el) => {
             const id = el.dataset.id
-            if (!T(id)) return
+            if (!T(id)) {
+              return
+            }
             S.view = 'detail'
             S.detail = id
             S.drawer = null
@@ -13197,7 +13392,9 @@
             // Always the 概览 tab, also from the tree: a waiting session is called out at the top of the 现在 card.
           },
           'task-overview': (el) => {
-            if (!T(el.dataset.id)) return
+            if (!T(el.dataset.id)) {
+              return
+            }
             S.view = 'detail'
             S.detail = el.dataset.id
             S.drawer = null
@@ -13210,7 +13407,9 @@
             const t = T(el.dataset.id)
             const to = el.dataset.v
             S.menu = null
-            if (!t || t.status === to) return
+            if (!t || t.status === to) {
+              return
+            }
             t.timeline.push({
               at: '刚刚',
               kind: 'rule',
@@ -13263,8 +13462,9 @@
           at: (el) => {
             const where = el.dataset.where
             const d = S.dispatch[where]
-            if (!/@\S*$/.test(d.text))
+            if (!/@\S*$/.test(d.text)) {
               d.text = `${d.text}${d.text && !d.text.endsWith(' ') ? ' ' : ''}@`
+            }
             S.pop = { where, query: '', index: 0 }
             S.focus = `dispatch-${where}`
           },
@@ -13278,7 +13478,9 @@
           },
           send: (el) => {
             dispatchDirect(el.dataset.where)
-            if (S.view === 'chat') S.scrollChat = true
+            if (S.view === 'chat') {
+              S.scrollChat = true
+            }
           },
           'open-chat': () => {
             const d = S.dispatch.home
@@ -13294,7 +13496,9 @@
             S.drawer = null
           },
           'goto-chat-demo': () => {
-            if (!S.chat) startScheduler(D.scheduler.request, [])
+            if (!S.chat) {
+              startScheduler(D.scheduler.request, [])
+            }
           },
           'new-chat': () => {
             S.chat = null
@@ -13308,15 +13512,21 @@
             const r = [...S.receipts, ...(S.chat ? S.chat.receipts : [])].find(
               (x) => x.id === el.dataset.rid
             )
-            if (r && r.state === 'counting') undoReceipt(r)
+            if (r && r.state === 'counting') {
+              undoReceipt(r)
+            }
           },
           dismiss: (el) => {
             S.receipts = S.receipts.filter((x) => x.id !== el.dataset.rid)
-            if (S.chat) S.chat.receipts = S.chat.receipts.filter((x) => x.id !== el.dataset.rid)
+            if (S.chat) {
+              S.chat.receipts = S.chat.receipts.filter((x) => x.id !== el.dataset.rid)
+            }
           },
           peek: (el) => {
             const s = SS(el.dataset.sid)
-            if (!s) return
+            if (!s) {
+              return
+            }
             openPeek(s.id, el.dataset.level === 'wide' ? 'wide' : 'peek')
           },
           'drawer-close': () => {
@@ -13329,26 +13539,36 @@
           'drawer-switch': (el) => {
             const s = SS(el.dataset.sid)
             S.menu = null
-            if (!s || !S.drawer) return
+            if (!s || !S.drawer) {
+              return
+            }
             S.drawer.session = s.id
             S.drawer.stopping = false
             S.ccDraft = ''
-            if (sFact(s) === 'live' && s.state !== 'ended') S.focus = 'cc-input'
+            if (sFact(s) === 'live' && s.state !== 'ended') {
+              S.focus = 'cc-input'
+            }
           },
           'drawer-wide': () => {
-            if (!S.drawer) return
+            if (!S.drawer) {
+              return
+            }
             S.drawer.level = 'wide'
             S.focus = 'cc-input'
           },
           'drawer-narrow': () => {
-            if (!S.drawer) return
+            if (!S.drawer) {
+              return
+            }
             S.drawer.level = 'peek'
             S.focus = 'cc-input'
           },
           // 全屏: task mode switches to the session's tab in the task view; workspace mode jumps to the workspace's tab.
           'drawer-full': (el) => {
             const s = SS(el.dataset.sid || (S.drawer && S.drawer.session))
-            if (!s || sFact(s) !== 'live') return
+            if (!s || sFact(s) !== 'live') {
+              return
+            }
             S.fullFrom = { view: S.view, detail: S.detail, session: s.id }
             S.view = 'session'
             S.session = s.id
@@ -13358,7 +13578,9 @@
           // 收回侧边: back to where 全屏 was pressed, with the session in the wide drawer.
           'drawer-back': () => {
             const f = S.fullFrom
-            if (!f) return
+            if (!f) {
+              return
+            }
             S.view = f.view === 'detail' && T(f.detail) ? 'detail' : 'home'
             S.detail = f.detail
             S.fullFrom = null
@@ -13366,7 +13588,9 @@
           },
           'dr-opt': (el) => {
             const s = S.drawer && SS(S.drawer.session)
-            if (!s || s.state !== 'waiting') return
+            if (!s || s.state !== 'waiting') {
+              return
+            }
             sendToSession(s, el.dataset.v)
             S.focus = 'cc-input'
           },
@@ -13380,7 +13604,7 @@
             const s = SS(S.drawer.session)
             s.state = 'ended'
             s.last = '会话已停止'
-            if (s.task)
+            if (s.task) {
               T(s.task).timeline.push({
                 at: '刚刚',
                 kind: 'session',
@@ -13388,6 +13612,7 @@
                 text: `停止了 ${AG[s.agent]} 会话`,
                 by: '你'
               })
+            }
             S.drawer.stopping = false
           },
           snooze: (el) => {
@@ -13430,7 +13655,9 @@
             S.summary[id] = 'loading'
             later(1600, () => {
               const t = T(id)
-              if (!t) return
+              if (!t) {
+                return
+              }
               S.summary[id] = 'done'
               const text = SUMMARY[id] || `${t.title}：会话在跑，还没有回写结论。`
               t.progress.unshift({
@@ -13453,7 +13680,9 @@
           },
           'new-session': (el) => {
             const t = T(el.dataset.id)
-            if (!t || !wsOfTask(t)) return
+            if (!t || !wsOfTask(t)) {
+              return
+            }
             S.sessionDlg = {
               task: t.id,
               sub: null,
@@ -13476,7 +13705,9 @@
           'accept-open': (el) => {
             S.accept.open = el.dataset.id
             const sc = document.getElementById('dscroll')
-            if (sc) sc.scrollTop = 0
+            if (sc) {
+              sc.scrollTop = 0
+            }
           },
           'accept-close': () => {
             S.accept.open = null
@@ -13484,7 +13715,9 @@
           },
           'reject-open': () => {
             S.accept.reject = !S.accept.reject
-            if (S.accept.reject) S.focus = 'reject'
+            if (S.accept.reject) {
+              S.focus = 'reject'
+            }
           },
           'reject-cancel': () => {
             S.accept.reject = false
@@ -13493,7 +13726,9 @@
           'reject-send': (el) => {
             const t = T(el.dataset.id)
             const reason = S.accept.reason.trim()
-            if (!reason) return
+            if (!reason) {
+              return
+            }
             const from = STATUS[t.status].name
             t.status = 'doing'
             t.updated = '刚刚'
@@ -13504,13 +13739,15 @@
               s.state = 'working'
               s.since = '刚刚'
               s.last = ''
-              if (s.view === 'chat')
-                (S.chats[s.id] = S.chats[s.id] || []).push({
+              if (s.view === 'chat') {
+                ;(S.chats[s.id] = S.chats[s.id] || []).push({
                   who: 'you',
                   text: `打回：${reason}`,
                   status: '刚刚'
                 })
-              else termType(s.id, `打回：${reason}`)
+              } else {
+                termType(s.id, `打回：${reason}`)
+              }
               sent.push(
                 `${AG[s.agent]}${T(s.task).id !== t.id ? `（${subLabel(T(s.task))}）` : ' '}`
               )
@@ -13575,7 +13812,9 @@
           },
           comment: (el) => {
             const text = S.comment.trim()
-            if (!text) return
+            if (!text) {
+              return
+            }
             T(el.dataset.id).timeline.push({ at: '刚刚', kind: 'comment', text, by: '你' })
             S.comment = ''
           },
@@ -13622,14 +13861,19 @@
           set: (el) => {
             const k = el.dataset.k
             const v = el.dataset.v
-            if (k.startsWith('pr-')) S.settings.prRule[k.slice(3)] = v
-            else S.settings[k] = v
+            if (k.startsWith('pr-')) {
+              S.settings.prRule[k.slice(3)] = v
+            } else {
+              S.settings[k] = v
+            }
           },
           'set-toggle': (el) => {
             const k = el.dataset.k
-            if (k.startsWith('start-'))
+            if (k.startsWith('start-')) {
               S.settings.startRule[k.slice(6)] = !S.settings.startRule[k.slice(6)]
-            else S.settings[k] = !S.settings[k]
+            } else {
+              S.settings[k] = !S.settings[k]
+            }
           },
           'set-proj': (el) => {
             S.settings.project = el.dataset.v
@@ -13651,39 +13895,62 @@
               (S.projMenu && !e.target.closest('.pmenu')) ||
               (S.chipOpen && !e.target.closest('.tcpop')) ||
               (S.menu && !e.target.closest('.moremenu, .spop, .wspop, .swpop'))
-            if (closePop) S.pop = null
+            if (closePop) {
+              S.pop = null
+            }
             if (closeMenus) {
               S.projMenu = null
               S.chipOpen = false
               S.menu = null
             }
-            if (closePop || closeMenus) render()
+            if (closePop || closeMenus) {
+              render()
+            }
             return
           }
-          if (el.disabled) return
+          if (el.disabled) {
+            return
+          }
           const act = el.dataset.act
           const fn = ACTS[act]
-          if (!fn) return
+          if (!fn) {
+            return
+          }
           e.stopPropagation()
-          if (act !== 'filter' && !el.closest('.fpop')) S.filterOpen = false
-          if (act !== 'at' && act !== 'pick' && !el.closest('.dbox')) S.pop = null
-          if (act !== 'chip' && !el.closest('.tcpop')) S.chipOpen = false
-          if (act !== 'proj-menu') S.projMenu = null
+          if (act !== 'filter' && !el.closest('.fpop')) {
+            S.filterOpen = false
+          }
+          if (act !== 'at' && act !== 'pick' && !el.closest('.dbox')) {
+            S.pop = null
+          }
+          if (act !== 'chip' && !el.closest('.tcpop')) {
+            S.chipOpen = false
+          }
+          if (act !== 'proj-menu') {
+            S.projMenu = null
+          }
           if (
             !['more-menu', 'status-menu', 'ws-menu', 'drawer-sw'].includes(act) &&
             !el.closest('.moremenu, .spop, .wspop, .swpop')
-          )
+          ) {
             S.menu = null
+          }
           const res = fn(el)
           // Picking an item inside the … menu closes it.
-          if (el.closest('.moremenu')) S.menu = null
-          if (res !== 'rendered') render()
+          if (el.closest('.moremenu')) {
+            S.menu = null
+          }
+          if (res !== 'rendered') {
+            render()
+          }
         })
         // Sidebar task rows show their latest progress on hover; the card sits beside the sidebar so the scroll box can't clip it.
         let tipFor = null
         frame.addEventListener('mouseover', (e) => {
           const tip = frame.querySelector('#ttip')
-          if (!tip) return
+          if (!tip) {
+            return
+          }
           const el = e.target.closest('.sb [data-tip]')
           if (!el) {
             if (tipFor) {
@@ -13692,7 +13959,9 @@
             }
             return
           }
-          if (el.dataset.tip === tipFor && tip.classList.contains('on')) return
+          if (el.dataset.tip === tipFor && tip.classList.contains('on')) {
+            return
+          }
           tipFor = el.dataset.tip
           const win = frame.querySelector('.win').getBoundingClientRect()
           const r = el.getBoundingClientRect()
@@ -13704,7 +13973,9 @@
         })
         frame.addEventListener('mouseleave', () => {
           const tip = frame.querySelector('#ttip')
-          if (tip) tip.classList.remove('on')
+          if (tip) {
+            tip.classList.remove('on')
+          }
           tipFor = null
         })
         frame.addEventListener('input', (e) => {
@@ -13714,9 +13985,12 @@
             S.dispatch[where].text = el.value
             const m = el.value.match(/@([^\s@]*)$/)
             if (m) {
-              if (!S.pop || S.pop.where !== where || S.pop.query !== m[1])
+              if (!S.pop || S.pop.where !== where || S.pop.query !== m[1]) {
                 S.pop = { where, query: m[1], index: 0 }
-            } else S.pop = null
+              }
+            } else {
+              S.pop = null
+            }
             refreshDispatch(where)
             return
           }
@@ -13724,19 +13998,27 @@
           if (k === 'comment') {
             S.comment = el.value
             const btn = frame.querySelector('[data-act="comment"]')
-            if (btn) btn.classList.toggle('primary', !!el.value.trim())
+            if (btn) {
+              btn.classList.toggle('primary', !!el.value.trim())
+            }
           } else if (k === 'reject') {
             S.accept.reason = el.value
             const btn = frame.querySelector('[data-act="reject-send"]')
-            if (btn) btn.disabled = !el.value.trim()
+            if (btn) {
+              btn.disabled = !el.value.trim()
+            }
           } else if (el.dataset.nt) {
             S.newTask[el.dataset.nt] = el.value
             const btn = frame.querySelector('[data-act="nt-create"]')
-            if (btn) btn.disabled = !S.newTask.title.trim()
+            if (btn) {
+              btn.disabled = !S.newTask.title.trim()
+            }
           } else if (el.dataset.cp) {
             S.composer[el.dataset.cp] = el.value
             const btn = frame.querySelector('[data-act="cp-create"]')
-            if (btn) btn.disabled = !S.composer.name.trim()
+            if (btn) {
+              btn.disabled = !S.composer.name.trim()
+            }
           } else if (el.dataset.sd) {
             S.sessionDlg[el.dataset.sd] = el.value
           } else if (el.classList.contains('pc-input')) {
@@ -13764,7 +14046,9 @@
               if (e.key === 'Enter' || e.key === 'Tab') {
                 e.preventDefault()
                 const x = en[S.pop.index]
-                if (x) pickMention(where, x.type, x.id)
+                if (x) {
+                  pickMention(where, x.type, x.id)
+                }
                 return
               }
               if (e.key === 'Escape') {
@@ -13777,7 +14061,9 @@
               e.preventDefault()
               S.focus = `dispatch-${where}`
               dispatchDirect(where)
-              if (S.view === 'chat') S.scrollChat = true
+              if (S.view === 'chat') {
+                S.scrollChat = true
+              }
               render()
               return
             }
@@ -13791,9 +14077,13 @@
           if (el.dataset.actInput === 'cc' && e.key === 'Enter') {
             e.preventDefault()
             const text = S.ccDraft.trim()
-            if (!text) return
+            if (!text) {
+              return
+            }
             const s = SS(el.dataset.sid || S.session)
-            if (!s) return
+            if (!s) {
+              return
+            }
             sendToSession(s, text)
             S.ccDraft = ''
             S.focus = 'cc-input'
@@ -13814,7 +14104,9 @@
           }
           if (el.dataset.cp && e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
             e.preventDefault()
-            if (S.composer.name.trim()) createFromComposer()
+            if (S.composer.name.trim()) {
+              createFromComposer()
+            }
             render()
             return
           }
@@ -13837,38 +14129,58 @@
           }
         })
         document.addEventListener('keydown', (e) => {
-          if (e.key !== 'Escape') return
-          if (S.newTask) S.newTask = null
-          else if (S.composer) S.composer = null
-          else if (S.sessionDlg) S.sessionDlg = null
-          else if (S.cancelDlg) S.cancelDlg = null
-          else if (S.menu) S.menu = null
-          else if (S.drawer) S.drawer = null
-          else if (S.pop) S.pop = null
-          else if (S.chipOpen) S.chipOpen = false
-          else return
+          if (e.key !== 'Escape') {
+            return
+          }
+          if (S.newTask) {
+            S.newTask = null
+          } else if (S.composer) {
+            S.composer = null
+          } else if (S.sessionDlg) {
+            S.sessionDlg = null
+          } else if (S.cancelDlg) {
+            S.cancelDlg = null
+          } else if (S.menu) {
+            S.menu = null
+          } else if (S.drawer) {
+            S.drawer = null
+          } else if (S.pop) {
+            S.pop = null
+          } else if (S.chipOpen) {
+            S.chipOpen = false
+          } else {
+            return
+          }
           render()
         })
 
         // Undo countdowns tick in place so typing elsewhere keeps focus; a receipt that runs out re-renders once.
         setInterval(() => {
-          if (!S) return
+          if (!S) {
+            return
+          }
           let changed = false
           const all = [...S.receipts, ...(S.chat ? S.chat.receipts : [])]
           for (const r of all) {
-            if (r.state !== 'counting') continue
+            if (r.state !== 'counting') {
+              continue
+            }
             const left = Math.max(0, Math.ceil((r.endsAt - Date.now()) / 1000))
             if (left !== r.left) {
               r.left = left
               const el = frame.querySelector(`[data-cd="${r.id}"]`)
-              if (el) el.textContent = left
+              if (el) {
+                el.textContent = left
+              }
             }
             if (left <= 0) {
               r.state = 'done'
               changed = true
             }
           }
-          if (changed) render()
+          if (changed) {
+            render()
+          }
         }, 200)
 
         // ---------- presets (one per screen) ----------
@@ -14080,15 +14392,16 @@
             .querySelectorAll('.switcher .tab')
             .forEach((a) => a.classList.toggle('on', a.dataset.id === parent))
           const sub = document.querySelector('.switcher .subname')
-          if (sub) sub.textContent = SUB[id] ? `${id} · ${SUB_NAME[id]}` : ''
+          if (sub) {
+            sub.textContent = SUB[id] ? `${id} · ${SUB_NAME[id]}` : ''
+          }
           document.title = `Orca 以任务为主 · ${SUB[id] ? SUB_NAME[id] : SCREENS.find(([s]) => s === id)[1]}`
         }
         const nav = document.querySelector('.switcher .tabs-host')
-        nav.innerHTML =
-          SCREENS.map(
-            ([id, name]) =>
-              `<a class="tab" href="#${id}" data-id="${id}"><span>${id}</span>${name}</a>`
-          ).join('') + '<span class="subname"></span>'
+        nav.innerHTML = `${SCREENS.map(
+          ([id, name]) =>
+            `<a class="tab" href="#${id}" data-id="${id}"><span>${id}</span>${name}</a>`
+        ).join('')}<span class="subname"></span>`
         document.querySelector('.switcher .reset').addEventListener('click', () => {
           try {
             localStorage.removeItem(sidebarKey(current))
@@ -14116,7 +14429,9 @@
             const el = document.createElement('div')
             Object.assign(el.dataset, data)
             const r = ACTS[name](el)
-            if (r !== 'rendered') render()
+            if (r !== 'rendered') {
+              render()
+            }
           }
         }
         fromHash()
