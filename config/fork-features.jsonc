@@ -3253,6 +3253,8 @@
         "src/shared/host-setting-overrides.ts",
         "mobile/src/i18n/use-mobile-translation.ts",
         "src/main/runtime/orca-runtime.ts",
+        "src/main/runtime/runtime-notifier-contract.ts",
+        "src/shared/workspace-session-state-types.ts",
         "src/main/ipc/desktop-runtime-sender-lifecycle.ts"
       ],
       "policyId": "local-tasks",
@@ -3298,6 +3300,11 @@
         "src/main/local-tasks/local-task-proposal-ownership.ts"
       ],
       "seams": [
+        {
+          "file": "src/main/runtime/terminal/focus/focus-terminal.ts",
+          "mustContain": "terminalWindowProjectionSource()",
+          "why": "A task preview projects an already live terminal through the background notifier without creating a PTY or navigating (REQ-028)"
+        },
         {
           "file": "src/main/index.ts",
           "mustContain": "startLocalTasksForMainProcess()",

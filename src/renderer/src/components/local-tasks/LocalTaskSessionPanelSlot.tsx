@@ -44,6 +44,7 @@ import {
   revealLocalTaskSession
 } from '@/local-tasks/local-task-session-reveal'
 import { localTaskSessionPanelIsOnScreen } from '@/local-tasks/local-task-session-panel-read'
+import { prepareLocalTaskSessionPreview } from '@/local-tasks/local-task-session-preview-preparation'
 import { localTaskDescendantIds } from '../../../../shared/local-tasks/local-task-tree'
 
 function relatedSessions(
@@ -72,6 +73,7 @@ function LocalTaskSessionPanelContent({
   const publishedPortal = useRef<ActivityTerminalPortalTarget | null>(null)
   const readSurface = useRef<HTMLDivElement | null>(null)
   const chatViewObserved = useRef(false)
+  const [preparationFailed, setPreparationFailed] = useState(false)
   const tabId = session.paneKey
     ? (parsePaneKey(session.paneKey)?.tabId ?? session.tabId)
     : session.tabId
@@ -80,6 +82,29 @@ function LocalTaskSessionPanelContent({
     tabId ? state.terminalLayoutsByTabId[tabId] : undefined
   )
   const mountReady = useAppStore((state) => localTaskSessionMountReady(state, session, tabId))
+  const { id: sessionLinkId, hostId, surface } = session
+  useEffect(() => {
+    setPreparationFailed(false)
+    if (mountReady || !inContact || surface !== 'terminal') {
+      return
+    }
+    let cancelled = false
+    void prepareLocalTaskSessionPreview({ id: sessionLinkId, hostId, surface }).then(
+      (prepared) => {
+        if (!cancelled) {
+          setPreparationFailed(prepared === false)
+        }
+      },
+      () => {
+        if (!cancelled) {
+          setPreparationFailed(true)
+        }
+      }
+    )
+    return () => {
+      cancelled = true
+    }
+  }, [hostId, inContact, mountReady, requestToken, sessionLinkId, surface])
   const paneKey =
     resolveLocalTaskSessionPaneKey(session, terminalLayout) ??
     (!inContact &&
@@ -210,7 +235,7 @@ function LocalTaskSessionPanelContent({
         <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/80 text-sm text-muted-foreground">
           {translate('localTasks.sessionPanel.disconnected', 'Not connected')}
         </div>
-      ) : !isChat && !terminalAvailable ? (
+      ) : !isChat && (!terminalAvailable || preparationFailed) ? (
         <div className="absolute inset-0 flex items-center justify-center text-sm text-muted-foreground">
           {translate('localTasks.sessionPanel.unavailable', 'Session unavailable')}
         </div>

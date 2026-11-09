@@ -3,7 +3,7 @@ title: 本地任务管理
 slug: 本地任务管理
 status: implementing
 created: 2026-10-26
-updated: 2026-11-07
+updated: 2026-11-09
 external_ids:
   - 'Fartown/orca#90'
 ---
@@ -375,6 +375,15 @@ external_ids:
 - 验证完再一起做两个切片
 
 ## 3. 开发记录
+
+### 2026-11-09 后台终端速览的缺失 tab 复现与修复（testing）
+
+- 本轮目标：继续统一 Goal，优先定位 ui-13 的新后台终端速览空白；保持 Q1/Q2、现有后台创建行为及原 provider 会话不变。
+- 完成内容：在 b48792da79 新构建的 ui-14 同轮回读主端 session、SQLite、window 布局与 renderer cache；新 tab/pane/PTY 在主端和磁盘持续存在，窗口点击前后缺 tab/layout，未收到 createTerminal。速览打开时按任务会话定位持久化 live pane，核对 PTY/incarnation 后复用后台 notifier 投影；不新建 PTY、不导航或聚焦；失联、删除和身份不符时不补建，不自动重试。
+- 代码或文档变更：功能自有预览准备、仅本桌面可调用的 links.prepareSession RPC、现有 Panel 接入和 TC-304；运行时仅登记通用只读投影适配接缝，RPC manifest 调用功能逻辑，核心不依赖任务模块；同步依赖、架构与参数目录。
+- 验证证据：`.docs/local-tasks-ui-validation/2026-11-06/consolidation/goal-2026-11-07/evidence/ui-14/` 保存修前失败与主端/窗口/磁盘快照；`.docs/local-tasks-ui-validation/2026-11-09/resume/environment/preview-unit-02.log` 12项、`preview-typecheck-02.log` 全域类型、`preview-architecture-02.log` 架构已通过。修后应用重建与本机/SSH/物理手机复测仍待本轮后续证据。
+- 未解决问题：逐 REQ 与111原型状态尚有未测或未实现分支，最终 check:changed、正常 push PR #76 和新候选 CI 未完成；旧手机与 Metro 已过期，新独占 Pixel9 和 root sshd 新隔离 HOME 已核验，不能外推为业务通过。
+- 下一步：以提交后的新构建复测终端输入、宽窄、原标签与返回，再继续两套派活、真实手机/SSH/CLI/RPC/迁移/断联；保留全部缺口，禁止自动合入 integration。
 
 ### 2026-11-07 统一候选的并发、SSH与真实模型验收（testing）
 

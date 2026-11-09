@@ -5,6 +5,7 @@ import {
   LocalTasksAttentionSnoozeParams,
   LocalTasksLinksLinkWorkspaceParams,
   LocalTasksLinksListParams,
+  LocalTasksLinksPrepareSessionParams,
   LocalTasksLinksRecordSessionParams,
   LocalTasksLinksResolveWorkspaceParams,
   LocalTasksLinksUnlinkSessionParams,
@@ -14,6 +15,7 @@ import {
 import type { LocalTaskExecutionService } from '../../../local-tasks/local-task-execution-service'
 import { localTasksReadiness } from '../../../local-tasks/local-tasks-readiness'
 import { isDesktopClientCaller, sourceOf } from '../../../local-tasks/local-tasks-rpc-caller'
+import { prepareLocalTaskTerminalPreview } from '../../../local-tasks/local-task-terminal-preview'
 import { defineMethod } from '../core'
 
 const DESKTOP_ONLY: LocalTaskFailure = { ok: false, code: 'desktop_only' }
@@ -23,6 +25,7 @@ const DESKTOP_ONLY: LocalTaskFailure = { ok: false, code: 'desktop_only' }
  * reads neither, so it never speaks for them. Any desktop, local or paired, may.
  */
 export const LOCAL_TASK_DESKTOP_ONLY_METHODS: readonly string[] = [
+  'localTasks.links.prepareSession',
   'localTasks.links.resolveWorkspace',
   'localTasks.rules.applyPrMerged'
 ]
@@ -32,6 +35,28 @@ function execution(): LocalTaskExecutionService {
 }
 
 export const LOCAL_TASK_LINK_METHODS = [
+  defineMethod({
+    permission: 'workspace',
+    name: 'localTasks.links.prepareSession',
+    params: LocalTasksLinksPrepareSessionParams,
+    handler: async (params, context) => {
+      if (context.caller?.kind !== 'desktop' || context.clientKind === 'mobile') {
+        return DESKTOP_ONLY
+      }
+      const link = execution()
+        .listLinks()
+        .sessions.find((row) => row.id === params.sessionLinkId)
+      return {
+        ok: true,
+        prepared: link
+          ? await prepareLocalTaskTerminalPreview(
+              link,
+              context.runtime.terminalWindowProjectionSource()
+            )
+          : false
+      }
+    }
+  }),
   defineMethod({
     permission: 'workspace',
     name: 'localTasks.links.list',
