@@ -3,8 +3,8 @@ title: '手机打开工作区终端身份恢复'
 slug: '手机打开工作区终端身份恢复'
 status: testing
 created: 2026-10-24
-updated: 2026-11-05
-external_ids: ['STA-3859']
+updated: 2026-11-09
+external_ids: ['STA-3859', 'Fartown/orca#92']
 ---
 
 # 手机打开工作区终端身份恢复 开发 Journal
@@ -13,11 +13,11 @@ external_ids: ['STA-3859']
 
 | 类型     | 文档                                                                                     | 状态         | 说明                                                                              |
 | -------- | ---------------------------------------------------------------------------------------- | ------------ | --------------------------------------------------------------------------------- |
-| 需求     | [requirements/手机打开工作区终端身份恢复.md](requirements/手机打开工作区终端身份恢复.md) | ready        | REQ-001 至 REQ-006 均待实现；REQ-006 已收窄到本次 adoption 兜底                   |
+| 需求     | [requirements/手机打开工作区终端身份恢复.md](requirements/手机打开工作区终端身份恢复.md) | ready        | REQ-001 至 REQ-007 待整体验收；REQ-007 补数字 PTY 缓存碰撞                        |
 | 交互     | -                                                                                        | not-required | 不新增 UI，也无独立交互事实源                                                     |
 | 调研     | [research/手机激活终端认领证据.md](research/手机激活终端认领证据.md)                     | ready        | 现场、受控实验、上游历史及证据限制                                                |
 | 方案     | [solutions/手机工作区原终端身份恢复方案.md](solutions/手机工作区原终端身份恢复方案.md)   | approved     | 最终窄版源码经指定 Claude 代码 review APPROVE；仅代表本次 slice，不是全量产品验收 |
-| 测试用例 | [tests/cases/手机终端原身份恢复.md](tests/cases/手机终端原身份恢复.md)                   | ready        | 17 条长期规格；每条执行结果在本 Journal 与 ignored 原始证据中分开记录             |
+| 测试用例 | [tests/cases/手机终端原身份恢复.md](tests/cases/手机终端原身份恢复.md)                   | ready        | 包含 TC-022 数字恢复；执行结果在本 Journal 与 ignored 原始证据中分开记录          |
 
 ## 2. 决策点记录
 

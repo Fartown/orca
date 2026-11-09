@@ -364,6 +364,7 @@ test.describe('numeric fallback provider recovery', () => {
     testRepoPath,
     registerPostElectronShutdownCleanup
   }, testInfo) => {
+    // The real local-provider fallback must outlast the 60-second daemon startup cap.
     test.setTimeout(240_000)
     const orcaPage = await electronApp.firstWindow()
     await orcaPage.waitForLoadState('domcontentloaded')
