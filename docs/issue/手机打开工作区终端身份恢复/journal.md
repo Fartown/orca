@@ -249,3 +249,13 @@ external_ids: ['STA-3859']
 - 验证证据：原失败日志 `build/ci-unit-11.log`；本机 `build/activation-seam-after.log` 10 项通过。均在本轮忽略证据目录。修订提交的全量 CI 尚待运行。
 - 未解决问题：发布安装及截图实际宿主的验证仍待完成，不能标 done。
 - 下一步：完成修订提交门禁，待完整 PR 检查通过后合并发布，再按已有授权安装并检查实际版本和终端连续性。
+
+## 2026-11-09 数字 PTY 现场补修
+
+- 本轮目标：implementing；修复 REQ-007，保留现有六个 live 会话并阻止重复空 shell。
+- 完成内容：连接用户提供的新 Mac 地址，核实 `.76` 及构建提交；关联 19:33 的 renderer 新 tab 与 provider 新 PTY `14/15`。读取现场 renderer，定位其他工作区旧 `4/5` mounted 缓存挡住原身份恢复，数字 ID fallback 随后新建 shell。
+- 代码或文档变更：登记 REQ-007、现场分析与数字恢复回归。修复工作区范围的竞争绑定判断，数字 PTY 无法恢复原身份时 decline，非数字旧路径保留；没有改 provider 防碰撞规则或 wire 协议。
+- 验证证据：`.docs/mobile-terminal-recovery-ui-validation/2026-11-09/evidence/` 下 `regression-before.log` 四项失败；`feature-tests.log` 125项通过；`typecheck.log`、architecture/features/docs及三项 localization 通过；`numeric-e2e.log` 真实 local fallback 数字 PTY 通过，`ssh-e2e.log` SSH Git/folder 与旧 host 配对通过。`TC-022` 记录范围。
+- 完成内容补充：生产 Mac 先保存 `renderer-before.json` 备份，再仅移除其他两个工作区 mounted 列表中已由新鲜主机证明属于当前工作区的裸 `4/5` 缓存，使用现有 createTab 恢复原 tab/leaf。桌面4→6，主机发布6；`mac-host-after-repair.json` / `mac-renderer-after-repair.json` 对比确认六个 handle/incarnation 不变、两个根 PID/启动时间不变、导航不变、主进程仍为19549；没有退出应用、关闭 tab 或向生产终端输入。
+- 未解决问题：永久代码尚未正式发布/安装，真实手机13标签的当前画面未获得；当前状态 testing，不是 done。完整 e2e 类型检查有 cloud/mobile 未装独立依赖的诊断，目标 spec 无诊断。初次旧场景 E2E 被上游 setup script 提示卡挡住，复用现有 dismiss helper 后重跑，不改产品提示卡。
+- 下一步：收齐重跑与 PR 检查，发布防复发版本；正式安装重启须取得该 Mac 的明确许可，不能把现场状态修复当作永久代码已经安装。
