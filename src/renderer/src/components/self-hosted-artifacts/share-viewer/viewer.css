@@ -29,12 +29,16 @@
 /* Same add button as the app's preview, in its gutter; higher specificity than its narrow-width rule. */
 .orca-share-comment-block > .markdown-annotation-add {
   position: absolute;
+  z-index: 1;
   top: 2px;
   left: -26px;
 }
 
-.orca-share-comment-block:hover > .markdown-annotation-add,
-.orca-share-comment-block:focus-within > .markdown-annotation-add {
+/* Why :has: a list item with a sub-list is a block around other blocks; only the innermost shows its button. */
+.orca-share-comment-block:hover:not(:has(.orca-share-comment-block:hover))
+  > .markdown-annotation-add,
+.orca-share-comment-block:focus-within:not(:has(.orca-share-comment-block:focus-within))
+  > .markdown-annotation-add {
   opacity: 1;
 }
 
@@ -62,30 +66,50 @@
   padding: 0;
 }
 
-/* Commented text: a dashed rule drawn a little below each line (::highlight cannot offset an underline). */
-.orca-share-comment-underlines {
+/* What a comment is about: a dashed rule a little below selected text, a bar beside a whole block. */
+.orca-share-comment-marks {
+  --share-comment-mark: color-mix(in srgb, var(--foreground) 40%, transparent);
   position: absolute;
   inset: 0;
   pointer-events: none;
 }
 
-.orca-share-comment-underlines > span {
+.orca-share-comment-marks > span {
   position: absolute;
+}
+
+.orca-share-comment-marks > span.is-active {
+  --share-comment-mark: color-mix(in srgb, var(--foreground) 80%, transparent);
+}
+
+/* Why a gradient: ::highlight cannot offset an underline, and a border's dashes cannot be sized. */
+.orca-share-comment-marks > span.is-line {
   height: 1px;
-  background-image: linear-gradient(
-    to right,
-    color-mix(in srgb, var(--foreground) 40%, transparent) 60%,
-    transparent 60%
-  );
+  background-image: linear-gradient(to right, var(--share-comment-mark) 60%, transparent 60%);
   background-size: 5px 1px;
 }
 
-.orca-share-comment-underlines > span.is-active {
-  background-image: linear-gradient(
-    to right,
-    color-mix(in srgb, var(--foreground) 80%, transparent) 60%,
-    transparent 60%
-  );
+.orca-share-comment-marks > span.is-bar {
+  width: 2px;
+  border-radius: 1px;
+  background: var(--share-comment-mark);
+}
+
+/* A click on a card or on marked text flashes its counterpart, as the app does for review notes. */
+.orca-share-comment-marks > span.is-attention {
+  animation: orca-share-comment-mark-attention 900ms ease-out;
+}
+
+@keyframes orca-share-comment-mark-attention {
+  0%,
+  45% {
+    --share-comment-mark: var(--foreground);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--ring) 35%, transparent);
+  }
+
+  100% {
+    box-shadow: none;
+  }
 }
 
 /* Why: `.markdown-light .markdown-body code` outranks `.markdown-body pre code`, painting each code line as a chip. */

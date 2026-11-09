@@ -105,6 +105,7 @@ export function addArtifactShareComment(
       startLine: input.startLine,
       endLine: input.endLine,
       ...(input.quote ? { quote: input.quote } : {}),
+      ...(input.anchor ? { anchor: input.anchor } : {}),
       createdAt: now.toISOString()
     }
     file.comments.push(comment)

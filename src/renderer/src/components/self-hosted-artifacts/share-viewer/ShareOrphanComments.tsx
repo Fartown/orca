@@ -1,34 +1,14 @@
-import React, { useLayoutEffect, useState, type RefObject } from 'react'
+import React from 'react'
 import { translate } from '@/i18n/i18n'
 import { ShareCommentCard, ShareCommentCardFrame } from './ShareCommentBlock'
-import { findShareCommentHomeBlock } from './share-comment-blocks'
+import { useShareCommentPlacements } from './ShareCommentPlacements'
 import { useShareComments } from './share-viewer-comments-state'
 
-/** Comments whose last line no longer falls in a block (the file changed after they were left). */
-export function ShareOrphanComments({
-  bodyRef,
-  markdown
-}: {
-  bodyRef: RefObject<HTMLDivElement | null>
-  markdown: string
-}): React.JSX.Element | null {
+/** Comments whose text is no longer in the file: listed after it, with the text they quoted. */
+export function ShareOrphanComments(): React.JSX.Element | null {
   const { available, comments } = useShareComments()
-  const [orphanIds, setOrphanIds] = useState<ReadonlySet<string>>(() => new Set())
-
-  useLayoutEffect(() => {
-    const body = bodyRef.current
-    setOrphanIds(
-      new Set(
-        body
-          ? comments
-              .filter((comment) => findShareCommentHomeBlock(body, comment) === null)
-              .map((comment) => comment.id)
-          : []
-      )
-    )
-  }, [bodyRef, comments, markdown])
-
-  const orphans = comments.filter((comment) => orphanIds.has(comment.id))
+  const placements = useShareCommentPlacements()
+  const orphans = comments.filter((comment) => placements.get(comment.id)?.kind === 'orphan')
   if (!available || orphans.length === 0) {
     return null
   }

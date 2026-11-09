@@ -16,6 +16,7 @@ import { translate } from '@/i18n/i18n'
 import { useAppStore } from '@/store'
 import { ShareCommentInlineContext } from './ShareCommentBlock'
 import { ShareCommentHighlights, ShareSelectionCommentButton } from './ShareCommentHighlights'
+import { ShareCommentPlacementsProvider } from './ShareCommentPlacements'
 import { ShareCommentRail } from './ShareCommentRail'
 import { ShareImageViewerProvider } from './ShareImageViewer'
 import { ShareOrphanComments } from './ShareOrphanComments'
@@ -207,33 +208,35 @@ function ShareViewerLayout({
             className={`markdown-body orca-share-body ${showRail ? 'orca-share-body-with-rail' : ''}`.trim()}
             translate="no"
           >
-            <ShareDarkContext.Provider value={isDark}>
-              <ShareAnchorContext.Provider value={navigateToAnchor}>
-                <ShareCommentInlineContext.Provider value={inlineComments}>
-                  {bodyReady ? (
-                    <MarkdownPreviewBody
-                      content={shared.markdown}
-                      components={SHARE_MARKDOWN_COMPONENTS}
-                    />
-                  ) : (
-                    <p
-                      role="status"
-                      className="flex items-center gap-2 text-sm text-muted-foreground"
-                    >
-                      <Loader2 className="size-4 animate-spin" />
-                      {translate('editor.markdownPreview.preparing', 'Preparing preview…')}
-                    </p>
-                  )}
-                </ShareCommentInlineContext.Provider>
-              </ShareAnchorContext.Provider>
-            </ShareDarkContext.Provider>
-            {bodyReady ? (
-              <>
-                <ShareOrphanComments bodyRef={bodyRef} markdown={shared.markdown} />
-                <ShareCommentHighlights bodyRef={bodyRef} markdown={shared.markdown} />
-                {showRail ? <ShareCommentRail bodyRef={bodyRef} /> : null}
-              </>
-            ) : null}
+            <ShareCommentPlacementsProvider bodyRef={bodyRef} markdown={shared.markdown}>
+              <ShareDarkContext.Provider value={isDark}>
+                <ShareAnchorContext.Provider value={navigateToAnchor}>
+                  <ShareCommentInlineContext.Provider value={inlineComments}>
+                    {bodyReady ? (
+                      <MarkdownPreviewBody
+                        content={shared.markdown}
+                        components={SHARE_MARKDOWN_COMPONENTS}
+                      />
+                    ) : (
+                      <p
+                        role="status"
+                        className="flex items-center gap-2 text-sm text-muted-foreground"
+                      >
+                        <Loader2 className="size-4 animate-spin" />
+                        {translate('editor.markdownPreview.preparing', 'Preparing preview…')}
+                      </p>
+                    )}
+                  </ShareCommentInlineContext.Provider>
+                </ShareAnchorContext.Provider>
+              </ShareDarkContext.Provider>
+              {bodyReady ? (
+                <>
+                  <ShareOrphanComments />
+                  <ShareCommentHighlights bodyRef={bodyRef} />
+                  {showRail ? <ShareCommentRail bodyRef={bodyRef} /> : null}
+                </>
+              ) : null}
+            </ShareCommentPlacementsProvider>
           </div>
         </div>
       </div>

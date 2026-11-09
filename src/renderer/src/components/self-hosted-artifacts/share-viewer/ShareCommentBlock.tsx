@@ -1,4 +1,5 @@
 import React, { useCallback, useContext, useState } from 'react'
+import { revealMarkdownNavigationDetails } from '@/components/editor/markdown-navigation-details'
 import { CornerDownLeft, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { DiffCommentCard } from '@/components/diff-comments/DiffCommentCard'
@@ -12,17 +13,21 @@ import {
 import type { MarkdownPreviewPositionNode } from '@/components/editor/markdown-preview-types'
 import type { ArtifactShareComment } from '../../../../../shared/self-hosted-artifacts/artifact-share-comments-contract'
 import type { ShareCommentPostError } from './share-viewer-comments-client'
+import { captureShareCommentBlock, type ShareCommentPlacement } from './share-comment-anchors'
 import {
-  findShareCommentBlocks,
   SHARE_COMMENT_BLOCK_ATTRIBUTE,
   SHARE_COMMENT_CHROME_ATTRIBUTE,
   SHARE_COMMENT_ID_ATTRIBUTE
 } from './share-comment-blocks'
 import {
-  isShareCommentInBlock,
-  useShareComments,
-  type ShareCommentRange
-} from './share-viewer-comments-state'
+  SHARE_DRAFT_PLACEMENT_ID,
+  shareCommentPlacementElement,
+  useShareCommentPlacements
+} from './ShareCommentPlacements'
+import { useShareComments, type ShareCommentRange } from './share-viewer-comments-state'
+
+// Where a card click brings its text: the upper third of the view, where the eye starts reading.
+const REVEAL_VIEW_FRACTION = 1 / 3
 
 /** True when the page is too narrow for a side rail; cards then sit under their block. */
 export const ShareCommentInlineContext = React.createContext(false)
@@ -89,7 +94,32 @@ function isCardControl(target: EventTarget | null): boolean {
   )
 }
 
-/** Hover on a card emphasizes the text it is about; a click also scrolls that text into view. */
+/** Opens folded sections around the text and brings it to the upper third of the view. */
+function revealCommentSource(placement: ShareCommentPlacement | undefined): boolean {
+  const element = shareCommentPlacementElement(placement)
+  if (!(element instanceof HTMLElement) || !placement || placement.kind === 'orphan') {
+    return false
+  }
+  revealMarkdownNavigationDetails(element)
+  const scroller = element.closest<HTMLElement>('.markdown-preview')
+  const target: Element | Range =
+    placement.kind === 'text' ? (placement.ranges[0] ?? element) : placement.block
+  if (!scroller) {
+    return false
+  }
+  const view = scroller.getBoundingClientRect()
+  scroller.scrollTo({
+    top:
+      scroller.scrollTop +
+      target.getBoundingClientRect().top -
+      view.top -
+      scroller.clientHeight * REVEAL_VIEW_FRACTION,
+    behavior: 'smooth'
+  })
+  return true
+}
+
+/** Hover on a card emphasizes the text it is about; a click also brings that text into view. */
 export function ShareCommentCardFrame({
   comment,
   className,
@@ -103,23 +133,26 @@ export function ShareCommentCardFrame({
   frameRef?: React.Ref<HTMLDivElement>
   children: React.ReactNode
 }): React.JSX.Element {
-  const { activeCommentId, setActiveCommentId } = useShareComments()
+  const { activeCommentId, setActiveCommentId, attentionCommentId, flashComment } =
+    useShareComments()
+  const placements = useShareCommentPlacements()
+  const state = [
+    activeCommentId === comment.id ? 'is-active' : '',
+    attentionCommentId === comment.id ? 'is-attention' : ''
+  ]
   return (
     <div
       ref={frameRef}
       {...{ [SHARE_COMMENT_ID_ATTRIBUTE]: comment.id, 'data-share-rail-id': comment.id }}
-      className={`${className} ${activeCommentId === comment.id ? 'is-active' : ''}`.trim()}
+      className={[className, ...state].filter(Boolean).join(' ')}
       style={style}
       onMouseEnter={() => setActiveCommentId(comment.id)}
       onMouseLeave={() => setActiveCommentId(null)}
       onClick={(event) => {
         event.stopPropagation()
         setActiveCommentId(comment.id)
-        if (!isCardControl(event.target)) {
-          findShareCommentBlocks(document, comment)[0]?.scrollIntoView({
-            block: 'nearest',
-            behavior: 'smooth'
-          })
+        if (!isCardControl(event.target) && revealCommentSource(placements.get(comment.id))) {
+          flashComment(comment.id)
         }
       }}
     >
@@ -207,11 +240,16 @@ export function ShareCommentComposer(): React.JSX.Element {
   )
 }
 
-/** On narrow pages there is no rail, so the composer and cards follow their block. */
-function InlineComments({ range }: { range: ShareCommentRange }): React.JSX.Element | null {
-  const { comments, draft } = useShareComments()
-  const own = comments.filter((comment) => isShareCommentInBlock(comment, range))
-  const composing = draft !== null && isShareCommentInBlock(draft.range, range)
+/** On narrow pages there is no rail, so the composer and cards follow the block they are on. */
+function InlineComments({ block }: { block: HTMLElement | null }): React.JSX.Element | null {
+  const { comments } = useShareComments()
+  const placements = useShareCommentPlacements()
+  const onBlock = (id: string): boolean => {
+    const placement = placements.get(id)
+    return Boolean(block && placement && placement.kind !== 'orphan' && placement.block === block)
+  }
+  const own = comments.filter((comment) => onBlock(comment.id))
+  const composing = onBlock(SHARE_DRAFT_PLACEMENT_ID)
   if (own.length === 0 && !composing) {
     return null
   }
@@ -231,9 +269,15 @@ function InlineComments({ range }: { range: ShareCommentRange }): React.JSX.Elem
   )
 }
 
-function AddCommentButton({ range }: { range: ShareCommentRange }): React.JSX.Element {
+/** Comments on the whole block; a second press closes the draft it opened. */
+function AddCommentButton({ block }: { block: HTMLElement | null }): React.JSX.Element {
   const { draft, startDraft, cancelDraft } = useShareComments()
-  const composing = draft !== null && isShareCommentInBlock(draft.range, range)
+  const placements = useShareCommentPlacements()
+  const draftPlacement = placements.get(SHARE_DRAFT_PLACEMENT_ID)
+  const composing =
+    draft?.anchor?.whole === true &&
+    draftPlacement?.kind === 'block' &&
+    draftPlacement.block === block
   const label = translate(
     'auto.components.selfHostedArtifacts.shareViewer.addComment',
     'Add comment'
@@ -250,8 +294,8 @@ function AddCommentButton({ range }: { range: ShareCommentRange }): React.JSX.El
         event.stopPropagation()
         if (composing) {
           cancelDraft()
-        } else {
-          startDraft({ range })
+        } else if (block) {
+          startDraft(captureShareCommentBlock(block))
         }
       }}
     >
@@ -274,6 +318,31 @@ function blockAttributes(range: ShareCommentRange): Record<string, string | numb
   }
 }
 
+/** The block wrapper the rest of the page finds comments by: its source lines and add button. */
+function CommentableBlock({
+  range,
+  children
+}: {
+  range: ShareCommentRange
+  children: React.ReactNode
+}): React.JSX.Element {
+  const inline = useContext(ShareCommentInlineContext)
+  const [block, setBlock] = useState<HTMLElement | null>(null)
+  return (
+    // Why tabIndex: on touch screens focusing the block is what reveals its add button.
+    <div
+      ref={setBlock}
+      {...blockAttributes(range)}
+      tabIndex={-1}
+      className="orca-share-comment-block"
+    >
+      {children}
+      <AddCommentButton block={block} />
+      {inline ? <InlineComments block={block} /> : null}
+    </div>
+  )
+}
+
 /** Paragraphs, headings, code and tables gain an add button; their cards live in the rail. */
 export function ShareCommentBlock({
   node,
@@ -283,21 +352,33 @@ export function ShareCommentBlock({
   children: React.ReactNode
 }): React.JSX.Element {
   const range = useBlockRange(node)
-  const inline = useContext(ShareCommentInlineContext)
-  if (!range) {
-    return <>{children}</>
-  }
-  return (
-    // Why tabIndex: on touch screens focusing the block is what reveals its add button.
-    <div {...blockAttributes(range)} tabIndex={-1} className="orca-share-comment-block">
-      {children}
-      <AddCommentButton range={range} />
-      {inline ? <InlineComments range={range} /> : null}
-    </div>
-  )
+  return range ? <CommentableBlock range={range}>{children}</CommentableBlock> : <>{children}</>
 }
 
-/** List items keep their `<li>`; a loose item's paragraphs take the button instead. */
+const LIST_TAGS = new Set(['ul', 'ol'])
+const LOOSE_ITEM_TAGS = new Set(['p', 'pre', 'table', 'blockquote'])
+
+/**
+ * A list item's own lines: a tight item with a sub-list owns the lines before it, so its text is
+ * commentable while each sub-item stays its own block. Loose items leave it to their paragraphs.
+ */
+function listItemOwnRange(node: MarkdownPreviewPositionNode | undefined): ShareCommentRange | null {
+  const range = getMarkdownPreviewBlockRange(node)
+  if (!range || !hasMarkdownPreviewNestedBlock(node)) {
+    return range
+  }
+  const children = node?.children ?? []
+  if (children.some((child) => child.tagName && LOOSE_ITEM_TAGS.has(child.tagName))) {
+    return null
+  }
+  const firstList = children.find((child) => child.tagName && LIST_TAGS.has(child.tagName))
+  const listLine = firstList?.position?.start?.line
+  return typeof listLine === 'number' && listLine > range.startLine
+    ? { startLine: range.startLine, endLine: listLine - 1 }
+    : null
+}
+
+/** List items keep their `<li>`; the wrapper sits inside it. */
 export function ShareCommentListItem({
   node,
   children,
@@ -305,18 +386,14 @@ export function ShareCommentListItem({
 }: React.ComponentProps<'li'> & {
   node?: MarkdownPreviewPositionNode
 }): React.JSX.Element {
-  const range = useBlockRange(hasMarkdownPreviewNestedBlock(node) ? undefined : node)
-  const inline = useContext(ShareCommentInlineContext)
+  const { available } = useShareComments()
+  const range = available ? listItemOwnRange(node) : null
   if (!range) {
     return <li {...props}>{children}</li>
   }
   return (
     <li {...props}>
-      <div {...blockAttributes(range)} tabIndex={-1} className="orca-share-comment-block">
-        {children}
-        <AddCommentButton range={range} />
-        {inline ? <InlineComments range={range} /> : null}
-      </div>
+      <CommentableBlock range={range}>{children}</CommentableBlock>
     </li>
   )
 }

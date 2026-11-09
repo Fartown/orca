@@ -145,7 +145,13 @@ const ShareBlockquote: NonNullable<Components['blockquote']> = ({ node, children
   )
 }
 
+// Why the line: a comment on a cell names that row's source line, not the whole table.
+const ShareTableRow: NonNullable<Components['tr']> = ({ node, ...props }) => (
+  <tr {...props} data-source-line={node?.position?.start.line} />
+)
+
 export const SHARE_MARKDOWN_COMPONENTS: Components = {
+  tr: ShareTableRow,
   a: ShareLink,
   code: ShareCode,
   pre: SharePre,

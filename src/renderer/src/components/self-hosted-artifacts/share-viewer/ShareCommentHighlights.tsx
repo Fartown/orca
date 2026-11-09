@@ -1,92 +1,27 @@
-import React, { useEffect, useLayoutEffect, useMemo, useRef, useState, type RefObject } from 'react'
+import React, { useEffect, useLayoutEffect, useMemo, useState, type RefObject } from 'react'
 import { MessageSquarePlus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { translate } from '@/i18n/i18n'
-import { findDomTextSearchRanges } from '@/lib/dom-text-search-highlights'
-import { ARTIFACT_SHARE_COMMENT_LIMITS } from '../../../../../shared/self-hosted-artifacts/artifact-share-comments-contract'
+import { captureShareCommentSelection, ShareCommentPage } from './share-comment-anchors'
+import { SHARE_COMMENT_ID_ATTRIBUTE } from './share-comment-blocks'
+import { buildShareCommentTextMap, shareCommentTextRange } from './share-comment-text-map'
 import {
-  findShareCommentBlocks,
-  readShareCommentBlockRange,
-  SHARE_COMMENT_BLOCK_SELECTOR,
-  SHARE_COMMENT_CHROME_ATTRIBUTE,
-  SHARE_COMMENT_ID_ATTRIBUTE
-} from './share-comment-blocks'
+  SHARE_DRAFT_PLACEMENT_ID,
+  shareCommentFoldedSummary,
+  shareCommentPlacementElement,
+  useShareCommentPlacements,
+  type ShareCommentPlacements
+} from './ShareCommentPlacements'
 import { useShareComments, type ShareCommentDraft } from './share-viewer-comments-state'
 
-const DRAFT_ID = 'draft'
 // Space between a line's text and its underline.
 const UNDERLINE_GAP_PX = 2
+// A whole-block comment's bar sits in the gutter, clear of the text; the add button covers it on hover.
+const BLOCK_BAR_GUTTER_PX = 12
 
-function isCommentChrome(element: HTMLElement): boolean {
-  return element.closest(`[${SHARE_COMMENT_CHROME_ATTRIBUTE}]`) !== null
-}
-
-/** Each selected line is found in the blocks it came from; a whole-block comment paints its text. */
-function rangesForComment(body: HTMLElement, draft: ShareCommentDraft): Range[] {
-  const blocks = findShareCommentBlocks(body, draft.range)
-  const scope = { rejectElement: isCommentChrome, joinedTextSelector: SHARE_COMMENT_BLOCK_SELECTOR }
-  const pieces = (draft.quote ?? '')
-    .split(/\n+/)
-    .map((piece) => piece.trim())
-    .filter(Boolean)
-  const found = pieces.flatMap((piece) => {
-    for (const block of blocks) {
-      const match = findDomTextSearchRanges(block, piece, scope)[0]
-      if (match) {
-        return [match]
-      }
-    }
-    return []
-  })
-  if (found.length > 0) {
-    return found
-  }
-  // The file changed, or the comment names a whole block: mark everything it covers.
-  return blocks.flatMap((block) => findWholeBlockText(block))
-}
-
-/** Viewport top of the text a comment is about, so its rail card can sit level with it. */
-export function findShareCommentAnchor(body: HTMLElement, draft: ShareCommentDraft): number | null {
-  const first = rangesForComment(body, draft)[0]
-  const rect = first?.getClientRects()[0] ?? first?.getBoundingClientRect()
-  if (rect) {
-    return rect.top
-  }
-  const block = findShareCommentBlocks(body, draft.range)[0]
-  return block ? block.getBoundingClientRect().top : null
-}
-
-function findWholeBlockText(block: HTMLElement): Range[] {
-  const walker = document.createTreeWalker(block, NodeFilter.SHOW_TEXT, {
-    acceptNode: (node) =>
-      node.parentElement && !isCommentChrome(node.parentElement) && node.textContent?.trim()
-        ? NodeFilter.FILTER_ACCEPT
-        : NodeFilter.FILTER_REJECT
-  })
-  const first = walker.nextNode()
-  let last = first
-  for (let next = walker.nextNode(); next; next = walker.nextNode()) {
-    last = next
-  }
-  if (!first || !last) {
-    return []
-  }
-  const range = document.createRange()
-  range.setStart(first, 0)
-  range.setEnd(last, last.textContent?.length ?? 0)
-  return [range]
-}
-
-function caretAt(x: number, y: number): { node: Node; offset: number } | null {
-  const position = document.caretPositionFromPoint?.(x, y)
-  if (position) {
-    return { node: position.offsetNode, offset: position.offset }
-  }
-  const range = document.caretRangeFromPoint?.(x, y)
-  return range ? { node: range.startContainer, offset: range.startOffset } : null
-}
-
-type UnderlineSegment = { key: string; id: string; left: number; top: number; width: number }
+type Mark =
+  | { key: string; id: string; kind: 'line'; left: number; top: number; width: number }
+  | { key: string; id: string; kind: 'bar'; left: number; top: number; height: number }
 
 /** Each piece of a range's text; inline code is flagged, its smaller font must not set the line. */
 function textLineRects(range: Range): { rect: DOMRect; code: boolean }[] {
@@ -123,7 +58,7 @@ function textLineRects(range: Range): { rect: DOMRect; code: boolean }[] {
 }
 
 /** One underline per visual line, just below its prose (code chips have their own padding). */
-function underlineSegments(id: string, ranges: Range[], origin: DOMRect): UnderlineSegment[] {
+function underlineMarks(id: string, ranges: Range[], origin: DOMRect): Mark[] {
   const lines: {
     top: number
     bottom: number
@@ -157,56 +92,95 @@ function underlineSegments(id: string, ranges: Range[], origin: DOMRect): Underl
   return lines.map((line, index) => ({
     key: `${id}:${index}`,
     id,
+    kind: 'line',
     left: line.left - origin.left,
     top: (line.textBottom ?? line.codeBottom) - origin.top + UNDERLINE_GAP_PX,
     width: line.right - line.left
   }))
 }
 
+/** A whole block's bar spans its own text (a list item's sub-list is not part of it). */
+function barMark(id: string, element: HTMLElement, origin: DOMRect): Mark {
+  const map = buildShareCommentTextMap(element)
+  const text = shareCommentTextRange(map, 0, map.text.length)
+  const rect = text?.getBoundingClientRect() ?? element.getBoundingClientRect()
+  return {
+    key: `${id}:bar`,
+    id,
+    kind: 'bar',
+    left: rect.left - origin.left - BLOCK_BAR_GUTTER_PX,
+    top: rect.top - origin.top,
+    height: rect.height
+  }
+}
+
+function marksFor(placements: ShareCommentPlacements, origin: DOMRect): Mark[] {
+  return [...placements].flatMap(([id, placement]): Mark[] => {
+    const folded = shareCommentFoldedSummary(shareCommentPlacementElement(placement))
+    if (folded) {
+      // Text inside a folded section has no box; its summary line carries the mark.
+      return [barMark(id, folded, origin)]
+    }
+    if (placement.kind === 'text') {
+      return underlineMarks(id, placement.ranges, origin)
+    }
+    return placement.kind === 'block' ? [barMark(id, placement.block, origin)] : []
+  })
+}
+
+function caretAt(x: number, y: number): { node: Node; offset: number } | null {
+  const position = document.caretPositionFromPoint?.(x, y)
+  if (position) {
+    return { node: position.offsetNode, offset: position.offset }
+  }
+  const range = document.caretRangeFromPoint?.(x, y)
+  return range ? { node: range.startContainer, offset: range.startOffset } : null
+}
+
+/** Comments under a click: text comments whose text holds the caret, else whole-block ones. */
+function commentsAt(placements: ShareCommentPlacements, event: MouseEvent): string[] {
+  const caret = caretAt(event.clientX, event.clientY)
+  const onText: string[] = []
+  const onBlock: string[] = []
+  for (const [id, placement] of placements) {
+    if (id === SHARE_DRAFT_PLACEMENT_ID) {
+      continue
+    }
+    if (
+      placement.kind === 'text' &&
+      caret &&
+      placement.ranges.some((range) => range.isPointInRange(caret.node, caret.offset))
+    ) {
+      onText.push(id)
+    } else if (
+      placement.kind === 'block' &&
+      event.target instanceof Node &&
+      placement.block.contains(event.target)
+    ) {
+      onBlock.push(id)
+    }
+  }
+  return onText.length > 0 ? onText : onBlock
+}
+
 /**
- * Draws a dashed underline a little below the text each comment is about. Clicking marked text
- * brings its card forward; hovering a card darkens its underline.
+ * Marks what each comment is about: a dashed line under selected text, a bar beside a whole
+ * block. Clicking marked text brings its card forward, cycling through comments that overlap.
  */
 export function ShareCommentHighlights({
-  bodyRef,
-  markdown
+  bodyRef
 }: {
   bodyRef: RefObject<HTMLDivElement | null>
-  markdown: string
 }): React.JSX.Element | null {
-  const { available, comments, draft, activeCommentId, setActiveCommentId } = useShareComments()
-  const rangesById = useRef(new Map<string, Range[]>())
-  const [segments, setSegments] = useState<UnderlineSegment[]>([])
-  const [layoutRevision, setLayoutRevision] = useState(0)
-
-  // Why: images, fonts and diagrams settle after first paint and move every line below them.
-  useEffect(() => {
-    const body = bodyRef.current
-    if (!body) {
-      return
-    }
-    const observer = new ResizeObserver(() => setLayoutRevision((revision) => revision + 1))
-    observer.observe(body)
-    return () => observer.disconnect()
-  }, [bodyRef])
+  const { draft, activeCommentId, setActiveCommentId, attentionCommentId, flashComment } =
+    useShareComments()
+  const placements = useShareCommentPlacements()
+  const [marks, setMarks] = useState<Mark[]>([])
 
   useLayoutEffect(() => {
     const body = bodyRef.current
-    if (!body || !available) {
-      setSegments([])
-      return
-    }
-    const next = new Map<string, Range[]>()
-    for (const comment of comments) {
-      next.set(comment.id, rangesForComment(body, { range: comment, quote: comment.quote }))
-    }
-    if (draft) {
-      next.set(DRAFT_ID, rangesForComment(body, draft))
-    }
-    rangesById.current = next
-    const origin = body.getBoundingClientRect()
-    setSegments([...next].flatMap(([id, ranges]) => underlineSegments(id, ranges, origin)))
-  }, [available, bodyRef, comments, draft, markdown, layoutRevision])
+    setMarks(body ? marksFor(placements, body.getBoundingClientRect()) : [])
+  }, [bodyRef, placements])
 
   useEffect(() => {
     const body = bodyRef.current
@@ -217,38 +191,50 @@ export function ShareCommentHighlights({
       if (window.getSelection()?.isCollapsed === false) {
         return
       }
-      const caret = caretAt(event.clientX, event.clientY)
-      if (!caret) {
+      const ids = commentsAt(placements, event)
+      if (ids.length === 0) {
         return
       }
-      for (const [id, ranges] of rangesById.current) {
-        if (
-          id !== DRAFT_ID &&
-          ranges.some((range) => range.isPointInRange(caret.node, caret.offset))
-        ) {
-          setActiveCommentId(id)
-          body
-            .querySelector(`[${SHARE_COMMENT_ID_ATTRIBUTE}="${id}"]`)
-            ?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
-          return
-        }
+      const current = activeCommentId ? ids.indexOf(activeCommentId) : -1
+      const id = ids[(current + 1) % ids.length] ?? ids[0]
+      if (!id) {
+        return
       }
+      setActiveCommentId(id)
+      flashComment(id)
+      body
+        .querySelector(`[${SHARE_COMMENT_ID_ATTRIBUTE}="${id}"]`)
+        ?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
     }
     body.addEventListener('click', onClick)
     return () => body.removeEventListener('click', onClick)
-  }, [bodyRef, setActiveCommentId])
+  }, [activeCommentId, bodyRef, flashComment, placements, setActiveCommentId])
 
-  if (segments.length === 0) {
+  if (marks.length === 0) {
     return null
   }
-  const active = draft ? DRAFT_ID : activeCommentId
+  const active = draft ? SHARE_DRAFT_PLACEMENT_ID : activeCommentId
+  // Why sorted: the emphasized comment paints last, over any comment sharing its text.
+  const ordered = [...marks].sort(
+    (left, right) => Number(left.id === active) - Number(right.id === active)
+  )
   return (
-    <div className="orca-share-comment-underlines" aria-hidden="true">
-      {segments.map((segment) => (
+    <div className="orca-share-comment-marks" aria-hidden="true">
+      {ordered.map((mark) => (
         <span
-          key={segment.key}
-          className={segment.id === active ? 'is-active' : undefined}
-          style={{ left: segment.left, top: segment.top, width: segment.width }}
+          key={mark.key}
+          className={[
+            mark.kind === 'line' ? 'is-line' : 'is-bar',
+            mark.id === active ? 'is-active' : '',
+            mark.id === attentionCommentId ? 'is-attention' : ''
+          ]
+            .filter(Boolean)
+            .join(' ')}
+          style={
+            mark.kind === 'line'
+              ? { left: mark.left, top: mark.top, width: mark.width }
+              : { left: mark.left, top: mark.top, height: mark.height }
+          }
         />
       ))}
     </div>
@@ -257,47 +243,24 @@ export function ShareCommentHighlights({
 
 type SelectionTarget = { draft: ShareCommentDraft; top: number; left: number }
 
-/** The selection's blocks give its source lines; its text becomes the comment's exact quote. */
+/** The selection's text, its offsets in the blocks it covers and its exact source lines. */
 function readSelection(body: HTMLElement): SelectionTarget | null {
   const selection = window.getSelection()
   if (!selection || selection.isCollapsed || selection.rangeCount === 0) {
     return null
   }
   const range = selection.getRangeAt(0)
-  const startElement =
-    range.startContainer instanceof HTMLElement
-      ? range.startContainer
-      : range.startContainer.parentElement
-  const endElement =
-    range.endContainer instanceof HTMLElement
-      ? range.endContainer
-      : range.endContainer.parentElement
-  const startBlock = startElement?.closest<HTMLElement>(SHARE_COMMENT_BLOCK_SELECTOR)
-  const endBlock = endElement?.closest<HTMLElement>(SHARE_COMMENT_BLOCK_SELECTOR)
-  if (
-    !startBlock ||
-    !endBlock ||
-    !body.contains(startBlock) ||
-    !body.contains(endBlock) ||
-    (startElement && isCommentChrome(startElement)) ||
-    (endElement && isCommentChrome(endElement))
-  ) {
+  if (!range.intersectsNode(body)) {
     return null
   }
-  const quote = selection.toString().trim().slice(0, ARTIFACT_SHARE_COMMENT_LIMITS.quote)
-  if (!quote) {
+  const draft = captureShareCommentSelection(new ShareCommentPage(body), range)
+  if (!draft) {
     return null
   }
   const rects = range.getClientRects()
   const anchor = [...rects].at(-1) ?? range.getBoundingClientRect()
   return {
-    draft: {
-      range: {
-        startLine: readShareCommentBlockRange(startBlock).startLine,
-        endLine: readShareCommentBlockRange(endBlock).endLine
-      },
-      quote
-    },
+    draft,
     top: anchor.bottom + 6,
     left: Math.max(8, Math.min(anchor.right - 40, window.innerWidth - 120))
   }
@@ -330,16 +293,16 @@ export function ShareSelectionCommentButton({
         setTarget(body ? readSelection(body) : null)
       })
     }
-    const hide = (): void => setTarget(null)
+    // Why follow the scroll: the selection stays, so its button must stay under it.
     const scroller = scrollRef.current
     document.addEventListener('selectionchange', update)
-    scroller?.addEventListener('scroll', hide, { passive: true })
-    window.addEventListener('resize', hide)
+    scroller?.addEventListener('scroll', update, { passive: true })
+    window.addEventListener('resize', update)
     return () => {
       cancelAnimationFrame(frame)
       document.removeEventListener('selectionchange', update)
-      scroller?.removeEventListener('scroll', hide)
-      window.removeEventListener('resize', hide)
+      scroller?.removeEventListener('scroll', update)
+      window.removeEventListener('resize', update)
     }
   }, [available, bodyRef, scrollRef])
 
