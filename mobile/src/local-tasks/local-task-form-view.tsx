@@ -1,7 +1,15 @@
 import { useState } from 'react'
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { Check, ChevronDown, CornerDownRight, Layers } from 'lucide-react-native'
+import {
+  Check,
+  ChevronDown,
+  ChevronRight,
+  CornerDownRight,
+  Info,
+  Layers,
+  Play
+} from 'lucide-react-native'
 import {
   LOCAL_TASK_DESCRIPTION_MAX,
   LOCAL_TASK_TITLE_MAX
@@ -12,10 +20,20 @@ import { MobileSwitch } from '../components/MobileSwitch'
 import { colors, spacing } from '../theme/mobile-theme'
 import type { LocalTasksApi } from './local-tasks-api'
 import { localTasksCopy } from './local-tasks-copy'
+import type { LocalTaskSite } from './local-task-endpoint'
+import { localTaskCreateCopy } from './local-task-create-copy'
+import {
+  LocalTaskCreateKickoffSection,
+  localTaskCreatePlanLine
+} from './local-task-create-kickoff-section'
+import {
+  LocalTaskCreateStepHeading,
+  LocalTaskCreateWhereSection
+} from './local-task-create-where-section'
 import {
   LocalTaskFormPrompts,
   LocalTaskPasteChoice,
-  LocalTaskPropertyRow,
+  LocalTaskPropertiesCard,
   LocalTaskSubtaskEntries
 } from './local-task-form-fields'
 import {
@@ -26,11 +44,10 @@ import {
   type LocalTaskDraft,
   type LocalTaskFormMode
 } from './local-task-form-state'
-import { localTaskStatusLookup, orderedLocalTaskStatuses } from './local-task-list-projection'
 import { LocalTaskGrowingInput } from './local-task-growing-input'
 import { LocalTaskDraftPickers, type LocalTaskDraftPicker } from './local-task-pickers'
 import { localTaskStyles } from './local-tasks-styles'
-import { LocalTaskPriorityIcon, LocalTaskStatusIcon } from './local-tasks-visuals'
+import { useLocalTaskCreateWhere } from './use-local-task-create-where'
 import { useLocalTaskFormSubmit } from './use-local-task-form-submit'
 import type { LocalTasksLibrary } from './use-local-tasks-library'
 
@@ -39,6 +56,9 @@ type Props = {
   api: LocalTasksApi
   mode: LocalTaskFormMode
   readOnly: boolean
+  /** The library's host and its routes, for where a new task is worked on and its first session. */
+  site?: LocalTaskSite
+  onNavigate?: (href: string) => void
   onClose: () => void
   /** The task the form created or saved, which the caller then shows. */
   onDone: (taskId: string) => void
@@ -46,25 +66,32 @@ type Props = {
 
 export function LocalTaskFormView(props: Props) {
   const copy = localTasksCopy()
+  const create = localTaskCreateCopy()
   const insets = useSafeAreaInsets()
   const { library, mode } = props
+  const creating = mode.kind === 'create'
   const [draft, setDraft] = useState<LocalTaskDraft>(() => initialLocalTaskDraft(mode))
   const [picker, setPicker] = useState<LocalTaskDraftPicker | null>(null)
   const [continueCreating, setContinueCreating] = useState(false)
   const [pasted, setPasted] = useState<string[] | null>(null)
+  // A new task opens on its three steps (m8); its properties stay one tap away.
+  const [propertiesOpen, setPropertiesOpen] = useState(!creating)
   const submit = useLocalTaskFormSubmit(props.api, library)
   const patch = (next: Partial<LocalTaskDraft>) =>
     setDraft((previous) => ({ ...previous, ...next }))
+  const where = useLocalTaskCreateWhere({
+    active: creating && !props.readOnly,
+    site: props.site,
+    api: props.api,
+    library,
+    openedProjectId: mode.kind === 'create' ? mode.projectId : draft.projectId,
+    draft,
+    patch
+  })
+  // Why only for 稍后再定: a task that starts work opens on its detail, as the desktop does.
+  const keepCreating = continueCreating && (!creating || where.where === 'later')
 
   const project = library.projects.find((entry) => entry.id === draft.projectId) ?? null
-  const lookup = localTaskStatusLookup(library.projects)
-  const status = draft.statusId ? (lookup.get(draft.statusId) ?? null) : null
-  // An unset status is the project's first Unstarted one, which the desktop applies on create.
-  const shownStatus =
-    status ??
-    (project
-      ? (orderedLocalTaskStatuses(project).find((entry) => entry.category === 'unstarted') ?? null)
-      : null)
   const editing = mode.kind === 'edit' ? mode.task : null
   const parentCandidates = localTaskParentCandidates(
     editing,
@@ -72,13 +99,23 @@ export function LocalTaskFormView(props: Props) {
     library.tasks,
     buildLocalTaskIndex([], library.tasks)
   )
-  const parent = draft.parentId
-    ? (library.tasks.find((task) => task.id === draft.parentId) ?? null)
-    : null
   const title =
     mode.kind === 'edit' ? copy.editTask : mode.kind === 'subtask' ? copy.newSubtask : copy.newTask
   const canSubmit =
-    !props.readOnly && draft.title.trim().length > 0 && !submit.busy && !submit.subtaskRetryPending
+    !props.readOnly &&
+    draft.title.trim().length > 0 &&
+    !submit.busy &&
+    !submit.subtaskRetryPending &&
+    (!creating || where.planReady)
+  const primaryLabel =
+    mode.kind === 'edit'
+      ? copy.save
+      : creating && where.startsSession
+        ? create.createAndStart
+        : copy.create
+  // Why not read-only: a library that takes no writes has nowhere to start work either.
+  const steps = creating && !props.readOnly
+  const planLine = steps ? localTaskCreatePlanLine(where.plan, create) : null
 
   const leaveNotice = () => {
     const taskId = submit.dismissNotice()
@@ -87,7 +124,7 @@ export function LocalTaskFormView(props: Props) {
     }
   }
   const finish = (taskId: string) => {
-    if (mode.kind !== 'edit' && continueCreating) {
+    if (mode.kind !== 'edit' && keepCreating) {
       setDraft(nextLocalTaskDraft)
       return
     }
@@ -114,19 +151,29 @@ export function LocalTaskFormView(props: Props) {
             </Text>
           </View>
         ) : (
-          <Pressable
-            style={[localTaskStyles.chip, styles.contextChip]}
-            onPress={() => setPicker('project')}
-            accessibilityRole="button"
-            accessibilityLabel={copy.project}
-          >
-            <Layers size={13} color={colors.textSecondary} />
-            <Text style={localTaskStyles.chipText} numberOfLines={1}>
-              {project?.name ?? ''}
-            </Text>
-            <Text style={localTaskStyles.chipMeta}>{project?.prefix ?? ''}</Text>
-            <ChevronDown size={13} color={colors.textMuted} />
-          </Pressable>
+          <>
+            {creating ? <LocalTaskCreateStepHeading step={1} title={create.stepTask} /> : null}
+            <View style={styles.chipRow}>
+              <Pressable
+                style={[localTaskStyles.chip, styles.contextChip]}
+                onPress={() => setPicker('project')}
+                accessibilityRole="button"
+                accessibilityLabel={copy.project}
+              >
+                <Layers size={13} color={colors.textSecondary} />
+                <Text style={localTaskStyles.chipText} numberOfLines={1}>
+                  {project?.name ?? ''}
+                </Text>
+                <Text style={localTaskStyles.chipMeta}>{project?.prefix ?? ''}</Text>
+                <ChevronDown size={13} color={colors.textMuted} />
+              </Pressable>
+              {creating && where.projectFollows ? (
+                <Text style={[localTaskStyles.meta, styles.flex]} numberOfLines={1}>
+                  {create.projectFollows}
+                </Text>
+              ) : null}
+            </View>
+          </>
         )}
         <LocalTaskGrowingInput
           style={[localTaskStyles.titleInput, styles.title]}
@@ -157,52 +204,45 @@ export function LocalTaskFormView(props: Props) {
             onChangeText={(description) => patch({ description })}
           />
         )}
-        {mode.kind === 'create' ? (
+        {creating ? (
+          <Pressable
+            style={({ pressed }) => [styles.toggle, pressed && localTaskStyles.pressed]}
+            onPress={() => setPropertiesOpen((open) => !open)}
+            accessibilityRole="button"
+            accessibilityState={{ expanded: propertiesOpen }}
+          >
+            {propertiesOpen ? (
+              <ChevronDown size={14} color={colors.textMuted} />
+            ) : (
+              <ChevronRight size={14} color={colors.textMuted} />
+            )}
+            <Text style={localTaskStyles.sectionActionText}>{create.moreProperties}</Text>
+          </Pressable>
+        ) : null}
+        {creating && propertiesOpen ? (
           <LocalTaskSubtaskEntries
             entries={draft.subtasks}
             onChange={(subtasks) => patch({ subtasks })}
           />
         ) : null}
-        <Text style={localTaskStyles.sectionLabel}>{copy.properties}</Text>
-        <View style={localTaskStyles.card}>
-          <LocalTaskPropertyRow label={copy.status} first onPress={() => setPicker('status')}>
-            <LocalTaskStatusIcon
-              category={shownStatus?.category ?? 'unstarted'}
-              color={shownStatus?.color ?? 'gray'}
-              size={14}
-            />
-            <Text style={localTaskStyles.rowValue}>
-              {shownStatus?.name ?? copy.defaultStatusNames.unstarted}
-            </Text>
-          </LocalTaskPropertyRow>
-          <LocalTaskPropertyRow label={copy.priority} onPress={() => setPicker('priority')}>
-            <LocalTaskPriorityIcon priority={draft.priority} />
-            <Text style={localTaskStyles.rowValue}>{copy.priorities[draft.priority]}</Text>
-          </LocalTaskPropertyRow>
-          <LocalTaskPropertyRow label={copy.labels}>
-            <LocalTaskGrowingInput
-              style={[localTaskStyles.bareInput, styles.labels]}
-              minHeight={21}
-              blurOnSubmit
-              value={draft.labelsText}
-              onChangeText={(labelsText) =>
-                patch({ labelsText: labelsText.replace(/\r?\n/g, ' ') })
-              }
-              placeholder={copy.labelsPlaceholder}
-              placeholderTextColor={colors.textMuted}
-            />
-          </LocalTaskPropertyRow>
-          {mode.kind === 'subtask' ? null : (
-            <LocalTaskPropertyRow label={copy.parent} onPress={() => setPicker('parent')}>
-              <Text
-                style={parent ? localTaskStyles.rowValue : localTaskStyles.rowValueMuted}
-                numberOfLines={1}
-              >
-                {parent ? parent.title : copy.none}
-              </Text>
-            </LocalTaskPropertyRow>
-          )}
-        </View>
+        {propertiesOpen ? (
+          <Text style={localTaskStyles.sectionLabel}>{copy.properties}</Text>
+        ) : null}
+        <LocalTaskPropertiesCard
+          draft={draft}
+          projects={library.projects}
+          tasks={library.tasks}
+          showParent={mode.kind !== 'subtask'}
+          hidden={!propertiesOpen}
+          onPick={setPicker}
+          onPatch={patch}
+        />
+        {steps ? (
+          <>
+            <LocalTaskCreateWhereSection state={where} />
+            <LocalTaskCreateKickoffSection state={where} />
+          </>
+        ) : null}
         {submit.error ? (
           <Text style={[localTaskStyles.errorText, styles.gap]}>{submit.error}</Text>
         ) : null}
@@ -233,45 +273,74 @@ export function LocalTaskFormView(props: Props) {
             ) : null}
           </View>
         ) : null}
-        {mode.kind === 'edit' ? null : (
+        {mode.kind === 'subtask' ? (
           <Text style={[localTaskStyles.hint, styles.gap]}>{copy.formHint}</Text>
-        )}
+        ) : null}
       </ScrollView>
-      <View style={[localTaskStyles.footerBar, { paddingBottom: insets.bottom + spacing.md }]}>
-        {mode.kind === 'edit' ? (
-          <View style={localTaskStyles.topBarSpacer} />
-        ) : (
-          <View style={styles.continueRow}>
-            <MobileSwitch
-              value={continueCreating}
-              onValueChange={setContinueCreating}
-              accessibilityLabel={copy.continueCreating}
-            />
-            <Text style={localTaskStyles.meta}>{copy.continueCreating}</Text>
+      <View
+        style={[
+          localTaskStyles.footerBar,
+          styles.footer,
+          { paddingBottom: insets.bottom + spacing.md }
+        ]}
+      >
+        {planLine ? (
+          <View style={styles.planLine}>
+            <Info size={14} color={colors.textMuted} />
+            <Text style={[localTaskStyles.meta, styles.flex]} numberOfLines={2}>
+              {planLine}
+            </Text>
           </View>
-        )}
-        <Pressable
-          style={[localTaskStyles.primaryButton, !canSubmit && localTaskStyles.disabled]}
-          disabled={!canSubmit}
-          onPress={() => void submit.save(mode, draft).then((taskId) => taskId && finish(taskId))}
-          accessibilityRole="button"
-        >
-          {submit.busy ? (
-            <ActivityIndicator size="small" color={colors.bgBase} />
-          ) : (
-            <Check size={16} color={colors.bgBase} />
-          )}
-          <Text style={localTaskStyles.primaryButtonText}>
-            {mode.kind === 'edit' ? copy.save : copy.create}
-          </Text>
-        </Pressable>
+        ) : null}
+        <View style={styles.footerRow}>
+          {mode.kind === 'edit' ? (
+            <View style={localTaskStyles.topBarSpacer} />
+          ) : !creating || where.where === 'later' ? (
+            <View style={styles.continueRow}>
+              <MobileSwitch
+                value={continueCreating}
+                onValueChange={setContinueCreating}
+                accessibilityLabel={copy.continueCreating}
+              />
+              <Text style={localTaskStyles.meta}>{copy.continueCreating}</Text>
+            </View>
+          ) : null}
+          <Pressable
+            style={[
+              localTaskStyles.primaryButton,
+              creating && where.where !== 'later' && styles.flex,
+              !canSubmit && localTaskStyles.disabled
+            ]}
+            disabled={!canSubmit}
+            onPress={() =>
+              void submit
+                .save(mode, draft, creating ? where.kickoff : null)
+                .then((taskId) => taskId && finish(taskId))
+            }
+            accessibilityRole="button"
+            accessibilityLabel={primaryLabel}
+            accessibilityHint={planLine ?? undefined}
+          >
+            {submit.busy ? (
+              <ActivityIndicator size="small" color={colors.bgBase} />
+            ) : creating && where.startsSession ? (
+              <Play size={16} color={colors.bgBase} />
+            ) : (
+              <Check size={16} color={colors.bgBase} />
+            )}
+            <Text style={localTaskStyles.primaryButtonText}>{primaryLabel}</Text>
+          </Pressable>
+        </View>
       </View>
       <LocalTaskDraftPickers
         open={picker}
         draft={draft}
         projects={library.projects}
         parentCandidates={parentCandidates}
-        onPatch={patch}
+        onPatch={(next) => {
+          where.draftChanged(next)
+          patch(next)
+        }}
         onClose={() => setPicker(null)}
       />
       {mode.kind === 'subtask' ? (
@@ -309,9 +378,19 @@ const styles = StyleSheet.create({
   title: { lineHeight: TITLE_LINE_HEIGHT },
   topBarBalance: { width: 40 },
   content: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xl, gap: spacing.sm },
-  contextChip: { alignSelf: 'flex-start', marginBottom: spacing.sm, maxWidth: '100%' },
+  contextChip: { alignSelf: 'flex-start', maxWidth: '100%' },
+  chipRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.sm
+  },
+  flex: { flex: 1 },
+  toggle: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start' },
+  footer: { flexDirection: 'column', alignItems: 'stretch', gap: spacing.sm },
+  footerRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  planLine: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   description: { minHeight: 60, lineHeight: 21, textAlignVertical: 'top' },
-  labels: { flex: 1, lineHeight: 21 },
   gap: { marginTop: spacing.md },
   continueRow: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   partialActions: { gap: spacing.sm }

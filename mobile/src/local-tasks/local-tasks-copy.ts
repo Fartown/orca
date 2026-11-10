@@ -1,38 +1,17 @@
-import { translate } from '../i18n/mobile-i18n'
-import { LOCAL_TASKS_COPY_EN } from './local-tasks-copy-en'
+import { getMobileUiRevision, translate } from '../i18n/mobile-i18n'
+import { localTasksFailureCopy } from './local-tasks-failure-copy'
+import { localTasksLibraryCopy } from './local-tasks-library-copy'
+import { localTasksProjectCopy } from './local-tasks-project-copy'
+import { localTasksTaskCopy } from './local-tasks-task-copy'
+import { localTasksWorkCopy } from './local-tasks-work-copy'
 
-export type LocalTasksCopy = typeof LOCAL_TASKS_COPY_EN & {
-  title: string
-  description: string
-  now: string
-  noProgress: string
-  systemRecords: string
-  prMergedRule: string
-  prMergedModes: { none: string; review: string; completed: string }
-  acceptReview: string
-  rejectReview: string
-  rejectReason: string
-  dispatchPlaceholder: string
-  dispatchButton: string
-  dispatchRunOn: string
-  dispatchNoSetup: string
-  dispatchHost: string
-  dispatchRepo: string
-  dispatchWorkspace: string
-  dispatchTask: string
-  dispatchTarget: string
-  dispatchChooseTarget: string
-}
-
-// Why mostly English: this copy predates the mobile catalog; entries move to translate() as
-// they are localized.
-export function localTasksCopy(): LocalTasksCopy {
+function buildLocalTasksCopy() {
   return {
-    ...LOCAL_TASKS_COPY_EN,
-    defaultStatusNames: {
-      ...LOCAL_TASKS_COPY_EN.defaultStatusNames,
-      review: translate('localTasks.defaultStatus.review', 'Ready for acceptance')
-    },
+    ...localTasksLibraryCopy(),
+    ...localTasksTaskCopy(),
+    ...localTasksProjectCopy(),
+    ...localTasksFailureCopy(),
+    work: localTasksWorkCopy(),
     title: translate('localTasks.title', 'Local tasks'),
     description: translate('localTasks.description', 'Description'),
     now: translate('localTasks.now', 'Now'),
@@ -61,6 +40,19 @@ export function localTasksCopy(): LocalTasksCopy {
     dispatchTarget: translate('localTasks.dispatchTarget', 'Target'),
     dispatchChooseTarget: translate('localTasks.dispatchChooseTarget', 'Choose a target')
   }
+}
+
+export type LocalTasksCopy = ReturnType<typeof buildLocalTasksCopy>
+
+let built: { revision: number; copy: LocalTasksCopy } | undefined
+
+// Rebuilt when the language changes, not per call: task cards ask for it several times per row.
+export function localTasksCopy(): LocalTasksCopy {
+  const revision = getMobileUiRevision()
+  if (built?.revision !== revision) {
+    built = { revision, copy: buildLocalTasksCopy() }
+  }
+  return built.copy
 }
 
 export function formatLocalTaskAgo(copy: LocalTasksCopy, at: number, now: number): string {

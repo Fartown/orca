@@ -1,4 +1,5 @@
-import { AlertTriangle } from 'lucide-react'
+import { useState } from 'react'
+import { AlertTriangle, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { translate } from '@/i18n/i18n'
 import { isImeCompositionKeyDown } from '@/lib/ime-composition-keyboard-event'
@@ -85,10 +86,11 @@ export function LocalTaskDetailTitle({
           }
         }}
         aria-label={translate('localTasks.create.titleLabel', 'Title')}
-        // field-sizing:content wraps a long title onto more lines instead of cutting it off.
+        // field-sizing:content wraps a long title onto more lines instead of cutting it off; the
+        // negative margin keeps the heading's text flush with the rows under it.
         className={cn(
           LOCAL_TASK_INLINE_FIELD,
-          'block resize-none overflow-hidden py-1 text-xl font-semibold leading-snug text-foreground [field-sizing:content]'
+          '-mx-1.5 block w-[calc(100%+0.75rem)] cursor-text resize-none overflow-hidden py-0.5 text-xl font-semibold leading-snug text-foreground [field-sizing:content] hover:border-transparent'
         )}
       />
       <FieldConflict field={field} />
@@ -96,13 +98,16 @@ export function LocalTaskDetailTitle({
   )
 }
 
+const DESCRIPTION_TEXT = 'whitespace-pre-wrap break-words text-sm leading-relaxed text-foreground'
+
+/** Reads as text; a click opens the editor, which stays while a save or a conflict is pending. */
 function DescriptionField({
   task,
   writable
 }: {
   task: LocalTask
   writable: boolean
-}): React.JSX.Element {
+}): React.JSX.Element | null {
   const field = useLocalTaskFieldDraft({
     task,
     stored: task.description,
@@ -110,19 +115,52 @@ function DescriptionField({
     same: sameText,
     toPatch: (description) => ({ description })
   })
+  const [editing, setEditing] = useState(false)
+  const open = writable && (editing || field.conflict || field.value !== task.description)
+  if (!open) {
+    if (!field.value.trim()) {
+      return writable ? (
+        <button
+          type="button"
+          onClick={() => setEditing(true)}
+          className="flex w-fit items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+        >
+          <Plus className="size-3" />
+          {translate('localTasks.detail.addDescription', 'Add description')}
+        </button>
+      ) : null
+    }
+    return writable ? (
+      <button
+        type="button"
+        onClick={() => setEditing(true)}
+        className={cn(
+          '-mx-1.5 block w-[calc(100%+0.75rem)] cursor-text rounded-md px-1.5 py-1 text-left hover:bg-accent/40',
+          DESCRIPTION_TEXT
+        )}
+      >
+        {field.value}
+      </button>
+    ) : (
+      <p className={DESCRIPTION_TEXT}>{field.value}</p>
+    )
+  }
   return (
     <div className="flex flex-col gap-1">
       <ImeTextarea
+        autoFocus
         value={field.value}
-        readOnly={!writable}
         maxLength={LOCAL_TASK_DESCRIPTION_MAX}
         onChange={(event) => field.edit(event.target.value)}
-        onBlur={() => void field.commit()}
+        onBlur={() => {
+          setEditing(false)
+          void field.commit()
+        }}
         placeholder={translate('localTasks.create.descriptionPlaceholder', 'Add a description…')}
         aria-label={translate('localTasks.create.descriptionLabel', 'Description')}
         className={cn(
           LOCAL_TASK_INLINE_FIELD,
-          'scrollbar-sleek min-h-20 resize-y py-1.5 text-sm leading-relaxed text-foreground'
+          '-mx-1.5 w-[calc(100%+0.75rem)] scrollbar-sleek min-h-20 resize-y border-border/60 py-1 text-sm leading-relaxed text-foreground [field-sizing:content]'
         )}
       />
       <FieldConflict field={field} />
@@ -136,6 +174,6 @@ export function LocalTaskDetailBody({
 }: {
   task: LocalTask
   writable: boolean
-}): React.JSX.Element {
+}): React.JSX.Element | null {
   return <DescriptionField task={task} writable={writable} />
 }

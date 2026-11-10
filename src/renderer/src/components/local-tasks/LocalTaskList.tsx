@@ -22,18 +22,22 @@ import {
   openCreateInGroup
 } from './LocalTaskGroupHead'
 import { LocalTaskRow, localTaskStatusHeading } from './LocalTaskRow'
+import { LocalTaskNeedsYouBand } from './LocalTaskNeedsYouBand'
+import { isLocalTaskGroupCollapsed } from '@/local-tasks/local-task-group-collapse'
 import type { LocalTaskListModel } from './use-local-task-list-model'
 
 function GroupHeader({
   group,
   collapsed,
   onToggle,
-  model
+  model,
+  inBand
 }: {
   group: LocalTaskListGroup
   collapsed: boolean
   onToggle: () => void
   model: LocalTaskListModel
+  inBand: number
 }): React.JSX.Element {
   const writable = useLocalTasksDomain((state) => canCreateInGroup(state, group, model))
   return (
@@ -51,7 +55,14 @@ function GroupHeader({
         )}
         <LocalTaskGroupIcon head={group} />
         <span className="truncate">{localTaskGroupLabel(group)}</span>
-        <span className="text-2xs tabular-nums text-muted-foreground">{group.count}</span>
+        <span className="text-2xs tabular-nums text-muted-foreground">{group.count - inBand}</span>
+        {inBand > 0 ? (
+          <span className="truncate text-2xs font-normal text-muted-foreground">
+            {translate('localTasks.list.moreInNeedsYou', '{{count}} more in Needs you', {
+              count: inBand
+            })}
+          </span>
+        ) : null}
       </button>
       {writable ? (
         <Button
@@ -115,6 +126,19 @@ function EmptyList({
   )
 }
 
+/** Tasks this group counts that the Needs you section shows instead. */
+function groupTasksInBand(group: LocalTaskListGroup, banded: ReadonlySet<string>): number {
+  let count = 0
+  for (const entry of group.entries) {
+    for (const task of [entry.task, ...entry.lines.map((line) => line.task)]) {
+      if (banded.has(task.id)) {
+        count += 1
+      }
+    }
+  }
+  return count
+}
+
 /**
  * Grouped as the toolbar says; subtasks of any depth sit indented under a shown parent, and each
  * level folds on its own (REQ-004, REQ-006).
@@ -127,6 +151,7 @@ export const LocalTaskList = memo(function LocalTaskList({
   useUiLanguageRevision()
   const collapsed = useLocalTaskPage((state) => state.collapsedGroupKeys)
   const folded = model.foldedTaskIds
+  const banded = model.band.ids
   useEffect(() => {
     const page = localTaskPageStore.getState()
     const cursor = clampLocalTaskCursor(page.cursorTaskId, model.listTaskIds, model.orderedTaskIds)
@@ -134,15 +159,21 @@ export const LocalTaskList = memo(function LocalTaskList({
       page.setCursor(cursor)
     }
   }, [model.listTaskIds, model.orderedTaskIds])
-  if (model.groups.length === 0) {
+  if (model.groups.length === 0 && banded.size === 0) {
     return (
       <EmptyList hasTasks={model.scopeTasks.length > 0} scopeProjectId={model.scopeProjectId} />
     )
   }
   return (
     <div className="@container/local-task-list min-h-0 flex-1 overflow-y-auto rounded-md border border-border/60 scrollbar-sleek">
+      <LocalTaskNeedsYouBand model={model} />
       {model.groups.map((group) => {
-        const isCollapsed = collapsed.includes(group.key)
+        const entries = group.entries.filter((entry) => !banded.has(entry.task.id))
+        const inBand = groupTasksInBand(group, banded)
+        if (entries.length === 0) {
+          return null
+        }
+        const isCollapsed = isLocalTaskGroupCollapsed(group, collapsed)
         const label = localTaskGroupLabel(group)
         const statusHeading =
           group.kind === 'status' || group.kind === 'category'
@@ -154,11 +185,12 @@ export const LocalTaskList = memo(function LocalTaskList({
               group={group}
               collapsed={isCollapsed}
               model={model}
+              inBand={inBand}
               onToggle={() => localTaskPageStore.getState().toggleGroupCollapsed(group.key)}
             />
             {isCollapsed
               ? null
-              : group.entries.map((entry) => (
+              : entries.map((entry) => (
                   <div key={entry.task.id}>
                     <LocalTaskRow
                       task={entry.task}
@@ -168,17 +200,19 @@ export const LocalTaskList = memo(function LocalTaskList({
                       folded={entry.children.length > 0 ? folded.has(entry.task.id) : null}
                       hostLabels={model.hostLabels}
                     />
-                    {unfoldedLocalTaskLines(entry.lines, folded).map((line) => (
-                      <LocalTaskRow
-                        key={line.task.id}
-                        task={line.task}
-                        index={model.index}
-                        statusHeading={statusHeading}
-                        depth={line.depth}
-                        folded={line.childCount > 0 ? folded.has(line.task.id) : null}
-                        hostLabels={model.hostLabels}
-                      />
-                    ))}
+                    {unfoldedLocalTaskLines(entry.lines, folded)
+                      .filter((line) => !banded.has(line.task.id))
+                      .map((line) => (
+                        <LocalTaskRow
+                          key={line.task.id}
+                          task={line.task}
+                          index={model.index}
+                          statusHeading={statusHeading}
+                          depth={line.depth}
+                          folded={line.childCount > 0 ? folded.has(line.task.id) : null}
+                          hostLabels={model.hostLabels}
+                        />
+                      ))}
                   </div>
                 ))}
           </section>

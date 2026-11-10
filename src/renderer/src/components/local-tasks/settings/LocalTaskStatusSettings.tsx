@@ -218,6 +218,18 @@ function addStatus(project: LocalTaskProject, category: LocalTaskStatusCategory)
   )
 }
 
+/** Task count per status id, across every library the page reads. */
+export function useLocalTaskStatusUsage(): Map<string, number> {
+  const tasks = useLocalTasksDomain((state) => state.tasks)
+  return useMemo(() => {
+    const counts = new Map<string, number>()
+    for (const task of tasks) {
+      counts.set(task.statusId, (counts.get(task.statusId) ?? 0) + 1)
+    }
+    return counts
+  }, [tasks])
+}
+
 /** Statuses by fixed category: add, rename, recolor, reorder, remove (REQ-003). */
 export function LocalTaskStatusSettings({
   project,
@@ -226,28 +238,10 @@ export function LocalTaskStatusSettings({
   project: LocalTaskProject
   writable: boolean
 }): React.JSX.Element {
-  const tasks = useLocalTasksDomain((state) => state.tasks)
   const [removing, setRemoving] = useState<LocalTaskStatusDef | null>(null)
-  const usage = useMemo(() => {
-    const counts = new Map<string, number>()
-    for (const task of tasks) {
-      counts.set(task.statusId, (counts.get(task.statusId) ?? 0) + 1)
-    }
-    return counts
-  }, [tasks])
+  const usage = useLocalTaskStatusUsage()
   return (
     <section className="flex flex-col gap-2">
-      <div className="space-y-1">
-        <h3 className="text-sm font-medium text-foreground">
-          {translate('localTasks.settings.statusesTitle', 'Statuses')}
-        </h3>
-        <p className="text-xs text-muted-foreground">
-          {translate(
-            'localTasks.settings.statusesHelp',
-            'The six categories are fixed. A status never changes category, and each category keeps at least one. Board columns are these statuses.'
-          )}
-        </p>
-      </div>
       <div className="divide-y divide-border/60 rounded-md border border-border/60">
         {LOCAL_TASK_STATUS_CATEGORIES.map((category) => {
           const statuses = project.statuses.filter((status) => status.category === category)

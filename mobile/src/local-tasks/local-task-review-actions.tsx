@@ -1,8 +1,11 @@
 import { useState } from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
+import { Check, CircleCheck, Undo2 } from 'lucide-react-native'
+import { parseLocalTaskProgressSections } from '../../../src/shared/local-tasks/local-task-progress-sections'
 import { localTaskNeedsReview } from '../../../src/shared/local-tasks/local-task-review-items'
+import { localTaskWritebackSection } from '../../../src/shared/local-tasks/local-task-writebacks'
 import type { LocalTask, LocalTaskProject } from '../../../src/shared/local-tasks/local-task-types'
-import { spacing } from '../theme/mobile-theme'
+import { colors, spacing, typography } from '../theme/mobile-theme'
 import type { LocalTasksApi } from './local-tasks-api'
 import type { LocalTasksCopy } from './local-tasks-copy'
 import type { LocalTaskSite } from './local-task-endpoint'
@@ -10,6 +13,7 @@ import { localTaskWriteMessage } from './local-task-failure-message'
 import { createLocalTaskOperationIds, sendLocalTaskWrite } from './local-task-operation-ids'
 import { LocalTaskReplyDrawer } from './local-task-reply-drawer'
 import { sendLocalTaskReply } from './local-task-reply-send'
+import { localTasksPageCopy } from './local-tasks-page-copy'
 import { localTaskStyles } from './local-tasks-styles'
 import type { LocalTasksLibrary } from './use-local-tasks-library'
 
@@ -21,6 +25,10 @@ export function LocalTaskReviewActions(props: {
   library: LocalTasksLibrary
   copy: LocalTasksCopy
   readOnly: boolean
+  /** The PR as its host has it, when read. */
+  detail?: string | null
+  /** The latest writeback, whose 自检 / 验收 lines the block repeats. */
+  latestBody?: string | null
   onUpdateStatus: (statusId: string) => Promise<boolean>
   onError: (message: string | null) => void
 }) {
@@ -82,30 +90,62 @@ export function LocalTaskReviewActions(props: {
   if (!localTaskNeedsReview(props.task, props.project ?? undefined)) {
     return null
   }
+  const acceptDisabled = props.readOnly || !connected || !statusFor('completed')
+  const rejectDisabled = props.readOnly || !connected
+  const page = localTasksPageCopy()
+  // Only facts the host or the agent's writeback actually gave (m7).
+  const sections = props.latestBody ? parseLocalTaskProgressSections(props.latestBody) : null
+  const facts = [
+    [page.mergedInto, props.detail ?? null],
+    [page.selfCheck, localTaskWritebackSection(sections, 'selfCheck')],
+    [page.whereToVerify, localTaskWritebackSection(sections, 'verify')]
+  ].flatMap(([label, text]) => (label && text ? [{ label, text }] : []))
   return (
     <>
-      <View style={styles.actions}>
-        <Pressable
-          style={localTaskStyles.smallButton}
-          disabled={props.readOnly || !connected || !statusFor('completed')}
-          onPress={() => {
-            const completed = statusFor('completed')
-            if (completed) {
-              void props.onUpdateStatus(completed)
-            }
-          }}
-          accessibilityRole="button"
-        >
-          <Text style={localTaskStyles.smallButtonText}>{props.copy.acceptReview}</Text>
-        </Pressable>
-        <Pressable
-          style={localTaskStyles.smallButton}
-          disabled={props.readOnly || !connected}
-          onPress={() => setRejecting(true)}
-          accessibilityRole="button"
-        >
-          <Text style={localTaskStyles.smallButtonText}>{props.copy.rejectReview}</Text>
-        </Pressable>
+      <View style={[localTaskStyles.card, styles.block]} testID="local-task-review-block">
+        <View style={styles.head}>
+          <CircleCheck size={14} color={colors.statusGreen} />
+          <Text style={styles.title}>{props.copy.work.card.awaitingAcceptance}</Text>
+        </View>
+        {facts.map((fact) => (
+          <View key={fact.label} style={styles.fact}>
+            <Text style={[localTaskStyles.meta, styles.factLabel]}>{fact.label}</Text>
+            <Text style={[localTaskStyles.body, styles.factText]}>{fact.text}</Text>
+          </View>
+        ))}
+        <View style={styles.actions}>
+          <Pressable
+            style={[
+              localTaskStyles.secondaryButton,
+              styles.action,
+              rejectDisabled && localTaskStyles.disabled
+            ]}
+            disabled={rejectDisabled}
+            onPress={() => setRejecting(true)}
+            accessibilityRole="button"
+          >
+            <Undo2 size={15} color={colors.textPrimary} />
+            <Text style={localTaskStyles.secondaryButtonText}>{props.copy.rejectReview}</Text>
+          </Pressable>
+          <Pressable
+            style={[
+              localTaskStyles.primaryButton,
+              styles.action,
+              acceptDisabled && localTaskStyles.disabled
+            ]}
+            disabled={acceptDisabled}
+            onPress={() => {
+              const completed = statusFor('completed')
+              if (completed) {
+                void props.onUpdateStatus(completed)
+              }
+            }}
+            accessibilityRole="button"
+          >
+            <Check size={15} color={colors.bgBase} />
+            <Text style={localTaskStyles.primaryButtonText}>{props.copy.acceptReview}</Text>
+          </Pressable>
+        </View>
       </View>
       <LocalTaskReplyDrawer
         visible={rejecting}
@@ -122,5 +162,12 @@ export function LocalTaskReviewActions(props: {
 }
 
 const styles = StyleSheet.create({
-  actions: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.sm }
+  block: { marginTop: spacing.md, padding: spacing.md, gap: spacing.md },
+  head: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  title: { color: colors.statusGreen, fontSize: typography.bodySize, fontWeight: '600' },
+  fact: { flexDirection: 'row', gap: spacing.md },
+  factLabel: { width: 72, paddingTop: 2 },
+  factText: { flex: 1 },
+  actions: { flexDirection: 'row', gap: spacing.sm },
+  action: { flex: 1 }
 })

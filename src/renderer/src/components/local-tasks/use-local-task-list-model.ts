@@ -13,6 +13,11 @@ import {
 import { useLocalTasksDomain } from '@/local-tasks/local-tasks-domain-store'
 import { useLocalTaskPage } from '@/local-tasks/local-task-page-store'
 import { localTaskIdsNeedingYou } from '@/local-tasks/local-task-needs-you-rows'
+import {
+  buildLocalTaskNeedsYouBand,
+  EMPTY_LOCAL_TASK_BAND
+} from '@/local-tasks/local-task-needs-you-band'
+import { isLocalTaskGroupCollapsed } from '@/local-tasks/local-task-group-collapse'
 import { useLocalTaskEndpointLabels } from '@/local-tasks/local-task-endpoint-labels'
 import type { LocalTask, LocalTaskProject } from '../../../../shared/local-tasks/local-task-types'
 
@@ -54,9 +59,8 @@ export function useLocalTaskListModel() {
     }
     return counts
   }, [tasks])
-  const needsYouProgress = useLocalTasksDomain((state) =>
-    filters.needsYou ? state.progress : null
-  )
+  const progress = useLocalTasksDomain((state) => state.progress)
+  const needsYouProgress = filters.needsYou ? progress : null
   const visibility = useMemo(
     () => ({
       // The Needs you view draws its own rows; the list behind it keeps the full set.
@@ -87,17 +91,44 @@ export function useLocalTaskListModel() {
         : [],
     [layout, scopeTasks, index, scopeProjectId, visibility, sortBy, showCanceled]
   )
+  const shownTaskIds = useMemo(
+    () =>
+      new Set(
+        layout === 'list'
+          ? flattenLocalTaskGroups(groups)
+          : columns.flatMap((column) => column.tasks.map((task) => task.id))
+      ),
+    [layout, groups, columns]
+  )
+  // Why only the All view: a status view already says what it holds; the band would repeat it.
+  const band = useMemo(
+    () =>
+      view === 'all'
+        ? buildLocalTaskNeedsYouBand({ progress, index, visibleIds: shownTaskIds })
+        : EMPTY_LOCAL_TASK_BAND,
+    [view, progress, index, shownTaskIds]
+  )
+  const bandTaskIds = useMemo(
+    () => [...band.waiting, ...band.review].map((row) => row.task.id),
+    [band]
+  )
   // Every list row with nothing folded or collapsed; what a hidden cursor falls back along.
-  const listTaskIds = useMemo(() => flattenLocalTaskGroups(groups), [groups])
+  const listTaskIds = useMemo(
+    () => [...bandTaskIds, ...flattenLocalTaskGroups(groups).filter((id) => !band.ids.has(id))],
+    [band, bandTaskIds, groups]
+  )
   const orderedTaskIds = useMemo(
     () =>
       layout === 'list'
-        ? flattenLocalTaskGroups(
-            groups.filter((group) => !collapsedGroupKeys.includes(group.key)),
-            foldedTaskIds
-          )
+        ? [
+            ...bandTaskIds,
+            ...flattenLocalTaskGroups(
+              groups.filter((group) => !isLocalTaskGroupCollapsed(group, collapsedGroupKeys)),
+              foldedTaskIds
+            ).filter((id) => !band.ids.has(id))
+          ]
         : columns.flatMap((column) => column.tasks.map((task) => task.id)),
-    [layout, groups, columns, collapsedGroupKeys, foldedTaskIds]
+    [layout, groups, columns, collapsedGroupKeys, foldedTaskIds, band, bandTaskIds]
   )
   return {
     projects,
@@ -114,7 +145,8 @@ export function useLocalTaskListModel() {
     listTaskIds,
     foldedTaskIds,
     layout,
-    hostLabels
+    hostLabels,
+    band
   }
 }
 

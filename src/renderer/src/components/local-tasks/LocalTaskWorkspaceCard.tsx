@@ -1,4 +1,3 @@
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { useMemo } from 'react'
 import {
   FileDiff,
@@ -21,7 +20,6 @@ import { getWorkspaceStatusVisualMeta } from '@/components/sidebar/workspace-sta
 import { translate } from '@/i18n/i18n'
 import { useAppStore } from '@/store'
 import { activateAndRevealWorkspace } from '@/lib/worktree-activation'
-import { selectExecutionHostDisplayLabel } from '@/lib/execution-host-display-label'
 import { cn } from '@/lib/utils'
 import { normalizeExecutionHostId } from '../../../../shared/execution-host'
 import {
@@ -42,6 +40,8 @@ import { useLocalTaskRowWriteReason } from '@/local-tasks/local-task-write-reaso
 import { runLocalTaskStart, useLocalTaskStartState } from '@/local-tasks/local-task-work-actions'
 import { LocalTaskActionTooltip } from './LocalTaskActionTooltip'
 import { LocalTaskStartActions } from './LocalTaskStartActions'
+import { useLocalTaskHostLabel } from './LocalTaskHostLabel'
+import { LocalTaskWorkspaceLine } from './LocalTaskWorkspaceLine'
 import {
   LocalTaskReviewBadge,
   localTaskChecksLabel,
@@ -56,7 +56,8 @@ function openWorkspace(worktree: Worktree, hostId: string | null): void {
   activateAndRevealWorkspace(worktree.id, executionHostId ? { executionHostId } : undefined)
 }
 
-function openChanges(worktree: Worktree, hostId: string | null): void {
+/** The workspace with its source-control panel open on the changes. */
+export function openLocalTaskWorkspaceChanges(worktree: Worktree, hostId: string | null): void {
   openWorkspace(worktree, hostId)
   const state = useAppStore.getState()
   state.setRightSidebarTab('source-control')
@@ -79,11 +80,7 @@ function HostLabel({
   hostId: string
   fallback: string | null
 }): React.JSX.Element {
-  const label = useAppStore((state) => {
-    const id = normalizeExecutionHostId(hostId)
-    return id ? selectExecutionHostDisplayLabel(state, id) : null
-  })
-  const text = label ?? fallback ?? hostId
+  const text = useLocalTaskHostLabel(hostId, fallback)
   // Why the title: the row truncates a long host name, so hovering shows it whole.
   return (
     <span className="min-w-0 truncate" title={text}>
@@ -277,7 +274,11 @@ function LinkedWorkspace({
             {translate('localTasks.links.openWorkspace', 'Open workspace')}
           </Button>
           {link.kind === 'git-worktree' ? (
-            <Button variant="outline" size="xs" onClick={() => openChanges(worktree, hostId)}>
+            <Button
+              variant="outline"
+              size="xs"
+              onClick={() => openLocalTaskWorkspaceChanges(worktree, hostId)}
+            >
               <FileDiff className="size-3" />
               {translate('localTasks.links.viewChanges', 'View changes')}
             </Button>
@@ -321,45 +322,45 @@ export function LocalTaskWorkspaceCard({
   const inheritedFrom = workspace && !ownLink ? index.tasksById.get(workspace.taskId) : undefined
   if (compact && workspace) {
     return (
-      <div className="flex min-w-0 items-center gap-2 text-xs">
-        <GitBranch className="size-3.5 shrink-0 text-muted-foreground" />
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button variant="ghost" size="xs" className="min-w-0 max-w-full justify-start">
-              <span className="truncate">
-                {workspace.nameSnapshot ??
-                  workspace.branchSnapshot ??
-                  translate('localTasks.links.workspace', 'Workspace')}
-              </span>
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent align="start" className="w-80">
-            <div className="flex flex-col gap-3">
-              <LinkedWorkspace
-                link={workspace}
-                writable={Boolean(ownLink) && writable}
-                restart={start.mode === 'create' ? { reason: start.reason } : null}
-                onRestart={() => project && runLocalTaskStart(task, project, ownLink)}
+      <LocalTaskWorkspaceLine
+        link={workspace}
+        inheritedFrom={ownLink ? null : (inheritedFrom?.title ?? '?')}
+        popover={
+          <div className="flex flex-col gap-3">
+            <LinkedWorkspace
+              link={workspace}
+              writable={Boolean(ownLink) && writable}
+              restart={start.mode === 'create' ? { reason: start.reason } : null}
+              onRestart={() => project && runLocalTaskStart(task, project, ownLink)}
+            />
+            {!ownLink ? (
+              <LocalTaskStartActions
+                task={task}
+                project={project}
+                ownLink={null}
+                writeReason={writeReason}
+                inherited
               />
-              {!ownLink ? (
-                <LocalTaskStartActions
-                  task={task}
-                  project={project}
-                  ownLink={null}
-                  writeReason={writeReason}
-                  inherited
-                />
-              ) : null}
-            </div>
-          </PopoverContent>
-        </Popover>
-        {!ownLink ? (
-          <span className="truncate text-muted-foreground">
-            {translate('localTasks.links.inheritedWorkspace', 'Uses the workspace of “{{title}}”', {
-              title: inheritedFrom?.title ?? '?'
-            })}
-          </span>
-        ) : null}
+            ) : null}
+          </div>
+        }
+      />
+    )
+  }
+  if (compact) {
+    // Why only Link here: the title row's primary button is Start (a folder project has none).
+    return (
+      <div className="flex min-w-0 flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+        <GitBranch className="size-3.5 shrink-0" />
+        <span>{translate('localTasks.links.noWorkspace', 'No workspace yet')}</span>
+        <LocalTaskStartActions
+          task={task}
+          project={project}
+          ownLink={null}
+          writeReason={writeReason}
+          inherited={false}
+          show="link"
+        />
       </div>
     )
   }

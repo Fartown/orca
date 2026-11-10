@@ -211,7 +211,17 @@ describe('orca task', () => {
   it('lists tasks title first, narrowed by project prefix and status category', async () => {
     host()
     await main(['task', 'list', '--project', 'shop', '--status', 'started'], '/repo')
-    expect(printed()).toBe('Export orders as CSV\tSHOP-12 · In Progress · Shop')
+    expect(printed()).toBe('Export orders as CSV\tSHOP-12 · In Progress · Shop · checkout')
+  })
+
+  it('lists each task with its own workspace, so a proposal can name its worktreeId', async () => {
+    host()
+    await main(['task', 'list', '--project', 'shop', '--json'], '/repo')
+    const listed = JSON.parse(printed()).result.tasks
+    expect(listed[0]).toMatchObject({
+      ref: 'SHOP-12',
+      workspace: { hostId: 'local', name: 'checkout', worktreeId: checkout.id }
+    })
   })
 
   it('shows a task by an earlier prefix with its description and workspace', async () => {
@@ -487,9 +497,17 @@ describe('orca task', () => {
         main(['task', 'propose', '--body', '[{"kind":"start","title":"x"}]'], '/repo')
       )
       expect(writeParams('localTasks.proposals.create')).toBeUndefined()
-      expect(console.error).toHaveBeenCalledWith(
-        expect.stringContaining('orca task guide --dispatcher')
-      )
+      expect(console.error).toHaveBeenCalledWith(expect.stringContaining('Expected start: {'))
+    })
+
+    it('refuses a field the item kind does not take, instead of dropping it', async () => {
+      host()
+      const items = [
+        { kind: 'subtask', parentTaskId: 'SHOP-12', title: 'Probe', prompt: 'Read', target: {} }
+      ]
+      await inPane(() => main(['task', 'propose', '--body', JSON.stringify(items)], '/repo'))
+      expect(writeParams('localTasks.proposals.create')).toBeUndefined()
+      expect(console.error).toHaveBeenCalledWith(expect.stringContaining('unknown field target'))
     })
 
     it('refuses dispatcher commands outside a session Orca started', async () => {

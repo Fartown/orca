@@ -14,7 +14,7 @@ import type { StructuredLaunchTerminal } from '@/lib/agent-session/launch/struct
 import type { StructuredAgentLaunchSettlement } from '@/lib/structured-agent-launch-settlement'
 import { activateAndRevealWorkspace } from '@/lib/worktree-activation'
 import { requestBackgroundTerminalWorktreeMount } from '@/components/terminal/background-terminal-worktree-mount'
-import { selectExecutionHostDisplayLabel } from '@/lib/execution-host-display-label'
+import { selectLocalTaskHostLabel } from '@/local-tasks/local-task-host-label'
 import type { TuiAgent } from '../../../shared/tui-agent'
 import { buildLocalTaskAgentPrompt } from '../../../shared/local-tasks/local-task-agent-prompt'
 import { localTaskAncestors } from '../../../shared/local-tasks/local-task-tree'
@@ -122,7 +122,7 @@ export function launchLocalTaskSession(args: LocalTaskSessionLaunchArgs): boolea
   if (!isLocalTaskHostInContact(state, hostId)) {
     toast.error(
       translate('localTasks.links.hostOffline', '{{host}} is not connected', {
-        host: selectExecutionHostDisplayLabel(state, hostId)
+        host: selectLocalTaskHostLabel(state, hostId)
       })
     )
     return false

@@ -6,6 +6,18 @@ import { localTasksCopy } from './local-tasks-copy'
 import type { LocalTaskWorkspaceReview } from './local-task-workspace-row'
 import { localTaskStyles } from './local-tasks-styles'
 
+/** "PR #231 merged", as the host has it; out of contact the state is not claimed as current. */
+export function localTaskReviewLabel(review: LocalTaskWorkspaceReview, inContact: boolean): string {
+  const work = localTasksCopy().work
+  const label = review.kind === 'pr' ? work.review.pr(review.number) : work.review.mr(review.number)
+  const state = review.state.toLowerCase()
+  return !inContact
+    ? work.review.unverifiable(label)
+    : state === 'open' || state === 'draft' || state === 'merged' || state === 'closed'
+      ? work.review[state](label)
+      : label
+}
+
 /**
  * The workspace's PR or MR as its host has it, with its checks (REQ-012), colored as the host
  * list's PR chip. Out of contact the cached state is not claimed as current.
@@ -16,13 +28,7 @@ export function LocalTaskWorkspaceReviewLine(props: {
 }) {
   const work = localTasksCopy().work
   const { review } = props
-  const label = review.kind === 'pr' ? work.review.pr(review.number) : work.review.mr(review.number)
-  const state = review.state.toLowerCase()
-  const said = !props.inContact
-    ? work.review.unverifiable(label)
-    : state === 'open' || state === 'draft' || state === 'merged' || state === 'closed'
-      ? work.review[state](label)
-      : label
+  const said = localTaskReviewLabel(review, props.inContact)
   const checks =
     props.inContact && review.checks && review.checks !== 'neutral'
       ? work.checks[review.checks]

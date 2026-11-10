@@ -1,24 +1,10 @@
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Popover, PopoverAnchor, PopoverContent } from '@/components/ui/popover'
 import { useMemo } from 'react'
-import { ArrowRightLeft, SlidersHorizontal } from 'lucide-react'
-import { toast } from 'sonner'
-import { Button } from '@/components/ui/button'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuTrigger
-} from '@/components/ui/dropdown-menu'
 import { translate } from '@/i18n/i18n'
-import type { LocalTask, LocalTaskProject } from '../../../../shared/local-tasks/local-task-types'
+import type { LocalTask } from '../../../../shared/local-tasks/local-task-types'
 import { collectLocalTaskLabels, type LocalTaskIndex } from '@/local-tasks/local-task-grouping'
-import { localTasksClient } from '@/local-tasks/local-tasks-runtime-client'
-import { localTaskIdEndpoint } from '@/local-tasks/local-task-endpoints'
 import { localTaskParentCandidates } from '../../../../shared/local-tasks/local-task-hierarchy'
-import { localTasksDomainStore } from '@/local-tasks/local-tasks-domain-store'
 import {
-  runLocalTaskWrite,
   setLocalTasksPriority,
   setLocalTasksStatus,
   toggleLocalTasksLabel,
@@ -55,39 +41,26 @@ function Property({
   )
 }
 
-async function moveTask(task: LocalTask, target: LocalTaskProject): Promise<void> {
-  const result = await runLocalTaskWrite(() =>
-    localTasksClient.moveTask({ taskId: task.id, targetProjectId: target.id })
-  )
-  if (result) {
-    localTasksDomainStore.getState().upsertTasks([result.task])
-    // Why the title first: the new ref is news, but it is not what names the task (§4).
-    toast.success(
-      translate('localTasks.detail.moved', '“{{title}}” moved to {{project}} as {{ref}}', {
-        title: result.task.title,
-        project: target.name,
-        ref: result.task.ref
-      })
-    )
-  }
-}
-
-/** Inline task properties; the picker also exposes fields that have not been set. */
+/**
+ * The task's property chips: status always, the rest once set. "Edit properties…" in the task menu
+ * opens every field, unset ones included, anchored on this row.
+ */
 export function LocalTaskDetailProperties({
   task,
   index,
   allTasks,
   writable,
   expanded = false,
-  workspace
+  editing = false,
+  onEditingChange
 }: {
   task: LocalTask
   index: LocalTaskIndex
   allTasks: readonly LocalTask[]
   writable: boolean
   expanded?: boolean
-  /** The 工作区 card (REQ-012) heads the column. */
-  workspace?: React.ReactNode
+  editing?: boolean
+  onEditingChange?: (open: boolean) => void
 }): React.JSX.Element {
   const writeReason = useLocalTaskRowWriteReason(task.id)
   const reason = writable ? null : writeReason
@@ -97,17 +70,9 @@ export function LocalTaskDetailProperties({
     () => localTaskParentCandidates(task, task.projectId, allTasks, index),
     [allTasks, index, task]
   )
-  // Why one library: each Orca numbers its own tasks, so a task moves only within its library.
-  const otherProjects = [...index.projectsById.values()].filter(
-    (candidate) =>
-      candidate.id !== task.projectId &&
-      localTaskIdEndpoint(candidate.id) === localTaskIdEndpoint(task.projectId)
-  )
 
-  return (
-    <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-      {' '}
-      {workspace ? <div className="border-b border-border/60 pb-3">{workspace}</div> : null}
+  const chips = (
+    <div className="flex flex-wrap items-center gap-x-1.5 gap-y-2">
       <Property label={translate('localTasks.field.status', 'Status')} reason={reason}>
         <LocalTaskStatusSelect
           project={project}
@@ -146,65 +111,28 @@ export function LocalTaskDetailProperties({
             onChange={(parentId) => void updateLocalTaskFields(task, { parentId })}
           />
         </Property>
-      ) : null}{' '}
-      <Property label={translate('localTasks.field.project', 'Project')}>
-        <div className="flex items-center gap-1">
-          <span className="min-w-0 truncate text-xs text-foreground">{project?.name}</span>
-          <span className="font-mono text-2xs text-muted-foreground">{project?.prefix}</span>
-          {otherProjects.length > 0 ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild disabled={!writable}>
-                <Button
-                  variant="ghost"
-                  size="icon-xs"
-                  className="ml-auto"
-                  aria-label={translate('localTasks.detail.moveTo', 'Move to another project')}
-                >
-                  <ArrowRightLeft className="size-3.5" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuLabel>
-                  {translate('localTasks.detail.moveTo', 'Move to another project')}
-                </DropdownMenuLabel>
-                {otherProjects.map((candidate) => (
-                  <DropdownMenuItem
-                    key={candidate.id}
-                    onSelect={() => void moveTask(task, candidate)}
-                  >
-                    {candidate.name}
-                    <span className="font-mono text-2xs text-muted-foreground">
-                      {candidate.prefix}
-                    </span>
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : null}
-        </div>
-      </Property>
-      {!expanded ? (
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon-xs"
-              aria-label={translate('localTasks.detail.properties', 'Task properties')}
-            >
-              <SlidersHorizontal className="size-3.5" />
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent align="start" className="w-80">
-            <LocalTaskDetailProperties
-              task={task}
-              index={index}
-              allTasks={allTasks}
-              writable={writable}
-              expanded
-            />
-          </PopoverContent>
-        </Popover>
       ) : null}
     </div>
+  )
+  if (expanded || !onEditingChange) {
+    return chips
+  }
+  return (
+    <Popover open={editing} onOpenChange={onEditingChange}>
+      <PopoverAnchor asChild>{chips}</PopoverAnchor>
+      <PopoverContent
+        align="start"
+        className="w-80"
+        aria-label={translate('localTasks.detail.properties', 'Task properties')}
+      >
+        <LocalTaskDetailProperties
+          task={task}
+          index={index}
+          allTasks={allTasks}
+          writable={writable}
+          expanded
+        />
+      </PopoverContent>
+    </Popover>
   )
 }

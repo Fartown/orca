@@ -1,3 +1,7 @@
+import {
+  buildLocalTaskIndex,
+  localTaskCategory
+} from '../../../src/shared/local-tasks/local-task-grouping'
 import type { LocalTaskAttentionItem } from '../../../src/shared/local-tasks/local-task-link-types'
 import type { LocalTasksStatus } from '../../../src/shared/local-tasks/local-task-types'
 import { localTaskLibraryHasProjects, localTaskSourceShown } from './local-tasks-access'
@@ -20,7 +24,22 @@ export type LocalTaskHomeAttentionRow = {
   since: number
 }
 
-export type LocalTaskHomeAttention = { count: number; rows: LocalTaskHomeAttentionRow[] }
+/** The newest writeback of a task in progress that "Needs you" does not already show. */
+export type LocalTaskHomeLatest = {
+  taskId: string
+  ref: string
+  body: string
+  at: number
+  writeback: boolean
+}
+
+export type LocalTaskHomeAttention = {
+  count: number
+  rows: LocalTaskHomeAttentionRow[]
+  latest: LocalTaskHomeLatest | null
+  /** Top-level tasks not completed or canceled: what "View all" opens. */
+  openCount: number
+}
 
 /** One library as home counts it: each half is null until read, `error` when its read failed. */
 export type LocalTaskHomeLibrary = {
@@ -45,7 +64,30 @@ export async function readLocalTaskHomeAttention(
     api.projects()
   ])
   const rows = localTaskAttentionRows({ snapshot, tasks, projects, projectId: null })
+  const index = buildLocalTaskIndex(projects, tasks)
+  const shown = new Set(rows.map((row) => row.task.id))
+  const latest = tasks
+    .filter(
+      (task) =>
+        !shown.has(task.id) &&
+        task.latestProgress?.body &&
+        localTaskCategory(task, index) === 'started'
+    )
+    .sort((a, b) => (b.latestProgress?.at ?? 0) - (a.latestProgress?.at ?? 0))[0]
   return {
+    latest: latest?.latestProgress
+      ? {
+          taskId: latest.id,
+          ref: latest.ref,
+          body: latest.latestProgress.body.replace(/\s*\n+\s*/g, ' '),
+          at: latest.latestProgress.at,
+          writeback: latest.latestProgress.kind !== 'turn-ended'
+        }
+      : null,
+    openCount: tasks.filter((task) => {
+      const category = localTaskCategory(task, index)
+      return task.parentId === null && category !== 'completed' && category !== 'canceled'
+    }).length,
     count: localTaskAttentionTaskCount(rows),
     rows: rows.slice(0, HOME_ROWS).map((row) => ({
       taskId: row.task.id,

@@ -12,16 +12,18 @@ import { ConfirmModal } from '../components/ConfirmModal'
 import { colors, radii, spacing, typography } from '../theme/mobile-theme'
 import type { LocalTasksApi } from './local-tasks-api'
 import { formatLocalTaskAgo, localTasksCopy } from './local-tasks-copy'
+import { localTasksPageCopy } from './local-tasks-page-copy'
 import { describeLocalTaskEvent } from './local-task-event-copy'
 import { localTaskWriteMessage } from './local-task-failure-message'
 import { createLocalTaskOperationIds, sendLocalTaskWrite } from './local-task-operation-ids'
 import { localTaskStyles } from './local-tasks-styles'
-import { useLocalTaskEvents } from './use-local-tasks-library'
+import type { useLocalTaskEvents } from './use-local-tasks-library'
 
 type Props = {
   api: LocalTasksApi
   taskId: string
-  eventsVersion: number
+  /** Read once by the page, which also numbers the writebacks from them. */
+  events: ReturnType<typeof useLocalTaskEvents>
   statuses: Map<string, LocalTaskStatusDef>
   tasksById: ReadonlyMap<string, LocalTask>
   now: number
@@ -32,11 +34,8 @@ type Props = {
 
 export function LocalTaskActivitySection(props: Props) {
   const copy = localTasksCopy()
-  const {
-    events,
-    error: eventsError,
-    retry
-  } = useLocalTaskEvents(props.canRead ? props.api : null, props.taskId, props.eventsVersion)
+  const page = localTasksPageCopy()
+  const { events, error: eventsError, retry } = props.events
   const [ids] = useState(() => ({
     add: createLocalTaskOperationIds(),
     edit: createLocalTaskOperationIds(),
@@ -88,6 +87,43 @@ export function LocalTaskActivitySection(props: Props) {
   return (
     <View>
       <Text style={localTaskStyles.sectionLabel}>{copy.activity}</Text>
+      {/* System records sit folded in one line above the conversation (m4). */}
+      {systemCount > 0 ? (
+        <Pressable
+          onPress={() => setShowSystemRecords((shown) => !shown)}
+          accessibilityRole="button"
+          accessibilityState={{ expanded: showSystemRecords }}
+          style={styles.systemToggle}
+        >
+          {showSystemRecords ? (
+            <ChevronDown size={14} color={colors.textMuted} />
+          ) : (
+            <ChevronRight size={14} color={colors.textMuted} />
+          )}
+          <Text style={localTaskStyles.meta}>
+            {copy.systemRecords} {systemCount} · {showSystemRecords ? page.collapse : page.expand}
+          </Text>
+        </Pressable>
+      ) : null}
+      {showSystemRecords
+        ? ordered
+            .filter((event) => event.kind !== 'comment')
+            .map((event) => {
+              const line = describeLocalTaskEvent(copy, event, props.statuses, props.tasksById)
+              return (
+                <View key={event.id} style={styles.entry}>
+                  <View style={styles.dot} />
+                  <Text style={styles.entryText}>
+                    {line.actor ? `${line.actor} ` : ''}
+                    {line.text}{' '}
+                    <Text style={localTaskStyles.meta}>
+                      {formatLocalTaskAgo(copy, event.createdAt, props.now)}
+                    </Text>
+                  </Text>
+                </View>
+              )
+            })
+        : null}
       {ordered
         .filter((event) => event.kind === 'comment')
         .map((event) => {
@@ -127,42 +163,6 @@ export function LocalTaskActivitySection(props: Props) {
             </Pressable>
           )
         })}
-      {systemCount > 0 ? (
-        <Pressable
-          onPress={() => setShowSystemRecords((shown) => !shown)}
-          accessibilityRole="button"
-          accessibilityState={{ expanded: showSystemRecords }}
-          style={styles.systemToggle}
-        >
-          {showSystemRecords ? (
-            <ChevronDown size={14} color={colors.textMuted} />
-          ) : (
-            <ChevronRight size={14} color={colors.textMuted} />
-          )}
-          <Text style={localTaskStyles.meta}>
-            {copy.systemRecords} · {systemCount}
-          </Text>
-        </Pressable>
-      ) : null}
-      {showSystemRecords
-        ? ordered
-            .filter((event) => event.kind !== 'comment')
-            .map((event) => {
-              const line = describeLocalTaskEvent(copy, event, props.statuses, props.tasksById)
-              return (
-                <View key={event.id} style={styles.entry}>
-                  <View style={styles.dot} />
-                  <Text style={styles.entryText}>
-                    {line.actor ? `${line.actor} ` : ''}
-                    {line.text}{' '}
-                    <Text style={localTaskStyles.meta}>
-                      {formatLocalTaskAgo(copy, event.createdAt, props.now)}
-                    </Text>
-                  </Text>
-                </View>
-              )
-            })
-        : null}
       {eventsError && props.canRead ? (
         <Pressable onPress={retry} accessibilityRole="button" style={styles.error}>
           <Text style={localTaskStyles.errorText}>

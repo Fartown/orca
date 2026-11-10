@@ -4,7 +4,7 @@ import { toast } from 'sonner'
 import { translate } from '@/i18n/i18n'
 import { useAppStore } from '@/store'
 import type { AppState } from '@/store/types'
-import { selectExecutionHostDisplayLabel } from '@/lib/execution-host-display-label'
+import { selectLocalTaskHostLabel } from '@/local-tasks/local-task-host-label'
 import { normalizeExecutionHostId } from '../../../shared/execution-host'
 import type { LocalTaskWorkspaceLink } from '../../../shared/local-tasks/local-task-link-types'
 import type { LocalTask, LocalTaskProject } from '../../../shared/local-tasks/local-task-types'
@@ -37,7 +37,7 @@ function hostUnreachable(state: AppState, hostId: string): string {
   const id = normalizeExecutionHostId(hostId)
   return id
     ? translate('localTasks.links.hostOffline', '{{host}} is not connected', {
-        host: selectExecutionHostDisplayLabel(state, id)
+        host: selectLocalTaskHostLabel(state, id)
       })
     : translate('localTasks.links.hostOfflineUnnamed', 'The workspace’s host is not connected')
 }

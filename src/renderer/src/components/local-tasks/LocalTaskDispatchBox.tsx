@@ -1,26 +1,25 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { ArrowUp, X } from 'lucide-react'
-import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
-import { Input } from '@/components/ui/input'
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandItem,
-  CommandList
-} from '@/components/ui/command'
 import { translate } from '@/i18n/i18n'
 import { useAppStore } from '@/store'
 import { getAgentCatalog } from '@/lib/agent-catalog'
-import { pickTuiAgent } from '../../../../shared/tui-agent-selection'
+import { isWebClientLocation } from '@/lib/web-client-location'
+import { filterEnabledTuiAgents, pickTuiAgent } from '../../../../shared/tui-agent-selection'
+import type { TuiAgent } from '../../../../shared/tui-agent'
+import { askLocalTaskDispatcher } from '@/local-tasks/local-task-dispatcher-ask'
+import { openLocalTaskDispatcher } from '@/local-tasks/local-task-dispatcher-session'
+import { LocalTaskDispatchMentionMenu } from './LocalTaskDispatchMentionMenu'
+import { LocalTaskDispatchFooter, type LocalTaskDispatchMode } from './LocalTaskDispatchFooter'
+import {
+  LocalTaskDispatchProjectChoice,
+  LocalTaskDispatchTargets
+} from './LocalTaskDispatchTargets'
 import type { LocalTaskProject } from '../../../../shared/local-tasks/local-task-types'
 import { findMentionQuery } from '@/components/pull-request-page/mentions/query'
 import { buildSidebarHostOptionsForAllHosts } from '@/components/sidebar/sidebar-host-options'
 import { selectWslHostsServing } from '@/components/sidebar/use-wsl-hosts-enabled'
 import { getHostDisplayLabelOverrides } from '../../../../shared/host-setting-overrides'
 import { useBoundedHostRows } from '@/components/host-picker/use-bounded-host-rows'
-import { HostListOverflowNote } from '@/components/host-picker/HostListOverflowNote'
 import { createDispatchAppSelector } from '@/local-tasks/local-task-dispatch-app-selector'
 import {
   localTaskDispatchCandidates,
@@ -56,6 +55,9 @@ export function LocalTaskDispatchBox(): React.JSX.Element {
   const [receipts, setReceipts] = useState<Receipt[]>([])
   const [batchMessage, setBatchMessage] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const [mode, setMode] = useState<LocalTaskDispatchMode>('dispatch')
+  const [chosenAgent, setChosenAgent] = useState<TuiAgent | null>(null)
+  const [activeId, setActiveId] = useState<string | null>(null)
   const input = useRef<HTMLTextAreaElement>(null)
   const focusRequest = useLocalTaskDispatchFocusRequest()
   const app = useAppStore(useMemo(() => createDispatchAppSelector(), []))
@@ -85,11 +87,23 @@ export function LocalTaskDispatchBox(): React.JSX.Element {
     () => localTaskDispatchCandidates(app, tasks, hostOptions, links, writableEndpoints),
     [app, hostOptions, links, tasks, writableEndpoints]
   )
-  const agent = pickTuiAgent(
+  const tasksById = useMemo(() => new Map(tasks.map((task) => [task.id, task])), [tasks])
+  const agents = useMemo(() => {
+    const enabled = new Set(
+      filterEnabledTuiAgents(
+        getAgentCatalog().map((entry) => entry.id),
+        app.settings?.disabledTuiAgents
+      )
+    )
+    return getAgentCatalog().filter((entry) => enabled.has(entry.id))
+  }, [app.settings?.disabledTuiAgents])
+  const preferredAgent = pickTuiAgent(
     app.settings?.defaultTuiAgent,
-    getAgentCatalog().map((item) => item.id),
+    agents.map((item) => item.id),
     app.settings?.disabledTuiAgents
   )
+  const agent =
+    chosenAgent && agents.some((entry) => entry.id === chosenAgent) ? chosenAgent : preferredAgent
   const picked = targets[0]
   const projectChoices = picked ? projectsForDispatchTarget(app, picked, projects) : []
   const orphanRepo =
@@ -107,17 +121,15 @@ export function LocalTaskDispatchBox(): React.JSX.Element {
     projectChoices.find((project) => project.id === projectId) ??
     projectChoices.find((project) => project.id === lastProjectId) ??
     projectChoices[0]
-  const filtered = candidates
-    .filter(
-      (candidate) =>
-        (hostFilter === null || candidate.kind === 'host' || candidate.hostId === hostFilter) &&
-        (query === null ||
-          `${candidate.label} ${candidate.detail}`
-            .toLocaleLowerCase()
-            .includes(query.toLocaleLowerCase())) &&
-        !targets.some((selected) => selected.id === candidate.id)
-    )
-    .slice(0, 30)
+  const filtered = candidates.filter(
+    (candidate) =>
+      (hostFilter === null || candidate.kind === 'host' || candidate.hostId === hostFilter) &&
+      (query === null ||
+        `${candidate.label} ${candidate.detail}`
+          .toLocaleLowerCase()
+          .includes(query.toLocaleLowerCase())) &&
+      !targets.some((selected) => selected.id === candidate.id)
+  )
   const selectedRows = useBoundedHostRows(targets)
 
   useEffect(() => {
@@ -146,7 +158,25 @@ export function LocalTaskDispatchBox(): React.JSX.Element {
       )
     }
     setQuery(null)
+    setActiveId(null)
     requestAnimationFrame(() => input.current?.focus())
+  }
+
+  const insertMention = (): void => {
+    const textarea = input.current
+    const at = textarea?.selectionStart ?? text.length
+    setText(`${text.slice(0, at)}@${text.slice(at)}`)
+    setQuery('')
+    requestAnimationFrame(() => {
+      textarea?.focus()
+      textarea?.setSelectionRange(at + 1, at + 1)
+    })
+  }
+
+  const openDispatcherOnly = (): void => {
+    if (agent) {
+      void openLocalTaskDispatcher(agent)
+    }
   }
 
   const submit = async (createProject = false): Promise<void> => {
@@ -200,54 +230,77 @@ export function LocalTaskDispatchBox(): React.JSX.Element {
     }
   }
 
+  const toDispatcher = mode === 'ask' || targets.length === 0
+  const dispatcherOffered = !isWebClientLocation()
+  const ask = async (): Promise<void> => {
+    if (!agent || busy || !dispatcherOffered) {
+      return
+    }
+    setBusy(true)
+    try {
+      const sent = await askLocalTaskDispatcher({ agent, text, askOnly: mode === 'ask' })
+      if (sent) {
+        setText('')
+      }
+    } finally {
+      setBusy(false)
+    }
+  }
+  const send = (): void => {
+    if (!text.trim()) {
+      return
+    }
+    void (toDispatcher ? ask() : submit())
+  }
+  const blockedReason = !agent
+    ? translate('localTasks.dispatch.noAgent', 'Turn on an agent in Settings → Agents first.')
+    : toDispatcher && !dispatcherOffered
+      ? translate(
+          'localTasks.dispatch.webNoDispatcher',
+          'The dispatcher runs in the desktop app. Here, @ a workspace or repository to dispatch.'
+        )
+      : !toDispatcher && targets.length > 1 && targets.some((target) => target.kind !== 'workspace')
+        ? translate(
+            'localTasks.dispatch.multiOnlyWorkspaces',
+            'Several targets work only with workspaces.'
+          )
+        : !toDispatcher && !picked?.available
+          ? translate('localTasks.dispatch.disconnected', 'Not connected')
+          : null
+  const sendDisabled =
+    busy || !text.trim() || blockedReason !== null || (!toDispatcher && !selectedProject)
+  const visible = query === null ? [] : filtered.filter((candidate) => candidate.available)
+  const active =
+    query === null
+      ? null
+      : (visible.find((candidate) => candidate.id === activeId) ?? visible[0] ?? null)
+  const moveActive = (step: number): void => {
+    if (visible.length === 0) {
+      return
+    }
+    const at = active ? visible.findIndex((candidate) => candidate.id === active.id) : -1
+    setActiveId(visible[(at + step + visible.length) % visible.length]?.id ?? null)
+  }
+
   return (
-    <div className="relative flex flex-col gap-2 rounded-md border border-border bg-card p-3">
-      <div className="flex flex-wrap gap-1">
-        {hostFilter ? (
-          <Button size="xs" variant="outline" onClick={() => setHostFilter(null)}>
-            {hostOptions.find((host) => host.id === hostFilter)?.label ?? hostFilter}
-            <X className="size-3" />
-          </Button>
-        ) : null}
-        {selectedRows.shown.map((target) => (
-          <Button
-            key={target.id}
-            size="xs"
-            variant="outline"
-            onClick={() => setTargets((current) => current.filter((item) => item.id !== target.id))}
-          >
-            {target.label}
-            <X className="size-3" />
-          </Button>
-        ))}
-      </div>
-      {targets.length > 0 ? (
-        <span className="text-xs text-muted-foreground">
-          {translate('localTasks.dispatch.selectedCount', '{{count}} selected', {
-            count: targets.length
-          })}
-        </span>
-      ) : null}
-      {selectedRows.searchable ? (
-        <Input
-          value={selectedRows.query}
-          onChange={(event) => selectedRows.setQuery(event.target.value)}
-          placeholder={translate('localTasks.dispatch.searchSelected', 'Search selected targets')}
-          aria-label={translate('localTasks.dispatch.searchSelected', 'Search selected targets')}
-          className="h-7"
-        />
-      ) : null}
-      <HostListOverflowNote
-        hiddenCount={selectedRows.hiddenCount}
-        label={(count) =>
-          translate('localTasks.dispatch.moreSelected', '{{count}} more selected', { count })
+    <div className="@container/local-task-dispatch relative flex flex-col gap-1.5 rounded-xl border border-border bg-card px-3 pt-2.5 pb-2 shadow-xs">
+      <LocalTaskDispatchTargets
+        hostLabel={
+          hostFilter
+            ? (hostOptions.find((host) => host.id === hostFilter)?.label ?? hostFilter)
+            : null
         }
+        onClearHost={() => setHostFilter(null)}
+        rows={selectedRows}
+        count={targets.length}
+        onRemove={(id) => setTargets((current) => current.filter((item) => item.id !== id))}
       />
       <Textarea
         variant="composite"
         ref={input}
         value={text}
-        className="min-h-16"
+        rows={1}
+        className="field-sizing-content max-h-40 min-h-6 font-sans text-sm leading-6 md:text-sm"
         placeholder={translate(
           'localTasks.dispatch.placeholder',
           'What should be done? @ a workspace or repository, then describe the task'
@@ -257,113 +310,77 @@ export function LocalTaskDispatchBox(): React.JSX.Element {
           setText(event.target.value)
           setQuery(findMentionQuery(event.target.value, event.target.selectionStart)?.query ?? null)
         }}
-        onKeyUp={(event) =>
+        onKeyUp={(event) => {
+          if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
+            return
+          }
           setQuery(
             findMentionQuery(event.currentTarget.value, event.currentTarget.selectionStart)
               ?.query ?? null
           )
-        }
+        }}
         onKeyDown={(event) => {
+          if (query !== null && (event.key === 'ArrowDown' || event.key === 'ArrowUp')) {
+            event.preventDefault()
+            moveActive(event.key === 'ArrowDown' ? 1 : -1)
+            return
+          }
+          if (query !== null && event.key === 'Escape') {
+            event.preventDefault()
+            event.stopPropagation()
+            setQuery(null)
+            return
+          }
           if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
             event.preventDefault()
-            if (query !== null && filtered[0]) {
-              choose(filtered[0])
-            } else {
-              void submit()
+            if (query !== null && active) {
+              choose(active)
+            } else if (!sendDisabled) {
+              send()
             }
           }
         }}
       />
       {query !== null ? (
-        <div className="scrollbar-sleek absolute inset-x-3 top-full z-30 max-h-64 overflow-auto rounded-md border border-border bg-popover shadow-floating">
-          <Command shouldFilter={false} surface="inline" density="menu">
-            <CommandList>
-              <CommandEmpty>
-                {translate('localTasks.dispatch.noMatches', 'No matches')}
-              </CommandEmpty>
-              <CommandGroup>
-                {filtered.map((candidate) => (
-                  <CommandItem
-                    key={candidate.id}
-                    value={candidate.id}
-                    disabled={!candidate.available}
-                    onSelect={() => choose(candidate)}
-                  >
-                    <span className="min-w-0 flex-1 truncate">{candidate.label}</span>
-                    <span className="text-2xs text-muted-foreground">
-                      {candidate.available
-                        ? candidate.detail
-                        : translate('localTasks.dispatch.disconnected', 'Not connected')}
-                    </span>
-                  </CommandItem>
-                ))}
-              </CommandGroup>
-            </CommandList>
-          </Command>
-        </div>
+        <LocalTaskDispatchMentionMenu
+          candidates={filtered}
+          activeId={active?.id ?? null}
+          app={app}
+          links={links}
+          tasksById={tasksById}
+          onChoose={choose}
+          onHover={setActiveId}
+        />
       ) : null}
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-xs text-muted-foreground">
-          {picked
-            ? translate('localTasks.dispatch.executedBy', 'Run on {{host}}', {
-                host: picked.detail || picked.hostId || ''
-              })
-            : translate(
-                'localTasks.dispatch.chooseTarget',
-                'Choose a workspace or repository with @'
-              )}
-        </span>
-        <Button
-          size="sm"
-          disabled={
-            busy ||
-            !agent ||
-            !text.trim() ||
-            targets.length === 0 ||
-            (targets.length > 1 && targets.some((target) => target.kind !== 'workspace')) ||
-            !picked?.available ||
-            !selectedProject
-          }
-          onClick={() => void submit(false)}
-        >
-          <ArrowUp className="size-4" />
-          {translate('localTasks.dispatch.submit', 'Dispatch')}
-        </Button>
-      </div>
-      {projectChoices.length > 1 ? (
-        <div className="flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
-          {translate('localTasks.dispatch.project', 'Project')}
-          {projectChoices.map((project) => (
-            <Button
-              key={project.id}
-              size="xs"
-              variant={selectedProject?.id === project.id ? 'secondary' : 'ghost'}
-              onClick={() => {
-                setProjectId(project.id)
-                void localTasksClient
-                  .setPreference('dispatchLastProject', project.id)
-                  .catch(() => {})
-              }}
-            >
-              {project.name}
-            </Button>
-          ))}
-        </div>
-      ) : null}
-      {orphanRepo && !selectedProject ? (
-        <div className="flex items-center justify-between gap-2 rounded border border-border p-2 text-xs">
-          <span>
-            {translate(
-              'localTasks.dispatch.createProjectPrompt',
-              'Create a project for {{repo}}?',
-              { repo: orphanRepo.label }
-            )}
-          </span>
-          <Button size="xs" disabled={busy} onClick={() => void submit(true)}>
-            {translate('localTasks.dispatch.createProject', 'Create project and dispatch')}
-          </Button>
-        </div>
-      ) : null}
+      <LocalTaskDispatchFooter
+        agents={agents}
+        agent={agent}
+        defaultAgent={preferredAgent}
+        onAgentChange={setChosenAgent}
+        mode={mode}
+        onModeChange={setMode}
+        dispatcherOffered={dispatcherOffered}
+        busy={busy}
+        runOn={picked && !toDispatcher ? picked.detail || picked.hostId || '' : null}
+        sendDisabled={sendDisabled}
+        blockedReason={blockedReason}
+        onMention={insertMention}
+        onExpand={() => void (text.trim() ? ask() : openDispatcherOnly())}
+        onSend={send}
+      />
+      {toDispatcher ? null : (
+        <LocalTaskDispatchProjectChoice
+          choices={projectChoices}
+          selectedId={selectedProject?.id ?? null}
+          onPick={(id) => {
+            setProjectId(id)
+            void localTasksClient.setPreference('dispatchLastProject', id).catch(() => {})
+          }}
+          orphanRepoLabel={orphanRepo?.label ?? null}
+          busy={busy}
+          onCreate={() => void submit(true)}
+        />
+      )}
       {batchMessage ? <p className="text-xs text-destructive">{batchMessage}</p> : null}
       {agent
         ? receipts.map((receipt) => (

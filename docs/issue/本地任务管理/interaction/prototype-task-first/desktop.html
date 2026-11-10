@@ -7191,6 +7191,836 @@
         cursor: not-allowed;
       }
     </style>
+    <style>
+      /* 总管: the ledger page, the floating conversation panel, and the proposal card both of them show. */
+      .v-i.v-sa.has .n {
+        color: var(--agent-question-text);
+        font-weight: 600;
+      }
+      .sa-notice {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        height: 34px;
+        padding: 0 12px 0 36px;
+        border-bottom: 1px solid var(--border);
+        font-size: var(--text-xs);
+        color: var(--foreground);
+        cursor: pointer;
+      }
+      .sa-notice:hover {
+        background: color-mix(in srgb, var(--accent) 28%, transparent);
+      }
+      .sa-notice > .ic:first-child {
+        color: var(--muted-foreground);
+      }
+      .sa-led {
+        flex: 1 1 auto;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .sa-led,
+      .sa-panel,
+      .sa-card,
+      .sa-notice {
+        text-wrap: pretty;
+      }
+      .sa-hd h2 {
+        font-size: var(--text-base);
+        font-weight: 600;
+        line-height: 1.4;
+      }
+      .sa-hd p {
+        margin-top: 2px;
+        font-size: var(--text-xs);
+        line-height: 1.6;
+        color: var(--muted-foreground);
+      }
+      .sa-bar {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-height: 46px;
+        padding: 6px 8px 6px 14px;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        background: rgb(255 255 255 / 0.02);
+        flex: none;
+      }
+      .sa-stat {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        font-size: var(--text-sm);
+        font-weight: 500;
+        white-space: nowrap;
+      }
+      .sa-stat > .ic {
+        color: var(--muted-foreground);
+      }
+      .sa-bar .sa-where {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        font-size: var(--text-2xs);
+        color: var(--muted-foreground);
+        white-space: nowrap;
+      }
+      .sa-wake {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        height: 28px;
+        padding: 0 8px;
+        border-radius: 6px;
+        font-size: var(--text-xs);
+        color: var(--muted-foreground);
+        white-space: nowrap;
+        cursor: pointer;
+      }
+      .sa-wake:hover {
+        color: var(--foreground);
+      }
+      .sa-scroll {
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow-y: auto;
+        scrollbar-width: none;
+        padding-bottom: 28px;
+        -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 24px), transparent);
+        mask-image: linear-gradient(to bottom, #000 calc(100% - 24px), transparent);
+      }
+      .sa-scroll::-webkit-scrollbar {
+        display: none;
+      }
+      .sa-cols {
+        display: grid;
+        grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr);
+        gap: 24px;
+        align-items: start;
+      }
+      .sa-col {
+        display: flex;
+        flex-direction: column;
+        gap: 22px;
+        min-width: 0;
+      }
+      .sa-sec {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        min-width: 0;
+      }
+      .sa-sec > h3 {
+        display: flex;
+        align-items: baseline;
+        gap: 6px;
+        font-size: var(--text-xs);
+        font-weight: 600;
+        color: var(--muted-foreground);
+      }
+      .sa-sec > h3 .n {
+        font-weight: 500;
+        font-variant-numeric: tabular-nums;
+      }
+      .sa-sec > h3 .n.q {
+        color: var(--agent-question-text);
+        font-weight: 600;
+      }
+      .sa-empty {
+        padding: 10px 12px;
+        border: 1px dashed var(--border);
+        border-radius: 8px;
+        font-size: var(--text-xs);
+        line-height: 1.6;
+        color: var(--muted-foreground);
+      }
+      .sa-list {
+        border: 1px solid var(--border);
+        border-radius: 10px;
+      }
+      .sa-w {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        padding: 10px 10px 10px 12px;
+      }
+      .sa-w + .sa-w,
+      .sa-u + .sa-u,
+      .sa-d + .sa-d {
+        border-top: 1px solid var(--border);
+      }
+      .sa-w1 {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-height: 22px;
+      }
+      .sa-tt {
+        font-size: var(--text-sm);
+        font-weight: 500;
+        cursor: pointer;
+      }
+      .sa-tt:hover {
+        text-decoration: underline;
+        text-decoration-color: var(--input);
+        text-underline-offset: 3px;
+      }
+      .sa-w1 .sa-sn {
+        font-size: var(--text-2xs);
+        color: var(--muted-foreground);
+        white-space: nowrap;
+      }
+      .sa-w1 .sa-sn.unv {
+        color: var(--agent-unverifiable);
+      }
+      .sa-w2 {
+        display: flex;
+        align-items: flex-start;
+        gap: 6px;
+        padding-left: 22px;
+        font-size: var(--text-xs);
+        line-height: 1.6;
+        color: rgb(250 250 250 / 0.82);
+      }
+      .sa-w2 .ptag {
+        margin-top: 3px;
+      }
+      .sa-w2.off {
+        color: var(--muted-foreground);
+      }
+      .sa-w3 {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 4px 6px;
+        padding-left: 22px;
+        font-size: var(--text-2xs);
+        color: var(--muted-foreground);
+      }
+      .sa-w3 .unv {
+        color: var(--agent-unverifiable);
+      }
+      .sa-note {
+        font-size: var(--text-2xs);
+        line-height: 1.6;
+        color: var(--muted-foreground);
+      }
+      .sa-u {
+        display: flex;
+        gap: 10px;
+        padding: 8px 12px;
+        font-size: var(--text-xs);
+        line-height: 1.6;
+      }
+      .sa-at {
+        flex: none;
+        font-size: var(--text-2xs);
+        color: var(--muted-foreground);
+        white-space: nowrap;
+      }
+      .sa-u > .sa-at {
+        width: 54px;
+        padding-top: 1px;
+      }
+      .sa-ub {
+        flex: 1 1 auto;
+        min-width: 0;
+      }
+      .sa-ub .tid {
+        margin-right: 6px;
+      }
+      .sa-ub.host {
+        color: var(--agent-unverifiable);
+      }
+      .sa-ub.host .ic {
+        margin: -2px 5px 0 0;
+      }
+      .sa-ny {
+        display: flex;
+        align-items: flex-start;
+        gap: 5px;
+        margin-top: 3px;
+        font-size: var(--text-2xs);
+        line-height: 1.5;
+        color: var(--agent-question-text);
+      }
+      .sa-ny .ic {
+        margin-top: 2px;
+      }
+      .sa-d {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        padding: 9px 12px;
+      }
+      .sa-d1 {
+        display: flex;
+        align-items: baseline;
+        gap: 10px;
+        font-size: var(--text-xs);
+        line-height: 1.55;
+      }
+      .sa-d1 > span:first-child {
+        flex: 1 1 auto;
+        min-width: 0;
+      }
+      .sa-d2 {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 6px;
+      }
+      .sa-ref {
+        display: inline-flex;
+        align-items: center;
+        height: 20px;
+        padding: 0 6px;
+        border-radius: 4px;
+        background: rgb(255 255 255 / 0.07);
+        font-size: var(--text-2xs);
+        color: var(--foreground);
+        font-variant-numeric: tabular-nums;
+        cursor: pointer;
+      }
+      .sa-ref:hover {
+        background: color-mix(in srgb, var(--accent) 70%, transparent);
+      }
+      .sa-fail {
+        display: inline-flex;
+        align-items: center;
+        height: 20px;
+        padding: 0 6px;
+        border-radius: 4px;
+        background: color-mix(in srgb, var(--status-warning) 14%, transparent);
+        font-size: var(--text-2xs);
+        color: var(--status-warning);
+      }
+      .sa-d2 .lnk {
+        margin-left: 2px;
+      }
+
+      /* The proposal card: identical on the ledger and docked above the conversation's input. */
+      .sa-card {
+        border: 1px solid var(--input);
+        border-radius: 10px;
+        background: var(--card);
+        box-shadow: var(--shadow-sm);
+      }
+      .sa-card.locked {
+        border-color: var(--border);
+        background: rgb(255 255 255 / 0.015);
+        box-shadow: none;
+      }
+      .sa-ch {
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
+        padding: 10px 12px 9px 14px;
+        border-bottom: 1px solid var(--border);
+      }
+      .sa-ch > .ic {
+        margin-top: 3px;
+        color: var(--muted-foreground);
+      }
+      .sa-ch b {
+        flex: 1 1 auto;
+        min-width: 0;
+        font-size: var(--text-sm);
+        font-weight: 600;
+        line-height: 1.55;
+      }
+      .sa-ch .sa-at,
+      .sa-ch .pill {
+        margin-top: 2px;
+      }
+      .sa-i {
+        display: flex;
+        gap: 10px;
+        padding: 9px 12px 9px 14px;
+      }
+      .sa-i + .sa-i {
+        border-top: 1px solid var(--border);
+      }
+      .sa-i > .check {
+        margin-top: 4px;
+        cursor: pointer;
+      }
+      .sa-i > .check.lock {
+        cursor: not-allowed;
+        opacity: 0.4;
+      }
+      .sa-lead {
+        width: 14px;
+        height: 14px;
+        margin-top: 4px;
+        flex: none;
+        display: inline-grid;
+        place-items: center;
+      }
+      .sa-i.off .sa-ib > :not(.sa-ix) {
+        opacity: 0.45;
+      }
+      .sa-ib {
+        flex: 1 1 auto;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .sa-it {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 4px 8px;
+        min-height: 22px;
+        font-size: var(--text-sm);
+        font-weight: 500;
+        line-height: 1.5;
+      }
+      .sa-it .danger {
+        color: var(--destructive);
+      }
+      .sa-it .sa-edit,
+      .sa-it .sa-st {
+        margin-left: auto;
+      }
+      .sa-st {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        font-size: var(--text-2xs);
+        font-weight: 400;
+        color: var(--muted-foreground);
+        white-space: nowrap;
+      }
+      .sa-st.ok {
+        color: var(--status-success);
+      }
+      .sa-st.unk {
+        color: var(--status-warning);
+        font-weight: 600;
+      }
+      .sa-im {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 4px 8px;
+        font-size: var(--text-2xs);
+        color: var(--muted-foreground);
+      }
+      .sa-im .sa-ses {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        white-space: nowrap;
+      }
+      .sa-id {
+        font-size: var(--text-xs);
+        line-height: 1.6;
+        color: rgb(250 250 250 / 0.82);
+      }
+      .sa-id .k {
+        margin-right: 6px;
+        font-size: var(--text-2xs);
+        color: var(--muted-foreground);
+      }
+      .sa-ix {
+        display: flex;
+        align-items: flex-start;
+        gap: 5px;
+        font-size: var(--text-2xs);
+        line-height: 1.55;
+        color: var(--agent-unverifiable);
+      }
+      .sa-ix .ic,
+      .sa-ir .ic {
+        margin-top: 1px;
+      }
+      .sa-ir {
+        display: flex;
+        align-items: flex-start;
+        gap: 5px;
+        font-size: var(--text-2xs);
+        line-height: 1.55;
+        color: var(--muted-foreground);
+      }
+      .sa-ir.ok {
+        color: var(--status-success);
+      }
+      .sa-ir.unk {
+        color: var(--status-warning);
+      }
+      .sa-ir .sa-ref {
+        height: 18px;
+        margin-left: 2px;
+      }
+      .sa-ed {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        margin-top: 2px;
+      }
+      .sa-ed label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: var(--text-2xs);
+        color: var(--muted-foreground);
+      }
+      .sa-ed label > span:first-child {
+        width: 40px;
+        flex: none;
+      }
+      .sa-ed .sa-field {
+        flex: 1 1 auto;
+        min-width: 0;
+        height: 26px;
+        padding: 0 8px;
+        border-radius: 6px;
+        border: 1px solid var(--ring);
+        background: rgb(255 255 255 / 0.03);
+        font-size: var(--text-xs);
+        color: var(--foreground);
+      }
+      .sa-ed .seg > span {
+        cursor: pointer;
+      }
+      .sa-cf {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 12px 10px 14px;
+        border-top: 1px solid var(--border);
+        font-size: var(--text-2xs);
+        color: var(--muted-foreground);
+      }
+      .sa-cn {
+        flex: 1 1 auto;
+        min-width: 0;
+        display: flex;
+        align-items: flex-start;
+        gap: 6px;
+        line-height: 1.55;
+      }
+      .sa-cn .ic,
+      .sa-cn .ast {
+        margin-top: 1px;
+      }
+      .sa-cn b {
+        color: var(--foreground);
+        font-weight: 500;
+      }
+      .sa-cf .btn {
+        height: 28px;
+      }
+      .sa-cf .sa-why {
+        font-size: var(--text-2xs);
+        color: var(--muted-foreground);
+        white-space: nowrap;
+      }
+
+      /* Floating conversation: one panel over whatever page is open; chat and terminal are the same session. */
+      .sa-panel {
+        position: absolute;
+        right: 20px;
+        bottom: 14px;
+        z-index: 32;
+        width: 620px;
+        height: 780px;
+        max-height: calc(100% - 28px);
+        display: flex;
+        flex-direction: column;
+        background: var(--popover);
+        border: 1px solid rgb(255 255 255 / 0.12);
+        border-radius: 12px;
+        box-shadow: var(--shadow-lg);
+        overflow: hidden;
+      }
+      .sa-ph {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        height: 46px;
+        padding: 0 8px 0 14px;
+        border-bottom: 1px solid var(--border);
+        flex: none;
+      }
+      .sa-ph b {
+        font-size: var(--text-sm);
+        font-weight: 600;
+      }
+      .sa-ph .sa-where {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        font-size: var(--text-2xs);
+        color: var(--muted-foreground);
+        white-space: nowrap;
+      }
+      .sa-ph .seg > span {
+        cursor: pointer;
+      }
+      .sa-old {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        height: 32px;
+        padding: 0 10px 0 14px;
+        border-bottom: 1px solid var(--border);
+        background: color-mix(in srgb, var(--accent) 30%, transparent);
+        font-size: var(--text-2xs);
+        color: var(--foreground);
+        flex: none;
+      }
+      .sa-old .ic {
+        color: var(--muted-foreground);
+      }
+      .sa-thread {
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow-y: auto;
+        scrollbar-width: none;
+        padding: 14px 16px 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+      .sa-thread::-webkit-scrollbar {
+        display: none;
+      }
+      .sa-thread > :first-child {
+        margin-top: auto;
+      }
+      .sa-msg {
+        display: flex;
+        gap: 10px;
+      }
+      .sa-mb {
+        flex: 1 1 auto;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .sa-mn {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        height: 26px;
+        font-size: var(--text-xs);
+        font-weight: 600;
+      }
+      .sa-mn .muted {
+        font-weight: 400;
+        font-size: var(--text-2xs);
+      }
+      .sa-mt {
+        font-size: var(--text-sm);
+        line-height: 1.65;
+      }
+      .sa-reads {
+        display: flex;
+        flex-direction: column;
+        padding: 6px 0;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: rgb(255 255 255 / 0.02);
+      }
+      .sa-reads .h {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        padding: 0 12px 4px;
+        font-size: var(--text-2xs);
+        color: var(--muted-foreground);
+      }
+      .sa-rd {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        gap: 2px 8px;
+        padding: 3px 12px;
+      }
+      .sa-rd code {
+        padding: 1px 6px;
+        border-radius: 4px;
+        background: rgb(255 255 255 / 0.06);
+        font-family: var(--font-mono);
+        font-size: var(--text-2xs);
+        color: var(--foreground);
+      }
+      .sa-rd > span {
+        padding-left: 2px;
+        font-size: var(--text-xs);
+        line-height: 1.55;
+        color: rgb(250 250 250 / 0.78);
+      }
+      .sa-rd.skip > span {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        color: var(--agent-unverifiable);
+      }
+      .sa-you {
+        display: flex;
+        justify-content: flex-end;
+      }
+      .sa-you .bub {
+        max-width: 440px;
+        padding: 8px 12px;
+        border-radius: 10px;
+        background: var(--secondary);
+        font-size: var(--text-sm);
+        line-height: 1.6;
+      }
+      .sa-ptr {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        padding: 6px 10px;
+        border-left: 2px solid var(--input);
+        border-radius: 0 6px 6px 0;
+        background: rgb(255 255 255 / 0.025);
+        color: var(--muted-foreground);
+      }
+      .sa-ptr .sa-pw {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        font-size: var(--text-3xs);
+      }
+      .sa-ptr code {
+        font-family: var(--font-mono);
+        font-size: var(--text-2xs);
+        line-height: 1.6;
+        color: var(--muted-foreground);
+      }
+      .sa-day {
+        align-self: center;
+        font-size: var(--text-2xs);
+        color: var(--muted-foreground);
+      }
+      .sa-mark {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        align-self: flex-start;
+        height: 26px;
+        padding: 0 10px;
+        border-radius: 6px;
+        border: 1px solid var(--border);
+        font-size: var(--text-xs);
+        color: var(--muted-foreground);
+      }
+      .sa-mark b {
+        color: var(--foreground);
+        font-weight: 500;
+      }
+      .sa-empty-chat {
+        align-self: center;
+        max-width: 420px;
+        margin: auto 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+        text-align: center;
+        font-size: var(--text-xs);
+        line-height: 1.6;
+        color: var(--muted-foreground);
+      }
+      .sa-empty-chat h3 {
+        font-size: var(--text-sm);
+        font-weight: 600;
+        color: var(--foreground);
+      }
+      .sa-empty-chat .exs {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        margin-top: 4px;
+      }
+      .sa-dock {
+        flex: none;
+        max-height: 52%;
+        overflow-y: auto;
+        scrollbar-width: none;
+        padding: 10px 12px 0;
+        border-top: 1px solid var(--border);
+      }
+      .sa-dock::-webkit-scrollbar {
+        display: none;
+      }
+      .sa-in {
+        flex: none;
+        padding: 10px 12px 12px;
+      }
+      .sa-box {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        height: 40px;
+        padding: 0 8px 0 12px;
+        border: 1px solid var(--ring);
+        border-radius: 10px;
+        background: var(--card);
+      }
+      .sa-box input {
+        flex: 1 1 auto;
+        min-width: 0;
+        font-size: var(--text-sm);
+      }
+      .sa-box input::placeholder {
+        color: var(--muted-foreground);
+      }
+      .sa-in.term {
+        background: var(--editor-surface);
+        border-top: 1px solid var(--border);
+      }
+      .sa-in.term .cc-box {
+        margin-top: 0;
+        max-width: none;
+      }
+      .sa-panel .dterm {
+        flex: 1 1 auto;
+      }
+      .sa-pill {
+        position: absolute;
+        right: 20px;
+        bottom: 14px;
+        z-index: 32;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        height: 36px;
+        padding: 0 12px 0 11px;
+        border-radius: 999px;
+        border: 1px solid rgb(255 255 255 / 0.14);
+        background: var(--popover);
+        box-shadow: var(--shadow-md);
+        font-size: var(--text-xs);
+        white-space: nowrap;
+        cursor: pointer;
+      }
+      .sa-pill b {
+        font-weight: 600;
+      }
+      .sa-pill .muted {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+      }
+      .sa-pill .cnt.q {
+        margin-left: 2px;
+      }
+      .by-sa {
+        background: color-mix(in srgb, var(--callout-note) 16%, transparent);
+        color: color-mix(in srgb, var(--callout-note) 70%, var(--foreground));
+      }
+    </style>
   </head>
   <body>
     <!--icons:start-->
@@ -8497,6 +9327,17 @@
         <path d="M20 10h-6V4" />
         <path d="m3 21 7-7" />
         <path d="M4 14h6v6" />
+      </symbol>
+      <symbol
+        id="i-minus"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <path d="M5 12h14" />
       </symbol>
       <symbol
         id="i-messages-square"
@@ -10006,7 +10847,9 @@
             ccDraft: '',
             sysOpen: {},
             // Set by the drawer's 全屏: which session tab was opened from it, so the tab can offer 收回侧边.
-            fullFrom: null
+            fullFrom: null,
+            // 总管: its ledger, proposals and floating conversation.
+            sa: saFresh()
           }
         }
         const later = (ms, fn) => {
@@ -10498,7 +11341,20 @@
             loose.map((s) => treeSessionRow(s, 1, { loose: true })),
             'v-loose'
           )
+          const sa = saWaiting()
+          const saRow = row(
+            'sa',
+            ic('bot', 14),
+            '总管',
+            '',
+            sa,
+            'data-act="view" data-v="dispatcher"',
+            f.view === 'dispatcher',
+            [],
+            `v-sa ${sa ? 'has' : ''}`
+          )
           return `<nav class="views sbviews">
+      ${saRow}
       ${view('need', ic('bell', 14), '需要你', 'v-need')}
       ${view('all', ic('list-todo', 14), '全部')}
       ${view('doing', catIcon('started'), '进行中')}
@@ -10569,7 +11425,9 @@
             `<div class="v-i ${f.view === key ? 'on' : ''} ${cls}" data-act="view" data-v="${key}">${icon}<span>${label}</span><span class="n">${n}</span></div>`
           const proj = (key, label, extra, n) =>
             `<div class="v-i ${f.project === key ? 'on' : ''}" data-act="scope" data-p="${key}">${ic(key === 'all' ? 'layers' : 'folder-git-2', 14)}<span>${label}</span>${extra}<span class="n">${n}</span></div>`
+          const sa = saWaiting()
           return `<nav class="views">
+      ${v('dispatcher', ic('bot', 14), '总管', sa, `v-sa ${sa ? 'has' : ''}`)}
       ${v('need', ic('bell', 14), '需要你', needsYou().length, 'v-need')}
       ${v('all', ic('list-todo', 14), '全部', inScope.length)}
       ${v('doing', catIcon('started'), '进行中', cnt('doing'))}
@@ -10617,7 +11475,9 @@
             `<div class="rail-i ${f.view === key ? 'on' : ''}" data-act="view" data-v="${key}" title="${label}">${icon}${badge}</div>`
           const p = (key, label, inner) =>
             `<div class="rail-i ${f.project === key ? 'on' : ''}" data-act="scope" data-p="${key}" title="${label}">${inner}</div>`
+          const sa = saWaiting()
           return `<nav class="views rail">
+      ${r('dispatcher', ic('bot', 14), '总管', sa ? `<span class="rail-b">${sa}</span>` : '')}
       ${r('need', ic('bell', 14), '需要你', ny ? `<span class="rail-b">${ny}</span>` : '')}
       ${r('all', ic('list-todo', 14), '全部')}
       ${r('doing', catIcon('started'), '进行中')}
@@ -11578,16 +12438,21 @@
           const all = needsYou()
           const tops = visibleTops().map((t) => t.id)
           const list = all.filter((n) => tops.includes(n.task.id))
-          if (!list.length) {
+          const sa = saWaiting()
+          if (!list.length && !sa) {
             return { html: '', ids: [] }
           }
+          // Proposals are decisions too: one row here points at the 总管 page.
+          const notice = sa
+            ? `<div class="sa-notice" data-act="view" data-v="dispatcher">${ic('bot', 14)}<span>总管有 ${sa} 个提案等你确认</span><span class="fill"></span>${ic('chevron-right', 14, 'c-mute')}</div>`
+            : ''
           const waits = list.filter((n) => n.kind !== 'review')
           const reviews = list.filter((n) => n.kind === 'review')
           const sub = (name, items) =>
             items.length
               ? `<div class="nsub">${name}<span class="cnt">${items.length}</span></div>${items.map(needRow).join('')}`
               : ''
-          const html = `<div class="lgrp ngrp">${ic('bell', 14, 'c-q')}<span>需要你</span><span class="cnt q">${list.length}</span><span class="grule">会话在等你回答、做完一轮还没看，或任务待你验收</span></div>
+          const html = `<div class="lgrp ngrp">${ic('bell', 14, 'c-q')}<span>需要你</span><span class="cnt q">${list.length}</span><span class="grule">会话在等你回答、做完一轮还没看，或任务待你验收</span></div>${notice}
       ${sub('会话在等你', waits)}${sub('待验收', reviews)}`
           return { html, ids: list.map((n) => n.task.id) }
         }
@@ -11657,6 +12522,9 @@
           return `<div class="kb-hint"><span>${kb('J', 'K')}移动</span><span>${kb('↵')}打开</span><span>${kb('Space')}预览</span><span>${kb('S')}状态</span><span>${kb('V')}列表 / 看板</span><span>${kb('F')}筛选</span><span>${kb('/')}搜索</span><span>${kb('C')}新建任务</span></div>`
         }
         function homeContent() {
+          if (S.filter.view === 'dispatcher') {
+            return saLedger()
+          }
           return `<div class="home">
       ${dispatchBox('home')}
       ${S.receipts.length ? `<div class="rcpts">${S.receipts.map(receiptHtml).join('')}</div>` : ''}
@@ -11821,12 +12689,15 @@
           规则: 'by-rule',
           智能体: 'by-agent',
           你: 'by-you',
-          手机: 'by-you'
+          手机: 'by-you',
+          总管: 'by-sa'
         }
         function tlIcon(e) {
           switch (e.kind) {
             case 'dispatch':
               return ic('messages-square', 13)
+            case 'proposal':
+              return ic('bot', 13)
             case 'session':
               return av(e.agent, 13)
             case 'progress':
@@ -11863,7 +12734,8 @@
           'dispatch',
           'accept',
           'reject',
-          'astask'
+          'astask',
+          'proposal'
         ])
         const isSys = (e) => !SHOWN_KINDS.has(e.kind)
         function timelineSect(t) {
@@ -11883,8 +12755,10 @@
               const link =
                 e.kind === 'dispatch'
                   ? `<button class="lnk" data-act="goto-chat">${ic('arrow-up-right', 11)}回到那段对话</button>`
-                  : ''
-              return `<div class="tli ${e.kind === 'progress' ? 'prog' : ''} ${isSys(e) ? 'sys' : ''}"><span class="tl-ic">${tlIcon(e)}</span><div class="tl-b"><span class="by ${BY_CLASS[e.by] || ''}">${e.by}</span>${text}${quote}${e.note ? `<span class="tl-note">· ${esc(e.note)}</span>` : ''}${link}</div><span class="tl-at">${e.at}</span></div>`
+                  : e.kind === 'proposal' && e.conv
+                    ? `<button class="lnk" data-act="sa-goto" data-conv="${e.conv}">${ic('arrow-up-right', 11)}回到那段对话</button>`
+                    : ''
+              return `<div class="tli ${e.kind === 'progress' ? 'prog' : e.kind === 'proposal' ? 'sa-tl' : ''} ${isSys(e) ? 'sys' : ''}"><span class="tl-ic">${tlIcon(e)}</span><div class="tl-b"><span class="by ${BY_CLASS[e.by] || ''}">${e.by}</span>${text}${quote}${e.note ? `<span class="tl-note">· ${esc(e.note)}</span>` : ''}${link}</div><span class="tl-at">${e.at}</span></div>`
             })
             .join('')
           const sysRow = sys.length
@@ -13047,6 +13921,1125 @@
         }
 
         // ---------- pages + window ----------
+        // ---------- 总管: one resident session; tasks are its ledger, proposals its only way to act ----------
+        // It reads with the orca CLI and proposes; Orca runs what you confirm, item by item, without asking it again.
+        const SA_STATUS = {
+          closed: '未打开',
+          open: '已打开',
+          working: '工作中',
+          waiting: '在等你',
+          idle: '空闲'
+        }
+        const SA_HINT =
+          '在它的对话里说你想做什么。它在这里提出步骤，你确认后由 Orca 执行；之后它跟进这些任务并向你汇报。'
+        const SA_INTRO = '总管是一个替你分配和跟进任务的智能体会话。它只提建议，由你在这里确认。'
+        function saFresh() {
+          return {
+            live: false,
+            state: 'closed',
+            wake: true,
+            woke: false,
+            panel: null,
+            mode: 'chat',
+            pill: false,
+            conv: 'c-now',
+            current: 'c-now',
+            convs: { 'c-now': [] },
+            props: [],
+            watches: [],
+            dispatched: [],
+            unread: [],
+            draft: '',
+            edit: null,
+            scrollTo: null
+          }
+        }
+        const SA_READS_PR = [
+          { cmd: 'orca worktree list --repo orca', out: '本机 · 5 个工作区' },
+          { cmd: 'orca worktree list --repo shop --host minizc', out: 'minizc · 3 个工作区' },
+          {
+            cmd: 'orca task list --all-hosts --json',
+            out: '已属于任务：feat-reconnect、orc-38-sidebar-group、perf-startup、shop-12-order-export'
+          },
+          {
+            cmd: 'orca worktree ps --json',
+            out: 'feat-x：PR #74 未合并，Codex 做完一轮；refund-webhook：PR #233 CI 失败，Claude 做完一轮。两处都没挂任务'
+          }
+        ]
+        const SA_SKIP_PR = 'infra 在 dbox 上：dbox 未连接，无法确认，没有查。'
+        const SA_TEXT_PR =
+          'PR 没合、也还没有任务的工作区有两个，里面各有一个做完一轮的会话。建议把它们各记成一个任务，之后我盯着。'
+        const SA_PROPS = {
+          pr: {
+            id: 'p-pr',
+            conv: 'c-now',
+            at: '2 分钟前',
+            summary: '两个工作区 PR 没合、也没挂任务，各记成一个任务跟进',
+            items: [
+              {
+                kind: 'record',
+                ws: 'orca/feat-x',
+                session: 'sx74',
+                title: '跟进 PR #74 的评审意见'
+              },
+              {
+                kind: 'record',
+                ws: 'shop/refund-webhook',
+                session: 'sx233',
+                title: '修复 PR #233 的 CI'
+              }
+            ]
+          },
+          six: {
+            id: 'p-six',
+            conv: 'c-now',
+            at: '刚刚',
+            summary: 'ORC-41 换 Codex 重来，再顺手收拾 4 件事',
+            items: [
+              {
+                kind: 'stop',
+                task: 'ORC-41',
+                session: 's41',
+                reason: '换 Codex 重来。停的只是这个会话，工作区和改过的文件不动。'
+              },
+              {
+                kind: 'subtask',
+                parent: 'ORC-41',
+                title: '用 Codex 重做 attach 时序修复',
+                agent: 'codex',
+                prompt: '按 ORC-41 的复现脚本重做修复，先别动 relay 那层。'
+              },
+              {
+                kind: 'append',
+                task: 'ORC-39',
+                session: 's39',
+                text: 'profile 里剩下的两处也看一下，改完再回写。'
+              },
+              { kind: 'link', task: 'SHOP-15', ws: 'shop/refund-webhook' },
+              {
+                kind: 'record',
+                ws: 'orca/feat-x',
+                session: 'sx74',
+                title: '跟进 PR #74 的评审意见'
+              },
+              {
+                kind: 'start',
+                ws: 'orca/docs-typo',
+                title: '把 README 里过期的链接都修一下',
+                agent: 'claude',
+                prompt: '把 README 里过期的链接都修一下，改完开 PR。'
+              }
+            ]
+          },
+          o39: {
+            id: 'p-39',
+            conv: 'c-now',
+            at: '刚刚',
+            summary: '让 ORC-39 接着看 profile 里剩下那处',
+            items: [
+              {
+                kind: 'append',
+                task: 'ORC-39',
+                session: 's39',
+                text: '接着看 profile 里剩下那处，改完再回写。'
+              }
+            ]
+          },
+          inf: {
+            id: 'p-inf',
+            conv: 'c-now',
+            at: '2 小时前',
+            summary: '今天先不迁 production：INF-3 做完 staging 就停',
+            items: [
+              {
+                kind: 'append',
+                task: 'INF-3',
+                session: 's3',
+                text: 'staging 收尾就停，production 的 secrets 今天先别动。'
+              },
+              {
+                kind: 'stop',
+                task: 'INF-3',
+                session: 's3',
+                reason: '你说今天不迁 production。staging 收尾后停掉这个会话，明天再开。'
+              }
+            ]
+          },
+          o41: {
+            id: 'p-41',
+            conv: 'c-41',
+            at: '昨天 18:01',
+            status: 'done',
+            decidedAt: '昨天 18:02',
+            summary: '在 feat-reconnect 建任务，先复现再修',
+            items: [
+              {
+                kind: 'start',
+                ws: 'orca/feat-reconnect',
+                title: '重连后终端偶发空白',
+                agent: 'claude',
+                prompt: '重连后终端偶发空白，先复现再修；SSH 工作区也要一起看。',
+                res: 'done',
+                outTask: 'ORC-41',
+                out: '已建任务，Claude 会话已启动'
+              }
+            ]
+          }
+        }
+        const SA_WATCHES = [
+          { task: 'ORC-41', by: 'proposal', at: '昨天 18:02' },
+          { task: 'ORC-39', by: 'ask', at: '今天 9:10' },
+          { task: 'SHOP-12', by: 'ask', at: '今天 9:10' }
+        ]
+        const SA_DISPATCHED = [
+          {
+            id: 'p-41',
+            summary: '在 feat-reconnect 建任务，先复现再修',
+            at: '昨天 18:02',
+            conv: 'c-41',
+            results: [{ task: 'ORC-41' }]
+          },
+          {
+            id: 'p-39a',
+            summary: '让 ORC-39 顺便看看首屏渲染',
+            at: '今天 9:12',
+            conv: 'c-now',
+            results: [{ task: 'ORC-39' }]
+          }
+        ]
+        const SA_UNREAD = [
+          {
+            at: '5 分钟前',
+            task: 'ORC-41',
+            short: 'ORC-41 回写了进展',
+            text: '回写了进展 #2：已复现，根因在 terminal-surface 的 attach 时序'
+          },
+          {
+            at: '20 分钟前',
+            task: 'SHOP-12',
+            short: 'SHOP-12 进入待验收',
+            text: '进入待验收',
+            need: '等你验收：商城后台 → 订单 → 导出，选 CSV'
+          }
+        ]
+        const SA_BUSY_Q = 'SHOP-12 的验收入口在哪？'
+        function saConvs(kind) {
+          const c41 = [
+            { who: 'day', text: '昨天 18:01' },
+            { who: 'you', text: '重连后终端偶发空白，SSH 工作区也要一起看。先复现再修。' },
+            {
+              who: 'sa',
+              reads: [
+                {
+                  cmd: 'orca worktree list --repo orca',
+                  out: 'feat-reconnect 还没挂任务，分支名对得上'
+                },
+                { cmd: 'orca task list --all-hosts --json', out: '没有相关的任务' }
+              ],
+              text: '建议在 feat-reconnect 建任务并开 Claude 会话，第一句写明先复现：',
+              card: 'p-41'
+            },
+            { who: 'sa', text: 'ORC-41 建好了，会话已经开起来。我会盯着它，有进展再告诉你。' }
+          ]
+          const pr = [
+            { who: 'day', text: '今天 9:38' },
+            { who: 'you', text: D.scheduler.request },
+            { who: 'sa', reads: SA_READS_PR, skip: SA_SKIP_PR, text: SA_TEXT_PR, card: 'p-pr' }
+          ]
+          const six = [
+            { who: 'day', text: '今天 10:05' },
+            {
+              who: 'you',
+              text: 'ORC-41 换 Codex 重来。顺手收拾几件事：ORC-39 把 profile 剩下的看完；退款签名校验挂到 refund-webhook；feat-x 记个任务；再开个任务修 README 里过期的链接。'
+            },
+            {
+              who: 'sa',
+              reads: [
+                {
+                  cmd: 'orca task show ORC-41 --json',
+                  out: '进行中 · Claude 工作中 12 分钟 · feat-reconnect（本机）'
+                },
+                { cmd: 'orca task show ORC-39 --json', out: '进行中 · Claude 做完一轮 · 回写 #1' },
+                {
+                  cmd: 'orca worktree ps --json',
+                  out: 'feat-x、refund-webhook 各有一个做完一轮的会话，都没挂任务'
+                }
+              ],
+              text: '6 件事放在一份提案里。停会话那一项要你单独看一眼。',
+              card: 'p-six'
+            }
+          ]
+          const wake = [
+            { who: 'day', text: '今天 9:10' },
+            { who: 'you', text: 'ORC-39 和 ORC-41 帮我盯着，有进展告诉我。' },
+            {
+              who: 'sa',
+              reads: [
+                { cmd: 'orca task watch ORC-39', out: '已盯上' },
+                { cmd: 'orca task watch ORC-41', out: '已经在盯' }
+              ],
+              text: '好，两个都盯着。有新动态时我会看一眼，只告诉你要知道或要决定的事。'
+            },
+            {
+              who: 'ptr',
+              at: '刚刚',
+              text: '有 2 条任务动态：ORC-39 回写了进展，ORC-41 进入待验收。运行 orca task inbox --json'
+            },
+            {
+              who: 'sa',
+              reads: [
+                { cmd: 'orca task inbox --json', out: '2 条：ORC-39 回写 #2；ORC-41 进入待验收' },
+                { cmd: 'orca task show ORC-41 --json', out: '待验收 · 回写 #3 · 4 分钟前' }
+              ],
+              text: 'ORC-39 已定位到第二处大头：首屏前同步加载了全部主题文件，改成按需后降到 1.2 秒，还剩一处没看。\nORC-41 已推到待验收：改成等 xterm 打开后再 attach，回归测试通过，等你验收。\n要让 ORC-39 接着看剩下那处吗？提案在下面。',
+              card: 'p-39'
+            }
+          ]
+          return { 'c-41': c41, 'c-now': { pr, six, wake }[kind] || pr }
+        }
+        function saProp(def) {
+          const p = clone(def)
+          return {
+            status: 'pending',
+            viewer: 'self',
+            decidedAt: null,
+            ...p,
+            items: p.items.map((it) => ({ on: true, res: null, ...it }))
+          }
+        }
+        const saP = (id) => S.sa.props.find((p) => p.id === id)
+        const saOpen = () =>
+          S.sa.props.filter((p) => ['pending', 'executing', 'interrupted'].includes(p.status))
+        const saWaiting = () => saOpen().length
+        // ORC-41 came out of the 总管's first proposal: its timeline starts there and links back to that conversation.
+        function saMarkOrc41() {
+          const t = T('ORC-41')
+          t.createdBy = '由总管提案'
+          t.timeline[0] = {
+            at: '昨天 18:02',
+            kind: 'proposal',
+            text: '由总管提案、你确认',
+            quote: '在 feat-reconnect 建任务，先复现再修',
+            by: '总管',
+            conv: 'c-41'
+          }
+        }
+        function saLive(state, kind = 'pr') {
+          const a = S.sa
+          a.live = true
+          a.state = state
+          a.watches = clone(SA_WATCHES)
+          a.dispatched = clone(SA_DISPATCHED)
+          a.convs = saConvs(kind)
+          a.props = [saProp(SA_PROPS.o41)]
+          saMarkOrc41()
+        }
+        // The 总管 is mid-turn on a question; when it finishes, a waiting inbox wakes it once.
+        function saBusy() {
+          const conv = S.sa.convs[S.sa.current]
+          conv.push({ who: 'you', text: SA_BUSY_Q }, { who: 'sa', working: true })
+          S.sa.state = 'working'
+          later(3200, () => saAnswer(conv, SA_BUSY_Q))
+        }
+
+        // ---------- proposal card ----------
+        function saItemWs(it) {
+          if (it.kind === 'subtask') {
+            return wsOfTask(T(it.parent))
+          }
+          if (it.ws) {
+            return W(it.ws)
+          }
+          const s = it.session ? SS(it.session) : null
+          return s ? W(s.workspace) : null
+        }
+        function saItemCopy(it) {
+          const w = saItemWs(it)
+          switch (it.kind) {
+            case 'start':
+              return `在 ${w.name} 新建任务“${it.title}”`
+            case 'subtask':
+              return `${it.parent} 的子任务：“${it.title}”`
+            case 'append':
+              return `给 ${it.task} 的会话追加一句`
+            case 'stop':
+              return `停掉 ${it.task} 的会话`
+            case 'link':
+              return `把 ${it.task} 关联到 ${w.name}`
+            case 'record':
+              return `把 ${w.name} 里的工作记成任务“${it.title}”`
+            default:
+              return ''
+          }
+        }
+        // Why an item cannot be confirmed right now; empty when it can.
+        function saBlocked(it) {
+          const s = it.session ? SS(it.session) : null
+          const w = saItemWs(it)
+          const h = w && hostOfWs(w)
+          if (h && !h.connected) {
+            if (it.kind === 'append') {
+              return `${h.name} 未连接：这句发不过去，也无法确认会话现在的状态。恢复联系后再确认这一项。`
+            }
+            if (it.kind === 'stop') {
+              return `${h.name} 未连接：停不了，也无法确认会话是不是还在跑。恢复联系后再确认这一项。`
+            }
+            return `${h.name} 未连接：恢复联系后再确认这一项。`
+          }
+          if ((it.kind === 'append' || it.kind === 'stop') && s && s.state === 'ended') {
+            return '这个会话已经结束。'
+          }
+          if (it.kind === 'append' && s && s.state !== 'done') {
+            return `${AG[s.agent]} 还在${sLabel(s)}：做完一轮后才能追加。`
+          }
+          return ''
+        }
+        const saKept = (p) => p.items.filter((it) => it.on && !saBlocked(it))
+        function saLeadHtml(it) {
+          switch (it.res) {
+            case 'done':
+              return ic('circle-check', 14, 'c-ok')
+            case 'running':
+              return ast('working', 13)
+            case 'unknown':
+              return ic('circle-dashed', 14, 'c-warn')
+            case 'dropped':
+              return ic('x', 13, 'c-mute')
+            default:
+              return ast('none', 13)
+          }
+        }
+        // Where an item stands once the proposal is decided: a word beside its title, plus the outcome when there is one.
+        const SA_RES_NAME = {
+          done: ['已完成', 'ok'],
+          running: ['正在执行…', ''],
+          wait: ['等待', ''],
+          unknown: ['结果未知', 'unk'],
+          skip: ['没有执行', ''],
+          dropped: ['已去掉', '']
+        }
+        function saResHtml(it) {
+          const ref = it.outTask
+            ? `<button class="sa-ref" data-act="open" data-id="${it.outTask}">${it.outTask}</button>`
+            : ''
+          if (it.res === 'done') {
+            return `<div class="sa-ir ok">${ic('check', 11)}<span>${esc(it.out || '已完成')}</span>${ref}</div>`
+          }
+          if (it.res === 'unknown') {
+            return `<div class="sa-ir unk">${ic('circle-dashed', 11)}<span>${esc(it.out)}</span></div>`
+          }
+          return ''
+        }
+        function saEditHtml(p, it, i) {
+          const field = (label, key) =>
+            `<label><span>${label}</span><input class="sa-field" data-fk="sa-ed-${i}-${key}" data-act-input="sa-edit" data-pid="${p.id}" data-i="${i}" data-field="${key}" value="${esc(it[key])}" autocomplete="off" spellcheck="false"></label>`
+          const agents = `<label><span>智能体</span><span class="seg">${['claude', 'codex'].map((a) => `<span class="${it.agent === a ? 'on' : ''}" data-act="sa-agent" data-pid="${p.id}" data-i="${i}" data-v="${a}">${av(a, 12)}${AG[a]}</span>`).join('')}</span></label>`
+          switch (it.kind) {
+            case 'start':
+            case 'subtask':
+              return field('标题', 'title') + field('第一句', 'prompt') + agents
+            case 'append':
+              return field('追加', 'text')
+            case 'stop':
+              return field('原因', 'reason')
+            case 'record':
+              return field('标题', 'title')
+            case 'link': {
+              const ws = S.workspaces.filter((x) => !x.primary && (!x.task || x.id === it.ws))
+              return `<label><span>工作区</span><span class="seg">${ws.map((x) => `<span class="${x.id === it.ws ? 'on' : ''}" data-act="sa-ws" data-pid="${p.id}" data-i="${i}" data-v="${x.id}">${x.name}</span>`).join('')}</span></label>`
+            }
+            default:
+              return ''
+          }
+        }
+        function saItemHtml(p, it, i) {
+          const pending = p.status === 'pending'
+          const block = pending ? saBlocked(it) : ''
+          const editing = pending && S.sa.edit && S.sa.edit.pid === p.id && S.sa.edit.i === i
+          const s = it.session ? SS(it.session) : null
+          const w = saItemWs(it)
+          const on = it.on && !block
+          const lead = pending
+            ? `<span class="check ${on ? 'on' : ''} ${block ? 'lock' : ''}" ${block ? `title="${esc(block)}"` : `data-act="sa-toggle" data-pid="${p.id}" data-i="${i}" title="${on ? '去掉这一项' : '保留这一项'}"`}>${on ? ic('check', 10) : ''}</span>`
+            : `<span class="sa-lead">${saLeadHtml(it)}</span>`
+          const edit =
+            pending && !block
+              ? `<button class="btn ghost xs sa-edit" data-act="sa-edit" data-pid="${p.id}" data-i="${i}">${editing ? `${ic('check', 11)}改好了` : `${ic('pencil', 11)}改`}</button>`
+              : ''
+          const resName = !pending && SA_RES_NAME[it.res]
+          const state = resName
+            ? `<span class="sa-st ${resName[1]}">${it.res === 'running' ? ast('working', 11) : ''}${resName[0]}</span>`
+            : ''
+          const title = `<span class="${it.kind === 'stop' ? 'danger' : ''}">${esc(saItemCopy(it))}</span>${it.kind === 'stop' ? '<span class="pill err">永远要确认</span>' : ''}${edit}${state}`
+          const ses = s
+            ? `<span class="sa-ses">${sAst(s, 11)}${av(s.agent, 11)}${AG[s.agent]} · ${sLabel(s)}${sWhen(s)}</span>`
+            : ''
+          const agent = it.agent
+            ? `<span class="sa-ses">${av(it.agent, 11)}${AG[it.agent]} · 新会话</span>`
+            : ''
+          let meta = ''
+          let detail = ''
+          if (it.kind === 'start') {
+            meta = `${wsChip(w, { repo: true })}${agent}`
+            detail = `<span class="k">第一句</span>${esc(it.prompt)}`
+          } else if (it.kind === 'subtask') {
+            meta = `${wsChip(w, { repo: true })}<span>同一工作区</span>${agent}`
+            detail = `<span class="k">第一句</span>${esc(it.prompt)}`
+          } else if (it.kind === 'append') {
+            meta = `${ses}${wsChip(w)}`
+            detail = `<span class="k">追加</span>${esc(it.text)}`
+          } else if (it.kind === 'stop') {
+            meta = `${ses}${wsChip(w)}`
+            detail = `<span class="k">原因</span>${esc(it.reason)}`
+          } else if (it.kind === 'link') {
+            const inside = S.sessions.filter((x) => x.workspace === w.id && x.state !== 'ended')
+            meta = `${wsChip(w, { repo: true })}${prChip(w.pr, true)}${inside.length ? `<span>里面的 ${inside.length} 个会话一起挂到 ${it.task}</span>` : ''}`
+          } else if (it.kind === 'record') {
+            meta = `${wsChip(w, { repo: true })}${prChip(w.pr, true)}${ses}`
+          }
+          const off = (pending && !on) || it.res === 'dropped' || it.res === 'skip'
+          // Items that never ran keep only their title once the proposal is decided.
+          const brief = it.res === 'dropped' || it.res === 'skip'
+          return `<div class="sa-i ${off ? 'off' : ''}">${lead}<div class="sa-ib">
+        <div class="sa-it">${title}</div>
+        ${brief ? '' : `<div class="sa-im">${meta}</div>`}
+        ${editing ? `<div class="sa-ed">${saEditHtml(p, it, i)}</div>` : detail && !brief ? `<div class="sa-id">${detail}</div>` : ''}
+        ${block ? `<div class="sa-ix">${ic('unplug', 12)}<span>${esc(block)}</span></div>` : ''}
+        ${pending ? '' : saResHtml(it)}
+      </div></div>`
+        }
+        function saCard(p, where) {
+          const pending = p.status === 'pending'
+          const counted = p.items.filter((it) => it.res && it.res !== 'dropped')
+          const done = counted.filter((it) => it.res === 'done').length
+          const unknown = counted.filter((it) => it.res === 'unknown').length
+          const keep = pending ? saKept(p).length : 0
+          const pill = pending
+            ? '<span class="pill q">等你确认</span>'
+            : p.status === 'executing'
+              ? '<span class="pill work">正在执行</span>'
+              : p.status === 'interrupted'
+                ? '<span class="pill">执行窗口已断开</span>'
+                : ''
+          let foot
+          if (pending) {
+            foot = `<span class="sa-cn">${ic('info', 12)}<span>确认后由 Orca 直接执行，不再经过总管</span></span><button class="btn ghost" data-act="sa-dismiss" data-pid="${p.id}">不要了</button><button class="btn primary" data-act="sa-confirm" data-pid="${p.id}" ${keep ? '' : 'disabled'}>${ic('check', 13)}确认 ${keep} 项</button>`
+          } else if (p.status === 'executing' && p.viewer === 'other') {
+            foot = `<span class="sa-cn">${ast('working', 12)}<span><b>这份提案已经在执行或执行过了。</b>完成 ${done}/${counted.length} 项</span></span><span class="sa-why">执行窗口还在</span><button class="btn ghost" disabled title="执行窗口还在">标记为已结束</button>`
+          } else if (p.status === 'executing') {
+            foot = `<span class="sa-cn">${ast('working', 12)}<span><b>正在执行…</b> 完成 ${done}/${counted.length} 项 · 已完成的项会记下来，不会重跑</span></span>`
+          } else if (p.status === 'interrupted') {
+            foot = `<span class="sa-cn">${ic('circle-alert', 12, 'c-warn')}<span>执行窗口已断开。收尾前请检查任务；已记录的结果会保留，不会重新执行步骤。</span></span><button class="btn" data-act="sa-finish" data-pid="${p.id}">标记为已结束</button>`
+          } else if (p.status === 'dismissed') {
+            foot = `<span class="sa-cn">${ic('x', 12)}<span>你选了「不要了」，没有执行任何一项 · ${p.decidedAt}</span></span>`
+          } else if (p.status === 'finished') {
+            foot = `<span class="sa-cn">${ic('check', 12)}<span>已结束 · 完成 ${done}/${counted.length} 项${unknown ? ` · ${unknown} 项结果未知` : ''} · ${p.decidedAt}</span></span>`
+          } else {
+            foot = `<span class="sa-cn">${ic('check-check', 12, 'c-ok')}<span>你确认了 ${counted.length} 项 · 完成 ${done}/${counted.length} 项 · ${p.decidedAt}</span></span>`
+          }
+          return `<div class="sa-card ${pending || where === 'ledger' ? '' : 'locked'}" data-pid="${p.id}">
+        <div class="sa-ch">${ic('list-checks', 14)}<b>${esc(p.summary)}</b><span class="sa-at">${p.at}</span>${pill}</div>
+        ${p.items.map((it, i) => saItemHtml(p, it, i)).join('')}
+        <div class="sa-cf">${foot}</div>
+      </div>`
+        }
+
+        // ---------- ledger page (任务页导航最上方的「总管」) ----------
+        function saSec(title, n, empty, body, q = false) {
+          return `<section class="sa-sec"><h3>${title}<span class="n ${q && n ? 'q' : ''}">${n}</span></h3>${n ? body : `<div class="sa-empty">${empty}</div>`}</section>`
+        }
+        function saWatchRow(wt) {
+          const t = T(wt.task)
+          if (!t) {
+            return ''
+          }
+          const p = progressInfo(t)
+          const s = liveSessions(t)[0] || familySessions(t)[0]
+          const off = p.offline
+          const st = off
+            ? `<span class="sa-sn unv">无法确认</span>`
+            : `<span class="sa-sn">${STATUS[t.status].name}</span>`
+          const prog = off
+            ? `<div class="sa-w2 off">${ic('unplug', 12, 'c-unv')}<span>${off.name} 未连接 · 上次读到 ${p.at}：${esc(p.text)}</span></div>`
+            : `<div class="sa-w2">${p.tag ? `<span class="ptag ${p.kind === 'last' ? 'last' : 'agent'}">${p.tag}</span>` : ''}<span>${esc(p.text)}${p.at ? ` · ${p.at}` : ''}</span></div>`
+          const origin = `${wt.by === 'proposal' ? '来自它的提案' : '你让它盯的'} · ${wt.at}`
+          const sess = s
+            ? `${sAst(s, 11)}${av(s.agent, 11)}<span class="${off ? 'unv' : ''}">${AG[s.agent]} ${sLabel(s)}${sWhen(s)}</span><span class="dotsep"></span>`
+            : ''
+          return `<div class="sa-w">
+        <div class="sa-w1">${off ? ic('circle-dashed', 14, 'c-unv') : stIcon(t)}<span class="sa-tt" data-act="open" data-id="${t.id}">${esc(t.title)}</span>${tid(t)}${st}<span class="fill"></span><button class="btn ghost xs" data-act="sa-unwatch" data-id="${t.id}" title="不再盯 ${t.id}">${ic('x', 11)}不再盯</button></div>
+        ${prog}
+        <div class="sa-w3">${sess}<span>${origin}</span></div>
+      </div>`
+        }
+        function saLedger() {
+          const a = S.sa
+          const open = saOpen()
+          const status = a.live ? SA_STATUS[a.state] : SA_STATUS.closed
+          const btn = a.live
+            ? `<button class="btn" data-act="sa-show">${ic('message-square', 13)}显示对话</button>`
+            : `<button class="btn primary" data-act="sa-open">${ic('message-square', 13)}打开总管</button>`
+          const wake = a.live
+            ? `<span class="sa-wake" data-act="sa-wake" role="switch" aria-checked="${a.wake}"><span class="toggle ${a.wake ? 'on' : ''}"></span>有新动态时唤醒</span>`
+            : ''
+          const where = a.live
+            ? `<span class="sa-where">${br('claude', 11)}Claude · 本机</span>`
+            : ''
+          const watches = a.watches.map(saWatchRow).join('')
+          const unread = `<div class="sa-note">${a.wake ? '它下次做完一轮时，Orca 会提醒它来看这些。' : '唤醒已关闭：只有它自己查收件箱时才会看到这些。'}</div><div class="sa-list">${a.unread
+            .map(
+              (u) =>
+                `<div class="sa-u"><span class="sa-at">${u.at}</span>${
+                  u.host
+                    ? `<div class="sa-ub host">${ic('unplug', 12)}<span class="tid">${u.task}</span>${esc(u.text)}</div>`
+                    : `<div class="sa-ub"><span class="tid">${u.task}</span>${esc(u.text)}${u.need ? `<div class="sa-ny">${ic('hand', 11)}<span>${esc(u.need)}</span></div>` : ''}</div>`
+                }</div>`
+            )
+            .join('')}</div>`
+          const dispatched = `<div class="sa-list">${a.dispatched
+            .map(
+              (d) =>
+                `<div class="sa-d"><div class="sa-d1"><span>${esc(d.summary)}</span><span class="sa-at">${d.at}</span></div><div class="sa-d2">${d.results.map((r) => (r.task ? `<button class="sa-ref" data-act="open" data-id="${r.task}">${r.task}</button>` : `<span class="sa-fail">${esc(r.fail)}</span>`)).join('')}${d.conv && a.convs[d.conv] ? `<button class="lnk" data-act="sa-goto" data-conv="${d.conv}">${ic('arrow-up-right', 11)}回到那段对话</button>` : ''}</div></div>`
+            )
+            .join('')}</div>`
+          return `<div class="sa-led">
+      <div class="sa-hd"><h2>总管</h2><p>${a.live ? SA_HINT : SA_INTRO}</p></div>
+      <div class="sa-bar"><span class="sa-stat">${ic('bot', 16)}${status}</span>${where}<span class="fill"></span>${wake}${btn}</div>
+      <div class="sa-scroll" id="sascroll"><div class="sa-cols">
+        <div class="sa-col">
+          ${saSec('等你确认', open.length, '没有等你确认的提案。', open.map((p) => saCard(p, 'ledger')).join(''), true)}
+          ${saSec('它盯着的任务', a.watches.length, '还没有。它的提案开出的任务会自动盯上，你让它盯的任务也会出现在这里。', `<div class="sa-list">${watches}</div>`)}
+        </div>
+        <div class="sa-col">
+          ${saSec('它还没处理的动态', a.unread.length, '目前都处理过了。', unread)}
+          ${saSec('它派出的', a.dispatched.length, '还没有执行过的提案。', dispatched)}
+        </div>
+      </div></div>
+    </div>`
+        }
+
+        // ---------- floating conversation (聊天 ↔ 终端: the same Claude terminal session) ----------
+        function saReadsHtml(reads, skip) {
+          return `<div class="sa-reads"><div class="h">${ic('eye', 12)}只读查了这些，没有改动任何东西</div>${reads.map((r) => `<div class="sa-rd"><code>${esc(r.cmd)}</code><span>${esc(r.out)}</span></div>`).join('')}${skip ? `<div class="sa-rd skip"><span>${ic('circle-dashed', 11)}${esc(skip)}</span></div>` : ''}</div>`
+        }
+        const SA_MARK = {
+          pending: '等你确认',
+          executing: '正在执行',
+          interrupted: '执行窗口已断开'
+        }
+        function saMsgHtml(m) {
+          if (m.who === 'day') {
+            return `<div class="sa-day">${esc(m.text)}</div>`
+          }
+          if (m.who === 'you') {
+            return `<div class="sa-you"><div class="bub">${esc(m.text)}</div></div>`
+          }
+          if (m.who === 'ptr') {
+            return `<div class="sa-ptr"><span class="sa-pw">${ic('bell', 11)}Orca · ${m.at}</span><code>${esc(m.text)}</code></div>`
+          }
+          const head = `<div class="sa-mn">总管<span class="muted">${br('claude', 11)} Claude</span></div>`
+          if (m.working) {
+            return `<div class="sa-msg"><div class="m-av">${ic('bot', 14)}</div><div class="sa-mb">${head}<div class="sa-mt muted">${ast('working', 12)} 正在只读查询…</div></div></div>`
+          }
+          const p = m.card ? saP(m.card) : null
+          const card = !p
+            ? ''
+            : SA_MARK[p.status]
+              ? `<div class="sa-mark">${ic('list-checks', 13)}<b>提案 · ${p.items.length} 项</b>${SA_MARK[p.status]}</div>`
+              : saCard(p, 'thread')
+          const text = m.text
+            ? m.text
+                .split('\n')
+                .map((x) => `<div class="sa-mt">${esc(x)}</div>`)
+                .join('')
+            : ''
+          return `<div class="sa-msg"><div class="m-av">${ic('bot', 14)}</div><div class="sa-mb">${head}${m.reads ? saReadsHtml(m.reads, m.skip) : ''}${text}${card}</div></div>`
+        }
+        function saTermLines(conv) {
+          const L = []
+          const nl = () => L.push(['\n'])
+          for (const m of conv) {
+            if (m.who === 'day') {
+              continue
+            }
+            if (m.who === 'you' || m.who === 'ptr') {
+              if (L.length) {
+                nl()
+              }
+              L.push(['d', '> '], [m.who === 'you' ? 'w' : 'd', m.text])
+              nl()
+              continue
+            }
+            nl()
+            if (m.working) {
+              L.push(['o', '✶ 正在思考…'], ['d', ' (esc 中断)'])
+              nl()
+              continue
+            }
+            for (const r of m.reads || []) {
+              L.push(['w', '⏺ '], ['b', 'Bash'], ['', `(${r.cmd})`])
+              nl()
+              L.push(['d', `  ⎿  ${r.out}`])
+              nl()
+            }
+            if (m.skip) {
+              L.push(['w', '⏺ '], ['', m.skip])
+              nl()
+            }
+            const p = m.card ? saP(m.card) : null
+            if (p) {
+              L.push(
+                ['w', '⏺ '],
+                ['b', 'Bash'],
+                ['', '(orca task propose --body-file proposal.json)']
+              )
+              nl()
+              L.push(['d', `  ⎿  已提交提案 · ${p.items.length} 项 · 等你确认`])
+              nl()
+            }
+            if (m.text) {
+              L.push(['w', '⏺ '], ['', m.text.replace(/\n/g, '\n  ')])
+              nl()
+            }
+          }
+          if (S.sa.state !== 'working') {
+            nl()
+            L.push(['d', '> '])
+          }
+          return L
+        }
+        function saDot(state, s = 11) {
+          return ast(state === 'working' ? 'working' : state === 'waiting' ? 'waiting' : 'done', s)
+        }
+        function saPanelHtml() {
+          const a = S.sa
+          if (S.view === 'settings' || !a.live) {
+            return ''
+          }
+          if (!a.panel) {
+            const n = saWaiting()
+            return a.pill
+              ? `<div class="sa-pill" data-act="sa-show" title="打开总管的对话">${ic('bot', 15, 'c-mute')}<b>总管</b><span class="muted">${saDot(a.state)}${SA_STATUS[a.state]}</span>${n ? `<span class="cnt q">${n} 个等你确认</span>` : ''}</div>`
+              : ''
+          }
+          const term = a.panel.mode === 'term'
+          const conv = a.convs[a.conv] || []
+          const old = a.conv !== a.current
+          const day = old && conv[0] && conv[0].who === 'day' ? conv[0].text : ''
+          const docked = old ? [] : a.props.filter((p) => p.conv === a.current && SA_MARK[p.status])
+          let body
+          if (term) {
+            body = `<div class="dterm"><div class="dt-in">${termHtml(saTermLines(conv))}</div></div>`
+          } else if (!conv.length) {
+            const ex = (t) =>
+              `<button class="ex" data-act="sa-example" data-text="${esc(t)}">${esc(t)}</button>`
+            body = `<div class="sa-thread"><div class="sa-empty-chat">${ic('bot', 22, 'c-mute')}<h3>说你想做什么</h3><p>${SA_HINT}</p><div class="exs">${ex(D.scheduler.request)}${ex('ORC-39 做到哪了？')}</div></div></div>`
+          } else {
+            body = `<div class="sa-thread">${conv.map(saMsgHtml).join('')}</div>`
+          }
+          const input = term
+            ? `<div class="sa-in term"><div class="cc-box"><span class="d">&gt;</span><input data-fk="sa-input" data-act-input="sa" value="${esc(a.draft)}" placeholder="发给 Claude，回车发送" autocomplete="off" spellcheck="false"></div></div>`
+            : `<div class="sa-in"><div class="sa-box"><input data-fk="sa-input" data-act-input="sa" value="${esc(a.draft)}" placeholder="跟总管说要做什么，回车发送" autocomplete="off" spellcheck="false"><button class="icon-btn sm" data-act="sa-send" title="发送">${ic('arrow-up', 14)}</button></div></div>`
+          return `<div class="sa-panel" data-mode="${a.panel.mode}">
+      <div class="sa-ph">${ic('bot', 16, 'c-mute')}<b>总管</b><span class="sa-where">${saDot(a.state)}${SA_STATUS[a.state]} · ${br('claude', 11)}Claude · 本机</span><span class="fill"></span>
+        <span class="seg"><span class="${term ? '' : 'on'}" data-act="sa-mode" data-v="chat">${ic('message-square', 13)}聊天</span><span class="${term ? 'on' : ''}" data-act="sa-mode" data-v="term">${ic('square-terminal', 13)}终端</span></span>
+        <button class="icon-btn" data-act="sa-min" title="最小化">${ic('minus', 16)}</button><button class="icon-btn" data-act="sa-close" title="关闭对话，总管继续运行">${ic('x', 16)}</button></div>
+      ${old ? `<div class="sa-old">${ic('history', 13)}<span>${esc(day)} 的一段对话</span><span class="fill"></span><button class="btn ghost xs" data-act="sa-now">回到现在</button></div>` : ''}
+      ${body}
+      ${docked.length ? `<div class="sa-dock">${docked.map((p) => saCard(p, 'panel')).join('')}</div>` : ''}
+      ${input}
+    </div>`
+        }
+
+        // ---------- what happens when you confirm, send, or it wakes ----------
+        function saMark(p, t, text, quote) {
+          t.timeline.push({ at: '刚刚', kind: 'proposal', text, quote, by: '总管', conv: p.conv })
+          t.updated = '刚刚'
+        }
+        function saApply(p, it) {
+          if (it.kind === 'record' || it.kind === 'start' || it.kind === 'subtask') {
+            const parent = it.kind === 'subtask' ? T(it.parent) : null
+            const w = saItemWs(it)
+            const t = createTask({
+              project: parent ? parent.project : R(w.repo).project,
+              text: it.prompt || it.title,
+              title: it.title,
+              ws: w,
+              parent: parent ? parent.id : undefined,
+              agent: it.kind === 'record' ? 'none' : it.agent
+            })
+            t.createdBy = '由总管提案'
+            t.timeline = t.timeline.filter((e) => e.kind !== 'dispatch')
+            t.timeline.unshift({
+              at: '刚刚',
+              kind: 'proposal',
+              text: '由总管提案、你确认',
+              quote: p.summary,
+              by: '总管',
+              conv: p.conv
+            })
+            if (it.kind === 'record') {
+              const s = SS(it.session)
+              if (s) {
+                s.task = t.id
+              }
+              it.out = '已记成任务'
+            } else {
+              it.out = `已建任务，${AG[it.agent]} 会话已启动`
+            }
+            it.outTask = t.id
+            S.sa.watches.unshift({ task: t.id, by: 'proposal', at: '刚刚' })
+            return
+          }
+          const t = T(it.task)
+          it.outTask = t.id
+          if (it.kind === 'append') {
+            const s = SS(it.session)
+            s.state = 'working'
+            s.since = '刚刚'
+            s.lastAt = '刚刚'
+            s.last = ''
+            termType(s.id, it.text)
+            saMark(p, t, '由总管提案、你确认：给会话追加一句', it.text)
+            it.out = `已发给 ${AG[s.agent]}，会话回到工作中`
+          } else if (it.kind === 'stop') {
+            const s = SS(it.session)
+            s.state = 'ended'
+            saMark(p, t, `由总管提案、你确认：停掉 ${AG[s.agent]} 会话`, it.reason)
+            it.out = '已停掉，工作区和改过的文件不动'
+          } else if (it.kind === 'link') {
+            const w = W(it.ws)
+            t.workspace = w.id
+            w.task = t.id
+            S.sessions
+              .filter((x) => x.workspace === w.id && !x.task)
+              .forEach((x) => {
+                x.task = t.id
+              })
+            saMark(p, t, `由总管提案、你确认：关联 ${w.name}`, '')
+            it.out = `已关联，${w.name} 里的会话一起挂到 ${t.id}`
+          }
+        }
+        function saLog(p) {
+          const results = []
+          p.items.forEach((it, i) => {
+            if (it.res === 'done' && it.outTask && !results.some((r) => r.task === it.outTask)) {
+              results.push({ task: it.outTask })
+            } else if (it.res === 'unknown') {
+              results.push({ fail: `第 ${i + 1} 步：结果未知` })
+            }
+          })
+          S.sa.dispatched.unshift({
+            id: p.id,
+            summary: p.summary,
+            at: '刚刚',
+            conv: p.conv,
+            results
+          })
+        }
+        // One item at a time; each result is recorded before the next starts, so nothing recorded runs twice.
+        function saStep(p) {
+          const next = p.items.find((it) => it.res === 'wait')
+          if (!next) {
+            p.status = 'done'
+            saLog(p)
+            return
+          }
+          next.res = 'running'
+          later(700, () => {
+            if (p.status !== 'executing') {
+              return
+            }
+            saApply(p, next)
+            next.res = 'done'
+            saStep(p)
+          })
+        }
+        function saConfirm(p) {
+          const keep = saKept(p)
+          if (!keep.length) {
+            return
+          }
+          p.status = 'executing'
+          p.viewer = 'self'
+          p.decidedAt = '刚刚'
+          S.sa.edit = null
+          p.items.forEach((it) => {
+            it.res = keep.includes(it) ? 'wait' : 'dropped'
+          })
+          saStep(p)
+        }
+        function saReply(text) {
+          if (text === D.scheduler.request && !saP('p-pr')) {
+            S.sa.props.push({ ...saProp(SA_PROPS.pr), at: '刚刚' })
+            return {
+              who: 'sa',
+              reads: SA_READS_PR,
+              skip: SA_SKIP_PR,
+              text: SA_TEXT_PR,
+              card: 'p-pr'
+            }
+          }
+          const ref = (text.match(/[A-Z]+-\d+/) || [])[0]
+          const t = ref && T(ref)
+          if (t) {
+            const p = t.progress[0]
+            const w = wsOfTask(t)
+            const h = w && hostOfWs(w)
+            if (h && !h.connected) {
+              return {
+                who: 'sa',
+                reads: [
+                  { cmd: `orca task show ${t.id} --json`, out: `${h.name} 未连接 · 无法确认` }
+                ],
+                text: `${t.id} 在 ${h.name} 上，${h.name} 现在不在联系，无法确认它的状态。上次读到的是 ${p ? p.at : '之前'}：${p ? joinProgress(p) : '没有回写'}`
+              }
+            }
+            return {
+              who: 'sa',
+              reads: [
+                {
+                  cmd: `orca task show ${t.id} --json`,
+                  out: `${STATUS[t.status].name}${p ? ` · 回写 #${p.n} · ${p.at}` : ''}`
+                }
+              ],
+              text: p
+                ? `${t.id} ${t.title}，${STATUS[t.status].name}。按 ${p.at} 的回写：${joinProgress(p)}`
+                : `${t.id} ${t.title}，${STATUS[t.status].name}，还没有回写。`
+            }
+          }
+          if (text === SA_BUSY_Q) {
+            return {
+              who: 'sa',
+              reads: [
+                { cmd: 'orca task show SHOP-12 --json', out: '待验收 · 回写 #4 · 20 分钟前' }
+              ],
+              text: 'SHOP-12 的验收入口：商城后台 → 订单 → 导出，选 CSV。自检写的是 10 万行 18.4 秒导出、Excel 打开不乱码。'
+            }
+          }
+          const ny = needsYou()
+          const list = ny.map(
+            (n) =>
+              `${n.task.id} ${n.kind === 'review' ? '待验收' : n.kind === 'answer' ? '在等你回答' : '做完一轮还没看'}`
+          )
+          return {
+            who: 'sa',
+            reads: [
+              {
+                cmd: 'orca task needs-you --json',
+                out: list.length ? list.join('；') : '没有在等你的'
+              }
+            ],
+            text: `${list.length ? `现在要你处理的：${list.join('，')}。` : '现在没有要你处理的。'}要我动手的事直接说，我会先给你提案。`
+          }
+        }
+        // Finishing a turn starts an idle period; waiting news wakes it at most once per idle period, never while you type.
+        function saAnswer(conv, text) {
+          const i = conv.findIndex((m) => m.working)
+          if (i === -1) {
+            return
+          }
+          conv.splice(i, 1, saReply(text))
+          S.sa.state = 'idle'
+          S.sa.woke = false
+          if (S.sa.wake && S.sa.unread.length) {
+            later(900, saWake)
+          }
+        }
+        function saWake() {
+          const a = S.sa
+          if (
+            !a.live ||
+            a.state !== 'idle' ||
+            a.woke ||
+            !a.wake ||
+            !a.unread.length ||
+            a.draft.trim()
+          ) {
+            return
+          }
+          a.woke = true
+          const conv = a.convs[a.current]
+          const news = a.unread
+          conv.push(
+            {
+              who: 'ptr',
+              at: '刚刚',
+              text: `有 ${news.length} 条任务动态：${news.map((u) => u.short).join('，')}。运行 orca task inbox --json`
+            },
+            { who: 'sa', working: true }
+          )
+          a.state = 'working'
+          later(1600, () => {
+            const i = conv.findIndex((m) => m.working)
+            if (i === -1) {
+              return
+            }
+            conv.splice(i, 1, {
+              who: 'sa',
+              reads: [
+                {
+                  cmd: 'orca task inbox --json',
+                  out: `${news.length} 条：${news.map((u) => u.short).join('；')}`
+                }
+              ],
+              text: news
+                .map((u) =>
+                  u.host
+                    ? `${u.task}：${u.text}，现在无法确认它的状态；恢复联系后我再读一次。`
+                    : `${u.task} ${u.text}${u.need ? `，${u.need}` : '，不用你做什么'}。`
+                )
+                .join('\n')
+            })
+            a.unread = []
+            a.state = 'idle'
+          })
+        }
+        function saSend() {
+          const a = S.sa
+          const text = a.draft.trim()
+          if (!text || !a.live) {
+            return
+          }
+          a.draft = ''
+          a.conv = a.current
+          const conv = a.convs[a.current]
+          conv.push({ who: 'you', text }, { who: 'sa', working: true })
+          a.state = 'working'
+          S.focus = 'sa-input'
+          later(1400, () => saAnswer(conv, text))
+        }
+        function saOpenPanel(mode) {
+          const a = S.sa
+          if (!a.live) {
+            a.live = true
+            a.state = 'idle'
+            a.convs = { 'c-now': [] }
+          }
+          a.panel = { mode: mode || a.mode }
+          a.pill = false
+          S.focus = 'sa-input'
+        }
+        function saItemOf(el) {
+          const p = saP(el.dataset.pid)
+          return p ? { p, it: p.items[+el.dataset.i] } : null
+        }
+        const SA_ACTS = {
+          'sa-open': () => {
+            saOpenPanel('chat')
+          },
+          'sa-show': () => {
+            saOpenPanel()
+          },
+          'sa-mode': (el) => {
+            S.sa.mode = el.dataset.v
+            S.sa.panel.mode = el.dataset.v
+            S.focus = 'sa-input'
+          },
+          'sa-min': () => {
+            S.sa.panel = null
+            S.sa.pill = true
+          },
+          'sa-close': () => {
+            S.sa.panel = null
+            S.sa.pill = false
+            toast('对话收起了，总管还在运行；从任务页的「总管」再打开')
+          },
+          'sa-now': () => {
+            S.sa.conv = S.sa.current
+          },
+          'sa-goto': (el) => {
+            saOpenPanel('chat')
+            S.sa.mode = 'chat'
+            S.sa.conv = el.dataset.conv
+          },
+          'sa-wake': () => {
+            S.sa.wake = !S.sa.wake
+          },
+          'sa-unwatch': (el) => {
+            S.sa.watches = S.sa.watches.filter((w) => w.task !== el.dataset.id)
+            toast(`不再盯 ${el.dataset.id}`)
+          },
+          'sa-toggle': (el) => {
+            const x = saItemOf(el)
+            if (x && x.p.status === 'pending' && !saBlocked(x.it)) {
+              x.it.on = !x.it.on
+            }
+          },
+          'sa-edit': (el) => {
+            const e = S.sa.edit
+            const same = e && e.pid === el.dataset.pid && e.i === +el.dataset.i
+            S.sa.edit = same ? null : { pid: el.dataset.pid, i: +el.dataset.i }
+            if (!same) {
+              const x = saItemOf(el)
+              const first = {
+                start: 'title',
+                subtask: 'title',
+                append: 'text',
+                stop: 'reason',
+                record: 'title'
+              }[x.it.kind]
+              S.focus = first ? `sa-ed-${el.dataset.i}-${first}` : null
+            }
+          },
+          'sa-agent': (el) => {
+            const x = saItemOf(el)
+            if (x) {
+              x.it.agent = el.dataset.v
+            }
+          },
+          'sa-ws': (el) => {
+            const x = saItemOf(el)
+            if (x) {
+              x.it.ws = el.dataset.v
+            }
+          },
+          'sa-confirm': (el) => {
+            const p = saP(el.dataset.pid)
+            if (p && p.status === 'pending') {
+              saConfirm(p)
+            }
+          },
+          'sa-dismiss': (el) => {
+            const p = saP(el.dataset.pid)
+            if (p && p.status === 'pending') {
+              p.status = 'dismissed'
+              p.decidedAt = '刚刚'
+              S.sa.edit = null
+              toast('这份提案不要了，没有执行任何一项')
+            }
+          },
+          'sa-finish': (el) => {
+            const p = saP(el.dataset.pid)
+            if (p && p.status === 'interrupted') {
+              p.status = 'finished'
+              p.decidedAt = '刚刚'
+              saLog(p)
+              toast('已标记为已结束；没有重跑任何一项')
+            }
+          },
+          'sa-send': () => {
+            saSend()
+          },
+          'sa-example': (el) => {
+            S.sa.draft = el.dataset.text
+            saSend()
+          }
+        }
+        // A preset may ask for a row to be in view (d19's timeline entry); scroll its own box, not the page.
+        function saAfterRender() {
+          const sel = S.sa.scrollTo
+          S.sa.scrollTo = null
+          const el = sel && frame.querySelector(sel)
+          const box = el && el.closest('#dscroll, #sascroll')
+          if (!box) {
+            return
+          }
+          const k = box.getBoundingClientRect().height / box.clientHeight || 1
+          box.scrollTop +=
+            (el.getBoundingClientRect().top - box.getBoundingClientRect().top) / k - 160
+        }
+
         function homePage() {
           return taskPage(homeContent())
         }
@@ -13080,7 +15073,7 @@
           const tst = S.toast
             ? `<div class="toast">${ic('info', 13)}${esc(S.toast.text)}</div>`
             : ''
-          return `<div class="win ${cls}">${side}<div class="main ${drawer && pushed() ? 'pushed' : ''}">${main}${drawer}${tst}</div>${statusbar()}${overlay}<div class="popover ttip" id="ttip"></div></div>`
+          return `<div class="win ${cls}">${side}<div class="main ${drawer && pushed() ? 'pushed' : ''}">${main}${drawer}${saPanelHtml()}${tst}</div>${statusbar()}${overlay}<div class="popover ttip" id="ttip"></div></div>`
         }
 
         // ---------- render ----------
@@ -13108,7 +15101,9 @@
           if (term) {
             term.scrollTop = term.scrollHeight
           }
-          for (const el of frame.querySelectorAll('.chatv, .schat-in')) {
+          for (const el of frame.querySelectorAll(
+            '.chatv, .schat-in, .sa-thread, .sa-panel .dterm'
+          )) {
             el.scrollTop = el.scrollHeight
           }
           if (S.scrollChat) {
@@ -13153,6 +15148,7 @@
           }
         }
         const ACTS = {
+          ...SA_ACTS,
           home: () => {
             S.view = 'home'
             S.drawer = null
@@ -14026,6 +16022,13 @@
             it[el.dataset.field] = el.value
           } else if (k === 'cc') {
             S.ccDraft = el.value
+          } else if (k === 'sa') {
+            S.sa.draft = el.value
+          } else if (k === 'sa-edit') {
+            const x = saItemOf(el)
+            if (x) {
+              x.it[el.dataset.field] = el.value
+            }
           }
         })
         frame.addEventListener('keydown', (e) => {
@@ -14072,6 +16075,18 @@
               S.focus = `dispatch-${where}`
               render()
             }
+            return
+          }
+          if (el.dataset.actInput === 'sa' && e.key === 'Enter' && !e.isComposing) {
+            e.preventDefault()
+            saSend()
+            render()
+            return
+          }
+          if (el.dataset.actInput === 'sa-edit' && (e.key === 'Enter' || e.key === 'Escape')) {
+            e.preventDefault()
+            S.sa.edit = null
+            render()
             return
           }
           if (el.dataset.actInput === 'cc' && e.key === 'Enter') {
@@ -14303,7 +16318,160 @@
           d14: () => {
             S.view = 'session'
             S.session = 's41'
+          },
+          // 总管 screens (round 6). d15 starts mid-turn: when the answer lands, the two waiting news items wake it once.
+          d15: () => {
+            saLive('idle')
+            S.filter.view = 'dispatcher'
+            S.sa.props.push(saProp(SA_PROPS.pr))
+            S.sa.unread = clone(SA_UNREAD)
+            saBusy()
+          },
+          'd15-closed': () => {
+            S.filter.view = 'dispatcher'
+          },
+          'd15-nav': () => {
+            saLive('idle')
+            S.sa.props.push(saProp(SA_PROPS.pr))
+            S.sa.pill = true
+          },
+          d16: () => {
+            saLive('idle')
+            S.sa.props.push(saProp(SA_PROPS.pr))
+            S.sa.panel = { mode: 'chat' }
+          },
+          'd16-terminal': () => {
+            saLive('idle')
+            S.sa.props.push(saProp(SA_PROPS.pr))
+            S.sa.mode = 'term'
+            S.sa.panel = { mode: 'term' }
+          },
+          d17: () => {
+            saLive('idle', 'six')
+            S.filter.view = 'dispatcher'
+            S.sa.props.push(saProp(SA_PROPS.six))
+          },
+          'd17-running': () => saSix('executing'),
+          'd17-running-other': () => saSix('executing', 'other'),
+          'd17-finished': () => saSix('interrupted'),
+          d18: () => {
+            saLive('idle', 'wake')
+            saWakeData()
+            S.sa.props.push(saProp(SA_PROPS.o39))
+            S.sa.panel = { mode: 'chat' }
+          },
+          'd18-unverifiable': () => {
+            saLive('idle')
+            S.filter.view = 'dispatcher'
+            S.sa.watches.unshift({ task: 'INF-3', by: 'ask', at: '昨天 20:15' })
+            S.sa.props.push(saProp(SA_PROPS.inf))
+            S.sa.unread = [
+              {
+                at: '2 小时前',
+                task: 'INF-3',
+                host: true,
+                short: 'INF-3 所在的 dbox 失去联系',
+                text: 'dbox 失去联系'
+              }
+            ]
+            saBusy()
+          },
+          d19: () => {
+            saLive('idle')
+            detailOf('ORC-41')
+            S.sa.scrollTo = '.tli.sa-tl'
           }
+        }
+        // d17-running / -finished: the six-item proposal after you dropped the last item and confirmed five.
+        function saSix(status, viewer = 'self') {
+          saLive('idle', 'six')
+          S.filter.view = 'dispatcher'
+          const p = saProp(SA_PROPS.six)
+          p.status = status
+          p.viewer = viewer
+          p.at = '3 分钟前'
+          p.decidedAt = '1 分钟前'
+          const [stop, sub, ...rest] = p.items
+          stop.res = 'done'
+          stop.outTask = 'ORC-41'
+          stop.out = '已停掉，工作区和改过的文件不动'
+          SS('s41').state = 'ended'
+          saMark(p, T('ORC-41'), '由总管提案、你确认：停掉 Claude 会话', stop.reason)
+          sub.res = status === 'executing' ? 'running' : 'unknown'
+          sub.out =
+            '执行窗口断开时，这一项还没回报。先去 ORC-41 看看 Codex 会话开起来没有，再决定要不要重来。'
+          rest.forEach((it, i) => {
+            if (i === rest.length - 1) {
+              it.on = false
+              it.res = 'dropped'
+            } else {
+              it.res = status === 'executing' ? 'wait' : 'skip'
+            }
+          })
+          S.sa.props.push(p)
+        }
+        // d18: ORC-39 wrote progress #2 and finished a turn; ORC-41 reached 待验收 with its Claude done.
+        function saWakeData() {
+          const t39 = T('ORC-39')
+          t39.progress.unshift({
+            n: 2,
+            session: 's39',
+            agent: 'claude',
+            at: '2 分钟前',
+            did: '已定位到第二处大头：首屏前同步加载了全部主题文件。',
+            result: '改成按需加载后降到 1.2 秒。',
+            next: 'profile 里还剩一处没看。',
+            need: ''
+          })
+          t39.timeline.push({
+            at: '2 分钟前',
+            kind: 'progress',
+            agent: 'claude',
+            n: 2,
+            text: '已定位到第二处大头：首屏前同步加载了全部主题文件，改成按需加载后降到 1.2 秒。下一步：profile 里还剩一处没看。',
+            by: '智能体'
+          })
+          t39.updated = '2 分钟前'
+          Object.assign(SS('s39'), {
+            lastAt: '2 分钟前',
+            last: '降到 1.2 秒了，profile 里还剩一处没看。'
+          })
+          const t41 = T('ORC-41')
+          t41.status = 'review'
+          t41.updated = '4 分钟前'
+          t41.progress.unshift({
+            n: 3,
+            session: 's41',
+            agent: 'claude',
+            at: '4 分钟前',
+            did: '已修复：改成等 xterm 打开后再 attach。',
+            check: '回归测试通过，断线 30 秒后重连内容还在。',
+            result: '',
+            next: '',
+            need: '验收：断线 30 秒后重连，终端内容还在。'
+          })
+          t41.timeline.push(
+            {
+              at: '4 分钟前',
+              kind: 'progress',
+              agent: 'claude',
+              n: 3,
+              text: '已修复：改成等 xterm 打开后再 attach；自检：回归测试通过。验收：断线 30 秒后重连，终端内容还在。',
+              by: '智能体'
+            },
+            {
+              at: '4 分钟前',
+              kind: 'rule',
+              text: '进行中 → 待验收',
+              note: '智能体回写时改的',
+              by: '规则'
+            }
+          )
+          Object.assign(SS('s41'), {
+            state: 'done',
+            lastAt: '4 分钟前',
+            last: '修好了，回归测试通过，等你验收。'
+          })
         }
         // Screens d1–d12 open in workspace mode for comparison; the sidebar switch is remembered per screen in localStorage.
         const SIDEBAR_DEFAULT = {
@@ -14339,7 +16507,12 @@
           ['d11', '主机未连接'],
           ['d12', '设置 → 任务'],
           ['d13', '任务模式 · 首页'],
-          ['d14', '任务模式 · 会话']
+          ['d14', '任务模式 · 会话'],
+          ['d15', '总管 · 台账'],
+          ['d16', '总管 · 对话'],
+          ['d17', '总管 · 提案'],
+          ['d18', '总管 · 被唤醒'],
+          ['d19', '由总管提案']
         ]
         // Sub-screens reachable by hash (and from index.html); the switcher highlights their parent tab.
         const SUB = {
@@ -14358,7 +16531,14 @@
           'd13-session': 'd13',
           'd13-session-wide': 'd13',
           'd13-session-tab': 'd13',
-          'd13-unlinked': 'd13'
+          'd13-unlinked': 'd13',
+          'd15-closed': 'd15',
+          'd15-nav': 'd15',
+          'd16-terminal': 'd16',
+          'd17-running': 'd17',
+          'd17-running-other': 'd17',
+          'd17-finished': 'd17',
+          'd18-unverifiable': 'd18'
         }
         const SUB_NAME = {
           'd2-host': '@ 主机只缩小候选',
@@ -14376,7 +16556,14 @@
           'd13-session': '点侧栏会话',
           'd13-session-wide': '点侧栏会话 → 加宽',
           'd13-session-tab': '全屏：会话标签 + 收回侧边',
-          'd13-unlinked': '未关联任务的会话'
+          'd13-unlinked': '未关联任务的会话',
+          'd15-closed': '总管还没打开',
+          'd15-nav': '首页：导航里的总管带等你确认数',
+          'd16-terminal': '同一个会话切到终端',
+          'd17-running': '逐项执行中',
+          'd17-running-other': '另一个窗口看执行中的提案',
+          'd17-finished': '执行窗口断开后收尾',
+          'd18-unverifiable': 'dbox 失去联系'
         }
         let current = 'd1'
         function applyPreset(id) {
@@ -14387,6 +16574,7 @@
           S.sidebar = storedSidebar(id) || SIDEBAR_DEFAULT[id] || 'workspace'
           PRESETS[id]()
           render()
+          saAfterRender()
           const parent = SUB[id] || id
           document
             .querySelectorAll('.switcher .tab')

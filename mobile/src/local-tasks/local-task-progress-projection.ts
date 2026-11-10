@@ -15,8 +15,8 @@ import {
   localTaskDescendantIds,
   localTaskEffectiveWorkspace
 } from '../../../src/shared/local-tasks/local-task-tree'
+import { buildLocalTaskNeedsYouBand } from '../../../src/shared/local-tasks/local-task-needs-you-band'
 import type { LocalTask, LocalTaskProject } from '../../../src/shared/local-tasks/local-task-types'
-import { localTaskNeedsReview } from '../../../src/shared/local-tasks/local-task-review-items'
 
 // What the phone shows of the library host's judgement. Every state here is the host's; the phone
 // only groups, filters and orders it, and says "can't confirm" out of contact.
@@ -30,41 +30,45 @@ export type LocalTaskAttentionRow = {
   since: number
 }
 
-/** Items of tasks in scope, one row per task, the task waiting longest first. */
-export function localTaskAttentionRows(args: {
+/**
+ * "Needs you" of the tasks in scope, grouped as the desktop groups it (the shared band): sessions
+ * waiting on the user, newest first, then tasks awaiting acceptance. `visibleIds` narrows it to
+ * what a filtered list shows.
+ */
+export function localTaskNeedsYou(args: {
   snapshot: LocalTaskProgressSnapshot | null
   tasks: readonly LocalTask[]
   projects?: readonly LocalTaskProject[]
   projectId: string | null
-}): LocalTaskAttentionRow[] {
-  const tasksById = new Map(args.tasks.map((task) => [task.id, task]))
-  const projectsById = new Map((args.projects ?? []).map((project) => [project.id, project]))
-  const rows = new Map<string, LocalTaskAttentionRow>()
-  for (const item of args.snapshot?.items ?? []) {
-    const task = tasksById.get(item.taskId)
-    if (!task || (args.projectId !== null && task.projectId !== args.projectId)) {
-      continue
+  visibleIds?: ReadonlySet<string>
+}): { rows: LocalTaskAttentionRow[]; ids: ReadonlySet<string> } {
+  const index = buildLocalTaskIndex(args.projects ?? [], args.tasks)
+  const scoped = args.tasks.filter(
+    (task) =>
+      (args.projectId === null || task.projectId === args.projectId) &&
+      (!args.visibleIds || args.visibleIds.has(task.id))
+  )
+  const band = buildLocalTaskNeedsYouBand({
+    progress: args.snapshot,
+    index,
+    visibleIds: new Set(scoped.map((task) => task.id))
+  })
+  const rows = [...band.waiting, ...band.review].map((row) => {
+    const items = [...row.items].sort((a, b) => a.since - b.since)
+    return {
+      task: row.task,
+      review: row.group === 'review',
+      items,
+      since: items[0]?.since ?? row.task.updatedAt
     }
-    const row = rows.get(task.id) ?? { task, review: false, items: [], since: item.since }
-    row.items.push(item)
-    row.since = Math.min(row.since, item.since)
-    rows.set(task.id, row)
-  }
-  for (const task of args.tasks) {
-    if (
-      (args.projectId !== null && task.projectId !== args.projectId) ||
-      !localTaskNeedsReview(task, projectsById.get(task.projectId))
-    ) {
-      continue
-    }
-    const row = rows.get(task.id) ?? { task, review: true, items: [], since: task.updatedAt }
-    row.review = true
-    row.since = Math.min(row.since, task.updatedAt)
-    rows.set(task.id, row)
-  }
-  return [...rows.values()]
-    .map((row) => ({ ...row, items: [...row.items].sort((a, b) => a.since - b.since) }))
-    .sort((a, b) => a.since - b.since || a.task.number - b.task.number)
+  })
+  return { rows, ids: band.ids }
+}
+
+export function localTaskAttentionRows(
+  args: Parameters<typeof localTaskNeedsYou>[0]
+): LocalTaskAttentionRow[] {
+  return localTaskNeedsYou(args).rows
 }
 
 export function localTaskAttentionTaskCount(rows: readonly LocalTaskAttentionRow[]): number {

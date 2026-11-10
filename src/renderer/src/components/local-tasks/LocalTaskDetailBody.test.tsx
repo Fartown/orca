@@ -46,14 +46,25 @@ beforeEach(() => {
 afterEach(cleanup)
 
 it('has no criteria editor for legacy rows and still saves the description', async () => {
-  render(<LocalTaskDetailBody task={task} writable />)
+  const view = render(<LocalTaskDetailBody task={task} writable />)
   expect(screen.queryByText('First criterion')).toBeNull()
   expect(screen.queryByRole('button', { name: 'Remove criterion' })).toBeNull()
+  fireEvent.click(screen.getByRole('button', { name: 'Add description' }))
   const description = screen.getByRole('textbox', { name: 'Description' })
   fireEvent.change(description, { target: { value: 'Clarified work' } })
   fireEvent.blur(description)
   await waitFor(() =>
     expect(fixture.save).toHaveBeenCalledWith('task-1', { description: 'Clarified work' }, 3)
+  )
+  view.rerender(
+    <LocalTaskDetailBody task={{ ...task, description: 'Clarified work', revision: 4 }} writable />
+  )
+  // Saved, the description reads as text again and a click reopens the editor.
+  await waitFor(() => expect(screen.queryByRole('textbox', { name: 'Description' })).toBeNull())
+  fireEvent.click(screen.getByRole('button', { name: 'Clarified work' }))
+  expect(screen.getByRole('textbox', { name: 'Description' })).toHaveProperty(
+    'value',
+    'Clarified work'
   )
 })
 

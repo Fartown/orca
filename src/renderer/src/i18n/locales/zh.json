@@ -23247,7 +23247,8 @@
         "empty": "还没有。它的提案开出的任务会自动盯上，你让它盯的任务也会出现在这里。",
         "byProposal": "来自它的提案 · {{time}}",
         "byAsk": "你让它盯的 · {{time}}",
-        "unwatch": "不再盯 {{ref}}"
+        "unwatch": "不再盯 {{ref}}",
+        "unwatchShort": "不再盯"
       },
       "dispatched": {
         "title": "它派出的",
@@ -23264,7 +23265,59 @@
       "claimedElsewhere": "这份提案已经在执行或执行过了。",
       "interrupted": "执行窗口已断开。收尾前请检查任务；已记录的结果会保留，不会重新执行步骤。",
       "executionUnverifiable": "无法确认执行情况。重复操作前请先检查任务。",
-      "finish": "标记为已结束"
+      "finish": "标记为已结束",
+      "where": "{{agent}} · {{host}}",
+      "alwaysConfirm": "永远要确认",
+      "edit": "改",
+      "editDone": "改好了",
+      "pickProject": "选一个项目",
+      "field": {
+        "title": "标题",
+        "prompt": "第一句",
+        "agent": "智能体",
+        "text": "追加",
+        "reason": "原因"
+      },
+      "place": {
+        "newWorkspace": "{{repo}} 的新工作区",
+        "newSession": "{{agent}} · 新会话",
+        "sameWorkspace": "同一工作区"
+      },
+      "stage": {
+        "done": "已完成",
+        "failed": "没做成",
+        "waiting": "等待",
+        "unknown": "结果未知",
+        "skipped": "没有执行",
+        "dropped": "已去掉"
+      },
+      "lock": {
+        "hostOffline": "{{host}} 未连接：恢复联系后再确认这一项。",
+        "appendOffline": "{{host}} 未连接：这句发不过去，也无法确认会话现在的状态。恢复联系后再确认这一项。",
+        "stopOffline": "{{host}} 未连接：停不了，也无法确认会话是不是还在跑。恢复联系后再确认这一项。",
+        "pickProject": "这个仓库属于多个项目，先选一个。",
+        "ended": "这个会话已经结束。",
+        "missing": "这里找不到这个会话。",
+        "unverifiable": "现在无法确认这个会话的状态。",
+        "busy": "{{agent}} 现在是「{{state}}」：做完一轮后才能追加。"
+      },
+      "result": {
+        "failed": "没做成：{{detail}}",
+        "unknown": "执行窗口断开时，这一项还没回报。先去看看任务，再决定要不要重来。"
+      },
+      "pill": {
+        "pending": "等你确认",
+        "running": "正在执行",
+        "disconnected": "执行窗口已断开",
+        "confirmed": "已确认"
+      },
+      "footer": {
+        "pending": "确认后由 Orca 直接执行，不再经过总管",
+        "runningHere": "正在执行… 完成 {{done}}/{{total}} 项 · 已完成的项会记下来，不会重跑",
+        "progress": "完成 {{done}}/{{total}} 项",
+        "windowAlive": "执行窗口还在",
+        "unrun": "已确认，还没执行。"
+      }
     },
     "latestProgress": {
       "title": "最新进展",
@@ -23283,7 +23336,27 @@
       "tree": "任务和会话",
       "empty": "创建项目后即可添加任务。",
       "record": "记成任务…",
-      "unlinked": "未关联任务的会话"
+      "unlinked": "未关联任务的会话",
+      "toggleOn": "按任务显示",
+      "toggleOff": "切回工作区",
+      "other": "其他",
+      "agentReason": "{{agent}} {{reason}}",
+      "lastProgress": "上次进展 {{when}}",
+      "addUnder": "在「{{title}}」下添加",
+      "newSubtask": "新建子任务"
+    },
+    "sessionChip": {
+      "belongs": "{{ref}} · 这个会话属于它",
+      "relink": "改为关联到…",
+      "back": "返回",
+      "backToPanel": "收回侧边",
+      "backToPanelHint": "回到概览，会话收回右侧的加宽态"
+    },
+    "taskSummary": {
+      "status": "状态",
+      "writeback": "回写",
+      "lastLine": "最后一句",
+      "noWorkspace": "还没有工作区"
     },
     "quickActions": {
       "newTask": "新建任务…",
@@ -23320,7 +23393,6 @@
       "editComment": "编辑",
       "deleteComment": "删除",
       "saveComment": "保存",
-      "title": "评论与动态",
       "submitComment": "评论",
       "actor": {
         "desktop": "我",
@@ -23356,7 +23428,9 @@
       "sessionUnlinked": "{{actor}} 取消关联 {{agent}} 会话",
       "ruleStart": "开始做后，状态从 {{from}} 变为 {{to}}",
       "rulePrMerged": "#{{number}} 已合入：{{from}} → {{to}}",
-      "systemRecords": "系统记录（{{count}}）"
+      "heading": "动态",
+      "systemRecordsLabel": "系统记录",
+      "writeback": "回写 #{{number}}："
     },
     "common": {
       "cancel": "取消"
@@ -23373,7 +23447,8 @@
       "addInGroup": "在「{{group}}」新建任务",
       "noMatches": "没有符合这个视图的任务。",
       "showAll": "显示全部任务",
-      "empty": "还没有任务。按 C 记下第一件。"
+      "empty": "还没有任务。按 C 记下第一件。",
+      "moreInNeedsYou": "另有 {{count}} 个在「需要你」"
     },
     "board": {
       "canceledHidden": "「已取消」列已隐藏，可在「筛选」里打开。",
@@ -23387,16 +23462,51 @@
     "create": {
       "created": "已创建「{{title}}」· {{ref}}",
       "title": "新建任务",
-      "titlePlaceholder": "任务标题",
+      "titlePlaceholder": "任务标题（必填）",
       "titleLabel": "标题",
       "descriptionPlaceholder": "添加描述…",
       "descriptionLabel": "描述",
-      "keepCreating": "继续创建",
-      "submit": "创建任务",
-      "workspace": "工作区",
-      "workspaceLater": "稍后再定工作区",
-      "workspaceExisting": "使用已有工作区",
-      "workspaceNew": "下一步新建工作区"
+      "keepCreating": "继续创建"
+    },
+    "createFlow": {
+      "stepSubtitle": "第 1 步，共 2 步：建任务、选在哪做",
+      "recordTitle": "记成任务",
+      "recordSubtitle": "关联会话 {{agent}}（{{workspace}}）和它的工作区",
+      "whatSection": "要做什么",
+      "descriptionPlaceholder": "描述（可选）",
+      "whereSection": "在哪做",
+      "whereExisting": "已有工作区",
+      "whereNew": "新建工作区",
+      "whereLater": "稍后再定",
+      "searchPlaceholder": "搜索工作区（列出所有在联系的主机）",
+      "noWorkspaces": "还没有工作区",
+      "noMatches": "没有匹配的工作区",
+      "folder": "文件夹",
+      "free": "空闲",
+      "ownedSubtask": "属于 {{ref}} · 会建成子任务",
+      "noProjectHere": "这台主机上没有能新建任务的项目",
+      "kickoff": "开工",
+      "kickoffIn": "在 {{workspace}} 里开会话",
+      "defaultAgent": "默认",
+      "moreAgents": "更多",
+      "noAgent": "先不开",
+      "firstLine": "第一句指令",
+      "firstLineDefault": "按任务说明开始",
+      "briefNote": "后面附任务说明（设置里可关）",
+      "delivery": "发送方式",
+      "deliverySend": "直接发送",
+      "deliverySendHint": "会话开起来就发出去",
+      "deliveryDraft": "放进输入框，我再看看",
+      "deliveryDraftHint": "只当草稿，你看过再发",
+      "newNote": "下一步打开 Orca 的新建工作区，智能体和第一句指令在那里填。「创建自」会预选这个任务，建好的工作区自动关联。",
+      "newFolder": "这个项目的仓库是文件夹，只能用已有工作区。",
+      "laterNote": "先只建任务，不开工。之后在任务视图里点「开始做」选工作区。",
+      "recordNote": "会话 {{agent}}（{{workspace}}）已经在跑，直接关联到这个任务，不再开会话。",
+      "staysNote": "建好后停在任务视图",
+      "nextNote": "建好任务后接着打开新建工作区",
+      "createAndStart": "创建并开工",
+      "createThenWorkspace": "创建，下一步新建工作区",
+      "create": "创建"
     },
     "criteria": {},
     "delete": {
@@ -23420,7 +23530,11 @@
       "conflict": "已被其他设备修改，你的内容保留在这里。",
       "conflictOverwrite": "用我的覆盖",
       "conflictDiscard": "放弃我的修改",
-      "properties": "任务属性"
+      "properties": "任务属性",
+      "review": "验收",
+      "cancelTask": "取消任务",
+      "editProperties": "编辑属性…",
+      "addDescription": "添加描述"
     },
     "field": {
       "status": "状态",
@@ -23522,7 +23636,27 @@
       "subtaskProgress": "已完成子任务：{{done}} / {{total}}",
       "select": "选中「{{title}}」",
       "fold": "收起「{{title}}」的子任务",
-      "unfold": "展开「{{title}}」的子任务"
+      "unfold": "展开「{{title}}」的子任务",
+      "noWorkspace": "还没有工作区",
+      "workspaceGone": "工作区已删除",
+      "hostOffline": "{{host}} 未连接",
+      "writeback": "回写",
+      "lastSentence": "最后一句",
+      "lastProgressAt": "上次进展 {{when}}：",
+      "subtasksAllDone": "都做完一轮",
+      "subtasksWorking": "{{count}} 个工作中",
+      "subtaskCount": "子任务 {{count}}",
+      "subtaskLatest": "最新：{{ref}} {{body}}",
+      "agent": "智能体",
+      "agentSays": "{{agent}}：{{text}}",
+      "previewUnavailable": "速览不可用",
+      "awaitingAcceptance": "待验收",
+      "preview": "速览",
+      "remindLater": "稍后提醒",
+      "goAccept": "去验收",
+      "start": "开始做",
+      "notStarted": "还没有工作区和会话",
+      "agentAsks": "{{agent}} 问：{{text}}"
     },
     "source": {
       "label": "本地任务",
@@ -23537,7 +23671,6 @@
     "subtasks": {
       "added": "已添加 {{count}} 个子任务",
       "title": "子任务",
-      "placeholder": "添加子任务——粘贴多行可一次添加多个",
       "add": "添加子任务",
       "retryRemaining": "重试剩余 {{count}} 个子任务"
     },
@@ -23553,8 +23686,34 @@
       "rules": "自动状态规则",
       "ruleStart": "开始做后移到进行中",
       "ruleStartHelp": "关联工作区或开第一个会话时，处于待规划或未开始的任务移到进行中类别的第一个状态。",
-      "rulePrMerged": "PR 合并后完成任务",
-      "rulePrMergedHelp": "任务工作区的 PR 在工作区当前提交上合并后，任务移到已完成类别的第一个状态。同一个 PR 只触发一次。",
+      "rulesHint": "· 只有这两条，都可以关",
+      "mergedReviewHelp": "任务移到「待验收」，进入首页「需要你」，由你点「通过」或「打回」。",
+      "mergedCompleteHelp": "任务直接移到「已完成」。适合合并即上线、不需要人再看的项目。",
+      "mergedNoneHelp": "任务状态不动。",
+      "completionNote": "智能体最多把任务推进到待验收；「已完成」只能由你点「通过」，或由这条规则在 PR 合并后写入。",
+      "rulesSearchDescription": "开始做后移到进行中；任务工作区的 PR 合并后进入待验收、进入已完成或不动。",
+      "keywordRule": "规则",
+      "homeTitle": "任务首页与派活",
+      "homeSearchDescription": "打开 Orca 时显示什么、任务说明、从任务发起的会话怎么发送。",
+      "keywordLaunch": "启动",
+      "keywordBrief": "任务说明",
+      "launchView": "打开 Orca 时显示",
+      "launchViewHelp": "任务首页：派活输入框、需要你、按状态分组的任务。选「工作区」就和以前一样，任务页留在左侧栏。",
+      "launchTasks": "任务首页",
+      "launchWorkspaces": "工作区",
+      "brief": "任务说明",
+      "briefHelp": "从任务开的会话，在第一句指令后附一段任务说明：任务编号、怎么用 orca task progress 回写进展、完成只能由你定。关掉后任务卡只能显示智能体的最后一句话。",
+      "briefView": "查看说明内容",
+      "briefAppended": "从任务开的会话，第一句指令后附上这一段（以 {{ref}} 为例）：",
+      "briefGuide": "智能体需要时用 orca task guide 读取的回写规则：",
+      "delivery": "从任务发起的会话",
+      "deliveryHelp": "派活、新建任务、开会话、打回开的会话都按这个默认；本功能自己的弹层里可以临时改，Orca 的新建工作区弹窗按这里的设置执行。",
+      "deliverySend": "直接发送",
+      "deliveryDraft": "放进输入框",
+      "statusesSummary": "· 6 个类别固定，状态不能换类别",
+      "manageStatuses": "管理状态",
+      "manageStatusesTitle": "{{project}} 的状态",
+      "hiddenSourceNote": "在「任务来源」里隐藏本地任务后，以上入口和任务模式按钮都不显示。",
       "projectRemoved": "已删除 {{name}}",
       "removeTitle": "删除 {{name}}？",
       "removeDescription": "它的任务（{{count}} 个）会一起删除。关联的仓库及其工作区和会话不受影响。",
@@ -23596,7 +23755,7 @@
       "keywordStatus": "状态",
       "keywordBoard": "看板",
       "title": "本地任务",
-      "description": "项目、关联的仓库、编号前缀与状态。",
+      "description": "任务首页、派活、项目与状态。",
       "repos": "仓库",
       "reposHelp": "「开始做」在这些仓库里新建工作区，默认仓库优先，位置在这个项目所在的主机上。多个项目可以共用一个仓库。",
       "reposNone": "无：这个项目只用来记录任务",
@@ -23610,10 +23769,10 @@
       "removeRepo": "从项目中移除",
       "repoActions": "{{name}} 的操作",
       "repoAlsoIn": "也在 {{projects}} 中",
-      "mergedAction": "PR 合入后",
-      "mergedReview": "转为待验收",
-      "mergedComplete": "标为已完成",
-      "mergedNone": "不改变状态"
+      "mergedAction": "任务工作区的 PR 合并后",
+      "mergedReview": "进入待验收",
+      "mergedComplete": "进入已完成",
+      "mergedNone": "不动"
     },
     "failure": {
       "lastStatusInCategory": "每个类别至少要保留一个状态。",
@@ -23797,7 +23956,11 @@
       "startIn": "在 {{repo}} 中{{action}}",
       "startInRepo": "在其他仓库开始做",
       "startOwn": "单独开始做",
-      "paletteEvidence": "已关联的本地任务"
+      "paletteEvidence": "已关联的本地任务",
+      "noWorkspace": "还没有工作区",
+      "fileCount": "{{count}} 个文件",
+      "peek": "速览",
+      "peekUnavailable": "速览不可用 · {{reason}}"
     },
     "writeBlocked": {
       "unavailable": "任务库暂时不可用。",
@@ -23808,25 +23971,29 @@
     "now": {
       "title": "现在",
       "latest": "最新进展",
-      "viewSession": "查看会话",
-      "needsYou": "需要你"
+      "needsYou": "需要你",
+      "writebackNumber": "回写 #{{number}}",
+      "writeback": "回写",
+      "lastMessage": "最后一句",
+      "allProgress": "全部进展"
     },
     "acceptance": {
       "title": "待验收",
       "accept": "通过验收",
       "reject": "打回",
       "reason": "需要修改什么？",
-      "sendBack": "保存并发送反馈",
       "notSent": "反馈已保存，请打开会话发送。",
-      "queue": "任务在等你验收"
-    },
-    "workflow": {
-      "title": "任务工作流",
-      "startup": "启动时打开任务页",
-      "brief": "新会话附带任务说明",
-      "delivery": "任务内容发送方式",
-      "submit": "立即发送",
-      "draft": "放入草稿"
+      "approve": "通过",
+      "reasonPrMerged": "#{{number}} 合并后进入待验收",
+      "reasonBy": "{{actor}}改为待验收",
+      "landed": "合入位置",
+      "changes": "改动",
+      "selfCheck": "自检",
+      "whereToVerify": "在哪验收",
+      "rejectReason": "打回原因",
+      "required": "必填",
+      "sendBackToSessions": "打回并发给会话",
+      "sendBackNewSession": "打回并开新会话"
     },
     "sessionPanel": {
       "title": "会话速览",
@@ -23835,10 +24002,15 @@
       "widen": "加宽",
       "fullscreen": "全屏",
       "close": "关闭",
-      "backToTask": "回到任务",
       "disconnected": "未连接",
       "unavailable": "会话不可用",
-      "unverifiable": "无法确认会话"
+      "unverifiable": "无法确认会话",
+      "wideMode": "加宽",
+      "stop": "停止",
+      "stopConfirm": "停止这个会话？任务和工作区不变。",
+      "stopSession": "停止会话",
+      "stopFailed": "无法确认会话已停止。",
+      "stopped": "会话已停止"
     },
     "dispatch": {
       "placeholder": "要做什么？@ 工作区或仓库，说一句话",
@@ -23846,7 +24018,6 @@
       "noMatches": "无匹配项",
       "disconnected": "未连接",
       "executedBy": "由 {{host}} 执行",
-      "chooseTarget": "用 @ 选择工作区或仓库",
       "submit": "派活",
       "project": "项目",
       "createProjectPrompt": "为仓库 {{repo}} 建一个项目？",
@@ -23879,7 +24050,45 @@
       "sessionStarted": "会话已启动",
       "selectedCount": "已选择 {{count}} 项",
       "moreSelected": "另有 {{count}} 项已选择",
-      "searchSelected": "搜索已选目标"
+      "searchSelected": "搜索已选目标",
+      "askNotSent": "总管已打开，消息没有发出，请在对话里发送。",
+      "noAgent": "先在「设置 → 智能体」里打开一个智能体。",
+      "webNoDispatcher": "总管在桌面端运行。这里请 @ 一个工作区或仓库直接派活。",
+      "multiOnlyWorkspaces": "同时派给多个目标时只能选工作区。",
+      "mention": "提及在哪做",
+      "hintMention": "提及在哪做",
+      "hintAsk": "提问",
+      "hintSend": "派活",
+      "expand": "展开对话",
+      "mode": "派活或只问",
+      "modeDispatch": "派活",
+      "modeAsk": "只问",
+      "askUnconfirmed": "已发给总管，但还没确认它收到，请到对话里看一眼。"
+    },
+    "band": {
+      "description": "会话在等你回答、做完一轮还没看，或任务待你验收",
+      "waiting": "会话在等你",
+      "review": "待验收",
+      "proposals": "总管有 {{count}} 个提案等你确认"
+    },
+    "mention": {
+      "workspaces": "工作区",
+      "repos": "仓库",
+      "tasks": "任务",
+      "hosts": "主机",
+      "ownedBy": "属于 {{ref}}",
+      "newWorkspace": "新建工作区来做",
+      "underTask": "在它下面派活",
+      "narrowHost": "只看这台主机的候选",
+      "label": "在哪做",
+      "more": "还有 {{count}} 个，继续输入可以筛选",
+      "move": "选择",
+      "pick": "选中",
+      "close": "关闭",
+      "footer": "候选来自所有在联系的主机 · 选主机只缩小范围，不派活"
+    },
+    "host": {
+      "thisMachine": "本机"
     }
   },
   "markdownReviewAnchorRecovery": {

@@ -1,12 +1,4 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { ChevronDown, Maximize2, Minimize2, PanelRightClose, X } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger
-} from '@/components/ui/dropdown-menu'
 import { translate } from '@/i18n/i18n'
 import { useAppStore } from '@/store'
 import { SYNC_FIT_PANES_EVENT } from '@/constants/terminal'
@@ -38,14 +30,15 @@ import {
   planLocalTaskSessionPortal,
   resolveLocalTaskSessionPaneKey
 } from '@/local-tasks/local-task-session-panel-portal'
-import { selectLocalTaskSessionTabLabel } from '@/local-tasks/local-task-session-tab-label'
-import {
-  acknowledgeLocalTaskSessionItems,
-  revealLocalTaskSession
-} from '@/local-tasks/local-task-session-reveal'
+import { acknowledgeLocalTaskSessionItems } from '@/local-tasks/local-task-session-reveal'
 import { localTaskSessionPanelIsOnScreen } from '@/local-tasks/local-task-session-panel-read'
 import { prepareLocalTaskSessionPreview } from '@/local-tasks/local-task-session-preview-preparation'
+import { useLocalTaskSessionProgress } from '@/local-tasks/local-task-session-progress'
 import { localTaskDescendantIds } from '../../../../shared/local-tasks/local-task-tree'
+import {
+  LocalTaskSessionPanelHeader,
+  LocalTaskSessionStopBar as StopSessionBar
+} from './LocalTaskSessionPanelHeader'
 
 function relatedSessions(
   taskId: string,
@@ -78,6 +71,7 @@ function LocalTaskSessionPanelContent({
     ? (parsePaneKey(session.paneKey)?.tabId ?? session.tabId)
     : session.tabId
   const inContact = useLocalTaskHostInContact(session.hostId)
+  const sessionState = useLocalTaskSessionProgress(session)?.state ?? 'unknown'
   const terminalLayout = useAppStore((state) =>
     tabId ? state.terminalLayoutsByTabId[tabId] : undefined
   )
@@ -214,6 +208,14 @@ function LocalTaskSessionPanelContent({
 
   useEffect(() => () => setActivityTerminalPortals([]), [])
 
+  const terminalShown =
+    !isChat &&
+    inContact &&
+    terminalAvailable &&
+    !preparationFailed &&
+    portalStatus !== 'unavailable' &&
+    sessionState !== 'exited' &&
+    sessionState !== 'missing'
   return (
     <div ref={readSurface} className="relative flex min-h-0 flex-1 flex-col bg-background">
       <div className="flex min-h-0 flex-1 flex-col" inert={!inContact}>
@@ -231,6 +233,8 @@ function LocalTaskSessionPanelContent({
           <div ref={setPortalTarget} className="relative min-h-0 flex-1 overflow-hidden" />
         )}
       </div>
+      {/* Why terminals only: a chat's own composer carries its stop. */}
+      {terminalShown ? <StopSessionBar session={session} /> : null}
       {!inContact ? (
         <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/80 text-sm text-muted-foreground">
           {translate('localTasks.sessionPanel.disconnected', 'Not connected')}
@@ -257,9 +261,6 @@ export function LocalTaskSessionPanelSlot(): React.JSX.Element | null {
   const tasks = useLocalTasksDomain((state) => state.tasks)
   const allSessions = useLocalTasksDomain((state) => state.links.sessions)
   const session = allSessions.find((candidate) => candidate.id === sessionLinkId)
-  const name = useAppStore((state) =>
-    session ? selectLocalTaskSessionTabLabel(state, session) : null
-  )
   const options = useMemo(
     () => (taskId ? relatedSessions(taskId, tasks, allSessions) : []),
     [allSessions, taskId, tasks]
@@ -311,76 +312,12 @@ export function LocalTaskSessionPanelSlot(): React.JSX.Element | null {
       }
       aria-label={translate('localTasks.sessionPanel.title', 'Session preview')}
     >
-      <div className="flex h-10 shrink-0 items-center gap-1 border-b border-border px-2">
-        {options.length > 1 ? (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="min-w-0 flex-1 justify-start"
-                aria-label={translate('localTasks.sessionPanel.switchSession', 'Switch session')}
-              >
-                <span className="min-w-0 flex-1 truncate text-left">
-                  {name ?? session.agent ?? session.id}
-                </span>
-                <ChevronDown className="size-3 shrink-0" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start">
-              {options.map((candidate) => (
-                <DropdownMenuItem
-                  key={candidate.id}
-                  onSelect={() => localTaskSessionPanelStore.getState().switchSession(candidate)}
-                >
-                  {candidate.id === session.id
-                    ? (name ?? candidate.agent ?? candidate.id)
-                    : (candidate.agent ?? candidate.id)}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        ) : (
-          <span className="min-w-0 flex-1 truncate px-1 text-sm font-medium text-foreground">
-            {name ?? session.agent ?? translate('localTasks.sessionPanel.title', 'Session preview')}
-          </span>
-        )}
-        <Button
-          size="icon-xs"
-          variant="ghost"
-          aria-label={
-            mode === 'wide'
-              ? translate('localTasks.sessionPanel.narrow', 'Narrow')
-              : translate('localTasks.sessionPanel.widen', 'Widen')
-          }
-          onClick={() =>
-            localTaskSessionPanelStore.getState().setMode(mode === 'wide' ? 'narrow' : 'wide')
-          }
-        >
-          {mode === 'wide' ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />}
-        </Button>
-        <Button
-          size="icon-xs"
-          variant="ghost"
-          aria-label={translate('localTasks.sessionPanel.fullscreen', 'Full screen')}
-          onClick={() => {
-            localTaskSessionPanelStore.getState().close()
-            if (!revealLocalTaskSession(session)) {
-              localTaskSessionPanelStore.getState().open(session, mode)
-            }
-          }}
-        >
-          <PanelRightClose className="size-4" />
-        </Button>
-        <Button
-          size="icon-xs"
-          variant="ghost"
-          aria-label={translate('localTasks.sessionPanel.close', 'Close')}
-          onClick={() => localTaskSessionPanelStore.getState().close()}
-        >
-          <X className="size-4" />
-        </Button>
-      </div>
+      <LocalTaskSessionPanelHeader
+        session={session}
+        options={options}
+        panelTaskId={taskId}
+        mode={mode}
+      />
       <LocalTaskSessionPanelContent session={session} requestToken={requestToken} />
     </div>
   )

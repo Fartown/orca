@@ -1,6 +1,6 @@
 import { translate } from '@/i18n/i18n'
 import { useAppStore } from '@/store'
-import { selectExecutionHostDisplayLabel } from '@/lib/execution-host-display-label'
+import { selectLocalTaskHostLabel } from '@/local-tasks/local-task-host-label'
 import type { LocalTaskBoardColumn } from '../../../shared/local-tasks/local-task-list-groups'
 import type { LocalTask } from '../../../shared/local-tasks/local-task-types'
 import { localTaskIdEndpoint, type LocalTaskEndpointKey } from './local-task-endpoints'
@@ -87,14 +87,12 @@ function describeEndpoint(
   }
   return localTaskLibraryWriteReason(
     selectLocalTasksPartition(state, endpoint),
-    selectExecutionHostDisplayLabel(useAppStore.getState(), endpoint)
+    selectLocalTaskHostLabel(useAppStore.getState(), endpoint)
   )
 }
 
 function useEndpointReason(endpoint: LocalTaskEndpointKey | null): string | null {
-  const label = useAppStore((state) =>
-    endpoint ? selectExecutionHostDisplayLabel(state, endpoint) : ''
-  )
+  const label = useAppStore((state) => (endpoint ? selectLocalTaskHostLabel(state, endpoint) : ''))
   return useLocalTasksDomain((state) =>
     endpoint ? localTaskLibraryWriteReason(selectLocalTasksPartition(state, endpoint), label) : null
   )

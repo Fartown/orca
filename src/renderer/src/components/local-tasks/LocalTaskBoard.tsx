@@ -1,6 +1,17 @@
-import { LocalTaskLatestProgress } from './LocalTaskLatestProgress'
 import { useState } from 'react'
-import { CornerDownRight, EyeOff, Plus } from 'lucide-react'
+import { Bell, CornerDownRight, EyeOff, Plus } from 'lucide-react'
+import { useNow } from '@/hooks/use-now'
+import { formatLocalTaskTime } from '@/local-tasks/local-task-time'
+import { localTaskVisibleProgress } from '@/local-tasks/local-task-visible-progress'
+import { localTaskAttentionKindLabel } from '@/local-tasks/local-task-attention-copy'
+import {
+  LocalTaskHostCell,
+  LocalTaskSessionCell,
+  LocalTaskWorkspaceCell,
+  useLocalTaskLeadSession,
+  useLocalTaskRowSessions,
+  useLocalTaskRowWorkspace
+} from './LocalTaskRowFacts'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { translate } from '@/i18n/i18n'
@@ -22,7 +33,6 @@ import {
 import type { LocalTask } from '../../../../shared/local-tasks/local-task-types'
 import { LocalTaskPriorityIcon, LocalTaskStatusIcon } from './LocalTaskIcons'
 import { LocalTaskLabelChips, LocalTaskSubtaskProgress } from './LocalTaskRow'
-import { LocalTaskProgressBadges } from './LocalTaskProgress'
 import { canCreateInGroup, localTaskGroupLabel, openCreateInGroup } from './LocalTaskGroupHead'
 import type { LocalTaskListModel } from './use-local-task-list-model'
 
@@ -40,6 +50,11 @@ function BoardCard({
   const isCursor = useLocalTaskPage((state) => state.cursorTaskId === task.id)
   const draggable = useLocalTaskRowWritable(task.id)
   const path = localTaskPathFromRoot(task, index.tasksById)
+  const status = index.statusesById.get(task.statusId)
+  const workspace = useLocalTaskRowWorkspace(task, index)
+  const sessions = useLocalTaskRowSessions(task, index, workspace.link)
+  const lead = useLocalTaskLeadSession(sessions)
+  const now = useNow(60_000)
   return (
     <div
       role="button"
@@ -63,13 +78,6 @@ function BoardCard({
         isCursor && 'bg-accent ring-1 ring-ring/50'
       )}
     >
-      <div className="flex items-center justify-between gap-2">
-        <span className="flex min-w-0 items-center gap-1.5">
-          <span className="shrink-0 font-mono text-2xs text-muted-foreground">{task.ref}</span>
-          <LocalTaskHostTag id={task.id} labels={hostLabels} />
-        </span>
-        <LocalTaskPriorityIcon priority={task.priority} />
-      </div>
       {path.length > 0 ? (
         <span className="flex min-w-0 items-center gap-1 text-2xs text-muted-foreground">
           <CornerDownRight className="size-3 shrink-0" />
@@ -80,8 +88,24 @@ function BoardCard({
           </span>
         </span>
       ) : null}
-      <span className="line-clamp-2 text-[13px] font-medium leading-snug text-foreground">
-        {task.title}
+      <span className="flex min-w-0 items-start gap-1.5">
+        {status ? (
+          <LocalTaskStatusIcon category={status.category} color={status.color} className="mt-0.5" />
+        ) : null}
+        <span className="line-clamp-2 text-[13px] font-medium leading-snug text-foreground">
+          {task.title}
+        </span>
+        {task.priority !== 0 ? <LocalTaskPriorityIcon priority={task.priority} /> : null}
+      </span>
+      <span className="flex min-w-0 items-center gap-2 text-2xs text-muted-foreground">
+        <span className="shrink-0 tabular-nums">{task.ref}</span>
+        <LocalTaskHostTag id={task.id} labels={hostLabels} />
+        <span className="min-w-0 truncate">
+          <LocalTaskWorkspaceCell workspace={workspace} />
+        </span>
+        <span className="ml-auto min-w-0 shrink-0">
+          <LocalTaskHostCell workspace={workspace} />
+        </span>
       </span>
       {task.labels.length > 0 || index.childrenByParentId.has(task.id) ? (
         <div className="flex items-center gap-2">
@@ -89,11 +113,104 @@ function BoardCard({
           <LocalTaskSubtaskProgress task={task} index={index} />
         </div>
       ) : null}
-      <LocalTaskLatestProgress task={task} index={index} />{' '}
-      <LocalTaskProgressBadges task={task} index={index} />
+      <LocalTaskBoardProgress task={task} index={index} />
+      {lead ? (
+        <span className="flex min-w-0 items-center justify-between gap-2">
+          <LocalTaskSessionCell sessions={sessions} lead={lead} inContact={workspace.inContact} />
+          <span className="shrink-0 text-2xs text-muted-foreground">
+            {formatLocalTaskTime(task.updatedAt, now)}
+          </span>
+        </span>
+      ) : null}
     </div>
   )
 }
+
+/** A card's newest writeback, two lines at most; the full text sits in the tooltip. */
+function LocalTaskBoardProgress({
+  task,
+  index
+}: {
+  task: LocalTask
+  index: LocalTaskIndex
+}): React.JSX.Element | null {
+  const progress = useLocalTasksDomain((state) => state.progress)
+  const links = useLocalTasksDomain((state) => state.links)
+  const latest = localTaskVisibleProgress(task, index, { progress, links })
+  if (!latest) {
+    return null
+  }
+  return (
+    <span
+      className="line-clamp-2 text-2xs leading-relaxed text-muted-foreground"
+      title={latest.progress.body}
+    >
+      <span className="mr-1 rounded-sm bg-muted px-1 text-foreground/80">
+        {latest.progress.kind === 'progress'
+          ? translate('localTasks.row.writeback', 'Writeback')
+          : translate('localTasks.row.lastSentence', 'Last line')}
+      </span>
+      {latest.task.id === task.id ? '' : `${latest.task.ref} `}
+      {latest.progress.body}
+    </span>
+  )
+}
+
+function NeedsYouStrip({ model }: { model: LocalTaskListModel }): React.JSX.Element | null {
+  const rows = [...model.band.waiting, ...model.band.review]
+  if (rows.length === 0) {
+    return null
+  }
+  return (
+    <div className="flex min-w-0 items-center gap-2 overflow-x-auto scrollbar-sleek">
+      <span className="flex shrink-0 items-center gap-1.5 text-xs font-medium text-foreground">
+        <Bell className="size-3.5 text-status-warning" aria-hidden />
+        {translate('localTasks.needsYou.title', 'Needs you')}
+        <span className="rounded-full bg-status-warning px-1.5 text-2xs leading-4 tabular-nums text-background">
+          {rows.length}
+        </span>
+      </span>
+      {rows.map((row) => {
+        const status = model.index.statusesById.get(row.task.statusId)
+        const item = row.items.find((candidate) => candidate.kind !== 'unread-done') ?? row.items[0]
+        return (
+          <button
+            key={row.task.id}
+            type="button"
+            onClick={() => localTaskPageStore.getState().openDetail(row.task.id)}
+            className="flex h-7 shrink-0 items-center gap-1.5 rounded-md border border-border/60 bg-card px-2 text-xs hover:bg-accent"
+          >
+            {status ? (
+              <LocalTaskStatusIcon category={status.category} color={status.color} />
+            ) : null}
+            <span className="max-w-48 truncate text-foreground">{row.task.title}</span>
+            <span className="text-2xs text-muted-foreground">{row.task.ref}</span>
+            <span
+              className={cn(
+                'rounded-sm px-1 text-2xs leading-4',
+                row.group === 'review'
+                  ? 'bg-status-success-background text-status-success'
+                  : 'bg-status-warning-background text-status-warning'
+              )}
+            >
+              {row.group === 'review'
+                ? translate('localTasks.row.awaitingAcceptance', 'Awaiting acceptance')
+                : item
+                  ? localTaskAttentionKindLabel(item.kind)
+                  : null}
+            </span>
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+/**
+ * Active work first, then what is done; planning after it so an empty column never pushes
+ * Completed off screen. A drop still moves a card to any column.
+ */
+const COLUMN_ORDER = ['started', 'review', 'unstarted', 'completed', 'backlog', 'canceled'] as const
 
 function BoardColumn({
   column,
@@ -145,7 +262,7 @@ function BoardColumn({
         )
       }}
       className={cn(
-        'flex w-64 shrink-0 flex-col rounded-md border border-border/50 bg-muted/20 transition-[border-color,box-shadow]',
+        'flex w-52 shrink-0 flex-col rounded-md border border-border/50 bg-muted/20 transition-[border-color,box-shadow]',
         dragOver && 'border-ring/70 ring-1 ring-ring/70'
       )}
     >
@@ -181,10 +298,17 @@ export function LocalTaskBoard({ model }: { model: LocalTaskListModel }): React.
   const showCanceled = useLocalTaskPage((state) => state.showCanceledColumn)
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-2">
+      <NeedsYouStrip model={model} />
       <div className="flex min-h-0 flex-1 gap-3 overflow-x-auto pb-1 scrollbar-sleek">
-        {model.columns.map((column) => (
-          <BoardColumn key={column.key} column={column} model={model} />
-        ))}
+        {model.columns
+          .toSorted(
+            (a, b) =>
+              COLUMN_ORDER.indexOf(statusHeadCategory(a)) -
+              COLUMN_ORDER.indexOf(statusHeadCategory(b))
+          )
+          .map((column) => (
+            <BoardColumn key={column.key} column={column} model={model} />
+          ))}
       </div>
       {showCanceled ? null : (
         <p className="flex items-center gap-1.5 text-2xs text-muted-foreground">

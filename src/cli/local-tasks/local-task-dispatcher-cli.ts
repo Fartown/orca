@@ -10,6 +10,10 @@ import { printResult } from '../format'
 import { RuntimeClientError } from '../runtime/types'
 import { cliTime } from './local-task-cli-format'
 import {
+  localTaskProposalFormatHints,
+  localTaskProposalItemProblems
+} from './local-task-proposal-check'
+import {
   callLibrary,
   readTaskLibrary,
   resolveTaskRef,
@@ -132,18 +136,34 @@ export const LOCAL_TASK_DISPATCHER_CLI_HANDLERS: Record<string, CommandHandler> 
         'Write the proposal as { "summary": "...", "items": [ ... ] } or as an array of items.'
       )
     }
+    const problems = localTaskProposalItemProblems(body.data.items)
+    if (problems.length > 0) {
+      throw new RuntimeClientError(
+        'invalid_argument',
+        `The proposal items do not match the format: ${problems.slice(0, 3).join('; ')}`
+      )
+    }
     const library = await readTaskLibrary(client, { access: 'write', links: true })
     const items = LocalTaskProposalItemSchema.array()
       .min(1)
       .max(20)
       .safeParse(body.data.items.map((item) => resolveProposalRefs(library, item)))
     if (!items.success) {
+      const failing = new Set(
+        items.error.issues.map((issue) => issue.path[0]).filter((at) => typeof at === 'number')
+      )
+      const hints = localTaskProposalFormatHints(body.data.items, failing)
       throw new RuntimeClientError(
         'invalid_argument',
-        `The proposal items do not match the format (run orca task guide --dispatcher): ${items.error.issues
-          .slice(0, 3)
-          .map((issue) => `${issue.path.join('.')}: ${issue.message}`)
-          .join('; ')}`
+        [
+          `The proposal items do not match the format: ${items.error.issues
+            .slice(0, 3)
+            .map((issue) => `${issue.path.join('.')}: ${issue.message}`)
+            .join('; ')}`,
+          ...(hints.length > 0
+            ? [`Expected ${hints.join(' | ')}`]
+            : ['See orca task guide --dispatcher'])
+        ].join('. ')
       )
     }
     const { value, envelope } = await write(

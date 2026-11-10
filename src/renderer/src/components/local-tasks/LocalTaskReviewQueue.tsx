@@ -1,59 +1,39 @@
 import { translate } from '@/i18n/i18n'
 import { localTaskNeedsReview } from '../../../../shared/local-tasks/local-task-review-items'
-import { useLocalTasksDomain, isLocalTaskRowWritable } from '@/local-tasks/local-tasks-domain-store'
-import { openLocalTaskPage } from '@/local-tasks/local-task-navigation'
-import { openLocalTaskSession } from '@/local-tasks/local-task-session-reveal'
+import type { LocalTaskBandRow } from '@/local-tasks/local-task-needs-you-band'
+import { LocalTaskRow } from './LocalTaskRow'
 import type { LocalTaskListModel } from './use-local-task-list-model'
-import { LocalTaskAcceptanceStrip } from './LocalTaskAcceptanceStrip'
-import { Button } from '@/components/ui/button'
 
+/** Needs you view: tasks waiting for acceptance, as the home list draws them (REQ-024). */
 export function LocalTaskReviewQueue({
   model
 }: {
   model: LocalTaskListModel
 }): React.JSX.Element | null {
-  const partitions = useLocalTasksDomain((state) => state.partitions)
-  const home = useLocalTasksDomain((state) => state.home)
-  const links = useLocalTasksDomain((state) => state.links)
-  const tasks = model.scopeTasks.filter((task) =>
-    localTaskNeedsReview(task, model.index.projectsById.get(task.projectId))
-  )
-  if (tasks.length === 0) {
+  const rows: LocalTaskBandRow[] = model.scopeTasks
+    .filter((task) => localTaskNeedsReview(task, model.index.projectsById.get(task.projectId)))
+    .map((task) => ({ task, group: 'review', items: [] }))
+  if (rows.length === 0) {
     return null
   }
   return (
-    <section className="flex shrink-0 flex-col gap-2">
-      <h3 className="text-xs font-medium text-muted-foreground">
-        {translate('localTasks.acceptance.queue', 'Tasks waiting for acceptance')} · {tasks.length}
+    <section className="@container/local-task-list flex shrink-0 flex-col overflow-hidden rounded-md border border-border/60">
+      <h3 className="flex h-7 items-center gap-1.5 border-b border-border/40 px-3 text-2xs text-muted-foreground">
+        {translate('localTasks.band.review', 'Awaiting acceptance')}
+        <span className="tabular-nums">{rows.length}</span>
       </h3>
-      {tasks.map((task) => {
-        const session = links.sessions.find(
-          (link) => link.id === task.latestProgress?.sessionLinkId
-        )
-        return (
-          <div key={task.id} className="rounded-xl border border-border bg-card p-3">
-            <div className="mb-2 flex min-w-0 items-center gap-2">
-              <button
-                type="button"
-                className="min-w-0 flex-1 truncate text-left text-sm font-medium hover:underline"
-                onClick={() => openLocalTaskPage({ taskId: task.id })}
-              >
-                {task.title}
-              </button>
-              {session ? (
-                <Button variant="ghost" size="xs" onClick={() => openLocalTaskSession(session)}>
-                  {translate('localTasks.now.viewSession', 'View session')}
-                </Button>
-              ) : null}
-            </div>
-            <LocalTaskAcceptanceStrip
-              task={task}
-              project={model.index.projectsById.get(task.projectId)}
-              writable={isLocalTaskRowWritable({ partitions, home }, task.id)}
-            />
-          </div>
-        )
-      })}
+      {rows.map((row) => (
+        <LocalTaskRow
+          key={row.task.id}
+          task={row.task}
+          index={model.index}
+          statusHeading={null}
+          depth={0}
+          folded={null}
+          hostLabels={model.hostLabels}
+          band={row}
+        />
+      ))}
     </section>
   )
 }

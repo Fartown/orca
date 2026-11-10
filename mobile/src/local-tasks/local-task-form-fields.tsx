@@ -2,6 +2,7 @@ import { useRef, useState, type ReactNode } from 'react'
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
 import { ChevronRight, ListTodo, Pencil, Trash2, X } from 'lucide-react-native'
 import { LOCAL_TASK_TITLE_MAX } from '../../../src/shared/local-tasks/local-task-model'
+import type { LocalTask, LocalTaskProject } from '../../../src/shared/local-tasks/local-task-types'
 import { ActionSheetModal } from '../components/ActionSheetModal'
 import { ConfirmModal } from '../components/ConfirmModal'
 import { colors, spacing } from '../theme/mobile-theme'
@@ -10,9 +11,14 @@ import {
   isMultiLinePaste,
   localTaskDraftEntries,
   splitPastedLines,
+  type LocalTaskDraft,
   type LocalTaskDraftEntry
 } from './local-task-form-state'
+import { LocalTaskGrowingInput } from './local-task-growing-input'
+import { localTaskStatusLookup, orderedLocalTaskStatuses } from './local-task-list-projection'
+import type { LocalTaskDraftPicker } from './local-task-pickers'
 import { localTaskStyles } from './local-tasks-styles'
+import { LocalTaskPriorityIcon, LocalTaskStatusIcon } from './local-tasks-visuals'
 
 /** Subtasks typed into a new task. A paste of several lines adds one entry per line. */
 export function LocalTaskSubtaskEntries(props: {
@@ -89,6 +95,74 @@ export function LocalTaskPropertyRow(props: {
       <View style={styles.propertyValue}>{props.children}</View>
       {props.onPress ? <ChevronRight size={16} color={colors.textMuted} /> : null}
     </Pressable>
+  )
+}
+
+/** Status, priority, labels and (outside a subtask form) parent, each opening its picker. */
+export function LocalTaskPropertiesCard(props: {
+  draft: LocalTaskDraft
+  projects: readonly LocalTaskProject[]
+  tasks: readonly LocalTask[]
+  showParent: boolean
+  hidden: boolean
+  onPick: (picker: LocalTaskDraftPicker) => void
+  onPatch: (next: Partial<LocalTaskDraft>) => void
+}) {
+  const copy = localTasksCopy()
+  const { draft } = props
+  const project = props.projects.find((entry) => entry.id === draft.projectId) ?? null
+  const status = draft.statusId
+    ? (localTaskStatusLookup(props.projects).get(draft.statusId) ?? null)
+    : null
+  // An unset status is the project's first Unstarted one, which the desktop applies on create.
+  const shownStatus =
+    status ??
+    (project
+      ? (orderedLocalTaskStatuses(project).find((entry) => entry.category === 'unstarted') ?? null)
+      : null)
+  const parent = draft.parentId
+    ? (props.tasks.find((task) => task.id === draft.parentId) ?? null)
+    : null
+  return (
+    <View style={[localTaskStyles.card, props.hidden && styles.hidden]}>
+      <LocalTaskPropertyRow label={copy.status} first onPress={() => props.onPick('status')}>
+        <LocalTaskStatusIcon
+          category={shownStatus?.category ?? 'unstarted'}
+          color={shownStatus?.color ?? 'gray'}
+          size={14}
+        />
+        <Text style={localTaskStyles.rowValue}>
+          {shownStatus?.name ?? copy.defaultStatusNames.unstarted}
+        </Text>
+      </LocalTaskPropertyRow>
+      <LocalTaskPropertyRow label={copy.priority} onPress={() => props.onPick('priority')}>
+        <LocalTaskPriorityIcon priority={draft.priority} />
+        <Text style={localTaskStyles.rowValue}>{copy.priorities[draft.priority]}</Text>
+      </LocalTaskPropertyRow>
+      <LocalTaskPropertyRow label={copy.labels}>
+        <LocalTaskGrowingInput
+          style={[localTaskStyles.bareInput, styles.labels]}
+          minHeight={21}
+          blurOnSubmit
+          value={draft.labelsText}
+          onChangeText={(labelsText) =>
+            props.onPatch({ labelsText: labelsText.replace(/\r?\n/g, ' ') })
+          }
+          placeholder={copy.labelsPlaceholder}
+          placeholderTextColor={colors.textMuted}
+        />
+      </LocalTaskPropertyRow>
+      {props.showParent ? (
+        <LocalTaskPropertyRow label={copy.parent} onPress={() => props.onPick('parent')}>
+          <Text
+            style={parent ? localTaskStyles.rowValue : localTaskStyles.rowValueMuted}
+            numberOfLines={1}
+          >
+            {parent ? parent.title : copy.none}
+          </Text>
+        </LocalTaskPropertyRow>
+      ) : null}
+    </View>
   )
 }
 
@@ -192,5 +266,7 @@ const styles = StyleSheet.create({
     marginRight: -9
   },
   addRow: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: spacing.sm },
+  labels: { flex: 1, lineHeight: 21 },
+  hidden: { display: 'none' },
   propertyValue: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }
 })

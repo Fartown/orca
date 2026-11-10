@@ -2,7 +2,7 @@ import { useCallback, useMemo, useState } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import { translate } from '@/i18n/i18n'
 import { useAppStore } from '@/store'
-import { selectExecutionHostDisplayLabel } from '@/lib/execution-host-display-label'
+import { selectLocalTaskHostLabel } from '@/local-tasks/local-task-host-label'
 import type { ExecutionHostId } from '../../../shared/execution-host'
 import type { LocalTask } from '../../../shared/local-tasks/local-task-types'
 import type { Worktree } from '../../../shared/worktree/types'
@@ -72,7 +72,7 @@ export function useLocalTaskLinkDraft(args: {
   )
   const endpoint = hostId ? localTaskEndpointForHost(hostId) : null
   const libraryLabel = useAppStore((state) =>
-    endpoint ? selectExecutionHostDisplayLabel(state, endpoint) : ''
+    endpoint ? selectLocalTaskHostLabel(state, endpoint) : ''
   )
   const workspace = useMemo<DraftWorkspace | null>(
     () =>

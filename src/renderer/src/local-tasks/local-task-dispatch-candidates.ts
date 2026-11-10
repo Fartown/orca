@@ -4,7 +4,7 @@ import {
   selectWorktreesByRepo,
   getFolderWorkspaceWorktree
 } from '@/store/workspace-record-selectors'
-import { selectExecutionHostDisplayLabel } from '@/lib/execution-host-display-label'
+import { selectLocalTaskHostLabel } from '@/local-tasks/local-task-host-label'
 import { getRepoExecutionHostId, normalizeExecutionHostId } from '../../../shared/execution-host'
 import type { Repo } from '../../../shared/repo-types'
 import type { Worktree } from '../../../shared/worktree/types'
@@ -53,6 +53,8 @@ export type LocalTaskDispatchCandidate =
       hostId: string | null
       available: boolean
       task: LocalTask
+      /** The workspace it works in, its own or an ancestor's; null before it has one. */
+      workspaceName: string | null
     }
   | { kind: 'host'; id: string; label: string; detail: string; hostId: string; available: boolean }
 
@@ -75,7 +77,7 @@ export function localTaskDispatchCandidates(
         kind: 'workspace',
         id: `workspace:${hostId}:${worktree.id}`,
         label: worktree.displayName,
-        detail: selectExecutionHostDisplayLabel(state, hostId),
+        detail: selectLocalTaskHostLabel(state, hostId),
         hostId,
         available: isLocalTaskHostInContact(state, hostId),
         worktree
@@ -119,7 +121,7 @@ export function localTaskDispatchCandidates(
         kind: 'repo',
         id: `repo:${hostId}:${repo.id}`,
         label: repo.displayName,
-        detail: selectExecutionHostDisplayLabel(state, hostId),
+        detail: selectLocalTaskHostLabel(state, hostId),
         hostId,
         available: isLocalTaskHostInContact(state, hostId),
         repo,
@@ -135,13 +137,20 @@ export function localTaskDispatchCandidates(
       kind: 'task',
       id: `task:${task.id}`,
       label: `${task.ref} ${task.title}`,
-      detail: displayHostId ? selectExecutionHostDisplayLabel(state, displayHostId) : '',
+      detail: displayHostId ? selectLocalTaskHostLabel(state, displayHostId) : '',
       hostId,
       available:
         writableEndpoints.includes(localTaskIdEndpoint(task.id)) &&
         hostId !== null &&
         isLocalTaskHostInContact(state, hostId),
-      task
+      task,
+      workspaceName: workspace
+        ? ((workspace.worktreeId
+            ? state.getKnownWorktreeById(workspace.worktreeId)?.displayName
+            : undefined) ??
+          workspace.nameSnapshot ??
+          null)
+        : null
     }
   })
   const hostRows: LocalTaskDispatchCandidate[] = hostOptions.map((host) => ({

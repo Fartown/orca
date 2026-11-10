@@ -3,6 +3,7 @@ import { getAgentCatalog } from '@/lib/agent-catalog'
 import { getRepoExecutionHostId, normalizeExecutionHostId } from '../../../shared/execution-host'
 import { normalizeDisabledTuiAgents, pickTuiAgent } from '../../../shared/tui-agent-selection'
 import type { TuiAgent } from '../../../shared/tui-agent'
+import type { LocalTaskProposalItem } from '../../../shared/local-tasks/local-task-dispatcher-rpc-params'
 import type { LocalTaskProject } from '../../../shared/local-tasks/local-task-types'
 import {
   localTaskEndpointForHost,
@@ -10,7 +11,11 @@ import {
   SELF_LOCAL_TASK_ENDPOINT,
   type LocalTaskEndpointKey
 } from './local-task-endpoints'
-import { orcaProjectIdForRepo, orcaProjectIdsForWorktree } from './local-task-workspace-resolution'
+import {
+  localTaskWorktreeHostId,
+  orcaProjectIdForRepo,
+  orcaProjectIdsForWorktree
+} from './local-task-workspace-resolution'
 
 /** Why a proposal item could not be placed, worded for the dispatcher that reads the result. */
 export type LocalTaskProposalMiss = { miss: string }
@@ -36,43 +41,63 @@ export function projectsOfLibrary(
   return projects.filter((project) => localTaskIdEndpoint(project.id) === library)
 }
 
-function byName(projects: readonly LocalTaskProject[], name: string): LocalTaskProject[] {
+/** Whether an item's `project` names this task project, by name, prefix or alias. */
+export function proposalProjectIsNamed(project: LocalTaskProject, name: string): boolean {
   const wanted = name.trim().toLowerCase()
-  return projects.filter(
-    (project) =>
-      project.name.toLowerCase() === wanted ||
-      project.prefix.toLowerCase() === wanted ||
-      project.aliases.some((alias) => alias.toLowerCase() === wanted)
+  return (
+    project.name.toLowerCase() === wanted ||
+    project.prefix.toLowerCase() === wanted ||
+    project.aliases.some((alias) => alias.toLowerCase() === wanted)
   )
 }
 
 /**
- * The task project an item's new task goes in: the one it names, else the one whose Orca projects
- * hold its target, else the only project there is. Several candidates are a miss, never a guess.
+ * The task projects an unnamed item's new task could go in: those whose Orca projects hold its
+ * target, else the only project there is. One is taken; several must be named, never guessed.
  */
+export function proposalProjectCandidates(
+  projects: readonly LocalTaskProject[],
+  targetOrcaProjectIds: ReadonlySet<string> | null,
+  library: LocalTaskEndpointKey = SELF_LOCAL_TASK_ENDPOINT
+): LocalTaskProject[] {
+  const own = projectsOfLibrary(projects, library)
+  const holding = targetOrcaProjectIds
+    ? own.filter((project) => project.repos.some((id) => targetOrcaProjectIds.has(id)))
+    : []
+  if (holding.length > 0) {
+    return holding
+  }
+  if (own.length === 1) {
+    return own
+  }
+  return targetOrcaProjectIds ? [] : own
+}
+
+/** The task project an item's new task goes in: the one it names, else its only candidate. */
 export function resolveProposalProject(
   projects: readonly LocalTaskProject[],
   named: string | undefined,
   targetOrcaProjectIds: ReadonlySet<string> | null,
   library: LocalTaskEndpointKey = SELF_LOCAL_TASK_ENDPOINT
 ): LocalTaskProject | LocalTaskProposalMiss {
-  const own = projectsOfLibrary(projects, library)
   if (named) {
-    const found = byName(own, named)
+    const found = projectsOfLibrary(projects, library).filter((project) =>
+      proposalProjectIsNamed(project, named)
+    )
     return found.length === 1 ? found[0] : { miss: `no single task project named "${named}"` }
   }
-  const holding = targetOrcaProjectIds
-    ? own.filter((project) => project.repos.some((id) => targetOrcaProjectIds.has(id)))
-    : []
-  if (holding.length === 1) {
-    return holding[0]
+  const candidates = proposalProjectCandidates(projects, targetOrcaProjectIds, library)
+  if (candidates.length === 1) {
+    return candidates[0]
   }
-  if (holding.length === 0 && own.length === 1) {
-    return own[0]
-  }
-  return own.length === 0 || (holding.length === 0 && targetOrcaProjectIds)
+  return candidates.length === 0
     ? { miss: 'no task project here tracks this repository; ask the user to set one up' }
-    : { miss: 'name the task project: more than one could take this task' }
+    : {
+        // Why the prefixes: the dispatcher reads this in its inbox and can resubmit with one.
+        miss: `name the task project: more than one could take this task (${candidates
+          .map((project) => project.prefix)
+          .join(', ')})`
+      }
 }
 
 /** A workspace row this window lists, as the composer's creations hand it over. */
@@ -91,19 +116,59 @@ export function findProposalWorktree(
   )
 }
 
-export function proposalWorktreeProjects(state: AppState, worktree: ProposalWorktree): Set<string> {
-  return orcaProjectIdsForWorktree(state, worktree)
+/** The Orca projects a target sits in and the library its new task belongs in. */
+export type ProposalProjectScope = {
+  orcaProjectIds: ReadonlySet<string>
+  library: LocalTaskEndpointKey
 }
 
-/** The host a repository runs on, for the library its tasks belong in. */
-export function proposalRepoHostId(state: AppState, repoId: string): string | null {
-  const repo = state.repos.find((candidate) => candidate.id === repoId)
-  return repo ? getRepoExecutionHostId(repo) : null
+export function proposalWorktreeScope(
+  state: AppState,
+  worktree: ProposalWorktree
+): ProposalProjectScope {
+  return {
+    orcaProjectIds: orcaProjectIdsForWorktree(state, worktree),
+    library: proposalLibraryFor(localTaskWorktreeHostId(state, worktree))
+  }
 }
 
-export function proposalRepoProjects(state: AppState, repoId: string): Set<string> | null {
+/** A repository's scope from the host it runs on; null when this window does not list it. */
+export function proposalRepoScope(state: AppState, repoId: string): ProposalProjectScope | null {
   const repo = state.repos.find((candidate) => candidate.id === repoId)
-  return repo ? new Set([orcaProjectIdForRepo(state, repo)]) : null
+  return repo
+    ? {
+        orcaProjectIds: new Set([orcaProjectIdForRepo(state, repo)]),
+        library: proposalLibraryFor(getRepoExecutionHostId(repo))
+      }
+    : null
+}
+
+function proposalItemScope(
+  state: AppState,
+  item: LocalTaskProposalItem
+): ProposalProjectScope | null {
+  const target = item.kind === 'start' || item.kind === 'record' ? item.target : null
+  if (!target) {
+    return null
+  }
+  if ('repoId' in target) {
+    return proposalRepoScope(state, target.repoId)
+  }
+  const worktree = findProposalWorktree(state, target)
+  return isProposalMiss(worktree) ? null : proposalWorktreeScope(state, worktree)
+}
+
+/**
+ * The task projects a start or record could put its new task in, read from this window's own rows
+ * by the rule the run uses; empty for other kinds and for targets this window does not list.
+ */
+export function proposalItemProjectCandidates(
+  state: AppState,
+  projects: readonly LocalTaskProject[],
+  item: LocalTaskProposalItem
+): LocalTaskProject[] {
+  const scope = proposalItemScope(state, item)
+  return scope ? proposalProjectCandidates(projects, scope.orcaProjectIds, scope.library) : []
 }
 
 /** The agent an item asks for when it is installed and on, else the user's default. */

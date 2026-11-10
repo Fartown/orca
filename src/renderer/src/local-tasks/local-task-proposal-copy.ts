@@ -8,7 +8,16 @@ export type LocalTaskProposalNames = {
   repo: (repoId: string) => string
 }
 
-export type LocalTaskProposalItemCopy = { title: string; detail: string | null }
+/** The item's text as the person reads it; the detail is the words it sends or gives as reason. */
+export type LocalTaskProposalItemCopy = {
+  title: string
+  detail: string | null
+  detailLabel: string | null
+}
+
+function firstLine(): string {
+  return translate('localTasks.dispatcher.field.prompt', 'First line')
+}
 
 /** One line per item as the person reads it before confirming (REQ-030). */
 export function describeLocalTaskProposalItem(
@@ -29,7 +38,8 @@ export function describeLocalTaskProposalItem(
                 'New task “{{title}}” in a new workspace of {{place}}',
                 { title: item.title, place: names.repo(item.target.repoId) }
               ),
-        detail: item.prompt
+        detail: item.prompt,
+        detailLabel: firstLine()
       }
     case 'subtask':
       return {
@@ -37,21 +47,24 @@ export function describeLocalTaskProposalItem(
           ref: names.taskRef(item.parentTaskId),
           title: item.title
         }),
-        detail: item.prompt
+        detail: item.prompt,
+        detailLabel: firstLine()
       }
     case 'append':
       return {
         title: translate('localTasks.dispatcher.item.append', 'Tell the session on {{ref}}', {
           ref: names.taskRef(item.taskId)
         }),
-        detail: item.text
+        detail: item.text,
+        detailLabel: translate('localTasks.dispatcher.field.text', 'Append')
       }
     case 'stop':
       return {
         title: translate('localTasks.dispatcher.item.stop', 'Stop the session on {{ref}}', {
           ref: names.taskRef(item.taskId)
         }),
-        detail: item.reason
+        detail: item.reason,
+        detailLabel: translate('localTasks.dispatcher.field.reason', 'Reason')
       }
     case 'link':
       return {
@@ -59,7 +72,8 @@ export function describeLocalTaskProposalItem(
           ref: names.taskRef(item.taskId),
           place: names.workspace(item.target.worktreeId)
         }),
-        detail: null
+        detail: null,
+        detailLabel: null
       }
     case 'record':
       return {
@@ -68,7 +82,8 @@ export function describeLocalTaskProposalItem(
           'Record the work in {{place}} as task “{{title}}”',
           { place: names.workspace(item.target.worktreeId), title: item.title }
         ),
-        detail: null
+        detail: null,
+        detailLabel: null
       }
   }
 }

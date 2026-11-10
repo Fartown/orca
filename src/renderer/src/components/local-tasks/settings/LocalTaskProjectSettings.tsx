@@ -27,23 +27,20 @@ import { runLocalTaskWrite } from '@/local-tasks/local-task-writes'
 import { localTasksSync } from '@/local-tasks/local-tasks-sync'
 import { useRevisionedFieldDraft, type LocalTaskFieldDraft } from '../use-local-task-field-draft'
 import type { LocalTasksProjectsUpdateInput } from '../../../../../shared/local-tasks/local-tasks-rpc-params'
-import { LocalTaskProjectRules } from './LocalTaskProjectRules'
 import { LocalTaskProjectRepos } from './LocalTaskProjectRepos'
+import { LocalTaskStatusOverview } from './LocalTaskStatusOverview'
 
 function Field({
   label,
-  help,
   children
 }: {
   label: string
-  help?: string
   children: React.ReactNode
 }): React.JSX.Element {
   return (
-    <div className="space-y-2">
+    <div className="flex min-w-0 flex-col gap-2">
       <Label>{label}</Label>
       {children}
-      {help ? <p className="text-xs text-muted-foreground">{help}</p> : null}
     </div>
   )
 }
@@ -133,7 +130,7 @@ function RemoveProjectDialog({
   )
 }
 
-/** Name, prefix (earlier prefixes stay as aliases) and delete for one task project. */
+/** Name, prefix (earlier prefixes stay as aliases), repos, statuses and delete for one project. */
 export function LocalTaskProjectSettings({
   project,
   writable
@@ -222,55 +219,61 @@ export function LocalTaskProjectSettings({
   }
 
   return (
-    <section className="flex flex-col gap-5">
-      <Field label={translate('localTasks.settings.name', 'Name')}>
-        <Input
-          value={name.value}
-          disabled={!writable}
-          maxLength={LOCAL_TASK_PROJECT_NAME_MAX}
-          onChange={(event) => {
-            name.edit(event.target.value)
-            setNameError(null)
-          }}
-          onBlur={saveName}
-          onKeyDown={(event) => {
-            if (event.key === 'Enter' && !isImeCompositionKeyDown(event)) {
-              event.currentTarget.blur()
-            }
-          }}
-        />
+    <section className="flex min-w-0 flex-col gap-4">
+      <div className="space-y-2">
+        <div className="grid grid-cols-2 gap-3">
+          <Field label={translate('localTasks.settings.name', 'Name')}>
+            <Input
+              value={name.value}
+              disabled={!writable}
+              maxLength={LOCAL_TASK_PROJECT_NAME_MAX}
+              onChange={(event) => {
+                name.edit(event.target.value)
+                setNameError(null)
+              }}
+              onBlur={saveName}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' && !isImeCompositionKeyDown(event)) {
+                  event.currentTarget.blur()
+                }
+              }}
+            />
+          </Field>
+          <Field label={translate('localTasks.settings.prefix', 'Ref prefix')}>
+            <Input
+              value={prefix.value}
+              disabled={!writable}
+              maxLength={10}
+              onChange={(event) => {
+                prefix.edit(event.target.value.toUpperCase())
+                setPrefixError(null)
+              }}
+              aria-invalid={prefixError !== null || undefined}
+              className="font-mono"
+            />
+          </Field>
+        </div>
         {nameError ? <p className="text-xs text-destructive">{nameError}</p> : null}
         <ProjectFieldConflict field={name} />
-      </Field>
-      <LocalTaskProjectRepos project={project} writable={writable} />
-      <Field
-        label={translate('localTasks.settings.prefix', 'Ref prefix')}
-        help={translate(
-          'localTasks.settings.prefixHelp',
-          'Changing it keeps the old prefix as an alias: old refs still search and open, and no other project can take it.'
-        )}
-      >
-        <div className="flex items-center gap-2">
-          <Input
-            value={prefix.value}
-            disabled={!writable}
-            maxLength={10}
-            onChange={(event) => {
-              prefix.edit(event.target.value.toUpperCase())
-              setPrefixError(null)
-            }}
-            aria-invalid={prefixError !== null || undefined}
-            className="w-32"
-          />
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={!writable || prefix.value === project.prefix || prefix.saving}
-            onClick={() => void savePrefix()}
-          >
-            {translate('localTasks.settings.savePrefix', 'Change prefix')}
-          </Button>
-        </div>
+        {/* Why only while edited: the alias rule matters at the moment of change, not at rest. */}
+        {prefix.value !== project.prefix ? (
+          <div className="flex items-start gap-2">
+            <Button
+              variant="outline"
+              size="xs"
+              disabled={!writable || prefix.saving}
+              onClick={() => void savePrefix()}
+            >
+              {translate('localTasks.settings.savePrefix', 'Change prefix')}
+            </Button>
+            <p className="text-xs text-muted-foreground">
+              {translate(
+                'localTasks.settings.prefixHelp',
+                'Changing it keeps the old prefix as an alias: old refs still search and open, and no other project can take it.'
+              )}
+            </p>
+          </div>
+        ) : null}
         {prefixError ? <p className="text-xs text-destructive">{prefixError}</p> : null}
         <ProjectFieldConflict field={prefix} />
         {project.aliases.length > 0 ? (
@@ -280,8 +283,9 @@ export function LocalTaskProjectSettings({
             })}
           </p>
         ) : null}
-      </Field>
-      <LocalTaskProjectRules project={project} writable={writable} />
+      </div>
+      <LocalTaskProjectRepos project={project} writable={writable} />
+      <LocalTaskStatusOverview project={project} writable={writable} />
       <div className="flex items-center justify-between gap-3 rounded-md border border-border/60 px-3 py-2">
         <p className="text-xs text-muted-foreground">
           {translate(

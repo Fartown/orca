@@ -1,12 +1,6 @@
 import { useState } from 'react'
-import { ArrowLeft, ChevronDown, ChevronUp, MoreHorizontal, Trash2 } from 'lucide-react'
+import { ArrowLeft, ChevronDown, ChevronUp } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger
-} from '@/components/ui/dropdown-menu'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { ShortcutKeyCombo } from '@/components/ShortcutKeyCombo'
 import { translate } from '@/i18n/i18n'
@@ -20,8 +14,8 @@ import { useLocalTaskRowWritable } from '@/local-tasks/local-tasks-domain-store'
 import { localTaskDescendantIds } from '../../../../shared/local-tasks/local-task-tree'
 import { LocalTaskStatusIcon } from './LocalTaskIcons'
 import { LocalTaskDetailBody, LocalTaskDetailTitle } from './LocalTaskDetailBody'
-import { LocalTaskLatestProgressCard } from './LocalTaskLatestProgress'
 import { LocalTaskDetailProperties } from './LocalTaskDetailProperties'
+import { LocalTaskDetailMenu, LocalTaskDetailPrimaryAction } from './LocalTaskDetailActions'
 import { LocalTaskSubtasks } from './LocalTaskSubtasks'
 import { LocalTaskActivity } from './LocalTaskActivity'
 import { LocalTaskWorkspaceCard } from './LocalTaskWorkspaceCard'
@@ -83,6 +77,7 @@ export function LocalTaskDetail({
 }): React.JSX.Element {
   const writable = useLocalTaskRowWritable(taskId)
   const [deleting, setDeleting] = useState(false)
+  const [editingProperties, setEditingProperties] = useState(false)
   useLocalTaskEscapeLayer('panel', true, back)
   const task = model.index.tasksById.get(taskId)
   const ownLink = useLocalTaskWorkspaceLink(task?.id ?? null)
@@ -148,36 +143,37 @@ export function LocalTaskDetail({
             {position + 1} / {model.orderedTaskIds.length}
           </span>
         ) : null}
-        {writable ? (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon-xs"
-                className="ml-auto"
-                aria-label={translate('localTasks.detail.actions', 'Task actions')}
-              >
-                <MoreHorizontal className="size-3.5" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem variant="destructive" onSelect={() => setDeleting(true)}>
-                <Trash2 />
-                {translate('localTasks.detail.delete', 'Delete task…')}
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        ) : null}
       </header>
       <div className="min-h-0 flex-1 overflow-y-auto scrollbar-sleek">
         <div key={task.id} className="mx-auto flex max-w-4xl flex-col gap-6 px-1 pb-10 pr-3">
-          <div className="flex flex-col gap-3">
-            <LocalTaskDetailTitle task={task} writable={writable} />
+          <div className="flex flex-col gap-2.5">
+            <div className="flex items-start gap-3">
+              <div className="min-w-0 flex-1">
+                <LocalTaskDetailTitle task={task} writable={writable} />
+              </div>
+              <div className="flex shrink-0 items-center gap-1 pt-0.5">
+                <LocalTaskDetailPrimaryAction
+                  task={task}
+                  project={project}
+                  ownLink={ownLink}
+                  workspace={workspace}
+                />
+                <LocalTaskDetailMenu
+                  task={task}
+                  index={model.index}
+                  writable={writable}
+                  onEditProperties={() => setEditingProperties(true)}
+                  onDelete={() => setDeleting(true)}
+                />
+              </div>
+            </div>
             <LocalTaskDetailProperties
               task={task}
               index={model.index}
               allTasks={model.tasks}
               writable={writable}
+              editing={editingProperties}
+              onEditingChange={setEditingProperties}
             />
             <LocalTaskWorkspaceCard
               task={task}
@@ -196,7 +192,6 @@ export function LocalTaskDetail({
             index={model.index}
             writable={writable}
           />
-          <LocalTaskLatestProgressCard task={task} />
           <LocalTaskDetailBody task={task} writable={writable} />
           <LocalTaskSubtasks task={task} index={model.index} writable={writable} />
           <LocalTaskActivity taskId={task.id} index={model.index} writable={writable} />

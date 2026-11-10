@@ -188,13 +188,18 @@ export function localTaskAttentionItem(
     return null
   }
   const agent = link.agent ?? row.agentType ?? null
+  // Why: the question itself tells the user what to answer; the prose before it often does not.
+  const asked =
+    kind === 'question'
+      ? parseAskFromStatus(row.interactivePrompt, row.toolName)?.questions[0]?.question.trim()
+      : undefined
   return {
     key: localTaskAttentionKey(row.paneKey, row.stateStartedAt),
     taskId: link.taskId,
     taskSessionId: link.id,
     kind,
     agent: agent && agent !== 'unknown' ? agent.slice(0, AGENT_LABEL_MAX) : null,
-    lastMessage: evidence.lastMessage,
+    lastMessage: asked ? asked.slice(0, LAST_MESSAGE_MAX) : evidence.lastMessage,
     since: row.stateStartedAt,
     // Why: only a finished turn takes typed input; every wait is answered inside the session.
     replyable: kind === 'unread-done'

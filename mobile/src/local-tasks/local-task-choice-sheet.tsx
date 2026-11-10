@@ -17,8 +17,28 @@ export type LocalTaskChoice = {
   label: string
   /** Why a choice is greyed out, or what it adds. */
   subtitle?: string
+  /** A short fact on the right, e.g. which task already holds it. */
+  tag?: string
+  /** Consecutive choices with the same section are drawn as one titled group. */
+  section?: string
   disabled?: boolean
   onPress: () => void
+}
+
+/** Consecutive choices grouped by section, each group keeping its order. */
+function choiceGroups(
+  choices: readonly LocalTaskChoice[]
+): { section: string | undefined; choices: LocalTaskChoice[] }[] {
+  const groups: { section: string | undefined; choices: LocalTaskChoice[] }[] = []
+  for (const choice of choices) {
+    const last = groups.at(-1)
+    if (last && last.section === choice.section) {
+      last.choices.push(choice)
+    } else {
+      groups.push({ section: choice.section, choices: [choice] })
+    }
+  }
+  return groups
 }
 
 /**
@@ -77,36 +97,52 @@ export function LocalTaskChoiceSheet(props: {
         <Text style={[localTaskStyles.hint, styles.noMatch]}>{localTasksCopy().filteredEmpty}</Text>
       ) : null}
       {props.loading ? <ActivityIndicator color={colors.textSecondary} /> : null}
-      {props.choices.length > 0 ? (
-        <View style={styles.group}>
-          {props.choices.map((choice, index) => (
-            <View key={choice.key}>
-              {index > 0 ? <View style={styles.separator} /> : null}
-              <Pressable
-                testID={`local-task-choice-${choice.key}`}
-                style={({ pressed }) => [
-                  styles.row,
-                  pressed && !choice.disabled && styles.rowPressed,
-                  choice.disabled && localTaskStyles.disabled
-                ]}
-                disabled={choice.disabled}
-                accessibilityRole="button"
-                accessibilityState={{ disabled: choice.disabled === true }}
-                onPress={choice.onPress}
-              >
-                <Text style={styles.label} numberOfLines={1}>
-                  {choice.label}
-                </Text>
-                {choice.subtitle ? (
-                  <Text style={localTaskStyles.meta} numberOfLines={1}>
-                    {choice.subtitle}
-                  </Text>
-                ) : null}
-              </Pressable>
-            </View>
-          ))}
+      {choiceGroups(props.choices).map((group, at) => (
+        <View key={`${group.section ?? ''}:${at}`} style={styles.section}>
+          {group.section ? (
+            <Text style={styles.sectionTitle}>
+              {group.section} <Text style={styles.sectionCount}>{group.choices.length}</Text>
+            </Text>
+          ) : null}
+          <View style={styles.group}>
+            {group.choices.map((choice, index) => (
+              <View key={choice.key}>
+                {index > 0 ? <View style={styles.separator} /> : null}
+                <Pressable
+                  testID={`local-task-choice-${choice.key}`}
+                  style={({ pressed }) => [
+                    styles.row,
+                    pressed && !choice.disabled && styles.rowPressed,
+                    choice.disabled && localTaskStyles.disabled
+                  ]}
+                  disabled={choice.disabled}
+                  accessibilityRole="button"
+                  accessibilityState={{ disabled: choice.disabled === true }}
+                  onPress={choice.onPress}
+                >
+                  <View style={styles.rowText}>
+                    <Text style={styles.label} numberOfLines={1}>
+                      {choice.label}
+                    </Text>
+                    {choice.subtitle ? (
+                      <Text style={localTaskStyles.meta} numberOfLines={1}>
+                        {choice.subtitle}
+                      </Text>
+                    ) : null}
+                  </View>
+                  {choice.tag ? (
+                    <View style={localTaskStyles.label}>
+                      <Text style={localTaskStyles.labelText} numberOfLines={1}>
+                        {choice.tag}
+                      </Text>
+                    </View>
+                  ) : null}
+                </Pressable>
+              </View>
+            ))}
+          </View>
         </View>
-      ) : null}
+      ))}
     </BottomDrawer>
   )
 }
@@ -135,7 +171,22 @@ const styles = StyleSheet.create({
   },
   searchInput: { flex: 1, paddingVertical: 6 },
   noMatch: { paddingHorizontal: spacing.xs, paddingBottom: spacing.sm },
-  row: { paddingVertical: spacing.md, paddingHorizontal: spacing.md + 2, gap: 2 },
+  section: { gap: spacing.xs, marginBottom: spacing.sm },
+  sectionTitle: {
+    paddingHorizontal: spacing.xs,
+    color: colors.textSecondary,
+    fontSize: typography.metaSize,
+    fontWeight: '600'
+  },
+  sectionCount: { color: colors.textMuted, fontWeight: '400' },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md + 2
+  },
+  rowText: { flex: 1, minWidth: 0, gap: 2 },
   rowPressed: { backgroundColor: colors.bgRaised },
   label: { color: colors.textPrimary, fontSize: typography.bodySize }
 })

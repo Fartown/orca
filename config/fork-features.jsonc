@@ -3981,6 +3981,11 @@
           "why": "Task-first navigation and session preview reuse the existing workspace/session surfaces (REQ-026, REQ-028)"
         },
         {
+          "file": "src/renderer/src/components/native-chat/NativeChatComposerPane.tsx",
+          "mustContain": "LocalTaskDispatcherPanelDock",
+          "why": "The dispatcher's proposals wait above its own chat input, so they are confirmed where it proposed them (REQ-030)"
+        },
+        {
           "file": "mobile/src/session/use-mobile-session-foundation.ts",
           "mustContain": "MobileSessionScopeOverride",
           "why": "Task-first navigation and session preview reuse the existing workspace/session surfaces (REQ-026, REQ-028)"
@@ -4179,7 +4184,27 @@
         "src/renderer/src/components/local-tasks/LocalTaskProposalCard.test.tsx",
         "src/renderer/src/local-tasks/local-task-dispatcher-proposals.test.ts",
         "src/renderer/src/local-tasks/local-task-proposal-execution.test.ts",
-        "src/main/ipc/desktop-runtime-sender-lifecycle.test.ts"
+        "src/main/ipc/desktop-runtime-sender-lifecycle.test.ts",
+        "src/renderer/src/local-tasks/local-task-needs-you-band.test.ts",
+        "src/renderer/src/local-tasks/local-task-progress-sections.test.ts",
+        "src/renderer/src/local-tasks/local-task-writebacks.test.ts",
+        "src/renderer/src/local-tasks/local-task-sidebar-tree.test.ts",
+        "src/renderer/src/local-tasks/local-task-create-workspace-choices.test.ts",
+        "src/renderer/src/local-tasks/local-task-proposal-progress.test.ts",
+        "src/renderer/src/local-tasks/local-task-proposal-item-facts.test.ts",
+        "src/renderer/src/components/local-tasks/LocalTaskCreateDialog.test.tsx",
+        "src/renderer/src/components/local-tasks/LocalTaskSessionChip.test.tsx",
+        "src/renderer/src/components/local-tasks/LocalTaskSidebarTree.test.tsx",
+        "src/renderer/src/components/local-tasks/LocalTaskSessionList.test.tsx",
+        "src/renderer/src/components/local-tasks/settings/LocalTaskProjectRules.test.tsx",
+        "src/shared/local-tasks/local-task-create-plan.test.ts",
+        "mobile/src/local-tasks/local-task-card-facts.test.ts",
+        "mobile/src/local-tasks/local-task-create-choices.test.ts",
+        "mobile/src/local-tasks/local-task-create-kickoff.test.ts",
+        "mobile/src/local-tasks/local-tasks-copy.test.ts",
+        "mobile/src/local-tasks/local-tasks-library-header.test.tsx",
+        "src/renderer/src/local-tasks/local-task-proposal-targets.test.ts",
+        "src/renderer/src/local-tasks/local-task-dispatcher-ask.test.ts"
       ],
       "checks": [
         "pnpm exec vitest run --config config/vitest.config.ts src/main/local-tasks src/shared/local-tasks src/main/runtime/rpc/methods/local-tasks.test.ts src/shared/host-operation-ownership.test.ts src/main/runtime/runtime-rpc/fork-mobile-rpc-method-allowlist.test.ts src/main/runtime/runtime-rpc-mobile-method-allowlist.test.ts src/cli/local-tasks src/main/ipc/desktop-runtime-sender-lifecycle.test.ts",

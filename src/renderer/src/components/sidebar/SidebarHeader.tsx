@@ -72,7 +72,7 @@ const SidebarHeader = React.memo(function SidebarHeader({
       <div className="flex shrink-0 items-center gap-1">
         <LocalTaskSidebarModeButton />
         <Popover
-          open={introOpen}
+          open={introOpen && !taskMode}
           onOpenChange={(open) => {
             if (!open) {
               acknowledgeIntro()
@@ -81,7 +81,7 @@ const SidebarHeader = React.memo(function SidebarHeader({
         >
           <Tooltip>
             <TooltipTrigger asChild>
-              <span className="inline-flex shrink-0">
+              <span className={cn('inline-flex shrink-0', taskMode && 'hidden')}>
                 <PopoverAnchor asChild>
                   <Button
                     type="button"
@@ -168,11 +168,13 @@ const SidebarHeader = React.memo(function SidebarHeader({
             </div>
           </PopoverContent>
         </Popover>
-        <SidebarHeaderActions
-          onWorkspaceBoardMenuOpenChange={onWorkspaceBoardMenuOpenChange}
-          agentsViewActive={agentsViewActive}
-          activityOptionsTarget={activityOptionsTarget}
-        />
+        {taskMode ? null : (
+          <SidebarHeaderActions
+            onWorkspaceBoardMenuOpenChange={onWorkspaceBoardMenuOpenChange}
+            agentsViewActive={agentsViewActive}
+            activityOptionsTarget={activityOptionsTarget}
+          />
+        )}
       </div>
     </div>
   )

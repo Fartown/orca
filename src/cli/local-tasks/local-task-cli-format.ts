@@ -17,6 +17,12 @@ export type TaskCliSummary = {
   labels: string[]
 }
 
+/** A row of `orca task list`: enough for the dispatcher to see who owns which workspace. */
+export type TaskCliListItem = TaskCliSummary & {
+  workspace: { hostId: string; name: string | null; worktreeId: string | null } | null
+  latestProgress: { at: string; body: string } | null
+}
+
 export type TaskCliDetail = TaskCliSummary & {
   description: string
   workspace: {
@@ -24,6 +30,8 @@ export type TaskCliDetail = TaskCliSummary & {
     kind: LocalTaskWorkspaceLink['kind']
     name: string | null
     branch: string | null
+    /** What a proposal's `target.worktreeId` names. */
+    worktreeId: string | null
   } | null
   /** The agent's newest writeback (REQ-022). */
   latestProgress: { at: string; body: string; needsYou: string | null } | null
@@ -71,7 +79,8 @@ export function detailTask(
           hostId: link.hostId,
           kind: link.kind,
           name: link.nameSnapshot,
-          branch: link.branchSnapshot
+          branch: link.branchSnapshot,
+          worktreeId: link.worktreeId
         }
       : null,
     latestProgress: progress
@@ -92,9 +101,41 @@ function contextLine(task: TaskCliSummary): string {
   return [task.ref, task.status, task.project].filter(Boolean).join(' · ')
 }
 
-export function formatTaskList(result: { tasks: TaskCliSummary[] }): string {
+/** The progress line is cut to its first line; `orca task show` has the whole writeback. */
+const LIST_PROGRESS_MAX = 160
+
+export function listTask(
+  resolved: ResolvedTask,
+  link: LocalTaskWorkspaceLink | null
+): TaskCliListItem {
+  const progress = resolved.task.latestProgress
+  const firstLine =
+    progress?.body
+      .split('\n')
+      .find((line) => line.trim())
+      ?.trim() ?? ''
+  return {
+    ...summarizeTask(resolved),
+    workspace: link
+      ? { hostId: link.hostId, name: link.nameSnapshot, worktreeId: link.worktreeId }
+      : null,
+    latestProgress: progress
+      ? { at: cliTime(progress.at), body: firstLine.slice(0, LIST_PROGRESS_MAX) }
+      : null
+  }
+}
+
+export function formatTaskList(result: { tasks: TaskCliListItem[] }): string {
   return result.tasks.length
-    ? result.tasks.map((task) => `${task.title}\t${contextLine(task)}`).join('\n')
+    ? result.tasks
+        .map((task) => {
+          const where = task.workspace?.name ? ` · ${task.workspace.name}` : ''
+          const latest = task.latestProgress
+            ? `\n  latest (${task.latestProgress.at}): ${task.latestProgress.body}`
+            : ''
+          return `${task.title}\t${contextLine(task)}${where}${latest}`
+        })
+        .join('\n')
     : 'No tasks.'
 }
 

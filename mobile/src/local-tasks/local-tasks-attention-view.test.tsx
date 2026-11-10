@@ -24,6 +24,14 @@ vi.mock('react-native', () => ({
   View: 'View',
   StyleSheet: { create: <T,>(styles: T) => styles, hairlineWidth: 1 }
 }))
+vi.mock('lucide-react-native', () => ({
+  Check: 'Check',
+  Clock: 'Clock',
+  CornerDownRight: 'CornerDownRight',
+  Eye: 'Eye',
+  SquareTerminal: 'SquareTerminal'
+}))
+vi.mock('../components/AgentStateDot', () => ({ AgentStateDot: () => null }))
 vi.mock('../components/ActionSheetModal', () => ({ ActionSheetModal: 'ActionSheetModal' }))
 vi.mock('../components/bottom-drawer/BottomDrawer', () => ({
   BottomDrawer: (props: { visible: boolean; children: ReactNode }) =>

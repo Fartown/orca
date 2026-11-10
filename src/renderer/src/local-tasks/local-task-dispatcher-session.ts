@@ -10,6 +10,7 @@ import type { AppState } from '@/store/types'
 import { FLOATING_TERMINAL_WORKTREE_ID } from '../../../shared/constants'
 import { makePaneKey, parsePaneKey } from '../../../shared/stable-pane-id'
 import type { TuiAgent } from '../../../shared/tui-agent'
+import { isTuiAgent } from '../../../shared/tui-agent-config'
 import { localTaskDispatcherClient } from './local-task-dispatcher-client'
 import { localTasksClient } from './local-tasks-runtime-client'
 import { localTasksDomainStore, useLocalTasksDomain } from './local-tasks-domain-store'
@@ -62,9 +63,25 @@ function showDispatcherAsChat(paneKey: string): void {
   }
 }
 
+/** Names the dispatcher's tab in the floating strip, unless the person already named it. */
+function nameDispatcherTab(tabId: string): void {
+  const app = useAppStore.getState()
+  const tab = (app.tabsByWorktree[FLOATING_TERMINAL_WORKTREE_ID] ?? []).find(
+    (candidate) => candidate.id === tabId
+  )
+  if (tab && !tab.customTitle) {
+    app.setTabCustomTitle(tabId, translate('localTasks.dispatcher.title', 'Dispatcher'), {
+      recordInteraction: false
+    })
+  }
+}
+
 function revealDispatcherPane(paneKey: string): void {
   const app = useAppStore.getState()
   const tabId = parsePaneKey(paneKey)?.tabId
+  if (tabId) {
+    nameDispatcherTab(tabId)
+  }
   app.setFloatingWorkspacePanelOpen(true)
   const unified = dispatcherUnifiedTab(app, tabId)
   if (tabId && unified) {
@@ -90,6 +107,24 @@ export function useLocalTaskDispatcherPane(): {
     return Boolean(tabId && state.terminalLayoutsByTabId[tabId])
   })
   return { paneKey, known: paneKey !== null, live }
+}
+
+/** The agent the dispatcher runs: what its pane reports, else what its tab was launched with. */
+export function useLocalTaskDispatcherAgent(paneKey: string | null): TuiAgent | null {
+  return useAppStore((state) => {
+    if (!paneKey) {
+      return null
+    }
+    const reported = state.agentStatusByPaneKey[paneKey]?.agentType
+    if (isTuiAgent(reported)) {
+      return reported
+    }
+    const tabId = parsePaneKey(paneKey)?.tabId
+    return (
+      (state.tabsByWorktree[FLOATING_TERMINAL_WORKTREE_ID] ?? []).find((tab) => tab.id === tabId)
+        ?.launchAgent ?? null
+    )
+  })
 }
 
 function firstLeafPaneKey(state: AppState, tabId: string): string | null {

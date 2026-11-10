@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import { useAppStore } from '@/store'
-import { selectExecutionHostDisplayLabel } from '@/lib/execution-host-display-label'
+import { selectLocalTaskHostLabel } from '@/local-tasks/local-task-host-label'
 import { getMixedHostContextLabels } from '../../../shared/worktree/host-context-labels'
 import { localTaskIdEndpoint, type LocalTaskEndpointKey } from './local-task-endpoints'
 import { useLocalTasksDomain } from './local-tasks-domain-store'
@@ -29,9 +29,7 @@ export function useLocalTaskEndpointLabels(): ReadonlyMap<string, string> | unde
     ])
   )
   const labels = useAppStore(
-    useShallow((state) =>
-      endpoints.map((endpoint) => selectExecutionHostDisplayLabel(state, endpoint))
-    )
+    useShallow((state) => endpoints.map((endpoint) => selectLocalTaskHostLabel(state, endpoint)))
   )
   return useMemo(
     () =>

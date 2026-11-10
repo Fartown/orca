@@ -3,7 +3,8 @@ import type { LocalTaskProgressSnapshot } from '../../../src/shared/local-tasks/
 import type { LocalTask, LocalTaskProject } from '../../../src/shared/local-tasks/local-task-types'
 import {
   localTaskAttentionRows,
-  localTaskAttentionTaskCount
+  localTaskAttentionTaskCount,
+  localTaskNeedsYou
 } from './local-task-progress-projection'
 
 const project: LocalTaskProject = {
@@ -74,4 +75,39 @@ it('counts one task with multiple waiting sessions once and includes review task
     ['2', 0, true]
   ])
   expect(localTaskAttentionTaskCount(rows)).toBe(2)
+})
+
+it('groups "Needs you" as the desktop does: waiting first, review wins, subtasks ride along', () => {
+  const started = { ...project.statuses[0]!, id: 'started', category: 'started' as const }
+  const withStarted = { ...project, statuses: [...project.statuses, started] }
+  const item = (taskId: string, since: number) => ({
+    key: `${taskId}@${since}`,
+    taskId,
+    taskSessionId: `s-${taskId}`,
+    kind: 'question' as const,
+    agent: 'codex',
+    lastMessage: 'Top or bottom?',
+    since,
+    replyable: false
+  })
+  const parent = task('1', 'review')
+  const child = { ...task('2', 'started'), parentId: '1' }
+  const other = task('3', 'started')
+  const { rows, ids } = localTaskNeedsYou({
+    snapshot: {
+      observedAt: 200,
+      sessions: [],
+      items: [item('1', 10), item('2', 20), item('3', 30)]
+    },
+    tasks: [parent, child, other],
+    projects: [withStarted],
+    projectId: null
+  })
+  expect(rows.map((row) => [row.task.id, row.review])).toEqual([
+    ['3', false],
+    ['1', true]
+  ])
+  // The parent's own question stays on its review row; the subtask's stays off the band.
+  expect(rows[1]?.items.map((entry) => entry.taskId)).toEqual(['1'])
+  expect([...ids].sort()).toEqual(['1', '3'])
 })

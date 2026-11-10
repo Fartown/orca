@@ -1,3 +1,4 @@
+import { LocalTaskDispatcherPanelDock } from '@/components/local-tasks/LocalTaskDispatcherPanelDock'
 import { useNativeChatComposerEditSession } from './use-native-chat-composer-edit-session'
 import { useNativeChatComposerNotice } from './use-native-chat-composer-notice'
 import { useNativeChatMobileHoldNotice } from './use-native-chat-mobile-hold-notice'
@@ -363,6 +364,7 @@ export const NativeChatComposerPane = forwardRef<ComposerHandle, C.NativeChatCom
 
     return (
       <div ref={root} data-native-chat-composer-scope={draftScopeKey}>
+        <LocalTaskDispatcherPanelDock tabId={terminalTabId} />
         <NativeChatComposerField
           draftScopeKey={draftScopeKey}
           positionTarget={editSession ? undefined : terminalTabId}

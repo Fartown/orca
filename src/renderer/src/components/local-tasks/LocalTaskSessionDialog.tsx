@@ -16,7 +16,7 @@ import { useAgentDetectionTargetForWorktree } from '@/hooks/useAgentDetectionTar
 import { useDetectedAgents } from '@/hooks/useDetectedAgents'
 import { translate } from '@/i18n/i18n'
 import { useAppStore } from '@/store'
-import { selectExecutionHostDisplayLabel } from '@/lib/execution-host-display-label'
+import { selectLocalTaskHostLabel } from '@/local-tasks/local-task-host-label'
 import { filterEnabledTuiAgents, pickTuiAgent } from '../../../../shared/tui-agent-selection'
 import type { TuiAgent } from '../../../../shared/tui-agent'
 import type { LocalTaskWorkspaceLink } from '../../../../shared/local-tasks/local-task-link-types'
@@ -46,7 +46,7 @@ function SessionForm({
 }): React.JSX.Element {
   const settings = useAppStore((state) => state.settings)
   const hostLabel = useAppStore((state) =>
-    selectExecutionHostDisplayLabel(state, localTaskWorktreeHostId(state, worktree))
+    selectLocalTaskHostLabel(state, localTaskWorktreeHostId(state, worktree))
   )
   const target = useAgentDetectionTargetForWorktree(worktree.id)
   const { detectedIds } = useDetectedAgents(target)

@@ -1,4 +1,5 @@
 import type { LocalTaskAttentionItem } from '../../../shared/local-tasks/local-task-link-types'
+import { buildLocalTaskNeedsYouBand } from '../../../shared/local-tasks/local-task-needs-you-band'
 import type { LocalTask, LocalTaskProject } from '../../../shared/local-tasks/local-task-types'
 import type { LocalTaskProgressView } from './local-tasks-derived-state'
 import type { LocalTaskReplyDraft } from './local-task-needs-you-store'
@@ -89,6 +90,7 @@ function unlistedDraftStanding(
   return !progress || session?.state === 'unverifiable' ? 'unconfirmed' : 'moved-on'
 }
 
+/** Rows of the home list's Needs you section over every task in scope, so the badges match it. */
 export function localTaskNeedsYouCount(
   state: {
     tasks: readonly LocalTask[]
@@ -97,22 +99,17 @@ export function localTaskNeedsYouCount(
   },
   scopeProjectId: string | null = null
 ): number {
-  const tasks = new Map(state.tasks.map((task) => [task.id, task]))
-  const ids = new Set(
-    liveLocalTaskItems(state.progress, tasks, scopeProjectId).map((item) => item.taskId)
+  const tasksById = new Map(state.tasks.map((task) => [task.id, task]))
+  const projectsById = new Map(state.projects.map((project) => [project.id, project]))
+  const visibleIds = new Set(
+    state.tasks
+      .filter((task) => scopeProjectId === null || task.projectId === scopeProjectId)
+      .map((task) => task.id)
   )
-  const review = new Set(
-    state.projects.flatMap((project) =>
-      project.statuses.filter((status) => status.category === 'review').map((status) => status.id)
-    )
-  )
-  for (const task of state.tasks) {
-    if (
-      (scopeProjectId === null || task.projectId === scopeProjectId) &&
-      review.has(task.statusId)
-    ) {
-      ids.add(task.id)
-    }
-  }
-  return ids.size
+  const band = buildLocalTaskNeedsYouBand({
+    progress: state.progress,
+    index: { tasksById, projectsById },
+    visibleIds
+  })
+  return band.waiting.length + band.review.length
 }

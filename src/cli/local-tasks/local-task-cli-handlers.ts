@@ -32,6 +32,7 @@ import {
   formatTaskCurrent,
   formatTaskList,
   formatTaskShow,
+  listTask,
   summarizeTask
 } from './local-task-cli-format'
 
@@ -81,7 +82,7 @@ function statusFilter(library: TaskLibrary, wanted: string): (task: LocalTask) =
 export const LOCAL_TASK_CLI_HANDLERS: Record<string, CommandHandler> = {
   ...LOCAL_TASK_CLI_WRITE_HANDLERS,
   'task list': async ({ client, flags, json }) => {
-    const library = await readTaskLibrary(client)
+    const library = await readTaskLibrary(client, { links: true })
     const project = getOptionalStringFlag(flags, 'project')
     const status = getOptionalStringFlag(flags, 'status')
     const filters = [
@@ -90,7 +91,12 @@ export const LOCAL_TASK_CLI_HANDLERS: Record<string, CommandHandler> = {
     ]
     const tasks = library.tasks
       .filter((task) => filters.every((matches) => matches(task)))
-      .map((task) => summarizeTask(describeTask(library, task)))
+      .map((task) =>
+        listTask(
+          describeTask(library, task),
+          library.links.workspaces.find((link) => link.taskId === task.id) ?? null
+        )
+      )
     printResult({ ...library.envelope, result: { tasks } }, json, formatTaskList)
   },
   'task show': async ({ client, flags, json }) => {

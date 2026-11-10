@@ -11,11 +11,13 @@ import { localTaskEndpointForHost, localTaskEndpointTarget } from './local-task-
 import { stopLocalTaskTerminalOnHost } from './local-task-terminal-stop'
 import { sendLocalTaskReply } from './local-task-needs-you-actions'
 import { isProposalMiss, type LocalTaskProposalMiss } from './local-task-proposal-targets'
-import { localTasksDomainStore } from './local-tasks-domain-store'
+import { localTasksDomainStore, type LocalTasksDomainState } from './local-tasks-domain-store'
 
 // Items that act on a task's existing session: tell it one more thing, or stop it.
 
 export type Outcome = Omit<LocalTaskProposalItemResult, 'index'>
+/** The rows a proposal item is resolved against: the window's merged libraries. */
+export type ProposalDomain = Pick<LocalTasksDomainState, 'tasks' | 'projects' | 'links'>
 type Item<K extends LocalTaskProposalItem['kind']> = Extract<LocalTaskProposalItem, { kind: K }>
 
 export function failed(miss: LocalTaskProposalMiss, taskId?: string): Outcome {
@@ -26,8 +28,11 @@ export function failed(miss: LocalTaskProposalMiss, taskId?: string): Outcome {
  * A task an item names by id or by ref, in any library this window reads: the dispatcher's CLI
  * sees only its own library, so a task on another host arrives as its ref (D-008).
  */
-export function findProposalTask(idOrRef: string): LocalTask | LocalTaskProposalMiss {
-  const { tasks, projects } = localTasksDomainStore.getState()
+export function findProposalTask(
+  idOrRef: string,
+  domain: ProposalDomain = localTasksDomainStore.getState()
+): LocalTask | LocalTaskProposalMiss {
+  const { tasks, projects } = domain
   const byId = tasks.find((task) => task.id === idOrRef)
   if (byId) {
     return byId
@@ -50,18 +55,16 @@ export function findProposalTask(idOrRef: string): LocalTask | LocalTaskProposal
   }
 }
 
-/** A session of the task, on a host this window is in contact with; its only one when unnamed. */
-function liveSession(item: {
-  taskId: string
-  sessionLinkId?: string
-}): { task: LocalTask; link: LocalTaskSessionLink } | LocalTaskProposalMiss {
-  const task = findProposalTask(item.taskId)
+/** A session of the task the item names; its only one when unnamed. */
+export function findProposalSession(
+  item: { taskId: string; sessionLinkId?: string },
+  domain: ProposalDomain = localTasksDomainStore.getState()
+): { task: LocalTask; link: LocalTaskSessionLink } | LocalTaskProposalMiss {
+  const task = findProposalTask(item.taskId, domain)
   if (isProposalMiss(task)) {
     return task
   }
-  const sessions = localTasksDomainStore
-    .getState()
-    .links.sessions.filter((candidate) => candidate.taskId === task.id)
+  const sessions = domain.links.sessions.filter((candidate) => candidate.taskId === task.id)
   const named = item.sessionLinkId
     ? sessions.filter((candidate) => candidate.id === item.sessionLinkId)
     : sessions
@@ -72,8 +75,20 @@ function liveSession(item: {
         : `${task.ref} has ${named.length} sessions; name one with sessionLinkId`
     }
   }
-  return isLocalTaskHostInContact(useAppStore.getState(), named[0].hostId)
-    ? { task, link: named[0] }
+  return { task, link: named[0] }
+}
+
+/** The item's session, on a host this window is in contact with. */
+function liveSession(item: {
+  taskId: string
+  sessionLinkId?: string
+}): { task: LocalTask; link: LocalTaskSessionLink } | LocalTaskProposalMiss {
+  const found = findProposalSession(item)
+  if (isProposalMiss(found)) {
+    return found
+  }
+  return isLocalTaskHostInContact(useAppStore.getState(), found.link.hostId)
+    ? found
     : { miss: 'the session’s host is out of contact (unverifiable)' }
 }
 

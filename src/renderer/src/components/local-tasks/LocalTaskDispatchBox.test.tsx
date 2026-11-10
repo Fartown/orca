@@ -15,7 +15,7 @@ type CandidateFixture = {
 const mocks = vi.hoisted(() => {
   const candidates: CandidateFixture[] = []
   return {
-    app: { settings: { activeRuntimeEnvironmentId: 'server-a' } },
+    app: { settings: { activeRuntimeEnvironmentId: 'server-a' }, repos: [] },
     candidates,
     dispatchBatch: vi.fn()
   }
@@ -47,14 +47,18 @@ vi.mock('@/local-tasks/local-task-dispatch-undo', () => ({
 }))
 vi.mock('@/local-tasks/local-tasks-domain-store', () => ({
   useLocalTasksDomain: (select: (state: unknown) => unknown) =>
-    select({ tasks: [], projects: [], links: {}, preferences: {} }),
+    select({ tasks: [], projects: [], links: { workspaces: [], sessions: [] }, preferences: {} }),
   useWritableLocalTaskEndpoints: () => []
 }))
 vi.mock('@/local-tasks/local-tasks-runtime-client', () => ({
   localTasksClient: { setPreference: vi.fn() }
 }))
 vi.mock('@/lib/agent-catalog', () => ({ getAgentCatalog: () => [{ id: 'claude' }] }))
-vi.mock('../../../../shared/tui-agent-selection', () => ({ pickTuiAgent: () => 'claude' }))
+vi.mock('../../../../shared/tui-agent-selection', () => ({
+  pickTuiAgent: () => 'claude',
+  filterEnabledTuiAgents: (ids: string[]) => ids
+}))
+vi.mock('@/components/agent/AgentCombobox', () => ({ default: () => null }))
 vi.mock('@/components/pull-request-page/mentions/query', () => ({
   findMentionQuery: (text: string) => (text === '@' ? { atIndex: 0, query: '' } : null)
 }))

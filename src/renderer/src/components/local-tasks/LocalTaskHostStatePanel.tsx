@@ -10,7 +10,7 @@ import {
   describeLocalTaskLibraryNotices,
   type LocalTaskLibraryNotice
 } from '@/local-tasks/local-task-library-notices'
-import { selectExecutionHostDisplayLabel } from '@/lib/execution-host-display-label'
+import { selectLocalTaskHostLabel } from '@/local-tasks/local-task-host-label'
 import { cn } from '@/lib/utils'
 import { useAppStore } from '@/store'
 import type { LocalTaskChangeScope } from '../../../../shared/local-tasks/local-task-types'
@@ -231,7 +231,7 @@ export function LocalTaskLibraryNotices(): React.JSX.Element | null {
   const home = useLocalTasksDomain((state) => state.home)
   const labels = useAppStore(
     useShallow((state) =>
-      partitions.map((partition) => selectExecutionHostDisplayLabel(state, partition.endpoint))
+      partitions.map((partition) => selectLocalTaskHostLabel(state, partition.endpoint))
     )
   )
   const notices = describeLocalTaskLibraryNotices(

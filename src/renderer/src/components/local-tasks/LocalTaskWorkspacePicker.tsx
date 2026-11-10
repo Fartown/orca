@@ -17,7 +17,7 @@ import {
   selectFolderWorkspaces,
   selectWorktreesByRepo
 } from '@/store/workspace-record-selectors'
-import { selectExecutionHostDisplayLabel } from '@/lib/execution-host-display-label'
+import { selectLocalTaskHostLabel } from '@/local-tasks/local-task-host-label'
 import type { Worktree } from '../../../../shared/worktree/types'
 import type { LocalTaskLinks } from '../../../../shared/local-tasks/local-task-link-types'
 import type { LocalTask, LocalTaskProject } from '../../../../shared/local-tasks/local-task-types'
@@ -78,7 +78,7 @@ export function listLocalTaskWorkspaceChoices(
       return {
         worktree,
         hostId,
-        hostLabel: selectExecutionHostDisplayLabel(state, hostId),
+        hostLabel: selectLocalTaskHostLabel(state, hostId),
         branch: localTaskBranchName(worktree),
         ownerTitle:
           owner && owner.taskId !== taskId

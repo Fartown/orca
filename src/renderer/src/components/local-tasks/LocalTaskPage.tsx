@@ -135,11 +135,13 @@ function LocalTaskOverview({ model }: { model: LocalTaskListModel }): React.JSX.
   useLocalTaskEscapeLayer('panel', previewTask !== undefined, () =>
     localTaskPageStore.getState().setPreviewOpen(false)
   )
+  // Why the nav spans the full height: the dispatch box belongs to the content column beside it.
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-3">
-      <LocalTaskDispatchBox />
-      <div className="@container/local-task-page relative flex min-h-0 flex-1 gap-4 pt-2">
-        {sidebarTaskMode ? null : <LocalTaskNav model={model} />}
+    <div className="@container/local-task-page relative flex min-h-0 flex-1 gap-4">
+      {sidebarTaskMode ? null : <LocalTaskNav model={model} />}
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-3">
+        {/* Why not on the dispatcher page: there you talk to the dispatcher in its own panel. */}
+        {dispatcher ? null : <LocalTaskDispatchBox />}
         {dispatcher ? (
           <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2">
             <LocalTaskScopeMenu model={model} className="self-start @3xl/local-task-page:hidden" />
@@ -153,7 +155,6 @@ function LocalTaskOverview({ model }: { model: LocalTaskListModel }): React.JSX.
           </div>
         ) : (
           <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2">
-            <LocalTaskReviewQueue model={model} />
             <LocalTaskToolbar model={model} />
             {hasSelection ? <LocalTaskBatchBar model={model} /> : null}
             {model.layout === 'list' ? (
@@ -164,8 +165,8 @@ function LocalTaskOverview({ model }: { model: LocalTaskListModel }): React.JSX.
             <LocalTaskKeyHints />
           </div>
         )}
-        {previewTask ? <LocalTaskPreview task={previewTask} index={model.index} /> : null}
-      </div>{' '}
+      </div>
+      {previewTask ? <LocalTaskPreview task={previewTask} index={model.index} /> : null}
     </div>
   )
 }

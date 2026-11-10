@@ -19,7 +19,7 @@ vi.mock('react-native', () => ({
   View: 'View',
   StyleSheet: { create: <T,>(styles: T) => styles }
 }))
-vi.mock('lucide-react-native', () => ({ Send: 'Send' }))
+vi.mock('lucide-react-native', () => ({ AtSign: 'AtSign', Laptop: 'Laptop', Send: 'Send', X: 'X' }))
 vi.mock('./local-task-choice-sheet', () => ({ LocalTaskChoiceSheet: 'LocalTaskChoiceSheet' }))
 vi.mock('./local-task-launch-sheet', () => ({
   LocalTaskLaunchSheet: () => null,

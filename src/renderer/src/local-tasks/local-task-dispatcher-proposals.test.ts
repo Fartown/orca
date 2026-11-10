@@ -25,6 +25,11 @@ import {
   localTaskProposalsStore,
   runLocalTaskProposal
 } from './local-task-dispatcher-proposals'
+import {
+  applyLocalTaskProposalItemDraft,
+  localTaskProposalEditsStore,
+  setLocalTaskProposalItemEdit
+} from './local-task-proposal-edits'
 
 const proposal: LocalTaskProposal = {
   id: 'p-1',
@@ -46,6 +51,7 @@ describe('running a confirmed proposal', () => {
     fixture.recordResults.mockReset()
     fixture.list.mockResolvedValue({ proposals: [] })
     localTaskProposalsStore.setState(localTaskProposalsStore.getInitialState(), true)
+    localTaskProposalEditsStore.setState(localTaskProposalEditsStore.getInitialState(), true)
   })
 
   it('runs nothing when another window already claimed it', async () => {
@@ -64,6 +70,34 @@ describe('running a confirmed proposal', () => {
     await runLocalTaskProposal(proposal)
 
     expect(fixture.execute).toHaveBeenCalledWith(claimed)
+  })
+
+  it('runs the items as the person edited them, leaving the rest as proposed', async () => {
+    const stored = {
+      ...proposal,
+      items: [
+        { kind: 'append' as const, taskId: 't-1', text: 'Check the CSV' },
+        { kind: 'stop' as const, taskId: 't-2', reason: 'Superseded' }
+      ]
+    }
+    const claimed = { ...stored, status: 'executing' as const, executionActive: true }
+    fixture.claim.mockResolvedValue({ ok: true, proposal: claimed })
+    fixture.execute.mockResolvedValue([])
+    const edited = applyLocalTaskProposalItemDraft(stored.items[0], { text: 'Check the XLSX too' })
+    setLocalTaskProposalItemEdit(stored.id, 0, edited)
+
+    await runLocalTaskProposal(stored)
+
+    expect(fixture.execute).toHaveBeenCalledWith({
+      ...claimed,
+      items: [{ ...stored.items[0], text: 'Check the XLSX too' }, stored.items[1]]
+    })
+  })
+
+  it('refuses an edit that would not be a valid item', () => {
+    const item = { kind: 'stop' as const, taskId: 't-2', reason: 'Superseded' }
+    expect(applyLocalTaskProposalItemDraft(item, { reason: '   ' })).toBeNull()
+    expect(applyLocalTaskProposalItemDraft(item, { text: 'not a stop field' })).toEqual(item)
   })
 
   it('does not run side effects when a host cannot report an execution owner', async () => {

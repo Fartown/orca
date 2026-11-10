@@ -4,6 +4,10 @@ import { toast } from 'sonner'
 import { translate } from '@/i18n/i18n'
 import type { LocalTaskProposal } from '../../../shared/local-tasks/local-task-dispatcher-types'
 import { localTaskDispatcherClient } from './local-task-dispatcher-client'
+import {
+  forgetLocalTaskProposalEdits,
+  withLocalTaskProposalEdits
+} from './local-task-proposal-edits'
 import { executeLocalTaskProposal } from './local-task-proposal-execution'
 import { runLocalTaskWrite } from './local-task-writes'
 
@@ -54,6 +58,7 @@ export async function refreshLocalTaskProposals(): Promise<void> {
       unrun: confirmed.proposals.filter(unseen),
       claimed: executing.proposals.filter(unseen)
     })
+    forgetLocalTaskProposalEdits(seen)
   } catch (error) {
     console.error('local tasks: reading the dispatcher’s proposals failed', error)
   }
@@ -87,7 +92,7 @@ export async function runLocalTaskProposal(proposal: LocalTaskProposal): Promise
       )
       return
     }
-    const results = await executeLocalTaskProposal(claimed.proposal)
+    const results = await executeLocalTaskProposal(withLocalTaskProposalEdits(claimed.proposal))
     if (!results) {
       toast.error(
         translate('localTasks.dispatcher.reportFailed', 'The results could not be recorded.')

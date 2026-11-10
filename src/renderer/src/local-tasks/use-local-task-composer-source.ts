@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { translate } from '@/i18n/i18n'
 import { useAppStore } from '@/store'
-import { selectExecutionHostDisplayLabel } from '@/lib/execution-host-display-label'
+import { selectLocalTaskHostLabel } from '@/local-tasks/local-task-host-label'
 import type { ExecutionHostId } from '../../../shared/execution-host'
 import { suggestLocalTaskWorkspaceName } from '../../../shared/local-tasks/local-task-model'
 import type { LocalTask } from '../../../shared/local-tasks/local-task-types'
@@ -87,10 +87,10 @@ export function useLocalTaskComposerSource(
     card.selectedRepoIsGit && card.selectedRepoProjectId ? card.selectedRepoExecutionHostId : null
   const endpoint = hostId ? localTaskEndpointForHost(hostId) : null
   const libraryLabel = useAppStore((state) =>
-    endpoint ? selectExecutionHostDisplayLabel(state, endpoint) : ''
+    endpoint ? selectLocalTaskHostLabel(state, endpoint) : ''
   )
   const taskLibraryLabel = useAppStore((state) =>
-    task ? selectExecutionHostDisplayLabel(state, localTaskIdEndpoint(task.id)) : ''
+    task ? selectLocalTaskHostLabel(state, localTaskIdEndpoint(task.id)) : ''
   )
   // Why derived: a target on another Orca's host hides the pick; switching back shows it again.
   const selected: LocalTask | null =

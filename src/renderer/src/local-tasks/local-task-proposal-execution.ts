@@ -8,15 +8,12 @@ import type { LocalTaskWorkspaceLink } from '../../../shared/local-tasks/local-t
 import type { LocalTask, LocalTaskFailure } from '../../../shared/local-tasks/local-task-types'
 import { localTaskDispatcherClient } from './local-task-dispatcher-client'
 import { findLocalTaskEffectiveWorkspace } from './local-task-link-selectors'
-import { localTaskWorktreeHostId } from './local-task-workspace-resolution'
 import {
   findProposalWorktree,
   isProposalMiss,
-  proposalLibraryFor,
-  proposalRepoHostId,
   type ProposalWorktree,
-  proposalRepoProjects,
-  proposalWorktreeProjects,
+  proposalRepoScope,
+  proposalWorktreeScope,
   resolveProposalAgent,
   resolveProposalProject,
   type LocalTaskProposalMiss
@@ -116,11 +113,12 @@ async function runStart(item: Item<'start'>, run: ProposalRun): Promise<Outcome>
     if (isProposalMiss(worktree)) {
       return failed(worktree)
     }
+    const scope = proposalWorktreeScope(state, worktree)
     const project = resolveProposalProject(
       projects,
       item.project,
-      proposalWorktreeProjects(state, worktree),
-      proposalLibraryFor(localTaskWorktreeHostId(state, worktree))
+      scope.orcaProjectIds,
+      scope.library
     )
     if (isProposalMiss(project)) {
       return failed(project)
@@ -132,15 +130,15 @@ async function runStart(item: Item<'start'>, run: ProposalRun): Promise<Outcome>
     const link = await linkWorkspace(task.id, worktree, 'start')
     return isProposalMiss(link) ? failed(link, task.id) : launch(task, link, item.agent)
   }
-  const orcaProjects = proposalRepoProjects(state, item.target.repoId)
-  if (!orcaProjects) {
+  const scope = proposalRepoScope(state, item.target.repoId)
+  if (!scope) {
     return failed({ miss: `repository ${item.target.repoId} is not in Orca` })
   }
   const project = resolveProposalProject(
     projects,
     item.project,
-    orcaProjects,
-    proposalLibraryFor(proposalRepoHostId(state, item.target.repoId))
+    scope.orcaProjectIds,
+    scope.library
   )
   if (isProposalMiss(project)) {
     return failed(project)
@@ -152,7 +150,7 @@ async function runStart(item: Item<'start'>, run: ProposalRun): Promise<Outcome>
   // Why the composer: a new workspace takes the person's choices (branch, host, setup).
   if (
     run.composerOpened ||
-    !startLocalTaskWork(task, project, { orcaProjectId: [...orcaProjects][0] })
+    !startLocalTaskWork(task, project, { orcaProjectId: [...scope.orcaProjectIds][0] })
   ) {
     return { ok: false, taskId: task.id, detail: `created ${task.ref}; start it from the task` }
   }
@@ -205,11 +203,12 @@ async function runRecord(item: Item<'record'>): Promise<Outcome> {
   if (isProposalMiss(worktree)) {
     return failed(worktree)
   }
+  const scope = proposalWorktreeScope(state, worktree)
   const project = resolveProposalProject(
     localTasksDomainStore.getState().projects,
     item.project,
-    proposalWorktreeProjects(state, worktree),
-    proposalLibraryFor(localTaskWorktreeHostId(state, worktree))
+    scope.orcaProjectIds,
+    scope.library
   )
   if (isProposalMiss(project)) {
     return failed(project)

@@ -1,17 +1,16 @@
 import { useState } from 'react'
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
-import { Send } from 'lucide-react-native'
 import {
   LOCAL_TASK_TITLE_MAX,
   suggestLocalTaskWorkspaceName
 } from '../../../src/shared/local-tasks/local-task-model'
 import type { LocalTask, LocalTaskProject } from '../../../src/shared/local-tasks/local-task-types'
-import { colors, radii, spacing } from '../theme/mobile-theme'
 import type { LocalTasksApi } from './local-tasks-api'
 import { localTasksCopy } from './local-tasks-copy'
-import type { LocalTaskSite } from './local-task-endpoint'
+import { localTaskListedHostId, type LocalTaskSite } from './local-task-endpoint'
 import { localTaskWriteMessage } from './local-task-failure-message'
 import { LocalTaskChoiceSheet } from './local-task-choice-sheet'
+import { LocalTaskDispatchComposer } from './local-task-dispatch-composer'
+import { localTaskMentionChoices } from './local-task-dispatch-mentions'
 import {
   LocalTaskLaunchSheet,
   localTaskHostLabel,
@@ -26,7 +25,6 @@ import {
   localTaskLinkParamsFor,
   type LocalTaskWorkspaceCandidate
 } from './local-task-workspace-candidates'
-import { localTaskStyles } from './local-tasks-styles'
 import { useLocalTaskHostLabels } from './use-local-task-host-labels'
 import { useLocalTaskLaunch } from './use-local-task-launch'
 import { useLocalTaskProjectCatalog } from './use-local-task-project-catalog'
@@ -38,6 +36,10 @@ export function LocalTaskDispatchInput(props: {
   api: LocalTasksApi
   library: LocalTasksLibrary
   project: LocalTaskProject
+  /** The paired host's word on its SSH hosts, keyed as the phone lists them. */
+  hostConnected?: ReadonlyMap<string, boolean>
+  /** The page shows all projects: `project` is only the fallback for a bare sentence. */
+  allProjects?: boolean
   onNavigate: (href: string) => void
 }) {
   const copy = localTasksCopy()
@@ -56,10 +58,28 @@ export function LocalTaskDispatchInput(props: {
   >(null)
   const mention = text.match(/(?:^|\s)@([^\s]*)$/)?.[1] ?? null
   const catalog = useLocalTaskProjectCatalog(props.site.pairedClient)
+  // With all projects in view, every project's repositories are offered (a task-only project
+  // offers every repository on the host).
+  const scopeRepos = props.allProjects
+    ? props.library.projects.some((entry) => entry.repos.length === 0)
+      ? []
+      : [...new Set(props.library.projects.flatMap((entry) => entry.repos))]
+    : props.project.repos
   const setups =
     catalog.state === 'ready'
-      ? localTaskSetupsFor(catalog.catalog, props.site.endpoint, props.project.repos)
+      ? localTaskSetupsFor(catalog.catalog, props.site.endpoint, scopeRepos)
       : []
+  // The project a task dispatched into a repository belongs to.
+  const projectForRepo = (repoId: string) => {
+    const owner = setups.find((entry) => entry.repoId === repoId)
+    return (
+      (owner
+        ? props.library.projects.find((entry) => entry.repos.includes(owner.orcaProjectId))
+        : undefined) ??
+      props.library.projects.find((entry) => entry.repos.length === 0) ??
+      props.project
+    )
+  }
   const filteredSetups = setups.filter(
     (entry) =>
       (hostFilter === null || entry.ownerHostId === hostFilter) &&
@@ -82,75 +102,53 @@ export function LocalTaskDispatchInput(props: {
     copy,
     onNavigate: props.onNavigate
   })
-  const matches = (value: string) => value.toLowerCase().includes((mention ?? '').toLowerCase())
-  const candidates = workspaceState.status === 'ready' ? workspaceState.candidates : []
-  const tasksByIdForChoice = new Map(props.library.tasks.map((entry) => [entry.id, entry]))
-  const mentionChoices = [
-    ...Array.from(new Map(setups.map((entry) => [entry.ownerHostId, entry])).values())
-      .filter((entry) =>
-        matches(localTaskHostLabel(entry.hostId, labels.get(entry.hostId)) || entry.ownerHostId)
-      )
-      .map((entry) => ({
-        key: `host:${entry.ownerHostId}`,
-        label: `${copy.dispatchHost} · ${localTaskHostLabel(entry.hostId, labels.get(entry.hostId)) || entry.ownerHostId}`,
-        onPress: () => {
-          setHostFilter(entry.ownerHostId)
-          setTarget(null)
-          setText((previous) => previous.replace(/@[^\s]*$/, '@'))
-        }
-      })),
-    ...Array.from(new Map(setups.map((entry) => [entry.repoId, entry])).values())
-      .filter(
-        (entry) => (hostFilter === null || entry.ownerHostId === hostFilter) && matches(entry.label)
-      )
-      .map((entry) => ({
-        key: `repo:${entry.repoId}`,
-        label: `${copy.dispatchRepo} · ${entry.label}`,
-        onPress: () => {
-          setRepoFilter(entry.repoId)
-          setTarget(null)
-          setText((previous) => previous.replace(/@[^\s]*$/, '@'))
-        }
-      })),
-    ...candidates
-      .filter(
-        (entry) =>
-          (hostFilter === null || entry.hostId === hostFilter) &&
-          (repoFilter === null || entry.repoId === repoFilter) &&
-          matches(`${entry.displayName} ${entry.branch}`)
-      )
-      .map((entry) => ({
-        key: `workspace:${entry.hostId}:${entry.worktreeId}`,
-        label: `${copy.dispatchWorkspace} · ${entry.displayName}`,
-        onPress: () => {
-          setTarget({ kind: 'workspace', workspace: entry })
-          setText((previous) => previous.replace(/(?:^|\s)@[^\s]*$/, ''))
-        }
-      })),
-    ...props.library.tasks
-      .filter((task) => {
-        if (!matches(`${task.ref} ${task.title}`)) {
-          return false
-        }
-        const workspace = localTaskWorkspaceLinkFor(
-          task,
-          tasksByIdForChoice,
-          props.library.work.links
-        )
-        return (
-          (hostFilter === null || workspace?.hostId === hostFilter) &&
-          (repoFilter === null || workspace?.repoId === repoFilter)
-        )
-      })
-      .map((task) => ({
-        key: `task:${task.id}`,
-        label: `${copy.dispatchTask} · ${task.ref} ${task.title}`,
-        onPress: () => {
-          setTarget({ kind: 'task', task })
-          setText((previous) => previous.replace(/(?:^|\s)@[^\s]*$/, ''))
-        }
-      }))
-  ]
+  // Every repository on the host, only to name a workspace's repository.
+  const repoLabels = new Map(
+    (catalog.state === 'ready'
+      ? localTaskSetupsFor(catalog.catalog, props.site.endpoint, [])
+      : setups
+    ).map((entry) => [entry.repoId, entry.label])
+  )
+  const listedHost = (ownerHostId: string) =>
+    localTaskListedHostId(props.site.endpoint, ownerHostId) ?? ownerHostId
+  const hostName = (ownerHostId: string) =>
+    ownerHostId === 'local'
+      ? props.site.label
+      : (labels.get(listedHost(ownerHostId)) ?? localTaskHostLabel(listedHost(ownerHostId), null))
+  const closeMention = () => setText((previous) => previous.replace(/(?:^|\s)@[^\s]*$/, ''))
+  const keepMentioning = () => setText((previous) => previous.replace(/@[^\s]*$/, '@'))
+  const mentionChoices = localTaskMentionChoices({
+    query: mention ?? '',
+    setups,
+    candidates: workspaceState.status === 'ready' ? workspaceState.candidates : [],
+    tasks: props.library.tasks,
+    links: props.library.work.links,
+    hostFilter,
+    repoFilter,
+    repoLabels,
+    hosts: {
+      name: hostName,
+      connected: (ownerHostId) => props.hostConnected?.get(listedHost(ownerHostId)) ?? null
+    },
+    onHost: (ownerHostId) => {
+      setHostFilter(ownerHostId)
+      setTarget(null)
+      keepMentioning()
+    },
+    onRepo: (repoId) => {
+      setRepoFilter(repoId)
+      setTarget(null)
+      keepMentioning()
+    },
+    onWorkspace: (workspace) => {
+      setTarget({ kind: 'workspace', workspace })
+      closeMention()
+    },
+    onTask: (task) => {
+      setTarget({ kind: 'task', task })
+      closeMention()
+    }
+  })
   const dispatch = async () => {
     const message = text.trim()
     if (!message || busy || props.site.connState !== 'connected') {
@@ -223,10 +221,13 @@ export function LocalTaskDispatchInput(props: {
         return
       }
       const parentId = targetTask ? targetTask.id : null
+      const scopedRepo = repoFilter ?? workspaceTarget?.repoId ?? null
       const project = targetTask
         ? (props.library.projects.find((entry) => entry.id === targetTask.projectId) ??
           props.project)
-        : props.project
+        : props.allProjects && scopedRepo
+          ? projectForRepo(scopedRepo)
+          : props.project
       const projectSetups =
         catalog.state === 'ready'
           ? localTaskSetupsFor(catalog.catalog, props.site.endpoint, project.repos).filter(
@@ -308,90 +309,72 @@ export function LocalTaskDispatchInput(props: {
     }
   }
   const canDispatch = Boolean(setup || target)
+  const dispatchCopy = copy.work.dispatch
+  const sendDisabled = !canDispatch || busy || !text.trim() || props.site.connState !== 'connected'
+  const chips = [
+    ...(target
+      ? [
+          {
+            key: 'target',
+            label:
+              target.kind === 'task'
+                ? `${target.task.ref} ${target.task.title}`
+                : [repoLabels.get(target.workspace.repoId), target.workspace.displayName]
+                    .filter(Boolean)
+                    .join('/'),
+            clear: () => setTarget(null)
+          }
+        ]
+      : []),
+    ...(hostFilter
+      ? [{ key: 'host', label: hostName(hostFilter), clear: () => setHostFilter(null) }]
+      : []),
+    ...(repoFilter
+      ? [
+          {
+            key: 'repo',
+            label: repoLabels.get(repoFilter) ?? copy.dispatchRepo,
+            clear: () => setRepoFilter(null)
+          }
+        ]
+      : [])
+  ]
+  const onSend = target
+    ? target.kind === 'task'
+      ? dispatchCopy.onSendTask(target.task.ref)
+      : dispatchCopy.onSendWorkspace(
+          target.workspace.displayName,
+          hostName(target.workspace.hostId)
+        )
+    : null
   return (
-    <View style={styles.container}>
-      <View style={styles.composer}>
-        <TextInput
-          style={styles.input}
-          value={text}
-          onChangeText={setText}
-          multiline
-          placeholder={copy.dispatchPlaceholder}
-          placeholderTextColor={colors.textMuted}
-          accessibilityLabel={copy.dispatchPlaceholder}
-        />
-        <Pressable
-          style={[styles.send, (!canDispatch || busy || !text.trim()) && localTaskStyles.disabled]}
-          disabled={!canDispatch || busy || !text.trim() || props.site.connState !== 'connected'}
-          onPress={() => void dispatch()}
-          accessibilityRole="button"
-          accessibilityLabel={copy.dispatchButton}
-        >
-          <Send size={17} color={colors.bgBase} />
-        </Pressable>
-      </View>
-      <Text style={localTaskStyles.meta}>
-        {target
-          ? `${copy.dispatchTarget} ${target.kind === 'task' ? `${target.task.ref} ${target.task.title}` : target.workspace.displayName}`
-          : setup
-            ? `${copy.dispatchRunOn} ${localTaskSetupLabel(setup, labels)}`
-            : copy.dispatchNoSetup}
-      </Text>
-      {hostFilter || repoFilter || target ? (
-        <Pressable
-          onPress={() => {
-            setHostFilter(null)
-            setRepoFilter(null)
-            setTarget(null)
-          }}
-          accessibilityRole="button"
-        >
-          <Text style={localTaskStyles.meta}>{copy.clearFilters}</Text>
-        </Pressable>
-      ) : null}
-      {error || launch.notice ? (
-        <Text style={localTaskStyles.errorText}>{error ?? launch.notice}</Text>
-      ) : null}
+    <>
+      <LocalTaskDispatchComposer
+        text={text}
+        onChangeText={setText}
+        chips={chips}
+        sendDisabled={sendDisabled}
+        onSend={() => void dispatch()}
+        hostLabel={props.site.label}
+        onSendLine={onSend}
+        hint={!target && !setup && catalog.state === 'ready' ? copy.dispatchNoSetup : null}
+        error={error ?? launch.notice}
+      />
       <LocalTaskLaunchSheet launch={launch} hostLabels={labels} workspaceHostLabel="" />
       <LocalTaskChoiceSheet
         visible={mention !== null}
-        title={copy.dispatchChooseTarget}
+        title={copy.work.mention.title}
         choices={mentionChoices}
         loading={workspaceState.status === 'loading'}
-        message={workspaceState.status === 'failed' ? copy.loadFailed : null}
+        message={workspaceState.status === 'failed' ? copy.loadFailed : copy.work.mention.hint}
         search={{
           query: mention ?? '',
-          placeholder: copy.dispatchChooseTarget,
+          placeholder: copy.work.mention.search,
           onChange: (query) =>
             setText((previous) => previous.replace(/@[^\s]*$/, `@${query.replace(/\s/g, '')}`))
         }}
-        onClose={() => setText((previous) => previous.replace(/(?:^|\s)@[^\s]*$/, ''))}
+        onClose={closeMention}
       />
-    </View>
+    </>
   )
 }
-
-const styles = StyleSheet.create({
-  container: { paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, gap: spacing.xs },
-  composer: { flexDirection: 'row', alignItems: 'flex-end', gap: spacing.sm },
-  input: {
-    flex: 1,
-    minHeight: 44,
-    maxHeight: 120,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    color: colors.textPrimary,
-    backgroundColor: colors.bgPanel,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
-    borderRadius: radii.surface
-  },
-  send: {
-    width: 40,
-    height: 40,
-    borderRadius: radii.control,
-    backgroundColor: colors.textPrimary,
-    alignItems: 'center',
-    justifyContent: 'center'
-  }
-})

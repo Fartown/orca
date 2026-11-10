@@ -476,7 +476,21 @@ describe('host attention judgment', () => {
     const sessions = panes.map((paneKey) => linkedSession(context, { paneKey }).session)
     const approval = JSON.stringify({ approval: { tool: 'Bash', summary: 'rm -rf build' } })
     host.report(panes[0], { state: 'waiting', interactivePrompt: approval })
-    host.report(panes[1], { state: 'waiting', toolName: 'AskUserQuestion' })
+    const ask = JSON.stringify({
+      questions: [
+        {
+          question: '子任务要不要跟父任务一起折叠？',
+          multiSelect: false,
+          options: [{ label: '要' }, { label: '不要' }]
+        }
+      ]
+    })
+    host.report(panes[1], {
+      state: 'waiting',
+      toolName: 'AskUserQuestion',
+      interactivePrompt: ask,
+      lastAssistantMessage: '先确认一个问题。'
+    })
     host.report(panes[2], { state: 'blocked' })
     host.report(panes[3], {
       state: 'done',
@@ -508,6 +522,10 @@ describe('host attention judgment', () => {
       agent: 'claude',
       lastMessage: '导出接口好了'
     })
+    // The question itself, not the prose before it, says what to answer.
+    expect(progress.items.find((item) => item.kind === 'question')?.lastMessage).toBe(
+      '子任务要不要跟父任务一起折叠？'
+    )
     expect(progress.sessions.find((s) => s.taskSessionId === sessions[6].id)).toMatchObject({
       state: 'working'
     })

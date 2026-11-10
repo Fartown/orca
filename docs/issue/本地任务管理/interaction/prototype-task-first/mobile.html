@@ -3690,6 +3690,110 @@
       .more-row > .ic:last-child:not(:first-child) {
         margin-left: auto;
       }
+
+      /* ---------- 总管（m9）：入口、提案列表、提案详情 ---------- */
+      .sa-entry {
+        margin-top: 14px;
+      }
+      .sa-entry .row-sub .ag {
+        margin-right: 1px;
+      }
+      .sa-badge {
+        flex: none;
+        height: 22px;
+        padding: 0 8px;
+        border-radius: 999px;
+        display: inline-flex;
+        align-items: center;
+        background: color-mix(in srgb, var(--agent-question) 16%, transparent);
+        color: var(--agent-question-text);
+        font-size: 12px;
+        font-weight: 600;
+        white-space: nowrap;
+      }
+      .sa-stat {
+        margin-top: 12px;
+      }
+      .sa-band {
+        margin: 12px 16px 0;
+      }
+      .sa-prow,
+      .sa-drow {
+        align-items: flex-start;
+      }
+      .sa-prow .row-sub,
+      .sa-drow .row-sub {
+        margin-top: 2px;
+      }
+      .sa-ptitle {
+        font-size: 14px;
+        font-weight: 500;
+        line-height: 1.45;
+        text-wrap: pretty;
+      }
+      .sa-ptitle.lg {
+        font-size: 17px;
+        font-weight: 600;
+        line-height: 1.4;
+        text-wrap: balance;
+      }
+      .sa-bb .bb-hint b {
+        color: var(--foreground);
+        font-weight: 600;
+      }
+      .sa-ref + .sa-ref {
+        margin-left: 6px;
+      }
+      .sa-mempty {
+        margin: 0 16px;
+        padding: 12px 14px;
+        border: 1px dashed var(--border);
+        border-radius: 12px;
+        font-size: 13px;
+        color: var(--muted-foreground);
+      }
+      .sa-phead {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        padding: 14px 20px 12px;
+      }
+      .sa-mprop {
+        margin: 0 16px;
+      }
+      .sa-mprop .pp-meta {
+        flex-wrap: wrap;
+        white-space: normal;
+      }
+      .sa-mprop .pp-prompt,
+      .sa-mprop .pp-title {
+        text-wrap: pretty;
+      }
+      .sa-must {
+        display: inline-flex;
+        align-items: center;
+        height: 18px;
+        padding: 0 7px;
+        border-radius: 999px;
+        background: color-mix(in srgb, var(--destructive) 14%, transparent);
+        color: var(--destructive);
+        font-size: 11px;
+        font-weight: 600;
+      }
+      .sa-mres {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        margin-top: 2px;
+        font-size: 12px;
+        color: var(--muted-foreground);
+      }
+      .sa-mres.ok {
+        color: var(--status-success);
+      }
+      .cbox.sa-lock {
+        opacity: 0.4;
+      }
     </style>
   </head>
   <body>
@@ -5893,7 +5997,9 @@
               foldDone: true,
               form: null,
               focus: null,
-              ui: { allProgress: {}, genRunning: {}, comment: {}, sysOpen: {} }
+              ui: { allProgress: {}, genRunning: {}, comment: {}, sysOpen: {} },
+              // 总管（m9）：只在 m9 那几台手机上有。
+              sa: null
             }
           }
 
@@ -6948,6 +7054,10 @@
                 return this.vSession(this.s.route.sid)
               case 'host':
                 return this.vHost(this.s.route.id)
+              case 'sa':
+                return this.vSa()
+              case 'saprop':
+                return this.vSaProp(this.s.route.id)
               default:
                 return this.vHome()
             }
@@ -7282,11 +7392,195 @@
         ${this.vComposer('home')}
         <div class="exec-line">${ic('laptop', 's12')}由 MacBook Pro 执行 · 任务在它的库里，手机通过它读写</div>
         ${hint ? `<div class="cb-hint">${hint}</div>` : ''}
-        ${this.s.dispatched.map((k) => this.vDisp(k)).join('')}
+        ${this.s.dispatched.map((k) => this.vDisp(k)).join('')}${this.s.sa ? this.vSaEntry() : ''}
         <div class="seg tseg">${segBtn('need', '需要你', ny.length)}${segBtn('doing', '进行中', allTops.filter((t) => t.status === 'doing').length)}${segBtn('all', '全部', null)}</div>
         ${body}
         <div class="pad-bottom"></div>
       </div>`
+          }
+
+          // ---------- 总管：手机列出和决定提案，执行在桌面 ----------
+          saPending() {
+            return this.s.sa.props.filter((p) => p.status === 'pending')
+          }
+          saCopy(it) {
+            const w = it.ws ? this.ws(it.ws) : null
+            switch (it.kind) {
+              case 'record':
+                return `把 ${w.name} 里的工作记成任务“${it.title}”`
+              case 'stop':
+                return `停掉 ${it.task} 的会话`
+              case 'subtask':
+                return `${it.task} 的子任务：“${it.title}”`
+              case 'append':
+                return `给 ${it.task} 的会话追加一句`
+              default:
+                return it.title || ''
+            }
+          }
+          vSaEntry() {
+            const a = this.s.sa
+            const n = this.saPending().length
+            return `<div class="list-card sa-entry"><div class="row" data-act="open-sa"><div class="icon-box">${ic('bot', 's18')}</div><div class="row-main"><div class="row-title">总管</div><div class="row-sub">${a.online ? '空闲 · MacBook Pro' : `${stateDot('unverifiable', 12)}<span class="c-unv">MacBook Pro 未连接</span>`}</div></div>${n ? `<span class="sa-badge">${n} 个等你确认</span>` : ''}${ic('chevron-right', 's14 chev')}</div></div>`
+          }
+          vSaBand() {
+            return `<div class="offline-band sa-band">${stateDot('unverifiable', 14)}<div><div>MacBook Pro 未连接</div><div class="s">下面是断开前最后读到的内容。提案要由桌面的 Orca 执行，恢复连接前只能看，不能确认。</div></div></div>`
+          }
+          vSa() {
+            const a = this.s.sa
+            const pending = this.saPending()
+            const row = (p) =>
+              `<div class="row sa-prow" data-act="open-saprop" data-id="${p.id}"><div class="row-main"><div class="sa-ptitle">${esc(p.summary)}</div><div class="row-sub"><span>${p.items.length} 项</span><span class="faint">·</span><span>${p.at}</span>${p.items.some((i) => i.kind === 'stop') ? '<span class="faint">·</span><span class="c-b">含停会话</span>' : ''}</div></div>${ic('chevron-right', 's14 chev')}</div>`
+            const done = a.dispatched
+              .map(
+                (d) =>
+                  `<div class="row sa-drow"><div class="row-main"><div class="sa-ptitle">${esc(d.summary)}</div><div class="row-sub">${d.refs.map((r) => `<span class="tid sa-ref">${r}</span>`).join('')}<span class="faint">·</span><span>${d.at}</span></div></div></div>`
+              )
+              .join('')
+            return `${navbar({ back: '本地任务', title: '总管' })}
+      <div class="scroll">
+        <div class="list-card sa-stat"><div class="row">${a.online ? stateDot('done', 16) : stateDot('unverifiable', 16)}<div class="row-main"><div class="row-title">${a.online ? '空闲' : '无法确认'}</div><div class="row-sub">Claude · 在 MacBook Pro 上运行</div></div></div></div>
+        ${a.online ? '' : this.vSaBand()}
+        <div class="sec">等你确认<span class="n ${pending.length ? 'attn' : ''}">${pending.length}</span></div>
+        ${pending.length ? `<div class="list-card">${pending.map(row).join('')}</div>` : '<div class="sa-mempty">没有等你确认的提案。</div>'}
+        <div class="sec">它派出的<span class="n">${a.dispatched.length}</span></div>
+        ${a.dispatched.length ? `<div class="list-card">${done}</div>` : '<div class="sa-mempty">还没有执行过的提案。</div>'}
+        <div class="pad-bottom"></div>
+      </div>`
+          }
+          vSaProp(id) {
+            const a = this.s.sa
+            const p = a.props.find((x) => x.id === id)
+            const pending = p.status === 'pending'
+            const can = pending && a.online
+            const keep = p.items.filter((it) => it.on)
+            const items = p.items
+              .map((it, i) => {
+                const w = it.ws ? this.ws(it.ws) : null
+                const meta = `${w ? `<div class="pp-meta">${ic('folder-git-2', 's12')}<span class="mono">${w.repo}/${w.name}</span><span class="faint">·</span>${this.wsHost(w).name}</div>` : ''}${it.ses ? `<div class="pp-meta">${it.ses}</div>` : ''}`
+                const detail = it.prompt
+                  ? `第一句：${esc(it.prompt)}`
+                  : it.reason
+                    ? `原因：${esc(it.reason)}`
+                    : it.text
+                      ? `追加：${esc(it.text)}`
+                      : ''
+                const box = can
+                  ? `<button class="cbox ${it.on ? 'on' : ''}" data-act="sa-mtoggle" data-id="${p.id}" data-i="${i}" aria-label="${it.on ? '去掉这一项' : '保留这一项'}">${ic('check')}</button>`
+                  : `<span class="cbox ${it.on ? 'on' : ''} sa-lock">${ic('check')}</span>`
+                let res = ''
+                if (p.status === 'done' || p.status === 'executing') {
+                  res = !it.on
+                    ? '<div class="sa-mres">已去掉，没有执行</div>'
+                    : it.out
+                      ? `<div class="sa-mres ok">${ic('check', 's12')}${esc(it.out)}</div>`
+                      : `<div class="sa-mres">${spinner(12)}正在由 MacBook Pro 执行…</div>`
+                }
+                return `<div class="pp-item ${it.on ? '' : 'off'}">${box}<div class="pp-main"><div class="pp-title ${it.kind === 'stop' ? 'c-b' : ''}">${esc(this.saCopy(it))}</div>${it.kind === 'stop' ? '<div><span class="sa-must">永远要确认</span></div>' : ''}${meta}${detail ? `<div class="pp-prompt">${detail}</div>` : ''}${pending && !it.on ? '<div class="sa-mres">已去掉</div>' : ''}${res}</div></div>`
+              })
+              .join('')
+            const done = p.items.filter((it) => it.out).length
+            let bar
+            if (pending && a.online) {
+              bar = `<div class="bb-hint">${ic('laptop', 's14')}<span><b>由桌面的 Orca 执行</b><br>确认后 MacBook Pro 逐项执行，不再经过总管。</span></div><div class="bb-row"><button class="btn" data-act="sa-mdismiss" data-id="${p.id}">不要了</button><button class="btn primary flex1" data-act="sa-mconfirm" data-id="${p.id}" ${keep.length ? '' : 'disabled'}>${ic('check')}确认 ${keep.length} 项</button></div>`
+            } else if (pending) {
+              bar = `<div class="bb-hint">${stateDot('unverifiable', 14)}<span><b>MacBook Pro 未连接</b><br>提案要由桌面的 Orca 执行，恢复连接后才能确认。</span></div><div class="bb-row"><button class="btn" disabled>不要了</button><button class="btn primary flex1" disabled>${ic('check')}确认 ${keep.length} 项</button></div>`
+            } else if (p.status === 'dismissed') {
+              bar = `<div class="bb-hint">${ic('x', 's14')}<span>你选了「不要了」，没有执行任何一项</span></div>`
+            } else {
+              bar = `<div class="bb-hint">${p.status === 'done' ? ic('check-check', 's14 c-ok') : spinner(14)}<span>已确认 · 由 MacBook Pro 执行 · 完成 ${done}/${keep.length} 项</span></div>`
+            }
+            return `${navbar({ back: '总管', title: '提案' })}
+      <div class="scroll">
+        ${a.online ? '' : this.vSaBand()}
+        <div class="sa-phead"><div class="sa-ptitle lg">${esc(p.summary)}</div><div class="row-sub"><span>总管</span><span class="faint">·</span><span>${p.at}</span><span class="faint">·</span><span>${p.items.length} 项</span></div></div>
+        <div class="proposal sa-mprop">${items}</div>
+        <div class="pad-bottom"></div>
+      </div>
+      <div class="bottom-bar sa-bb">${bar}</div>`
+          }
+          // 确认后由桌面执行：手机只看到逐项回报，结果写进桌面的任务库。
+          saRun(p) {
+            p.items.forEach((it) => {
+              if (!it.on) {
+                return
+              }
+              if (it.kind === 'record') {
+                const w = this.ws(it.ws)
+                const key = this.repo(w.repo).project
+                const id = this.nextId(key)
+                this.d.tasks.push({
+                  id,
+                  project: key,
+                  title: it.title,
+                  status: 'doing',
+                  ws: w.id,
+                  updated: '刚刚',
+                  priority: 0,
+                  labels: [],
+                  createdAt: '刚刚 · 由总管提案',
+                  desc: '',
+                  progress: [],
+                  timeline: [
+                    {
+                      who: '总管',
+                      kind: 'chat',
+                      time: '刚刚',
+                      html: '由总管提案、你确认',
+                      quote: p.summary
+                    }
+                  ],
+                  children: [],
+                  created: Date.now()
+                })
+                w.task = id
+                it.ref = id
+                it.out = `已记成 ${id}`
+              } else if (it.kind === 'stop') {
+                const s = this.ses('s-41')
+                if (s) {
+                  s.state = 'ended'
+                }
+                it.ref = it.task
+                it.out = '已停掉，工作区和改过的文件不动'
+              } else {
+                const parent = this.task(it.task)
+                const id = this.nextId(parent.project)
+                this.d.tasks.push({
+                  id,
+                  project: parent.project,
+                  title: it.title,
+                  status: 'doing',
+                  parent: parent.id,
+                  updated: '刚刚',
+                  priority: 0,
+                  labels: [],
+                  createdAt: '刚刚 · 由总管提案',
+                  desc: it.prompt || '',
+                  progress: [],
+                  timeline: [
+                    {
+                      who: '总管',
+                      kind: 'chat',
+                      time: '刚刚',
+                      html: '由总管提案、你确认',
+                      quote: p.summary
+                    }
+                  ],
+                  children: [],
+                  created: Date.now()
+                })
+                parent.children = [...(parent.children || []), id]
+                it.ref = id
+                it.out = `已建 ${id}，Codex 会话已启动`
+              }
+            })
+            p.status = 'done'
+            this.s.sa.dispatched.unshift({
+              summary: p.summary,
+              at: '刚刚',
+              refs: [...new Set(p.items.filter((it) => it.on && it.ref).map((it) => it.ref))]
+            })
           }
 
           // ---------- 任务详情（第三轮：头部一个主按钮，一张「现在」卡，空块不显示，系统记录折叠） ----------
@@ -8747,6 +9041,49 @@
               case 'pp-confirm':
                 this.confirmProposal(this.conv(this.s.convId).msgs[+el.dataset.mi])
                 break
+              case 'open-sa':
+                this.go({ name: 'sa' })
+                break
+              case 'open-saprop':
+                this.go({ name: 'saprop', id })
+                break
+              case 'sa-mtoggle': {
+                const p = this.s.sa.props.find((x) => x.id === id)
+                if (p && p.status === 'pending' && this.s.sa.online) {
+                  const it = p.items[+el.dataset.i]
+                  it.on = !it.on
+                }
+                break
+              }
+              case 'sa-mdismiss': {
+                const p = this.s.sa.props.find((x) => x.id === id)
+                if (p && p.status === 'pending' && this.s.sa.online) {
+                  p.status = 'dismissed'
+                  this.toast('这份提案不要了，没有执行任何一项', 'x')
+                }
+                break
+              }
+              case 'sa-mconfirm': {
+                const p = this.s.sa.props.find((x) => x.id === id)
+                if (
+                  !p ||
+                  p.status !== 'pending' ||
+                  !this.s.sa.online ||
+                  !p.items.some((it) => it.on)
+                ) {
+                  break
+                }
+                p.status = 'executing'
+                if (SHOT) {
+                  this.saRun(p)
+                } else {
+                  setTimeout(() => {
+                    this.saRun(p)
+                    this.render()
+                  }, 1200)
+                }
+                break
+              }
               default:
                 return
             }
@@ -8796,6 +9133,77 @@
           p.s.convId = 'c-today'
         }
         const toTasks = (p) => p.go({ name: 'tasks' })
+        // 总管（m9）：两份等你确认的提案、两份它派出的；online 为 false 时桌面未连接。与桌面 d15～d17 同一批数据。
+        const saSeed = (p, online = true) => {
+          p.s.sa = {
+            online,
+            props: [
+              {
+                id: 'p-pr',
+                status: 'pending',
+                summary: '两个工作区 PR 没合、也没挂任务，各记成一个任务跟进',
+                at: '2 分钟前',
+                items: [
+                  {
+                    kind: 'record',
+                    ws: 'orca/feat-x',
+                    title: '跟进 PR #74 的评审意见',
+                    ses: 'Codex 做完一轮',
+                    on: true
+                  },
+                  {
+                    kind: 'record',
+                    ws: 'shop/refund-webhook',
+                    title: '修复 PR #233 的 CI',
+                    ses: 'Claude 做完一轮',
+                    on: true
+                  }
+                ]
+              },
+              {
+                id: 'p-41',
+                status: 'pending',
+                summary: 'ORC-41 换 Codex 重来',
+                at: '刚刚',
+                items: [
+                  {
+                    kind: 'stop',
+                    task: 'ORC-41',
+                    ws: 'orca/feat-reconnect',
+                    ses: 'Claude 工作中 12 分钟',
+                    reason: '换 Codex 重来。停的只是这个会话，工作区和改过的文件不动。',
+                    on: true
+                  },
+                  {
+                    kind: 'subtask',
+                    task: 'ORC-41',
+                    ws: 'orca/feat-reconnect',
+                    title: '用 Codex 重做 attach 时序修复',
+                    ses: 'Codex 新会话',
+                    prompt: '按 ORC-41 的复现脚本重做修复，先别动 relay 那层。',
+                    on: true
+                  }
+                ]
+              }
+            ],
+            dispatched: [
+              {
+                summary: '在 feat-reconnect 建任务，先复现再修',
+                at: '昨天 18:02',
+                refs: ['ORC-41']
+              },
+              { summary: '让 ORC-39 顺便看看首屏渲染', at: '今天 9:12', refs: ['ORC-39'] }
+            ]
+          }
+        }
+        const toSa = (p, online = true, prop = null) => {
+          saSeed(p, online)
+          toTasks(p)
+          p.go({ name: 'sa' })
+          if (prop) {
+            p.go({ name: 'saprop', id: prop })
+          }
+        }
         const SCREENS = [
           {
             id: 'm1',
@@ -9158,6 +9566,63 @@
                   p.s.toast = null
                 }
               }
+            ]
+          },
+          {
+            id: 'm9',
+            name: '总管',
+            desc: '本地任务页的派活输入框下面是「总管」入口：写明它在 MacBook Pro 上运行、空闲，右边是等你确认的提案数。点进去是总管页：它的状态（对话在桌面的 Orca 里，手机不开对话），等你确认的提案（每份写明几项、什么时候提的；含停会话的标红），以及它派出的、各自开出了哪些任务。',
+            frames: [
+              {
+                caption: '本地任务页：「总管」入口带等你确认数',
+                init: (p) => {
+                  saSeed(p)
+                  toTasks(p)
+                }
+              },
+              { caption: '总管页：等你确认的提案、它派出的', init: (p) => toSa(p) }
+            ]
+          },
+          {
+            id: 'm9-decide',
+            name: '决定提案',
+            desc: '提案详情和桌面上的提案卡是同一份：每项一个勾选框，勾上是保留、去掉就不执行；停会话那项标红并写「永远要确认」。底部写明「由桌面的 Orca 执行」：确认后 MacBook Pro 逐项执行，不再经过总管，手机只看到逐项回报；「不要了」整份不执行。',
+            frames: [
+              { caption: '提案详情：逐项保留或去掉', init: (p) => toSa(p, true, 'p-pr') },
+              {
+                caption: '去掉一项：按钮变成「确认 1 项」',
+                init: (p) => {
+                  toSa(p, true, 'p-pr')
+                  p.s.sa.props[0].items[1].on = false
+                }
+              },
+              {
+                caption: '确认后：由 MacBook Pro 执行，逐项回报',
+                init: (p) => {
+                  toSa(p, true, 'p-pr')
+                  const prop = p.s.sa.props[0]
+                  prop.items[1].on = false
+                  prop.status = 'executing'
+                  p.saRun(prop)
+                }
+              },
+              { caption: '含停会话的提案：那一项永远要确认', init: (p) => toSa(p, true, 'p-41') }
+            ]
+          },
+          {
+            id: 'm9-offline',
+            name: '桌面未连接',
+            desc: '配对的 MacBook Pro 不在联系：入口写明未连接；总管页和提案详情只显示断开前最后读到的内容，状态写「无法确认」，勾选框和「不要了」「确认」都置灰，并写明原因：提案要由桌面的 Orca 执行，恢复连接后才能确认；手机不会替你攒着稍后再发。',
+            frames: [
+              {
+                caption: '入口写明 MacBook Pro 未连接',
+                init: (p) => {
+                  saSeed(p, false)
+                  toTasks(p)
+                }
+              },
+              { caption: '总管页只读', init: (p) => toSa(p, false) },
+              { caption: '提案详情：按钮置灰并写明原因', init: (p) => toSa(p, false, 'p-pr') }
             ]
           }
         ]

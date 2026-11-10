@@ -24,7 +24,9 @@ export function LocalTaskStartActions({
   project,
   ownLink,
   writeReason,
-  inherited
+  inherited,
+  show = 'all',
+  size = 'xs'
 }: {
   task: LocalTask
   project: LocalTaskProject | undefined
@@ -33,7 +35,10 @@ export function LocalTaskStartActions({
   writeReason: string | null
   /** The task works in an ancestor's workspace, so Start makes it one of its own. */
   inherited: boolean
-}): React.JSX.Element {
+  /** The task view puts Start in its title row and Link on the workspace line. */
+  show?: 'all' | 'start' | 'link'
+  size?: 'xs' | 'sm'
+}): React.JSX.Element | null {
   const start = useLocalTaskStartState(project, ownLink)
   const choices = useLocalTaskStartChoices(start.mode === 'create' ? project : undefined)
   const run = (orcaProjectId?: string): void => {
@@ -45,9 +50,13 @@ export function LocalTaskStartActions({
     ? translate('localTasks.links.startOwn', 'Start work separately')
     : translate('localTasks.links.start', 'Start work')
   const reason = writeReason ?? start.reason
+  const showStart = show !== 'link' && start.mode === 'create'
+  if (show === 'start' && !showStart) {
+    return null
+  }
   return (
     <div className="flex flex-wrap gap-1.5">
-      {start.mode === 'create' ? (
+      {showStart ? (
         <span className="flex items-center gap-1">
           <LocalTaskActionTooltip
             reason={reason}
@@ -61,8 +70,8 @@ export function LocalTaskStartActions({
             }
             shortcut={['I']}
           >
-            <Button size="xs" disabled={reason !== null} onClick={() => run()}>
-              <Play className="size-3" />
+            <Button size={size} disabled={reason !== null} onClick={() => run()}>
+              <Play className={size === 'sm' ? 'size-3.5' : 'size-3'} />
               {startLabel}
             </Button>
           </LocalTaskActionTooltip>
@@ -72,7 +81,7 @@ export function LocalTaskStartActions({
                 <DropdownMenuTrigger asChild disabled={reason !== null}>
                   <Button
                     variant="outline"
-                    size="icon-xs"
+                    size={size === 'sm' ? 'icon-sm' : 'icon-xs'}
                     aria-label={translate(
                       'localTasks.links.startInRepo',
                       'Start work in another repository'
@@ -100,19 +109,21 @@ export function LocalTaskStartActions({
           ) : null}
         </span>
       ) : null}
-      <LocalTaskActionTooltip reason={writeReason}>
-        <Button
-          variant="outline"
-          size="xs"
-          disabled={writeReason !== null}
-          onClick={() =>
-            localTaskLinkDialogStore.getState().open({ kind: 'pick-workspace', taskId: task.id })
-          }
-        >
-          <Link2 className="size-3" />
-          {translate('localTasks.links.useExisting', 'Link an existing workspace')}
-        </Button>
-      </LocalTaskActionTooltip>
+      {show !== 'start' ? (
+        <LocalTaskActionTooltip reason={writeReason}>
+          <Button
+            variant={show === 'link' ? 'ghost' : 'outline'}
+            size="xs"
+            disabled={writeReason !== null}
+            onClick={() =>
+              localTaskLinkDialogStore.getState().open({ kind: 'pick-workspace', taskId: task.id })
+            }
+          >
+            <Link2 className="size-3" />
+            {translate('localTasks.links.useExisting', 'Link an existing workspace')}
+          </Button>
+        </LocalTaskActionTooltip>
+      ) : null}
     </div>
   )
 }
