@@ -30,6 +30,7 @@ import type {
 import type { LocalTask } from '../../../../shared/local-tasks/local-task-types'
 import {
   LocalTaskReviewBadge,
+  localTaskSessionDotState,
   localTaskSessionStateLabel,
   useLocalTaskReview,
   useLocalTaskWorkspace,
@@ -183,18 +184,6 @@ export function LocalTaskHostCell({
   )
 }
 
-function dotFor(state: LocalTaskSessionState) {
-  switch (state) {
-    case 'missing':
-      return 'unconfirmed' as const
-    case 'exited':
-    case 'unknown':
-      return 'idle' as const
-    default:
-      return state
-  }
-}
-
 /** The lead session in words, with how many more the row holds. */
 export function LocalTaskSessionCell({
   sessions,
@@ -223,7 +212,7 @@ export function LocalTaskSessionCell({
   const agent = isTuiAgent(lead.agent) ? lead.agent : null
   return (
     <span className="flex min-w-0 items-center gap-1 text-2xs text-muted-foreground">
-      <AgentStateDot state={item ? 'waiting' : dotFor(state)} size="sm" />
+      <AgentStateDot state={item ? 'waiting' : localTaskSessionDotState(state)} size="sm" />
       {agent ? <AgentIcon agent={agent} size={12} /> : null}
       <span className={cn('truncate', item && 'text-status-warning')}>{label}</span>
       {sessions.length > 1 ? <span className="shrink-0">+{sessions.length - 1}</span> : null}

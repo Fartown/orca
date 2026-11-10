@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { GitBranch, Plus } from 'lucide-react'
-import { AgentStateDot, type AgentDotState } from '@/components/AgentStateDot'
+import { AgentStateDot } from '@/components/AgentStateDot'
 import { useNow } from '@/hooks/use-now'
 import { translate } from '@/i18n/i18n'
 import { AgentIcon, getAgentLabel } from '@/lib/agent-catalog'
@@ -13,10 +13,10 @@ import type {
 import { formatLocalTaskSessionAge } from '@/local-tasks/local-task-session-age'
 import { selectLocalTaskWorkspace } from '@/local-tasks/local-task-workspace-resolution'
 import { isTuiAgent } from '../../../../shared/tui-agent-config'
-import type { LocalTaskSessionState } from '../../../../shared/local-tasks/local-task-link-types'
 import { LocalTaskHostIcon, useLocalTaskHostLabel } from './LocalTaskHostLabel'
 import {
   LocalTaskReviewBadge,
+  localTaskSessionDotState,
   localTaskSessionStateLabel,
   useLocalTaskReview
 } from './LocalTaskProgress'
@@ -67,18 +67,6 @@ export function LocalTaskProposalPlaceChip({
   )
 }
 
-function dotFor(state: LocalTaskSessionState): AgentDotState {
-  switch (state) {
-    case 'missing':
-      return 'unconfirmed'
-    case 'exited':
-    case 'unknown':
-      return 'idle'
-    default:
-      return state
-  }
-}
-
 function agentName(agent: string | null): string {
   return isTuiAgent(agent) ? getAgentLabel(agent) : translate('localTasks.links.agent', 'Agent')
 }
@@ -104,7 +92,7 @@ export function LocalTaskProposalSessionLine({
         session.state === 'unverifiable' && 'text-status-warning'
       )}
     >
-      <AgentStateDot state={dotFor(session.state)} size="sm" />
+      <AgentStateDot state={localTaskSessionDotState(session.state)} size="sm" />
       {isTuiAgent(session.agent) ? <AgentIcon agent={session.agent} size={12} /> : null}
       <span className="truncate">{words}</span>
     </span>
