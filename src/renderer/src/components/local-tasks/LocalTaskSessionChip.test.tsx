@@ -138,7 +138,7 @@ it('relinks a session by unlinking it first, offering only the other tasks in it
     </TooltipProvider>
   )
   fireEvent.click(screen.getByRole('button', { name: 'Reconnect blank terminal · ORC-41' }))
-  expect(screen.getByText('ORC-41 · This session belongs to it')).toBeTruthy()
+  expect(await screen.findByText('ORC-41 · This session belongs to it')).toBeTruthy()
   fireEvent.click(screen.getByRole('button', { name: /Link to another task/ }))
   const choices = within(screen.getByRole('dialog'))
     .getAllByRole('button')

@@ -3,14 +3,9 @@ import { ArrowUpRight, CornerDownRight, Link2, Unlink } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { translate } from '@/i18n/i18n'
 import { useAppStore } from '@/store'
-import { getExecutionHostIdForWorktree } from '@/lib/worktree-runtime-owner'
 import { parsePaneKey } from '../../../../shared/stable-pane-id'
 import { isTuiAgent } from '../../../../shared/tui-agent-config'
-import type { ExecutionHostId } from '../../../../shared/execution-host'
-import type {
-  LocalTaskSessionLink,
-  LocalTaskWorkspaceLink
-} from '../../../../shared/local-tasks/local-task-link-types'
+import type { LocalTaskSessionLink } from '../../../../shared/local-tasks/local-task-link-types'
 import type { LocalTask } from '../../../../shared/local-tasks/local-task-types'
 import { openLocalTaskPage } from '@/local-tasks/local-task-navigation'
 import {
@@ -19,7 +14,6 @@ import {
   terminalSessionIds
 } from '@/local-tasks/local-task-session-recording'
 import { unlinkLocalTaskSession } from '@/local-tasks/local-task-workspace-linking'
-import { findLocalTaskLinkForWorkspace } from '@/local-tasks/local-task-link-selectors'
 import { useLocalTasksDomain } from '@/local-tasks/local-tasks-domain-store'
 import { localTasksClient } from '@/local-tasks/local-tasks-runtime-client'
 import { runLocalTaskWrite } from '@/local-tasks/local-task-writes'
@@ -29,25 +23,7 @@ import { localTaskWorkspaceFamilyIds } from '../../../../shared/local-tasks/loca
 import type { LocalTaskSessionPane } from './LocalTaskSessionChip'
 import { LocalTaskSummaryCard } from './LocalTaskSummaryCard'
 import { useLocalTaskIndex } from './use-local-task-list-model'
-
-/** A pane's workspace link, matched as the sidebar card matches it: instance, then host and id. */
-export function useLocalTaskPaneWorkspaceLink(worktreeId: string): {
-  hostId: ExecutionHostId
-  link: LocalTaskWorkspaceLink | null
-} {
-  const hostId = useAppStore((state) => getExecutionHostIdForWorktree(state, worktreeId))
-  const instanceId = useAppStore(
-    (state) => state.getKnownWorktreeById(worktreeId, hostId)?.instanceId
-  )
-  const link = useLocalTasksDomain((state) =>
-    findLocalTaskLinkForWorkspace(state.links, {
-      id: worktreeId,
-      hostId,
-      ...(instanceId ? { instanceId } : {})
-    })
-  )
-  return { hostId, link }
-}
+import { useLocalTaskPaneWorkspaceLink } from '@/local-tasks/local-task-pane-workspace-link'
 
 /** The card behind a linked session's chip: the task at a glance, then relink or open it. */
 function LinkedCard({

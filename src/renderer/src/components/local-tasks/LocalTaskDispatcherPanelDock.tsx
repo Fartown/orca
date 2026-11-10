@@ -1,8 +1,14 @@
-import { useNow } from '@/hooks/use-now'
-import { useLocalTaskProposals } from '@/local-tasks/local-task-dispatcher-proposals'
-import { useLocalTaskDispatcherPane } from '@/local-tasks/local-task-dispatcher-session'
+import { lazy, Suspense } from 'react'
+import { useLocalTaskDispatcherPane } from '@/local-tasks/local-task-dispatcher-pane'
 import { parsePaneKey } from '../../../../shared/stable-pane-id'
-import { LocalTaskProposalCard, useProposalNames } from './LocalTaskProposalCard'
+
+// Why lazy: hosts mount the dock on every chat pane, so the cards and what runs a proposal load
+// only once a pane turns out to be the dispatcher's.
+const LocalTaskDispatcherPanelCards = lazy(() =>
+  import('./LocalTaskDispatcherPanelCards').then((module) => ({
+    default: module.LocalTaskDispatcherPanelCards
+  }))
+)
 
 /**
  * The proposals still waiting on the person, docked above the dispatcher's own input (d16): the
@@ -14,21 +20,10 @@ export function LocalTaskDispatcherPanelDock({
   tabId: string
 }): React.JSX.Element | null {
   const { paneKey, live } = useLocalTaskDispatcherPane()
-  const pending = useLocalTaskProposals((state) => state.pending)
-  const unrun = useLocalTaskProposals((state) => state.unrun)
-  const claimed = useLocalTaskProposals((state) => state.claimed)
-  const names = useProposalNames()
-  const now = useNow(60_000)
   const ours = live && paneKey !== null && parsePaneKey(paneKey)?.tabId === tabId
-  const waiting = [...pending, ...unrun, ...claimed]
-  if (!ours || waiting.length === 0) {
-    return null
-  }
-  return (
-    <div className="flex max-h-[50%] shrink-0 flex-col gap-2 overflow-y-auto px-3 pt-2 scrollbar-sleek">
-      {waiting.map((proposal) => (
-        <LocalTaskProposalCard key={proposal.id} proposal={proposal} names={names} now={now} />
-      ))}
-    </div>
-  )
+  return ours ? (
+    <Suspense fallback={null}>
+      <LocalTaskDispatcherPanelCards />
+    </Suspense>
+  ) : null
 }

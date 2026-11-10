@@ -1,5 +1,3 @@
-import { useStore } from 'zustand'
-import { createStore } from 'zustand/vanilla'
 import { toast } from 'sonner'
 import { translate } from '@/i18n/i18n'
 import { newAgentLaunchRequestId } from '@/lib/agent-launch-request-id'
@@ -13,36 +11,25 @@ import type { TuiAgent } from '../../../shared/tui-agent'
 import { isTuiAgent } from '../../../shared/tui-agent-config'
 import { localTaskDispatcherClient } from './local-task-dispatcher-client'
 import { localTasksClient } from './local-tasks-runtime-client'
-import { localTasksDomainStore, useLocalTasksDomain } from './local-tasks-domain-store'
 import { LOCAL_TASK_DISPATCHER_PANE_PREFERENCE_KEY } from './local-task-preference-keys'
+import {
+  knownDispatcherPaneKey,
+  liveDispatcherPaneKey,
+  localTaskDispatcherStore,
+  useLocalTaskDispatcherPane
+} from './local-task-dispatcher-pane'
+
+export {
+  knownDispatcherPaneKey,
+  liveDispatcherPaneKey,
+  localTaskDispatcherStore,
+  useLocalTaskDispatcherPane
+}
 
 export const LOCAL_TASK_DISPATCHER_OPENING_PROMPT =
   "You are the user's dispatcher in Orca. Run `orca task guide --dispatcher` now and follow it. Then tell the user in one sentence that you are ready."
 
-type DispatcherState = { paneKey: string | null; opening: boolean }
-
-export const localTaskDispatcherStore = createStore<DispatcherState>(() => ({
-  paneKey: null,
-  opening: false
-}))
-
 const PANE_WAIT_MS = 30_000
-
-/** The pane the dispatcher last ran in, open or not; null when this library never had one. */
-export function knownDispatcherPaneKey(): string | null {
-  return (
-    localTaskDispatcherStore.getState().paneKey ??
-    localTasksDomainStore.getState().preferences[LOCAL_TASK_DISPATCHER_PANE_PREFERENCE_KEY] ??
-    null
-  )
-}
-
-/** The pane the dispatcher runs in, when its tab is still open in this window. */
-export function liveDispatcherPaneKey(state: AppState = useAppStore.getState()): string | null {
-  const paneKey = knownDispatcherPaneKey()
-  const pane = paneKey ? parsePaneKey(paneKey) : null
-  return pane && state.terminalLayoutsByTabId[pane.tabId] ? paneKey : null
-}
 
 /** Opens the floating workspace on the dispatcher's tab and puts the cursor in it. */
 function dispatcherUnifiedTab(state: AppState, tabId: string | undefined) {
@@ -89,24 +76,6 @@ function revealDispatcherPane(paneKey: string): void {
     app.setActiveTab(tabId)
     focusTerminalTabSurface(tabId)
   }
-}
-
-/** The dispatcher's pane as the page shows it: known once it was opened, live while its tab is. */
-export function useLocalTaskDispatcherPane(): {
-  paneKey: string | null
-  known: boolean
-  live: boolean
-} {
-  const opened = useStore(localTaskDispatcherStore, (state) => state.paneKey)
-  const remembered = useLocalTasksDomain(
-    (state) => state.preferences[LOCAL_TASK_DISPATCHER_PANE_PREFERENCE_KEY] ?? null
-  )
-  const paneKey = opened ?? remembered
-  const live = useAppStore((state) => {
-    const tabId = paneKey ? parsePaneKey(paneKey)?.tabId : undefined
-    return Boolean(tabId && state.terminalLayoutsByTabId[tabId])
-  })
-  return { paneKey, known: paneKey !== null, live }
 }
 
 /** The agent the dispatcher runs: what its pane reports, else what its tab was launched with. */

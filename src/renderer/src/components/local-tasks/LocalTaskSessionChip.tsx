@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { lazy, Suspense, useState } from 'react'
 import { ChevronDown, Link2, PanelRightClose } from 'lucide-react'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { translate } from '@/i18n/i18n'
@@ -16,7 +16,13 @@ import {
 } from '@/local-tasks/local-task-session-panel-store'
 import { useAppStore } from '@/store'
 import { LocalTaskStatusIcon } from './LocalTaskIcons'
-import { LocalTaskSessionChipCard, useLocalTaskPaneWorkspaceLink } from './LocalTaskSessionChipCard'
+import { useLocalTaskPaneWorkspaceLink } from '@/local-tasks/local-task-pane-workspace-link'
+
+// Why lazy: every terminal header mounts the chip; the card and its task summary load on hover.
+const loadChipCard = () => import('./LocalTaskSessionChipCard')
+const LocalTaskSessionChipCard = lazy(() =>
+  loadChipCard().then((module) => ({ default: module.LocalTaskSessionChipCard }))
+)
 
 export type LocalTaskSessionPane = {
   worktreeId: string
@@ -137,6 +143,8 @@ function LinkedSessionChip({
             title={label}
             aria-label={label}
             onPointerDown={(event) => event.stopPropagation()}
+            onPointerEnter={() => void loadChipCard()}
+            onFocus={() => void loadChipCard()}
             onClick={(event) => event.stopPropagation()}
             className={cn(
               'inline-flex h-5 min-w-0 shrink items-center gap-1 rounded-full border border-input bg-popover/95 px-1.5 text-2xs text-foreground shadow-xs transition-colors hover:bg-accent data-[state=open]:bg-accent',
@@ -176,11 +184,13 @@ function LinkedSessionChip({
         >
           <div className="p-3">
             {open ? (
-              <LocalTaskSessionChipCard
-                pane={pane}
-                session={session}
-                onDone={() => setOpen(false)}
-              />
+              <Suspense fallback={null}>
+                <LocalTaskSessionChipCard
+                  pane={pane}
+                  session={session}
+                  onDone={() => setOpen(false)}
+                />
+              </Suspense>
             ) : null}
           </div>
         </PopoverContent>

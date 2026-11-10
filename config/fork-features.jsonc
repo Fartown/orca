@@ -3255,7 +3255,8 @@
         "src/main/runtime/orca-runtime.ts",
         "src/main/runtime/runtime-notifier-contract.ts",
         "src/shared/workspace-session-state-types.ts",
-        "src/main/ipc/desktop-runtime-sender-lifecycle.ts"
+        "src/main/ipc/desktop-runtime-sender-lifecycle.ts",
+        "src/renderer/src/lib/e2e-config.ts"
       ],
       "policyId": "local-tasks",
       "ownedPaths": [
