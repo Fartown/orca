@@ -266,10 +266,12 @@ function CreateBody({
             }
           }}
         />
-        <DialogTitle className="shrink-0 text-base">
-          {record
-            ? translate('localTasks.createFlow.recordTitle', 'Make task')
-            : translate('localTasks.create.title', 'New task')}
+        <DialogTitle className="shrink-0">
+          <span className="block text-base">
+            {record
+              ? translate('localTasks.createFlow.recordTitle', 'Make task')
+              : translate('localTasks.create.title', 'New task')}
+          </span>
         </DialogTitle>
         <span className="min-w-0 truncate text-xs text-muted-foreground">
           {record

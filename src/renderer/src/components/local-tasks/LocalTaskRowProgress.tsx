@@ -74,7 +74,7 @@ export function LocalTaskProgressLine({
         align="start"
         variant="tab-preview"
         showArrow={false}
-        className="w-auto max-w-lg p-0"
+        className="w-auto max-w-lg"
       >
         <LocalTaskProgressCard
           body={latest.progress.body}
@@ -131,8 +131,9 @@ function LocalTaskProgressCard({
 }): React.JSX.Element {
   const agent = session && isTuiAgent(session.agent) ? session.agent : null
   const sections = parseLocalTaskProgressSections(body)
+  // Why -my-1: the tab-preview tooltip pads p-3; this card keeps its 8px top and bottom.
   return (
-    <div className="flex flex-col gap-1.5 px-3 py-2 text-xs">
+    <div className="-my-1 flex flex-col gap-1.5 text-xs">
       <div className="flex items-center gap-1.5 text-2xs text-muted-foreground">
         {agent ? <AgentIcon agent={agent} size={12} /> : null}
         {agent ? <span>{getAgentLabel(agent)}</span> : null}

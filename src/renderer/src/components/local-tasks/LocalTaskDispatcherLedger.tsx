@@ -148,7 +148,10 @@ function DispatchedRow({
                   {step(at + 1, translate('localTasks.dispatcher.stage.skipped', 'Not run'))}
                 </StepChip>
               )
-            default:
+            case 'dropped':
+            case 'running':
+            case 'unverifiable':
+            case 'waiting':
               return null
           }
         })}

@@ -252,5 +252,9 @@ export function useLocalTaskProposalItemViews(
       })
     )
   )
-  return useMemo(() => JSON.parse(key) as LocalTaskProposalItemView[], [key])
+  return useMemo(
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: key is the JSON of the LocalTaskProposalItemView[] built just above, and JSON keeps every field of it.
+    () => JSON.parse(key) as LocalTaskProposalItemView[],
+    [key]
+  )
 }

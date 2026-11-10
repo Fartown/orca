@@ -1,7 +1,7 @@
 import { Folder, GitBranch, Search, Unplug } from 'lucide-react'
-import { Input } from '@/components/ui/input'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { translate } from '@/i18n/i18n'
+import { ImeInput } from '@/lib/ime-text-field'
 import { cn } from '@/lib/utils'
 import {
   localTaskCreateChoiceBlocked,
@@ -123,17 +123,18 @@ export function LocalTaskCreateWorkspaceList({
   )
   return (
     <div className="flex flex-col gap-2">
-      <div className="relative">
+      {/* Why a shell: Input's padding cannot host the icon, so this mirrors its border and focus tokens. */}
+      <div className="flex h-8 items-center gap-2 rounded-md border border-input pr-3 pl-2.5 shadow-xs transition-[color,box-shadow] focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/50 dark:bg-input/30">
         <Search
-          className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground"
+          className="pointer-events-none size-3.5 shrink-0 text-muted-foreground"
           aria-hidden
         />
-        <Input
+        <ImeInput
           value={query}
           onChange={(event) => onQueryChange(event.target.value)}
           placeholder={label}
           aria-label={label}
-          className="h-8 pl-8"
+          className="h-full min-w-0 flex-1 bg-transparent text-base outline-none selection:bg-primary selection:text-primary-foreground placeholder:text-muted-foreground md:text-sm"
         />
       </div>
       {shown.length === 0 ? (
@@ -152,11 +153,12 @@ export function LocalTaskCreateWorkspaceList({
             }
           }}
           aria-label={translate('localTasks.createFlow.whereExisting', 'Existing workspace')}
-          className="scrollbar-sleek max-h-44 gap-0.5 overflow-y-auto rounded-md border border-border p-1"
         >
-          {shown.map((choice) => (
-            <ChoiceRow key={choice.key} choice={choice} picked={choice.key === pickedKey} />
-          ))}
+          <div className="scrollbar-sleek grid max-h-44 gap-0.5 overflow-y-auto rounded-md border border-border p-1">
+            {shown.map((choice) => (
+              <ChoiceRow key={choice.key} choice={choice} picked={choice.key === pickedKey} />
+            ))}
+          </div>
         </RadioGroup>
       )}
     </div>

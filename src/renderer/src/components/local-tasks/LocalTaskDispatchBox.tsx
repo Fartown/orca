@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Textarea } from '@/components/ui/textarea'
+import { ImeTextarea } from '@/lib/ime-text-field'
 import { translate } from '@/i18n/i18n'
 import { useAppStore } from '@/store'
 import { getAgentCatalog } from '@/lib/agent-catalog'
@@ -295,12 +295,11 @@ export function LocalTaskDispatchBox(): React.JSX.Element {
         count={targets.length}
         onRemove={(id) => setTargets((current) => current.filter((item) => item.id !== id))}
       />
-      <Textarea
-        variant="composite"
+      <ImeTextarea
         ref={input}
         value={text}
         rows={1}
-        className="field-sizing-content max-h-40 min-h-6 font-sans text-sm leading-6 md:text-sm"
+        className="scrollbar-sleek field-sizing-content max-h-40 min-h-6 w-full min-w-0 resize-none bg-transparent p-0 font-sans text-sm leading-6 outline-none placeholder:text-muted-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50"
         placeholder={translate(
           'localTasks.dispatch.placeholder',
           'What should be done? @ a workspace or repository, then describe the task'

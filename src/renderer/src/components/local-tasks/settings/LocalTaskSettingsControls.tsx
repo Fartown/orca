@@ -11,10 +11,30 @@ export function LocalTaskSettingsCard({
   className?: string
   children: React.ReactNode
 }): React.JSX.Element {
+  // Why py-1.5: with Card sm's own py-2.5 the body sits 1rem from the card's edge.
   return (
-    <Card size="sm" className={cn('gap-0 px-5 py-4', className)}>
-      {children}
+    <Card size="sm">
+      <div className={cn('flex flex-col px-5 py-1.5', className)}>{children}</div>
     </Card>
+  )
+}
+
+/** An underlined text action under a setting, e.g. opening a preview or an editor. */
+export function LocalTaskSettingsLinkButton({
+  onClick,
+  children
+}: {
+  onClick: () => void
+  children: React.ReactNode
+}): React.JSX.Element {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="inline-flex shrink-0 cursor-pointer items-center justify-center gap-1 rounded-md text-xs font-medium whitespace-nowrap text-foreground underline decoration-border underline-offset-4 transition-all outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-3"
+    >
+      {children}
+    </button>
   )
 }
 
@@ -79,8 +99,8 @@ export function LocalTaskSettingsSegment<T extends string>({
       className="flex w-fit"
     >
       {options.map((option) => (
-        <ToggleGroupItem key={option.value} value={option.value} className="data-[size=xs]:px-3">
-          {option.label}
+        <ToggleGroupItem key={option.value} value={option.value}>
+          <span className="px-1">{option.label}</span>
         </ToggleGroupItem>
       ))}
     </ToggleGroup>

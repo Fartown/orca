@@ -169,14 +169,20 @@ function LinkedSessionChip({
           // Why: the chat chip sits at the transcript's left edge; opening leftward covers the sidebar.
           align={pane.sessionId ? 'start' : 'end'}
           collisionPadding={8}
-          className="w-88 p-3"
+          className="w-88"
           // Why: focusing the first control on open drew a focus ring before any key press.
           onOpenAutoFocus={(event) => event.preventDefault()}
           onClick={(event) => event.stopPropagation()}
         >
-          {open ? (
-            <LocalTaskSessionChipCard pane={pane} session={session} onDone={() => setOpen(false)} />
-          ) : null}
+          <div className="p-3">
+            {open ? (
+              <LocalTaskSessionChipCard
+                pane={pane}
+                session={session}
+                onDone={() => setOpen(false)}
+              />
+            ) : null}
+          </div>
         </PopoverContent>
       </Popover>
     </span>

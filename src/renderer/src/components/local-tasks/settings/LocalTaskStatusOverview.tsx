@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { Pencil } from 'lucide-react'
-import { Button } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,
@@ -12,6 +11,7 @@ import { Label } from '@/components/ui/label'
 import { translate } from '@/i18n/i18n'
 import type { LocalTaskProject } from '../../../../../shared/local-tasks/local-task-types'
 import { LocalTaskStatusIcon } from '../LocalTaskIcons'
+import { LocalTaskSettingsLinkButton } from './LocalTaskSettingsControls'
 import { LocalTaskStatusSettings, useLocalTaskStatusUsage } from './LocalTaskStatusSettings'
 
 /** A project's statuses as chips with task counts; the full editor opens in a dialog. */
@@ -26,13 +26,15 @@ export function LocalTaskStatusOverview({
   const [managing, setManaging] = useState(false)
   return (
     <div className="space-y-2">
-      <Label className="flex-wrap gap-1.5">
-        {translate('localTasks.settings.statusesTitle', 'Statuses')}
-        <span className="text-2xs font-normal text-muted-foreground">
-          {translate(
-            'localTasks.settings.statusesSummary',
-            '· Six fixed categories; a status never changes category'
-          )}
+      <Label>
+        <span className="flex flex-wrap items-center gap-1.5">
+          {translate('localTasks.settings.statusesTitle', 'Statuses')}
+          <span className="text-2xs font-normal text-muted-foreground">
+            {translate(
+              'localTasks.settings.statusesSummary',
+              '· Six fixed categories; a status never changes category'
+            )}
+          </span>
         </span>
       </Label>
       <ul className="flex flex-wrap gap-1.5">
@@ -53,15 +55,10 @@ export function LocalTaskStatusOverview({
           </li>
         ))}
       </ul>
-      <Button
-        variant="link"
-        size="xs"
-        className="h-auto px-0 text-foreground underline decoration-border underline-offset-4 has-[>svg]:px-0"
-        onClick={() => setManaging(true)}
-      >
+      <LocalTaskSettingsLinkButton onClick={() => setManaging(true)}>
         <Pencil />
         {translate('localTasks.settings.manageStatuses', 'Manage statuses')}
-      </Button>
+      </LocalTaskSettingsLinkButton>
       <Dialog open={managing} onOpenChange={setManaging}>
         <DialogContent scrollable className="sm:max-w-xl">
           <DialogHeader>

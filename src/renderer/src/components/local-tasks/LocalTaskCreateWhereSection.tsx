@@ -106,17 +106,23 @@ export function LocalTaskCreateWhereSection({
             aria-label={label}
             className="grid-cols-3"
           >
-            <ToggleGroupItem value="existing" className="gap-1.5">
-              <GitBranch className="size-3.5" />
-              {translate('localTasks.createFlow.whereExisting', 'Existing workspace')}
+            <ToggleGroupItem value="existing">
+              <span className="flex items-center gap-1.5">
+                <GitBranch className="size-3.5" />
+                {translate('localTasks.createFlow.whereExisting', 'Existing workspace')}
+              </span>
             </ToggleGroupItem>
-            <ToggleGroupItem value="new" className="gap-1.5">
-              <Plus className="size-3.5" />
-              {translate('localTasks.createFlow.whereNew', 'New workspace')}
+            <ToggleGroupItem value="new">
+              <span className="flex items-center gap-1.5">
+                <Plus className="size-3.5" />
+                {translate('localTasks.createFlow.whereNew', 'New workspace')}
+              </span>
             </ToggleGroupItem>
-            <ToggleGroupItem value="later" className="gap-1.5">
-              <Clock className="size-3.5" />
-              {translate('localTasks.createFlow.whereLater', 'Decide later')}
+            <ToggleGroupItem value="later">
+              <span className="flex items-center gap-1.5">
+                <Clock className="size-3.5" />
+                {translate('localTasks.createFlow.whereLater', 'Decide later')}
+              </span>
             </ToggleGroupItem>
           </ToggleGroup>
           {state.where === 'existing' ? (

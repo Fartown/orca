@@ -45,14 +45,14 @@ function RecordButton({ source }: { source: CreateSource }): React.JSX.Element {
       variant="ghost"
       size="xs"
       tabIndex={-1}
-      className="h-5 text-2xs"
+      className="h-5"
       onClick={() => {
         openLocalTaskPage({ create: true })
         localTaskPageStore.getState().openCreate({ source })
       }}
     >
       <Plus className="size-3" />
-      {translate('localTasks.sidebar.record', 'Make task…')}
+      <span className="text-2xs">{translate('localTasks.sidebar.record', 'Make task…')}</span>
     </Button>
   )
 }

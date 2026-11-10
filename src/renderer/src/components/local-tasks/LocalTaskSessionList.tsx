@@ -152,24 +152,25 @@ function SessionRow({
         </Button>
       )}
       {writable ? (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon-xs"
-              className="opacity-0 focus-visible:opacity-100 group-hover/session:opacity-100 data-[state=open]:opacity-100"
-              aria-label={translate('localTasks.links.sessionActions', 'Session actions')}
-            >
-              <MoreHorizontal className="size-3.5" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onSelect={() => void unlinkLocalTaskSession(session.id)}>
-              <Unlink />
-              {translate('localTasks.links.unlinkSession', 'Unlink session')}
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <span className="flex shrink-0 opacity-0 group-hover/session:opacity-100 has-[:focus-visible]:opacity-100 has-data-[state=open]:opacity-100">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon-xs"
+                aria-label={translate('localTasks.links.sessionActions', 'Session actions')}
+              >
+                <MoreHorizontal className="size-3.5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onSelect={() => void unlinkLocalTaskSession(session.id)}>
+                <Unlink />
+                {translate('localTasks.links.unlinkSession', 'Unlink session')}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </span>
       ) : null}
     </div>
   )

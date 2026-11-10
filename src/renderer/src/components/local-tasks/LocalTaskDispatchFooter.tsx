@@ -96,7 +96,7 @@ export function LocalTaskDispatchFooter({
         {dispatcherOffered ? (
           <ToggleGroup
             type="single"
-            size="sm"
+            size="xs"
             variant="outline"
             value={mode}
             onValueChange={(value) => {
@@ -106,17 +106,18 @@ export function LocalTaskDispatchFooter({
             }}
             aria-label={translate('localTasks.dispatch.mode', 'Dispatch or ask')}
           >
-            <ToggleGroupItem value="dispatch" className="h-6 px-2 text-xs">
+            <ToggleGroupItem value="dispatch">
               {translate('localTasks.dispatch.modeDispatch', 'Dispatch')}
             </ToggleGroupItem>
-            <ToggleGroupItem value="ask" className="h-6 px-2 text-xs">
+            <ToggleGroupItem value="ask">
               {translate('localTasks.dispatch.modeAsk', 'Ask')}
             </ToggleGroupItem>
           </ToggleGroup>
         ) : null}
-        <Button
-          size="icon-sm"
-          className="rounded-full"
+        {/* Why not Button: no size draws a round send button; this mirrors default icon-sm. */}
+        <button
+          type="button"
+          className="inline-flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-full bg-primary text-primary-foreground transition-all outline-none hover:bg-primary/90 focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50"
           disabled={sendDisabled}
           title={blockedReason ?? undefined}
           aria-label={
@@ -127,7 +128,7 @@ export function LocalTaskDispatchFooter({
           onClick={onSend}
         >
           <ArrowUp className="size-4" />
-        </Button>
+        </button>
       </span>
     </div>
   )

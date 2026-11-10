@@ -1,5 +1,4 @@
 import { ChevronDown, X } from 'lucide-react'
-import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -77,19 +76,24 @@ function AgentPicker({
           className="flex-wrap"
         >
           {shown.map((entry) => (
-            <ToggleGroupItem key={entry.id} value={entry.id} className="gap-1.5">
-              <AgentLabel entry={entry} isDefault={entry.id === launch.defaultAgent} />
+            <ToggleGroupItem key={entry.id} value={entry.id}>
+              <span className="flex items-center gap-1.5">
+                <AgentLabel entry={entry} isDefault={entry.id === launch.defaultAgent} />
+              </span>
             </ToggleGroupItem>
           ))}
         </ToggleGroup>
       ) : null}
       {more.length > 0 ? (
         <DropdownMenu>
+          {/* Why not Button: outline has no picked state; this is outline sm plus the toggles' on accent. */}
           <DropdownMenuTrigger asChild>
-            <Button
-              variant="outline"
-              size="sm"
-              className={cn(pickedMore && 'bg-accent text-accent-foreground')}
+            <button
+              type="button"
+              className={cn(
+                "inline-flex h-8 shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-md border border-border bg-background px-2.5 text-sm font-medium whitespace-nowrap text-foreground shadow-xs transition-all outline-none hover:border-muted-foreground/35 hover:bg-accent hover:text-accent-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 dark:border-input dark:bg-input/30 dark:hover:bg-input/50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+                pickedMore && 'bg-accent text-accent-foreground'
+              )}
             >
               {pickedMore ? (
                 <AgentLabel entry={pickedMore} isDefault={pickedMore.id === launch.defaultAgent} />
@@ -97,9 +101,9 @@ function AgentPicker({
                 translate('localTasks.createFlow.moreAgents', 'More')
               )}
               <ChevronDown className="size-3.5 text-muted-foreground" />
-            </Button>
+            </button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="scrollbar-sleek max-h-72 overflow-y-auto">
+          <DropdownMenuContent align="start" className="max-h-72">
             <DropdownMenuRadioGroup
               value={pickedMore?.id ?? ''}
               onValueChange={(value) => {
@@ -124,10 +128,11 @@ function AgentPicker({
         size="sm"
         pressed={agent === null}
         onPressedChange={() => onAgentChange('none')}
-        className="gap-1.5"
       >
-        <X className="size-3.5" />
-        {translate('localTasks.createFlow.noAgent', 'Not now')}
+        <span className="flex items-center gap-1.5">
+          <X className="size-3.5" />
+          {translate('localTasks.createFlow.noAgent', 'Not now')}
+        </span>
       </Toggle>
     </div>
   )
@@ -224,24 +229,25 @@ export function LocalTaskCreateKickoff({
             }
           }}
           aria-label={translate('localTasks.createFlow.delivery', 'Delivery')}
-          className="grid grid-cols-2 gap-0 divide-x divide-border overflow-hidden rounded-md border border-input"
         >
-          {options.map((option) => (
-            <label
-              key={option.value}
-              className={cn(
-                'flex min-w-0 items-start gap-2 px-3 py-2',
-                off ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:bg-accent',
-                !off && delivery === option.value && 'bg-accent'
-              )}
-            >
-              <RadioGroupItem value={option.value} className="mt-0.5" />
-              <span className="flex min-w-0 flex-col">
-                <span className="text-sm">{option.title}</span>
-                <span className="text-xs text-muted-foreground">{option.hint}</span>
-              </span>
-            </label>
-          ))}
+          <div className="grid grid-cols-2 divide-x divide-border overflow-hidden rounded-md border border-input">
+            {options.map((option) => (
+              <label
+                key={option.value}
+                className={cn(
+                  'flex min-w-0 items-start gap-2 px-3 py-2',
+                  off ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:bg-accent',
+                  !off && delivery === option.value && 'bg-accent'
+                )}
+              >
+                <RadioGroupItem value={option.value} className="mt-0.5" />
+                <span className="flex min-w-0 flex-col">
+                  <span className="text-sm">{option.title}</span>
+                  <span className="text-xs text-muted-foreground">{option.hint}</span>
+                </span>
+              </label>
+            ))}
+          </div>
         </RadioGroup>
       </div>
     </div>

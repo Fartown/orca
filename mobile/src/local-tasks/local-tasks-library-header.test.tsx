@@ -51,8 +51,9 @@ it('reaches another host from an empty library, where no project can be picked',
   const scope = renderer!.root.findByProps({ testID: 'local-tasks-scope' })
   expect(scope.props.disabled).toBe(false)
   act(() => scope.props.onPress())
-  const sheet = renderer!.root.findByType('ActionSheetModal' as never)
-  const labels = (sheet.props as { actions: { label: string }[] }).actions.map((a) => a.label)
+  const sheet = renderer!.root.find((node) => Array.isArray(node.props.actions))
+  const actions: { label: string }[] = sheet.props.actions
+  const labels = actions.map((action) => action.label)
   const copy = localTasksCopy()
   expect(labels).toContain(copy.switchHost)
   expect(labels).not.toContain(copy.allProjects)

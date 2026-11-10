@@ -292,7 +292,13 @@ export function LocalTaskSidebarTaskNode({
             {note ? <span className="flex h-4 min-w-0 items-center">{note}</span> : null}
           </LocalTaskSidebarTreeRow>
         </HoverCardTrigger>
-        <HoverCardContent side="right" align="start" sideOffset={8} className="w-80 p-3">
+        <HoverCardContent
+          side="right"
+          align="start"
+          sideOffset={8}
+          variant="workspace-details"
+          className="w-80"
+        >
           <LocalTaskSummaryCard task={task} index={index} caption={task.ref} />
         </HoverCardContent>
       </HoverCard>

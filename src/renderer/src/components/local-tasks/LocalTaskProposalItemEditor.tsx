@@ -1,7 +1,7 @@
 import AgentCombobox from '@/components/agent/AgentCombobox'
 import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
 import { translate } from '@/i18n/i18n'
+import { ImeTextarea } from '@/lib/ime-text-field'
 import {
   localTaskProposalEditFields,
   localTaskProposalPicksProject,
@@ -15,9 +15,10 @@ import type { LocalTaskProposalItem } from '../../../../shared/local-tasks/local
 /** The draft an editor starts from: the item's current words for every field it may change. */
 export function localTaskProposalDraftOf(item: LocalTaskProposalItem): LocalTaskProposalItemDraft {
   const draft: LocalTaskProposalItemDraft = {}
+  const fields: Record<string, unknown> = item
   for (const field of localTaskProposalEditFields(item)) {
-    const value = (item as Partial<Record<LocalTaskProposalEditField, string>>)[field]
-    if (value !== undefined) {
+    const value = fields[field]
+    if (typeof value === 'string') {
       draft[field] = value
     }
   }
@@ -105,13 +106,14 @@ export function LocalTaskProposalItemEditor({
                 <span className="pt-1.5">{launch.unavailableReason}</span>
               )
             ) : multiline ? (
-              <Textarea
+              // Why not Textarea: it has no compact size; these are its tokens at compact padding and type.
+              <ImeTextarea
                 aria-label={label}
                 value={draft[field] ?? ''}
                 rows={2}
                 onChange={(event) => set(field, event.target.value)}
                 onKeyDown={(event) => onKeyDown(event, true)}
-                className="min-h-0 px-2 py-1 text-xs md:text-xs"
+                className="scrollbar-sleek w-full min-w-0 rounded-md border border-input bg-transparent px-2 py-1 text-xs shadow-xs transition-[color,box-shadow] outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 dark:bg-input/30"
               />
             ) : (
               <Input

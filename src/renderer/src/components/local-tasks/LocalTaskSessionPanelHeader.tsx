@@ -164,7 +164,7 @@ export function LocalTaskSessionPanelHeader({
               <Button
                 variant="ghost"
                 size="xs"
-                className="min-w-0 max-w-[45%] justify-start px-1"
+                className="min-w-0 max-w-[45%] justify-start"
                 aria-label={translate('localTasks.sessionPanel.switchSession', 'Switch session')}
               >
                 {name}
@@ -304,14 +304,11 @@ export function LocalTaskSessionStopBar({
   }
   return (
     <div className="flex shrink-0 justify-end border-t border-border px-2 py-1.5">
-      <Button
-        variant="ghost"
-        size="xs"
-        className="text-destructive hover:text-destructive"
-        onClick={() => setConfirming(true)}
-      >
-        <Square />
-        {translate('localTasks.sessionPanel.stop', 'Stop')}
+      <Button variant="ghost" size="xs" onClick={() => setConfirming(true)}>
+        <Square className="text-destructive" />
+        <span className="text-destructive">
+          {translate('localTasks.sessionPanel.stop', 'Stop')}
+        </span>
       </Button>
     </div>
   )

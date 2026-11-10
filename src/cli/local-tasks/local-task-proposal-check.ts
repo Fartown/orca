@@ -1,16 +1,21 @@
-import type { z } from 'zod'
 import { LOCAL_TASK_PROPOSAL_ITEM_FORMATS } from '../../shared/local-tasks/local-task-brief'
 import { LocalTaskProposalItemSchema } from '../../shared/local-tasks/local-task-dispatcher-rpc-params'
 
 const FIELDS_BY_KIND: ReadonlyMap<string, ReadonlySet<string>> = new Map(
   LocalTaskProposalItemSchema.options.map((option) => [
-    (option.shape.kind as z.ZodLiteral<string>).value,
+    option.shape.kind.value,
     new Set(Object.keys(option.shape))
   ])
 )
 
-function formatOf(kind: string): string | undefined {
-  return (LOCAL_TASK_PROPOSAL_ITEM_FORMATS as Record<string, string>)[kind]
+const FORMATS: ReadonlyMap<string, string> = new Map(
+  Object.entries(LOCAL_TASK_PROPOSAL_ITEM_FORMATS)
+)
+
+function kindOf(item: unknown): string | undefined {
+  return item && typeof item === 'object' && 'kind' in item && typeof item.kind === 'string'
+    ? item.kind
+    : undefined
 }
 
 /**
@@ -23,15 +28,16 @@ export function localTaskProposalItemProblems(items: readonly unknown[]): string
     if (!item || typeof item !== 'object') {
       return [`item ${at}: not an object`]
     }
-    const raw = (item as { kind?: unknown }).kind
-    const kind = typeof raw === 'string' ? raw : ''
+    const kind = kindOf(item) ?? ''
     const fields = FIELDS_BY_KIND.get(kind)
     if (!fields) {
       return [`item ${at}: kind must be one of ${[...FIELDS_BY_KIND.keys()].join(', ')}`]
     }
     const unknown = Object.keys(item).filter((key) => !fields.has(key))
     return unknown.length > 0
-      ? [`item ${at} (${kind}): unknown field ${unknown.join(', ')}. Write it as ${formatOf(kind)}`]
+      ? [
+          `item ${at} (${kind}): unknown field ${unknown.join(', ')}. Write it as ${FORMATS.get(kind)}`
+        ]
       : []
   })
 }
@@ -41,11 +47,9 @@ export function localTaskProposalFormatHints(
   items: readonly unknown[],
   failingIndexes: ReadonlySet<number>
 ): string[] {
-  const kinds = new Set(
-    [...failingIndexes].map((at) => (items[at] as { kind?: unknown } | undefined)?.kind)
-  )
+  const kinds = new Set([...failingIndexes].flatMap((at) => kindOf(items[at]) ?? []))
   return [...kinds].flatMap((kind) => {
-    const format = typeof kind === 'string' ? formatOf(kind) : undefined
+    const format = FORMATS.get(kind)
     return format ? [`${kind}: ${format}`] : []
   })
 }

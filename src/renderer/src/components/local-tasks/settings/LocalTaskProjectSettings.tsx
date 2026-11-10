@@ -249,7 +249,7 @@ export function LocalTaskProjectSettings({
                 setPrefixError(null)
               }}
               aria-invalid={prefixError !== null || undefined}
-              className="font-mono"
+              variant="code"
             />
           </Field>
         </div>

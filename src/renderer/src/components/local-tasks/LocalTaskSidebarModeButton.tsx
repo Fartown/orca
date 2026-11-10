@@ -17,29 +17,30 @@ export function LocalTaskSidebarModeButton(): React.JSX.Element | null {
     return null
   }
   return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <Button
-          variant="ghost"
-          size="icon-xs"
-          aria-label={label}
-          aria-pressed={enabled}
-          // Why: the same pressed look as the activity toggle beside it, so "on" reads alike.
-          className={cn(
-            'text-muted-foreground',
-            enabled &&
-              'bg-foreground/10 text-foreground hover:bg-foreground/15 dark:hover:bg-foreground/15'
-          )}
-          onClick={() => chooseLocalTaskSidebarMode(!enabled)}
-        >
-          <ListTodo className="size-3.5" />
-        </Button>
-      </TooltipTrigger>
-      <TooltipContent side="bottom" sideOffset={6}>
-        {enabled
-          ? translate('localTasks.sidebar.toggleOff', 'Back to workspaces')
-          : translate('localTasks.sidebar.toggleOn', 'Show by task')}
-      </TooltipContent>
-    </Tooltip>
+    <span className="flex shrink-0 text-muted-foreground">
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon-xs"
+            aria-label={label}
+            aria-pressed={enabled}
+            // Why: the same pressed look as the activity toggle beside it, so "on" reads alike.
+            className={cn(
+              enabled &&
+                'bg-foreground/10 text-foreground hover:bg-foreground/15 dark:hover:bg-foreground/15'
+            )}
+            onClick={() => chooseLocalTaskSidebarMode(!enabled)}
+          >
+            <ListTodo className="size-3.5" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="bottom" sideOffset={6}>
+          {enabled
+            ? translate('localTasks.sidebar.toggleOff', 'Back to workspaces')
+            : translate('localTasks.sidebar.toggleOn', 'Show by task')}
+        </TooltipContent>
+      </Tooltip>
+    </span>
   )
 }

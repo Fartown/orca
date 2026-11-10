@@ -257,15 +257,16 @@ export function LocalTaskProposalItemRow({
                 {translate('localTasks.dispatcher.editDone', 'Done')}
               </Button>
             ) : (
-              <Button
-                variant="ghost"
-                size="xs"
-                className="ml-auto text-muted-foreground"
-                onClick={() => setDraft(localTaskProposalDraftOf(item))}
-              >
-                <Pencil />
-                {translate('localTasks.dispatcher.edit', 'Edit')}
-              </Button>
+              <span className="ml-auto flex shrink-0 text-muted-foreground">
+                <Button
+                  variant="ghost"
+                  size="xs"
+                  onClick={() => setDraft(localTaskProposalDraftOf(item))}
+                >
+                  <Pencil />
+                  {translate('localTasks.dispatcher.edit', 'Edit')}
+                </Button>
+              </span>
             )
           ) : null}
           {stage ? (

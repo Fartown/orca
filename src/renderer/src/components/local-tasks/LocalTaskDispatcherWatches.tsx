@@ -117,18 +117,23 @@ function WatchRow({
             : status?.name}
         </span>
         <span className="min-w-0 flex-1" />
-        <Button
-          variant="ghost"
-          size="xs"
-          className="shrink-0 text-muted-foreground"
-          aria-label={translate('localTasks.dispatcher.watches.unwatch', 'Stop following {{ref}}', {
-            ref: task.ref
-          })}
-          onClick={() => void unwatchLocalTaskFromLedger(task.id)}
-        >
-          <X />
-          {translate('localTasks.dispatcher.watches.unwatchShort', 'Stop following')}
-        </Button>
+        <span className="flex shrink-0 text-muted-foreground">
+          <Button
+            variant="ghost"
+            size="xs"
+            aria-label={translate(
+              'localTasks.dispatcher.watches.unwatch',
+              'Stop following {{ref}}',
+              {
+                ref: task.ref
+              }
+            )}
+            onClick={() => void unwatchLocalTaskFromLedger(task.id)}
+          >
+            <X />
+            {translate('localTasks.dispatcher.watches.unwatchShort', 'Stop following')}
+          </Button>
+        </span>
       </div>
       <div className="min-w-0 pl-5.5">
         <LocalTaskProgressLine task={task} index={index} workspace={workspace} />

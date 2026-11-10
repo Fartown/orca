@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { FileText } from 'lucide-react'
-import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
 import { translate } from '@/i18n/i18n'
 import { useLocalTasksDomain, localTasksDomainStore } from '@/local-tasks/local-tasks-domain-store'
@@ -9,6 +8,7 @@ import { runLocalTaskWrite } from '@/local-tasks/local-task-writes'
 import { LocalTaskBriefPreviewDialog } from './LocalTaskBriefPreviewDialog'
 import {
   LocalTaskSettingsCard,
+  LocalTaskSettingsLinkButton,
   LocalTaskSettingsRow,
   LocalTaskSettingsSegment
 } from './LocalTaskSettingsControls'
@@ -70,15 +70,10 @@ export function LocalTaskWorkflowSettings(): React.JSX.Element {
             'Sessions started from a task get a task brief after the first instruction: the task ref, how to write back progress with orca task progress, and that only you complete the task. Turned off, task cards can only show the agent’s last message.'
           )}
           extra={
-            <Button
-              variant="link"
-              size="xs"
-              className="h-auto px-0 text-foreground underline decoration-border underline-offset-4 has-[>svg]:px-0"
-              onClick={() => setBriefOpen(true)}
-            >
+            <LocalTaskSettingsLinkButton onClick={() => setBriefOpen(true)}>
               <FileText />
               {translate('localTasks.settings.briefView', 'View the brief')}
-            </Button>
+            </LocalTaskSettingsLinkButton>
           }
           control={
             <Switch

@@ -100,7 +100,7 @@ describe('LocalTaskProposalCard', () => {
     render(<LocalTaskProposalCard proposal={proposal({})} names={names} now={0} />)
 
     const stop = screen.getByRole('checkbox', { name: 'Stop the session on t-9' })
-    expect((stop as HTMLButtonElement).disabled).toBe(true)
+    expect(stop).toHaveProperty('disabled', true)
     expect(screen.getByText('This session can’t be found here.')).toBeTruthy()
     fireEvent.click(screen.getByRole('button', { name: 'Confirm 1' }))
 
@@ -197,7 +197,7 @@ it('shows an active execution in another window without offering manual finish',
   expect(screen.getByText('Running…')).toBeTruthy()
   expect(screen.getByText('The execution window is still open')).toBeTruthy()
   const finishButton = screen.getByRole('button', { name: 'Mark as finished' })
-  expect((finishButton as HTMLButtonElement).disabled).toBe(true)
+  expect(finishButton).toHaveProperty('disabled', true)
   fireEvent.click(finishButton)
   expect(finish).not.toHaveBeenCalled()
 })
