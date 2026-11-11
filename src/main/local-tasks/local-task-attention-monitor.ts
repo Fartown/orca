@@ -102,9 +102,25 @@ export class LocalTaskAttentionMonitor {
     if (raised) {
       standing = raised.taskSessionId === taskSessionId ? 'raised' : 'other-session'
     } else if (pane !== null && isLocalTaskAttentionKeyOfPane(itemKey, pane)) {
-      standing = 'moved-on'
+      const outOfContact = judgment.sessions.some(
+        (session) => session.taskSessionId === taskSessionId && session.state === 'unverifiable'
+      )
+      standing = outOfContact ? 'unverifiable' : 'moved-on'
     }
     return { standing, liveKeys: new Set(judgment.candidates.map((item) => item.key)) }
+  }
+
+  /** Whether a key may still be raised: it is now (seen or snoozed too), or its pane is out of contact. */
+  attentionKeyMayReturn(): (key: string) => boolean {
+    const judgment = this.judge(this.now())
+    const raised = new Set(judgment.candidates.map((item) => item.key))
+    const unjudgedPanes = judgment.sessions.flatMap((session) => {
+      const pane =
+        session.state === 'unverifiable' ? judgment.panes.get(session.taskSessionId) : null
+      return pane ? [pane] : []
+    })
+    return (key) =>
+      raised.has(key) || unjudgedPanes.some((pane) => isLocalTaskAttentionKeyOfPane(key, pane))
   }
 
   /** Re-judge soon: a status, mark or link changed. Idle until started. */
@@ -234,14 +250,10 @@ export class LocalTaskAttentionMonitor {
     }
     const row = latestLocalTaskRow(this.source.rowsForPane(paneKey))
     if (!row) {
-      // Why: only a pane that reported this process can be said to have stopped; a quiet one may
-      // be an agent without status hooks, or a pane the window has not reattached yet.
-      if (!this.panes.hasReported(paneKey)) {
-        judgment.sessions.push(progress('unknown'))
-      } else {
-        const shellRemains = link.surface === 'chat' || this.source.terminalLive(paneKey)
-        judgment.sessions.push(progress(shellRemains ? 'exited' : 'missing'))
-      }
+      // Why: only a pane that reported this process can be said to have ended, its agent gone or
+      // its tab closed (REQ-012); a quiet one may be an agent without status hooks, or a pane the
+      // window has not reattached yet.
+      judgment.sessions.push(progress(this.panes.hasReported(paneKey) ? 'exited' : 'unknown'))
       return
     }
     this.panes.heard(paneKey, row)
@@ -257,7 +269,8 @@ export class LocalTaskAttentionMonitor {
         sessionLinkId: link.id,
         taskId: link.taskId,
         key,
-        body: words || saved?.body || ''
+        body: words || saved?.body || '',
+        sessionOpenedAt: link.openedAt
       })
     }
     const staleAt = localTaskRowStaleAt(row)

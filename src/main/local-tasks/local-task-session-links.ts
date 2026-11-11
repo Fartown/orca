@@ -9,6 +9,7 @@ import type {
 } from '../../shared/local-tasks/local-task-types'
 import type { LocalTasksLinksRecordSessionInput } from '../../shared/local-tasks/local-tasks-link-rpc-params'
 import { toLocalTaskOwnedHostId } from '../../shared/local-tasks/local-task-endpoint-ids'
+import { localTaskLinkWorkspaceId } from '../../shared/local-tasks/local-task-workspace-match'
 import type { LocalTasksDatabase } from './local-tasks-database'
 import { appendLocalTaskEvent } from './local-task-event-store'
 import {
@@ -96,7 +97,7 @@ export function recordLocalTaskSession(
     id,
     task.id,
     hostId,
-    input.worktreeId ?? workspace.worktreeId,
+    input.worktreeId ?? localTaskLinkWorkspaceId(workspace),
     input.instanceId ?? workspace.instanceId,
     input.surface,
     input.tabId ?? null,

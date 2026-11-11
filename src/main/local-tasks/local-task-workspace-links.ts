@@ -16,14 +16,15 @@ import { appendLocalTaskEvent } from './local-task-event-store'
 import {
   findWorkspaceOwner,
   isSameWorkspace,
-  isSessionInWorkspace,
   localTaskRefusal,
+  placeInWorkspace,
   readTaskSessionLinks,
   readWorkspaceLink,
   workspaceIdentityKey,
   type LocalTaskWorkspacePlace
 } from './local-task-link-rows'
 import { applyLocalTaskStartRule } from './local-task-rules'
+import { readEffectiveWorkspaceLink } from './local-task-session-links'
 import { readLocalTask, readLocalTaskSubtreeIds } from './local-task-store'
 
 type WorkspaceResult = LocalTaskResult<{ workspace: LocalTaskWorkspaceLink }>
@@ -206,7 +207,8 @@ export function unlinkLocalTaskWorkspace(
 
 /**
  * The task's and its descendants' sessions that ran in this workspace. A descendant's sessions in
- * its own workspace, or from an earlier parent's, ran elsewhere and stay.
+ * its own workspace, or from an earlier parent's, ran elsewhere and stay. A session that cannot say
+ * where it ran goes only when this workspace is the one its task works in.
  */
 function removeFamilySessions(
   db: LocalTasksDatabase,
@@ -216,7 +218,12 @@ function removeFamilySessions(
   const doomed: LocalTaskSessionLink[] = readTaskSessionLinks(
     db,
     readLocalTaskSubtreeIds(db, taskId)
-  ).filter((session) => isSessionInWorkspace(session, workspace))
+  ).filter((session) => {
+    const verdict = placeInWorkspace(session, workspace)
+    return verdict === 'unknown'
+      ? readEffectiveWorkspaceLink(db, session.taskId)?.taskId === taskId
+      : verdict === 'in'
+  })
   const remove = db.prepare('DELETE FROM local_task_sessions WHERE id = ?')
   for (const session of doomed) {
     remove.run(session.id)

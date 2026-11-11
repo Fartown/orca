@@ -86,8 +86,10 @@ export function localTaskWaitingKind(row: LocalTaskStatusRow): 'approval' | 'que
 }
 
 /**
- * The state a row shows, with upstream's decay: a non-`done` row silent past the stale window
- * (or replayed from disk) reads `unverifiable` while its terminal runs, else `idle`.
+ * The state a row shows on a host in contact, with upstream's decay: a non-`done` row silent past
+ * the stale window (or replayed from disk) reads `unverifiable` while its terminal runs, else
+ * `idle`. A wait for the user in a running terminal never decays by time (REQ-014): the agent
+ * stays silent until the user acts, so its silence is the wait itself.
  */
 export function localTaskRowState(
   row: LocalTaskStatusRow,
@@ -97,14 +99,19 @@ export function localTaskRowState(
   if (row.state === 'done') {
     return 'done'
   }
+  const waitsInLiveTerminal = terminalLive && (row.state === 'waiting' || row.state === 'blocked')
   const fresh =
     row.restoredUnconfirmed !== true &&
     (row.structuredHost === 'owned' ||
+      waitsInLiveTerminal ||
       now - localTaskRowObservedAt(row) <= AGENT_STATUS_STALE_AFTER_MS)
   return fresh ? row.state : resolveDecayedAgentRowState(row, terminalLive)
 }
 
-/** When a non-`done` row stops counting as fresh; null when it never decays by time. */
+/**
+ * When a non-`done` row may stop counting as fresh; null when it never decays by time. A wait in
+ * a running terminal is judged again then, in case that terminal ended without a report.
+ */
 export function localTaskRowStaleAt(row: LocalTaskStatusRow): number | null {
   if (row.state === 'done' || row.restoredUnconfirmed === true || row.structuredHost === 'owned') {
     return null

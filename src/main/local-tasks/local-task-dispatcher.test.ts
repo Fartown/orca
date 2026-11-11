@@ -264,12 +264,12 @@ describe('dispatcher inbox (REQ-031)', () => {
 
     const box = inbox(service)
     expect(box.items.map((item) => [item.kind, item.taskRef, item.summary])).toEqual([
-      ['progress', 'SHOP-1', 'Fix reconnect: Found the loop'],
-      ['comment', 'SHOP-1', 'Fix reconnect: Prefer 30s'],
+      ['progress', 'SHOP-1', '"Fix reconnect": "Found the loop"'],
+      ['comment', 'SHOP-1', '"Fix reconnect": "Prefer 30s"'],
       [
         'status',
         'SHOP-1',
-        'Fix reconnect moved to Ready for acceptance — waiting for the user to review'
+        '"Fix reconnect" moved to "Ready for acceptance" — waiting for the user to review'
       ]
     ])
     expect(box.items[0].needsYou).toBe('Pick a timeout')
@@ -278,7 +278,7 @@ describe('dispatcher inbox (REQ-031)', () => {
     expect(inbox(service).items).toEqual([])
     write(watched.id, 'Repro written', {})
     expect(inbox(service).items.map((item) => item.summary)).toEqual([
-      'Fix reconnect: Repro written'
+      '"Fix reconnect": "Repro written"'
     ])
   })
 
@@ -297,7 +297,7 @@ describe('dispatcher inbox (REQ-031)', () => {
     expect(first.inbox.more).toBe(true)
     expect(first.inbox.items).toHaveLength(2)
     service.ackInbox({ clientOperationId: op(), paneKey: PANE, cursor: first.inbox.cursor })
-    expect(inbox(service).items.map((item) => item.summary)).toEqual(['Long task: three'])
+    expect(inbox(service).items.map((item) => item.summary)).toEqual(['"Long task": "three"'])
   })
 
   it('stops watching a task once it is completed', () => {
@@ -567,13 +567,17 @@ describe('dispatcher proposal decisions', () => {
         }
       ]
     }
-    const dispatcher = new LocalTaskDispatcher(db, () => snapshot)
+    const dispatcher = new LocalTaskDispatcher(
+      db,
+      () => snapshot,
+      () => (key) => snapshot.items.some((item) => item.key === key)
+    )
     const first = dispatcher.inbox(PANE)
     if (!first.ok) {
       throw new Error(first.code)
     }
     expect(first.inbox.items.map((item) => item.summary)).toEqual([
-      'Needs approval: codex waits for the user to approve — Allow npm install?'
+      '"Needs approval": codex waits for the user to approve — "Allow npm install?"'
     ])
     expect(dispatcher.ack(PANE, first.inbox.cursor, 10).ok).toBe(true)
     const again = dispatcher.inbox(PANE)

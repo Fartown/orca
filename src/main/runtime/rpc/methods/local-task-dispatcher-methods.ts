@@ -3,6 +3,7 @@ import {
   LocalTasksDispatcherInboxParams,
   LocalTasksDispatcherRecordFactsParams,
   LocalTasksDispatcherRegisterParams,
+  LocalTasksDispatcherUnwatchParams,
   LocalTasksDispatcherWatchParams,
   LocalTasksDispatcherWatchesParams,
   LocalTasksProposalsClaimParams,
@@ -24,6 +25,7 @@ export const LOCAL_TASK_DISPATCHER_DESKTOP_METHODS: readonly string[] = [
   'localTasks.dispatcher.register',
   'localTasks.dispatcher.recordFacts',
   'localTasks.proposals.claim',
+  'localTasks.proposals.release',
   'localTasks.proposals.recordResults'
 ]
 
@@ -86,7 +88,7 @@ export const LOCAL_TASK_DISPATCHER_METHODS = [
   defineMethod({
     permission: 'workspace',
     name: 'localTasks.dispatcher.unwatch',
-    params: LocalTasksDispatcherWatchParams,
+    params: LocalTasksDispatcherUnwatchParams,
     handler: (params) => service().unwatchTask(params)
   }),
   defineMethod({
@@ -122,6 +124,15 @@ export const LOCAL_TASK_DISPATCHER_METHODS = [
             context.runtime,
             context.connectionSignal
           )
+        : DESKTOP_ONLY
+  }),
+  defineMethod({
+    permission: 'workspace',
+    name: 'localTasks.proposals.release',
+    params: LocalTasksProposalsClaimParams,
+    handler: (params, context) =>
+      sourceOf(context) === 'desktop' && context.connectionId
+        ? service().releaseProposal(params, context.connectionId, context.runtime)
         : DESKTOP_ONLY
   }),
   defineMethod({

@@ -15,7 +15,7 @@ export type LocalTaskBandRow = {
 export type LocalTaskNeedsYouBand = {
   waiting: LocalTaskBandRow[]
   review: LocalTaskBandRow[]
-  /** Every task the band shows; the status groups below leave them out. */
+  /** Every task the band shows, with its subtasks; the status groups below leave them out. */
   ids: ReadonlySet<string>
 }
 
@@ -25,15 +25,15 @@ export const EMPTY_LOCAL_TASK_BAND: LocalTaskNeedsYouBand = {
   ids: new Set()
 }
 
-function hasReviewAncestor(
+function hasAncestorIn(
   task: LocalTask,
   tasksById: LocalTaskIndex['tasksById'],
-  reviewIds: ReadonlySet<string>
+  ids: ReadonlySet<string>
 ): boolean {
   const seen = new Set<string>()
   let parentId = task.parentId
   while (parentId && !seen.has(parentId)) {
-    if (reviewIds.has(parentId)) {
+    if (ids.has(parentId)) {
       return true
     }
     seen.add(parentId)
@@ -79,14 +79,14 @@ export function buildLocalTaskNeedsYouBand<
   const review: LocalTaskBandRow[] = []
   for (const id of reviewIds) {
     const task = index.tasksById.get(id)
-    if (task && !hasReviewAncestor(task, index.tasksById, reviewIds)) {
+    if (task && !hasAncestorIn(task, index.tasksById, reviewIds)) {
       review.push({ task, group: 'review', items: newestFirst(itemsByTask.get(id) ?? []) })
     }
   }
   const waiting: LocalTaskBandRow[] = []
   for (const [taskId, items] of itemsByTask) {
     const task = index.tasksById.get(taskId)
-    if (!task || reviewIds.has(taskId) || hasReviewAncestor(task, index.tasksById, reviewIds)) {
+    if (!task || reviewIds.has(taskId) || hasAncestorIn(task, index.tasksById, reviewIds)) {
       continue
     }
     waiting.push({ task, group: 'waiting', items: newestFirst(items) })
@@ -94,10 +94,15 @@ export function buildLocalTaskNeedsYouBand<
   const newest = (row: LocalTaskBandRow): number => row.items[0]?.since ?? row.task.updatedAt
   waiting.sort((a, b) => newest(b) - newest(a) || a.task.ref.localeCompare(b.task.ref))
   review.sort((a, b) => b.task.updatedAt - a.task.updatedAt || a.task.ref.localeCompare(b.task.ref))
-  const ids = new Set([...waiting, ...review].map((row) => row.task.id))
-  // Why: a review row stands for its whole subtree, so its subtasks leave the groups below too.
-  for (const id of reviewIds) {
-    ids.add(id)
+  const rowIds = new Set([...waiting, ...review].map((row) => row.task.id))
+  const ids = new Set(rowIds)
+  // Why: a band row stands for its whole subtree, so its subtasks leave the groups below too and
+  // every client's headings count them as in the band (REQ-006).
+  for (const id of visibleIds) {
+    const task = index.tasksById.get(id)
+    if (task && hasAncestorIn(task, index.tasksById, rowIds)) {
+      ids.add(id)
+    }
   }
   return { waiting, review, ids }
 }

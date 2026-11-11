@@ -43,6 +43,8 @@ export const DEFAULT_LOCAL_TASK_STATUSES: readonly DefaultLocalTaskStatus[] = [
 ]
 
 export const LOCAL_TASK_TITLE_MAX = 300
+/** Longest summary or needs-you text one fact forwarded to the dispatcher may carry. */
+export const LOCAL_TASK_FORWARDED_FACT_TEXT_MAX = 500
 export const LOCAL_TASK_DESCRIPTION_MAX = 20_000
 export const LOCAL_TASK_CRITERIA_MAX = 50
 export const LOCAL_TASK_CRITERION_MAX = 500

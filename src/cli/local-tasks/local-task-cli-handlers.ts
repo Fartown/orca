@@ -25,6 +25,8 @@ import {
   type TaskLibrary
 } from './local-task-cli-library'
 import { LOCAL_TASK_CLI_WRITE_HANDLERS } from './local-task-cli-write-handlers'
+import { refusedInDispatcher } from './local-task-dispatcher-guard'
+import { LOCAL_TASK_NEEDS_YOU_CLI_HANDLERS } from './local-task-needs-you-cli'
 import { currentWorkspace } from './local-task-cli-workspace'
 import {
   detailTask,
@@ -79,8 +81,81 @@ function statusFilter(library: TaskLibrary, wanted: string): (task: LocalTask) =
   return (task) => ids.has(task.statusId)
 }
 
+/** Comments, status changes and writebacks: an agent's own record of its work. */
+const LOCAL_TASK_CLI_EVENT_HANDLERS: Record<string, CommandHandler> = {
+  'task comment': async ({ client, flags, json }) => {
+    const body = requiredWords(flags, 'body', 'comment text')
+    const library = await readTaskLibrary(client, { access: 'write' })
+    const resolved = resolveTaskRef(library, getRequiredStringFlag(flags, 'ref'))
+    const envelope = await addTaskComment(client, resolved, body)
+    printResult(
+      { ...envelope, result: { task: summarizeTask(resolved), change: 'commented' } },
+      json,
+      formatTaskChange
+    )
+  },
+  'task status': async ({ client, flags, json }) => {
+    const name = requiredWords(flags, 'status', 'status name')
+    const library = await readTaskLibrary(client, { access: 'write' })
+    const resolved = resolveTaskRef(library, getRequiredStringFlag(flags, 'ref'))
+    const status = resolveTaskStatus(resolved, name)
+    if (status.category === 'completed' && status.id !== resolved.task.statusId) {
+      throw new RuntimeClientError('invalid_argument', COMPLETED_FROM_CLI_MESSAGE)
+    }
+    if (status.id === resolved.task.statusId) {
+      printResult(
+        { ...library.envelope, result: { task: summarizeTask(resolved), change: 'unchanged' } },
+        json,
+        formatTaskChange
+      )
+      return
+    }
+    const { task, envelope } = await setTaskStatus(client, resolved, status)
+    printResult(
+      {
+        ...envelope,
+        result: { task: summarizeTask(describeTask(library, task)), change: 'updated' }
+      },
+      json,
+      formatTaskChange
+    )
+  },
+  'task progress': async ({ client, flags, json, cwd }) => {
+    const body = (
+      await readCommandBody(flags, cwd, {
+        required: true,
+        maximumCharacters: LOCAL_TASK_COMMENT_MAX,
+        tooLargeCode: 'invalid_argument',
+        label: 'Progress'
+      })
+    ).trim()
+    if (!body) {
+      throw new RuntimeClientError('invalid_argument', 'The progress text is empty.')
+    }
+    const needsYou = getOptionalStringFlag(flags, 'needs-you')?.trim() || undefined
+    if (needsYou && needsYou.length > LOCAL_TASK_NEEDS_YOU_MAX) {
+      throw new RuntimeClientError(
+        'invalid_argument',
+        `--needs-you must be at most ${LOCAL_TASK_NEEDS_YOU_MAX} characters.`
+      )
+    }
+    const library = await readTaskLibrary(client, { access: 'write', links: true })
+    const resolved = resolveTaskRef(library, getRequiredStringFlag(flags, 'ref'))
+    const sessionLinkId = currentSessionLinkId(library, resolved.task.id)
+    const envelope = await addTaskComment(client, resolved, body, {
+      ...(sessionLinkId ? { sessionLinkId } : {}),
+      ...(needsYou ? { needsYou } : {})
+    })
+    printResult(
+      { ...envelope, result: { task: summarizeTask(resolved), change: 'progress' } },
+      json,
+      formatTaskChange
+    )
+  }
+}
+
 export const LOCAL_TASK_CLI_HANDLERS: Record<string, CommandHandler> = {
-  ...LOCAL_TASK_CLI_WRITE_HANDLERS,
+  ...refusedInDispatcher({ ...LOCAL_TASK_CLI_WRITE_HANDLERS, ...LOCAL_TASK_CLI_EVENT_HANDLERS }),
   'task list': async ({ client, flags, json }) => {
     const library = await readTaskLibrary(client, { links: true })
     const project = getOptionalStringFlag(flags, 'project')
@@ -158,78 +233,10 @@ export const LOCAL_TASK_CLI_HANDLERS: Record<string, CommandHandler> = {
       formatTaskCurrent
     )
   },
-  'task comment': async ({ client, flags, json }) => {
-    const body = requiredWords(flags, 'body', 'comment text')
-    const library = await readTaskLibrary(client, { access: 'write' })
-    const resolved = resolveTaskRef(library, getRequiredStringFlag(flags, 'ref'))
-    const envelope = await addTaskComment(client, resolved, body)
-    printResult(
-      { ...envelope, result: { task: summarizeTask(resolved), change: 'commented' } },
-      json,
-      formatTaskChange
-    )
-  },
-  'task status': async ({ client, flags, json }) => {
-    const name = requiredWords(flags, 'status', 'status name')
-    const library = await readTaskLibrary(client, { access: 'write' })
-    const resolved = resolveTaskRef(library, getRequiredStringFlag(flags, 'ref'))
-    const status = resolveTaskStatus(resolved, name)
-    if (status.category === 'completed' && status.id !== resolved.task.statusId) {
-      throw new RuntimeClientError('invalid_argument', COMPLETED_FROM_CLI_MESSAGE)
-    }
-    if (status.id === resolved.task.statusId) {
-      printResult(
-        { ...library.envelope, result: { task: summarizeTask(resolved), change: 'unchanged' } },
-        json,
-        formatTaskChange
-      )
-      return
-    }
-    const { task, envelope } = await setTaskStatus(client, resolved, status)
-    printResult(
-      {
-        ...envelope,
-        result: { task: summarizeTask(describeTask(library, task)), change: 'updated' }
-      },
-      json,
-      formatTaskChange
-    )
-  },
-  'task progress': async ({ client, flags, json, cwd }) => {
-    const body = (
-      await readCommandBody(flags, cwd, {
-        required: true,
-        maximumCharacters: LOCAL_TASK_COMMENT_MAX,
-        tooLargeCode: 'invalid_argument',
-        label: 'Progress'
-      })
-    ).trim()
-    if (!body) {
-      throw new RuntimeClientError('invalid_argument', 'The progress text is empty.')
-    }
-    const needsYou = getOptionalStringFlag(flags, 'needs-you')?.trim() || undefined
-    if (needsYou && needsYou.length > LOCAL_TASK_NEEDS_YOU_MAX) {
-      throw new RuntimeClientError(
-        'invalid_argument',
-        `--needs-you must be at most ${LOCAL_TASK_NEEDS_YOU_MAX} characters.`
-      )
-    }
-    const library = await readTaskLibrary(client, { access: 'write', links: true })
-    const resolved = resolveTaskRef(library, getRequiredStringFlag(flags, 'ref'))
-    const sessionLinkId = currentSessionLinkId(library, resolved.task.id)
-    const envelope = await addTaskComment(client, resolved, body, {
-      ...(sessionLinkId ? { sessionLinkId } : {}),
-      ...(needsYou ? { needsYou } : {})
-    })
-    printResult(
-      { ...envelope, result: { task: summarizeTask(resolved), change: 'progress' } },
-      json,
-      formatTaskChange
-    )
-  },
   'task guide': async ({ flags }) => {
     console.log(flags.has('dispatcher') ? LOCAL_TASK_DISPATCHER_GUIDE : LOCAL_TASK_WORKER_GUIDE)
   },
-  ...LOCAL_TASK_DISPATCHER_CLI_HANDLERS
+  ...LOCAL_TASK_DISPATCHER_CLI_HANDLERS,
+  ...LOCAL_TASK_NEEDS_YOU_CLI_HANDLERS
 }
 import { LOCAL_EXECUTION_HOST_ID } from '../../shared/execution-host'
