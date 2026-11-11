@@ -94,7 +94,7 @@ describe('acking the dispatcher inbox', () => {
     }
     const future = encodeInboxCursor({
       ...issued,
-      eventAt: Date.now() + 86_400_000,
+      eventAt: issued.eventAt + 86_400_000,
       eventRowid: 1e9
     })
     expect(ack(future)).toMatchObject({ ok: false, code: 'invalid_argument', detail: 'cursor' })
