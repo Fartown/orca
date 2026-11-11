@@ -22,6 +22,7 @@ import { getHostDisplayLabelOverrides } from '../../../../shared/host-setting-ov
 import { useBoundedHostRows } from '@/components/host-picker/use-bounded-host-rows'
 import { createDispatchAppSelector } from '@/local-tasks/local-task-dispatch-app-selector'
 import {
+  liveLocalTaskDispatchTargets,
   localTaskDispatchCandidates,
   type LocalTaskDispatchCandidate
 } from '@/local-tasks/local-task-dispatch-candidates'
@@ -104,7 +105,11 @@ export function LocalTaskDispatchBox(): React.JSX.Element {
   )
   const agent =
     chosenAgent && agents.some((entry) => entry.id === chosenAgent) ? chosenAgent : preferredAgent
-  const picked = targets[0]
+  const liveTargets = useMemo(
+    () => liveLocalTaskDispatchTargets(targets, candidates),
+    [candidates, targets]
+  )
+  const picked = liveTargets[0]
   const projectChoices = picked ? projectsForDispatchTarget(app, picked, projects) : []
   const orphanRepo =
     picked?.kind === 'workspace'
@@ -197,9 +202,9 @@ export function LocalTaskDispatchBox(): React.JSX.Element {
     }
     setBusy(true)
     try {
-      if (targets.length > 1) {
+      if (liveTargets.length > 1) {
         const batch = await dispatchLocalTaskToWorkspaces({
-          targets: targets.filter(
+          targets: liveTargets.filter(
             (target): target is Extract<LocalTaskDispatchCandidate, { kind: 'workspace' }> =>
               target.kind === 'workspace'
           ),
@@ -219,7 +224,8 @@ export function LocalTaskDispatchBox(): React.JSX.Element {
       }
       const next = await dispatchLocalTask({ target: picked, text, agent, project })
       setReceipts([next])
-      if (next.kind === 'launched' || next.kind === 'appended') {
+      // Why cleared once anything went out: the same words sent again would reach the agent twice.
+      if (next.kind === 'launched' || next.kind === 'appended' || next.kind === 'unrecorded') {
         setText('')
         setTargets([])
         setHostFilter(null)
@@ -264,7 +270,7 @@ export function LocalTaskDispatchBox(): React.JSX.Element {
             'localTasks.dispatch.multiOnlyWorkspaces',
             'Several targets work only with workspaces.'
           )
-        : !toDispatcher && !picked?.available
+        : !toDispatcher && liveTargets.some((target) => !target.available)
           ? translate('localTasks.dispatch.disconnected', 'Not connected')
           : null
   const sendDisabled =

@@ -6,9 +6,15 @@ import type {
 } from '../../../shared/local-tasks/local-task-dispatcher-types'
 import {
   describeLocalTaskInboxEvent,
-  isOtherLibraryTaskId
+  inboxLine,
+  isOtherLibraryTaskId,
+  pendingWatchRef,
+  quotedTaskTitle
 } from '../../../shared/local-tasks/local-task-inbox-copy'
+import { LOCAL_TASK_FORWARDED_FACT_TEXT_MAX } from '../../../shared/local-tasks/local-task-model'
 import { localTaskDispatcherClient } from './local-task-dispatcher-client'
+import { isProposalMiss } from './local-task-proposal-targets'
+import { findProposalTask, type ProposalDomain } from './local-task-proposal-session-items'
 import { knownDispatcherPaneKey } from './local-task-dispatcher-session'
 import { localTaskIdEndpoint, type LocalTaskEndpointKey } from './local-task-endpoints'
 import { subscribeSelfLocalTaskChanges } from './local-task-self-changes'
@@ -36,11 +42,13 @@ export type ForwardingView = {
 }
 
 type ForwardingDeps = {
-  client: Pick<typeof localTaskDispatcherClient, 'watches' | 'recordFacts'>
+  client: Pick<typeof localTaskDispatcherClient, 'watches' | 'recordFacts' | 'watch'>
   watchEvents: (taskId: string) => () => void
   paneKey: () => string | null
   hostLabel: (endpoint: LocalTaskEndpointKey) => string
   now: () => number
+  /** The synced libraries a pending ref is looked up in. */
+  domain: () => ProposalDomain
 }
 
 const DEFAULT_DEPS: ForwardingDeps = {
@@ -48,7 +56,8 @@ const DEFAULT_DEPS: ForwardingDeps = {
   watchEvents: (taskId) => localTasksSync.watchEvents(taskId),
   paneKey: knownDispatcherPaneKey,
   hostLabel: (endpoint) => selectExecutionHostDisplayLabel(useAppStore.getState(), endpoint),
-  now: Date.now
+  now: Date.now,
+  domain: () => localTasksDomainStore.getState()
 }
 
 /**
@@ -60,9 +69,13 @@ const DEFAULT_DEPS: ForwardingDeps = {
 export function createLocalTaskDispatcherForwarding(deps: ForwardingDeps = DEFAULT_DEPS): {
   refreshWatches: () => Promise<void>
   forward: (state?: ForwardingView) => Promise<void>
+  resolvePending: () => Promise<void>
   dispose: () => void
 } {
   let remote: LocalTaskWatch[] = []
+  /** Refs the dispatcher asked to watch that its own library does not hold (REQ-031). */
+  let pending: string[] = []
+  let resolving = false
   const releases = new Map<string, () => void>()
   const sent = new Set<string>()
   const contact = new Map<LocalTaskEndpointKey, boolean>()
@@ -96,8 +109,10 @@ export function createLocalTaskDispatcherForwarding(deps: ForwardingDeps = DEFAU
           at: event.createdAt,
           taskId: watch.taskId,
           taskRef: task?.ref ?? null,
-          summary: copy.summary,
-          ...(copy.needsYou ? { needsYou: copy.needsYou } : {}),
+          summary: inboxLine(copy.summary, LOCAL_TASK_FORWARDED_FACT_TEXT_MAX),
+          ...(copy.needsYou
+            ? { needsYou: inboxLine(copy.needsYou, LOCAL_TASK_FORWARDED_FACT_TEXT_MAX) }
+            : {}),
           ...(copy.finished ? { finished: true } : {})
         })
       }
@@ -122,9 +137,12 @@ export function createLocalTaskDispatcherForwarding(deps: ForwardingDeps = DEFAU
         at,
         taskId: null,
         taskRef: null,
-        summary: inContact
-          ? `${label} is back in contact; news from its tasks resumes`
-          : `${label} is out of contact: its tasks can't be confirmed (unverifiable) until it is back`
+        summary: inboxLine(
+          inContact
+            ? `${label} is back in contact; news from its tasks resumes`
+            : `${label} is out of contact: its tasks can't be confirmed (unverifiable) until it is back`,
+          LOCAL_TASK_FORWARDED_FACT_TEXT_MAX
+        )
       })
     }
     return facts
@@ -166,6 +184,57 @@ export function createLocalTaskDispatcherForwarding(deps: ForwardingDeps = DEFAU
     }
   }
 
+  async function followPending(paneKey: string, pendingId: string): Promise<boolean> {
+    const ref = pendingWatchRef(pendingId)
+    const task = ref ? findProposalTask(ref, deps.domain()) : null
+    if (!task || isProposalMiss(task)) {
+      return false
+    }
+    const watched = await deps.client.watch(paneKey, task.id, pendingId).catch(() => null)
+    if (!watched?.ok) {
+      return false
+    }
+    await deps.client
+      .recordFacts(paneKey, [
+        {
+          sourceId: `${task.id}#followed#${pendingId}`,
+          kind: 'host',
+          at: deps.now(),
+          taskId: task.id,
+          taskRef: task.ref,
+          summary: inboxLine(
+            `Now following ${task.ref} ${quotedTaskTitle(task.title)} on ${deps.hostLabel(localTaskIdEndpoint(task.id))}`,
+            LOCAL_TASK_FORWARDED_FACT_TEXT_MAX
+          )
+        }
+      ])
+      .catch(() => null)
+    return true
+  }
+
+  /**
+   * Follows each pending ref in the one synced library that holds it; the same write drops the
+   * ref. A ref no library in contact holds, or that several hold, waits for the next change of the
+   * libraries.
+   */
+  async function resolvePending(): Promise<void> {
+    const paneKey = deps.paneKey()
+    if (!paneKey || pending.length === 0 || resolving) {
+      return
+    }
+    resolving = true
+    try {
+      // Why safe to drop inside: `pending` is replaced, never changed, so this walks the old list.
+      for (const pendingId of pending) {
+        if (await followPending(paneKey, pendingId)) {
+          pending = pending.filter((id) => id !== pendingId)
+        }
+      }
+    } finally {
+      resolving = false
+    }
+  }
+
   async function refreshWatches(): Promise<void> {
     const paneKey = deps.paneKey()
     if (!paneKey) {
@@ -175,6 +244,9 @@ export function createLocalTaskDispatcherForwarding(deps: ForwardingDeps = DEFAU
     if (!result?.ok) {
       return
     }
+    pending = result.watches
+      .map((watch) => watch.taskId)
+      .filter((taskId) => pendingWatchRef(taskId) !== null)
     remote = result.watches.filter((watch) => isOtherLibraryTaskId(watch.taskId))
     const wanted = new Set(remote.map((watch) => watch.taskId))
     for (const taskId of wanted) {
@@ -188,12 +260,14 @@ export function createLocalTaskDispatcherForwarding(deps: ForwardingDeps = DEFAU
         releases.delete(taskId)
       }
     }
+    await resolvePending()
     await forward()
   }
 
   return {
     refreshWatches,
     forward,
+    resolvePending,
     dispose: () => {
       for (const release of releases.values()) {
         release()
@@ -213,6 +287,10 @@ export function bindLocalTaskDispatcherForwarding(): () => void {
     }
   })
   const unsubscribeDomain = localTasksDomainStore.subscribe((state, previous) => {
+    // Why the tasks: a pending ref is found once its host's library is read again.
+    if (state.tasks !== previous.tasks) {
+      void forwarding.resolvePending()
+    }
     if (
       state.eventsByTaskId !== previous.eventsByTaskId ||
       state.partitions !== previous.partitions

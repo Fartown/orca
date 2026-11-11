@@ -13,6 +13,8 @@ import {
   isProposalMiss,
   type ProposalWorktree,
   proposalRepoScope,
+  proposalNoAgentMiss,
+  proposalWorkspaceOwnedMiss,
   proposalWorktreeScope,
   resolveProposalAgent,
   resolveProposalProject,
@@ -91,6 +93,14 @@ async function linkWorkspace(
   return isProposalMiss(linked) ? linked : linked.workspace
 }
 
+const ownedWorkspace = (worktree: ProposalWorktree, taskId?: string) =>
+  proposalWorkspaceOwnedMiss(
+    useAppStore.getState(),
+    localTasksDomainStore.getState(),
+    worktree,
+    taskId
+  )
+
 function launch(task: LocalTask, link: LocalTaskWorkspaceLink, asked: string | undefined): Outcome {
   const agent = resolveProposalAgent(useAppStore.getState(), asked)
   const launched =
@@ -106,12 +116,21 @@ function launch(task: LocalTask, link: LocalTaskWorkspaceLink, asked: string | u
 }
 
 async function runStart(item: Item<'start'>, run: ProposalRun): Promise<Outcome> {
+  const unstartable = proposalNoAgentMiss(useAppStore.getState(), item.agent)
+  if (unstartable) {
+    return failed(unstartable)
+  }
   const state = useAppStore.getState()
   const { projects } = localTasksDomainStore.getState()
   if ('worktreeId' in item.target) {
     const worktree = findProposalWorktree(state, item.target)
     if (isProposalMiss(worktree)) {
       return failed(worktree)
+    }
+    // Why before creating: the link would be refused and leave the new task orphaned.
+    const owned = ownedWorkspace(worktree)
+    if (owned) {
+      return failed(owned)
     }
     const scope = proposalWorktreeScope(state, worktree)
     const project = resolveProposalProject(
@@ -163,6 +182,10 @@ async function runStart(item: Item<'start'>, run: ProposalRun): Promise<Outcome>
 }
 
 async function runSubtask(item: Item<'subtask'>): Promise<Outcome> {
+  const unstartable = proposalNoAgentMiss(useAppStore.getState(), item.agent)
+  if (unstartable) {
+    return failed(unstartable)
+  }
   const parent = findProposalTask(item.parentTaskId)
   if (isProposalMiss(parent)) {
     return failed(parent)
@@ -191,6 +214,10 @@ async function runLink(item: Item<'link'>): Promise<Outcome> {
   if (isProposalMiss(worktree)) {
     return failed(worktree, task.id)
   }
+  const owned = ownedWorkspace(worktree, task.id)
+  if (owned) {
+    return failed(owned, task.id)
+  }
   const link = await linkWorkspace(task.id, worktree, 'manual')
   return isProposalMiss(link)
     ? failed(link, task.id)
@@ -202,6 +229,10 @@ async function runRecord(item: Item<'record'>): Promise<Outcome> {
   const worktree = findProposalWorktree(state, item.target)
   if (isProposalMiss(worktree)) {
     return failed(worktree)
+  }
+  const owned = ownedWorkspace(worktree)
+  if (owned) {
+    return failed(owned)
   }
   const scope = proposalWorktreeScope(state, worktree)
   const project = resolveProposalProject(
@@ -259,11 +290,13 @@ export async function executeLocalTaskProposal(
   executors: LocalTaskProposalExecutors = LOCAL_TASK_PROPOSAL_EXECUTORS
 ): Promise<LocalTaskProposalItemResult[] | null> {
   const kept = proposal.keptItemIndexes ?? proposal.items.map((_, index) => index)
+  // Why: a recorded item already ran; running it again would repeat its side effect.
+  const recorded = new Set((proposal.results ?? []).map((result) => result.index))
   const run: ProposalRun = { composerOpened: false }
   const results: LocalTaskProposalItemResult[] = []
   for (const index of kept) {
     const item = proposal.items[index]
-    if (!item) {
+    if (!item || recorded.has(index)) {
       continue
     }
     const outcome = await runItem(item, run, executors).catch((error: unknown): Outcome => ({
@@ -276,13 +309,13 @@ export async function executeLocalTaskProposal(
       ...(outcome.detail ? { detail: outcome.detail.slice(0, DETAIL_MAX) } : {})
     }
     results.push(result)
-    const recorded = await write(() =>
+    const saved = await write(() =>
       localTaskDispatcherClient.recordResults(proposal.id, [result], false)
     )
-    if (isProposalMiss(recorded)) {
+    if (isProposalMiss(saved)) {
       return null
     }
   }
-  const recorded = await write(() => localTaskDispatcherClient.recordResults(proposal.id, [], true))
-  return isProposalMiss(recorded) ? null : results
+  const finished = await write(() => localTaskDispatcherClient.recordResults(proposal.id, [], true))
+  return isProposalMiss(finished) ? null : results
 }

@@ -48,14 +48,22 @@ export function findLocalTaskItemsSeenElsewhere(
 // an item seen, so opening a session and the pane it shows never mark the same item twice.
 const attempted = new Map<string, 'sent' | LocalTaskProgressView | null>()
 
-/** Marks one item seen in its library unless this window already did. */
+/**
+ * Marks one item seen in its library unless this window already did. A failed write is not
+ * retried on the next key or click, only once the hosts answer with new progress.
+ */
 export function acknowledgeLocalTaskItemOnce(item: LocalTaskAttentionItem): void {
   const domain = localTasksDomainStore.getState()
   const key = localTaskItemClientKey(item)
-  if (attempted.get(key) === 'sent' || !isLocalTaskRowWritable(domain, item.taskSessionId)) {
+  const view = domain.progress
+  const previous = attempted.get(key)
+  if (
+    previous === 'sent' ||
+    (previous !== undefined && previous === view) ||
+    !isLocalTaskRowWritable(domain, item.taskSessionId)
+  ) {
     return
   }
-  const view = domain.progress
   attempted.set(key, 'sent')
   void localTasksClient.acknowledgeAttention(item.key, item.taskSessionId).then(
     (result) => {
@@ -90,16 +98,12 @@ export function bindLocalTaskSeenForwarding(): () => void {
         attempted.delete(key)
       }
     }
-    const view = domain.progress
     for (const item of findLocalTaskItemsSeenElsewhere(
       items,
       domain.links.sessions,
       acknowledged
     )) {
-      const previous = attempted.get(localTaskItemClientKey(item))
-      if (previous === undefined || (previous !== 'sent' && previous !== view)) {
-        acknowledgeLocalTaskItemOnce(item)
-      }
+      acknowledgeLocalTaskItemOnce(item)
     }
   }
 

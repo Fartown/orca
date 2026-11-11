@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { act, cleanup, render } from '@testing-library/react'
+import { act, cleanup, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { makeTerminalTab, makeWorktree } from '@/store/slices/worktrees-slice-test-fixtures'
 import type { LocalTaskSessionLink } from '../../../../shared/local-tasks/local-task-link-types'
@@ -107,3 +107,32 @@ it.each(['catalog then tab then layout', 'layout then tab then catalog'])(
     expect(requestMount).toHaveBeenCalledWith({ worktreeId: WORKTREE, tabIds: [TAB] })
   }
 )
+
+it('drops an armed stop confirmation when the preview switches to another session', () => {
+  const TAB_2 = toWebTerminalSurfaceTabId('host-tab-2')
+  const LEAF_2 = '22222222-2222-4222-8222-222222222222'
+  const other: LocalTaskSessionLink = { ...link, id: 'runtime:env-1/session-2', tabId: TAB_2 }
+  localTasksDomainStore.setState({ links: { workspaces: [], sessions: [link, other] } })
+  useAppStore.setState({
+    worktreesByRepo: { repo: [worktree] },
+    tabsByWorktree: {
+      [WORKTREE]: [terminalTab, makeTerminalTab({ id: TAB_2, worktreeId: WORKTREE })]
+    },
+    terminalLayoutsByTabId: {
+      ...layout.terminalLayoutsByTabId,
+      [TAB_2]: {
+        root: { type: 'leaf' as const, leafId: LEAF_2 },
+        activeLeafId: LEAF_2,
+        expandedLeafId: null,
+        ptyIdsByLeafId: { [LEAF_2]: 'remote:env-1@@term-2' }
+      }
+    }
+  })
+  render(<LocalTaskSessionPanelSlot />)
+  act(() => screen.getByRole('button', { name: 'Stop' }).click())
+  expect(screen.getByRole('button', { name: 'Stop session' })).toBeTruthy()
+
+  act(() => localTaskSessionPanelStore.getState().switchSession(other))
+  expect(screen.queryByRole('button', { name: 'Stop session' })).toBeNull()
+  expect(screen.getByRole('button', { name: 'Stop' })).toBeTruthy()
+})

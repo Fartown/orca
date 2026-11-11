@@ -29,7 +29,9 @@ function facts(
     inContact,
     place: null,
     session: state ? { agent: 'claude', state, since: 1 } : null,
-    projectIds
+    projectIds,
+    owner: null,
+    launch: null
   }
 }
 
@@ -98,5 +100,27 @@ describe('localTaskProposalItemLock', () => {
       localTaskProposalItemLock({ ...start, project: 'OPS' }, facts(null, 'ssh:box', true, shared))
     ).toBeNull()
     expect(localTaskProposalItemLock(start, facts(null, 'ssh:box', true, ['p-shop']))).toBeNull()
+  })
+
+  it('holds back a start or record in a workspace another task already owns', () => {
+    const owned = {
+      ...facts(null, 'ssh:box', true, ['p-shop', 'p-ops']),
+      owner: { ref: 'SHOP-3', title: 'Hotfix' }
+    }
+    expect(localTaskProposalItemLock(start, owned)).toEqual({
+      kind: 'workspace-owned',
+      ref: 'SHOP-3',
+      title: 'Hotfix'
+    })
+    expect(localTaskProposalItemLock(start, { ...owned, inContact: false })).toMatchObject({
+      kind: 'host-offline'
+    })
+  })
+
+  it('holds back a start when no agent is enabled to run its session', () => {
+    const none = { ...facts(null), launch: { agent: null, substituted: false } }
+    expect(localTaskProposalItemLock(start, none)).toEqual({ kind: 'no-agent' })
+    const some = { ...facts(null), launch: { agent: 'claude' as const, substituted: true } }
+    expect(localTaskProposalItemLock(start, some)).toBeNull()
   })
 })

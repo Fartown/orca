@@ -4,7 +4,9 @@ import { getRepoExecutionHostId, normalizeExecutionHostId } from '../../../share
 import { normalizeDisabledTuiAgents, pickTuiAgent } from '../../../shared/tui-agent-selection'
 import type { TuiAgent } from '../../../shared/tui-agent'
 import type { LocalTaskProposalItem } from '../../../shared/local-tasks/local-task-dispatcher-rpc-params'
-import type { LocalTaskProject } from '../../../shared/local-tasks/local-task-types'
+import type { LocalTaskLinks } from '../../../shared/local-tasks/local-task-link-types'
+import type { LocalTask, LocalTaskProject } from '../../../shared/local-tasks/local-task-types'
+import { findLocalTaskLinkForWorkspace } from '../../../shared/local-tasks/local-task-workspace-match'
 import {
   localTaskEndpointForHost,
   localTaskIdEndpoint,
@@ -180,4 +182,56 @@ export function resolveProposalAgent(state: AppState, asked: string | undefined)
   return named && !disabledSet.has(named)
     ? named
     : pickTuiAgent(state.settings?.defaultTuiAgent, catalog, disabled)
+}
+
+/** The agent a new session of an item opens with, and whether it stands in for the one asked. */
+export function proposalLaunchAgent(
+  state: AppState,
+  asked: string | undefined
+): { agent: TuiAgent | null; substituted: boolean } {
+  const agent = resolveProposalAgent(state, asked)
+  return { agent, substituted: asked !== undefined && agent !== asked }
+}
+
+/**
+ * The task a workspace already belongs to, from this window's links. A workspace belongs to one
+ * task, so a start or record there would leave its new task without one.
+ */
+export function proposalWorkspaceOwner(
+  state: AppState,
+  domain: { tasks: readonly LocalTask[]; links: LocalTaskLinks },
+  worktree: Pick<ProposalWorktree, 'id' | 'hostId' | 'instanceId'>
+): LocalTask | null {
+  const link = findLocalTaskLinkForWorkspace(domain.links, {
+    id: worktree.id,
+    hostId: localTaskWorktreeHostId(state, worktree),
+    ...(worktree.instanceId ? { instanceId: worktree.instanceId } : {})
+  })
+  return link ? (domain.tasks.find((task) => task.id === link.taskId) ?? null) : null
+}
+
+/**
+ * Why an item cannot go in a workspace another task owns, worded for the dispatcher; checked
+ * before a task is made, since the link would be refused and leave that task without one.
+ */
+export function proposalWorkspaceOwnedMiss(
+  state: AppState,
+  domain: { tasks: readonly LocalTask[]; links: LocalTaskLinks },
+  worktree: Pick<ProposalWorktree, 'id' | 'hostId' | 'instanceId'>,
+  taskId?: string
+): LocalTaskProposalMiss | null {
+  const owner = proposalWorkspaceOwner(state, domain, worktree)
+  return owner && owner.id !== taskId
+    ? { miss: `the workspace already belongs to ${owner.ref}; a workspace belongs to one task` }
+    : null
+}
+
+/** Why a start or subtask cannot run with no agent enabled; checked before its task is made. */
+export function proposalNoAgentMiss(
+  state: AppState,
+  asked: string | undefined
+): LocalTaskProposalMiss | null {
+  return resolveProposalAgent(state, asked) === null
+    ? { miss: 'no agent is enabled; ask the user to turn one on in Settings, Agents' }
+    : null
 }

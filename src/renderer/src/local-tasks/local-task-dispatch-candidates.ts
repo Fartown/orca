@@ -163,3 +163,14 @@ export function localTaskDispatchCandidates(
   }))
   return [...workspaceRows, ...repoRows, ...taskRows, ...hostRows]
 }
+
+/** Picked targets as the live list has them now: a pick is a snapshot, and its host may drop. */
+export function liveLocalTaskDispatchTargets(
+  targets: readonly LocalTaskDispatchCandidate[],
+  candidates: readonly LocalTaskDispatchCandidate[]
+): LocalTaskDispatchCandidate[] {
+  return targets.map(
+    (target) =>
+      candidates.find((candidate) => candidate.id === target.id) ?? { ...target, available: false }
+  )
+}

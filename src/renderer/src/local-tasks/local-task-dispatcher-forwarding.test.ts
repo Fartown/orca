@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from 'vitest'
-import type { LocalTaskForwardedFact } from '../../../shared/local-tasks/local-task-dispatcher-types'
-import type { LocalTaskEvent } from '../../../shared/local-tasks/local-task-types'
+import type {
+  LocalTaskForwardedFact,
+  LocalTaskWatch
+} from '../../../shared/local-tasks/local-task-dispatcher-types'
+import type { LocalTask, LocalTaskEvent } from '../../../shared/local-tasks/local-task-types'
 
 vi.mock('@/store', async () => {
   const { createTestStore } = await import('@/store/slices/store-test-helpers')
@@ -42,29 +45,51 @@ function domain(events: LocalTaskEvent[], inContact = true): ForwardingView {
   }
 }
 
-function setup() {
+function setup(
+  watches: LocalTaskWatch[] = [
+    { taskId: REMOTE, addedAt: 1_000_000, addedBy: 'proposal' },
+    { taskId: 'task-local', addedAt: 1_000_000, addedBy: 'proposal' }
+  ],
+  tasks: LocalTask[] = []
+) {
   const recorded: LocalTaskForwardedFact[][] = []
   const watchEvents = vi.fn(() => () => undefined)
+  const watch = vi.fn(async () => ({ ok: true as const }))
   const forwarding = createLocalTaskDispatcherForwarding({
     client: {
-      watches: async () => ({
-        ok: true as const,
-        watches: [
-          { taskId: REMOTE, addedAt: 1_000_000, addedBy: 'proposal' as const },
-          { taskId: 'task-local', addedAt: 1_000_000, addedBy: 'proposal' as const }
-        ]
-      }),
+      watches: async () => ({ ok: true as const, watches }),
       recordFacts: async (_paneKey, facts) => {
         recorded.push(facts)
         return { ok: true as const }
-      }
+      },
+      watch
     },
     watchEvents,
     paneKey: () => 'tab-d:leaf',
     hostLabel: () => 'loopback sshd',
-    now: () => 2_000_000
+    now: () => 2_000_000,
+    domain: () => ({ tasks, projects: [], links: { workspaces: [], sessions: [] } })
   })
-  return { forwarding, recorded, watchEvents }
+  return { forwarding, recorded, watchEvents, watch }
+}
+
+function remoteTask(id: string, ref: string, title: string): LocalTask {
+  return {
+    id,
+    projectId: 'runtime:env-ssh/p',
+    number: Number(ref.split('-')[1]),
+    ref,
+    title,
+    description: '',
+    criteria: [],
+    statusId: 'runtime:env-ssh/todo',
+    priority: 0,
+    labels: [],
+    parentId: null,
+    createdAt: 0,
+    updatedAt: 0,
+    revision: 1
+  }
 }
 
 describe('forwarding news from other libraries to the dispatcher', () => {
@@ -114,5 +139,37 @@ describe('forwarding news from other libraries to the dispatcher', () => {
       ],
       ['host', 'loopback sshd is back in contact; news from its tasks resumes']
     ])
+  })
+
+  it('follows a ref the dispatcher watched once one library in contact holds it', async () => {
+    const pending: LocalTaskWatch = { taskId: 'ref:SSH-7', addedAt: 1, addedBy: 'dispatcher' }
+    const tasks: LocalTask[] = []
+    const { forwarding, recorded, watch } = setup([pending], tasks)
+    await forwarding.refreshWatches()
+    expect(watch).not.toHaveBeenCalled()
+
+    tasks.push(remoteTask(REMOTE, 'SSH-7', 'Investigate on SSH'))
+    await forwarding.resolvePending()
+    // One write follows the task and drops the pending ref; an unwatch by ref would end both.
+    expect(watch).toHaveBeenCalledWith('tab-d:leaf', REMOTE, 'ref:SSH-7')
+    expect(recorded.flat().map((fact) => [fact.kind, fact.taskId, fact.summary])).toEqual([
+      ['host', REMOTE, 'Now following SSH-7 "Investigate on SSH" on loopback sshd']
+    ])
+    await forwarding.resolvePending()
+    expect(watch).toHaveBeenCalledTimes(1)
+
+    // Watched again after an unwatch, the same ref is followed again.
+    await forwarding.refreshWatches()
+    expect(watch).toHaveBeenCalledTimes(2)
+  })
+
+  it('leaves a ref that two hosts hold waiting instead of guessing', async () => {
+    const pending: LocalTaskWatch = { taskId: 'ref:SSH-7', addedAt: 1, addedBy: 'dispatcher' }
+    const { forwarding, watch } = setup(
+      [pending],
+      [remoteTask(REMOTE, 'SSH-7', 'One'), remoteTask('runtime:env-other/task-7', 'SSH-7', 'Other')]
+    )
+    await forwarding.refreshWatches()
+    expect(watch).not.toHaveBeenCalled()
   })
 })

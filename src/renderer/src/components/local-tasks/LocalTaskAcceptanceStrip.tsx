@@ -9,7 +9,11 @@ import { AgentIcon, getAgentLabel } from '@/lib/agent-catalog'
 import { firstStatusInCategory } from '@/local-tasks/local-task-grouping'
 import { updateLocalTaskFields, runLocalTaskWrite } from '@/local-tasks/local-task-writes'
 import { localTasksClient } from '@/local-tasks/local-tasks-runtime-client'
-import { localTasksDomainStore, useLocalTasksDomain } from '@/local-tasks/local-tasks-domain-store'
+import {
+  localTasksDomainStore,
+  useLocalTasksDomain,
+  type LocalTasksDomainState
+} from '@/local-tasks/local-tasks-domain-store'
 import { sendLocalTaskReply } from '@/local-tasks/local-task-needs-you-actions'
 import {
   isLocalTaskHostInContact,
@@ -31,7 +35,11 @@ import { localTaskSessionPanelStore } from '@/local-tasks/local-task-session-pan
 import { localTaskBranchName } from '@/local-tasks/local-task-workspace-linking'
 import { localTaskEventText } from '../../../../shared/local-tasks/local-task-event-payload'
 import { isTuiAgent } from '../../../../shared/tui-agent-config'
-import type { LocalTaskWorkspaceLink } from '../../../../shared/local-tasks/local-task-link-types'
+import type {
+  LocalTaskSessionLink,
+  LocalTaskWorkspaceLink
+} from '../../../../shared/local-tasks/local-task-link-types'
+import { localTaskFinishedSessions } from '../../../../shared/local-tasks/local-task-finished-sessions'
 import type { LocalTask, LocalTaskProject } from '../../../../shared/local-tasks/local-task-types'
 import { LocalTaskStatusIcon } from './LocalTaskIcons'
 import { LocalTaskDiffStat, LocalTaskFactRow, LocalTaskFactRows } from './LocalTaskFactRows'
@@ -196,6 +204,16 @@ function AcceptanceFacts({
 
 const NO_WRITEBACKS: readonly LocalTaskWriteback[] = []
 
+/** The sessions a Send back reason goes to: the task's and its subtasks' that finished a turn. */
+function finishedSessionsOf(state: LocalTasksDomainState, taskId: string): LocalTaskSessionLink[] {
+  return localTaskFinishedSessions({
+    taskId,
+    tasks: state.tasks,
+    sessions: state.links.sessions,
+    stateOf: (sessionLinkId) => state.progress?.sessions.get(sessionLinkId)?.state
+  })
+}
+
 /**
  * Approve or Send back a task waiting for acceptance. `queue` is the bare strip for a list card;
  * `detail` is the task view's block with the facts to judge by.
@@ -219,14 +237,7 @@ export function LocalTaskAcceptanceStrip({
   const [rejecting, setRejecting] = useState(false)
   const [reason, setReason] = useState('')
   const [busy, setBusy] = useState(false)
-  // Why only finished sessions: one working or waiting cannot take the reason as its next line.
-  const finishedSessions = useLocalTasksDomain(
-    (state) =>
-      state.links.sessions.filter(
-        (session) =>
-          session.taskId === task.id && state.progress?.sessions.get(session.id)?.state === 'done'
-      ).length
-  )
+  const finishedSessions = useLocalTasksDomain((state) => finishedSessionsOf(state, task.id).length)
   const status = project?.statuses.find((candidate) => candidate.id === task.statusId)
   if (!project || status?.category !== 'review') {
     return null
@@ -250,10 +261,7 @@ export function LocalTaskAcceptanceStrip({
         return
       }
       const domain = localTasksDomainStore.getState()
-      const sessions = domain.links.sessions.filter(
-        (session) =>
-          session.taskId === task.id && domain.progress?.sessions.get(session.id)?.state === 'done'
-      )
+      const sessions = finishedSessionsOf(domain, task.id)
       let unsent = false
       for (const session of sessions) {
         if (!isLocalTaskHostInContact(useAppStore.getState(), session.hostId)) {

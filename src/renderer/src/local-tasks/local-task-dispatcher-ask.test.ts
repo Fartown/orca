@@ -11,7 +11,8 @@ vi.mock('./local-task-dispatcher-session', () => ({
   openLocalTaskDispatcher: async () => true
 }))
 
-import { askLocalTaskDispatcher } from './local-task-dispatcher-ask'
+import { LOCAL_TASK_DISPATCHER_GUIDE } from '../../../shared/local-tasks/local-task-brief'
+import { askLocalTaskDispatcher, LOCAL_TASK_ASK_ONLY_PREFIX } from './local-task-dispatcher-ask'
 
 describe('askLocalTaskDispatcher', () => {
   beforeEach(() => {
@@ -39,5 +40,11 @@ describe('askLocalTaskDispatcher', () => {
     expect(mocks.info).toHaveBeenCalledWith(
       'The dispatcher is open. Your message was not sent; send it there.'
     )
+  })
+
+  it('marks an Ask the way the dispatcher guide recognizes, so both say the same thing', () => {
+    expect(LOCAL_TASK_ASK_ONLY_PREFIX.startsWith('[Ask only:')).toBe(true)
+    expect(LOCAL_TASK_DISPATCHER_GUIDE).toContain('A message that starts with [Ask only: ...]')
+    expect(LOCAL_TASK_ASK_ONLY_PREFIX).toContain('offer a read-only investigation task')
   })
 })

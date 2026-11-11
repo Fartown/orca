@@ -1,11 +1,15 @@
-import { memo, useEffect } from 'react'
+import { memo, useEffect, useMemo } from 'react'
 import { ChevronDown, ChevronRight, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { translate } from '@/i18n/i18n'
 import { useUiLanguageRevision } from '@/i18n/use-ui-language-revision'
 import { clampLocalTaskCursor } from '@/local-tasks/local-task-cursor'
 import {
+  localTaskGroupKey,
+  localTaskListGroupTasks,
+  tallyLocalTaskGroups,
   unfoldedLocalTaskLines,
+  type LocalTaskGroupTally,
   type LocalTaskListGroup
 } from '@/local-tasks/local-task-list-groups'
 import {
@@ -31,14 +35,15 @@ function GroupHeader({
   collapsed,
   onToggle,
   model,
-  inBand
+  tally
 }: {
   group: LocalTaskListGroup
   collapsed: boolean
   onToggle: () => void
   model: LocalTaskListModel
-  inBand: number
+  tally: LocalTaskGroupTally
 }): React.JSX.Element {
+  const { shown, inBand } = tally
   const writable = useLocalTasksDomain((state) => canCreateInGroup(state, group, model))
   return (
     <div className="flex h-8 items-center gap-2 border-b border-border/40 bg-muted/30 pr-2 pl-2">
@@ -55,7 +60,7 @@ function GroupHeader({
         )}
         <LocalTaskGroupIcon head={group} />
         <span className="truncate">{localTaskGroupLabel(group)}</span>
-        <span className="text-2xs tabular-nums text-muted-foreground">{group.count - inBand}</span>
+        <span className="text-2xs tabular-nums text-muted-foreground">{shown}</span>
         {inBand > 0 ? (
           <span className="truncate text-2xs font-normal text-muted-foreground">
             {translate('localTasks.list.moreInNeedsYou', '{{count}} more in Needs you', {
@@ -126,19 +131,6 @@ function EmptyList({
   )
 }
 
-/** Tasks this group counts that the Needs you section shows instead. */
-function groupTasksInBand(group: LocalTaskListGroup, banded: ReadonlySet<string>): number {
-  let count = 0
-  for (const entry of group.entries) {
-    for (const task of [entry.task, ...entry.lines.map((line) => line.task)]) {
-      if (banded.has(task.id)) {
-        count += 1
-      }
-    }
-  }
-  return count
-}
-
 /**
  * Grouped as the toolbar says; subtasks of any depth sit indented under a shown parent, and each
  * level folds on its own (REQ-004, REQ-006).
@@ -152,6 +144,16 @@ export const LocalTaskList = memo(function LocalTaskList({
   const collapsed = useLocalTaskPage((state) => state.collapsedGroupKeys)
   const folded = model.foldedTaskIds
   const banded = model.band.ids
+  const tallies = useMemo(
+    () =>
+      tallyLocalTaskGroups(
+        model.groups,
+        localTaskListGroupTasks(model.groups),
+        (group, task) => localTaskGroupKey(task, model.index, group.kind) === group.key,
+        banded
+      ),
+    [banded, model.groups, model.index]
+  )
   useEffect(() => {
     const page = localTaskPageStore.getState()
     const cursor = clampLocalTaskCursor(page.cursorTaskId, model.listTaskIds, model.orderedTaskIds)
@@ -167,10 +169,10 @@ export const LocalTaskList = memo(function LocalTaskList({
   return (
     <div className="@container/local-task-list min-h-0 flex-1 overflow-y-auto rounded-md border border-border/60 scrollbar-sleek">
       <LocalTaskNeedsYouBand model={model} />
-      {model.groups.map((group) => {
+      {model.groups.map((group, at) => {
         const entries = group.entries.filter((entry) => !banded.has(entry.task.id))
-        const inBand = groupTasksInBand(group, banded)
-        if (entries.length === 0) {
+        const tally = tallies[at] ?? { shown: 0, inBand: 0 }
+        if (tally.shown + tally.inBand === 0) {
           return null
         }
         const isCollapsed = isLocalTaskGroupCollapsed(group, collapsed)
@@ -185,7 +187,7 @@ export const LocalTaskList = memo(function LocalTaskList({
               group={group}
               collapsed={isCollapsed}
               model={model}
-              inBand={inBand}
+              tally={tally}
               onToggle={() => localTaskPageStore.getState().toggleGroupCollapsed(group.key)}
             />
             {isCollapsed

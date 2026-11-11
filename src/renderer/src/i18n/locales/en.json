@@ -24014,7 +24014,9 @@
       "place": {
         "newWorkspace": "New workspace of {{repo}}",
         "newSession": "{{agent}} · new session",
-        "sameWorkspace": "Same workspace"
+        "sameWorkspace": "Same workspace",
+        "noAgent": "No agent is enabled",
+        "agentSubstituted": "(default; {{asked}} is not available)"
       },
       "stage": {
         "done": "Done",
@@ -24032,17 +24034,20 @@
         "ended": "This session has ended.",
         "missing": "This session can’t be found here.",
         "unverifiable": "The session’s state can’t be confirmed right now.",
-        "busy": "{{agent}} is “{{state}}”: append once it finishes a turn."
+        "busy": "{{agent}} is “{{state}}”: append once it finishes a turn.",
+        "workspaceOwned": "This workspace already belongs to {{ref}} “{{title}}”. A workspace belongs to one task."
       },
       "result": {
         "failed": "Didn’t work: {{detail}}",
-        "unknown": "The execution window disconnected before this step reported. Check the task before deciding whether to redo it."
+        "unknown": "The execution window disconnected before this step reported. Check the task before deciding whether to redo it.",
+        "unrecorded": "This step’s result could not be recorded, so whether it worked is unknown. Check the task before deciding whether to redo it."
       },
       "pill": {
         "pending": "Waiting for you",
         "running": "Running",
         "disconnected": "Execution window disconnected",
-        "confirmed": "Confirmed"
+        "confirmed": "Confirmed",
+        "stopped": "Stopped"
       },
       "footer": {
         "pending": "Once you confirm, Orca runs these directly, without the dispatcher.",
@@ -24050,7 +24055,9 @@
         "progress": "Done {{done}} of {{total}}",
         "windowAlive": "The execution window is still open",
         "unrun": "Confirmed, not run yet."
-      }
+      },
+      "claimFailed": "Couldn’t reach the task library, so nothing ran. Try again.",
+      "abandoned": "A result could not be recorded, so this window stopped the run. Check the tasks before finishing. Recorded results are kept; no steps are repeated."
     },
     "latestProgress": {
       "title": "Latest progress",
@@ -24777,7 +24784,6 @@
       "chooseWorkspaceOrRepo": "Choose a workspace or repository",
       "workspaceNameTaken": "Workspace name is already in use",
       "createdWorkspaceLinkFailed": "Workspace created but could not be linked",
-      "agentLinkFailed": "Agent started but could not be linked",
       "chooseSameLibraryWorkspaces": "Choose unlinked workspaces on one task library",
       "createParentTaskFailed": "Could not create parent task",
       "sessionStarted": "Session started",
@@ -24796,7 +24802,10 @@
       "mode": "Dispatch or ask",
       "modeDispatch": "Dispatch",
       "modeAsk": "Ask",
-      "askUnconfirmed": "Sent to the dispatcher, but its arrival is not confirmed yet. Check the conversation."
+      "askUnconfirmed": "Sent to the dispatcher, but its arrival is not confirmed yet. Check the conversation.",
+      "appendPartial": "{{missed}} of {{total}} finished sessions did not get it",
+      "appendNotRecorded": "Sent, but it could not be recorded on the task",
+      "recordAgain": "Record again"
     },
     "band": {
       "description": "Sessions waiting for your answer or a finished turn you have not seen, and tasks waiting for your acceptance",

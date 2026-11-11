@@ -151,3 +151,20 @@ it('marks an item seen once when opening its session also acknowledges its pane'
   useAppStore.setState({ acknowledgedAgentsByPaneKey: { 'tab-1:leaf-1': 100 } })
   expect(fixture.acknowledgeAttention).toHaveBeenCalledOnce()
 })
+
+it('does not rewrite a failed "seen" on every key; it waits for the hosts to answer anew', async () => {
+  fixture.acknowledgeAttention.mockResolvedValueOnce({ ok: false, code: 'unavailable' })
+  const seen = item('s1', 'tab-1:leaf-1@100', 100)
+  acknowledgeLocalTaskItemOnce(seen)
+  await vi.waitFor(() => expect(fixture.acknowledgeAttention).toHaveBeenCalledOnce())
+  await Promise.resolve()
+  acknowledgeLocalTaskItemOnce(seen)
+  acknowledgeLocalTaskItemOnce(seen)
+  expect(fixture.acknowledgeAttention).toHaveBeenCalledOnce()
+  localTasksDomainStore
+    .getState()
+    .writer('local')
+    .applyProgress({ observedAt: 2, sessions: [], items: [seen] })
+  acknowledgeLocalTaskItemOnce(seen)
+  expect(fixture.acknowledgeAttention).toHaveBeenCalledTimes(2)
+})

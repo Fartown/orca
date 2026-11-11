@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
+import type * as DispatchCandidates from '@/local-tasks/local-task-dispatch-candidates'
 
 type CandidateFixture = {
   kind: 'workspace'
@@ -27,7 +28,8 @@ vi.mock('@/store', () => ({
 vi.mock('@/components/sidebar/sidebar-host-options', () => ({
   buildSidebarHostOptionsForAllHosts: () => []
 }))
-vi.mock('@/local-tasks/local-task-dispatch-candidates', () => ({
+vi.mock('@/local-tasks/local-task-dispatch-candidates', async (importOriginal) => ({
+  ...(await importOriginal<typeof DispatchCandidates>()),
   localTaskDispatchCandidates: () => mocks.candidates
 }))
 vi.mock('@/local-tasks/local-task-dispatch-project', () => ({
@@ -99,4 +101,25 @@ it('bounds selected chips while dispatching every selected workspace across acti
   await waitFor(() => expect(mocks.dispatchBatch).toHaveBeenCalledOnce())
   expect(mocks.dispatchBatch.mock.calls[0]?.[0].targets).toHaveLength(60)
   expect(mocks.dispatchBatch.mock.calls[0]?.[0].targets[59].worktree.id).toBe('worktree-59')
+})
+
+it('greys Dispatch out when a picked workspace host drops after the pick', () => {
+  const view = render(<LocalTaskDispatchBox />)
+  const input = screen.getByRole('textbox', { name: 'Dispatch a task' })
+  fireEvent.change(input, { target: { value: '@', selectionStart: 1 } })
+  fireEvent.click(screen.getByText('Workspace 0'))
+  fireEvent.change(input, { target: { value: 'Build the feature' } })
+  const send = (): HTMLButtonElement => {
+    const button = screen.getByRole('button', { name: 'Dispatch' })
+    if (!(button instanceof HTMLButtonElement)) {
+      throw new Error('Dispatch is not a button')
+    }
+    return button
+  }
+  expect(send().disabled).toBe(false)
+
+  mocks.candidates = mocks.candidates.map((candidate) => ({ ...candidate, available: false }))
+  mocks.app = { ...mocks.app }
+  view.rerender(<LocalTaskDispatchBox />)
+  expect(send().disabled).toBe(true)
 })

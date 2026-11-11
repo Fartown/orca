@@ -2,48 +2,56 @@ import { callRuntimeRpc } from '@/runtime/runtime-rpc-client'
 import { translate } from '@/i18n/i18n'
 import { createAgentSessionOperationId } from '@/runtime/agent-session-operation-id'
 import { useAppStore } from '@/store'
-import {
-  getFolderWorkspaceWorktree,
-  selectFolderWorkspaces,
-  selectWorktreesByRepo
-} from '@/store/workspace-record-selectors'
+import type { AppState } from '@/store/types'
 import { normalizeExecutionHostId } from '../../../shared/execution-host'
 import type { AgentLaunchResult } from '../../../shared/agent-launch-intent'
 import type { TuiAgent } from '../../../shared/tui-agent'
 import type { LocalTask, LocalTaskProject } from '../../../shared/local-tasks/local-task-types'
-import type { LocalTaskSessionLink } from '../../../shared/local-tasks/local-task-link-types'
-import { parsePaneKey } from '../../../shared/stable-pane-id'
+import { localTaskFinishedSessions } from '../../../shared/local-tasks/local-task-finished-sessions'
 import { isFolderRepo } from '../../../shared/repo-kind'
+import { worktreeIdsEqual } from '../../../shared/worktree/id'
 import { isLocalTaskHostInContact } from './local-task-host-contact'
 import { localTaskEndpointForHost, localTaskEndpointTarget } from './local-task-endpoints'
-import { isLocalTaskRowWritable, localTasksDomainStore } from './local-tasks-domain-store'
-import { localTasksClient } from './local-tasks-runtime-client'
+import {
+  isLocalTaskRowWritable,
+  localTasksDomainStore,
+  type LocalTasksDomainState
+} from './local-tasks-domain-store'
 import { linkLocalTaskWorkspace } from './local-task-workspace-linking'
 import { launchInNewWorkspace } from './local-task-dispatch-new-workspace'
 import { localTaskDispatchPrompt } from './local-task-dispatch-prompt'
+import {
+  dispatchedSessionIds,
+  settleDispatchLaunch,
+  type LocalTaskDispatchRecord
+} from './local-task-dispatch-record'
 import { createDispatchTask } from './local-task-dispatch-task'
 import {
   findLocalTaskEffectiveWorkspace,
   findLocalTaskLinkForWorkspace
 } from './local-task-link-selectors'
 import {
-  localTaskLinkWorkspaceId,
-  localTaskWorktreeHostId
+  localTaskWorktreeHostId,
+  selectLocalTaskWorkspace
 } from './local-task-workspace-resolution'
 import { projectsForDispatchTarget } from './local-task-dispatch-project'
-import { recordLocalTaskSession, chatSessionIds } from './local-task-session-recording'
-import { sendLocalTaskReply } from './local-task-needs-you-actions'
+import { appendToFinishedSessions } from './local-task-dispatch-append'
 import type { LocalTaskDispatchCandidate } from './local-task-dispatch-candidates'
 
 export type LocalTaskDispatchReceipt = {
-  kind: 'launched' | 'appended' | 'failed' | 'unconfirmed'
+  /** `unrecorded`: the session started but its task does not list it yet; never launched again. */
+  kind: 'launched' | 'appended' | 'failed' | 'unconfirmed' | 'unrecorded'
   taskId: string
   createdTaskIds: string[]
   target: LocalTaskDispatchCandidate
   text: string
   message: string | null
   launch?: { hostId: string; worktreeId: string; outcome: AgentLaunchResult['outcome'] }
+  /** What `unrecorded` still has to write down. */
+  record?: LocalTaskDispatchRecord
 }
+
+type WorkspaceTarget = Extract<LocalTaskDispatchCandidate, { kind: 'workspace' }>
 
 export { dispatchTitle } from './local-task-dispatch-task'
 
@@ -58,23 +66,9 @@ function failed(
   return { kind, taskId, createdTaskIds, target, text, message }
 }
 
-function doneSession(taskId: string): LocalTaskSessionLink | null {
-  const domain = localTasksDomainStore.getState()
-  const completed = new Set(
-    [...(domain.progress?.sessions.values() ?? [])]
-      .filter((session) => session.state === 'done')
-      .map((session) => session.taskSessionId)
-  )
-  return (
-    domain.links.sessions.find(
-      (session) => session.taskId === taskId && completed.has(session.id)
-    ) ?? null
-  )
-}
-
 export async function launchInWorkspace(
   task: LocalTask,
-  target: Extract<LocalTaskDispatchCandidate, { kind: 'workspace' }>,
+  target: WorkspaceTarget,
   text: string,
   agent: TuiAgent,
   createdTaskIds: string[]
@@ -105,8 +99,9 @@ export async function launchInWorkspace(
   } catch (error) {
     return fail(error instanceof Error ? error.message : String(error), 'unconfirmed')
   }
-  const recorded = await recordLocalTaskSession(
-    {
+  return settleDispatchLaunch({ taskId: task.id, createdTaskIds, target, text }, result, {
+    workspace: null,
+    session: {
       taskId: task.id,
       hostId,
       worktreeId: result.worktreeId,
@@ -114,44 +109,78 @@ export async function launchInWorkspace(
       agent,
       linkedVia: 'start'
     },
-    result.outcome.kind === 'structured'
-      ? chatSessionIds(result.outcome.tabId ?? null, result.outcome.sessionId)
-      : {
-          surface: 'terminal',
-          paneKey: result.outcome.paneKey ?? undefined,
-          tabId: result.outcome.paneKey ? parsePaneKey(result.outcome.paneKey)?.tabId : undefined
-        }
+    ids: dispatchedSessionIds(result.outcome)
+  })
+}
+
+/** Where a target works now, read at submit time; `ownerTaskId` already holds that workspace. */
+function resolveDispatchPlace(
+  state: AppState,
+  domain: LocalTasksDomainState,
+  target: Exclude<LocalTaskDispatchCandidate, { kind: 'host' }>
+): { hostId: string | null; workspace: WorkspaceTarget | null; ownerTaskId: string | null } {
+  if (target.kind === 'repo') {
+    return { hostId: target.hostId, workspace: null, ownerTaskId: null }
+  }
+  if (target.kind === 'workspace') {
+    const owner = findLocalTaskLinkForWorkspace(domain.links, {
+      id: target.worktree.id,
+      hostId: target.hostId,
+      ...(target.worktree.instanceId ? { instanceId: target.worktree.instanceId } : {})
+    })
+    return { hostId: target.hostId, workspace: target, ownerTaskId: owner?.taskId ?? null }
+  }
+  const link = findLocalTaskEffectiveWorkspace(
+    domain.links,
+    target.task,
+    new Map(domain.tasks.map((item) => [item.id, item]))
   )
-  if (!recorded) {
-    return fail(
-      translate('localTasks.dispatch.sessionLinkFailed', 'Session started but could not be linked')
-    )
+  if (!link) {
+    return { hostId: null, workspace: null, ownerTaskId: null }
+  }
+  const located = selectLocalTaskWorkspace(state, link)
+  if (typeof located === 'string') {
+    return { hostId: link.hostId, workspace: null, ownerTaskId: link.taskId }
   }
   return {
-    kind: 'launched',
-    taskId: task.id,
-    createdTaskIds,
-    target,
-    text,
-    message:
-      result.prompt?.outcome === 'not-delivered'
-        ? translate(
-            'localTasks.dispatch.promptNotDelivered',
-            'Session started but prompt was not delivered'
-          )
-        : (result.warning ?? null),
-    launch: { hostId, worktreeId: result.worktreeId, outcome: result.outcome }
+    hostId: link.hostId,
+    ownerTaskId: link.taskId,
+    workspace: {
+      kind: 'workspace',
+      id: `workspace:${link.hostId}:${located.id}`,
+      label: located.displayName,
+      detail: '',
+      hostId: link.hostId,
+      available: isLocalTaskHostInContact(state, link.hostId),
+      worktree: located
+    }
   }
 }
 
-export async function dispatchLocalTask(args: {
+type DispatchArgs = {
   target: LocalTaskDispatchCandidate
   text: string
   agent: TuiAgent
   project?: LocalTaskProject
   existingTaskId?: string
   parentTaskId?: string
-}): Promise<LocalTaskDispatchReceipt> {
+}
+
+/** Never rejects: a throw midway may have reached a host, so it reads as unconfirmed, not failed. */
+export function dispatchLocalTask(args: DispatchArgs): Promise<LocalTaskDispatchReceipt> {
+  return dispatchOnce(args).catch((error: unknown) =>
+    failed(
+      args.existingTaskId ?? '',
+      [],
+      args.target,
+      args.text.trim(),
+      error instanceof Error ? error.message : String(error),
+      'unconfirmed'
+    )
+  )
+}
+
+async function dispatchOnce(args: DispatchArgs): Promise<LocalTaskDispatchReceipt> {
   const { target, agent } = args
   const text = args.text.trim()
   const state = useAppStore.getState()
@@ -165,7 +194,7 @@ export async function dispatchLocalTask(args: {
       : null
   const fail = (message: string, taskId = knownTask?.id ?? '', createdTaskIds: string[] = []) =>
     failed(taskId, createdTaskIds, target, text, message)
-  if (!text || target.kind === 'host' || !target.available) {
+  if (!text || target.kind === 'host') {
     return fail(
       translate(
         'localTasks.dispatch.chooseConnectedTarget',
@@ -178,46 +207,26 @@ export async function dispatchLocalTask(args: {
       translate('localTasks.dispatch.chooseFolderWorkspace', 'Choose an existing folder workspace')
     )
   }
+  const place = resolveDispatchPlace(state, domain, target)
+  if (place.hostId === null) {
+    return fail(
+      translate('localTasks.dispatch.chooseTaskWorkspace', 'Choose a workspace for this task')
+    )
+  }
+  // Why read now: the pick was a snapshot; a host lost since then must refuse before any write.
+  if (!isLocalTaskHostInContact(state, place.hostId)) {
+    return fail(translate('localTasks.dispatch.hostNotConnected', 'Host not connected'))
+  }
+  if (target.kind === 'task' && !place.workspace) {
+    return fail(
+      translate('localTasks.dispatch.chooseTaskWorkspace', 'Choose a workspace for this task')
+    )
+  }
   let task = knownTask
   let parentId: string | null = args.parentTaskId ?? null
-  let workspaceAlreadyOwned = false
-  let workspaceTarget: Extract<LocalTaskDispatchCandidate, { kind: 'workspace' }> | null = null
-  if (target.kind === 'task') {
-    const byId = new Map(domain.tasks.map((item) => [item.id, item]))
-    const link = findLocalTaskEffectiveWorkspace(domain.links, target.task, byId)
-    const workspaceId = link ? localTaskLinkWorkspaceId(link) : null
-    const worktree = workspaceId
-      ? [
-          ...Object.values(selectWorktreesByRepo(state)).flat(),
-          ...selectFolderWorkspaces(state).map((folder) => getFolderWorkspaceWorktree(folder))
-        ].find((item) => item.id === workspaceId)
-      : null
-    if (!worktree) {
-      return fail(
-        translate('localTasks.dispatch.chooseTaskWorkspace', 'Choose a workspace for this task')
-      )
-    }
-    workspaceTarget = {
-      kind: 'workspace',
-      id: `workspace:${link?.hostId}:${worktree.id}`,
-      label: worktree.displayName,
-      detail: '',
-      hostId: link!.hostId,
-      available: isLocalTaskHostInContact(state, link!.hostId),
-      worktree
-    }
-  } else if (target.kind === 'workspace') {
-    workspaceTarget = target
-    const owner = findLocalTaskLinkForWorkspace(domain.links, {
-      id: target.worktree.id,
-      hostId: target.hostId,
-      ...(target.worktree.instanceId ? { instanceId: target.worktree.instanceId } : {})
-    })
-    if (owner && !task) {
-      task = domain.tasks.find((item) => item.id === owner.taskId) ?? null
-      workspaceAlreadyOwned = true
-      project = task ? domain.projects.find((item) => item.id === task?.projectId) : project
-    }
+  if (target.kind === 'workspace' && place.ownerTaskId && !task) {
+    task = domain.tasks.find((item) => item.id === place.ownerTaskId) ?? null
+    project = task ? domain.projects.find((item) => item.id === task?.projectId) : project
   }
   if (!project || !isLocalTaskRowWritable(domain, project.id)) {
     return fail(
@@ -226,23 +235,24 @@ export async function dispatchLocalTask(args: {
     )
   }
   if (task) {
-    const done = doneSession(task.id)
-    if (done) {
-      if (!isLocalTaskHostInContact(state, done.hostId)) {
-        return fail(
-          translate('localTasks.dispatch.hostNotConnected', 'Host not connected'),
-          task.id
-        )
-      }
-      const sent = await sendLocalTaskReply(done, text)
-      if (sent.status !== 'sent') {
-        return fail(
-          translate('localTasks.dispatch.appendFailed', 'Could not send to the finished session'),
-          task.id
-        )
-      }
-      await localTasksClient.addComment(task.id, text)
-      return { kind: 'appended', taskId: task.id, createdTaskIds: [], target, text, message: null }
+    const workspace = target.kind === 'workspace' ? target : null
+    // Why only that workspace's when one was named: the line was meant for work there (REQ-029).
+    const finished = localTaskFinishedSessions({
+      taskId: task.id,
+      tasks: domain.tasks,
+      sessions: domain.links.sessions,
+      stateOf: (sessionLinkId) => domain.progress?.sessions.get(sessionLinkId)?.state
+    }).filter(
+      (session) =>
+        !workspace ||
+        (workspace.worktree.instanceId !== undefined &&
+          session.instanceId === workspace.worktree.instanceId) ||
+        (session.hostId === workspace.hostId &&
+          session.worktreeId !== null &&
+          worktreeIdsEqual(session.worktreeId, workspace.worktree.id))
+    )
+    if (finished.length > 0) {
+      return appendToFinishedSessions(task, finished, target, text)
     }
     if (!args.existingTaskId) {
       parentId = task.id
@@ -257,14 +267,12 @@ export async function dispatchLocalTask(args: {
     }
     createdTaskIds.push(task.id)
   }
-  if (workspaceTarget) {
-    if (
-      !workspaceAlreadyOwned &&
-      !domain.links.workspaces.some((link) => link.taskId === task.id)
-    ) {
+  if (place.workspace) {
+    // Why not linked when owned: one workspace belongs to one task; a subtask works in its owner's.
+    if (!place.ownerTaskId) {
       const linked = await linkLocalTaskWorkspace(state, {
         taskId: task.id,
-        worktree: workspaceTarget.worktree,
+        worktree: place.workspace.worktree,
         linkedVia: 'start'
       })
       if (!linked) {
@@ -278,7 +286,7 @@ export async function dispatchLocalTask(args: {
         )
       }
     }
-    return launchInWorkspace(task, workspaceTarget, text, agent, createdTaskIds)
+    return launchInWorkspace(task, place.workspace, text, agent, createdTaskIds)
   }
   if (target.kind === 'repo') {
     return launchInNewWorkspace(task, target, text, agent, createdTaskIds)

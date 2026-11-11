@@ -23,8 +23,10 @@ type WakeState = {
   pointedIdle: string | null
   /** The inbox as it stood at the last pointer; an unacked inbox with nothing new stays quiet. */
   pointedCursor: string | null
-  /** When the person last pressed a key in the dispatcher's tab. */
+  /** When the person last put text in the dispatcher's input: a printable key, a paste, a drop. */
   typedAt: number | null
+  /** When the person last pressed any key in the dispatcher's tab, text or not. */
+  keyAt: number | null
   checking: boolean
   again: boolean
 }
@@ -35,6 +37,26 @@ const POINTER_WRITTEN: ReadonlySet<string> = new Set([
   'partial-submit-failed',
   'unconfirmed'
 ])
+
+/** How long after a key its input reaches the terminal record; a later input came some other way. */
+const KEY_INPUT_WINDOW_MS = 1000
+
+/**
+ * Whether a key can leave text in the input: a printable character, a paste shortcut, or an IME
+ * composition. Shortcuts, arrows and Esc cannot, so they do not hold the pointer back.
+ */
+export function mayLeaveLocalTaskDispatcherDraft(
+  event: Pick<KeyboardEvent, 'key' | 'ctrlKey' | 'metaKey' | 'shiftKey' | 'isComposing'>
+): boolean {
+  if (event.isComposing || event.key === 'Process') {
+    return true
+  }
+  const key = event.key.toLowerCase()
+  if (event.metaKey || event.ctrlKey) {
+    return key === 'v'
+  }
+  return event.key.length === 1 || (event.shiftKey && event.key === 'Insert')
+}
 
 /** True while the person's keyboard is in the dispatcher's terminal: a half-typed line must not meet the pointer. */
 export function isPersonInDispatcherTab(tabId: string): boolean {
@@ -72,22 +94,35 @@ function idleStretch(paneKey: string): { key: string; turnStartedAt: number } | 
 export function createLocalTaskDispatcherWake(
   send: typeof sendMessageToAgent = sendMessageToAgent,
   personInTab: (tabId: string) => boolean = isPersonInDispatcherTab
-): { check: () => Promise<void>; noteTyping: (at: number) => void } {
+): {
+  check: () => Promise<void>
+  noteTyping: (at: number) => void
+  noteKey: (at: number) => void
+} {
   const wake: WakeState = {
     pointedIdle: null,
     pointedCursor: null,
     typedAt: null,
+    keyAt: null,
     checking: false,
     again: false
   }
 
-  /** The terminal input record includes paste, drop and IME commits, even before its store flush. */
+  /**
+   * The terminal input record also has pastes from the menu, drops and IME commits, even before
+   * its store flush; an input right after a key that leaves no text is that key, not a draft.
+   */
   function mayHoldDraft(paneKey: string, idle: { turnStartedAt: number }): boolean {
     const state = useAppStore.getState()
     const inputAt = readLastTerminalInputAt(state.lastTerminalInputAtByPaneKey ?? {}, paneKey)
+    const fromKey =
+      inputAt !== undefined &&
+      wake.keyAt !== null &&
+      inputAt >= wake.keyAt &&
+      inputAt - wake.keyAt <= KEY_INPUT_WINDOW_MS
     return (
       (wake.typedAt !== null && wake.typedAt >= idle.turnStartedAt) ||
-      (inputAt !== undefined && inputAt >= idle.turnStartedAt)
+      (inputAt !== undefined && inputAt >= idle.turnStartedAt && !fromKey)
     )
   }
 
@@ -159,6 +194,9 @@ export function createLocalTaskDispatcherWake(
     check,
     noteTyping: (at) => {
       wake.typedAt = at
+    },
+    noteKey: (at) => {
+      wake.keyAt = at
     }
   }
 }
@@ -205,13 +243,26 @@ export function bindLocalTaskDispatcher(): () => void {
   const onFocusMoved = (): void => {
     void wake.check()
   }
-  // Why keys: a draft left in the dispatcher's input must not be submitted with the pointer.
-  const onKey = (event: KeyboardEvent): void => {
+  const inDispatcherTab = (event: Event): boolean => {
     const tabId = parsePaneKey(liveDispatcherPaneKey() ?? '')?.tabId
     const tab = tabId
       ? document.querySelector(`[data-terminal-tab-id="${CSS.escape(tabId)}"]`)
       : null
-    if (tab && event.target instanceof Node && tab.contains(event.target)) {
+    return Boolean(tab && event.target instanceof Node && tab.contains(event.target))
+  }
+  // Why keys: a draft left in the dispatcher's input must not be submitted with the pointer.
+  const onKey = (event: KeyboardEvent): void => {
+    if (!inDispatcherTab(event)) {
+      return
+    }
+    const at = Date.now()
+    wake.noteKey(at)
+    if (mayLeaveLocalTaskDispatcherDraft(event)) {
+      wake.noteTyping(at)
+    }
+  }
+  const onText = (event: Event): void => {
+    if (inDispatcherTab(event)) {
       wake.noteTyping(Date.now())
     }
   }
@@ -219,6 +270,8 @@ export function bindLocalTaskDispatcher(): () => void {
   target?.addEventListener('focusin', onFocusMoved)
   target?.addEventListener('blur', onFocusMoved)
   target?.addEventListener('keydown', onKey, true)
+  target?.addEventListener('paste', onText, true)
+  target?.addEventListener('drop', onText, true)
   return () => {
     unbindForwarding()
     unsubscribeChanges()
@@ -226,5 +279,7 @@ export function bindLocalTaskDispatcher(): () => void {
     target?.removeEventListener('focusin', onFocusMoved)
     target?.removeEventListener('blur', onFocusMoved)
     target?.removeEventListener('keydown', onKey, true)
+    target?.removeEventListener('paste', onText, true)
+    target?.removeEventListener('drop', onText, true)
   }
 }

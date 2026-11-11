@@ -1,5 +1,6 @@
 import { addAppKeyListener, removeAppKeyListener } from '@/lib/app-keyboard-router'
 import { isImeOwnedKeyboardEvent } from '@/lib/ime-composition-keyboard-event'
+import { localTaskSessionPanelStore } from './local-task-session-panel-store'
 
 /** Single-key commands on the local task page (REQ-007, slice 1). */
 export type LocalTaskPageKeyAction =
@@ -45,6 +46,8 @@ const NESTED_OVERLAY_SELECTOR =
 export const LOCAL_TASK_OVERLAY_ATTRIBUTE = 'data-local-task-overlay'
 export const LOCAL_TASK_PAGE_ATTRIBUTE = 'data-local-task-page'
 export const LOCAL_TASK_ROW_ATTRIBUTE = 'data-local-task-row'
+/** On the session preview beside the page; its keys belong to the session it shows. */
+export const LOCAL_TASK_SESSION_PANEL_ATTRIBUTE = 'data-local-task-session-panel'
 const ACTIVATING_TARGET_SELECTOR =
   'button, a[href], summary, [role="button"], [role="checkbox"], [role="radio"], [role="switch"], [role="tab"], [role="menuitem"], [role="option"]'
 
@@ -61,12 +64,22 @@ export function isEditableKeyTarget(target: EventTarget | null): boolean {
   )
 }
 
-// Why: focus elsewhere in the window (sidebar, a pane) keeps its own keys.
+function isInSessionPanel(target: EventTarget | null): boolean {
+  return (
+    target instanceof Element && target.closest(`[${LOCAL_TASK_SESSION_PANEL_ATTRIBUTE}]`) !== null
+  )
+}
+
+// Why: focus elsewhere in the window (sidebar, a pane, the session preview) keeps its own keys.
 function isOnLocalTaskPage(target: EventTarget | null): boolean {
   if (target === document.body || target === document.documentElement || target === null) {
     return true
   }
-  return target instanceof Element && target.closest(`[${LOCAL_TASK_PAGE_ATTRIBUTE}]`) !== null
+  return (
+    target instanceof Element &&
+    !isInSessionPanel(target) &&
+    target.closest(`[${LOCAL_TASK_PAGE_ATTRIBUTE}]`) !== null
+  )
 }
 
 /** Maps a keydown to a page command, or null when the key belongs to whatever has focus. */
@@ -152,8 +165,39 @@ function handleEscape(event: KeyboardEvent): void {
   layer.close()
 }
 
+/**
+ * Esc inside the session preview: its terminal or composer takes it as the session's own key (an
+ * agent interrupt), and focus stays there; elsewhere in the preview it closes the preview only.
+ */
+function handleSessionPanelEscape(event: KeyboardEvent): boolean {
+  const target = event.target
+  if (!isInSessionPanel(target) || overlayOpen(NESTED_OVERLAY_SELECTOR)) {
+    return false
+  }
+  if (target instanceof HTMLElement && isEditableKeyTarget(target)) {
+    // Why after this dispatch: the upstream task page's Esc owner blurs any field, which would
+    // hand the next keys to the page instead of the session.
+    queueMicrotask(() => {
+      if (target.isConnected && document.activeElement !== target) {
+        target.focus({ preventScroll: true })
+      }
+    })
+    return true
+  }
+  event.preventDefault()
+  event.stopImmediatePropagation()
+  localTaskSessionPanelStore.getState().close()
+  return true
+}
+
 function onKeyDown(event: KeyboardEvent): void {
-  if (!pageHandler || event.defaultPrevented || isImeOwnedKeyboardEvent(event)) {
+  if (event.defaultPrevented || isImeOwnedKeyboardEvent(event)) {
+    return
+  }
+  if (event.key === 'Escape' && handleSessionPanelEscape(event)) {
+    return
+  }
+  if (!pageHandler) {
     return
   }
   if (event.key === 'Escape') {

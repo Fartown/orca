@@ -35,6 +35,8 @@ import { localTaskSessionPanelIsOnScreen } from '@/local-tasks/local-task-sessio
 import { prepareLocalTaskSessionPreview } from '@/local-tasks/local-task-session-preview-preparation'
 import { useLocalTaskSessionProgress } from '@/local-tasks/local-task-session-progress'
 import { localTaskDescendantIds } from '../../../../shared/local-tasks/local-task-tree'
+import { LOCAL_TASK_SESSION_PANEL_ATTRIBUTE } from '@/local-tasks/local-task-page-keys'
+import { useLocalTaskEscapeLayer } from './use-local-task-page-keys'
 import {
   LocalTaskSessionPanelHeader,
   LocalTaskSessionStopBar as StopSessionBar
@@ -234,7 +236,8 @@ function LocalTaskSessionPanelContent({
         )}
       </div>
       {/* Why terminals only: a chat's own composer carries its stop. */}
-      {terminalShown ? <StopSessionBar session={session} /> : null}
+      {/* Why keyed: a confirm armed on one session must not stop the next one switched to. */}
+      {terminalShown ? <StopSessionBar key={session.id} session={session} /> : null}
       {!inContact ? (
         <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/80 text-sm text-muted-foreground">
           {translate('localTasks.sessionPanel.disconnected', 'Not connected')}
@@ -273,12 +276,24 @@ export function LocalTaskSessionPanelSlot(): React.JSX.Element | null {
     }
   }, [activeView, mode, session])
 
+  // On the task page, Esc closes the preview before the detail or the page behind it.
+  useLocalTaskEscapeLayer('panel', mode !== 'closed', () =>
+    localTaskSessionPanelStore.getState().close()
+  )
   useEffect(() => {
     if (mode === 'closed') {
       return
     }
+    // Why not from inside: the page key router owns Esc there, and the session keeps its own.
     const onKeyDown = (event: KeyboardEvent): void => {
-      if (event.key === 'Escape' && !event.defaultPrevented) {
+      if (
+        event.key === 'Escape' &&
+        !event.defaultPrevented &&
+        !(
+          event.target instanceof Element &&
+          event.target.closest(`[${LOCAL_TASK_SESSION_PANEL_ATTRIBUTE}]`)
+        )
+      ) {
         localTaskSessionPanelStore.getState().close()
       }
     }
@@ -311,6 +326,7 @@ export function LocalTaskSessionPanelSlot(): React.JSX.Element | null {
           : 'relative z-20 flex w-[420px] max-w-[60%] shrink-0 flex-col border-l border-border bg-background'
       }
       aria-label={translate('localTasks.sessionPanel.title', 'Session preview')}
+      {...{ [LOCAL_TASK_SESSION_PANEL_ATTRIBUTE]: '' }}
     >
       <LocalTaskSessionPanelHeader
         session={session}

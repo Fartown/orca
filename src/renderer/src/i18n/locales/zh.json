@@ -23281,7 +23281,9 @@
       "place": {
         "newWorkspace": "{{repo}} 的新工作区",
         "newSession": "{{agent}} · 新会话",
-        "sameWorkspace": "同一工作区"
+        "sameWorkspace": "同一工作区",
+        "noAgent": "没有启用的智能体",
+        "agentSubstituted": "默认；{{asked}} 不可用"
       },
       "stage": {
         "done": "已完成",
@@ -23299,17 +23301,20 @@
         "ended": "这个会话已经结束。",
         "missing": "这里找不到这个会话。",
         "unverifiable": "现在无法确认这个会话的状态。",
-        "busy": "{{agent}} 现在是「{{state}}」：做完一轮后才能追加。"
+        "busy": "{{agent}} 现在是「{{state}}」：做完一轮后才能追加。",
+        "workspaceOwned": "这个工作区已属于 {{ref}} “{{title}}”。一个工作区只属于一个任务。"
       },
       "result": {
         "failed": "没做成：{{detail}}",
-        "unknown": "执行窗口断开时，这一项还没回报。先去看看任务，再决定要不要重来。"
+        "unknown": "执行窗口断开时，这一项还没回报。先去看看任务，再决定要不要重来。",
+        "unrecorded": "这一步的结果没能记录，是否成功未知。请先检查任务，再决定是否重做。"
       },
       "pill": {
         "pending": "等你确认",
         "running": "正在执行",
         "disconnected": "执行窗口已断开",
-        "confirmed": "已确认"
+        "confirmed": "已确认",
+        "stopped": "已停止"
       },
       "footer": {
         "pending": "确认后由 Orca 直接执行，不再经过总管",
@@ -23317,7 +23322,9 @@
         "progress": "完成 {{done}}/{{total}} 项",
         "windowAlive": "执行窗口还在",
         "unrun": "已确认，还没执行。"
-      }
+      },
+      "claimFailed": "连不上任务库，什么都没执行。请重试。",
+      "abandoned": "有一项结果没能记录，本窗口已停止执行。收尾前请先检查任务。已记录的结果会保留，不会重复执行任何步骤。"
     },
     "latestProgress": {
       "title": "最新进展",
@@ -24044,7 +24051,6 @@
       "chooseWorkspaceOrRepo": "选择工作区或仓库",
       "workspaceNameTaken": "工作区名称已被使用",
       "createdWorkspaceLinkFailed": "工作区已创建，但未能关联到任务",
-      "agentLinkFailed": "智能体已启动，但未能关联到任务",
       "chooseSameLibraryWorkspaces": "选择同一任务库下尚未关联任务的工作区",
       "createParentTaskFailed": "未能创建父任务",
       "sessionStarted": "会话已启动",
@@ -24063,7 +24069,10 @@
       "mode": "派活或只问",
       "modeDispatch": "派活",
       "modeAsk": "只问",
-      "askUnconfirmed": "已发给总管，但还没确认它收到，请到对话里看一眼。"
+      "askUnconfirmed": "已发给总管，但还没确认它收到，请到对话里看一眼。",
+      "appendPartial": "{{total}} 个做完一轮的会话中有 {{missed}} 个没收到",
+      "appendNotRecorded": "已发出，但没能记到任务上",
+      "recordAgain": "补记录"
     },
     "band": {
       "description": "会话在等你回答、做完一轮还没看，或任务待你验收",

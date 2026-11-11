@@ -276,7 +276,10 @@ export function LocalTaskSessionStopBar({
     setConfirming(false)
     if (outcome?.ok) {
       toast.success(translate('localTasks.sessionPanel.stopped', 'Session stopped'))
-      localTaskSessionPanelStore.getState().close()
+      const panel = localTaskSessionPanelStore.getState()
+      if (panel.sessionLinkId === session.id) {
+        panel.close()
+      }
     } else {
       toast.error(
         translate('localTasks.sessionPanel.stopFailed', 'Couldn’t confirm the session stopped.')
