@@ -194,12 +194,14 @@ export function createLocalTaskDispatcherForwarding(deps: ForwardingDeps = DEFAU
     if (!watched?.ok) {
       return false
     }
+    const at = deps.now()
     await deps.client
       .recordFacts(paneKey, [
         {
-          sourceId: `${task.id}#followed#${pendingId}`,
+          // Why the time: a ref watched again after an unwatch is a new follow, told again.
+          sourceId: `${task.id}#followed#${pendingId}#${at}`,
           kind: 'host',
-          at: deps.now(),
+          at,
           taskId: task.id,
           taskRef: task.ref,
           summary: inboxLine(

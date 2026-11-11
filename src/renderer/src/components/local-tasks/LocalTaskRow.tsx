@@ -216,7 +216,7 @@ export const LocalTaskRow = memo(function LocalTaskRow({
   const open = (): void => localTaskPageStore.getState().openDetail(task.id)
   const subtasks = index.childrenByParentId.has(task.id)
   const unstarted = status?.category === 'unstarted' || status?.category === 'backlog'
-  const leadWidth = folded === null ? LEAD_SLOT_PX : LEAD_SLOT_PX * 2
+  const leadWidth = folded === null && depth === 0 ? LEAD_SLOT_PX : LEAD_SLOT_PX * 2
   return (
     <div
       ref={rowRef}
@@ -256,7 +256,12 @@ export const LocalTaskRow = memo(function LocalTaskRow({
         />
       </span>
       <div className="flex min-w-0 items-center gap-2.5">
-        {folded === null ? null : <FoldToggle task={task} folded={folded} />}
+        {folded !== null ? (
+          <FoldToggle task={task} folded={folded} />
+        ) : depth > 0 ? (
+          // Why: a subtask with no fold sits under one that has it; keep the slot so it nests.
+          <span className="size-4 shrink-0" aria-hidden />
+        ) : null}
         <span className="flex size-4 shrink-0 items-center justify-center">
           {status ? <LocalTaskStatusIcon category={status.category} color={status.color} /> : null}
         </span>

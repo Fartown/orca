@@ -650,9 +650,10 @@ describe('orca task', () => {
       })
       await main(['task', 'needs-you'], '/repo')
       expect(printed().split('\n')).toEqual([
-        'Nothing waits for the user among the sessions Orca can confirm.',
+        'Nothing waits for the user among the sessions this library can confirm.',
         "On box, these sessions can't be confirmed (unverifiable): the host is out of contact or they have not reported for a while.",
-        '  SHOP-12  "Export orders as CSV" (claude)'
+        '  SHOP-12  "Export orders as CSV" (claude)',
+        "Other hosts' libraries are not read here: their tasks' news reaches orca task inbox."
       ])
       vi.mocked(console.log).mockClear()
       await main(['task', 'needs-you', '--json'], '/repo')
@@ -688,9 +689,10 @@ describe('orca task', () => {
             : { ok: true }
       })
       await main(['task', 'needs-you'], '/repo')
-      expect(printed()).toBe(
-        'SHOP-13  "Refund flow": codex waits to approve — "Allow npm install?"'
-      )
+      expect(printed().split('\n')).toEqual([
+        'SHOP-13  "Refund flow": codex waits to approve — "Allow npm install?"',
+        "Other hosts' libraries are not read here: their tasks' news reaches orca task inbox."
+      ])
     })
   })
   it('refuses to write to a library a newer Orca left read-only', async () => {

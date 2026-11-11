@@ -86,11 +86,14 @@ function formatNeedsYou(result: NeedsYouResult): string {
   if (lines.length === 0) {
     lines.push(
       offline.length > 0
-        ? 'Nothing waits for the user among the sessions Orca can confirm.'
-        : 'Nothing waits for the user.'
+        ? 'Nothing waits for the user among the sessions this library can confirm.'
+        : 'Nothing waits for the user in this library.'
     )
   }
-  return [...lines, ...offline].join('\n')
+  // Why said: tasks in another host's library are not read here; their news comes by the inbox.
+  const scope =
+    "Other hosts' libraries are not read here: their tasks' news reaches orca task inbox."
+  return [...lines, ...offline, scope].join('\n')
 }
 
 export const LOCAL_TASK_NEEDS_YOU_CLI_HANDLERS: Record<string, CommandHandler> = {

@@ -56,8 +56,8 @@ Read freely:
 - orca task list [--json]            tasks with status, workspace (worktreeId) and latest progress
 - orca task show <ref> [--json]      one task: description, workspace, latest progress, and its
                                      sessions with the sessionLinkId an append or stop names
-- orca task needs-you [--json]       sessions waiting for the user, tasks waiting for review, and
-                                     sessions Orca can't confirm, by host
+- orca task needs-you [--json]       in this library: sessions waiting for the user, tasks waiting
+                                     for review, sessions Orca can't confirm; other hosts' come by inbox
 - orca task inbox [--json]           what changed on the tasks you watch; add --ack <cursor> after
 - orca worktree ps [--json]          every workspace with its worktreeId and repoId; a workspace no
                                      task in orca task list names belongs to no task
