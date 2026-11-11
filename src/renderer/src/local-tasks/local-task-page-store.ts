@@ -1,3 +1,4 @@
+import type { Worktree } from '../../../shared/worktree/types'
 import { createStore } from 'zustand/vanilla'
 import { useStore } from 'zustand'
 import type {
@@ -8,8 +9,11 @@ import type {
 /** Left-rail views; every one but `all` is one status category (REQ-006). */
 export const LOCAL_TASK_VIEWS = ['all', 'started', 'backlog', 'completed', 'canceled'] as const
 export type LocalTaskView = (typeof LOCAL_TASK_VIEWS)[number]
-/** What the rail shows: a status view, or the sessions waiting on the user (REQ-014). */
-export type LocalTaskPageView = LocalTaskView | 'needs-you'
+/**
+ * What the rail shows: a status view, the sessions waiting on the user (REQ-014), or the
+ * dispatcher's ledger (REQ-030, REQ-031).
+ */
+export type LocalTaskPageView = LocalTaskView | 'needs-you' | 'dispatcher'
 
 /** List grouping; `status` means statuses in one project and categories across projects. */
 export const LOCAL_TASK_GROUP_BYS = ['status', 'priority', 'project', 'none'] as const
@@ -30,6 +34,14 @@ export type LocalTaskFilters = {
 export type LocalTaskPickerKind = 'status' | 'priority' | 'labels'
 
 export type LocalTaskCreateDefaults = {
+  source?: {
+    worktree: Worktree
+    paneKey: string
+    agent: string
+    title: string
+    sessionId?: string
+    tabId?: string
+  }
   projectId: string | null
   statusId: string | null
   priority: LocalTaskPriority | null
@@ -197,7 +209,8 @@ export const localTaskPageStore = createStore<LocalTaskPageState>((set) => ({
           projectId: defaults?.projectId ?? null,
           statusId: defaults?.statusId ?? null,
           priority: defaults?.priority ?? null,
-          parentId: defaults?.parentId ?? null
+          parentId: defaults?.parentId ?? null,
+          ...(defaults?.source ? { source: defaults.source } : {})
         }
       }
     }),

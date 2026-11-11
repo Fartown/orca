@@ -46,7 +46,7 @@ export function initialLocalTaskDraft(mode: LocalTaskFormMode): LocalTaskDraft {
       projectId: task.projectId,
       title: task.title,
       description: task.description,
-      criteria: localTaskDraftEntries(task.criteria),
+      criteria: [],
       statusId: task.statusId,
       priority: task.priority,
       labelsText: task.labels.join(', '),
@@ -106,7 +106,7 @@ export function createLocalTaskPayload(draft: LocalTaskDraft) {
     projectId: draft.projectId,
     title: localTaskTitleOf(draft),
     description: draft.description.trim(),
-    criteria: localTaskDraftTexts(draft.criteria),
+    criteria: [],
     ...(draft.statusId ? { statusId: draft.statusId } : {}),
     priority: draft.priority,
     labels: parseLocalTaskLabels(draft.labelsText),
@@ -137,10 +137,6 @@ export function localTaskPatchFor(draft: LocalTaskDraft, task: LocalTask): Local
   }
   if (draft.description.trim() !== task.description) {
     patch.description = draft.description.trim()
-  }
-  const criteria = localTaskDraftTexts(draft.criteria)
-  if (!sameList(criteria, task.criteria)) {
-    patch.criteria = criteria
   }
   if (draft.statusId && draft.statusId !== task.statusId) {
     patch.statusId = draft.statusId

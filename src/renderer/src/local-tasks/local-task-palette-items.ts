@@ -6,6 +6,7 @@ import type {
 } from '../../../shared/local-tasks/local-task-types'
 import { isExactLocalTaskRef, matchesLocalTaskQuery } from './local-task-grouping'
 import { localTaskHostLabelFor, useLocalTaskEndpointLabels } from './local-task-endpoint-labels'
+import { localTaskIdEndpoint } from './local-task-endpoints'
 import { selectLocalTaskSourceVisible } from './local-task-source-visibility'
 import { useLocalTasksDomain } from './local-tasks-domain-store'
 
@@ -19,19 +20,23 @@ export type LocalTaskPaletteItem = {
   status: LocalTaskStatusDef | null
   /** Only once projects come from more than one Orca, as the task page labels them. */
   hostLabel: string | null
+  /** Its library's Orca is out of contact: the row is the last read, not the current task. */
+  unverifiable: boolean
 }
 
 const RESULT_MAX = 30
 
 // Why one shared list: a query matching no task must not hand the palette a new array per keystroke.
 const NO_ITEMS: readonly LocalTaskPaletteItem[] = []
+const NO_ENDPOINTS: ReadonlySet<string> = new Set()
 
 /** The task page's own search, the exactly named ref first; capped like upstream's task results. */
 export function buildLocalTaskPaletteItems(
   projects: readonly LocalTaskProject[],
   tasks: readonly LocalTask[],
   query: string,
-  hostLabels?: ReadonlyMap<string, string>
+  hostLabels?: ReadonlyMap<string, string>,
+  outOfContact: ReadonlySet<string> = NO_ENDPOINTS
 ): readonly LocalTaskPaletteItem[] {
   const trimmed = query.trim()
   if (!trimmed) {
@@ -56,7 +61,8 @@ export function buildLocalTaskPaletteItems(
       task,
       projectName: project?.name ?? '',
       status: project?.statuses.find((status) => status.id === task.statusId) ?? null,
-      hostLabel: localTaskHostLabelFor(hostLabels, task.id)
+      hostLabel: localTaskHostLabelFor(hostLabels, task.id),
+      unverifiable: outOfContact.has(localTaskIdEndpoint(task.id))
     }
   })
 }
@@ -67,8 +73,24 @@ export function useLocalTaskPaletteItems(query: string): readonly LocalTaskPalet
   const tasks = useLocalTasksDomain((state) => state.tasks)
   const visible = useLocalTasksDomain(selectLocalTaskSourceVisible)
   const hostLabels = useLocalTaskEndpointLabels()
+  // Why the shared verdict only: the palette reads what the page holds and never asks a host.
+  const outOfContactKey = useLocalTasksDomain((state) =>
+    state.partitions
+      .filter((partition) => !partition.inContact)
+      .map((partition) => partition.endpoint)
+      .join('\n')
+  )
   return useMemo(
-    () => (visible ? buildLocalTaskPaletteItems(projects, tasks, query, hostLabels) : NO_ITEMS),
-    [visible, projects, tasks, query, hostLabels]
+    () =>
+      visible
+        ? buildLocalTaskPaletteItems(
+            projects,
+            tasks,
+            query,
+            hostLabels,
+            outOfContactKey ? new Set(outOfContactKey.split('\n')) : NO_ENDPOINTS
+          )
+        : NO_ITEMS,
+    [visible, projects, tasks, query, hostLabels, outOfContactKey]
   )
 }

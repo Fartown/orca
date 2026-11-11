@@ -5,6 +5,7 @@ import type {
   LocalTaskLinks,
   LocalTaskWorkspaceLink
 } from '../../../src/shared/local-tasks/local-task-link-types'
+import { getWorktreeGitIdentityDisplay } from '../../../src/shared/worktree/git-identity-display'
 import { worktreeIdsEqual } from '../../../src/shared/worktree/id'
 import { parseWorkspaceKey } from '../../../src/shared/workspace-scope'
 import { salvagedOptional, salvagingArray } from '../../../src/shared/zod-salvage'
@@ -46,12 +47,15 @@ export function readLocalTaskWorkspaceCandidates(rows: unknown): LocalTaskWorksp
     .map((row) => {
       const scope =
         row.workspaceKind === 'folder-workspace' ? parseWorkspaceKey(row.worktreeId) : null
+      // Shown and stored as the desktop does: `main`, not `refs/heads/main`.
+      const identity = getWorktreeGitIdentityDisplay({ branch: row.branch })
+      const branch = identity?.kind === 'branch' ? identity.branchName : ''
       return {
         worktreeId: row.worktreeId,
         repoId: row.repoId,
         hostId: row.hostId ?? LOCAL_EXECUTION_HOST_ID,
-        displayName: row.displayName || row.branch || row.worktreeId,
-        branch: row.branch ?? '',
+        displayName: row.displayName || branch || row.worktreeId,
+        branch,
         instanceId: row.worktreeInstanceId ?? null,
         folderWorkspaceId: scope?.type === 'folder' ? scope.folderWorkspaceId : null
       }

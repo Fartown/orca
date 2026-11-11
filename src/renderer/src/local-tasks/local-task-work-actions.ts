@@ -1,9 +1,10 @@
 import { useMemo } from 'react'
 import { useShallow } from 'zustand/react/shallow'
+import { toast } from 'sonner'
 import { translate } from '@/i18n/i18n'
 import { useAppStore } from '@/store'
 import type { AppState } from '@/store/types'
-import { selectExecutionHostDisplayLabel } from '@/lib/execution-host-display-label'
+import { selectLocalTaskHostLabel } from '@/local-tasks/local-task-host-label'
 import { normalizeExecutionHostId } from '../../../shared/execution-host'
 import type { LocalTaskWorkspaceLink } from '../../../shared/local-tasks/local-task-link-types'
 import type { LocalTask, LocalTaskProject } from '../../../shared/local-tasks/local-task-types'
@@ -21,6 +22,7 @@ import {
   isFolderLocalTaskProject,
   localTaskStartTargets,
   localTaskWorktreeHostId,
+  reposForLocalTaskProject,
   resolveLocalTaskStartTarget,
   selectLocalTaskWorkspace
 } from './local-task-workspace-resolution'
@@ -35,7 +37,7 @@ function hostUnreachable(state: AppState, hostId: string): string {
   const id = normalizeExecutionHostId(hostId)
   return id
     ? translate('localTasks.links.hostOffline', '{{host}} is not connected', {
-        host: selectExecutionHostDisplayLabel(state, id)
+        host: selectLocalTaskHostLabel(state, id)
       })
     : translate('localTasks.links.hostOfflineUnnamed', 'The workspace’s host is not connected')
 }
@@ -57,12 +59,17 @@ export function selectLocalTaskStartState(
   }
   const start = resolveLocalTaskStartTarget(state, project)
   if (!start) {
+    // Why two messages: a project whose linked repos all left Orca needs them added back, not linked.
+    const removed =
+      project.repos.length > 0 && reposForLocalTaskProject(state, project).length === 0
     return {
       mode: 'create',
-      reason: translate(
-        'localTasks.links.noRepoShort',
-        'No Git repository in Orca for this project'
-      )
+      reason: removed
+        ? translate(
+            'localTasks.links.repoRemovedShort',
+            'This project’s repositories were removed from Orca'
+          )
+        : translate('localTasks.links.noRepoShort', 'No Git repository in Orca for this project')
     }
   }
   return {
@@ -96,10 +103,7 @@ export function selectLocalTaskSessionState(
     return {
       mode: 'session',
       reason: isLocalTaskHostInContact(state, workspace.hostId)
-        ? translate(
-            'localTasks.links.workspaceUnverifiable',
-            'The workspace cannot be reached now.'
-          )
+        ? translate('localTasks.links.workspaceUnverifiable', 'Can’t confirm the workspace now.')
         : hostUnreachable(state, workspace.hostId)
     }
   }
@@ -159,14 +163,23 @@ export function runLocalTaskStart(
   task: LocalTask,
   project: LocalTaskProject,
   ownLink: LocalTaskWorkspaceLink | null,
-  options: { orcaProjectId?: string } = {}
+  options: { orcaProjectId?: string; prompt?: string } = {}
 ): void {
   const state = selectLocalTaskStartState(useAppStore.getState(), project, ownLink)
-  if (state.reason || state.mode === 'hidden') {
+  if (state.reason) {
+    // Why: the I key and Restart reach here past a greyed button, so say why nothing opens.
+    toast.error(state.reason)
+    return
+  }
+  if (state.mode === 'hidden') {
     return
   }
   if (state.mode === 'existing') {
-    localTaskLinkDialogStore.getState().open({ kind: 'pick-workspace', taskId: task.id })
+    localTaskLinkDialogStore.getState().open({
+      kind: 'pick-workspace',
+      taskId: task.id,
+      ...(options.prompt ? { prompt: options.prompt } : {})
+    })
     return
   }
   startLocalTaskWork(task, project, { replace: ownLink !== null, ...options })
@@ -182,7 +195,9 @@ export function runLocalTaskSession(
     runLocalTaskStart(task, project, null)
     return
   }
-  if (selectLocalTaskSessionState(useAppStore.getState(), project, workspace).reason) {
+  const { reason } = selectLocalTaskSessionState(useAppStore.getState(), project, workspace)
+  if (reason) {
+    toast.error(reason)
     return
   }
   localTaskLinkDialogStore.getState().open({ kind: 'session', taskId: task.id })

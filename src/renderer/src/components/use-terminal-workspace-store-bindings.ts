@@ -2,6 +2,7 @@ import { useAppStore } from '../store'
 import { useActivityTerminalPortals } from './activity/activity-terminal-portal'
 import type { ActivityTerminalPortalTarget } from './activity/activity-terminal-portal'
 import type { TerminalWorkspaceFoundation } from './use-terminal-workspace-foundation'
+import { useLocalTaskSessionPanel } from '../local-tasks/local-task-session-panel-store'
 
 export function useTerminalWorkspaceStoreBindings(controller: TerminalWorkspaceFoundation) {
   const { activeView, renderedActiveWorktreeId } = controller
@@ -61,8 +62,9 @@ export function useTerminalWorkspaceStoreBindings(controller: TerminalWorkspaceF
   const tabBarOrder = renderedActiveWorktreeId
     ? tabBarOrderByWorktree[renderedActiveWorktreeId]
     : undefined
+  const localTaskSessionPanelOpen = useLocalTaskSessionPanel((state) => state.mode !== 'closed')
   const activityTerminalPortals: ActivityTerminalPortalTarget[] = useActivityTerminalPortals(
-    activeView === 'activity'
+    activeView === 'activity' || localTaskSessionPanelOpen
   )
 
   return {

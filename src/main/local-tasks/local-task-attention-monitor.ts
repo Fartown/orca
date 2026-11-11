@@ -15,11 +15,6 @@ import type {
   LocalTaskSessionState
 } from '../../shared/local-tasks/local-task-link-types'
 import type { LocalTaskChangeScope } from '../../shared/local-tasks/local-task-types'
-import { parsePaneKey } from '../../shared/stable-pane-id'
-import {
-  structuredAgentSessionPaneKey,
-  structuredAgentSessionTabId
-} from '../../shared/agent-session/view/structured-agent-session-projection'
 import {
   nextLocalTaskSnoozeExpiry,
   readLocalTaskAttentionStates,
@@ -29,7 +24,13 @@ import {
 import type { LocalTaskHostSessionSource } from './local-task-host-session-source'
 import { hasLocalTaskSessionLinks, readLocalTaskLinks } from './local-task-link-rows'
 import { LocalTaskPaneMemory } from './local-task-pane-memory'
+import { findLocalTaskPane, latestLocalTaskRow } from './local-task-host-pane-match'
 import { claimLocalTaskSessionPane } from './local-task-session-links'
+import {
+  readLocalTaskTurnEnd,
+  writeLocalTaskTurnEnds,
+  type LocalTaskTurnEnd
+} from './local-task-turn-records'
 import type { LocalTasksDatabase } from './local-tasks-database'
 
 // Why: hook events arrive per tool call; one judgment per window bounds the work and the notices.
@@ -45,6 +46,7 @@ type Judgment = {
   items: LocalTaskAttentionItem[]
   staleAt: number | null
   claims: { sessionLinkId: string; paneKey: string }[]
+  turnEnds: LocalTaskTurnEnd[]
   /** Each session's own pane, claimed or found now. */
   panes: Map<string, string | null>
 }
@@ -161,6 +163,9 @@ export class LocalTaskAttentionMonitor {
         console.error('[local-tasks] claiming session panes failed', error)
       }
     }
+    if (judgment.turnEnds.length > 0 && !this.db.readOnly) {
+      this.db.transaction(() => writeLocalTaskTurnEnds(this.db, judgment.turnEnds, now))
+    }
     const content = JSON.stringify([judgment.sessions, judgment.items])
     if (this.published !== null && content !== this.published) {
       this.onChange(['attention'])
@@ -179,12 +184,13 @@ export class LocalTaskAttentionMonitor {
       items: [],
       staleAt: null,
       claims: [],
+      turnEnds: [],
       panes: new Map()
     }
     let paneKeys: readonly string[] | null = null
     const knownPaneKeys = (): readonly string[] => (paneKeys ??= this.source.paneKeys())
     for (const link of [...links].sort((a, b) => a.id.localeCompare(b.id))) {
-      const paneKey = link.paneKey ?? this.findPane(link, knownPaneKeys, claimedPanes)
+      const paneKey = link.paneKey ?? findLocalTaskPane(link, knownPaneKeys, claimedPanes)
       if (paneKey && !link.paneKey) {
         claimedPanes.add(paneKey)
         judgment.claims.push({ sessionLinkId: link.id, paneKey })
@@ -205,6 +211,7 @@ export class LocalTaskAttentionMonitor {
     judgment: Judgment
   ): void {
     const prose = paneKey ? this.panes.proseOf(paneKey) : null
+    const saved = readLocalTaskTurnEnd(this.db, link.id)
     const progress = (
       state: LocalTaskSessionState,
       row: LocalTaskStatusRow | null = null,
@@ -212,7 +219,7 @@ export class LocalTaskAttentionMonitor {
     ): LocalTaskSessionProgress => ({
       taskSessionId: link.id,
       state,
-      lastMessage: localTaskRowWords(row, prose),
+      lastMessage: localTaskRowWords(row, prose) || saved?.body || null,
       stateSince: row?.stateStartedAt ?? null,
       unread
     })
@@ -225,7 +232,7 @@ export class LocalTaskAttentionMonitor {
       judgment.sessions.push(progress('unknown'))
       return
     }
-    const row = latestRow(this.source.rowsForPane(paneKey))
+    const row = latestLocalTaskRow(this.source.rowsForPane(paneKey))
     if (!row) {
       // Why: only a pane that reported this process can be said to have stopped; a quiet one may
       // be an agent without status hooks, or a pane the window has not reattached yet.
@@ -241,9 +248,18 @@ export class LocalTaskAttentionMonitor {
     const state = localTaskRowState(row, this.source.terminalLive(paneKey), now)
     const key = localTaskAttentionKey(row.paneKey, row.stateStartedAt)
     const mark = marks.get(key)
+    const words = localTaskRowWords(row, this.panes.proseOf(paneKey))
     const finishedTurn =
       state === 'done' && row.sessionBoundary !== true && row.restoredUnconfirmed !== true
     const unread = finishedTurn && (mark?.seenAt ?? null) === null
+    if (finishedTurn && (saved?.key !== key || (words !== null && words !== saved.body))) {
+      judgment.turnEnds.push({
+        sessionLinkId: link.id,
+        taskId: link.taskId,
+        key,
+        body: words || saved?.body || ''
+      })
+    }
     const staleAt = localTaskRowStaleAt(row)
     if (staleAt !== null && staleAt > now) {
       judgment.staleAt = Math.min(judgment.staleAt ?? staleAt, staleAt)
@@ -255,7 +271,7 @@ export class LocalTaskAttentionMonitor {
       row: LIVE_STATES.includes(state) ? row : null,
       structured: link.surface === 'chat' || row.structuredHost !== undefined,
       unread: finishedTurn,
-      lastMessage: localTaskRowWords(row, this.panes.proseOf(paneKey))
+      lastMessage: words
     })
     if (!item) {
       return
@@ -265,27 +281,6 @@ export class LocalTaskAttentionMonitor {
     if ((mark?.seenAt ?? null) === null && (snoozedUntil === null || snoozedUntil <= now)) {
       judgment.items.push(item)
     }
-  }
-
-  /** The host's own pane for a session recorded before its pane reported. */
-  private findPane(
-    link: LocalTaskSessionLink,
-    knownPaneKeys: () => readonly string[],
-    claimedPanes: ReadonlySet<string>
-  ): string | null {
-    if (link.surface === 'chat') {
-      return link.sessionId
-        ? structuredAgentSessionPaneKey(structuredAgentSessionTabId(link.sessionId), link.sessionId)
-        : null
-    }
-    if (!link.tabId) {
-      return null
-    }
-    // Why only a lone candidate: in a split tab any reporting pane may be another agent's.
-    const candidates = knownPaneKeys().filter(
-      (paneKey) => parsePaneKey(paneKey)?.tabId === link.tabId && !claimedPanes.has(paneKey)
-    )
-    return candidates.length === 1 ? candidates[0] : null
   }
 
   private armDeadline(judgment: Judgment, now: number): void {
@@ -324,15 +319,4 @@ export class LocalTaskAttentionMonitor {
     this.coalesceTimer = null
     this.deadlineTimer = null
   }
-}
-
-/** A structured session can hold several subjects on one pane; the newest report speaks. */
-function latestRow(rows: readonly LocalTaskStatusRow[]): LocalTaskStatusRow | null {
-  let latest: LocalTaskStatusRow | null = null
-  for (const row of rows) {
-    if (!latest || row.receivedAt > latest.receivedAt) {
-      latest = row
-    }
-  }
-  return latest
 }

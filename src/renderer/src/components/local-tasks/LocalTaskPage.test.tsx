@@ -55,7 +55,7 @@ it('shows the same project read failure in settings', () => {
   render(<LocalTasksSettingsPane />)
   expect(screen.getByRole('alert')).toBeTruthy()
   expect(screen.getByRole('button', { name: 'Retry' })).toBeTruthy()
-  expect(screen.queryByText('No task projects yet.')).toBeNull()
+  expect(screen.queryByText('No projects yet.')).toBeNull()
 })
 
 it('shows a failed status read even before the host becomes readable', () => {

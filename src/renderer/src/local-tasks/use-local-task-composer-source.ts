@@ -1,6 +1,9 @@
-import { useCallback, useMemo, useState } from 'react'
+import { localTaskWorkflowPreferences } from './local-task-workflow-preferences'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { toast } from 'sonner'
+import { translate } from '@/i18n/i18n'
 import { useAppStore } from '@/store'
-import { selectExecutionHostDisplayLabel } from '@/lib/execution-host-display-label'
+import { selectLocalTaskHostLabel } from '@/local-tasks/local-task-host-label'
 import type { ExecutionHostId } from '../../../shared/execution-host'
 import { suggestLocalTaskWorkspaceName } from '../../../shared/local-tasks/local-task-model'
 import type { LocalTask } from '../../../shared/local-tasks/local-task-types'
@@ -26,7 +29,41 @@ type ComposerFields = {
 
 export type LocalTaskComposerSubmitOptions = {
   launchPrompt?: string
+  launchPromptDelivery?: 'draft' | 'auto-submit'
   onCreationStarted?: (creationId: string) => void
+}
+
+/** Why the picked task's pill left the composer, or null while nothing explains it. */
+export function localTaskPickSetAsideReason(
+  task: Pick<LocalTask, 'title'>,
+  target: { folder: boolean; otherLibrary: boolean; taskLibraryLabel: string }
+): string | null {
+  if (target.folder) {
+    return translate(
+      'localTasks.sourceTab.setAsideFolder',
+      'A folder can’t start work on “{{title}}”, so the task is set aside. Switch back to a Git repository to keep it.',
+      { title: task.title }
+    )
+  }
+  if (target.otherLibrary) {
+    return translate(
+      'localTasks.sourceTab.setAsideHost',
+      '“{{title}}” is kept on {{library}}, so it can’t start work on this host. Switch back to keep it.',
+      { title: task.title, library: target.taskLibraryLabel }
+    )
+  }
+  return null
+}
+
+/** Says once why the pill went; switching back brings it back without another word. */
+function useAnnounceSetAside(reason: string | null): void {
+  const shown = useRef<string | null>(null)
+  useEffect(() => {
+    if (reason && reason !== shown.current) {
+      toast.info(reason)
+    }
+    shown.current = reason
+  }, [reason])
 }
 
 /**
@@ -50,11 +87,23 @@ export function useLocalTaskComposerSource(
     card.selectedRepoIsGit && card.selectedRepoProjectId ? card.selectedRepoExecutionHostId : null
   const endpoint = hostId ? localTaskEndpointForHost(hostId) : null
   const libraryLabel = useAppStore((state) =>
-    endpoint ? selectExecutionHostDisplayLabel(state, endpoint) : ''
+    endpoint ? selectLocalTaskHostLabel(state, endpoint) : ''
+  )
+  const taskLibraryLabel = useAppStore((state) =>
+    task ? selectLocalTaskHostLabel(state, localTaskIdEndpoint(task.id)) : ''
   )
   // Why derived: a target on another Orca's host hides the pick; switching back shows it again.
   const selected: LocalTask | null =
     task && endpoint !== null && localTaskIdEndpoint(task.id) === endpoint ? task : null
+  useAnnounceSetAside(
+    task && !selected
+      ? localTaskPickSetAsideReason(task, {
+          folder: !card.selectedRepoIsGit && card.selectedRepoProjectId !== null,
+          otherLibrary: endpoint !== null,
+          taskLibraryLabel
+        })
+      : null
+  )
   const { name, onNameValueChange, onClearSmartNameSelection } = card
   const select = useCallback(
     (next: LocalTask) => {
@@ -80,7 +129,8 @@ export function useLocalTaskComposerSource(
       return {}
     }
     return {
-      launchPrompt: localTaskPromptFor(selected),
+      launchPrompt: pick.prompt ?? localTaskPromptFor(selected),
+      launchPromptDelivery: localTaskWorkflowPreferences(selected.id).delivery,
       onCreationStarted: (creationId: string) => {
         rememberLocalTaskStart(creationId, pick)
         releaseLocalTaskComposer()
@@ -90,6 +140,7 @@ export function useLocalTaskComposerSource(
   }, [pick, selected])
   const projectId = card.selectedRepoProjectId
   const selectedTaskId = selected?.id ?? null
+  const pickedName = task ? suggestLocalTaskWorkspaceName(task.ref, task.title) : undefined
   const tab = useMemo<LocalTaskSourceTab | null>(
     () =>
       hostId && projectId
@@ -100,10 +151,11 @@ export function useLocalTaskComposerSource(
             libraryLabel,
             selectedTaskId,
             initialMode,
-            select
+            select,
+            pickedName
           }
         : null,
-    [hostId, initialMode, libraryLabel, projectId, select, selectedTaskId]
+    [hostId, initialMode, libraryLabel, pickedName, projectId, select, selectedTaskId]
   )
   const cardOverrides = useMemo(
     () =>

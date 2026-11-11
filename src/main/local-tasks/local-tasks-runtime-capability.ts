@@ -1,4 +1,7 @@
-import { LOCAL_TASKS_RUNTIME_CAPABILITY } from '../../shared/local-tasks/local-tasks-capability'
+import {
+  LOCAL_TASKS_RUNTIME_CAPABILITY,
+  LOCAL_TASKS_V2_RUNTIME_CAPABILITY
+} from '../../shared/local-tasks/local-tasks-capability'
 import { localTasksReadiness } from './local-tasks-readiness'
 
 /**
@@ -7,5 +10,7 @@ import { localTasksReadiness } from './local-tasks-readiness'
  * hosts none and never does.
  */
 export function localTasksRuntimeCapabilities(): string[] {
-  return localTasksReadiness.isTaskHost() ? [LOCAL_TASKS_RUNTIME_CAPABILITY] : []
+  return localTasksReadiness.isTaskHost()
+    ? [LOCAL_TASKS_RUNTIME_CAPABILITY, LOCAL_TASKS_V2_RUNTIME_CAPABILITY]
+    : []
 }

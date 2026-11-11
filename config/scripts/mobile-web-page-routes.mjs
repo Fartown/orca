@@ -28,10 +28,32 @@ export const MOBILE_WEB_PAGE_ROUTES = [
     pathname: '/h/[hostId]/accounts',
     grants: ['navigate', 'storage', 'externalLink', 'haptics']
   },
-  // Fork local-tasks: the accounts route's four, for the same layout-wide reasons.
+  // Fork local-tasks embeds the full session chat controller in a drawer. Its closure reaches the
+  // same native media, audio, clipboard and pane capabilities as the session route.
   {
     pathname: '/h/[hostId]/local-tasks',
-    grants: ['navigate', 'storage', 'externalLink', 'haptics']
+    grants: [
+      'navigate',
+      'storage',
+      'externalLink',
+      'haptics',
+      'screencastBinary',
+      'native.clipboard.write',
+      'native.clipboard.read',
+      'native.media.pick',
+      'native.media.read',
+      'native.media.release',
+      'native.audio.start',
+      'native.audio.read',
+      'native.audio.stop'
+    ],
+    optionalGrants: [
+      'externalNavigation',
+      'native.media.name',
+      'native.pdf.view',
+      'terminalKeyRail',
+      'native.file.pick'
+    ]
   },
   // Create Workspace overlay needs navigate to close/open session; shared form/layout supply other grants.
   {

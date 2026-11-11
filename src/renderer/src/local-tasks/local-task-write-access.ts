@@ -17,10 +17,6 @@ export function canWriteLocalTaskRows(state: AccessState, ids: readonly string[]
   return ids.length > 0 && ids.every((id) => isLocalTaskRowWritable(state, id))
 }
 
-export function useCanWriteLocalTaskRows(ids: readonly string[]): boolean {
-  return useLocalTasksDomain((state) => canWriteLocalTaskRows(state, ids))
-}
-
 /** Projects a new task can go into now. */
 export function writableLocalTaskProjects(
   state: AccessState,

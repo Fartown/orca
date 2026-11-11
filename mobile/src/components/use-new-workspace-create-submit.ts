@@ -19,6 +19,7 @@ import type { AgentLaunchSupport } from '../tasks/agent-launch-request'
 import type { WorkspaceSshGate } from '../tasks/workspace-ssh-gate'
 import type { useMobileComposerSource } from '../tasks/use-mobile-composer-source'
 import type { WorktreeCreateIdempotencySupport } from '../tasks/worktree-create-idempotency-policy'
+import type { LocalTaskCreateRun } from '../local-tasks/local-task-create-source-start'
 import {
   pickPreferredNewWorktreeAgent,
   type NewWorktreeAgentOption,
@@ -48,6 +49,7 @@ export function useNewWorkspaceCreateSubmit(args: {
   detectedAgentIds: Set<string> | null
   sshGate: WorkspaceSshGate
   composer: Composer
+  localTaskCreate?: LocalTaskCreateRun | null
   note: string
   existingWorktreePaths?: readonly string[]
   retiredWorktreeNames: RetiredNameRegistry
@@ -164,6 +166,21 @@ export function useNewWorkspaceCreateSubmit(args: {
         args.selectedAgent.id !== '__blank__' ? args.selectedAgent.id : undefined
       const trimmedNote = args.note.trim() || undefined
       const selection = args.composer.createSelection
+      if (args.localTaskCreate) {
+        const created = await args.localTaskCreate({
+          name: trimmedName,
+          agent: createdWithAgentId ?? null,
+          setupDecision,
+          note: trimmedNote
+        })
+        if ('error' in created) {
+          args.setError(created.error)
+          return
+        }
+        args.onClose()
+        args.onCreated(created.worktreeId, created.name, created.warning)
+        return
+      }
       const result = selection
         ? await createWorkspaceFromComposerSource({
             client,

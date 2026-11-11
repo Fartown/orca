@@ -47,8 +47,14 @@ export function LocalTaskWorkspaceLinkSheet(props: {
   const labelOf = (ownerHostId: string) =>
     localTaskHostLabel(listedOf(ownerHostId), props.hostLabels.get(listedOf(ownerHostId)))
   const titles = new Map(props.tasks.map((task) => [task.id, task.title]))
-  const candidates =
+  const [query, setQuery] = useState('')
+  const all =
     state.status === 'ready' ? localTaskCandidatesForProject(state.candidates, props.setups) : []
+  const words = query.trim().toLowerCase().split(/\s+/).filter(Boolean)
+  const candidates = all.filter((candidate) => {
+    const haystack = `${candidate.displayName} ${candidate.branch}`.toLowerCase()
+    return words.every((word) => haystack.includes(word))
+  })
   const link = async (index: number) => {
     const candidate = candidates[index]
     if (!candidate) {
@@ -66,8 +72,9 @@ export function LocalTaskWorkspaceLinkSheet(props: {
       },
       props.api.linkWorkspace
     )
-    setError(localTaskWriteMessage(copy, outcome))
+    setError(localTaskWriteMessage(copy, outcome, props.tasks))
     if (outcome.kind === 'ok') {
+      setQuery('')
       props.onLinked()
     }
   }
@@ -79,11 +86,16 @@ export function LocalTaskWorkspaceLinkSheet(props: {
       message={
         state.status === 'failed'
           ? copy.loadFailed
-          : state.status === 'ready' && candidates.length === 0
+          : state.status === 'ready' && all.length === 0
             ? copy.work.noWorkspacesToLink
             : null
       }
       error={error}
+      search={
+        all.length > 0
+          ? { query, placeholder: copy.work.searchWorkspaces, onChange: setQuery }
+          : null
+      }
       choices={candidates.map((candidate, index) => {
         const holder = localTaskLinkHolding(props.links, candidate)
         const host = labelOf(candidate.hostId)
@@ -99,6 +111,7 @@ export function LocalTaskWorkspaceLinkSheet(props: {
       })}
       onClose={() => {
         setError(null)
+        setQuery('')
         props.onClose()
       }}
     />

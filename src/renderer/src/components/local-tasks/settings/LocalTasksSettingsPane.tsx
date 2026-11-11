@@ -1,5 +1,6 @@
+import { LocalTaskWorkflowSettings } from './LocalTaskWorkflowSettings'
 import { useState } from 'react'
-import { FolderKanban, Plus } from 'lucide-react'
+import { FolderKanban, Info, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -31,7 +32,8 @@ import { LocalTaskProjectCreator } from '../LocalTaskProjectCreator'
 import { LocalTaskEmptyProjectForm } from '../LocalTaskEmptyProjectForm'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { LocalTaskProjectSettings } from './LocalTaskProjectSettings'
-import { LocalTaskStatusSettings } from './LocalTaskStatusSettings'
+import { LocalTaskProjectRules } from './LocalTaskProjectRules'
+import { LocalTaskSettingsCard } from './LocalTaskSettingsControls'
 
 function NewProjectDialog({
   open,
@@ -47,13 +49,11 @@ function NewProjectDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-xl">
         <DialogHeader>
-          <DialogTitle>
-            {translate('localTasks.settings.newProject', 'New task project')}
-          </DialogTitle>
+          <DialogTitle>{translate('localTasks.settings.newProject', 'New project')}</DialogTitle>
           <DialogDescription>
             {translate(
               'localTasks.settings.newProjectDescription',
-              'Make one task project per repository, or an empty one for tasks only; repositories can be added later.'
+              'Make one project per repository, or an empty one for tasks only; repositories can be added later.'
             )}
           </DialogDescription>
         </DialogHeader>
@@ -86,7 +86,7 @@ function NewProjectDialog({
   )
 }
 
-/** Settings → Local Tasks: projects, prefixes and statuses (REQ-001, REQ-002, REQ-003). */
+/** Settings → Local Tasks: task home and dispatch, then projects, statuses and rules. */
 export function LocalTasksSettingsPane(): React.JSX.Element {
   useLocalTaskLibraryViewer()
   const connection = useLocalTasksDomain((state) => state.connection)
@@ -108,16 +108,24 @@ export function LocalTasksSettingsPane(): React.JSX.Element {
     )
   }
   if (connection === 'live' && readError && !cachedReadable) {
-    return <LocalTaskReadErrorPanel detail={readError} onRetry={retryRead} />
+    return (
+      <LocalTaskSettingsCard>
+        <LocalTaskReadErrorPanel detail={readError} onRetry={retryRead} />
+      </LocalTaskSettingsCard>
+    )
   }
   if (!readable && !cachedReadable) {
-    return <LocalTaskHostStatePanel />
+    return (
+      <LocalTaskSettingsCard>
+        <LocalTaskHostStatePanel />
+      </LocalTaskSettingsCard>
+    )
   }
   if (!projectsLoaded) {
     return (
-      <div className="text-sm text-muted-foreground">
+      <LocalTaskSettingsCard className="text-sm text-muted-foreground">
         {translate('localTasks.page.loading', 'Loading tasks…')}
-      </div>
+      </LocalTaskSettingsCard>
     )
   }
   const project = projects.find((candidate) => candidate.id === selectedId) ?? projects[0]
@@ -125,52 +133,66 @@ export function LocalTasksSettingsPane(): React.JSX.Element {
   const projectWritable =
     project !== undefined && writableEndpoints.includes(localTaskIdEndpoint(project.id))
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-4">
+      <LocalTaskWorkflowSettings />
       <LocalTaskReadOnlyNotice />
       <LocalTaskLibraryNotices />
       {readError ? (
         <LocalTaskReadErrorPanel detail={readError} onRetry={retryRead} compact />
       ) : null}
-      <div className="flex flex-wrap items-center gap-2">
-        {projects.map((candidate) => (
-          <button
-            key={candidate.id}
-            type="button"
-            onClick={() => setSelectedId(candidate.id)}
-            aria-pressed={candidate.id === project?.id}
-            className={cn(
-              'flex h-8 items-center gap-2 rounded-md border px-3 text-[13px] transition',
-              candidate.id === project?.id
-                ? 'border-foreground/40 bg-muted/70 text-foreground'
-                : 'border-border/60 text-muted-foreground hover:bg-accent hover:text-foreground'
-            )}
+      <LocalTaskSettingsCard className="gap-4">
+        <div className="flex flex-wrap items-center gap-2 border-b border-border/60 pb-4">
+          {projects.map((candidate) => (
+            <button
+              key={candidate.id}
+              type="button"
+              onClick={() => setSelectedId(candidate.id)}
+              aria-pressed={candidate.id === project?.id}
+              className={cn(
+                'flex h-8 items-center gap-2 rounded-md border px-3 text-[13px] transition',
+                candidate.id === project?.id
+                  ? 'border-foreground/40 bg-muted/70 text-foreground'
+                  : 'border-border/60 text-muted-foreground hover:bg-accent hover:text-foreground'
+              )}
+            >
+              <FolderKanban className="size-3.5" />
+              {candidate.name}
+              <span className="font-mono text-2xs text-muted-foreground">{candidate.prefix}</span>
+              <LocalTaskHostTag id={candidate.id} labels={hostLabels} />
+            </button>
+          ))}
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={writableEndpoints.length === 0}
+            onClick={() => setCreating(true)}
           >
-            <FolderKanban className="size-3.5" />
-            {candidate.name}
-            <span className="font-mono text-2xs text-muted-foreground">{candidate.prefix}</span>
-            <LocalTaskHostTag id={candidate.id} labels={hostLabels} />
-          </button>
-        ))}
-        <Button
-          variant="ghost"
-          size="sm"
-          disabled={writableEndpoints.length === 0}
-          onClick={() => setCreating(true)}
-        >
-          <Plus className="size-3.5" />
-          {translate('localTasks.settings.newProject', 'New task project')}
-        </Button>
-      </div>
-      {project ? (
-        <div className="grid gap-8 lg:grid-cols-2">
-          <LocalTaskProjectSettings key={project.id} project={project} writable={projectWritable} />
-          <LocalTaskStatusSettings project={project} writable={projectWritable} />
+            <Plus className="size-3.5" />
+            {translate('localTasks.settings.newProject', 'New project')}
+          </Button>
         </div>
-      ) : (
-        <p className="text-sm text-muted-foreground">
-          {translate('localTasks.settings.noProjects', 'No task projects yet.')}
-        </p>
-      )}
+        {project ? (
+          <div className="grid gap-7 lg:grid-cols-[minmax(0,24rem)_minmax(0,1fr)]">
+            <LocalTaskProjectSettings
+              key={project.id}
+              project={project}
+              writable={projectWritable}
+            />
+            <LocalTaskProjectRules project={project} writable={projectWritable} />
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            {translate('localTasks.settings.noProjects', 'No projects yet.')}
+          </p>
+        )}
+      </LocalTaskSettingsCard>
+      <p className="flex items-start gap-1.5 text-xs text-muted-foreground">
+        <Info className="mt-0.5 size-3 shrink-0" />
+        {translate(
+          'localTasks.settings.hiddenSourceNote',
+          'When Local tasks is hidden in Task sources, the entries above and the task mode button are not shown.'
+        )}
+      </p>
       <NewProjectDialog
         open={creating}
         onOpenChange={setCreating}

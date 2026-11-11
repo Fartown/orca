@@ -19,6 +19,8 @@ const mobileDir = fileURLToPath(new URL('../../mobile/', import.meta.url))
 const describeClosure = mobileWebAppDependenciesPresent() ? describe : describe.skip
 
 const SESSION = '/h/[hostId]/session/[worktreeId]'
+const LOCAL_TASKS = '/h/[hostId]/local-tasks'
+const CHAT_ROUTES = [LOCAL_TASKS, SESSION]
 const SEAM = 'src/file-attachment-upload/file-attachment-picker.web.ts'
 const NATIVE = 'src/file-attachment-upload/file-attachment-picker.ts'
 const GRANT_MODULE = 'src/file-attachment-upload/bridge-file-verbs.ts'
@@ -49,7 +51,7 @@ function routesDeclaring(token) {
 describe('the grant token this census is written against', () => {
   it('is the one the shell declares', () => {
     expect(filePickGrantToken()).toBe('native.file.pick')
-    expect(routesDeclaring(filePickGrantToken())).toEqual([SESSION])
+    expect(routesDeclaring(filePickGrantToken())).toEqual(CHAT_ROUTES)
   })
 })
 
@@ -61,22 +63,24 @@ describeClosure(
       async (route, mod) => {
         const closure = await routeClosure(mod)
         const reachesPicker = closure.local.includes(SEAM)
-        expect(reachesPicker).toBe(route === SESSION)
+        expect(reachesPicker).toBe(CHAT_ROUTES.includes(route))
         expect(routesDeclaring(filePickGrantToken()).includes(route)).toBe(reachesPicker)
       }
     )
 
     it('declares it on the optional lane, so a shell without it keeps the screen on the page', () => {
-      const session = MOBILE_WEB_PAGE_ROUTES.find((route) => route.pathname === SESSION)
-      if (!session) {
-        throw new Error('the manifest lost the session route this census is written against')
+      for (const pathname of CHAT_ROUTES) {
+        const route = MOBILE_WEB_PAGE_ROUTES.find((entry) => entry.pathname === pathname)
+        if (!route) {
+          throw new Error(`the manifest lost ${pathname}`)
+        }
+        expect(route.optionalGrants).toContain(filePickGrantToken())
+        expect(route.grants).not.toContain(filePickGrantToken())
+        // Its handles are read and released through the media verbs, which the route requires.
+        expect(route.grants).toEqual(
+          expect.arrayContaining(['native.media.read', 'native.media.release'])
+        )
       }
-      expect(session.optionalGrants).toContain(filePickGrantToken())
-      expect(session.grants).not.toContain(filePickGrantToken())
-      // Its handles are read and released through the media verbs, which the route requires.
-      expect(session.grants).toEqual(
-        expect.arrayContaining(['native.media.read', 'native.media.release'])
-      )
     })
 
     it('reaches the picker through its web sibling, never the native document picker', async () => {

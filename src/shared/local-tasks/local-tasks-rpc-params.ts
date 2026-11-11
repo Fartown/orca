@@ -14,6 +14,7 @@ import {
   LOCAL_TASK_STATUS_NAME_MAX,
   LOCAL_TASK_TITLE_MAX
 } from './local-task-model'
+import { LOCAL_TASK_NEEDS_YOU_MAX } from './local-task-progress'
 
 // Why: every write carries one so a phone that resends after a dropped socket gets the first result back.
 const clientOperationId = z.string().min(1).max(128)
@@ -63,7 +64,8 @@ export const LocalTasksProjectsUpdateParams = z.object({
   rules: z
     .object({
       startMovesToInProgress: z.boolean().optional(),
-      prMergedCompletes: z.boolean().optional()
+      prMergedCompletes: z.boolean().optional(),
+      prMergedMode: z.enum(['none', 'review', 'completed']).optional()
     })
     .optional(),
   /** The whole new list; the default stays when still listed, else moves to the first. */
@@ -157,7 +159,14 @@ export const LocalTasksEventsListParams = z.object({ taskId: id })
 export const LocalTasksEventsAddCommentParams = z.object({
   clientOperationId,
   taskId: id,
-  body: z.string().trim().min(1).max(LOCAL_TASK_COMMENT_MAX)
+  body: z.string().trim().min(1).max(LOCAL_TASK_COMMENT_MAX),
+  // An agent's writeback; hosts before writebacks strip it and keep a plain comment.
+  progress: z
+    .object({
+      sessionLinkId: id.optional(),
+      needsYou: z.string().trim().min(1).max(LOCAL_TASK_NEEDS_YOU_MAX).optional()
+    })
+    .optional()
 })
 
 export const LocalTasksEventsEditCommentParams = z.object({

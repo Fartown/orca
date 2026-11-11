@@ -10,6 +10,7 @@ import {
 } from '../../../../shared/execution-host'
 import {
   buildExecutionHostRegistry,
+  buildExecutionHostRegistryForAllHosts,
   type ExecutionHostHealth,
   type ExecutionHostRegistryEntry
 } from '../../../../shared/execution-host-registry'
@@ -66,7 +67,7 @@ export type SidebarHostScopeOption = {
   health: ExecutionHostHealth | 'mixed'
 }
 
-export function buildSidebarHostOptions(args: {
+type SidebarHostOptionsArgs = {
   repos: readonly Pick<Repo, 'connectionId' | 'executionHostId'>[]
   sshTargetLabels: ReadonlyMap<string, string>
   sshConnectionStates?: ReadonlyMap<string, SshConnectionState>
@@ -84,7 +85,49 @@ export function buildSidebarHostOptions(args: {
   wslHostsEnabled?: boolean
   /** True keeps WSL hosts' rows but marks them unable to run in this build. */
   wslHostServerFilesMissing?: boolean
-}): SidebarHostOption[] {
+}
+
+export function buildSidebarHostOptions(args: SidebarHostOptionsArgs): SidebarHostOption[] {
+  const activeRuntimeHostId = args.settings?.activeRuntimeEnvironmentId?.trim()
+    ? toRuntimeExecutionHostId(args.settings.activeRuntimeEnvironmentId.trim())
+    : null
+  return buildSidebarHostOptionsCore(
+    args,
+    buildExecutionHostRegistry({
+      repos: args.repos,
+      settings: args.settings,
+      sshTargetLabels: args.sshTargetLabels,
+      sshConnectionStates: args.sshConnectionStates,
+      runtimeEnvironments: args.runtimeEnvironments,
+      runtimeStatusByEnvironmentId: args.runtimeStatusByEnvironmentId,
+      hostLabelOverrides: args.hostLabelOverrides
+    }),
+    activeRuntimeHostId
+  )
+}
+
+export function buildSidebarHostOptionsForAllHosts(
+  args: Omit<SidebarHostOptionsArgs, 'settings'>
+): SidebarHostOption[] {
+  return buildSidebarHostOptionsCore(
+    args,
+    buildExecutionHostRegistryForAllHosts({
+      repos: args.repos,
+      sshTargetLabels: args.sshTargetLabels,
+      sshConnectionStates: args.sshConnectionStates,
+      runtimeEnvironments: args.runtimeEnvironments,
+      runtimeStatusByEnvironmentId: args.runtimeStatusByEnvironmentId,
+      hostLabelOverrides: args.hostLabelOverrides
+    }),
+    null
+  )
+}
+
+function buildSidebarHostOptionsCore(
+  args: Omit<SidebarHostOptionsArgs, 'settings'>,
+  registry: readonly ExecutionHostRegistryEntry[],
+  activeRuntimeHostId: ExecutionHostId | null
+): SidebarHostOption[] {
   const configuredSshTargetIds = new Set(args.sshTargetLabels.keys())
   const projectSshTargetIds = new Set<string>()
   for (const repo of args.repos) {
@@ -104,18 +147,7 @@ export function buildSidebarHostOptions(args: {
       })
     }
   }
-  const activeRuntimeHostId = args.settings?.activeRuntimeEnvironmentId?.trim()
-    ? toRuntimeExecutionHostId(args.settings.activeRuntimeEnvironmentId.trim())
-    : null
-  return buildExecutionHostRegistry({
-    repos: args.repos,
-    settings: args.settings,
-    sshTargetLabels: args.sshTargetLabels,
-    sshConnectionStates: args.sshConnectionStates,
-    runtimeEnvironments: args.runtimeEnvironments,
-    runtimeStatusByEnvironmentId: args.runtimeStatusByEnvironmentId,
-    hostLabelOverrides: args.hostLabelOverrides
-  }).map((host) => {
+  return registry.map((host) => {
     if (host.kind === 'local') {
       return { ...host, presence: 'local' }
     }

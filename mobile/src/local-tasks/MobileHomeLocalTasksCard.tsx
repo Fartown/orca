@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { ChevronRight, ClipboardList, Monitor } from 'lucide-react-native'
 import { PickerModal } from '../components/PickerModal'
@@ -6,8 +7,9 @@ import { useOpenHostStackRoute } from '../navigation/use-open-host-stack-route'
 import { colors, radii, spacing, typography } from '../theme/mobile-theme'
 import type { HostProfile } from '../transport/types'
 import { localTaskHostMachineName } from './local-tasks-access'
-import { localTasksCopy } from './local-tasks-copy'
+import { formatLocalTaskAgo, localTasksCopy } from './local-tasks-copy'
 import { localTaskAttentionLine } from './local-task-attention-row'
+import { localTasksPageCopy } from './local-tasks-page-copy'
 import type { LocalTaskHomeAttentionRow } from './local-task-home-attention'
 import { localTasksRouteTarget } from './local-tasks-route'
 import { useLocalTaskHomeHosts, type LocalTaskHomeHost } from './use-local-task-home-hosts'
@@ -23,9 +25,8 @@ export type LocalTaskHomeCardRow = LocalTaskHomeAttentionRow & {
   hostLabel: string | null
 }
 
-/** Counts and the tasks waiting longest across every library of every connected host. */
+/** Counts, "Needs you" rows and the newest writeback across every library of every connected host. */
 export function summarizeLocalTaskHomeHosts(ready: readonly ReadyHost[]) {
-  const copy = localTasksCopy()
   const libraries = ready.flatMap((entry) =>
     entry.libraries.map((library) => ({ hostId: entry.host.id, library }))
   )
@@ -34,21 +35,27 @@ export function summarizeLocalTaskHomeHosts(ready: readonly ReadyHost[]) {
     library.attention === 'error' ? [] : [library.attention]
   )
   const needsYou = read.reduce((sum, attention) => sum + attention.count, 0)
-  const parts: string[] = []
-  if (read.length > 0) {
-    parts.push(copy.work.homeNeedsYou(needsYou))
-  }
-  parts.push(
-    libraries.some(({ library }) => library.inProgress === 'error')
-      ? copy.homeCardError
-      : copy.homeCardInProgress(
-          libraries.reduce(
-            (sum, { library }) =>
-              sum + (typeof library.inProgress === 'number' ? library.inProgress : 0),
-            0
-          )
-        )
-  )
+  const inProgress = libraries.some(({ library }) => library.inProgress === 'error')
+    ? null
+    : libraries.reduce(
+        (sum, { library }) =>
+          sum + (typeof library.inProgress === 'number' ? library.inProgress : 0),
+        0
+      )
+  const latest =
+    libraries
+      .flatMap(({ hostId, library }) =>
+        library.attention !== 'error' && library.attention.latest
+          ? [
+              {
+                ...library.attention.latest,
+                hostId,
+                ...(library.executionHost ? { executionHost: library.executionHost } : {})
+              }
+            ]
+          : []
+      )
+      .sort((a, b) => b.at - a.at)[0] ?? null
   const rows: LocalTaskHomeCardRow[] = libraries
     .flatMap(({ hostId, library }) =>
       library.attention === 'error'
@@ -60,9 +67,16 @@ export function summarizeLocalTaskHomeHosts(ready: readonly ReadyHost[]) {
             hostLabel: named ? library.label : null
           }))
     )
-    .sort((a, b) => a.since - b.since)
     .slice(0, HOME_ROWS)
-  return { subtitle: parts.join(' · '), rows, needsYou: needsYou > 0 }
+  return {
+    /** Null until some library's "Needs you" was read. */
+    needsYou: read.length > 0 ? needsYou : null,
+    /** Null when some library's count could not be read. */
+    inProgress,
+    rows,
+    latest,
+    openCount: read.reduce((sum, attention) => sum + attention.openCount, 0)
+  }
 }
 
 /** Where a host's entry lands: the first of its libraries with something that needs you. */
@@ -87,13 +101,19 @@ export function MobileHomeLocalTasksCard(props: { connectedHosts: HostProfile[] 
   const hosts = useLocalTaskHomeHosts(props.connectedHosts)
   const openHostStackRoute = useOpenHostStackRoute()
   const picker = useConnectedHostPicker(props.connectedHosts)
+  // Why tied to the reads: relative times move when home reads again, and no clock ticks for them.
+  const [now, setNow] = useState(() => Date.now())
+  useEffect(() => {
+    setNow(Date.now())
+  }, [hosts])
   const ready = hosts.flatMap((entry) => (entry.kind === 'ready' ? [entry] : []))
   const unreachable = hosts.flatMap((entry) => (entry.kind === 'unreachable' ? [entry] : []))
   if (ready.length === 0 && unreachable.length === 0) {
     return null
   }
   const summary = summarizeLocalTaskHomeHosts(ready)
-  const openRow = (row: LocalTaskHomeCardRow) =>
+  const page = localTasksPageCopy()
+  const openTask = (row: { hostId: string; taskId: string; executionHost?: `runtime:${string}` }) =>
     openHostStackRoute(
       row.hostId,
       localTasksRouteTarget(
@@ -102,23 +122,26 @@ export function MobileHomeLocalTasksCard(props: { connectedHosts: HostProfile[] 
         row.executionHost ? { executionHost: row.executionHost } : undefined
       )
     )
+  const openEntry = (attention: boolean) =>
+    picker.pickHost(
+      (hostId) => {
+        const host = ready.find((entry) => entry.host.id === hostId)
+        if (host) {
+          openHostStackRoute(
+            hostId,
+            attention ? homeEntryTarget(host) : localTasksRouteTarget(hostId)
+          )
+        }
+      },
+      ready.map((entry) => entry.host)
+    )
   return (
     <View style={styles.stack}>
       {ready.length > 0 ? (
         <View style={[styles.card, styles.column]}>
           <Pressable
             style={({ pressed }) => [styles.header, pressed && styles.cardPressed]}
-            onPress={() =>
-              picker.pickHost(
-                (hostId) => {
-                  const host = ready.find((entry) => entry.host.id === hostId)
-                  if (host) {
-                    openHostStackRoute(hostId, homeEntryTarget(host))
-                  }
-                },
-                ready.map((entry) => entry.host)
-              )
-            }
+            onPress={() => openEntry(true)}
             accessibilityRole="button"
             accessibilityLabel={copy.homeCardTitle}
           >
@@ -127,28 +150,90 @@ export function MobileHomeLocalTasksCard(props: { connectedHosts: HostProfile[] 
             </View>
             <View style={styles.main}>
               <Text style={styles.title}>{copy.homeCardTitle}</Text>
-              <Text style={styles.subtitle} numberOfLines={1}>
-                {summary.subtitle}
-              </Text>
             </View>
             <ChevronRight size={16} color={colors.textMuted} />
           </Pressable>
+          <View style={styles.counters}>
+            <Pressable
+              style={styles.counter}
+              onPress={() => openEntry(true)}
+              accessibilityRole="button"
+              testID="local-tasks-home-needs-you"
+            >
+              <Text style={[styles.count, styles.attention]}>{summary.needsYou ?? '–'}</Text>
+              <Text style={styles.subtitle}>{page.homeNeedsYou}</Text>
+            </Pressable>
+            <View style={styles.divider} />
+            <Pressable
+              style={styles.counter}
+              onPress={() => openEntry(false)}
+              accessibilityRole="button"
+              testID="local-tasks-home-in-progress"
+            >
+              <Text style={styles.count}>{summary.inProgress ?? '–'}</Text>
+              <Text style={styles.subtitle}>
+                {summary.inProgress === null ? copy.homeCardError : page.homeInProgress}
+              </Text>
+            </Pressable>
+          </View>
           {summary.rows.map((row) => (
             <Pressable
               key={`${row.hostId}:${row.executionHost ?? ''}:${row.taskId}`}
               style={({ pressed }) => [styles.row, pressed && styles.cardPressed]}
-              onPress={() => openRow(row)}
+              onPress={() => openTask(row)}
               accessibilityRole="button"
             >
+              <View style={styles.rowHead}>
+                <Text style={styles.ref}>{row.ref}</Text>
+                <Text style={[styles.kind, row.item ? styles.attention : styles.review]}>
+                  {row.item
+                    ? copy.work.attentionKinds[row.item.kind]
+                    : copy.work.card.awaitingAcceptance}
+                </Text>
+                <Text style={[styles.rowMeta, styles.time]} numberOfLines={1}>
+                  {formatLocalTaskAgo(copy, row.since, now)}
+                </Text>
+              </View>
               <Text style={styles.rowTitle} numberOfLines={1}>
-                {row.title}
+                {row.item ? localTaskAttentionLine(row.item) : row.title}
                 {row.hostLabel ? ` · ${row.hostLabel}` : ''}
-              </Text>
-              <Text style={styles.rowMeta} numberOfLines={1}>
-                {copy.work.attentionKinds[row.item.kind]} · {localTaskAttentionLine(row.item)}
               </Text>
             </Pressable>
           ))}
+          {summary.latest ? (
+            <Pressable
+              style={({ pressed }) => [styles.row, pressed && styles.cardPressed]}
+              onPress={() => summary.latest && openTask(summary.latest)}
+              accessibilityRole="button"
+            >
+              <View style={styles.rowHead}>
+                <Text style={styles.ref}>{summary.latest.ref}</Text>
+                <Text style={styles.kind}>
+                  {page.homeLatest(
+                    summary.latest.writeback ? copy.work.card.writeback : copy.work.card.lastLine
+                  )}
+                </Text>
+                <Text style={[styles.rowMeta, styles.time]} numberOfLines={1}>
+                  {formatLocalTaskAgo(copy, summary.latest.at, now)}
+                </Text>
+              </View>
+              <Text style={styles.rowTitle} numberOfLines={1}>
+                {summary.latest.body}
+              </Text>
+            </Pressable>
+          ) : null}
+          {summary.openCount > 0 ? (
+            <Pressable
+              style={({ pressed }) => [styles.viewAll, pressed && styles.cardPressed]}
+              onPress={() => openEntry(false)}
+              accessibilityRole="button"
+            >
+              <Text style={[styles.viewAllText, styles.attention]}>
+                {page.homeViewAll(summary.openCount)}
+              </Text>
+              <ChevronRight size={14} color={colors.statusAmber} />
+            </Pressable>
+          ) : null}
         </View>
       ) : null}
       {unreachable.map(({ host, pairingInvalid }) => (
@@ -198,8 +283,47 @@ const styles = StyleSheet.create({
   stack: { gap: spacing.sm, marginTop: spacing.sm },
   column: { flexDirection: 'column', alignItems: 'stretch' },
   header: { flexDirection: 'row', alignItems: 'center' },
-  // Why 60: the icon's 46 plus its 14 margin, so rows align under the title.
-  row: { paddingTop: spacing.sm, paddingLeft: 60, gap: 2 },
+  counters: {
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    marginTop: spacing.md,
+    paddingTop: spacing.sm,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.borderSubtle
+  },
+  counter: { flex: 1, flexDirection: 'row', alignItems: 'baseline', gap: 6 },
+  count: { fontSize: 24, fontWeight: '700', color: colors.textPrimary },
+  divider: {
+    width: StyleSheet.hairlineWidth,
+    backgroundColor: colors.borderSubtle,
+    marginRight: 14
+  },
+  attention: { color: colors.statusAmber },
+  review: { color: colors.statusGreen },
+  row: {
+    paddingVertical: spacing.sm,
+    gap: 2,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.borderSubtle
+  },
+  rowHead: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  ref: {
+    fontFamily: typography.monoFamily,
+    color: colors.textMuted,
+    fontSize: typography.metaSize
+  },
+  kind: { color: colors.textSecondary, fontSize: typography.metaSize, fontWeight: '600' },
+  time: { marginLeft: 'auto' },
   rowTitle: { color: colors.textPrimary, fontSize: typography.bodySize },
-  rowMeta: { color: colors.textMuted, fontSize: typography.metaSize }
+  rowMeta: { color: colors.textMuted, fontSize: typography.metaSize },
+  viewAll: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    paddingTop: spacing.sm,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.borderSubtle
+  },
+  viewAllText: { fontSize: typography.bodySize, fontWeight: '600' }
 })

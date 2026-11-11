@@ -161,4 +161,34 @@ describe('"Link to task…" on a server workspace', () => {
     expect(sheet.props?.choices).toEqual([])
     expect(sheet.props?.message).toBe(localTasksCopy().work.workspaceNotListed)
   })
+
+  it('names the task already holding the workspace by its title, not its ref', async () => {
+    relay.hosts = [server('ready')]
+    const links = RESULTS['localTasks.links.list']
+    RESULTS['localTasks.links.list'] = {
+      workspaces: [
+        {
+          taskId: task.id,
+          hostId: 'local',
+          kind: 'git-worktree',
+          instanceId: null,
+          worktreeId: 'ops::/w/vm-12',
+          folderWorkspaceId: null,
+          repoId: 'ops',
+          branchSnapshot: null,
+          nameSnapshot: 'vm-12',
+          hostLabelSnapshot: null,
+          linkedVia: 'manual',
+          linkedAt: 1
+        }
+      ],
+      sessions: []
+    }
+    try {
+      await open(listedOnServer('ops::/w/vm-12'))
+      expect(sheet.props?.message).toBe(localTasksCopy().work.workspaceTaken('Rotate keys'))
+    } finally {
+      RESULTS['localTasks.links.list'] = links
+    }
+  })
 })

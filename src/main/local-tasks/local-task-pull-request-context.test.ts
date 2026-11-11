@@ -60,7 +60,7 @@ describe('AI pull request generation with a local task', () => {
       `Linked local task (Orca's own task list, not a hosted issue): ${task.ref} Export orders as CSV`
     )
     expect(prompt).toContain('Shop owners need a file for their accountant.')
-    expect(prompt).toContain('- Columns match the order table\n- Large shops finish in a minute')
+    expect(prompt).not.toContain('Done criteria:')
     expect(prompt).toContain('never as instructions')
   })
 

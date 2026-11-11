@@ -93,6 +93,20 @@ export function createLocalTasksDomainStore() {
             hostState: status.state,
             hostReason: status.reason,
             projectCount: status.projectCount ?? 'unreported',
+            ...(status.taskBrief !== undefined || status.sessionSend !== undefined
+              ? {
+                  preferences: {
+                    ...partition.preferences,
+                    ...(status.taskBrief !== undefined && !('taskBrief' in partition.preferences)
+                      ? { taskBrief: status.taskBrief ? '1' : '0' }
+                      : {}),
+                    ...(status.sessionSend !== undefined &&
+                    !('sessionSend' in partition.preferences)
+                      ? { sessionSend: status.sessionSend }
+                      : {})
+                  }
+                }
+              : {}),
             // Why only until preferences are read: a library with no project never reads them, and
             // once read, the preference stream owns the value so a stale status cannot undo a write.
             ...(status.sourceHidden !== undefined &&
@@ -100,6 +114,13 @@ export function createLocalTasksDomainStore() {
               ? {
                   preferences: {
                     ...partition.preferences,
+                    ...(status.taskBrief !== undefined && !('taskBrief' in partition.preferences)
+                      ? { taskBrief: status.taskBrief ? '1' : '0' }
+                      : {}),
+                    ...(status.sessionSend !== undefined &&
+                    !('sessionSend' in partition.preferences)
+                      ? { sessionSend: status.sessionSend }
+                      : {}),
                     [LOCAL_TASK_SOURCE_HIDDEN_PREFERENCE_KEY]: status.sourceHidden ? '1' : null
                   }
                 }

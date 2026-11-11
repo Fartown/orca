@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 import {
   ChevronDown,
@@ -5,119 +6,183 @@ import {
   Columns3,
   Layers,
   List,
+  Plus,
+  Search,
   Server,
   Settings
 } from 'lucide-react-native'
 import type { LocalTaskProject } from '../../../src/shared/local-tasks/local-task-types'
-import { colors } from '../theme/mobile-theme'
+import { ActionSheetModal, type ActionSheetAction } from '../components/ActionSheetModal'
+import { colors, typography } from '../theme/mobile-theme'
 import { localTasksCopy } from './local-tasks-copy'
 import { localTaskStyles } from './local-tasks-styles'
 
 export type LocalTasksViewMode = 'list' | 'board'
 
-/** Back, settings and the list/board toggle, then the title with the host and project switches. */
+/**
+ * Back, the title, New task and Search, as the prototype's header. The title also names the scope
+ * (all projects or one, and the host when several are reachable) and opens the page's switches:
+ * project, host, project settings, list or board.
+ */
 export function LocalTasksLibraryHeader(props: {
-  project: LocalTaskProject | null
-  hasProjects: boolean
+  projects: readonly LocalTaskProject[]
+  /** Null for all projects. */
+  projectId: string | null
+  onSelectProject: (projectId: string | null) => void
+  onCreateProject?: () => void
   /** Shown only while the page reaches more than one host's library (D-008). */
   hostLabel: string | null
   onPickHost: () => void
   view: LocalTasksViewMode
   /** Off where list and board mean nothing: with no project, and in "Needs you". */
   showViewToggle: boolean
+  /** Absent where nothing can be created: a read-only library, or one with no project. */
+  onNewTask?: () => void
+  /** Absent where there is nothing to search ("Needs you"). */
+  onSearch?: () => void
+  searchActive: boolean
   onExit: () => void
   onSettings: () => void
   onView: (view: LocalTasksViewMode) => void
-  onPickProject: () => void
 }) {
   const copy = localTasksCopy()
+  const [menuOpen, setMenuOpen] = useState(false)
+  const project = props.projects.find((entry) => entry.id === props.projectId) ?? null
+  const hasProjects = props.projects.length > 0
+  // Why not only with projects: an empty library still needs the way to another host's library.
+  const canOpen = hasProjects || props.hostLabel !== null || props.onCreateProject !== undefined
+  const scope = [
+    project ? `${project.name} · ${project.prefix}` : copy.allProjects,
+    props.hostLabel
+  ]
+    .filter(Boolean)
+    .join(' · ')
+  const actions: ActionSheetAction[] = [
+    ...(hasProjects
+      ? [
+          {
+            label: copy.allProjects,
+            icon: Layers,
+            checked: props.projectId === null,
+            onPress: () => props.onSelectProject(null)
+          }
+        ]
+      : []),
+    ...props.projects.map((entry) => ({
+      label: entry.name,
+      hint: entry.prefix,
+      checked: entry.id === props.projectId,
+      onPress: () => props.onSelectProject(entry.id)
+    })),
+    ...(props.onCreateProject
+      ? [
+          {
+            label: copy.createProject,
+            icon: Plus,
+            closeBeforePress: true,
+            onPress: props.onCreateProject
+          }
+        ]
+      : []),
+    ...(props.hostLabel !== null
+      ? [
+          {
+            label: copy.switchHost,
+            hint: props.hostLabel,
+            icon: Server,
+            closeBeforePress: true,
+            onPress: props.onPickHost
+          }
+        ]
+      : []),
+    ...(props.showViewToggle
+      ? (['list', 'board'] as const).map((mode) => ({
+          label: mode === 'list' ? copy.viewList : copy.viewBoard,
+          icon: mode === 'list' ? List : Columns3,
+          checked: props.view === mode,
+          onPress: () => props.onView(mode)
+        }))
+      : []),
+    {
+      label: copy.projectSettings,
+      icon: Settings,
+      closeBeforePress: true,
+      onPress: props.onSettings
+    }
+  ]
   return (
-    <>
-      <View style={localTaskStyles.topBar}>
-        <Pressable
-          style={localTaskStyles.backButton}
-          onPress={props.onExit}
-          accessibilityRole="button"
-        >
-          <ChevronLeft size={22} color={colors.textPrimary} />
-          <Text style={localTaskStyles.backLabel}>{copy.back}</Text>
-        </Pressable>
-        <View style={localTaskStyles.topBarSpacer} />
-        {props.hasProjects ? (
-          <Pressable
-            style={localTaskStyles.iconButton}
-            onPress={props.onSettings}
-            accessibilityRole="button"
-            accessibilityLabel={copy.projectSettings}
-          >
-            <Settings size={18} color={colors.textSecondary} />
-          </Pressable>
-        ) : null}
-        {props.showViewToggle ? (
-          <View style={styles.viewToggle}>
-            {(['list', 'board'] as const).map((mode) => {
-              const Icon = mode === 'list' ? List : Columns3
-              const active = props.view === mode
-              return (
-                <Pressable
-                  key={mode}
-                  style={[localTaskStyles.iconButton, active && localTaskStyles.iconButtonActive]}
-                  onPress={() => props.onView(mode)}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: active }}
-                  accessibilityLabel={mode === 'list' ? copy.viewList : copy.viewBoard}
-                >
-                  <Icon size={17} color={active ? colors.textPrimary : colors.textMuted} />
-                </Pressable>
-              )
-            })}
+    <View style={localTaskStyles.topBar}>
+      <Pressable
+        style={[localTaskStyles.backButton, styles.side]}
+        onPress={props.onExit}
+        accessibilityRole="button"
+      >
+        <ChevronLeft size={22} color={colors.textPrimary} />
+        <Text style={localTaskStyles.backLabel}>{copy.back}</Text>
+      </Pressable>
+      <Pressable
+        style={styles.title}
+        disabled={!canOpen}
+        onPress={() => setMenuOpen(true)}
+        accessibilityRole="button"
+        accessibilityLabel={copy.switchProject}
+        testID="local-tasks-scope"
+      >
+        <Text style={styles.titleText} numberOfLines={1}>
+          {copy.title}
+        </Text>
+        {canOpen ? (
+          <View style={styles.scope}>
+            <Text style={styles.scopeText} numberOfLines={1}>
+              {hasProjects ? scope : (props.hostLabel ?? copy.createProject)}
+            </Text>
+            <ChevronDown size={11} color={colors.textMuted} />
           </View>
         ) : null}
-      </View>
-      <View style={localTaskStyles.titleRow}>
-        <Text style={localTaskStyles.heading}>{copy.title}</Text>
-        {props.hostLabel !== null ? (
+      </Pressable>
+      <View style={[styles.side, styles.trailing]}>
+        {props.onNewTask ? (
           <Pressable
-            style={localTaskStyles.chip}
-            onPress={props.onPickHost}
+            style={localTaskStyles.iconButton}
+            onPress={props.onNewTask}
             accessibilityRole="button"
-            accessibilityLabel={copy.switchHost}
-            testID="local-tasks-host-switch"
+            accessibilityLabel={copy.newTask}
+            testID="local-tasks-new-task"
           >
-            <Server size={14} color={colors.textSecondary} />
-            <Text style={localTaskStyles.chipText} numberOfLines={1}>
-              {props.hostLabel}
-            </Text>
-            <ChevronDown size={14} color={colors.textMuted} />
+            <Plus size={20} color={colors.textPrimary} />
           </Pressable>
         ) : null}
-        {props.hasProjects ? (
+        {props.onSearch ? (
           <Pressable
-            style={localTaskStyles.chip}
-            onPress={props.onPickProject}
+            style={[
+              localTaskStyles.iconButton,
+              props.searchActive && localTaskStyles.iconButtonActive
+            ]}
+            onPress={props.onSearch}
             accessibilityRole="button"
-            accessibilityLabel={copy.switchProject}
+            accessibilityState={{ expanded: props.searchActive }}
+            accessibilityLabel={copy.searchPlaceholder}
           >
-            <Layers size={14} color={colors.textSecondary} />
-            <Text style={localTaskStyles.chipText} numberOfLines={1}>
-              {props.project?.name ?? copy.allProjects}
-            </Text>
-            {props.project ? (
-              <Text style={localTaskStyles.chipMeta}>{props.project.prefix}</Text>
-            ) : null}
-            <ChevronDown size={14} color={colors.textMuted} />
+            <Search size={19} color={colors.textPrimary} />
           </Pressable>
         ) : null}
       </View>
-    </>
+      <ActionSheetModal
+        visible={menuOpen}
+        title={copy.switchProject}
+        actions={actions}
+        onClose={() => setMenuOpen(false)}
+      />
+    </View>
   )
 }
 
 const styles = StyleSheet.create({
-  viewToggle: {
-    flexDirection: 'row',
-    backgroundColor: colors.bgPanel,
-    borderRadius: 8,
-    padding: 2
-  }
+  // Equal sides keep the title centered whichever buttons show.
+  side: { width: 92 },
+  trailing: { flexDirection: 'row', justifyContent: 'flex-end', gap: 2 },
+  title: { flex: 1, minWidth: 0, alignItems: 'center' },
+  titleText: { color: colors.textPrimary, fontSize: typography.bodySize, fontWeight: '600' },
+  scope: { flexDirection: 'row', alignItems: 'center', gap: 2, maxWidth: '100%' },
+  scopeText: { flexShrink: 1, color: colors.textMuted, fontSize: typography.metaSize }
 })

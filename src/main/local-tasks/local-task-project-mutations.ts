@@ -43,7 +43,7 @@ export function createLocalTaskProject(
   db.prepare(
     `INSERT INTO local_task_projects (id, name, default_repo_id, last_execution_host_id,
        next_number, rule_start_moves, rule_pr_merged_completes, created_at, updated_at, revision)
-     VALUES (?, ?, ?, ?, 1, 1, 1, ?, ?, 0)`
+     VALUES (?, ?, ?, ?, 1, 1, 2, ?, ?, 0)`
   ).run(projectId, input.name, defaultRepoId, lastExecutionHostId, now, now)
   writeProjectRepos(db, projectId, repos)
   db.prepare(
@@ -82,7 +82,15 @@ export function updateLocalTaskProject(
   if (prefixChange && !prefixChange.ok) {
     return prefixChange
   }
-  const rules = { ...project.rules, ...input.rules }
+  const rules = {
+    ...project.rules,
+    ...input.rules,
+    ...(input.rules?.prMergedMode !== undefined
+      ? { prMergedCompletes: input.rules.prMergedMode === 'completed' }
+      : input.rules?.prMergedCompletes !== undefined
+        ? { prMergedMode: input.rules.prMergedCompletes ? 'completed' : 'none' }
+        : {})
+  }
   const name = input.name ?? project.name
   const repos = input.repos ?? project.repos
   const reposChanged = repos.join('\n') !== project.repos.join('\n')
@@ -101,7 +109,8 @@ export function updateLocalTaskProject(
     !prefixChange &&
     name === project.name &&
     rules.startMovesToInProgress === project.rules.startMovesToInProgress &&
-    rules.prMergedCompletes === project.rules.prMergedCompletes &&
+    (rules.prMergedMode ?? (rules.prMergedCompletes ? 'completed' : 'none')) ===
+      project.rules.prMergedMode &&
     !reposChanged &&
     defaultRepoId === project.defaultRepoId &&
     lastExecutionHostId === project.lastExecutionHostId
@@ -122,7 +131,15 @@ export function updateLocalTaskProject(
   ).run(
     name,
     rules.startMovesToInProgress ? 1 : 0,
-    rules.prMergedCompletes ? 1 : 0,
+    rules.prMergedMode === 'review'
+      ? 2
+      : rules.prMergedMode === 'completed'
+        ? 1
+        : rules.prMergedMode === 'none'
+          ? 0
+          : rules.prMergedCompletes
+            ? 1
+            : 0,
     defaultRepoId,
     lastExecutionHostId,
     now,

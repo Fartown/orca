@@ -6,12 +6,28 @@ import type { SettingsNavSection } from '@/lib/settings-navigation-types'
 
 export const LOCAL_TASKS_SETTINGS_SECTION_ID = 'local-tasks'
 
+export function getLocalTasksSettingsDescription(): string {
+  return translate('localTasks.settings.description', 'Task home, dispatch, projects and statuses.')
+}
+
 export const getLocalTasksSettingsSearchEntries = createLocalizedCatalog(() => [
   {
-    title: translate('localTasks.settings.projectsTitle', 'Task projects'),
+    title: translate('localTasks.settings.homeTitle', 'Task home and dispatch'),
+    description: translate(
+      'localTasks.settings.homeSearchDescription',
+      'What Orca shows when it opens, the task brief, and how sessions started from a task send their prompt.'
+    ),
+    keywords: [
+      ...translateSearchKeyword('localTasks.settings.keywordTasks', 'tasks'),
+      ...translateSearchKeyword('localTasks.settings.keywordLaunch', 'launch'),
+      ...translateSearchKeyword('localTasks.settings.keywordBrief', 'brief')
+    ]
+  },
+  {
+    title: translate('localTasks.settings.projectsTitle', 'Projects'),
     description: translate(
       'localTasks.settings.projectsSearchDescription',
-      'Create task projects, link repositories, rename them and change their ref prefix.'
+      'Create projects, link repositories, rename them and change their ref prefix.'
     ),
     keywords: [
       ...translateSearchKeyword('localTasks.settings.keywordTasks', 'tasks'),
@@ -30,6 +46,14 @@ export const getLocalTasksSettingsSearchEntries = createLocalizedCatalog(() => [
       ...translateSearchKeyword('localTasks.settings.keywordStatus', 'status'),
       ...translateSearchKeyword('localTasks.settings.keywordBoard', 'board')
     ]
+  },
+  {
+    title: translate('localTasks.settings.rules', 'Automatic status rules'),
+    description: translate(
+      'localTasks.settings.rulesSearchDescription',
+      'Starting work moves a task to In Progress; after its PR is merged a task moves to acceptance, to completed, or stays.'
+    ),
+    keywords: [...translateSearchKeyword('localTasks.settings.keywordRule', 'rule')]
   }
 ])
 
@@ -38,11 +62,8 @@ export function getLocalTasksSettingsSections(): SettingsNavSection[] {
   return [
     {
       id: LOCAL_TASKS_SETTINGS_SECTION_ID,
-      title: translate('localTasks.settings.title', 'Local Tasks'),
-      description: translate(
-        'localTasks.settings.description',
-        'Task projects, their repositories, ref prefixes and statuses.'
-      ),
+      title: translate('localTasks.settings.title', 'Local tasks'),
+      description: getLocalTasksSettingsDescription(),
       icon: ListTodo,
       searchEntries: getLocalTasksSettingsSearchEntries(),
       group: 'workflows'

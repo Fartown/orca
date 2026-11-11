@@ -76,14 +76,26 @@ export function toClientLocalTask(endpoint: LocalTaskEndpointKey, task: LocalTas
     id: localTaskClientId(endpoint, task.id),
     projectId: localTaskClientId(endpoint, task.projectId),
     statusId: localTaskClientId(endpoint, task.statusId),
-    parentId: task.parentId ? localTaskClientId(endpoint, task.parentId) : null
+    parentId: task.parentId ? localTaskClientId(endpoint, task.parentId) : null,
+    ...(task.latestProgress
+      ? {
+          latestProgress: {
+            ...task.latestProgress,
+            sessionLinkId: task.latestProgress.sessionLinkId
+              ? localTaskClientId(endpoint, task.latestProgress.sessionLinkId)
+              : null
+          }
+        }
+      : {})
   }
 }
 
 // Status and parent entries name library ids that the activity copy looks up.
 const EVENT_ID_KEYS: Partial<Record<LocalTaskEvent['kind'], readonly string[]>> = {
   status: ['from', 'to'],
-  parent: ['from', 'to']
+  parent: ['from', 'to'],
+  comment: ['sessionLinkId'],
+  'turn-ended': ['sessionLinkId']
 }
 
 export function toClientLocalTaskEvent(

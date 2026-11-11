@@ -1,5 +1,5 @@
-import { useMemo } from 'react'
-import { AlertTriangle } from 'lucide-react'
+import { useState } from 'react'
+import { AlertTriangle, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { translate } from '@/i18n/i18n'
 import { isImeCompositionKeyDown } from '@/lib/ime-composition-keyboard-event'
@@ -10,28 +10,12 @@ import {
   LOCAL_TASK_TITLE_MAX
 } from '../../../../shared/local-tasks/local-task-model'
 import type { LocalTask } from '../../../../shared/local-tasks/local-task-types'
-import {
-  cleanLocalTaskCriteria,
-  LocalTaskCriteriaEditor,
-  newLocalTaskCriterionDraft,
-  toLocalTaskCriterionDrafts,
-  type LocalTaskCriterionDraft
-} from './LocalTaskCriteriaEditor'
 import { LOCAL_TASK_INLINE_FIELD } from './local-task-inline-field'
 import { useLocalTaskFieldDraft, type LocalTaskFieldDraft } from './use-local-task-field-draft'
 
 const sameText = (a: string, b: string): boolean => a === b
 const readTitle = (task: LocalTask): string => task.title
 const readDescription = (task: LocalTask): string => task.description
-const readCriteria = (task: LocalTask): LocalTaskCriterionDraft[] =>
-  toLocalTaskCriterionDrafts(task.criteria)
-
-function sameCriteria(a: LocalTaskCriterionDraft[], b: LocalTaskCriterionDraft[]): boolean {
-  const left = cleanLocalTaskCriteria(a)
-  const right = cleanLocalTaskCriteria(b)
-  return left.length === right.length && left.every((text, index) => text === right[index])
-}
-
 /** Shown when the field was changed elsewhere while this edit was open. */
 function FieldConflict<E>({ field }: { field: LocalTaskFieldDraft<E> }): React.JSX.Element | null {
   if (!field.conflict) {
@@ -64,7 +48,13 @@ function FieldConflict<E>({ field }: { field: LocalTaskFieldDraft<E> }): React.J
   )
 }
 
-function TitleField({ task, writable }: { task: LocalTask; writable: boolean }): React.JSX.Element {
+export function LocalTaskDetailTitle({
+  task,
+  writable
+}: {
+  task: LocalTask
+  writable: boolean
+}): React.JSX.Element {
   const field = useLocalTaskFieldDraft({
     task,
     stored: task.title,
@@ -96,10 +86,11 @@ function TitleField({ task, writable }: { task: LocalTask; writable: boolean }):
           }
         }}
         aria-label={translate('localTasks.create.titleLabel', 'Title')}
-        // field-sizing:content wraps a long title onto more lines instead of cutting it off.
+        // field-sizing:content wraps a long title onto more lines instead of cutting it off; the
+        // negative margin keeps the heading's text flush with the rows under it.
         className={cn(
           LOCAL_TASK_INLINE_FIELD,
-          'block resize-none overflow-hidden py-1 text-xl font-semibold leading-snug text-foreground [field-sizing:content]'
+          '-mx-1.5 block w-[calc(100%+0.75rem)] cursor-text resize-none overflow-hidden py-0.5 text-xl font-semibold leading-snug text-foreground [field-sizing:content] hover:border-transparent'
         )}
       />
       <FieldConflict field={field} />
@@ -107,13 +98,16 @@ function TitleField({ task, writable }: { task: LocalTask; writable: boolean }):
   )
 }
 
+const DESCRIPTION_TEXT = 'whitespace-pre-wrap break-words text-sm leading-relaxed text-foreground'
+
+/** Reads as text; a click opens the editor, which stays while a save or a conflict is pending. */
 function DescriptionField({
   task,
   writable
 }: {
   task: LocalTask
   writable: boolean
-}): React.JSX.Element {
+}): React.JSX.Element | null {
   const field = useLocalTaskFieldDraft({
     task,
     stored: task.description,
@@ -121,19 +115,52 @@ function DescriptionField({
     same: sameText,
     toPatch: (description) => ({ description })
   })
+  const [editing, setEditing] = useState(false)
+  const open = writable && (editing || field.conflict || field.value !== task.description)
+  if (!open) {
+    if (!field.value.trim()) {
+      return writable ? (
+        <button
+          type="button"
+          onClick={() => setEditing(true)}
+          className="flex w-fit items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+        >
+          <Plus className="size-3" />
+          {translate('localTasks.detail.addDescription', 'Add description')}
+        </button>
+      ) : null
+    }
+    return writable ? (
+      <button
+        type="button"
+        onClick={() => setEditing(true)}
+        className={cn(
+          '-mx-1.5 block w-[calc(100%+0.75rem)] cursor-text rounded-md px-1.5 py-1 text-left hover:bg-accent/40',
+          DESCRIPTION_TEXT
+        )}
+      >
+        {field.value}
+      </button>
+    ) : (
+      <p className={DESCRIPTION_TEXT}>{field.value}</p>
+    )
+  }
   return (
     <div className="flex flex-col gap-1">
       <ImeTextarea
+        autoFocus
         value={field.value}
-        readOnly={!writable}
         maxLength={LOCAL_TASK_DESCRIPTION_MAX}
         onChange={(event) => field.edit(event.target.value)}
-        onBlur={() => void field.commit()}
+        onBlur={() => {
+          setEditing(false)
+          void field.commit()
+        }}
         placeholder={translate('localTasks.create.descriptionPlaceholder', 'Add a description…')}
         aria-label={translate('localTasks.create.descriptionLabel', 'Description')}
         className={cn(
           LOCAL_TASK_INLINE_FIELD,
-          'scrollbar-sleek min-h-20 resize-y py-1.5 text-sm leading-relaxed text-foreground'
+          '-mx-1.5 w-[calc(100%+0.75rem)] scrollbar-sleek min-h-20 resize-y border-border/60 py-1 text-sm leading-relaxed text-foreground [field-sizing:content]'
         )}
       />
       <FieldConflict field={field} />
@@ -141,70 +168,12 @@ function DescriptionField({
   )
 }
 
-function CriteriaField({
-  task,
-  writable
-}: {
-  task: LocalTask
-  writable: boolean
-}): React.JSX.Element {
-  // Why: ids come from the text, so a re-read with equal criteria keeps the same rows mounted.
-  const stored = useMemo(() => toLocalTaskCriterionDrafts(task.criteria), [task.criteria])
-  const field = useLocalTaskFieldDraft({
-    task,
-    stored,
-    read: readCriteria,
-    same: sameCriteria,
-    toPatch: (criteria) => ({ criteria: cleanLocalTaskCriteria(criteria) })
-  })
-  if (field.value.length === 0) {
-    return (
-      <button
-        type="button"
-        disabled={!writable}
-        onClick={() => field.edit([newLocalTaskCriterionDraft()])}
-        className="w-fit text-left text-xs text-muted-foreground hover:text-foreground disabled:pointer-events-none"
-      >
-        {translate('localTasks.criteria.add', 'Add a criterion')}
-      </button>
-    )
-  }
-  return (
-    <div className="flex flex-col gap-1">
-      <LocalTaskCriteriaEditor
-        items={field.value}
-        onItemsChange={(items) => {
-          field.edit(items)
-          if (items.length === 0) {
-            void field.commitValue(items)
-          }
-        }}
-        disabled={!writable}
-        onLeave={() => void field.commit()}
-      />
-      <FieldConflict field={field} />
-    </div>
-  )
-}
-
-/** Title, description and done criteria (a plain list, REQ-004); each saves when left. */
 export function LocalTaskDetailBody({
   task,
   writable
 }: {
   task: LocalTask
   writable: boolean
-}): React.JSX.Element {
-  return (
-    <div className="flex flex-col gap-4">
-      <TitleField task={task} writable={writable} />
-      <DescriptionField task={task} writable={writable} />
-      <section className="flex flex-col gap-1.5">
-        <h3 className="text-xs font-medium text-muted-foreground">
-          {translate('localTasks.detail.criteria', 'Done criteria')}
-        </h3>
-        <CriteriaField task={task} writable={writable} />
-      </section>
-    </div>
-  )
+}): React.JSX.Element | null {
+  return <DescriptionField task={task} writable={writable} />
 }

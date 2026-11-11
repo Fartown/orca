@@ -12,6 +12,7 @@ import {
   type LocalTaskFormMode
 } from './local-task-form-state'
 import { createLocalTaskOperationIds, sendLocalTaskWrite } from './local-task-operation-ids'
+import type { LocalTaskCreateKickoffRun } from './use-local-task-create-where'
 import type { LocalTasksLibrary } from './use-local-tasks-library'
 import { useLocalTaskSubtaskBatch } from './use-local-task-subtask-batch'
 
@@ -107,7 +108,16 @@ export function useLocalTaskFormSubmit(api: LocalTasksApi, library: LocalTasksLi
     return saved
   }
 
-  const saveNew = async (draft: LocalTaskDraft): Promise<string | null> => {
+  const saveNew = async (
+    draft: LocalTaskDraft,
+    kickoff: LocalTaskCreateKickoffRun | null
+  ): Promise<string | null> => {
+    // Why before the create: a host out of contact leaves nothing half done.
+    const blocked = kickoff ? await kickoff.blocked() : null
+    if (blocked) {
+      write.setError(blocked)
+      return null
+    }
     const created = await sendLocalTaskWrite(
       ids.create,
       createLocalTaskPayload(draft),
@@ -119,6 +129,7 @@ export function useLocalTaskFormSubmit(api: LocalTasksApi, library: LocalTasksLi
     }
     const taskId = created.value.task.id
     library.acceptTasks([created.value.task])
+    const problems: string[] = []
     const titles = localTaskDraftTexts(draft.subtasks)
     if (titles.length > 0) {
       const subtasks = await sendLocalTaskWrite(
@@ -129,10 +140,17 @@ export function useLocalTaskFormSubmit(api: LocalTasksApi, library: LocalTasksLi
       if (subtasks.kind === 'ok') {
         library.acceptTasks(subtasks.value.tasks)
       } else {
-        // Why hold the id: the task exists, so leaving the form must open it, not retry it.
-        setNotice({ text: copy.savedPartially, taskId })
-        return null
+        problems.push(copy.savedPartially)
       }
+    }
+    const kickoffProblem = kickoff ? await kickoff.run(created.value.task) : null
+    if (kickoffProblem) {
+      problems.push(kickoffProblem)
+    }
+    if (problems.length > 0) {
+      // Why hold the id: the task exists, so leaving the form must open it, not retry it.
+      setNotice({ text: problems.join('\n\n'), taskId })
+      return null
     }
     return taskId
   }
@@ -141,8 +159,15 @@ export function useLocalTaskFormSubmit(api: LocalTasksApi, library: LocalTasksLi
     busy: write.busy,
     error: write.error,
     notice: notice?.text ?? null,
-    save: (mode: LocalTaskFormMode, draft: LocalTaskDraft) =>
-      write.run(() => (mode.kind === 'edit' ? saveEdit(mode.task, draft) : saveNew(draft))),
+    /** `kickoff` puts a new task to work once it exists (m8); the form stays busy until it settles. */
+    save: (
+      mode: LocalTaskFormMode,
+      draft: LocalTaskDraft,
+      kickoff: LocalTaskCreateKickoffRun | null = null
+    ) =>
+      write.run(() =>
+        mode.kind === 'edit' ? saveEdit(mode.task, draft) : saveNew(draft, kickoff)
+      ),
     ...subtaskBatch,
     conflict: conflict !== null,
     /** Writes the user's own changes over the latest version. */

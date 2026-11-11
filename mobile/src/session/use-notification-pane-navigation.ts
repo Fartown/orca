@@ -16,7 +16,8 @@ export function useNotificationPaneNavigation({
   connState,
   switchSessionTab,
   worktreeId,
-  openNativeSession
+  openNativeSession,
+  paneKeyOverride
 }: {
   sessionTabs: MobileSessionTab[]
   terminalsLoaded: boolean
@@ -24,6 +25,7 @@ export function useNotificationPaneNavigation({
   switchSessionTab: (tab: MobileSessionTab) => void
   worktreeId?: string
   openNativeSession?: (source: StructuredSessionOpenSource) => Promise<void>
+  paneKeyOverride?: string | null
 }) {
   const client = usePageBridgeClient()
   const router = useRouter()
@@ -31,18 +33,25 @@ export function useNotificationPaneNavigation({
   const urlPaneKey =
     firstParam(useLocalSearchParams<{ paneKey?: string | string[] }>().paneKey) || null
   // The shell's pane wins: the URL copied it at bootstrap and can be older than a later notification tap.
-  const pending = useRef(client.getShellSession()?.route?.params?.paneKey || urlPaneKey)
+  const pending = useRef(
+    paneKeyOverride === undefined
+      ? client.getShellSession()?.route?.params?.paneKey || urlPaneKey
+      : paneKeyOverride
+  )
   const applied = useRef<string | null>(null)
   const [asked, setAsked] = useState(0)
 
   useEffect(() => {
     // Spend the URL's tap so a remount of this screen cannot replay it over a later tab pick.
-    if (urlPaneKey !== null) {
+    if (paneKeyOverride === undefined && urlPaneKey !== null) {
       router.setParams({ paneKey: undefined })
     }
-  }, [router, urlPaneKey])
+  }, [router, urlPaneKey, paneKeyOverride])
 
   useEffect(() => {
+    if (paneKeyOverride !== undefined) {
+      return
+    }
     // Acknowledge the initial init separately; read from the client to keep the effect keyed only on client.
     const seed = client.getShellSession()?.route?.params?.paneKey ?? null
     if (seed !== null && seed !== '') {
@@ -63,7 +72,7 @@ export function useNotificationPaneNavigation({
       pending.current = paneKey
       setAsked((count) => count + 1)
     })
-  }, [client])
+  }, [client, paneKeyOverride])
 
   useEffect(() => {
     const paneKey = pending.current

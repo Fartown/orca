@@ -1,3 +1,6 @@
+import { LocalTaskReviewQueue } from './LocalTaskReviewQueue'
+import { LocalTaskDispatchBox } from './LocalTaskDispatchBox'
+import { useLocalTaskSidebarMode } from '@/local-tasks/local-task-sidebar-mode'
 import { useState, type ReactNode } from 'react'
 import { LoaderCircle } from 'lucide-react'
 import { translate } from '@/i18n/i18n'
@@ -29,6 +32,7 @@ import { LocalTaskQuickPicker } from './LocalTaskQuickPicker'
 import { LocalTaskLinkDialogHost } from './LocalTaskLinkDialogHost'
 import { LocalTaskKeyHints } from './LocalTaskKeyHints'
 import { LocalTaskNeedsYouView } from './LocalTaskNeedsYouView'
+import { LocalTaskDispatcherView } from './LocalTaskDispatcherView'
 import { useLocalTaskListModel, type LocalTaskListModel } from './use-local-task-list-model'
 import { useLocalTaskEscapeLayer, useLocalTaskPageKeys } from './use-local-task-page-keys'
 
@@ -83,10 +87,13 @@ export function LocalTaskPage({ sourceBar }: { sourceBar: ReactNode }): React.JS
     )
   } else if (!hasProjects || bootstrapCreating) {
     body = (
-      <LocalTaskBootstrap
-        onStart={() => setBootstrapCreating(true)}
-        onDone={() => setBootstrapCreating(false)}
-      />
+      <div className="flex min-h-0 flex-1 flex-col gap-3">
+        {!bootstrapCreating ? <LocalTaskDispatchBox /> : null}
+        <LocalTaskBootstrap
+          onStart={() => setBootstrapCreating(true)}
+          onDone={() => setBootstrapCreating(false)}
+        />
+      </div>
     )
   } else if (detailTaskId) {
     body = <LocalTaskDetail taskId={detailTaskId} model={model} />
@@ -114,10 +121,12 @@ export function LocalTaskPage({ sourceBar }: { sourceBar: ReactNode }): React.JS
 }
 
 function LocalTaskOverview({ model }: { model: LocalTaskListModel }): React.JSX.Element {
+  const sidebarTaskMode = useLocalTaskSidebarMode()
   const previewOpen = useLocalTaskPage((state) => state.previewOpen)
   const cursorTaskId = useLocalTaskPage((state) => (state.previewOpen ? state.cursorTaskId : null))
   const hasSelection = useLocalTaskPage((state) => state.selectedTaskIds.length > 0)
   const needsYou = useLocalTaskPage((state) => state.view === 'needs-you')
+  const dispatcher = useLocalTaskPage((state) => state.view === 'dispatcher')
   const previewTask =
     previewOpen && cursorTaskId ? model.index.tasksById.get(cursorTaskId) : undefined
   useLocalTaskEscapeLayer('panel', hasSelection, () =>
@@ -126,26 +135,37 @@ function LocalTaskOverview({ model }: { model: LocalTaskListModel }): React.JSX.
   useLocalTaskEscapeLayer('panel', previewTask !== undefined, () =>
     localTaskPageStore.getState().setPreviewOpen(false)
   )
+  // Why the nav spans the full height: the dispatch box belongs to the content column beside it.
   return (
-    <div className="@container/local-task-page relative flex min-h-0 flex-1 gap-4 pt-2">
-      <LocalTaskNav model={model} />
-      {needsYou ? (
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2">
-          <LocalTaskScopeMenu model={model} className="self-start @3xl/local-task-page:hidden" />
-          <LocalTaskNeedsYouView model={model} />
-        </div>
-      ) : (
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2">
-          <LocalTaskToolbar model={model} />
-          {hasSelection ? <LocalTaskBatchBar model={model} /> : null}
-          {model.layout === 'list' ? (
-            <LocalTaskList model={model} />
-          ) : (
-            <LocalTaskBoard model={model} />
-          )}
-          <LocalTaskKeyHints />
-        </div>
-      )}
+    <div className="@container/local-task-page relative flex min-h-0 flex-1 gap-4">
+      {sidebarTaskMode ? null : <LocalTaskNav model={model} />}
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-3">
+        {/* Why not on the dispatcher page: there you talk to the dispatcher in its own panel. */}
+        {dispatcher ? null : <LocalTaskDispatchBox />}
+        {dispatcher ? (
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2">
+            <LocalTaskScopeMenu model={model} className="self-start @3xl/local-task-page:hidden" />
+            <LocalTaskDispatcherView model={model} />
+          </div>
+        ) : needsYou ? (
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2">
+            <LocalTaskScopeMenu model={model} className="self-start @3xl/local-task-page:hidden" />
+            <LocalTaskReviewQueue model={model} />
+            <LocalTaskNeedsYouView model={model} />
+          </div>
+        ) : (
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2">
+            <LocalTaskToolbar model={model} />
+            {hasSelection ? <LocalTaskBatchBar model={model} /> : null}
+            {model.layout === 'list' ? (
+              <LocalTaskList model={model} />
+            ) : (
+              <LocalTaskBoard model={model} />
+            )}
+            <LocalTaskKeyHints />
+          </div>
+        )}
+      </div>
       {previewTask ? <LocalTaskPreview task={previewTask} index={model.index} /> : null}
     </div>
   )

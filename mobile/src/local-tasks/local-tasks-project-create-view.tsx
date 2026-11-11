@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import {
   ActivityIndicator,
   Pressable,
@@ -9,17 +9,24 @@ import {
   View
 } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { Check, ChevronLeft, FilePlus, Layers } from 'lucide-react-native'
+import { Check, ChevronLeft, FilePlus, Square, SquareCheck } from 'lucide-react-native'
 import {
   LOCAL_TASK_PROJECT_NAME_MAX,
   normalizeLocalTaskPrefix
 } from '../../../src/shared/local-tasks/local-task-model'
-import { ConfirmModal } from '../components/ConfirmModal'
+import {
+  suggestLocalTaskPrefix as suggestPrefix,
+  takenLocalTaskPrefixes
+} from '../../../src/shared/local-tasks/local-task-prefix-suggestion'
 import { colors, spacing } from '../theme/mobile-theme'
 import type { LocalTasksApi } from './local-tasks-api'
 import { localTasksCopy } from './local-tasks-copy'
 import { localTaskWriteMessage } from './local-task-failure-message'
-import { createLocalTaskOperationIds, sendLocalTaskWrite } from './local-task-operation-ids'
+import {
+  createLocalTaskOperationIds,
+  sendLocalTaskWrite,
+  type LocalTaskOperationIds
+} from './local-task-operation-ids'
 import { localTaskStyles } from './local-tasks-styles'
 import {
   suggestLocalTaskPrefix,
@@ -37,63 +44,127 @@ type Props = {
   onCreated: (projectId: string) => void
 }
 
-/** What the new project starts from: one of the host's Orca projects, or nothing (REQ-001). */
-type ProjectStart = { kind: 'repo'; choice: OrcaProjectChoice } | { kind: 'empty' }
+type RowState = { selected: boolean; prefix: string; error: string | null }
+
+/** Each repository with a prefix of its own, none taken by the library or by a row above it. */
+export function suggestLocalTaskProjectRows(
+  choices: readonly OrcaProjectChoice[],
+  projects: LocalTasksLibrary['projects']
+): { choice: OrcaProjectChoice; prefix: string }[] {
+  const taken = takenLocalTaskPrefixes(projects)
+  return choices.map((choice) => {
+    const prefix = suggestPrefix(choice.displayName, taken)
+    taken.add(prefix)
+    return { choice, prefix }
+  })
+}
 
 /**
- * Recommends this host's Orca projects, one task project each, or an empty project that only tracks
- * tasks; nothing is created until the user confirms (REQ-001). Repos are added later in settings.
+ * One task project per ticked repository, each with its own editable prefix, or an empty project
+ * that only tracks tasks (REQ-001, as the desktop's "Create selected"). Nothing is created until the
+ * user presses Create; each row's refusal is said on that row, and the rows that went through stay.
  */
 export function LocalTasksProjectCreateView(props: Props) {
   const copy = localTasksCopy()
   const insets = useSafeAreaInsets()
-  const [ids] = useState(() => createLocalTaskOperationIds())
-  const [picked, setPicked] = useState<ProjectStart | null>(null)
+  const choices = props.orcaProjects.state === 'ready' ? props.orcaProjects.projects : []
+  // A row the user edited keeps its own prefix; the rest follow the projects as they are created.
+  const suggestions = useMemo(
+    () => suggestLocalTaskProjectRows(choices, props.library.projects),
+    [choices, props.library.projects]
+  )
+  const [rows, setRows] = useState<Record<string, RowState>>({})
+  const rowIds = useRef(new Map<string, LocalTaskOperationIds>())
+  const [emptyIds] = useState(() => createLocalTaskOperationIds())
+  const [createdId, setCreatedId] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
   const [name, setName] = useState('')
   const [prefixText, setPrefixText] = useState('')
   const [prefixEdited, setPrefixEdited] = useState(false)
-  const [confirming, setConfirming] = useState(false)
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const prefix = normalizeLocalTaskPrefix(prefixText)
-  // Why only a hint: one repo may serve several task projects (D-008).
+  const [emptyError, setEmptyError] = useState<string | null>(null)
+  const rowOf = (id: string, suggested: string): RowState =>
+    rows[id] ?? { selected: false, prefix: suggested, error: null }
+  const patchRow = (id: string, suggested: string, patch: Partial<RowState>) =>
+    setRows((current) => ({ ...current, [id]: { ...rowOf(id, suggested), ...patch } }))
+  const chosen = suggestions.filter(({ choice, prefix }) => rowOf(choice.id, prefix).selected)
+  const emptyPrefix = normalizeLocalTaskPrefix(prefixText)
+  // Why only a hint: one repository may serve several task projects (D-008).
   const linkedNames = (orcaProjectId: string) =>
     props.library.projects
       .filter((project) => project.repos.includes(orcaProjectId))
       .map((project) => project.name)
 
-  const pick = (next: ProjectStart) => {
-    setPicked(next)
-    const displayName = next.kind === 'repo' ? next.choice.displayName : ''
-    setName(displayName.slice(0, LOCAL_TASK_PROJECT_NAME_MAX))
-    setPrefixText(displayName ? suggestLocalTaskPrefix(displayName, props.library.projects) : '')
-    setPrefixEdited(false)
-    setError(null)
+  const createSelected = async () => {
+    if (props.readOnly || busy) {
+      return
+    }
+    setBusy(true)
+    let firstCreated: string | null = null
+    let failed = false
+    for (const { choice, prefix: suggested } of chosen) {
+      const prefix = normalizeLocalTaskPrefix(rowOf(choice.id, suggested).prefix)
+      if (!prefix) {
+        failed = true
+        patchRow(choice.id, suggested, { error: copy.prefixInvalid })
+        continue
+      }
+      let ids = rowIds.current.get(choice.id)
+      if (!ids) {
+        ids = createLocalTaskOperationIds()
+        rowIds.current.set(choice.id, ids)
+      }
+      const outcome = await sendLocalTaskWrite(
+        ids,
+        {
+          name: choice.displayName.slice(0, LOCAL_TASK_PROJECT_NAME_MAX),
+          prefix,
+          repos: [choice.id],
+          statusNames: copy.defaultStatusNames
+        },
+        props.api.createProject
+      )
+      if (outcome.kind === 'ok') {
+        firstCreated ??= outcome.value.project.id
+        patchRow(choice.id, suggested, { selected: false, error: null })
+      } else {
+        failed = true
+        patchRow(choice.id, suggested, { error: localTaskWriteMessage(copy, outcome) })
+      }
+    }
+    setBusy(false)
+    props.library.reload(['projects'])
+    if (firstCreated && !failed) {
+      props.onCreated(firstCreated)
+    } else if (firstCreated) {
+      setCreatedId(firstCreated)
+    }
   }
 
-  const create = async () => {
-    setConfirming(false)
-    if (props.readOnly || !picked || !prefix) {
+  const createEmpty = async () => {
+    if (props.readOnly || busy || !emptyPrefix || !name.trim()) {
       return
     }
     setBusy(true)
     const outcome = await sendLocalTaskWrite(
-      ids,
-      {
-        name: name.trim(),
-        prefix,
-        ...(picked.kind === 'repo' ? { repos: [picked.choice.id] } : {}),
-        statusNames: copy.defaultStatusNames
-      },
+      emptyIds,
+      { name: name.trim(), prefix: emptyPrefix, statusNames: copy.defaultStatusNames },
       props.api.createProject
     )
     setBusy(false)
-    setError(localTaskWriteMessage(copy, outcome))
+    setEmptyError(localTaskWriteMessage(copy, outcome))
     props.library.reload(['projects'])
     if (outcome.kind === 'ok') {
       props.onCreated(outcome.value.project.id)
     }
   }
+
+  const canCreateEmpty = !props.readOnly && !busy && emptyPrefix !== null && name.trim() !== ''
+  // Said only for what was typed: an empty field is what the disabled button is waiting for.
+  const emptyHint = !name.trim()
+    ? copy.nameRequired
+    : prefixText && !emptyPrefix
+      ? copy.prefixInvalid
+      : null
 
   return (
     <View style={[localTaskStyles.screen, { paddingTop: insets.top }]}>
@@ -114,120 +185,176 @@ export function LocalTasksProjectCreateView(props: Props) {
         keyboardShouldPersistTaps="handled"
       >
         <Text style={localTaskStyles.hint}>{copy.newProjectHint}</Text>
-        <Pressable
-          testID="local-tasks-new-empty-project"
-          style={[localTaskStyles.card, localTaskStyles.cardRow, styles.gap]}
-          onPress={() => pick({ kind: 'empty' })}
-          accessibilityRole="radio"
-          accessibilityState={{ selected: picked?.kind === 'empty' }}
-        >
-          <FilePlus size={16} color={colors.textSecondary} />
-          <View style={styles.choiceText}>
-            <Text style={localTaskStyles.body}>{copy.emptyProject}</Text>
-            <Text style={localTaskStyles.meta} numberOfLines={1}>
-              {copy.emptyProjectHint}
-            </Text>
-          </View>
-          {picked?.kind === 'empty' ? <Check size={16} color={colors.textPrimary} /> : null}
-        </Pressable>
         {props.orcaProjects.state === 'loading' ? (
           <ActivityIndicator color={colors.textSecondary} />
         ) : null}
         {props.orcaProjects.state === 'unavailable' ? (
           <Text style={[localTaskStyles.hint, styles.gap]}>{copy.orcaProjectsUnavailable}</Text>
         ) : null}
-        {props.orcaProjects.state === 'ready' && props.orcaProjects.projects.length === 0 ? (
+        {props.orcaProjects.state === 'ready' && suggestions.length === 0 ? (
           <Text style={[localTaskStyles.hint, styles.gap]}>{copy.noOrcaProjects}</Text>
         ) : null}
-        {props.orcaProjects.state === 'ready' && props.orcaProjects.projects.length > 0 ? (
-          <View style={[localTaskStyles.card, styles.gap]}>
-            {props.orcaProjects.projects.map((choice, index) => {
-              const linked = linkedNames(choice.id)
-              const selected = picked?.kind === 'repo' && picked.choice.id === choice.id
-              return (
-                <Pressable
-                  key={choice.id}
-                  style={[localTaskStyles.cardRow, index === 0 && localTaskStyles.cardRowFirst]}
-                  onPress={() => pick({ kind: 'repo', choice })}
-                  accessibilityRole="radio"
-                  accessibilityState={{ selected }}
-                >
-                  <Layers size={16} color={colors.textSecondary} />
-                  <View style={styles.choiceText}>
-                    <Text style={localTaskStyles.body}>{choice.displayName}</Text>
-                    <Text style={localTaskStyles.meta} numberOfLines={1}>
-                      {linked.length > 0
-                        ? copy.orcaProjectLinked(linked.join('、'))
-                        : choice.setupNames.join(' · ')}
-                    </Text>
-                  </View>
-                  {selected ? <Check size={16} color={colors.textPrimary} /> : null}
-                </Pressable>
-              )
-            })}
-          </View>
-        ) : null}
-        {picked ? (
+        {suggestions.length > 0 ? (
           <>
-            <Text style={localTaskStyles.sectionLabel}>{copy.name}</Text>
-            <TextInput
-              style={localTaskStyles.input}
-              value={name}
-              maxLength={LOCAL_TASK_PROJECT_NAME_MAX}
-              onChangeText={(next) => {
-                setName(next)
-                if (!prefixEdited && picked.kind === 'empty') {
-                  setPrefixText(
-                    next.trim() ? suggestLocalTaskPrefix(next, props.library.projects) : ''
-                  )
-                }
-              }}
-            />
-            <Text style={localTaskStyles.sectionLabel}>{copy.prefix}</Text>
-            <TextInput
-              style={localTaskStyles.input}
-              value={prefixText}
-              autoCapitalize="characters"
-              autoCorrect={false}
-              maxLength={10}
-              onChangeText={(value) => {
-                setPrefixEdited(true)
-                setPrefixText(value.toUpperCase())
-              }}
-            />
-            {prefix ? null : (
-              <Text style={[localTaskStyles.errorText, styles.below]}>{copy.prefixInvalid}</Text>
-            )}
-            {error ? <Text style={[localTaskStyles.errorText, styles.below]}>{error}</Text> : null}
-            <Pressable
-              style={[
-                localTaskStyles.primaryButton,
-                styles.gap,
-                (props.readOnly || !prefix || !name.trim() || busy) && localTaskStyles.disabled
-              ]}
-              disabled={props.readOnly || !prefix || !name.trim() || busy}
-              onPress={() => setConfirming(true)}
-              accessibilityRole="button"
-            >
-              {busy ? (
-                <ActivityIndicator size="small" color={colors.bgBase} />
-              ) : (
-                <Check size={16} color={colors.bgBase} />
-              )}
-              <Text style={localTaskStyles.primaryButtonText}>{copy.create}</Text>
-            </Pressable>
+            <View style={[localTaskStyles.card, styles.gap]}>
+              {suggestions.map(({ choice, prefix: suggested }, index) => {
+                const row = rowOf(choice.id, suggested)
+                const linked = linkedNames(choice.id)
+                const Box = row.selected ? SquareCheck : Square
+                return (
+                  <View
+                    key={choice.id}
+                    style={[styles.repoRow, index === 0 && localTaskStyles.cardRowFirst]}
+                  >
+                    <View style={styles.repoLine}>
+                      <Pressable
+                        testID={`local-tasks-new-project-${choice.id}`}
+                        style={styles.repoPick}
+                        disabled={props.readOnly || busy}
+                        onPress={() =>
+                          patchRow(choice.id, suggested, { selected: !row.selected, error: null })
+                        }
+                        accessibilityRole="checkbox"
+                        accessibilityState={{
+                          checked: row.selected,
+                          disabled: props.readOnly || busy
+                        }}
+                        accessibilityLabel={choice.displayName}
+                      >
+                        <Box
+                          size={18}
+                          color={row.selected ? colors.textPrimary : colors.textSecondary}
+                        />
+                        <View style={styles.choiceText}>
+                          <Text style={localTaskStyles.body} numberOfLines={1}>
+                            {choice.displayName}
+                          </Text>
+                          <Text style={localTaskStyles.meta} numberOfLines={1}>
+                            {linked.length > 0
+                              ? copy.orcaProjectLinked(linked.join(', '))
+                              : choice.setupNames.join(' · ')}
+                          </Text>
+                        </View>
+                      </Pressable>
+                      <TextInput
+                        style={[localTaskStyles.input, styles.prefixInput]}
+                        value={row.prefix}
+                        editable={!props.readOnly && !busy}
+                        autoCapitalize="characters"
+                        autoCorrect={false}
+                        maxLength={10}
+                        accessibilityLabel={copy.prefixFor(choice.displayName)}
+                        onChangeText={(value) =>
+                          patchRow(choice.id, suggested, {
+                            prefix: value.toUpperCase(),
+                            error: null
+                          })
+                        }
+                      />
+                    </View>
+                    {row.error ? (
+                      <Text style={[localTaskStyles.errorText, styles.rowError]}>{row.error}</Text>
+                    ) : null}
+                  </View>
+                )
+              })}
+            </View>
+            <View style={styles.actions}>
+              {createdId ? (
+                <Pressable
+                  style={localTaskStyles.secondaryButton}
+                  disabled={busy}
+                  onPress={() => props.onCreated(createdId)}
+                  accessibilityRole="button"
+                >
+                  <Text style={localTaskStyles.secondaryButtonText}>
+                    {copy.continueWithCreated}
+                  </Text>
+                </Pressable>
+              ) : null}
+              <Pressable
+                testID="local-tasks-create-selected"
+                style={[
+                  localTaskStyles.primaryButton,
+                  (props.readOnly || busy || chosen.length === 0) && localTaskStyles.disabled
+                ]}
+                disabled={props.readOnly || busy || chosen.length === 0}
+                onPress={() => void createSelected()}
+                accessibilityRole="button"
+              >
+                {busy ? (
+                  <ActivityIndicator size="small" color={colors.bgBase} />
+                ) : (
+                  <Check size={16} color={colors.bgBase} />
+                )}
+                <Text style={localTaskStyles.primaryButtonText}>
+                  {copy.createSelected(chosen.length)}
+                </Text>
+              </Pressable>
+            </View>
           </>
         ) : null}
+        <Text style={localTaskStyles.sectionLabel}>{copy.emptyProjectTitle}</Text>
+        <View style={styles.emptyHead}>
+          <FilePlus size={16} color={colors.textSecondary} />
+          <Text style={localTaskStyles.meta}>{copy.emptyProjectHint}</Text>
+        </View>
+        <Text style={localTaskStyles.sectionLabel}>{copy.name}</Text>
+        <TextInput
+          testID="local-tasks-new-empty-project"
+          style={localTaskStyles.input}
+          value={name}
+          maxLength={LOCAL_TASK_PROJECT_NAME_MAX}
+          editable={!props.readOnly && !busy}
+          onChangeText={(next) => {
+            setName(next)
+            setEmptyError(null)
+            if (!prefixEdited) {
+              setPrefixText(next.trim() ? suggestLocalTaskPrefix(next, props.library.projects) : '')
+            }
+          }}
+        />
+        <Text style={localTaskStyles.sectionLabel}>{copy.prefix}</Text>
+        <TextInput
+          style={localTaskStyles.input}
+          value={prefixText}
+          editable={!props.readOnly && !busy}
+          autoCapitalize="characters"
+          autoCorrect={false}
+          maxLength={10}
+          onChangeText={(value) => {
+            setPrefixEdited(true)
+            setEmptyError(null)
+            setPrefixText(value.toUpperCase())
+          }}
+        />
+        {emptyHint ? (
+          <Text
+            style={[
+              emptyHint === copy.nameRequired ? localTaskStyles.hint : localTaskStyles.errorText,
+              styles.below
+            ]}
+          >
+            {emptyHint}
+          </Text>
+        ) : null}
+        {emptyError ? (
+          <Text style={[localTaskStyles.errorText, styles.below]}>{emptyError}</Text>
+        ) : null}
+        <Pressable
+          style={[
+            localTaskStyles.secondaryButton,
+            styles.gap,
+            !canCreateEmpty && localTaskStyles.disabled
+          ]}
+          disabled={!canCreateEmpty}
+          onPress={() => void createEmpty()}
+          accessibilityRole="button"
+          accessibilityState={{ disabled: !canCreateEmpty }}
+        >
+          <Text style={localTaskStyles.secondaryButtonText}>{copy.createEmptyProject}</Text>
+        </Pressable>
       </ScrollView>
-      <ConfirmModal
-        visible={confirming}
-        title={copy.confirmCreateProject(name.trim(), prefix ?? '')}
-        message={copy.confirmCreateProjectMessage}
-        confirmLabel={copy.create}
-        cancelLabel={copy.cancel}
-        onConfirm={() => void create()}
-        onCancel={() => setConfirming(false)}
-      />
     </View>
   )
 }
@@ -237,5 +364,25 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm, gap: spacing.xs },
   gap: { marginTop: spacing.md },
   below: { marginTop: spacing.xs },
-  choiceText: { flex: 1, gap: 2 }
+  repoRow: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.borderSubtle,
+    gap: 4
+  },
+  repoLine: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  repoPick: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  prefixInput: { width: 96 },
+  rowError: { paddingLeft: 26 },
+  choiceText: { flex: 1, gap: 2 },
+  // Why wrap: two long labels overflow a 320–390pt row and push the first button off-screen.
+  actions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'flex-end',
+    gap: spacing.sm,
+    marginTop: spacing.md
+  },
+  emptyHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm }
 })

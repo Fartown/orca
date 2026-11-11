@@ -10,6 +10,8 @@ const surface = z.enum(['terminal', 'chat'])
 
 export const LocalTasksLinksListParams = z.object({})
 
+export const LocalTasksLinksPrepareSessionParams = z.object({ sessionLinkId: id })
+
 // Every `hostId`, `tabId` and `paneKey` below is in the library owner's own form, never a client's.
 export const LocalTasksLinksLinkWorkspaceParams = z
   .object({

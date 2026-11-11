@@ -99,7 +99,9 @@ describe('Local tasks tab rows (REQ-011)', () => {
       { inContact: false, connection: 'live', hostState: 'ready' },
       'Studio'
     )
-    expect(blocked).toBe('Studio is not connected, so tasks cannot be linked now.')
+    expect(blocked).toBe(
+      'Studio is not connected, so tasks can’t be linked now. The tasks below are as last read.'
+    )
     const listed = rows('order', blocked)
     expect(listed[0]).toMatchObject({ task: null, disabled: true, note: blocked })
     expect(listed.slice(1).every((row) => row.disabled)).toBe(true)

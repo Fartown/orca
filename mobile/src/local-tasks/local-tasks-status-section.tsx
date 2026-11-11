@@ -108,6 +108,11 @@ export function LocalTasksStatusSection(props: {
 
   const menuStatus = dialog?.kind === 'menu' ? dialog.status : null
   const removing = dialog?.kind === 'remove' ? dialog : null
+  // Why said in the menu: the host would refuse these, so the actions say why they are off.
+  const menuPeers = menuStatus
+    ? ordered.filter((entry) => entry.category === menuStatus.category)
+    : []
+  const menuAt = menuStatus ? menuPeers.findIndex((entry) => entry.id === menuStatus.id) : -1
   return (
     <View>
       <Text style={localTaskStyles.sectionLabel}>{copy.statusesSection}</Text>
@@ -165,12 +170,27 @@ export function LocalTasksStatusSection(props: {
                   icon: Palette,
                   onPress: () => setDialog({ kind: 'color', status: menuStatus })
                 },
-                { label: copy.moveUp, icon: ArrowUp, onPress: () => void move(menuStatus, -1) },
-                { label: copy.moveDown, icon: ArrowDown, onPress: () => void move(menuStatus, 1) },
+                {
+                  label: copy.moveUp,
+                  icon: ArrowUp,
+                  ...(menuAt <= 0 ? { disabled: true, hint: copy.firstInCategory } : {}),
+                  onPress: () => void move(menuStatus, -1)
+                },
+                {
+                  label: copy.moveDown,
+                  icon: ArrowDown,
+                  ...(menuAt >= menuPeers.length - 1
+                    ? { disabled: true, hint: copy.lastInCategory }
+                    : {}),
+                  onPress: () => void move(menuStatus, 1)
+                },
                 {
                   label: copy.deleteStatus,
                   icon: Trash2,
                   destructive: true,
+                  ...(menuPeers.length <= 1
+                    ? { disabled: true, hint: copy.lastStatusInCategory }
+                    : {}),
                   onPress: () =>
                     setDialog({
                       kind: 'remove',
@@ -252,9 +272,9 @@ export function LocalTasksStatusSection(props: {
       />
       <ConfirmModal
         visible={removing !== null && removing.taskCount === 0}
-        title={copy.deleteStatus}
-        message={removing?.status.name}
-        confirmLabel={copy.delete}
+        title={copy.removeStatusTitle(removing?.status.name ?? '')}
+        message={copy.removeStatusUnused}
+        confirmLabel={copy.deleteStatus}
         cancelLabel={copy.cancel}
         destructive
         onConfirm={() => {

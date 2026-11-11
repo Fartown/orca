@@ -3,11 +3,7 @@ import type { LocalTask } from '../../../src/shared/local-tasks/local-task-types
 import type { LocalTasksApi, LocalTaskWriteOutcome } from './local-tasks-api'
 import type { LocalTasksCopy } from './local-tasks-copy'
 import { localTaskWriteMessage } from './local-task-failure-message'
-import {
-  localTaskDraftTexts,
-  parseLocalTaskLabels,
-  type LocalTaskDraft
-} from './local-task-form-state'
+import { parseLocalTaskLabels, type LocalTaskDraft } from './local-task-form-state'
 import { createLocalTaskOperationIds, sendLocalTaskWrite } from './local-task-operation-ids'
 import type { LocalTasksLibrary } from './use-local-tasks-library'
 
@@ -21,8 +17,7 @@ export function useLocalTaskSubtaskBatch(
 ) {
   const [ids] = useState(() => ({
     subtasks: createLocalTaskOperationIds(),
-    batch: createLocalTaskOperationIds(),
-    criteria: createLocalTaskOperationIds()
+    batch: createLocalTaskOperationIds()
   }))
   const [partialTaskId, setPartialTaskId] = useState<string | null>(null)
   const [subtaskRetryPending, setSubtaskRetryPending] = useState(false)
@@ -44,10 +39,6 @@ export function useLocalTaskSubtaskBatch(
         removeLabels?: string[]
       }
     } | null
-    criteriaKey: string | null
-    criteriaDone: number
-    criteriaClearing: boolean
-    criteriaUnsettled: { taskId: string; criteria: string[] } | null
   } | null>(null)
   const fail = (outcome: LocalTaskWriteOutcome<unknown>) => {
     setError(localTaskWriteMessage(copy, outcome))
@@ -84,11 +75,7 @@ export function useLocalTaskSubtaskBatch(
           batchKey: null,
           batchLabels: [],
           batchPriorityWritten: false,
-          batchUnsettled: null,
-          criteriaKey: null,
-          criteriaDone: 0,
-          criteriaClearing: false,
-          criteriaUnsettled: null
+          batchUnsettled: null
         }
         setPartialTaskId(parent.id)
       }
@@ -145,52 +132,6 @@ export function useLocalTaskSubtaskBatch(
       pending.batchKey = batchKey
       pending.batchLabels = labels
       pending.batchPriorityWritten = batchPatch.priority !== undefined
-      if (pending.criteriaUnsettled) {
-        const unsettled = pending.criteriaUnsettled
-        const settled = await sendLocalTaskWrite(
-          ids.criteria,
-          { taskId: unsettled.taskId, patch: { criteria: unsettled.criteria } },
-          api.updateTask
-        )
-        if (settled.kind !== 'ok') {
-          if (settled.kind !== 'unknown') {
-            pending.criteriaUnsettled = null
-          }
-          setError(`${copy.subtasksPartiallySaved} ${localTaskWriteMessage(copy, settled) ?? ''}`)
-          return false
-        }
-        library.acceptTasks([settled.value.task])
-        pending.criteriaDone += 1
-        pending.criteriaUnsettled = null
-      }
-      const criteria = localTaskDraftTexts(draft.criteria)
-      const criteriaKey = JSON.stringify(criteria)
-      if (pending.criteriaKey !== criteriaKey) {
-        pending.criteriaClearing =
-          criteria.length === 0 && pending.criteriaKey !== null && pending.criteriaKey !== '[]'
-        pending.criteriaDone = 0
-        pending.criteriaKey = criteriaKey
-      }
-      while (
-        pending.criteriaDone < pending.tasks.length &&
-        (criteria.length > 0 || pending.criteriaClearing)
-      ) {
-        const task = pending.tasks[pending.criteriaDone]
-        const updated = await sendLocalTaskWrite(
-          ids.criteria,
-          { taskId: task.id, patch: { criteria } },
-          api.updateTask
-        )
-        if (updated.kind !== 'ok') {
-          if (updated.kind === 'unknown') {
-            pending.criteriaUnsettled = { taskId: task.id, criteria }
-          }
-          setError(`${copy.subtasksPartiallySaved} ${localTaskWriteMessage(copy, updated) ?? ''}`)
-          return false
-        }
-        library.acceptTasks([updated.value.task])
-        pending.criteriaDone += 1
-      }
       pendingSubtasks.current = null
       subtaskIntent.current = null
       setSubtaskRetryPending(false)

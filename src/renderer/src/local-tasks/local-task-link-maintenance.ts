@@ -119,7 +119,11 @@ export function findLocalTaskPrMergedTriggers(
   const triggers: LocalTaskPrMergedTrigger[] = []
   for (const link of library.links.workspaces) {
     const open = link.kind === 'git-worktree' ? openLinkedTask(library, link.taskId) : null
-    if (!open?.project.rules.prMergedCompletes) {
+    if (
+      !open ||
+      (open.project.rules.prMergedMode ??
+        (open.project.rules.prMergedCompletes ? 'completed' : 'none')) === 'none'
+    ) {
       continue
     }
     const located = selectLocalTaskWorkspace(state, link)

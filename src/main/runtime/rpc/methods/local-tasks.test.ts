@@ -9,7 +9,10 @@ import {
   hasAppEnvironment,
   setAppEnvironment
 } from '../../../../shared/app-environment'
-import { LOCAL_TASKS_RUNTIME_CAPABILITY } from '../../../../shared/local-tasks/local-tasks-capability'
+import {
+  LOCAL_TASKS_RUNTIME_CAPABILITY,
+  LOCAL_TASKS_V2_RUNTIME_CAPABILITY
+} from '../../../../shared/local-tasks/local-tasks-capability'
 import { startOrcadLocalTasks } from '../../../local-tasks/orcad-local-tasks'
 import { ensureActiveOrcaProfile } from '../../../orca-profiles/profile-index-store'
 import { getLocalTasksDatabasePath } from '../../../local-tasks/local-tasks-database'
@@ -22,6 +25,10 @@ import {
 } from '../../runtime-rpc/fork-mobile-rpc-method-allowlist'
 import { isDesktopClientCaller, sourceOf } from '../../../local-tasks/local-tasks-rpc-caller'
 import { ALL_RPC_METHODS } from './index'
+import {
+  LOCAL_TASK_DISPATCHER_DESKTOP_METHODS,
+  LOCAL_TASK_DISPATCHER_SESSION_METHODS
+} from './local-task-dispatcher-methods'
 import { LOCAL_TASK_DESKTOP_ONLY_METHODS } from './local-task-link-methods'
 import { LOCAL_TASK_METHODS } from './local-tasks'
 
@@ -64,7 +71,9 @@ describe('localTasks RPC', () => {
     for (const name of names) {
       const phoneMay =
         !name.startsWith('localTasks.preferences.') &&
-        !LOCAL_TASK_DESKTOP_ONLY_METHODS.includes(name)
+        !LOCAL_TASK_DESKTOP_ONLY_METHODS.includes(name) &&
+        !LOCAL_TASK_DISPATCHER_DESKTOP_METHODS.includes(name) &&
+        !LOCAL_TASK_DISPATCHER_SESSION_METHODS.includes(name)
       expect(isMobileRpcMethodAllowed(name)).toBe(phoneMay)
       // What a phone may call it may also aim at a server through its desktop.
       expect(isForkExecutionHostRelayMethod(name)).toBe(phoneMay)
@@ -111,7 +120,10 @@ describe('localTasks RPC', () => {
       state: 'ready',
       projectCount: 0
     })
-    expect(localTasksRuntimeCapabilities()).toEqual([LOCAL_TASKS_RUNTIME_CAPABILITY])
+    expect(localTasksRuntimeCapabilities()).toEqual([
+      LOCAL_TASKS_RUNTIME_CAPABILITY,
+      LOCAL_TASKS_V2_RUNTIME_CAPABILITY
+    ])
     const service = localTasksReadiness.requireService()
     const project = service.createProject({ clientOperationId: 'p1', name: '调研', prefix: 'RS' })
     expect(localTasksReadiness.status()).toMatchObject({ projectCount: 1 })
@@ -157,7 +169,10 @@ describe('orcad task library', () => {
       }
     })
     expect(localTasksReadiness.status()).toMatchObject({ taskHost: true, state: 'ready' })
-    expect(localTasksRuntimeCapabilities()).toEqual([LOCAL_TASKS_RUNTIME_CAPABILITY])
+    expect(localTasksRuntimeCapabilities()).toEqual([
+      LOCAL_TASKS_RUNTIME_CAPABILITY,
+      LOCAL_TASKS_V2_RUNTIME_CAPABILITY
+    ])
     // No linked session yet: the host's status changes are not even subscribed.
     expect(watching.size).toBe(0)
     const service = localTasksReadiness.requireService()

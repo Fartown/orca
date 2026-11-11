@@ -70,6 +70,8 @@ type GroupInput = {
   projectId: string | null
   segment: LocalTaskSegment
   filter?: LocalTaskFilter
+  /** The tasks "Needs you" holds, which the filter's `needsYou` narrows to. */
+  needingYou?: ReadonlySet<string>
 }
 
 export function buildLocalTaskGroups(
@@ -78,7 +80,12 @@ export function buildLocalTaskGroups(
   const index = buildLocalTaskIndex(input.projects, input.tasks)
   const scope = tasksInScope(input.tasks, input.projectId)
   const filter = input.filter ?? EMPTY_LOCAL_TASK_FILTER
-  const visibility = { view: input.segment, filters: filter, query: filter.query }
+  const visibility = {
+    view: input.segment,
+    filters: filter,
+    query: filter.query,
+    ...(filter.needsYou ? { onlyTaskIds: input.needingYou ?? new Set<string>() } : {})
+  }
   const row = (task: LocalTask, subtasks: LocalTaskTreeLine[]): LocalTaskListRow => {
     const progress = localTaskSubtaskProgress(task, index)
     return { task, subtasks, subtaskDone: progress?.done ?? 0, subtaskTotal: progress?.total ?? 0 }

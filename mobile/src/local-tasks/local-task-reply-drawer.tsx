@@ -6,7 +6,8 @@ import { localTasksCopy } from './local-tasks-copy'
 
 /**
  * The reply box of one "Needs you" item. The draft is the caller's, so closing keeps it; out of
- * contact the box is disabled and says it is reconnecting, as the phone's chat composer does.
+ * contact the box is disabled, says it is reconnecting as the phone's chat composer does, and says
+ * above it why Send is off.
  */
 export function LocalTaskReplyDrawer(props: {
   visible: boolean
@@ -14,6 +15,8 @@ export function LocalTaskReplyDrawer(props: {
   message?: string
   draft: string
   connected: boolean
+  /** The library's Orca, named in the out-of-contact line. */
+  hostLabel: string
   onChangeDraft: (draft: string) => void
   onSend: (text: string) => void
   onClose: () => void
@@ -26,6 +29,11 @@ export function LocalTaskReplyDrawer(props: {
       <View style={styles.header}>
         <Text style={styles.title}>{props.title}</Text>
         {props.message ? <Text style={styles.message}>{props.message}</Text> : null}
+        {props.connected ? null : (
+          <Text style={styles.offline} testID="local-task-reply-offline">
+            {copy.work.replyDisconnected(props.hostLabel)}
+          </Text>
+        )}
       </View>
       <TextInput
         testID="local-task-reply-input"
@@ -70,6 +78,7 @@ const styles = StyleSheet.create({
   header: { paddingHorizontal: spacing.xs, paddingBottom: spacing.sm },
   title: { fontSize: 15, fontWeight: '600', color: colors.textPrimary },
   message: { fontSize: 13, color: colors.textMuted, marginTop: 2 },
+  offline: { fontSize: 13, color: colors.statusAmber, marginTop: spacing.xs },
   input: {
     backgroundColor: colors.bgRaised,
     color: colors.textPrimary,

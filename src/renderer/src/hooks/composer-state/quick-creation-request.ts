@@ -61,6 +61,7 @@ export type QuickSubmitOptions = {
   launchChoice?: AgentLaunchChoice
   /** Replaces the linked-work-item prompt when an agent is chosen, left unsent as its draft. */
   launchPrompt?: string
+  launchPromptDelivery?: 'draft' | 'auto-submit'
   onCreationStarted?: (creationId: string) => void
 }
 

@@ -83,6 +83,21 @@ describe('Cmd+J local task results', () => {
     expect(item.task.title).toBe('Ship notes')
   })
 
+  it('marks only the rows of a library whose Orca is out of contact as unconfirmed', () => {
+    const paired = { ...task(3, 'Ship labels'), id: 'runtime:env-1/orc-3' }
+    const items = buildLocalTaskPaletteItems(
+      [orca],
+      [...library, paired],
+      'ship',
+      undefined,
+      new Set(['runtime:env-1'])
+    )
+    expect(items.map((item) => [item.task.title, item.unverifiable])).toEqual([
+      ['Ship notes', false],
+      ['Ship labels', true]
+    ])
+  })
+
   it('leaves the upstream action first for the generic verbs it answers to', () => {
     expect(catalogIds('create')).toEqual([CREATE_WORKSPACE_QUICK_ACTION_ID])
     expect(catalogIds('creat')).toEqual([CREATE_WORKSPACE_QUICK_ACTION_ID])

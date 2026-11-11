@@ -19,4 +19,20 @@ describe('mobile local task refusal copy', () => {
       localTaskWriteMessage(copy, { kind: 'refused', code: 'future_code', detail: null })
     ).toBe(copy.failureGeneric('future_code'))
   })
+
+  it('names the task holding a workspace by its title, and keeps the ref when none is loaded', () => {
+    const copy = localTasksCopy()
+    const refused = {
+      kind: 'refused' as const,
+      code: 'workspace_already_linked',
+      detail: 'SHOP-12'
+    }
+    const tasks = [{ ref: 'SHOP-12', title: 'Export orders as CSV' }]
+    expect(localTaskWriteMessage(copy, refused, tasks)).toBe(
+      copy.failures.workspace_already_linked('Export orders as CSV')
+    )
+    expect(localTaskWriteMessage(copy, refused, [])).toBe(
+      copy.failures.workspace_already_linked('SHOP-12')
+    )
+  })
 })

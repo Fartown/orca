@@ -33,6 +33,7 @@ vi.mock('@/components/native-chat/structured-agent-session-message-sender', () =
 }))
 
 import { sendMessageToAgent } from './agent-message-send'
+import { sendNotesToActiveAgentSession } from './active-agent-note-send'
 import { activeAgentNotesSendFailureMessage } from './active-agent-note-send-result'
 
 function sendNotes() {
@@ -47,6 +48,20 @@ beforeEach(() => {
   mocks.send.mockReset()
   mocks.relaunch.mockClear()
   mocks.launch.lifecycle = null
+})
+
+it('passes an optional wake guard through the selected terminal send', async () => {
+  vi.mocked(sendNotesToActiveAgentSession).mockResolvedValueOnce({ status: 'sent' })
+  const guard = vi.fn(() => true)
+  await sendMessageToAgent({
+    worktreeId: 'wt-1',
+    target: { kind: 'terminal', tabId: 'tab-1', leafId: 'leaf-1' },
+    prompt: 'wake',
+    beforeTerminalSend: guard
+  })
+  expect(sendNotesToActiveAgentSession).toHaveBeenCalledWith(
+    expect.objectContaining({ beforeTerminalSend: guard })
+  )
 })
 
 // Notes clear only when their message is recorded; any other end keeps them with the caller.

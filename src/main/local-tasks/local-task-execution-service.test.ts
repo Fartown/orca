@@ -405,6 +405,13 @@ describe('task workspace links', () => {
 describe('merged PR rule', () => {
   it('completes the task holding the PR’s workspace once and never re-completes it', () => {
     const { service, work, project, status, task, statusOf } = setup()
+    expect(
+      service.updateProject({
+        clientOperationId: op(),
+        projectId: project.id,
+        rules: { prMergedMode: 'completed' }
+      })
+    ).toMatchObject({ ok: true })
     const parent = task('订单导出')
     const child = task('后端', parent.id)
     linkWorktree(work, child.id, SHOP)
@@ -462,7 +469,6 @@ describe('host attention judgment', () => {
     linkWorktree(context.work, parent.id, `${SHOP}-${parent.number}`)
     return { task: parent, session: recordTerminal(context.work, parent.id, ids) }
   }
-
   it('sorts this host’s statuses into the four kinds and leaves the rest alone', () => {
     const context = setup()
     const { work, host } = context
@@ -470,7 +476,21 @@ describe('host attention judgment', () => {
     const sessions = panes.map((paneKey) => linkedSession(context, { paneKey }).session)
     const approval = JSON.stringify({ approval: { tool: 'Bash', summary: 'rm -rf build' } })
     host.report(panes[0], { state: 'waiting', interactivePrompt: approval })
-    host.report(panes[1], { state: 'waiting', toolName: 'AskUserQuestion' })
+    const ask = JSON.stringify({
+      questions: [
+        {
+          question: '子任务要不要跟父任务一起折叠？',
+          multiSelect: false,
+          options: [{ label: '要' }, { label: '不要' }]
+        }
+      ]
+    })
+    host.report(panes[1], {
+      state: 'waiting',
+      toolName: 'AskUserQuestion',
+      interactivePrompt: ask,
+      lastAssistantMessage: '先确认一个问题。'
+    })
     host.report(panes[2], { state: 'blocked' })
     host.report(panes[3], {
       state: 'done',
@@ -502,6 +522,10 @@ describe('host attention judgment', () => {
       agent: 'claude',
       lastMessage: '导出接口好了'
     })
+    // The question itself, not the prose before it, says what to answer.
+    expect(progress.items.find((item) => item.kind === 'question')?.lastMessage).toBe(
+      '子任务要不要跟父任务一起折叠？'
+    )
     expect(progress.sessions.find((s) => s.taskSessionId === sessions[6].id)).toMatchObject({
       state: 'working'
     })

@@ -16,9 +16,12 @@ import { useMobileTranslation } from '../i18n/use-mobile-translation'
 import { TaskProviderLogo } from './TaskProviderLogo'
 import { TextField } from './composer-input/TextField'
 import { LIST_LEADING_INSET, ListGroup, SectionHeader, ListRow } from './list/ListGroup'
+import { LocalTaskCreateSourcePill } from '../local-tasks/local-task-create-source-views'
+import type { LocalTaskCreateSource } from '../local-tasks/use-local-task-create-source'
 
 type Props = {
   composer: MobileComposerSource
+  localTaskSource?: LocalTaskCreateSource | null
   label: string
   disabled?: boolean
   onOpenExternalUrl: (url: string) => void
@@ -48,6 +51,7 @@ function SelectionIcon({ kind }: { kind: SmartNameSelection['kind'] }) {
 /** The form's "Start from" section: a name, or the source a workspace is created from. */
 export function SmartWorkspaceSourceField({
   composer,
+  localTaskSource,
   label,
   disabled,
   onOpenExternalUrl,
@@ -73,7 +77,9 @@ export function SmartWorkspaceSourceField({
         title={label}
         trailing={t('components.smartWorkspaceSourceField.optionalLabel', 'Optional')}
       />
-      {selection ? (
+      {localTaskSource?.picked ? (
+        <LocalTaskCreateSourcePill task={localTaskSource.picked} onClear={localTaskSource.clear} />
+      ) : selection ? (
         <ListGroup separatorInset={LIST_LEADING_INSET}>
           <ListRow
             key="selection"

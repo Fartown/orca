@@ -4,7 +4,8 @@ import type { WorktreeCreationCompleted } from './local-task-creation-events'
 
 const fixture = vi.hoisted(() => ({
   linkWorkspace: vi.fn(),
-  recordSession: vi.fn()
+  recordSession: vi.fn(),
+  setPreference: vi.fn()
 }))
 
 vi.mock('@/store', async () => {
@@ -14,7 +15,8 @@ vi.mock('@/store', async () => {
 vi.mock('./local-tasks-runtime-client', () => ({
   localTasksClient: {
     linkWorkspace: fixture.linkWorkspace,
-    recordSession: fixture.recordSession
+    recordSession: fixture.recordSession,
+    setPreference: fixture.setPreference
   }
 }))
 
@@ -23,6 +25,8 @@ import { makeWorktree } from '@/store/slices/worktrees-slice-test-fixtures'
 import { getDefaultSettings } from '../../../shared/constants'
 import { notifyWorktreeCreationCompleted } from './local-task-creation-events'
 import { localTasksDomainStore } from './local-tasks-domain-store'
+import { localTaskPageStore } from './local-task-page-store'
+import { LOCAL_ACTIVE_PREFERENCE_KEY } from './local-task-preference-keys'
 import {
   LOCAL_TASK_COMPOSER_KEY,
   bindLocalTaskStartWork,
@@ -82,9 +86,11 @@ beforeEach(() => {
     }
   })
   localTasksDomainStore.getState().openEndpoint('local')
+  localTaskPageStore.setState(localTaskPageStore.getInitialState())
   localTasksDomainStore.getState().writer('local').applyTasks([task])
   fixture.linkWorkspace.mockResolvedValue({ ok: true, workspace: {} })
   fixture.recordSession.mockResolvedValue({ ok: true, session: {} })
+  fixture.setPreference.mockResolvedValue({ ok: true })
   rememberLocalTaskStart('creation-1', {
     taskId: 'task-12',
     orcaProjectIds: ['orca-shop'],
@@ -99,6 +105,7 @@ afterEach(() => {
   resetLocalTaskStartWorkForTests()
   fixture.linkWorkspace.mockReset()
   fixture.recordSession.mockReset()
+  fixture.setPreference.mockReset()
 })
 
 it('links the created workspace and records the agent tab once creation completes', async () => {
@@ -117,6 +124,10 @@ it('links the created workspace and records the agent tab once creation complete
   expect(fixture.recordSession.mock.calls[0][0]).toEqual(
     expect.objectContaining({ taskId: 'task-12', surface: 'terminal', tabId: 'tab-agent' })
   )
+  await vi.waitFor(() =>
+    expect(fixture.setPreference).toHaveBeenCalledWith(LOCAL_ACTIVE_PREFERENCE_KEY, '1')
+  )
+  expect(localTaskPageStore.getState().detailTaskId).toBe('task-12')
 })
 
 it.each([

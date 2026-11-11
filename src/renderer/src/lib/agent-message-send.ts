@@ -13,6 +13,7 @@ export async function sendMessageToAgent(args: {
   worktreeId: string
   target: AgentMessageTarget
   prompt: string
+  beforeTerminalSend?: (phase: 'paste' | 'submit') => boolean
 }): Promise<ActiveAgentNotesSendResult> {
   const { target, worktreeId } = args
   const prompt = args.prompt.trim()
@@ -23,7 +24,8 @@ export async function sendMessageToAgent(args: {
     return sendNotesToActiveAgentSession({
       worktreeId,
       prompt,
-      noteTarget: { tabId: target.tabId, leafId: target.leafId }
+      noteTarget: { tabId: target.tabId, leafId: target.leafId },
+      beforeTerminalSend: args.beforeTerminalSend
     })
   }
   const state = useAppStore.getState()

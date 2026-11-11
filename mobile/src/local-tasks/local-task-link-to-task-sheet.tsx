@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { matchesLocalTaskQuery } from '../../../src/shared/local-tasks/local-task-grouping'
 import type { LocalTaskLinks } from '../../../src/shared/local-tasks/local-task-link-types'
 import type { LocalTask, LocalTaskProject } from '../../../src/shared/local-tasks/local-task-types'
 import { taskRuntimeStatusRead } from '../tasks/mobile-task-runtime-operations'
@@ -51,7 +52,7 @@ export function localTaskLinkChoices(library: Library, related: ReadonlySet<stri
 }
 
 /**
- * "Link to Task…" for one workspace, in the library of the Orca that owns it (D-008): the paired
+ * "Link to task…" for one workspace, in the library of the Orca that owns it (D-008): the paired
  * host's own, or a server's through the paired host. Everything is read once, when the sheet opens
  * and the library is in contact: a server only while the paired host can relay to it. A server's
  * own workspace list says which of its hosts the workspace is on, which the link records.
@@ -158,10 +159,15 @@ export function LocalTaskLinkToTaskSheet(props: {
 
   const ready = reading.status === 'ready' && contact === 'ready' ? reading : null
   const holder = ready && ownTarget ? localTaskLinkHolding(ready.library.links, ownTarget) : null
-  const holderRef = holder
-    ? ready?.library.tasks.find((task) => task.id === holder.taskId)?.ref
+  const holderTitle = holder
+    ? ready?.library.tasks.find((task) => task.id === holder.taskId)?.title
     : null
   const tasks = ready && ownTarget ? localTaskLinkChoices(ready.library, ready.related) : []
+  const [query, setQuery] = useState('')
+  const projectsById = new Map(ready?.library.projects.map((project) => [project.id, project]))
+  const shown = tasks.filter((task) =>
+    matchesLocalTaskQuery(task, projectsById.get(task.projectId), query)
+  )
   const link = async (task: LocalTask) => {
     if (!ownTarget || !libraryClient) {
       return
@@ -175,23 +181,24 @@ export function LocalTaskLinkToTaskSheet(props: {
       },
       createLocalTasksApi(libraryClient).linkWorkspace
     )
-    setError(localTaskWriteMessage(copy, outcome))
+    setError(localTaskWriteMessage(copy, outcome, ready?.library.tasks))
     if (outcome.kind === 'ok') {
       props.onLinked?.()
       props.onClose()
     }
   }
+  // Why no host id fallback: an unnamed host is worded without one (REQ-017).
   const message =
     contact === 'offline'
-      ? copy.work.hostOffline(props.hostLabel || relay?.label || (target?.hostId ?? ''))
+      ? copy.work.hostOffline(props.hostLabel || relay?.label || '')
       : reading.status === 'failed' || (endpoint.executionHost && serverRows.status === 'failed')
         ? copy.loadFailed
         : reading.status === 'unsupported'
           ? copy.unsupported
           : target && !ownPending && !ownTarget
             ? copy.work.workspaceNotListed
-            : holderRef
-              ? copy.work.workspaceTaken(holderRef)
+            : holder
+              ? copy.work.workspaceTaken(holderTitle ?? '')
               : ready && tasks.length === 0
                 ? copy.work.noOpenTasks
                 : null
@@ -206,7 +213,10 @@ export function LocalTaskLinkToTaskSheet(props: {
       }
       message={message}
       error={error}
-      choices={tasks.map((task) => {
+      search={
+        tasks.length > 0 ? { query, placeholder: copy.searchPlaceholder, onChange: setQuery } : null
+      }
+      choices={shown.map((task) => {
         const held = ready?.library.links.workspaces.find((entry) => entry.taskId === task.id)
         return {
           key: task.id,
@@ -220,6 +230,7 @@ export function LocalTaskLinkToTaskSheet(props: {
       })}
       onClose={() => {
         setError(null)
+        setQuery('')
         props.onClose()
       }}
     />

@@ -1,7 +1,10 @@
 import { useLayoutEffect } from 'react'
 import { useMobileStructuredSessionOpening } from './use-mobile-structured-session-opening'
 import { useNotificationPaneNavigation } from './use-notification-pane-navigation'
-import { useMobileSessionFoundation } from './use-mobile-session-foundation'
+import {
+  useMobileSessionFoundation,
+  type MobileSessionScopeOverride
+} from './use-mobile-session-foundation'
 import { useMobileSessionScreenState } from './use-mobile-session-screen-state'
 import { useMobileSessionTerminalRuntime } from './use-mobile-session-terminal-runtime'
 import { useMobileSessionFeedbackCapabilities } from './use-mobile-session-feedback-capabilities'
@@ -34,8 +37,8 @@ import { useMobileSessionBulkClose } from './use-mobile-session-bulk-close'
 import { useMobileSessionPresentation } from './use-mobile-session-presentation'
 import { useMobileSessionPanelRouteActions } from './use-mobile-session-panel-route-actions'
 
-export function useMobileSessionController() {
-  const foundation = useMobileSessionFoundation()
+export function useMobileSessionController(override?: MobileSessionScopeOverride) {
+  const foundation = useMobileSessionFoundation(override)
   const screenState = Object.assign(foundation, useMobileSessionScreenState(foundation))
   const terminalRuntime = Object.assign(screenState, useMobileSessionTerminalRuntime(screenState))
   const feedbackCapabilities = Object.assign(
@@ -97,7 +100,11 @@ export function useMobileSessionController() {
   const preferences = useMobileSessionPreferenceFocus(keyboardState)
   const tabSwitching = Object.assign(keyboardState, useMobileSessionTabSwitching(keyboardState))
   const openNativeSession = useMobileStructuredSessionOpening(tabSwitching)
-  useNotificationPaneNavigation({ ...tabSwitching, openNativeSession })
+  useNotificationPaneNavigation({
+    ...tabSwitching,
+    openNativeSession,
+    ...(override ? { paneKeyOverride: override.paneKey } : {})
+  })
   const terminalWebview = Object.assign(tabSwitching, useMobileSessionTerminalWebview(tabSwitching))
   const terminalSendActions = Object.assign(
     terminalWebview,

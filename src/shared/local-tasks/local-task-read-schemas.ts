@@ -29,6 +29,7 @@ const STATE_ARMS = hostUnionArms<LocalTasksHostState>({
 })
 const EVENT_KIND_ARMS = hostUnionArms<LocalTaskEventKind>({
   comment: true,
+  'turn-ended': true,
   created: true,
   title: true,
   description: true,
@@ -83,8 +84,16 @@ export const localTaskProjectSchema: z.ZodType<LocalTaskProject, unknown> = z.ob
   lastExecutionHostId: withDefault('lastExecutionHostId', z.string().nullable(), () => null),
   rules: withDefault(
     'rules',
-    z.object({ startMovesToInProgress: z.boolean(), prMergedCompletes: z.boolean() }),
-    () => ({ startMovesToInProgress: true, prMergedCompletes: true })
+    z.object({
+      startMovesToInProgress: z.boolean(),
+      prMergedCompletes: z.boolean(),
+      prMergedMode: z.enum(['none', 'review', 'completed']).optional()
+    }),
+    () => ({
+      startMovesToInProgress: true,
+      prMergedCompletes: false,
+      prMergedMode: 'review' as const
+    })
   ),
   statuses: salvagingArray(statusDefSchema),
   createdAt: z.number(),
@@ -108,7 +117,18 @@ export const localTaskSchema: z.ZodType<LocalTask, unknown> = z.object({
   updatedAt: z.number(),
   revision: z.number(),
   // Why salvaged: a host from before moves were searchable sends none; a bad list only costs search.
-  formerRefs: salvagedOptional('formerRefs', salvagingArray(z.string()))
+  formerRefs: salvagedOptional('formerRefs', salvagingArray(z.string())),
+  // Why salvaged: hosts before writebacks send none; a bad one only hides the line on the card.
+  latestProgress: salvagedOptional(
+    'latestProgress',
+    z.object({
+      kind: z.enum(['progress', 'turn-ended']),
+      body: z.string(),
+      at: z.number(),
+      sessionLinkId: z.string().nullable(),
+      needsYou: z.string().optional()
+    })
+  )
 })
 
 const localTaskEventSchema: z.ZodType<LocalTaskEvent, unknown> = z.object({
@@ -128,6 +148,8 @@ export const localTasksStatusSchema: z.ZodType<LocalTasksStatus, unknown> = z.ob
   projectCount: z.number().optional(),
   sourceHidden: z.boolean().optional(),
   cardTaskHidden: z.boolean().optional(),
+  taskBrief: z.boolean().optional(),
+  sessionSend: z.enum(['submit', 'draft']).optional(),
   state: openEnum(STATE_ARMS, 'unavailable'),
   reason: withDefault('reason', z.string().nullable(), () => null),
   revision: z.number(),

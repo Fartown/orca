@@ -31,7 +31,14 @@ export function LocalTaskLinkDialogHost({
       model.index.tasksById,
       new Map(links.workspaces.map((workspace) => [workspace.taskId, workspace]))
     )
-    return link ? <LocalTaskSessionDialog task={task} link={link} onClose={close} /> : null
+    return link ? (
+      <LocalTaskSessionDialog
+        task={task}
+        link={link}
+        initialPrompt={dialog.prompt}
+        onClose={close}
+      />
+    ) : null
   }
   const project = model.index.projectsById.get(task.projectId)
   return project ? (
@@ -40,6 +47,17 @@ export function LocalTaskLinkDialogHost({
       project={project}
       replace={findLocalTaskWorkspaceLink(links, task.id) !== null}
       onClose={close}
+      onLinked={() => {
+        if (dialog.prompt) {
+          localTaskLinkDialogStore.getState().open({
+            kind: 'session',
+            taskId: task.id,
+            prompt: dialog.prompt
+          })
+        } else {
+          close()
+        }
+      }}
     />
   ) : null
 }

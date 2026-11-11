@@ -12,6 +12,8 @@ import {
 import { colors, radii, spacing, typography } from '../theme/mobile-theme'
 import { formatLocalTaskAgo, localTasksCopy } from './local-tasks-copy'
 import type { LocalTaskListGroup, LocalTaskListRow } from './local-task-list-projection'
+import type { LocalTaskRowSession } from './local-task-progress-projection'
+import { LocalTaskSessionDots } from './local-task-session-dots'
 import { localTaskStyles } from './local-tasks-styles'
 import {
   LocalTaskPriorityIcon,
@@ -30,6 +32,9 @@ type Props = {
   bottomInset: number
   /** Present in one project, where a column is a status a new task can start in. */
   onCreateIn?: (statusId: string) => void
+  /** The session dots a card shows, from what the page already loaded. */
+  sessionsFor: (task: LocalTask) => LocalTaskRowSession[]
+  latestLineFor?: (task: LocalTask) => string | null
   onOpen: (taskId: string) => void
 }
 
@@ -91,6 +96,10 @@ export function LocalTasksBoardView(props: Props) {
                 ancestors={localTaskPathFromRoot(row.task, props.tasksById)}
                 status={group.status}
                 now={props.now}
+                sessions={props.sessionsFor(row.task)}
+                latestLine={
+                  props.latestLineFor?.(row.task) ?? row.task.latestProgress?.body ?? null
+                }
                 onOpen={props.onOpen}
               />
             ))}
@@ -118,6 +127,8 @@ function LocalTaskBoardCard(props: {
   ancestors: LocalTask[]
   status: LocalTaskStatusDef | null
   now: number
+  sessions: readonly LocalTaskRowSession[]
+  latestLine: string | null
   onOpen: (taskId: string) => void
 }) {
   const copy = localTasksCopy()
@@ -127,7 +138,7 @@ function LocalTaskBoardCard(props: {
       style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
       onPress={() => props.onOpen(task.id)}
       accessibilityRole="button"
-      accessibilityLabel={`${task.ref} ${task.title}`}
+      accessibilityLabel={`${task.title} ${task.ref}`}
     >
       <View style={styles.cardTop}>
         <Text style={localTaskStyles.mono}>{task.ref}</Text>
@@ -151,6 +162,11 @@ function LocalTaskBoardCard(props: {
       <Text style={styles.cardTitle} numberOfLines={3}>
         {task.title}
       </Text>
+      {props.latestLine ? (
+        <Text style={localTaskStyles.meta} numberOfLines={2}>
+          {props.latestLine}
+        </Text>
+      ) : null}
       {task.labels.length > 0 ? (
         <View style={styles.labels}>
           {task.labels.slice(0, 3).map((label) => (
@@ -173,6 +189,8 @@ function LocalTaskBoardCard(props: {
             {copy.updatedAgo(formatLocalTaskAgo(copy, task.updatedAt, props.now))}
           </Text>
         )}
+        <View style={localTaskStyles.topBarSpacer} />
+        <LocalTaskSessionDots sessions={props.sessions} />
       </View>
     </Pressable>
   )

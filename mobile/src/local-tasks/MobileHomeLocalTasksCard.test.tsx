@@ -49,6 +49,7 @@ vi.mock('../transport/client-context', () => {
 })
 
 import { localTasksCopy } from './local-tasks-copy'
+import { localTasksPageCopy } from './local-tasks-page-copy'
 import { MobileHomeLocalTasksCard } from './MobileHomeLocalTasksCard'
 
 function host(id: string): HostProfile {
@@ -78,7 +79,9 @@ function desktop(id: string, projectCount: number, sourceHidden?: boolean) {
       projectCount,
       ...(sourceHidden === undefined ? {} : { sourceHidden })
     },
-    'localTasks.attention.get': { observedAt: 1, sessions: [], items: [] }
+    'localTasks.attention.get': { observedAt: 1, sessions: [], items: [] },
+    'localTasks.tasks.list': { tasks: [] },
+    'localTasks.projects.list': { projects: [] }
   }
   const client: RpcClient = {
     sendRequest: async (method: string): Promise<RpcResponse> => {
@@ -169,10 +172,8 @@ describe('the home local tasks card', () => {
     await show(['home-hidden', 'home-older'])
     expect(hidden).toEqual(['status.get', 'localTasks.status'])
     // Only the older host's 3 in progress: the hidden library is neither read further nor counted.
-    expect(texts()).toEqual([
-      copy.homeCardTitle,
-      `${copy.work.homeNeedsYou(0)} · ${copy.homeCardInProgress(3)}`
-    ])
+    const page = localTasksPageCopy()
+    expect(texts()).toEqual([copy.homeCardTitle, '0', page.homeNeedsYou, '3', page.homeInProgress])
 
     // Out of contact later, a hidden library is no "cannot connect" line either.
     env.states['home-hidden'] = 'disconnected'

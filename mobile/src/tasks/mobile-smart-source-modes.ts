@@ -3,7 +3,7 @@ import { translate } from '../i18n/mobile-i18n'
 
 // Lucide has no brand icons; provider modes use TaskProviderLogo SVGs.
 export type SmartModeIcon =
-  | { type: 'lucide'; name: 'sparkles' | 'git-branch' | 'case-sensitive' }
+  | { type: 'lucide'; name: 'sparkles' | 'git-branch' | 'case-sensitive' | 'list-todo' }
   | { type: 'provider'; provider: 'github' | 'gitlab' | 'linear' | 'jira' }
 
 export type SmartModeOption = {
@@ -19,6 +19,13 @@ export const SMART_MODE_OPTIONS: readonly SmartModeOption[] = [
       return translate('tasks.smartSourceModes.smart', 'Smart')
     },
     icon: { type: 'lucide', name: 'sparkles' }
+  },
+  {
+    id: 'local',
+    get label() {
+      return translate('localTasks.sourceTab.label', 'Local')
+    },
+    icon: { type: 'lucide', name: 'list-todo' }
   },
   { id: 'github', label: 'GitHub', icon: { type: 'provider', provider: 'github' } },
   { id: 'linear', label: 'Linear', icon: { type: 'provider', provider: 'linear' } },
@@ -48,6 +55,7 @@ export type SmartModeAvailabilityInput = {
   gitlabAvailable: boolean
   linearAvailable: boolean
   jiraAvailable: boolean
+  localTaskSourceOffered?: boolean
 }
 
 export function resolveAvailableSmartModes(input: SmartModeAvailabilityInput): SmartNameMode[] {
@@ -58,6 +66,8 @@ export function resolveAvailableSmartModes(input: SmartModeAvailabilityInput): S
     switch (option.id) {
       case 'smart':
         return input.tasksSupported
+      case 'local':
+        return input.localTaskSourceOffered === true
       case 'github':
         return input.tasksSupported && input.hasRepo && input.githubAvailable
       case 'gitlab':

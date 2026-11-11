@@ -28,7 +28,7 @@ function HeldNote({ standing }: { standing: LocalTaskNeedsYouStanding }): React.
     <span className="text-2xs text-muted-foreground">
       {standing === 'moved-on'
         ? translate('localTasks.needsYou.item.left', 'No longer waiting on you')
-        : translate('localTasks.needsYou.item.unverifiable', 'Host not connected; cannot confirm')}
+        : translate('localTasks.needsYou.item.unverifiable', 'Host not connected; can’t confirm')}
     </span>
   )
 }

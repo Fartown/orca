@@ -36,6 +36,7 @@ import {
   LocalTaskExecutionService,
   type LocalTaskVolatileChange
 } from './local-task-execution-service'
+import { LocalTaskDispatcherService } from './local-task-dispatcher-service'
 import type { LocalTaskHostSessionSource } from './local-task-host-session-source'
 import { runLocalTaskWrite } from './local-task-mutation-receipts'
 import {
@@ -63,6 +64,8 @@ import { updateLocalTask } from './local-task-update'
 import { rowNumber, rowString } from './local-tasks-sqlite-row'
 
 const READ_ONLY: LocalTaskFailure = { ok: false, code: 'read_only' }
+export const LOCAL_TASK_BRIEF_PREFERENCE_KEY = 'taskBrief'
+export const LOCAL_TASK_SESSION_SEND_PREFERENCE_KEY = 'sessionSend'
 
 const PROJECT_RESULT = writeResultSchema({ project: projectSchema })
 const TASK_RESULT = writeResultSchema({ task: taskSchema })
@@ -77,7 +80,7 @@ const EVENT_RESULT = writeResultSchema({ eventId: z.string() })
  * This Orca's task library (one per profile, D-008). Every write is one transaction keyed by the
  * client's operation id.
  */
-export class LocalTasksService {
+export class LocalTasksService extends LocalTaskDispatcherService {
   /** Links, the host's "needs you" judgment and rules. */
   readonly execution: LocalTaskExecutionService
 
@@ -87,7 +90,12 @@ export class LocalTasksService {
     onVolatileChange?: LocalTaskVolatileChange,
     sessions?: LocalTaskHostSessionSource
   ) {
+    super(db, now)
     this.execution = new LocalTaskExecutionService(db, now, onVolatileChange, sessions)
+  }
+
+  protected dispatcherProgress() {
+    return this.execution.getProgress()
   }
 
   get readOnly(): boolean {
@@ -119,6 +127,22 @@ export class LocalTasksService {
   cardTaskHidden(): boolean {
     const keys = [LOCAL_TASK_CARD_SHOW_PREFERENCE_KEY]
     return this.getPreferences(keys).values[LOCAL_TASK_CARD_SHOW_PREFERENCE_KEY] === '0'
+  }
+
+  taskBrief(): boolean {
+    return (
+      this.getPreferences([LOCAL_TASK_BRIEF_PREFERENCE_KEY]).values[
+        LOCAL_TASK_BRIEF_PREFERENCE_KEY
+      ] !== '0'
+    )
+  }
+
+  sessionSend(): 'submit' | 'draft' {
+    return this.getPreferences([LOCAL_TASK_SESSION_SEND_PREFERENCE_KEY]).values[
+      LOCAL_TASK_SESSION_SEND_PREFERENCE_KEY
+    ] === 'draft'
+      ? 'draft'
+      : 'submit'
   }
 
   taskHostId(): string | null {
@@ -241,7 +265,7 @@ export class LocalTasksService {
 
   addComment(input: LocalTasksEventsAddCommentInput, source: LocalTaskEventSource) {
     return this.write(input.clientOperationId, 'events.addComment', input, EVENT_RESULT, (now) =>
-      addLocalTaskComment(this.db, input.taskId, input.body, source, now)
+      addLocalTaskComment(this.db, input.taskId, input.body, source, now, input.progress)
     )
   }
 
@@ -258,20 +282,12 @@ export class LocalTasksService {
   }
 
   private write<T extends { ok: boolean }>(
-    clientOperationId: string,
+    operationId: string,
     method: string,
     params: unknown,
-    resultSchema: ZodType<T>,
+    schema: ZodType<T>,
     operation: (now: number) => T
   ): T | LocalTaskFailure {
-    return runLocalTaskWrite(
-      this.db,
-      this.now(),
-      clientOperationId,
-      method,
-      params,
-      resultSchema,
-      operation
-    )
+    return runLocalTaskWrite(this.db, this.now(), operationId, method, params, schema, operation)
   }
 }

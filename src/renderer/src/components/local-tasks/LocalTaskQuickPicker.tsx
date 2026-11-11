@@ -118,9 +118,10 @@ function PickerBody({
   model: LocalTaskListModel
 }): React.JSX.Element {
   const [query, setQuery] = useState('')
+  // Why the title: a dialog names its task the way the rest of the page does (§4).
   const subject =
     targets.length === 1
-      ? targets[0].ref
+      ? targets[0].title
       : translate('localTasks.picker.taskCount', '{{count}} tasks', { count: targets.length })
   const title =
     kind === 'priority'

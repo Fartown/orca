@@ -2030,6 +2030,13 @@
     "liveTerminals_one": "{{count}} live terminal will reconnect after restart.",
     "liveTerminals_other": "{{count}} live terminals will reconnect after restart."
   },
+  "localTasks": {
+    "needsYou": {
+      "sidebarCount": "{{count}} tasks need you",
+      "sidebarCount_one": "{{count}} task needs you",
+      "sidebarCount_other": "{{count}} tasks need you"
+    }
+  },
   "menu": {
     "quitApp": "Quit {{appName}}"
   },

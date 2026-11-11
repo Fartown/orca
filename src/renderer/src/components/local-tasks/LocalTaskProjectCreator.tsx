@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { translate } from '@/i18n/i18n'
-import { selectExecutionHostDisplayLabel } from '@/lib/execution-host-display-label'
+import { selectLocalTaskHostLabel } from '@/local-tasks/local-task-host-label'
 import { useAppStore } from '@/store'
 import { normalizeLocalTaskPrefix } from '../../../../shared/local-tasks/local-task-model'
 import { describeLocalTaskFailure } from '@/local-tasks/local-task-failure-copy'
@@ -40,7 +40,7 @@ function useHostLabelsByProject(projectIds: readonly string[]): ReadonlyMap<stri
     [hostIdsByProject]
   )
   const labels = useAppStore(
-    useShallow((state) => hostIds.map((hostId) => selectExecutionHostDisplayLabel(state, hostId)))
+    useShallow((state) => hostIds.map((hostId) => selectLocalTaskHostLabel(state, hostId)))
   )
   return useMemo(() => {
     const labelOf = new Map(hostIds.map((hostId, at) => [hostId, labels[at] ?? hostId]))
@@ -154,7 +154,7 @@ export function LocalTaskProjectCreator({
             )
           : translate(
               'localTasks.projects.allLinked',
-              'Every repository already has a task project. More projects can share one from settings.'
+              'Every repository already has a project. More projects can share one from settings.'
             )}
       </p>
     )

@@ -48,7 +48,8 @@ import type { LocalTask } from '../../../../shared/local-tasks/local-task-types'
 
 const SESSION_DOTS_MAX = 3
 
-function dotState(state: LocalTaskSessionState): AgentDotState {
+/** The agent dot a task session shows for its state. */
+export function localTaskSessionDotState(state: LocalTaskSessionState): AgentDotState {
   switch (state) {
     case 'working':
     case 'waiting':
@@ -101,7 +102,7 @@ export function LocalTaskSessionDot({
   }
   return (
     <AgentStateDot
-      state={dotState(progress.state)}
+      state={localTaskSessionDotState(progress.state)}
       size={size}
       title={translate('localTasks.links.sessionDot', 'Session · {{state}}', {
         state: localTaskSessionStateLabel(progress.state)

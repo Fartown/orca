@@ -439,7 +439,7 @@ describe("the host list's local tasks", () => {
       sheetFor: linked
     })
     expect(glyphs()).toContain('Local task: Export API')
-    expect(texts()).toContain("SHOP-12 · Can't confirm")
+    expect(texts()).toContain('SHOP-12 · Can’t confirm')
     // Only the shared watch releasing its subscription; nothing is read.
     expect(desktop.calls.slice(readsInContact)).toEqual(['desktop localTasks.unsubscribeChanges'])
     const readsOutOfContact = desktop.calls.length

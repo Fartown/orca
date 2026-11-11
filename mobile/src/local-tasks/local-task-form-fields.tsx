@@ -1,11 +1,8 @@
 import { useRef, useState, type ReactNode } from 'react'
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
-import { ChevronRight, ListTodo, Pencil, Plus, Trash2, X } from 'lucide-react-native'
-import {
-  LOCAL_TASK_CRITERIA_MAX,
-  LOCAL_TASK_CRITERION_MAX,
-  LOCAL_TASK_TITLE_MAX
-} from '../../../src/shared/local-tasks/local-task-model'
+import { ChevronRight, ListTodo, Pencil, Trash2, X } from 'lucide-react-native'
+import { LOCAL_TASK_TITLE_MAX } from '../../../src/shared/local-tasks/local-task-model'
+import type { LocalTask, LocalTaskProject } from '../../../src/shared/local-tasks/local-task-types'
 import { ActionSheetModal } from '../components/ActionSheetModal'
 import { ConfirmModal } from '../components/ConfirmModal'
 import { colors, spacing } from '../theme/mobile-theme'
@@ -13,61 +10,15 @@ import { localTasksCopy } from './local-tasks-copy'
 import {
   isMultiLinePaste,
   localTaskDraftEntries,
-  newLocalTaskDraftEntry,
   splitPastedLines,
+  type LocalTaskDraft,
   type LocalTaskDraftEntry
 } from './local-task-form-state'
 import { LocalTaskGrowingInput } from './local-task-growing-input'
+import { localTaskStatusLookup, orderedLocalTaskStatuses } from './local-task-list-projection'
+import type { LocalTaskDraftPicker } from './local-task-pickers'
 import { localTaskStyles } from './local-tasks-styles'
-
-export function LocalTaskCriteriaEditor(props: {
-  criteria: LocalTaskDraftEntry[]
-  onChange: (criteria: LocalTaskDraftEntry[]) => void
-}) {
-  const copy = localTasksCopy()
-  const set = (id: string, text: string) =>
-    props.onChange(props.criteria.map((entry) => (entry.id === id ? { ...entry, text } : entry)))
-  return (
-    <View>
-      <Text style={localTaskStyles.sectionLabel}>
-        {copy.criteria} <Text style={localTaskStyles.meta}>{copy.criteriaOptional}</Text>
-      </Text>
-      {props.criteria.map((entry) => (
-        <View key={entry.id} style={[styles.lineRow, styles.criterionRow]}>
-          <Text style={[localTaskStyles.meta, styles.criterionBullet]}>•</Text>
-          <LocalTaskGrowingInput
-            style={[localTaskStyles.bareInput, styles.lineInput, styles.criterionInput]}
-            minHeight={CRITERION_LINE_HEIGHT}
-            value={entry.text}
-            maxLength={LOCAL_TASK_CRITERION_MAX}
-            // Why: a criterion is one line of the stored list; Return must not split it.
-            onChangeText={(text) => set(entry.id, text.replace(/\r?\n/g, ' '))}
-            placeholder={copy.criterionPlaceholder}
-            placeholderTextColor={colors.textMuted}
-          />
-          <Pressable
-            style={[styles.removeButton, styles.criterionRemove]}
-            onPress={() => props.onChange(props.criteria.filter((other) => other.id !== entry.id))}
-            accessibilityRole="button"
-            accessibilityLabel={copy.delete}
-          >
-            <X size={14} color={colors.textMuted} />
-          </Pressable>
-        </View>
-      ))}
-      {props.criteria.length < LOCAL_TASK_CRITERIA_MAX ? (
-        <Pressable
-          style={styles.addRow}
-          onPress={() => props.onChange([...props.criteria, newLocalTaskDraftEntry()])}
-          accessibilityRole="button"
-        >
-          <Plus size={14} color={colors.textSecondary} />
-          <Text style={localTaskStyles.sectionActionText}>{copy.addCriterion}</Text>
-        </Pressable>
-      ) : null}
-    </View>
-  )
-}
+import { LocalTaskPriorityIcon, LocalTaskStatusIcon } from './local-tasks-visuals'
 
 /** Subtasks typed into a new task. A paste of several lines adds one entry per line. */
 export function LocalTaskSubtaskEntries(props: {
@@ -144,6 +95,74 @@ export function LocalTaskPropertyRow(props: {
       <View style={styles.propertyValue}>{props.children}</View>
       {props.onPress ? <ChevronRight size={16} color={colors.textMuted} /> : null}
     </Pressable>
+  )
+}
+
+/** Status, priority, labels and (outside a subtask form) parent, each opening its picker. */
+export function LocalTaskPropertiesCard(props: {
+  draft: LocalTaskDraft
+  projects: readonly LocalTaskProject[]
+  tasks: readonly LocalTask[]
+  showParent: boolean
+  hidden: boolean
+  onPick: (picker: LocalTaskDraftPicker) => void
+  onPatch: (next: Partial<LocalTaskDraft>) => void
+}) {
+  const copy = localTasksCopy()
+  const { draft } = props
+  const project = props.projects.find((entry) => entry.id === draft.projectId) ?? null
+  const status = draft.statusId
+    ? (localTaskStatusLookup(props.projects).get(draft.statusId) ?? null)
+    : null
+  // An unset status is the project's first Unstarted one, which the desktop applies on create.
+  const shownStatus =
+    status ??
+    (project
+      ? (orderedLocalTaskStatuses(project).find((entry) => entry.category === 'unstarted') ?? null)
+      : null)
+  const parent = draft.parentId
+    ? (props.tasks.find((task) => task.id === draft.parentId) ?? null)
+    : null
+  return (
+    <View style={[localTaskStyles.card, props.hidden && styles.hidden]}>
+      <LocalTaskPropertyRow label={copy.status} first onPress={() => props.onPick('status')}>
+        <LocalTaskStatusIcon
+          category={shownStatus?.category ?? 'unstarted'}
+          color={shownStatus?.color ?? 'gray'}
+          size={14}
+        />
+        <Text style={localTaskStyles.rowValue}>
+          {shownStatus?.name ?? copy.defaultStatusNames.unstarted}
+        </Text>
+      </LocalTaskPropertyRow>
+      <LocalTaskPropertyRow label={copy.priority} onPress={() => props.onPick('priority')}>
+        <LocalTaskPriorityIcon priority={draft.priority} />
+        <Text style={localTaskStyles.rowValue}>{copy.priorities[draft.priority]}</Text>
+      </LocalTaskPropertyRow>
+      <LocalTaskPropertyRow label={copy.labels}>
+        <LocalTaskGrowingInput
+          style={[localTaskStyles.bareInput, styles.labels]}
+          minHeight={21}
+          blurOnSubmit
+          value={draft.labelsText}
+          onChangeText={(labelsText) =>
+            props.onPatch({ labelsText: labelsText.replace(/\r?\n/g, ' ') })
+          }
+          placeholder={copy.labelsPlaceholder}
+          placeholderTextColor={colors.textMuted}
+        />
+      </LocalTaskPropertyRow>
+      {props.showParent ? (
+        <LocalTaskPropertyRow label={copy.parent} onPress={() => props.onPick('parent')}>
+          <Text
+            style={parent ? localTaskStyles.rowValue : localTaskStyles.rowValueMuted}
+            numberOfLines={1}
+          >
+            {parent ? parent.title : copy.none}
+          </Text>
+        </LocalTaskPropertyRow>
+      ) : null}
+    </View>
   )
 }
 
@@ -233,16 +252,9 @@ export function LocalTaskFormPrompts(props: {
   )
 }
 
-const CRITERION_LINE_HEIGHT = 21
-
 const styles = StyleSheet.create({
   lineRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: 6 },
   lineInput: { flex: 1 },
-  // A criterion wraps, so the bullet and the remove button stay on its first line.
-  criterionRow: { alignItems: 'flex-start' },
-  criterionBullet: { lineHeight: CRITERION_LINE_HEIGHT },
-  criterionInput: { lineHeight: CRITERION_LINE_HEIGHT },
-  criterionRemove: { marginTop: (CRITERION_LINE_HEIGHT - 32) / 2 },
   // Why 32pt with negative margins: big enough to hit (the page ignores hitSlop) without
   // making the row taller than its text.
   removeButton: {
@@ -254,5 +266,7 @@ const styles = StyleSheet.create({
     marginRight: -9
   },
   addRow: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: spacing.sm },
+  labels: { flex: 1, lineHeight: 21 },
+  hidden: { display: 'none' },
   propertyValue: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }
 })

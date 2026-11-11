@@ -21,7 +21,7 @@ import {
 // The order the priority picker uses: urgent first, "no priority" last.
 const PRIORITY_ORDER = [1, 2, 3, 4, 0] as const
 
-/** Search by ref or title, and a sheet for category, priority and labels. */
+/** Search by title or ref, and a sheet for "waiting on me", category, priority and labels. */
 export function LocalTasksFilterBar(props: {
   filter: LocalTaskFilter
   labels: string[]
@@ -77,6 +77,13 @@ export function LocalTasksFilterBar(props: {
               <Text style={localTaskStyles.sectionActionText}>{copy.clearFilters}</Text>
             </Pressable>
           ) : null}
+        </View>
+        <View style={[styles.section, styles.chips]}>
+          <FilterChip
+            label={copy.filterNeedsYou}
+            selected={filter.needsYou}
+            onPress={() => set({ needsYou: !filter.needsYou })}
+          />
         </View>
         <FilterSection title={copy.filterCategories}>
           {LOCAL_TASK_STATUS_CATEGORIES.map((category) => (

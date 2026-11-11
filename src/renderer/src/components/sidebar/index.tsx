@@ -1,3 +1,8 @@
+import { LocalTaskSidebarTree } from '@/components/local-tasks/LocalTaskSidebarTree'
+import {
+  useLocalTaskSidebarMode,
+  useLocalTaskSidebarRevealRedirect
+} from '@/local-tasks/local-task-sidebar-mode'
 import React, { useEffect, useMemo } from 'react'
 import { useAppStore } from '@/store'
 import { TooltipProvider } from '@/components/ui/tooltip'
@@ -59,6 +64,8 @@ function Sidebar({
   const startupWorktreeRefreshCompleted = useAppStore((s) => s.startupWorktreeRefreshCompleted)
   const settings = useAppStore((s) => s.settings)
   const sidebarBody = useAppStore((s) => s.sidebarBody ?? 'workspaces')
+  const taskMode = useLocalTaskSidebarMode() && sidebarBody !== 'agents'
+  useLocalTaskSidebarRevealRedirect(taskMode)
   const showAgentDashboard = settings?.experimentalAgentDashboardPopout === true
   const agentDashboardDrawerOpen = useAppStore((s) => s.agentDashboardDrawerOpen)
   const setAgentDashboardDrawerOpen = useAppStore((s) => s.setAgentDashboardDrawerOpen)
@@ -141,7 +148,7 @@ function Sidebar({
     onDraftWidthChange: setSidebarLiveWidth
   })
 
-  useWorkspaceRevealBodyRedirect(sidebarOpen && sidebarBody === 'agents')
+  useWorkspaceRevealBodyRedirect(sidebarOpen && (sidebarBody === 'agents' || taskMode))
   // A collapsed sidebar takes no drops.
   const sidebarRef = React.useCallback(
     (node: HTMLDivElement | null) => {
@@ -168,7 +175,9 @@ function Sidebar({
             />
             <SeveredTerminalDaemonBanner />
             <StalledTerminalDaemonBanner />
-            {sidebarBody === 'agents' ? (
+            {taskMode ? (
+              <LocalTaskSidebarTree />
+            ) : sidebarBody === 'agents' ? (
               <React.Suspense fallback={<div className="min-h-0 flex-1" />}>
                 <ActivityThreadCollapseContext.Provider value={agentsCollapseState}>
                   <SidebarAgentsList

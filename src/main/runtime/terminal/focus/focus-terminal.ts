@@ -14,6 +14,27 @@ export abstract class OrcaRuntimeWithFocusTerminal extends OrcaRuntimeWithWaitFo
     ...args: Parameters<PtyTerminalSummaryMethods['getPtyManualTitle']>
   ): ReturnType<PtyTerminalSummaryMethods['getPtyManualTitle']>
 
+  terminalWindowProjectionSource() {
+    return {
+      session: (hostId: string) => this.store?.getWorkspaceSession?.(hostId) ?? null,
+      notifier: this.notifier,
+      terminal: (paneKey: string) => {
+        const handle = this.getTerminalHandleForPaneKey(paneKey)
+        const live = handle ? this.getLivePtyForHandle(handle) : null
+        return handle && live
+          ? {
+              handle,
+              ptyId: live.pty.ptyId,
+              incarnationId: live.pty.incarnationId,
+              worktreeId: live.pty.worktreeId,
+              paneKey: this.paneOfPty(live.pty).paneKey,
+              connected: live.pty.connected
+            }
+          : null
+      }
+    }
+  }
+
   async focusTerminal(
     handle: string,
     options: { navigateHost?: boolean } = {}

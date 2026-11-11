@@ -122,7 +122,7 @@ export function describeLocalTaskRuleStatus(
       const prNumber = payload?.prNumber
       return translate(
         'localTasks.activity.rulePrMerged',
-        '#{{number}} was merged, so the task completed: {{from}} → {{to}}',
+        '#{{number}} was merged: {{from}} → {{to}}',
         { number: typeof prNumber === 'number' ? prNumber : '?', from, to }
       )
     }

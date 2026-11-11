@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/select'
 import { translate } from '@/i18n/i18n'
 import { isImeCompositionKeyDown } from '@/lib/ime-composition-keyboard-event'
-import { selectExecutionHostDisplayLabel } from '@/lib/execution-host-display-label'
+import { selectLocalTaskHostLabel } from '@/local-tasks/local-task-host-label'
 import { useAppStore } from '@/store'
 import {
   LOCAL_TASK_PROJECT_NAME_MAX,
@@ -43,7 +43,7 @@ export function LocalTaskEmptyProjectForm({ onDone }: { onDone?: () => void }): 
   const hostLabels = useAppStore(
     useShallow((state) =>
       writable.length > 1
-        ? writable.map((endpoint) => selectExecutionHostDisplayLabel(state, endpoint))
+        ? writable.map((endpoint) => selectLocalTaskHostLabel(state, endpoint))
         : []
     )
   )

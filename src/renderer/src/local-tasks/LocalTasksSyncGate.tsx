@@ -1,3 +1,4 @@
+import { bindLocalTaskStartupPage } from './local-task-startup-page'
 import { useEffect } from 'react'
 import { RecoverableRenderErrorBoundary } from '@/components/error-boundaries/RecoverableRenderErrorBoundary'
 import { isWebClientLocation } from '@/lib/web-client-location'
@@ -27,6 +28,7 @@ import { subscribeLocalTaskAppStore } from './local-task-app-store-subscription'
 import { installLocalTaskPageKeyRouter } from './local-task-page-keys'
 import { bindLocalTaskSourceActivation } from './local-task-source-activation'
 import { bindLocalTaskViewPreferences } from './local-task-view-preferences'
+import { bindLocalTaskDispatcher } from './local-task-dispatcher-wake'
 import { localTaskPageStore } from './local-task-page-store'
 
 const NO_STREAM = { unsubscribe: () => {} }
@@ -274,6 +276,8 @@ function LocalTasksLibraries(): null {
   useEffect(() => installLocalTaskPageKeyRouter(), [])
   useEffect(() => bindLocalTaskSourceActivation(), [])
   useEffect(() => bindLocalTaskViewPreferences(), [])
+  useEffect(() => bindLocalTaskStartupPage(), [])
+  useEffect(() => bindLocalTaskDispatcher(), [])
   useEffect(
     () =>
       subscribeLocalTaskAppStore('leaving the task page', (state, previous) => {

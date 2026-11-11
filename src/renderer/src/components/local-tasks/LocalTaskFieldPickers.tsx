@@ -112,11 +112,14 @@ export function LocalTaskProjectSelect({
   projects,
   value,
   onChange,
+  emptyText,
   disabled
 }: {
   projects: readonly LocalTaskProject[]
   value: string | null
   onChange: (projectId: string) => void
+  /** Said when nothing is picked; defaults to the field's name, as in the create dialog. */
+  emptyText?: string
   disabled?: boolean
 }): React.JSX.Element {
   const current = projects.find((project) => project.id === value)
@@ -125,8 +128,8 @@ export function LocalTaskProjectSelect({
       <DropdownMenuTrigger asChild disabled={disabled}>
         <Button variant="outline" size="xs" className={TRIGGER}>
           <FolderKanban className="size-3.5" />
-          <span className="truncate">
-            {current?.name ?? translate('localTasks.field.project', 'Project')}
+          <span className={cn('truncate', !current && emptyText && 'text-muted-foreground')}>
+            {current?.name ?? emptyText ?? translate('localTasks.field.project', 'Project')}
           </span>
           {current ? (
             <span className="font-mono text-2xs text-muted-foreground">{current.prefix}</span>
@@ -165,6 +168,16 @@ export function LocalTaskLabelOptions({
   const typed = query.trim().slice(0, LOCAL_TASK_LABEL_MAX)
   return (
     <CommandGroup>
+      {canAdd ? null : (
+        // Why first: the other labels are greyed at the cap, and a long list would hide this line.
+        <p className="px-2 py-1.5 text-2xs text-muted-foreground">
+          {translate(
+            'localTasks.picker.labelsFull',
+            'A task holds up to {{count}} labels. Remove one to add another.',
+            { count: LOCAL_TASK_LABELS_MAX }
+          )}
+        </p>
+      )}
       {labels.map((label) => {
         const selected = checked(label)
         return (

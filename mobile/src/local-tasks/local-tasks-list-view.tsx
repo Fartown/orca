@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
-import { ChevronDown, ChevronRight, ListTodo } from 'lucide-react-native'
+import { Bell, ChevronDown, ChevronRight } from 'lucide-react-native'
 import type { LocalTaskStatusCategory } from '../../../src/shared/local-tasks/local-task-model'
 import type {
   LocalTask,
@@ -8,14 +8,14 @@ import type {
 } from '../../../src/shared/local-tasks/local-task-types'
 import { unfoldedLocalTaskLines } from '../../../src/shared/local-tasks/local-task-list-groups'
 import { colors, spacing, typography } from '../theme/mobile-theme'
-import { formatLocalTaskAgo, localTasksCopy } from './local-tasks-copy'
+import { localTasksCopy } from './local-tasks-copy'
+import { LocalTaskCard, localTaskCardStyles } from './local-task-card'
+import type { LocalTaskCardFacts } from './local-task-card-facts'
 import type { LocalTaskListGroup, LocalTaskListRow } from './local-task-list-projection'
+import type { LocalTaskRowSession } from './local-task-progress-projection'
+import { LocalTaskSessionDots } from './local-task-session-dots'
 import { localTaskStyles } from './local-tasks-styles'
-import {
-  LocalTaskPriorityIcon,
-  LocalTaskStatusIcon,
-  localTaskCategoryColor
-} from './local-tasks-visuals'
+import { LocalTaskStatusIcon, localTaskCategoryColor } from './local-tasks-visuals'
 
 // Why these start folded: finished and parked work is the long tail of a list you scan for today.
 const FOLDED_CATEGORIES: ReadonlySet<LocalTaskStatusCategory> = new Set([
@@ -31,11 +31,31 @@ type Props = {
   bottomInset: number
   /** Said when there is nothing to show; defaults to "no tasks here yet". */
   emptyText?: string
+  /** The session dots a subtask line shows, from what the page already loaded. */
+  sessionsFor: (task: LocalTask) => LocalTaskRowSession[]
+  /** What a card says, from what the page already loaded. */
+  factsFor: (task: LocalTask) => LocalTaskCardFacts
+  /** "Needs you", drawn first; the tasks it holds leave the status groups below. */
+  band?: { ids: ReadonlySet<string>; count: number; note: string | null; section: ReactNode }
   onOpen: (taskId: string) => void
+}
+
+/** Tasks a group counts that "Needs you" shows instead. */
+function tasksInBand(group: LocalTaskListGroup, band: ReadonlySet<string>): number {
+  let count = 0
+  for (const row of group.rows) {
+    for (const task of [row.task, ...row.subtasks.map((line) => line.task)]) {
+      if (band.has(task.id)) {
+        count += 1
+      }
+    }
+  }
+  return count
 }
 
 export function LocalTasksListView(props: Props) {
   const copy = localTasksCopy()
+  const card = copy.work.card
   const [toggledGroups, setToggledGroups] = useState<ReadonlySet<string>>(new Set())
   const [foldedParents, setFoldedParents] = useState<ReadonlySet<string>>(new Set())
   const toggle = (set: ReadonlySet<string>, key: string) => {
@@ -45,7 +65,16 @@ export function LocalTasksListView(props: Props) {
     }
     return next
   }
-  if (props.groups.length === 0) {
+  const banded = props.band?.ids ?? new Set<string>()
+  const groups = props.groups
+    .map((group) => ({
+      group,
+      rows: group.rows.filter((row) => !banded.has(row.task.id)),
+      inBand: tasksInBand(group, banded)
+    }))
+    .filter((entry) => entry.rows.length > 0)
+  const bandCount = props.band?.count ?? 0
+  if (groups.length === 0 && bandCount === 0) {
     return (
       <View style={localTaskStyles.centered}>
         <Text style={localTaskStyles.centeredText}>{props.emptyText ?? copy.emptyList}</Text>
@@ -54,7 +83,20 @@ export function LocalTasksListView(props: Props) {
   }
   return (
     <ScrollView contentContainerStyle={{ paddingBottom: props.bottomInset + 96 }}>
-      {props.groups.map((group) => {
+      {props.band && bandCount > 0 ? (
+        <View testID="local-tasks-needs-you-band">
+          <View style={styles.groupHeader}>
+            <Bell size={14} color={colors.statusAmber} />
+            <Text style={styles.groupTitle}>{copy.work.segmentAttention}</Text>
+            <Text style={[localTaskStyles.meta, styles.attentionCount]}>{bandCount}</Text>
+          </View>
+          {props.band.note ? (
+            <Text style={[localTaskStyles.hint, styles.bandNote]}>{props.band.note}</Text>
+          ) : null}
+          {props.band.section}
+        </View>
+      ) : null}
+      {groups.map(({ group, rows, inBand }) => {
         const foldedByDefault = group.category !== null && FOLDED_CATEGORIES.has(group.category)
         const folded = foldedByDefault !== toggledGroups.has(group.key)
         return (
@@ -82,21 +124,32 @@ export function LocalTasksListView(props: Props) {
                 {group.status?.name ??
                   (group.category ? copy.categories[group.category] : copy.unknownStatus)}
               </Text>
-              <Text style={localTaskStyles.meta}>{group.count}</Text>
+              <Text style={localTaskStyles.meta}>{group.count - inBand}</Text>
+              {inBand > 0 ? (
+                <Text style={[localTaskStyles.meta, styles.shrink]} numberOfLines={1}>
+                  {card.moreInNeedsYou(inBand)}
+                </Text>
+              ) : null}
             </Pressable>
-            {folded
-              ? null
-              : group.rows.map((row) => (
+            {folded ? null : (
+              <View style={[localTaskStyles.card, localTaskCardStyles.group]}>
+                {rows.map((row, at) => (
                   <LocalTaskListRowView
                     key={row.task.id}
                     row={row}
+                    first={at === 0}
+                    banded={banded}
                     lookup={props.lookup}
                     now={props.now}
                     folded={foldedParents}
+                    sessionsFor={props.sessionsFor}
+                    factsFor={props.factsFor}
                     onToggle={(taskId) => setFoldedParents((previous) => toggle(previous, taskId))}
                     onOpen={props.onOpen}
                   />
                 ))}
+              </View>
+            )}
           </View>
         )
       })}
@@ -106,83 +159,46 @@ export function LocalTasksListView(props: Props) {
 
 function LocalTaskListRowView(props: {
   row: LocalTaskListRow
+  first: boolean
+  banded: ReadonlySet<string>
   lookup: Map<string, LocalTaskStatusDef>
   now: number
   folded: ReadonlySet<string>
+  sessionsFor: (task: LocalTask) => LocalTaskRowSession[]
+  factsFor: (task: LocalTask) => LocalTaskCardFacts
   onToggle: (taskId: string) => void
   onOpen: (taskId: string) => void
 }) {
-  const copy = localTasksCopy()
   const { task } = props.row
-  const status = props.lookup.get(task.statusId) ?? null
   const expanded = !props.folded.has(task.id)
   return (
-    <View style={styles.rowBlock}>
-      <Pressable
-        style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
-        onPress={() => props.onOpen(task.id)}
-        accessibilityRole="button"
-        accessibilityLabel={`${task.title} ${task.ref}`}
-      >
-        <LocalTaskStatusIcon category={status?.category ?? null} color={status?.color ?? 'gray'} />
-        <View style={styles.rowMain}>
-          <Text style={styles.rowTitle} numberOfLines={2}>
-            {task.title}
-          </Text>
-          <View style={styles.rowMeta}>
-            <LocalTaskPriorityIcon priority={task.priority} />
-            <Text style={[localTaskStyles.mono, styles.rowRef]} numberOfLines={1}>
-              {task.ref}
-            </Text>
-            {props.row.subtaskTotal > 0 || props.row.subtasks.length > 0 ? (
-              <Pressable
-                style={styles.subtaskChipHit}
-                onPress={() => props.onToggle(task.id)}
-                accessibilityRole="button"
-                accessibilityState={{ expanded }}
-              >
-                <View style={styles.subtaskChip}>
-                  <ListTodo size={11} color={colors.textMuted} />
-                  <Text style={localTaskStyles.meta}>
-                    {props.row.subtaskDone}/{props.row.subtaskTotal}
-                  </Text>
-                  {expanded ? (
-                    <ChevronDown size={11} color={colors.textMuted} />
-                  ) : (
-                    <ChevronRight size={11} color={colors.textMuted} />
-                  )}
-                </View>
-              </Pressable>
-            ) : null}
-            {/* The first label, cut at the edge, and how many more; the detail lists them all. */}
-            {task.labels.length > 0 ? (
-              <Text style={[localTaskStyles.meta, styles.rowLabels]} numberOfLines={1}>
-                {task.labels[0]}
-              </Text>
-            ) : null}
-            {task.labels.length > 1 ? (
-              <Text style={localTaskStyles.meta}>+{task.labels.length - 1}</Text>
-            ) : null}
-          </View>
-        </View>
-        <Text style={localTaskStyles.meta}>
-          {formatLocalTaskAgo(copy, task.updatedAt, props.now)}
-        </Text>
-      </Pressable>
+    <LocalTaskCard
+      task={task}
+      status={props.lookup.get(task.statusId) ?? null}
+      facts={props.factsFor(task)}
+      now={props.now}
+      first={props.first}
+      subtasksExpanded={expanded}
+      onToggleSubtasks={props.row.subtasks.length > 0 ? () => props.onToggle(task.id) : undefined}
+      onOpen={props.onOpen}
+    >
       {expanded
-        ? unfoldedLocalTaskLines(props.row.subtasks, props.folded).map((line) => (
-            <LocalTaskSubtaskRow
-              key={line.task.id}
-              task={line.task}
-              status={props.lookup.get(line.task.statusId) ?? null}
-              depth={line.depth}
-              folded={line.childCount > 0 ? props.folded.has(line.task.id) : undefined}
-              onToggle={() => props.onToggle(line.task.id)}
-              onOpen={props.onOpen}
-            />
-          ))
+        ? unfoldedLocalTaskLines(props.row.subtasks, props.folded)
+            .filter((line) => !props.banded.has(line.task.id))
+            .map((line) => (
+              <LocalTaskSubtaskRow
+                key={line.task.id}
+                task={line.task}
+                status={props.lookup.get(line.task.statusId) ?? null}
+                depth={line.depth}
+                folded={line.childCount > 0 ? props.folded.has(line.task.id) : undefined}
+                sessions={props.sessionsFor(line.task)}
+                onToggle={() => props.onToggle(line.task.id)}
+                onOpen={props.onOpen}
+              />
+            ))
         : null}
-    </View>
+    </LocalTaskCard>
   )
 }
 
@@ -199,6 +215,8 @@ export function LocalTaskSubtaskRow(props: {
   onToggle?: () => void
   /** Inside a card, which pads its own rows: no list indent under a parent's status icon. */
   inCard?: boolean
+  /** The sessions this subtask opened, drawn as dots after its title (REQ-012). */
+  sessions?: readonly LocalTaskRowSession[]
   onOpen: (taskId: string) => void
 }) {
   const indent = (Math.min(props.depth ?? 1, MAX_INDENT_DEPTH) - 1) * spacing.lg
@@ -213,7 +231,7 @@ export function LocalTaskSubtaskRow(props: {
       ]}
       onPress={() => props.onOpen(props.task.id)}
       accessibilityRole="button"
-      accessibilityLabel={`${props.task.ref} ${props.task.title}`}
+      accessibilityLabel={`${props.task.title} ${props.task.ref}`}
     >
       <LocalTaskStatusIcon
         category={props.status?.category ?? null}
@@ -224,6 +242,7 @@ export function LocalTaskSubtaskRow(props: {
       <Text style={styles.subtaskTitle} numberOfLines={1}>
         {props.task.title}
       </Text>
+      {props.sessions ? <LocalTaskSessionDots sessions={props.sessions} /> : null}
       {props.folded !== undefined ? (
         <Pressable
           testID={`local-task-fold-${props.task.id}`}
@@ -249,37 +268,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.sm,
     paddingHorizontal: spacing.lg,
-    paddingVertical: 10,
-    backgroundColor: colors.bgPanel,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.borderSubtle
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.sm
   },
-  groupTitle: { color: colors.textPrimary, fontSize: typography.metaSize, fontWeight: '600' },
-  rowBlock: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.borderSubtle },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md
-  },
+  groupTitle: { color: colors.textPrimary, fontSize: typography.bodySize, fontWeight: '600' },
+  attentionCount: { color: colors.statusAmber },
+  bandNote: { paddingHorizontal: spacing.lg, paddingBottom: spacing.sm },
+  shrink: { flexShrink: 1, minWidth: 0 },
   rowPressed: { backgroundColor: colors.bgRaised },
-  rowMain: { flex: 1, minWidth: 0, gap: 4 },
-  rowTitle: { color: colors.textPrimary, fontSize: typography.bodySize },
-  rowMeta: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  rowRef: { flexShrink: 0 },
-  rowLabels: { flexShrink: 1, minWidth: 0 },
-  // Why padding pulled back by margins: the browser page ignores hitSlop, and the pill stays its size.
-  subtaskChipHit: { paddingVertical: 10, marginVertical: -10 },
-  subtaskChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 999,
-    backgroundColor: colors.bgRaised
-  },
   subtaskRow: {
     flexDirection: 'row',
     alignItems: 'center',

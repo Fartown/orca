@@ -8,6 +8,11 @@ import type { LocalTasksTasksUpdateInput } from '../../shared/local-tasks/local-
 import type { LocalTasksDatabase } from './local-tasks-database'
 import { appendLocalTaskEvent } from './local-task-event-store'
 import {
+  descriptionWithLegacyCriteria,
+  descriptionWithoutTrackedLegacyCriteria,
+  readTrackedLegacyCriteria
+} from './local-task-criteria-fold'
+import {
   isValidParent,
   recordLabelChange,
   setTaskColumn,
@@ -15,6 +20,7 @@ import {
 } from './local-task-mutation-rules'
 import { readLocalTaskProject } from './local-task-project-store'
 import { readLocalTask } from './local-task-store'
+import { rowString } from './local-tasks-sqlite-row'
 
 /** Applies only the fields that changed, one activity entry per changed field. */
 export function updateLocalTask(
@@ -38,6 +44,15 @@ export function updateLocalTask(
   ) {
     return { ok: false, code: 'status_invalid' }
   }
+  // Why: the CLI cannot tell a person from an agent, so completing stays a click in the UI (REQ-022).
+  if (
+    source === 'cli' &&
+    patch.statusId !== undefined &&
+    patch.statusId !== task.statusId &&
+    project.statuses.find((status) => status.id === patch.statusId)?.category === 'completed'
+  ) {
+    return { ok: false, code: 'status_invalid', detail: 'completed-needs-ui' }
+  }
   // Why: any depth, but never under itself or its own subtree; its links stay as they name work.
   if (
     patch.parentId !== undefined &&
@@ -59,22 +74,27 @@ export function updateLocalTask(
     )
     event('title', { from: task.title, to: patch.title })
   }
-  if (patch.description !== undefined && patch.description !== task.description) {
-    touchRow(
-      'UPDATE local_tasks SET description = ?, updated_at = ?, revision = revision + 1 WHERE id = ?',
-      patch.description
-    )
-    event('description')
-  }
-  if (
-    patch.criteria !== undefined &&
-    JSON.stringify(patch.criteria) !== JSON.stringify(task.criteria)
-  ) {
-    touchRow(
-      'UPDATE local_tasks SET criteria = ?, updated_at = ?, revision = revision + 1 WHERE id = ?',
-      JSON.stringify(patch.criteria)
-    )
-    event('criteria')
+  if (patch.description !== undefined || patch.criteria !== undefined) {
+    const row = db.prepare('SELECT criteria FROM local_tasks WHERE id = ?').get(task.id)
+    const tracked = row ? readTrackedLegacyCriteria(rowString(row, 'criteria')) : []
+    const base =
+      patch.criteria !== undefined
+        ? descriptionWithoutTrackedLegacyCriteria(patch.description ?? task.description, tracked)
+        : (patch.description ?? task.description)
+    const description =
+      patch.criteria !== undefined ? descriptionWithLegacyCriteria(base, patch.criteria) : base
+    const nextTracked = patch.criteria !== undefined && description !== base ? patch.criteria : []
+    if (
+      description !== task.description ||
+      JSON.stringify(nextTracked) !== JSON.stringify(tracked)
+    ) {
+      db.prepare(
+        'UPDATE local_tasks SET description = ?, criteria = ?, updated_at = ?, revision = revision + 1 WHERE id = ?'
+      ).run(description, JSON.stringify(nextTracked), now, task.id)
+      if (description !== task.description) {
+        event('description')
+      }
+    }
   }
   if (patch.statusId !== undefined && patch.statusId !== task.statusId) {
     setTaskColumn(db, task.id, 'status_id', patch.statusId, now)
