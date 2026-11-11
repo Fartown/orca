@@ -4207,7 +4207,15 @@
         "mobile/src/local-tasks/local-tasks-copy.test.ts",
         "mobile/src/local-tasks/local-tasks-library-header.test.tsx",
         "src/renderer/src/local-tasks/local-task-proposal-targets.test.ts",
-        "src/renderer/src/local-tasks/local-task-dispatcher-ask.test.ts"
+        "src/renderer/src/local-tasks/local-task-dispatcher-ask.test.ts",
+        "src/shared/local-tasks/local-task-latest-progress-choice.test.ts",
+        "src/shared/local-tasks/local-task-attention-rules.test.ts",
+        "src/shared/local-tasks/local-task-finished-sessions.test.ts",
+        "src/main/local-tasks/local-task-folder-workspace-links.test.ts",
+        "src/main/local-tasks/local-task-attention-monitor.test.ts",
+        "src/main/local-tasks/local-task-dispatcher-inbox.test.ts",
+        "src/renderer/src/local-tasks/local-task-dispatch-launch.test.ts",
+        "mobile/src/local-tasks/local-task-review-actions.test.tsx"
       ],
       "checks": [
         "pnpm exec vitest run --config config/vitest.config.ts src/main/local-tasks src/shared/local-tasks src/main/runtime/rpc/methods/local-tasks.test.ts src/shared/host-operation-ownership.test.ts src/main/runtime/runtime-rpc/fork-mobile-rpc-method-allowlist.test.ts src/main/runtime/runtime-rpc-mobile-method-allowlist.test.ts src/cli/local-tasks src/main/ipc/desktop-runtime-sender-lifecycle.test.ts",

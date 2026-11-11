@@ -3,9 +3,10 @@ title: 本地任务管理
 slug: 本地任务管理
 status: implementing
 created: 2026-10-26
-updated: 2026-11-10
+updated: 2026-11-11
 external_ids:
   - 'Fartown/orca#90'
+  - 'Fartown/orca#99'
 ---
 
 # 本地任务管理 开发 Journal
@@ -26,7 +27,7 @@ external_ids:
 | 测试记录 | [tests/runs/2026-10-26-开工前验证.md](tests/runs/2026-10-26-开工前验证.md)             | completed | 开工前 4 项：1、2 成立，3 仅代码确认，4 部分成立                                                                                                                                  |
 | 测试记录 | [tests/runs/2026-10-26-切片1真机验证.md](tests/runs/2026-10-26-切片1真机验证.md)       | completed | 切片 1：13 条通过、3 条部分覆盖，4 个修复复测通过                                                                                                                                 |
 | 测试记录 | [tests/runs/2026-11-05-总管本机真机验证.md](tests/runs/2026-11-05-总管本机真机验证.md) | completed | 总管本机场景：打开、提案、确认执行、收件箱、回写、唤醒、开关、重开都通过；SSH 场景未做                                                                                            |
-| 测试用例 | [tests/cases/任务为主的工作流测试.md](tests/cases/任务为主的工作流测试.md)             | ready     | TC-301～TC-309，任务界面、派活、会话、验收、主机归属与兼容                                                                                                                        |
+| 测试用例 | [tests/cases/任务为主的工作流测试.md](tests/cases/任务为主的工作流测试.md)             | ready     | TC-301～TC-309，任务界面、派活、会话、验收、主机归属与兼容；TC-312～TC-323 原型还原补充；TC-324～TC-330 复审修复回归（2026-11-11）                                                |
 
 ## 2. 决策点记录
 
@@ -375,6 +376,82 @@ external_ids:
 - 验证完再一起做两个切片
 
 ## 3. 开发记录
+
+### 2026-11-11 复审发现的问题修复（testing）
+
+- 本轮目标：PR #76 合入后，对任务管理和总管重新做一轮复审（主进程与共享层、桌面、总管与 CLI、手机、需求符合度五个方向），把发现的问题修掉（Fartown/orca#99）。复审清单在本机 `.docs/local-tasks-review/2026-11-11/review.md`。
+- 完成内容：
+  - 高优先 8 项：
+    - H1 手机首页卡片无限重复渲染。
+    - H2 最新进展被轮次末句盖掉：三端改用同一取舍规则 `src/shared/local-tasks/local-task-latest-progress-choice.ts`。
+    - H3 @ 已有工作区的任务派活必然失败。
+    - H4 总管面板里 CLI 写命令被拒，只能走提案。
+    - H5 任务内容进总管时加引号，并声明为数据。
+    - H6 文件夹工作区判断会话是否在内，改为 in、out、unknown 三态。
+    - H7 等批准、等回答、被卡住的条目，终端还在时不再 30 分钟后消失。
+    - H8 打回和续发包含子任务的会话：新增 `src/shared/local-tasks/local-task-finished-sessions.ts`。
+  - 中优先：
+    - ack 游标校验，ack 时保留暂缓或失联主机的已确认键。
+    - 跨主机按编号盯任务：窗口找到后在同一次写入里换成真实 id。
+    - `needs-you` 按主机列出无法确认的会话，不断言主机失联。
+    - 中断收尾的消息列出状态不明的项；结果写入失败时提案卡显示「已停止」，可人工收尾。
+    - 提案落到已属别的任务的工作区，或没有可用智能体时，锁定该项并在执行前拒绝。
+    - 派活回执：会话已起但没记到任务上时给「补记录」；提交时重新判断主机是否在联系。
+    - 三处计数口径统一。
+    - 手机：配对服务器速览读错主机、详情页草稿串任务、打回双发。
+  - 低优先若干，见三个代码提交的说明。
+  - 修完由独立评审复核，又发现并修了 F1～F4、F6～F8：
+    - 跨主机盯任务刚跟上就被删；
+    - 同一编号第二次盯会被吞掉；
+    - `needs-you` 把联系正常的主机说成失联；
+    - @ 工作区时续发到了别的工作区；
+    - 游标被拒时的提示改准确；
+    - 空正文的进展口径统一；
+    - 转发摘要超过长度上限。
+  - F5（由其他执行方持有的聊天会话等待时是否仍会衰减）待真机确认。
+- 代码或文档变更：
+  - 代码在 `src/main/local-tasks/`、`src/shared/local-tasks/`、`src/cli/local-tasks/`、`src/renderer/src/local-tasks/`、`src/renderer/src/components/local-tasks/`、`mobile/src/local-tasks/`，以及 `local-task-dispatcher-methods.ts`。
+  - RPC 改动：
+    - 新增仅桌面可用的 `localTasks.proposals.release`；
+    - `dispatcher.watch` 增加可选参数 `replacesRef`；
+    - `dispatcher.unwatch` 改用独立的参数定义；
+    - 参数目录已重新生成。
+  - 中英文文案：桌面新增 10 个键，手机新增 3 个键，删掉不再使用的 `localTasks.dispatch.agentLinkFailed`。
+  - 关键回归测试登记到 `fork-features`。
+  - 需求文档：
+    - 补各条的 2026-11-11 状态；
+    - 更正「手机能决定提案」（手机端没有提案界面）；
+    - 更正 CLI 旧参数写法；
+    - 更正 REQ-017 与 D-014 冲突的两处。
+  - 用例文档：
+    - 修正 TC-312.1、TC-313.1；
+    - 新增 TC-324～TC-330 复审修复回归用例，含 SSH 变体。
+- 验证证据：
+  - 单测：主进程与 CLI、渲染层、手机、配套脚本四组全过（`pnpm verify:fork-features -- --feature local-tasks`）。
+  - 以下检查均通过：
+    - `pnpm tc` 与手机两项类型检查；
+    - 8 道本地化门禁、`verify:rpc-params-catalog`；
+    - `check:fork-features`、`check:fork-docs`；
+    - 改动代码质量、React Doctor、anti-slop；
+    - 全仓 type-aware 与 lint。
+  - 门禁记录在本机 `.docs/local-tasks-review/2026-11-11/evidence/gates-2/`；同一工作目录里另一功能（同步上游守卫）的未提交文件引起的报错不计入。
+  - 难以在真机触发的新状态（补记录、部分送达、已停止与结果未知、工作区已属别的任务、智能体被替换、没有可用智能体）用组件夹具截图，light 和 dark 各一张，已逐张看过（`.docs/local-tasks-review/2026-11-11/evidence/fixtures/`）。
+  - 桌面与 SSH 真机验证见本节后续补记。
+- 未解决问题：
+  - 服务端还分不出调用方是不是总管，要根治 H4 需要给总管单独发受限凭证，需改上游的终端环境注入和 socket 认证。
+  - 需求项留到下一轮：
+    - REQ-004 取消任务时一并停止会话；
+    - REQ-024 项目级验收说明；
+    - REQ-029 无工作区的任务可 @、「改为建子任务」；
+    - REQ-030 手机提案界面、「直接执行」开关（与 D-017 冲突，待用户定）。
+  - 重启后不存在的会话仍显示「状态未知」。
+  - 手机派活先建任务再选智能体。
+  - CLI 每次写入都现读版本号。
+  - 轮次记录查询没有索引。
+- 下一步：
+  1. 推送并开 PR，链接 #99，跟进 CI。
+  2. 补记桌面与 SSH 真机验证结果。
+  3. CI 全绿后问用户是否合并。
 
 ### 2026-11-10 按原型还原、完整功能测试与总管评测（testing）
 
