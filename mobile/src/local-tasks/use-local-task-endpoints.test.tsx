@@ -13,6 +13,7 @@ import { MOBILE_DESKTOP_RELAY_RUNTIME_CAPABILITY } from '../../../src/shared/mob
 import { MOBILE_RELAY_HOSTS_LIST_METHOD } from '../../../src/shared/mobile-relay-hosts-contract'
 import type { RpcClient } from '../transport/rpc-client'
 import type { RpcResponse } from '../transport/types'
+import { relayHostsFeed } from '../worktree/relay-hosts-feed'
 import { localTaskEndpointFor, type LocalTaskEndpoint } from './local-task-endpoint'
 import { useLocalTaskEndpoints } from './use-local-task-endpoints'
 import { useLocalTasksLibrary } from './use-local-tasks-library'
@@ -48,7 +49,7 @@ const LIBRARY_ANSWERS: Record<string, unknown> = {
 }
 
 /** A paired desktop relaying to one current server and one that predates local tasks. */
-function desktop() {
+function desktop(server: { relay: 'ready' | 'unavailable' } = { relay: 'ready' }) {
   const taskCalls: { method: string; executionHost: string | undefined }[] = []
   let emit: ((payload: unknown) => void) | null = null
   const session: RpcClient = {
@@ -57,7 +58,9 @@ function desktop() {
       if (method === MOBILE_RELAY_HOSTS_LIST_METHOD) {
         return reply({
           hosts: [
-            { hostId: SERVER, label: 'dbox', health: 'available', relay: 'ready' },
+            server.relay === 'ready'
+              ? { hostId: SERVER, label: 'dbox', health: 'available', relay: 'ready' }
+              : { hostId: SERVER, label: 'dbox', health: 'disconnected', relay: 'unavailable' },
             { hostId: OLD_SERVER, label: 'old', health: 'available', relay: 'ready' }
           ]
         })
@@ -132,6 +135,22 @@ describe("a server's task library through the paired host (D-008)", () => {
   it('lists only servers that advertise local tasks beside the host itself', async () => {
     const { session } = desktop()
     const seen = await open(session, localTaskEndpointFor(undefined))
+    expect(seen.choices).toEqual(['self=mbp5', `${SERVER}=dbox`])
+  })
+
+  it("keeps a server that drops out on the switch, so the host's own library stays a tap away", async () => {
+    const server: { relay: 'ready' | 'unavailable' } = { relay: 'ready' }
+    const { session } = desktop(server)
+    const seen = await open(session, localTaskEndpointFor(SERVER))
+    expect(seen.access).toBe('ready')
+    expect(seen.choices).toEqual(['self=mbp5', `${SERVER}=dbox`])
+
+    server.relay = 'unavailable'
+    await act(async () => {
+      await relayHostsFeed(session).read()
+    })
+    await settle()
+    expect(seen.access).not.toBe('ready')
     expect(seen.choices).toEqual(['self=mbp5', `${SERVER}=dbox`])
   })
 

@@ -4658,7 +4658,8 @@
       "empty": "No tasks here yet",
       "filteredEmpty": "No tasks match the search or filter",
       "searchPlaceholder": "Search title or ref",
-      "unknownStatus": "Unknown status"
+      "unknownStatus": "Unknown status",
+      "subtasksOf": "Subtasks of “{{title}}”"
     },
     "filter": {
       "title": "Filter",
@@ -5163,6 +5164,8 @@
       "nothingCreated": "Nothing was created: {{reason}}",
       "createdNotLinked": "{{ref}} was created, but {{workspace}} was not linked to it. {{reason}}",
       "createdNotStarted": "{{ref}} was created. {{reason}}"
-    }
+    },
+    "rejectNoFinishedSession": "Reason saved. No session has finished a turn to take it; open one, or start a new session from the task.",
+    "rejectNotSent": "Reason saved, but {{missed}} of {{total}} sessions did not get it: {{reason}}"
   }
 }

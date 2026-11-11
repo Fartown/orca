@@ -27,7 +27,7 @@ const NEXT_COLUMN_PEEK = 48
 
 type Props = {
   groups: LocalTaskListGroup[]
-  tasksById: Map<string, LocalTask>
+  tasksById: ReadonlyMap<string, LocalTask>
   now: number
   bottomInset: number
   /** Present in one project, where a column is a status a new task can start in. */

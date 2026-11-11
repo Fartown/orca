@@ -9,9 +9,9 @@ import { useLocalTaskWorkspaceListing } from './use-local-task-workspace-listing
 import type { LocalTasksLibrary } from './use-local-tasks-library'
 
 /**
- * How the page's cards name hosts and PRs. Host names and the paired host's word on its SSH hosts
- * are read once; the workspace list is read once per set of tasks awaiting acceptance, and only
- * while the library's host is in contact. Nothing retries or polls.
+ * How the page's cards name hosts and PRs. Host names are read once, and the paired host's word on
+ * its SSH hosts follows its notices; the workspace list is read once per set of tasks awaiting
+ * acceptance, and only while the library's host is in contact. Nothing retries or polls.
  */
 export function useLocalTaskCardContext(args: {
   site: LocalTaskSite

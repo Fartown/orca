@@ -10,8 +10,11 @@ import { localTaskDescendantIds } from '../../../src/shared/local-tasks/local-ta
 import type { LocalTask } from '../../../src/shared/local-tasks/local-task-types'
 import { localTaskLatestProgress } from './local-task-latest-line'
 import {
+  buildLocalTaskSessionLookup,
   localTaskRowSessionStates,
-  localTaskWorkspaceLinkFor
+  localTaskSessionsOf,
+  localTaskWorkspaceLinkFor,
+  type LocalTaskSessionLookup
 } from './local-task-progress-projection'
 
 export type LocalTaskCardSession = {
@@ -130,18 +133,19 @@ function oneLine(text: string): string {
 function subtaskFacts(
   task: LocalTask,
   index: Pick<LocalTaskIndex, 'childrenByParentId'>,
-  links: LocalTaskLinks,
-  states: ReadonlyMap<string, LocalTaskSessionState>,
+  lookup: LocalTaskSessionLookup,
   inContact: boolean
 ): LocalTaskCardSubtasks | null {
   const children = index.childrenByParentId.get(task.id) ?? []
   if (children.length === 0) {
     return null
   }
-  const childIds = new Set(children.map((child) => child.id))
-  const sessionStates = links.sessions
-    .filter((link) => childIds.has(link.taskId))
-    .map((link) => (inContact ? (states.get(link.id) ?? 'unknown') : 'unverifiable'))
+  const sessionStates: LocalTaskSessionState[] = localTaskSessionsOf(
+    children.map((child) => child.id),
+    lookup
+  ).map((link) =>
+    inContact ? (lookup.progressById.get(link.id)?.state ?? 'unknown') : 'unverifiable'
+  )
   const waiting = sessionStates.filter((state) => state === 'waiting').length
   const working = sessionStates.filter((state) => state === 'working').length
   const summary: LocalTaskCardSubtasks['summary'] =
@@ -180,24 +184,26 @@ export function localTaskCardFacts(args: {
   hostName: (ownerHostId: string, snapshotLabel: string | null) => string
   /** The paired host's word on a host; null when it gave none. */
   hostConnected: (ownerHostId: string) => boolean | null
+  /** Built from the same links and snapshot by a page that reads many cards. */
+  lookup?: LocalTaskSessionLookup
 }): LocalTaskCardFacts {
   const { task, index, links, snapshot, inContact } = args
-  const link = localTaskWorkspaceLinkFor(task, index.tasksById, links)
-  const progress = new Map((snapshot?.sessions ?? []).map((entry) => [entry.taskSessionId, entry]))
-  const states = new Map([...progress].map(([id, entry]) => [id, entry.state]))
+  const lookup = args.lookup ?? buildLocalTaskSessionLookup(links, snapshot)
+  const link = localTaskWorkspaceLinkFor(task, index.tasksById, links, lookup)
   const items = snapshot?.items ?? []
   const sessions: LocalTaskCardSession[] = localTaskRowSessionStates({
     task,
     index,
     links,
     snapshot,
-    inContact
+    inContact,
+    lookup
   }).flatMap((row) => {
-    const sessionLink = links.sessions.find((entry) => entry.id === row.id)
+    const sessionLink = lookup.sessionsById.get(row.id)
     if (!sessionLink) {
       return []
     }
-    const entry = progress.get(row.id)
+    const entry = lookup.progressById.get(row.id)
     return [
       {
         link: sessionLink,
@@ -244,6 +250,6 @@ export function localTaskCardFacts(args: {
     lead,
     sessionCount: sessions.length,
     latest,
-    subtasks: subtaskFacts(task, index, links, states, inContact)
+    subtasks: subtaskFacts(task, index, lookup, inContact)
   }
 }
