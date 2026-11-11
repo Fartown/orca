@@ -1027,9 +1027,14 @@ jobs:
       # The fork mirrors main but does not publish upstream's release tags.
       - name: Fetch upstream compatibility baselines
         if: github.repository == 'Fartown/orca'
-        run: >-
-          git fetch --no-tags --filter=blob:none https://github.com/stablyai/orca.git
-          'refs/tags/v*:refs/tags/v*'
+        run: |
+          git fetch --no-tags --filter=blob:none https://github.com/stablyai/orca.git 'refs/tags/v*:refs/tags/v*'
+          # Why: fork builds carry upstream as of the last sync; a release cut after it is not one
+          # fork users upgrade from, and its moved files fail checks written for the older tree.
+          snapshot="$(git log -1 --format=%ct "$(git merge-base HEAD origin/main)")"
+          git for-each-ref --format='%(refname:short) %(creatordate:unix)' 'refs/tags/v*' \
+            | awk -v snapshot="$snapshot" '$2 > snapshot { print $1 }' \
+            | xargs -r git tag -d > /dev/null
 
       - uses: ./.github/actions/install-node-dependencies
         with:
