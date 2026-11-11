@@ -14,7 +14,11 @@ import type {
   LiveTerminalSurfaceOwner,
   LiveTerminalSurfaceOwnerIndex
 } from './worktree-live-terminal-surface-owners'
-import { restoreRecordedLiveTerminalSurface } from '../mobile-terminal-surface-recovery/recorded-live-terminal-surface'
+import {
+  hasCompetingRecordedTerminalBinding,
+  restoreRecordedLiveTerminalSurface
+} from '../mobile-terminal-surface-recovery/recorded-live-terminal-surface'
+import { canMintLiveTerminalFallback } from '../mobile-terminal-surface-recovery/live-terminal-placement-verdict'
 
 export type LiveSurfaceAdoptionStore = WorktreeOperationRouteState &
   Pick<
@@ -55,9 +59,7 @@ export function bindLivePtyToExactSurface(
   const ownerEntries = Object.entries(store.tabsByWorktree).flatMap(([ownerWorktreeId, tabs]) =>
     tabs.filter((tab) => tab.id === terminal.tabId).map((tab) => ({ ownerWorktreeId, tab }))
   )
-  const competingBinding = Object.entries(store.ptyIdsByTabId).some(
-    ([tabId, ptyIds]) => tabId !== terminal.tabId && ptyIds.includes(terminal.ptyId)
-  )
+  const competingBinding = hasCompetingRecordedTerminalBinding(store, worktreeId, terminal)
   if (ownerEntries.length > 1 || competingBinding) {
     return false
   }
@@ -250,15 +252,20 @@ export async function adoptLiveWorkspacePtySurfaces(
       }
       continue
     }
-    surfaced = true
     if (
       owner.recorded &&
       bindToRecordedSurface(getState, worktreeId, owner.recorded, materializedTabIds)
     ) {
+      surfaced = true
       continue
     }
     // A recorded tab createTab had to mint under another id already holds this PTY.
     if (resolveTerminalTabPtyOwnership(getState(), worktreeId, ptyId).kind !== 'none') {
+      surfaced = true
+      continue
+    }
+    if (!canMintLiveTerminalFallback(ptyId)) {
+      declinedPtyIds.push(ptyId)
       continue
     }
     getState().createTab(worktreeId, undefined, undefined, {
@@ -266,6 +273,7 @@ export async function adoptLiveWorkspacePtySurfaces(
       activate: false,
       recordInteraction: false
     })
+    surfaced = true
   }
   return { surfaced, declinedPtyIds }
 }
