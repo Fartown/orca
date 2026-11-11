@@ -3,7 +3,7 @@ title: 集成分支自动出包
 slug: 集成分支自动出包
 status: testing
 created: 2026-09-12
-updated: 2026-11-05
+updated: 2026-11-11
 external_ids: ['Fartown/orca#85']
 ---
 
@@ -102,6 +102,15 @@ external_ids: ['Fartown/orca#85']
 - 影响范围：REQ-401、REQ-402、REQ-403；APK 沿用 Expo debug 签名并核验指纹，不生成密钥或暗改 versionCode。
 
 ## 3. 开发记录
+
+### 2026-11-11 跨版本兼容只拿同步快照之前的上游发布作基准（testing）
+
+- 本轮目标：PR #76 的 `cross-version wire compatibility` 一跑就红，报 `cannot read src/main/daemon/daemon-protocol-version.ts at v1.4.255`；查清原因并在 fork 的步骤里修好，不改上游检查脚本。
+- 完成内容：fork 专属步骤 `Fetch upstream compatibility baselines` 拉全部上游 `v*` 标签后，删掉晚于 fork 上次同步快照（`git merge-base HEAD origin/main` 的提交时间）的标签。原因：fork 构建带的是同步时的上游，同步之后才发的上游版本不是 fork 用户的升级起点；而上游从 v1.4.252 起把 `daemon-protocol-version.ts` 挪到 `src/main/daemon/protocol/`，v1.4.256 又挪了终端流协议，fork 里按旧布局写的检查读不到，凡命中该作业路径过滤的 fork PR 都会红。
+- 代码或文档变更：`.github/workflows/pr.yml` 这一步与本记录。
+- 验证证据：本机按同一规则（快照 2026-11-02）保留 1096 个标签、去掉 10 个；最新稳定发布为 v1.4.246，跨版本旅程引用的 18 个旧版本标签全部保留；`check-daemon-protocol-crossing.mjs --release-ref v1.4.246` 通过（协议 54→55，升级接管活终端）。证据在本地任务管理分支的 `.docs/local-tasks-ui-validation/2026-11-10/ci/evidence/cross-version/`。
+- 未解决问题：fork 已落后上游 1517 个提交，每周同步自 10-12 起连续失败；同步后快照前移，基准随之更新，不需要再改这里。
+- 下一步：合入后在 PR #76 上重跑该作业。
 
 ### 2026-11-05 Fork 改动必须关联 GitHub issue（testing）
 
