@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ConnectPanePtySession } from './connect-pane-pty-session'
 import { runDeferredSessionReattachChoice } from './deferred-session-reattach-choice'
 import type * as PairedParkedTerminalRestore from './paired-parked-terminal-restore'
+import { pendingSpawnByPaneKey, pendingSpawnGenerationByPaneKey } from './pty-connect-limits'
 
 // Live mirrored PTYs must reattach despite periodic crash-recovery bookmarks, which cannot authorize a second cold-restored agent.
 
@@ -138,10 +139,37 @@ function expectAttachedToLiveRemotePty(session: ConnectPanePtySession): void {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  pendingSpawnByPaneKey.clear()
+  pendingSpawnGenerationByPaneKey.clear()
   mocks.canRestorePairedParked = false
 })
 
 describe('deferred reattach choice: mirrored remote pane with a live crash-recovery bookmark', () => {
+  it.each([null, 1])(
+    'does not spawn over an unverifiable pending attempt, generation %s',
+    async (generation) => {
+      setStore(null)
+      mocks.state.tabsByWorktree = { [WORKTREE_ID]: [{ id: TAB_ID, ptyId: null }] }
+      const original = buildSession()
+      const session = buildSession(TAB_ID, {
+        deps: { ...original.deps, restoredPtyIdByLeafId: {} }
+      })
+      pendingSpawnByPaneKey.set(session.pendingSpawnKey, Promise.resolve(null))
+      if (generation !== null) {
+        pendingSpawnGenerationByPaneKey.set(session.pendingSpawnKey, generation)
+      }
+
+      runDeferredSessionReattachChoice(session)
+      await Promise.resolve()
+      await Promise.resolve()
+
+      expect(session.startFreshSpawn).not.toHaveBeenCalled()
+      expect(session.startFreshColdRestoreAgentResume).not.toHaveBeenCalled()
+      expect(session.transport.attach).not.toHaveBeenCalled()
+      expect(session.settlePaneAttachAttempt).toHaveBeenCalledWith('failed')
+    }
+  )
+
   it('retains a live binding when transport attachment throws', () => {
     setStore(null)
     const session = buildSession()

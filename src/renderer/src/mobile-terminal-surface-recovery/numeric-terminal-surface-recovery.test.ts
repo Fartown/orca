@@ -4,6 +4,7 @@ import { runWorktreeAgentActivationGate } from '../lib/worktree-agent-activation
 import {
   LIVE_LEAF_ID,
   SIBLING_LEAF_ID,
+  sleepingRecord,
   seedExistingSurface,
   testDeps,
   WORKTREE_ID
@@ -12,6 +13,80 @@ import {
 vi.mock('../../../shared/layout-owner-switch', () => ({ ORCA_LAYOUT_OWNER_IS_MAIN: false }))
 
 describe('numeric terminal surface recovery', () => {
+  it('does not report partial placement as adopted after skipping a live sleeping claim', async () => {
+    const { deps, resume } = testDeps({
+      sessions: ['4', '5'].map((id) => ({
+        id,
+        cwd: '/acp-workspace',
+        worktreeId: WORKTREE_ID,
+        title: 'Claude',
+        agentOwnership: id === '4' ? ('present' as const) : ('absent' as const)
+      })),
+      sleeping: [sleepingRecord('sleeping-pane', LIVE_LEAF_ID, 'saved-session')],
+      resumeCount: 0,
+      surfaceOwners: new Map([['5', { unowned: true, recorded: null }]])
+    })
+    seedExistingSurface(deps.getState(), {
+      tabId: 'sleeping-pane',
+      leafId: LIVE_LEAF_ID,
+      boundPtyId: '4'
+    })
+    await expect(runWorktreeAgentActivationGate(WORKTREE_ID, deps)).resolves.toBe('blocked')
+    expect(resume).toHaveBeenCalledWith(WORKTREE_ID, {
+      skipClaimKeys: new Set([`${WORKTREE_ID}\0codex\0session_id\0saved-session`])
+    })
+  })
+
+  it('blocks when two panes claim the same live numeric PTY', async () => {
+    const { deps, createTab, resume } = testDeps({
+      sessions: [
+        {
+          id: '4',
+          cwd: '/acp-workspace',
+          worktreeId: WORKTREE_ID,
+          title: 'Claude',
+          agentOwnership: 'present'
+        }
+      ],
+      surfaceOwners: new Map([['4', { unowned: true, recorded: null }]])
+    })
+    for (const tabId of ['claim-a', 'claim-b']) {
+      seedExistingSurface(deps.getState(), {
+        tabId,
+        leafId: LIVE_LEAF_ID,
+        boundPtyId: '4'
+      })
+    }
+    await expect(runWorktreeAgentActivationGate(WORKTREE_ID, deps)).resolves.toBe('blocked')
+    expect(createTab).not.toHaveBeenCalled()
+    expect(resume).not.toHaveBeenCalled()
+  })
+
+  it.each([false, true])(
+    'blocks partial placement with a structured session: %s',
+    async (structured) => {
+      const { deps, createTab, resume } = testDeps({
+        sessions: ['4', '5'].map((id) => ({
+          id,
+          cwd: '/acp-workspace',
+          worktreeId: WORKTREE_ID,
+          title: 'Claude',
+          agentOwnership: 'present' as const
+        })),
+        structured,
+        surfaceOwners: new Map([['5', { unowned: true, recorded: null }]])
+      })
+      seedExistingSurface(deps.getState(), {
+        tabId: 'original-4',
+        leafId: LIVE_LEAF_ID,
+        boundPtyId: '4'
+      })
+      await expect(runWorktreeAgentActivationGate(WORKTREE_ID, deps)).resolves.toBe('blocked')
+      expect(createTab).not.toHaveBeenCalled()
+      expect(resume).not.toHaveBeenCalled()
+    }
+  )
+
   it.each([WORKTREE_ID, 'folder:acp-workspace'])(
     'restores the host-recorded numeric terminals despite stale bindings outside %s',
     async (worktreeId) => {

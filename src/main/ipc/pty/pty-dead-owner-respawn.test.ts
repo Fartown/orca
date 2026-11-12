@@ -6,6 +6,7 @@ import { makePaneKey } from '../../../shared/stable-pane-id'
 import { ORCA_LAYOUT_OWNER_IS_MAIN } from '../../../shared/layout-owner-switch'
 import { registerPtyHandlers } from './register-handlers'
 import { setLocalPtyProvider } from './provider/registry'
+import { clearProviderPtyState } from './provider/state-cleanup'
 import { isHiddenRendererPty } from './delivery/pty-hidden-delivery-gate'
 
 vi.mock('electron', () => import('./pty-ipc-mock-registry').then((m) => m.electronModuleMock()))
@@ -55,10 +56,17 @@ vi.mock('../../codex/codex-state-db-backfill-recovery', () =>
 describe('registerPtyHandlers', () => {
   const { handlers, mainWindow } = setupPtyIpcSuite()
 
-  it.each([false, true])(
-    'reattaches a live removed folder or respawns an absent caller (%s)',
-    async (live) => {
-      const livePtyId = live ? 'pty-live-removed-folder' : 'pty-proven-absent-owner'
+  it.each([
+    { live: false, numeric: false, hasOwner: true },
+    { live: true, numeric: false, hasOwner: true },
+    { live: false, numeric: true, hasOwner: true },
+    { live: true, numeric: true, hasOwner: true },
+    { live: true, numeric: true, hasOwner: false }
+  ])(
+    'reattaches live owners and requires host absence before replacing ($live, $numeric, $hasOwner)',
+    async ({ live, numeric, hasOwner }) => {
+      const livePtyId = numeric ? '4' : live ? 'pty-live-removed-folder' : 'pty-proven-absent-owner'
+      clearProviderPtyState(livePtyId)
       const worktreeId = live ? 'folder:removed' : 'repo-1::/tmp/proven-absent-owner'
       const cwd = '/tmp/proven-absent-owner'
       const tabId = 'tab-proven-absent-owner'
@@ -112,7 +120,7 @@ describe('registerPtyHandlers', () => {
             root: { type: 'leaf' as const, leafId },
             activeLeafId: leafId,
             expandedLeafId: null,
-            ptyIdsByLeafId: { [leafId]: livePtyId }
+            ptyIdsByLeafId: hasOwner ? { [leafId]: livePtyId } : {}
           }
         },
         terminalPtyIncarnationsByPaneKey: { [paneKey]: 'inc-proven-absent-owner' }
@@ -157,23 +165,32 @@ describe('registerPtyHandlers', () => {
         store as never
       )
 
-      const mounted = await handlers.get('pty:spawn')!(null, {
-        cols: 80,
-        rows: 24,
-        cwd,
-        command: 'codex resume proven-absent-session',
-        sessionId: livePtyId,
-        initiallyHidden: true,
-        worktreeId,
-        tabId,
-        leafId,
-        env: {
-          ORCA_PANE_KEY: paneKey,
-          ORCA_TAB_ID: tabId,
-          ORCA_WORKTREE_ID: worktreeId
-        }
-      })
+      const mount = () =>
+        handlers.get('pty:spawn')!(null, {
+          cols: 80,
+          rows: 24,
+          cwd,
+          command: 'codex resume proven-absent-session',
+          sessionId: livePtyId,
+          initiallyHidden: true,
+          worktreeId,
+          tabId,
+          leafId,
+          env: {
+            ORCA_PANE_KEY: paneKey,
+            ORCA_TAB_ID: tabId,
+            ORCA_WORKTREE_ID: worktreeId
+          }
+        })
 
+      const mounting = mount()
+      if (!hasOwner) {
+        await expect(mounting).rejects.toThrow('terminal_pane_owner_unverified')
+        expect(providerSpawn).not.toHaveBeenCalled()
+        expect(runtime.onPtyExit).not.toHaveBeenCalled()
+        session.terminalLayoutsByTabId[tabId].ptyIdsByLeafId = { [leafId]: livePtyId }
+      }
+      const mounted = hasOwner ? await mounting : await mount()
       expect(mounted).toMatchObject({ id: livePtyId })
       if (live) {
         expect(providerSpawn).toHaveBeenCalledTimes(1)

@@ -167,37 +167,21 @@ export function bindHandleReattachResult(sessionBag: ConnectPanePtySession): voi
     const hasStructuralReplay = Boolean(
       connectResult?.snapshot || connectResult?.replay || connectResult?.coldRestore
     )
-    // Why: reattach drops startup commands; only real hibernation is authority to retire an empty adopted shell and resume its provider session.
+    // Only main can adjudicate retiring a live empty shell; a window sleep note cannot prove exit.
     const mainStarts = mainStartsPane(session)
     if (
       !hasStructuralReplay &&
       connectResult?.isReattach &&
+      mainStarts &&
       // Why: main already judged this terminal after its start; asking again would loop.
-      !(mainStarts && session.mainStartAttach) &&
+      !session.mainStartAttach &&
       hasEmptyReattachRetireEvidence(
         ptyId,
-        connectResult.agentResumeRefused
-          ? null
-          : mainStarts
-            ? session.buildColdRestoreAgentResumeStartup()
-            : coldRestoreStartup
+        connectResult.agentResumeRefused ? null : session.buildColdRestoreAgentResumeStartup()
       )
     ) {
       session.transport.disconnect()
-      if (mainStarts) {
-        // Main retires the empty shell and resumes the agent in its place (startPane).
-        session.startFreshColdRestoreAgentResume(null)
-        return false
-      }
-      if (staleSessionId) {
-        session.clearExitedPanePtyLayoutBinding(staleSessionId)
-        session.deps.clearTabPtyId(session.deps.tabId, staleSessionId)
-      } else {
-        session.syncPanePtyLayoutBinding(null)
-      }
-      session.startFreshColdRestoreAgentResume(coldRestoreStartup, {
-        forceBlankRestoredViewport: true
-      })
+      session.startFreshColdRestoreAgentResume(null)
       return false
     }
     session.setPanePtyFitBinding(ptyId)
