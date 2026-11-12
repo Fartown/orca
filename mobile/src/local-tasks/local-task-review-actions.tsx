@@ -1,10 +1,12 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { Check, CircleCheck, Undo2 } from 'lucide-react-native'
 import { parseLocalTaskProgressSections } from '../../../src/shared/local-tasks/local-task-progress-sections'
+import { localTaskFinishedSessions } from '../../../src/shared/local-tasks/local-task-finished-sessions'
 import { localTaskNeedsReview } from '../../../src/shared/local-tasks/local-task-review-items'
 import { localTaskWritebackSection } from '../../../src/shared/local-tasks/local-task-writebacks'
 import type { LocalTask, LocalTaskProject } from '../../../src/shared/local-tasks/local-task-types'
+import { translate } from '../i18n/mobile-i18n'
 import { colors, spacing, typography } from '../theme/mobile-theme'
 import type { LocalTasksApi } from './local-tasks-api'
 import type { LocalTasksCopy } from './local-tasks-copy'
@@ -16,6 +18,21 @@ import { sendLocalTaskReply } from './local-task-reply-send'
 import { localTasksPageCopy } from './local-tasks-page-copy'
 import { localTaskStyles } from './local-tasks-styles'
 import type { LocalTasksLibrary } from './use-local-tasks-library'
+
+function rejectCopy() {
+  return {
+    noFinishedSession: translate(
+      'localTasks.rejectNoFinishedSession',
+      'Reason saved. No session has finished a turn to take it; open one, or start a new session from the task.'
+    ),
+    notSent: (missed: number, total: number, reason: string): string =>
+      translate(
+        'localTasks.rejectNotSent',
+        'Reason saved, but {{missed}} of {{total}} sessions did not get it: {{reason}}',
+        { missed, total, reason }
+      )
+  }
+}
 
 export function LocalTaskReviewActions(props: {
   task: LocalTask
@@ -36,14 +53,13 @@ export function LocalTaskReviewActions(props: {
   const [rejecting, setRejecting] = useState(false)
   const [reasonDraft, setReasonDraft] = useState('')
   const [savedReason, setSavedReason] = useState<string | null>(null)
+  const [sending, setSending] = useState(false)
+  // Why a ref too: two taps land before the state above re-renders the button disabled.
+  const inFlight = useRef(false)
   const statusFor = (category: 'started' | 'completed') =>
     props.project?.statuses.find((entry) => entry.category === category)?.id ?? null
   const connected = props.site.connState === 'connected'
-  const reject = async () => {
-    const reason = reasonDraft.trim()
-    if (!reason || !connected) {
-      return
-    }
+  const sendBack = async (reason: string) => {
     if (savedReason !== reason) {
       const comment = await sendLocalTaskWrite(
         commentIds,
@@ -64,27 +80,54 @@ export function LocalTaskReviewActions(props: {
     setReasonDraft('')
     setSavedReason(null)
     props.library.reload(['events', 'tasks'])
-    const session = props.library.work.links.sessions.find(
-      (entry) => entry.id === props.task.latestProgress?.sessionLinkId
+    const progress = new Map(
+      (props.library.work.progress?.sessions ?? []).map((entry) => [entry.taskSessionId, entry])
     )
-    if (!session) {
+    const sessions = localTaskFinishedSessions({
+      taskId: props.task.id,
+      tasks: props.library.tasks,
+      sessions: props.library.work.links.sessions,
+      stateOf: (sessionLinkId) => progress.get(sessionLinkId)?.state
+    })
+    if (sessions.length === 0) {
+      props.onError(rejectCopy().noFinishedSession)
       return
     }
     const work = props.copy.work
-    const outcome = await sendLocalTaskReply({
-      client: props.site.client,
-      session,
-      text: reason,
-      reasons: {
-        missing: work.replySessionMissing,
-        notConnected: work.replyNotConnected,
-        inputNotCleared: work.replyInputNotCleared,
-        inputRefused: work.replyInputRefused,
-        chatNotReady: work.replyChatNotReady
+    const reasons: string[] = []
+    for (const session of sessions) {
+      const outcome = await sendLocalTaskReply({
+        client: props.site.client,
+        session,
+        text: reason,
+        reasons: {
+          missing: work.replySessionMissing,
+          notConnected: work.replyNotConnected,
+          inputNotCleared: work.replyInputNotCleared,
+          inputRefused: work.replyInputRefused,
+          chatNotReady: work.replyChatNotReady
+        }
+      })
+      if (outcome.kind === 'not-sent') {
+        reasons.push(outcome.reason ?? '')
       }
-    })
-    if (outcome.kind === 'not-sent') {
-      props.onError(work.replyNotSentBecause(outcome.reason ?? ''))
+    }
+    if (reasons.length > 0) {
+      props.onError(rejectCopy().notSent(reasons.length, sessions.length, reasons[0] ?? ''))
+    }
+  }
+  const reject = async () => {
+    const reason = reasonDraft.trim()
+    if (!reason || !connected || inFlight.current) {
+      return
+    }
+    inFlight.current = true
+    setSending(true)
+    try {
+      await sendBack(reason)
+    } finally {
+      inFlight.current = false
+      setSending(false)
     }
   }
   if (!localTaskNeedsReview(props.task, props.project ?? undefined)) {
@@ -152,6 +195,7 @@ export function LocalTaskReviewActions(props: {
         title={props.copy.rejectReason}
         draft={reasonDraft}
         connected={connected}
+        sending={sending}
         hostLabel={props.site.label}
         onChangeDraft={setReasonDraft}
         onSend={() => void reject()}

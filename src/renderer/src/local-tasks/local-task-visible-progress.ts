@@ -1,3 +1,8 @@
+import {
+  chooseLocalTaskFamilyProgress,
+  chooseLocalTaskOwnProgress,
+  type LocalTaskTurnEndCandidate
+} from '../../../shared/local-tasks/local-task-latest-progress-choice'
 import type {
   LocalTask,
   LocalTaskLatestProgress
@@ -6,43 +11,57 @@ import { localTaskDescendantIds } from '../../../shared/local-tasks/local-task-t
 import type { LocalTaskIndex } from './local-task-grouping'
 import type { LocalTasksDomainState } from './local-tasks-domain-store'
 
+type VisibleProgress = { task: LocalTask; progress: LocalTaskLatestProgress }
+
+/** The task's own progress first, else its newest descendant's (REQ-012, REQ-022). */
 export function localTaskVisibleProgress(
   task: LocalTask,
   index: LocalTaskIndex,
   domain: Pick<LocalTasksDomainState, 'progress' | 'links'>
-): { task: LocalTask; progress: LocalTaskLatestProgress } | null {
-  const ids = new Set([task.id, ...localTaskDescendantIds(task.id, index.childrenByParentId)])
-  let latest: { task: LocalTask; progress: LocalTaskLatestProgress } | null = null
-  for (const id of ids) {
-    const owner = index.tasksById.get(id)
-    if (owner?.latestProgress && (!latest || owner.latestProgress.at > latest.progress.at)) {
-      latest = { task: owner, progress: owner.latestProgress }
+): VisibleProgress | null {
+  const liveTurns = liveTurnEndsByTask(domain)
+  const own = (owner: LocalTask | undefined): VisibleProgress | null => {
+    if (!owner) {
+      return null
     }
+    const saved = owner.latestProgress ?? null
+    const progress = chooseLocalTaskOwnProgress(saved?.kind === 'progress' ? saved : null, [
+      ...(saved?.kind === 'turn-ended' ? [{ progress: saved, roundStartedAt: null }] : []),
+      ...(liveTurns.get(owner.id) ?? [])
+    ])
+    return progress ? { task: owner, progress } : null
   }
+  const descendants = localTaskDescendantIds(task.id, index.childrenByParentId).flatMap((id) => {
+    const entry = own(index.tasksById.get(id))
+    return entry ? [entry] : []
+  })
+  return chooseLocalTaskFamilyProgress(own(task), descendants)
+}
+
+/**
+ * A finished turn the host reports live, for a host that keeps no turn end of its own. Its round
+ * is unknown here, so it only stands in for a turn end, never for a writeback.
+ */
+function liveTurnEndsByTask(
+  domain: Pick<LocalTasksDomainState, 'progress' | 'links'>
+): Map<string, LocalTaskTurnEndCandidate[]> {
+  const byTask = new Map<string, LocalTaskTurnEndCandidate[]>()
   for (const session of domain.links.sessions) {
-    if (!ids.has(session.taskId)) {
-      continue
-    }
     const row = domain.progress?.sessions.get(session.id)
-    const owner = index.tasksById.get(session.taskId)
-    if (
-      !row?.lastMessage ||
-      !owner ||
-      row.stateSince === null ||
-      (row.state !== 'done' && row.state !== 'unverifiable') ||
-      (latest && row.stateSince <= latest.progress.at)
-    ) {
+    if (!row?.lastMessage || row.stateSince === null || row.state !== 'done') {
       continue
     }
-    latest = {
-      task: owner,
+    const turns = byTask.get(session.taskId) ?? []
+    turns.push({
       progress: {
         kind: 'turn-ended',
         body: row.lastMessage,
         at: row.stateSince,
         sessionLinkId: session.id
-      }
-    }
+      },
+      roundStartedAt: null
+    })
+    byTask.set(session.taskId, turns)
   }
-  return latest
+  return byTask
 }

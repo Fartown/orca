@@ -94,6 +94,8 @@ export function localTasksLibraryCopy() {
     viewBoard: translate('localTasks.list.viewBoard', 'Board'),
     newTask: translate('localTasks.list.newTask', 'New task'),
     newSubtask: translate('localTasks.list.newSubtask', 'New subtask'),
+    subtasksOf: (title: string): string =>
+      translate('localTasks.list.subtasksOf', 'Subtasks of “{{title}}”', { title }),
     editTask: translate('localTasks.list.editTask', 'Edit task'),
     noProjects: translate('localTasks.list.noProjects', 'No projects yet'),
     noProjectsHint: translate(

@@ -75,16 +75,65 @@ export function localTaskAttentionTaskCount(rows: readonly LocalTaskAttentionRow
   return rows.length
 }
 
+/**
+ * A library's links and the host's word on each session, indexed once per load: a page that reads
+ * every card passes it, so one card costs its own sessions and not the whole library's.
+ */
+export type LocalTaskSessionLookup = {
+  sessionsByTaskId: ReadonlyMap<string, readonly LocalTaskSessionLink[]>
+  sessionsById: ReadonlyMap<string, LocalTaskSessionLink>
+  /** Each session's place in the library's list, which breaks ties as that list does. */
+  positions: ReadonlyMap<string, number>
+  progressById: ReadonlyMap<string, LocalTaskProgressSnapshot['sessions'][number]>
+  workspacesByTaskId: ReadonlyMap<string, LocalTaskWorkspaceLink>
+}
+
+export function buildLocalTaskSessionLookup(
+  links: LocalTaskLinks,
+  snapshot: LocalTaskProgressSnapshot | null
+): LocalTaskSessionLookup {
+  const sessionsByTaskId = new Map<string, LocalTaskSessionLink[]>()
+  for (const link of links.sessions) {
+    const own = sessionsByTaskId.get(link.taskId)
+    if (own) {
+      own.push(link)
+    } else {
+      sessionsByTaskId.set(link.taskId, [link])
+    }
+  }
+  return {
+    sessionsByTaskId,
+    sessionsById: new Map(links.sessions.map((link) => [link.id, link])),
+    positions: new Map(links.sessions.map((link, position) => [link.id, position])),
+    progressById: new Map((snapshot?.sessions ?? []).map((entry) => [entry.taskSessionId, entry])),
+    workspacesByTaskId: new Map(links.workspaces.map((link) => [link.taskId, link]))
+  }
+}
+
+/** The sessions these tasks opened, in the library's own order. */
+export function localTaskSessionsOf(
+  taskIds: Iterable<string>,
+  lookup: LocalTaskSessionLookup
+): LocalTaskSessionLink[] {
+  const found: LocalTaskSessionLink[] = []
+  for (const taskId of new Set(taskIds)) {
+    found.push(...(lookup.sessionsByTaskId.get(taskId) ?? []))
+  }
+  const at = (link: LocalTaskSessionLink) => lookup.positions.get(link.id) ?? 0
+  return found.sort((a, b) => at(a) - at(b))
+}
+
 /** The workspace a task works in: its own, else the nearest ancestor's (REQ-009). */
 export function localTaskWorkspaceLinkFor(
   task: LocalTask,
   tasksById: ReadonlyMap<string, LocalTask>,
-  links: LocalTaskLinks
+  links: LocalTaskLinks,
+  lookup?: Pick<LocalTaskSessionLookup, 'workspacesByTaskId'>
 ): LocalTaskWorkspaceLink | null {
   return localTaskEffectiveWorkspace(
     task,
     tasksById,
-    new Map(links.workspaces.map((link) => [link.taskId, link]))
+    lookup?.workspacesByTaskId ?? new Map(links.workspaces.map((link) => [link.taskId, link]))
   )
 }
 
@@ -103,24 +152,22 @@ export type LocalTaskSessionView = {
  */
 export function localTaskSessionViews(args: {
   task: LocalTask
-  tasks: readonly LocalTask[]
+  index: Pick<LocalTaskIndex, 'tasksById' | 'childrenByParentId'>
   links: LocalTaskLinks
   snapshot: LocalTaskProgressSnapshot | null
   inContact: boolean
+  /** Built from the same links and snapshot by a page that reads many tasks. */
+  lookup?: LocalTaskSessionLookup
 }): LocalTaskSessionView[] {
-  const { tasksById, childrenByParentId } = buildLocalTaskIndex([], args.tasks)
-  const own = new Set([args.task.id, ...localTaskDescendantIds(args.task.id, childrenByParentId)])
-  const progress = new Map(
-    (args.snapshot?.sessions ?? []).map((entry) => [entry.taskSessionId, entry])
-  )
-  return args.links.sessions
-    .filter((link) => own.has(link.taskId))
+  const lookup = args.lookup ?? buildLocalTaskSessionLookup(args.links, args.snapshot)
+  const own = [args.task.id, ...localTaskDescendantIds(args.task.id, args.index.childrenByParentId)]
+  return localTaskSessionsOf(own, lookup)
     .sort((a, b) => b.openedAt - a.openedAt)
     .map((link) => {
-      const entry = progress.get(link.id)
+      const entry = lookup.progressById.get(link.id)
       return {
         link,
-        task: tasksById.get(link.taskId) ?? null,
+        task: args.index.tasksById.get(link.taskId) ?? null,
         state: !args.inContact ? 'unverifiable' : (entry?.state ?? 'unknown'),
         lastMessage: entry?.lastMessage ?? null
       }
@@ -141,22 +188,21 @@ export function localTaskRowSessionStates(args: {
   links: LocalTaskLinks
   snapshot: LocalTaskProgressSnapshot | null
   inContact: boolean
+  /** Built from the same links and snapshot by a page that reads many tasks. */
+  lookup?: LocalTaskSessionLookup
 }): LocalTaskRowSession[] {
-  const owners = new Set(args.links.workspaces.map((link) => link.taskId))
-  const family = new Set(
-    owners.has(args.task.id)
-      ? localTaskWorkspaceFamilyIds(args.task.id, args.index, (taskId) => owners.has(taskId))
-      : [args.task.id]
-  )
-  const progress = new Map(
-    (args.snapshot?.sessions ?? []).map((entry) => [entry.taskSessionId, entry.state])
-  )
-  return args.links.sessions
-    .filter((link) => family.has(link.taskId))
+  const lookup = args.lookup ?? buildLocalTaskSessionLookup(args.links, args.snapshot)
+  const owns = (taskId: string) => lookup.workspacesByTaskId.has(taskId)
+  const family = owns(args.task.id)
+    ? localTaskWorkspaceFamilyIds(args.task.id, args.index, owns)
+    : [args.task.id]
+  return localTaskSessionsOf(family, lookup)
     .sort((a, b) => a.openedAt - b.openedAt)
     .map((link) => ({
       id: link.id,
-      state: args.inContact ? (progress.get(link.id) ?? 'unknown') : 'unverifiable'
+      state: args.inContact
+        ? (lookup.progressById.get(link.id)?.state ?? 'unknown')
+        : 'unverifiable'
     }))
 }
 

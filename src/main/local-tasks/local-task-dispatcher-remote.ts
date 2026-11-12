@@ -4,6 +4,7 @@ import type {
   LocalTaskInboxKind,
   LocalTaskWatch
 } from '../../shared/local-tasks/local-task-dispatcher-types'
+import { pendingWatchRef } from '../../shared/local-tasks/local-task-inbox-copy'
 import type { SqliteRow } from '../sqlite/sqlite-statement'
 import type { LocalTasksDatabase } from './local-tasks-database'
 import { rowNullableString, rowNumber, rowString } from './local-tasks-sqlite-row'
@@ -32,6 +33,77 @@ export function removeRemoteWatch(
   db.prepare(
     'DELETE FROM local_task_conversation_remote_watches WHERE conversation_id = ? AND task_client_id = ?'
   ).run(conversationId, taskClientId)
+}
+
+/** Follows a task in this library; adding it again keeps its first record. */
+export function addLocalWatch(
+  db: LocalTasksDatabase,
+  conversationId: string,
+  taskId: string,
+  addedBy: string,
+  now: number
+): void {
+  db.prepare(
+    `INSERT OR IGNORE INTO local_task_conversation_watches
+       (conversation_id, task_id, added_at, added_by) VALUES (?, ?, ?, ?)`
+  ).run(conversationId, taskId, now, addedBy)
+  db.touch('events')
+}
+
+export function listLocalWatchTaskIds(db: LocalTasksDatabase, conversationId: string): string[] {
+  return db
+    .prepare('SELECT task_id FROM local_task_conversation_watches WHERE conversation_id = ?')
+    .all(conversationId)
+    .map((row) => rowString(row, 'task_id'))
+}
+
+/** Follows another library's task, or a ref a window may find; only `replacesRef`'s row goes. */
+export function addDispatcherRemoteWatch(
+  db: LocalTasksDatabase,
+  conversationId: string,
+  taskId: string,
+  now: number,
+  replacesRef?: string
+): void {
+  addRemoteWatch(db, conversationId, taskId, 'dispatcher', now)
+  // Why not removeDispatcherWatch: by ref it also ends every watch its facts named, this one too.
+  if (replacesRef && pendingWatchRef(replacesRef) !== null) {
+    removeRemoteWatch(db, conversationId, replacesRef)
+  }
+}
+
+/**
+ * Stops following a task: by its id here or in another library, or by a ref (`ref:SSH-7`), which
+ * also ends the watch on each other-library task its forwarded facts named by that ref. False when
+ * a ref matched nothing.
+ */
+export function removeDispatcherWatch(
+  db: LocalTasksDatabase,
+  conversationId: string,
+  taskId: string
+): boolean {
+  const ref = pendingWatchRef(taskId)
+  if (ref === null) {
+    db.prepare(
+      'DELETE FROM local_task_conversation_watches WHERE conversation_id = ? AND task_id = ?'
+    ).run(conversationId, taskId)
+    removeRemoteWatch(db, conversationId, taskId)
+    return true
+  }
+  const pending = db
+    .prepare(
+      'DELETE FROM local_task_conversation_remote_watches WHERE conversation_id = ? AND task_client_id = ?'
+    )
+    .run(conversationId, taskId)
+  // Why by ref: the dispatcher names another host's task by the ref its inbox reported.
+  const named = db
+    .prepare(
+      `DELETE FROM local_task_conversation_remote_watches WHERE conversation_id = ?
+         AND task_client_id IN (SELECT f.task_client_id FROM local_task_conversation_facts f
+           WHERE f.conversation_id = ? AND f.task_ref = ? COLLATE NOCASE)`
+    )
+    .run(conversationId, conversationId, ref)
+  return Number(pending.changes) + Number(named.changes) > 0
 }
 
 /** Every task the conversation follows, here and in other libraries, newest first. */

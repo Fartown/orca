@@ -7,6 +7,10 @@ import {
   dispatchLocalTask,
   type LocalTaskDispatchReceipt as Receipt
 } from '@/local-tasks/local-task-dispatch-launch'
+import {
+  finishLocalTaskDispatchRecord,
+  revealDispatchedSession
+} from '@/local-tasks/local-task-dispatch-record'
 import { offerLocalTaskDispatchUndo } from '@/local-tasks/local-task-dispatch-undo'
 import type { TuiAgent } from '../../../../shared/tui-agent'
 
@@ -36,6 +40,15 @@ export function LocalTaskDispatchReceipt({
       setBusy(false)
     }
   }
+  // Why no relaunch: the session already runs; only its record under the task is missing.
+  const recordAgain = async (): Promise<void> => {
+    setBusy(true)
+    try {
+      onChange(await finishLocalTaskDispatchRecord(receipt))
+    } finally {
+      setBusy(false)
+    }
+  }
   const remove = async (): Promise<void> => {
     setBusy(true)
     try {
@@ -55,7 +68,9 @@ export function LocalTaskDispatchReceipt({
       <div className="font-medium text-foreground">
         {task ? `${task.ref} · ${task.title}` : receipt.text}
       </div>
-      <div className="text-muted-foreground">
+      <div
+        className={receipt.kind === 'unrecorded' ? 'text-status-warning' : 'text-muted-foreground'}
+      >
         {receipt.kind === 'launched'
           ? receipt.message
             ? translate('localTasks.dispatch.sessionStarted', 'Session started')
@@ -64,8 +79,23 @@ export function LocalTaskDispatchReceipt({
             ? translate('localTasks.dispatch.appended', 'Sent to session')
             : (receipt.message ?? translate('localTasks.dispatch.failed', 'Dispatch failed'))}
       </div>
-      {receipt.kind === 'launched' && receipt.message ? (
-        <div className="text-foreground">{receipt.message}</div>
+      {(receipt.kind === 'launched' || receipt.kind === 'appended') && receipt.message ? (
+        <div className="text-status-warning">{receipt.message}</div>
+      ) : null}
+      {receipt.kind === 'unrecorded' ? (
+        <div className="flex gap-2">
+          <Button size="xs" variant="outline" disabled={busy} onClick={() => void recordAgain()}>
+            {translate('localTasks.dispatch.recordAgain', 'Record again')}
+          </Button>
+          <Button
+            size="xs"
+            variant="ghost"
+            disabled={busy}
+            onClick={() => revealDispatchedSession(receipt)}
+          >
+            {translate('localTasks.needsYou.item.open', 'Open session')}
+          </Button>
+        </div>
       ) : null}
       {receipt.kind === 'failed' ? (
         <div className="flex gap-2">

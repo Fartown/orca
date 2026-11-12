@@ -10,6 +10,7 @@ import type {
   LocalTaskFailure,
   LocalTaskFailureCode
 } from '../../shared/local-tasks/local-task-types'
+import { localTaskLinkWorkspaceId } from '../../shared/local-tasks/local-task-workspace-match'
 import { worktreeIdentityKey, worktreeIdsEqual } from '../../shared/worktree/id'
 import type { SqliteRow } from '../sqlite/sqlite-statement'
 import type { LocalTasksDatabase } from './local-tasks-database'
@@ -90,17 +91,6 @@ export function findWorkspaceOwner(
   return null
 }
 
-/** Whether a session ran in this workspace; a session that cannot say is taken to be in it. */
-export function isSessionInWorkspace(
-  session: LocalTaskSessionLink,
-  workspace: LocalTaskWorkspacePlace
-): boolean {
-  return isPlaceInWorkspace(
-    { hostId: session.hostId, worktreeId: session.worktreeId, instanceId: session.instanceId },
-    workspace
-  )
-}
-
 /** The host/worktree/instance of a would-be session, as much as the caller knows. */
 export type LocalTaskSessionPlace = {
   hostId: string
@@ -108,21 +98,33 @@ export type LocalTaskSessionPlace = {
   instanceId: string | null
 }
 
+/**
+ * Whether a session place is in this workspace, by the workspace's id on its host (`folder:<id>`
+ * for a folder workspace); `unknown` when neither the place nor the workspace carries an id.
+ */
+export function placeInWorkspace(
+  place: LocalTaskSessionPlace,
+  workspace: LocalTaskWorkspacePlace
+): 'in' | 'out' | 'unknown' {
+  if (place.hostId !== workspace.hostId) {
+    return 'out'
+  }
+  if (place.instanceId && workspace.instanceId) {
+    return place.instanceId === workspace.instanceId ? 'in' : 'out'
+  }
+  const workspaceId = localTaskLinkWorkspaceId(workspace)
+  if (place.worktreeId && workspaceId) {
+    return worktreeIdsEqual(place.worktreeId, workspaceId) ? 'in' : 'out'
+  }
+  return 'unknown'
+}
+
 /** Whether a session place belongs to this workspace; an unknowable place is taken to be in it. */
 export function isPlaceInWorkspace(
   place: LocalTaskSessionPlace,
   workspace: LocalTaskWorkspacePlace
 ): boolean {
-  if (place.hostId !== workspace.hostId) {
-    return false
-  }
-  if (place.instanceId && workspace.instanceId) {
-    return place.instanceId === workspace.instanceId
-  }
-  if (place.worktreeId && workspace.worktreeId) {
-    return worktreeIdsEqual(place.worktreeId, workspace.worktreeId)
-  }
-  return true
+  return placeInWorkspace(place, workspace) !== 'out'
 }
 
 export function readLocalTaskLinks(db: LocalTasksDatabase): LocalTaskLinks {

@@ -109,5 +109,6 @@ it('groups "Needs you" as the desktop does: waiting first, review wins, subtasks
   ])
   // The parent's own question stays on its review row; the subtask's stays off the band.
   expect(rows[1]?.items.map((entry) => entry.taskId)).toEqual(['1'])
-  expect([...ids].sort()).toEqual(['1', '3'])
+  // The subtask leaves the groups below with its parent, so the counts match (REQ-006).
+  expect([...ids].sort()).toEqual(['1', '2', '3'])
 })

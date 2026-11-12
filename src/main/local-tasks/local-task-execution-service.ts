@@ -128,6 +128,10 @@ export class LocalTaskExecutionService {
     return this.attention.snapshot()
   }
 
+  attentionKeyMayReturn(): (key: string) => boolean {
+    return this.attention.attentionKeyMayReturn()
+  }
+
   acknowledge(input: { clientOperationId: string; itemKey: string; taskSessionId: string }) {
     const result = this.write(
       input.clientOperationId,

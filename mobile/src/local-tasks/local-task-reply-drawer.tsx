@@ -15,6 +15,8 @@ export function LocalTaskReplyDrawer(props: {
   message?: string
   draft: string
   connected: boolean
+  /** A send under way: Send stays off so one tap sends once. */
+  sending?: boolean
   /** The library's Orca, named in the out-of-contact line. */
   hostLabel: string
   onChangeDraft: (draft: string) => void
@@ -23,7 +25,7 @@ export function LocalTaskReplyDrawer(props: {
 }) {
   const copy = localTasksCopy()
   const text = props.draft.trim()
-  const canSend = props.connected && text.length > 0
+  const canSend = props.connected && text.length > 0 && props.sending !== true
   return (
     <BottomDrawer visible={props.visible} onClose={props.onClose}>
       <View style={styles.header}>
@@ -40,7 +42,7 @@ export function LocalTaskReplyDrawer(props: {
         style={[styles.input, !props.connected && styles.disabled]}
         value={props.draft}
         onChangeText={props.onChangeDraft}
-        editable={props.connected}
+        editable={props.connected && props.sending !== true}
         multiline
         autoFocus
         placeholder={props.connected ? copy.work.replyPlaceholder : copy.work.replyReconnecting}
@@ -67,7 +69,9 @@ export function LocalTaskReplyDrawer(props: {
           accessibilityRole="button"
           accessibilityState={{ disabled: !canSend }}
         >
-          <Text style={styles.sendText}>{copy.send}</Text>
+          <Text style={styles.sendText}>
+            {props.sending ? copy.work.replyStates.sending : copy.send}
+          </Text>
         </Pressable>
       </View>
     </BottomDrawer>

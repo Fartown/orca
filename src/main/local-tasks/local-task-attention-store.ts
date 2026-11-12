@@ -11,9 +11,11 @@ export type LocalTaskAttentionState = { seenAt: number | null; snoozedUntil: num
 export type LocalTaskAttentionMarkTarget = {
   /**
    * `raised`: the session raises the item now. `moved-on`: an earlier wait of the session's own
-   * pane, which no longer shows. `other-session`: anything else, e.g. another session's item.
+   * pane, which no longer shows. `unverifiable`: a wait of the session's own pane while its host is
+   * out of contact, so whether it is still current cannot be told. `other-session`: anything else,
+   * e.g. another session's item.
    */
-  standing: 'raised' | 'moved-on' | 'other-session'
+  standing: 'raised' | 'moved-on' | 'unverifiable' | 'other-session'
   /** Keys the rules raise now, seen or not; marks on other keys may be pruned. */
   liveKeys: ReadonlySet<string>
 }
@@ -132,6 +134,7 @@ function unwrittenMarkResult(
     return { ok: false, code: 'attention_item_mismatch' }
   }
   // Why not refused: a wait the session left no longer shows, and its next wait must show again.
+  // An unverifiable one is written, so the mark holds if that wait is still current on reconnect.
   return target.standing === 'moved-on' ? { ok: true } : null
 }
 

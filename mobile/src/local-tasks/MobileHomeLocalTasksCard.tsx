@@ -1,4 +1,3 @@
-import { useEffect, useState } from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { ChevronRight, ClipboardList, Monitor } from 'lucide-react-native'
 import { PickerModal } from '../components/PickerModal'
@@ -101,12 +100,9 @@ export function MobileHomeLocalTasksCard(props: { connectedHosts: HostProfile[] 
   const hosts = useLocalTaskHomeHosts(props.connectedHosts)
   const openHostStackRoute = useOpenHostStackRoute()
   const picker = useConnectedHostPicker(props.connectedHosts)
-  // Why tied to the reads: relative times move when home reads again, and no clock ticks for them.
-  const [now, setNow] = useState(() => Date.now())
-  useEffect(() => {
-    setNow(Date.now())
-  }, [hosts])
   const ready = hosts.flatMap((entry) => (entry.kind === 'ready' ? [entry] : []))
+  // Why the newest read and no clock: relative times move only when home reads again.
+  const now = ready.reduce((latest, entry) => Math.max(latest, entry.readAt), 0)
   const unreachable = hosts.flatMap((entry) => (entry.kind === 'unreachable' ? [entry] : []))
   if (ready.length === 0 && unreachable.length === 0) {
     return null

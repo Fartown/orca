@@ -13,6 +13,7 @@ import {
   type LocalTaskSegment
 } from './local-task-list-projection'
 import {
+  buildLocalTaskSessionLookup,
   localTaskAttentionRows,
   localTaskIdsNeedingYou,
   localTaskNeedsYou,
@@ -82,15 +83,24 @@ export function useLocalTasksLibraryModel(args: {
       .filter((row) => row.review)
       .map((row) => row.task)
   })
-  const tasksById = new Map(library.tasks.map((task) => [task.id, task]))
-  const index = buildLocalTaskIndex(library.projects, library.tasks)
+  // Why once per load: every card reads them, and rebuilding them per card made the board O(N²).
+  const index = useMemo(
+    () => buildLocalTaskIndex(library.projects, library.tasks),
+    [library.projects, library.tasks]
+  )
+  const sessionLookup = useMemo(
+    () => buildLocalTaskSessionLookup(library.work.links, library.work.progress),
+    [library.work.links, library.work.progress]
+  )
+  const tasksById = index.tasksById
   const sessionsFor = (task: LocalTask) =>
     localTaskRowSessionStates({
       task,
       index,
       links: library.work.links,
       snapshot: library.work.progress,
-      inContact
+      inContact,
+      lookup: sessionLookup
     })
   const factsFor = (task: LocalTask) =>
     localTaskCardFacts({
@@ -100,17 +110,19 @@ export function useLocalTasksLibraryModel(args: {
       snapshot: library.work.progress,
       inContact,
       hostName: cards.context.hostName,
-      hostConnected: cards.context.hostConnected
+      hostConnected: cards.context.hostConnected,
+      lookup: sessionLookup
     })
   const latestLineFor = (task: LocalTask) =>
     localTaskLatestLine(
       task,
       localTaskSessionViews({
         task,
-        tasks: library.tasks,
+        index,
         links: library.work.links,
         snapshot: library.work.progress,
-        inContact
+        inContact,
+        lookup: sessionLookup
       }),
       localTaskDescendantIds(task.id, index.childrenByParentId).flatMap((id) => {
         const child = index.tasksById.get(id)

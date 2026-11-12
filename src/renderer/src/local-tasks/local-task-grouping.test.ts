@@ -15,7 +15,10 @@ import {
 import {
   buildLocalTaskBoardColumns,
   flattenLocalTaskGroups,
-  groupLocalTasksForList
+  groupLocalTasksForList,
+  localTaskGroupKey,
+  localTaskListGroupTasks,
+  tallyLocalTaskGroups
 } from './local-task-list-groups'
 import { EMPTY_LOCAL_TASK_FILTERS } from './local-task-page-store'
 import { clampLocalTaskCursor } from './local-task-cursor'
@@ -136,14 +139,17 @@ describe('local task counts and groups (REQ-006)', () => {
       BY_STATUS
     )
     const summary = groups.map((group) => [group.key, group.entries.map((entry) => entry.task.id)])
+    // Integrating keeps its heading though SHOP-14, its only task, rides under SHOP-12.
     expect(summary).toEqual([
       ['shop-doing', ['SHOP-12']],
+      ['shop-integrating', []],
       ['shop-todo', ['SHOP-11']],
       ['shop-done', ['SHOP-7']]
     ])
     // SHOP-13 rides under SHOP-12 in its own status; SHOP-15 rides there too but is Todo.
     expect(groups.map((group) => [group.key, group.count])).toEqual([
       ['shop-doing', 2],
+      ['shop-integrating', 1],
       ['shop-todo', 2],
       ['shop-done', 1]
     ])
@@ -162,6 +168,32 @@ describe('local task counts and groups (REQ-006)', () => {
       'SHOP-14',
       'SHOP-15'
     ])
+  })
+
+  it('splits every heading into shown and in-band tasks that add up to its board column', () => {
+    const scoped = tasksInScope(tasks, 'shop')
+    const groups = groupLocalTasksForList(scoped, index, 'shop', ALL, BY_STATUS)
+    // SHOP-12 waits in the band and takes its subtasks with it; SHOP-11 stays below.
+    const banded = new Set(['SHOP-12', 'SHOP-13', 'SHOP-14', 'SHOP-15'])
+    const tallies = tallyLocalTaskGroups(
+      groups,
+      localTaskListGroupTasks(groups),
+      (group, task) => localTaskGroupKey(task, index, group.kind) === group.key,
+      banded
+    )
+    expect(groups.map((group, at) => [group.key, tallies[at]])).toEqual([
+      ['shop-doing', { shown: 0, inBand: 2 }],
+      ['shop-integrating', { shown: 0, inBand: 1 }],
+      ['shop-todo', { shown: 1, inBand: 1 }],
+      ['shop-done', { shown: 1, inBand: 0 }]
+    ])
+    const board = buildLocalTaskBoardColumns(scoped, index, 'shop', ALL, BOARD)
+    groups.forEach((group, at) => {
+      const tally = tallies[at]
+      expect(tally ? tally.shown + tally.inBand : -1).toBe(
+        board.find((column) => column.key === group.key)?.tasks.length
+      )
+    })
   })
 
   it('shows a matching subtask on its own row when its parent is filtered out', () => {

@@ -5,17 +5,18 @@ const fixture = vi.hoisted(() => ({
   claim: vi.fn(),
   list: vi.fn(),
   execute: vi.fn(),
-  recordResults: vi.fn()
-}))
-
-vi.mock('sonner', () => ({
+  recordResults: vi.fn(),
+  release: vi.fn(),
   toast: { info: vi.fn(), error: vi.fn(), success: vi.fn(), warning: vi.fn() }
 }))
+
+vi.mock('sonner', () => ({ toast: fixture.toast }))
 vi.mock('./local-task-dispatcher-client', () => ({
   localTaskDispatcherClient: {
     claim: fixture.claim,
     list: fixture.list,
-    recordResults: fixture.recordResults
+    recordResults: fixture.recordResults,
+    release: fixture.release
   }
 }))
 vi.mock('./local-task-proposal-execution', () => ({ executeLocalTaskProposal: fixture.execute }))
@@ -49,6 +50,10 @@ describe('running a confirmed proposal', () => {
     fixture.claim.mockReset()
     fixture.execute.mockReset()
     fixture.recordResults.mockReset()
+    fixture.release.mockReset()
+    for (const show of Object.values(fixture.toast)) {
+      show.mockReset()
+    }
     fixture.list.mockResolvedValue({ proposals: [] })
     localTaskProposalsStore.setState(localTaskProposalsStore.getInitialState(), true)
     localTaskProposalEditsStore.setState(localTaskProposalEditsStore.getInitialState(), true)
@@ -128,5 +133,42 @@ describe('running a confirmed proposal', () => {
 
     expect(fixture.recordResults).toHaveBeenCalledWith(proposal.id, [], true)
     expect(fixture.execute).not.toHaveBeenCalled()
+  })
+
+  it('tells a claim request that got no answer from a claim taken elsewhere', async () => {
+    fixture.claim.mockRejectedValueOnce(new Error('host unreachable'))
+    await runLocalTaskProposal(proposal)
+    expect(fixture.toast.error).toHaveBeenCalledWith(
+      'Couldn’t reach the task library, so nothing ran. Try again.'
+    )
+    expect(fixture.toast.info).not.toHaveBeenCalled()
+
+    fixture.claim.mockResolvedValueOnce({ ok: false, code: 'stale', detail: 'executing' })
+    await runLocalTaskProposal(proposal)
+    expect(fixture.toast.info).toHaveBeenCalledWith('This proposal is already running or has run.')
+    expect(fixture.execute).not.toHaveBeenCalled()
+  })
+
+  it('gives up a run whose result could not be recorded, so the person can finish it', async () => {
+    fixture.claim.mockResolvedValue({
+      ok: true,
+      proposal: { ...proposal, status: 'executing', executionActive: true }
+    })
+    fixture.execute.mockResolvedValue(null)
+    fixture.release.mockResolvedValue({ ok: true, proposal })
+    fixture.recordResults.mockResolvedValue({ ok: true, proposal })
+
+    await runLocalTaskProposal(proposal)
+    expect(fixture.release).toHaveBeenCalledWith(proposal.id)
+    expect(localTaskProposalsStore.getState()).toMatchObject({ running: [], abandoned: ['p-1'] })
+
+    // The host may still list this window as running it; the person can finish it anyway.
+    localTaskProposalsStore.setState({
+      claimed: [{ ...proposal, status: 'executing', executionActive: true }]
+    })
+    await finishInterruptedLocalTaskProposal(proposal.id)
+    expect(fixture.release).toHaveBeenCalledTimes(2)
+    expect(fixture.recordResults).toHaveBeenCalledWith(proposal.id, [], true)
+    expect(localTaskProposalsStore.getState().abandoned).toEqual([])
   })
 })

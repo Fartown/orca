@@ -37,7 +37,11 @@ export abstract class LocalTaskDispatcherService {
     private readonly dispatcherDb: LocalTasksDatabase,
     private readonly dispatcherNow: () => number
   ) {
-    this.dispatcher = new LocalTaskDispatcher(dispatcherDb, () => this.dispatcherProgress())
+    this.dispatcher = new LocalTaskDispatcher(
+      dispatcherDb,
+      () => this.dispatcherProgress(),
+      () => this.dispatcherAttentionKeyMayReturn()
+    )
     dispatcherDb.onClose(() => {
       for (const [proposalId, lifetime] of this.claimLifetimes) {
         lifetime.cleanupSubscription(claimSubscriptionId(proposalId))
@@ -46,6 +50,8 @@ export abstract class LocalTaskDispatcherService {
   }
 
   protected abstract dispatcherProgress(): LocalTaskProgressSnapshot
+
+  protected abstract dispatcherAttentionKeyMayReturn(): (key: string) => boolean
 
   registerDispatcher(input: LocalTasksDispatcherRegisterInput) {
     return this.writeDispatcher(
@@ -123,6 +129,22 @@ export abstract class LocalTaskDispatcherService {
     return result.ok ? this.dispatcher.proposalResult(input.proposalId) : result
   }
 
+  /**
+   * The claiming window gives up a run it can no longer report on, so the claim retires now rather
+   * than when its connection closes, and a person can close the proposal out (D-018).
+   */
+  releaseProposal(
+    input: { clientOperationId: string; proposalId: string },
+    connectionId: string,
+    lifetime: ClaimLifetime
+  ) {
+    if (!connectionId || this.dispatcher.ownership.ownerOf(input.proposalId) !== connectionId) {
+      return { ok: false as const, code: 'stale' as const, detail: 'execution-owner' }
+    }
+    lifetime.cleanupSubscription(claimSubscriptionId(input.proposalId))
+    return this.dispatcher.proposalResult(input.proposalId)
+  }
+
   recordProposalResults(
     input: LocalTasksProposalsRecordResultsInput,
     connectionId: string,
@@ -156,13 +178,18 @@ export abstract class LocalTaskDispatcherService {
     return result.ok ? this.dispatcher.proposalResult(input.proposalId) : result
   }
 
-  watchTask(input: { clientOperationId: string; paneKey: string; taskId: string }) {
+  watchTask(input: {
+    clientOperationId: string
+    paneKey: string
+    taskId: string
+    replacesRef?: string
+  }) {
     return this.writeDispatcher(
       input.clientOperationId,
       'dispatcher.watch',
       input,
       EMPTY_RESULT,
-      (now) => this.dispatcher.watch(input.paneKey, input.taskId, now)
+      (now) => this.dispatcher.watch(input.paneKey, input.taskId, now, input.replacesRef)
     )
   }
 

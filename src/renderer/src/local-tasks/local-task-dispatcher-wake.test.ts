@@ -25,7 +25,10 @@ vi.mock('./local-task-dispatcher-session', () => ({
 }))
 
 import { useAppStore } from '@/store'
-import { createLocalTaskDispatcherWake } from './local-task-dispatcher-wake'
+import {
+  createLocalTaskDispatcherWake,
+  mayLeaveLocalTaskDispatcherDraft
+} from './local-task-dispatcher-wake'
 
 const LEAF = '11111111-1111-4111-8111-111111111111'
 const PANE = `tab-d:${LEAF}`
@@ -204,5 +207,42 @@ describe('dispatcher wake', () => {
     await wake.check()
 
     expect(fixture.inbox).not.toHaveBeenCalled()
+  })
+
+  it('is not held back by keys that leave no text, such as arrows, Esc or a copy', async () => {
+    fixture.inbox.mockResolvedValue(inboxWith('c1'))
+    const wake = createLocalTaskDispatcherWake(send, () => false)
+    setStatus('done', 200, { turnStartedAt: 100 })
+    // The arrow key reached the terminal a moment after it was pressed.
+    wake.noteKey(150)
+    useAppStore.getState().recordTerminalInput(PANE, 152)
+
+    await wake.check()
+
+    expect(send).toHaveBeenCalledTimes(1)
+  })
+
+  it('counts printable keys, pastes and IME input as a possible draft, and nothing else', () => {
+    const key = (
+      value: string,
+      extra: Partial<Pick<KeyboardEvent, 'ctrlKey' | 'metaKey' | 'shiftKey' | 'isComposing'>> = {}
+    ) => ({
+      key: value,
+      ctrlKey: false,
+      metaKey: false,
+      shiftKey: false,
+      isComposing: false,
+      ...extra
+    })
+    expect(mayLeaveLocalTaskDispatcherDraft(key('a'))).toBe(true)
+    expect(mayLeaveLocalTaskDispatcherDraft(key(' '))).toBe(true)
+    expect(mayLeaveLocalTaskDispatcherDraft(key('v', { metaKey: true }))).toBe(true)
+    expect(mayLeaveLocalTaskDispatcherDraft(key('Insert', { shiftKey: true }))).toBe(true)
+    expect(mayLeaveLocalTaskDispatcherDraft(key('Process'))).toBe(true)
+    expect(mayLeaveLocalTaskDispatcherDraft(key('c', { metaKey: true }))).toBe(false)
+    expect(mayLeaveLocalTaskDispatcherDraft(key('c', { ctrlKey: true }))).toBe(false)
+    expect(mayLeaveLocalTaskDispatcherDraft(key('ArrowUp'))).toBe(false)
+    expect(mayLeaveLocalTaskDispatcherDraft(key('Escape'))).toBe(false)
+    expect(mayLeaveLocalTaskDispatcherDraft(key('Enter'))).toBe(false)
   })
 })

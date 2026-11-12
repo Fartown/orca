@@ -43,15 +43,24 @@ type CardPhase =
   | 'running-here'
   | 'running-elsewhere'
   | 'interrupted'
+  /** This window stopped its own run when a result could not be recorded. */
+  | 'abandoned'
   | 'unverifiable'
   | 'closed'
 
-function cardPhase(proposal: LocalTaskProposal, runningHere: boolean): CardPhase {
+function cardPhase(
+  proposal: LocalTaskProposal,
+  runningHere: boolean,
+  abandonedHere: boolean
+): CardPhase {
   if (proposal.status === 'pending') {
     return 'pending'
   }
   if (runningHere) {
     return 'running-here'
+  }
+  if (abandonedHere && (proposal.status === 'confirmed' || proposal.status === 'executing')) {
+    return 'abandoned'
   }
   if (proposal.status === 'confirmed') {
     return 'unrun'
@@ -86,6 +95,12 @@ function PhasePill({ phase }: { phase: CardPhase }): React.JSX.Element | null {
       return (
         <span className={cn(pill, 'bg-status-warning-background text-status-warning')}>
           {translate('localTasks.dispatcher.pill.disconnected', 'Execution window disconnected')}
+        </span>
+      )
+    case 'abandoned':
+      return (
+        <span className={cn(pill, 'bg-status-warning-background text-status-warning')}>
+          {translate('localTasks.dispatcher.pill.stopped', 'Stopped')}
         </span>
       )
     case 'unrun':
@@ -204,14 +219,20 @@ function CardFooter({
         </>
       )
     case 'interrupted':
+    case 'abandoned':
       return (
         <>
           <span className={note}>
             <CircleAlert className={cn(icon, 'text-status-warning')} aria-hidden />
-            {translate(
-              'localTasks.dispatcher.interrupted',
-              'The execution window is no longer connected. Check the tasks before finishing. Recorded results are kept; no steps are repeated.'
-            )}
+            {phase === 'abandoned'
+              ? translate(
+                  'localTasks.dispatcher.abandoned',
+                  'A result could not be recorded, so this window stopped the run. Check the tasks before finishing. Recorded results are kept; no steps are repeated.'
+                )
+              : translate(
+                  'localTasks.dispatcher.interrupted',
+                  'The execution window is no longer connected. Check the tasks before finishing. Recorded results are kept; no steps are repeated.'
+                )}
           </span>
           <Button
             variant="outline"
@@ -263,6 +284,7 @@ export function LocalTaskProposalCard({
   now: number
 }): React.JSX.Element {
   const runningHere = useLocalTaskProposals((state) => state.running.includes(proposal.id))
+  const abandonedHere = useLocalTaskProposals((state) => state.abandoned.includes(proposal.id))
   const edits = useLocalTaskProposalEdits(proposal.id)
   const items = useMemo(
     () =>
@@ -274,11 +296,18 @@ export function LocalTaskProposalCard({
   )
   const views = useLocalTaskProposalItemViews(items)
   const [dropped, setDropped] = useState<ReadonlySet<number>>(() => new Set())
-  const phase = cardPhase(proposal, runningHere)
+  const phase = cardPhase(proposal, runningHere, abandonedHere)
   const pending = phase === 'pending'
   const progress = useMemo(
-    () => localTaskProposalProgress(proposal, runningHere),
-    [proposal, runningHere]
+    () =>
+      localTaskProposalProgress(
+        // Why: a run this window stopped is over, whatever the host last said about its claim.
+        phase === 'abandoned'
+          ? { ...proposal, status: 'executing', executionActive: false }
+          : proposal,
+        runningHere
+      ),
+    [phase, proposal, runningHere]
   )
   const keep = pending
     ? items.map((_, index) => index).filter((index) => !dropped.has(index) && !views[index]?.lock)
@@ -304,7 +333,7 @@ export function LocalTaskProposalCard({
         <span className="mt-0.5 shrink-0 text-2xs text-muted-foreground">
           {formatLocalTaskTime(proposal.createdAt, now)}
         </span>
-        <span className="mt-px">
+        <span className="mt-0.5 flex shrink-0">
           <PhasePill phase={phase} />
         </span>
       </header>
@@ -328,6 +357,7 @@ export function LocalTaskProposalCard({
               kept={keep.includes(index)}
               busy={runningHere}
               progress={pending ? null : (progress?.items[index] ?? null)}
+              unrecorded={phase === 'abandoned'}
               onToggle={() => toggle(index)}
             />
           )

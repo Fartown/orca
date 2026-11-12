@@ -19,13 +19,16 @@ type ProposalsState = {
   claimed: LocalTaskProposal[]
   /** Proposals this window is running now. */
   running: readonly string[]
+  /** Runs this window stopped because a result could not be recorded: it runs them no more. */
+  abandoned: readonly string[]
 }
 
 export const localTaskProposalsStore = createStore<ProposalsState>(() => ({
   pending: [],
   unrun: [],
   claimed: [],
-  running: []
+  running: [],
+  abandoned: []
 }))
 
 export function useLocalTaskProposals<T>(select: (state: ProposalsState) => T): T {
@@ -72,6 +75,25 @@ function setRunning(proposalId: string, running: boolean): void {
   }))
 }
 
+function setAbandoned(proposalId: string, abandoned: boolean): void {
+  localTaskProposalsStore.setState((state) => ({
+    abandoned: abandoned
+      ? [...state.abandoned.filter((id) => id !== proposalId), proposalId]
+      : state.abandoned.filter((id) => id !== proposalId)
+  }))
+}
+
+/**
+ * Stops a run whose result could not be recorded. Why release: this window's connection still
+ * holds the claim, and while it does nobody, this window included, could close the proposal out.
+ */
+async function abandonLocalTaskProposalRun(proposalId: string): Promise<void> {
+  setAbandoned(proposalId, true)
+  await localTaskDispatcherClient.release(proposalId).catch((error: unknown) => {
+    console.error('local tasks: releasing an abandoned proposal run failed', error)
+  })
+}
+
 /**
  * Claims a confirmed proposal, runs it once in this window and says how it went. The claim is
  * what stops a second window, a stale card or a reload from running the same items again.
@@ -82,8 +104,21 @@ export async function runLocalTaskProposal(proposal: LocalTaskProposal): Promise
   }
   setRunning(proposal.id, true)
   try {
-    const claimed = await localTaskDispatcherClient.claim(proposal.id).catch(() => null)
-    if (!claimed?.ok || claimed.proposal.executionActive !== true) {
+    const claimed = await localTaskDispatcherClient.claim(proposal.id).catch((error: unknown) => {
+      console.error('local tasks: claiming a proposal failed', error)
+      return null
+    })
+    // Why apart from a refusal: a request that never got an answer ran nothing and can be retried.
+    if (claimed === null) {
+      toast.error(
+        translate(
+          'localTasks.dispatcher.claimFailed',
+          'Couldn’t reach the task library, so nothing ran. Try again.'
+        )
+      )
+      return
+    }
+    if (!claimed.ok || claimed.proposal.executionActive !== true) {
       toast.info(
         translate(
           'localTasks.dispatcher.claimedElsewhere',
@@ -94,6 +129,7 @@ export async function runLocalTaskProposal(proposal: LocalTaskProposal): Promise
     }
     const results = await executeLocalTaskProposal(withLocalTaskProposalEdits(claimed.proposal))
     if (!results) {
+      await abandonLocalTaskProposalRun(proposal.id)
       toast.error(
         translate('localTasks.dispatcher.reportFailed', 'The results could not be recorded.')
       )
@@ -121,13 +157,37 @@ export async function runLocalTaskProposal(proposal: LocalTaskProposal): Promise
  */
 export async function finishInterruptedLocalTaskProposal(proposalId: string): Promise<void> {
   const state = localTaskProposalsStore.getState()
+  const abandonedHere = state.abandoned.includes(proposalId)
   if (
     state.running.includes(proposalId) ||
-    state.claimed.find((proposal) => proposal.id === proposalId)?.executionActive !== false
+    (!abandonedHere &&
+      state.claimed.find((proposal) => proposal.id === proposalId)?.executionActive !== false)
   ) {
     return
   }
-  await runLocalTaskWrite(() => localTaskDispatcherClient.recordResults(proposalId, [], true))
+  if (abandonedHere) {
+    // Why first: the host lets nobody close a run while this window's connection still claims it.
+    const released = await localTaskDispatcherClient.release(proposalId).then(
+      () => true,
+      (error: unknown) => {
+        toast.error(
+          translate('localTasks.failure.callFailed', 'Could not save the change: {{message}}', {
+            message: error instanceof Error ? error.message : String(error)
+          })
+        )
+        return false
+      }
+    )
+    if (!released) {
+      return
+    }
+  }
+  const finished = await runLocalTaskWrite(() =>
+    localTaskDispatcherClient.recordResults(proposalId, [], true)
+  )
+  if (finished) {
+    setAbandoned(proposalId, false)
+  }
   void refreshLocalTaskProposals()
 }
 /** A person's decision (REQ-030); `keep` names the items they kept, all when absent. */

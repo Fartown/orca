@@ -13,6 +13,7 @@ import { useMobileSessionController } from '../session/use-mobile-session-contro
 import { colors, radii, spacing, typography } from '../theme/mobile-theme'
 import type { LocalTaskSessionSummary } from './local-task-card-facts'
 import { localTasksCopy } from './local-tasks-copy'
+import { LocalTaskServerWorkspaceScope } from './local-task-server-workspace-scope'
 import { LOCAL_TASK_SESSION_DOT } from './local-task-session-dots'
 import { localTaskSessionPaneKey } from './local-task-work-navigation'
 import type { LocalTasksApi } from './local-tasks-api'
@@ -134,6 +135,8 @@ function ChatContent(props: {
 /** A chat session answered in place (Q2); terminal sessions open their own page instead. */
 export function LocalTaskSessionDrawer(props: {
   hostId: string
+  /** The server a server library's session runs on; absent on the paired host's own library. */
+  executionHost?: `runtime:${string}`
   worktreeId: string | null
   session: LocalTaskSessionLink | null
   api: LocalTasksApi
@@ -146,6 +149,20 @@ export function LocalTaskSessionDrawer(props: {
   onClose: () => void
 }) {
   const session = props.session
+  const content =
+    session && props.worktreeId ? (
+      <ChatContent
+        key={session.id}
+        hostId={props.hostId}
+        worktreeId={props.worktreeId}
+        session={session}
+        api={props.api}
+        library={props.library}
+        summary={props.summary ?? null}
+        now={props.now ?? 0}
+        onOpenFull={props.onOpenFull}
+      />
+    ) : null
   return (
     <BottomDrawer
       visible={session !== null && props.worktreeId !== null}
@@ -153,19 +170,13 @@ export function LocalTaskSessionDrawer(props: {
       fillAvailable
       contentScrollable={false}
     >
-      {session && props.worktreeId ? (
-        <ChatContent
-          key={session.id}
-          hostId={props.hostId}
-          worktreeId={props.worktreeId}
-          session={session}
-          api={props.api}
-          library={props.library}
-          summary={props.summary ?? null}
-          now={props.now ?? 0}
-          onOpenFull={props.onOpenFull}
-        />
-      ) : null}
+      {content && props.executionHost ? (
+        <LocalTaskServerWorkspaceScope hostId={props.hostId} executionHost={props.executionHost}>
+          {content}
+        </LocalTaskServerWorkspaceScope>
+      ) : (
+        content
+      )}
     </BottomDrawer>
   )
 }

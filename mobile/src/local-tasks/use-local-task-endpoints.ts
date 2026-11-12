@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { ExecutionHostId } from '../../../src/shared/execution-host'
 import { taskRuntimeStatusRead } from '../tasks/mobile-task-runtime-operations'
 import type { RpcClient } from '../transport/rpc-client'
@@ -108,8 +108,29 @@ export function useLocalTaskEndpoints(args: {
       ? [{ endpoint: localTaskEndpointFor(host.hostId), label: host.label }]
       : []
   )
+  const activeServer = args.active.executionHost
+  const listedLabel = servers?.find((host) => host.hostId === activeServer)?.label
+  // Why remembered: a server that leaves the desktop's list is still the one on screen.
+  const lastLabel = useRef<{ hostId: string; label: string } | null>(null)
+  useEffect(() => {
+    if (activeServer && listedLabel !== undefined) {
+      lastLabel.current = { hostId: activeServer, label: listedLabel }
+    }
+  }, [activeServer, listedLabel])
+  const remembered = lastLabel.current
+  const activeLabel =
+    listedLabel ?? (remembered && remembered.hostId === activeServer ? remembered.label : '')
+  // A server shown while out of reach stays listed, so the switch back to the host's own stays.
+  const strandedServer =
+    activeServer && !serverChoices.some((choice) => choice.endpoint.key === args.active.key)
+      ? [{ endpoint: args.active, label: activeLabel }]
+      : []
   const choices: LocalTaskEndpointChoice[] = desktopHasTasks
-    ? [{ endpoint: localTaskEndpointFor(undefined), label: args.machineName }, ...serverChoices]
+    ? [
+        { endpoint: localTaskEndpointFor(undefined), label: args.machineName },
+        ...serverChoices,
+        ...strandedServer
+      ]
     : []
   const desktopAccess = resolveLocalTasksAccess({
     connState: args.connState,
@@ -131,7 +152,7 @@ export function useLocalTaskEndpoints(args: {
       }
     }
   }
-  const label = servers?.find((host) => host.hostId === args.active.executionHost)?.label ?? ''
+  const label = activeLabel
   // Why the desktop first: only a desktop with local tasks relays a phone's task calls to a server.
   const access: LocalTasksAccess =
     desktopAccess !== 'ready'

@@ -50,6 +50,14 @@ export const localTaskDispatcherClient = {
       { proposalId },
       proposalResult
     ),
+  /** Gives up this window's claim on a run it can no longer report on, so a person can close it out. */
+  release: (proposalId: string) =>
+    writeLocalTasks(
+      SELF_LOCAL_TASK_ENDPOINT,
+      'localTasks.proposals.release',
+      { proposalId },
+      proposalResult
+    ),
   recordResults: (proposalId: string, results: LocalTaskProposalItemResult[], finalize = true) =>
     writeLocalTasks(
       SELF_LOCAL_TASK_ENDPOINT,
@@ -63,6 +71,14 @@ export const localTaskDispatcherClient = {
       'localTasks.dispatcher.watches',
       { paneKey },
       watchesResult
+    ),
+  /** Follows, for the dispatcher, a task its ref named in another host's library (REQ-031). */
+  watch: (paneKey: string, taskId: string, replacesRef?: string) =>
+    writeLocalTasks(
+      SELF_LOCAL_TASK_ENDPOINT,
+      'localTasks.dispatcher.watch',
+      { paneKey, taskId, ...(replacesRef ? { replacesRef } : {}) },
+      okResult
     ),
   unwatch: (paneKey: string, taskId: string) =>
     writeLocalTasks(
