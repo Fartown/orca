@@ -3,11 +3,20 @@ title: 自托管产物后端
 slug: 自托管产物后端
 status: testing
 created: 2026-09-05
-updated: 2026-11-09
+updated: 2026-11-12
 external_ids: ['Fartown/orca#84', 'Fartown/orca#87', 'Fartown/orca#93']
 ---
 
 # 自托管产物后端 Journal
+
+## 2026-11-12 评论定位改为照搬 Orca 审阅笔记的规则（Fartown/orca#93）
+
+- 本轮目标：implementing → testing；用户多次要求「照着做」，指出我在自己设计的定位方案上反复打补丁。
+- 完成内容：读完 Orca 富文本编辑器与预览的评论实现（`rich-markdown-review-annotations`、`rich-markdown-range-bounds`、`markdown-review-anchor-recovery`、预览的 `wrapAnnotatedBlock`），分享页改为同一规则：记「块行范围 + 显示文字」，在末行所在块里找第一处、再全文找，找不到在卡片上标 Orca 的「原文已变更」并放到评论栏顶部；整块评论以块文字为所选文字；点卡片与点文字都滚到中间并闪一下。删除自定义的偏移量锚点、唯一前文、页尾「旧版本」列表与整块竖线；契约去掉 `anchor`。
+- 代码或文档变更：`share-comment-anchors.ts` 重写；`ShareOrphanComments.tsx` 删除；契约、存储、导入、标记、侧栏、卡片随之调整；`dependsOn` 加 `rich-markdown-range-bounds.ts` 与 `review-anchor-position.ts`；REQ-311、AT-21。
+- 验证证据：单元测试 22 个文件 87 项；三套类型检查与 lint 通过；隔离 Orca 实例 1 passed，分享页 6 处画线与 Orca 6 处标出逐条一致；页面走查两种版本各 59/59。
+- 未解决问题：同一块里重复的文字落在第一处，这是 Orca 笔记本身的行为；用户的真机未测。
+- 下一步：推送 PR #94，等用户决定合并。
 
 ## 2026-11-09 评论定位真机验证：本机 Orca 与 SSH 主机（Fartown/orca#93）
 

@@ -54,19 +54,7 @@
   margin: 8px 0 16px;
 }
 
-.orca-share-orphan-comments {
-  margin-top: 48px;
-  padding-top: 16px;
-  border-top: 1px solid var(--border);
-}
-
-.orca-share-orphan-comments > h2 {
-  margin: 0 0 12px;
-  border: 0;
-  padding: 0;
-}
-
-/* What a comment is about: a dashed rule a little below selected text, a bar beside a whole block. */
+/* What a comment is about: a dashed rule a little below its selected text. */
 .orca-share-comment-marks {
   --share-comment-mark: color-mix(in srgb, var(--foreground) 40%, transparent);
   position: absolute;
@@ -87,12 +75,6 @@
   height: 1px;
   background-image: linear-gradient(to right, var(--share-comment-mark) 60%, transparent 60%);
   background-size: 5px 1px;
-}
-
-.orca-share-comment-marks > span.is-bar {
-  width: 2px;
-  border-radius: 1px;
-  background: var(--share-comment-mark);
 }
 
 /* A click on a card or on marked text flashes its counterpart, as the app does for review notes. */

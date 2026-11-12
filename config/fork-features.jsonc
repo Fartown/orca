@@ -1676,7 +1676,9 @@
         "src/renderer/src/components/editor/markdown-rich-size-limit.ts",
         "src/renderer/src/components/editor/CodeBlockCopyButton.tsx",
         "src/renderer/src/components/editor/markdown-doc-links.ts",
-        "src/renderer/src/components/editor/use-mermaid-diagram-expand.ts"
+        "src/renderer/src/components/editor/use-mermaid-diagram-expand.ts",
+        "src/renderer/src/components/editor/rich-markdown-range-bounds.ts",
+        "src/renderer/src/components/markdown-review-anchor-recovery/review-anchor-position.ts"
       ],
       "policyId": "self-hosted-artifacts",
       "ownedPaths": [

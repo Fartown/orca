@@ -48,8 +48,7 @@ function toReviewNote(
     source: 'markdown',
     ...(comment.startLine === comment.endLine ? {} : { startLine: comment.startLine }),
     lineNumber: comment.endLine,
-    // Why the context: Orca matches a note's text first-on-the-line; it makes repeated words unique.
-    ...(comment.quote ? { selectedText: `${comment.anchor?.context ?? ''}${comment.quote}` } : {}),
+    ...(comment.quote ? { selectedText: comment.quote } : {}),
     // Why the name in the body: notes have no author field, and the agent should know who asked.
     body: comment.author
       ? `${comment.author} via share link: ${comment.body}`

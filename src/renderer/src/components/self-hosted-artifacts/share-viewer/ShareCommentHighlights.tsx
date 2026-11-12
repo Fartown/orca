@@ -4,11 +4,9 @@ import { Button } from '@/components/ui/button'
 import { translate } from '@/i18n/i18n'
 import { captureShareCommentSelection, ShareCommentPage } from './share-comment-anchors'
 import { SHARE_COMMENT_ID_ATTRIBUTE } from './share-comment-blocks'
-import { buildShareCommentTextMap, shareCommentTextRange } from './share-comment-text-map'
 import {
   SHARE_DRAFT_PLACEMENT_ID,
   shareCommentFoldedSummary,
-  shareCommentPlacementElement,
   useShareCommentPlacements,
   type ShareCommentPlacements
 } from './ShareCommentPlacements'
@@ -16,12 +14,8 @@ import { useShareComments, type ShareCommentDraft } from './share-viewer-comment
 
 // Space between a line's text and its underline.
 const UNDERLINE_GAP_PX = 2
-// A whole-block comment's bar sits in the gutter, clear of the text; the add button covers it on hover.
-const BLOCK_BAR_GUTTER_PX = 12
 
-type Mark =
-  | { key: string; id: string; kind: 'line'; left: number; top: number; width: number }
-  | { key: string; id: string; kind: 'bar'; left: number; top: number; height: number }
+type Mark = { key: string; id: string; left: number; top: number; width: number }
 
 /** Each piece of a range's text; inline code is flagged, its smaller font must not set the line. */
 function textLineRects(range: Range): { rect: DOMRect; code: boolean }[] {
@@ -92,40 +86,20 @@ function underlineMarks(id: string, ranges: Range[], origin: DOMRect): Mark[] {
   return lines.map((line, index) => ({
     key: `${id}:${index}`,
     id,
-    kind: 'line',
     left: line.left - origin.left,
     top: (line.textBottom ?? line.codeBottom) - origin.top + UNDERLINE_GAP_PX,
     width: line.right - line.left
   }))
 }
 
-/** A whole block's bar spans its own text (a list item's sub-list is not part of it). */
-function barMark(id: string, element: HTMLElement, origin: DOMRect): Mark {
-  const map = buildShareCommentTextMap(element)
-  const text = shareCommentTextRange(map, 0, map.text.length)
-  const rect = text?.getBoundingClientRect() ?? element.getBoundingClientRect()
-  return {
-    key: `${id}:bar`,
-    id,
-    kind: 'bar',
-    left: rect.left - origin.left - BLOCK_BAR_GUTTER_PX,
-    top: rect.top - origin.top,
-    height: rect.height
-  }
-}
-
+/** Like the app's notes, only selected text is marked; text in a folded section has no box. */
 function marksFor(placements: ShareCommentPlacements, origin: DOMRect): Mark[] {
-  return [...placements].flatMap(([id, placement]): Mark[] => {
-    const folded = shareCommentFoldedSummary(shareCommentPlacementElement(placement))
-    if (folded) {
-      // Text inside a folded section has no box; its summary line carries the mark.
-      return [barMark(id, folded, origin)]
-    }
-    if (placement.kind === 'text') {
-      return underlineMarks(id, placement.ranges, origin)
-    }
-    return placement.kind === 'block' ? [barMark(id, placement.block, origin)] : []
-  })
+  return [...placements].flatMap(([id, placement]): Mark[] =>
+    placement.kind === 'text' &&
+    !shareCommentFoldedSummary(placement.ranges[0]?.startContainer.parentElement ?? null)
+      ? underlineMarks(id, placement.ranges, origin)
+      : []
+  )
 }
 
 function caretAt(x: number, y: number): { node: Node; offset: number } | null {
@@ -164,8 +138,7 @@ function commentsAt(placements: ShareCommentPlacements, event: MouseEvent): stri
 }
 
 /**
- * Marks what each comment is about: a dashed line under selected text, a bar beside a whole
- * block. Clicking marked text brings its card forward, cycling through comments that overlap.
+ * Marks what each comment is about with a dashed line under its selected text. Clicking marked text brings its card forward, cycling through comments that overlap.
  */
 export function ShareCommentHighlights({
   bodyRef
@@ -204,7 +177,8 @@ export function ShareCommentHighlights({
       flashComment(id)
       body
         .querySelector(`[${SHARE_COMMENT_ID_ATTRIBUTE}="${id}"]`)
-        ?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+        // As the app's rail centers a note's card when its text is clicked.
+        ?.scrollIntoView({ block: 'center', behavior: 'smooth' })
     }
     body.addEventListener('click', onClick)
     return () => body.removeEventListener('click', onClick)
@@ -224,17 +198,13 @@ export function ShareCommentHighlights({
         <span
           key={mark.key}
           className={[
-            mark.kind === 'line' ? 'is-line' : 'is-bar',
+            'is-line',
             mark.id === active ? 'is-active' : '',
             mark.id === attentionCommentId ? 'is-attention' : ''
           ]
             .filter(Boolean)
             .join(' ')}
-          style={
-            mark.kind === 'line'
-              ? { left: mark.left, top: mark.top, width: mark.width }
-              : { left: mark.left, top: mark.top, height: mark.height }
-          }
+          style={{ left: mark.left, top: mark.top, width: mark.width }}
         />
       ))}
     </div>

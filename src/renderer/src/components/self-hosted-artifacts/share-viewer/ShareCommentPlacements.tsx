@@ -59,10 +59,7 @@ export function ShareCommentPlacementsProvider({
     const page = new ShareCommentPage(body)
     const next = new Map<string, ShareCommentPlacement>()
     for (const comment of comments) {
-      next.set(
-        comment.id,
-        placeShareComment(page, { range: comment, quote: comment.quote, anchor: comment.anchor })
-      )
+      next.set(comment.id, placeShareComment(page, { range: comment, quote: comment.quote }))
     }
     if (draft) {
       next.set(SHARE_DRAFT_PLACEMENT_ID, placeShareComment(page, draft))
@@ -85,7 +82,7 @@ export function useShareCommentPlacements(): ShareCommentPlacements {
 export function shareCommentPlacementElement(
   placement: ShareCommentPlacement | undefined
 ): Element | null {
-  if (!placement || placement.kind === 'orphan') {
+  if (!placement || placement.kind === 'unresolved') {
     return null
   }
   if (placement.kind === 'block') {

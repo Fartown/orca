@@ -1,10 +1,7 @@
 import React, { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { translate } from '@/i18n/i18n'
-import type {
-  ArtifactShareComment,
-  ArtifactShareCommentAnchor
-} from '../../../../../shared/self-hosted-artifacts/artifact-share-comments-contract'
+import type { ArtifactShareComment } from '../../../../../shared/self-hosted-artifacts/artifact-share-comments-contract'
 import {
   deleteShareComment,
   editShareComment,
@@ -15,11 +12,12 @@ import {
 
 export type ShareCommentRange = { startLine: number; endLine: number }
 
-/** A comment being written: its source lines, the text it is about, and where that text sits. */
+/** A comment being written, as the app's review notes record one: its lines and selected text. */
 export type ShareCommentDraft = {
   range: ShareCommentRange
   quote?: string
-  anchor?: ArtifactShareCommentAnchor
+  /** Opened from a block's add button rather than a text selection; never sent. */
+  wholeBlock?: boolean
 }
 
 export type ShareCommentsState = {
@@ -101,8 +99,7 @@ export function ShareCommentsProvider({
         body,
         startLine: draft.range.startLine,
         endLine: draft.range.endLine,
-        ...(draft.quote ? { quote: draft.quote } : {}),
-        ...(draft.anchor ? { anchor: draft.anchor } : {})
+        ...(draft.quote ? { quote: draft.quote } : {})
       })
       if ('failure' in result) {
         return result.failure

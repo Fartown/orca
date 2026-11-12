@@ -63,19 +63,18 @@ export function ShareCommentRail({
     const bodyTop = body.getBoundingClientRect().top
     const anchored: RichMarkdownReviewNotePosition[] = []
     for (const comment of comments) {
-      // Orphans (their text is gone from the file) are listed after the document instead.
       const top = shareCommentPlacementTop(placements.get(comment.id))
-      if (top !== null) {
-        anchored.push({
-          comment: toReviewNote(
-            comment.id,
-            { range: comment },
-            comment.body,
-            Date.parse(comment.createdAt)
-          ),
-          top: top - bodyTop
-        })
-      }
+      // As in the app's rail: a note whose text is gone sits at the top, marked as changed.
+      anchored.push({
+        comment: toReviewNote(
+          comment.id,
+          { range: comment },
+          comment.body,
+          Date.parse(comment.createdAt)
+        ),
+        top: top === null ? 0 : top - bodyTop,
+        ...(top === null ? { anchorUnresolved: true } : {})
+      })
     }
     const draftTop = draft
       ? shareCommentPlacementTop(placements.get(SHARE_DRAFT_PLACEMENT_ID))

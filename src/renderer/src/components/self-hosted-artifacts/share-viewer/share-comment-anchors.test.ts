@@ -75,71 +75,71 @@ function placedText(placement: ReturnType<typeof placeShareComment>): string[] {
 
 afterEach(() => document.body.replaceChildren())
 
-describe('share comment anchors', () => {
-  it('records the chosen occurrence and finds that one again, not the first', () => {
-    const { body, page } = mount()
-    const draft = captureShareCommentSelection(page(), select(body, '评论', 2))
-    expect(draft).toMatchObject({
-      range: { startLine: 3, endLine: 3 },
-      quote: '评论',
-      // Orca finds a note's text by first match, so the note carries enough to be unique.
-      anchor: { line: 3, length: 2, context: '二个' }
-    })
-    expect(captureShareCommentSelection(page(), select(body, '乙二'))?.anchor).not.toHaveProperty(
-      'context'
-    )
-    const placed = placeShareComment(page(), draft!)
-    expect(placed.kind).toBe('text')
-    const range = placed.kind === 'text' ? placed.ranges[0] : null
-    // The chosen 评论 follows 第二个; the first one on the line opens it.
-    expect(range?.startContainer.textContent?.slice(0, range.startOffset)).toMatch(/第二个$/)
-  })
+/** The text before a placed range inside its node, to tell repeated words apart. */
+function textBefore(placement: ReturnType<typeof placeShareComment>): string | null {
+  const range = placement.kind === 'text' ? placement.ranges[0] : null
+  return range ? (range.startContainer.textContent ?? '').slice(0, range.startOffset) : null
+}
 
-  it('names the exact source line in multi-line paragraphs, tables and code', () => {
+// These follow the app's review notes: a note is its blocks' line range plus its selected text,
+// found first in the block holding its last line, then anywhere; else "Original text changed".
+describe("share comments placed by the app's review-note rules", () => {
+  it('records the line range of the blocks a selection touches and the text it shows', () => {
     const { body, page } = mount()
-    expect(captureShareCommentSelection(page(), select(body, '选中这里'))?.range).toEqual({
-      startLine: 7,
-      endLine: 7
+    expect(captureShareCommentSelection(page(), select(body, '选中这里'))).toEqual({
+      range: { startLine: 5, endLine: 7 },
+      quote: '选中这里'
     })
     expect(captureShareCommentSelection(page(), select(body, '乙二'))?.range).toEqual({
-      startLine: 18,
+      startLine: 15,
       endLine: 18
     })
-    expect(captureShareCommentSelection(page(), select(body, 'three'))?.range).toEqual({
-      startLine: 23,
-      endLine: 23
-    })
-  })
-
-  it('keeps a formula to its visible text and spans a selection across paragraphs', () => {
-    const { body, page } = mount()
-    const formula = captureShareCommentSelection(page(), select(body, '粗体', 0, '公式'))
-    expect(formula?.quote).toBe('粗体 和 x2 公式')
-
+    // A formula contributes the text it shows, not its hidden TeX.
+    expect(captureShareCommentSelection(page(), select(body, '粗体', 0, '公式'))?.quote).toBe(
+      '粗体 和 x2 公式'
+    )
     const across = captureShareCommentSelection(page(), select(body, '结尾在这里', 0, '开头在这里'))
-    expect(across).toMatchObject({ range: { startLine: 11, endLine: 13 } })
+    expect(across).toEqual({
+      range: { startLine: 11, endLine: 13 },
+      quote: '结尾在这里。 跨段落的第二段，开头在这里'
+    })
     expect(placedText(placeShareComment(page(), across!))).toEqual([
       '结尾在这里。',
       '跨段落的第二段，开头在这里'
     ])
   })
 
-  it('lets a parent list item own its text without its sub-list', () => {
+  it('finds the selected text first in the block of its last line, as the app does', () => {
     const { body, page } = mount()
-    const parent = captureShareCommentSelection(page(), select(body, '父项自己的文字'))
-    expect(parent).toMatchObject({ range: { startLine: 26, endLine: 26 }, anchor: { line: 26 } })
-    const parentBlock = body.querySelector<HTMLElement>('[data-source-line="26"]')!
-    expect(captureShareCommentBlock(parentBlock).quote).toBe('父项自己的文字')
+    const repeated = captureShareCommentSelection(page(), select(body, '评论', 2))!
+    // The app matches the first occurrence in the block; the share page shows the same place.
+    expect(textBefore(placeShareComment(page(), repeated))).toBe('')
+    const second = captureShareCommentSelection(page(), select(body, '第二个评论'))!
+    expect(textBefore(placeShareComment(page(), second))).toBe('评论定位要准：第一个评论在这里，')
   })
 
-  it('follows text that moved, and gives up on text that is gone', () => {
+  it('lets a parent list item own its text and comments on whole blocks by their text', () => {
     const { body, page } = mount()
-    const draft = captureShareCommentSelection(page(), select(body, '评论', 2))!
+    expect(captureShareCommentSelection(page(), select(body, '父项自己的文字'))).toEqual({
+      range: { startLine: 26, endLine: 26 },
+      quote: '父项自己的文字'
+    })
     const whole = captureShareCommentBlock(
       body.querySelector<HTMLElement>('[data-source-line="11"]')!
     )
+    expect(whole).toEqual({
+      range: { startLine: 11, endLine: 11 },
+      quote: '跨段落的第一段，结尾在这里。',
+      wholeBlock: true
+    })
+    expect(placedText(placeShareComment(page(), whole))).toEqual(['跨段落的第一段，结尾在这里。'])
+  })
 
-    // A paragraph inserted above: every line moves down by four.
+  it('finds moved text anywhere, and marks a note whose text is gone as unresolved', () => {
+    const { body, page } = mount()
+    const note = captureShareCommentSelection(page(), select(body, '乙二'))!
+
+    // A paragraph inserted above: line 18 now holds other text, so the whole page is searched.
     const shifted = mount(
       block(3, 3, '<p>新增的一段。</p>') +
         PAGE.replaceAll(
@@ -147,15 +147,12 @@ describe('share comment anchors', () => {
           (_, line) => `data-source-line="${Number(line) + 4}"`
         )
     )
-    const moved = placeShareComment(shifted.page(), draft)
-    const range = moved.kind === 'text' ? moved.ranges[0] : null
-    expect(range?.startContainer.textContent?.slice(0, range.startOffset)).toMatch(/第二个$/)
-    expect(placeShareComment(shifted.page(), whole)).toMatchObject({ kind: 'block' })
+    expect(placedText(placeShareComment(shifted.page(), note))).toEqual(['乙二'])
 
-    const rewritten = mount(PAGE.replace('第二个评论', '第二处'))
-    const quoted = { ...draft, quote: '第二个评论', anchor: { ...draft.anchor!, length: 5 } }
-    expect(placeShareComment(rewritten.page(), quoted)).toEqual({ kind: 'orphan' })
-    const removed = mount(PAGE.replace('跨段落的第一段，结尾在这里。', '改写过的段落。'))
-    expect(placeShareComment(removed.page(), whole)).toEqual({ kind: 'orphan' })
+    const removed = mount(PAGE.replace('乙二', '改过了'))
+    expect(placeShareComment(removed.page(), note)).toEqual({
+      kind: 'unresolved',
+      block: removed.body.querySelector('[data-source-line="15"]')
+    })
   })
 })

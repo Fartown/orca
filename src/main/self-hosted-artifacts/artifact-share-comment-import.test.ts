@@ -87,21 +87,6 @@ describe('reader comments becoming review notes', () => {
     await expect(
       importArtifactShareComments({ home, ledgerPath, runtime: owner.runtime })
     ).resolves.toBe(0)
-    // A repeated word carries the text before it, so Orca's first-match lookup lands on it.
-    await addArtifactShareComment(
-      home,
-      { rootPath: workspace, relativePath: 'docs/plan.md' },
-      {
-        body: '第二处',
-        startLine: 6,
-        endLine: 6,
-        quote: '评论',
-        anchor: { line: 6, offset: 9, length: 2, context: '二个' }
-      },
-      new Date('2026-11-05T08:01:00Z')
-    )
-    await importArtifactShareComments({ home, ledgerPath, runtime: owner.runtime })
-    expect(owner.state.notes.find((note) => note.lineNumber === 6)?.selectedText).toBe('二个评论')
     // Sending notes to an agent deletes them; the comment must not come back as a note.
     owner.state.notes = []
     await comment('还有一处', 5, 5)

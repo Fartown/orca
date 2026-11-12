@@ -19,7 +19,6 @@ import { ShareCommentHighlights, ShareSelectionCommentButton } from './ShareComm
 import { ShareCommentPlacementsProvider } from './ShareCommentPlacements'
 import { ShareCommentRail } from './ShareCommentRail'
 import { ShareImageViewerProvider } from './ShareImageViewer'
-import { ShareOrphanComments } from './ShareOrphanComments'
 import { ShareViewerHeader } from './ShareViewerHeader'
 import { ShareCommentsProvider, useShareComments } from './share-viewer-comments-state'
 import {
@@ -231,7 +230,6 @@ function ShareViewerLayout({
               </ShareDarkContext.Provider>
               {bodyReady ? (
                 <>
-                  <ShareOrphanComments />
                   <ShareCommentHighlights bodyRef={bodyRef} />
                   {showRail ? <ShareCommentRail bodyRef={bodyRef} /> : null}
                 </>

@@ -1,5 +1,6 @@
 import React, { useCallback, useContext, useState } from 'react'
 import { revealMarkdownNavigationDetails } from '@/components/editor/markdown-navigation-details'
+import { getMarkdownReviewAnchorLabel } from '@/components/markdown-review-anchor-recovery/review-anchor-position'
 import { CornerDownLeft, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { DiffCommentCard } from '@/components/diff-comments/DiffCommentCard'
@@ -25,9 +26,6 @@ import {
   useShareCommentPlacements
 } from './ShareCommentPlacements'
 import { useShareComments, type ShareCommentRange } from './share-viewer-comments-state'
-
-// Where a card click brings its text: the upper third of the view, where the eye starts reading.
-const REVEAL_VIEW_FRACTION = 1 / 3
 
 /** True when the page is too narrow for a side rail; cards then sit under their block. */
 export const ShareCommentInlineContext = React.createContext(false)
@@ -70,11 +68,13 @@ export function ShareCommentCard({
   onContentResize?: () => void
 }): React.JSX.Element {
   const { editComment, deleteComment } = useShareComments()
+  const placements = useShareCommentPlacements()
   return (
     <DiffCommentCard
       lineNumber={comment.endLine}
       startLine={comment.startLine === comment.endLine ? undefined : comment.startLine}
-      label={null}
+      // Same as the app's notes: a note whose text is gone says so.
+      label={getMarkdownReviewAnchorLabel(placements.get(comment.id)?.kind === 'unresolved')}
       // Why the time in the author slot: the card's header shows no name, and no "Note" fallback.
       author={formatCommentTime(comment.updatedAt ?? comment.createdAt)}
       quote={formatMarkdownReviewCardQuote(comment.quote)}
@@ -94,26 +94,27 @@ function isCardControl(target: EventTarget | null): boolean {
   )
 }
 
-/** Opens folded sections around the text and brings it to the upper third of the view. */
+/** As the app's review rail does: center the note's text in the view (opening folded sections). */
 function revealCommentSource(placement: ShareCommentPlacement | undefined): boolean {
   const element = shareCommentPlacementElement(placement)
-  if (!(element instanceof HTMLElement) || !placement || placement.kind === 'orphan') {
+  if (!(element instanceof HTMLElement) || !placement || placement.kind === 'unresolved') {
     return false
   }
   revealMarkdownNavigationDetails(element)
   const scroller = element.closest<HTMLElement>('.markdown-preview')
-  const target: Element | Range =
-    placement.kind === 'text' ? (placement.ranges[0] ?? element) : placement.block
   if (!scroller) {
     return false
   }
+  const first = placement.kind === 'text' ? placement.ranges[0] : undefined
+  const last = placement.kind === 'text' ? placement.ranges.at(-1) : undefined
+  const top = (first ?? element).getBoundingClientRect().top
+  const bottom = (last ?? element).getBoundingClientRect().bottom
   const view = scroller.getBoundingClientRect()
   scroller.scrollTo({
-    top:
-      scroller.scrollTop +
-      target.getBoundingClientRect().top -
-      view.top -
-      scroller.clientHeight * REVEAL_VIEW_FRACTION,
+    top: Math.max(
+      0,
+      scroller.scrollTop + (top + bottom) / 2 - view.top - scroller.clientHeight / 2
+    ),
     behavior: 'smooth'
   })
   return true
@@ -246,7 +247,7 @@ function InlineComments({ block }: { block: HTMLElement | null }): React.JSX.Ele
   const placements = useShareCommentPlacements()
   const onBlock = (id: string): boolean => {
     const placement = placements.get(id)
-    return Boolean(block && placement && placement.kind !== 'orphan' && placement.block === block)
+    return Boolean(block && placement?.block === block)
   }
   const own = comments.filter((comment) => onBlock(comment.id))
   const composing = onBlock(SHARE_DRAFT_PLACEMENT_ID)
@@ -275,8 +276,9 @@ function AddCommentButton({ block }: { block: HTMLElement | null }): React.JSX.E
   const placements = useShareCommentPlacements()
   const draftPlacement = placements.get(SHARE_DRAFT_PLACEMENT_ID)
   const composing =
-    draft?.anchor?.whole === true &&
-    draftPlacement?.kind === 'block' &&
+    draft?.wholeBlock === true &&
+    draftPlacement !== undefined &&
+    draftPlacement.kind !== 'unresolved' &&
     draftPlacement.block === block
   const label = translate(
     'auto.components.selfHostedArtifacts.shareViewer.addComment',

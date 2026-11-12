@@ -14,26 +14,6 @@ export const ARTIFACT_SHARE_COMMENT_LIMITS = {
 export const ARTIFACT_SHARE_COMMENTS_SEGMENT = 'comments'
 
 const SourceLine = z.number().int().min(1).max(10_000_000)
-const ARTIFACT_SHARE_COMMENT_CONTEXT_LIMIT = 200
-
-/**
- * Where on the page a comment sits: the rendered block starting at `line`, `offset` characters
- * into its whitespace-collapsed text, for `length` characters (blocks it spans joined by one
- * character each). `whole` marks a comment on a whole block rather than on selected text.
- */
-export const ArtifactShareCommentAnchor = z.object({
-  line: SourceLine,
-  offset: z.number().int().min(0).max(10_000_000),
-  length: z.number().int().min(0).max(10_000_000),
-  whole: z.boolean().optional(),
-  /**
-   * Text just before the selection, when the selected text also occurs earlier in its block:
-   * Orca finds a review note's text by its first match on the line, so the note carries enough
-   * of what precedes it to be found at the reader's occurrence.
-   */
-  context: z.string().max(ARTIFACT_SHARE_COMMENT_CONTEXT_LIMIT).optional()
-})
-export type ArtifactShareCommentAnchor = z.infer<typeof ArtifactShareCommentAnchor>
 
 export const ArtifactShareCommentInput = z
   .object({
@@ -42,8 +22,7 @@ export const ArtifactShareCommentInput = z
     body: z.string().trim().min(1).max(ARTIFACT_SHARE_COMMENT_LIMITS.body),
     startLine: SourceLine,
     endLine: SourceLine,
-    quote: z.string().trim().max(ARTIFACT_SHARE_COMMENT_LIMITS.quote).optional(),
-    anchor: ArtifactShareCommentAnchor.optional()
+    quote: z.string().trim().max(ARTIFACT_SHARE_COMMENT_LIMITS.quote).optional()
   })
   .refine((input) => input.endLine >= input.startLine, { message: 'endLine before startLine' })
 export type ArtifactShareCommentInput = z.infer<typeof ArtifactShareCommentInput>
@@ -58,7 +37,6 @@ export const ArtifactShareComment = z.object({
   startLine: SourceLine,
   endLine: SourceLine,
   quote: z.string().max(ARTIFACT_SHARE_COMMENT_LIMITS.quote).optional(),
-  anchor: ArtifactShareCommentAnchor.optional(),
   createdAt: z.string(),
   /** Set when the author edits the text; Orca refreshes the review note it became. */
   updatedAt: z.string().optional()
