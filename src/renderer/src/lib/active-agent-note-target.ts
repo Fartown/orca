@@ -19,6 +19,7 @@ import {
   resolveTitleActivityLabel
 } from '@/lib/pane-agent-evidence'
 import { resolveRuntimePaneTitleForLeaf } from '../../../shared/runtime-pane-title-leaf-id'
+import { findTerminalAtRecordedPane } from '@/local-tasks/local-task-background-terminal-match'
 
 const ACTIVE_AGENT_PROBE_RPC_TIMEOUT_MS = 3000
 const ACTIVE_AGENT_TERMINAL_LIST_LIMIT = 200
@@ -181,7 +182,7 @@ export async function findActiveRuntimeTerminal(
   return (
     terminals.find(
       (terminal) => terminal.tabId === runtimeTabId && terminal.leafId === noteTarget.leafId
-    ) ?? null
+    ) ?? findTerminalAtRecordedPane(terminals, { tabId: runtimeTabId, leafId: noteTarget.leafId })
   )
 }
 

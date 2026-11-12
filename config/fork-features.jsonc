@@ -3989,6 +3989,11 @@
           "why": "The dispatcher's proposals wait above its own chat input, so they are confirmed where it proposed them (REQ-030)"
         },
         {
+          "file": "src/renderer/src/lib/active-agent-note-target.ts",
+          "mustContain": "findTerminalAtRecordedPane(terminals",
+          "why": "A follow-up or Send back reaches a session launched in the background before its pane mounts (REQ-024, REQ-029, #102)"
+        },
+        {
           "file": "mobile/src/session/use-mobile-session-foundation.ts",
           "mustContain": "MobileSessionScopeOverride",
           "why": "Task-first navigation and session preview reuse the existing workspace/session surfaces (REQ-026, REQ-028)"

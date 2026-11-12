@@ -878,6 +878,7 @@
             "src/renderer/src/components/sidebar/index.tsx",
             "src/renderer/src/components/sidebar/SidebarHeader.tsx",
             "src/renderer/src/components/native-chat/NativeChatComposerPane.tsx",
+            "src/renderer/src/lib/active-agent-note-target.ts",
             "mobile/src/session/use-mobile-session-foundation.ts",
             "mobile/src/session/use-mobile-session-controller.ts",
             "mobile/src/session/use-notification-pane-navigation.ts",
@@ -2016,6 +2017,7 @@
             "src/renderer/src/components/sidebar/index.tsx",
             "src/renderer/src/components/sidebar/SidebarHeader.tsx",
             "src/renderer/src/components/native-chat/NativeChatComposerPane.tsx",
+            "src/renderer/src/lib/active-agent-note-target.ts",
             "mobile/src/session/use-mobile-session-foundation.ts",
             "mobile/src/session/use-mobile-session-controller.ts",
             "mobile/src/session/use-notification-pane-navigation.ts",
@@ -2127,7 +2129,8 @@
             "src/renderer/src/components/use-terminal-workspace-store-bindings.ts",
             "src/renderer/src/components/sidebar/index.tsx",
             "src/renderer/src/components/sidebar/SidebarHeader.tsx",
-            "src/renderer/src/components/native-chat/NativeChatComposerPane.tsx"
+            "src/renderer/src/components/native-chat/NativeChatComposerPane.tsx",
+            "src/renderer/src/lib/active-agent-note-target.ts"
           ],
           "forbiddenTargets": [
             "src/renderer/src/local-tasks/**",
