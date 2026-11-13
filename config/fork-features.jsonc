@@ -3121,24 +3121,14 @@
         "src/shared/github/pull-request-types.ts",
         "src/renderer/src/components/AgentStateDot.tsx",
         "src/renderer/src/components/agent/AgentCombobox.tsx",
-        "src/renderer/src/components/sidebar/ProjectHeaderActions.tsx",
-        "src/renderer/src/components/sidebar/SidebarGroupByToggle.tsx",
         "src/renderer/src/components/sidebar/repo-header-action-button-class.ts",
         "src/renderer/src/components/sidebar/sidebar-workspace-option-items.ts",
         "src/renderer/src/components/sidebar/workspace-detached-review-request.ts",
         "src/renderer/src/components/sidebar/worktree-card-pr-display.ts",
-        "src/renderer/src/components/sidebar/worktree-list/listing/rendered-row-keys.ts",
-        "src/renderer/src/components/sidebar/worktree-list/listing/sidebar-list-model.ts",
-        "src/renderer/src/components/sidebar/worktree-list/rows/SectionHeader.tsx",
-        "src/renderer/src/components/sidebar/worktree-list/rows/header-event-guards.ts",
-        "src/renderer/src/components/sidebar/worktree-list/rows/indentation.ts",
-        "src/renderer/src/components/sidebar/worktree-list/rows/option-dom.ts",
-        "src/renderer/src/components/sidebar/worktree-list/viewport/virtual-rows.ts",
         "src/renderer/src/components/sidebar/worktree-review-helpers.tsx",
         "src/renderer/src/hooks/ipc-events/runtime-environment-subscription-selection.ts",
         "src/renderer/src/hooks/useAgentDetectionTarget.ts",
         "src/renderer/src/hooks/useDetectedAgents.ts",
-        "src/renderer/src/hooks/useVirtualizedScrollAnchor.ts",
         "src/renderer/src/lib/active-agent-note-send-result.ts",
         "src/renderer/src/lib/agent-catalog.tsx",
         "src/renderer/src/lib/agent-launch-request-id.ts",
@@ -3175,10 +3165,6 @@
         "src/shared/project-host-setup-lookup.ts",
         "src/shared/repo-kind.ts",
         "src/shared/repo-types.ts",
-        "src/shared/sidebar-list/folder-workspace-host-id.ts",
-        "src/shared/sidebar-list/group-keys.ts",
-        "src/shared/sidebar-list/host-section-rows.ts",
-        "src/shared/sidebar-list/row-types.ts",
         "src/shared/stable-pane-id.ts",
         "src/shared/terminal-tab-types.ts",
         "src/shared/agent-session/view/structured-agent-session-projection.ts",
@@ -3599,46 +3585,6 @@
           "why": "Compact and new-style cards open hover details for a workspace whose only link is its task (REQ-016)"
         },
         {
-          "file": "src/renderer/src/components/workspace-cleanup/workspace-cleanup-facets.ts",
-          "mustContain": "...localTaskCleanupTicketSources({",
-          "why": "Workspace cleanup counts a task link as a ticket source"
-        },
-        {
-          "file": "src/renderer/src/components/workspace-cleanup/workspace-cleanup-facet-labels.ts",
-          "mustContain": "case 'local-task':",
-          "why": "The ticket source filter names Local tasks"
-        },
-        {
-          "file": "src/renderer/src/components/workspace-cleanup/workspace-cleanup-git-review-facets.tsx",
-          "mustContain": "useLocalTaskCleanupTicketSourceValues(",
-          "why": "The Local task ticket filter is offered only while Local is shown and a library has a project"
-        },
-        {
-          "file": "src/shared/workspace-cleanup-filter-model.ts",
-          "mustContain": "| 'local-task'",
-          "why": "Ticket sources gain local-task; older hosts drop the unknown value from saved filters"
-        },
-        {
-          "file": "src/shared/workspace-cleanup-facet-rankings.ts",
-          "mustContain": "'local-task'\n]",
-          "why": "The ticket source list, which the saved-filter codec checks against, includes local-task"
-        },
-        {
-          "file": "src/shared/pull-request-generation.ts",
-          "mustContain": "...localTaskPullRequestPromptLines(context.linkedLocalTask),",
-          "why": "AI pull request descriptions read the workspace's task title, description and done criteria"
-        },
-        {
-          "file": "src/main/ipc/filesystem/filesystem-git-pull-request-generation-handlers.ts",
-          "mustContain": "...linkedLocalTaskDraftContext({ id: args.worktreeId, path: args.worktreePath })",
-          "why": "The desktop reads its own library for its own checkouts when it generates PR details"
-        },
-        {
-          "file": "src/main/runtime/runtime-git-generation-commands.ts",
-          "mustContain": "...linkedLocalTaskDraftContext(target.worktree)",
-          "why": "A paired server or orcad reads its own library for its own checkouts when it generates PR details"
-        },
-        {
           "file": "src/cli/specs/index.ts",
           "mustContain": "...LOCAL_TASK_COMMAND_SPECS",
           "why": "orca task list / show / current / comment / status are part of the CLI's command table"
@@ -3844,21 +3790,6 @@
           "why": "A structured chat session shows its local task chip beside its pane header"
         },
         {
-          "file": "src/renderer/src/components/sidebar/WorktreeList.tsx",
-          "mustContain": "withSidebarTaskGroups(useBaseSidebarListModel)",
-          "why": "The sidebar list registers task grouping through the feature wrapper"
-        },
-        {
-          "file": "src/renderer/src/components/sidebar/workspace-options-menu-items.tsx",
-          "mustContain": "<LocalTaskSidebarGroupByToggle",
-          "why": "The workspace options register the task grouping toggle"
-        },
-        {
-          "file": "src/renderer/src/components/sidebar/workspace-options-menu-items.tsx",
-          "mustContain": "const groupBy = useSidebarTaskGroupBy()",
-          "why": "Options that only apply to upstream grouping hide while the sidebar groups by task"
-        },
-        {
           "file": "src/main/runtime/runtime-rpc/runtime-rpc-websocket-dispatch.ts",
           "mustContain": "!isForkExecutionHostRelayMethod(request.method)",
           "why": "A phone's task request for one of the desktop's servers is relayed like other host operations"
@@ -3872,11 +3803,6 @@
           "file": "src/main/integration-builds/orcad-fork-services.ts",
           "mustContain": "registerCleanup(startOrcadLocalTasks(runtime))",
           "why": "An SSH host's managed orcad holds the task library of its own projects"
-        },
-        {
-          "file": "src/renderer/src/components/sidebar/worktree-list/rows/virtual-row-dispatch.tsx",
-          "mustContain": "return renderSectionOrTaskHeaderRow({",
-          "why": "The virtual row dispatcher registers local task group headers"
         },
         {
           "file": "src/renderer/src/hooks/composer-state/quick-creation-execution.ts",
@@ -3945,8 +3871,8 @@
         },
         {
           "file": "src/renderer/src/components/sidebar/SidebarGroupByToggle.tsx",
-          "mustContain": "export type SidebarGroupByExtraChoice =",
-          "why": "The task grouping choice renders inside the upstream toggle, so it keeps the upstream item style (REQ-016)"
+          "mustContain": "SAFETY: the items are GROUP_BY_OPTIONS",
+          "why": "Retiring task grouping (D-021) put back upstream's own cast; the suppression keeps the PR-base casting scan from counting it as new. Drop it when the next upstream sync moves the file"
         },
         {
           "file": "src/renderer/src/components/sidebar/use-worktree-card-review-details.ts",
@@ -4177,8 +4103,6 @@
         "src/renderer/src/local-tasks/local-task-new-workspace-shortcut.test.ts",
         "src/renderer/src/components/local-tasks/LocalTaskCardDisplay.test.tsx",
         "src/renderer/src/local-tasks/local-task-palette.test.ts",
-        "src/renderer/src/local-tasks/local-task-cleanup-ticket-source.test.ts",
-        "src/main/local-tasks/local-task-pull-request-context.test.ts",
         "src/cli/local-tasks/local-task-cli.test.ts",
         "mobile/src/local-tasks/local-task-session-drawer-style.test.ts",
         "src/shared/local-tasks/local-task-dispatcher-rpc-params.test.ts",
@@ -4220,7 +4144,9 @@
         "src/main/local-tasks/local-task-attention-monitor.test.ts",
         "src/main/local-tasks/local-task-dispatcher-inbox.test.ts",
         "src/renderer/src/local-tasks/local-task-dispatch-launch.test.ts",
-        "mobile/src/local-tasks/local-task-review-actions.test.tsx"
+        "mobile/src/local-tasks/local-task-review-actions.test.tsx",
+        "src/main/local-tasks/local-tasks-upstream-registration.test.ts",
+        "src/shared/local-tasks/local-task-retired-cleanup-ticket-source.test.ts"
       ],
       "checks": [
         "pnpm exec vitest run --config config/vitest.config.ts src/main/local-tasks src/shared/local-tasks src/main/runtime/rpc/methods/local-tasks.test.ts src/shared/host-operation-ownership.test.ts src/main/runtime/runtime-rpc/fork-mobile-rpc-method-allowlist.test.ts src/main/runtime/runtime-rpc-mobile-method-allowlist.test.ts src/cli/local-tasks src/main/ipc/desktop-runtime-sender-lifecycle.test.ts",

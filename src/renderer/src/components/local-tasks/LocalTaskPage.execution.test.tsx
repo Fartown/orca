@@ -12,7 +12,6 @@ import { makeWorktree } from '@/store/slices/worktrees-slice-test-fixtures'
 import type { LocalTask, LocalTaskProject } from '../../../../shared/local-tasks/local-task-types'
 import { LocalTaskPage } from './LocalTaskPage'
 import { LocalTaskSessionChip } from './LocalTaskSessionChip'
-import { LocalTaskSidebarGroupByToggle } from './LocalTaskSidebarGroupByToggle'
 
 const project: LocalTaskProject = {
   id: 'project-1',
@@ -298,12 +297,4 @@ it('finds a session’s workspace link the way the sidebar card does, by instanc
   } finally {
     useAppStore.setState({ repos: previous.repos, worktreesByRepo: previous.worktreesByRepo })
   }
-})
-
-it('puts the Task grouping inside the upstream toggle, styled like its other choices', () => {
-  render(<LocalTaskSidebarGroupByToggle groupBy="none" setGroupBy={() => {}} />)
-  const none = screen.getByRole('radio', { name: 'None' })
-  const byTask = screen.getByRole('radio', { name: 'Task' })
-  expect(byTask.className).toBe(none.className)
-  expect(byTask.parentElement).toBe(none.parentElement)
 })

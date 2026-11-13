@@ -19,6 +19,7 @@ import {
   resolveTitleActivityLabel
 } from '@/lib/pane-agent-evidence'
 import { resolveRuntimePaneTitleForLeaf } from '../../../shared/runtime-pane-title-leaf-id'
+
 import { findTerminalAtRecordedPane } from '@/local-tasks/local-task-background-terminal-match'
 
 const ACTIVE_AGENT_PROBE_RPC_TIMEOUT_MS = 3000

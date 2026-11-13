@@ -30,6 +30,7 @@ import { REFERENCE_COMMAND_SPECS } from './reference'
 import { PORTS_COMMAND_SPECS } from './ports'
 import { PLUGIN_AUTHORING_COMMAND_SPECS, PLUGIN_RUNTIME_COMMAND_SPECS } from './plugin'
 import { PLUGIN_VIEW_COMMAND_SPECS } from './plugin-view'
+
 import { LOCAL_TASK_COMMAND_SPECS } from '../local-tasks/local-task-command-specs'
 
 export const COMMAND_SPECS: CommandSpec[] = [

@@ -4,7 +4,6 @@ import { useMobileTranslation } from '../i18n/use-mobile-translation'
 import type { WorkspaceCreateSetupDecision } from '../tasks/workspace-create-params'
 import type { WorkspaceSshGate } from '../tasks/workspace-ssh-gate'
 import type { useMobileComposerSource } from '../tasks/use-mobile-composer-source'
-import type { LocalTaskCreateSource } from '../local-tasks/use-local-task-create-source'
 import { useMobileColorScheme } from '../theme/use-mobile-color-scheme'
 import { BottomDrawer } from './bottom-drawer/BottomDrawer'
 import { MobileLoadErrorState, MobileStateView } from './MobileStateView'
@@ -19,6 +18,8 @@ import { NewWorktreeProjectTargetFields } from './NewWorktreeProjectTargetFields
 import { NewWorkspaceSshConnectionField } from './NewWorkspaceSshConnectionField'
 import { SheetPrimaryButton } from './SheetPrimaryButton'
 import { SmartWorkspaceSourceField } from './SmartWorkspaceSourceField'
+
+import type { LocalTaskCreateSource } from '../local-tasks/use-local-task-create-source'
 
 type Composer = ReturnType<typeof useMobileComposerSource>
 type Selection = { label: string; detail?: string }

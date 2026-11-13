@@ -24065,9 +24065,6 @@
       "chip": "Needs you"
     },
     "sidebar": {
-      "groupByTask": "Task",
-      "noTaskGroup": "No task",
-      "openTask": "Open “{{title}}”",
       "toggle": "Task mode",
       "title": "Tasks",
       "collapse": "Collapse",
@@ -24121,9 +24118,6 @@
     },
     "palette": {
       "source": "Local task"
-    },
-    "cleanup": {
-      "ticketSource": "Local task"
     },
     "activity": {
       "commentPlaceholder": "Write a comment…",

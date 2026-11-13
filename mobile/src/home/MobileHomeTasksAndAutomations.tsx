@@ -7,6 +7,7 @@ import { colors } from '../theme/mobile-theme'
 import { useMobileColorScheme } from '../theme/use-mobile-color-scheme'
 import type { HostProfile } from '../transport/types'
 import { homeListStyles as styles } from './home-list-styles'
+
 import { MobileHomeLocalTasksCard } from '../local-tasks/MobileHomeLocalTasksCard'
 
 /** Home's Tasks and Automations sections, each opening on a connected desktop. */

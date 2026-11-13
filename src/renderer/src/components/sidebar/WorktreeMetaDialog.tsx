@@ -2,6 +2,7 @@ import React from 'react'
 import { useAppStore } from '@/store'
 import WorktreeMetaDialogDraft from './WorktreeMetaDialogDraft'
 import { getWorktreeMetaDialogOwner } from './worktree-meta-dialog-owner'
+
 import { LocalTaskWorkspaceDetailsScope } from '@/components/local-tasks/LocalTaskWorkspaceDetailsScope'
 
 export default function WorktreeMetaDialog(): React.JSX.Element {

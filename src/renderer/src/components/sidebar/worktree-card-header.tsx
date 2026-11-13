@@ -14,6 +14,7 @@ import type { WorktreeCardPresentation } from './worktree-card-presentation'
 import { WorktreeCardSshHostControl } from './WorktreeCardSshHostControl'
 import { WorktreeTitleInlineRename } from './WorktreeTitleInlineRename'
 import type { WorktreeCardController } from './use-worktree-card-controller'
+
 import { LocalTaskWorkspaceChip } from '@/components/local-tasks/LocalTaskWorkspaceChip'
 
 function RepoIdentityChip({

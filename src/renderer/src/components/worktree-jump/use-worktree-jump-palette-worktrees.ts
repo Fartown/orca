@@ -19,8 +19,9 @@ import type { Worktree } from '../../../../shared/worktree/types'
 import { EMPTY_SORTED_WORKTREES } from './worktree-jump-palette-model'
 import { buildWorktreeJumpPaletteDocumentIndex } from './worktree-jump-palette-document-index'
 import { buildWorktreeJumpPaletteWorktreeMaps } from './worktree-jump-palette-worktree-maps'
-import { useLocalTaskWorkspaceEvidence } from '@/local-tasks/local-task-palette-evidence'
 import type { WorktreeJumpPaletteWorktreesInput } from './worktree-jump-palette-worktrees-input'
+
+import { useLocalTaskWorkspaceEvidence } from '@/local-tasks/local-task-palette-evidence'
 
 export function useWorktreeJumpPaletteWorktrees({
   paletteSearchQuery,

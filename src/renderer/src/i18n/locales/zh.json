@@ -23332,9 +23332,6 @@
       "chip": "需要你"
     },
     "sidebar": {
-      "groupByTask": "任务",
-      "noTaskGroup": "未关联任务",
-      "openTask": "打开「{{title}}」",
       "toggle": "任务模式",
       "title": "任务",
       "collapse": "收起",
@@ -23388,9 +23385,6 @@
     },
     "palette": {
       "source": "本地任务"
-    },
-    "cleanup": {
-      "ticketSource": "本地任务"
     },
     "activity": {
       "commentPlaceholder": "写评论…",

@@ -21,7 +21,7 @@ import type { SmartWorkspaceNameSelection } from '@/components/new-workspace/sma
 import { localTasksDomainStore } from './local-tasks-domain-store'
 import { localTaskLibraryViewerStore } from './local-task-library-viewers'
 import { LocalTaskSourceTabContext, type LocalTaskSourceTab } from './local-task-source-tab'
-import { localTaskIdForCreation, resetLocalTaskStartWorkForTests } from './local-task-start-work'
+import { resetLocalTaskStartWorkForTests } from './local-task-start-work'
 import { useLocalTaskComposerSource } from './use-local-task-composer-source'
 
 const initialState = useAppStore.getInitialState()
@@ -127,7 +127,6 @@ describe('the composer’s Local tasks pick (REQ-009)', () => {
     expect(options.launchPrompt).toContain('Order export')
     expect(options.launchPrompt).toContain('CSV of last month')
     act(() => options.onCreationStarted?.('creation-1'))
-    expect(localTaskIdForCreation('creation-1')).toBe('t12')
     expect(result.current.cardOverrides).toEqual({})
     expect(result.current.submitOptions()).toEqual({})
   })

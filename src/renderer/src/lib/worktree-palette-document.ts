@@ -20,7 +20,6 @@ import {
   resolveWorktreeDisplayName
 } from './worktree-default-display-name'
 import type { HostedReviewInfo } from '../../../shared/hosted-review'
-import type { LocalTaskWorkspaceEvidence } from '@/local-tasks/local-task-palette-evidence'
 import type { Repo } from '../../../shared/repo-types'
 import { getWorkspaceAttachments } from '../../../shared/workspace-attachments'
 import { getWorkspaceAttachmentKey } from '../../../shared/workspace-attachment-normalization'
@@ -30,6 +29,8 @@ import {
   getPaletteWorktreeIdentity,
   resolvePaletteRepoForWorktree
 } from './palette-repo-resolution'
+
+import type { LocalTaskWorkspaceEvidence } from '@/local-tasks/local-task-palette-evidence'
 
 export const WORKTREE_PALETTE_NAME_FIELD_ID = 'name'
 export const WORKTREE_PALETTE_BRANCH_FIELD_ID = 'branch'

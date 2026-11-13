@@ -27,14 +27,6 @@ import {
 } from '../tasks/smart-source-paste-intent'
 import { useSmartWorkspaceSource } from '../tasks/use-smart-workspace-source'
 import type { MobileComposerSource } from '../tasks/use-mobile-composer-source'
-import { LOCAL_TASK_CREATE_SOURCE_COPY_EN } from '../local-tasks/local-task-create-source-copy'
-import {
-  isLocalTaskCreateSourceRow,
-  type LocalTaskCreateSourceRow
-} from '../local-tasks/local-task-create-source-rows'
-import { LocalTaskCreateSourceRowView } from '../local-tasks/local-task-create-source-views'
-import type { LocalTaskCreateSource } from '../local-tasks/use-local-task-create-source'
-import { useLocalTaskCreateSourceTab } from '../local-tasks/use-local-task-create-source-tab'
 import { colors, pressedStyle } from '../theme/mobile-theme'
 import { useMobileColorScheme } from '../theme/use-mobile-color-scheme'
 import { useMobileTranslation } from '../i18n/use-mobile-translation'
@@ -44,6 +36,15 @@ import { TextField } from './composer-input/TextField'
 import { SmartSourceModeIcon } from './SmartSourceModeIcon'
 import { SmartWorkspaceSourceRow } from './SmartWorkspaceSourceRow'
 import { SheetHeader } from './nav-bar/SheetHeader'
+
+import { LOCAL_TASK_CREATE_SOURCE_COPY_EN } from '../local-tasks/local-task-create-source-copy'
+import {
+  isLocalTaskCreateSourceRow,
+  type LocalTaskCreateSourceRow
+} from '../local-tasks/local-task-create-source-rows'
+import { LocalTaskCreateSourceRowView } from '../local-tasks/local-task-create-source-views'
+import type { LocalTaskCreateSource } from '../local-tasks/use-local-task-create-source'
+import { useLocalTaskCreateSourceTab } from '../local-tasks/use-local-task-create-source-tab'
 
 // Delay focus like MobileSearchField: native autoFocus may not raise keyboard during drawer animation.
 const SOURCE_INPUT_FOCUS_DELAY_MS = 120

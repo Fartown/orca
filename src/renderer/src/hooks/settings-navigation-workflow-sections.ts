@@ -8,8 +8,6 @@ import { getMobileEmulatorSearchEntries } from '@/components/settings/mobile-emu
 import { getQuickCommandsPaneSearchEntries } from '@/components/settings/quick-commands-search'
 import { getShareSkillsSettingsSearchEntries } from '@/components/settings/share-skills-settings-search'
 import { getTasksPaneSearchEntries } from '@/components/settings/tasks-search'
-import { getLanArtifactsSettingsSearchEntries } from '@/components/self-hosted-artifacts/settings/lan-artifacts-settings-search'
-import { getLocalTasksSettingsSections } from '@/components/local-tasks/settings/local-tasks-settings-search'
 import { translate } from '@/i18n/i18n'
 import type { SettingsNavSection } from '@/lib/settings-navigation-types'
 import {
@@ -26,6 +24,9 @@ import {
   TabletSmartphone
 } from 'lucide-react'
 import type { SettingsNavigationBuildOptions } from './settings-navigation-build-options'
+
+import { getLanArtifactsSettingsSearchEntries } from '@/components/self-hosted-artifacts/settings/lan-artifacts-settings-search'
+import { getLocalTasksSettingsSections } from '@/components/local-tasks/settings/local-tasks-settings-search'
 
 export function buildWorkflowSettingsSections(
   { isWebClient }: SettingsNavigationBuildOptions,

@@ -8,6 +8,7 @@ import {
 } from './smart-workspace-name-field-model'
 import { canUseGitLabSmartSource } from './smart-workspace-provider-availability'
 import type { useWorkItemSourceState } from './use-work-item-source-state'
+
 import { useLocalTaskSourceTabOffered } from '@/local-tasks/local-task-source-tab'
 import { withLocalTaskSourceMode } from '@/local-tasks/use-local-task-source-search'
 

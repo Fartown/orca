@@ -52,6 +52,7 @@ import { isDesktopBrowserBridgeHostEnabled } from './desktop-browser-bridge/desk
 import { DESKTOP_BROWSER_BRIDGE_RUNTIME_CAPABILITY } from '../../shared/desktop-browser-bridge-protocol'
 import { darkSwitchRuntimeCapabilities } from './dark-switch-runtime-capabilities'
 import { supportsDurableTerminalPromptDelivery } from './durable-terminal-prompt-delivery-support'
+
 import { localTasksRuntimeCapabilities } from '../local-tasks/local-tasks-runtime-capability'
 
 type RuntimeStatusHost = {
