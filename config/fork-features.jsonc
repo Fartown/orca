@@ -4139,7 +4139,9 @@
         "src/main/local-tasks/local-task-attention-monitor.test.ts",
         "src/main/local-tasks/local-task-dispatcher-inbox.test.ts",
         "src/renderer/src/local-tasks/local-task-dispatch-launch.test.ts",
-        "mobile/src/local-tasks/local-task-review-actions.test.tsx"
+        "mobile/src/local-tasks/local-task-review-actions.test.tsx",
+        "src/main/local-tasks/local-tasks-upstream-registration.test.ts",
+        "src/shared/local-tasks/local-task-retired-cleanup-ticket-source.test.ts"
       ],
       "checks": [
         "pnpm exec vitest run --config config/vitest.config.ts src/main/local-tasks src/shared/local-tasks src/main/runtime/rpc/methods/local-tasks.test.ts src/shared/host-operation-ownership.test.ts src/main/runtime/runtime-rpc/fork-mobile-rpc-method-allowlist.test.ts src/main/runtime/runtime-rpc-mobile-method-allowlist.test.ts src/cli/local-tasks src/main/ipc/desktop-runtime-sender-lifecycle.test.ts",
