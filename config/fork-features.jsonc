@@ -3585,46 +3585,6 @@
           "why": "Compact and new-style cards open hover details for a workspace whose only link is its task (REQ-016)"
         },
         {
-          "file": "src/renderer/src/components/workspace-cleanup/workspace-cleanup-facets.ts",
-          "mustContain": "...localTaskCleanupTicketSources({",
-          "why": "Workspace cleanup counts a task link as a ticket source"
-        },
-        {
-          "file": "src/renderer/src/components/workspace-cleanup/workspace-cleanup-facet-labels.ts",
-          "mustContain": "case 'local-task':",
-          "why": "The ticket source filter names Local tasks"
-        },
-        {
-          "file": "src/renderer/src/components/workspace-cleanup/workspace-cleanup-git-review-facets.tsx",
-          "mustContain": "useLocalTaskCleanupTicketSourceValues(",
-          "why": "The Local task ticket filter is offered only while Local is shown and a library has a project"
-        },
-        {
-          "file": "src/shared/workspace-cleanup-filter-model.ts",
-          "mustContain": "| 'local-task'",
-          "why": "Ticket sources gain local-task; older hosts drop the unknown value from saved filters"
-        },
-        {
-          "file": "src/shared/workspace-cleanup-facet-rankings.ts",
-          "mustContain": "'local-task'\n]",
-          "why": "The ticket source list, which the saved-filter codec checks against, includes local-task"
-        },
-        {
-          "file": "src/shared/pull-request-generation.ts",
-          "mustContain": "...localTaskPullRequestPromptLines(context.linkedLocalTask),",
-          "why": "AI pull request descriptions read the workspace's task title, description and done criteria"
-        },
-        {
-          "file": "src/main/ipc/filesystem/filesystem-git-pull-request-generation-handlers.ts",
-          "mustContain": "...linkedLocalTaskDraftContext({ id: args.worktreeId, path: args.worktreePath })",
-          "why": "The desktop reads its own library for its own checkouts when it generates PR details"
-        },
-        {
-          "file": "src/main/runtime/runtime-git-generation-commands.ts",
-          "mustContain": "...linkedLocalTaskDraftContext(target.worktree)",
-          "why": "A paired server or orcad reads its own library for its own checkouts when it generates PR details"
-        },
-        {
           "file": "src/cli/specs/index.ts",
           "mustContain": "...LOCAL_TASK_COMMAND_SPECS",
           "why": "orca task list / show / current / comment / status are part of the CLI's command table"
@@ -4138,8 +4098,6 @@
         "src/renderer/src/local-tasks/local-task-new-workspace-shortcut.test.ts",
         "src/renderer/src/components/local-tasks/LocalTaskCardDisplay.test.tsx",
         "src/renderer/src/local-tasks/local-task-palette.test.ts",
-        "src/renderer/src/local-tasks/local-task-cleanup-ticket-source.test.ts",
-        "src/main/local-tasks/local-task-pull-request-context.test.ts",
         "src/cli/local-tasks/local-task-cli.test.ts",
         "mobile/src/local-tasks/local-task-session-drawer-style.test.ts",
         "src/shared/local-tasks/local-task-dispatcher-rpc-params.test.ts",

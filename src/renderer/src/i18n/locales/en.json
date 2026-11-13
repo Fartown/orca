@@ -24119,9 +24119,6 @@
     "palette": {
       "source": "Local task"
     },
-    "cleanup": {
-      "ticketSource": "Local task"
-    },
     "activity": {
       "commentPlaceholder": "Write a comment…",
       "commentLabel": "Comment",

@@ -23386,9 +23386,6 @@
     "palette": {
       "source": "本地任务"
     },
-    "cleanup": {
-      "ticketSource": "本地任务"
-    },
     "activity": {
       "commentPlaceholder": "写评论…",
       "commentLabel": "评论",
