@@ -3,11 +3,38 @@ title: 自托管产物后端
 slug: 自托管产物后端
 status: testing
 created: 2026-09-05
-updated: 2026-11-06
-external_ids: ['Fartown/orca#84', 'Fartown/orca#87']
+updated: 2026-11-12
+external_ids: ['Fartown/orca#84', 'Fartown/orca#87', 'Fartown/orca#93']
 ---
 
 # 自托管产物后端 Journal
+
+## 2026-11-12 评论定位改为照搬 Orca 审阅笔记的规则（Fartown/orca#93）
+
+- 本轮目标：implementing → testing；用户多次要求「照着做」，指出我在自己设计的定位方案上反复打补丁。
+- 完成内容：读完 Orca 富文本编辑器与预览的评论实现（`rich-markdown-review-annotations`、`rich-markdown-range-bounds`、`markdown-review-anchor-recovery`、预览的 `wrapAnnotatedBlock`），分享页改为同一规则：记「块行范围 + 显示文字」，在末行所在块里找第一处、再全文找，找不到在卡片上标 Orca 的「原文已变更」并放到评论栏顶部；整块评论以块文字为所选文字；点卡片与点文字都滚到中间并闪一下。删除自定义的偏移量锚点、唯一前文、页尾「旧版本」列表与整块竖线；契约去掉 `anchor`。
+- 代码或文档变更：`share-comment-anchors.ts` 重写；`ShareOrphanComments.tsx` 删除；契约、存储、导入、标记、侧栏、卡片随之调整；`dependsOn` 加 `rich-markdown-range-bounds.ts` 与 `review-anchor-position.ts`；REQ-311、AT-21。
+- 验证证据：单元测试 22 个文件 87 项；三套类型检查与 lint 通过；隔离 Orca 实例 1 passed，分享页 6 处画线与 Orca 6 处标出逐条一致；页面走查两种版本各 59/59。
+- 未解决问题：同一块里重复的文字落在第一处，这是 Orca 笔记本身的行为；用户的真机未测。
+- 下一步：推送 PR #94，等用户决定合并。
+
+## 2026-11-09 评论定位真机验证：本机 Orca 与 SSH 主机（Fartown/orca#93）
+
+- 本轮目标：testing；用户问「你自己不能测试吗」，把上一轮列为未执行的真机验证自己做掉。
+- 完成内容：隔离 Orca 实例实测发现一处真问题：分享页上选中同一段第三个「评论」，Orca 富文本编辑器却标在第一个（Orca 按所在行的第一处匹配查找笔记文字）。修复：所选文字在块内重复时，评论锚点多记前面几个字（`anchor.context`），导入时笔记的选中文字带上它，Orca 就标在同一处。随后在本机装 sshd、构建 Orca Server 模板，按用户的实际用法跑 SSH 场景：主机桌面 Orca 提供链接，客户端经 sshd 连主机、工作区由主机 Orca Server 管理，评论由主机写成笔记推送到客户端。
+- 代码或文档变更：评论契约 `anchor.context`；分享页记录唯一前文；导入时拼进笔记的选中文字；单元测试；REQ-311、AT-21。
+- 验证证据：本机隔离实例 1 passed：6 条笔记行号 3/7/18/24/28/32，Orca 标出的文字与分享页一致（修复前重复文字标在第一处）；SSH 1 passed：3 条笔记由主机 Orca Server 写入并推送到客户端，客户端标出的文字一致；单元测试 16 个文件 68 项。脚本与截图在 `.docs/artifact-share-anchor-ui-validation/2026-11-09/`。本机改动：临时安装 openssh-server 并在 127.0.0.1:2222 起 root sshd、临时授权一把密钥；为构建 Orca Server 临时给本地 node-pty 打上仓库补丁；跑完已停止 sshd、撤销密钥、删除 `~/.orca`、`~/.orca-remote`、`~/.orca-artifact-share` 与测试仓库，node-pty 恢复原样。
+- 未解决问题：用户的 minizc、mbp5 与真实手机未测（本会话访问不到）；手机用浏览器模拟。
+- 下一步：推送到 PR #94，等 CI 与用户决定合并。
+
+## 2026-11-09 评论定位按情况清单重做（Fartown/orca#93）
+
+- 本轮目标：implementing → testing；用户指出「评论定位你都做不好」，要求先想清楚有哪些情况、怎么处理，列出来再改。
+- 完成内容：先列出 26 种情况及处理（记位置 11、找回 4、画标记 4、卡片对应 5、Orca 笔记 2），按建议定下整块评论用左侧竖线、不画卡片引线，建 issue #93。实现：评论多存一个锚点（块起始行、可见文字中的起点与长度、是否整块）；选区按块的可见文字映射到 DOM，得到精确源行（换行、表格行、代码行）；一处统一解析所有评论的位置，虚线、竖线、侧栏卡片、窄屏卡片和「旧版本」列表都用它；文件改动后按「原位置核对 → 最近行 → 同块最近起点」找回，找不到列为旧版本（原来会退成整块划线、划到无关段落）；带子列表的父列表项可评论；折叠区挂到 summary；重叠评论点击轮换；点卡片或文字时对方闪一下。顺带修了侧栏卡片引用回调每次渲染重建、导致反复重新测量的问题。
+- 代码或文档变更：分享页新增 `share-comment-text-map.ts`、`share-comment-anchors.ts`（含单元测试）、`ShareCommentPlacements.tsx`，重写标记、侧栏、旧版本列表与块包装；表格行带源行；评论契约与存储增加可选 `anchor`；REQ-311、AT-21。
+- 验证证据：单元测试 5 项（反向验证：改回取第一个匹配后「文字移动」用例失败）；定位脚本按清单 34 项断言，桌面版与 Orca Server 版页面均 34/34（Orca Server 版连跑 3 次结果一致）；原 59 项走查更新「整块评论为竖线」一项后通过；三套类型检查与 lint 通过。证据在 `.docs/artifact-share-anchor-ui-validation/2026-11-09/`。
+- 未解决问题：真机（minizc、mbp5、手机）未执行；Orca 里笔记按精确行与摘录标出文字的隔离实例实测未执行（Orca 侧逻辑未改）。
+- 下一步：开 PR 关联 #93，CI 通过后等用户决定合并。
 
 ## 2026-11-06 评论不再区分身份（Fartown/orca#87）
 

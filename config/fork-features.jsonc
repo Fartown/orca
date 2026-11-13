@@ -1676,7 +1676,9 @@
         "src/renderer/src/components/editor/markdown-rich-size-limit.ts",
         "src/renderer/src/components/editor/CodeBlockCopyButton.tsx",
         "src/renderer/src/components/editor/markdown-doc-links.ts",
-        "src/renderer/src/components/editor/use-mermaid-diagram-expand.ts"
+        "src/renderer/src/components/editor/use-mermaid-diagram-expand.ts",
+        "src/renderer/src/components/editor/rich-markdown-range-bounds.ts",
+        "src/renderer/src/components/markdown-review-anchor-recovery/review-anchor-position.ts"
       ],
       "policyId": "self-hosted-artifacts",
       "ownedPaths": [
@@ -1940,6 +1942,7 @@
         "src/main/self-hosted-artifacts/artifact-share-owner-comments.test.ts",
         "src/cli/self-hosted-artifacts/artifact-share-cli-comments.test.ts",
         "config/scripts/build-artifact-share-viewer.test.mjs",
+        "src/renderer/src/components/self-hosted-artifacts/share-viewer/share-comment-anchors.test.ts",
         "src/cli/self-hosted-artifacts/artifact-share-cli-target.test.ts",
         "src/renderer/src/components/self-hosted-artifacts/share-button/lan-artifact-share-machine.test.ts",
         "src/renderer/src/components/self-hosted-artifacts/share-button/lan-artifact-share-target.test.ts",
