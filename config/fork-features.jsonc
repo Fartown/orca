@@ -3121,24 +3121,14 @@
         "src/shared/github/pull-request-types.ts",
         "src/renderer/src/components/AgentStateDot.tsx",
         "src/renderer/src/components/agent/AgentCombobox.tsx",
-        "src/renderer/src/components/sidebar/ProjectHeaderActions.tsx",
-        "src/renderer/src/components/sidebar/SidebarGroupByToggle.tsx",
         "src/renderer/src/components/sidebar/repo-header-action-button-class.ts",
         "src/renderer/src/components/sidebar/sidebar-workspace-option-items.ts",
         "src/renderer/src/components/sidebar/workspace-detached-review-request.ts",
         "src/renderer/src/components/sidebar/worktree-card-pr-display.ts",
-        "src/renderer/src/components/sidebar/worktree-list/listing/rendered-row-keys.ts",
-        "src/renderer/src/components/sidebar/worktree-list/listing/sidebar-list-model.ts",
-        "src/renderer/src/components/sidebar/worktree-list/rows/SectionHeader.tsx",
-        "src/renderer/src/components/sidebar/worktree-list/rows/header-event-guards.ts",
-        "src/renderer/src/components/sidebar/worktree-list/rows/indentation.ts",
-        "src/renderer/src/components/sidebar/worktree-list/rows/option-dom.ts",
-        "src/renderer/src/components/sidebar/worktree-list/viewport/virtual-rows.ts",
         "src/renderer/src/components/sidebar/worktree-review-helpers.tsx",
         "src/renderer/src/hooks/ipc-events/runtime-environment-subscription-selection.ts",
         "src/renderer/src/hooks/useAgentDetectionTarget.ts",
         "src/renderer/src/hooks/useDetectedAgents.ts",
-        "src/renderer/src/hooks/useVirtualizedScrollAnchor.ts",
         "src/renderer/src/lib/active-agent-note-send-result.ts",
         "src/renderer/src/lib/agent-catalog.tsx",
         "src/renderer/src/lib/agent-launch-request-id.ts",
@@ -3175,10 +3165,6 @@
         "src/shared/project-host-setup-lookup.ts",
         "src/shared/repo-kind.ts",
         "src/shared/repo-types.ts",
-        "src/shared/sidebar-list/folder-workspace-host-id.ts",
-        "src/shared/sidebar-list/group-keys.ts",
-        "src/shared/sidebar-list/host-section-rows.ts",
-        "src/shared/sidebar-list/row-types.ts",
         "src/shared/stable-pane-id.ts",
         "src/shared/terminal-tab-types.ts",
         "src/shared/agent-session/view/structured-agent-session-projection.ts",
@@ -3844,21 +3830,6 @@
           "why": "A structured chat session shows its local task chip beside its pane header"
         },
         {
-          "file": "src/renderer/src/components/sidebar/WorktreeList.tsx",
-          "mustContain": "withSidebarTaskGroups(useBaseSidebarListModel)",
-          "why": "The sidebar list registers task grouping through the feature wrapper"
-        },
-        {
-          "file": "src/renderer/src/components/sidebar/workspace-options-menu-items.tsx",
-          "mustContain": "<LocalTaskSidebarGroupByToggle",
-          "why": "The workspace options register the task grouping toggle"
-        },
-        {
-          "file": "src/renderer/src/components/sidebar/workspace-options-menu-items.tsx",
-          "mustContain": "const groupBy = useSidebarTaskGroupBy()",
-          "why": "Options that only apply to upstream grouping hide while the sidebar groups by task"
-        },
-        {
           "file": "src/main/runtime/runtime-rpc/runtime-rpc-websocket-dispatch.ts",
           "mustContain": "!isForkExecutionHostRelayMethod(request.method)",
           "why": "A phone's task request for one of the desktop's servers is relayed like other host operations"
@@ -3872,11 +3843,6 @@
           "file": "src/main/integration-builds/orcad-fork-services.ts",
           "mustContain": "registerCleanup(startOrcadLocalTasks(runtime))",
           "why": "An SSH host's managed orcad holds the task library of its own projects"
-        },
-        {
-          "file": "src/renderer/src/components/sidebar/worktree-list/rows/virtual-row-dispatch.tsx",
-          "mustContain": "return renderSectionOrTaskHeaderRow({",
-          "why": "The virtual row dispatcher registers local task group headers"
         },
         {
           "file": "src/renderer/src/hooks/composer-state/quick-creation-execution.ts",
@@ -3942,11 +3908,6 @@
           "file": "src/renderer/src/hooks/composer-state/composer-target-store.ts",
           "mustContain": "resolveLocalTaskComposerCatalog({",
           "why": "Delegate the optional task-scoped repo and host guard to feature-owned code, keeping ordinary callers unchanged."
-        },
-        {
-          "file": "src/renderer/src/components/sidebar/SidebarGroupByToggle.tsx",
-          "mustContain": "export type SidebarGroupByExtraChoice =",
-          "why": "The task grouping choice renders inside the upstream toggle, so it keeps the upstream item style (REQ-016)"
         },
         {
           "file": "src/renderer/src/components/sidebar/use-worktree-card-review-details.ts",

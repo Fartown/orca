@@ -35,7 +35,6 @@ import {
   resetLocalTaskStartWorkForTests,
   startLocalTaskWork
 } from './local-task-start-work'
-import { localTaskStartedWorkspaceStore } from './local-task-started-workspaces'
 
 const WORKTREE_ID = 'repo1::/repo1/shop-12'
 
@@ -96,7 +95,6 @@ beforeEach(() => {
     orcaProjectIds: ['orca-shop'],
     replace: false
   })
-  localTaskStartedWorkspaceStore.setState({ started: [] })
   unbind = bindLocalTaskStartWork()
 })
 
@@ -211,44 +209,6 @@ it('records a chat by its session once the launch settles, without waiting for i
     expect.objectContaining({ taskId: 'task-12', surface: 'chat', sessionId: 'session-7' })
   )
   expect(fixture.recordSession.mock.calls[0][0]).not.toHaveProperty('tabId')
-})
-
-const startedWorkspace = { worktreeId: WORKTREE_ID, hostId: 'local', taskId: 'task-12' }
-
-it('keeps a created workspace with its task until the library’s links name it', async () => {
-  notifyWorktreeCreationCompleted(completed())
-  expect(localTaskStartedWorkspaceStore.getState().started).toEqual([startedWorkspace])
-  await vi.waitFor(() => expect(fixture.linkWorkspace).toHaveBeenCalledOnce())
-  expect(localTaskStartedWorkspaceStore.getState().started).toEqual([startedWorkspace])
-  localTasksDomainStore
-    .getState()
-    .writer('local')
-    .applyLinks({
-      workspaces: [
-        {
-          taskId: 'task-12',
-          hostId: 'local',
-          kind: 'git-worktree',
-          instanceId: 'i-12',
-          worktreeId: WORKTREE_ID,
-          folderWorkspaceId: null,
-          repoId: 'repo1',
-          branchSnapshot: null,
-          nameSnapshot: null,
-          hostLabelSnapshot: null,
-          linkedVia: 'start',
-          linkedAt: 1
-        }
-      ],
-      sessions: []
-    })
-  expect(localTaskStartedWorkspaceStore.getState().started).toEqual([])
-})
-
-it('lets a created workspace go when its link could not be written', async () => {
-  fixture.linkWorkspace.mockResolvedValue({ ok: false, code: 'task_has_workspace' })
-  notifyWorktreeCreationCompleted(completed())
-  await vi.waitFor(() => expect(localTaskStartedWorkspaceStore.getState().started).toEqual([]))
 })
 
 it('starts in the composer with the task preselected, and lets go of it once a creation starts', () => {
