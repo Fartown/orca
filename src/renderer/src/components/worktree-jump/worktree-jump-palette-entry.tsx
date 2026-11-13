@@ -1,5 +1,4 @@
 import { WorktreeJumpPaletteTaskRow } from './worktree-jump-palette-task-row'
-import { LocalTaskPaletteRow } from '@/components/local-tasks/LocalTaskPaletteRow'
 import type React from 'react'
 import { flushSync } from 'react-dom'
 import { CommandItem } from '@/components/ui/command'
@@ -18,6 +17,8 @@ import {
   WorktreeJumpPaletteSimulatorRow
 } from './worktree-jump-palette-browser-simulator-rows'
 import { translate } from '@/i18n/i18n'
+
+import { LocalTaskPaletteRow } from '@/components/local-tasks/LocalTaskPaletteRow'
 
 export function WorktreeJumpPaletteEntry({
   entry,

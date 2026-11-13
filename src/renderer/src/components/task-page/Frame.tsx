@@ -1,9 +1,11 @@
 import type { TaskPageComposerActionsModel } from './use-task-page-composer-actions'
 import { TaskPageListChrome } from './ListChrome'
 import { TaskPageContent } from './Content'
+
 import { TaskPageSourceBar } from './SourceBar'
 import { LocalTaskPage } from '@/components/local-tasks/LocalTaskPage'
 import { useLocalTaskSourceActive } from '@/components/local-tasks/LocalTaskSource'
+
 export function TaskPageFrame({
   model
 }: {

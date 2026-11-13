@@ -1,4 +1,3 @@
-import { LocalTaskDispatcherPanelDock } from '@/components/local-tasks/LocalTaskDispatcherPanelDock'
 import { useNativeChatComposerEditSession } from './use-native-chat-composer-edit-session'
 import { useNativeChatComposerNotice } from './use-native-chat-composer-notice'
 import { useNativeChatMobileHoldNotice } from './use-native-chat-mobile-hold-notice'
@@ -27,6 +26,8 @@ import { useImeEnterGestureOwnership } from '@/lib/ime-composition-keyboard-even
 import { useNativeChatComposerAppMenuSelection } from './use-native-chat-composer-app-menu-selection'
 import { useNativeChatComposerSubmit } from './use-native-chat-composer-submit'
 import { useNativeChatComposerCommandPicker } from './use-native-chat-composer-command-picker'
+
+import { LocalTaskDispatcherPanelDock } from '@/components/local-tasks/LocalTaskDispatcherPanelDock'
 
 type ComposerHandle = C.NativeChatComposerHandle
 

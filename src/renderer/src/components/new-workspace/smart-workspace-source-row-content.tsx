@@ -14,6 +14,7 @@ import { Trans } from 'react-i18next'
 import { i18n, translate } from '@/i18n/i18n'
 import type { JiraSite } from '../../../../shared/jira/jira-types'
 import type { RowEntry, SmartWorkspaceNameSelection } from './smart-workspace-name-field-model'
+
 import {
   LocalTaskSourceRowIcon,
   LocalTaskSourceRowLabel,

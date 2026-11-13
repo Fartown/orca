@@ -31,6 +31,7 @@ import { WorktreeCardTaskDetailSection } from './WorktreeCardTaskDetailSection'
 import { getWorktreeCardTaskActions } from './worktree-card-task-actions'
 import { WorktreeCardHoverIdentityHeader } from './WorktreeCardHoverIdentityHeader'
 import { CommentMarkdownAsync, preloadCommentMarkdown } from './comment-markdown-lazy'
+
 import { LocalTaskHoverRow, LocalTaskHoverSection } from '../local-tasks/LocalTaskHoverDetails'
 import { useLocalTaskOfWorkspace } from '@/local-tasks/local-task-workspace-task'
 

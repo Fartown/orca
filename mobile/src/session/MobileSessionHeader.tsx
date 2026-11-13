@@ -17,6 +17,7 @@ import { useResponsiveLayout } from '../layout/responsive-layout'
 import type { MobileSessionController } from './use-mobile-session-controller'
 import { useTopChromeSpace } from '../layout/use-top-chrome-space'
 import { useShellSideRail } from '../layout/use-shell-side-rail'
+
 import { LocalTaskSessionStripMount } from '../local-tasks/local-task-session-strip-slot'
 
 export function MobileSessionHeader({

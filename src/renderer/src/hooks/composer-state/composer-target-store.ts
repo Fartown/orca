@@ -14,10 +14,11 @@ import type { WorkspaceSource as WorkspaceCreateTelemetrySource } from '../../..
 import type { LinkedWorkItemSummary } from '@/lib/new-workspace'
 import type { ComposerDecisions } from './composer-decisions'
 import type { WorkspaceCreationTargetHint } from '@/lib/project-host-workspace-target'
-import type { Repo } from '../../../../shared/repo-types'
-import { resolveLocalTaskComposerCatalog } from '@/local-tasks/local-task-composer-catalog'
 import { selectWorktreesByRepo } from '@/store/workspace-record-selectors'
 import { selectAllKnownWorkspaceStatuses } from '@/store/host-workspace-status-columns'
+
+import type { Repo } from '../../../../shared/repo-types'
+import { resolveLocalTaskComposerCatalog } from '@/local-tasks/local-task-composer-catalog'
 
 export type ComposerStateInput = {
   initialRepoId?: string

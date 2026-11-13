@@ -7,12 +7,13 @@ import { WorkspacePortScanner } from '../components/ports/WorkspacePortScanner'
 import { SavedHostScopeWidenGate } from '../components/sidebar/SavedHostScopeWidenGate'
 import { MacosTccPromptNoticeHost } from '../hooks/MacosTccPromptNoticeHost'
 import { useAppStore } from '../store'
-import { GoalDomainSyncGate } from '../goals/GoalDomainSyncGate'
-import { LocalTasksSyncGate } from '../local-tasks/LocalTasksSyncGate'
-import { LocalTaskLinkMaintenance } from '../local-tasks/LocalTaskLinkMaintenance'
 import { ActiveWorkspaceSyncGate } from './ActiveWorkspaceSyncGate'
 import { StructuredAgentSessionAttentionBridge } from '../components/native-chat/StructuredAgentSessionAttentionBridge'
 import { StructuredAgentSessionStatusBridge } from '../components/native-chat/StructuredAgentSessionStatusBridge'
+
+import { GoalDomainSyncGate } from '../goals/GoalDomainSyncGate'
+import { LocalTasksSyncGate } from '../local-tasks/LocalTasksSyncGate'
+import { LocalTaskLinkMaintenance } from '../local-tasks/LocalTaskLinkMaintenance'
 
 const DashboardPopoutBridge = lazy(() => import('../components/dashboard/DashboardPopoutBridge'))
 

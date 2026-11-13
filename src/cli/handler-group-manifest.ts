@@ -4,6 +4,7 @@ import { JIRA_HANDLER_GROUP } from './jira-handler-group'
 import { LINEAR_HANDLER_GROUP } from './linear-handler-group'
 import { REFERENCE_HANDLER_GROUP } from './reference-handler-group'
 import { PLUGIN_HANDLER_GROUPS } from './plugin-handler-groups'
+
 import { LOCAL_TASK_HANDLER_GROUP } from './local-tasks/local-task-handler-group'
 import { ARTIFACT_SHARE_HANDLER_GROUP } from './self-hosted-artifacts/artifact-share-handler-group'
 

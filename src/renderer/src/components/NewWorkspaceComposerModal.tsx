@@ -35,8 +35,9 @@ import { getWorkspaceComposerInitialFocusTarget } from '@/lib/workspace-composer
 import { getFolderWorkspacePrimaryActionLabel } from '@/components/sidebar/folder-workspace-composer-helpers'
 import type { WorkspaceCreationTargetHint } from '@/lib/project-host-workspace-target'
 import { useAgentMenuObservation } from '@/components/tab-bar/use-new-tab-agent-menu-rows'
-import type { Repo } from '../../../shared/repo-types'
 import { addAppKeyListener, removeAppKeyListener } from '@/lib/app-keyboard-router'
+
+import type { Repo } from '../../../shared/repo-types'
 import type { LocalTaskComposerStart } from '@/local-tasks/local-task-start-work'
 import { LocalTaskSourceTabContext } from '@/local-tasks/local-task-source-tab'
 import { useLocalTaskComposerSource } from '@/local-tasks/use-local-task-composer-source'

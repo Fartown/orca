@@ -67,10 +67,6 @@ import { STRUCTURED_AGENT_SESSION_VISUAL_METHODS } from './structured-agent-sess
 import { STRUCTURED_AGENT_SESSION_AGENTS_METHODS } from './structured-agent-session-agents'
 import { MANAGED_RUNTIME_INSTALL_METHODS } from './managed-runtime-install'
 import { ARTIFACT_METHODS } from './artifacts'
-import { ARTIFACT_SHARE_METHODS } from './artifact-share'
-import { GOAL_METHODS } from './goals'
-import { LOCAL_TASK_METHODS } from './local-tasks'
-import { FILE_ATTACHMENT_UPLOAD_METHODS } from './file-attachment-upload'
 import { AGENT_HOOK_METHODS } from './agent-hooks'
 import { AGENT_LAUNCH_METHODS } from './agent-launch'
 import { CONNECTOR_METHODS } from './connector'
@@ -81,6 +77,11 @@ import {
 } from './workspace-layout'
 import { ORCA_LAYOUT_OWNER_IS_MAIN } from '../../../../shared/layout-owner-switch'
 import { ORCA_SIDEBAR_INPUTS_IS_MAIN } from '../../../../shared/sidebar-inputs-switch'
+
+import { ARTIFACT_SHARE_METHODS } from './artifact-share'
+import { GOAL_METHODS } from './goals'
+import { LOCAL_TASK_METHODS } from './local-tasks'
+import { FILE_ATTACHMENT_UPLOAD_METHODS } from './file-attachment-upload'
 
 // Keep registration order and the full RPC/security surface visible in one manifest.
 export const ALL_RPC_METHODS = [

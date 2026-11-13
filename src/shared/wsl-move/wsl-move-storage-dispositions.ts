@@ -3,6 +3,7 @@ import {
   notApplicableDisposition,
   type WslMoveFieldDisposition
 } from './wsl-move-dispositions'
+
 import { LOCAL_TASKS_SQLITE_TABLE_DISPOSITIONS } from '../local-tasks/local-tasks-wsl-move-dispositions'
 
 /** Census tests require a disposition for each renderer module using localStorage. */

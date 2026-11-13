@@ -19,6 +19,7 @@ import { PROVIDER_LABELS } from './mobile-task-view-options'
 import { jiraSiteLabel } from './jira-mobile-connection'
 import type { Translate } from '../i18n/mobile-i18n'
 import { useMobileTranslation } from '../i18n/use-mobile-translation'
+
 import { useLocalTaskSourceOptions } from '../local-tasks/local-task-source-option'
 
 function sourceCountLabel(count: number, t: Translate): string {

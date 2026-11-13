@@ -28,6 +28,7 @@ import { getTasksPaneSearchKeywords } from './tasks-search'
 import { useIntegrationProviderStatusRefresh } from './use-integration-provider-status-refresh'
 import { useTaskSourceProviderReadiness } from './use-task-source-provider-readiness'
 import { translate } from '@/i18n/i18n'
+
 import { LocalTasksSourceCard } from '@/components/local-tasks/settings/LocalTasksSourceCard'
 
 type TasksPaneProps = {

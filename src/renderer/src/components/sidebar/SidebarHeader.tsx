@@ -1,5 +1,3 @@
-import { LocalTaskSidebarModeButton } from '@/components/local-tasks/LocalTaskSidebarModeButton'
-import { useLocalTaskSidebarMode } from '@/local-tasks/local-task-sidebar-mode'
 import React, { useId } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAppStore } from '@/store'
@@ -12,6 +10,9 @@ import { Sparkles, Bell } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { AgentQuestionIcon } from '@/components/AgentQuestionIcon'
 import { useAgentBucketCounts } from '@/components/dashboard/useAgentBucketCounts'
+
+import { LocalTaskSidebarModeButton } from '@/components/local-tasks/LocalTaskSidebarModeButton'
+import { useLocalTaskSidebarMode } from '@/local-tasks/local-task-sidebar-mode'
 
 type SidebarHeaderProps = {
   onWorkspaceBoardMenuOpenChange: (open: boolean) => void
