@@ -14,6 +14,7 @@ export function SidebarGroupByToggle({ groupBy, setGroupBy }: SidebarGroupByTogg
       value={groupBy}
       onValueChange={(value) => {
         if (value) {
+          // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the items are GROUP_BY_OPTIONS, so a non-empty value is one of their WorktreeGroupBy ids.
           setGroupBy(value as WorktreeGroupBy)
         }
       }}

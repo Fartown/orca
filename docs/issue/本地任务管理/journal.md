@@ -405,7 +405,7 @@ external_ids:
 
 - 本轮目标：按 D-021 在同步上游前减少本功能的上游接缝和合并风险（Fartown/orca#108）。
 - 完成内容：
-  - 下线侧栏「按任务分组」：4 个上游侧栏文件恢复成合并基点的原样，删掉 7 个只为它服务的文件。选过「按任务」的旧库回落到用户原来的上游分组；fork 从没写过上游的 groupBy，旧偏好只是不再被读取。
+  - 下线侧栏「按任务分组」：4 个上游侧栏文件恢复成合并基点的原样，删掉 7 个只为它服务的文件。其中 `SidebarGroupByToggle.tsx` 恢复后带回上游自己的一处类型断言，PR 的增量质量检查以 fork/integration 为基线，会把它算成新增，所以加了一行带理由的豁免注释，登记成接缝；下次同步上游、上游把这个文件挪走时去掉。选过「按任务」的旧库回落到用户原来的上游分组；fork 从没写过上游的 groupBy，旧偏好只是不再被读取。
   - 下线 PR 描述带任务内容、工作区清理的「本地任务」来源：8 个上游文件恢复成原样，删掉 5 个文件。保存过的旧筛选值，会被上游读盘和 RPC 写入两处的合法值过滤丢掉，新测试 `local-task-retired-cleanup-ticket-source.test.ts` 固定了这一点。
   - 新测试 `local-tasks-upstream-registration.test.ts`：通过应用实际构建的运行时和默认派发器，检查本功能的能力声明和全部 `localTasks.*` 方法。上游已把对应文件挪成 `hosts/runtime-status.ts` 和 `rpc-method-registry.ts`，合并可能把 fork 版本留在没人引用的旧文件里，而按字符串的检查照样会通过。把方法表过滤掉做反向试验，测试会失败。
   - 61 个上游文件里，本功能新加的 import 挪到上游 import 段的空行之后，单独成一段。用 `git merge-file` 对照三种上游改法：整段改写、只改最后一行、末尾追加一行。原来紧贴的排法三种都冲突，新排法都能自动合并。
@@ -417,6 +417,7 @@ external_ids:
   - 需求 REQ-016、REQ-019、REQ-026；用例 TC-108 改写、新增 TC-108.1、TC-218 作废；两份技术方案标注已下线。
 - 验证证据：
   - `pnpm tc`、手机类型检查、相关单测（侧栏、本地任务渲染层、工作区清理、PR 生成、主进程本地任务）通过；
+  - `pnpm check:changed`（基线 fork/integration）除单测外全部通过；单测按改动选中的范围太大，30 分钟超时，期间唯一失败的 `plugin-view-replay.test.tsx` 单独重跑 4/4 通过，且本次没改插件文件；全量单测以 PR 的 CI 为准；
   - `check:fork-features`、`check:architecture-policies --base Fartown/main`、`check:fork-docs` 在提交后的干净状态下通过；
   - 同一份上游（origin/main `255b5c22c1`）模拟合并，本功能涉及的冲突文件从 91 个降到 67 个（`.docs/local-tasks-conflict-review/2026-11-12/raw/merge-tree-after-108.txt`）；
   - 隔离实例真机验证 5 项全部通过：分组菜单只剩上游 4 项；存过「按任务」的旧库回落到原来的上游分组；卡片、悬停详情和终端头部的任务 chip 都在；清理弹窗丢掉旧的 local-task 来源、只保留 Linear；任务首页、详情、派活框正常，全程没有页面错误（`.docs/local-tasks-conflict-review/2026-11-12/e2e/results.md`）。

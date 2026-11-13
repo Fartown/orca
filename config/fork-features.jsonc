@@ -3870,6 +3870,11 @@
           "why": "Delegate the optional task-scoped repo and host guard to feature-owned code, keeping ordinary callers unchanged."
         },
         {
+          "file": "src/renderer/src/components/sidebar/SidebarGroupByToggle.tsx",
+          "mustContain": "SAFETY: the items are GROUP_BY_OPTIONS",
+          "why": "Retiring task grouping (D-021) put back upstream's own cast; the suppression keeps the PR-base casting scan from counting it as new. Drop it when the next upstream sync moves the file"
+        },
+        {
           "file": "src/renderer/src/components/sidebar/use-worktree-card-review-details.ts",
           "mustContain": "export function resolveWorktreeCardReview(",
           "why": "The PR-merged rule reads the same review the workspace card shows, from one shared resolver (REQ-013)"
