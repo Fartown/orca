@@ -9,6 +9,7 @@ import {
   releaseEmptyTranscriptClaims,
   type NativeChatPendingSend
 } from '../../../../shared/native-chat/transcript/native-chat-pending-sends'
+import { retirePagedOutPendingSends } from '../../../../shared/native-chat-paged-out-echo/retire-paged-out-pending-sends'
 import {
   appendPendingSendCache,
   nextNativeChatPendingSendId,
@@ -32,6 +33,8 @@ export function useNativeChatPendingDelivery(args: {
     messages: NativeChatMessage[]
     readPhase?: ReadState['phase']
     sessionId?: string | null
+    /** Older transcript rows exist beyond `messages`. */
+    hasMore?: boolean
   }
 }) {
   const languageRevision = useUiLanguageRevision()
@@ -59,9 +62,19 @@ export function useNativeChatPendingDelivery(args: {
     },
     [scope]
   )
+  const pagedWindow = useMemo(
+    () => ({ hasMore: args.session.hasMore === true, settled: args.session.readPhase === 'ready' }),
+    [args.session.hasMore, args.session.readPhase]
+  )
   useEffect(() => {
-    save((entries) => prunePendingSends(releaseEmptyTranscriptClaims(entries, sessionId), messages))
-  }, [messages, save, sessionId])
+    save((entries) =>
+      retirePagedOutPendingSends(
+        prunePendingSends(releaseEmptyTranscriptClaims(entries, sessionId), messages),
+        messages,
+        pagedWindow
+      )
+    )
+  }, [messages, pagedWindow, save, sessionId])
   const record = useCallback(
     (text: string, imagePaths?: string[]) => {
       const sentAt = Date.now()

@@ -57,6 +57,8 @@ export function useMobileNativeChatDrafts(args: {
   transcriptLoading?: boolean
   // Only settled own-session history makes an empty list a real send boundary.
   transcriptSettled: boolean
+  // Older rows exist beyond `messages`; unknown counts as the whole transcript.
+  transcriptHasMore?: boolean
 }): {
   // Subscribe where the text is drawn; a subscriber here redraws the session screen per keystroke.
   draftKey: string | null
@@ -88,7 +90,8 @@ export function useMobileNativeChatDrafts(args: {
     launchDraftCreatedAt,
     chatActive = true,
     transcriptLoading,
-    transcriptSettled
+    transcriptSettled,
+    transcriptHasMore = false
   } = args
   const draftKey = mobileNativeChatScopeKey(hostId, worktreeId, tabId)
   const pendingKey = draftKey && sessionId ? `${draftKey}\0${sessionId}` : null
@@ -250,7 +253,10 @@ export function useMobileNativeChatDrafts(args: {
     }
     setPendingBySession((previous) => {
       const current = previous[pendingKey] ?? []
-      const next = retireLandedMobileNativeChatPending(echoRows, current, landedImagePendingIds)
+      const next = retireLandedMobileNativeChatPending(echoRows, current, landedImagePendingIds, {
+        hasMore: transcriptHasMore,
+        settled: transcriptSettled
+      })
       if (next === current) {
         return previous
       }
@@ -261,7 +267,7 @@ export function useMobileNativeChatDrafts(args: {
       delete remaining[pendingKey]
       return remaining
     })
-  }, [echoRows, messages, pending, pendingKey, transcriptSettled])
+  }, [echoRows, messages, pending, pendingKey, transcriptHasMore, transcriptSettled])
   const visiblePending = useMemo(
     () => visibleMobileNativeChatPending(echoRows, pending),
     [echoRows, pending]

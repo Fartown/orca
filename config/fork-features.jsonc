@@ -274,6 +274,55 @@
       ]
     },
     {
+      "id": "native-chat-paged-out-echo",
+      "title": "聊天视图残留发送气泡",
+      "goal": "已送达但已被分页挤出的发送气泡不再永久钉在聊天视图底部（桌面与手机）",
+      "journal": "docs/issue/聊天视图残留发送气泡/journal.md",
+      "dependsOn": [
+        "src/shared/native-chat/native-chat-types.ts",
+        "src/shared/native-chat/transcript/native-chat-pending-sends.ts"
+      ],
+      "policyId": "native-chat-paged-out-echo",
+      "ownedPaths": [
+        "src/shared/native-chat-paged-out-echo/**",
+        "src/renderer/src/native-chat-paged-out-echo/**",
+        "mobile/src/native-chat-paged-out-echo/**",
+        "docs/issue/聊天视图残留发送气泡/**"
+      ],
+      "requiredFiles": ["src/shared/native-chat-paged-out-echo/retire-paged-out-pending-sends.ts"],
+      "seams": [
+        {
+          "file": "src/renderer/src/components/native-chat/use-native-chat-pending-delivery.ts",
+          "mustContain": "retirePagedOutPendingSends",
+          "why": "Desktop terminal Chat retires echoes the loaded window has moved past after normal reconciliation."
+        },
+        {
+          "file": "mobile/src/session/native-chat/mobile-native-chat-pending-echo.ts",
+          "mustContain": "retirePagedOutPendingSends",
+          "why": "Phone Chat applies the same retirement before preview binding."
+        },
+        {
+          "file": "mobile/src/session/native-chat/composer/use-mobile-native-chat-drafts.ts",
+          "mustContain": "transcriptHasMore",
+          "why": "Carry whether older rows exist into phone echo retirement."
+        },
+        {
+          "file": "mobile/src/session/native-chat/use-mobile-native-chat-controller.ts",
+          "mustContain": "transcriptHasMore: nativeChatSession.hasMore",
+          "why": "Hand the phone session's hasMore to the drafts hook."
+        }
+      ],
+      "tests": [
+        "src/shared/native-chat-paged-out-echo/retire-paged-out-pending-sends.test.ts",
+        "src/renderer/src/native-chat-paged-out-echo/pending-delivery-paged-out.test.tsx",
+        "mobile/src/native-chat-paged-out-echo/mobile-drafts-paged-out.test.ts"
+      ],
+      "checks": [
+        "pnpm exec vitest run --config config/vitest.config.ts src/shared/native-chat-paged-out-echo src/renderer/src/native-chat-paged-out-echo src/renderer/src/components/native-chat/use-native-chat-pending-delivery.test.tsx src/shared/native-chat/transcript/native-chat-pending-sends.test.ts",
+        "pnpm --dir mobile exec vitest run src/native-chat-paged-out-echo src/session/native-chat/composer"
+      ]
+    },
+    {
       "id": "integration-builds",
       "title": "集成分支自动出包：同一提交的 macOS、Linux 与 Android 内测包",
       "goal": "同源发布 fork 内测包，并提供桌面更新清单和 Android 应用内更新",
