@@ -4,9 +4,12 @@ import { cn } from '@/lib/utils'
 import { formatLocalTaskTime } from '@/local-tasks/local-task-time'
 import { useLocalTasksDomain } from '@/local-tasks/local-tasks-domain-store'
 import { localTaskVisibleProgress } from '@/local-tasks/local-task-visible-progress'
+import { localTaskProgressSummary } from '@/local-tasks/local-task-progress-summary'
 import { translate } from '@/i18n/i18n'
+import { parseLocalTaskProgressSections } from '@/local-tasks/local-task-progress-sections'
 import type { LocalTaskIndex } from '@/local-tasks/local-task-grouping'
 import type { LocalTask } from '../../../../shared/local-tasks/local-task-types'
+import { LocalTaskProgressBody } from './LocalTaskFactRows'
 
 export function LocalTaskLatestProgress({
   task,
@@ -23,8 +26,8 @@ export function LocalTaskLatestProgress({
   }
   const text =
     latest.task.id === task.id
-      ? latest.progress.body
-      : `${latest.task.title}: ${latest.progress.body}`
+      ? localTaskProgressSummary(latest.progress.body)
+      : `${latest.task.title}: ${localTaskProgressSummary(latest.progress.body)}`
   return (
     <span className="block truncate text-xs font-normal text-muted-foreground" title={text}>
       <span className="sr-only">{translate('localTasks.now.latest', 'Latest progress')}: </span>
@@ -39,16 +42,25 @@ export function LocalTaskLatestProgress({
  */
 export function LocalTaskLatestProgressCard({
   task,
+  index,
   compact = false
 }: {
   task: LocalTask
+  index?: LocalTaskIndex
   compact?: boolean
 }): React.JSX.Element | null {
   const now = useNow(60_000)
-  const progress = task.latestProgress
-  if (!progress) {
+  const domainProgress = useLocalTasksDomain((state) => state.progress)
+  const links = useLocalTasksDomain((state) => state.links)
+  const latest = index
+    ? localTaskVisibleProgress(task, index, { progress: domainProgress, links })
+    : task.latestProgress
+      ? { task, progress: task.latestProgress }
+      : null
+  if (!latest) {
     return null
   }
+  const { progress } = latest
   return (
     <section className="flex flex-col gap-1.5 rounded-lg border border-border/60 p-3">
       <header className="flex items-baseline gap-2">
@@ -59,15 +71,19 @@ export function LocalTaskLatestProgressCard({
           {formatLocalTaskTime(progress.at, now)}
         </span>
       </header>
+      {latest.task.id !== task.id ? (
+        <span className="truncate text-xs text-muted-foreground" title={latest.task.title}>
+          {latest.task.title}
+        </span>
+      ) : null}
       {progress.needsYou ? <NeedsYou text={progress.needsYou} /> : null}
-      <p
-        className={cn(
-          'whitespace-pre-wrap break-words text-xs leading-relaxed text-foreground',
-          compact && 'line-clamp-4'
-        )}
-      >
-        {progress.body}
-      </p>
+      <div className={cn('min-w-0', compact && 'text-xs')}>
+        <LocalTaskProgressBody
+          key={`${latest.task.id}:${progress.at}`}
+          body={progress.body}
+          sections={parseLocalTaskProgressSections(progress.body)}
+        />
+      </div>
     </section>
   )
 }
@@ -99,7 +115,9 @@ export function LocalTaskLatestProgressLine({
       <span className="line-clamp-2 break-words">{progress.needsYou}</span>
     </span>
   ) : (
-    <span className="line-clamp-2 break-words text-2xs text-muted-foreground">{progress.body}</span>
+    <span className="line-clamp-2 break-words text-2xs text-muted-foreground">
+      {localTaskProgressSummary(progress.body)}
+    </span>
   )
 }
 

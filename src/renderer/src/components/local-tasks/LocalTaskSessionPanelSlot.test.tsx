@@ -3,6 +3,7 @@ import { act, cleanup, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { makeTerminalTab, makeWorktree } from '@/store/slices/worktrees-slice-test-fixtures'
 import type { LocalTaskSessionLink } from '../../../../shared/local-tasks/local-task-link-types'
+import type { LocalTask } from '../../../../shared/local-tasks/local-task-types'
 import { toWebTerminalSurfaceTabId } from '../../../../shared/terminal-surface-id'
 
 const requestMount = vi.hoisted(() => vi.fn())
@@ -40,6 +41,22 @@ const link: LocalTaskSessionLink = {
   linkedVia: 'manual',
   openedAt: 1
 }
+const parentTask: LocalTask = {
+  id: link.taskId,
+  projectId: 'project',
+  number: 1,
+  ref: 'ORC-1',
+  title: 'Parent task title',
+  description: '',
+  criteria: [],
+  statusId: 'doing',
+  priority: 2,
+  labels: [],
+  parentId: null,
+  createdAt: 1,
+  updatedAt: 1,
+  revision: 1
+}
 const worktree = makeWorktree({
   id: WORKTREE,
   repoId: 'repo',
@@ -75,6 +92,33 @@ beforeEach(() => {
 afterEach(() => {
   cleanup()
   localTaskSessionPanelStore.getState().close()
+})
+
+it('shows the switched child session task name and ref while keeping the parent scope', () => {
+  const childTask: LocalTask = {
+    ...parentTask,
+    id: 'runtime:env-1/child',
+    number: 2,
+    ref: 'ORC-2',
+    title: 'Child session task title',
+    parentId: parentTask.id
+  }
+  const childSession: LocalTaskSessionLink = {
+    ...link,
+    id: 'runtime:env-1/child-session',
+    taskId: childTask.id
+  }
+  localTasksDomainStore.setState({
+    tasks: [parentTask, childTask],
+    links: { workspaces: [], sessions: [link, childSession] }
+  })
+  render(<LocalTaskSessionPanelSlot />)
+  expect(screen.getByRole('button', { name: 'Parent task title ORC-1' })).toBeTruthy()
+
+  act(() => localTaskSessionPanelStore.getState().switchSession(childSession))
+  expect(screen.getByRole('button', { name: 'Child session task title ORC-2' })).toBeTruthy()
+  expect(screen.getByTitle('Child session task title')).toBeTruthy()
+  expect(localTaskSessionPanelStore.getState().taskId).toBe(parentTask.id)
 })
 
 it.each(['catalog then tab then layout', 'layout then tab then catalog'])(

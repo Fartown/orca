@@ -1,5 +1,6 @@
 import type { Worktree } from '../../../shared/worktree/types'
 import { createStore } from 'zustand/vanilla'
+import { localTaskSessionPanelStore } from './local-task-session-panel-store'
 import { useStore } from 'zustand'
 import type {
   LocalTaskPriority,
@@ -94,6 +95,7 @@ export type LocalTaskPageState = {
   setQuery: (query: string) => void
   setCursor: (taskId: string | null, via?: 'pointer') => void
   openDetail: (taskId: string | null) => void
+  openPreview: (taskId: string) => void
   setPreviewOpen: (open: boolean) => void
   toggleSelected: (taskId: string) => void
   clearSelection: () => void
@@ -153,7 +155,12 @@ export const localTaskPageStore = createStore<LocalTaskPageState>((set) => ({
   setShowCanceledColumn: (showCanceledColumn) => set({ showCanceledColumn }),
   setFilters: (filters) => set({ filters }),
   setQuery: (query) => set({ query }),
-  setCursor: (cursorTaskId, via) => set({ cursorTaskId, cursorFromPointer: via === 'pointer' }),
+  setCursor: (cursorTaskId, via) =>
+    set((state) =>
+      via === 'pointer' && state.previewOpen
+        ? state
+        : { cursorTaskId, cursorFromPointer: via === 'pointer' }
+    ),
   openDetail: (detailTaskId) =>
     set((state) => ({
       detailTaskId,
@@ -161,6 +168,10 @@ export const localTaskPageStore = createStore<LocalTaskPageState>((set) => ({
       cursorTaskId: detailTaskId ?? state.cursorTaskId,
       cursorFromPointer: false
     })),
+  openPreview: (taskId) => {
+    localTaskSessionPanelStore.getState().close()
+    set({ cursorTaskId: taskId, cursorFromPointer: true, detailTaskId: null, previewOpen: true })
+  },
   setPreviewOpen: (previewOpen) => set({ previewOpen }),
   toggleSelected: (taskId) =>
     set((state) => ({

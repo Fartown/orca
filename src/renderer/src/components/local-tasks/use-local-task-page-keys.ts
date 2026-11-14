@@ -71,7 +71,11 @@ function runAction(action: LocalTaskPageKeyAction, model: LocalTaskListModel): v
       return
     case 'preview':
       if (cursor && !inDetail) {
-        page.setPreviewOpen(!page.previewOpen)
+        if (page.previewOpen) {
+          page.setPreviewOpen(false)
+        } else {
+          page.openPreview(cursor)
+        }
       }
       return
     case 'select':

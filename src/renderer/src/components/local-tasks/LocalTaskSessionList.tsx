@@ -15,6 +15,7 @@ import { useLocalTaskSessionLinks } from '@/local-tasks/local-task-link-selector
 import { useLocalTaskSessionProgress } from '@/local-tasks/local-task-session-progress'
 import { useLocalTaskHostInContact } from '@/local-tasks/local-task-host-contact'
 import { localTaskSessionPanelStore } from '@/local-tasks/local-task-session-panel-store'
+import { localTaskPageStore } from '@/local-tasks/local-task-page-store'
 import { formatLocalTaskSessionAge } from '@/local-tasks/local-task-session-age'
 import { unlinkLocalTaskSession } from '@/local-tasks/local-task-workspace-linking'
 import { openLocalTaskWorkspace } from '@/local-tasks/local-task-work-actions'
@@ -48,13 +49,15 @@ function SessionRow({
   owner,
   showOwner,
   workspace,
-  writable
+  writable,
+  compact
 }: {
   session: LocalTaskSessionLink
   owner: LocalTask | undefined
   showOwner: boolean
   workspace: LocalTaskWorkspaceLink | null
   writable: boolean
+  compact: boolean
 }): React.JSX.Element {
   const progress = useLocalTaskSessionProgress(session)
   const inContact = useLocalTaskHostInContact(session.hostId)
@@ -83,17 +86,26 @@ function SessionRow({
       }
       return
     }
+    localTaskPageStore.getState().setPreviewOpen(false)
     localTaskSessionPanelStore.getState().open(session)
   }
   return (
-    <div className="group/session flex min-h-10 items-center gap-2 border-t border-border/60 px-4 py-1.5 hover:bg-accent/60">
+    <div
+      className={cn(
+        'group/session flex min-h-10 items-center gap-2 border-t border-border/60 px-4 py-1.5 hover:bg-accent/60',
+        compact && 'flex-wrap'
+      )}
+    >
       {/* Why no tab stop: the Peek button beside it is the keyboard's way in. */}
       <button
         type="button"
         tabIndex={-1}
         disabled={offline !== null || (missing && !workspace)}
         onClick={open}
-        className="flex min-w-0 flex-1 items-center gap-2 text-left disabled:cursor-default"
+        className={cn(
+          'flex min-w-0 flex-1 items-center gap-2 text-left disabled:cursor-default',
+          compact && 'flex-wrap'
+        )}
       >
         <LocalTaskSessionDot link={session} />
         <AgentIcon agent={agent} size={14} />
@@ -125,6 +137,7 @@ function SessionRow({
         <span
           className={cn(
             'min-w-0 flex-1 truncate text-xs',
+            compact && 'basis-full',
             missing ? 'text-muted-foreground' : 'text-foreground'
           )}
           title={last}
@@ -185,7 +198,8 @@ export function LocalTaskSessionList({
   workspace,
   index,
   writable,
-  showEmpty
+  showEmpty,
+  compact = false
 }: {
   task: LocalTask
   /** The workspace the task works in: its own or the nearest ancestor's. */
@@ -193,6 +207,7 @@ export function LocalTaskSessionList({
   index: LocalTaskIndex
   writable: boolean
   showEmpty: boolean
+  compact?: boolean
 }): React.JSX.Element | null {
   const sessions = useLocalTaskSessionLinks([
     task.id,
@@ -213,6 +228,7 @@ export function LocalTaskSessionList({
             showOwner={session.taskId !== task.id}
             workspace={workspace}
             writable={writable}
+            compact={compact}
           />
         ))
       ) : (

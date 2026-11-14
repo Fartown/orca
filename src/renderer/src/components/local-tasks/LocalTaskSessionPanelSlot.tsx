@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { translate } from '@/i18n/i18n'
+import { cn } from '@/lib/utils'
 import { useAppStore } from '@/store'
 import { SYNC_FIT_PANES_EVENT } from '@/constants/terminal'
 import { requestBackgroundTerminalWorktreeMount } from '@/components/terminal/background-terminal-worktree-mount'
@@ -256,7 +257,10 @@ function LocalTaskSessionPanelContent({
 }
 
 export function LocalTaskSessionPanelSlot(): React.JSX.Element | null {
+  const panelRef = useRef<HTMLDivElement | null>(null)
+  const [availableWidth, setAvailableWidth] = useState<number | null>(null)
   const mode = useLocalTaskSessionPanel((state) => state.mode)
+  const panelOpen = mode !== 'closed'
   const sessionLinkId = useLocalTaskSessionPanel((state) => state.sessionLinkId)
   const taskId = useLocalTaskSessionPanel((state) => state.taskId)
   const requestToken = useLocalTaskSessionPanel((state) => state.requestToken)
@@ -307,7 +311,23 @@ export function LocalTaskSessionPanelSlot(): React.JSX.Element | null {
     }
   }, [mode])
 
+  useLayoutEffect(() => {
+    const parent = panelRef.current?.parentElement
+    if (!parent) {
+      return
+    }
+    const updateWidth = (): void => setAvailableWidth(parent.clientWidth)
+    updateWidth()
+    if (typeof ResizeObserver === 'undefined') {
+      return
+    }
+    const observer = new ResizeObserver(updateWidth)
+    observer.observe(parent)
+    return () => observer.disconnect()
+  }, [panelOpen])
+
   const setRef = useCallback((node: HTMLDivElement | null) => {
+    panelRef.current = node
     if (!node) {
       setActivityTerminalPortals([])
     }
@@ -317,14 +337,16 @@ export function LocalTaskSessionPanelSlot(): React.JSX.Element | null {
     return null
   }
 
+  const fillAvailableWidth =
+    availableWidth !== null && availableWidth > 0 && availableWidth < (mode === 'wide' ? 1200 : 800)
+
   return (
     <div
       ref={setRef}
-      className={
-        mode === 'wide'
-          ? 'absolute inset-y-0 right-0 z-30 flex w-2/3 min-w-0 flex-col border-l border-border bg-background shadow-floating'
-          : 'relative z-20 flex w-[420px] max-w-[60%] shrink-0 flex-col border-l border-border bg-background'
-      }
+      className={cn(
+        'relative z-20 flex min-h-0 min-w-0 shrink-0 flex-col overflow-hidden border-l border-border bg-background',
+        fillAvailableWidth ? 'w-full' : mode === 'wide' ? 'w-2/3' : 'w-[420px] max-w-[60%]'
+      )}
       aria-label={translate('localTasks.sessionPanel.title', 'Session preview')}
       {...{ [LOCAL_TASK_SESSION_PANEL_ATTRIBUTE]: '' }}
     >
