@@ -24741,7 +24741,6 @@
       "disconnected": "Not connected",
       "unavailable": "Session unavailable",
       "unverifiable": "Cannot confirm session",
-      "wideMode": "Wide",
       "stop": "Stop",
       "stopConfirm": "Stop this session? The task and workspace stay.",
       "stopSession": "Stop session",
