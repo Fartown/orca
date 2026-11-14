@@ -9,6 +9,7 @@ import { localTaskAttentionClearsOnView } from '../../../shared/local-tasks/loca
 import { acknowledgeLocalTaskItemOnce } from './local-task-seen-forwarding'
 import { localTasksDomainStore } from './local-tasks-domain-store'
 import { localTaskSessionPanelStore } from './local-task-session-panel-store'
+import { localTaskPageStore } from './local-task-page-store'
 import { openLocalTaskPage } from './local-task-navigation'
 import { resolveAutoAckTabTargets } from '@/hooks/agent-auto-ack-targets'
 
@@ -74,7 +75,10 @@ export function openLocalTaskSession(link: LocalTaskSessionLink): boolean {
     localTaskSessionPanelStore.getState().close()
     return revealLocalTaskSession(link)
   }
-  openLocalTaskPage({ taskId: link.taskId })
+  if (state.activeView !== 'tasks' || !localTaskPageStore.getState().localActive) {
+    openLocalTaskPage({ taskId: link.taskId })
+  }
+  localTaskPageStore.getState().setPreviewOpen(false)
   localTaskSessionPanelStore.getState().open(link)
   return true
 }

@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { cleanup, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
 import type { LocalTask } from '../../../../shared/local-tasks/local-task-types'
 import { LocalTaskLatestProgressCard, LocalTaskLatestProgressLine } from './LocalTaskLatestProgress'
@@ -51,5 +51,45 @@ describe('latest progress on a task', () => {
       </>
     )
     expect(container.textContent).toBe('')
+  })
+
+  it('renders Markdown and lets a long writeback expand', () => {
+    render(
+      <LocalTaskLatestProgressCard
+        task={{
+          ...task,
+          latestProgress: {
+            kind: 'progress',
+            body: `**Done**\n\n${'More detail. '.repeat(40)}`,
+            at: 1_700_000_000_000,
+            sessionLinkId: null
+          }
+        }}
+      />
+    )
+    expect(screen.getByText('Done').tagName).toBe('STRONG')
+    const expand = screen.getByRole('button', { name: 'Show more' })
+    expect(expand.getAttribute('aria-expanded')).toBe('false')
+    fireEvent.click(expand)
+    expect(screen.getByRole('button', { name: 'Show less' }).getAttribute('aria-expanded')).toBe(
+      'true'
+    )
+  })
+
+  it('shows a readable writeback excerpt without Markdown syntax', () => {
+    const { container } = render(
+      <LocalTaskLatestProgressLine
+        task={{
+          ...task,
+          latestProgress: {
+            kind: 'progress',
+            body: '## Completed - **Invoice export**\n\n- Added `CSV` output',
+            at: 1_700_000_000_000,
+            sessionLinkId: null
+          }
+        }}
+      />
+    )
+    expect(container.textContent).toBe('Completed - Invoice export Added CSV output')
   })
 })

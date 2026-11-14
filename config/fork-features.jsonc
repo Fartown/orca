@@ -3042,6 +3042,8 @@
       "journal": "docs/issue/本地任务管理/journal.md",
       "dependsOn": [
         "src/renderer/src/components/native-chat/NativeChatPaneHeader.tsx",
+        "src/renderer/src/components/sidebar/CommentMarkdown.tsx",
+        "src/renderer/src/components/editor/markdown-table-of-contents.ts",
         "src/renderer/src/store/pinned-tab-close-guard.ts",
         "src/main/orca-profiles/profile-storage-paths.ts",
         "src/main/sqlite/harden-database-files.ts",
@@ -4161,6 +4163,7 @@
         "src/renderer/src/components/sidebar/sidebar-host-options.test.ts",
         "src/shared/execution-host-registry.test.ts",
         "src/renderer/src/components/local-tasks/LocalTaskSessionPanelSlot.test.tsx",
+        "src/renderer/src/local-tasks/local-task-page-store.test.ts",
         "src/main/local-tasks/local-task-dispatcher.test.ts",
         "src/renderer/src/components/local-tasks/LocalTaskProposalCard.test.tsx",
         "src/renderer/src/local-tasks/local-task-dispatcher-proposals.test.ts",

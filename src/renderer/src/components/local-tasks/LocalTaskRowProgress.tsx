@@ -8,6 +8,7 @@ import type { LocalTaskIndex } from '@/local-tasks/local-task-grouping'
 import { parseLocalTaskProgressSections } from '@/local-tasks/local-task-progress-sections'
 import { formatLocalTaskTime } from '@/local-tasks/local-task-time'
 import { localTaskVisibleProgress } from '@/local-tasks/local-task-visible-progress'
+import { localTaskProgressSummary } from '@/local-tasks/local-task-progress-summary'
 import { useLocalTasksDomain } from '@/local-tasks/local-tasks-domain-store'
 import { isTuiAgent } from '../../../../shared/tui-agent-config'
 import type {
@@ -16,6 +17,7 @@ import type {
 } from '../../../../shared/local-tasks/local-task-link-types'
 import type { LocalTask } from '../../../../shared/local-tasks/local-task-types'
 import type { LocalTaskRowWorkspace } from './LocalTaskRowFacts'
+import { LocalTaskProgressBody } from './LocalTaskFactRows'
 
 /**
  * What happened last: an agent's writeback, or its last sentence when it wrote none. A task on a
@@ -38,7 +40,7 @@ export function LocalTaskProgressLine({
     return null
   }
   const from = latest.task.id === task.id ? null : latest.task.ref
-  const body = latest.progress.body.replace(/\s*\n+\s*/g, ' ')
+  const body = localTaskProgressSummary(latest.progress.body)
   const when = formatLocalTaskTime(latest.progress.at, now)
   const offline = workspace.hostId !== null && !workspace.inContact
   return (
@@ -144,18 +146,7 @@ function LocalTaskProgressCard({
         </span>
         <span>· {when}</span>
       </div>
-      {sections ? (
-        <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1">
-          {sections.map((section, at) => (
-            <div key={`${section.label}-${at}`} className="contents">
-              <dt className="text-muted-foreground">{section.label}</dt>
-              <dd className="whitespace-pre-wrap text-foreground">{section.text}</dd>
-            </div>
-          ))}
-        </dl>
-      ) : (
-        <p className="whitespace-pre-wrap text-foreground">{body}</p>
-      )}
+      <LocalTaskProgressBody body={body} sections={sections} />
     </div>
   )
 }

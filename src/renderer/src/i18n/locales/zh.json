@@ -23329,7 +23329,9 @@
     "latestProgress": {
       "title": "最新进展",
       "needsYou": "需要你：{{text}}",
-      "chip": "需要你"
+      "chip": "需要你",
+      "showMore": "展开更多",
+      "showLess": "收起"
     },
     "sidebar": {
       "toggle": "任务模式",
@@ -23618,7 +23620,7 @@
     "preview": {
       "label": "任务预览",
       "close": "关闭预览",
-      "open": "打开任务"
+      "open": "打开任务详情"
     },
     "projects": {
       "noOrcaProjects": "Orca 里还没有仓库。可以先建一个空项目，或先在 Orca 里添加仓库。",
@@ -24006,7 +24008,6 @@
       "disconnected": "未连接",
       "unavailable": "会话不可用",
       "unverifiable": "无法确认会话",
-      "wideMode": "加宽",
       "stop": "停止",
       "stopConfirm": "停止这个会话？任务和工作区不变。",
       "stopSession": "停止会话",

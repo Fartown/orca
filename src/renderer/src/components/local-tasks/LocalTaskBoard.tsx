@@ -3,6 +3,7 @@ import { Bell, CornerDownRight, EyeOff, Plus } from 'lucide-react'
 import { useNow } from '@/hooks/use-now'
 import { formatLocalTaskTime } from '@/local-tasks/local-task-time'
 import { localTaskVisibleProgress } from '@/local-tasks/local-task-visible-progress'
+import { localTaskProgressSummary } from '@/local-tasks/local-task-progress-summary'
 import { localTaskAttentionKindLabel } from '@/local-tasks/local-task-attention-copy'
 import {
   LocalTaskHostCell,
@@ -66,7 +67,7 @@ function BoardCard({
         event.dataTransfer.setData(DRAG_TYPE, task.id)
         event.dataTransfer.effectAllowed = 'move'
       }}
-      onClick={() => localTaskPageStore.getState().openDetail(task.id)}
+      onClick={() => localTaskPageStore.getState().openPreview(task.id)}
       onMouseMove={() => {
         if (!isCursor) {
           localTaskPageStore.getState().setCursor(task.id, 'pointer')
@@ -140,18 +141,16 @@ function LocalTaskBoardProgress({
   if (!latest) {
     return null
   }
+  const summary = localTaskProgressSummary(latest.progress.body)
   return (
-    <span
-      className="line-clamp-2 text-2xs leading-relaxed text-muted-foreground"
-      title={latest.progress.body}
-    >
+    <span className="line-clamp-2 text-2xs leading-relaxed text-muted-foreground" title={summary}>
       <span className="mr-1 rounded-sm bg-muted px-1 text-foreground/80">
         {latest.progress.kind === 'progress'
           ? translate('localTasks.row.writeback', 'Writeback')
           : translate('localTasks.row.lastSentence', 'Last line')}
       </span>
       {latest.task.id === task.id ? '' : `${latest.task.ref} `}
-      {latest.progress.body}
+      {summary}
     </span>
   )
 }
@@ -177,7 +176,7 @@ function NeedsYouStrip({ model }: { model: LocalTaskListModel }): React.JSX.Elem
           <button
             key={row.task.id}
             type="button"
-            onClick={() => localTaskPageStore.getState().openDetail(row.task.id)}
+            onClick={() => localTaskPageStore.getState().openPreview(row.task.id)}
             className="flex h-7 shrink-0 items-center gap-1.5 rounded-md border border-border/60 bg-card px-2 text-xs hover:bg-accent"
           >
             {status ? (

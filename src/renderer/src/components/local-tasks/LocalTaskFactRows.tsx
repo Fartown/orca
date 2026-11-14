@@ -1,3 +1,6 @@
+import { useState } from 'react'
+import { Button } from '@/components/ui/button'
+import CommentMarkdown from '@/components/sidebar/CommentMarkdown'
 import { translate } from '@/i18n/i18n'
 import { cn } from '@/lib/utils'
 import type { LocalTaskProgressSection } from '@/local-tasks/local-task-progress-sections'
@@ -46,23 +49,39 @@ export function LocalTaskProgressBody({
   /** Extra rows that align with the writeback's own. */
   after?: React.ReactNode
 }): React.JSX.Element {
-  if (!sections) {
-    return (
-      <div className="flex flex-col gap-1.5">
-        <p className="whitespace-pre-wrap break-words text-sm text-foreground">{body}</p>
-        {after ? <LocalTaskFactRows>{after}</LocalTaskFactRows> : null}
-      </div>
-    )
-  }
-  return (
+  const [expanded, setExpanded] = useState(false)
+  const long = body.length > 320 || body.split('\n').length > 6
+  const content = sections ? (
     <LocalTaskFactRows>
       {sections.map((section, at) => (
         <LocalTaskFactRow key={`${at}:${section.label}`} label={section.label}>
-          <span className="whitespace-pre-wrap">{section.text}</span>
+          <CommentMarkdown content={section.text} variant="compact" className="text-sm" />
         </LocalTaskFactRow>
       ))}
-      {after}
     </LocalTaskFactRows>
+  ) : (
+    <CommentMarkdown content={body} variant="compact" className="text-sm text-foreground" />
+  )
+  return (
+    <div className="flex min-w-0 flex-col gap-1.5">
+      <div className={cn('min-w-0 overflow-hidden', long && !expanded && 'max-h-32')}>
+        {content}
+      </div>
+      {long ? (
+        <Button
+          variant="ghost"
+          size="xs"
+          className="self-start"
+          aria-expanded={expanded}
+          onClick={() => setExpanded(!expanded)}
+        >
+          {expanded
+            ? translate('localTasks.latestProgress.showLess', 'Show less')
+            : translate('localTasks.latestProgress.showMore', 'Show more')}
+        </Button>
+      ) : null}
+      {after ? <LocalTaskFactRows>{after}</LocalTaskFactRows> : null}
+    </div>
   )
 }
 

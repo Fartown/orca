@@ -24062,7 +24062,9 @@
     "latestProgress": {
       "title": "Latest progress",
       "needsYou": "Needs you: {{text}}",
-      "chip": "Needs you"
+      "chip": "Needs you",
+      "showMore": "Show more",
+      "showLess": "Show less"
     },
     "sidebar": {
       "toggle": "Task mode",
@@ -24351,7 +24353,7 @@
     "preview": {
       "label": "Task preview",
       "close": "Close preview",
-      "open": "Open task"
+      "open": "Open task details"
     },
     "projects": {
       "noOrcaProjects": "No repositories in Orca yet. Make an empty project, or add a repository to Orca first.",
@@ -24739,7 +24741,6 @@
       "disconnected": "Not connected",
       "unavailable": "Session unavailable",
       "unverifiable": "Cannot confirm session",
-      "wideMode": "Wide",
       "stop": "Stop",
       "stopConfirm": "Stop this session? The task and workspace stay.",
       "stopSession": "Stop session",
