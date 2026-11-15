@@ -2,6 +2,12 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import type { LocalTask } from '../../../../shared/local-tasks/local-task-types'
+import { addAppKeyListener, removeAppKeyListener } from '@/lib/app-keyboard-router'
+import {
+  claimLocalTaskPageKeys,
+  installLocalTaskPageKeyRouter,
+  pushLocalTaskEscapeLayer
+} from '@/local-tasks/local-task-page-keys'
 
 const fixture = vi.hoisted(() => ({
   save: vi.fn(
@@ -126,4 +132,38 @@ it('does not treat an IME composition key as title submission or cancellation', 
   expect(fixture.save).not.toHaveBeenCalled()
   fireEvent.blur(title)
   await waitFor(() => expect(fixture.save).toHaveBeenCalledWith('task-1', { title: '正在输入' }, 3))
+})
+
+it('keeps an IME-owned Escape in the title before the upstream capture blur owner', async () => {
+  const uninstallRouter = installLocalTaskPageKeyRouter()
+  const releasePage = claimLocalTaskPageKeys(() => {})
+  const releasePanel = pushLocalTaskEscapeLayer('panel', () => {})
+  const upstreamBlur = (event: KeyboardEvent): void => {
+    if (event.key === 'Escape' && event.target instanceof HTMLTextAreaElement) {
+      event.preventDefault()
+      event.target.blur()
+    }
+  }
+  addAppKeyListener('keydown', upstreamBlur)
+  try {
+    render(
+      <div data-local-task-page="">
+        <LocalTaskDetailTitle task={task} writable />
+      </div>
+    )
+    const title = screen.getByRole('textbox', { name: 'Title' })
+    title.focus()
+    fireEvent.compositionStart(title)
+    fireEvent.change(title, { target: { value: '正在输入' } })
+    expect(fireEvent.keyDown(title, { key: 'Escape', isComposing: true, keyCode: 229 })).toBe(true)
+    await Promise.resolve()
+    expect(document.activeElement).toBe(title)
+    expect(title).toHaveProperty('value', '正在输入')
+    expect(fixture.save).not.toHaveBeenCalled()
+  } finally {
+    removeAppKeyListener('keydown', upstreamBlur)
+    releasePanel()
+    releasePage()
+    uninstallRouter()
+  }
 })

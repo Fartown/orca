@@ -191,6 +191,16 @@ function handleSessionPanelEscape(event: KeyboardEvent): boolean {
 }
 
 function onKeyDown(event: KeyboardEvent): void {
+  if (
+    event.key === 'Escape' &&
+    isImeOwnedKeyboardEvent(event) &&
+    isEditableKeyTarget(event.target) &&
+    isOnLocalTaskPage(event.target)
+  ) {
+    // The upstream Esc owner would blur the editor before its IME can cancel a candidate.
+    event.stopImmediatePropagation()
+    return
+  }
   if (event.defaultPrevented || isImeOwnedKeyboardEvent(event)) {
     return
   }
