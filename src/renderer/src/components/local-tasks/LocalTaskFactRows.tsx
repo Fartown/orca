@@ -107,7 +107,7 @@ export function LocalTaskProgressBody({
         className={cn(
           'min-w-0 overflow-hidden',
           !expanded &&
-            'max-h-[3.75rem] [&_.comment-md-h]:block [&_.comment-md-p]:block [&_blockquote]:my-0 [&_code]:leading-5 [&_code]:py-0 [&_dl]:gap-y-0 [&_hr]:my-0 [&_ol]:my-0 [&_pre]:my-0 [&_pre]:py-0 [&_ul]:my-0'
+            'max-h-[3.75rem] [&_.comment-md-h]:block [&_.comment-md-p]:block [&_blockquote]:my-0 [&_code]:leading-none [&_code]:py-0 [&_dl]:gap-y-0 [&_hr]:my-0 [&_ol]:my-0 [&_pre]:my-0 [&_pre]:py-0 [&_pre_code]:leading-5 [&_ul]:my-0'
         )}
       >
         {content}
