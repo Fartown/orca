@@ -55,14 +55,16 @@ export function registerSettingsAndSidebarIpcBridge(unsubs: (() => void)[]): voi
   }
 
   unsubs.push(window.api.ui.onOpenLocalTaskLink?.(openLocalTaskDeepLink) ?? (() => {}))
-  void window.api.ui
-    .consumePendingLocalTaskLink?.()
-    .then((link) => {
-      if (link) {
-        openLocalTaskDeepLink(link)
-      }
-    })
-    .catch(() => {})
+  const pendingTaskLink = window.api.ui.consumePendingLocalTaskLink?.()
+  if (pendingTaskLink && typeof pendingTaskLink.then === 'function') {
+    void pendingTaskLink
+      .then((link) => {
+        if (link) {
+          openLocalTaskDeepLink(link)
+        }
+      })
+      .catch(() => {})
+  }
 
   unsubs.push(window.api.ui.onOpenPluginInstallLink?.(openPluginInstallLink) ?? (() => {}))
   const pendingPluginLink = window.api.ui.consumePendingPluginInstallLink?.()
