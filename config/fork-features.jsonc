@@ -4146,6 +4146,21 @@
           "file": "src/renderer/src/web/preload-api/web-os-deep-link-api.ts",
           "mustContain": "export const webOsDeepLinkApi = {",
           "why": "REQ-026: register library-qualified task links with the existing cold/warm deep-link and renderer delivery channels."
+        },
+        {
+          "file": "mobile/src/components/MobileMarkdown.tsx",
+          "mustContain": "density?: 'tight'",
+          "why": "REQ-017/022/026: optional tight Markdown rhythm keeps a collapsed three-line task progress preview complete without changing default chat rendering."
+        },
+        {
+          "file": "mobile/src/components/mobile-markdown-blocks.tsx",
+          "mustContain": "density?: 'tight'",
+          "why": "REQ-017/022/026: optional tight Markdown rhythm keeps a collapsed three-line task progress preview complete without changing default chat rendering."
+        },
+        {
+          "file": "mobile/src/components/mobile-markdown-styles.ts",
+          "mustContain": "tightRoot:",
+          "why": "REQ-017/022/026: optional tight Markdown rhythm keeps a collapsed three-line task progress preview complete without changing default chat rendering."
         }
       ],
       "tests": [

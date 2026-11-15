@@ -101,14 +101,23 @@ describe('mobile task progress body', () => {
     expect(tree!.root.find((node) => String(node.type) === 'MobileMarkdown').props.content).toBe(
       '**Done** with [details](https://example.com)'
     )
+    expect(tree!.root.find((node) => String(node.type) === 'MobileMarkdown').props.density).toBe(
+      'tight'
+    )
     expect(clip().props.style[1]).toEqual({ maxHeight: 63 })
     measure(90)
     expect(toggle().props.accessibilityState.expanded).toBe(false)
     act(() => toggle().props.onPress())
     expect(clip().props.style[1]).toBe(false)
     expect(toggle().props.accessibilityState.expanded).toBe(true)
+    expect(tree!.root.find((node) => String(node.type) === 'MobileMarkdown').props.density).toBe(
+      undefined
+    )
     act(() => toggle().props.onPress())
     expect(clip().props.style[1]).toEqual({ maxHeight: 63 })
+    expect(tree!.root.find((node) => String(node.type) === 'MobileMarkdown').props.density).toBe(
+      'tight'
+    )
   })
 
   it('hides the control when text fits and resets on another task', () => {

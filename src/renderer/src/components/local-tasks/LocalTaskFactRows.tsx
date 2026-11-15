@@ -102,7 +102,14 @@ export function LocalTaskProgressBody({
   )
   return (
     <div className="flex min-w-0 flex-col gap-1.5">
-      <div ref={clipRef} className={cn('min-w-0 overflow-hidden', !expanded && 'max-h-[3.75rem]')}>
+      <div
+        ref={clipRef}
+        className={cn(
+          'min-w-0 overflow-hidden',
+          !expanded &&
+            'max-h-[3.75rem] [&_.comment-md-h]:block [&_.comment-md-p]:block [&_blockquote]:my-0 [&_code]:leading-5 [&_code]:py-0 [&_dl]:gap-y-0 [&_hr]:my-0 [&_ol]:my-0 [&_pre]:my-0 [&_pre]:py-0 [&_ul]:my-0'
+        )}
+      >
         {content}
       </div>
       {overflow ? (

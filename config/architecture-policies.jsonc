@@ -977,7 +977,10 @@
             "src/preload/api/ui-bridge-state-and-menu-commands.ts",
             "src/renderer/src/hooks/ipc-events/settings-sidebar-ipc-bridge.ts",
             "src/renderer/src/web/preload-api/web-ui-api.ts",
-            "src/renderer/src/web/preload-api/web-os-deep-link-api.ts"
+            "src/renderer/src/web/preload-api/web-os-deep-link-api.ts",
+            "mobile/src/components/MobileMarkdown.tsx",
+            "mobile/src/components/mobile-markdown-blocks.tsx",
+            "mobile/src/components/mobile-markdown-styles.ts"
           ],
           "message": "Branch changes an upstream path that no fork feature owns or registers as a seam; extend config/fork-features.jsonc and this allowlist, or move the change into a feature-owned path."
         }
@@ -2082,7 +2085,10 @@
             "src/preload/api/ui-bridge-state-and-menu-commands.ts",
             "src/renderer/src/hooks/ipc-events/settings-sidebar-ipc-bridge.ts",
             "src/renderer/src/web/preload-api/web-ui-api.ts",
-            "src/renderer/src/web/preload-api/web-os-deep-link-api.ts"
+            "src/renderer/src/web/preload-api/web-os-deep-link-api.ts",
+            "mobile/src/components/MobileMarkdown.tsx",
+            "mobile/src/components/mobile-markdown-blocks.tsx",
+            "mobile/src/components/mobile-markdown-styles.ts"
           ],
           "message": "Change is outside the local tasks feature."
         },

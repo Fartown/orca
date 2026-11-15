@@ -43,13 +43,24 @@ function ProgressBody(props: { body: string }) {
         <View onLayout={(event) => setContentHeight(event.nativeEvent.layout.height)}>
           {sections ? (
             sections.map((section, at) => (
-              <View key={`${at}:${section.label}`} style={styles.progressSection}>
-                <Text style={styles.sectionLabel}>{section.label}</Text>
-                <MobileMarkdown content={section.text} textScale={21 / 19} />
+              <View
+                key={`${at}:${section.label}`}
+                style={[styles.progressSection, expanded && styles.progressSectionExpanded]}
+              >
+                <Text style={[localTaskStyles.body, styles.sectionLabel]}>{section.label}</Text>
+                <MobileMarkdown
+                  content={section.text}
+                  textScale={21 / 19}
+                  density={!expanded ? 'tight' : undefined}
+                />
               </View>
             ))
           ) : (
-            <MobileMarkdown content={props.body} textScale={21 / 19} />
+            <MobileMarkdown
+              content={props.body}
+              textScale={21 / 19}
+              density={!expanded ? 'tight' : undefined}
+            />
           )}
         </View>
       </View>
@@ -252,7 +263,8 @@ const styles = StyleSheet.create({
   sectionLabel: { color: colors.textSecondary },
   progressBody: { gap: spacing.xs },
   progressClip: { overflow: 'hidden' },
-  progressSection: { gap: spacing.xs },
+  progressSection: { gap: 0 },
+  progressSectionExpanded: { gap: spacing.xs },
   progressToggle: { color: colors.textSecondary, fontSize: typography.metaSize },
   allProgress: {
     flexDirection: 'row',
