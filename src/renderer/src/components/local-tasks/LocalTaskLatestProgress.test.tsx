@@ -2,6 +2,7 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { LocalTask } from '../../../../shared/local-tasks/local-task-types'
+import { buildLocalTaskIndex } from '@/local-tasks/local-task-grouping'
 import { LocalTaskProgressBody } from './LocalTaskFactRows'
 import { LocalTaskLatestProgressCard, LocalTaskLatestProgressLine } from './LocalTaskLatestProgress'
 
@@ -114,6 +115,24 @@ describe('latest progress on a task', () => {
     )
     fireEvent.click(screen.getByRole('button', { name: 'Show more' }))
     rerender(<LocalTaskLatestProgressCard task={progress('second long body', 'two')} />)
+    expect(screen.getByRole('button', { name: 'Show more' }).getAttribute('aria-expanded')).toBe(
+      'false'
+    )
+  })
+
+  it('folds when navigating from a parent preview to the child that wrote the same progress', () => {
+    measureProgress(100)
+    const parent = { ...task, id: 'parent' }
+    const child: LocalTask = {
+      ...task,
+      id: 'child',
+      parentId: parent.id,
+      latestProgress: { kind: 'progress', body: 'same long progress', at: 1, sessionLinkId: null }
+    }
+    const index = buildLocalTaskIndex([], [parent, child])
+    const { rerender } = render(<LocalTaskLatestProgressCard task={parent} index={index} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Show more' }))
+    rerender(<LocalTaskLatestProgressCard task={child} index={index} />)
     expect(screen.getByRole('button', { name: 'Show more' }).getAttribute('aria-expanded')).toBe(
       'false'
     )

@@ -131,7 +131,7 @@ export function LocalTaskNowCard(props: {
                 .join(' · ')}
             </Text>
             <ProgressBody
-              key={`${written.taskId}:${written.at}:${written.body}`}
+              key={`${props.task.id}:${written.taskId}:${written.at}:${written.body}`}
               body={written.body}
             />
           </>

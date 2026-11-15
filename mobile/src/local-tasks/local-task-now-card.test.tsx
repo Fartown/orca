@@ -47,15 +47,17 @@ afterEach(async () => {
   await activateMobileUiLocale('en')
 })
 
-function renderBody(body: string, id = 'one') {
+function renderBody(body: string, id = 'one', descendants: LocalTask[] = [], ownProgress = true) {
   const current = {
     ...task,
     id,
-    latestProgress: { kind: 'progress' as const, body, at: 1, sessionLinkId: null }
+    latestProgress: ownProgress
+      ? { kind: 'progress' as const, body, at: 1, sessionLinkId: null }
+      : undefined
   }
   return createElement(LocalTaskNowCard, {
     task: current,
-    descendants: [],
+    descendants,
     facts: {
       workspace: null,
       hostName: '',
@@ -120,6 +122,24 @@ describe('mobile task progress body', () => {
     act(() => tree!.update(renderBody('another long body', 'two')))
     expect(clip().props.style[1]).toEqual({ maxHeight: 63 })
     expect(tree!.root.findAllByProps({ testID: 'local-task-progress-toggle' })).toHaveLength(0)
+  })
+
+  it('folds when navigating from a parent preview to the child that wrote the same progress', () => {
+    const child: LocalTask = {
+      ...task,
+      id: 'child',
+      parentId: 'parent',
+      latestProgress: { kind: 'progress', body: 'same long progress', at: 1, sessionLinkId: null }
+    }
+    act(() => {
+      tree = create(renderBody(child.latestProgress!.body, 'parent', [child], false))
+    })
+    measure(90)
+    act(() => toggle().props.onPress())
+    act(() => tree!.update(renderBody(child.latestProgress!.body, child.id)))
+    expect(clip().props.style[1]).toEqual({ maxHeight: 63 })
+    measure(90)
+    expect(toggle().props.accessibilityState.expanded).toBe(false)
   })
 
   it('updates the disclosure labels when the mobile language changes', async () => {

@@ -79,7 +79,7 @@ export function LocalTaskLatestProgressCard({
       {progress.needsYou ? <NeedsYou text={progress.needsYou} /> : null}
       <div className={cn('min-w-0', compact && 'text-xs')}>
         <LocalTaskProgressBody
-          key={`${latest.task.id}:${progress.at}`}
+          key={`${task.id}:${latest.task.id}:${progress.at}`}
           body={progress.body}
           sections={parseLocalTaskProgressSections(progress.body)}
         />
