@@ -7,6 +7,7 @@ import { normalizeExecutionHostId } from '../../../shared/execution-host'
 import type { AgentLaunchResult } from '../../../shared/agent-launch-intent'
 import type { TuiAgent } from '../../../shared/tui-agent'
 import type { LocalTask, LocalTaskProject } from '../../../shared/local-tasks/local-task-types'
+import type { LocalTaskSessionLink } from '../../../shared/local-tasks/local-task-link-types'
 import { localTaskFinishedSessions } from '../../../shared/local-tasks/local-task-finished-sessions'
 import { isFolderRepo } from '../../../shared/repo-kind'
 import { worktreeIdsEqual } from '../../../shared/worktree/id'
@@ -47,6 +48,8 @@ export type LocalTaskDispatchReceipt = {
   text: string
   message: string | null
   launch?: { hostId: string; worktreeId: string; outcome: AgentLaunchResult['outcome'] }
+  /** The first session that acknowledged a successful append; never inferred from recency. */
+  appendedSession?: LocalTaskSessionLink
   /** What `unrecorded` still has to write down. */
   record?: LocalTaskDispatchRecord
 }

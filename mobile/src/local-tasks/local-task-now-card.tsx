@@ -13,6 +13,8 @@ import {
   type LocalTaskWriteback
 } from '../../../src/shared/local-tasks/local-task-writebacks'
 import { AgentStateDot } from '../components/AgentStateDot'
+import { MobileMarkdown } from '../components/MobileMarkdown'
+import { useMobileTranslation } from '../i18n/use-mobile-translation'
 import { colors, spacing, typography } from '../theme/mobile-theme'
 import { LocalTaskCardFoot } from './local-task-card'
 import type { LocalTaskCardFacts } from './local-task-card-facts'
@@ -23,33 +25,49 @@ import type { LocalTaskSessionView } from './local-task-progress-projection'
 import { LOCAL_TASK_SESSION_DOT } from './local-task-session-dots'
 import { localTaskStyles } from './local-tasks-styles'
 
+const PROGRESS_PREVIEW_HEIGHT = 63
+
 /** A writeback's body, as its labelled lines when it was written that way. */
 function ProgressBody(props: { body: string }) {
+  const t = useMobileTranslation()
+  const [expanded, setExpanded] = useState(false)
+  const [contentHeight, setContentHeight] = useState(0)
   const sections = parseLocalTaskProgressSections(props.body)
-  if (!sections) {
-    return (
-      <>
-        {props.body
-          .split(/\n+/)
-          .map((line) => line.trim())
-          .filter(Boolean)
-          .map((line, at) => (
-            <Text key={`${at}:${line}`} style={localTaskStyles.body}>
-              {line}
-            </Text>
-          ))}
-      </>
-    )
-  }
+  const overflow = contentHeight > PROGRESS_PREVIEW_HEIGHT + 1
   return (
-    <>
-      {sections.map((section, at) => (
-        <Text key={`${at}:${section.label}`} style={localTaskStyles.body}>
-          <Text style={styles.sectionLabel}>{section.label} </Text>
-          {section.text}
-        </Text>
-      ))}
-    </>
+    <View style={styles.progressBody}>
+      <View
+        style={[styles.progressClip, !expanded && { maxHeight: PROGRESS_PREVIEW_HEIGHT }]}
+        testID="local-task-progress-clip"
+      >
+        <View onLayout={(event) => setContentHeight(event.nativeEvent.layout.height)}>
+          {sections ? (
+            sections.map((section, at) => (
+              <View key={`${at}:${section.label}`} style={styles.progressSection}>
+                <Text style={styles.sectionLabel}>{section.label}</Text>
+                <MobileMarkdown content={section.text} textScale={21 / 19} />
+              </View>
+            ))
+          ) : (
+            <MobileMarkdown content={props.body} textScale={21 / 19} />
+          )}
+        </View>
+      </View>
+      {overflow ? (
+        <Pressable
+          onPress={() => setExpanded((value) => !value)}
+          accessibilityRole="button"
+          accessibilityState={{ expanded }}
+          testID="local-task-progress-toggle"
+        >
+          <Text style={styles.progressToggle}>
+            {expanded
+              ? t('localTasks.latestProgress.showLess', 'Show less')
+              : t('localTasks.latestProgress.showMore', 'Show more')}
+          </Text>
+        </Pressable>
+      ) : null}
+    </View>
   )
 }
 
@@ -112,7 +130,10 @@ export function LocalTaskNowCard(props: {
                 .filter(Boolean)
                 .join(' · ')}
             </Text>
-            <ProgressBody body={written.body} />
+            <ProgressBody
+              key={`${written.taskId}:${written.at}:${written.body}`}
+              body={written.body}
+            />
           </>
         ) : (
           <Text style={localTaskStyles.meta}>{page.noWriteback}</Text>
@@ -229,6 +250,10 @@ const styles = StyleSheet.create({
   section: { padding: spacing.md, gap: 6 },
   heading: { color: colors.textPrimary, fontSize: typography.metaSize, fontWeight: '600' },
   sectionLabel: { color: colors.textSecondary },
+  progressBody: { gap: spacing.xs },
+  progressClip: { overflow: 'hidden' },
+  progressSection: { gap: spacing.xs },
+  progressToggle: { color: colors.textSecondary, fontSize: typography.metaSize },
   allProgress: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -7,6 +7,7 @@ import { translate } from '@/i18n/i18n'
 import { toast } from 'sonner'
 import { useAppStore } from '../../store'
 import { openPluginInstallLink } from '../../store/plugin-preview-request'
+import { openLocalTaskDeepLink } from '../../local-tasks/local-task-deep-link-navigation'
 
 function getShortcutPlatform(): NodeJS.Platform {
   if (navigator.userAgent.includes('Mac')) {
@@ -52,6 +53,16 @@ export function registerSettingsAndSidebarIpcBridge(unsubs: (() => void)[]): voi
       })
       .catch(() => {})
   }
+
+  unsubs.push(window.api.ui.onOpenLocalTaskLink?.(openLocalTaskDeepLink) ?? (() => {}))
+  void window.api.ui
+    .consumePendingLocalTaskLink?.()
+    .then((link) => {
+      if (link) {
+        openLocalTaskDeepLink(link)
+      }
+    })
+    .catch(() => {})
 
   unsubs.push(window.api.ui.onOpenPluginInstallLink?.(openPluginInstallLink) ?? (() => {}))
   const pendingPluginLink = window.api.ui.consumePendingPluginInstallLink?.()

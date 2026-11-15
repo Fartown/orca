@@ -40,3 +40,21 @@ it('returns from detail to the task summary when opened explicitly', () => {
     previewOpen: true
   })
 })
+
+it('closes a summary when its project or view changes without moving to a hovered row', () => {
+  localTaskPageStore.getState().openPreview('task-a')
+  localTaskPageStore.getState().setCursor('task-b', 'pointer')
+  localTaskPageStore.getState().setScope('project-b')
+  expect(localTaskPageStore.getState()).toMatchObject({
+    previewOpen: false,
+    cursorTaskId: null,
+    scopeProjectId: 'project-b'
+  })
+  localTaskPageStore.getState().openPreview('task-b')
+  localTaskPageStore.getState().setView('completed')
+  expect(localTaskPageStore.getState()).toMatchObject({
+    previewOpen: false,
+    cursorTaskId: null,
+    view: 'completed'
+  })
+})

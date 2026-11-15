@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Bell, CornerDownRight, EyeOff, Plus } from 'lucide-react'
 import { useNow } from '@/hooks/use-now'
 import { formatLocalTaskTime } from '@/local-tasks/local-task-time'
@@ -49,6 +49,15 @@ function BoardCard({
   hostLabels: ReadonlyMap<string, string> | undefined
 }): React.JSX.Element {
   const isCursor = useLocalTaskPage((state) => state.cursorTaskId === task.id)
+  const reveal = useLocalTaskPage(
+    (state) => state.cursorTaskId === task.id && !state.cursorFromPointer
+  )
+  const cardRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (reveal) {
+      cardRef.current?.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'auto' })
+    }
+  }, [reveal])
   const draggable = useLocalTaskRowWritable(task.id)
   const path = localTaskPathFromRoot(task, index.tasksById)
   const status = index.statusesById.get(task.statusId)
@@ -58,6 +67,7 @@ function BoardCard({
   const now = useNow(60_000)
   return (
     <div
+      ref={cardRef}
       role="button"
       tabIndex={-1}
       draggable={draggable}
@@ -205,12 +215,6 @@ function NeedsYouStrip({ model }: { model: LocalTaskListModel }): React.JSX.Elem
   )
 }
 
-/**
- * Active work first, then what is done; planning after it so an empty column never pushes
- * Completed off screen. A drop still moves a card to any column.
- */
-const COLUMN_ORDER = ['started', 'review', 'unstarted', 'completed', 'backlog', 'canceled'] as const
-
 function BoardColumn({
   column,
   model
@@ -299,15 +303,9 @@ export function LocalTaskBoard({ model }: { model: LocalTaskListModel }): React.
     <div className="flex min-h-0 flex-1 flex-col gap-2">
       <NeedsYouStrip model={model} />
       <div className="flex min-h-0 flex-1 gap-3 overflow-x-auto pb-1 scrollbar-sleek">
-        {model.columns
-          .toSorted(
-            (a, b) =>
-              COLUMN_ORDER.indexOf(statusHeadCategory(a)) -
-              COLUMN_ORDER.indexOf(statusHeadCategory(b))
-          )
-          .map((column) => (
-            <BoardColumn key={column.key} column={column} model={model} />
-          ))}
+        {model.columns.map((column) => (
+          <BoardColumn key={column.key} column={column} model={model} />
+        ))}
       </div>
       {showCanceled ? null : (
         <p className="flex items-center gap-1.5 text-2xs text-muted-foreground">

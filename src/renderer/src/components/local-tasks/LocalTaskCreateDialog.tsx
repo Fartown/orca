@@ -280,10 +280,12 @@ function CreateBody({
                 'Links the {{agent}} session ({{workspace}}) and its workspace',
                 { agent: record.session, workspace: record.workspace }
               )
-            : translate(
-                'localTasks.createFlow.stepSubtitle',
-                'Step 1 of 2: the task, then where to work'
-              )}
+            : where === 'new'
+              ? translate(
+                  'localTasks.createFlow.stepSubtitle',
+                  'Step 1 of 2: the task, then where to work'
+                )
+              : null}
         </span>
       </div>
       <section className="flex flex-col gap-2">

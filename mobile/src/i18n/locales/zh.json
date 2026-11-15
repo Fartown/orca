@@ -4598,6 +4598,10 @@
       "createdNotStarted": "已创建 {{ref}}。{{reason}}"
     },
     "rejectNoFinishedSession": "原因已记成评论。没有做完一轮的会话可以接收；请打开会话发送，或从任务开一个新会话。",
-    "rejectNotSent": "原因已记成评论，但 {{total}} 个会话中有 {{missed}} 个没收到：{{reason}}"
+    "rejectNotSent": "原因已记成评论，但 {{total}} 个会话中有 {{missed}} 个没收到：{{reason}}",
+    "latestProgress": {
+      "showMore": "展开更多",
+      "showLess": "收起"
+    }
   }
 }

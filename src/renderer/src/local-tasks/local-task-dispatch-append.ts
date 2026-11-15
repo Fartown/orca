@@ -29,9 +29,11 @@ export async function appendToFinishedSessions(
     return refused(translate('localTasks.dispatch.hostNotConnected', 'Host not connected'))
   }
   let sent = 0
+  let appendedSession: LocalTaskSessionLink | null = null
   for (const session of reachable) {
     if ((await sendLocalTaskReply(session, text)).status === 'sent') {
       sent += 1
+      appendedSession ??= session
     }
   }
   if (sent === 0) {
@@ -65,6 +67,7 @@ export async function appendToFinishedSessions(
     createdTaskIds: [],
     target,
     text,
+    ...(appendedSession ? { appendedSession } : {}),
     message: notes.length > 0 ? notes.join(' ') : null
   }
 }

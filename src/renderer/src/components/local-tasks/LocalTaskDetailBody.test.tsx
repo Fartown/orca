@@ -80,6 +80,7 @@ it('preserves input typed during a save when a newer remote revision changes the
   const title = screen.getByRole('textbox', { name: 'Title' })
   fireEvent.change(title, { target: { value: 'First' } })
   fireEvent.blur(title)
+  await waitFor(() => expect(fixture.save).toHaveBeenCalledOnce())
   fireEvent.change(title, { target: { value: 'Second' } })
   const remote = { ...task, title: 'Remote', revision: 5 }
   localTasksDomainStore.getState().upsertTasks([remote])
@@ -87,4 +88,42 @@ it('preserves input typed during a save when a newer remote revision changes the
   finishSave('saved')
   await waitFor(() => expect(screen.getByText(/Changed on another device/)).toBeTruthy())
   expect(title).toHaveProperty('value', 'Second')
+})
+
+it('discards a title on Escape while Enter and ordinary blur save', async () => {
+  render(<LocalTaskDetailTitle task={task} writable />)
+  const title = screen.getByRole('textbox', { name: 'Title' })
+  title.focus()
+  fireEvent.change(title, { target: { value: 'Canceled draft' } })
+  const upstreamBlur = (event: KeyboardEvent): void => {
+    if (event.key === 'Escape') {
+      title.blur()
+    }
+  }
+  window.addEventListener('keydown', upstreamBlur, true)
+  fireEvent.keyDown(title, { key: 'Escape' })
+  window.removeEventListener('keydown', upstreamBlur, true)
+  await Promise.resolve()
+  expect(title).toHaveProperty('value', 'Task')
+  expect(fixture.save).not.toHaveBeenCalled()
+
+  title.focus()
+  fireEvent.change(title, { target: { value: 'Saved with Enter' } })
+  fireEvent.keyDown(title, { key: 'Enter' })
+  fireEvent.blur(title)
+  await waitFor(() =>
+    expect(fixture.save).toHaveBeenCalledWith('task-1', { title: 'Saved with Enter' }, 3)
+  )
+})
+
+it('does not treat an IME composition key as title submission or cancellation', async () => {
+  render(<LocalTaskDetailTitle task={task} writable />)
+  const title = screen.getByRole('textbox', { name: 'Title' })
+  fireEvent.change(title, { target: { value: '正在输入' } })
+  fireEvent.keyDown(title, { key: 'Escape', isComposing: true })
+  fireEvent.keyDown(title, { key: 'Enter', isComposing: true })
+  expect(title).toHaveProperty('value', '正在输入')
+  expect(fixture.save).not.toHaveBeenCalled()
+  fireEvent.blur(title)
+  await waitFor(() => expect(fixture.save).toHaveBeenCalledWith('task-1', { title: '正在输入' }, 3))
 })

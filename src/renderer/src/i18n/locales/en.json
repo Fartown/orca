@@ -24270,7 +24270,14 @@
       "review": "Review",
       "cancelTask": "Cancel task",
       "editProperties": "Edit properties…",
-      "addDescription": "Add description"
+      "addDescription": "Add description",
+      "copyLink": "Copy link",
+      "linkCopied": "Task link copied",
+      "linkCopyFailed": "Could not copy task link",
+      "linkLibraryMissing": "Task library is not available in this Orca",
+      "linkLibraryOffline": "Task library is disconnected; showing saved task",
+      "linkTaskMissing": "Task is not available in its library",
+      "linkLibraryUnavailable": "Task library is disconnected; no saved task is available"
     },
     "field": {
       "status": "Status",
@@ -24800,7 +24807,9 @@
       "askUnconfirmed": "Sent to the dispatcher, but its arrival is not confirmed yet. Check the conversation.",
       "appendPartial": "{{missed}} of {{total}} finished sessions did not get it",
       "appendNotRecorded": "Sent, but it could not be recorded on the task",
-      "recordAgain": "Record again"
+      "recordAgain": "Record again",
+      "previewTask": "Preview task",
+      "previewSession": "Preview session"
     },
     "band": {
       "description": "Sessions waiting for your answer or a finished turn you have not seen, and tasks waiting for your acceptance",

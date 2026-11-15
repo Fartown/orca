@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { AlertTriangle, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { translate } from '@/i18n/i18n'
@@ -62,6 +62,7 @@ export function LocalTaskDetailTitle({
     same: sameText,
     toPatch: (title) => ({ title: title.trim() })
   })
+  const cancelingBlur = useRef(false)
   return (
     <div className="flex flex-col gap-1">
       <ImeTextarea
@@ -72,14 +73,26 @@ export function LocalTaskDetailTitle({
         // Why: a title is one line of text; a pasted newline would only be stripped on save.
         onChange={(event) => field.edit(event.target.value.replace(/\r?\n/g, ' '))}
         onBlur={() => {
-          // Why: an emptied title is not saved; the stored one comes back.
-          if (field.value.trim()) {
-            void field.commit()
-          } else {
-            field.discard()
-          }
+          // The page's capture-phase Esc owner blurs before this field sees the key.
+          queueMicrotask(() => {
+            if (cancelingBlur.current) {
+              cancelingBlur.current = false
+            } else if (field.value.trim()) {
+              void field.commit()
+            } else {
+              field.discard()
+            }
+          })
         }}
         onKeyDown={(event) => {
+          if (event.key === 'Escape' && !isImeCompositionKeyDown(event)) {
+            cancelingBlur.current = true
+            field.discard()
+            event.preventDefault()
+            event.stopPropagation()
+            event.currentTarget.blur()
+            return
+          }
           if (event.key === 'Enter' && !isImeCompositionKeyDown(event)) {
             event.preventDefault()
             event.currentTarget.blur()

@@ -46,6 +46,13 @@ export const uiStateAndMenuCommandsApi = {
   },
   consumePendingSkillShare: (): Promise<string | null> =>
     ipcRenderer.invoke('ui:consumePendingSkillShare'),
+  onOpenLocalTaskLink: (callback: (link: string) => void): (() => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, link: string): void => callback(link)
+    ipcRenderer.on('ui:openLocalTaskLink', listener)
+    return () => ipcRenderer.removeListener('ui:openLocalTaskLink', listener)
+  },
+  consumePendingLocalTaskLink: (): Promise<string | null> =>
+    ipcRenderer.invoke('ui:consumePendingLocalTaskLink'),
   onOpenPluginInstallLink: (callback: (link: string) => void): (() => void) => {
     const listener = (_event: Electron.IpcRendererEvent, link: string): void => callback(link)
     ipcRenderer.on('ui:openPluginInstallLink', listener)

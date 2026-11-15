@@ -74,13 +74,16 @@ export function createDesktopHandoff(options: {
 export function desktopHandoffArguments(pending: {
   skillShareDeepLinks: { consume: () => string | null }
   pluginInstallLinks: { consume: () => string | null }
+  localTaskDeepLinks: { consume: () => string | null }
   osOpenedDocuments: { consume: () => string[] }
 }): string[] {
   const shareId = pending.skillShareDeepLinks.consume()
   const pluginLink = pending.pluginInstallLinks.consume()
+  const taskLink = pending.localTaskDeepLinks.consume()
   return [
     ...(shareId ? [`orca://skills/share/${shareId}`] : []),
     ...(pluginLink ? [pluginLink] : []),
+    ...(taskLink ? [taskLink] : []),
     ...pending.osOpenedDocuments.consume()
   ]
 }

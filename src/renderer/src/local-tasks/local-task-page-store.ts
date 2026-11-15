@@ -146,9 +146,12 @@ export const localTaskPageStore = createStore<LocalTaskPageState>((set) => ({
       scopeProjectId,
       view: view ?? state.view,
       detailTaskId: null,
+      previewOpen: false,
+      cursorTaskId: null,
       selectedTaskIds: []
     })),
-  setView: (view) => set({ view, detailTaskId: null, selectedTaskIds: [] }),
+  setView: (view) =>
+    set({ view, detailTaskId: null, previewOpen: false, cursorTaskId: null, selectedTaskIds: [] }),
   setLayout: (layout) => set({ layout }),
   setGroupBy: (groupBy) => set({ groupBy }),
   setSortBy: (sortBy) => set({ sortBy }),

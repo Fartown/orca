@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import CommentMarkdown from '@/components/sidebar/CommentMarkdown'
 import { translate } from '@/i18n/i18n'
@@ -49,31 +49,69 @@ export function LocalTaskProgressBody({
   /** Extra rows that align with the writeback's own. */
   after?: React.ReactNode
 }): React.JSX.Element {
-  const [expanded, setExpanded] = useState(false)
-  const long = body.length > 320 || body.split('\n').length > 6
+  const [disclosure, setDisclosure] = useState({ body, expanded: false })
+  const expanded = disclosure.body === body && disclosure.expanded
+  const [measurement, setMeasurement] = useState({ body, overflow: false })
+  const overflow = measurement.body === body && measurement.overflow
+  const clipRef = useRef<HTMLDivElement>(null)
+  useLayoutEffect(() => {
+    if (disclosure.body !== body) {
+      setDisclosure({ body, expanded: false })
+    }
+  }, [body, disclosure.body])
+  useLayoutEffect(() => {
+    const clip = clipRef.current
+    if (!clip) {
+      return
+    }
+    const measure = (): void => {
+      if (!expanded) {
+        const next = clip.scrollHeight > clip.clientHeight + 1
+        setMeasurement((current) =>
+          current.body === body && current.overflow === next ? current : { body, overflow: next }
+        )
+      }
+    }
+    measure()
+    if (typeof ResizeObserver !== 'undefined') {
+      const observer = new ResizeObserver(measure)
+      observer.observe(clip)
+      return () => observer.disconnect()
+    }
+    window.addEventListener('resize', measure)
+    return () => window.removeEventListener('resize', measure)
+  }, [body, expanded])
   const content = sections ? (
     <LocalTaskFactRows>
       {sections.map((section, at) => (
         <LocalTaskFactRow key={`${at}:${section.label}`} label={section.label}>
-          <CommentMarkdown content={section.text} variant="compact" className="text-sm" />
+          <CommentMarkdown
+            content={section.text}
+            variant="compact"
+            className="text-sm leading-5 [&_li]:leading-5"
+          />
         </LocalTaskFactRow>
       ))}
     </LocalTaskFactRows>
   ) : (
-    <CommentMarkdown content={body} variant="compact" className="text-sm text-foreground" />
+    <CommentMarkdown
+      content={body}
+      variant="compact"
+      className="text-sm leading-5 text-foreground [&_li]:leading-5"
+    />
   )
   return (
     <div className="flex min-w-0 flex-col gap-1.5">
-      <div className={cn('min-w-0 overflow-hidden', long && !expanded && 'max-h-32')}>
+      <div ref={clipRef} className={cn('min-w-0 overflow-hidden', !expanded && 'max-h-[3.75rem]')}>
         {content}
       </div>
-      {long ? (
+      {overflow ? (
         <Button
           variant="ghost"
           size="xs"
           className="self-start"
           aria-expanded={expanded}
-          onClick={() => setExpanded(!expanded)}
+          onClick={() => setDisclosure({ body, expanded: !expanded })}
         >
           {expanded
             ? translate('localTasks.latestProgress.showLess', 'Show less')

@@ -90,6 +90,8 @@ export type UiCommandEventApi = {
   quitAfterStoppingAllSessions?: () => Promise<boolean>
   onOpenSkillShare: (callback: (shareId: string) => void) => () => void
   consumePendingSkillShare: () => Promise<string | null>
+  onOpenLocalTaskLink: (callback: (link: string) => void) => () => void
+  consumePendingLocalTaskLink: () => Promise<string | null>
   /** Raw `orca://plugins/...` link; the renderer validates it. */
   onOpenPluginInstallLink: (callback: (link: string) => void) => () => void
   consumePendingPluginInstallLink: () => Promise<string | null>

@@ -3295,7 +3295,9 @@
         "src/main/runtime/runtime-notifier-contract.ts",
         "src/shared/workspace-session-state-types.ts",
         "src/main/ipc/desktop-runtime-sender-lifecycle.ts",
-        "src/renderer/src/lib/e2e-config.ts"
+        "src/renderer/src/lib/e2e-config.ts",
+        "mobile/src/components/MobileMarkdown.tsx",
+        "src/main/startup/skill-share-deep-link-state.ts"
       ],
       "policyId": "local-tasks",
       "ownedPaths": [
@@ -4074,6 +4076,56 @@
           "file": "src/main/runtime/runtime-rpc/runtime-rpc-websocket-dispatch.ts",
           "mustContain": "connectionSignal: abortRegistration?.signal,",
           "why": "REQ-030: paired desktop socket retirement invalidates a delayed claim before ownership registration"
+        },
+        {
+          "file": "src/main/index.ts",
+          "mustContain": "state.localTaskDeepLinks.capture(argv",
+          "why": "REQ-026: register library-qualified task links with the existing cold/warm deep-link and renderer delivery channels."
+        },
+        {
+          "file": "src/main/startup/orca-deep-link-url.ts",
+          "mustContain": "parseLocalTaskDeepLink(url) !== null",
+          "why": "REQ-026: register library-qualified task links with the existing cold/warm deep-link and renderer delivery channels."
+        },
+        {
+          "file": "src/main/startup/main-process-state.ts",
+          "mustContain": "localTaskDeepLinks: new PendingDeepLinkState(localTaskDeepLinkFromArguments)",
+          "why": "REQ-026: register library-qualified task links with the existing cold/warm deep-link and renderer delivery channels."
+        },
+        {
+          "file": "src/main/startup/main-process-ipc-bootstrap.ts",
+          "mustContain": "'ui:consumePendingLocalTaskLink'",
+          "why": "REQ-026: register library-qualified task links with the existing cold/warm deep-link and renderer delivery channels."
+        },
+        {
+          "file": "src/main/window/macos-desktop-handoff.ts",
+          "mustContain": "...(taskLink ? [taskLink] : [])",
+          "why": "REQ-026: register library-qualified task links with the existing cold/warm deep-link and renderer delivery channels."
+        },
+        {
+          "file": "src/preload/api/ui-command-event-api.ts",
+          "mustContain": "onOpenLocalTaskLink:",
+          "why": "REQ-026: register library-qualified task links with the existing cold/warm deep-link and renderer delivery channels."
+        },
+        {
+          "file": "src/preload/api/ui-bridge-state-and-menu-commands.ts",
+          "mustContain": "ipcRenderer.on('ui:openLocalTaskLink'",
+          "why": "REQ-026: register library-qualified task links with the existing cold/warm deep-link and renderer delivery channels."
+        },
+        {
+          "file": "src/renderer/src/hooks/ipc-events/settings-sidebar-ipc-bridge.ts",
+          "mustContain": "onOpenLocalTaskLink?.(openLocalTaskDeepLink)",
+          "why": "REQ-026: register library-qualified task links with the existing cold/warm deep-link and renderer delivery channels."
+        },
+        {
+          "file": "src/renderer/src/web/preload-api/web-ui-api.ts",
+          "mustContain": "...webOsDeepLinkApi,",
+          "why": "REQ-026: register library-qualified task links with the existing cold/warm deep-link and renderer delivery channels."
+        },
+        {
+          "file": "src/renderer/src/web/preload-api/web-os-deep-link-api.ts",
+          "mustContain": "export const webOsDeepLinkApi = {",
+          "why": "REQ-026: register library-qualified task links with the existing cold/warm deep-link and renderer delivery channels."
         }
       ],
       "tests": [
@@ -4198,7 +4250,14 @@
         "src/renderer/src/local-tasks/local-task-dispatch-launch.test.ts",
         "mobile/src/local-tasks/local-task-review-actions.test.tsx",
         "src/main/local-tasks/local-tasks-upstream-registration.test.ts",
-        "src/shared/local-tasks/local-task-retired-cleanup-ticket-source.test.ts"
+        "src/shared/local-tasks/local-task-retired-cleanup-ticket-source.test.ts",
+        "mobile/src/local-tasks/local-task-now-card.test.tsx",
+        "src/renderer/src/components/local-tasks/LocalTaskLatestProgress.test.tsx",
+        "src/renderer/src/components/local-tasks/LocalTaskDispatchReceipt.test.tsx",
+        "src/shared/local-tasks/local-task-deep-link.test.ts",
+        "src/main/local-tasks/local-task-deep-link-routing.test.ts",
+        "src/renderer/src/local-tasks/local-task-deep-link-navigation.test.ts",
+        "src/renderer/src/local-tasks/local-task-receipt-preview.test.ts"
       ],
       "checks": [
         "pnpm exec vitest run --config config/vitest.config.ts src/main/local-tasks src/shared/local-tasks src/main/runtime/rpc/methods/local-tasks.test.ts src/shared/host-operation-ownership.test.ts src/main/runtime/runtime-rpc/fork-mobile-rpc-method-allowlist.test.ts src/main/runtime/runtime-rpc-mobile-method-allowlist.test.ts src/cli/local-tasks src/main/ipc/desktop-runtime-sender-lifecycle.test.ts",
