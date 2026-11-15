@@ -27,6 +27,7 @@ import {
 } from './agent-task-complete-settings'
 
 import { installRunDeferredConnect } from './run-deferred-connect'
+import { paneIsCoveredByNativeChat } from '../native-chat-covered-pane'
 
 import { installSleepingRecordAccess } from './sleeping-record-access'
 import { installShellCommandInference } from './shell-command-inference'
@@ -56,7 +57,10 @@ export function connectPanePty(
   session.tabGeneration = terminalTab?.generation ?? 0
   // Recovery belongs to this xterm instance; late requests cannot replace its already-remounted successor.
   session.terminalRecoveryGeneration = captureTabRecoveryGeneration(terminalTab)
-  session.terminalRecoveryInstance = registerTerminalPaneRecoveryInstance(session.deps.tabId)
+  session.terminalRecoveryInstance = registerTerminalPaneRecoveryInstance(
+    session.deps.tabId,
+    () => session.deps.isVisibleRef.current && paneIsCoveredByNativeChat(session.pane)
+  )
   session.mountFollowsTerminalPark = session.deps.mountFollowsTerminalPark
   session.authoritativeReattachGeneration = 0
   exposeE2eTerminalPtyOutputDebug()

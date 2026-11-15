@@ -249,14 +249,31 @@
       "title": "终端聊天视图恢复",
       "goal": "恢复已有终端标签的聊天视图切换，保留同一终端与会话绑定",
       "journal": "docs/issue/终端聊天视图恢复/journal.md",
-      "dependsOn": ["src/renderer/src/i18n/i18n.ts"],
+      "dependsOn": [
+        "src/renderer/src/i18n/i18n.ts",
+        "src/renderer/src/components/terminal-pane/terminal-recovery-ledger-test-store.ts",
+        "src/renderer/src/store/terminals/terminal-tab-location.ts"
+      ],
       "policyId": "native-chat-view-recovery",
       "ownedPaths": [
         "src/renderer/src/native-chat-view-recovery/**",
         "docs/issue/终端聊天视图恢复/**"
       ],
-      "requiredFiles": ["src/renderer/src/native-chat-view-recovery/TerminalTabViewSwitch.tsx"],
+      "requiredFiles": [
+        "src/renderer/src/native-chat-view-recovery/TerminalTabViewSwitch.tsx",
+        "src/renderer/src/native-chat-view-recovery/terminal-chat-recovery-owner.ts"
+      ],
       "seams": [
+        {
+          "file": "src/renderer/src/components/terminal-pane/terminal-pane-recovery.ts",
+          "mustContain": "allowsTerminalChatRecovery",
+          "why": "Permit a current visible terminal-backed chat to reuse existing recovery admission."
+        },
+        {
+          "file": "src/renderer/src/components/terminal-pane/pty-connection/connect-pane-pty.ts",
+          "mustContain": "paneIsCoveredByNativeChat",
+          "why": "Capture the real pane visibility and chat cover in its recovery instance."
+        },
         {
           "file": "src/renderer/src/components/tab-bar/SortableTabContextMenu.tsx",
           "mustContain": "TerminalTabViewSwitch",
@@ -268,9 +285,12 @@
           "why": "Keep the existing menu behavior contract aligned with the restored entry."
         }
       ],
-      "tests": ["src/renderer/src/components/tab-bar/SortableTabContextMenu.test.tsx"],
+      "tests": [
+        "src/renderer/src/components/tab-bar/SortableTabContextMenu.test.tsx",
+        "src/renderer/src/native-chat-view-recovery/terminal-chat-recovery.test.ts"
+      ],
       "checks": [
-        "pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/components/tab-bar/SortableTabContextMenu.test.tsx src/renderer/src/components/tab-bar/native-chat-tab-agent-evidence.test.ts"
+        "pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/components/tab-bar/SortableTabContextMenu.test.tsx src/renderer/src/components/tab-bar/native-chat-tab-agent-evidence.test.ts src/renderer/src/native-chat-view-recovery/terminal-chat-recovery.test.ts src/renderer/src/components/terminal-pane/terminal-pane-recovery.test.ts src/renderer/src/components/terminal-pane/terminal-pane-recovery-unsettled-fallback.test.ts src/renderer/src/components/terminal-pane/terminal-pane-surface-ownership.test.ts"
       ]
     },
     {
