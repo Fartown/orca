@@ -4292,12 +4292,15 @@
         "src/shared/local-tasks/local-task-deep-link.test.ts",
         "src/main/local-tasks/local-task-deep-link-routing.test.ts",
         "src/renderer/src/local-tasks/local-task-deep-link-navigation.test.ts",
-        "src/renderer/src/local-tasks/local-task-receipt-preview.test.ts"
+        "src/renderer/src/local-tasks/local-task-receipt-preview.test.ts",
+        "mobile/src/components/MobileMarkdown.rendering.test.tsx",
+        "mobile/src/components/mobile-markdown-selectable.test.tsx",
+        "mobile/src/local-tasks/local-task-activity-section.test.tsx"
       ],
       "checks": [
         "pnpm exec vitest run --config config/vitest.config.ts src/main/local-tasks src/shared/local-tasks src/main/runtime/rpc/methods/local-tasks.test.ts src/shared/host-operation-ownership.test.ts src/main/runtime/runtime-rpc/fork-mobile-rpc-method-allowlist.test.ts src/main/runtime/runtime-rpc-mobile-method-allowlist.test.ts src/cli/local-tasks src/main/ipc/desktop-runtime-sender-lifecycle.test.ts",
         "ORCA_BACKGROUND_LAUNCH=1 pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/local-tasks src/renderer/src/components/local-tasks src/renderer/src/components/task-page src/renderer/src/components/cmd-j src/renderer/src/lib/worktree-creation-structured-session.test.ts src/renderer/src/lib/agent-message-send.test.ts src/renderer/src/lib/active-agent-note-send-delivery-guard.test.ts",
-        "pnpm --dir mobile exec vitest run src/local-tasks src/home/MobileHomeTasksAndAutomations.test.tsx src/session/use-notification-pane-navigation.test.tsx src/components/bottom-drawer src/mobile-web-shell/bridge/bridge-rpc-client-frames.test.ts",
+        "pnpm --dir mobile exec vitest run src/local-tasks src/home/MobileHomeTasksAndAutomations.test.tsx src/session/use-notification-pane-navigation.test.tsx src/components/bottom-drawer src/mobile-web-shell/bridge/bridge-rpc-client-frames.test.ts src/components/MobileMarkdown.rendering.test.tsx src/components/mobile-markdown-selectable.test.tsx",
         "pnpm exec vitest run --config config/vitest.config.ts config/scripts/mobile-web-app-file-attachment-grant.test.mjs config/scripts/mobile-web-app/mobile-web-app-session-dictation-capture.test.mjs config/scripts/mobile-web-app/mobile-web-app-page-grant-call-sites.test.mjs config/scripts/mobile-web-app/mobile-web-app-screencast-lane-grant.test.mjs config/scripts/mobile-web-app/mobile-web-app-external-navigation-grant.test.mjs"
       ]
     },

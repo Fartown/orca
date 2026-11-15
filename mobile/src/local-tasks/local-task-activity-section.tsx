@@ -9,6 +9,7 @@ import type {
 import { isLocalTaskProgressPayload } from '../../../src/shared/local-tasks/local-task-progress'
 import { ActionSheetModal } from '../components/ActionSheetModal'
 import { ConfirmModal } from '../components/ConfirmModal'
+import { MobileMarkdown } from '../components/MobileMarkdown'
 import { colors, radii, spacing, typography } from '../theme/mobile-theme'
 import type { LocalTasksApi } from './local-tasks-api'
 import { formatLocalTaskAgo, localTasksCopy } from './local-tasks-copy'
@@ -156,7 +157,11 @@ export function LocalTaskActivitySection(props: Props) {
                 </Text>
                 {event.kind === 'comment' && event.body ? (
                   <View style={styles.bubble}>
-                    <Text style={localTaskStyles.body}>{event.body}</Text>
+                    {isLocalTaskProgressPayload(event.payload) ? (
+                      <MobileMarkdown content={event.body} />
+                    ) : (
+                      <Text style={localTaskStyles.body}>{event.body}</Text>
+                    )}
                   </View>
                 ) : null}
               </View>
