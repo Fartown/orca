@@ -957,6 +957,9 @@
             "src/renderer/src/components/sidebar/sidebar-host-options.ts",
             "src/renderer/src/components/sidebar/sidebar-host-options.test.ts",
             "src/shared/execution-host-registry.test.ts",
+            "docs/issue/跨版本Wire夹具兼容/**",
+            "tests/e2e/cross-version-wire/release-checkout-publication.ts",
+            "tests/e2e/cross-version-wire/release-checkout.unit.test.ts",
             "src/renderer/src/components/markdown-review-anchor-recovery/**",
             "docs/issue/Markdown评论失效锚点恢复/**",
             "tests/e2e/markdown-review-anchor-recovery.spec.ts",
@@ -2226,6 +2229,32 @@
             ".gitignore"
           ],
           "message": "Change is outside plugin workspace remote."
+        }
+      ]
+    },
+    {
+      "id": "cross-version-wire-fixture-compat",
+      "description": "Keep historical cross-version wire checkouts usable when the terminal protocol file moves uniquely.",
+      "rules": [
+        {
+          "id": "cross-version-wire-fixture-compat-worktree-scope",
+          "type": "change-scope",
+          "comparison": "worktree",
+          "whenChanged": [
+            "docs/issue/跨版本Wire夹具兼容/**",
+            "tests/e2e/cross-version-wire/release-checkout-publication.ts",
+            "tests/e2e/cross-version-wire/release-checkout.unit.test.ts"
+          ],
+          "allowedPaths": [
+            "docs/issue/跨版本Wire夹具兼容/**",
+            "tests/e2e/cross-version-wire/release-checkout-publication.ts",
+            "tests/e2e/cross-version-wire/release-checkout.unit.test.ts",
+            ".gitignore",
+            "config/fork-features.jsonc",
+            "config/architecture-policies.jsonc",
+            "docs/issue/README.md"
+          ],
+          "message": "Change is outside cross-version wire fixture compatibility."
         }
       ]
     },
