@@ -6,7 +6,10 @@ import { localTaskClientId, localTaskEndpointEnvironmentId } from './local-task-
 import { subscribeLocalTaskAppStore } from './local-task-app-store-subscription'
 import { localTasksDomainStore } from './local-tasks-domain-store'
 import { openLocalTaskPage } from './local-task-navigation'
-import { parseLocalTaskDeepLink } from '../../../shared/local-tasks/local-task-deep-link'
+import {
+  isLocalTaskDeepLinkCandidate,
+  parseLocalTaskDeepLink
+} from '../../../shared/local-tasks/local-task-deep-link'
 
 let stopPending: (() => void) | null = null
 const DUPLICATE_LINK_WINDOW_MS = 3_000
@@ -14,8 +17,7 @@ let lastLink: string | null = null
 let lastLinkAt = 0
 
 export function openLocalTaskDeepLink(link: string): void {
-  const target = parseLocalTaskDeepLink(link)
-  if (!target) {
+  if (!isLocalTaskDeepLinkCandidate(link)) {
     return
   }
   const now = Date.now()
@@ -26,6 +28,11 @@ export function openLocalTaskDeepLink(link: string): void {
   lastLinkAt = now
   stopPending?.()
   stopPending = null
+  const target = parseLocalTaskDeepLink(link)
+  if (!target) {
+    toast.error(translate('localTasks.detail.linkInvalid', 'Task link is invalid'))
+    return
+  }
   const taskId = localTaskClientId(target.endpoint, target.taskId)
   openLocalTaskPage()
   let settled = false

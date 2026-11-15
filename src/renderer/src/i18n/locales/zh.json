@@ -23541,6 +23541,7 @@
       "copyLink": "复制链接",
       "linkCopied": "任务链接已复制",
       "linkCopyFailed": "无法复制任务链接",
+      "linkInvalid": "任务链接无效",
       "linkLibraryMissing": "此 Orca 中没有该任务库",
       "linkLibraryOffline": "任务库已断开，显示保存的任务",
       "linkTaskMissing": "该任务库中找不到任务",

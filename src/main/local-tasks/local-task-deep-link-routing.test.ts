@@ -28,3 +28,17 @@ it('routes an OS task link through capture, cold-start consume and sidecar hando
     })
   ).toContain(link)
 })
+
+it('routes a malformed task URL to its owner without capturing unrelated Orca URLs', () => {
+  const malformed = 'orca://tasks/v1/local/a%2Fb'
+  const unrelated = 'orca://pair?code=x'
+  expect(isRoutedOrcaDeepLink(malformed)).toBe(true)
+  expect(isRoutedOrcaDeepLink(unrelated)).toBe(false)
+
+  const pending = new PendingDeepLinkState(localTaskDeepLinkFromArguments)
+  const publish = vi.fn()
+  expect(pending.capture(['Orca', unrelated], publish)).toBe(false)
+  expect(pending.capture(['Orca', malformed], publish)).toBe(true)
+  expect(publish).toHaveBeenCalledExactlyOnceWith(malformed)
+  expect(pending.consume()).toBe(malformed)
+})

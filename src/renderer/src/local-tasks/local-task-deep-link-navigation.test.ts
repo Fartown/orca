@@ -246,3 +246,40 @@ it('does not open a task from a missing paired library', () => {
   expect(mocks.open).toHaveBeenCalledExactlyOnceWith()
   expect(mocks.error).toHaveBeenCalledOnce()
 })
+
+it('explains a malformed task link without navigating or selecting another task', () => {
+  domain.getState().openEndpoint('local')
+  domain
+    .getState()
+    .writer('local')
+    .applyTasks([task('same-id')])
+
+  openLocalTaskDeepLink('orca://tasks/v1/local/a%2Fb')
+
+  expect(mocks.error).toHaveBeenCalledExactlyOnceWith(expect.any(String))
+  expect(mocks.open).not.toHaveBeenCalled()
+})
+
+it('cancels a waiting task link when a malformed task URL arrives', () => {
+  domain.getState().openEndpoint('local')
+  setAppState({ runtimeEnvironmentCatalogSettled: false })
+  openLocalTaskDeepLink(localTaskDeepLink({ endpoint: 'runtime:env-1', taskId: 'old' }))
+
+  openLocalTaskDeepLink('orca://tasks/v1/local/a%2Fb')
+  domain.getState().openEndpoint('runtime:env-1')
+  domain
+    .getState()
+    .writer('runtime:env-1')
+    .applyTasks([task('runtime:env-1/old')])
+
+  expect(mocks.error).toHaveBeenCalledOnce()
+  expect(mocks.open).toHaveBeenCalledExactlyOnceWith()
+  expect(mocks.appListeners.size).toBe(0)
+})
+
+it('ignores unrelated Orca links without a task error', () => {
+  openLocalTaskDeepLink('orca://pair?code=abc')
+
+  expect(mocks.error).not.toHaveBeenCalled()
+  expect(mocks.open).not.toHaveBeenCalled()
+})

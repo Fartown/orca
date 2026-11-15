@@ -4104,7 +4104,7 @@
         },
         {
           "file": "src/main/startup/orca-deep-link-url.ts",
-          "mustContain": "parseLocalTaskDeepLink(url) !== null",
+          "mustContain": "isLocalTaskDeepLinkCandidate(url)",
           "why": "REQ-026: register library-qualified task links with the existing cold/warm deep-link and renderer delivery channels."
         },
         {

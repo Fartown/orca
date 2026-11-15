@@ -1,6 +1,16 @@
 export type LocalTaskDeepLinkTarget = { endpoint: 'local' | `runtime:${string}`; taskId: string }
 
 const PREFIX = 'orca://tasks/v1/'
+const TASK_LINK_AUTHORITY = 'orca://tasks'
+
+export function isLocalTaskDeepLinkCandidate(value: string): boolean {
+  return (
+    value === TASK_LINK_AUTHORITY ||
+    value.startsWith(`${TASK_LINK_AUTHORITY}/`) ||
+    value.startsWith(`${TASK_LINK_AUTHORITY}?`) ||
+    value.startsWith(`${TASK_LINK_AUTHORITY}#`)
+  )
+}
 
 function isLocalTaskEndpoint(value: string): value is LocalTaskDeepLinkTarget['endpoint'] {
   return value === 'local' || /^runtime:[^/\\:]+$/.test(value)
@@ -40,5 +50,5 @@ export function parseLocalTaskDeepLink(value: string): LocalTaskDeepLinkTarget |
 }
 
 export function localTaskDeepLinkFromArguments(argv: readonly string[]): string | null {
-  return argv.find((argument) => parseLocalTaskDeepLink(argument) !== null) ?? null
+  return argv.find(isLocalTaskDeepLinkCandidate) ?? null
 }

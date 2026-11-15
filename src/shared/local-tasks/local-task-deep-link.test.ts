@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { localTaskDeepLink, parseLocalTaskDeepLink } from './local-task-deep-link'
+import {
+  localTaskDeepLink,
+  localTaskDeepLinkFromArguments,
+  parseLocalTaskDeepLink
+} from './local-task-deep-link'
 
 describe('local task deep links', () => {
   it('round trips the owning local or paired library and its own task id', () => {
@@ -22,5 +26,16 @@ describe('local task deep links', () => {
     ]) {
       expect(parseLocalTaskDeepLink(link)).toBeNull()
     }
+  })
+
+  it('forwards malformed task URLs for a visible error while leaving other Orca URLs alone', () => {
+    const malformed = 'orca://tasks/v1/local/a%2Fb'
+    expect(parseLocalTaskDeepLink(malformed)).toBeNull()
+    expect(localTaskDeepLinkFromArguments(['Orca', 'orca://pair?code=x', malformed])).toBe(
+      malformed
+    )
+    expect(localTaskDeepLinkFromArguments(['Orca', 'orca://pair?code=x'])).toBeNull()
+    expect(localTaskDeepLinkFromArguments(['Orca', 'orca://skills/share/abc'])).toBeNull()
+    expect(localTaskDeepLinkFromArguments(['Orca', 'orca://tasks-other/v1/local/id'])).toBeNull()
   })
 })
