@@ -2,7 +2,7 @@ import { createElement } from 'react'
 import { act, create, type ReactTestInstance, type ReactTestRenderer } from 'react-test-renderer'
 import { afterEach, expect, it, vi } from 'vitest'
 import type { LocalTaskEvent } from '../../../src/shared/local-tasks/local-task-types'
-import type { LocalTasksApi } from './local-tasks-api'
+import { createLocalTasksApi } from './local-tasks-api'
 import { LocalTaskActivitySection } from './local-task-activity-section'
 
 vi.mock('react-native', () => ({
@@ -56,7 +56,7 @@ it('renders a marked writeback as Markdown and leaves an ordinary comment litera
   act(() => {
     tree = create(
       createElement(LocalTaskActivitySection, {
-        api: {} as LocalTasksApi,
+        api: createLocalTasksApi({ sendRequest: vi.fn() }),
         taskId: 'task',
         events: {
           events: [

@@ -1,7 +1,11 @@
 import { beforeEach, expect, it, vi } from 'vitest'
 import type { LocalTask, LocalTaskProject } from '../../../shared/local-tasks/local-task-types'
 import { localTasksDomainStore } from './local-tasks-domain-store'
-import { EMPTY_LOCAL_TASK_FILTERS, localTaskPageStore } from './local-task-page-store'
+import {
+  EMPTY_LOCAL_TASK_FILTERS,
+  localTaskPageStore,
+  type LocalTaskFilters
+} from './local-task-page-store'
 
 const openPage = vi.hoisted(() => vi.fn())
 vi.mock('./local-task-navigation', () => ({ openLocalTaskPage: openPage }))
@@ -85,13 +89,13 @@ it('lands on a receipt task across project, status, query and filter barriers', 
 })
 
 it('keeps matching search and filters when opening the task', () => {
-  const filters = {
-    priorities: [2] as const,
+  const filters: LocalTaskFilters = {
+    priorities: [2],
     labels: ['ui'],
-    categories: [] as [],
+    categories: [],
     needsYou: false
   }
-  localTaskPageStore.setState({ query: 'Fix', filters: filters as never })
+  localTaskPageStore.setState({ query: 'Fix', filters })
   openLocalTaskReceiptPreview(task)
   expect(localTaskPageStore.getState()).toMatchObject({ query: 'Fix', filters, previewOpen: true })
 })

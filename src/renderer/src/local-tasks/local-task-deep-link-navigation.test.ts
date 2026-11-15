@@ -1,19 +1,38 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { localTaskDeepLink } from '../../../shared/local-tasks/local-task-deep-link'
+import type { LocalTask } from '../../../shared/local-tasks/local-task-types'
 import type * as LocalTasksDomainModule from './local-tasks-domain-store'
 
-const mocks = vi.hoisted(() => ({
-  open: vi.fn(),
-  error: vi.fn(),
-  warning: vi.fn(),
-  appState: {
+type MockAppState = {
+  runtimeEnvironmentCatalogSettled: boolean
+  runtimeEnvironments: { id: string }[]
+  reachable: string[]
+}
+
+type MockState = {
+  open: ReturnType<typeof vi.fn>
+  error: ReturnType<typeof vi.fn>
+  warning: ReturnType<typeof vi.fn>
+  appState: MockAppState
+  appListeners: Set<(state: unknown, previous: unknown) => void>
+  domain: ReturnType<typeof LocalTasksDomainModule.createLocalTasksDomainStore> | null
+}
+
+const mocks = vi.hoisted<MockState>(() => {
+  const appState: MockAppState = {
     runtimeEnvironmentCatalogSettled: true,
-    runtimeEnvironments: [] as { id: string }[],
-    reachable: [] as string[]
-  },
-  appListeners: new Set<(state: unknown, previous: unknown) => void>(),
-  domain: null as ReturnType<typeof LocalTasksDomainModule.createLocalTasksDomainStore> | null
-}))
+    runtimeEnvironments: [],
+    reachable: []
+  }
+  return {
+    open: vi.fn(),
+    error: vi.fn(),
+    warning: vi.fn(),
+    appState,
+    appListeners: new Set<(state: unknown, previous: unknown) => void>(),
+    domain: null
+  }
+})
 vi.mock('@/store', () => ({
   useAppStore: {
     getState: () => mocks.appState,
@@ -37,6 +56,25 @@ vi.mock('sonner', () => ({ toast: { error: mocks.error, warning: mocks.warning }
 import { openLocalTaskDeepLink } from './local-task-deep-link-navigation'
 const domain = mocks.domain!
 let testNow = 0
+
+function task(id: string): LocalTask {
+  return {
+    id,
+    projectId: 'project',
+    number: 1,
+    ref: 'TASK-1',
+    title: id,
+    description: '',
+    criteria: [],
+    statusId: 'started',
+    priority: 2,
+    labels: [],
+    parentId: null,
+    createdAt: 0,
+    updatedAt: 0,
+    revision: 0
+  }
+}
 
 function setAppState(patch: Partial<typeof mocks.appState>): void {
   const previous = mocks.appState
@@ -94,7 +132,7 @@ it('waits for the known paired library after the local partition arrives first',
   domain
     .getState()
     .writer('runtime:env-1')
-    .applyTasks([{ id: 'runtime:env-1/same-id' } as never])
+    .applyTasks([task('runtime:env-1/same-id')])
   expect(mocks.open).toHaveBeenLastCalledWith({ taskId: 'runtime:env-1/same-id' })
   expect(mocks.error).not.toHaveBeenCalled()
 })
@@ -116,7 +154,7 @@ it('navigates once when opening a waiting task synchronously updates the app sto
   domain
     .getState()
     .writer('runtime:env-1')
-    .applyTasks([{ id: taskId } as never])
+    .applyTasks([task(taskId)])
 
   expect(mocks.open).toHaveBeenCalledTimes(2)
   expect(mocks.open).toHaveBeenLastCalledWith({ taskId })
@@ -135,7 +173,7 @@ it('cancels the previous waiting link when a newer link arrives', () => {
   domain
     .getState()
     .writer('runtime:env-1')
-    .applyTasks([{ id: 'runtime:env-1/new' } as never])
+    .applyTasks([task('runtime:env-1/new')])
   setAppState({
     runtimeEnvironmentCatalogSettled: true,
     runtimeEnvironments: [{ id: 'env-2' }],
@@ -173,11 +211,11 @@ it('opens only the task from the named library even when own ids collide', () =>
   domain
     .getState()
     .writer('local')
-    .applyTasks([{ id: 'same-id' } as never])
+    .applyTasks([task('same-id')])
   domain
     .getState()
     .writer('runtime:env-1')
-    .applyTasks([{ id: 'runtime:env-1/same-id' } as never])
+    .applyTasks([task('runtime:env-1/same-id')])
   openLocalTaskDeepLink(localTaskDeepLink({ endpoint: 'runtime:env-1', taskId: 'same-id' }))
   expect(mocks.open).toHaveBeenLastCalledWith({ taskId: 'runtime:env-1/same-id' })
 })
@@ -187,7 +225,7 @@ it('shows a cached disconnected task without retrying or selecting another libra
   domain
     .getState()
     .writer('runtime:env-1')
-    .applyTasks([{ id: 'runtime:env-1/same-id' } as never])
+    .applyTasks([task('runtime:env-1/same-id')])
   domain.getState().setEndpointContact('runtime:env-1', false)
   openLocalTaskDeepLink(localTaskDeepLink({ endpoint: 'runtime:env-1', taskId: 'same-id' }))
   expect(mocks.open).toHaveBeenLastCalledWith({ taskId: 'runtime:env-1/same-id' })
@@ -203,7 +241,7 @@ it('does not open a task from a missing paired library', () => {
   domain
     .getState()
     .writer('local')
-    .applyTasks([{ id: 'same-id' } as never])
+    .applyTasks([task('same-id')])
   openLocalTaskDeepLink(localTaskDeepLink({ endpoint: 'runtime:env-2', taskId: 'same-id' }))
   expect(mocks.open).toHaveBeenCalledExactlyOnceWith()
   expect(mocks.error).toHaveBeenCalledOnce()

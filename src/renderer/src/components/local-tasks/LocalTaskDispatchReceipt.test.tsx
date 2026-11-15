@@ -3,16 +3,20 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import type { LocalTaskDispatchReceipt as Receipt } from '@/local-tasks/local-task-dispatch-launch'
 
-const mocks = vi.hoisted(() => ({
-  dispatch: vi.fn(),
-  finish: vi.fn(),
-  reveal: vi.fn(),
-  previewTask: vi.fn(),
-  openSession: vi.fn(),
-  revealSession: vi.fn(),
-  links: [] as unknown[],
-  tasks: [] as unknown[]
-}))
+const mocks = vi.hoisted(() => {
+  const links: unknown[] = []
+  const tasks: unknown[] = []
+  return {
+    dispatch: vi.fn(),
+    finish: vi.fn(),
+    reveal: vi.fn(),
+    previewTask: vi.fn(),
+    openSession: vi.fn(),
+    revealSession: vi.fn(),
+    links,
+    tasks
+  }
+})
 
 vi.mock('@/local-tasks/local-task-dispatch-launch', () => ({ dispatchLocalTask: mocks.dispatch }))
 vi.mock('@/local-tasks/local-task-dispatch-record', () => ({
@@ -97,7 +101,7 @@ it('uses the receipt task and already recorded session for both follow-up action
     launch: {
       hostId: 'local',
       worktreeId: 'wt',
-      outcome: { kind: 'terminal', paneKey: 'tab:leaf', handle: 'handle' } as never
+      outcome: { kind: 'terminal', paneKey: 'tab:leaf', handle: 'handle' }
     }
   }
   render(<LocalTaskDispatchReceipt receipt={receipt} agent="claude" onChange={vi.fn()} />)

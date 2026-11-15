@@ -8,12 +8,12 @@ import {
   openLocalTaskSession,
   revealLocalTaskSession
 } from '@/local-tasks/local-task-session-reveal'
-import { dispatchedSessionIds } from '@/local-tasks/local-task-dispatch-record'
 import {
   dispatchLocalTask,
   type LocalTaskDispatchReceipt as Receipt
 } from '@/local-tasks/local-task-dispatch-launch'
 import {
+  dispatchedSessionIds,
   finishLocalTaskDispatchRecord,
   revealDispatchedSession
 } from '@/local-tasks/local-task-dispatch-record'

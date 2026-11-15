@@ -2,6 +2,10 @@ export type LocalTaskDeepLinkTarget = { endpoint: 'local' | `runtime:${string}`;
 
 const PREFIX = 'orca://tasks/v1/'
 
+function isLocalTaskEndpoint(value: string): value is LocalTaskDeepLinkTarget['endpoint'] {
+  return value === 'local' || /^runtime:[^/\\:]+$/.test(value)
+}
+
 export function localTaskDeepLink(target: LocalTaskDeepLinkTarget): string {
   return `${PREFIX}${encodeURIComponent(target.endpoint)}/${encodeURIComponent(target.taskId)}`
 }
@@ -25,11 +29,11 @@ export function parseLocalTaskDeepLink(value: string): LocalTaskDeepLinkTarget |
       !taskId ||
       taskId.includes('/') ||
       taskId.includes('\\') ||
-      !(endpoint === 'local' || /^runtime:[^/\\:]+$/.test(endpoint))
+      !isLocalTaskEndpoint(endpoint)
     ) {
       return null
     }
-    return { endpoint: endpoint as LocalTaskDeepLinkTarget['endpoint'], taskId }
+    return { endpoint, taskId }
   } catch {
     return null
   }
