@@ -96,29 +96,61 @@ it('preserves input typed during a save when a newer remote revision changes the
   expect(title).toHaveProperty('value', 'Second')
 })
 
-it('discards a title on Escape while Enter and ordinary blur save', async () => {
+it('saves with Enter, then discards the next draft before upstream Escape blur', async () => {
+  const uninstallRouter = installLocalTaskPageKeyRouter()
+  const releasePage = claimLocalTaskPageKeys(() => {})
+  const closePanel = vi.fn()
+  const releasePanel = pushLocalTaskEscapeLayer('panel', closePanel)
+  const upstreamBlur = vi.fn((event: KeyboardEvent): void => {
+    if (event.key === 'Escape' && event.target instanceof HTMLTextAreaElement) {
+      event.preventDefault()
+      event.target.blur()
+    }
+  })
+  addAppKeyListener('keydown', upstreamBlur)
+  try {
+    const view = render(
+      <div data-local-task-page="">
+        <LocalTaskDetailTitle task={task} writable />
+      </div>
+    )
+    const title = screen.getByRole('textbox', { name: 'Title' })
+    title.focus()
+    fireEvent.change(title, { target: { value: 'Saved with Enter' } })
+    fireEvent.keyDown(title, { key: 'Enter' })
+    await waitFor(() =>
+      expect(fixture.save).toHaveBeenCalledWith('task-1', { title: 'Saved with Enter' }, 3)
+    )
+    view.rerender(
+      <div data-local-task-page="">
+        <LocalTaskDetailTitle task={{ ...task, title: 'Saved with Enter', revision: 4 }} writable />
+      </div>
+    )
+    fixture.save.mockClear()
+    upstreamBlur.mockClear()
+    title.focus()
+    fireEvent.change(title, { target: { value: 'Canceled draft' } })
+    fireEvent.keyDown(title, { key: 'Escape' })
+    expect(title).toHaveProperty('value', 'Saved with Enter')
+    expect(fixture.save).not.toHaveBeenCalled()
+    expect(upstreamBlur).not.toHaveBeenCalled()
+    expect(closePanel).not.toHaveBeenCalled()
+  } finally {
+    removeAppKeyListener('keydown', upstreamBlur)
+    releasePanel()
+    releasePage()
+    uninstallRouter()
+  }
+})
+
+it('saves a title on ordinary blur', async () => {
   render(<LocalTaskDetailTitle task={task} writable />)
   const title = screen.getByRole('textbox', { name: 'Title' })
   title.focus()
-  fireEvent.change(title, { target: { value: 'Canceled draft' } })
-  const upstreamBlur = (event: KeyboardEvent): void => {
-    if (event.key === 'Escape') {
-      title.blur()
-    }
-  }
-  window.addEventListener('keydown', upstreamBlur, true)
-  fireEvent.keyDown(title, { key: 'Escape' })
-  window.removeEventListener('keydown', upstreamBlur, true)
-  await Promise.resolve()
-  expect(title).toHaveProperty('value', 'Task')
-  expect(fixture.save).not.toHaveBeenCalled()
-
-  title.focus()
-  fireEvent.change(title, { target: { value: 'Saved with Enter' } })
-  fireEvent.keyDown(title, { key: 'Enter' })
+  fireEvent.change(title, { target: { value: 'Saved on blur' } })
   fireEvent.blur(title)
   await waitFor(() =>
-    expect(fixture.save).toHaveBeenCalledWith('task-1', { title: 'Saved with Enter' }, 3)
+    expect(fixture.save).toHaveBeenCalledWith('task-1', { title: 'Saved on blur' }, 3)
   )
 })
 
