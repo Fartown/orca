@@ -426,6 +426,15 @@ external_ids:
 
 ## 3. 开发记录
 
+### 2026-11-16 CI 独立检查修复与复测（testing）
+
+- 本轮目标：修复PR #111首轮CI的React Doctor错误，复现并核查手机HostStack动画检查失败，保留原门禁和断言。
+- 完成内容：57cf5bc4a5仅将标题Esc的discard回调改为在layout effect提交阶段注册并按依赖刷新，移除渲染期间写ref；取消草稿、正常保存和IME逻辑保持。手机原用例本地未复现，未修改导航、用例、阈值或CI；该项仍由新一轮CI验证。
+- 代码或文档变更：LocalTaskDetailBody.tsx的窄修及本条QA记录。上一轮本地通用检查没有包含CI独立执行的React Doctor命令，本轮已补跑其相同PR基线命令。
+- 验证证据：57cf下React Doctor changed-lines对0f6cbb基线0 errors，标题/key owner相关3文件27/27通过；fresh E2E构建的隐藏Electron实际Enter保存、Esc取消后blur不补写、普通blur保存全部通过，截图与产物SHA绑定在`.docs/local-tasks-followup-fixes-ui-validation/2026-11-15/evidence/gates/ci-fix-pc/`。手机HostStack原文件14/14、WebKit首次push用例连续3次通过，日志在`evidence/gates/ci-fix-mobile/`。c174的远端12个单测分片全部通过；不能将独立static/mobile失败汇总为CI全绿。
+- 未解决问题：手机原CI只有位置断言失败、未保存frames，动画未启动还是采样未捕获仍不能确定，不能称已修复动画或确定flaky；新候选最终增量门禁与CI待完成。原生Pixel SSH认证与真实失联RPC计数仍沿上条未覆盖记录。
+- 下一步：冻结本条文档后对c174执行增量check:changed并再次跑PR基线React Doctor，正常推送；新候选CI全部通过才按授权合入，完整宽选集未完成及范围例外如实保留。
+
 ### 2026-11-16 历史夹具阻断解除与合入准备（testing）
 
 - 本轮目标：完成用户要求的默认预览、名称优先、面板布局、PC/手机三行正文及走查修复的最终交付。
