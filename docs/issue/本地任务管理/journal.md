@@ -426,6 +426,15 @@ external_ids:
 
 ## 3. 开发记录
 
+### 2026-11-16 推送前事件桥回归修复（testing）
+
+- 本轮目标：修复最终 PR 基线检查发现的通用 IPC 事件注册回归，保留完整检查而非只接受本地任务定向测试。
+- 完成内容：`consumePendingLocalTaskLink` 返回非 Promise 时不再同步抛错；与相邻 skill/plugin 接缝一样，先判断返回值的 `then` 再接后续处理，任务扩展不会阻断浏览器、用量与快捷键等事件桥的注册。
+- 代码或文档变更：c3c0e66a9e 仅改已登记的 `settings-sidebar-ipc-bridge.ts` 本地任务注册块；没有改测试夹具、其他功能逻辑或门禁。方案补充该兼容约束。
+- 验证证据：770 的首轮 check:changed 31/32通过，unit聚合30分钟超时前有多组失败；定向3文件4/6用例复现同一 `.then is not a function`，确认由本轮新增代码引起。修后6文件16/16通过，lint/格式/tc:web通过；红绿原始日志在 `.docs/local-tasks-followup-fixes-ui-validation/2026-11-15/evidence/gates/final-770/`。
+- 未解决问题：该源码提交还需真实冷暖启动链接复测及最终完整 check:changed；Pixel SSH 的 E2EE 配对阻断和真实失联 RPC 计数未覆盖仍按上条保留。之前31/32不能写成最终门禁全绿。
+- 下一步：重新构建隐藏 Electron 核对有效 Promise 的 pending-link 冷暖路径；文档提交后对最终 HEAD 重跑完整门禁，推送 PR #111 并持续跟进 CI 全绿合入。
+
 ### 2026-11-16 D-023 实现与本地验收收尾（testing）
 
 - 本轮目标：交付 #110/#114 全部已确认交互问题的修复，以真实本机、SSH 和手机证据核对，并按用户授权推进 PR #111 合入。
