@@ -2,6 +2,7 @@ import { constants } from 'node:fs'
 import { access, mkdtemp, mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { lock } from 'proper-lockfile'
+import { releaseModuleLocation } from './release-module-locations.ts'
 import { scavengeReleaseCheckoutStaging } from './release-checkout-tree.ts'
 
 export const CHECKOUT_FORMAT = 9
@@ -83,7 +84,10 @@ async function checkoutMatches(root: string, commit: string): Promise<boolean> {
 
 async function assertCheckoutWireSurface(root: string, ref: string): Promise<void> {
   try {
-    await access(join(root, 'src', 'shared', 'terminal-stream-protocol.ts'), constants.F_OK)
+    await access(
+      join(root, releaseModuleLocation(root, TERMINAL_STREAM_PROTOCOL_PATH)),
+      constants.F_OK
+    )
   } catch {
     throw new Error(
       `Cross-version checkout for ${ref} is missing the terminal stream protocol; ` +
@@ -91,6 +95,8 @@ async function assertCheckoutWireSurface(root: string, ref: string): Promise<voi
     )
   }
 }
+
+const TERMINAL_STREAM_PROTOCOL_PATH = 'src/shared/terminal-stream-protocol.ts'
 
 export async function publishReleaseCheckout({
   root,

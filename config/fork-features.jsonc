@@ -4401,6 +4401,60 @@
       ]
     },
     {
+      "id": "cross-version-wire-fixture-compat",
+      "title": "跨版本 Wire 夹具路径兼容",
+      "goal": "历史 checkout 路径唯一迁移且 fork 默认版本符合上游同步快照，显式较新版本仍可验证",
+      "journal": "docs/issue/跨版本Wire夹具兼容/journal.md",
+      "policyId": "cross-version-wire-fixture-compat",
+      "ownedPaths": [
+        "config/scripts/cross-version-wire-fixture-compat/**",
+        "docs/issue/跨版本Wire夹具兼容/**"
+      ],
+      "requiredFiles": [
+        "config/scripts/cross-version-wire-fixture-compat/release-candidates.mjs",
+        "docs/issue/跨版本Wire夹具兼容/journal.md",
+        "docs/issue/跨版本Wire夹具兼容/requirements/跨版本Wire夹具兼容.md"
+      ],
+      "dependsOn": [
+        "config/scripts/stable-release-tags.mjs",
+        "tests/e2e/cross-version-wire/release-module-locations.ts"
+      ],
+      "seams": [
+        {
+          "file": "tests/e2e/cross-version-wire/release-checkout-publication.ts",
+          "mustContain": "releaseModuleLocation(root, TERMINAL_STREAM_PROTOCOL_PATH)",
+          "why": "Publication accepts the unique terminal protocol location within the historical checkout."
+        },
+        {
+          "file": "tests/e2e/cross-version-wire/release-checkout.unit.test.ts",
+          "mustContain": "terminal/stream/terminal-stream-protocol.ts",
+          "why": "The checkout unit cases cover the shipped and moved terminal protocol paths."
+        },
+        {
+          "file": "tests/e2e/cross-version-wire/release-checkout.ts",
+          "mustContain": "stableReleaseCandidates(REPO_ROOT)",
+          "why": "Local baseline and recent refs use the same fork snapshot candidate pool as CI."
+        },
+        {
+          "file": "config/scripts/check-daemon-protocol-crossing.mjs",
+          "mustContain": "stableReleaseCandidates(repoRoot)",
+          "why": "The daemon gate chooses its default from the same fork snapshot candidate pool."
+        },
+        {
+          "file": ".gitignore",
+          "mustContain": "!docs/issue/跨版本Wire夹具兼容/**",
+          "why": "Track the independent maintenance requirement documents."
+        }
+      ],
+      "tests": [
+        "tests/e2e/cross-version-wire/release-checkout.unit.test.ts",
+        "config/scripts/cross-version-wire-fixture-compat/release-candidates.test.mjs"
+      ],
+      "checks": [
+        "ORCA_BACKGROUND_LAUNCH=1 pnpm exec vitest run --config config/vitest.config.ts tests/e2e/cross-version-wire/release-checkout.unit.test.ts tests/e2e/cross-version-wire/release-module-locations.unit.test.ts config/scripts/cross-version-wire-fixture-compat/release-candidates.test.mjs config/scripts/check-daemon-protocol-crossing.test.mjs"
+      ]
+    },
+    {
       "id": "markdown-review-anchor-recovery",
       "title": "Markdown评论失效锚点恢复",
       "goal": "原文变更后保留可查看、编辑和删除的评论卡片，恢复可匹配的引文定位",
