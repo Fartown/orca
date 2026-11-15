@@ -14,13 +14,14 @@ import {
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { lock } from 'proper-lockfile'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { forceTerminateProcessTree } from '@orca/process-host/process-tree-termination'
 import { spawnProcess } from '@orca/process-host'
 import {
   importReleaseCheckoutModule,
   materializeReleaseCheckout,
   REPO_ROOT,
+  resolveBaselineReleaseRef,
   type CheckoutLockOptions,
   type CheckoutStagingContext,
   type ReleaseCheckout
@@ -28,6 +29,15 @@ import {
 import { publishReleaseCheckout } from './release-checkout-publication'
 const temporaryRoots: string[] = []
 const temporaryRefs: { ref: string; commit: string }[] = []
+
+it('keeps an explicit newer baseline ref independent of the default candidate pool', () => {
+  vi.stubEnv('ORCA_CROSS_VERSION_BASELINE_REF', 'v1.4.256')
+  try {
+    expect(resolveBaselineReleaseRef()).toBe('v1.4.256')
+  } finally {
+    vi.unstubAllEnvs()
+  }
+})
 
 const COMPRESSED_LOCK_OPTIONS: CheckoutLockOptions = {
   realpath: false,

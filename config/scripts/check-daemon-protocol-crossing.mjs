@@ -4,13 +4,15 @@ import { execFileSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
+
+import { stableReleaseCandidates } from './cross-version-wire-fixture-compat/release-candidates.mjs'
+
 import {
   DAEMON_PROTOCOL_SOURCE_PATH,
   canAttach,
   crossingRequirements,
   parseDaemonProtocolFacts
 } from './daemon-protocol-facts.mjs'
-import { selectLatestStableReleaseTag } from './stable-release-tags.mjs'
 
 // Same override the cross-version-wire harness honors, so both pair against one ref.
 const RELEASE_REF_ENV = 'ORCA_CROSS_VERSION_BASELINE_REF'
@@ -29,8 +31,8 @@ export function resolveReleaseRef(repoRoot, explicitRef, env = process.env) {
   if (override) {
     return override
   }
-  const tags = git(repoRoot, ['tag', '--list', 'v[0-9]*']).split('\n').filter(Boolean)
-  const latest = selectLatestStableReleaseTag(tags)
+  const tags = stableReleaseCandidates(repoRoot)
+  const latest = tags[0]
   if (!latest) {
     // Why: a shallow clone has no tags; passing here would silently skip the gate.
     throw new Error(
