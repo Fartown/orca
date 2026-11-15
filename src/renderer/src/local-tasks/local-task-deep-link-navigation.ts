@@ -28,52 +28,62 @@ export function openLocalTaskDeepLink(link: string): void {
   stopPending = null
   const taskId = localTaskClientId(target.endpoint, target.taskId)
   openLocalTaskPage()
-  const locate = (): boolean => {
+  let settled = false
+  let stopDomain: (() => void) | null = null
+  let stopApp: (() => void) | null = null
+  const cancel = (): void => {
+    settled = true
+    stopDomain?.()
+    stopApp?.()
+  }
+  const locate = (): (() => void) | null => {
     const partitions = localTasksDomainStore.getState().partitions
     const partition = partitions.find((item) => item.endpoint === target.endpoint)
     if (!partition) {
       if (target.endpoint === 'local' && partitions.length === 0) {
-        return false
+        return null
       }
       const environmentId = localTaskEndpointEnvironmentId(target.endpoint)
       if (environmentId) {
         const app = useAppStore.getState()
         if (!app.runtimeEnvironmentCatalogSettled) {
-          return false
+          return null
         }
         if (app.runtimeEnvironments.some((item) => item.id === environmentId)) {
           if (getReachableRuntimeEnvironmentIds(app).includes(environmentId)) {
-            return false
+            return null
           }
-          toast.error(
-            translate(
-              'localTasks.detail.linkLibraryUnavailable',
-              'Task library is disconnected; no saved task is available'
+          return () =>
+            toast.error(
+              translate(
+                'localTasks.detail.linkLibraryUnavailable',
+                'Task library is disconnected; no saved task is available'
+              )
             )
-          )
-          return true
         }
       }
-      toast.error(
-        translate(
-          'localTasks.detail.linkLibraryMissing',
-          'Task library is not available in this Orca'
+      return () =>
+        toast.error(
+          translate(
+            'localTasks.detail.linkLibraryMissing',
+            'Task library is not available in this Orca'
+          )
         )
-      )
-      return true
     }
     const task = partition.tasks.find((item) => item.id === taskId)
     if (task) {
-      openLocalTaskPage({ taskId })
-      if (!partition.inContact) {
-        toast.warning(
-          translate(
-            'localTasks.detail.linkLibraryOffline',
-            'Task library is disconnected; showing saved task'
+      const offline = !partition.inContact
+      return () => {
+        openLocalTaskPage({ taskId })
+        if (offline) {
+          toast.warning(
+            translate(
+              'localTasks.detail.linkLibraryOffline',
+              'Task library is disconnected; showing saved task'
+            )
           )
-        )
+        }
       }
-      return true
     }
     if (
       !partition.inContact ||
@@ -81,30 +91,32 @@ export function openLocalTaskDeepLink(link: string): void {
       ['unsupported', 'failed', 'ended'].includes(partition.connection) ||
       (partition.connection === 'idle' && partition.projectCount === 0)
     ) {
-      toast.error(
-        translate('localTasks.detail.linkTaskMissing', 'Task is not available in its library')
-      )
-      return true
+      return () =>
+        toast.error(
+          translate('localTasks.detail.linkTaskMissing', 'Task is not available in its library')
+        )
     }
-    return false
+    return null
   }
-  if (locate()) {
+  const finish = (): void => {
+    if (settled) {
+      return
+    }
+    const action = locate()
+    if (!action) {
+      return
+    }
+    cancel()
+    if (stopPending === cancel) {
+      stopPending = null
+    }
+    action()
+  }
+  finish()
+  if (settled) {
     return
   }
-  const stopDomain = localTasksDomainStore.subscribe(() => {
-    if (locate()) {
-      stopPending?.()
-      stopPending = null
-    }
-  })
-  const stopApp = subscribeLocalTaskAppStore('task link navigation', () => {
-    if (locate()) {
-      stopPending?.()
-      stopPending = null
-    }
-  })
-  stopPending = () => {
-    stopDomain()
-    stopApp()
-  }
+  stopDomain = localTasksDomainStore.subscribe(finish)
+  stopApp = subscribeLocalTaskAppStore('task link navigation', finish)
+  stopPending = cancel
 }

@@ -99,6 +99,55 @@ it('waits for the known paired library after the local partition arrives first',
   expect(mocks.error).not.toHaveBeenCalled()
 })
 
+it('navigates once when opening a waiting task synchronously updates the app store', () => {
+  domain.getState().openEndpoint('local')
+  setAppState({ runtimeEnvironmentCatalogSettled: false })
+  const taskId = 'runtime:env-1/reentrant-task'
+  let emitted = false
+  mocks.open.mockImplementation((intent?: { taskId?: string }) => {
+    if (intent?.taskId === taskId && !emitted) {
+      emitted = true
+      setAppState({ runtimeEnvironmentCatalogSettled: true })
+    }
+  })
+
+  openLocalTaskDeepLink(localTaskDeepLink({ endpoint: 'runtime:env-1', taskId: 'reentrant-task' }))
+  domain.getState().openEndpoint('runtime:env-1')
+  domain
+    .getState()
+    .writer('runtime:env-1')
+    .applyTasks([{ id: taskId } as never])
+
+  expect(mocks.open).toHaveBeenCalledTimes(2)
+  expect(mocks.open).toHaveBeenLastCalledWith({ taskId })
+  expect(mocks.error).not.toHaveBeenCalled()
+  expect(mocks.appListeners.size).toBe(0)
+  setAppState({ reachable: ['env-1'] })
+  expect(mocks.open).toHaveBeenCalledTimes(2)
+})
+
+it('cancels the previous waiting link when a newer link arrives', () => {
+  domain.getState().openEndpoint('local')
+  domain.getState().openEndpoint('runtime:env-1')
+  setAppState({ runtimeEnvironmentCatalogSettled: false })
+  openLocalTaskDeepLink(localTaskDeepLink({ endpoint: 'runtime:env-2', taskId: 'old' }))
+  openLocalTaskDeepLink(localTaskDeepLink({ endpoint: 'runtime:env-1', taskId: 'new' }))
+  domain
+    .getState()
+    .writer('runtime:env-1')
+    .applyTasks([{ id: 'runtime:env-1/new' } as never])
+  setAppState({
+    runtimeEnvironmentCatalogSettled: true,
+    runtimeEnvironments: [{ id: 'env-2' }],
+    reachable: []
+  })
+
+  expect(mocks.open).toHaveBeenCalledTimes(3)
+  expect(mocks.open).toHaveBeenLastCalledWith({ taskId: 'runtime:env-1/new' })
+  expect(mocks.error).not.toHaveBeenCalled()
+  expect(mocks.appListeners.size).toBe(0)
+})
+
 it('ends a missing paired library after catalog settles without connecting it', () => {
   domain.getState().openEndpoint('local')
   setAppState({ runtimeEnvironmentCatalogSettled: false })
