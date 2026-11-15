@@ -65,8 +65,7 @@ export function LocalTaskDetailTitle({
   })
   const cancelingBlur = useRef(false)
   const titleRef = useRef<HTMLTextAreaElement>(null)
-  const discardRef = useRef(field.discard)
-  discardRef.current = field.discard
+  const { discard } = field
   useLayoutEffect(() => {
     const title = titleRef.current
     if (!title) {
@@ -74,10 +73,10 @@ export function LocalTaskDetailTitle({
     }
     return pushLocalTaskFieldEscape(title, () => {
       cancelingBlur.current = document.activeElement === title
-      discardRef.current()
+      discard()
       title.blur()
     })
-  }, [])
+  }, [discard])
   return (
     <div className="flex flex-col gap-1">
       <ImeTextarea
