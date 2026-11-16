@@ -59,12 +59,11 @@ export function localTaskWorkspaceForRoute(
   workspaces: readonly LocalTaskWorkspaceLink[],
   worktreeId: string
 ): LocalTaskWorkspaceLink | null {
-  return (
-    workspaces.find((link) => {
-      const routeId = localTaskWorkspaceRouteId(link)
-      return routeId !== null && (routeId === worktreeId || worktreeIdsEqual(routeId, worktreeId))
-    }) ?? null
-  )
+  const matches = workspaces.filter((link) => {
+    const routeId = localTaskWorkspaceRouteId(link)
+    return routeId !== null && (routeId === worktreeId || worktreeIdsEqual(routeId, worktreeId))
+  })
+  return matches.length === 1 ? matches[0] : null
 }
 
 type StripData = {
