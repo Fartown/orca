@@ -465,7 +465,7 @@ external_ids:
 - 完成内容：6854候选的本机、真实SSH和PR基线16/16检查通过后，发现集成分支已前进到c5acbcf（#126终端发送修复）。正常合并为d91eb63，唯一冲突是生成索引，已重新生成；本地任务产品逻辑无冲突。packages、CLI、Electron E2E、mobile-web和darwin-arm64 orcad模板全部重新构建，生产源hash前后一致。
 - 代码或文档变更：集成基线合并、本条交付记录和生成索引；#124功能仍为原范围，未增加连接、RPC或服务。
 - 验证证据：新mobile buildId为728fed72，本机完整WebShell链1/1通过（39s）；根tc、手机生产/1294文件测试类型、本地化三项、架构27组、fork-features与fork-docs全部通过。合并前四组登记共1809条与真实SSH精确owner回读保留为历史；新基线最后SSH、推送前检查及CI结果持续记录于本机`.docs/local-tasks-mobile-card-ui-validation/2026-11-16/results.md`，不混用旧轮次结论。
-- 未解决问题：原生Android/iOS与终端正文流仍未验收；#122现场历史误报未定因并保持OPEN。SSH owner原始status仅有runtimeId/协议版本，无appVersion/commit，不推断远端进程版本；managed目标删除被规则拒绝时保留响应，不为清理停止共享服务。
+- 未解决问题：原生Android/iOS与终端正文流仍未验收；#122现场历史误报未定因并保持OPEN。SSH owner原始status报告appVersion 1.4.214及协议版本，但没有commit，不把owner版本推断成本地候选；managed目标删除被规则拒绝时保留响应，不为清理停止共享服务。
 - 下一步：最后候选完成SSH与推送前检查后正常推送，CI全部通过按授权合入；在交付证据绑定最终SHA、PR与清理结果，保留用户运行中的App。
 
 ### 2026-11-16 新一轮会话与导航问题登记（implementing）
