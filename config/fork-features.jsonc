@@ -453,6 +453,11 @@
           "file": "src/main/runtime/rpc/methods/orchestration/runs/mutation-request-show.ts",
           "mustContain": "verifyDurableChatTranscriptReceipt",
           "why": "Verify durable Chat transcript file continuity on the execution host before confirming local input."
+        },
+        {
+          "file": "src/main/ipc/register-core-handlers/register-core-handlers.test.ts",
+          "mustContain": "native-chat-view-recovery/durable-chat-ipc",
+          "why": "Keep core registration tests isolated at the terminal Chat registration seam."
         }
       ],
       "tests": [

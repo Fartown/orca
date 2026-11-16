@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createBrowserUuid } from '@/lib/browser-uuid'
 import { translate } from '@/i18n/i18n'
 import { useUiLanguageRevision } from '@/i18n/use-ui-language-revision'
@@ -27,7 +27,9 @@ export function useDurableChatDelivery(args: {
   const enabled = args.agent === 'codex' && !!api
   const readRevision = useRef(0)
   const current = useRef(args)
-  current.current = args
+  useLayoutEffect(() => {
+    current.current = args
+  }, [args])
   const refresh = useCallback(async () => {
     if (!api) {
       return []

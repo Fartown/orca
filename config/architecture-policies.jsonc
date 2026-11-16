@@ -141,7 +141,8 @@
             "src/shared/terminal-runtime-capabilities.ts",
             "src/shared/orchestration-mutation-request.ts",
             "src/shared/rpc-contract/orchestration-runs-mutation-request-show-params.ts",
-            "src/main/runtime/rpc/methods/orchestration/runs/mutation-request-show.ts"
+            "src/main/runtime/rpc/methods/orchestration/runs/mutation-request-show.ts",
+            "src/main/ipc/register-core-handlers/register-core-handlers.test.ts"
           ],
           "message": "Change is outside terminal chat view recovery."
         }
@@ -1036,7 +1037,8 @@
             "src/shared/terminal-runtime-capabilities.ts",
             "src/shared/orchestration-mutation-request.ts",
             "src/shared/rpc-contract/orchestration-runs-mutation-request-show-params.ts",
-            "src/main/runtime/rpc/methods/orchestration/runs/mutation-request-show.ts"
+            "src/main/runtime/rpc/methods/orchestration/runs/mutation-request-show.ts",
+            "src/main/ipc/register-core-handlers/register-core-handlers.test.ts"
           ],
           "message": "Branch changes an upstream path that no fork feature owns or registers as a seam; extend config/fork-features.jsonc and this allowlist, or move the change into a feature-owned path."
         }

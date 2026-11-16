@@ -77,14 +77,14 @@ external_ids: [Fartown/orca#112, Fartown/orca#119, Fartown/orca#118, Fartown/orc
 - 未解决问题：没有逐写回执能唯一解释原 11:17 RPC 失败原因，不能把同时存在的连接错误当作精确逐写证据。
 - 下一步：跑完最后编辑后的完整门禁，提交 Issue #119 的 PR 并等 CI。用户 .84 原消息的缓存已标记 unconfirmed，文字保留、未补发；运行中程序未替换。
 
-### 2026-11-16 持久提交闭环（implementing）
+### 2026-11-16 持久提交闭环（testing）
 
 - 本轮目标：解决普通 Codex Chat 的假已发、原文仅内存保存、页面持有异步 Enter，以及丢回执后无同请求恢复的问题。
 - 完成内容：Issue #121；独立 feat/native-chat-durable-submit 工作树；分层调研；main 持久 outbox 与同请求查询；执行端整体提交、写入结算、原 session/incarnation fence；正文边界与唯一 user-row 对账接入。
 - 代码或文档变更：feature 拥有目录增 main/shared 模块；旧文件只作 IPC、capability、composer 与发送队列接线；新增需求、调研、方案、用例。
-- 验证证据：首批持久存储与对账 12 项测试通过；完整类型检查通过。故障集成、真实 Codex、本地与 SSH App、完整门禁待执行，不能提前认定完成。
-- 未解决问题：真实 TUI 清理/图片与新 host 边界仍需实测；旧能力与 legacy relay 只支持保留输入的诚实拒绝，不迁移用户终端。
-- 下一步：补齐故障/真实应用验收，完成所有门禁和 CI，关联 Issue 合入。
+- 验证证据：最终注册 renderer 检查 125 项、专项及 IPC/requestShow 兼容组 59 项通过；早期终端运行时组 1,510 项通过（各组有交集）。真实本地 Git/文件夹、图片、丢主机回执后 renderer/App 重开，以及独立 Mini SSH 文件夹、丢回执后主机服务重启均以真实 Codex/模型请求/JSONL/DOM 验证一次送达和同 ID 查询。类型、本地化、架构、登记/文档、变更质量通过；CI 最终结果随 PR #126。详见 [持久提交闭环验收](tests/runs/2026-11-16-持久提交闭环验收.md)。
+- 未解决问题：服务重启且没有当前 provider 身份证据时保留输入并拒绝，不从历史恢复行猜身份；legacy relay/旧能力同样诚实拒绝。用户运行中的 .84 未换包，本轮未补发用户历史消息；历史首次 RPC 丢失原因仍缺逐写证据。
+- 下一步：PR #126 最终 CI 全绿后合入 fork/integration；发布包准备后遵循 AGENTS 的退出 App 约束处理现场更新。
 
 ### 2026-11-16 恢复行内容与提醒一致性（testing）
 

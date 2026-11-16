@@ -444,8 +444,8 @@ vi.mock('../hosted-review', () => ({
   registerHostedReviewHandlers: registerHostedReviewHandlersMock
 }))
 
-vi.mock('../native-chat', () => ({
-  registerNativeChatHandlers: registerNativeChatHandlersMock
+vi.mock('../../native-chat-view-recovery/durable-chat-ipc', () => ({
+  registerTerminalChatHandlers: registerNativeChatHandlersMock
 }))
 
 import { agentSessionRefusalError } from '../../../shared/agent-session/failures/agent-session-wire-refusals'
