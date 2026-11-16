@@ -3254,6 +3254,13 @@
       "goal": "管理各主机的任务、会话与进展，支持直接派活、人工验收和需确认的总管提案",
       "journal": "docs/issue/本地任务管理/journal.md",
       "dependsOn": [
+        "src/renderer/src/lib/terminal-tab-owner-activation.ts",
+        "src/shared/project-section-catalog-schema.ts",
+        "src/shared/folder-workspace-types.ts",
+        "src/shared/workspace-linked-item-schema.ts",
+        "src/renderer/src/store/adopt-from-endpoint.ts",
+        "src/renderer/src/store/catalog-identity.ts",
+        "src/renderer/src/store/slices/project-group-owner-routing.ts",
         "src/shared/runtime-host-descriptor.ts",
         "src/shared/runtime-host-status.ts",
         "src/renderer/src/store/slices/runtime-environment-ssh-selectors.ts",
@@ -3536,6 +3543,15 @@
         "src/main/runtime/rpc/methods/local-task-dispatcher-methods.ts"
       ],
       "requiredFiles": [
+        "src/main/local-tasks/local-task-dispatcher-workspace.ts",
+        "src/shared/local-tasks/local-task-dispatcher-workspace.ts",
+        "src/renderer/src/local-tasks/local-task-dispatcher-source.ts",
+        "src/renderer/src/local-tasks/local-task-dispatcher-presentation.ts",
+        "src/renderer/src/local-tasks/local-task-dispatcher-send.ts",
+        "src/renderer/src/components/local-tasks/LocalTaskDispatcherHostSelect.tsx",
+        "src/renderer/src/local-tasks/local-task-dispatcher-ids.ts",
+        "src/renderer/src/local-tasks/local-task-dispatcher-changes.ts",
+        "src/renderer/src/local-tasks/local-task-dispatcher-forwarding-bind.ts",
         "src/shared/local-tasks/local-task-session-origin.ts",
         "src/main/local-tasks/local-task-session-schema.ts",
         "src/renderer/src/local-tasks/local-task-session-origin-route.ts",
@@ -3575,6 +3591,11 @@
         "src/main/local-tasks/local-task-proposal-ownership.ts"
       ],
       "seams": [
+        {
+          "file": "resources/skills/released-digests.json",
+          "mustContain": "69376456185483ea494eb354be09bce5b8bde9d1c792e8cb1ce7687691d1a021",
+          "why": "Generated add-only release ledger includes the v1.4.250 skill identity so full-history feature validation uses the same compatible install history"
+        },
         {
           "file": "src/main/runtime/terminal/focus/focus-terminal.ts",
           "mustContain": "terminalWindowProjectionSource()",
@@ -3914,6 +3935,12 @@
           "file": "src/renderer/src/i18n/locales/zh.json",
           "mustContain": "\"localTasks\": {",
           "why": "Chinese copy of the local tasks feature"
+        },
+
+        {
+          "file": "src/renderer/src/i18n/locales/zh-Hant.json",
+          "mustContain": "\"localTasks\": {",
+          "why": "Traditional Chinese dispatcher host selection copy"
         },
         {
           "file": "mobile/src/host-screen/host-screen-overlays.tsx",
@@ -4402,6 +4429,12 @@
         }
       ],
       "tests": [
+        "src/main/local-tasks/local-task-dispatcher-workspace.test.ts",
+        "src/renderer/src/local-tasks/local-task-dispatcher-client.test.ts",
+        "src/renderer/src/local-tasks/local-task-dispatcher-changes.test.ts",
+        "src/renderer/src/local-tasks/local-task-dispatcher-forwarding.test.ts",
+        "src/renderer/src/local-tasks/local-task-dispatcher-wake.test.ts",
+        "src/renderer/src/local-tasks/local-task-dispatcher-ledger.test.ts",
         "src/renderer/src/local-tasks/local-task-session-execution-sync.test.ts",
         "src/renderer/src/local-tasks/local-task-cross-host-reply.test.ts",
         "src/main/local-tasks/local-task-session-replacement.test.ts",
@@ -4524,6 +4557,8 @@
         "mobile/src/local-tasks/local-tasks-copy.test.ts",
         "mobile/src/local-tasks/local-tasks-library-header.test.tsx",
         "src/renderer/src/local-tasks/local-task-proposal-targets.test.ts",
+        "src/renderer/src/local-tasks/local-task-dispatcher-source.test.ts",
+        "src/renderer/src/local-tasks/local-task-dispatcher-session.test.ts",
         "src/renderer/src/local-tasks/local-task-dispatcher-ask.test.ts",
         "src/shared/local-tasks/local-task-latest-progress-choice.test.ts",
         "src/shared/local-tasks/local-task-attention-rules.test.ts",

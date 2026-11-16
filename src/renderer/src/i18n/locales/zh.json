@@ -23330,7 +23330,11 @@
         "unrun": "已确认，还没执行。"
       },
       "claimFailed": "连不上任务库，什么都没执行。请重试。",
-      "abandoned": "有一项结果没能记录，本窗口已停止执行。收尾前请先检查任务。已记录的结果会保留，不会重复执行任何步骤。"
+      "abandoned": "有一项结果没能记录，本窗口已停止执行。收尾前请先检查任务。已记录的结果会保留，不会重复执行任何步骤。",
+      "executionHost": "执行主机",
+      "hostUnavailable": "主机未连接",
+      "hostSaveFailed": "无法保存执行主机。",
+      "hostUpgrade": "请更新此主机上的 Orca 后再运行总管。"
     },
     "latestProgress": {
       "title": "最新进展",

@@ -52,9 +52,12 @@ export const LocalTasksDispatcherRegisterParams = z.object({
   clientOperationId,
   paneKey,
   agent: agent.optional(),
+  worktreeId: worktreeId.optional(),
   /** The dispatcher's pane before it was reopened: its conversation, watches and inbox carry over. */
   previousPaneKey: paneKey.optional()
 })
+
+export const LocalTasksDispatcherPrepareWorkspaceParams = z.object({})
 
 export const LocalTasksProposalsCreateParams = z.object({
   clientOperationId,

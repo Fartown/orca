@@ -101,7 +101,13 @@ function pairedPartition(environmentId: string) {
  * meanwhile shows up at the next of those. A browser client's paired library is its own.
  */
 function pairedLibraryStreamed(environmentId: string): boolean {
-  if (isWebClientLocation() || localTaskLibraryViewerStore.getState().viewers > 0) {
+  if (
+    isWebClientLocation() ||
+    localTaskLibraryViewerStore.getState().viewers > 0 ||
+    localTaskLibraryViewerStore
+      .getState()
+      .endpoints?.has(localTaskEnvironmentEndpoint(environmentId))
+  ) {
     return true
   }
   const partition = pairedPartition(environmentId)

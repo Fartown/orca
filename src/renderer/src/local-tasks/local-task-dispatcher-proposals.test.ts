@@ -1,23 +1,41 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { LocalTaskProposal } from '../../../shared/local-tasks/local-task-dispatcher-types'
+import type { LocalTaskEndpointKey } from './local-task-endpoints'
 
-const fixture = vi.hoisted(() => ({
-  claim: vi.fn(),
-  list: vi.fn(),
-  execute: vi.fn(),
-  recordResults: vi.fn(),
-  release: vi.fn(),
-  toast: { info: vi.fn(), error: vi.fn(), success: vi.fn(), warning: vi.fn() }
-}))
+const fixture = vi.hoisted(() => {
+  const source: { endpoint: LocalTaskEndpointKey } = { endpoint: 'local' }
+  return {
+    ...source,
+    claim: vi.fn(),
+    list: vi.fn(),
+    execute: vi.fn(),
+    recordResults: vi.fn(),
+    release: vi.fn(),
+    toast: { info: vi.fn(), error: vi.fn(), success: vi.fn(), warning: vi.fn() },
+    epoch: 0
+  }
+})
 
 vi.mock('sonner', () => ({ toast: fixture.toast }))
 vi.mock('./local-task-dispatcher-client', () => ({
+  localTaskDispatcherClientFor: () => ({
+    claim: fixture.claim,
+    list: fixture.list,
+    recordResults: fixture.recordResults,
+    release: fixture.release
+  }),
   localTaskDispatcherClient: {
     claim: fixture.claim,
     list: fixture.list,
     recordResults: fixture.recordResults,
     release: fixture.release
   }
+}))
+vi.mock('./local-task-dispatcher-source', () => ({
+  getLocalTaskDispatcherEndpoint: () => fixture.endpoint,
+  getLocalTaskDispatcherEpoch: () => fixture.epoch,
+  isLocalTaskDispatcherSourceCurrent: (endpoint: string, epoch: number) =>
+    endpoint === fixture.endpoint && epoch === fixture.epoch
 }))
 vi.mock('./local-task-proposal-execution', () => ({ executeLocalTaskProposal: fixture.execute }))
 
@@ -47,6 +65,8 @@ const proposal: LocalTaskProposal = {
 
 describe('running a confirmed proposal', () => {
   beforeEach(() => {
+    fixture.endpoint = 'local'
+    fixture.epoch = 0
     fixture.claim.mockReset()
     fixture.execute.mockReset()
     fixture.recordResults.mockReset()
@@ -65,6 +85,22 @@ describe('running a confirmed proposal', () => {
     await runLocalTaskProposal(proposal)
 
     expect(fixture.execute).not.toHaveBeenCalled()
+  })
+
+  it('releases a late claim without executing after the source contact generation changed', async () => {
+    fixture.release.mockResolvedValue({ ok: true, proposal })
+    let release: (value: unknown) => void = () => {}
+    fixture.claim.mockReturnValueOnce(
+      new Promise((resolve) => {
+        release = resolve
+      })
+    )
+    const running = runLocalTaskProposal(proposal)
+    fixture.epoch += 1
+    release({ ok: true, proposal: { ...proposal, status: 'executing', executionActive: true } })
+    await running
+    expect(fixture.execute).not.toHaveBeenCalled()
+    expect(fixture.release).toHaveBeenCalledWith(proposal.id)
   })
 
   it('runs the proposal as the claim returned it', async () => {

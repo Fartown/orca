@@ -308,6 +308,7 @@
           "baseRef": "$base",
           "requireBaseAncestor": false,
           "allowedPaths": [
+            "resources/skills/released-digests.json",
             "src/main/runtime/workspaces/workspace-activation.ts",
             "src/renderer/src/hooks/ipc-events/worktree-event-runtime.ts",
             "src/renderer/src/hooks/ipc-events/worktree-event-runtime-activation.test.ts",
@@ -1984,6 +1985,7 @@
             "src/cli/local-tasks/**"
           ],
           "allowedPaths": [
+            "resources/skills/released-digests.json",
             "src/cli/local-tasks/**",
             "src/renderer/src/components/sidebar/worktree-card-option-items.tsx",
             "src/renderer/src/components/sidebar/use-worktree-agent-activation.ts",
@@ -2034,6 +2036,7 @@
             "src/renderer/src/i18n/locales/en.json",
             "src/renderer/src/i18n/en-runtime-required.json",
             "src/renderer/src/i18n/locales/zh.json",
+            "src/renderer/src/i18n/locales/zh-Hant.json",
             "config/scripts/mobile-web-page-routes.mjs",
             "config/scripts/mobile-web-app/mobile-web-app-page-route-modules.mjs",
             "config/scripts/verify-mobile-web-app-bundle.mjs",

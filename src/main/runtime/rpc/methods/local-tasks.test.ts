@@ -12,6 +12,7 @@ import {
 import {
   LOCAL_TASKS_RUNTIME_CAPABILITY,
   LOCAL_TASKS_CROSS_HOST_SESSIONS_CAPABILITY,
+  LOCAL_TASKS_DISPATCHER_HOST_CAPABILITY,
   LOCAL_TASKS_V2_RUNTIME_CAPABILITY
 } from '../../../../shared/local-tasks/local-tasks-capability'
 import { startOrcadLocalTasks } from '../../../local-tasks/orcad-local-tasks'
@@ -124,7 +125,8 @@ describe('localTasks RPC', () => {
     expect(localTasksRuntimeCapabilities()).toEqual([
       LOCAL_TASKS_RUNTIME_CAPABILITY,
       LOCAL_TASKS_V2_RUNTIME_CAPABILITY,
-      LOCAL_TASKS_CROSS_HOST_SESSIONS_CAPABILITY
+      LOCAL_TASKS_CROSS_HOST_SESSIONS_CAPABILITY,
+      LOCAL_TASKS_DISPATCHER_HOST_CAPABILITY
     ])
     const service = localTasksReadiness.requireService()
     const project = service.createProject({ clientOperationId: 'p1', name: '调研', prefix: 'RS' })
@@ -174,7 +176,8 @@ describe('orcad task library', () => {
     expect(localTasksRuntimeCapabilities()).toEqual([
       LOCAL_TASKS_RUNTIME_CAPABILITY,
       LOCAL_TASKS_V2_RUNTIME_CAPABILITY,
-      LOCAL_TASKS_CROSS_HOST_SESSIONS_CAPABILITY
+      LOCAL_TASKS_CROSS_HOST_SESSIONS_CAPABILITY,
+      LOCAL_TASKS_DISPATCHER_HOST_CAPABILITY
     ])
     // No linked session yet: the host's status changes are not even subscribed.
     expect(watching.size).toBe(0)

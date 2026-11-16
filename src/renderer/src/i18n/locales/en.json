@@ -24063,7 +24063,11 @@
         "unrun": "Confirmed, not run yet."
       },
       "claimFailed": "Couldn’t reach the task library, so nothing ran. Try again.",
-      "abandoned": "A result could not be recorded, so this window stopped the run. Check the tasks before finishing. Recorded results are kept; no steps are repeated."
+      "abandoned": "A result could not be recorded, so this window stopped the run. Check the tasks before finishing. Recorded results are kept; no steps are repeated.",
+      "executionHost": "Execution host",
+      "hostUnavailable": "Out of contact",
+      "hostSaveFailed": "Could not save the execution host.",
+      "hostUpgrade": "Update Orca on this host to run the dispatcher."
     },
     "latestProgress": {
       "title": "Latest progress",

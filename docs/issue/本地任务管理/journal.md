@@ -1,10 +1,11 @@
 ---
 title: 本地任务管理
 slug: 本地任务管理
-status: implementing
+status: testing
 created: 2026-10-26
-updated: 2026-11-16
+updated: 2026-11-17
 external_ids:
+  - 'Fartown/orca#135'
   - 'Fartown/orca#130'
   - 'Fartown/orca#90'
   - 'Fartown/orca#99'
@@ -24,7 +25,7 @@ external_ids:
 
 | 类型     | 文档                                                                                       | 状态      | 说明                                                                                                                                                                              |
 | -------- | ------------------------------------------------------------------------------------------ | --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 需求     | [requirements/本地任务管理.md](requirements/本地任务管理.md)                               | ready     | REQ-001～REQ-032；REQ-001～REQ-018 于 2026-10-26 用户确认；REQ-020～REQ-025 于 2026-11-01 确认；REQ-026～REQ-030 于 2026-11-02 按方案评审新增；REQ-031 于 2026-11-05 新增（总管） |
+| 需求     | [requirements/本地任务管理.md](requirements/本地任务管理.md)                               | ready     | REQ-001～REQ-033；REQ-001～REQ-018 于 2026-10-26 用户确认；REQ-020～REQ-025 于 2026-11-01 确认；REQ-026～REQ-030 于 2026-11-02 按方案评审新增；REQ-031 于 2026-11-05 新增（总管） |
 | 交互     | [interaction/prototype-task-first](interaction/prototype-task-first/README.md)             | completed | 以任务为主的交互原型，桌面和手机，迭代 5 轮（D-011～D-014）；浏览器打开 `index.html`                                                                                              |
 | 交互     | -                                                                                          | approved  | 切片 1、2 的设计稿在本机 `.docs/本地任务管理调研/2026-10-24/prototype-v4/`，不进仓库                                                                                              |
 | 产品方案 | [interaction/任务为主的工作流产品方案.md](interaction/任务为主的工作流产品方案.md)         | approved  | 2026-10-30 以任务为主的工作流与通用对话；2026-11-02 评审后修订（D-012）                                                                                                           |
@@ -43,8 +44,19 @@ external_ids:
 | 测试用例 | [tests/cases/跨主机会话关联回归.md](tests/cases/跨主机会话关联回归.md)                     | ready     | TC-351～TC-354，双向关联、持久身份、SSH、手机与失败保护                                                                                                                           |
 | 测试记录 | [tests/runs/2026-11-16-跨主机会话关联验收.md](tests/runs/2026-11-16-跨主机会话关联验收.md) | completed | 当前构建双向配对、真 SSH、三处原 pane 预览与断联恢复通过；手机原生界面未测                                                                                                        |
 | 测试用例 | [tests/cases/手机会话浮卡任务上下文.md](tests/cases/手机会话浮卡任务上下文.md)             | ready     | D-025 / #124；TC-347～TC-350，所点标签、名称入口、关联抽屉、失联与回执隔离                                                                                                        |
+| 方案     | [solutions/总管执行主机与启动等待.md](solutions/总管执行主机与启动等待.md)                 | ready     | REQ-033、D-027；所选来源拥有总管与台账，兼容本机浮动会话                                                                                                                          |
+| 测试用例 | [tests/cases/总管执行主机与启动等待.md](tests/cases/总管执行主机与启动等待.md)             | ready     | TC-355～TC-359，本机、配对、SSH、等待提示与失联计数                                                                                                                               |
 
 ## 2. 决策点记录
+
+### D-027 总管来源独立选择
+
+- 日期：2026-11-17；来源：用户明确要求开发、测试，Issue #135。
+- 背景：总管固定 Local Mac，等待目录信任时 Chat 无内容；只解释原因不能满足任务。
+- 备选：仅加主机显示标签；完整绑定所选来源的会话、提案、收件箱与输入。
+- 最终决定：完整绑定来源，复用普通 source-owned folder 与现有启动/路由；本机 legacy floating 兼容。
+- 原因：运行位置与任务库独立，切换不能串会话、结果或唤醒输入。
+- 影响：REQ-030、REQ-031、REQ-033；方案和 TC-355～TC-359；共享联系控制读取，无私有重试。
 
 ### D-026 任务库与已有会话执行主机独立
 
@@ -462,6 +474,15 @@ external_ids:
 - 验证完再一起做两个切片
 
 ## 3. 开发记录
+
+### 2026-11-17 总管主机选择与启动等待（testing）
+
+- 本轮目标：开发并实测总管主机选择，修复等待提醒与 Chat 空白，继续完整 CI。
+- 完成内容：Issue #135、REQ-033、D-027；本机旧浮动总管兼容，配对和 managed SSH 总管使用来源 profile 的普通 folder；来源绑定的注册、提案、收件箱、外库关注和唤醒；切换与连接代际 fence；prehooks 等待显示原终端，原会话不被替换；显式显示远端时仅最小化挡住目标的原本机总管浮层。
+- 代码或文档变更：local-tasks 自有路径及既有 dispatcher RPC seam；主机选择及中英繁体文本；方案、TC-355～TC-359；原 generator 补 v1.4.250 已发布 orca-computer-use 的唯一历史摘要（三行 add-only），不改变当前技能包或校验器，并登记精确生成物 seam。
+- 验证证据：后端 38 文件 257 项、桌面初轮 178 文件 1265 项、手机 73 文件 344 项、mobile-web 5 文件 47 项通过；数据层 67 项后追加 unknown unwatch 用例通过；原 pane/迟到标签/切换 fence/浮层遮挡的增量回归通过。隐藏 CDP 已实证 Local trust 原终端、旧偏好重载仍原 PID、paired Chat；完整 related 检查与最终 SSH/确认执行/断联验收仍在进行。日志目录 `.docs/dispatcher-host-selection-ui-validation/2026-11-17/`。
+- 未解决问题：最终来源提案确认与唤醒、SSH Chat、断联零请求和恢复仍需最后构建的完整验收；完整 PR CI 尚未运行，不能以 skipped 或候选结果计完成。
+- 下一步：结束完整检查后合入最新 integration、冻结最终源码，完成后台本机/配对/真实 SSH 验收与 PR 全部相关 CI。
 
 ### 2026-11-16 跨主机会话关联实现与验收（testing）
 

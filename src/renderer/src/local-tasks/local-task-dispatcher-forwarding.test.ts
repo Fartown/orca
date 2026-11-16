@@ -93,6 +93,59 @@ function remoteTask(id: string, ref: string, title: string): LocalTask {
 }
 
 describe('forwarding news from other libraries to the dispatcher', () => {
+  it('follows this desktop library from a mini dispatcher and never probes unresolved installation tokens', async () => {
+    const watchEvents = vi.fn(() => () => {})
+    const forwarding = createLocalTaskDispatcherForwarding({
+      endpoint: 'runtime:mini',
+      current: () => true,
+      client: {
+        watches: async () => ({
+          ok: true,
+          watches: [
+            { taskId: 'local-task', addedAt: 1, addedBy: 'dispatcher' },
+            { taskId: 'runtime:mini/native', addedAt: 1, addedBy: 'dispatcher' },
+            { taskId: 'runtime:dispatcher-unavailable/missing', addedAt: 1, addedBy: 'dispatcher' }
+          ]
+        }),
+        recordFacts: async () => ({ ok: true }),
+        watch: async () => ({ ok: true })
+      },
+      watchEvents,
+      paneKey: () => 'pane',
+      hostLabel: () => 'Local Mac',
+      now: () => 1,
+      domain: () => ({ tasks: [], projects: [], links: { sessions: [], workspaces: [] } })
+    })
+    await forwarding.refreshWatches()
+    expect(watchEvents.mock.calls).toEqual([['local-task']])
+    forwarding.dispose()
+  })
+
+  it('does not subscribe or forward a watch response after its source instance was disposed', async () => {
+    const watchEvents = vi.fn(() => () => {})
+    let release: (value: unknown) => void = () => {}
+    const watches = vi.fn().mockReturnValue(
+      new Promise((resolve) => {
+        release = resolve
+      })
+    )
+    const recordFacts = vi.fn(async () => ({ ok: true as const }))
+    const forwarding = createLocalTaskDispatcherForwarding({
+      endpoint: 'runtime:mini',
+      client: { watches, recordFacts, watch: async () => ({ ok: true }) },
+      watchEvents,
+      paneKey: () => 'pane',
+      hostLabel: () => 'Local Mac',
+      now: () => 1,
+      domain: () => ({ tasks: [], projects: [], links: { sessions: [], workspaces: [] } })
+    })
+    const reading = forwarding.refreshWatches()
+    forwarding.dispose()
+    release({ ok: true, watches: [{ taskId: 'local-task', addedAt: 1, addedBy: 'dispatcher' }] })
+    await reading
+    expect(watchEvents).not.toHaveBeenCalled()
+    expect(recordFacts).not.toHaveBeenCalled()
+  })
   it('reads only tasks on other hosts and forwards each writeback once', async () => {
     const { forwarding, recorded, watchEvents } = setup()
     await forwarding.refreshWatches()

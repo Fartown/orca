@@ -149,7 +149,7 @@ async function runStart(item: Item<'start'>, run: ProposalRun): Promise<Outcome>
     const link = await linkWorkspace(task.id, worktree, 'start')
     return isProposalMiss(link) ? failed(link, task.id) : launch(task, link, item.agent)
   }
-  const scope = proposalRepoScope(state, item.target.repoId)
+  const scope = proposalRepoScope(state, item.target.repoId, item.target.hostId)
   if (!scope) {
     return failed({ miss: `repository ${item.target.repoId} is not in Orca` })
   }
