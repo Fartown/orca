@@ -1,3 +1,5 @@
+import type { z } from 'zod'
+import type { DurableChatTranscriptBoundary } from './native-chat-view-recovery/durable-chat-submit'
 import type { WriteSettlement } from './pty-write-settlement'
 
 export type RuntimeTerminalSend = {
@@ -12,6 +14,7 @@ export type RuntimeTerminalSend = {
 export type RuntimeTerminalPromptStage = 'input_accepted' | 'turn_started'
 
 export type RuntimeTerminalPromptDelivery = {
+  chatTranscript?: z.infer<typeof DurableChatTranscriptBoundary>
   requestId: string
   stages: RuntimeTerminalPromptStage[]
   provider: 'antigravity' | 'claude' | 'codex' | 'unsupported' | 'old-host'

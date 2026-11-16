@@ -5,6 +5,7 @@ export const MUTATION_REQUEST_STATES = ['completed', 'pending', 'absent'] as con
 export type OrchestrationMutationRequestState = (typeof MUTATION_REQUEST_STATES)[number]
 
 export type OrchestrationMutationRequestShowResult = {
+  chatTranscriptVerified?: boolean
   requestId: string
   state: OrchestrationMutationRequestState
   method?: string

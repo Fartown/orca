@@ -1,3 +1,4 @@
+import type { DurableChatSend } from '../../../../shared/native-chat-view-recovery/durable-chat-submit'
 import type { OrchestrationAgentReference } from '../../../../shared/orchestration-agent-reference'
 import type { CaptureStructuredAgentSessionPresentation } from './use-structured-agent-session-mutate'
 import type { StructuredAgentSessionSendRequest } from './structured-agent-session-send-slot'
@@ -89,6 +90,7 @@ export type NativeChatOptimisticSendOutcome = {
 }
 
 export type NativeChatComposerProps = {
+  onDurableSend?: DurableChatSend
   /** Tab hosting the agent; used to resolve the live ptyId + runtime settings. */
   terminalTabId: string
   /** Input-only edit session: every submit saves, Escape cancels, and send-only actions are absent. */

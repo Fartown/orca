@@ -256,17 +256,62 @@
         "src/renderer/src/i18n/i18n.ts",
         "src/renderer/src/components/terminal-pane/terminal-parked-watcher-reconciliation.ts",
         "src/renderer/src/components/terminal-pane/terminal-recovery-ledger-test-store.ts",
-        "src/renderer/src/store/terminals/terminal-tab-location.ts"
+        "src/renderer/src/store/terminals/terminal-tab-location.ts",
+        "src/shared/agent-tui-input-clear.ts",
+        "src/shared/agent-image-paste.ts",
+        "src/shared/agent-image-paste-path.ts",
+        "src/shared/native-chat/input/native-chat-paste-bytes.ts",
+        "src/main/runtime/orca-runtime.ts",
+        "src/main/runtime/rpc/dispatcher.ts",
+        "src/main/runtime/rpc/methods/index.ts",
+        "src/main/runtime/rpc/rpc-caller-identity.ts",
+        "src/main/ipc/desktop-renderer-runtime-capabilities.ts",
+        "src/shared/ssh-pty-id.ts",
+        "src/shared/remote-runtime/remote-runtime-pty-id.ts",
+        "src/shared/runtime-environment-store.ts",
+        "src/main/ipc/runtime-environments/runtime-environment-transport-routing.ts",
+        "src/main/ipc/runtime-environments/runtime-environment-registry-root.ts",
+        "src/main/ipc/runtime-environments/runtime-environment-request-connections.ts",
+        "src/shared/runtime-host-status.ts",
+        "src/shared/runtime-host-connection-state.ts",
+        "src/main/ssh/targets/ssh-target-registry.ts",
+        "src/shared/execution-host.ts",
+        "src/main/durable-file-write.ts",
+        "src/shared/runtime-rpc-envelope.ts",
+        "src/main/native-chat/transcript-tail-reader.ts",
+        "src/shared/native-chat/native-chat-types.ts",
+        "src/shared/native-chat/transcript/native-chat-pending-occurrence.ts",
+        "src/shared/native-chat/transcript/native-chat-pending-sends.ts",
+        "src/renderer/src/components/ui/context-menu.tsx",
+        "src/renderer/src/i18n/use-ui-language-revision.ts",
+        "src/renderer/src/store/index.ts",
+        "src/renderer/src/hooks/ipc-events/runtime-environment-subscription-selection.ts",
+        "src/renderer/src/components/native-chat/NativeChatMessageRow.tsx",
+        "src/renderer/src/lib/browser-uuid.ts",
+        "src/shared/native-chat/transcript/native-chat-image-transcript-markers.ts",
+        "src/main/ipc/agent-status-ipc-boundary.ts",
+        "src/main/native-chat/session-file-resolver.ts",
+        "src/main/native-chat/wsl-transcript-fs-access.ts",
+        "src/main/runtime/terminal/input/terminal-agent-prompt-resubmit.ts",
+        "src/main/runtime/agent-prompt-submission-verification.ts",
+        "src/main/runtime/terminal-input-admission.ts",
+        "src/main/runtime/orca-runtime-core.ts",
+        "src/main/ipc/native-chat.ts",
+        "src/main/native-chat/transcript-file-version.ts"
       ],
       "policyId": "native-chat-view-recovery",
       "ownedPaths": [
         "src/renderer/src/native-chat-view-recovery/**",
-        "docs/issue/终端聊天视图恢复/**"
+        "docs/issue/终端聊天视图恢复/**",
+        "src/main/native-chat-view-recovery/**",
+        "src/shared/native-chat-view-recovery/**"
       ],
       "requiredFiles": [
         "src/renderer/src/native-chat-view-recovery/TerminalTabViewSwitch.tsx",
         "src/renderer/src/native-chat-view-recovery/terminal-chat-recovery-owner.ts",
-        "src/renderer/src/native-chat-view-recovery/restored-terminal-activity-target.ts"
+        "src/renderer/src/native-chat-view-recovery/restored-terminal-activity-target.ts",
+        "src/main/native-chat-view-recovery/durable-chat-submitter.ts",
+        "src/shared/native-chat-view-recovery/durable-chat-submit.ts"
       ],
       "seams": [
         {
@@ -323,6 +368,96 @@
           "file": "src/renderer/src/components/activity/useActivityUnreadCount.test.ts",
           "mustContain": "restored nonterminal attention",
           "why": "Guard unread badge behavior without clearing historical events."
+        },
+        {
+          "file": "src/main/ipc/register-core-handlers/register-core-handlers.ts",
+          "mustContain": "registerTerminalChatHandlers",
+          "why": "Connect durable terminal Chat submission and transcript receipts."
+        },
+        {
+          "file": "src/main/runtime/orca-runtime-get-status.ts",
+          "mustContain": "DURABLE_CHAT_COMPOSER_CAPABILITY",
+          "why": "Connect durable terminal Chat submission and transcript receipts."
+        },
+        {
+          "file": "src/main/runtime/rpc/methods/terminal/terminal-send-method.ts",
+          "mustContain": "chatComposer",
+          "why": "Connect durable terminal Chat submission and transcript receipts."
+        },
+        {
+          "file": "src/main/runtime/runtime-terminal-contracts.ts",
+          "mustContain": "DurableChatComposer",
+          "why": "Connect durable terminal Chat submission and transcript receipts."
+        },
+        {
+          "file": "src/main/runtime/terminal/input/terminal-agent-prompt.ts",
+          "mustContain": "OrcaRuntimeWithDurableChatPrompt",
+          "why": "Connect durable terminal Chat submission and transcript receipts."
+        },
+        {
+          "file": "src/preload/api/native-chat-api.ts",
+          "mustContain": "DurableChatSubmitApi",
+          "why": "Connect durable terminal Chat submission and transcript receipts."
+        },
+        {
+          "file": "src/preload/api/native-chat-bridge.ts",
+          "mustContain": "durableSubmit",
+          "why": "Connect durable terminal Chat submission and transcript receipts."
+        },
+        {
+          "file": "src/renderer/src/components/native-chat/NativeChatComposerPane.tsx",
+          "mustContain": "onDurableSend",
+          "why": "Connect durable terminal Chat submission and transcript receipts."
+        },
+        {
+          "file": "src/renderer/src/components/native-chat/NativeChatResolvedView.tsx",
+          "mustContain": "onDurableSend",
+          "why": "Connect durable terminal Chat submission and transcript receipts."
+        },
+        {
+          "file": "src/renderer/src/components/native-chat/native-chat-composer-types.ts",
+          "mustContain": "onDurableSend",
+          "why": "Connect durable terminal Chat submission and transcript receipts."
+        },
+        {
+          "file": "src/renderer/src/components/native-chat/use-native-chat-pending-delivery.ts",
+          "mustContain": "useDurableChatDelivery",
+          "why": "Connect durable terminal Chat submission and transcript receipts."
+        },
+        {
+          "file": "src/shared/rpc-contract/terminal-unary-params.ts",
+          "mustContain": "DurableChatComposer",
+          "why": "Connect durable terminal Chat submission and transcript receipts."
+        },
+        {
+          "file": "src/shared/runtime-terminal-send-contract.ts",
+          "mustContain": "DurableChatTranscriptBoundary",
+          "why": "Connect durable terminal Chat submission and transcript receipts."
+        },
+        {
+          "file": "src/shared/terminal-runtime-capabilities.ts",
+          "mustContain": "DURABLE_CHAT_COMPOSER_CAPABILITY",
+          "why": "Connect durable terminal Chat submission and transcript receipts."
+        },
+        {
+          "file": "src/shared/orchestration-mutation-request.ts",
+          "mustContain": "chatTranscriptVerified",
+          "why": "Verify durable Chat transcript file continuity on the execution host before confirming local input."
+        },
+        {
+          "file": "src/shared/rpc-contract/orchestration-runs-mutation-request-show-params.ts",
+          "mustContain": "verifyChatTranscript",
+          "why": "Verify durable Chat transcript file continuity on the execution host before confirming local input."
+        },
+        {
+          "file": "src/main/runtime/rpc/methods/orchestration/runs/mutation-request-show.ts",
+          "mustContain": "verifyDurableChatTranscriptReceipt",
+          "why": "Verify durable Chat transcript file continuity on the execution host before confirming local input."
+        },
+        {
+          "file": "src/main/ipc/register-core-handlers/register-core-handlers.test.ts",
+          "mustContain": "native-chat-view-recovery/durable-chat-ipc",
+          "why": "Keep core registration tests isolated at the terminal Chat registration seam."
         }
       ],
       "tests": [
@@ -331,10 +466,18 @@
         "src/renderer/src/native-chat-view-recovery/terminal-chat-recovery.test.ts",
         "src/renderer/src/native-chat-view-recovery/activity-restored-attention.test.ts",
         "src/renderer/src/components/activity/activity-thread-actions.test.ts",
-        "src/renderer/src/components/activity/useActivityUnreadCount.test.ts"
+        "src/renderer/src/components/activity/useActivityUnreadCount.test.ts",
+        "src/main/native-chat-view-recovery/durable-chat-submitter.test.ts",
+        "src/main/native-chat-view-recovery/durable-chat-composer-input.test.ts",
+        "src/shared/native-chat-view-recovery/durable-chat-reconciliation.test.ts",
+        "src/main/native-chat-view-recovery/durable-chat-runtime.test.ts",
+        "src/renderer/src/native-chat-view-recovery/use-durable-chat-delivery.test.tsx",
+        "src/main/native-chat-view-recovery/durable-chat-session-identity.test.ts",
+        "src/main/native-chat-view-recovery/durable-chat-transcript-verification.test.ts"
       ],
       "checks": [
-        "pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/native-chat-view-recovery/codex-chat-delivery.test.tsx src/renderer/src/components/tab-bar/SortableTabContextMenu.test.tsx src/renderer/src/components/tab-bar/native-chat-tab-agent-evidence.test.ts src/renderer/src/native-chat-view-recovery/terminal-chat-recovery.test.ts src/renderer/src/components/terminal-pane/terminal-pane-recovery.test.ts src/renderer/src/components/terminal-pane/terminal-pane-recovery-unsettled-fallback.test.ts src/renderer/src/components/terminal-pane/terminal-pane-surface-ownership.test.ts src/renderer/src/native-chat-view-recovery/activity-restored-attention.test.ts src/renderer/src/components/activity/activity-thread-actions.test.ts src/renderer/src/components/activity/useActivityUnreadCount.test.ts"
+        "pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/native-chat-view-recovery src/renderer/src/components/tab-bar/SortableTabContextMenu.test.tsx src/renderer/src/components/tab-bar/native-chat-tab-agent-evidence.test.ts src/renderer/src/native-chat-view-recovery/terminal-chat-recovery.test.ts src/renderer/src/components/terminal-pane/terminal-pane-recovery.test.ts src/renderer/src/components/terminal-pane/terminal-pane-recovery-unsettled-fallback.test.ts src/renderer/src/components/terminal-pane/terminal-pane-surface-ownership.test.ts src/renderer/src/components/activity/activity-thread-actions.test.ts src/renderer/src/components/activity/useActivityUnreadCount.test.ts",
+        "pnpm exec vitest run --config config/vitest.config.ts src/main/native-chat-view-recovery src/shared/native-chat-view-recovery"
       ]
     },
     {
