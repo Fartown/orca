@@ -170,7 +170,9 @@ function threadVerdictEntry(thread: AgentPaneThread): AgentStatusEntry | undefin
 
 // Why the pane's row: an answered ask's done predates the blocked event, and a clear can hide it.
 function paneActivityEntry(thread: AgentPaneThread): AgentStatusEntry | null {
-  return thread.paneEntry && isHistoricalActivityState(thread.paneEntry.state)
+  return thread.paneEntry &&
+    isHistoricalActivityState(thread.paneEntry.state) &&
+    (thread.paneEntry.state === 'done' || thread.paneEntry.restoredUnconfirmed !== true)
     ? thread.paneEntry
     : null
 }
