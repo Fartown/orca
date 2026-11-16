@@ -88,7 +88,7 @@ it('leaves untrackable providers free of client process scans', async () => {
   f.tracker.dispose()
 })
 
-it('keeps a legacy remote process hint unverifiable after a startup title', async () => {
+it('keeps a legacy remote process hint unverifiable without privately retrying it', async () => {
   const read = vi.fn(async () => 'claude')
   const publish = vi.fn<(entry: PaneForegroundAgentEntry) => void>()
   const tracker = createPaneForegroundAgentTracker({
@@ -102,10 +102,14 @@ it('keeps a legacy remote process hint unverifiable after a startup title', asyn
   })
   tracker.onAgentStartupObserved()
   await vi.advanceTimersByTimeAsync(30_000)
-  expect(read).toHaveBeenCalledTimes(3)
+  expect(read).toHaveBeenCalledTimes(1)
   expect(read).toHaveBeenCalledWith('ssh:connection@@pty-delayed', {
     expectedIncarnationId: 'inc-current'
   })
+  expect(publish).not.toHaveBeenCalled()
+  tracker.onCommandStarted()
+  await vi.advanceTimersByTimeAsync(350)
+  expect(read).toHaveBeenCalledTimes(2)
   expect(publish).not.toHaveBeenCalled()
   tracker.dispose()
 })

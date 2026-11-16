@@ -29,17 +29,44 @@ export function runtimeTerminalProcessContactKey(ptyId: string): string | null {
   return ptyId.startsWith('ssh:') ? null : 'local'
 }
 
-export function subscribeRuntimeTerminalProcessContact(listener: () => void): () => void {
-  return useAppStore.subscribe((state, previous) => {
+const contactListeners = new Set<() => void>()
+let unsubscribeContact: (() => void) | null = null
+
+function startContactSubscription(): () => void {
+  const initial = useAppStore.getState()
+  let statuses = initial.runtimeStatusByEnvironmentId
+  let environments = initial.runtimeEnvironments
+  let sshState = initial.sshStateByEnvironment
+  let sshConnections = initial.sshConnectionStates
+  return useAppStore.subscribe((state) => {
     if (
-      state.runtimeStatusByEnvironmentId !== previous.runtimeStatusByEnvironmentId ||
-      state.runtimeEnvironments !== previous.runtimeEnvironments ||
-      state.sshStateByEnvironment !== previous.sshStateByEnvironment ||
-      state.sshConnectionStates !== previous.sshConnectionStates
+      state.runtimeStatusByEnvironmentId !== statuses ||
+      state.runtimeEnvironments !== environments ||
+      state.sshStateByEnvironment !== sshState ||
+      state.sshConnectionStates !== sshConnections
     ) {
-      listener()
+      statuses = state.runtimeStatusByEnvironmentId
+      environments = state.runtimeEnvironments
+      sshState = state.sshStateByEnvironment
+      sshConnections = state.sshConnectionStates
+      for (const listener of Array.from(contactListeners)) {
+        listener()
+      }
     }
   })
+}
+
+export function subscribeRuntimeTerminalProcessContact(listener: () => void): () => void {
+  const subscriber = (): void => listener()
+  unsubscribeContact ??= startContactSubscription()
+  contactListeners.add(subscriber)
+  return () => {
+    contactListeners.delete(subscriber)
+    if (contactListeners.size === 0) {
+      unsubscribeContact?.()
+      unsubscribeContact = null
+    }
+  }
 }
 
 export function captureRuntimeTerminalInspectionContact(ptyId: string) {

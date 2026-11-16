@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useAppStore } from '@/store'
 import {
   inspectRuntimeTerminalProcess,
@@ -6,7 +6,11 @@ import {
 } from './runtime-terminal-inspection'
 import { clearRuntimeCompatibilityCacheForTests } from './runtime-rpc-client'
 import { createCompatibleRuntimeStatusResponse } from './runtime-compatibility-test-fixture'
-import { runtimeTerminalProcessContactKey } from './runtime-terminal-inspection-contact'
+import {
+  captureRuntimeTerminalInspectionContact,
+  runtimeTerminalProcessContactKey,
+  subscribeRuntimeTerminalProcessContact
+} from './runtime-terminal-inspection-contact'
 
 vi.mock('@/store', async () => {
   const { createTestStore } = await import('@/store/slices/store-test-helpers')
@@ -59,8 +63,53 @@ beforeEach(() => {
   useAppStore.setState({ sshConnectionStates: new Map() })
   contact(true)
 })
+afterEach(() => vi.restoreAllMocks())
 
 describe('terminal process inspection follows shared contact', () => {
+  it('shares one raw store subscription across remote demands and releases it after the last disposal', () => {
+    const subscribe = useAppStore.subscribe
+    const rawStop = vi.fn()
+    const rawSubscribe = vi.spyOn(useAppStore, 'subscribe').mockImplementation((listener) => {
+      const stop = subscribe(listener)
+      return () => {
+        rawStop()
+        stop()
+      }
+    })
+    const local = captureRuntimeTerminalInspectionContact('local-pty')
+    expect(rawSubscribe).not.toHaveBeenCalled()
+    const first = captureRuntimeTerminalInspectionContact(remote)
+    const second = captureRuntimeTerminalInspectionContact(remote)
+    expect(first).not.toBeNull()
+    expect(second).not.toBeNull()
+    expect(rawSubscribe).toHaveBeenCalledOnce()
+    first?.dispose()
+    local?.dispose()
+    expect(rawStop).not.toHaveBeenCalled()
+    contact(false)
+    expect(second?.isCurrent()).toBe(false)
+    second?.dispose()
+    expect(rawStop).toHaveBeenCalledOnce()
+    contact(true)
+    const next = captureRuntimeTerminalInspectionContact(remote)
+    expect(rawSubscribe).toHaveBeenCalledTimes(2)
+    next?.dispose()
+    expect(rawStop).toHaveBeenCalledTimes(2)
+  })
+  it('accepts state-only store notifications and ignores writes outside the four contact slices', () => {
+    const subscribe = useAppStore.subscribe
+    vi.spyOn(useAppStore, 'subscribe').mockImplementation((listener) => {
+      const notify = listener as (state: ReturnType<typeof useAppStore.getState>) => void
+      return subscribe((state) => notify(state))
+    })
+    const changed = vi.fn()
+    const stop = subscribeRuntimeTerminalProcessContact(changed)
+    useAppStore.setState({ terminalLayoutsByTabId: {} })
+    expect(changed).not.toHaveBeenCalled()
+    contact(false)
+    expect(changed).toHaveBeenCalledOnce()
+    stop()
+  })
   it('reads valid source-host evidence while shared contact permits the request', async () => {
     await expect(inspectRuntimeTerminalProcess(remote)).resolves.toEqual(inspection)
     expect(runtime.mock.calls.map(([args]) => args.method)).toEqual([

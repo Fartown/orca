@@ -309,6 +309,11 @@
           "baseRef": "$base",
           "requireBaseAncestor": false,
           "allowedPaths": [
+            "src/renderer/src/lib/codex-session-restart-test-fixture.ts",
+            "src/renderer/src/lib/codex-session-restart.test.ts",
+            "tests/e2e/remote-agent-completion-authority.unit.test.ts",
+            "src/renderer/src/components/terminal-pane/pane-delayed-agent-startup.test.ts",
+            "src/renderer/src/components/terminal-pane/pty-connection-unanswered-command-finish.spec.ts",
             "src/renderer/src/components/terminal-pane/pane-foreground-read-scheduler.ts",
             "src/renderer/src/runtime/runtime-terminal-inspection-contact.ts",
             "src/renderer/src/runtime/runtime-terminal-inspection-contact.test.ts",
@@ -1999,6 +2004,11 @@
             "src/cli/local-tasks/**"
           ],
           "allowedPaths": [
+            "src/renderer/src/lib/codex-session-restart-test-fixture.ts",
+            "src/renderer/src/lib/codex-session-restart.test.ts",
+            "tests/e2e/remote-agent-completion-authority.unit.test.ts",
+            "src/renderer/src/components/terminal-pane/pane-delayed-agent-startup.test.ts",
+            "src/renderer/src/components/terminal-pane/pty-connection-unanswered-command-finish.spec.ts",
             "src/renderer/src/components/terminal-pane/pane-foreground-read-scheduler.ts",
             "src/renderer/src/runtime/runtime-terminal-inspection-contact.ts",
             "src/renderer/src/runtime/runtime-terminal-inspection-contact.test.ts",

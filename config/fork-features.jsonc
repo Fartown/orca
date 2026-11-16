@@ -3611,6 +3611,31 @@
       ],
       "seams": [
         {
+          "file": "src/renderer/src/lib/codex-session-restart-test-fixture.ts",
+          "mustContain": "export function codexRestartRuntimeContact",
+          "why": "Reuse the existing Codex restart evidence fixture for canonical verified and out-of-contact host snapshots"
+        },
+        {
+          "file": "src/renderer/src/lib/codex-session-restart.test.ts",
+          "mustContain": "markLiveCodexSessionsForRestart",
+          "why": "Codex restart observations follow canonical source contact and preserve offline remote panes"
+        },
+        {
+          "file": "tests/e2e/remote-agent-completion-authority.unit.test.ts",
+          "mustContain": "remote agent completion authority",
+          "why": "Remote completion requires shared contact before fenced execution-host evidence can be read"
+        },
+        {
+          "file": "src/renderer/src/components/terminal-pane/pane-delayed-agent-startup.test.ts",
+          "mustContain": "without privately retrying",
+          "why": "Legacy remote hints remain unverifiable and only a new command may request another observation"
+        },
+        {
+          "file": "src/renderer/src/components/terminal-pane/pty-connection-unanswered-command-finish.spec.ts",
+          "mustContain": "retains an out-of-contact SSH row regardless of local verifiability",
+          "why": "An unreachable SSH owner cannot be judged from local process capability; restored source evidence may retire its row"
+        },
+        {
           "file": "src/renderer/src/runtime/runtime-terminal-inspection.ts",
           "mustContain": "captureRuntimeTerminalInspectionContact(ptyId)",
           "why": "Fence all remote process inspection before dispatch and after await using shared contact evidence"
@@ -4488,6 +4513,13 @@
         }
       ],
       "tests": [
+        "src/renderer/src/lib/codex-session-restart.test.ts",
+        "tests/e2e/remote-agent-completion-authority.unit.test.ts",
+        "src/renderer/src/components/terminal-pane/pane-delayed-agent-startup.test.ts",
+        "src/renderer/src/components/terminal-pane/pty-connection-main-pane-start.test.ts",
+        "src/renderer/src/components/terminal-pane/pty-connection-input-and-repaint.test.ts",
+        "src/renderer/src/components/terminal-pane/pty-connection-main-pane-restore-start.test.ts",
+        "src/renderer/src/components/terminal-pane/pty-connection-completion-and-notification.test.ts",
         "src/renderer/src/components/terminal-pane/pane-foreground-agent-tracker.test.ts",
         "src/renderer/src/components/terminal-pane/pane-foreground-inspect-observation-identity.test.ts",
         "src/renderer/src/components/terminal-pane/pty-connection-foreground-agent.test.ts",
@@ -4652,7 +4684,7 @@
       ],
       "checks": [
         "pnpm exec vitest run --config config/vitest.config.ts src/main/local-tasks src/shared/local-tasks src/main/runtime/rpc/methods/local-tasks.test.ts src/main/runtime/wsl-host-agent-launch-paths.test.ts src/main/runtime/wsl-host-agent-terminal-launch.test.ts src/main/codex-cli/command-guest-path.test.ts src/shared/host-operation-ownership.test.ts src/main/runtime/runtime-rpc/fork-mobile-rpc-method-allowlist.test.ts src/main/runtime/runtime-rpc-mobile-method-allowlist.test.ts src/cli/local-tasks src/main/ipc/desktop-runtime-sender-lifecycle.test.ts",
-        "ORCA_BACKGROUND_LAUNCH=1 pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/local-tasks src/renderer/src/components/local-tasks src/renderer/src/components/task-page src/renderer/src/components/terminal-pane/pane-foreground-agent-tracker.test.ts src/renderer/src/components/terminal-pane/pane-foreground-inspect-observation-identity.test.ts src/renderer/src/components/terminal-pane/pty-connection-foreground-agent.test.ts src/renderer/src/components/terminal-pane/pane-foreground-process-exit-retire.test.ts src/renderer/src/runtime/runtime-terminal-inspection-contact.test.ts src/renderer/src/components/terminal-pane/pane-foreground-agent-contact.test.ts src/renderer/src/runtime/runtime-terminal-inspection.test.ts src/renderer/src/components/cmd-j src/renderer/src/lib/worktree-creation-structured-session.test.ts src/renderer/src/lib/agent-message-send.test.ts src/renderer/src/lib/active-agent-note-send-delivery-guard.test.ts",
+        "ORCA_BACKGROUND_LAUNCH=1 pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/local-tasks src/renderer/src/components/local-tasks src/renderer/src/components/task-page src/renderer/src/lib/codex-session-restart.test.ts tests/e2e/remote-agent-completion-authority.unit.test.ts src/renderer/src/components/terminal-pane/pane-delayed-agent-startup.test.ts src/renderer/src/components/terminal-pane/pty-connection-main-pane-start.test.ts src/renderer/src/components/terminal-pane/pty-connection-input-and-repaint.test.ts src/renderer/src/components/terminal-pane/pty-connection-main-pane-restore-start.test.ts src/renderer/src/components/terminal-pane/pty-connection-completion-and-notification.test.ts src/renderer/src/components/terminal-pane/pane-foreground-agent-tracker.test.ts src/renderer/src/components/terminal-pane/pane-foreground-inspect-observation-identity.test.ts src/renderer/src/components/terminal-pane/pty-connection-foreground-agent.test.ts src/renderer/src/components/terminal-pane/pane-foreground-process-exit-retire.test.ts src/renderer/src/runtime/runtime-terminal-inspection-contact.test.ts src/renderer/src/components/terminal-pane/pane-foreground-agent-contact.test.ts src/renderer/src/runtime/runtime-terminal-inspection.test.ts src/renderer/src/components/cmd-j src/renderer/src/lib/worktree-creation-structured-session.test.ts src/renderer/src/lib/agent-message-send.test.ts src/renderer/src/lib/active-agent-note-send-delivery-guard.test.ts",
         "pnpm --dir mobile exec vitest run src/local-tasks src/home/MobileHomeTasksAndAutomations.test.tsx src/session/use-notification-pane-navigation.test.tsx src/components/bottom-drawer src/mobile-web-shell/bridge/bridge-rpc-client-frames.test.ts src/components/MobileMarkdown.rendering.test.tsx src/components/mobile-markdown-selectable.test.tsx",
         "pnpm exec vitest run --config config/vitest.config.ts config/scripts/mobile-web-app-file-attachment-grant.test.mjs config/scripts/mobile-web-app/mobile-web-app-session-dictation-capture.test.mjs config/scripts/mobile-web-app/mobile-web-app-page-grant-call-sites.test.mjs config/scripts/mobile-web-app/mobile-web-app-screencast-lane-grant.test.mjs config/scripts/mobile-web-app/mobile-web-app-external-navigation-grant.test.mjs"
       ]

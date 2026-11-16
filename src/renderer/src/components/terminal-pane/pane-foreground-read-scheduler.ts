@@ -22,6 +22,17 @@ export function createPaneForegroundReadScheduler(
       : null
   }
   let lastContact: string | null | undefined
+  let unsubscribe: (() => void) | undefined
+  const subscribeRemote = (): void => {
+    const id = deps.getPtyId()
+    if (!id || deps.isRemotePtyId?.(id) !== true) {
+      unsubscribe?.()
+      unsubscribe = undefined
+    } else if (!unsubscribe && deps.subscribeReadContactChange) {
+      lastContact = contactKey()
+      unsubscribe = deps.subscribeReadContactChange(onContactChanged)
+    }
+  }
   const hasPending = (): boolean => scheduled !== null || active !== null
   const cancel = (): void => {
     generation += 1
@@ -36,6 +47,7 @@ export function createPaneForegroundReadScheduler(
     if (disposed) {
       return
     }
+    subscribeRemote()
     const contact = contactKey()
     lastContact ??= contact
     if (contact === null) {
@@ -55,7 +67,7 @@ export function createPaneForegroundReadScheduler(
       })
     }, delayMs)
   }
-  const unsubscribe = deps.subscribeReadContactChange?.(() => {
+  function onContactChanged(): void {
     const next = contactKey()
     if (lastContact === undefined) {
       lastContact = next
@@ -76,7 +88,7 @@ export function createPaneForegroundReadScheduler(
     } else {
       schedule(0, pending.retryIndex, pending.reason)
     }
-  })
+  }
   return {
     cancel,
     schedule,

@@ -27,23 +27,24 @@ function live(epoch = 1): RuntimeTerminalProcessInspection {
   }
 }
 
-function fixture(initialContact: string | null = 'connected') {
+function fixture(initialContact: string | null = 'connected', remote = true) {
   let key = initialContact
   let changed = () => {}
   const read = vi.fn<() => Promise<RuntimeTerminalProcessInspection>>().mockResolvedValue(live())
   const publish = vi.fn()
   const shell = vi.fn()
   const unsubscribe = vi.fn()
+  const subscribe = vi.fn((listener: () => void) => {
+    changed = listener
+    return unsubscribe
+  })
   const tracker = createPaneForegroundAgentTracker({
     getPtyId: () => PTY,
     isTrackablePtyId: () => true,
-    isRemotePtyId: () => true,
+    isRemotePtyId: () => remote,
     getExpectedIncarnationId: () => 'inc',
     getReadContactKey: () => key,
-    subscribeReadContactChange: (listener) => {
-      changed = listener
-      return unsubscribe
-    },
+    subscribeReadContactChange: subscribe,
     readForegroundProcess: read,
     publish,
     hasKnownAgentIdentity: () => true,
@@ -55,6 +56,7 @@ function fixture(initialContact: string | null = 'connected') {
     publish,
     shell,
     unsubscribe,
+    subscribe,
     contact: (next: string | null) => {
       key = next
       changed()
@@ -69,6 +71,27 @@ afterEach(() => {
 })
 
 describe('foreground reads follow shared host contact', () => {
+  it('never subscribes native local panes to remote contact changes', async () => {
+    const first = fixture('connected', false)
+    const second = fixture('connected', false)
+    first.tracker.onCommandStarted('claude')
+    second.tracker.onVisiblePtyBound(true)
+    await vi.advanceTimersByTimeAsync(350)
+    expect(first.subscribe).not.toHaveBeenCalled()
+    expect(second.subscribe).not.toHaveBeenCalled()
+    expect(first.read).toHaveBeenCalledOnce()
+    expect(second.read).toHaveBeenCalledOnce()
+    first.tracker.dispose()
+    second.tracker.dispose()
+  })
+
+  it('subscribes a remote pane only when its first foreground read is requested', () => {
+    const f = fixture()
+    expect(f.subscribe).not.toHaveBeenCalled()
+    f.tracker.onCommandStarted('claude')
+    expect(f.subscribe).toHaveBeenCalledOnce()
+    f.tracker.dispose()
+  })
   it('cancels a scheduled read and only reads again on the shared return to contact', async () => {
     const f = fixture()
     f.tracker.onCommandFinished()
