@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { matchesLocalTaskQuery } from '../../../src/shared/local-tasks/local-task-grouping'
 import type { RpcSendParams } from '../transport/rpc-params-contract'
 import type { MobileSessionTab } from '../session/mobile-session-route-types'
@@ -69,10 +69,12 @@ export function LocalTaskSessionLinkSheet({
 }) {
   const lastRequest = useRef<SessionLinkRequest | null>(null)
   const currentRequest = useRef(request)
-  currentRequest.current = request
-  if (request) {
-    lastRequest.current = request
-  }
+  useLayoutEffect(() => {
+    currentRequest.current = request
+    if (request) {
+      lastRequest.current = request
+    }
+  }, [request])
   const shownRequest = request ?? lastRequest.current
   const copy = localTasksCopy()
   const executionHost = useWorkspaceExecutionHost()
@@ -104,7 +106,9 @@ export function LocalTaskSessionLinkSheet({
     currentLine?.workspace?.hostId === request.record.hostId
   )
   const writableRef = useRef(writable)
-  writableRef.current = writable
+  useLayoutEffect(() => {
+    writableRef.current = writable
+  }, [writable])
   const choices = writable ? (currentLine?.sessionChoices ?? []) : []
   const operation = useMemo(() => ({ request, ids: createLocalTaskOperationIds() }), [request])
   const [error, setError] = useState<string | null>(null)

@@ -468,6 +468,15 @@ external_ids:
 - 未解决问题：原生Android/iOS与终端正文流仍未验收；#122现场历史误报未定因并保持OPEN。SSH owner原始status报告appVersion 1.4.214及协议版本，但没有commit，不把owner版本推断成本地候选；managed目标删除被规则拒绝时保留响应，不为清理停止共享服务。
 - 下一步：最后候选完成SSH与推送前检查后正常推送，CI全部通过按授权合入；在交付证据绑定最终SHA、PR与清理结果，保留用户运行中的App。
 
+### 2026-11-16 PR #128 独立 React Doctor 修复（testing）
+
+- 本轮目标：修复PR #128静态检查失败，保持浮卡关联的异步与失联保护。
+- 完成内容：关联抽屉的currentRequest、lastRequest和writable三个ref只在layout effect提交阶段同步，避免并发渲染被丢弃时泄漏状态；保留请求身份、关闭动画数据、标签清单及旧回调可写性门控。
+- 代码或文档变更：仅`local-task-session-link-sheet.tsx`的三处ref同步和本记录；不修改检查脚本、规则、baseline或豁免。
+- 验证证据：f1a3的CI与同命令本地均报三条`no-ref-current-in-render`；修后精确CI命令`node config/scripts/check-react-doctor-changed.mjs c5acbcf66b34cc75dfa8d62449b6dba091d73958`通过，Card12/12、手机生产类型及1294文件测试类型通过。之前通用changed-code quality里的React Doctor扫描通过，不代表CI这个独立检查通过；最终新增该命令单独验证。红绿日志在本机`.docs/local-tasks-mobile-card-ui-validation/2026-11-16/evidence/gates/`，新bundle和本机/SSH回归结果继续记录在同topic的results.md。
+- 未解决问题：修后新bundle真实界面回归和最终CI仍在执行；原生手机及#122历史误报边界保持不变。
+- 下一步：冻结本记录，重建手机bundle、复验本机/SSH及最后推送前检查后正常更新PR，CI全绿合入；不将原head的其它绿项冒充新head全绿。
+
 ### 2026-11-16 新一轮会话与导航问题登记（implementing）
 
 - 本轮目标：按用户要求一起排查并修复布局、导航、新建关联、连接误报及提醒空白。
