@@ -588,10 +588,13 @@ describe('the session tab task detail card', () => {
     )
     act(() => linkButton.props.onPress())
     let sheet = renderer!.root.find((node) => String(node.type) === 'ChoiceSheet')
+    const oldChoice = sheet.props.choices[0].onPress
     act(() => sheet.props.choices[0].onPress())
     expect(host.writes).toHaveLength(1)
     act(() => sheet.props.onClose())
     act(() => linkButton.props.onPress())
+    act(() => oldChoice())
+    expect(host.writes).toHaveLength(1)
     sheet = renderer!.root.find((node) => String(node.type) === 'ChoiceSheet')
     act(() => sheet.props.choices[0].onPress())
     act(() => sheet.props.choices[0].onPress())
@@ -649,13 +652,12 @@ describe('the session tab task detail card', () => {
         ).length > 0
     )
     act(() => linkButton.props.onPress())
-    expect(renderer!.root.find((node) => String(node.type) === 'ChoiceSheet').props.visible).toBe(
-      true
-    )
+    const sheet = renderer!.root.find((node) => String(node.type) === 'ChoiceSheet')
+    expect(sheet.props.visible).toBe(true)
+    const oldChoice = sheet.props.choices[0].onPress
     act(() => focusCleanup.current?.())
-    expect(renderer!.root.find((node) => String(node.type) === 'ChoiceSheet').props.visible).toBe(
-      false
-    )
+    expect(renderer!.root.findAll((node) => String(node.type) === 'ChoiceSheet')).toHaveLength(0)
+    act(() => oldChoice())
     expect(host.writes).toHaveLength(0)
   })
 

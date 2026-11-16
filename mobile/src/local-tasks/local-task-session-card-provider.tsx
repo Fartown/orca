@@ -10,25 +10,29 @@ import {
   type SessionTaskReceiptController
 } from './local-task-session-card-slot'
 
+type LinkOpening = { id: number; request: SessionLinkRequest; visible: boolean }
+
 export function LocalTaskSessionCardProvider({ children }: { children: ReactNode }) {
-  const [linkRequest, setLinkRequest] = useState<SessionLinkRequest | null>(null)
-  const currentRequest = useRef<SessionLinkRequest | null>(null)
+  const [opening, setOpening] = useState<LinkOpening | null>(null)
+  const currentOpening = useRef<LinkOpening | null>(null)
+  const nextOpeningId = useRef(0)
   const openLinkRequest = useCallback((request: SessionLinkRequest) => {
-    currentRequest.current = request
-    setLinkRequest(request)
+    const next = { id: ++nextOpeningId.current, request, visible: true }
+    currentOpening.current = next
+    setOpening(next)
   }, [])
-  const closeLinkRequest = useCallback((request: SessionLinkRequest) => {
-    if (currentRequest.current !== request) {
+  const closeLinkOpening = useCallback((id: number) => {
+    if (currentOpening.current?.id !== id) {
       return
     }
-    currentRequest.current = null
-    setLinkRequest((current) => (current === request ? null : current))
+    currentOpening.current = null
+    setOpening((current) => (current?.id === id ? { ...current, visible: false } : current))
   }, [])
   useFocusEffect(
     useCallback(
       () => () => {
-        currentRequest.current = null
-        setLinkRequest(null)
+        currentOpening.current = null
+        setOpening(null)
       },
       []
     )
@@ -47,14 +51,17 @@ export function LocalTaskSessionCardProvider({ children }: { children: ReactNode
     (controller: SessionTaskReceiptController) => (
       <>
         <LocalTaskSessionReceipt controller={controller} />
-        <LocalTaskSessionLinkSheet
-          request={linkRequest}
-          controller={controller}
-          onClose={closeLinkRequest}
-        />
+        {opening ? (
+          <LocalTaskSessionLinkSheet
+            key={opening.id}
+            request={opening.visible ? opening.request : null}
+            controller={controller}
+            onClose={() => closeLinkOpening(opening.id)}
+          />
+        ) : null}
       </>
     ),
-    [closeLinkRequest, linkRequest]
+    [closeLinkOpening, opening]
   )
   return (
     <LocalTaskSessionReceiptSlot.Provider value={renderReceipt}>

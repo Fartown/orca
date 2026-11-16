@@ -74,6 +74,9 @@ export function LocalTaskSessionLinkSheet({
     if (request) {
       lastRequest.current = request
     }
+    return () => {
+      currentRequest.current = null
+    }
   }, [request])
   const shownRequest = request ?? lastRequest.current
   const copy = localTasksCopy()
@@ -108,15 +111,14 @@ export function LocalTaskSessionLinkSheet({
   const writableRef = useRef(writable)
   useLayoutEffect(() => {
     writableRef.current = writable
+    return () => {
+      writableRef.current = false
+    }
   }, [writable])
   const choices = writable ? (currentLine?.sessionChoices ?? []) : []
   const operation = useMemo(() => ({ request, ids: createLocalTaskOperationIds() }), [request])
   const [error, setError] = useState<string | null>(null)
   const [query, setQuery] = useState('')
-  useEffect(() => {
-    setError(null)
-    setQuery('')
-  }, [request])
   const shown = choices.filter((entry) => matchesLocalTaskQuery(entry, undefined, query))
   const linkSession = async (taskId: string) => {
     if (

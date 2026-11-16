@@ -477,6 +477,15 @@ external_ids:
 - 未解决问题：修后新bundle真实界面回归和最终CI仍在执行；原生手机及#122历史误报边界保持不变。
 - 下一步：冻结本记录，重建手机bundle、复验本机/SSH及最后推送前检查后正常更新PR，CI全绿合入；不将原head的其它绿项冒充新head全绿。
 
+### 2026-11-16 PR #128 fork 全量状态生命周期修复（testing）
+
+- 本轮目标：修复CI相对上游的全fork质量检查，保持抽屉独立请求语义。
+- 完成内容：Provider为每次打开分配独立opening key；关闭只隐藏同一实例保留动画，新打开自然初始化错误、筛选和操作ID，不再用effect追随request重置state。卸载时清空旧请求及可写ref，已捕获的旧选择回调不能新写，迟到结果不能关闭新抽屉。
+- 代码或文档变更：Provider、LinkSheet、既有Card异步回归追加旧回调禁写断言与本记录；没有修改CI、质量规则、baseline或豁免。
+- 验证证据：d92的PR范围和独立React Doctor通过，但CI全fork相对8cd6a7e5检查1754文件报一条`no-adjust-state-on-prop-change`，本地同命令已复现。修后PR独立检查通过，全fork扫描与功能回归继续执行，逐项结果在本机`.docs/local-tasks-mobile-card-ui-validation/2026-11-16/results.md`；旧d92本机和真实SSH通过仅作为历史，不冒充新源码验收。
+- 未解决问题：新状态生命周期的完整门禁和fresh手机bundle本机/SSH回归尚待收尾；原生设备与#122历史根因未定边界保持。
+- 下一步：同时取得PR范围与全fork范围质量检查通过，冻结提交后fresh手机构建、真实界面和最后推送前检查，正常更新同PR并跟进新head CI全绿合入。
+
 ### 2026-11-16 新一轮会话与导航问题登记（implementing）
 
 - 本轮目标：按用户要求一起排查并修复布局、导航、新建关联、连接误报及提醒空白。
