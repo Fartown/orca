@@ -3391,6 +3391,9 @@
         "src/renderer/src/local-tasks/LocalTasksSyncGate.tsx",
         "src/renderer/src/components/local-tasks/LocalTaskPage.tsx",
         "src/renderer/src/components/local-tasks/LocalTaskSource.tsx",
+        "src/renderer/src/components/local-tasks/LocalTaskSourceCreateAction.tsx",
+        "src/renderer/src/local-tasks/local-task-agent-row-activation.ts",
+        "src/renderer/src/local-tasks/local-task-nav-preference.ts",
         "mobile/app/h/[hostId]/local-tasks.web.tsx",
         "mobile/src/local-tasks/MobileHomeLocalTasksCard.tsx",
         "mobile/src/local-tasks/local-task-source-option.tsx",
@@ -3842,6 +3845,16 @@
           "why": "Add reference → Local tasks puts the task in the workspace details draft (REQ-011)"
         },
         {
+          "file": "src/renderer/src/components/sidebar/WorkspaceAttachmentSearch.tsx",
+          "mustContain": "LocalTaskSourceCreateAction",
+          "why": "Workspace details can stage a new task without leaving its workspace and host (D-024)."
+        },
+        {
+          "file": "src/renderer/src/components/sidebar/WorktreeLinkedItemsField.tsx",
+          "mustContain": "LocalTaskLinkedCountLabel",
+          "why": "Pending new tasks are distinguished from saved links in workspace details (D-024)."
+        },
+        {
           "file": "src/renderer/src/components/sidebar/WorktreeLinkedItemsField.tsx",
           "mustContain": "<LocalTaskLinkedWorkRow disabled={disabled} />",
           "why": "Linked work lists and counts the workspace's task under Issues & tasks (REQ-011)"
@@ -4010,6 +4023,11 @@
           "file": "src/renderer/src/app-shell/AppWorkspaceShell.tsx",
           "mustContain": "LocalTaskSessionPanelSlot",
           "why": "Task-first navigation and session preview reuse the existing workspace/session surfaces (REQ-026, REQ-028)"
+        },
+        {
+          "file": "src/renderer/src/components/sidebar/use-worktree-agent-activation.ts",
+          "mustContain": "openLocalTaskSessionFromAgentRow",
+          "why": "Linked workspace sidebar sessions open conversation-first beside their task (D-024, REQ-028)."
         },
         {
           "file": "src/renderer/src/components/use-terminal-workspace-store-bindings.ts",
@@ -4256,6 +4274,8 @@
         "src/renderer/src/local-tasks/local-tasks-runtime-client.test.ts",
         "src/renderer/src/local-tasks/local-tasks-sync-gate.test.tsx",
         "src/renderer/src/local-tasks/local-task-session-reveal.test.ts",
+        "src/renderer/src/local-tasks/local-task-agent-row-activation.test.ts",
+        "src/renderer/src/local-tasks/local-task-nav-preference.test.ts",
         "src/renderer/src/components/local-tasks/LocalTaskReplyBox.test.tsx",
         "mobile/src/local-tasks/use-local-task-endpoints.test.tsx",
         "mobile/src/local-tasks/local-task-reply-send.test.ts",

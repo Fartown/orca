@@ -102,7 +102,7 @@ it('opens a preview without acknowledging before its surface is ready', () => {
   expect(localTaskPageStore.getState().previewOpen).toBe(false)
   expect(fixture.openTaskPage).toHaveBeenCalledWith({ taskId: link.taskId })
   expect(localTaskSessionPanelStore.getState()).toMatchObject({
-    mode: 'narrow',
+    mode: 'wide',
     sessionLinkId: SESSION,
     taskId: link.taskId
   })

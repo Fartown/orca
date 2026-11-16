@@ -4,7 +4,10 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { translate } from '@/i18n/i18n'
 import { useLocalTaskSourceTab } from '@/local-tasks/local-task-source-tab'
 import { useLocalTasksDomain } from '@/local-tasks/local-tasks-domain-store'
-import { useLocalTaskRowWriteReason } from '@/local-tasks/local-task-write-reason'
+import {
+  useLocalTaskCreateWriteReason,
+  useLocalTaskRowWriteReason
+} from '@/local-tasks/local-task-write-reason'
 import { LocalTaskActionTooltip } from './LocalTaskActionTooltip'
 
 function useDraftTaskId(): string | null {
@@ -12,11 +15,37 @@ function useDraftTaskId(): string | null {
   return tab?.draft ? tab.selectedTaskId : null
 }
 
-/** 1 while workspace details holds a task for this workspace, so "N linked" counts it. */
+export function useLocalTaskPendingCreateCount(): number {
+  return useLocalTaskSourceTab()?.draft?.newTask ? 1 : 0
+}
+
+export function LocalTaskLinkedCountLabel({ count }: { count: number }): React.JSX.Element {
+  const pending = useLocalTaskPendingCreateCount()
+  return (
+    <>
+      {pending
+        ? translate(
+            'localTasks.sourceTab.pendingCount',
+            '{{linked}} linked · {{pending}} pending',
+            {
+              linked: count - pending,
+              pending
+            }
+          )
+        : translate('workspace.links.linkedCount', '{{count}} linked', {
+            count,
+            defaultValue_one: '{{count}} linked'
+          })}
+    </>
+  )
+}
+
+/** One row while workspace details holds an existing task or a new task draft. */
 export function useLocalTaskLinkedWorkCount(): number {
   const taskId = useDraftTaskId()
+  const pending = useLocalTaskPendingCreateCount()
   return useLocalTasksDomain((state) =>
-    taskId !== null && state.tasks.some((task) => task.id === taskId) ? 1 : 0
+    pending || (taskId !== null && state.tasks.some((task) => task.id === taskId)) ? 1 : 0
   )
 }
 
@@ -32,9 +61,12 @@ export function LocalTaskLinkedWorkRow({
   const tab = useLocalTaskSourceTab()
   const taskId = useDraftTaskId()
   const linkedTaskId = tab?.draft?.linkedTaskId ?? null
+  const newTask = tab?.draft?.newTask ?? null
   const task = useLocalTasksDomain((state) => state.tasks.find((t) => t.id === taskId))
   const projectName = useLocalTasksDomain(
-    (state) => state.projects.find((project) => project.id === task?.projectId)?.name ?? ''
+    (state) =>
+      state.projects.find((project) => project.id === (newTask?.projectId ?? task?.projectId))
+        ?.name ?? ''
   )
   const replaced = useLocalTasksDomain((state) =>
     linkedTaskId !== null && linkedTaskId !== taskId
@@ -42,10 +74,54 @@ export function LocalTaskLinkedWorkRow({
       : undefined
   )
   const writeReason = useLocalTaskRowWriteReason(task?.id ?? null)
-  if (!tab?.draft || !task) {
+  const createReason = useLocalTaskCreateWriteReason(newTask?.projectId ?? null)
+  if (!tab?.draft) {
     return null
   }
   const { remove } = tab.draft
+  if (newTask) {
+    return (
+      <div data-workspace-linked-item="" className="flex min-h-8 min-w-0 items-center gap-1 py-1">
+        <ListTodo className="size-3.5 shrink-0 text-muted-foreground" />
+        <div className="flex min-w-0 flex-1 flex-col text-xs">
+          <span className="truncate font-medium">{newTask.title}</span>
+          <span className="text-2xs text-muted-foreground">
+            {projectName} ·{' '}
+            {tab.draft.createdTaskId
+              ? translate(
+                  'localTasks.sourceTab.createdLinkPending',
+                  'Task created; workspace link pending. Save again to retry.'
+                )
+              : tab.draft.createAttempted
+                ? translate(
+                    'localTasks.sourceTab.creationRetryPending',
+                    'Creation outcome is unknown. Save again to retry this draft.'
+                  )
+                : translate(
+                    'localTasks.sourceTab.pendingCreateLink',
+                    'Save workspace details to create and link this task.'
+                  )}
+          </span>
+          {createReason ? (
+            <span className="text-2xs text-muted-foreground">{createReason}</span>
+          ) : null}
+        </div>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-xs"
+          disabled={disabled}
+          aria-label={translate('localTasks.sourceTab.removeTaskDraft', 'Remove new task draft')}
+          onClick={remove}
+        >
+          <X className="size-3" />
+        </Button>
+      </div>
+    )
+  }
+  if (!task) {
+    return null
+  }
   return (
     <div data-workspace-linked-item="" className="flex min-h-8 min-w-0 items-center gap-1 py-1">
       <ListTodo className="size-3.5 shrink-0 text-muted-foreground" />

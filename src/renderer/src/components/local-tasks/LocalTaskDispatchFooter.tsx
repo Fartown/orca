@@ -45,7 +45,7 @@ export function LocalTaskDispatchFooter({
 }): React.JSX.Element {
   const keyCap = 'min-w-4 px-1 py-0 text-3xs'
   return (
-    <div className="flex items-center gap-1.5">
+    <div className="flex min-w-0 flex-wrap items-center gap-1.5">
       <Button
         variant="ghost"
         size="icon-xs"
@@ -81,7 +81,7 @@ export function LocalTaskDispatchFooter({
           ? translate('localTasks.dispatch.hintAsk', 'ask')
           : translate('localTasks.dispatch.hintSend', 'dispatch')}
       </span>
-      <span className="ml-auto flex items-center gap-1.5">
+      <span className="ml-auto flex min-w-0 flex-wrap items-center justify-end gap-1.5">
         {runOn ? (
           <span className="hidden max-w-48 truncate text-2xs text-muted-foreground @3xl/local-task-dispatch:inline">
             {translate('localTasks.dispatch.executedBy', 'Run on {{host}}', { host: runOn })}

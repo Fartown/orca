@@ -1,5 +1,5 @@
 import { lazy, Suspense, useState } from 'react'
-import { ChevronDown, Link2, PanelRightClose } from 'lucide-react'
+import { ChevronDown, Link2, PanelLeftClose } from 'lucide-react'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { translate } from '@/i18n/i18n'
 import { cn } from '@/lib/utils'
@@ -145,7 +145,7 @@ function LinkedSessionChip({
           type="button"
           title={translate(
             'localTasks.sessionChip.backToPanelHint',
-            'Back to the overview, with this session in the wide panel on the right'
+            'Back to the overview, with this session in the wide panel on the left'
           )}
           onPointerDown={(event) => event.stopPropagation()}
           onClick={(event) => {
@@ -155,7 +155,7 @@ function LinkedSessionChip({
           }}
           className="inline-flex h-5 shrink-0 items-center gap-1 rounded-full border border-input bg-popover/95 px-1.5 text-2xs text-muted-foreground shadow-xs transition-colors hover:bg-accent hover:text-foreground"
         >
-          <PanelRightClose className="size-3" />
+          <PanelLeftClose className="size-3" />
           {translate('localTasks.sessionChip.backToPanel', 'Back to side')}
         </button>
       ) : null}

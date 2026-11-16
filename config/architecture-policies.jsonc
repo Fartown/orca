@@ -884,6 +884,7 @@
             "src/renderer/src/hooks/ipc-events/new-workspace-command.ts",
             "src/cli/local-tasks/**",
             "src/renderer/src/components/sidebar/worktree-card-option-items.tsx",
+            "src/renderer/src/components/sidebar/use-worktree-agent-activation.ts",
             "src/renderer/src/components/sidebar/WorktreeCardMeta.tsx",
             "src/renderer/src/components/sidebar/WorktreeCardLinkedItemsSection.tsx",
             "src/renderer/src/components/sidebar/use-worktree-card-controller.ts",
@@ -1942,6 +1943,7 @@
           "allowedPaths": [
             "src/cli/local-tasks/**",
             "src/renderer/src/components/sidebar/worktree-card-option-items.tsx",
+            "src/renderer/src/components/sidebar/use-worktree-agent-activation.ts",
             "src/renderer/src/components/sidebar/WorktreeCardMeta.tsx",
             "src/renderer/src/components/sidebar/WorktreeCardLinkedItemsSection.tsx",
             "src/renderer/src/components/sidebar/use-worktree-card-controller.ts",
@@ -2142,7 +2144,9 @@
           "type": "dependency-boundary",
           "sourceFiles": ["src/renderer/src/**/*.ts", "src/renderer/src/**/*.tsx"],
           "exceptPaths": [
+            "src/renderer/src/components/sidebar/WorkspaceAttachmentSearch.tsx",
             "src/renderer/src/components/sidebar/worktree-card-option-items.tsx",
+            "src/renderer/src/components/sidebar/use-worktree-agent-activation.ts",
             "src/renderer/src/components/sidebar/WorktreeCardMeta.tsx",
             "src/renderer/src/components/sidebar/use-worktree-card-controller.ts",
             "src/renderer/src/components/worktree-jump/worktree-jump-palette-model.ts",

@@ -153,7 +153,10 @@ export const localTasksClient = {
       okOnly
     ),
 
-  createTask: async (input: WithoutOperation<LocalTasksTasksCreateInput>) => {
+  createTask: async (
+    input: WithoutOperation<LocalTasksTasksCreateInput>,
+    options?: { clientOperationId: string }
+  ) => {
     const endpoint = localTaskIdEndpoint(input.projectId)
     const result = await writeLocalTasks(
       endpoint,
@@ -164,7 +167,8 @@ export const localTasksClient = {
         ...(input.statusId ? { statusId: localTaskOwnerId(input.statusId) } : {}),
         ...(input.parentId === undefined ? {} : { parentId: ownerIdOrNull(input.parentId) })
       },
-      taskResult
+      taskResult,
+      options?.clientOperationId
     )
     return result.ok ? { ...result, task: toClientLocalTask(endpoint, result.task) } : result
   },
