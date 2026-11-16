@@ -481,6 +481,7 @@ external_ids:
 - 完成内容：Issue #135、REQ-033、D-027；本机旧浮动总管兼容，配对和 managed SSH 总管使用来源 profile 的普通 folder；来源绑定的注册、提案、收件箱、外库关注和唤醒；切换与连接代际 fence；prehooks 等待显示原终端，原会话不被替换；显式显示远端时仅最小化挡住目标的原本机总管浮层。
 - 代码或文档变更：local-tasks 自有路径及既有 dispatcher RPC seam；主机选择及中英繁体文本；方案、TC-355～TC-359；原 generator 补 v1.4.250 已发布 orca-computer-use 的唯一历史摘要（三行 add-only），不改变当前技能包或校验器，并登记精确生成物 seam。
 - 验证证据：后端 38 文件 257 项、桌面初轮 178 文件 1265 项、手机 73 文件 344 项、mobile-web 5 文件 47 项通过；数据层 67 项后追加 unknown unwatch 用例通过；原 pane/迟到标签/切换 fence/浮层遮挡的增量回归通过。隐藏 CDP 已实证 Local trust 原终端、旧偏好重载仍原 PID、paired Chat；完整 related 检查与最终 SSH/确认执行/断联验收仍在进行。日志目录 `.docs/dispatcher-host-selection-ui-validation/2026-11-17/`。
+- 补充验证：完整 related 检查自然跑完 1605.7 秒，原 14 个失败为 WSL fixture 9 项及缺发布 tag 5 项；在 integration 87e7 独立副本复现前者，同类 resolver 另有 2 项。三个 fixture 仅隔离系统目录枚举，当前与基线修后 4 文件 37 项均通过；补取官方 v1.4.222/v1.4.228/v1.4.229 引用后重验跨版本，不改生产 CLI 查找或断言。候选实际 UI 全链路已通过，包含原进程完整唤醒、source proposal 确认执行、SSH Chat、断联零私有请求及恢复。
 - 未解决问题：最终来源提案确认与唤醒、SSH Chat、断联零请求和恢复仍需最后构建的完整验收；完整 PR CI 尚未运行，不能以 skipped 或候选结果计完成。
 - 下一步：结束完整检查后合入最新 integration、冻结最终源码，完成后台本机/配对/真实 SSH 验收与 PR 全部相关 CI。
 

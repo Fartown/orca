@@ -3600,6 +3600,21 @@
       ],
       "seams": [
         {
+          "file": "src/main/runtime/wsl-host-agent-launch-paths.test.ts",
+          "mustContain": "getSystemCliInstallDirectories: () => []",
+          "why": "WSL fixture isolates host-installed agent CLIs during cross-platform dispatcher validation without changing production resolution or assertions"
+        },
+        {
+          "file": "src/main/runtime/wsl-host-agent-terminal-launch.test.ts",
+          "mustContain": "getSystemCliInstallDirectories: () => []",
+          "why": "WSL fixture isolates host-installed agent CLIs during cross-platform dispatcher validation without changing production resolution or assertions"
+        },
+        {
+          "file": "src/main/codex-cli/command-guest-path.test.ts",
+          "mustContain": "getSystemCliInstallDirectories: () => []",
+          "why": "WSL fixture isolates host-installed agent CLIs during cross-platform dispatcher validation without changing production resolution or assertions"
+        },
+        {
           "file": "resources/skills/released-digests.json",
           "mustContain": "69376456185483ea494eb354be09bce5b8bde9d1c792e8cb1ce7687691d1a021",
           "why": "Generated add-only release ledger includes the v1.4.250 skill identity so full-history feature validation uses the same compatible install history"
@@ -4437,6 +4452,9 @@
         }
       ],
       "tests": [
+        "src/main/runtime/wsl-host-agent-launch-paths.test.ts",
+        "src/main/runtime/wsl-host-agent-terminal-launch.test.ts",
+        "src/main/codex-cli/command-guest-path.test.ts",
         "src/main/local-tasks/local-task-dispatcher-workspace.test.ts",
         "src/renderer/src/local-tasks/local-task-dispatcher-client.test.ts",
         "src/renderer/src/local-tasks/local-task-dispatcher-changes.test.ts",
@@ -4590,7 +4608,7 @@
         "mobile/src/local-tasks/local-task-activity-section.test.tsx"
       ],
       "checks": [
-        "pnpm exec vitest run --config config/vitest.config.ts src/main/local-tasks src/shared/local-tasks src/main/runtime/rpc/methods/local-tasks.test.ts src/shared/host-operation-ownership.test.ts src/main/runtime/runtime-rpc/fork-mobile-rpc-method-allowlist.test.ts src/main/runtime/runtime-rpc-mobile-method-allowlist.test.ts src/cli/local-tasks src/main/ipc/desktop-runtime-sender-lifecycle.test.ts",
+        "pnpm exec vitest run --config config/vitest.config.ts src/main/local-tasks src/shared/local-tasks src/main/runtime/rpc/methods/local-tasks.test.ts src/main/runtime/wsl-host-agent-launch-paths.test.ts src/main/runtime/wsl-host-agent-terminal-launch.test.ts src/main/codex-cli/command-guest-path.test.ts src/shared/host-operation-ownership.test.ts src/main/runtime/runtime-rpc/fork-mobile-rpc-method-allowlist.test.ts src/main/runtime/runtime-rpc-mobile-method-allowlist.test.ts src/cli/local-tasks src/main/ipc/desktop-runtime-sender-lifecycle.test.ts",
         "ORCA_BACKGROUND_LAUNCH=1 pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/local-tasks src/renderer/src/components/local-tasks src/renderer/src/components/task-page src/renderer/src/components/cmd-j src/renderer/src/lib/worktree-creation-structured-session.test.ts src/renderer/src/lib/agent-message-send.test.ts src/renderer/src/lib/active-agent-note-send-delivery-guard.test.ts",
         "pnpm --dir mobile exec vitest run src/local-tasks src/home/MobileHomeTasksAndAutomations.test.tsx src/session/use-notification-pane-navigation.test.tsx src/components/bottom-drawer src/mobile-web-shell/bridge/bridge-rpc-client-frames.test.ts src/components/MobileMarkdown.rendering.test.tsx src/components/mobile-markdown-selectable.test.tsx",
         "pnpm exec vitest run --config config/vitest.config.ts config/scripts/mobile-web-app-file-attachment-grant.test.mjs config/scripts/mobile-web-app/mobile-web-app-session-dictation-capture.test.mjs config/scripts/mobile-web-app/mobile-web-app-page-grant-call-sites.test.mjs config/scripts/mobile-web-app/mobile-web-app-screencast-lane-grant.test.mjs config/scripts/mobile-web-app/mobile-web-app-external-navigation-grant.test.mjs"

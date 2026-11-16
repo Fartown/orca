@@ -309,6 +309,9 @@
           "baseRef": "$base",
           "requireBaseAncestor": false,
           "allowedPaths": [
+            "src/main/runtime/wsl-host-agent-launch-paths.test.ts",
+            "src/main/runtime/wsl-host-agent-terminal-launch.test.ts",
+            "src/main/codex-cli/command-guest-path.test.ts",
             "resources/skills/released-digests.json",
             "src/main/runtime/workspaces/workspace-activation.ts",
             "src/renderer/src/hooks/ipc-events/worktree-event-runtime.ts",
@@ -1987,6 +1990,9 @@
             "src/cli/local-tasks/**"
           ],
           "allowedPaths": [
+            "src/main/runtime/wsl-host-agent-launch-paths.test.ts",
+            "src/main/runtime/wsl-host-agent-terminal-launch.test.ts",
+            "src/main/codex-cli/command-guest-path.test.ts",
             "resources/skills/released-digests.json",
             "src/cli/local-tasks/**",
             "src/renderer/src/components/sidebar/worktree-card-option-items.tsx",
