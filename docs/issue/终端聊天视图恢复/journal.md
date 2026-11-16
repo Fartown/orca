@@ -5,7 +5,8 @@ status: testing
 created: 2026-10-23
 updated: 2026-11-16
 issue: 终端聊天视图恢复
-external_ids: [Fartown/orca#112, Fartown/orca#119, Fartown/orca#118, Fartown/orca#121, Fartown/orca#127]
+external_ids:
+  [Fartown/orca#112, Fartown/orca#119, Fartown/orca#118, Fartown/orca#121, Fartown/orca#127]
 ---
 
 # 终端聊天视图恢复
