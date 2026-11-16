@@ -476,12 +476,21 @@ external_ids:
 
 ## 3. 开发记录
 
+### 2026-11-17 完整 CI 修复与最终复验（done）
+
+- 本轮目标：修净 PR #133 新 HEAD 完整 CI 的实际失败，保持跨主机关联和总管行为。
+- 完成内容：forwarding factory 不再反向导出 bind，wake 直引 bind；手机完整 18 路由前缀重测，仅 tasks135→134、末布局139→138，预算更紧。未放宽 margin4、体积上限或断言。
+- 代码或文档变更：两个 feature-owned dispatcher 模块、既有 mobile budget seam 及测量 pin、登记的构建测试；本轮 Run 和原始 CI 日志索引。
+- 验证证据：CI 同款全仓库 native plugins exit0；相关 21 项、手机构建与授权 6 文件63项、类型和 CI 修复切片 check:changed23/23（31.9s）通过。独立 integration87 对照原139/current138，原断言红绿有据；最新 a919 app/template 真实重建，同构建四场景0 skip/flaky，全部夹具清理。
+- 未解决问题：旧 macOS job 未获 hosted runner、steps=[]，是容量取消；两个源码失败及派生汇总均保留原日志。最终新 HEAD 完整 CI 尚待推送后回读，不能用旧 pass/skip 替代。
+- 下一步：提交最后验收文档、推送新 HEAD、持续等完整 CI；当前运行的用户 App、数据库与会话均未变更。
+
 ### 2026-11-17 总管主机选择与启动等待（done）
 
 - 本轮目标：开发并实测总管主机选择，修复等待提醒与 Chat 空白，验证完整远端流程并继续交付 CI。
 - 完成内容：Issue #135、REQ-033、D-027；本机旧浮动会话兼容，配对和 managed SSH 总管使用来源 profile 普通 folder；来源绑定的注册、提案、收件箱、外库关注与唤醒；来源/联系代际 fence；prehook 等待显示原终端，显式显示远端时仅最小化原本机总管浮层，保留原 tab/PTY/PID。
 - 代码或文档变更：local-tasks 自有路径及既有 dispatcher RPC seam；主机选择及中英繁体文本；共享 foreground 读取复用 contact key，RPC 前后 fence、取消离线定时读、拒迟到结果、只按共享返联恢复；REQ-033、TC-355～TC-359 和[本轮验收](tests/runs/2026-11-17-总管主机选择验收.md)。必要生成物补正式 v1.4.250 的三行 add-only 历史摘要；三个 WSL fixture 仅隔离本机实际 CLI 搜索，不改生产查找、断言或门禁。
-- 验证证据：功能组及补充夹具共 311 文件 2363 项通过，跨版本 4 文件 8 项通过；共享终端广集 541 文件 5591 pass / 2 skip。固定源码 1930064ca28、指纹 ca8d4e757a0c3da00cd49db4902940c5d557bacbbfde571d18661d33ed5e3fd3、模板 0.1.0+4e401134f419；同构建总管与原跨主机关联共四场景通过，0 skip/flaky。原进程复用、source proposal 真确认与台账、原 PID 完整 wake、canonical 失联后全部 terminal.* 与任务/Chat 私有调用为零、真实 SSH/双向关联与 Peek/TCP reset 恢复全部实证。
+- 验证证据：功能组及补充夹具共 312 文件 2379 项通过，跨版本 4 文件 8 项通过；共享终端广集 541 文件 5591 pass / 2 skip。固定源码 a919c79330a、指纹 a2a593901fa61927e850f801b02c64a2bec1618d8ad4f20980423ba134e38a23、模板 0.1.0+fbe422134def；同构建总管与原跨主机关联共四场景通过，0 skip/flaky。原进程复用、source proposal 真确认与台账、原 PID 完整 wake、canonical 失联后全部 terminal.* 与任务/Chat 私有调用为零、真实 SSH/双向关联与 Peek/TCP reset 恢复全部实证。
 - 排查补证：首次 broad related 自然结束 1605.7 秒，14 个失败为真实系统 CLI 污染的 WSL fixture 9 项、缺历史 ref 5 项；原 integration 副本复现，修隔离及补官方 refs 后对应集合全绿。正式断联红轮抓到共享 foreground 在失联后 1757ms 新发 inspectProcess，保留原调用栈与红轮，不弱化全 terminal.* 断言；修复后 7 文件 170 项与真实零请求复验均绿。
 - 未解决问题：未在原生 Windows/Linux UI、原生手机或真实模型请求上实测；本轮采用真实 PTY/HTTP hooks/JSONL 协议夹具，未替用户回答信任菜单。用户当前运行的 App 和任务库未改动；PR 完整 CI 的最终 HEAD/结论由交付记录回读，不把待运行或 skipped 计通过。
 - 补充广集回归：原 34 项中 29 项生命周期/旧 SSH 判定修复；余 5 项为缺共享联系的 completion/restart 夹具，补 verified/ready 与缓存 status 仍离线的负向，原 39 加 2 项共 41 通过。最终完整 related 自然通过（660.4 秒）；宏为 24/25，唯一旧类型断言规范红已在 193 的一行 SAFETY 注释中修正，增量 check:changed 23/23 与 PR-base 129 文件质量全项通过。原始红日志保留。
