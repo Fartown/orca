@@ -16,7 +16,7 @@ import {
 } from './local-task-dispatcher-session'
 import { subscribeLocalTaskAppStore } from './local-task-app-store-subscription'
 import { subscribeLocalTaskDispatcherChanges } from './local-task-dispatcher-changes'
-import { bindLocalTaskDispatcherForwarding } from './local-task-dispatcher-forwarding'
+import { bindLocalTaskDispatcherForwarding } from './local-task-dispatcher-forwarding-bind'
 import { LOCAL_TASK_DISPATCHER_WAKE_PREFERENCE_KEY } from './local-task-preference-keys'
 import {
   getLocalTaskDispatcherEndpoint,

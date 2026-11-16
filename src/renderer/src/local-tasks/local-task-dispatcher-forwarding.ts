@@ -20,7 +20,6 @@ import type {
   LocalTaskEvent,
   LocalTaskStatusDef
 } from '../../../shared/local-tasks/local-task-types'
-export { bindLocalTaskDispatcherForwarding } from './local-task-dispatcher-forwarding-bind'
 
 // Why a grace: a proposal's own run (status, first session) happens just before its watch lands.
 const EVENT_GRACE_MS = 10 * 60_000
