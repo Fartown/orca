@@ -1,7 +1,7 @@
 ---
 title: 本地任务管理
 slug: 本地任务管理
-status: testing
+status: done
 created: 2026-10-26
 updated: 2026-11-17
 external_ids:
@@ -46,6 +46,7 @@ external_ids:
 | 测试用例 | [tests/cases/手机会话浮卡任务上下文.md](tests/cases/手机会话浮卡任务上下文.md)             | ready     | D-025 / #124；TC-347～TC-350，所点标签、名称入口、关联抽屉、失联与回执隔离                                                                                                        |
 | 方案     | [solutions/总管执行主机与启动等待.md](solutions/总管执行主机与启动等待.md)                 | ready     | REQ-033、D-027；所选来源拥有总管与台账，兼容本机浮动会话                                                                                                                          |
 | 测试用例 | [tests/cases/总管执行主机与启动等待.md](tests/cases/总管执行主机与启动等待.md)             | ready     | TC-355～TC-359，本机、配对、SSH、等待提示与失联计数                                                                                                                               |
+| 验收     | [tests/runs/2026-11-17-总管主机选择验收.md](tests/runs/2026-11-17-总管主机选择验收.md)     | completed | TC-355～TC-359；本机、配对、真实 SSH、原进程及断联请求计数                                                                                                                        |
 
 ## 2. 决策点记录
 
@@ -475,18 +476,18 @@ external_ids:
 
 ## 3. 开发记录
 
-### 2026-11-17 总管主机选择与启动等待（testing）
+### 2026-11-17 总管主机选择与启动等待（done）
 
-- 本轮目标：开发并实测总管主机选择，修复等待提醒与 Chat 空白，继续完整 CI。
-- 完成内容：Issue #135、REQ-033、D-027；本机旧浮动总管兼容，配对和 managed SSH 总管使用来源 profile 的普通 folder；来源绑定的注册、提案、收件箱、外库关注和唤醒；切换与连接代际 fence；prehooks 等待显示原终端，原会话不被替换；显式显示远端时仅最小化挡住目标的原本机总管浮层。
-- 代码或文档变更：local-tasks 自有路径及既有 dispatcher RPC seam；主机选择及中英繁体文本；方案、TC-355～TC-359；原 generator 补 v1.4.250 已发布 orca-computer-use 的唯一历史摘要（三行 add-only），不改变当前技能包或校验器，并登记精确生成物 seam。
-- 验证证据：后端 38 文件 257 项、桌面初轮 178 文件 1265 项、手机 73 文件 344 项、mobile-web 5 文件 47 项通过；数据层 67 项后追加 unknown unwatch 用例通过；原 pane/迟到标签/切换 fence/浮层遮挡的增量回归通过。隐藏 CDP 已实证 Local trust 原终端、旧偏好重载仍原 PID、paired Chat；完整 related 检查与最终 SSH/确认执行/断联验收仍在进行。日志目录 `.docs/dispatcher-host-selection-ui-validation/2026-11-17/`。
-- 补充验证：完整 related 检查自然跑完 1605.7 秒，原 14 个失败为 WSL fixture 9 项及缺发布 tag 5 项；在 integration 87e7 独立副本复现前者，同类 resolver 另有 2 项。三个 fixture 仅隔离系统目录枚举，当前与基线修后 4 文件 37 项均通过；补取官方 v1.4.222/v1.4.228/v1.4.229 引用后重验跨版本，不改生产 CLI 查找或断言。候选实际 UI 全链路已通过，包含原进程完整唤醒、source proposal 确认执行、SSH Chat、断联零私有请求及恢复。
-- 未解决问题：最终来源提案确认与唤醒、SSH Chat、断联零请求和恢复仍需最后构建的完整验收；完整 PR CI 尚未运行，不能以 skipped 或候选结果计完成。
-- 最终断联补证：4f80 固定构建的加严全 terminal.* 请求计数抓到共享前台探查器在 canonical 失联后 1757ms 新发 inspectProcess；调用栈为 pane-agent-identity → foreground reader → tracker scheduledRead。该真实缺陷保留红轮证据，不以“共享层”排除；本轮扩展既有 seam、复用共享联系 verdict/key，取消离线探查并拒迟到包，返联仅由共享事件恢复，正在回归。
-- 下一步：补齐前台探查联系边界后重新冻结源码、后台本机/配对/真实 SSH 验收与 PR 全部相关 CI。
+- 本轮目标：开发并实测总管主机选择，修复等待提醒与 Chat 空白，验证完整远端流程并继续交付 CI。
+- 完成内容：Issue #135、REQ-033、D-027；本机旧浮动会话兼容，配对和 managed SSH 总管使用来源 profile 普通 folder；来源绑定的注册、提案、收件箱、外库关注与唤醒；来源/联系代际 fence；prehook 等待显示原终端，显式显示远端时仅最小化原本机总管浮层，保留原 tab/PTY/PID。
+- 代码或文档变更：local-tasks 自有路径及既有 dispatcher RPC seam；主机选择及中英繁体文本；共享 foreground 读取复用 contact key，RPC 前后 fence、取消离线定时读、拒迟到结果、只按共享返联恢复；REQ-033、TC-355～TC-359 和[本轮验收](tests/runs/2026-11-17-总管主机选择验收.md)。必要生成物补正式 v1.4.250 的三行 add-only 历史摘要；三个 WSL fixture 仅隔离本机实际 CLI 搜索，不改生产查找、断言或门禁。
+- 验证证据：功能组及补充夹具共 311 文件 2363 项通过，跨版本 4 文件 8 项通过；共享终端广集 541 文件 5591 pass / 2 skip。固定源码 1930064ca28、指纹 ca8d4e757a0c3da00cd49db4902940c5d557bacbbfde571d18661d33ed5e3fd3、模板 0.1.0+4e401134f419；同构建总管与原跨主机关联共四场景通过，0 skip/flaky。原进程复用、source proposal 真确认与台账、原 PID 完整 wake、canonical 失联后全部 terminal.* 与任务/Chat 私有调用为零、真实 SSH/双向关联与 Peek/TCP reset 恢复全部实证。
+- 排查补证：首次 broad related 自然结束 1605.7 秒，14 个失败为真实系统 CLI 污染的 WSL fixture 9 项、缺历史 ref 5 项；原 integration 副本复现，修隔离及补官方 refs 后对应集合全绿。正式断联红轮抓到共享 foreground 在失联后 1757ms 新发 inspectProcess，保留原调用栈与红轮，不弱化全 terminal.* 断言；修复后 7 文件 170 项与真实零请求复验均绿。
+- 未解决问题：未在原生 Windows/Linux UI、原生手机或真实模型请求上实测；本轮采用真实 PTY/HTTP hooks/JSONL 协议夹具，未替用户回答信任菜单。用户当前运行的 App 和任务库未改动；PR 完整 CI 的最终 HEAD/结论由交付记录回读，不把待运行或 skipped 计通过。
+- 补充广集回归：原 34 项中 29 项生命周期/旧 SSH 判定修复；余 5 项为缺共享联系的 completion/restart 夹具，补 verified/ready 与缓存 status 仍离线的负向，原 39 加 2 项共 41 通过。最终完整 related 自然通过（660.4 秒）；宏为 24/25，唯一旧类型断言规范红已在 193 的一行 SAFETY 注释中修正，增量 check:changed 23/23 与 PR-base 129 文件质量全项通过。原始红日志保留。
+- 下一步：源码与真实应用验收完成；最后文档增量检查、推送 PR #133 并等待同一 HEAD 完整 CI。最终回读在 `.docs/dispatcher-host-selection-ui-validation/2026-11-17/`，不把 pending/skipped 计通过。
 
-### 2026-11-16 跨主机会话关联实现与验收（testing）
+### 2026-11-16 跨主机会话关联实现与验收（done）
 
 - 本轮目标：完成 REQ-032，让 Local Mac 与其他已连接主机的任务库双向关联已有会话，并保持任务和执行归属。
 - 完成内容：任务选择器支持跨库；关联保存持久 installationId 与源相对位置；schema v8 迁移、同名来源隔离、来源状态投影；预览、回复和导航核验源主机；同库原子换绑，跨库未知移除不回滚新关联；手机仅按可信来源缓存打开完整页，拒绝任务内误发。
