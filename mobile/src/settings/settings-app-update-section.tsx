@@ -1,3 +1,5 @@
+import { integrationUpdatesEnabled } from '../integration-builds/mobile-updates'
+import { IntegrationSettingsUpdateSection } from '../integration-builds/IntegrationSettingsUpdateSection'
 import { useEffect, useState } from 'react'
 import {
   appUpdateChecker,
@@ -11,6 +13,14 @@ const CHECK_RESULT_VISIBLE_MS = 3000
 const RELATIVE_TIME_TICK_MS = 60_000
 
 export function SettingsAppUpdateSection() {
+  return integrationUpdatesEnabled ? (
+    <IntegrationSettingsUpdateSection />
+  ) : (
+    <OfficialSettingsAppUpdateSection />
+  )
+}
+
+function OfficialSettingsAppUpdateSection() {
   const state = useAppUpdateState()
   const [result, setResult] = useState<'up-to-date' | 'failed' | null>(null)
   // Tick only when the relative label can age past just now.

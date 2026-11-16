@@ -3,8 +3,8 @@ title: 集成分支自动出包
 slug: 集成分支自动出包
 status: testing
 created: 2026-09-12
-updated: 2026-11-11
-external_ids: ['Fartown/orca#85']
+updated: 2026-11-16
+external_ids: ['Fartown/orca#85', 'Fartown/orca#131']
 ---
 
 # 集成分支自动出包 开发 Journal
@@ -634,3 +634,13 @@ external_ids: ['Fartown/orca#85']
 - 验证证据：pnpm tc、全部 16 个功能的 38 条 checks、check:fork-features、check:fork-docs、本地化与 RPC 目录校验通过；隐藏 Electron 本机与 SSH（127.0.0.1:2222 上的 orcad）真机验收 5/5 通过，证据在 `.docs/issues-board-removal-ui-validation/2026-10-23/`。 S2 中远端 orcad 的 `issues.*` 返回 method_not_found，`goals.status` 为 ready。
 - 未解决问题：无。
 - 下一步：随 Issues 下线 PR 合入 fork/integration。
+
+## 2026-11-16：手机设置更新入口一致性（testing）
+
+- 本轮目标：修复关于能下载、外层检查必失败和状态不一致。
+- 完成内容：复现 source=null 导致外层无网络直接 failed；外层 integration 分支复用关于页 controller 与 shared hook，保留官方渠道原路径。
+- 代码或文档变更：登记 REQ-416、TC-417～420、事实调研和渠道复用方案；独立 feat/integration-mobile-settings-update 工作树，根治终端 Chat 的 PR #129 已单独合入。
+- 验证证据：旧回归 2 failed/1 passed；修复后 29 项 mobile 测试和 230 项集成更新合同测试通过，pnpm tc、mobile app/tests 类型检查、三项本地化、格式、架构、fork/docs 和 changed-quality 通过。真实组件渲染旧版顶部 29%/外层失败，修复后进度一致；权限/安装器打开、真实错误、latest、亮暗主题均采证。见[本轮验收](tests/runs/2026-11-16-手机设置更新入口一致性.md)。
+- 未解决问题：手机运行包尚未包含此修复；本机原生模拟器不可直接使用，渲染验证须诚实标注 native I/O fixture。
+- 未解决门禁：本地完整 check:changed 40/41 通过；技能清单 stale 在未修改基线同样失败，未修改无关资源、不把该项记为通过。
+- 下一步：提交独立 PR，跟踪 CI 与发布；手机运行包生效须另行验证。
