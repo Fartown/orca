@@ -41,6 +41,7 @@ import type {
 import { localTasksDomainStore } from './local-tasks-domain-store'
 import { acknowledgeLocalTaskSessionItems, openLocalTaskSession } from './local-task-session-reveal'
 import { localTaskSessionPanelStore } from './local-task-session-panel-store'
+import { localTaskPageStore } from './local-task-page-store'
 
 const LEAF = '11111111-1111-4111-8111-111111111111'
 const SESSION = 'runtime:env-1/s-1'
@@ -82,6 +83,7 @@ beforeEach(() => {
   fixture.activeWorktreeId = null
   fixture.visibleTargets = []
   localTaskSessionPanelStore.getState().close()
+  localTaskPageStore.setState(localTaskPageStore.getInitialState(), true)
   localTasksDomainStore.setState(localTasksDomainStore.getInitialState())
   localTasksDomainStore.getState().openEndpoint('runtime:env-1')
   const library = localTasksDomainStore.getState().writer('runtime:env-1')
@@ -95,7 +97,9 @@ beforeEach(() => {
 })
 
 it('opens a preview without acknowledging before its surface is ready', () => {
+  localTaskPageStore.getState().setPreviewOpen(true)
   expect(openLocalTaskSession(link)).toBe(true)
+  expect(localTaskPageStore.getState().previewOpen).toBe(false)
   expect(fixture.openTaskPage).toHaveBeenCalledWith({ taskId: link.taskId })
   expect(localTaskSessionPanelStore.getState()).toMatchObject({
     mode: 'narrow',
@@ -106,6 +110,23 @@ it('opens a preview without acknowledging before its surface is ready', () => {
   expect(fixture.acknowledge).not.toHaveBeenCalled()
   acknowledgeLocalTaskSessionItems(SESSION)
   expect(fixture.acknowledge.mock.calls).toEqual([[`tab-1:${LEAF}@5`, SESSION]])
+})
+
+it('keeps the local task list behind a session preview', () => {
+  localTaskPageStore.getState().setLocalActive(true)
+  localTaskPageStore.getState().setPreviewOpen(true)
+  expect(openLocalTaskSession(link)).toBe(true)
+  expect(fixture.openTaskPage).not.toHaveBeenCalled()
+  expect(localTaskPageStore.getState()).toMatchObject({ detailTaskId: null, previewOpen: false })
+  expect(localTaskSessionPanelStore.getState().sessionLinkId).toBe(link.id)
+})
+
+it('keeps an existing detail behind its session preview', () => {
+  localTaskPageStore.getState().setLocalActive(true)
+  localTaskPageStore.getState().openDetail(link.taskId)
+  expect(openLocalTaskSession(link)).toBe(true)
+  expect(fixture.openTaskPage).not.toHaveBeenCalled()
+  expect(localTaskPageStore.getState().detailTaskId).toBe(link.taskId)
 })
 
 it('reveals an already visible terminal tab without creating a second session surface', () => {

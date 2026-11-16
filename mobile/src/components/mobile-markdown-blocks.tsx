@@ -36,6 +36,8 @@ export type MarkdownBlockContext = MarkdownInlineContext & {
   growing: boolean
   listText: StyleProp<TextStyle>
   listMarker: StyleProp<TextStyle>
+  density?: 'tight'
+  tightLineHeight: number | null
   /** Interactive children own their touches and must forward the row action. */
   rowLongPress?: () => void
   directives: readonly NativeChatVisualDirective[]
@@ -70,7 +72,7 @@ function renderCode(node: Code, key: number, ctx: MarkdownBlockContext): ReactNo
 function renderList(node: List, key: number, ctx: MarkdownBlockContext, depth: number): ReactNode {
   const itemText: ParagraphText = { style: ctx.listText, selectable: true }
   return (
-    <View key={key} style={styles.list}>
+    <View key={key} style={[styles.list, ctx.density === 'tight' && styles.tightList]}>
       {node.children.map((item, itemIndex) => (
         <View key={itemIndex} style={styles.listItem}>
           <NativeText style={ctx.listMarker}>
@@ -82,7 +84,7 @@ function renderList(node: List, key: number, ctx: MarkdownBlockContext, depth: n
                 ? '[x]'
                 : '[ ]'}
           </NativeText>
-          <View style={styles.listItemBody}>
+          <View style={[styles.listItemBody, ctx.density === 'tight' && styles.tightListItemBody]}>
             {renderBlocks(item.children, ctx, itemText, depth + 1)}
           </View>
         </View>
@@ -271,6 +273,7 @@ function renderBlock(
               node.depth <= 2 ? styles.headingLarge : styles.heading,
               ctx.textScale
             ),
+            ctx.tightLineHeight !== null ? { lineHeight: ctx.tightLineHeight } : null,
             ctx.tone.text
           ]}
         >
@@ -279,7 +282,7 @@ function renderBlock(
       )
     case 'blockquote':
       return (
-        <View key={key} style={styles.quote}>
+        <View key={key} style={[styles.quote, ctx.density === 'tight' && styles.tightQuote]}>
           {renderBlocks(
             node.children,
             ctx,
@@ -287,6 +290,7 @@ function renderBlock(
               style: [
                 styles.quoteText,
                 scaledMarkdownText(styles.quoteText, ctx.textScale),
+                ctx.tightLineHeight !== null ? { lineHeight: ctx.tightLineHeight } : null,
                 ctx.tone.secondary
               ],
               selectable: true
@@ -307,7 +311,7 @@ function renderBlock(
       return (
         <View key={key} style={styles.listItem}>
           <NativeText style={ctx.listMarker}>{`[${node.label ?? node.identifier}]`}</NativeText>
-          <View style={styles.listItemBody}>
+          <View style={[styles.listItemBody, ctx.density === 'tight' && styles.tightListItemBody]}>
             {renderBlocks(node.children, ctx, { style: ctx.listText, selectable: true }, depth + 1)}
           </View>
         </View>

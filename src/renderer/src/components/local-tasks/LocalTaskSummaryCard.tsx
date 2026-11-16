@@ -6,6 +6,7 @@ import type { LocalTaskIndex } from '@/local-tasks/local-task-grouping'
 import { formatLocalTaskTime } from '@/local-tasks/local-task-time'
 import { localTaskPriorityLabel } from '@/local-tasks/local-task-vocabulary-copy'
 import { localTaskVisibleProgress } from '@/local-tasks/local-task-visible-progress'
+import { localTaskProgressSummary } from '@/local-tasks/local-task-progress-summary'
 import { useLocalTasksDomain } from '@/local-tasks/local-tasks-domain-store'
 import type { LocalTask } from '../../../../shared/local-tasks/local-task-types'
 import { LocalTaskPriorityIcon, LocalTaskStatusIcon } from './LocalTaskIcons'
@@ -118,7 +119,7 @@ export function LocalTaskSummaryCard({
               {latest.task.id === task.id ? null : (
                 <span className="mr-1 text-muted-foreground">{latest.task.ref}</span>
               )}
-              {latest.progress.body}
+              {localTaskProgressSummary(latest.progress.body)}
               <span className="text-muted-foreground">
                 {' '}
                 · {formatLocalTaskTime(latest.progress.at, now)}

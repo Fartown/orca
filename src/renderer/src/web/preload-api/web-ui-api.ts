@@ -30,6 +30,7 @@ import { readLocalWebUIState } from './web-preferences-store'
 import { callRuntimeResult } from './web-runtime-calls'
 import { requireActiveEnvironmentOrNull } from './web-runtime-session'
 import { UI_STORAGE_KEY, noopUnsubscribe, writeJson } from './web-storage'
+import { webOsDeepLinkApi } from './web-os-deep-link-api'
 
 /** Combines browser-local preferences with host persistence; acknowledged writes remain distinct from best-effort writes. */
 export function createWebUiApi(): NonNullable<Partial<PreloadApi>['ui']> {
@@ -209,10 +210,7 @@ export function createWebUiApi(): NonNullable<Partial<PreloadApi>['ui']> {
     consumePendingOpenSettings: () => Promise.resolve(false),
     onQuitAndStopAllSessions: () => noopUnsubscribe,
     consumePendingQuitAndStopAllSessions: () => Promise.resolve(false),
-    onOpenSkillShare: () => noopUnsubscribe,
-    consumePendingSkillShare: () => Promise.resolve(null),
-    onOpenPluginInstallLink: () => noopUnsubscribe,
-    consumePendingPluginInstallLink: () => Promise.resolve(null),
+    ...webOsDeepLinkApi,
     // Why: the web client has no OS shell handing it files, so there is never a queued open.
     onOpenMarkdownFiles: () => noopUnsubscribe,
     consumePendingMarkdownFileOpens: () => Promise.resolve([]),

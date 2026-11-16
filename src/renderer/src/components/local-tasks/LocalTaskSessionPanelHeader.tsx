@@ -133,30 +133,42 @@ export function LocalTaskSessionPanelHeader({
   const offline = inContact
     ? null
     : translate('localTasks.links.hostOffline', '{{host}} is not connected', { host: hostLabel })
-  const ownerTitle = titleOf(session.taskId)
   const name = (
-    <span className="min-w-0 truncate text-sm font-semibold text-foreground">
+    <span className="min-w-0 truncate text-xs font-medium text-foreground">
       {localTaskSessionAgentName(session)}
-      {ownerTitle ? ` · ${ownerTitle}` : ''}
     </span>
   )
   const taskLine = task ? (
     <button
       type="button"
       onClick={() => openLocalTaskPage({ taskId: task.id })}
-      className={cn(
-        'flex min-w-0 items-center gap-1.5 text-left hover:text-foreground',
-        wide && 'ml-auto shrink'
-      )}
+      className="flex min-w-0 flex-1 items-center gap-1.5 text-left hover:text-foreground"
     >
       {status ? <LocalTaskStatusIcon category={status.category} color={status.color} /> : null}
-      <span className="min-w-0 truncate text-foreground">{task.title}</span>
-      <span className="shrink-0 font-mono text-2xs">{task.ref}</span>
+      <span className="min-w-0 truncate text-sm font-semibold text-foreground" title={task.title}>
+        {task.title}
+      </span>
+      <span className="shrink-0 font-mono text-2xs text-muted-foreground">{task.ref}</span>
     </button>
   ) : null
   return (
     <div className="flex shrink-0 flex-col border-b border-border">
-      <div className="flex h-10 items-center gap-1.5 pl-3 pr-2">
+      <div className="flex h-9 min-w-0 items-center gap-1.5 pl-3 pr-2">
+        {taskLine ?? (
+          <span className="min-w-0 flex-1 truncate text-sm font-semibold">
+            {translate('localTasks.sessionPanel.title', 'Session preview')}
+          </span>
+        )}
+        <Button
+          size="icon-xs"
+          variant="ghost"
+          aria-label={translate('localTasks.sessionPanel.close', 'Close')}
+          onClick={() => localTaskSessionPanelStore.getState().close()}
+        >
+          <X className="size-4" />
+        </Button>
+      </div>
+      <div className="flex min-h-9 min-w-0 flex-wrap items-center gap-1.5 py-1 pl-3 pr-2">
         <AgentIcon agent={isTuiAgent(session.agent) ? session.agent : null} size={16} />
         {options.length > 1 ? (
           <DropdownMenu>
@@ -164,7 +176,7 @@ export function LocalTaskSessionPanelHeader({
               <Button
                 variant="ghost"
                 size="xs"
-                className="min-w-0 max-w-[45%] justify-start"
+                className="min-w-0 max-w-40 justify-start"
                 aria-label={translate('localTasks.sessionPanel.switchSession', 'Switch session')}
               >
                 {name}
@@ -187,10 +199,7 @@ export function LocalTaskSessionPanelHeader({
           name
         )}
         <span className="shrink-0 text-xs text-muted-foreground">
-          {localTaskSessionSurfaceLabel(session)} ·{' '}
-          {wide
-            ? translate('localTasks.sessionPanel.wideMode', 'Wide')
-            : translate('localTasks.links.peek', 'Peek')}
+          {localTaskSessionSurfaceLabel(session)}
         </span>
         <span className="flex-1" />
         <Button
@@ -219,14 +228,6 @@ export function LocalTaskSessionPanelHeader({
             {translate('localTasks.sessionPanel.fullscreen', 'Full screen')}
           </Button>
         </LocalTaskActionTooltip>
-        <Button
-          size="icon-xs"
-          variant="ghost"
-          aria-label={translate('localTasks.sessionPanel.close', 'Close')}
-          onClick={() => localTaskSessionPanelStore.getState().close()}
-        >
-          <X className="size-4" />
-        </Button>
       </div>
       <div className="flex flex-col gap-1 px-3 pb-2 text-xs text-muted-foreground">
         <div className="flex min-w-0 items-center gap-x-1.5">
@@ -248,9 +249,7 @@ export function LocalTaskSessionPanelHeader({
           <span className="min-w-0 truncate" title={offline ?? hostLabel}>
             {offline ?? hostLabel}
           </span>
-          {wide ? taskLine : null}
         </div>
-        {wide ? null : taskLine}
       </div>
     </div>
   )

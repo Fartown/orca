@@ -145,6 +145,7 @@ function LatestProgress({
         ) : null}
       </div>
       <LocalTaskProgressBody
+        key={`${latest.task.id}:${progress.at}`}
         body={progress.body}
         sections={parseLocalTaskProgressSections(progress.body)}
         after={

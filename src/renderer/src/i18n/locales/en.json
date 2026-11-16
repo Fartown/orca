@@ -24062,7 +24062,9 @@
     "latestProgress": {
       "title": "Latest progress",
       "needsYou": "Needs you: {{text}}",
-      "chip": "Needs you"
+      "chip": "Needs you",
+      "showMore": "Show more",
+      "showLess": "Show less"
     },
     "sidebar": {
       "toggle": "Task mode",
@@ -24268,7 +24270,15 @@
       "review": "Review",
       "cancelTask": "Cancel task",
       "editProperties": "Edit properties…",
-      "addDescription": "Add description"
+      "addDescription": "Add description",
+      "copyLink": "Copy link",
+      "linkCopied": "Task link copied",
+      "linkCopyFailed": "Could not copy task link",
+      "linkInvalid": "Task link is invalid",
+      "linkLibraryMissing": "Task library is not available in this Orca",
+      "linkLibraryOffline": "Task library is disconnected; showing saved task",
+      "linkTaskMissing": "Task is not available in its library",
+      "linkLibraryUnavailable": "Task library is disconnected; no saved task is available"
     },
     "field": {
       "status": "Status",
@@ -24351,7 +24361,7 @@
     "preview": {
       "label": "Task preview",
       "close": "Close preview",
-      "open": "Open task"
+      "open": "Open task details"
     },
     "projects": {
       "noOrcaProjects": "No repositories in Orca yet. Make an empty project, or add a repository to Orca first.",
@@ -24739,7 +24749,6 @@
       "disconnected": "Not connected",
       "unavailable": "Session unavailable",
       "unverifiable": "Cannot confirm session",
-      "wideMode": "Wide",
       "stop": "Stop",
       "stopConfirm": "Stop this session? The task and workspace stay.",
       "stopSession": "Stop session",
@@ -24799,7 +24808,9 @@
       "askUnconfirmed": "Sent to the dispatcher, but its arrival is not confirmed yet. Check the conversation.",
       "appendPartial": "{{missed}} of {{total}} finished sessions did not get it",
       "appendNotRecorded": "Sent, but it could not be recorded on the task",
-      "recordAgain": "Record again"
+      "recordAgain": "Record again",
+      "previewTask": "Preview task",
+      "previewSession": "Preview session"
     },
     "band": {
       "description": "Sessions waiting for your answer or a finished turn you have not seen, and tasks waiting for your acceptance",

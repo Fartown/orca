@@ -213,7 +213,7 @@ export const LocalTaskRow = memo(function LocalTaskRow({
       rowRef.current?.scrollIntoView({ block: 'nearest' })
     }
   }, [reveal])
-  const open = (): void => localTaskPageStore.getState().openDetail(task.id)
+  const open = (): void => localTaskPageStore.getState().openPreview(task.id)
   const subtasks = index.childrenByParentId.has(task.id)
   const unstarted = status?.category === 'unstarted' || status?.category === 'backlog'
   const leadWidth = folded === null && depth === 0 ? LEAD_SLOT_PX : LEAD_SLOT_PX * 2

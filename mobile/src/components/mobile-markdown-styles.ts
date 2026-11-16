@@ -6,6 +6,10 @@ export const styles = themedStyleSheet(() => ({
   root: {
     gap: spacing.md
   },
+  tightRoot: { gap: 0 },
+  tightList: { gap: 0 },
+  tightListItemBody: { gap: 0 },
+  tightQuote: { gap: 0, paddingVertical: 0 },
   paragraph: {
     fontSize: 13,
     lineHeight: 19,

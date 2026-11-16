@@ -162,7 +162,7 @@ it('goes back from a full-size session to its task, with the session in the wide
   })
 })
 
-it('leaves out back to side while the task page panel already shows the session', () => {
+it('hides the duplicate task chip inside the task page session preview', () => {
   useAppStore.setState({ activeView: 'tasks' })
   const session = localTasksDomainStore.getState().links.sessions[0]
   localTaskSessionPanelStore.getState().open(session, 'wide')
@@ -172,5 +172,17 @@ it('leaves out back to side while the task page panel already shows the session'
     </TooltipProvider>
   )
   expect(screen.queryByRole('button', { name: 'Back to side' })).toBeNull()
+  expect(screen.queryByRole('button', { name: 'Reconnect blank terminal · ORC-41' })).toBeNull()
+})
+
+it('keeps the task chip in the full session even while its preview state is open', () => {
+  useAppStore.setState({ activeView: 'terminal' })
+  const session = localTasksDomainStore.getState().links.sessions[0]
+  localTaskSessionPanelStore.getState().open(session, 'wide')
+  render(
+    <TooltipProvider>
+      <LocalTaskSessionChip pane={{ worktreeId: WORKTREE, paneKey: PANE }} />
+    </TooltipProvider>
+  )
   expect(screen.getByRole('button', { name: 'Reconnect blank terminal · ORC-41' })).toBeTruthy()
 })

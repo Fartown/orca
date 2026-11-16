@@ -17,6 +17,7 @@ import {
 import { useAppStore } from '@/store'
 import { LocalTaskStatusIcon } from './LocalTaskIcons'
 import { useLocalTaskPaneWorkspaceLink } from '@/local-tasks/local-task-pane-workspace-link'
+import { resolveLocalTaskSessionPaneKey } from '@/local-tasks/local-task-session-panel-portal'
 
 // Why lazy: every terminal header mounts the chip; the card and its task summary load on hover.
 const loadChipCard = () => import('./LocalTaskSessionChipCard')
@@ -106,9 +107,31 @@ function LinkedSessionChip({
   const panelOpen = useLocalTaskSessionPanel(
     (state) => state.mode !== 'closed' && session !== null && state.sessionLinkId === session.id
   )
-  // Why: the panel shows the same pane, and there "back to side" would lead where it already is.
-  const inPanel = useAppStore((state) => state.activeView === 'tasks') && panelOpen
+  const previewingPane = useAppStore((state) => {
+    if (
+      state.activeView !== 'tasks' ||
+      !panelOpen ||
+      !session ||
+      session.worktreeId !== pane.worktreeId
+    ) {
+      return false
+    }
+    if (session.surface === 'chat') {
+      return pane.sessionId !== undefined && pane.sessionId === session.sessionId
+    }
+    const tabId = session.paneKey ? parsePaneKey(session.paneKey)?.tabId : session.tabId
+    return (
+      pane.paneKey ===
+      resolveLocalTaskSessionPaneKey(
+        session,
+        tabId ? state.terminalLayoutsByTabId[tabId] : undefined
+      )
+    )
+  })
   if (!task && !workspaceLinked) {
+    return null
+  }
+  if (previewingPane) {
     return null
   }
   const label = task
@@ -116,7 +139,7 @@ function LinkedSessionChip({
     : translate('localTasks.links.menuLink', 'Link to task…')
   return (
     <span className={cn('inline-flex min-w-0 items-center gap-1', className)}>
-      {task && session && !inPanel ? (
+      {task && session ? (
         // Why: REQ-028 — a session shown full size goes back to its task with the panel wide.
         <button
           type="button"

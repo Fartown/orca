@@ -40,7 +40,12 @@ import type { createWindowsShellPathHydration } from './windows-shell-path-hydra
 import type { ServeOptions } from './main-process-serve'
 import type { HangDetectionMarker } from '../hang-watchdog/hang-detection-marker'
 import { ServeReadinessPublisher } from '../server/serve-readiness'
-import { PluginInstallLinkState, SkillShareDeepLinkState } from './skill-share-deep-link-state'
+import { localTaskDeepLinkFromArguments } from '../../shared/local-tasks/local-task-deep-link'
+import {
+  PendingDeepLinkState,
+  PluginInstallLinkState,
+  SkillShareDeepLinkState
+} from './skill-share-deep-link-state'
 import { OsOpenedDocumentState } from './os-opened-documents'
 import {
   DEFAULT_GPU_CRASH_FALLBACK_THRESHOLD,
@@ -133,6 +138,7 @@ export const mainProcessState = {
   // Why: a confirmed Quit Completely can open the window; its renderer pulls this one-shot on mount.
   pendingQuitAndStopAllSessions: createWebContentsTimedFlag(),
   skillShareDeepLinks: new SkillShareDeepLinkState(),
+  localTaskDeepLinks: new PendingDeepLinkState(localTaskDeepLinkFromArguments),
   pluginInstallLinks: new PluginInstallLinkState(),
   // Buffer OS Open With before any renderer listener exists.
   osOpenedDocuments: new OsOpenedDocumentState(),

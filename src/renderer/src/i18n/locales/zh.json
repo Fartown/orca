@@ -23329,7 +23329,9 @@
     "latestProgress": {
       "title": "最新进展",
       "needsYou": "需要你：{{text}}",
-      "chip": "需要你"
+      "chip": "需要你",
+      "showMore": "展开更多",
+      "showLess": "收起"
     },
     "sidebar": {
       "toggle": "任务模式",
@@ -23535,7 +23537,15 @@
       "review": "验收",
       "cancelTask": "取消任务",
       "editProperties": "编辑属性…",
-      "addDescription": "添加描述"
+      "addDescription": "添加描述",
+      "copyLink": "复制链接",
+      "linkCopied": "任务链接已复制",
+      "linkCopyFailed": "无法复制任务链接",
+      "linkInvalid": "任务链接无效",
+      "linkLibraryMissing": "此 Orca 中没有该任务库",
+      "linkLibraryOffline": "任务库已断开，显示保存的任务",
+      "linkTaskMissing": "该任务库中找不到任务",
+      "linkLibraryUnavailable": "任务库已断开，且没有保存的任务"
     },
     "field": {
       "status": "状态",
@@ -23618,7 +23628,7 @@
     "preview": {
       "label": "任务预览",
       "close": "关闭预览",
-      "open": "打开任务"
+      "open": "打开任务详情"
     },
     "projects": {
       "noOrcaProjects": "Orca 里还没有仓库。可以先建一个空项目，或先在 Orca 里添加仓库。",
@@ -24006,7 +24016,6 @@
       "disconnected": "未连接",
       "unavailable": "会话不可用",
       "unverifiable": "无法确认会话",
-      "wideMode": "加宽",
       "stop": "停止",
       "stopConfirm": "停止这个会话？任务和工作区不变。",
       "stopSession": "停止会话",
@@ -24066,7 +24075,9 @@
       "askUnconfirmed": "已发给总管，但还没确认它收到，请到对话里看一眼。",
       "appendPartial": "{{total}} 个做完一轮的会话中有 {{missed}} 个没收到",
       "appendNotRecorded": "已发出，但没能记到任务上",
-      "recordAgain": "补记录"
+      "recordAgain": "补记录",
+      "previewTask": "预览任务",
+      "previewSession": "速览会话"
     },
     "band": {
       "description": "会话在等你回答、做完一轮还没看，或任务待你验收",

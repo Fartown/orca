@@ -974,7 +974,19 @@
             "src/main/ipc/desktop-runtime-sender-lifecycle.ts",
             "src/main/runtime/rpc/core.ts",
             "src/main/runtime/rpc/dispatcher-stream-options.ts",
-            "src/main/ipc/desktop-runtime-sender-lifecycle.test.ts"
+            "src/main/ipc/desktop-runtime-sender-lifecycle.test.ts",
+            "src/main/startup/orca-deep-link-url.ts",
+            "src/main/startup/main-process-state.ts",
+            "src/main/startup/main-process-ipc-bootstrap.ts",
+            "src/main/window/macos-desktop-handoff.ts",
+            "src/preload/api/ui-command-event-api.ts",
+            "src/preload/api/ui-bridge-state-and-menu-commands.ts",
+            "src/renderer/src/hooks/ipc-events/settings-sidebar-ipc-bridge.ts",
+            "src/renderer/src/web/preload-api/web-ui-api.ts",
+            "src/renderer/src/web/preload-api/web-os-deep-link-api.ts",
+            "mobile/src/components/MobileMarkdown.tsx",
+            "mobile/src/components/mobile-markdown-blocks.tsx",
+            "mobile/src/components/mobile-markdown-styles.ts"
           ],
           "message": "Branch changes an upstream path that no fork feature owns or registers as a seam; extend config/fork-features.jsonc and this allowlist, or move the change into a feature-owned path."
         }
@@ -2070,7 +2082,19 @@
             "src/main/ipc/desktop-runtime-sender-lifecycle.ts",
             "src/main/runtime/rpc/core.ts",
             "src/main/runtime/rpc/dispatcher-stream-options.ts",
-            "src/main/ipc/desktop-runtime-sender-lifecycle.test.ts"
+            "src/main/ipc/desktop-runtime-sender-lifecycle.test.ts",
+            "src/main/startup/orca-deep-link-url.ts",
+            "src/main/startup/main-process-state.ts",
+            "src/main/startup/main-process-ipc-bootstrap.ts",
+            "src/main/window/macos-desktop-handoff.ts",
+            "src/preload/api/ui-command-event-api.ts",
+            "src/preload/api/ui-bridge-state-and-menu-commands.ts",
+            "src/renderer/src/hooks/ipc-events/settings-sidebar-ipc-bridge.ts",
+            "src/renderer/src/web/preload-api/web-ui-api.ts",
+            "src/renderer/src/web/preload-api/web-os-deep-link-api.ts",
+            "mobile/src/components/MobileMarkdown.tsx",
+            "mobile/src/components/mobile-markdown-blocks.tsx",
+            "mobile/src/components/mobile-markdown-styles.ts"
           ],
           "message": "Change is outside the local tasks feature."
         },
@@ -2092,7 +2116,10 @@
             "**/*.spec.ts",
             "**/*.spec.tsx",
             "src/main/runtime/rpc/methods/local-task-link-methods.ts",
-            "src/main/runtime/rpc/methods/local-task-dispatcher-methods.ts"
+            "src/main/runtime/rpc/methods/local-task-dispatcher-methods.ts",
+            "src/main/startup/orca-deep-link-url.ts",
+            "src/main/startup/main-process-state.ts",
+            "src/main/window/macos-desktop-handoff.ts"
           ],
           "forbiddenTargets": ["src/main/local-tasks/**", "src/shared/local-tasks/**"],
           "importTextHints": ["local-tasks"],
@@ -2151,7 +2178,8 @@
             "src/renderer/src/components/sidebar/index.tsx",
             "src/renderer/src/components/sidebar/SidebarHeader.tsx",
             "src/renderer/src/components/native-chat/NativeChatComposerPane.tsx",
-            "src/renderer/src/lib/active-agent-note-target.ts"
+            "src/renderer/src/lib/active-agent-note-target.ts",
+            "src/renderer/src/hooks/ipc-events/settings-sidebar-ipc-bridge.ts"
           ],
           "forbiddenTargets": [
             "src/renderer/src/local-tasks/**",

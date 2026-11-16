@@ -12,12 +12,17 @@ import {
 } from '@/local-tasks/local-task-list-groups'
 import { useLocalTasksDomain } from '@/local-tasks/local-tasks-domain-store'
 import { useLocalTaskPage } from '@/local-tasks/local-task-page-store'
-import { localTaskIdsNeedingYou } from '@/local-tasks/local-task-needs-you-rows'
+import {
+  buildLocalTaskNeedsYouRows,
+  localTaskIdsNeedingYou
+} from '@/local-tasks/local-task-needs-you-rows'
+import { useLocalTaskNeedsYou } from '@/local-tasks/local-task-needs-you-store'
 import {
   buildLocalTaskNeedsYouBand,
   EMPTY_LOCAL_TASK_BAND
 } from '@/local-tasks/local-task-needs-you-band'
 import { isLocalTaskGroupCollapsed } from '@/local-tasks/local-task-group-collapse'
+import { orderLocalTaskBoardColumns } from '@/local-tasks/local-task-board-order'
 import { useLocalTaskEndpointLabels } from '@/local-tasks/local-task-endpoint-labels'
 import type { LocalTask, LocalTaskProject } from '../../../../shared/local-tasks/local-task-types'
 
@@ -60,6 +65,19 @@ export function useLocalTaskListModel() {
     return counts
   }, [tasks])
   const progress = useLocalTasksDomain((state) => state.progress)
+  const needsYouDrafts = useLocalTaskNeedsYou((state) => state.drafts)
+  const needsYouTaskIds = useMemo(
+    () =>
+      new Set(
+        buildLocalTaskNeedsYouRows({
+          progress,
+          drafts: needsYouDrafts,
+          tasksById: index.tasksById,
+          scopeProjectId
+        }).map((row) => row.task.id)
+      ),
+    [progress, needsYouDrafts, index, scopeProjectId]
+  )
   const needsYouProgress = filters.needsYou ? progress : null
   const visibility = useMemo(
     () => ({
@@ -84,10 +102,12 @@ export function useLocalTaskListModel() {
   const columns = useMemo(
     () =>
       layout === 'board'
-        ? buildLocalTaskBoardColumns(scopeTasks, index, scopeProjectId, visibility, {
-            sortBy,
-            showCanceled
-          })
+        ? orderLocalTaskBoardColumns(
+            buildLocalTaskBoardColumns(scopeTasks, index, scopeProjectId, visibility, {
+              sortBy,
+              showCanceled
+            })
+          )
         : [],
     [layout, scopeTasks, index, scopeProjectId, visibility, sortBy, showCanceled]
   )
@@ -141,6 +161,8 @@ export function useLocalTaskListModel() {
     taskCountByProject,
     groups,
     columns,
+    shownTaskIds,
+    needsYouTaskIds,
     orderedTaskIds,
     listTaskIds,
     foldedTaskIds,

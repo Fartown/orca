@@ -8,6 +8,7 @@ import {
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu'
 import { Textarea } from '@/components/ui/textarea'
+import CommentMarkdown from '@/components/sidebar/CommentMarkdown'
 import { useNow } from '@/hooks/use-now'
 import { translate } from '@/i18n/i18n'
 import { formatLocalTaskTime } from '@/local-tasks/local-task-time'
@@ -146,7 +147,11 @@ function WritebackEntry({
             number: writeback.number
           })}
         </span>
-        <span className="whitespace-pre-wrap text-foreground">{event.body}</span>
+        <CommentMarkdown
+          content={event.body ?? ''}
+          variant="compact"
+          className="text-sm text-foreground"
+        />
         {needsYou ? (
           <p className="mt-0.5 whitespace-pre-wrap text-foreground">
             {translate('localTasks.latestProgress.needsYou', 'Needs you: {{text}}', {

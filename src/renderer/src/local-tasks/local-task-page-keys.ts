@@ -111,7 +111,9 @@ export function resolveLocalTaskPageKey(event: KeyboardEvent): LocalTaskPageKeyA
   return action
 }
 
-type EscapeLayer = { close: () => void; kind: 'dialog' | 'panel' }
+type EscapeLayer =
+  | { close: () => void; kind: 'dialog' | 'panel' }
+  | { close: () => void; kind: 'field'; target: HTMLElement }
 
 let pageHandler: ((action: LocalTaskPageKeyAction) => void) | null = null
 const escapeLayers: EscapeLayer[] = []
@@ -132,8 +134,20 @@ export function claimLocalTaskPageKeys(
  * Esc closes the innermost local surface (dialog, detail, preview) instead of the whole task page.
  * Dialog layers must render their content with `data-local-task-overlay`.
  */
-export function pushLocalTaskEscapeLayer(kind: EscapeLayer['kind'], close: () => void): () => void {
+export function pushLocalTaskEscapeLayer(kind: 'dialog' | 'panel', close: () => void): () => void {
   const layer: EscapeLayer = { kind, close }
+  escapeLayers.push(layer)
+  return () => {
+    const index = escapeLayers.indexOf(layer)
+    if (index !== -1) {
+      escapeLayers.splice(index, 1)
+    }
+  }
+}
+
+/** A field with its own draft handles Esc before the page's capture-phase blur owner. */
+export function pushLocalTaskFieldEscape(target: HTMLElement, close: () => void): () => void {
+  const layer: EscapeLayer = { kind: 'field', target, close }
   escapeLayers.push(layer)
   return () => {
     const index = escapeLayers.indexOf(layer)
@@ -148,7 +162,16 @@ function overlayOpen(selector: string): boolean {
 }
 
 function handleEscape(event: KeyboardEvent): void {
-  const layer = escapeLayers.at(-1)
+  const field = escapeLayers.findLast(
+    (layer) => layer.kind === 'field' && layer.target === event.target
+  )
+  if (field) {
+    event.preventDefault()
+    event.stopImmediatePropagation()
+    field.close()
+    return
+  }
+  const layer = escapeLayers.findLast((candidate) => candidate.kind !== 'field')
   if (!layer || overlayOpen(`[role="dialog"]:not([${LOCAL_TASK_OVERLAY_ATTRIBUTE}])`)) {
     return
   }
@@ -191,6 +214,16 @@ function handleSessionPanelEscape(event: KeyboardEvent): boolean {
 }
 
 function onKeyDown(event: KeyboardEvent): void {
+  if (
+    event.key === 'Escape' &&
+    isImeOwnedKeyboardEvent(event) &&
+    isEditableKeyTarget(event.target) &&
+    isOnLocalTaskPage(event.target)
+  ) {
+    // The upstream Esc owner would blur the editor before its IME can cancel a candidate.
+    event.stopImmediatePropagation()
+    return
+  }
   if (event.defaultPrevented || isImeOwnedKeyboardEvent(event)) {
     return
   }

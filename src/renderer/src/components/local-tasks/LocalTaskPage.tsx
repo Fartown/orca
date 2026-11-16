@@ -1,9 +1,10 @@
 import { LocalTaskReviewQueue } from './LocalTaskReviewQueue'
 import { LocalTaskDispatchBox } from './LocalTaskDispatchBox'
 import { useLocalTaskSidebarMode } from '@/local-tasks/local-task-sidebar-mode'
-import { useState, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { LoaderCircle } from 'lucide-react'
 import { translate } from '@/i18n/i18n'
+import { cn } from '@/lib/utils'
 import { LOCAL_TASK_PAGE_ATTRIBUTE } from '@/local-tasks/local-task-page-keys'
 import {
   isLocalTasksReadable,
@@ -127,8 +128,18 @@ function LocalTaskOverview({ model }: { model: LocalTaskListModel }): React.JSX.
   const hasSelection = useLocalTaskPage((state) => state.selectedTaskIds.length > 0)
   const needsYou = useLocalTaskPage((state) => state.view === 'needs-you')
   const dispatcher = useLocalTaskPage((state) => state.view === 'dispatcher')
+  const previewStillVisible =
+    cursorTaskId !== null &&
+    (needsYou ? model.needsYouTaskIds.has(cursorTaskId) : model.shownTaskIds.has(cursorTaskId))
   const previewTask =
-    previewOpen && cursorTaskId ? model.index.tasksById.get(cursorTaskId) : undefined
+    previewOpen && previewStillVisible && cursorTaskId
+      ? model.index.tasksById.get(cursorTaskId)
+      : undefined
+  useEffect(() => {
+    if (previewOpen && !previewStillVisible) {
+      localTaskPageStore.getState().setPreviewOpen(false)
+    }
+  }, [previewOpen, previewStillVisible])
   useLocalTaskEscapeLayer('panel', hasSelection, () =>
     localTaskPageStore.getState().clearSelection()
   )
@@ -139,7 +150,12 @@ function LocalTaskOverview({ model }: { model: LocalTaskListModel }): React.JSX.
   return (
     <div className="@container/local-task-page relative flex min-h-0 flex-1 gap-4">
       {sidebarTaskMode ? null : <LocalTaskNav model={model} />}
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-3">
+      <div
+        className={cn(
+          'min-h-0 min-w-0 flex-1 flex-col gap-3',
+          previewTask ? 'hidden @5xl/local-task-page:flex' : 'flex'
+        )}
+      >
         {/* Why not on the dispatcher page: there you talk to the dispatcher in its own panel. */}
         {dispatcher ? null : <LocalTaskDispatchBox />}
         {dispatcher ? (

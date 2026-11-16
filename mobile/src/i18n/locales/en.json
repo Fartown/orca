@@ -5166,6 +5166,10 @@
       "createdNotStarted": "{{ref}} was created. {{reason}}"
     },
     "rejectNoFinishedSession": "Reason saved. No session has finished a turn to take it; open one, or start a new session from the task.",
-    "rejectNotSent": "Reason saved, but {{missed}} of {{total}} sessions did not get it: {{reason}}"
+    "rejectNotSent": "Reason saved, but {{missed}} of {{total}} sessions did not get it: {{reason}}",
+    "latestProgress": {
+      "showMore": "Show more",
+      "showLess": "Show less"
+    }
   }
 }

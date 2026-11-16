@@ -71,6 +71,7 @@ vi.mock('./local-task-workspace-resolution', () => ({
 vi.mock('./local-task-dispatch-project', () => ({ projectsForDispatchTarget: () => [project] }))
 
 import { dispatchLocalTask } from './local-task-dispatch-launch'
+import { appendToFinishedSessions } from './local-task-dispatch-append'
 import { dispatchLocalTaskToWorkspaces } from './local-task-dispatch-multiple'
 import { finishLocalTaskDispatchRecord } from './local-task-dispatch-record'
 
@@ -253,6 +254,11 @@ describe('a dispatch added to a task (REQ-029, H8)', () => {
       agent: 'claude'
     })
     expect(receipt).toMatchObject({ kind: 'appended', taskId: 'parent', message: null })
+    expect(receipt.appendedSession).toMatchObject({
+      id: 's-child',
+      taskId: 'child',
+      hostId: 'local'
+    })
     expect(fixture.reply.mock.calls.map((call) => call[0].id)).toEqual(['s-child'])
     expect(fixture.createTask).not.toHaveBeenCalled()
     expect(fixture.addComment).toHaveBeenCalledWith('parent', 'Also cover the cold start')
@@ -294,6 +300,27 @@ describe('a dispatch added to a task (REQ-029, H8)', () => {
       message: 'Sent, but it could not be recorded on the task'
     })
   })
+})
+
+it('receipt keeps only the exact SSH session that acknowledged an append', async () => {
+  fixture.contact.add('ssh:tag')
+  const local = session('local-session', 'parent')
+  const remote = { ...session('ssh-session', 'child'), hostId: 'ssh:tag' }
+  fixture.reply
+    .mockResolvedValueOnce({ status: 'failed' })
+    .mockResolvedValueOnce({ status: 'sent' })
+  const receipt = await appendToFinishedSessions(
+    parent,
+    [local, remote],
+    taskTarget(parent),
+    'Continue here'
+  )
+  expect(receipt.kind).toBe('appended')
+  expect(receipt.appendedSession).toEqual(remote)
+  expect(fixture.reply.mock.calls.map((call) => call[0].id)).toEqual([
+    'local-session',
+    'ssh-session'
+  ])
 })
 
 describe('a session that started but was not recorded', () => {

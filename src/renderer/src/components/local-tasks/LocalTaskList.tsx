@@ -142,6 +142,7 @@ export const LocalTaskList = memo(function LocalTaskList({
 }): React.JSX.Element {
   useUiLanguageRevision()
   const collapsed = useLocalTaskPage((state) => state.collapsedGroupKeys)
+  const previewOpen = useLocalTaskPage((state) => state.previewOpen)
   const folded = model.foldedTaskIds
   const banded = model.band.ids
   const tallies = useMemo(
@@ -155,12 +156,15 @@ export const LocalTaskList = memo(function LocalTaskList({
     [banded, model.groups, model.index]
   )
   useEffect(() => {
+    if (previewOpen) {
+      return
+    }
     const page = localTaskPageStore.getState()
     const cursor = clampLocalTaskCursor(page.cursorTaskId, model.listTaskIds, model.orderedTaskIds)
     if (cursor !== page.cursorTaskId) {
       page.setCursor(cursor)
     }
-  }, [model.listTaskIds, model.orderedTaskIds])
+  }, [model.listTaskIds, model.orderedTaskIds, previewOpen])
   if (model.groups.length === 0 && banded.size === 0) {
     return (
       <EmptyList hasTasks={model.scopeTasks.length > 0} scopeProjectId={model.scopeProjectId} />
