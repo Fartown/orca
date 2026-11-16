@@ -22,7 +22,7 @@ function prompt(): DurableChatPrepareArgs {
     text: 'root-cause delivery test',
     imagePaths: ['/remote/image.png'],
     clearInput: '\x15',
-    sentAt: Date.now(),
+    sentAt: 1000,
     afterMessageId: 'old-turn',
     afterMessageTimestamp: 100
   }
