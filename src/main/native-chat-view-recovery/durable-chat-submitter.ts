@@ -22,7 +22,7 @@ type PreparedTarget = Pick<
 >
 
 export class DurableChatSubmitter {
-  private readonly active = new Set<string>()
+  private readonly active = new Map<string, Promise<void>>()
 
   constructor(
     private readonly outbox: DurableChatOutbox,
@@ -71,7 +71,8 @@ export class DurableChatSubmitter {
     if (this.active.has(id)) {
       return
     }
-    this.active.add(id)
+    const completion = Promise.withResolvers<void>()
+    this.active.set(id, completion.promise)
     try {
       let record: DurableChatSubmitRecord | undefined
       await this.outbox.update((records) =>
@@ -97,6 +98,7 @@ export class DurableChatSubmitter {
           agentPrompt: true,
           client: { id: 'orca-desktop-chat', type: 'desktop' },
           chatComposer: {
+            reconcileRestoredSession: record.reconcileRestoredSession,
             expectedSessionId: record.sessionId,
             clearInput: record.clearInput,
             imagePaths: record.imagePaths,
@@ -111,13 +113,12 @@ export class DurableChatSubmitter {
       await this.setState(id, 'unconfirmed')
     } finally {
       this.active.delete(id)
+      completion.resolve()
     }
   }
 
   async query(id: string): Promise<void> {
-    if (this.active.has(id)) {
-      return
-    }
+    await this.active.get(id)
     const record = (await this.outbox.list()).find((entry) => entry.id === id)
     if (!record || record.state === 'prepared' || record.state === 'confirmed') {
       return

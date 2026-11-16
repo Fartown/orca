@@ -8,8 +8,10 @@ import { assertTerminalInputAdmitted } from '../runtime/terminal-input-admission
 import { waitForAgentPromptDelay } from '../runtime/orca-runtime-core'
 import {
   captureDurableChatTranscriptBoundary,
-  durableChatProviderSession
+  durableChatProviderSession,
+  durableChatSubmissionSession
 } from './durable-chat-transcript-boundary'
+import { restoredTerminalAuthorityMatches } from './restored-terminal-authority'
 import { writeDurableChatComposerPrefix } from './durable-chat-composer-input'
 
 export abstract class OrcaRuntimeWithDurableChatPrompt extends OrcaRuntimeWithResubmitHeldAgentPrompt {
@@ -34,14 +36,67 @@ export abstract class OrcaRuntimeWithDurableChatPrompt extends OrcaRuntimeWithRe
     options: RuntimeAgentPromptWriteOptions
   ): void {
     if (options.chatComposer) {
-      durableChatProviderSession(this, handle, options.chatComposer.expectedSessionId)
+      durableChatSubmissionSession(
+        this,
+        handle,
+        options.chatComposer.expectedSessionId,
+        this.canSubmitRestoredChat(handle, options.chatComposer)
+      )
+    }
+  }
+  private canSubmitRestoredChat(
+    handle: string,
+    composer: NonNullable<RuntimeAgentPromptWriteOptions['chatComposer']>
+  ): boolean {
+    const terminal = this.getOrchestrationDispatchAuthority(handle)
+    return !!(
+      composer.reconcileRestoredSession &&
+      terminal &&
+      restoredTerminalAuthorityMatches(
+        this.restoredOrchestrationAuthorityByPtyId.get(terminal.ptyId),
+        terminal,
+        (left, right) => this.orchestrationCompatibilityHostScopesEqual(left, right)
+      )
+    )
+  }
+  verifyRestoredChatProviderSession(
+    handle: string,
+    ptyId: string,
+    processIncarnation: string,
+    sessionId: string,
+    submittedAt: number
+  ): boolean {
+    try {
+      const binding = this.getTerminalPromptRequestBinding(handle)
+      if (binding.ptyId !== ptyId || binding.processIncarnation !== processIncarnation) {
+        return false
+      }
+      durableChatProviderSession(this, handle, sessionId)
+      const exact = this.getExactWorkerProviderSession(handle, 0)
+      const row = this.getAgentProviderSessionRows().find(
+        (entry) => entry.paneKey === exact?.paneKey && entry.receivedAt === exact.observedAt
+      )
+      return !!(
+        row?.observation?.origin === 'hook' &&
+        row.observation.kind === 'transition' &&
+        row.observation.observedAt >= submittedAt &&
+        row.turnStartedAt !== undefined &&
+        row.turnStartedAt >= submittedAt
+      )
+    } catch {
+      return false
     }
   }
   protected captureDurableChatBoundary(
     handle: string,
     composer: NonNullable<RuntimeAgentPromptWriteOptions['chatComposer']>
   ) {
-    return captureDurableChatTranscriptBoundary(this, handle, composer.expectedSessionId)
+    return captureDurableChatTranscriptBoundary(
+      this,
+      handle,
+      composer.expectedSessionId,
+      this.canSubmitRestoredChat(handle, composer)
+    )
   }
   protected async writeAgentPromptChunk(
     ptyId: string,

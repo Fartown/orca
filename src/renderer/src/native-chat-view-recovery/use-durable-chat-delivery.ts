@@ -15,6 +15,18 @@ import {
 import { pendingSendsAsMessages } from '../../../shared/native-chat/transcript/native-chat-pending-sends'
 import { durableChatUserEvidence } from '../../../shared/native-chat-view-recovery/durable-chat-reconciliation'
 
+function hostInContact(record: DurableChatSubmitRecord) {
+  const state = useAppStore.getState()
+  const host = parseExecutionHostId(record.executionHostId)
+  return (
+    host?.kind === 'local' ||
+    (host?.kind === 'ssh'
+      ? state.sshConnectionStates.get(host.targetId)?.status === 'connected'
+      : host?.kind === 'runtime' &&
+        getReachableRuntimeEnvironmentIds(state).includes(host.environmentId))
+  )
+}
+
 export function useDurableChatDelivery(args: {
   paneKey: string
   agent: string
@@ -58,13 +70,7 @@ export function useDurableChatDelivery(args: {
         if (record.state === 'prepared' || record.state === 'confirmed') {
           continue
         }
-        const host = parseExecutionHostId(record.executionHostId)
-        const contact =
-          host?.kind === 'local' ||
-          (host?.kind === 'ssh'
-            ? state.sshConnectionStates.get(host.targetId)?.status === 'connected'
-            : host?.kind === 'runtime' &&
-              getReachableRuntimeEnvironmentIds(state).includes(host.environmentId))
+        const contact = hostInContact(record)
         const epoch = record.environmentId
           ? (state.runtimeStatusByEnvironmentId.get(record.environmentId)?.hostContactEpoch ?? 0)
           : 0
@@ -79,6 +85,7 @@ export function useDurableChatDelivery(args: {
       }
     }
     let entries: DurableChatSubmitRecord[] = []
+    let providerEdge = ''
     const update = () => {
       void refresh()
         .then((next) => {
@@ -88,7 +95,32 @@ export function useDurableChatDelivery(args: {
         .catch(() => {})
     }
     const unlisten = api.onChanged(update)
-    const unsubscribe = useAppStore.subscribe(() => queryOnContact(entries))
+    const unsubscribe = useAppStore.subscribe(() => {
+      queryOnContact(entries)
+      const snapshot = current.current
+      const row = useAppStore.getState().agentStatusByPaneKey[snapshot.paneKey]
+      const edge = JSON.stringify([row?.turnStartedAt, row?.stateObservedAt, row?.state])
+      if (edge === providerEdge) {
+        return
+      }
+      providerEdge = edge
+      if (
+        snapshot.session.sessionId &&
+        entries.some(
+          (entry) =>
+            entry.transcriptBoundary?.sessionUnverifiedAtSubmit &&
+            entry.state !== 'confirmed' &&
+            hostInContact(entry)
+        )
+      ) {
+        const evidence = durableChatUserEvidence(snapshot.session.messages)
+        if (evidence.length > 0) {
+          void api
+            .confirm(snapshot.paneKey, snapshot.session.sessionId, JSON.stringify(evidence))
+            .catch(() => {})
+        }
+      }
+    })
     update()
     return () => {
       disposed = true
@@ -116,7 +148,7 @@ export function useDurableChatDelivery(args: {
     [args.session.messages]
   )
   useEffect(() => {
-    if (!api || !args.session.sessionId || records.length === 0 || evidenceJson === '[]') {
+    if (!api || !args.session.sessionId || !records.some(hostInContact) || evidenceJson === '[]') {
       return
     }
     void api.confirm(args.paneKey, args.session.sessionId, evidenceJson).catch(() => {})
@@ -145,6 +177,7 @@ export function useDurableChatDelivery(args: {
       const record = await api.prepare({
         ...input,
         ...entry,
+        reconcileRestoredSession: true,
         paneKey: snapshot.paneKey,
         sessionId: snapshot.session.sessionId,
         imagePaths: input.imagePaths,

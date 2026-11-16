@@ -85,6 +85,42 @@ async function fixture() {
 }
 
 describe('durable terminal Chat submissions', () => {
+  it('waits for an in-flight send before using its one contact query to recover a lost receipt', async () => {
+    const f = await fixture(),
+      input = prompt()
+    await f.submitter.prepare(input)
+    let release = () => {}
+    let entered = () => {}
+    const started = new Promise<void>((resolve) => {
+      entered = resolve
+    })
+    const pendingSend = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    f.deps.call.mockImplementation(async (_record, method) => {
+      if (method === 'terminal.send') {
+        entered()
+        await pendingSend
+        throw new Error('lost response after committed host send')
+      }
+      return { ...accepted, result: { state: 'completed', receipt: accepted.result } }
+    })
+    const send = f.submitter.dispatch(input.id)
+    await started
+    const query = f.submitter.query(input.id)
+    await Promise.resolve()
+    expect(f.deps.call).toHaveBeenCalledTimes(1)
+    release()
+    await Promise.all([send, query])
+    expect(f.deps.call.mock.calls.map((call) => call[1])).toEqual([
+      'terminal.send',
+      'orchestration.requestShow'
+    ])
+    expect(f.deps.call.mock.calls[1][2]).toEqual({ request: input.id })
+    expect(await f.submitter.list(input.paneKey)).toMatchObject([
+      { id: input.id, state: 'input_accepted', text: input.text }
+    ])
+  })
   it('reconciles the latest durable state atomically when the renderer snapshot misses a concurrent identical send', async () => {
     const f = await fixture(),
       first = prompt(),
