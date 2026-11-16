@@ -265,6 +265,11 @@
       ],
       "seams": [
         {
+          "file": "src/renderer/src/components/native-chat/use-native-chat-pty-composer-send.ts",
+          "mustContain": "optimisticSendOutcome",
+          "why": "Apply existing verified delivery outcomes to ordinary Codex terminal messages."
+        },
+        {
           "file": "src/renderer/src/components/terminal-pane/terminal-pane-recovery.ts",
           "mustContain": "allowsTerminalChatRecovery",
           "why": "Permit a current visible terminal-backed chat to reuse existing recovery admission."
@@ -286,11 +291,12 @@
         }
       ],
       "tests": [
+        "src/renderer/src/native-chat-view-recovery/codex-chat-delivery.test.tsx",
         "src/renderer/src/components/tab-bar/SortableTabContextMenu.test.tsx",
         "src/renderer/src/native-chat-view-recovery/terminal-chat-recovery.test.ts"
       ],
       "checks": [
-        "pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/components/tab-bar/SortableTabContextMenu.test.tsx src/renderer/src/components/tab-bar/native-chat-tab-agent-evidence.test.ts src/renderer/src/native-chat-view-recovery/terminal-chat-recovery.test.ts src/renderer/src/components/terminal-pane/terminal-pane-recovery.test.ts src/renderer/src/components/terminal-pane/terminal-pane-recovery-unsettled-fallback.test.ts src/renderer/src/components/terminal-pane/terminal-pane-surface-ownership.test.ts"
+        "pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/native-chat-view-recovery/codex-chat-delivery.test.tsx src/renderer/src/components/tab-bar/SortableTabContextMenu.test.tsx src/renderer/src/components/tab-bar/native-chat-tab-agent-evidence.test.ts src/renderer/src/native-chat-view-recovery/terminal-chat-recovery.test.ts src/renderer/src/components/terminal-pane/terminal-pane-recovery.test.ts src/renderer/src/components/terminal-pane/terminal-pane-recovery-unsettled-fallback.test.ts src/renderer/src/components/terminal-pane/terminal-pane-surface-ownership.test.ts"
       ]
     },
     {

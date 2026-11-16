@@ -83,7 +83,7 @@ export function useNativeChatPtyComposerSend(args: {
     })
     let pendingId: string | undefined
     const sendOptions =
-      args.agent === 'claude' && classification === 'chat'
+      (args.agent === 'claude' || args.agent === 'codex') && classification === 'chat'
         ? {
             ...launchSendOptions,
             onWriteRejected: () => {
@@ -95,7 +95,16 @@ export function useNativeChatPtyComposerSend(args: {
               if (pendingId) {
                 args.optimisticSendOutcome?.holdUnconfirmed(pendingId)
               }
-            }
+            },
+            ...(args.agent === 'codex'
+              ? {
+                  onDeliverySettled: (acknowledged: boolean) => {
+                    if (!acknowledged && pendingId) {
+                      args.optimisticSendOutcome?.holdUnconfirmed(pendingId)
+                    }
+                  }
+                }
+              : {})
           }
         : launchSendOptions
     let pendingHandle: NativeChatSendHandle | null = null
