@@ -1,4 +1,4 @@
-import { createContext, createElement, useMemo, useRef, useState } from 'react'
+import { createContext, createElement, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Text } from 'react-native'
 import { File, FileText, Globe, SquareTerminal } from 'lucide-react-native'
 import { MobileAgentIcon } from '../components/MobileAgentIcon'
@@ -143,6 +143,13 @@ vi.mock('./MobileSessionContentRow', () => ({
 }))
 vi.mock('./MobileSessionSheets', () => ({ MobileSessionSheets: () => null }))
 vi.mock('./MobileWorkerAutoCloseStrip', () => ({ MobileWorkerAutoCloseStrip: () => null }))
+vi.mock('../local-tasks/local-task-session-card-slot', () => ({
+  LocalTaskSessionReceiptMount: () => null,
+  LocalTaskSessionCardMount: (props: {
+    controller: { activeSessionTab: { id: string } }
+    children?: ReactNode
+  }) => createElement('TaskCardMount', props, props.children)
+}))
 vi.mock('./MobileSessionTab', async (original) => {
   const actual = await original<typeof TabModule>()
   return {
@@ -384,6 +391,18 @@ describe('MobileSessionTabStrip edge taps', () => {
     expect(work.back).toBeNull()
     act(() => strip.card().props.onSettled(strip.card().props.motion))
     expect(strip.root.findAllByType(AnchoredDetailCard)).toHaveLength(0)
+    strip.unmount()
+  })
+
+  it('passes the clicked tab identity to the task card', () => {
+    const strip = mountStrip()
+    strip.tapAt(250)
+    expect(strip.card().props.source.key).toBe('tab:c')
+    expect(strip.tabs[2].props.accessibilityState.selected).toBe(true)
+    expect(
+      strip.card().find((node) => String(node.type) === 'TaskCardMount').props.controller
+        .activeSessionTab.id
+    ).toBe('c')
     strip.unmount()
   })
 

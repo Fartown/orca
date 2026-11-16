@@ -18,7 +18,7 @@ import type { MobileSessionController } from './use-mobile-session-controller'
 import { useTopChromeSpace } from '../layout/use-top-chrome-space'
 import { useShellSideRail } from '../layout/use-shell-side-rail'
 
-import { LocalTaskSessionStripMount } from '../local-tasks/local-task-session-strip-slot'
+import { LocalTaskSessionReceiptMount } from '../local-tasks/local-task-session-card-slot'
 
 export function MobileSessionHeader({
   controller,
@@ -163,7 +163,7 @@ export function MobileSessionHeader({
             />
           )}
         </View>
-        <LocalTaskSessionStripMount controller={controller} />
+        <LocalTaskSessionReceiptMount controller={controller} />
         {tabsInTopBar ? null : tabStrip}
       </SafeAreaView>
       <MobileSessionHeaderMoreMenu

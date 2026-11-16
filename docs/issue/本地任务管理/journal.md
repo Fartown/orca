@@ -14,6 +14,7 @@ external_ids:
   - 'Fartown/orca#114'
   - 'Fartown/orca#117'
   - 'Fartown/orca#122'
+  - 'Fartown/orca#124'
 ---
 
 # 本地任务管理 开发 Journal
@@ -37,8 +38,18 @@ external_ids:
 | 测试用例 | [tests/cases/任务为主的工作流测试.md](tests/cases/任务为主的工作流测试.md)             | ready     | TC-301～TC-309，任务界面、派活、会话、验收、主机归属与兼容；TC-312～TC-323 原型还原补充；TC-324～TC-330 复审修复回归（2026-11-11）                                                |
 | 测试用例 | [tests/cases/任务交互修复回归.md](tests/cases/任务交互修复回归.md)                     | ready     | D-023 / #114；TC-335～TC-342，标题取消、范围预览、回执、看板键盘、链接、步骤、需要你与 PC/手机三行正文                                                                            |
 | 测试用例 | [tests/cases/会话布局与导航回归.md](tests/cases/会话布局与导航回归.md)                 | ready     | D-024 / #117；TC-343～TC-346，手动导航、关联新建、幂等重试与共享连接状态                                                                                                          |
+| 测试用例 | [tests/cases/手机会话浮卡任务上下文.md](tests/cases/手机会话浮卡任务上下文.md)         | ready     | D-025 / #124；TC-347～TC-350，所点标签、名称入口、关联抽屉、失联与回执隔离                                                                                                        |
 
 ## 2. 决策点记录
+
+### D-025 手机会话浮卡承载任务上下文
+
+- 日期：2026-11-16。
+- 来源：用户手机终端标签浮卡截图及「为什么不把任务放在悬浮卡里」；Issue #124。
+- 背景：浮卡只有会话标题与智能体，任务在会话页顶部单独占行，信息分散。
+- 最终决定：任务信息迁入既有标签浮卡，以所点标签的会话关联优先、工作区任务兜底；任务名为主、编号次要，名称区域可打开任务。顶部不再重复显示任务行；关联入口随信息迁移，当前会话的聚焦已读确认保留。
+- 原因：任务是当前会话的上下文，应与所点会话一起查看；卡片本身不替未阅读的会话确认已读。
+- 影响范围：REQ-011、REQ-014、REQ-016、REQ-017；重命名旧 Strip 的组件、slot 与 provider，保留共享任务库 watch 和回执，不删除任务关联能力。抽屉归路由持有，卡片关闭不丢选择；失联不写，新旧请求的回执和操作 ID 隔离。不新增主机连接、轮询、重试、RPC、执行主机文件或服务。
 
 ### D-024 对话优先布局、手动导航与关联入口
 
@@ -438,6 +449,42 @@ external_ids:
 - 验证完再一起做两个切片
 
 ## 3. 开发记录
+
+### 2026-11-16 手机标签浮卡任务上下文（testing）
+
+- 本轮目标：按#124将手机会话任务信息放入现有标签浮卡，去掉顶部重复任务行并保留已读和关联能力。
+- 完成内容：任务名/ref整块点击，所点标签的会话关联优先、工作区兜底；顶部重复行移除，当前会话receipt独立保留。确认并修正portal外部点击导致选择抽屉丢失、state上提后的失联写与迟到结果串请求风险。复核补修同库local/SSH路径碰撞任取任务、目标标签关闭后关联旧会话两处问题；请求仍由路由持有，浮卡关闭不丢选择，当前清单权威确认标签消失才关请求，失联只禁写不判退出。
+- 代码或文档变更：先登记Card/Receipt/LinkSheet/provider/slot及上游最小接缝，再按源文件hash应用旧Strip的迁移；需求REQ-017、D-025、TC-347～TC-350与mobile openTask文案。
+- 验证证据：集成基线1a97b52；补修后mobile bundle为b4838e45，生产源前后hash一致。本机隔离WebShell完成卡片→任务页→关联子任务→owner回读，1 passed/28.7s，截图等待opacity=1后亲看；两保护有效反向10/12（2失败）、修后12/12。当前登记main/CLI 210、renderer1215、mobile337、scripts47共1809条通过；根tc、手机生产与1294文件测试类型、变更代码质量及React Doctor通过。首轮类型测试错误和stale ReactElement夹具已修，不放宽断言。SSH、推送前检查、CI与逐项边界持续记录于本机`.docs/local-tasks-mobile-card-ui-validation/2026-11-16/results.md`，交付结论绑定最后候选而非首版截图。
+- 未解决问题：真实SSH host边界及最后推送前门禁仍在执行；原生Android/iOS与终端正文流未验收。本机壳连接固定connected不冒充失联验证，失联/迟到回执目前由组件整合测试覆盖；#122历史误报未定因，保持OPEN。
+- 下一步：完成SSH与最后门禁，在交付报告记录确切候选/PR/CI结果，按用户授权CI全绿合入；不重启替换用户App。
+
+### 2026-11-16 D-025 新集成基线复验（testing）
+
+- 本轮目标：在最新集成基线上交付#124，验证证据与实际候选一致。
+- 完成内容：6854候选的本机、真实SSH和PR基线16/16检查通过后，发现集成分支已前进到c5acbcf（#126终端发送修复）。正常合并为d91eb63，唯一冲突是生成索引，已重新生成；本地任务产品逻辑无冲突。packages、CLI、Electron E2E、mobile-web和darwin-arm64 orcad模板全部重新构建，生产源hash前后一致。
+- 代码或文档变更：集成基线合并、本条交付记录和生成索引；#124功能仍为原范围，未增加连接、RPC或服务。
+- 验证证据：新mobile buildId为728fed72，本机完整WebShell链1/1通过（39s）；根tc、手机生产/1294文件测试类型、本地化三项、架构27组、fork-features与fork-docs全部通过。合并前四组登记共1809条与真实SSH精确owner回读保留为历史；新基线最后SSH、推送前检查及CI结果持续记录于本机`.docs/local-tasks-mobile-card-ui-validation/2026-11-16/results.md`，不混用旧轮次结论。
+- 未解决问题：原生Android/iOS与终端正文流仍未验收；#122现场历史误报未定因并保持OPEN。SSH owner原始status报告appVersion 1.4.214及协议版本，但没有commit，不把owner版本推断成本地候选；managed目标删除被规则拒绝时保留响应，不为清理停止共享服务。
+- 下一步：最后候选完成SSH与推送前检查后正常推送，CI全部通过按授权合入；在交付证据绑定最终SHA、PR与清理结果，保留用户运行中的App。
+
+### 2026-11-16 PR #128 独立 React Doctor 修复（testing）
+
+- 本轮目标：修复PR #128静态检查失败，保持浮卡关联的异步与失联保护。
+- 完成内容：关联抽屉的currentRequest、lastRequest和writable三个ref只在layout effect提交阶段同步，避免并发渲染被丢弃时泄漏状态；保留请求身份、关闭动画数据、标签清单及旧回调可写性门控。
+- 代码或文档变更：仅`local-task-session-link-sheet.tsx`的三处ref同步和本记录；不修改检查脚本、规则、baseline或豁免。
+- 验证证据：f1a3的CI与同命令本地均报三条`no-ref-current-in-render`；修后精确CI命令`node config/scripts/check-react-doctor-changed.mjs c5acbcf66b34cc75dfa8d62449b6dba091d73958`通过，Card12/12、手机生产类型及1294文件测试类型通过。之前通用changed-code quality里的React Doctor扫描通过，不代表CI这个独立检查通过；最终新增该命令单独验证。红绿日志在本机`.docs/local-tasks-mobile-card-ui-validation/2026-11-16/evidence/gates/`，新bundle和本机/SSH回归结果继续记录在同topic的results.md。
+- 未解决问题：修后新bundle真实界面回归和最终CI仍在执行；原生手机及#122历史误报边界保持不变。
+- 下一步：冻结本记录，重建手机bundle、复验本机/SSH及最后推送前检查后正常更新PR，CI全绿合入；不将原head的其它绿项冒充新head全绿。
+
+### 2026-11-16 PR #128 fork 全量状态生命周期修复（testing）
+
+- 本轮目标：修复CI相对上游的全fork质量检查，保持抽屉独立请求语义。
+- 完成内容：Provider为每次打开分配独立opening key；关闭只隐藏同一实例保留动画，新打开自然初始化错误、筛选和操作ID，不再用effect追随request重置state。卸载时清空旧请求及可写ref，已捕获的旧选择回调不能新写，迟到结果不能关闭新抽屉。
+- 代码或文档变更：Provider、LinkSheet、既有Card异步回归追加旧回调禁写断言与本记录；没有修改CI、质量规则、baseline或豁免。
+- 验证证据：d92的PR范围和独立React Doctor通过，但CI全fork相对8cd6a7e5检查1754文件报一条`no-adjust-state-on-prop-change`，本地同命令已复现。修后PR独立检查通过，全fork扫描与功能回归继续执行，逐项结果在本机`.docs/local-tasks-mobile-card-ui-validation/2026-11-16/results.md`；旧d92本机和真实SSH通过仅作为历史，不冒充新源码验收。
+- 未解决问题：新状态生命周期的完整门禁和fresh手机bundle本机/SSH回归尚待收尾；原生设备与#122历史根因未定边界保持。
+- 下一步：同时取得PR范围与全fork范围质量检查通过，冻结提交后fresh手机构建、真实界面和最后推送前检查，正常更新同PR并跟进新head CI全绿合入。
 
 ### 2026-11-16 新一轮会话与导航问题登记（implementing）
 
