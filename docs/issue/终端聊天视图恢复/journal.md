@@ -5,7 +5,7 @@ status: testing
 created: 2026-10-23
 updated: 2026-11-16
 issue: 终端聊天视图恢复
-external_ids: [Fartown/orca#112, Fartown/orca#119]
+external_ids: [Fartown/orca#112, Fartown/orca#119, Fartown/orca#121]
 ---
 
 # 终端聊天视图恢复
@@ -23,6 +23,8 @@ external_ids: [Fartown/orca#112, Fartown/orca#119]
 - 本轮测试：[持续绑定恢复验收](tests/runs/2026-11-15-持续绑定恢复验收.md)，completed；覆盖 REQ-1804。
 
 ## 2. 决策点记录
+
+- 2026-11-16：[持久提交闭环需求](requirements/持久提交闭环.md)、[现状调研](research/持久提交现状.md)、[方案](solutions/持久提交闭环.md)、[用例](tests/cases/持久提交闭环.md)。REQ-1806～1809 扩展同一终端聊天功能；前次写入结算不等于 provider 消费，不能当作根治证据。
 
 - 2026-10-23：根因是标签右键菜单用 isChatView 隐藏了终端到聊天的方向；终端面板右键和快捷键已支持。恢复同一标签的现有切换，不把它替换为创建新会话或恢复 provider。
 - 界面展示由客户端持有，终端和 transcript 继续由本地或 SSH 执行主机持有；不新增协议、主机连接或配置。
@@ -73,3 +75,12 @@ external_ids: [Fartown/orca#112, Fartown/orca#119]
 - 验证证据：6 项新增整合回归在旧版失败；补齐严格确认和图片、Claude 保留回归后，11 份相关测试共 143 项通过。真实旧 .84 与修复版后台 UI 对照：同样不存在的 PTY，旧版普通气泡，修复版“消息未发送”且不发 Enter。真实 SSH 隧道下 mini 对缺失 handle 返回 terminal_handle_stale，修复版同样正确标记，用户原终端未写入任何测试文字。详见 [Codex投递验收](tests/runs/2026-11-16-Codex投递验收.md)。现场数据仅本地 .docs/native-chat-terminal-send-ui-validation/2026-11-16/ 保存。
 - 未解决问题：没有逐写回执能唯一解释原 11:17 RPC 失败原因，不能把同时存在的连接错误当作精确逐写证据。
 - 下一步：跑完最后编辑后的完整门禁，提交 Issue #119 的 PR 并等 CI。用户 .84 原消息的缓存已标记 unconfirmed，文字保留、未补发；运行中程序未替换。
+
+### 2026-11-16 持久提交闭环（implementing）
+
+- 本轮目标：解决普通 Codex Chat 的假已发、原文仅内存保存、页面持有异步 Enter，以及丢回执后无同请求恢复的问题。
+- 完成内容：Issue #121；独立 feat/native-chat-durable-submit 工作树；分层调研；main 持久 outbox 与同请求查询；执行端整体提交、写入结算、原 session/incarnation fence；正文边界与唯一 user-row 对账接入。
+- 代码或文档变更：feature 拥有目录增 main/shared 模块；旧文件只作 IPC、capability、composer 与发送队列接线；新增需求、调研、方案、用例。
+- 验证证据：首批持久存储与对账 12 项测试通过；完整类型检查通过。故障集成、真实 Codex、本地与 SSH App、完整门禁待执行，不能提前认定完成。
+- 未解决问题：真实 TUI 清理/图片与新 host 边界仍需实测；旧能力与 legacy relay 只支持保留输入的诚实拒绝，不迁移用户终端。
+- 下一步：补齐故障/真实应用验收，完成所有门禁和 CI，关联 Issue 合入。
