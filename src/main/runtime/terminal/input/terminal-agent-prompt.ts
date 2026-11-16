@@ -1,9 +1,7 @@
+import { OrcaRuntimeWithDurableChatPrompt } from '../../../native-chat-view-recovery/durable-chat-prompt-runtime'
 import { agentPromptObservationSignal } from './agent-prompt-signals'
 import { assertTerminalInputAdmitted } from '../../terminal-input-admission'
-import type {
-  AgentPromptExpectedBinding,
-  RuntimeAgentPromptWriteOptions
-} from '../../runtime-terminal-contracts'
+import type { RuntimeAgentPromptWriteOptions } from '../../runtime-terminal-contracts'
 import type {
   RuntimeTerminalPromptDelivery,
   RuntimeTerminalSend
@@ -32,29 +30,12 @@ import {
   verifyAgentPromptSubmission
 } from '../../agent-prompt-submission-verification'
 import { AgentPromptPermissionReturnedError } from './agent-prompt-permission-hold'
-import { OrcaRuntimeWithResubmitHeldAgentPrompt } from './terminal-agent-prompt-resubmit'
 
-export abstract class OrcaRuntimeWithWriteTerminalAgentPrompt extends OrcaRuntimeWithResubmitHeldAgentPrompt {
+export abstract class OrcaRuntimeWithWriteTerminalAgentPrompt extends OrcaRuntimeWithDurableChatPrompt {
   protected abstract createAgentPromptRenderGate(
     ptyId: string,
     pasteIngestMs: number
   ): { arm: () => void; wait: () => Promise<void>; dispose: () => void } | null
-
-  protected assertAgentPromptExpectedBinding(
-    handle: string,
-    expected: AgentPromptExpectedBinding | undefined
-  ): void {
-    if (!expected) {
-      return
-    }
-    const current = this.getTerminalPromptRequestBinding(handle)
-    if (
-      current.ptyId !== expected.ptyId ||
-      current.processIncarnation !== expected.processIncarnation
-    ) {
-      throw new Error('terminal_handle_stale')
-    }
-  }
 
   /** Under `wait`, a pre-paste refusal is the hold's to resume rather than the caller's to see. */
   private throwIfAgentPromptPermissionReturned(
@@ -73,6 +54,8 @@ export abstract class OrcaRuntimeWithWriteTerminalAgentPrompt extends OrcaRuntim
     pastePayload: string,
     options: RuntimeAgentPromptWriteOptions
   ): Promise<{ submits: number; prompt?: RuntimeTerminalPromptDelivery }> {
+    let chatTranscript: RuntimeTerminalPromptDelivery['chatTranscript']
+    const write = (data: string) => this.writeAgentPromptChunk(ptyId, data, options)
     const observationSignal = agentPromptObservationSignal(options)
     assertAgentPromptRequestActive(observationSignal)
     this.assertAgentPromptGeneration(ptyId, generation)
@@ -113,6 +96,7 @@ export abstract class OrcaRuntimeWithWriteTerminalAgentPrompt extends OrcaRuntim
         throw new Error('terminal_handle_stale')
       }
       this.assertAgentPromptExpectedBinding(handle, options.expectedBinding)
+      this.assertDurableChatSession(handle, options)
       if (this.isPtyStopRequested(ptyId)) {
         throw new Error('terminal_not_writable')
       }
@@ -142,11 +126,21 @@ export abstract class OrcaRuntimeWithWriteTerminalAgentPrompt extends OrcaRuntim
         permissionBaseline,
         this.getAgentPromptActivity(handle, ptyId)
       )
+      if (options.chatComposer) {
+        await this.prepareDurableChatComposer(
+          handle,
+          ptyId,
+          options,
+          beforeWrite,
+          deliverySignal,
+          permissionBaseline
+        )
+      }
       // Claude can lose the start of a large bracketed paste split across writes; send the whole frame together.
       renderGate?.arm()
       const initialWrite = submitWithPaste ? pastePayload + AGENT_PROMPT_SUBMIT : pastePayload
       assertTerminalInputAdmitted(this, ptyId, options.inputSource)
-      if (!this.ptyController?.write(ptyId, initialWrite, options.inputKind)) {
+      if (!(await write(initialWrite))) {
         throw new Error('terminal_not_writable')
       }
       if (submitWithPaste) {
@@ -184,10 +178,11 @@ export abstract class OrcaRuntimeWithWriteTerminalAgentPrompt extends OrcaRuntim
       assertWritable(deliverySignal)
       baseline = preSubmitBaseline ?? this.getAgentPromptActivity(handle, ptyId, waitTextCache)
       this.assertAgentPromptPermissionSafe(permissionBaseline, baseline)
-      if (
-        !submitWithPaste &&
-        !this.ptyController?.write(ptyId, AGENT_PROMPT_SUBMIT, options.inputKind)
-      ) {
+      if (options.chatComposer) {
+        chatTranscript = await this.captureDurableChatBoundary(handle, options.chatComposer)
+        await beforeWrite(deliverySignal)
+      }
+      if (!submitWithPaste && !(await write(AGENT_PROMPT_SUBMIT))) {
         throw new Error(options.suffixFailureError ?? 'terminal_not_writable')
       }
       if (!submitWithPaste) {
@@ -199,28 +194,29 @@ export abstract class OrcaRuntimeWithWriteTerminalAgentPrompt extends OrcaRuntim
     } finally {
       renderGate?.dispose()
     }
-    const submits = submitWithPaste
-      ? 1
-      : 1 +
-        (await this.resubmitHeldAgentPrompt(
-          ptyId,
-          generation,
-          {
-            ...options,
-            signal: admissionSignal,
-            beforeWrite: () => beforeWrite(admissionSignal)
-          },
-          {
-            baseline,
-            readActivity: () => this.getAgentPromptActivity(handle, ptyId, waitTextCache),
-            prompt: options.promptForSchedule,
-            heldBudgetMs: getAgentPromptHeldSubmitBudgetMs(
-              writeHostPlatform,
-              this.getPtyAgent(ptyId),
-              pastePayload
-            )
-          }
-        ))
+    const submits =
+      submitWithPaste || options.chatComposer
+        ? 1
+        : 1 +
+          (await this.resubmitHeldAgentPrompt(
+            ptyId,
+            generation,
+            {
+              ...options,
+              signal: admissionSignal,
+              beforeWrite: () => beforeWrite(admissionSignal)
+            },
+            {
+              baseline,
+              readActivity: () => this.getAgentPromptActivity(handle, ptyId, waitTextCache),
+              prompt: options.promptForSchedule,
+              heldBudgetMs: getAgentPromptHeldSubmitBudgetMs(
+                writeHostPlatform,
+                this.getPtyAgent(ptyId),
+                pastePayload
+              )
+            }
+          ))
     const effectTimeoutMs = resolveAgentPromptEffectTimeoutMs(this.getPtyAgent(ptyId))
     if (!options.acceptQueued || !options.requestId) {
       await verifyAgentPromptSubmission({
@@ -241,6 +237,7 @@ export abstract class OrcaRuntimeWithWriteTerminalAgentPrompt extends OrcaRuntim
         : null
     const inputAccepted: RuntimeTerminalPromptDelivery = {
       requestId: options.requestId,
+      ...(chatTranscript ? { chatTranscript } : {}),
       stages: ['input_accepted'],
       provider: settlementAgent ?? 'unsupported',
       observation: settlementAgent ? 'supported' : 'unsupported',

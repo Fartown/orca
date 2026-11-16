@@ -1,3 +1,4 @@
+import type { DurableChatSubmitApi } from '../../shared/native-chat-view-recovery/durable-chat-submit'
 import type { AgentType } from '../../shared/agent-status-types'
 import type {
   NativeChatMessage,
@@ -55,6 +56,7 @@ export type NativeChatSubscribeArgs = {
 }
 
 export type NativeChatApi = {
+  durableSubmit?: DurableChatSubmitApi
   /** Reads the latest limit turns; the hook-reported transcriptPath takes precedence over ID globbing. */
   readSession: (
     agent: AgentType,

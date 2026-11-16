@@ -48,6 +48,7 @@ export const NativeChatComposerPane = forwardRef<ComposerHandle, C.NativeChatCom
       afterStop,
       onStop,
       onOptimisticSend,
+      onDurableSend,
       optimisticSendOutcome,
       onOptimisticSendCanceled,
       onSlashCommand,
@@ -264,6 +265,7 @@ export const NativeChatComposerPane = forwardRef<ComposerHandle, C.NativeChatCom
       setNotice
     }
     const sendPty = useNativeChatPtyComposerSend({
+      onDurableSend,
       draftScopeKey,
       ...ptyCommandRouting,
       draft,

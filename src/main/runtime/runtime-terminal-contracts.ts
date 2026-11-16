@@ -1,3 +1,5 @@
+import type { z } from 'zod'
+import type { DurableChatComposer } from '../../shared/native-chat-view-recovery/durable-chat-submit'
 import type { RuntimePtyWorktreeRecord, RuntimeLeafRecord } from './runtime-terminal-state-records'
 import type { ProgramStatusFacet } from '../../shared/program-status/facet'
 import type { AgentLaunchRuntime } from '../../shared/agent-launch-runtime'
@@ -280,6 +282,7 @@ export type RuntimeProviderSnapshotReadOptions = {
 
 /** Agent-prompt writes add the correlation inputs a queued-acceptance receipt needs. */
 export type RuntimeAgentPromptWriteOptions = Omit<RuntimeTerminalWriteOptions, 'inputKind'> & {
+  chatComposer?: z.infer<typeof DurableChatComposer>
   /** `launch` for the prompt an agent starts with; `driving` for any prompt sent to a running one. */
   inputKind: Exclude<TerminalInputKind, 'query-reply'>
   /** Caller observation may end without cancelling a paste already accepted by the host. */

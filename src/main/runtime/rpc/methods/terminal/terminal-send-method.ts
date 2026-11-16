@@ -139,7 +139,7 @@ export const TERMINAL_SEND_METHODS = [
       }
       // Recheck permission and agent presence immediately before PTY acceptance.
       const assertSendPreconditions =
-        params.requireAgentStatus === 'sendable'
+        params.requireAgentStatus === 'sendable' || params.chatComposer
           ? async (ptyId?: string): Promise<void> => {
               await assertTerminalAgentSendable({
                 runtime,
@@ -150,7 +150,7 @@ export const TERMINAL_SEND_METHODS = [
               })
             }
           : undefined
-      if (params.requireAgentStatus === 'sendable') {
+      if (params.requireAgentStatus === 'sendable' || params.chatComposer) {
         try {
           await assertSendPreconditions?.(leaf?.ptyId ?? undefined)
         } catch (error) {
@@ -180,6 +180,11 @@ export const TERMINAL_SEND_METHODS = [
         params.interrupt !== true &&
         params.client?.type === 'desktop' &&
         (await runtime.isTerminalRunningSettledPromptAgent(params.terminal))
+      if (params.chatComposer && (!orchestrationMutation || !useSettledAgentPrompt)) {
+        throw new InvalidArgumentError(
+          'Durable chat requires a supported running agent and request ID'
+        )
+      }
       const reserveWrite =
         params.inputKind !== 'query-reply' && leaf?.ptyId && mobileFloorClientId
           ? (ptyId: string): void => {
@@ -198,6 +203,16 @@ export const TERMINAL_SEND_METHODS = [
           ? await runtime.sendTerminalAgentPrompt(params.terminal, params.text!, {
               inputKind: 'driving',
               inputSource,
+              ...(params.chatComposer
+                ? {
+                    chatComposer: params.chatComposer,
+                    composerReady: true,
+                    expectedBinding: {
+                      ptyId: params.chatComposer.expectedPtyId,
+                      processIncarnation: params.chatComposer.expectedIncarnation
+                    }
+                  }
+                : {}),
               beforeWrite,
               observationSignal: signal,
               ...(orchestrationMutation

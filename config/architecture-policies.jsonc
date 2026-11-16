@@ -101,7 +101,9 @@
           "comparison": "worktree",
           "whenChanged": [
             "src/renderer/src/native-chat-view-recovery/**",
-            "docs/issue/终端聊天视图恢复/**"
+            "docs/issue/终端聊天视图恢复/**",
+            "src/main/native-chat-view-recovery/**",
+            "src/shared/native-chat-view-recovery/**"
           ],
           "allowedPaths": [
             "src/renderer/src/native-chat-view-recovery/**",
@@ -120,7 +122,27 @@
             "config/fork-features.jsonc",
             "config/architecture-policies.jsonc",
             "docs/issue/README.md",
-            ".gitignore"
+            ".gitignore",
+            "src/main/native-chat-view-recovery/**",
+            "src/shared/native-chat-view-recovery/**",
+            "src/main/ipc/register-core-handlers/register-core-handlers.ts",
+            "src/main/runtime/orca-runtime-get-status.ts",
+            "src/main/runtime/rpc/methods/terminal/terminal-send-method.ts",
+            "src/main/runtime/runtime-terminal-contracts.ts",
+            "src/main/runtime/terminal/input/terminal-agent-prompt.ts",
+            "src/preload/api/native-chat-api.ts",
+            "src/preload/api/native-chat-bridge.ts",
+            "src/renderer/src/components/native-chat/NativeChatComposerPane.tsx",
+            "src/renderer/src/components/native-chat/NativeChatResolvedView.tsx",
+            "src/renderer/src/components/native-chat/native-chat-composer-types.ts",
+            "src/renderer/src/components/native-chat/use-native-chat-pending-delivery.ts",
+            "src/shared/rpc-contract/terminal-unary-params.ts",
+            "src/shared/runtime-terminal-send-contract.ts",
+            "src/shared/terminal-runtime-capabilities.ts",
+            "src/shared/orchestration-mutation-request.ts",
+            "src/shared/rpc-contract/orchestration-runs-mutation-request-show-params.ts",
+            "src/main/runtime/rpc/methods/orchestration/runs/mutation-request-show.ts",
+            "src/main/ipc/register-core-handlers/register-core-handlers.test.ts"
           ],
           "message": "Change is outside terminal chat view recovery."
         }
@@ -1001,7 +1023,24 @@
             "src/renderer/src/web/preload-api/web-os-deep-link-api.ts",
             "mobile/src/components/MobileMarkdown.tsx",
             "mobile/src/components/mobile-markdown-blocks.tsx",
-            "mobile/src/components/mobile-markdown-styles.ts"
+            "mobile/src/components/mobile-markdown-styles.ts",
+            "src/main/native-chat-view-recovery/**",
+            "src/shared/native-chat-view-recovery/**",
+            "src/main/ipc/register-core-handlers/register-core-handlers.ts",
+            "src/main/runtime/rpc/methods/terminal/terminal-send-method.ts",
+            "src/main/runtime/runtime-terminal-contracts.ts",
+            "src/main/runtime/terminal/input/terminal-agent-prompt.ts",
+            "src/preload/api/native-chat-api.ts",
+            "src/preload/api/native-chat-bridge.ts",
+            "src/renderer/src/components/native-chat/NativeChatResolvedView.tsx",
+            "src/renderer/src/components/native-chat/native-chat-composer-types.ts",
+            "src/shared/rpc-contract/terminal-unary-params.ts",
+            "src/shared/runtime-terminal-send-contract.ts",
+            "src/shared/terminal-runtime-capabilities.ts",
+            "src/shared/orchestration-mutation-request.ts",
+            "src/shared/rpc-contract/orchestration-runs-mutation-request-show-params.ts",
+            "src/main/runtime/rpc/methods/orchestration/runs/mutation-request-show.ts",
+            "src/main/ipc/register-core-handlers/register-core-handlers.test.ts"
           ],
           "message": "Branch changes an upstream path that no fork feature owns or registers as a seam; extend config/fork-features.jsonc and this allowlist, or move the change into a feature-owned path."
         }

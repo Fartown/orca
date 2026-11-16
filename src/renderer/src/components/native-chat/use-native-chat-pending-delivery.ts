@@ -1,3 +1,4 @@
+import { useDurableChatDelivery } from '../../native-chat-view-recovery/use-durable-chat-delivery'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { translate } from '@/i18n/i18n'
 import { useUiLanguageRevision } from '@/i18n/use-ui-language-revision'
@@ -37,6 +38,7 @@ export function useNativeChatPendingDelivery(args: {
     hasMore?: boolean
   }
 }) {
+  const durable = useDurableChatDelivery(args)
   const languageRevision = useUiLanguageRevision()
   const { paneKey, agent } = args
   const { messages } = args.session
@@ -190,5 +192,24 @@ export function useNativeChatPendingDelivery(args: {
     return result
     // oxlint-disable-next-line react-hooks/exhaustive-deps -- translate() reads the UI language implicitly.
   }, [pending, cancel, languageRevision])
-  return { pending, record, cancel, reject, holdUnconfirmed, clear, notices }
+  const combinedNotices = useMemo(
+    () =>
+      durable.notices.size === 0
+        ? notices
+        : notices.size === 0
+          ? durable.notices
+          : new Map([...notices, ...durable.notices]),
+    [notices, durable.notices]
+  )
+  return {
+    pending,
+    durableMessages: durable.messages,
+    record,
+    cancel,
+    reject,
+    holdUnconfirmed,
+    clear,
+    notices: combinedNotices,
+    sendDurable: durable.send
+  }
 }
