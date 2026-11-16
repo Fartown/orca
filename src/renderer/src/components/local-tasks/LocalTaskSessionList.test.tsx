@@ -73,7 +73,7 @@ it('peeks a session on a host in contact, beside the task instead of leaving it'
   )
   fireEvent.click(screen.getByRole('button', { name: 'Peek' }))
   expect(localTaskSessionPanelStore.getState()).toMatchObject({
-    mode: 'narrow',
+    mode: 'wide',
     sessionLinkId: session.id
   })
   expect(localTaskPageStore.getState().previewOpen).toBe(false)

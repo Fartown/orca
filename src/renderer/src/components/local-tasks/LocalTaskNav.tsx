@@ -228,7 +228,7 @@ export function LocalTaskNav({
       className={
         sidebar
           ? 'flex shrink-0 flex-col gap-2'
-          : 'hidden w-52 shrink-0 flex-col gap-4 overflow-y-auto scrollbar-sleek @3xl/local-task-page:flex'
+          : 'grid max-h-40 w-full shrink-0 grid-cols-2 gap-2 overflow-y-auto border-b border-border pb-2 scrollbar-sleek @3xl/local-task-page:flex @3xl/local-task-page:max-h-none @3xl/local-task-page:w-52 @3xl/local-task-page:flex-col @3xl/local-task-page:gap-4 @3xl/local-task-page:border-0 @3xl/local-task-page:pb-0'
       }
     >
       <div className="flex flex-col gap-0.5">

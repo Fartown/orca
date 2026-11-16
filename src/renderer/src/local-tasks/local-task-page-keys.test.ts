@@ -136,7 +136,7 @@ describe('keys in the session preview beside the page (REQ-028)', () => {
     press(terminal, 'Escape')
     await Promise.resolve()
     expect(document.activeElement).toBe(terminal)
-    expect(localTaskSessionPanelStore.getState().mode).toBe('narrow')
+    expect(localTaskSessionPanelStore.getState().mode).toBe('wide')
     press(document.activeElement ?? document.body, 'j')
     press(element('#widen'), 'c')
     expect(actions).toEqual([])

@@ -337,15 +337,20 @@ export function LocalTaskSessionPanelSlot(): React.JSX.Element | null {
     return null
   }
 
-  const fillAvailableWidth =
-    availableWidth !== null && availableWidth > 0 && availableWidth < (mode === 'wide' ? 1200 : 800)
+  const fillAvailableWidth = availableWidth !== null && availableWidth > 0 && availableWidth < 560
 
   return (
     <div
       ref={setRef}
       className={cn(
-        'relative z-20 flex min-h-0 min-w-0 shrink-0 flex-col overflow-hidden border-l border-border bg-background',
-        fillAvailableWidth ? 'w-full' : mode === 'wide' ? 'w-2/3' : 'w-[420px] max-w-[60%]'
+        'relative z-20 order-first flex min-h-0 min-w-0 shrink-0 flex-col overflow-hidden border-r border-border bg-background',
+        fillAvailableWidth
+          ? mode === 'wide'
+            ? 'w-[70%]'
+            : 'w-[45%]'
+          : mode === 'wide'
+            ? 'w-[min(66.667%,max(240px,calc(100%-300px)))]'
+            : 'w-[min(420px,50%)]'
       )}
       aria-label={translate('localTasks.sessionPanel.title', 'Session preview')}
       {...{ [LOCAL_TASK_SESSION_PANEL_ATTRIBUTE]: '' }}
@@ -355,6 +360,7 @@ export function LocalTaskSessionPanelSlot(): React.JSX.Element | null {
         options={options}
         panelTaskId={taskId}
         mode={mode}
+        taskOnly={fillAvailableWidth}
       />
       <LocalTaskSessionPanelContent session={session} requestToken={requestToken} />
     </div>

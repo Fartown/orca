@@ -1,6 +1,7 @@
 import type { Worktree } from '../../../shared/worktree/types'
 import { createStore } from 'zustand/vanilla'
 import { localTaskSessionPanelStore } from './local-task-session-panel-store'
+import { persistLocalTaskNavExpanded, readLocalTaskNavExpanded } from './local-task-nav-preference'
 import { useStore } from 'zustand'
 import type {
   LocalTaskPriority,
@@ -62,6 +63,7 @@ export type LocalTaskPageState = {
   scopeProjectId: string | null
   view: LocalTaskPageView
   layout: 'list' | 'board'
+  navExpanded: boolean
   groupBy: LocalTaskGroupBy
   sortBy: LocalTaskSortBy
   showCanceledColumn: boolean
@@ -88,6 +90,7 @@ export type LocalTaskPageState = {
   setScope: (scopeProjectId: string | null, view?: LocalTaskPageView) => void
   setView: (view: LocalTaskPageView) => void
   setLayout: (layout: 'list' | 'board') => void
+  setNavExpanded: (expanded: boolean) => void
   setGroupBy: (groupBy: LocalTaskGroupBy) => void
   setSortBy: (sortBy: LocalTaskSortBy) => void
   setShowCanceledColumn: (show: boolean) => void
@@ -118,6 +121,7 @@ export const localTaskPageStore = createStore<LocalTaskPageState>((set) => ({
   scopeProjectId: null,
   view: 'all',
   layout: 'list',
+  navExpanded: readLocalTaskNavExpanded(),
   groupBy: 'status',
   sortBy: 'updated',
   showCanceledColumn: false,
@@ -153,6 +157,10 @@ export const localTaskPageStore = createStore<LocalTaskPageState>((set) => ({
   setView: (view) =>
     set({ view, detailTaskId: null, previewOpen: false, cursorTaskId: null, selectedTaskIds: [] }),
   setLayout: (layout) => set({ layout }),
+  setNavExpanded: (navExpanded) => {
+    set({ navExpanded })
+    persistLocalTaskNavExpanded(navExpanded)
+  },
   setGroupBy: (groupBy) => set({ groupBy }),
   setSortBy: (sortBy) => set({ sortBy }),
   setShowCanceledColumn: (showCanceledColumn) => set({ showCanceledColumn }),

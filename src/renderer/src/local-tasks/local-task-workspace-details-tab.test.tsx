@@ -10,7 +10,11 @@ import { folderWorkspaceKey } from '../../../shared/workspace-scope'
 import type { Worktree } from '../../../shared/worktree/types'
 import type { ExecutionHostId } from '../../../shared/execution-host'
 
-const client = vi.hoisted(() => ({ linkWorkspace: vi.fn(), unlinkWorkspace: vi.fn() }))
+const client = vi.hoisted(() => ({
+  createTask: vi.fn(),
+  linkWorkspace: vi.fn(),
+  unlinkWorkspace: vi.fn()
+}))
 
 vi.mock('@/components/ui/tooltip', () => ({
   Tooltip: ({ children }: { children?: ReactNode }) => <>{children}</>,
@@ -176,6 +180,7 @@ describe('workspace details → linked work → Local tasks (REQ-011)', () => {
     updateWorktreeMeta.mockClear()
     client.linkWorkspace.mockReset().mockResolvedValue({ ok: true, workspace: {} })
     client.unlinkWorkspace.mockReset().mockResolvedValue({ ok: true })
+    client.createTask.mockReset().mockResolvedValue({ ok: true, task: task('', 14, 'New report') })
   })
   afterEach(cleanup)
 
@@ -277,6 +282,143 @@ describe('workspace details → linked work → Local tasks (REQ-011)', () => {
     expect(client.linkWorkspace.mock.calls[0][0]).toEqual(
       expect.objectContaining({ taskId: 't12', kind: 'folder', folderWorkspaceId: 'folder-1' })
     )
+  })
+
+  it('stages a new task from the search query and creates and links it only on Save', async () => {
+    library('local')
+    openDetails()
+    fireEvent.change(screen.getByRole('combobox', { name: 'Search references' }), {
+      target: { value: 'New report' }
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'New local task' }))
+    expect(screen.getByRole('textbox', { name: 'Title' })).toHaveProperty('value', 'New report')
+    fireEvent.click(screen.getByRole('button', { name: 'Use this task' }))
+    expect(linkedRows()).toEqual([
+      expect.stringContaining('Save workspace details to create and link this task.')
+    ])
+    expect(client.createTask).not.toHaveBeenCalled()
+    expect(client.linkWorkspace).not.toHaveBeenCalled()
+    await save()
+    expect(client.createTask).toHaveBeenCalledWith(
+      expect.objectContaining({ projectId: 'shop', title: 'New report' }),
+      { clientOperationId: expect.any(String) }
+    )
+    expect(client.linkWorkspace.mock.calls[0][0]).toEqual(
+      expect.objectContaining({ taskId: 't14', hostId: 'local', worktreeId: WORKTREE.id })
+    )
+  })
+
+  it('stages with Cmd/Ctrl+Enter without saving the outer dialog or consuming plain textarea Enter', () => {
+    library('local')
+    openDetails()
+    fireEvent.click(screen.getByRole('button', { name: 'New local task' }))
+    const title = screen.getByRole('textbox', { name: 'Title' })
+    const description = screen.getByRole('textbox', { name: 'Description' })
+    fireEvent.change(title, { target: { value: 'New report' } })
+    fireEvent.keyDown(description, { key: 'Enter' })
+    expect(screen.getByRole('button', { name: 'Use this task' })).toBeTruthy()
+    const modifier = navigator.userAgent.includes('Mac') ? { metaKey: true } : { ctrlKey: true }
+    fireEvent.keyDown(title, { key: 'Enter', isComposing: true, ...modifier })
+    expect(screen.getByRole('button', { name: 'Use this task' })).toBeTruthy()
+    fireEvent.keyDown(title, { key: 'Enter', ...modifier })
+    expect(useAppStore.getState().activeModal).toBe('edit-meta')
+    expect(linkedRows()).toEqual([
+      expect.stringContaining('Save workspace details to create and link this task.')
+    ])
+    expect(client.createTask).not.toHaveBeenCalled()
+    expect(client.linkWorkspace).not.toHaveBeenCalled()
+  })
+
+  it('discards a staged task on Cancel and retries a failed link without creating twice', async () => {
+    library('local')
+    openDetails()
+    fireEvent.click(screen.getByRole('button', { name: 'New local task' }))
+    fireEvent.change(screen.getByRole('textbox', { name: 'Title' }), {
+      target: { value: 'New report' }
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Use this task' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(client.createTask).not.toHaveBeenCalled()
+    expect(client.linkWorkspace).not.toHaveBeenCalled()
+
+    cleanup()
+    openDetails()
+    fireEvent.click(screen.getByRole('button', { name: 'New local task' }))
+    fireEvent.change(screen.getByRole('textbox', { name: 'Title' }), {
+      target: { value: 'New report' }
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Use this task' }))
+    client.linkWorkspace.mockResolvedValueOnce({ ok: false, code: 'read_only' })
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+    expect(
+      await screen.findByText('Task created; workspace link pending. Save again to retry.')
+    ).toBeTruthy()
+    expect(linkedRows()).toEqual([expect.stringContaining('Task created; workspace link pending.')])
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+    await waitFor(() => expect(useAppStore.getState().activeModal).not.toBe('edit-meta'))
+    expect(client.createTask).toHaveBeenCalledOnce()
+    expect(client.linkWorkspace).toHaveBeenCalledTimes(2)
+  })
+
+  it('creates in the paired library that owns the SSH workspace', async () => {
+    library('runtime:env-1')
+    const remote = { ...WORKTREE, hostId: 'runtime:env-1' as const }
+    openDetails(remote, 'runtime:env-1')
+    fireEvent.click(screen.getByRole('button', { name: 'New local task' }))
+    fireEvent.change(screen.getByRole('textbox', { name: 'Title' }), {
+      target: { value: 'New report' }
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Use this task' }))
+    client.createTask.mockResolvedValueOnce({
+      ok: true,
+      task: task('runtime:env-1/', 14, 'New report')
+    })
+    await save()
+    expect(client.createTask.mock.calls[0][0].projectId).toBe('runtime:env-1/shop')
+    expect(client.linkWorkspace.mock.calls[0][0]).toEqual(
+      expect.objectContaining({ taskId: 'runtime:env-1/t14', hostId: 'runtime:env-1' })
+    )
+  })
+
+  it('reuses the operation ID when the server created the task but its first response was lost', async () => {
+    library('local')
+    openDetails()
+    fireEvent.click(screen.getByRole('button', { name: 'New local task' }))
+    fireEvent.change(screen.getByRole('textbox', { name: 'Title' }), {
+      target: { value: 'New report' }
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Use this task' }))
+    const receipts = new Map<string, LocalTask>()
+    client.createTask.mockImplementation(
+      async (_input: unknown, options: { clientOperationId: string }) => {
+        const operationId = options.clientOperationId
+        const prior = receipts.get(operationId)
+        if (prior) {
+          return { ok: true, task: prior }
+        }
+        const created = task('', 14, 'New report')
+        receipts.set(operationId, created)
+        throw new Error('Response lost after server commit')
+      }
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+    expect(
+      await screen.findByText('The task link was not saved. Save again to retry.')
+    ).toBeTruthy()
+    expect(client.linkWorkspace).not.toHaveBeenCalled()
+    expect(screen.getByRole('button', { name: 'New task draft: New report' })).toHaveProperty(
+      'disabled',
+      true
+    )
+    expect(linkedRows()).toEqual([expect.stringContaining('Creation outcome is unknown.')])
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+    await waitFor(() => expect(useAppStore.getState().activeModal).not.toBe('edit-meta'))
+    expect(client.createTask).toHaveBeenCalledTimes(2)
+    expect(client.createTask.mock.calls[0][1].clientOperationId).toBe(
+      client.createTask.mock.calls[1][1].clientOperationId
+    )
+    expect(receipts.size).toBe(1)
+    expect(client.linkWorkspace).toHaveBeenCalledOnce()
   })
 
   it('greys the tab’s tasks while a paired server is out of contact, and reads nothing new', async () => {

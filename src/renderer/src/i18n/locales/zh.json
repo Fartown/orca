@@ -23356,7 +23356,7 @@
       "relink": "改为关联到…",
       "back": "返回",
       "backToPanel": "收回侧边",
-      "backToPanelHint": "回到概览，会话收回右侧的加宽态"
+      "backToPanelHint": "回到概览，会话收回左侧的加宽态"
     },
     "taskSummary": {
       "status": "状态",
@@ -23618,6 +23618,8 @@
     },
     "nav": {
       "label": "任务视图",
+      "show": "展开任务导航",
+      "hide": "收起任务导航",
       "projects": "项目",
       "manageProjects": "管理项目与状态",
       "allProjects": "全部项目"
@@ -23868,6 +23870,15 @@
     },
     "sourceTab": {
       "label": "本地",
+      "newTask": "新建本地任务",
+      "createOnSave": "保存工作区详情时，新建任务并关联到当前工作区。",
+      "stageTask": "选用此任务",
+      "editNewTask": "待新建任务：{{title}}",
+      "createdLinkPending": "任务已创建，工作区关联待保存；请再次保存重试。",
+      "pendingCreateLink": "保存工作区详情后，新建并关联此任务。",
+      "removeTaskDraft": "移除待新建任务",
+      "pendingCount": "已关联 {{linked}} 项 · 待保存 {{pending}} 项",
+      "creationRetryPending": "尚未确认新建结果，请再次保存以重试同一任务。",
       "placeholder": "按标题或编号搜索本地任务",
       "unavailable": "任务库暂时不可用。",
       "offline": "{{host}} 未连接，暂时不能关联任务。下面显示的是上次读取的内容。",

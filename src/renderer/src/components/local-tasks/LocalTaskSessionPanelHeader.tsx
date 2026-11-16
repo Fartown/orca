@@ -80,13 +80,15 @@ export function LocalTaskSessionPanelHeader({
   session,
   options,
   panelTaskId,
-  mode
+  mode,
+  taskOnly
 }: {
   session: LocalTaskSessionLink
   /** Sessions of the task the preview opened from and every level below it. */
   options: readonly LocalTaskSessionLink[]
   panelTaskId: string | null
   mode: Exclude<LocalTaskSessionPanelMode, 'closed'>
+  taskOnly: boolean
 }): React.JSX.Element {
   const progress = useLocalTaskSessionProgress(session)
   const inContact = useLocalTaskHostInContact(session.hostId)
@@ -141,7 +143,12 @@ export function LocalTaskSessionPanelHeader({
   const taskLine = task ? (
     <button
       type="button"
-      onClick={() => openLocalTaskPage({ taskId: task.id })}
+      onClick={() => {
+        if (taskOnly) {
+          localTaskSessionPanelStore.getState().close()
+        }
+        openLocalTaskPage({ taskId: task.id })
+      }}
       className="flex min-w-0 flex-1 items-center gap-1.5 text-left hover:text-foreground"
     >
       {status ? <LocalTaskStatusIcon category={status.category} color={status.color} /> : null}
@@ -207,7 +214,7 @@ export function LocalTaskSessionPanelHeader({
           variant="ghost"
           onClick={() => localTaskSessionPanelStore.getState().setMode(wide ? 'narrow' : 'wide')}
         >
-          {wide ? <ChevronRight /> : <ChevronLeft />}
+          {wide ? <ChevronLeft /> : <ChevronRight />}
           {wide
             ? translate('localTasks.sessionPanel.narrow', 'Narrow')
             : translate('localTasks.sessionPanel.widen', 'Widen')}

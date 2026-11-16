@@ -289,7 +289,7 @@ export function LocalTaskDispatchBox(): React.JSX.Element {
   }
 
   return (
-    <div className="@container/local-task-dispatch relative flex flex-col gap-1.5 rounded-xl border border-border bg-card px-3 pt-2.5 pb-2 shadow-xs">
+    <div className="@container/local-task-dispatch relative flex min-w-0 flex-col gap-1.5 rounded-xl border border-border bg-card px-3 pt-2.5 pb-2 shadow-xs">
       <LocalTaskDispatchTargets
         hostLabel={
           hostFilter

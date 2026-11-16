@@ -42,14 +42,20 @@ function SearchField(): React.JSX.Element {
  */
 export function LocalTaskToolbar({ model }: { model: LocalTaskListModel }): React.JSX.Element {
   const layout = useLocalTaskPage((state) => state.layout)
+  const navExpanded = useLocalTaskPage((state) => state.navExpanded)
   const writable = useCanCreateLocalTask(model.scopeProjectId)
   const writeReason = useLocalTaskCreateWriteReason(model.scopeProjectId)
   const newTask = translate('localTasks.toolbar.newTask', 'New task')
   return (
     <div className="@container/local-task-toolbar">
-      <div className="flex min-w-0 items-center gap-2">
-        <LocalTaskScopeTitle model={model} className="hidden @3xl/local-task-page:flex" />
-        <LocalTaskScopeMenu model={model} className="@3xl/local-task-page:hidden" />
+      <div className="flex min-w-0 flex-wrap items-center gap-2">
+        {navExpanded ? (
+          <LocalTaskScopeTitle model={model} className="hidden @3xl/local-task-page:flex" />
+        ) : null}
+        <LocalTaskScopeMenu
+          model={model}
+          className={navExpanded ? '@3xl/local-task-page:hidden' : undefined}
+        />
         <ToggleGroup
           type="single"
           variant="outline"

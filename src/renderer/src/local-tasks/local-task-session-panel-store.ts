@@ -22,7 +22,7 @@ export const localTaskSessionPanelStore = createStore<LocalTaskSessionPanelState
   sessionLinkId: null,
   taskId: null,
   requestToken: null,
-  open: (link, mode = 'narrow') =>
+  open: (link, mode = 'wide') =>
     set((state) => ({
       mode,
       sessionLinkId: link.id,

@@ -2031,6 +2031,10 @@
     "liveTerminals_other": "{{count}} live terminals will reconnect after restart."
   },
   "localTasks": {
+    "nav": {
+      "hide": "Hide task navigation",
+      "show": "Show task navigation"
+    },
     "needsYou": {
       "sidebarCount": "{{count}} tasks need you",
       "sidebarCount_one": "{{count}} task needs you",
