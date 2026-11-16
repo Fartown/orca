@@ -16,6 +16,7 @@ import {
 } from '../../../shared/terminal-process-inspection'
 
 import type { TerminalInputKind } from '../../../shared/terminal-input-kind'
+import { captureRuntimeTerminalInspectionContact } from './runtime-terminal-inspection-contact'
 
 export type RuntimeTerminalProcessInspection = TerminalProcessInspection
 
@@ -61,10 +62,34 @@ export async function inspectRuntimeTerminalProcess(
   ptyId: string,
   options?: { expectedIncarnationId?: string; scanChildProcesses?: boolean; steadyState?: boolean }
 ): Promise<RuntimeTerminalProcessInspection> {
+  const contact = captureRuntimeTerminalInspectionContact(ptyId)
+  if (!contact) {
+    return clientOnlyUnverifiableInspection('transport_loss')
+  }
+  try {
+    const result = await inspectCurrentRuntimeTerminalProcess(ptyId, options, () => {
+      if (!contact.isCurrent()) {
+        throw new Error('Runtime unavailable')
+      }
+    })
+    return contact.isCurrent() ? result : clientOnlyUnverifiableInspection('transport_loss')
+  } finally {
+    contact.dispose()
+  }
+}
+
+async function inspectCurrentRuntimeTerminalProcess(
+  ptyId: string,
+  options:
+    | { expectedIncarnationId?: string; scanChildProcesses?: boolean; steadyState?: boolean }
+    | undefined,
+  beforeSend: () => void
+): Promise<RuntimeTerminalProcessInspection> {
   const owner = getRemoteRuntimePtyOwner(ptyId)
   const remote = isRemoteInspectionPtyId(ptyId)
   if (!owner) {
     try {
+      beforeSend()
       const result = await (options
         ? window.api.pty.inspectProcess(ptyId, options)
         : window.api.pty.inspectProcess(ptyId))
@@ -90,7 +115,7 @@ export async function inspectRuntimeTerminalProcess(
         // Close guards request real process scans; dropping this causes unverifiable and confirmation on every idle remote Windows close.
         ...(options?.scanChildProcesses === true ? { scanChildProcesses: true } : {})
       },
-      { timeoutMs: 15_000 }
+      { timeoutMs: 15_000, beforeSend }
     )
     return normalizeInspectionResult(result.process, true)
   } catch (error) {

@@ -11,6 +11,10 @@ import { createTerminalCommandLifecycle } from '../terminal-command-lifecycle'
 import { createPaneForegroundAgentTracker } from '../pane-foreground-agent-tracker'
 import { isRemoteExecutionHostPtyId } from '../../../../../shared/remote-execution-host-pty-id'
 import { inspectRuntimeTerminalProcess } from '@/runtime/runtime-terminal-inspection'
+import {
+  runtimeTerminalProcessContactKey,
+  subscribeRuntimeTerminalProcessContact
+} from '@/runtime/runtime-terminal-inspection-contact'
 import { dispatchTerminalCommandFinishedEvent } from '@/hooks/terminal-command-finished-event'
 import type { TuiAgent } from '../../../../../shared/tui-agent'
 import { isTuiAgent, TUI_AGENT_CONFIG } from '../../../../../shared/tui-agent-config'
@@ -135,8 +139,10 @@ export function installPaneAgentIdentity(session: ConnectPanePtySession): void {
     })
   }
   session.paneForegroundAgentTracker = createPaneForegroundAgentTracker({
-    getPtyId: () => session.transport.getPtyId(),
+    getPtyId: () => session.transport?.getPtyId() ?? null,
     isTrackablePtyId: session.isForegroundTrackingAllowed,
+    getReadContactKey: runtimeTerminalProcessContactKey,
+    subscribeReadContactChange: subscribeRuntimeTerminalProcessContact,
     readForegroundProcess: (id, options) =>
       isRemoteExecutionHostPtyId(id)
         ? inspectRuntimeTerminalProcess(id, options)

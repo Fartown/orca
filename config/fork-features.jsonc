@@ -3262,6 +3262,9 @@
       "goal": "管理各主机的任务、会话与进展，支持直接派活、人工验收和需确认的总管提案",
       "journal": "docs/issue/本地任务管理/journal.md",
       "dependsOn": [
+        "src/renderer/src/runtime/runtime-terminal-stream.ts",
+        "src/shared/remote-runtime/remote-runtime-pty-id.ts",
+        "src/shared/ssh-pty-id.ts",
         "src/renderer/src/lib/terminal-tab-owner-activation.ts",
         "src/shared/project-section-catalog-schema.ts",
         "src/shared/folder-workspace-types.ts",
@@ -3534,6 +3537,10 @@
       ],
       "policyId": "local-tasks",
       "ownedPaths": [
+        "src/renderer/src/components/terminal-pane/pane-foreground-read-scheduler.ts",
+        "src/renderer/src/runtime/runtime-terminal-inspection-contact.ts",
+        "src/renderer/src/runtime/runtime-terminal-inspection-contact.test.ts",
+        "src/renderer/src/components/terminal-pane/pane-foreground-agent-contact.test.ts",
         "src/main/local-tasks/**",
         "src/shared/local-tasks/**",
         "src/main/startup/main-process-local-tasks.ts",
@@ -3551,6 +3558,10 @@
         "src/main/runtime/rpc/methods/local-task-dispatcher-methods.ts"
       ],
       "requiredFiles": [
+        "src/renderer/src/components/terminal-pane/pane-foreground-read-scheduler.ts",
+        "src/renderer/src/runtime/runtime-terminal-inspection-contact.ts",
+        "src/renderer/src/runtime/runtime-terminal-inspection-contact.test.ts",
+        "src/renderer/src/components/terminal-pane/pane-foreground-agent-contact.test.ts",
         "src/main/local-tasks/local-task-dispatcher-workspace.ts",
         "src/shared/local-tasks/local-task-dispatcher-workspace.ts",
         "src/renderer/src/local-tasks/local-task-dispatcher-source.ts",
@@ -3599,6 +3610,31 @@
         "src/main/local-tasks/local-task-proposal-ownership.ts"
       ],
       "seams": [
+        {
+          "file": "src/renderer/src/runtime/runtime-terminal-inspection.ts",
+          "mustContain": "captureRuntimeTerminalInspectionContact(ptyId)",
+          "why": "Fence all remote process inspection before dispatch and after await using shared contact evidence"
+        },
+        {
+          "file": "src/renderer/src/components/terminal-pane/pane-foreground-agent-tracker-contract.ts",
+          "mustContain": "subscribeReadContactChange?",
+          "why": "Expose optional shared contact callbacks without giving foreground tracking its own host state"
+        },
+        {
+          "file": "src/renderer/src/components/terminal-pane/pane-foreground-agent-tracker.ts",
+          "mustContain": "createPaneForegroundReadScheduler(deps, readForeground)",
+          "why": "Suspend scheduled process reads while out of contact and resume only on shared verdict changes"
+        },
+        {
+          "file": "src/renderer/src/components/terminal-pane/pty-connection/pane-agent-identity.ts",
+          "mustContain": "getReadContactKey: runtimeTerminalProcessContactKey",
+          "why": "Inject shared contact tracking into pane foreground reads without changing native identity rules"
+        },
+        {
+          "file": "src/renderer/src/runtime/runtime-terminal-inspection.test.ts",
+          "mustContain": "inspectRuntimeTerminalProcess",
+          "why": "Existing process-inspection fixtures declare their reachable owners explicitly"
+        },
         {
           "file": "src/main/runtime/wsl-host-agent-launch-paths.test.ts",
           "mustContain": "getSystemCliInstallDirectories: () => []",
@@ -4452,6 +4488,13 @@
         }
       ],
       "tests": [
+        "src/renderer/src/components/terminal-pane/pane-foreground-agent-tracker.test.ts",
+        "src/renderer/src/components/terminal-pane/pane-foreground-inspect-observation-identity.test.ts",
+        "src/renderer/src/components/terminal-pane/pty-connection-foreground-agent.test.ts",
+        "src/renderer/src/components/terminal-pane/pane-foreground-process-exit-retire.test.ts",
+        "src/renderer/src/runtime/runtime-terminal-inspection-contact.test.ts",
+        "src/renderer/src/components/terminal-pane/pane-foreground-agent-contact.test.ts",
+        "src/renderer/src/runtime/runtime-terminal-inspection.test.ts",
         "src/main/runtime/wsl-host-agent-launch-paths.test.ts",
         "src/main/runtime/wsl-host-agent-terminal-launch.test.ts",
         "src/main/codex-cli/command-guest-path.test.ts",
@@ -4609,7 +4652,7 @@
       ],
       "checks": [
         "pnpm exec vitest run --config config/vitest.config.ts src/main/local-tasks src/shared/local-tasks src/main/runtime/rpc/methods/local-tasks.test.ts src/main/runtime/wsl-host-agent-launch-paths.test.ts src/main/runtime/wsl-host-agent-terminal-launch.test.ts src/main/codex-cli/command-guest-path.test.ts src/shared/host-operation-ownership.test.ts src/main/runtime/runtime-rpc/fork-mobile-rpc-method-allowlist.test.ts src/main/runtime/runtime-rpc-mobile-method-allowlist.test.ts src/cli/local-tasks src/main/ipc/desktop-runtime-sender-lifecycle.test.ts",
-        "ORCA_BACKGROUND_LAUNCH=1 pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/local-tasks src/renderer/src/components/local-tasks src/renderer/src/components/task-page src/renderer/src/components/cmd-j src/renderer/src/lib/worktree-creation-structured-session.test.ts src/renderer/src/lib/agent-message-send.test.ts src/renderer/src/lib/active-agent-note-send-delivery-guard.test.ts",
+        "ORCA_BACKGROUND_LAUNCH=1 pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/local-tasks src/renderer/src/components/local-tasks src/renderer/src/components/task-page src/renderer/src/components/terminal-pane/pane-foreground-agent-tracker.test.ts src/renderer/src/components/terminal-pane/pane-foreground-inspect-observation-identity.test.ts src/renderer/src/components/terminal-pane/pty-connection-foreground-agent.test.ts src/renderer/src/components/terminal-pane/pane-foreground-process-exit-retire.test.ts src/renderer/src/runtime/runtime-terminal-inspection-contact.test.ts src/renderer/src/components/terminal-pane/pane-foreground-agent-contact.test.ts src/renderer/src/runtime/runtime-terminal-inspection.test.ts src/renderer/src/components/cmd-j src/renderer/src/lib/worktree-creation-structured-session.test.ts src/renderer/src/lib/agent-message-send.test.ts src/renderer/src/lib/active-agent-note-send-delivery-guard.test.ts",
         "pnpm --dir mobile exec vitest run src/local-tasks src/home/MobileHomeTasksAndAutomations.test.tsx src/session/use-notification-pane-navigation.test.tsx src/components/bottom-drawer src/mobile-web-shell/bridge/bridge-rpc-client-frames.test.ts src/components/MobileMarkdown.rendering.test.tsx src/components/mobile-markdown-selectable.test.tsx",
         "pnpm exec vitest run --config config/vitest.config.ts config/scripts/mobile-web-app-file-attachment-grant.test.mjs config/scripts/mobile-web-app/mobile-web-app-session-dictation-capture.test.mjs config/scripts/mobile-web-app/mobile-web-app-page-grant-call-sites.test.mjs config/scripts/mobile-web-app/mobile-web-app-screencast-lane-grant.test.mjs config/scripts/mobile-web-app/mobile-web-app-external-navigation-grant.test.mjs"
       ]

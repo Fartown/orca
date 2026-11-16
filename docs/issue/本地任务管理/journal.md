@@ -483,7 +483,8 @@ external_ids:
 - 验证证据：后端 38 文件 257 项、桌面初轮 178 文件 1265 项、手机 73 文件 344 项、mobile-web 5 文件 47 项通过；数据层 67 项后追加 unknown unwatch 用例通过；原 pane/迟到标签/切换 fence/浮层遮挡的增量回归通过。隐藏 CDP 已实证 Local trust 原终端、旧偏好重载仍原 PID、paired Chat；完整 related 检查与最终 SSH/确认执行/断联验收仍在进行。日志目录 `.docs/dispatcher-host-selection-ui-validation/2026-11-17/`。
 - 补充验证：完整 related 检查自然跑完 1605.7 秒，原 14 个失败为 WSL fixture 9 项及缺发布 tag 5 项；在 integration 87e7 独立副本复现前者，同类 resolver 另有 2 项。三个 fixture 仅隔离系统目录枚举，当前与基线修后 4 文件 37 项均通过；补取官方 v1.4.222/v1.4.228/v1.4.229 引用后重验跨版本，不改生产 CLI 查找或断言。候选实际 UI 全链路已通过，包含原进程完整唤醒、source proposal 确认执行、SSH Chat、断联零私有请求及恢复。
 - 未解决问题：最终来源提案确认与唤醒、SSH Chat、断联零请求和恢复仍需最后构建的完整验收；完整 PR CI 尚未运行，不能以 skipped 或候选结果计完成。
-- 下一步：结束完整检查后合入最新 integration、冻结最终源码，完成后台本机/配对/真实 SSH 验收与 PR 全部相关 CI。
+- 最终断联补证：4f80 固定构建的加严全 terminal.* 请求计数抓到共享前台探查器在 canonical 失联后 1757ms 新发 inspectProcess；调用栈为 pane-agent-identity → foreground reader → tracker scheduledRead。该真实缺陷保留红轮证据，不以“共享层”排除；本轮扩展既有 seam、复用共享联系 verdict/key，取消离线探查并拒迟到包，返联仅由共享事件恢复，正在回归。
+- 下一步：补齐前台探查联系边界后重新冻结源码、后台本机/配对/真实 SSH 验收与 PR 全部相关 CI。
 
 ### 2026-11-16 跨主机会话关联实现与验收（testing）
 
