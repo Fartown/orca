@@ -126,14 +126,16 @@ export abstract class OrcaRuntimeWithWriteTerminalAgentPrompt extends OrcaRuntim
         permissionBaseline,
         this.getAgentPromptActivity(handle, ptyId)
       )
-      await this.prepareDurableChatComposer(
-        handle,
-        ptyId,
-        options,
-        beforeWrite,
-        deliverySignal,
-        permissionBaseline
-      )
+      if (options.chatComposer) {
+        await this.prepareDurableChatComposer(
+          handle,
+          ptyId,
+          options,
+          beforeWrite,
+          deliverySignal,
+          permissionBaseline
+        )
+      }
       // Claude can lose the start of a large bracketed paste split across writes; send the whole frame together.
       renderGate?.arm()
       const initialWrite = submitWithPaste ? pastePayload + AGENT_PROMPT_SUBMIT : pastePayload
