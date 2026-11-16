@@ -562,6 +562,8 @@
         "config/scripts/run-linux-cli-launch-contract-docker.mjs",
         "mobile/scripts/prepare-android-release.mjs",
         "mobile/src/theme/mobile-theme.ts",
+        "mobile/src/settings/settings-screen-frame.tsx",
+        "mobile/src/components/list/ListGroup.tsx",
         "src/main/startup/configure-process.ts",
         "tests/e2e/helpers/e2e-completed-onboarding-profile.ts",
         "tests/e2e/helpers/electron-home-isolation.ts",
@@ -692,6 +694,11 @@
           "why": "manual update check and download status"
         },
         {
+          "file": "mobile/src/settings/settings-app-update-section.tsx",
+          "mustContain": "IntegrationSettingsUpdateSection",
+          "why": "Route the integration settings entry to the existing fork update controller and shared status."
+        },
+        {
           "file": "src/main/updater/updater-release-feed.ts",
           "mustContain": "pinIntegrationReleaseFeed",
           "why": "fork builds resolve their default feed from fork releases"
@@ -748,6 +755,7 @@
         "src/shared/integration-builds/release-catalog.test.ts",
         "src/main/integration-builds/integration-update-feed.test.ts",
         "mobile/src/integration-builds/update-controller.test.ts",
+        "mobile/src/integration-builds/settings-update-channel.test.tsx",
         "config/scripts/integration-builds/mobile-dependency-contract.test.mjs",
         "config/scripts/integration-builds/architecture-live-path-references.test.mjs",
         "config/scripts/win32-test-lane-registration.test.mjs",
