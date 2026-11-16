@@ -1,4 +1,4 @@
-import { verifyDurableChatTranscriptReceipt } from '../../../../../native-chat-view-recovery/durable-chat-transcript-verification'
+import { reconcileDurableChatMutationReceipt } from '../../../../../native-chat-view-recovery/durable-chat-transcript-verification'
 import {
   describeMutationRequestState,
   type OrchestrationMutationRequestShowResult
@@ -11,7 +11,7 @@ export const ORCHESTRATION_MUTATION_REQUEST_METHODS = [
     name: 'orchestration.requestShow',
     permission: 'workspace',
     params: RequestShowParams,
-    // Read durable receipts without writing/mutating again; keep this recovery query outside ORCHESTRATION_MUTATION_METHODS.
+    // Observe the original request only; a verified restored-session proof may be checkpointed without sending input.
     handler: async (
       params,
       { runtime, authenticatedCallerFingerprint }
@@ -31,12 +31,13 @@ export const ORCHESTRATION_MUTATION_REQUEST_METHODS = [
           })
         }
       }
+      const verification = params.verifyChatTranscript
+        ? await reconcileDurableChatMutationReceipt(runtime, callerFingerprint, params.request)
+        : null
       return {
         ...(params.verifyChatTranscript
           ? {
-              chatTranscriptVerified: await verifyDurableChatTranscriptReceipt(
-                parseReceipt(row.receipt ?? '')
-              )
+              chatTranscriptVerified: verification?.verified === true
             }
           : {}),
         requestId: params.request,
@@ -44,7 +45,7 @@ export const ORCHESTRATION_MUTATION_REQUEST_METHODS = [
         method: row.method,
         createdAt: row.created_at,
         updatedAt: row.updated_at,
-        ...(row.receipt ? { receipt: parseReceipt(row.receipt) } : {}),
+        ...(row.receipt ? { receipt: verification?.receipt ?? parseReceipt(row.receipt) } : {}),
         interpretation: describeMutationRequestState({
           requestId: params.request,
           state: row.state,

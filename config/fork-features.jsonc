@@ -451,8 +451,13 @@
         },
         {
           "file": "src/main/runtime/rpc/methods/orchestration/runs/mutation-request-show.ts",
-          "mustContain": "verifyDurableChatTranscriptReceipt",
+          "mustContain": "reconcileDurableChatMutationReceipt",
           "why": "Verify durable Chat transcript file continuity on the execution host before confirming local input."
+        },
+        {
+          "file": "src/main/runtime/orchestration/terminal-authority/verify-orchestration-compatibility-caller.ts",
+          "mustContain": "restoredTerminalAuthorityMatches",
+          "why": "Reuse the exact restored physical authority comparison without changing caller token attestation."
         },
         {
           "file": "src/main/ipc/register-core-handlers/register-core-handlers.test.ts",
@@ -473,7 +478,8 @@
         "src/main/native-chat-view-recovery/durable-chat-runtime.test.ts",
         "src/renderer/src/native-chat-view-recovery/use-durable-chat-delivery.test.tsx",
         "src/main/native-chat-view-recovery/durable-chat-session-identity.test.ts",
-        "src/main/native-chat-view-recovery/durable-chat-transcript-verification.test.ts"
+        "src/main/native-chat-view-recovery/durable-chat-transcript-verification.test.ts",
+        "src/main/native-chat-view-recovery/durable-chat-restored-receipt.test.ts"
       ],
       "checks": [
         "pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/native-chat-view-recovery src/renderer/src/components/tab-bar/SortableTabContextMenu.test.tsx src/renderer/src/components/tab-bar/native-chat-tab-agent-evidence.test.ts src/renderer/src/native-chat-view-recovery/terminal-chat-recovery.test.ts src/renderer/src/components/terminal-pane/terminal-pane-recovery.test.ts src/renderer/src/components/terminal-pane/terminal-pane-recovery-unsettled-fallback.test.ts src/renderer/src/components/terminal-pane/terminal-pane-surface-ownership.test.ts src/renderer/src/components/activity/activity-thread-actions.test.ts src/renderer/src/components/activity/useActivityUnreadCount.test.ts",

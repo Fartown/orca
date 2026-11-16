@@ -2,16 +2,24 @@
 import { act, cleanup, renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useDurableChatDelivery } from './use-durable-chat-delivery'
+import type { NativeChatMessage } from '../../../shared/native-chat/native-chat-types'
 import type {
   DurableChatSubmitApi,
   DurableChatSubmitRecord
 } from '../../../shared/native-chat-view-recovery/durable-chat-submit'
 
-const contact = vi.hoisted(() => ({ live: false, listeners: new Set<() => void>() }))
+const contact = vi.hoisted(() => {
+  const statuses: Record<
+    string,
+    { state: string; turnStartedAt?: number; stateObservedAt?: number; updatedAt?: number }
+  > = {}
+  return { live: false, listeners: new Set<() => void>(), statuses }
+})
 vi.mock('@/store', () => ({
   useAppStore: {
     getState: () => ({
       runtimeStatusByEnvironmentId: new Map(),
+      agentStatusByPaneKey: contact.statuses,
       sshConnectionStates: new Map(),
       runtimeEnvironments: [],
       settings: {},
@@ -56,6 +64,9 @@ beforeEach(() => {
   vi.setSystemTime(1000)
   contact.live = false
   contact.listeners.clear()
+  for (const key of Object.keys(contact.statuses)) {
+    delete contact.statuses[key]
+  }
   rows = [record()]
   api = {
     list: vi.fn(async (paneKey) => rows.filter((r) => r.paneKey === paneKey)),
@@ -87,6 +98,58 @@ async function flush() {
 }
 
 describe('durable Chat recovery in the renderer', () => {
+  it('reconciles a transcript-first restored send on its host turn edge, ignoring tool repaint and offline edges', async () => {
+    contact.live = true
+    rows[0].transcriptBoundary = {
+      sessionId: 'session',
+      afterMessageId: null,
+      afterByteOffset: 20,
+      transcriptPath: '/host/session.jsonl',
+      fileIdentity: 'dev:ino',
+      boundaryFingerprint: '',
+      empty: false,
+      submittedAt: 1000,
+      sessionUnverifiedAtSubmit: true,
+      submitPtyId: 'host-pty'
+    }
+    const messages: NativeChatMessage[] = [
+      {
+        id: 'actual',
+        role: 'user',
+        source: 'transcript',
+        timestamp: 1100,
+        transcriptOrder: 30,
+        blocks: [{ type: 'text', text: 'kept original' }]
+      }
+    ]
+    renderHook(() =>
+      useDurableChatDelivery({
+        paneKey: 'pane-a',
+        agent: 'codex',
+        session: { sessionId: 'session', messages }
+      })
+    )
+    await flush()
+    const notify = async () =>
+      act(async () => {
+        for (const fn of contact.listeners) {
+          fn()
+        }
+      })
+    await notify()
+    vi.mocked(api.confirm).mockClear()
+    contact.statuses['pane-a'] = { state: 'done', turnStartedAt: 1100, stateObservedAt: 1200 }
+    await notify()
+    expect(api.confirm).toHaveBeenCalledOnce()
+    contact.statuses['pane-a'].updatedAt = 1300
+    await notify()
+    expect(api.confirm).toHaveBeenCalledOnce()
+    contact.live = false
+    contact.statuses['pane-a'].turnStartedAt = 1400
+    await notify()
+    expect(api.confirm).toHaveBeenCalledOnce()
+    expect(api.dispatch).not.toHaveBeenCalled()
+  })
   it('restores the original text/images after remount, times out even after accepted and never polls/replays offline', async () => {
     let mounted = renderHook(() => useDelivery('pane-a'))
     await flush()
@@ -140,6 +203,9 @@ describe('durable Chat recovery in the renderer', () => {
     await act(async () => release([]))
     expect(mounted.result.current.pending).toMatchObject([{ text: 'kept original' }])
     expect(api.dispatch).toHaveBeenCalledExactlyOnceWith(record().id)
+    expect(api.prepare).toHaveBeenCalledWith(
+      expect.objectContaining({ reconcileRestoredSession: true })
+    )
   })
 
   it('fences a retired pane generation even after A to B to A', async () => {

@@ -5,7 +5,7 @@ status: testing
 created: 2026-10-23
 updated: 2026-11-16
 issue: 终端聊天视图恢复
-external_ids: [Fartown/orca#112, Fartown/orca#119, Fartown/orca#118, Fartown/orca#121]
+external_ids: [Fartown/orca#112, Fartown/orca#119, Fartown/orca#118, Fartown/orca#121, Fartown/orca#127]
 ---
 
 # 终端聊天视图恢复
@@ -22,6 +22,8 @@ external_ids: [Fartown/orca#112, Fartown/orca#119, Fartown/orca#118, Fartown/orc
 
 - 本轮测试：[持续绑定恢复验收](tests/runs/2026-11-15-持续绑定恢复验收.md)，completed；覆盖 REQ-1804。
 - #118 测试：[恢复提醒与内容验收](tests/runs/2026-11-16-恢复提醒与内容验收.md)，completed；覆盖 REQ-1806，本机、全局浮动及真实 SSH 的受控恢复点击通过。
+
+- #127 测试：[恢复态首条提交验收](tests/runs/2026-11-16-恢复态首条提交验收.md)，completed；覆盖 REQ-1811。
 
 ## 2. 决策点记录
 
@@ -94,3 +96,12 @@ external_ids: [Fartown/orca#112, Fartown/orca#119, Fartown/orca#118, Fartown/orc
 - 验证证据：旧逻辑定向 3 文件 32 项为 27 通过、5 失败，分别指向 waiting/blocked 当前事件及未读和无绑定点击；补齐目标 split leaf 回归后，最终同 3 文件 35/35、合入基线 #120 后联合功能登记 10 文件 122/122 通过。隔离隐藏 Electron 实例使用真实 PTY 的 1 项受控场景通过：恢复未确认 waiting 无当前行、徽标 0，旧 done 历史行仍可选；点击后保持同 tab、leaf、PTY，原终端 marker 仍在；新鲜绑定的 waiting 元数据对照有当前行、徽标 1。原始结果见 `.docs/attention-content-ui-validation/2026-11-16/evidence/{red/targeted-red.log,controlled/restored-chat-controlled.json,controlled/controlled-final2.log}`，截图见同目录 `controlled/restored-chat-activity-history.png`、`controlled/restored-chat-returned-terminal.png`、`controlled/fresh-bound-waiting-contrast.png`。MBP5 只读元数据见另一工作区 `.docs/local-tasks-session-wide-ui-validation/2026-11-16/evidence/mbp5/`。
 - 未解决问题：MBP5 原 PTY 历史仅 68 字节、1 行，无可核实会话 ID 或 prompt 模式，不能推断旧 provider；对照的 providerSession 是受控元数据，不是真实 provider。隐藏实例已在 fdfe5c51 基线上复验普通及全局浮动真实 PTY 的展示路径；SSH 真实 hook 发布 waiting/provider 身份，单次受控客户端恢复后，点击前 guard 确认仍恢复未确认、无绑定且含旧历史；真实标题点击返回同 tab/leaf/canonical PTY 并保留 marker（r10 1/1），未证明用户历史故障 producer 或每条系统通知的来源。失联仍是 unverifiable，不推断 exited。
 - 下一步：完成最终门禁与交付；TC-1815 已完成真实 SSH 与远端镜像的受控点击验证；最后 check:changed 后按授权提交、CI 全绿合入。终端、transcript 与会话证据归执行主机，客户端只切视图，本轮不新增 RPC、端口、环境变量、服务或重试。
+
+### 2026-11-16 恢复态首条提交（testing）
+
+- 本轮目标：补齐重启后下一条新 Chat，闭合恢复态 provider 门禁循环。
+- 完成内容：复现 #126 的旧路径失败；新客户端 opt-in 在原恢复物理 authority 精确匹配时整体提交一次，身份后证与最终正文确认分开。后证使用原 PTY/incarnation、严格 provider、真实 hook transition 和本次提交后的 turnStartedAt；Stop 后仍可证明，OSC/replay 不能证明。completed 原 ledger 持久后证，未知只查询原 ID，不补发。
+- 代码或文档变更：owned submitter/runtime/transcript verifier 和 renderer host-push 边沿；原 authority 比较提取复用，旧兼容调用者 token attestation 不变；可选参数和 receipt 字段保持混合版本。需求、方案、用例及[本轮验收](tests/runs/2026-11-16-恢复态首条提交验收.md)已补齐。
+- 验证证据：169 项相关测试、pnpm tc、三项本地化、架构/fork/docs/changed-quality 通过。本地 Git/folder App 重开、SSH folder 丢回执+host 重启+客户端重开后下一条，模型/user/UI 各一次、outbox 空、原 handle/PTY/incarnation 相同，全程隐藏窗口。证据在 .docs/native-chat-restored-submit-ui-validation/2026-11-16/。
+- 未解决问题：用户两端 .84 未换包；没有重启用户 App 或补发用户历史消息。#126 漏测的 c5acbc 发布构建已取消，待本补修 CI/集成包。
+- 下一步：按现有授权提交、CI 全绿合入；核验集成包签名、兼容性、回滚包和两端 PTY 后，再按 AGENTS.md 请求退出安装的最后确认。

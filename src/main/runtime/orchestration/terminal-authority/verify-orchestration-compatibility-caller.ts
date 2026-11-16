@@ -11,6 +11,7 @@ import type {
 import { createHash } from 'node:crypto'
 import type { RuntimePtyWorktreeRecord } from '../../runtime-terminal-state-records'
 import { parsePaneKey } from '../../../../shared/stable-pane-id'
+import { restoredTerminalAuthorityMatches } from '../../../native-chat-view-recovery/restored-terminal-authority'
 
 export abstract class OrcaRuntimeWithVerifyOrchestrationCompatibilityCaller extends OrcaRuntimeWithSerializeHeadlessTerminalBuffer {
   abstract getOrchestrationDispatchAuthority(
@@ -64,13 +65,9 @@ export abstract class OrcaRuntimeWithVerifyOrchestrationCompatibilityCaller exte
     } else {
       const receipt = this.restoredOrchestrationAuthorityByPtyId.get(terminal.ptyId)
       if (
-        !receipt ||
-        receipt.ptyId !== terminal.ptyId ||
-        receipt.worktreeId !== terminal.worktreeId ||
-        receipt.terminalHandle !== terminal.terminalHandle ||
-        receipt.paneKey !== terminal.paneKey ||
-        receipt.processIncarnation !== terminal.processIncarnation ||
-        !this.orchestrationCompatibilityHostScopesEqual(receipt.hostScope, terminal.hostScope)
+        !restoredTerminalAuthorityMatches(receipt, terminal, (left, right) =>
+          this.orchestrationCompatibilityHostScopesEqual(left, right)
+        )
       ) {
         return null
       }

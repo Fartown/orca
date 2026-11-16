@@ -97,6 +97,7 @@ export class DurableChatSubmitter {
           agentPrompt: true,
           client: { id: 'orca-desktop-chat', type: 'desktop' },
           chatComposer: {
+            reconcileRestoredSession: record.reconcileRestoredSession,
             expectedSessionId: record.sessionId,
             clearInput: record.clearInput,
             imagePaths: record.imagePaths,
