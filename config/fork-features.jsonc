@@ -3555,6 +3555,12 @@
         "mobile/src/local-tasks/MobileHomeLocalTasksCard.tsx",
         "mobile/src/local-tasks/local-task-source-option.tsx",
         "mobile/src/local-tasks/LocalTaskHostRowsProvider.tsx",
+        "mobile/src/local-tasks/LocalTaskSessionCard.tsx",
+        "mobile/src/local-tasks/LocalTaskSessionCard.test.tsx",
+        "mobile/src/local-tasks/local-task-session-card-slot.tsx",
+        "mobile/src/local-tasks/local-task-session-card-provider.tsx",
+        "mobile/src/local-tasks/local-task-session-receipt.tsx",
+        "mobile/src/local-tasks/local-task-session-link-sheet.tsx",
         "docs/issue/本地任务管理/journal.md",
         "docs/issue/本地任务管理/requirements/本地任务管理.md",
         "src/main/runtime/rpc/methods/local-task-link-methods.ts",
@@ -3913,18 +3919,28 @@
         },
         {
           "file": "mobile/src/session/MobileSessionHeader.tsx",
-          "mustContain": "<LocalTaskSessionStripMount controller={controller} />",
-          "why": "The mobile session header mounts the task link strip slot; upstream header tests import no task strip"
+          "mustContain": "<LocalTaskSessionReceiptMount controller={controller} />",
+          "why": "The header keeps the current session read receipt active while task context is shown in the tab detail card (REQ-014, REQ-017)"
+        },
+        {
+          "file": "mobile/src/session/MobileSessionSurface.tsx",
+          "mustContain": "<LocalTaskSessionCardMount",
+          "why": "The existing tab detail card receives task context for the tab that opened it (REQ-011, REQ-017)"
+        },
+        {
+          "file": "mobile/src/session/MobileSessionTabStrip.test.tsx",
+          "mustContain": "vi.mock('../local-tasks/local-task-session-card-slot'",
+          "why": "The tab gesture regression preserves the clicked-tab identity at the task card slot (REQ-017)"
         },
         {
           "file": "mobile/app/h/[hostId]/session/[worktreeId].web.tsx",
-          "mustContain": "<LocalTaskSessionStripProvider>",
-          "why": "The session route fills the header's task strip slot (REQ-017)"
+          "mustContain": "<LocalTaskSessionCardProvider>",
+          "why": "The route owns task card, read receipt and link drawer lifetime without changing the shared detail card (REQ-011, REQ-017)"
         },
         {
           "file": "mobile/src/navigation/workspace-route.test.tsx",
-          "mustContain": "vi.mock('../local-tasks/local-task-session-strip-provider'",
-          "why": "The every-route test renders the session route without the task strip's native graph (REQ-017)"
+          "mustContain": "vi.mock('../local-tasks/local-task-session-card-provider'",
+          "why": "The every-route test renders the session route without the task card native graph (REQ-017)"
         },
         {
           "file": "src/renderer/src/app-shell/use-visible-review-refresh-reporting.ts",
@@ -4415,6 +4431,7 @@
         "src/renderer/src/components/local-tasks/LocalTaskToolbar.test.tsx",
         "src/renderer/src/components/local-tasks/settings/LocalTaskProjectSettings.test.tsx",
         "mobile/src/local-tasks/MobileLocalTasksScreen.test.tsx",
+        "mobile/src/local-tasks/LocalTaskSessionCard.test.tsx",
         "mobile/src/local-tasks/local-task-events-recovery.test.tsx",
         "mobile/src/local-tasks/local-task-failure-message.test.ts",
         "mobile/src/local-tasks/local-task-work-navigation.test.ts",

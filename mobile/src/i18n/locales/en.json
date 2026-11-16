@@ -4875,6 +4875,7 @@
       "writeError": "Could not save the change: {{message}}"
     },
     "work": {
+      "openTask": "Open task",
       "snooze": {
         "label": "Snooze",
         "hour": "For 1 hour",
