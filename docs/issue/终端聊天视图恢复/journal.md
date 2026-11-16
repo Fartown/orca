@@ -104,4 +104,5 @@ external_ids: [Fartown/orca#112, Fartown/orca#119, Fartown/orca#118, Fartown/orc
 - 代码或文档变更：owned submitter/runtime/transcript verifier 和 renderer host-push 边沿；原 authority 比较提取复用，旧兼容调用者 token attestation 不变；可选参数和 receipt 字段保持混合版本。需求、方案、用例及[本轮验收](tests/runs/2026-11-16-恢复态首条提交验收.md)已补齐。
 - 验证证据：169 项相关测试、pnpm tc、三项本地化、架构/fork/docs/changed-quality 通过。本地 Git/folder App 重开、SSH folder 丢回执+host 重启+客户端重开后下一条，模型/user/UI 各一次、outbox 空、原 handle/PTY/incarnation 相同，全程隐藏窗口。证据在 .docs/native-chat-restored-submit-ui-validation/2026-11-16/。
 - 未解决问题：用户两端 .84 未换包；没有重启用户 App 或补发用户历史消息。#126 漏测的 c5acbc 发布构建已取消，待本补修 CI/集成包。
+- 最终审查补修：dispatching 通知先占 contact query、main active 时直接 return 的竞态由新增失败回归实证；active 改为本地完成 barrier，query 等原 dispatch finally 后查同 ID，遗留 dispatching 仍可直接查，无重发/host 轮询。
 - 下一步：按现有授权提交、CI 全绿合入；核验集成包签名、兼容性、回滚包和两端 PTY 后，再按 AGENTS.md 请求退出安装的最后确认。
