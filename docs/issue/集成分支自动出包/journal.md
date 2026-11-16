@@ -3,7 +3,7 @@ title: 集成分支自动出包
 slug: 集成分支自动出包
 status: testing
 created: 2026-09-12
-updated: 2026-11-16
+updated: 2026-11-17
 external_ids: ['Fartown/orca#85', 'Fartown/orca#131']
 ---
 
@@ -644,3 +644,12 @@ external_ids: ['Fartown/orca#85', 'Fartown/orca#131']
 - 未解决问题：手机运行包尚未包含此修复；本机原生模拟器不可直接使用，渲染验证须诚实标注 native I/O fixture。
 - 未解决门禁：本地完整 check:changed 40/41 通过；技能清单 stale 在未修改基线同样失败，未修改无关资源、不把该项记为通过。
 - 下一步：提交独立 PR，跟踪 CI 与发布；手机运行包生效须另行验证。
+
+## 2026-11-17：继续实测与合入（testing）
+
+- 本轮目标：完成 PR #132 的构建、合入与同源出包，保留终端根治修复 #129。
+- 完成内容：重新核验既有 CI，27 项成功；macOS 任务因未获 hosted runner 被取消，Android APK 签名和版本校验成功。再次重跑 macOS 后仍在等待机器，改用官方已正式支持的标准 arm64 macos-26 镜像实跑全部既有构建步骤。
+- 代码或文档变更：仅调整本功能的三处 macOS runner 镜像及原合同预期；更新 REQ-416 的交付约束和 TC-421，不改变架构、固定发布者、签名、三平台完整发布或用户主机运行状态。
+- 验证证据：原始平台容量注释、全部 CI 和 Android 构建记录位于 `.docs/mobile-settings-update-ui-validation/2026-11-16/evidence/`；macos-26 的官方支持说明为 https://github.blog/changelog/2026-02-26-macos-26-is-now-generally-available-for-github-hosted-runners/ 。新一轮本地与云端证据位于 `.docs/mobile-settings-update-ui-validation/2026-11-17/`，结果完成后补录。
+- 未解决问题：新镜像构建、产物最低系统版本审计、合入和正式发布待完成；手机原生安装与用户应用升级均未执行。
+- 下一步：合并最新 fork/integration 基线，运行修改后检查并推送；等待实际构建全绿后合入并审计正式包。

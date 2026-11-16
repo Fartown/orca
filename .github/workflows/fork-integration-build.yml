@@ -66,7 +66,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        runner: [macos-15]
+        runner: [macos-26]
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 35
     steps:
@@ -102,7 +102,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        runner: [macos-15]
+        runner: [macos-26]
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 60
     env:
@@ -138,7 +138,7 @@ jobs:
       matrix:
         include:
           - arch: arm64
-            runner: macos-15
+            runner: macos-26
             app-directory: mac-arm64
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 90

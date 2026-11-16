@@ -464,7 +464,7 @@ describe('workflow wiring', () => {
     const probe = workflow.jobs['signing-probe']
     expect(probe.if).toContain("github.event_name == 'workflow_dispatch'")
     expect(probe.if).toContain('inputs.signing_probe_only')
-    expect(probe.strategy.matrix.runner).toEqual(['macos-15'])
+    expect(probe.strategy.matrix.runner).toEqual(['macos-26'])
     expect(probe.steps[0].with.ref).toBe('${{ github.sha }}')
     expect(JSON.stringify(probe)).not.toContain('secrets.')
     expect(probe.steps.at(-1).with.path).toContain('${{ runner.temp }}/signing-probe-evidence')
