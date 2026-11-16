@@ -5,9 +5,13 @@ import { structuredAgentSessionPaneKey } from '../../../shared/agent-session/vie
 import type { Tab } from '../../../shared/tab-types'
 import type { TuiAgent } from '../../../shared/tui-agent'
 import type { LocalTasksLinksRecordSessionInput } from '../../../shared/local-tasks/local-tasks-link-rpc-params'
-import type { LocalTaskLinkOrigin } from '../../../shared/local-tasks/local-task-link-types'
+import type {
+  LocalTaskLinkOrigin,
+  LocalTaskSessionLink
+} from '../../../shared/local-tasks/local-task-link-types'
 import { localTasksClient } from './local-tasks-runtime-client'
 import { runLocalTaskWrite } from './local-task-writes'
+import { crossHostLocalTaskSessionInput } from './local-task-cross-host-session-link'
 
 export type LocalTaskSessionTarget = {
   taskId: string
@@ -17,6 +21,8 @@ export type LocalTaskSessionTarget = {
   /** Null when an existing session is linked and its agent never reported. */
   agent: TuiAgent | null
   linkedVia: LocalTaskLinkOrigin
+  crossHost?: boolean
+  replacingSessionLinkId?: string
 }
 
 type SessionIds = Pick<
@@ -28,18 +34,31 @@ export async function recordLocalTaskSession(
   target: LocalTaskSessionTarget,
   ids: SessionIds
 ): Promise<boolean> {
-  const result = await runLocalTaskWrite(() =>
-    localTasksClient.recordSession({
+  return (await recordLocalTaskSessionLink(target, ids)) !== null
+}
+
+export async function recordLocalTaskSessionLink(
+  target: LocalTaskSessionTarget,
+  ids: SessionIds
+): Promise<LocalTaskSessionLink | null> {
+  const result = await runLocalTaskWrite(() => {
+    const input = {
       taskId: target.taskId,
       hostId: target.hostId,
       worktreeId: target.worktreeId,
       ...(target.instanceId ? { instanceId: target.instanceId } : {}),
       ...(target.agent ? { agent: target.agent } : {}),
       linkedVia: target.linkedVia,
+      ...(target.replacingSessionLinkId
+        ? { replacingSessionLinkId: target.replacingSessionLinkId }
+        : {}),
       ...ids
-    })
-  )
-  return result !== null
+    }
+    return localTasksClient.recordSession(
+      target.crossHost ? crossHostLocalTaskSessionInput(input) : input
+    )
+  })
+  return result?.session ?? null
 }
 
 /** A terminal by this client's tab id; the client turns a paired server's mirror back into its own. */

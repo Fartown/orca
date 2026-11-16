@@ -15,6 +15,8 @@ import { localTaskPageStore } from './local-task-page-store'
 import { openLocalTaskSession } from './local-task-session-reveal'
 import { runLocalTaskWrite } from './local-task-writes'
 import { localTasksClient } from './local-tasks-runtime-client'
+import { useAppStore } from '@/store'
+import { isLocalTaskSessionReplyRouteCurrent } from './local-task-session-execution-contact'
 import {
   isLocalTaskRowWritable,
   localTasksDomainStore,
@@ -101,12 +103,25 @@ export async function sendLocalTaskReply(
   link: LocalTaskSessionLink,
   text: string
 ): Promise<ActiveAgentNotesSendResult> {
+  if (link.executionOrigin && !isLocalTaskSessionReplyRouteCurrent(useAppStore.getState(), link)) {
+    return { status: 'status-unavailable', code: 'runtime-unverifiable' }
+  }
   const target = localTaskReplyTarget(link)
   if (!link.worktreeId || !target) {
     return { status: 'no-active-terminal', code: 'no-note-target' }
   }
   try {
-    return await sendMessageToAgent({ worktreeId: link.worktreeId, target, prompt: text })
+    return await sendMessageToAgent({
+      worktreeId: link.worktreeId,
+      target,
+      prompt: text,
+      ...(link.executionOrigin
+        ? {
+            beforeTerminalSend: () =>
+              isLocalTaskSessionReplyRouteCurrent(useAppStore.getState(), link)
+          }
+        : {})
+    })
   } catch {
     return { status: 'status-unavailable', code: 'runtime-unverifiable' }
   }

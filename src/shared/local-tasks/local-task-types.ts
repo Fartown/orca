@@ -118,6 +118,7 @@ export type LocalTasksStatus = {
   revision: number
   /** Identity of this task library; a rebuilt database gets a new one. */
   taskHostId: string | null
+  installationId?: string
   /** Optional for older hosts; counts tasks whose status category is started. */
   inProgressCount?: number
   /** Optional for older hosts, read as "has projects"; 0 keeps every task surface out of the way. */

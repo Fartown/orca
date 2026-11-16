@@ -18,6 +18,8 @@ import { useAppStore } from '@/store'
 import { LocalTaskStatusIcon } from './LocalTaskIcons'
 import { useLocalTaskPaneWorkspaceLink } from '@/local-tasks/local-task-pane-workspace-link'
 import { resolveLocalTaskSessionPaneKey } from '@/local-tasks/local-task-session-panel-portal'
+import { localTaskSessionLinkChoices } from '@/local-tasks/local-task-session-link-choices'
+import { getExecutionHostIdForWorktree } from '@/lib/worktree-runtime-owner'
 
 // Why lazy: every terminal header mounts the chip; the card and its task summary load on hover.
 const loadChipCard = () => import('./LocalTaskSessionChipCard')
@@ -30,6 +32,7 @@ export type LocalTaskSessionPane = {
   paneKey: string
   /** Set for a structured chat; its pane key is derived from tab and session. */
   sessionId?: string
+  hostId?: string
 }
 
 /** The linked session a pane shows: by pane key, by tab before the key was known, or by chat id. */
@@ -38,9 +41,13 @@ export function findLocalTaskSessionForPane(
   pane: LocalTaskSessionPane
 ): LocalTaskSessionLink | null {
   const tabId = parsePaneKey(pane.paneKey)?.tabId ?? null
+  const candidates = links.sessions.filter(
+    (session) =>
+      session.worktreeId === pane.worktreeId && (!pane.hostId || session.hostId === pane.hostId)
+  )
   return (
-    links.sessions.find((session) => session.paneKey === pane.paneKey) ??
-    links.sessions.find(
+    candidates.find((session) => session.paneKey === pane.paneKey) ??
+    candidates.find(
       (session) =>
         session.paneKey === null &&
         ((tabId !== null && session.tabId === tabId) ||
@@ -81,7 +88,7 @@ const CHAT_CHIP_CLASS = 'absolute top-2 left-4 z-20 backdrop-blur-sm'
 
 function SessionChip(props: LocalTaskSessionChipProps): React.JSX.Element | null {
   const anyLinked = useLocalTasksDomain(
-    (state) => state.links.workspaces.length > 0 || state.links.sessions.length > 0
+    (state) => state.tasks.length > 0 || state.links.sessions.length > 0
   )
   return anyLinked ? <LinkedSessionChip {...props} /> : null
 }
@@ -92,7 +99,10 @@ function LinkedSessionChip({
   className
 }: LocalTaskSessionChipProps): React.JSX.Element | null {
   const [open, setOpen] = useState(false)
-  const session = useLocalTasksDomain((state) => findLocalTaskSessionForPane(state.links, pane))
+  const hostId = useAppStore((state) => getExecutionHostIdForWorktree(state, pane.worktreeId))
+  const session = useLocalTasksDomain((state) =>
+    findLocalTaskSessionForPane(state.links, { ...pane, hostId })
+  )
   const task = useLocalTasksDomain((state) =>
     session ? state.tasks.find((candidate) => candidate.id === session.taskId) : undefined
   )
@@ -104,6 +114,13 @@ function LinkedSessionChip({
       : undefined
   )
   const workspaceLinked = useLocalTaskPaneWorkspaceLink(pane.worktreeId).link !== null
+  const hasChoices = useLocalTasksDomain(
+    (state) =>
+      localTaskSessionLinkChoices(state.tasks, state.links, {
+        id: pane.worktreeId,
+        hostId
+      }).length > 0
+  )
   const panelOpen = useLocalTaskSessionPanel(
     (state) => state.mode !== 'closed' && session !== null && state.sessionLinkId === session.id
   )
@@ -128,7 +145,7 @@ function LinkedSessionChip({
       )
     )
   })
-  if (!task && !workspaceLinked) {
+  if (!task && !workspaceLinked && !hasChoices) {
     return null
   }
   if (previewingPane) {

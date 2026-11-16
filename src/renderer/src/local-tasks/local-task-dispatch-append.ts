@@ -4,7 +4,7 @@ import type { LocalTaskSessionLink } from '../../../shared/local-tasks/local-tas
 import type { LocalTask } from '../../../shared/local-tasks/local-task-types'
 import type { LocalTaskDispatchCandidate } from './local-task-dispatch-candidates'
 import type { LocalTaskDispatchReceipt } from './local-task-dispatch-launch'
-import { isLocalTaskHostInContact } from './local-task-host-contact'
+import { isLocalTaskSessionInContact } from './local-task-session-execution-contact'
 import { sendLocalTaskReply } from './local-task-needs-you-actions'
 import { localTasksClient } from './local-tasks-runtime-client'
 
@@ -24,7 +24,7 @@ export async function appendToFinishedSessions(
     message
   })
   const state = useAppStore.getState()
-  const reachable = sessions.filter((session) => isLocalTaskHostInContact(state, session.hostId))
+  const reachable = sessions.filter((session) => isLocalTaskSessionInContact(state, session))
   if (reachable.length === 0) {
     return refused(translate('localTasks.dispatch.hostNotConnected', 'Host not connected'))
   }

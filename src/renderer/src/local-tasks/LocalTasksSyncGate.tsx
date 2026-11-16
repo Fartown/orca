@@ -30,6 +30,7 @@ import { bindLocalTaskSourceActivation } from './local-task-source-activation'
 import { bindLocalTaskViewPreferences } from './local-task-view-preferences'
 import { bindLocalTaskDispatcher } from './local-task-dispatcher-wake'
 import { localTaskPageStore } from './local-task-page-store'
+import { bindLocalTaskSessionExecutions } from './local-task-session-execution-sync'
 
 const NO_STREAM = { unsubscribe: () => {} }
 
@@ -252,6 +253,7 @@ function bindPairedLibraryStreams(): () => void {
 
 /** Holds every task library this window reads; reads follow each host's notices only. */
 function LocalTasksLibraries(): null {
+  useEffect(() => bindLocalTaskSessionExecutions(), [])
   useEffect(() => installLocalTaskPageKeyRouter(), [])
   useEffect(() => bindLocalTaskSourceActivation(), [])
   useEffect(() => bindLocalTaskViewPreferences(), [])

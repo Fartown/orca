@@ -35,6 +35,7 @@ export type LocalTasksPartition = {
   inContact: boolean
   hostState: LocalTasksHostState | null
   hostReason: string | null
+  installationId?: string | null
   /** Null until a status was read; only a status answer sets it (D6 stream demand). */
   projectCount: LocalTasksReportedProjectCount
   /** Read failures belong to the resource that produced them. */
@@ -83,6 +84,7 @@ export function emptyLocalTasksPartition(endpoint: LocalTaskEndpointKey): LocalT
     inContact: true,
     hostState: null,
     hostReason: null,
+    installationId: null,
     projectCount: null,
     readErrors: {},
     projects: [],

@@ -5,6 +5,7 @@ import type { LocalTaskStatusRow } from '../../shared/local-tasks/local-task-att
  * terminals and its SSH connections. Read in memory only; nothing here reaches another host.
  */
 export type LocalTaskHostSessionSource = {
+  installationId?(): string | null
   /** Status rows the host holds for one pane, provider-session-only rows left out. */
   rowsForPane(paneKey: string): readonly LocalTaskStatusRow[]
   /** Every pane key with a status row, for claiming a session recorded by tab alone. */

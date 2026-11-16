@@ -22,7 +22,7 @@ import { translate } from '@/i18n/i18n'
 import { AgentIcon } from '@/lib/agent-catalog'
 import { cn } from '@/lib/utils'
 import { useLocalTasksDomain } from '@/local-tasks/local-tasks-domain-store'
-import { useLocalTaskHostInContact } from '@/local-tasks/local-task-host-contact'
+import { useLocalTaskSessionInContact } from '@/local-tasks/local-task-session-execution-contact'
 import { findLocalTaskEffectiveWorkspace } from '@/local-tasks/local-task-link-selectors'
 import { openLocalTaskPage } from '@/local-tasks/local-task-navigation'
 import { runStopItem } from '@/local-tasks/local-task-proposal-session-items'
@@ -91,8 +91,8 @@ export function LocalTaskSessionPanelHeader({
   taskOnly: boolean
 }): React.JSX.Element {
   const progress = useLocalTaskSessionProgress(session)
-  const inContact = useLocalTaskHostInContact(session.hostId)
-  const hostLabel = useLocalTaskHostLabel(session.hostId)
+  const inContact = useLocalTaskSessionInContact(session)
+  const hostLabel = useLocalTaskHostLabel(session.hostId, session.executionOrigin?.hostLabel)
   const tasks = useLocalTasksDomain((state) => state.tasks)
   const projects = useLocalTasksDomain((state) => state.projects)
   const links = useLocalTasksDomain((state) => state.links)

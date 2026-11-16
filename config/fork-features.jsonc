@@ -3254,6 +3254,11 @@
       "goal": "管理各主机的任务、会话与进展，支持直接派活、人工验收和需确认的总管提案",
       "journal": "docs/issue/本地任务管理/journal.md",
       "dependsOn": [
+        "src/shared/runtime-host-descriptor.ts",
+        "src/shared/runtime-host-status.ts",
+        "src/renderer/src/store/slices/runtime-environment-ssh-selectors.ts",
+        "src/renderer/src/lib/resolve-owner.ts",
+        "src/main/runtime/host-descriptor.ts",
         "src/renderer/src/components/native-chat/NativeChatPaneHeader.tsx",
         "src/renderer/src/components/sidebar/CommentMarkdown.tsx",
         "src/renderer/src/components/editor/markdown-table-of-contents.ts",
@@ -3531,6 +3536,12 @@
         "src/main/runtime/rpc/methods/local-task-dispatcher-methods.ts"
       ],
       "requiredFiles": [
+        "src/shared/local-tasks/local-task-session-origin.ts",
+        "src/main/local-tasks/local-task-session-schema.ts",
+        "src/renderer/src/local-tasks/local-task-session-origin-route.ts",
+        "src/renderer/src/local-tasks/local-task-session-execution-sync.ts",
+        "src/renderer/src/local-tasks/local-task-cross-host-session-link.ts",
+        "mobile/src/local-tasks/local-task-execution-origin.ts",
         "src/main/local-tasks/local-tasks-service.ts",
         "src/main/local-tasks/local-tasks-database.ts",
         "src/main/startup/main-process-local-tasks.ts",
@@ -4375,6 +4386,14 @@
         }
       ],
       "tests": [
+        "src/renderer/src/local-tasks/local-task-session-execution-sync.test.ts",
+        "src/renderer/src/local-tasks/local-task-cross-host-reply.test.ts",
+        "src/main/local-tasks/local-task-session-replacement.test.ts",
+        "mobile/src/local-tasks/local-task-execution-origin.test.ts",
+        "src/main/local-tasks/local-task-cross-host-sessions.test.ts",
+        "src/renderer/src/local-tasks/local-task-foreign-session-progress.test.ts",
+        "src/renderer/src/local-tasks/local-task-session-origin-route.test.ts",
+        "src/shared/local-tasks/local-task-session-origin.test.ts",
         "mobile/src/local-tasks/local-task-filter.test.ts",
         "mobile/src/local-tasks/local-task-form-state.test.ts",
         "mobile/src/local-tasks/local-task-list-projection.test.ts",

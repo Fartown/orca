@@ -116,13 +116,18 @@ export function localTaskSessionSummary(args: {
   return {
     link,
     task,
-    state: args.inContact ? (entry?.state ?? 'unknown') : 'unverifiable',
-    item: args.inContact
-      ? (args.snapshot?.items.find((item) => item.taskSessionId === link.id) ?? null)
-      : null,
+    state: args.inContact && !link.executionOrigin ? (entry?.state ?? 'unknown') : 'unverifiable',
+    item:
+      args.inContact && !link.executionOrigin
+        ? (args.snapshot?.items.find((item) => item.taskSessionId === link.id) ?? null)
+        : null,
     stateSince: entry?.stateSince ?? null,
-    workspaceName: workspace?.nameSnapshot ?? workspace?.branchSnapshot ?? '',
-    hostName: args.hostName(link.hostId, workspace?.hostLabelSnapshot ?? null)
+    workspaceName: link.executionOrigin
+      ? (link.worktreeId ?? '')
+      : (workspace?.nameSnapshot ?? workspace?.branchSnapshot ?? ''),
+    hostName:
+      link.executionOrigin?.hostLabel ??
+      args.hostName(link.hostId, workspace?.hostLabelSnapshot ?? null)
   }
 }
 
@@ -144,7 +149,9 @@ function subtaskFacts(
     children.map((child) => child.id),
     lookup
   ).map((link) =>
-    inContact ? (lookup.progressById.get(link.id)?.state ?? 'unknown') : 'unverifiable'
+    inContact && !link.executionOrigin
+      ? (lookup.progressById.get(link.id)?.state ?? 'unknown')
+      : 'unverifiable'
   )
   const waiting = sessionStates.filter((state) => state === 'waiting').length
   const working = sessionStates.filter((state) => state === 'working').length
@@ -208,7 +215,10 @@ export function localTaskCardFacts(args: {
       {
         link: sessionLink,
         state: row.state,
-        item: inContact ? (items.find((item) => item.taskSessionId === row.id) ?? null) : null,
+        item:
+          inContact && !sessionLink.executionOrigin
+            ? (items.find((item) => item.taskSessionId === row.id) ?? null)
+            : null,
         lastMessage: entry?.lastMessage ?? null,
         stateSince: entry?.stateSince ?? null
       }

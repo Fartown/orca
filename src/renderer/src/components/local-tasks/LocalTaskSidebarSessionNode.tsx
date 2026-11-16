@@ -6,7 +6,7 @@ import { selectLocalTaskHostLabel } from '@/local-tasks/local-task-host-label'
 import { cn } from '@/lib/utils'
 import { useAppStore } from '@/store'
 import { localTaskAttentionKindLabel } from '@/local-tasks/local-task-attention-copy'
-import { useLocalTaskHostInContact } from '@/local-tasks/local-task-host-contact'
+import { useLocalTaskSessionInContact } from '@/local-tasks/local-task-session-execution-contact'
 import { openLocalTaskPage } from '@/local-tasks/local-task-navigation'
 import { useLocalTaskSessionPanel } from '@/local-tasks/local-task-session-panel-store'
 import { useLocalTaskSessionProgress } from '@/local-tasks/local-task-session-progress'
@@ -30,7 +30,7 @@ export function LocalTaskSidebarSessionNode({
   depth: number
 }): React.JSX.Element {
   const progress = useLocalTaskSessionProgress(session)
-  const inContact = useLocalTaskHostInContact(session.hostId)
+  const inContact = useLocalTaskSessionInContact(session)
   const item = useLocalTasksDomain(
     (state) =>
       state.progress?.items.find(

@@ -11,7 +11,8 @@ vi.mock('@/components/terminal/background-terminal-worktree-mount', () => ({
   requestBackgroundTerminalWorktreeMount: requestMount
 }))
 vi.mock('@/local-tasks/local-task-host-contact', () => ({
-  useLocalTaskHostInContact: () => true
+  useLocalTaskHostInContact: () => true,
+  isLocalTaskHostInContact: () => true
 }))
 vi.mock('@/components/activity/activity-terminal-portal-status', () => ({
   useActivityTerminalPortalStatus: () => 'loading'

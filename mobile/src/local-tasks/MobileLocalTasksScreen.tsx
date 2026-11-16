@@ -8,6 +8,7 @@ import { useRouteHandoff } from '../navigation/route-handoff'
 import { firstParam } from '../navigation/route-param-reader'
 import { colors } from '../theme/mobile-theme'
 import { useHostClient } from '../transport/host-client-hooks'
+import { useRpcClientContext } from '../transport/client-context'
 import { loadHosts } from '../transport/host-store'
 import {
   localTaskEndpointFor,
@@ -22,6 +23,7 @@ import { LocalTasksLibraryScreen } from './local-tasks-library-screen'
 import { localTaskStyles } from './local-tasks-styles'
 import { useLocalTaskEndpoints } from './use-local-task-endpoints'
 import { useLocalTasksLibrary } from './use-local-tasks-library'
+import { resolveLocalTaskExecutionOrigin } from './local-task-execution-origin'
 
 function useHostMachineName(hostId: string | undefined): string {
   const [name, setName] = useState('')
@@ -57,6 +59,7 @@ export function MobileLocalTasksScreen() {
   }>()
   const hostId = firstParam(params.hostId)
   const { client, state: connState } = useHostClient(hostId)
+  const clients = useRpcClientContext()
   const gates = useOptionalHostProtocolGates()
   const machineName = useHostMachineName(hostId)
   const routeExecutionHost = firstParam(params.executionHost)
@@ -122,7 +125,21 @@ export function MobileLocalTasksScreen() {
     client: reach.client,
     connState: reach.connState,
     capabilities: reach.capabilities,
-    label: reach.label
+    label: reach.label,
+    resolveExecutionOrigin: (origin) =>
+      resolveLocalTaskExecutionOrigin(origin, [
+        ...clients.getAllClients().map((entry) => ({
+          hostId: entry.hostId,
+          connected: entry.client.getState() === 'connected',
+          status: entry.client.getShellHostStatus?.()
+        })),
+        {
+          hostId: hostId ?? '',
+          connected: reach.connState === 'connected',
+          status: { hostDescriptor: { installationId: library.status?.installationId } },
+          endpoint: active
+        }
+      ])
   }
   return (
     <View style={localTaskStyles.screen}>

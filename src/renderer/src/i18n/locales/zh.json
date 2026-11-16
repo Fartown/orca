@@ -23162,6 +23162,12 @@
     "switchToChatView": "切到聊天视图"
   },
   "localTasks": {
+    "crossHost": {
+      "executionUnavailable": "会话所在的主机未连接。",
+      "ownerUnknown": "无法确认会话所在的执行主机。",
+      "previousLinkUnconfirmed": "已关联新任务，但无法确认旧关联是否已移除。请核对两个任务。",
+      "updateRequired": "请更新任务所在主机的 Orca，以关联其他主机上的会话。"
+    },
     "needsYou": {
       "title": "需要你",
       "description": "挂在任务上的会话里，等你批准、等你回答、被卡住，或做完一轮你还没看的条目。主机断开期间不列出，恢复联系后重新判定。",

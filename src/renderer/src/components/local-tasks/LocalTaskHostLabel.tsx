@@ -2,7 +2,11 @@ import { Laptop, Server, Unplug } from 'lucide-react'
 import { useAppStore } from '@/store'
 import { selectLocalTaskHostLabel } from '@/local-tasks/local-task-host-label'
 import { cn } from '@/lib/utils'
-import { normalizeExecutionHostId, parseExecutionHostId } from '../../../../shared/execution-host'
+import {
+  normalizeExecutionHostId,
+  parseExecutionHostId,
+  isUnresolvedOwnerHostId
+} from '../../../../shared/execution-host'
 
 /** A host's display name (the user's rename first); the snapshot or raw id when this window has none. */
 export function useLocalTaskHostLabel(
@@ -10,7 +14,7 @@ export function useLocalTaskHostLabel(
   fallback: string | null = null
 ): string {
   const label = useAppStore((state) => {
-    const id = hostId ? normalizeExecutionHostId(hostId) : null
+    const id = hostId && !isUnresolvedOwnerHostId(hostId) ? normalizeExecutionHostId(hostId) : null
     return id ? selectLocalTaskHostLabel(state, id) : null
   })
   return label ?? fallback ?? hostId ?? ''

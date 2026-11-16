@@ -2,6 +2,7 @@ import { parseExecutionHostId } from '../../shared/execution-host'
 import type { RuntimeClientEvent } from '../../shared/runtime-client-events'
 import { agentHookServer, type AgentHookServer } from '../agent-hooks/server'
 import { getRegisteredSshState } from '../ssh/targets/ssh-target-registry'
+import { getPublishedHostDescriptor } from '../runtime/host-descriptor'
 import type { LocalTaskHostSessionSource } from './local-task-host-session-source'
 
 type HookStatusStore = Pick<
@@ -15,6 +16,7 @@ type HookStatusStore = Pick<
 
 /** The runtime pieces the binding reads; desktop, `orca serve` and orcad all provide them. */
 export type LocalTaskHostRuntime = {
+  getRuntimeId?(): string
   hasLiveTerminalForPaneKey(paneKey: string): boolean
   onClientEvent(
     listener: (event: RuntimeClientEvent) => void,
@@ -34,6 +36,10 @@ export function bindLocalTaskHostSessions(
     getRegisteredSshState(targetId)?.status
 ): LocalTaskHostSessionSource {
   return {
+    installationId: () => {
+      const runtimeId = runtime.getRuntimeId?.()
+      return runtimeId ? (getPublishedHostDescriptor(runtimeId)?.installationId ?? null) : null
+    },
     rowsForPane: (paneKey) =>
       hooks.getStatusSnapshotForPane(paneKey).filter((row) => row.providerSessionOnly !== true),
     paneKeys: () => hooks.getStatusChangeSnapshot().map((status) => status.paneKey),

@@ -45,6 +45,9 @@ vi.mock('../transport/host-client-hooks', () => ({
     state: fixture.connection
   })
 }))
+vi.mock('../transport/client-context', () => ({
+  useRpcClientContext: () => ({ getAllClients: () => [] })
+}))
 vi.mock('../transport/host-store', () => ({ loadHosts: async () => [{ id: 'h', name: 'desk' }] }))
 vi.mock('./use-local-tasks-library', () => ({
   useLocalTasksLibrary: () => ({

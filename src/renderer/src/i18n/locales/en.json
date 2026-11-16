@@ -23893,6 +23893,12 @@
     "switchToChatView": "Switch to Chat View"
   },
   "localTasks": {
+    "crossHost": {
+      "executionUnavailable": "The session’s host is not connected.",
+      "ownerUnknown": "The session’s execution host is unknown.",
+      "previousLinkUnconfirmed": "Linked to the new task, but removing the previous link could not be confirmed. Check both tasks.",
+      "updateRequired": "Update the task library’s Orca to link sessions across hosts."
+    },
     "needsYou": {
       "title": "Needs you",
       "description": "Sessions on tasks that wait for an approval or an answer, are blocked, or finished a turn you have not seen. Disconnected hosts are left out until they are back.",
