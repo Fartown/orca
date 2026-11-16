@@ -296,7 +296,8 @@
         "src/main/runtime/agent-prompt-submission-verification.ts",
         "src/main/runtime/terminal-input-admission.ts",
         "src/main/runtime/orca-runtime-core.ts",
-        "src/main/ipc/native-chat.ts"
+        "src/main/ipc/native-chat.ts",
+        "src/main/native-chat/transcript-file-version.ts"
       ],
       "policyId": "native-chat-view-recovery",
       "ownedPaths": [
@@ -437,6 +438,21 @@
           "file": "src/shared/terminal-runtime-capabilities.ts",
           "mustContain": "DURABLE_CHAT_COMPOSER_CAPABILITY",
           "why": "Connect durable terminal Chat submission and transcript receipts."
+        },
+        {
+          "file": "src/shared/orchestration-mutation-request.ts",
+          "mustContain": "chatTranscriptVerified",
+          "why": "Verify durable Chat transcript file continuity on the execution host before confirming local input."
+        },
+        {
+          "file": "src/shared/rpc-contract/orchestration-runs-mutation-request-show-params.ts",
+          "mustContain": "verifyChatTranscript",
+          "why": "Verify durable Chat transcript file continuity on the execution host before confirming local input."
+        },
+        {
+          "file": "src/main/runtime/rpc/methods/orchestration/runs/mutation-request-show.ts",
+          "mustContain": "verifyDurableChatTranscriptReceipt",
+          "why": "Verify durable Chat transcript file continuity on the execution host before confirming local input."
         }
       ],
       "tests": [
@@ -451,7 +467,8 @@
         "src/shared/native-chat-view-recovery/durable-chat-reconciliation.test.ts",
         "src/main/native-chat-view-recovery/durable-chat-runtime.test.ts",
         "src/renderer/src/native-chat-view-recovery/use-durable-chat-delivery.test.tsx",
-        "src/main/native-chat-view-recovery/durable-chat-session-identity.test.ts"
+        "src/main/native-chat-view-recovery/durable-chat-session-identity.test.ts",
+        "src/main/native-chat-view-recovery/durable-chat-transcript-verification.test.ts"
       ],
       "checks": [
         "pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/native-chat-view-recovery src/renderer/src/components/tab-bar/SortableTabContextMenu.test.tsx src/renderer/src/components/tab-bar/native-chat-tab-agent-evidence.test.ts src/renderer/src/native-chat-view-recovery/terminal-chat-recovery.test.ts src/renderer/src/components/terminal-pane/terminal-pane-recovery.test.ts src/renderer/src/components/terminal-pane/terminal-pane-recovery-unsettled-fallback.test.ts src/renderer/src/components/terminal-pane/terminal-pane-surface-ownership.test.ts src/renderer/src/components/activity/activity-thread-actions.test.ts src/renderer/src/components/activity/useActivityUnreadCount.test.ts",

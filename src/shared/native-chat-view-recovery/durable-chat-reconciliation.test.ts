@@ -41,6 +41,9 @@ function record(
       sessionId: 'session',
       afterMessageId: 'host-boundary',
       afterByteOffset: 500,
+      transcriptPath: '/fixture/transcript.jsonl',
+      fileIdentity: 'dev:ino',
+      boundaryFingerprint: 'boundary',
       empty: false,
       submittedAt: 500
     },
@@ -140,6 +143,9 @@ describe('Codex durable transcript receipts', () => {
         sessionId: 'session',
         afterMessageId: 'host-boundary',
         afterByteOffset: 500,
+        transcriptPath: '/fixture/transcript.jsonl',
+        fileIdentity: 'dev:ino',
+        boundaryFingerprint: 'boundary',
         empty: false,
         submittedAt: 550
       }

@@ -138,7 +138,10 @@
             "src/renderer/src/components/native-chat/use-native-chat-pending-delivery.ts",
             "src/shared/rpc-contract/terminal-unary-params.ts",
             "src/shared/runtime-terminal-send-contract.ts",
-            "src/shared/terminal-runtime-capabilities.ts"
+            "src/shared/terminal-runtime-capabilities.ts",
+            "src/shared/orchestration-mutation-request.ts",
+            "src/shared/rpc-contract/orchestration-runs-mutation-request-show-params.ts",
+            "src/main/runtime/rpc/methods/orchestration/runs/mutation-request-show.ts"
           ],
           "message": "Change is outside terminal chat view recovery."
         }
@@ -1030,7 +1033,10 @@
             "src/renderer/src/components/native-chat/native-chat-composer-types.ts",
             "src/shared/rpc-contract/terminal-unary-params.ts",
             "src/shared/runtime-terminal-send-contract.ts",
-            "src/shared/terminal-runtime-capabilities.ts"
+            "src/shared/terminal-runtime-capabilities.ts",
+            "src/shared/orchestration-mutation-request.ts",
+            "src/shared/rpc-contract/orchestration-runs-mutation-request-show-params.ts",
+            "src/main/runtime/rpc/methods/orchestration/runs/mutation-request-show.ts"
           ],
           "message": "Branch changes an upstream path that no fork feature owns or registers as a seam; extend config/fork-features.jsonc and this allowlist, or move the change into a feature-owned path."
         }

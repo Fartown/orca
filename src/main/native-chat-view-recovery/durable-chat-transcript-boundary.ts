@@ -2,7 +2,11 @@ import { createHash } from 'node:crypto'
 import type { OrcaRuntimeService } from '../runtime/orca-runtime'
 import { resolveObservedAgentStatusBinding } from '../ipc/agent-status-ipc-boundary'
 import { resolveSessionFilePath } from '../native-chat/session-file-resolver'
-import { transcriptFileStat } from '../native-chat/wsl-transcript-fs-access'
+import {
+  boundaryFingerprint,
+  readTranscriptFileVersion,
+  transcriptFileVersionChanged
+} from '../native-chat/transcript-file-version'
 import { readNativeChatTranscriptTail } from '../native-chat/transcript-tail-reader'
 
 export type DurableChatSessionRuntime = Pick<
@@ -83,10 +87,18 @@ export async function captureDurableChatTranscriptBoundary(
   if ('error' in result) {
     throw new Error('Chat transcript boundary is unavailable')
   }
+  const version = await readTranscriptFileVersion(filePath)
+  const fingerprint = await boundaryFingerprint(filePath, version.size)
+  if (transcriptFileVersionChanged(await readTranscriptFileVersion(filePath), version)) {
+    throw new Error('Chat transcript changed during submission')
+  }
   return {
+    transcriptPath: filePath,
+    fileIdentity: version.identity,
+    boundaryFingerprint: fingerprint,
     sessionId: session.id,
     afterMessageId: result.messages.at(-1)?.id ?? null,
-    afterByteOffset: (await transcriptFileStat(filePath, 'exact')).size,
+    afterByteOffset: version.size,
     empty: result.messages.length === 0 && !result.hasMore,
     submittedAt: Date.now()
   }

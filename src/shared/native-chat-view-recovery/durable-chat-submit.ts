@@ -7,6 +7,9 @@ export const DurableChatTranscriptBoundary = z.object({
   sessionId: z.string().min(1),
   afterMessageId: z.string().nullable(),
   afterByteOffset: z.number().int().nonnegative(),
+  transcriptPath: z.string().min(1).max(32768),
+  fileIdentity: z.string().min(1),
+  boundaryFingerprint: z.string().max(128),
   empty: z.boolean(),
   submittedAt: z.number().finite()
 })

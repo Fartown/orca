@@ -142,10 +142,40 @@ export class DurableChatSubmitter {
     sessionId: string,
     evidence: readonly DurableChatUserEvidence[]
   ): Promise<void> {
+    const verified = new Set<string>()
+    for (const record of await this.outbox.list()) {
+      if (
+        record.paneKey !== paneKey ||
+        record.sessionId !== sessionId ||
+        !record.transcriptBoundary ||
+        ['prepared', 'rejected', 'confirmed'].includes(record.state)
+      ) {
+        continue
+      }
+      try {
+        const response = await this.deps.call(record, 'orchestration.requestShow', {
+          request: record.id,
+          verifyChatTranscript: true
+        })
+        if (
+          response.ok &&
+          response.result &&
+          typeof response.result === 'object' &&
+          'chatTranscriptVerified' in response.result &&
+          response.result.chatTranscriptVerified === true
+        ) {
+          verified.add(record.id)
+        }
+      } catch {}
+    }
     let changed = false
     await this.outbox.update((records) => {
       const matches = reconcileDurableChatSubmissions(
-        records.filter((entry) => entry.paneKey === paneKey),
+        records
+          .filter((entry) => entry.paneKey === paneKey)
+          .map((entry) =>
+            verified.has(entry.id) ? entry : { ...entry, transcriptBoundary: undefined }
+          ),
         evidence,
         sessionId
       )

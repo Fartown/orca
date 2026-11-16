@@ -41,6 +41,9 @@ const accepted: RuntimeRpcResponse<unknown> = {
           sessionId: 'codex-session',
           afterMessageId: 'old-turn',
           afterByteOffset: 100,
+          transcriptPath: '/fixture/transcript.jsonl',
+          fileIdentity: 'dev:ino',
+          boundaryFingerprint: 'boundary',
           empty: false,
           submittedAt: 100
         }
@@ -66,7 +69,16 @@ async function fixture() {
     })),
     call: vi
       .fn<(...args: unknown[]) => Promise<RuntimeRpcResponse<unknown>>>()
-      .mockResolvedValue(accepted),
+      .mockImplementation(async (_record, _method, params) =>
+        params && typeof params === 'object' && 'verifyChatTranscript' in params
+          ? {
+              id: 'rpc',
+              ok: true,
+              _meta: { runtimeId: 'runtime-1' },
+              result: { chatTranscriptVerified: true }
+            }
+          : accepted
+      ),
     changed: vi.fn()
   }
   return { path, store, deps, submitter: new DurableChatSubmitter(store, deps) }
@@ -94,6 +106,25 @@ describe('durable terminal Chat submissions', () => {
     const settled = f.deps.changed.mock.calls.length
     await f.submitter.confirm(first.paneKey, first.sessionId, [evidence])
     expect(f.deps.changed).toHaveBeenCalledTimes(settled)
+  })
+
+  it('retains an apparent transcript match when the host cannot verify the original file generation', async () => {
+    const f = await fixture(),
+      input = prompt()
+    await f.submitter.prepare(input)
+    await f.submitter.dispatch(input.id)
+    f.deps.call.mockResolvedValue({
+      id: 'rpc',
+      ok: true,
+      _meta: { runtimeId: 'runtime-1' },
+      result: { chatTranscriptVerified: false }
+    })
+    await f.submitter.confirm(input.paneKey, input.sessionId, [
+      { id: 'reencoded-history', transcriptOrder: 1000, text: input.text, imageCount: 1 }
+    ])
+    expect(await f.submitter.list(input.paneKey)).toMatchObject([
+      { id: input.id, text: input.text, imagePaths: input.imagePaths }
+    ])
   })
 
   it('fsyncs the exact input and owner before dispatch and survives a new store instance', async () => {

@@ -1,3 +1,4 @@
+import { verifyDurableChatTranscriptReceipt } from '../../../../../native-chat-view-recovery/durable-chat-transcript-verification'
 import {
   describeMutationRequestState,
   type OrchestrationMutationRequestShowResult
@@ -11,10 +12,10 @@ export const ORCHESTRATION_MUTATION_REQUEST_METHODS = [
     permission: 'workspace',
     params: RequestShowParams,
     // Read durable receipts without writing/mutating again; keep this recovery query outside ORCHESTRATION_MUTATION_METHODS.
-    handler: (
+    handler: async (
       params,
       { runtime, authenticatedCallerFingerprint }
-    ): OrchestrationMutationRequestShowResult => {
+    ): Promise<OrchestrationMutationRequestShowResult> => {
       const db = runtime.getOrchestrationDb()
       // Receipt caller keys come from the paired fingerprint or the local mutation identity.
       const callerFingerprint =
@@ -31,6 +32,13 @@ export const ORCHESTRATION_MUTATION_REQUEST_METHODS = [
         }
       }
       return {
+        ...(params.verifyChatTranscript
+          ? {
+              chatTranscriptVerified: await verifyDurableChatTranscriptReceipt(
+                parseReceipt(row.receipt ?? '')
+              )
+            }
+          : {}),
         requestId: params.request,
         state: row.state,
         method: row.method,
