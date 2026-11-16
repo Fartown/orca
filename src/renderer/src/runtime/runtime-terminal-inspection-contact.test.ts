@@ -99,6 +99,7 @@ describe('terminal process inspection follows shared contact', () => {
   it('accepts state-only store notifications and ignores writes outside the four contact slices', () => {
     const subscribe = useAppStore.subscribe
     vi.spyOn(useAppStore, 'subscribe').mockImplementation((listener) => {
+      // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: Only the state-reading contact listener is passed to this legacy adapter fixture.
       const notify = listener as (state: ReturnType<typeof useAppStore.getState>) => void
       return subscribe((state) => notify(state))
     })
