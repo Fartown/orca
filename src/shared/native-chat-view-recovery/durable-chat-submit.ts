@@ -10,11 +10,15 @@ export const DurableChatTranscriptBoundary = z.object({
   transcriptPath: z.string().min(1).max(32768),
   fileIdentity: z.string().min(1),
   boundaryFingerprint: z.string().max(128),
+  sessionUnverifiedAtSubmit: z.boolean().optional(),
+  sessionVerifiedAfterSubmit: z.boolean().optional(),
+  submitPtyId: z.string().min(1).optional(),
   empty: z.boolean(),
   submittedAt: z.number().finite()
 })
 
 export const DurableChatComposer = z.object({
+  reconcileRestoredSession: z.boolean().optional(),
   expectedSessionId: z.string().min(1),
   clearInput: z
     .string()
@@ -28,6 +32,7 @@ export const DurableChatComposer = z.object({
 })
 
 export const DurableChatPrepare = z.object({
+  reconcileRestoredSession: z.boolean().optional(),
   id: z.string().uuid(),
   paneKey: z.string().min(1),
   ptyId: z.string().min(1),

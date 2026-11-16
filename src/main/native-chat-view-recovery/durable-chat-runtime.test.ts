@@ -20,6 +20,7 @@ const boundary = vi.hoisted(() => ({
 }))
 vi.mock('./durable-chat-transcript-boundary', () => ({
   durableChatProviderSession: vi.fn(),
+  durableChatSubmissionSession: vi.fn(),
   captureDurableChatTranscriptBoundary: vi.fn(async () => boundary)
 }))
 vi.mock('../git/worktree', () => {
