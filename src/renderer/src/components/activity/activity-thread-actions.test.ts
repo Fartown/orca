@@ -85,13 +85,16 @@ describe('activity thread host routing', () => {
       visibleWorkspaceHostIds: null,
       workspaceHostScope: 'all',
       tabsByWorktree: { [thread.worktree.id]: [thread.tab] },
+      terminalLayoutsByTabId: {},
+      runtimePaneTitlesByTabId: {},
       unifiedTabsByWorktree: {},
       activeRepoId: thread.worktree.repoId,
       activeWorktreeId: thread.worktree.id,
       activeWorkspaceExecutionHostId: 'local',
       setActiveRepo: vi.fn(),
       setActiveWorktree,
-      setActiveTabType: vi.fn()
+      setActiveTabType: vi.fn(),
+      setTabViewMode: vi.fn()
     }
     mocks.getState.mockImplementation(() => state)
   })
@@ -191,6 +194,141 @@ describe('activity thread host routing', () => {
     expect(setActiveWorktree).not.toHaveBeenCalled()
     expect(mocks.activateTabAndFocusPane).toHaveBeenCalledWith(
       thread.tab.id,
+      '11111111-1111-4111-8111-111111111111',
+      { flashFocusedPane: true, scrollToBottomIfOutputSinceLastView: true }
+    )
+  })
+
+  it.each([false, true])(
+    'reveals the original terminal pane for an unbound restored chat, floating=%s',
+    (floating) => {
+      const target = floating ? makeFloatingThread() : thread
+      const restored = {
+        ...target,
+        tab: { ...target.tab, viewMode: 'chat' as const },
+        paneEntry: {
+          paneKey: target.paneKey,
+          state: 'waiting' as const,
+          prompt: '',
+          updatedAt: 2_000,
+          stateStartedAt: 2_000,
+          stateHistory: [],
+          restoredUnconfirmed: true
+        }
+      }
+      state.tabsByWorktree = { [restored.worktree.id]: [restored.tab] }
+      state.terminalLayoutsByTabId = {
+        [restored.tab.id]: {
+          root: { type: 'leaf', leafId: '11111111-1111-4111-8111-111111111111' },
+          activeLeafId: '11111111-1111-4111-8111-111111111111',
+          expandedLeafId: null,
+          ptyIdsByLeafId: {
+            '11111111-1111-4111-8111-111111111111': restored.tab.ptyId
+          }
+        }
+      }
+      if (floating) {
+        state.settings = { floatingTerminalEnabled: true }
+        state.floatingWorkspacePanelOpen = false
+      }
+
+      makeActions().selectThread(restored)
+
+      expect(state.setTabViewMode).toHaveBeenCalledWith(restored.tab.id, 'terminal')
+      expect(mocks.activateStructuredAgentSessionTab).toHaveBeenCalledOnce()
+      if (floating) {
+        expect(mocks.activateAndRevealWorkspace).not.toHaveBeenCalled()
+        expect(mocks.dispatchEvent).toHaveBeenCalledWith(
+          expect.objectContaining({ type: TOGGLE_FLOATING_TERMINAL_EVENT })
+        )
+      } else {
+        expect(mocks.activateAndRevealWorkspace).toHaveBeenCalledOnce()
+      }
+      expect(mocks.activateTabAndFocusPane).toHaveBeenCalledWith(
+        restored.tab.id,
+        '11111111-1111-4111-8111-111111111111',
+        { flashFocusedPane: true, scrollToBottomIfOutputSinceLastView: true }
+      )
+    }
+  )
+
+  it.each([
+    { binding: 'target', revealsTerminal: true },
+    { binding: 'sibling', revealsTerminal: false }
+  ] as const)(
+    'uses the target floating split leaf binding when tab PTY is pending: $binding',
+    ({ binding, revealsTerminal }) => {
+      const target = makeFloatingThread()
+      const targetLeafId = '11111111-1111-4111-8111-111111111111'
+      const siblingLeafId = '22222222-2222-4222-8222-222222222222'
+      const restored = {
+        ...target,
+        tab: { ...target.tab, ptyId: null, viewMode: 'chat' as const },
+        paneEntry: {
+          paneKey: target.paneKey,
+          state: 'waiting' as const,
+          prompt: '',
+          updatedAt: 2_000,
+          stateStartedAt: 2_000,
+          stateHistory: [],
+          restoredUnconfirmed: true
+        }
+      }
+      state.settings = { floatingTerminalEnabled: true }
+      state.floatingWorkspacePanelOpen = true
+      state.tabsByWorktree = { [restored.worktree.id]: [restored.tab] }
+      state.terminalLayoutsByTabId = {
+        [restored.tab.id]: {
+          root: {
+            type: 'split',
+            direction: 'vertical',
+            first: { type: 'leaf', leafId: targetLeafId },
+            second: { type: 'leaf', leafId: siblingLeafId }
+          },
+          activeLeafId: binding === 'target' ? siblingLeafId : targetLeafId,
+          expandedLeafId: null,
+          ptyIdsByLeafId: {
+            [binding === 'target' ? targetLeafId : siblingLeafId]: 'remote:paired@@original-pty'
+          }
+        }
+      }
+
+      makeActions().selectThread(restored)
+
+      if (revealsTerminal) {
+        expect(state.setTabViewMode).toHaveBeenCalledWith(restored.tab.id, 'terminal')
+      } else {
+        expect(state.setTabViewMode).not.toHaveBeenCalled()
+      }
+      expect(mocks.activateAndRevealWorkspace).not.toHaveBeenCalled()
+      expect(mocks.activateTabAndFocusPane).toHaveBeenCalledWith(restored.tab.id, targetLeafId, {
+        flashFocusedPane: true,
+        scrollToBottomIfOutputSinceLastView: true
+      })
+    }
+  )
+
+  it('keeps the chat view for a freshly bound row', () => {
+    const bound = {
+      ...thread,
+      tab: { ...thread.tab, viewMode: 'chat' as const },
+      paneEntry: {
+        paneKey: thread.paneKey,
+        state: 'waiting' as const,
+        prompt: '',
+        updatedAt: 2_000,
+        stateStartedAt: 2_000,
+        stateHistory: [],
+        providerSession: { key: 'session_id' as const, id: 'known-session' }
+      }
+    }
+    state.tabsByWorktree = { [bound.worktree.id]: [bound.tab] }
+
+    makeActions().selectThread(bound)
+
+    expect(state.setTabViewMode).not.toHaveBeenCalled()
+    expect(mocks.activateTabAndFocusPane).toHaveBeenCalledWith(
+      bound.tab.id,
       '11111111-1111-4111-8111-111111111111',
       { flashFocusedPane: true, scrollToBottomIfOutputSinceLastView: true }
     )

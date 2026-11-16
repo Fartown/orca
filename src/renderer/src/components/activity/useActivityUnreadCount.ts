@@ -37,8 +37,9 @@ export function countActivityUnread(source: ActivityUnreadCountSource, now = Dat
     }
     // Session-boundary idle connects (STA-3386) and monitoring snapshots create no unread events, so counting either would leave a badge with no row to clear.
     if (
-      (isHistoricalActivityState(entry.state) ||
-        (live && freshActivityLiveAgentState(entry, now) === 'working')) &&
+      (entry.state === 'done' ||
+        (!live && isHistoricalActivityState(entry.state) && entry.restoredUnconfirmed !== true) ||
+        (live && freshActivityLiveAgentState(entry, now) === entry.state)) &&
       entry.sessionBoundary !== true &&
       mutedAt < entry.stateStartedAt
     ) {

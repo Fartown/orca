@@ -247,10 +247,14 @@
     {
       "id": "native-chat-view-recovery",
       "title": "终端聊天视图恢复",
-      "goal": "恢复已有终端标签的聊天视图切换，保留同一终端与会话绑定",
+      "goal": "恢复已有终端标签的聊天视图切换和 Activity 内容一致性，保留同一终端与会话绑定",
       "journal": "docs/issue/终端聊天视图恢复/journal.md",
       "dependsOn": [
+        "src/shared/agent-status-types.ts",
+        "src/shared/terminal-tab-types.ts",
+        "src/shared/stable-pane-id.ts",
         "src/renderer/src/i18n/i18n.ts",
+        "src/renderer/src/components/terminal-pane/terminal-parked-watcher-reconciliation.ts",
         "src/renderer/src/components/terminal-pane/terminal-recovery-ledger-test-store.ts",
         "src/renderer/src/store/terminals/terminal-tab-location.ts"
       ],
@@ -261,7 +265,8 @@
       ],
       "requiredFiles": [
         "src/renderer/src/native-chat-view-recovery/TerminalTabViewSwitch.tsx",
-        "src/renderer/src/native-chat-view-recovery/terminal-chat-recovery-owner.ts"
+        "src/renderer/src/native-chat-view-recovery/terminal-chat-recovery-owner.ts",
+        "src/renderer/src/native-chat-view-recovery/restored-terminal-activity-target.ts"
       ],
       "seams": [
         {
@@ -288,15 +293,48 @@
           "file": "src/renderer/src/components/tab-bar/SortableTabContextMenu.test.tsx",
           "mustContain": "switches an eligible terminal tab into chat view",
           "why": "Keep the existing menu behavior contract aligned with the restored entry."
+        },
+        {
+          "file": "src/renderer/src/components/activity/activity-pane-events.ts",
+          "mustContain": "args.liveState === args.entry.state",
+          "why": "Only fresh current pane status may create a current attention event."
+        },
+        {
+          "file": "src/renderer/src/components/activity/useActivityUnreadCount.ts",
+          "mustContain": "freshActivityLiveAgentState",
+          "why": "Keep the badge in step with fresh current attention events."
+        },
+        {
+          "file": "src/renderer/src/components/activity/activity-thread-presentation.ts",
+          "mustContain": "restoredUnconfirmed",
+          "why": "Avoid presenting an unconfirmed restored row as current input demand."
+        },
+        {
+          "file": "src/renderer/src/components/activity/activity-thread-actions.ts",
+          "mustContain": "shouldRevealRestoredTerminal",
+          "why": "Reveal the original terminal pane for an unbound restored chat row."
+        },
+        {
+          "file": "src/renderer/src/components/activity/activity-thread-actions.test.ts",
+          "mustContain": "reveals the original terminal pane",
+          "why": "Guard same tab and pane navigation for restored unbound rows."
+        },
+        {
+          "file": "src/renderer/src/components/activity/useActivityUnreadCount.test.ts",
+          "mustContain": "restored nonterminal attention",
+          "why": "Guard unread badge behavior without clearing historical events."
         }
       ],
       "tests": [
         "src/renderer/src/native-chat-view-recovery/codex-chat-delivery.test.tsx",
         "src/renderer/src/components/tab-bar/SortableTabContextMenu.test.tsx",
-        "src/renderer/src/native-chat-view-recovery/terminal-chat-recovery.test.ts"
+        "src/renderer/src/native-chat-view-recovery/terminal-chat-recovery.test.ts",
+        "src/renderer/src/native-chat-view-recovery/activity-restored-attention.test.ts",
+        "src/renderer/src/components/activity/activity-thread-actions.test.ts",
+        "src/renderer/src/components/activity/useActivityUnreadCount.test.ts"
       ],
       "checks": [
-        "pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/native-chat-view-recovery/codex-chat-delivery.test.tsx src/renderer/src/components/tab-bar/SortableTabContextMenu.test.tsx src/renderer/src/components/tab-bar/native-chat-tab-agent-evidence.test.ts src/renderer/src/native-chat-view-recovery/terminal-chat-recovery.test.ts src/renderer/src/components/terminal-pane/terminal-pane-recovery.test.ts src/renderer/src/components/terminal-pane/terminal-pane-recovery-unsettled-fallback.test.ts src/renderer/src/components/terminal-pane/terminal-pane-surface-ownership.test.ts"
+        "pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/native-chat-view-recovery/codex-chat-delivery.test.tsx src/renderer/src/components/tab-bar/SortableTabContextMenu.test.tsx src/renderer/src/components/tab-bar/native-chat-tab-agent-evidence.test.ts src/renderer/src/native-chat-view-recovery/terminal-chat-recovery.test.ts src/renderer/src/components/terminal-pane/terminal-pane-recovery.test.ts src/renderer/src/components/terminal-pane/terminal-pane-recovery-unsettled-fallback.test.ts src/renderer/src/components/terminal-pane/terminal-pane-surface-ownership.test.ts src/renderer/src/native-chat-view-recovery/activity-restored-attention.test.ts src/renderer/src/components/activity/activity-thread-actions.test.ts src/renderer/src/components/activity/useActivityUnreadCount.test.ts"
       ]
     },
     {
