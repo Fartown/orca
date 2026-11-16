@@ -7,6 +7,8 @@ import { parsePaneKey } from '../../../../shared/stable-pane-id'
 import { dismissStaleAgentRowByKey } from '../terminal-pane/stale-agent-row'
 import { activateStructuredAgentSessionTab } from '@/lib/agent-session/structured-agent-session-tab-activation'
 
+import { openLocalTaskSessionFromAgentRow } from '@/local-tasks/local-task-agent-row-activation'
+
 export function useWorktreeAgentActivation(worktreeId: string) {
   return useCallback(
     (tabId: string, paneKey: string) => {
@@ -23,6 +25,9 @@ export function useWorktreeAgentActivation(worktreeId: string) {
           paneKey
         })
         dismissStaleAgentRowByKey(paneKey)
+        return
+      }
+      if (openLocalTaskSessionFromAgentRow(worktreeId, tabId, paneKey)) {
         return
       }
       // Use shared activation for cross-repo reveal and navigation history.

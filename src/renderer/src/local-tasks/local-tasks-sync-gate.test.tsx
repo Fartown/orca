@@ -24,6 +24,12 @@ const env = vi.hoisted(() => {
   const capabilityChecks: string[] = []
   const opened: unknown[] = []
   const closed: unknown[] = []
+  const subscriptions: {
+    target: unknown
+    onEvent: (frame: unknown) => void
+    onError: (error: unknown) => void
+    onClose: () => void
+  }[] = []
   const reads: { target: unknown; method: string }[] = []
   return {
     connected,
@@ -34,6 +40,7 @@ const env = vi.hoisted(() => {
     capabilityChecks,
     opened,
     closed,
+    subscriptions,
     reads,
     keyRouterThrows: false,
     listeners,
@@ -86,8 +93,18 @@ vi.mock('../runtime/runtime-rpc-client', () => ({
   }
 }))
 vi.mock('../runtime/runtime-rpc-subscribe', () => ({
-  subscribeRuntimeRpc: async (target: unknown) => {
+  subscribeRuntimeRpc: async (
+    target: unknown,
+    _method: string,
+    _params: unknown,
+    callbacks: {
+      onEvent: (frame: unknown) => void
+      onError: (error: unknown) => void
+      onClose: () => void
+    }
+  ) => {
     env.opened.push(target)
+    env.subscriptions.push({ target, ...callbacks })
     return { unsubscribe: () => env.closed.push(target) }
   }
 }))
@@ -205,6 +222,62 @@ it('reads once more when the shared layer sees the host answer again', async () 
     vi.useRealTimers()
   }
 })
+
+it.each(['error', 'close'] as const)(
+  'replaces a ready paired stream after %s and a same-runtime contact return',
+  async (ending) => {
+    const environmentId = ending === 'error' ? 'env-6' : 'env-7'
+    const target = { kind: 'environment', environmentId }
+    env.supported.add(environmentId)
+    env.projectCounts.set(environmentId, 2)
+    env.publish({
+      runtimeEnvironments: [{ id: environmentId }],
+      runtimeStatusByEnvironmentId: new Map([
+        [environmentId, { ...env.connected, hostContactEpoch: 0 }]
+      ])
+    })
+    render(<LocalTasksSyncGate />)
+    await waitFor(() =>
+      expect(
+        env.subscriptions.filter((entry) => environmentOf(entry.target) === environmentId)
+      ).toHaveLength(1)
+    )
+    const first = env.subscriptions.find((entry) => environmentOf(entry.target) === environmentId)!
+    first.onEvent({ type: 'ready', subscriptionId: 'stream-1', revision: 1, state: 'ready' })
+    await waitFor(() => expect(readsOf(environmentId, 'localTasks.status')).toBe(2))
+    const readsBeforeContactReturn = readsOf(environmentId, 'localTasks.status')
+    expect(connection(environmentId)).toBe('live')
+
+    if (ending === 'error') {
+      first.onError(new Error('stream ended'))
+    } else {
+      first.onClose()
+    }
+    await waitFor(() =>
+      expect(connection(environmentId)).toBe(ending === 'error' ? 'failed' : 'ended')
+    )
+
+    env.publish({
+      runtimeStatusByEnvironmentId: new Map([
+        [environmentId, { ...env.connected, hostContactEpoch: 1 }]
+      ])
+    })
+    await waitFor(() => expect(env.closed).toContainEqual(target))
+    await waitFor(() =>
+      expect(
+        env.subscriptions.filter((entry) => environmentOf(entry.target) === environmentId)
+      ).toHaveLength(2)
+    )
+    const second = env.subscriptions.filter(
+      (entry) => environmentOf(entry.target) === environmentId
+    )[1]
+    second.onEvent({ type: 'ready', subscriptionId: 'stream-2', revision: 1, state: 'ready' })
+    await waitFor(() =>
+      expect(readsOf(environmentId, 'localTasks.status')).toBe(readsBeforeContactReturn + 1)
+    )
+    expect(connection(environmentId)).toBe('live')
+  }
+)
 
 it('streams a paired library with no project only while a surface that can add one is open', async () => {
   env.publish({

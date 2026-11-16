@@ -247,10 +247,14 @@
     {
       "id": "native-chat-view-recovery",
       "title": "终端聊天视图恢复",
-      "goal": "恢复已有终端标签的聊天视图切换，保留同一终端与会话绑定",
+      "goal": "恢复已有终端标签的聊天视图切换和 Activity 内容一致性，保留同一终端与会话绑定",
       "journal": "docs/issue/终端聊天视图恢复/journal.md",
       "dependsOn": [
+        "src/shared/agent-status-types.ts",
+        "src/shared/terminal-tab-types.ts",
+        "src/shared/stable-pane-id.ts",
         "src/renderer/src/i18n/i18n.ts",
+        "src/renderer/src/components/terminal-pane/terminal-parked-watcher-reconciliation.ts",
         "src/renderer/src/components/terminal-pane/terminal-recovery-ledger-test-store.ts",
         "src/renderer/src/store/terminals/terminal-tab-location.ts",
         "src/shared/agent-tui-input-clear.ts",
@@ -274,7 +278,6 @@
         "src/shared/execution-host.ts",
         "src/main/durable-file-write.ts",
         "src/shared/runtime-rpc-envelope.ts",
-        "src/shared/agent-status-types.ts",
         "src/main/native-chat/transcript-tail-reader.ts",
         "src/shared/native-chat/native-chat-types.ts",
         "src/shared/native-chat/transcript/native-chat-pending-occurrence.ts",
@@ -305,6 +308,7 @@
       "requiredFiles": [
         "src/renderer/src/native-chat-view-recovery/TerminalTabViewSwitch.tsx",
         "src/renderer/src/native-chat-view-recovery/terminal-chat-recovery-owner.ts",
+        "src/renderer/src/native-chat-view-recovery/restored-terminal-activity-target.ts",
         "src/main/native-chat-view-recovery/durable-chat-submitter.ts",
         "src/shared/native-chat-view-recovery/durable-chat-submit.ts"
       ],
@@ -333,6 +337,36 @@
           "file": "src/renderer/src/components/tab-bar/SortableTabContextMenu.test.tsx",
           "mustContain": "switches an eligible terminal tab into chat view",
           "why": "Keep the existing menu behavior contract aligned with the restored entry."
+        },
+        {
+          "file": "src/renderer/src/components/activity/activity-pane-events.ts",
+          "mustContain": "args.liveState === args.entry.state",
+          "why": "Only fresh current pane status may create a current attention event."
+        },
+        {
+          "file": "src/renderer/src/components/activity/useActivityUnreadCount.ts",
+          "mustContain": "freshActivityLiveAgentState",
+          "why": "Keep the badge in step with fresh current attention events."
+        },
+        {
+          "file": "src/renderer/src/components/activity/activity-thread-presentation.ts",
+          "mustContain": "restoredUnconfirmed",
+          "why": "Avoid presenting an unconfirmed restored row as current input demand."
+        },
+        {
+          "file": "src/renderer/src/components/activity/activity-thread-actions.ts",
+          "mustContain": "shouldRevealRestoredTerminal",
+          "why": "Reveal the original terminal pane for an unbound restored chat row."
+        },
+        {
+          "file": "src/renderer/src/components/activity/activity-thread-actions.test.ts",
+          "mustContain": "reveals the original terminal pane",
+          "why": "Guard same tab and pane navigation for restored unbound rows."
+        },
+        {
+          "file": "src/renderer/src/components/activity/useActivityUnreadCount.test.ts",
+          "mustContain": "restored nonterminal attention",
+          "why": "Guard unread badge behavior without clearing historical events."
         },
         {
           "file": "src/main/ipc/register-core-handlers/register-core-handlers.ts",
@@ -409,6 +443,9 @@
         "src/renderer/src/native-chat-view-recovery/codex-chat-delivery.test.tsx",
         "src/renderer/src/components/tab-bar/SortableTabContextMenu.test.tsx",
         "src/renderer/src/native-chat-view-recovery/terminal-chat-recovery.test.ts",
+        "src/renderer/src/native-chat-view-recovery/activity-restored-attention.test.ts",
+        "src/renderer/src/components/activity/activity-thread-actions.test.ts",
+        "src/renderer/src/components/activity/useActivityUnreadCount.test.ts",
         "src/main/native-chat-view-recovery/durable-chat-submitter.test.ts",
         "src/main/native-chat-view-recovery/durable-chat-composer-input.test.ts",
         "src/shared/native-chat-view-recovery/durable-chat-reconciliation.test.ts",
@@ -417,7 +454,7 @@
         "src/main/native-chat-view-recovery/durable-chat-session-identity.test.ts"
       ],
       "checks": [
-        "pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/native-chat-view-recovery src/renderer/src/components/tab-bar/SortableTabContextMenu.test.tsx src/renderer/src/components/tab-bar/native-chat-tab-agent-evidence.test.ts src/renderer/src/native-chat-view-recovery/terminal-chat-recovery.test.ts src/renderer/src/components/terminal-pane/terminal-pane-recovery.test.ts src/renderer/src/components/terminal-pane/terminal-pane-recovery-unsettled-fallback.test.ts src/renderer/src/components/terminal-pane/terminal-pane-surface-ownership.test.ts",
+        "pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/native-chat-view-recovery src/renderer/src/components/tab-bar/SortableTabContextMenu.test.tsx src/renderer/src/components/tab-bar/native-chat-tab-agent-evidence.test.ts src/renderer/src/native-chat-view-recovery/terminal-chat-recovery.test.ts src/renderer/src/components/terminal-pane/terminal-pane-recovery.test.ts src/renderer/src/components/terminal-pane/terminal-pane-recovery-unsettled-fallback.test.ts src/renderer/src/components/terminal-pane/terminal-pane-surface-ownership.test.ts src/renderer/src/components/activity/activity-thread-actions.test.ts src/renderer/src/components/activity/useActivityUnreadCount.test.ts",
         "pnpm exec vitest run --config config/vitest.config.ts src/main/native-chat-view-recovery src/shared/native-chat-view-recovery"
       ]
     },
@@ -3475,6 +3512,9 @@
         "src/renderer/src/local-tasks/LocalTasksSyncGate.tsx",
         "src/renderer/src/components/local-tasks/LocalTaskPage.tsx",
         "src/renderer/src/components/local-tasks/LocalTaskSource.tsx",
+        "src/renderer/src/components/local-tasks/LocalTaskSourceCreateAction.tsx",
+        "src/renderer/src/local-tasks/local-task-agent-row-activation.ts",
+        "src/renderer/src/local-tasks/local-task-nav-preference.ts",
         "mobile/app/h/[hostId]/local-tasks.web.tsx",
         "mobile/src/local-tasks/MobileHomeLocalTasksCard.tsx",
         "mobile/src/local-tasks/local-task-source-option.tsx",
@@ -3926,6 +3966,16 @@
           "why": "Add reference → Local tasks puts the task in the workspace details draft (REQ-011)"
         },
         {
+          "file": "src/renderer/src/components/sidebar/WorkspaceAttachmentSearch.tsx",
+          "mustContain": "LocalTaskSourceCreateAction",
+          "why": "Workspace details can stage a new task without leaving its workspace and host (D-024)."
+        },
+        {
+          "file": "src/renderer/src/components/sidebar/WorktreeLinkedItemsField.tsx",
+          "mustContain": "LocalTaskLinkedCountLabel",
+          "why": "Pending new tasks are distinguished from saved links in workspace details (D-024)."
+        },
+        {
           "file": "src/renderer/src/components/sidebar/WorktreeLinkedItemsField.tsx",
           "mustContain": "<LocalTaskLinkedWorkRow disabled={disabled} />",
           "why": "Linked work lists and counts the workspace's task under Issues & tasks (REQ-011)"
@@ -4094,6 +4144,11 @@
           "file": "src/renderer/src/app-shell/AppWorkspaceShell.tsx",
           "mustContain": "LocalTaskSessionPanelSlot",
           "why": "Task-first navigation and session preview reuse the existing workspace/session surfaces (REQ-026, REQ-028)"
+        },
+        {
+          "file": "src/renderer/src/components/sidebar/use-worktree-agent-activation.ts",
+          "mustContain": "openLocalTaskSessionFromAgentRow",
+          "why": "Linked workspace sidebar sessions open conversation-first beside their task (D-024, REQ-028)."
         },
         {
           "file": "src/renderer/src/components/use-terminal-workspace-store-bindings.ts",
@@ -4340,6 +4395,8 @@
         "src/renderer/src/local-tasks/local-tasks-runtime-client.test.ts",
         "src/renderer/src/local-tasks/local-tasks-sync-gate.test.tsx",
         "src/renderer/src/local-tasks/local-task-session-reveal.test.ts",
+        "src/renderer/src/local-tasks/local-task-agent-row-activation.test.ts",
+        "src/renderer/src/local-tasks/local-task-nav-preference.test.ts",
         "src/renderer/src/components/local-tasks/LocalTaskReplyBox.test.tsx",
         "mobile/src/local-tasks/use-local-task-endpoints.test.tsx",
         "mobile/src/local-tasks/local-task-reply-send.test.ts",

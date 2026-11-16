@@ -112,6 +112,22 @@ describe('countActivityUnread source overlap', () => {
   })
 })
 
+describe('restored nonterminal attention', () => {
+  it.each(['waiting', 'blocked'] as const)(
+    'does not count an unconfirmed %s as a new current reminder while retaining earlier history',
+    (state) => {
+      const entry = makeEntry({
+        state,
+        restoredUnconfirmed: true,
+        stateStartedAt: 2_000,
+        stateHistory: [{ state: 'waiting', prompt: 'Earlier request', startedAt: 1_000 }]
+      })
+      expect(countActivityUnread(makeSource(entry), 2_000)).toBe(1)
+      expect(countActivityUnread(makeSource(entry, 1_500), 2_000)).toBe(0)
+    }
+  )
+})
+
 describe('countActivityUnread working turns', () => {
   it('counts fresh working, but not monitoring, historical, or retained working', () => {
     const entry = makeEntry({

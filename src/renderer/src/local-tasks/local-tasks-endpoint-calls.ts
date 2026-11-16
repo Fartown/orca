@@ -63,19 +63,15 @@ export function localTaskFailureEndpoint(failure: LocalTaskFailure): LocalTaskEn
   return failureEndpoints.get(failure) ?? null
 }
 
-/** Every write gets a fresh operation id, so a replayed request returns the first result. */
+/** Each write gets an operation id; callers retrying one operation may reuse its id. */
 export async function writeLocalTasks<TSchema extends z.ZodType>(
   endpoint: LocalTaskEndpointKey,
   method: string,
   params: Record<string, unknown>,
-  schema: TSchema
+  schema: TSchema,
+  clientOperationId = createBrowserUuid()
 ): Promise<z.infer<TSchema>> {
-  const result = await callLocalTasks(
-    endpoint,
-    method,
-    { ...params, clientOperationId: createBrowserUuid() },
-    schema
-  )
+  const result = await callLocalTasks(endpoint, method, { ...params, clientOperationId }, schema)
   if (typeof result === 'object' && result !== null && 'ok' in result && result.ok === false) {
     failureEndpoints.set(result, endpoint)
   }

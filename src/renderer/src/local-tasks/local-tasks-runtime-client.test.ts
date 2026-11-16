@@ -13,6 +13,7 @@ vi.mock('../runtime/runtime-rpc-client', () => ({ callRuntimeRpc: host.call }))
 vi.mock('@/store', () => ({ useAppStore: { getState: () => ({ repos: host.repos }) } }))
 
 import { toWebTerminalSurfaceTabId } from '../../../shared/terminal-surface-id'
+import { createBrowserUuid } from '@/lib/browser-uuid'
 import type { LocalTask } from '../../../shared/local-tasks/local-task-types'
 import { localTasksEndpointReads } from './local-tasks-endpoint-calls'
 import { localTasksClient } from './local-tasks-runtime-client'
@@ -21,6 +22,18 @@ import { updateLocalTaskFields } from './local-task-writes'
 
 const SERVER = { kind: 'environment', environmentId: 'env-1' }
 const LEAF = '11111111-1111-4111-8111-111111111111'
+
+function clientOperationIdFrom(params: unknown): string {
+  if (
+    typeof params !== 'object' ||
+    params === null ||
+    !('clientOperationId' in params) ||
+    typeof params.clientOperationId !== 'string'
+  ) {
+    throw new Error('Missing client operation ID')
+  }
+  return params.clientOperationId
+}
 
 function rawTask(id: string): LocalTask {
   return {
@@ -52,6 +65,39 @@ beforeEach(() => {
 })
 
 describe('writes go to the library that owns the row (D-008)', () => {
+  it('replays a create with the caller’s operation ID at the owning server after a lost response', async () => {
+    const clientOperationId = createBrowserUuid()
+    const receipts = new Map<string, LocalTask>()
+    host.call.mockImplementation(async (_target, method, params) => {
+      if (method !== 'localTasks.tasks.create') {
+        throw new Error(`Unexpected method: ${method}`)
+      }
+      const operationId = clientOperationIdFrom(params)
+      const prior = receipts.get(operationId)
+      if (prior) {
+        return { ok: true, task: prior }
+      }
+      const created = rawTask('created-on-server')
+      receipts.set(operationId, created)
+      throw new Error('Response lost after server commit')
+    })
+    const input = { projectId: 'runtime:env-1/p1', title: 'On the server' }
+    await expect(localTasksClient.createTask(input, { clientOperationId })).rejects.toThrow(
+      'Response lost'
+    )
+    const result = await localTasksClient.createTask(input, { clientOperationId })
+    expect(result).toMatchObject({ ok: true, task: { id: 'runtime:env-1/created-on-server' } })
+    expect(receipts.size).toBe(1)
+    expect(host.call.mock.calls.map(([, , params]) => clientOperationIdFrom(params))).toEqual([
+      clientOperationId,
+      clientOperationId
+    ])
+    expect(sentTo()).toMatchObject({
+      target: SERVER,
+      method: 'localTasks.tasks.create',
+      params: { projectId: 'p1' }
+    })
+  })
   it('sends a paired server’s task in the server’s own ids and returns this client’s ids', async () => {
     host.call.mockResolvedValue({ ok: true, task: rawTask('t1') })
     const result = await localTasksClient.updateTask({

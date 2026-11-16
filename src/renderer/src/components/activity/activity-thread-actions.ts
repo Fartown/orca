@@ -14,6 +14,7 @@ import { parsePaneKey } from '../../../../shared/stable-pane-id'
 import { findKnownWorktreeById } from '@/store/slices/worktrees/listing/detected-worktree-meta'
 import type { AppState } from '@/store/types'
 import type { AgentPaneThread } from './activity-thread-types'
+import { shouldRevealRestoredTerminal } from '@/native-chat-view-recovery/restored-terminal-activity-target'
 
 // Use the scope filter’s focused-host fallback; local would misroute hostless runtime-owned workspaces.
 function getActivityThreadExecutionHostId(
@@ -110,13 +111,17 @@ export function createActivityThreadActions({
     // Read post-activation: the tab this thread points at may have only just been revived.
     const activated = useAppStore.getState()
     const liveTabs = activated.tabsByWorktree[thread.worktree.id] ?? []
-    if (!liveTabs.some((tab) => tab.id === thread.tab.id)) {
+    const liveTab = liveTabs.find((tab) => tab.id === thread.tab.id)
+    if (!liveTab) {
       // Retained threads may outlive their tab; keep the workspace activated without focusing an unrelated sibling.
       return
     }
     // Floating tabs have no catalog workspace; reveal their panel without changing the main workspace.
     if (isFloatingTerminal) {
       revealFloatingWorkspacePanel(activated)
+    }
+    if (shouldRevealRestoredTerminal(liveTab, thread.paneKey, thread.paneEntry, activated)) {
+      activated.setTabViewMode(liveTab.id, 'terminal')
     }
     activated.setActiveTabType('terminal', thread.worktree.id)
     const parsed = parsePaneKey(thread.paneKey)

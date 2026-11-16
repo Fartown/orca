@@ -24089,7 +24089,7 @@
       "relink": "Link to another task…",
       "back": "Back",
       "backToPanel": "Back to side",
-      "backToPanelHint": "Back to the overview, with this session in the wide panel on the right"
+      "backToPanelHint": "Back to the overview, with this session in the wide panel on the left"
     },
     "taskSummary": {
       "status": "Status",
@@ -24351,6 +24351,8 @@
     },
     "nav": {
       "label": "Task views",
+      "show": "Show task navigation",
+      "hide": "Hide task navigation",
       "projects": "Projects",
       "manageProjects": "Manage projects and statuses",
       "allProjects": "All projects"
@@ -24601,6 +24603,15 @@
     },
     "sourceTab": {
       "label": "Local",
+      "newTask": "New local task",
+      "createOnSave": "The task and workspace link are saved when you save workspace details.",
+      "stageTask": "Use this task",
+      "editNewTask": "New task draft: {{title}}",
+      "createdLinkPending": "Task created; workspace link pending. Save again to retry.",
+      "pendingCreateLink": "Save workspace details to create and link this task.",
+      "removeTaskDraft": "Remove new task draft",
+      "pendingCount": "{{linked}} linked · {{pending}} pending",
+      "creationRetryPending": "Creation outcome is unknown. Save again to retry this draft.",
       "placeholder": "Search local tasks by title or ref",
       "unavailable": "The task library is not available now.",
       "offline": "{{host}} is not connected, so tasks can’t be linked now. The tasks below are as last read.",

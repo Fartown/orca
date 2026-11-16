@@ -19,6 +19,7 @@ import {
 
 import {
   LocalTaskLinkedWorkRow,
+  LocalTaskLinkedCountLabel,
   useLocalTaskLinkedWorkCount
 } from '@/components/local-tasks/LocalTaskLinkedWorkRow'
 
@@ -125,10 +126,7 @@ export function WorktreeLinkedItemsField({
       <div className="flex items-center justify-between gap-2">
         <Label>{translate('workspace.links.title', 'Linked work')}</Label>
         <span className="text-xs text-muted-foreground">
-          {translate('workspace.links.linkedCount', '{{count}} linked', {
-            count,
-            defaultValue_one: '{{count}} linked'
-          })}
+          <LocalTaskLinkedCountLabel count={count} />
         </span>
       </div>
       <WorkspaceAttachmentComposer

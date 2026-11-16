@@ -1,5 +1,6 @@
 import { createContext, useContext } from 'react'
 import type { LocalTask } from '../../../shared/local-tasks/local-task-types'
+import type { LocalTasksTasksCreateInput } from '../../../shared/local-tasks/local-tasks-rpc-params'
 import { localTaskEndpointForHost } from './local-task-endpoints'
 import type { LocalTaskSourceScope } from './local-task-source-rows'
 import { selectLocalTaskSourceVisible } from './local-task-source-visibility'
@@ -26,6 +27,10 @@ export type LocalTaskSourceTab = LocalTaskSourceScope & {
   draft?: {
     linkedTaskId: string | null
     remove: () => void
+    newTask: Omit<LocalTasksTasksCreateInput, 'clientOperationId'> | null
+    createdTaskId: string | null
+    createAttempted: boolean
+    stageCreate: (input: Omit<LocalTasksTasksCreateInput, 'clientOperationId'>) => void
     /** Writes the draft once the rest of the details saved; the failure to show, or null. */
     commit: () => Promise<string | null>
   }

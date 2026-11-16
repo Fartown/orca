@@ -5,7 +5,7 @@ status: testing
 created: 2026-10-23
 updated: 2026-11-16
 issue: 终端聊天视图恢复
-external_ids: [Fartown/orca#112, Fartown/orca#119, Fartown/orca#121]
+external_ids: [Fartown/orca#112, Fartown/orca#119, Fartown/orca#118, Fartown/orca#121]
 ---
 
 # 终端聊天视图恢复
@@ -21,10 +21,11 @@ external_ids: [Fartown/orca#112, Fartown/orca#119, Fartown/orca#121]
 | 测试执行 | [本机与SSH验收](tests/runs/2026-10-23-本机与SSH验收.md) | completed    | 双向菜单、进程及 transcript 保留；正式发布待完成 |
 
 - 本轮测试：[持续绑定恢复验收](tests/runs/2026-11-15-持续绑定恢复验收.md)，completed；覆盖 REQ-1804。
+- #118 测试：[恢复提醒与内容验收](tests/runs/2026-11-16-恢复提醒与内容验收.md)，completed；覆盖 REQ-1806，本机、全局浮动及真实 SSH 的受控恢复点击通过。
 
 ## 2. 决策点记录
 
-- 2026-11-16：[持久提交闭环需求](requirements/持久提交闭环.md)、[现状调研](research/持久提交现状.md)、[方案](solutions/持久提交闭环.md)、[用例](tests/cases/持久提交闭环.md)。REQ-1806～1809 扩展同一终端聊天功能；前次写入结算不等于 provider 消费，不能当作根治证据。
+- 2026-11-16：[持久提交闭环需求](requirements/持久提交闭环.md)、[现状调研](research/持久提交现状.md)、[方案](solutions/持久提交闭环.md)、[用例](tests/cases/持久提交闭环.md)。REQ-1807～1810 扩展同一终端聊天功能；前次写入结算不等于 provider 消费，不能当作根治证据。
 
 - 2026-10-23：根因是标签右键菜单用 isChatView 隐藏了终端到聊天的方向；终端面板右键和快捷键已支持。恢复同一标签的现有切换，不把它替换为创建新会话或恢复 provider。
 - 界面展示由客户端持有，终端和 transcript 继续由本地或 SSH 执行主机持有；不新增协议、主机连接或配置。
@@ -84,3 +85,12 @@ external_ids: [Fartown/orca#112, Fartown/orca#119, Fartown/orca#121]
 - 验证证据：首批持久存储与对账 12 项测试通过；完整类型检查通过。故障集成、真实 Codex、本地与 SSH App、完整门禁待执行，不能提前认定完成。
 - 未解决问题：真实 TUI 清理/图片与新 host 边界仍需实测；旧能力与 legacy relay 只支持保留输入的诚实拒绝，不迁移用户终端。
 - 下一步：补齐故障/真实应用验收，完成所有门禁和 CI，关联 Issue 合入。
+
+### 2026-11-16 恢复行内容与提醒一致性（testing）
+
+- 本轮目标：修复 Issue #118 中恢复未确认的 Activity 提醒及空聊天入口，并保持原终端与历史事件。
+- 完成内容：核对 MBP5 preview84 元数据，确认聊天展示偏好、恢复未确认 waiting 行、缺失 provider 绑定及原 PTY 身份；先写 waiting/blocked 事件、未读和同 tab/pane 点击红测，再复用 fresh live state 与现有 setTabViewMode 切回原终端。旧历史和已读标记未清除。
+- 代码或文档变更：本功能登记 Activity 的最小接缝、必需文件与测试；新增 REQ-1806、TC-1813～1815；实现恢复未确认行的当前提醒过滤与原终端展示判定，不新建会话或改通知派发。
+- 验证证据：旧逻辑定向 3 文件 32 项为 27 通过、5 失败，分别指向 waiting/blocked 当前事件及未读和无绑定点击；补齐目标 split leaf 回归后，最终同 3 文件 35/35、合入基线 #120 后联合功能登记 10 文件 122/122 通过。隔离隐藏 Electron 实例使用真实 PTY 的 1 项受控场景通过：恢复未确认 waiting 无当前行、徽标 0，旧 done 历史行仍可选；点击后保持同 tab、leaf、PTY，原终端 marker 仍在；新鲜绑定的 waiting 元数据对照有当前行、徽标 1。原始结果见 `.docs/attention-content-ui-validation/2026-11-16/evidence/{red/targeted-red.log,controlled/restored-chat-controlled.json,controlled/controlled-final2.log}`，截图见同目录 `controlled/restored-chat-activity-history.png`、`controlled/restored-chat-returned-terminal.png`、`controlled/fresh-bound-waiting-contrast.png`。MBP5 只读元数据见另一工作区 `.docs/local-tasks-session-wide-ui-validation/2026-11-16/evidence/mbp5/`。
+- 未解决问题：MBP5 原 PTY 历史仅 68 字节、1 行，无可核实会话 ID 或 prompt 模式，不能推断旧 provider；对照的 providerSession 是受控元数据，不是真实 provider。隐藏实例已在 fdfe5c51 基线上复验普通及全局浮动真实 PTY 的展示路径；SSH 真实 hook 发布 waiting/provider 身份，单次受控客户端恢复后，点击前 guard 确认仍恢复未确认、无绑定且含旧历史；真实标题点击返回同 tab/leaf/canonical PTY 并保留 marker（r10 1/1），未证明用户历史故障 producer 或每条系统通知的来源。失联仍是 unverifiable，不推断 exited。
+- 下一步：完成最终门禁与交付；TC-1815 已完成真实 SSH 与远端镜像的受控点击验证；最后 check:changed 后按授权提交、CI 全绿合入。终端、transcript 与会话证据归执行主机，客户端只切视图，本轮不新增 RPC、端口、环境变量、服务或重试。
