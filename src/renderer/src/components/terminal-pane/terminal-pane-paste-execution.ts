@@ -8,8 +8,7 @@ import {
 } from './terminal-paste-runtime'
 import { captureTerminalPasteOwnership } from '@/terminal-paste-ownership/terminal-paste-ownership'
 import { formatTerminalPasteOwnershipFailure } from '@/terminal-paste-ownership/terminal-paste-failure'
-import { clearRecoveredTerminalPasteErrors } from '@/terminal-paste-ownership/terminal-paste-feedback'
-import { appendPaneTerminalError } from './terminal-error-accumulation'
+import { createTerminalPasteFeedback } from '@/terminal-paste-ownership/terminal-paste-feedback'
 import { pasteTextIntoTerminalPane } from './terminal-pane-paste-dispatch'
 import { formatTerminalPasteExecutionError } from './terminal-paste-errors'
 import { recordTerminalUserInputForLeaf } from './terminal-input-activity'
@@ -39,8 +38,9 @@ export function createTerminalPanePasteExecution(
     tabId,
     worktreeId
   } = controller
-  const capturePanePasteOwnership = (pane: ManagedPane, source: TerminalPasteSource) =>
-    captureTerminalPasteOwnership({
+  const beginPasteFeedback = createTerminalPasteFeedback(setTerminalErrorsByPaneId)
+  const capturePanePasteOwnership = (pane: ManagedPane, source: TerminalPasteSource) => ({
+    ...captureTerminalPasteOwnership({
       paneContainer: pane.container,
       requireFocus: source === 'keyboard' || source === 'paste-event' || source === 'app-menu',
       readTargetState: () => {
@@ -54,10 +54,9 @@ export function createTerminalPanePasteExecution(
           ptyId: transport?.getPtyId() ?? null
         }
       }
-    })
-  const reportPasteError = (pane: ManagedPane, message: string): void => {
-    setTerminalErrorsByPaneId((current) => appendPaneTerminalError(current, pane.id, message))
-  }
+    }),
+    feedback: beginPasteFeedback(pane.id)
+  })
 
   const executePanePasteText = async (
     pane: ManagedPane,
@@ -85,15 +84,14 @@ export function createTerminalPanePasteExecution(
       planOptions: options
     })
     if (execution.status !== 'pasted') {
-      reportPasteError(
-        pane,
+      ownership.feedback.fail(
         execution.reason === 'stale-target'
           ? formatTerminalPasteOwnershipFailure(ownership.getFailure())
           : formatTerminalPasteExecutionError(execution.reason)
       )
       return false
     }
-    setTerminalErrorsByPaneId((current) => clearRecoveredTerminalPasteErrors(current, pane.id))
+    ownership.feedback.succeed()
     if (text) {
       recordTerminalUserInputForLeaf(tabId, pane.leafId)
     }
@@ -148,13 +146,12 @@ export function createTerminalPanePasteExecution(
       protectedMultilineTextPasteOptions: resolvePaneProtectedMultilinePasteOptions(pane),
       pasteText: (text, options) => executePanePasteText(pane, source, ownership, text, options),
       onTextPasteError: () =>
-        reportPasteError(
-          pane,
+        ownership.feedback.fail(
           'Paste failed: clipboard text is too large for a safe terminal paste.'
         ),
-      onImagePasteError: (error) => reportPasteError(pane, formatClipboardImagePasteError(error))
+      onImagePasteError: (error) => ownership.feedback.fail(formatClipboardImagePasteError(error))
     }).catch(() => {
-      reportPasteError(pane, 'Paste failed.')
+      ownership.feedback.fail('Paste failed.')
     })
   }
 

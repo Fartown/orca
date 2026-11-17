@@ -1,4 +1,5 @@
 import {
+  appendPaneTerminalError,
   clearPaneTerminalError,
   type TerminalErrorsByPaneId
 } from '@/components/terminal-pane/terminal-error-accumulation'
@@ -31,4 +32,31 @@ export function clearRecoveredTerminalPasteErrors(
     }
   }
   return next
+}
+
+type TerminalPasteErrorSink = (
+  update: (current: TerminalErrorsByPaneId) => TerminalErrorsByPaneId
+) => void
+
+const operationsByErrorSink = new WeakMap<TerminalPasteErrorSink, Map<number, object>>()
+
+export function createTerminalPasteFeedback(setErrors: TerminalPasteErrorSink) {
+  const latestOperations = operationsByErrorSink.get(setErrors) ?? new Map<number, object>()
+  operationsByErrorSink.set(setErrors, latestOperations)
+  return (paneId: number) => {
+    const operation = {}
+    latestOperations.set(paneId, operation)
+    return {
+      fail: (message: string): void => {
+        if (latestOperations.get(paneId) === operation) {
+          setErrors((current) => appendPaneTerminalError(current, paneId, message))
+        }
+      },
+      succeed: (): void => {
+        if (latestOperations.get(paneId) === operation) {
+          setErrors((current) => clearRecoveredTerminalPasteErrors(current, paneId))
+        }
+      }
+    }
+  }
 }
