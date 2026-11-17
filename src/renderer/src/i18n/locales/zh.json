@@ -1,4 +1,9 @@
 {
+  "terminalPasteOwnership": {
+    "focusChanged": "粘贴已取消：输入焦点与目标终端不一致。",
+    "disconnected": "粘贴已取消：完成前终端连接已断开。",
+    "targetChanged": "粘贴已取消：完成前目标终端已变化。"
+  },
   "agentLaunch": {
     "opencode": {
       "updateRequired": "此版本的 OpenCode 无法使用所选模型安全启动。请将 OpenCode 更新到受支持的版本，或不指定模型。",

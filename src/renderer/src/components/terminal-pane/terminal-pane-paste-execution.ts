@@ -1,16 +1,15 @@
 import { useAppStore } from '../../store'
 import type { ManagedPane } from '@/lib/pane-manager/pane-manager'
-import type { PtyTransport } from './pty-transport-types'
 import { getConnectionId } from '@/lib/connection-context'
 import type { TerminalPasteSource, TerminalPasteTextOptions } from './terminal-paste-model'
 import {
   resolveTerminalPasteRuntime,
   resolveTerminalPasteRuntimeEnvironmentId
 } from './terminal-paste-runtime'
-import {
-  isTerminalPanePasteFocusCurrent,
-  isTerminalPanePasteTargetCurrent
-} from './terminal-paste-target-state'
+import { captureTerminalPasteOwnership } from '@/terminal-paste-ownership/terminal-paste-ownership'
+import { formatTerminalPasteOwnershipFailure } from '@/terminal-paste-ownership/terminal-paste-failure'
+import { clearRecoveredTerminalPasteErrors } from '@/terminal-paste-ownership/terminal-paste-feedback'
+import { appendPaneTerminalError } from './terminal-error-accumulation'
 import { pasteTextIntoTerminalPane } from './terminal-pane-paste-dispatch'
 import { formatTerminalPasteExecutionError } from './terminal-paste-errors'
 import { recordTerminalUserInputForLeaf } from './terminal-input-activity'
@@ -36,35 +35,38 @@ export function createTerminalPanePasteExecution(
     forceBracketedMultilineTextPaste,
     managerRef,
     paneTransportsRef,
-    setTerminalError,
+    setTerminalErrorsByPaneId,
     tabId,
     worktreeId
   } = controller
-  const isPanePasteTargetMounted = (
-    pane: ManagedPane,
-    transport: PtyTransport | undefined,
-    ptyId: string | null
-  ): boolean =>
-    isTerminalPanePasteTargetCurrent({
-      manager: managerRef.current,
-      paneTransports: paneTransportsRef.current,
-      paneId: pane.id,
-      leafId: pane.leafId,
-      transport,
-      ptyId
+  const capturePanePasteOwnership = (pane: ManagedPane, source: TerminalPasteSource) =>
+    captureTerminalPasteOwnership({
+      paneContainer: pane.container,
+      requireFocus: source === 'keyboard' || source === 'paste-event' || source === 'app-menu',
+      readTargetState: () => {
+        const transport = paneTransportsRef.current.get(pane.id)
+        return {
+          manager: managerRef.current,
+          paneTransports: paneTransportsRef.current,
+          paneId: pane.id,
+          leafId: pane.leafId,
+          transport,
+          ptyId: transport?.getPtyId() ?? null
+        }
+      }
     })
+  const reportPasteError = (pane: ManagedPane, message: string): void => {
+    setTerminalErrorsByPaneId((current) => appendPaneTerminalError(current, pane.id, message))
+  }
 
   const executePanePasteText = async (
     pane: ManagedPane,
     source: TerminalPasteSource,
-    activeElementAtDispatch: Element | null,
+    ownership: ReturnType<typeof capturePanePasteOwnership>,
     text: string,
     options?: TerminalPasteTextOptions
-  ): Promise<void> => {
-    const transport = paneTransportsRef.current.get(pane.id)
-    const ptyId = transport?.getPtyId() ?? null
-    const keyboardOwnedPaste =
-      source === 'keyboard' || source === 'paste-event' || source === 'app-menu'
+  ): Promise<boolean> => {
+    const { transport, ptyId } = ownership
     const execution = await pasteTextIntoTerminalPane({
       pane,
       text,
@@ -78,29 +80,27 @@ export function createTerminalPanePasteExecution(
       }),
       transport,
       inputKind: 'driving',
-      isTargetCurrent: () => {
-        if (!isPanePasteTargetMounted(pane, transport, ptyId)) {
-          return false
-        }
-        return isTerminalPanePasteFocusCurrent({
-          requireSameFocusedElement: keyboardOwnedPaste,
-          activeElementAtDispatch,
-          paneContainer: pane.container
-        })
-      },
-      canContinue: () => isPanePasteTargetMounted(pane, transport, ptyId),
+      isTargetCurrent: ownership.isTargetCurrent,
+      canContinue: ownership.canContinue,
       planOptions: options
     })
     if (execution.status !== 'pasted') {
-      setTerminalError(formatTerminalPasteExecutionError(execution.reason))
-      return
+      reportPasteError(
+        pane,
+        execution.reason === 'stale-target'
+          ? formatTerminalPasteOwnershipFailure(ownership.getFailure())
+          : formatTerminalPasteExecutionError(execution.reason)
+      )
+      return false
     }
+    setTerminalErrorsByPaneId((current) => clearRecoveredTerminalPasteErrors(current, pane.id))
     if (text) {
       recordTerminalUserInputForLeaf(tabId, pane.leafId)
     }
     if (options?.recoverImagePasteWebglAtlas) {
       scheduleImagePasteWebglAtlasRecovery()
     }
+    return true
   }
 
   // Resolve per pane/PTY host: Windows Codex needs input-record newlines even beside other protocols.
@@ -129,7 +129,7 @@ export function createTerminalPanePasteExecution(
 
   const pasteFromClipboard = (
     pane: ManagedPane,
-    source: Extract<TerminalPasteSource, 'keyboard' | 'paste-event'>,
+    source: Extract<TerminalPasteSource, 'keyboard' | 'paste-event' | 'app-menu'>,
     readClipboardText: (options?: ReadClipboardTextOptions) => Promise<string> = window.api.ui
       .readClipboardText
   ): void => {
@@ -139,20 +139,22 @@ export function createTerminalPanePasteExecution(
       worktreeId,
       paneTransportsRef.current.get(pane.id)
     )
-    const activeElementAtDispatch = document.activeElement
+    const ownership = capturePanePasteOwnership(pane, source)
     void pasteTerminalClipboard({
       readClipboardText,
       saveClipboardImageAsTempFile: window.api.ui.saveClipboardImageAsTempFile,
       connectionId,
       runtimeEnvironmentId,
       protectedMultilineTextPasteOptions: resolvePaneProtectedMultilinePasteOptions(pane),
-      pasteText: (text, options) =>
-        executePanePasteText(pane, source, activeElementAtDispatch, text, options),
+      pasteText: (text, options) => executePanePasteText(pane, source, ownership, text, options),
       onTextPasteError: () =>
-        setTerminalError('Paste failed: clipboard text is too large for a safe terminal paste.'),
-      onImagePasteError: (error) => setTerminalError(formatClipboardImagePasteError(error))
+        reportPasteError(
+          pane,
+          'Paste failed: clipboard text is too large for a safe terminal paste.'
+        ),
+      onImagePasteError: (error) => reportPasteError(pane, formatClipboardImagePasteError(error))
     }).catch(() => {
-      setTerminalError('Paste failed.')
+      reportPasteError(pane, 'Paste failed.')
     })
   }
 

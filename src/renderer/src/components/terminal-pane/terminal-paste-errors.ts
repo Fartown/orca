@@ -1,4 +1,5 @@
 import type { TerminalPasteExecutionReason } from './terminal-paste-model'
+import { formatTerminalPasteOwnershipFailure } from '@/terminal-paste-ownership/terminal-paste-failure'
 
 export function formatTerminalPasteExecutionError(
   reason: TerminalPasteExecutionReason | undefined
@@ -7,7 +8,7 @@ export function formatTerminalPasteExecutionError(
     return 'Paste failed: clipboard text is too large for a safe terminal paste.'
   }
   if (reason === 'stale-target') {
-    return 'Paste cancelled: terminal focus changed before paste started.'
+    return formatTerminalPasteOwnershipFailure('target-changed')
   }
   if (reason === 'target-disconnected') {
     return 'Paste cancelled: terminal disconnected before paste completed.'
