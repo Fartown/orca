@@ -24,7 +24,6 @@ import {
 } from './workspace-cleanup-host-identity'
 import { getWorktreeVisitTimestamp } from '@/lib/worktree-visit-recency'
 import { getWorkspaceCleanupGitChipLabel } from './workspace-cleanup-candidate-labels'
-import { localTaskCleanupTicketSources } from '@/local-tasks/local-task-cleanup-ticket-source'
 export type { WorkspaceCleanupWorktreeFacts } from './workspace-cleanup-host-identity'
 
 export type WorkspaceCleanupFacetSources = {
@@ -106,13 +105,7 @@ export function buildWorkspaceCleanupFacets(
     sources.reviewInfoByWorktreeId?.get(hostIdentity) ??
     sources.reviewInfoByWorktreeId?.get(candidate.worktreeId) ??
     EMPTY_REVIEW_INFO
-  const ticketSources = [
-    ...getTicketSources(worktree),
-    ...localTaskCleanupTicketSources({
-      id: candidate.worktreeId,
-      hostId: worktree?.hostId ?? getWorkspaceCleanupCandidateHostId(candidate)
-    })
-  ]
+  const ticketSources = getTicketSources(worktree)
   const localContextCount = getLocalContextCount(candidate)
   const hasComment = (worktree?.comment ?? '').trim().length > 0
   const branch = getBranchDisplayName(worktree?.branch ?? candidate.branch)

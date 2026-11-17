@@ -20,6 +20,7 @@ import { getMobileTerminalTabHostAgentIdentity } from './mobile-terminal-tab-age
 import { mobileSessionTabCardContent } from './mobile-session-tab-card-content'
 import { MobileSessionTabCardFooter } from './MobileSessionTabCardFooter'
 import { useShellSideRail } from '../layout/use-shell-side-rail'
+import { LocalTaskSessionCardMount } from '../local-tasks/local-task-session-card-slot'
 
 export function MobileSessionSurface({ controller }: { controller: MobileSessionController }) {
   useMobileColorScheme()
@@ -71,8 +72,20 @@ export function MobileSessionSurface({ controller }: { controller: MobileSession
     [tab, hostAgentIdentity, now, t]
   )
   const footer = useMemo(
-    () => (tabContent ? <MobileSessionTabCardFooter content={tabContent} /> : null),
-    [tabContent]
+    () =>
+      tabContent ? (
+        <LocalTaskSessionCardMount
+          controller={{
+            hostId: controller.hostId,
+            worktreeId: controller.worktreeId,
+            activeSessionTab: tab
+          }}
+          onOpenTask={details.dismiss}
+        >
+          <MobileSessionTabCardFooter content={tabContent} />
+        </LocalTaskSessionCardMount>
+      ) : null,
+    [tabContent, details.dismiss, tab, controller.hostId, controller.worktreeId]
   )
   const contentRow = useMemo(
     () => <MobileSessionContentRow controller={controller} />,

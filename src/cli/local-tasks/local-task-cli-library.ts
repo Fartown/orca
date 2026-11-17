@@ -193,7 +193,11 @@ const REFUSAL_MESSAGES: Record<string, string> = {
 // Why by detail: the dispatcher refusal reuses not_found so older hosts need no new code.
 const REFUSAL_DETAIL_MESSAGES: Record<string, string> = {
   dispatcher:
-    'Orca does not know this pane as the dispatcher. Run this inside the dispatcher session that Orca started.'
+    'Orca does not know this pane as the dispatcher. Run this inside the dispatcher session that Orca started.',
+  cursor:
+    'That cursor no longer matches the inbox: an item it covered was deleted, or Orca did not hand it out. Run orca task inbox again and ack the cursor it prints.',
+  watch:
+    'You do not follow that task. A task on another host can be named by the ref your inbox reported for it.'
 }
 /** Why an agent's status change was refused, written so the agent knows what to do next. */
 export const COMPLETED_FROM_CLI_MESSAGE =

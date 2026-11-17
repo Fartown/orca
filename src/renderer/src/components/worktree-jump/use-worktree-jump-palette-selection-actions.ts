@@ -1,6 +1,5 @@
 import { skipPaletteExitAnimation } from './worktree-jump-palette-exit-animation'
 import { useWorktreeJumpPaletteTaskSelection } from './use-worktree-jump-palette-task-selection'
-import { useLocalTaskPaletteSelection } from '@/local-tasks/local-task-palette-selection'
 import type { WorktreeJumpPaletteTaskSearch } from './use-worktree-jump-palette-task-search'
 import { useCallback } from 'react'
 import { toast } from 'sonner'
@@ -25,6 +24,8 @@ import type { WorktreeJumpPaletteLocalState } from './use-worktree-jump-palette-
 import type { WorktreeJumpPaletteQuickActions } from './use-worktree-jump-palette-quick-actions'
 import type { WorktreeJumpPaletteSelectionLifecycle } from './use-worktree-jump-palette-selection-lifecycle'
 import type { WorktreeJumpPaletteStoreState } from './use-worktree-jump-palette-store-state'
+
+import { useLocalTaskPaletteSelection } from '@/local-tasks/local-task-palette-selection'
 
 function getSettingsTargetFromSectionId(sectionId: string): {
   pane: SettingsNavTarget

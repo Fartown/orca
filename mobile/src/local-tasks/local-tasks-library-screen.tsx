@@ -130,7 +130,7 @@ export function LocalTasksLibraryScreen(props: Props) {
     })
   // Q2: a chat session is answered in the drawer; a terminal one opens its own page.
   const previewSession = (taskSessionId: string) => {
-    if (localTaskChatPreviewTarget(library, taskSessionId)) {
+    if (localTaskChatPreviewTarget(library, site.endpoint, taskSessionId)) {
       setNotice(null)
       setPreviewSessionId(taskSessionId)
     } else {
@@ -147,6 +147,8 @@ export function LocalTasksLibraryScreen(props: Props) {
   if (top?.kind === 'detail') {
     return (
       <LocalTaskDetailView
+        // Why keyed: drafts, comment edits and write ids belong to one task, not to the next one opened.
+        key={top.taskId}
         library={library}
         api={props.api}
         taskId={top.taskId}

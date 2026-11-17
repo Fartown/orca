@@ -32,11 +32,6 @@ import {
   type LocalTaskSessionTarget
 } from './local-task-session-recording'
 import { localTasksDomainStore } from './local-tasks-domain-store'
-import {
-  forgetLocalTaskStartedWorkspace,
-  rememberLocalTaskStartedWorkspace,
-  settleLocalTaskStartedWorkspaces
-} from './local-task-started-workspaces'
 
 /** What a creation started for a task links once it completes; also the composer's task pick. */
 export type LocalTaskComposerStart = {
@@ -265,37 +260,19 @@ export function handleLocalTaskCreationCompleted(completed: WorktreeCreationComp
     return
   }
   const hostId = createdWorkspaceHostId(completed)
-  const workspace = { id: completed.worktreeId, hostId }
-  // Why before the link is written: the sidebar drops the pending row as soon as this returns.
-  rememberLocalTaskStartedWorkspace({ worktreeId: workspace.id, hostId, taskId: start.taskId })
+  // Why swallow: the link write reports its own failure; an unlinked workspace just stays unlinked.
   void linkCreatedWorkspace(start, completed, hostId).then(
     (linked) => {
-      if (!linked) {
-        forgetLocalTaskStartedWorkspace(workspace)
-      } else {
+      if (linked) {
         openLocalTaskPage({ taskId: start.taskId })
       }
     },
-    () => forgetLocalTaskStartedWorkspace(workspace)
+    () => {}
   )
 }
 
 export function bindLocalTaskStartWork(): () => void {
-  const unsubscribeCreations = subscribeWorktreeCreationCompleted(handleLocalTaskCreationCompleted)
-  const unsubscribeLinks = localTasksDomainStore.subscribe((state, previous) => {
-    if (state.links !== previous.links) {
-      settleLocalTaskStartedWorkspaces(state.links)
-    }
-  })
-  return () => {
-    unsubscribeCreations()
-    unsubscribeLinks()
-  }
-}
-
-/** The task a creation still in flight was started for, so the sidebar can group its row. */
-export function localTaskIdForCreation(creationId: string): string | null {
-  return pendingStarts.get(creationId)?.taskId ?? null
+  return subscribeWorktreeCreationCompleted(handleLocalTaskCreationCompleted)
 }
 
 export function resetLocalTaskStartWorkForTests(): void {

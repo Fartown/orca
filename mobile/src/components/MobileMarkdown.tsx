@@ -28,6 +28,8 @@ type Props = {
   growing?: boolean
   /** The surface under the text: `userMessage` inside your own message's bubble. */
   tone?: keyof typeof MARKDOWN_TONES
+  /** Keeps text blocks on one line rhythm for short, height-clipped previews. */
+  density?: 'tight'
 }
 
 function MobileMarkdownContent({
@@ -39,7 +41,8 @@ function MobileMarkdownContent({
   renderVisual,
   renderImage,
   growing = false,
-  tone: toneName = 'default'
+  tone: toneName = 'default',
+  density
 }: Props) {
   useMobileColorScheme()
   // Interactive children own their touches and must forward the row action.
@@ -54,15 +57,27 @@ function MobileMarkdownContent({
     ) : null
   }
   const tone = MARKDOWN_TONES[toneName]
+  const tightLineHeight =
+    density === 'tight'
+      ? (scaledMarkdownText(styles.paragraph, textScale)?.lineHeight ?? styles.paragraph.lineHeight)
+      : null
   const ctx: MarkdownBlockContext = {
     growing,
     onOpenFile,
     tone,
     textScale,
-    listText: [styles.listText, scaledMarkdownText(styles.listText, textScale), tone.text],
+    density,
+    tightLineHeight,
+    listText: [
+      styles.listText,
+      scaledMarkdownText(styles.listText, textScale),
+      tightLineHeight !== null ? { lineHeight: tightLineHeight } : null,
+      tone.text
+    ],
     listMarker: [
       styles.listMarker,
       scaledMarkdownText(styles.listMarker, textScale),
+      tightLineHeight !== null ? { lineHeight: tightLineHeight } : null,
       tone.secondary
     ],
     rowLongPress: setup.androidTranscript ? setup.onLongPress : undefined,
@@ -73,9 +88,14 @@ function MobileMarkdownContent({
   }
   // Native-chat range selection is set on each block; nested inline spans inherit it.
   return (
-    <View style={styles.root}>
+    <View style={[styles.root, tightLineHeight !== null && styles.tightRoot]}>
       {renderBlocks(root.children, ctx, {
-        style: [styles.paragraph, scaledMarkdownText(styles.paragraph, textScale), tone.text],
+        style: [
+          styles.paragraph,
+          scaledMarkdownText(styles.paragraph, textScale),
+          tightLineHeight !== null ? { lineHeight: tightLineHeight } : null,
+          tone.text
+        ],
         selectable: rangeSelectable
       })}
     </View>

@@ -1,3 +1,4 @@
+import { useDurableChatDelivery } from '../../native-chat-view-recovery/use-durable-chat-delivery'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { translate } from '@/i18n/i18n'
 import { useUiLanguageRevision } from '@/i18n/use-ui-language-revision'
@@ -9,6 +10,7 @@ import {
   releaseEmptyTranscriptClaims,
   type NativeChatPendingSend
 } from '../../../../shared/native-chat/transcript/native-chat-pending-sends'
+import { retirePagedOutPendingSends } from '../../../../shared/native-chat-paged-out-echo/retire-paged-out-pending-sends'
 import {
   appendPendingSendCache,
   nextNativeChatPendingSendId,
@@ -32,8 +34,11 @@ export function useNativeChatPendingDelivery(args: {
     messages: NativeChatMessage[]
     readPhase?: ReadState['phase']
     sessionId?: string | null
+    /** Older transcript rows exist beyond `messages`. */
+    hasMore?: boolean
   }
 }) {
+  const durable = useDurableChatDelivery(args)
   const languageRevision = useUiLanguageRevision()
   const { paneKey, agent } = args
   const { messages } = args.session
@@ -59,9 +64,19 @@ export function useNativeChatPendingDelivery(args: {
     },
     [scope]
   )
+  const pagedWindow = useMemo(
+    () => ({ hasMore: args.session.hasMore === true, settled: args.session.readPhase === 'ready' }),
+    [args.session.hasMore, args.session.readPhase]
+  )
   useEffect(() => {
-    save((entries) => prunePendingSends(releaseEmptyTranscriptClaims(entries, sessionId), messages))
-  }, [messages, save, sessionId])
+    save((entries) =>
+      retirePagedOutPendingSends(
+        prunePendingSends(releaseEmptyTranscriptClaims(entries, sessionId), messages),
+        messages,
+        pagedWindow
+      )
+    )
+  }, [messages, pagedWindow, save, sessionId])
   const record = useCallback(
     (text: string, imagePaths?: string[]) => {
       const sentAt = Date.now()
@@ -177,5 +192,24 @@ export function useNativeChatPendingDelivery(args: {
     return result
     // oxlint-disable-next-line react-hooks/exhaustive-deps -- translate() reads the UI language implicitly.
   }, [pending, cancel, languageRevision])
-  return { pending, record, cancel, reject, holdUnconfirmed, clear, notices }
+  const combinedNotices = useMemo(
+    () =>
+      durable.notices.size === 0
+        ? notices
+        : notices.size === 0
+          ? durable.notices
+          : new Map([...notices, ...durable.notices]),
+    [notices, durable.notices]
+  )
+  return {
+    pending,
+    durableMessages: durable.messages,
+    record,
+    cancel,
+    reject,
+    holdUnconfirmed,
+    clear,
+    notices: combinedNotices,
+    sendDurable: durable.send
+  }
 }

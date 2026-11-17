@@ -111,7 +111,7 @@ export function LocalTaskDetail({
           {project?.name}
         </span>
         <span className="text-xs text-muted-foreground">/</span>
-        {/* Why one shrinking run: a deep path gives way before the task's own ref does. */}
+        {/* Why one shrinking run: a deep path gives way before the task's own name does. */}
         <span className="flex min-w-0 items-center gap-2 overflow-hidden">
           {path.map((ancestor) => (
             <span key={ancestor.id} className="flex min-w-0 items-center gap-2">
@@ -128,8 +128,13 @@ export function LocalTaskDetail({
           ))}
         </span>
         {status ? <LocalTaskStatusIcon category={status.category} color={status.color} /> : null}
-        {/* Why muted: the title below is the task's name; the ref here only places it. */}
-        <span className="shrink-0 whitespace-nowrap font-mono text-xs text-muted-foreground">
+        <span
+          className="min-w-0 max-w-64 truncate text-xs font-medium text-foreground"
+          title={task.title}
+        >
+          {task.title}
+        </span>
+        <span className="shrink-0 whitespace-nowrap font-mono text-2xs text-muted-foreground">
           {task.ref}
         </span>
         <LocalTaskHostTag id={task.id} labels={model.hostLabels} />

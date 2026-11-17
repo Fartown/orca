@@ -10,6 +10,10 @@ import type { MobileTerminalCommand } from './terminal/launch/mobile-terminal-st
 import type { SleepingAgentLaunchConfig } from '../../shared/agent-session/lifecycle/agent-session-resume'
 import { LOCAL_EXECUTION_HOST_ID } from '../../shared/execution-host'
 
+vi.mock('../../shared/system-cli-install-dirs', () => ({
+  getSystemCliInstallDirectories: () => []
+}))
+
 let root: string
 let windowsBin: string
 let nativeBin: string

@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Bell, CornerDownRight, EyeOff, Plus } from 'lucide-react'
 import { useNow } from '@/hooks/use-now'
 import { formatLocalTaskTime } from '@/local-tasks/local-task-time'
 import { localTaskVisibleProgress } from '@/local-tasks/local-task-visible-progress'
+import { localTaskProgressSummary } from '@/local-tasks/local-task-progress-summary'
 import { localTaskAttentionKindLabel } from '@/local-tasks/local-task-attention-copy'
 import {
   LocalTaskHostCell,
@@ -48,6 +49,15 @@ function BoardCard({
   hostLabels: ReadonlyMap<string, string> | undefined
 }): React.JSX.Element {
   const isCursor = useLocalTaskPage((state) => state.cursorTaskId === task.id)
+  const reveal = useLocalTaskPage(
+    (state) => state.cursorTaskId === task.id && !state.cursorFromPointer
+  )
+  const cardRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (reveal) {
+      cardRef.current?.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'auto' })
+    }
+  }, [reveal])
   const draggable = useLocalTaskRowWritable(task.id)
   const path = localTaskPathFromRoot(task, index.tasksById)
   const status = index.statusesById.get(task.statusId)
@@ -57,6 +67,7 @@ function BoardCard({
   const now = useNow(60_000)
   return (
     <div
+      ref={cardRef}
       role="button"
       tabIndex={-1}
       draggable={draggable}
@@ -66,7 +77,7 @@ function BoardCard({
         event.dataTransfer.setData(DRAG_TYPE, task.id)
         event.dataTransfer.effectAllowed = 'move'
       }}
-      onClick={() => localTaskPageStore.getState().openDetail(task.id)}
+      onClick={() => localTaskPageStore.getState().openPreview(task.id)}
       onMouseMove={() => {
         if (!isCursor) {
           localTaskPageStore.getState().setCursor(task.id, 'pointer')
@@ -140,18 +151,16 @@ function LocalTaskBoardProgress({
   if (!latest) {
     return null
   }
+  const summary = localTaskProgressSummary(latest.progress.body)
   return (
-    <span
-      className="line-clamp-2 text-2xs leading-relaxed text-muted-foreground"
-      title={latest.progress.body}
-    >
+    <span className="line-clamp-2 text-2xs leading-relaxed text-muted-foreground" title={summary}>
       <span className="mr-1 rounded-sm bg-muted px-1 text-foreground/80">
         {latest.progress.kind === 'progress'
           ? translate('localTasks.row.writeback', 'Writeback')
           : translate('localTasks.row.lastSentence', 'Last line')}
       </span>
       {latest.task.id === task.id ? '' : `${latest.task.ref} `}
-      {latest.progress.body}
+      {summary}
     </span>
   )
 }
@@ -177,7 +186,7 @@ function NeedsYouStrip({ model }: { model: LocalTaskListModel }): React.JSX.Elem
           <button
             key={row.task.id}
             type="button"
-            onClick={() => localTaskPageStore.getState().openDetail(row.task.id)}
+            onClick={() => localTaskPageStore.getState().openPreview(row.task.id)}
             className="flex h-7 shrink-0 items-center gap-1.5 rounded-md border border-border/60 bg-card px-2 text-xs hover:bg-accent"
           >
             {status ? (
@@ -205,12 +214,6 @@ function NeedsYouStrip({ model }: { model: LocalTaskListModel }): React.JSX.Elem
     </div>
   )
 }
-
-/**
- * Active work first, then what is done; planning after it so an empty column never pushes
- * Completed off screen. A drop still moves a card to any column.
- */
-const COLUMN_ORDER = ['started', 'review', 'unstarted', 'completed', 'backlog', 'canceled'] as const
 
 function BoardColumn({
   column,
@@ -300,15 +303,9 @@ export function LocalTaskBoard({ model }: { model: LocalTaskListModel }): React.
     <div className="flex min-h-0 flex-1 flex-col gap-2">
       <NeedsYouStrip model={model} />
       <div className="flex min-h-0 flex-1 gap-3 overflow-x-auto pb-1 scrollbar-sleek">
-        {model.columns
-          .toSorted(
-            (a, b) =>
-              COLUMN_ORDER.indexOf(statusHeadCategory(a)) -
-              COLUMN_ORDER.indexOf(statusHeadCategory(b))
-          )
-          .map((column) => (
-            <BoardColumn key={column.key} column={column} model={model} />
-          ))}
+        {model.columns.map((column) => (
+          <BoardColumn key={column.key} column={column} model={model} />
+        ))}
       </div>
       {showCanceled ? null : (
         <p className="flex items-center gap-1.5 text-2xs text-muted-foreground">

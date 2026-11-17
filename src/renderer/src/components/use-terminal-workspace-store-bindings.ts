@@ -2,6 +2,7 @@ import { useAppStore } from '../store'
 import { useActivityTerminalPortals } from './activity/activity-terminal-portal'
 import type { ActivityTerminalPortalTarget } from './activity/activity-terminal-portal'
 import type { TerminalWorkspaceFoundation } from './use-terminal-workspace-foundation'
+
 import { useLocalTaskSessionPanel } from '../local-tasks/local-task-session-panel-store'
 
 export function useTerminalWorkspaceStoreBindings(controller: TerminalWorkspaceFoundation) {

@@ -1,10 +1,19 @@
 import { beforeEach, describe, expect, it, vi, type Mock } from 'vitest'
 import type { sendMessageToAgent } from '@/lib/agent-message-send'
+import type { LocalTaskEndpointKey } from './local-task-endpoints'
 
 const fixture = vi.hoisted(() => {
+  const source: { endpoint: LocalTaskEndpointKey } = { endpoint: 'local' }
   const pane: { key: string | null } = { key: null }
   const preferences: Record<string, string | null> = {}
-  return { inbox: vi.fn(), pane, preferences }
+  return {
+    ...source,
+    inbox: vi.fn(),
+    pane,
+    preferences,
+    epoch: 0,
+    worktreeId: 'global-floating-terminal'
+  }
 })
 
 vi.mock('@/store', async () => {
@@ -13,19 +22,38 @@ vi.mock('@/store', async () => {
 })
 vi.mock('@/lib/agent-message-send', () => ({ sendMessageToAgent: vi.fn() }))
 vi.mock('./local-task-dispatcher-client', () => ({
+  localTaskDispatcherClientFor: () => ({ inbox: fixture.inbox }),
   localTaskDispatcherClient: { inbox: fixture.inbox }
+}))
+vi.mock('./local-task-dispatcher-source', () => ({
+  getLocalTaskDispatcherEndpoint: () => fixture.endpoint,
+  getLocalTaskDispatcherEpoch: () => fixture.epoch,
+  getLocalTaskDispatcherPreferences: () => fixture.preferences,
+  isLocalTaskDispatcherSourceCurrent: (endpoint: string, epoch: number) =>
+    endpoint === fixture.endpoint && epoch === fixture.epoch,
+  subscribeLocalTaskDispatcherSource: () => () => {},
+  initialiseLocalTaskDispatcherSource: () => {},
+  applyLocalTaskDispatcherPreferences: () => {}
 }))
 vi.mock('./local-task-dispatcher-proposals', () => ({ refreshLocalTaskProposals: vi.fn() }))
 vi.mock('./local-tasks-domain-store', () => ({
   localTasksDomainStore: { getState: () => ({ preferences: fixture.preferences }) }
 }))
 vi.mock('./local-task-dispatcher-session', () => ({
+  getLocalTaskDispatcherSendArgs: (paneKey: string, prompt: string) => ({
+    worktreeId: fixture.worktreeId,
+    target: { kind: 'terminal', tabId: paneKey.split(':')[0], leafId: paneKey.split(':')[1] },
+    prompt
+  }),
   knownDispatcherPaneKey: () => fixture.pane.key,
   liveDispatcherPaneKey: () => fixture.pane.key
 }))
 
 import { useAppStore } from '@/store'
-import { createLocalTaskDispatcherWake } from './local-task-dispatcher-wake'
+import {
+  createLocalTaskDispatcherWake,
+  mayLeaveLocalTaskDispatcherDraft
+} from './local-task-dispatcher-wake'
 
 const LEAF = '11111111-1111-4111-8111-111111111111'
 const PANE = `tab-d:${LEAF}`
@@ -73,6 +101,9 @@ describe('dispatcher wake', () => {
   let send: Mock<typeof sendMessageToAgent>
 
   beforeEach(() => {
+    fixture.endpoint = 'local'
+    fixture.epoch = 0
+    fixture.worktreeId = 'global-floating-terminal'
     fixture.pane.key = PANE
     fixture.inbox.mockReset()
     delete fixture.preferences['dispatcher.wake']
@@ -92,6 +123,50 @@ describe('dispatcher wake', () => {
     expect(send.mock.calls[0][0]).toMatchObject({
       target: { kind: 'terminal', tabId: 'tab-d', leafId: LEAF }
     })
+  })
+
+  it('uses the selected source folder and fences its submit after switching sources', async () => {
+    fixture.endpoint = 'runtime:mini'
+    fixture.worktreeId = 'folder:source'
+    fixture.inbox.mockResolvedValue(inboxWith('remote'))
+    setStatus('done', 100)
+    const wake = createLocalTaskDispatcherWake(send, () => false)
+    await wake.check()
+    expect(send.mock.calls[0][0].worktreeId).toBe('folder:source')
+    fixture.epoch += 1
+    expect(send.mock.calls[0][0].beforeTerminalSend?.('submit')).toBe(false)
+  })
+
+  it('drops a late inbox after the same source disconnects and reconnects', async () => {
+    let release: (value: unknown) => void = () => {}
+    fixture.inbox.mockReturnValueOnce(
+      new Promise((resolve) => {
+        release = resolve
+      })
+    )
+    setStatus('done', 100)
+    const wake = createLocalTaskDispatcherWake(send, () => false)
+    const checking = wake.check()
+    fixture.epoch += 1
+    release(inboxWith('old-generation'))
+    await checking
+    expect(send).not.toHaveBeenCalled()
+  })
+
+  it('does not send a late inbox pointer after its dispatcher binding is disposed', async () => {
+    let release: (value: unknown) => void = () => {}
+    fixture.inbox.mockReturnValueOnce(
+      new Promise((resolve) => {
+        release = resolve
+      })
+    )
+    setStatus('done', 100)
+    const wake = createLocalTaskDispatcherWake(send, () => false)
+    const checking = wake.check()
+    wake.dispose()
+    release(inboxWith('closed'))
+    await checking
+    expect(send).not.toHaveBeenCalled()
   })
 
   it('stays quiet while the dispatcher works or the inbox is empty', async () => {
@@ -204,5 +279,42 @@ describe('dispatcher wake', () => {
     await wake.check()
 
     expect(fixture.inbox).not.toHaveBeenCalled()
+  })
+
+  it('is not held back by keys that leave no text, such as arrows, Esc or a copy', async () => {
+    fixture.inbox.mockResolvedValue(inboxWith('c1'))
+    const wake = createLocalTaskDispatcherWake(send, () => false)
+    setStatus('done', 200, { turnStartedAt: 100 })
+    // The arrow key reached the terminal a moment after it was pressed.
+    wake.noteKey(150)
+    useAppStore.getState().recordTerminalInput(PANE, 152)
+
+    await wake.check()
+
+    expect(send).toHaveBeenCalledTimes(1)
+  })
+
+  it('counts printable keys, pastes and IME input as a possible draft, and nothing else', () => {
+    const key = (
+      value: string,
+      extra: Partial<Pick<KeyboardEvent, 'ctrlKey' | 'metaKey' | 'shiftKey' | 'isComposing'>> = {}
+    ) => ({
+      key: value,
+      ctrlKey: false,
+      metaKey: false,
+      shiftKey: false,
+      isComposing: false,
+      ...extra
+    })
+    expect(mayLeaveLocalTaskDispatcherDraft(key('a'))).toBe(true)
+    expect(mayLeaveLocalTaskDispatcherDraft(key(' '))).toBe(true)
+    expect(mayLeaveLocalTaskDispatcherDraft(key('v', { metaKey: true }))).toBe(true)
+    expect(mayLeaveLocalTaskDispatcherDraft(key('Insert', { shiftKey: true }))).toBe(true)
+    expect(mayLeaveLocalTaskDispatcherDraft(key('Process'))).toBe(true)
+    expect(mayLeaveLocalTaskDispatcherDraft(key('c', { metaKey: true }))).toBe(false)
+    expect(mayLeaveLocalTaskDispatcherDraft(key('c', { ctrlKey: true }))).toBe(false)
+    expect(mayLeaveLocalTaskDispatcherDraft(key('ArrowUp'))).toBe(false)
+    expect(mayLeaveLocalTaskDispatcherDraft(key('Escape'))).toBe(false)
+    expect(mayLeaveLocalTaskDispatcherDraft(key('Enter'))).toBe(false)
   })
 })

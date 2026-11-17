@@ -34,6 +34,8 @@ import {
 import type { WorkspaceAttachmentComposerProps } from './WorkspaceAttachmentComposer'
 import { WorkspaceAttachmentSourceStatus } from './WorkspaceAttachmentSourceStatus'
 
+import { LocalTaskSourceCreateAction } from '@/components/local-tasks/LocalTaskSourceCreateAction'
+
 export function WorkspaceAttachmentSearch({
   query,
   onQueryChange,
@@ -281,28 +283,33 @@ export function WorkspaceAttachmentSearch({
               'No matching references. Try a title, number, or URL.'
             )}
             beforeResults={
-              direct ? (
-                <div className="border-b border-border p-1">
-                  <CommandItem
-                    value={directValue}
-                    selection="palette"
-                    disabled={!directEnabled}
-                    onSelect={() => add(direct)}
-                  >
-                    <Plus className="size-3.5" />
-                    <span>
-                      {translate('workspace.links.addItem', 'Add {{label}}', {
-                        label: workspaceAttachmentLabel(direct)
-                      })}
-                    </span>
-                    {directLinked ? (
-                      <span className="ml-auto text-xs text-muted-foreground">
-                        {translate('workspace.links.linkedResult', 'Linked')}
+              <>
+                {localTasks.active ? (
+                  <LocalTaskSourceCreateAction query={query} disabled={props.disabled} />
+                ) : null}
+                {direct ? (
+                  <div className="border-b border-border p-1">
+                    <CommandItem
+                      value={directValue}
+                      selection="palette"
+                      disabled={!directEnabled}
+                      onSelect={() => add(direct)}
+                    >
+                      <Plus className="size-3.5" />
+                      <span>
+                        {translate('workspace.links.addItem', 'Add {{label}}', {
+                          label: workspaceAttachmentLabel(direct)
+                        })}
                       </span>
-                    ) : null}
-                  </CommandItem>
-                </div>
-              ) : null
+                      {directLinked ? (
+                        <span className="ml-auto text-xs text-muted-foreground">
+                          {translate('workspace.links.linkedResult', 'Linked')}
+                        </span>
+                      ) : null}
+                    </CommandItem>
+                  </div>
+                ) : null}
+              </>
             }
           />
         </div>

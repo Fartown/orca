@@ -56,11 +56,12 @@ import {
   renderPluginsSettingsSection
 } from './settings-advanced-section-renderers'
 import { renderProjectSettingsSections } from './settings-project-section-renderer'
-import { renderLocalTasksSettingsSection } from '@/components/local-tasks/settings/render-local-tasks-settings-section'
 import {
   SettingsHostScopePicker,
   shouldShowSettingsHostScopePicker
 } from './SettingsHostScopePicker'
+
+import { renderLocalTasksSettingsSection } from '@/components/local-tasks/settings/render-local-tasks-settings-section'
 
 export function renderSettingsLoading(
   interactions: SettingsInteractionController

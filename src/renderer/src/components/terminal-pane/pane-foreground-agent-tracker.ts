@@ -7,6 +7,7 @@ import { resolveCompatibleAgentTypeForOwner } from '../../../../shared/agent-tit
 import { isShellProcess } from '../../../../shared/shell-process-detection'
 import type { TerminalAgent } from '../../../../shared/terminal-agent'
 import { createPaneForegroundProcessReader } from './pane-foreground-process-reader'
+import { createPaneForegroundReadScheduler } from './pane-foreground-read-scheduler'
 import { FOREGROUND_COMMAND_READS } from '../../../../shared/foreground-command-settle'
 import type {
   ForegroundReadReason,
@@ -29,10 +30,6 @@ export function createPaneForegroundAgentTracker(deps: PaneForegroundAgentTracke
   dispose: () => void
 } {
   let disposed = false
-  let readTimer: ReturnType<typeof setTimeout> | null = null
-  let scheduledReadReason: ForegroundReadReason | null = null
-  let activeReadReason: ForegroundReadReason | null = null
-  let readGeneration = 0
   // Nested agent shells leak 133;D onto the main PTY; confirm foreground before treating it as prompt return.
   let hasForegroundAgentEvidence = false
   // Latch launch/hook evidence through confirmation so cleanup cannot disarm the bounded retry ladder.
@@ -50,42 +47,14 @@ export function createPaneForegroundAgentTracker(deps: PaneForegroundAgentTracke
     const ptyId = deps.getPtyId()
     return ptyId && deps.isTrackablePtyId(ptyId) ? ptyId : null
   }
-
-  const cancelPendingRead = (): void => {
-    readGeneration += 1
-    if (readTimer !== null) {
-      clearTimeout(readTimer)
-      readTimer = null
-    }
-    scheduledReadReason = null
-    activeReadReason = null
-  }
-
-  const scheduleRead = (
-    delayMs: number,
-    retryIndex: number,
-    reason: ForegroundReadReason
-  ): void => {
-    const generation = readGeneration
-    scheduledReadReason = reason
-    readTimer = setTimeout(() => {
-      readTimer = null
-      scheduledReadReason = null
-      activeReadReason = reason
-      void readForeground(generation, retryIndex, reason).finally(() => {
-        if (generation === readGeneration && activeReadReason === reason) {
-          activeReadReason = null
-        }
-      })
-    }, delayMs)
-  }
-
-  const hasPendingRead = (): boolean => scheduledReadReason !== null || activeReadReason !== null
-  const hasCommandReadInFlight = (): boolean =>
-    scheduledReadReason === 'command' ||
-    activeReadReason === 'command' ||
-    scheduledReadReason === 'command-finished' ||
-    activeReadReason === 'command-finished'
+  const scheduler = createPaneForegroundReadScheduler(deps, readForeground)
+  const {
+    cancel: cancelPendingRead,
+    schedule: scheduleRead,
+    contactKey,
+    hasPending: hasPendingRead,
+    hasCommandRead: hasCommandReadInFlight
+  } = scheduler
 
   // Release retained capabilities when a read ends; superseded reads delegate settlement to their successor.
   const releaseRetainedCapability = (hadReadInFlight: boolean): void => {
@@ -95,7 +64,7 @@ export function createPaneForegroundAgentTracker(deps: PaneForegroundAgentTracke
   }
 
   const settleAbortedRead = (generation: number): void => {
-    if (!disposed && generation === readGeneration) {
+    if (!disposed && scheduler.isCurrent(generation)) {
       deps.onVisibleForegroundSettled?.('inconclusive')
     }
   }
@@ -106,7 +75,8 @@ export function createPaneForegroundAgentTracker(deps: PaneForegroundAgentTracke
     reason: ForegroundReadReason
   ): Promise<void> {
     const ptyId = trackablePtyId()
-    if (disposed || generation !== readGeneration || !ptyId) {
+    const readContactKey = contactKey()
+    if (disposed || !scheduler.isCurrent(generation) || !ptyId || readContactKey === null) {
       settleAbortedRead(generation)
       return
     }
@@ -122,11 +92,16 @@ export function createPaneForegroundAgentTracker(deps: PaneForegroundAgentTracke
     // Fence pending inspection so an old PTY cannot publish identity into its replacement.
     if (
       disposed ||
-      generation !== readGeneration ||
+      !scheduler.isCurrent(generation) ||
+      contactKey() !== readContactKey ||
       trackablePtyId() !== ptyId ||
       (remote && deps.getExpectedIncarnationId?.() !== expectedIncarnationId)
     ) {
       settleAbortedRead(generation)
+      return
+    }
+    if (remote && remoteEvidenceVerdict === 'unverifiable') {
+      deps.onVisibleForegroundSettled?.('inconclusive')
       return
     }
     const recognized =
@@ -326,7 +301,7 @@ export function createPaneForegroundAgentTracker(deps: PaneForegroundAgentTracke
     dispose() {
       const hadReadAtDispose = hasPendingRead()
       disposed = true
-      cancelPendingRead()
+      scheduler.dispose()
       releaseRetainedCapability(hadReadAtDispose)
     }
   }

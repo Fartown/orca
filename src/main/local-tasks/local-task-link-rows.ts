@@ -10,7 +10,15 @@ import type {
   LocalTaskFailure,
   LocalTaskFailureCode
 } from '../../shared/local-tasks/local-task-types'
+import { localTaskLinkWorkspaceId } from '../../shared/local-tasks/local-task-workspace-match'
+import {
+  isLocalTaskForeignSessionHostId,
+  localTaskForeignSessionHostId,
+  localTaskSessionHostAliases,
+  LocalTaskSessionExecutionOriginSchema
+} from '../../shared/local-tasks/local-task-session-origin'
 import { worktreeIdentityKey, worktreeIdsEqual } from '../../shared/worktree/id'
+import { parsePaneKey } from '../../shared/stable-pane-id'
 import type { SqliteRow } from '../sqlite/sqlite-statement'
 import type { LocalTasksDatabase } from './local-tasks-database'
 import { rowNullableString, rowNumber, rowString } from './local-tasks-sqlite-row'
@@ -22,7 +30,7 @@ const ORIGINS: readonly LocalTaskLinkOrigin[] = ['start', 'manual']
 const WORKSPACE_COLUMNS = `task_id, host_id, kind, instance_id, worktree_id, folder_workspace_id,
   repo_id, branch_snapshot, name_snapshot, host_label_snapshot, linked_via, linked_at`
 const SESSION_COLUMNS = `id, task_id, host_id, worktree_id, instance_id, surface, tab_id, pane_key,
-  session_id, provider_session, agent, linked_via, opened_at`
+  session_id, provider_session, agent, linked_via, opened_at, execution_origin`
 
 /** Where a workspace lives; enough to tell two links apart. */
 export type LocalTaskWorkspacePlace = Pick<
@@ -90,17 +98,6 @@ export function findWorkspaceOwner(
   return null
 }
 
-/** Whether a session ran in this workspace; a session that cannot say is taken to be in it. */
-export function isSessionInWorkspace(
-  session: LocalTaskSessionLink,
-  workspace: LocalTaskWorkspacePlace
-): boolean {
-  return isPlaceInWorkspace(
-    { hostId: session.hostId, worktreeId: session.worktreeId, instanceId: session.instanceId },
-    workspace
-  )
-}
-
 /** The host/worktree/instance of a would-be session, as much as the caller knows. */
 export type LocalTaskSessionPlace = {
   hostId: string
@@ -108,21 +105,33 @@ export type LocalTaskSessionPlace = {
   instanceId: string | null
 }
 
+/**
+ * Whether a session place is in this workspace, by the workspace's id on its host (`folder:<id>`
+ * for a folder workspace); `unknown` when neither the place nor the workspace carries an id.
+ */
+export function placeInWorkspace(
+  place: LocalTaskSessionPlace,
+  workspace: LocalTaskWorkspacePlace
+): 'in' | 'out' | 'unknown' {
+  if (place.hostId !== workspace.hostId) {
+    return 'out'
+  }
+  if (place.instanceId && workspace.instanceId) {
+    return place.instanceId === workspace.instanceId ? 'in' : 'out'
+  }
+  const workspaceId = localTaskLinkWorkspaceId(workspace)
+  if (place.worktreeId && workspaceId) {
+    return worktreeIdsEqual(place.worktreeId, workspaceId) ? 'in' : 'out'
+  }
+  return 'unknown'
+}
+
 /** Whether a session place belongs to this workspace; an unknowable place is taken to be in it. */
 export function isPlaceInWorkspace(
   place: LocalTaskSessionPlace,
   workspace: LocalTaskWorkspacePlace
 ): boolean {
-  if (place.hostId !== workspace.hostId) {
-    return false
-  }
-  if (place.instanceId && workspace.instanceId) {
-    return place.instanceId === workspace.instanceId
-  }
-  if (place.worktreeId && workspace.worktreeId) {
-    return worktreeIdsEqual(place.worktreeId, workspace.worktreeId)
-  }
-  return true
+  return placeInWorkspace(place, workspace) !== 'out'
 }
 
 export function readLocalTaskLinks(db: LocalTasksDatabase): LocalTaskLinks {
@@ -191,33 +200,43 @@ export function findSessionConflict(
     /** A terminal recorded by tab before its pane key resolves; two such records on one tab clash. */
     tabId?: string | null
   },
-  exceptId: string | null
+  exceptId: string | null,
+  selfInstallationId?: string | null
 ): LocalTaskSessionLink | null {
+  const hosts = localTaskSessionHostAliases(claim.hostId, selfInstallationId)
+  const hostPlaceholders = hosts.map(() => '?').join(', ')
+  const foreign = isLocalTaskForeignSessionHostId(claim.hostId)
+  const tabId = claim.tabId ?? (claim.paneKey ? parsePaneKey(claim.paneKey)?.tabId : null)
   const candidates = [
     ...(claim.paneKey
       ? readSessionRows(
           db,
-          `SELECT ${SESSION_COLUMNS} FROM local_task_sessions WHERE pane_key = ?`,
-          claim.paneKey
+          `SELECT ${SESSION_COLUMNS} FROM local_task_sessions WHERE pane_key = ? AND ${
+            foreign
+              ? `host_id IN (${hostPlaceholders})`
+              : `(host_id NOT LIKE 'foreign:%' OR host_id IN (${hostPlaceholders}))`
+          }`,
+          claim.paneKey,
+          ...hosts
         )
       : []),
     ...(claim.sessionId
       ? readSessionRows(
           db,
-          `SELECT ${SESSION_COLUMNS} FROM local_task_sessions WHERE host_id = ? AND session_id = ?`,
-          claim.hostId,
+          `SELECT ${SESSION_COLUMNS} FROM local_task_sessions
+           WHERE host_id IN (${hostPlaceholders}) AND session_id = ?`,
+          ...hosts,
           claim.sessionId
         )
       : []),
-    // Why pane_key IS NULL: once a pane key lands the pane_key index owns dedup; this only closes the
-    // window where a terminal tab is recorded for two tasks before either resolves its pane.
-    ...(claim.tabId && !claim.paneKey
+    // Pending native/origin aliases must not bypass each other when their first pane resolves.
+    ...(tabId && (!claim.paneKey || hosts.length > 1 || foreign)
       ? readSessionRows(
           db,
           `SELECT ${SESSION_COLUMNS} FROM local_task_sessions
-           WHERE host_id = ? AND tab_id = ? AND pane_key IS NULL`,
-          claim.hostId,
-          claim.tabId
+           WHERE host_id IN (${hostPlaceholders}) AND tab_id = ? AND pane_key IS NULL`,
+          ...hosts,
+          tabId
         )
       : [])
   ]
@@ -266,10 +285,27 @@ function toSessionLink(row: SqliteRow): LocalTaskSessionLink | null {
   if (!surface || !linkedVia) {
     return null
   }
+  const rawOrigin = rowNullableString(row, 'execution_origin')
+  let executionOrigin
+  if (rawOrigin) {
+    try {
+      executionOrigin = LocalTaskSessionExecutionOriginSchema.parse(JSON.parse(rawOrigin))
+    } catch {
+      return null
+    }
+  }
+  const hostId = rowString(row, 'host_id')
+  if (
+    (executionOrigin && localTaskForeignSessionHostId(executionOrigin) !== hostId) ||
+    (hostId.startsWith('foreign:') && !executionOrigin)
+  ) {
+    return null
+  }
   return {
     id: rowString(row, 'id'),
     taskId: rowString(row, 'task_id'),
-    hostId: rowString(row, 'host_id'),
+    hostId,
+    ...(executionOrigin ? { executionOrigin } : {}),
     worktreeId: rowNullableString(row, 'worktree_id'),
     instanceId: rowNullableString(row, 'instance_id'),
     surface,

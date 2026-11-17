@@ -22,6 +22,7 @@ beforeEach(() => localTaskSessionPanelStore.getState().close())
 
 it('keeps the same session and portal request while changing width', () => {
   localTaskSessionPanelStore.getState().open(first)
+  expect(localTaskSessionPanelStore.getState().mode).toBe('wide')
   const token = localTaskSessionPanelStore.getState().requestToken
   localTaskSessionPanelStore.getState().setMode('wide')
   expect(localTaskSessionPanelStore.getState()).toMatchObject({
@@ -40,7 +41,7 @@ it('changes the portal request when switching sessions and keeps the root task',
     .getState()
     .switchSession({ ...first, id: 'session-2', taskId: 'child-1' })
   expect(localTaskSessionPanelStore.getState()).toMatchObject({
-    mode: 'narrow',
+    mode: 'wide',
     sessionLinkId: 'session-2',
     taskId: first.taskId
   })

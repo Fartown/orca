@@ -2,6 +2,7 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import type { LocalTaskIndex } from '@/local-tasks/local-task-grouping'
+import type { LocalTaskEvent } from '../../../../shared/local-tasks/local-task-types'
 
 const rpc = vi.hoisted(() => ({ addComment: vi.fn(), retryEvents: vi.fn(async () => {}) }))
 vi.mock('@/local-tasks/local-tasks-runtime-client', () => ({ localTasksClient: rpc }))
@@ -83,4 +84,28 @@ it('exposes an activity read failure for the selected task', () => {
   fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
   expect(rpc.retryEvents).toHaveBeenCalledWith('A')
   expect(localTasksDomainStore.getState().subscriptionEpoch).toBe(0)
+})
+
+it('renders writeback Markdown in history while keeping an ordinary comment literal', () => {
+  const event = (id: string, body: string, progress: boolean): LocalTaskEvent => ({
+    id,
+    taskId: 'A',
+    kind: 'comment',
+    source: 'cli',
+    body,
+    payload: progress ? { progress: true } : null,
+    createdAt: 1,
+    editedAt: null
+  })
+  localTasksDomainStore
+    .getState()
+    .writer('local')
+    .applyEvents('A', [
+      event('writeback', '## Result\n\n**Done** with `CSV`', true),
+      event('comment', '**literal**', false)
+    ])
+  render(<LocalTaskActivity taskId="A" index={index} writable />)
+  expect(screen.getByRole('heading', { name: 'Result' })).toBeTruthy()
+  expect(screen.getByText('Done').tagName).toBe('STRONG')
+  expect(screen.getByText('**literal**').tagName).toBe('P')
 })

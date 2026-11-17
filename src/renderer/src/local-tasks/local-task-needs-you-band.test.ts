@@ -98,7 +98,19 @@ describe('buildLocalTaskNeedsYouBand', () => {
     const result = band(tasks, [item('grand', 3)])
     expect(result.review.map((row) => row.task.id)).toEqual(['parent'])
     expect(result.waiting).toEqual([])
-    expect([...result.ids].sort()).toEqual(['child', 'parent'])
+    expect([...result.ids].sort()).toEqual(['child', 'grand', 'parent'])
+  })
+
+  it('takes the subtasks of a waiting task out of the groups below with it', () => {
+    const tasks = [
+      task('waiting', 'started'),
+      task('sub', 'started', 'waiting'),
+      task('deeper', 'started', 'sub'),
+      task('apart', 'started')
+    ]
+    const result = band(tasks, [item('waiting', 3)])
+    expect(result.waiting.map((row) => row.task.id)).toEqual(['waiting'])
+    expect([...result.ids].sort()).toEqual(['deeper', 'sub', 'waiting'])
   })
 
   it('shows only tasks the current view shows', () => {

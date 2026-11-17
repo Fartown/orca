@@ -34,8 +34,7 @@ import {
   type WorkspaceViewSection
 } from '../../../../shared/workspace-view/workspace-view-options'
 import { translate } from '@/i18n/i18n'
-import { LocalTaskSidebarGroupByToggle } from '@/components/local-tasks/LocalTaskSidebarGroupByToggle'
-import { useSidebarTaskGroupBy } from '@/local-tasks/local-task-sidebar'
+import { SidebarGroupByToggle } from './SidebarGroupByToggle'
 
 export function useWorkspaceOptionsFilterBadge(): {
   hasAnyFilter: boolean
@@ -86,7 +85,7 @@ function GroupByOptionItem(): JSX.Element {
   const setGroupBy = useAppStore((s) => s.setGroupBy)
   return (
     <div className="px-2 pt-0.5 pb-1">
-      <LocalTaskSidebarGroupByToggle groupBy={groupBy} setGroupBy={setGroupBy} />
+      <SidebarGroupByToggle groupBy={groupBy} setGroupBy={setGroupBy} />
     </div>
   )
 }
@@ -265,7 +264,7 @@ export function WorkspaceOptionsMenuItems({
   preserveWorkspaceBoardOpen?: boolean
 }): JSX.Element {
   const repoCount = useAppStore((s) => s.repos.length)
-  const groupBy = useSidebarTaskGroupBy()
+  const groupBy = useAppStore((s) => s.groupBy)
   const showSleepingWorkspaces = useAppStore((s) => s.showSleepingWorkspaces)
   const hideWorkspacesFromOtherDevices = useAppStore((s) => s.hideWorkspacesFromOtherDevices)
   const newCardStyle = useAppStore((s) => s.settings?.experimentalNewWorktreeCardStyle === true)

@@ -20,11 +20,22 @@ import {
   type RuntimeEnvironmentCallRequest
 } from '@/runtime/runtime-compatibility-test-fixture'
 import { clearRuntimeCompatibilityCacheForTests } from '@/runtime/runtime-rpc-client'
-import { liveRemoteEvidence } from './codex-session-restart-test-fixture'
+import {
+  liveRemoteEvidence,
+  codexRestartRuntimeContact
+} from './codex-session-restart-test-fixture'
 
 const ACCOUNT_A = 'account-a@example.com'
 const ACCOUNT_B = 'account-b@example.com'
 const ACCOUNT_C = 'account-c@example.com'
+
+function setRuntimeContact(connected: boolean): void {
+  useAppStore.setState({
+    runtimeStatusByEnvironmentId: new Map([['env-1', codexRestartRuntimeContact(connected)]])
+  })
+}
+beforeEach(() => setRuntimeContact(true))
+afterEach(() => useAppStore.setState({ runtimeStatusByEnvironmentId: new Map() }))
 
 function setLaunchAgentOnFirstTab(launchAgent: TuiAgent): void {
   const [tab, ...rest] = useAppStore.getState().tabsByWorktree.wt1 ?? []
@@ -368,57 +379,57 @@ describe('markLiveCodexSessionsForRestart', () => {
     })
   })
 
-  it('inspects remote runtime PTYs on the server their id names', async () => {
-    useAppStore.setState({
-      settings: { activeRuntimeEnvironmentId: 'env-1' } as never,
-      tabsByWorktree: {
-        wt1: [
-          {
-            id: 'tab-1',
-            ptyId: 'remote:env-1@@term-1',
-            worktreeId: 'wt1',
-            title: 'orca-1',
-            customTitle: null,
-            color: null,
-            sortOrder: 0,
-            createdAt: 1
-          }
-        ]
-      },
-      ptyIdsByTabId: {
-        'tab-1': ['remote:env-1@@term-1']
-      }
-    })
-    runtimeEnvironmentCall.mockResolvedValue({
-      id: 'rpc-1',
-      ok: true,
-      result: {
-        process: {
-          foregroundProcess: 'codex',
-          hasChildProcesses: true,
-          foregroundProcessEvidence: liveRemoteEvidence('term-1')
+  it.each([true, false])(
+    'inspects the PTY owner only while canonical contact is %s',
+    async (connected) => {
+      setRuntimeContact(connected)
+      useAppStore.setState({
+        settings: { activeRuntimeEnvironmentId: 'env-1' } as never,
+        tabsByWorktree: {
+          wt1: useAppStore
+            .getState()
+            .tabsByWorktree.wt1.map((tab) => ({ ...tab, ptyId: 'remote:env-1@@term-1' }))
+        },
+        ptyIdsByTabId: {
+          'tab-1': ['remote:env-1@@term-1']
         }
-      },
-      _meta: { runtimeId: 'remote-runtime' }
-    })
+      })
+      runtimeEnvironmentCall.mockResolvedValue({
+        id: 'rpc-1',
+        ok: true,
+        result: {
+          process: {
+            foregroundProcess: 'codex',
+            hasChildProcesses: true,
+            foregroundProcessEvidence: liveRemoteEvidence('term-1')
+          }
+        },
+        _meta: { runtimeId: 'remote-runtime' }
+      })
 
-    await markForFocusedHost({
-      previousAccountLabel: ACCOUNT_A,
-      nextAccountLabel: ACCOUNT_B
-    })
+      await markForFocusedHost({
+        previousAccountLabel: ACCOUNT_A,
+        nextAccountLabel: ACCOUNT_B
+      })
 
-    expect(window.api.pty.inspectProcess).not.toHaveBeenCalled()
-    expect(runtimeEnvironmentCall).toHaveBeenCalledWith({
-      selector: 'env-1',
-      method: 'terminal.inspectProcess',
-      params: { terminal: 'term-1' },
-      timeoutMs: 15_000
-    })
-    expect(useAppStore.getState().codexRestartNoticeByPtyId['remote:env-1@@term-1']).toEqual({
-      previousAccountLabel: ACCOUNT_A,
-      nextAccountLabel: ACCOUNT_B
-    })
-  })
+      expect(window.api.pty.inspectProcess).not.toHaveBeenCalled()
+      if (!connected) {
+        expect(runtimeEnvironmentTransportCall).not.toHaveBeenCalled()
+        expect(useAppStore.getState().codexRestartNoticeByPtyId).toEqual({})
+        return
+      }
+      expect(runtimeEnvironmentCall).toHaveBeenCalledWith({
+        selector: 'env-1',
+        method: 'terminal.inspectProcess',
+        params: { terminal: 'term-1' },
+        timeoutMs: 15_000
+      })
+      expect(useAppStore.getState().codexRestartNoticeByPtyId['remote:env-1@@term-1']).toEqual({
+        previousAccountLabel: ACCOUNT_A,
+        nextAccountLabel: ACCOUNT_B
+      })
+    }
+  )
 })
 
 // Restart notices swallow input; machine/runtime-scoped account changes must not mark foreign SSH/relay or sibling WSL panes.

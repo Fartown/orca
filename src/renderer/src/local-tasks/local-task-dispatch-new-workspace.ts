@@ -6,13 +6,11 @@ import { getRepoExecutionHostId, normalizeExecutionHostId } from '../../../share
 import type { AgentLaunchResult } from '../../../shared/agent-launch-intent'
 import type { TuiAgent } from '../../../shared/tui-agent'
 import type { LocalTask } from '../../../shared/local-tasks/local-task-types'
-import { parsePaneKey } from '../../../shared/stable-pane-id'
 import { getClientWorktreeCreateCandidate } from '../../../shared/new-workspace/worktree-create-retry-policy'
 import { suggestLocalTaskWorkspaceName } from '../../../shared/local-tasks/local-task-model'
 import { isLocalTaskHostInContact } from './local-task-host-contact'
 import { localTaskEndpointForHost, localTaskEndpointTarget } from './local-task-endpoints'
-import { linkLocalTaskWorkspace } from './local-task-workspace-linking'
-import { recordLocalTaskSession, chatSessionIds } from './local-task-session-recording'
+import { dispatchedSessionIds, settleDispatchLaunch } from './local-task-dispatch-record'
 import type { LocalTaskDispatchCandidate } from './local-task-dispatch-candidates'
 import type { LocalTaskDispatchReceipt } from './local-task-dispatch-launch'
 import { localTaskDispatchPrompt } from './local-task-dispatch-prompt'
@@ -104,31 +102,14 @@ export async function launchInNewWorkspace(
       translate('localTasks.dispatch.workspaceNameTaken', 'Workspace name is already in use')
     )
   }
-  const linked = await linkLocalTaskWorkspace(state, {
-    taskId: task.id,
-    worktree: {
-      id: result.worktreeId,
-      repoId: target.repo.id,
-      displayName: usedName,
+  // Why recorded as one step: past this point the workspace and session exist, so a failure
+  // offers to finish the record, never to launch again.
+  return settleDispatchLaunch({ taskId: task.id, createdTaskIds, target, text }, result, {
+    workspace: {
+      worktree: { id: result.worktreeId, repoId: target.repo.id, displayName: usedName, hostId },
       hostId
     },
-    hostId,
-    linkedVia: 'start'
-  })
-  if (!linked) {
-    return failed(
-      task.id,
-      createdTaskIds,
-      target,
-      text,
-      translate(
-        'localTasks.dispatch.createdWorkspaceLinkFailed',
-        'Workspace created but could not be linked'
-      )
-    )
-  }
-  const recorded = await recordLocalTaskSession(
-    {
+    session: {
       taskId: task.id,
       hostId,
       worktreeId: result.worktreeId,
@@ -136,36 +117,6 @@ export async function launchInNewWorkspace(
       agent,
       linkedVia: 'start'
     },
-    result.outcome.kind === 'structured'
-      ? chatSessionIds(result.outcome.tabId ?? null, result.outcome.sessionId)
-      : {
-          surface: 'terminal',
-          paneKey: result.outcome.paneKey ?? undefined,
-          tabId: result.outcome.paneKey ? parsePaneKey(result.outcome.paneKey)?.tabId : undefined
-        }
-  )
-  if (!recorded) {
-    return failed(
-      task.id,
-      createdTaskIds,
-      target,
-      text,
-      translate('localTasks.dispatch.agentLinkFailed', 'Agent started but could not be linked')
-    )
-  }
-  return {
-    kind: 'launched',
-    taskId: task.id,
-    createdTaskIds,
-    target,
-    text,
-    message:
-      result.prompt?.outcome === 'not-delivered'
-        ? translate(
-            'localTasks.dispatch.promptNotDelivered',
-            'Session started but prompt was not delivered'
-          )
-        : (result.warning ?? null),
-    launch: { hostId, worktreeId: result.worktreeId, outcome: result.outcome }
-  }
+    ids: dispatchedSessionIds(result.outcome)
+  })
 }

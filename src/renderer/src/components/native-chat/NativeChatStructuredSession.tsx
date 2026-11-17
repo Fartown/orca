@@ -56,7 +56,6 @@ import { useAppStore } from '../../store'
 import { structuredAgentLabel } from '@/lib/agent-session/launch/structured-agent-session-launch-label'
 import { useNativeChatStructuredComposerTransport } from './use-native-chat-structured-composer-transport'
 import { NativeChatStructuredComposerTabStrips } from './NativeChatStructuredComposerTabStrips'
-import { nativeChatPaneHeader } from '@/components/local-tasks/local-task-chat-pane-header'
 import { structuredAgentSessionReadFailureNotice } from './structured-agent-session-read-failure-notice'
 import { useStructuredAgentSessionDeliveryNotices } from './use-structured-agent-session-delivery-notices'
 import { dispatchWasWithdrawn } from '../../../../shared/agent-session/requests/structured-agent-session-dispatch-rejection'
@@ -71,6 +70,8 @@ import {
   NativeChatClaudeSignInContext,
   useNativeChatClaudeSignIn
 } from './native-chat-claude-sign-in'
+
+import { nativeChatPaneHeader } from '@/components/local-tasks/local-task-chat-pane-header'
 
 export function NativeChatStructuredSession(
   props: Omit<NativeChatStructuredViewProps, 'mode'>

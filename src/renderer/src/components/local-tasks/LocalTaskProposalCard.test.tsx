@@ -30,9 +30,13 @@ import {
   withLocalTaskProposalEdits
 } from '@/local-tasks/local-task-proposal-edits'
 import { localTasksDomainStore } from '@/local-tasks/local-tasks-domain-store'
+import { makeWorktree } from '@/store/slices/worktrees-slice-test-fixtures'
+import { getDefaultSettings } from '../../../../shared/constants'
 import type { LocalTaskProposal } from '../../../../shared/local-tasks/local-task-dispatcher-types'
 import type { LocalTaskProject } from '../../../../shared/local-tasks/local-task-types'
 import { LocalTaskProposalCard } from './LocalTaskProposalCard'
+
+const initialApp = useAppStore.getState()
 
 const names: LocalTaskProposalNames = {
   taskRef: (taskId) => taskId,
@@ -69,7 +73,12 @@ afterEach(() => {
   localTaskProposalsStore.setState(localTaskProposalsStore.getInitialState(), true)
   localTaskProposalEditsStore.setState(localTaskProposalEditsStore.getInitialState(), true)
   localTasksDomainStore.setState(localTasksDomainStore.getInitialState())
-  useAppStore.setState({ repos: [], projectHostSetups: [] })
+  useAppStore.setState({
+    repos: [],
+    projectHostSetups: [],
+    getKnownWorktreeById: initialApp.getKnownWorktreeById,
+    settings: initialApp.settings
+  })
   decide.mockClear()
   run.mockClear()
   finish.mockClear()
@@ -173,6 +182,64 @@ describe('LocalTaskProposalCard', () => {
     expect(withLocalTaskProposalEdits(shared).items[0]).toMatchObject({ project: 'OPS' })
   })
 
+  it('locks a start in a workspace another task owns, and shows the agent that would launch', () => {
+    const worktree = makeWorktree({ id: 'repo1::/w', repoId: 'repo1', hostId: 'local' })
+    useAppStore.setState({
+      getKnownWorktreeById: () => worktree,
+      settings: {
+        ...getDefaultSettings('/home/test'),
+        defaultTuiAgent: 'claude',
+        disabledTuiAgents: ['codex']
+      }
+    })
+    localTasksDomainStore.setState({
+      tasks: [
+        {
+          id: 't-3',
+          projectId: 'p',
+          number: 3,
+          ref: 'SHOP-3',
+          title: 'Hotfix',
+          description: '',
+          criteria: [],
+          statusId: 's',
+          priority: 0,
+          labels: [],
+          parentId: null,
+          createdAt: 0,
+          updatedAt: 0,
+          revision: 1
+        }
+      ],
+      links: {
+        sessions: [],
+        workspaces: [
+          {
+            taskId: 't-3',
+            hostId: 'local',
+            kind: 'git-worktree',
+            instanceId: null,
+            worktreeId: worktree.id,
+            folderWorkspaceId: null,
+            repoId: 'repo1',
+            branchSnapshot: null,
+            nameSnapshot: null,
+            hostLabelSnapshot: null,
+            linkedVia: 'start',
+            linkedAt: 0
+          }
+        ]
+      }
+    })
+    const start = { ...proposal({}).items[0], agent: 'codex' }
+    render(<LocalTaskProposalCard proposal={proposal({ items: [start] })} names={names} now={0} />)
+
+    expect(screen.getByRole('checkbox', { name: /CSV export/ })).toHaveProperty('disabled', true)
+    expect(screen.getByText(/already belongs to SHOP-3 “Hotfix”/)).toBeTruthy()
+    expect(screen.getByText(/Codex is not available/)).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Confirm 0' })).toHaveProperty('disabled', true)
+  })
+
   it('offers to run a proposal confirmed elsewhere instead of deciding it again', () => {
     const confirmed = proposal({ status: 'confirmed', decidedSource: 'mobile' })
     render(<LocalTaskProposalCard proposal={confirmed} names={names} now={0} />)
@@ -238,6 +305,28 @@ it('offers only finish after the execution connection retires, without a Run act
   expect(finish).toHaveBeenCalledWith('p-1')
   expect(screen.queryByRole('button', { name: 'Run' })).toBeNull()
   expect(screen.getByText(/Recorded results are kept/)).toBeTruthy()
+})
+
+it('lets the person finish a run this window stopped, though the host still lists it as running', () => {
+  localTaskProposalsStore.setState({ abandoned: ['p-1'] })
+  render(
+    <LocalTaskProposalCard
+      proposal={proposal({
+        status: 'executing',
+        executionActive: true,
+        results: [{ index: 0, ok: true, taskId: 't-1' }],
+        keptItemIndexes: [0, 1]
+      })}
+      names={names}
+      now={0}
+    />
+  )
+
+  expect(screen.getByText('Stopped')).toBeTruthy()
+  expect(screen.getByText('Result unknown')).toBeTruthy()
+  expect(screen.getByText(/whether it worked is unknown/)).toBeTruthy()
+  fireEvent.click(screen.getByRole('button', { name: 'Mark as finished' }))
+  expect(finish).toHaveBeenCalledWith('p-1')
 })
 
 it('does not interpret an unknown owner on an older host as a retired window', () => {

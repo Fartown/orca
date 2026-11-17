@@ -1,8 +1,9 @@
 // @vitest-environment happy-dom
-import { act, cleanup, render } from '@testing-library/react'
+import { act, cleanup, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { makeTerminalTab, makeWorktree } from '@/store/slices/worktrees-slice-test-fixtures'
 import type { LocalTaskSessionLink } from '../../../../shared/local-tasks/local-task-link-types'
+import type { LocalTask } from '../../../../shared/local-tasks/local-task-types'
 import { toWebTerminalSurfaceTabId } from '../../../../shared/terminal-surface-id'
 
 const requestMount = vi.hoisted(() => vi.fn())
@@ -10,7 +11,8 @@ vi.mock('@/components/terminal/background-terminal-worktree-mount', () => ({
   requestBackgroundTerminalWorktreeMount: requestMount
 }))
 vi.mock('@/local-tasks/local-task-host-contact', () => ({
-  useLocalTaskHostInContact: () => true
+  useLocalTaskHostInContact: () => true,
+  isLocalTaskHostInContact: () => true
 }))
 vi.mock('@/components/activity/activity-terminal-portal-status', () => ({
   useActivityTerminalPortalStatus: () => 'loading'
@@ -39,6 +41,22 @@ const link: LocalTaskSessionLink = {
   agent: 'claude',
   linkedVia: 'manual',
   openedAt: 1
+}
+const parentTask: LocalTask = {
+  id: link.taskId,
+  projectId: 'project',
+  number: 1,
+  ref: 'ORC-1',
+  title: 'Parent task title',
+  description: '',
+  criteria: [],
+  statusId: 'doing',
+  priority: 2,
+  labels: [],
+  parentId: null,
+  createdAt: 1,
+  updatedAt: 1,
+  revision: 1
 }
 const worktree = makeWorktree({
   id: WORKTREE,
@@ -77,6 +95,33 @@ afterEach(() => {
   localTaskSessionPanelStore.getState().close()
 })
 
+it('shows the switched child session task name and ref while keeping the parent scope', () => {
+  const childTask: LocalTask = {
+    ...parentTask,
+    id: 'runtime:env-1/child',
+    number: 2,
+    ref: 'ORC-2',
+    title: 'Child session task title',
+    parentId: parentTask.id
+  }
+  const childSession: LocalTaskSessionLink = {
+    ...link,
+    id: 'runtime:env-1/child-session',
+    taskId: childTask.id
+  }
+  localTasksDomainStore.setState({
+    tasks: [parentTask, childTask],
+    links: { workspaces: [], sessions: [link, childSession] }
+  })
+  render(<LocalTaskSessionPanelSlot />)
+  expect(screen.getByRole('button', { name: 'Parent task title ORC-1' })).toBeTruthy()
+
+  act(() => localTaskSessionPanelStore.getState().switchSession(childSession))
+  expect(screen.getByRole('button', { name: 'Child session task title ORC-2' })).toBeTruthy()
+  expect(screen.getByTitle('Child session task title')).toBeTruthy()
+  expect(localTaskSessionPanelStore.getState().taskId).toBe(parentTask.id)
+})
+
 it.each(['catalog then tab then layout', 'layout then tab then catalog'])(
   'requests the targeted mount after %s and re-requests after readiness returns',
   (order) => {
@@ -107,3 +152,32 @@ it.each(['catalog then tab then layout', 'layout then tab then catalog'])(
     expect(requestMount).toHaveBeenCalledWith({ worktreeId: WORKTREE, tabIds: [TAB] })
   }
 )
+
+it('drops an armed stop confirmation when the preview switches to another session', () => {
+  const TAB_2 = toWebTerminalSurfaceTabId('host-tab-2')
+  const LEAF_2 = '22222222-2222-4222-8222-222222222222'
+  const other: LocalTaskSessionLink = { ...link, id: 'runtime:env-1/session-2', tabId: TAB_2 }
+  localTasksDomainStore.setState({ links: { workspaces: [], sessions: [link, other] } })
+  useAppStore.setState({
+    worktreesByRepo: { repo: [worktree] },
+    tabsByWorktree: {
+      [WORKTREE]: [terminalTab, makeTerminalTab({ id: TAB_2, worktreeId: WORKTREE })]
+    },
+    terminalLayoutsByTabId: {
+      ...layout.terminalLayoutsByTabId,
+      [TAB_2]: {
+        root: { type: 'leaf' as const, leafId: LEAF_2 },
+        activeLeafId: LEAF_2,
+        expandedLeafId: null,
+        ptyIdsByLeafId: { [LEAF_2]: 'remote:env-1@@term-2' }
+      }
+    }
+  })
+  render(<LocalTaskSessionPanelSlot />)
+  act(() => screen.getByRole('button', { name: 'Stop' }).click())
+  expect(screen.getByRole('button', { name: 'Stop session' })).toBeTruthy()
+
+  act(() => localTaskSessionPanelStore.getState().switchSession(other))
+  expect(screen.queryByRole('button', { name: 'Stop session' })).toBeNull()
+  expect(screen.getByRole('button', { name: 'Stop' })).toBeTruthy()
+})

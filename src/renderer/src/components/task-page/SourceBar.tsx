@@ -14,11 +14,13 @@ import {
   SelectItem
 } from '@/components/ui/select'
 import { openAppHttpLink } from '@/lib/app-http-link-open'
+
 import {
   LocalTaskSourceButton,
   LocalTaskSourceSummary,
   useLocalTaskSourceActive
 } from '@/components/local-tasks/LocalTaskSource'
+
 export function TaskPageSourceBar({
   model
 }: {

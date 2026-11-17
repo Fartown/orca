@@ -8,7 +8,6 @@ import {
   type LocalTaskStatusRow
 } from '../../shared/local-tasks/local-task-attention-rules'
 import type {
-  LocalTaskAttentionItem,
   LocalTaskProgressSnapshot,
   LocalTaskSessionLink,
   LocalTaskSessionProgress,
@@ -26,11 +25,9 @@ import { hasLocalTaskSessionLinks, readLocalTaskLinks } from './local-task-link-
 import { LocalTaskPaneMemory } from './local-task-pane-memory'
 import { findLocalTaskPane, latestLocalTaskRow } from './local-task-host-pane-match'
 import { claimLocalTaskSessionPane } from './local-task-session-links'
-import {
-  readLocalTaskTurnEnd,
-  writeLocalTaskTurnEnds,
-  type LocalTaskTurnEnd
-} from './local-task-turn-records'
+import { unverifiableLocalTaskOriginProgress } from '../../shared/local-tasks/local-task-session-origin'
+import type { LocalTaskAttentionJudgment as Judgment } from './local-task-attention-judgment'
+import { readLocalTaskTurnEnd, writeLocalTaskTurnEnds } from './local-task-turn-records'
 import type { LocalTasksDatabase } from './local-tasks-database'
 
 // Why: hook events arrive per tool call; one judgment per window bounds the work and the notices.
@@ -38,18 +35,6 @@ const REFRESH_COALESCE_MS = 150
 // Why: setTimeout overflows past 2^31-1 ms; a later deadline re-arms on the way.
 const MAX_TIMER_MS = 2_147_483_647
 const LIVE_STATES: readonly LocalTaskSessionState[] = ['working', 'waiting', 'blocked', 'done']
-
-type Judgment = {
-  sessions: LocalTaskSessionProgress[]
-  /** Every item the rules raise, seen, snoozed or not; marks on any other key may be pruned. */
-  candidates: LocalTaskAttentionItem[]
-  items: LocalTaskAttentionItem[]
-  staleAt: number | null
-  claims: { sessionLinkId: string; paneKey: string }[]
-  turnEnds: LocalTaskTurnEnd[]
-  /** Each session's own pane, claimed or found now. */
-  panes: Map<string, string | null>
-}
 
 /**
  * Judges every linked session from this host's own agent status (REQ-014, D-008): progress, the
@@ -102,9 +87,25 @@ export class LocalTaskAttentionMonitor {
     if (raised) {
       standing = raised.taskSessionId === taskSessionId ? 'raised' : 'other-session'
     } else if (pane !== null && isLocalTaskAttentionKeyOfPane(itemKey, pane)) {
-      standing = 'moved-on'
+      const outOfContact = judgment.sessions.some(
+        (session) => session.taskSessionId === taskSessionId && session.state === 'unverifiable'
+      )
+      standing = outOfContact ? 'unverifiable' : 'moved-on'
     }
     return { standing, liveKeys: new Set(judgment.candidates.map((item) => item.key)) }
+  }
+
+  /** Whether a key may still be raised: it is now (seen or snoozed too), or its pane is out of contact. */
+  attentionKeyMayReturn(): (key: string) => boolean {
+    const judgment = this.judge(this.now())
+    const raised = new Set(judgment.candidates.map((item) => item.key))
+    const unjudgedPanes = judgment.sessions.flatMap((session) => {
+      const pane =
+        session.state === 'unverifiable' ? judgment.panes.get(session.taskSessionId) : null
+      return pane ? [pane] : []
+    })
+    return (key) =>
+      raised.has(key) || unjudgedPanes.some((pane) => isLocalTaskAttentionKeyOfPane(key, pane))
   }
 
   /** Re-judge soon: a status, mark or link changed. Idle until started. */
@@ -155,7 +156,12 @@ export class LocalTaskAttentionMonitor {
       try {
         this.db.transaction(() => {
           for (const claim of judgment.claims) {
-            claimLocalTaskSessionPane(this.db, claim.sessionLinkId, claim.paneKey)
+            claimLocalTaskSessionPane(
+              this.db,
+              claim.sessionLinkId,
+              claim.paneKey,
+              this.source.installationId?.()
+            )
           }
         })
         judgment = this.judge(now)
@@ -177,7 +183,9 @@ export class LocalTaskAttentionMonitor {
   private judge(now: number): Judgment {
     const { sessions: links } = readLocalTaskLinks(this.db)
     const marks = readLocalTaskAttentionStates(this.db)
-    const claimedPanes = new Set(links.flatMap((link) => (link.paneKey ? [link.paneKey] : [])))
+    const claimedPanes = new Set(
+      links.flatMap((link) => (!link.executionOrigin && link.paneKey ? [link.paneKey] : []))
+    )
     const judgment: Judgment = {
       sessions: [],
       candidates: [],
@@ -190,6 +198,11 @@ export class LocalTaskAttentionMonitor {
     let paneKeys: readonly string[] | null = null
     const knownPaneKeys = (): readonly string[] => (paneKeys ??= this.source.paneKeys())
     for (const link of [...links].sort((a, b) => a.id.localeCompare(b.id))) {
+      if (link.executionOrigin) {
+        judgment.panes.set(link.id, null)
+        judgment.sessions.push(unverifiableLocalTaskOriginProgress(link.id))
+        continue
+      }
       const paneKey = link.paneKey ?? findLocalTaskPane(link, knownPaneKeys, claimedPanes)
       if (paneKey && !link.paneKey) {
         claimedPanes.add(paneKey)
@@ -234,14 +247,10 @@ export class LocalTaskAttentionMonitor {
     }
     const row = latestLocalTaskRow(this.source.rowsForPane(paneKey))
     if (!row) {
-      // Why: only a pane that reported this process can be said to have stopped; a quiet one may
-      // be an agent without status hooks, or a pane the window has not reattached yet.
-      if (!this.panes.hasReported(paneKey)) {
-        judgment.sessions.push(progress('unknown'))
-      } else {
-        const shellRemains = link.surface === 'chat' || this.source.terminalLive(paneKey)
-        judgment.sessions.push(progress(shellRemains ? 'exited' : 'missing'))
-      }
+      // Why: only a pane that reported this process can be said to have ended, its agent gone or
+      // its tab closed (REQ-012); a quiet one may be an agent without status hooks, or a pane the
+      // window has not reattached yet.
+      judgment.sessions.push(progress(this.panes.hasReported(paneKey) ? 'exited' : 'unknown'))
       return
     }
     this.panes.heard(paneKey, row)
@@ -257,7 +266,8 @@ export class LocalTaskAttentionMonitor {
         sessionLinkId: link.id,
         taskId: link.taskId,
         key,
-        body: words || saved?.body || ''
+        body: words || saved?.body || '',
+        sessionOpenedAt: link.openedAt
       })
     }
     const staleAt = localTaskRowStaleAt(row)

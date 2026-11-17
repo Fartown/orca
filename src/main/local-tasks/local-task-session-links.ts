@@ -9,6 +9,14 @@ import type {
 } from '../../shared/local-tasks/local-task-types'
 import type { LocalTasksLinksRecordSessionInput } from '../../shared/local-tasks/local-tasks-link-rpc-params'
 import { toLocalTaskOwnedHostId } from '../../shared/local-tasks/local-task-endpoint-ids'
+import { localTaskLinkWorkspaceId } from '../../shared/local-tasks/local-task-workspace-match'
+import {
+  localTaskForeignSessionHostId,
+  localTaskSessionHostAliases,
+  LocalTaskSessionExecutionOriginSchema
+} from '../../shared/local-tasks/local-task-session-origin'
+import { parsePaneKey } from '../../shared/stable-pane-id'
+import { worktreeIdsEqual } from '../../shared/worktree/id'
 import type { LocalTasksDatabase } from './local-tasks-database'
 import { appendLocalTaskEvent } from './local-task-event-store'
 import {
@@ -38,74 +46,149 @@ export function readEffectiveWorkspaceLink(
   return null
 }
 
-/** Records a session opened for a task; it runs in the task's effective workspace. */
+function sameExecutionSession(
+  existing: LocalTaskSessionLink,
+  input: LocalTasksLinksRecordSessionInput,
+  hostId: string,
+  selfInstallationId?: string | null
+): boolean {
+  if (
+    existing.surface !== input.surface ||
+    !localTaskSessionHostAliases(hostId, selfInstallationId).includes(existing.hostId) ||
+    (input.worktreeId &&
+      existing.worktreeId &&
+      !worktreeIdsEqual(input.worktreeId, existing.worktreeId)) ||
+    (input.instanceId && existing.instanceId && input.instanceId !== existing.instanceId)
+  ) {
+    return false
+  }
+  const oldTab = existing.tabId ?? (existing.paneKey ? parsePaneKey(existing.paneKey)?.tabId : null)
+  const newTab = input.tabId ?? (input.paneKey ? parsePaneKey(input.paneKey)?.tabId : null)
+  const identities = [
+    [existing.sessionId, input.sessionId],
+    [existing.paneKey, input.paneKey],
+    [oldTab, newTab]
+  ]
+  return (
+    identities.every(([oldId, newId]) => !oldId || !newId || oldId === newId) &&
+    identities.some(([oldId, newId]) => Boolean(oldId && oldId === newId))
+  )
+}
+
+/** Started sessions use the default workspace; manually linked external sessions keep their own. */
 export function recordLocalTaskSession(
   db: LocalTasksDatabase,
   input: LocalTasksLinksRecordSessionInput,
   source: LocalTaskEventSource,
-  now: number
+  now: number,
+  selfInstallationId?: string | null
 ): SessionResult {
   const task = readLocalTask(db, input.taskId)
   if (!task) {
     return { ok: false, code: 'not_found' }
   }
-  const hostId = toLocalTaskOwnedHostId(input.hostId)
+  const parsedOrigin = input.executionOrigin
+    ? LocalTaskSessionExecutionOriginSchema.safeParse(input.executionOrigin)
+    : null
+  if (parsedOrigin && !parsedOrigin.success) {
+    return { ok: false, code: 'invalid_argument' }
+  }
+  const executionOrigin = parsedOrigin?.success ? parsedOrigin.data : undefined
+  const foreignHostId = executionOrigin ? localTaskForeignSessionHostId(executionOrigin) : null
+  if (
+    executionOrigin &&
+    (input.linkedVia !== 'manual' ||
+      !input.worktreeId ||
+      (input.hostId !== foreignHostId &&
+        toLocalTaskOwnedHostId(input.hostId) !== toLocalTaskOwnedHostId(executionOrigin.hostId)))
+  ) {
+    return { ok: false, code: 'invalid_argument' }
+  }
+  const hostId = foreignHostId ?? toLocalTaskOwnedHostId(input.hostId)
   if (!hostId) {
     return { ok: false, code: 'host_not_owned' }
   }
+  const replacing = input.replacingSessionLinkId
+    ? readSessionLink(db, input.replacingSessionLinkId)
+    : null
+  if (input.replacingSessionLinkId) {
+    if (input.linkedVia !== 'manual') {
+      return { ok: false, code: 'invalid_argument' }
+    }
+    if (!replacing) {
+      return { ok: false, code: 'not_found' }
+    }
+    if (!sameExecutionSession(replacing, input, hostId, selfInstallationId)) {
+      return { ok: false, code: 'invalid_argument' }
+    }
+  }
   const workspace = readEffectiveWorkspaceLink(db, task.id)
-  if (!workspace) {
+  const worktreeId = input.worktreeId ?? replacing?.worktreeId ?? null
+  const instanceId = input.instanceId ?? replacing?.instanceId ?? null
+  if (!workspace && !executionOrigin) {
     return { ok: false, code: 'workspace_required' }
   }
-  // Why: a session the task shows must run in its effective workspace. A host/worktree/instance that
-  // is none of the workspace's is rejected, so a mismatched caller cannot attach foreign work.
-  // A reparented task's existing sessions keep their own rows, never recorded anew here.
-  const claimsForeignPlace = !isPlaceInWorkspace(
-    {
-      hostId,
-      worktreeId: input.worktreeId ?? null,
-      instanceId: input.instanceId ?? null
-    },
-    workspace
-  )
+  // Native starts retain workspace ownership checks; explicit external attachments move neither.
+  const claimsForeignPlace =
+    !executionOrigin &&
+    workspace &&
+    !isPlaceInWorkspace(
+      {
+        hostId,
+        worktreeId,
+        instanceId
+      },
+      workspace
+    )
   if (claimsForeignPlace) {
     return { ok: false, code: 'invalid_argument' }
   }
+  const tabId = input.tabId ?? replacing?.tabId ?? null
+  const paneKey = input.paneKey ?? replacing?.paneKey ?? null
+  const sessionId = input.sessionId ?? replacing?.sessionId ?? null
   const conflict = findSessionConflict(
     db,
     {
-      paneKey: input.paneKey ?? null,
+      paneKey,
       hostId,
-      sessionId: input.sessionId ?? null,
-      tabId: input.tabId ?? null
+      sessionId,
+      tabId
     },
-    null
+    replacing?.id ?? null,
+    selfInstallationId
   )
   if (conflict) {
-    return conflict.taskId === task.id
+    return !replacing && conflict.taskId === task.id
       ? { ok: true, session: conflict }
       : localTaskRefusal('session_already_linked', readLocalTask(db, conflict.taskId)?.ref)
   }
   const firstForTask = readTaskSessionLinks(db, [task.id]).length === 0
+  if (replacing) {
+    const unlinked = unlinkLocalTaskSession(db, replacing.id, source, now)
+    if (!unlinked.ok) {
+      return unlinked
+    }
+  }
   const id = randomUUID()
   db.prepare(
     `INSERT INTO local_task_sessions (id, task_id, host_id, worktree_id, instance_id, surface,
-       tab_id, pane_key, session_id, provider_session, agent, linked_via, opened_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+       tab_id, pane_key, session_id, provider_session, agent, linked_via, opened_at, execution_origin)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   ).run(
     id,
     task.id,
     hostId,
-    input.worktreeId ?? workspace.worktreeId,
-    input.instanceId ?? workspace.instanceId,
+    worktreeId ?? (workspace ? localTaskLinkWorkspaceId(workspace) : null),
+    instanceId ?? (executionOrigin ? null : (workspace?.instanceId ?? null)),
     input.surface,
-    input.tabId ?? null,
-    input.paneKey ?? null,
-    input.sessionId ?? null,
-    input.providerSession ?? null,
-    input.agent ?? null,
+    tabId,
+    paneKey,
+    sessionId,
+    input.providerSession ?? replacing?.providerSession ?? null,
+    input.agent ?? replacing?.agent ?? null,
     input.linkedVia,
-    now
+    now,
+    executionOrigin ? JSON.stringify(executionOrigin) : null
   )
   appendLocalTaskEvent(db, {
     taskId: task.id,
@@ -113,7 +196,7 @@ export function recordLocalTaskSession(
     source,
     payload: {
       sessionLinkId: id,
-      agent: input.agent ?? null,
+      agent: input.agent ?? replacing?.agent ?? null,
       surface: input.surface,
       hostId,
       via: input.linkedVia
@@ -135,16 +218,18 @@ export function recordLocalTaskSession(
 export function claimLocalTaskSessionPane(
   db: LocalTasksDatabase,
   sessionLinkId: string,
-  paneKey: string
+  paneKey: string,
+  selfInstallationId?: string | null
 ): boolean {
   const existing = readSessionLink(db, sessionLinkId)
-  if (!existing || existing.paneKey !== null) {
+  if (!existing || existing.executionOrigin || existing.paneKey !== null) {
     return false
   }
   const conflict = findSessionConflict(
     db,
     { paneKey, hostId: existing.hostId, sessionId: null },
-    existing.id
+    existing.id,
+    selfInstallationId
   )
   if (conflict) {
     return false

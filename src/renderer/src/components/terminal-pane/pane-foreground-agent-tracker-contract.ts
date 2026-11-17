@@ -8,6 +8,8 @@ export type PaneForegroundAgentTrackerDeps = {
   getPtyId: () => string | null
   /** Local reads only: remote RPC cost and replayed OSC streams must not produce process evidence. */
   isTrackablePtyId: (ptyId: string) => boolean
+  getReadContactKey?: (ptyId: string) => string | null
+  subscribeReadContactChange?: (listener: () => void) => () => void
   readForegroundProcess: (
     ptyId: string,
     options?: { expectedIncarnationId?: string }

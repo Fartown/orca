@@ -8,7 +8,6 @@ import { openLocalTaskWorkspaceDetails } from '@/local-tasks/local-task-workspac
 import { selectLocalTaskSourceVisible } from '@/local-tasks/local-task-source-visibility'
 import { openLocalTaskPage } from '@/local-tasks/local-task-navigation'
 import { useLocalTaskOfWorkspace } from '@/local-tasks/local-task-workspace-task'
-import { useLocalTaskSidebarGrouping } from '@/local-tasks/local-task-sidebar-grouping'
 import { useLocalTaskCardChipShown } from '@/local-tasks/local-task-card-chip-preference'
 import { localTaskWorktreeHostId } from '@/local-tasks/local-task-workspace-resolution'
 import { localTaskEndpointForHost } from '@/local-tasks/local-task-endpoints'
@@ -23,7 +22,6 @@ type WorkspaceRef = Pick<Worktree, 'id' | 'hostId' | 'instanceId'>
 /**
  * The task chip on a sidebar workspace card (REQ-016): the task's title, the ref only in its
  * tooltip. It shrinks three times faster than the workspace name, so the name stays readable.
- * Grouping the sidebar by task already names the task in the group head, so the chip steps aside;
  * "Show properties → Local task" hides it, while the hover card still lists the task.
  */
 export function LocalTaskWorkspaceChip({
@@ -38,9 +36,8 @@ export function LocalTaskWorkspaceChip({
 
 function LinkedWorkspaceChip({ worktree }: { worktree: WorkspaceRef }): React.JSX.Element | null {
   const task = useLocalTaskOfWorkspace(worktree)?.task
-  const grouping = useLocalTaskSidebarGrouping()
   const shown = useLocalTaskCardChipShown()
-  if (!task || grouping === 'on' || !shown) {
+  if (!task || !shown) {
     return null
   }
   const label = `${task.title} · ${task.ref}`

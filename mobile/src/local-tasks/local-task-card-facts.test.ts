@@ -6,7 +6,7 @@ import type {
   LocalTaskSessionLink
 } from '../../../src/shared/local-tasks/local-task-link-types'
 import type { LocalTask } from '../../../src/shared/local-tasks/local-task-types'
-import { localTaskCardFacts } from './local-task-card-facts'
+import { localTaskCardFacts, localTaskSessionSummary } from './local-task-card-facts'
 
 function task(id: string, parentId: string | null = null): LocalTask {
   return {
@@ -80,6 +80,64 @@ function facts(snapshot: LocalTaskProgressSnapshot, tasks: LocalTask[] = [parent
 }
 
 describe('localTaskCardFacts', () => {
+  it('does not treat a library owner snapshot as progress of an external execution', () => {
+    const external = {
+      ...session('external', parent.id, 1),
+      hostId: 'foreign:11111111-1111-4111-8111-111111111111/local',
+      linkedVia: 'manual' as const,
+      executionOrigin: {
+        installationId: '11111111-1111-4111-8111-111111111111',
+        hostId: 'local',
+        hostLabel: 'Local Mac'
+      },
+      worktreeId: 'folder:external-workspace'
+    }
+    const externalLinks = { ...links, sessions: [external] }
+    const snapshot: LocalTaskProgressSnapshot = {
+      observedAt: 10,
+      sessions: [
+        {
+          taskSessionId: external.id,
+          state: 'waiting',
+          lastMessage: null,
+          stateSince: 5,
+          unread: true
+        }
+      ],
+      items: [
+        {
+          key: 'external@5',
+          taskId: parent.id,
+          taskSessionId: external.id,
+          kind: 'question',
+          agent: 'claude',
+          lastMessage: 'A different host asks this',
+          since: 5,
+          replyable: true
+        }
+      ]
+    }
+    const args = {
+      index: buildLocalTaskIndex([], [parent]),
+      links: externalLinks,
+      snapshot,
+      inContact: true,
+      hostName: () => 'mini'
+    }
+    expect(
+      localTaskCardFacts({ ...args, task: parent, hostConnected: () => true }).lead
+    ).toMatchObject({
+      state: 'unverifiable',
+      item: null
+    })
+    expect(localTaskSessionSummary({ ...args, taskSessionId: external.id })).toMatchObject({
+      state: 'unverifiable',
+      item: null,
+      workspaceName: 'folder:external-workspace',
+      hostName: 'Local Mac'
+    })
+  })
+
   it('names the session waiting on the user first and sums up the subtasks', () => {
     const result = facts({
       observedAt: 10,

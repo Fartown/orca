@@ -7,6 +7,7 @@ import { AgentIcon, getAgentLabel } from '@/lib/agent-catalog'
 import { cn } from '@/lib/utils'
 import { useAppStore } from '@/store'
 import type {
+  LocalTaskProposalAgentFacts,
   LocalTaskProposalPlace,
   LocalTaskProposalSessionFacts
 } from '@/local-tasks/local-task-proposal-item-facts'
@@ -99,18 +100,38 @@ export function LocalTaskProposalSessionLine({
   )
 }
 
-/** The agent a new session would open with. */
+/** The agent a new session would open with, saying so when it stands in for the one asked. */
 export function LocalTaskProposalNewSession({
-  agent
+  launch,
+  asked
 }: {
-  agent: string | null
+  launch: LocalTaskProposalAgentFacts | null
+  /** The agent the item names, if any. */
+  asked: string | null
 }): React.JSX.Element {
+  const agent = launch ? launch.agent : asked
+  if (launch && launch.agent === null) {
+    return (
+      <span className="inline-flex shrink-0 items-center gap-1 text-status-warning">
+        {translate('localTasks.dispatcher.place.noAgent', 'No agent is enabled')}
+      </span>
+    )
+  }
   return (
     <span className="inline-flex shrink-0 items-center gap-1">
       {isTuiAgent(agent) ? <AgentIcon agent={agent} size={12} /> : null}
       {translate('localTasks.dispatcher.place.newSession', '{{agent}} · new session', {
         agent: agentName(agent)
       })}
+      {launch?.substituted && asked ? (
+        <span className="text-status-warning">
+          {translate(
+            'localTasks.dispatcher.place.agentSubstituted',
+            '(default; {{asked}} is not available)',
+            { asked: isTuiAgent(asked) ? getAgentLabel(asked) : asked }
+          )}
+        </span>
+      ) : null}
     </span>
   )
 }

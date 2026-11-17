@@ -804,7 +804,7 @@ describe('host attention judgment', () => {
     expect(readLocalTaskAttentionStates(db).get(seenKey)).toMatchObject({ seenAt: NOW })
   })
 
-  it('says unverifiable for an SSH target out of contact and ended once a pane stops reporting', () => {
+  it('says unverifiable for an SSH target out of contact and ended once a session closes', () => {
     const context = setup()
     const { work, host, task } = context
     const remote = task('远程')
@@ -845,7 +845,8 @@ describe('host attention judgment', () => {
     host.rows.delete(`tab-1:${LEAF}`)
     host.live.add(`tab-1:${LEAF}`)
     expect(stateOf()).toBe('exited')
+    // Its terminal closed too: still a session that ended (REQ-012), not one Orca lost track of.
     host.live.delete(`tab-1:${LEAF}`)
-    expect(stateOf()).toBe('missing')
+    expect(stateOf()).toBe('exited')
   })
 })

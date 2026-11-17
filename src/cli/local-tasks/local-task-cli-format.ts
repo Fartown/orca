@@ -44,6 +44,19 @@ export function cliTime(at: number): string {
   return `${new Date(at).toISOString().slice(0, 16).replace('T', ' ')}Z`
 }
 
+/**
+ * Text people, agents or outside sources wrote, fenced so an agent reads it as data, never as an
+ * instruction (H5). Why JSON quoting: a quote or newline inside cannot end the quote.
+ */
+export function quotedCliText(text: string): string {
+  return JSON.stringify(text)
+}
+
+/** Several lines of such text, each behind "> " so no line of it can pass for the CLI's own. */
+function quotedCliBlock(text: string): string[] {
+  return text.split('\n').map((line) => `> ${line}`)
+}
+
 const PRIORITY_LABELS: Record<LocalTaskPriority, string> = {
   0: 'No priority',
   1: 'Urgent',
@@ -131,30 +144,34 @@ export function formatTaskList(result: { tasks: TaskCliListItem[] }): string {
         .map((task) => {
           const where = task.workspace?.name ? ` · ${task.workspace.name}` : ''
           const latest = task.latestProgress
-            ? `\n  latest (${task.latestProgress.at}): ${task.latestProgress.body}`
+            ? `\n  latest (${task.latestProgress.at}): ${quotedCliText(task.latestProgress.body)}`
             : ''
-          return `${task.title}\t${contextLine(task)}${where}${latest}`
+          return `${quotedCliText(task.title)}\t${contextLine(task)}${where}${latest}`
         })
         .join('\n')
     : 'No tasks.'
 }
 
 export function formatTaskDetail(task: TaskCliDetail): string {
-  const lines = [task.title, contextLine(task), `Priority: ${task.priority}`]
+  const lines = [quotedCliText(task.title), contextLine(task), `Priority: ${task.priority}`]
   if (task.labels.length > 0) {
-    lines.push(`Labels: ${task.labels.join(', ')}`)
+    lines.push(`Labels: ${task.labels.map(quotedCliText).join(', ')}`)
   }
   if (task.workspace) {
     const name = task.workspace.name ?? task.workspace.branch ?? '(unnamed)'
     lines.push(`Workspace: ${name} on ${task.workspace.hostId}`)
   }
   if (task.description.trim()) {
-    lines.push('', task.description.trim())
+    lines.push('', 'Description:', ...quotedCliBlock(task.description.trim()))
   }
   if (task.latestProgress) {
-    lines.push('', `Latest progress (${task.latestProgress.at}):`, task.latestProgress.body)
+    lines.push(
+      '',
+      `Latest progress (${task.latestProgress.at}):`,
+      ...quotedCliBlock(task.latestProgress.body.trim())
+    )
     if (task.latestProgress.needsYou) {
-      lines.push(`Needs the user: ${task.latestProgress.needsYou}`)
+      lines.push(`Needs the user: ${quotedCliText(task.latestProgress.needsYou)}`)
     }
   }
   if (task.sessions.length > 0) {
@@ -184,5 +201,5 @@ export function formatTaskCurrent(result: {
 }
 
 export function formatTaskChange(result: { task: TaskCliSummary; change: string }): string {
-  return `${result.change}\t${result.task.title}\t${contextLine(result.task)}`
+  return `${result.change}\t${quotedCliText(result.task.title)}\t${contextLine(result.task)}`
 }

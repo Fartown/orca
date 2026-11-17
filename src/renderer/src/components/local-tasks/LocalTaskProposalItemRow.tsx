@@ -60,7 +60,7 @@ function ItemMeta({
       parts = (
         <>
           {place}
-          <LocalTaskProposalNewSession agent={item.agent ?? null} />
+          <LocalTaskProposalNewSession launch={facts.launch} asked={item.agent ?? null} />
         </>
       )
       break
@@ -71,7 +71,7 @@ function ItemMeta({
           <span className="shrink-0">
             {translate('localTasks.dispatcher.place.sameWorkspace', 'Same workspace')}
           </span>
-          <LocalTaskProposalNewSession agent={item.agent ?? null} />
+          <LocalTaskProposalNewSession launch={facts.launch} asked={item.agent ?? null} />
         </>
       )
       break
@@ -159,6 +159,7 @@ export function LocalTaskProposalItemRow({
   kept,
   busy,
   progress,
+  unrecorded,
   onToggle
 }: {
   proposalId: string
@@ -173,6 +174,8 @@ export function LocalTaskProposalItemRow({
   kept: boolean
   busy: boolean
   progress: LocalTaskProposalItemProgress | null
+  /** This window stopped the run because a result could not be recorded. */
+  unrecorded: boolean
   onToggle: () => void
 }): React.JSX.Element {
   const [draft, setDraft] = useState<LocalTaskProposalItemDraft | null>(null)
@@ -314,7 +317,7 @@ export function LocalTaskProposalItemRow({
         ) : null}
         {lock ? <LocalTaskProposalLockNote lock={lock} hostId={view.facts.hostId} /> : null}
         {progress && !brief ? (
-          <LocalTaskProposalItemOutcome progress={progress} names={names} />
+          <LocalTaskProposalItemOutcome progress={progress} names={names} unrecorded={unrecorded} />
         ) : null}
       </div>
     </li>

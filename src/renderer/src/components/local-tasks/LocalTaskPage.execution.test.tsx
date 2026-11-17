@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { addAppKeyListener, removeAppKeyListener } from '@/lib/app-keyboard-router'
@@ -12,7 +12,6 @@ import { makeWorktree } from '@/store/slices/worktrees-slice-test-fixtures'
 import type { LocalTask, LocalTaskProject } from '../../../../shared/local-tasks/local-task-types'
 import { LocalTaskPage } from './LocalTaskPage'
 import { LocalTaskSessionChip } from './LocalTaskSessionChip'
-import { LocalTaskSidebarGroupByToggle } from './LocalTaskSidebarGroupByToggle'
 
 const project: LocalTaskProject = {
   id: 'project-1',
@@ -249,6 +248,14 @@ it.each([
     )
     expect(screen.getByRole('button', { name: /Mark as seen/ })).toHaveProperty('disabled', off)
     expect(screen.getByRole('button', { name: /Snooze/ })).toHaveProperty('disabled', off)
+    fireEvent.click(screen.getByRole('button', { name: 'ONE-1 Task' }))
+    expect(localTaskPageStore.getState()).toMatchObject({
+      previewOpen: true,
+      cursorTaskId: task.id,
+      detailTaskId: null
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Open task details' }))
+    expect(localTaskPageStore.getState().detailTaskId).toBe(task.id)
   }
 )
 
@@ -279,6 +286,92 @@ it('scrolls the list to a cursor the keyboard moved, never to a row under the po
   }
 })
 
+it('keeps a summary within the queried results and never swaps it to a hovered task', () => {
+  const library = localTasksDomainStore.getState().writer('local')
+  library.applyTasks([task, { ...task, id: 'task-2', ref: 'ONE-2', title: 'Second' }])
+  localTaskPageStore.setState({ detailTaskId: null })
+  render(
+    <TooltipProvider>
+      <LocalTaskPage sourceBar={null} />
+    </TooltipProvider>
+  )
+  act(() => localTaskPageStore.getState().openPreview(task.id))
+  expect(localTaskPageStore.getState().previewOpen).toBe(true)
+  act(() => localTaskPageStore.getState().setCursor('task-2', 'pointer'))
+  expect(localTaskPageStore.getState().cursorTaskId).toBe(task.id)
+  act(() => localTaskPageStore.getState().setQuery('Second'))
+  expect(localTaskPageStore.getState().previewOpen).toBe(false)
+  expect(screen.queryByRole('complementary', { name: 'Task preview' })).toBeNull()
+})
+
+it('keeps a summary for a filtered-in subtask when its parent is folded', () => {
+  localTasksDomainStore
+    .getState()
+    .writer('local')
+    .applyTasks([task, child(2, task.id)])
+  localTaskPageStore.setState({ detailTaskId: null })
+  render(
+    <TooltipProvider>
+      <LocalTaskPage sourceBar={null} />
+    </TooltipProvider>
+  )
+  act(() => localTaskPageStore.getState().openPreview('task-2'))
+  act(() => localTaskPageStore.getState().toggleTaskCollapsed(task.id))
+  expect(localTaskPageStore.getState().previewOpen).toBe(true)
+  const preview = screen.getByRole('complementary', { name: 'Task preview' })
+  expect(preview.textContent).toContain('Task 2')
+  expect(within(preview).getByRole('button', { name: /Open task details/ })).toBeTruthy()
+  const uninstall = installLocalTaskPageKeyRouter()
+  try {
+    fireEvent.keyDown(document.body, { key: 'j' })
+    expect(localTaskPageStore.getState().cursorTaskId).toBe(task.id)
+    expect(screen.getByRole('complementary', { name: 'Task preview' }).textContent).toContain(
+      'ONE-1'
+    )
+  } finally {
+    uninstall()
+  }
+  act(() => localTaskPageStore.getState().openPreview('task-2'))
+  act(() => localTaskPageStore.getState().setPreviewOpen(false))
+  expect(localTaskPageStore.getState().cursorTaskId).toBe(task.id)
+})
+
+it('uses rendered board order for the keyboard cursor and reveals it in both scroll directions', () => {
+  const statuses = [
+    { id: 'backlog', category: 'backlog' as const, name: 'Backlog' },
+    { id: 'started', category: 'started' as const, name: 'Started' }
+  ].map((status, position) => ({ ...project.statuses[0], ...status, position }))
+  const library = localTasksDomainStore.getState().writer('local')
+  library.applyProjects([{ ...project, statuses }])
+  library.applyTasks([
+    { ...task, id: 'task-backlog', statusId: 'backlog', title: 'Backlog task' },
+    { ...task, id: 'task-started', statusId: 'started', title: 'Started task' }
+  ])
+  localTaskPageStore.setState({ detailTaskId: null, layout: 'board' })
+  const scroll = vi.spyOn(HTMLElement.prototype, 'scrollIntoView').mockImplementation(() => {})
+  const uninstall = installLocalTaskPageKeyRouter()
+  try {
+    render(
+      <TooltipProvider>
+        <LocalTaskPage sourceBar={null} />
+      </TooltipProvider>
+    )
+    const cards = [...document.querySelectorAll('[data-local-task-row]')]
+    expect(cards.map((card) => card.textContent)).toEqual([
+      expect.stringContaining('Started task'),
+      expect.stringContaining('Backlog task')
+    ])
+    fireEvent.keyDown(document.body, { key: 'j' })
+    expect(localTaskPageStore.getState().cursorTaskId).toBe('task-started')
+    fireEvent.keyDown(document.body, { key: 'j' })
+    expect(localTaskPageStore.getState().cursorTaskId).toBe('task-backlog')
+    expect(scroll).toHaveBeenCalledWith({ block: 'nearest', inline: 'nearest', behavior: 'auto' })
+  } finally {
+    uninstall()
+    scroll.mockRestore()
+  }
+})
+
 it('finds a session’s workspace link the way the sidebar card does, by instance first', () => {
   const renamed = 'repo-1::/repo-1/renamed'
   const previous = useAppStore.getState()
@@ -298,12 +391,4 @@ it('finds a session’s workspace link the way the sidebar card does, by instanc
   } finally {
     useAppStore.setState({ repos: previous.repos, worktreesByRepo: previous.worktreesByRepo })
   }
-})
-
-it('puts the Task grouping inside the upstream toggle, styled like its other choices', () => {
-  render(<LocalTaskSidebarGroupByToggle groupBy="none" setGroupBy={() => {}} />)
-  const none = screen.getByRole('radio', { name: 'None' })
-  const byTask = screen.getByRole('radio', { name: 'Task' })
-  expect(byTask.className).toBe(none.className)
-  expect(byTask.parentElement).toBe(none.parentElement)
 })

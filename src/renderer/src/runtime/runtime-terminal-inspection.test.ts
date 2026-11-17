@@ -4,6 +4,7 @@ import { recordRuntimeTerminalInputForPtyId } from './runtime-terminal-input-rec
 import { sendRuntimePtyInputVerified } from './runtime-terminal-verified-input'
 import { CLIPBOARD_TEXT_MEASURE_YIELD_CODE_UNITS } from '../../../shared/clipboard-text'
 import {
+  createCompatibleRuntimeStatusResponse,
   createCompatibleRuntimeStatusResponseIfNeeded,
   type RuntimeEnvironmentCallRequest
 } from './runtime-compatibility-test-fixture'
@@ -75,6 +76,12 @@ describe('runtime terminal owner routing', () => {
     useAppStore.setState({
       settings: { experimentalAgentHibernation: true } as never,
       terminalLayoutsByTabId: {},
+      runtimeStatusByEnvironmentId: new Map([
+        ['env-1', { status: createCompatibleRuntimeStatusResponse().result, checkedAt: 1 }]
+      ]),
+      sshConnectionStates: new Map([
+        ['host', { targetId: 'host', status: 'connected', error: null, reconnectAttempt: 0 }]
+      ]),
       lastTerminalInputAtByPaneKey: {}
     })
   })

@@ -15,8 +15,8 @@ import { hostAdvertisesLocalTasks, localTaskHostMachineName } from './local-task
 import { readLocalTaskHomeLibrary, type LocalTaskHomeLibrary } from './local-task-home-attention'
 
 export type LocalTaskHomeHost =
-  /** A connected host whose own library or a relayed server's has a project. */
-  | { kind: 'ready'; host: HostProfile; libraries: LocalTaskHomeLibrary[] }
+  /** A connected host whose own library or a relayed server's has a project, as of `readAt`. */
+  | { kind: 'ready'; host: HostProfile; libraries: LocalTaskHomeLibrary[]; readAt: number }
   /**
    * A host that had such a library earlier in this session and cannot be reached now. Unreachable
    * says nothing about whether its Orca is open (AGENTS.md: loss of contact is not exit).
@@ -30,6 +30,7 @@ function unreachableState(state: ConnectionState | null): 'disconnected' | 'auth
 
 /** The libraries home lists for one host: none when it has no local tasks or no project. */
 type HostReading = { libraries: LocalTaskHomeLibrary[] }
+type HostRead = HostReading & { readAt: number }
 
 function presentLibraries(libraries: readonly (LocalTaskHomeLibrary | null)[]) {
   return libraries.flatMap((library) => (library ? [library] : []))
@@ -95,7 +96,7 @@ async function readHomeHost(client: RpcClient, host: HostProfile): Promise<HostR
 export function useLocalTaskHomeHosts(connectedHosts: HostProfile[]): LocalTaskHomeHost[] {
   const ctx = useRpcClientContext()
   const [catalog, setCatalog] = useState<HostProfile[]>([])
-  const [readings, setReadings] = useState<Record<string, HostReading>>({})
+  const [readings, setReadings] = useState<Record<string, HostRead>>({})
   const [focus, setFocus] = useState<{ turn: number; focused: boolean }>({
     turn: 0,
     focused: false
@@ -134,7 +135,10 @@ export function useLocalTaskHomeHosts(connectedHosts: HostProfile[]): LocalTaskH
       readHomeHost(client, host).then(
         (reading) => {
           if (turns.current.get(host.id) === turn) {
-            setReadings((previous) => ({ ...previous, [host.id]: reading }))
+            setReadings((previous) => ({
+              ...previous,
+              [host.id]: { ...reading, readAt: Date.now() }
+            }))
           }
         },
         () => {}
@@ -172,8 +176,10 @@ export function useLocalTaskHomeHosts(connectedHosts: HostProfile[]): LocalTaskH
 
   const connectedIds = new Set(connectedHosts.map((host) => host.id))
   const ready: LocalTaskHomeHost[] = connectedHosts.flatMap((host) => {
-    const libraries = readings[host.id]?.libraries ?? []
-    return libraries.length > 0 ? [{ kind: 'ready', host, libraries }] : []
+    const reading = readings[host.id]
+    return reading && reading.libraries.length > 0
+      ? [{ kind: 'ready', host, libraries: reading.libraries, readAt: reading.readAt }]
+      : []
   })
   const unreachable: LocalTaskHomeHost[] = catalog.flatMap((host) => {
     const state = unreachableState(ctx.getKnownState(host.id))

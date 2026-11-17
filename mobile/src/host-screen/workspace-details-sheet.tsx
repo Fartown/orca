@@ -34,6 +34,7 @@ import {
 import type { Worktree } from '../worktree/workspace-list-types'
 import type { Translate } from '../i18n/mobile-i18n'
 import { useMobileTranslation } from '../i18n/use-mobile-translation'
+
 import { useLocalTaskDetailRows } from '../local-tasks/local-task-workspace-detail-rows'
 
 const ICON_SIZE = 16

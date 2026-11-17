@@ -25,6 +25,7 @@ import {
   streamLocalTaskChanges
 } from '../../../local-tasks/local-tasks-change-subscription'
 import { localTasksReadiness } from '../../../local-tasks/local-tasks-readiness'
+import { getPublishedHostDescriptor } from '../../host-descriptor'
 import { sourceOf } from '../../../local-tasks/local-tasks-rpc-caller'
 import type { LocalTasksService } from '../../../local-tasks/local-tasks-service'
 import { defineMethod, defineStreamingMethod } from '../core'
@@ -52,7 +53,10 @@ export const LOCAL_TASK_METHODS = [
     permission: 'workspace',
     name: 'localTasks.status',
     params: null,
-    handler: () => localTasksReadiness.status()
+    handler: (_params, { runtime }) => {
+      const installationId = getPublishedHostDescriptor(runtime.getRuntimeId())?.installationId
+      return { ...localTasksReadiness.status(), ...(installationId ? { installationId } : {}) }
+    }
   }),
   defineMethod({
     permission: 'workspace',

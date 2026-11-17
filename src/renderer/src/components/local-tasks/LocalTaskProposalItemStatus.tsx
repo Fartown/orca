@@ -100,6 +100,17 @@ function lockText(lock: LocalTaskProposalLock, host: string): string {
         'localTasks.dispatcher.lock.pickProject',
         'This repository belongs to several projects. Pick one first.'
       )
+    case 'workspace-owned':
+      return translate(
+        'localTasks.dispatcher.lock.workspaceOwned',
+        'This workspace already belongs to {{ref}} “{{title}}”. A workspace belongs to one task.',
+        { ref: lock.ref, title: lock.title }
+      )
+    case 'no-agent':
+      return translate(
+        'localTasks.dispatch.noAgent',
+        'Turn on an agent in Settings → Agents first.'
+      )
     case 'session-ended':
       return translate('localTasks.dispatcher.lock.ended', 'This session has ended.')
     case 'session-missing':
@@ -164,10 +175,13 @@ function TaskRef({ taskId, label }: { taskId: string; label: string }): React.JS
 /** What a recorded result says, or why an item's result is unknown. */
 export function LocalTaskProposalItemOutcome({
   progress,
-  names
+  names,
+  unrecorded = false
 }: {
   progress: LocalTaskProposalItemProgress
   names: LocalTaskProposalNames
+  /** The run stopped because this window could not record a result, not because it went away. */
+  unrecorded?: boolean
 }): React.JSX.Element | null {
   const { stage, result } = progress
   const ref = result?.taskId ? (
@@ -199,10 +213,15 @@ export function LocalTaskProposalItemOutcome({
       <span className="flex min-w-0 items-start gap-1.5 text-2xs text-status-warning">
         <CircleDashed className="mt-px size-3 shrink-0" aria-hidden />
         <span className="min-w-0 break-words">
-          {translate(
-            'localTasks.dispatcher.result.unknown',
-            'The execution window disconnected before this step reported. Check the task before deciding whether to redo it.'
-          )}
+          {unrecorded
+            ? translate(
+                'localTasks.dispatcher.result.unrecorded',
+                'This step’s result could not be recorded, so whether it worked is unknown. Check the task before deciding whether to redo it.'
+              )
+            : translate(
+                'localTasks.dispatcher.result.unknown',
+                'The execution window disconnected before this step reported. Check the task before deciding whether to redo it.'
+              )}
         </span>
       </span>
     )

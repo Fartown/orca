@@ -2031,10 +2031,28 @@
     "liveTerminals_other": "{{count}} live terminals will reconnect after restart."
   },
   "localTasks": {
+    "nav": {
+      "hide": "Hide task navigation",
+      "show": "Show task navigation"
+    },
     "needsYou": {
       "sidebarCount": "{{count}} tasks need you",
       "sidebarCount_one": "{{count}} task needs you",
       "sidebarCount_other": "{{count}} tasks need you"
+    },
+    "dispatch": {
+      "previewTask": "Preview task",
+      "previewSession": "Preview session"
+    },
+    "detail": {
+      "copyLink": "Copy link",
+      "linkCopied": "Task link copied",
+      "linkCopyFailed": "Could not copy task link",
+      "linkInvalid": "Task link is invalid",
+      "linkLibraryMissing": "Task library is not available in this Orca",
+      "linkLibraryOffline": "Task library is disconnected; showing saved task",
+      "linkTaskMissing": "Task is not available in its library",
+      "linkLibraryUnavailable": "Task library is disconnected; no saved task is available"
     }
   },
   "menu": {

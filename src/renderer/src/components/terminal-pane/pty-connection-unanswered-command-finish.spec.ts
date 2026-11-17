@@ -52,12 +52,9 @@ export function registerPtyConnectionUnansweredCommandFinishTests(): void {
       await restoreTerminalTestGlobals()
     })
 
-    it.each([
-      ['clears', 'a row without a process identity', false],
-      ['keeps', 'a row whose agent process the host can check', true]
-    ])(
-      '%s %s when an SSH pane finishes and the shell check cannot answer',
-      async (_verb, _label, verifiable) => {
+    it.each([false, true])(
+      'retains an out-of-contact SSH row regardless of local verifiability %s, then accepts source shell proof',
+      async (verifiable) => {
         vi.useFakeTimers()
         const { connectPanePty } = await import('./pty-connection')
         vi.mocked(window.api.pty.confirmForegroundProcess).mockResolvedValue(null)
@@ -71,7 +68,7 @@ export function registerPtyConnectionUnansweredCommandFinishTests(): void {
         transport.connect.mockImplementation(
           async ({ callbacks }: { callbacks: ConnectCallbacks }) => {
             dataCallbackRef.current = callbacks.onData ?? null
-            return { id: ptyId }
+            return { id: ptyId, incarnationId: 'source-incarnation' }
           }
         )
         transportFactoryQueue.push(transport)
@@ -107,12 +104,44 @@ export function registerPtyConnectionUnansweredCommandFinishTests(): void {
         await vi.advanceTimersByTimeAsync(350 + 1200 + 6000)
         await flushAsyncTicks()
 
-        expect(hasVerifiableAgentProcess).toHaveBeenCalledWith(paneKey)
-        if (verifiable) {
-          expect(mockStoreState.dropAgentStatus).not.toHaveBeenCalled()
-        } else {
-          expect(mockStoreState.dropAgentStatus).toHaveBeenCalledWith(paneKey)
+        expect(hasVerifiableAgentProcess).not.toHaveBeenCalled()
+        expect(window.api.pty.inspectProcess).not.toHaveBeenCalled()
+        expect(mockStoreState.dropAgentStatus).not.toHaveBeenCalled()
+
+        vi.mocked(window.api.pty.inspectProcess).mockResolvedValue({
+          foregroundProcess: 'bash',
+          hasChildProcesses: false,
+          foregroundProcessEvidence: {
+            verdict: 'live',
+            processName: 'bash',
+            ptyId: 'pty-codex-exit',
+            ptyIncarnationId: 'source-incarnation',
+            authorityGeneration: 'source-authority',
+            observationEpoch: 1,
+            capturedAgeMs: 0,
+            fence: {
+              platform: 'posix',
+              shellPid: 1,
+              shellStartTime: '1',
+              tty: '/dev/pts/1',
+              foregroundPgid: 1
+            }
+          }
+        })
+        mockStoreState = {
+          ...mockStoreState,
+          sshConnectionStates: new Map([['conn', { status: 'connected' }]])
         }
+        for (const notify of storeSubscribers) {
+          notify(mockStoreState)
+        }
+        await vi.advanceTimersByTimeAsync(1)
+        await flushAsyncTicks()
+        expect(window.api.pty.inspectProcess).toHaveBeenCalledWith(ptyId, {
+          expectedIncarnationId: 'source-incarnation'
+        })
+        expect(mockStoreState.dropAgentStatus).toHaveBeenCalledWith(paneKey)
+        expect(hasVerifiableAgentProcess).not.toHaveBeenCalled()
       }
     )
   })

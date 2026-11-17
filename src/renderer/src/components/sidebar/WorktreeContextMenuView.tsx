@@ -46,6 +46,7 @@ import {
   shouldUseNativeContextMenu
 } from './worktree-context-menu-policy'
 import { CLOSE_ALL_CONTEXT_MENUS_EVENT } from '@/lib/close-all-context-menus'
+
 import { LocalTaskWorkspaceMenuItem } from '@/components/local-tasks/LocalTaskWorkspaceChip'
 
 export default function WorktreeContextMenuView({ model }: { model: WorktreeContextMenuModel }) {

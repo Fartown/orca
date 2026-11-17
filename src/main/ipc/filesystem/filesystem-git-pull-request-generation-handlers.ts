@@ -23,7 +23,6 @@ import { withLinkedIssueDraftContext } from '../../../shared/source-control-ai-a
 import { resolveSourceControlAiLinkedIssueMeta } from '../source-control-ai-linked-issue'
 import { resolveHostedReviewBodyForGeneration } from '../../source-control/pull-request-template'
 import { loadPullRequestLinkedIssue } from '../../source-control/pull-request-linked-issue'
-import { linkedLocalTaskDraftContext } from '../../local-tasks/local-task-pull-request-context'
 import type { FilesystemHandlerContext } from './filesystem-handler-context'
 import {
   getLocalAgentRuntimeTarget,
@@ -137,8 +136,7 @@ export function registerFilesystemGitPullRequestGenerationHandlers(
       context = {
         ...withLinkedIssueDraftContext(context, issueMeta?.linkedIssue),
         ...(args.provider ? { provider: args.provider } : {}),
-        ...(linkedIssueDetails ? { linkedIssueDetails } : {}),
-        ...linkedLocalTaskDraftContext({ id: args.worktreeId, path: args.worktreePath })
+        ...(linkedIssueDetails ? { linkedIssueDetails } : {})
       }
       const localEnv = await prepareLocalCommitMessageAgentEnv(
         resolvedSettings.params.agentId,

@@ -91,7 +91,7 @@ export function LocalTaskDetailScreen(props: LocalTaskDetailProps & { task: Loca
   })
   // Q2: a chat session is answered in the drawer; a terminal one opens its own page.
   const openSession = (id: string) => {
-    if (localTaskChatPreviewTarget(library, id)) {
+    if (localTaskChatPreviewTarget(library, props.site.endpoint, id)) {
       setPreviewSessionId(id)
       return null
     }
@@ -219,7 +219,7 @@ export function LocalTaskDetailScreen(props: LocalTaskDetailProps & { task: Loca
           writebacks={localTaskWritebacks(events.events)}
           sessions={localTaskSessionViews({
             task,
-            tasks: library.tasks,
+            index,
             links: library.work.links,
             snapshot: library.work.progress,
             inContact

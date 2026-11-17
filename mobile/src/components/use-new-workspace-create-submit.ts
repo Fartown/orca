@@ -19,7 +19,6 @@ import type { AgentLaunchSupport } from '../tasks/agent-launch-request'
 import type { WorkspaceSshGate } from '../tasks/workspace-ssh-gate'
 import type { useMobileComposerSource } from '../tasks/use-mobile-composer-source'
 import type { WorktreeCreateIdempotencySupport } from '../tasks/worktree-create-idempotency-policy'
-import type { LocalTaskCreateRun } from '../local-tasks/local-task-create-source-start'
 import {
   pickPreferredNewWorktreeAgent,
   type NewWorktreeAgentOption,
@@ -29,6 +28,8 @@ import type { MobileWorkspaceRepo, SetupRunPolicy } from './new-worktree-modal-t
 import type { OrcaHookTrustPrompt } from './OrcaHookTrustDrawer'
 import type { NewWorktreeDrawerView } from './use-new-worktree-drawer-navigation'
 import { getSuggestedCreatureName } from './worktree-name-suggestion'
+
+import type { LocalTaskCreateRun } from '../local-tasks/local-task-create-source-start'
 
 type CreateOptions = {
   setupOverride?: Exclude<WorkspaceCreateSetupDecision, 'inherit'>

@@ -1,54 +1,23 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native'
-import { useStore } from 'zustand'
 import { useMobileTranslation } from '../i18n/use-mobile-translation'
 import { colors, radii, spacing, typography } from '../theme/mobile-theme'
-import {
-  downloadAndInstallUpdate,
-  integrationUpdatesEnabled,
-  mobileUpdates
-} from './mobile-updates'
+import { integrationUpdatesEnabled } from './mobile-updates'
+import { useIntegrationUpdateAction } from './use-integration-update-action'
 
 export function IntegrationUpdateRow() {
-  const { stage, progress, error, release } = useStore(mobileUpdates.store)
+  const { stage, error, label, pending, onPress } = useIntegrationUpdateAction()
   const t = useMobileTranslation()
   if (!integrationUpdatesEnabled) {
     return null
   }
-  const pending = ['checking', 'downloading', 'verifying', 'installing'].includes(stage)
-  const installable = ['ready', 'permission', 'installer-opened'].includes(stage)
-  const label =
-    stage === 'checking'
-      ? t('integrationBuilds.updateRow.checking', 'Checking for updates…')
-      : stage === 'downloading'
-        ? t('integrationBuilds.updateRow.downloading', 'Downloading update… {{percent}}%', {
-            percent: Math.floor(progress)
-          })
-        : stage === 'verifying'
-          ? t('integrationBuilds.updateRow.verifying', 'Verifying APK…')
-          : stage === 'installing'
-            ? t('integrationBuilds.updateRow.installing', 'Opening Android installer…')
-            : installable
-              ? t('integrationBuilds.updateRow.install', 'Install downloaded update')
-              : stage === 'available'
-                ? t('integrationBuilds.updateRow.download', 'Download and install update')
-                : stage === 'error' && release
-                  ? t('integrationBuilds.updateRow.retry', 'Retry update')
-                  : t('integrationBuilds.updateRow.check', 'Check for updates')
+
   return (
     <View style={styles.section}>
       <Pressable
         accessibilityRole="button"
         disabled={pending}
         style={styles.button}
-        onPress={() => {
-          if (installable) {
-            void mobileUpdates.install()
-          } else if (stage === 'available' || (stage === 'error' && release)) {
-            void downloadAndInstallUpdate()
-          } else {
-            void mobileUpdates.check(true)
-          }
-        }}
+        onPress={onPress}
       >
         <Text style={styles.label}>{label}</Text>
       </Pressable>

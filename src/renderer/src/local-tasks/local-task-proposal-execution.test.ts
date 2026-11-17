@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { LocalTaskProposal } from '../../../shared/local-tasks/local-task-dispatcher-types'
 import type { LocalTaskProject } from '../../../shared/local-tasks/local-task-types'
 
-const fixture = vi.hoisted(() => ({ recordResults: vi.fn() }))
+const fixture = vi.hoisted(() => ({ recordResults: vi.fn(), createTask: vi.fn() }))
 
 vi.mock('@/store', async () => {
   const { createTestStore } = await import('@/store/slices/store-test-helpers')
@@ -11,12 +11,21 @@ vi.mock('@/store', async () => {
 vi.mock('./local-task-dispatcher-client', () => ({
   localTaskDispatcherClient: { recordResults: fixture.recordResults }
 }))
+vi.mock('./local-tasks-runtime-client', () => ({
+  localTasksClient: { createTask: fixture.createTask }
+}))
 
+import { getAgentCatalog } from '@/lib/agent-catalog'
+import { createGlobalSettingsFixture } from '../../../shared/global-settings-test-fixture'
+import { useAppStore } from '@/store'
+import { makeWorktree } from '@/store/slices/worktrees-slice-test-fixtures'
 import {
   executeLocalTaskProposal,
+  LOCAL_TASK_PROPOSAL_EXECUTORS,
   type LocalTaskProposalExecutors
 } from './local-task-proposal-execution'
 import { resolveProposalProject } from './local-task-proposal-targets'
+import { localTasksDomainStore } from './local-tasks-domain-store'
 
 function proposal(overrides: Partial<LocalTaskProposal> = {}): LocalTaskProposal {
   return {
@@ -123,6 +132,95 @@ describe('executeLocalTaskProposal', () => {
     await executing
     expect(run.append).toHaveBeenCalledTimes(1)
     expect(run.stop).toHaveBeenCalledTimes(1)
+  })
+
+  it('never runs again an item whose result the library already holds', async () => {
+    const run = executors()
+    const results = await executeLocalTaskProposal(
+      proposal({ results: [{ index: 0, ok: true, taskId: 't-1' }] }),
+      run
+    )
+    expect(run.start).not.toHaveBeenCalled()
+    expect(results?.map((result) => result.index)).toEqual([1, 2])
+  })
+
+  it('refuses a new task in a workspace another task owns, before making the task', async () => {
+    const worktree = makeWorktree({ id: 'repo1::/w', repoId: 'repo1', hostId: 'local' })
+    useAppStore.setState({ getKnownWorktreeById: () => worktree })
+    localTasksDomainStore.setState({
+      tasks: [
+        {
+          id: 'task-owner',
+          projectId: 'p',
+          number: 3,
+          ref: 'SHOP-3',
+          title: 'Hotfix',
+          description: '',
+          criteria: [],
+          statusId: 's',
+          priority: 0,
+          labels: [],
+          parentId: null,
+          createdAt: 0,
+          updatedAt: 0,
+          revision: 1
+        }
+      ],
+      links: {
+        sessions: [],
+        workspaces: [
+          {
+            taskId: 'task-owner',
+            hostId: 'local',
+            kind: 'git-worktree',
+            instanceId: null,
+            worktreeId: worktree.id,
+            folderWorkspaceId: null,
+            repoId: 'repo1',
+            branchSnapshot: null,
+            nameSnapshot: null,
+            hostLabelSnapshot: null,
+            linkedVia: 'start',
+            linkedAt: 0
+          }
+        ]
+      }
+    })
+    const outcome = await LOCAL_TASK_PROPOSAL_EXECUTORS.record(
+      { kind: 'record', title: 'Track it', target: { worktreeId: worktree.id } },
+      { composerOpened: false }
+    )
+    expect(outcome).toEqual({
+      ok: false,
+      detail: 'the workspace already belongs to SHOP-3; a workspace belongs to one task'
+    })
+    expect(fixture.createTask).not.toHaveBeenCalled()
+    localTasksDomainStore.setState(localTasksDomainStore.getInitialState())
+  })
+
+  it('refuses a start or subtask with no agent enabled, before making the task', async () => {
+    const settings = useAppStore.getState().settings
+    useAppStore.setState({
+      settings: createGlobalSettingsFixture({
+        disabledTuiAgents: getAgentCatalog().map((entry) => entry.id)
+      })
+    })
+    const started = await LOCAL_TASK_PROPOSAL_EXECUTORS.start(
+      { kind: 'start', title: 'Export', prompt: 'Add CSV export', target: { worktreeId: 'w' } },
+      { composerOpened: false }
+    )
+    const sub = await LOCAL_TASK_PROPOSAL_EXECUTORS.subtask(
+      { kind: 'subtask', parentTaskId: 'task-1', title: 'Tests', prompt: 'Add tests' },
+      { composerOpened: false }
+    )
+    for (const outcome of [started, sub]) {
+      expect(outcome).toEqual({
+        ok: false,
+        detail: 'no agent is enabled; ask the user to turn one on in Settings, Agents'
+      })
+    }
+    expect(fixture.createTask).not.toHaveBeenCalled()
+    useAppStore.setState({ settings })
   })
 
   it('does not repeat or continue after losing contact while saving an outcome', async () => {

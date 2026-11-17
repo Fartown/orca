@@ -3,8 +3,8 @@ title: 集成分支自动出包
 slug: 集成分支自动出包
 status: testing
 created: 2026-09-12
-updated: 2026-11-11
-external_ids: ['Fartown/orca#85']
+updated: 2026-11-17
+external_ids: ['Fartown/orca#85', 'Fartown/orca#131']
 ---
 
 # 集成分支自动出包 开发 Journal
@@ -634,3 +634,22 @@ external_ids: ['Fartown/orca#85']
 - 验证证据：pnpm tc、全部 16 个功能的 38 条 checks、check:fork-features、check:fork-docs、本地化与 RPC 目录校验通过；隐藏 Electron 本机与 SSH（127.0.0.1:2222 上的 orcad）真机验收 5/5 通过，证据在 `.docs/issues-board-removal-ui-validation/2026-10-23/`。 S2 中远端 orcad 的 `issues.*` 返回 method_not_found，`goals.status` 为 ready。
 - 未解决问题：无。
 - 下一步：随 Issues 下线 PR 合入 fork/integration。
+
+## 2026-11-16：手机设置更新入口一致性（testing）
+
+- 本轮目标：修复关于能下载、外层检查必失败和状态不一致。
+- 完成内容：复现 source=null 导致外层无网络直接 failed；外层 integration 分支复用关于页 controller 与 shared hook，保留官方渠道原路径。
+- 代码或文档变更：登记 REQ-416、TC-417～420、事实调研和渠道复用方案；独立 feat/integration-mobile-settings-update 工作树，根治终端 Chat 的 PR #129 已单独合入。
+- 验证证据：旧回归 2 failed/1 passed；修复后 29 项 mobile 测试和 230 项集成更新合同测试通过，pnpm tc、mobile app/tests 类型检查、三项本地化、格式、架构、fork/docs 和 changed-quality 通过。真实组件渲染旧版顶部 29%/外层失败，修复后进度一致；权限/安装器打开、真实错误、latest、亮暗主题均采证。见[本轮验收](tests/runs/2026-11-16-手机设置更新入口一致性.md)。
+- 未解决问题：手机运行包尚未包含此修复；本机原生模拟器不可直接使用，渲染验证须诚实标注 native I/O fixture。
+- 未解决门禁：本地完整 check:changed 40/41 通过；技能清单 stale 在未修改基线同样失败，未修改无关资源、不把该项记为通过。
+- 下一步：提交独立 PR，跟踪 CI 与发布；手机运行包生效须另行验证。
+
+## 2026-11-17：继续实测与合入（testing）
+
+- 本轮目标：完成 PR #132 的构建、合入与同源出包，保留终端根治修复 #129。
+- 完成内容：重新核验既有 CI，27 项成功；macOS 任务因未获 hosted runner 被取消，Android APK 签名和版本校验成功。再次重跑 macOS 后仍在等待机器，改用官方已正式支持的标准 arm64 macos-26 镜像实跑全部既有构建步骤。
+- 代码或文档变更：仅调整本功能的三处 macOS runner 镜像及原合同预期；更新 REQ-416 的交付约束和 TC-421，不改变架构、固定发布者、签名、三平台完整发布或用户主机运行状态。
+- 验证证据：原始平台容量注释、全部 CI 和 Android 构建记录位于 `.docs/mobile-settings-update-ui-validation/2026-11-16/evidence/`；macos-26 的官方支持说明为 https://github.blog/changelog/2026-02-26-macos-26-is-now-generally-available-for-github-hosted-runners/ 。新一轮本地与云端证据位于 `.docs/mobile-settings-update-ui-validation/2026-11-17/`，结果完成后补录。
+- 未解决问题：新镜像构建、产物最低系统版本审计、合入和正式发布待完成；手机原生安装与用户应用升级均未执行。
+- 下一步：合并最新 fork/integration 基线，运行修改后检查并推送；等待实际构建全绿后合入并审计正式包。

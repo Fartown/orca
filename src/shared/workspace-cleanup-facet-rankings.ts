@@ -68,8 +68,7 @@ export const WORKSPACE_CLEANUP_REVIEW_STATE_VALUES = Object.keys(
 export const WORKSPACE_CLEANUP_TICKET_SOURCE_VALUES: WorkspaceCleanupTicketSource[] = [
   'work-item',
   'linear',
-  'issue',
-  'local-task'
+  'issue'
 ]
 export const WORKSPACE_CLEANUP_IDLE_SIGNAL_VALUES: WorkspaceCleanupIdleSignal[] = [
   'last-visited',

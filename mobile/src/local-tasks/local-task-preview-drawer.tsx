@@ -11,7 +11,7 @@ import type { LocalTasksLibrary } from './use-local-tasks-library'
  * a way into the full session. Closed while `taskSessionId` is null or names no routable chat.
  */
 export function LocalTaskPreviewDrawer(props: {
-  site: Pick<LocalTaskSite, 'hostId' | 'connState'>
+  site: Pick<LocalTaskSite, 'hostId' | 'endpoint' | 'connState'>
   api: LocalTasksApi
   library: LocalTasksLibrary
   taskSessionId: string | null
@@ -22,7 +22,7 @@ export function LocalTaskPreviewDrawer(props: {
 }) {
   const { library } = props
   const target = props.taskSessionId
-    ? localTaskChatPreviewTarget(library, props.taskSessionId)
+    ? localTaskChatPreviewTarget(library, props.site.endpoint, props.taskSessionId)
     : null
   const summary = target
     ? localTaskSessionSummary({
@@ -37,6 +37,7 @@ export function LocalTaskPreviewDrawer(props: {
   return (
     <LocalTaskSessionDrawer
       hostId={props.site.hostId}
+      executionHost={target?.executionHost}
       worktreeId={target?.worktreeId ?? null}
       session={target?.session ?? null}
       api={props.api}

@@ -98,6 +98,10 @@ export class LocalTasksService extends LocalTaskDispatcherService {
     return this.execution.getProgress()
   }
 
+  protected dispatcherAttentionKeyMayReturn() {
+    return this.execution.attentionKeyMayReturn()
+  }
+
   get readOnly(): boolean {
     return this.db.readOnly
   }

@@ -3,8 +3,12 @@ import type { LocalTaskWorkspaceKind } from '../../shared/local-tasks/local-task
 import { workspaceIdentityKey } from './local-task-link-rows'
 import { keepOwnedHostSpellings } from './local-tasks-owned-host-migration'
 import { rowNullableString, rowString } from './local-tasks-sqlite-row'
+import {
+  LOCAL_TASK_SESSION_COLUMNS,
+  upgradeCrossHostSessionSchema
+} from './local-task-session-schema'
 
-export const LOCAL_TASKS_SCHEMA_VERSION = 7
+export const LOCAL_TASKS_SCHEMA_VERSION = 8
 
 // Why default_repo_id is an Orca project id: since v4 it names one of the project's linked repos.
 const PROJECT_COLUMNS = `  id TEXT PRIMARY KEY,
@@ -109,21 +113,11 @@ CREATE UNIQUE INDEX IF NOT EXISTS local_task_workspaces_identity
 CREATE UNIQUE INDEX IF NOT EXISTS local_task_workspaces_instance
   ON local_task_workspaces(host_id, instance_id) WHERE instance_id IS NOT NULL;
 CREATE TABLE IF NOT EXISTS local_task_sessions (
-  id TEXT PRIMARY KEY,
-  task_id TEXT NOT NULL REFERENCES local_tasks(id) ON DELETE CASCADE,
-  host_id TEXT NOT NULL,
-  worktree_id TEXT,
-  instance_id TEXT,
-  surface TEXT NOT NULL,
-  tab_id TEXT,
-  pane_key TEXT UNIQUE,
-  session_id TEXT,
-  provider_session TEXT,
-  agent TEXT,
-  linked_via TEXT NOT NULL,
-  opened_at INTEGER NOT NULL
+${LOCAL_TASK_SESSION_COLUMNS}
 );
 CREATE INDEX IF NOT EXISTS local_task_sessions_task ON local_task_sessions(task_id);
+CREATE UNIQUE INDEX IF NOT EXISTS local_task_sessions_host_pane
+  ON local_task_sessions(host_id, pane_key) WHERE pane_key IS NOT NULL;
 CREATE UNIQUE INDEX IF NOT EXISTS local_task_sessions_host_session
   ON local_task_sessions(host_id, session_id) WHERE session_id IS NOT NULL;
 CREATE TABLE IF NOT EXISTS local_task_attention_state (
@@ -315,6 +309,13 @@ export function applyLocalTasksSchema(database: SyncDatabase, storedVersion: num
   }
   if (storedVersion >= 1 && storedVersion < 4) {
     upgradeToHostOwnedLibrary(database)
+  }
+  if (
+    storedVersion >= 1 &&
+    storedVersion < 8 &&
+    !hasColumn(database, 'local_task_sessions', 'execution_origin')
+  ) {
+    upgradeCrossHostSessionSchema(database)
   }
   database.exec(SCHEMA)
   // Why after SCHEMA: every table it reads and cleans exists by then, whichever version this was.

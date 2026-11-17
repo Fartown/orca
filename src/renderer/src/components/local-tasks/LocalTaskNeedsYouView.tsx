@@ -1,7 +1,8 @@
 import { useMemo } from 'react'
 import { useShallow } from 'zustand/react/shallow'
-import { CheckCheck, LoaderCircle } from 'lucide-react'
+import { ArrowUpRight, CheckCheck, LoaderCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { ShortcutKeyCombo } from '@/components/ShortcutKeyCombo'
 import { useNow } from '@/hooks/use-now'
 import { translate } from '@/i18n/i18n'
@@ -55,12 +56,27 @@ function NeedsYouRow({
       <header className="flex min-w-0 items-center gap-2 px-2">
         <button
           type="button"
-          onClick={() => localTaskPageStore.getState().openDetail(task.id)}
+          onClick={() => localTaskPageStore.getState().openPreview(task.id)}
           className="flex min-w-0 flex-1 items-baseline gap-2 text-left hover:underline"
         >
           <span className="shrink-0 font-mono text-2xs text-muted-foreground">{task.ref}</span>
           <span className="truncate text-sm font-medium text-foreground">{task.title}</span>
         </button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              aria-label={translate('localTasks.preview.open', 'Open task details')}
+              onClick={() => localTaskPageStore.getState().openDetail(task.id)}
+            >
+              <ArrowUpRight className="size-3.5" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="top" sideOffset={4}>
+            {translate('localTasks.preview.open', 'Open task details')}
+          </TooltipContent>
+        </Tooltip>
         {row.entries.length > 1 ? (
           <span className="shrink-0 text-2xs tabular-nums text-muted-foreground">
             {row.entries.length}

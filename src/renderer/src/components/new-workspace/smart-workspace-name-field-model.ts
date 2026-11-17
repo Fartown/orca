@@ -11,6 +11,7 @@ import type {
   SmartNameMode,
   SmartWorkspaceSourceRow
 } from '../../../../shared/new-workspace/smart-workspace-source-results'
+
 import type { LocalTaskSourceRow } from '@/local-tasks/local-task-source-rows'
 
 export type RepoOption = ReturnType<typeof useAppStore.getState>['repos'][number]

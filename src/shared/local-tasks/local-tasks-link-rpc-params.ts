@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { LocalTaskSessionExecutionOriginSchema } from './local-task-session-origin'
 
 const clientOperationId = z.string().min(1).max(128)
 const id = z.string().min(1).max(128)
@@ -55,6 +56,8 @@ export const LocalTasksLinksRecordSessionParams = z
     clientOperationId,
     taskId: id,
     hostId,
+    executionOrigin: LocalTaskSessionExecutionOriginSchema.optional(),
+    replacingSessionLinkId: id.optional(),
     worktreeId: worktreeId.optional(),
     instanceId: id.optional(),
     surface,
@@ -67,6 +70,9 @@ export const LocalTasksLinksRecordSessionParams = z
   })
   .refine((params) => !!(params.tabId || params.paneKey || params.sessionId), {
     message: 'A session link needs a tabId, paneKey or sessionId'
+  })
+  .refine((params) => !params.replacingSessionLinkId || params.linkedVia === 'manual', {
+    message: 'Only a manual link may replace an existing session link'
   })
 
 export const LocalTasksLinksUnlinkSessionParams = z.object({ clientOperationId, sessionLinkId: id })

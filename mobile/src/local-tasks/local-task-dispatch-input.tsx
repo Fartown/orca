@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { buildLocalTaskIndex } from '../../../src/shared/local-tasks/local-task-grouping'
 import {
   LOCAL_TASK_TITLE_MAX,
   suggestLocalTaskWorkspaceName
@@ -166,14 +167,14 @@ export function LocalTaskDispatchInput(props: {
           : holder
             ? (props.library.tasks.find((entry) => entry.id === holder.taskId) ?? null)
             : null
-      const tasksById = new Map(props.library.tasks.map((entry) => [entry.id, entry]))
+      const index = buildLocalTaskIndex([], props.library.tasks)
       const linkedWorkspace = targetTask
-        ? localTaskWorkspaceLinkFor(targetTask, tasksById, props.library.work.links)
+        ? localTaskWorkspaceLinkFor(targetTask, index.tasksById, props.library.work.links)
         : null
       const sessions = targetTask
         ? localTaskSessionViews({
             task: targetTask,
-            tasks: props.library.tasks,
+            index,
             links: props.library.work.links,
             snapshot: props.library.work.progress,
             inContact: true

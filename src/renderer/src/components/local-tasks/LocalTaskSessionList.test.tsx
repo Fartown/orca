@@ -7,11 +7,13 @@ import type { LocalTask } from '../../../../shared/local-tasks/local-task-types'
 
 const contact = vi.hoisted(() => ({ inContact: true }))
 vi.mock('@/local-tasks/local-task-host-contact', () => ({
-  useLocalTaskHostInContact: () => contact.inContact
+  useLocalTaskHostInContact: () => contact.inContact,
+  isLocalTaskHostInContact: () => contact.inContact
 }))
 
 import { localTasksDomainStore } from '@/local-tasks/local-tasks-domain-store'
 import { localTaskSessionPanelStore } from '@/local-tasks/local-task-session-panel-store'
+import { localTaskPageStore } from '@/local-tasks/local-task-page-store'
 import { LocalTaskSessionList } from './LocalTaskSessionList'
 
 const task: LocalTask = {
@@ -56,22 +58,26 @@ beforeEach(() => {
   localTasksDomainStore.setState(localTasksDomainStore.getInitialState(), true)
   localTasksDomainStore.setState({ links: { workspaces: [], sessions: [session] } })
   localTaskSessionPanelStore.getState().close()
+  localTaskPageStore.getState().clearTransientUi()
 })
 afterEach(() => {
   cleanup()
   localTaskSessionPanelStore.getState().close()
+  localTaskPageStore.getState().clearTransientUi()
 })
 
 it('peeks a session on a host in contact, beside the task instead of leaving it', () => {
   contact.inContact = true
+  localTaskPageStore.getState().openPreview(task.id)
   render(
     <LocalTaskSessionList task={task} workspace={null} index={index} writable showEmpty={false} />
   )
   fireEvent.click(screen.getByRole('button', { name: 'Peek' }))
   expect(localTaskSessionPanelStore.getState()).toMatchObject({
-    mode: 'narrow',
+    mode: 'wide',
     sessionLinkId: session.id
   })
+  expect(localTaskPageStore.getState().previewOpen).toBe(false)
 })
 
 it('says why a session on a host out of contact cannot be peeked, and offers no way in', () => {

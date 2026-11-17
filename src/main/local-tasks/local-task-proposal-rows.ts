@@ -130,15 +130,30 @@ export function describeSettledProposal(proposal: LocalTaskProposal): string {
   if (proposal.status === 'dismissed') {
     return `The user dismissed your proposal: ${what}`
   }
+  const results = new Map((proposal.results ?? []).map((result) => [result.index, result]))
+  const kept = new Set(proposal.keptItemIndexes ?? proposal.items.map((_, index) => index))
+  const numbers = (indexes: number[]): string => indexes.map((index) => index + 1).join(', ')
+  const unrecorded = proposal.items
+    .map((_, index) => index)
+    .filter((index) => kept.has(index) && !results.has(index))
+  const left = proposal.items.map((_, index) => index).filter((index) => !kept.has(index))
   // Why every item: a done item names the task it made, which the dispatcher follows next.
-  const items = (proposal.results ?? []).map(
-    (result) =>
-      `item ${result.index + 1} ${result.ok ? 'done' : 'failed'}${
-        result.detail ? ` (${result.detail})` : ''
-      }`
-  )
-  return `The user confirmed your proposal (${what}): ${
-    items.join('; ') ||
-    'its run was interrupted and no results were recorded; check the tasks before repeating anything'
-  }`
+  const parts = [...results.values()]
+    .sort((a, b) => a.index - b.index)
+    .map(
+      (result) =>
+        `item ${result.index + 1} ${result.ok ? 'done' : 'failed'}${
+          result.detail ? ` (${result.detail})` : ''
+        }`
+    )
+  // Why say it (D-018): an item without a result may have run, so proposing it again could repeat it.
+  if (unrecorded.length > 0) {
+    parts.push(
+      `item(s) ${numbers(unrecorded)}: the run was interrupted, their state is unknown; check the tasks before deciding whether to propose them again`
+    )
+  }
+  if (left.length > 0) {
+    parts.push(`item(s) ${numbers(left)} left out by the user`)
+  }
+  return `The user confirmed your proposal (${what}): ${parts.join('; ')}`
 }

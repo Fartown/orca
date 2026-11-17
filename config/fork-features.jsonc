@@ -247,16 +247,88 @@
     {
       "id": "native-chat-view-recovery",
       "title": "终端聊天视图恢复",
-      "goal": "恢复已有终端标签的聊天视图切换，保留同一终端与会话绑定",
+      "goal": "恢复已有终端标签的聊天视图切换和 Activity 内容一致性，保留同一终端与会话绑定",
       "journal": "docs/issue/终端聊天视图恢复/journal.md",
-      "dependsOn": ["src/renderer/src/i18n/i18n.ts"],
+      "dependsOn": [
+        "src/shared/agent-status-types.ts",
+        "src/shared/terminal-tab-types.ts",
+        "src/shared/stable-pane-id.ts",
+        "src/renderer/src/i18n/i18n.ts",
+        "src/renderer/src/components/terminal-pane/terminal-parked-watcher-reconciliation.ts",
+        "src/renderer/src/components/terminal-pane/terminal-recovery-ledger-test-store.ts",
+        "src/renderer/src/store/terminals/terminal-tab-location.ts",
+        "src/shared/agent-tui-input-clear.ts",
+        "src/shared/agent-image-paste.ts",
+        "src/shared/agent-image-paste-path.ts",
+        "src/shared/native-chat/input/native-chat-paste-bytes.ts",
+        "src/main/runtime/orca-runtime.ts",
+        "src/main/runtime/rpc/dispatcher.ts",
+        "src/main/runtime/rpc/methods/index.ts",
+        "src/main/runtime/rpc/rpc-caller-identity.ts",
+        "src/main/ipc/desktop-renderer-runtime-capabilities.ts",
+        "src/shared/ssh-pty-id.ts",
+        "src/shared/remote-runtime/remote-runtime-pty-id.ts",
+        "src/shared/runtime-environment-store.ts",
+        "src/main/ipc/runtime-environments/runtime-environment-transport-routing.ts",
+        "src/main/ipc/runtime-environments/runtime-environment-registry-root.ts",
+        "src/main/ipc/runtime-environments/runtime-environment-request-connections.ts",
+        "src/shared/runtime-host-status.ts",
+        "src/shared/runtime-host-connection-state.ts",
+        "src/main/ssh/targets/ssh-target-registry.ts",
+        "src/shared/execution-host.ts",
+        "src/main/durable-file-write.ts",
+        "src/shared/runtime-rpc-envelope.ts",
+        "src/main/native-chat/transcript-tail-reader.ts",
+        "src/shared/native-chat/native-chat-types.ts",
+        "src/shared/native-chat/transcript/native-chat-pending-occurrence.ts",
+        "src/shared/native-chat/transcript/native-chat-pending-sends.ts",
+        "src/renderer/src/components/ui/context-menu.tsx",
+        "src/renderer/src/i18n/use-ui-language-revision.ts",
+        "src/renderer/src/store/index.ts",
+        "src/renderer/src/hooks/ipc-events/runtime-environment-subscription-selection.ts",
+        "src/renderer/src/components/native-chat/NativeChatMessageRow.tsx",
+        "src/renderer/src/lib/browser-uuid.ts",
+        "src/shared/native-chat/transcript/native-chat-image-transcript-markers.ts",
+        "src/main/ipc/agent-status-ipc-boundary.ts",
+        "src/main/native-chat/session-file-resolver.ts",
+        "src/main/native-chat/wsl-transcript-fs-access.ts",
+        "src/main/runtime/terminal/input/terminal-agent-prompt-resubmit.ts",
+        "src/main/runtime/agent-prompt-submission-verification.ts",
+        "src/main/runtime/terminal-input-admission.ts",
+        "src/main/runtime/orca-runtime-core.ts",
+        "src/main/ipc/native-chat.ts",
+        "src/main/native-chat/transcript-file-version.ts"
+      ],
       "policyId": "native-chat-view-recovery",
       "ownedPaths": [
         "src/renderer/src/native-chat-view-recovery/**",
-        "docs/issue/终端聊天视图恢复/**"
+        "docs/issue/终端聊天视图恢复/**",
+        "src/main/native-chat-view-recovery/**",
+        "src/shared/native-chat-view-recovery/**"
       ],
-      "requiredFiles": ["src/renderer/src/native-chat-view-recovery/TerminalTabViewSwitch.tsx"],
+      "requiredFiles": [
+        "src/renderer/src/native-chat-view-recovery/TerminalTabViewSwitch.tsx",
+        "src/renderer/src/native-chat-view-recovery/terminal-chat-recovery-owner.ts",
+        "src/renderer/src/native-chat-view-recovery/restored-terminal-activity-target.ts",
+        "src/main/native-chat-view-recovery/durable-chat-submitter.ts",
+        "src/shared/native-chat-view-recovery/durable-chat-submit.ts"
+      ],
       "seams": [
+        {
+          "file": "src/renderer/src/components/native-chat/use-native-chat-pty-composer-send.ts",
+          "mustContain": "optimisticSendOutcome",
+          "why": "Apply existing verified delivery outcomes to ordinary Codex terminal messages."
+        },
+        {
+          "file": "src/renderer/src/components/terminal-pane/terminal-pane-recovery.ts",
+          "mustContain": "allowsTerminalChatRecovery",
+          "why": "Permit a current visible terminal-backed chat to reuse existing recovery admission."
+        },
+        {
+          "file": "src/renderer/src/components/terminal-pane/pty-connection/connect-pane-pty.ts",
+          "mustContain": "paneIsCoveredByNativeChat",
+          "why": "Capture the real pane visibility and chat cover in its recovery instance."
+        },
         {
           "file": "src/renderer/src/components/tab-bar/SortableTabContextMenu.tsx",
           "mustContain": "TerminalTabViewSwitch",
@@ -266,11 +338,201 @@
           "file": "src/renderer/src/components/tab-bar/SortableTabContextMenu.test.tsx",
           "mustContain": "switches an eligible terminal tab into chat view",
           "why": "Keep the existing menu behavior contract aligned with the restored entry."
+        },
+        {
+          "file": "src/renderer/src/components/activity/activity-pane-events.ts",
+          "mustContain": "args.liveState === args.entry.state",
+          "why": "Only fresh current pane status may create a current attention event."
+        },
+        {
+          "file": "src/renderer/src/components/activity/useActivityUnreadCount.ts",
+          "mustContain": "freshActivityLiveAgentState",
+          "why": "Keep the badge in step with fresh current attention events."
+        },
+        {
+          "file": "src/renderer/src/components/activity/activity-thread-presentation.ts",
+          "mustContain": "restoredUnconfirmed",
+          "why": "Avoid presenting an unconfirmed restored row as current input demand."
+        },
+        {
+          "file": "src/renderer/src/components/activity/activity-thread-actions.ts",
+          "mustContain": "shouldRevealRestoredTerminal",
+          "why": "Reveal the original terminal pane for an unbound restored chat row."
+        },
+        {
+          "file": "src/renderer/src/components/activity/activity-thread-actions.test.ts",
+          "mustContain": "reveals the original terminal pane",
+          "why": "Guard same tab and pane navigation for restored unbound rows."
+        },
+        {
+          "file": "src/renderer/src/components/activity/useActivityUnreadCount.test.ts",
+          "mustContain": "restored nonterminal attention",
+          "why": "Guard unread badge behavior without clearing historical events."
+        },
+        {
+          "file": "src/main/ipc/register-core-handlers/register-core-handlers.ts",
+          "mustContain": "registerTerminalChatHandlers",
+          "why": "Connect durable terminal Chat submission and transcript receipts."
+        },
+        {
+          "file": "src/main/runtime/orca-runtime-get-status.ts",
+          "mustContain": "DURABLE_CHAT_COMPOSER_CAPABILITY",
+          "why": "Connect durable terminal Chat submission and transcript receipts."
+        },
+        {
+          "file": "src/main/runtime/rpc/methods/terminal/terminal-send-method.ts",
+          "mustContain": "chatComposer",
+          "why": "Connect durable terminal Chat submission and transcript receipts."
+        },
+        {
+          "file": "src/main/runtime/runtime-terminal-contracts.ts",
+          "mustContain": "DurableChatComposer",
+          "why": "Connect durable terminal Chat submission and transcript receipts."
+        },
+        {
+          "file": "src/main/runtime/terminal/input/terminal-agent-prompt.ts",
+          "mustContain": "OrcaRuntimeWithDurableChatPrompt",
+          "why": "Connect durable terminal Chat submission and transcript receipts."
+        },
+        {
+          "file": "src/preload/api/native-chat-api.ts",
+          "mustContain": "DurableChatSubmitApi",
+          "why": "Connect durable terminal Chat submission and transcript receipts."
+        },
+        {
+          "file": "src/preload/api/native-chat-bridge.ts",
+          "mustContain": "durableSubmit",
+          "why": "Connect durable terminal Chat submission and transcript receipts."
+        },
+        {
+          "file": "src/renderer/src/components/native-chat/NativeChatComposerPane.tsx",
+          "mustContain": "onDurableSend",
+          "why": "Connect durable terminal Chat submission and transcript receipts."
+        },
+        {
+          "file": "src/renderer/src/components/native-chat/NativeChatResolvedView.tsx",
+          "mustContain": "onDurableSend",
+          "why": "Connect durable terminal Chat submission and transcript receipts."
+        },
+        {
+          "file": "src/renderer/src/components/native-chat/native-chat-composer-types.ts",
+          "mustContain": "onDurableSend",
+          "why": "Connect durable terminal Chat submission and transcript receipts."
+        },
+        {
+          "file": "src/renderer/src/components/native-chat/use-native-chat-pending-delivery.ts",
+          "mustContain": "useDurableChatDelivery",
+          "why": "Connect durable terminal Chat submission and transcript receipts."
+        },
+        {
+          "file": "src/shared/rpc-contract/terminal-unary-params.ts",
+          "mustContain": "DurableChatComposer",
+          "why": "Connect durable terminal Chat submission and transcript receipts."
+        },
+        {
+          "file": "src/shared/runtime-terminal-send-contract.ts",
+          "mustContain": "DurableChatTranscriptBoundary",
+          "why": "Connect durable terminal Chat submission and transcript receipts."
+        },
+        {
+          "file": "src/shared/terminal-runtime-capabilities.ts",
+          "mustContain": "DURABLE_CHAT_COMPOSER_CAPABILITY",
+          "why": "Connect durable terminal Chat submission and transcript receipts."
+        },
+        {
+          "file": "src/shared/orchestration-mutation-request.ts",
+          "mustContain": "chatTranscriptVerified",
+          "why": "Verify durable Chat transcript file continuity on the execution host before confirming local input."
+        },
+        {
+          "file": "src/shared/rpc-contract/orchestration-runs-mutation-request-show-params.ts",
+          "mustContain": "verifyChatTranscript",
+          "why": "Verify durable Chat transcript file continuity on the execution host before confirming local input."
+        },
+        {
+          "file": "src/main/runtime/rpc/methods/orchestration/runs/mutation-request-show.ts",
+          "mustContain": "reconcileDurableChatMutationReceipt",
+          "why": "Verify durable Chat transcript file continuity on the execution host before confirming local input."
+        },
+        {
+          "file": "src/main/runtime/orchestration/terminal-authority/verify-orchestration-compatibility-caller.ts",
+          "mustContain": "restoredTerminalAuthorityMatches",
+          "why": "Reuse the exact restored physical authority comparison without changing caller token attestation."
+        },
+        {
+          "file": "src/main/ipc/register-core-handlers/register-core-handlers.test.ts",
+          "mustContain": "native-chat-view-recovery/durable-chat-ipc",
+          "why": "Keep core registration tests isolated at the terminal Chat registration seam."
         }
       ],
-      "tests": ["src/renderer/src/components/tab-bar/SortableTabContextMenu.test.tsx"],
+      "tests": [
+        "src/renderer/src/native-chat-view-recovery/codex-chat-delivery.test.tsx",
+        "src/renderer/src/components/tab-bar/SortableTabContextMenu.test.tsx",
+        "src/renderer/src/native-chat-view-recovery/terminal-chat-recovery.test.ts",
+        "src/renderer/src/native-chat-view-recovery/activity-restored-attention.test.ts",
+        "src/renderer/src/components/activity/activity-thread-actions.test.ts",
+        "src/renderer/src/components/activity/useActivityUnreadCount.test.ts",
+        "src/main/native-chat-view-recovery/durable-chat-submitter.test.ts",
+        "src/main/native-chat-view-recovery/durable-chat-composer-input.test.ts",
+        "src/shared/native-chat-view-recovery/durable-chat-reconciliation.test.ts",
+        "src/main/native-chat-view-recovery/durable-chat-runtime.test.ts",
+        "src/renderer/src/native-chat-view-recovery/use-durable-chat-delivery.test.tsx",
+        "src/main/native-chat-view-recovery/durable-chat-session-identity.test.ts",
+        "src/main/native-chat-view-recovery/durable-chat-transcript-verification.test.ts",
+        "src/main/native-chat-view-recovery/durable-chat-restored-receipt.test.ts"
+      ],
       "checks": [
-        "pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/components/tab-bar/SortableTabContextMenu.test.tsx src/renderer/src/components/tab-bar/native-chat-tab-agent-evidence.test.ts"
+        "pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/native-chat-view-recovery src/renderer/src/components/tab-bar/SortableTabContextMenu.test.tsx src/renderer/src/components/tab-bar/native-chat-tab-agent-evidence.test.ts src/renderer/src/native-chat-view-recovery/terminal-chat-recovery.test.ts src/renderer/src/components/terminal-pane/terminal-pane-recovery.test.ts src/renderer/src/components/terminal-pane/terminal-pane-recovery-unsettled-fallback.test.ts src/renderer/src/components/terminal-pane/terminal-pane-surface-ownership.test.ts src/renderer/src/components/activity/activity-thread-actions.test.ts src/renderer/src/components/activity/useActivityUnreadCount.test.ts",
+        "pnpm exec vitest run --config config/vitest.config.ts src/main/native-chat-view-recovery src/shared/native-chat-view-recovery"
+      ]
+    },
+    {
+      "id": "native-chat-paged-out-echo",
+      "title": "聊天视图残留发送气泡",
+      "goal": "已送达但已被分页挤出的发送气泡不再永久钉在聊天视图底部（桌面与手机）",
+      "journal": "docs/issue/聊天视图残留发送气泡/journal.md",
+      "dependsOn": [
+        "src/shared/native-chat/native-chat-types.ts",
+        "src/shared/native-chat/transcript/native-chat-pending-sends.ts"
+      ],
+      "policyId": "native-chat-paged-out-echo",
+      "ownedPaths": [
+        "src/shared/native-chat-paged-out-echo/**",
+        "src/renderer/src/native-chat-paged-out-echo/**",
+        "mobile/src/native-chat-paged-out-echo/**",
+        "docs/issue/聊天视图残留发送气泡/**"
+      ],
+      "requiredFiles": ["src/shared/native-chat-paged-out-echo/retire-paged-out-pending-sends.ts"],
+      "seams": [
+        {
+          "file": "src/renderer/src/components/native-chat/use-native-chat-pending-delivery.ts",
+          "mustContain": "retirePagedOutPendingSends",
+          "why": "Desktop terminal Chat retires echoes the loaded window has moved past after normal reconciliation."
+        },
+        {
+          "file": "mobile/src/session/native-chat/mobile-native-chat-pending-echo.ts",
+          "mustContain": "retirePagedOutPendingSends",
+          "why": "Phone Chat applies the same retirement before preview binding."
+        },
+        {
+          "file": "mobile/src/session/native-chat/composer/use-mobile-native-chat-drafts.ts",
+          "mustContain": "transcriptHasMore",
+          "why": "Carry whether older rows exist into phone echo retirement."
+        },
+        {
+          "file": "mobile/src/session/native-chat/use-mobile-native-chat-controller.ts",
+          "mustContain": "transcriptHasMore: nativeChatSession.hasMore",
+          "why": "Hand the phone session's hasMore to the drafts hook."
+        }
+      ],
+      "tests": [
+        "src/shared/native-chat-paged-out-echo/retire-paged-out-pending-sends.test.ts",
+        "src/renderer/src/native-chat-paged-out-echo/pending-delivery-paged-out.test.tsx",
+        "mobile/src/native-chat-paged-out-echo/mobile-drafts-paged-out.test.ts"
+      ],
+      "checks": [
+        "pnpm exec vitest run --config config/vitest.config.ts src/shared/native-chat-paged-out-echo src/renderer/src/native-chat-paged-out-echo src/renderer/src/components/native-chat/use-native-chat-pending-delivery.test.tsx src/shared/native-chat/transcript/native-chat-pending-sends.test.ts",
+        "pnpm --dir mobile exec vitest run src/native-chat-paged-out-echo src/session/native-chat/composer"
       ]
     },
     {
@@ -300,6 +562,8 @@
         "config/scripts/run-linux-cli-launch-contract-docker.mjs",
         "mobile/scripts/prepare-android-release.mjs",
         "mobile/src/theme/mobile-theme.ts",
+        "mobile/src/settings/settings-screen-frame.tsx",
+        "mobile/src/components/list/ListGroup.tsx",
         "src/main/startup/configure-process.ts",
         "tests/e2e/helpers/e2e-completed-onboarding-profile.ts",
         "tests/e2e/helpers/electron-home-isolation.ts",
@@ -430,6 +694,11 @@
           "why": "manual update check and download status"
         },
         {
+          "file": "mobile/src/settings/settings-app-update-section.tsx",
+          "mustContain": "IntegrationSettingsUpdateSection",
+          "why": "Route the integration settings entry to the existing fork update controller and shared status."
+        },
+        {
           "file": "src/main/updater/updater-release-feed.ts",
           "mustContain": "pinIntegrationReleaseFeed",
           "why": "fork builds resolve their default feed from fork releases"
@@ -486,6 +755,7 @@
         "src/shared/integration-builds/release-catalog.test.ts",
         "src/main/integration-builds/integration-update-feed.test.ts",
         "mobile/src/integration-builds/update-controller.test.ts",
+        "mobile/src/integration-builds/settings-update-channel.test.tsx",
         "config/scripts/integration-builds/mobile-dependency-contract.test.mjs",
         "config/scripts/integration-builds/architecture-live-path-references.test.mjs",
         "config/scripts/win32-test-lane-registration.test.mjs",
@@ -2325,7 +2595,7 @@
         },
         {
           "file": "config/scripts/verify-mobile-web-app-bundle.mjs",
-          "mustContain": "['./h/_layout.tsx', 139]",
+          "mustContain": "['./h/_layout.tsx', 138]",
           "why": "the route-prefix sweep records continuation's measured chunk-sharing change"
         },
         {
@@ -2995,7 +3265,24 @@
       "goal": "管理各主机的任务、会话与进展，支持直接派活、人工验收和需确认的总管提案",
       "journal": "docs/issue/本地任务管理/journal.md",
       "dependsOn": [
+        "src/renderer/src/runtime/runtime-terminal-stream.ts",
+        "src/shared/remote-runtime/remote-runtime-pty-id.ts",
+        "src/shared/ssh-pty-id.ts",
+        "src/renderer/src/lib/terminal-tab-owner-activation.ts",
+        "src/shared/project-section-catalog-schema.ts",
+        "src/shared/folder-workspace-types.ts",
+        "src/shared/workspace-linked-item-schema.ts",
+        "src/renderer/src/store/adopt-from-endpoint.ts",
+        "src/renderer/src/store/catalog-identity.ts",
+        "src/renderer/src/store/slices/project-group-owner-routing.ts",
+        "src/shared/runtime-host-descriptor.ts",
+        "src/shared/runtime-host-status.ts",
+        "src/renderer/src/store/slices/runtime-environment-ssh-selectors.ts",
+        "src/renderer/src/lib/resolve-owner.ts",
+        "src/main/runtime/host-descriptor.ts",
         "src/renderer/src/components/native-chat/NativeChatPaneHeader.tsx",
+        "src/renderer/src/components/sidebar/CommentMarkdown.tsx",
+        "src/renderer/src/components/editor/markdown-table-of-contents.ts",
         "src/renderer/src/store/pinned-tab-close-guard.ts",
         "src/main/orca-profiles/profile-storage-paths.ts",
         "src/main/sqlite/harden-database-files.ts",
@@ -3124,24 +3411,14 @@
         "src/shared/github/pull-request-types.ts",
         "src/renderer/src/components/AgentStateDot.tsx",
         "src/renderer/src/components/agent/AgentCombobox.tsx",
-        "src/renderer/src/components/sidebar/ProjectHeaderActions.tsx",
-        "src/renderer/src/components/sidebar/SidebarGroupByToggle.tsx",
         "src/renderer/src/components/sidebar/repo-header-action-button-class.ts",
         "src/renderer/src/components/sidebar/sidebar-workspace-option-items.ts",
         "src/renderer/src/components/sidebar/workspace-detached-review-request.ts",
         "src/renderer/src/components/sidebar/worktree-card-pr-display.ts",
-        "src/renderer/src/components/sidebar/worktree-list/listing/rendered-row-keys.ts",
-        "src/renderer/src/components/sidebar/worktree-list/listing/sidebar-list-model.ts",
-        "src/renderer/src/components/sidebar/worktree-list/rows/SectionHeader.tsx",
-        "src/renderer/src/components/sidebar/worktree-list/rows/header-event-guards.ts",
-        "src/renderer/src/components/sidebar/worktree-list/rows/indentation.ts",
-        "src/renderer/src/components/sidebar/worktree-list/rows/option-dom.ts",
-        "src/renderer/src/components/sidebar/worktree-list/viewport/virtual-rows.ts",
         "src/renderer/src/components/sidebar/worktree-review-helpers.tsx",
         "src/renderer/src/hooks/ipc-events/runtime-environment-subscription-selection.ts",
         "src/renderer/src/hooks/useAgentDetectionTarget.ts",
         "src/renderer/src/hooks/useDetectedAgents.ts",
-        "src/renderer/src/hooks/useVirtualizedScrollAnchor.ts",
         "src/renderer/src/lib/active-agent-note-send-result.ts",
         "src/renderer/src/lib/agent-catalog.tsx",
         "src/renderer/src/lib/agent-launch-request-id.ts",
@@ -3178,10 +3455,6 @@
         "src/shared/project-host-setup-lookup.ts",
         "src/shared/repo-kind.ts",
         "src/shared/repo-types.ts",
-        "src/shared/sidebar-list/folder-workspace-host-id.ts",
-        "src/shared/sidebar-list/group-keys.ts",
-        "src/shared/sidebar-list/host-section-rows.ts",
-        "src/shared/sidebar-list/row-types.ts",
         "src/shared/stable-pane-id.ts",
         "src/shared/terminal-tab-types.ts",
         "src/shared/agent-session/view/structured-agent-session-projection.ts",
@@ -3261,10 +3534,16 @@
         "src/main/runtime/runtime-notifier-contract.ts",
         "src/shared/workspace-session-state-types.ts",
         "src/main/ipc/desktop-runtime-sender-lifecycle.ts",
-        "src/renderer/src/lib/e2e-config.ts"
+        "src/renderer/src/lib/e2e-config.ts",
+        "mobile/src/components/MobileMarkdown.tsx",
+        "src/main/startup/skill-share-deep-link-state.ts"
       ],
       "policyId": "local-tasks",
       "ownedPaths": [
+        "src/renderer/src/components/terminal-pane/pane-foreground-read-scheduler.ts",
+        "src/renderer/src/runtime/runtime-terminal-inspection-contact.ts",
+        "src/renderer/src/runtime/runtime-terminal-inspection-contact.test.ts",
+        "src/renderer/src/components/terminal-pane/pane-foreground-agent-contact.test.ts",
         "src/main/local-tasks/**",
         "src/shared/local-tasks/**",
         "src/main/startup/main-process-local-tasks.ts",
@@ -3282,6 +3561,25 @@
         "src/main/runtime/rpc/methods/local-task-dispatcher-methods.ts"
       ],
       "requiredFiles": [
+        "src/renderer/src/components/terminal-pane/pane-foreground-read-scheduler.ts",
+        "src/renderer/src/runtime/runtime-terminal-inspection-contact.ts",
+        "src/renderer/src/runtime/runtime-terminal-inspection-contact.test.ts",
+        "src/renderer/src/components/terminal-pane/pane-foreground-agent-contact.test.ts",
+        "src/main/local-tasks/local-task-dispatcher-workspace.ts",
+        "src/shared/local-tasks/local-task-dispatcher-workspace.ts",
+        "src/renderer/src/local-tasks/local-task-dispatcher-source.ts",
+        "src/renderer/src/local-tasks/local-task-dispatcher-presentation.ts",
+        "src/renderer/src/local-tasks/local-task-dispatcher-send.ts",
+        "src/renderer/src/components/local-tasks/LocalTaskDispatcherHostSelect.tsx",
+        "src/renderer/src/local-tasks/local-task-dispatcher-ids.ts",
+        "src/renderer/src/local-tasks/local-task-dispatcher-changes.ts",
+        "src/renderer/src/local-tasks/local-task-dispatcher-forwarding-bind.ts",
+        "src/shared/local-tasks/local-task-session-origin.ts",
+        "src/main/local-tasks/local-task-session-schema.ts",
+        "src/renderer/src/local-tasks/local-task-session-origin-route.ts",
+        "src/renderer/src/local-tasks/local-task-session-execution-sync.ts",
+        "src/renderer/src/local-tasks/local-task-cross-host-session-link.ts",
+        "mobile/src/local-tasks/local-task-execution-origin.ts",
         "src/main/local-tasks/local-tasks-service.ts",
         "src/main/local-tasks/local-tasks-database.ts",
         "src/main/startup/main-process-local-tasks.ts",
@@ -3291,10 +3589,19 @@
         "src/renderer/src/local-tasks/LocalTasksSyncGate.tsx",
         "src/renderer/src/components/local-tasks/LocalTaskPage.tsx",
         "src/renderer/src/components/local-tasks/LocalTaskSource.tsx",
+        "src/renderer/src/components/local-tasks/LocalTaskSourceCreateAction.tsx",
+        "src/renderer/src/local-tasks/local-task-agent-row-activation.ts",
+        "src/renderer/src/local-tasks/local-task-nav-preference.ts",
         "mobile/app/h/[hostId]/local-tasks.web.tsx",
         "mobile/src/local-tasks/MobileHomeLocalTasksCard.tsx",
         "mobile/src/local-tasks/local-task-source-option.tsx",
         "mobile/src/local-tasks/LocalTaskHostRowsProvider.tsx",
+        "mobile/src/local-tasks/LocalTaskSessionCard.tsx",
+        "mobile/src/local-tasks/LocalTaskSessionCard.test.tsx",
+        "mobile/src/local-tasks/local-task-session-card-slot.tsx",
+        "mobile/src/local-tasks/local-task-session-card-provider.tsx",
+        "mobile/src/local-tasks/local-task-session-receipt.tsx",
+        "mobile/src/local-tasks/local-task-session-link-sheet.tsx",
         "docs/issue/本地任务管理/journal.md",
         "docs/issue/本地任务管理/requirements/本地任务管理.md",
         "src/main/runtime/rpc/methods/local-task-link-methods.ts",
@@ -3306,6 +3613,76 @@
         "src/main/local-tasks/local-task-proposal-ownership.ts"
       ],
       "seams": [
+        {
+          "file": "src/renderer/src/lib/codex-session-restart-test-fixture.ts",
+          "mustContain": "export function codexRestartRuntimeContact",
+          "why": "Reuse the existing Codex restart evidence fixture for canonical verified and out-of-contact host snapshots"
+        },
+        {
+          "file": "src/renderer/src/lib/codex-session-restart.test.ts",
+          "mustContain": "markLiveCodexSessionsForRestart",
+          "why": "Codex restart observations follow canonical source contact and preserve offline remote panes"
+        },
+        {
+          "file": "tests/e2e/remote-agent-completion-authority.unit.test.ts",
+          "mustContain": "remote agent completion authority",
+          "why": "Remote completion requires shared contact before fenced execution-host evidence can be read"
+        },
+        {
+          "file": "src/renderer/src/components/terminal-pane/pane-delayed-agent-startup.test.ts",
+          "mustContain": "without privately retrying",
+          "why": "Legacy remote hints remain unverifiable and only a new command may request another observation"
+        },
+        {
+          "file": "src/renderer/src/components/terminal-pane/pty-connection-unanswered-command-finish.spec.ts",
+          "mustContain": "retains an out-of-contact SSH row regardless of local verifiability",
+          "why": "An unreachable SSH owner cannot be judged from local process capability; restored source evidence may retire its row"
+        },
+        {
+          "file": "src/renderer/src/runtime/runtime-terminal-inspection.ts",
+          "mustContain": "captureRuntimeTerminalInspectionContact(ptyId)",
+          "why": "Fence all remote process inspection before dispatch and after await using shared contact evidence"
+        },
+        {
+          "file": "src/renderer/src/components/terminal-pane/pane-foreground-agent-tracker-contract.ts",
+          "mustContain": "subscribeReadContactChange?",
+          "why": "Expose optional shared contact callbacks without giving foreground tracking its own host state"
+        },
+        {
+          "file": "src/renderer/src/components/terminal-pane/pane-foreground-agent-tracker.ts",
+          "mustContain": "createPaneForegroundReadScheduler(deps, readForeground)",
+          "why": "Suspend scheduled process reads while out of contact and resume only on shared verdict changes"
+        },
+        {
+          "file": "src/renderer/src/components/terminal-pane/pty-connection/pane-agent-identity.ts",
+          "mustContain": "getReadContactKey: runtimeTerminalProcessContactKey",
+          "why": "Inject shared contact tracking into pane foreground reads without changing native identity rules"
+        },
+        {
+          "file": "src/renderer/src/runtime/runtime-terminal-inspection.test.ts",
+          "mustContain": "inspectRuntimeTerminalProcess",
+          "why": "Existing process-inspection fixtures declare their reachable owners explicitly"
+        },
+        {
+          "file": "src/main/runtime/wsl-host-agent-launch-paths.test.ts",
+          "mustContain": "getSystemCliInstallDirectories: () => []",
+          "why": "WSL fixture isolates host-installed agent CLIs during cross-platform dispatcher validation without changing production resolution or assertions"
+        },
+        {
+          "file": "src/main/runtime/wsl-host-agent-terminal-launch.test.ts",
+          "mustContain": "getSystemCliInstallDirectories: () => []",
+          "why": "WSL fixture isolates host-installed agent CLIs during cross-platform dispatcher validation without changing production resolution or assertions"
+        },
+        {
+          "file": "src/main/codex-cli/command-guest-path.test.ts",
+          "mustContain": "getSystemCliInstallDirectories: () => []",
+          "why": "WSL fixture isolates host-installed agent CLIs during cross-platform dispatcher validation without changing production resolution or assertions"
+        },
+        {
+          "file": "resources/skills/released-digests.json",
+          "mustContain": "69376456185483ea494eb354be09bce5b8bde9d1c792e8cb1ce7687691d1a021",
+          "why": "Generated add-only release ledger includes the v1.4.250 skill identity so full-history feature validation uses the same compatible install history"
+        },
         {
           "file": "src/main/runtime/terminal/focus/focus-terminal.ts",
           "mustContain": "terminalWindowProjectionSource()",
@@ -3602,46 +3979,6 @@
           "why": "Compact and new-style cards open hover details for a workspace whose only link is its task (REQ-016)"
         },
         {
-          "file": "src/renderer/src/components/workspace-cleanup/workspace-cleanup-facets.ts",
-          "mustContain": "...localTaskCleanupTicketSources({",
-          "why": "Workspace cleanup counts a task link as a ticket source"
-        },
-        {
-          "file": "src/renderer/src/components/workspace-cleanup/workspace-cleanup-facet-labels.ts",
-          "mustContain": "case 'local-task':",
-          "why": "The ticket source filter names Local tasks"
-        },
-        {
-          "file": "src/renderer/src/components/workspace-cleanup/workspace-cleanup-git-review-facets.tsx",
-          "mustContain": "useLocalTaskCleanupTicketSourceValues(",
-          "why": "The Local task ticket filter is offered only while Local is shown and a library has a project"
-        },
-        {
-          "file": "src/shared/workspace-cleanup-filter-model.ts",
-          "mustContain": "| 'local-task'",
-          "why": "Ticket sources gain local-task; older hosts drop the unknown value from saved filters"
-        },
-        {
-          "file": "src/shared/workspace-cleanup-facet-rankings.ts",
-          "mustContain": "'local-task'\n]",
-          "why": "The ticket source list, which the saved-filter codec checks against, includes local-task"
-        },
-        {
-          "file": "src/shared/pull-request-generation.ts",
-          "mustContain": "...localTaskPullRequestPromptLines(context.linkedLocalTask),",
-          "why": "AI pull request descriptions read the workspace's task title, description and done criteria"
-        },
-        {
-          "file": "src/main/ipc/filesystem/filesystem-git-pull-request-generation-handlers.ts",
-          "mustContain": "...linkedLocalTaskDraftContext({ id: args.worktreeId, path: args.worktreePath })",
-          "why": "The desktop reads its own library for its own checkouts when it generates PR details"
-        },
-        {
-          "file": "src/main/runtime/runtime-git-generation-commands.ts",
-          "mustContain": "...linkedLocalTaskDraftContext(target.worktree)",
-          "why": "A paired server or orcad reads its own library for its own checkouts when it generates PR details"
-        },
-        {
           "file": "src/cli/specs/index.ts",
           "mustContain": "...LOCAL_TASK_COMMAND_SPECS",
           "why": "orca task list / show / current / comment / status are part of the CLI's command table"
@@ -3686,6 +4023,12 @@
           "mustContain": "\"localTasks\": {",
           "why": "Chinese copy of the local tasks feature"
         },
+
+        {
+          "file": "src/renderer/src/i18n/locales/zh-Hant.json",
+          "mustContain": "\"localTasks\": {",
+          "why": "Traditional Chinese dispatcher host selection copy"
+        },
         {
           "file": "mobile/src/host-screen/host-screen-overlays.tsx",
           "mustContain": "...taskLink.actionsFor(actionTarget, () => state.setActionTarget(null)),\n                      {\n                        id: 'delete',",
@@ -3693,18 +4036,28 @@
         },
         {
           "file": "mobile/src/session/MobileSessionHeader.tsx",
-          "mustContain": "<LocalTaskSessionStripMount controller={controller} />",
-          "why": "The mobile session header mounts the task link strip slot; upstream header tests import no task strip"
+          "mustContain": "<LocalTaskSessionReceiptMount controller={controller} />",
+          "why": "The header keeps the current session read receipt active while task context is shown in the tab detail card (REQ-014, REQ-017)"
+        },
+        {
+          "file": "mobile/src/session/MobileSessionSurface.tsx",
+          "mustContain": "<LocalTaskSessionCardMount",
+          "why": "The existing tab detail card receives task context for the tab that opened it (REQ-011, REQ-017)"
+        },
+        {
+          "file": "mobile/src/session/MobileSessionTabStrip.test.tsx",
+          "mustContain": "vi.mock('../local-tasks/local-task-session-card-slot'",
+          "why": "The tab gesture regression preserves the clicked-tab identity at the task card slot (REQ-017)"
         },
         {
           "file": "mobile/app/h/[hostId]/session/[worktreeId].web.tsx",
-          "mustContain": "<LocalTaskSessionStripProvider>",
-          "why": "The session route fills the header's task strip slot (REQ-017)"
+          "mustContain": "<LocalTaskSessionCardProvider>",
+          "why": "The route owns task card, read receipt and link drawer lifetime without changing the shared detail card (REQ-011, REQ-017)"
         },
         {
           "file": "mobile/src/navigation/workspace-route.test.tsx",
-          "mustContain": "vi.mock('../local-tasks/local-task-session-strip-provider'",
-          "why": "The every-route test renders the session route without the task strip's native graph (REQ-017)"
+          "mustContain": "vi.mock('../local-tasks/local-task-session-card-provider'",
+          "why": "The every-route test renders the session route without the task card native graph (REQ-017)"
         },
         {
           "file": "src/renderer/src/app-shell/use-visible-review-refresh-reporting.ts",
@@ -3782,6 +4135,16 @@
           "why": "Add reference → Local tasks puts the task in the workspace details draft (REQ-011)"
         },
         {
+          "file": "src/renderer/src/components/sidebar/WorkspaceAttachmentSearch.tsx",
+          "mustContain": "LocalTaskSourceCreateAction",
+          "why": "Workspace details can stage a new task without leaving its workspace and host (D-024)."
+        },
+        {
+          "file": "src/renderer/src/components/sidebar/WorktreeLinkedItemsField.tsx",
+          "mustContain": "LocalTaskLinkedCountLabel",
+          "why": "Pending new tasks are distinguished from saved links in workspace details (D-024)."
+        },
+        {
           "file": "src/renderer/src/components/sidebar/WorktreeLinkedItemsField.tsx",
           "mustContain": "<LocalTaskLinkedWorkRow disabled={disabled} />",
           "why": "Linked work lists and counts the workspace's task under Issues & tasks (REQ-011)"
@@ -3847,21 +4210,6 @@
           "why": "A structured chat session shows its local task chip beside its pane header"
         },
         {
-          "file": "src/renderer/src/components/sidebar/WorktreeList.tsx",
-          "mustContain": "withSidebarTaskGroups(useBaseSidebarListModel)",
-          "why": "The sidebar list registers task grouping through the feature wrapper"
-        },
-        {
-          "file": "src/renderer/src/components/sidebar/workspace-options-menu-items.tsx",
-          "mustContain": "<LocalTaskSidebarGroupByToggle",
-          "why": "The workspace options register the task grouping toggle"
-        },
-        {
-          "file": "src/renderer/src/components/sidebar/workspace-options-menu-items.tsx",
-          "mustContain": "const groupBy = useSidebarTaskGroupBy()",
-          "why": "Options that only apply to upstream grouping hide while the sidebar groups by task"
-        },
-        {
           "file": "src/main/runtime/runtime-rpc/runtime-rpc-websocket-dispatch.ts",
           "mustContain": "!isForkExecutionHostRelayMethod(request.method)",
           "why": "A phone's task request for one of the desktop's servers is relayed like other host operations"
@@ -3875,11 +4223,6 @@
           "file": "src/main/integration-builds/orcad-fork-services.ts",
           "mustContain": "registerCleanup(startOrcadLocalTasks(runtime))",
           "why": "An SSH host's managed orcad holds the task library of its own projects"
-        },
-        {
-          "file": "src/renderer/src/components/sidebar/worktree-list/rows/virtual-row-dispatch.tsx",
-          "mustContain": "return renderSectionOrTaskHeaderRow({",
-          "why": "The virtual row dispatcher registers local task group headers"
         },
         {
           "file": "src/renderer/src/hooks/composer-state/quick-creation-execution.ts",
@@ -3948,8 +4291,8 @@
         },
         {
           "file": "src/renderer/src/components/sidebar/SidebarGroupByToggle.tsx",
-          "mustContain": "export type SidebarGroupByExtraChoice =",
-          "why": "The task grouping choice renders inside the upstream toggle, so it keeps the upstream item style (REQ-016)"
+          "mustContain": "SAFETY: the items are GROUP_BY_OPTIONS",
+          "why": "Retiring task grouping (D-021) put back upstream's own cast; the suppression keeps the PR-base casting scan from counting it as new. Drop it when the next upstream sync moves the file"
         },
         {
           "file": "src/renderer/src/components/sidebar/use-worktree-card-review-details.ts",
@@ -3972,6 +4315,11 @@
           "why": "Task-first navigation and session preview reuse the existing workspace/session surfaces (REQ-026, REQ-028)"
         },
         {
+          "file": "src/renderer/src/components/sidebar/use-worktree-agent-activation.ts",
+          "mustContain": "openLocalTaskSessionFromAgentRow",
+          "why": "Linked workspace sidebar sessions open conversation-first beside their task (D-024, REQ-028)."
+        },
+        {
           "file": "src/renderer/src/components/use-terminal-workspace-store-bindings.ts",
           "mustContain": "localTaskSessionPanelOpen",
           "why": "Task-first navigation and session preview reuse the existing workspace/session surfaces (REQ-026, REQ-028)"
@@ -3990,6 +4338,11 @@
           "file": "src/renderer/src/components/native-chat/NativeChatComposerPane.tsx",
           "mustContain": "LocalTaskDispatcherPanelDock",
           "why": "The dispatcher's proposals wait above its own chat input, so they are confirmed where it proposed them (REQ-030)"
+        },
+        {
+          "file": "src/renderer/src/lib/active-agent-note-target.ts",
+          "mustContain": "findTerminalAtRecordedPane(terminals",
+          "why": "A follow-up or Send back reaches a session launched in the background before its pane mounts (REQ-024, REQ-029, #102)"
         },
         {
           "file": "mobile/src/session/use-mobile-session-foundation.ts",
@@ -4095,9 +4448,106 @@
           "file": "src/main/runtime/runtime-rpc/runtime-rpc-websocket-dispatch.ts",
           "mustContain": "connectionSignal: abortRegistration?.signal,",
           "why": "REQ-030: paired desktop socket retirement invalidates a delayed claim before ownership registration"
+        },
+        {
+          "file": "src/main/index.ts",
+          "mustContain": "state.localTaskDeepLinks.capture(argv",
+          "why": "REQ-026: register library-qualified task links with the existing cold/warm deep-link and renderer delivery channels."
+        },
+        {
+          "file": "src/main/startup/orca-deep-link-url.ts",
+          "mustContain": "isLocalTaskDeepLinkCandidate(url)",
+          "why": "REQ-026: register library-qualified task links with the existing cold/warm deep-link and renderer delivery channels."
+        },
+        {
+          "file": "src/main/startup/main-process-state.ts",
+          "mustContain": "localTaskDeepLinks: new PendingDeepLinkState(localTaskDeepLinkFromArguments)",
+          "why": "REQ-026: register library-qualified task links with the existing cold/warm deep-link and renderer delivery channels."
+        },
+        {
+          "file": "src/main/startup/main-process-ipc-bootstrap.ts",
+          "mustContain": "'ui:consumePendingLocalTaskLink'",
+          "why": "REQ-026: register library-qualified task links with the existing cold/warm deep-link and renderer delivery channels."
+        },
+        {
+          "file": "src/main/window/macos-desktop-handoff.ts",
+          "mustContain": "...(taskLink ? [taskLink] : [])",
+          "why": "REQ-026: register library-qualified task links with the existing cold/warm deep-link and renderer delivery channels."
+        },
+        {
+          "file": "src/preload/api/ui-command-event-api.ts",
+          "mustContain": "onOpenLocalTaskLink:",
+          "why": "REQ-026: register library-qualified task links with the existing cold/warm deep-link and renderer delivery channels."
+        },
+        {
+          "file": "src/preload/api/ui-bridge-state-and-menu-commands.ts",
+          "mustContain": "ipcRenderer.on('ui:openLocalTaskLink'",
+          "why": "REQ-026: register library-qualified task links with the existing cold/warm deep-link and renderer delivery channels."
+        },
+        {
+          "file": "src/renderer/src/hooks/ipc-events/settings-sidebar-ipc-bridge.ts",
+          "mustContain": "onOpenLocalTaskLink?.(openLocalTaskDeepLink)",
+          "why": "REQ-026: register library-qualified task links with the existing cold/warm deep-link and renderer delivery channels."
+        },
+        {
+          "file": "src/renderer/src/web/preload-api/web-ui-api.ts",
+          "mustContain": "...webOsDeepLinkApi,",
+          "why": "REQ-026: register library-qualified task links with the existing cold/warm deep-link and renderer delivery channels."
+        },
+        {
+          "file": "src/renderer/src/web/preload-api/web-os-deep-link-api.ts",
+          "mustContain": "export const webOsDeepLinkApi = {",
+          "why": "REQ-026: register library-qualified task links with the existing cold/warm deep-link and renderer delivery channels."
+        },
+        {
+          "file": "mobile/src/components/MobileMarkdown.tsx",
+          "mustContain": "density?: 'tight'",
+          "why": "REQ-017/022/026: optional tight Markdown rhythm keeps a collapsed three-line task progress preview complete without changing default chat rendering."
+        },
+        {
+          "file": "mobile/src/components/mobile-markdown-blocks.tsx",
+          "mustContain": "density?: 'tight'",
+          "why": "REQ-017/022/026: optional tight Markdown rhythm keeps a collapsed three-line task progress preview complete without changing default chat rendering."
+        },
+        {
+          "file": "mobile/src/components/mobile-markdown-styles.ts",
+          "mustContain": "tightRoot:",
+          "why": "REQ-017/022/026: optional tight Markdown rhythm keeps a collapsed three-line task progress preview complete without changing default chat rendering."
         }
       ],
       "tests": [
+        "config/scripts/build-mobile-web-app-bundle.test.mjs",
+        "src/renderer/src/lib/codex-session-restart.test.ts",
+        "tests/e2e/remote-agent-completion-authority.unit.test.ts",
+        "src/renderer/src/components/terminal-pane/pane-delayed-agent-startup.test.ts",
+        "src/renderer/src/components/terminal-pane/pty-connection-main-pane-start.test.ts",
+        "src/renderer/src/components/terminal-pane/pty-connection-input-and-repaint.test.ts",
+        "src/renderer/src/components/terminal-pane/pty-connection-main-pane-restore-start.test.ts",
+        "src/renderer/src/components/terminal-pane/pty-connection-completion-and-notification.test.ts",
+        "src/renderer/src/components/terminal-pane/pane-foreground-agent-tracker.test.ts",
+        "src/renderer/src/components/terminal-pane/pane-foreground-inspect-observation-identity.test.ts",
+        "src/renderer/src/components/terminal-pane/pty-connection-foreground-agent.test.ts",
+        "src/renderer/src/components/terminal-pane/pane-foreground-process-exit-retire.test.ts",
+        "src/renderer/src/runtime/runtime-terminal-inspection-contact.test.ts",
+        "src/renderer/src/components/terminal-pane/pane-foreground-agent-contact.test.ts",
+        "src/renderer/src/runtime/runtime-terminal-inspection.test.ts",
+        "src/main/runtime/wsl-host-agent-launch-paths.test.ts",
+        "src/main/runtime/wsl-host-agent-terminal-launch.test.ts",
+        "src/main/codex-cli/command-guest-path.test.ts",
+        "src/main/local-tasks/local-task-dispatcher-workspace.test.ts",
+        "src/renderer/src/local-tasks/local-task-dispatcher-client.test.ts",
+        "src/renderer/src/local-tasks/local-task-dispatcher-changes.test.ts",
+        "src/renderer/src/local-tasks/local-task-dispatcher-forwarding.test.ts",
+        "src/renderer/src/local-tasks/local-task-dispatcher-wake.test.ts",
+        "src/renderer/src/local-tasks/local-task-dispatcher-ledger.test.ts",
+        "src/renderer/src/local-tasks/local-task-session-execution-sync.test.ts",
+        "src/renderer/src/local-tasks/local-task-cross-host-reply.test.ts",
+        "src/main/local-tasks/local-task-session-replacement.test.ts",
+        "mobile/src/local-tasks/local-task-execution-origin.test.ts",
+        "src/main/local-tasks/local-task-cross-host-sessions.test.ts",
+        "src/renderer/src/local-tasks/local-task-foreign-session-progress.test.ts",
+        "src/renderer/src/local-tasks/local-task-session-origin-route.test.ts",
+        "src/shared/local-tasks/local-task-session-origin.test.ts",
         "mobile/src/local-tasks/local-task-filter.test.ts",
         "mobile/src/local-tasks/local-task-form-state.test.ts",
         "mobile/src/local-tasks/local-task-list-projection.test.ts",
@@ -4130,6 +4580,7 @@
         "src/renderer/src/components/local-tasks/LocalTaskToolbar.test.tsx",
         "src/renderer/src/components/local-tasks/settings/LocalTaskProjectSettings.test.tsx",
         "mobile/src/local-tasks/MobileLocalTasksScreen.test.tsx",
+        "mobile/src/local-tasks/LocalTaskSessionCard.test.tsx",
         "mobile/src/local-tasks/local-task-events-recovery.test.tsx",
         "mobile/src/local-tasks/local-task-failure-message.test.ts",
         "mobile/src/local-tasks/local-task-work-navigation.test.ts",
@@ -4146,6 +4597,8 @@
         "src/renderer/src/local-tasks/local-tasks-runtime-client.test.ts",
         "src/renderer/src/local-tasks/local-tasks-sync-gate.test.tsx",
         "src/renderer/src/local-tasks/local-task-session-reveal.test.ts",
+        "src/renderer/src/local-tasks/local-task-agent-row-activation.test.ts",
+        "src/renderer/src/local-tasks/local-task-nav-preference.test.ts",
         "src/renderer/src/components/local-tasks/LocalTaskReplyBox.test.tsx",
         "mobile/src/local-tasks/use-local-task-endpoints.test.tsx",
         "mobile/src/local-tasks/local-task-reply-send.test.ts",
@@ -4175,8 +4628,6 @@
         "src/renderer/src/local-tasks/local-task-new-workspace-shortcut.test.ts",
         "src/renderer/src/components/local-tasks/LocalTaskCardDisplay.test.tsx",
         "src/renderer/src/local-tasks/local-task-palette.test.ts",
-        "src/renderer/src/local-tasks/local-task-cleanup-ticket-source.test.ts",
-        "src/main/local-tasks/local-task-pull-request-context.test.ts",
         "src/cli/local-tasks/local-task-cli.test.ts",
         "mobile/src/local-tasks/local-task-session-drawer-style.test.ts",
         "src/shared/local-tasks/local-task-dispatcher-rpc-params.test.ts",
@@ -4186,6 +4637,7 @@
         "src/renderer/src/components/sidebar/sidebar-host-options.test.ts",
         "src/shared/execution-host-registry.test.ts",
         "src/renderer/src/components/local-tasks/LocalTaskSessionPanelSlot.test.tsx",
+        "src/renderer/src/local-tasks/local-task-page-store.test.ts",
         "src/main/local-tasks/local-task-dispatcher.test.ts",
         "src/renderer/src/components/local-tasks/LocalTaskProposalCard.test.tsx",
         "src/renderer/src/local-tasks/local-task-dispatcher-proposals.test.ts",
@@ -4210,13 +4662,35 @@
         "mobile/src/local-tasks/local-tasks-copy.test.ts",
         "mobile/src/local-tasks/local-tasks-library-header.test.tsx",
         "src/renderer/src/local-tasks/local-task-proposal-targets.test.ts",
-        "src/renderer/src/local-tasks/local-task-dispatcher-ask.test.ts"
+        "src/renderer/src/local-tasks/local-task-dispatcher-source.test.ts",
+        "src/renderer/src/local-tasks/local-task-dispatcher-session.test.ts",
+        "src/renderer/src/local-tasks/local-task-dispatcher-ask.test.ts",
+        "src/shared/local-tasks/local-task-latest-progress-choice.test.ts",
+        "src/shared/local-tasks/local-task-attention-rules.test.ts",
+        "src/shared/local-tasks/local-task-finished-sessions.test.ts",
+        "src/main/local-tasks/local-task-folder-workspace-links.test.ts",
+        "src/main/local-tasks/local-task-attention-monitor.test.ts",
+        "src/main/local-tasks/local-task-dispatcher-inbox.test.ts",
+        "src/renderer/src/local-tasks/local-task-dispatch-launch.test.ts",
+        "mobile/src/local-tasks/local-task-review-actions.test.tsx",
+        "src/main/local-tasks/local-tasks-upstream-registration.test.ts",
+        "src/shared/local-tasks/local-task-retired-cleanup-ticket-source.test.ts",
+        "mobile/src/local-tasks/local-task-now-card.test.tsx",
+        "src/renderer/src/components/local-tasks/LocalTaskLatestProgress.test.tsx",
+        "src/renderer/src/components/local-tasks/LocalTaskDispatchReceipt.test.tsx",
+        "src/shared/local-tasks/local-task-deep-link.test.ts",
+        "src/main/local-tasks/local-task-deep-link-routing.test.ts",
+        "src/renderer/src/local-tasks/local-task-deep-link-navigation.test.ts",
+        "src/renderer/src/local-tasks/local-task-receipt-preview.test.ts",
+        "mobile/src/components/MobileMarkdown.rendering.test.tsx",
+        "mobile/src/components/mobile-markdown-selectable.test.tsx",
+        "mobile/src/local-tasks/local-task-activity-section.test.tsx"
       ],
       "checks": [
-        "pnpm exec vitest run --config config/vitest.config.ts src/main/local-tasks src/shared/local-tasks src/main/runtime/rpc/methods/local-tasks.test.ts src/shared/host-operation-ownership.test.ts src/main/runtime/runtime-rpc/fork-mobile-rpc-method-allowlist.test.ts src/main/runtime/runtime-rpc-mobile-method-allowlist.test.ts src/cli/local-tasks src/main/ipc/desktop-runtime-sender-lifecycle.test.ts",
-        "ORCA_BACKGROUND_LAUNCH=1 pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/local-tasks src/renderer/src/components/local-tasks src/renderer/src/components/task-page src/renderer/src/components/cmd-j src/renderer/src/lib/worktree-creation-structured-session.test.ts src/renderer/src/lib/agent-message-send.test.ts src/renderer/src/lib/active-agent-note-send-delivery-guard.test.ts",
-        "pnpm --dir mobile exec vitest run src/local-tasks src/home/MobileHomeTasksAndAutomations.test.tsx src/session/use-notification-pane-navigation.test.tsx src/components/bottom-drawer src/mobile-web-shell/bridge/bridge-rpc-client-frames.test.ts",
-        "pnpm exec vitest run --config config/vitest.config.ts config/scripts/mobile-web-app-file-attachment-grant.test.mjs config/scripts/mobile-web-app/mobile-web-app-session-dictation-capture.test.mjs config/scripts/mobile-web-app/mobile-web-app-page-grant-call-sites.test.mjs config/scripts/mobile-web-app/mobile-web-app-screencast-lane-grant.test.mjs config/scripts/mobile-web-app/mobile-web-app-external-navigation-grant.test.mjs"
+        "pnpm exec vitest run --config config/vitest.config.ts src/main/local-tasks src/shared/local-tasks src/main/runtime/rpc/methods/local-tasks.test.ts src/main/runtime/wsl-host-agent-launch-paths.test.ts src/main/runtime/wsl-host-agent-terminal-launch.test.ts src/main/codex-cli/command-guest-path.test.ts src/shared/host-operation-ownership.test.ts src/main/runtime/runtime-rpc/fork-mobile-rpc-method-allowlist.test.ts src/main/runtime/runtime-rpc-mobile-method-allowlist.test.ts src/cli/local-tasks src/main/ipc/desktop-runtime-sender-lifecycle.test.ts",
+        "ORCA_BACKGROUND_LAUNCH=1 pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/local-tasks src/renderer/src/components/local-tasks src/renderer/src/components/task-page src/renderer/src/lib/codex-session-restart.test.ts tests/e2e/remote-agent-completion-authority.unit.test.ts src/renderer/src/components/terminal-pane/pane-delayed-agent-startup.test.ts src/renderer/src/components/terminal-pane/pty-connection-main-pane-start.test.ts src/renderer/src/components/terminal-pane/pty-connection-input-and-repaint.test.ts src/renderer/src/components/terminal-pane/pty-connection-main-pane-restore-start.test.ts src/renderer/src/components/terminal-pane/pty-connection-completion-and-notification.test.ts src/renderer/src/components/terminal-pane/pane-foreground-agent-tracker.test.ts src/renderer/src/components/terminal-pane/pane-foreground-inspect-observation-identity.test.ts src/renderer/src/components/terminal-pane/pty-connection-foreground-agent.test.ts src/renderer/src/components/terminal-pane/pane-foreground-process-exit-retire.test.ts src/renderer/src/runtime/runtime-terminal-inspection-contact.test.ts src/renderer/src/components/terminal-pane/pane-foreground-agent-contact.test.ts src/renderer/src/runtime/runtime-terminal-inspection.test.ts src/renderer/src/components/cmd-j src/renderer/src/lib/worktree-creation-structured-session.test.ts src/renderer/src/lib/agent-message-send.test.ts src/renderer/src/lib/active-agent-note-send-delivery-guard.test.ts",
+        "pnpm --dir mobile exec vitest run src/local-tasks src/home/MobileHomeTasksAndAutomations.test.tsx src/session/use-notification-pane-navigation.test.tsx src/components/bottom-drawer src/mobile-web-shell/bridge/bridge-rpc-client-frames.test.ts src/components/MobileMarkdown.rendering.test.tsx src/components/mobile-markdown-selectable.test.tsx",
+        "pnpm exec vitest run --config config/vitest.config.ts config/scripts/build-mobile-web-app-bundle.test.mjs config/scripts/mobile-web-app-file-attachment-grant.test.mjs config/scripts/mobile-web-app/mobile-web-app-session-dictation-capture.test.mjs config/scripts/mobile-web-app/mobile-web-app-page-grant-call-sites.test.mjs config/scripts/mobile-web-app/mobile-web-app-screencast-lane-grant.test.mjs config/scripts/mobile-web-app/mobile-web-app-external-navigation-grant.test.mjs"
       ]
     },
     {
@@ -4393,6 +4867,60 @@
       ],
       "checks": [
         "ORCA_BACKGROUND_LAUNCH=1 pnpm exec vitest run --config config/vitest.config.ts src/shared/plugin-workspace-remote src/main/plugin-workspace-remote src/renderer/src/plugin-workspace-remote src/main/plugins src/shared/plugins src/renderer/src/components/plugins"
+      ]
+    },
+    {
+      "id": "cross-version-wire-fixture-compat",
+      "title": "跨版本 Wire 夹具路径兼容",
+      "goal": "历史 checkout 路径唯一迁移且 fork 默认版本符合上游同步快照，显式较新版本仍可验证",
+      "journal": "docs/issue/跨版本Wire夹具兼容/journal.md",
+      "policyId": "cross-version-wire-fixture-compat",
+      "ownedPaths": [
+        "config/scripts/cross-version-wire-fixture-compat/**",
+        "docs/issue/跨版本Wire夹具兼容/**"
+      ],
+      "requiredFiles": [
+        "config/scripts/cross-version-wire-fixture-compat/release-candidates.mjs",
+        "docs/issue/跨版本Wire夹具兼容/journal.md",
+        "docs/issue/跨版本Wire夹具兼容/requirements/跨版本Wire夹具兼容.md"
+      ],
+      "dependsOn": [
+        "config/scripts/stable-release-tags.mjs",
+        "tests/e2e/cross-version-wire/release-module-locations.ts"
+      ],
+      "seams": [
+        {
+          "file": "tests/e2e/cross-version-wire/release-checkout-publication.ts",
+          "mustContain": "releaseModuleLocation(root, TERMINAL_STREAM_PROTOCOL_PATH)",
+          "why": "Publication accepts the unique terminal protocol location within the historical checkout."
+        },
+        {
+          "file": "tests/e2e/cross-version-wire/release-checkout.unit.test.ts",
+          "mustContain": "terminal/stream/terminal-stream-protocol.ts",
+          "why": "The checkout unit cases cover the shipped and moved terminal protocol paths."
+        },
+        {
+          "file": "tests/e2e/cross-version-wire/release-checkout.ts",
+          "mustContain": "stableReleaseCandidates(REPO_ROOT)",
+          "why": "Local baseline and recent refs use the same fork snapshot candidate pool as CI."
+        },
+        {
+          "file": "config/scripts/check-daemon-protocol-crossing.mjs",
+          "mustContain": "stableReleaseCandidates(repoRoot)",
+          "why": "The daemon gate chooses its default from the same fork snapshot candidate pool."
+        },
+        {
+          "file": ".gitignore",
+          "mustContain": "!docs/issue/跨版本Wire夹具兼容/**",
+          "why": "Track the independent maintenance requirement documents."
+        }
+      ],
+      "tests": [
+        "tests/e2e/cross-version-wire/release-checkout.unit.test.ts",
+        "config/scripts/cross-version-wire-fixture-compat/release-candidates.test.mjs"
+      ],
+      "checks": [
+        "ORCA_BACKGROUND_LAUNCH=1 pnpm exec vitest run --config config/vitest.config.ts tests/e2e/cross-version-wire/release-checkout.unit.test.ts tests/e2e/cross-version-wire/release-module-locations.unit.test.ts config/scripts/cross-version-wire-fixture-compat/release-candidates.test.mjs config/scripts/check-daemon-protocol-crossing.test.mjs"
       ]
     },
     {

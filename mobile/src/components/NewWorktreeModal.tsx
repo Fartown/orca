@@ -11,7 +11,6 @@ import { useMobileComposerSource } from '../tasks/use-mobile-composer-source'
 import { useNewWorktreeRuntimeCapabilities } from '../tasks/worktree-create-capability'
 import { useWorktreeCreateBasePrefetch } from '../tasks/use-worktree-create-base-prefetch'
 import { useHostDescriptor } from '../transport/host-descriptor-store'
-import { useLocalTaskCreateSource } from '../local-tasks/use-local-task-create-source'
 import { isSameMobileWorkspaceRepo } from '../worktree/new-workspace-dialog-repo-selection'
 import {
   buildRetiredWorktreeNamesRefreshKey,
@@ -37,6 +36,8 @@ import { useNewWorkspaceRepositories } from './use-new-workspace-repositories'
 import { useNewWorkspaceRuntimeContext } from './use-new-workspace-runtime-context'
 import { useNewWorkspaceSetupScript } from './use-new-workspace-setup-script'
 import { useNewWorktreeDrawerNavigation } from './use-new-worktree-drawer-navigation'
+
+import { useLocalTaskCreateSource } from '../local-tasks/use-local-task-create-source'
 
 /** The server a repo runs on; undefined for the desktop's own (local, SSH, folder). */
 function serverOf(repo: MobileWorkspaceRepo): `runtime:${string}` | undefined {

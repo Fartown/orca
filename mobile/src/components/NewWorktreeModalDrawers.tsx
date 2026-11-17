@@ -4,7 +4,6 @@ import { useMobileTranslation } from '../i18n/use-mobile-translation'
 import type { SmartModeAvailabilityInput } from '../tasks/mobile-smart-source-modes'
 import type { PasteRepoCandidate } from '../tasks/smart-source-paste-intent'
 import type { useMobileComposerSource } from '../tasks/use-mobile-composer-source'
-import type { LocalTaskCreateSource } from '../local-tasks/use-local-task-create-source'
 import { HostKindIcon } from './HostKindIcon'
 import { MobileAgentIcon } from './MobileAgentIcon'
 import type { NewWorktreeAgentOption } from './new-worktree-agent-selection'
@@ -20,6 +19,8 @@ import { OrcaHookTrustDrawer, type OrcaHookTrustPrompt } from './OrcaHookTrustDr
 import { SmartWorkspaceSourceDrawer } from './SmartWorkspaceSourceDrawer'
 import type { JiraSite, JiraSiteSelection } from '../../../src/shared/jira/jira-types'
 import type { NewWorktreeDrawerView } from './use-new-worktree-drawer-navigation'
+
+import type { LocalTaskCreateSource } from '../local-tasks/use-local-task-create-source'
 
 type Composer = ReturnType<typeof useMobileComposerSource>
 

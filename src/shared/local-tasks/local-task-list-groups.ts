@@ -99,7 +99,8 @@ function listHeads(
   }
 }
 
-function headKeyFor(
+/** The key of the group a task counts in by its own value, whatever row it rides under. */
+export function localTaskGroupKey(
   task: LocalTask,
   index: LocalTaskIndex,
   kind: LocalTaskGroupHead['kind']
@@ -193,7 +194,7 @@ export function groupLocalTasksForList(
   const entriesByKey = new Map<string, LocalTaskListEntry[]>()
   const countByKey = new Map<string, number>()
   for (const task of visible) {
-    const key = headKeyFor(task, index, kind)
+    const key = localTaskGroupKey(task, index, kind)
     if (key === null) {
       continue
     }
@@ -222,9 +223,42 @@ export function groupLocalTasksForList(
         entries: (entriesByKey.get(head.key) ?? []).sort((a, b) => compare(a.task, b.task)),
         count: countByKey.get(head.key) ?? 0
       }))
-      .filter((group) => group.entries.length > 0)
+      // Why by count: a status whose tasks all ride under other groups still heads its number.
+      .filter((group) => group.count > 0)
       // Why: the group holding the searched ref moves up too, so the match is the first row.
       .sort((a, b) => Number(b.entries.some(hasExactRef)) - Number(a.entries.some(hasExactRef)))
+  )
+}
+
+/** A heading below "Needs you": tasks of its own value the groups show, and those the band holds. */
+export type LocalTaskGroupTally = { shown: number; inBand: number }
+
+/**
+ * Counts each task the list holds once, in the group of its own value wherever its row rides, so a
+ * heading's shown number plus the band's share equals its board column and the nav (REQ-006).
+ * `banded` is the band's ids, every band task with its subtasks, which leave the groups below.
+ */
+export function tallyLocalTaskGroups<Group>(
+  groups: readonly Group[],
+  tasks: readonly LocalTask[],
+  owns: (group: Group, task: LocalTask) => boolean,
+  banded: ReadonlySet<string>
+): LocalTaskGroupTally[] {
+  return groups.map((group) => {
+    const tally = { shown: 0, inBand: 0 }
+    for (const task of tasks) {
+      if (owns(group, task)) {
+        tally[banded.has(task.id) ? 'inBand' : 'shown'] += 1
+      }
+    }
+    return tally
+  })
+}
+
+/** Every task the list groups hold, each row once. */
+export function localTaskListGroupTasks(groups: readonly LocalTaskListGroup[]): LocalTask[] {
+  return groups.flatMap((group) =>
+    group.entries.flatMap((entry) => [entry.task, ...entry.lines.map((line) => line.task)])
   )
 }
 
@@ -255,7 +289,7 @@ export function buildLocalTaskBoardColumns(
   const kind = heads[0]?.kind
   const tasksByKey = new Map<string, LocalTask[]>()
   for (const task of scopeTasks) {
-    const key = kind ? headKeyFor(task, index, kind) : null
+    const key = kind ? localTaskGroupKey(task, index, kind) : null
     if (key === null || !isLocalTaskVisible(task, index, visibility)) {
       continue
     }

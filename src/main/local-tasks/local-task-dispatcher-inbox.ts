@@ -5,7 +5,9 @@ import type {
 import {
   describeLocalTaskInboxEvent,
   inboxLine,
-  LOCAL_TASK_INBOX_EVENT_KINDS
+  LOCAL_TASK_INBOX_EVENT_KINDS,
+  quotedTaskText,
+  quotedTaskTitle
 } from '../../shared/local-tasks/local-task-inbox-copy'
 import type { LocalTaskProgressSnapshot } from '../../shared/local-tasks/local-task-link-types'
 import type { LocalTask, LocalTaskResult } from '../../shared/local-tasks/local-task-types'
@@ -83,7 +85,8 @@ export function parseStoredKeys(text: string | null): string[] {
   }
 }
 
-const oneLine = inboxLine
+// Why longer than other lines: an interrupted run must still name every item left unknown.
+const SETTLED_PROPOSAL_MAX = 800
 
 /** What changed on a conversation's watched tasks since its last ack; reading changes nothing. */
 export function readLocalTaskInbox(
@@ -127,15 +130,13 @@ export function readLocalTaskInbox(
   const waiting = attention.items.filter((item) => watched.has(item.taskId) && !acked.has(item.key))
   for (const item of waiting) {
     const task = taskOf(item.taskId)
-    const said = item.lastMessage ? ` — ${item.lastMessage}` : ''
+    const said = item.lastMessage ? ` — ${quotedTaskText(item.lastMessage)}` : ''
     items.push({
       kind: 'needs-you',
       at: item.since,
       taskId: item.taskId,
       taskRef: task?.ref ?? null,
-      summary: oneLine(
-        `${task?.title ?? 'A task'}: ${item.agent ?? 'a session'} ${ATTENTION_WORDS[item.kind] ?? 'waits'}${said}`
-      )
+      summary: `${quotedTaskTitle(task?.title)}: ${item.agent ?? 'a session'} ${ATTENTION_WORDS[item.kind] ?? 'waits'}${said}`
     })
   }
   const settled = unreportedLocalTaskProposals(db, conversationId)
@@ -145,7 +146,7 @@ export function readLocalTaskInbox(
       at: proposal.decidedAt ?? proposal.createdAt,
       taskId: null,
       taskRef: null,
-      summary: oneLine(describeSettledProposal(proposal))
+      summary: inboxLine(describeSettledProposal(proposal), SETTLED_PROPOSAL_MAX)
     })
   }
   items.push(...forwarded.items)
@@ -202,7 +203,7 @@ export function ackLocalTaskInbox(
   db: LocalTasksDatabase,
   conversation: SqliteRow,
   cursorText: string,
-  liveAttention: ReadonlySet<string>,
+  mayReturn: (key: string) => boolean,
   now: number
 ): LocalTaskResult<object> {
   const cursor = decodeInboxCursor(cursorText)
@@ -212,21 +213,25 @@ export function ackLocalTaskInbox(
   const conversationId = rowString(conversation, 'id')
   const at = rowNumber(conversation, 'inbox_event_at')
   const rowid = rowNumber(conversation, 'inbox_event_rowid')
+  // Why: a made-up position (say, in the future) would silence every event before it for good.
+  if (!isIssuedInboxPosition(db, conversationId, cursor, { at, rowid })) {
+    return { ok: false, code: 'invalid_argument', detail: 'cursor' }
+  }
   const forward =
     cursor.eventAt > at || (cursor.eventAt === at && cursor.eventRowid > rowid)
       ? { at: cursor.eventAt, rowid: cursor.eventRowid }
       : { at, rowid }
-  // Why prune to live items: a key that left the judgment never comes back the same.
+  // Why keep snoozed and out-of-contact keys: pruned, they would wake the dispatcher again on return.
   const stored = parseStoredKeys(rowNullableString(conversation, 'acked_attention'))
-  const acked = [...new Set([...stored, ...cursor.attention])].filter((key) =>
-    liveAttention.has(key)
-  )
+  const acked = [...new Set([...stored, ...cursor.attention])].filter(mayReturn)
   db.prepare(
     `UPDATE local_task_conversations SET inbox_event_at = ?, inbox_event_rowid = ?,
        acked_attention = ?, updated_at = ? WHERE id = ?`
   ).run(forward.at, forward.rowid, JSON.stringify(acked), now, conversationId)
+  // Why only settled ones: marking a pending proposal reported would hide how it was later settled.
   const report = db.prepare(
-    'UPDATE local_task_proposals SET reported_at = ? WHERE id = ? AND conversation_id = ?'
+    `UPDATE local_task_proposals SET reported_at = ? WHERE id = ? AND conversation_id = ?
+       AND status IN ('dismissed', 'executed')`
   )
   for (const proposalId of cursor.proposals) {
     report.run(now, proposalId, conversationId)
@@ -242,4 +247,30 @@ export function ackLocalTaskInbox(
   reportForwardedFacts(db, conversationId, cursor.factRowid, now)
   db.touch('events')
   return { ok: true }
+}
+
+/**
+ * Whether a cursor names only positions an inbox read could have handed out: the stored event
+ * position or an event that exists, and no forwarded fact past this conversation's own.
+ */
+function isIssuedInboxPosition(
+  db: LocalTasksDatabase,
+  conversationId: string,
+  cursor: LocalTaskInboxCursor,
+  stored: { at: number; rowid: number }
+): boolean {
+  const atStored = cursor.eventAt === stored.at && cursor.eventRowid === stored.rowid
+  const event =
+    atStored ||
+    db
+      .prepare('SELECT 1 AS found FROM local_task_events WHERE rowid = ? AND created_at = ?')
+      .get(cursor.eventRowid, cursor.eventAt) !== undefined
+  const fact =
+    cursor.factRowid === 0 ||
+    db
+      .prepare(
+        'SELECT 1 AS found FROM local_task_conversation_facts WHERE rowid = ? AND conversation_id = ?'
+      )
+      .get(cursor.factRowid, conversationId) !== undefined
+  return event && fact
 }

@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { LOCAL_TASK_TITLE_MAX } from './local-task-model'
+import { LOCAL_TASK_FORWARDED_FACT_TEXT_MAX, LOCAL_TASK_TITLE_MAX } from './local-task-model'
 
 // The dispatcher session (REQ-030, REQ-031): it proposes, a person decides, a desktop executes.
 const clientOperationId = z.string().min(1).max(128)
@@ -52,9 +52,12 @@ export const LocalTasksDispatcherRegisterParams = z.object({
   clientOperationId,
   paneKey,
   agent: agent.optional(),
+  worktreeId: worktreeId.optional(),
   /** The dispatcher's pane before it was reopened: its conversation, watches and inbox carry over. */
   previousPaneKey: paneKey.optional()
 })
+
+export const LocalTasksDispatcherPrepareWorkspaceParams = z.object({})
 
 export const LocalTasksProposalsCreateParams = z.object({
   clientOperationId,
@@ -94,7 +97,19 @@ export const LocalTasksProposalsRecordResultsParams = z.object({
 
 export const LocalTasksProposalsClaimParams = z.object({ clientOperationId, proposalId: id })
 
-export const LocalTasksDispatcherWatchParams = z.object({ clientOperationId, paneKey, taskId: id })
+export const LocalTasksDispatcherWatchParams = z.object({
+  clientOperationId,
+  paneKey,
+  taskId: id,
+  /** A pending `ref:` watch this one resolves; only that row is dropped, in the same write. */
+  replacesRef: id.optional()
+})
+
+export const LocalTasksDispatcherUnwatchParams = z.object({
+  clientOperationId,
+  paneKey,
+  taskId: id
+})
 
 export const LocalTasksDispatcherWatchesParams = z.object({ paneKey })
 
@@ -112,8 +127,8 @@ export const LocalTasksDispatcherRecordFactsParams = z.object({
         at: z.number().int().nonnegative(),
         taskId: z.string().min(1).max(256).nullable(),
         taskRef: z.string().max(64).nullable(),
-        summary: z.string().min(1).max(500),
-        needsYou: z.string().max(500).optional(),
+        summary: z.string().min(1).max(LOCAL_TASK_FORWARDED_FACT_TEXT_MAX),
+        needsYou: z.string().max(LOCAL_TASK_FORWARDED_FACT_TEXT_MAX).optional(),
         finished: z.boolean().optional()
       })
     )

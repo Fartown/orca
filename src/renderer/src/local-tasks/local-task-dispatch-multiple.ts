@@ -1,7 +1,9 @@
 import type { TuiAgent } from '../../../shared/tui-agent'
 import { translate } from '@/i18n/i18n'
 import type { LocalTaskProject } from '../../../shared/local-tasks/local-task-types'
+import { useAppStore } from '@/store'
 import { localTaskEndpointForHost, localTaskIdEndpoint } from './local-task-endpoints'
+import { isLocalTaskHostInContact } from './local-task-host-contact'
 import { isLocalTaskRowWritable, localTasksDomainStore } from './local-tasks-domain-store'
 import { localTasksClient } from './local-tasks-runtime-client'
 import { findLocalTaskLinkForWorkspace } from './local-task-link-selectors'
@@ -25,13 +27,21 @@ export async function dispatchLocalTaskToWorkspaces(args: {
   project: LocalTaskProject
 }): Promise<LocalTaskDispatchBatch> {
   const domain = localTasksDomainStore.getState()
+  const state = useAppStore.getState()
   const endpoint = localTaskIdEndpoint(args.project.id)
+  // Why read now: a host lost since the pick must refuse before the parent is written.
+  if (args.targets.some((target) => !isLocalTaskHostInContact(state, target.hostId))) {
+    return {
+      parentTaskId: null,
+      receipts: [],
+      message: translate('localTasks.dispatch.hostNotConnected', 'Host not connected')
+    }
+  }
   if (
     !isLocalTaskRowWritable(domain, args.project.id) ||
     args.targets.length < 2 ||
     args.targets.some(
       (target) =>
-        !target.available ||
         localTaskEndpointForHost(target.hostId) !== endpoint ||
         findLocalTaskLinkForWorkspace(domain.links, {
           id: target.worktree.id,

@@ -21,6 +21,7 @@ import { MobileRepoIcon } from './MobileRepoIcon'
 import { WorktreeAgentList } from './WorktreeAgentList'
 import { WorktreeMetaGlyphs, prStateColor } from './WorktreeMetaGlyphs'
 import { WORKTREE_ROW_LAYOUT } from './worktree-list-row-layout'
+
 import { LocalTaskWorkspaceGlyph } from '../local-tasks/LocalTaskWorkspaceGlyph'
 
 // Match desktop formatBranchName by hiding refs/heads/ prefix.

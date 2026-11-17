@@ -11,6 +11,7 @@ import type { PtyTransport } from './pty-transport-types'
 import { TerminalPaneHeaderDropSurface } from './TerminalPaneHeaderDropSurface'
 import { TerminalPaneResumeInChatButton } from './TerminalPaneResumeInChatButton'
 import { makePaneKey } from '../../../../shared/stable-pane-id'
+
 import { GoalSessionAction } from '@/components/goals/GoalSessionAction'
 import { LocalTaskSessionChip } from '@/components/local-tasks/LocalTaskSessionChip'
 import { TerminalPaneChatViewButton } from '@/components/terminal-chat-view-button/TerminalPaneChatViewButton'

@@ -30,6 +30,7 @@ import { bindLocalTaskSourceActivation } from './local-task-source-activation'
 import { bindLocalTaskViewPreferences } from './local-task-view-preferences'
 import { bindLocalTaskDispatcher } from './local-task-dispatcher-wake'
 import { localTaskPageStore } from './local-task-page-store'
+import { bindLocalTaskSessionExecutions } from './local-task-session-execution-sync'
 
 const NO_STREAM = { unsubscribe: () => {} }
 
@@ -100,7 +101,13 @@ function pairedPartition(environmentId: string) {
  * meanwhile shows up at the next of those. A browser client's paired library is its own.
  */
 function pairedLibraryStreamed(environmentId: string): boolean {
-  if (isWebClientLocation() || localTaskLibraryViewerStore.getState().viewers > 0) {
+  if (
+    isWebClientLocation() ||
+    localTaskLibraryViewerStore.getState().viewers > 0 ||
+    localTaskLibraryViewerStore
+      .getState()
+      .endpoints?.has(localTaskEnvironmentEndpoint(environmentId))
+  ) {
     return true
   }
   const partition = pairedPartition(environmentId)
@@ -110,7 +117,8 @@ function pairedLibraryStreamed(environmentId: string): boolean {
 function pairedSubscriptionKey(environmentId: string): string {
   const epoch = pairedPartition(environmentId)?.subscriptionEpoch ?? 0
   const mode = pairedLibraryStreamed(environmentId) ? 'stream' : 'status'
-  return `${getRuntimeEnvironmentConnectionGeneration(environmentId)}:${getRuntimeEnvironmentRevision(environmentId) ?? 'unknown'}:${epoch}:${mode}`
+  const contactEpoch = hostContactEpoch(useAppStore.getState(), environmentId)
+  return `${getRuntimeEnvironmentConnectionGeneration(environmentId)}:${getRuntimeEnvironmentRevision(environmentId) ?? 'unknown'}:${contactEpoch}:${epoch}:${mode}`
 }
 
 function hostContactEpoch(state: AppState, environmentId: string): number {
@@ -124,19 +132,10 @@ function hostContactEpoch(state: AppState, environmentId: string): number {
  * probes, retries or reconnects on its own.
  */
 function bindPairedLibraryStreams(): () => void {
-  // A failed subscribe waits for the shared layer's "host is back" edge, not for a timer: the
-  // contact epoch it failed under, and the epoch last folded into each key. A same-runtime return
-  // moves only `hostContactEpoch`, not the connection generation or the pairing revision.
-  const failedUnderContact = new Map<string, number>()
-  const contactMarks = new Map<string, number>()
-  const subscriptionKey = (environmentId: string): string =>
-    `${pairedSubscriptionKey(environmentId)}:${contactMarks.get(environmentId) ?? 0}`
-
   const events = createRuntimeClientEventsSync({
     getDesiredEnvironmentIds: () => getReachableRuntimeEnvironmentIds(useAppStore.getState()),
-    getSubscriptionKey: subscriptionKey,
+    getSubscriptionKey: pairedSubscriptionKey,
     subscribe: async (environmentId, _onEvent, onError, isCurrent) => {
-      failedUnderContact.delete(environmentId)
       const endpoint = localTaskEnvironmentEndpoint(environmentId)
       const sync = localTasksSyncFor(endpoint)
       const writer = localTasksDomainStore.getState().writer(endpoint)
@@ -187,10 +186,6 @@ function bindPairedLibraryStreams(): () => void {
         // Why not rethrown: the shared layer would re-probe on its backoff timer while nothing
         // changed. What was read stays, unconfirmed; the user's Retry or regained contact goes next.
         if (isCurrent()) {
-          failedUnderContact.set(
-            environmentId,
-            hostContactEpoch(useAppStore.getState(), environmentId)
-          )
           sync.fail(error)
         }
         return NO_STREAM
@@ -206,21 +201,12 @@ function bindPairedLibraryStreams(): () => void {
     for (const environmentId of reachable) {
       localTasksSyncFor(localTaskEnvironmentEndpoint(environmentId))
     }
-    for (const [environmentId, epoch] of failedUnderContact) {
-      const current = hostContactEpoch(state, environmentId)
-      if (current !== epoch) {
-        failedUnderContact.delete(environmentId)
-        contactMarks.set(environmentId, current)
-      }
-    }
     for (const partition of localTasksDomainStore.getState().partitions) {
       const environmentId = localTaskEndpointEnvironmentId(partition.endpoint)
       if (environmentId === null) {
         continue
       }
       if (!paired.has(environmentId) && !reachable.has(environmentId)) {
-        failedUnderContact.delete(environmentId)
-        contactMarks.delete(environmentId)
         closeLocalTasksSync(partition.endpoint)
         continue
       }
@@ -250,7 +236,7 @@ function bindPairedLibraryStreams(): () => void {
         const environmentId = localTaskEndpointEnvironmentId(partition.endpoint)
         return environmentId === null
           ? `${partition.endpoint}:${partition.subscriptionEpoch}`
-          : `${partition.endpoint}:${subscriptionKey(environmentId)}`
+          : `${partition.endpoint}:${pairedSubscriptionKey(environmentId)}`
       })
       .join('\n')
   let previousDemand = demand()
@@ -273,6 +259,7 @@ function bindPairedLibraryStreams(): () => void {
 
 /** Holds every task library this window reads; reads follow each host's notices only. */
 function LocalTasksLibraries(): null {
+  useEffect(() => bindLocalTaskSessionExecutions(), [])
   useEffect(() => installLocalTaskPageKeyRouter(), [])
   useEffect(() => bindLocalTaskSourceActivation(), [])
   useEffect(() => bindLocalTaskViewPreferences(), [])

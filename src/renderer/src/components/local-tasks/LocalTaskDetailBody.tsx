@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
 import { AlertTriangle, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { translate } from '@/i18n/i18n'
@@ -11,6 +11,7 @@ import {
 } from '../../../../shared/local-tasks/local-task-model'
 import type { LocalTask } from '../../../../shared/local-tasks/local-task-types'
 import { LOCAL_TASK_INLINE_FIELD } from './local-task-inline-field'
+import { pushLocalTaskFieldEscape } from '@/local-tasks/local-task-page-keys'
 import { useLocalTaskFieldDraft, type LocalTaskFieldDraft } from './use-local-task-field-draft'
 
 const sameText = (a: string, b: string): boolean => a === b
@@ -62,9 +63,24 @@ export function LocalTaskDetailTitle({
     same: sameText,
     toPatch: (title) => ({ title: title.trim() })
   })
+  const cancelingBlur = useRef(false)
+  const titleRef = useRef<HTMLTextAreaElement>(null)
+  const { discard } = field
+  useLayoutEffect(() => {
+    const title = titleRef.current
+    if (!title) {
+      return
+    }
+    return pushLocalTaskFieldEscape(title, () => {
+      cancelingBlur.current = document.activeElement === title
+      discard()
+      title.blur()
+    })
+  }, [discard])
   return (
     <div className="flex flex-col gap-1">
       <ImeTextarea
+        ref={titleRef}
         value={field.value}
         readOnly={!writable}
         rows={1}
@@ -72,14 +88,23 @@ export function LocalTaskDetailTitle({
         // Why: a title is one line of text; a pasted newline would only be stripped on save.
         onChange={(event) => field.edit(event.target.value.replace(/\r?\n/g, ' '))}
         onBlur={() => {
-          // Why: an emptied title is not saved; the stored one comes back.
-          if (field.value.trim()) {
+          if (cancelingBlur.current) {
+            cancelingBlur.current = false
+          } else if (field.value.trim()) {
             void field.commit()
           } else {
             field.discard()
           }
         }}
         onKeyDown={(event) => {
+          if (event.key === 'Escape' && !isImeCompositionKeyDown(event)) {
+            cancelingBlur.current = document.activeElement === event.currentTarget
+            field.discard()
+            event.preventDefault()
+            event.stopPropagation()
+            event.currentTarget.blur()
+            return
+          }
           if (event.key === 'Enter' && !isImeCompositionKeyDown(event)) {
             event.preventDefault()
             event.currentTarget.blur()

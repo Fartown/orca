@@ -5,9 +5,14 @@ import type {
   LocalTaskProposal,
   LocalTaskWatch
 } from '../../../shared/local-tasks/local-task-dispatcher-types'
-import { localTaskDispatcherClient } from './local-task-dispatcher-client'
+import { localTaskDispatcherClientFor } from './local-task-dispatcher-client'
 import { knownDispatcherPaneKey } from './local-task-dispatcher-session'
-import { subscribeSelfLocalTaskChanges } from './local-task-self-changes'
+import { subscribeLocalTaskDispatcherChanges } from './local-task-dispatcher-changes'
+import {
+  getLocalTaskDispatcherEndpoint,
+  getLocalTaskDispatcherEpoch,
+  isLocalTaskDispatcherSourceCurrent
+} from './local-task-dispatcher-source'
 import { runLocalTaskWrite } from './local-task-writes'
 
 /** What the person sees of the dispatcher's records (REQ-031): it keeps no other memory. */
@@ -41,21 +46,32 @@ const LEDGER_INBOX_LIMIT = 50
 const LEDGER_DISPATCHED_LIMIT = 10
 let latestRead = 0
 
+export function resetLocalTaskDispatcherLedger(): void {
+  latestRead += 1
+  localTaskDispatcherLedgerStore.setState(EMPTY)
+}
+
 /** Re-reads the ledger from this window's own library; a slow read never overwrites a later one. */
 export async function refreshLocalTaskDispatcherLedger(): Promise<void> {
   const paneKey = knownDispatcherPaneKey()
   const sequence = ++latestRead
+  const endpoint = getLocalTaskDispatcherEndpoint()
+  const epoch = getLocalTaskDispatcherEpoch()
+  if (!isLocalTaskDispatcherSourceCurrent(endpoint, epoch)) {
+    return
+  }
+  const client = localTaskDispatcherClientFor(endpoint)
   if (!paneKey) {
     localTaskDispatcherLedgerStore.setState({ ...EMPTY, loaded: true })
     return
   }
   try {
     const [watches, inbox, executed] = await Promise.all([
-      localTaskDispatcherClient.watches(paneKey),
-      localTaskDispatcherClient.inbox(paneKey, LEDGER_INBOX_LIMIT),
-      localTaskDispatcherClient.list('executed')
+      client.watches(paneKey),
+      client.inbox(paneKey, LEDGER_INBOX_LIMIT),
+      client.list('executed')
     ])
-    if (sequence !== latestRead) {
+    if (sequence !== latestRead || !isLocalTaskDispatcherSourceCurrent(endpoint, epoch)) {
       return
     }
     const conversationId = inbox.ok ? inbox.inbox.conversationId : null
@@ -71,7 +87,7 @@ export async function refreshLocalTaskDispatcherLedger(): Promise<void> {
         .slice(0, LEDGER_DISPATCHED_LIMIT)
     })
   } catch (error) {
-    if (sequence === latestRead) {
+    if (sequence === latestRead && isLocalTaskDispatcherSourceCurrent(endpoint, epoch)) {
       localTaskDispatcherLedgerStore.setState({
         loaded: true,
         error: error instanceof Error ? error.message : String(error)
@@ -83,14 +99,14 @@ export async function refreshLocalTaskDispatcherLedger(): Promise<void> {
 /** While the ledger is shown it follows the library's change notices; nothing polls. */
 export function followLocalTaskDispatcherLedger(): () => void {
   void refreshLocalTaskDispatcherLedger()
-  return subscribeSelfLocalTaskChanges((scopes) => {
+  return subscribeLocalTaskDispatcherChanges((scopes) => {
     if (
       scopes === null ||
       scopes.some((scope) => scope === 'events' || scope === 'tasks' || scope === 'attention')
     ) {
       void refreshLocalTaskDispatcherLedger()
     }
-  })
+  }, resetLocalTaskDispatcherLedger)
 }
 
 /** The person stops the dispatcher following a task; its records stay. */
@@ -99,6 +115,12 @@ export async function unwatchLocalTaskFromLedger(taskId: string): Promise<void> 
   if (!paneKey) {
     return
   }
-  await runLocalTaskWrite(() => localTaskDispatcherClient.unwatch(paneKey, taskId))
+  const endpoint = getLocalTaskDispatcherEndpoint()
+  const epoch = getLocalTaskDispatcherEpoch()
+  if (!isLocalTaskDispatcherSourceCurrent(endpoint, epoch)) {
+    return
+  }
+  const client = localTaskDispatcherClientFor(endpoint)
+  await runLocalTaskWrite(() => client.unwatch(paneKey, taskId))
   void refreshLocalTaskDispatcherLedger()
 }

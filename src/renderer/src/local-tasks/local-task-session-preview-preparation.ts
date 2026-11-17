@@ -8,9 +8,10 @@ const preparationResult = z.object({ ok: z.literal(true), prepared: z.boolean() 
 
 /** Paired workspaces already follow their host's tab stream; only this window's library needs IPC projection. */
 export async function prepareLocalTaskSessionPreview(
-  link: Pick<LocalTaskSessionLink, 'id' | 'hostId' | 'surface'>
+  link: Pick<LocalTaskSessionLink, 'id' | 'hostId' | 'surface' | 'executionOrigin'>
 ): Promise<boolean | null> {
   if (
+    link.executionOrigin ||
     link.surface !== 'terminal' ||
     localTaskIdEndpoint(link.id) !== SELF_LOCAL_TASK_ENDPOINT ||
     !isLocalTaskHostInContact(useAppStore.getState(), link.hostId)

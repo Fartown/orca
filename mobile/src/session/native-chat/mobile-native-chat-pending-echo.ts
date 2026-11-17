@@ -10,6 +10,10 @@ import {
   visibleNativeChatPendingSends,
   type NativeChatPendingSend
 } from '../../../../src/shared/native-chat/transcript/native-chat-pending-sends'
+import {
+  retirePagedOutPendingSends,
+  type NativeChatLoadedWindow
+} from '../../../../src/shared/native-chat-paged-out-echo/retire-paged-out-pending-sends'
 
 export type MobileNativeChatPendingMessage = NativeChatPendingSend & {
   // Phone-local preview URIs; these echoes retire only once their preview binds to a transcript row.
@@ -92,11 +96,14 @@ export function removeWaitingSessionPending(
 export function retireLandedMobileNativeChatPending(
   messages: readonly NativeChatMessage[],
   current: MobileNativeChatPendingMessage[],
-  landedImagePendingIds: ReadonlySet<string>
+  landedImagePendingIds: ReadonlySet<string>,
+  loadedWindow: NativeChatLoadedWindow
 ): MobileNativeChatPendingMessage[] {
-  const kept = new Set(prunePendingSends(current, messages))
-  let changed = false
-  const next = current.flatMap((item) => {
+  // A replaced window can hold neither an echo's row nor its preview's; such echoes never bind.
+  const live = retirePagedOutPendingSends(current, messages, loadedWindow)
+  const kept = new Set(prunePendingSends(live, messages))
+  let changed = live !== current
+  const next = live.flatMap((item) => {
     if (landedImagePendingIds.has(item.id)) {
       changed = true
       // The preview now lives on its row; a caption stays a plain send so it can retire with glued neighbours.

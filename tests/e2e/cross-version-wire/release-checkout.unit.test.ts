@@ -12,21 +12,32 @@ import {
   writeFileSync
 } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import { lock } from 'proper-lockfile'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { forceTerminateProcessTree } from '@orca/process-host/process-tree-termination'
 import { spawnProcess } from '@orca/process-host'
 import {
   importReleaseCheckoutModule,
   materializeReleaseCheckout,
   REPO_ROOT,
+  resolveBaselineReleaseRef,
   type CheckoutLockOptions,
   type CheckoutStagingContext,
   type ReleaseCheckout
 } from './release-checkout'
+import { publishReleaseCheckout } from './release-checkout-publication'
 const temporaryRoots: string[] = []
 const temporaryRefs: { ref: string; commit: string }[] = []
+
+it('keeps an explicit newer baseline ref independent of the default candidate pool', () => {
+  vi.stubEnv('ORCA_CROSS_VERSION_BASELINE_REF', 'v1.4.256')
+  try {
+    expect(resolveBaselineReleaseRef()).toBe('v1.4.256')
+  } finally {
+    vi.unstubAllEnvs()
+  }
+})
 
 const COMPRESSED_LOCK_OPTIONS: CheckoutLockOptions = {
   realpath: false,
@@ -38,6 +49,26 @@ const COMPRESSED_LOCK_OPTIONS: CheckoutLockOptions = {
 function temporaryCacheRoot(): string {
   const root = mkdtempSync(join(tmpdir(), 'orca-cross-version-checkout-'))
   temporaryRoots.push(root)
+  return root
+}
+
+const SHIPPED_TERMINAL_PROTOCOL = 'src/shared/terminal-stream-protocol.ts'
+const MOVED_TERMINAL_PROTOCOL = 'src/shared/terminal/stream/terminal-stream-protocol.ts'
+
+async function publishTerminalProtocolFixture(paths: readonly string[]): Promise<string> {
+  const root = join(temporaryCacheRoot(), 'release')
+  await publishReleaseCheckout({
+    root,
+    ref: 'v1.4.256',
+    commit: 'f'.repeat(40),
+    populateStaging: async (staging) => {
+      for (const relativePath of paths) {
+        const file = join(staging, relativePath)
+        mkdirSync(dirname(file), { recursive: true })
+        writeFileSync(file, 'export const synthetic = true\n')
+      }
+    }
+  })
   return root
 }
 
@@ -263,6 +294,28 @@ afterEach(() => {
 })
 
 describe('release checkout materialization', () => {
+  it.each([SHIPPED_TERMINAL_PROTOCOL, MOVED_TERMINAL_PROTOCOL])(
+    'publishes a historical release with terminal protocol at %s',
+    async (relativePath) => {
+      const root = await publishTerminalProtocolFixture([relativePath])
+      expect(existsSync(join(root, relativePath))).toBe(true)
+      expect(existsSync(join(root, 'checkout-stamp.json'))).toBe(true)
+    }
+  )
+
+  const rejectedProtocolLocations: { kind: string; paths: string[] }[] = [
+    { kind: 'missing', paths: [] },
+    {
+      kind: 'ambiguous',
+      paths: [MOVED_TERMINAL_PROTOCOL, 'src/shared/older/terminal-stream-protocol.ts']
+    }
+  ]
+  it.each(rejectedProtocolLocations)('refuses a $kind terminal protocol', async ({ paths }) => {
+    await expect(publishTerminalProtocolFixture(paths)).rejects.toThrow(
+      /missing the terminal stream protocol/
+    )
+  })
+
   it('keeps an import live while another colliding release label materializes', async () => {
     // Squash-merged history has no merge parents; create two distinct refs with colliding labels.
     const scope = `refs/orca-checkout-test/${randomUUID()}`

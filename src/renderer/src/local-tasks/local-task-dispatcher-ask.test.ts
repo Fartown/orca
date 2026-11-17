@@ -8,10 +8,16 @@ vi.mock('sonner', () => ({ toast: { info: mocks.info } }))
 vi.mock('@/lib/agent-message-send', () => ({ sendMessageToAgent: mocks.send }))
 vi.mock('./local-task-dispatcher-session', () => ({
   liveDispatcherPaneKey: () => 'tab-1:11111111-1111-4111-8111-111111111111',
-  openLocalTaskDispatcher: async () => true
+  openLocalTaskDispatcher: async () => true,
+  getLocalTaskDispatcherSendArgs: (_pane: string, prompt: string) => ({
+    worktreeId: 'global-floating-terminal',
+    target: { kind: 'terminal', tabId: 'tab-1', leafId: '11111111-1111-4111-8111-111111111111' },
+    prompt
+  })
 }))
 
-import { askLocalTaskDispatcher } from './local-task-dispatcher-ask'
+import { LOCAL_TASK_DISPATCHER_GUIDE } from '../../../shared/local-tasks/local-task-brief'
+import { askLocalTaskDispatcher, LOCAL_TASK_ASK_ONLY_PREFIX } from './local-task-dispatcher-ask'
 
 describe('askLocalTaskDispatcher', () => {
   beforeEach(() => {
@@ -39,5 +45,11 @@ describe('askLocalTaskDispatcher', () => {
     expect(mocks.info).toHaveBeenCalledWith(
       'The dispatcher is open. Your message was not sent; send it there.'
     )
+  })
+
+  it('marks an Ask the way the dispatcher guide recognizes, so both say the same thing', () => {
+    expect(LOCAL_TASK_ASK_ONLY_PREFIX.startsWith('[Ask only:')).toBe(true)
+    expect(LOCAL_TASK_DISPATCHER_GUIDE).toContain('A message that starts with [Ask only: ...]')
+    expect(LOCAL_TASK_ASK_ONLY_PREFIX).toContain('offer a read-only investigation task')
   })
 })

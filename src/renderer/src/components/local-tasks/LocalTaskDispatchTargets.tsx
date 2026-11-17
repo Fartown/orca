@@ -106,8 +106,8 @@ export function LocalTaskDispatchProjectChoice({
   }
   if (orphanRepoLabel && selectedId === null) {
     return (
-      <div className="flex items-center justify-between gap-2 rounded border border-border p-2 text-xs">
-        <span>
+      <div className="flex min-w-0 flex-wrap items-center justify-between gap-2 rounded border border-border p-2 text-xs">
+        <span className="min-w-0 break-words">
           {translate('localTasks.dispatch.createProjectPrompt', 'Create a project for {{repo}}?', {
             repo: orphanRepoLabel
           })}

@@ -20,6 +20,16 @@ import { LocalTaskDispatcher } from './local-task-dispatcher'
 import { runLocalTaskWrite } from './local-task-mutation-receipts'
 import { writeResultSchema } from '../../shared/local-tasks/local-task-result-schemas'
 import type { OrcaRuntimeService } from '../runtime/orca-runtime'
+import { FLOATING_TERMINAL_WORKTREE_ID } from '../../shared/constants'
+import {
+  LOCAL_TASK_DISPATCHER_SESSION_PREFERENCE_KEY,
+  LOCAL_TASK_DISPATCHER_PANE_PREFERENCE_KEY,
+  type LocalTaskDispatcherWorkspace
+} from '../../shared/local-tasks/local-task-dispatcher-workspace'
+import {
+  prepareLocalTaskDispatcherWorkspace,
+  type LocalTaskDispatcherWorkspaceRuntime
+} from './local-task-dispatcher-workspace'
 
 const EMPTY_RESULT = writeResultSchema({})
 const CONVERSATION_RESULT = writeResultSchema({ conversation: conversationSchema })
@@ -32,12 +42,17 @@ const claimSubscriptionId = (proposalId: string): string =>
 export abstract class LocalTaskDispatcherService {
   readonly dispatcher: LocalTaskDispatcher
   private readonly claimLifetimes = new Map<string, ClaimLifetime>()
+  private preparingWorkspace: Promise<LocalTaskDispatcherWorkspace> | null = null
 
   constructor(
     private readonly dispatcherDb: LocalTasksDatabase,
     private readonly dispatcherNow: () => number
   ) {
-    this.dispatcher = new LocalTaskDispatcher(dispatcherDb, () => this.dispatcherProgress())
+    this.dispatcher = new LocalTaskDispatcher(
+      dispatcherDb,
+      () => this.dispatcherProgress(),
+      () => this.dispatcherAttentionKeyMayReturn()
+    )
     dispatcherDb.onClose(() => {
       for (const [proposalId, lifetime] of this.claimLifetimes) {
         lifetime.cleanupSubscription(claimSubscriptionId(proposalId))
@@ -47,13 +62,54 @@ export abstract class LocalTaskDispatcherService {
 
   protected abstract dispatcherProgress(): LocalTaskProgressSnapshot
 
+  protected abstract dispatcherAttentionKeyMayReturn(): (key: string) => boolean
+
+  async prepareDispatcherWorkspace(runtime: LocalTaskDispatcherWorkspaceRuntime) {
+    if (this.dispatcherDb.readOnly) {
+      return { ok: false as const, code: 'read_only' as const }
+    }
+    const preparing = (this.preparingWorkspace ??= prepareLocalTaskDispatcherWorkspace(
+      this.dispatcherDb,
+      runtime
+    ))
+    try {
+      return await preparing
+    } finally {
+      if (this.preparingWorkspace === preparing) {
+        this.preparingWorkspace = null
+      }
+    }
+  }
+
   registerDispatcher(input: LocalTasksDispatcherRegisterInput) {
     return this.writeDispatcher(
       input.clientOperationId,
       'dispatcher.register',
       input,
       CONVERSATION_RESULT,
-      (now) => this.dispatcher.register(input.paneKey, input.agent, now, input.previousPaneKey)
+      (now) => {
+        const result = this.dispatcher.register(
+          input.paneKey,
+          input.agent,
+          now,
+          input.previousPaneKey
+        )
+        if (result.ok) {
+          const save = this.dispatcherDb.prepare(
+            'INSERT INTO local_task_preferences (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value'
+          )
+          save.run(
+            LOCAL_TASK_DISPATCHER_SESSION_PREFERENCE_KEY,
+            JSON.stringify({
+              worktreeId: input.worktreeId ?? FLOATING_TERMINAL_WORKTREE_ID,
+              paneKey: input.paneKey
+            })
+          )
+          save.run(LOCAL_TASK_DISPATCHER_PANE_PREFERENCE_KEY, input.paneKey)
+          this.dispatcherDb.touch('preferences')
+        }
+        return result
+      }
     )
   }
 
@@ -123,6 +179,22 @@ export abstract class LocalTaskDispatcherService {
     return result.ok ? this.dispatcher.proposalResult(input.proposalId) : result
   }
 
+  /**
+   * The claiming window gives up a run it can no longer report on, so the claim retires now rather
+   * than when its connection closes, and a person can close the proposal out (D-018).
+   */
+  releaseProposal(
+    input: { clientOperationId: string; proposalId: string },
+    connectionId: string,
+    lifetime: ClaimLifetime
+  ) {
+    if (!connectionId || this.dispatcher.ownership.ownerOf(input.proposalId) !== connectionId) {
+      return { ok: false as const, code: 'stale' as const, detail: 'execution-owner' }
+    }
+    lifetime.cleanupSubscription(claimSubscriptionId(input.proposalId))
+    return this.dispatcher.proposalResult(input.proposalId)
+  }
+
   recordProposalResults(
     input: LocalTasksProposalsRecordResultsInput,
     connectionId: string,
@@ -156,13 +228,18 @@ export abstract class LocalTaskDispatcherService {
     return result.ok ? this.dispatcher.proposalResult(input.proposalId) : result
   }
 
-  watchTask(input: { clientOperationId: string; paneKey: string; taskId: string }) {
+  watchTask(input: {
+    clientOperationId: string
+    paneKey: string
+    taskId: string
+    replacesRef?: string
+  }) {
     return this.writeDispatcher(
       input.clientOperationId,
       'dispatcher.watch',
       input,
       EMPTY_RESULT,
-      (now) => this.dispatcher.watch(input.paneKey, input.taskId, now)
+      (now) => this.dispatcher.watch(input.paneKey, input.taskId, now, input.replacesRef)
     )
   }
 

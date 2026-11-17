@@ -17,14 +17,6 @@ import { registerMainProcessIpcHandlers } from './startup/main-process-ipc-boots
 import { initializeMainProcessReady } from './startup/main-process-ready'
 import { installMainProcessQuitHandlers } from './startup/main-process-quit'
 import { shouldActivateDesktopForSecondInstance } from './startup/single-instance-lock'
-import {
-  startGoalFeatureForMainProcess,
-  stopGoalFeatureForMainProcess
-} from './startup/main-process-goals'
-import {
-  startLocalTasksForMainProcess,
-  stopLocalTasksForMainProcess
-} from './startup/main-process-local-tasks'
 import { resolveOsOpenedDocuments } from './startup/os-opened-documents'
 import {
   formatProfileStateStartupFailure,
@@ -51,6 +43,15 @@ import { clearWindowsStdHandleInheritance } from './startup/windows-std-handle-i
 import { installWindowsIsolatedSpawner } from './startup/windows-isolated-spawner'
 import { dropE2eSpawnLogOutsideE2e } from './startup/e2e-spawn-log-env'
 
+import {
+  startGoalFeatureForMainProcess,
+  stopGoalFeatureForMainProcess
+} from './startup/main-process-goals'
+import {
+  startLocalTasksForMainProcess,
+  stopLocalTasksForMainProcess
+} from './startup/main-process-local-tasks'
+
 // Before anything spawns, so no daemon, PTY or agent inherits it outside e2e.
 dropE2eSpawnLogOutsideE2e()
 
@@ -74,6 +75,9 @@ function requestDesktopActivation(argv: readonly string[] = []): void {
   })
   state.pluginInstallLinks.capture(argv, (link) => {
     state.mainWindow?.webContents.send('ui:openPluginInstallLink', link)
+  })
+  state.localTaskDeepLinks.capture(argv, (link) => {
+    state.mainWindow?.webContents.send('ui:openLocalTaskLink', link)
   })
   state.osOpenedDocuments.capture(argv, publishOsOpenedDocuments)
   // Duplicate serve launches must not activate a desktop on a headless server (#11935).
@@ -168,6 +172,7 @@ if (preflightReady) {
   })
   state.skillShareDeepLinks.capture(process.argv)
   state.pluginInstallLinks.capture(process.argv)
+  state.localTaskDeepLinks.capture(process.argv)
   // The first renderer pulls on mount; nothing listens this early.
   state.osOpenedDocuments.capture(process.argv)
   registerMainProcessIpcHandlers()

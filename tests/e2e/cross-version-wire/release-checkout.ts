@@ -1,6 +1,12 @@
 import { execFileSync } from 'node:child_process'
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises'
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path'
+
+import {
+  recentStableReleaseCandidates,
+  stableReleaseCandidates
+} from '../../../config/scripts/cross-version-wire-fixture-compat/release-candidates.mjs'
+
 import { selectLatestStableReleaseTag } from '../../../config/scripts/stable-release-tags.mjs'
 import {
   populateReleaseCheckoutSource,
@@ -57,14 +63,14 @@ export function resolveBaselineReleaseRef(): string {
   }
   let tags: string[]
   try {
-    tags = git(['tag', '--list', 'v[0-9]*']).split('\n').filter(Boolean)
+    tags = stableReleaseCandidates(REPO_ROOT)
   } catch (error) {
     throw new Error(
-      `Cross-version harness could not list git tags in ${REPO_ROOT}: ${String(error)}. ` +
+      `Cross-version harness could not select release tags in ${REPO_ROOT}: ${String(error)}. ` +
         `Run it inside a git checkout, or pin a ref with ${BASELINE_REF_ENV}.`
     )
   }
-  const latest = selectLatestStableReleaseTag(tags)
+  const latest = tags[0]
   if (!latest) {
     throw new Error(
       `Cross-version harness found no stable desktop release tags matching vX.Y.Z (saw ${tags.length} tag(s) total). ` +
@@ -77,20 +83,7 @@ export function resolveBaselineReleaseRef(): string {
 
 /** The newest `count` stable desktop releases, newest first: the ones a downgrade can reach. */
 export function resolveRecentStableReleaseRefs(count: number): string[] {
-  let tags = git(['tag', '--list', 'v[0-9]*']).split('\n').filter(Boolean)
-  const recent: string[] = []
-  while (recent.length < count) {
-    const latest = selectLatestStableReleaseTag(tags)
-    if (!latest) {
-      throw new Error(
-        `Cross-version harness found ${recent.length} of ${count} stable desktop release tags; ` +
-          'a shallow CI clone needs `fetch-depth: 0`.'
-      )
-    }
-    recent.push(latest)
-    tags = tags.filter((tag) => tag !== latest)
-  }
-  return recent
+  return recentStableReleaseCandidates(REPO_ROOT, count)
 }
 
 function resolveCommit(ref: string): string {

@@ -19,6 +19,7 @@ import {
   getWorktreeCardDisplayOptions
 } from './sidebar-workspace-option-items'
 import { translate } from '@/i18n/i18n'
+
 import { LocalTaskCardOptionItem } from '@/components/local-tasks/LocalTaskCardOptionItem'
 
 type CardMenuItemProps = {

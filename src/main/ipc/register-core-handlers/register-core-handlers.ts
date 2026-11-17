@@ -35,7 +35,7 @@ import { registerWslHostHandlers } from '../wsl-host-handlers'
 import { registerEphemeralVmHandlers } from '../ephemeral-vm'
 import { registerAiVaultHandlers } from '../ai-vault'
 import { registerAiVaultSearchHandlers } from '../ai-vault-search'
-import { registerNativeChatHandlers } from '../native-chat'
+import { registerTerminalChatHandlers } from '../../native-chat-view-recovery/durable-chat-ipc'
 import { registerNotificationHandlers } from '../notifications'
 import { registerNotebookHandlers } from '../notebook'
 import { registerOnboardingHandlers } from '../onboarding'
@@ -296,7 +296,7 @@ export function registerCoreHandlers(
   configureRuntimeAiVaultSessionDelete((environmentId, args) =>
     deleteRuntimeAiVaultSession(getRuntimeEnvironmentRegistryRoot(), environmentId, args)
   )
-  registerNativeChatHandlers()
+  registerTerminalChatHandlers(runtime)
   registerClipboardHandlers(store, {
     localChatAttachmentStore: async () => {
       await ensureStructuredAgentSessionHostUnlessRefused(() =>

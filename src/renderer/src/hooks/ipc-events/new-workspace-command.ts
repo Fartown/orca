@@ -2,6 +2,7 @@ import { buildLinearIssueLinkedWorkItem } from '@/lib/linear-linked-work-item'
 import type { LinkedWorkItemSummary } from '@/lib/new-workspace'
 import { getLinearIssueWorkspaceName } from '../../../../shared/workspace-name'
 import type { AppState } from '../../store/types'
+
 import { localTaskShortcutComposerData } from '@/local-tasks/local-task-new-workspace-shortcut'
 
 type NewWorkspaceShortcutModalData = {

@@ -22,16 +22,22 @@ import type { LocalTasksDatabase } from './local-tasks-database'
 import { ackLocalTaskInbox, readLocalTaskInbox } from './local-task-dispatcher-inbox'
 import { insertLocalTaskProposal, readLocalTaskProposal } from './local-task-proposal-rows'
 import { readLocalTask } from './local-task-store'
-import { isOtherLibraryTaskId } from '../../shared/local-tasks/local-task-inbox-copy'
+import {
+  isOtherLibraryTaskId,
+  pendingWatchRef
+} from '../../shared/local-tasks/local-task-inbox-copy'
 import { recordLocalTaskProposalResults } from './local-task-proposal-results'
 import { LocalTaskProposalOwnership } from './local-task-proposal-ownership'
 import {
+  addDispatcherRemoteWatch,
+  addLocalWatch,
   addRemoteWatch,
   listDispatcherWatches,
+  listLocalWatchTaskIds,
   listRemoteWatches,
   readForwardedFacts,
   recordForwardedFacts,
-  removeRemoteWatch
+  removeDispatcherWatch
 } from './local-task-dispatcher-remote'
 import {
   rowNullableNumber,
@@ -55,7 +61,9 @@ export class LocalTaskDispatcher {
 
   constructor(
     private readonly db: LocalTasksDatabase,
-    private readonly attention: () => LocalTaskProgressSnapshot
+    private readonly attention: () => LocalTaskProgressSnapshot,
+    /** Whether an acknowledged key may be raised again; ack keeps only those. */
+    private readonly attentionKeyMayReturn: () => (key: string) => boolean
   ) {
     this.ownership = new LocalTaskProposalOwnership(db)
   }
@@ -212,7 +220,7 @@ export class LocalTaskDispatcher {
         if (isOtherLibraryTaskId(taskId)) {
           addRemoteWatch(this.db, proposal.conversationId, taskId, 'proposal', now)
         } else if (readLocalTask(this.db, taskId)) {
-          this.addWatch(proposal.conversationId, taskId, 'proposal', now)
+          addLocalWatch(this.db, proposal.conversationId, taskId, 'proposal', now)
         }
       }
     )
@@ -225,21 +233,28 @@ export class LocalTaskDispatcher {
     return this.proposalResult(proposal.id)
   }
 
-  watch(paneKey: string, taskId: string, now: number): LocalTaskResult<object> {
+  /** `replacesRef`: the pending ref a desktop window resolved to `taskId`; only its row goes. */
+  watch(
+    paneKey: string,
+    taskId: string,
+    now: number,
+    replacesRef?: string
+  ): LocalTaskResult<object> {
     const conversation = this.conversationFor(paneKey)
     if (!conversation) {
       return NOT_DISPATCHER
     }
-    // Why no check for another library's task: this host cannot read that library.
-    if (isOtherLibraryTaskId(taskId)) {
-      addRemoteWatch(this.db, conversation.id, taskId, 'dispatcher', now)
+    // Why no check for another library's task, or a ref a desktop window finds in one: this host
+    // cannot read that library.
+    if (isOtherLibraryTaskId(taskId) || pendingWatchRef(taskId) !== null) {
+      addDispatcherRemoteWatch(this.db, conversation.id, taskId, now, replacesRef)
       this.db.touch('events')
       return { ok: true }
     }
     if (!readLocalTask(this.db, taskId)) {
       return { ok: false, code: 'not_found' }
     }
-    this.addWatch(conversation.id, taskId, 'dispatcher', now)
+    addLocalWatch(this.db, conversation.id, taskId, 'dispatcher', now)
     return { ok: true }
   }
 
@@ -248,12 +263,9 @@ export class LocalTaskDispatcher {
     if (!conversation) {
       return NOT_DISPATCHER
     }
-    this.db
-      .prepare(
-        'DELETE FROM local_task_conversation_watches WHERE conversation_id = ? AND task_id = ?'
-      )
-      .run(conversation.id, taskId)
-    removeRemoteWatch(this.db, conversation.id, taskId)
+    if (!removeDispatcherWatch(this.db, conversation.id, taskId)) {
+      return { ok: false, code: 'not_found', detail: 'watch' }
+    }
     this.db.touch('events')
     return { ok: true }
   }
@@ -278,7 +290,7 @@ export class LocalTaskDispatcher {
       return NOT_DISPATCHER
     }
     const conversationId = rowString(row, 'id')
-    const watched = new Set(this.watchedTaskIds(conversationId))
+    const watched = new Set(listLocalWatchTaskIds(this.db, conversationId))
     return {
       ok: true,
       inbox: readLocalTaskInbox(
@@ -301,8 +313,7 @@ export class LocalTaskDispatcher {
     if (!row) {
       return NOT_DISPATCHER
     }
-    const live = new Set(this.attention().items.map((item) => item.key))
-    return ackLocalTaskInbox(this.db, row, cursorText, live, now)
+    return ackLocalTaskInbox(this.db, row, cursorText, this.attentionKeyMayReturn(), now)
   }
 
   /** What the dispatcher follows, newest first, for the person's ledger (REQ-031). */
@@ -311,23 +322,6 @@ export class LocalTaskDispatcher {
     return conversation
       ? { ok: true, watches: listDispatcherWatches(this.db, conversation.id) }
       : NOT_DISPATCHER
-  }
-
-  private watchedTaskIds(conversationId: string): string[] {
-    return this.db
-      .prepare('SELECT task_id FROM local_task_conversation_watches WHERE conversation_id = ?')
-      .all(conversationId)
-      .map((row) => rowString(row, 'task_id'))
-  }
-
-  private addWatch(conversationId: string, taskId: string, addedBy: string, now: number): void {
-    this.db
-      .prepare(
-        `INSERT OR IGNORE INTO local_task_conversation_watches
-           (conversation_id, task_id, added_at, added_by) VALUES (?, ?, ?, ?)`
-      )
-      .run(conversationId, taskId, now, addedBy)
-    this.db.touch('events')
   }
 
   proposalResult(proposalId: string): ProposalResult {

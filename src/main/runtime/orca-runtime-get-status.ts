@@ -1,3 +1,4 @@
+import { DURABLE_CHAT_COMPOSER_CAPABILITY } from '../../shared/native-chat-view-recovery/durable-chat-submit'
 import { BROWSER_GOOGLE_COOKIE_CLEAR_CAPABILITY } from '../../shared/browser-runtime-capabilities'
 import { OrcaRuntimeWithPtyController } from './orca-runtime-pty-controller'
 import type { RuntimeDegradation, RuntimeStatus } from '../../shared/runtime-types'
@@ -52,6 +53,7 @@ import { isDesktopBrowserBridgeHostEnabled } from './desktop-browser-bridge/desk
 import { DESKTOP_BROWSER_BRIDGE_RUNTIME_CAPABILITY } from '../../shared/desktop-browser-bridge-protocol'
 import { darkSwitchRuntimeCapabilities } from './dark-switch-runtime-capabilities'
 import { supportsDurableTerminalPromptDelivery } from './durable-terminal-prompt-delivery-support'
+
 import { localTasksRuntimeCapabilities } from '../local-tasks/local-tasks-runtime-capability'
 
 type RuntimeStatusHost = {
@@ -98,7 +100,8 @@ export abstract class OrcaRuntimeWithGetStatus extends OrcaRuntimeWithPtyControl
           capability !== TERMINAL_PAIRED_PARKING_RUNTIME_CAPABILITY) &&
         (process.env.ORCA_E2E_DISABLE_AUTHORITATIVE_SESSION_TABS_INVENTORY !== '1' ||
           capability !== SESSION_TABS_AUTHORITATIVE_INVENTORY_RUNTIME_CAPABILITY) &&
-        (capability !== TERMINAL_PROMPT_DELIVERY_RUNTIME_CAPABILITY ||
+        ((capability !== TERMINAL_PROMPT_DELIVERY_RUNTIME_CAPABILITY &&
+          capability !== DURABLE_CHAT_COMPOSER_CAPABILITY) ||
           supportsDurableTerminalPromptDelivery()) &&
         // Only hosts running their own usage poller can consume saved keys.
         (capability !== USAGE_CREDENTIALS_RUNTIME_CAPABILITY ||

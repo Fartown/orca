@@ -23161,6 +23161,12 @@
     "switchToChatView": "切到聊天视图"
   },
   "localTasks": {
+    "crossHost": {
+      "executionUnavailable": "会话所在的主机未连接。",
+      "ownerUnknown": "无法确认会话所在的执行主机。",
+      "previousLinkUnconfirmed": "已关联新任务，但无法确认旧关联是否已移除。请核对两个任务。",
+      "updateRequired": "请更新任务所在主机的 Orca，以关联其他主机上的会话。"
+    },
     "needsYou": {
       "title": "需要你",
       "description": "挂在任务上的会话里，等你批准、等你回答、被卡住，或做完一轮你还没看的条目。主机断开期间不列出，恢复联系后重新判定。",
@@ -23280,7 +23286,9 @@
       "place": {
         "newWorkspace": "{{repo}} 的新工作区",
         "newSession": "{{agent}} · 新会话",
-        "sameWorkspace": "同一工作区"
+        "sameWorkspace": "同一工作区",
+        "noAgent": "没有启用的智能体",
+        "agentSubstituted": "默认；{{asked}} 不可用"
       },
       "stage": {
         "done": "已完成",
@@ -23298,17 +23306,20 @@
         "ended": "这个会话已经结束。",
         "missing": "这里找不到这个会话。",
         "unverifiable": "现在无法确认这个会话的状态。",
-        "busy": "{{agent}} 现在是「{{state}}」：做完一轮后才能追加。"
+        "busy": "{{agent}} 现在是「{{state}}」：做完一轮后才能追加。",
+        "workspaceOwned": "这个工作区已属于 {{ref}} “{{title}}”。一个工作区只属于一个任务。"
       },
       "result": {
         "failed": "没做成：{{detail}}",
-        "unknown": "执行窗口断开时，这一项还没回报。先去看看任务，再决定要不要重来。"
+        "unknown": "执行窗口断开时，这一项还没回报。先去看看任务，再决定要不要重来。",
+        "unrecorded": "这一步的结果没能记录，是否成功未知。请先检查任务，再决定是否重做。"
       },
       "pill": {
         "pending": "等你确认",
         "running": "正在执行",
         "disconnected": "执行窗口已断开",
-        "confirmed": "已确认"
+        "confirmed": "已确认",
+        "stopped": "已停止"
       },
       "footer": {
         "pending": "确认后由 Orca 直接执行，不再经过总管",
@@ -23316,17 +23327,22 @@
         "progress": "完成 {{done}}/{{total}} 项",
         "windowAlive": "执行窗口还在",
         "unrun": "已确认，还没执行。"
-      }
+      },
+      "claimFailed": "连不上任务库，什么都没执行。请重试。",
+      "abandoned": "有一项结果没能记录，本窗口已停止执行。收尾前请先检查任务。已记录的结果会保留，不会重复执行任何步骤。",
+      "executionHost": "执行主机",
+      "hostUnavailable": "主机未连接",
+      "hostSaveFailed": "无法保存执行主机。",
+      "hostUpgrade": "请更新此主机上的 Orca 后再运行总管。"
     },
     "latestProgress": {
       "title": "最新进展",
       "needsYou": "需要你：{{text}}",
-      "chip": "需要你"
+      "chip": "需要你",
+      "showMore": "展开更多",
+      "showLess": "收起"
     },
     "sidebar": {
-      "groupByTask": "任务",
-      "noTaskGroup": "未关联任务",
-      "openTask": "打开「{{title}}」",
       "toggle": "任务模式",
       "title": "任务",
       "collapse": "收起",
@@ -23349,7 +23365,7 @@
       "relink": "改为关联到…",
       "back": "返回",
       "backToPanel": "收回侧边",
-      "backToPanelHint": "回到概览，会话收回右侧的加宽态"
+      "backToPanelHint": "回到概览，会话收回左侧的加宽态"
     },
     "taskSummary": {
       "status": "状态",
@@ -23380,9 +23396,6 @@
     },
     "palette": {
       "source": "本地任务"
-    },
-    "cleanup": {
-      "ticketSource": "本地任务"
     },
     "activity": {
       "commentPlaceholder": "写评论…",
@@ -23533,7 +23546,15 @@
       "review": "验收",
       "cancelTask": "取消任务",
       "editProperties": "编辑属性…",
-      "addDescription": "添加描述"
+      "addDescription": "添加描述",
+      "copyLink": "复制链接",
+      "linkCopied": "任务链接已复制",
+      "linkCopyFailed": "无法复制任务链接",
+      "linkInvalid": "任务链接无效",
+      "linkLibraryMissing": "此 Orca 中没有该任务库",
+      "linkLibraryOffline": "任务库已断开，显示保存的任务",
+      "linkTaskMissing": "该任务库中找不到任务",
+      "linkLibraryUnavailable": "任务库已断开，且没有保存的任务"
     },
     "field": {
       "status": "状态",
@@ -23606,6 +23627,8 @@
     },
     "nav": {
       "label": "任务视图",
+      "show": "展开任务导航",
+      "hide": "收起任务导航",
       "projects": "项目",
       "manageProjects": "管理项目与状态",
       "allProjects": "全部项目"
@@ -23616,7 +23639,7 @@
     "preview": {
       "label": "任务预览",
       "close": "关闭预览",
-      "open": "打开任务"
+      "open": "打开任务详情"
     },
     "projects": {
       "noOrcaProjects": "Orca 里还没有仓库。可以先建一个空项目，或先在 Orca 里添加仓库。",
@@ -23856,6 +23879,15 @@
     },
     "sourceTab": {
       "label": "本地",
+      "newTask": "新建本地任务",
+      "createOnSave": "保存工作区详情时，新建任务并关联到当前工作区。",
+      "stageTask": "选用此任务",
+      "editNewTask": "待新建任务：{{title}}",
+      "createdLinkPending": "任务已创建，工作区关联待保存；请再次保存重试。",
+      "pendingCreateLink": "保存工作区详情后，新建并关联此任务。",
+      "removeTaskDraft": "移除待新建任务",
+      "pendingCount": "已关联 {{linked}} 项 · 待保存 {{pending}} 项",
+      "creationRetryPending": "尚未确认新建结果，请再次保存以重试同一任务。",
       "placeholder": "按标题或编号搜索本地任务",
       "unavailable": "任务库暂时不可用。",
       "offline": "{{host}} 未连接，暂时不能关联任务。下面显示的是上次读取的内容。",
@@ -24004,7 +24036,6 @@
       "disconnected": "未连接",
       "unavailable": "会话不可用",
       "unverifiable": "无法确认会话",
-      "wideMode": "加宽",
       "stop": "停止",
       "stopConfirm": "停止这个会话？任务和工作区不变。",
       "stopSession": "停止会话",
@@ -24043,7 +24074,6 @@
       "chooseWorkspaceOrRepo": "选择工作区或仓库",
       "workspaceNameTaken": "工作区名称已被使用",
       "createdWorkspaceLinkFailed": "工作区已创建，但未能关联到任务",
-      "agentLinkFailed": "智能体已启动，但未能关联到任务",
       "chooseSameLibraryWorkspaces": "选择同一任务库下尚未关联任务的工作区",
       "createParentTaskFailed": "未能创建父任务",
       "sessionStarted": "会话已启动",
@@ -24062,7 +24092,12 @@
       "mode": "派活或只问",
       "modeDispatch": "派活",
       "modeAsk": "只问",
-      "askUnconfirmed": "已发给总管，但还没确认它收到，请到对话里看一眼。"
+      "askUnconfirmed": "已发给总管，但还没确认它收到，请到对话里看一眼。",
+      "appendPartial": "{{total}} 个做完一轮的会话中有 {{missed}} 个没收到",
+      "appendNotRecorded": "已发出，但没能记到任务上",
+      "recordAgain": "补记录",
+      "previewTask": "预览任务",
+      "previewSession": "速览会话"
     },
     "band": {
       "description": "会话在等你回答、做完一轮还没看，或任务待你验收",

@@ -31,7 +31,7 @@ export type UpdatePorts = {
   install(): Promise<void>
 }
 
-const busy = (stage: UpdateStage) =>
+export const isUpdateBusy = (stage: UpdateStage) =>
   ['checking', 'downloading', 'verifying', 'installing'].includes(stage)
 
 export function createUpdateController(ports: UpdatePorts) {
@@ -51,7 +51,7 @@ export function createUpdateController(ports: UpdatePorts) {
 
   async function check(manual = false) {
     const { stage } = store.getState()
-    if (busy(stage) || ['ready', 'permission', 'installer-opened'].includes(stage)) {
+    if (isUpdateBusy(stage) || ['ready', 'permission', 'installer-opened'].includes(stage)) {
       return
     }
     if (!manual && Date.now() - lastCheck < 24 * 60 * 60 * 1000) {
@@ -73,7 +73,7 @@ export function createUpdateController(ports: UpdatePorts) {
   }
 
   async function install() {
-    if (busy(store.getState().stage) || !downloaded) {
+    if (isUpdateBusy(store.getState().stage) || !downloaded) {
       return
     }
     const release = store.getState().release
@@ -97,7 +97,7 @@ export function createUpdateController(ports: UpdatePorts) {
 
   async function download() {
     const { stage, release } = store.getState()
-    if (busy(stage) || !release || release.androidVersionCode <= ports.versionCode()) {
+    if (isUpdateBusy(stage) || !release || release.androidVersionCode <= ports.versionCode()) {
       return
     }
     downloaded = false

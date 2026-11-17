@@ -1,4 +1,4 @@
-import { createElement } from 'react'
+import { Profiler, createElement } from 'react'
 import { act, create, type ReactTestRenderer } from 'react-test-renderer'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { LOCAL_TASKS_RUNTIME_CAPABILITY } from '../../../src/shared/local-tasks/local-tasks-capability'
@@ -143,6 +143,29 @@ function tree() {
 }
 
 describe('the home local tasks card', () => {
+  it('settles once its reads land, however often the clock moves', async () => {
+    desktop('home-busy', 1)
+    // Why a clock that moves per call: each commit that asks the time sees a new one, as on a phone.
+    const base = Date.now()
+    let ticks = 0
+    const clock = vi.spyOn(Date, 'now').mockImplementation(() => base + Math.min(++ticks, 200))
+    let commits = 0
+    const card = createElement(MobileHomeLocalTasksCard, { connectedHosts: [host('home-busy')] })
+    await act(async () => {
+      renderer = create(
+        createElement(Profiler, { id: 'home', onRender: () => (commits += 1) }, card)
+      )
+    })
+    for (let turn = 0; turn < 8; turn += 1) {
+      await act(async () => {
+        await Promise.resolve()
+      })
+    }
+    clock.mockRestore()
+    expect(texts()[0]).toBe(localTasksCopy().homeCardTitle)
+    expect(commits).toBeLessThan(20)
+  })
+
   it('reads each host once on focus, and then only a host that connects', async () => {
     const a = desktop('home-a', 1)
     const b = desktop('home-b', 1)

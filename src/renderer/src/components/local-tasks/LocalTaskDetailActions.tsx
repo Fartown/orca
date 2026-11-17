@@ -4,6 +4,7 @@ import {
   Ban,
   Bot,
   CheckCheck,
+  Link,
   MoreHorizontal,
   SlidersHorizontal,
   Trash2
@@ -22,7 +23,8 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { translate } from '@/i18n/i18n'
 import { firstStatusInCategory, type LocalTaskIndex } from '@/local-tasks/local-task-grouping'
-import { localTaskIdEndpoint } from '@/local-tasks/local-task-endpoints'
+import { localTaskIdEndpoint, splitLocalTaskClientId } from '@/local-tasks/local-task-endpoints'
+import { localTaskDeepLink } from '../../../../shared/local-tasks/local-task-deep-link'
 import { localTasksClient } from '@/local-tasks/local-tasks-runtime-client'
 import { localTasksDomainStore } from '@/local-tasks/local-tasks-domain-store'
 import { runLocalTaskWrite, setLocalTasksStatus } from '@/local-tasks/local-task-writes'
@@ -136,6 +138,15 @@ export function LocalTaskDetailMenu({
       candidate.id !== task.projectId &&
       localTaskIdEndpoint(candidate.id) === localTaskIdEndpoint(task.projectId)
   )
+  const copyLink = async (): Promise<void> => {
+    const { endpoint, id: taskId } = splitLocalTaskClientId(task.id)
+    try {
+      await window.api.ui.writeClipboardText(localTaskDeepLink({ endpoint, taskId }))
+      toast.success(translate('localTasks.detail.linkCopied', 'Task link copied'))
+    } catch {
+      toast.error(translate('localTasks.detail.linkCopyFailed', 'Could not copy task link'))
+    }
+  }
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -156,6 +167,10 @@ export function LocalTaskDetailMenu({
           }
         }}
       >
+        <DropdownMenuItem onSelect={() => void copyLink()}>
+          <Link />
+          {translate('localTasks.detail.copyLink', 'Copy link')}
+        </DropdownMenuItem>
         <DropdownMenuItem
           onSelect={() => {
             keepFocus.current = true

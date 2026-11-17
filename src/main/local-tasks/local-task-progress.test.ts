@@ -48,10 +48,18 @@ describe('agent writebacks (REQ-022)', () => {
       sessionLinkId: 'session-1',
       taskId: task.id,
       key: 'pane@100',
-      body: 'First result'
+      body: 'First result',
+      sessionOpenedAt: 50
     }
+    const roundStarts = () =>
+      service
+        .listEvents(task.id)
+        .events.filter((event) => event.kind === 'turn-ended')
+        .map((event) => event.payload?.roundStartedAt)
     db.transaction(() => writeLocalTaskTurnEnds(db, [turn], 110))
     db.transaction(() => writeLocalTaskTurnEnds(db, [turn], 120))
+    // The first round began when the session was linked.
+    expect(roundStarts()).toEqual([50])
     expect(
       service.listEvents(task.id).events.filter((event) => event.kind === 'turn-ended')
     ).toHaveLength(1)
@@ -63,7 +71,13 @@ describe('agent writebacks (REQ-022)', () => {
     db.transaction(() =>
       writeLocalTaskTurnEnds(db, [{ ...turn, key: 'pane@200', body: 'Next result' }], 210)
     )
-    expect(readLocalTaskTurnEnd(db, 'session-1')).toEqual({ key: 'pane@200', body: 'Next result' })
+    expect(readLocalTaskTurnEnd(db, 'session-1')).toEqual({
+      key: 'pane@200',
+      body: 'Next result',
+      at: 210
+    })
+    // The next round began when the last one ended there.
+    expect(roundStarts()).toEqual([110])
     expect(
       service.listEvents(task.id).events.filter((event) => event.kind === 'turn-ended')
     ).toHaveLength(1)

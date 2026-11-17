@@ -1,4 +1,3 @@
-import { LocalTaskDispatcherPanelDock } from '@/components/local-tasks/LocalTaskDispatcherPanelDock'
 import { useNativeChatComposerEditSession } from './use-native-chat-composer-edit-session'
 import { useNativeChatComposerNotice } from './use-native-chat-composer-notice'
 import { useNativeChatMobileHoldNotice } from './use-native-chat-mobile-hold-notice'
@@ -28,6 +27,8 @@ import { useNativeChatComposerAppMenuSelection } from './use-native-chat-compose
 import { useNativeChatComposerSubmit } from './use-native-chat-composer-submit'
 import { useNativeChatComposerCommandPicker } from './use-native-chat-composer-command-picker'
 
+import { LocalTaskDispatcherPanelDock } from '@/components/local-tasks/LocalTaskDispatcherPanelDock'
+
 type ComposerHandle = C.NativeChatComposerHandle
 
 /** Send through the chat’s structured transport or verified PTY route, with agent-aware autocomplete and image handling. */
@@ -47,6 +48,7 @@ export const NativeChatComposerPane = forwardRef<ComposerHandle, C.NativeChatCom
       afterStop,
       onStop,
       onOptimisticSend,
+      onDurableSend,
       optimisticSendOutcome,
       onOptimisticSendCanceled,
       onSlashCommand,
@@ -263,6 +265,7 @@ export const NativeChatComposerPane = forwardRef<ComposerHandle, C.NativeChatCom
       setNotice
     }
     const sendPty = useNativeChatPtyComposerSend({
+      onDurableSend,
       draftScopeKey,
       ...ptyCommandRouting,
       draft,

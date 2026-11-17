@@ -10,7 +10,6 @@ import type { TuiAgent } from '../../shared/tui-agent'
 import { getStagedCommitContext } from '../git/status'
 import { SSH_HOST_NOT_SERVED_MESSAGE } from '../providers/ssh-host-not-served-error'
 import { loadPullRequestLinkedIssue } from '../source-control/pull-request-linked-issue'
-import { linkedLocalTaskDraftContext } from '../local-tasks/local-task-pull-request-context'
 import { resolveHostedReviewBodyForGeneration } from '../source-control/pull-request-template'
 import { prepareLocalCommitMessageAgentEnv } from '../text-generation/commit-message-agent-environment'
 import {
@@ -203,8 +202,7 @@ export class RuntimeGitGenerationCommands {
     context = {
       ...withLinkedIssueDraftContext(context, issueMeta?.linkedIssue),
       ...(input.provider ? { provider: input.provider } : {}),
-      ...(linkedIssueDetails ? { linkedIssueDetails } : {}),
-      ...linkedLocalTaskDraftContext(target.worktree)
+      ...(linkedIssueDetails ? { linkedIssueDetails } : {})
     }
 
     const localEnv = await prepareLocalCommitMessageAgentEnv(

@@ -1,3 +1,4 @@
+import { DurableChatComposer } from '../native-chat-view-recovery/durable-chat-submit'
 import { z } from 'zod'
 import { TERMINAL_KITTY_FILE_MAX_BYTES } from '../terminal-kitty-file'
 import { OptionalFiniteNumber, OptionalString, requiredString } from './rpc-param-primitives'
@@ -162,6 +163,7 @@ export const TerminalSetPaneTitle = TerminalHandle.extend({
 })
 
 export const TerminalSend = TerminalHandle.extend({
+  chatComposer: DurableChatComposer.optional(),
   text: OptionalString,
   enter: z.unknown().optional(),
   interrupt: z.unknown().optional(),

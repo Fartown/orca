@@ -212,8 +212,11 @@ export function NativeChatResolvedView({
 
   // Match mobile ordering: hook preview before optimistic user echoes.
   const pendingMessages = useMemo(
-    () => pendingSendsAsMessages(pending, sessionAfterCommandBoundaries.messages),
-    [pending, sessionAfterCommandBoundaries.messages]
+    () => [
+      ...pendingSendsAsMessages(pending, sessionAfterCommandBoundaries.messages),
+      ...delivery.durableMessages
+    ],
+    [pending, sessionAfterCommandBoundaries.messages, delivery.durableMessages]
   )
   const streamingText = useMemo(() => {
     return deriveNativeChatStreamingText({
@@ -400,6 +403,7 @@ export function NativeChatResolvedView({
           isWorking={isWorking}
           onStop={stopAgent}
           onOptimisticSend={onOptimisticSend}
+          onDurableSend={delivery.sendDurable}
           onOptimisticSendCanceled={delivery.cancel}
           optimisticSendOutcome={delivery}
           onSlashCommand={onSlashCommand}

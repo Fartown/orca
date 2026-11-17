@@ -1,8 +1,3 @@
-import { LocalTaskSidebarTree } from '@/components/local-tasks/LocalTaskSidebarTree'
-import {
-  useLocalTaskSidebarMode,
-  useLocalTaskSidebarRevealRedirect
-} from '@/local-tasks/local-task-sidebar-mode'
 import React, { useEffect, useMemo } from 'react'
 import { useAppStore } from '@/store'
 import { TooltipProvider } from '@/components/ui/tooltip'
@@ -28,6 +23,12 @@ import { LocalGitToolchainScanBanner } from './LocalGitToolchainScanBanner'
 import { SeveredTerminalDaemonBanner } from './SeveredTerminalDaemonBanner'
 import { StalledTerminalDaemonBanner } from './StalledTerminalDaemonBanner'
 import { StartupWorktreeRefreshStatus } from './StartupWorktreeRefreshStatus'
+
+import { LocalTaskSidebarTree } from '@/components/local-tasks/LocalTaskSidebarTree'
+import {
+  useLocalTaskSidebarMode,
+  useLocalTaskSidebarRevealRedirect
+} from '@/local-tasks/local-task-sidebar-mode'
 
 // Keep the Agents activity pipeline out of the workspace view’s initial bundle.
 const SidebarAgentsList = lazyWithRetry(() => import('./SidebarAgentsList'))

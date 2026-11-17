@@ -22,7 +22,7 @@ import { translate } from '@/i18n/i18n'
 import { AgentIcon } from '@/lib/agent-catalog'
 import { cn } from '@/lib/utils'
 import { useLocalTasksDomain } from '@/local-tasks/local-tasks-domain-store'
-import { useLocalTaskHostInContact } from '@/local-tasks/local-task-host-contact'
+import { useLocalTaskSessionInContact } from '@/local-tasks/local-task-session-execution-contact'
 import { findLocalTaskEffectiveWorkspace } from '@/local-tasks/local-task-link-selectors'
 import { openLocalTaskPage } from '@/local-tasks/local-task-navigation'
 import { runStopItem } from '@/local-tasks/local-task-proposal-session-items'
@@ -80,17 +80,19 @@ export function LocalTaskSessionPanelHeader({
   session,
   options,
   panelTaskId,
-  mode
+  mode,
+  taskOnly
 }: {
   session: LocalTaskSessionLink
   /** Sessions of the task the preview opened from and every level below it. */
   options: readonly LocalTaskSessionLink[]
   panelTaskId: string | null
   mode: Exclude<LocalTaskSessionPanelMode, 'closed'>
+  taskOnly: boolean
 }): React.JSX.Element {
   const progress = useLocalTaskSessionProgress(session)
-  const inContact = useLocalTaskHostInContact(session.hostId)
-  const hostLabel = useLocalTaskHostLabel(session.hostId)
+  const inContact = useLocalTaskSessionInContact(session)
+  const hostLabel = useLocalTaskHostLabel(session.hostId, session.executionOrigin?.hostLabel)
   const tasks = useLocalTasksDomain((state) => state.tasks)
   const projects = useLocalTasksDomain((state) => state.projects)
   const links = useLocalTasksDomain((state) => state.links)
@@ -133,30 +135,47 @@ export function LocalTaskSessionPanelHeader({
   const offline = inContact
     ? null
     : translate('localTasks.links.hostOffline', '{{host}} is not connected', { host: hostLabel })
-  const ownerTitle = titleOf(session.taskId)
   const name = (
-    <span className="min-w-0 truncate text-sm font-semibold text-foreground">
+    <span className="min-w-0 truncate text-xs font-medium text-foreground">
       {localTaskSessionAgentName(session)}
-      {ownerTitle ? ` · ${ownerTitle}` : ''}
     </span>
   )
   const taskLine = task ? (
     <button
       type="button"
-      onClick={() => openLocalTaskPage({ taskId: task.id })}
-      className={cn(
-        'flex min-w-0 items-center gap-1.5 text-left hover:text-foreground',
-        wide && 'ml-auto shrink'
-      )}
+      onClick={() => {
+        if (taskOnly) {
+          localTaskSessionPanelStore.getState().close()
+        }
+        openLocalTaskPage({ taskId: task.id })
+      }}
+      className="flex min-w-0 flex-1 items-center gap-1.5 text-left hover:text-foreground"
     >
       {status ? <LocalTaskStatusIcon category={status.category} color={status.color} /> : null}
-      <span className="min-w-0 truncate text-foreground">{task.title}</span>
-      <span className="shrink-0 font-mono text-2xs">{task.ref}</span>
+      <span className="min-w-0 truncate text-sm font-semibold text-foreground" title={task.title}>
+        {task.title}
+      </span>
+      <span className="shrink-0 font-mono text-2xs text-muted-foreground">{task.ref}</span>
     </button>
   ) : null
   return (
     <div className="flex shrink-0 flex-col border-b border-border">
-      <div className="flex h-10 items-center gap-1.5 pl-3 pr-2">
+      <div className="flex h-9 min-w-0 items-center gap-1.5 pl-3 pr-2">
+        {taskLine ?? (
+          <span className="min-w-0 flex-1 truncate text-sm font-semibold">
+            {translate('localTasks.sessionPanel.title', 'Session preview')}
+          </span>
+        )}
+        <Button
+          size="icon-xs"
+          variant="ghost"
+          aria-label={translate('localTasks.sessionPanel.close', 'Close')}
+          onClick={() => localTaskSessionPanelStore.getState().close()}
+        >
+          <X className="size-4" />
+        </Button>
+      </div>
+      <div className="flex min-h-9 min-w-0 flex-wrap items-center gap-1.5 py-1 pl-3 pr-2">
         <AgentIcon agent={isTuiAgent(session.agent) ? session.agent : null} size={16} />
         {options.length > 1 ? (
           <DropdownMenu>
@@ -164,7 +183,7 @@ export function LocalTaskSessionPanelHeader({
               <Button
                 variant="ghost"
                 size="xs"
-                className="min-w-0 max-w-[45%] justify-start"
+                className="min-w-0 max-w-40 justify-start"
                 aria-label={translate('localTasks.sessionPanel.switchSession', 'Switch session')}
               >
                 {name}
@@ -187,10 +206,7 @@ export function LocalTaskSessionPanelHeader({
           name
         )}
         <span className="shrink-0 text-xs text-muted-foreground">
-          {localTaskSessionSurfaceLabel(session)} ·{' '}
-          {wide
-            ? translate('localTasks.sessionPanel.wideMode', 'Wide')
-            : translate('localTasks.links.peek', 'Peek')}
+          {localTaskSessionSurfaceLabel(session)}
         </span>
         <span className="flex-1" />
         <Button
@@ -198,7 +214,7 @@ export function LocalTaskSessionPanelHeader({
           variant="ghost"
           onClick={() => localTaskSessionPanelStore.getState().setMode(wide ? 'narrow' : 'wide')}
         >
-          {wide ? <ChevronRight /> : <ChevronLeft />}
+          {wide ? <ChevronLeft /> : <ChevronRight />}
           {wide
             ? translate('localTasks.sessionPanel.narrow', 'Narrow')
             : translate('localTasks.sessionPanel.widen', 'Widen')}
@@ -219,14 +235,6 @@ export function LocalTaskSessionPanelHeader({
             {translate('localTasks.sessionPanel.fullscreen', 'Full screen')}
           </Button>
         </LocalTaskActionTooltip>
-        <Button
-          size="icon-xs"
-          variant="ghost"
-          aria-label={translate('localTasks.sessionPanel.close', 'Close')}
-          onClick={() => localTaskSessionPanelStore.getState().close()}
-        >
-          <X className="size-4" />
-        </Button>
       </div>
       <div className="flex flex-col gap-1 px-3 pb-2 text-xs text-muted-foreground">
         <div className="flex min-w-0 items-center gap-x-1.5">
@@ -248,9 +256,7 @@ export function LocalTaskSessionPanelHeader({
           <span className="min-w-0 truncate" title={offline ?? hostLabel}>
             {offline ?? hostLabel}
           </span>
-          {wide ? taskLine : null}
         </div>
-        {wide ? null : taskLine}
       </div>
     </div>
   )
@@ -276,7 +282,10 @@ export function LocalTaskSessionStopBar({
     setConfirming(false)
     if (outcome?.ok) {
       toast.success(translate('localTasks.sessionPanel.stopped', 'Session stopped'))
-      localTaskSessionPanelStore.getState().close()
+      const panel = localTaskSessionPanelStore.getState()
+      if (panel.sessionLinkId === session.id) {
+        panel.close()
+      }
     } else {
       toast.error(
         translate('localTasks.sessionPanel.stopFailed', 'Couldn’t confirm the session stopped.')

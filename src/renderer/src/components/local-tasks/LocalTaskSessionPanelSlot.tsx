@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { translate } from '@/i18n/i18n'
+import { cn } from '@/lib/utils'
 import { useAppStore } from '@/store'
 import { SYNC_FIT_PANES_EVENT } from '@/constants/terminal'
 import { requestBackgroundTerminalWorktreeMount } from '@/components/terminal/background-terminal-worktree-mount'
@@ -20,7 +21,11 @@ import {
 import { parsePaneKey } from '../../../../shared/stable-pane-id'
 import type { LocalTaskSessionLink } from '../../../../shared/local-tasks/local-task-link-types'
 import { useLocalTasksDomain } from '@/local-tasks/local-tasks-domain-store'
-import { useLocalTaskHostInContact } from '@/local-tasks/local-task-host-contact'
+import {
+  findLocalTaskSessionChatTab,
+  isLocalTaskSessionTerminalSurfaceCurrent,
+  useLocalTaskSessionInContact
+} from '@/local-tasks/local-task-session-execution-contact'
 import {
   useLocalTaskSessionPanel,
   localTaskSessionPanelStore
@@ -35,6 +40,8 @@ import { localTaskSessionPanelIsOnScreen } from '@/local-tasks/local-task-sessio
 import { prepareLocalTaskSessionPreview } from '@/local-tasks/local-task-session-preview-preparation'
 import { useLocalTaskSessionProgress } from '@/local-tasks/local-task-session-progress'
 import { localTaskDescendantIds } from '../../../../shared/local-tasks/local-task-tree'
+import { LOCAL_TASK_SESSION_PANEL_ATTRIBUTE } from '@/local-tasks/local-task-page-keys'
+import { useLocalTaskEscapeLayer } from './use-local-task-page-keys'
 import {
   LocalTaskSessionPanelHeader,
   LocalTaskSessionStopBar as StopSessionBar
@@ -70,20 +77,25 @@ function LocalTaskSessionPanelContent({
   const tabId = session.paneKey
     ? (parsePaneKey(session.paneKey)?.tabId ?? session.tabId)
     : session.tabId
-  const inContact = useLocalTaskHostInContact(session.hostId)
+  const inContact = useLocalTaskSessionInContact(session)
   const sessionState = useLocalTaskSessionProgress(session)?.state ?? 'unknown'
   const terminalLayout = useAppStore((state) =>
     tabId ? state.terminalLayoutsByTabId[tabId] : undefined
   )
   const mountReady = useAppStore((state) => localTaskSessionMountReady(state, session, tabId))
-  const { id: sessionLinkId, hostId, surface } = session
+  const { id: sessionLinkId, hostId, surface, executionOrigin } = session
   useEffect(() => {
     setPreparationFailed(false)
     if (mountReady || !inContact || surface !== 'terminal') {
       return
     }
     let cancelled = false
-    void prepareLocalTaskSessionPreview({ id: sessionLinkId, hostId, surface }).then(
+    void prepareLocalTaskSessionPreview({
+      id: sessionLinkId,
+      hostId,
+      surface,
+      executionOrigin
+    }).then(
       (prepared) => {
         if (!cancelled) {
           setPreparationFailed(prepared === false)
@@ -98,7 +110,7 @@ function LocalTaskSessionPanelContent({
     return () => {
       cancelled = true
     }
-  }, [hostId, inContact, mountReady, requestToken, sessionLinkId, surface])
+  }, [hostId, inContact, mountReady, requestToken, sessionLinkId, surface, executionOrigin])
   const paneKey =
     resolveLocalTaskSessionPaneKey(session, terminalLayout) ??
     (!inContact &&
@@ -106,15 +118,7 @@ function LocalTaskSessionPanelContent({
     publishedPortal.current.tabId === tabId
       ? publishedPortal.current.paneKey
       : null)
-  const chatTab = useAppStore((state) =>
-    session.worktreeId
-      ? (state.unifiedTabsByWorktree[session.worktreeId] ?? []).find(
-          (tab) =>
-            tab.contentType === 'agent-session' &&
-            (tab.id === session.tabId || (session.sessionId && tab.entityId === session.sessionId))
-        )
-      : undefined
-  )
+  const chatTab = useAppStore((state) => findLocalTaskSessionChatTab(state, session))
   const chatOwner = useAppStore((state) =>
     chatTab && chatTab.contentType === 'agent-session'
       ? structuredAgentSessionOwnerForTab(state, chatTab)
@@ -123,7 +127,10 @@ function LocalTaskSessionPanelContent({
   const chatTarget = useMemo(() => structuredAgentSessionTargetForHost(chatOwner), [chatOwner])
   const isChat =
     session.surface === 'chat' && chatTab?.contentType === 'agent-session' && chatTarget
-  const terminalAvailable = Boolean(session.worktreeId && tabId && paneKey)
+  const sourceSurfaceCurrent = useAppStore((state) =>
+    isLocalTaskSessionTerminalSurfaceCurrent(state, session)
+  )
+  const terminalAvailable = Boolean(sourceSurfaceCurrent && session.worktreeId && tabId && paneKey)
   const portalStatus = useActivityTerminalPortalStatus(
     portalTarget,
     !isChat && inContact ? paneKey : null,
@@ -186,6 +193,7 @@ function LocalTaskSessionPanelContent({
     const plan = planLocalTaskSessionPortal(candidate, inContact, publishedPortal.current)
     if (
       mountReady &&
+      sourceSurfaceCurrent &&
       (plan.requestMount || (!candidate && !isChat && inContact)) &&
       session.worktreeId &&
       tabId
@@ -203,7 +211,8 @@ function LocalTaskSessionPanelContent({
     requestToken,
     session.worktreeId,
     tabId,
-    terminalAvailable
+    terminalAvailable,
+    sourceSurfaceCurrent
   ])
 
   useEffect(() => () => setActivityTerminalPortals([]), [])
@@ -234,7 +243,8 @@ function LocalTaskSessionPanelContent({
         )}
       </div>
       {/* Why terminals only: a chat's own composer carries its stop. */}
-      {terminalShown ? <StopSessionBar session={session} /> : null}
+      {/* Why keyed: a confirm armed on one session must not stop the next one switched to. */}
+      {terminalShown ? <StopSessionBar key={session.id} session={session} /> : null}
       {!inContact ? (
         <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/80 text-sm text-muted-foreground">
           {translate('localTasks.sessionPanel.disconnected', 'Not connected')}
@@ -253,7 +263,10 @@ function LocalTaskSessionPanelContent({
 }
 
 export function LocalTaskSessionPanelSlot(): React.JSX.Element | null {
+  const panelRef = useRef<HTMLDivElement | null>(null)
+  const [availableWidth, setAvailableWidth] = useState<number | null>(null)
   const mode = useLocalTaskSessionPanel((state) => state.mode)
+  const panelOpen = mode !== 'closed'
   const sessionLinkId = useLocalTaskSessionPanel((state) => state.sessionLinkId)
   const taskId = useLocalTaskSessionPanel((state) => state.taskId)
   const requestToken = useLocalTaskSessionPanel((state) => state.requestToken)
@@ -273,12 +286,24 @@ export function LocalTaskSessionPanelSlot(): React.JSX.Element | null {
     }
   }, [activeView, mode, session])
 
+  // On the task page, Esc closes the preview before the detail or the page behind it.
+  useLocalTaskEscapeLayer('panel', mode !== 'closed', () =>
+    localTaskSessionPanelStore.getState().close()
+  )
   useEffect(() => {
     if (mode === 'closed') {
       return
     }
+    // Why not from inside: the page key router owns Esc there, and the session keeps its own.
     const onKeyDown = (event: KeyboardEvent): void => {
-      if (event.key === 'Escape' && !event.defaultPrevented) {
+      if (
+        event.key === 'Escape' &&
+        !event.defaultPrevented &&
+        !(
+          event.target instanceof Element &&
+          event.target.closest(`[${LOCAL_TASK_SESSION_PANEL_ATTRIBUTE}]`)
+        )
+      ) {
         localTaskSessionPanelStore.getState().close()
       }
     }
@@ -292,7 +317,23 @@ export function LocalTaskSessionPanelSlot(): React.JSX.Element | null {
     }
   }, [mode])
 
+  useLayoutEffect(() => {
+    const parent = panelRef.current?.parentElement
+    if (!parent) {
+      return
+    }
+    const updateWidth = (): void => setAvailableWidth(parent.clientWidth)
+    updateWidth()
+    if (typeof ResizeObserver === 'undefined') {
+      return
+    }
+    const observer = new ResizeObserver(updateWidth)
+    observer.observe(parent)
+    return () => observer.disconnect()
+  }, [panelOpen])
+
   const setRef = useCallback((node: HTMLDivElement | null) => {
+    panelRef.current = node
     if (!node) {
       setActivityTerminalPortals([])
     }
@@ -302,21 +343,30 @@ export function LocalTaskSessionPanelSlot(): React.JSX.Element | null {
     return null
   }
 
+  const fillAvailableWidth = availableWidth !== null && availableWidth > 0 && availableWidth < 560
+
   return (
     <div
       ref={setRef}
-      className={
-        mode === 'wide'
-          ? 'absolute inset-y-0 right-0 z-30 flex w-2/3 min-w-0 flex-col border-l border-border bg-background shadow-floating'
-          : 'relative z-20 flex w-[420px] max-w-[60%] shrink-0 flex-col border-l border-border bg-background'
-      }
+      className={cn(
+        'relative z-20 order-first flex min-h-0 min-w-0 shrink-0 flex-col overflow-hidden border-r border-border bg-background',
+        fillAvailableWidth
+          ? mode === 'wide'
+            ? 'w-[70%]'
+            : 'w-[45%]'
+          : mode === 'wide'
+            ? 'w-[min(66.667%,max(240px,calc(100%-300px)))]'
+            : 'w-[min(420px,50%)]'
+      )}
       aria-label={translate('localTasks.sessionPanel.title', 'Session preview')}
+      {...{ [LOCAL_TASK_SESSION_PANEL_ATTRIBUTE]: '' }}
     >
       <LocalTaskSessionPanelHeader
         session={session}
         options={options}
         panelTaskId={taskId}
         mode={mode}
+        taskOnly={fillAvailableWidth}
       />
       <LocalTaskSessionPanelContent session={session} requestToken={requestToken} />
     </div>

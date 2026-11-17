@@ -146,7 +146,10 @@ export const LOCAL_TASK_COMMAND_SPECS: CommandSpec[] = [
     usage: 'orca task watch <ref> [--json]',
     allowedFlags: [...GLOBAL_FLAGS, 'ref'],
     positionalArgs: ['ref'],
-    notes: ['Run inside the dispatcher session. Finished tasks stop being watched on their own.'],
+    notes: [
+      'Run inside the dispatcher session. Finished tasks stop being watched on their own.',
+      "A ref this host's library does not hold is followed once an Orca window finds it in another host's library."
+    ],
     examples: ['orca task watch SHOP-12']
   },
   {

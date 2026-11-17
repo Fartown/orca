@@ -1,7 +1,12 @@
-import { readNativeChatComposerDraft } from './native-chat-composer-draft-store'
+import { readIpcErrorMessage } from '@/lib/ipc-error'
+import type { DurableChatSend } from '../../../../shared/native-chat-view-recovery/durable-chat-submit'
+import {
+  readNativeChatComposerDraft,
+  clearNativeChatComposerDraftIfUnchanged
+} from './native-chat-composer-draft-store'
 import { serializeNativeChatAgentReferences } from './native-chat-agent-reference-send'
 import { admitNativeChatPastedText } from './native-chat-composer-pasted-text-references'
-import { useCallback, type Dispatch, type SetStateAction } from 'react'
+import { useCallback, useRef, type Dispatch, type SetStateAction } from 'react'
 import type { AgentType } from '../../../../shared/agent-status-types'
 import type { NativeChatLaunchDraft } from '@/lib/native-chat-launch-prompt'
 import { useAppStore } from '../../store'
@@ -27,6 +32,7 @@ import {
 } from './use-native-chat-local-command-answer'
 
 export function useNativeChatPtyComposerSend(args: {
+  onDurableSend?: DurableChatSend
   agent: AgentType
   draft: string
   draftScopeKey: string
@@ -52,7 +58,11 @@ export function useNativeChatPtyComposerSend(args: {
   clearImageAttachments: () => void
   setNotice: (notice: string | null) => void
 }): () => void {
+  const preparing = useRef(false)
   return useCallback(() => {
+    if (preparing.current) {
+      return
+    }
     let text = args.draft
     const imagePaths = args.imageAttachments.map((attachment) => attachment.path)
     if ((text.trim() === '' && imagePaths.length === 0) || args.disabled) {
@@ -81,9 +91,37 @@ export function useNativeChatPtyComposerSend(args: {
       agent: args.agent,
       readInputLine: () => args.readTerminalDraft?.()
     })
+    const sendDurable = args.onDurableSend
+    if (args.agent === 'codex' && classification === 'chat' && sendDurable) {
+      preparing.current = true
+      void (async () => {
+        try {
+          await sendDurable({
+            ptyId: target.ptyId,
+            text,
+            imagePaths,
+            clearInput: launchSendOptions?.clearInput ?? '\x15'
+          })
+          args.onSubmitted?.()
+          if (clearNativeChatComposerDraftIfUnchanged(args.draftScopeKey, submitted)) {
+            args.setDraft('')
+            args.setCaret(0)
+            args.clearSkillOrigin()
+            args.clearImageAttachments()
+          }
+          args.setNotice(null)
+          useAppStore.getState().clearNativeChatLaunchDraft(args.terminalTabId)
+        } catch (error) {
+          args.setNotice(readIpcErrorMessage(error) ?? String(error))
+        } finally {
+          preparing.current = false
+        }
+      })()
+      return
+    }
     let pendingId: string | undefined
     const sendOptions =
-      args.agent === 'claude' && classification === 'chat'
+      (args.agent === 'claude' || args.agent === 'codex') && classification === 'chat'
         ? {
             ...launchSendOptions,
             onWriteRejected: () => {
@@ -95,7 +133,16 @@ export function useNativeChatPtyComposerSend(args: {
               if (pendingId) {
                 args.optimisticSendOutcome?.holdUnconfirmed(pendingId)
               }
-            }
+            },
+            ...(args.agent === 'codex'
+              ? {
+                  onDeliverySettled: (acknowledged: boolean) => {
+                    if (!acknowledged && pendingId) {
+                      args.optimisticSendOutcome?.holdUnconfirmed(pendingId)
+                    }
+                  }
+                }
+              : {})
           }
         : launchSendOptions
     let pendingHandle: NativeChatSendHandle | null = null

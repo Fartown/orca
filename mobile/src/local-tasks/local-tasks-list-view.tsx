@@ -6,7 +6,10 @@ import type {
   LocalTask,
   LocalTaskStatusDef
 } from '../../../src/shared/local-tasks/local-task-types'
-import { unfoldedLocalTaskLines } from '../../../src/shared/local-tasks/local-task-list-groups'
+import {
+  tallyLocalTaskGroups,
+  unfoldedLocalTaskLines
+} from '../../../src/shared/local-tasks/local-task-list-groups'
 import { colors, spacing, typography } from '../theme/mobile-theme'
 import { localTasksCopy } from './local-tasks-copy'
 import { LocalTaskCard, localTaskCardStyles } from './local-task-card'
@@ -40,19 +43,6 @@ type Props = {
   onOpen: (taskId: string) => void
 }
 
-/** Tasks a group counts that "Needs you" shows instead. */
-function tasksInBand(group: LocalTaskListGroup, band: ReadonlySet<string>): number {
-  let count = 0
-  for (const row of group.rows) {
-    for (const task of [row.task, ...row.subtasks.map((line) => line.task)]) {
-      if (band.has(task.id)) {
-        count += 1
-      }
-    }
-  }
-  return count
-}
-
 export function LocalTasksListView(props: Props) {
   const copy = localTasksCopy()
   const card = copy.work.card
@@ -66,13 +56,26 @@ export function LocalTasksListView(props: Props) {
     return next
   }
   const banded = props.band?.ids ?? new Set<string>()
+  // The desktop's tally: each task counts once, in its own status, wherever its row rides.
+  const tallies = tallyLocalTaskGroups(
+    props.groups,
+    props.groups.flatMap((group) =>
+      group.rows.flatMap((row) => [row.task, ...row.subtasks.map((line) => line.task)])
+    ),
+    (group, task) =>
+      group.status
+        ? task.statusId === group.status.id
+        : props.lookup.get(task.statusId)?.category === group.category,
+    banded
+  )
   const groups = props.groups
-    .map((group) => ({
+    .map((group, at) => ({
       group,
       rows: group.rows.filter((row) => !banded.has(row.task.id)),
-      inBand: tasksInBand(group, banded)
+      shown: tallies[at]?.shown ?? 0,
+      inBand: tallies[at]?.inBand ?? 0
     }))
-    .filter((entry) => entry.rows.length > 0)
+    .filter((entry) => entry.shown + entry.inBand > 0)
   const bandCount = props.band?.count ?? 0
   if (groups.length === 0 && bandCount === 0) {
     return (
@@ -96,7 +99,7 @@ export function LocalTasksListView(props: Props) {
           {props.band.section}
         </View>
       ) : null}
-      {groups.map(({ group, rows, inBand }) => {
+      {groups.map(({ group, rows, shown, inBand }) => {
         const foldedByDefault = group.category !== null && FOLDED_CATEGORIES.has(group.category)
         const folded = foldedByDefault !== toggledGroups.has(group.key)
         return (
@@ -124,14 +127,14 @@ export function LocalTasksListView(props: Props) {
                 {group.status?.name ??
                   (group.category ? copy.categories[group.category] : copy.unknownStatus)}
               </Text>
-              <Text style={localTaskStyles.meta}>{group.count - inBand}</Text>
+              <Text style={localTaskStyles.meta}>{shown}</Text>
               {inBand > 0 ? (
                 <Text style={[localTaskStyles.meta, styles.shrink]} numberOfLines={1}>
                   {card.moreInNeedsYou(inBand)}
                 </Text>
               ) : null}
             </Pressable>
-            {folded ? null : (
+            {folded || rows.length === 0 ? null : (
               <View style={[localTaskStyles.card, localTaskCardStyles.group]}>
                 {rows.map((row, at) => (
                   <LocalTaskListRowView
@@ -249,6 +252,7 @@ export function LocalTaskSubtaskRow(props: {
           style={styles.foldToggle}
           onPress={props.onToggle}
           accessibilityRole="button"
+          accessibilityLabel={localTasksCopy().subtasksOf(props.task.title)}
           accessibilityState={{ expanded: !props.folded }}
         >
           {props.folded ? (

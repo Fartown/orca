@@ -15,7 +15,7 @@ import {
   type LocalTaskEndpointKey
 } from './local-task-endpoints'
 import { LOCAL_TASK_PREFERENCE_KEYS } from './local-task-preference-keys'
-import { publishSelfLocalTaskChanges } from './local-task-self-changes'
+import { publishLocalTaskChanges } from './local-task-self-changes'
 
 const ALL_SCOPES: readonly LocalTaskChangeScope[] = [
   'projects',
@@ -226,7 +226,7 @@ export function localTasksSyncFor(endpoint: LocalTaskEndpointKey): LocalTasksSyn
       // Why: UI choices are kept in the page's own library; another Orca's are its user's.
       {
         preferences: endpoint === SELF_LOCAL_TASK_ENDPOINT || isWebClientLocation(),
-        ...(endpoint === SELF_LOCAL_TASK_ENDPOINT ? { onChange: publishSelfLocalTaskChanges } : {})
+        onChange: (scopes) => publishLocalTaskChanges(endpoint, scopes)
       }
     )
     syncs.set(endpoint, sync)
