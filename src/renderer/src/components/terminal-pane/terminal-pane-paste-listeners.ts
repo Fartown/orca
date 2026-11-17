@@ -1,6 +1,3 @@
-import { useAppStore } from '../../store'
-import { getConnectionId } from '@/lib/connection-context'
-import { resolveTerminalPasteRuntimeEnvironmentId } from './terminal-paste-runtime'
 import { keybindingMatchesAction } from '../../../../shared/keybindings'
 import {
   firesNativePasteEvent,
@@ -8,20 +5,17 @@ import {
   isClipboardEventPasteRequired
 } from './terminal-clipboard-event-paste'
 import { assertClipboardTextWithinLimitWithYield } from '../../../../shared/clipboard-text'
-import { pasteTerminalClipboard } from './terminal-clipboard-paste'
 import { APP_MENU_PASTE_EVENT } from '@/lib/app-menu-paste'
 import {
   APP_MENU_SELECTION_ACTION_EVENT,
   type AppMenuSelectionAction
 } from '@/lib/app-menu-selection-actions'
 import { isEditableTarget } from '@/lib/editable-target'
+import { resolveTerminalKeyboardPane } from './terminal-keyboard-pane-resolution'
 import { copyTerminalSelection } from './terminal-selection-copy'
 import { isInsideNativeChatCover } from './native-chat-covered-pane'
 import type { TerminalPaneCloseController } from './use-terminal-pane-close-actions'
-import {
-  formatClipboardImagePasteError,
-  type TerminalPanePasteExecution
-} from './terminal-pane-paste-execution'
+import type { TerminalPanePasteExecution } from './terminal-pane-paste-execution'
 
 export function registerTerminalPanePasteListeners({
   container,
@@ -36,9 +30,8 @@ export function registerTerminalPanePasteListeners({
   isMac: boolean
   shortcutPlatform: NodeJS.Platform
 }): () => void {
-  const { keybindings, managerRef, paneTransportsRef, setTerminalError, worktreeId } = controller
-  const { executePanePasteText, pasteFromClipboard, resolvePaneProtectedMultilinePasteOptions } =
-    execution
+  const { keybindings, managerRef } = controller
+  const { pasteFromClipboard } = execution
   let suppressNextNativePaste = false
   let pasteSuppressionTimerId: number | null = null
   const shouldSuppressNativePaste = (event: KeyboardEvent): boolean => {
@@ -96,7 +89,7 @@ export function registerTerminalPanePasteListeners({
     if (!manager) {
       return
     }
-    const pane = manager.getActivePane() ?? manager.getPanes()[0]
+    const pane = resolveTerminalKeyboardPane(manager, target)
     if (!pane) {
       return
     }
@@ -135,7 +128,7 @@ export function registerTerminalPanePasteListeners({
     if (!manager) {
       return
     }
-    const pane = manager.getActivePane() ?? manager.getPanes()[0]
+    const pane = resolveTerminalKeyboardPane(manager, target)
     if (!pane) {
       return
     }
@@ -168,28 +161,11 @@ export function registerTerminalPanePasteListeners({
     if (!manager) {
       return
     }
-    const pane = manager.getActivePane() ?? manager.getPanes()[0]
+    const pane = resolveTerminalKeyboardPane(manager, activeElementAtDispatch)
     if (!pane) {
       return
     }
-    const connectionId = getConnectionId(worktreeId) ?? null
-    const runtimeEnvironmentId = resolveTerminalPasteRuntimeEnvironmentId(
-      useAppStore.getState(),
-      worktreeId,
-      paneTransportsRef.current.get(pane.id)
-    )
-    void pasteTerminalClipboard({
-      readClipboardText: window.api.ui.readClipboardText,
-      saveClipboardImageAsTempFile: window.api.ui.saveClipboardImageAsTempFile,
-      connectionId,
-      runtimeEnvironmentId,
-      protectedMultilineTextPasteOptions: resolvePaneProtectedMultilinePasteOptions(pane),
-      pasteText: (text, options) =>
-        executePanePasteText(pane, 'app-menu', activeElementAtDispatch, text, options),
-      onTextPasteError: () =>
-        setTerminalError('Paste failed: clipboard text is too large for a safe terminal paste.'),
-      onImagePasteError: (error) => setTerminalError(formatClipboardImagePasteError(error))
-    }).catch(() => setTerminalError('Paste failed.'))
+    pasteFromClipboard(pane, 'app-menu')
   }
 
   const onAppMenuSelectionAction = (event: Event): void => {

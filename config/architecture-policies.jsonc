@@ -7,6 +7,42 @@
   ],
   "policies": [
     {
+      "id": "terminal-paste-ownership",
+      "description": "Keep clipboard operations bound to the focused original terminal without clearing unrelated errors.",
+      "rules": [
+        {
+          "id": "terminal-paste-ownership-worktree-scope",
+          "type": "change-scope",
+          "comparison": "worktree",
+          "whenChanged": [
+            "src/renderer/src/terminal-paste-ownership/**",
+            "docs/issue/终端粘贴目标归属/**",
+            "src/renderer/src/components/terminal-pane/terminal-pane-paste-execution.ts",
+            "src/renderer/src/components/terminal-pane/terminal-pane-paste-listeners.ts",
+            "src/renderer/src/components/terminal-pane/terminal-paste-target-state.ts",
+            "src/renderer/src/components/terminal-pane/terminal-paste-errors.ts"
+          ],
+          "allowedPaths": [
+            "src/renderer/src/components/native-chat/native-chat-paste-routing.test.tsx",
+            "src/renderer/src/terminal-paste-ownership/**",
+            "docs/issue/终端粘贴目标归属/**",
+            "src/renderer/src/components/terminal-pane/terminal-pane-paste-execution.ts",
+            "src/renderer/src/components/terminal-pane/terminal-pane-paste-listeners.ts",
+            "src/renderer/src/components/terminal-pane/terminal-paste-target-state.ts",
+            "src/renderer/src/components/terminal-pane/terminal-paste-errors.ts",
+            ".gitignore",
+            "config/fork-features.jsonc",
+            "config/architecture-policies.jsonc",
+            "docs/issue/README.md",
+            "src/renderer/src/i18n/locales/en.json",
+            "src/renderer/src/i18n/locales/zh.json",
+            "src/renderer/src/i18n/en-runtime-required.json"
+          ],
+          "message": "Change is outside terminal paste ownership."
+        }
+      ]
+    },
+    {
       "id": "workspace-session-recovery",
       "description": "Recover workspace content without resurrecting historical selections or crossing host ownership.",
       "rules": [
@@ -309,6 +345,15 @@
           "baseRef": "$base",
           "requireBaseAncestor": false,
           "allowedPaths": [
+            "src/renderer/src/components/native-chat/native-chat-paste-routing.test.tsx",
+            "src/renderer/src/terminal-paste-ownership/**",
+            "docs/issue/终端粘贴目标归属/**",
+            "src/renderer/src/components/terminal-pane/terminal-pane-paste-execution.ts",
+            "src/renderer/src/components/terminal-pane/terminal-pane-paste-listeners.ts",
+            "src/renderer/src/components/terminal-pane/terminal-paste-target-state.ts",
+            "src/renderer/src/components/terminal-pane/terminal-paste-errors.ts",
+            ".gitignore",
+
             "src/renderer/src/lib/codex-session-restart-test-fixture.ts",
             "src/renderer/src/lib/codex-session-restart.test.ts",
             "tests/e2e/remote-agent-completion-authority.unit.test.ts",
