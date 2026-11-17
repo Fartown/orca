@@ -108,12 +108,12 @@ describe('task page search and filter', () => {
     ])
   })
 
-  it('shows a matching subtask on its own row when its parent does not match', () => {
+  it('keeps matching subtasks in their own groups when their parent is absent or in another group', () => {
     expect(shown({ ...EMPTY_LOCAL_TASK_FILTER, labels: ['backend'] })).toEqual(['MALL-13'])
     expect(shown({ ...EMPTY_LOCAL_TASK_FILTER, query: 'export' })).toEqual([
       'MALL-12',
       '>MALL-13',
-      '>MALL-14'
+      'MALL-14'
     ])
   })
 
@@ -124,7 +124,7 @@ describe('task page search and filter', () => {
       'MALL-1',
       'MALL-12',
       '>MALL-13',
-      '>MALL-14'
+      'MALL-14'
     ])
   })
 

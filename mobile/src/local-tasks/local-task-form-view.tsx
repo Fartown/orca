@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import {
   Check,
@@ -18,6 +18,8 @@ import { buildLocalTaskIndex } from '../../../src/shared/local-tasks/local-task-
 import { localTaskParentCandidates } from '../../../src/shared/local-tasks/local-task-hierarchy'
 import { MobileSwitch } from '../components/MobileSwitch'
 import { colors, spacing } from '../theme/mobile-theme'
+import { themedStyleSheet } from '../theme/themed-styles'
+import { useMobileColorScheme } from '../theme/use-mobile-color-scheme'
 import type { LocalTasksApi } from './local-tasks-api'
 import { localTasksCopy } from './local-tasks-copy'
 import type { LocalTaskSite } from './local-task-endpoint'
@@ -65,6 +67,7 @@ type Props = {
 }
 
 export function LocalTaskFormView(props: Props) {
+  useMobileColorScheme()
   const copy = localTasksCopy()
   const create = localTaskCreateCopy()
   const insets = useSafeAreaInsets()
@@ -373,7 +376,7 @@ export function LocalTaskFormView(props: Props) {
 
 const TITLE_LINE_HEIGHT = 24
 
-const styles = StyleSheet.create({
+const styles = themedStyleSheet(() => ({
   cancel: { color: colors.textSecondary, fontSize: 14 },
   title: { lineHeight: TITLE_LINE_HEIGHT },
   topBarBalance: { width: 40 },
@@ -394,4 +397,4 @@ const styles = StyleSheet.create({
   gap: { marginTop: spacing.md },
   continueRow: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   partialActions: { gap: spacing.sm }
-})
+}))

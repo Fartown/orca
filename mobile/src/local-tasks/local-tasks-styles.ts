@@ -1,9 +1,10 @@
 import { StyleSheet } from 'react-native'
 import { TEXT_INPUT_FONT_SIZE } from '../platform/text-input-font-size'
 import { colors, radii, spacing, typography } from '../theme/mobile-theme'
+import { themedStyleSheet } from '../theme/themed-styles'
 
 /** Shared by every local-tasks screen, so the list, the detail and the forms read as one page. */
-export const localTaskStyles = StyleSheet.create({
+export const localTaskStyles = themedStyleSheet(() => ({
   screen: { flex: 1, backgroundColor: colors.bgBase },
   topBar: {
     flexDirection: 'row',
@@ -214,4 +215,4 @@ export const localTaskStyles = StyleSheet.create({
     borderTopColor: colors.borderSubtle,
     backgroundColor: colors.bgBase
   }
-})
+}))

@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react'
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { Pressable, ScrollView, Text, View } from 'react-native'
 import { Bell, ChevronDown, ChevronRight } from 'lucide-react-native'
 import type { LocalTaskStatusCategory } from '../../../src/shared/local-tasks/local-task-model'
 import type {
@@ -11,6 +11,8 @@ import {
   unfoldedLocalTaskLines
 } from '../../../src/shared/local-tasks/local-task-list-groups'
 import { colors, spacing, typography } from '../theme/mobile-theme'
+import { themedStyleSheet } from '../theme/themed-styles'
+import { useMobileColorScheme } from '../theme/use-mobile-color-scheme'
 import { localTasksCopy } from './local-tasks-copy'
 import { LocalTaskCard, localTaskCardStyles } from './local-task-card'
 import type { LocalTaskCardFacts } from './local-task-card-facts'
@@ -44,6 +46,7 @@ type Props = {
 }
 
 export function LocalTasksListView(props: Props) {
+  useMobileColorScheme()
   const copy = localTasksCopy()
   const card = copy.work.card
   const [toggledGroups, setToggledGroups] = useState<ReadonlySet<string>>(new Set())
@@ -56,7 +59,7 @@ export function LocalTasksListView(props: Props) {
     return next
   }
   const banded = props.band?.ids ?? new Set<string>()
-  // The desktop's tally: each task counts once, in its own status, wherever its row rides.
+  // The desktop's tally: each task counts once in its own status; the band keeps its share.
   const tallies = tallyLocalTaskGroups(
     props.groups,
     props.groups.flatMap((group) =>
@@ -177,6 +180,7 @@ function LocalTaskListRowView(props: {
   return (
     <LocalTaskCard
       task={task}
+      ancestors={props.row.ancestors}
       status={props.lookup.get(task.statusId) ?? null}
       facts={props.factsFor(task)}
       now={props.now}
@@ -222,6 +226,7 @@ export function LocalTaskSubtaskRow(props: {
   sessions?: readonly LocalTaskRowSession[]
   onOpen: (taskId: string) => void
 }) {
+  useMobileColorScheme()
   const indent = (Math.min(props.depth ?? 1, MAX_INDENT_DEPTH) - 1) * spacing.lg
   return (
     <Pressable
@@ -241,10 +246,10 @@ export function LocalTaskSubtaskRow(props: {
         color={props.status?.color ?? 'gray'}
         size={14}
       />
-      <Text style={localTaskStyles.mono}>{props.task.ref}</Text>
       <Text style={styles.subtaskTitle} numberOfLines={1}>
         {props.task.title}
       </Text>
+      <Text style={localTaskStyles.mono}>{props.task.ref}</Text>
       {props.sessions ? <LocalTaskSessionDots sessions={props.sessions} /> : null}
       {props.folded !== undefined ? (
         <Pressable
@@ -266,7 +271,7 @@ export function LocalTaskSubtaskRow(props: {
   )
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyleSheet(() => ({
   groupHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -300,4 +305,4 @@ const styles = StyleSheet.create({
     marginRight: -10
   },
   subtaskTitle: { flex: 1, color: colors.textPrimary, fontSize: typography.metaSize + 1 }
-})
+}))

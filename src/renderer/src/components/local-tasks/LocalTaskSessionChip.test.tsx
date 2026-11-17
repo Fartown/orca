@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 
 const client = vi.hoisted(() => {
@@ -158,6 +158,13 @@ function pairedTaskLibrary(installationId: string | undefined): void {
   remote.applyLinks({ workspaces: [], sessions: [] })
 }
 
+async function openSessionChip(name: string): Promise<void> {
+  fireEvent.click(screen.getByRole('button', { name }))
+  await act(async () => {
+    await vi.dynamicImportSettled()
+  })
+}
+
 it('links an existing local pane to a paired task without taking over its workspace', async () => {
   pairedTaskLibrary('22222222-2222-4222-8222-222222222222')
   render(
@@ -165,7 +172,7 @@ it('links an existing local pane to a paired task without taking over its worksp
       <LocalTaskSessionChip pane={{ worktreeId: WORKTREE, paneKey: PANE }} />
     </TooltipProvider>
   )
-  fireEvent.click(screen.getByRole('button', { name: 'Link to task…' }))
+  await openSessionChip('Link to task…')
   const choice = await screen.findByRole('button', { name: /ORC-41.*Reconnect blank terminal/ })
   expect(choice).toHaveProperty('disabled', false)
   fireEvent.click(choice)
@@ -196,7 +203,7 @@ it('keeps an older task library visible while refusing an unsupported cross-host
       <LocalTaskSessionChip pane={{ worktreeId: WORKTREE, paneKey: PANE }} />
     </TooltipProvider>
   )
-  fireEvent.click(screen.getByRole('button', { name: 'Link to task…' }))
+  await openSessionChip('Link to task…')
   const choice = await screen.findByRole('button', { name: /ORC-41.*Reconnect blank terminal/ })
   expect(choice).toHaveProperty('disabled', true)
   expect(choice.title).toMatch(/Update the task library/)
@@ -220,7 +227,7 @@ it('relinks a session atomically, offering only the other tasks in its workspace
       <LocalTaskSessionChip pane={{ worktreeId: WORKTREE, paneKey: PANE }} />
     </TooltipProvider>
   )
-  fireEvent.click(screen.getByRole('button', { name: 'Reconnect blank terminal · ORC-41' }))
+  await openSessionChip('Reconnect blank terminal · ORC-41')
   expect(await screen.findByText('ORC-41 · This session belongs to it')).toBeTruthy()
   fireEvent.click(screen.getByRole('button', { name: /Link to another task/ }))
   const choices = within(screen.getByRole('dialog'))
@@ -244,7 +251,7 @@ it('keeps the existing link when a same-library replacement cannot be saved', as
       <LocalTaskSessionChip pane={{ worktreeId: WORKTREE, paneKey: PANE }} />
     </TooltipProvider>
   )
-  fireEvent.click(screen.getByRole('button', { name: 'Reconnect blank terminal · ORC-41' }))
+  await openSessionChip('Reconnect blank terminal · ORC-41')
   fireEvent.click(await screen.findByRole('button', { name: /Link to another task/ }))
   fireEvent.click(await screen.findByRole('button', { name: /ORC-42/ }))
   await waitFor(() =>
@@ -277,7 +284,7 @@ it('retains the new cross-library link if the old unlink commits but its respons
       <LocalTaskSessionChip pane={{ worktreeId: WORKTREE, paneKey: PANE }} />
     </TooltipProvider>
   )
-  fireEvent.click(screen.getByRole('button', { name: 'Reconnect blank terminal · ORC-41' }))
+  await openSessionChip('Reconnect blank terminal · ORC-41')
   fireEvent.click(await screen.findByRole('button', { name: /Link to another task/ }))
   const choice = screen
     .getAllByRole('button')

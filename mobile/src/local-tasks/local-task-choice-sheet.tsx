@@ -2,6 +2,8 @@ import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 
 import { Search, X } from 'lucide-react-native'
 import { BottomDrawer } from '../components/bottom-drawer/BottomDrawer'
 import { colors, radii, spacing, typography } from '../theme/mobile-theme'
+import { themedStyleSheet } from '../theme/themed-styles'
+import { useMobileColorScheme } from '../theme/use-mobile-color-scheme'
 import { localTasksCopy } from './local-tasks-copy'
 import { localTaskStyles } from './local-tasks-styles'
 
@@ -57,6 +59,7 @@ export function LocalTaskChoiceSheet(props: {
   search?: LocalTaskChoiceSearch | null
   onClose: () => void
 }) {
+  useMobileColorScheme()
   const { search } = props
   return (
     <BottomDrawer visible={props.visible} onClose={props.onClose} contentScrollable>
@@ -147,7 +150,7 @@ export function LocalTaskChoiceSheet(props: {
   )
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyleSheet(() => ({
   header: { paddingHorizontal: spacing.xs, paddingBottom: spacing.sm, gap: 4 },
   title: { fontSize: 13, fontWeight: '500', color: colors.textMuted },
   group: { backgroundColor: colors.bgPanel, borderRadius: 12, overflow: 'hidden' },
@@ -189,4 +192,4 @@ const styles = StyleSheet.create({
   rowText: { flex: 1, minWidth: 0, gap: 2 },
   rowPressed: { backgroundColor: colors.bgRaised },
   label: { color: colors.textPrimary, fontSize: typography.bodySize }
-})
+}))

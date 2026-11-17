@@ -16,11 +16,13 @@ import {
   statusHeadCategory,
   type LocalTaskTreeLine
 } from '../../../src/shared/local-tasks/local-task-list-groups'
+import { localTaskPathFromRoot } from '../../../src/shared/local-tasks/local-task-hierarchy'
 import { EMPTY_LOCAL_TASK_FILTER, type LocalTaskFilter } from './local-task-filter'
 
 export type LocalTaskSegment = 'started' | 'all'
 export type LocalTaskListRow = {
   task: LocalTask
+  ancestors: LocalTask[]
   /** Every shown descendant, in tree order (each line after its parent). */
   subtasks: LocalTaskTreeLine[]
   subtaskDone: number
@@ -31,7 +33,7 @@ export type LocalTaskListGroup = {
   status: LocalTaskStatusDef | null
   category: LocalTaskStatusCategory | null
   rows: LocalTaskListRow[]
-  /** Tasks in this status, subtasks nested under another group included (REQ-006). */
+  /** Tasks in this status, including same-status subtasks nested under its own rows (REQ-006). */
   count: number
 }
 
@@ -88,7 +90,13 @@ export function buildLocalTaskGroups(
   }
   const row = (task: LocalTask, subtasks: LocalTaskTreeLine[]): LocalTaskListRow => {
     const progress = localTaskSubtaskProgress(task, index)
-    return { task, subtasks, subtaskDone: progress?.done ?? 0, subtaskTotal: progress?.total ?? 0 }
+    return {
+      task,
+      ancestors: localTaskPathFromRoot(task, index.tasksById),
+      subtasks,
+      subtaskDone: progress?.done ?? 0,
+      subtaskTotal: progress?.total ?? 0
+    }
   }
   if (!input.nestSubtasks) {
     return buildLocalTaskBoardColumns(scope, index, input.projectId, visibility, {

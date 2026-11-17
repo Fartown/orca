@@ -37,6 +37,7 @@ import type { LocalTasksLibrary } from './use-local-tasks-library'
 export type LocalTaskWorkControls = {
   /** The head's main button (m4): a new session in the task's workspace, else Start work. */
   primary: { label: string; disabled: boolean; onPress: () => void } | null
+  inheritedFrom: LocalTask | null
   /** Everything else the task's workspace offers, for the "…" menu. */
   menuActions: ActionSheetAction[]
   /** Why a button is off, what is starting, what failed: said under the head. */
@@ -272,9 +273,18 @@ export function useLocalTaskWorkControls(props: {
       {text}
     </Text>
   )
-  const notices = (
+  const hasNotice =
+    verdict?.kind === 'missing' ||
+    !workspace ||
+    (needsCatalog && (Boolean(noSetupHint) || (setups.length > 0 && !startSetup))) ||
+    hostOffline ||
+    libraryOffline ||
+    launch.busy ||
+    Boolean(launch.notice) ||
+    Boolean(error) ||
+    (Boolean(library.work.error) && !libraryOffline)
+  const notices = hasNotice ? (
     <>
-      {inheritedFrom ? hint(work.inheritedWorkspace(inheritedFrom.title)) : null}
       {verdict?.kind === 'missing' ? (
         <Text style={localTaskStyles.errorText} testID="local-task-workspace-gone">
           {work.workspaceGone}
@@ -297,7 +307,7 @@ export function useLocalTaskWorkControls(props: {
         <Text style={localTaskStyles.errorText}>{work.workLoadFailed}</Text>
       ) : null}
     </>
-  )
+  ) : null
   const sheets = (
     <>
       <LocalTaskLaunchSheet launch={launch} hostLabels={labels} workspaceHostLabel={hostLabel} />
@@ -340,6 +350,7 @@ export function useLocalTaskWorkControls(props: {
   )
   return {
     primary,
+    inheritedFrom: inheritedFrom ?? null,
     menuActions,
     notices,
     sheets,

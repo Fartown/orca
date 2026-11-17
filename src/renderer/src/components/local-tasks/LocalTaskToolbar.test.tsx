@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { cleanup, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { localTaskPageStore } from '@/local-tasks/local-task-page-store'
 import { localTasksDomainStore } from '@/local-tasks/local-tasks-domain-store'
@@ -20,6 +20,7 @@ function Toolbar(): React.JSX.Element {
 
 beforeEach(() => {
   localTaskPageStore.setState({
+    query: '',
     searchFocusRequest: 0,
     consumedSearchFocusRequest: 0
   })
@@ -37,4 +38,14 @@ it('focuses one requested search once across remounts', () => {
   view.unmount()
   render(<Toolbar />)
   expect(document.activeElement).not.toBe(screen.getByRole('textbox', { name: 'Search tasks' }))
+})
+
+it('clears a search and keeps focus in the search field', () => {
+  localTaskPageStore.getState().setQuery('no-matching-task')
+  render(<Toolbar />)
+  const search = screen.getByRole('textbox', { name: 'Search tasks' })
+  fireEvent.click(screen.getByRole('button', { name: 'Clear search' }))
+  expect(localTaskPageStore.getState().query).toBe('')
+  expect(document.activeElement).toBe(search)
+  expect(screen.queryByRole('button', { name: 'Clear search' })).toBeNull()
 })

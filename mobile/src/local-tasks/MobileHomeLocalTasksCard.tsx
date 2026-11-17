@@ -4,10 +4,13 @@ import { PickerModal } from '../components/PickerModal'
 import { useConnectedHostPicker } from '../components/use-connected-host-picker'
 import { useOpenHostStackRoute } from '../navigation/use-open-host-stack-route'
 import { colors, radii, spacing, typography } from '../theme/mobile-theme'
+import { themedStyleSheet } from '../theme/themed-styles'
+import { useMobileColorScheme } from '../theme/use-mobile-color-scheme'
 import type { HostProfile } from '../transport/types'
 import { localTaskHostMachineName } from './local-tasks-access'
 import { formatLocalTaskAgo, localTasksCopy } from './local-tasks-copy'
 import { localTaskAttentionLine } from './local-task-attention-row'
+import { localTaskSessionSummary } from './local-task-session-summary'
 import { localTasksPageCopy } from './local-tasks-page-copy'
 import type { LocalTaskHomeAttentionRow } from './local-task-home-attention'
 import { localTasksRouteTarget } from './local-tasks-route'
@@ -96,6 +99,7 @@ function homeEntryTarget(host: ReadyHost) {
  * never sees it. A host that had one and is out of contact now gets a "cannot connect" line.
  */
 export function MobileHomeLocalTasksCard(props: { connectedHosts: HostProfile[] }) {
+  useMobileColorScheme()
   const copy = localTasksCopy()
   const hosts = useLocalTaskHomeHosts(props.connectedHosts)
   const openHostStackRoute = useOpenHostStackRoute()
@@ -214,7 +218,7 @@ export function MobileHomeLocalTasksCard(props: { connectedHosts: HostProfile[] 
                 </Text>
               </View>
               <Text style={styles.rowTitle} numberOfLines={1}>
-                {summary.latest.body}
+                {localTaskSessionSummary(summary.latest.body)}
               </Text>
             </Pressable>
           ) : null}
@@ -251,7 +255,7 @@ export function MobileHomeLocalTasksCard(props: { connectedHosts: HostProfile[] 
 }
 
 // Why these values: the card sits under home's task card and matches its frame, icon and type.
-const styles = StyleSheet.create({
+const styles = themedStyleSheet(() => ({
   card: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -322,4 +326,4 @@ const styles = StyleSheet.create({
     borderTopColor: colors.borderSubtle
   },
   viewAllText: { fontSize: typography.bodySize, fontWeight: '600' }
-})
+}))

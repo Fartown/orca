@@ -1,9 +1,11 @@
 import { useState } from 'react'
-import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
+import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native'
 import { Bot, ChevronRight, Send, X } from 'lucide-react-native'
 import type { LocalTaskCreatePlan } from '../../../src/shared/local-tasks/local-task-create-plan'
 import { PickerModal } from '../components/PickerModal'
 import { colors, radii, spacing, typography } from '../theme/mobile-theme'
+import { themedStyleSheet } from '../theme/themed-styles'
+import { useMobileColorScheme } from '../theme/use-mobile-color-scheme'
 import { localTasksCopy } from './local-tasks-copy'
 import { localTaskCreateCopy, type LocalTaskCreateCopy } from './local-task-create-copy'
 import {
@@ -75,6 +77,7 @@ function Tile(props: {
   hint: string | null
   onPress: () => void
 }) {
+  useMobileColorScheme()
   const Icon = props.icon === 'bot' ? Bot : X
   return (
     <Pressable
@@ -107,6 +110,7 @@ function Tile(props: {
 
 /** ③ 开工 (m8): which agent opens a session there, its first prompt, and how it is sent. */
 export function LocalTaskCreateKickoffSection({ state }: { state: LocalTaskCreateWhereState }) {
+  useMobileColorScheme()
   const create = localTaskCreateCopy()
   const [moreOpen, setMoreOpen] = useState(false)
   const off = state.where === 'later'
@@ -200,7 +204,7 @@ export function LocalTaskCreateKickoffSection({ state }: { state: LocalTaskCreat
   )
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyleSheet(() => ({
   section: { gap: spacing.sm, marginTop: spacing.lg },
   tiles: { flexDirection: 'row', gap: spacing.sm },
   tile: {
@@ -238,4 +242,4 @@ const styles = StyleSheet.create({
   sendHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: 2 },
   sendTitle: { color: colors.textPrimary, fontSize: typography.bodySize, fontWeight: '600' },
   flex: { flex: 1 }
-})
+}))

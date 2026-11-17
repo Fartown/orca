@@ -1,16 +1,15 @@
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
+import { Pressable, Text, TextInput, View } from 'react-native'
 import { AtSign, Laptop, Send, X } from 'lucide-react-native'
 import { TEXT_INPUT_FONT_SIZE } from '../platform/text-input-font-size'
 import { colors, radii, spacing, typography } from '../theme/mobile-theme'
+import { themedStyleSheet } from '../theme/themed-styles'
+import { useMobileColorScheme } from '../theme/use-mobile-color-scheme'
 import { localTasksCopy } from './local-tasks-copy'
 import { localTaskStyles } from './local-tasks-styles'
 
 export type LocalTaskDispatchChip = { key: string; label: string; clear: () => void }
 
-/**
- * The dispatch box: what @ picked as chips, the sentence, @ and send; under it which host runs the
- * work, and what sending will do.
- */
+/** Task instruction, selected targets and execution host. */
 export function LocalTaskDispatchComposer(props: {
   text: string
   onChangeText: (text: string) => void
@@ -23,6 +22,7 @@ export function LocalTaskDispatchComposer(props: {
   hint: string | null
   error: string | null
 }) {
+  useMobileColorScheme()
   const copy = localTasksCopy()
   const dispatch = copy.work.dispatch
   return (
@@ -92,7 +92,7 @@ export function LocalTaskDispatchComposer(props: {
   )
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyleSheet(() => ({
   container: { paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, gap: spacing.xs },
   composer: {
     backgroundColor: colors.bgPanel,
@@ -125,21 +125,21 @@ const styles = StyleSheet.create({
   },
   toolbar: { flexDirection: 'row', alignItems: 'center' },
   tool: {
-    width: 32,
-    height: 32,
+    width: 44,
+    height: 44,
     borderRadius: radii.pill,
     alignItems: 'center',
     justifyContent: 'center'
   },
   spacer: { flex: 1 },
   send: {
-    width: 32,
-    height: 32,
+    width: 44,
+    height: 44,
     borderRadius: radii.pill,
     backgroundColor: colors.textPrimary,
     alignItems: 'center',
     justifyContent: 'center'
   },
-  execLine: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 2 },
+  execLine: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
   shrink: { flexShrink: 1 }
-})
+}))

@@ -6,6 +6,7 @@ import { MobileSegmentedControl } from '../components/MobileSegmentedControl'
 import { PickerListDrawer } from '../components/PickerListDrawer'
 import { useBackClaim } from '../navigation/use-back-claim'
 import { colors } from '../theme/mobile-theme'
+import { useMobileColorScheme } from '../theme/use-mobile-color-scheme'
 import type { LocalTasksApi } from './local-tasks-api'
 import type { LocalTaskEndpoint, LocalTaskSite } from './local-task-endpoint'
 import { localTasksCopy } from './local-tasks-copy'
@@ -66,6 +67,7 @@ type Props = {
 type Segment = 'attention' | LocalTaskSegment
 
 export function LocalTasksLibraryScreen(props: Props) {
+  useMobileColorScheme()
   const copy = localTasksCopy()
   const insets = useSafeAreaInsets()
   const { library, site } = props

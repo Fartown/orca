@@ -1,6 +1,8 @@
 import { useRef, useState, type ReactNode } from 'react'
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { Pressable, ScrollView, Text, View } from 'react-native'
 import { colors, spacing } from '../theme/mobile-theme'
+import { themedStyleSheet } from '../theme/themed-styles'
+import { useMobileColorScheme } from '../theme/use-mobile-color-scheme'
 
 export type LocalTaskSwipeAction = {
   label: string
@@ -15,6 +17,7 @@ const ACTION_WIDTH = 84
  * handler: it behaves the same natively and inside the shell's page, where the list renders.
  */
 export function LocalTaskSwipeRow(props: { actions: LocalTaskSwipeAction[]; children: ReactNode }) {
+  useMobileColorScheme()
   const scroller = useRef<ScrollView>(null)
   const [width, setWidth] = useState(0)
   const revealed = ACTION_WIDTH * props.actions.length
@@ -48,7 +51,7 @@ export function LocalTaskSwipeRow(props: { actions: LocalTaskSwipeAction[]; chil
   )
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyleSheet(() => ({
   measuring: { width: '100%' },
   action: {
     width: ACTION_WIDTH,
@@ -59,4 +62,4 @@ const styles = StyleSheet.create({
   },
   accent: { backgroundColor: colors.statusAmber },
   actionText: { color: colors.textPrimary, fontSize: 13, fontWeight: '600', textAlign: 'center' }
-})
+}))

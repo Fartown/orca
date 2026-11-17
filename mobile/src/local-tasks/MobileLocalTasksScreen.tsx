@@ -7,6 +7,7 @@ import { useOptionalHostProtocolGates } from '../components/host-protocol-gates-
 import { useRouteHandoff } from '../navigation/route-handoff'
 import { firstParam } from '../navigation/route-param-reader'
 import { colors } from '../theme/mobile-theme'
+import { useMobileColorScheme } from '../theme/use-mobile-color-scheme'
 import { useHostClient } from '../transport/host-client-hooks'
 import { useRpcClientContext } from '../transport/client-context'
 import { loadHosts } from '../transport/host-store'
@@ -48,6 +49,7 @@ function useHostMachineName(hostId: string | undefined): string {
  * React Native Web) and Back is the handoff's.
  */
 export function MobileLocalTasksScreen() {
+  useMobileColorScheme()
   const copy = localTasksCopy()
   const insets = useSafeAreaInsets()
   const router = useRouteHandoff()
@@ -190,6 +192,7 @@ function LocalTasksGate(props: {
   onShowOwn?: () => void
   onBack: () => void
 }) {
+  useMobileColorScheme()
   const copy = localTasksCopy()
   const insets = useSafeAreaInsets()
   const [showDetails, setShowDetails] = useState(false)

@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View } from 'react-native'
+import { Text, View } from 'react-native'
 import Svg, { Path } from 'react-native-svg'
 import {
   DEFAULT_LOCAL_TASK_STATUSES,
@@ -7,17 +7,21 @@ import {
   type LocalTaskStatusColor
 } from '../../../src/shared/local-tasks/local-task-model'
 import { colors } from '../theme/mobile-theme'
+import { themedStyleSheet, themedStyles } from '../theme/themed-styles'
+import { useMobileColorScheme } from '../theme/use-mobile-color-scheme'
 
 // Why tokens only: the stored color is a name precisely so data cannot bypass the palette.
-export const LOCAL_TASK_STATUS_COLOR_VALUES: Record<LocalTaskStatusColor, string> = {
-  gray: colors.textMuted,
-  blue: colors.accentBlue,
-  yellow: colors.statusAmber,
-  orange: colors.syntaxString,
-  green: colors.statusGreen,
-  red: colors.statusRed,
-  purple: colors.statusPurple
-}
+export const LOCAL_TASK_STATUS_COLOR_VALUES: Record<LocalTaskStatusColor, string> = themedStyles(
+  () => ({
+    gray: colors.textMuted,
+    blue: colors.accentBlue,
+    yellow: colors.statusAmber,
+    orange: colors.syntaxString,
+    green: colors.statusGreen,
+    red: colors.statusRed,
+    purple: colors.statusPurple
+  })
+)
 
 /** The colour a category's default status gets, for a category shown without a status. */
 export function localTaskCategoryColor(category: LocalTaskStatusCategory): LocalTaskStatusColor {
@@ -38,6 +42,7 @@ export function LocalTaskStatusIcon(props: {
   color: LocalTaskStatusColor
   size?: number
 }) {
+  useMobileColorScheme()
   const fill = LOCAL_TASK_STATUS_COLOR_VALUES[props.color]
   const size = props.size ?? 16
   const { category } = props
@@ -75,6 +80,7 @@ const BAR_HEIGHTS = [5, 8, 11]
 const FILLED_BARS: Record<LocalTaskPriority, number> = { 0: 0, 1: 3, 2: 3, 3: 2, 4: 1 }
 
 export function LocalTaskPriorityIcon(props: { priority: LocalTaskPriority }) {
+  useMobileColorScheme()
   if (props.priority === 1) {
     return (
       <View style={styles.urgent}>
@@ -99,7 +105,7 @@ export function LocalTaskPriorityIcon(props: { priority: LocalTaskPriority }) {
   )
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyleSheet(() => ({
   bars: { flexDirection: 'row', alignItems: 'flex-end', gap: 2, height: 12, width: 14 },
   bar: { width: 3, borderRadius: 1 },
   barOn: { backgroundColor: colors.textSecondary },
@@ -114,4 +120,4 @@ const styles = StyleSheet.create({
     justifyContent: 'center'
   },
   urgentText: { color: colors.onAccent, fontSize: 10, fontWeight: '700', lineHeight: 12 }
-})
+}))
