@@ -27,12 +27,13 @@ function SearchField(): React.JSX.Element {
   return (
     <div className="relative min-w-0 flex-1 @3xl/local-task-toolbar:w-40 @3xl/local-task-toolbar:flex-none @5xl/local-task-toolbar:w-56">
       <Input
+        adornment="trailing"
         ref={inputRef}
         value={query}
         onChange={(event) => localTaskPageStore.getState().setQuery(event.target.value)}
         placeholder={translate('localTasks.toolbar.searchPlaceholder', 'Search title or ref')}
         aria-label={translate('localTasks.toolbar.search', 'Search tasks')}
-        className="h-8 w-full pr-8"
+        className="h-8 w-full"
       />
       {query ? (
         <Button
