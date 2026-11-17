@@ -142,6 +142,13 @@ export function toClientLocalTaskSessionLink(
   endpoint: LocalTaskEndpointKey,
   link: LocalTaskSessionLink
 ): LocalTaskSessionLink {
+  if (link.executionOrigin) {
+    return {
+      ...link,
+      id: localTaskClientId(endpoint, link.id),
+      taskId: localTaskClientId(endpoint, link.taskId)
+    }
+  }
   if (isSelf(endpoint)) {
     return link
   }

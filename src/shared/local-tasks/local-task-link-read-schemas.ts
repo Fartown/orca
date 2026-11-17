@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { LocalTaskSessionExecutionOriginSchema } from './local-task-session-origin'
 import type {
   LocalTaskAttentionItem,
   LocalTaskAttentionKind,
@@ -60,6 +61,7 @@ export const localTaskSessionLinkSchema: z.ZodType<LocalTaskSessionLink, unknown
   id: z.string(),
   taskId: z.string(),
   hostId: z.string(),
+  executionOrigin: LocalTaskSessionExecutionOriginSchema.optional(),
   worktreeId: z.string().nullable(),
   instanceId: z.string().nullable(),
   surface: openEnum(SURFACE_ARMS, 'terminal'),

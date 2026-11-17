@@ -8,11 +8,37 @@ import type { AgentCompletionDispatchMeta } from '../../src/renderer/src/compone
 import { inspectRuntimeTerminalProcess } from '../../src/renderer/src/runtime/runtime-terminal-inspection'
 import { clearRuntimeCompatibilityCacheForTests } from '../../src/renderer/src/runtime/runtime-rpc-client'
 import {
+  createCompatibleRuntimeStatusResponse,
   createCompatibleRuntimeStatusResponseIfNeeded,
   type RuntimeEnvironmentCallRequest
 } from '../../src/renderer/src/runtime/runtime-compatibility-test-fixture'
+import { useAppStore } from '../../src/renderer/src/store'
 
 const REMOTE_PTY_ID = 'remote:remote-host@@term_remote_agent'
+
+function setRuntimeContact(connected: boolean): void {
+  const status = createCompatibleRuntimeStatusResponse().result
+  useAppStore.setState({
+    runtimeStatusByEnvironmentId: new Map([
+      [
+        'remote-host',
+        {
+          status,
+          checkedAt: 1,
+          snapshot: {
+            environmentId: 'remote-host',
+            pairingRevision: 1,
+            sequence: 1,
+            checkedAt: 1,
+            status,
+            verification: connected ? 'verified' : 'unavailable',
+            transport: connected ? 'ready' : 'disconnected'
+          }
+        }
+      ]
+    ])
+  })
+}
 
 describe('remote agent completion authority', () => {
   const runtimeCall = vi.fn()
@@ -21,6 +47,7 @@ describe('remote agent completion authority', () => {
   })
 
   beforeEach(() => {
+    setRuntimeContact(true)
     vi.useFakeTimers()
     vi.spyOn(Math, 'random').mockReturnValue(0.5)
     clearRuntimeCompatibilityCacheForTests()
@@ -36,6 +63,7 @@ describe('remote agent completion authority', () => {
   })
 
   afterEach(() => {
+    useAppStore.setState({ runtimeStatusByEnvironmentId: new Map() })
     resetAgentCompletionCoordinatorIdentitiesForTest()
     vi.useRealTimers()
     vi.unstubAllGlobals()
@@ -60,6 +88,27 @@ describe('remote agent completion authority', () => {
     expect(runtimeCall).not.toHaveBeenCalled()
     expect(dispatchCompletion).not.toHaveBeenCalled()
 
+    coordinator.dispose()
+  })
+
+  it('does not inspect or dispatch remote title completion while canonical contact is unavailable', async () => {
+    setRuntimeContact(false)
+    const dispatchCompletion = vi.fn()
+    const coordinator = createAgentCompletionCoordinator({
+      paneKey: 'tab-remote:leaf-offline',
+      getPtyId: () => REMOTE_PTY_ID,
+      isRemotePtyId: () => true,
+      getExpectedIncarnationId: () => 'inc-remote',
+      inspectProcess: inspectRuntimeTerminalProcess,
+      dispatchCompletion,
+      isLive: () => true
+    })
+    coordinator.startProcessTracking()
+    coordinator.observeTitle('Codex working')
+    coordinator.observeTitle('/tmp/offline-finish')
+    await vi.advanceTimersByTimeAsync(60_000)
+    expect(runtimeTransportCall).not.toHaveBeenCalled()
+    expect(dispatchCompletion).not.toHaveBeenCalled()
     coordinator.dispose()
   })
 

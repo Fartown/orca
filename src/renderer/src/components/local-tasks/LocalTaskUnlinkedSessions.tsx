@@ -108,8 +108,22 @@ function WorkspaceSessions({
   const inContact = useLocalTaskHostInContact(hostId)
   const agentRows = useWorktreeAgentRows(worktree.id, !linked)
   const tabs = useAppStore((state) => state.unifiedTabsByWorktree[worktree.id] ?? EMPTY_TABS)
-  const chats = linked ? EMPTY_TABS : tabs.filter((tab) => tab.contentType === 'agent-session')
-  const rows = linked ? [] : agentRows
+  const sessions = useLocalTasksDomain((state) => state.links.sessions)
+  const held = sessions.filter(
+    (session) => session.hostId === hostId && session.worktreeId === worktree.id
+  )
+  const chats = linked
+    ? EMPTY_TABS
+    : tabs.filter(
+        (tab) =>
+          tab.contentType === 'agent-session' &&
+          !held.some((session) => session.tabId === tab.id || session.sessionId === tab.entityId)
+      )
+  const rows = linked
+    ? []
+    : agentRows.filter(
+        (row) => !held.some((session) => session.paneKey === (row.activationPaneKey ?? row.paneKey))
+      )
   const key = `${hostId}:${worktree.id}`
   const count = rows.length + chats.length
   useEffect(() => {

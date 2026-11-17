@@ -18,6 +18,11 @@ import {
 /** One library's data and writers, as `createLocalTasksSync` reads and applies them. */
 export type LocalTasksPartitionView = LocalTasksPartition & PartitionWriter
 
+export type LocalTaskSessionExecutionProjection = (
+  derived: LocalTasksDerived,
+  partitions: readonly LocalTasksPartition[]
+) => LocalTasksDerived
+
 export type LocalTasksDomainState = LocalTasksDerived & {
   /** This app's own library first (none in a browser client), then each paired Orca's. */
   partitions: readonly LocalTasksPartition[]
@@ -34,6 +39,8 @@ export type LocalTasksDomainState = LocalTasksDerived & {
   applyHomePreferences: (values: Record<string, string | null>) => void
   writer: (endpoint: LocalTaskEndpointKey) => PartitionWriter
   retry: (endpoint?: LocalTaskEndpointKey) => void
+  setSessionExecutionProjection: (project: LocalTaskSessionExecutionProjection | null) => void
+  refreshSessionExecutions: () => void
 }
 
 function mergeTasks(current: LocalTask[], incoming: LocalTask[], created: boolean): LocalTask[] {
@@ -52,10 +59,14 @@ function mergeTasks(current: LocalTask[], incoming: LocalTask[], created: boolea
 export function createLocalTasksDomainStore() {
   const derive = createDerive()
   return createStore<LocalTasksDomainState>((set, get) => {
-    const commit = (partitions: readonly LocalTasksPartition[]) => ({
-      partitions,
-      ...derive(partitions)
-    })
+    let projectExecutions: LocalTaskSessionExecutionProjection | null = null
+    const commit = (partitions: readonly LocalTasksPartition[]) => {
+      const derived = derive(partitions)
+      return {
+        partitions,
+        ...(projectExecutions ? projectExecutions(derived, partitions) : derived)
+      }
+    }
     const update = (
       endpoint: LocalTaskEndpointKey,
       change: (partition: LocalTasksPartition) => Partial<LocalTasksPartition> | null
@@ -92,6 +103,7 @@ export function createLocalTasksDomainStore() {
           update(endpoint, (partition) => ({
             hostState: status.state,
             hostReason: status.reason,
+            installationId: status.installationId ?? null,
             projectCount: status.projectCount ?? 'unreported',
             ...(status.taskBrief !== undefined || status.sessionSend !== undefined
               ? {
@@ -224,6 +236,15 @@ export function createLocalTasksDomainStore() {
         }
       },
       writer,
+      setSessionExecutionProjection: (project) => {
+        projectExecutions = project
+        set((state) => commit(state.partitions))
+      },
+      refreshSessionExecutions: () =>
+        set((state) => {
+          const next = commit(state.partitions)
+          return next.links === state.links && next.progress === state.progress ? state : next
+        }),
       retry: (endpoint) => {
         const target = endpoint ?? get().home
         if (target) {

@@ -29,6 +29,7 @@ export async function prepareLocalTaskTerminalPreview(
   const host = parseExecutionHostId(link.hostId)
   const reveal = source.notifier?.revealTerminalSession?.bind(source.notifier)
   if (
+    link.executionOrigin ||
     !host ||
     host.kind === 'runtime' ||
     !reveal ||

@@ -13,11 +13,12 @@ import {
 } from '@/components/editor/rich-markdown-review-note-layout'
 import type { DiffComment } from '../../../../../shared/diff-comment-types'
 import { ShareCommentCard, ShareCommentCardFrame, ShareCommentComposer } from './ShareCommentBlock'
-import { findShareCommentAnchor } from './ShareCommentHighlights'
-import { findShareCommentHomeBlock } from './share-comment-blocks'
+import {
+  SHARE_DRAFT_PLACEMENT_ID,
+  shareCommentPlacementTop,
+  useShareCommentPlacements
+} from './ShareCommentPlacements'
 import { useShareComments, type ShareCommentDraft } from './share-viewer-comments-state'
-
-const DRAFT_ID = 'draft'
 
 /** The rich editor's stacking takes review notes; a share comment maps onto one field for field. */
 function toReviewNote(
@@ -49,11 +50,10 @@ export function ShareCommentRail({
   bodyRef: RefObject<HTMLDivElement | null>
 }): React.JSX.Element | null {
   const { comments, draft } = useShareComments()
+  const placements = useShareCommentPlacements()
   const [positions, setPositions] = useState<RichMarkdownReviewNotePosition[]>([])
   const heights = useRef(new Map<string, number>())
-  const cards = useRef(new Map<string, HTMLElement>())
-  const [layoutRevision, setLayoutRevision] = useState(0)
-  const relayout = useCallback(() => setLayoutRevision((revision) => revision + 1), [])
+  const [heightRevision, setHeightRevision] = useState(0)
 
   useLayoutEffect(() => {
     const body = bodyRef.current
@@ -63,45 +63,31 @@ export function ShareCommentRail({
     const bodyTop = body.getBoundingClientRect().top
     const anchored: RichMarkdownReviewNotePosition[] = []
     for (const comment of comments) {
-      // Orphans (the file changed under them) are listed after the document instead.
-      if (findShareCommentHomeBlock(body, comment) === null) {
-        continue
-      }
-      const draftShape = { range: comment, quote: comment.quote }
-      const top = findShareCommentAnchor(body, draftShape)
-      if (top !== null) {
-        anchored.push({
-          comment: toReviewNote(
-            comment.id,
-            draftShape,
-            comment.body,
-            Date.parse(comment.createdAt)
-          ),
-          top: top - bodyTop
-        })
-      }
+      const top = shareCommentPlacementTop(placements.get(comment.id))
+      // As in the app's rail: a note whose text is gone sits at the top, marked as changed.
+      anchored.push({
+        comment: toReviewNote(
+          comment.id,
+          { range: comment },
+          comment.body,
+          Date.parse(comment.createdAt)
+        ),
+        top: top === null ? 0 : top - bodyTop,
+        ...(top === null ? { anchorUnresolved: true } : {})
+      })
     }
-    const draftTop = draft ? findShareCommentAnchor(body, draft) : null
+    const draftTop = draft
+      ? shareCommentPlacementTop(placements.get(SHARE_DRAFT_PLACEMENT_ID))
+      : null
     if (draft && draftTop !== null) {
       // Why Infinity: at the same line a new draft stacks after the comments already there.
       anchored.push({
-        comment: toReviewNote(DRAFT_ID, draft, '', Infinity),
+        comment: toReviewNote(SHARE_DRAFT_PLACEMENT_ID, draft, '', Infinity),
         top: draftTop - bodyTop
       })
     }
     setPositions(stackRichMarkdownReviewNotePositions(anchored, heights.current))
-  }, [bodyRef, comments, draft, layoutRevision])
-
-  // Why: images, fonts and diagrams settle after first paint and move every anchor below them.
-  useEffect(() => {
-    const body = bodyRef.current
-    if (!body) {
-      return
-    }
-    const observer = new ResizeObserver(relayout)
-    observer.observe(body)
-    return () => observer.disconnect()
-  }, [bodyRef, relayout])
+  }, [bodyRef, comments, draft, placements, heightRevision])
 
   const [cardObserver] = useState(
     () =>
@@ -116,24 +102,34 @@ export function ShareCommentRail({
           }
         }
         if (changed) {
-          relayout()
+          setHeightRevision((revision) => revision + 1)
         }
       })
   )
   useEffect(() => () => cardObserver.disconnect(), [cardObserver])
 
+  // Why cached per id: a fresh ref callback each render would re-observe every card each time.
+  const cardRefs = useRef(new Map<string, (element: HTMLElement | null) => void>())
   const trackCard = useCallback(
-    (id: string) => (element: HTMLElement | null) => {
-      const previous = cards.current.get(id)
-      if (previous && previous !== element) {
-        cardObserver.unobserve(previous)
-        cards.current.delete(id)
-        heights.current.delete(id)
+    (id: string) => {
+      let callback = cardRefs.current.get(id)
+      if (!callback) {
+        let observed: HTMLElement | null = null
+        callback = (element) => {
+          if (observed && observed !== element) {
+            cardObserver.unobserve(observed)
+            heights.current.delete(id)
+          }
+          observed = element
+          if (element) {
+            cardObserver.observe(element)
+          } else {
+            cardRefs.current.delete(id)
+          }
+        }
+        cardRefs.current.set(id, callback)
       }
-      if (element) {
-        cards.current.set(id, element)
-        cardObserver.observe(element)
-      }
+      return callback
     },
     [cardObserver]
   )
@@ -148,7 +144,7 @@ export function ShareCommentRail({
       aria-label={translate('auto.components.selfHostedArtifacts.shareViewer.comments', 'Comments')}
     >
       {positions.map(({ comment: { id }, top }) => {
-        if (id === DRAFT_ID) {
+        if (id === SHARE_DRAFT_PLACEMENT_ID) {
           return (
             <div
               key={id}

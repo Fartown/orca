@@ -40,6 +40,7 @@ import { HostAccountLaunchEnvParams } from '../host-account-launch-env'
 import {
   LocalTasksDispatcherAckParams,
   LocalTasksDispatcherInboxParams,
+  LocalTasksDispatcherPrepareWorkspaceParams,
   LocalTasksDispatcherRecordFactsParams,
   LocalTasksDispatcherRegisterParams,
   LocalTasksDispatcherUnwatchParams,
@@ -1321,6 +1322,7 @@ export const RPC_PARAMS_BY_METHOD = {
   'localTasks.attention.snooze': LocalTasksAttentionSnoozeParams,
   'localTasks.dispatcher.ack': LocalTasksDispatcherAckParams,
   'localTasks.dispatcher.inbox': LocalTasksDispatcherInboxParams,
+  'localTasks.dispatcher.prepareWorkspace': LocalTasksDispatcherPrepareWorkspaceParams,
   'localTasks.dispatcher.recordFacts': LocalTasksDispatcherRecordFactsParams,
   'localTasks.dispatcher.register': LocalTasksDispatcherRegisterParams,
   'localTasks.dispatcher.unwatch': LocalTasksDispatcherUnwatchParams,

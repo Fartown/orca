@@ -8,7 +8,12 @@ vi.mock('sonner', () => ({ toast: { info: mocks.info } }))
 vi.mock('@/lib/agent-message-send', () => ({ sendMessageToAgent: mocks.send }))
 vi.mock('./local-task-dispatcher-session', () => ({
   liveDispatcherPaneKey: () => 'tab-1:11111111-1111-4111-8111-111111111111',
-  openLocalTaskDispatcher: async () => true
+  openLocalTaskDispatcher: async () => true,
+  getLocalTaskDispatcherSendArgs: (_pane: string, prompt: string) => ({
+    worktreeId: 'global-floating-terminal',
+    target: { kind: 'terminal', tabId: 'tab-1', leafId: '11111111-1111-4111-8111-111111111111' },
+    prompt
+  })
 }))
 
 import { LOCAL_TASK_DISPATCHER_GUIDE } from '../../../shared/local-tasks/local-task-brief'

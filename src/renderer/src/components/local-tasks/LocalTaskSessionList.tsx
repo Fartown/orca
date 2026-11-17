@@ -13,7 +13,7 @@ import { cn } from '@/lib/utils'
 import type { LocalTaskIndex } from '@/local-tasks/local-task-grouping'
 import { useLocalTaskSessionLinks } from '@/local-tasks/local-task-link-selectors'
 import { useLocalTaskSessionProgress } from '@/local-tasks/local-task-session-progress'
-import { useLocalTaskHostInContact } from '@/local-tasks/local-task-host-contact'
+import { useLocalTaskSessionInContact } from '@/local-tasks/local-task-session-execution-contact'
 import { localTaskSessionPanelStore } from '@/local-tasks/local-task-session-panel-store'
 import { localTaskPageStore } from '@/local-tasks/local-task-page-store'
 import { formatLocalTaskSessionAge } from '@/local-tasks/local-task-session-age'
@@ -60,8 +60,8 @@ function SessionRow({
   compact: boolean
 }): React.JSX.Element {
   const progress = useLocalTaskSessionProgress(session)
-  const inContact = useLocalTaskHostInContact(session.hostId)
-  const hostLabel = useLocalTaskHostLabel(session.hostId)
+  const inContact = useLocalTaskSessionInContact(session)
+  const hostLabel = useLocalTaskHostLabel(session.hostId, session.executionOrigin?.hostLabel)
   const now = useNow(60_000)
   const state = progress?.state ?? 'unknown'
   const agent = isTuiAgent(session.agent) ? session.agent : null

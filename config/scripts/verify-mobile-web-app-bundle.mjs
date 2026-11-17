@@ -66,7 +66,7 @@ export function mobileWebAppBundleBudgetBytes(manifest) {
 
 // Measure sorted route prefixes with routes.slice(0,n), excluding locale catalogs: distinct importer sets determine chunks, not route count.
 // Re-measure table when routes change; it is envelope’s only input, and pins must fail rather than permit arbitrary ceiling bumps.
-// Fork sweep 2026-11-09: local-tasks adds twelve scripts after index; the 18-route tree emits 139 non-catalog scripts.
+// Fork sweep 2026-11-17: local-tasks adds twelve scripts after index; the 18-route tree emits 138 non-catalog scripts.
 export const MOBILE_WEB_APP_BUNDLE_SCRIPT_SWEEP = [
   ['./_layout.tsx', 4],
   ['./h/[hostId]/[...page].tsx', 8],
@@ -84,8 +84,8 @@ export const MOBILE_WEB_APP_BUNDLE_SCRIPT_SWEEP = [
   ['./h/[hostId]/review/[worktreeId].tsx', 94],
   ['./h/[hostId]/session/[worktreeId].tsx', 105],
   ['./h/[hostId]/source-control/[worktreeId].tsx', 115],
-  ['./h/[hostId]/tasks.tsx', 135],
-  ['./h/_layout.tsx', 139]
+  ['./h/[hostId]/tasks.tsx', 134],
+  ['./h/_layout.tsx', 138]
 ]
 
 const sweptScripts = MOBILE_WEB_APP_BUNDLE_SCRIPT_SWEEP.map(([, scripts]) => scripts)

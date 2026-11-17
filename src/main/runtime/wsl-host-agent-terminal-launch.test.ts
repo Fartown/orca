@@ -10,6 +10,10 @@ import {
   resolveWslHostAgentResumeInputs
 } from './wsl-host-agent-terminal-launch'
 
+vi.mock('../../shared/system-cli-install-dirs', () => ({
+  getSystemCliInstallDirectories: () => []
+}))
+
 let root: string
 let windowsMount: string
 let windowsBin: string

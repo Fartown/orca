@@ -19263,7 +19263,6 @@
           "commentSaving": "Saving…",
           "commentSubmit": "Comment",
           "addComment": "Add comment",
-          "orphanComments": "Comments on an earlier version",
           "commentSelection": "Comment",
           "imageTitle": "Image",
           "comments": "Comments",
@@ -23893,6 +23892,12 @@
     "switchToChatView": "Switch to Chat View"
   },
   "localTasks": {
+    "crossHost": {
+      "executionUnavailable": "The session’s host is not connected.",
+      "ownerUnknown": "The session’s execution host is unknown.",
+      "previousLinkUnconfirmed": "Linked to the new task, but removing the previous link could not be confirmed. Check both tasks.",
+      "updateRequired": "Update the task library’s Orca to link sessions across hosts."
+    },
     "needsYou": {
       "title": "Needs you",
       "description": "Sessions on tasks that wait for an approval or an answer, are blocked, or finished a turn you have not seen. Disconnected hosts are left out until they are back.",
@@ -24057,7 +24062,11 @@
         "unrun": "Confirmed, not run yet."
       },
       "claimFailed": "Couldn’t reach the task library, so nothing ran. Try again.",
-      "abandoned": "A result could not be recorded, so this window stopped the run. Check the tasks before finishing. Recorded results are kept; no steps are repeated."
+      "abandoned": "A result could not be recorded, so this window stopped the run. Check the tasks before finishing. Recorded results are kept; no steps are repeated.",
+      "executionHost": "Execution host",
+      "hostUnavailable": "Out of contact",
+      "hostSaveFailed": "Could not save the execution host.",
+      "hostUpgrade": "Update Orca on this host to run the dispatcher."
     },
     "latestProgress": {
       "title": "Latest progress",

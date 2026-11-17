@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import SyncDatabase from '../../main/sqlite/sync-database'
 import { LocalTasksDatabase } from '../../main/local-tasks/local-tasks-database'
+import { LOCAL_TASKS_SCHEMA_VERSION } from '../../main/local-tasks/local-tasks-schema'
 import { rowString } from '../../main/local-tasks/local-tasks-sqlite-row'
 import { SQLITE_TABLE_DISPOSITIONS } from '../wsl-move/wsl-move-storage-dispositions'
 
@@ -15,14 +16,16 @@ const DISPATCHER_TABLES = [
 ]
 
 describe('local tasks WSL move table census', () => {
-  it('classifies every table in a real v7 library and leaves dispatcher records with their owner', () => {
+  it('classifies every table in the current library and leaves dispatcher records with their owner', () => {
     const db = LocalTasksDatabase.openTransient()
     try {
       const tables = db
         .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name LIKE 'local_task_%'")
         .all()
         .map((row) => rowString(row, 'name'))
-      expect(db.prepare('PRAGMA user_version').get()).toMatchObject({ user_version: 7 })
+      expect(db.prepare('PRAGMA user_version').get()).toMatchObject({
+        user_version: LOCAL_TASKS_SCHEMA_VERSION
+      })
       expect(tables).toContain('local_tasks')
       for (const table of tables) {
         expect(SQLITE_TABLE_DISPOSITIONS[`local-tasks.${table}`], table).toBeDefined()

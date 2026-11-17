@@ -10,6 +10,7 @@ import {
   proposalItemProjectCandidates,
   proposalLaunchAgent,
   proposalProjectCandidates,
+  proposalRepoScope,
   proposalWorkspaceOwner,
   resolveProposalProject
 } from './local-task-proposal-targets'
@@ -94,6 +95,20 @@ describe('proposalItemProjectCandidates', () => {
   const projects = [shop, ops, web, docs]
   const store = createTestStore()
   store.setState({ repos: [sshRepo], projectHostSetups: [sshSetup] })
+
+  it('qualifies a source repository id by host instead of choosing its identically named local row', () => {
+    const twins = createTestStore()
+    twins.setState({
+      repos: [
+        { ...sshRepo, executionHostId: 'local', connectionId: null },
+        { ...sshRepo, executionHostId: 'runtime:env-1', connectionId: null }
+      ]
+    })
+    expect(proposalRepoScope(twins.getState(), 'shop', 'runtime:env-1')?.library).toBe(
+      'runtime:env-1'
+    )
+    expect(proposalRepoScope(twins.getState(), 'shop')).toBeNull()
+  })
 
   it('reads a start in a new workspace of a repository on an SSH host from the rows here', () => {
     const start: LocalTaskProposalItem = {

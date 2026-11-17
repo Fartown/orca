@@ -25,7 +25,7 @@ export function localTaskChatPreviewTarget(
   executionHost: `runtime:${string}` | undefined
 } | null {
   const session = library.work.links.sessions.find((entry) => entry.id === taskSessionId)
-  if (session?.surface !== 'chat') {
+  if (session?.surface !== 'chat' || session.executionOrigin) {
     return null
   }
   const tasksById = new Map(library.tasks.map((task) => [task.id, task]))
@@ -44,7 +44,7 @@ export function localTaskChatPreviewTarget(
  * where the user asked, so a tap is never silent.
  */
 export function openLinkedLocalTaskSession(args: {
-  site: Pick<LocalTaskSite, 'hostId' | 'endpoint'>
+  site: Pick<LocalTaskSite, 'hostId' | 'endpoint' | 'resolveExecutionOrigin'>
   api: LocalTasksApi
   library: Pick<LocalTasksLibrary, 'tasks' | 'work' | 'reload'>
   copy: LocalTasksCopy
@@ -62,6 +62,7 @@ export function openLinkedLocalTaskSession(args: {
     hostId: args.site.hostId,
     endpoint: args.site.endpoint,
     session,
+    resolveExecutionOrigin: args.site.resolveExecutionOrigin,
     workspace: owner ? localTaskWorkspaceLinkFor(owner, tasksById, library.work.links) : null
   })
   if (!href) {

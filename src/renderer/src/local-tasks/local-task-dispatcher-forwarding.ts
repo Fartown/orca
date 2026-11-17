@@ -1,5 +1,3 @@
-import { useAppStore } from '@/store'
-import { selectExecutionHostDisplayLabel } from '@/lib/execution-host-display-label'
 import type {
   LocalTaskForwardedFact,
   LocalTaskWatch
@@ -7,24 +5,21 @@ import type {
 import {
   describeLocalTaskInboxEvent,
   inboxLine,
-  isOtherLibraryTaskId,
   pendingWatchRef,
   quotedTaskTitle
 } from '../../../shared/local-tasks/local-task-inbox-copy'
 import { LOCAL_TASK_FORWARDED_FACT_TEXT_MAX } from '../../../shared/local-tasks/local-task-model'
-import { localTaskDispatcherClient } from './local-task-dispatcher-client'
+import type { localTaskDispatcherClient } from './local-task-dispatcher-client'
 import { isProposalMiss } from './local-task-proposal-targets'
 import { findProposalTask, type ProposalDomain } from './local-task-proposal-session-items'
-import { knownDispatcherPaneKey } from './local-task-dispatcher-session'
 import { localTaskIdEndpoint, type LocalTaskEndpointKey } from './local-task-endpoints'
-import { subscribeSelfLocalTaskChanges } from './local-task-self-changes'
+import { isResolvedDispatcherTaskId } from './local-task-dispatcher-ids'
 import { localTasksDomainStore } from './local-tasks-domain-store'
 import type {
   LocalTask,
   LocalTaskEvent,
   LocalTaskStatusDef
 } from '../../../shared/local-tasks/local-task-types'
-import { localTasksSync } from './local-tasks-sync'
 
 // Why a grace: a proposal's own run (status, first session) happens just before its watch lands.
 const EVENT_GRACE_MS = 10 * 60_000
@@ -41,7 +36,7 @@ export type ForwardingView = {
   partitions: readonly { endpoint: string; inContact: boolean }[]
 }
 
-type ForwardingDeps = {
+export type ForwardingDeps = {
   client: Pick<typeof localTaskDispatcherClient, 'watches' | 'recordFacts' | 'watch'>
   watchEvents: (taskId: string) => () => void
   paneKey: () => string | null
@@ -49,15 +44,9 @@ type ForwardingDeps = {
   now: () => number
   /** The synced libraries a pending ref is looked up in. */
   domain: () => ProposalDomain
-}
-
-const DEFAULT_DEPS: ForwardingDeps = {
-  client: localTaskDispatcherClient,
-  watchEvents: (taskId) => localTasksSync.watchEvents(taskId),
-  paneKey: knownDispatcherPaneKey,
-  hostLabel: (endpoint) => selectExecutionHostDisplayLabel(useAppStore.getState(), endpoint),
-  now: Date.now,
-  domain: () => localTasksDomainStore.getState()
+  endpoint?: LocalTaskEndpointKey
+  current?: () => boolean
+  factSourceId?: (taskId: string, eventId: string) => string
 }
 
 /**
@@ -66,7 +55,7 @@ const DEFAULT_DEPS: ForwardingDeps = {
  * contact. It reads those libraries only through their syncs, which follow host contact; it never
  * asks a host on its own, and a host out of contact simply forwards nothing until it is back.
  */
-export function createLocalTaskDispatcherForwarding(deps: ForwardingDeps = DEFAULT_DEPS): {
+export function createLocalTaskDispatcherForwarding(deps: ForwardingDeps): {
   refreshWatches: () => Promise<void>
   forward: (state?: ForwardingView) => Promise<void>
   resolvePending: () => Promise<void>
@@ -81,6 +70,9 @@ export function createLocalTaskDispatcherForwarding(deps: ForwardingDeps = DEFAU
   const contact = new Map<LocalTaskEndpointKey, boolean>()
   let forwarding = false
   let again = false
+  let disposed = false
+  let reads = 0
+  const current = (): boolean => !disposed && (deps.current?.() ?? true)
 
   function collect(state: ForwardingView): LocalTaskForwardedFact[] {
     const facts: LocalTaskForwardedFact[] = []
@@ -90,7 +82,8 @@ export function createLocalTaskDispatcherForwarding(deps: ForwardingDeps = DEFAU
         ? state.projects.find((candidate) => candidate.id === task.projectId)
         : undefined
       for (const event of state.eventsByTaskId[watch.taskId] ?? []) {
-        const sourceId = `${watch.taskId}#${event.id}`
+        const sourceId =
+          deps.factSourceId?.(watch.taskId, event.id) ?? `${watch.taskId}#${event.id}`
         if (sent.has(sourceId) || event.createdAt < watch.addedAt - EVENT_GRACE_MS) {
           continue
         }
@@ -150,14 +143,17 @@ export function createLocalTaskDispatcherForwarding(deps: ForwardingDeps = DEFAU
 
   async function forwardOnce(state: ForwardingView): Promise<void> {
     const paneKey = deps.paneKey()
-    if (!paneKey || remote.length === 0) {
+    if (!current() || !paneKey || remote.length === 0) {
       return
     }
     const facts = collect(state)
     for (let at = 0; at < facts.length; at += FACTS_PER_CALL) {
+      if (!current()) {
+        return
+      }
       const batch = facts.slice(at, at + FACTS_PER_CALL)
       const result = await deps.client.recordFacts(paneKey, batch).catch(() => null)
-      if (result?.ok) {
+      if (result?.ok && current()) {
         for (const fact of batch) {
           sent.add(fact.sourceId)
         }
@@ -166,6 +162,9 @@ export function createLocalTaskDispatcherForwarding(deps: ForwardingDeps = DEFAU
   }
 
   async function forward(state?: ForwardingView): Promise<void> {
+    if (!current()) {
+      return
+    }
     if (forwarding) {
       again = true
       return
@@ -178,7 +177,7 @@ export function createLocalTaskDispatcherForwarding(deps: ForwardingDeps = DEFAU
           console.error('local tasks: forwarding news to the dispatcher failed', error)
         })
         state = undefined
-      } while (again)
+      } while (again && current())
     } finally {
       forwarding = false
     }
@@ -187,11 +186,11 @@ export function createLocalTaskDispatcherForwarding(deps: ForwardingDeps = DEFAU
   async function followPending(paneKey: string, pendingId: string): Promise<boolean> {
     const ref = pendingWatchRef(pendingId)
     const task = ref ? findProposalTask(ref, deps.domain()) : null
-    if (!task || isProposalMiss(task)) {
+    if (!current() || !task || isProposalMiss(task)) {
       return false
     }
     const watched = await deps.client.watch(paneKey, task.id, pendingId).catch(() => null)
-    if (!watched?.ok) {
+    if (!watched?.ok || !current()) {
       return false
     }
     const at = deps.now()
@@ -199,7 +198,9 @@ export function createLocalTaskDispatcherForwarding(deps: ForwardingDeps = DEFAU
       .recordFacts(paneKey, [
         {
           // Why the time: a ref watched again after an unwatch is a new follow, told again.
-          sourceId: `${task.id}#followed#${pendingId}#${at}`,
+          sourceId:
+            deps.factSourceId?.(task.id, `followed#${pendingId}#${at}`) ??
+            `${task.id}#followed#${pendingId}#${at}`,
           kind: 'host',
           at,
           taskId: task.id,
@@ -221,13 +222,16 @@ export function createLocalTaskDispatcherForwarding(deps: ForwardingDeps = DEFAU
    */
   async function resolvePending(): Promise<void> {
     const paneKey = deps.paneKey()
-    if (!paneKey || pending.length === 0 || resolving) {
+    if (!current() || !paneKey || pending.length === 0 || resolving) {
       return
     }
     resolving = true
     try {
       // Why safe to drop inside: `pending` is replaced, never changed, so this walks the old list.
       for (const pendingId of pending) {
+        if (!current()) {
+          return
+        }
         if (await followPending(paneKey, pendingId)) {
           pending = pending.filter((id) => id !== pendingId)
         }
@@ -238,18 +242,23 @@ export function createLocalTaskDispatcherForwarding(deps: ForwardingDeps = DEFAU
   }
 
   async function refreshWatches(): Promise<void> {
+    const sequence = ++reads
     const paneKey = deps.paneKey()
-    if (!paneKey) {
+    if (!current() || !paneKey) {
       return
     }
     const result = await deps.client.watches(paneKey).catch(() => null)
-    if (!result?.ok) {
+    if (!result?.ok || !current() || sequence !== reads) {
       return
     }
     pending = result.watches
       .map((watch) => watch.taskId)
       .filter((taskId) => pendingWatchRef(taskId) !== null)
-    remote = result.watches.filter((watch) => isOtherLibraryTaskId(watch.taskId))
+    remote = result.watches.filter(
+      (watch) =>
+        isResolvedDispatcherTaskId(watch.taskId) &&
+        localTaskIdEndpoint(watch.taskId) !== (deps.endpoint ?? 'local')
+    )
     const wanted = new Set(remote.map((watch) => watch.taskId))
     for (const taskId of wanted) {
       if (!releases.has(taskId)) {
@@ -271,38 +280,11 @@ export function createLocalTaskDispatcherForwarding(deps: ForwardingDeps = DEFAU
     forward,
     resolvePending,
     dispose: () => {
+      disposed = true
       for (const release of releases.values()) {
         release()
       }
       releases.clear()
     }
-  }
-}
-
-/** Mounted with the dispatcher's other services: follows this library's notices and the syncs. */
-export function bindLocalTaskDispatcherForwarding(): () => void {
-  const forwarding = createLocalTaskDispatcherForwarding()
-  void forwarding.refreshWatches()
-  const unsubscribeChanges = subscribeSelfLocalTaskChanges((scopes) => {
-    if (scopes === null || scopes.includes('events')) {
-      void forwarding.refreshWatches()
-    }
-  })
-  const unsubscribeDomain = localTasksDomainStore.subscribe((state, previous) => {
-    // Why the tasks: a pending ref is found once its host's library is read again.
-    if (state.tasks !== previous.tasks) {
-      void forwarding.resolvePending()
-    }
-    if (
-      state.eventsByTaskId !== previous.eventsByTaskId ||
-      state.partitions !== previous.partitions
-    ) {
-      void forwarding.forward(state)
-    }
-  })
-  return () => {
-    unsubscribeChanges()
-    unsubscribeDomain()
-    forwarding.dispose()
   }
 }
