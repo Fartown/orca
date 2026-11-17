@@ -1,4 +1,4 @@
-import React, { useCallback, useContext, useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { translate } from '@/i18n/i18n'
 import type { ArtifactShareComment } from '../../../../../shared/self-hosted-artifacts/artifact-share-comments-contract'
@@ -12,8 +12,13 @@ import {
 
 export type ShareCommentRange = { startLine: number; endLine: number }
 
-/** A comment being written: anchored to source lines, with the reader's exact selection if any. */
-export type ShareCommentDraft = { range: ShareCommentRange; quote?: string }
+/** A comment being written, as the app's review notes record one: its lines and selected text. */
+export type ShareCommentDraft = {
+  range: ShareCommentRange
+  quote?: string
+  /** Opened from a block's add button rather than a text selection; never sent. */
+  wholeBlock?: boolean
+}
 
 export type ShareCommentsState = {
   /** False while loading and when the server cannot take comments; blocks then render bare. */
@@ -25,6 +30,9 @@ export type ShareCommentsState = {
   /** The comment whose card and text are emphasized, from a hover, focus or click on its text. */
   activeCommentId: string | null
   setActiveCommentId: (id: string | null) => void
+  /** Briefly flashed card and text, so the eye finds which pair a click connected. */
+  attentionCommentId: string | null
+  flashComment: (id: string) => void
   submit: (body: string) => Promise<ShareCommentPostError | null>
   /** A share link carries no identity, so every reader may edit or delete every comment. */
   editComment: (id: string, body: string) => Promise<boolean>
@@ -33,13 +41,8 @@ export type ShareCommentsState = {
 
 const ShareCommentsContext = React.createContext<ShareCommentsState | null>(null)
 
-/** Like the app's preview, a comment belongs to the block that contains its last line. */
-export function isShareCommentInBlock(
-  comment: Pick<ArtifactShareComment, 'endLine'>,
-  block: ShareCommentRange
-): boolean {
-  return block.startLine <= comment.endLine && comment.endLine <= block.endLine
-}
+// Matches the app's review-note attention animation.
+const ATTENTION_MS = 900
 
 export function ShareCommentsProvider({
   children
@@ -50,6 +53,16 @@ export function ShareCommentsProvider({
   const [comments, setComments] = useState<ArtifactShareComment[]>([])
   const [draft, setDraft] = useState<ShareCommentDraft | null>(null)
   const [activeCommentId, setActiveCommentId] = useState<string | null>(null)
+  const [attentionCommentId, setAttentionCommentId] = useState<string | null>(null)
+  const attentionTimer = useRef(0)
+  const flashComment = useCallback((id: string) => {
+    window.clearTimeout(attentionTimer.current)
+    // Why null first: flashing the same comment twice must restart its animation.
+    setAttentionCommentId(null)
+    requestAnimationFrame(() => setAttentionCommentId(id))
+    attentionTimer.current = window.setTimeout(() => setAttentionCommentId(null), ATTENTION_MS)
+  }, [])
+  useEffect(() => () => window.clearTimeout(attentionTimer.current), [])
 
   // Why on return to the tab: other readers comment meanwhile; the page never polls on its own.
   useEffect(() => {
@@ -138,11 +151,24 @@ export function ShareCommentsProvider({
       cancelDraft,
       activeCommentId,
       setActiveCommentId,
+      attentionCommentId,
+      flashComment,
       submit,
       editComment,
       deleteComment
     }),
-    [available, comments, draft, cancelDraft, activeCommentId, submit, editComment, deleteComment]
+    [
+      available,
+      comments,
+      draft,
+      cancelDraft,
+      activeCommentId,
+      attentionCommentId,
+      flashComment,
+      submit,
+      editComment,
+      deleteComment
+    ]
   )
   return <ShareCommentsContext.Provider value={value}>{children}</ShareCommentsContext.Provider>
 }
