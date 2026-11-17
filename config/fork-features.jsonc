@@ -4390,7 +4390,7 @@
         {
           "file": "src/renderer/src/components/sidebar/use-worktree-agent-activation.ts",
           "mustContain": "openLocalTaskSessionFromAgentRow",
-          "why": "Linked workspace sidebar sessions open conversation-first beside their task (D-024, REQ-028)."
+          "why": "Only task mode opens a linked sidebar session beside its task; project mode preserves native session activation (D-028, REQ-026, REQ-028)."
         },
         {
           "file": "src/renderer/src/components/use-terminal-workspace-store-bindings.ts",

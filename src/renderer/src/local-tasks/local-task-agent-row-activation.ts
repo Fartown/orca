@@ -5,13 +5,22 @@ import { parsePaneKey } from '../../../shared/stable-pane-id'
 import { localTasksDomainStore } from './local-tasks-domain-store'
 import { localTaskSessionPanelStore } from './local-task-session-panel-store'
 import { openLocalTaskPage } from './local-task-navigation'
+import { selectLocalTaskSidebarMode } from './local-task-sidebar-mode'
 
-/** A sidebar agent row names one live pane. Only a link on that exact host and pane may replace it. */
+/** Only task mode may replace a sidebar pane activation with its exact linked task. */
 export function openLocalTaskSessionFromAgentRow(
   worktreeId: string,
   tabId: string,
   paneKey: string
 ): boolean {
+  const domain = localTasksDomainStore.getState()
+  if (!selectLocalTaskSidebarMode(domain)) {
+    const panel = localTaskSessionPanelStore.getState()
+    if (panel.mode !== 'closed') {
+      panel.close()
+    }
+    return false
+  }
   const pane = parsePaneKey(paneKey)
   if (!pane || pane.tabId !== tabId) {
     return false
@@ -20,12 +29,10 @@ export function openLocalTaskSessionFromAgentRow(
   if (!hostId) {
     return false
   }
-  const links = localTasksDomainStore
-    .getState()
-    .links.sessions.filter(
-      (session) =>
-        session.worktreeId === worktreeId && parseExecutionHostId(session.hostId)?.id === hostId
-    )
+  const links = domain.links.sessions.filter(
+    (session) =>
+      session.worktreeId === worktreeId && parseExecutionHostId(session.hostId)?.id === hostId
+  )
   const exact = links.filter((session) => session.paneKey === paneKey)
   const candidates = exact.length
     ? exact
