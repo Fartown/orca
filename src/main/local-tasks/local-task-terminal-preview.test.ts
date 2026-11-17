@@ -103,6 +103,29 @@ describe('task terminal preview preparation', () => {
     expect(f.reveal).not.toHaveBeenCalled()
   })
 
+  it('never prepares an external origin through this task library host even with matching raw pane ids', async () => {
+    const f = fixture()
+    for (const hostId of ['foreign:11111111-1111-4111-8111-111111111111/local', 'local']) {
+      expect(
+        await prepareLocalTaskTerminalPreview(
+          {
+            ...f.link,
+            hostId,
+            executionOrigin: {
+              installationId: '11111111-1111-4111-8111-111111111111',
+              hostId: 'local',
+              hostLabel: 'Other Mac'
+            }
+          },
+          f.source
+        )
+      ).toBe(false)
+    }
+    expect(f.source.session).not.toHaveBeenCalled()
+    expect(f.source.terminal).not.toHaveBeenCalled()
+    expect(f.reveal).not.toHaveBeenCalled()
+  })
+
   it('does not recreate a deleted pane or adopt a mismatched worktree', async () => {
     const f = fixture()
     delete f.session.terminalLayoutsByTabId[tabId]

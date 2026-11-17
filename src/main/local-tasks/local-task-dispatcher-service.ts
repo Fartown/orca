@@ -20,6 +20,16 @@ import { LocalTaskDispatcher } from './local-task-dispatcher'
 import { runLocalTaskWrite } from './local-task-mutation-receipts'
 import { writeResultSchema } from '../../shared/local-tasks/local-task-result-schemas'
 import type { OrcaRuntimeService } from '../runtime/orca-runtime'
+import { FLOATING_TERMINAL_WORKTREE_ID } from '../../shared/constants'
+import {
+  LOCAL_TASK_DISPATCHER_SESSION_PREFERENCE_KEY,
+  LOCAL_TASK_DISPATCHER_PANE_PREFERENCE_KEY,
+  type LocalTaskDispatcherWorkspace
+} from '../../shared/local-tasks/local-task-dispatcher-workspace'
+import {
+  prepareLocalTaskDispatcherWorkspace,
+  type LocalTaskDispatcherWorkspaceRuntime
+} from './local-task-dispatcher-workspace'
 
 const EMPTY_RESULT = writeResultSchema({})
 const CONVERSATION_RESULT = writeResultSchema({ conversation: conversationSchema })
@@ -32,6 +42,7 @@ const claimSubscriptionId = (proposalId: string): string =>
 export abstract class LocalTaskDispatcherService {
   readonly dispatcher: LocalTaskDispatcher
   private readonly claimLifetimes = new Map<string, ClaimLifetime>()
+  private preparingWorkspace: Promise<LocalTaskDispatcherWorkspace> | null = null
 
   constructor(
     private readonly dispatcherDb: LocalTasksDatabase,
@@ -53,13 +64,52 @@ export abstract class LocalTaskDispatcherService {
 
   protected abstract dispatcherAttentionKeyMayReturn(): (key: string) => boolean
 
+  async prepareDispatcherWorkspace(runtime: LocalTaskDispatcherWorkspaceRuntime) {
+    if (this.dispatcherDb.readOnly) {
+      return { ok: false as const, code: 'read_only' as const }
+    }
+    const preparing = (this.preparingWorkspace ??= prepareLocalTaskDispatcherWorkspace(
+      this.dispatcherDb,
+      runtime
+    ))
+    try {
+      return await preparing
+    } finally {
+      if (this.preparingWorkspace === preparing) {
+        this.preparingWorkspace = null
+      }
+    }
+  }
+
   registerDispatcher(input: LocalTasksDispatcherRegisterInput) {
     return this.writeDispatcher(
       input.clientOperationId,
       'dispatcher.register',
       input,
       CONVERSATION_RESULT,
-      (now) => this.dispatcher.register(input.paneKey, input.agent, now, input.previousPaneKey)
+      (now) => {
+        const result = this.dispatcher.register(
+          input.paneKey,
+          input.agent,
+          now,
+          input.previousPaneKey
+        )
+        if (result.ok) {
+          const save = this.dispatcherDb.prepare(
+            'INSERT INTO local_task_preferences (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value'
+          )
+          save.run(
+            LOCAL_TASK_DISPATCHER_SESSION_PREFERENCE_KEY,
+            JSON.stringify({
+              worktreeId: input.worktreeId ?? FLOATING_TERMINAL_WORKTREE_ID,
+              paneKey: input.paneKey
+            })
+          )
+          save.run(LOCAL_TASK_DISPATCHER_PANE_PREFERENCE_KEY, input.paneKey)
+          this.dispatcherDb.touch('preferences')
+        }
+        return result
+      }
     )
   }
 

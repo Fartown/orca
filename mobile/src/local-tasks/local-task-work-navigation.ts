@@ -10,6 +10,7 @@ import {
 import { folderWorkspaceKey } from '../../../src/shared/workspace-scope'
 import { workspaceRouteHref } from '../navigation/workspace-execution-host'
 import { localTaskRouteExecutionHost, type LocalTaskEndpoint } from './local-task-endpoint'
+import type { LocalTaskExecutionOriginResolver } from './local-task-execution-origin'
 
 /** The id the phone's workspace routes take: a folder workspace goes by its `folder:` key. */
 export function localTaskWorkspaceRouteId(
@@ -74,7 +75,24 @@ export function localTaskSessionHref(args: {
   endpoint: LocalTaskEndpoint
   session: LocalTaskSessionLink
   workspace: LocalTaskWorkspaceLink | null
+  resolveExecutionOrigin?: LocalTaskExecutionOriginResolver
 }): string | null {
+  if (args.session.executionOrigin) {
+    const route = args.resolveExecutionOrigin?.(args.session.executionOrigin)
+    return route && args.session.worktreeId
+      ? localTaskWorkspaceHref({
+          hostId: route.hostId,
+          endpoint: route.endpoint,
+          link: {
+            kind: 'git-worktree',
+            worktreeId: args.session.worktreeId,
+            folderWorkspaceId: null,
+            hostId: args.session.executionOrigin.hostId
+          },
+          paneKey: localTaskSessionPaneKey(args.session)
+        })
+      : null
+  }
   const ownRouteId = args.session.worktreeId
   const workspaceRouteId = args.workspace ? localTaskWorkspaceRouteId(args.workspace) : null
   // Why: a session keeps the workspace it ran in (D-007/REQ-011). A reparented task's old session

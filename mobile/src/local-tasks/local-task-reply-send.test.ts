@@ -63,6 +63,24 @@ function host(sendAccepted: boolean) {
 }
 
 describe('a "Needs you" reply into a terminal session', () => {
+  it('never sends a foreign session reply through the task library client', async () => {
+    const client = host(true)
+    const outcome = await sendLocalTaskReply({
+      client,
+      session: terminalSession({
+        executionOrigin: {
+          installationId: '11111111-1111-4111-8111-111111111111',
+          hostId: 'local',
+          hostLabel: 'Another Mac'
+        }
+      }),
+      text: 'run the tests',
+      reasons
+    })
+    expect(outcome).toEqual({ kind: 'not-sent', reason: reasons.notConnected })
+    expect(client.sendRequest).not.toHaveBeenCalled()
+  })
+
   it("types into the linked pane's terminal once", async () => {
     const client = host(true)
     const outcome = await sendLocalTaskReply({

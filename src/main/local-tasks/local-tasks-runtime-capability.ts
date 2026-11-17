@@ -1,5 +1,7 @@
 import {
   LOCAL_TASKS_RUNTIME_CAPABILITY,
+  LOCAL_TASKS_CROSS_HOST_SESSIONS_CAPABILITY,
+  LOCAL_TASKS_DISPATCHER_HOST_CAPABILITY,
   LOCAL_TASKS_V2_RUNTIME_CAPABILITY
 } from '../../shared/local-tasks/local-tasks-capability'
 import { localTasksReadiness } from './local-tasks-readiness'
@@ -11,6 +13,11 @@ import { localTasksReadiness } from './local-tasks-readiness'
  */
 export function localTasksRuntimeCapabilities(): string[] {
   return localTasksReadiness.isTaskHost()
-    ? [LOCAL_TASKS_RUNTIME_CAPABILITY, LOCAL_TASKS_V2_RUNTIME_CAPABILITY]
+    ? [
+        LOCAL_TASKS_RUNTIME_CAPABILITY,
+        LOCAL_TASKS_V2_RUNTIME_CAPABILITY,
+        LOCAL_TASKS_CROSS_HOST_SESSIONS_CAPABILITY,
+        LOCAL_TASKS_DISPATCHER_HOST_CAPABILITY
+      ]
     : []
 }

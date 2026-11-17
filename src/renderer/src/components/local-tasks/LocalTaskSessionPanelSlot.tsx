@@ -21,7 +21,11 @@ import {
 import { parsePaneKey } from '../../../../shared/stable-pane-id'
 import type { LocalTaskSessionLink } from '../../../../shared/local-tasks/local-task-link-types'
 import { useLocalTasksDomain } from '@/local-tasks/local-tasks-domain-store'
-import { useLocalTaskHostInContact } from '@/local-tasks/local-task-host-contact'
+import {
+  findLocalTaskSessionChatTab,
+  isLocalTaskSessionTerminalSurfaceCurrent,
+  useLocalTaskSessionInContact
+} from '@/local-tasks/local-task-session-execution-contact'
 import {
   useLocalTaskSessionPanel,
   localTaskSessionPanelStore
@@ -73,20 +77,25 @@ function LocalTaskSessionPanelContent({
   const tabId = session.paneKey
     ? (parsePaneKey(session.paneKey)?.tabId ?? session.tabId)
     : session.tabId
-  const inContact = useLocalTaskHostInContact(session.hostId)
+  const inContact = useLocalTaskSessionInContact(session)
   const sessionState = useLocalTaskSessionProgress(session)?.state ?? 'unknown'
   const terminalLayout = useAppStore((state) =>
     tabId ? state.terminalLayoutsByTabId[tabId] : undefined
   )
   const mountReady = useAppStore((state) => localTaskSessionMountReady(state, session, tabId))
-  const { id: sessionLinkId, hostId, surface } = session
+  const { id: sessionLinkId, hostId, surface, executionOrigin } = session
   useEffect(() => {
     setPreparationFailed(false)
     if (mountReady || !inContact || surface !== 'terminal') {
       return
     }
     let cancelled = false
-    void prepareLocalTaskSessionPreview({ id: sessionLinkId, hostId, surface }).then(
+    void prepareLocalTaskSessionPreview({
+      id: sessionLinkId,
+      hostId,
+      surface,
+      executionOrigin
+    }).then(
       (prepared) => {
         if (!cancelled) {
           setPreparationFailed(prepared === false)
@@ -101,7 +110,7 @@ function LocalTaskSessionPanelContent({
     return () => {
       cancelled = true
     }
-  }, [hostId, inContact, mountReady, requestToken, sessionLinkId, surface])
+  }, [hostId, inContact, mountReady, requestToken, sessionLinkId, surface, executionOrigin])
   const paneKey =
     resolveLocalTaskSessionPaneKey(session, terminalLayout) ??
     (!inContact &&
@@ -109,15 +118,7 @@ function LocalTaskSessionPanelContent({
     publishedPortal.current.tabId === tabId
       ? publishedPortal.current.paneKey
       : null)
-  const chatTab = useAppStore((state) =>
-    session.worktreeId
-      ? (state.unifiedTabsByWorktree[session.worktreeId] ?? []).find(
-          (tab) =>
-            tab.contentType === 'agent-session' &&
-            (tab.id === session.tabId || (session.sessionId && tab.entityId === session.sessionId))
-        )
-      : undefined
-  )
+  const chatTab = useAppStore((state) => findLocalTaskSessionChatTab(state, session))
   const chatOwner = useAppStore((state) =>
     chatTab && chatTab.contentType === 'agent-session'
       ? structuredAgentSessionOwnerForTab(state, chatTab)
@@ -126,7 +127,10 @@ function LocalTaskSessionPanelContent({
   const chatTarget = useMemo(() => structuredAgentSessionTargetForHost(chatOwner), [chatOwner])
   const isChat =
     session.surface === 'chat' && chatTab?.contentType === 'agent-session' && chatTarget
-  const terminalAvailable = Boolean(session.worktreeId && tabId && paneKey)
+  const sourceSurfaceCurrent = useAppStore((state) =>
+    isLocalTaskSessionTerminalSurfaceCurrent(state, session)
+  )
+  const terminalAvailable = Boolean(sourceSurfaceCurrent && session.worktreeId && tabId && paneKey)
   const portalStatus = useActivityTerminalPortalStatus(
     portalTarget,
     !isChat && inContact ? paneKey : null,
@@ -189,6 +193,7 @@ function LocalTaskSessionPanelContent({
     const plan = planLocalTaskSessionPortal(candidate, inContact, publishedPortal.current)
     if (
       mountReady &&
+      sourceSurfaceCurrent &&
       (plan.requestMount || (!candidate && !isChat && inContact)) &&
       session.worktreeId &&
       tabId
@@ -206,7 +211,8 @@ function LocalTaskSessionPanelContent({
     requestToken,
     session.worktreeId,
     tabId,
-    terminalAvailable
+    terminalAvailable,
+    sourceSurfaceCurrent
   ])
 
   useEffect(() => () => setActivityTerminalPortals([]), [])

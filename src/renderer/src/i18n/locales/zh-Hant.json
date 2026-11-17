@@ -22765,5 +22765,13 @@
     "launchTerminal": "啟動終端機",
     "promptPlaceholder": "新增提示詞（選填）：/ 選擇技能，@ 選擇檔案",
     "promptPlaceholderFilesOnly": "新增提示詞（選填）：@ 選擇檔案"
+  },
+  "localTasks": {
+    "dispatcher": {
+      "executionHost": "執行主機",
+      "hostUnavailable": "主機未連接",
+      "hostSaveFailed": "無法儲存執行主機。",
+      "hostUpgrade": "請更新此主機上的 Orca 後再執行總管。"
+    }
   }
 }

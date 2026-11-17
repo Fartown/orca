@@ -144,6 +144,7 @@ const localTaskEventSchema: z.ZodType<LocalTaskEvent, unknown> = z.object({
 
 export const localTasksStatusSchema: z.ZodType<LocalTasksStatus, unknown> = z.object({
   taskHost: z.boolean(),
+  installationId: z.string().optional(),
   inProgressCount: z.number().optional(),
   projectCount: z.number().optional(),
   sourceHidden: z.boolean().optional(),

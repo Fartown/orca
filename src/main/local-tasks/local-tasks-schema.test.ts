@@ -230,6 +230,112 @@ function libraryAt(stampedVersion: number): string {
 }
 
 describe('local tasks schema upgrade', () => {
+  it('upgrades v7 pane uniqueness without losing native sessions or their attention marks', () => {
+    const directory = mkdtempSync(join(tmpdir(), 'local-tasks-v7-'))
+    directories.push(directory)
+    const db = LocalTasksDatabase.open('profile', directory)
+    const service = new LocalTasksService(db, () => 1_000)
+    const project = service.createProject({
+      clientOperationId: 'project',
+      name: 'Shop',
+      prefix: 'SHOP'
+    })
+    if (!project.ok) {
+      throw new Error(project.code)
+    }
+    const created = service.createTask(
+      { clientOperationId: 'task', projectId: project.project.id, title: 'Native task' },
+      'desktop'
+    )
+    if (!created.ok) {
+      throw new Error(created.code)
+    }
+    expect(
+      service.execution.linkWorkspace(
+        {
+          clientOperationId: 'workspace',
+          taskId: created.task.id,
+          hostId: 'local',
+          kind: 'git-worktree',
+          worktreeId: SHOP_WORKTREE,
+          linkedVia: 'manual'
+        },
+        'desktop'
+      ).ok
+    ).toBe(true)
+    const native = service.execution.recordSession(
+      {
+        clientOperationId: 'session',
+        taskId: created.task.id,
+        hostId: 'local',
+        surface: 'terminal',
+        paneKey: 'tab:leaf',
+        linkedVia: 'start'
+      },
+      'desktop'
+    )
+    if (!native.ok) {
+      throw new Error(native.code)
+    }
+    db.prepare(
+      'INSERT INTO local_task_attention_state (item_key, task_session_id, seen_at, created_at) VALUES (?, ?, 1, 1)'
+    ).run('tab:leaf@1', native.session.id)
+    service.execution.dispose()
+    db.close()
+    const raw = new SyncDatabase(getLocalTasksDatabasePath('profile', directory))
+    raw.pragma('foreign_keys = OFF')
+    raw.exec(`CREATE TABLE local_task_sessions_v7 (
+      id TEXT PRIMARY KEY, task_id TEXT NOT NULL REFERENCES local_tasks(id) ON DELETE CASCADE,
+      host_id TEXT NOT NULL, worktree_id TEXT, instance_id TEXT, surface TEXT NOT NULL,
+      tab_id TEXT, pane_key TEXT UNIQUE, session_id TEXT, provider_session TEXT, agent TEXT,
+      linked_via TEXT NOT NULL, opened_at INTEGER NOT NULL);
+      INSERT INTO local_task_sessions_v7 SELECT id, task_id, host_id, worktree_id, instance_id,
+        surface, tab_id, pane_key, session_id, provider_session, agent, linked_via, opened_at
+        FROM local_task_sessions;
+      DROP TABLE local_task_sessions;
+      ALTER TABLE local_task_sessions_v7 RENAME TO local_task_sessions;`)
+    raw.pragma('user_version = 7')
+    raw.close()
+
+    const upgraded = LocalTasksDatabase.open('profile', directory)
+    const updated = new LocalTasksService(upgraded, () => 2_000)
+    expect(updated.execution.listLinks().sessions).toEqual([native.session])
+    expect(
+      upgraded.prepare('SELECT task_session_id FROM local_task_attention_state').get()
+    ).toEqual({ task_session_id: native.session.id })
+    expect(upgraded.prepare('PRAGMA foreign_key_check').all()).toEqual([])
+    const origin = {
+      installationId: '11111111-1111-4111-8111-111111111111',
+      hostId: 'ssh:build',
+      hostLabel: 'Build server'
+    }
+    const external = updated.execution.recordSession(
+      {
+        clientOperationId: 'external',
+        taskId: created.task.id,
+        hostId: 'ssh:build',
+        worktreeId: 'folder:folder-on-build',
+        surface: 'terminal',
+        paneKey: 'tab:leaf',
+        linkedVia: 'manual',
+        executionOrigin: origin
+      },
+      'desktop'
+    )
+    expect(external).toMatchObject({ ok: true, session: { executionOrigin: origin } })
+    updated.execution.dispose()
+    upgraded.close()
+
+    const reopened = LocalTasksDatabase.open('profile', directory)
+    const reader = new LocalTasksService(reopened, () => 3_000)
+    expect(reader.execution.listLinks().sessions).toContainEqual(
+      expect.objectContaining({ executionOrigin: origin, worktreeId: 'folder:folder-on-build' })
+    )
+    expect(reopened.prepare('PRAGMA user_version').get()).toEqual({ user_version: 8 })
+    reader.execution.dispose()
+    reopened.close()
+  })
+
   it.each([1, 2, 3])('brings a library stamped v%i to the host-owned model', (stamped) => {
     const db = LocalTasksDatabase.open('profile', libraryAt(stamped))
     const service = new LocalTasksService(db, () => 1_000_000)

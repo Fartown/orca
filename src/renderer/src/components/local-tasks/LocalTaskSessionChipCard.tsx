@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { toast } from 'sonner'
 import { ArrowUpRight, CornerDownRight, Link2, Unlink } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { translate } from '@/i18n/i18n'
@@ -10,20 +11,70 @@ import type { LocalTask } from '../../../../shared/local-tasks/local-task-types'
 import { openLocalTaskPage } from '@/local-tasks/local-task-navigation'
 import {
   chatSessionIds,
-  recordLocalTaskSession,
+  recordLocalTaskSessionLink,
   terminalSessionIds
 } from '@/local-tasks/local-task-session-recording'
 import { unlinkLocalTaskSession } from '@/local-tasks/local-task-workspace-linking'
-import { useLocalTasksDomain } from '@/local-tasks/local-tasks-domain-store'
+import {
+  useLocalTasksDomain,
+  selectLocalTasksPartition
+} from '@/local-tasks/local-tasks-domain-store'
 import { localTasksClient } from '@/local-tasks/local-tasks-runtime-client'
 import { runLocalTaskWrite } from '@/local-tasks/local-task-writes'
 import { useLocalTaskRowWriteReason } from '@/local-tasks/local-task-write-reason'
-import { buildLocalTaskIndex } from '@/local-tasks/local-task-grouping'
-import { localTaskWorkspaceFamilyIds } from '../../../../shared/local-tasks/local-task-hierarchy'
 import type { LocalTaskSessionPane } from './LocalTaskSessionChip'
 import { LocalTaskSummaryCard } from './LocalTaskSummaryCard'
 import { useLocalTaskIndex } from './use-local-task-list-model'
 import { useLocalTaskPaneWorkspaceLink } from '@/local-tasks/local-task-pane-workspace-link'
+import { localTaskSessionLinkChoices } from '@/local-tasks/local-task-session-link-choices'
+import { localTaskIdEndpoint, localTaskOwnerId } from '@/local-tasks/local-task-endpoints'
+import { useLocalTaskHostLabel } from './LocalTaskHostLabel'
+
+function SessionTaskChoice({
+  task,
+  crossHost,
+  nested,
+  busy,
+  onPick
+}: {
+  task: LocalTask
+  crossHost: boolean
+  nested: boolean
+  busy: boolean
+  onPick: () => void
+}): React.JSX.Element {
+  const reason = useLocalTaskRowWriteReason(task.id)
+  const hostLabel = useLocalTaskHostLabel(localTaskIdEndpoint(task.id))
+  const supported = useLocalTasksDomain(
+    (state) =>
+      !crossHost ||
+      Boolean(selectLocalTasksPartition(state, localTaskIdEndpoint(task.id))?.installationId)
+  )
+  const unavailable =
+    reason ??
+    (!supported
+      ? translate(
+          'localTasks.crossHost.updateRequired',
+          'Update the task library’s Orca to link sessions across hosts.'
+        )
+      : null)
+  return (
+    <button
+      type="button"
+      disabled={unavailable !== null || busy}
+      title={unavailable ?? undefined}
+      onClick={onPick}
+      className="flex w-full min-w-0 items-center gap-1.5 rounded px-1 py-1 text-left text-xs hover:bg-accent disabled:opacity-50"
+    >
+      {nested ? <CornerDownRight className="size-3 shrink-0 text-muted-foreground" /> : null}
+      <span className="shrink-0 font-mono text-2xs text-muted-foreground">{task.ref}</span>
+      <span className="min-w-0 flex-1 truncate text-foreground">{task.title}</span>
+      {crossHost ? (
+        <span className="shrink-0 text-2xs text-muted-foreground">{hostLabel}</span>
+      ) : null}
+    </button>
+  )
+}
 
 /** The card behind a linked session's chip: the task at a glance, then relink or open it. */
 function LinkedCard({
@@ -95,9 +146,8 @@ function LinkedCard({
 }
 
 /**
- * 关联到任务…: the task that owns this workspace and every task below it that works in it; a
- * descendant with its own workspace works elsewhere (REQ-011), and the host would refuse it.
- * Relinking a linked session lists the others and unlinks it first, as the host keeps one link.
+ * Offers tasks sharing this workspace and tasks on other hosts. Save the replacement before
+ * removing a link in another library; an unconfirmed removal must not discard the new link.
  */
 function LinkChooser({
   pane,
@@ -113,54 +163,63 @@ function LinkChooser({
   const { hostId, link } = useLocalTaskPaneWorkspaceLink(pane.worktreeId)
   const agentType = useAppStore((state) => state.agentStatusByPaneKey[pane.paneKey]?.agentType)
   const tasks = useLocalTasksDomain((state) => state.tasks)
-  const workspaces = useLocalTasksDomain((state) => state.links.workspaces)
-  const writeReason = useLocalTaskRowWriteReason(replacing?.id ?? link?.taskId ?? null)
+  const links = useLocalTasksDomain((state) => state.links)
+  const instanceId = useAppStore(
+    (state) => state.getKnownWorktreeById(pane.worktreeId, hostId)?.instanceId
+  )
+  const writeReason = useLocalTaskRowWriteReason(replacing?.id ?? null)
   const [busy, setBusy] = useState(false)
-  // Why nothing: the chip shows no entry on a workspace without a task (REQ-011, REQ-016).
-  if (!link) {
-    return null
-  }
-  const owner = tasks.find((task) => task.id === link.taskId)
-  const owners = new Set(workspaces.map((workspace) => workspace.taskId))
-  const tasksById = new Map(tasks.map((task) => [task.id, task]))
-  const family = (
-    owner
-      ? localTaskWorkspaceFamilyIds(owner.id, buildLocalTaskIndex([], tasks), (taskId) =>
-          owners.has(taskId)
-        ).flatMap((taskId) => tasksById.get(taskId) ?? [])
-      : []
-  ).filter((task) => task.id !== replacing?.taskId)
+  const choices = localTaskSessionLinkChoices(tasks, links, {
+    id: pane.worktreeId,
+    hostId,
+    ...(instanceId ? { instanceId } : {})
+  }).filter(({ task }) => task.id !== replacing?.taskId)
   const tabId = parsePaneKey(pane.paneKey)?.tabId ?? null
-  const pick = async (task: LocalTask): Promise<void> => {
+  const pick = async (task: LocalTask, crossHost: boolean): Promise<void> => {
     setBusy(true)
     try {
-      if (
-        replacing &&
-        !(await runLocalTaskWrite(() => localTasksClient.unlinkSession(replacing.id)))
-      ) {
-        return
-      }
+      const acrossLibraries =
+        replacing !== null && localTaskIdEndpoint(replacing.id) !== localTaskIdEndpoint(task.id)
       const ids = pane.sessionId
         ? chatSessionIds(tabId, pane.sessionId)
         : tabId
           ? { ...terminalSessionIds(tabId), paneKey: pane.paneKey }
           : { surface: 'terminal' as const, paneKey: pane.paneKey }
-      const recorded = await recordLocalTaskSession(
+      const recorded = await recordLocalTaskSessionLink(
         {
           taskId: task.id,
           hostId,
           worktreeId: pane.worktreeId,
-          instanceId: link.instanceId,
+          instanceId: instanceId ?? link?.instanceId ?? null,
           agent: isTuiAgent(agentType)
             ? agentType
             : isTuiAgent(replacing?.agent)
               ? replacing.agent
               : null,
-          linkedVia: 'manual'
+          linkedVia: 'manual',
+          crossHost,
+          ...(replacing && !acrossLibraries
+            ? {
+                replacingSessionLinkId: localTaskOwnerId(replacing.id)
+              }
+            : {})
         },
         ids
       )
       if (recorded) {
+        if (
+          replacing &&
+          acrossLibraries &&
+          !(await runLocalTaskWrite(() => localTasksClient.unlinkSession(replacing.id)))
+        ) {
+          toast.error(
+            translate(
+              'localTasks.crossHost.previousLinkUnconfirmed',
+              'Linked to the new task, but removing the previous link could not be confirmed. Check both tasks.'
+            )
+          )
+          return
+        }
         onDone()
       }
     } finally {
@@ -173,20 +232,15 @@ function LinkChooser({
         {translate('localTasks.links.linkSessionTo', 'Link this session to')}
       </span>
       {writeReason ? <p className="px-1 text-2xs text-muted-foreground">{writeReason}</p> : null}
-      {family.map((task) => (
-        <button
+      {choices.map(({ task, crossHost }) => (
+        <SessionTaskChoice
           key={task.id}
-          type="button"
-          disabled={writeReason !== null || busy}
-          onClick={() => void pick(task)}
-          className="flex w-full min-w-0 items-center gap-1.5 rounded px-1 py-1 text-left text-xs hover:bg-accent disabled:opacity-50"
-        >
-          {task.id !== owner?.id ? (
-            <CornerDownRight className="size-3 shrink-0 text-muted-foreground" />
-          ) : null}
-          <span className="shrink-0 font-mono text-2xs text-muted-foreground">{task.ref}</span>
-          <span className="min-w-0 truncate text-foreground">{task.title}</span>
-        </button>
+          task={task}
+          crossHost={crossHost}
+          nested={!crossHost && task.id !== link?.taskId}
+          busy={busy || writeReason !== null}
+          onPick={() => void pick(task, crossHost)}
+        />
       ))}
       {replacing ? (
         <div className="mt-1 flex gap-1.5 border-t border-border pt-2">

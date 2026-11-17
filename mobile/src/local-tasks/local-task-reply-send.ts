@@ -176,7 +176,7 @@ export async function sendLocalTaskReply(args: {
   text: string
   reasons: LocalTaskReplyReasons
 }): Promise<LocalTaskReplyOutcome> {
-  if (!args.client || args.client.getState() !== 'connected') {
+  if (args.session.executionOrigin || !args.client || args.client.getState() !== 'connected') {
     return { kind: 'not-sent', reason: args.reasons.notConnected }
   }
   if (args.session.surface === 'chat') {

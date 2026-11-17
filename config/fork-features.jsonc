@@ -2592,7 +2592,7 @@
         },
         {
           "file": "config/scripts/verify-mobile-web-app-bundle.mjs",
-          "mustContain": "['./h/_layout.tsx', 139]",
+          "mustContain": "['./h/_layout.tsx', 138]",
           "why": "the route-prefix sweep records continuation's measured chunk-sharing change"
         },
         {
@@ -3262,6 +3262,21 @@
       "goal": "管理各主机的任务、会话与进展，支持直接派活、人工验收和需确认的总管提案",
       "journal": "docs/issue/本地任务管理/journal.md",
       "dependsOn": [
+        "src/renderer/src/runtime/runtime-terminal-stream.ts",
+        "src/shared/remote-runtime/remote-runtime-pty-id.ts",
+        "src/shared/ssh-pty-id.ts",
+        "src/renderer/src/lib/terminal-tab-owner-activation.ts",
+        "src/shared/project-section-catalog-schema.ts",
+        "src/shared/folder-workspace-types.ts",
+        "src/shared/workspace-linked-item-schema.ts",
+        "src/renderer/src/store/adopt-from-endpoint.ts",
+        "src/renderer/src/store/catalog-identity.ts",
+        "src/renderer/src/store/slices/project-group-owner-routing.ts",
+        "src/shared/runtime-host-descriptor.ts",
+        "src/shared/runtime-host-status.ts",
+        "src/renderer/src/store/slices/runtime-environment-ssh-selectors.ts",
+        "src/renderer/src/lib/resolve-owner.ts",
+        "src/main/runtime/host-descriptor.ts",
         "src/renderer/src/components/native-chat/NativeChatPaneHeader.tsx",
         "src/renderer/src/components/sidebar/CommentMarkdown.tsx",
         "src/renderer/src/components/editor/markdown-table-of-contents.ts",
@@ -3522,6 +3537,10 @@
       ],
       "policyId": "local-tasks",
       "ownedPaths": [
+        "src/renderer/src/components/terminal-pane/pane-foreground-read-scheduler.ts",
+        "src/renderer/src/runtime/runtime-terminal-inspection-contact.ts",
+        "src/renderer/src/runtime/runtime-terminal-inspection-contact.test.ts",
+        "src/renderer/src/components/terminal-pane/pane-foreground-agent-contact.test.ts",
         "src/main/local-tasks/**",
         "src/shared/local-tasks/**",
         "src/main/startup/main-process-local-tasks.ts",
@@ -3539,6 +3558,25 @@
         "src/main/runtime/rpc/methods/local-task-dispatcher-methods.ts"
       ],
       "requiredFiles": [
+        "src/renderer/src/components/terminal-pane/pane-foreground-read-scheduler.ts",
+        "src/renderer/src/runtime/runtime-terminal-inspection-contact.ts",
+        "src/renderer/src/runtime/runtime-terminal-inspection-contact.test.ts",
+        "src/renderer/src/components/terminal-pane/pane-foreground-agent-contact.test.ts",
+        "src/main/local-tasks/local-task-dispatcher-workspace.ts",
+        "src/shared/local-tasks/local-task-dispatcher-workspace.ts",
+        "src/renderer/src/local-tasks/local-task-dispatcher-source.ts",
+        "src/renderer/src/local-tasks/local-task-dispatcher-presentation.ts",
+        "src/renderer/src/local-tasks/local-task-dispatcher-send.ts",
+        "src/renderer/src/components/local-tasks/LocalTaskDispatcherHostSelect.tsx",
+        "src/renderer/src/local-tasks/local-task-dispatcher-ids.ts",
+        "src/renderer/src/local-tasks/local-task-dispatcher-changes.ts",
+        "src/renderer/src/local-tasks/local-task-dispatcher-forwarding-bind.ts",
+        "src/shared/local-tasks/local-task-session-origin.ts",
+        "src/main/local-tasks/local-task-session-schema.ts",
+        "src/renderer/src/local-tasks/local-task-session-origin-route.ts",
+        "src/renderer/src/local-tasks/local-task-session-execution-sync.ts",
+        "src/renderer/src/local-tasks/local-task-cross-host-session-link.ts",
+        "mobile/src/local-tasks/local-task-execution-origin.ts",
         "src/main/local-tasks/local-tasks-service.ts",
         "src/main/local-tasks/local-tasks-database.ts",
         "src/main/startup/main-process-local-tasks.ts",
@@ -3572,6 +3610,76 @@
         "src/main/local-tasks/local-task-proposal-ownership.ts"
       ],
       "seams": [
+        {
+          "file": "src/renderer/src/lib/codex-session-restart-test-fixture.ts",
+          "mustContain": "export function codexRestartRuntimeContact",
+          "why": "Reuse the existing Codex restart evidence fixture for canonical verified and out-of-contact host snapshots"
+        },
+        {
+          "file": "src/renderer/src/lib/codex-session-restart.test.ts",
+          "mustContain": "markLiveCodexSessionsForRestart",
+          "why": "Codex restart observations follow canonical source contact and preserve offline remote panes"
+        },
+        {
+          "file": "tests/e2e/remote-agent-completion-authority.unit.test.ts",
+          "mustContain": "remote agent completion authority",
+          "why": "Remote completion requires shared contact before fenced execution-host evidence can be read"
+        },
+        {
+          "file": "src/renderer/src/components/terminal-pane/pane-delayed-agent-startup.test.ts",
+          "mustContain": "without privately retrying",
+          "why": "Legacy remote hints remain unverifiable and only a new command may request another observation"
+        },
+        {
+          "file": "src/renderer/src/components/terminal-pane/pty-connection-unanswered-command-finish.spec.ts",
+          "mustContain": "retains an out-of-contact SSH row regardless of local verifiability",
+          "why": "An unreachable SSH owner cannot be judged from local process capability; restored source evidence may retire its row"
+        },
+        {
+          "file": "src/renderer/src/runtime/runtime-terminal-inspection.ts",
+          "mustContain": "captureRuntimeTerminalInspectionContact(ptyId)",
+          "why": "Fence all remote process inspection before dispatch and after await using shared contact evidence"
+        },
+        {
+          "file": "src/renderer/src/components/terminal-pane/pane-foreground-agent-tracker-contract.ts",
+          "mustContain": "subscribeReadContactChange?",
+          "why": "Expose optional shared contact callbacks without giving foreground tracking its own host state"
+        },
+        {
+          "file": "src/renderer/src/components/terminal-pane/pane-foreground-agent-tracker.ts",
+          "mustContain": "createPaneForegroundReadScheduler(deps, readForeground)",
+          "why": "Suspend scheduled process reads while out of contact and resume only on shared verdict changes"
+        },
+        {
+          "file": "src/renderer/src/components/terminal-pane/pty-connection/pane-agent-identity.ts",
+          "mustContain": "getReadContactKey: runtimeTerminalProcessContactKey",
+          "why": "Inject shared contact tracking into pane foreground reads without changing native identity rules"
+        },
+        {
+          "file": "src/renderer/src/runtime/runtime-terminal-inspection.test.ts",
+          "mustContain": "inspectRuntimeTerminalProcess",
+          "why": "Existing process-inspection fixtures declare their reachable owners explicitly"
+        },
+        {
+          "file": "src/main/runtime/wsl-host-agent-launch-paths.test.ts",
+          "mustContain": "getSystemCliInstallDirectories: () => []",
+          "why": "WSL fixture isolates host-installed agent CLIs during cross-platform dispatcher validation without changing production resolution or assertions"
+        },
+        {
+          "file": "src/main/runtime/wsl-host-agent-terminal-launch.test.ts",
+          "mustContain": "getSystemCliInstallDirectories: () => []",
+          "why": "WSL fixture isolates host-installed agent CLIs during cross-platform dispatcher validation without changing production resolution or assertions"
+        },
+        {
+          "file": "src/main/codex-cli/command-guest-path.test.ts",
+          "mustContain": "getSystemCliInstallDirectories: () => []",
+          "why": "WSL fixture isolates host-installed agent CLIs during cross-platform dispatcher validation without changing production resolution or assertions"
+        },
+        {
+          "file": "resources/skills/released-digests.json",
+          "mustContain": "69376456185483ea494eb354be09bce5b8bde9d1c792e8cb1ce7687691d1a021",
+          "why": "Generated add-only release ledger includes the v1.4.250 skill identity so full-history feature validation uses the same compatible install history"
+        },
         {
           "file": "src/main/runtime/terminal/focus/focus-terminal.ts",
           "mustContain": "terminalWindowProjectionSource()",
@@ -3911,6 +4019,12 @@
           "file": "src/renderer/src/i18n/locales/zh.json",
           "mustContain": "\"localTasks\": {",
           "why": "Chinese copy of the local tasks feature"
+        },
+
+        {
+          "file": "src/renderer/src/i18n/locales/zh-Hant.json",
+          "mustContain": "\"localTasks\": {",
+          "why": "Traditional Chinese dispatcher host selection copy"
         },
         {
           "file": "mobile/src/host-screen/host-screen-overlays.tsx",
@@ -4399,6 +4513,38 @@
         }
       ],
       "tests": [
+        "config/scripts/build-mobile-web-app-bundle.test.mjs",
+        "src/renderer/src/lib/codex-session-restart.test.ts",
+        "tests/e2e/remote-agent-completion-authority.unit.test.ts",
+        "src/renderer/src/components/terminal-pane/pane-delayed-agent-startup.test.ts",
+        "src/renderer/src/components/terminal-pane/pty-connection-main-pane-start.test.ts",
+        "src/renderer/src/components/terminal-pane/pty-connection-input-and-repaint.test.ts",
+        "src/renderer/src/components/terminal-pane/pty-connection-main-pane-restore-start.test.ts",
+        "src/renderer/src/components/terminal-pane/pty-connection-completion-and-notification.test.ts",
+        "src/renderer/src/components/terminal-pane/pane-foreground-agent-tracker.test.ts",
+        "src/renderer/src/components/terminal-pane/pane-foreground-inspect-observation-identity.test.ts",
+        "src/renderer/src/components/terminal-pane/pty-connection-foreground-agent.test.ts",
+        "src/renderer/src/components/terminal-pane/pane-foreground-process-exit-retire.test.ts",
+        "src/renderer/src/runtime/runtime-terminal-inspection-contact.test.ts",
+        "src/renderer/src/components/terminal-pane/pane-foreground-agent-contact.test.ts",
+        "src/renderer/src/runtime/runtime-terminal-inspection.test.ts",
+        "src/main/runtime/wsl-host-agent-launch-paths.test.ts",
+        "src/main/runtime/wsl-host-agent-terminal-launch.test.ts",
+        "src/main/codex-cli/command-guest-path.test.ts",
+        "src/main/local-tasks/local-task-dispatcher-workspace.test.ts",
+        "src/renderer/src/local-tasks/local-task-dispatcher-client.test.ts",
+        "src/renderer/src/local-tasks/local-task-dispatcher-changes.test.ts",
+        "src/renderer/src/local-tasks/local-task-dispatcher-forwarding.test.ts",
+        "src/renderer/src/local-tasks/local-task-dispatcher-wake.test.ts",
+        "src/renderer/src/local-tasks/local-task-dispatcher-ledger.test.ts",
+        "src/renderer/src/local-tasks/local-task-session-execution-sync.test.ts",
+        "src/renderer/src/local-tasks/local-task-cross-host-reply.test.ts",
+        "src/main/local-tasks/local-task-session-replacement.test.ts",
+        "mobile/src/local-tasks/local-task-execution-origin.test.ts",
+        "src/main/local-tasks/local-task-cross-host-sessions.test.ts",
+        "src/renderer/src/local-tasks/local-task-foreign-session-progress.test.ts",
+        "src/renderer/src/local-tasks/local-task-session-origin-route.test.ts",
+        "src/shared/local-tasks/local-task-session-origin.test.ts",
         "mobile/src/local-tasks/local-task-filter.test.ts",
         "mobile/src/local-tasks/local-task-form-state.test.ts",
         "mobile/src/local-tasks/local-task-list-projection.test.ts",
@@ -4513,6 +4659,8 @@
         "mobile/src/local-tasks/local-tasks-copy.test.ts",
         "mobile/src/local-tasks/local-tasks-library-header.test.tsx",
         "src/renderer/src/local-tasks/local-task-proposal-targets.test.ts",
+        "src/renderer/src/local-tasks/local-task-dispatcher-source.test.ts",
+        "src/renderer/src/local-tasks/local-task-dispatcher-session.test.ts",
         "src/renderer/src/local-tasks/local-task-dispatcher-ask.test.ts",
         "src/shared/local-tasks/local-task-latest-progress-choice.test.ts",
         "src/shared/local-tasks/local-task-attention-rules.test.ts",
@@ -4536,10 +4684,10 @@
         "mobile/src/local-tasks/local-task-activity-section.test.tsx"
       ],
       "checks": [
-        "pnpm exec vitest run --config config/vitest.config.ts src/main/local-tasks src/shared/local-tasks src/main/runtime/rpc/methods/local-tasks.test.ts src/shared/host-operation-ownership.test.ts src/main/runtime/runtime-rpc/fork-mobile-rpc-method-allowlist.test.ts src/main/runtime/runtime-rpc-mobile-method-allowlist.test.ts src/cli/local-tasks src/main/ipc/desktop-runtime-sender-lifecycle.test.ts",
-        "ORCA_BACKGROUND_LAUNCH=1 pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/local-tasks src/renderer/src/components/local-tasks src/renderer/src/components/task-page src/renderer/src/components/cmd-j src/renderer/src/lib/worktree-creation-structured-session.test.ts src/renderer/src/lib/agent-message-send.test.ts src/renderer/src/lib/active-agent-note-send-delivery-guard.test.ts",
+        "pnpm exec vitest run --config config/vitest.config.ts src/main/local-tasks src/shared/local-tasks src/main/runtime/rpc/methods/local-tasks.test.ts src/main/runtime/wsl-host-agent-launch-paths.test.ts src/main/runtime/wsl-host-agent-terminal-launch.test.ts src/main/codex-cli/command-guest-path.test.ts src/shared/host-operation-ownership.test.ts src/main/runtime/runtime-rpc/fork-mobile-rpc-method-allowlist.test.ts src/main/runtime/runtime-rpc-mobile-method-allowlist.test.ts src/cli/local-tasks src/main/ipc/desktop-runtime-sender-lifecycle.test.ts",
+        "ORCA_BACKGROUND_LAUNCH=1 pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/local-tasks src/renderer/src/components/local-tasks src/renderer/src/components/task-page src/renderer/src/lib/codex-session-restart.test.ts tests/e2e/remote-agent-completion-authority.unit.test.ts src/renderer/src/components/terminal-pane/pane-delayed-agent-startup.test.ts src/renderer/src/components/terminal-pane/pty-connection-main-pane-start.test.ts src/renderer/src/components/terminal-pane/pty-connection-input-and-repaint.test.ts src/renderer/src/components/terminal-pane/pty-connection-main-pane-restore-start.test.ts src/renderer/src/components/terminal-pane/pty-connection-completion-and-notification.test.ts src/renderer/src/components/terminal-pane/pane-foreground-agent-tracker.test.ts src/renderer/src/components/terminal-pane/pane-foreground-inspect-observation-identity.test.ts src/renderer/src/components/terminal-pane/pty-connection-foreground-agent.test.ts src/renderer/src/components/terminal-pane/pane-foreground-process-exit-retire.test.ts src/renderer/src/runtime/runtime-terminal-inspection-contact.test.ts src/renderer/src/components/terminal-pane/pane-foreground-agent-contact.test.ts src/renderer/src/runtime/runtime-terminal-inspection.test.ts src/renderer/src/components/cmd-j src/renderer/src/lib/worktree-creation-structured-session.test.ts src/renderer/src/lib/agent-message-send.test.ts src/renderer/src/lib/active-agent-note-send-delivery-guard.test.ts",
         "pnpm --dir mobile exec vitest run src/local-tasks src/home/MobileHomeTasksAndAutomations.test.tsx src/session/use-notification-pane-navigation.test.tsx src/components/bottom-drawer src/mobile-web-shell/bridge/bridge-rpc-client-frames.test.ts src/components/MobileMarkdown.rendering.test.tsx src/components/mobile-markdown-selectable.test.tsx",
-        "pnpm exec vitest run --config config/vitest.config.ts config/scripts/mobile-web-app-file-attachment-grant.test.mjs config/scripts/mobile-web-app/mobile-web-app-session-dictation-capture.test.mjs config/scripts/mobile-web-app/mobile-web-app-page-grant-call-sites.test.mjs config/scripts/mobile-web-app/mobile-web-app-screencast-lane-grant.test.mjs config/scripts/mobile-web-app/mobile-web-app-external-navigation-grant.test.mjs"
+        "pnpm exec vitest run --config config/vitest.config.ts config/scripts/build-mobile-web-app-bundle.test.mjs config/scripts/mobile-web-app-file-attachment-grant.test.mjs config/scripts/mobile-web-app/mobile-web-app-session-dictation-capture.test.mjs config/scripts/mobile-web-app/mobile-web-app-page-grant-call-sites.test.mjs config/scripts/mobile-web-app/mobile-web-app-screencast-lane-grant.test.mjs config/scripts/mobile-web-app/mobile-web-app-external-navigation-grant.test.mjs"
       ]
     },
     {

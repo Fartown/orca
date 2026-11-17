@@ -77,6 +77,17 @@ export const localTaskLinksClient = {
     ),
   recordSession: async (input: WithoutOperation<LocalTasksLinksRecordSessionInput>) => {
     const endpoint = localTaskIdEndpoint(input.taskId)
+    if (input.executionOrigin) {
+      const result = await writeLocalTasks(
+        endpoint,
+        'localTasks.links.recordSession',
+        { ...input, taskId: localTaskOwnerId(input.taskId) },
+        sessionResult
+      )
+      return result.ok
+        ? { ...result, session: toClientLocalTaskSessionLink(endpoint, result.session) }
+        : result
+    }
     const repoId = input.worktreeId ? getRepoIdFromWorktreeId(input.worktreeId) : null
     const hostId = localTaskOwnerHostNow(endpoint, input.hostId, repoId)
     if (!hostId) {

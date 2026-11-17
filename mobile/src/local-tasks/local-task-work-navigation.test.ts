@@ -58,6 +58,42 @@ function session(extra: Partial<LocalTaskSessionLink> = {}): LocalTaskSessionLin
 }
 
 describe('localTaskSessionHref', () => {
+  const executionOrigin = {
+    installationId: '11111111-1111-4111-8111-111111111111',
+    hostId: 'local',
+    hostLabel: 'Local Mac'
+  }
+
+  it('never opens a foreign raw pane on the task library host without a verified execution route', () => {
+    expect(
+      localTaskSessionHref({
+        hostId: 'mini-task-library',
+        endpoint: SELF_LOCAL_TASK_ENDPOINT,
+        session: session({ hostId: 'local', executionOrigin }),
+        workspace: workspace()
+      })
+    ).toBeNull()
+  })
+
+  it('opens an external session on the trusted existing execution host with its original pane', () => {
+    const href = localTaskSessionHref({
+      hostId: 'mini-task-library',
+      endpoint: localTaskEndpointFor('runtime:mini'),
+      session: session({ hostId: 'foreign:stored-key', executionOrigin }),
+      workspace: workspace(),
+      resolveExecutionOrigin: () => ({
+        hostId: 'mac-execution-host',
+        endpoint: SELF_LOCAL_TASK_ENDPOINT
+      })
+    })
+    expect(route(href)).toEqual({
+      pathname: `/h/mac-execution-host/session/${encodeURIComponent('repo::/old-parent')}`,
+      name: null,
+      paneKey: PANE_KEY,
+      executionHost: null
+    })
+  })
+
   it('routes a reparented session to the workspace it actually ran in, not the new parent', () => {
     const href = localTaskSessionHref({
       hostId: 'paired-desktop',

@@ -135,8 +135,16 @@ export function proposalWorktreeScope(
 }
 
 /** A repository's scope from the host it runs on; null when this window does not list it. */
-export function proposalRepoScope(state: AppState, repoId: string): ProposalProjectScope | null {
-  const repo = state.repos.find((candidate) => candidate.id === repoId)
+export function proposalRepoScope(
+  state: AppState,
+  repoId: string,
+  hostId?: string
+): ProposalProjectScope | null {
+  const candidates = state.repos.filter(
+    (candidate) =>
+      candidate.id === repoId && (!hostId || getRepoExecutionHostId(candidate) === hostId)
+  )
+  const repo = candidates.length === 1 ? candidates[0] : undefined
   return repo
     ? {
         orcaProjectIds: new Set([orcaProjectIdForRepo(state, repo)]),
@@ -154,7 +162,7 @@ function proposalItemScope(
     return null
   }
   if ('repoId' in target) {
-    return proposalRepoScope(state, target.repoId)
+    return proposalRepoScope(state, target.repoId, target.hostId)
   }
   const worktree = findProposalWorktree(state, target)
   return isProposalMiss(worktree) ? null : proposalWorktreeScope(state, worktree)

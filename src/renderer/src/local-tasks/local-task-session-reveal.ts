@@ -12,6 +12,12 @@ import { localTaskSessionPanelStore } from './local-task-session-panel-store'
 import { localTaskPageStore } from './local-task-page-store'
 import { openLocalTaskPage } from './local-task-navigation'
 import { resolveAutoAckTabTargets } from '@/hooks/agent-auto-ack-targets'
+import {
+  findLocalTaskSessionChatTab,
+  isLocalTaskSessionInContact,
+  isLocalTaskSessionTerminalSurfaceCurrent
+} from './local-task-session-execution-contact'
+import { structuredAgentSessionTargetForHost } from '@/runtime/structured-agent-session-owner'
 
 /**
  * Shows a linked session through Orca's own navigation: the pane for a terminal, the chat tab for a
@@ -19,16 +25,15 @@ import { resolveAutoAckTabTargets } from '@/hooks/agent-auto-ack-targets'
  * when this window cannot place it.
  */
 export function revealLocalTaskSession(link: LocalTaskSessionLink): boolean {
+  if (link.executionOrigin && !isLocalTaskSessionInContact(useAppStore.getState(), link)) {
+    return false
+  }
   const { worktreeId } = link
   if (!worktreeId) {
     return false
   }
   const executionHostId = parseExecutionHostId(link.hostId)?.id ?? null
-  const chatTab = (useAppStore.getState().unifiedTabsByWorktree[worktreeId] ?? []).find(
-    (tab) =>
-      tab.contentType === 'agent-session' &&
-      (tab.id === link.tabId || (link.sessionId !== null && tab.entityId === link.sessionId))
-  )
+  const chatTab = findLocalTaskSessionChatTab(useAppStore.getState(), link)
   if (chatTab) {
     if (
       activateAndRevealWorkspace(worktreeId, executionHostId ? { executionHostId } : undefined) ===
@@ -36,7 +41,18 @@ export function revealLocalTaskSession(link: LocalTaskSessionLink): boolean {
     ) {
       return false
     }
-    return activateStructuredAgentSessionTab({ worktreeId, tabId: chatTab.id })
+    const target = link.executionOrigin ? structuredAgentSessionTargetForHost(link.hostId) : null
+    return activateStructuredAgentSessionTab({
+      worktreeId,
+      tabId: chatTab.id,
+      ...(target ? { target } : {})
+    })
+  }
+  if (
+    link.executionOrigin &&
+    !isLocalTaskSessionTerminalSurfaceCurrent(useAppStore.getState(), link)
+  ) {
+    return false
   }
   const pane = link.paneKey ? parsePaneKey(link.paneKey) : null
   const tabId = pane?.tabId ?? link.tabId

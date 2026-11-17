@@ -1,3 +1,5 @@
+import type { LocalTaskSessionExecutionOrigin } from './local-task-session-origin'
+
 export type LocalTaskWorkspaceKind = 'git-worktree' | 'folder'
 
 /** How a link was made: from the task's Start, or by picking an existing workspace or session. */
@@ -30,6 +32,7 @@ export type LocalTaskSessionLink = {
   id: string
   taskId: string
   hostId: string
+  executionOrigin?: LocalTaskSessionExecutionOrigin
   worktreeId: string | null
   instanceId: string | null
   surface: LocalTaskSessionSurface

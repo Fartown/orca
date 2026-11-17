@@ -19,8 +19,13 @@ import { localTaskPageStore } from '@/local-tasks/local-task-page-store'
 import { LOCAL_TASK_DISPATCHER_WAKE_PREFERENCE_KEY } from '@/local-tasks/local-task-preference-keys'
 import { resolveProposalAgent } from '@/local-tasks/local-task-proposal-targets'
 import { useLocalTasksDomain } from '@/local-tasks/local-tasks-domain-store'
-import { localTasksClient } from '@/local-tasks/local-tasks-runtime-client'
-import { LOCAL_EXECUTION_HOST_ID } from '../../../../shared/execution-host'
+import {
+  getLocalTaskDispatcherPreferences,
+  useLocalTaskDispatcherEndpoint
+} from '@/local-tasks/local-task-dispatcher-source'
+import { localTaskDispatcherClientFor } from '@/local-tasks/local-task-dispatcher-client'
+import { useLocalTaskHostInContact } from '@/local-tasks/local-task-host-contact'
+import { LocalTaskDispatcherHostSelect } from './LocalTaskDispatcherHostSelect'
 import { DispatcherDispatched, DispatcherUnread, LedgerSection } from './LocalTaskDispatcherLedger'
 import { DispatcherWatches } from './LocalTaskDispatcherWatches'
 import { useLocalTaskHostLabel } from './LocalTaskHostLabel'
@@ -36,9 +41,14 @@ export function useLocalTaskDispatcherWaitingCount(): number {
 }
 
 function useDispatcherStatusLabel(paneKey: string | null, live: boolean): string {
+  const endpoint = useLocalTaskDispatcherEndpoint()
+  const inContact = useLocalTaskHostInContact(endpoint)
   const state = useAppStore((app) =>
     paneKey && live ? (app.agentStatusByPaneKey[paneKey]?.state ?? null) : null
   )
+  if (!inContact) {
+    return translate('localTasks.dispatcher.hostUnavailable', 'Out of contact')
+  }
   if (!live) {
     return translate('localTasks.dispatcher.status.closed', 'Not open')
   }
@@ -60,10 +70,16 @@ function openDispatcherConversation(): void {
   }
 }
 
-/** It always runs in this window's floating workspace, so its host is this machine. */
+function useDispatcherWakeOn(): boolean {
+  useStore(localTaskDispatcherStore, (state) => state.preferencesByEndpoint)
+  useLocalTaskDispatcherEndpoint()
+  useLocalTasksDomain((state) => state.preferences)
+  return getLocalTaskDispatcherPreferences()[LOCAL_TASK_DISPATCHER_WAKE_PREFERENCE_KEY] !== '0'
+}
 function DispatcherWhere({ paneKey }: { paneKey: string | null }): React.JSX.Element | null {
   const agent = useLocalTaskDispatcherAgent(paneKey)
-  const host = useLocalTaskHostLabel(LOCAL_EXECUTION_HOST_ID)
+  const endpoint = useLocalTaskDispatcherEndpoint()
+  const host = useLocalTaskHostLabel(endpoint)
   if (!agent) {
     return null
   }
@@ -79,18 +95,19 @@ function DispatcherWhere({ paneKey }: { paneKey: string | null }): React.JSX.Ele
 }
 
 function DispatcherBar(): React.JSX.Element {
+  const endpoint = useLocalTaskDispatcherEndpoint()
+  const inContact = useLocalTaskHostInContact(endpoint)
   const opening = useStore(localTaskDispatcherStore, (state) => state.opening)
   const { paneKey, live } = useLocalTaskDispatcherPane()
   const status = useDispatcherStatusLabel(paneKey, live)
-  const wakeOn = useLocalTasksDomain(
-    (state) => state.preferences[LOCAL_TASK_DISPATCHER_WAKE_PREFERENCE_KEY] !== '0'
-  )
+  const wakeOn = useDispatcherWakeOn()
   return (
     <div className="flex min-h-11 flex-wrap items-center gap-x-2.5 gap-y-2 rounded-lg border border-border/60 py-1.5 pl-3.5 pr-2">
       <span className="inline-flex shrink-0 items-center gap-2 text-sm font-medium text-foreground">
         <Bot className="size-4 text-muted-foreground" aria-hidden />
         {status}
       </span>
+      <LocalTaskDispatcherHostSelect />
       {live ? <DispatcherWhere paneKey={paneKey} /> : null}
       <span className="min-w-0 flex-1" />
       {live ? (
@@ -98,7 +115,7 @@ function DispatcherBar(): React.JSX.Element {
           <Switch
             checked={wakeOn}
             onCheckedChange={(on) =>
-              void localTasksClient.setPreference(
+              void localTaskDispatcherClientFor(endpoint).setPreference(
                 LOCAL_TASK_DISPATCHER_WAKE_PREFERENCE_KEY,
                 on ? null : '0'
               )
@@ -110,7 +127,7 @@ function DispatcherBar(): React.JSX.Element {
       <Button
         size="sm"
         variant={live ? 'outline' : 'default'}
-        disabled={opening}
+        disabled={opening || !inContact}
         onClick={openDispatcherConversation}
       >
         {opening ? (
@@ -129,7 +146,7 @@ function DispatcherBar(): React.JSX.Element {
 /**
  * The dispatcher's ledger (REQ-030, REQ-031): what waits on the person and what it follows on the
  * left, what it has not handled yet and what it dispatched on the right. Every block shows even
- * before the dispatcher is opened. The conversation itself is in the floating workspace.
+ * before the dispatcher is opened. The conversation stays on its execution host.
  */
 export function LocalTaskDispatcherView({
   model
@@ -141,9 +158,7 @@ export function LocalTaskDispatcherView({
   const unrun = useLocalTaskProposals((state) => state.unrun)
   const claimed = useLocalTaskProposals((state) => state.claimed)
   const { live } = useLocalTaskDispatcherPane()
-  const wakeOn = useLocalTasksDomain(
-    (state) => state.preferences[LOCAL_TASK_DISPATCHER_WAKE_PREFERENCE_KEY] !== '0'
-  )
+  const wakeOn = useDispatcherWakeOn()
   const names = useProposalNames()
   const now = useNow(60_000)
   const waiting = [...pending, ...unrun, ...claimed]

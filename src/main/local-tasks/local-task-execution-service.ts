@@ -56,7 +56,7 @@ export class LocalTaskExecutionService {
     private readonly db: LocalTasksDatabase,
     private readonly now: () => number,
     onVolatileChange: LocalTaskVolatileChange = () => {},
-    sessions: LocalTaskHostSessionSource = SILENT_LOCAL_TASK_HOST_SESSIONS
+    private readonly sessions: LocalTaskHostSessionSource = SILENT_LOCAL_TASK_HOST_SESSIONS
   ) {
     this.attention = new LocalTaskAttentionMonitor(db, now, sessions, onVolatileChange)
   }
@@ -104,13 +104,17 @@ export class LocalTaskExecutionService {
   }
 
   /** Its commit re-arms judgment, so a session recorded by tab alone gets its pane claimed. */
-  recordSession(input: LocalTasksLinksRecordSessionInput, source: LocalTaskEventSource) {
+  recordSession(
+    input: LocalTasksLinksRecordSessionInput,
+    source: LocalTaskEventSource,
+    selfInstallationId = this.sessions.installationId?.()
+  ) {
     return this.write(
       input.clientOperationId,
       'links.recordSession',
       input,
       SESSION_RESULT,
-      (now) => recordLocalTaskSession(this.db, input, source, now)
+      (now) => recordLocalTaskSession(this.db, input, source, now, selfInstallationId)
     )
   }
 

@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { LocalTaskSessionExecutionOriginSchema } from './local-task-session-origin'
 import { LOCAL_TASK_STATUS_CATEGORIES, LOCAL_TASK_STATUS_COLORS } from './local-task-model'
 import type {
   LocalTask,
@@ -97,6 +98,7 @@ export const statusResultSchema: z.ZodType<LocalTasksStatus> = z.object({
   reason: z.string().nullable(),
   revision: z.number(),
   taskHostId: z.string().nullable(),
+  installationId: z.string().optional(),
   inProgressCount: z.number().int().nonnegative().optional(),
   projectCount: z.number().int().nonnegative().optional(),
   sourceHidden: z.boolean().optional(),
@@ -196,6 +198,7 @@ export const sessionLinkSchema: z.ZodType<LocalTaskSessionLink> = z.object({
   id: z.string(),
   taskId: z.string(),
   hostId: z.string(),
+  executionOrigin: LocalTaskSessionExecutionOriginSchema.optional(),
   worktreeId: z.string().nullable(),
   instanceId: z.string().nullable(),
   surface: z.enum(everyMember<LocalTaskSessionSurface>()(['terminal', 'chat'])),

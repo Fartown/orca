@@ -7,7 +7,8 @@ import type { LocalTask } from '../../../../shared/local-tasks/local-task-types'
 
 const contact = vi.hoisted(() => ({ inContact: true }))
 vi.mock('@/local-tasks/local-task-host-contact', () => ({
-  useLocalTaskHostInContact: () => contact.inContact
+  useLocalTaskHostInContact: () => contact.inContact,
+  isLocalTaskHostInContact: () => contact.inContact
 }))
 
 import { localTasksDomainStore } from '@/local-tasks/local-tasks-domain-store'

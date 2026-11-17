@@ -168,7 +168,8 @@ export function localTaskSessionViews(args: {
       return {
         link,
         task: args.index.tasksById.get(link.taskId) ?? null,
-        state: !args.inContact ? 'unverifiable' : (entry?.state ?? 'unknown'),
+        state:
+          !args.inContact || link.executionOrigin ? 'unverifiable' : (entry?.state ?? 'unknown'),
         lastMessage: entry?.lastMessage ?? null
       }
     })
@@ -200,9 +201,10 @@ export function localTaskRowSessionStates(args: {
     .sort((a, b) => a.openedAt - b.openedAt)
     .map((link) => ({
       id: link.id,
-      state: args.inContact
-        ? (lookup.progressById.get(link.id)?.state ?? 'unknown')
-        : 'unverifiable'
+      state:
+        args.inContact && !link.executionOrigin
+          ? (lookup.progressById.get(link.id)?.state ?? 'unknown')
+          : 'unverifiable'
     }))
 }
 

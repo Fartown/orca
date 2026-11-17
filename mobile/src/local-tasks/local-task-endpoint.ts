@@ -6,6 +6,7 @@ import {
 } from '../../../src/shared/local-tasks/local-task-endpoint-ids'
 import type { RpcClient } from '../transport/rpc-client'
 import type { ConnectionState } from '../transport/types'
+import type { LocalTaskExecutionOriginResolver } from './local-task-execution-origin'
 
 /**
  * Which Orca's task library a view reads (D-008): the paired host's own, or one of the servers it
@@ -32,6 +33,7 @@ export type LocalTaskSite = {
   capabilities: readonly string[]
   /** The library's Orca, as the user knows it. */
   label: string
+  resolveExecutionOrigin?: LocalTaskExecutionOriginResolver
 }
 
 export const SELF_LOCAL_TASK_ENDPOINT: LocalTaskEndpoint = {

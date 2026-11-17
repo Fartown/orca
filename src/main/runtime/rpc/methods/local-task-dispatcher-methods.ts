@@ -3,6 +3,7 @@ import {
   LocalTasksDispatcherInboxParams,
   LocalTasksDispatcherRecordFactsParams,
   LocalTasksDispatcherRegisterParams,
+  LocalTasksDispatcherPrepareWorkspaceParams,
   LocalTasksDispatcherUnwatchParams,
   LocalTasksDispatcherWatchParams,
   LocalTasksDispatcherWatchesParams,
@@ -22,6 +23,7 @@ const DESKTOP_ONLY: LocalTaskFailure = { ok: false, code: 'desktop_only' }
 
 /** A desktop window registers its dispatcher pane, claims what it runs and reports the results. */
 export const LOCAL_TASK_DISPATCHER_DESKTOP_METHODS: readonly string[] = [
+  'localTasks.dispatcher.prepareWorkspace',
   'localTasks.dispatcher.register',
   'localTasks.dispatcher.recordFacts',
   'localTasks.proposals.claim',
@@ -47,6 +49,15 @@ function service(): LocalTasksService {
  * registers a dispatcher or reports what it executed, and only a person decides a proposal.
  */
 export const LOCAL_TASK_DISPATCHER_METHODS = [
+  defineMethod({
+    permission: 'workspace',
+    name: 'localTasks.dispatcher.prepareWorkspace',
+    params: LocalTasksDispatcherPrepareWorkspaceParams,
+    handler: (_params, context) =>
+      sourceOf(context) === 'desktop'
+        ? service().prepareDispatcherWorkspace(context.runtime)
+        : DESKTOP_ONLY
+  }),
   defineMethod({
     permission: 'workspace',
     name: 'localTasks.dispatcher.register',

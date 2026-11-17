@@ -1,17 +1,38 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { LocalTaskProposal } from '../../../shared/local-tasks/local-task-dispatcher-types'
+import type { LocalTaskEndpointKey } from './local-task-endpoints'
 
 const fixture = vi.hoisted(() => {
+  const source: { endpoint: LocalTaskEndpointKey } = { endpoint: 'local' }
   const pane: { key: string | null } = { key: 'tab-d:leaf' }
-  return { pane, watches: vi.fn(), inbox: vi.fn(), list: vi.fn() }
+  return {
+    ...source,
+    pane,
+    watches: vi.fn(),
+    inbox: vi.fn(),
+    list: vi.fn(),
+    epoch: 0
+  }
 })
 
 vi.mock('./local-task-dispatcher-client', () => ({
+  localTaskDispatcherClientFor: () => ({
+    watches: fixture.watches,
+    inbox: fixture.inbox,
+    list: fixture.list
+  }),
   localTaskDispatcherClient: {
     watches: fixture.watches,
     inbox: fixture.inbox,
     list: fixture.list
   }
+}))
+vi.mock('./local-task-dispatcher-source', () => ({
+  getLocalTaskDispatcherEndpoint: () => fixture.endpoint,
+  getLocalTaskDispatcherEpoch: () => fixture.epoch,
+  isLocalTaskDispatcherSourceCurrent: (endpoint: string, epoch: number) =>
+    endpoint === fixture.endpoint && epoch === fixture.epoch,
+  subscribeLocalTaskDispatcherSource: () => () => {}
 }))
 vi.mock('./local-task-dispatcher-session', () => ({
   knownDispatcherPaneKey: () => fixture.pane.key
@@ -19,7 +40,8 @@ vi.mock('./local-task-dispatcher-session', () => ({
 
 import {
   localTaskDispatcherLedgerStore,
-  refreshLocalTaskDispatcherLedger
+  refreshLocalTaskDispatcherLedger,
+  resetLocalTaskDispatcherLedger
 } from './local-task-dispatcher-ledger'
 
 function executed(id: string, conversationId: string, decidedAt: number): LocalTaskProposal {
@@ -39,6 +61,9 @@ function executed(id: string, conversationId: string, decidedAt: number): LocalT
 
 describe('dispatcher ledger', () => {
   beforeEach(() => {
+    resetLocalTaskDispatcherLedger()
+    fixture.endpoint = 'local'
+    fixture.epoch = 0
     fixture.pane.key = 'tab-d:leaf'
     fixture.watches.mockReset()
     fixture.watches.mockResolvedValue({
@@ -75,5 +100,21 @@ describe('dispatcher ledger', () => {
 
     expect(fixture.watches).not.toHaveBeenCalled()
     expect(localTaskDispatcherLedgerStore.getState()).toMatchObject({ loaded: true, watches: [] })
+  })
+
+  it('discards an old source ledger response after switching hosts', async () => {
+    let release: (value: { ok: true; watches: [] }) => void = () => {}
+    fixture.watches.mockReturnValueOnce(
+      new Promise((resolve) => {
+        release = resolve
+      })
+    )
+    const reading = refreshLocalTaskDispatcherLedger()
+    fixture.endpoint = 'runtime:mini'
+    fixture.epoch += 1
+    release({ ok: true, watches: [] })
+    await reading
+    expect(localTaskDispatcherLedgerStore.getState().dispatched).toEqual([])
+    expect(localTaskDispatcherLedgerStore.getState().loaded).toBe(false)
   })
 })

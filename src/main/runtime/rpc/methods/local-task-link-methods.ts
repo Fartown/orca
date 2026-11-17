@@ -16,6 +16,7 @@ import type { LocalTaskExecutionService } from '../../../local-tasks/local-task-
 import { localTasksReadiness } from '../../../local-tasks/local-tasks-readiness'
 import { isDesktopClientCaller, sourceOf } from '../../../local-tasks/local-tasks-rpc-caller'
 import { prepareLocalTaskTerminalPreview } from '../../../local-tasks/local-task-terminal-preview'
+import { getPublishedHostDescriptor } from '../../host-descriptor'
 import { defineMethod } from '../core'
 
 const DESKTOP_ONLY: LocalTaskFailure = { ok: false, code: 'desktop_only' }
@@ -88,7 +89,12 @@ export const LOCAL_TASK_LINK_METHODS = [
     permission: 'workspace',
     name: 'localTasks.links.recordSession',
     params: LocalTasksLinksRecordSessionParams,
-    handler: (params, context) => execution().recordSession(params, sourceOf(context))
+    handler: (params, context) =>
+      execution().recordSession(
+        params,
+        sourceOf(context),
+        getPublishedHostDescriptor(context.runtime.getRuntimeId())?.installationId
+      )
   }),
   defineMethod({
     permission: 'workspace',
