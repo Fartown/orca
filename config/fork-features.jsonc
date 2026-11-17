@@ -3711,6 +3711,16 @@
           "why": "An unreachable SSH owner cannot be judged from local process capability; restored source evidence may retire its row"
         },
         {
+          "file": "src/renderer/src/components/terminal-pane/pty-connection-test-pane-fixtures.ts",
+          "mustContain": "export function retireTerminalTestTransports",
+          "why": "Connections a finished test left open lose their PTY, so their process polling cannot call the next test's inspect mock (#140)"
+        },
+        {
+          "file": "src/renderer/src/components/terminal-pane/pty-connection-test-environment.ts",
+          "mustContain": "retireTerminalTestTransports()",
+          "why": "Every pty-connection test retires its transports at teardown before the next test installs its mocks (#140)"
+        },
+        {
           "file": "src/renderer/src/runtime/runtime-terminal-inspection.ts",
           "mustContain": "captureRuntimeTerminalInspectionContact(ptyId)",
           "why": "Fence all remote process inspection before dispatch and after await using shared contact evidence"

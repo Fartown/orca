@@ -2,7 +2,10 @@ import { vi } from 'vitest'
 import { resetAgentStartupDelayedDeliveryForTests } from '@/lib/agent-startup-delayed-delivery'
 import * as agentStatusStartupSnapshot from '@/hooks/ipc-events/agent-status-startup-snapshot'
 import { drainFakeTimerWork, flushAsyncTicks } from './pty-connection-test-async'
-import { takeTerminalTestPanes } from './pty-connection-test-pane-fixtures'
+import {
+  retireTerminalTestTransports,
+  takeTerminalTestPanes
+} from './pty-connection-test-pane-fixtures'
 import type { ManagedPane } from '@/lib/pane-manager/pane-manager-types'
 
 const originalRequestAnimationFrame = globalThis.requestAnimationFrame
@@ -116,6 +119,8 @@ export async function installTerminalTestGlobals(): Promise<void> {
 }
 
 export async function restoreTerminalTestGlobals(): Promise<void> {
+  // A connection the test left open polls on real time; with no PTY left it stops.
+  retireTerminalTestTransports()
   // Drain deferred confirmation work before the next test replaces its store mock.
   await drainFakeTimerWork()
   vi.useRealTimers()

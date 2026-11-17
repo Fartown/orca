@@ -49,6 +49,20 @@ export type MockTransport = {
   serializeBufferOutcome?: ReturnType<typeof vi.fn>
 }
 
+// Why: connections a test leaves open keep polling on real time; their transports must go dead.
+const liveTestTransports: (() => void)[] = []
+
+/**
+ * Ends every PTY the test's transports carried, as if each terminal had closed. A connection left
+ * open by a finished test then has no PTY to inspect, so its process polling stops instead of
+ * calling the next test's API mocks.
+ */
+export function retireTerminalTestTransports(): void {
+  for (const retire of liveTestTransports.splice(0)) {
+    retire()
+  }
+}
+
 export function createMockTransport(initialPtyId: string | null = null): MockTransport {
   let ptyId = initialPtyId
   const sendInput = vi.fn<(data: string) => boolean>(() => true)
@@ -77,6 +91,12 @@ export function createMockTransport(initialPtyId: string | null = null): MockTra
     serializeBuffer: undefined
   }
   transport.isConnected = vi.fn(() => ptyId !== null)
+  liveTestTransports.push(() => {
+    ptyId = null
+    // A test may have pinned its own answers; a closed terminal has no PTY whatever they were.
+    transport.getPtyId.mockImplementation(() => null)
+    transport.isConnected?.mockImplementation(() => false)
+  })
   return transport
 }
 

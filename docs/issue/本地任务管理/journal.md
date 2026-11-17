@@ -5,6 +5,7 @@ status: done
 created: 2026-10-26
 updated: 2026-11-17
 external_ids:
+  - 'Fartown/orca#140'
   - 'Fartown/orca#135'
   - 'Fartown/orca#130'
   - 'Fartown/orca#90'
@@ -475,6 +476,15 @@ external_ids:
 - 验证完再一起做两个切片
 
 ## 3. 开发记录
+
+### 2026-11-17 修复 pty 未应答命令结束用例的偶发失败（done）
+
+- 本轮目标：Issue #140，消除 `pty-connection-unanswered-command-finish.spec.ts` 偶发的 `inspectProcess` 误调用，不放宽断言。
+- 完成内容：前序用例用真实计时器连接、未释放，agent 完成轮询在后续用例里调用了新的 `inspectProcess` mock。测试环境收尾时让本用例全部 mock transport 失去 PTY，泄漏的连接因 `getPtyId()` 为空停止轮询。
+- 代码或文档变更：`pty-connection-test-pane-fixtures.ts` 新增 `retireTerminalTestTransports`，`pty-connection-test-environment.ts` 收尾调用；两文件登记为本功能 seam 和 scope 白名单。
+- 验证证据：修复前聚合文件 3 次过 1 次；修复后 6/6 及 20 次循环全过，`terminal-pane` 目录全量、类型、fork 闸门、check:changed 通过（见 PR）。
+- 未解决问题：无；产品代码未改，SSH/远端路径不受影响。
+- 下一步：PR 合入 fork/integration 后观察 CI 分片不再出现该用例失败。
 
 ### 2026-11-17 完整 CI 修复与最终复验（done）
 
