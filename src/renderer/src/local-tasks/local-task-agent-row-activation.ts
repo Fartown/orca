@@ -15,6 +15,10 @@ export function openLocalTaskSessionFromAgentRow(
 ): boolean {
   const domain = localTasksDomainStore.getState()
   if (!selectLocalTaskSidebarMode(domain)) {
+    const panel = localTaskSessionPanelStore.getState()
+    if (panel.mode !== 'closed') {
+      panel.close()
+    }
     return false
   }
   const pane = parsePaneKey(paneKey)

@@ -94,16 +94,31 @@ it('does not route to a task when its source is hidden even if task mode was sav
 
 it('reads the current mode on every click without waiting for the row to render again', () => {
   expect(openLocalTaskSessionFromAgentRow('repo::/work', 'tab-1', paneKey)).toBe(true)
-  const panel = localTaskSessionPanelStore.getState()
   fixture.openTaskPage.mockClear()
   localTasksDomainStore.setState({ preferences: {} })
   expect(openLocalTaskSessionFromAgentRow('repo::/work', 'tab-1', paneKey)).toBe(false)
   expect(fixture.openTaskPage).not.toHaveBeenCalled()
-  expect(localTaskSessionPanelStore.getState()).toBe(panel)
+  expect(localTaskSessionPanelStore.getState().mode).toBe('closed')
   localTasksDomainStore.setState({ preferences: { sidebarTaskMode: '1' } })
   expect(openLocalTaskSessionFromAgentRow('repo::/work', 'tab-1', paneKey)).toBe(true)
   expect(fixture.openTaskPage).toHaveBeenCalledOnce()
 })
+
+it.each(['wide', 'narrow'] as const)(
+  'closes the previous %s task preview before the original project activation',
+  (mode) => {
+    localTaskSessionPanelStore.getState().open(link, mode)
+    localTasksDomainStore.setState({ preferences: {} })
+    expect(openLocalTaskSessionFromAgentRow('repo::/work', 'tab-1', paneKey)).toBe(false)
+    expect(fixture.openTaskPage).not.toHaveBeenCalled()
+    expect(localTaskSessionPanelStore.getState()).toMatchObject({
+      mode: 'closed',
+      sessionLinkId: null,
+      taskId: null,
+      requestToken: null
+    })
+  }
+)
 
 it.each(['ssh:mini', 'runtime:mini'])(
   'keeps task-mode navigation on the exact %s owner',
