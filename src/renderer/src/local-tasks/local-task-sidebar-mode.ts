@@ -3,16 +3,25 @@ import { useEffect } from 'react'
 import { useAppStore } from '@/store'
 import { SCROLL_TO_CURRENT_WORKSPACE_REVEAL_REQUEST_EVENT } from '@/lib/scroll-to-current-workspace-status'
 import { localTasksClient } from './local-tasks-runtime-client'
-import { localTasksDomainStore, useLocalTasksDomain } from './local-tasks-domain-store'
+import {
+  localTasksDomainStore,
+  useLocalTasksDomain,
+  type LocalTasksDomainState
+} from './local-tasks-domain-store'
 
 export const SIDEBAR_TASK_MODE_PREFERENCE_KEY = 'sidebarTaskMode'
 
-export function useLocalTaskSidebarMode(): boolean {
-  return useLocalTasksDomain(
-    (state) =>
-      state.preferences[SIDEBAR_TASK_MODE_PREFERENCE_KEY] === '1' &&
-      state.preferences[LOCAL_TASK_SOURCE_HIDDEN_PREFERENCE_KEY] !== '1'
+export function selectLocalTaskSidebarMode(
+  state: Pick<LocalTasksDomainState, 'preferences'>
+): boolean {
+  return (
+    state.preferences[SIDEBAR_TASK_MODE_PREFERENCE_KEY] === '1' &&
+    state.preferences[LOCAL_TASK_SOURCE_HIDDEN_PREFERENCE_KEY] !== '1'
   )
+}
+
+export function useLocalTaskSidebarMode(): boolean {
+  return useLocalTasksDomain(selectLocalTaskSidebarMode)
 }
 
 export function chooseLocalTaskSidebarMode(enabled: boolean): void {
