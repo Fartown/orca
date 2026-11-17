@@ -1,10 +1,12 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native'
+import { Pressable, Text, View } from 'react-native'
 import { Pencil, Plus } from 'lucide-react-native'
 import type {
   LocalTask,
   LocalTaskStatusDef
 } from '../../../src/shared/local-tasks/local-task-types'
 import { colors, spacing, typography } from '../theme/mobile-theme'
+import { themedStyleSheet } from '../theme/themed-styles'
+import { useMobileColorScheme } from '../theme/use-mobile-color-scheme'
 import { useMobileTranslation } from '../i18n/use-mobile-translation'
 import { localTasksCopy } from './local-tasks-copy'
 import type { LocalTaskRowSession } from './local-task-progress-projection'
@@ -23,6 +25,7 @@ export function LocalTaskDetailSections(props: {
   onAddSubtask: (parent: LocalTask) => void
   onOpenTask: (taskId: string) => void
 }) {
+  useMobileColorScheme()
   const t = useMobileTranslation()
   const copy = localTasksCopy()
   const { task } = props
@@ -44,18 +47,35 @@ export function LocalTaskDetailSections(props: {
           </View>
           <Text style={localTaskStyles.body}>{task.description}</Text>
         </>
-      ) : props.readOnly ? null : (
-        <Pressable
-          style={styles.emptyAction}
-          onPress={() => props.onEdit(task)}
-          accessibilityRole="button"
-        >
-          <Pencil size={12} color={colors.textSecondary} />
-          <Text style={styles.emptyActionText}>
-            {t('localTasks.detail.addDescription', 'Add description')}
-          </Text>
-        </Pressable>
-      )}
+      ) : null}
+      {!props.readOnly && (!task.description || props.subtasks.length === 0) ? (
+        <View style={styles.emptyActions} testID="local-task-detail-empty-actions">
+          {!task.description ? (
+            <Pressable
+              style={styles.emptyAction}
+              onPress={() => props.onEdit(task)}
+              accessibilityRole="button"
+            >
+              <Pencil size={12} color={colors.textSecondary} />
+              <Text style={styles.emptyActionText}>
+                {t('localTasks.detail.addDescription', 'Add description')}
+              </Text>
+            </Pressable>
+          ) : null}
+          {props.subtasks.length === 0 ? (
+            <Pressable
+              style={styles.emptyAction}
+              onPress={() => props.onAddSubtask(task)}
+              accessibilityRole="button"
+            >
+              <Plus size={12} color={colors.textSecondary} />
+              <Text style={styles.emptyActionText}>
+                {t('localTasks.detail.addFirstSubtask', 'Add subtask')}
+              </Text>
+            </Pressable>
+          ) : null}
+        </View>
+      ) : null}
       {props.subtasks.length > 0 ? (
         <>
           <View style={localTaskStyles.sectionHeaderRow}>
@@ -85,32 +105,27 @@ export function LocalTaskDetailSections(props: {
             ))}
           </View>
         </>
-      ) : props.readOnly ? null : (
-        <Pressable
-          style={styles.emptyAction}
-          onPress={() => props.onAddSubtask(task)}
-          accessibilityRole="button"
-        >
-          <Plus size={12} color={colors.textSecondary} />
-          <Text style={styles.emptyActionText}>
-            {t('localTasks.detail.addFirstSubtask', 'Add subtask')}
-          </Text>
-        </Pressable>
-      )}
+      ) : null}
     </>
   )
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyleSheet(() => ({
   sectionTitle: { color: colors.textMuted, fontSize: typography.metaSize, fontWeight: '600' },
+  emptyActions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: spacing.md,
+    marginTop: spacing.lg
+  },
   emptyAction: {
     flexDirection: 'row',
     alignItems: 'center',
     alignSelf: 'flex-start',
     minHeight: 44,
     gap: spacing.xs,
-    marginTop: spacing.xs,
     paddingHorizontal: spacing.sm
   },
   emptyActionText: { color: colors.textSecondary, fontSize: typography.metaSize }
-})
+}))

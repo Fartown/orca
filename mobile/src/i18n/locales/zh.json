@@ -4497,11 +4497,11 @@
         "chat": "聊天"
       },
       "dispatch": {
-        "placeholder": "要做什么？@ 工作区或仓库，说一句话",
+        "placeholder": "要做什么？@ 选择目标",
         "mention": "提及工作区、仓库、任务或主机",
         "clearTarget": "移除目标",
-        "runBy": "由 {{host}} 执行 · 任务存在它的任务库里，手机通过它读写",
-        "runByPaired": "任务存在与这台手机配对的主机的任务库里",
+        "runBy": "由 {{host}} 执行",
+        "runByPaired": "由配对主机执行",
         "onSendWorkspaceOn": "发送后：在 {{workspace}}（{{host}}）新建任务并开会话",
         "onSendWorkspace": "发送后：在 {{workspace}} 新建任务并开会话",
         "onSendTask": "发送后：在 {{ref}} 下继续做"

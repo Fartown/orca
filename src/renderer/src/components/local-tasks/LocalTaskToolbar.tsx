@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { Kanban, List, Plus } from 'lucide-react'
+import { Kanban, List, Plus, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
@@ -25,21 +25,33 @@ function SearchField(): React.JSX.Element {
     }
   }, [focusRequest])
   return (
-    <Input
-      ref={inputRef}
-      value={query}
-      onChange={(event) => localTaskPageStore.getState().setQuery(event.target.value)}
-      placeholder={translate('localTasks.toolbar.searchPlaceholder', 'Search title or ref')}
-      aria-label={translate('localTasks.toolbar.search', 'Search tasks')}
-      className="h-8 w-40 @5xl/local-task-toolbar:w-56"
-    />
+    <div className="relative min-w-0 flex-1 @3xl/local-task-toolbar:w-40 @3xl/local-task-toolbar:flex-none @5xl/local-task-toolbar:w-56">
+      <Input
+        ref={inputRef}
+        value={query}
+        onChange={(event) => localTaskPageStore.getState().setQuery(event.target.value)}
+        placeholder={translate('localTasks.toolbar.searchPlaceholder', 'Search title or ref')}
+        aria-label={translate('localTasks.toolbar.search', 'Search tasks')}
+        className="h-8 w-full pr-8"
+      />
+      {query ? (
+        <Button
+          variant="ghost"
+          size="icon-xs"
+          className="absolute right-1 top-1"
+          aria-label={translate('localTasks.toolbar.clearSearch', 'Clear search')}
+          onClick={() => {
+            localTaskPageStore.getState().setQuery('')
+            inputRef.current?.focus()
+          }}
+        >
+          <X className="size-3.5" />
+        </Button>
+      ) : null}
+    </div>
   )
 }
 
-/**
- * One row at every width: as the column narrows, labels fold into icons before anything wraps,
- * and the title becomes the view menu once the page hides its rail.
- */
 export function LocalTaskToolbar({ model }: { model: LocalTaskListModel }): React.JSX.Element {
   const layout = useLocalTaskPage((state) => state.layout)
   const navExpanded = useLocalTaskPage((state) => state.navExpanded)
@@ -48,61 +60,64 @@ export function LocalTaskToolbar({ model }: { model: LocalTaskListModel }): Reac
   const newTask = translate('localTasks.toolbar.newTask', 'New task')
   return (
     <div className="@container/local-task-toolbar">
-      <div className="flex min-w-0 flex-wrap items-center gap-2">
-        {navExpanded ? (
-          <LocalTaskScopeTitle model={model} className="hidden @3xl/local-task-page:flex" />
-        ) : null}
-        <LocalTaskScopeMenu
-          model={model}
-          className={navExpanded ? '@3xl/local-task-page:hidden' : undefined}
-        />
-        <ToggleGroup
-          type="single"
-          variant="outline"
-          size="sm"
-          value={layout}
-          onValueChange={(value) => {
-            if (value === 'list' || value === 'board') {
-              localTaskPageStore.getState().setLayout(value)
-            }
-          }}
-          aria-label={translate('localTasks.toolbar.layout', 'Layout')}
-          className="shrink-0"
-        >
-          <ToggleGroupItem value="list" aria-label={translate('localTasks.toolbar.list', 'List')}>
-            <List className="size-3.5" />
-            <span className="hidden @3xl/local-task-toolbar:inline">
-              {translate('localTasks.toolbar.list', 'List')}
-            </span>
-          </ToggleGroupItem>
-          <ToggleGroupItem
-            value="board"
-            aria-label={translate('localTasks.toolbar.board', 'Board')}
-          >
-            <Kanban className="size-3.5" />
-            <span className="hidden @3xl/local-task-toolbar:inline">
-              {translate('localTasks.toolbar.board', 'Board')}
-            </span>
-          </ToggleGroupItem>
-        </ToggleGroup>
-        <LocalTaskViewOptions />
-        <span className="min-w-0 flex-1" />
-        <LocalTaskFilterPopover model={model} />
-        <SearchField />
-        <LocalTaskActionTooltip reason={writeReason} label={newTask} shortcut={['C']}>
-          <Button
+      <div className="flex min-w-0 flex-col gap-2 @3xl/local-task-toolbar:flex-row @3xl/local-task-toolbar:items-center">
+        <div className="flex min-w-0 items-center gap-2 @3xl/local-task-toolbar:flex-1">
+          {navExpanded ? (
+            <LocalTaskScopeTitle model={model} className="hidden @3xl/local-task-page:flex" />
+          ) : null}
+          <LocalTaskScopeMenu
+            model={model}
+            className={navExpanded ? '@3xl/local-task-page:hidden' : undefined}
+          />
+          <ToggleGroup
+            type="single"
+            variant="outline"
             size="sm"
+            value={layout}
+            onValueChange={(value) => {
+              if (value === 'list' || value === 'board') {
+                localTaskPageStore.getState().setLayout(value)
+              }
+            }}
+            aria-label={translate('localTasks.toolbar.layout', 'Layout')}
             className="shrink-0"
-            disabled={!writable}
-            aria-label={newTask}
-            onClick={() =>
-              localTaskPageStore.getState().openCreate({ projectId: model.scopeProjectId })
-            }
           >
-            <Plus className="size-3.5" />
-            <span className="hidden @2xl/local-task-toolbar:inline">{newTask}</span>
-          </Button>
-        </LocalTaskActionTooltip>
+            <ToggleGroupItem value="list" aria-label={translate('localTasks.toolbar.list', 'List')}>
+              <List className="size-3.5" />
+              <span className="hidden @3xl/local-task-toolbar:inline">
+                {translate('localTasks.toolbar.list', 'List')}
+              </span>
+            </ToggleGroupItem>
+            <ToggleGroupItem
+              value="board"
+              aria-label={translate('localTasks.toolbar.board', 'Board')}
+            >
+              <Kanban className="size-3.5" />
+              <span className="hidden @3xl/local-task-toolbar:inline">
+                {translate('localTasks.toolbar.board', 'Board')}
+              </span>
+            </ToggleGroupItem>
+          </ToggleGroup>
+          <LocalTaskViewOptions />
+        </div>
+        <div className="flex min-w-0 w-full items-center gap-2 @3xl/local-task-toolbar:w-auto @3xl/local-task-toolbar:shrink-0">
+          <LocalTaskFilterPopover model={model} />
+          <SearchField />
+          <LocalTaskActionTooltip reason={writeReason} label={newTask} shortcut={['C']}>
+            <Button
+              size="sm"
+              className="shrink-0"
+              disabled={!writable}
+              aria-label={newTask}
+              onClick={() =>
+                localTaskPageStore.getState().openCreate({ projectId: model.scopeProjectId })
+              }
+            >
+              <Plus className="size-3.5" />
+              <span>{newTask}</span>
+            </Button>
+          </LocalTaskActionTooltip>
+        </div>
       </div>
     </div>
   )

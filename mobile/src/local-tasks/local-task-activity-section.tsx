@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
+import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native'
 import { ChevronDown, ChevronRight, Pencil, Send, Trash2, X } from 'lucide-react-native'
 import type {
   LocalTask,
@@ -11,6 +11,8 @@ import { ActionSheetModal } from '../components/ActionSheetModal'
 import { ConfirmModal } from '../components/ConfirmModal'
 import { MobileMarkdown } from '../components/MobileMarkdown'
 import { colors, radii, spacing, typography } from '../theme/mobile-theme'
+import { themedStyleSheet } from '../theme/themed-styles'
+import { useMobileColorScheme } from '../theme/use-mobile-color-scheme'
 import type { LocalTasksApi } from './local-tasks-api'
 import { formatLocalTaskAgo, localTasksCopy } from './local-tasks-copy'
 import { localTasksPageCopy } from './local-tasks-page-copy'
@@ -34,6 +36,7 @@ type Props = {
 }
 
 export function LocalTaskActivitySection(props: Props) {
+  useMobileColorScheme()
   const copy = localTasksCopy()
   const page = localTasksPageCopy()
   const { events, error: eventsError, retry } = props.events
@@ -254,7 +257,7 @@ export function LocalTaskActivitySection(props: Props) {
   )
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyleSheet(() => ({
   systemToggle: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -307,4 +310,4 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center'
   }
-})
+}))

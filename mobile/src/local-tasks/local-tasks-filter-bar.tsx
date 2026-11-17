@@ -1,9 +1,11 @@
 import { useState, type ReactNode } from 'react'
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
+import { Pressable, Text, TextInput, View } from 'react-native'
 import { ListFilter, Search, X } from 'lucide-react-native'
 import { LOCAL_TASK_STATUS_CATEGORIES } from '../../../src/shared/local-tasks/local-task-model'
 import { BottomDrawer } from '../components/bottom-drawer/BottomDrawer'
 import { colors, radii, spacing } from '../theme/mobile-theme'
+import { themedStyleSheet } from '../theme/themed-styles'
+import { useMobileColorScheme } from '../theme/use-mobile-color-scheme'
 import { localTasksCopy } from './local-tasks-copy'
 import {
   EMPTY_LOCAL_TASK_FILTER,
@@ -27,6 +29,7 @@ export function LocalTasksFilterBar(props: {
   labels: string[]
   onChange: (filter: LocalTaskFilter) => void
 }) {
+  useMobileColorScheme()
   const copy = localTasksCopy()
   const [open, setOpen] = useState(false)
   const { filter } = props
@@ -137,6 +140,7 @@ export function LocalTasksFilterBar(props: {
 }
 
 function FilterSection(props: { title: string; children: ReactNode }) {
+  useMobileColorScheme()
   return (
     <View style={styles.section}>
       <Text style={localTaskStyles.meta}>{props.title}</Text>
@@ -151,6 +155,7 @@ function FilterChip(props: {
   selected: boolean
   onPress: () => void
 }) {
+  useMobileColorScheme()
   return (
     <Pressable
       style={[styles.chip, props.selected && styles.chipSelected]}
@@ -167,7 +172,7 @@ function FilterChip(props: {
   )
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyleSheet(() => ({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -224,4 +229,4 @@ const styles = StyleSheet.create({
   },
   chipSelected: { borderColor: colors.textSecondary, backgroundColor: colors.bgRaised },
   chipTextSelected: { color: colors.textPrimary, fontWeight: '600' }
-})
+}))

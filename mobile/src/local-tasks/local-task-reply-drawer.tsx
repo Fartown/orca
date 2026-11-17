@@ -1,7 +1,9 @@
-import { Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
+import { Platform, Pressable, Text, TextInput, View } from 'react-native'
 import { BottomDrawer } from '../components/bottom-drawer/BottomDrawer'
 import { TEXT_INPUT_FONT_SIZE } from '../platform/text-input-font-size'
 import { colors, radii, spacing, typography } from '../theme/mobile-theme'
+import { themedStyleSheet } from '../theme/themed-styles'
+import { useMobileColorScheme } from '../theme/use-mobile-color-scheme'
 import { localTasksCopy } from './local-tasks-copy'
 
 /**
@@ -23,6 +25,7 @@ export function LocalTaskReplyDrawer(props: {
   onSend: (text: string) => void
   onClose: () => void
 }) {
+  useMobileColorScheme()
   const copy = localTasksCopy()
   const text = props.draft.trim()
   const canSend = props.connected && text.length > 0 && props.sending !== true
@@ -78,7 +81,7 @@ export function LocalTaskReplyDrawer(props: {
   )
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyleSheet(() => ({
   header: { paddingHorizontal: spacing.xs, paddingBottom: spacing.sm },
   title: { fontSize: 15, fontWeight: '600', color: colors.textPrimary },
   message: { fontSize: 13, color: colors.textMuted, marginTop: 2 },
@@ -120,4 +123,4 @@ const styles = StyleSheet.create({
     fontWeight: '500'
   },
   sendText: { color: colors.bgBase, fontSize: typography.bodySize, fontWeight: '600' }
-})
+}))

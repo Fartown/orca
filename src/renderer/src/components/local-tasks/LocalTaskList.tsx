@@ -12,13 +12,8 @@ import {
   type LocalTaskGroupTally,
   type LocalTaskListGroup
 } from '@/local-tasks/local-task-list-groups'
-import {
-  EMPTY_LOCAL_TASK_FILTERS,
-  localTaskPageStore,
-  useLocalTaskPage
-} from '@/local-tasks/local-task-page-store'
+import { localTaskPageStore, useLocalTaskPage } from '@/local-tasks/local-task-page-store'
 import { useLocalTasksDomain } from '@/local-tasks/local-tasks-domain-store'
-import { useCanCreateLocalTask } from '@/local-tasks/local-task-write-access'
 import {
   LocalTaskGroupIcon,
   canCreateInGroup,
@@ -27,6 +22,7 @@ import {
 } from './LocalTaskGroupHead'
 import { LocalTaskRow, localTaskStatusHeading } from './LocalTaskRow'
 import { LocalTaskNeedsYouBand } from './LocalTaskNeedsYouBand'
+import { LocalTaskEmptyView } from './LocalTaskEmptyView'
 import { isLocalTaskGroupCollapsed } from '@/local-tasks/local-task-group-collapse'
 import type { LocalTaskListModel } from './use-local-task-list-model'
 
@@ -89,52 +85,6 @@ function GroupHeader({
   )
 }
 
-function EmptyList({
-  hasTasks,
-  scopeProjectId
-}: {
-  hasTasks: boolean
-  scopeProjectId: string | null
-}): React.JSX.Element {
-  const writable = useCanCreateLocalTask(scopeProjectId)
-  return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-2 p-8 text-center text-sm text-muted-foreground">
-      {hasTasks ? (
-        <>
-          {translate('localTasks.list.noMatches', 'No tasks match this view.')}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              const page = localTaskPageStore.getState()
-              page.setFilters(EMPTY_LOCAL_TASK_FILTERS)
-              page.setQuery('')
-              page.setView('all')
-            }}
-          >
-            {translate('localTasks.list.showAll', 'Show all tasks')}
-          </Button>
-        </>
-      ) : (
-        <>
-          {translate('localTasks.list.empty', 'No tasks yet. Press C to write down the first one.')}
-          {writable ? (
-            <Button
-              size="sm"
-              onClick={() =>
-                localTaskPageStore.getState().openCreate({ projectId: scopeProjectId })
-              }
-            >
-              <Plus className="size-3.5" />
-              {translate('localTasks.toolbar.newTask', 'New task')}
-            </Button>
-          ) : null}
-        </>
-      )}
-    </div>
-  )
-}
-
 /**
  * Grouped as the toolbar says; subtasks of any depth sit indented under a shown parent, and each
  * level folds on its own (REQ-004, REQ-006).
@@ -171,7 +121,10 @@ export const LocalTaskList = memo(function LocalTaskList({
   }, [model.listTaskIds, model.orderedTaskIds, previewOpen])
   if (model.groups.length === 0 && banded.size === 0) {
     return (
-      <EmptyList hasTasks={model.scopeTasks.length > 0} scopeProjectId={model.scopeProjectId} />
+      <LocalTaskEmptyView
+        hasTasks={model.scopeTasks.length > 0}
+        scopeProjectId={model.scopeProjectId}
+      />
     )
   }
   return (

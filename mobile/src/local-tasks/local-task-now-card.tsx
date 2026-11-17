@@ -16,6 +16,8 @@ import { AgentStateDot } from '../components/AgentStateDot'
 import { MobileMarkdown } from '../components/MobileMarkdown'
 import { useMobileTranslation } from '../i18n/use-mobile-translation'
 import { colors, spacing, typography } from '../theme/mobile-theme'
+import { themedStyleSheet } from '../theme/themed-styles'
+import { useMobileColorScheme } from '../theme/use-mobile-color-scheme'
 import { LocalTaskCardFoot } from './local-task-card'
 import type { LocalTaskCardFacts } from './local-task-card-facts'
 import { formatLocalTaskAgo, localTasksCopy } from './local-tasks-copy'
@@ -30,6 +32,7 @@ const PROGRESS_PREVIEW_HEIGHT = 63
 
 /** A writeback's body, as its labelled lines when it was written that way. */
 function ProgressBody(props: { body: string }) {
+  useMobileColorScheme()
   const t = useMobileTranslation()
   const [expanded, setExpanded] = useState(false)
   const [contentHeight, setContentHeight] = useState(0)
@@ -101,6 +104,7 @@ export function LocalTaskNowCard(props: {
   onOpenSession: (taskSessionId: string) => void
   onLongPressSession: ((sessionLinkId: string) => void) | null
 }) {
+  useMobileColorScheme()
   const t = useMobileTranslation()
   const copy = localTasksCopy()
   const page = localTasksPageCopy()
@@ -119,6 +123,13 @@ export function LocalTaskNowCard(props: {
   const earlier = props.writebacks
     .filter((entry) => entry !== numbered)
     .sort((a, b) => b.number - a.number)
+  if (!written && props.writebacks.length === 0 && props.sessions.length === 0 && !facts.offline) {
+    return (
+      <View style={styles.empty} testID="local-task-now-card">
+        <Text style={localTaskStyles.meta}>{page.noWriteback}</Text>
+      </View>
+    )
+  }
   return (
     <View style={[localTaskStyles.card, styles.card]} testID="local-task-now-card">
       {written ? (
@@ -144,7 +155,7 @@ export function LocalTaskNowCard(props: {
           />
         </View>
       ) : null}
-      {props.writebacks.length >= 2 ? (
+      {props.writebacks.length >= (written ? 2 : 1) ? (
         <Pressable
           style={styles.allProgress}
           onPress={() => setShowAll((shown) => !shown)}
@@ -184,7 +195,7 @@ export function LocalTaskNowCard(props: {
           <Text style={localTaskStyles.meta}>{props.sessions.length}</Text>
         </View>
       ) : null}
-      {!written && props.sessions.length === 0 ? (
+      {!written && props.writebacks.length === 0 && props.sessions.length === 0 ? (
         <View style={styles.section}>
           <Text style={localTaskStyles.meta}>{page.noWriteback}</Text>
         </View>
@@ -213,40 +224,41 @@ export function LocalTaskNowCard(props: {
             accessibilityHint={props.onLongPressSession ? work.sessionActionsHint : undefined}
             testID={`local-task-session-${view.link.id}`}
           >
+            <View style={styles.sessionSide}>
+              <AgentStateDot state={item ? 'waiting' : LOCAL_TASK_SESSION_DOT[view.state]} />
+            </View>
             <View style={styles.sessionMain}>
-              <View style={styles.sessionLine}>
-                <AgentStateDot state={item ? 'waiting' : LOCAL_TASK_SESSION_DOT[view.state]} />
+              <View style={styles.sessionIdentity}>
                 <Text style={styles.agent}>{formatAgentTypeLabel(view.link.agent)}</Text>
                 <Text style={localTaskStyles.meta}>{work.surfaces[view.link.surface]}</Text>
                 {view.task && view.task.id !== props.task.id ? (
                   <View style={styles.subtask}>
                     <CornerDownRight size={11} color={colors.textMuted} />
-                    <Text style={localTaskStyles.meta} numberOfLines={1}>
+                    <Text style={[localTaskStyles.meta, styles.subtaskTitle]} numberOfLines={1}>
                       {view.task.title}
                     </Text>
                   </View>
                 ) : null}
-                <Text
-                  style={[styles.state, (item || view.state === 'working') && styles.attention]}
-                  numberOfLines={1}
-                >
-                  {[
-                    item ? work.attentionKinds[item.kind] : work.sessionStates[view.state],
-                    view.state === 'working' && stateSince !== null
-                      ? work.card.duration(props.now - stateSince)
-                      : null
-                  ]
-                    .filter(Boolean)
-                    .join(' · ')}
-                </Text>
               </View>
+              <Text style={[styles.state, (item || view.state === 'working') && styles.attention]}>
+                {[
+                  item ? work.attentionKinds[item.kind] : work.sessionStates[view.state],
+                  view.state === 'working' && stateSince !== null
+                    ? work.card.duration(props.now - stateSince)
+                    : null
+                ]
+                  .filter(Boolean)
+                  .join(' · ')}
+              </Text>
               {summary && !repeatedProgress ? (
                 <Text style={localTaskStyles.meta} numberOfLines={2}>
                   {summary}
                 </Text>
               ) : null}
             </View>
-            <ChevronRight size={15} color={colors.textMuted} />
+            <View style={styles.sessionSide}>
+              <ChevronRight size={15} color={colors.textMuted} />
+            </View>
           </Pressable>
         )
       })}
@@ -254,16 +266,16 @@ export function LocalTaskNowCard(props: {
   )
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyleSheet(() => ({
   card: { marginTop: spacing.lg },
-  section: { padding: spacing.md, gap: 6 },
+  empty: { marginTop: spacing.lg },
+  section: { padding: spacing.md, gap: spacing.sm },
   heading: { color: colors.textPrimary, fontSize: typography.metaSize, fontWeight: '600' },
   sessionsHeading: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    padding: spacing.md,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.borderSubtle
   },
@@ -277,41 +289,46 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
+    gap: spacing.sm,
+    paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.borderSubtle
   },
   allProgressText: { color: colors.textSecondary, fontSize: typography.metaSize },
   earlier: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    gap: 4,
+    padding: spacing.md,
+    gap: spacing.sm,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.borderSubtle
   },
-  offline: { paddingHorizontal: spacing.md, paddingBottom: spacing.sm },
+  offline: { padding: spacing.md },
   session: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     gap: spacing.sm,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
+    padding: spacing.md,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.borderSubtle
   },
   pressed: { backgroundColor: colors.bgRaised },
-  sessionMain: { flex: 1, minWidth: 0, gap: 4 },
-  sessionLine: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 6 },
+  sessionSide: { width: 16, height: 20, alignItems: 'center', justifyContent: 'center' },
+  sessionMain: { flex: 1, minWidth: 0, gap: spacing.xs },
+  sessionIdentity: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, minHeight: 20 },
   subtask: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 2,
-    flexShrink: 1,
-    minWidth: 0,
-    maxWidth: '100%'
+    gap: spacing.xs,
+    flex: 1,
+    minWidth: 0
   },
-  agent: { color: colors.textPrimary, fontSize: typography.bodySize, fontWeight: '600' },
-  state: { flexShrink: 1, color: colors.textSecondary, fontSize: typography.metaSize },
+  subtaskTitle: { flex: 1, minWidth: 0 },
+  agent: {
+    color: colors.textPrimary,
+    fontSize: typography.bodySize,
+    fontWeight: '600',
+    lineHeight: 20
+  },
+  state: { color: colors.textSecondary, fontSize: typography.metaSize },
   attention: { color: colors.statusAmber }
-})
+}))

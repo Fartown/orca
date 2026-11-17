@@ -172,7 +172,7 @@ function SecondLine({
   }
   const firstLine = task.description.split('\n').find((text) => text.trim())
   return (
-    <span className="truncate text-xs text-muted-foreground">
+    <span className="block min-w-0 truncate text-xs text-muted-foreground">
       {firstLine ?? translate('localTasks.row.notStarted', 'No workspace or session yet')}
     </span>
   )
@@ -261,43 +261,56 @@ export const LocalTaskRow = memo(function LocalTaskRow({
           })}
         />
       </span>
-      <div className="flex min-w-0 items-center gap-2.5">
+      <div className={cn('flex min-w-0 gap-2.5', parentPath ? 'items-end' : 'items-center')}>
         {folded !== null ? (
           <FoldToggle task={task} folded={folded} />
         ) : depth > 0 ? (
           // Why: a subtask with no fold sits under one that has it; keep the slot so it nests.
           <span className="size-4 shrink-0" aria-hidden />
         ) : null}
-        <span className="flex size-4 shrink-0 items-center justify-center">
-          {status ? <LocalTaskStatusIcon category={status.category} color={status.color} /> : null}
-        </span>
         <span className="flex min-w-16 flex-1 flex-col gap-0.5">
           {parentPath ? (
-            <span
-              className="flex min-w-0 items-center gap-1 text-2xs text-muted-foreground"
-              title={parentPath}
-            >
-              <CornerDownRight className="size-3 shrink-0" aria-hidden />
-              <span className="truncate">{parentPath}</span>
+            <span className="flex min-w-0 items-center gap-2.5">
+              <span className="size-4 shrink-0" aria-hidden />
+              <span
+                className="flex min-w-0 items-center gap-1 text-2xs text-muted-foreground"
+                title={parentPath}
+              >
+                <CornerDownRight className="size-3 shrink-0" aria-hidden />
+                <span className="truncate">{parentPath}</span>
+              </span>
             </span>
           ) : null}
-          <span className="flex min-w-0 items-center gap-2">
-            <span className="truncate font-medium text-foreground">{task.title}</span>
-            <span className="shrink-0 text-2xs tabular-nums text-muted-foreground">{task.ref}</span>
-            {task.priority !== 0 ? <LocalTaskPriorityIcon priority={task.priority} /> : null}
-            {band ? <LocalTaskRowBandBadge band={band} /> : <LocalTaskNeedsYouMarker task={task} />}
-            {status && !band && !repeatsHeading(status, statusHeading, index, task.projectId) ? (
-              <span className="hidden shrink-0 rounded-sm bg-muted px-1.5 text-2xs leading-4 text-muted-foreground @xl/local-task-list:inline">
-                {status.name}
+          <span className="flex min-w-0 items-center gap-2.5">
+            <span className="flex size-4 shrink-0 items-center justify-center">
+              {status ? (
+                <LocalTaskStatusIcon category={status.category} color={status.color} />
+              ) : null}
+            </span>
+            <span className="flex min-w-0 items-center gap-2">
+              <span className="truncate font-medium text-foreground">{task.title}</span>
+              <span className="shrink-0 text-2xs tabular-nums text-muted-foreground">
+                {task.ref}
               </span>
-            ) : null}
-            <LocalTaskHostTag
-              id={task.id}
-              labels={hostLabels}
-              className="hidden max-w-24 shrink-0 @2xl/local-task-list:block"
-            />
-            <span className="hidden min-w-0 @5xl/local-task-list:flex">
-              <LocalTaskLabelChips labels={task.labels} />
+              {task.priority !== 0 ? <LocalTaskPriorityIcon priority={task.priority} /> : null}
+              {band ? (
+                <LocalTaskRowBandBadge band={band} />
+              ) : (
+                <LocalTaskNeedsYouMarker task={task} />
+              )}
+              {status && !band && !repeatsHeading(status, statusHeading, index, task.projectId) ? (
+                <span className="hidden shrink-0 rounded-sm bg-muted px-1.5 text-2xs leading-4 text-muted-foreground @xl/local-task-list:inline">
+                  {status.name}
+                </span>
+              ) : null}
+              <LocalTaskHostTag
+                id={task.id}
+                labels={hostLabels}
+                className="hidden max-w-24 shrink-0 @2xl/local-task-list:block"
+              />
+              <span className="hidden min-w-0 @5xl/local-task-list:flex">
+                <LocalTaskLabelChips labels={task.labels} />
+              </span>
             </span>
           </span>
         </span>

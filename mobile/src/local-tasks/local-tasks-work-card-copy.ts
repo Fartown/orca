@@ -79,7 +79,7 @@ export function localTasksWorkCardCopy() {
     dispatch: {
       placeholder: translate(
         'localTasks.work.dispatch.placeholder',
-        'What needs doing? @ a workspace or repository, then say it'
+        'What needs doing? @ to choose'
       ),
       mention: translate(
         'localTasks.work.dispatch.mention',
@@ -88,15 +88,8 @@ export function localTasksWorkCardCopy() {
       clearTarget: translate('localTasks.work.dispatch.clearTarget', 'Remove target'),
       runBy: (host: string): string =>
         host
-          ? translate(
-              'localTasks.work.dispatch.runBy',
-              'Run by {{host}} · tasks live in its library, the phone reads and writes through it',
-              { host }
-            )
-          : translate(
-              'localTasks.work.dispatch.runByPaired',
-              'Tasks live in the library of the host this phone is paired with'
-            ),
+          ? translate('localTasks.work.dispatch.runBy', 'Run by {{host}}', { host })
+          : translate('localTasks.work.dispatch.runByPaired', 'Run by the paired host'),
       onSendWorkspace: (workspace: string, host: string): string =>
         host
           ? translate(

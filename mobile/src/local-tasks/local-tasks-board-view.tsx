@@ -10,10 +10,13 @@ import {
   localTaskPathLabel
 } from '../../../src/shared/local-tasks/local-task-hierarchy'
 import { colors, radii, spacing, typography } from '../theme/mobile-theme'
+import { themedStyleSheet } from '../theme/themed-styles'
+import { useMobileColorScheme } from '../theme/use-mobile-color-scheme'
 import { formatLocalTaskAgo, localTasksCopy } from './local-tasks-copy'
 import type { LocalTaskListGroup, LocalTaskListRow } from './local-task-list-projection'
 import type { LocalTaskRowSession } from './local-task-progress-projection'
 import { LocalTaskSessionDots } from './local-task-session-dots'
+import { localTaskSessionSummary } from './local-task-session-summary'
 import { localTaskStyles } from './local-tasks-styles'
 import {
   LocalTaskPriorityIcon,
@@ -39,6 +42,7 @@ type Props = {
 }
 
 export function LocalTasksBoardView(props: Props) {
+  useMobileColorScheme()
   const copy = localTasksCopy()
   const { width } = useWindowDimensions()
   const [showCanceled, setShowCanceled] = useState(false)
@@ -89,6 +93,9 @@ export function LocalTasksBoardView(props: Props) {
             style={styles.board}
             contentContainerStyle={{ gap: spacing.sm, paddingBottom: props.bottomInset + 96 }}
           >
+            {group.rows.length === 0 ? (
+              <Text style={[localTaskStyles.meta, styles.emptyColumn]}>{copy.emptyList}</Text>
+            ) : null}
             {group.rows.map((row) => (
               <LocalTaskBoardCard
                 key={row.task.id}
@@ -131,6 +138,7 @@ function LocalTaskBoardCard(props: {
   latestLine: string | null
   onOpen: (taskId: string) => void
 }) {
+  useMobileColorScheme()
   const copy = localTasksCopy()
   const { task } = props.row
   return (
@@ -140,11 +148,6 @@ function LocalTaskBoardCard(props: {
       accessibilityRole="button"
       accessibilityLabel={`${task.title} ${task.ref}`}
     >
-      <View style={styles.cardTop}>
-        <Text style={localTaskStyles.mono}>{task.ref}</Text>
-        <View style={localTaskStyles.topBarSpacer} />
-        <LocalTaskPriorityIcon priority={task.priority} />
-      </View>
       {props.ancestors.length > 0 ? (
         <View style={styles.parentHint}>
           <CornerDownRight size={12} color={colors.textMuted} />
@@ -162,9 +165,14 @@ function LocalTaskBoardCard(props: {
       <Text style={styles.cardTitle} numberOfLines={3}>
         {task.title}
       </Text>
+      <View style={styles.cardTop}>
+        <Text style={localTaskStyles.mono}>{task.ref}</Text>
+        <View style={localTaskStyles.topBarSpacer} />
+        <LocalTaskPriorityIcon priority={task.priority} />
+      </View>
       {props.latestLine ? (
         <Text style={localTaskStyles.meta} numberOfLines={2}>
-          {props.latestLine}
+          {localTaskSessionSummary(props.latestLine)}
         </Text>
       ) : null}
       {task.labels.length > 0 ? (
@@ -196,8 +204,9 @@ function LocalTaskBoardCard(props: {
   )
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyleSheet(() => ({
   board: { flex: 1 },
+  emptyColumn: { paddingVertical: spacing.md },
   columnHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -233,4 +242,4 @@ const styles = StyleSheet.create({
     borderTopColor: colors.borderSubtle
   },
   canceledToggle: { alignSelf: 'flex-start', marginTop: spacing.sm }
-})
+}))

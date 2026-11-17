@@ -45,7 +45,10 @@ it('keeps workspace and offline facts while showing the inherited task only once
     tree = create(
       createElement(LocalTaskDetailWhere, {
         facts: {
-          workspace: { name: 'frontend', hostId: 'ssh:desk' },
+          workspace: {
+            name: 'A very long workspace name that must not hide host facts',
+            hostId: 'ssh:desk'
+          },
           hostName: 'Remote desk',
           offline: true,
           lead: null,
@@ -53,7 +56,7 @@ it('keeps workspace and offline facts while showing the inherited task only once
           latest: null,
           subtasks: null
         },
-        reviewDetail: null,
+        reviewDetail: 'PR #28 needs review',
         inheritedFrom: parent,
         primary: { label: 'New session', disabled: true, onPress: () => {} },
         notices: createElement('Text', null, 'Host not connected'),
@@ -64,10 +67,20 @@ it('keeps workspace and offline facts while showing the inherited task only once
   const labels = tree!.root
     .findAll((node) => String(node.type) === 'Text')
     .flatMap((node) => (typeof node.props.children === 'string' ? [node.props.children] : []))
-  expect(labels.some((label) => label.includes('frontend') && label.includes('Remote desk'))).toBe(
-    true
-  )
+  expect(labels).toContain('A very long workspace name that must not hide host facts')
+  expect(labels).toContain('Remote desk not connected')
+  expect(labels).toContain('PR #28 needs review')
   expect(labels).toContain('From Parent')
   expect(labels).toContain('Host not connected')
+  const textColumn = tree!.root.findByProps({ testID: 'local-task-detail-where-text' })
+  const facts = textColumn.findAll((node) => String(node.type) === 'Text')
+  expect(facts.map((node) => node.props.children)).toEqual([
+    'A very long workspace name that must not hide host facts',
+    'Remote desk not connected',
+    'PR #28 needs review',
+    'From Parent'
+  ])
+  expect(facts[0].props.numberOfLines).toBe(1)
+  expect(facts[1].props.numberOfLines).toBeUndefined()
   expect(tree!.root.findByProps({ testID: 'local-task-detail-primary' }).props.disabled).toBe(true)
 })

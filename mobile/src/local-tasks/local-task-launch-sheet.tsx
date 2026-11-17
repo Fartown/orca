@@ -1,10 +1,12 @@
 import { useState } from 'react'
-import { Pressable, StyleSheet, Text, View } from 'react-native'
+import { Pressable, Text, View } from 'react-native'
 import { Bot, ChevronRight, FolderPlus, MapPin } from 'lucide-react-native'
 import { ActionSheetContent, type ActionSheetAction } from '../components/ActionSheetModal'
 import { BottomDrawer } from '../components/bottom-drawer/BottomDrawer'
 import { PickerModal } from '../components/PickerModal'
 import { colors, spacing, typography } from '../theme/mobile-theme'
+import { themedStyleSheet } from '../theme/themed-styles'
+import { useMobileColorScheme } from '../theme/use-mobile-color-scheme'
 import { localTasksCopy } from './local-tasks-copy'
 import type { LocalTaskSetup } from './local-task-project-setups'
 import type { LocalTaskLaunchController } from './use-local-task-launch'
@@ -63,6 +65,7 @@ export function LocalTaskLaunchSheet(props: {
   /** The linked workspace's host as the caller names it, for Open a session. */
   workspaceHostLabel: string
 }) {
+  useMobileColorScheme()
   const work = localTasksCopy().work
   const { launch } = props
   const request = launch.request
@@ -186,7 +189,7 @@ export function LocalTaskLaunchSheet(props: {
   )
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyleSheet(() => ({
   // Drawn like ActionSheetContent's group, so the settings and the agents read as one sheet.
   settings: {
     backgroundColor: colors.bgPanel,
@@ -205,4 +208,4 @@ const styles = StyleSheet.create({
   settingText: { flex: 1, minWidth: 0 },
   settingLabel: { fontSize: typography.bodySize, fontWeight: '500', color: colors.textPrimary },
   settingHint: { marginTop: 2, fontSize: typography.metaSize, color: colors.textMuted }
-})
+}))
