@@ -56,7 +56,7 @@ export function LocalTasksListView(props: Props) {
     return next
   }
   const banded = props.band?.ids ?? new Set<string>()
-  // The desktop's tally: each task counts once, in its own status, wherever its row rides.
+  // The desktop's tally: each task counts once in its own status; the band keeps its share.
   const tallies = tallyLocalTaskGroups(
     props.groups,
     props.groups.flatMap((group) =>
@@ -177,6 +177,7 @@ function LocalTaskListRowView(props: {
   return (
     <LocalTaskCard
       task={task}
+      ancestors={props.row.ancestors}
       status={props.lookup.get(task.statusId) ?? null}
       facts={props.factsFor(task)}
       now={props.now}
@@ -241,10 +242,10 @@ export function LocalTaskSubtaskRow(props: {
         color={props.status?.color ?? 'gray'}
         size={14}
       />
-      <Text style={localTaskStyles.mono}>{props.task.ref}</Text>
       <Text style={styles.subtaskTitle} numberOfLines={1}>
         {props.task.title}
       </Text>
+      <Text style={localTaskStyles.mono}>{props.task.ref}</Text>
       {props.sessions ? <LocalTaskSessionDots sessions={props.sessions} /> : null}
       {props.folded !== undefined ? (
         <Pressable

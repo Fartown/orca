@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { ChevronLeft, Ellipsis, Layers, Pencil, Trash2 } from 'lucide-react-native'
+import { ChevronLeft, Ellipsis, Pencil, Trash2 } from 'lucide-react-native'
 import { buildLocalTaskIndex } from '../../../src/shared/local-tasks/local-task-grouping'
 import { localTaskPathFromRoot } from '../../../src/shared/local-tasks/local-task-hierarchy'
 import { localTaskDescendantIds } from '../../../src/shared/local-tasks/local-task-tree'
@@ -9,7 +9,7 @@ import type { LocalTask } from '../../../src/shared/local-tasks/local-task-types
 import { localTaskWritebacks } from '../../../src/shared/local-tasks/local-task-writebacks'
 import { ActionSheetModal } from '../components/ActionSheetModal'
 import { ConfirmModal } from '../components/ConfirmModal'
-import { colors, spacing, typography } from '../theme/mobile-theme'
+import { colors, radii, spacing, typography } from '../theme/mobile-theme'
 import { formatLocalTaskAgo, localTasksCopy } from './local-tasks-copy'
 import { LocalTaskActivitySection } from './local-task-activity-section'
 import { localTaskWriteMessage } from './local-task-failure-message'
@@ -133,14 +133,7 @@ export function LocalTaskDetailScreen(props: LocalTaskDetailProps & { task: Loca
           <ChevronLeft size={22} color={colors.textPrimary} />
           <Text style={localTaskStyles.backLabel}>{copy.title}</Text>
         </Pressable>
-        <View style={styles.titleCenter}>
-          <LocalTaskStatusIcon
-            category={status?.category ?? null}
-            color={status?.color ?? 'gray'}
-            size={14}
-          />
-          <Text style={styles.ref}>{task.ref}</Text>
-        </View>
+        <View style={styles.topBarSpace} />
         <Pressable
           style={localTaskStyles.iconButton}
           onPress={() => setMenuOpen(true)}
@@ -155,34 +148,41 @@ export function LocalTaskDetailScreen(props: LocalTaskDetailProps & { task: Loca
         contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + spacing.xl }]}
         keyboardShouldPersistTaps="handled"
       >
+        <Text style={styles.title}>{task.title}</Text>
         <View style={styles.metaRow}>
-          <Layers size={12} color={colors.textMuted} />
-          <Text style={localTaskStyles.meta}>
-            {project?.name ?? ''} ·{' '}
-            {copy.updatedAgo(formatLocalTaskAgo(copy, task.updatedAt, props.now))}
+          <Text style={styles.ref}>{task.ref}</Text>
+          <Text style={[localTaskStyles.meta, styles.metaDetail]} numberOfLines={1}>
+            {[project?.name, copy.updatedAgo(formatLocalTaskAgo(copy, task.updatedAt, props.now))]
+              .filter(Boolean)
+              .join(' · ')}
           </Text>
         </View>
-        <Text style={styles.title}>{task.title}</Text>
         <View style={styles.chips}>
           <Pressable
-            style={localTaskStyles.chip}
+            style={styles.attributeAction}
             disabled={props.readOnly}
             onPress={() => setPicker('status')}
+            accessibilityRole="button"
+            accessibilityLabel={`${copy.status}: ${status?.name ?? copy.unknownStatus}`}
           >
             <LocalTaskStatusIcon
               category={status?.category ?? null}
               color={status?.color ?? 'gray'}
               size={14}
             />
-            <Text style={localTaskStyles.chipText}>{status?.name ?? copy.unknownStatus}</Text>
+            <Text style={styles.attributeText}>{status?.name ?? copy.unknownStatus}</Text>
           </Pressable>
           <Pressable
-            style={localTaskStyles.chip}
+            style={[styles.attributeAction, task.priority === 0 && styles.unsetPriorityAction]}
             disabled={props.readOnly}
             onPress={() => setPicker('priority')}
+            accessibilityRole="button"
+            accessibilityLabel={`${copy.priority}: ${copy.priorities[task.priority]}`}
           >
             <LocalTaskPriorityIcon priority={task.priority} />
-            <Text style={localTaskStyles.chipText}>{copy.priorities[task.priority]}</Text>
+            <Text style={[styles.attributeText, task.priority === 0 && styles.unsetPriority]}>
+              {copy.priorities[task.priority]}
+            </Text>
           </Pressable>
           {task.labels.map((label) => (
             <View key={label} style={localTaskStyles.label}>
@@ -195,6 +195,7 @@ export function LocalTaskDetailScreen(props: LocalTaskDetailProps & { task: Loca
           facts={facts}
           reviewDetail={reviewDetail}
           primary={work.primary}
+          inheritedFrom={work.inheritedFrom}
           notices={work.notices}
           readOnly={props.readOnly}
         />
@@ -328,28 +329,41 @@ export function LocalTaskDetailScreen(props: LocalTaskDetailProps & { task: Loca
 }
 
 const styles = StyleSheet.create({
-  titleCenter: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6
-  },
-  // The ref only says where the page is; the title below is the task's name (§4), so it stays muted.
+  topBarSpace: { flex: 1 },
   ref: {
     color: colors.textMuted,
     fontFamily: typography.monoFamily,
     fontSize: 13
   },
   content: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm },
-  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  title: { color: colors.textPrimary, fontSize: 20, fontWeight: '700', marginTop: spacing.sm },
-  chips: {
+  metaRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     alignItems: 'center',
     gap: spacing.sm,
-    marginTop: spacing.md
+    marginTop: spacing.xs
   },
+  metaDetail: { flexShrink: 1, minWidth: 0 },
+  title: { color: colors.textPrimary, fontSize: 20, fontWeight: '700' },
+  chips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginTop: spacing.xs
+  },
+  attributeAction: {
+    minHeight: 44,
+    maxWidth: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radii.control,
+    backgroundColor: colors.bgRaised
+  },
+  attributeText: { flexShrink: 1, color: colors.textSecondary, fontSize: typography.metaSize },
+  unsetPriorityAction: { backgroundColor: 'transparent' },
+  unsetPriority: { color: colors.textMuted },
   error: { marginTop: spacing.sm }
 })

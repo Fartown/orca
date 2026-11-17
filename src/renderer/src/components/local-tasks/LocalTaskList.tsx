@@ -63,9 +63,13 @@ function GroupHeader({
         <span className="text-2xs tabular-nums text-muted-foreground">{shown}</span>
         {inBand > 0 ? (
           <span className="truncate text-2xs font-normal text-muted-foreground">
-            {translate('localTasks.list.moreInNeedsYou', '{{count}} more in Needs you', {
-              count: inBand
-            })}
+            {translate(
+              'localTasks.list.moreInNeedsYou',
+              'View {{count}} more through Needs you tasks',
+              {
+                count: inBand
+              }
+            )}
           </span>
         ) : null}
       </button>

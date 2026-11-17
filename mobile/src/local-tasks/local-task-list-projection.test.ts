@@ -78,11 +78,38 @@ const tasks = [
 ]
 
 describe('local task counts (REQ-006)', () => {
+  it('projects a Todo child into its own row while a Started sibling stays nested', () => {
+    const family = [
+      task(40, 'started'),
+      task(41, 'started', 'SHOP-40'),
+      task(42, 'unstarted', 'SHOP-40')
+    ]
+    const groups = buildLocalTaskGroups({
+      tasks: family,
+      projects: [project],
+      projectId: 'shop',
+      segment: 'all',
+      nestSubtasks: true,
+      keepEmpty: false
+    })
+    const started = groups.find((group) => group.key === 'started')
+    const todo = groups.find((group) => group.key === 'unstarted')
+
+    expect(started?.count).toBe(2)
+    expect(started?.rows.map((row) => row.task.ref)).toEqual(['SHOP-40'])
+    expect(started?.rows[0]?.subtasks.map((line) => line.task.ref)).toEqual(['SHOP-41'])
+    expect(todo?.count).toBe(1)
+    expect(todo?.rows.map((row) => [row.task.ref, row.task.parentId])).toEqual([
+      ['SHOP-42', 'SHOP-40']
+    ])
+    expect(todo?.rows[0]?.ancestors.map((ancestor) => ancestor.ref)).toEqual(['SHOP-40'])
+  })
+
   it('counts the project scope with subtasks in the segment control', () => {
     expect(localTaskSegmentCounts(tasks, [project], 'shop')).toEqual({ started: 5, all: 10 })
   })
 
-  it('counts only the rows a list group shows, with nested subtasks riding on their parent', () => {
+  it('keeps same-status subtasks nested and cross-status subtasks in their counted group', () => {
     const groups = buildLocalTaskGroups({
       tasks,
       projects: [project],
@@ -96,18 +123,14 @@ describe('local task counts (REQ-006)', () => {
     )
     expect(shown).toEqual({
       backlog: ['SHOP-16'],
-      unstarted: ['SHOP-11'],
+      unstarted: ['SHOP-15', 'SHOP-11'],
       started: ['SHOP-12', 'SHOP-10'],
       joint: ['SHOP-17'],
       review: ['SHOP-9'],
       completed: ['SHOP-7']
     })
     const parent = groups.find((group) => group.key === 'started')?.rows[0]
-    expect(parent?.subtasks.map((child) => child.task.ref)).toEqual([
-      'SHOP-13',
-      'SHOP-14',
-      'SHOP-15'
-    ])
+    expect(parent?.subtasks.map((child) => child.task.ref)).toEqual(['SHOP-13', 'SHOP-14'])
     expect([parent?.subtaskDone, parent?.subtaskTotal]).toEqual([0, 3])
   })
 
@@ -162,7 +185,7 @@ describe('local task counts (REQ-006)', () => {
     expect(board.find((column) => column.key === 'category:started')?.rows).toHaveLength(5)
   })
 
-  it('nests every level under its root row, indented, and folding a level hides all below it', () => {
+  it('nests same-group descendants and gives cross-group descendants independent rows', () => {
     // SHOP-12 › SHOP-13 › SHOP-20 › SHOP-21, beside SHOP-14 and SHOP-15 (D-008: any depth).
     const deep = [...tasks, task(20, 'started', 'SHOP-13'), task(21, 'unstarted', 'SHOP-20')]
     const groups = buildLocalTaskGroups({
@@ -177,17 +200,14 @@ describe('local task counts (REQ-006)', () => {
     const lines = root?.subtasks ?? []
     expect(lines.map((line) => [line.task.ref, line.depth, line.childCount])).toEqual([
       ['SHOP-13', 1, 1],
-      ['SHOP-20', 2, 1],
-      ['SHOP-21', 3, 0],
-      ['SHOP-14', 1, 0],
-      ['SHOP-15', 1, 0]
+      ['SHOP-20', 2, 0],
+      ['SHOP-14', 1, 0]
     ])
-    // Deeper tasks ride under their root, never as rows of their own.
-    expect(groups.flatMap((group) => group.rows.map((row) => row.task.ref))).not.toContain(
-      'SHOP-20'
-    )
+    expect(
+      groups.find((group) => group.key === 'unstarted')?.rows.map((row) => row.task.ref)
+    ).toEqual(['SHOP-21', 'SHOP-15', 'SHOP-11'])
     expect(
       unfoldedLocalTaskLines(lines, new Set(['SHOP-13'])).map((line) => line.task.ref)
-    ).toEqual(['SHOP-13', 'SHOP-14', 'SHOP-15'])
+    ).toEqual(['SHOP-13', 'SHOP-14'])
   })
 })

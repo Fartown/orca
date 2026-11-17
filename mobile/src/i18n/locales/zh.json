@@ -4157,7 +4157,10 @@
       "missing": "这个任务已不存在。",
       "deleteTitle": "删除「{{title}}」？",
       "deleteWithSubtasks": "它下面各层的子任务（共 {{count}} 个）会一起删除。只删除任务记录，工作区和会话不受影响。",
-      "deleteSingle": "只删除任务记录，工作区和会话不受影响。"
+      "deleteSingle": "只删除任务记录，工作区和会话不受影响。",
+      "inheritedFrom": "沿用「{{title}}」",
+      "addDescription": "添加描述",
+      "addFirstSubtask": "添加子任务"
     },
     "event": {
       "source": {
@@ -4483,7 +4486,7 @@
         "subtasksWorking": "{{count}} 个工作中",
         "subtasksLatest": "最新：{{ref}}",
         "awaitingAcceptance": "待验收",
-        "moreInNeedsYou": "另有 {{count}} 个在「需要你」",
+        "moreInNeedsYou": "在「需要你」任务中查看另 {{count}} 项",
         "preview": "速览",
         "openFullSession": "打开完整会话",
         "remindLater": "稍后提醒",
@@ -4532,7 +4535,8 @@
       "expand": "展开",
       "selfCheck": "自检",
       "whereToVerify": "在哪验收",
-      "mergedInto": "合入位置"
+      "mergedInto": "合入位置",
+      "sessions": "会话"
     },
     "create": {
       "stepTask": "任务",

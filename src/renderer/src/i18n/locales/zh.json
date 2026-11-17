@@ -23451,7 +23451,7 @@
       "noMatches": "没有符合这个视图的任务。",
       "showAll": "显示全部任务",
       "empty": "还没有任务。按 C 记下第一件。",
-      "moreInNeedsYou": "另有 {{count}} 个在「需要你」"
+      "moreInNeedsYou": "在「需要你」任务中查看另 {{count}} 项"
     },
     "board": {
       "canceledHidden": "「已取消」列已隐藏，可在「筛选」里打开。",

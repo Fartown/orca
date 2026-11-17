@@ -48,7 +48,7 @@ export type LocalTaskListEntry = {
   children: LocalTask[]
   lines: LocalTaskTreeLine[]
 }
-/** `count` is every shown task whose own value is this group's, nested under another group or not. */
+/** `count` is every shown task whose own value is this group's. */
 export type LocalTaskListGroup = LocalTaskGroupHead & {
   entries: LocalTaskListEntry[]
   count: number
@@ -99,7 +99,7 @@ function listHeads(
   }
 }
 
-/** The key of the group a task counts in by its own value, whatever row it rides under. */
+/** The key of the group a task counts in by its own value. */
 export function localTaskGroupKey(
   task: LocalTask,
   index: LocalTaskIndex,
@@ -168,10 +168,9 @@ export function unfoldedLocalTaskLines(
 }
 
 /**
- * A subtask whose parent is shown rides under the parent, whatever the grouping, yet counts in the
- * group of its own value, so a heading agrees with the nav and the board (REQ-006). Subtasks keep
- * their number order under the parent, at any depth (D-008); `children` stays the first level so
- * every client nests alike.
+ * A shown subtask nests only when its immediate parent belongs to the same group. A cross-group
+ * subtask starts its own entry with its real parentId intact; descendants never skip it to attach
+ * to an earlier ancestor. Subtasks keep number order within each same-group tree (D-008).
  */
 export function groupLocalTasksForList(
   scopeTasks: readonly LocalTask[],
@@ -186,11 +185,17 @@ export function groupLocalTasksForList(
     return []
   }
   const visible = scopeTasks.filter((task) => isLocalTaskVisible(task, index, visibility))
-  const visibleIds = new Set(visible.map((task) => task.id))
+  const visibleById = new Map(visible.map((task) => [task.id, task]))
   // Why: a searched ref stays a row of its own instead of hiding under its parent.
-  const nests = (task: LocalTask): boolean =>
-    visibleIds.has(task.id) &&
-    !isExactLocalTaskRef(task, index.projectsById.get(task.projectId), visibility.query)
+  const nests = (task: LocalTask): boolean => {
+    const parent = task.parentId ? visibleById.get(task.parentId) : undefined
+    return (
+      visibleById.has(task.id) &&
+      parent !== undefined &&
+      localTaskGroupKey(task, index, kind) === localTaskGroupKey(parent, index, kind) &&
+      !isExactLocalTaskRef(task, index.projectsById.get(task.projectId), visibility.query)
+    )
+  }
   const entriesByKey = new Map<string, LocalTaskListEntry[]>()
   const countByKey = new Map<string, number>()
   for (const task of visible) {
@@ -199,7 +204,7 @@ export function groupLocalTasksForList(
       continue
     }
     countByKey.set(key, (countByKey.get(key) ?? 0) + 1)
-    if (task.parentId && visibleIds.has(task.parentId) && nests(task)) {
+    if (nests(task)) {
       continue
     }
     const children = (index.childrenByParentId.get(task.id) ?? []).filter(nests)
@@ -223,7 +228,7 @@ export function groupLocalTasksForList(
         entries: (entriesByKey.get(head.key) ?? []).sort((a, b) => compare(a.task, b.task)),
         count: countByKey.get(head.key) ?? 0
       }))
-      // Why by count: a status whose tasks all ride under other groups still heads its number.
+      // A nonempty group has at least one entry; the count still includes its nested rows.
       .filter((group) => group.count > 0)
       // Why: the group holding the searched ref moves up too, so the match is the first row.
       .sort((a, b) => Number(b.entries.some(hasExactRef)) - Number(a.entries.some(hasExactRef)))
@@ -234,8 +239,8 @@ export function groupLocalTasksForList(
 export type LocalTaskGroupTally = { shown: number; inBand: number }
 
 /**
- * Counts each task the list holds once, in the group of its own value wherever its row rides, so a
- * heading's shown number plus the band's share equals its board column and the nav (REQ-006).
+ * Counts each task the list holds once in the group of its own value, so a heading's shown number
+ * plus the band's share equals its board column and the nav (REQ-006).
  * `banded` is the band's ids, every band task with its subtasks, which leave the groups below.
  */
 export function tallyLocalTaskGroups<Group>(

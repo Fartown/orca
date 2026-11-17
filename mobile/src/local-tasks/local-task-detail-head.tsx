@@ -5,6 +5,7 @@ import type { LocalTask } from '../../../src/shared/local-tasks/local-task-types
 import { colors, radii, spacing, typography } from '../theme/mobile-theme'
 import type { LocalTaskCardFacts } from './local-task-card-facts'
 import { localTasksCopy } from './local-tasks-copy'
+import { useMobileTranslation } from '../i18n/use-mobile-translation'
 import { localTaskStyles } from './local-tasks-styles'
 import type { LocalTaskWorkControls } from './local-task-work-section'
 
@@ -45,9 +46,11 @@ export function LocalTaskDetailWhere(props: {
   facts: LocalTaskCardFacts
   reviewDetail: string | null
   primary: LocalTaskWorkControls['primary']
+  inheritedFrom: LocalTaskWorkControls['inheritedFrom']
   notices: ReactNode
   readOnly: boolean
 }) {
+  const t = useMobileTranslation()
   const card = localTasksCopy().work.card
   const { facts, primary } = props
   return (
@@ -64,6 +67,13 @@ export function LocalTaskDetailWhere(props: {
               .filter(Boolean)
               .join(' · ')}
           </Text>
+          {props.inheritedFrom ? (
+            <Text style={styles.inherited} numberOfLines={1}>
+              {t('localTasks.detail.inheritedFrom', 'From {{title}}', {
+                title: props.inheritedFrom.title
+              })}
+            </Text>
+          ) : null}
         </View>
       ) : null}
       {primary && !props.readOnly ? (
@@ -78,7 +88,7 @@ export function LocalTaskDetailWhere(props: {
           <Text style={styles.primaryText}>{primary.label}</Text>
         </Pressable>
       ) : null}
-      <View style={styles.notices}>{props.notices}</View>
+      {props.notices ? <View style={styles.notices}>{props.notices}</View> : null}
     </>
   )
 }
@@ -93,20 +103,39 @@ const styles = StyleSheet.create({
   },
   ancestor: { flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 1 },
   parentTitle: { flexShrink: 1, color: colors.textSecondary, fontSize: typography.metaSize },
-  whereRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: spacing.md },
-  shrink: { flexShrink: 1 },
+  whereRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: spacing.md
+  },
+  shrink: { flexShrink: 1, minWidth: 0 },
+  inherited: {
+    flexShrink: 1,
+    minWidth: 0,
+    color: colors.textMuted,
+    fontSize: typography.metaSize
+  },
   // The light pill the prototype draws for the head's one main action.
   primary: {
     flexDirection: 'row',
     alignItems: 'center',
     alignSelf: 'flex-start',
+    maxWidth: '100%',
     gap: 6,
     marginTop: spacing.md,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
+    minHeight: 44,
     borderRadius: radii.pill,
     backgroundColor: colors.surfaceBright
   },
-  primaryText: { color: colors.bgBase, fontSize: typography.bodySize, fontWeight: '600' },
+  primaryText: {
+    flexShrink: 1,
+    color: colors.bgBase,
+    fontSize: typography.bodySize,
+    fontWeight: '600'
+  },
   notices: { gap: 4, marginTop: spacing.sm }
 })

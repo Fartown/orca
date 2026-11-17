@@ -4725,7 +4725,10 @@
       "missing": "This task no longer exists.",
       "deleteTitle": "Delete “{{title}}”?",
       "deleteWithSubtasks": "Its subtasks at every level ({{count}}) are deleted with it. Only task records are removed; workspaces and sessions are not touched.",
-      "deleteSingle": "Only the task record is removed; workspaces and sessions are not touched."
+      "deleteSingle": "Only the task record is removed; workspaces and sessions are not touched.",
+      "inheritedFrom": "From {{title}}",
+      "addDescription": "Add description",
+      "addFirstSubtask": "Add subtask"
     },
     "event": {
       "source": {
@@ -5051,7 +5054,7 @@
         "subtasksWorking": "{{count}} working",
         "subtasksLatest": "Latest: {{ref}}",
         "awaitingAcceptance": "Awaiting acceptance",
-        "moreInNeedsYou": "{{count}} more in Needs you",
+        "moreInNeedsYou": "View {{count}} more through Needs you tasks",
         "preview": "Preview",
         "openFullSession": "Open full session",
         "remindLater": "Remind later",
@@ -5100,7 +5103,8 @@
       "expand": "Expand",
       "selfCheck": "Self-check",
       "whereToVerify": "Where to verify",
-      "mergedInto": "Merged into"
+      "mergedInto": "Merged into",
+      "sessions": "Sessions"
     },
     "create": {
       "stepTask": "Task",

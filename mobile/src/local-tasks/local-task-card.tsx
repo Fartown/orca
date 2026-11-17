@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { Check, Clock, CornerDownRight, Eye, SquareTerminal } from 'lucide-react-native'
 import { formatAgentTypeLabel } from '../../../src/shared/agent-type-label'
+import { localTaskPathLabel } from '../../../src/shared/local-tasks/local-task-hierarchy'
 import type {
   LocalTaskAttentionItem,
   LocalTaskAttentionKind
@@ -180,6 +181,7 @@ export function LocalTaskSubtaskSummary(props: {
 /** A task in a status group: title, where it works, its latest line and its lead session. */
 export function LocalTaskCard(props: {
   task: LocalTask
+  ancestors?: readonly LocalTask[]
   status: LocalTaskStatusDef | null
   facts: LocalTaskCardFacts
   now: number
@@ -208,6 +210,16 @@ export function LocalTaskCard(props: {
             accessibilityRole="button"
             accessibilityLabel={`${task.title} ${task.ref}`}
           >
+            {props.ancestors && props.ancestors.length > 0 ? (
+              <Text
+                style={localTaskStyles.meta}
+                numberOfLines={1}
+                accessibilityLabel={localTaskPathLabel(props.ancestors)}
+              >
+                {props.ancestors.length > 1 ? '… › ' : ''}
+                {props.ancestors.at(-1)?.title}
+              </Text>
+            ) : null}
             <Text style={styles.title} numberOfLines={2}>
               {task.title}
             </Text>

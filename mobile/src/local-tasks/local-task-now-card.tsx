@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
-import { ChevronDown, ChevronRight, CircleDot, CornerDownRight, List } from 'lucide-react-native'
+import { ChevronDown, ChevronRight, CornerDownRight, List } from 'lucide-react-native'
 import { formatAgentTypeLabel } from '../../../src/shared/agent-type-label'
 import type {
   LocalTaskLinks,
@@ -20,6 +20,7 @@ import { LocalTaskCardFoot } from './local-task-card'
 import type { LocalTaskCardFacts } from './local-task-card-facts'
 import { formatLocalTaskAgo, localTasksCopy } from './local-tasks-copy'
 import { localTaskLatestProgress } from './local-task-latest-line'
+import { localTaskSessionSummary } from './local-task-session-summary'
 import { localTasksPageCopy } from './local-tasks-page-copy'
 import type { LocalTaskSessionView } from './local-task-progress-projection'
 import { LOCAL_TASK_SESSION_DOT } from './local-task-session-dots'
@@ -100,6 +101,7 @@ export function LocalTaskNowCard(props: {
   onOpenSession: (taskSessionId: string) => void
   onLongPressSession: ((sessionLinkId: string) => void) | null
 }) {
+  const t = useMobileTranslation()
   const copy = localTasksCopy()
   const page = localTasksPageCopy()
   const work = copy.work
@@ -119,37 +121,29 @@ export function LocalTaskNowCard(props: {
     .sort((a, b) => b.number - a.number)
   return (
     <View style={[localTaskStyles.card, styles.card]} testID="local-task-now-card">
-      <View style={styles.label}>
-        <CircleDot size={13} color={colors.textMuted} />
-        <Text style={styles.labelText}>{copy.now}</Text>
-      </View>
-      <View style={styles.section}>
-        <Text style={styles.heading}>{page.latestProgress}</Text>
-        {written ? (
-          <>
-            <Text style={localTaskStyles.meta}>
-              {[
-                numbered
-                  ? page.writebackNumber(numbered.number)
-                  : turnEnded
-                    ? work.card.lastLine
-                    : work.card.writeback,
-                writer ? writer.ref : null,
-                writerAgent ? formatAgentTypeLabel(writerAgent) : null,
-                formatLocalTaskAgo(copy, written.at, props.now)
-              ]
-                .filter(Boolean)
-                .join(' · ')}
-            </Text>
-            <ProgressBody
-              key={`${props.task.id}:${written.taskId}:${written.at}:${written.body}`}
-              body={written.body}
-            />
-          </>
-        ) : (
-          <Text style={localTaskStyles.meta}>{page.noWriteback}</Text>
-        )}
-      </View>
+      {written ? (
+        <View style={styles.section}>
+          <Text style={styles.heading}>{page.latestProgress}</Text>
+          <Text style={localTaskStyles.meta}>
+            {[
+              numbered
+                ? page.writebackNumber(numbered.number)
+                : turnEnded
+                  ? work.card.lastLine
+                  : work.card.writeback,
+              writer ? writer.ref : null,
+              writerAgent ? formatAgentTypeLabel(writerAgent) : null,
+              formatLocalTaskAgo(copy, written.at, props.now)
+            ]
+              .filter(Boolean)
+              .join(' · ')}
+          </Text>
+          <ProgressBody
+            key={`${props.task.id}:${written.taskId}:${written.at}:${written.body}`}
+            body={written.body}
+          />
+        </View>
+      ) : null}
       {props.writebacks.length >= 2 ? (
         <Pressable
           style={styles.allProgress}
@@ -184,6 +178,17 @@ export function LocalTaskNowCard(props: {
           <LocalTaskCardFoot facts={facts} now={props.now} />
         </View>
       ) : null}
+      {props.sessions.length > 0 ? (
+        <View style={styles.sessionsHeading}>
+          <Text style={styles.heading}>{t('localTasks.page.sessions', 'Sessions')}</Text>
+          <Text style={localTaskStyles.meta}>{props.sessions.length}</Text>
+        </View>
+      ) : null}
+      {!written && props.sessions.length === 0 ? (
+        <View style={styles.section}>
+          <Text style={localTaskStyles.meta}>{page.noWriteback}</Text>
+        </View>
+      ) : null}
       {props.sessions.map((view) => {
         const item =
           view.state === 'unverifiable'
@@ -192,6 +197,9 @@ export function LocalTaskNowCard(props: {
         const stateSince =
           props.snapshot?.sessions.find((entry) => entry.taskSessionId === view.link.id)
             ?.stateSince ?? null
+        const summary = view.lastMessage ? localTaskSessionSummary(view.lastMessage) : null
+        const repeatedProgress =
+          written?.sessionLinkId === view.link.id && view.lastMessage === written.body
         return (
           <Pressable
             key={view.link.id}
@@ -232,9 +240,9 @@ export function LocalTaskNowCard(props: {
                     .join(' · ')}
                 </Text>
               </View>
-              {view.lastMessage ? (
-                <Text style={localTaskStyles.meta} numberOfLines={1}>
-                  {view.lastMessage}
+              {summary && !repeatedProgress ? (
+                <Text style={localTaskStyles.meta} numberOfLines={2}>
+                  {summary}
                 </Text>
               ) : null}
             </View>
@@ -248,18 +256,17 @@ export function LocalTaskNowCard(props: {
 
 const styles = StyleSheet.create({
   card: { marginTop: spacing.lg },
-  label: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.borderSubtle
-  },
-  labelText: { color: colors.textSecondary, fontSize: typography.metaSize, fontWeight: '600' },
   section: { padding: spacing.md, gap: 6 },
   heading: { color: colors.textPrimary, fontSize: typography.metaSize, fontWeight: '600' },
+  sessionsHeading: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.borderSubtle
+  },
   sectionLabel: { color: colors.textSecondary },
   progressBody: { gap: spacing.xs },
   progressClip: { overflow: 'hidden' },
@@ -295,8 +302,15 @@ const styles = StyleSheet.create({
   },
   pressed: { backgroundColor: colors.bgRaised },
   sessionMain: { flex: 1, minWidth: 0, gap: 4 },
-  sessionLine: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  subtask: { flexDirection: 'row', alignItems: 'center', gap: 2, flexShrink: 1 },
+  sessionLine: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 6 },
+  subtask: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    flexShrink: 1,
+    minWidth: 0,
+    maxWidth: '100%'
+  },
   agent: { color: colors.textPrimary, fontSize: typography.bodySize, fontWeight: '600' },
   state: { flexShrink: 1, color: colors.textSecondary, fontSize: typography.metaSize },
   attention: { color: colors.statusAmber }

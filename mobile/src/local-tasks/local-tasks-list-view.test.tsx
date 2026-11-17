@@ -2,9 +2,10 @@ import { createElement } from 'react'
 import { act, create, type ReactTestRenderer } from 'react-test-renderer'
 import { afterEach, expect, it, vi } from 'vitest'
 import type { LocalTask, LocalTaskProject } from '../../../src/shared/local-tasks/local-task-types'
+import { LocalTaskCard } from './local-task-card'
 import { localTasksCopy } from './local-tasks-copy'
 import { buildLocalTaskGroups, localTaskStatusLookup } from './local-task-list-projection'
-import { LocalTasksListView } from './local-tasks-list-view'
+import { LocalTaskSubtaskRow, LocalTasksListView } from './local-tasks-list-view'
 
 vi.mock('react-native', () => ({
   Pressable: 'Pressable',
@@ -117,4 +118,61 @@ it('heads each status with the tasks of that status shown below, plus those in "
   const more = localTasksCopy().work.card.moreInNeedsYou
   expect(texts).toEqual(expect.arrayContaining(['Doing', 1, more(1), 'Todo', 1]))
   expect(texts.filter((text) => text === more(1))).toHaveLength(2)
+})
+
+it('offers a cross-status child as a card in its counted group with its real parent', () => {
+  const tasks = [task('A', 'doing'), task('B', 'todo', 'A')]
+  const groups = buildLocalTaskGroups({
+    tasks,
+    projects: [project],
+    projectId: 'p',
+    segment: 'all',
+    nestSubtasks: true,
+    keepEmpty: false
+  })
+  const onOpen = vi.fn()
+  act(() => {
+    renderer = create(
+      createElement(LocalTasksListView, {
+        groups,
+        lookup: localTaskStatusLookup([project]),
+        now: 0,
+        bottomInset: 0,
+        sessionsFor: () => [],
+        factsFor: () => ({
+          workspace: null,
+          hostName: '',
+          offline: false,
+          lead: null,
+          sessionCount: 0,
+          latest: null,
+          subtasks: null
+        }),
+        onOpen
+      })
+    )
+  })
+  const cards = renderer!.root.findAllByType(LocalTaskCard)
+  expect(cards.map((card) => card.props.task.id)).toEqual(['A', 'B'])
+  expect(cards[1]?.props.ancestors.map((ancestor: LocalTask) => ancestor.id)).toEqual(['A'])
+  act(() => cards[1]?.props.onOpen('B'))
+  expect(onOpen).toHaveBeenCalledWith('B')
+})
+
+it('reads a nested subtask name before its secondary ref', () => {
+  const child = { ...task('B', 'doing', 'A'), title: 'Readable child name' }
+  act(() => {
+    renderer = create(
+      createElement(LocalTaskSubtaskRow, {
+        task: child,
+        status: project.statuses[0] ?? null,
+        onOpen: vi.fn()
+      })
+    )
+  })
+  expect(
+    renderer!.root
+      .findAll((node) => String(node.type) === 'Text')
+      .map((node) => node.props.children)
+  ).toEqual(['Readable child name', 'B'])
 })

@@ -63,9 +63,13 @@ export function localTasksWorkCardCopy() {
         'Awaiting acceptance'
       ),
       moreInNeedsYou: (count: number): string =>
-        translate('localTasks.work.card.moreInNeedsYou', '{{count}} more in Needs you', {
-          count
-        }),
+        translate(
+          'localTasks.work.card.moreInNeedsYou',
+          'View {{count}} more through Needs you tasks',
+          {
+            count
+          }
+        ),
       preview: translate('localTasks.work.card.preview', 'Preview'),
       openFullSession: translate('localTasks.work.card.openFullSession', 'Open full session'),
       remindLater: translate('localTasks.work.card.remindLater', 'Remind later'),

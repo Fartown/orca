@@ -3518,6 +3518,7 @@
         "src/main/ipc/desktop-runtime-sender-lifecycle.ts",
         "src/renderer/src/lib/e2e-config.ts",
         "mobile/src/components/MobileMarkdown.tsx",
+        "mobile/src/components/mobile-markdown-tree.ts",
         "src/main/startup/skill-share-deep-link-state.ts"
       ],
       "policyId": "local-tasks",
@@ -4525,6 +4526,10 @@
         "src/main/local-tasks/local-tasks-upstream-registration.test.ts",
         "src/shared/local-tasks/local-task-retired-cleanup-ticket-source.test.ts",
         "mobile/src/local-tasks/local-task-now-card.test.tsx",
+        "mobile/src/local-tasks/local-task-detail-screen.test.tsx",
+        "mobile/src/local-tasks/local-task-detail-head.test.tsx",
+        "mobile/src/local-tasks/local-task-detail-sections.test.tsx",
+        "mobile/src/local-tasks/local-task-session-summary.test.ts",
         "src/renderer/src/components/local-tasks/LocalTaskLatestProgress.test.tsx",
         "src/renderer/src/components/local-tasks/LocalTaskDispatchReceipt.test.tsx",
         "src/shared/local-tasks/local-task-deep-link.test.ts",
