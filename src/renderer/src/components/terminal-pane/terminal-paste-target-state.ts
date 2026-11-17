@@ -41,6 +41,7 @@ export function isTerminalPanePasteTargetCurrent({
 export type TerminalPanePasteFocusState = {
   requireSameFocusedElement: boolean
   activeElementAtDispatch: Element | null
+  focusOwnedAtDispatch?: boolean
   paneContainer: Element
   activeElement?: Element | null
 }
@@ -48,13 +49,14 @@ export type TerminalPanePasteFocusState = {
 export function isTerminalPanePasteFocusCurrent({
   requireSameFocusedElement,
   activeElementAtDispatch,
+  focusOwnedAtDispatch,
   paneContainer,
   activeElement = typeof document === 'undefined' ? null : document.activeElement
 }: TerminalPanePasteFocusState): boolean {
   if (!requireSameFocusedElement || activeElementAtDispatch === null) {
     return true
   }
-  if (!paneContainer.contains(activeElementAtDispatch)) {
+  if (!(focusOwnedAtDispatch ?? paneContainer.contains(activeElementAtDispatch))) {
     return false
   }
   if (activeElement === activeElementAtDispatch) {

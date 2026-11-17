@@ -23,6 +23,78 @@
   "dependsOnIgnore": ["src/renderer/src/components/ui/**"],
   "features": [
     {
+      "id": "terminal-paste-ownership",
+      "title": "终端粘贴目标归属",
+      "goal": "快捷键按实际聚焦分屏固定粘贴目标，容忍同一目标输入框替换并准确恢复错误提示",
+      "journal": "docs/issue/终端粘贴目标归属/journal.md",
+      "policyId": "terminal-paste-ownership",
+      "ownedPaths": [
+        "src/renderer/src/terminal-paste-ownership/**",
+        "docs/issue/终端粘贴目标归属/**"
+      ],
+      "requiredFiles": [
+        "src/renderer/src/terminal-paste-ownership/terminal-paste-ownership.ts",
+        "src/renderer/src/terminal-paste-ownership/terminal-paste-feedback.ts"
+      ],
+      "dependsOn": [
+        "src/renderer/src/components/terminal-pane/terminal-paste-target-state.ts",
+        "src/renderer/src/components/terminal-pane/terminal-paste-model.ts",
+        "src/renderer/src/components/terminal-pane/pty-transport-types.ts",
+        "src/renderer/src/components/terminal-pane/terminal-keyboard-pane-resolution.ts",
+        "src/renderer/src/components/terminal-pane/terminal-error-accumulation.ts",
+        "src/renderer/src/i18n/i18n.ts"
+      ],
+      "seams": [
+        {
+          "file": "src/renderer/src/components/native-chat/native-chat-paste-routing.test.tsx",
+          "mustContain": "'app-menu'",
+          "why": "Keep terminal-only menu paste delegated to the original-target clipboard execution."
+        },
+        {
+          "file": "src/renderer/src/i18n/locales/en.json",
+          "mustContain": "terminalPasteOwnership",
+          "why": "Localize paste ownership failures."
+        },
+        {
+          "file": "src/renderer/src/i18n/locales/zh.json",
+          "mustContain": "terminalPasteOwnership",
+          "why": "Localize paste ownership failures."
+        },
+        {
+          "file": "src/renderer/src/components/terminal-pane/terminal-pane-paste-execution.ts",
+          "mustContain": "captureTerminalPasteOwnership",
+          "why": "Bind asynchronous paste to its original pane and report only owned failures."
+        },
+        {
+          "file": "src/renderer/src/components/terminal-pane/terminal-pane-paste-listeners.ts",
+          "mustContain": "resolveTerminalKeyboardPane",
+          "why": "Bind asynchronous paste to its original pane and report only owned failures."
+        },
+        {
+          "file": "src/renderer/src/components/terminal-pane/terminal-paste-target-state.ts",
+          "mustContain": "focusOwnedAtDispatch",
+          "why": "Bind asynchronous paste to its original pane and report only owned failures."
+        },
+        {
+          "file": "src/renderer/src/components/terminal-pane/terminal-paste-errors.ts",
+          "mustContain": "formatTerminalPasteOwnershipFailure",
+          "why": "Bind asynchronous paste to its original pane and report only owned failures."
+        },
+        {
+          "file": ".gitignore",
+          "mustContain": "!docs/issue/终端粘贴目标归属/**",
+          "why": "Bind asynchronous paste to its original pane and report only owned failures."
+        }
+      ],
+      "tests": [
+        "src/renderer/src/terminal-paste-ownership/terminal-paste-ownership.test.ts",
+        "src/renderer/src/terminal-paste-ownership/terminal-paste-feedback.test.ts"
+      ],
+      "checks": [
+        "ORCA_BACKGROUND_LAUNCH=1 pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/terminal-paste-ownership src/renderer/src/components/terminal-pane/terminal-clipboard-paste.test.ts src/renderer/src/components/terminal-pane/terminal-paste-coordinator.test.ts src/renderer/src/components/native-chat/native-chat-paste-routing.test.tsx --maxWorkers=2"
+      ]
+    },
+    {
       "id": "workspace-session-recovery",
       "title": "工作区恢复占位收敛",
       "goal": "历史选择不复活工作区，按在线主机目录收敛恢复占位并保留可恢复内容",
