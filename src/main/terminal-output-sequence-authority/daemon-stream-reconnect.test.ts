@@ -25,7 +25,7 @@ it('keeps legacy daemon snapshots and new echo in one domain through real reconn
       runtime.onPtyData(
         'pty-1',
         event.data,
-        Date.now(),
+        0,
         event.sequenceChars ?? event.data.length,
         event.transformed
       )
@@ -78,7 +78,7 @@ it('does not double count an existing stream whose data crosses the attach respo
     runtime.onPtyData(
       'pty-1',
       event.data,
-      Date.now(),
+      0,
       event.sequenceChars ?? event.data.length,
       event.transformed
     )
@@ -144,7 +144,7 @@ it('rebases the same adapter after a real socket loss with a fresh attachment le
     runtime.onPtyData(
       'pty-1',
       event.data,
-      Date.now(),
+      0,
       event.sequenceChars ?? event.data.length,
       event.transformed
     )

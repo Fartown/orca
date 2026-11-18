@@ -32,6 +32,15 @@ external_ids:
 
 ## 3. 开发记录
 
+### 2026-11-18：重连测试固定事件时间
+
+- 本轮目标：消除 CI flaky-test ratchet 报出的三处真实时钟依赖。
+- 完成内容：真实 socket 重连测试使用固定事件时间，继续等待实际输出与连接状态；旧客户端复用 ID 的取消准备测试改用已有原始 socket pair 夹具，继续验证服务端取消语义，不再覆写每次连接都会重建的 clientId。
+- 代码或文档变更：`daemon-stream-reconnect.test.ts`、既有 preflight replacement 夹具及其接缝登记、本记录；产品逻辑和门禁不变。
+- 验证证据：新 head 真实 SSH 丢帧恢复验收通过，执行端 stdin 与客户端回显一致，原 PTY/incarnation 保持不变；定向测试与 ast-grep 门禁结果见主证据目录。
+- 未解决问题：PR 必需检查仍须按最终 head 完整通过。
+- 下一步：推送修正，完成 PR checks 与合入。
+
 ### 2026-11-18：CI 模块边界收敛
 
 - 本轮目标：解决 CI 对三个 daemon 模块的 300 行上限。

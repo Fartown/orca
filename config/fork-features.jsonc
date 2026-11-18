@@ -101,6 +101,11 @@
           "file": "src/main/daemon/daemon-pty-buffer-snapshots.ts",
           "mustContain": "canProvideAuthoritativeBufferSnapshot",
           "why": "Keep the existing snapshot ownership probe in its snapshot module and the state seam within its line budget."
+        },
+        {
+          "file": "src/main/daemon/daemon-preflight-client-replacement.test.ts",
+          "mustContain": "connectDaemonSocketPair(socketPath, tokenPath, 'reused-client-id')",
+          "why": "Exercise legacy same-ID socket replacement directly now that DaemonClient creates fresh connection leases."
         }
       ],
       "tests": [

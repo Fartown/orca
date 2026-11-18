@@ -4,7 +4,6 @@ import { connect, type Socket } from 'node:net'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
-import { DaemonClient } from './client'
 import { DaemonServer } from './daemon-server'
 import { getDaemonSocketPath } from './daemon-spawner'
 import { encodeNdjson } from './ndjson'
@@ -79,31 +78,27 @@ describe('daemon preflight client replacement', () => {
     server = new DaemonServer({ socketPath, tokenPath, preparePtySpawn, spawnSubprocess })
     await server.start()
 
-    const original = new DaemonClient({ socketPath, tokenPath })
-    const replacement = new DaemonClient({ socketPath, tokenPath })
-    ;(original as unknown as { clientId: string }).clientId = 'reused-client-id'
-    ;(replacement as unknown as { clientId: string }).clientId = 'reused-client-id'
-    await original.ensureConnected()
-    original
-      .request('createOrAttach', {
-        sessionId: 'replacement-pending',
-        cols: 80,
-        rows: 24
+    const original = await connectDaemonSocketPair(socketPath, tokenPath, 'reused-client-id')
+    original.control.write(
+      encodeNdjson({
+        id: 'replacement-request',
+        type: 'createOrAttach',
+        payload: { sessionId: 'replacement-pending', cols: 80, rows: 24 }
       })
-      .catch(() => {
-        /* Replacement disconnects this pending request. */
-      })
+    )
     await vi.waitFor(() => expect(preparePtySpawn).toHaveBeenCalledOnce())
 
-    await replacement.ensureConnected()
+    const replacement = await connectDaemonSocketPair(socketPath, tokenPath, 'reused-client-id')
     finishPreparation()
     await vi.waitFor(() =>
       expect((server as unknown as DaemonServerPrivate).preparations.pending.size).toBe(0)
     )
     expect(spawnSubprocess).not.toHaveBeenCalled()
 
-    replacement.disconnect()
-    original.disconnect()
+    replacement.control.destroy()
+    replacement.stream.destroy()
+    original.control.destroy()
+    original.stream.destroy()
   })
 
   it('cancels only the preparation whose client loses its stream socket', async () => {

@@ -34,7 +34,8 @@
             "src/main/daemon/daemon-pty-adapter-session-adoption.test.ts",
             "src/main/daemon/daemon-pty-spawn-result-classification.test.ts",
             "src/main/daemon/client.ts",
-            "src/main/daemon/daemon-pty-buffer-snapshots.ts"
+            "src/main/daemon/daemon-pty-buffer-snapshots.ts",
+            "src/main/daemon/daemon-preflight-client-replacement.test.ts"
           ],
           "message": "Change is outside terminal output sequence authority."
         }
@@ -1153,7 +1154,8 @@
             "src/main/daemon/daemon-pty-adapter-session-adoption.test.ts",
             "src/main/daemon/daemon-pty-spawn-result-classification.test.ts",
             "src/main/daemon/client.ts",
-            "src/main/daemon/daemon-pty-buffer-snapshots.ts"
+            "src/main/daemon/daemon-pty-buffer-snapshots.ts",
+            "src/main/daemon/daemon-preflight-client-replacement.test.ts"
           ],
           "message": "Branch changes an upstream path that no fork feature owns or registers as a seam; extend config/fork-features.jsonc and this allowlist, or move the change into a feature-owned path."
         }
