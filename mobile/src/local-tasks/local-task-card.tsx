@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { Check, Clock, CornerDownRight, Eye, SquareTerminal } from 'lucide-react-native'
 import { formatAgentTypeLabel } from '../../../src/shared/agent-type-label'
+import { localTaskPathLabel } from '../../../src/shared/local-tasks/local-task-hierarchy'
 import type {
   LocalTaskAttentionItem,
   LocalTaskAttentionKind
@@ -12,10 +13,13 @@ import type {
 } from '../../../src/shared/local-tasks/local-task-types'
 import { AgentStateDot } from '../components/AgentStateDot'
 import { colors, spacing, typography } from '../theme/mobile-theme'
+import { themedStyleSheet } from '../theme/themed-styles'
+import { useMobileColorScheme } from '../theme/use-mobile-color-scheme'
 import type { LocalTaskCardFacts } from './local-task-card-facts'
 import { formatLocalTaskAgo, localTasksCopy } from './local-tasks-copy'
 import { LOCAL_TASK_SESSION_DOT } from './local-task-session-dots'
 import { localTaskStyles } from './local-tasks-styles'
+import { localTaskSessionSummary } from './local-task-session-summary'
 import { LocalTaskStatusIcon } from './local-tasks-visuals'
 
 const ATTENTION_DOT: Record<LocalTaskAttentionKind, 'waiting' | 'blocked' | 'done'> = {
@@ -34,6 +38,7 @@ export function LocalTaskCardMeta(props: {
   /** What follows the kind instead of the workspace: the agent, a PR. */
   detail?: string | null
 }) {
+  useMobileColorScheme()
   const work = localTasksCopy().work
   const { facts } = props
   const where = facts.workspace
@@ -61,6 +66,7 @@ export function LocalTaskCardMeta(props: {
 
 /** The lead session's agent, state and time in it, and where the latest line came from. */
 export function LocalTaskCardFoot(props: { facts: LocalTaskCardFacts; now: number }) {
+  useMobileColorScheme()
   const copy = localTasksCopy()
   const card = copy.work.card
   const { facts } = props
@@ -114,12 +120,14 @@ export function LocalTaskCardFoot(props: { facts: LocalTaskCardFacts; now: numbe
 
 /** The latest line, two lines at most; a session that has not written yet says so. */
 export function LocalTaskCardLatestLine(props: { facts: LocalTaskCardFacts }) {
+  useMobileColorScheme()
   const card = localTasksCopy().work.card
   const latest = props.facts.latest
   if (!latest) {
     return null
   }
-  const text = latest.source === 'started' ? card.sessionStarted : latest.body
+  const text =
+    latest.source === 'started' ? card.sessionStarted : localTaskSessionSummary(latest.body)
   const dim = latest.source === 'started' || props.facts.offline
   return (
     <Text style={[styles.body, dim && styles.dim]} numberOfLines={2}>
@@ -137,6 +145,7 @@ export function LocalTaskSubtaskSummary(props: {
   expanded?: boolean
   onToggle?: () => void
 }) {
+  useMobileColorScheme()
   const card = localTasksCopy().work.card
   const subtasks = props.facts.subtasks
   if (!subtasks) {
@@ -154,7 +163,9 @@ export function LocalTaskSubtaskSummary(props: {
           : summary?.kind === 'working'
             ? card.subtasksWorking(summary.count)
             : null,
-    subtasks.latest ? `${card.subtasksLatest(subtasks.latest.ref)} ${subtasks.latest.body}` : null
+    subtasks.latest
+      ? `${card.subtasksLatest(subtasks.latest.ref)} ${localTaskSessionSummary(subtasks.latest.body)}`
+      : null
   ]
   const line = (
     <View style={styles.kids}>
@@ -180,6 +191,7 @@ export function LocalTaskSubtaskSummary(props: {
 /** A task in a status group: title, where it works, its latest line and its lead session. */
 export function LocalTaskCard(props: {
   task: LocalTask
+  ancestors?: readonly LocalTask[]
   status: LocalTaskStatusDef | null
   facts: LocalTaskCardFacts
   now: number
@@ -190,37 +202,60 @@ export function LocalTaskCard(props: {
   /** Subtask lines drawn under the card, inside its row. */
   children?: ReactNode
 }) {
+  useMobileColorScheme()
   const { task, status, facts } = props
   const closed = status?.category === 'completed' || status?.category === 'canceled'
   return (
     <View style={[styles.cardBlock, props.first && styles.cardBlockFirst]}>
       <View style={styles.card}>
-        <View style={styles.icon}>
-          <LocalTaskStatusIcon
-            category={status?.category ?? null}
-            color={status?.color ?? 'gray'}
-          />
-        </View>
-        <View style={styles.main}>
-          <Pressable
-            style={({ pressed }) => [styles.main, pressed && styles.pressed]}
-            onPress={() => props.onOpen(task.id)}
-            accessibilityRole="button"
-            accessibilityLabel={`${task.title} ${task.ref}`}
-          >
-            <Text style={styles.title} numberOfLines={2}>
-              {task.title}
-            </Text>
-            <LocalTaskCardMeta task={task} facts={facts} />
-            {closed ? null : <LocalTaskCardLatestLine facts={facts} />}
-            {closed ? null : <LocalTaskCardFoot facts={facts} now={props.now} />}
-          </Pressable>
-          <LocalTaskSubtaskSummary
-            facts={facts}
-            expanded={props.subtasksExpanded}
-            onToggle={props.onToggleSubtasks}
-          />
-        </View>
+        <Pressable
+          style={({ pressed }) => [styles.cardMain, pressed && styles.pressed]}
+          onPress={() => props.onOpen(task.id)}
+          accessibilityRole="button"
+          accessibilityLabel={`${task.title} ${task.ref}`}
+        >
+          {props.ancestors && props.ancestors.length > 0 ? (
+            <View style={styles.cardRow}>
+              <View style={styles.iconColumn} />
+              <Text
+                style={[localTaskStyles.meta, styles.rowContent]}
+                numberOfLines={1}
+                accessibilityLabel={localTaskPathLabel(props.ancestors)}
+              >
+                {props.ancestors.length > 1 ? '… › ' : ''}
+                {props.ancestors.at(-1)?.title}
+              </Text>
+            </View>
+          ) : null}
+          <View style={styles.cardRow}>
+            <View style={[styles.iconColumn, styles.icon]}>
+              <LocalTaskStatusIcon
+                category={status?.category ?? null}
+                color={status?.color ?? 'gray'}
+              />
+            </View>
+            <View style={styles.main}>
+              <Text style={styles.title} numberOfLines={2}>
+                {task.title}
+              </Text>
+              <LocalTaskCardMeta task={task} facts={facts} />
+              {closed ? null : <LocalTaskCardLatestLine facts={facts} />}
+              {closed ? null : <LocalTaskCardFoot facts={facts} now={props.now} />}
+            </View>
+          </View>
+        </Pressable>
+        {facts.subtasks ? (
+          <View style={styles.cardRow}>
+            <View style={styles.iconColumn} />
+            <View style={styles.rowContent}>
+              <LocalTaskSubtaskSummary
+                facts={facts}
+                expanded={props.subtasksExpanded}
+                onToggle={props.onToggleSubtasks}
+              />
+            </View>
+          </View>
+        ) : null}
       </View>
       {props.children}
     </View>
@@ -234,6 +269,7 @@ export function LocalTaskCardButton(props: {
   disabled?: boolean
   onPress: () => void
 }) {
+  useMobileColorScheme()
   const Icon =
     props.icon === 'preview'
       ? Eye
@@ -264,21 +300,24 @@ export function localTaskLeadItem(
   return items.findLast((item) => item.kind !== 'unread-done') ?? items.at(-1) ?? null
 }
 
-export const localTaskCardStyles = StyleSheet.create({
+export const localTaskCardStyles = themedStyleSheet(() => ({
   group: { marginHorizontal: spacing.lg },
   actions: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: 4 },
   question: { color: colors.textPrimary, fontSize: typography.bodySize, lineHeight: 20 }
-})
+}))
 
-const styles = StyleSheet.create({
+const styles = themedStyleSheet(() => ({
   cardBlock: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderSubtle },
   cardBlockFirst: { borderTopWidth: 0 },
   card: {
-    flexDirection: 'row',
-    gap: spacing.md,
+    gap: 4,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md
   },
+  cardMain: { gap: 4 },
+  cardRow: { flexDirection: 'row', gap: spacing.md },
+  iconColumn: { width: 16 },
+  rowContent: { flex: 1, minWidth: 0 },
   pressed: { backgroundColor: colors.bgRaised },
   icon: { paddingTop: 2 },
   main: { flex: 1, minWidth: 0, gap: 4 },
@@ -296,4 +335,4 @@ const styles = StyleSheet.create({
   foot: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   footText: { flex: 1, minWidth: 0, color: colors.textSecondary, fontSize: typography.metaSize },
   kids: { flexDirection: 'row', alignItems: 'center', gap: 4 }
-})
+}))

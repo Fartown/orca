@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Pressable, StyleSheet, Text, View } from 'react-native'
+import { Pressable, Text, View } from 'react-native'
 import { Check, GitBranch, Plus } from 'lucide-react-native'
 import { LOCAL_TASK_PROJECT_REPOS_MAX } from '../../../src/shared/local-tasks/local-task-model'
 import { localTaskReposPatch } from '../../../src/shared/local-tasks/local-task-repos-patch'
@@ -8,6 +8,8 @@ import { ActionSheetContent, ActionSheetModal } from '../components/ActionSheetM
 import { BottomDrawer } from '../components/bottom-drawer/BottomDrawer'
 import { PickerListDrawer } from '../components/PickerListDrawer'
 import { colors, spacing } from '../theme/mobile-theme'
+import { themedStyleSheet } from '../theme/themed-styles'
+import { useMobileColorScheme } from '../theme/use-mobile-color-scheme'
 import type { LocalTasksApi } from './local-tasks-api'
 import { localTasksCopy } from './local-tasks-copy'
 import { localTaskWriteMessage } from './local-task-failure-message'
@@ -23,6 +25,7 @@ export function LocalTaskReposSection(props: {
   readOnly: boolean
   onChanged: () => void
 }) {
+  useMobileColorScheme()
   const copy = localTasksCopy()
   const { project } = props
   const [ids] = useState(() => createLocalTaskOperationIds())
@@ -143,7 +146,7 @@ export function LocalTaskReposSection(props: {
   )
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyleSheet(() => ({
   grow: { flex: 1 },
   defaultBadge: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   add: { marginTop: spacing.sm },
@@ -154,4 +157,4 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.md + 2
   }
-})
+}))

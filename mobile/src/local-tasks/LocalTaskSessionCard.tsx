@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { Pressable, StyleSheet, Text, View } from 'react-native'
+import { Pressable, Text, View } from 'react-native'
 import { ChevronRight, ClipboardList } from 'lucide-react-native'
 import { AgentStateDot } from '../components/AgentStateDot'
 import { useMobileTranslation } from '../i18n/use-mobile-translation'
@@ -7,6 +7,8 @@ import { useWorkspaceExecutionHost } from '../navigation/workspace-execution-hos
 import { useRouteHandoff } from '../navigation/route-handoff'
 import type { MobileSessionTab } from '../session/mobile-session-route-types'
 import { colors, spacing, typography } from '../theme/mobile-theme'
+import { themedStyleSheet } from '../theme/themed-styles'
+import { useMobileColorScheme } from '../theme/use-mobile-color-scheme'
 import { localTasksCopy } from './local-tasks-copy'
 import { localTasksRouteHref } from './local-tasks-route'
 import { localTaskEndpointFor } from './local-task-endpoint'
@@ -45,6 +47,7 @@ export function LocalTaskSessionCard({
   onOpenTask?: () => void
   onLinkSession?: (request: SessionLinkRequest) => void
 }) {
+  useMobileColorScheme()
   const copy = localTasksCopy()
   const t = useMobileTranslation()
   const router = useRouteHandoff()
@@ -129,7 +132,7 @@ export function LocalTaskSessionCard({
   )
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyleSheet(() => ({
   cardSection: { width: '100%', gap: spacing.xs, paddingTop: spacing.sm },
   taskTarget: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   taskIdentity: { flex: 1, gap: spacing.xs },
@@ -143,4 +146,4 @@ const styles = StyleSheet.create({
   state: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   stateText: { color: colors.textSecondary, fontSize: typography.metaSize },
   action: { color: colors.textSecondary, fontSize: typography.metaSize }
-})
+}))

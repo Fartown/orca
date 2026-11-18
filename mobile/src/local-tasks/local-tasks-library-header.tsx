@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Pressable, StyleSheet, Text, View } from 'react-native'
+import { Pressable, Text, View } from 'react-native'
 import {
   ChevronDown,
   ChevronLeft,
@@ -14,6 +14,8 @@ import {
 import type { LocalTaskProject } from '../../../src/shared/local-tasks/local-task-types'
 import { ActionSheetModal, type ActionSheetAction } from '../components/ActionSheetModal'
 import { colors, typography } from '../theme/mobile-theme'
+import { themedStyleSheet } from '../theme/themed-styles'
+import { useMobileColorScheme } from '../theme/use-mobile-color-scheme'
 import { localTasksCopy } from './local-tasks-copy'
 import { localTaskStyles } from './local-tasks-styles'
 
@@ -45,6 +47,7 @@ export function LocalTasksLibraryHeader(props: {
   onSettings: () => void
   onView: (view: LocalTasksViewMode) => void
 }) {
+  useMobileColorScheme()
   const copy = localTasksCopy()
   const [menuOpen, setMenuOpen] = useState(false)
   const project = props.projects.find((entry) => entry.id === props.projectId) ?? null
@@ -177,7 +180,7 @@ export function LocalTasksLibraryHeader(props: {
   )
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyleSheet(() => ({
   // Equal sides keep the title centered whichever buttons show.
   side: { width: 92 },
   trailing: { flexDirection: 'row', justifyContent: 'flex-end', gap: 2 },
@@ -185,4 +188,4 @@ const styles = StyleSheet.create({
   titleText: { color: colors.textPrimary, fontSize: typography.bodySize, fontWeight: '600' },
   scope: { flexDirection: 'row', alignItems: 'center', gap: 2, maxWidth: '100%' },
   scopeText: { flexShrink: 1, color: colors.textMuted, fontSize: typography.metaSize }
-})
+}))

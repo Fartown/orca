@@ -7,6 +7,8 @@ import type {
 import type { LocalTaskStatusDef } from '../../../src/shared/local-tasks/local-task-types'
 import { AgentStateDot } from '../components/AgentStateDot'
 import { colors, spacing, typography } from '../theme/mobile-theme'
+import { themedStyleSheet } from '../theme/themed-styles'
+import { useMobileColorScheme } from '../theme/use-mobile-color-scheme'
 import {
   LocalTaskCardButton,
   LocalTaskCardLatestLine,
@@ -19,6 +21,7 @@ import type { LocalTaskCardFacts } from './local-task-card-facts'
 import { formatLocalTaskAgo, localTasksCopy } from './local-tasks-copy'
 import type { LocalTaskAttentionRow } from './local-task-progress-projection'
 import { localTaskStyles } from './local-tasks-styles'
+import { localTaskSessionSummary } from './local-task-session-summary'
 import { LocalTaskStatusIcon } from './local-tasks-visuals'
 import type { LocalTaskReplyStatus } from './use-local-task-attention-actions'
 
@@ -46,12 +49,13 @@ export function localTaskAttentionLine(item: LocalTaskAttentionItem): string {
   const work = localTasksCopy().work
   const agent = item.agent ? formatAgentTypeLabel(item.agent) : work.someAgent
   if (item.lastMessage) {
-    return work.agentSaid(agent, item.lastMessage)
+    return work.agentSaid(agent, localTaskSessionSummary(item.lastMessage))
   }
   return item.kind === 'unread-done' ? work.agentStopped(agent) : agent
 }
 
 function ReplyState(props: { item: LocalTaskAttentionItem; reply: LocalTaskReplyStatus }) {
+  useMobileColorScheme()
   const work = localTasksCopy().work
   const { reply } = props
   const label =
@@ -76,6 +80,7 @@ function ReplyButton(props: {
   item: LocalTaskAttentionItem
   handlers: LocalTaskAttentionItemHandlers
 }) {
+  useMobileColorScheme()
   const work = localTasksCopy().work
   const reply = props.handlers.replyFor(props.item.key)
   return (
@@ -97,6 +102,7 @@ function ItemOutcome(props: {
   item: LocalTaskAttentionItem
   handlers: LocalTaskAttentionItemHandlers
 }) {
+  useMobileColorScheme()
   const reply = props.handlers.replyFor(props.item.key)
   const error = props.handlers.errors[props.item.key]
   return (
@@ -112,6 +118,7 @@ function OtherItemLine(props: {
   item: LocalTaskAttentionItem
   handlers: LocalTaskAttentionItemHandlers
 }) {
+  useMobileColorScheme()
   const work = localTasksCopy().work
   const { item, handlers } = props
   return (
@@ -148,6 +155,7 @@ export function LocalTaskAttentionCard(props: {
   onOpenTask: (taskId: string) => void
   onMore: () => void
 }) {
+  useMobileColorScheme()
   const copy = localTasksCopy()
   const card = copy.work.card
   const { row, facts, handlers } = props
@@ -230,7 +238,7 @@ export function LocalTaskAttentionCard(props: {
             </>
           ) : lead?.lastMessage ? (
             <Text style={localTaskCardStyles.question} numberOfLines={3}>
-              {lead.lastMessage}
+              {localTaskSessionSummary(lead.lastMessage)}
             </Text>
           ) : null}
         </Pressable>
@@ -277,7 +285,7 @@ export function LocalTaskAttentionCard(props: {
   )
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyleSheet(() => ({
   block: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderSubtle },
   blockFirst: { borderTopWidth: 0 },
   card: {
@@ -294,4 +302,4 @@ const styles = StyleSheet.create({
   shrink: { flexShrink: 1, minWidth: 0 },
   other: { gap: 4, marginTop: 4 },
   otherLine: { flexDirection: 'row', alignItems: 'center', gap: 6 }
-})
+}))

@@ -1,3 +1,4 @@
+import { LocalTaskEmptyView } from './LocalTaskEmptyView'
 import { useEffect, useRef, useState } from 'react'
 import { Bell, CornerDownRight, EyeOff, Plus } from 'lucide-react'
 import { useNow } from '@/hooks/use-now'
@@ -299,6 +300,21 @@ function BoardColumn({
 /** Columns are statuses, or categories across projects; drop a card to change its status. */
 export function LocalTaskBoard({ model }: { model: LocalTaskListModel }): React.JSX.Element {
   const showCanceled = useLocalTaskPage((state) => state.showCanceledColumn)
+  const restricted = useLocalTaskPage(
+    ({ query, view, filters }) =>
+      query.trim().length > 0 ||
+      view !== 'all' ||
+      filters.needsYou ||
+      filters.categories.length + filters.priorities.length + filters.labels.length > 0
+  )
+  if (model.shownTaskIds.size === 0 && (restricted || model.scopeTasks.length === 0)) {
+    return (
+      <LocalTaskEmptyView
+        hasTasks={model.scopeTasks.length > 0}
+        scopeProjectId={model.scopeProjectId}
+      />
+    )
+  }
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-2">
       <NeedsYouStrip model={model} />

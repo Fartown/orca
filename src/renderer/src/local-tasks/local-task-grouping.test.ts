@@ -119,6 +119,47 @@ const BY_STATUS = { groupBy: 'status', sortBy: 'updated' } as const
 const BOARD = { sortBy: 'updated', showCanceled: false } as const
 
 describe('local task counts and groups (REQ-006)', () => {
+  it('places a cross-status subtask in its own accessible status group', () => {
+    const family = [
+      task(shop, 40, 'shop-doing'),
+      task(shop, 41, 'shop-doing', { parentId: 'SHOP-40' }),
+      task(shop, 42, 'shop-todo', { parentId: 'SHOP-40' })
+    ]
+    const familyIndex = buildLocalTaskIndex([shop], family)
+    const groups = groupLocalTasksForList(family, familyIndex, 'shop', ALL, BY_STATUS)
+    const doing = groups.find((group) => group.key === 'shop-doing')
+    const todo = groups.find((group) => group.key === 'shop-todo')
+
+    expect(doing?.count).toBe(2)
+    expect(doing?.entries.map((entry) => entry.task.id)).toEqual(['SHOP-40'])
+    expect(doing?.entries[0]?.lines.map((line) => line.task.id)).toEqual(['SHOP-41'])
+    expect(todo?.count).toBe(1)
+    expect(todo?.entries.map((entry) => [entry.task.id, entry.task.parentId])).toEqual([
+      ['SHOP-42', 'SHOP-40']
+    ])
+    expect(flattenLocalTaskGroups(groups).toSorted()).toEqual(['SHOP-40', 'SHOP-41', 'SHOP-42'])
+  })
+
+  it('does not jump a Started grandchild across its Backlog parent to a Started ancestor', () => {
+    const chain = [
+      task(shop, 50, 'shop-doing'),
+      task(shop, 51, 'shop-backlog', { parentId: 'SHOP-50' }),
+      task(shop, 52, 'shop-doing', { parentId: 'SHOP-51' })
+    ]
+    const chainIndex = buildLocalTaskIndex([shop], chain)
+    const groups = groupLocalTasksForList(chain, chainIndex, 'shop', ALL, BY_STATUS)
+    expect(
+      groups.find((group) => group.key === 'shop-doing')?.entries.map((entry) => entry.task.id)
+    ).toEqual(['SHOP-52', 'SHOP-50'])
+    expect(
+      groups.find((group) => group.key === 'shop-backlog')?.entries.map((entry) => entry.task.id)
+    ).toEqual(['SHOP-51'])
+    expect(groups.flatMap((group) => group.entries.flatMap((entry) => entry.lines))).toEqual([])
+    expect(
+      groups.flatMap((group) => group.entries.map((entry) => entry.task.id)).toSorted()
+    ).toEqual(chain.map((item) => item.id).toSorted())
+  })
+
   it('counts every task in scope for the rail, subtasks included', () => {
     expect(countLocalTaskViews(tasks, index)).toEqual({
       all: 8,
@@ -130,7 +171,7 @@ describe('local task counts and groups (REQ-006)', () => {
     expect(countLocalTaskViews(tasksInScope(tasks, 'shop'), index).all).toBe(6)
   })
 
-  it('rides subtasks under a shown parent yet counts each in its own status, as the board does', () => {
+  it('nests only same-status subtasks and gives every cross-status task its own row', () => {
     const groups = groupLocalTasksForList(
       tasksInScope(tasks, 'shop'),
       index,
@@ -139,14 +180,12 @@ describe('local task counts and groups (REQ-006)', () => {
       BY_STATUS
     )
     const summary = groups.map((group) => [group.key, group.entries.map((entry) => entry.task.id)])
-    // Integrating keeps its heading though SHOP-14, its only task, rides under SHOP-12.
     expect(summary).toEqual([
       ['shop-doing', ['SHOP-12']],
-      ['shop-integrating', []],
-      ['shop-todo', ['SHOP-11']],
+      ['shop-integrating', ['SHOP-14']],
+      ['shop-todo', ['SHOP-11', 'SHOP-15']],
       ['shop-done', ['SHOP-7']]
     ])
-    // SHOP-13 rides under SHOP-12 in its own status; SHOP-15 rides there too but is Todo.
     expect(groups.map((group) => [group.key, group.count])).toEqual([
       ['shop-doing', 2],
       ['shop-integrating', 1],
@@ -157,23 +196,16 @@ describe('local task counts and groups (REQ-006)', () => {
     for (const group of groups) {
       expect(board.find((column) => column.key === group.key)?.tasks.length).toBe(group.count)
     }
-    expect(groups[0].entries[0].children.map((child) => child.id)).toEqual([
-      'SHOP-13',
-      'SHOP-14',
-      'SHOP-15'
-    ])
-    expect(flattenLocalTaskGroups(groups).slice(0, 4)).toEqual([
-      'SHOP-12',
-      'SHOP-13',
-      'SHOP-14',
-      'SHOP-15'
-    ])
+    expect(groups[0].entries[0].children.map((child) => child.id)).toEqual(['SHOP-13'])
+    expect(flattenLocalTaskGroups(groups).toSorted()).toEqual(
+      ['SHOP-7', 'SHOP-11', 'SHOP-12', 'SHOP-13', 'SHOP-14', 'SHOP-15'].toSorted()
+    )
   })
 
   it('splits every heading into shown and in-band tasks that add up to its board column', () => {
     const scoped = tasksInScope(tasks, 'shop')
     const groups = groupLocalTasksForList(scoped, index, 'shop', ALL, BY_STATUS)
-    // SHOP-12 waits in the band and takes its subtasks with it; SHOP-11 stays below.
+    // SHOP-12 waits in the band and takes its descendants with it; SHOP-11 stays below.
     const banded = new Set(['SHOP-12', 'SHOP-13', 'SHOP-14', 'SHOP-15'])
     const tallies = tallyLocalTaskGroups(
       groups,
@@ -239,7 +271,7 @@ describe('local task counts and groups (REQ-006)', () => {
     expect(withCanceled.at(-1)?.key).toBe('shop-canceled')
   })
 
-  it('groups by priority or project and still rides subtasks under their parent', () => {
+  it('groups by priority or project using the same parent-child group rule', () => {
     const byPriority = groupLocalTasksForList(tasks, index, null, ALL, {
       groupBy: 'priority',
       sortBy: 'number'
@@ -248,9 +280,9 @@ describe('local task counts and groups (REQ-006)', () => {
       byPriority.map((group) => [group.key, group.entries.map((entry) => entry.task.id)])
     ).toEqual([
       ['priority:2', ['SHOP-12']],
-      ['priority:0', ['SHOP-7', 'SHOP-11', 'ORC-28', 'ORC-30']]
+      ['priority:0', ['SHOP-7', 'SHOP-11', 'SHOP-13', 'SHOP-14', 'SHOP-15', 'ORC-28', 'ORC-30']]
     ])
-    expect(byPriority[0].entries[0].children).toHaveLength(3)
+    expect(byPriority[0].entries[0].children).toHaveLength(0)
     const byProject = groupLocalTasksForList(tasks, index, null, ALL, {
       groupBy: 'project',
       sortBy: 'number'
@@ -259,6 +291,49 @@ describe('local task counts and groups (REQ-006)', () => {
       ['shop', 3],
       ['orca', 2]
     ])
+  })
+
+  it('keeps the immediate parent boundary across priority changes, but nests by project and none', () => {
+    const family = [
+      task(shop, 40, 'shop-doing', { priority: 1 }),
+      task(shop, 41, 'shop-doing', { parentId: 'SHOP-40', priority: 0 }),
+      task(shop, 42, 'shop-doing', { parentId: 'SHOP-41', priority: 1 })
+    ]
+    const familyIndex = buildLocalTaskIndex([shop], family)
+    const grouped = (groupBy: 'priority' | 'project' | 'none') =>
+      groupLocalTasksForList(family, familyIndex, 'shop', ALL, { groupBy, sortBy: 'number' })
+    const priority = grouped('priority')
+    expect(
+      priority.find((group) => group.key === 'priority:1')?.entries.map((entry) => entry.task.id)
+    ).toEqual(['SHOP-40', 'SHOP-42'])
+    expect(
+      priority.find((group) => group.key === 'priority:0')?.entries.map((entry) => entry.task.id)
+    ).toEqual(['SHOP-41'])
+    for (const kind of ['project', 'none'] as const) {
+      const groups = grouped(kind)
+      expect(groups[0]?.entries.map((entry) => entry.task.id)).toEqual(['SHOP-40'])
+      expect(groups[0]?.entries[0]?.lines.map((line) => [line.task.id, line.depth])).toEqual([
+        ['SHOP-41', 1],
+        ['SHOP-42', 2]
+      ])
+    }
+  })
+
+  it('gives an exact-ref child its own result row even when its parent also matches the text', () => {
+    const family = [
+      task(shop, 40, 'shop-doing', { title: 'SHOP-42 parent note' }),
+      task(shop, 42, 'shop-doing', { parentId: 'SHOP-40' })
+    ]
+    const familyIndex = buildLocalTaskIndex([shop], family)
+    const groups = groupLocalTasksForList(
+      family,
+      familyIndex,
+      'shop',
+      { ...ALL, query: 'SHOP-42' },
+      BY_STATUS
+    )
+    expect(groups[0]?.entries.map((entry) => entry.task.id)).toEqual(['SHOP-42', 'SHOP-40'])
+    expect(groups[0]?.entries.every((entry) => entry.lines.length === 0)).toBe(true)
   })
 
   it('applies the sort to list rows and board cards alike', () => {
@@ -329,7 +404,7 @@ describe('local task counts and groups (REQ-006)', () => {
 })
 
 describe('task tree in the list (REQ-004, D-008)', () => {
-  // SHOP-20 › SHOP-21 › SHOP-22 › SHOP-23, plus SHOP-24 under SHOP-20; statuses spread across groups.
+  // SHOP-20 › SHOP-21 › SHOP-22 › SHOP-23, plus SHOP-24 under SHOP-20.
   const tree = [
     task(shop, 20, 'shop-doing'),
     task(shop, 21, 'shop-todo', { parentId: 'SHOP-20' }),
@@ -340,39 +415,49 @@ describe('task tree in the list (REQ-004, D-008)', () => {
   const treeIndex = buildLocalTaskIndex([shop], tree)
   const groups = groupLocalTasksForList(tree, treeIndex, 'shop', ALL, BY_STATUS)
 
-  it('nests every depth under its shown root, whatever group the descendants’ statuses name', () => {
-    expect(groups.flatMap((group) => group.entries.map((entry) => entry.task.id))).toEqual([
-      'SHOP-20'
+  it('keeps cross-status descendants independent without jumping to a matching grandparent', () => {
+    expect(
+      groups.flatMap((group) => group.entries.map((entry) => entry.task.id)).toSorted()
+    ).toEqual(['SHOP-20', 'SHOP-21', 'SHOP-22', 'SHOP-23'].toSorted())
+    const doing = groups.find((group) => group.key === 'shop-doing')
+    expect(doing?.entries.find((entry) => entry.task.id === 'SHOP-20')?.lines).toEqual([
+      { task: tree[4], depth: 1, childCount: 0 }
     ])
-    const [entry] = groups[0].entries
-    expect(entry.children.map((child) => child.id)).toEqual(['SHOP-21', 'SHOP-24'])
-    expect(entry.lines.map((line) => [line.task.id, line.depth, line.childCount])).toEqual([
-      ['SHOP-21', 1, 1],
-      ['SHOP-22', 2, 1],
-      ['SHOP-23', 3, 0],
-      ['SHOP-24', 1, 0]
-    ])
+    expect(doing?.entries.find((entry) => entry.task.id === 'SHOP-23')?.task.parentId).toBe(
+      'SHOP-22'
+    )
+    expect(flattenLocalTaskGroups(groups).toSorted()).toEqual(
+      tree.map((item) => item.id).toSorted()
+    )
   })
 
-  it('walks J/K in tree order and skips everything a folded task hides', () => {
-    expect(flattenLocalTaskGroups(groups)).toEqual([
+  it('walks J/K through any-depth same-group tree and skips folded descendants', () => {
+    const oneGroup = groupLocalTasksForList(tree, treeIndex, 'shop', ALL, {
+      groupBy: 'none',
+      sortBy: 'updated'
+    })
+    expect(flattenLocalTaskGroups(oneGroup)).toEqual([
       'SHOP-20',
       'SHOP-21',
       'SHOP-22',
       'SHOP-23',
       'SHOP-24'
     ])
-    expect(flattenLocalTaskGroups(groups, new Set(['SHOP-21']))).toEqual([
+    expect(flattenLocalTaskGroups(oneGroup, new Set(['SHOP-21']))).toEqual([
       'SHOP-20',
       'SHOP-21',
       'SHOP-24'
     ])
-    expect(flattenLocalTaskGroups(groups, new Set(['SHOP-20']))).toEqual(['SHOP-20'])
+    expect(flattenLocalTaskGroups(oneGroup, new Set(['SHOP-20']))).toEqual(['SHOP-20'])
   })
 
   it('moves a cursor that a fold or a collapsed group hid to the nearest row still shown', () => {
-    const all = flattenLocalTaskGroups(groups)
-    const foldedAt21 = flattenLocalTaskGroups(groups, new Set(['SHOP-21']))
+    const oneGroup = groupLocalTasksForList(tree, treeIndex, 'shop', ALL, {
+      groupBy: 'none',
+      sortBy: 'updated'
+    })
+    const all = flattenLocalTaskGroups(oneGroup)
+    const foldedAt21 = flattenLocalTaskGroups(oneGroup, new Set(['SHOP-21']))
     expect(clampLocalTaskCursor('SHOP-23', all, foldedAt21)).toBe('SHOP-21')
     expect(clampLocalTaskCursor('SHOP-24', all, foldedAt21)).toBe('SHOP-24')
     expect(clampLocalTaskCursor('SHOP-21', all, ['SHOP-24'])).toBe('SHOP-24')

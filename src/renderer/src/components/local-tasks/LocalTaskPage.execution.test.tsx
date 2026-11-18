@@ -336,6 +336,33 @@ it('keeps a summary for a filtered-in subtask when its parent is folded', () => 
   expect(localTaskPageStore.getState().cursorTaskId).toBe(task.id)
 })
 
+it('renders a cross-status child in its own PC group with its real parent path', () => {
+  const started = {
+    ...project.statuses[0],
+    id: 'doing',
+    category: 'started' as const,
+    name: 'In Progress'
+  }
+  const todo = { ...project.statuses[0], id: 'todo', name: 'Todo' }
+  const parent = { ...task, statusId: started.id, title: 'Parent work' }
+  const childTask = { ...child(2, task.id), statusId: todo.id, title: 'Child work' }
+  const library = localTasksDomainStore.getState().writer('local')
+  library.applyProjects([{ ...project, statuses: [started, todo] }])
+  library.applyTasks([parent, childTask])
+  localTaskPageStore.setState({ detailTaskId: null, scopeProjectId: project.id })
+  render(
+    <TooltipProvider>
+      <LocalTaskPage sourceBar={null} />
+    </TooltipProvider>
+  )
+  const todoGroup = screen.getByRole('region', { name: 'Todo' })
+  const childRow = within(todoGroup).getByRole('button', { name: /Child work/ })
+  expect(within(childRow).getByTitle('Parent work')).toBeTruthy()
+  expect(
+    within(screen.getByRole('region', { name: 'In Progress' })).queryByText('Child work')
+  ).toBeNull()
+})
+
 it('uses rendered board order for the keyboard cursor and reveals it in both scroll directions', () => {
   const statuses = [
     { id: 'backlog', category: 'backlog' as const, name: 'Backlog' },

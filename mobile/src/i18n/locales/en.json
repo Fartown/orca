@@ -4725,7 +4725,10 @@
       "missing": "This task no longer exists.",
       "deleteTitle": "Delete “{{title}}”?",
       "deleteWithSubtasks": "Its subtasks at every level ({{count}}) are deleted with it. Only task records are removed; workspaces and sessions are not touched.",
-      "deleteSingle": "Only the task record is removed; workspaces and sessions are not touched."
+      "deleteSingle": "Only the task record is removed; workspaces and sessions are not touched.",
+      "inheritedFrom": "From {{title}}",
+      "addDescription": "Add description",
+      "addFirstSubtask": "Add subtask"
     },
     "event": {
       "source": {
@@ -5051,7 +5054,7 @@
         "subtasksWorking": "{{count}} working",
         "subtasksLatest": "Latest: {{ref}}",
         "awaitingAcceptance": "Awaiting acceptance",
-        "moreInNeedsYou": "{{count}} more in Needs you",
+        "moreInNeedsYou": "View {{count}} more through Needs you tasks",
         "preview": "Preview",
         "openFullSession": "Open full session",
         "remindLater": "Remind later",
@@ -5062,11 +5065,11 @@
         "chat": "Chat"
       },
       "dispatch": {
-        "placeholder": "What needs doing? @ a workspace or repository, then say it",
+        "placeholder": "What needs doing? @ to choose",
         "mention": "Mention a workspace, repository, task or host",
         "clearTarget": "Remove target",
-        "runBy": "Run by {{host}} · tasks live in its library, the phone reads and writes through it",
-        "runByPaired": "Tasks live in the library of the host this phone is paired with",
+        "runBy": "Run by {{host}}",
+        "runByPaired": "Run by the paired host",
         "onSendWorkspaceOn": "On send: a task in {{workspace}} ({{host}}), with a new session",
         "onSendWorkspace": "On send: a task in {{workspace}}, with a new session",
         "onSendTask": "On send: work continues under {{ref}}"
@@ -5100,7 +5103,8 @@
       "expand": "Expand",
       "selfCheck": "Self-check",
       "whereToVerify": "Where to verify",
-      "mergedInto": "Merged into"
+      "mergedInto": "Merged into",
+      "sessions": "Sessions"
     },
     "create": {
       "stepTask": "Task",

@@ -3,6 +3,8 @@ import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 
 import { Folder, GitBranch, Info, Laptop, Search, Server } from 'lucide-react-native'
 import { MobileSegmentedControl } from '../components/MobileSegmentedControl'
 import { colors, radii, spacing, typography } from '../theme/mobile-theme'
+import { themedStyleSheet } from '../theme/themed-styles'
+import { useMobileColorScheme } from '../theme/use-mobile-color-scheme'
 import { localTasksCopy } from './local-tasks-copy'
 import type { LocalTaskCreateWorkspaceChoice } from './local-task-create-choices'
 import { localTaskCreateCopy } from './local-task-create-copy'
@@ -14,6 +16,7 @@ import type { LocalTaskCreateWhereState } from './use-local-task-create-where'
 const ROWS_SHOWN = 10
 
 export function LocalTaskCreateStepHeading(props: { step: number; title: string }) {
+  useMobileColorScheme()
   return (
     <View style={styles.stepHeading} accessibilityRole="header">
       <View style={styles.stepNumber}>
@@ -25,6 +28,7 @@ export function LocalTaskCreateStepHeading(props: { step: number; title: string 
 }
 
 export function LocalTaskCreateNote(props: { children: ReactNode; warn?: boolean }) {
+  useMobileColorScheme()
   return (
     <View style={styles.note}>
       <Info size={14} color={props.warn ? colors.statusAmber : colors.textMuted} />
@@ -34,6 +38,7 @@ export function LocalTaskCreateNote(props: { children: ReactNode; warn?: boolean
 }
 
 export function LocalTaskCreateRadio(props: { on: boolean }) {
+  useMobileColorScheme()
   return (
     <View style={[styles.radio, props.on && styles.radioOn]}>
       {props.on ? <View style={styles.radioDot} /> : null}
@@ -74,6 +79,7 @@ function WorkspaceRow(props: {
   hostName: string
   onPick: () => void
 }) {
+  useMobileColorScheme()
   const { choice } = props
   const blocked = choice.block !== null
   return (
@@ -107,6 +113,7 @@ function WorkspaceRow(props: {
 }
 
 function ExistingWorkspaces({ state }: { state: LocalTaskCreateWhereState }) {
+  useMobileColorScheme()
   const create = localTaskCreateCopy()
   const [showAll, setShowAll] = useState(false)
   const total = state.groups.reduce((sum, group) => sum + group.choices.length, 0)
@@ -198,6 +205,7 @@ function ExistingWorkspaces({ state }: { state: LocalTaskCreateWhereState }) {
 }
 
 function NewWorkspace({ state }: { state: LocalTaskCreateWhereState }) {
+  useMobileColorScheme()
   const create = localTaskCreateCopy()
   const { repo } = state
   const repoHost = repo ? state.hosts.name(repo.setup.ownerHostId) : ''
@@ -295,6 +303,7 @@ function NewWorkspace({ state }: { state: LocalTaskCreateWhereState }) {
 
 /** ② 在哪做 (m8): an existing workspace, a new one from a repository, or decide later. */
 export function LocalTaskCreateWhereSection({ state }: { state: LocalTaskCreateWhereState }) {
+  useMobileColorScheme()
   const create = localTaskCreateCopy()
   return (
     <View style={styles.section}>
@@ -326,7 +335,7 @@ export function LocalTaskCreateWhereSection({ state }: { state: LocalTaskCreateW
   )
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyleSheet(() => ({
   section: { gap: spacing.sm, marginTop: spacing.lg },
   stepHeading: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   stepNumber: {
@@ -384,4 +393,4 @@ const styles = StyleSheet.create({
   mono: { fontFamily: typography.monoFamily },
   flex: { flex: 1 },
   laterNote: { marginHorizontal: 0, marginBottom: 0 }
-})
+}))

@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { Pressable, StyleSheet, Text, View } from 'react-native'
+import { Pressable, Text, View } from 'react-native'
 import { Check, CircleCheck, Undo2 } from 'lucide-react-native'
 import { parseLocalTaskProgressSections } from '../../../src/shared/local-tasks/local-task-progress-sections'
 import { localTaskFinishedSessions } from '../../../src/shared/local-tasks/local-task-finished-sessions'
@@ -8,6 +8,8 @@ import { localTaskWritebackSection } from '../../../src/shared/local-tasks/local
 import type { LocalTask, LocalTaskProject } from '../../../src/shared/local-tasks/local-task-types'
 import { translate } from '../i18n/mobile-i18n'
 import { colors, spacing, typography } from '../theme/mobile-theme'
+import { themedStyleSheet } from '../theme/themed-styles'
+import { useMobileColorScheme } from '../theme/use-mobile-color-scheme'
 import type { LocalTasksApi } from './local-tasks-api'
 import type { LocalTasksCopy } from './local-tasks-copy'
 import type { LocalTaskSite } from './local-task-endpoint'
@@ -49,6 +51,7 @@ export function LocalTaskReviewActions(props: {
   onUpdateStatus: (statusId: string) => Promise<boolean>
   onError: (message: string | null) => void
 }) {
+  useMobileColorScheme()
   const [commentIds] = useState(() => createLocalTaskOperationIds())
   const [rejecting, setRejecting] = useState(false)
   const [reasonDraft, setReasonDraft] = useState('')
@@ -205,7 +208,7 @@ export function LocalTaskReviewActions(props: {
   )
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyleSheet(() => ({
   block: { marginTop: spacing.md, padding: spacing.md, gap: spacing.md },
   head: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   title: { color: colors.statusGreen, fontSize: typography.bodySize, fontWeight: '600' },
@@ -214,4 +217,4 @@ const styles = StyleSheet.create({
   factText: { flex: 1 },
   actions: { flexDirection: 'row', gap: spacing.sm },
   action: { flex: 1 }
-})
+}))

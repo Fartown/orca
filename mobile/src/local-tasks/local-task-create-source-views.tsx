@@ -1,7 +1,9 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native'
+import { Pressable, Text, View } from 'react-native'
 import { ListTodo, X } from 'lucide-react-native'
 import type { LocalTask } from '../../../src/shared/local-tasks/local-task-types'
 import { colors, pressedStyle, spacing, typography } from '../theme/mobile-theme'
+import { themedStyleSheet } from '../theme/themed-styles'
+import { useMobileColorScheme } from '../theme/use-mobile-color-scheme'
 import { LIST_LEADING_INSET, ListGroup, ListRow } from '../components/list/ListGroup'
 import { LOCAL_TASK_CREATE_SOURCE_COPY_EN } from './local-task-create-source-copy'
 import type { LocalTaskCreateSourceRow } from './local-task-create-source-rows'
@@ -14,6 +16,7 @@ export function LocalTaskCreateSourceRowView(props: {
   row: LocalTaskCreateSourceRow
   onPress: () => void
 }) {
+  useMobileColorScheme()
   const { row } = props
   if (!row.task) {
     return <Text style={styles.notice}>{row.note}</Text>
@@ -45,6 +48,7 @@ export function LocalTaskCreateSourceRowView(props: {
 
 /** The picked task in place of the name field, as upstream shows a picked issue: title, then ref. */
 export function LocalTaskCreateSourcePill(props: { task: LocalTask; onClear: () => void }) {
+  useMobileColorScheme()
   return (
     <ListGroup separatorInset={LIST_LEADING_INSET}>
       <ListRow
@@ -67,7 +71,7 @@ export function LocalTaskCreateSourcePill(props: { task: LocalTask; onClear: () 
   )
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyleSheet(() => ({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -112,4 +116,4 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginRight: -spacing.sm
   }
-})
+}))

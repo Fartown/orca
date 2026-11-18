@@ -19,6 +19,8 @@ import {
   takenLocalTaskPrefixes
 } from '../../../src/shared/local-tasks/local-task-prefix-suggestion'
 import { colors, spacing } from '../theme/mobile-theme'
+import { themedStyleSheet } from '../theme/themed-styles'
+import { useMobileColorScheme } from '../theme/use-mobile-color-scheme'
 import type { LocalTasksApi } from './local-tasks-api'
 import { localTasksCopy } from './local-tasks-copy'
 import { localTaskWriteMessage } from './local-task-failure-message'
@@ -65,6 +67,7 @@ export function suggestLocalTaskProjectRows(
  * user presses Create; each row's refusal is said on that row, and the rows that went through stay.
  */
 export function LocalTasksProjectCreateView(props: Props) {
+  useMobileColorScheme()
   const copy = localTasksCopy()
   const insets = useSafeAreaInsets()
   const choices = props.orcaProjects.state === 'ready' ? props.orcaProjects.projects : []
@@ -359,7 +362,7 @@ export function LocalTasksProjectCreateView(props: Props) {
   )
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyleSheet(() => ({
   balance: { width: 60 },
   content: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm, gap: spacing.xs },
   gap: { marginTop: spacing.md },
@@ -385,4 +388,4 @@ const styles = StyleSheet.create({
     marginTop: spacing.md
   },
   emptyHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm }
-})
+}))

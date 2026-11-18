@@ -24198,7 +24198,7 @@
       "noMatches": "No tasks match this view.",
       "showAll": "Show all tasks",
       "empty": "No tasks yet. Press C to write down the first one.",
-      "moreInNeedsYou": "{{count}} more in Needs you"
+      "moreInNeedsYou": "View {{count}} more through Needs you tasks"
     },
     "board": {
       "canceledHidden": "The Canceled column is hidden. Turn it on under Filter.",
@@ -24435,6 +24435,7 @@
       "retryRemaining": "Retry remaining {{count}} subtasks"
     },
     "toolbar": {
+      "clearSearch": "Clear search",
       "searchPlaceholder": "Search title or ref",
       "search": "Search tasks",
       "layout": "Layout",
