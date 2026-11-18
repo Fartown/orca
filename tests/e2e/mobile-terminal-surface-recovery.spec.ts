@@ -417,7 +417,6 @@ test.describe('numeric fallback provider recovery', () => {
           worktreeId: workspace.id,
           tabId,
           leafId,
-          sessionId: '900001',
           initiallyHidden: true
         })
       },
@@ -430,6 +429,35 @@ test.describe('numeric fallback provider recovery', () => {
       original.id
     )
     expect(before?.rootProcessId).toBeGreaterThan(0)
+    const unverified = await orcaPage.evaluate(
+      async ({ workspace, ptyId, tabId, leafId }) => {
+        const store = window.__store!
+        store.getState().createTab(workspace.id, undefined, undefined, {
+          id: tabId,
+          initialLeafId: leafId,
+          activate: false,
+          recordInteraction: false
+        })
+        try {
+          await window.api.pty.spawn({
+            cols: 100,
+            rows: 30,
+            cwd: workspace.path,
+            worktreeId: workspace.id,
+            tabId,
+            leafId,
+            sessionId: ptyId
+          })
+          return 'unexpected-success'
+        } catch (error) {
+          return error instanceof Error ? error.message : String(error)
+        } finally {
+          store.getState().closeTab(tabId)
+        }
+      },
+      { workspace, ptyId: original.id, tabId: randomUUID(), leafId: randomUUID() }
+    )
+    expect(unverified).toContain('terminal_pane_owner_unverified')
     const marker = `NUMERIC_RECOVERY_${randomUUID().replaceAll('-', '')}`
     await orcaPage.evaluate(
       ({ id, marker }) =>

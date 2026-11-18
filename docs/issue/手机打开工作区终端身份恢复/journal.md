@@ -4,7 +4,7 @@ slug: '手机打开工作区终端身份恢复'
 status: testing
 created: 2026-10-24
 updated: 2026-11-09
-external_ids: ['STA-3859', 'Fartown/orca#92']
+external_ids: ['STA-3859', 'Fartown/orca#92', 'Fartown/orca#95']
 ---
 
 # 手机打开工作区终端身份恢复 开发 Journal
@@ -259,3 +259,12 @@ external_ids: ['STA-3859', 'Fartown/orca#92']
 - 完成内容补充：生产 Mac 先保存 `renderer-before.json` 备份，再仅移除其他两个工作区 mounted 列表中已由新鲜主机证明属于当前工作区的裸 `4/5` 缓存，使用现有 createTab 恢复原 tab/leaf。桌面4→6，主机发布6；`mac-host-after-repair.json` / `mac-renderer-after-repair.json` 对比确认六个 handle/incarnation 不变、两个根 PID/启动时间不变、导航不变、主进程仍为19549；没有退出应用、关闭 tab 或向生产终端输入。
 - 未解决问题：永久代码尚未正式发布/安装，真实手机13标签的当前画面未获得；当前状态 testing，不是 done。完整 e2e 类型检查有 cloud/mobile 未装独立依赖的诊断，目标 spec 无诊断。初次旧场景 E2E 被上游 setup script 提示卡挡住，复用现有 dismiss helper 后重跑，不改产品提示卡。
 - 下一步：收齐重跑与 PR 检查，发布防复发版本；正式安装重启须取得该 Mac 的明确许可，不能把现场状态修复当作永久代码已经安装。
+
+### 2026-11-09 既有 pane 连接与恢复判定源码复核
+
+- 本轮目标：复核此前三轮之后仍可增生空 shell 的完整调用链；先给出源代码反例，再修改准入。
+- 完成内容：确认 numeric sessionId + owner 缺失可从共享 fresh 进入 provider；ambiguous 被当 owned；partial placement 提前 adopted；window 因 live reattach 无回放加睡眠 note 清绑定重开；pending null/旧 generation 直接 fresh。分别拦住这些分支，正向退出和正常新建保留。
+- 代码或文档变更：新增 main feature-owned numeric admission，共享 spawn-operation 接线；调整原 adoption/gate/reattach 接缝及对应现有反例测试；登记 REQ-008、TC-023 和源码审查记录。无 wire 变更，无用户现场 tab 删除。
+- 验证证据：状态 testing。主类型检查、feature checks、架构/Fork/三项本地化通过。实际应用 7 项通过：真实 numeric fallback + 无 owner 请求拒绝、4 项 Git/folder 旧 census 路径、无答复 attach 后 reload、SSH Git/folder 手机激活及隔离客户端重启。最后补查 sleeping claim 后 partial placement 的拒绝，最终完整 feature checks 为 13 文件、224 项通过；最终主类型、按 PR base 的 changed-code quality、架构与 Fork 门禁均通过。原始记录在 `.docs/mobile-terminal-recovery-ui-validation/2026-11-09-source-audit/`。
+- 未解决问题：用户 Mac 正在运行的 .76 未包含这轮代码。先前 #91 的 Mac build 已 cancelled、publish skipped，不能宣称永久包已安装。现场 21:25 新建 PTY 16 的发起者尚无完整 breadcrumb，不能把源码反例直接当作该次运行的唯一根因。pending null 的拒绝覆盖当前连接尝试，不把任何未来 remount 或旧 host 的行为假定为已验证。额外 E2E 全树类型检查有 42 个 cloud/mobile 依赖或 stub 错误，与基线逐条相同，无新增；不把它记为通过。
+- 下一步：完成本轮源码复核后的针对性验证并提交独立 PR；正式产物和 Mac 安装/重启须分开记录，未获该主机重启授权不退出应用。

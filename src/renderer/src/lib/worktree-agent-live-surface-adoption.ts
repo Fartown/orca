@@ -196,7 +196,7 @@ export async function adoptLiveWorkspacePtySurfaces(
 ): Promise<{ surfaced: boolean; declinedPtyIds: string[] }> {
   // Include persisted layout/tab.ptyId bindings; mounted-only ptyIdsByTabId misses dormant surfaces.
   const unbound = livePtyIds.filter(
-    (ptyId) => resolveTerminalTabPtyOwnership(getState(), worktreeId, ptyId).kind === 'none'
+    (ptyId) => resolveTerminalTabPtyOwnership(getState(), worktreeId, ptyId).kind !== 'owned'
   )
   let surfaced = unbound.length < livePtyIds.length
   const declinedPtyIds: string[] = []
@@ -217,8 +217,13 @@ export async function adoptLiveWorkspacePtySurfaces(
   }
   for (const ptyId of [...unbound.filter((id) => !isUnowned(id)), ...unbound.filter(isUnowned)]) {
     // Recheck after RPC: panes can mount and bind while census is in flight.
-    if (resolveTerminalTabPtyOwnership(getState(), worktreeId, ptyId).kind !== 'none') {
+    const ownership = resolveTerminalTabPtyOwnership(getState(), worktreeId, ptyId)
+    if (ownership.kind === 'owned') {
       surfaced = true
+      continue
+    }
+    if (ownership.kind === 'ambiguous') {
+      declinedPtyIds.push(ptyId)
       continue
     }
     const owner = surfaceOwners?.get(ptyId)
@@ -260,8 +265,13 @@ export async function adoptLiveWorkspacePtySurfaces(
       continue
     }
     // A recorded tab createTab had to mint under another id already holds this PTY.
-    if (resolveTerminalTabPtyOwnership(getState(), worktreeId, ptyId).kind !== 'none') {
-      surfaced = true
+    const reboundOwnership = resolveTerminalTabPtyOwnership(getState(), worktreeId, ptyId)
+    if (reboundOwnership.kind !== 'none') {
+      if (reboundOwnership.kind === 'owned') {
+        surfaced = true
+      } else {
+        declinedPtyIds.push(ptyId)
+      }
       continue
     }
     if (!canMintLiveTerminalFallback(ptyId)) {

@@ -1,4 +1,6 @@
 import type { PaneSpawnOperation } from './pane/pane-spawn-operation'
+import { assertNumericReattachMaySpawn } from '../../mobile-terminal-surface-recovery/numeric-reattach-admission'
+import { getAppPtyId } from './provider/registry'
 import type { AdoptStablePaneArgs } from './ipc/spawn-types'
 import { adoptedOutcome, type PtySpawnOutcome } from './spawn-outcome'
 import type { PtySpawnOperationState, PtySpawnExecutionFacts } from './spawn-operation-state'
@@ -205,6 +207,12 @@ export async function runPtySpawn<State extends PtySpawnOperationState>(
     return inherit(adopted)
   }
   const fresh = async (operation: PaneSpawnOperation): Promise<PtySpawnOutcome> => {
+    assertNumericReattachMaySpawn({
+      sessionId: args.sessionId,
+      requestedPtyId: args.sessionId ? getAppPtyId(args.connectionId, args.sessionId) : undefined,
+      absentOwnerPtyId: operation.absentOwner?.ptyId,
+      stoppedPtyId: ctx.replacedPaneOwner?.ptyId
+    })
     if (prepared) {
       retirePreparation(adapter)
     }
