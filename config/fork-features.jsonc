@@ -34,7 +34,8 @@
       ],
       "requiredFiles": [
         "src/main/terminal-output-sequence-authority/daemon-stream-position.ts",
-        "src/main/terminal-output-sequence-authority/continued-stream-position.ts"
+        "src/main/terminal-output-sequence-authority/continued-stream-position.ts",
+        "src/main/terminal-output-sequence-authority/delivered-stream-spawn-result.ts"
       ],
       "dependsOn": [
         "src/main/daemon/daemon-pty-adapter-test-harness.ts",
@@ -42,7 +43,8 @@
         "src/main/daemon/mock-descendant-sweep.ts",
         "src/main/runtime/orca-runtime-test-scenario-builders.spec.ts",
         "src/main/runtime/orca-runtime-test-fixtures.spec.ts",
-        "src/main/daemon/daemon-spawner.ts"
+        "src/main/daemon/daemon-spawner.ts",
+        "src/main/daemon/daemon-stream-events.ts"
       ],
       "seams": [
         {
@@ -52,7 +54,7 @@
         },
         {
           "file": "src/main/daemon/daemon-pty-adapter.ts",
-          "mustContain": "outputStreamPosition.record",
+          "mustContain": "outputStreamPosition.recordData",
           "why": "Keep execution-owner snapshot and delivered stream positions consistent across attach."
         },
         {
@@ -62,7 +64,7 @@
         },
         {
           "file": "src/main/daemon/daemon-pty-spawn-result.ts",
-          "mustContain": "streamPosition",
+          "mustContain": "withDeliveredStreamPosition",
           "why": "Keep execution-owner snapshot and delivered stream positions consistent across attach."
         },
         {
@@ -94,6 +96,11 @@
           "file": "src/main/daemon/client.ts",
           "mustContain": "this.clientId = randomUUID()",
           "why": "Fence each reconnected stream from previous attachment callbacks on older daemons."
+        },
+        {
+          "file": "src/main/daemon/daemon-pty-buffer-snapshots.ts",
+          "mustContain": "canProvideAuthoritativeBufferSnapshot",
+          "why": "Keep the existing snapshot ownership probe in its snapshot module and the state seam within its line budget."
         }
       ],
       "tests": [

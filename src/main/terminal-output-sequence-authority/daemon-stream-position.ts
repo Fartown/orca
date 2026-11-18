@@ -1,3 +1,5 @@
+import type { DataEvent, DataGapEvent } from '../daemon/daemon-stream-events'
+
 type StreamPosition = {
   receivedChars: number
   position?: number
@@ -26,6 +28,14 @@ export class DaemonStreamPosition {
   beginAttach(id: string): StreamObservation {
     const state = this.session(id)
     return { state, receivedChars: state.receivedChars }
+  }
+
+  recordData(id: string, payload: DataEvent['payload']): void {
+    this.record(id, payload.rawLength ?? payload.sequenceChars ?? payload.data.length, payload.seq)
+  }
+
+  recordGap(id: string, payload: DataGapEvent['payload']): void {
+    this.record(id, payload.sequenceChars ?? payload.droppedChars)
   }
 
   record(id: string, rawLength: number, seq?: number): void {

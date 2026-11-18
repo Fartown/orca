@@ -1,3 +1,4 @@
+import { withDeliveredStreamPosition } from '../terminal-output-sequence-authority/delivered-stream-spawn-result'
 import { isAgentSessionClaimedSpawnResult } from '../../shared/agent-session/agent-session-host-authority'
 import { parseTerminalKittyKeyboardFlags } from '../../shared/terminal-kitty-keyboard-flags'
 import { daemonSpawnResultIdentity } from './daemon-spawn-result-identity'
@@ -33,16 +34,7 @@ export abstract class DaemonPtySpawnResult extends DaemonPtySpawnRequest {
     let result = initialResult
     const finalizeSpawnResult = (spawnResult: PtySpawnResult): PtySpawnResult =>
       this.resultForExitBeforeSpawnReply(sessionId, result, operation) ?? {
-        ...spawnResult,
-        ...(spawnResult.providerSequence?.generation === 'continued' &&
-        this.outputStreamPosition.position(sessionId) !== undefined
-          ? {
-              providerSequence: {
-                ...spawnResult.providerSequence,
-                streamPosition: this.outputStreamPosition.position(sessionId)
-              }
-            }
-          : {}),
+        ...withDeliveredStreamPosition(spawnResult, this.outputStreamPosition.position(sessionId)),
         ...(!result.isNew ? { isReattach: true } : {}),
         ...(result.isNew && !historyRecovery.identityChanged
           ? { startupCwdSource: effectiveCwd === opts.cwd ? 'request' : 'recovered-history' }

@@ -283,11 +283,6 @@ export abstract class DaemonPtyRuntimeState {
     return this.protocolVersion >= GIT_CREDENTIAL_GUARD_HOST_PROTOCOL_VERSION
   }
 
-  // Snapshot authority requires this adapter to own the session, not just support its protocol.
-  canProvideAuthoritativeBufferSnapshot(id: string): boolean {
-    return this.supportsAuthoritativeBufferSnapshots && this.activeSessionIds.has(id)
-  }
-
   protected get canDelegateBackgroundToDaemon(): boolean {
     return (
       this.supportsAuthoritativeBufferSnapshots &&
