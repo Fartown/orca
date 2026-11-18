@@ -1,7 +1,8 @@
 import type * as React from 'react'
+import type * as PtyConnectionModule from './pty-connection'
 import { vi } from 'vitest'
 import type { Mock } from 'vitest'
-import type { MockTransport } from './pty-connection-test-pane-fixtures'
+import { trackTerminalTestBinding, type MockTransport } from './pty-connection-test-pane-fixtures'
 import type { StoreState } from './pty-connection-test-store-state'
 
 type StoreSubscriber = (state: StoreState) => void
@@ -50,6 +51,17 @@ export const ptyConnectionTestMocks: PtyConnectionTestMocks = fixture.mocks
 
 export function bindPtyConnectionTestMocks(bindings: PtyConnectionTestBindings): void {
   fixture.bind(bindings)
+  vi.doMock('./pty-connection', async (importOriginal) => {
+    const actual = await importOriginal<typeof PtyConnectionModule>()
+    return {
+      ...actual,
+      connectPanePty: (...args: Parameters<typeof actual.connectPanePty>) => {
+        const binding = actual.connectPanePty(...args)
+        trackTerminalTestBinding(binding)
+        return binding
+      }
+    }
+  })
 }
 
 function takeMockTransport(options: Record<string, unknown>): MockTransport {

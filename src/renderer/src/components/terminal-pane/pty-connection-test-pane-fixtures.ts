@@ -143,6 +143,18 @@ export type MockPane = {
 }
 
 const testPanes: MockPane[] = []
+const testBindings = new Set<{ dispose: () => void }>()
+
+export function trackTerminalTestBinding(binding: { dispose: () => void }): void {
+  testBindings.add(binding)
+}
+
+export function disposeTerminalTestBindings(): void {
+  for (const binding of testBindings) {
+    binding.dispose()
+  }
+  testBindings.clear()
+}
 
 export function takeTerminalTestPanes(): MockPane[] {
   return testPanes.splice(0)

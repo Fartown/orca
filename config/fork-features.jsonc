@@ -106,6 +106,31 @@
           "file": "src/main/daemon/daemon-preflight-client-replacement.test.ts",
           "mustContain": "connectDaemonSocketPair(socketPath, tokenPath, 'reused-client-id')",
           "why": "Exercise legacy same-ID socket replacement directly now that DaemonClient creates fresh connection leases."
+        },
+        {
+          "file": "src/renderer/src/components/terminal-pane/pty-connection-mocks.spec.ts",
+          "mustContain": "trackTerminalTestBinding(binding)",
+          "why": "Release test connection bindings so live process monitors cannot contaminate later SSH regression assertions."
+        },
+        {
+          "file": "src/renderer/src/components/terminal-pane/pty-connection-test-environment.ts",
+          "mustContain": "disposeTerminalTestBindings()",
+          "why": "Dispose test connections before replacing renderer globals during regression teardown."
+        },
+        {
+          "file": "src/renderer/src/components/terminal-pane/pty-connection-test-pane-fixtures.ts",
+          "mustContain": "disposeTerminalTestBindings",
+          "why": "Keep created test pane bindings in the existing fixture lifetime registry."
+        },
+        {
+          "file": "tests/tools/win-update-e2e/app-driver.mjs",
+          "mustContain": "name: 'Close tasks'",
+          "why": "Reveal an existing restored terminal before checking daemon continuity; never create a replacement."
+        },
+        {
+          "file": "tests/tools/win-update-e2e/app-driver.test.mjs",
+          "mustContain": "reveals the restored terminal behind tasks",
+          "why": "Keep the Windows continuity driver from masking terminal restoration with a newly created session."
         }
       ],
       "tests": [

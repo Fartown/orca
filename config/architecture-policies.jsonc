@@ -35,7 +35,12 @@
             "src/main/daemon/daemon-pty-spawn-result-classification.test.ts",
             "src/main/daemon/client.ts",
             "src/main/daemon/daemon-pty-buffer-snapshots.ts",
-            "src/main/daemon/daemon-preflight-client-replacement.test.ts"
+            "src/main/daemon/daemon-preflight-client-replacement.test.ts",
+            "src/renderer/src/components/terminal-pane/pty-connection-mocks.spec.ts",
+            "src/renderer/src/components/terminal-pane/pty-connection-test-environment.ts",
+            "src/renderer/src/components/terminal-pane/pty-connection-test-pane-fixtures.ts",
+            "tests/tools/win-update-e2e/app-driver.mjs",
+            "tests/tools/win-update-e2e/app-driver.test.mjs"
           ],
           "message": "Change is outside terminal output sequence authority."
         }
@@ -1155,7 +1160,12 @@
             "src/main/daemon/daemon-pty-spawn-result-classification.test.ts",
             "src/main/daemon/client.ts",
             "src/main/daemon/daemon-pty-buffer-snapshots.ts",
-            "src/main/daemon/daemon-preflight-client-replacement.test.ts"
+            "src/main/daemon/daemon-preflight-client-replacement.test.ts",
+            "src/renderer/src/components/terminal-pane/pty-connection-mocks.spec.ts",
+            "src/renderer/src/components/terminal-pane/pty-connection-test-environment.ts",
+            "src/renderer/src/components/terminal-pane/pty-connection-test-pane-fixtures.ts",
+            "tests/tools/win-update-e2e/app-driver.mjs",
+            "tests/tools/win-update-e2e/app-driver.test.mjs"
           ],
           "message": "Branch changes an upstream path that no fork feature owns or registers as a seam; extend config/fork-features.jsonc and this allowlist, or move the change into a feature-owned path."
         }

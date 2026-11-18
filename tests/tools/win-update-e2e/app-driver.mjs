@@ -203,6 +203,10 @@ export async function ensureTerminal(page, { allowCreate = true, timeoutMs = 60_
     return
   }
   if (!allowCreate) {
+    const closeTasks = page.getByRole('button', { name: 'Close tasks', exact: true }).first()
+    if (await closeTasks.isVisible().catch(() => false)) {
+      await tryClickWithKnownOverlayRetry(page, closeTasks, timeoutMs)
+    }
     // Restored-terminal timeout is restore failure, not an excuse to create.
     await waitForTerminalReady(page, timeoutMs)
     return
