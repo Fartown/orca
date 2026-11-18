@@ -34,6 +34,15 @@ export abstract class DaemonPtySpawnResult extends DaemonPtySpawnRequest {
     const finalizeSpawnResult = (spawnResult: PtySpawnResult): PtySpawnResult =>
       this.resultForExitBeforeSpawnReply(sessionId, result, operation) ?? {
         ...spawnResult,
+        ...(spawnResult.providerSequence?.generation === 'continued' &&
+        this.outputStreamPosition.position(sessionId) !== undefined
+          ? {
+              providerSequence: {
+                ...spawnResult.providerSequence,
+                streamPosition: this.outputStreamPosition.position(sessionId)
+              }
+            }
+          : {}),
         ...(!result.isNew ? { isReattach: true } : {}),
         ...(result.isNew && !historyRecovery.identityChanged
           ? { startupCwdSource: effectiveCwd === opts.cwd ? 'request' : 'recovered-history' }

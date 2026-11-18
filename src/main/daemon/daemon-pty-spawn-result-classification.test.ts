@@ -1,4 +1,5 @@
 import { expect, it, vi } from 'vitest'
+import { DaemonStreamPosition } from '../terminal-output-sequence-authority/daemon-stream-position'
 import { DaemonPtySpawnResult } from './daemon-pty-spawn-result'
 import { DaemonPtySessionSpawn } from './daemon-pty-session-spawn'
 import type { DaemonPtySpawnContext } from './daemon-pty-spawn-request'
@@ -73,6 +74,7 @@ it.each([
         result: CreateOrAttachResult
       ): Promise<PtySpawnResult>
     } = Object.assign(Object.create(DaemonPtySpawnResult.prototype), {
+      outputStreamPosition: new DaemonStreamPosition(),
       clearSessionAwaitingDaemonRecovery: vi.fn(),
       ptyInventory: { spawned: vi.fn() },
       sessionIncarnations: new Map(),

@@ -122,6 +122,8 @@ export class DaemonClient {
     attemptGeneration: number,
     sharedBudget: boolean
   ): Promise<void> {
+    // A fresh pair must not inherit callbacks still attached to the previous connection lease.
+    this.clientId = randomUUID()
     const token = readDaemonClientToken(this.tokenPath)
     const deadlineMs = Date.now() + timeoutMs
     const remainingMs = (): number =>

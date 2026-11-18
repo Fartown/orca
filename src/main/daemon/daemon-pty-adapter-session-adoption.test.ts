@@ -105,6 +105,7 @@ describe('DaemonPtyAdapter (IPtyProvider)', () => {
       expect(second.snapshot).toContain('hello from shell')
       expect(second.providerSequence).toEqual({
         value: 'hello from shell\r\n'.length,
+        streamPosition: 'hello from shell\r\n'.length,
         generation: 'continued'
       })
     })
