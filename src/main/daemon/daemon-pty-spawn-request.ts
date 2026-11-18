@@ -106,7 +106,7 @@ export abstract class DaemonPtySpawnRequest extends DaemonPtyRuntimeState {
     context: DaemonPtySpawnContext,
     historySeedSegments: readonly string[] | null
   ): Promise<CreateOrAttachResult> {
-    const requestCreateOrAttach = (
+    const requestCreateOrAttach = async (
       historySeed: string | undefined,
       historySeedTransferId: string | undefined
     ) => {
@@ -147,14 +147,23 @@ export abstract class DaemonPtySpawnRequest extends DaemonPtyRuntimeState {
           ? { agentSessionEnsure: opts.agentSessionEnsure }
           : {})
       }
-      return opts.signal
+      const observation = this.outputStreamPosition.beginAttach(context.sessionId)
+      const result = await (opts.signal
         ? this.client.request<CreateOrAttachResult>(
             'createOrAttach',
             payload,
             undefined,
             opts.signal
           )
-        : this.client.request<CreateOrAttachResult>('createOrAttach', payload)
+        : this.client.request<CreateOrAttachResult>('createOrAttach', payload))
+      this.outputStreamPosition.attach(
+        result.agentSessionEnsure?.owner.ptyId ?? context.sessionId,
+        result.isNew ? 0 : result.snapshot?.outputSequence,
+        result.isNew,
+        observation,
+        result.incarnationId
+      )
+      return result
     }
 
     let historySeedUnavailable = false

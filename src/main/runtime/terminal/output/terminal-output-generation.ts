@@ -1,3 +1,4 @@
+import { continuedStreamPosition } from '../../../terminal-output-sequence-authority/continued-stream-position'
 import { OrcaRuntimeWithCreateTerminalSideEffectCommandCodeDetector } from './terminal-derived-agent-facts'
 import type { AgentStatus } from '../../../../shared/agent-detection'
 import { getDisplayPromptLifecycle } from '../../runtime-worktree-status-projection'
@@ -124,7 +125,7 @@ export abstract class OrcaRuntimeWithRecordAgentPromptLifecycleState extends Orc
 
   synchronizePtyOutputSequenceFromProvider(
     ptyId: string,
-    providerSequence: { value: number; generation: 'continued' | 'reset' },
+    providerSequence: { value: number; generation: 'continued' | 'reset'; streamPosition?: number },
     runtimeSequenceAtSpawnStart = 0
   ): number {
     if (
@@ -141,10 +142,18 @@ export abstract class OrcaRuntimeWithRecordAgentPromptLifecycleState extends Orc
     const postSpawnSequence = currentSequence - sequenceAtSpawnStart
     const wasInitialized = this.providerSequenceInitializedPtys.has(ptyId)
     const replacesExistingRuntimeGeneration = wasInitialized || sequenceAtSpawnStart > 0
+    const streamAnchor =
+      providerSequence.generation === 'continued'
+        ? continuedStreamPosition(
+            providerSequence.streamPosition,
+            currentSequence,
+            this.providerSequenceOffsetByPtyId.get(ptyId) ?? 0
+          )
+        : null
     const providerOffset =
       providerSequence.generation === 'reset'
         ? sequenceAtSpawnStart
-        : (this.providerSequenceOffsetByPtyId.get(ptyId) ?? 0)
+        : (streamAnchor?.offset ?? this.providerSequenceOffsetByPtyId.get(ptyId) ?? 0)
     const providerBaseline = providerOffset + baseline
 
     if (providerSequence.generation === 'reset') {
@@ -170,11 +179,12 @@ export abstract class OrcaRuntimeWithRecordAgentPromptLifecycleState extends Orc
     }
 
     const synchronizedSequence =
-      providerSequence.generation === 'reset'
+      streamAnchor?.position ??
+      (providerSequence.generation === 'reset'
         ? currentSequence
         : wasInitialized
           ? currentSequence
-          : providerBaseline + postSpawnSequence
+          : providerBaseline + postSpawnSequence)
     this.ptyOutputSequenceById.set(ptyId, synchronizedSequence)
     this.providerSequenceInitializedPtys.add(ptyId)
     this.providerSequenceOffsetByPtyId.set(ptyId, providerOffset)

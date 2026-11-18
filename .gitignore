@@ -268,3 +268,6 @@ ci-shards/
 
 !docs/issue/终端粘贴目标归属/
 !docs/issue/终端粘贴目标归属/**
+
+!docs/issue/终端输出序号一致性/
+!docs/issue/终端输出序号一致性/**

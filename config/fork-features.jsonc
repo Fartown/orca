@@ -23,6 +23,126 @@
   "dependsOnIgnore": ["src/renderer/src/components/ui/**"],
   "features": [
     {
+      "id": "terminal-output-sequence-authority",
+      "title": "终端输出序号一致性",
+      "goal": "以执行端挂接边界校准实际流位置，防止恢复快照吞掉新回显并兼容旧 daemon",
+      "journal": "docs/issue/终端输出序号一致性/journal.md",
+      "policyId": "terminal-output-sequence-authority",
+      "ownedPaths": [
+        "src/main/terminal-output-sequence-authority/**",
+        "docs/issue/终端输出序号一致性/**"
+      ],
+      "requiredFiles": [
+        "src/main/terminal-output-sequence-authority/daemon-stream-position.ts",
+        "src/main/terminal-output-sequence-authority/continued-stream-position.ts",
+        "src/main/terminal-output-sequence-authority/delivered-stream-spawn-result.ts"
+      ],
+      "dependsOn": [
+        "src/main/daemon/daemon-pty-adapter-test-harness.ts",
+        "src/main/daemon/daemon-pty-adapter.ts",
+        "src/main/daemon/mock-descendant-sweep.ts",
+        "src/main/runtime/orca-runtime-test-scenario-builders.spec.ts",
+        "src/main/runtime/orca-runtime-test-fixtures.spec.ts",
+        "src/main/daemon/daemon-spawner.ts",
+        "src/main/daemon/daemon-stream-events.ts"
+      ],
+      "seams": [
+        {
+          "file": "src/main/daemon/daemon-pty-runtime-state.ts",
+          "mustContain": "outputStreamPosition",
+          "why": "Keep execution-owner snapshot and delivered stream positions consistent across attach."
+        },
+        {
+          "file": "src/main/daemon/daemon-pty-adapter.ts",
+          "mustContain": "outputStreamPosition.recordData",
+          "why": "Keep execution-owner snapshot and delivered stream positions consistent across attach."
+        },
+        {
+          "file": "src/main/daemon/daemon-pty-spawn-request.ts",
+          "mustContain": "outputStreamPosition.attach",
+          "why": "Keep execution-owner snapshot and delivered stream positions consistent across attach."
+        },
+        {
+          "file": "src/main/daemon/daemon-pty-spawn-result.ts",
+          "mustContain": "withDeliveredStreamPosition",
+          "why": "Keep execution-owner snapshot and delivered stream positions consistent across attach."
+        },
+        {
+          "file": "src/main/providers/pty-spawn-result.ts",
+          "mustContain": "streamPosition",
+          "why": "Keep execution-owner snapshot and delivered stream positions consistent across attach."
+        },
+        {
+          "file": "src/main/runtime/terminal/output/terminal-output-generation.ts",
+          "mustContain": "continuedStreamPosition",
+          "why": "Keep execution-owner snapshot and delivered stream positions consistent across attach."
+        },
+        {
+          "file": ".gitignore",
+          "mustContain": "!docs/issue/终端输出序号一致性/**",
+          "why": "Keep execution-owner snapshot and delivered stream positions consistent across attach."
+        },
+        {
+          "file": "src/main/daemon/daemon-pty-adapter-session-adoption.test.ts",
+          "mustContain": "streamPosition",
+          "why": "Update existing adapter fixtures for delivered stream metadata."
+        },
+        {
+          "file": "src/main/daemon/daemon-pty-spawn-result-classification.test.ts",
+          "mustContain": "DaemonStreamPosition",
+          "why": "Update existing adapter fixtures for delivered stream metadata."
+        },
+        {
+          "file": "src/main/daemon/client.ts",
+          "mustContain": "this.clientId = randomUUID()",
+          "why": "Fence each reconnected stream from previous attachment callbacks on older daemons."
+        },
+        {
+          "file": "src/main/daemon/daemon-pty-buffer-snapshots.ts",
+          "mustContain": "canProvideAuthoritativeBufferSnapshot",
+          "why": "Keep the existing snapshot ownership probe in its snapshot module and the state seam within its line budget."
+        },
+        {
+          "file": "src/main/daemon/daemon-preflight-client-replacement.test.ts",
+          "mustContain": "connectDaemonSocketPair(socketPath, tokenPath, 'reused-client-id')",
+          "why": "Exercise legacy same-ID socket replacement directly now that DaemonClient creates fresh connection leases."
+        },
+        {
+          "file": "src/renderer/src/components/terminal-pane/pty-connection-mocks.spec.ts",
+          "mustContain": "trackTerminalTestBinding(binding)",
+          "why": "Release test connection bindings so live process monitors cannot contaminate later SSH regression assertions."
+        },
+        {
+          "file": "src/renderer/src/components/terminal-pane/pty-connection-test-environment.ts",
+          "mustContain": "disposeTerminalTestBindings()",
+          "why": "Dispose test connections before replacing renderer globals during regression teardown."
+        },
+        {
+          "file": "src/renderer/src/components/terminal-pane/pty-connection-test-pane-fixtures.ts",
+          "mustContain": "disposeTerminalTestBindings",
+          "why": "Keep created test pane bindings in the existing fixture lifetime registry."
+        },
+        {
+          "file": "tests/tools/win-update-e2e/app-driver.mjs",
+          "mustContain": "name: 'Close tasks'",
+          "why": "Reveal an existing restored terminal before checking daemon continuity; never create a replacement."
+        },
+        {
+          "file": "tests/tools/win-update-e2e/app-driver.test.mjs",
+          "mustContain": "reveals the restored terminal behind tasks",
+          "why": "Keep the Windows continuity driver from masking terminal restoration with a newly created session."
+        }
+      ],
+      "tests": [
+        "src/main/terminal-output-sequence-authority/daemon-stream-position.test.ts",
+        "src/main/terminal-output-sequence-authority/continued-stream-position.test.ts",
+        "src/main/terminal-output-sequence-authority/daemon-stream-reconnect.test.ts"
+      ],
+      "checks": [
+        "ORCA_BACKGROUND_LAUNCH=1 pnpm exec vitest run --config config/vitest.config.ts src/main/terminal-output-sequence-authority --maxWorkers=1"
+      ]
+    },
+    {
       "id": "terminal-paste-ownership",
       "title": "终端粘贴目标归属",
       "goal": "快捷键按实际聚焦分屏固定粘贴目标，容忍同一目标输入框替换并准确恢复错误提示",

@@ -9,6 +9,11 @@ import type { PtyProviderBufferSnapshot } from '../providers/pty-provider-contra
 const DURABLE_HISTORY_OVERLAY_DEADLINE_MS = 5_000
 
 export abstract class DaemonPtyBufferSnapshots extends DaemonPtySessionControl {
+  // Snapshot authority requires this adapter to own the session, not just support its protocol.
+  canProvideAuthoritativeBufferSnapshot(id: string): boolean {
+    return this.supportsAuthoritativeBufferSnapshots && this.activeSessionIds.has(id)
+  }
+
   async getBufferSnapshot(
     id: string,
     opts: { scrollbackRows?: number } = {}

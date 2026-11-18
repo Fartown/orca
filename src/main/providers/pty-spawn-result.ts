@@ -42,6 +42,8 @@ export type PtySpawnResult = TerminalLaunchResult & {
   providerSequence?: {
     value: number
     generation: 'continued' | 'reset'
+    /** Last owner position delivered on this stream, independent of the snapshot's cut. */
+    streamPosition?: number
   }
   /** Snapshot kitty flags seed hidden runtime query replies; renderers reassert after replay screen switches. */
   snapshotKittyKeyboardFlags?: number

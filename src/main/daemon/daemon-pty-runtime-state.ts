@@ -1,3 +1,4 @@
+import { DaemonStreamPosition } from '../terminal-output-sequence-authority/daemon-stream-position'
 import { DaemonClient } from './client'
 import { DaemonPtyInputClosedIncarnations } from './daemon-pty-input-closed-incarnations'
 import { DaemonPtyInventoryObservation } from './daemon-pty-inventory-observation'
@@ -93,6 +94,7 @@ export abstract class DaemonPtyRuntimeState {
   protected tokenPath: string
   protected pidPath: string | null
   protected pidRecord: ParsedDaemonPid | null
+  protected readonly outputStreamPosition = new DaemonStreamPosition()
   protected client: DaemonClient
   protected auditContext: DaemonAuditContext
   protected lastAuthenticatedIdentity: DaemonEndpointIdentity | null = null
@@ -194,6 +196,7 @@ export abstract class DaemonPtyRuntimeState {
     if (!this.ptyInventory.retire(sessionId, expectedIncarnationId)) {
       return
     }
+    this.outputStreamPosition.forget(sessionId)
     this.activeSessionIds.delete(sessionId)
     this.inputClosedIncarnations.delete(sessionId)
     this.clearSessionAwaitingDaemonRecovery(sessionId)
@@ -260,6 +263,7 @@ export abstract class DaemonPtyRuntimeState {
       this.protocolVersion >= SNAPSHOT_SERIALIZER_FIDELITY_DAEMON_PROTOCOL_VERSION
     this.supportsStartupIngress = supportsPtyStartupIngress(this.protocolVersion)
     this.client.onDisconnected(() => {
+      this.outputStreamPosition.disconnected()
       this.ptyInventory.reset()
       if (!this.respawnAdoptionClosed) {
         this.writeRecoveryAttempted = false
@@ -277,11 +281,6 @@ export abstract class DaemonPtyRuntimeState {
 
   supportsGitCredentialGuardHost(): boolean {
     return this.protocolVersion >= GIT_CREDENTIAL_GUARD_HOST_PROTOCOL_VERSION
-  }
-
-  // Snapshot authority requires this adapter to own the session, not just support its protocol.
-  canProvideAuthoritativeBufferSnapshot(id: string): boolean {
-    return this.supportsAuthoritativeBufferSnapshots && this.activeSessionIds.has(id)
   }
 
   protected get canDelegateBackgroundToDaemon(): boolean {

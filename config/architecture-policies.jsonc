@@ -7,6 +7,46 @@
   ],
   "policies": [
     {
+      "id": "terminal-output-sequence-authority",
+      "description": "Reconcile daemon snapshot and delivered stream positions without changing terminal input or wire.",
+      "rules": [
+        {
+          "id": "terminal-output-sequence-authority-worktree-scope",
+          "type": "change-scope",
+          "comparison": "worktree",
+          "whenChanged": [
+            "src/main/terminal-output-sequence-authority/**",
+            "docs/issue/终端输出序号一致性/**"
+          ],
+          "allowedPaths": [
+            "src/main/terminal-output-sequence-authority/**",
+            "docs/issue/终端输出序号一致性/**",
+            "src/main/daemon/daemon-pty-runtime-state.ts",
+            "src/main/daemon/daemon-pty-adapter.ts",
+            "src/main/daemon/daemon-pty-spawn-request.ts",
+            "src/main/daemon/daemon-pty-spawn-result.ts",
+            "src/main/providers/pty-spawn-result.ts",
+            "src/main/runtime/terminal/output/terminal-output-generation.ts",
+            ".gitignore",
+            "config/fork-features.jsonc",
+            "config/architecture-policies.jsonc",
+            "docs/issue/README.md",
+            "src/main/daemon/daemon-pty-adapter-session-adoption.test.ts",
+            "src/main/daemon/daemon-pty-spawn-result-classification.test.ts",
+            "src/main/daemon/client.ts",
+            "src/main/daemon/daemon-pty-buffer-snapshots.ts",
+            "src/main/daemon/daemon-preflight-client-replacement.test.ts",
+            "src/renderer/src/components/terminal-pane/pty-connection-mocks.spec.ts",
+            "src/renderer/src/components/terminal-pane/pty-connection-test-environment.ts",
+            "src/renderer/src/components/terminal-pane/pty-connection-test-pane-fixtures.ts",
+            "tests/tools/win-update-e2e/app-driver.mjs",
+            "tests/tools/win-update-e2e/app-driver.test.mjs"
+          ],
+          "message": "Change is outside terminal output sequence authority."
+        }
+      ]
+    },
+    {
       "id": "terminal-paste-ownership",
       "description": "Keep clipboard operations bound to the focused original terminal without clearing unrelated errors.",
       "rules": [
@@ -345,6 +385,14 @@
           "baseRef": "$base",
           "requireBaseAncestor": false,
           "allowedPaths": [
+            "src/main/runtime/terminal/output/terminal-output-generation.ts",
+            "src/main/providers/pty-spawn-result.ts",
+            "src/main/daemon/daemon-pty-spawn-result.ts",
+            "src/main/daemon/daemon-pty-spawn-request.ts",
+            "src/main/daemon/daemon-pty-adapter.ts",
+            "src/main/daemon/daemon-pty-runtime-state.ts",
+            "docs/issue/终端输出序号一致性/**",
+            "src/main/terminal-output-sequence-authority/**",
             "src/renderer/src/components/native-chat/native-chat-paste-routing.test.tsx",
             "src/renderer/src/terminal-paste-ownership/**",
             "docs/issue/终端粘贴目标归属/**",
@@ -1107,7 +1155,17 @@
             "src/shared/rpc-contract/orchestration-runs-mutation-request-show-params.ts",
             "src/main/runtime/rpc/methods/orchestration/runs/mutation-request-show.ts",
             "src/main/runtime/orchestration/terminal-authority/verify-orchestration-compatibility-caller.ts",
-            "src/main/ipc/register-core-handlers/register-core-handlers.test.ts"
+            "src/main/ipc/register-core-handlers/register-core-handlers.test.ts",
+            "src/main/daemon/daemon-pty-adapter-session-adoption.test.ts",
+            "src/main/daemon/daemon-pty-spawn-result-classification.test.ts",
+            "src/main/daemon/client.ts",
+            "src/main/daemon/daemon-pty-buffer-snapshots.ts",
+            "src/main/daemon/daemon-preflight-client-replacement.test.ts",
+            "src/renderer/src/components/terminal-pane/pty-connection-mocks.spec.ts",
+            "src/renderer/src/components/terminal-pane/pty-connection-test-environment.ts",
+            "src/renderer/src/components/terminal-pane/pty-connection-test-pane-fixtures.ts",
+            "tests/tools/win-update-e2e/app-driver.mjs",
+            "tests/tools/win-update-e2e/app-driver.test.mjs"
           ],
           "message": "Branch changes an upstream path that no fork feature owns or registers as a seam; extend config/fork-features.jsonc and this allowlist, or move the change into a feature-owned path."
         }

@@ -143,6 +143,7 @@ export class DaemonPtyAdapter extends DaemonPtyDaemonRecovery implements IPtyPro
       }
 
       if (event.event === 'data') {
+        this.outputStreamPosition.recordData(event.sessionId, event.payload)
         this.markSessionDirty(event.sessionId)
         emitPtyListeners(this.dataListeners, (listener) =>
           listener({
@@ -168,6 +169,7 @@ export class DaemonPtyAdapter extends DaemonPtyDaemonRecovery implements IPtyPro
             : {})
         })
       } else if (event.event === 'dataGap') {
+        this.outputStreamPosition.recordGap(event.sessionId, event.payload)
         this.emitBackgroundStreamEvent({
           id: event.sessionId,
           kind: 'dataGap',
