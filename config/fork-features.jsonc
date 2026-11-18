@@ -156,6 +156,8 @@
       "goal": "手机激活与自动恢复保留宿主原终端身份，未证实退出时不创建替代 shell，并收敛重复标签",
       "journal": "docs/issue/手机打开工作区终端身份恢复/journal.md",
       "dependsOn": [
+        "src/shared/runtime-types.ts",
+        "src/renderer/src/hooks/ipc-events/runtime-environment-subscription-selection.ts",
         "src/renderer/src/lib/worktree-activation.ts",
         "src/renderer/src/store/index.ts",
         "src/shared/execution-host.ts",
@@ -169,6 +171,7 @@
       ],
       "policyId": "mobile-terminal-surface-recovery",
       "ownedPaths": [
+        "src/main/mobile-terminal-surface-recovery/**",
         "src/renderer/src/mobile-terminal-surface-recovery/**",
         "tests/e2e/mobile-terminal-surface-recovery.spec.ts",
         "docs/issue/手机打开工作区终端身份恢复/**"
@@ -183,6 +186,16 @@
         "src/renderer/src/mobile-terminal-surface-recovery/live-terminal-placement-verdict.ts"
       ],
       "seams": [
+        {
+          "file": "src/main/runtime/terminal/launch/mobile-terminal-owned-create.ts",
+          "mustContain": "this.getTerminalPtyForHandle(terminal.handle)",
+          "why": "Resolve the original terminal after its window adopts the handle."
+        },
+        {
+          "file": "src/renderer/src/components/terminal-pane/remote-runtime-pty-transport.ts",
+          "mustContain": "await resolveAdoptedTerminalPane(",
+          "why": "Reconcile a stale first activation with fresh host pane evidence."
+        },
         {
           "file": "src/main/runtime/workspaces/workspace-activation.ts",
           "mustContain": "resolveWorkspaceSelector(worktreeSelector)",
@@ -298,6 +311,8 @@
         }
       ],
       "tests": [
+        "src/main/mobile-terminal-surface-recovery/adopted-terminal-create.test.ts",
+        "src/renderer/src/mobile-terminal-surface-recovery/adopted-terminal-attach.test.ts",
         "src/renderer/src/hooks/ipc-events/worktree-event-runtime-activation.test.ts",
         "src/renderer/src/hooks/ipc-events/worktree-event-lineage-refresh.test.ts",
 
@@ -313,7 +328,7 @@
         "src/renderer/src/lib/worktree-agent-activation-gate.test.ts"
       ],
       "checks": [
-        "pnpm exec vitest run --config config/vitest.config.ts src/main/runtime/project-group-folder-workspace-selectors.test.ts src/renderer/src/hooks/ipc-events/worktree-event-runtime-activation.test.ts src/renderer/src/hooks/ipc-events/worktree-event-lineage-refresh.test.ts src/renderer/src/mobile-terminal-surface-recovery src/renderer/src/lib/worktree-agent-activation-gate.test.ts src/renderer/src/lib/worktree-agent-activation-seam.test.ts src/renderer/src/components/terminal-pane/pty-connection/reattach-success-settle.test.ts src/renderer/src/components/terminal-pane/pty-connection/deferred-session-reattach-newer-daemon-hold.test.ts src/renderer/src/components/terminal-pane/pty-connection/deferred-session-reattach-live-bookmark.test.ts"
+        "pnpm exec vitest run --config config/vitest.config.ts src/main/mobile-terminal-surface-recovery src/main/runtime/project-group-folder-workspace-selectors.test.ts src/renderer/src/hooks/ipc-events/worktree-event-runtime-activation.test.ts src/renderer/src/hooks/ipc-events/worktree-event-lineage-refresh.test.ts src/renderer/src/mobile-terminal-surface-recovery src/renderer/src/lib/worktree-agent-activation-gate.test.ts src/renderer/src/lib/worktree-agent-activation-seam.test.ts src/renderer/src/components/terminal-pane/pty-connection/reattach-success-settle.test.ts src/renderer/src/components/terminal-pane/pty-connection/deferred-session-reattach-newer-daemon-hold.test.ts src/renderer/src/components/terminal-pane/pty-connection/deferred-session-reattach-live-bookmark.test.ts"
       ]
     },
     {

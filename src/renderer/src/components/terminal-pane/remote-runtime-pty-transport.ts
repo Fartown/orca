@@ -109,6 +109,7 @@ import { listRemoteRuntimeSessionTabsAfterCurrentInFlight } from '@/runtime/remo
 import { subscribeAcceptedWebSessionTerminalHandle } from '@/runtime/web-session-terminal-handle-events'
 import { hostSnapshotAffirmsWorktreeContents } from '@/runtime/host-session-snapshot-authority'
 import { runRemoteAgentSessionLaunch } from '@/runtime/remote-agent-session-launch'
+import { resolveAdoptedTerminalPane } from '../../mobile-terminal-surface-recovery/resolve-adopted-terminal-pane'
 import { useAppStore } from '@/store'
 import { recordWebAgentSessionHandoff } from '@/runtime/web-agent-session-handoff'
 import { refreshWebRuntimeSessionTabsSnapshot } from '@/runtime/web-runtime-session-snapshot'
@@ -818,7 +819,8 @@ export function createRemoteRuntimePtyTransport(
 
   async function waitForHostSessionHandle(
     hostTabId: string,
-    isCurrent: () => boolean
+    isCurrent: () => boolean,
+    outcome: { adoptedPane?: RuntimeTerminalResolvePane }
   ): Promise<string | undefined | false> {
     if (!worktreeId) {
       return undefined
@@ -829,6 +831,20 @@ export function createRemoteRuntimePtyTransport(
       // Why: this runs when the pane itself is opened/attached — the user's wake gesture.
       activated = await activateHostSessionSurface(hostTabId, worktree, 'user')
     } catch (error) {
+      if (isRemoteTerminalStaleMessage(runtimeTerminalErrorMessage(error))) {
+        const pane = await resolveAdoptedTerminalPane({
+          environmentId: currentRuntimeEnvironmentId,
+          worktreeId,
+          tabId: hostTabId,
+          leafId,
+          isCurrent,
+          resolve: () => resolveHostSessionPane(hostTabId)
+        })
+        if (pane) {
+          outcome.adoptedPane = pane
+          return pane.handle
+        }
+      }
       // Activation cannot distinguish pre-hydration from true absence; only scoped inventory may prove removal (#21852).
       if (!isMissingHostSessionSurfaceError(error)) {
         throw error
@@ -943,12 +959,12 @@ export function createRemoteRuntimePtyTransport(
   async function waitForHostSessionHandleWithRecovery(
     hostTabId: string,
     isCurrent: () => boolean,
-    outcome: { boundedWaitEnded: boolean }
+    outcome: { boundedWaitEnded: boolean; adoptedPane?: RuntimeTerminalResolvePane }
   ): Promise<string | undefined | false> {
     let recoveryEpoch = recovery.isActive ? recovery.currentEpoch : undefined
     while (isCurrent()) {
       try {
-        const hostHandle = await waitForHostSessionHandle(hostTabId, isCurrent)
+        const hostHandle = await waitForHostSessionHandle(hostTabId, isCurrent, outcome)
         if (!isCurrent()) {
           return undefined
         }
@@ -1177,7 +1193,9 @@ export function createRemoteRuntimePtyTransport(
       (expectedAttachGeneration === undefined || expectedAttachGeneration === attachGeneration) &&
       (expectedLifecycleEpoch === undefined || expectedLifecycleEpoch === lifecycleEpoch)
     const hostTabId = toHostSessionTabId(tabId)
-    const waitOutcome = { boundedWaitEnded: false }
+    const waitOutcome: { boundedWaitEnded: boolean; adoptedPane?: RuntimeTerminalResolvePane } = {
+      boundedWaitEnded: false
+    }
     // Why overlap: resolvePane is a read keyed only by the pane, so it need not wait an activation round trip.
     const earlyPaneResolution = resolveHostSessionPane(hostTabId)
     const hostHandle = await waitForHostSessionHandleWithRecovery(hostTabId, isCurrent, waitOutcome)
@@ -1219,11 +1237,12 @@ export function createRemoteRuntimePtyTransport(
       terminal.tabId === hostTabId &&
       terminal.leafId === leafId &&
       (!terminal.worktreeId || terminal.worktreeId === worktreeId)
-    let resolvedPane = await earlyPaneResolution
+    let resolvedPane = waitOutcome.adoptedPane ?? (await earlyPaneResolution)
     const activationIncarnationId = authoritativePtyIncarnationId
     if (
       !matchesHostHandle(resolvedPane) ||
-      (activationIncarnationId !== null &&
+      (!waitOutcome.adoptedPane &&
+        activationIncarnationId !== null &&
         (resolvedPane.incarnationId ?? null) !== activationIncarnationId)
     ) {
       // Why: activation can materialize the surface or learn its incarnation, so an earlier read may be stale.

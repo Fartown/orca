@@ -3,8 +3,8 @@ title: '手机打开工作区终端身份恢复'
 slug: '手机打开工作区终端身份恢复'
 status: testing
 created: 2026-10-24
-updated: 2026-11-09
-external_ids: ['STA-3859', 'Fartown/orca#92']
+updated: 2026-11-18
+external_ids: ['STA-3859', 'Fartown/orca#92', 'Fartown/orca#148']
 ---
 
 # 手机打开工作区终端身份恢复 开发 Journal
@@ -259,3 +259,12 @@ external_ids: ['STA-3859', 'Fartown/orca#92']
 - 完成内容补充：生产 Mac 先保存 `renderer-before.json` 备份，再仅移除其他两个工作区 mounted 列表中已由新鲜主机证明属于当前工作区的裸 `4/5` 缓存，使用现有 createTab 恢复原 tab/leaf。桌面4→6，主机发布6；`mac-host-after-repair.json` / `mac-renderer-after-repair.json` 对比确认六个 handle/incarnation 不变、两个根 PID/启动时间不变、导航不变、主进程仍为19549；没有退出应用、关闭 tab 或向生产终端输入。
 - 未解决问题：永久代码尚未正式发布/安装，真实手机13标签的当前画面未获得；当前状态 testing，不是 done。完整 e2e 类型检查有 cloud/mobile 未装独立依赖的诊断，目标 spec 无诊断。初次旧场景 E2E 被上游 setup script 提示卡挡住，复用现有 dismiss helper 后重跑，不改产品提示卡。
 - 下一步：收齐重跑与 PR 检查，发布防复发版本；正式安装重启须取得该 Mac 的明确许可，不能把现场状态修复当作永久代码已经安装。
+
+### 2026-11-18 已接管终端的首次连接
+
+- 本轮目标：REQ-008，修复首次激活已创建终端却返回句柄失效的问题。
+- 完成内容：宿主按原实例发布已接管的终端；镜像遇旧宿主误报后，只读核实同一工作区与分屏。
+- 代码或文档变更：登记两个接缝、身份检查、回归用例和本地及 SSH 验收条件。
+- 验证证据：本地及 SSH 隔离 Electron 均读回原实例输出，执行端仅收到一次测试输入。SSH 客户端在真实激活成功后注入 stale 回复，重新读取同一分屏后成功接入。记录见 `.docs/restored-terminal-adoption-ui-validation/2026-11-18/`。
+- 未解决问题：已安装的旧版本需随包更新。
+- 下一步：通过 fork 门禁后合入。

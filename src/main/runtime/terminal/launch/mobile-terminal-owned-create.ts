@@ -147,8 +147,12 @@ export abstract class OrcaRuntimeWithCreateRuntimeOwnedMobileSessionTerminal ext
     if (terminal.ptyId) {
       opts.onPtyCreated?.(terminal.ptyId, terminal)
     }
-    const livePty = this.getLivePtyForHandle(terminal.handle)
-    if (!livePty) {
+    const livePty = this.getTerminalPtyForHandle(terminal.handle)
+    if (
+      livePty.pty.worktreeId !== worktreeId ||
+      (terminal.ptyId != null && terminal.ptyId !== livePty.pty.ptyId) ||
+      (terminal.incarnationId != null && terminal.incarnationId !== livePty.pty.incarnationId)
+    ) {
       throw new Error('terminal_handle_stale')
     }
     if (opts.createMutation) {

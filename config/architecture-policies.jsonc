@@ -89,6 +89,9 @@
             "docs/issue/手机打开工作区终端身份恢复/**"
           ],
           "allowedPaths": [
+            "src/main/mobile-terminal-surface-recovery/**",
+            "src/main/runtime/terminal/launch/mobile-terminal-owned-create.ts",
+            "src/renderer/src/components/terminal-pane/remote-runtime-pty-transport.ts",
             "src/main/runtime/workspaces/workspace-activation.ts",
             "src/renderer/src/hooks/ipc-events/worktree-event-runtime.ts",
             "src/renderer/src/hooks/ipc-events/worktree-event-runtime-activation.test.ts",
@@ -372,6 +375,9 @@
             "src/main/runtime/wsl-host-agent-terminal-launch.test.ts",
             "src/main/codex-cli/command-guest-path.test.ts",
             "resources/skills/released-digests.json",
+            "src/main/mobile-terminal-surface-recovery/**",
+            "src/main/runtime/terminal/launch/mobile-terminal-owned-create.ts",
+            "src/renderer/src/components/terminal-pane/remote-runtime-pty-transport.ts",
             "src/main/runtime/workspaces/workspace-activation.ts",
             "src/renderer/src/hooks/ipc-events/worktree-event-runtime.ts",
             "src/renderer/src/hooks/ipc-events/worktree-event-runtime-activation.test.ts",
