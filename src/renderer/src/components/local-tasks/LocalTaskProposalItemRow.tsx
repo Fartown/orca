@@ -3,7 +3,7 @@ import { Check, Pencil } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { translate } from '@/i18n/i18n'
-import { cn } from '@/lib/utils'
+import { cn } from '@/lib/class-names'
 import {
   applyLocalTaskProposalItemDraft,
   localTaskProposalEditFields,

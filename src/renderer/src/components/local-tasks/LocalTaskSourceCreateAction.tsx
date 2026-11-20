@@ -11,7 +11,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { translate } from '@/i18n/i18n'
-import { isImeCompositionKeyDown } from '@/lib/ime-composition-keyboard-event'
+import { isImeCompositionKeyDown } from '@/lib/text-input/ime/ime-composition-keyboard-event'
 import { collectLocalTaskLabels, firstStatusInCategory } from '@/local-tasks/local-task-grouping'
 import { localTaskEndpointForHost, localTaskIdEndpoint } from '@/local-tasks/local-task-endpoints'
 import { useLocalTaskSourceTab } from '@/local-tasks/local-task-source-tab'

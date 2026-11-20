@@ -4,20 +4,20 @@ import {
   notificationCtorMock,
   notificationIsSupportedMock,
   resetNotificationDispatchMocks
-} from '../ipc/notifications-test-harness'
-import { registerNotificationHandlers } from '../ipc/notifications'
+} from './notification-dispatch-test-harness'
+import { registerNotificationHandlers } from '../ipc/notifications/notifications'
 
 vi.mock('electron', async () =>
-  (await import('../ipc/notifications-test-harness')).createElectronModuleMock()
+  (await import('./notification-dispatch-test-harness')).createElectronModuleMock()
 )
-vi.mock('../ipc/notification-authorization-status', async () =>
-  (await import('../ipc/notifications-test-harness')).createNotificationAuthorizationModuleMock()
+vi.mock('../ipc/notifications/notification-authorization-status', async () =>
+  (await import('./notification-dispatch-test-harness')).createNotificationAuthorizationModuleMock()
 )
 vi.mock('../ipc/ui', async () =>
-  (await import('../ipc/notifications-test-harness')).createTrustedUIRendererModuleMock()
+  (await import('./notification-dispatch-test-harness')).createTrustedUIRendererModuleMock()
 )
 vi.mock('../tray/system-tray', async () =>
-  (await import('../ipc/notifications-test-harness')).createSystemTrayModuleMock()
+  (await import('./notification-dispatch-test-harness')).createSystemTrayModuleMock()
 )
 
 beforeEach(resetNotificationDispatchMocks)

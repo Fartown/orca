@@ -3,14 +3,14 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { z } from 'zod'
-import { setAppEnvironment } from '../../shared/app-environment'
+import { setAppEnvironment } from '../../shared/app-lifecycle/app-environment'
 import { OrcaRuntimeService } from '../runtime/orca-runtime'
-import { OrcaRuntimeRpcServer } from '../runtime/runtime-rpc'
+import { OrcaRuntimeRpcServer } from '../runtime/rpc/server/runtime-rpc'
 import {
   authenticateMobileWsSession,
   createEncryptedWsResponseReader,
   sendEncryptedWsRequest
-} from '../runtime/runtime-rpc-mobile-ws-test-harness'
+} from '../runtime/rpc/server/runtime-rpc-mobile-ws-test-harness'
 
 // A paired phone uploads over the real path: WebSocket, E2EE, mobile device scope, the mobile
 // allowlist, method dispatch, and the local temp-directory writer.

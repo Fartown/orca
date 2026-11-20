@@ -11,7 +11,7 @@ import {
   SelectValue
 } from '@/components/ui/select'
 import { translate } from '@/i18n/i18n'
-import { isImeCompositionKeyDown } from '@/lib/ime-composition-keyboard-event'
+import { isImeCompositionKeyDown } from '@/lib/text-input/ime/ime-composition-keyboard-event'
 import { selectLocalTaskHostLabel } from '@/local-tasks/local-task-host-label'
 import { useAppStore } from '@/store'
 import {

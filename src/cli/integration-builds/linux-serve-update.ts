@@ -8,11 +8,35 @@ import {
   resolveAppImageBuildWatch,
   serveAppImageAttemptPath,
   type AppImageBuildWatch
-} from '../runtime/serve-appimage-update'
-import { execveThisProcess } from '../runtime/serve-supervisor-relocation'
-import { resolveAppImageCacheKey } from '../../shared/appimage-cache-identity'
-import { waitForMacBundleVersion } from '../runtime/mac-app-update-bundle'
-import type { InstallRequestedHandoff } from '../runtime/serve-supervisor-policy'
+} from '../runtime/serve/updates/serve-appimage-update'
+import { execveThisProcess } from '../runtime/serve/supervision/serve-supervisor-relocation'
+import { resolveAppImageCacheKey } from '../../shared/desktop-distribution/appimage/appimage-cache-identity'
+import {
+  getMacAppBundlePath,
+  waitForMacBundleVersion
+} from '../runtime/serve/updates/mac-app-update-bundle'
+import type { InstallRequestedHandoff } from '../runtime/serve/supervision/serve-supervisor-policy'
+import { getServeUpdateHandoffPath } from '../../shared/remote-runtime/serve-supervisor/serve-update-handoff'
+
+/**
+ * Electron serve hands updates to this CLI for packaged macOS apps and, in this fork, supervised
+ * Linux AppImages; `linuxEnv` is what the Linux child needs to find its AppImage again.
+ */
+export function serveUpdateHandoff(
+  executable: string,
+  args: { recipeJson?: boolean; supervise?: boolean },
+  userDataPath: string
+) {
+  const linuxEnv =
+    args.recipeJson !== true
+      ? linuxServeUpdateEnvironment(executable, args.supervise === true)
+      : null
+  const path =
+    args.recipeJson !== true && (getMacAppBundlePath(executable) || linuxEnv)
+      ? getServeUpdateHandoffPath(userDataPath)
+      : null
+  return { path, linuxEnv }
+}
 
 export async function awaitServeUpdateHandoff(options: {
   executable: string

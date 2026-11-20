@@ -21,12 +21,16 @@ vi.mock('@/store', () => ({
     })
   }
 }))
-vi.mock('@/hooks/agent-auto-ack-targets', () => ({
+vi.mock('@/attention/agent-auto-ack-targets', () => ({
   resolveAutoAckTabTargets: () => fixture.visibleTargets
 }))
-vi.mock('@/lib/reveal-terminal-pane', () => ({ revealTerminalPane: fixture.reveal }))
-vi.mock('@/lib/worktree-activation', () => ({ activateAndRevealWorkspace: () => true }))
-vi.mock('@/lib/structured-agent-session-tab-activation', () => ({
+vi.mock('@/lib/workspace/activation/reveal-terminal-pane', () => ({
+  revealTerminalPane: fixture.reveal
+}))
+vi.mock('@/lib/workspace/activation/worktree-activation', () => ({
+  activateAndRevealWorkspace: () => true
+}))
+vi.mock('@/lib/agent-session/structured-agent-session-tab-activation', () => ({
   activateStructuredAgentSessionTab: () => true
 }))
 vi.mock('./local-task-navigation', () => ({ openLocalTaskPage: fixture.openTaskPage }))

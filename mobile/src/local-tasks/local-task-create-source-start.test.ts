@@ -2,11 +2,11 @@ import { describe, expect, it } from 'vitest'
 import {
   AGENT_LAUNCH_REPLAY_REQUIRED_RUNTIME_CAPABILITY,
   AGENT_LAUNCH_RUNTIME_CAPABILITY
-} from '../../../src/shared/agent-launch-runtime-capability'
+} from '../../../src/shared/agent-launch/contracts/agent-launch-runtime-capability'
 import type { LocalTask } from '../../../src/shared/local-tasks/local-task-types'
-import { FakeSession } from '../transport/mobile-endpoint-supervisor-test-fakes'
-import { scopeRpcClientToExecutionHost } from '../transport/execution-host-scoped-rpc-client'
-import type { RpcResponse } from '../transport/types'
+import { FakeSession } from '../transport/connection/mobile-endpoint-supervisor-test-fakes'
+import { scopeRpcClientToExecutionHost } from '../worktree/execution-hosts/execution-host-scoped-rpc-client'
+import type { RpcResponse } from '../transport/rpc/rpc-wire-types'
 import { localTasksCopy } from './local-tasks-copy'
 import { createLocalTaskOperationIds } from './local-task-operation-ids'
 import {

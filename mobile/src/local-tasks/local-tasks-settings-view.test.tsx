@@ -25,10 +25,10 @@ vi.mock('lucide-react-native', () => ({
   Plus: 'Plus',
   Trash2: 'Trash2'
 }))
-vi.mock('../components/ConfirmModal', () => ({ ConfirmModal: 'ConfirmModal' }))
-vi.mock('../components/TextInputModal', () => ({ TextInputModal: 'TextInputModal' }))
-vi.mock('../components/MobileSwitch', () => ({ MobileSwitch: 'MobileSwitch' }))
-vi.mock('../components/PickerModal', () => ({ PickerModal: 'PickerModal' }))
+vi.mock('../components/sheets/ConfirmModal', () => ({ ConfirmModal: 'ConfirmModal' }))
+vi.mock('../components/sheets/TextInputModal', () => ({ TextInputModal: 'TextInputModal' }))
+vi.mock('../components/controls/MobileSwitch', () => ({ MobileSwitch: 'MobileSwitch' }))
+vi.mock('../components/sheets/PickerModal', () => ({ PickerModal: 'PickerModal' }))
 vi.mock('./local-tasks-status-section', () => ({ LocalTasksStatusSection: () => null }))
 vi.mock('./local-task-repos-section', () => ({ LocalTaskReposSection: () => null }))
 vi.mock('./local-task-form-fields', () => ({

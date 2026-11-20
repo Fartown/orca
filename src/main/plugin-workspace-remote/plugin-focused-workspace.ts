@@ -2,7 +2,7 @@ import type { PluginHostRendererActions } from '../plugins/view/plugin-host-rend
 import {
   projectPluginWorkspaceContext,
   type PluginWorkspaceContext
-} from '../plugins/workers/plugin-workspace-projection'
+} from '../plugins/workers/host-api/plugin-workspace-projection'
 
 /**
  * `readContext` and `workspace.changed` for a focused workspace main's runtime does not own (an

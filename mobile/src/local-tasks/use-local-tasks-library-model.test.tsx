@@ -6,7 +6,7 @@ import type {
   LocalTaskWorkspaceLink
 } from '../../../src/shared/local-tasks/local-task-link-types'
 import type { LocalTask, LocalTaskProject } from '../../../src/shared/local-tasks/local-task-types'
-import type { RpcClient } from '../transport/rpc-client'
+import type { RpcClient } from '../transport/rpc/rpc-client-contract'
 import type * as LocalTaskGroupingModule from '../../../src/shared/local-tasks/local-task-grouping'
 
 const indexBuilds = vi.hoisted(() => ({ count: 0 }))

@@ -1,8 +1,8 @@
 // @vitest-environment happy-dom
 import { act, cleanup, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
-import type { AiVaultSession } from '../../../shared/ai-vault-types'
-import type { AiVaultListRow } from '../components/right-sidebar/AiVaultVirtualRow'
+import type { AiVaultSession } from '../../../shared/ai-vault/contracts/ai-vault-types'
+import type { AiVaultListRow } from '../components/right-sidebar/ai-vault/session-list/AiVaultVirtualRow'
 import { sessionNameStore } from './session-name-store'
 
 // Every row mounted: the list's lookup is what is under test, not virtualization.
@@ -20,7 +20,7 @@ vi.mock('@tanstack/react-virtual', () => ({
   })
 }))
 // The row shows whatever title lookup the list hands it, so the assertion reads the list's wiring.
-vi.mock('../components/right-sidebar/AiVaultVirtualRow', () => ({
+vi.mock('../components/right-sidebar/ai-vault/session-list/AiVaultVirtualRow', () => ({
   AiVaultVirtualRow: ({
     row,
     getCanonicalTitle
@@ -35,7 +35,7 @@ vi.mock('../components/right-sidebar/AiVaultVirtualRow', () => ({
     ) : null
 }))
 
-import { AiVaultSessionVirtualList } from '../components/right-sidebar/AiVaultSessionVirtualList'
+import { AiVaultSessionVirtualList } from '../components/right-sidebar/ai-vault/session-list/AiVaultSessionVirtualList'
 
 const session: AiVaultSession = {
   id: 'local:codex:s1',
@@ -91,6 +91,7 @@ function renderList(): void {
       onCopyPath={vi.fn()}
       onOpenLog={vi.fn()}
       onRevealLog={vi.fn()}
+      onRevealArtifacts={vi.fn()}
       onOpenCwd={vi.fn()}
       onRequestDelete={vi.fn()}
     />

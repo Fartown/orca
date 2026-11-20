@@ -1,13 +1,15 @@
 import { describe, expect, it, vi } from 'vitest'
-import { createTerminalTabPresentationActions } from '../store/terminals/terminal-tab-presentation'
+import { createTerminalTabPresentationActions } from '../store/terminals/tabs/presentation/terminal-tab-presentation'
 import type { AppState } from '../store/types'
-import { parseWorkspaceSession } from '../../../shared/workspace-session-schema'
+import { parseWorkspaceSession } from '../../../shared/workspace-session/workspace-session-schema'
 import {
   resolveTerminalTabTitle,
   resolveUnifiedTabLabel
-} from '../../../shared/tab-title-resolution'
+} from '../../../shared/workspace-layout/tab-groups/tab-title-resolution'
 
-vi.mock('@/runtime/sync-runtime-graph', () => ({ scheduleRuntimeGraphSync: vi.fn() }))
+vi.mock('@/runtime/sync-runtime-graph/graph-sync-scheduler', () => ({
+  scheduleRuntimeGraphSync: vi.fn()
+}))
 
 describe('real title store and workspace serialization seams', () => {
   it('preserves evidence-only changes in both tab models and through restart parsing', () => {

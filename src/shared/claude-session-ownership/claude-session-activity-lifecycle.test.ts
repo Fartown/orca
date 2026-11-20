@@ -5,12 +5,12 @@ import {
   clearPaneCacheState,
   clearPaneTurnCacheState,
   createHookListenerState,
-  movePaneCacheState,
-  paneHasStateClaims,
-  seedLegacyAgentStatusForTests
+  movePaneCacheState
 } from '../agent-hook-listener/listener-state'
-import { normalizeHookPayload } from '../agent-hook-listener'
-import { makePaneKey } from '../stable-pane-id'
+import { paneHasStateClaims } from '../agent-hook-listener/pane-state-claims'
+import { seedLegacyAgentStatusForTests } from '../agent-hook-listener/legacy-agent-status-test-seed'
+import { normalizeHookPayload } from '../agent-hook-listener/normalization/normalize-hook-payload'
+import { makePaneKey } from '../workspace-layout/stable-pane-id'
 import { shouldRejectClaudeSessionReplacement } from './claude-session-activity'
 
 describe('Claude activity follows existing listener lifecycle', () => {

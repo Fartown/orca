@@ -1,12 +1,15 @@
 import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { REMOTE_ARTIFACT_INPUT_ENV, sshArtifactSourceKey } from '../../shared/artifact-cli-bridge'
-import { toSshExecutionHostId } from '../../shared/execution-host'
+import {
+  REMOTE_ARTIFACT_INPUT_ENV,
+  sshArtifactSourceKey
+} from '../../shared/artifacts/artifact-cli-bridge'
+import { toSshExecutionHostId } from '../../shared/execution-host/execution-host'
 import {
   ORCHESTRATION_COMPATIBILITY_HOST_ID_ENV,
   ORCHESTRATION_COMPATIBILITY_HOST_KIND_ENV
-} from '../../shared/orchestration-compatibility-evidence'
-import { RuntimeClientError } from '../runtime-client'
+} from '../../shared/orchestration/orchestration-compatibility-evidence'
+import { RuntimeClientError } from '../runtime/connection/types'
 import {
   resolveArtifactShareCliFileTarget,
   resolveArtifactShareCliHost,

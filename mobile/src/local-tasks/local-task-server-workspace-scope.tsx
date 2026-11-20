@@ -2,11 +2,11 @@ import type { ReactNode } from 'react'
 import {
   HostStatusGatesContext,
   useOptionalHostProtocolGates
-} from '../components/host-protocol-gates-context'
+} from '../components/host-connection/host-protocol-gates-context'
 import { WorkspaceExecutionHostContext } from '../navigation/workspace-execution-host'
-import { useHostClient } from '../transport/host-client-hooks'
-import { WorkspaceServerContext } from '../transport/use-workspace-client'
-import { useWorkspaceServer } from '../transport/workspace-server'
+import { useHostClient } from '../transport/connection/host-client-hooks'
+import { WorkspaceServerContext } from '../worktree/execution-hosts/workspace-server-context'
+import { useWorkspaceServer } from '../worktree/execution-hosts/workspace-server'
 
 const NO_CAPABILITIES: readonly string[] = []
 

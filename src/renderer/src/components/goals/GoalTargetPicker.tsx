@@ -1,6 +1,6 @@
 import { useGoalDomainStore } from '@/goals/use-goals-domain-store'
-import { getExecutionHostIdForWorktree } from '@/lib/worktree-runtime-owner'
-import { folderWorkspaceToWorktree } from '../../../../shared/folder-workspace-worktree'
+import { getExecutionHostIdForWorktree } from '@/lib/workspace/ownership/worktree-runtime-owner'
+import { folderWorkspaceToWorktree } from '../../../../shared/folder-workspaces/folder-workspace-worktree'
 import { useMemo } from 'react'
 import { basename } from '@/lib/path'
 import { Label } from '@/components/ui/label'
@@ -13,8 +13,8 @@ import {
 } from '@/components/ui/select'
 import { translate } from '@/i18n/i18n'
 import { useAppStore } from '@/store'
-import { useAllWorktrees } from '@/store/selectors'
-import { selectFolderWorkspaces } from '@/store/workspace-record-selectors'
+import { useAllWorktrees } from '@/store/slices/worktrees/listing/use-worktree-catalog'
+import { selectFolderWorkspaces } from '@/store/workspaces/catalog/workspace-record-fields'
 import { listGoalSessionCandidates, type GoalSessionCandidate } from '@/goals/goal-session-target'
 
 export type GoalTargetSelection = {

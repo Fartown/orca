@@ -1,5 +1,5 @@
 import { MessageSquarePlus } from 'lucide-react-native'
-import type { ActionSheetAction } from '../components/ActionSheetModal'
+import type { ActionSheetAction } from '../components/sheets/ActionSheetModal'
 import { CONTINUATION_COPY } from './continuation-copy'
 import { resolveMobileContinuationSource, type MobileContinuationTab } from './continuation-source'
 

@@ -1,6 +1,6 @@
 import { mkdir } from 'node:fs/promises'
 import { dirname, resolve } from 'node:path'
-import { folderWorkspaceKey } from '../../shared/workspace-scope'
+import { folderWorkspaceKey } from '../../shared/workspace/identity/workspace-scope'
 import type { LocalTaskDispatcherWorkspace } from '../../shared/local-tasks/local-task-dispatcher-workspace'
 import type { OrcaRuntimeService } from '../runtime/orca-runtime'
 import type { LocalTasksDatabase } from './local-tasks-database'
@@ -65,13 +65,14 @@ export async function prepareLocalTaskDispatcherWorkspace(
         resolve(folder.folderPath) === resolve(folderPath)
     )
   if (!folderWorkspace) {
-    folderWorkspace = await runtime.createFolderWorkspace({
+    const created = await runtime.createFolderWorkspace({
       projectGroupId: projectGroup.id,
       name: 'Dispatcher',
       folderPath,
       connectionId: null,
       creatorProvenance: { kind: 'host' }
     })
+    folderWorkspace = created.folderWorkspace
   }
   checkOpen()
   if (

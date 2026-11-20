@@ -1,4 +1,4 @@
-import type { AiVaultSession } from '../../../shared/ai-vault-types'
+import type { AiVaultSession } from '../../../shared/ai-vault/contracts/ai-vault-types'
 import { mintAgentSessionFallbackTitle } from '../../../shared/agent-session-fallback-title'
 import { resolveSessionDisplayTitle } from '../../../shared/session-display-title'
 import { sessionNameSlotCandidates } from '../../../shared/session-names/session-name-slot'

@@ -1,12 +1,12 @@
 import { translate } from '@/i18n/i18n'
-import { focusTerminalTabSurface } from '@/lib/focus-terminal-tab-surface'
-import { revealTerminalPane } from '@/lib/reveal-terminal-pane'
+import { focusTerminalTabSurface } from '@/components/terminal-pane/input/focus/focus-terminal-tab-surface'
+import { revealTerminalPane } from '@/lib/workspace/activation/reveal-terminal-pane'
 import { useAppStore } from '@/store'
 import type { AppState } from '@/store/types'
-import { FLOATING_TERMINAL_WORKTREE_ID } from '../../../shared/constants'
-import { parsePaneKey } from '../../../shared/stable-pane-id'
-import type { TuiAgent } from '../../../shared/tui-agent'
-import { isTuiAgent } from '../../../shared/tui-agent-config'
+import { FLOATING_TERMINAL_WORKTREE_ID } from '../../../shared/workspace/identity/floating-workspace-id'
+import { parsePaneKey } from '../../../shared/workspace-layout/stable-pane-id'
+import type { TuiAgent } from '../../../shared/agent-launch/catalog/tui-agent'
+import { isTuiAgent } from '../../../shared/agent-launch/catalog/tui-agent-config'
 import type { LocalTaskEndpointKey } from './local-task-endpoints'
 import {
   localTaskDispatcherStore,
@@ -29,7 +29,7 @@ function dispatcherUnifiedTab(state: AppState, paneKey: string, worktreeId: stri
 }
 
 export function dispatcherNeedsStartupTerminal(state: AppState, paneKey: string): boolean {
-  const status = state.agentStatusByPaneKey[paneKey]
+  const status = state.agentStatusByPaneKey.get(paneKey)
   return Boolean(
     status &&
     (status.state === 'waiting' || status.state === 'blocked') &&
@@ -56,7 +56,7 @@ export function bindLocalTaskDispatcherPresentation(): () => void {
       handledWait = null
       return
     }
-    const wait = `${getLocalTaskDispatcherEndpoint()}:${getLocalTaskDispatcherEpoch()}:${paneKey}:${state.agentStatusByPaneKey[paneKey]?.stateStartedAt}`
+    const wait = `${getLocalTaskDispatcherEndpoint()}:${getLocalTaskDispatcherEpoch()}:${paneKey}:${state.agentStatusByPaneKey.get(paneKey)?.stateStartedAt}`
     if (wait === handledWait) {
       return
     }
@@ -151,7 +151,7 @@ export function useLocalTaskDispatcherAgent(paneKey: string | null): TuiAgent | 
     if (!paneKey) {
       return null
     }
-    const reported = state.agentStatusByPaneKey[paneKey]?.agentType
+    const reported = state.agentStatusByPaneKey.get(paneKey)?.agentType
     if (isTuiAgent(reported)) {
       return reported
     }

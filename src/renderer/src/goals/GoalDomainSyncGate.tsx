@@ -1,5 +1,5 @@
-import { getExecutionHostIdForWorktree } from '../lib/worktree-runtime-owner'
-import { getActiveSidebarWorkspaceId } from '../../../shared/workspace-scope'
+import { getExecutionHostIdForWorktree } from '../lib/workspace/ownership/worktree-runtime-owner'
+import { getActiveSidebarWorkspaceId } from '../../../shared/workspace/identity/workspace-scope'
 import { useGoalEditorDraftSync } from './goal-editor-drafts-sync'
 import { useEffect, useMemo, useRef, type MutableRefObject } from 'react'
 import { useStore } from 'zustand'

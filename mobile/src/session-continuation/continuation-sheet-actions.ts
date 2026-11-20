@@ -1,4 +1,4 @@
-import type { ActionSheetAction } from '../components/ActionSheetModal'
+import type { ActionSheetAction } from '../components/sheets/ActionSheetModal'
 import type { AgentSessionContinuationContextMode } from '../../../src/shared/agent-session-continuation/continuation-prompt'
 import { CONTINUATION_COPY } from './continuation-copy'
 import type { MobileSessionContinuationAgent } from './continuation-agents'

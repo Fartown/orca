@@ -5,10 +5,10 @@ import { afterEach, describe, expect, it } from 'vitest'
 import {
   useTabGroupItemProjections,
   type TabGroupWorktreeSnapshot
-} from '../components/tab-group/useTabGroupItemProjections'
-import { resolveTerminalTabTitle } from '../../../shared/tab-title-resolution'
-import { getAgentRowConversationName } from '../../../shared/agent-row-conversation-name'
-import type { AiVaultSessionTitle } from '../../../shared/ai-vault-session-title'
+} from '../components/tab-group/workspace-model/useTabGroupItemProjections'
+import { resolveTerminalTabTitle } from '../../../shared/workspace-layout/tab-groups/tab-title-resolution'
+import { getAgentRowConversationName } from '../../../shared/agent-status/presentation/agent-row-conversation-name'
+import type { AiVaultSessionTitle } from '../../../shared/ai-vault/contracts/ai-vault-session-title'
 
 afterEach(cleanup)
 

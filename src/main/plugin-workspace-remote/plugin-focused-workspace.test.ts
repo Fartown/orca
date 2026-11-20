@@ -3,15 +3,18 @@ import { join } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { PluginFocusedWorkspace } from '../../shared/plugin-workspace-remote/plugin-workspace-remote'
 import type { PluginViewRequestBody } from '../../shared/plugins/view/plugin-view-protocol'
-import { pluginRuntimeDelegate, readPluginWorkspaceChange } from '../plugins/plugin-runtime-binding'
+import {
+  pluginRuntimeDelegate,
+  readPluginWorkspaceChange
+} from '../plugins/runtime/plugin-runtime-binding'
 import {
   getPluginHostRendererActions,
   setPluginHostRendererRequest,
   type PluginHostRendererActions
 } from '../plugins/view/plugin-host-renderer-actions'
 import { pluginViewReplySchema } from '../plugins/view/plugin-view-reply-schema'
-import { executePluginHostCall } from '../plugins/workers/plugin-host-methods'
-import { bindPluginHostServices } from '../plugins/workers/plugin-host-service-bindings'
+import { executePluginHostCall } from '../plugins/workers/host-api/plugin-host-methods'
+import { bindPluginHostServices } from '../plugins/workers/host-api/plugin-host-service-bindings'
 
 const FOCUSED: PluginFocusedWorkspace = {
   worktreeId: 'repo-9::/home/dev/app',
@@ -48,7 +51,8 @@ function hostWithoutLocalFocus() {
       listTerminals,
       sendTerminal: vi.fn(),
       dispatchPluginNotification: vi.fn(),
-      listVisibleRepos: () => []
+      listVisibleRepos: () => [],
+      listAgentTasksByPaneKey: () => ({})
     },
     () => [{ paneKey: 't:l', worktreeId: FOCUSED.worktreeId, state: 'working', stateStartedAt: 1 }]
   )
@@ -83,10 +87,11 @@ describe('a focused workspace main runtime does not own', () => {
 
     await expect(call('workspace.readContext', undefined, window)).resolves.toEqual({
       ok: true,
-      value: CONTEXT
+      value: { ...CONTEXT, workspaceId: FOCUSED.worktreeId }
     })
     await expect(readPluginWorkspaceChange(delegate, window)).resolves.toEqual({
-      context: CONTEXT
+      change: { context: { ...CONTEXT, workspaceId: FOCUSED.worktreeId } },
+      worktreeId: null
     })
     expect(listTerminals).not.toHaveBeenCalled()
   })
@@ -119,7 +124,7 @@ describe('a focused workspace main runtime does not own', () => {
     })
     await expect(
       readPluginWorkspaceChange(hostWithoutLocalFocus().delegate, window)
-    ).resolves.toEqual({ context: null })
+    ).resolves.toEqual({ change: { context: null }, worktreeId: null })
   })
 
   it('carries the window answer through the reply check main applies', async () => {

@@ -1,10 +1,12 @@
 import { afterEach, expect, it, vi } from 'vitest'
 import { canonicalSessionTitleKey } from '../lib/canonical-session-titles'
-import { startAiVaultTabTitleSync } from '../lib/ai-vault-tab-title-sync'
+import { startAiVaultTabTitleSync } from '../lib/agent-session/history/title-sync/ai-vault-tab-title-sync'
 import { fixture, nativeResult } from './session-name-binding-test-fixture'
 import { createSessionNameStore } from './session-name-store'
 
-vi.mock('@/runtime/sync-runtime-graph', () => ({ scheduleRuntimeGraphSync: vi.fn() }))
+vi.mock('@/runtime/sync-runtime-graph/graph-sync-scheduler', () => ({
+  scheduleRuntimeGraphSync: vi.fn()
+}))
 const stops: (() => void)[] = []
 afterEach(() => stops.splice(0).forEach((stop) => stop()))
 

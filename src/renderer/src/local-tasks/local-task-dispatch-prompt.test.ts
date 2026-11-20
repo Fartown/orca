@@ -9,10 +9,10 @@ const fixture = vi.hoisted(() => ({
   record: vi.fn(async () => true)
 }))
 vi.mock('@/store', async () => {
-  const { createTestStore } = await import('@/store/slices/store-test-helpers')
+  const { createTestStore } = await import('@/store/testing/app-store-test-fixture')
   return { useAppStore: createTestStore() }
 })
-vi.mock('@/runtime/runtime-rpc-client', () => ({ callRuntimeRpc: fixture.rpc }))
+vi.mock('@/runtime/rpc/calls/runtime-rpc-call', () => ({ callRuntimeRpc: fixture.rpc }))
 vi.mock('./local-task-workspace-linking', () => ({ linkLocalTaskWorkspace: fixture.link }))
 vi.mock('./local-task-session-recording', () => ({
   recordLocalTaskSession: fixture.record,

@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import type { ExecutionHostId } from '../../../shared/execution-host'
+import type { ExecutionHostId } from '../../../shared/execution-host/execution-host'
 import { createStore } from 'zustand/vanilla'
 import { useStore } from 'zustand'
 import { toast } from 'sonner'

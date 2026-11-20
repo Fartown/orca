@@ -17,7 +17,9 @@ const { callRuntime, environments } = vi.hoisted(() => ({
     { id: 'offline', name: 'Old laptop' }
   ]
 }))
-vi.mock('../../shared/runtime-environment-store', () => ({ listEnvironments: () => environments }))
+vi.mock('../../shared/remote-runtime/host-store/runtime-environment-store', () => ({
+  listEnvironments: async () => environments
+}))
 
 const { listArtifactShareHosts } = await import('../runtime/rpc/methods/artifact-share')
 

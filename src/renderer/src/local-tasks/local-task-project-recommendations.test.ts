@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { LocalTaskProject } from '../../../shared/local-tasks/local-task-types'
-import type { Project } from '../../../shared/project-types'
+import type { Project } from '../../../shared/project/project-types'
 import {
   localTaskEndpointForOrcaProject,
   recommendLocalTaskProjects,

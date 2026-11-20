@@ -7,9 +7,9 @@ vi.mock('react-native', () => ({
   Platform: { OS: 'ios' }
 }))
 
-import { sshTargetSummaryHostId } from '../../../src/shared/worktree/host-context-labels'
-import type { RpcClient } from '../transport/rpc-client'
-import type { RpcResponse } from '../transport/types'
+import { sshTargetSummaryHostId } from '../../../src/shared/worktree/row-display/host-context-labels'
+import type { RpcClient } from '../transport/rpc/rpc-client-contract'
+import type { RpcResponse } from '../transport/rpc/rpc-wire-types'
 import { useLocalTaskHostDirectory, useLocalTaskHostLabels } from './use-local-task-host-labels'
 
 const MINI = sshTargetSummaryHostId('minizc')

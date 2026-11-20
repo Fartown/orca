@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { resolveReleaseRef } from '../check-daemon-protocol-crossing.mjs'
+import { resolveReleaseRef } from '../daemon-protocol/admission/check-daemon-protocol-crossing.mjs'
 import { recentStableReleaseCandidates, stableReleaseCandidates } from './release-candidates.mjs'
 
 const datedTags = [

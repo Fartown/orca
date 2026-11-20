@@ -2,7 +2,7 @@ import type React from 'react'
 import { FileCode, ListTree } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { translate } from '@/i18n/i18n'
-import { cn } from '@/lib/utils'
+import { cn } from '@/lib/class-names'
 import type { ShareDocument } from './viewer-document'
 
 // Same recipe as the editor header's icon actions so the page reads as the app's own preview.

@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { DurableChatOutbox } from './durable-chat-outbox'
 import { DurableChatSubmitter } from './durable-chat-submitter'
 import type { DurableChatPrepareArgs } from '../../shared/native-chat-view-recovery/durable-chat-submit'
-import type { RuntimeRpcResponse } from '../../shared/runtime-rpc-envelope'
+import type { RuntimeRpcResponse } from '../../shared/remote-runtime/rpc/runtime-rpc-envelope'
 
 const directories: string[] = []
 afterEach(async () => {

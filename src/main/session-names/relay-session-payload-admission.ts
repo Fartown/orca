@@ -1,6 +1,6 @@
-import { normalizeAgentStatusPayload } from '../../shared/agent-status-types'
+import { normalizeAgentStatusPayload } from '../../shared/agent-status/contracts/agent-status-types'
 import type { HookListenerState } from '../../shared/agent-hook-listener/listener-state'
-import { readAgentProcessPresence } from '../../shared/agent-process-presence'
+import { readAgentProcessPresence } from '../../shared/agent-status/process/agent-process-presence'
 import {
   restoreRelayEchoedPrompt,
   shouldRejectRelayCodexTitleTask,

@@ -1,9 +1,9 @@
 import type { z } from 'zod'
 import type { DurableChatComposer } from '../../shared/native-chat-view-recovery/durable-chat-submit'
-import { AGENT_TUI_CLEAR_INPUT_MAX } from '../../shared/agent-tui-input-clear'
-import { agentImagePasteWrites } from '../../shared/agent-image-paste'
-import { agentImagePastePath } from '../../shared/agent-image-paste-path'
-import { buildNativeChatImagePasteBytes } from '../../shared/native-chat/input/native-chat-paste-bytes'
+import { AGENT_TUI_CLEAR_INPUT_MAX } from '../../shared/agent-launch/startup/agent-tui-input-clear'
+import { agentImagePasteWrites } from '../../shared/native-chat/input/composer/agent-image-paste'
+import { agentImagePastePath } from '../../shared/native-chat/input/composer/agent-image-paste-path'
+import { buildNativeChatImagePasteBytes } from '../../shared/native-chat/input/composer/native-chat-paste-bytes'
 
 export async function writeDurableChatComposerPrefix(args: {
   composer: z.infer<typeof DurableChatComposer>

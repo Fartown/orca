@@ -1,7 +1,8 @@
 import { createStore } from 'zustand/vanilla'
 import type { AppState } from '../store/types'
-import type { AiVaultSessionTitlesResult } from '../../../shared/ai-vault-session-title'
-import { createTerminalTabPresentationActions } from '../store/terminals/terminal-tab-presentation'
+import type { AiVaultSessionTitlesResult } from '../../../shared/ai-vault/contracts/ai-vault-session-title'
+import { acceptedAgentStatuses } from '../store/slices/agent-status/status-ownership/accepted-agent-statuses'
+import { createTerminalTabPresentationActions } from '../store/terminals/tabs/presentation/terminal-tab-presentation'
 
 export const LEAF = '11111111-1111-4111-8111-111111111111'
 export const SIBLING = '22222222-2222-4222-8222-222222222222'
@@ -52,23 +53,26 @@ export function fixture() {
             ptyIdsByLeafId: { [LEAF]: 'leaf-pty' }
           }
         },
-        agentStatusByPaneKey: {
-          [PANE]: {
-            paneKey: PANE,
-            tabId: 'tab',
-            worktreeId: 'workspace',
-            agentType: 'codex',
-            providerSession: { key: 'session_id', id: 'A' },
-            prompt: '',
-            state: 'working',
-            stateHistory: [],
-            updatedAt: 1,
-            stateStartedAt: 1
-          }
-        },
+        agentStatusByPaneKey: acceptedAgentStatuses([
+          [
+            PANE,
+            {
+              paneKey: PANE,
+              tabId: 'tab',
+              worktreeId: 'workspace',
+              agentType: 'codex',
+              providerSession: { key: 'session_id', id: 'A' },
+              prompt: '',
+              state: 'working',
+              stateHistory: [],
+              updatedAt: 1,
+              stateStartedAt: 1
+            }
+          ]
+        ]),
         agentLaunchConfigByPaneKey: {},
         sleepingAgentSessionsByPaneKey: {},
-        retainedAgentsByPaneKey: {},
+        pendingPaneAccountRestarts: {},
         worktreesByRepo: {},
         detectedWorktreesByRepo: {},
         folderWorkspaces: []
@@ -77,9 +81,9 @@ export function fixture() {
   store.setState(createTerminalTabPresentationActions(store.setState, store.getState))
   const replaceIdentity = (id: string) =>
     store.setState((s) => ({
-      agentStatusByPaneKey: {
-        [PANE]: { ...s.agentStatusByPaneKey[PANE], providerSession: { key: 'session_id', id } }
-      }
+      agentStatusByPaneKey: acceptedAgentStatuses([
+        [PANE, { ...s.agentStatusByPaneKey.get(PANE)!, providerSession: { key: 'session_id', id } }]
+      ])
     }))
   const slot = () => store.getState().tabsByWorktree.workspace[0].aiVaultTitle
   return { ...store, replaceIdentity, slot }

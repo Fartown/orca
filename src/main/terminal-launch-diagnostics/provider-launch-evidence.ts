@@ -1,5 +1,5 @@
-import type { PtySpawnOperationState } from '../ipc/pty/spawn-operation-state'
-import type { PtySpawnResult } from '../providers/pty-provider-contract'
+import type { PtySpawnOperationState } from '../ipc/pty/spawn/spawn-operation-state'
+import type { PtySpawnResult } from '../providers/pty/spawn-result'
 import { recordTerminalLaunchStage } from './launch-trace'
 
 // Spawn arguments are only read through launchEvidence's allowlist, so secrets never leave here.

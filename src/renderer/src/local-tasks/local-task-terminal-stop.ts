@@ -1,6 +1,6 @@
 import { useAppStore } from '@/store'
-import { callRuntimeRpc } from '@/runtime/runtime-rpc-client'
-import type { RuntimeTerminalClose } from '../../../shared/runtime-terminal-contracts'
+import { callRuntimeRpc } from '@/runtime/rpc/calls/runtime-rpc-call'
+import type { RuntimeTerminalClose } from '../../../shared/terminal/runtime/runtime-terminal-contracts'
 import { isLocalTaskHostInContact } from './local-task-host-contact'
 import { localTaskEndpointForHost, localTaskEndpointTarget } from './local-task-endpoints'
 

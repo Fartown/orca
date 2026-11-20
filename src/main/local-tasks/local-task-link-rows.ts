@@ -18,7 +18,7 @@ import {
   LocalTaskSessionExecutionOriginSchema
 } from '../../shared/local-tasks/local-task-session-origin'
 import { worktreeIdentityKey, worktreeIdsEqual } from '../../shared/worktree/id'
-import { parsePaneKey } from '../../shared/stable-pane-id'
+import { parsePaneKey } from '../../shared/workspace-layout/stable-pane-id'
 import type { SqliteRow } from '../sqlite/sqlite-statement'
 import type { LocalTasksDatabase } from './local-tasks-database'
 import { rowNullableString, rowNumber, rowString } from './local-tasks-sqlite-row'

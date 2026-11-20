@@ -1,11 +1,11 @@
 // @vitest-environment happy-dom
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { Editor } from '@tiptap/core'
-import type { DiffComment } from '../../../../shared/diff-comment-types'
-import { createRichMarkdownExtensions } from '../editor/rich-markdown-extensions'
-import { createRichMarkdownEditorCodec } from '../editor/rich-markdown-source-transport'
-import { getRichMarkdownCommentBlocks } from '../editor/rich-markdown-comment-blocks'
-import { measureRichMarkdownReviewNotePositions } from '../editor/rich-markdown-review-note-positioning'
+import type { DiffComment } from '../../../../shared/file-review/diff-comment-types'
+import { createRichMarkdownExtensions } from '../editor/rich-markdown/schema/rich-markdown-extensions'
+import { createRichMarkdownEditorCodec } from '../editor/rich-markdown/document/rich-markdown-source-transport'
+import { getRichMarkdownCommentBlocks } from '../editor/rich-markdown/review/rich-markdown-comment-blocks'
+import { measureRichMarkdownReviewNotePositions } from '../editor/rich-markdown/review/rich-markdown-review-note-positioning'
 import { resolveMarkdownReviewAnchorPosition } from './review-anchor-position'
 
 const editors: Editor[] = []

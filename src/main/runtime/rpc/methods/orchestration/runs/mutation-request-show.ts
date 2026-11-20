@@ -2,13 +2,14 @@ import { reconcileDurableChatMutationReceipt } from '../../../../../native-chat-
 import {
   describeMutationRequestState,
   type OrchestrationMutationRequestShowResult
-} from '../../../../../../shared/orchestration-mutation-request'
-import { defineMethod } from '../../../core'
-import { RequestShowParams } from '../../../../../../shared/rpc-contract/orchestration-runs-mutation-request-show-params'
+} from '../../../../../../shared/orchestration/orchestration-mutation-request'
+import { defineOrchestrationMethod } from '../access/orchestration-method-access'
+import { RequestShowParams } from '../../../../../../shared/rpc-contract/orchestration/orchestration-runs-mutation-request-show-params'
 
 export const ORCHESTRATION_MUTATION_REQUEST_METHODS = [
-  defineMethod({
+  defineOrchestrationMethod({
     name: 'orchestration.requestShow',
+    access: { kind: 'reads', server: 'on', targets: { request: 'request' } },
     permission: 'workspace',
     params: RequestShowParams,
     // Observe the original request only; a verified restored-session proof may be checkpointed without sending input.

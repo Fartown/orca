@@ -5,7 +5,7 @@ import { translate } from '@/i18n/i18n'
 import { useAppStore } from '@/store'
 import type { AppState } from '@/store/types'
 import { selectLocalTaskHostLabel } from '@/local-tasks/local-task-host-label'
-import { normalizeExecutionHostId } from '../../../shared/execution-host'
+import { normalizeExecutionHostId } from '../../../shared/execution-host/execution-host'
 import type { LocalTaskWorkspaceLink } from '../../../shared/local-tasks/local-task-link-types'
 import type { LocalTask, LocalTaskProject } from '../../../shared/local-tasks/local-task-types'
 import { isLocalTaskHostInContact } from './local-task-host-contact'
@@ -17,7 +17,7 @@ import {
   findLocalTaskWorkspaceLink
 } from './local-task-link-selectors'
 import { localTasksDomainStore } from './local-tasks-domain-store'
-import { activateAndRevealWorkspace } from '@/lib/worktree-activation'
+import { activateAndRevealWorkspace } from '@/lib/workspace/activation/worktree-activation'
 import {
   isFolderLocalTaskProject,
   localTaskStartTargets,

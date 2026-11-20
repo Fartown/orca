@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { FILE_ATTACHMENT_CHUNK_BYTES } from '../../../src/shared/file-attachment-upload/file-attachment-upload-limits'
 import { uploadAttachmentFile } from './file-attachment-upload-client'
 import { memoryFile, rpcError, rpcOk } from './file-attachment-test-fixtures'
-import type { RpcResponse } from '../transport/types'
+import type { RpcResponse } from '../transport/rpc/rpc-wire-types'
 import {
   FileAttachmentHostUpdateRequiredError,
   FileAttachmentTooLargeError

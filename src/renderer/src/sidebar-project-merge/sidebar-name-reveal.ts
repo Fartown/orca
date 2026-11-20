@@ -2,8 +2,8 @@ import { useMemo } from 'react'
 import {
   buildProjectGroupingIndex,
   type ProjectSectionModel
-} from '../../../shared/project-section-grouping'
-import type { Repo } from '../../../shared/repo-types'
+} from '../../../shared/sidebar-list/sections/project-section-grouping'
+import type { Repo } from '../../../shared/repository/repo-types'
 
 export function resolveSidebarProjectNameRevealKey(
   nativeKey: string,

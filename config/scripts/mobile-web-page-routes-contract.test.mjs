@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { MobileWebBundleRouteSchema } from '../../src/shared/mobile-web-bundle/manifest-contract'
-import { MOBILE_WEB_PAGE_ROUTES } from './mobile-web-page-routes.mjs'
+import { MOBILE_WEB_PAGE_ROUTES } from './build/mobile-web-app/mobile-web-page-routes.mjs'
 
 // The host refuses a manifest whole when one route breaks the contract, which sends every page back
 // to its native screen; the bundle verifier passed a route over the grant ceiling without a word.

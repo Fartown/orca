@@ -7,13 +7,13 @@ import type {
 } from '../../../src/shared/local-tasks/local-task-link-types'
 import type { LocalTask } from '../../../src/shared/local-tasks/local-task-types'
 import { localTaskEffectiveWorkspace } from '../../../src/shared/local-tasks/local-task-tree'
-import { makePaneKey } from '../../../src/shared/stable-pane-id'
+import { makePaneKey } from '../../../src/shared/workspace-layout/stable-pane-id'
 import { worktreeIdsEqual } from '../../../src/shared/worktree/id'
-import { useOptionalHostProtocolGates } from '../components/host-protocol-gates-context'
-import type { MobileSessionTab } from '../session/mobile-session-route-types'
-import { taskRuntimeStatusRead } from '../tasks/mobile-task-runtime-operations'
-import { useHostClient } from '../transport/host-client-hooks'
-import { useWorkspaceClient } from '../transport/use-workspace-client'
+import { useOptionalHostProtocolGates } from '../components/host-connection/host-protocol-gates-context'
+import type { MobileSessionTab } from '../session/tabs/mobile-session-tabs'
+import { taskRuntimeStatusRead } from '../tasks/screen-state/mobile-task-runtime-operations'
+import { useHostClient } from '../transport/connection/host-client-hooks'
+import { useWorkspaceClient } from '../worktree/execution-hosts/use-workspace-client'
 import { hostAdvertisesLocalTasks } from './local-tasks-access'
 import type { LocalTaskEndpoint } from './local-task-endpoint'
 import { useLocalTaskSessionLibrary } from './local-task-session-library'
@@ -114,7 +114,7 @@ function useRelayingHostHasLocalTasks(hostId: string | undefined, viaServer: boo
     }
     const probed = desktop.client
     let current = true
-    taskRuntimeStatusRead.requestSingleFlight(probed, hostId).then(
+    taskRuntimeStatusRead.request(probed).then(
       (reply) => {
         if (current) {
           setProbe({

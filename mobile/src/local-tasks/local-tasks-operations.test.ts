@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { runRpcOperation } from '../transport/rpc-operation'
-import { RpcIncompatibleReplyError } from '../transport/rpc-incompatible-reply-error'
-import type { RpcResponse } from '../transport/types'
+import { runRpcOperation } from '../transport/rpc/rpc-operation'
+import { RpcIncompatibleReplyError } from '../transport/rpc/rpc-incompatible-reply-error'
+import type { RpcResponse } from '../transport/rpc/rpc-wire-types'
 import {
   localTaskCreate,
   localTaskProjectsRead,

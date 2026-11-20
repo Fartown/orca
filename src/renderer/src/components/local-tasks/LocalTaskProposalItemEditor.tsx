@@ -1,7 +1,7 @@
 import AgentCombobox from '@/components/agent/AgentCombobox'
 import { Input } from '@/components/ui/input'
 import { translate } from '@/i18n/i18n'
-import { ImeTextarea } from '@/lib/ime-text-field'
+import { ImeTextarea } from '@/lib/text-input/ime/ime-text-field'
 import {
   localTaskProposalEditFields,
   localTaskProposalPicksProject,
@@ -9,7 +9,7 @@ import {
   type LocalTaskProposalItemDraft
 } from '@/local-tasks/local-task-proposal-edits'
 import { useLocalTaskLaunchAgents } from '@/local-tasks/use-local-task-launch-agents'
-import { isTuiAgent } from '../../../../shared/tui-agent-config'
+import { isTuiAgent } from '../../../../shared/agent-launch/catalog/tui-agent-config'
 import type { LocalTaskProposalItem } from '../../../../shared/local-tasks/local-task-dispatcher-rpc-params'
 
 /** The draft an editor starts from: the item's current words for every field it may change. */

@@ -1,5 +1,5 @@
-import type { WorktreeCreationRequest } from '@/lib/pending-worktree-creation'
-import type { StructuredCreationSessionOutcome } from '@/lib/worktree-creation-structured-session'
+import type { WorktreeCreationRequest } from '@/lib/workspace/creation/pending-worktree-creation'
+import type { StructuredCreationSessionOutcome } from '@/local-tasks/local-task-creation-outcome-tracking'
 
 /** What workspace creation hands back once the workspace exists; the shape of its completion args. */
 export type WorktreeCreationCompleted = {

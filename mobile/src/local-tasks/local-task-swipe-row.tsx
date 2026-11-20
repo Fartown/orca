@@ -1,5 +1,5 @@
 import { useRef, useState, type ReactNode } from 'react'
-import { Pressable, ScrollView, Text, View } from 'react-native'
+import { Pressable, ScrollView, Text, View, type ScrollViewInstance } from 'react-native'
 import { colors, spacing } from '../theme/mobile-theme'
 import { themedStyleSheet } from '../theme/themed-styles'
 import { useMobileColorScheme } from '../theme/use-mobile-color-scheme'
@@ -18,7 +18,7 @@ const ACTION_WIDTH = 84
  */
 export function LocalTaskSwipeRow(props: { actions: LocalTaskSwipeAction[]; children: ReactNode }) {
   useMobileColorScheme()
-  const scroller = useRef<ScrollView>(null)
+  const scroller = useRef<ScrollViewInstance>(null)
   const [width, setWidth] = useState(0)
   const revealed = ACTION_WIDTH * props.actions.length
   return (

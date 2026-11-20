@@ -9,6 +9,10 @@ external_ids: ['Fartown/orca#84', 'Fartown/orca#87', 'Fartown/orca#93']
 
 # 自托管产物后端 Journal
 
+## 2026-11-20 同步上游后删除折叠分享项的测试
+
+- 上游 #40501 删除了浏览器工具栏的折叠分享项（`BrowserChromeShareControl` 与 `browser-chrome-folded-tools`），`self-hosted-artifacts/share-button/lan-share-toolbar-label.test.tsx` 测的对象已不存在，删除该测试；局域网分享入口改由 `LanArtifactShareEntryButtons.tsx` 适配上游新工具栏，相关测试已移到 `share-button/` 下的 `*.lan-share.test.tsx` 并通过。
+
 ## 2026-11-12 评论定位改为照搬 Orca 审阅笔记的规则（Fartown/orca#93）
 
 - 本轮目标：implementing → testing；用户多次要求「照着做」，指出我在自己设计的定位方案上反复打补丁。

@@ -1,5 +1,5 @@
-import { sha256 } from '../../../shared/sha256'
-import { createBrowserUuid } from '@/lib/browser-uuid'
+import { sha256 } from '../../../shared/hashing/sha256'
+import { createNonSecureContextUuid as createBrowserUuid } from '../../../shared/identifiers/non-secure-context-uuid'
 
 /**
  * Every mutation carries a client-minted id plus a sha256 fingerprint of its

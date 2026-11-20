@@ -1,12 +1,15 @@
 import { useMemo } from 'react'
-import { getAgentCatalog, type AgentCatalogEntry } from '@/lib/agent-catalog'
-import { useAgentDetectionTargetForWorktree } from '@/hooks/useAgentDetectionTarget'
-import { useDetectedAgents } from '@/hooks/useDetectedAgents'
+import { getAgentCatalog, type AgentCatalogEntry } from '@/lib/agent-catalog/agent-catalog'
+import { useAgentDetectionTargetForWorktree } from '@/lib/agent-session/launch/inventory/useAgentDetectionTarget'
+import { useDetectedAgents } from '@/lib/agent-session/launch/inventory/useDetectedAgents'
 import { translate } from '@/i18n/i18n'
 import { useAppStore } from '@/store'
 import { selectLocalTaskHostLabel } from '@/local-tasks/local-task-host-label'
-import { filterEnabledTuiAgents, pickTuiAgent } from '../../../shared/tui-agent-selection'
-import type { TuiAgent } from '../../../shared/tui-agent'
+import {
+  filterEnabledTuiAgents,
+  pickTuiAgent
+} from '../../../shared/agent-launch/catalog/tui-agent-selection'
+import type { TuiAgent } from '../../../shared/agent-launch/catalog/tui-agent'
 import type { Worktree } from '../../../shared/worktree/types'
 import { localTaskWorktreeHostId } from './local-task-workspace-resolution'
 

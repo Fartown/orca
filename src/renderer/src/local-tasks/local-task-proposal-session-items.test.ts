@@ -27,10 +27,10 @@ vi.mock('@/store', () => ({
     })
   }
 }))
-vi.mock('@/lib/active-agent-note-target', () => ({
+vi.mock('@/lib/agent-session/messaging/terminal/active-agent-note-target', () => ({
   findActiveRuntimeTerminal: fixture.findTerminal
 }))
-vi.mock('@/runtime/runtime-rpc-client', () => ({ callRuntimeRpc: fixture.rpc }))
+vi.mock('@/runtime/rpc/calls/runtime-rpc-call', () => ({ callRuntimeRpc: fixture.rpc }))
 vi.mock('./local-task-host-contact', () => ({
   isLocalTaskHostInContact: () => fixture.contact
 }))

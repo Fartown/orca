@@ -1,4 +1,5 @@
-import type { AgentStatusIpcPayload, AgentStatusState } from '../../shared/agent-status-types'
+import type { AgentStatusIpcPayload } from '../../shared/agent-status/contracts/agent-status-ipc-payload'
+import type { AgentStatusState } from '../../shared/agent-status/contracts/agent-status-types'
 import type { GoalTurnState } from '../../shared/goals/goal-control-contract'
 
 export type GoalTurnRow = Pick<AgentStatusIpcPayload, 'state' | 'providerSessionOnly'> & {

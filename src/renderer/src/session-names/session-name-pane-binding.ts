@@ -1,8 +1,8 @@
-import type { TerminalPaneLayoutNode } from '../../../shared/terminal-tab-types'
-import { parsePaneKey } from '../../../shared/stable-pane-id'
+import type { TerminalPaneLayoutNode } from '../../../shared/workspace-layout/terminal-tab-types'
+import { parsePaneKey } from '../../../shared/workspace-layout/stable-pane-id'
 import type { AppState } from '../store/types'
-import type { AiVaultTitleRequest } from '../lib/ai-vault-tab-title-requests'
-import type { AgentType } from '../../../shared/agent-status-types'
+import type { AiVaultTitleRequest } from '../lib/agent-session/history/title-sync/ai-vault-tab-title-requests'
+import type { AgentType } from '../../../shared/agent-status/contracts/agent-status-types'
 
 function containsLeaf(node: TerminalPaneLayoutNode, leaf: string): boolean {
   return node.type === 'leaf'
@@ -29,7 +29,7 @@ export function sessionNamePaneWasReplaced(
   if (layout?.root && leaf && !containsLeaf(layout.root, leaf)) {
     return true
   }
-  const live = request.paneKey && state.agentStatusByPaneKey[request.paneKey]
+  const live = request.paneKey && state.agentStatusByPaneKey.get(request.paneKey)
   return Boolean(
     live &&
     live.agentType &&

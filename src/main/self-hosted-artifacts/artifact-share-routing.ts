@@ -1,5 +1,5 @@
 import type { z } from 'zod'
-import { parseExecutionHostId } from '../../shared/execution-host'
+import { parseExecutionHostId } from '../../shared/execution-host/execution-host'
 import type { ARTIFACT_SHARE_RELAY_METHODS } from '../../shared/self-hosted-artifacts/artifact-share-contract'
 import {
   ARTIFACT_SHARE_ERROR_CODES,

@@ -1,6 +1,9 @@
 import { useCallback } from 'react'
-import type { MobileTerminalCreateResult } from '../session/use-mobile-session-terminal-create-actions'
-import type { RpcClient } from '../transport/rpc-client'
+import {
+  createMobileTerminalWithResult,
+  type MobileTerminalContinuationCreateOptions
+} from './terminal-create-result'
+import type { RpcClient } from '../transport/rpc/rpc-client-contract'
 import type { MobileSessionContinuationAgent } from './continuation-agents'
 import type { MobileContinuationCreateResult } from './continuation-delivery'
 import { useMobileSessionContinuation } from './use-mobile-session-continuation'
@@ -12,12 +15,13 @@ export function useMobileSessionContinuationScope(scope: {
   worktreeId: string
   deviceTokenRef: { readonly current: string | null }
   showToast: (message: string, durationMs?: number) => void
-  createTerminalWithResult: (
+  /** The session's ordinary create; continuation reads what it made through `onCreateResult`. */
+  handleCreateTerminal: (
     agent?: MobileSessionContinuationAgent,
-    options?: { cwd?: string; clientMutationId?: string }
-  ) => Promise<MobileTerminalCreateResult>
+    options?: MobileTerminalContinuationCreateOptions
+  ) => Promise<unknown>
 }) {
-  const { createTerminalWithResult } = scope
+  const { handleCreateTerminal } = scope
   const createTerminal = useCallback(
     async (
       agent: MobileSessionContinuationAgent,
@@ -26,7 +30,7 @@ export function useMobileSessionContinuationScope(scope: {
     ): Promise<MobileContinuationCreateResult> => {
       // Passing options at all keeps this on the terminal channel (the structured route is the
       // bare-agent case), and reuses the existing activate/subscribe/toast behaviour.
-      const result = await createTerminalWithResult(agent, {
+      const result = await createMobileTerminalWithResult(handleCreateTerminal, agent, {
         ...(cwd ? { cwd } : {}),
         clientMutationId
       })
@@ -39,7 +43,7 @@ export function useMobileSessionContinuationScope(scope: {
         ? { kind: 'without-handle' }
         : { kind: 'failed' }
     },
-    [createTerminalWithResult]
+    [handleCreateTerminal]
   )
   return useMobileSessionContinuation({
     client: scope.client,

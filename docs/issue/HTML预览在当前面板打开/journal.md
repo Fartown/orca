@@ -22,6 +22,17 @@ external_ids: []
 
 ## 2. 决策点记录
 
+### D-103 编辑器头部预览的落位改用上游实现，退役 EditorPanel 接缝
+
+- 日期：2026-11-20
+- 背景：同步上游到 a024ab78586 时，上游 #39367（Open HTML previews in the editor's tab group）已让编辑器头部的 HTML 预览在发起者所在的标签组打开，与 REQ-401 等价
+- 备选项：
+  1. 在上游新写法上重新挂 `openFilePreviewInSourcePane`
+  2. 采用上游 `openEditorHtmlPreview`，退役 `EditorPanel.tsx` 这条接缝
+- 最终决定：采用 2；组合 diff 的预览（REQ-405）上游仍开到右侧，那条接缝保留；按钮文案仍按 D-102 用「打开预览」
+- 原因：上游已覆盖同一行为，保留重复接缝只增加以后同步的冲突面
+- 影响范围：`config/fork-features.jsonc` 删去 `EditorPanel.tsx` 接缝；REQ-401 的行为由上游提供
+
 ### D-102 按钮文案改为「打开预览」，上游的 props 名保持不动
 
 - 日期：2026-09-15

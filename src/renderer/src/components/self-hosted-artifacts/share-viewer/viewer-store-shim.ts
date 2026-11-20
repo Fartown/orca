@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { MARKDOWN_TOC_PANEL_DEFAULT_WIDTH } from '../../../../../shared/markdown-toc-panel-width'
+import { MARKDOWN_TOC_PANEL_DEFAULT_WIDTH } from '../../../../../shared/editor/markdown/markdown-toc-panel-width'
 
 type ShareViewerModal = 'none' | 'diagram-viewer'
 

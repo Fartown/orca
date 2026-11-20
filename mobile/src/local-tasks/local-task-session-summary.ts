@@ -1,5 +1,6 @@
 import type { Nodes } from 'mdast'
-import { parseMobileMarkdownTree, plainText } from '../components/mobile-markdown-tree'
+import { parseMobileMarkdownTree } from '../components/markdown/parsing/mobile-markdown-tree'
+import { plainText } from '../components/markdown/parsing/mobile-markdown-plain-text'
 
 const SUMMARY_MAX_CHARS = 160
 

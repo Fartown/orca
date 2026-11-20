@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
-import type { UnvalidatedRpcRequestPort } from '../transport/unvalidated-rpc-request-port'
+import type { UnvalidatedRpcRequestPort } from '../transport/rpc/unvalidated-rpc-request-port'
 import {
   projectSectionsRead,
   readServedProjectSections,
   type ServedProjectSections
-} from '../worktree/project-sections-operations'
+} from '../worktree/project-sections/project-sections-operations'
 
 export type LocalTaskProjectCatalog =
   | { state: 'loading' }

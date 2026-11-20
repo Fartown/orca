@@ -1,12 +1,12 @@
 import { createHash } from 'node:crypto'
 import type { OrcaRuntimeService } from '../runtime/orca-runtime'
-import { resolveObservedAgentStatusBinding } from '../ipc/agent-status-ipc-boundary'
+import { resolveObservedAgentStatusBinding } from '../ipc/agent-hooks/agent-status-ipc-boundary'
 import { resolveSessionFilePath } from '../native-chat/session-file-resolver'
 import {
   boundaryFingerprint,
   readTranscriptFileVersion,
   transcriptFileVersionChanged
-} from '../native-chat/transcript-file-version'
+} from '../native-chat/transcript-watching/transcript-file-version'
 import { readNativeChatTranscriptTail } from '../native-chat/transcript-tail-reader'
 
 export type DurableChatSessionRuntime = Pick<

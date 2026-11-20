@@ -2,14 +2,14 @@ import {
   cloneSessionAccumulator,
   createAccumulator,
   sessionIdFromFileName
-} from '../ai-vault/session-scanner-accumulator'
+} from '../ai-vault/parsing/session-scanner-accumulator'
 import type {
   CodexUsageSnapshot,
   FileWithMtime,
   SessionAccumulator
 } from '../ai-vault/session-scanner-types'
-import type { TranscriptMessageSink } from '../ai-vault/session-transcript-consumers'
-import type { CodexNonUserOrigin } from '../ai-vault/session-scanner-codex-non-user-origin'
+import type { TranscriptMessageSink } from '../ai-vault/transcripts/session-transcript-consumers'
+import type { CodexNonUserOrigin } from '../ai-vault/scanners/codex/session-scanner-codex-non-user-origin'
 
 export type CodexSessionParseState = {
   accumulator: SessionAccumulator

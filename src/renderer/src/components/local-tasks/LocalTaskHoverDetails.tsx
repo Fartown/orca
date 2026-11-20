@@ -2,8 +2,11 @@ import { ListTodo, MonitorUp } from 'lucide-react'
 import {
   WorktreeCardDetailSection,
   WorktreeCardDetailSectionContent
-} from '@/components/sidebar/WorktreeCardDetailSection'
-import { DetailHeader, MetadataActionIcon } from '@/components/sidebar/WorktreeCardMetadataControls'
+} from '@/components/sidebar/workspace-card/details/WorktreeCardDetailSection'
+import {
+  DetailHeader,
+  MetadataActionIcon
+} from '@/components/sidebar/workspace-card/metadata/WorktreeCardMetadataControls'
 import { translate } from '@/i18n/i18n'
 import { openLocalTaskPage } from '@/local-tasks/local-task-navigation'
 import type { LocalTaskOfWorkspace } from '@/local-tasks/local-task-workspace-task'

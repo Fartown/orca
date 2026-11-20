@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
 import { Folder, GitBranch, Info, Laptop, Search, Server } from 'lucide-react-native'
-import { MobileSegmentedControl } from '../components/MobileSegmentedControl'
+import { MobileSegmentedControl } from '../components/controls/MobileSegmentedControl'
 import { colors, radii, spacing, typography } from '../theme/mobile-theme'
 import { themedStyleSheet } from '../theme/themed-styles'
 import { useMobileColorScheme } from '../theme/use-mobile-color-scheme'

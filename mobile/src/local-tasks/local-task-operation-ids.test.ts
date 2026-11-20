@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { markRpcDeliveryUnknown } from '../transport/rpc-delivery-ambiguity'
-import type { RpcResponse } from '../transport/types'
+import { markRpcDeliveryUnknown } from '../transport/rpc/rpc-delivery-ambiguity'
+import type { RpcResponse } from '../transport/rpc/rpc-wire-types'
 import { createLocalTasksApi } from './local-tasks-api'
 import { createLocalTaskOperationIds, sendLocalTaskWrite } from './local-task-operation-ids'
 

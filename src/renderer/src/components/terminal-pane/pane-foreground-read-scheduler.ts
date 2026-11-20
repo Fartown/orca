@@ -1,7 +1,7 @@
 import type {
   ForegroundReadReason,
   PaneForegroundAgentTrackerDeps
-} from './pane-foreground-agent-tracker-contract'
+} from './pty-connection/agent-identity/foreground-process/pane-foreground-agent-tracker-contract'
 
 export function createPaneForegroundReadScheduler(
   deps: PaneForegroundAgentTrackerDeps,

@@ -1,13 +1,13 @@
 import { useAppStore } from '@/store'
 import type { AppState } from '@/store/types'
-import { resolveOwner } from '@/lib/resolve-owner'
-import { runtimeEnvironmentIdOrLocalUnlessTwin } from '@/lib/worktree-runtime-owner'
+import { resolveOwner } from '@/lib/workspace/ownership/resolve-owner'
+import { runtimeEnvironmentIdOrLocalUnlessTwin } from '@/lib/workspace/ownership/worktree-runtime-owner'
 import {
   structuredAgentSessionOwnerForTab,
   structuredAgentSessionTargetForTab
-} from '@/runtime/structured-agent-session-owner'
-import type { Tab } from '../../../shared/tab-types'
-import { authorityKey } from '../../../shared/host-authority'
+} from '@/runtime/native-chat/session-ownership/structured-agent-session-owner'
+import type { Tab } from '../../../shared/workspace-layout/tab-groups/tab-types'
+import { authorityKey } from '../../../shared/execution-host/host-authority'
 import type { LocalTaskSessionLink } from '../../../shared/local-tasks/local-task-link-types'
 import { isLocalTaskHostInContact } from './local-task-host-contact'
 import { isLocalTaskSessionOriginInContact } from './local-task-foreign-session-progress'

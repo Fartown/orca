@@ -2,10 +2,10 @@ import { OrcaRuntimeWithResubmitHeldAgentPrompt } from '../runtime/terminal/inpu
 import type {
   AgentPromptExpectedBinding,
   RuntimeAgentPromptWriteOptions
-} from '../runtime/runtime-terminal-contracts'
-import type { AgentPromptActivity } from '../runtime/agent-prompt-submission-verification'
-import { assertTerminalInputAdmitted } from '../runtime/terminal-input-admission'
-import { waitForAgentPromptDelay } from '../runtime/orca-runtime-core'
+} from '../runtime/terminal/input/agent-prompt-write-options'
+import type { AgentPromptActivity } from '../runtime/terminal/input/agent-prompt-submission-verification'
+import { assertTerminalInputAdmitted } from '../runtime/terminal/input/terminal-input-admission'
+import { waitForAgentPromptDelay } from '../runtime/terminal/input/agent-prompt-signals'
 import {
   captureDurableChatTranscriptBoundary,
   durableChatProviderSession,

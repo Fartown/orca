@@ -6,7 +6,7 @@ import { startOrcadArtifactShare } from './orcad-artifact-share'
 import { requireArtifactShareRuntime } from './artifact-share-runtime-registry'
 import { ARTIFACT_SHARE_HOME_ENV } from './store/artifact-share-store-layout'
 
-vi.mock('../../shared/app-environment', () => ({
+vi.mock('../../shared/app-lifecycle/app-environment', () => ({
   getAppEnvironment: () => ({ getPath: () => process.env.ORCA_ARTIFACT_SHARE_HOME })
 }))
 let base: string

@@ -1,4 +1,4 @@
-import type { AiVaultSessionTitle } from '../ai-vault-session-title'
+import type { AiVaultSessionTitle } from '../ai-vault/contracts/ai-vault-session-title'
 import { mintAgentSessionFallbackTitle } from '../agent-session-fallback-title'
 import {
   resolveSessionDisplayTitle,
@@ -18,12 +18,21 @@ export function sessionNameSlotCandidates(
     slot?.title === (slot ? mintAgentSessionFallbackTitle(slot.agent, slot.sessionId) : '')
       ? null
       : slot?.title
+  // A peer without evidence fields (upstream builds) still classifies its title; trust only its explicit 'named'.
+  const peerNamed = slot && !slot.providerName && !slot.source && slot.kind === 'named'
   return {
-    providerTitle: slot?.providerName?.kind === 'named' ? slot.providerName.title : null,
+    providerTitle:
+      slot?.providerName?.kind === 'named'
+        ? slot.providerName.title
+        : peerNamed
+          ? (legacyTitle ?? null)
+          : null,
     userTitle: slot?.manualTitle ?? (slot?.source === 'conversation-override' ? slot.title : null),
     generatedTitle:
       slot?.generatedTitle ??
-      (slot && !slot.providerName && slot.source !== 'conversation-override' ? legacyTitle : null)
+      (slot && !peerNamed && !slot.providerName && slot.source !== 'conversation-override'
+        ? legacyTitle
+        : null)
   }
 }
 
@@ -35,6 +44,7 @@ export function sessionNameSlotEqual(
     left?.agent === right?.agent &&
     left?.sessionId === right?.sessionId &&
     left?.title === right?.title &&
+    left?.kind === right?.kind &&
     left?.source === right?.source &&
     left?.manualTitle === right?.manualTitle &&
     left?.generatedTitle === right?.generatedTitle &&
@@ -80,9 +90,15 @@ export function projectSessionNameSlot(args: {
   if (!resolved) {
     return null
   }
+  // Upstream readers of `kind` rank a session's own name (manual or provider) above quick-command labels.
+  const named =
+    resolved.source === 'user' ||
+    resolved.source === 'provider' ||
+    resolved.source === 'provider-snapshot'
   return {
     ...slot,
     title: resolved.title,
+    kind: named ? 'named' : 'fallback',
     source: resolved.source === 'user' ? 'conversation-override' : 'provider'
   }
 }

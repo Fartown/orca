@@ -1,7 +1,7 @@
-import type { DocPreviewFileAccessResult } from '../../shared/doc-preview-file-access'
+import type { DocPreviewFileAccessResult } from '../../shared/document-preview/doc-preview-file-access'
 import type { DocumentPreviewChunkRequest } from '../../shared/document-preview-size/document-preview-chunk'
 import { DOCUMENT_PREVIEW_TEXT_MAX_BYTES } from '../../shared/document-preview-size/document-preview-size-limit'
-import { MAX_FILE_RANGE_READ_BYTES } from '../../shared/file-range-read'
+import { MAX_FILE_RANGE_READ_BYTES } from '../../shared/file-content/file-range-read'
 
 export async function readDocumentPreviewInChunks(
   read: (chunk: DocumentPreviewChunkRequest) => Promise<DocPreviewFileAccessResult>

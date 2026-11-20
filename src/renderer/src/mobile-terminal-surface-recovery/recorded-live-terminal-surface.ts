@@ -1,9 +1,9 @@
-import { hasClosedTerminalTabRecord } from '../../../shared/closed-terminal-tab-tombstones'
-import { parsePaneKey } from '../../../shared/stable-pane-id'
-import { isValidHostTerminalTabId } from '../../../shared/terminal-tab-id'
+import { hasClosedTerminalTabRecord } from '../../../shared/workspace-layout/terminal-surfaces/closed-terminal-tab-tombstones'
+import { parsePaneKey } from '../../../shared/workspace-layout/stable-pane-id'
+import { isValidHostTerminalTabId } from '../../../shared/workspace-layout/terminal-surfaces/terminal-tab-id'
 import { worktreeIdsEqual } from '../../../shared/worktree/id'
-import type { LiveSurfaceAdoptionStore } from '../lib/worktree-agent-live-surface-adoption'
-import type { LiveTerminalSurfaceOwner } from '../lib/worktree-live-terminal-surface-owners'
+import type { LiveSurfaceAdoptionStore } from '../lib/workspace/activation/worktree-agent-live-surface-adoption'
+import type { LiveTerminalSurfaceOwner } from '../lib/workspace/ownership/worktree-live-terminal-surface-owners'
 
 export function hasCompetingRecordedTerminalBinding(
   store: LiveSurfaceAdoptionStore,

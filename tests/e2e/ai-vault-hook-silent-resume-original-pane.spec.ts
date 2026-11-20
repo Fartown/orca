@@ -112,21 +112,19 @@ test('a hook-silent resumed pane stays findable as its session original pane', a
     // session, because the resumed agent never finished a turn.
     const otherSources = await page.evaluate((providerSessionId) => {
       const state = window.__store?.getState()
-      const namedByStatus = Object.values(state?.agentStatusByPaneKey ?? {}).some(
+      // Upstream #42104 retired finished-agent retention; a done row stays in the status map.
+      const namedByStatus = Array.from(state?.agentStatusByPaneKey.values() ?? []).some(
         (entry) => entry?.providerSession?.id === providerSessionId
-      )
-      const namedByRetained = Object.values(state?.retainedAgentsByPaneKey ?? {}).some(
-        (retained) => retained?.entry?.providerSession?.id === providerSessionId
       )
       const namedBySleeping = Object.values(state?.sleepingAgentSessionsByPaneKey ?? {}).some(
         (record) => record?.providerSession?.id === providerSessionId
       )
-      return { namedByStatus, namedByRetained, namedBySleeping }
+      return { namedByStatus, namedBySleeping }
     }, PROVIDER_SESSION_ID)
     expect(
       otherSources,
       'the pane must be hook-silent, or this test no longer reproduces the accident'
-    ).toEqual({ namedByStatus: false, namedByRetained: false, namedBySleeping: false })
+    ).toEqual({ namedByStatus: false, namedBySleeping: false })
 
     // The pane the finder must return still resolves: same tab, live leaf.
     const paneSurface = await page.evaluate(

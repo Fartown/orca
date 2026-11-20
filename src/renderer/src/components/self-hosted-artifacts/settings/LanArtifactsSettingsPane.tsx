@@ -1,9 +1,12 @@
 import { ArrowRight } from 'lucide-react'
-import type { GlobalSettings } from '../../../../../shared/global-settings-types'
-import { SettingsRow, SettingsSwitchRow } from '@/components/settings/SettingsFormControls'
+import type { GlobalSettings } from '../../../../../shared/settings/global-settings-types'
+import {
+  SettingsRow,
+  SettingsSwitchRow
+} from '@/components/settings/form-controls/SettingsFormControls'
 import { Button } from '@/components/ui/button'
 import { translate } from '@/i18n/i18n'
-import { isWebClientLocation } from '@/lib/web-client-location'
+import { isWebClientLocation } from '@/app-shell/platform/web-client-location'
 import { useAppStore } from '@/store'
 import { LanArtifactLocalServiceSettings } from './LanArtifactLocalServiceSettings'
 

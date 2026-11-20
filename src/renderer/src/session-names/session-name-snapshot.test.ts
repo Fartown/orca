@@ -1,5 +1,5 @@
 import { expect, it, vi } from 'vitest'
-import type { AiVaultSessionTitlesResult } from '../../../shared/ai-vault-session-title'
+import type { AiVaultSessionTitlesResult } from '../../../shared/ai-vault/contracts/ai-vault-session-title'
 import { createSessionNameStore } from './session-name-store'
 import { nativeResult } from './session-name-binding-test-fixture'
 

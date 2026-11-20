@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react'
-import { parseExecutionHostId } from '../../../src/shared/execution-host'
+import { parseExecutionHostId } from '../../../src/shared/execution-host/execution-host'
 import {
   buildHostLabelById,
   sshTargetSummaryHostId
-} from '../../../src/shared/worktree/host-context-labels'
+} from '../../../src/shared/worktree/row-display/host-context-labels'
 import { hostSshTargetSummariesRead } from '../host-screen/host-screen-operations'
-import type { RpcClient } from '../transport/rpc-client'
-import { relayHostsFeed } from '../worktree/relay-hosts-feed'
+import type { RpcClient } from '../transport/rpc/rpc-client-contract'
+import { relayHostsFeed } from '../worktree/execution-hosts/relay-hosts-feed'
 
 export type LocalTaskHostDirectory = {
   labels: ReadonlyMap<string, string>

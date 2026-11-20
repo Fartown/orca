@@ -1,6 +1,6 @@
-import { getAppEnvironment } from '../../shared/app-environment'
+import { getAppEnvironment } from '../../shared/app-lifecycle/app-environment'
 import type { ArtifactShareCommentImportRuntime } from './artifact-share-comment-import'
-import { resolveOrcadInstallRoot } from '../orcad/orcad-app-paths'
+import { resolveOrcadInstallRoot } from '../orcad/host-runtime/orcad-app-paths'
 import {
   startArtifactShareForMainProcess,
   stopArtifactShareForMainProcess,

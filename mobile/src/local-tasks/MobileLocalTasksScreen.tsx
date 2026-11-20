@@ -3,14 +3,14 @@ import { ActivityIndicator, Pressable, Text, View } from 'react-native'
 import { useLocalSearchParams } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { ChevronLeft, Monitor } from 'lucide-react-native'
-import { useOptionalHostProtocolGates } from '../components/host-protocol-gates-context'
+import { useOptionalHostProtocolGates } from '../components/host-connection/host-protocol-gates-context'
 import { useRouteHandoff } from '../navigation/route-handoff'
 import { firstParam } from '../navigation/route-param-reader'
 import { colors } from '../theme/mobile-theme'
 import { useMobileColorScheme } from '../theme/use-mobile-color-scheme'
-import { useHostClient } from '../transport/host-client-hooks'
-import { useRpcClientContext } from '../transport/client-context'
-import { loadHosts } from '../transport/host-store'
+import { useHostClient } from '../transport/connection/host-client-hooks'
+import { useRpcClientContext } from '../transport/connection/client-context'
+import { loadHosts } from '../host-catalog/host-store'
 import {
   localTaskEndpointFor,
   SELF_LOCAL_TASK_ENDPOINT,

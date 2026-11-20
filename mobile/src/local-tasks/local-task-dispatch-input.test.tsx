@@ -10,7 +10,7 @@ import type { LocalTaskSite } from './local-task-endpoint'
 import { SELF_LOCAL_TASK_ENDPOINT } from './local-task-endpoint'
 import { createLocalTasksApi, type LocalTasksApi } from './local-tasks-api'
 import type { LocalTasksLibrary } from './use-local-tasks-library'
-import type { RpcClient } from '../transport/rpc-client'
+import type { RpcClient } from '../transport/rpc/rpc-client-contract'
 
 vi.mock('react-native', () => ({
   Pressable: 'Pressable',

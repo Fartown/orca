@@ -1,4 +1,4 @@
-import { parsePaneKey } from '../stable-pane-id'
+import { parsePaneKey } from '../workspace-layout/stable-pane-id'
 import type { LocalTaskLinks, LocalTaskSessionLink } from './local-task-link-types'
 
 export type LocalTaskSessionIdentity = {

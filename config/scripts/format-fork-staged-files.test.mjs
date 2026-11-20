@@ -21,7 +21,10 @@ it('retains both lint checks before the fork-aware formatter', () => {
   expect(tasks.at(-1)).toBe('node config/scripts/format-fork-staged-files.mjs')
   expect(tasks.filter((command) => command.startsWith('oxfmt'))).toEqual([])
   expect(tasks).toEqual(
-    expect.arrayContaining(['oxlint', 'oxlint --config config/oxlint-react-doctor.json'])
+    expect.arrayContaining([
+      'oxlint --no-error-on-unmatched-pattern',
+      'oxlint --config config/oxlint-react-doctor.json'
+    ])
   )
 })
 

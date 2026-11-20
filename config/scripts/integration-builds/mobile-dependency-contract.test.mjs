@@ -1,6 +1,9 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
-import { lockedVersion, lockfileRootImporter } from '../pnpm-lockfile-root-importer.mjs'
+import {
+  lockedVersion,
+  lockfileRootImporter
+} from '../package-manager/lockfile-contracts/pnpm-lockfile-root-importer.mjs'
 
 describe('integration update native bundle dependencies', () => {
   it('declares and locks Zustand in the mobile project, independently of the root install', () => {

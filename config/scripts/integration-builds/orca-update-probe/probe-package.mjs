@@ -27,7 +27,7 @@ export function runBuild(args, env, log) {
 
 export async function completedProfile() {
   const result = buildSync({
-    entryPoints: ['tests/e2e/helpers/e2e-completed-onboarding-profile.ts'],
+    entryPoints: ['tests/e2e/desktop/electron-fixtures/e2e-completed-onboarding-profile.ts'],
     bundle: true,
     platform: 'node',
     format: 'esm',

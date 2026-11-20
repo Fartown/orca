@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import { useAppStore } from '@/store'
 import { selectLocalTaskHostLabel } from '@/local-tasks/local-task-host-label'
-import { getMixedHostContextLabels } from '../../../shared/worktree/host-context-labels'
+import { getMixedHostContextLabels } from '../../../shared/worktree/row-display/host-context-labels'
 import { localTaskIdEndpoint, type LocalTaskEndpointKey } from './local-task-endpoints'
 import { useLocalTasksDomain } from './local-tasks-domain-store'
 

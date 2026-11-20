@@ -6,9 +6,10 @@ import type {
   LocalTaskWorkspaceLink
 } from '../../../src/shared/local-tasks/local-task-link-types'
 import type { LocalTask } from '../../../src/shared/local-tasks/local-task-types'
-import type { MobileSessionTab } from '../session/mobile-session-route-types'
-import type { RpcClient } from '../transport/rpc-client'
-import type { ConnectionState, RpcResponse } from '../transport/types'
+import type { MobileSessionTab } from '../session/tabs/mobile-session-tabs'
+import type { RpcClient } from '../transport/rpc/rpc-client-contract'
+import type { ConnectionState } from '../transport/connection/connection-state'
+import type { RpcResponse } from '../transport/rpc/rpc-wire-types'
 
 type StripEnv = { state: ConnectionState; client: RpcClient | null }
 
@@ -42,10 +43,10 @@ vi.mock('../navigation/workspace-execution-host', () => ({
   useWorkspaceExecutionHost: () => undefined
 }))
 vi.mock('../navigation/route-handoff', () => ({ useRouteHandoff: () => ({ push: routePush }) }))
-vi.mock('../transport/host-client-hooks', () => ({
+vi.mock('../transport/connection/host-client-hooks', () => ({
   useHostClient: () => ({ client: env.client, clientId: 'c', state: env.state })
 }))
-vi.mock('../components/host-protocol-gates-context', async () => {
+vi.mock('../components/host-connection/host-protocol-gates-context', async () => {
   const { LOCAL_TASKS_RUNTIME_CAPABILITY } =
     await import('../../../src/shared/local-tasks/local-tasks-capability')
   const gates = {
@@ -59,7 +60,7 @@ vi.mock('./use-local-task-session-acknowledge', () => ({
   useAcknowledgeOpenSession: acknowledgeHook
 }))
 vi.mock('./local-task-choice-sheet', () => ({ LocalTaskChoiceSheet: 'ChoiceSheet' }))
-vi.mock('../components/AgentStateDot', () => ({ AgentStateDot: () => null }))
+vi.mock('../agents/presentation/AgentStateDot', () => ({ AgentStateDot: () => null }))
 
 import { localTasksCopy } from './local-tasks-copy'
 import { LocalTaskSessionCard } from './LocalTaskSessionCard'

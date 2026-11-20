@@ -5,7 +5,9 @@ const mocks = vi.hoisted(() => ({
   info: vi.fn()
 }))
 vi.mock('sonner', () => ({ toast: { info: mocks.info } }))
-vi.mock('@/lib/agent-message-send', () => ({ sendMessageToAgent: mocks.send }))
+vi.mock('@/lib/agent-session/messaging/agent-message-send', () => ({
+  sendMessageToAgent: mocks.send
+}))
 vi.mock('./local-task-dispatcher-session', () => ({
   liveDispatcherPaneKey: () => 'tab-1:11111111-1111-4111-8111-111111111111',
   openLocalTaskDispatcher: async () => true,

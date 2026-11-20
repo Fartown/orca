@@ -5,7 +5,7 @@ import {
   DurableChatRecord,
   type DurableChatSubmitRecord
 } from '../../shared/native-chat-view-recovery/durable-chat-submit'
-import { durableWriteTempPath, writeFileDurable } from '../durable-file-write'
+import { durableWriteTempPath, writeFileDurable } from '../filesystem/durable-file-write'
 
 export class DurableChatOutbox {
   private tail: Promise<unknown> = Promise.resolve()

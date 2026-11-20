@@ -1,5 +1,6 @@
-import type { AgentStateHistoryEntry, AgentStatusEntry } from '../agent-status-types'
-import { structuralValuesEqualIgnoringUndefined } from '../structural-value-equality'
+import type { AgentStateHistoryEntry } from '../agent-status/lifecycle/agent-state-history'
+import type { AgentStatusEntry } from '../agent-status/contracts/agent-status-types'
+import { structuralValuesEqualIgnoringUndefined } from '../collections/structural-value-equality'
 
 /** A host-owned structured session keeps its turn, so only other sessions count as replaced. */
 export function sessionNameIdentityReplaced(
@@ -25,6 +26,26 @@ export function isSessionNameIdentityReplacement(
     session &&
     (previous.providerSession.id !== session.id ||
       (agent && agent !== 'unknown' && agent !== previous.agentType))
+  )
+}
+
+type HookRowSessionName = {
+  payload: Pick<AgentStatusEntry, 'agentType'>
+  providerSession?: AgentStatusEntry['providerSession']
+}
+
+/** Hook rows keep the agent in their payload and the session beside it; a replacement restarts the state clock. */
+export function hookRowSessionNameReplaced(
+  previous: HookRowSessionName | undefined,
+  incoming: HookRowSessionName
+): boolean {
+  return isSessionNameIdentityReplacement(
+    previous && {
+      agentType: previous.payload.agentType,
+      providerSession: previous.providerSession
+    },
+    incoming.payload.agentType,
+    incoming.providerSession
   )
 }
 

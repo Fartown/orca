@@ -1,18 +1,24 @@
 import { hostWorktreeTarget } from '../../../../../shared/worktree/host-qualified-identity'
-import type { DocPreviewGrantLocation } from '@/lib/doc-preview-grants'
-import { useCallback } from 'react'
-import { useAppStore } from '@/store'
-import { selectWorkspaceByHostTarget } from '@/store/workspace-record-selectors'
-import type { OpenFile } from '@/store/slices/editor'
+import type { DocPreviewGrantLocation } from '@/lib/browser/documents/doc-preview-grants'
+import { useCallback, type ComponentProps } from 'react'
+import { useAppStore } from '@/store/index'
+import { selectWorkspaceByHostTarget } from '@/store/workspaces/selection/workspace-host-target'
+import type { OpenFile } from '@/store/slices/editor/types/open-file'
 import type { DocPreviewDocumentIdentity } from '@/components/browser-pane/workspace-doc/doc-preview-document-identity'
-import type { BrowserChromeShareControl } from '@/components/browser-pane/assemble-chrome/browser-chrome-toolbar'
+import type { Button } from '@/components/ui/button'
 import {
   resolveEditorFileShareTarget,
   resolveDocPreviewShareTarget
 } from './lan-artifact-share-target'
 import { LanArtifactShareButton, type LanArtifactShareControl } from './LanArtifactShareButton'
-import type { NativeChatVisualOwner } from '@/components/native-chat/native-chat-visual-owner'
-import { getRuntimeTargetHostId } from '@/runtime/runtime-client-target'
+import type { NativeChatVisualOwner } from '@/components/native-chat/media/visuals/native-chat-visual-owner'
+import { getRuntimeTargetHostId } from '@/runtime/rpc/targets/runtime-client-target'
+
+/** Lets a toolbar match its neighbors, e.g. the address bar's muted field icons. */
+type LanArtifactShareButtonStyle = {
+  variant?: ComponentProps<typeof Button>['variant']
+  size?: ComponentProps<typeof Button>['size']
+}
 
 /** Editor header, for any shareable document: the open tab already knows which computer owns the file. */
 export function EditorFileLanShareButton({
@@ -53,7 +59,8 @@ export function BrowserFileLanShareButton({
   worktreeId: string
   filePath: string
   className?: string
-} & LanArtifactShareControl): React.JSX.Element {
+} & LanArtifactShareButtonStyle &
+  LanArtifactShareControl): React.JSX.Element {
   const resolveTarget = useCallback(() => {
     const worktree = selectWorkspaceByHostTarget(
       useAppStore.getState(),
@@ -81,7 +88,8 @@ export function DocPreviewLanShareButton({
   identity: DocPreviewDocumentIdentity
   location: DocPreviewGrantLocation
   className?: string
-} & LanArtifactShareControl): React.JSX.Element {
+} & LanArtifactShareButtonStyle &
+  LanArtifactShareControl): React.JSX.Element {
   const resolveTarget = useCallback(
     () => resolveDocPreviewShareTarget(location, identity.absolutePath),
     [identity.absolutePath, location]
@@ -122,18 +130,18 @@ export function NativeChatVisualLanShareButton({
   )
 }
 
-// Why built here: a render function declared inside the toolbar component reads as a nested
-// component; the chrome only calls it with its controlled open state and overflow anchor.
+// Why built here: the browser chrome places share beside the address as a muted field icon, the
+// same slot and style the cloud publish button used.
 export function browserFileLanShareControl(
   worktreeId: string,
   filePath: string
-): (control: BrowserChromeShareControl) => React.JSX.Element {
-  return (control) => (
+): React.JSX.Element {
+  return (
     <BrowserFileLanShareButton
       worktreeId={worktreeId}
       filePath={filePath}
-      className="h-7 w-7"
-      {...control}
+      size="icon-xs"
+      variant="muted-field-icon"
     />
   )
 }
@@ -141,16 +149,16 @@ export function browserFileLanShareControl(
 export function docPreviewLanShareControl(
   identity: DocPreviewDocumentIdentity,
   location: DocPreviewGrantLocation | null
-): ((control: BrowserChromeShareControl) => React.JSX.Element) | undefined {
+): React.JSX.Element | undefined {
   if (!location) {
     return undefined
   }
-  return (control) => (
+  return (
     <DocPreviewLanShareButton
       identity={identity}
       location={location}
-      className="h-7 w-7"
-      {...control}
+      size="icon-xs"
+      variant="muted-field-icon"
     />
   )
 }

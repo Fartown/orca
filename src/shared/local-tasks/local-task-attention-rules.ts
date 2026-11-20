@@ -2,12 +2,12 @@
  * The "needs you" rules (REQ-014) over one agent status row. Pure, so the library's host judges
  * with them and any client reading a row the same way reaches the same verdict.
  */
-import type { AgentStatusIpcPayload } from '../agent-status-types'
+import type { AgentStatusIpcPayload } from '../agent-status/contracts/agent-status-ipc-payload'
 import {
   AGENT_STATUS_STALE_AFTER_MS,
   agentStatusAuthorityObservedAt
-} from '../agent-status-freshness'
-import { resolveDecayedAgentRowState } from '../agent-row-decay-state'
+} from '../agent-status/contracts/agent-status-freshness'
+import { resolveDecayedAgentRowState } from '../agent-status/presentation/agent-row-decay-state'
 import { parseAskFromStatus } from '../native-chat/input/native-chat-ask'
 import type {
   LocalTaskAttentionItem,

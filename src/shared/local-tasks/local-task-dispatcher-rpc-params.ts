@@ -1,4 +1,4 @@
-import { z } from 'zod'
+import * as z from 'zod'
 import { LOCAL_TASK_FORWARDED_FACT_TEXT_MAX, LOCAL_TASK_TITLE_MAX } from './local-task-model'
 
 // The dispatcher session (REQ-030, REQ-031): it proposes, a person decides, a desktop executes.

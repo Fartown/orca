@@ -1,4 +1,4 @@
-import { z } from 'zod'
+import * as z from 'zod'
 import {
   LOCAL_TASK_BATCH_MAX,
   LOCAL_TASK_COMMENT_MAX,

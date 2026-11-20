@@ -1,7 +1,7 @@
 import { createElement } from 'react'
 import { act, create, type ReactTestRenderer } from 'react-test-renderer'
 import { describe, expect, it, vi } from 'vitest'
-import type { RpcClient } from '../transport/rpc-client'
+import type { RpcClient } from '../transport/rpc/rpc-client-contract'
 import { startLocalTasksChangeFeed } from './local-tasks-change-feed'
 import { useLocalTasksLibrary, type LocalTasksLibrary } from './use-local-tasks-library'
 

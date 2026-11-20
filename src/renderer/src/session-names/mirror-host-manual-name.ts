@@ -1,4 +1,4 @@
-import type { AiVaultSessionTitle } from '../../../shared/ai-vault-session-title'
+import type { AiVaultSessionTitle } from '../../../shared/ai-vault/contracts/ai-vault-session-title'
 
 /** An explicit host rename is manual evidence, not an unverified Provider name. */
 export function mirrorHostManualName(

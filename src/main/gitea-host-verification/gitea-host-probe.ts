@@ -1,5 +1,5 @@
-import { runCoalescedProbe, type CoalescedProbes } from '../git/coalesced-probe'
-import { NEGATIVE_ENTRY_TTL_MS } from '../git/remote-ref-probe-cache'
+import { runCoalescedProbe, type CoalescedProbes } from '../git/remotes/coalesced-probe'
+import { NEGATIVE_ENTRY_TTL_MS } from '../git/remotes/remote-ref-probe-cache'
 import type { GiteaRepoRef } from '../gitea/repository-ref'
 import { cancelUnreadResponseBody } from '../lib/unread-response-body'
 

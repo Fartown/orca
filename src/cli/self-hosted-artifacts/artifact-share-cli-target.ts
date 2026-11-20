@@ -2,15 +2,15 @@ import { resolve } from 'node:path'
 import {
   parseRemoteArtifactInput,
   REMOTE_ARTIFACT_INPUT_ENV
-} from '../../shared/artifact-cli-bridge'
-import { toSshExecutionHostId } from '../../shared/execution-host'
+} from '../../shared/artifacts/artifact-cli-bridge'
+import { toSshExecutionHostId } from '../../shared/execution-host/execution-host'
 import {
   ORCHESTRATION_COMPATIBILITY_HOST_ID_ENV,
   ORCHESTRATION_COMPATIBILITY_HOST_KIND_ENV
-} from '../../shared/orchestration-compatibility-evidence'
-import { parseWorkspaceKey } from '../../shared/workspace-scope'
+} from '../../shared/orchestration/orchestration-compatibility-evidence'
+import { parseWorkspaceKey } from '../../shared/workspace/identity/workspace-scope'
 import { splitWorktreeIdForFilesystem } from '../../shared/worktree/id'
-import { RuntimeClientError } from '../runtime-client'
+import { RuntimeClientError } from '../runtime/connection/types'
 
 export type ArtifactShareCliFileTarget = {
   executionHostId: string

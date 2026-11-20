@@ -3,22 +3,23 @@ import {
   _resetTerminalPaneRecoveryForTests,
   registerTerminalPaneRecoveryInstance,
   requestTerminalPaneRecovery
-} from '../components/terminal-pane/terminal-pane-recovery'
+} from '../components/terminal-pane/render-health/recovery/terminal-pane-recovery'
 import {
   recoveryLedgerMocks as mocks,
   resetRecoveryLedgerStore,
   setTerminalTabs
-} from '../components/terminal-pane/terminal-recovery-ledger-test-store'
+} from '../components/terminal-pane/render-health/recovery/terminal-recovery-ledger-test-store'
 
 vi.mock('@/store', async () => {
-  const store = await import('../components/terminal-pane/terminal-recovery-ledger-test-store')
+  const store =
+    await import('../components/terminal-pane/render-health/recovery/terminal-recovery-ledger-test-store')
   return { useAppStore: { getState: () => store.recoveryLedgerStoreState() } }
 })
 
-vi.mock('@/lib/crash-breadcrumb-recorder', async () => {
-  const store = await import('../components/terminal-pane/terminal-recovery-ledger-test-store')
-  return { recordRendererCrashBreadcrumb: store.recoveryLedgerMocks.recordRendererCrashBreadcrumb }
-})
+// Why: the ledger store reaches this module through store lookups, so importing the store here would cycle.
+vi.mock('@/diagnostics/crash-reporting/crash-breadcrumb-recorder', () => ({
+  recordRendererCrashBreadcrumb: vi.fn()
+}))
 
 const releases: (() => void)[] = []
 

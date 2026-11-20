@@ -8,11 +8,11 @@ import {
   pendingWatchRef
 } from '../../shared/local-tasks/local-task-inbox-copy'
 import { parseLocalTaskRef } from '../../shared/local-tasks/local-task-model'
-import { readCommandBody } from '../command-body-input'
-import type { CommandHandler } from '../dispatch'
-import { getOptionalStringFlag, getRequiredStringFlag } from '../flags'
-import { printResult } from '../format'
-import { RuntimeClientError } from '../runtime/types'
+import { readCommandBody } from '../arguments/command-body-input'
+import type { CommandHandler } from '../dispatch/dispatch'
+import { getOptionalStringFlag, getRequiredStringFlag } from '../arguments/flags'
+import { printResult } from '../output/command-result-output'
+import { RuntimeClientError } from '../runtime/connection/types'
 import { cliTime, quotedCliText } from './local-task-cli-format'
 import {
   localTaskProposalFormatHints,

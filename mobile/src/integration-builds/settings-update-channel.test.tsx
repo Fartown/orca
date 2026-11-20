@@ -17,6 +17,7 @@ const fixture = vi.hoisted(() => {
 })
 vi.mock('../app-update/app-update-runtime', () => ({
   installedAppVersion: '0.0.62',
+  canCheckForAppUpdates: true,
   appUpdateChecker: { checkNow: fixture.legacyCheck },
   useAppUpdateState: () => ({ checking: false, available: null, lastCheckedAt: null }),
   openAppUpdate: vi.fn()

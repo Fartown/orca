@@ -24,8 +24,8 @@ vi.mock('@/store', () => ({
     })
   }
 }))
-vi.mock('@/runtime/runtime-rpc-client', () => ({ callRuntimeRpc: fixture.rpc }))
-vi.mock('@/runtime/structured-agent-session-close', () => ({
+vi.mock('@/runtime/rpc/calls/runtime-rpc-call', () => ({ callRuntimeRpc: fixture.rpc }))
+vi.mock('@/runtime/native-chat/requests/structured-agent-session-close', () => ({
   closeStructuredAgentSession: fixture.closeStructured
 }))
 vi.mock('sonner', () => ({

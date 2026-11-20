@@ -10,7 +10,7 @@ vi.mock('@/local-tasks/local-task-navigation', () => ({
 }))
 
 import { TooltipProvider } from '@/components/ui/tooltip'
-import { getReachableRuntimeEnvironmentIds } from '@/hooks/ipc-events/runtime-environment-subscription-selection'
+import { getReachableRuntimeEnvironmentIds } from '@/hooks/ipc-events/runtime-events/runtime-environment-subscription-selection'
 import {
   toClientLocalTask,
   toClientLocalTaskLinks,
@@ -21,9 +21,9 @@ import { localTaskEnvironmentEndpoint } from '@/local-tasks/local-task-endpoints
 import {
   runtimeEnvironmentStatusFromSnapshot,
   type RuntimeHostStatusSnapshot
-} from '../../../../shared/runtime-host-status'
+} from '../../../../shared/remote-runtime/host-status/runtime-host-status'
 import { useAppStore } from '@/store'
-import { makeWorktree } from '@/store/slices/worktrees-slice-test-fixtures'
+import { makeWorktree } from '@/store/slices/worktrees/worktree.test-fixture'
 import { localTaskPageStore } from '@/local-tasks/local-task-page-store'
 import { localTaskSessionPanelStore } from '@/local-tasks/local-task-session-panel-store'
 import { localTaskSidebarTreeStore } from '@/local-tasks/local-task-sidebar-tree'

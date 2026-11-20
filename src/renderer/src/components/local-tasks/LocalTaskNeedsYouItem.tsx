@@ -18,7 +18,7 @@ import {
 } from '@/local-tasks/local-task-needs-you-store'
 import { formatLocalTaskTime } from '@/local-tasks/local-task-time'
 import { useLocalTaskRowWritable } from '@/local-tasks/local-tasks-domain-store'
-import { formatAgentTypeLabel } from '../../../../shared/agent-type-label'
+import { formatAgentTypeLabel } from '../../../../shared/agent-status/presentation/agent-type-label'
 import type { LocalTaskSessionLink } from '../../../../shared/local-tasks/local-task-link-types'
 import { LocalTaskReplyBox } from './LocalTaskReplyBox'
 import { LocalTaskSnoozeMenu } from './LocalTaskSnoozeMenu'

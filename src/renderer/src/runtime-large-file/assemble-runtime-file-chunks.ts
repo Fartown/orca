@@ -1,4 +1,4 @@
-import type { RuntimeFileReadChunkResult } from '../../../shared/runtime-types'
+import type { RuntimeFileReadChunkResult } from '../../../shared/file-content/runtime-file-read'
 
 /**
  * Read a whole file off a paired runtime with `files.readChunk`.

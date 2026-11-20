@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 const identity = vi.hoisted(() => vi.fn())
-vi.mock('../appimage-runtime-identity', () => ({ resolveAppImageRuntimeIdentity: identity }))
+vi.mock('../updater/linux-package/appimage-runtime-identity', () => ({
+  resolveAppImageRuntimeIdentity: identity
+}))
 import { hasLinuxServeUpdateSupervisor } from './linux-serve-update-support'
 
 const platform = Object.getOwnPropertyDescriptor(process, 'platform')!

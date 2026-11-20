@@ -2,15 +2,18 @@ import { expect, it, vi } from 'vitest'
 import {
   buildStoreState,
   FUTURE_PANE_KEY
-} from '../hooks/ipc-events-agent-status-store-test-fixtures'
-import { createAgentStatusEventApplicator } from '../hooks/ipc-events/agent-status-event-applicator'
+} from '../hooks/ipc-events/agent-status/ipc-events-agent-status-store-test-fixtures'
+import { createAgentStatusEventApplicator } from '../hooks/ipc-events/agent-status/agent-status-event-applicator'
 
 const { observe, getState } = vi.hoisted(() => ({ observe: vi.fn(), getState: vi.fn() }))
 vi.mock('@/store', () => ({ useAppStore: { getState } }))
-vi.mock('@/hooks/agent-hook-completion-notifications', () => ({
-  observeAgentHookCompletionForNotification: observe
-}))
-vi.mock('@/lib/telemetry', () => ({ track: vi.fn() }))
+vi.mock(
+  '@/components/terminal-pane/agent-completion/hook-lane/agent-hook-completion-notifications',
+  () => ({
+    observeAgentHookCompletionForNotification: observe
+  })
+)
+vi.mock('@/diagnostics/telemetry/telemetry', () => ({ track: vi.fn() }))
 
 it('keeps accepted IPC session identity in the delayed notification snapshot, not private routing fields', () => {
   observe.mockClear()

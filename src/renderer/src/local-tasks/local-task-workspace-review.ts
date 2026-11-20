@@ -1,16 +1,16 @@
 import type { AppState } from '@/store/types'
-import { getHostedReviewCacheKey } from '@/store/slices/hosted-review-cache-identity'
-import { getIndexedRepoMap } from '@/store/worktree-repo-index'
-import { getDetachedWorkspaceReviewRequest } from '@/components/sidebar/workspace-detached-review-request'
+import { getHostedReviewCacheKey } from '@/store/slices/hosted-review/hosted-review-cache-identity'
+import { getIndexedRepoMap } from '@/store/repos/repository-catalog-index'
+import { getDetachedWorkspaceReviewRequest } from '@/components/sidebar/workspace-card/review/workspace-detached-review-request'
 import {
   isCachedMergedBranchPRCurrentForWorktree,
   type WorktreeCardPrDisplay
-} from '@/components/sidebar/worktree-card-pr-display'
-import { resolveWorktreeCardReview } from '@/components/sidebar/use-worktree-card-review-details'
-import { getGitHubPRCacheKey } from '../../../shared/github/github-cache-key'
-import type { HostedReviewInfo } from '../../../shared/hosted-review'
-import { getWorktreeGitIdentityDisplay } from '../../../shared/worktree/git-identity-display'
-import type { Repo } from '../../../shared/repo-types'
+} from '@/components/sidebar/workspace-card/review/worktree-card-pr-display'
+import { resolveWorktreeCardReview } from '@/components/sidebar/workspace-card/review/worktree-card-review-resolution'
+import { getGitHubPRCacheKey } from '../../../shared/github/cache/github-cache-key'
+import type { HostedReviewInfo } from '../../../shared/source-control/hosted-review/hosted-review-contracts'
+import { getWorktreeGitIdentityDisplay } from '../../../shared/worktree/row-display/git-identity-display'
+import type { Repo } from '../../../shared/repository/repo-types'
 import type { Worktree } from '../../../shared/worktree/types'
 
 type HostedEntry = AppState['hostedReviewCache'][string] | undefined

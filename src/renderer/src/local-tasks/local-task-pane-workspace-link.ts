@@ -1,6 +1,6 @@
 import { useAppStore } from '@/store'
-import { getExecutionHostIdForWorktree } from '@/lib/worktree-runtime-owner'
-import type { ExecutionHostId } from '../../../shared/execution-host'
+import { getExecutionHostIdForWorktree } from '@/lib/workspace/ownership/worktree-runtime-owner'
+import type { ExecutionHostId } from '../../../shared/execution-host/execution-host'
 import type { LocalTaskWorkspaceLink } from '../../../shared/local-tasks/local-task-link-types'
 import { findLocalTaskLinkForWorkspace } from './local-task-link-selectors'
 import { useLocalTasksDomain } from './local-tasks-domain-store'

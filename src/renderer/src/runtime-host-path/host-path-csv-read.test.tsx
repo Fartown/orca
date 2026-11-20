@@ -2,32 +2,32 @@
 
 import { renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { OpenFile } from '@/store/slices/editor'
-import type { FileContent } from '@/components/editor/editor-panel-content-types'
+import type { OpenFile } from '@/store/slices/editor/types/open-file'
+import type { FileContent } from '@/components/editor/loading/editor-panel-content-types'
 
 const mocks = vi.hoisted(() => ({
   readEditorCsvFileContent: vi.fn(),
   findWorkspaceFileRoute: vi.fn()
 }))
 
-vi.mock('@/components/editor/csv/csv-file-content', () => ({
+vi.mock('@/components/editor/csv/preview/csv-file-content', () => ({
   readEditorCsvFileContent: mocks.readEditorCsvFileContent
 }))
-vi.mock('@/lib/runtime-workspace-file-route', () => ({
+vi.mock('@/lib/files/access/runtime-workspace-file-route', () => ({
   findWorkspaceFileRoute: mocks.findWorkspaceFileRoute
 }))
 // Upstream now asks the host to re-grant a restored outside-workspace file; this host declines.
-vi.mock('@/runtime/runtime-terminal-artifact-grant', () => ({
+vi.mock('@/runtime/files/grants/runtime-terminal-artifact-grant', () => ({
   renewTerminalArtifactGrant: vi.fn(async () => null),
   hostSavesGrantedFiles: vi.fn(async () => false)
 }))
-vi.mock('@/lib/connection-context', async (importOriginal) => ({
+vi.mock('@/lib/workspace/ownership/connection-context', async (importOriginal) => ({
   ...(await importOriginal<object>()),
   getConnectionIdForFile: () => null,
   isWorktreeConnectionResolved: () => true
 }))
 
-import { useEditorPanelFileContentLoader } from '@/components/editor/useEditorPanelFileContentLoader'
+import { useEditorPanelFileContentLoader } from '@/components/editor/loading/useEditorPanelFileContentLoader'
 
 const GRANT = { grantId: 'grant-1', absolutePath: '/data/exports/report.csv' }
 

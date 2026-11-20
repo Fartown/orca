@@ -1,8 +1,8 @@
 // @vitest-environment happy-dom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { renderHook } from '@testing-library/react'
-import { useAiVaultSessionDeleteAction } from '../components/right-sidebar/ai-vault-session-delete-action'
-import { prepareAiVaultSessionContinuation } from '../components/right-sidebar/ai-vault-session-continuation'
+import { useAiVaultSessionDeleteAction } from '../components/right-sidebar/ai-vault/session-actions/ai-vault-session-delete-action'
+import { prepareAiVaultSessionContinuation } from '../components/right-sidebar/ai-vault/session-actions/ai-vault-session-continuation'
 import { getScannedSessionDisplayName } from './session-name-display'
 import { sessionNameStore } from './session-name-store'
 import { scannedSession } from './scanned-session-name-test-fixture'
@@ -12,7 +12,7 @@ import {
 } from '../lib/canonical-session-titles'
 
 const confirm = vi.hoisted(() => vi.fn())
-vi.mock('@/components/confirmation-dialog-context', () => ({
+vi.mock('@/components/dismiss/confirmation/confirmation-dialog-context', () => ({
   useConfirmationDialog: () => confirm
 }))
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }))

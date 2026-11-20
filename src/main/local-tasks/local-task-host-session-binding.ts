@@ -1,8 +1,8 @@
-import { parseExecutionHostId } from '../../shared/execution-host'
-import type { RuntimeClientEvent } from '../../shared/runtime-client-events'
-import { agentHookServer, type AgentHookServer } from '../agent-hooks/server'
+import { parseExecutionHostId } from '../../shared/execution-host/execution-host'
+import type { RuntimeClientEvent } from '../../shared/remote-runtime/session-graph/runtime-client-events'
+import { agentHookServer, type AgentHookServer } from '../agent-hooks/server/agent-hook-server'
 import { getRegisteredSshState } from '../ssh/targets/ssh-target-registry'
-import { getPublishedHostDescriptor } from '../runtime/host-descriptor'
+import { getPublishedHostDescriptor } from '../runtime/hosts/platform-probe/host-descriptor'
 import type { LocalTaskHostSessionSource } from './local-task-host-session-source'
 
 type HookStatusStore = Pick<

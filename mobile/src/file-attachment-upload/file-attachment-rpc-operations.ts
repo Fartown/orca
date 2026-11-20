@@ -1,6 +1,6 @@
-import { z } from 'zod'
-import { bindDeferredRpcOperation, defineRpcOperation } from '../transport/rpc-operation'
-import { rpcResultVariant } from '../transport/rpc-operation-result-reader'
+import * as z from 'zod'
+import { bindDeferredRpcOperation, defineRpcOperation } from '../transport/rpc/rpc-operation'
+import { rpcResultVariant } from '../transport/rpc/rpc-operation-result-reader'
 
 // Replies checked against src/main/file-attachment-upload/file-attachment-upload-store.ts. Each is
 // loose so a later host may add members; only what this side reads is required.

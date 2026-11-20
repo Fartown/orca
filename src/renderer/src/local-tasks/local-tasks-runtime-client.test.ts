@@ -9,11 +9,11 @@ const host = vi.hoisted(() => {
     repos
   }
 })
-vi.mock('../runtime/runtime-rpc-client', () => ({ callRuntimeRpc: host.call }))
+vi.mock('../runtime/rpc/calls/runtime-rpc-call', () => ({ callRuntimeRpc: host.call }))
 vi.mock('@/store', () => ({ useAppStore: { getState: () => ({ repos: host.repos }) } }))
 
-import { toWebTerminalSurfaceTabId } from '../../../shared/terminal-surface-id'
-import { createBrowserUuid } from '@/lib/browser-uuid'
+import { toWebTerminalSurfaceTabId } from '../../../shared/workspace-layout/terminal-surface-id'
+import { createNonSecureContextUuid as createBrowserUuid } from '../../../shared/identifiers/non-secure-context-uuid'
 import type { LocalTask } from '../../../shared/local-tasks/local-task-types'
 import { localTasksEndpointReads } from './local-tasks-endpoint-calls'
 import { localTasksClient } from './local-tasks-runtime-client'

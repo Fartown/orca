@@ -8,10 +8,13 @@ import {
   parseExecutionHostId,
   toRuntimeExecutionHostId,
   toSshExecutionHostId
-} from '../execution-host'
-import type { HostAuthorityEndpoint } from '../host-authority'
-import { makePaneKey, parsePaneKey } from '../stable-pane-id'
-import { toHostSessionTabId, toWebTerminalSurfaceTabId } from '../terminal-surface-id'
+} from '../execution-host/execution-host'
+import type { HostAuthorityEndpoint } from '../execution-host/host-authority'
+import { makePaneKey, parsePaneKey } from '../workspace-layout/stable-pane-id'
+import {
+  toHostSessionTabId,
+  toWebTerminalSurfaceTabId
+} from '../workspace-layout/terminal-surface-id'
 import type { LocalTaskSessionLink } from './local-task-link-types'
 
 /**

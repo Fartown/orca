@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import type { MobileNewTabAgentOption } from '../session/mobile-new-tab-agent-options'
+import type { MobileNewTabAgentOption } from '../session/agent-launch/mobile-new-tab-agent-options'
 import { loadLocalTaskAgentOptions } from './local-task-agent-options'
 import type { LocalTaskSite } from './local-task-endpoint'
 import { readLocalTaskHostContact } from './local-task-host-contact'

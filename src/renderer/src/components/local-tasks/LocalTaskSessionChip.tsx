@@ -2,8 +2,8 @@ import { lazy, Suspense, useState } from 'react'
 import { ChevronDown, Link2, PanelLeftClose } from 'lucide-react'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { translate } from '@/i18n/i18n'
-import { cn } from '@/lib/utils'
-import { parsePaneKey } from '../../../../shared/stable-pane-id'
+import { cn } from '@/lib/class-names'
+import { parsePaneKey } from '../../../../shared/workspace-layout/stable-pane-id'
 import type {
   LocalTaskLinks,
   LocalTaskSessionLink
@@ -19,7 +19,7 @@ import { LocalTaskStatusIcon } from './LocalTaskIcons'
 import { useLocalTaskPaneWorkspaceLink } from '@/local-tasks/local-task-pane-workspace-link'
 import { resolveLocalTaskSessionPaneKey } from '@/local-tasks/local-task-session-panel-portal'
 import { localTaskSessionLinkChoices } from '@/local-tasks/local-task-session-link-choices'
-import { getExecutionHostIdForWorktree } from '@/lib/worktree-runtime-owner'
+import { getExecutionHostIdForWorktree } from '@/lib/workspace/ownership/worktree-runtime-owner'
 
 // Why lazy: every terminal header mounts the chip; the card and its task summary load on hover.
 const loadChipCard = () => import('./LocalTaskSessionChipCard')

@@ -7,9 +7,15 @@ import type { LocalTask, LocalTaskProject } from '../../../shared/local-tasks/lo
 vi.mock('@/components/ui/tooltip', () => ({
   Tooltip: ({ children }: { children?: ReactNode }) => <>{children}</>,
   TooltipContent: () => null,
-  TooltipTrigger: ({ children }: { children?: ReactNode }) => <>{children}</>
+  // Why a span: icon-only source tabs hand their tab role and handlers to this trigger.
+  TooltipTrigger: ({
+    asChild,
+    children,
+    ...props
+  }: { asChild?: boolean; children?: ReactNode } & Record<string, unknown>) =>
+    asChild ? <>{children}</> : <span {...props}>{children}</span>
 }))
-vi.mock('@/runtime/runtime-linear-client', () => ({
+vi.mock('@/runtime/linear/runtime-linear-client', () => ({
   linearStatus: vi.fn(async () => ({ connected: false, viewer: null }))
 }))
 const toastInfo = vi.hoisted(() => vi.fn())
@@ -17,7 +23,7 @@ vi.mock('sonner', () => ({ toast: { info: toastInfo, error: vi.fn(), success: vi
 
 import { useAppStore } from '@/store'
 import SmartWorkspaceNameField from '@/components/new-workspace/SmartWorkspaceNameField'
-import type { SmartWorkspaceNameSelection } from '@/components/new-workspace/smart-workspace-name-field-model'
+import type { SmartWorkspaceNameSelection } from '@/components/new-workspace/name-field/smart-workspace-name-field-model'
 import { localTasksDomainStore } from './local-tasks-domain-store'
 import { localTaskLibraryViewerStore } from './local-task-library-viewers'
 import { LocalTaskSourceTabContext, type LocalTaskSourceTab } from './local-task-source-tab'
@@ -209,7 +215,7 @@ describe('the composer’s Create From field shares the Local tasks tab', () => 
   it('lists tasks on the tab after Smart and hands the chosen one to the composer', async () => {
     const tab = composerTab()
     render(<Field tab={tab} />)
-    const tabs = screen.getAllByRole('tab').map((candidate) => candidate.textContent)
+    const tabs = screen.getAllByRole('tab').map((candidate) => candidate.getAttribute('aria-label'))
     expect(tabs.indexOf('Local')).toBe(tabs.indexOf('Smart') + 1)
     fireEvent.mouseDown(screen.getByRole('tab', { name: 'Local' }))
     fireEvent.click(await screen.findByRole('option', { name: /Order export/ }))

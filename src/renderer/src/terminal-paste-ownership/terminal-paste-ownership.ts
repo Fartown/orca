@@ -2,7 +2,7 @@ import {
   isTerminalPanePasteFocusCurrent,
   isTerminalPanePasteTargetCurrent,
   type TerminalPasteTargetState
-} from '@/components/terminal-pane/terminal-paste-target-state'
+} from '@/components/terminal-pane/input/paste/terminal-paste-target-state'
 import type { TerminalPasteOwnershipFailure } from './terminal-paste-failure'
 
 export function captureTerminalPasteOwnership<

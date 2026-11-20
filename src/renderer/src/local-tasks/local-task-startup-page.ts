@@ -1,4 +1,4 @@
-import { e2eConfig } from '@/lib/e2e-config'
+import { e2eConfig } from '@/app-shell/startup/e2e-config'
 import { useAppStore } from '@/store'
 import { localTasksDomainStore } from './local-tasks-domain-store'
 import { LOCAL_TASK_SOURCE_HIDDEN_PREFERENCE_KEY } from '../../../shared/local-tasks/local-task-source-visibility'

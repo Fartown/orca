@@ -1,50 +1,39 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import {
-  createRuntimeFileCommands,
-  useRuntimeFileCommandsLifecycle
-} from '../runtime/orca-runtime-files-test-harness'
-import { resolveAuthorizedPathMock } from '../runtime/orca-runtime-files-mock-registry'
-import { readAuthorizedDocPreviewFile } from '../../shared/doc-preview-file-access'
-import { REMOTE_RPC_MAX_CONTENT_BYTES } from '../../shared/remote-rpc-content-budget'
-import { readDocPreviewFile } from '../browser/doc-preview-file-reader'
-import { callRuntimeEnvironment } from '../ipc/runtime-environments/runtime-environment-transport-routing'
+import { createDocumentPreviewFileReads } from './document-preview-runtime-file-reads.test-fixture'
+import { readAuthorizedDocPreviewFile } from '../../shared/document-preview/doc-preview-file-access'
+import { REMOTE_RPC_MAX_CONTENT_BYTES } from '../../shared/remote-runtime/rpc/remote-rpc-content-budget'
+import { readDocPreviewFile } from '../browser/document-preview/doc-preview-file-reader'
+import { callRuntimeEnvironment } from '../ipc/runtime-environments/requests/runtime-environment-transport-routing'
 import { RpcDispatcher } from '../runtime/rpc/dispatcher'
-import { FILE_METHODS } from '../runtime/rpc/methods/files'
+import { FILE_METHODS } from '../runtime/rpc/methods/files/files'
 import type { OrcaRuntimeService } from '../runtime/orca-runtime'
 import { serializeRemoteRuntimePayload } from '../../shared/remote-runtime/remote-runtime-memory-limits'
 import {
   mintDocPreviewGrant,
   revokeAllDocPreviewGrants
-} from '../browser/doc-preview-grant-registry'
+} from '../browser/document-preview/doc-preview-grant-registry'
 
-vi.mock('fs', async () =>
-  (await import('../runtime/orca-runtime-files-mock-registry')).fsModuleMock()
-)
-vi.mock(
-  '../runtime/file-watcher-host',
-  async () => (await import('../runtime/orca-runtime-files-mock-registry')).fileWatcherHostMock
-)
-vi.mock('../ipc/filesystem/filesystem-auth', async () =>
-  (await import('../runtime/orca-runtime-files-mock-registry')).filesystemAuthModuleMock()
-)
-vi.mock('../git/runner', async () =>
-  (await import('../runtime/orca-runtime-files-mock-registry')).gitRunnerModuleMock()
-)
-vi.mock(
-  '../ipc/local-worktree-runtime-options',
-  async () =>
-    (await import('../runtime/orca-runtime-files-mock-registry')).localWorktreeRuntimeOptionsMock
-)
-vi.mock('../ipc/runtime-environments/runtime-environment-transport-routing', () => ({
+const { resolveAuthorizedPathMock } = vi.hoisted(() => ({
+  resolveAuthorizedPathMock: vi.fn<(targetPath: string) => Promise<unknown>>()
+}))
+
+vi.mock('../ipc/filesystem/access/filesystem-auth', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  resolveAuthorizedPath: resolveAuthorizedPathMock
+}))
+vi.mock('../ipc/runtime-environments/requests/runtime-environment-transport-routing', () => ({
   callRuntimeEnvironment: vi.fn()
 }))
-vi.mock('../ipc/runtime-environments/runtime-environment-registry-root', () => ({
+vi.mock('../ipc/runtime-environments/catalog/runtime-environment-registry-root', () => ({
   getRuntimeEnvironmentRegistryRoot: () => '/unused-user-data'
 }))
-vi.mock('../persistence', () => ({ getCanonicalUserDataPath: () => '/unused-user-data' }))
+vi.mock('../persistence/loading-store/user-data-path', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  getCanonicalUserDataPath: () => '/unused-user-data'
+}))
 
 const TEXT_CAP = 20 * 1024 * 1024
 const END_MARKER = '<!--preview-complete-->'
@@ -65,7 +54,9 @@ async function fixture(size: number) {
 }
 
 describe('document preview text size', () => {
-  useRuntimeFileCommandsLifecycle()
+  beforeEach(() => {
+    resolveAuthorizedPathMock.mockReset()
+  })
 
   afterEach(async () => {
     revokeAllDocPreviewGrants()
@@ -76,7 +67,7 @@ describe('document preview text size', () => {
     'reads all %i bytes through the local runtime',
     async (size) => {
       const { root, content } = await fixture(size)
-      const { commands } = createRuntimeFileCommands({ path: root })
+      const { commands } = createDocumentPreviewFileReads({ path: root })
 
       const result = await commands.readDocPreviewFile(
         'id:wt-1',
@@ -97,7 +88,7 @@ describe('document preview text size', () => {
     'routes %i bytes from a runtime-owned preview through bounded RPC replies',
     async (size) => {
       const { root, content } = await fixture(size)
-      const { commands } = createRuntimeFileCommands({ path: root })
+      const { commands } = createDocumentPreviewFileReads({ path: root })
       const dispatcher = new RpcDispatcher({
         runtime: {
           getRuntimeId: () => 'preview-test',
@@ -148,6 +139,9 @@ describe('document preview text size', () => {
         if (!result.ok) {
           throw new Error(result.message)
         }
+        if (!('bytes' in result)) {
+          throw new Error('an HTML document must be served as bytes, not a media stream')
+        }
         expect(result.bytes.toString('utf8') === content).toBe(true)
         expect(requestCount).toBe(Math.ceil(size / (256 * 1024)))
         expect(new Set(calledMethods)).toEqual(new Set(['files.readDocPreview']))
@@ -158,7 +152,7 @@ describe('document preview text size', () => {
 
   it('rejects 20 MiB plus one byte without returning partial content', async () => {
     const { root, entryPath } = await fixture(TEXT_CAP + 1)
-    const { commands } = createRuntimeFileCommands({ path: root })
+    const { commands } = createDocumentPreviewFileReads({ path: root })
 
     await expect(
       commands.readDocPreviewFile('id:wt-1', 'index.html', 'index.html', null, [])
@@ -178,7 +172,7 @@ describe('document preview text size', () => {
 
   it('preserves the paired and ordinary file text caps', async () => {
     const { root } = await fixture(512 * 1024 + 1)
-    const { commands } = createRuntimeFileCommands({ path: root })
+    const { commands } = createDocumentPreviewFileReads({ path: root })
     resolveAuthorizedPathMock.mockImplementation(async (path: string) => path)
 
     await expect(
@@ -199,7 +193,7 @@ describe('document preview text size', () => {
   it('still enforces the encoded paired response budget', async () => {
     const { root, entryPath } = await fixture(64)
     await writeFile(entryPath, '\u0001'.repeat(64))
-    const { commands } = createRuntimeFileCommands({ path: root })
+    const { commands } = createDocumentPreviewFileReads({ path: root })
 
     await expect(
       commands.readDocPreviewFile('id:wt-1', 'index.html', 'index.html', null, [], 128)
@@ -208,7 +202,7 @@ describe('document preview text size', () => {
 
   it('enforces chunk length and file version on the execution host', async () => {
     const { root, entryPath } = await fixture(128)
-    const { commands } = createRuntimeFileCommands({ path: root })
+    const { commands } = createDocumentPreviewFileReads({ path: root })
     const read = (chunk: { offset: number; length: number; version?: string }) =>
       commands.readDocPreviewFile(
         'id:wt-1',

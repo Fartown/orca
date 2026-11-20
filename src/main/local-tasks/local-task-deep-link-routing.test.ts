@@ -3,9 +3,9 @@ import {
   localTaskDeepLink,
   localTaskDeepLinkFromArguments
 } from '../../shared/local-tasks/local-task-deep-link'
-import { isRoutedOrcaDeepLink } from '../startup/orca-deep-link-url'
-import { PendingDeepLinkState } from '../startup/skill-share-deep-link-state'
-import { desktopHandoffArguments } from '../window/macos-desktop-handoff'
+import { isRoutedOrcaDeepLink } from '../startup/open-routing/orca-deep-link-url'
+import { PendingDeepLinkState } from '../startup/open-routing/skill-share-deep-link-state'
+import { desktopHandoffArguments } from '../window/activation/macos-desktop-handoff'
 
 it('routes an OS task link through capture, cold-start consume and sidecar handoff', () => {
   const link = localTaskDeepLink({ endpoint: 'runtime:env-1', taskId: 'task-1' })
@@ -22,7 +22,7 @@ it('routes an OS task link through capture, cold-start consume and sidecar hando
   expect(
     desktopHandoffArguments({
       localTaskDeepLinks: sidecar,
-      skillShareDeepLinks: { consume: () => null },
+      deepLinks: { drainArguments: () => [] },
       pluginInstallLinks: { consume: () => null },
       osOpenedDocuments: { consume: () => [] }
     })

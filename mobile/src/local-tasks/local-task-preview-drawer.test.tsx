@@ -6,11 +6,11 @@ import type {
   LocalTaskWorkspaceLink
 } from '../../../src/shared/local-tasks/local-task-link-types'
 import type { LocalTask } from '../../../src/shared/local-tasks/local-task-types'
-import { MOBILE_DESKTOP_RELAY_RUNTIME_CAPABILITY } from '../../../src/shared/mobile-desktop-relay-contract'
-import { MOBILE_RELAY_HOSTS_LIST_METHOD } from '../../../src/shared/mobile-relay-hosts-contract'
-import type { RpcClient } from '../transport/rpc-client'
-import type * as HostProtocolGatesModule from '../components/host-protocol-gates-context'
-import type { RpcResponse } from '../transport/types'
+import { MOBILE_DESKTOP_RELAY_RUNTIME_CAPABILITY } from '../../../src/shared/remote-runtime/relay/mobile-desktop-relay-contract'
+import { MOBILE_RELAY_HOSTS_LIST_METHOD } from '../../../src/shared/remote-runtime/relay/mobile-relay-hosts-contract'
+import type { RpcClient } from '../transport/rpc/rpc-client-contract'
+import type * as HostProtocolGatesModule from '../components/host-connection/host-protocol-gates-context'
+import type { RpcResponse } from '../transport/rpc/rpc-wire-types'
 
 type Seen = { client: RpcClient | null; executionHost: string | undefined }
 const probe = vi.hoisted((): { desktop: RpcClient | null; seen: Seen[] } => ({
@@ -33,7 +33,7 @@ vi.mock('lucide-react-native', () => ({
 }))
 vi.mock('../theme/themed-styles', () => ({ themedStyleSheet: () => ({}) }))
 vi.mock('../theme/use-mobile-color-scheme', () => ({ useMobileColorScheme: () => 'dark' }))
-vi.mock('../components/AgentStateDot', () => ({ AgentStateDot: () => null }))
+vi.mock('../agents/presentation/AgentStateDot', () => ({ AgentStateDot: () => null }))
 vi.mock('../components/bottom-drawer/BottomDrawer', () => ({
   BottomDrawer: (props: { visible: boolean; children: ReactNode }) =>
     props.visible ? props.children : null
@@ -43,13 +43,13 @@ vi.mock('../i18n/use-mobile-translation', () => ({
 }))
 vi.mock('../session/MobileSessionActiveContent', () => ({ MobileSessionActiveContent: () => null }))
 vi.mock('./use-local-task-session-acknowledge', () => ({ useAcknowledgeOpenSession: () => {} }))
-vi.mock('../transport/host-status-gates', () => ({
+vi.mock('../transport/connection/host-status-gates', () => ({
   useHostStatusGates: () => ({ hostCapabilities: [], statusPending: false, statusReadable: true })
 }))
-vi.mock('../transport/host-client-hooks', () => ({
+vi.mock('../transport/connection/host-client-hooks', () => ({
   useHostClient: () => ({ client: probe.desktop, clientId: 'desktop', state: 'connected' })
 }))
-vi.mock('../components/host-protocol-gates-context', async (original) => ({
+vi.mock('../components/host-connection/host-protocol-gates-context', async (original) => ({
   ...(await original<typeof HostProtocolGatesModule>()),
   useOptionalHostProtocolGates: () => ({
     hostCapabilities: [MOBILE_DESKTOP_RELAY_RUNTIME_CAPABILITY],
@@ -59,7 +59,7 @@ vi.mock('../components/host-protocol-gates-context', async (original) => ({
 }))
 // The chat's controller, reduced to what decides where it reads: the route's client and host.
 vi.mock('../session/use-mobile-session-controller', async () => {
-  const { useWorkspaceClient } = await import('../transport/use-workspace-client')
+  const { useWorkspaceClient } = await import('../worktree/execution-hosts/use-workspace-client')
   const { useWorkspaceExecutionHost } = await import('../navigation/workspace-execution-host')
   return {
     useMobileSessionController: (scope: { hostId: string }) => {

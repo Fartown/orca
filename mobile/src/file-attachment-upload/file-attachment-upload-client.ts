@@ -1,12 +1,12 @@
-import { CLIPBOARD_IMAGE_MAX_SOURCE_BYTES } from '../../../src/shared/clipboard-image'
+import { CLIPBOARD_IMAGE_MAX_SOURCE_BYTES } from '../../../src/shared/clipboard/clipboard-image'
 import { isAgentImageAttachmentName } from '../../../src/shared/file-attachment-upload/file-attachment-delivery-text'
 import {
   FILE_ATTACHMENT_CHUNK_BYTES,
   FILE_ATTACHMENT_MAX_BYTES
 } from '../../../src/shared/file-attachment-upload/file-attachment-upload-limits'
-import { isMobileMethodUnavailableError } from '../transport/mobile-method-unavailable'
+import { isMobileMethodUnavailableError } from '../transport/rpc/mobile-method-unavailable'
 import { base64DecodedByteLength } from './attachment-base64-length'
-import { saveMobileClipboardImageAsTempFile } from '../session/mobile-clipboard-image'
+import { saveMobileClipboardImageAsTempFile } from '../files/attachments/mobile-clipboard-image'
 import {
   fileAttachmentUploadAbort,
   fileAttachmentUploadAppend,

@@ -1,7 +1,10 @@
-import { activateAndRevealWorkspace, activateAndRevealWorktree } from '@/lib/worktree-activation'
+import {
+  activateAndRevealWorkspace,
+  activateAndRevealWorktree
+} from '@/lib/workspace/activation/worktree-activation'
 import { useAppStore } from '@/store'
-import type { ExecutionHostId } from '../../../shared/execution-host'
-import { parseWorkspaceKey } from '../../../shared/workspace-scope'
+import type { ExecutionHostId } from '../../../shared/execution-host/execution-host'
+import { parseWorkspaceKey } from '../../../shared/workspace/identity/workspace-scope'
 
 export async function refreshNotifiedWorkspaceCatalog(
   workspaceId: string,

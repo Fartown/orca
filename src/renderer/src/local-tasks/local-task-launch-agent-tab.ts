@@ -1,6 +1,9 @@
-import { parseRoutableExecutionHostId, type ExecutionHostId } from '../../../shared/execution-host'
-import { toWebTerminalSurfaceTabId } from '../../../shared/terminal-surface-id'
-import type { TuiAgent } from '../../../shared/tui-agent'
+import {
+  parseRoutableExecutionHostId,
+  type ExecutionHostId
+} from '../../../shared/execution-host/execution-host'
+import { toWebTerminalSurfaceTabId } from '../../../shared/workspace-layout/terminal-surface-id'
+import type { TuiAgent } from '../../../shared/agent-launch/catalog/tui-agent'
 
 type WorktreeTabs = {
   tabsByWorktree: Readonly<Record<string, readonly { id: string; launchAgent?: TuiAgent }[]>>

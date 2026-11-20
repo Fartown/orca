@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { ArrowLeft, ChevronDown, ChevronUp } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { ShortcutKeyCombo } from '@/components/ShortcutKeyCombo'
+import { ShortcutKeyCombo } from '@/components/ui/ShortcutKeyCombo'
 import { translate } from '@/i18n/i18n'
 import { localTaskPageStore } from '@/local-tasks/local-task-page-store'
 import {

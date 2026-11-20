@@ -1,35 +1,73 @@
-import { existsSync, lstatSync, mkdirSync, readFileSync } from 'node:fs'
+import { existsSync, readFileSync, statSync } from 'node:fs'
+import { lstat, mkdir, readFile } from 'node:fs/promises'
+import { inCredentialFileOrder } from '../credentials/credential-file-io'
 import { dirname } from 'node:path'
-import { writeCredentialFileAtomic } from '../integration-credential-file'
-import { readPrivateWindowsFile } from '../../shared/secure-path-windows-acl'
+import { writeCredentialFileAtomic } from '../credentials/integration-credential-file'
+import { readPrivateWindowsCredentialFile } from '../../shared/secure-storage/windows-credential-file-io'
 import { parseAntigravityNativeCredential } from './native-credential-codec'
 import type { AntigravityCredentialBackend } from './native-account-service'
 
 const CONFLICT =
   'The native Antigravity credential changed during selection; refresh before retrying.'
 
-export function isAntigravityFileStorageHost(env: NodeJS.ProcessEnv, kernelRelease = ''): boolean {
+// Mirrors agy's Linux dbus detector: no session bus address and no per-user bus socket.
+function lacksAntigravitySessionBus(env: NodeJS.ProcessEnv): boolean {
+  if (!['', 'none:', 'disabled:'].includes(env.DBUS_SESSION_BUS_ADDRESS ?? '')) {
+    return false
+  }
+  try {
+    return !statSync(`/run/user/${process.getuid?.()}/bus`).isSocket()
+  } catch {
+    return true
+  }
+}
+
+export function isAntigravityFileStorageHost(env: NodeJS.ProcessEnv): boolean {
   return (
     ['SSH_TTY', 'SSH_CLIENT', 'SSH_CONNECTION', 'WSL_DISTRO_NAME', 'WSL_INTEROP'].some((name) =>
       Boolean(env[name])
-    ) || /microsoft|wsl/i.test(kernelRelease)
+    ) ||
+    (process.platform === 'linux' && lacksAntigravitySessionBus(env))
   )
 }
 
-export function readAntigravityCredentialFile(path: string): string | null {
+export function isAntigravityContainerOrWslHost(): boolean {
+  if (existsSync('/.dockerenv')) {
+    return true
+  }
+  for (const [path, pattern] of [
+    ['/proc/1/cgroup', /docker|containerd|kubepods/],
+    ['/proc/sys/kernel/osrelease', /microsoft|wsl/i]
+  ] as const) {
+    try {
+      if (pattern.test(readFileSync(path, 'utf8'))) {
+        return true
+      }
+    } catch {}
+  }
+  return false
+}
+
+export async function readAntigravityCredentialFile(path: string): Promise<string | null> {
   try {
     if (process.platform === 'win32') {
-      const raw = readPrivateWindowsFile(path, 64 * 1024)
+      const raw = await readPrivateWindowsCredentialFile(path, 64 * 1024)
       return raw ? new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(raw) : null
     }
-    if (!existsSync(path)) {
-      return null
+    let metadata
+    try {
+      metadata = await lstat(path)
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+        return null
+      }
+      throw error
     }
-    const stat = lstatSync(path)
+    const stat = metadata
     if (!stat.isFile() || stat.size > 64 * 1024 || (stat.mode & 0o077) !== 0) {
       throw new Error('unsafe credential file')
     }
-    return readFileSync(path, 'utf8')
+    return await readFile(path, 'utf8')
   } catch {
     throw new Error('The Antigravity execution-host credential file could not be read safely.')
   }
@@ -41,33 +79,35 @@ export function createAntigravityFileCredentialBackend(
 ): AntigravityCredentialBackend {
   async function read() {
     try {
-      const contents = readAntigravityCredentialFile(path)
+      const contents = await readAntigravityCredentialFile(path)
       return contents === null ? null : parseCredential(contents)
     } catch {
       throw new Error('The Antigravity execution-host credential file could not be read safely.')
     }
   }
   return {
-    read,
+    read: () => inCredentialFileOrder(`${path}.mutation`, read),
     async write(contents, expected) {
-      parseCredential(contents)
-      if ((await read())?.contents !== (expected ?? undefined)) {
-        throw new Error(CONFLICT)
-      }
-      try {
-        mkdirSync(dirname(path), { recursive: true, mode: 0o700 })
-        writeCredentialFileAtomic(path, Buffer.from(contents, 'utf8'), undefined, true)
-      } catch (error) {
-        if (process.platform === 'win32') {
-          throw new Error(
-            'Antigravity could not update its credential file privately. Check the file permissions and try again.'
-          )
+      return inCredentialFileOrder(`${path}.mutation`, async () => {
+        parseCredential(contents)
+        if ((await read())?.contents !== (expected ?? undefined)) {
+          throw new Error(CONFLICT)
         }
-        throw error
-      }
-      if ((await read())?.contents !== contents) {
-        throw new Error(CONFLICT)
-      }
+        try {
+          await mkdir(dirname(path), { recursive: true, mode: 0o700 })
+          await writeCredentialFileAtomic(path, Buffer.from(contents, 'utf8'), undefined, true)
+        } catch (error) {
+          if (process.platform === 'win32') {
+            throw new Error(
+              'Antigravity could not update its credential file privately. Check the file permissions and try again.'
+            )
+          }
+          throw error
+        }
+        if ((await read())?.contents !== contents) {
+          throw new Error(CONFLICT)
+        }
+      })
     }
   }
 }

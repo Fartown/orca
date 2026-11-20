@@ -14,7 +14,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   SERVE_UPDATE_HANDOFF_PATH_ENV,
   getServeUpdateHandoffPath
-} from '../../shared/serve-update-handoff'
+} from '../../shared/remote-runtime/serve-supervisor/serve-update-handoff'
 
 const mocks = vi.hoisted(() => ({
   app: { getVersion: () => '1.0.0', quit: vi.fn() },
@@ -29,7 +29,7 @@ import {
   hasServeUpdateSupervisor,
   installServeSupervisorDisconnectQuit,
   requestServeUpdateHandoff
-} from '../serve-update-handoff'
+} from '../updater/serve-update-handoff'
 
 describe('serve update handoff profile identity', () => {
   const platform = Object.getOwnPropertyDescriptor(process, 'platform')!

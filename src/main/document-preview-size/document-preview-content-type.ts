@@ -1,5 +1,6 @@
 import { extname } from 'node:path'
-import { FONT_FILE_MIME_TYPES } from '../../shared/font-file-extensions'
+import { FONT_FILE_MIME_TYPES } from '../../shared/file-preview/font-file-extensions'
+import { MEDIA_FILE_MIME_TYPES } from '../../shared/file-preview/media-mime-types'
 
 const DOC_PREVIEW_CONTENT_TYPES: Record<string, string> = {
   '.html': 'text/html; charset=utf-8',
@@ -20,7 +21,8 @@ const DOC_PREVIEW_CONTENT_TYPES: Record<string, string> = {
   '.bmp': 'image/bmp',
   '.ico': 'image/x-icon',
   '.pdf': 'application/pdf',
-  ...FONT_FILE_MIME_TYPES
+  ...FONT_FILE_MIME_TYPES,
+  ...MEDIA_FILE_MIME_TYPES
 }
 
 export function docPreviewContentType(relativePath: string): string {

@@ -1,20 +1,21 @@
-import { parseExecutionHostId } from '../../../src/shared/execution-host'
+import { parseExecutionHostId } from '../../../src/shared/execution-host/execution-host'
 import {
   buildMobileNewTabAgentOptions,
   type MobileNewTabAgentOption,
   type MobileNewTabAgentSettings
-} from '../session/mobile-new-tab-agent-options'
+} from '../session/agent-launch/mobile-new-tab-agent-options'
 import {
   hostRefusesOtherRuntimeWorkspace,
-  loadMobileNewTabAgentOptions
-} from '../session/mobile-new-tab-agent-loader'
+  loadMobileAgentLaunchContext,
+  newTabAgentOptionsFrom
+} from '../session/agent-launch/mobile-new-tab-agent-loader'
 import {
   localAgentDetectionRead,
   remoteAgentDetectionRead
-} from '../tasks/mobile-workspace-source-operations'
-import { isMobileTuiAgent } from '../tasks/mobile-tui-agents'
-import { newTabSettingsRead } from '../transport/settings-read-operations'
-import type { RpcClient } from '../transport/rpc-client'
+} from '../new-workspace/creation/mobile-workspace-source-operations'
+import { isTuiAgent } from '../../../src/shared/agent-launch/catalog/tui-agent-config'
+import { newTabSettingsRead } from '../session/agent-launch/mobile-new-tab-settings-operations'
+import type { RpcClient } from '../transport/rpc/rpc-client-contract'
 
 function readAgentSettings(settings: unknown): MobileNewTabAgentSettings | null {
   if (!settings || typeof settings !== 'object') {
@@ -30,7 +31,7 @@ function readAgentSettings(settings: unknown): MobileNewTabAgentSettings | null 
 }
 
 function normalizeDefault(value: string): MobileNewTabAgentSettings['defaultTuiAgent'] {
-  return value === 'blank' ? 'blank' : isMobileTuiAgent(value) ? value : null
+  return value === 'blank' ? 'blank' : isTuiAgent(value) ? value : null
 }
 
 /**
@@ -47,12 +48,12 @@ export async function loadLocalTaskAgentOptions(args: {
   target: { kind: 'existing'; routeId: string } | { kind: 'create'; hostId: string }
 }): Promise<MobileNewTabAgentOption[]> {
   if (args.target.kind === 'existing') {
-    const inventory = await loadMobileNewTabAgentOptions({
+    const context = await loadMobileAgentLaunchContext({
       client: args.launchClient,
       worktreeId: args.target.routeId,
       hostRefusesOtherRuntime: hostRefusesOtherRuntimeWorkspace(args.hostCapabilities)
     })
-    return inventory.options
+    return newTabAgentOptionsFrom(context.settings, context.detectedAgents)
   }
   const host = parseExecutionHostId(args.target.hostId)
   const [settingsReply, detected] = await Promise.all([

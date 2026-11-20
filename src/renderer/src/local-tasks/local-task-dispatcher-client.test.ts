@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { LocalTaskProposal } from '../../../shared/local-tasks/local-task-dispatcher-types'
-import { toWebTerminalSurfaceTabId } from '../../../shared/terminal-surface-id'
+import { toWebTerminalSurfaceTabId } from '../../../shared/workspace-layout/terminal-surface-id'
 import type { LocalTaskEndpointKey } from './local-task-endpoints'
 
 const fixture = vi.hoisted(() => {

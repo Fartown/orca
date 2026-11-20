@@ -3,7 +3,7 @@ import type { NativeChatMessage } from '../native-chat/native-chat-types'
 import {
   prunePendingSends,
   type NativeChatPendingSend
-} from '../native-chat/transcript/native-chat-pending-sends'
+} from '../native-chat/transcript/pending-sends/native-chat-pending-sends'
 import { retirePagedOutPendingSends } from './retire-paged-out-pending-sends'
 
 function row(id: string, role: NativeChatMessage['role'], timestamp: number): NativeChatMessage {

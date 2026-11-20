@@ -1,4 +1,7 @@
-import { inspectProcessLiveness, readProcessCommandLine } from '../daemon/daemon-process-inspection'
+import {
+  inspectProcessLiveness,
+  readProcessCommandLine
+} from '../daemon/endpoint/identity/daemon-process-inspection'
 import { readWindowsProcessTable } from '../windows/windows-process-table'
 import type { GoalDriverVerdict } from '../../shared/goals/goal-control-contract'
 

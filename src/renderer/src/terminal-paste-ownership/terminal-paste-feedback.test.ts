@@ -4,21 +4,27 @@ import {
   createTerminalPasteFeedback
 } from './terminal-paste-feedback'
 import { formatTerminalPasteOwnershipFailure } from './terminal-paste-failure'
-import type { TerminalErrorsByPaneId } from '@/components/terminal-pane/terminal-error-accumulation'
-import { formatTerminalPasteExecutionError } from '@/components/terminal-pane/terminal-paste-errors'
+import type { TerminalErrorsByPaneId } from '@/components/terminal-pane/errors/terminal-error-accumulation'
+import { formatTerminalPasteExecutionError } from '@/components/terminal-pane/input/paste/terminal-paste-errors'
 
 vi.mock('@/i18n/i18n', () => ({ translate: (_key: string, fallback: string) => fallback }))
+
+const entry = (message: string) => ({ message, resourceLimit: false })
 
 describe('paste failure feedback', () => {
   it('clears only the recovered pane paste errors and preserves unrelated terminal errors', () => {
     const focus = formatTerminalPasteOwnershipFailure('focus-changed')
     const errors = {
-      1: [focus, 'Remote terminal was closed.', 'Image paste failed: clipboard rejected'],
-      2: [focus]
+      1: [
+        entry(focus),
+        entry('Remote terminal was closed.'),
+        entry('Image paste failed: clipboard rejected')
+      ],
+      2: [entry(focus)]
     }
     expect(clearRecoveredTerminalPasteErrors(errors, 1)).toEqual({
-      1: ['Remote terminal was closed.'],
-      2: [focus]
+      1: [entry('Remote terminal was closed.')],
+      2: [entry(focus)]
     })
   })
 
@@ -32,7 +38,7 @@ describe('paste failure feedback', () => {
   })
 
   it('retains object identity when there are no recovered errors', () => {
-    const errors = { 1: ['Unrelated terminal failure'] }
+    const errors = { 1: [entry('Unrelated terminal failure')] }
     expect(clearRecoveredTerminalPasteErrors(errors, 1)).toBe(errors)
   })
 
@@ -46,7 +52,7 @@ describe('paste failure feedback', () => {
     const message = formatTerminalPasteOwnershipFailure('focus-changed')
     newer.fail(message)
     older.succeed()
-    expect(errors).toEqual({ 1: [message] })
+    expect(errors).toEqual({ 1: [entry(message)] })
     begin(1).succeed()
     expect(errors).toEqual({})
   })
@@ -74,6 +80,6 @@ describe('paste failure feedback', () => {
     const message = formatTerminalPasteOwnershipFailure('target-disconnected')
     newer.fail(message)
     older.succeed()
-    expect(errors).toEqual({ 1: [message] })
+    expect(errors).toEqual({ 1: [entry(message)] })
   })
 })

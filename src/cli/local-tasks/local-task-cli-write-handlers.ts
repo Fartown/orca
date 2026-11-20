@@ -1,14 +1,18 @@
-import { LOCAL_EXECUTION_HOST_ID } from '../../shared/execution-host'
+import { LOCAL_EXECUTION_HOST_ID } from '../../shared/execution-host/execution-host'
 import { findLocalTaskSessionForIdentity } from '../../shared/local-tasks/local-task-session-match'
 import {
   LOCAL_TASK_DESCRIPTION_MAX,
   LOCAL_TASK_TITLE_MAX
 } from '../../shared/local-tasks/local-task-model'
-import type { CommandHandler } from '../dispatch'
-import { readCommandBody } from '../command-body-input'
-import { getOptionalStringFlag, getRepeatedStringFlag, getRequiredStringFlag } from '../flags'
-import { printResult } from '../format'
-import { RuntimeClientError } from '../runtime/types'
+import type { CommandHandler } from '../dispatch/dispatch'
+import { readCommandBody } from '../arguments/command-body-input'
+import {
+  getOptionalStringFlag,
+  getRepeatedStringFlag,
+  getRequiredStringFlag
+} from '../arguments/flags'
+import { printResult } from '../output/command-result-output'
+import { RuntimeClientError } from '../runtime/connection/types'
 import {
   createTask,
   describeTask,

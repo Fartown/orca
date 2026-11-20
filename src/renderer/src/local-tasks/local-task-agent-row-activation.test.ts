@@ -7,7 +7,7 @@ const fixture = vi.hoisted(() => ({
   openTaskPage: vi.fn()
 }))
 vi.mock('@/store', () => ({ useAppStore: { getState: () => ({}) } }))
-vi.mock('@/lib/worktree-runtime-owner', () => ({
+vi.mock('@/lib/workspace/ownership/worktree-runtime-owner', () => ({
   getKnownExecutionHostIdForWorktree: () => fixture.hostId
 }))
 vi.mock('./local-task-navigation', () => ({ openLocalTaskPage: fixture.openTaskPage }))

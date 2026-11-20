@@ -3,9 +3,10 @@ import { useStore } from 'zustand'
 import { Bot, ChevronRight, LoaderCircle, MessageSquare } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
-import { useNow } from '@/hooks/use-now'
+import { useNow } from '@/lib/window-activity/use-now'
 import { translate } from '@/i18n/i18n'
-import { AgentIcon, getAgentLabel } from '@/lib/agent-catalog'
+import { AgentIcon } from '@/components/agent/icons/AgentIcon'
+import { getAgentLabel } from '@/lib/agent-catalog/agent-catalog'
 import { useAppStore } from '@/store'
 import { followLocalTaskDispatcherLedger } from '@/local-tasks/local-task-dispatcher-ledger'
 import { useLocalTaskProposals } from '@/local-tasks/local-task-dispatcher-proposals'
@@ -44,7 +45,7 @@ function useDispatcherStatusLabel(paneKey: string | null, live: boolean): string
   const endpoint = useLocalTaskDispatcherEndpoint()
   const inContact = useLocalTaskHostInContact(endpoint)
   const state = useAppStore((app) =>
-    paneKey && live ? (app.agentStatusByPaneKey[paneKey]?.state ?? null) : null
+    paneKey && live ? (app.agentStatusByPaneKey.get(paneKey)?.state ?? null) : null
   )
   if (!inContact) {
     return translate('localTasks.dispatcher.hostUnavailable', 'Out of contact')

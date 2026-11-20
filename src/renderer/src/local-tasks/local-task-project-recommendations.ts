@@ -1,5 +1,5 @@
 import type { LocalTaskProject } from '../../../shared/local-tasks/local-task-types'
-import type { Project } from '../../../shared/project-types'
+import type { Project } from '../../../shared/project/project-types'
 import {
   SELF_LOCAL_TASK_ENDPOINT,
   localTaskEndpointForHost,

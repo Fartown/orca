@@ -1,4 +1,4 @@
-import { isRuntimePathAbsolute } from '../../shared/cross-platform-path'
+import { isRuntimePathAbsolute } from '../../shared/file-access/cross-platform-path'
 
 /**
  * What a paired client may ask this host to open by absolute path.

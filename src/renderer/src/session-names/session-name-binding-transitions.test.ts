@@ -1,13 +1,16 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { AiVaultSessionTitlesResult } from '../../../shared/ai-vault-session-title'
-import { collectAiVaultTitleRequests } from '../lib/ai-vault-tab-title-requests'
-import { startAiVaultTabTitleSync } from '../lib/ai-vault-tab-title-sync'
+import type { AiVaultSessionTitlesResult } from '../../../shared/ai-vault/contracts/ai-vault-session-title'
+import { collectAiVaultTitleRequests } from '../lib/agent-session/history/title-sync/ai-vault-tab-title-requests'
+import { startAiVaultTabTitleSync } from '../lib/agent-session/history/title-sync/ai-vault-tab-title-sync'
 import { fixture, nativeResult, LEAF, PANE, SIBLING } from './session-name-binding-test-fixture'
 import { createSessionNameStore } from './session-name-store'
-import { getDefaultSettings } from '../../../shared/constants'
+import { acceptedAgentStatuses } from '../store/slices/agent-status/status-ownership/accepted-agent-statuses'
+import { getDefaultSettings } from '../../../shared/orca-profiles/constants'
 import { canonicalSessionTitleKey } from '../lib/canonical-session-titles'
 
-vi.mock('@/runtime/sync-runtime-graph', () => ({ scheduleRuntimeGraphSync: vi.fn() }))
+vi.mock('@/runtime/sync-runtime-graph/graph-sync-scheduler', () => ({
+  scheduleRuntimeGraphSync: vi.fn()
+}))
 const stops: (() => void)[] = []
 afterEach(() => stops.splice(0).forEach((stop) => stop()))
 
@@ -130,13 +133,16 @@ describe('session name binding replacement boundaries', () => {
       })
     )
     store.setState((s) => ({
-      agentStatusByPaneKey: {
-        [PANE]: {
-          ...s.agentStatusByPaneKey[PANE],
-          agentType: 'gemini',
-          providerSession: { key: 'session_id', id: 'G' }
-        }
-      }
+      agentStatusByPaneKey: acceptedAgentStatuses([
+        [
+          PANE,
+          {
+            ...s.agentStatusByPaneKey.get(PANE)!,
+            agentType: 'gemini',
+            providerSession: { key: 'session_id', id: 'G' }
+          }
+        ]
+      ])
     }))
     expect(store.slot()?.title).not.toBe('Name of Codex A')
   })
@@ -192,7 +198,7 @@ describe('session name binding replacement boundaries', () => {
         resolveSessionTitles: async () => ({ titles: [] })
       })
     )
-    store.setState({ agentStatusByPaneKey: {} })
+    store.setState({ agentStatusByPaneKey: acceptedAgentStatuses() })
     expect(store.slot()?.title).toBe('Known name')
   })
 
@@ -206,7 +212,7 @@ describe('session name binding replacement boundaries', () => {
         resolveSessionTitles: async () => ({ titles: [] })
       })
     )
-    store.setState({ agentStatusByPaneKey: {} })
+    store.setState({ agentStatusByPaneKey: acceptedAgentStatuses() })
     expect(store.slot()?.title).toBe('Known name')
     store.setState((s) => ({
       terminalLayoutsByTabId: {

@@ -1,8 +1,10 @@
 import { describe, expect, it, vi } from 'vitest'
-import { runWorktreeAgentActivationGate } from '../lib/worktree-agent-activation-gate'
-import { listed, testDeps, WORKTREE_ID } from '../lib/worktree-agent-activation-gate.test-fixture'
+import { runWorktreeAgentActivationGate } from '../lib/workspace/activation/worktree-agent-activation-gate'
+import { listed, testDeps, WORKTREE_ID } from './activation-gate.test-fixture'
 
-vi.mock('../../../shared/layout-owner-switch', () => ({ ORCA_LAYOUT_OWNER_IS_MAIN: false }))
+vi.mock('../../../shared/workspace-layout/layout-owner-switch', () => ({
+  ORCA_LAYOUT_OWNER_IS_MAIN: false
+}))
 
 describe('activation with unresolved live terminals', () => {
   it.each([

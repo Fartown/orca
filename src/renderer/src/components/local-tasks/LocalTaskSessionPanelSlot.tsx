@@ -1,14 +1,14 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { translate } from '@/i18n/i18n'
-import { cn } from '@/lib/utils'
+import { cn } from '@/lib/class-names'
 import { useAppStore } from '@/store'
 import { SYNC_FIT_PANES_EVENT } from '@/constants/terminal'
-import { requestBackgroundTerminalWorktreeMount } from '@/components/terminal/background-terminal-worktree-mount'
+import { requestBackgroundTerminalWorktreeMount } from '@/components/terminal/workspace-mounting/background-terminal-worktree-mount'
 import {
   setActivityTerminalPortals,
   type ActivityTerminalPortalTarget
-} from '@/components/activity/activity-terminal-portal'
-import { useActivityTerminalPortalStatus } from '@/components/activity/activity-terminal-portal-status'
+} from '@/components/activity/terminal-portal/activity-terminal-portal'
+import { useActivityTerminalPortalStatus } from '@/components/activity/terminal-portal/activity-terminal-portal-status'
 import NativeChatView from '@/components/native-chat/NativeChatView'
 import {
   sameStructuredReadTarget,
@@ -17,8 +17,8 @@ import {
 import {
   structuredAgentSessionOwnerForTab,
   structuredAgentSessionTargetForHost
-} from '@/runtime/structured-agent-session-owner'
-import { parsePaneKey } from '../../../../shared/stable-pane-id'
+} from '@/runtime/native-chat/session-ownership/structured-agent-session-owner'
+import { parsePaneKey } from '../../../../shared/workspace-layout/stable-pane-id'
 import type { LocalTaskSessionLink } from '../../../../shared/local-tasks/local-task-link-types'
 import { useLocalTasksDomain } from '@/local-tasks/local-tasks-domain-store'
 import {

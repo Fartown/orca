@@ -1,4 +1,4 @@
-import type { AiVaultTitleRequest } from '../lib/ai-vault-tab-title-requests'
+import type { AiVaultTitleRequest } from '../lib/agent-session/history/title-sync/ai-vault-tab-title-requests'
 
 export type BoundSessionNameRequest = AiVaultTitleRequest & { bindingRevision: number }
 

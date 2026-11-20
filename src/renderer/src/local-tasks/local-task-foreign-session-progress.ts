@@ -1,9 +1,9 @@
 import type { AppState } from '@/store/types'
-import { selectRuntimeAwareSshStatus } from '@/store/slices/runtime-environment-ssh-selectors'
-import { parseExecutionHostId } from '../../../shared/execution-host'
-import type { AgentStatusEntry } from '../../../shared/agent-status-types'
-import { agentStatusEvidenceObservedAt } from '../../../shared/agent-status-freshness'
-import { parsePaneKey } from '../../../shared/stable-pane-id'
+import { selectRuntimeAwareSshStatus } from '@/store/slices/ssh/runtime-environment-ssh-selectors'
+import { parseExecutionHostId } from '../../../shared/execution-host/execution-host'
+import type { AgentStatusEntry } from '../../../shared/agent-status/contracts/agent-status-types'
+import { agentStatusEvidenceObservedAt } from '../../../shared/agent-status/contracts/agent-status-freshness'
+import { parsePaneKey } from '../../../shared/workspace-layout/stable-pane-id'
 import { worktreeIdsEqual } from '../../../shared/worktree/id'
 import {
   localTaskRowState,
@@ -60,7 +60,7 @@ function sourceStatusRow(
   if (!paneKey || !pane || !route.authority || (link.tabId !== null && link.tabId !== pane.tabId)) {
     return null
   }
-  const row = state.agentStatusByPaneKey[paneKey]
+  const row = state.agentStatusByPaneKey.get(paneKey)
   if (
     !row ||
     row.paneKey !== link.paneKey ||

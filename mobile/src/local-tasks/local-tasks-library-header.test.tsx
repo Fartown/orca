@@ -21,7 +21,7 @@ vi.mock('lucide-react-native', () => ({
   Server: 'Server',
   Settings: 'Settings'
 }))
-vi.mock('../components/ActionSheetModal', () => ({ ActionSheetModal: 'ActionSheetModal' }))
+vi.mock('../components/sheets/ActionSheetModal', () => ({ ActionSheetModal: 'ActionSheetModal' }))
 
 let renderer: ReactTestRenderer | null = null
 afterEach(() => {

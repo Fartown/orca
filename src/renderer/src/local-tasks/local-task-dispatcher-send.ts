@@ -1,8 +1,8 @@
-import type { sendMessageToAgent } from '@/lib/agent-message-send'
-import { getExecutionHostIdForWorktree } from '@/lib/worktree-runtime-owner'
+import type { sendMessageToAgent } from '@/lib/agent-session/messaging/agent-message-send'
+import { getExecutionHostIdForWorktree } from '@/lib/workspace/ownership/worktree-runtime-owner'
 import { useAppStore } from '@/store'
-import { FLOATING_TERMINAL_WORKTREE_ID } from '../../../shared/constants'
-import { parsePaneKey } from '../../../shared/stable-pane-id'
+import { FLOATING_TERMINAL_WORKTREE_ID } from '../../../shared/workspace/identity/floating-workspace-id'
+import { parsePaneKey } from '../../../shared/workspace-layout/stable-pane-id'
 import { knownDispatcherWorktreeId, liveDispatcherPaneKey } from './local-task-dispatcher-pane'
 import { dispatcherNeedsStartupTerminal } from './local-task-dispatcher-presentation'
 import {

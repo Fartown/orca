@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { ProjectSectionCatalogSchema } from '../../../src/shared/project-section-catalog-schema'
+import { ProjectSectionCatalogSchema } from '../../../src/shared/sidebar-list/catalog/project-section-catalog-schema'
 import { localTaskEndpointFor } from './local-task-endpoint'
 import { localTaskSetupsFor, pickLocalTaskStartSetup } from './local-task-project-setups'
 

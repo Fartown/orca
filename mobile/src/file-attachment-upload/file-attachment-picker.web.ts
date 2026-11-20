@@ -5,17 +5,17 @@ import {
   BRIDGE_MEDIA_READ_MAX_BYTES,
   type BridgeMediaChunk,
   type BridgeMediaItem
-} from '../mobile-web-shell/bridge/bridge-media-verbs'
-import type { BridgeRpcClient } from '../mobile-web-shell/bridge/bridge-rpc-client'
-import { MEDIA_STAGED_MAX_BYTES } from '../mobile-web-shell/media-handle-registry'
+} from '../mobile-web-shell/bridge/native-capabilities/bridge-media-verbs'
+import type { BridgeRpcClient } from '../mobile-web-shell/bridge/client-state/bridge-rpc-client-contract'
+import { CLIPBOARD_IMAGE_MAX_SOURCE_BYTES as MEDIA_STAGED_MAX_BYTES } from '../../../src/shared/clipboard/clipboard-image'
 import {
   NATIVE_VERB_REASONS,
   NativeVerbError,
   useNativeVerbs,
   type NativeVerbReason,
   type NativeVerbs
-} from '../mobile-web-shell/bridge/use-native-verbs'
-import { usePageBridgeClient } from '../transport/client-context.web'
+} from '../mobile-web-shell/bridge/native-capabilities/use-native-verbs'
+import { usePageBridgeClient } from '../transport/connection/client-context.web'
 import { base64DecodedByteLength } from './attachment-base64-length'
 import { filePickResultSchema, type BridgeFileItem } from './bridge-file-verbs'
 import {

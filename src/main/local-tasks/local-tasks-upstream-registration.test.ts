@@ -11,6 +11,7 @@ import {
 import { OrcaRuntimeService } from '../runtime/orca-runtime'
 import { RpcDispatcher } from '../runtime/rpc/dispatcher'
 import { LOCAL_TASK_METHODS } from '../runtime/rpc/methods/local-tasks'
+import { ALL_RPC_METHODS } from '../runtime/rpc/methods/rpc-method-registry'
 import { startLocalTasksHost } from './local-tasks-host-lifecycle'
 
 // These reach each registration through what the app itself builds, not through the upstream file
@@ -49,7 +50,10 @@ describe('local tasks stay registered where the app reads them (#108)', () => {
   })
 
   it('the default dispatcher knows every localTasks method', async () => {
-    const dispatcher = new RpcDispatcher({ runtime: new OrcaRuntimeService() })
+    const dispatcher = new RpcDispatcher({
+      runtime: new OrcaRuntimeService(),
+      methods: ALL_RPC_METHODS
+    })
     const unknown = await failureCode(dispatcher, 'localTasks.noSuchMethod')
     expect(unknown).not.toBeNull()
     for (const method of LOCAL_TASK_METHODS) {

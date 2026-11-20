@@ -18,7 +18,7 @@ import {
   revealDispatchedSession
 } from '@/local-tasks/local-task-dispatch-record'
 import { offerLocalTaskDispatchUndo } from '@/local-tasks/local-task-dispatch-undo'
-import type { TuiAgent } from '../../../../shared/tui-agent'
+import type { TuiAgent } from '../../../../shared/agent-launch/catalog/tui-agent'
 import type { LocalTaskSessionLink } from '../../../../shared/local-tasks/local-task-link-types'
 
 function startedSession(receipt: Receipt): LocalTaskSessionLink | null {

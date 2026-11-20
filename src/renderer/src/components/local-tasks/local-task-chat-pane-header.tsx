@@ -1,4 +1,4 @@
-import { nativeChatPaneHeader as nativeChatPaneTitleBar } from '@/components/native-chat/NativeChatPaneHeader'
+import { nativeChatPaneHeader as nativeChatPaneTitleBar } from '@/components/native-chat/pane/actions/NativeChatPaneHeader'
 import { structuredAgentSessionPaneKey } from '../../../../shared/agent-session/view/structured-agent-session-projection'
 import { LocalTaskSessionChip } from './LocalTaskSessionChip'
 

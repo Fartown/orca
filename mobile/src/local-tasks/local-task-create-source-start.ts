@@ -6,15 +6,15 @@
  * every host case tests in node.
  */
 
-import { getRepoExecutionHostId } from '../../../src/shared/execution-host'
+import { getRepoExecutionHostId } from '../../../src/shared/execution-host/execution-host'
 import { buildLocalTaskAgentPrompt } from '../../../src/shared/local-tasks/local-task-agent-prompt'
 import { suggestLocalTaskWorkspaceName } from '../../../src/shared/local-tasks/local-task-model'
 import { localTaskAncestors } from '../../../src/shared/local-tasks/local-task-tree'
 import type { LocalTask } from '../../../src/shared/local-tasks/local-task-types'
-import type { TuiAgent } from '../../../src/shared/tui-agent'
-import type { WorkspaceCreateSetupDecision } from '../tasks/workspace-create-params'
-import type { WorktreeCreateResult } from '../tasks/worktree-create-retry'
-import type { RpcClient } from '../transport/rpc-client'
+import type { TuiAgent } from '../../../src/shared/agent-launch/catalog/tui-agent'
+import type { SetupDecision as WorkspaceCreateSetupDecision } from '../../../src/shared/worktree/create-types'
+import type { WorktreeCreateResult } from '../new-workspace/creation/worktree-create-retry'
+import type { RpcClient } from '../transport/rpc/rpc-client-contract'
 import { createLocalTasksApi } from './local-tasks-api'
 import type { LocalTasksCopy } from './local-tasks-copy'
 import { startLocalTaskInNewWorkspace, type LocalTaskLaunchIds } from './local-task-agent-launch'

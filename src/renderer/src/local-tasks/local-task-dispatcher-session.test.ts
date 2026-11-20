@@ -1,7 +1,8 @@
 // @vitest-environment happy-dom
 import { beforeEach, expect, it, vi } from 'vitest'
-import type { AgentStatusEntry } from '../../../shared/agent-status-types'
-import type { Tab } from '../../../shared/tab-types'
+import { acceptedAgentStatuses } from '@/store/slices/agent-status/status-ownership/accepted-agent-statuses'
+import type { AgentStatusEntry } from '../../../shared/agent-status/contracts/agent-status-types'
+import type { Tab } from '../../../shared/workspace-layout/tab-groups/tab-types'
 const fixture = vi.hoisted(() => ({
   launch: vi.fn(),
   register: vi.fn(),
@@ -14,18 +15,24 @@ const fixture = vi.hoisted(() => ({
   panel: vi.fn()
 }))
 vi.mock('@/store', async () => {
-  const { createTestStore } = await import('@/store/slices/store-test-helpers')
+  const { createTestStore } = await import('@/store/testing/app-store-test-fixture')
   return { useAppStore: createTestStore() }
 })
-vi.mock('@/lib/active-agent-note-target', () => ({ findActiveRuntimeTerminal: fixture.find }))
-vi.mock('@/lib/terminal-tab-owner-activation', () => ({
+vi.mock('@/lib/agent-session/messaging/terminal/active-agent-note-target', () => ({
+  findActiveRuntimeTerminal: fixture.find
+}))
+vi.mock('@/lib/workspace/tabs/terminal-tab-owner-activation', () => ({
   activateTerminalTabOnOwner: fixture.activateOwner
 }))
-vi.mock('@/lib/reveal-terminal-pane', () => ({ revealTerminalPane: fixture.reveal }))
-vi.mock('@/runtime/runtime-rpc-client', () => ({
+vi.mock('@/lib/workspace/activation/reveal-terminal-pane', () => ({
+  revealTerminalPane: fixture.reveal
+}))
+vi.mock('@/runtime/rpc/compatibility/runtime-capability-proof', () => ({
   runtimeEnvironmentSupportsCapability: async () => true
 }))
-vi.mock('@/lib/launch-agent-in-new-tab', () => ({ launchAgentInNewTab: fixture.launch }))
+vi.mock('@/lib/agent-session/launch/new-tab/launch-agent-in-new-tab', () => ({
+  launchAgentInNewTabWithOutcome: fixture.launch
+}))
 vi.mock('./local-task-dispatcher-client', () => ({
   localTaskDispatcherClientFor: () => ({
     register: fixture.register,
@@ -34,7 +41,8 @@ vi.mock('./local-task-dispatcher-client', () => ({
   })
 }))
 import { useAppStore } from '@/store'
-import { makeWorktree, TEST_REPO } from '@/store/slices/worktrees-slice-test-fixtures'
+import { makeWorktree } from '@/store/slices/worktrees/worktree.test-fixture'
+import { TEST_REPO } from '@/store/repos/repo.test-fixture'
 import { localTasksDomainStore } from './local-tasks-domain-store'
 import {
   localTaskDispatcherStore,
@@ -98,7 +106,7 @@ beforeEach(() => {
 
 it('reveals a pre-hook trust wait in its existing terminal instead of an empty Chat, without launching another agent', async () => {
   const dispose = bindLocalTaskDispatcherPresentation()
-  useAppStore.setState({ agentStatusByPaneKey: { [PANE]: status() } })
+  useAppStore.setState({ agentStatusByPaneKey: acceptedAgentStatuses([[PANE, status()]]) })
   expect(fixture.view).toHaveBeenCalledWith(tab.id, 'terminal')
   await expect(openLocalTaskDispatcher('claude')).resolves.toBe(true)
   expect(fixture.launch).not.toHaveBeenCalled()
@@ -109,31 +117,39 @@ it('reveals a pre-hook trust wait in its existing terminal instead of an empty C
 it('keeps a provider-backed approval in Chat and does not keep forcing a user-selected view', () => {
   const dispose = bindLocalTaskDispatcherPresentation()
   useAppStore.setState({
-    agentStatusByPaneKey: {
-      [PANE]: status({
-        providerSession: { key: 'session_id', id: 'claude-provider' },
-        interactivePrompt: 'Approve the command?'
-      })
-    }
+    agentStatusByPaneKey: acceptedAgentStatuses([
+      [
+        PANE,
+        status({
+          providerSession: { key: 'session_id', id: 'claude-provider' },
+          interactivePrompt: 'Approve the command?'
+        })
+      ]
+    ])
   })
   expect(fixture.view).not.toHaveBeenCalled()
-  useAppStore.setState({ agentStatusByPaneKey: { [PANE]: status() } })
+  useAppStore.setState({ agentStatusByPaneKey: acceptedAgentStatuses([[PANE, status()]]) })
   expect(fixture.view).toHaveBeenCalledTimes(1)
-  useAppStore.setState({ agentStatusByPaneKey: { [PANE]: status({ updatedAt: 2 }) } })
+  useAppStore.setState({
+    agentStatusByPaneKey: acceptedAgentStatuses([[PANE, status({ updatedAt: 2 })]])
+  })
   expect(fixture.view).toHaveBeenCalledTimes(1)
   dispose()
 })
 
 it('refuses sends into startup prompts and fences an accepted paste before Enter if the source changes', () => {
-  useAppStore.setState({ agentStatusByPaneKey: { [PANE]: status() } })
+  useAppStore.setState({ agentStatusByPaneKey: acceptedAgentStatuses([[PANE, status()]]) })
   expect(getLocalTaskDispatcherSendArgs(PANE, 'continue')).toBeNull()
   useAppStore.setState({
-    agentStatusByPaneKey: {
-      [PANE]: status({
-        state: 'done',
-        providerSession: { key: 'session_id', id: 'claude-provider' }
-      })
-    }
+    agentStatusByPaneKey: acceptedAgentStatuses([
+      [
+        PANE,
+        status({
+          state: 'done',
+          providerSession: { key: 'session_id', id: 'claude-provider' }
+        })
+      ]
+    ])
   })
   const args = getLocalTaskDispatcherSendArgs(PANE, 'continue')
   expect(args?.worktreeId).toBe(WORKTREE)
@@ -151,7 +167,7 @@ it('does not launch locally when the selected remote source is out of contact', 
 
 it('handles a restored trust pane when its remembered dispatcher identity arrives after agent status', () => {
   localTaskDispatcherStore.setState({ paneKey: null })
-  useAppStore.setState({ agentStatusByPaneKey: { [PANE]: status() } })
+  useAppStore.setState({ agentStatusByPaneKey: acceptedAgentStatuses([[PANE, status()]]) })
   const dispose = bindLocalTaskDispatcherPresentation()
   expect(fixture.view).not.toHaveBeenCalled()
   localTaskDispatcherStore.setState({ paneKey: PANE })
@@ -188,9 +204,9 @@ it('requires the selected remote catalog and a unique terminal owner before send
     worktreesByRepo: {
       repo1: [makeWorktree({ id: worktreeId, repoId: 'repo1', hostId: 'runtime:mini' })]
     },
-    agentStatusByPaneKey: {
-      [PANE]: status({ state: 'done', providerSession: { key: 'session_id', id: 'mini-provider' } })
-    }
+    agentStatusByPaneKey: acceptedAgentStatuses([
+      [PANE, status({ state: 'done', providerSession: { key: 'session_id', id: 'mini-provider' } })]
+    ])
   })
   const send = getLocalTaskDispatcherSendArgs(PANE, 'continue on mini')
   expect(send?.worktreeId).toBe(worktreeId)
@@ -212,7 +228,10 @@ it('requires the selected remote catalog and a unique terminal owner before send
 })
 
 it('waits for a late unified tab before marking a restored startup wait handled', () => {
-  useAppStore.setState({ unifiedTabsByWorktree: {}, agentStatusByPaneKey: { [PANE]: status() } })
+  useAppStore.setState({
+    unifiedTabsByWorktree: {},
+    agentStatusByPaneKey: acceptedAgentStatuses([[PANE, status()]])
+  })
   const dispose = bindLocalTaskDispatcherPresentation()
   expect(fixture.view).not.toHaveBeenCalled()
   useAppStore.setState({ unifiedTabsByWorktree: { [WORKTREE]: [tab] } })

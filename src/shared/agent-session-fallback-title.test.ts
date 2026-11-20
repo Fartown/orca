@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { mintAgentSessionFallbackTitle } from './agent-session-fallback-title'
-import { AI_VAULT_AGENTS, AI_VAULT_AGENT_LABELS } from './ai-vault-types'
-import type { TuiAgent } from './tui-agent'
-import { TUI_AGENT_DISPLAY_NAMES } from './tui-agent-display-names'
+import { AI_VAULT_AGENTS, AI_VAULT_AGENT_LABELS } from './ai-vault/contracts/ai-vault-types'
+import type { TuiAgent } from './agent-launch/catalog/tui-agent'
+import { TUI_AGENT_DISPLAY_NAMES } from './agent-launch/catalog/tui-agent-display-names'
 
 describe('agent session fallback title', () => {
   it('mints the scanner fallback string byte-for-byte for every AI Vault agent', () => {

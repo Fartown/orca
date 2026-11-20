@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { isCodexRecapTaskText } from './codex-recap-task-text'
 import { isEligibleSessionNamePrompt } from './session-name-candidate-quality'
-import { deriveGeneratedTabTitle } from '../agent-tab-title'
+import { deriveGeneratedTabTitle } from '../agent-status/presentation/agent-tab-title'
 
 const RECAP_PROMPT =
   'Write a brief catch-up for a user returning to this Codex task. In at most 40 words and one or two plain-text sentences, explain the objective, what was completed or learned, and the next step.'

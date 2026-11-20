@@ -1,5 +1,5 @@
 import type { RpcEnvelopeMeta, RpcFailure } from '../runtime/rpc/core'
-import { errorResponse, mapRuntimeError } from '../runtime/rpc/errors'
+import { errorResponse, mapRuntimeError } from '../runtime/rpc/responses/rpc-response'
 import { ArtifactShareError } from '../../shared/self-hosted-artifacts/artifact-share-errors'
 
 export const ARTIFACT_SHARE_RPC_METHOD_PREFIX = 'artifactShare.'

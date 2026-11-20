@@ -1,8 +1,9 @@
 import { beforeEach, describe, expect, it } from 'vitest'
+import { acceptedAgentStatuses } from '@/store/slices/agent-status/status-ownership/accepted-agent-statuses'
 import { useAppStore } from '@/store'
-import type { AgentStatusEntry } from '../../../shared/agent-status-types'
-import { deriveGeneratedTabTitle } from '../../../shared/agent-tab-title'
-import { getDefaultSettings } from '../../../shared/constants'
+import type { AgentStatusEntry } from '../../../shared/agent-status/contracts/agent-status-types'
+import { deriveGeneratedTabTitle } from '../../../shared/agent-status/presentation/agent-tab-title'
+import { getDefaultSettings } from '../../../shared/orca-profiles/constants'
 import type { LocalTaskSessionLink } from '../../../shared/local-tasks/local-task-link-types'
 import { selectLocalTaskSessionTabLabel } from './local-task-session-tab-label'
 
@@ -38,7 +39,7 @@ function status(overrides: Partial<AgentStatusEntry>): AgentStatusEntry {
 
 function label(entry: AgentStatusEntry, generatedTitles: boolean): string | null {
   useAppStore.setState({
-    agentStatusByPaneKey: { [PANE]: entry },
+    agentStatusByPaneKey: acceptedAgentStatuses([[PANE, entry]]),
     settings: { ...getDefaultSettings('/home/test'), tabAutoGenerateTitle: generatedTitles }
   })
   return selectLocalTaskSessionTabLabel(useAppStore.getState(), link)

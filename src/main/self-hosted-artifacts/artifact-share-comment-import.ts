@@ -1,9 +1,9 @@
 import { createHash } from 'node:crypto'
 import { mkdirSync, watch, type FSWatcher } from 'node:fs'
 import { join } from 'node:path'
-import type { DiffComment } from '../../shared/diff-comment-types'
-import { relativePathInsideRoot } from '../../shared/cross-platform-path'
-import { parseExecutionHostId } from '../../shared/execution-host'
+import type { DiffComment } from '../../shared/file-review/diff-comment-types'
+import { relativePathInsideRoot } from '../../shared/file-access/cross-platform-path'
+import { parseExecutionHostId } from '../../shared/execution-host/execution-host'
 import type { ArtifactShareComment } from '../../shared/self-hosted-artifacts/artifact-share-comments-contract'
 import {
   listArtifactShareCommentFiles,

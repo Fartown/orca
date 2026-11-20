@@ -1,4 +1,4 @@
-import type { MarkdownRichModeUnsupportedReason } from '../editor/markdown-rich-mode'
+import type { MarkdownRichModeUnsupportedReason } from '../editor/markdown/render-mode/markdown-rich-mode'
 
 /**
  * The code-mode gates a user may knowingly lift. Each one is a round-trip

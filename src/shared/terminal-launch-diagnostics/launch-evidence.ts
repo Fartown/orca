@@ -1,6 +1,9 @@
-import { sha256 } from '../sha256'
-import { parsePaneKey } from '../stable-pane-id'
-import { toHostSessionTabId, HOST_TERMINAL_SURFACE_SEPARATOR } from '../terminal-surface-id'
+import { sha256 } from '../hashing/sha256'
+import { parsePaneKey } from '../workspace-layout/stable-pane-id'
+import {
+  toHostSessionTabId,
+  HOST_TERMINAL_SURFACE_SEPARATOR
+} from '../workspace-layout/terminal-surface-id'
 
 export type LaunchEvidence = Record<string, string | number | boolean | null>
 
@@ -154,8 +157,13 @@ export function launchCandidateEvidence(input: unknown, state: unknown): LaunchE
   if (!ref || statuses === null || typeof statuses !== 'object') {
     return evidence
   }
+  // The renderer store keeps statuses in a keyed class whose own fields are not rows.
+  const entries =
+    'values' in statuses && typeof statuses.values === 'function'
+      ? Array.from(statuses.values() as Iterable<unknown>)
+      : Object.values(statuses)
   let count = 0
-  for (const entry of Object.values(statuses)) {
+  for (const entry of entries) {
     if (
       providerReference(launchField(entry, 'agentType'), launchField(entry, 'providerSession')) !==
       ref

@@ -1,30 +1,32 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { FakeSession } from '../transport/mobile-endpoint-supervisor-test-fakes'
+import { FakeSession } from '../transport/connection/mobile-endpoint-supervisor-test-fakes'
 import { createLocalTasksApi } from './local-tasks-api'
 import { createLocalTaskOperationIds } from './local-task-operation-ids'
 import { startLocalTaskInNewWorkspace } from './local-task-agent-launch'
-import { createWorktreeWithNameRetry } from '../tasks/worktree-create-retry'
-import { readNewWorktreeRuntimeCapabilities } from '../tasks/worktree-create-capability'
+import { createWorktreeWithNameRetry } from '../new-workspace/creation/worktree-create-retry'
+import { readNewWorktreeRuntimeCapabilities } from '../new-workspace/creation/worktree-create-capability'
 import {
   AGENT_LAUNCH_REPLAY_REQUIRED_RUNTIME_CAPABILITY,
   AGENT_LAUNCH_RUNTIME_CAPABILITY
-} from '../../../src/shared/agent-launch-runtime-capability'
+} from '../../../src/shared/agent-launch/contracts/agent-launch-runtime-capability'
 import { localTasksCopy } from './local-tasks-copy'
 import { localTaskLaunchMessage } from './local-task-launch-message'
 
 const HOST_PANE = 'tab-1:6f1c2b0e-3d4a-4b5c-8d9e-0a1b2c3d4e5f'
 
-vi.mock('../tasks/worktree-create-retry', () => ({ createWorktreeWithNameRetry: vi.fn() }))
-vi.mock('../tasks/worktree-create-capability', () => ({
+vi.mock('../new-workspace/creation/worktree-create-retry', () => ({
+  createWorktreeWithNameRetry: vi.fn()
+}))
+vi.mock('../new-workspace/creation/worktree-create-capability', () => ({
   readNewWorktreeRuntimeCapabilities: vi.fn()
 }))
-vi.mock('../tasks/replay-on-ambiguous-delivery', () => ({
+vi.mock('../new-workspace/creation/replay-on-ambiguous-delivery', () => ({
   sendReplayingAmbiguousDelivery: vi.fn(async () => ({
     response: { id: 'launch', ok: true, result: {} },
     replayed: false
   }))
 }))
-vi.mock('../tasks/mobile-workspace-create-operations', () => ({
+vi.mock('../new-workspace/creation/mobile-workspace-create-operations', () => ({
   agentLaunchReplayRun: {
     request: vi.fn(),
     interpret: vi.fn(() => ({
@@ -243,7 +245,8 @@ describe('Start with an agent', () => {
   })
 
   it('says so when the agent started but the task text was not delivered', async () => {
-    const { agentLaunchReplayRun } = await import('../tasks/mobile-workspace-create-operations')
+    const { agentLaunchReplayRun } =
+      await import('../new-workspace/creation/mobile-workspace-create-operations')
     vi.mocked(agentLaunchReplayRun.interpret).mockReturnValueOnce({
       worktreeId: 'repo::/shop-12',
       outcome: { kind: 'terminal', handle: 'term_1', paneKey: HOST_PANE },

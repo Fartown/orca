@@ -22,7 +22,7 @@ vi.mock('./use-lan-artifact-hosts', () => ({
     stopWorkspace: vi.fn()
   })
 }))
-vi.mock('@/components/confirmation-dialog-context', () => ({
+vi.mock('@/components/dismiss/confirmation/confirmation-dialog-context', () => ({
   useConfirmationDialog: () => vi.fn()
 }))
 vi.mock('./LanArtifactHostSection', () => ({

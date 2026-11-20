@@ -1,12 +1,14 @@
 import { describe, expect, it, vi } from 'vitest'
 import { OrcaRuntimeService } from './orca-runtime'
-import { getDefaultWorkspaceSession } from '../../shared/constants'
+import { getDefaultWorkspaceSession } from '../../shared/orca-profiles/constants'
 import type {
   RuntimeMobileSessionBrowserTab,
-  RuntimeMobileSessionTabGroup,
-  RuntimeMobileSessionTabsSnapshot,
   RuntimeMobileSessionTerminalTab
-} from '../../shared/runtime-types'
+} from '../../shared/remote-runtime/session-graph/runtime-mobile-session-tab-contracts'
+import type {
+  RuntimeMobileSessionTabGroup,
+  RuntimeMobileSessionTabsSnapshot
+} from '../../shared/remote-runtime/session-graph/runtime-session-contracts'
 
 /**
  * Sibling headless writers are not publisher handovers either.

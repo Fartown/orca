@@ -1,5 +1,5 @@
 import { useAppStore } from '@/store'
-import { normalizeExecutionHostId } from '../../../shared/execution-host'
+import { normalizeExecutionHostId } from '../../../shared/execution-host/execution-host'
 
 /** `modalData` flag: Orca's workspace details opens on its Local tasks tab. */
 export const LOCAL_TASK_DETAILS_TAB_KEY = 'localTaskTab'

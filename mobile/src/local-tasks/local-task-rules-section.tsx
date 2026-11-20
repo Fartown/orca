@@ -4,8 +4,8 @@ import type {
   LocalTaskProject,
   LocalTaskProjectRules
 } from '../../../src/shared/local-tasks/local-task-types'
-import { MobileSwitch } from '../components/MobileSwitch'
-import { PickerModal } from '../components/PickerModal'
+import { MobileSwitch } from '../components/controls/MobileSwitch'
+import { PickerModal } from '../components/sheets/PickerModal'
 import { spacing } from '../theme/mobile-theme'
 import type { LocalTasksApi } from './local-tasks-api'
 import { localTasksCopy } from './local-tasks-copy'

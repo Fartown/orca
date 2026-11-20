@@ -1,4 +1,4 @@
-import type { TuiAgent } from '../../../shared/tui-agent'
+import type { TuiAgent } from '../../../shared/agent-launch/catalog/tui-agent'
 import { translate } from '@/i18n/i18n'
 import type { LocalTaskProject } from '../../../shared/local-tasks/local-task-types'
 import { useAppStore } from '@/store'

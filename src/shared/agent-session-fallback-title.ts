@@ -1,6 +1,6 @@
-import { AI_VAULT_AGENT_LABELS, type AiVaultAgent } from './ai-vault-types'
-import type { TuiAgent } from './tui-agent'
-import { TUI_AGENT_DISPLAY_NAMES } from './tui-agent-display-names'
+import { AI_VAULT_AGENT_LABELS, type AiVaultAgent } from './ai-vault/contracts/ai-vault-types'
+import type { TuiAgent } from './agent-launch/catalog/tui-agent'
+import { TUI_AGENT_DISPLAY_NAMES } from './agent-launch/catalog/tui-agent-display-names'
 
 /**
  * The canonical fallback name for a provider session, e.g. `Claude a1b2c3d4`.

@@ -5,7 +5,13 @@ import { describe, expect, it } from 'vitest'
 // Continuation watches a terminal from birth, so it is the path that hits xterm's DECRQM handler:
 // esbuild's minifySyntax folds the handler's `(void 0 || (i = {}))` table into a shape that never
 // answers, and the agent waits forever. The engine build minifies whitespace and identifiers only.
-const ENGINE = join(import.meta.dirname, '..', 'terminal', 'terminal-webview-engine.generated.ts')
+const ENGINE = join(
+  import.meta.dirname,
+  '..',
+  'terminal',
+  'document',
+  'terminal-webview-engine.generated.ts'
+)
 
 describe('the terminal WebView engine bundle', () => {
   it('keeps the request-mode table that syntax minification breaks', () => {

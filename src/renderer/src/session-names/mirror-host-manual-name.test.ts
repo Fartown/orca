@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest'
 import { mirrorHostManualName } from './mirror-host-manual-name'
-import { resolveTerminalTabTitle } from '../../../shared/tab-title-resolution'
+import { resolveTerminalTabTitle } from '../../../shared/workspace-layout/tab-groups/tab-title-resolution'
 
 const slot = { agent: 'codex', sessionId: 's-1', title: 'Cached generated name' } as const
 

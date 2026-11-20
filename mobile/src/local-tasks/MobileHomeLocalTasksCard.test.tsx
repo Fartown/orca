@@ -2,8 +2,10 @@ import { Profiler, createElement } from 'react'
 import { act, create, type ReactTestRenderer } from 'react-test-renderer'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { LOCAL_TASKS_RUNTIME_CAPABILITY } from '../../../src/shared/local-tasks/local-tasks-capability'
-import type { RpcClient } from '../transport/rpc-client'
-import type { ConnectionState, HostProfile, RpcResponse } from '../transport/types'
+import type { RpcClient } from '../transport/rpc/rpc-client-contract'
+import type { ConnectionState } from '../transport/connection/connection-state'
+import type { HostProfile } from '../host-catalog/host-profile'
+import type { RpcResponse } from '../transport/rpc/rpc-wire-types'
 
 type HomeEnv = {
   catalog: HostProfile[]
@@ -32,15 +34,15 @@ vi.mock('expo-router', async () => {
   const { useEffect } = await import('react')
   return { useFocusEffect: (effect: () => void | (() => void)) => useEffect(effect, [effect]) }
 })
-vi.mock('../components/PickerModal', () => ({ PickerModal: () => null }))
-vi.mock('../components/use-connected-host-picker', () => ({
+vi.mock('../components/sheets/PickerModal', () => ({ PickerModal: () => null }))
+vi.mock('../host-catalog/selection/use-connected-host-picker', () => ({
   useConnectedHostPicker: () => ({ pickHost: () => {}, pickerProps: {} })
 }))
 vi.mock('../navigation/use-open-host-stack-route', () => ({
   useOpenHostStackRoute: () => () => {}
 }))
-vi.mock('../transport/host-store', () => ({ loadHosts: async () => env.catalog }))
-vi.mock('../transport/client-context', () => {
+vi.mock('../host-catalog/host-store', () => ({ loadHosts: async () => env.catalog }))
+vi.mock('../transport/connection/client-context', () => {
   const ctx = {
     getAllClients: () => env.clients,
     getKnownState: (hostId: string) => env.states[hostId] ?? null

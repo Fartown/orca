@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { projectSessionNameSlot, sessionNameSlotCandidates } from './session-name-slot'
 import { resolveSessionDisplayTitle } from '../session-display-title'
-import { resolveTerminalTabTitle } from '../tab-title-resolution'
+import { resolveTerminalTabTitle } from '../workspace-layout/tab-groups/tab-title-resolution'
 
 const identity = { agent: 'codex' as const, sessionId: 'session' }
 const named = {

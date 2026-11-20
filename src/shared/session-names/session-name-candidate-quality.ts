@@ -1,4 +1,4 @@
-import { isKnownHarnessInjectedUserTurnText } from '../harness-injected-user-turns'
+import { isKnownHarnessInjectedUserTurnText } from '../agent-session/journal/harness-injected-user-turns'
 import { isCodexRecapTaskText } from './codex-recap-task-text'
 
 const LOW_INFORMATION_PROMPT =

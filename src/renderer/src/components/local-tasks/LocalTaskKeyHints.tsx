@@ -1,4 +1,4 @@
-import { ShortcutKeyCombo } from '@/components/ShortcutKeyCombo'
+import { ShortcutKeyCombo } from '@/components/ui/ShortcutKeyCombo'
 import { translate } from '@/i18n/i18n'
 
 function Hint({ keys, label }: { keys: string[]; label: string }): React.JSX.Element {

@@ -2,10 +2,11 @@ import { createElement } from 'react'
 import { act, create, type ReactTestRenderer } from 'react-test-renderer'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { LOCAL_TASKS_RUNTIME_CAPABILITY } from '../../../src/shared/local-tasks/local-tasks-capability'
-import type { ActionSheetAction } from '../components/ActionSheetModal'
-import type { RpcClient } from '../transport/rpc-client'
-import type { ConnectionState, RpcResponse } from '../transport/types'
-import type { Worktree } from '../worktree/workspace-list-types'
+import type { ActionSheetAction } from '../components/sheets/ActionSheetModal'
+import type { RpcClient } from '../transport/rpc/rpc-client-contract'
+import type { ConnectionState } from '../transport/connection/connection-state'
+import type { RpcResponse } from '../transport/rpc/rpc-wire-types'
+import type { Worktree } from '../worktree/workspace-list/workspace-list-types'
 import {
   createLocalTaskHostLibraries,
   LocalTaskHostRowsContext,

@@ -3,8 +3,8 @@ import {
   canPreviewLanguage,
   getWorkspaceFilePreviewPlan,
   openDocPreviewTab
-} from '@/lib/file-preview'
-import { useAppStore } from '@/store'
+} from '@/lib/browser/documents/file-preview'
+import { useAppStore } from '@/store/index'
 
 /**
  * Open a rendered preview as a tab in the pane the request came from, and switch to it.
@@ -18,11 +18,14 @@ export function openFilePreviewInSourcePane(params: {
   filePath: string
   worktreeId: string
   sourceGroupId: string | null
+  /** The workspace whose tab groups hold the source, when it differs from the file's worktree. */
+  placementWorkspaceId?: string
 }): void {
   if (!canPreviewLanguage(params.language)) {
     return
   }
   const state = useAppStore.getState()
+  const placementWorkspaceId = params.placementWorkspaceId ?? params.worktreeId
   const plan = getWorkspaceFilePreviewPlan(state, params.worktreeId, params.filePath)
   if (plan.status === 'unsupported') {
     toast.error(plan.message)
@@ -32,8 +35,8 @@ export function openFilePreviewInSourcePane(params: {
   // caller that cannot name one still belongs in the pane the reader is looking at.
   const targetGroupId =
     params.sourceGroupId ??
-    state.activeGroupIdByWorktree[params.worktreeId] ??
-    state.groupsByWorktree[params.worktreeId]?.[0]?.id ??
+    state.activeGroupIdByWorktree[placementWorkspaceId] ??
+    state.groupsByWorktree[placementWorkspaceId]?.[0]?.id ??
     undefined
   if (plan.status === 'doc-preview') {
     openDocPreviewTab(
@@ -41,13 +44,14 @@ export function openFilePreviewInSourcePane(params: {
       {
         filePath: params.filePath,
         worktreeId: params.worktreeId,
+        placementWorkspaceId,
         activate: true
       },
       { targetGroupId }
     )
     return
   }
-  state.createBrowserTab(params.worktreeId, plan.url, {
+  state.createBrowserTab(placementWorkspaceId, plan.url, {
     title: plan.title,
     targetGroupId,
     activate: true

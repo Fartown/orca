@@ -5,7 +5,7 @@ import { afterEach, expect, it, vi } from 'vitest'
 import {
   readTranscriptFileVersion,
   boundaryFingerprint
-} from '../native-chat/transcript-file-version'
+} from '../native-chat/transcript-watching/transcript-file-version'
 import {
   reconcileDurableChatTranscriptReceipt,
   verifyDurableChatTranscriptReceipt

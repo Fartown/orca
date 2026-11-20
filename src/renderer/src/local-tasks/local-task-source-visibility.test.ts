@@ -3,7 +3,7 @@ import { beforeEach, expect, it, vi } from 'vitest'
 const fixture = vi.hoisted(() => ({ setPreference: vi.fn() }))
 
 vi.mock('@/store', async () => {
-  const { createTestStore } = await import('@/store/slices/store-test-helpers')
+  const { createTestStore } = await import('@/store/testing/app-store-test-fixture')
   return { useAppStore: createTestStore() }
 })
 vi.mock('./local-tasks-runtime-client', () => ({

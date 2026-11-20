@@ -6,10 +6,11 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu'
-import { useNow } from '@/hooks/use-now'
-import { AgentIcon, getAgentLabel } from '@/lib/agent-catalog'
+import { useNow } from '@/lib/window-activity/use-now'
+import { AgentIcon } from '@/components/agent/icons/AgentIcon'
+import { getAgentLabel } from '@/lib/agent-catalog/agent-catalog'
 import { translate } from '@/i18n/i18n'
-import { cn } from '@/lib/utils'
+import { cn } from '@/lib/class-names'
 import type { LocalTaskIndex } from '@/local-tasks/local-task-grouping'
 import { useLocalTaskSessionLinks } from '@/local-tasks/local-task-link-selectors'
 import { useLocalTaskSessionProgress } from '@/local-tasks/local-task-session-progress'
@@ -19,7 +20,7 @@ import { localTaskPageStore } from '@/local-tasks/local-task-page-store'
 import { formatLocalTaskSessionAge } from '@/local-tasks/local-task-session-age'
 import { unlinkLocalTaskSession } from '@/local-tasks/local-task-workspace-linking'
 import { openLocalTaskWorkspace } from '@/local-tasks/local-task-work-actions'
-import { isTuiAgent } from '../../../../shared/tui-agent-config'
+import { isTuiAgent } from '../../../../shared/agent-launch/catalog/tui-agent-config'
 import type {
   LocalTaskSessionLink,
   LocalTaskWorkspaceLink

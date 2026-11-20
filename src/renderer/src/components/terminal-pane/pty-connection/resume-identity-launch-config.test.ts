@@ -2,12 +2,12 @@
 
 import { afterEach, describe, expect, it } from 'vitest'
 import { useAppStore } from '@/store'
-import { findOriginalAiVaultSessionPane } from '@/components/right-sidebar/ai-vault-original-pane'
-import type { AiVaultSession } from '../../../../../shared/ai-vault-types'
+import { findOriginalAiVaultSessionPane } from '@/components/right-sidebar/ai-vault/session-actions/ai-vault-original-pane'
+import type { AiVaultSession } from '../../../../../shared/ai-vault/contracts/ai-vault-types'
 import type { ConnectPanePtySession } from './connect-pane-pty-session'
-import { installSleepingRecordAccess } from './sleeping-record-access'
+import { installSleepingRecordAccess } from './startup/sleeping-record-access'
 import { bindDeferredColdRestoreAndSnapshot } from './deferred-cold-restore-and-snapshot'
-import type { ColdRestoreAgentResumeStartup } from './fresh-spawn-types'
+import type { ColdRestoreAgentResumeStartup } from './startup/fresh-spawn-types'
 
 const LEAF_ID = '44444444-4444-4444-8444-444444444444'
 const PANE_KEY = `tab-lc:${LEAF_ID}`
@@ -144,7 +144,7 @@ describe('resume identity in the launch-config registry', () => {
     // sleeping record name this session anywhere.
     const state = useAppStore.getState()
     expect(
-      Object.values(state.agentStatusByPaneKey).some(
+      Array.from(state.agentStatusByPaneKey.values()).some(
         (entry) => entry?.providerSession?.id === PROVIDER_SESSION.id
       )
     ).toBe(false)

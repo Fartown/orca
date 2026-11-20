@@ -1,5 +1,5 @@
-import { z } from 'zod'
-import { RuntimeHostDescriptorSchema } from '../../../src/shared/runtime-host-descriptor'
+import * as z from 'zod'
+import { RuntimeHostDescriptorSchema } from '../../../src/shared/remote-runtime/host-status/runtime-host-descriptor'
 import type { LocalTaskSessionExecutionOrigin } from '../../../src/shared/local-tasks/local-task-session-origin'
 import { SELF_LOCAL_TASK_ENDPOINT, type LocalTaskEndpoint } from './local-task-endpoint'
 

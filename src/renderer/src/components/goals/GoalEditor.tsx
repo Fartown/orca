@@ -74,7 +74,9 @@ export function GoalEditor(): React.JSX.Element {
     session?.change((current) => {
       const guard =
         !current.goalId && value.paneKey
-          ? defaultGuardFor(useAppStore.getState().agentStatusByPaneKey[value.paneKey]?.agentType)
+          ? defaultGuardFor(
+              useAppStore.getState().agentStatusByPaneKey.get(value.paneKey)?.agentType
+            )
           : null
       return {
         ...current,

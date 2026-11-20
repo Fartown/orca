@@ -2,7 +2,7 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import type { AgentStatusIpcPayload } from '../../shared/agent-status-types'
+import type { AgentStatusIpcPayload } from '../../shared/agent-status/contracts/agent-status-ipc-payload'
 import type {
   GoalCreateParams,
   GoalDriverVerdict,
@@ -10,7 +10,7 @@ import type {
 } from '../../shared/goals/goal-control-contract'
 import { legacyGoalRecordPath } from '../../shared/goals/goal-store-layout'
 import { goalWorkspaceKey } from '../../shared/goals/goal-workspace-key'
-import type { RuntimeTerminalShow } from '../../shared/runtime-terminal-contracts'
+import type { RuntimeTerminalShow } from '../../shared/terminal/runtime/runtime-terminal-contracts'
 import { GoalControlService } from './goal-control-service'
 import type { GoalDriverLaunchRequest } from './goal-driver-launch'
 import { GoalStore } from './goal-store'

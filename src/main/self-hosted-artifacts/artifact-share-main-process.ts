@@ -1,6 +1,6 @@
 import { homedir, hostname } from 'node:os'
-import { isArtifactSharingEnabled } from '../../shared/artifact-sharing-gate'
-import type { GlobalSettings } from '../../shared/global-settings-types'
+import { isArtifactSharingEnabled } from '../../shared/artifacts/artifact-sharing-gate'
+import type { GlobalSettings } from '../../shared/settings/global-settings-types'
 import {
   removeArtifactShareReviewNotes,
   startArtifactShareCommentImport,

@@ -1,4 +1,4 @@
-import type { HandlerGroup } from '../handler-group-manifest'
+import type { HandlerGroup } from '../dispatch/handler-group-manifest'
 
 export const LOCAL_TASK_HANDLER_GROUP: HandlerGroup = {
   name: 'local-tasks',

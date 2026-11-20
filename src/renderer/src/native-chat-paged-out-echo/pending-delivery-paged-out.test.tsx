@@ -2,8 +2,8 @@
 import { act, cleanup, renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import type { NativeChatMessage } from '../../../shared/native-chat/native-chat-types'
-import { useNativeChatPendingDelivery } from '../components/native-chat/use-native-chat-pending-delivery'
-import { clearPendingSendCacheForTests } from '../components/native-chat/native-chat-pending'
+import { useNativeChatPendingDelivery } from '../components/native-chat/session/terminal/delivery/use-native-chat-pending-delivery'
+import { clearPendingSendCacheForTests } from '../components/native-chat/session/terminal/delivery/native-chat-pending'
 
 type Session = Parameters<typeof useNativeChatPendingDelivery>[0]['session']
 

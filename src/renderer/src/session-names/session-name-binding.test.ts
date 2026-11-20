@@ -1,15 +1,17 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { AiVaultSessionTitlesResult } from '../../../shared/ai-vault-session-title'
+import type { AiVaultSessionTitlesResult } from '../../../shared/ai-vault/contracts/ai-vault-session-title'
 import {
   resolveTerminalTabTitle,
   resolveUnifiedTabLabel
-} from '../../../shared/tab-title-resolution'
+} from '../../../shared/workspace-layout/tab-groups/tab-title-resolution'
 import { fixture, nativeResult, LEAF, SIBLING } from './session-name-binding-test-fixture'
-import { collectAiVaultTitleRequests } from '../lib/ai-vault-tab-title-requests'
-import { aiVaultTitleSyncInputsChanged } from '../lib/ai-vault-tab-title-sync-inputs'
-import { startAiVaultTabTitleSync } from '../lib/ai-vault-tab-title-sync'
+import { collectAiVaultTitleRequests } from '../lib/agent-session/history/title-sync/ai-vault-tab-title-requests'
+import { aiVaultTitleSyncInputsChanged } from '../lib/agent-session/history/title-sync/ai-vault-tab-title-sync-inputs'
+import { startAiVaultTabTitleSync } from '../lib/agent-session/history/title-sync/ai-vault-tab-title-sync'
 
-vi.mock('@/runtime/sync-runtime-graph', () => ({ scheduleRuntimeGraphSync: vi.fn() }))
+vi.mock('@/runtime/sync-runtime-graph/graph-sync-scheduler', () => ({
+  scheduleRuntimeGraphSync: vi.fn()
+}))
 const stops: (() => void)[] = []
 afterEach(() => stops.splice(0).forEach((stop) => stop()))
 

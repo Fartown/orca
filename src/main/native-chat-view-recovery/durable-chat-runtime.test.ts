@@ -1,12 +1,15 @@
-import '../runtime/rpc/unused-default-rpc-methods.test-fixture'
+import '../runtime/rpc/dispatch/testing/unused-default-rpc-methods.test-fixture'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { createAgentPromptSubmissionRuntime } from '../runtime/agent-prompt-submission-runtime-test-fixture'
-import { OrchestrationDb } from '../runtime/orchestration/db'
+import { createAgentPromptSubmissionRuntime } from '../runtime/terminal/input/agent-prompt-submission-runtime-test-fixture'
+import { OrchestrationDb } from '../runtime/orchestration/db/orchestration-db'
 import { RpcDispatcher } from '../runtime/rpc/dispatcher'
-import { TERMINAL_METHODS } from '../runtime/rpc/methods/terminal'
-import { WRITE_ACCEPTED, writeUnverifiable } from '../../shared/pty-write-settlement'
-import type { WriteSettlement } from '../../shared/pty-write-settlement'
-import { AGENT_TUI_CLEAR_INPUT_MAX } from '../../shared/agent-tui-input-clear'
+import { TERMINAL_METHODS } from '../runtime/rpc/methods/terminal/terminal'
+import {
+  WRITE_ACCEPTED,
+  writeUnverifiable
+} from '../../shared/terminal/pty/lifecycle/pty-write-settlement'
+import type { WriteSettlement } from '../../shared/terminal/pty/lifecycle/pty-write-settlement'
+import { AGENT_TUI_CLEAR_INPUT_MAX } from '../../shared/agent-launch/startup/agent-tui-input-clear'
 
 const boundary = vi.hoisted(() => ({
   sessionId: 'session',
@@ -23,12 +26,18 @@ vi.mock('./durable-chat-transcript-boundary', () => ({
   durableChatSubmissionSession: vi.fn(),
   captureDurableChatTranscriptBoundary: vi.fn(async () => boundary)
 }))
-vi.mock('../git/worktree', () => {
-  const read = async () => [
-    { path: '/tmp/worktree-a', head: 'abc', branch: 'chat', isBare: false, isMainWorktree: false }
-  ]
-  return { listWorktrees: read, listWorktreesStrict: read }
-})
+const readWorktrees = vi.hoisted(() => async () => [
+  { path: '/tmp/worktree-a', head: 'abc', branch: 'chat', isBare: false, isMainWorktree: false }
+])
+vi.mock('../git/worktrees/catalog/worktree-scan-cache', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  listWorktrees: readWorktrees,
+  listWorktreesSharedStrict: readWorktrees
+}))
+vi.mock('../git/worktrees/catalog/worktree-listing', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  listWorktreesStrict: readWorktrees
+}))
 afterEach(() => vi.useRealTimers())
 
 async function fixture(settle: (data: string, index: number) => Promise<WriteSettlement>) {

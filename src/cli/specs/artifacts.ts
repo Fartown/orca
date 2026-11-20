@@ -1,5 +1,5 @@
-import type { CommandSpec } from '../args'
-import { LOCAL_COMMAND_FLAGS } from '../args'
+import type { CommandSpec } from '../discovery/command-spec'
+import { LOCAL_COMMAND_FLAGS } from '../arguments/args'
 
 // Why kept: `--api-url` is still parsed so the handler can explain that local network sharing has no API URL.
 const RETIRED_CLOUD_FLAGS = ['api-url']

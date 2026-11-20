@@ -3,15 +3,15 @@ import {
   getRepoExecutionHostId,
   LOCAL_EXECUTION_HOST_ID,
   type ExecutionHostId
-} from '../../../src/shared/execution-host'
+} from '../../../src/shared/execution-host/execution-host'
 import { suggestLocalTaskWorkspaceName } from '../../../src/shared/local-tasks/local-task-model'
 import type { LocalTask } from '../../../src/shared/local-tasks/local-task-types'
-import { getProjectIdentityKey } from '../../../src/shared/project-host-setup-projection'
-import { getHostContextLabel } from '../../../src/shared/worktree/host-context-labels'
-import type { MobileWorkspaceRepo } from '../components/new-worktree-modal-types'
-import { taskRuntimeStatusRead } from '../tasks/mobile-task-runtime-operations'
-import type { MobileComposerSource } from '../tasks/use-mobile-composer-source'
-import type { RpcClient } from '../transport/rpc-client'
+import { getProjectIdentityKey } from '../../../src/shared/project/host-setup/project-host-setup-projection'
+import { getHostContextLabel } from '../../../src/shared/worktree/row-display/host-context-labels'
+import type { MobileWorkspaceRepo } from '../new-workspace/creation/forms/new-worktree-modal-types'
+import { taskRuntimeStatusRead } from '../tasks/screen-state/mobile-task-runtime-operations'
+import type { MobileComposerSource } from '../new-workspace/source-selection/use-mobile-composer-source'
+import type { RpcClient } from '../transport/rpc/rpc-client-contract'
 import { hostAdvertisesLocalTasks } from './local-tasks-access'
 import { localTasksCopy } from './local-tasks-copy'
 import { LOCAL_TASK_CREATE_SOURCE_COPY_EN } from './local-task-create-source-copy'
@@ -65,13 +65,13 @@ function useAdvertisingLibrary(
       return
     }
     let current = true
-    const capabilitiesOf = (target: RpcClient, hostKey: string) =>
+    const capabilitiesOf = (target: RpcClient) =>
       taskRuntimeStatusRead
-        .requestSingleFlight(target, hostKey)
+        .request(target)
         .then((reply) => taskRuntimeStatusRead.interpret(reply).capabilities ?? [])
     void Promise.all([
-      capabilitiesOf(client, key),
-      client === desktopClient ? null : capabilitiesOf(desktopClient, 'self')
+      capabilitiesOf(client),
+      client === desktopClient ? null : capabilitiesOf(desktopClient)
     ]).then(
       ([own, desktop]) => {
         if (!current) {

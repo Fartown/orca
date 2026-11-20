@@ -1,4 +1,4 @@
-import { isWebClientLocation } from '@/lib/web-client-location'
+import { isWebClientLocation } from '@/app-shell/platform/web-client-location'
 import type { LocalTaskChangeScope } from '../../../shared/local-tasks/local-task-types'
 import { changeMessageSchema } from '../../../shared/local-tasks/local-task-result-schemas'
 import { localTasksEndpointReads, type LocalTasksEndpointReads } from './local-tasks-endpoint-calls'

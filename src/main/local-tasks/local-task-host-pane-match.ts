@@ -2,7 +2,7 @@ import {
   structuredAgentSessionPaneKey,
   structuredAgentSessionTabId
 } from '../../shared/agent-session/view/structured-agent-session-projection'
-import { parsePaneKey } from '../../shared/stable-pane-id'
+import { parsePaneKey } from '../../shared/workspace-layout/stable-pane-id'
 import type { LocalTaskStatusRow } from '../../shared/local-tasks/local-task-attention-rules'
 import type { LocalTaskSessionLink } from '../../shared/local-tasks/local-task-link-types'
 

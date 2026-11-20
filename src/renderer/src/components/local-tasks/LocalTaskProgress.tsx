@@ -1,17 +1,17 @@
 import { useMemo } from 'react'
 import { Folder, GitBranch } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { AgentStateDot, type AgentDotState } from '@/components/AgentStateDot'
+import { AgentStateDot, type AgentDotState } from '@/components/agent/status/AgentStateDot'
 import {
   ReviewIcon,
   getReviewChecksTone,
   getReviewLabel
-} from '@/components/sidebar/worktree-review-helpers'
-import type { WorktreeCardPrDisplay } from '@/components/sidebar/worktree-card-pr-display'
+} from '@/components/sidebar/workspace-card/review/worktree-review-presentation'
+import type { WorktreeCardPrDisplay } from '@/components/sidebar/workspace-card/review/worktree-card-pr-display'
 import { translate } from '@/i18n/i18n'
-import { cn } from '@/lib/utils'
+import { cn } from '@/lib/class-names'
 import { useAppStore } from '@/store'
-import { getIndexedRepoMap } from '@/store/worktree-repo-index'
+import { getIndexedRepoMap } from '@/store/repos/repository-catalog-index'
 import type { LocalTaskIndex } from '@/local-tasks/local-task-grouping'
 import { useLocalTaskHostInContact } from '@/local-tasks/local-task-host-contact'
 import {
@@ -28,8 +28,8 @@ import {
   useLocalTaskSessionProgress
 } from '@/local-tasks/local-task-session-progress'
 import { localTaskAttentionKindLabel } from '@/local-tasks/local-task-attention-copy'
-import { getAgentLabel } from '@/lib/agent-catalog'
-import { isTuiAgent } from '../../../../shared/tui-agent-config'
+import { getAgentLabel } from '@/lib/agent-catalog/agent-catalog'
+import { isTuiAgent } from '../../../../shared/agent-launch/catalog/tui-agent-config'
 import {
   selectLocalTaskWorkspace,
   localTaskWorktreeHostId

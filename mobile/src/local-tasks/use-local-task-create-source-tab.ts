@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { SmartNameMode } from '../../../src/shared/new-workspace/smart-workspace-source-results'
 import type { LocalTasksHostState } from '../../../src/shared/local-tasks/local-task-types'
-import type { RpcClient } from '../transport/rpc-client'
+import type { RpcClient } from '../transport/rpc/rpc-client-contract'
 import { createLocalTasksApi } from './local-tasks-api'
 import { localTasksCopy } from './local-tasks-copy'
 import { LOCAL_TASK_CREATE_SOURCE_COPY_EN } from './local-task-create-source-copy'

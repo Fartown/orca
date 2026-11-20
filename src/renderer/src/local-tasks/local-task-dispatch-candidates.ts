@@ -1,16 +1,19 @@
 import type { AppState } from '@/store/types'
 import {
   selectFolderWorkspaces,
-  selectWorktreesByRepo,
-  getFolderWorkspaceWorktree
-} from '@/store/workspace-record-selectors'
+  selectWorktreesByRepo
+} from '@/store/workspaces/catalog/workspace-record-fields'
+import { getFolderWorkspaceWorktree } from '../../../shared/folder-workspaces/folder-workspace-worktree'
 import { selectLocalTaskHostLabel } from '@/local-tasks/local-task-host-label'
-import { getRepoExecutionHostId, normalizeExecutionHostId } from '../../../shared/execution-host'
-import type { Repo } from '../../../shared/repo-types'
+import {
+  getRepoExecutionHostId,
+  normalizeExecutionHostId
+} from '../../../shared/execution-host/execution-host'
+import type { Repo } from '../../../shared/repository/repo-types'
 import type { Worktree } from '../../../shared/worktree/types'
 import type { LocalTask, LocalTaskProject } from '../../../shared/local-tasks/local-task-types'
 import type { LocalTaskLinks } from '../../../shared/local-tasks/local-task-link-types'
-import { isFolderRepo } from '../../../shared/repo-kind'
+import { isFolderRepo } from '../../../shared/repository/repo-kind'
 import { isLocalTaskHostInContact } from './local-task-host-contact'
 import {
   localTaskClientId,

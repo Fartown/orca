@@ -7,7 +7,7 @@ import type {
   LocalTaskSessionLink
 } from '../../../src/shared/local-tasks/local-task-link-types'
 import type { LocalTask } from '../../../src/shared/local-tasks/local-task-types'
-import type { ConnectionState } from '../transport/types'
+import type { ConnectionState } from '../transport/connection/connection-state'
 import { createLocalTasksApi } from './local-tasks-api'
 import { localTasksCopy } from './local-tasks-copy'
 import { LocalTasksAttentionView } from './local-tasks-attention-view'
@@ -31,8 +31,8 @@ vi.mock('lucide-react-native', () => ({
   Eye: 'Eye',
   SquareTerminal: 'SquareTerminal'
 }))
-vi.mock('../components/AgentStateDot', () => ({ AgentStateDot: () => null }))
-vi.mock('../components/ActionSheetModal', () => ({ ActionSheetModal: 'ActionSheetModal' }))
+vi.mock('../agents/presentation/AgentStateDot', () => ({ AgentStateDot: () => null }))
+vi.mock('../components/sheets/ActionSheetModal', () => ({ ActionSheetModal: 'ActionSheetModal' }))
 vi.mock('../components/bottom-drawer/BottomDrawer', () => ({
   BottomDrawer: (props: { visible: boolean; children: ReactNode }) =>
     props.visible ? props.children : null

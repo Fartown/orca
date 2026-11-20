@@ -4,7 +4,7 @@ import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ProcessResult } from '@orca/process-host/process-spec'
 import type { GoalDraftAcceptanceParams } from '../../shared/goals/goal-control-contract'
-import type { RuntimeTerminalShow } from '../../shared/runtime-terminal-contracts'
+import type { RuntimeTerminalShow } from '../../shared/terminal/runtime/runtime-terminal-contracts'
 import { GoalAcceptanceDrafts } from './goal-acceptance-drafts'
 
 let home: string

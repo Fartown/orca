@@ -1,7 +1,7 @@
-import { z } from 'zod'
-import type { FolderWorkspace } from '../folder-workspace-types'
-import { WorkspaceLinkedItemSchema } from '../workspace-linked-item-schema'
-import { ProjectGroupSchema } from '../project-section-catalog-schema'
+import * as z from 'zod'
+import type { FolderWorkspace } from '../folder-workspaces/folder-workspace-types'
+import { WorkspaceLinkedItemSchema } from '../workspace-attachments/workspace-linked-item-schema'
+import { ProjectGroupSchema } from '../sidebar-list/catalog/project-section-catalog-schema'
 
 export const LOCAL_TASK_DISPATCHER_SESSION_PREFERENCE_KEY = 'dispatcher.session.v1'
 export const LOCAL_TASK_DISPATCHER_PANE_PREFERENCE_KEY = 'dispatcher.paneKey'

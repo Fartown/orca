@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { WorkspaceCleanup } from '../rpc-contract/workspace-cleanup-ui-params'
-import { normalizeWorkspaceCleanupBrowseState } from '../workspace-cleanup-browse-state'
+import { WorkspaceCleanup } from '../rpc-contract/workspace-cleanup/workspace-cleanup-ui-params'
+import { normalizeWorkspaceCleanupBrowseState } from '../workspace-cleanup/workspace-cleanup-browse-state'
 
 // Why: builds before REQ-019 was withdrawn saved 'local-task' as a cleanup ticket source.
 const savedBrowse = {

@@ -5,7 +5,7 @@ import type { LocalTaskProject } from '../../../shared/local-tasks/local-task-ty
 const fixture = vi.hoisted(() => ({ recordResults: vi.fn(), createTask: vi.fn() }))
 
 vi.mock('@/store', async () => {
-  const { createTestStore } = await import('@/store/slices/store-test-helpers')
+  const { createTestStore } = await import('@/store/testing/app-store-test-fixture')
   return { useAppStore: createTestStore() }
 })
 vi.mock('./local-task-dispatcher-client', () => ({
@@ -15,10 +15,10 @@ vi.mock('./local-tasks-runtime-client', () => ({
   localTasksClient: { createTask: fixture.createTask }
 }))
 
-import { getAgentCatalog } from '@/lib/agent-catalog'
-import { createGlobalSettingsFixture } from '../../../shared/global-settings-test-fixture'
+import { getAgentCatalog } from '@/lib/agent-catalog/agent-catalog'
+import { createGlobalSettingsFixture } from '../../../shared/settings/global-settings-test-fixture'
 import { useAppStore } from '@/store'
-import { makeWorktree } from '@/store/slices/worktrees-slice-test-fixtures'
+import { makeWorktree } from '@/store/slices/worktrees/worktree.test-fixture'
 import {
   executeLocalTaskProposal,
   LOCAL_TASK_PROPOSAL_EXECUTORS,

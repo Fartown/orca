@@ -20,10 +20,10 @@ import type {
   LocalTaskProject,
   LocalTaskStatusDef
 } from '../../../src/shared/local-tasks/local-task-types'
-import { ActionSheetModal } from '../components/ActionSheetModal'
-import { ConfirmModal } from '../components/ConfirmModal'
-import { PickerModal } from '../components/PickerModal'
-import { TextInputModal } from '../components/TextInputModal'
+import { ActionSheetModal } from '../components/sheets/ActionSheetModal'
+import { ConfirmModal } from '../components/sheets/ConfirmModal'
+import { PickerModal } from '../components/sheets/PickerModal'
+import { TextInputModal } from '../components/sheets/TextInputModal'
 import { colors } from '../theme/mobile-theme'
 import type { LocalTasksApi, LocalTaskWriteOutcome } from './local-tasks-api'
 import { localTasksCopy } from './local-tasks-copy'

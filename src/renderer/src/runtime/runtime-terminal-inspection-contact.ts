@@ -2,10 +2,10 @@ import { useAppStore } from '@/store'
 import {
   buildRuntimeClientEventEnvironmentKey,
   getReachableRuntimeEnvironmentIds
-} from '@/hooks/ipc-events/runtime-environment-subscription-selection'
-import { getRemoteRuntimePtyOwner } from './runtime-terminal-stream'
+} from '@/hooks/ipc-events/runtime-events/runtime-environment-subscription-selection'
+import { getRemoteRuntimePtyOwner } from './hosted-terminals/identity/remote-runtime-pty-owner'
 import { isRemoteRuntimePtyId } from '../../../shared/remote-runtime/remote-runtime-pty-id'
-import { parseAppSshPtyId } from '../../../shared/ssh-pty-id'
+import { parseAppSshPtyId } from '../../../shared/remote-runtime/ssh/ssh-pty-id'
 
 export function runtimeTerminalProcessContactKey(ptyId: string): string | null {
   const state = useAppStore.getState()

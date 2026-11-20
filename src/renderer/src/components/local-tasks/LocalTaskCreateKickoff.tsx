@@ -10,12 +10,13 @@ import { Input } from '@/components/ui/input'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Toggle } from '@/components/ui/toggle'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
-import { AgentIcon, type AgentCatalogEntry } from '@/lib/agent-catalog'
+import { AgentIcon } from '@/components/agent/icons/AgentIcon'
+import type { AgentCatalogEntry } from '@/lib/agent-catalog/agent-catalog'
 import { translate } from '@/i18n/i18n'
-import { cn } from '@/lib/utils'
+import { cn } from '@/lib/class-names'
 import type { LocalTaskPromptDelivery } from '@/local-tasks/local-task-session-launch'
 import type { LocalTaskLaunchAgents } from '@/local-tasks/use-local-task-launch-agents'
-import type { TuiAgent } from '../../../../shared/tui-agent'
+import type { TuiAgent } from '../../../../shared/agent-launch/catalog/tui-agent'
 
 // Why a cap: a host can have many agents installed; the rest stay one click away under More.
 const SHOWN_AGENTS = 3

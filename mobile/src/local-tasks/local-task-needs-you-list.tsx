@@ -7,7 +7,7 @@ import {
   localTaskSnoozeUntil
 } from '../../../src/shared/local-tasks/local-task-snooze-presets'
 import type { LocalTask } from '../../../src/shared/local-tasks/local-task-types'
-import { ActionSheetModal } from '../components/ActionSheetModal'
+import { ActionSheetModal } from '../components/sheets/ActionSheetModal'
 import type { LocalTasksApi } from './local-tasks-api'
 import { localTasksCopy } from './local-tasks-copy'
 import { LocalTaskAttentionCard, localTaskAttentionLine } from './local-task-attention-row'

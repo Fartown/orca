@@ -1,15 +1,15 @@
 import { appendFile, mkdir, rename, writeFile } from 'node:fs/promises'
 import path from 'node:path'
-import { getAppEnvironment } from '../../shared/app-environment'
-import { isWindowsAbsolutePathLike } from '../../shared/cross-platform-path'
-import type { IFilesystemProvider } from '../providers/filesystem-provider-contract'
+import { getAppEnvironment } from '../../shared/app-lifecycle/app-environment'
+import { isWindowsAbsolutePathLike } from '../../shared/file-access/cross-platform-path'
+import type { IFilesystemProvider } from '../providers/filesystem/provider-contract'
 import {
   ensureOwnedTempStagingRoot,
   getOwnedTempStagingRoot,
   isDirectChild,
   removeOwnedDirectory,
   sweepExpiredOwnedDirectories
-} from '../window/owned-temp-staging-root'
+} from '../filesystem/owned-temp-staging-root'
 
 const ROOT_NAME = 'orca-file-attachments'
 // Under the remote user's home, not the shared temp dir: the filesystem calls cannot chmod, and on a

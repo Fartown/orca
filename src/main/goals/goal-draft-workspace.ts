@@ -1,6 +1,6 @@
 import { stat } from 'node:fs/promises'
-import type { FolderWorkspace } from '../../shared/folder-workspace-types'
-import { parseWorkspaceKey } from '../../shared/workspace-scope'
+import type { FolderWorkspace } from '../../shared/folder-workspaces/folder-workspace-types'
+import { parseWorkspaceKey } from '../../shared/workspace/identity/workspace-scope'
 import { inferFolderWorkspacePathConnection } from '../project-groups/folder-workspace-path-status'
 
 type ConnectionInput = Parameters<typeof inferFolderWorkspacePathConnection>[0]

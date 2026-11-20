@@ -9,7 +9,7 @@ const fixture = vi.hoisted(() => ({
 }))
 
 vi.mock('@/store', async () => {
-  const { createTestStore } = await import('@/store/slices/store-test-helpers')
+  const { createTestStore } = await import('@/store/testing/app-store-test-fixture')
   return { useAppStore: createTestStore() }
 })
 vi.mock('./local-tasks-runtime-client', () => ({
@@ -21,8 +21,8 @@ vi.mock('./local-tasks-runtime-client', () => ({
 }))
 
 import { useAppStore } from '@/store'
-import { makeWorktree } from '@/store/slices/worktrees-slice-test-fixtures'
-import { getDefaultSettings } from '../../../shared/constants'
+import { makeWorktree } from '@/store/slices/worktrees/worktree.test-fixture'
+import { getDefaultSettings } from '../../../shared/orca-profiles/constants'
 import { notifyWorktreeCreationCompleted } from './local-task-creation-events'
 import { localTasksDomainStore } from './local-tasks-domain-store'
 import { localTaskPageStore } from './local-task-page-store'

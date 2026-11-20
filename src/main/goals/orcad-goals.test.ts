@@ -1,4 +1,4 @@
-import { getDefaultSettings } from '../../shared/constants'
+import { getDefaultSettings } from '../../shared/orca-profiles/constants'
 import { afterEach, expect, it, vi } from 'vitest'
 import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
@@ -6,13 +6,13 @@ import { join } from 'node:path'
 import { startGoals } from './orcad-goals'
 import { goalFeatureReadinessRegistry } from '../runtime/rpc/methods/goals'
 
-vi.mock('../agent-hooks/server', () => ({
+vi.mock('../agent-hooks/server/agent-hook-server', () => ({
   agentHookServer: {
     buildPtyEnv: () => ({ ORCA_AGENT_HOOK_PORT: '1' }),
     getStatusSnapshotForPane: () => []
   }
 }))
-vi.mock('../../shared/app-environment', () => ({
+vi.mock('../../shared/app-lifecycle/app-environment', () => ({
   getAppEnvironment: () => ({ getPath: () => process.env.ORCA_GOAL_HOME })
 }))
 let root: string | undefined

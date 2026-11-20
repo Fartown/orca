@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
-import type { RpcClient } from '../transport/rpc-client'
-import { worktreeCatalogRead } from '../worktree/worktree-catalog-operations'
-import { WORKTREE_PS_FULL_LIMIT } from '../worktree/worktree-catalog-snapshot-client'
+import type { RpcClient } from '../transport/rpc/rpc-client-contract'
+import { worktreeCatalogRead } from '../worktree/catalog/worktree-catalog-operations'
+import { requestLocalTaskWorktreeCatalog } from './local-task-worktree-catalog-read'
 import { readLocalTaskMainWorkspaceIds } from './local-task-create-choices'
 import {
   readLocalTaskWorkspaceCandidates,
@@ -46,8 +46,7 @@ export function useLocalTaskCreateWorkspaces(
         setRead({ client, state })
       }
     }
-    worktreeCatalogRead
-      .requestSingleFlight(client, key, { limit: WORKTREE_PS_FULL_LIMIT })
+    requestLocalTaskWorktreeCatalog(client, key)
       .then((reply) => {
         const catalog = worktreeCatalogRead.interpret(reply)
         if (!catalog.accepted) {

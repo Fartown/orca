@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import { ClipboardList } from 'lucide-react-native'
-import type { ActionSheetAction } from '../components/ActionSheetModal'
-import type { RpcClient } from '../transport/rpc-client'
-import type { ConnectionState } from '../transport/types'
-import type { Worktree } from '../worktree/workspace-list-types'
+import type { ActionSheetAction } from '../components/sheets/ActionSheetModal'
+import type { RpcClient } from '../transport/rpc/rpc-client-contract'
+import type { ConnectionState } from '../transport/connection/connection-state'
+import type { Worktree } from '../worktree/workspace-list/workspace-list-types'
 import { hostAdvertisesLocalTasks } from './local-tasks-access'
 import { localTasksCopy } from './local-tasks-copy'
 import { useLocalTaskForHostRow } from './local-task-host-rows'
@@ -19,6 +19,7 @@ type RowServer = {
   client: RpcClient | null
   state: ConnectionState
   gates: { hostCapabilities: readonly string[] }
+  name?: string | null
 } | null
 
 /** The client of the library a row belongs to: its server's when in contact and current enough. */
@@ -83,7 +84,8 @@ export function useLocalTaskHostLinkAction(args: {
           closeBeforePress: true,
           onPress: () => {
             done()
-            setLinking({ candidate, hostLabel: row.hostContextLabel ?? '' })
+            // Upstream keeps the mixed-host label beside the row, not on it; a server row names its server.
+            setLinking({ candidate, hostLabel: args.server?.name ?? '' })
           }
         }
       ]
@@ -93,6 +95,7 @@ export function useLocalTaskHostLinkAction(args: {
         target={linking?.candidate ?? null}
         hostLabel={linking?.hostLabel ?? ''}
         client={args.client}
+        hostCapabilities={args.hostCapabilities}
         onClose={() => setLinking(null)}
       />
     )

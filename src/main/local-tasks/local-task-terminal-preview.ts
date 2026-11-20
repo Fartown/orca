@@ -1,8 +1,8 @@
-import { parseExecutionHostId } from '../../shared/execution-host'
-import { makePaneKey, parsePaneKey } from '../../shared/stable-pane-id'
-import type { WorkspaceSessionState } from '../../shared/workspace-session-state-types'
+import { parseExecutionHostId } from '../../shared/execution-host/execution-host'
+import { makePaneKey, parsePaneKey } from '../../shared/workspace-layout/stable-pane-id'
+import type { WorkspaceSessionState } from '../../shared/workspace-session/workspace-session-state-types'
 import type { LocalTaskSessionLink } from '../../shared/local-tasks/local-task-link-types'
-import type { RuntimeNotifier } from '../runtime/runtime-notifier-contract'
+import type { RuntimeNotifier } from '../runtime/client/events/runtime-notifier-contract'
 import { getRegisteredSshState } from '../ssh/targets/ssh-target-registry'
 
 type LivePreviewTerminal = {

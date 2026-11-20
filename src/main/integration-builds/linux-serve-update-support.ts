@@ -1,4 +1,4 @@
-import { resolveAppImageRuntimeIdentity } from '../appimage-runtime-identity'
+import { resolveAppImageRuntimeIdentity } from '../updater/linux-package/appimage-runtime-identity'
 
 export function hasLinuxServeUpdateSupervisor(): boolean {
   return (

@@ -5,27 +5,27 @@
  * again. Kept free of React so every outcome tests in node.
  */
 
-import type { AgentLaunchPrompt, AgentLaunchResult } from '../../../src/shared/agent-launch-intent'
-import { classifyAgentLaunchReplayRefusal } from '../../../src/shared/agent-launch-replay-refusal'
-import { withoutReservedAgentCreateFields } from '../../../src/shared/agent-launch-intent'
+import type {
+  AgentLaunchPrompt,
+  AgentLaunchResult
+} from '../../../src/shared/agent-launch/contracts/agent-launch-intent'
+import { classifyAgentLaunchReplayRefusal } from '../../../src/shared/agent-launch/contracts/agent-launch-replay-refusal'
+import { withoutReservedAgentCreateFields } from '../../../src/shared/agent-launch/contracts/agent-launch-intent'
 import type { LocalTaskSessionSurface } from '../../../src/shared/local-tasks/local-task-link-types'
-import { makePaneKey, parsePaneKey } from '../../../src/shared/stable-pane-id'
-import type { TuiAgent } from '../../../src/shared/tui-agent'
-import {
-  launchAgentInExistingWorkspace,
-  reserveMobileAgentLaunch,
-  type MobileAgentLaunchReservation
-} from '../session/mobile-existing-agent-launch'
-import { rememberMobileCreatedStructuredSession } from '../session/mobile-created-structured-sessions'
-import { structuredSessionOperationId } from '../session/structured-session-operation-id'
-import { readAgentLaunchSupport } from '../tasks/agent-launch-request'
-import { createWorktreeWithNameRetry } from '../tasks/worktree-create-retry'
-import { readNewWorktreeRuntimeCapabilities } from '../tasks/worktree-create-capability'
-import { agentLaunchReplayRun } from '../tasks/mobile-workspace-create-operations'
-import { sendReplayingAmbiguousDelivery } from '../tasks/replay-on-ambiguous-delivery'
-import { WORKTREE_CREATE_TIMEOUT_MS } from '../tasks/workspace-create-timeout'
-import type { WorkspaceCreateParams } from '../tasks/workspace-create-params'
-import type { RpcClient } from '../transport/rpc-client'
+import { makePaneKey, parsePaneKey } from '../../../src/shared/workspace-layout/stable-pane-id'
+import type { TuiAgent } from '../../../src/shared/agent-launch/catalog/tui-agent'
+import { launchAgentInExistingWorkspace } from '../session/agent-launch/mobile-existing-agent-launch'
+import { reserveLaunch, type LaunchReservation } from './local-task-launch-reservation'
+import { rememberMobileCreatedStructuredSession } from '../session/native-chat/agent-session/mobile-created-structured-sessions'
+import { structuredSessionOperationId } from '../session/native-chat/agent-session/structured-session-operation-id'
+import { readAgentLaunchSupport } from '../session/agent-launch/agent-launch-request'
+import { createWorktreeWithNameRetry } from '../new-workspace/creation/worktree-create-retry'
+import { readNewWorktreeRuntimeCapabilities } from '../new-workspace/creation/worktree-create-capability'
+import { agentLaunchReplayRun } from '../new-workspace/creation/mobile-workspace-create-operations'
+import { sendReplayingAmbiguousDelivery } from '../new-workspace/creation/replay-on-ambiguous-delivery'
+import { WORKTREE_CREATE_TIMEOUT_MS } from '../new-workspace/creation/workspace-create-timeout'
+import type { WorkspaceCreateParams } from '../new-workspace/creation/workspace-create-params'
+import type { RpcClient } from '../transport/rpc/rpc-client-contract'
 import type { LocalTasksApi, LocalTaskWriteOutcome } from './local-tasks-api'
 import { sendLocalTaskWrite, type LocalTaskOperationIds } from './local-task-operation-ids'
 
@@ -78,7 +78,7 @@ type LaunchedSession = {
 
 function launchedSession(
   result: AgentLaunchResult,
-  reservation: MobileAgentLaunchReservation
+  reservation: LaunchReservation
 ): LaunchedSession {
   const outcome = result.outcome
   if (outcome.kind === 'structured') {
@@ -103,7 +103,7 @@ async function recordLaunchedSession(args: {
   worktreeId: string
   agent: TuiAgent
   result: AgentLaunchResult
-  reservation: MobileAgentLaunchReservation
+  reservation: LaunchReservation
   linkedVia: 'start' | 'manual'
 }): Promise<LocalTaskLaunchOutcome> {
   const session = launchedSession(args.result, args.reservation)
@@ -144,7 +144,7 @@ export async function startLocalTaskInNewWorkspace(args: {
   /** Null starts no agent: the workspace is created and linked, no session recorded (REQ-009). */
   agent: TuiAgent | null
   prompt: AgentLaunchPrompt
-  reservation?: MobileAgentLaunchReservation
+  reservation?: LaunchReservation
   choices?: LocalTaskCreateChoices
   /** Start work again: the link replaces the one to a deleted workspace. */
   replace?: boolean
@@ -157,7 +157,7 @@ export async function startLocalTaskInNewWorkspace(args: {
   if (!support || !support.replay) {
     return { kind: 'failed', message: null, reason: 'update-desktop' }
   }
-  const reservation = args.reservation ?? reserveMobileAgentLaunch(agent)
+  const reservation = args.reservation ?? reserveLaunch(agent, args.hostCapabilities)
   const params = {
     agent,
     operationId: structuredSessionOperationId(),
@@ -305,7 +305,7 @@ export async function openLocalTaskSession(args: {
   agent: TuiAgent
   prompt: AgentLaunchPrompt
 }): Promise<LocalTaskLaunchOutcome> {
-  const reservation = reserveMobileAgentLaunch(args.agent)
+  const reservation = reserveLaunch(args.agent, args.hostCapabilities)
   const launched = await launchAgentInExistingWorkspace({
     client: args.launchClient,
     hostCapabilities: args.hostCapabilities,

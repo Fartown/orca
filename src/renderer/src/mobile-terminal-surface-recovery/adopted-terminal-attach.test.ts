@@ -1,11 +1,9 @@
 import { beforeEach, expect, it, vi } from 'vitest'
-import {
-  createRemoteRuntimeTransportMocks,
-  type MultiplexSubscriptionCallbacks
-} from '../components/terminal-pane/remote-runtime-pty-transport-test-harness'
+import { createRemoteRuntimeTransportMocks } from '../components/terminal-pane/pty-transport/remote/remote-runtime-pty-transport-test-harness'
+import type { MultiplexSubscriptionCallbacks } from '../components/terminal-pane/pty-transport/remote/remote-runtime-pty-transport-stream-fixtures'
 
 const state = vi.hoisted(() => ({ runtimeStatusByEnvironmentId: new Map() }))
-vi.mock('@/store', () => ({ useAppStore: { getState: () => state } }))
+vi.mock('@/store/index', () => ({ useAppStore: { getState: () => state } }))
 let callbacks: MultiplexSubscriptionCallbacks = null
 let resolvedHandle = ''
 const fixture = createRemoteRuntimeTransportMocks({
@@ -64,7 +62,7 @@ it.each([
       }
     })
     const { createRemoteRuntimePtyTransport } =
-      await import('../components/terminal-pane/remote-runtime-pty-transport')
+      await import('../components/terminal-pane/pty-transport/remote-runtime/remote-runtime-pty-transport')
     const transport = createRemoteRuntimePtyTransport('env-1', {
       worktreeId: 'wt-1',
       tabId: 'web-terminal-host-tab-1',

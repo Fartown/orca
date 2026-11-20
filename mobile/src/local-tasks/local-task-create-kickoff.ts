@@ -11,8 +11,8 @@ import type { LocalTaskWorkspaceLink } from '../../../src/shared/local-tasks/loc
 import { suggestLocalTaskWorkspaceName } from '../../../src/shared/local-tasks/local-task-model'
 import { localTaskAncestors } from '../../../src/shared/local-tasks/local-task-tree'
 import type { LocalTask } from '../../../src/shared/local-tasks/local-task-types'
-import type { TuiAgent } from '../../../src/shared/tui-agent'
-import type { RpcClient } from '../transport/rpc-client'
+import type { TuiAgent } from '../../../src/shared/agent-launch/catalog/tui-agent'
+import type { RpcClient } from '../transport/rpc/rpc-client-contract'
 import type { LocalTasksApi } from './local-tasks-api'
 import type { LocalTasksCopy } from './local-tasks-copy'
 import {

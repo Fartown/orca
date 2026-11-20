@@ -1,11 +1,13 @@
 // @vitest-environment happy-dom
 import { act, renderHook } from '@testing-library/react'
 import { beforeEach, expect, it, vi } from 'vitest'
-import { useQuickCreationExecution } from '@/hooks/composer-state/quick-creation-execution'
-import type { PreparedQuickSubmit } from '@/hooks/composer-state/composer-submit-model'
+import { useQuickCreationExecution } from '@/hooks/composer-state/submission/quick-creation-execution'
+import type { PreparedQuickSubmit } from '@/hooks/composer-state/submission/composer-submit-model'
 
 const creation = vi.hoisted(() => ({ run: vi.fn(() => 'creation-1') }))
-vi.mock('@/lib/worktree-creation-flow', () => ({ runBackgroundWorktreeCreation: creation.run }))
+vi.mock('@/lib/workspace/creation/worktree-creation-flow', () => ({
+  runBackgroundWorktreeCreation: creation.run
+}))
 
 const prepared: PreparedQuickSubmit = {
   submitLinkedWorkItem: null,
@@ -51,7 +53,11 @@ const input = {
   resetForNextCreate: vi.fn(),
   resolvedInitialWorkspaceStatus: undefined,
   selectedEphemeralVmRecipeId: null,
-  selectedRepoAgentLaunchFact: { kind: 'withheld', reason: 'agentless' },
+  selectedRepoAgentLaunchFact: {
+    kind: 'withheld',
+    reason: 'agentless',
+    recovery: 'refreshProjects'
+  },
   selectedRepoExecutionHostId: null,
   selectedRepoIsGit: true,
   selectedRepoIsRemote: false,

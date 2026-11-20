@@ -15,7 +15,7 @@ import {
   localTaskSessionHostAliases,
   LocalTaskSessionExecutionOriginSchema
 } from '../../shared/local-tasks/local-task-session-origin'
-import { parsePaneKey } from '../../shared/stable-pane-id'
+import { parsePaneKey } from '../../shared/workspace-layout/stable-pane-id'
 import { worktreeIdsEqual } from '../../shared/worktree/id'
 import type { LocalTasksDatabase } from './local-tasks-database'
 import { appendLocalTaskEvent } from './local-task-event-store'

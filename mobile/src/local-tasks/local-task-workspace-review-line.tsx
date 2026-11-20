@@ -1,6 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native'
 import { GitPullRequest } from 'lucide-react-native'
-import { prStateColor } from '../components/WorktreeMetaGlyphs'
+import { prStateColor } from '../worktree/row-presentation/WorktreeMetaGlyphs'
 import { colors } from '../theme/mobile-theme'
 import { localTasksCopy } from './local-tasks-copy'
 import type { LocalTaskWorkspaceReview } from './local-task-workspace-row'

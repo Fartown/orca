@@ -2,7 +2,7 @@ import { useAppStore } from '@/store'
 import {
   AGENT_STATUS_STALE_AFTER_MS,
   agentStatusEvidenceObservedAt
-} from '../../../shared/agent-status-freshness'
+} from '../../../shared/agent-status/contracts/agent-status-freshness'
 import type { LocalTaskSessionProgress } from '../../../shared/local-tasks/local-task-link-types'
 import { subscribeLocalTaskAppStore } from './local-task-app-store-subscription'
 import {
@@ -70,7 +70,7 @@ export function bindLocalTaskSessionExecutions(): () => void {
       if (progress) {
         sessions.set(link.id, progress)
       }
-      const row = link.paneKey ? state.agentStatusByPaneKey[link.paneKey] : null
+      const row = link.paneKey ? state.agentStatusByPaneKey.get(link.paneKey) : null
       const nextStale = row
         ? agentStatusEvidenceObservedAt(row) + AGENT_STATUS_STALE_AFTER_MS + 1
         : null

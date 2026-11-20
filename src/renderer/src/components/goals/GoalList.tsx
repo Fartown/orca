@@ -11,7 +11,10 @@ import { getGoalRuntimeClient } from '@/goals/goal-runtime-client'
 import { goalDomainStore } from '@/goals/goals-domain-store'
 import { goalPhaseBadgeVariant, goalPhaseLabel } from '@/goals/goal-status-copy'
 import { useGoalDomainStore } from '@/goals/use-goals-domain-store'
-import { EmptyState, SessionLoadingState } from '../right-sidebar/AiVaultSessionListStates'
+import {
+  EmptyState,
+  SessionLoadingState
+} from '../right-sidebar/ai-vault/session-list/AiVaultSessionListStates'
 
 export function GoalList(): React.JSX.Element {
   const summaries = useGoalDomainStore((s) => s.summaries)

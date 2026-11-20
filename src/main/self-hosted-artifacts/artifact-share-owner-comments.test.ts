@@ -2,8 +2,8 @@ import { mkdir, mkdtemp, realpath, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import type { DiffComment } from '../../shared/diff-comment-types'
-import { mergeDiffCommentMutation } from '../../shared/diff-comment-mutation'
+import type { DiffComment } from '../../shared/file-review/diff-comment-types'
+import { mergeDiffCommentMutation } from '../../shared/file-review/diff-comment-mutation'
 import {
   importArtifactShareComments,
   removeArtifactShareReviewNotes,

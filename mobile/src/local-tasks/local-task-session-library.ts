@@ -8,7 +8,7 @@ import type {
   LocalTask,
   LocalTaskChangeScope
 } from '../../../src/shared/local-tasks/local-task-types'
-import type { RpcClient } from '../transport/rpc-client'
+import type { RpcClient } from '../transport/rpc/rpc-client-contract'
 import { createLocalTasksApi } from './local-tasks-api'
 import { localTaskLibraryHasProjects } from './local-tasks-access'
 import { startLocalTasksChangeFeed } from './local-tasks-change-feed'

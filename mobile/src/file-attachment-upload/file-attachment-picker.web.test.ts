@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 
 // `use-native-verbs` reaches the host-client hooks, whose real module imports the Expo runtime.
-vi.mock('../transport/host-client-hooks', () => ({
+vi.mock('../transport/connection/host-client-hooks', () => ({
   useDisconnectHostClient: () => () => {},
   useForceReconnect: () => null,
   useForgetHostClient: () => () => {},
@@ -10,8 +10,8 @@ vi.mock('../transport/host-client-hooks', () => ({
   useRefreshHostClient: () => () => {}
 }))
 
-import { NativeVerbError } from '../mobile-web-shell/bridge/use-native-verbs'
-import { MEDIA_STAGED_MAX_BYTES } from '../mobile-web-shell/media-handle-registry'
+import { NativeVerbError } from '../mobile-web-shell/bridge/native-capabilities/use-native-verbs'
+import { CLIPBOARD_IMAGE_MAX_SOURCE_BYTES as MEDIA_STAGED_MAX_BYTES } from '../../../src/shared/clipboard/clipboard-image'
 import {
   createShellFileAttachmentPicker,
   createStagedMediaFileAttachmentPicker,

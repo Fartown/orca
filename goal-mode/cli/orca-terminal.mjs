@@ -4,7 +4,7 @@ import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 
 const run = promisify(execFile)
-// 命令名按平台走,和上游 src/shared/orca-cli-command-name.ts 保持一致:
+// 命令名按平台走,和上游 src/shared/cli/orca-cli-command-name.ts 保持一致:
 //   linux 上叫 orca-ide(避开 GNOME Orca 读屏软件)、Windows 是 orca.cmd、其余 orca。
 // 写死 'orca' 的话 Linux 上开箱即坏,而且报错只会说「找不到命令」。
 function defaultOrcaBin() {

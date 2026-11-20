@@ -1,6 +1,6 @@
 import { ChevronDown, ChevronRight } from 'lucide-react'
 import { translate } from '@/i18n/i18n'
-import { cn } from '@/lib/utils'
+import { cn } from '@/lib/class-names'
 
 const ROW_PADDING = 4
 /** Each level steps in 20px; a guide line runs down the parent's caret column. */

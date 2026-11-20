@@ -1,13 +1,16 @@
 import { hostWorktreeTarget } from '../../../shared/worktree/host-qualified-identity'
-import { parseExecutionHostId, type ExecutionHostId } from '../../../shared/execution-host'
-import { getConnectionIdForFileFromState } from '@/lib/connection-owner-resolution'
-import { userNamedFileAccess } from '@/lib/local-file-access'
-import { toWorktreeRelativePath } from '../../../shared/terminal-links'
-import { activateAndRevealWorkspace } from '@/lib/worktree-activation'
+import {
+  parseExecutionHostId,
+  type ExecutionHostId
+} from '../../../shared/execution-host/execution-host'
+import { getConnectionIdForFileFromState } from '@/lib/workspace/ownership/connection-owner-resolution'
+import { userNamedFileAccess } from '@/lib/files/access/local-file-access'
+import { toWorktreeRelativePath } from '../../../shared/terminal/links/terminal-links'
+import { activateAndRevealWorkspace } from '@/lib/workspace/activation/worktree-activation'
 import { requestHostPathGrantForContext } from '@/runtime-host-path/host-path-file-client'
 import { resolveAbsoluteTabEntryReach } from '@/runtime-host-path/host-path-grant-seams'
-import { statRuntimePath } from '@/runtime/runtime-file-metadata-client'
-import { selectWorkspaceByHostTarget } from '@/store/workspace-record-selectors'
+import { statRuntimePath } from '@/runtime/files/metadata/runtime-file-metadata-client'
+import { selectWorkspaceByHostTarget } from '@/store/workspaces/selection/workspace-host-target'
 import { translate } from '@/i18n/i18n'
 import { useAppStore } from '@/store'
 

@@ -5,7 +5,7 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { LoaderCircle, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { translate } from '@/i18n/i18n'
-import { cn } from '@/lib/utils'
+import { cn } from '@/lib/class-names'
 import { LOCAL_TASK_PAGE_ATTRIBUTE } from '@/local-tasks/local-task-page-keys'
 import {
   isLocalTasksReadable,

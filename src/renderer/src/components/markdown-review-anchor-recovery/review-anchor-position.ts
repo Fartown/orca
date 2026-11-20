@@ -1,10 +1,10 @@
 import type { Editor } from '@tiptap/react'
-import type { DiffComment } from '../../../../shared/diff-comment-types'
+import type { DiffComment } from '../../../../shared/file-review/diff-comment-types'
 import { translate } from '@/i18n/i18n'
-import { getRichMarkdownAnnotationHighlightRangesForComment } from '../editor/rich-markdown-review-annotations'
-import type { RichMarkdownCommentBlock } from '../editor/rich-markdown-comment-blocks'
-import { getRichMarkdownRangeStart } from '../editor/rich-markdown-range-bounds'
-import type { RichMarkdownReviewNotePosition } from '../editor/rich-markdown-review-note-layout'
+import { getRichMarkdownAnnotationHighlightRangesForComment } from '../editor/rich-markdown/review/rich-markdown-review-annotations'
+import type { RichMarkdownCommentBlock } from '../editor/rich-markdown/review/rich-markdown-comment-blocks'
+import { getRichMarkdownRangeStart } from '../editor/rich-markdown/review/rich-markdown-range-bounds'
+import type { RichMarkdownReviewNotePosition } from '../editor/rich-markdown/review/rich-markdown-review-note-layout'
 
 export function resolveMarkdownReviewAnchorPosition({
   editor,

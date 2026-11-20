@@ -1,4 +1,4 @@
-import type { RpcResponse, RpcSuccess } from '../transport/types'
+import type { RpcResponse, RpcSuccess } from '../transport/rpc/rpc-wire-types'
 import type { PickedAttachmentFile } from './picked-attachment-file'
 
 export function rpcOk(result: unknown): RpcSuccess {

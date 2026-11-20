@@ -1,4 +1,4 @@
-import { stripInlineMarkdownForToc } from '@/components/editor/markdown-table-of-contents'
+import { stripInlineMarkdownForToc } from '@/components/editor/markdown/navigation/markdown-table-of-contents'
 
 /** Readable one-line text for list and card excerpts; the stored writeback stays Markdown. */
 export function localTaskProgressSummary(markdown: string): string {

@@ -3,7 +3,7 @@ import type {
   LocalTaskSessionLink,
   LocalTaskWorkspaceLink
 } from '../../../src/shared/local-tasks/local-task-link-types'
-import { makePaneKey } from '../../../src/shared/stable-pane-id'
+import { makePaneKey } from '../../../src/shared/workspace-layout/stable-pane-id'
 import { localTaskEndpointFor, SELF_LOCAL_TASK_ENDPOINT } from './local-task-endpoint'
 import { localTaskSessionHref } from './local-task-work-navigation'
 

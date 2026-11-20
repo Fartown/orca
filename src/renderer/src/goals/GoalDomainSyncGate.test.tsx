@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { act, cleanup, render } from '@testing-library/react'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
-import type { SshConnectionStatus } from '../../../shared/ssh-types'
+import type { SshConnectionStatus } from '../../../shared/remote-runtime/ssh/ssh-types'
 import type { GoalEditorDraftDemand } from './goal-editor-drafts-sync'
 
 type Harness = {
@@ -21,7 +21,7 @@ vi.mock('../store', () => ({
       sshConnectionStates: new Map([['box', { status: harness.ssh }]])
     })
 }))
-vi.mock('../lib/worktree-runtime-owner', () => ({
+vi.mock('../lib/workspace/ownership/worktree-runtime-owner', () => ({
   getExecutionHostIdForWorktree: () => 'ssh:box'
 }))
 vi.mock('./goal-runtime-client', () => ({

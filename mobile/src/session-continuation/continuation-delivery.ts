@@ -1,11 +1,11 @@
-import { buildAgentPromptPasteBytes } from '../../../src/shared/agent-prompt-injection'
+import { buildAgentPromptPasteBytes } from '../../../src/shared/agent-launch/startup/agent-prompt-injection'
 import {
   buildTerminalSendParams,
   TERMINAL_INPUT_SEND_OPTIONS
-} from '../terminal/terminal-send-request'
-import { isRpcDeliveryUnknown } from '../transport/rpc-delivery-ambiguity'
-import { runRpcOperation } from '../transport/rpc-operation'
-import type { RpcClient } from '../transport/rpc-client'
+} from '../terminal/input-delivery/terminal-send-request'
+import { isRpcDeliveryUnknown } from '../transport/rpc/rpc-delivery-ambiguity'
+import { runRpcOperation } from '../transport/rpc/rpc-operation'
+import type { RpcClient } from '../transport/rpc/rpc-client-contract'
 import {
   continuationTerminalSendOperation,
   continuationTerminalWaitOperation

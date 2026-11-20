@@ -1,5 +1,5 @@
-import { z } from 'zod'
-import type { NativeChatPendingSend } from '../native-chat/transcript/native-chat-pending-sends'
+import * as z from 'zod'
+import type { NativeChatPendingSend } from '../native-chat/transcript/pending-sends/native-chat-pending-sends'
 
 export const DURABLE_CHAT_COMPOSER_CAPABILITY = 'terminal.chat-composer.v1' as const
 

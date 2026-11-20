@@ -1,10 +1,10 @@
 import { describe, expect, it, vi } from 'vitest'
-import type * as SubscriptionSelection from '../hooks/ipc-events/runtime-environment-subscription-selection'
-import type { SshConnectionStatus } from '../../../shared/ssh-types'
+import type * as SubscriptionSelection from '../hooks/ipc-events/runtime-events/runtime-environment-subscription-selection'
+import type { SshConnectionStatus } from '../../../shared/remote-runtime/ssh/ssh-types'
 
 const reachable = vi.hoisted((): { ids: string[] } => ({ ids: [] }))
 vi.mock(
-  '../hooks/ipc-events/runtime-environment-subscription-selection',
+  '../hooks/ipc-events/runtime-events/runtime-environment-subscription-selection',
   async (importOriginal) => ({
     ...(await importOriginal<typeof SubscriptionSelection>()),
     getReachableRuntimeEnvironmentIds: () => reachable.ids

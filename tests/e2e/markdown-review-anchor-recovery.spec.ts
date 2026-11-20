@@ -2,15 +2,21 @@ import { runProcessSync } from '@orca/process-host'
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
-import type { Page, TestInfo } from '@stablyai/playwright-test'
-import { test, expect } from './helpers/orca-app'
-import { getActiveWorktreeContext, openMarkdownFixture } from './helpers/markdown-editor-fixture'
-import { launchHeadlessPairedRuntimeHost } from './helpers/headless-paired-runtime-host'
-import { launchPairedElectronClient } from './helpers/paired-electron-client'
-import { waitForPairedClientWorktree } from './helpers/paired-client-host-session'
-import { reserveLocalPort } from './helpers/reserve-local-port'
-import { decodePairingOffer, encodePairingOffer } from '../../src/shared/pairing'
-import type { Repo } from '../../src/shared/repo-types'
+import { expect, type Page, type TestInfo } from '@stablyai/playwright-test'
+import { test } from './desktop/electron-fixtures/orca-app'
+import {
+  getActiveWorktreeContext,
+  openMarkdownFixture
+} from './editor/markdown/markdown-editor-fixture'
+import { launchHeadlessPairedRuntimeHost } from './remote/paired-runtime/client-hosts/headless-paired-runtime-host'
+import { launchPairedElectronClient } from './remote/paired-runtime/client-hosts/paired-electron-client'
+import { waitForPairedClientWorktree } from './remote/paired-runtime/client-hosts/paired-client-host-session'
+import { reserveLocalPort } from './remote/managed-ssh/host-lifecycle/reserve-local-port'
+import {
+  decodePairingOffer,
+  encodePairingOffer
+} from '../../src/shared/remote-runtime/pairing/pairing'
+import type { Repo } from '../../src/shared/repository/repo-types'
 import type { Worktree } from '../../src/shared/worktree/types'
 
 const SOURCE = '# Heading\n\nRemaining text\n\nMoved text\n'

@@ -1,9 +1,9 @@
 import { useAppStore } from '@/store'
-import { revealTerminalPane } from '@/lib/reveal-terminal-pane'
-import { activateAndRevealWorkspace } from '@/lib/worktree-activation'
+import { revealTerminalPane } from '@/lib/workspace/activation/reveal-terminal-pane'
+import { activateAndRevealWorkspace } from '@/lib/workspace/activation/worktree-activation'
 import { activateStructuredAgentSessionTab } from '@/lib/agent-session/structured-agent-session-tab-activation'
-import { parseExecutionHostId } from '../../../shared/execution-host'
-import { parsePaneKey } from '../../../shared/stable-pane-id'
+import { parseExecutionHostId } from '../../../shared/execution-host/execution-host'
+import { parsePaneKey } from '../../../shared/workspace-layout/stable-pane-id'
 import type { LocalTaskSessionLink } from '../../../shared/local-tasks/local-task-link-types'
 import { localTaskAttentionClearsOnView } from '../../../shared/local-tasks/local-task-attention-rules'
 import { acknowledgeLocalTaskItemOnce } from './local-task-seen-forwarding'
@@ -11,13 +11,13 @@ import { localTasksDomainStore } from './local-tasks-domain-store'
 import { localTaskSessionPanelStore } from './local-task-session-panel-store'
 import { localTaskPageStore } from './local-task-page-store'
 import { openLocalTaskPage } from './local-task-navigation'
-import { resolveAutoAckTabTargets } from '@/hooks/agent-auto-ack-targets'
+import { resolveAutoAckTabTargets } from '@/attention/agent-auto-ack-targets'
 import {
   findLocalTaskSessionChatTab,
   isLocalTaskSessionInContact,
   isLocalTaskSessionTerminalSurfaceCurrent
 } from './local-task-session-execution-contact'
-import { structuredAgentSessionTargetForHost } from '@/runtime/structured-agent-session-owner'
+import { structuredAgentSessionTargetForHost } from '@/runtime/native-chat/session-ownership/structured-agent-session-owner'
 
 /**
  * Shows a linked session through Orca's own navigation: the pane for a terminal, the chat tab for a

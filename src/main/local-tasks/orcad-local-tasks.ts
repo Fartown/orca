@@ -1,4 +1,4 @@
-import { getAppEnvironment } from '../../shared/app-environment'
+import { getAppEnvironment } from '../../shared/app-lifecycle/app-environment'
 import { ensureActiveOrcaProfile } from '../orca-profiles/profile-index-store'
 import {
   bindLocalTaskHostSessions,

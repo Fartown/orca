@@ -1,16 +1,16 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { join } from 'node:path'
-import { AgentHookServer } from '../agent-hooks/server'
-import { normalizeHookPayload } from '../../shared/agent-hook-listener'
-import { makePaneKey } from '../../shared/stable-pane-id'
+import { AgentHookServer } from '../agent-hooks/server/agent-hook-server'
+import { normalizeHookPayload } from '../../shared/agent-hook-listener/normalization/normalize-hook-payload'
+import { makePaneKey } from '../../shared/workspace-layout/stable-pane-id'
 import {
   clearAllListenerCaches,
   clearPaneCacheState,
   clearPaneTurnCacheState,
   createHookListenerState,
-  movePaneCacheState,
-  paneHasStateClaims
+  movePaneCacheState
 } from '../../shared/agent-hook-listener/listener-state'
+import { paneHasStateClaims } from '../../shared/agent-hook-listener/pane-state-claims'
 import { shouldRejectCodexTitleTask } from '../../shared/session-names/codex-title-task-admission'
 
 const PANE = makePaneKey('codex-core', '11111111-1111-4111-8111-111111111111')

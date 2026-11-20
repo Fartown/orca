@@ -1,6 +1,6 @@
-import { z } from 'zod'
-import { defineRpcOperation } from '../transport/rpc-operation'
-import { rpcResultVariant } from '../transport/rpc-operation-result-reader'
+import * as z from 'zod'
+import { defineRpcOperation } from '../transport/rpc/rpc-operation'
+import { rpcResultVariant } from '../transport/rpc/rpc-operation-result-reader'
 
 /** Why `object-result-or-null` for both: a refusal is a legitimate answer here — the host may
  *  have closed the terminal between the create and the wait — and the delivery turns it into a

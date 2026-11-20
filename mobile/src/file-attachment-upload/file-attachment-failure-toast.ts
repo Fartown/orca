@@ -1,6 +1,6 @@
 import { FILE_ATTACHMENT_HOST_UNAVAILABLE_ERROR } from '../../../src/shared/file-attachment-upload/file-attachment-upload-limits'
 import { translate } from '../i18n/mobile-i18n'
-import type { ConnectionState } from '../transport/types'
+import type { ConnectionState } from '../transport/connection/connection-state'
 import {
   FileAttachmentHostUpdateRequiredError,
   FileAttachmentShellLimitError,

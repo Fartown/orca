@@ -5,7 +5,7 @@ import {
   isSameAgentProcess,
   readAgentProcessIdentity,
   type AgentProcessIdentity
-} from '../agent-process-presence'
+} from '../agent-status/process/agent-process-presence'
 
 export const CLAUDE_SESSION_ACTIVITY_WINDOW_MS = 30_000
 
@@ -118,21 +118,4 @@ function askedBeforeNormalization(
       process: sender
     })
   )
-}
-
-/** The relay asks its own presence check, looked up per call, whether the owner exited. */
-export function refusedHook(
-  state: HookListenerState,
-  relay: { checkAgentPresence: (paneKey: string) => unknown }
-) {
-  return (body: unknown): void =>
-    checkOwnerAfterRefusedClaudeHook(state, body, (paneKey) => relay.checkAgentPresence(paneKey))
-}
-
-export function cacheRecorder(
-  state: HookListenerState,
-  sent: Pick<AgentHookEventPayload, 'agentPresence'>
-) {
-  return (event: AgentHookEventPayload, isReplay: boolean): void =>
-    recordClaudeSessionActivity(state, event, isReplay, sent)
 }

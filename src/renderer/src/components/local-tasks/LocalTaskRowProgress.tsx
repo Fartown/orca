@@ -1,6 +1,7 @@
-import { AgentIcon, getAgentLabel } from '@/lib/agent-catalog'
+import { AgentIcon } from '@/components/agent/icons/AgentIcon'
+import { getAgentLabel } from '@/lib/agent-catalog/agent-catalog'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { useNow } from '@/hooks/use-now'
+import { useNow } from '@/lib/window-activity/use-now'
 import { translate } from '@/i18n/i18n'
 import { Unplug } from 'lucide-react'
 import { localTaskAttentionKindLabel } from '@/local-tasks/local-task-attention-copy'
@@ -10,7 +11,7 @@ import { formatLocalTaskTime } from '@/local-tasks/local-task-time'
 import { localTaskVisibleProgress } from '@/local-tasks/local-task-visible-progress'
 import { localTaskProgressSummary } from '@/local-tasks/local-task-progress-summary'
 import { useLocalTasksDomain } from '@/local-tasks/local-tasks-domain-store'
-import { isTuiAgent } from '../../../../shared/tui-agent-config'
+import { isTuiAgent } from '../../../../shared/agent-launch/catalog/tui-agent-config'
 import type {
   LocalTaskAttentionItem,
   LocalTaskSessionLink

@@ -3,8 +3,8 @@ import type { LocalTaskWorkspaceLink } from '../../../src/shared/local-tasks/loc
 import { buildLocalTaskAgentPrompt } from '../../../src/shared/local-tasks/local-task-agent-prompt'
 import { localTaskAncestors } from '../../../src/shared/local-tasks/local-task-tree'
 import type { LocalTask } from '../../../src/shared/local-tasks/local-task-types'
-import type { TuiAgent } from '../../../src/shared/tui-agent'
-import type { MobileNewTabAgentOption } from '../session/mobile-new-tab-agent-options'
+import type { TuiAgent } from '../../../src/shared/agent-launch/catalog/tui-agent'
+import type { MobileNewTabAgentOption } from '../session/agent-launch/mobile-new-tab-agent-options'
 import type { LocalTasksApi } from './local-tasks-api'
 import type { LocalTasksCopy } from './local-tasks-copy'
 import {

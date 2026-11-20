@@ -3,7 +3,7 @@ import { readFileSync, realpathSync } from 'node:fs'
 import path from 'node:path'
 import process from 'node:process'
 import { pathToFileURL } from 'node:url'
-import { resolveOxcCliInvocation } from './oxc-cli-invocation.mjs'
+import { resolveOxcCliInvocation } from './tool-invocation/oxc-cli-invocation.mjs'
 
 function upstreamBase(root, head) {
   try {
@@ -60,10 +60,14 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   if (files.length > 0) {
     const root = path.resolve(import.meta.dirname, '../..')
     const invocation = resolveOxcCliInvocation('oxfmt', 'oxfmt', root)
-    const result = spawnSync(invocation.command, [...invocation.prefixArgs, '--write', ...files], {
-      stdio: 'inherit',
-      windowsHide: true
-    })
+    const result = spawnSync(
+      invocation.command,
+      [...invocation.prefixArgs, '--write', '--no-error-on-unmatched-pattern', ...files],
+      {
+        stdio: 'inherit',
+        windowsHide: true
+      }
+    )
     if (result.error) {
       throw result.error
     }

@@ -2,13 +2,13 @@
 import type { ReactNode } from 'react'
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { FolderWorkspace } from '../../../shared/folder-workspace-types'
+import type { FolderWorkspace } from '../../../shared/folder-workspaces/folder-workspace-types'
 import type { LocalTaskWorkspaceLink } from '../../../shared/local-tasks/local-task-link-types'
 import { LOCAL_TASK_SOURCE_HIDDEN_PREFERENCE_KEY } from '../../../shared/local-tasks/local-task-source-visibility'
 import type { LocalTask, LocalTaskProject } from '../../../shared/local-tasks/local-task-types'
-import { folderWorkspaceKey } from '../../../shared/workspace-scope'
+import { folderWorkspaceKey } from '../../../shared/workspace/identity/workspace-scope'
 import type { Worktree } from '../../../shared/worktree/types'
-import type { ExecutionHostId } from '../../../shared/execution-host'
+import type { ExecutionHostId } from '../../../shared/execution-host/execution-host'
 
 const client = vi.hoisted(() => ({
   createTask: vi.fn(),
@@ -19,15 +19,21 @@ const client = vi.hoisted(() => ({
 vi.mock('@/components/ui/tooltip', () => ({
   Tooltip: ({ children }: { children?: ReactNode }) => <>{children}</>,
   TooltipContent: () => null,
-  TooltipTrigger: ({ children }: { children?: ReactNode }) => <>{children}</>
+  // Why a span: icon-only source tabs hand their tab role and handlers to this trigger.
+  TooltipTrigger: ({
+    asChild,
+    children,
+    ...props
+  }: { asChild?: boolean; children?: ReactNode } & Record<string, unknown>) =>
+    asChild ? <>{children}</> : <span {...props}>{children}</span>
 }))
-vi.mock('@/runtime/runtime-linear-client', () => ({
+vi.mock('@/runtime/linear/runtime-linear-client', () => ({
   linearStatus: vi.fn(async () => ({ connected: false, viewer: null }))
 }))
 vi.mock('./local-tasks-runtime-client', () => ({ localTasksClient: client }))
 
 import { useAppStore } from '@/store'
-import WorktreeMetaDialog from '@/components/sidebar/WorktreeMetaDialog'
+import WorktreeMetaDialog from '@/components/sidebar/workspace-card/metadata/WorktreeMetaDialog'
 import { localTasksDomainStore } from './local-tasks-domain-store'
 import type { LocalTaskEndpointKey } from './local-task-endpoints'
 import { openLocalTaskWorkspaceDetails } from './local-task-workspace-details'
@@ -188,7 +194,7 @@ describe('workspace details → linked work → Local tasks (REQ-011)', () => {
     library('local')
     openDetails()
     const tab = screen.getByRole('tab', { name: 'Local' })
-    const tabs = screen.getAllByRole('tab').map((candidate) => candidate.textContent)
+    const tabs = screen.getAllByRole('tab').map((candidate) => candidate.getAttribute('aria-label'))
     expect(tabs.indexOf('Local')).toBe(tabs.indexOf('Smart') + 1)
     await waitFor(() => expect(tab.getAttribute('aria-selected')).toBe('true'))
     await pick('Order export')

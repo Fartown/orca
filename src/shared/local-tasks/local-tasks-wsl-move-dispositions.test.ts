@@ -3,9 +3,11 @@ import SyncDatabase from '../../main/sqlite/sync-database'
 import { LocalTasksDatabase } from '../../main/local-tasks/local-tasks-database'
 import { LOCAL_TASKS_SCHEMA_VERSION } from '../../main/local-tasks/local-tasks-schema'
 import { rowString } from '../../main/local-tasks/local-tasks-sqlite-row'
-import { SQLITE_TABLE_DISPOSITIONS } from '../wsl-move/wsl-move-storage-dispositions'
+import { LOCAL_TASKS_SQLITE_TABLE_DISPOSITIONS } from './local-tasks-wsl-move-dispositions'
 
 void SyncDatabase
+
+const SQLITE_TABLE_DISPOSITIONS = Object.fromEntries(LOCAL_TASKS_SQLITE_TABLE_DISPOSITIONS)
 
 const DISPATCHER_TABLES = [
   'local_task_conversations',

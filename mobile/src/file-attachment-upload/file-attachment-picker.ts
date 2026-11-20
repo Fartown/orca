@@ -1,11 +1,11 @@
 import * as DocumentPicker from 'expo-document-picker'
 import { File as FsFile } from 'expo-file-system'
 import { FILE_ATTACHMENT_MAX_BYTES } from '../../../src/shared/file-attachment-upload/file-attachment-upload-limits'
-import { encodeBase64Bytes } from '../transport/base64-byte-codec'
+import { encodeBase64Bytes } from '../transport/encryption/base64-byte-codec'
 import type { FileAttachmentPicker, PickedAttachmentFile } from './picked-attachment-file'
 
 type FileHandle = {
-  readBytes(length: number): Uint8Array
+  readBytesSync(length: number): Uint8Array
   close(): void
 }
 
@@ -33,7 +33,7 @@ export async function* readFileBase64Chunks(
       const chunk = new Uint8Array(chunkBytes)
       let filled = 0
       while (filled < chunkBytes) {
-        const bytes = handle.readBytes(chunkBytes - filled)
+        const bytes = handle.readBytesSync(chunkBytes - filled)
         if (bytes.byteLength === 0) {
           break
         }

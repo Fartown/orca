@@ -2,14 +2,14 @@ import { useEffect, useState } from 'react'
 import { matchesLocalTaskQuery } from '../../../src/shared/local-tasks/local-task-grouping'
 import type { LocalTaskLinks } from '../../../src/shared/local-tasks/local-task-link-types'
 import type { LocalTask, LocalTaskProject } from '../../../src/shared/local-tasks/local-task-types'
-import { taskRuntimeStatusRead } from '../tasks/mobile-task-runtime-operations'
-import { scopeRpcClientToExecutionHost } from '../transport/execution-host-scoped-rpc-client'
-import type { RpcClient } from '../transport/rpc-client'
+import { taskRuntimeStatusRead } from '../tasks/screen-state/mobile-task-runtime-operations'
+import { scopeRpcClientToExecutionHost } from '../worktree/execution-hosts/execution-host-scoped-rpc-client'
+import type { RpcClient } from '../transport/rpc/rpc-client-contract'
 import {
   projectSectionsRead,
   readServedProjectSections
-} from '../worktree/project-sections-operations'
-import { useRelayHosts } from '../worktree/relay-hosts-feed'
+} from '../worktree/project-sections/project-sections-operations'
+import { useRelayHosts } from '../worktree/execution-hosts/relay-hosts-feed'
 import { createLocalTasksApi } from './local-tasks-api'
 import { hostAdvertisesLocalTasks } from './local-tasks-access'
 import { localTasksCopy } from './local-tasks-copy'
@@ -63,6 +63,8 @@ export function LocalTaskLinkToTaskSheet(props: {
   hostLabel: string
   /** The paired host's client. */
   client: RpcClient | null
+  /** The paired host's capabilities: a desktop that pushes relay host changes is not polled. */
+  hostCapabilities: readonly string[]
   onLinked?: () => void
   onClose: () => void
 }) {
@@ -77,7 +79,10 @@ export function LocalTaskLinkToTaskSheet(props: {
       ? scopeRpcClientToExecutionHost(client, endpoint.executionHost)
       : client
   // The host list keeps a server's rows while it is out of contact, so they can still be pressed.
-  const relayHosts = useRelayHosts(target && endpoint.executionHost ? client : null)
+  const relayHosts = useRelayHosts(
+    target && endpoint.executionHost ? client : null,
+    props.hostCapabilities
+  )
   const relay = relayHosts?.find((host) => host.hostId === endpoint.executionHost)
   const contact = !endpoint.executionHost
     ? 'ready'
@@ -110,7 +115,7 @@ export function LocalTaskLinkToTaskSheet(props: {
     // Why asked here: the host screen only knows the paired host advertises tasks, not the server.
     const supported = endpoint.executionHost
       ? taskRuntimeStatusRead
-          .requestSingleFlight(libraryClient, endpoint.executionHost)
+          .request(libraryClient)
           .then((reply) =>
             hostAdvertisesLocalTasks(taskRuntimeStatusRead.interpret(reply).capabilities)
           )

@@ -1,11 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { ImeTextarea } from '@/lib/ime-text-field'
+import { ImeTextarea } from '@/lib/text-input/ime/ime-text-field'
 import { translate } from '@/i18n/i18n'
 import { useAppStore } from '@/store'
-import { getAgentCatalog } from '@/lib/agent-catalog'
-import { isWebClientLocation } from '@/lib/web-client-location'
-import { filterEnabledTuiAgents, pickTuiAgent } from '../../../../shared/tui-agent-selection'
-import type { TuiAgent } from '../../../../shared/tui-agent'
+import { getAgentCatalog } from '@/lib/agent-catalog/agent-catalog'
+import { isWebClientLocation } from '@/app-shell/platform/web-client-location'
+import {
+  filterEnabledTuiAgents,
+  pickTuiAgent
+} from '../../../../shared/agent-launch/catalog/tui-agent-selection'
+import type { TuiAgent } from '../../../../shared/agent-launch/catalog/tui-agent'
 import { askLocalTaskDispatcher } from '@/local-tasks/local-task-dispatcher-ask'
 import { openLocalTaskDispatcher } from '@/local-tasks/local-task-dispatcher-session'
 import { LocalTaskDispatchMentionMenu } from './LocalTaskDispatchMentionMenu'
@@ -16,9 +19,9 @@ import {
 } from './LocalTaskDispatchTargets'
 import type { LocalTaskProject } from '../../../../shared/local-tasks/local-task-types'
 import { findMentionQuery } from '@/components/pull-request-page/mentions/query'
-import { buildSidebarHostOptionsForAllHosts } from '@/components/sidebar/sidebar-host-options'
-import { selectWslHostsServing } from '@/components/sidebar/use-wsl-hosts-enabled'
-import { getHostDisplayLabelOverrides } from '../../../../shared/host-setting-overrides'
+import { buildSidebarHostOptionsForAllHosts } from '@/components/sidebar/worktree-list/controls/sidebar-host-options'
+import { selectWslHostsServing } from '@/runtime/hosts/wsl/use-wsl-hosts-enabled'
+import { getHostDisplayLabelOverrides } from '../../../../shared/execution-host/host-setting-overrides'
 import { useBoundedHostRows } from '@/components/host-picker/use-bounded-host-rows'
 import { createDispatchAppSelector } from '@/local-tasks/local-task-dispatch-app-selector'
 import {

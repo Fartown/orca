@@ -11,14 +11,17 @@ import {
 } from '@/components/ui/dialog'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import AgentCombobox from '@/components/agent/AgentCombobox'
-import { getAgentCatalog } from '@/lib/agent-catalog'
-import { useAgentDetectionTargetForWorktree } from '@/hooks/useAgentDetectionTarget'
-import { useDetectedAgents } from '@/hooks/useDetectedAgents'
+import { getAgentCatalog } from '@/lib/agent-catalog/agent-catalog'
+import { useAgentDetectionTargetForWorktree } from '@/lib/agent-session/launch/inventory/useAgentDetectionTarget'
+import { useDetectedAgents } from '@/lib/agent-session/launch/inventory/useDetectedAgents'
 import { translate } from '@/i18n/i18n'
 import { useAppStore } from '@/store'
 import { selectLocalTaskHostLabel } from '@/local-tasks/local-task-host-label'
-import { filterEnabledTuiAgents, pickTuiAgent } from '../../../../shared/tui-agent-selection'
-import type { TuiAgent } from '../../../../shared/tui-agent'
+import {
+  filterEnabledTuiAgents,
+  pickTuiAgent
+} from '../../../../shared/agent-launch/catalog/tui-agent-selection'
+import type { TuiAgent } from '../../../../shared/agent-launch/catalog/tui-agent'
 import type { LocalTaskWorkspaceLink } from '../../../../shared/local-tasks/local-task-link-types'
 import type { LocalTask } from '../../../../shared/local-tasks/local-task-types'
 import {

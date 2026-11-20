@@ -10,7 +10,7 @@ import {
   X
 } from 'lucide-react'
 import { translate } from '@/i18n/i18n'
-import { getAgentLabel } from '@/lib/agent-catalog'
+import { getAgentLabel } from '@/lib/agent-catalog/agent-catalog'
 import { localTaskPageStore } from '@/local-tasks/local-task-page-store'
 import type { LocalTaskProposalNames } from '@/local-tasks/local-task-proposal-copy'
 import type { LocalTaskProposalLock } from '@/local-tasks/local-task-proposal-item-facts'
@@ -19,7 +19,7 @@ import type {
   LocalTaskProposalItemStage
 } from '@/local-tasks/local-task-proposal-progress'
 import { useLocalTasksDomain } from '@/local-tasks/local-tasks-domain-store'
-import { isTuiAgent } from '../../../../shared/tui-agent-config'
+import { isTuiAgent } from '../../../../shared/agent-launch/catalog/tui-agent-config'
 import { useLocalTaskHostLabel } from './LocalTaskHostLabel'
 import { localTaskSessionStateLabel } from './LocalTaskProgress'
 

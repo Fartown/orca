@@ -1,6 +1,6 @@
 import { Hand, Unplug } from 'lucide-react'
 import { translate } from '@/i18n/i18n'
-import { cn } from '@/lib/utils'
+import { cn } from '@/lib/class-names'
 import { useLocalTaskDispatcherLedger } from '@/local-tasks/local-task-dispatcher-ledger'
 import type { LocalTaskIndex } from '@/local-tasks/local-task-grouping'
 import { localTaskPageStore } from '@/local-tasks/local-task-page-store'

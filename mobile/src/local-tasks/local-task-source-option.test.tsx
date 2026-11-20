@@ -2,17 +2,17 @@ import { createElement } from 'react'
 import { act, create, type ReactTestRenderer } from 'react-test-renderer'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { LOCAL_TASKS_RUNTIME_CAPABILITY } from '../../../src/shared/local-tasks/local-tasks-capability'
-import type { TaskProvider } from '../../../src/shared/task-providers'
-import type { PickerOption } from '../components/PickerModal'
-import type { RpcClient } from '../transport/rpc-client'
-import type { ConnectionState, RpcResponse } from '../transport/types'
+import type { TaskProvider } from '../../../src/shared/work-items/task-providers'
+import type { PickerOption } from '../components/sheets/PickerModal'
+import type { RpcClient } from '../transport/rpc/rpc-client-contract'
+import type { ConnectionState } from '../transport/connection/connection-state'
+import type { RpcResponse } from '../transport/rpc/rpc-wire-types'
 
 type PageEnv = { client: RpcClient | null; state: ConnectionState; capabilities: string[] }
 
 const env = vi.hoisted((): PageEnv => ({ client: null, state: 'connected', capabilities: [] }))
 
-vi.mock('../tasks/mobile-tasks-dependencies', () => ({ ListTodo: 'ListTodo' }))
-vi.mock('../components/host-protocol-gates-context', () => ({
+vi.mock('../components/host-connection/host-protocol-gates-context', () => ({
   useOptionalHostProtocolGates: () => ({
     hostCapabilities: env.capabilities,
     statusPending: false,

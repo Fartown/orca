@@ -1,6 +1,6 @@
-import type { AgentHookSource } from '../agent-hook-relay'
+import type { AgentHookSource } from '../agent-hook-listener/transport/agent-hook-relay'
 import type { AgentProviderSessionMetadata } from '../agent-session/lifecycle/agent-session-resume'
-import type { AgentStatusPayload } from '../agent-status-types'
+import type { AgentStatusPayload } from '../agent-status/contracts/agent-status-types'
 import type { HookListenerState } from '../agent-hook-listener/listener-state'
 import { shouldRejectClaudeSessionReplacement } from '../claude-session-ownership/claude-session-activity'
 import { isCodexThreadTitleGenerationPrompt } from '../codex-thread-title-generation'

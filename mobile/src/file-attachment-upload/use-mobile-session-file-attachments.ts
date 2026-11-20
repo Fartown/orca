@@ -1,7 +1,8 @@
-import { triggerError, triggerSelection } from '../platform/haptics'
-import type { MobileImageSource } from '../platform/media-picker-contract'
-import type { MobileSessionAccessorySelectionModel } from '../session/use-mobile-session-accessory-selection'
-import type { MobileNativeChatImageAttachments } from '../session/native-chat/composer/use-mobile-native-chat-image-attachments'
+import { triggerError, triggerSelection } from '../platform/haptics/haptics'
+import type { MobileImageSource } from '../platform/media-picking/media-picker-contract'
+import type { MobileSessionAccessorySelectionModel } from '../terminal/session/accessory-keys/use-mobile-session-accessory-selection'
+import type { MobileNativeChatImageAttachments } from '../session/native-chat/composer/attachments/use-mobile-native-chat-image-attachments'
+import { addUploadedChatImages } from './add-uploaded-chat-images'
 import { useMobileFileAttachments, type MobileFileAttachments } from './use-mobile-file-attachments'
 
 type SessionAttachmentParts = {
@@ -40,7 +41,7 @@ export function useMobileSessionFileAttachments(
         ? scope.connState === 'connected'
         : scope.nativeChatInputLeaseReady && scope.activeHandle !== null,
       attachPhoto: () => void parts.nativeChatImages.attachImage('library'),
-      addUploadedImages: parts.nativeChatImages.addUploadedImages,
+      addUploadedImages: addUploadedChatImages,
       setComposerText: scope.nativeChatController.setChatComposerText
     }
   })

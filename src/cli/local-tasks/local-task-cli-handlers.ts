@@ -1,18 +1,22 @@
 import { findLocalTaskLinkForWorkspace } from '../../shared/local-tasks/local-task-workspace-match'
 import { findLocalTaskSessionForIdentity } from '../../shared/local-tasks/local-task-session-match'
 import type { LocalTask } from '../../shared/local-tasks/local-task-types'
-import type { CommandHandler, HandlerContext } from '../dispatch'
+import type { CommandHandler, HandlerContext } from '../dispatch/dispatch'
 import { LOCAL_TASK_COMMENT_MAX } from '../../shared/local-tasks/local-task-model'
 import {
   LOCAL_TASK_DISPATCHER_GUIDE,
   LOCAL_TASK_WORKER_GUIDE
 } from '../../shared/local-tasks/local-task-brief'
 import { LOCAL_TASK_NEEDS_YOU_MAX } from '../../shared/local-tasks/local-task-progress'
-import { readCommandBody } from '../command-body-input'
+import { readCommandBody } from '../arguments/command-body-input'
 import { LOCAL_TASK_DISPATCHER_CLI_HANDLERS } from './local-task-dispatcher-cli'
-import { getOptionalStringFlag, getRepeatedStringFlag, getRequiredStringFlag } from '../flags'
-import { printResult } from '../format'
-import { RuntimeClientError } from '../runtime/types'
+import {
+  getOptionalStringFlag,
+  getRepeatedStringFlag,
+  getRequiredStringFlag
+} from '../arguments/flags'
+import { printResult } from '../output/command-result-output'
+import { RuntimeClientError } from '../runtime/connection/types'
 import {
   addTaskComment,
   COMPLETED_FROM_CLI_MESSAGE,
@@ -239,4 +243,4 @@ export const LOCAL_TASK_CLI_HANDLERS: Record<string, CommandHandler> = {
   ...LOCAL_TASK_DISPATCHER_CLI_HANDLERS,
   ...LOCAL_TASK_NEEDS_YOU_CLI_HANDLERS
 }
-import { LOCAL_EXECUTION_HOST_ID } from '../../shared/execution-host'
+import { LOCAL_EXECUTION_HOST_ID } from '../../shared/execution-host/execution-host'

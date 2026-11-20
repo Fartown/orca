@@ -45,6 +45,11 @@ export function getIntlLocale(): string {
   return LANGUAGE.tag
 }
 
+/** The page never switches language after load, so the scope useTranslate keys on never changes. */
+export function getTranslationScope(): string {
+  return LANGUAGE.catalog
+}
+
 export function getShareViewerLanguage(): string {
   return LANGUAGE.catalog
 }

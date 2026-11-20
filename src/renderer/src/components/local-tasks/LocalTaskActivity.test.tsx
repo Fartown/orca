@@ -9,7 +9,7 @@ vi.mock('@/local-tasks/local-tasks-runtime-client', () => ({ localTasksClient: r
 vi.mock('@/local-tasks/local-tasks-sync', () => ({
   localTasksSync: { watchEvents: () => () => {}, retryEvents: rpc.retryEvents }
 }))
-vi.mock('@/hooks/use-now', () => ({ useNow: () => 1_000 }))
+vi.mock('@/lib/window-activity/use-now', () => ({ useNow: () => 1_000 }))
 
 import { LocalTaskActivity } from './LocalTaskActivity'
 import { localTasksDomainStore } from '@/local-tasks/local-tasks-domain-store'

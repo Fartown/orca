@@ -2,9 +2,9 @@ import {
   LOCAL_EXECUTION_HOST_ID,
   parseExecutionHostId,
   toRuntimeExecutionHostId
-} from '../../../shared/execution-host'
-import type { HostAuthorityEndpoint } from '../../../shared/host-authority'
-import type { RuntimeClientTarget } from '../../../shared/runtime-client-target'
+} from '../../../shared/execution-host/execution-host'
+import type { HostAuthorityEndpoint } from '../../../shared/execution-host/host-authority'
+import type { RuntimeClientTarget } from '../../../shared/remote-runtime/host-catalog/runtime-client-target'
 
 /**
  * Which Orca's task library a row came from (D-008): `local` is this app's own, `runtime:{env}` a

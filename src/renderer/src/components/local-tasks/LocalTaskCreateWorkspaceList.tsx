@@ -1,8 +1,8 @@
 import { Folder, GitBranch, Search, Unplug } from 'lucide-react'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { translate } from '@/i18n/i18n'
-import { ImeInput } from '@/lib/ime-text-field'
-import { cn } from '@/lib/utils'
+import { ImeInput } from '@/lib/text-input/ime/ime-text-field'
+import { cn } from '@/lib/class-names'
 import {
   localTaskCreateChoiceBlocked,
   type LocalTaskCreateWorkspaceChoice

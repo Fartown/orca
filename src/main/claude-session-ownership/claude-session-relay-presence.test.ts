@@ -2,14 +2,16 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { RelayAgentHookServer } from '../../wsl-guest/agent-hook-server'
-import type { AgentHookRelayEnvelope } from '../../shared/agent-hook-relay'
-import { makePaneKey } from '../../shared/stable-pane-id'
+import { RelayAgentHookServer } from '../../wsl-guest/agent-hooks/server/agent-hook-server'
+import type { AgentHookRelayEnvelope } from '../../shared/agent-hook-listener/transport/agent-hook-relay'
+import { makePaneKey } from '../../shared/workspace-layout/stable-pane-id'
 
 const probe = vi.hoisted(() =>
   vi.fn(async (): Promise<'live' | 'unverifiable' | 'exited'> => 'unverifiable')
 )
-vi.mock('../../shared/agent-process-presence-probe', () => ({ probeAgentProcessPresence: probe }))
+vi.mock('../../shared/agent-status/process/agent-process-presence-probe', () => ({
+  probeAgentProcessPresence: probe
+}))
 
 const OWNER_PID = 4001
 const OTHER_PID = 4002
@@ -111,7 +113,7 @@ describe('relay Claude activity window with process presence', () => {
 describe('client admission of presence-aware relay traffic', () => {
   async function relayIntoClient() {
     vi.resetModules()
-    const { AgentHookServer } = await import('../agent-hooks/server')
+    const { AgentHookServer } = await import('../agent-hooks/server/agent-hook-server')
     const client = new AgentHookServer()
     cleanups.push(async () => client.stop())
     const relay = await startRelay()

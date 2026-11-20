@@ -1,18 +1,18 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { createBrowserUuid } from '@/lib/browser-uuid'
+import { createNonSecureContextUuid as createBrowserUuid } from '../../../shared/identifiers/non-secure-context-uuid'
 import { translate } from '@/i18n/i18n'
 import { useUiLanguageRevision } from '@/i18n/use-ui-language-revision'
 import { useAppStore } from '@/store'
-import { parseExecutionHostId } from '../../../shared/execution-host'
-import { getReachableRuntimeEnvironmentIds } from '../hooks/ipc-events/runtime-environment-subscription-selection'
+import { parseExecutionHostId } from '../../../shared/execution-host/execution-host'
+import { getReachableRuntimeEnvironmentIds } from '../hooks/ipc-events/runtime-events/runtime-environment-subscription-selection'
 import type { NativeChatMessage } from '../../../shared/native-chat/native-chat-types'
-import type { NativeChatDeliveryNotice } from '../components/native-chat/NativeChatMessageRow'
+import type { NativeChatDeliveryNotice } from '../components/native-chat/messages/rows/NativeChatMessageRow'
 import {
   durableChatPending,
   type DurableChatSend,
   type DurableChatSubmitRecord
 } from '../../../shared/native-chat-view-recovery/durable-chat-submit'
-import { pendingSendsAsMessages } from '../../../shared/native-chat/transcript/native-chat-pending-sends'
+import { pendingSendsAsMessages } from '../../../shared/native-chat/transcript/pending-sends/native-chat-pending-sends'
 import { durableChatUserEvidence } from '../../../shared/native-chat-view-recovery/durable-chat-reconciliation'
 
 function hostInContact(record: DurableChatSubmitRecord) {
@@ -98,7 +98,7 @@ export function useDurableChatDelivery(args: {
     const unsubscribe = useAppStore.subscribe(() => {
       queryOnContact(entries)
       const snapshot = current.current
-      const row = useAppStore.getState().agentStatusByPaneKey[snapshot.paneKey]
+      const row = useAppStore.getState().agentStatusByPaneKey.get(snapshot.paneKey)
       const edge = JSON.stringify([row?.turnStartedAt, row?.stateObservedAt, row?.state])
       if (edge === providerEdge) {
         return

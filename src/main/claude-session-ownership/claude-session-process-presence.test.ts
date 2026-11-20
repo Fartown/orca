@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { AgentHookServer } from '../agent-hooks/server'
-import { buildBody, PANE, postHookEvent } from '../agent-hooks/server.test-fixtures'
+import { AgentHookServer } from '../agent-hooks/server/agent-hook-server'
+import { buildBody, PANE, postHookEvent } from '../agent-hooks/server/testing/server.test-fixtures'
 
 vi.mock('../telemetry/client', () => ({ track: vi.fn() }))
 vi.mock('../telemetry/cohort-classifier', () => ({ getCohortAtEmit: () => ({}) }))
@@ -8,7 +8,9 @@ vi.mock('../telemetry/cohort-classifier', () => ({ getCohortAtEmit: () => ({}) }
 const probe = vi.hoisted(() =>
   vi.fn(async (): Promise<'live' | 'unverifiable' | 'exited'> => 'unverifiable')
 )
-vi.mock('../../shared/agent-process-presence-probe', () => ({ probeAgentProcessPresence: probe }))
+vi.mock('../../shared/agent-status/process/agent-process-presence-probe', () => ({
+  probeAgentProcessPresence: probe
+}))
 
 const OWNER_PID = 4001
 const OTHER_PID = 4002
@@ -82,20 +84,23 @@ describe('Claude activity window with process presence', () => {
   })
 
   describe('when process detection registered the pane before any hook', () => {
-    // Why: an Orca-launched TUI is first seen by its foreground process, so the pane's owner
-    // carries no process and only the guard's own record knows which process the session runs in.
+    // Why: an Orca-launched TUI is first seen by its foreground process. Upstream now stamps the
+    // owner's process from its first hook, so the guard must hold with the detected row in place.
     async function detectedServer(): Promise<AgentHookServer> {
       const server = await createServer()
       server.ingestTerminalStatus({
         paneKey: PANE,
-        payload: { state: 'idle', prompt: '', agentType: 'claude' } as never,
+        payload: { state: 'done', prompt: '', agentType: 'claude' },
         origin: 'process'
       })
-      await hook(server, 'SessionStart', 'session-a', OWNER_PID)
-      await hook(server, 'UserPromptSubmit', 'session-a', OWNER_PID)
-      expect(server._getStateForTests().lastStatusByPaneKey.get(PANE)?.agentPresence?.process).toBe(
+      expect(server._getStateForTests().lastStatusByPaneKey.get(PANE)?.agentPresence).toBe(
         undefined
       )
+      await hook(server, 'SessionStart', 'session-a', OWNER_PID)
+      await hook(server, 'UserPromptSubmit', 'session-a', OWNER_PID)
+      expect(
+        server._getStateForTests().lastStatusByPaneKey.get(PANE)?.agentPresence?.process?.pid
+      ).toBe(OWNER_PID)
       return server
     }
 

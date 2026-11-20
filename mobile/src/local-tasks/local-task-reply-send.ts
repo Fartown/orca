@@ -3,22 +3,22 @@
  * (技术方案 §17.3): one request, never sent twice, nothing kept on any host. A refused send
  * hands the text back; a lost answer is "sent, not confirmed" and is left alone.
  */
-import { z } from 'zod'
+import * as z from 'zod'
 import type { AgentSessionHistoryResult } from '../../../src/shared/agent-session/agent-session-wire'
 import type { LocalTaskSessionLink } from '../../../src/shared/local-tasks/local-task-link-types'
-import { parsePaneKey } from '../../../src/shared/stable-pane-id'
-import { salvagingArray } from '../../../src/shared/zod-salvage'
+import { parsePaneKey } from '../../../src/shared/workspace-layout/stable-pane-id'
+import { salvagingArray } from '../../../src/shared/validation/zod-salvage'
 import {
   openMobileNativeChatSendBudget,
   sendMobileNativeChatMessageWithOutcome
-} from '../session/native-chat/mobile-native-chat-send'
-import { healMobileNativeChatStaleInput } from '../session/native-chat/mobile-native-chat-stale-input'
-import { sendMobileStructuredAgentSessionMessage } from '../session/mobile-structured-agent-session-send'
-import { callAgentSession } from '../session/mobile-structured-agent-session-rpc'
-import { structuredSessionOperationId } from '../session/structured-session-operation-id'
-import type { RpcClient } from '../transport/rpc-client'
-import { defineRpcOperation, runRpcOperation } from '../transport/rpc-operation'
-import { rpcResultVariant } from '../transport/rpc-operation-result-reader'
+} from '../session/native-chat/composer/delivery/mobile-native-chat-send'
+import { healMobileNativeChatStaleInput } from '../session/native-chat/composer/delivery/mobile-native-chat-stale-input'
+import { sendMobileStructuredAgentSessionMessage } from '../session/native-chat/agent-session/mobile-structured-agent-session-send'
+import { callAgentSession } from '../session/native-chat/agent-session/mobile-structured-agent-session-rpc'
+import { structuredSessionOperationId } from '../session/native-chat/agent-session/structured-session-operation-id'
+import type { RpcClient } from '../transport/rpc/rpc-client-contract'
+import { defineRpcOperation, runRpcOperation } from '../transport/rpc/rpc-operation'
+import { rpcResultVariant } from '../transport/rpc/rpc-operation-result-reader'
 
 export type LocalTaskReplyOutcome =
   | { kind: 'delivered' }

@@ -1,6 +1,6 @@
 import { Hand } from 'lucide-react'
-import { useNow } from '@/hooks/use-now'
-import { cn } from '@/lib/utils'
+import { useNow } from '@/lib/window-activity/use-now'
+import { cn } from '@/lib/class-names'
 import { formatLocalTaskTime } from '@/local-tasks/local-task-time'
 import { useLocalTasksDomain } from '@/local-tasks/local-tasks-domain-store'
 import { localTaskVisibleProgress } from '@/local-tasks/local-task-visible-progress'

@@ -3,13 +3,13 @@ import {
   getRepoExecutionHostId,
   parseExecutionHostId,
   type ExecutionHostId
-} from '../../../shared/execution-host'
+} from '../../../shared/execution-host/execution-host'
 import type { GoalSummary, GoalSummaryNotice } from '../../../shared/goals/goal-control-contract'
-import type { NotificationDispatchResult } from '../../../shared/notification-settings-types'
+import type { NotificationDispatchResult } from '../../../shared/notifications/notification-settings-types'
 import { translate } from '@/i18n/i18n'
 import { useAppStore } from '../store'
 import type { AppState } from '@/store/types'
-import { selectFolderWorkspaces } from '@/store/workspace-record-selectors'
+import { selectFolderWorkspaces } from '@/store/workspaces/catalog/workspace-record-fields'
 import { isGoalHostInContact, type GoalHostContactState } from './goal-host-contact'
 import { GoalRuntimeClient } from './goal-runtime-client'
 

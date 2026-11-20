@@ -1,8 +1,8 @@
 import { ListTodo } from 'lucide-react'
 import { createLocalizedCatalog } from '@/i18n/localized-catalog'
 import { translate } from '@/i18n/i18n'
-import { translateSearchKeyword } from '@/components/settings/settings-search-keywords'
-import type { SettingsNavSection } from '@/lib/settings-navigation-types'
+import { translateSearchKeyword } from '@/components/settings/search/settings-search-keywords'
+import type { SettingsNavSection } from '@/components/settings/navigation/settings-navigation-types'
 
 export const LOCAL_TASKS_SETTINGS_SECTION_ID = 'local-tasks'
 

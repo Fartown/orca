@@ -3,7 +3,7 @@ import { useSessionNameIndex } from '@/session-names/session-name-subscriptions'
 import { getScannedSessionDisplayName } from '@/session-names/session-name-display'
 import { sessionNameStore } from '@/session-names/session-name-store'
 import { canonicalSessionTitleKey } from '@/lib/canonical-session-titles'
-import type { AiVaultSession } from '../../../../shared/ai-vault-types'
+import type { AiVaultSession } from '../../../../shared/ai-vault/contracts/ai-vault-types'
 
 type CanonicalSessionTitles = {
   canonicalTitleBySessionKey: ReadonlyMap<string, string>

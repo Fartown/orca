@@ -1,10 +1,10 @@
 import { CircleDashed, X } from 'lucide-react'
-import { AgentStateDot } from '@/components/AgentStateDot'
+import { AgentStateDot } from '@/components/agent/status/AgentStateDot'
 import { Button } from '@/components/ui/button'
-import { useNow } from '@/hooks/use-now'
+import { useNow } from '@/lib/window-activity/use-now'
 import { translate } from '@/i18n/i18n'
-import { AgentIcon } from '@/lib/agent-catalog'
-import { cn } from '@/lib/utils'
+import { AgentIcon } from '@/components/agent/icons/AgentIcon'
+import { cn } from '@/lib/class-names'
 import {
   unwatchLocalTaskFromLedger,
   useLocalTaskDispatcherLedger
@@ -16,7 +16,7 @@ import { localTaskPageStore } from '@/local-tasks/local-task-page-store'
 import { formatLocalTaskSessionAge } from '@/local-tasks/local-task-session-age'
 import { useLocalTaskSessionProgress } from '@/local-tasks/local-task-session-progress'
 import { formatLocalTaskTime } from '@/local-tasks/local-task-time'
-import { isTuiAgent } from '../../../../shared/tui-agent-config'
+import { isTuiAgent } from '../../../../shared/agent-launch/catalog/tui-agent-config'
 import type { LocalTaskWatch } from '../../../../shared/local-tasks/local-task-dispatcher-types'
 import type { LocalTaskSessionLink } from '../../../../shared/local-tasks/local-task-link-types'
 import type { LocalTask } from '../../../../shared/local-tasks/local-task-types'

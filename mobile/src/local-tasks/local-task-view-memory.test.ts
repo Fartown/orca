@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest'
 vi.mock('@react-native-async-storage/async-storage', () => ({ default: {} }))
 vi.mock('../storage/mirrored-storage-keys', () => ({ persistMirrored: vi.fn() }))
 
-import { isPageStorageKey } from '../mobile-web-shell/page-storage-keys'
+import { isPageStorageKey } from '../mobile-web-shell/page-storage/page-storage-keys'
 import {
   LOCAL_TASK_VIEW_STORAGE_KEY,
   readLocalTaskViewChoices,

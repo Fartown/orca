@@ -1,7 +1,7 @@
 import type { LocalTaskChangeScope } from '../../../src/shared/local-tasks/local-task-types'
 import { changeMessageSchema } from '../../../src/shared/local-tasks/local-task-result-schemas'
-import type { RpcClient } from '../transport/rpc-client'
-import { runRpcOperation } from '../transport/rpc-operation'
+import type { RpcClient } from '../transport/rpc/rpc-client-contract'
+import { runRpcOperation } from '../transport/rpc/rpc-operation'
 import { localTaskChangesUnsubscribe } from './local-tasks-operations'
 
 // React Native's AppState, narrowed to what this reads so it also runs off the device.

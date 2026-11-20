@@ -1,9 +1,9 @@
 import { expect, it } from 'vitest'
-import { projectActivityTabs } from '../components/activity/activity-tab-projection'
-import { buildActivityTabContext } from '../components/activity/activity-event-builder-context'
+import { projectActivityTabs } from '../components/activity/events/activity-tab-projection'
+import { buildActivityTabContext } from '../components/activity/events/activity-event-builder-context'
 import { getActivitySessionName } from './activity-session-name'
-import type { Tab } from '../../../shared/tab-types'
-import type { AgentStatusEntry } from '../../../shared/agent-status-types'
+import type { Tab } from '../../../shared/workspace-layout/tab-groups/tab-types'
+import type { AgentStatusEntry } from '../../../shared/agent-status/contracts/agent-status-types'
 
 const tab: Tab = {
   id: 'agent-tab',

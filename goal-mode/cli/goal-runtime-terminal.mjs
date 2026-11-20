@@ -4,7 +4,7 @@
 // 由 config/scripts/build-goal-driver.mjs 一起打进去。CLI 路径(orca-goal 命令)不走这里。
 // 语义(单行校验、accepted 判定)留在 orca-terminal.mjs,这里只做传输。
 import { RuntimeClient } from '../../src/cli/runtime/client.ts'
-import { RuntimeRpcFailureError } from '../../src/cli/runtime/types.ts'
+import { RuntimeRpcFailureError } from '../../src/cli/runtime/connection/types.ts'
 
 /**
  * @param {object} [options]

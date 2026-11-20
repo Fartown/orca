@@ -1,4 +1,4 @@
-import type { CheckStatus } from '../../../src/shared/github/pull-request-types'
+import type { CheckStatus } from '../../../src/shared/github/pull-requests/pull-request-types'
 import type { LocalTaskSessionState } from '../../../src/shared/local-tasks/local-task-link-types'
 import { translate } from '../i18n/mobile-i18n'
 import { localTasksAttentionCopy } from './local-tasks-attention-copy'

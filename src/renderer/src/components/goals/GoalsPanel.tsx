@@ -1,4 +1,4 @@
-import { getActiveSidebarWorkspaceId } from '../../../../shared/workspace-scope'
+import { getActiveSidebarWorkspaceId } from '../../../../shared/workspace/identity/workspace-scope'
 import { GoalDraftList } from './GoalDraftList'
 import { Plus, Search } from 'lucide-react'
 import { Button } from '@/components/ui/button'

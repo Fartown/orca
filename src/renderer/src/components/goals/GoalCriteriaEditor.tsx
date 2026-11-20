@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { translate } from '@/i18n/i18n'
 import type { GoalCriterion } from '../../../../shared/goals/goal-control-contract'
-import { createBrowserUuid } from '@/lib/browser-uuid'
+import { createNonSecureContextUuid as createBrowserUuid } from '../../../../shared/identifiers/non-secure-context-uuid'
 
 /** User-declared acceptance items; only an item with a command is verified independently. */
 export function GoalCriteriaEditor({

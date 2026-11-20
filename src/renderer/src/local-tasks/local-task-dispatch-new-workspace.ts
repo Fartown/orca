@@ -1,10 +1,13 @@
-import { callRuntimeRpc } from '@/runtime/runtime-rpc-client'
+import { callRuntimeRpc } from '@/runtime/rpc/calls/runtime-rpc-call'
 import { translate } from '@/i18n/i18n'
-import { createAgentSessionOperationId } from '@/runtime/agent-session-operation-id'
+import { createAgentSessionOperationId } from '@/runtime/hosted-terminals/creation/agent-launch/agent-session-operation-id'
 import { useAppStore } from '@/store'
-import { getRepoExecutionHostId, normalizeExecutionHostId } from '../../../shared/execution-host'
-import type { AgentLaunchResult } from '../../../shared/agent-launch-intent'
-import type { TuiAgent } from '../../../shared/tui-agent'
+import {
+  getRepoExecutionHostId,
+  normalizeExecutionHostId
+} from '../../../shared/execution-host/execution-host'
+import type { AgentLaunchResult } from '../../../shared/agent-launch/contracts/agent-launch-intent'
+import type { TuiAgent } from '../../../shared/agent-launch/catalog/tui-agent'
 import type { LocalTask } from '../../../shared/local-tasks/local-task-types'
 import { getClientWorktreeCreateCandidate } from '../../../shared/new-workspace/worktree-create-retry-policy'
 import { suggestLocalTaskWorkspaceName } from '../../../shared/local-tasks/local-task-model'

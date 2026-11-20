@@ -17,10 +17,10 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu'
-import { useNow } from '@/hooks/use-now'
+import { useNow } from '@/lib/window-activity/use-now'
 import { translate } from '@/i18n/i18n'
-import { AgentIcon } from '@/lib/agent-catalog'
-import { cn } from '@/lib/utils'
+import { AgentIcon } from '@/components/agent/icons/AgentIcon'
+import { cn } from '@/lib/class-names'
 import { useLocalTasksDomain } from '@/local-tasks/local-tasks-domain-store'
 import { useLocalTaskSessionInContact } from '@/local-tasks/local-task-session-execution-contact'
 import { findLocalTaskEffectiveWorkspace } from '@/local-tasks/local-task-link-selectors'
@@ -33,7 +33,7 @@ import {
 } from '@/local-tasks/local-task-session-panel-store'
 import { useLocalTaskSessionProgress } from '@/local-tasks/local-task-session-progress'
 import { revealLocalTaskSession } from '@/local-tasks/local-task-session-reveal'
-import { isTuiAgent } from '../../../../shared/tui-agent-config'
+import { isTuiAgent } from '../../../../shared/agent-launch/catalog/tui-agent-config'
 import type { LocalTaskSessionLink } from '../../../../shared/local-tasks/local-task-link-types'
 import { LocalTaskActionTooltip } from './LocalTaskActionTooltip'
 import { LocalTaskHostIcon, useLocalTaskHostLabel } from './LocalTaskHostLabel'

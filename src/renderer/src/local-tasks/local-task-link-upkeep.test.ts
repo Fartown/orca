@@ -1,9 +1,9 @@
 import { describe, expect, it, vi } from 'vitest'
-import { createTestStore } from '@/store/slices/store-test-helpers'
-import { makeWorktree } from '@/store/slices/worktrees-slice-test-fixtures'
+import { createTestStore } from '@/store/testing/app-store-test-fixture'
+import { makeWorktree } from '@/store/slices/worktrees/worktree.test-fixture'
 import type { AppState } from '@/store/types'
-import type { HostedReviewInfo } from '../../../shared/hosted-review'
-import type { SshConnectionState } from '../../../shared/ssh-types'
+import type { HostedReviewInfo } from '../../../shared/source-control/hosted-review/hosted-review-contracts'
+import type { SshConnectionState } from '../../../shared/remote-runtime/ssh/ssh-types'
 import type {
   LocalTaskLinks,
   LocalTaskWorkspaceLink
@@ -13,10 +13,13 @@ import { findLocalTaskPrMergedTriggers } from './local-task-link-maintenance'
 import { selectLocalTaskWorkspace } from './local-task-workspace-resolution'
 import { localTaskMergedReview, localTaskReviewKeys } from './local-task-workspace-review'
 
-vi.mock('../hooks/ipc-events/runtime-environment-subscription-selection', async (original) => ({
-  ...(await original<object>()),
-  getReachableRuntimeEnvironmentIds: () => ['vm']
-}))
+vi.mock(
+  '../hooks/ipc-events/runtime-events/runtime-environment-subscription-selection',
+  async (original) => ({
+    ...(await original<object>()),
+    getReachableRuntimeEnvironmentIds: () => ['vm']
+  })
+)
 
 const REPO = { id: 'repo1', path: '/repo1', displayName: 'Shop', badgeColor: '#000', addedAt: 0 }
 const SSH_REPO = { ...REPO, connectionId: 'minizc' }

@@ -2,7 +2,7 @@ import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, expect, it } from 'vitest'
-import { listClaudeSubagentSessions } from '../../src/main/ai-vault/session-scanner-claude-subagents'
+import { listClaudeSubagentSessions } from '../../src/main/ai-vault/scanners/claude/session-scanner-claude-subagents'
 import { getScannedSessionDisplayName } from '../../src/renderer/src/session-names/session-name-display'
 import { sessionNameStore } from '../../src/renderer/src/session-names/session-name-store'
 

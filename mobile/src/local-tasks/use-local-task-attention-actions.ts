@@ -4,7 +4,7 @@ import {
   localTaskSnoozeUntil,
   type LocalTaskSnoozePreset
 } from '../../../src/shared/local-tasks/local-task-snooze-presets'
-import type { RpcClient } from '../transport/rpc-client'
+import type { RpcClient } from '../transport/rpc/rpc-client-contract'
 import type { LocalTasksApi, LocalTaskWriteOutcome } from './local-tasks-api'
 import type { LocalTasksCopy } from './local-tasks-copy'
 import { localTaskWriteMessage } from './local-task-failure-message'

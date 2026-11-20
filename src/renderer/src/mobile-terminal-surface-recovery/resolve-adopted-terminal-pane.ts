@@ -1,5 +1,5 @@
-import type { RuntimeTerminalResolvePane } from '../../../shared/runtime-types'
-import { getReachableRuntimeEnvironmentIds } from '../hooks/ipc-events/runtime-environment-subscription-selection'
+import type { RuntimeTerminalResolvePane } from '../../../shared/terminal/runtime/runtime-terminal-contracts'
+import { getReachableRuntimeEnvironmentIds } from '../hooks/ipc-events/runtime-events/runtime-environment-subscription-selection'
 import { useAppStore } from '../store'
 
 export async function resolveAdoptedTerminalPane(options: {

@@ -8,7 +8,7 @@ import type {
   LocalTaskEvent,
   LocalTaskStatusDef
 } from '../../../src/shared/local-tasks/local-task-types'
-import { formatAgentTypeLabel } from '../../../src/shared/agent-type-label'
+import { formatAgentTypeLabel } from '../../../src/shared/agent-status/presentation/agent-type-label'
 import type { LocalTasksCopy } from './local-tasks-copy'
 
 type Payload = Record<string, unknown> | null
