@@ -221,14 +221,9 @@ export class GoalControlService {
     )
     await this.store.writeRecord(record)
     await this.store.appendVersion(goalId, { specRevision: 1, savedAt: now, spec: params.spec })
+    let launched: { runtimeFence: number }
     try {
-      const launched = await this.runs.launchRun(record, runId, 'start')
-      return this.receipts.persist(
-        this.receipts.build(params, goalId, 'applied', 'ok', 'The goal driver is running.', {
-          runtimeFence: launched.runtimeFence,
-          runId
-        })
-      )
+      launched = await this.runs.launchRun(record, runId, 'start')
     } catch (error) {
       // The goal never existed for the user; only the receipt keeps the failure.
       await this.store.deleteGoal(goalId)
@@ -237,6 +232,12 @@ export class GoalControlService {
         message: error instanceof Error ? error.message : String(error)
       })
     }
+    return this.receipts.persist(
+      this.receipts.build(params, goalId, 'applied', 'ok', 'The goal driver is running.', {
+        runtimeFence: launched.runtimeFence,
+        runId
+      })
+    )
   }
 
   control(params: GoalControlParams): Promise<GoalOperation> {

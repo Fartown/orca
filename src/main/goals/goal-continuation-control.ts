@@ -240,6 +240,7 @@ export class GoalContinuationControl {
       continuation: 'enabled',
       lastOperationId: params.clientOperationId
     }
+    let launched: { runtimeFence: number }
     try {
       // Why intent before launch: the new driver reads control.json at its first checkpoint and
       // must find this resume there, not the previous run's stop.
@@ -250,24 +251,24 @@ export class GoalContinuationControl {
         'resume',
         params.clientOperationId
       )
-      const launched = await runs.launchRun(next, runId, 'resume')
-      return receipts.persist(
-        receipts.build(
-          params,
-          record.goalId,
-          'applied',
-          'ok',
-          'A new driver run attached to the goal.',
-          { runtimeFence: launched.runtimeFence, runId },
-          { continuationPaused: false }
-        )
-      )
+      launched = await runs.launchRun(next, runId, 'resume')
     } catch (error) {
       return receipts.reject(params, record.goalId, {
         code: 'driver_error',
         message: error instanceof Error ? error.message : String(error)
       })
     }
+    return receipts.persist(
+      receipts.build(
+        params,
+        record.goalId,
+        'applied',
+        'ok',
+        'A new driver run attached to the goal.',
+        { runtimeFence: launched.runtimeFence, runId },
+        { continuationPaused: false }
+      )
+    )
   }
 }
 
