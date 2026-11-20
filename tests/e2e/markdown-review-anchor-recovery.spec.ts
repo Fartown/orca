@@ -24,25 +24,31 @@ const SOURCE = '# Heading\n\nRemaining text\n\nMoved text\n'
 async function seedNotes(page: Page, worktreeId: string) {
   return page.evaluate(async (worktreeId) => {
     const add = window.__store!.getState().addDiffComment
+    // The seeded repo is a local worktree, served by this app on its own machine.
+    const owner = {
+      kind: 'worktree' as const,
+      worktreeId,
+      authority: { endpoint: { kind: 'self' as const }, at: 'local' as const }
+    }
     const base = {
       worktreeId,
       filePath: 'anchor-review.md',
       source: 'markdown' as const,
       side: 'modified' as const
     }
-    const missing = await add({
+    const missing = await add(owner, {
       ...base,
       lineNumber: 2,
       selectedText: 'Removed text',
       body: 'Original review body'
     })
-    const moved = await add({
+    const moved = await add(owner, {
       ...base,
       lineNumber: 999,
       selectedText: 'Moved text',
       body: 'Moved review body'
     })
-    const normal = await add({
+    const normal = await add(owner, {
       ...base,
       lineNumber: 3,
       selectedText: 'Remaining text',
