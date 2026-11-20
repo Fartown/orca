@@ -2150,7 +2150,6 @@
         "pluginsDescription": "安装和管理 Orca 插件（Alpha 版）",
         "tasksDescription": "连接提供商、安装 Linear 技能，并选择任务中显示的内容",
         "artifactsTitle": "产物",
-        "artifactsDescription": "与团队分享 HTML 和 Markdown 文件，并管理其公开链接",
         "automationsTitle": "自动化",
         "automationsDescription": "安排代理工作，并控制侧边栏是否显示自动化",
         "shareSkillsTitle": "分享技能",
@@ -12452,7 +12451,6 @@
         "artifacts": {
           "signIn": "登录 Orca",
           "title": "产物",
-          "description": "与团队分享 HTML 和 Markdown 文件，并管理其公开链接",
           "howToTitle": "如何使用产物",
           "howToDescription": "将 HTML 或 Markdown 文件发布为公开链接，然后分享给团队",
           "shareStepTitle": "选择要分享的文件",
@@ -12491,7 +12489,6 @@
           "connected": "已连接",
           "reconnectRequired": "会话已过期，请重新登录以使用云功能",
           "unavailable": "此构建不支持 Orca 登录",
-          "signedOut": "登录以启用 Orca 云功能，包括产物和 Orca Relay",
           "checking": "正在检查账户状态…",
           "account": "Orca 账户",
           "signOut": "退出登录",
@@ -12499,10 +12496,7 @@
           "signIn": "登录 Orca",
           "title": "Orca 账户",
           "description": "即时分享工作，并随时通过 Orca Mobile 访问桌面",
-          "searchDescription": "登录或退出产物和 Orca Relay 使用的账户",
           "benefitsTitle": "账户已包含",
-          "artifactsTitle": "产物分享",
-          "artifactsDescription": "发布 HTML 和 Markdown 文件，然后在 Orca 中管理所有分享链接",
           "relayTitle": "Orca Relay",
           "relayDescription": "通过蜂窝网络或任意 Wi-Fi 将 Orca Mobile 连接到此桌面",
           "skillsTitle": "技能分享",
@@ -18685,7 +18679,6 @@
           "signout": {
             "confirm": {
               "title": "退出 Orca？",
-              "description": "重新登录前，产物和 Orca Relay 将不可用，本地项目和工作树不会受到影响",
               "cancel": "取消",
               "action": "退出登录"
             }
@@ -19043,11 +19036,7 @@
       "UnexpectedSignoutCard": {
         "9f2c1a4b7d": "你已退出登录",
         "3e8f5c2a91": "关闭",
-        "7b4d9e1f2a": "以 {{value0}} 重新登录以恢复产物分享、Orca Relay 和技能分享",
-        "5a1c8d3e6f": "重新登录以恢复产物分享、Orca Relay 和技能分享",
         "1f6b2c9d4e": "重新登录后可用",
-        "8d2e4f7a1b": "产物分享",
-        "2c9a5b6e8d": "发布 HTML 和 Markdown 文件，并在 Orca 中管理所有共享链接",
         "6e3f1a9c5b": "Orca Relay",
         "4b7d2e8f1a": "通过蜂窝网络或任意 Wi-Fi 将 Orca Mobile 连接到此桌面",
         "9a4c6b2d7e": "技能分享",

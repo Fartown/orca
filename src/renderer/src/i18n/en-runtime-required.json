@@ -120,12 +120,6 @@
         "shownCount_one": "{{count}} shown",
         "shownCount_other": "{{count}} shown"
       },
-      "UnexpectedSignoutCard": {
-        "2c9a5b6e8d": "Publish HTML and Markdown files and manage every shared link from Orca.",
-        "5a1c8d3e6f": "Sign in again to restore Artifact sharing, Orca Relay, and skill sharing.",
-        "7b4d9e1f2a": "Sign in again as {{value0}} to restore Artifact sharing, Orca Relay, and skill sharing.",
-        "8d2e4f7a1b": "Artifact sharing"
-      },
       "WorktreeJumpPalette": {
         "itemsAvailable_one": "{{count}} item available.",
         "itemsAvailable_other": "{{count}} items available.",
@@ -384,15 +378,6 @@
           "showMoreAgents": "Show {{value0}} more agents →",
           "showMoreAgents_one": "Show {{count}} more agent →",
           "showMoreAgents_other": "Show {{count}} more agents →"
-        }
-      },
-      "orca": {
-        "profiles": {
-          "signout": {
-            "confirm": {
-              "description": "Artifacts and Orca Relay will be unavailable until you sign in again. Your local projects and worktrees won't be affected."
-            }
-          }
         }
       },
       "prCheckCounts": {
@@ -836,9 +821,6 @@
             "ff8de8a2ad": "display"
           }
         },
-        "artifacts": {
-          "description": "Share HTML and Markdown files with your team and manage their public links."
-        },
         "claudeSubagentNavigation": {
           "search": {
             "mod": "mod",
@@ -851,12 +833,6 @@
         "computerUseSummary": {
           "permissionsRequired_one": "{{value0}} permission required before agents can operate app windows.",
           "permissionsRequired_other": "{{value0}} permissions required before agents can operate app windows."
-        },
-        "orcaAccount": {
-          "artifactsDescription": "Publish HTML and Markdown files, then manage every shared link from Orca.",
-          "artifactsTitle": "Artifact sharing",
-          "searchDescription": "Sign in or out of the account used by Artifacts and Orca Relay.",
-          "signedOut": "Sign in to extend Orca with cloud features, including Artifacts and Orca Relay."
         },
         "repository": {
           "search": {
@@ -1327,9 +1303,6 @@
         "nativeDropTempCopyFailed": "Orca couldn't copy {{count}} dropped files.",
         "nativeDropTempCopyFailed_one": "Orca couldn't copy {{count}} dropped file.",
         "nativeDropTempCopyFailed_other": "Orca couldn't copy {{count}} dropped files."
-      },
-      "useSettingsNavigationMetadata": {
-        "artifactsDescription": "Share HTML and Markdown files with your team and manage their public links."
       }
     },
     "lib": {
