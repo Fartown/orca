@@ -1215,7 +1215,13 @@
         "src/cli/runtime/types.ts",
         "src/shared/runtime-client-target.ts",
         "src/renderer/src/store/workspace-record-selectors.ts",
-        "src/shared/worktree/host-qualified-identity.ts"
+        "src/shared/worktree/host-qualified-identity.ts",
+        "src/cli/args.ts",
+        "src/cli/command-body-input.ts",
+        "src/cli/dispatch.ts",
+        "src/cli/flags.ts",
+        "src/cli/format.ts",
+        "src/cli/handler-group-manifest.ts"
       ],
       "policyId": "goals-native-feature",
       "ownedPaths": [
@@ -1228,6 +1234,7 @@
         "src/main/runtime/rpc/methods/goals.test.ts",
         "src/main/startup/main-process-goals.ts",
         "goal-mode/**",
+        "src/cli/goals/**",
         "config/scripts/build-goal-driver.mjs",
         "docs/issue/Goal目标模式/**"
       ],
@@ -1262,7 +1269,11 @@
         "src/shared/goals/goal-agent-provider.ts",
         "src/shared/goals/goal-acceptance-prompt.ts",
         "src/main/goals/goal-evidence-projection.ts",
-        "config/scripts/build-goal-driver.mjs"
+        "config/scripts/build-goal-driver.mjs",
+        "goal-mode/cli/confirm-box.mjs",
+        "src/shared/goals/goal-payload-fingerprint.ts",
+        "src/cli/goals/goal-command-specs.ts",
+        "src/cli/goals/goal-cli-handlers.ts"
       ],
       "seams": [
         {
@@ -1444,6 +1455,36 @@
           "file": "src/shared/plugins/languages/protected-copy-keys.json",
           "mustContain": "\"goals.",
           "why": "fork copy keys protected from plugin language packs"
+        },
+        {
+          "file": "src/cli/specs/index.ts",
+          "mustContain": "...GOAL_COMMAND_SPECS",
+          "why": "orca goal subcommands let an agent draft, start, watch and stop a goal for the user"
+        },
+        {
+          "file": "src/cli/handler-group-manifest.ts",
+          "mustContain": "GOAL_HANDLER_GROUP",
+          "why": "orca goal subcommands dispatch to the goal CLI handlers"
+        },
+        {
+          "file": "src/main/startup/cli-command-names.ts",
+          "mustContain": "'goal',",
+          "why": "the CLI root command list includes goal"
+        },
+        {
+          "file": "skill-guides/orca-cli.md",
+          "mustContain": "## Goals",
+          "why": "the bundled orca-cli skill routes 'have another agent do it until done' to orca goal"
+        },
+        {
+          "file": "src/cli/bundled-skill-guides.ts",
+          "mustContain": "## Goals",
+          "why": "the generated skill guide carries the Goals section"
+        },
+        {
+          "file": "skills/orca-cli/SKILL.md",
+          "mustContain": "Orca goal",
+          "why": "the skill description triggers on goal requests"
         }
       ],
       "tests": [
@@ -1485,10 +1526,12 @@
         "src/renderer/src/components/goals/GoalEditor.test.tsx",
         "src/main/goals/orcad-goals.test.ts",
         "src/main/goals/goal-driver-resources.test.ts",
-        "src/shared/host-operation-ownership.test.ts"
+        "src/shared/host-operation-ownership.test.ts",
+        "src/cli/goals/goal-cli.test.ts",
+        "goal-mode/cli/confirm-box.test.mjs"
       ],
       "checks": [
-        "pnpm exec vitest run --config config/vitest.config.ts src/main/goals src/shared/goals src/renderer/src/goals src/renderer/src/components/goals src/main/runtime/rpc/methods/goals.test.ts src/main/plugins/plugin-bundled-bootstrap.test.ts src/main/persistence/applying-settings/persistence-ui-state.test.ts src/renderer/src/components/terminal-pane/TerminalPaneHeaderOverlay.test.tsx src/renderer/src/components/terminal-pane/terminal-pane-element-file-drop.test.tsx src/main/goals/goal-driver-resources.test.ts",
+        "pnpm exec vitest run --config config/vitest.config.ts src/main/goals src/shared/goals src/renderer/src/goals src/renderer/src/components/goals src/main/runtime/rpc/methods/goals.test.ts src/main/plugins/plugin-bundled-bootstrap.test.ts src/main/persistence/applying-settings/persistence-ui-state.test.ts src/renderer/src/components/terminal-pane/TerminalPaneHeaderOverlay.test.tsx src/renderer/src/components/terminal-pane/terminal-pane-element-file-drop.test.tsx src/main/goals/goal-driver-resources.test.ts src/cli/goals",
         "node --test --experimental-test-module-mocks goal-mode/cli/*.test.mjs",
         "ORCA_BACKGROUND_LAUNCH=1 pnpm exec vitest run --config config/vitest.config.ts src/shared/host-operation-ownership.test.ts"
       ]
