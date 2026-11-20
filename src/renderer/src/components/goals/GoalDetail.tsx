@@ -150,9 +150,11 @@ function BindingSection({
   detail: Pick<GoalDetailRecord, 'binding' | 'workspace' | 'agentStatus' | 'terminal'>
   offline: boolean
 }): React.JSX.Element {
-  const agentStatusByPaneKey = useAppStore((s) => s.agentStatusByPaneKey)
   const openSession = (): void => {
-    const pane = findPaneForTerminalHandle(agentStatusByPaneKey, detail.binding.terminal)
+    const pane = findPaneForTerminalHandle(
+      useAppStore.getState().agentStatusByPaneKey,
+      detail.binding.terminal
+    )
     if (!pane) {
       toast.error(translate('goals.detail.sessionMissing', 'The bound session is no longer open.'))
       return

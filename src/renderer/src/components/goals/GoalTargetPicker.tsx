@@ -15,7 +15,10 @@ import { translate } from '@/i18n/i18n'
 import { useAppStore } from '@/store'
 import { useAllWorktrees } from '@/store/slices/worktrees/listing/use-worktree-catalog'
 import { selectFolderWorkspaces } from '@/store/workspaces/catalog/workspace-record-fields'
-import { listGoalSessionCandidates, type GoalSessionCandidate } from '@/goals/goal-session-target'
+import {
+  createGoalSessionCandidatesSelector,
+  type GoalSessionCandidate
+} from '@/goals/goal-session-target'
 
 export type GoalTargetSelection = {
   worktreeId: string | null
@@ -40,7 +43,7 @@ export function GoalTargetPicker({
 }): React.JSX.Element {
   const worktrees = useAllWorktrees()
   const folderWorkspaces = useAppStore(selectFolderWorkspaces)
-  const agentStatusByPaneKey = useAppStore((s) => s.agentStatusByPaneKey)
+  const selectCandidates = useMemo(() => createGoalSessionCandidatesSelector(), [])
   const route = useGoalDomainStore((s) => s.routeExecutionHostId)
   const routeWorkspaces = useMemo(
     () =>
@@ -51,11 +54,7 @@ export function GoalTargetPicker({
         .sort((a, b) => a.path.localeCompare(b.path)),
     [worktrees, folderWorkspaces, route]
   )
-  const candidates = useMemo(
-    () =>
-      value.worktreeId ? listGoalSessionCandidates(agentStatusByPaneKey, value.worktreeId) : [],
-    [agentStatusByPaneKey, value.worktreeId]
-  )
+  const candidates = useAppStore((s) => selectCandidates(s.agentStatusByPaneKey, value.worktreeId))
   const lockedCandidate = locked
     ? candidates.find((candidate) => candidate.paneKey === value.paneKey)
     : undefined

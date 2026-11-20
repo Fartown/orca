@@ -40,6 +40,37 @@ export function listGoalSessionCandidates(
     .sort((a, b) => a.paneKey.localeCompare(b.paneKey))
 }
 
+function sameCandidate(a: GoalSessionCandidate, b: GoalSessionCandidate | undefined): boolean {
+  return (
+    b !== undefined &&
+    a.paneKey === b.paneKey &&
+    a.tabId === b.tabId &&
+    a.agentType === b.agentType &&
+    a.title === b.title &&
+    a.state === b.state &&
+    a.terminalHandle === b.terminalHandle
+  )
+}
+
+/** A per-consumer selector whose result keeps its identity while the workspace's candidates stay equal. */
+export function createGoalSessionCandidatesSelector(): (
+  agentStatusByPaneKey: GoalAgentStatusRows,
+  worktreeId: string | null
+) => GoalSessionCandidate[] {
+  let previous: GoalSessionCandidate[] = []
+  return (agentStatusByPaneKey, worktreeId) => {
+    const next = worktreeId ? listGoalSessionCandidates(agentStatusByPaneKey, worktreeId) : []
+    if (
+      next.length === previous.length &&
+      next.every((candidate, index) => sameCandidate(candidate, previous[index]))
+    ) {
+      return previous
+    }
+    previous = next
+    return next
+  }
+}
+
 export type GoalBindingResolution =
   | { ok: true; binding: GoalBinding }
   | { ok: false; reason: 'pane-missing' | 'incarnation-missing' | 'workspace-mismatch' }
