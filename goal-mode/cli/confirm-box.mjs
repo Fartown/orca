@@ -104,3 +104,33 @@ export async function answerConfirmBox({ terminal, handle, agentType, choice, se
   }
   return { outcome: 'still-there', detail: '按键后确认框还在,不再重按' }
 }
+
+/** 这一次等待的标识:状态开始时间,加上画面上确认框的原文。连着弹的框状态行不变,只能靠原文区分。 */
+export async function waitKeyOf(terminal, handle, agentType, stateStartedAt) {
+  const box = await captureConfirmBox(terminal, handle, agentType)
+  return `${stateStartedAt ?? 0}${box ? `|${box.text}` : ''}`
+}
+
+/** 画面读得到,且上面已经没有确认框。 */
+export async function screenShowsNoBox(terminal, handle, agentType) {
+  const screen = await terminal.readScreen(handle).catch(() => null)
+  return screen !== null && !findConfirmBox(screen.lines, agentType)
+}
+
+/**
+ * 守卫给了意见就按键,按完等状态存储跟上,免得紧接着的指示因为还显示「在等确认」而发不出去。
+ * @returns {Promise<{ outcome: string, detail: string } | null>} 没给意见返回 null
+ */
+export async function applyConfirmVerdict({ choice, stillWaiting, pollMs, ...box }) {
+  if (!choice) {
+    return null
+  }
+  const result = await answerConfirmBox({ ...box, choice })
+  if (result.outcome === 'pressed') {
+    const deadline = Date.now() + SETTLE_MS
+    while (Date.now() < deadline && (await stillWaiting().catch(() => false))) {
+      await sleep(pollMs)
+    }
+  }
+  return result
+}
