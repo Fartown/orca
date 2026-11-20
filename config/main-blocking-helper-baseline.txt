@@ -572,7 +572,7 @@
 2 src/main/host/deferred-secret-protection-report.ts
 1 src/main/host/electron-speech-services.ts
 1 src/main/host/secret-protection-report.ts
-14 src/main/index.ts
+15 src/main/index.ts # fork goals 接缝 +1：startGoalFeatureForMainProcess
 2 src/main/ipc/accounts/codex-accounts.ts
 1 src/main/ipc/accounts/codex-config-sync.ts
 1 src/main/ipc/accounts/cursor-accounts.ts
@@ -1396,7 +1396,7 @@
 12 src/main/startup/pty-startup/main-process-pty-startup.ts
 2 src/main/startup/quit/main-process-quit.ts # superseded-session unlink on a rare memory-only sign-in or rotation stays ordered with the sync saves, sign-out and quit flush (#44285)
 15 src/main/startup/runtime-startup/main-process-runtime-launch.ts
-4 src/main/startup/runtime-startup/main-process-runtime-service.ts
+5 src/main/startup/runtime-startup/main-process-runtime-service.ts # fork self-hosted-artifacts 接缝 +1：startArtifactShareForMainProcess
 1 src/main/startup/serve-launch/headless-serve-ssh-registration.ts
 3 src/main/startup/serve-launch/main-process-serve.ts
 3 src/main/startup/serve-launch/serve-cli-registration.ts
@@ -1432,7 +1432,7 @@
 1 src/main/updater/lifecycle/updater-check-state.ts
 1 src/main/updater/lifecycle/updater-download-install.ts
 5 src/main/updater/lifecycle/updater-install-execution.ts
-2 src/main/updater/lifecycle/updater-remote-status.ts
+3 src/main/updater/lifecycle/updater-remote-status.ts # fork integration-builds 接缝 +1：integrationUpdateUnavailableMessage
 4 src/main/updater/lifecycle/updater-setup.ts
 1 src/main/updater/lifecycle/windows-update-install-directory.ts
 10 src/main/updater/linux-package/appimage-runtime-identity.ts
@@ -1441,9 +1441,9 @@
 2 src/main/updater/linux-package/linux-package-update-recovery.ts
 4 src/main/updater/linux-package/linux-update-package-type.ts
 1 src/main/updater/linux-package/updater-package-recovery.ts
-8 src/main/updater/serve-update-handoff.ts
+9 src/main/updater/serve-update-handoff.ts # fork integration-builds 接缝 +1：hasLinuxServeUpdateSupervisor
 1 src/main/updater/update-install-exit-watchdog.ts
-3 src/main/updater/updater-events.ts
+4 src/main/updater/updater-events.ts # fork integration-builds 传递 +1：本文件未改，fetchChangelog 因 fork 接缝 isIntegrationBuild 变为阻塞
 6 src/main/usage/scan-worker/usage-scan-worker-spawn.ts
 1 src/main/warp-themes/auto-discovered-theme-files.ts
 6 src/main/warp-themes/discovery.ts
@@ -1600,3 +1600,37 @@
 13 src/shared/shell/command-resolution/node-cli-command-resolution.ts
 1 src/shared/shell/command-resolution/nvm-version-directories.ts
 1 src/shared/shell/launch/startup-command-staging.ts
+
+# fork 既有代码（2026-11-20 同步上游时随新棘轮登记，待按功能重构）
+2 src/main/goals/orcad-goals.ts
+5 src/main/integration-builds/integration-update-feed.ts
+2 src/main/integration-builds/linux-appimage-update-availability.ts
+1 src/main/integration-builds/linux-serve-update-support.ts
+3 src/main/integration-builds/orcad-fork-services.ts
+1 src/main/integration-builds/serve-update-handoff-path.ts
+8 src/main/local-tasks/local-tasks-database.ts
+4 src/main/local-tasks/local-tasks-owned-host-migration.ts
+11 src/main/local-tasks/local-tasks-schema.ts
+1 src/main/local-tasks/orcad-local-tasks.ts
+1 src/main/native-chat-view-recovery/durable-chat-transcript-boundary.ts
+2 src/main/runtime/rpc/methods/artifact-share.ts
+4 src/main/self-hosted-artifacts/artifact-share-comment-import.ts
+3 src/main/self-hosted-artifacts/artifact-share-known-hosts.ts
+4 src/main/self-hosted-artifacts/artifact-share-main-process.ts
+3 src/main/self-hosted-artifacts/artifact-share-owner-comments.ts
+7 src/main/self-hosted-artifacts/artifact-share-owner-service.ts
+2 src/main/self-hosted-artifacts/orcad-artifact-share.ts
+9 src/main/self-hosted-artifacts/server/artifact-share-app-server.ts
+5 src/main/self-hosted-artifacts/server/artifact-share-comments-endpoint.ts
+1 src/main/self-hosted-artifacts/server/artifact-share-http-handler.ts
+1 src/main/self-hosted-artifacts/server/artifact-share-serve-log.ts
+1 src/main/self-hosted-artifacts/server/artifact-share-serving-status.ts
+11 src/main/self-hosted-artifacts/store/artifact-share-comments.ts
+3 src/main/self-hosted-artifacts/store/artifact-share-config.ts
+5 src/main/self-hosted-artifacts/store/artifact-share-records.ts
+2 src/main/self-hosted-artifacts/store/artifact-share-serving-state.ts
+1 src/main/startup/main-process-goals.ts
+1 src/main/updater/lifecycle/updater-menu-checks.ts # fork integration-builds 接缝：pinIntegrationReleaseFeedOr
+1 src/main/updater/lifecycle/updater-scheduling.ts # fork integration-builds 接缝：pinIntegrationReleaseFeedOr
+1 src/main/updater/nudges/updater-nudge.ts # fork integration-builds 接缝：isIntegrationBuild
+1 src/main/updater/releases/updater-changelog.ts # fork integration-builds 接缝：isIntegrationBuild

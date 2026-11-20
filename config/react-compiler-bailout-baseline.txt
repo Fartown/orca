@@ -719,3 +719,26 @@
 1 src/renderer/src/store/plugins/appearance/plugin-icon-themes.ts
 5 src/renderer/src/store/retained-views/app-state-view.ts
 2 src/renderer/src/web/pairing/WebConnect.tsx
+
+# fork 既有代码（2026-11-20 同步上游时随新棘轮登记，待按功能重构）
+1 src/renderer/src/components/goals/GoalControls.tsx
+1 src/renderer/src/components/goals/GoalDraftDeleteButton.tsx
+1 src/renderer/src/components/goals/GoalEditor.tsx
+1 src/renderer/src/components/goals/GoalList.tsx
+1 src/renderer/src/components/goals/GoalRebindDialog.tsx
+2 src/renderer/src/components/goals/use-acceptance-draft.ts
+2 src/renderer/src/components/local-tasks/LocalTaskAcceptanceStrip.tsx
+3 src/renderer/src/components/local-tasks/LocalTaskDispatchBox.tsx
+3 src/renderer/src/components/local-tasks/LocalTaskDispatchReceipt.tsx
+1 src/renderer/src/components/local-tasks/LocalTaskDispatcherHostSelect.tsx
+1 src/renderer/src/components/local-tasks/LocalTaskEmptyProjectForm.tsx
+1 src/renderer/src/components/local-tasks/LocalTaskSessionChipCard.tsx
+7 src/renderer/src/components/local-tasks/LocalTaskSessionPanelSlot.tsx
+1 src/renderer/src/components/local-tasks/LocalTaskWorkspacePicker.tsx
+1 src/renderer/src/components/native-chat/composer/submit/use-native-chat-pty-composer-send.ts # fork native-chat-view-recovery 接缝：durable send 的 try/finally
+2 src/renderer/src/components/self-hosted-artifacts/page/use-lan-artifact-hosts.ts
+1 src/renderer/src/components/self-hosted-artifacts/settings/LanArtifactLocalServiceSettings.tsx
+2 src/renderer/src/components/self-hosted-artifacts/share-viewer/ShareCommentRail.tsx
+1 src/renderer/src/goals/GoalNoticeWatcher.tsx
+1 src/renderer/src/goals/goal-editor-drafts-sync.ts
+1 src/renderer/src/native-chat-view-recovery/use-durable-chat-delivery.ts

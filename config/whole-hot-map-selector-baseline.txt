@@ -69,3 +69,9 @@
 1 src/renderer/src/components/wsl-move/WslMoveDialog.tsx:terminalLayoutsByTabId
 1 src/renderer/src/components/wsl-move/WslMoveDialog.tsx:unifiedTabsByWorktree
 1 src/renderer/src/components/wsl-move/WslMovedProjectsSection.tsx:unifiedTabsByWorktree
+
+# fork 既有代码（2026-11-20 同步上游时随新棘轮登记，待按功能重构）
+1 src/renderer/src/session-names/use-activity-session-names.ts:agentStatusByPaneKey
+1 src/renderer/src/session-names/use-activity-session-names.ts:runtimePaneTitlesByTabId
+1 src/renderer/src/session-names/use-activity-session-names.ts:terminalLayoutsByTabId
+1 src/renderer/src/session-names/use-activity-session-names.ts:unifiedTabsByWorktree

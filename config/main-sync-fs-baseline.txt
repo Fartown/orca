@@ -595,3 +595,13 @@
 1 src/shared/terminal/pty/native-process/pty-process-ceiling-state.ts
 2 src/shared/web-client/bundled-web-client-manifest.ts
 3 src/shared/web-client/bundled-web-client-root.ts
+
+# fork 既有代码（2026-11-20 同步上游时随新棘轮登记，待按功能重构）
+1 src/main/goals/goal-driver-launch.ts
+1 src/main/integration-builds/integration-update-feed.ts
+2 src/main/local-tasks/local-tasks-database.ts
+1 src/main/self-hosted-artifacts/artifact-share-comment-import.ts
+6 src/main/self-hosted-artifacts/server/artifact-share-serve-log.ts
+2 src/main/self-hosted-artifacts/server/artifact-share-viewer-assets.ts
+1 src/main/self-hosted-artifacts/store/artifact-share-comments.ts
+1 src/main/self-hosted-artifacts/store/artifact-share-json-file.ts

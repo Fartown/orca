@@ -98,3 +98,14 @@
 1 src/shared/remote-runtime/control/remote-runtime-shared-control-app-heartbeat.ts
 1 src/shared/remote-runtime/remote-runtime-socket-liveness.ts
 1 src/shared/agent-hook-listener/presence/tmux-agent-hook-owner.ts
+
+# fork 既有代码（2026-11-20 同步上游时随新棘轮登记，待按功能重构）
+1 src/main/goals/goal-acceptance-draft-runner.ts
+1 src/main/goals/goal-driver-recovery.ts
+1 src/main/self-hosted-artifacts/server/artifact-share-app-server.ts
+1 src/renderer/src/components/goals/GoalDraftProgress.tsx
+1 src/renderer/src/components/goals/use-acceptance-draft.ts
+3 src/renderer/src/goals/GoalDomainSyncGate.tsx
+1 src/renderer/src/goals/GoalNoticeWatcher.tsx
+1 src/renderer/src/goals/goal-editor-drafts-sync.ts
+1 src/renderer/src/session-names/session-name-store.ts
