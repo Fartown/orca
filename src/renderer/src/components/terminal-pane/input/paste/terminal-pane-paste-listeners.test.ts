@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { TerminalPaneCloseController } from '../../layout/close/use-terminal-pane-close-actions'
 import { APP_MENU_PASTE_EVENT } from '@/lib/clipboard/menu/app-menu-paste'
 import { getRecentTerminalImages } from '../recent-terminal-images'
+import type { TerminalErrorsByPaneId } from '../../errors/terminal-error-accumulation'
 import { createTerminalPanePasteExecution } from './terminal-pane-paste-execution'
 import { registerTerminalPanePasteListeners } from './terminal-pane-paste-listeners'
 
@@ -18,6 +19,15 @@ vi.mock('@/store/index', () => ({
     })
   }
 }))
+
+/** Replays the per-pane error updates a paste wrote, as that pane's error list. */
+function pasteErrorsFor(sink: ReturnType<typeof vi.fn>, paneId: number): readonly unknown[] {
+  let errors: TerminalErrorsByPaneId = {}
+  for (const [update] of sink.mock.calls) {
+    errors = (update as (current: TerminalErrorsByPaneId) => TerminalErrorsByPaneId)(errors)
+  }
+  return errors[paneId] ?? []
+}
 
 function createFakePane(id: number, root: HTMLElement) {
   const container = document.createElement('div')
@@ -84,6 +94,8 @@ describe('registerTerminalPanePasteListeners app-menu paste', () => {
       ])
     )
     const setTerminalError = vi.fn()
+    // The fork's paste ownership reports per pane (terminal-paste-ownership).
+    const setTerminalErrorsByPaneId = vi.fn()
     // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: stub supplies the controller fields the paste listeners and execution read.
     const controller = {
       cwd: '/tmp',
@@ -92,6 +104,7 @@ describe('registerTerminalPanePasteListeners app-menu paste', () => {
       managerRef: { current: manager },
       paneTransportsRef: { current: transports },
       setTerminalError,
+      setTerminalErrorsByPaneId,
       tabId: 'tab-1',
       worktreeId: 'wt-1'
     } as unknown as TerminalPaneCloseController
@@ -102,11 +115,11 @@ describe('registerTerminalPanePasteListeners app-menu paste', () => {
       isMac: true,
       shortcutPlatform: 'darwin'
     })
-    return { paneA, paneB, setTerminalError, controller }
+    return { paneA, paneB, setTerminalError, setTerminalErrorsByPaneId, controller }
   }
 
   it('pastes into the focused pane when the manager active pane is stale (#41352)', async () => {
-    const { paneA, paneB, setTerminalError } = registerPaste('echo hi')
+    const { paneA, paneB, setTerminalError, setTerminalErrorsByPaneId } = registerPaste('echo hi')
     // A file drop focuses the drop pane's xterm without a pointerdown, leaving pane A active.
     paneB.textarea.focus()
     window.dispatchEvent(new CustomEvent(APP_MENU_PASTE_EVENT, { cancelable: true }))
@@ -114,12 +127,13 @@ describe('registerTerminalPanePasteListeners app-menu paste', () => {
     await vi.waitFor(() => expect(paneB.terminal.paste).toHaveBeenCalledWith('echo hi'))
     expect(paneA.terminal.paste).not.toHaveBeenCalled()
     expect(setTerminalError).not.toHaveBeenCalled()
+    expect(pasteErrorsFor(setTerminalErrorsByPaneId, paneB.id)).toEqual([])
   })
 
   it('does not record an image when the app-menu paste loses its terminal target', async () => {
     const savedImage = Promise.withResolvers<string>()
     const saveImage = vi.fn(() => savedImage.promise)
-    const { paneA, paneB, setTerminalError, controller } = registerPaste('', saveImage)
+    const { paneA, paneB, setTerminalErrorsByPaneId, controller } = registerPaste('', saveImage)
     const [sourcePane] = controller.managerRef.current!.getPanes()
 
     paneA.textarea.focus()
@@ -128,7 +142,9 @@ describe('registerTerminalPanePasteListeners app-menu paste', () => {
     paneB.textarea.focus()
     savedImage.resolve('/tmp/rejected-image.png')
 
-    await vi.waitFor(() => expect(setTerminalError).toHaveBeenCalled())
+    await vi.waitFor(() =>
+      expect(pasteErrorsFor(setTerminalErrorsByPaneId, sourcePane.id)).not.toEqual([])
+    )
     expect(getRecentTerminalImages(sourcePane.terminal)).toEqual([])
   })
 })
