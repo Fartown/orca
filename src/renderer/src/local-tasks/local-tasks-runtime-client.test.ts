@@ -255,7 +255,8 @@ it('re-reads only the library that refused a write as stale', async () => {
     { title: 'Renamed' }
   )
   expect(saved).toBe(false)
-  await vi.waitFor(() => expect(host.call).toHaveBeenCalledTimes(3))
+  // The stale re-read is a background task; a loaded runner needs longer than the 1s default.
+  await vi.waitFor(() => expect(host.call).toHaveBeenCalledTimes(3), { timeout: 5000 })
   expect(host.call.mock.calls.map(([target, method]) => [target, method])).toEqual([
     [SERVER, 'localTasks.tasks.update'],
     [SERVER, 'localTasks.projects.list'],
