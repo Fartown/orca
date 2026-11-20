@@ -14,7 +14,7 @@ export const WAKE_DEFAULTS = {
  *   守卫回 wait 之后状态仍是 done,也不会立刻再叫一次。
  */
 export function initialWakeState(now, consumedEndAt = 0) {
-  return { consumedEndAt, consumedWaitAt: 0, lastGuardAt: now, sawBusy: false }
+  return { consumedEndAt, consumedWait: null, lastGuardAt: now, sawBusy: false }
 }
 
 /** 发出一条消息之后:早于这一刻的结束事件都不属于新的一轮。 */
@@ -29,7 +29,7 @@ export function afterGuard(state, at) {
 
 /**
  * @param {object} state
- * @param {{ activity: 'disconnected'|'needs-user'|'ended'|'busy'|'quiet'|'unknown', stateStartedAt: number|null, hasRow: boolean } | null} obs
+ * @param {{ activity: 'disconnected'|'needs-user'|'ended'|'busy'|'quiet'|'unknown', stateStartedAt: number|null, hasRow: boolean, waitKey?: string } | null} obs
  *   null 表示这次没观察到(断联、出错):不产生结束事件,定时照走。
  * @returns {{ state: object, wake: string | null }} wake 是唤醒原因。
  */
@@ -38,13 +38,12 @@ export function detectWake(state, obs, now, limits = WAKE_DEFAULTS) {
   if (obs?.hasRow && obs.activity === 'ended' && (obs.stateStartedAt ?? 0) > state.consumedEndAt) {
     return { state: { ...state, consumedEndAt: obs.stateStartedAt }, wake: 'turn-ended' }
   }
-  // 停在确认框或提问框上:同一次等待只叫一次,守卫看画面决定替它按还是先不管。
-  if (
-    obs?.hasRow &&
-    obs.activity === 'needs-user' &&
-    (obs.stateStartedAt ?? 0) > (state.consumedWaitAt ?? 0)
-  ) {
-    return { state: { ...state, consumedWaitAt: obs.stateStartedAt }, wake: 'needs-user' }
+  // 停在确认框或提问框上:同一次等待只叫一次。连着弹的确认框状态行不变,靠画面上框的原文区分(waitKey)。
+  if (obs?.hasRow && obs.activity === 'needs-user') {
+    const key = obs.waitKey ?? String(obs.stateStartedAt ?? 0)
+    if (key !== state.consumedWait) {
+      return { state: { ...state, consumedWait: key }, wake: 'needs-user' }
+    }
   }
   if (obs && !obs.hasRow) {
     if (obs.activity === 'busy') {

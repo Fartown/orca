@@ -210,10 +210,20 @@ async function observe(run) {
     const kind = describeActivity(activity, QUIET_MS)
     run.agentIdle = kind === 'ended' || kind === 'quiet' || kind === 'needs-user'
     run.lastRow = activity.row ?? run.lastRow
+    const box =
+      kind === 'needs-user'
+        ? await captureConfirmBox(
+            SCREEN,
+            run.current.terminalHandle,
+            activity.row?.agentType ?? null
+          )
+        : null
+    const stateStartedAt = activity.row?.stateStartedAt ?? null
     return {
       activity: kind,
-      stateStartedAt: activity.row?.stateStartedAt ?? null,
-      hasRow: Boolean(activity.row?.state)
+      stateStartedAt,
+      hasRow: Boolean(activity.row?.state),
+      waitKey: `${stateStartedAt ?? 0}${box ? `|${box.text}` : ''}`
     }
   } catch {
     // 观察不到(断联、Orca 在重启)不是任何结论:不产生结束事件,定时照走。
@@ -234,13 +244,17 @@ async function review(
   const startedAt = Date.now()
   const promptBefore = run.lastRow?.prompt ?? ''
   const sequence = (run.current.guardCalls || 0) + 1
-  const { vars, cursor } = await guardMaterials(run, wakeText, { sequence, digestTranscript })
   // 守卫判断的是此刻画面上的确认框;之后按键前要核对还是这一个。
   const boxSeen = await captureConfirmBox(
     SCREEN,
     run.current.terminalHandle,
     run.lastRow?.agentType ?? null
   )
+  const { vars, cursor } = await guardMaterials(run, wakeText, {
+    sequence,
+    digestTranscript,
+    confirmBox: boxSeen
+  })
   report.guard?.(wakeText)
 
   const abort = new AbortController()

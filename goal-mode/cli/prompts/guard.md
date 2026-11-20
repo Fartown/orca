@@ -15,6 +15,7 @@
 - 上次复盘以来的对话摘要（驱动整理）：{{digestPath}}。里面已标出哪些是用户说的、哪些是驱动发的以及是否完整送达；压缩摘要、斜杠命令、子任务通知等系统注入不算用户说的话。
 - 完整对话记录：{{transcriptPath}}。核实某个说法、或往前找资料时按关键词检索，不要整份读。
 - 终端画面：`{{orcaCommand}} terminal read --terminal {{terminalHandle}} --screen`，看它是否停在确认框、提问框或报错上。
+- 驱动此刻在画面上认出的确认框：{{confirmBox}}
 - 本工作区的历史会话：{{sessionDir}}
 - 上次以来 git 看得到的改动：{{changes}}（不含被忽略的目录，也可能有用户或其他会话的改动）
 - 用户配置的检查命令上次的失败输出：{{checkFailures}}
