@@ -14,12 +14,22 @@
  *     --config tests/playwright.config.ts --project electron-headless --workers=1
  */
 import { existsSync, readFileSync } from 'node:fs'
-import type { ElectronApplication } from '@stablyai/playwright-test'
-import { test, expect } from './helpers/orca-app'
+import { expect, type ElectronApplication } from '@stablyai/playwright-test'
+import { test } from './desktop/electron-fixtures/orca-app'
 import { TEST_REPO_PATH_FILE } from './global-setup'
-import { waitForActiveTerminalManager, waitForPaneCount } from './helpers/terminal'
-import { ensureTerminalVisible, waitForActiveWorktree, waitForSessionReady } from './helpers/store'
-import { attachRepoAndOpenTerminal, createRestartSession } from './helpers/orca-restart'
+import {
+  waitForActiveTerminalManager,
+  waitForPaneCount
+} from './terminal/layout/terminal-pane-operations'
+import {
+  ensureTerminalVisible,
+  waitForActiveWorktree,
+  waitForSessionReady
+} from './desktop/renderer-probes/store'
+import {
+  attachRepoAndOpenTerminal,
+  createRestartSession
+} from './desktop/electron-fixtures/orca-restart'
 
 const PROVIDER_SESSION_ID = 'e2e-hook-silent-resume-session'
 
