@@ -1528,7 +1528,8 @@
         "src/main/goals/goal-driver-resources.test.ts",
         "src/shared/host-operation-ownership.test.ts",
         "src/cli/goals/goal-cli.test.ts",
-        "goal-mode/cli/confirm-box.test.mjs"
+        "goal-mode/cli/confirm-box.test.mjs",
+        "goal-mode/cli/goal-loop-confirm-box.test.mjs"
       ],
       "checks": [
         "pnpm exec vitest run --config config/vitest.config.ts src/main/goals src/shared/goals src/renderer/src/goals src/renderer/src/components/goals src/main/runtime/rpc/methods/goals.test.ts src/main/plugins/plugin-bundled-bootstrap.test.ts src/main/persistence/applying-settings/persistence-ui-state.test.ts src/renderer/src/components/terminal-pane/TerminalPaneHeaderOverlay.test.tsx src/renderer/src/components/terminal-pane/terminal-pane-element-file-drop.test.tsx src/main/goals/goal-driver-resources.test.ts src/cli/goals",
