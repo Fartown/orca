@@ -1,7 +1,8 @@
 import { rmSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
 import type { Page } from '@stablyai/playwright-test'
-import { expect, test } from './desktop/electron-fixtures/orca-app'
+import { expect } from '@stablyai/playwright-test'
+import { test } from './desktop/electron-fixtures/orca-app'
 import { openFileExplorer } from './editor/file-explorer/file-explorer'
 import {
   createRuntimeDesktopPairingOffer,
@@ -33,6 +34,7 @@ test('opens complete paired files within their caps and refuses oversized editab
   testRepoPath,
   registerPostElectronShutdownCleanup
 }, testInfo) => {
+  // Six 2-20 MB files each stream through a second paired Electron client in capped chunks.
   test.setTimeout(600_000)
   await orcaPage.evaluate(() =>
     window.__store!.getState().updateSettingsOrThrow({ uiLanguage: 'en' })
