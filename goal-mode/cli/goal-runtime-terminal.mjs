@@ -28,10 +28,13 @@ export function createRuntimeTerminalBackend(options = {}) {
     async showTerminal(handle) {
       return (await call('terminal.show', { terminal: handle })).terminal
     },
-    async readTerminal(handle, { limit = 2000, cursor } = {}) {
+    async readTerminal(handle, { limit = 2000, cursor, screen = false } = {}) {
       const params = { terminal: handle, limit }
       if (cursor != null) {
         params.cursor = String(cursor)
+      }
+      if (screen) {
+        params.screen = true
       }
       return (await call('terminal.read', params)).terminal
     },

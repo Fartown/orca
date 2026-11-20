@@ -21,6 +21,8 @@ function makeWorld(over = {}) {
   const w = {
     row: { state: 'done', stateStartedAt: 1, prompt: '', workingMode: null },
     draft: '',
+    screen: null,
+    keys: [],
     sent: [],
     interrupts: [],
     turnMs: 15,
@@ -54,7 +56,12 @@ async function loadLoop(w, { checks, env = {} } = {}) {
         w.interrupts.push(handle)
         w.onInterrupt?.()
       },
-      readTerminal: async () => ({ draft: w.draft })
+      readTerminal: async () => ({ draft: w.draft }),
+      readScreen: async () => (w.screen ? { lines: w.screen } : null),
+      sendKeys: async (_handle, keys) => {
+        w.keys.push(keys)
+        w.onKeys?.(keys)
+      }
     }
   })
   mock.module('./terminal-activity.mjs', {
@@ -591,4 +598,82 @@ test('每次守卫调用的全文留档', async () => {
   assert.deepEqual(files.filter((f) => f.endsWith('.json')).sort(), ['1.json', '2.json'])
   // 续跑消息指向的目标原文就写在这里
   assert.equal(await readFile(path.join(logDir, 'objective.md'), 'utf8'), '做完 X\n')
+})
+
+// —— 确认框由守卫处理(方案 §3.5) ——
+
+const CODEX_BOX = [
+  '  Would you like to run the following command?',
+  '  $ date > /tmp/out/a.txt',
+  '› 1. Yes, proceed (y)',
+  '  3. No, and tell Codex what to do differently (esc)',
+  '  Press enter to confirm or esc to cancel'
+]
+
+/** 首轮发出后 agent 停在确认框;按了键框就消失,agent 接着干完这一轮。 */
+function boxWorld() {
+  const w = makeWorld()
+  w.onSend = (text) => {
+    if (w.sent.length === 1) {
+      w.row = { ...w.row, state: 'waiting', stateStartedAt: Date.now() + 1, agentType: 'codex' }
+      w.screen = CODEX_BOX
+    } else {
+      w.runTurn(text)
+    }
+  }
+  w.onKeys = () => {
+    w.screen = ['• Ran date']
+    w.runTurn('')
+  }
+  return w
+}
+
+for (const [choice, key] of [
+  ['approve', '1'],
+  ['reject', '\x1b']
+]) {
+  test(`守卫 ${choice} 确认框:先按 ${JSON.stringify(key)},再把指示发出去`, async () => {
+    const w = boxWorld()
+    const { runLoop } = await loadLoop(w, { env: { ORCA_GOAL_CONFIRM_SETTLE_MS: '500' } })
+    const guard = scriptedGuard([
+      (input, n) => {
+        assert.equal(n, 1)
+        assert.match(input.vars.wakeReason, /确认框/)
+        return instruct('换成写到 /tmp/out/b.txt', { confirmBox: choice })
+      },
+      done
+    ])
+    assert.equal((await runLoop(goal(), { report, callGuard: guard })).state, 'complete')
+    assert.deepEqual(w.keys, [key])
+    assert.equal(w.sent.length, 2)
+    assert.match(w.sent[1], /换成写到/)
+  })
+}
+
+test('守卫没给确认框意见:不按键,照旧不往确认框里发指示', async () => {
+  const w = boxWorld()
+  const { runLoop } = await loadLoop(w, { env: { ORCA_GOAL_GUARD_INTERVAL_MS: '40' } })
+  const guard = scriptedGuard([
+    instruct('x'),
+    () => {
+      assert.equal(w.sent.length, 1)
+      return done
+    }
+  ])
+  assert.equal((await runLoop(goal(), { report, callGuard: guard })).state, 'complete')
+  assert.deepEqual(w.keys, [])
+})
+
+test('守卫判断期间确认框换了:不按键', async () => {
+  const w = boxWorld()
+  const { runLoop } = await loadLoop(w, { env: { ORCA_GOAL_GUARD_INTERVAL_MS: '40' } })
+  const guard = scriptedGuard([
+    () => {
+      w.screen = CODEX_BOX.map((line) => line.replace('a.txt', 'other.txt'))
+      return instruct('x', { confirmBox: 'approve' })
+    },
+    done
+  ])
+  assert.equal((await runLoop(goal(), { report, callGuard: guard })).state, 'complete')
+  assert.deepEqual(w.keys, [])
 })

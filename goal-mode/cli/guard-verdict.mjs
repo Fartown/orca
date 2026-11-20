@@ -5,9 +5,11 @@ export const GUARD_DECISIONS = ['wait', 'instruct', 'ask_user', 'done']
 const FIELDS = ['decision', 'observation', 'instruction', 'question', 'note']
 // 笔记是守卫的记忆,每次原样交还;设上限免得一次失控的输出撑爆记录。
 const LIMITS = { observation: 2_000, instruction: 6_000, question: 2_000, note: 12_000 }
+// 可选:对执行 agent 当前确认框的处理。不写或留空就是不处理,旧输出照样合法。
+export const CONFIRM_BOX_CHOICES = ['approve', 'reject']
 
 /**
- * @returns {{ ok: true, verdict: {decision: string, observation: string, instruction: string, question: string, note: string} } | { ok: false, error: string }}
+ * @returns {{ ok: true, verdict: {decision: string, observation: string, instruction: string, question: string, note: string, confirmBox: ''|'approve'|'reject'} } | { ok: false, error: string }}
  */
 export function parseGuardVerdict(text) {
   const raw = lastFencedJson(String(text ?? ''), (value) => 'decision' in value)
@@ -44,6 +46,23 @@ export function parseGuardVerdict(text) {
   }
   if (decision === 'done' && verdict.question) {
     return { ok: false, error: 'decision 是 done 时 question 必须是空字符串' }
+  }
+  const confirmBox = raw.confirmBox ?? ''
+  if (typeof confirmBox !== 'string') {
+    return { ok: false, error: 'confirmBox 的值不是字符串' }
+  }
+  verdict.confirmBox = confirmBox.trim()
+  if (verdict.confirmBox && !CONFIRM_BOX_CHOICES.includes(verdict.confirmBox)) {
+    return {
+      ok: false,
+      error: `confirmBox 只能是 ${CONFIRM_BOX_CHOICES.join('、')} 或空字符串,收到的是「${confirmBox}」`
+    }
+  }
+  if (verdict.confirmBox === 'reject' && decision !== 'instruct') {
+    return { ok: false, error: 'confirmBox 是 reject 时 decision 必须是 instruct,写明换一种做法' }
+  }
+  if (verdict.confirmBox === 'approve' && decision !== 'wait' && decision !== 'instruct') {
+    return { ok: false, error: 'confirmBox 是 approve 时 decision 只能是 wait 或 instruct' }
   }
   return { ok: true, verdict }
 }

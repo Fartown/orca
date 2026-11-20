@@ -5,10 +5,13 @@ import { renderPrompt } from './continuation-prompt.mjs'
 import { planVerdict, timeBudgetReason } from './goal-decision.mjs'
 import { writeGoal } from './goal-state.mjs'
 import { logReview, logTerminal } from './goal-loop-log.mjs'
-import { sendInterrupt, sendText } from './orca-terminal.mjs'
+import { readScreen, sendInterrupt, sendKeys, sendText } from './orca-terminal.mjs'
 import { applyRecordToGoal } from './goal-record-projection.mjs'
 import { describeActivity, observeAgent } from './terminal-activity.mjs'
 import { afterGuard, afterSend, detectWake, initialWakeState } from './round-wait-machine.mjs'
+import { answerConfirmBox, captureConfirmBox } from './confirm-box.mjs'
+
+const SCREEN = { readScreen, sendKeys }
 import { callGuard as defaultCallGuard, saveGuardCall } from './guard-call.mjs'
 import { addNotice, applyQuestion, resolveNotices } from './goal-notices.mjs'
 import {
@@ -31,6 +34,7 @@ const STOP_GRACE_MS = num('ORCA_GOAL_STOP_GRACE_MS', 60_000)
 // 驱动自己出错(磁盘、CLI、git)持续这么久就通知用户;不终结目标,一直重试。
 const FAULT_NOTICE_MS = num('ORCA_GOAL_ROUND_ERROR_GRACE_MS', 10 * 60_000)
 const SAVE_EVERY_MS = 60_000
+const CONFIRM_SETTLE_MS = num('ORCA_GOAL_CONFIRM_SETTLE_MS', 5_000)
 export { AUTO_MESSAGE_PREFIX }
 // Claude 把大段粘贴切块包进这个标签,驱动自己的消息也会被包住。
 const PASTED_CONTENT_TAG = /<\/?pasted_content(?:\s+id="[^"]*")?>/g
@@ -39,6 +43,7 @@ const WAKE_REASONS = {
   'turn-ended': '执行 agent 这一轮结束了',
   'terminal-quiet': '执行 agent 的终端安静下来了（它没有状态信号，可能是这一轮结束了）',
   timer: '定时巡检（距上次复盘已满 15 分钟）',
+  'needs-user': '执行 agent 停在确认框或提问框上',
   attached: '驱动刚接回这个目标，先弄清现在的情况',
   resumed: '用户恢复了自动续跑',
   'objective-changed': '用户修改了目标',
@@ -230,6 +235,12 @@ async function review(
   const promptBefore = run.lastRow?.prompt ?? ''
   const sequence = (run.current.guardCalls || 0) + 1
   const { vars, cursor } = await guardMaterials(run, wakeText, { sequence, digestTranscript })
+  // 守卫判断的是此刻画面上的确认框;之后按键前要核对还是这一个。
+  const boxSeen = await captureConfirmBox(
+    SCREEN,
+    run.current.terminalHandle,
+    run.lastRow?.agentType ?? null
+  )
   report.guard?.(wakeText)
 
   const abort = new AbortController()
@@ -338,8 +349,23 @@ async function review(
     verdict.question,
     now
   )
+  const confirm = verdict.confirmBox
+    ? await answerConfirmBox({
+        terminal: SCREEN,
+        handle: run.current.terminalHandle,
+        agentType: run.lastRow?.agentType ?? null,
+        choice: verdict.confirmBox,
+        seen: boxSeen
+      })
+    : null
+  if (confirm) {
+    report.confirmBox?.(verdict.confirmBox, confirm)
+    if (confirm.outcome === 'pressed') {
+      await settleAfterConfirm(run)
+    }
+  }
   const plan = planVerdict(run.current, verdict)
-  await logReview(run.current, wakeText, verdict, plan)
+  await logReview(run.current, wakeText, verdict, plan, confirm)
 
   if (plan.type === 'budget') {
     return finishBudget(run, plan.reason, report)
@@ -352,6 +378,23 @@ async function review(
   }
   await save()
   return null
+}
+
+/** 按完确认框后等状态存储跟上,免得紧接着的指示因为还显示「在等确认」而发不出去。 */
+async function settleAfterConfirm(run) {
+  const deadline = Date.now() + CONFIRM_SETTLE_MS
+  while (Date.now() < deadline) {
+    try {
+      const activity = await observeAgent(run.current.terminalHandle)
+      run.lastRow = activity.row ?? run.lastRow
+      if (describeActivity(activity, QUIET_MS) !== 'needs-user') {
+        return
+      }
+    } catch {
+      return
+    }
+    await sleep(POLL_MS)
+  }
 }
 
 function isAutoMessage(prompt) {

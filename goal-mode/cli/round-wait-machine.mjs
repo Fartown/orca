@@ -14,7 +14,7 @@ export const WAKE_DEFAULTS = {
  *   守卫回 wait 之后状态仍是 done,也不会立刻再叫一次。
  */
 export function initialWakeState(now, consumedEndAt = 0) {
-  return { consumedEndAt, lastGuardAt: now, sawBusy: false }
+  return { consumedEndAt, consumedWaitAt: 0, lastGuardAt: now, sawBusy: false }
 }
 
 /** 发出一条消息之后:早于这一刻的结束事件都不属于新的一轮。 */
@@ -37,6 +37,14 @@ export function detectWake(state, obs, now, limits = WAKE_DEFAULTS) {
   let next = state
   if (obs?.hasRow && obs.activity === 'ended' && (obs.stateStartedAt ?? 0) > state.consumedEndAt) {
     return { state: { ...state, consumedEndAt: obs.stateStartedAt }, wake: 'turn-ended' }
+  }
+  // 停在确认框或提问框上:同一次等待只叫一次,守卫看画面决定替它按还是先不管。
+  if (
+    obs?.hasRow &&
+    obs.activity === 'needs-user' &&
+    (obs.stateStartedAt ?? 0) > (state.consumedWaitAt ?? 0)
+  ) {
+    return { state: { ...state, consumedWaitAt: obs.stateStartedAt }, wake: 'needs-user' }
   }
   if (obs && !obs.hasRow) {
     if (obs.activity === 'busy') {

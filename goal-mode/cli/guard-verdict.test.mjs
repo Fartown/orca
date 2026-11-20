@@ -61,3 +61,25 @@ test('wait 和 instruct 可以保留待答问题;ask_user 可以同时安排能�
   assert.equal(parseGuardVerdict(block(full({ question: 'Q' }))).ok, true)
   assert.equal(parseGuardVerdict(block(full({ decision: 'ask_user', question: 'Q' }))).ok, true)
 })
+
+test('confirmBox 可选:旧输出没有这个字段照样合法,取值为空', () => {
+  const parsed = parseGuardVerdict(block(full()))
+  assert.equal(parsed.ok, true)
+  assert.equal(parsed.verdict.confirmBox, '')
+  assert.equal(parseGuardVerdict(block(full({ confirmBox: ' ' }))).verdict.confirmBox, '')
+})
+
+test('confirmBox 取 approve 或 reject;reject 必须带 instruct,approve 只配 wait 或 instruct', () => {
+  assert.equal(
+    parseGuardVerdict(block(full({ confirmBox: 'reject' }))).verdict.confirmBox,
+    'reject'
+  )
+  const waitApprove = full({ decision: 'wait', instruction: '', confirmBox: 'approve' })
+  assert.equal(parseGuardVerdict(block(waitApprove)).verdict.confirmBox, 'approve')
+  assert.match(parseGuardVerdict(block(full({ confirmBox: 'yes' }))).error, /confirmBox 只能是/)
+  assert.match(parseGuardVerdict(block(full({ confirmBox: 1 }))).error, /confirmBox 的值不是字符串/)
+  const waitReject = full({ decision: 'wait', instruction: '', confirmBox: 'reject' })
+  assert.match(parseGuardVerdict(block(waitReject)).error, /reject 时 decision 必须是 instruct/)
+  const askApprove = full({ decision: 'ask_user', question: '要什么', confirmBox: 'approve' })
+  assert.match(parseGuardVerdict(block(askApprove)).error, /approve 时 decision 只能是/)
+})

@@ -1,7 +1,7 @@
 // 逐轮日志:每次复盘与终局各留一条,目标不会「戛然而止」。
 import { appendLog } from './goal-state.mjs'
 
-export async function logReview(goal, wakeText, verdict, plan) {
+export async function logReview(goal, wakeText, verdict, plan, confirm = null) {
   await appendLog(goal.key, {
     at: new Date().toISOString(),
     turn: goal.turns,
@@ -12,7 +12,8 @@ export async function logReview(goal, wakeText, verdict, plan) {
     plan: plan.type,
     state: goal.state,
     reason: verdict.observation || null,
-    question: verdict.question || null
+    question: verdict.question || null,
+    ...(confirm ? { confirmBox: verdict.confirmBox, confirmOutcome: confirm.outcome } : {})
   }).catch(() => {})
 }
 
