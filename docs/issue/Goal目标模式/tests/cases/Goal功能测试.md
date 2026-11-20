@@ -778,3 +778,31 @@ REQ-112 原提案规定的验证次序仍保留：先增加“连续不变仍继
 - 关联需求：REQ-127、REQ-129；优先级：P1。
 - 步骤：检查渲染后的首轮、每轮与目标修改后的消息。
 - 预期：都写明「不同意守卫的指示时，写明理由和证据，守卫会复核」；首轮与「规矩照旧」写明清单有交付顺序的按顺序做；仍不带预算。
+
+## agent 替用户发起与确认框（REQ-130、REQ-131，2026-11-20）
+
+依据 [开工对齐与守卫判断改进方案](../../solutions/Goal分流与三方协作升级方案.md) §3.2、§3.5。自动化覆盖在 `src/cli/goals/goal-cli.test.ts`、`goal-mode/cli/confirm-box.test.mjs`、`goal-mode/cli/guard-verdict.test.mjs`、`goal-mode/cli/goal-loop.test.mjs`、`goal-mode/cli/round-wait-machine.test.mjs`；真机在隐藏的隔离 Orca 实例与 loopback SSH（127.0.0.1:2222 上的 orcad）执行。
+
+### TC-386 orca goal 本机全流程
+
+- 关联需求：REQ-130；优先级：P0。
+- 步骤：在本机工作区的终端里起执行 agent；`orca goal draft --terminal <h> --objective <原话>`；`orca goal checklist <draft> --wait`；`orca goal start <draft> --terminal <h>`；`orca goal status`；`orca goal stop <goal>`。
+- 预期：起草后目标列表里没有新目标；清单读得到正文和文件路径；启动后 status 看得到目标；stop 后不再续跑。清单未生成好、或终端不在清单的工作区时，start 拒绝。
+
+### TC-387 orca goal 经 SSH
+
+- 关联需求：REQ-130；优先级：P0。
+- 步骤：客户端连 SSH 主机上的 orcad；CLI 带 `--environment <该主机>` 走 TC-386 的全部步骤。
+- 预期：清单文件、目标记录在 SSH 主机的 Goal 目录，客户端没有；各步结果同 TC-386。
+
+### TC-388 守卫同意确认框
+
+- 关联需求：REQ-131；优先级：P0。
+- 步骤：执行 agent（Claude Code、codex 各一次）在需要确认的权限设置下执行目标内的无害命令。
+- 预期：停在确认框时叫守卫；守卫给 approve；驱动按 1，确认框消失，命令执行；留存按键前后的终端画面。
+
+### TC-389 守卫拒绝确认框
+
+- 关联需求：REQ-131；优先级：P0。
+- 步骤：执行 agent（Claude Code、codex 各一次）先要执行目标之外的操作（如强推）。
+- 预期：守卫给 reject 和换一种做法的指示；驱动按 Esc，确认框消失，指示送达，该操作没有执行。

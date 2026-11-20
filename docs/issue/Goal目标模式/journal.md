@@ -141,6 +141,60 @@ external_ids: [Fartown/orca#151]
 
 ## 3. 开发记录
 
+### 2026-11-20 确认框由守卫处理（testing）
+
+- 本轮目标：实施方案 §3.5，用户同日确认“后两块也一起做”；issue Fartown/orca#151。
+- 完成内容：
+  - 守卫结论多一个可选字段 `confirmBox`（approve / reject / 空），四种结论不变，旧输出照样合法；提示词补一段处理规则。
+  - 驱动在执行 agent 停在确认框或提问框上时叫守卫；叫守卫前读一次画面，把认出的确认框原文交给守卫；守卫给了意见时，先核对还是同一个框再按键，按完核对框已消失。
+  - 按键先在 tmux 里对 Claude Code 2.1.329、codex-cli 0.171.0 各实测同意和拒绝：两家都是按 1 同意、按 Esc 拒绝。Claude 后台子 agent 的确认框也出现在主终端，按 1 同样通过。
+  - 真机验证中发现并修复：Claude 连着弹两个确认框时状态行不变，第二个框没人管。改为按“状态开始时间 + 框的原文”区分每次等待。
+- 代码或文档变更：
+  - 代码：`goal-mode/cli/confirm-box.mjs`（新）、`guard-verdict.mjs`、`goal-loop.mjs`、`round-wait-machine.mjs`、`guard-materials.mjs`、`orca-terminal.mjs`、`goal-runtime-terminal.mjs`、`prompts/guard.md` 及对应测试。
+  - 文档：修订方案 §5.4.1、§5.6、§8；需求 REQ-131；测试用例 TC-388、TC-389；新方案 §3.5 实施说明。
+- 验证证据：
+  - 单测：`node --test` 共 145 项通过。
+  - 本机真机（隐藏的隔离实例，执行 agent 和守卫都是真实模型）：
+    - Claude 执行，6 个目标：守卫共同意 13 次、拒绝 4 次。拒绝的对象是多余的 `&& cat`、两次重复的只读核查、一次下载安装脚本。每次按键后确认框都消失。
+    - 拒绝后的指示：一次约 1 秒送达，一次约 3 分钟后才送达，一次没有发出去（状态行一直停在“等确认”），一次因脚本提前停止目标而无法判断。据此补了“按掉框后画面上没有框就照发”，单测覆盖，但修复后的真机重跑没有再出现拒绝。
+    - 修复连续确认框之后，连着弹的 4 个框各自在数秒内由守卫同意。
+    - codex 执行，3 个目标：同意 3 次，按 1 后命令执行。其中一个由守卫核实完成，另一个因安装地址不可达转去问用户。
+  - SSH（127.0.0.1:2222 上的 orcad）：codex 的确认框由主机上的守卫同意，驱动在主机上按键，按前按后都有画面。
+  - 证据目录：本机 `.docs/goal-cli-confirm-ui-validation/2026-11-20/evidence/`、`.docs/goal-confirm-box-ui-validation/2026-11-20/evidence/`（不入库）。
+- 未解决问题：
+  - codex 执行时没有出现过一次拒绝，codex 的拒绝按键只在 tmux 里手动实测过。
+  - 让执行 agent 越界的两种诱导（预先交代强推；目标里要求强推或管道安装远程脚本）都没有让守卫拒绝：执行 agent 不照做，或者守卫认为目标要求的就在范围内。
+  - 守卫会拒绝它认为多余的只读命令，偏严。
+- 下一步：合入后在真实目标上观察。
+
+### 2026-11-20 agent 用 orca goal 替用户发起（testing）
+
+- 本轮目标：实施方案 §3.2，用户同日确认“后两块也一起做”；issue Fartown/orca#151。
+- 完成内容：
+  - 新增 `orca goal draft / checklist / start / status / stop`，复用面板用的宿主 Goal 方法。
+  - 起草不启动目标；启动只接受生成好、且属于该终端工作区的清单。
+  - SSH 工作区用 `--environment` 指向主机上的 Orca Server。
+  - orca-cli skill 加 Goals 一节，并在触发描述里加入 goal 相关说法。
+  - 载荷指纹搬到 `src/shared/goals`，面板与 CLI 共用。
+- 代码或文档变更：
+  - 代码：`src/cli/goals/**`（新）、`src/shared/goals/goal-payload-fingerprint.ts`（新）、`src/renderer/src/goals/goal-client-operation.ts`。
+  - CLI 接缝：`src/cli/specs/index.ts`、`src/cli/handler-group-manifest.ts`、`src/main/startup/cli-command-names.ts`。
+  - skill 源文件及生成产物：`skill-guides/orca-cli.md`、`skills/orca-cli/SKILL.md`、`src/cli/bundled-skill-guides.ts`、`resources/skills/*`、`bundled-skill-sources.ts`。
+  - 登记：`config/fork-features.jsonc`、`config/architecture-policies.jsonc`。
+  - 文档：需求 REQ-130；测试用例 TC-386、TC-387；新方案 §3.2 实施说明。
+- 验证证据：
+  - 单测：`src/cli/goals/goal-cli.test.ts` 5 项通过。
+  - 本机真机（隐藏的隔离实例）：10 个场景的“起草 → 读清单 → 启动 → 查看”全部通过，其中 5 个走完了停止。起草后目标列表为空，清单正文和文件路径都读得到。
+  - SSH 真机（127.0.0.1:2222 上的 orcad）一轮全通过：
+    - 清单文件在主机的 `remote-home/.orca-goal/v2/drafts/` 下。
+    - 启动后状态是 executing；停止后状态为 idle、续跑已暂停。
+    - 运行前后真实 `~/.codex/config.toml`、`~/.claude/settings.json` 的修改时间不变，`authorized_keys` 的哈希也一致。
+  - 证据目录：同上。
+- 未解决问题：
+  - 还没有在新会话里实测 agent 会不会按 skill 走到 `orca goal`（方案 §4.2 第 2 项）。
+  - CLI 的预算只开放轮数和时长。
+- 下一步：用一个新会话说“开个 Codex 把某件事做完，你盯着”，看 agent 是否走到 `orca goal` 并先把清单发给用户确认。
+
 ### 2026-11-20 开工对齐与守卫先判断：提示词（testing）
 
 - 本轮目标：实施 [开工对齐与守卫判断改进方案](solutions/Goal分流与三方协作升级方案.md) §6 第 1 步（§3.1、§3.3、§3.4），只改提示词；issue Fartown/orca#151。
