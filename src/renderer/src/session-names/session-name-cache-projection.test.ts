@@ -1,7 +1,7 @@
 import { afterEach, expect, it, vi } from 'vitest'
 import { canonicalSessionTitleKey } from '../lib/canonical-session-titles'
 import { startAiVaultTabTitleSync } from '../lib/agent-session/history/title-sync/ai-vault-tab-title-sync'
-import { fixture, nativeResult } from './session-name-binding-test-fixture'
+import { fixture, nativeResult, titleSyncStore } from './session-name-binding-test-fixture'
 import { createSessionNameStore } from './session-name-store'
 
 vi.mock('@/runtime/sync-runtime-graph/graph-sync-scheduler', () => ({
@@ -20,8 +20,7 @@ it.each(['ssh:dev-box', 'local'] as const)(
     store.getState().setAiVaultTabTitle('tab', nativeResult('Old native').titles[0])
     stops.push(
       startAiVaultTabTitleSync({
-        getState: store.getState,
-        subscribe: store.subscribe,
+        ...titleSyncStore(store),
         resolveSessionTitles: names.resolveSessionTitles,
         subscribeSessionNames: names.subscribe,
         getSessionName: (request) =>

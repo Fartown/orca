@@ -139,6 +139,7 @@ import { hostSnapshotAffirmsWorktreeContents } from '@/runtime/web-session-tabs-
 import { runRemoteAgentSessionLaunch } from '@/runtime/hosted-terminals/creation/agent-launch/remote-agent-session-launch'
 import { resolveAdoptedTerminalPane } from '@/mobile-terminal-surface-recovery/resolve-adopted-terminal-pane'
 import { useAppStore } from '@/store/index'
+import { readRuntimeStatuses } from '@/store/slices/runtime-status/views/runtime-status-owner'
 import { recordWebAgentSessionHandoff } from '@/runtime/hosted-terminals/creation/agent-launch/web-agent-session-handoff'
 import { refreshWebRuntimeSessionTabsSnapshot } from '@/runtime/web-session-tabs-sync/inventory/web-runtime-session-snapshot'
 import {
@@ -3725,9 +3726,7 @@ export function createRemoteRuntimePtyTransport(
       }
       const freshLaunch = !resumeProviderSessionToSend ? opts.freshAgentLaunch : undefined
       const promptStatus = freshLaunch
-        ? lastVerifiedRuntimeStatus(
-            useAppStore.getState().runtimeStatusByEnvironmentId.get(createEnvironmentId)
-          )
+        ? lastVerifiedRuntimeStatus(readRuntimeStatuses().get(createEnvironmentId))
         : null
       const promptPlatform = authoritativeHostPlatform ?? promptStatus?.hostPlatform
       let promptPlan =

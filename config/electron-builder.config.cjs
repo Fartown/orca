@@ -211,6 +211,8 @@ const commonExtraResources = [
 const debElectronRuntimeDependencies = [
   'libgtk-3-0',
   'libnotify4',
+  'dbus-bin | dbus',
+  'libglib2.0-bin',
   'libnss3',
   'libxss1',
   'libxtst6',
@@ -225,6 +227,7 @@ const debElectronRuntimeDependencies = [
 const rpmElectronRuntimeDependencies = [
   'gtk3',
   'libnotify',
+  '/usr/bin/dbus-send',
   'nss',
   'libXScrnSaver',
   '(libXtst or libXtst6)',

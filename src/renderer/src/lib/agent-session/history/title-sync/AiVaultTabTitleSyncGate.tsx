@@ -7,6 +7,10 @@ import {
 import { startAiVaultTabTitleSync } from '@/lib/agent-session/history/title-sync/ai-vault-tab-title-sync'
 import { scheduleAfterInputQuiet } from '@/lib/window-activity/input-quiet-scheduler'
 import { useAppStore } from '@/store/index'
+import {
+  readRuntimeStatuses,
+  subscribeAppStoreWithStatuses
+} from '@/store/slices/runtime-status/views/runtime-status-owner'
 import { sessionNameStore } from '@/session-names/session-name-store'
 
 const TITLE_SYNC_DELAY_MS = 1_000
@@ -18,7 +22,8 @@ export function AiVaultTabTitleSyncGate(): null {
     () =>
       startAiVaultTabTitleSync({
         getState: useAppStore.getState,
-        subscribe: useAppStore.subscribe,
+        subscribe: subscribeAppStoreWithStatuses,
+        readStatuses: readRuntimeStatuses,
         resolveSessionTitles: sessionNameStore.resolveSessionTitles,
         subscribeSessionNames: sessionNameStore.subscribe,
         getSessionName: (request) =>

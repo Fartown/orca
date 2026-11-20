@@ -5,7 +5,13 @@ import { useTerminalPaneLayoutBindings } from '../components/terminal-pane/layou
 import type { TerminalPaneLayoutController } from '../components/terminal-pane/layout/persistence/use-terminal-pane-layout-persistence'
 import { createTerminalLayoutActions } from '../store/terminals/layout/terminal-layout-state'
 import { startAiVaultTabTitleSync } from '../lib/agent-session/history/title-sync/ai-vault-tab-title-sync'
-import { fixture, nativeResult, LEAF, SIBLING } from './session-name-binding-test-fixture'
+import {
+  fixture,
+  nativeResult,
+  LEAF,
+  SIBLING,
+  titleSyncStore
+} from './session-name-binding-test-fixture'
 
 let store: ReturnType<typeof fixture>
 vi.mock('../store', () => ({ useAppStore: { getState: () => store.getState() } }))
@@ -36,8 +42,7 @@ function mountBinding(selectedLeaf = SIBLING, selectedPaneId = 2) {
   store.getState().setAiVaultTabTitle('tab', nativeResult('Name of inactive A').titles[0])
   stops.push(
     startAiVaultTabTitleSync({
-      getState: store.getState,
-      subscribe: store.subscribe,
+      ...titleSyncStore(store),
       resolveSessionTitles: async () => ({ titles: [] })
     })
   )

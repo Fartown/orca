@@ -1,8 +1,9 @@
-import { createStore } from 'zustand/vanilla'
+import { createStore, type StoreApi } from 'zustand/vanilla'
 import type { AppState } from '../store/types'
 import type { AiVaultSessionTitlesResult } from '../../../shared/ai-vault/contracts/ai-vault-session-title'
 import { acceptedAgentStatuses } from '../store/slices/agent-status/status-ownership/accepted-agent-statuses'
 import { createTerminalTabPresentationActions } from '../store/terminals/tabs/presentation/terminal-tab-presentation'
+import type { startAiVaultTabTitleSync } from '../lib/agent-session/history/title-sync/ai-vault-tab-title-sync'
 
 export const LEAF = '11111111-1111-4111-8111-111111111111'
 export const SIBLING = '22222222-2222-4222-8222-222222222222'
@@ -75,7 +76,8 @@ export function fixture() {
         pendingPaneAccountRestarts: {},
         worktreesByRepo: {},
         detectedWorktreesByRepo: {},
-        folderWorkspaces: []
+        folderWorkspaces: [],
+        runtimeStatusByEnvironmentId: new Map()
       }) as unknown as AppState
   )
   store.setState(createTerminalTabPresentationActions(store.setState, store.getState))
@@ -99,5 +101,27 @@ export function nativeResult(title: string, sessionId = 'A'): AiVaultSessionTitl
         providerName: { kind: 'named', title, field: 'session_index.thread_name' }
       }
     ]
+  }
+}
+
+type TitleSyncStoreDependencies = Pick<
+  Parameters<typeof startAiVaultTabTitleSync>[0],
+  'getState' | 'subscribe' | 'readStatuses'
+>
+
+/** Wires the title sync to a store as the app gate does: each publication carries host statuses on both sides. */
+export function titleSyncStore(store: StoreApi<AppState>): TitleSyncStoreDependencies {
+  return {
+    getState: store.getState,
+    readStatuses: () => store.getState().runtimeStatusByEnvironmentId,
+    subscribe: (listener) =>
+      store.subscribe((state, previous) =>
+        listener(
+          state,
+          previous,
+          state.runtimeStatusByEnvironmentId,
+          previous.runtimeStatusByEnvironmentId
+        )
+      )
   }
 }

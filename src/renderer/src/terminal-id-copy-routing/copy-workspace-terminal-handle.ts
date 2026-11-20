@@ -3,6 +3,7 @@ import { getReachableRuntimeEnvironmentIds } from '@/hooks/ipc-events/runtime-ev
 import { getResolvedExecutionHostIdForWorktree } from '@/lib/workspace/ownership/resolved-worktree-execution-host'
 import { resolveOwner } from '@/lib/workspace/ownership/resolve-owner'
 import { captureRuntimeEnvironmentRequestRevision } from '@/runtime/rpc/environment-revisions/runtime-environment-revision'
+import { readRuntimeStatuses } from '@/store/slices/runtime-status/views/runtime-status-owner'
 import { useAppStore } from '@/store'
 import { selectRuntimeAwareSshStatus } from '@/store/slices/ssh/runtime-environment-ssh-selectors'
 import { parseExecutionHostId } from '../../../shared/execution-host/execution-host'
@@ -34,7 +35,8 @@ export async function copyWorkspaceTerminalHandle(
   }
   if (
     host.kind === 'ssh' &&
-    selectRuntimeAwareSshStatus(state, environmentId, host.targetId) !== 'connected'
+    selectRuntimeAwareSshStatus(state, readRuntimeStatuses(), environmentId, host.targetId) !==
+      'connected'
   ) {
     throw new Error('Terminal SSH host unavailable')
   }

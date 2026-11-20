@@ -1,4 +1,7 @@
-import type { AiVaultSessionTitle } from '../../../shared/ai-vault/contracts/ai-vault-session-title'
+import type {
+  AiVaultSessionTitle,
+  AiVaultSessionTitlesResult
+} from '../../../shared/ai-vault/contracts/ai-vault-session-title'
 import type { SessionNameEvidence } from '../../../shared/session-names/session-name-contract'
 import { projectSessionNameSlot } from '../../../shared/session-names/session-name-slot'
 import type { AppState } from '../store/types'
@@ -109,6 +112,32 @@ export function createSessionNameTabTitleProjection(args: {
   const isCurrentBinding = (request: BoundSessionNameRequest): boolean =>
     bindings.get(request.tabId)?.bindingRevision === request.bindingRevision
 
+  /** Lands one host batch's native names and evidence on tabs that still own the same binding. */
+  const writeResolved = (
+    requests: BoundSessionNameRequest[],
+    result: AiVaultSessionTitlesResult,
+    stillRequested: (request: BoundSessionNameRequest) => boolean
+  ): void => {
+    const host = requests[0]!.executionHostId
+    const identity = (agent: string, sessionId: string): string => `${host}\0${agent}\0${sessionId}`
+    const titles = new Map(
+      result.titles
+        .filter((title) => title.title.trim())
+        .map((title) => [identity(title.agent, title.sessionId), title])
+    )
+    const evidence = new Map(
+      (result.nameEvidence ?? []).map((entry) => [identity(entry.agent, entry.sessionId), entry])
+    )
+    for (const request of requests) {
+      const key = identity(request.agent, request.providerSession.id)
+      const title = titles.get(key)
+      const entry = evidence.get(key)
+      if ((title || entry) && stillRequested(request) && isCurrentBinding(request)) {
+        writeTitle(request, title, entry)
+      }
+    }
+  }
+
   const subscribe = (callbacks: {
     isStopped: () => boolean
     onNamesChanged: () => void
@@ -138,5 +167,5 @@ export function createSessionNameTabTitleProjection(args: {
     }
   }
 
-  return { observe, writeTitle, projectFallbackTitles, isCurrentBinding, subscribe }
+  return { observe, writeResolved, projectFallbackTitles, subscribe }
 }

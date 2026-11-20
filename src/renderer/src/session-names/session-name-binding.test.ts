@@ -4,7 +4,13 @@ import {
   resolveTerminalTabTitle,
   resolveUnifiedTabLabel
 } from '../../../shared/workspace-layout/tab-groups/tab-title-resolution'
-import { fixture, nativeResult, LEAF, SIBLING } from './session-name-binding-test-fixture'
+import {
+  fixture,
+  nativeResult,
+  LEAF,
+  SIBLING,
+  titleSyncStore
+} from './session-name-binding-test-fixture'
 import { collectAiVaultTitleRequests } from '../lib/agent-session/history/title-sync/ai-vault-tab-title-requests'
 import { aiVaultTitleSyncInputsChanged } from '../lib/agent-session/history/title-sync/ai-vault-tab-title-sync-inputs'
 import { startAiVaultTabTitleSync } from '../lib/agent-session/history/title-sync/ai-vault-tab-title-sync'
@@ -79,8 +85,7 @@ describe('session name binding lifetime', () => {
     )
     stops.push(
       startAiVaultTabTitleSync({
-        getState: store.getState,
-        subscribe: store.subscribe,
+        ...titleSyncStore(store),
         resolveSessionTitles
       })
     )
@@ -99,8 +104,7 @@ describe('session name binding lifetime', () => {
     store.getState().setAiVaultTabTitle('tab', nativeResult('Name of A').titles[0])
     stops.push(
       startAiVaultTabTitleSync({
-        getState: store.getState,
-        subscribe: store.subscribe,
+        ...titleSyncStore(store),
         resolveSessionTitles: async () => ({ titles: [] })
       })
     )
@@ -127,8 +131,7 @@ describe('session name binding lifetime', () => {
     }))
     stops.push(
       startAiVaultTabTitleSync({
-        getState: store.getState,
-        subscribe: store.subscribe,
+        ...titleSyncStore(store),
         resolveSessionTitles: async () => ({ titles: [] })
       })
     )

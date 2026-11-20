@@ -77,9 +77,12 @@ describe('AI Vault title subscription inputs', () => {
     })
     const store = createStore<AppState>(() => state)
     const scheduleReconcile = vi.fn(() => () => {})
+    const statuses = new Map()
     const stop = startAiVaultTabTitleSync({
       getState: store.getState,
-      subscribe: store.subscribe,
+      subscribe: (listener) =>
+        store.subscribe((next, previous) => listener(next, previous, statuses, statuses)),
+      readStatuses: () => statuses,
       scheduleReconcile,
       resolveSessionTitles: vi.fn()
     })

@@ -1,6 +1,6 @@
 import { afterEach, expect, it, vi } from 'vitest'
 import { startAiVaultTabTitleSync } from '../lib/agent-session/history/title-sync/ai-vault-tab-title-sync'
-import { fixture, PANE } from './session-name-binding-test-fixture'
+import { fixture, PANE, titleSyncStore } from './session-name-binding-test-fixture'
 import { getActivitySessionName } from './activity-session-name'
 import { acceptedAgentStatuses } from '../store/slices/agent-status/status-ownership/accepted-agent-statuses'
 import {
@@ -36,8 +36,7 @@ it.each(['local', 'ssh:dev-box'] as const)(
     })
     stops.push(
       startAiVaultTabTitleSync({
-        getState: store.getState,
-        subscribe: store.subscribe,
+        ...titleSyncStore(store),
         resolveSessionTitles: vi.fn(async () => ({ titles: [] })),
         scheduleReconcile: () => () => undefined
       })

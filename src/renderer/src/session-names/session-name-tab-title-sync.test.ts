@@ -40,6 +40,8 @@ function titleResult(agent: 'claude' | 'codex', title: string): AiVaultSessionTi
   }
 }
 
+type TitleSyncListener = Parameters<Parameters<typeof startAiVaultTabTitleSync>[0]['subscribe']>[0]
+
 function makeState(args: {
   agent?: 'claude' | 'codex'
   aiVaultTitle?: TerminalTab['aiVaultTitle']
@@ -49,7 +51,7 @@ function makeState(args: {
 }) {
   const agent = args.agent ?? 'codex'
   const tab = terminalTab(args.worktreeId, args.aiVaultTitle)
-  const listeners = new Set<(state: AppState, previous: AppState) => void>()
+  const listeners = new Set<TitleSyncListener>()
   const providerSession = {
     key: 'session_id' as const,
     id: `${agent}-session`,
@@ -69,7 +71,12 @@ function makeState(args: {
   }
   const emit = (previous: AppState): void => {
     for (const listener of listeners) {
-      listener(state, previous)
+      listener(
+        state,
+        previous,
+        state.runtimeStatusByEnvironmentId,
+        previous.runtimeStatusByEnvironmentId
+      )
     }
   }
   // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: this fixture supplies every field the title sync reads.
@@ -110,6 +117,7 @@ function makeState(args: {
     folderWorkspaces: [],
     repos: [],
     settings: {},
+    runtimeStatusByEnvironmentId: new Map(),
     setAiVaultTabTitle: (tabId: string, aiVaultTitle: TerminalTab['aiVaultTitle'] | null) => {
       const previous = state
       state = {
@@ -140,7 +148,8 @@ function makeState(args: {
       }
       emit(previous)
     },
-    subscribe: (listener: (next: AppState, previous: AppState) => void) => {
+    readStatuses: () => state.runtimeStatusByEnvironmentId,
+    subscribe: (listener: TitleSyncListener) => {
       listeners.add(listener)
       return () => listeners.delete(listener)
     }

@@ -24,7 +24,13 @@ export type LocalTaskSessionOriginContactState = LocalTaskHostContactState &
   Pick<AppState, 'sshConnectionStates'>
 
 export type LocalTaskForeignSessionProgressState = LocalTaskSessionOriginContactState &
-  Pick<AppState, 'agentStatusByPaneKey' | 'unifiedTabsByWorktree' | 'acknowledgedAgentsByPaneKey'>
+  Pick<
+    AppState,
+    | 'agentStatusByPaneKey'
+    | 'unifiedTabsByWorktree'
+    | 'acknowledgedAgentsByPaneKey'
+    | 'runtimeStatusByEnvironmentId'
+  >
 
 export type LocalTaskForeignSessionProgressOptions = {
   now: number
@@ -46,7 +52,12 @@ export function isLocalTaskSessionOriginInContact(
   return (
     location?.kind === 'local' ||
     (location?.kind === 'ssh' &&
-      selectRuntimeAwareSshStatus(state, environmentId, location.targetId) === 'connected')
+      selectRuntimeAwareSshStatus(
+        state,
+        state.runtimeStatusByEnvironmentId,
+        environmentId,
+        location.targetId
+      ) === 'connected')
   )
 }
 

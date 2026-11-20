@@ -178,7 +178,7 @@ describe('foreign source progress projection', () => {
       stateSince: null,
       unread: false
     })
-    app.runtimeStatusByEnvironmentId.clear()
+    app.runtimeStatusByEnvironmentId = new Map()
     expect(projectLocalTaskForeignSessionProgress(app, SELF, link, { now: NOW })?.state).toBe(
       'unverifiable'
     )

@@ -2,7 +2,14 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { AiVaultSessionTitlesResult } from '../../../shared/ai-vault/contracts/ai-vault-session-title'
 import { collectAiVaultTitleRequests } from '../lib/agent-session/history/title-sync/ai-vault-tab-title-requests'
 import { startAiVaultTabTitleSync } from '../lib/agent-session/history/title-sync/ai-vault-tab-title-sync'
-import { fixture, nativeResult, LEAF, PANE, SIBLING } from './session-name-binding-test-fixture'
+import {
+  fixture,
+  nativeResult,
+  LEAF,
+  PANE,
+  SIBLING,
+  titleSyncStore
+} from './session-name-binding-test-fixture'
 import { createSessionNameStore } from './session-name-store'
 import { acceptedAgentStatuses } from '../store/slices/agent-status/status-ownership/accepted-agent-statuses'
 import { getDefaultSettings } from '../../../shared/orca-profiles/constants'
@@ -36,8 +43,7 @@ describe('session name binding replacement boundaries', () => {
     })
     stops.push(
       startAiVaultTabTitleSync({
-        getState: store.getState,
-        subscribe: store.subscribe,
+        ...titleSyncStore(store),
         resolveSessionTitles: names.resolveSessionTitles,
         subscribeSessionNames: names.subscribe,
         getSessionName: (request) =>
@@ -81,8 +87,7 @@ describe('session name binding replacement boundaries', () => {
       })
       stops.push(
         startAiVaultTabTitleSync({
-          getState: store.getState,
-          subscribe: store.subscribe,
+          ...titleSyncStore(store),
           resolveSessionTitles: () => new Promise((resolve) => completions.push(resolve))
         })
       )
@@ -113,8 +118,7 @@ describe('session name binding replacement boundaries', () => {
     store.getState().setAiVaultTabTitle('tab', nativeResult('Name on old host').titles[0])
     stops.push(
       startAiVaultTabTitleSync({
-        getState: store.getState,
-        subscribe: store.subscribe,
+        ...titleSyncStore(store),
         resolveSessionTitles: async () => ({ titles: [] })
       })
     )
@@ -127,8 +131,7 @@ describe('session name binding replacement boundaries', () => {
     store.getState().setAiVaultTabTitle('tab', nativeResult('Name of Codex A').titles[0])
     stops.push(
       startAiVaultTabTitleSync({
-        getState: store.getState,
-        subscribe: store.subscribe,
+        ...titleSyncStore(store),
         resolveSessionTitles: async () => ({ titles: [] })
       })
     )
@@ -171,8 +174,7 @@ describe('session name binding replacement boundaries', () => {
     store.getState().setAiVaultTabTitle('tab', nativeResult('Name of removed pane').titles[0])
     stops.push(
       startAiVaultTabTitleSync({
-        getState: store.getState,
-        subscribe: store.subscribe,
+        ...titleSyncStore(store),
         resolveSessionTitles: async () => ({ titles: [] })
       })
     )
@@ -193,8 +195,7 @@ describe('session name binding replacement boundaries', () => {
     store.getState().setAiVaultTabTitle('tab', nativeResult('Known name').titles[0])
     stops.push(
       startAiVaultTabTitleSync({
-        getState: store.getState,
-        subscribe: store.subscribe,
+        ...titleSyncStore(store),
         resolveSessionTitles: async () => ({ titles: [] })
       })
     )
@@ -207,8 +208,7 @@ describe('session name binding replacement boundaries', () => {
     store.getState().setAiVaultTabTitle('tab', nativeResult('Known name').titles[0])
     stops.push(
       startAiVaultTabTitleSync({
-        getState: store.getState,
-        subscribe: store.subscribe,
+        ...titleSyncStore(store),
         resolveSessionTitles: async () => ({ titles: [] })
       })
     )

@@ -1,7 +1,14 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import type { AiVaultSessionTitlesResult } from '../../../shared/ai-vault/contracts/ai-vault-session-title'
 import { dispatchTerminalNotification } from '../components/terminal-pane/notifications/dispatch-terminal-notification'
-import { fixture, nativeResult, PANE, LEAF, SIBLING } from './session-name-binding-test-fixture'
+import {
+  fixture,
+  nativeResult,
+  PANE,
+  LEAF,
+  SIBLING,
+  titleSyncStore
+} from './session-name-binding-test-fixture'
 import { captureNotificationSessionName } from './notification-session-name'
 import { sessionNameStore } from './session-name-store'
 import { acceptedAgentStatuses } from '../store/slices/agent-status/status-ownership/accepted-agent-statuses'
@@ -384,8 +391,7 @@ it.each([false, true])(
     )
     stops.push(
       startAiVaultTabTitleSync({
-        getState: store.getState,
-        subscribe: store.subscribe,
+        ...titleSyncStore(store),
         resolveSessionTitles: sessionNameStore.resolveSessionTitles,
         invalidateSessionNames: (requests) =>
           sessionNameStore.invalidate(

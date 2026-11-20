@@ -1963,11 +1963,17 @@
     },
     "notifications": {
       "perfNotices": {
+        "disk": {
+          "label": "Disk almost full",
+          "description": "Suggest cleaning up workspaces when your disk is almost full."
+        },
         "hiddenTabs": {
           "label": "Hidden browser tabs",
           "description": "Suggest Memory Saver when many hidden browser tabs stay loaded."
         },
         "search": {
+          "disk": "disk",
+          "warning": "warning",
           "tabs": "tabs",
           "memory": "memory"
         }
@@ -14484,6 +14490,7 @@
         "CursorAccountsSection": {
           "source": {
             "keychain": "macOS Keychain (cursor-agent)",
+            "keyring": "Linux keyring (cursor-agent)",
             "cli": "Cursor CLI auth file",
             "desktop": "Cursor IDE"
           },
@@ -21831,6 +21838,7 @@
         "checking": "Checking whether {{agent}} is ready on this host…",
         "cliInstall": "Install",
         "cliRecheck": "Check again",
+        "openAgentSettings": "Open Settings",
         "cliRecheckFailed": "Could not check installed agents on this host. Try again."
       },
       "reasoning": "Reasoning",
@@ -21873,6 +21881,7 @@
         "claudeAccountFolderMissing": "The selected Claude account's folder is missing. Sign in to it again or choose another account.",
         "claudeAccountSetupFailed": "The selected Claude account could not be set up. Try again or choose another account.",
         "agentCommandNotRunnable": "{{agent}}'s Command in Settings → Agents must start with a program Orca can find. Variables, pipes and other shell syntax aren't supported; use the Environment setting for variables. Change it or reset it.",
+        "agentCommandFailed": "{{agent}}'s Command in Settings → Agents didn't start {{agent}}: {{detail}}. Change it or reset it.",
         "runtimeNotInstalled": "{{agent}} isn't installed on the computer running this chat. Install it from the chat in a current version of Orca.",
         "fullAccessAsRoot": "{{agent}} won't use Full access while it runs as root. Choose another permission for {{agent}} in Settings → Agents for the computer running this chat, then start a new chat.",
         "launchPreparationFailed": "Orca couldn't prepare {{agent}} to start on the computer running this chat.",
@@ -23050,8 +23059,9 @@
         "again": "{{name}} started setting up again"
       },
       "connectorOffer": {
+        "heading": "Connect a service",
+        "connectService": "Connect {{service}}",
         "connected": "Connected",
-        "connect": "Connect",
         "connectedIn": "Connected in {{places}}",
         "addOrg": "Add org",
         "addWorkspace": "Add workspace",
@@ -23169,7 +23179,6 @@
         "changed": "Comes over with changes",
         "already": "Already here",
         "stays": "Stays in {{app}}",
-        "heading": "Import plan",
         "fromAgain": "From {{app}}, again",
         "from": "From {{app}}",
         "selected": "{{chosen}} of {{total}} selected · keys and logins are never copied",
@@ -23187,11 +23196,17 @@
         "paused": "Automations are paused so nothing runs twice. Turn them on once the old bot is switched off in {{app}}."
       },
       "botCreateOffer": {
+        "heading": "New bot",
         "takesOverOne": "Takes over 1 workspace",
         "takesOverMany": "Takes over {{count}} workspaces",
         "created": "Created",
         "createdTookOverOne": "Created · took over 1 workspace",
         "createdTookOverMany": "Created · took over {{count}} workspaces",
+        "askedOne": "Asked to take over 1 workspace",
+        "askedMany": "Asked to take over {{count}} workspaces",
+        "tookOverSome": "Took over {{taken}} of {{count}} workspaces",
+        "tookOverOne": "Took over 1 workspace",
+        "tookOverMany": "Took over {{count}} workspaces",
         "watches": "Watches",
         "reports": "Reports",
         "takesOver": "Takes over",
@@ -23208,7 +23223,8 @@
         "createdTookOverSome": "Created · took over {{taken}} of {{count}} workspaces",
         "deleted": "Created, then deleted",
         "does": "Does",
-        "willPropose": "Will propose"
+        "willPropose": "Will propose",
+        "details": "Details of {{name}}"
       },
       "usage": {
         "description": "Show usage for this chat’s Codex account",
@@ -23326,6 +23342,7 @@
         "finishedWith": "Sign-in finished · {{message}}"
       },
       "offerCard": {
+        "notNow": "Not now",
         "dismiss": "Dismiss",
         "notSent": "Couldn't send that to the bot. Try again."
       },
@@ -23550,7 +23567,13 @@
         "foundLead": "Orca found credentials on this host you can use instead:",
         "signInGoogle": "Sign in with Google",
         "useKeyOrGcloud": "API key or gcloud",
-        "agy": "agy sign-in",
+        "yourAgy": "Your agy",
+        "yourAgyVersion": "Your agy · v{{version}}",
+        "orcaCopy": "Orca's copy",
+        "orcaCopyVersion": "Orca's copy · v{{version}}",
+        "orcasAgy": "Orca's agy",
+        "orcasAgyVersion": "Orca's agy · v{{version}}",
+        "runsOn": "Runs on: {{program}}",
         "agyItem": "agy's own login",
         "agyHint": "This chat runs the Antigravity CLI on this host. Another method applies to new chats.",
         "confirmSignIn": "Sign in with Google?"
@@ -24651,7 +24674,6 @@
       "cancelFailed": "Couldn't cancel the installation. Try again.",
       "install": "Install {{agent}}",
       "installManaged": "Install Orca's copy",
-      "installed": "Installed",
       "installedByOrca": "Installed by Orca · {{version}}",
       "notInstalled": "Not installed.",
       "progress": "{{agent}} download",
@@ -26038,6 +26060,14 @@
       "chatTitle": "Antigravity Chat",
       "chatDescription": "Signs in through your browser, so Chat works without agy installed.",
       "chatDescriptionAgy": "agy is signed in here, so new chats use agy's account below. This sign-in is used when agy isn't.",
+      "chatDescriptionAgyVersion": "New chats run on your agy (v{{version}}) and its account below. This sign-in is used when agy isn't.",
+      "chatDescriptionManagedVersion": "New chats run on Orca's copy (v{{version}}), so Chat works without agy installed.",
+      "chatDescriptionAgySignedOut": "New chats use agy, which isn't signed in yet. Run agy on this host to sign in.",
+      "chatDescriptionOrcaAgy": "Chats run on Orca's copy of agy and use agy's own sign-in.",
+      "chatDescriptionAgyOwnSignIn": "Chats run on agy and use agy's own sign-in.",
+      "chatDescriptionInstallAgy": "Install agy below to use Chat. It signs in with its own account.",
+      "chatDescriptionOrcaAgyVersion": "Chats run on Orca's agy (v{{version}}) and use agy's own sign-in.",
+      "chatDescriptionAgyOwnSignInVersion": "Chats run on your agy (v{{version}}) and use agy's own sign-in.",
       "terminalTitle": "agy in the terminal",
       "terminalDescriptionWindows": "Uses agy's own saved accounts. Switching applies to the host default agy credential.",
       "terminalDescription": "Uses agy's own saved accounts. Switching applies to new agy sessions.",
@@ -28217,10 +28247,7 @@
       "title": "Bots",
       "newBot": "New bot",
       "startFromScratch": "Start from scratch",
-      "emptyTitle": "Meet your AI teammate",
-      "emptyBody": "Ask from anywhere. It runs a fleet of agents and remembers what it learns.",
-      "emptySeeHow": "See how it works",
-      "emptyCreate": "Create a bot",
+      "emptyCardTitle": "Your AI teammate",
       "emptyTemplates": "Templates",
       "expand": "Expand Bots",
       "collapse": "Collapse Bots",
@@ -28269,7 +28296,8 @@
         "linkOnce": "(works once).",
         "tryIt": "Try it in any channel or direct message",
         "connectAnother": "Connect another Slack workspace",
-        "connect": "Connect Slack"
+        "connect": "Connect Slack",
+        "openInSlack": "Message it in Slack"
       },
       "connection": {
         "appSettings": "Slack app settings",
@@ -28283,7 +28311,8 @@
         "update": "Update in Slack",
         "installedBy": "installed by {{installer}}",
         "removeFromTitle": "Remove {{name}} from {{place}}?",
-        "signIn": "Sign in"
+        "signIn": "Sign in",
+        "updatePermissions": "Update Slack permissions…"
       },
       "token": {
         "open": "Get config token",
@@ -29379,7 +29408,6 @@
         "guideHereNote": "You click, in Orca",
         "guideBrowserNote": "You click, in your browser"
       },
-      "dismiss": "Dismiss",
       "account": {
         "title": "Which Google account should I use?",
         "note": "Every Google Cloud page opens as the account you pick.",
@@ -29453,7 +29481,9 @@
         "apiOff": "{{services}} is turned off in Google Cloud.",
         "adminBlocked": "Your company’s Google admin blocked {{services}}.",
         "checkFailed": "Orca couldn’t check {{services}}."
-      }
+      },
+      "notNow": "Not now",
+      "importSetupFile": "Import setup file"
     },
     "import": {
       "nudgeOne": "We found a bot in {{app}}.",
@@ -29726,6 +29756,9 @@
       "lines": "{{count}} lines",
       "flagOnLine": "{{flag}} on line {{line}}",
       "memory": "Memory",
+      "all": "All",
+      "previewFile": "Preview {{name}}",
+      "memoryLimit": "Up to {{count}} files",
       "linkCopied": "Link copied",
       "stopped": "Stopped sharing {{name}}",
       "webhookNotShared": "Webhook · not shared",
@@ -30168,7 +30201,8 @@
     },
     "tabs": {
       "homeDetail": "Home: the bot's main chat. Its memory, automations and requests from others land here.",
-      "sideDetail": "Side chat: a separate topic with this bot."
+      "sideDetail": "Side chat: a separate topic with this bot.",
+      "homeBanner": "Open {{name}}'s page"
     },
     "settingsView": {
       "pathCopied": "Path copied",
@@ -31993,6 +32027,11 @@
       "descriptionOneHour_one": "You have {{count}} tab you haven't viewed in over an hour. Turn on Memory Saver to free up its memory.",
       "descriptionOneHour_other": "You have {{count}} tabs you haven't viewed in over an hour. Turn on Memory Saver to free up their memory.",
       "turnOnMemorySaver": "Turn on Memory Saver"
+    },
+    "disk": {
+      "title": "Your disk is almost full",
+      "description": "Find workspaces you no longer need in Settings > Workspace Cleanup.",
+      "reviewOld": "Review old workspaces"
     },
     "dontShowAgain": "Don't show again"
   },
