@@ -677,3 +677,15 @@ test('守卫判断期间确认框换了:不按键', async () => {
   assert.equal((await runLoop(goal(), { report, callGuard: guard })).state, 'complete')
   assert.deepEqual(w.keys, [])
 })
+
+test('Esc 取消后状态行仍停在等确认:画面上没有框就照发指示', async () => {
+  const w = boxWorld()
+  w.onKeys = () => {
+    w.screen = ['  ⎿  Interrupted · What should Claude do instead?', '❯ ']
+  }
+  const { runLoop } = await loadLoop(w, { env: { ORCA_GOAL_CONFIRM_SETTLE_MS: '300' } })
+  const guard = scriptedGuard([instruct('改写到 b.txt', { confirmBox: 'reject' }), done])
+  assert.equal((await runLoop(goal(), { report, callGuard: guard })).state, 'complete')
+  assert.deepEqual(w.keys, ['\x1b'])
+  assert.match(w.sent[1], /改写到 b\.txt/)
+})

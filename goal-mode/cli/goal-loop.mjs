@@ -388,7 +388,7 @@ async function review(
     return verifyDone(run, verdict, report, save)
   }
   if (plan.type === 'send') {
-    await deliver(run, verdict, report)
+    await deliver(run, verdict, report, { boxCleared: confirm?.outcome === 'pressed' })
   }
   await save()
   return null
@@ -426,7 +426,7 @@ async function currentPrompt(run) {
 }
 
 /** 发给执行 agent 的消息:守卫给了指示就视为本轮已结束;只看是否停在确认框。 */
-async function deliver(run, verdict, report) {
+async function deliver(run, verdict, report, { boxCleared = false } = {}) {
   const name = run.objectiveChanged ? 'objective-updated' : 'continuation'
   const text = await renderPrompt(name, {
     objective: run.current.objective,
@@ -435,7 +435,7 @@ async function deliver(run, verdict, report) {
     observation: verdict.observation || '（守卫没有写观察）',
     instruction: verdict.instruction
   })
-  if (!(await sendWhenSafe(run, text, report))) {
+  if (!(await sendWhenSafe(run, text, report, { boxCleared }))) {
     return
   }
   startRound(run, name, report)
@@ -453,7 +453,7 @@ function startRound(run, name, report) {
  * @returns {Promise<boolean>} 发出去了吗。停在确认框或终端断开就不发,等下一次唤醒。
  * 不看输入框草稿:Claude 一轮结束后的暗色建议也被算作草稿,检查它会让续跑永远发不出去(用户 2026-09-24 决定不管)。
  */
-async function sendWhenSafe(run, text, report) {
+async function sendWhenSafe(run, text, report, { boxCleared = false } = {}) {
   const handle = run.current.terminalHandle
   let activity
   try {
@@ -463,7 +463,13 @@ async function sendWhenSafe(run, text, report) {
     return false
   }
   const kind = describeActivity(activity, QUIET_MS)
-  if (kind === 'needs-user' || kind === 'disconnected') {
+  // 刚按掉确认框、画面上确认已经没有框:Claude 被 Esc 取消后可能不再发 hook,状态行停在「等确认」(实测)。
+  const stale =
+    kind === 'needs-user' &&
+    boxCleared &&
+    (await readScreen(handle).catch(() => null)) !== null &&
+    !(await captureConfirmBox(SCREEN, handle, activity.row?.agentType ?? null))
+  if ((kind === 'needs-user' && !stale) || kind === 'disconnected') {
     report.warn(kind === 'needs-user' ? 'agent 正在等确认,这次不发' : '终端已断开,这次不发')
     return false
   }
