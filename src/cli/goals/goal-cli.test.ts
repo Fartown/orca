@@ -89,8 +89,8 @@ function host(draft: Record<string, unknown> | null = readyDraft, terminalOver =
   vi.spyOn(console, 'error').mockImplementation(() => {})
 }
 
-const params = (method: string) =>
-  callMock.mock.calls.find((call) => call[0] === method)?.[1] as Record<string, unknown> | undefined
+const params = (method: string): Record<string, unknown> | undefined =>
+  callMock.mock.calls.find((call) => call[0] === method)?.[1]
 
 describe('orca goal', () => {
   useWorktreeAwarenessEnvironment({

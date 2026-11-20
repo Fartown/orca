@@ -29,7 +29,9 @@ const DRAFT_POLL_MS = 2_000
 const DRAFT_WAIT_MS = 20 * 60_000
 const DEFAULT_BUDGET = { maxTurns: 20, maxMinutes: 180, checkTimeoutSeconds: 900 }
 
-async function call<T>(client: RuntimeClient, method: string, params: object) {
+type GoalCallParams = Record<string, unknown>
+
+async function call<T>(client: RuntimeClient, method: string, params: GoalCallParams) {
   return client.call<T>(method, { ...HOST, ...params }, { timeoutMs: 60_000 })
 }
 
@@ -84,7 +86,7 @@ async function readDraft(client: RuntimeClient, draftId: string) {
       `No checklist draft ${draftId} on this host.`
     )
   }
-  return response as typeof response & { result: GoalAcceptanceDraft }
+  return { ...response, result: response.result }
 }
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
@@ -185,7 +187,7 @@ export const GOAL_CLI_HANDLERS: Record<string, CommandHandler> = {
       if (!response.result) {
         throw new RuntimeClientError('goal_not_found', `No goal ${goalId} on this host.`)
       }
-      printResult(response as typeof response & { result: GoalDetail }, ctx.json, formatGoalDetail)
+      printResult({ ...response, result: response.result }, ctx.json, formatGoalDetail)
       return
     }
     const response = await call<{ items: GoalSummary[] }>(ctx.client, 'goals.list', {
