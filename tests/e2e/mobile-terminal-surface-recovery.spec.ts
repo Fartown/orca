@@ -1,35 +1,42 @@
 import { randomUUID } from 'node:crypto'
 import { runProcessSync } from '@orca/process-host'
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
-import type { TestInfo } from '@stablyai/playwright-test'
+import { expect, type TestInfo } from '@stablyai/playwright-test'
 import os from 'node:os'
 import path from 'node:path'
 import { z } from 'zod'
-import { test, expect } from './helpers/orca-app'
-import { createDesktopMobilePairingOffer } from './helpers/paired-electron-client'
-import { pairMobileClient } from './helpers/paired-mobile-client'
-import { getWorktreeTabs, waitForActiveWorktree, waitForSessionReady } from './helpers/store'
+import { test } from './desktop/electron-fixtures/orca-app'
+import { createDesktopMobilePairingOffer } from './remote/paired-runtime/client-hosts/paired-electron-client'
+import { pairMobileClient } from './remote/mobile-mirror/paired-mobile-client'
 import {
-  discoverActivePtyId,
+  getWorktreeTabs,
+  waitForActiveWorktree,
+  waitForSessionReady
+} from './desktop/renderer-probes/store'
+import { discoverActivePtyId } from './terminal/input/terminal-active-pane'
+import {
   getTerminalContent,
   readPaneIdentitySnapshot
-} from './helpers/terminal'
-import { worktreeRowSurface } from './worktree-row-locators'
-import { dismissSetupScriptPrompts } from './helpers/sidebar-setup-prompt'
-import { attachRepoAndOpenTerminal, createRestartSession } from './helpers/orca-restart'
+} from './terminal/layout/terminal-pane-identity'
+import { worktreeRowSurface } from './workspaces/sidebar/worktree-row-locators'
+import { dismissSetupScriptPrompts } from './workspaces/sidebar/sidebar-setup-prompt'
+import {
+  attachRepoAndOpenTerminal,
+  createRestartSession
+} from './desktop/electron-fixtures/orca-restart'
 import {
   launchManagedWorkspace,
   relaunchManagedApp,
   type ManagedHostFixture
-} from './helpers/orcad-managed-workspace'
+} from './remote/managed-ssh/host-lifecycle/orcad-managed-workspace'
 import {
   callEnvironment,
   createPairedHostTerminal,
   openPairedClientTab,
   readPairedPaneContent
-} from './helpers/paired-host-terminal'
-import { toRuntimeExecutionHostId } from '../../src/shared/execution-host'
-import type { PairedMobileSocket } from './helpers/paired-mobile-client'
+} from './terminal/remote-hosts/paired-host-terminal'
+import { toRuntimeExecutionHostId } from '../../src/shared/execution-host/execution-host'
+import type { PairedMobileSocket } from './remote/mobile-mirror/paired-mobile-client'
 
 const CreatedRepo = z.object({ repo: z.object({ id: z.string() }) })
 
