@@ -5,10 +5,23 @@ import { renderPrompt } from './continuation-prompt.mjs'
 import { planVerdict, timeBudgetReason } from './goal-decision.mjs'
 import { writeGoal } from './goal-state.mjs'
 import { logReview, logTerminal } from './goal-loop-log.mjs'
-import { sendInterrupt, sendText } from './orca-terminal.mjs'
+import { readScreen, sendInterrupt, sendKeys, sendText } from './orca-terminal.mjs'
 import { applyRecordToGoal } from './goal-record-projection.mjs'
 import { describeActivity, observeAgent } from './terminal-activity.mjs'
-import { afterGuard, afterSend, detectWake, initialWakeState } from './round-wait-machine.mjs'
+import {
+  WAKE_REASONS,
+  afterGuard,
+  afterSend,
+  detectWake,
+  initialWakeState
+} from './round-wait-machine.mjs'
+import { clearFault, guardFailed, noteFault } from './goal-loop-faults.mjs'
+import {
+  applyConfirmVerdict,
+  captureConfirmBox,
+  screenShowsNoBox,
+  waitKeyOf
+} from './confirm-box.mjs'
 import { callGuard as defaultCallGuard, saveGuardCall } from './guard-call.mjs'
 import { addNotice, applyQuestion, resolveNotices } from './goal-notices.mjs'
 import {
@@ -31,21 +44,15 @@ const STOP_GRACE_MS = num('ORCA_GOAL_STOP_GRACE_MS', 60_000)
 // 驱动自己出错(磁盘、CLI、git)持续这么久就通知用户;不终结目标,一直重试。
 const FAULT_NOTICE_MS = num('ORCA_GOAL_ROUND_ERROR_GRACE_MS', 10 * 60_000)
 const SAVE_EVERY_MS = 60_000
+const SCREEN = { readScreen, sendKeys }
+const FAULT_LIMITS = {
+  retryMs: GUARD_RETRY_MS,
+  intervalMs: GUARD_INTERVAL_MS,
+  noticeMs: FAULT_NOTICE_MS
+}
 export { AUTO_MESSAGE_PREFIX }
 // Claude 把大段粘贴切块包进这个标签,驱动自己的消息也会被包住。
 const PASTED_CONTENT_TAG = /<\/?pasted_content(?:\s+id="[^"]*")?>/g
-
-const WAKE_REASONS = {
-  'turn-ended': '执行 agent 这一轮结束了',
-  'terminal-quiet': '执行 agent 的终端安静下来了（它没有状态信号，可能是这一轮结束了）',
-  timer: '定时巡检（距上次复盘已满 15 分钟）',
-  attached: '驱动刚接回这个目标，先弄清现在的情况',
-  resumed: '用户恢复了自动续跑',
-  'objective-changed': '用户修改了目标',
-  'binding-changed': '目标换绑到了另一个终端',
-  'checks-failed': '你判了完成，但用户配置的检查命令没有通过',
-  'guard-retry': '上次调用守卫失败，现在重试'
-}
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 
@@ -180,7 +187,7 @@ export async function runLoop(
         return ended
       }
     } catch (err) {
-      await noteFault(run, err, report, save)
+      await noteFault(run, err, report, save, FAULT_LIMITS)
       if ((await control.checkpoint('retry-backoff').catch(() => 'run')) === 'stop') {
         return await finishStopped(run, control, null)
       }
@@ -205,10 +212,16 @@ async function observe(run) {
     const kind = describeActivity(activity, QUIET_MS)
     run.agentIdle = kind === 'ended' || kind === 'quiet' || kind === 'needs-user'
     run.lastRow = activity.row ?? run.lastRow
+    const stateStartedAt = activity.row?.stateStartedAt ?? null
+    const agentType = activity.row?.agentType ?? null
     return {
       activity: kind,
-      stateStartedAt: activity.row?.stateStartedAt ?? null,
-      hasRow: Boolean(activity.row?.state)
+      stateStartedAt,
+      hasRow: Boolean(activity.row?.state),
+      waitKey:
+        kind === 'needs-user'
+          ? await waitKeyOf(SCREEN, run.current.terminalHandle, agentType, stateStartedAt)
+          : undefined
     }
   } catch {
     // 观察不到(断联、Orca 在重启)不是任何结论:不产生结束事件,定时照走。
@@ -229,7 +242,17 @@ async function review(
   const startedAt = Date.now()
   const promptBefore = run.lastRow?.prompt ?? ''
   const sequence = (run.current.guardCalls || 0) + 1
-  const { vars, cursor } = await guardMaterials(run, wakeText, { sequence, digestTranscript })
+  // 守卫判断的是此刻画面上的确认框;之后按键前要核对还是这一个。
+  const boxSeen = await captureConfirmBox(
+    SCREEN,
+    run.current.terminalHandle,
+    run.lastRow?.agentType ?? null
+  )
+  const { vars, cursor } = await guardMaterials(run, wakeText, {
+    sequence,
+    digestTranscript,
+    confirmBox: boxSeen
+  })
   report.guard?.(wakeText)
 
   const abort = new AbortController()
@@ -306,7 +329,7 @@ async function review(
     return null
   }
   if (!result.ok) {
-    await guardFailed(run, result.reason, report, save)
+    await guardFailed(run, result.reason, report, save, FAULT_LIMITS)
     return null
   }
   if (run.guardFailures > 0) {
@@ -338,8 +361,22 @@ async function review(
     verdict.question,
     now
   )
+  const handle = run.current.terminalHandle
+  const confirm = await applyConfirmVerdict({
+    terminal: SCREEN,
+    handle,
+    agentType: run.lastRow?.agentType ?? null,
+    choice: verdict.confirmBox,
+    seen: boxSeen,
+    pollMs: POLL_MS,
+    stillWaiting: async () =>
+      describeActivity(await observeAgent(handle), QUIET_MS) === 'needs-user'
+  })
+  if (confirm) {
+    report.confirmBox?.(verdict.confirmBox, confirm)
+  }
   const plan = planVerdict(run.current, verdict)
-  await logReview(run.current, wakeText, verdict, plan)
+  await logReview(run.current, wakeText, verdict, plan, confirm)
 
   if (plan.type === 'budget') {
     return finishBudget(run, plan.reason, report)
@@ -348,7 +385,7 @@ async function review(
     return verifyDone(run, verdict, report, save)
   }
   if (plan.type === 'send') {
-    await deliver(run, verdict, report)
+    await deliver(run, verdict, report, { boxCleared: confirm?.outcome === 'pressed' })
   }
   await save()
   return null
@@ -369,7 +406,7 @@ async function currentPrompt(run) {
 }
 
 /** 发给执行 agent 的消息:守卫给了指示就视为本轮已结束;只看是否停在确认框。 */
-async function deliver(run, verdict, report) {
+async function deliver(run, verdict, report, { boxCleared = false } = {}) {
   const name = run.objectiveChanged ? 'objective-updated' : 'continuation'
   const text = await renderPrompt(name, {
     objective: run.current.objective,
@@ -378,7 +415,7 @@ async function deliver(run, verdict, report) {
     observation: verdict.observation || '（守卫没有写观察）',
     instruction: verdict.instruction
   })
-  if (!(await sendWhenSafe(run, text, report))) {
+  if (!(await sendWhenSafe(run, text, report, { boxCleared }))) {
     return
   }
   startRound(run, name, report)
@@ -396,7 +433,7 @@ function startRound(run, name, report) {
  * @returns {Promise<boolean>} 发出去了吗。停在确认框或终端断开就不发,等下一次唤醒。
  * 不看输入框草稿:Claude 一轮结束后的暗色建议也被算作草稿,检查它会让续跑永远发不出去(用户 2026-09-24 决定不管)。
  */
-async function sendWhenSafe(run, text, report) {
+async function sendWhenSafe(run, text, report, { boxCleared = false } = {}) {
   const handle = run.current.terminalHandle
   let activity
   try {
@@ -406,7 +443,12 @@ async function sendWhenSafe(run, text, report) {
     return false
   }
   const kind = describeActivity(activity, QUIET_MS)
-  if (kind === 'needs-user' || kind === 'disconnected') {
+  // 刚按掉确认框、画面上确认已经没有框:Claude 被 Esc 取消后可能不再发 hook,状态行停在「等确认」(实测)。
+  const stale =
+    kind === 'needs-user' &&
+    boxCleared &&
+    (await screenShowsNoBox(SCREEN, handle, activity.row?.agentType ?? null))
+  if ((kind === 'needs-user' && !stale) || kind === 'disconnected') {
     report.warn(kind === 'needs-user' ? 'agent 正在等确认,这次不发' : '终端已断开,这次不发')
     return false
   }
@@ -435,7 +477,7 @@ async function sendFirstTurn(run, { report, control, applyReload, save }) {
         return 'sent'
       }
     } catch (err) {
-      await noteFault(run, err, report, save)
+      await noteFault(run, err, report, save, FAULT_LIMITS)
     }
     await sleep(POLL_MS)
   }
@@ -530,60 +572,6 @@ async function finishBudget(run, reason, report) {
   }
   run.current = await writeGoal(run.current)
   return run.current
-}
-
-async function guardFailed(run, reason, report, save) {
-  run.guardFailures += 1
-  const delay = GUARD_RETRY_MS[run.guardFailures - 1]
-  report.warn(`守卫调用失败(第 ${run.guardFailures} 次):${reason}`)
-  if (delay !== undefined) {
-    run.guardRetryAt = Date.now() + delay
-  } else {
-    // 重试用完:通知用户,之后跟着定时唤醒再试,成功即恢复。
-    if (run.guardFailures === GUARD_RETRY_MS.length + 1) {
-      run.current = addNotice(
-        run.current,
-        'guard-unavailable',
-        `守卫无法运行:${reason}`,
-        Date.now()
-      )
-    }
-    run.guardRetryAt = Date.now() + GUARD_INTERVAL_MS
-  }
-  run.pendingWake = 'guard-retry'
-  await save()
-}
-
-async function noteFault(run, err, report, save) {
-  const message = err?.message || String(err)
-  if (err?.code === 'goal_host_unverifiable') {
-    return
-  }
-  if (!run.faultSince) {
-    run.faultSince = Date.now()
-    report.warn(`驱动出错,重试中:${message}`)
-  }
-  if (!run.faultNoticed && Date.now() - run.faultSince >= FAULT_NOTICE_MS) {
-    run.faultNoticed = true
-    run.current = {
-      ...addNotice(run.current, 'driver-fault', `驱动持续出错:${message}`, Date.now()),
-      driverError: { kind: 'round', message: message.slice(0, 500), at: Date.now() }
-    }
-    await save().catch(() => {})
-  }
-}
-
-function clearFault(run, report) {
-  if (!run.faultSince) {
-    return
-  }
-  report.warn(`驱动恢复正常(出错持续了 ${Math.round((Date.now() - run.faultSince) / 1000)} 秒)`)
-  run.faultSince = null
-  run.faultNoticed = false
-  run.current = {
-    ...resolveNotices(run.current, 'driver-fault', Date.now()),
-    driverError: null
-  }
 }
 
 /** 停止时对在途的一轮发一次中断,再按证据判断它结不结束;没有在跑的一轮就不打断。 */

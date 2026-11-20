@@ -121,6 +121,31 @@ export async function readTerminal(handle, { limit = 2000, cursor } = {}) {
 }
 
 /**
+ * 终端此刻的画面(不是滚动历史)。旧宿主不认 screen、或画面不可用时返回 null —— 调用方据此不做任何操作。
+ * @returns {Promise<{ lines: string[] } | null>}
+ */
+export async function readScreen(handle) {
+  const read = backend
+    ? await backend.readTerminal(handle, { limit: 200, screen: true })
+    : unwrap(
+        await orca(['terminal', 'read', '--terminal', handle, '--screen', '--limit', '200']),
+        'read'
+      ).terminal
+  return read?.source === 'screen' ? { lines: read.tail || [] } : null
+}
+
+/** 原样写入按键字节(如 '1'、Esc),不加回车,也不按 agent 提示词投递。 */
+export async function sendKeys(handle, keys) {
+  const result = backend
+    ? await backend.send(handle, keys, { enter: false })
+    : unwrap(await orca(['terminal', 'send', '--terminal', handle, '--text', keys]), 'send')
+  if (result?.accepted === false) {
+    throw new Error('终端拒绝了按键输入(通常是移动端客户端正持有该终端的输入锁)')
+  }
+  return result
+}
+
+/**
  * 注意两件事:
  * 1. `\n` 会被原样写进 PTY(0x0A),TUI 当回车 —— 所以文本必须已压成单行,见 continuation-prompt.js。
  * 2. 移动端持有该 PTY 的输入锁时,orca 返回 ok:true 但 accepted:false 且一个字节都没写。

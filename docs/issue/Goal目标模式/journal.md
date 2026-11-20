@@ -3,8 +3,8 @@ title: Goal 目标模式
 slug: Goal目标模式
 status: testing
 created: 2026-09-05
-updated: 2026-11-03
-external_ids: []
+updated: 2026-11-20
+external_ids: [Fartown/orca#151]
 ---
 
 # Goal 目标模式 Journal
@@ -13,12 +13,13 @@ external_ids: []
 
 | 类型         | 文档                                                                           | 状态         | 说明                                                                                                                                   |
 | ------------ | ------------------------------------------------------------------------------ | ------------ | -------------------------------------------------------------------------------------------------------------------------------------- |
-| 需求         | [Goal 目标模式](requirements/Goal目标模式.md)                                  | reviewing    | 2026-09-23 新增 REQ-124～REQ-126，修订 REQ-103、106、112～114、121；其余条目状态不变                                                   |
+| 需求         | [Goal 目标模式](requirements/Goal目标模式.md)                                  | reviewing    | 2026-11-20 新增 REQ-127～REQ-129（开工对齐、守卫先判断、守卫替用户评审）；2026-09-23 新增 REQ-124～REQ-126                             |
 | 交互         | -                                                                              | not-required | 本轮交互示意内嵌方案；没有独立设计事实源，不另建 design 文档                                                                           |
 | 方案         | [Goal 守卫监工与唤醒兜底修订方案](solutions/Goal守卫监工与唤醒兜底修订方案.md) | completed    | 第 3 版：驱动只管机制，守卫一份提示词四种结论，验收清单只做开工对齐；已实施并验证，实施差异见方案 §8                                   |
 | 方案评审     | [修订方案评审报告](solutions/Goal守卫监工与唤醒兜底修订方案.review.md)         | completed    | 2026-09-23 第 1 版 Claude 与 TRAE CLI 双路评审（2 条 P0、21 条 P1）；第 3 版 Codex 评审（6 高 5 中，结论小改后可实施）；处置均在报告内 |
 | 已落地方案   | [Goal 目标管理与交互闭环方案](solutions/Goal目标管理与交互闭环方案.md)         | completed    | UI、宿主控制服务、RPC 与草稿仍有效；驱动复用前提与 09-08 实施修订第 4 条由修订方案取代                                                 |
 | 历史实现基线 | [Goal 目标模式技术说明](solutions/Goal目标模式技术说明.md)                     | superseded   | 保留旧 CLI/插件实现事实与差距；补充宿主命令已支持带参的核对修正                                                                        |
+| 方案         | [Goal 开工对齐与守卫判断改进方案](solutions/Goal分流与三方协作升级方案.md)     | approved     | 2026-11-20 用户确认；§6 第 1 步（提示词）已实施，提示词全文同步到修订方案 §5.6，差异见修订方案 §8 同日记录                             |
 | 测试用例     | [功能测试](tests/cases/Goal功能测试.md)                                        | reviewing    | TC-344～TC-365 覆盖验收文档、异步草稿、文件查看、草稿删除与 SSH；TC-366～TC-375 覆盖守卫监工与唤醒兜底（REQ-124～REQ-126）             |
 | 调研         | -                                                                              | not-required | 当前源码事实已归并到技术正文，本次不重复调研                                                                                           |
 | 历史调研     | [Codex Goal 历史机制对照](research/Codex-Goal历史机制对照.md)                  | superseded   | 保留冻结 Codex SHA 的完整参考，不作为当前 Orca 事实                                                                                    |
@@ -139,6 +140,69 @@ external_ids: []
 - 影响范围：需求、技术说明、测试规格及本需求的执行证据。
 
 ## 3. 开发记录
+
+### 2026-11-20 确认框由守卫处理（testing）
+
+- 本轮目标：实施方案 §3.5，用户同日确认“后两块也一起做”；issue Fartown/orca#151。
+- 完成内容：
+  - 守卫结论多一个可选字段 `confirmBox`（approve / reject / 空），四种结论不变，旧输出照样合法；提示词补一段处理规则。
+  - 驱动在执行 agent 停在确认框或提问框上时叫守卫；叫守卫前读一次画面，把认出的确认框原文交给守卫；守卫给了意见时，先核对还是同一个框再按键，按完核对框已消失。
+  - 按键先在 tmux 里对 Claude Code 2.1.329、codex-cli 0.171.0 各实测同意和拒绝：两家都是按 1 同意、按 Esc 拒绝。Claude 后台子 agent 的确认框也出现在主终端，按 1 同样通过。
+  - 真机验证中发现并修复：Claude 连着弹两个确认框时状态行不变，第二个框没人管。改为按“状态开始时间 + 框的原文”区分每次等待。
+- 代码或文档变更：
+  - 代码：`goal-mode/cli/confirm-box.mjs`（新）、`guard-verdict.mjs`、`goal-loop.mjs`、`round-wait-machine.mjs`、`guard-materials.mjs`、`orca-terminal.mjs`、`goal-runtime-terminal.mjs`、`prompts/guard.md` 及对应测试。
+  - 文档：修订方案 §5.4.1、§5.6、§8；需求 REQ-131；测试用例 TC-388、TC-389；新方案 §3.5 实施说明。
+- 验证证据：
+  - 单测：`node --test` 共 145 项通过。
+  - 本机真机（隐藏的隔离实例，执行 agent 和守卫都是真实模型）：
+    - Claude 执行，6 个目标：守卫共同意 13 次、拒绝 4 次。拒绝的对象是多余的 `&& cat`、两次重复的只读核查、一次下载安装脚本。每次按键后确认框都消失。
+    - 拒绝后的指示：一次约 1 秒送达，一次约 3 分钟后才送达，一次没有发出去（状态行一直停在“等确认”），一次因脚本提前停止目标而无法判断。据此补了“按掉框后画面上没有框就照发”，单测覆盖，但修复后的真机重跑没有再出现拒绝。
+    - 修复连续确认框之后，连着弹的 4 个框各自在数秒内由守卫同意。
+    - codex 执行，3 个目标：同意 3 次，按 1 后命令执行。其中一个由守卫核实完成，另一个因安装地址不可达转去问用户。
+  - SSH（127.0.0.1:2222 上的 orcad）：codex 的确认框由主机上的守卫同意，驱动在主机上按键，按前按后都有画面。
+  - 证据目录：本机 `.docs/goal-cli-confirm-ui-validation/2026-11-20/evidence/`、`.docs/goal-confirm-box-ui-validation/2026-11-20/evidence/`（不入库）。
+- 未解决问题：
+  - codex 执行时没有出现过一次拒绝，codex 的拒绝按键只在 tmux 里手动实测过。
+  - 让执行 agent 越界的两种诱导（预先交代强推；目标里要求强推或管道安装远程脚本）都没有让守卫拒绝：执行 agent 不照做，或者守卫认为目标要求的就在范围内。
+  - 守卫会拒绝它认为多余的只读命令，偏严。
+- 下一步：合入后在真实目标上观察。
+
+### 2026-11-20 agent 用 orca goal 替用户发起（testing）
+
+- 本轮目标：实施方案 §3.2，用户同日确认“后两块也一起做”；issue Fartown/orca#151。
+- 完成内容：
+  - 新增 `orca goal draft / checklist / start / status / stop`，复用面板用的宿主 Goal 方法。
+  - 起草不启动目标；启动只接受生成好、且属于该终端工作区的清单。
+  - SSH 工作区用 `--environment` 指向主机上的 Orca Server。
+  - orca-cli skill 加 Goals 一节，并在触发描述里加入 goal 相关说法。
+  - 载荷指纹搬到 `src/shared/goals`，面板与 CLI 共用。
+- 代码或文档变更：
+  - 代码：`src/cli/goals/**`（新）、`src/shared/goals/goal-payload-fingerprint.ts`（新）、`src/renderer/src/goals/goal-client-operation.ts`。
+  - CLI 接缝：`src/cli/specs/index.ts`、`src/cli/handler-group-manifest.ts`、`src/main/startup/cli-command-names.ts`。
+  - skill 源文件及生成产物：`skill-guides/orca-cli.md`、`skills/orca-cli/SKILL.md`、`src/cli/bundled-skill-guides.ts`、`resources/skills/*`、`bundled-skill-sources.ts`。
+  - 登记：`config/fork-features.jsonc`、`config/architecture-policies.jsonc`。
+  - 文档：需求 REQ-130；测试用例 TC-386、TC-387；新方案 §3.2 实施说明。
+- 验证证据：
+  - 单测：`src/cli/goals/goal-cli.test.ts` 5 项通过。
+  - 本机真机（隐藏的隔离实例）：10 个场景的“起草 → 读清单 → 启动 → 查看”全部通过，其中 5 个走完了停止。起草后目标列表为空，清单正文和文件路径都读得到。
+  - SSH 真机（127.0.0.1:2222 上的 orcad）一轮全通过：
+    - 清单文件在主机的 `remote-home/.orca-goal/v2/drafts/` 下。
+    - 启动后状态是 executing；停止后状态为 idle、续跑已暂停。
+    - 运行前后真实 `~/.codex/config.toml`、`~/.claude/settings.json` 的修改时间不变，`authorized_keys` 的哈希也一致。
+  - 证据目录：同上。
+- 未解决问题：
+  - 还没有在新会话里实测 agent 会不会按 skill 走到 `orca goal`（方案 §4.2 第 2 项）。
+  - CLI 的预算只开放轮数和时长。
+- 下一步：用一个新会话说“开个 Codex 把某件事做完，你盯着”，看 agent 是否走到 `orca goal` 并先把清单发给用户确认。
+
+### 2026-11-20 开工对齐与守卫先判断：提示词（testing）
+
+- 本轮目标：实施 [开工对齐与守卫判断改进方案](solutions/Goal分流与三方协作升级方案.md) §6 第 1 步（§3.1、§3.3、§3.4），只改提示词；issue Fartown/orca#151。
+- 完成内容：守卫提示词第 2 条换成「范围、先后、验证」三问，有一问不对就 instruct，并写明执行 agent 正忙时指示也能送达；三问都对且确实在推进才 wait，其后顺延；「受阻、需要用户」一条加入由守卫替用户评审，「先评审再编码」由守卫的评审满足。发给执行 agent 的首轮、每轮、目标修改后三种消息都加「不同意守卫的指示时写明理由和证据，守卫会复核」和「清单有交付顺序的按顺序做」。清单生成：默认做法必须能让工作继续，大目标在「验收清单」末尾加「### 交付顺序」，仍是四节（用户同日更正：不加「我的理解」、不分「用户说的 / 我补充的」）。
+- 代码或文档变更：`goal-mode/cli/prompts/guard.md`、`first-turn.md`、`continuation.md`、`objective-updated.md`、`src/shared/goals/goal-acceptance-prompt.ts`；需求 REQ-127～REQ-129；测试用例 TC-382～TC-385；修订方案 §5.6 同步为现行全文、§5.4.6 与 §8 记差异；新方案入库并补 §4.3 复测。目标修改后的消息不在原定范围内，因为它和每轮消息用同一句「规矩照旧」，一起改以免两处说法不同。驱动逻辑、结论种类、结局都没改。
+- 验证证据：`node --test --experimental-test-module-mocks goal-mode/cli/*.test.mjs` 133 项通过；goals 注册的 vitest 38 个文件 259 项、host-operation-ownership 4 项通过；`pnpm build:goal-driver` 后驱动包与清单生成包里都是新提示词。守卫重放（每格 3 次，原版 / 改版）：09-30 第 2 次问用户 3 → 给指示 3；10-23 第 20 次（带交付顺序清单）等 3 → 给指示 3，原版 + 清单的对照仍是等 3；10-23 第 30 次等 3 → 等 2、问用户 1；09-30 第 15 次等 3 → 给指示 1、等 2；10-23 第 2 次等 3 → 等 3。清单重新生成：两份默认做法都能让工作继续，翻译插件给出 4 批交付顺序，但字数约 2,480 和 2,580，超过 2000。详见方案 §4.3，原始输入输出在本机 `.docs/goal-prompt-review/2026-11-20/`（不入库）。
+- 未解决问题：10-23 第 30 次交付顺序仍不起作用；越界改动 3 次只抓到 1 次；清单超字数；翻译插件清单生成用了约 15 分钟，超过面板 10 分钟超时（未在面板上实测）。
+- 下一步：同一分支继续方案 §3.2（orca CLI 的 goal 子命令与 skill）和 §3.5（确认框由守卫处理）。
 
 ### 2026-11-03 Windows 主机 CI 的稀疏检出补上 goal-mode（testing）
 

@@ -50,7 +50,26 @@ test('没有状态行的 agent:见它动过、再安静下来才叫守卫', () =
   assert.equal(detectWake(step.state, bare('quiet'), 4_000, LIMITS).wake, null, '安静一次只叫一次')
 })
 
-test('需要确认(权限框)不唤醒;定时照走', () => {
-  const state = initialWakeState(0, 0)
-  assert.equal(detectWake(state, hook('needs-user', 10), 1_000, LIMITS).wake, null)
+test('停在确认框或提问框:同一次等待只叫一次守卫,新的等待再叫', () => {
+  let step = detectWake(initialWakeState(0, 0), hook('needs-user', 100), 1_000, LIMITS)
+  assert.equal(step.wake, 'needs-user')
+  step = detectWake(afterGuard(step.state, 2_000), hook('needs-user', 100), 3_000, LIMITS)
+  assert.equal(step.wake, null)
+  step = detectWake(step.state, hook('needs-user', 4_000), 5_000, LIMITS)
+  assert.equal(step.wake, 'needs-user')
+})
+
+test('连着弹的确认框:状态行没变,框的原文变了也再叫一次', () => {
+  const wait = (key) => ({
+    activity: 'needs-user',
+    stateStartedAt: 100,
+    hasRow: true,
+    waitKey: key
+  })
+  let step = detectWake(initialWakeState(0, 0), wait('100|Read'), 1_000, LIMITS)
+  assert.equal(step.wake, 'needs-user')
+  step = detectWake(afterGuard(step.state, 2_000), wait('100|Read'), 3_000, LIMITS)
+  assert.equal(step.wake, null)
+  step = detectWake(step.state, wait('100|Bash'), 4_000, LIMITS)
+  assert.equal(step.wake, 'needs-user')
 })

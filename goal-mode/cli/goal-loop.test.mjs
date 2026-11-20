@@ -2,156 +2,20 @@
 //
 // 需要 `node --test --experimental-test-module-mocks`。
 import assert from 'node:assert/strict'
-import test, { after, mock } from 'node:test'
-import { mkdtemp, readdir, readFile, rm } from 'node:fs/promises'
-import { tmpdir } from 'node:os'
+import test from 'node:test'
+import { readdir, readFile } from 'node:fs/promises'
 import path from 'node:path'
-
-const HOME = await mkdtemp(path.join(tmpdir(), 'goal-loop-'))
-process.env.ORCA_GOAL_HOME = HOME
-process.env.ORCA_GOAL_POLL_MS = '5'
-process.env.ORCA_GOAL_STOP_GRACE_MS = '100'
-process.env.ORCA_GOAL_GUARD_RETRY_MS = '10,10'
-after(() => rm(HOME, { recursive: true, force: true }))
-
-const { describeActivity } = await import('./terminal-activity.mjs')
-
-/** 一个假的执行 agent:收到消息就干 turnMs 毫秒,然后状态存储报 done。 */
-function makeWorld(over = {}) {
-  const w = {
-    row: { state: 'done', stateStartedAt: 1, prompt: '', workingMode: null },
-    draft: '',
-    sent: [],
-    interrupts: [],
-    turnMs: 15,
-    onSend: null,
-    ...over
-  }
-  w.runTurn = (text) => {
-    w.row = { ...w.row, state: 'working', stateStartedAt: Date.now() + 1, prompt: text }
-    setTimeout(() => {
-      w.row = { ...w.row, state: 'done', stateStartedAt: Date.now() + 1 }
-    }, w.turnMs)
-  }
-  w.end = () => {
-    w.row = { ...w.row, state: 'done', stateStartedAt: Date.now() + 1 }
-  }
-  return w
-}
-
-async function loadLoop(w, { checks, env = {} } = {}) {
-  mock.reset()
-  for (const [name, value] of Object.entries(env)) {
-    process.env[name] = value
-  }
-  mock.module('./orca-terminal.mjs', {
-    namedExports: {
-      sendText: async (_handle, text) => {
-        w.sent.push(text)
-        ;(w.onSend ?? w.runTurn)(text)
-      },
-      sendInterrupt: async (handle) => {
-        w.interrupts.push(handle)
-        w.onInterrupt?.()
-      },
-      readTerminal: async () => ({ draft: w.draft })
-    }
-  })
-  mock.module('./terminal-activity.mjs', {
-    namedExports: {
-      observeAgent: async () => ({ connected: true, row: w.row, silentMs: null, spinning: false }),
-      describeActivity
-    }
-  })
-  mock.module('./git-snapshot.mjs', {
-    namedExports: {
-      snapshotWorktree: async () => ({ kind: 'git', tree: 't', head: 'h' }),
-      diffTrees: async () => ({ source: [], test: [] })
-    }
-  })
-  if (checks) {
-    mock.module('./acceptance-gate.mjs', {
-      namedExports: {
-        runAcceptance: async () => checks.shift(),
-        describeFailures: (result) => ({
-          list: '- `pnpm test` 退出码 1',
-          output: result.results.map((r) => r.output ?? '').join('\n')
-        })
-      }
-    })
-  }
-  const loop = await import(`./goal-loop.mjs?t=${Math.random()}`)
-  for (const name of Object.keys(env)) {
-    delete process.env[name]
-  }
-  return loop
-}
-
-/** 守卫替身:按顺序给出结论;给函数时由它决定(可以断言输入、改动现场)。 */
-function scriptedGuard(steps) {
-  const calls = []
-  const guard = async (input) => {
-    calls.push(input)
-    const step = steps.shift() ?? { decision: 'done', observation: '收尾' }
-    const value = typeof step === 'function' ? await step(input, calls.length) : step
-    if (value?.ok === false) {
-      return { prompt: 'p', attempts: [], ...value }
-    }
-    return {
-      ok: true,
-      prompt: 'p',
-      attempts: [],
-      verdict: {
-        decision: 'wait',
-        observation: '看到的',
-        instruction: '',
-        question: '',
-        note: '笔记',
-        ...value
-      }
-    }
-  }
-  guard.calls = calls
-  return guard
-}
-
-let seq = 0
-const goal = (over = {}) => ({
-  key: `k-${++seq}`,
-  objective: '做完 X',
-  worktreePath: '/tmp/wt',
-  terminalHandle: 'term_1',
-  acceptance: { commands: [], timeoutMs: 1000, cwd: '/tmp/wt' },
-  budget: { maxTurns: 0, maxMinutes: 0 },
-  guard: { agent: 'codex', timeoutMs: 1000, logDir: null },
-  checklistPath: '/tmp/checklist.md',
-  specRevision: 1,
-  state: 'active',
-  turns: 0,
-  activeMs: 0,
-  startedAt: Date.now(),
-  updatedAt: Date.now(),
-  lastSnapshot: null,
-  ...over
-})
-
-const report = new Proxy({}, { get: () => () => {} })
-
-function control({ checkpoint = () => 'run', takeReload = () => null } = {}) {
-  const confirmations = []
-  return {
-    confirmations,
-    checkpoint: async (phase) => checkpoint(phase),
-    takeReload,
-    confirmReload: async () => {},
-    confirmStop: async (confirmation) => {
-      confirmations.push(confirmation)
-    }
-  }
-}
-
-const done = { decision: 'done', observation: '全部核实通过' }
-const instruct = (instruction, over = {}) => ({ decision: 'instruct', instruction, ...over })
+import {
+  HOME,
+  control,
+  done,
+  goal,
+  instruct,
+  loadLoop,
+  makeWorld,
+  report,
+  scriptedGuard
+} from './goal-loop-test-world.mjs'
 
 test('新目标:发首轮,本轮结束叫守卫,指示发出去,判完成后结束', async () => {
   const w = makeWorld()
