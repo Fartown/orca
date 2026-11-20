@@ -6,8 +6,7 @@ import type { RpcClient } from '../../../transport/rpc/rpc-client-contract'
 import { folderCreateBusyMessage, uncertainCreateMessage } from './new-workspace-create-copy'
 import { triggerError, triggerSuccess } from '../../../platform/haptics/haptics'
 import type { WorktreeCreateParent } from '../worktree-create-retry'
-import { createBlankWorkspace } from '../../../local-tasks/local-task-create-route'
-import { createWorkspaceFromComposerSource } from '../../../local-tasks/local-task-create-route'
+import * as localTaskCreate from '../../../local-tasks/local-task-create-route'
 import { isMobileTuiAgentEnabled } from '../../../agents/mobile-tui-agents'
 import { createSetupNeedsTrustCheck, resolveCreateSetupApproval } from '../setup-hook-trust'
 import {
@@ -223,7 +222,7 @@ export function useNewWorkspaceCreateSubmit(args: {
         args.selectedAgent.id !== '__blank__' ? args.selectedAgent.id : undefined
       const trimmedNote = args.note.trim() || undefined
       const result = selection
-        ? await createWorkspaceFromComposerSource({
+        ? await localTaskCreate.createWorkspaceFromComposerSource({
             client,
             selection,
             targetRepoId: selectedRepo.id,
@@ -240,7 +239,7 @@ export function useNewWorkspaceCreateSubmit(args: {
             ),
             parent: folder?.parent
           })
-        : await createBlankWorkspace({
+        : await localTaskCreate.createBlankWorkspace({
             client,
             repoId: selectedRepo.id,
             baseName,
