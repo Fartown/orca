@@ -23,7 +23,9 @@ export const installedAppVersion: string | null = Constants.expoConfig?.version 
 
 /** The GitHub APK's package. Orca moved to Google Play as dev.orca.app, so this app gets no more updates. */
 export const isRetiredGithubAndroidApp =
-  Platform.OS === 'android' && Constants.expoConfig?.android?.package === 'com.stably.orca.mobile'
+  Platform.OS === 'android' &&
+  Constants.expoConfig?.android?.package === 'com.stably.orca.mobile' &&
+  !isIntegrationUpdateChannel()
 
 /** Play delivers this install's updates and forbids other update channels. */
 export const isGooglePlayInstall =
