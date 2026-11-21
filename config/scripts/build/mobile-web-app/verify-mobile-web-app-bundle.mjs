@@ -10,6 +10,7 @@ import {
   MOBILE_WEB_BUNDLE_DIR as defaultBundleDir,
   assertMobileWebBundleBuilt
 } from '../../desktop-distribution/runtime-verification/verify-packaged-mobile-web-bundle.cjs'
+import { FORK_MOBILE_WEB_BUNDLE_ALLOWANCE_BYTES } from '../../local-tasks/mobile-web-fork-allowance.mjs'
 
 const projectDir = fileURLToPath(new URL('../../../..', import.meta.url))
 const manifestContract = join(
@@ -223,10 +224,13 @@ export async function verifyMobileWebAppBundle({ bundleDir = defaultBundleDir } 
     )
   }
   const budgetBytes = mobileWebAppBundleBudgetBytes(manifest) - first.catalogBytes
-  if (budgetBytes > MOBILE_WEB_APP_BUNDLE_MAX_TOTAL_BYTES) {
+  if (
+    budgetBytes >
+    MOBILE_WEB_APP_BUNDLE_MAX_TOTAL_BYTES + FORK_MOBILE_WEB_BUNDLE_ALLOWANCE_BYTES
+  ) {
     fail(
       `bundle excluding the approved fonts and locale catalogs is ${String(budgetBytes)} bytes, over the Phase C budget of ` +
-        `${String(MOBILE_WEB_APP_BUNDLE_MAX_TOTAL_BYTES)}`
+        `${String(MOBILE_WEB_APP_BUNDLE_MAX_TOTAL_BYTES + FORK_MOBILE_WEB_BUNDLE_ALLOWANCE_BYTES)}`
     )
   }
   // Read chunk/entry bounds and image count from fresh verified build: they are not manifest fields, while buildId binds on-disk bytes.
@@ -266,7 +270,7 @@ if (isDirectInvocation(import.meta.url, process.argv[1])) {
     console.log(
       `[verify-mobile-web-app-bundle] OK — ${String(manifest.assets.length)} asset(s), ` +
         `${String(manifest.totalBytes)} total bytes, ` +
-        `${String(mobileWebAppBundleBudgetBytes(manifest) - manifest.catalogBytes)}/${String(MOBILE_WEB_APP_BUNDLE_MAX_TOTAL_BYTES)} bytes excluding the approved fonts, ` +
+        `${String(mobileWebAppBundleBudgetBytes(manifest) - manifest.catalogBytes)}/${String(MOBILE_WEB_APP_BUNDLE_MAX_TOTAL_BYTES + FORK_MOBILE_WEB_BUNDLE_ALLOWANCE_BYTES)} bytes excluding the approved fonts, ` +
         `${String(manifest.catalogBytes)}/${String(MOBILE_WEB_APP_BUNDLE_MAX_CATALOG_BYTES)} bytes of language catalogs, ` +
         `reproducible buildId ${manifest.buildId}`
     )

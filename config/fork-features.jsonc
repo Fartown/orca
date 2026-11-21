@@ -159,6 +159,11 @@
       ],
       "seams": [
         {
+          "file": "src/renderer/src/components/terminal-pane/input/paste/terminal-pane-paste-listeners.test.ts",
+          "mustContain": "pasteErrorsFor(setTerminalErrorsByPaneId",
+          "why": "Upstream's app-menu paste cases read the fork's per-pane paste errors, so a lost target still asserts its error and no recorded image"
+        },
+        {
           "file": "src/renderer/src/components/native-chat/paste/native-chat-paste-routing.test.tsx",
           "mustContain": "'app-menu'",
           "why": "Keep terminal-only menu paste delegated to the original-target clipboard execution."
@@ -3561,6 +3566,7 @@
       ],
       "policyId": "local-tasks",
       "ownedPaths": [
+        "config/scripts/local-tasks/**",
         "src/renderer/src/components/terminal-pane/pane-foreground-read-scheduler.ts",
         "src/renderer/src/runtime/runtime-terminal-inspection-contact.ts",
         "src/renderer/src/runtime/runtime-terminal-inspection-contact.test.ts",
@@ -3634,6 +3640,11 @@
         "src/main/local-tasks/local-task-proposal-ownership.ts"
       ],
       "seams": [
+        {
+          "file": "config/scripts/build/mobile-web-app/verify-mobile-web-app-bundle.mjs",
+          "mustContain": "MOBILE_WEB_APP_BUNDLE_MAX_TOTAL_BYTES + FORK_MOBILE_WEB_BUNDLE_ALLOWANCE_BYTES",
+          "why": "The phone page's size fence counts the fork's routes against their own measured allowance, not upstream's headroom (REQ-017)"
+        },
         {
           "file": "tests/e2e/agents/remote-sessions/remote-agent-completion-authority.unit.test.ts",
           "mustContain": "remote agent completion authority",
