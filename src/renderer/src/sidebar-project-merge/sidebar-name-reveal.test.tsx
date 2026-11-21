@@ -6,7 +6,12 @@ import type { Repo } from '../../../shared/repository/repo-types'
 import type { ProjectGroup } from '../../../shared/project/groups/project-group-types'
 import { projectHostSetupProjectionFromRepos } from '../../../shared/project/host-setup/project-host-setup-projection'
 import { getSidebarRowRevealAncestorKeys } from '../components/sidebar/worktree-list/navigation/reveal-ancestors'
-import { resolveSidebarNameReveal, resolveSidebarProjectNameRevealKey } from './sidebar-name-reveal'
+import {
+  isStoredSidebarReveal,
+  resolveSidebarNameReveal,
+  resolveSidebarProjectNameRevealKey,
+  sidebarNameRevealSource
+} from './sidebar-name-reveal'
 import { resolveProjectGroupHeaderColor } from '../components/sidebar/worktree-list/rows/project-header-color'
 import { useSidebarRevealRequests } from '../components/sidebar/worktree-list/navigation/use-reveal-requests'
 
@@ -132,10 +137,17 @@ describe('display-name header reveal', () => {
     const repoMap = new Map(repos.map((repo) => [repo.id, repo]))
     const combined = new Map([['sidebar-name:workspace', []]])
     const request = { rowKey: 'project:repo:a', behavior: 'smooth' }
-    expect(resolveSidebarNameReveal(request, { sectionKeys: combined, repoMap, model })).toEqual({
+    const retargeted = resolveSidebarNameReveal(request, { sectionKeys: combined, repoMap, model })
+    expect(retargeted).toEqual({
       ...request,
-      rowKey: 'sidebar-name:workspace'
+      rowKey: 'sidebar-name:workspace',
+      retargetedFrom: request
     })
+    // The reveal effect checks currency and clears with the store's own request, not the copy.
+    expect(sidebarNameRevealSource(retargeted)).toBe(request)
+    state.pendingRevealSidebarRow = request as typeof state.pendingRevealSidebarRow
+    expect(isStoredSidebarReveal(sidebarNameRevealSource(retargeted))).toBe(true)
+    expect(isStoredSidebarReveal(retargeted)).toBe(false)
     expect(resolveSidebarNameReveal(null, { sectionKeys: combined, repoMap, model })).toBeNull()
     expect(
       resolveSidebarNameReveal(request, {

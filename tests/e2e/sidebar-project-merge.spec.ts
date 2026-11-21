@@ -480,7 +480,7 @@ test('merges local and paired-host folders while preserving the remote workspace
       animations: 'disabled'
     })
     await settings.click()
-    const nameInput = client.page.getByLabel('Display Name', { exact: true })
+    const nameInput = client.page.getByLabel('Display name', { exact: true })
     await expect(nameInput).toHaveValue('workspace')
     await expect(client.page.getByText(remotePath, { exact: true }).first()).toBeVisible()
     await nameInput.fill('workspace-dbox')

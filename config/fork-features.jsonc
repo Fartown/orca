@@ -899,6 +899,7 @@
       "goal": "复用原仓库归并和显示名称，将同名项目区块合并展示；改名拆分，保留业务归属",
       "journal": "docs/issue/侧栏项目合并/journal.md",
       "dependsOn": [
+        "src/renderer/src/store/index.ts",
         "src/shared/project/project-types.ts",
         "src/shared/project/host-setup/project-host-setup-projection.ts",
         "src/shared/execution-host/execution-host.ts",

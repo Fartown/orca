@@ -1,4 +1,8 @@
-import { useSidebarNameReveal } from '@/sidebar-project-merge/sidebar-name-reveal'
+import {
+  isStoredSidebarReveal,
+  sidebarNameRevealSource,
+  useSidebarNameReveal
+} from '@/sidebar-project-merge/sidebar-name-reveal'
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useAppStore } from '@/store'
 import { toastSidebarRowRevealMissing } from './sidebar-row-reveal-missing'
@@ -206,14 +210,11 @@ export function usePendingSidebarReveal(args: PendingSidebarRevealArgs): void {
   ])
 
   useEffect(() => {
-    if (
-      !pendingRevealSidebarRow ||
-      useAppStore.getState().pendingRevealSidebarRow !== pendingRevealSidebarRow
-    ) {
+    const storedReveal = sidebarNameRevealSource(pendingRevealSidebarRow)
+    if (!pendingRevealSidebarRow || !isStoredSidebarReveal(storedReveal)) {
       return
     }
-    const isCurrent = () =>
-      useAppStore.getState().pendingRevealSidebarRow === pendingRevealSidebarRow
+    const isCurrent = () => isStoredSidebarReveal(storedReveal)
 
     if (!preparePendingSidebarRowReveal(argsRef.current, pendingRevealSidebarRow)) {
       return
@@ -247,7 +248,7 @@ export function usePendingSidebarReveal(args: PendingSidebarRevealArgs): void {
         }
         pendingRowRevealRetryRef.current = null
         requestVirtualizedScrollAnchorRecord(argsRef.current.scrollRef.current)
-        clearPendingRevealSidebarRow(pendingRevealSidebarRow)
+        clearPendingRevealSidebarRow(storedReveal)
         toastSidebarRowRevealMissing()
         return
       }
@@ -271,7 +272,7 @@ export function usePendingSidebarReveal(args: PendingSidebarRevealArgs): void {
         }
         pendingRowRevealRetryRef.current = null
         requestVirtualizedScrollAnchorRecord(argsRef.current.scrollRef.current)
-        clearPendingRevealSidebarRow(pendingRevealSidebarRow)
+        clearPendingRevealSidebarRow(storedReveal)
         return
       }
 
@@ -285,7 +286,7 @@ export function usePendingSidebarReveal(args: PendingSidebarRevealArgs): void {
       }
       pendingRowRevealRetryRef.current = null
       requestVirtualizedScrollAnchorRecord(argsRef.current.scrollRef.current)
-      clearPendingRevealSidebarRow(pendingRevealSidebarRow)
+      clearPendingRevealSidebarRow(storedReveal)
     })
 
     return () => {
