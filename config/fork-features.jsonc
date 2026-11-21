@@ -746,6 +746,11 @@
       ],
       "seams": [
         {
+          "file": "config/scripts/preflight/changed-checks/check-changed-code-quality.mjs",
+          "mustContain": "forkScans.selectOxlintScans(OXLINT_SCANS)",
+          "why": "Fork CI chooses which code-quality scans run through code-quality-scan-selection.mjs (ORCA_CODE_QUALITY_SCANS)"
+        },
+        {
           "file": "src/cli/runtime/serve/updates/serve-appimage-update.ts",
           "mustContain": "appImageLaunchEnvironment",
           "why": "Reuse source-aware AppImage launch environment cleanup for desktop launches."
