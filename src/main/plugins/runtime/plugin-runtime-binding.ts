@@ -8,7 +8,10 @@ import { savedWorkspaceCatalog } from '../../persistence/profile-save-domains'
 import type { PluginAgentStatusChangedPayload } from '../../../shared/plugins/events/plugin-events'
 import { PLUGIN_WORKSPACE_TERMINAL_LIMIT } from '../../../shared/plugins/workers/plugin-host-api-workspace-context'
 import type { PluginRuntimeDelegate } from '../workers/host-api/plugin-host-service-bindings'
-import { readPluginFocusedWorkspaceElsewhere } from '../../plugin-workspace-remote/plugin-focused-workspace'
+import {
+  readPluginFocusedWorkspaceElsewhere,
+  withPluginFocusedWorkspaceRemote
+} from '../../plugin-workspace-remote/plugin-focused-workspace'
 import { getPluginHostRendererActions } from '../view/plugin-host-renderer-actions'
 import type { PluginService } from '../plugin-service'
 import { installPluginHookRunner } from '../hooks/plugin-hook-participants'
@@ -221,7 +224,12 @@ export async function readPluginWorkspaceChange(
     ? await listWorkspaceTerminals(delegate, context.worktreeId).catch(() => [])
     : []
   return {
-    change: { context: projectPluginWorkspaceContext(context, terminals) },
+    change: {
+      context: projectPluginWorkspaceContext(
+        await withPluginFocusedWorkspaceRemote(context, renderer),
+        terminals
+      )
+    },
     worktreeId: context?.worktreeId ?? null
   }
 }

@@ -144,3 +144,60 @@ describe('a focused workspace main runtime does not own', () => {
     ).toThrow()
   })
 })
+
+describe('a workspace main resolves from stored rows but whose repository it does not list', () => {
+  const stored = {
+    worktreeId: FOCUSED.worktreeId,
+    path: '/home/dev/app',
+    branch: 'feature/review',
+    displayName: 'app'
+  }
+  function hostWithStoredFocus() {
+    return pluginRuntimeDelegate(
+      {
+        resolveActiveWorktreeContext: async () => stored,
+        listTerminals: vi.fn(async () => ({ terminals: [] })),
+        sendTerminal: vi.fn(),
+        dispatchPluginNotification: vi.fn(),
+        listVisibleRepos: () => [],
+        listAgentTasksByPaneKey: () => ({})
+      },
+      () => []
+    )
+  }
+
+  it('takes the remote from the window for readContext and workspace.changed (orcad SSH host)', async () => {
+    const window = windowWith(async () => FOCUSED)
+    const delegate = hostWithStoredFocus()
+    const read = await executePluginHostCall({
+      pluginId: 'acme.mod',
+      method: 'workspace.readContext',
+      params: undefined,
+      surface: 'worker',
+      grantedCapabilities: ['workspace:read'],
+      services: bindPluginHostServices({
+        delegate,
+        pluginsDataDir: join(tmpdir(), 'plugin-focused-workspace'),
+        renderer: window
+      }),
+      audit: { record: vi.fn().mockResolvedValue(undefined) }
+    })
+    expect(read).toMatchObject({ ok: true, value: { remote: FOCUSED.remote } })
+    const { change } = await readPluginWorkspaceChange(delegate, window)
+    expect(change.context).toMatchObject({ remote: FOCUSED.remote })
+  })
+
+  it('ignores a window focused on another worktree or without an answer', async () => {
+    const delegate = hostWithStoredFocus()
+    const other = windowWith(async () => ({ ...FOCUSED, worktreeId: 'repo-1::/elsewhere' }))
+    expect((await readPluginWorkspaceChange(delegate, other)).change.context).not.toHaveProperty(
+      'remote'
+    )
+    const silent = windowWith(async () => {
+      throw new Error('window closed')
+    })
+    expect((await readPluginWorkspaceChange(delegate, silent)).change.context).not.toHaveProperty(
+      'remote'
+    )
+  })
+})

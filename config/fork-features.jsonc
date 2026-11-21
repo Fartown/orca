@@ -4754,8 +4754,13 @@
           "why": "workspace.list reads each row's remote from the repo list it already fetches"
         },
         {
+          "file": "src/main/plugins/runtime/plugin-runtime-binding.ts",
+          "mustContain": "await withPluginFocusedWorkspaceRemote(context, renderer)",
+          "why": "workspace.changed completes a stored SSH context's remote from the window, as readContext does"
+        },
+        {
           "file": "src/main/plugins/workers/host-api/plugin-host-method-bindings.ts",
-          "mustContain": ": await readPluginFocusedWorkspaceElsewhere(services.renderer)",
+          "mustContain": "await resolvePluginReadContext(context, terminals, services.renderer)",
           "why": "readContext asks the window when main's runtime does not own the focused workspace (an orcad-managed SSH host)"
         },
         {

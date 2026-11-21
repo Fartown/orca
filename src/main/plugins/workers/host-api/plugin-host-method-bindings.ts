@@ -1,5 +1,5 @@
 import type { PluginWorkspaceRemote } from '../../../../shared/plugin-workspace-remote/plugin-workspace-remote'
-import { readPluginFocusedWorkspaceElsewhere } from '../../../plugin-workspace-remote/plugin-focused-workspace'
+import { resolvePluginReadContext } from '../../../plugin-workspace-remote/plugin-focused-workspace'
 import { z } from 'zod'
 import {
   isPluginHostMethodName,
@@ -11,7 +11,6 @@ import {
 import {
   projectPluginWorkspaceAgents,
   pluginFrameWorkspaceContext,
-  projectPluginWorkspaceContext,
   type PluginAgentStatusRow,
   type PluginWorkspaceTerminal
 } from './plugin-workspace-projection'
@@ -172,9 +171,7 @@ const HANDLERS: Record<PluginHostMethodName, BoundPluginHostMethod> = {
         ? await services.listWorktreeTerminals(context.worktreeId).catch(() => [])
         : []
       // An orcad-managed SSH host's focused workspace is not main's runtime's; the window knows it.
-      const projected = context
-        ? projectPluginWorkspaceContext(context, terminals)
-        : await readPluginFocusedWorkspaceElsewhere(services.renderer)
+      const projected = await resolvePluginReadContext(context, terminals, services.renderer)
       return surface === 'worker' ? projected : pluginFrameWorkspaceContext(projected)
     }
   ),

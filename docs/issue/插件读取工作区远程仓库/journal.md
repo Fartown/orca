@@ -49,6 +49,15 @@ external_ids: []
 - 未解决问题：orcad 托管的 SSH 工作区不出现在 `workspace.list`，`agents.list`、`terminal.sendText` 也看不到它（上游原有行为，用户选定不在本功能处理）；无界面服务里 SSH 工作区的 `readContext` 仍为 `null`。
 - 下一步：提 PR 合入 fork/integration；之后在私有仓库开发自建代码平台插件。
 
+### 2026-11-21 同步后真机发现 SSH 工作区丢 remote，已修（testing）
+
+- 本轮目标：修复同步后 orcad 托管的 SSH 工作区在 `workspace.readContext` 与 `workspace.changed` 里没有 `remote` 的回归。
+- 完成内容：真机复验（`/Users/bytedance/dev/orca/.docs/upstream-sync-ui-validation/2026-11-21/plugin-remote/README.md`）本机 3 例通过，SSH「HTTPS 带令牌」与「SSH/本地来回切换」失败。原因：上游新增的 `resolveRemoteWorkspaceContext`（`active-worktree-context-fallback.ts`）让主进程对远端工作区也用持久化行拼出非空上下文，fork 原先只在上下文为空时问窗口，被绕过；而 remote 只在主进程运行时的仓库列表里查，SSH 托管的仓库不在其中。修法：`plugin-focused-workspace.ts` 新增 `withPluginFocusedWorkspaceRemote`，上下文缺 remote 时取窗口对同一 worktree 的记录补上（worktreeId 不同、窗口无答复都不补）；readContext 走新的 `resolvePluginReadContext`，`workspace.changed` 在 `readPluginWorkspaceChange` 里同样补齐。插件收到的内容仍不含凭据。
+- 代码或文档变更：`src/main/plugin-workspace-remote/plugin-focused-workspace.ts`、`plugin-focused-workspace.test.ts`（新增「主进程有持久化上下文但无仓库记录」两例）；接缝 `plugin-host-method-bindings.ts` 的 mustContain 改为 `await resolvePluginReadContext(context, terminals, services.renderer)`，新增 `plugin-runtime-binding.ts` 接缝 `await withPluginFocusedWorkspaceRemote(context, renderer)`。
+- 验证证据：`src/main/plugin-workspace-remote`、`src/main/plugins`、`src/shared/plugin-workspace-remote` 55 文件 157 项通过；`pnpm tc:node`、`check:fork-features`、`check:architecture-policies` 通过。
+- 未解决问题：修复后尚未在真机 SSH 场景复跑 6 项场景脚本。
+- 下一步：用 `/Users/bytedance/dev/orca/.docs/upstream-sync-ui-validation/2026-11-21/plugin-remote/scripts/` 的脚本复跑 SSH 两例。
+
 ### 2026-11-21 上游同步到 fa60d0a566（done）
 
 - 本轮目标：`fork/integration` 从 `e723de1bfd` 合入上游到 `fa60d0a566`（四次合并：`22afb84f6a`、`9c3b42f644`、`d725f407e8`、`31df22fb1a`，冲突都在第一次），保持插件读工作区时带出远程仓库信息、焦点不在本机运行时时向外查询。
