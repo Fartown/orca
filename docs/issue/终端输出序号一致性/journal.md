@@ -32,6 +32,15 @@ external_ids:
 
 ## 3. 开发记录
 
+### 2026-11-21：上游同步到 fa60d0a566
+
+- 本轮目标：`fork/integration` 从 `e723de1bfd` 合入上游到 `fa60d0a566`（四次合并：`22afb84f6a`、`9c3b42f644`、`d725f407e8`、`31df22fb1a`，冲突都在第一次），保持执行端流位置校准与旧 daemon 兼容不丢。
+- 完成内容：本功能 7 个冲突（UU 3、UD 4）。上游把 daemon 适配器整体搬到 `src/main/daemon/providers/adapter/`，`daemon-pty-runtime-state.ts`、`daemon-pty-spawn-result.ts` 以上游为底重放流位置；`daemon-pty-adapter.ts` 里原来的 `recordData` 与 `recordGap` 两处调用合并成一行 `this.outputStreamPosition.observe(event)`（逻辑放进自有 `daemon-stream-position.ts`，避免上游文件超过 300 行）。上游删除的 `daemon-preflight-client-replacement.test.ts`（#42777）里守护「旧客户端同 ID 替换」的用例移植为自有测试 `src/main/terminal-output-sequence-authority/daemon-legacy-client-replacement.test.ts`；`daemon-pty-spawn-result-classification.test.ts`（#38030）fork 只改过夹具，随上游删除；`app-driver.test.mjs`（#38129）的恢复终端用例移到 `tests/tools/win-update-e2e/app-driver-restored-terminal.test.mjs`。
+- 代码或文档变更：`config/fork-features.jsonc` 接缝 17→15 条：11 条只换路径（`providers/adapter/`、`providers/checkpointing/`、`transport/client/daemon-client.ts`、`src/main/providers/pty/spawn-result.ts`、渲染端 `pty-connection/test-fixtures/` 三个夹具等），1 条改 mustContain 为 `this.outputStreamPosition.observe(event)`，退役随上游删除的 2 条测试接缝；`tests` 加 `daemon-legacy-client-replacement.test.ts`；`dependsOn` 7 条换新路径并补 `src/main/providers/pty/spawn-result.ts`。合并后没有本功能的单独修复提交。新棘轮基线未登记本功能条目。
+- 验证证据：登记 checks 4 文件 13 项通过（`/Users/bytedance/dev/orca/.docs/upstream-sync/2026-11-20/sync-checks-run3.log`）；冲突解法见 `/Users/bytedance/dev/orca/.docs/upstream-sync/2026-11-20/report-D-terminal-chat.md` 与 `phase2-D.tsv`；最终门禁（tc、check:fork-features、check:fork-docs、架构、改动代码质量 0 new）见 `/Users/bytedance/dev/orca/.docs/upstream-sync/2026-11-20/final-gates.log`；全量单测 `/Users/bytedance/dev/orca/.docs/upstream-sync/2026-11-20/verify/test-full.log` 的 12 个失败文件都不在本功能登记范围。真机抽查（`/Users/bytedance/dev/orca/.docs/upstream-sync-ui-validation/2026-11-21/README.md`）未覆盖本功能，本机与 SSH 都没有做。
+- 未解决问题：本机与 SSH 的恢复去重没有在同步后的构建上真机复验；`daemon-legacy-client-replacement.test.ts` 是从上游测试里只摘出同 ID 替换一例，其余上游用例按上游判断删除。
+- 下一步：下次需要真机回归终端恢复时，按「恢复与去重」用例在本机与 SSH 各跑一遍。
+
 ### 2026-11-18：回归夹具释放连接绑定
 
 - 本轮目标：修复完整 CI 中已有 SSH 零读取回归受到前序用例进程监视器污染的问题。
