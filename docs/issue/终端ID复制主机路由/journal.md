@@ -61,3 +61,12 @@ external_ids: []
 - 验证证据：定向测试及完整同树复验记录归集至 .docs/ci-baseline-repair/2026-10-22/；最终结果待集成复验。
 - 未解决问题：最终同树 CI 尚未完成；未部署或重启用户应用和远程服务。
 - 下一步：完整本地门禁、隐藏应用与 SSH 验证后，等待最终 CI 并合入。
+
+### 2026-11-21 上游同步到 fa60d0a566（done）
+
+- 本轮目标：`fork/integration` 从 `e723de1bfd` 合入上游到 `fa60d0a566`（四次合并：`22afb84f6a`、`9c3b42f644`、`d725f407e8`、`31df22fb1a`，冲突都在第一次），保持复制终端 ID 按源工作区主机查询。
+- 完成内容：本功能 2 个冲突。`terminal-pane-menu-copy-actions.ts` 被上游搬到 `terminal-pane/clipboard/`（UU），以上游为底重放 fork 的主机路由调用；`use-terminal-pane-context-menu.ts`（UD）被上游删掉，复制菜单逻辑移到 `clipboard/create-terminal-pane-menu-copy-actions.ts`，fork 接缝跟过去。上游删了 `terminal-handle-copy.test.ts`（#39113），checks 只留功能自有目录。合并后 `check:fork-features` 的导入审计发现自有代码引用了上游新模块 `runtime-status-owner.ts`，修复提交 `955df8b4de` 把它登记进 `dependsOn`。
+- 代码或文档变更：`config/fork-features.jsonc` 接缝 2 条换路径；checks 去掉已删的上游测试；`dependsOn` 11 条换路径，新增 `src/renderer/src/store/slices/runtime-status/views/runtime-status-owner.ts`。新棘轮基线未登记本功能条目。
+- 验证证据：登记 checks 1 文件 22 项通过（`/Users/bytedance/dev/orca/.docs/upstream-sync/2026-11-20/sync-checks-run3.log`）；冲突解法见 `/Users/bytedance/dev/orca/.docs/upstream-sync/2026-11-20/report-D-terminal-chat.md`、`phase2-D.tsv`；最终门禁见 `/Users/bytedance/dev/orca/.docs/upstream-sync/2026-11-20/final-gates.log`。真机抽查（`/Users/bytedance/dev/orca/.docs/upstream-sync-ui-validation/2026-11-21/README.md`）未覆盖本功能，本机、配对与 SSH 的复制菜单都没有在同步后复验。
+- 未解决问题：同步后的构建没有真机复验复制 ID 的主机路由（本机、配对、SSH、folder）。
+- 下一步：下次真机回归时按 2026-10-09 的三项隐藏应用测试重跑一遍。
