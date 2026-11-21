@@ -363,10 +363,10 @@ test('renderer restart retains a saved live terminal through an unanswered attac
   await orcaPage.screenshot({ path: testInfo.outputPath('restart-original-terminal.png') })
 })
 
-test.describe('numeric fallback provider recovery', () => {
+test.describe('local fallback provider recovery', () => {
   test.use({ orcaAppExtraEnv: { ORCA_E2E_DAEMON_INIT_DELAY_MS: '600000' } })
 
-  test('phone activation restores the original numeric terminal despite another workspace caching its ID', async ({
+  test('phone activation restores the original fallback terminal despite another workspace caching its ID', async ({
     electronApp,
     testRepoPath,
     registerPostElectronShutdownCleanup
@@ -381,7 +381,7 @@ test.describe('numeric fallback provider recovery', () => {
       { timeout: 90_000 }
     )
     const initialWorktreeId = await attachRepoAndOpenTerminal(orcaPage, testRepoPath)
-    const recoveryPath = mkdtempSync(path.join(os.tmpdir(), 'orca-numeric-recovery-'))
+    const recoveryPath = mkdtempSync(path.join(os.tmpdir(), 'orca-fallback-recovery-'))
     registerPostElectronShutdownCleanup(async () =>
       rmSync(recoveryPath, { recursive: true, force: true })
     )
@@ -403,7 +403,7 @@ test.describe('numeric fallback provider recovery', () => {
       await store.getState().fetchWorktrees(repoId, { forceLocalOwner: true })
       const worktree = store.getState().worktreesByRepo[repoId]?.[0]
       if (!worktree) {
-        throw new Error('Numeric recovery workspace missing')
+        throw new Error('Fallback recovery workspace missing')
       }
       return { id: worktree.id, path: worktree.path }
     }, repoId)
@@ -430,19 +430,23 @@ test.describe('numeric fallback provider recovery', () => {
       },
       { workspace, tabId, leafId }
     )
-    expect(original.id).toMatch(/^\d+$/)
+    // Upstream #43098 replaced numeric fallback IDs with workspace-scoped ones.
+    expect(original.id.startsWith(`${workspace.id}@@`)).toBe(true)
+    expect(original.id.slice(workspace.id.length + 2)).toMatch(/^[0-9a-f]{8}$/)
     expect(original.incarnationId).toBeTruthy()
+    const daemonSessions = await orcaPage.evaluate(() => window.api.pty.management.listSessions())
+    expect(daemonSessions.sessions.map((session) => session.sessionId)).not.toContain(original.id)
     const before = await orcaPage.evaluate(
       async (id) => (await window.api.pty.listSessions()).find((s) => s.id === id),
       original.id
     )
     expect(before?.rootProcessId).toBeGreaterThan(0)
-    const marker = `NUMERIC_RECOVERY_${randomUUID().replaceAll('-', '')}`
+    const marker = `FALLBACK_RECOVERY_${randomUUID().replaceAll('-', '')}`
     await orcaPage.evaluate(
       ({ id, marker }) =>
         window.api.pty.writeAccepted(
           id,
-          `export ORCA_NUMERIC_NONCE=${marker}; echo "$ORCA_NUMERIC_NONCE"\r`,
+          `export ORCA_FALLBACK_NONCE=${marker}; echo "$ORCA_FALLBACK_NONCE"\r`,
           'driving'
         ),
       { id: original.id, marker }
@@ -480,7 +484,7 @@ test.describe('numeric fallback provider recovery', () => {
         .toEqual([tabId])
       await expect.poll(() => getTerminalContent(orcaPage), { timeout: 30_000 }).toContain(marker)
       await orcaPage.evaluate(
-        (id) => window.api.pty.writeAccepted(id, 'echo "$ORCA_NUMERIC_NONCE"\r', 'driving'),
+        (id) => window.api.pty.writeAccepted(id, 'echo "$ORCA_FALLBACK_NONCE"\r', 'driving'),
         original.id
       )
       const after = await orcaPage.evaluate(
@@ -499,8 +503,8 @@ test.describe('numeric fallback provider recovery', () => {
       expect(
         identity?.panes.some((pane) => pane.leafId === leafId && pane.ptyId === original.id)
       ).toBe(true)
-      await orcaPage.screenshot({ path: testInfo.outputPath('numeric-original-terminal.png') })
-      await recordTerminalIdentity(testInfo, 'numeric-original-terminal', {
+      await orcaPage.screenshot({ path: testInfo.outputPath('fallback-original-terminal.png') })
+      await recordTerminalIdentity(testInfo, 'fallback-original-terminal', {
         tabId,
         leafId,
         original,

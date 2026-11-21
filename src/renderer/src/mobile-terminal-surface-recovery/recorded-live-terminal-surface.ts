@@ -4,6 +4,7 @@ import { isValidHostTerminalTabId } from '../../../shared/workspace-layout/termi
 import { worktreeIdsEqual } from '../../../shared/worktree/id'
 import type { LiveSurfaceAdoptionStore } from '../lib/workspace/activation/worktree-agent-live-surface-adoption'
 import type { LiveTerminalSurfaceOwner } from '../lib/workspace/ownership/worktree-live-terminal-surface-owners'
+import { writeRestoredSurfaceToMain } from './restored-surface-session-write'
 
 export function hasCompetingRecordedTerminalBinding(
   store: LiveSurfaceAdoptionStore,
@@ -46,5 +47,9 @@ export function restoreRecordedLiveTerminalSurface(
   ) {
     return false
   }
-  return adoptExactSurface()
+  if (!adoptExactSurface()) {
+    return false
+  }
+  writeRestoredSurfaceToMain()
+  return true
 }

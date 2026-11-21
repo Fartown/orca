@@ -295,7 +295,11 @@
         "src/renderer/src/components/terminal-pane/pty-connection/connect-pane-pty-session.ts",
         "src/renderer/src/components/terminal-pane/pty-connection/host-ownership/pane-owner-recovery.ts",
         "src/renderer/src/components/terminal-pane/pty-connection/startup/cold-restore-resume-startup.ts",
-        "src/renderer/src/components/terminal-pane/session-restore/newer-daemon/newer-daemon-hold-state.ts"
+        "src/renderer/src/components/terminal-pane/session-restore/newer-daemon/newer-daemon-hold-state.ts",
+        "src/renderer/src/lib/workspace/persistence/workspace-session.ts",
+        "src/renderer/src/lib/workspace/persistence/workspace-session-patch.ts",
+        "src/renderer/src/lib/workspace/persistence/workspace-session-host-persistence.ts",
+        "src/renderer/src/lib/workspace/persistence/workspace-session-acknowledged-entries.ts"
       ],
       "policyId": "mobile-terminal-surface-recovery",
       "ownedPaths": [
@@ -384,6 +388,7 @@
         "src/renderer/src/mobile-terminal-surface-recovery/deferred-session-reattach-connect-retain.test.ts",
         "src/renderer/src/mobile-terminal-surface-recovery/deferred-session-reattach-live-bookmark.test.ts",
         "tests/e2e/mobile-terminal-surface-recovery.spec.ts",
+        "src/renderer/src/mobile-terminal-surface-recovery/restored-surface-session-write.test.ts",
         "src/renderer/src/mobile-terminal-surface-recovery/activation-live-inventory.test.ts",
         "src/renderer/src/mobile-terminal-surface-recovery/recorded-live-terminal-surface.test.ts",
         "src/renderer/src/mobile-terminal-surface-recovery/numeric-terminal-surface-recovery.test.ts",
