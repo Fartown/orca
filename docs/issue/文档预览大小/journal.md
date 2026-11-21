@@ -50,6 +50,15 @@ external_ids: []
 
 ## 3. 开发记录
 
+### 2026-11-21 上游同步到 fa60d0a566（testing）
+
+- 本轮目标：`fork/integration` 从 `e723de1bfd` 合入上游到 `fa60d0a566`（四次合并：`22afb84f6a`、`9c3b42f644`、`d725f407e8`、`31df22fb1a`，冲突都在第一次），保持文档文本预览 20 MiB 上限与分块参数，不扩大普通读取与 paired RPC 预算。
+- 完成内容：本功能 5 个冲突（UU 3、UD 2）。上游把文档预览代码搬到 `src/main/browser/document-preview/` 与 `src/shared/document-preview/`，`doc-preview-file-reader.ts`、`doc-preview-file-access.ts` 以上游为底重放预览上限与分块；`files-params.ts`（上游搬到 `rpc-contract/filesystem/`，与远程主机绝对路径打开共用）保留 `files.readDocPreview` 的 `chunk` 参数。`doc-preview-file-reader.test.ts` 随上游移到新目录；`doc-preview-terminal-file-reader.test.ts` 被上游删除（#42167）且无继任，这条接缝退役。旧路径 `doc-preview-protocol.test.ts` 的 fork 断言（`media-src 'self' data:`）核实已在新位置 `document-preview/doc-preview-protocol.test.ts` 后删除旧副本。上游删掉的 `orca-runtime-files-test-harness.ts`（#39625、#43339）由自有夹具 `src/main/document-preview-size/document-preview-runtime-file-reads.test-fixture.ts` 代替；自有 `document-preview-content-type.ts` 补上上游新增的媒体类型。
+- 代码或文档变更：`config/fork-features.jsonc` 接缝 8→7 条（6 条换路径、退役 1 条）；checks 换新路径；`dependsOn` 4→6 条：3 条换路径，去掉已删的测试工具，新增 `src/main/runtime/files/file-command-host.ts`、`src/shared/execution-host/execution-host.ts`、`src/shared/file-preview/media-mime-types.ts`。合并后没有本功能的单独修复提交。新棘轮基线未登记本功能条目。
+- 验证证据：登记 checks 6 文件 22 项通过（`/Users/bytedance/dev/orca/.docs/upstream-sync/2026-11-20/sync-checks-run3.log`）；冲突解法见 `/Users/bytedance/dev/orca/.docs/upstream-sync/2026-11-20/report-E-files-preview-remote.md`、`report-G-shared.md`、`phase2-E.tsv`、`decisions.tsv`；最终门禁见 `/Users/bytedance/dev/orca/.docs/upstream-sync/2026-11-20/final-gates.log`。本机真机抽查通过：3 MB HTML 预览正常渲染（`/Users/bytedance/dev/orca/.docs/upstream-sync-ui-validation/2026-11-21/README.md` 第 7 项，截图 `evidence/doc-1-big-html-preview`）。SSH 与 paired 场景未在同步后真机复验。
+- 未解决问题：接近 20 MiB 上限的大文件与 SSH 主机上的预览没有在同步后复验。
+- 下一步：下次真机回归按「预览大小边界」用例补 SSH 与上限边界。
+
 ### 2026-11-03 上游预览测试放宽到接受 fork 的分块参数（testing）
 
 - 本轮目标：修掉同步后 `doc-preview-terminal-file-reader.test.ts` 里的 3 个用例（工作区外 HTML 预览）。
