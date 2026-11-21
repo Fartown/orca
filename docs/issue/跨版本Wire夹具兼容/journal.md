@@ -41,6 +41,15 @@ updated: 2026-11-16
 
 ## 3. 开发记录
 
+### 2026-11-21 上游同步到 fa60d0a566（testing）
+
+- 本轮目标：`fork/integration` 从 `e723de1bfd` 合入上游到 `fa60d0a566`（四次合并：`22afb84f6a`、`9c3b42f644`、`d725f407e8`、`31df22fb1a`，冲突都在第一次），保持跨版本 wire 夹具只接受唯一迁移位置（D-001）与按同步快照筛选基准标签（D-002）。
+- 完成内容：本功能 4 个冲突（全是 UU）。上游把发布检出代码搬到 `tests/e2e/cross-version-wire/release-checkouts/`，并在 `release-checkout-publication.ts` 引入自己的 `releaseModuleLocation`，取代了 fork 在这里的补丁，这条接缝退役；`release-checkout.ts`、`release-checkout.unit.test.ts` 以上游为底重放 fork 的唯一位置判定，单测「两个候选位置时报歧义」的夹具从 `[MOVED, older]` 改为 `[SHIPPED, older]`（合并报告没写原因，见未解决问题）；`check-daemon-protocol-crossing.mjs` 随上游搬到 `config/scripts/daemon-protocol/admission/` 后重放。checks 原来跑的 `release-module-locations.unit.test.ts` 被上游删除（#37814）。
+- 代码或文档变更：`config/fork-features.jsonc` 接缝 5→4 条（3 条换路径、退役 `release-checkout-publication.ts`）；`tests` 与 checks 换新路径并去掉已删测试；`dependsOn` 2 条换路径（`stable-release-tags.mjs` 到 `config/scripts/release/versioning/`，`release-module-locations.ts` 到 `release-checkouts/`）。合并后没有本功能的单独修复提交。新棘轮基线未登记本功能条目。
+- 验证证据：登记 checks 3 文件 16 项通过（`/Users/bytedance/dev/orca/.docs/upstream-sync/2026-11-20/sync-checks-run3.log`）；冲突解法见 `/Users/bytedance/dev/orca/.docs/upstream-sync/2026-11-20/report-F-builds-plugins-goals.md`、`phase2-F.tsv`；最终门禁见 `/Users/bytedance/dev/orca/.docs/upstream-sync/2026-11-20/final-gates.log`。真机抽查（`/Users/bytedance/dev/orca/.docs/upstream-sync-ui-validation/2026-11-21/README.md`）未覆盖本功能；本机与 SSH 执行机上的历史版本实测都没有在同步后重跑。
+- 未解决问题：上游 `releaseModuleLocation` 取代 fork 补丁后，D-001 的「只接受唯一迁移位置」在发布检出这一层改由上游实现承担，没有用真实历史版本复测；歧义夹具改用 `SHIPPED_TERMINAL_PROTOCOL` 的原因未记录，需确认没有放宽断言。
+- 下一步：下次跑跨版本 e2e 时确认历史版本检出仍只认唯一迁移位置。
+
 ### 2026-11-16 快照规则与历史版本复测（testing）
 
 - 本轮目标：使本地与CI默认版本方向一致，并保留显式v1.4.256协议迁移覆盖，解除原UI PR #111的门禁阻断。
