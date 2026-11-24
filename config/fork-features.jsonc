@@ -4950,6 +4950,58 @@
       "checks": [
         "ORCA_BACKGROUND_LAUNCH=1 pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/components/markdown-review-anchor-recovery"
       ]
+    },
+    {
+      "id": "markdown-link-reader",
+      "title": "Markdown 链接按阅读器打开：带行号的链接不再强制切源码",
+      "goal": "点击带行号的 Markdown 文件链接时保持标签当前的阅读模式，只有已在源码的标签才跳到该行；本地、SSH 与手机端一致",
+      "journal": "docs/issue/Markdown链接阅读器打开/journal.md",
+      "policyId": "markdown-link-reader",
+      "ownedPaths": [
+        "src/renderer/src/markdown-link-reader/**",
+        "mobile/src/markdown-link-reader/**",
+        "docs/issue/Markdown链接阅读器打开/**"
+      ],
+      "requiredFiles": ["src/renderer/src/markdown-link-reader/markdown-link-line-reveal.ts"],
+      "dependsOn": [
+        "src/shared/editor/markdown/markdown-default-view-mode.ts",
+        "src/renderer/src/store/types.ts"
+      ],
+      "seams": [
+        {
+          "file": "src/renderer/src/components/terminal-pane/links/files/terminal-file-link-editor-open.ts",
+          "mustContain": "revealsLinkedMarkdownLine(useAppStore.getState(), shown.fileId)",
+          "why": "terminal, chat-view and bot file links keep Markdown in the reader (REQ-1541, REQ-1542)"
+        },
+        {
+          "file": "src/renderer/src/store/slices/editor/markdown/markdown-link-action.ts",
+          "mustContain": "revealsLinkedMarkdownLine(get(), fileId)",
+          "why": "links inside a rich Markdown document follow the same rule (REQ-1541, REQ-1542)"
+        },
+        {
+          "file": "src/renderer/src/components/editor/markdown-preview/links/markdown-preview-link-actions.ts",
+          "mustContain": "revealsLinkedMarkdownLine(openedState, targetFileId)",
+          "why": "links inside the Markdown preview follow the same rule (REQ-1541, REQ-1542)"
+        },
+        {
+          "file": "mobile/src/files/markdown/MobileMarkdownPreviewModeBar.tsx",
+          "mustContain": "useState<MarkdownPreviewMode>('preview')",
+          "why": "the phone opens a line link in the reader and Source still lands on the line (REQ-1544)"
+        },
+        {
+          "file": ".gitignore",
+          "mustContain": "!docs/issue/Markdown链接阅读器打开/**",
+          "why": "track the feature's requirement documents"
+        }
+      ],
+      "tests": [
+        "src/renderer/src/markdown-link-reader/linked-markdown-line-reveal.test.ts",
+        "mobile/src/markdown-link-reader/markdown-preview-mode-line-link.test.tsx"
+      ],
+      "checks": [
+        "pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/markdown-link-reader",
+        "pnpm --dir mobile exec vitest run src/markdown-link-reader"
+      ]
     }
   ]
 }

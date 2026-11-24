@@ -4,6 +4,7 @@ import { scheduleEditorLineReveal } from '@/store/slices/editor/focus/editor-foc
 import '@/store/slices/editor/tabs/editor-open-target-group'
 import { isLiveLinkOpenGroup as isLiveEditorOpenGroup } from '@/lib/links/placement/link-open-intent'
 import { flashRevealedEditorView } from '@/components/tab-group/editor-reveal/editor-reveal-flash'
+import { revealsLinkedMarkdownLine } from '@/markdown-link-reader/markdown-link-line-reveal'
 import type { OpenFile } from '@/store/slices/editor/types/open-file'
 import type {
   EditorOpenLinkIntent,
@@ -61,9 +62,12 @@ export function openLinkedFileInEditor(
     if (position.line === null) {
       return
     }
-    if (language === 'markdown') {
-      // Why: rich Markdown has no line-based reveal consumer; line links must mount Monaco.
-      useAppStore.getState().setMarkdownViewMode(shown.fileId, 'source')
+    // Why: rich Markdown has no line-based reveal consumer, and a link keeps the reader rather than forcing source.
+    if (
+      language === 'markdown' &&
+      !revealsLinkedMarkdownLine(useAppStore.getState(), shown.fileId)
+    ) {
+      return
     }
     // Reveal only in this view; other document views keep their cursors, and later clicks supersede this request.
     scheduleEditorLineReveal(

@@ -14,6 +14,7 @@ import { runtimeTargetForOwnerEnvironment } from '@/runtime/rpc/targets/runtime-
 import { statRuntimePath } from '@/runtime/files/metadata/runtime-file-metadata-client'
 import { getOpenedEditFileIdAfterOpen } from '../file-ids/editor-file-ids'
 import { scheduleEditorLineReveal } from '../focus/editor-focus-reveal'
+import { revealsLinkedMarkdownLine } from '@/markdown-link-reader/markdown-link-line-reveal'
 import type { EditorGet, EditorSet } from '../types/editor-set-get'
 import type { EditorSlice } from '../types/editor-slice'
 
@@ -186,9 +187,10 @@ export function createMarkdownLinkAction(
 
       if (line !== undefined) {
         const fileId = getOpenedEditFileIdAfterOpen(get(), absolutePath, ctx.worktreeId)
-        // Why: MonacoEditor drops the reveal if the file stays in rich mode; switch to source using the resolved owner-qualified id.
-        get().setMarkdownViewMode(fileId, 'source')
-        scheduleEditorLineReveal(get, absolutePath, line, column, fileId)
+        // Why: only Monaco consumes a line reveal, and a link keeps the reader rather than forcing source.
+        if (revealsLinkedMarkdownLine(get(), fileId)) {
+          scheduleEditorLineReveal(get, absolutePath, line, column, fileId)
+        }
       }
     }
   }

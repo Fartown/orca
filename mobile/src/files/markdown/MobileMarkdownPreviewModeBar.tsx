@@ -8,16 +8,16 @@ import { filePreviewStyles as styles } from '../preview/mobile-file-preview-styl
 
 export type MarkdownPreviewMode = 'preview' | 'source'
 
-/** A line target opens the source; a new file or line target resets any manual pick. */
+/** Links open the reader even with a line; Source still lands on that line. A new target resets any manual pick. */
 export function useMarkdownPreviewMode(relativePath: string, initialLine: number | undefined) {
-  const [mode, setMode] = useState<MarkdownPreviewMode>(() => (initialLine ? 'source' : 'preview'))
+  const [mode, setMode] = useState<MarkdownPreviewMode>('preview')
   const [previousRelativePath, setPreviousRelativePath] = useState(relativePath)
   const [previousInitialLine, setPreviousInitialLine] = useState(initialLine)
   // Switch modes before paint for a new file or line target; do not flash the previous manual mode.
   if (relativePath !== previousRelativePath || initialLine !== previousInitialLine) {
     setPreviousRelativePath(relativePath)
     setPreviousInitialLine(initialLine)
-    setMode(initialLine ? 'source' : 'preview')
+    setMode('preview')
   }
   return [mode, setMode] as const
 }

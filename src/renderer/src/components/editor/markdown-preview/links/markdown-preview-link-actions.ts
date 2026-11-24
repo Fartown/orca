@@ -12,6 +12,7 @@ import { requireRuntimeTargetForFileOwner } from '@/lib/files/access/file-owner-
 import { statRuntimePath } from '@/runtime/files/metadata/runtime-file-metadata-client'
 import { useAppStore } from '@/store/index'
 import { scheduleEditorLineReveal } from '@/store/slices/editor/focus/editor-focus-reveal'
+import { revealsLinkedMarkdownLine } from '@/markdown-link-reader/markdown-link-line-reveal'
 import { relativePathInsideRoot } from '../../../../../../shared/file-access/cross-platform-path'
 import { openMarkdownExternalUrl } from '../../markdown/link-routing/markdown-external-url-open'
 import { resolveMarkdownLinkTarget } from '../../markdown/link-routing/markdown-internal-links'
@@ -113,7 +114,6 @@ export async function handleMarkdownPreviewLinkClick({
     activateMarkdownLink,
     openFile,
     openMarkdownPreview,
-    setMarkdownViewMode,
     scrollToAnchor
   } = context
 
@@ -257,8 +257,9 @@ export async function handleMarkdownPreviewLinkClick({
       openedState.activeFileIdByWorktree,
       { filePath: absolutePath, worktreeId: targetWorktree.id }
     )
-    if (language === 'markdown') {
-      setMarkdownViewMode(targetFileId, 'source')
+    // Why: only Monaco consumes a line reveal, and a link keeps the reader rather than forcing source.
+    if (language === 'markdown' && !revealsLinkedMarkdownLine(openedState, targetFileId)) {
+      return
     }
     // Why: wait for the tab, then keep its reveal alive after Preview teardown.
     afterPendingEntityTabs(targetWorktree.id, targetFileId, () =>
