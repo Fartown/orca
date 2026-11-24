@@ -148,11 +148,11 @@ export function installPaneAgentIdentity(session: ConnectPanePtySession): void {
     subscribeReadContactChange: subscribeRuntimeTerminalProcessContact,
     readForegroundProcess: (id, options) =>
       isRemoteExecutionHostPtyId(id)
-        ? inspectRuntimeTerminalProcess(id, options)
+        ? inspectRuntimeTerminalProcess(id, { ...options, foregroundOnly: true })
         : window.api.pty.getForegroundProcess(id),
     confirmForegroundProcess: (id, options) =>
       isRemoteExecutionHostPtyId(id)
-        ? inspectRuntimeTerminalProcess(id, options)
+        ? inspectRuntimeTerminalProcess(id, { ...options, foregroundOnly: true })
         : window.api.pty.confirmForegroundProcess(id),
     isRemotePtyId: isRemoteExecutionHostPtyId,
     getExpectedIncarnationId: () => session.remotePtyIncarnationId ?? null,

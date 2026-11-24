@@ -25,12 +25,22 @@ export function admitRemoteForegroundEvidence(
   if (!isRemoteForegroundEvidence(value)) {
     return null
   }
+  return isCurrentForegroundObservation(value, admission) ? value : null
+}
+
+export function isCurrentForegroundObservation(
+  value: Pick<
+    RemoteForegroundEvidence,
+    'ptyId' | 'ptyIncarnationId' | 'capturedAgeMs' | 'authorityGeneration' | 'observationEpoch'
+  >,
+  admission: RemoteForegroundEvidenceAdmission
+): boolean {
   if (
     admission.expectedIncarnationId === null ||
     value.ptyId !== admission.expectedPtyId ||
     value.ptyIncarnationId !== admission.expectedIncarnationId
   ) {
-    return null
+    return false
   }
   const receiveDelay = Math.max(
     0,
@@ -39,19 +49,19 @@ export function admitRemoteForegroundEvidence(
   // Use max, never sum: ps duration is inside receiveDelay and also included in host capturedAgeMs. Summing charged capture twice
   // (1200ms host + 1300ms round trip falsely exceeded 2s). Sweep gates differ: post-listing planning time is nonoverlapping and additive.
   if (Math.max(value.capturedAgeMs, receiveDelay) > REMOTE_FOREGROUND_EVIDENCE_MAX_AGE_MS) {
-    return null
+    return false
   }
   if (
     admission.knownAuthorityGenerations?.has(value.authorityGeneration) &&
     admission.lastAuthorityGeneration !== value.authorityGeneration
   ) {
-    return null
+    return false
   }
   if (
     admission.lastAuthorityGeneration === value.authorityGeneration &&
     value.observationEpoch <= admission.lastObservationEpoch
   ) {
-    return null
+    return false
   }
-  return value
+  return true
 }

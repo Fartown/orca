@@ -1,3 +1,4 @@
+import { createHostForegroundObservationReader } from '../../../../../../../shared/terminal-shell-mode-recovery/host-foreground-observation'
 import { getRemoteRuntimeTerminalHandle } from '@/runtime/hosted-terminals/identity/remote-runtime-pty-owner'
 import { parseAppSshPtyId } from '../../../../../../../shared/remote-runtime/ssh/ssh-pty-id'
 import { admitRemoteForegroundEvidence } from '../../../../../../../shared/terminal/pty/foreground/remote-foreground-evidence-admission'
@@ -21,9 +22,11 @@ export function createPaneForegroundProcessReader(deps: {
   let observationEpoch = -1
   let bindingKey: string | null = null
   const knownAuthorityGenerations = new Set<string>()
+  const readHostObservation = createHostForegroundObservationReader()
 
   return async (ptyId: string, requiresConfirmation: boolean) => {
     let processName: string | null = null
+    let shellForeground: boolean | null = null
     let remoteEvidenceVerdict: 'live' | 'unverifiable' | 'exited' | null = null
     const expectedIncarnationId = deps.getExpectedIncarnationId?.() ?? null
     const options = expectedIncarnationId ? { expectedIncarnationId } : undefined
@@ -49,6 +52,17 @@ export function createPaneForegroundProcessReader(deps: {
       } else if (typeof inspection === 'string' || inspection === null) {
         processName = inspection
         remoteEvidenceVerdict = remote ? 'unverifiable' : null
+      } else if (inspection.foregroundObservation !== undefined) {
+        const observed = readHostObservation(inspection.foregroundObservation, {
+          expectedPtyId:
+            parseAppSshPtyId(ptyId)?.relayPtyId ?? getRemoteRuntimeTerminalHandle(ptyId) ?? ptyId,
+          expectedIncarnationId,
+          requestStartedAtMonotonic,
+          receivedAtMonotonic: performance.now()
+        })
+        remoteEvidenceVerdict = observed?.verdict === 'observed' ? 'live' : 'unverifiable'
+        shellForeground = observed?.verdict === 'observed' && observed.foregroundKind === 'shell'
+        processName = observed?.verdict === 'observed' ? observed.processName : null
       } else if (remote) {
         const admitted = admitRemoteForegroundEvidence(inspection.foregroundProcessEvidence, {
           expectedPtyId:
@@ -78,6 +92,7 @@ export function createPaneForegroundProcessReader(deps: {
     }
     return {
       processName,
+      shellForeground,
       remoteEvidenceVerdict,
       expectedIncarnationId,
       remote

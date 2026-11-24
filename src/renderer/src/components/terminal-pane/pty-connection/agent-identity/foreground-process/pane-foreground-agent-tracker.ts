@@ -85,10 +85,8 @@ export function createPaneForegroundAgentTracker(deps: PaneForegroundAgentTracke
       hasForegroundAgentEvidence ||
       hasKnownAgentEvidence ||
       hasAgentExpectation
-    const { processName, remoteEvidenceVerdict, expectedIncarnationId, remote } = await readProcess(
-      ptyId,
-      requiresRoutingConfirmation
-    )
+    const { processName, shellForeground, remoteEvidenceVerdict, expectedIncarnationId, remote } =
+      await readProcess(ptyId, requiresRoutingConfirmation)
     // Fence pending inspection so an old PTY cannot publish identity into its replacement.
     if (
       disposed ||
@@ -100,16 +98,18 @@ export function createPaneForegroundAgentTracker(deps: PaneForegroundAgentTracke
       settleAbortedRead(generation)
       return
     }
-    if (remote && remoteEvidenceVerdict === 'unverifiable') {
+    if (remoteEvidenceVerdict === 'unverifiable' && (remote || shellForeground === false)) {
       deps.onVisibleForegroundSettled?.('inconclusive')
       return
     }
     const recognized =
-      remoteEvidenceVerdict === 'live'
-        ? recognizeAgentProcess(processName)
-        : remoteEvidenceVerdict !== null
-          ? null
-          : recognizeAgentProcess(processName)
+      shellForeground === true
+        ? null
+        : remoteEvidenceVerdict === 'live'
+          ? recognizeAgentProcess(processName)
+          : remoteEvidenceVerdict !== null
+            ? null
+            : recognizeAgentProcess(processName)
     if (recognized) {
       hasForegroundAgentEvidence = true
       hasAgentExpectation = false
@@ -135,6 +135,7 @@ export function createPaneForegroundAgentTracker(deps: PaneForegroundAgentTracke
     const shouldRetryExpectedIdentity =
       hasConfirmationExpectation && (reason !== 'command-finished' || processName === null)
     const shouldRetry =
+      !(shellForeground === true && reason !== 'command') &&
       retryDelay !== undefined &&
       (shouldRetryExpectedIdentity ||
         (processName !== null &&
@@ -156,8 +157,8 @@ export function createPaneForegroundAgentTracker(deps: PaneForegroundAgentTracke
     if (reason === 'visible-pty') {
       if (
         (hasForegroundAgentEvidence || hasKnownAgentEvidence) &&
-        processName !== null &&
-        isShellProcess(processName)
+        (shellForeground === true ||
+          (shellForeground === null && processName !== null && isShellProcess(processName)))
       ) {
         clearAgentEvidence()
         deps.publish({ agent: null, shellForeground: true })
@@ -169,7 +170,11 @@ export function createPaneForegroundAgentTracker(deps: PaneForegroundAgentTracke
       return
     }
     if (reason === 'command-finished') {
-      if (processName === null) {
+      if (shellForeground === false) {
+        deps.onVisibleForegroundSettled?.('inconclusive')
+        return
+      }
+      if (processName === null && shellForeground !== true) {
         if (remoteEvidenceVerdict !== null && remoteEvidenceVerdict !== 'live') {
           deps.onCommandFinishedUnavailable?.()
           return
@@ -180,7 +185,11 @@ export function createPaneForegroundAgentTracker(deps: PaneForegroundAgentTracke
         deps.onCommandFinishedUnavailable?.()
         return
       }
-      if ((hasForegroundAgentEvidence || hasKnownAgentEvidence) && !isShellProcess(processName)) {
+      if (
+        shellForeground !== true &&
+        (hasForegroundAgentEvidence || hasKnownAgentEvidence) &&
+        (processName === null || !isShellProcess(processName))
+      ) {
         // Settle any visible confirmation this read replaced, or its retained capability has no remaining owner to release it.
         deps.onVisibleForegroundSettled?.('inconclusive')
         return
