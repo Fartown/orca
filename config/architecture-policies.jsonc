@@ -600,6 +600,7 @@
             "config/scripts/preflight/changed-checks/check-changed-code-quality.test.mjs",
             // Ratchet baselines that carry rows for fork-owned code and fork seams.
             "config/main-sync-fs-baseline.txt",
+            "config/main-blocking-sqlite-baseline.txt",
             "config/recurring-timer-baseline.txt",
             "config/main-blocking-helper-baseline.txt",
             "config/render-path-translate-baseline.txt",
