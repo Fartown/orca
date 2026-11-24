@@ -70,7 +70,7 @@ export async function guardMaterials(
       transcriptPath: row?.transcriptPath || '不可用（状态存储没有给出对话记录路径）',
       orcaCommand: process.env.ORCA_BIN || defaultOrcaCommand(),
       terminalHandle: goal.terminalHandle,
-      confirmBox: confirmBox ? `\n${confirmBox.text}` : '无',
+      confirmBox: confirmBox ? confirmBox.text : '无',
       sessionDir: describeGoalSessionHistory(history),
       changes: await describeChanges(run),
       checkFailures: run.checkFailures || '无',
