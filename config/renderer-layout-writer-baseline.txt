@@ -22,6 +22,7 @@
 3 src/renderer/src/lib/workspace/persistence/workspace-session-staged-browser-tabs.ts
 1 src/renderer/src/lib/workspace/persistence/workspace-session-unified-tabs.ts
 17 src/renderer/src/lib/workspace/persistence/workspace-session.ts
+2 src/renderer/src/mobile-terminal-surface-recovery/restored-surface-session-write.ts
 1 src/renderer/src/runtime/browser/client-hosting/client-hosted-browser-row-state.ts
 13 src/renderer/src/runtime/browser/creation/testing/web-runtime-browser-creation-placement-test-rig.ts
 3 src/renderer/src/runtime/hosted-terminals/recovery/adoption/web-session-terminal-recovery-snapshot-validation.ts
