@@ -29,7 +29,10 @@ import type { TuiAgent } from '../../../../shared/agent-launch/catalog/tui-agent
 import type { AgentLaunchRuntime } from '../../../../shared/agent-launch/startup/agent-launch-runtime'
 import type { TerminalWorkspaceLaunchScope } from '../../orchestration/terminal-authority/structured-sessions/runtime-legacy-worker-terminal-recovery-types'
 import { parseAppSshPtyId } from '../../../../shared/remote-runtime/ssh/ssh-pty-id'
-import { type TerminalProcessInspection as PtyProcessInspection, isClientOnlyUnverifiableInspection } from '../../../../shared/terminal/pty/lifecycle/terminal-process-inspection'
+import {
+  type TerminalProcessInspection as PtyProcessInspection,
+  isClientOnlyUnverifiableInspection
+} from '../../../../shared/terminal/pty/lifecycle/terminal-process-inspection'
 import type { MainSessionTabRows } from '../layout/main-session-tab-rows'
 import { isReopenedChatTabId } from '../../../../shared/agent-session/view/structured-agent-session-host-tab-id'
 

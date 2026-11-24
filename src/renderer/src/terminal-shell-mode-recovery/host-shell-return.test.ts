@@ -3,9 +3,9 @@ import { createPaneForegroundAgentTracker } from '@/components/terminal-pane/pty
 import type { TerminalForegroundObservation } from '../../../shared/terminal/pty/lifecycle/terminal-foreground-observation'
 import type { HostProcessInspection } from '../../../shared/terminal/pty/lifecycle/terminal-process-inspection'
 
-function observation(
-  patch: Partial<TerminalForegroundObservation> = {}
-): TerminalForegroundObservation {
+type ObservedForeground = Extract<TerminalForegroundObservation, { verdict: 'observed' }>
+
+function observation(patch: Partial<ObservedForeground> = {}): ObservedForeground {
   return {
     verdict: 'observed',
     source: 'pty-master',
@@ -17,7 +17,7 @@ function observation(
     observationEpoch: 1,
     capturedAgeMs: 0,
     ...patch
-  } as TerminalForegroundObservation
+  }
 }
 
 function fixture(kind: 'local' | 'paired' | 'ssh', answer: HostProcessInspection) {
@@ -95,22 +95,26 @@ describe('host shell observations reach terminal mode recovery', () => {
     f.tracker.dispose()
   })
 
-  it.each([
-    { ptyId: 'other' },
-    { ptyIncarnationId: 'old' },
-    { capturedAgeMs: 3000 },
-    { verdict: 'unverifiable', reason: 'transport_loss' }
-  ])('does not reset from invalid or unverifiable observation %j', async (patch) => {
-    const f = fixture('paired', {
-      foregroundProcess: 'zsh',
-      hasChildProcesses: false,
-      foregroundObservation: observation(patch as Partial<TerminalForegroundObservation>)
-    })
-    f.tracker.onCommandFinished()
-    await vi.advanceTimersByTimeAsync(10_000)
-    expect(f.reset).not.toHaveBeenCalled()
-    f.tracker.dispose()
-  })
+  const invalidObservations: TerminalForegroundObservation[] = [
+    observation({ ptyId: 'other' }),
+    observation({ ptyIncarnationId: 'old' }),
+    observation({ capturedAgeMs: 3000 }),
+    { ...observation(), verdict: 'unverifiable', reason: 'transport_loss' }
+  ]
+  it.each(invalidObservations)(
+    'does not reset from invalid or unverifiable observation %j',
+    async (foregroundObservation) => {
+      const f = fixture('paired', {
+        foregroundProcess: 'zsh',
+        hasChildProcesses: false,
+        foregroundObservation
+      })
+      f.tracker.onCommandFinished()
+      await vi.advanceTimersByTimeAsync(10_000)
+      expect(f.reset).not.toHaveBeenCalled()
+      f.tracker.dispose()
+    }
+  )
 
   it('does not turn an old host null name into shell proof', async () => {
     const f = fixture('paired', { foregroundProcess: null, hasChildProcesses: false })

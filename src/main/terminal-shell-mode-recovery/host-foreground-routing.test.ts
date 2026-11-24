@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { OrcaRuntimeService } from '../../../main/runtime/orca-runtime'
+import { OrcaRuntimeService } from '../runtime/orca-runtime'
 
 describe('foreground-only inspection keeps host and caller identities', () => {
   it.each(['host-pty', 'ssh:target@@relay-pty'])(

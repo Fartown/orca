@@ -2,6 +2,7 @@ import { DurableChatComposer } from '../../native-chat-view-recovery/durable-cha
 import * as z from 'zod'
 import { TERMINAL_KITTY_FILE_MAX_BYTES } from '../../terminal/images/terminal-kitty-file'
 import { OptionalFiniteNumber, OptionalString, requiredString } from '../rpc-param-primitives'
+import { TERMINAL_FOREGROUND_INSPECTION_PARAMS } from '../../terminal-shell-mode-recovery/foreground-inspection-params'
 import { isTuiAgent } from '../../agent-launch/catalog/tui-agent-config'
 import { SpawnIntentParam } from './agent-session-params'
 import {
@@ -83,11 +84,7 @@ export const TerminalReveal = z.object({
 })
 
 /** Only inspectProcess accepts the decision-bearing process scan; sibling handle methods must not acquire this option. */
-export const TerminalInspectProcess = TerminalHandle.extend({
-  // Additive request member understood by newer hosts; legacy hosts safely ignore it.
-  scanChildProcesses: z.boolean().optional(),
-  foregroundOnly: z.boolean().optional()
-})
+export const TerminalInspectProcess = TerminalHandle.extend(TERMINAL_FOREGROUND_INSPECTION_PARAMS)
 
 export const TerminalListParams = z.object({
   worktree: OptionalString,

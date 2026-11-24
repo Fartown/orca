@@ -34,7 +34,11 @@ function normalizeInspectionResult(
     )
   }
   // Old-host compatibility process names are not observed evidence; exclude them from remote identity.
-  if (remote && result.foregroundProcessEvidence === undefined && result.foregroundObservation === undefined) {
+  if (
+    remote &&
+    result.foregroundProcessEvidence === undefined &&
+    result.foregroundObservation === undefined
+  ) {
     return clientOnlyUnverifiableInspection('old_host')
   }
   // Normalize removed booleans from older main/preload pairs during upgrades.
@@ -81,7 +85,7 @@ async function inspectCurrentRuntimeTerminalProcess(
     | {
         expectedIncarnationId?: string
         scanChildProcesses?: boolean
-    foregroundOnly?: boolean
+        foregroundOnly?: boolean
         steadyState?: boolean
         jobMembershipOnly?: boolean
       }

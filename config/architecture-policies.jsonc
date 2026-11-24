@@ -15,11 +15,13 @@
           "type": "change-scope",
           "comparison": "worktree",
           "whenChanged": [
+            "src/main/terminal-shell-mode-recovery/**",
             "src/shared/terminal-shell-mode-recovery/**",
             "src/renderer/src/terminal-shell-mode-recovery/**",
             "docs/issue/终端退出模式恢复/**"
           ],
           "allowedPaths": [
+            "src/main/terminal-shell-mode-recovery/**",
             "src/shared/rpc-contract/terminal/terminal-unary-params.ts",
             "src/main/runtime/rpc/methods/terminal/terminal-query-methods.ts",
             "src/main/runtime/session-tabs/chat/structured-session-tab-restoration.ts",
@@ -420,6 +422,7 @@
             "src/preload/api/terminal/pty-bridge-stream-and-serialization.ts",
             "src/main/ipc/pty/ipc/inspect.ts",
 
+            "src/main/terminal-shell-mode-recovery/**",
             "src/shared/terminal-shell-mode-recovery/**",
             "src/renderer/src/terminal-shell-mode-recovery/**",
             "docs/issue/终端退出模式恢复/**",

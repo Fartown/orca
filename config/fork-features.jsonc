@@ -29,6 +29,7 @@
       "journal": "docs/issue/终端退出模式恢复/journal.md",
       "policyId": "terminal-shell-mode-recovery",
       "ownedPaths": [
+        "src/main/terminal-shell-mode-recovery/**",
         "src/shared/terminal-shell-mode-recovery/**",
         "src/renderer/src/terminal-shell-mode-recovery/**",
         "docs/issue/终端退出模式恢复/**"
@@ -41,7 +42,7 @@
       "seams": [
         {
           "file": "src/shared/rpc-contract/terminal/terminal-unary-params.ts",
-          "mustContain": "foregroundOnly",
+          "mustContain": "TERMINAL_FOREGROUND_INSPECTION_PARAMS",
           "why": "Carry the additive host foreground-only request and its original terminal identity."
         },
         {
@@ -98,7 +99,7 @@
       ],
       "tests": ["src/renderer/src/terminal-shell-mode-recovery/host-shell-return.test.ts"],
       "checks": [
-        "ORCA_BACKGROUND_LAUNCH=1 pnpm exec vitest run --config config/vitest.config.ts src/shared/terminal-shell-mode-recovery src/renderer/src/terminal-shell-mode-recovery src/renderer/src/components/terminal-pane/pty-connection/tests/pty-connection-foreground-agent.test.ts src/renderer/src/components/terminal-pane/pane-foreground-agent-contact.test.ts src/renderer/src/runtime/runtime-terminal-inspection-contact.test.ts --maxWorkers=2"
+        "ORCA_BACKGROUND_LAUNCH=1 pnpm exec vitest run --config config/vitest.config.ts src/main/terminal-shell-mode-recovery src/shared/terminal-shell-mode-recovery src/renderer/src/terminal-shell-mode-recovery src/renderer/src/components/terminal-pane/pty-connection/tests/pty-connection-foreground-agent.test.ts src/renderer/src/components/terminal-pane/pane-foreground-agent-contact.test.ts src/renderer/src/runtime/runtime-terminal-inspection-contact.test.ts --maxWorkers=2"
       ]
     },
     {
