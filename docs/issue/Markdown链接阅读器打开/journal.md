@@ -1,7 +1,7 @@
 ---
 title: Markdown链接阅读器打开
 document_type: journal
-status: testing
+status: done
 external_ids:
   - 'Fartown/orca#154'
 created: 2026-11-24
@@ -12,14 +12,14 @@ updated: 2026-11-24
 
 ## 1. 关键文档链接
 
-| 类型     | 文档                                            | 状态         | 说明                                               |
-| -------- | ----------------------------------------------- | ------------ | -------------------------------------------------- |
-| 需求     | [需求](requirements/requirement.md)             | ready        | REQ-1541 至 REQ-1544                               |
-| 交互     | -                                               | not-required | 不加界面，只改打开时的模式                         |
-| 调研     | -                                               | not-required | 原因已在 Issue #154 中写明                         |
-| 方案     | -                                               | not-required | 复用默认模式设置和已有的跳行逻辑                   |
-| 测试执行 | [本地与SSH](tests/runs/2026-11-24-本地与SSH.md) | completed    | 本地、SSH 真机通过；手机端单测通过，真机待合入后验 |
-| 测试用例 | [链接打开模式](tests/cases/链接打开模式.md)     | ready        | 本地、SSH 和手机                                   |
+| 类型     | 文档                                            | 状态         | 说明                              |
+| -------- | ----------------------------------------------- | ------------ | --------------------------------- |
+| 需求     | [需求](requirements/requirement.md)             | ready        | REQ-1541 至 REQ-1544              |
+| 交互     | -                                               | not-required | 不加界面，只改打开时的模式        |
+| 调研     | -                                               | not-required | 原因已在 Issue #154 中写明        |
+| 方案     | -                                               | not-required | 复用默认模式设置和已有的跳行逻辑  |
+| 测试执行 | [本地与SSH](tests/runs/2026-11-24-本地与SSH.md) | completed    | 桌面与手机真机，本地与 SSH 均通过 |
+| 测试用例 | [链接打开模式](tests/cases/链接打开模式.md)     | ready        | 本地、SSH 和手机                  |
 
 ## 2. 决策点记录
 
@@ -36,6 +36,15 @@ updated: 2026-11-24
 - 机器归属：模式是客户端渲染状态，默认模式是客户端设置。文件和 stat 都在原执行主机上，本地在本机，SSH 在 SSH 主机，沿用现有 RPC。没有新增配置、服务、端口、环境变量或定时器。
 
 ## 3. 开发记录
+
+### 2026-11-24 合入与手机真机验证（done）
+
+- 本轮目标：合入 PR #155，用合入后的集成包完成手机真机验证（REQ-1544）。
+- 完成内容：PR #155 已合入 `08115f3c3d`，Issue #154 已关闭。集成包 `integration-45327747119-08115f3c3ddb`（1.4.214-preview.98）构建成功。云真机上安装这个 APK，配对隔离的桌面主机，在本机和 SSH 工作区里点终端输出的 `docs/guide.md:20`：两边都先显示预览模式，切到源码后第 20 行在视口顶部。TC-1544 通过。
+- 代码或文档变更：本记录；测试执行补了手机行。合入前还修了 `fork/integration` 上 11-21 同步留下的三处问题，各自单独提交：`16cd5aa8be` local-tasks 的 sqlite 基线、`4ce163c46d` 终端恢复的布局写入基线、`69184378fe` session-names 通知夹具补 `emit`。另外，需求索引必须在没有未跟踪文档的工作区里生成，否则 CI 会报索引过期。
+- 验证证据：`/Users/bytedance/dev/orca/.docs/markdown-link-reader-ui-validation/2026-11-24/mobile/README.md`，关键截图 `evidence/b2-local-after-tap.png`、`b3-local-source.png`、`d3-ssh-after-tap.png`、`d4-ssh-source.png`。PR #155 的 CI 46 项通过。
+- 未解决问题：验证时按坐标点击误入了 SSH 主机上的 Claude 新建入口，起了一次真实 `claude`。它停在信任目录提示，没有做任何选择，随即被结束；该进程的插件目录在隔离的远端 HOME 下。`~/.claude` 的几个缓存文件时间有变化，但同期你自己的多个 Claude 会话也在运行，无法确定来源。
+- 下一步：无。
 
 ### 2026-11-24 真机验证（testing）
 
