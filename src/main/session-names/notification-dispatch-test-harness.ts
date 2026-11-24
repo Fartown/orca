@@ -17,7 +17,9 @@ export const notificationCtorMock: NotificationSpy = vi.fn(function () {
     close: vi.fn(),
     on: notificationOnMock,
     once: notificationOnceMock,
-    removeListener: vi.fn()
+    removeListener: vi.fn(),
+    // Upstream's Linux show path reports an unanswered service check through emit('failed').
+    emit: vi.fn()
   }
 })
 export const notificationIsSupportedMock = vi.fn(() => true)
