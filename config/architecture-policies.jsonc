@@ -1074,7 +1074,14 @@
             "src/renderer/src/components/sidebar/workspace-card/details/worktree-card-details-items.tsx",
             "src/renderer/src/lib/workspace/creation/worktree-creation-background-mount.ts",
             "mobile/src/session/use-session-route-request.ts",
-            "src/shared/plugins/workers/plugin-host-api-workspace-context.ts"
+            "src/shared/plugins/workers/plugin-host-api-workspace-context.ts",
+            "src/renderer/src/markdown-link-reader/**",
+            "mobile/src/markdown-link-reader/**",
+            "docs/issue/Markdown链接阅读器打开/**",
+            "src/renderer/src/components/terminal-pane/links/files/terminal-file-link-editor-open.ts",
+            "src/renderer/src/store/slices/editor/markdown/markdown-link-action.ts",
+            "src/renderer/src/components/editor/markdown-preview/links/markdown-preview-link-actions.ts",
+            "mobile/src/files/markdown/MobileMarkdownPreviewModeBar.tsx"
           ],
           "message": "Branch changes an upstream path that no fork feature owns or registers as a seam; extend config/fork-features.jsonc and this allowlist, or move the change into a feature-owned path."
         }
@@ -2383,6 +2390,36 @@
             "docs/issue/README.md"
           ],
           "message": "Change is outside Markdown review anchor recovery."
+        }
+      ]
+    },
+    {
+      "id": "markdown-link-reader",
+      "description": "A line-numbered link to a Markdown file keeps the tab in the reader; the decision lives in its own module and reaches the link paths only through registered seams (REQ-1541～REQ-1544).",
+      "rules": [
+        {
+          "id": "markdown-link-reader-worktree-scope",
+          "type": "change-scope",
+          "comparison": "worktree",
+          "whenChanged": [
+            "src/renderer/src/markdown-link-reader/**",
+            "mobile/src/markdown-link-reader/**",
+            "docs/issue/Markdown链接阅读器打开/**"
+          ],
+          "allowedPaths": [
+            "src/renderer/src/markdown-link-reader/**",
+            "mobile/src/markdown-link-reader/**",
+            "docs/issue/Markdown链接阅读器打开/**",
+            "src/renderer/src/components/terminal-pane/links/files/terminal-file-link-editor-open.ts",
+            "src/renderer/src/store/slices/editor/markdown/markdown-link-action.ts",
+            "src/renderer/src/components/editor/markdown-preview/links/markdown-preview-link-actions.ts",
+            "mobile/src/files/markdown/MobileMarkdownPreviewModeBar.tsx",
+            ".gitignore",
+            "config/fork-features.jsonc",
+            "config/architecture-policies.jsonc",
+            "docs/issue/**"
+          ],
+          "message": "Change is outside the Markdown link reader feature and its journal."
         }
       ]
     }
