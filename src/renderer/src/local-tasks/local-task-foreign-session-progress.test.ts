@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
-import type { AgentStatusEntry } from '../../../shared/agent-status-types'
-import type { RuntimeEnvironmentStatus } from '../../../shared/runtime-host-status'
+import { acceptedAgentStatuses } from '@/store/slices/agent-status/status-ownership/accepted-agent-statuses'
+import type { AgentStatusEntry } from '../../../shared/agent-status/contracts/agent-status-types'
+import type { RuntimeEnvironmentStatus } from '../../../shared/remote-runtime/host-status/runtime-host-status'
 import type {
   LocalTaskSessionLink,
   LocalTaskSessionProgress
@@ -72,7 +73,7 @@ function state(entry: AgentStatusEntry = row()): LocalTaskForeignSessionProgress
     runtimeStatusByEnvironmentId: new Map([['mini', runtime()]]),
     sshStateByEnvironment: new Map(),
     sshConnectionStates: new Map(),
-    agentStatusByPaneKey: { [entry.paneKey]: entry },
+    agentStatusByPaneKey: acceptedAgentStatuses([[entry.paneKey, entry]]),
     unifiedTabsByWorktree: {},
     acknowledgedAgentsByPaneKey: {}
   }
@@ -91,19 +92,28 @@ function previous(): LocalTaskSessionProgress {
 describe('foreign source progress projection', () => {
   it('reads the source mirror rather than a same-named task-owner local hook', () => {
     const app = state()
-    app.agentStatusByPaneKey[`source-tab:${LEAF}`] = row({
-      paneKey: `source-tab:${LEAF}`,
-      connectionId: null,
-      state: 'done',
-      lastAssistantMessage: 'Wrong local process'
-    })
+    app.agentStatusByPaneKey = acceptedAgentStatuses([
+      ...app.agentStatusByPaneKey,
+      [
+        `source-tab:${LEAF}`,
+        row({
+          paneKey: `source-tab:${LEAF}`,
+          connectionId: null,
+          state: 'done',
+          lastAssistantMessage: 'Wrong local process'
+        })
+      ]
+    ])
     expect(projectLocalTaskForeignSessionProgress(app, SELF, link, { now: NOW })).toMatchObject({
       taskSessionId: link.id,
       state: 'working',
       lastMessage: 'Source progress',
       unread: false
     })
-    app.agentStatusByPaneKey[PANE] = row({ connectionId: 'other-environment' })
+    app.agentStatusByPaneKey = acceptedAgentStatuses([
+      ...app.agentStatusByPaneKey,
+      [PANE, row({ connectionId: 'other-environment' })]
+    ])
     expect(projectLocalTaskForeignSessionProgress(app, SELF, link, { now: NOW })).toMatchObject({
       state: 'unknown'
     })
@@ -129,11 +139,17 @@ describe('foreign source progress projection', () => {
     expect(projectLocalTaskForeignSessionProgress(app, SELF, link, { now: NOW })?.state).toBe(
       'working'
     )
-    app.agentStatusByPaneKey[PANE] = row({ connectionId: 'other-environment' })
+    app.agentStatusByPaneKey = acceptedAgentStatuses([
+      ...app.agentStatusByPaneKey,
+      [PANE, row({ connectionId: 'other-environment' })]
+    ])
     expect(projectLocalTaskForeignSessionProgress(app, SELF, link, { now: NOW })?.state).toBe(
       'unknown'
     )
-    app.agentStatusByPaneKey[PANE] = row({ connectionId: null })
+    app.agentStatusByPaneKey = acceptedAgentStatuses([
+      ...app.agentStatusByPaneKey,
+      [PANE, row({ connectionId: null })]
+    ])
     app.unifiedTabsByWorktree[link.worktreeId!][0].executionHostId = 'runtime:other'
     expect(projectLocalTaskForeignSessionProgress(app, SELF, link, { now: NOW })?.state).toBe(
       'unknown'
@@ -162,7 +178,7 @@ describe('foreign source progress projection', () => {
       stateSince: null,
       unread: false
     })
-    app.runtimeStatusByEnvironmentId.clear()
+    app.runtimeStatusByEnvironmentId = new Map()
     expect(projectLocalTaskForeignSessionProgress(app, SELF, link, { now: NOW })?.state).toBe(
       'unverifiable'
     )
@@ -182,11 +198,17 @@ describe('foreign source progress projection', () => {
       projectLocalTaskForeignSessionProgress(app, SELF, link, { now: NOW, terminalLive: false })
         ?.state
     ).toBe('idle')
-    app.agentStatusByPaneKey[PANE] = row({
-      updatedAt: old,
-      evidenceObservedAt: old,
-      mirroredEvidenceReceivedAt: NOW
-    })
+    app.agentStatusByPaneKey = acceptedAgentStatuses([
+      ...app.agentStatusByPaneKey,
+      [
+        PANE,
+        row({
+          updatedAt: old,
+          evidenceObservedAt: old,
+          mirroredEvidenceReceivedAt: NOW
+        })
+      ]
+    ])
     expect(projectLocalTaskForeignSessionProgress(app, SELF, link, { now: NOW })?.state).toBe(
       'working'
     )
@@ -211,7 +233,10 @@ describe('foreign source progress projection', () => {
     expect(projectLocalTaskForeignSessionProgress(app, SELF, link, { now: NOW })?.unread).toBe(
       false
     )
-    app.agentStatusByPaneKey[PANE] = row({ state: 'done', sessionBoundary: true })
+    app.agentStatusByPaneKey = acceptedAgentStatuses([
+      ...app.agentStatusByPaneKey,
+      [PANE, row({ state: 'done', sessionBoundary: true })]
+    ])
     expect(projectLocalTaskForeignSessionProgress(app, SELF, link, { now: NOW })?.unread).toBe(
       false
     )
@@ -252,7 +277,7 @@ describe('foreign source progress projection', () => {
 
   it('does not turn disappearance or an ordinary library link into foreign exit evidence', () => {
     const app = state()
-    app.agentStatusByPaneKey = {}
+    app.agentStatusByPaneKey = acceptedAgentStatuses()
     expect(
       projectLocalTaskForeignSessionProgress(app, SELF, link, { now: NOW, previous: previous() })
     ).toMatchObject({

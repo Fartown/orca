@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { ARTIFACT_SHARING_DISABLED_CODE } from '../artifact-sharing-gate'
+import { ARTIFACT_SHARING_DISABLED_CODE } from '../artifacts/artifact-sharing-gate'
 
 export const ARTIFACT_SHARE_ERROR_CODES = {
   sharingDisabled: ARTIFACT_SHARING_DISABLED_CODE,

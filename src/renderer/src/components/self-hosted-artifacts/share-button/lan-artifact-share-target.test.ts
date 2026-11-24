@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { toSshExecutionHostId } from '../../../../../shared/execution-host'
-import type { EditorFileOperationProvenance } from '@/lib/editor-file-operation-owner'
-import type { WorktreeOperationRoute } from '@/lib/worktree-operation-route'
+import { toSshExecutionHostId } from '../../../../../shared/execution-host/execution-host'
+import type { EditorFileOperationProvenance } from '@/lib/editor/file-operations/editor-file-operation-provenance'
+import type { WorktreeOperationRoute } from '@/lib/workspace/ownership/worktree-operation-route'
 import {
   deriveLanArtifactShareRoot,
   resolveDocPreviewShareTarget,

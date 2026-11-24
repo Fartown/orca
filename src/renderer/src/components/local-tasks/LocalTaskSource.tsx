@@ -1,7 +1,7 @@
 import { ListTodo } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { translate } from '@/i18n/i18n'
-import { cn } from '@/lib/utils'
+import { cn } from '@/lib/class-names'
 import { useLocalTasksDomain } from '@/local-tasks/local-tasks-domain-store'
 import { useLocalTaskPage } from '@/local-tasks/local-task-page-store'
 import { activateLocalTaskSource } from '@/local-tasks/local-task-source-activation'

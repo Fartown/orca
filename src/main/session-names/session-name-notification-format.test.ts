@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest'
-import { buildNotificationOptions } from '../ipc/notification-options'
+import { buildNotificationOptions } from '../ipc/notifications/notification-options'
 
 it.each(['Provider task name', '继续'])(
   'identifies native %s in rich notifications without changing the reply',

@@ -1,16 +1,16 @@
-import '../daemon/mock-descendant-sweep'
+import '../daemon/pty-subprocess/testing/mock-descendant-sweep'
 import { expect, it } from 'vitest'
 import { rmSync } from 'node:fs'
 import type { Socket } from 'node:net'
-import { DaemonPtyAdapter } from '../daemon/daemon-pty-adapter'
-import { getDaemonSocketPath } from '../daemon/daemon-spawner'
+import { DaemonPtyAdapter } from '../daemon/providers/adapter/daemon-pty-adapter'
+import { getDaemonSocketPath } from '../daemon/launch/daemon-spawner'
 import {
   createMockSubprocess,
   startDaemonAdapterHarness,
   waitFor
-} from '../daemon/daemon-pty-adapter-test-harness'
-import { createSideEffectRuntime } from '../runtime/orca-runtime-test-scenario-builders.spec'
-import { syncSinglePty } from '../runtime/orca-runtime-test-fixtures.spec'
+} from '../daemon/providers/adapter/testing/daemon-pty-adapter-test-harness'
+import { createSideEffectRuntime } from '../runtime/construction/test-context/orca-runtime-test-scenario-builders.spec'
+import { syncSinglePty } from '../runtime/construction/test-context/orca-runtime-test-fixtures.spec'
 
 it('keeps legacy daemon snapshots and new echo in one domain through real reconnect sockets', async () => {
   const subprocess = createMockSubprocess()

@@ -1,10 +1,10 @@
-import { z } from 'zod'
-import { LOCAL_EXECUTION_HOST_ID } from '../../../src/shared/execution-host'
-import type { CheckStatus } from '../../../src/shared/github/pull-request-types'
+import * as z from 'zod'
+import { LOCAL_EXECUTION_HOST_ID } from '../../../src/shared/execution-host/execution-host'
+import type { CheckStatus } from '../../../src/shared/github/pull-requests/pull-request-types'
 import type { LocalTaskWorkspaceLink } from '../../../src/shared/local-tasks/local-task-link-types'
 import { localTaskLinkWorkspaceId } from '../../../src/shared/local-tasks/local-task-workspace-match'
 import { getRepoIdFromWorktreeId, worktreeIdsEqual } from '../../../src/shared/worktree/id'
-import { salvagedOptional, salvagingArray } from '../../../src/shared/zod-salvage'
+import { salvagedOptional, salvagingArray } from '../../../src/shared/validation/zod-salvage'
 
 /** What the task's workspace card shows of the host's own row: its review, as the host has it. */
 export type LocalTaskWorkspaceReview = {

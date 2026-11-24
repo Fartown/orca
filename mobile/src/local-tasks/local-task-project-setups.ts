@@ -1,7 +1,10 @@
-import { parseExecutionHostId, type ExecutionHostId } from '../../../src/shared/execution-host'
-import { projectGroupIdFromRepoId } from '../../../src/shared/folder-workspace-worktree'
+import {
+  parseExecutionHostId,
+  type ExecutionHostId
+} from '../../../src/shared/execution-host/execution-host'
+import { projectGroupIdFromRepoId } from '../../../src/shared/folder-workspaces/folder-workspace-worktree'
 import type { LocalTaskProject } from '../../../src/shared/local-tasks/local-task-types'
-import type { ServedProjectSections } from '../worktree/project-sections-operations'
+import type { ServedProjectSections } from '../worktree/project-sections/project-sections-operations'
 import { localTaskOwnerHostId, type LocalTaskEndpoint } from './local-task-endpoint'
 
 /** One Orca project's checkout on the library's host, as the paired host's catalog lists it. */

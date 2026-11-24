@@ -14,12 +14,22 @@
  *     --config tests/playwright.config.ts --project electron-headless --workers=1
  */
 import { existsSync, readFileSync } from 'node:fs'
-import type { ElectronApplication } from '@stablyai/playwright-test'
-import { test, expect } from './helpers/orca-app'
+import { expect, type ElectronApplication } from '@stablyai/playwright-test'
+import { test } from './desktop/electron-fixtures/orca-app'
 import { TEST_REPO_PATH_FILE } from './global-setup'
-import { waitForActiveTerminalManager, waitForPaneCount } from './helpers/terminal'
-import { ensureTerminalVisible, waitForActiveWorktree, waitForSessionReady } from './helpers/store'
-import { attachRepoAndOpenTerminal, createRestartSession } from './helpers/orca-restart'
+import {
+  waitForActiveTerminalManager,
+  waitForPaneCount
+} from './terminal/layout/terminal-pane-operations'
+import {
+  ensureTerminalVisible,
+  waitForActiveWorktree,
+  waitForSessionReady
+} from './desktop/renderer-probes/store'
+import {
+  attachRepoAndOpenTerminal,
+  createRestartSession
+} from './desktop/electron-fixtures/orca-restart'
 
 const PROVIDER_SESSION_ID = 'e2e-hook-silent-resume-session'
 
@@ -112,21 +122,19 @@ test('a hook-silent resumed pane stays findable as its session original pane', a
     // session, because the resumed agent never finished a turn.
     const otherSources = await page.evaluate((providerSessionId) => {
       const state = window.__store?.getState()
-      const namedByStatus = Object.values(state?.agentStatusByPaneKey ?? {}).some(
+      // Upstream #42104 retired finished-agent retention; a done row stays in the status map.
+      const namedByStatus = Array.from(state?.agentStatusByPaneKey.values() ?? []).some(
         (entry) => entry?.providerSession?.id === providerSessionId
-      )
-      const namedByRetained = Object.values(state?.retainedAgentsByPaneKey ?? {}).some(
-        (retained) => retained?.entry?.providerSession?.id === providerSessionId
       )
       const namedBySleeping = Object.values(state?.sleepingAgentSessionsByPaneKey ?? {}).some(
         (record) => record?.providerSession?.id === providerSessionId
       )
-      return { namedByStatus, namedByRetained, namedBySleeping }
+      return { namedByStatus, namedBySleeping }
     }, PROVIDER_SESSION_ID)
     expect(
       otherSources,
       'the pane must be hook-silent, or this test no longer reproduces the accident'
-    ).toEqual({ namedByStatus: false, namedByRetained: false, namedBySleeping: false })
+    ).toEqual({ namedByStatus: false, namedBySleeping: false })
 
     // The pane the finder must return still resolves: same tab, live leaf.
     const paneSurface = await page.evaluate(

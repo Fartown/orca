@@ -1,15 +1,23 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { AiVaultSessionTitlesResult } from '../../../shared/ai-vault-session-title'
+import type { AiVaultSessionTitlesResult } from '../../../shared/ai-vault/contracts/ai-vault-session-title'
 import {
   resolveTerminalTabTitle,
   resolveUnifiedTabLabel
-} from '../../../shared/tab-title-resolution'
-import { fixture, nativeResult, LEAF, SIBLING } from './session-name-binding-test-fixture'
-import { collectAiVaultTitleRequests } from '../lib/ai-vault-tab-title-requests'
-import { aiVaultTitleSyncInputsChanged } from '../lib/ai-vault-tab-title-sync-inputs'
-import { startAiVaultTabTitleSync } from '../lib/ai-vault-tab-title-sync'
+} from '../../../shared/workspace-layout/tab-groups/tab-title-resolution'
+import {
+  fixture,
+  nativeResult,
+  LEAF,
+  SIBLING,
+  titleSyncStore
+} from './session-name-binding-test-fixture'
+import { collectAiVaultTitleRequests } from '../lib/agent-session/history/title-sync/ai-vault-tab-title-requests'
+import { aiVaultTitleSyncInputsChanged } from '../lib/agent-session/history/title-sync/ai-vault-tab-title-sync-inputs'
+import { startAiVaultTabTitleSync } from '../lib/agent-session/history/title-sync/ai-vault-tab-title-sync'
 
-vi.mock('@/runtime/sync-runtime-graph', () => ({ scheduleRuntimeGraphSync: vi.fn() }))
+vi.mock('@/runtime/sync-runtime-graph/graph-sync-scheduler', () => ({
+  scheduleRuntimeGraphSync: vi.fn()
+}))
 const stops: (() => void)[] = []
 afterEach(() => stops.splice(0).forEach((stop) => stop()))
 
@@ -77,8 +85,7 @@ describe('session name binding lifetime', () => {
     )
     stops.push(
       startAiVaultTabTitleSync({
-        getState: store.getState,
-        subscribe: store.subscribe,
+        ...titleSyncStore(store),
         resolveSessionTitles
       })
     )
@@ -97,8 +104,7 @@ describe('session name binding lifetime', () => {
     store.getState().setAiVaultTabTitle('tab', nativeResult('Name of A').titles[0])
     stops.push(
       startAiVaultTabTitleSync({
-        getState: store.getState,
-        subscribe: store.subscribe,
+        ...titleSyncStore(store),
         resolveSessionTitles: async () => ({ titles: [] })
       })
     )
@@ -125,8 +131,7 @@ describe('session name binding lifetime', () => {
     }))
     stops.push(
       startAiVaultTabTitleSync({
-        getState: store.getState,
-        subscribe: store.subscribe,
+        ...titleSyncStore(store),
         resolveSessionTitles: async () => ({ titles: [] })
       })
     )

@@ -4,7 +4,7 @@ import { join } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createLocalFileSink } from '../observability/local-file-sink'
 import { flushActiveSink, setActiveSink } from '../observability/tracer'
-import { createDaemonFileLog } from '../daemon/daemon-file-log'
+import { createDaemonFileLog } from '../daemon/observability/daemon-file-log'
 import { traceDaemonTerminalLaunch } from './daemon-launch-trace'
 import { launchReference } from '../../shared/terminal-launch-diagnostics/launch-evidence'
 import {

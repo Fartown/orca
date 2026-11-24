@@ -120,15 +120,18 @@ describe('terminal launch diagnostic allowlist', () => {
   it('distinguishes renderer observations from authoritative process liveness', () => {
     const input = { agent: 'codex', providerSession: { id: 'same' } }
     const state = {
-      agentStatusByPaneKey: {
-        one: {
-          paneKey: 'tab:leaf',
-          tabId: 'tab',
-          agentType: 'codex',
-          providerSession: { id: 'same' },
-          state: 'working'
-        }
-      },
+      agentStatusByPaneKey: new Map([
+        [
+          'tab:leaf',
+          {
+            paneKey: 'tab:leaf',
+            tabId: 'tab',
+            agentType: 'codex',
+            providerSession: { id: 'same' },
+            state: 'working'
+          }
+        ]
+      ]),
       ptyIdsByTabId: {}
     }
     expect(launchCandidateEvidence(input, state)).toMatchObject({

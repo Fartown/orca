@@ -35,6 +35,15 @@ updated: 2026-11-06
 
 ## 3. 开发记录
 
+### 2026-11-21 上游同步到 fa60d0a566（done）
+
+- 本轮目标：`fork/integration` 从 `e723de1bfd` 合入上游到 `fa60d0a566`（四次合并：`22afb84f6a`、`9c3b42f644`、`d725f407e8`、`31df22fb1a`，冲突都在第一次），保持锚点失效的评论不被隐藏（D-001）。
+- 完成内容：本功能 4 个冲突（UU，含桌面 en/zh 词条表）。上游把富文本评论代码搬到 `editor/rich-markdown/review/`；`rich-markdown-review-note-positioning.ts` 保留 fork 的 `resolveMarkdownReviewAnchorPosition`，没有带入上游新增的 `findLast` 定位；`RichMarkdownReviewNoteLayer.tsx` 以上游为底重放失效标记。两边规则有冲突：上游把落在分隔行或超出文末的评论挂到上一块，fork 标为「原文已变化」且有自有测试锁定，本轮按 fork 规则保留。checks 原来顺带跑的 `rich-markdown-review-rail-blocks`、`rich-markdown-review-note-layout`、`rich-markdown-comment-blocks` 三个上游测试被上游删除（#38037），fork 未改过它们。合并后 e2e 修复提交 `69754a5a3f`：上游的评论写入接口新增归属参数，e2e 写入评论时传本机工作区归属（`authority.endpoint.kind: self`）。
+- 代码或文档变更：`config/fork-features.jsonc` 接缝 3 条换路径（mustContain 不变）；checks 只留自有目录；`dependsOn` 5 条换路径。`tests/e2e/markdown-review-anchor-recovery.spec.ts`。新棘轮基线未登记本功能条目。
+- 验证证据：登记 checks 1 文件 8 项通过（`/Users/bytedance/dev/orca/.docs/upstream-sync/2026-11-20/sync-checks-run3.log`）；冲突解法见 `/Users/bytedance/dev/orca/.docs/upstream-sync/2026-11-20/report-E-files-preview-remote.md`、`phase2-E.tsv`；最终门禁见 `/Users/bytedance/dev/orca/.docs/upstream-sync/2026-11-20/final-gates.log`。真机抽查（`/Users/bytedance/dev/orca/.docs/upstream-sync-ui-validation/2026-11-21/README.md`）未覆盖本功能，本机与 SSH 都没有做；`69754a5a3f` 改过的 e2e 在资料里没有运行记录。
+- 未解决问题：上游与 fork 对「分隔行/文末评论」的处理不同，本轮保 fork，是否改随上游待定；e2e 修改后未见运行结果。
+- 下一步：跑一次 `tests/e2e/markdown-review-anchor-recovery.spec.ts` 确认通过；需要时再定是否采用上游的挂上一块规则。
+
 ### 2026-11-06 实现与验证（done）
 
 - 本轮目标：修复 Issue #79 并完成本地和 SSH 验证。

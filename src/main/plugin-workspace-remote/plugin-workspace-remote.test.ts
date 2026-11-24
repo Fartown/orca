@@ -1,11 +1,14 @@
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
-import { pluginRuntimeDelegate, readPluginWorkspaceChange } from '../plugins/plugin-runtime-binding'
-import { executePluginHostCall } from '../plugins/workers/plugin-host-methods'
-import type { PluginRuntimeDelegate } from '../plugins/workers/plugin-host-service-bindings'
-import { bindPluginHostServices } from '../plugins/workers/plugin-host-service-bindings'
-import type { PluginRuntimeRpc } from '../plugins/workers/plugin-host-workspace-method-bindings'
+import {
+  pluginRuntimeDelegate,
+  readPluginWorkspaceChange
+} from '../plugins/runtime/plugin-runtime-binding'
+import { executePluginHostCall } from '../plugins/workers/host-api/plugin-host-methods'
+import type { PluginRuntimeDelegate } from '../plugins/workers/host-api/plugin-host-service-bindings'
+import { bindPluginHostServices } from '../plugins/workers/host-api/plugin-host-service-bindings'
+import type { PluginRuntimeRpc } from '../plugins/workers/host-api/plugin-host-runtime-call'
 
 const RECORDED = {
   remoteName: 'origin',
@@ -25,7 +28,8 @@ function runtime(repos: { id: string; gitRemoteIdentity: typeof RECORDED | null 
     listTerminals: vi.fn(async () => ({ terminals: [] })),
     sendTerminal: vi.fn(),
     dispatchPluginNotification: vi.fn(),
-    listVisibleRepos: () => repos
+    listVisibleRepos: () => repos,
+    listAgentTasksByPaneKey: () => ({})
   }
 }
 
@@ -63,10 +67,25 @@ describe('plugin workspace remote', () => {
 
     await expect(readContext(delegate)).resolves.toEqual({
       ok: true,
-      value: { branch: 'feature/review', displayName: 'app', terminals: [], remote: PUBLISHED }
+      value: {
+        workspaceId: 'repo-1::/srv/app',
+        branch: 'feature/review',
+        displayName: 'app',
+        terminals: [],
+        remote: PUBLISHED
+      }
     })
     await expect(readPluginWorkspaceChange(delegate)).resolves.toEqual({
-      context: { branch: 'feature/review', displayName: 'app', terminals: [], remote: PUBLISHED }
+      change: {
+        context: {
+          workspaceId: 'repo-1::/srv/app',
+          branch: 'feature/review',
+          displayName: 'app',
+          terminals: [],
+          remote: PUBLISHED
+        }
+      },
+      worktreeId: 'repo-1::/srv/app'
     })
   })
 
@@ -77,7 +96,12 @@ describe('plugin workspace remote', () => {
     )
     await expect(readContext(delegate)).resolves.toEqual({
       ok: true,
-      value: { branch: 'feature/review', displayName: 'app', terminals: [] }
+      value: {
+        workspaceId: 'repo-1::/srv/app',
+        branch: 'feature/review',
+        displayName: 'app',
+        terminals: []
+      }
     })
   })
 

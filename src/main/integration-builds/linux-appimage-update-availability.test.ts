@@ -4,8 +4,12 @@ const mock = vi.hoisted(() => ({
   identity: vi.fn<() => { appImagePath: string } | null>(),
   packageType: vi.fn<() => string>()
 }))
-vi.mock('../appimage-runtime-identity', () => ({ resolveAppImageRuntimeIdentity: mock.identity }))
-vi.mock('../linux-update-package-type', () => ({ getLinuxPackageType: mock.packageType }))
+vi.mock('../updater/linux-package/appimage-runtime-identity', () => ({
+  resolveAppImageRuntimeIdentity: mock.identity
+}))
+vi.mock('../updater/linux-package/linux-update-package-type', () => ({
+  getLinuxPackageType: mock.packageType
+}))
 import { linuxAppImageUpdateUnavailableMessage } from './linux-appimage-update-availability'
 
 const platform = Object.getOwnPropertyDescriptor(process, 'platform')

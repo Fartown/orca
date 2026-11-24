@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
-import { parseExecutionHostId } from '../../../src/shared/execution-host'
-import { sshRepoStateRead } from '../tasks/mobile-workspace-source-operations'
-import type { RpcClient } from '../transport/rpc-client'
+import { parseExecutionHostId } from '../../../src/shared/execution-host/execution-host'
+import { sshRepoStateRead } from '../new-workspace/creation/mobile-workspace-source-operations'
+import type { RpcClient } from '../transport/rpc/rpc-client-contract'
 import type { LocalTaskEndpoint } from './local-task-endpoint'
 
 export type LocalTaskHostContact =

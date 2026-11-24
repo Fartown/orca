@@ -1,9 +1,9 @@
 import { afterEach, expect, it, vi } from 'vitest'
-import { createTestStore } from '@/store/slices/store-test-helpers'
+import { createTestStore } from '@/store/testing/app-store-test-fixture'
 import type { LocalTask } from '../../../shared/local-tasks/local-task-types'
 import type { LocalTaskLinks } from '../../../shared/local-tasks/local-task-link-types'
-import type { ProjectHostSetup } from '../../../shared/project-types'
-import type { Repo } from '../../../shared/repo-types'
+import type { ProjectHostSetup } from '../../../shared/project/project-types'
+import type { Repo } from '../../../shared/repository/repo-types'
 import { localTaskDispatchCandidates } from './local-task-dispatch-candidates'
 
 const remoteRepo: Repo = {

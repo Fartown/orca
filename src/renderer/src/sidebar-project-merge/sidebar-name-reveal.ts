@@ -1,9 +1,10 @@
 import { useMemo } from 'react'
+import { useAppStore } from '@/store'
 import {
   buildProjectGroupingIndex,
   type ProjectSectionModel
-} from '../../../shared/project-section-grouping'
-import type { Repo } from '../../../shared/repo-types'
+} from '../../../shared/sidebar-list/sections/project-section-grouping'
+import type { Repo } from '../../../shared/repository/repo-types'
 
 export function resolveSidebarProjectNameRevealKey(
   nativeKey: string,
@@ -23,6 +24,19 @@ export function resolveSidebarProjectNameRevealKey(
   return nativeKey
 }
 
+/** A retargeted reveal keeps the store's request, so currency checks and clears still match it. */
+export type SidebarNameReveal<T> = T & { retargetedFrom?: T }
+
+/** The request the store holds for a possibly retargeted reveal. */
+export function sidebarNameRevealSource<T>(reveal: SidebarNameReveal<T> | null): T | null {
+  return reveal?.retargetedFrom ?? reveal
+}
+
+/** Whether `reveal` is still the sidebar row request the store holds. */
+export function isStoredSidebarReveal(reveal: unknown): boolean {
+  return reveal !== null && useAppStore.getState().pendingRevealSidebarRow === reveal
+}
+
 export function resolveSidebarNameReveal<T extends { rowKey: string }>(
   pending: T | null,
   args: {
@@ -30,7 +44,7 @@ export function resolveSidebarNameReveal<T extends { rowKey: string }>(
     repoMap: Map<string, Repo>
     model?: ProjectSectionModel
   }
-): T | null {
+): SidebarNameReveal<T> | null {
   if (!pending) {
     return null
   }
@@ -40,7 +54,7 @@ export function resolveSidebarNameReveal<T extends { rowKey: string }>(
     args.repoMap,
     args.model
   )
-  return rowKey === pending.rowKey ? pending : { ...pending, rowKey }
+  return rowKey === pending.rowKey ? pending : { ...pending, rowKey, retargetedFrom: pending }
 }
 
 /** The pending sidebar row reveal, retargeted to the displayed name group that renders it. */
@@ -49,7 +63,7 @@ export function useSidebarNameReveal<T extends { rowKey: string }>(args: {
   occurrencePlan?: { bySection: ReadonlyMap<string, unknown> }
   repoMap: Map<string, Repo>
   projectGrouping?: ProjectSectionModel
-}): T | null {
+}): SidebarNameReveal<T> | null {
   const { pendingRevealSidebarRow, occurrencePlan, repoMap, projectGrouping } = args
   return useMemo(
     () =>

@@ -34,6 +34,15 @@ updated: 2026-10-30
 
 ## 3. 开发记录
 
+### 2026-11-21 上游同步到 fa60d0a566（testing）
+
+- 本轮目标：`fork/integration` 从 `e723de1bfd` 合入上游到 `fa60d0a566`（四次合并：`22afb84f6a`、`9c3b42f644`、`d725f407e8`、`31df22fb1a`），保持恢复占位只按实际内容创建、按在线主机目录收敛。
+- 完成内容：本功能没有合并冲突。上游把 `workspace-terminal-hydration.ts` 搬到 `store/terminals/hydration/`，接缝内容原样在；`workspace-record-selectors.ts` 被上游拆走，接缝文件 `all-host-repo-catalog-actions.ts`、`runtime-repo-catalog-actions.ts` 里 `selectWorktreesByRepo` 的导入改到 `../workspaces/catalog/workspace-record-fields`（文件位置与 mustContain 不变）。checks 原来顺带跑的 5 个上游测试（`workspace-terminal-placeholders`、`workspace-session-host-persistence`、`workspace-session-ssh-partition-ownership`、`repos-all-hosts`、`repos-catalog-reconciliation`）被上游删除（#41057、#38845、#39451），fork 从未改过它们，checks 只留功能自有目录。
+- 代码或文档变更：`config/fork-features.jsonc` 接缝 1 条换路径；checks 去掉上述 5 个已删测试路径；`dependsOn` 4 条换路径，`workspace-record-selectors.ts` 换成 `src/renderer/src/store/workspaces/catalog/workspace-record-fields.ts`。合并后没有本功能的单独修复提交。新棘轮基线未登记本功能条目。
+- 验证证据：登记 checks 2 文件 7 项通过（`/Users/bytedance/dev/orca/.docs/upstream-sync/2026-11-20/sync-checks-run3.log`）；登记改动依据见 `/Users/bytedance/dev/orca/.docs/upstream-sync/2026-11-20/phase2-F.tsv`、`decisions.tsv`；最终门禁见 `/Users/bytedance/dev/orca/.docs/upstream-sync/2026-11-20/final-gates.log`。真机抽查（`/Users/bytedance/dev/orca/.docs/upstream-sync-ui-validation/2026-11-21/README.md`）未覆盖本功能，本机与 SSH 都没有做。
+- 未解决问题：checks 少了 5 个上游测试后，本功能只剩自有目录 7 项单测守护；同步后的构建没有做本机或 SSH 恢复占位的真机复验。
+- 下一步：下次真机回归时按「恢复与目录」用例补本机与 SSH 各一轮。
+
 ### 2026-10-30 实现与验收（testing）
 
 - 本轮目标：阻止历史记录复活占位，完成主机范围收敛和数据保留验证。

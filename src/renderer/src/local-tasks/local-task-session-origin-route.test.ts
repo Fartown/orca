@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { UNRESOLVED_OWNER_HOST_ID } from '../../../shared/execution-host'
-import type { RuntimeEnvironmentStatus } from '../../../shared/runtime-host-status'
+import { UNRESOLVED_OWNER_HOST_ID } from '../../../shared/execution-host/execution-host'
+import type { RuntimeEnvironmentStatus } from '../../../shared/remote-runtime/host-status/runtime-host-status'
 import type { LocalTaskSessionLink } from '../../../shared/local-tasks/local-task-link-types'
 import type { LocalTaskSessionExecutionOrigin } from '../../../shared/local-tasks/local-task-session-origin'
 import {

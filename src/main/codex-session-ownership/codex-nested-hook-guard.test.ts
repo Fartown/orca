@@ -4,7 +4,7 @@ import { mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { runProcess } from '@orca/process-host'
-import { getManagedScript } from '../codex/codex-hook-script'
+import { getManagedScript } from '../codex/hooks/definitions/codex-hook-script'
 
 describe.skipIf(process.platform === 'win32')('Codex nested hook delivery', () => {
   let dir: string

@@ -3,15 +3,15 @@ import { toast } from 'sonner'
 import { translate } from '@/i18n/i18n'
 import { useAppStore } from '@/store'
 import type { AppState } from '@/store/types'
-import { queueHookCommandsForFirstWorktreeTab } from '@/lib/hook-command-delayed-delivery'
-import { getExecutionHostIdForWorktree } from '@/lib/worktree-runtime-owner'
+import { queueHookCommandsForFirstWorktreeTab } from '@/lib/workspace/creation/setup/hook-command-delayed-delivery'
+import { getExecutionHostIdForWorktree } from '@/lib/workspace/ownership/worktree-runtime-owner'
 import {
   getRepoExecutionHostId,
   normalizeExecutionHostId,
   type ExecutionHostId
-} from '../../../shared/execution-host'
+} from '../../../shared/execution-host/execution-host'
 import { getRepoIdFromWorktreeId } from '../../../shared/worktree/id'
-import type { TuiAgent } from '../../../shared/tui-agent'
+import type { TuiAgent } from '../../../shared/agent-launch/catalog/tui-agent'
 import { suggestLocalTaskWorkspaceName } from '../../../shared/local-tasks/local-task-model'
 import { localTaskLaunchAgentTabId } from './local-task-launch-agent-tab'
 import type { LocalTask, LocalTaskProject } from '../../../shared/local-tasks/local-task-types'

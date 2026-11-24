@@ -1,20 +1,21 @@
 // @vitest-environment happy-dom
 import { act, cleanup, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
-import { makeTerminalTab, makeWorktree } from '@/store/slices/worktrees-slice-test-fixtures'
+import { makeTerminalTab } from '@/store/terminals/testing/terminal-row.test-fixture'
+import { makeWorktree } from '@/store/slices/worktrees/worktree.test-fixture'
 import type { LocalTaskSessionLink } from '../../../../shared/local-tasks/local-task-link-types'
 import type { LocalTask } from '../../../../shared/local-tasks/local-task-types'
-import { toWebTerminalSurfaceTabId } from '../../../../shared/terminal-surface-id'
+import { toWebTerminalSurfaceTabId } from '../../../../shared/workspace-layout/terminal-surface-id'
 
 const requestMount = vi.hoisted(() => vi.fn())
-vi.mock('@/components/terminal/background-terminal-worktree-mount', () => ({
+vi.mock('@/components/terminal/workspace-mounting/background-terminal-worktree-mount', () => ({
   requestBackgroundTerminalWorktreeMount: requestMount
 }))
 vi.mock('@/local-tasks/local-task-host-contact', () => ({
   useLocalTaskHostInContact: () => true,
   isLocalTaskHostInContact: () => true
 }))
-vi.mock('@/components/activity/activity-terminal-portal-status', () => ({
+vi.mock('@/components/activity/terminal-portal/activity-terminal-portal-status', () => ({
   useActivityTerminalPortalStatus: () => 'loading'
 }))
 vi.mock('@/components/native-chat/NativeChatView', () => ({ default: () => null }))

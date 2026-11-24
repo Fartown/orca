@@ -76,3 +76,12 @@ updated: 2026-10-23
 - 验证证据：`tab-bar`、`terminal-pane`、i18n 与两个功能目录共 6457 用例通过，反向对照失败；fork 功能、fork 文档、架构策略、三项本地化门禁通过；本机与 SSH 真机标签右键为「切到聊天视图 ⌘⇧J」，本机另有「在新聊天中接管」，见[测试记录](tests/runs/2026-10-23-本机与SSH真机验证.md)。
 - 未解决问题：SSH 夹具首次连接失败一次，重跑通过；切回终端的标签菜单项仍是上游文案「Continue with Terminal Agent」（中文沿用上游翻译），未纳入本次改名。
 - 下一步：推送 PR #65，等 CI。
+
+### 2026-11-21 上游同步到 fa60d0a566
+
+- 本轮目标：`fork/integration` 从 `e723de1bfd` 合入上游到 `fa60d0a566`（四次合并：`22afb84f6a`、`9c3b42f644`、`d725f407e8`、`31df22fb1a`，冲突都在第一次），保留终端头部「切到聊天视图」按钮与「在新聊天中接管」的命名区分。
+- 完成内容：本功能 5 个冲突（UU 3、UD 2）。上游把终端面板拆进 `titles/`、`controller/`、`chat/`、`context-menu/` 子目录：`TerminalPaneHeaderOverlay.tsx`（UD）移植到 `terminal-pane/titles/`；`use-terminal-pane-projection.ts`（UD）被拆成 `chat/use-terminal-pane-chat-projection.ts` 与 `controller/use-terminal-pane-projection.ts`，fork 的 `activePaneCanToggleChat` 跟到后者；`TerminalContextMenu.tsx` 上游删 `translate` 统一用 `t()`，fork 文案随之改成 `t('terminalChatViewButton.switchToChatView', 'Switch to Chat View')`。桌面 zh 词条表里 `SortableTabContextMenu.switchToChatView` 保留 fork 的「在新聊天中接管」（上游为「在聊天中继续」）。上游删除的 `TerminalPaneHeaderOverlay.test.tsx`（#39270）不再放进 checks。
+- 代码或文档变更：`config/fork-features.jsonc` 接缝 9→10 条：4 条换路径，`TerminalContextMenu.tsx` 改到 `context-menu/` 并换 mustContain，新增 `controller/use-terminal-pane-projection.ts`（`activePaneCanToggleChat,`）；checks 只留自有目录；`dependsOn` 2 条换路径。合并后没有本功能的单独修复提交。新棘轮基线登记 1 条：render-path-translate `TerminalPaneChatViewButton.tsx` 1 处，React Compiler 不编译，行为同合并前（`config/render-path-translate-baseline.txt`，提交 `6244eac0a4`）。
+- 验证证据：登记 checks 1 文件 2 项通过（`/Users/bytedance/dev/orca/.docs/upstream-sync/2026-11-20/sync-checks-run3.log`）；冲突解法见 `/Users/bytedance/dev/orca/.docs/upstream-sync/2026-11-20/report-D-terminal-chat.md`、`report-G-shared.md`、`phase2-D.tsv`；棘轮清单 `/Users/bytedance/dev/orca/.docs/upstream-sync/2026-11-20/ratchet-refactor-backlog.tsv`，当前 HEAD 棘轮复核 `/Users/bytedance/dev/orca/.docs/upstream-sync/2026-11-20/journal-records/ratchets-at-2abf3d8ad1.log`；最终门禁见 `/Users/bytedance/dev/orca/.docs/upstream-sync/2026-11-20/final-gates.log`。本机真机抽查通过：头部「Switch to Chat View」与右键 ⌘⇧J 项都在，切到聊天视图后「Show terminal」可切回（`/Users/bytedance/dev/orca/.docs/upstream-sync-ui-validation/2026-11-21/README.md` 第 4 项，截图 `evidence/cv-1`～`cv-3`）。SSH 未覆盖。
+- 未解决问题：`TerminalPaneChatViewButton.tsx` 的渲染期翻译登记在 render-path-translate 基线里，待改成 `useTranslate()` 后从基线移除，跟踪：Fartown/orca#153；SSH 工作区没有在同步后复验。
+- 下一步：按 Fartown/orca#153 改写渲染期翻译并缩减基线；下次真机回归补 SSH 工作区。

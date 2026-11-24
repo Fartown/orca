@@ -1,8 +1,8 @@
-import { parseExecutionHostId } from '../../../shared/execution-host'
+import { parseExecutionHostId } from '../../../shared/execution-host/execution-host'
 import {
   getReachableRuntimeEnvironmentIds,
   type RuntimeEnvironmentStoreSyncState
-} from '../hooks/ipc-events/runtime-environment-subscription-selection'
+} from '../hooks/ipc-events/runtime-events/runtime-environment-subscription-selection'
 import { useAppStore } from '@/store'
 import type { AppState } from '../store/types'
 

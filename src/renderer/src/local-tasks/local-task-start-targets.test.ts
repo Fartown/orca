@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { createTestStore } from '@/store/slices/store-test-helpers'
-import type { ExecutionHostId } from '../../../shared/execution-host'
-import type { ProjectHostSetup } from '../../../shared/project-types'
-import type { Repo } from '../../../shared/repo-types'
+import { createTestStore } from '@/store/testing/app-store-test-fixture'
+import type { ExecutionHostId } from '../../../shared/execution-host/execution-host'
+import type { ProjectHostSetup } from '../../../shared/project/project-types'
+import type { Repo } from '../../../shared/repository/repo-types'
 import type { LocalTaskProject } from '../../../shared/local-tasks/local-task-types'
 import {
   localTaskStartTargets,

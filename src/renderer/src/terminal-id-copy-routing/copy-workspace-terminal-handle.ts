@@ -1,12 +1,13 @@
-import { copyTerminalHandleForPane } from '@/components/terminal-pane/terminal-handle-copy'
-import { getReachableRuntimeEnvironmentIds } from '@/hooks/ipc-events/runtime-environment-subscription-selection'
-import { getResolvedExecutionHostIdForWorktree } from '@/lib/resolved-worktree-execution-host'
-import { resolveOwner } from '@/lib/resolve-owner'
-import { captureRuntimeEnvironmentRequestRevision } from '@/runtime/runtime-environment-revision'
+import { copyTerminalHandleForPane } from '@/components/terminal-pane/clipboard/terminal-handle-copy'
+import { getReachableRuntimeEnvironmentIds } from '@/hooks/ipc-events/runtime-events/runtime-environment-subscription-selection'
+import { getResolvedExecutionHostIdForWorktree } from '@/lib/workspace/ownership/resolved-worktree-execution-host'
+import { resolveOwner } from '@/lib/workspace/ownership/resolve-owner'
+import { captureRuntimeEnvironmentRequestRevision } from '@/runtime/rpc/environment-revisions/runtime-environment-revision'
+import { readRuntimeStatuses } from '@/store/slices/runtime-status/views/runtime-status-owner'
 import { useAppStore } from '@/store'
-import { selectRuntimeAwareSshStatus } from '@/store/slices/runtime-environment-ssh-selectors'
-import { parseExecutionHostId } from '../../../shared/execution-host'
-import { toHostSessionTabId } from '../../../shared/terminal-surface-id'
+import { selectRuntimeAwareSshStatus } from '@/store/slices/ssh/runtime-environment-ssh-selectors'
+import { parseExecutionHostId } from '../../../shared/execution-host/execution-host'
+import { toHostSessionTabId } from '../../../shared/workspace-layout/terminal-surface-id'
 
 export async function copyWorkspaceTerminalHandle(
   worktreeId: string,
@@ -34,7 +35,8 @@ export async function copyWorkspaceTerminalHandle(
   }
   if (
     host.kind === 'ssh' &&
-    selectRuntimeAwareSshStatus(state, environmentId, host.targetId) !== 'connected'
+    selectRuntimeAwareSshStatus(state, readRuntimeStatuses(), environmentId, host.targetId) !==
+      'connected'
   ) {
     throw new Error('Terminal SSH host unavailable')
   }

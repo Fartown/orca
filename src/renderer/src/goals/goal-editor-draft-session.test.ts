@@ -1,12 +1,12 @@
 import { afterEach, expect, it, vi } from 'vitest'
 import { GoalRpcParams } from '../../../shared/goals/goal-control-contract'
 import type { GoalEditorDraftRecord } from '../../../shared/goals/goal-editor-draft-contract'
-import { callRuntimeRpc } from '../runtime/runtime-rpc-client'
+import { callRuntimeRpc } from '../runtime/rpc/calls/runtime-rpc-call'
 import { openGoalDraftSession, forgetGoalDraftSession } from './goal-editor-draft-session'
 import { GoalRuntimeClient } from './goal-runtime-client'
 import { goalDomainStore } from './goals-domain-store'
 
-vi.mock('../runtime/runtime-rpc-client', () => ({ callRuntimeRpc: vi.fn() }))
+vi.mock('../runtime/rpc/calls/runtime-rpc-call', () => ({ callRuntimeRpc: vi.fn() }))
 afterEach(() => vi.clearAllMocks())
 function record(): GoalEditorDraftRecord {
   return {

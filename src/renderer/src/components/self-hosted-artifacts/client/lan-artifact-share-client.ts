@@ -5,8 +5,8 @@ import {
   ArtifactShareStatusResult,
   type ArtifactShareConfigureLocalRequest
 } from '../../../../../shared/self-hosted-artifacts/artifact-share-contract'
-import { callRuntimeRpc } from '@/runtime/runtime-rpc-client'
-import { RuntimeRpcCallError } from '@/runtime/runtime-rpc-result'
+import { callRuntimeRpc } from '@/runtime/rpc/calls/runtime-rpc-call'
+import { RuntimeRpcCallError } from '@/runtime/rpc/calls/runtime-rpc-result'
 
 const LOCAL_RUNTIME = { kind: 'local' } as const
 

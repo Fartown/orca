@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { createTestStore } from '@/store/slices/store-test-helpers'
-import { makeWorktree } from '@/store/slices/worktrees-slice-test-fixtures'
+import { createTestStore } from '@/store/testing/app-store-test-fixture'
+import { makeWorktree } from '@/store/slices/worktrees/worktree.test-fixture'
 import type { LocalTaskProposalItem } from '../../../shared/local-tasks/local-task-dispatcher-rpc-params'
 import type { LocalTaskProject } from '../../../shared/local-tasks/local-task-types'
-import { getDefaultSettings } from '../../../shared/constants'
-import type { ProjectHostSetup } from '../../../shared/project-types'
-import type { Repo } from '../../../shared/repo-types'
+import { getDefaultSettings } from '../../../shared/orca-profiles/constants'
+import type { ProjectHostSetup } from '../../../shared/project/project-types'
+import type { Repo } from '../../../shared/repository/repo-types'
 import {
   proposalItemProjectCandidates,
   proposalLaunchAgent,

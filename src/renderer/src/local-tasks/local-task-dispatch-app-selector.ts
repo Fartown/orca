@@ -3,7 +3,7 @@ import {
   selectDetectedWorktreesByRepo,
   selectFolderWorkspaces,
   selectWorktreesByRepo
-} from '@/store/workspace-record-selectors'
+} from '@/store/workspaces/catalog/workspace-record-fields'
 
 export function createDispatchAppSelector(): (state: AppState) => AppState {
   let previous: { fields: readonly unknown[]; state: AppState } | null = null

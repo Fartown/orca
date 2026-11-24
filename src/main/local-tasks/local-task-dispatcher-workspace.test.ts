@@ -2,9 +2,9 @@ import { mkdtempSync, rmSync, statSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { FolderWorkspace } from '../../shared/folder-workspace-types'
-import type { ProjectGroup } from '../../shared/project-group-types'
-import { FLOATING_TERMINAL_WORKTREE_ID } from '../../shared/constants'
+import type { FolderWorkspace } from '../../shared/folder-workspaces/folder-workspace-types'
+import type { ProjectGroup } from '../../shared/project/groups/project-group-types'
+import { FLOATING_TERMINAL_WORKTREE_ID } from '../../shared/workspace/identity/floating-workspace-id'
 import {
   LOCAL_TASK_DISPATCHER_PANE_PREFERENCE_KEY,
   LOCAL_TASK_DISPATCHER_SESSION_PREFERENCE_KEY,
@@ -81,7 +81,7 @@ function fixture(readOnly = false) {
         updatedAt: 1
       }
       folders.push(folder)
-      return folder
+      return { folderWorkspace: folder }
     }
   )
   const runtime: LocalTaskDispatcherWorkspaceRuntime = {
@@ -170,10 +170,13 @@ describe('source-owned dispatcher folder workspace', () => {
   it('refuses a workspace creation result redirected by a host plugin to another execution location', async () => {
     const f = fixture()
     const create = f.createFolderWorkspace.getMockImplementation()!
-    f.createFolderWorkspace.mockImplementationOnce(async (input) => ({
-      ...(await create(input)),
-      connectionId: 'ssh:other'
-    }))
+    f.createFolderWorkspace.mockImplementationOnce(async (input) => {
+      const created = await create(input)
+      return {
+        ...created,
+        folderWorkspace: { ...created.folderWorkspace, connectionId: 'ssh:other' }
+      }
+    })
     await expect(f.service.prepareDispatcherWorkspace(f.runtime)).rejects.toThrow(
       'does not belong to this profile directory'
     )

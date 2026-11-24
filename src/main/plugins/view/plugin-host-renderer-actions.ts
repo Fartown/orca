@@ -4,7 +4,7 @@ import {
   type PluginViewRequestBody
 } from '../../../shared/plugins/view/plugin-view-protocol'
 import type { PluginCommandAliasActionId } from '../../../shared/plugins/contributions/plugin-command-actions'
-import { PluginHostCallError } from '../workers/plugin-host-call-scope'
+import { PluginHostCallError } from '../workers/host-api/plugin-host-call-scope'
 import type { PluginFocusedWorkspace } from '../../../shared/plugin-workspace-remote/plugin-workspace-remote'
 
 /** What a worker's `editor.open` and `commands.run` ask of Orca's window. */

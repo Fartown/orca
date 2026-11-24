@@ -142,11 +142,11 @@ export async function traceTerminalLaunchRpc<T>(
   )
 }
 
-export async function traceTerminalStreamingLaunchRpc(
+export async function traceTerminalStreamingLaunchRpc<R>(
   request: { method: string; id: string; params?: unknown },
   caller: LaunchCaller | undefined,
-  reply: (response: string) => void,
-  invoke: (reply: (response: string) => void) => Promise<void>
+  reply: (response: R) => void,
+  invoke: (reply: (response: R) => void) => Promise<void>
 ): Promise<void> {
   if (!METHODS.has(request.method)) {
     return invoke(reply)
@@ -158,7 +158,8 @@ export async function traceTerminalStreamingLaunchRpc(
       let result: unknown
       await invoke((response) => {
         try {
-          result = JSON.parse(response)
+          // Snapshot now: object replies stay runtime-owned and may change after this frame.
+          result = JSON.parse(typeof response === 'string' ? response : JSON.stringify(response))
         } catch {
           // Invalid frames still reach the original transport unchanged.
         }

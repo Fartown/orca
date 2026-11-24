@@ -4,7 +4,7 @@ const fakes = vi.hoisted(() => ({
   open: vi.fn(),
   refresh: vi.fn(async () => undefined)
 }))
-vi.mock('../web/preload-api/web-runtime-session', () => ({
+vi.mock('../web/runtime/client/web-runtime-session', () => ({
   webRuntimeState: { activeClient: { statusOwner: { read: fakes.read } } }
 }))
 vi.mock('../store', () => ({

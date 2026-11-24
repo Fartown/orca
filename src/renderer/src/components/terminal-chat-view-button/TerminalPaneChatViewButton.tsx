@@ -1,8 +1,8 @@
 import { MessageSquare } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { ShortcutKeyCombo } from '@/components/ShortcutKeyCombo'
-import { isMacPlatform } from '@/components/native-chat/native-chat-shortcut'
+import { ShortcutKeyCombo } from '@/components/ui/ShortcutKeyCombo'
+import { isMacPlatform } from '@/components/native-chat/pane/routing/native-chat-shortcut'
 import { translate } from '@/i18n/i18n'
 
 export function TerminalPaneChatViewButton({

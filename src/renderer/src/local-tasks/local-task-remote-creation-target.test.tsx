@@ -2,8 +2,8 @@
 import { renderHook } from '@testing-library/react'
 import { afterEach, expect, it, vi } from 'vitest'
 import { useAppStore } from '@/store'
-import { useComposerTargetStore } from '@/hooks/composer-state/composer-target-store'
-import { resolveWorkspaceCreationTarget } from '@/lib/project-host-workspace-target'
+import { useComposerTargetStore } from '@/hooks/composer-state/workspace-target/composer-target-store'
+import { resolveWorkspaceCreationTarget } from '@/lib/workspace/creation/project-host-workspace-target'
 import {
   canResolveFolderSmartGitHubSubmit,
   getInitialAutoManagedWorkspaceName,
@@ -22,7 +22,7 @@ import {
   resolveLocalTaskStartTarget
 } from './local-task-workspace-resolution'
 import type { LocalTask, LocalTaskProject } from '../../../shared/local-tasks/local-task-types'
-import type { Project, ProjectHostSetup } from '../../../shared/project-types'
+import type { Project, ProjectHostSetup } from '../../../shared/project/project-types'
 
 const decisions: ComposerDecisions = {
   canResolveFolderSmartGitHubSubmit,

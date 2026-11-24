@@ -151,3 +151,12 @@ external_ids: ['stablyai/orca#19860']
   - 复核记录见 `.docs/upstream-sync-ui-validation/2026-11-02/evidence/conflict-review-2026-11-03.md`。
 - 未解决问题：TC-707 真机验收仍未完成。
 - 下一步：随同步一起推送，等待远端 CI。
+
+### 2026-11-21 上游同步到 fa60d0a566（testing）
+
+- 本轮目标：`fork/integration` 从 `e723de1bfd` 合入上游到 `fa60d0a566`（四次合并：`22afb84f6a`、`9c3b42f644`、`d725f407e8`、`31df22fb1a`，冲突都在第一次），保持 Tab 重排、属性与激活沿用现任发布 epoch。
+- 完成内容：本功能 1 个冲突：`session-lifecycle/projection/apply-mobile-session-tab-navigation.ts`（UU），以上游为底重放 `publicationEpoch: snapshot.publicationEpoch`，接缝路径与 mustContain 不变。上游把 `headless-tab-group-moves.ts`、`headless-tab-properties.ts` 搬到 `session-tabs/layout/`，接缝内容原样在新位置。`src/shared/runtime-types.ts` 被上游拆开，依赖改指 `remote-runtime/session-graph/` 下的 `runtime-session-contracts.ts` 与 `runtime-mobile-session-tab-contracts.ts`。checks 原来顺带跑的 `runtime-headless-publication-contracts.test.ts` 被上游删除（#39608），fork 未改过它。
+- 代码或文档变更：`config/fork-features.jsonc` 接缝 2 条换路径；checks 去掉已删的上游测试；`dependsOn` 3→4 条（`constants.ts` 改到 `src/shared/orca-profiles/`，`runtime-types.ts` 换成上面两个契约文件）。合并后没有本功能的单独修复提交。新棘轮基线未登记本功能条目。
+- 验证证据：登记 checks 1 文件 6 项通过（`/Users/bytedance/dev/orca/.docs/upstream-sync/2026-11-20/sync-checks-run3.log`）；登记改动依据见 `/Users/bytedance/dev/orca/.docs/upstream-sync/2026-11-20/report-F-builds-plugins-goals.md`、`phase2-F.tsv`；最终门禁见 `/Users/bytedance/dev/orca/.docs/upstream-sync/2026-11-20/final-gates.log`。真机抽查（`/Users/bytedance/dev/orca/.docs/upstream-sync-ui-validation/2026-11-21/README.md`）未覆盖本功能，本机、配对与 SSH 都没有做。
+- 未解决问题：checks 只剩 1 个测试文件守护三处 epoch 沿用；同步后的构建没有做隔离双实例复验。
+- 下一步：下次需要真机回归时按 2026-09-24 的隔离双实例方法复验。

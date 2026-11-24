@@ -2,10 +2,10 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { createRuntimeFileCommands } from '../runtime/orca-runtime-files-test-harness'
+import { createDocumentPreviewFileReads } from './document-preview-runtime-file-reads.test-fixture'
 import { readDocumentPreviewInChunks } from './document-preview-chunk-reader'
 import { DOCUMENT_PREVIEW_TEXT_MAX_BYTES } from '../../shared/document-preview-size/document-preview-size-limit'
-import { REMOTE_RPC_MAX_CONTENT_BYTES } from '../../shared/remote-rpc-content-budget'
+import { REMOTE_RPC_MAX_CONTENT_BYTES } from '../../shared/remote-runtime/rpc/remote-rpc-content-budget'
 
 const roots: string[] = []
 afterEach(async () => {
@@ -19,7 +19,7 @@ async function fixture(size: number) {
   content.write('<!doctype html><p>中文预览</p>')
   content.write('<!--complete-->', size - 15)
   await writeFile(join(root, 'index.html'), content)
-  return { root, content, commands: createRuntimeFileCommands({ path: root }).commands }
+  return { root, content, commands: createDocumentPreviewFileReads({ path: root }).commands }
 }
 
 describe('document preview on the owning runtime', () => {
@@ -79,7 +79,7 @@ describe('document preview on the owning runtime', () => {
 
   it('never reads an unserved SSH workspace from this machine', async () => {
     const { root } = await fixture(1024)
-    const { commands } = createRuntimeFileCommands({ path: root, hostId: 'ssh:unserved' })
+    const { commands } = createDocumentPreviewFileReads({ path: root, hostId: 'ssh:unserved' })
     await expect(
       commands.readDocPreviewFile('id:wt-1', 'index.html', 'index.html', null, [])
     ).rejects.toThrow()

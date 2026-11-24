@@ -4,9 +4,9 @@ import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 // Why a value import: the Bun runner only moves SQLite tests to Node when they import this directly.
 import '../sqlite/sync-database'
-import { DeviceRegistry } from '../runtime/device-registry'
-import { OrcaRuntimeRpcServer } from '../runtime/runtime-rpc'
-import { createMobileRpcSurfaceRuntime } from '../runtime/runtime-rpc-mobile-method-allowlist-fixtures'
+import { DeviceRegistry } from '../runtime/rpc/server/pairing/device-registry'
+import { OrcaRuntimeRpcServer } from '../runtime/rpc/server/runtime-rpc'
+import { createMobileRpcSurfaceRuntime } from '../runtime/rpc/server/runtime-rpc-mobile-method-allowlist-fixtures'
 import { startLocalTasksHost } from './local-tasks-host-lifecycle'
 
 const cleanups: (() => void)[] = []

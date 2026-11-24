@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { ListTodo } from 'lucide-react'
 import { translate } from '@/i18n/i18n'
-import type { SmartWorkspaceNameModeOption } from '@/components/new-workspace/smart-workspace-localized-options'
+import type { SmartWorkspaceNameModeOption } from '@/components/new-workspace/source-search/smart-workspace-localized-options'
 import type { SmartNameMode } from '../../../shared/new-workspace/smart-workspace-source-results'
 import type { LocalTaskLinks } from '../../../shared/local-tasks/local-task-link-types'
 import type { LocalTask, LocalTaskProject } from '../../../shared/local-tasks/local-task-types'

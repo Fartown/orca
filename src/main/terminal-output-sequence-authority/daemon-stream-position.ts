@@ -1,4 +1,4 @@
-import type { DataEvent, DataGapEvent } from '../daemon/daemon-stream-events'
+import type { DaemonEvent, DataEvent, DataGapEvent } from '../daemon/protocol/daemon-stream-events'
 
 type StreamPosition = {
   receivedChars: number
@@ -28,6 +28,15 @@ export class DaemonStreamPosition {
   beginAttach(id: string): StreamObservation {
     const state = this.session(id)
     return { state, receivedChars: state.receivedChars }
+  }
+
+  /** Count every stream event that advances the delivered position; other events pass through. */
+  observe(event: DaemonEvent): void {
+    if (event.event === 'data') {
+      this.recordData(event.sessionId, event.payload)
+    } else if (event.event === 'dataGap') {
+      this.recordGap(event.sessionId, event.payload)
+    }
   }
 
   recordData(id: string, payload: DataEvent['payload']): void {

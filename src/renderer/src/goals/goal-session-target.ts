@@ -1,8 +1,8 @@
-import type { RuntimeClientTarget } from '../../../shared/runtime-client-target'
-import type { AgentStatusEntry } from '../../../shared/agent-status-types'
+import type { RuntimeClientTarget } from '../../../shared/remote-runtime/host-catalog/runtime-client-target'
+import type { AgentStatusEntry } from '../../../shared/agent-status/contracts/agent-status-types'
 import type { GoalBinding } from '../../../shared/goals/goal-control-contract'
-import type { RuntimeTerminalResolvePane } from '../../../shared/runtime-terminal-contracts'
-import { callRuntimeRpc } from '../runtime/runtime-rpc-client'
+import type { RuntimeTerminalResolvePane } from '../../../shared/terminal/runtime/runtime-terminal-contracts'
+import { callRuntimeRpc } from '../runtime/rpc/calls/runtime-rpc-call'
 
 export type GoalSessionCandidate = {
   paneKey: string
@@ -17,11 +17,14 @@ export type GoalSessionCandidate = {
  * Trusted existing sessions of a workspace: the hook-backed agent rows the
  * renderer already tracks. A plain shell has no row and is not offered.
  */
+/** The store's accepted agent rows by pane key. */
+type GoalAgentStatusRows = Pick<ReadonlyMap<string, AgentStatusEntry | undefined>, 'values'>
+
 export function listGoalSessionCandidates(
-  agentStatusByPaneKey: Record<string, AgentStatusEntry | undefined>,
+  agentStatusByPaneKey: GoalAgentStatusRows,
   worktreeId: string
 ): GoalSessionCandidate[] {
-  return Object.values(agentStatusByPaneKey)
+  return Array.from(agentStatusByPaneKey.values())
     .filter(
       (entry): entry is AgentStatusEntry => Boolean(entry) && entry?.worktreeId === worktreeId
     )
@@ -35,6 +38,37 @@ export function listGoalSessionCandidates(
       terminalHandle: entry.terminalHandle ?? null
     }))
     .sort((a, b) => a.paneKey.localeCompare(b.paneKey))
+}
+
+function sameCandidate(a: GoalSessionCandidate, b: GoalSessionCandidate | undefined): boolean {
+  return (
+    b !== undefined &&
+    a.paneKey === b.paneKey &&
+    a.tabId === b.tabId &&
+    a.agentType === b.agentType &&
+    a.title === b.title &&
+    a.state === b.state &&
+    a.terminalHandle === b.terminalHandle
+  )
+}
+
+/** A per-consumer selector whose result keeps its identity while the workspace's candidates stay equal. */
+export function createGoalSessionCandidatesSelector(): (
+  agentStatusByPaneKey: GoalAgentStatusRows,
+  worktreeId: string | null
+) => GoalSessionCandidate[] {
+  let previous: GoalSessionCandidate[] = []
+  return (agentStatusByPaneKey, worktreeId) => {
+    const next = worktreeId ? listGoalSessionCandidates(agentStatusByPaneKey, worktreeId) : []
+    if (
+      next.length === previous.length &&
+      next.every((candidate, index) => sameCandidate(candidate, previous[index]))
+    ) {
+      return previous
+    }
+    previous = next
+    return next
+  }
 }
 
 export type GoalBindingResolution =
@@ -75,10 +109,10 @@ export async function resolveGoalBindingForPane(
 
 /** The pane a bound goal writes into, by the runtime handle the host stored. */
 export function findPaneForTerminalHandle(
-  agentStatusByPaneKey: Record<string, AgentStatusEntry | undefined>,
+  agentStatusByPaneKey: GoalAgentStatusRows,
   terminalHandle: string
 ): { tabId: string; leafId: string } | null {
-  for (const entry of Object.values(agentStatusByPaneKey)) {
+  for (const entry of agentStatusByPaneKey.values()) {
     if (!entry || entry.terminalHandle !== terminalHandle) {
       continue
     }

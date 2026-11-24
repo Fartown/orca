@@ -2,8 +2,8 @@ import { createContext, useContext, type ComponentProps, type ReactNode } from '
 import { StyleSheet, View } from 'react-native'
 import { spacing } from '../theme/mobile-theme'
 import type { LocalTaskSessionCard } from './LocalTaskSessionCard'
-import type { MobileSessionTab } from '../session/mobile-session-route-types'
-import type { ConnectionState } from '../transport/types'
+import type { MobileSessionTab } from '../session/tabs/mobile-session-tabs'
+import type { ConnectionState } from '../transport/connection/connection-state'
 
 export type SessionTaskController = ComponentProps<typeof LocalTaskSessionCard>['controller']
 export type SessionTaskReceiptController = SessionTaskController & {

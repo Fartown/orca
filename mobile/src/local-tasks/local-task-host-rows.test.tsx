@@ -3,11 +3,12 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { LocalTaskWorkspaceLink } from '../../../src/shared/local-tasks/local-task-link-types'
 import { LOCAL_TASKS_RUNTIME_CAPABILITY } from '../../../src/shared/local-tasks/local-tasks-capability'
 import type { LocalTask } from '../../../src/shared/local-tasks/local-task-types'
-import { MOBILE_DESKTOP_RELAY_RUNTIME_CAPABILITY } from '../../../src/shared/mobile-desktop-relay-contract'
-import type { RpcClient } from '../transport/rpc-client'
-import type { RpcEnvelopeFields } from '../transport/rpc-envelope-fields'
-import type { ConnectionState, RpcResponse } from '../transport/types'
-import type { Worktree } from '../worktree/workspace-list-types'
+import { MOBILE_DESKTOP_RELAY_RUNTIME_CAPABILITY } from '../../../src/shared/remote-runtime/relay/mobile-desktop-relay-contract'
+import type { RpcClient } from '../transport/rpc/rpc-client-contract'
+import type { RpcEnvelopeFields } from '../transport/rpc/rpc-envelope-fields'
+import type { ConnectionState } from '../transport/connection/connection-state'
+import type { RpcResponse } from '../transport/rpc/rpc-wire-types'
+import type { Worktree } from '../worktree/workspace-list/workspace-list-types'
 
 vi.mock('react-native', () => ({
   AppState: { currentState: 'active', addEventListener: () => ({ remove: () => {} }) },
@@ -34,10 +35,10 @@ vi.mock('lucide-react-native', () => {
   ]
   return Object.fromEntries(icons.map((name) => [name, name]))
 })
-vi.mock('../components/TaskProviderLogo', () => ({ TaskProviderLogo: 'TaskProviderLogo' }))
-vi.mock('../components/MobileSwitch', () => ({ MobileSwitch: 'MobileSwitch' }))
+vi.mock('../components/icons/TaskProviderLogo', () => ({ TaskProviderLogo: 'TaskProviderLogo' }))
+vi.mock('../components/controls/MobileSwitch', () => ({ MobileSwitch: 'MobileSwitch' }))
 
-import { WorkspaceDetailsSheet } from '../host-screen/workspace-details-sheet'
+import { WorkspaceDetailsSheet } from '../host-screen/workspace-actions/workspace-details-sheet'
 import { LocalTaskHostRowsProvider } from './LocalTaskHostRowsProvider'
 import { LocalTaskWorkspaceGlyph } from './LocalTaskWorkspaceGlyph'
 

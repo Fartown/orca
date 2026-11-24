@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
-import type { ExecutionHostId } from '../../../src/shared/execution-host'
-import { taskRuntimeStatusRead } from '../tasks/mobile-task-runtime-operations'
-import type { RpcClient } from '../transport/rpc-client'
-import type { ConnectionState } from '../transport/types'
-import { useWorkspaceServer } from '../transport/workspace-server'
-import { useReachableServerClients } from '../worktree/use-reachable-server-clients'
+import type { ExecutionHostId } from '../../../src/shared/execution-host/execution-host'
+import { taskRuntimeStatusRead } from '../tasks/screen-state/mobile-task-runtime-operations'
+import type { RpcClient } from '../transport/rpc/rpc-client-contract'
+import type { ConnectionState } from '../transport/connection/connection-state'
+import { useWorkspaceServer } from '../worktree/execution-hosts/workspace-server'
+import { useReachableServerClients } from '../worktree/execution-hosts/use-reachable-server-clients'
 import { localTaskEndpointFor, type LocalTaskEndpoint } from './local-task-endpoint'
 import {
   hostAdvertisesLocalTasks,
@@ -47,7 +47,7 @@ function useServersWithLocalTasks(
   useEffect(() => {
     let current = true
     for (const [hostId, serverClient] of serverClients) {
-      taskRuntimeStatusRead.requestSingleFlight(serverClient, hostId).then(
+      taskRuntimeStatusRead.request(serverClient).then(
         (reply) => {
           const advertises = hostAdvertisesLocalTasks(
             taskRuntimeStatusRead.interpret(reply).capabilities

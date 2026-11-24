@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { useAppStore } from '@/store'
-import { UNRESOLVED_OWNER_HOST_ID } from '../../../shared/execution-host'
+import { UNRESOLVED_OWNER_HOST_ID } from '../../../shared/execution-host/execution-host'
 import type { LocalTaskSessionLink } from '../../../shared/local-tasks/local-task-link-types'
 import { localTasksDomainStore } from './local-tasks-domain-store'
 import { bindLocalTaskSessionExecutions } from './local-task-session-execution-sync'

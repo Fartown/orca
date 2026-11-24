@@ -6,7 +6,7 @@ import {
   type LocalTaskCreateWhere
 } from '../../../src/shared/local-tasks/local-task-create-plan'
 import type { LocalTask } from '../../../src/shared/local-tasks/local-task-types'
-import type { TuiAgent } from '../../../src/shared/tui-agent'
+import type { TuiAgent } from '../../../src/shared/agent-launch/catalog/tui-agent'
 import type { LocalTasksApi } from './local-tasks-api'
 import { localTasksCopy } from './local-tasks-copy'
 import {

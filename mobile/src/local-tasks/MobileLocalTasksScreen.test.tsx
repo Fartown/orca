@@ -30,7 +30,7 @@ vi.mock('expo-router', () => ({ useLocalSearchParams: () => ({ hostId: 'h' }) })
 vi.mock('react-native-safe-area-context', () => ({ useSafeAreaInsets: () => ({ top: 0 }) }))
 vi.mock('lucide-react-native', () => ({ ChevronLeft: 'left', Monitor: 'monitor' }))
 vi.mock('./local-tasks-styles', () => ({ localTaskStyles: {} }))
-vi.mock('../components/host-protocol-gates-context', () => ({
+vi.mock('../components/host-connection/host-protocol-gates-context', () => ({
   useOptionalHostProtocolGates: () => ({
     statusPending: false,
     statusReadable: true,
@@ -39,16 +39,18 @@ vi.mock('../components/host-protocol-gates-context', () => ({
 }))
 vi.mock('../navigation/route-handoff', () => ({ useRouteHandoff: () => ({ back: () => {} }) }))
 vi.mock('../navigation/route-param-reader', () => ({ firstParam: (value: string) => value }))
-vi.mock('../transport/host-client-hooks', () => ({
+vi.mock('../transport/connection/host-client-hooks', () => ({
   useHostClient: () => ({
     client: fixture.connection === 'connected' ? {} : null,
     state: fixture.connection
   })
 }))
-vi.mock('../transport/client-context', () => ({
+vi.mock('../transport/connection/client-context', () => ({
   useRpcClientContext: () => ({ getAllClients: () => [] })
 }))
-vi.mock('../transport/host-store', () => ({ loadHosts: async () => [{ id: 'h', name: 'desk' }] }))
+vi.mock('../host-catalog/host-store', () => ({
+  loadHosts: async () => [{ id: 'h', name: 'desk' }]
+}))
 vi.mock('./use-local-tasks-library', () => ({
   useLocalTasksLibrary: () => ({
     api: {},

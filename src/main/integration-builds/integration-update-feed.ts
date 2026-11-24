@@ -71,6 +71,14 @@ export function integrationUpdateUnavailableMessage(): string | null {
   return isIntegrationBuild() ? linuxAppImageUpdateUnavailableMessage() : null
 }
 
+/** Fork builds resolve their feed from fork releases; other builds keep Orca's default feed. */
+export async function pinIntegrationReleaseFeedOr<T extends string>(
+  updater: Parameters<typeof pinIntegrationReleaseFeed>[0],
+  pinDefault: () => Promise<T>
+): Promise<T | 'ready'> {
+  return (await pinIntegrationReleaseFeed(updater)) ? 'ready' : pinDefault()
+}
+
 export async function pinIntegrationReleaseFeed(
   updater: Pick<
     AppUpdater,

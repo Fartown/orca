@@ -1,6 +1,6 @@
 import type { LocalTaskProposalItem } from '../../../shared/local-tasks/local-task-dispatcher-rpc-params'
 import type { LocalTaskProposal } from '../../../shared/local-tasks/local-task-dispatcher-types'
-import { UNRESOLVED_OWNER_HOST_ID } from '../../../shared/execution-host'
+import { UNRESOLVED_OWNER_HOST_ID } from '../../../shared/execution-host/execution-host'
 import { toLocalTaskOwnedHostId } from '../../../shared/local-tasks/local-task-endpoint-ids'
 import {
   localTaskClientId,

@@ -47,7 +47,7 @@ vi.mock('@/store', () => ({
     }
   })
 }))
-vi.mock('../store/workspace-record-selectors', () => ({
+vi.mock('../store/workspaces/catalog/workspace-record-fields', () => ({
   selectWorktreesByRepo: () => {
     upkeep.appInputReads += 1
     return []
@@ -55,7 +55,7 @@ vi.mock('../store/workspace-record-selectors', () => ({
   selectDetectedWorktreesByRepo: (app: MockAppState) => app.detectedWorktreesByRepo,
   selectFolderWorkspaces: (app: MockAppState) => app.folderWorkspaces
 }))
-vi.mock('../hooks/ipc-events/runtime-environment-subscription-selection', () => ({
+vi.mock('../hooks/ipc-events/runtime-events/runtime-environment-subscription-selection', () => ({
   getReachableRuntimeEnvironmentIds: () => []
 }))
 vi.mock('./local-task-start-work', () => ({ bindLocalTaskStartWork: bind }))
@@ -75,26 +75,48 @@ vi.mock('./local-tasks-domain-store', () => ({
 vi.mock('./local-tasks-runtime-client', () => ({
   localTasksClient: { resolveWorkspace: upkeep.resolveWorkspace }
 }))
-vi.mock('../lib/web-client-location', () => ({ isWebClientLocation: () => false }))
+vi.mock('../app-shell/platform/web-client-location', () => ({ isWebClientLocation: () => false }))
 vi.mock('../app-shell/ActiveWorkspaceSyncGate', () => ({ ActiveWorkspaceSyncGate: () => null }))
-vi.mock('../components/AgentHibernationGate', () => ({ AgentHibernationGate: () => null }))
-vi.mock('../components/AiVaultTabTitleSyncGate', () => ({ AiVaultTabTitleSyncGate: () => null }))
-vi.mock('../components/dashboard/RetainedAgentsSyncGate', () => ({ default: () => null }))
+vi.mock('../lib/agent-session/hibernation/AgentHibernationGate', () => ({
+  AgentHibernationGate: () => null
+}))
+vi.mock('../lib/agent-session/history/title-sync/AiVaultTabTitleSyncGate', () => ({
+  AiVaultTabTitleSyncGate: () => null
+}))
 vi.mock('../components/ports/WorkspacePortScanner', () => ({ WorkspacePortScanner: () => null }))
-vi.mock('../components/sidebar/SavedHostScopeWidenGate', () => ({
+vi.mock('../components/sidebar/worktree-list/listing/SavedHostScopeWidenGate', () => ({
   SavedHostScopeWidenGate: () => null
 }))
 vi.mock('../hooks/MacosTccPromptNoticeHost', () => ({ MacosTccPromptNoticeHost: () => null }))
+vi.mock(
+  '../components/browser-pane/remote-host-control/RemoteHostBrowserControlNoticeHost',
+  () => ({ RemoteHostBrowserControlNoticeHost: () => null })
+)
+vi.mock('../lib/agent-session/history/session-names/TerminalSessionNameSyncGate', () => ({
+  TerminalSessionNameSyncGate: () => null
+}))
+vi.mock('../components/native-chat/media/visuals/NativeChatVisualGuestThemePublisher', () => ({
+  NativeChatVisualGuestThemePublisher: () => null
+}))
+vi.mock('../components/mobile/paired-mobile-devices', () => ({
+  usePairedMobileDevices: () => ({ hasPairedDevice: false })
+}))
 vi.mock('../goals/GoalDomainSyncGate', () => ({ GoalDomainSyncGate: () => null }))
 vi.mock('./LocalTasksSyncGate', () => ({ LocalTasksSyncGate: () => null }))
-vi.mock('../components/native-chat/StructuredAgentSessionAttentionBridge', () => ({
-  StructuredAgentSessionAttentionBridge: () => null
-}))
-vi.mock('../components/native-chat/StructuredAgentSessionStatusBridge', () => ({
+vi.mock(
+  '../components/native-chat/session/attention/StructuredAgentSessionAttentionBridge',
+  () => ({
+    StructuredAgentSessionAttentionBridge: () => null
+  })
+)
+vi.mock('../components/native-chat/session/status/StructuredAgentSessionStatusBridge', () => ({
   StructuredAgentSessionStatusBridge: () => null
 }))
 
 import { AppBackgroundServices } from '../app-shell/AppBackgroundServices'
+
+// The background tree reads preload capabilities; this window exposes none.
+Object.defineProperty(window, 'api', { value: {}, configurable: true })
 
 function publishAppChange(): void {
   for (const listener of upkeep.appListeners) {

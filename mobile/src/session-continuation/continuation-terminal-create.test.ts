@@ -1,15 +1,16 @@
 import { createElement } from 'react'
 import { act, create, type ReactTestRenderer } from 'react-test-renderer'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { RpcClient } from '../transport/rpc-client'
-import type { RpcResponse } from '../transport/types'
-import type { PendingSessionSelection } from '../session/pending-session-selection'
+import type { RpcClient } from '../transport/rpc/rpc-client-contract'
+import type { RpcResponse } from '../transport/rpc/rpc-wire-types'
+import type { PendingSessionSelection } from '../session/tabs/pending-session-selection'
+import { useMobileSessionTerminalCreateActions } from '../terminal/session/creation/use-mobile-session-terminal-create-actions'
 import {
-  useMobileSessionTerminalCreateActions,
+  createMobileTerminalWithResult,
   type MobileTerminalCreateResult
-} from '../session/use-mobile-session-terminal-create-actions'
+} from './terminal-create-result'
 
-vi.mock('../platform/haptics', () => ({ triggerSuccess: vi.fn(), triggerError: vi.fn() }))
+vi.mock('../platform/haptics/haptics', () => ({ triggerSuccess: vi.fn(), triggerError: vi.fn() }))
 
 // A host that can take `agent.launch`, so only the continuation bypass keeps the create off it.
 const LAUNCH_CAPABILITIES = [
@@ -95,7 +96,7 @@ async function createForContinuation(
 ): Promise<MobileTerminalCreateResult> {
   let actions: ReturnType<typeof useMobileSessionTerminalCreateActions> | undefined
   function Harness() {
-    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the scope carries every member createTerminalWithResult reads; a missing one throws on use.
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the scope carries every member the create reads; a missing one throws on use.
     actions = useMobileSessionTerminalCreateActions(scope(client) as never)
     return null
   }
@@ -104,7 +105,9 @@ async function createForContinuation(
   })
   let result: MobileTerminalCreateResult = null
   await act(async () => {
-    result = (await actions?.createTerminalWithResult('claude', options)) ?? null
+    result = actions
+      ? await createMobileTerminalWithResult(actions.handleCreateTerminal, 'claude', options)
+      : null
   })
   return result
 }

@@ -1,16 +1,19 @@
 import { afterEach, expect, it, vi } from 'vitest'
 import { useAppStore } from '@/store'
-import { applyWebSessionTabsSnapshot } from '../runtime/web-session-tabs-sync/snapshot-api'
-import { applyWebSessionTabsStorePatch } from '../runtime/web-session-tabs-sync/store-patch'
-import { decideWebSessionTabsSnapshot } from '../runtime/web-session-tabs-sync/tracking-decisions'
-import { resetWebSessionTabsSnapshotFreshnessForTests } from '../runtime/web-session-tabs-sync/tracking-lifecycle'
-import type { RuntimeMobileSessionTabsResult } from '../../../shared/runtime-types'
+import { applyWebSessionTabsSnapshot } from '../runtime/web-session-tabs-sync/snapshots/snapshot-api'
+import { applyWebSessionTabsStorePatch } from '../runtime/web-session-tabs-sync/snapshots/store-patch'
+import { decideWebSessionTabsSnapshot } from '../runtime/web-session-tabs-sync/tracking/tracking-decisions'
+import { resetWebSessionTabsSnapshotFreshnessForTests } from '../runtime/web-session-tabs-sync/tracking/tracking-lifecycle'
+import type { RuntimeMobileSessionTabsResult } from '../../../shared/remote-runtime/session-graph/runtime-session-contracts'
 import { LEAF } from './session-name-binding-test-fixture'
 
 const { observe } = vi.hoisted(() => ({ observe: vi.fn() }))
-vi.mock('@/hooks/agent-hook-completion-notifications', () => ({
-  observeAgentHookCompletionForNotification: observe
-}))
+vi.mock(
+  '@/components/terminal-pane/agent-completion/hook-lane/agent-hook-completion-notifications',
+  () => ({
+    observeAgentHookCompletionForNotification: observe
+  })
+)
 const initial = useAppStore.getInitialState()
 afterEach(() => {
   useAppStore.setState(initial, true)

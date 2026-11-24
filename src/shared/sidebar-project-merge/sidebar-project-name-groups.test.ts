@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import type { Repo } from '../repo-types'
-import { projectHostSetupProjectionFromRepos } from '../project-host-setup-projection'
+import type { Repo } from '../repository/repo-types'
+import { projectHostSetupProjectionFromRepos } from '../project/host-setup/project-host-setup-projection'
 import {
   buildProjectGroupingIndex,
   buildProjectOwnershipIndex,
   buildProjectSections,
   getDisplayedProjectGroupingForRepo,
   getProjectGroupingForRepo
-} from '../project-section-grouping'
+} from '../sidebar-list/sections/project-section-grouping'
 
 function folder(id: string, name = 'workspace', host: Repo['executionHostId'] = 'local'): Repo {
   return {

@@ -1,17 +1,17 @@
 import React, { useCallback, useContext, useState } from 'react'
-import { revealMarkdownNavigationDetails } from '@/components/editor/markdown-navigation-details'
+import { revealMarkdownNavigationDetails } from '@/components/editor/markdown/navigation/markdown-navigation-details'
 import { getMarkdownReviewAnchorLabel } from '@/components/markdown-review-anchor-recovery/review-anchor-position'
 import { CornerDownLeft, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { DiffCommentCard } from '@/components/diff-comments/DiffCommentCard'
-import { ImeTextarea } from '@/lib/ime-text-field'
-import { formatMarkdownReviewCardQuote } from '@/lib/markdown-review-notes'
+import { ImeTextarea } from '@/lib/text-input/ime/ime-text-field'
+import { formatMarkdownReviewCardQuote } from '@/lib/editor/markdown/review-notes/markdown-review-notes'
 import { getIntlLocale, translate } from '@/i18n/i18n'
 import {
   getMarkdownPreviewBlockRange,
   hasMarkdownPreviewNestedBlock
-} from '@/components/editor/markdown-preview-block-model'
-import type { MarkdownPreviewPositionNode } from '@/components/editor/markdown-preview-types'
+} from '@/components/editor/markdown-preview/review/markdown-preview-block-model'
+import type { MarkdownPreviewPositionNode } from '@/components/editor/markdown-preview/render-tree/markdown-preview-types'
 import type { ArtifactShareComment } from '../../../../../shared/self-hosted-artifacts/artifact-share-comments-contract'
 import type { ShareCommentPostError } from './share-viewer-comments-client'
 import { captureShareCommentBlock, type ShareCommentPlacement } from './share-comment-anchors'

@@ -1,8 +1,8 @@
 import { toast } from 'sonner'
 import { translate } from '@/i18n/i18n'
-import { sendMessageToAgent } from '@/lib/agent-message-send'
+import { sendMessageToAgent } from '@/lib/agent-session/messaging/agent-message-send'
 import { useAppStore } from '@/store'
-import type { TuiAgent } from '../../../shared/tui-agent'
+import type { TuiAgent } from '../../../shared/agent-launch/catalog/tui-agent'
 import {
   getLocalTaskDispatcherSendArgs,
   liveDispatcherPaneKey,
@@ -24,7 +24,8 @@ export const LOCAL_TASK_ASK_ONLY_PREFIX =
 const READY_WAIT_MS = 120_000
 
 function waitForIdle(paneKey: string, current: () => boolean): Promise<boolean> {
-  const idle = (): boolean => useAppStore.getState().agentStatusByPaneKey[paneKey]?.state === 'done'
+  const idle = (): boolean =>
+    useAppStore.getState().agentStatusByPaneKey.get(paneKey)?.state === 'done'
   if (idle()) {
     return Promise.resolve(true)
   }

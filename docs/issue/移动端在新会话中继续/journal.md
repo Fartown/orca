@@ -171,6 +171,15 @@ external_ids: []
 
 ## 3. 开发记录
 
+### 2026-11-21：上游同步到 fa60d0a566（testing）
+
+- 本轮目标：`fork/integration` 从 `e723de1bfd` 合入上游到 `fa60d0a566`（四次合并：`22afb84f6a`、`9c3b42f644`、`d725f407e8`、`31df22fb1a`，冲突都在第一次），保持手机端「在新会话中继续」的入口、两种模式与投递参数不丢。
+- 完成内容：本功能 8 个冲突（UU 5、UD 3）。上游把手机会话拆进 `mobile/src/session/tabs/` 与 `mobile/src/terminal/session/{creation,tab-actions}/`：`mobile-session-route-types.ts`（UD）的类型改用 `mobile/src/session/tabs/mobile-session-tabs.ts`，`mobile-session-terminal-create-request.ts`（UD）移植到 `terminal/session/creation/`；`use-mobile-session-terminal-create-actions.ts` 的结果改由 `options.onCreateResult` 回调上报，删掉只有续接会用、却从不进入的 `createTerminalWithResult` 返回值与结构化分支，host `agent.launch` 的绕行条件从「设了 cwd 或 clientMutationId」改为「设了 onCreateResult」，现有唯一调用方（续接）等价。`MobileSessionSheets.tsx` 为不超过 400 行，fork 改动压成 2 行：在 actions 参数位直接调 `useMobileSessionContinuationActions()`，续接状态与选择表挂在 `MobileSessionSurface.tsx` 的 `<MobileSessionContinuationScope controller={controller}>` 里。桌面 `agent-session-continuation.ts`、`agent-session-fork-context.ts` 随上游搬到 `lib/agent-session/context/` 后重放。上游删掉的 `loadMobileNewTabAgentOptions` 改用 `loadMobileAgentLaunchContext` + `newTabAgentOptionsFrom`，续接会话因此叠加上游新增的服务器智能体策略，与「+ 新标签页」一致；`MOBILE_TUI_AGENT_LABELS` 改用 `mobileTuiAgentLabel`；自有 `terminal-create-feedback.ts` 删除，改用上游等价的 `createMobileSessionTerminalCreateFeedback`；`continuation-prompt.ts` 移植上游对 hermes 的判断。`MobileSessionSheets.test.tsx`、`mobile-terminal-action-sheet-actions.test.ts`、`mobile-web-app-session-terminal-closure.test.mjs` 与桌面 4 个续接相关测试被上游删除，fork 未改过它们，从接缝、tests 与 checks 去掉。`verify-mobile-web-app-bundle.mjs` 随上游搬到 `config/scripts/build/mobile-web-app/`，分块扫描表按重测改为 `['./h/_layout.tsx', 104]`。
+- 代码或文档变更：`config/fork-features.jsonc` 接缝 10 条：6 条换路径，`MobileSessionSheets.tsx` 改 mustContain 为 `sessionContinuationActions: useMobileSessionContinuationActions()`，新增 `MobileSessionSurface.tsx` 一条，`verify-mobile-web-app-bundle.mjs` 换路径与数值，退役 `MobileSessionSheets.test.tsx`；`tests` 换成新路径的 `build-mobile-web-app-bundle.test.mjs`；3 条 checks 都只留自有目录或新路径；`dependsOn` 18→21 条（14 条换路径，`transport/types.ts` 拆成两份，补 `terminal/session/creation/` 下两个文件，`telemetry-events.ts` 换成 `telemetry/schemas/telemetry-property-schemas.ts`）。合并后没有本功能的单独修复提交。新棘轮基线未登记本功能条目。
+- 验证证据：登记 checks 桌面 1 文件 10 项、手机 7 文件 33 项、手机网页包测试 1 文件 4 项通过（`/Users/bytedance/dev/orca/.docs/upstream-sync/2026-11-20/sync-checks-run3.log`）；冲突解法见 `/Users/bytedance/dev/orca/.docs/upstream-sync/2026-11-20/report-C-mobile.md`、`phase2-C.tsv`、`decisions.tsv`；手机网页包与类型检查在最终门禁里通过（`/Users/bytedance/dev/orca/.docs/upstream-sync/2026-11-20/final-gates.log`）。真机抽查（`/Users/bytedance/dev/orca/.docs/upstream-sync-ui-validation/2026-11-21/README.md`）未覆盖本功能：手机真机、本机与 SSH 都没有在同步后走一次续接。
+- 未解决问题：续接现在会叠加上游服务器智能体策略，属行为变化，没有真机确认；桌面侧 4 个续接相关测试随上游删除后，桌面入口只剩 `src/shared/agent-session-continuation` 的单测。
+- 下一步：下次手机真机回归按 2026-09-13 的验收流程走一遍续接（两种模式、本机与 SSH 工作区）。
+
 ### 2026-10-22：New Tab 测试夹具补齐续接 scope（testing）
 
 - 本轮目标：修复完整 Mobile verify 暴露的既有测试夹具缺口。

@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react'
 import { Activity, CircleDot, History } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { useNow } from '@/hooks/use-now'
+import { useNow } from '@/lib/window-activity/use-now'
 import { translate } from '@/i18n/i18n'
-import { AgentIcon, getAgentLabel } from '@/lib/agent-catalog'
+import { AgentIcon } from '@/components/agent/icons/AgentIcon'
+import { getAgentLabel } from '@/lib/agent-catalog/agent-catalog'
 import { formatLocalTaskTime } from '@/local-tasks/local-task-time'
 import { useLocalTasksDomain } from '@/local-tasks/local-tasks-domain-store'
 import { localTaskVisibleProgress } from '@/local-tasks/local-task-visible-progress'
@@ -14,8 +15,8 @@ import {
   type LocalTaskWriteback
 } from '@/local-tasks/local-task-writebacks'
 import type { LocalTaskIndex } from '@/local-tasks/local-task-grouping'
-import { isTuiAgent } from '../../../../shared/tui-agent-config'
-import type { TuiAgent } from '../../../../shared/tui-agent'
+import { isTuiAgent } from '../../../../shared/agent-launch/catalog/tui-agent-config'
+import type { TuiAgent } from '../../../../shared/agent-launch/catalog/tui-agent'
 import type {
   LocalTaskLatestProgress,
   LocalTask,

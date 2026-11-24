@@ -1,5 +1,5 @@
-import { z } from 'zod'
-import { RuntimeHostDescriptorSchema } from '../runtime-host-descriptor'
+import * as z from 'zod'
+import { RuntimeHostDescriptorSchema } from '../remote-runtime/host-status/runtime-host-descriptor'
 import { toLocalTaskOwnedHostId } from './local-task-endpoint-ids'
 import type { LocalTaskSessionProgress } from './local-task-link-types'
 

@@ -1,12 +1,12 @@
 import { Laptop, Server, Unplug } from 'lucide-react'
 import { useAppStore } from '@/store'
 import { selectLocalTaskHostLabel } from '@/local-tasks/local-task-host-label'
-import { cn } from '@/lib/utils'
+import { cn } from '@/lib/class-names'
 import {
   normalizeExecutionHostId,
   parseExecutionHostId,
   isUnresolvedOwnerHostId
-} from '../../../../shared/execution-host'
+} from '../../../../shared/execution-host/execution-host'
 
 /** A host's display name (the user's rename first); the snapshot or raw id when this window has none. */
 export function useLocalTaskHostLabel(

@@ -1,4 +1,4 @@
-import { useNow } from '@/hooks/use-now'
+import { useNow } from '@/lib/window-activity/use-now'
 import { useLocalTaskProposals } from '@/local-tasks/local-task-dispatcher-proposals'
 import { LocalTaskProposalCard, useProposalNames } from './LocalTaskProposalCard'
 

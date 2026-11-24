@@ -1,5 +1,5 @@
-import { resolveAppImageRuntimeIdentity } from '../appimage-runtime-identity'
-import { getLinuxPackageType } from '../linux-update-package-type'
+import { resolveAppImageRuntimeIdentity } from '../updater/linux-package/appimage-runtime-identity'
+import { getLinuxPackageType } from '../updater/linux-package/linux-update-package-type'
 
 export function linuxAppImageUpdateUnavailableMessage(): string | null {
   if (

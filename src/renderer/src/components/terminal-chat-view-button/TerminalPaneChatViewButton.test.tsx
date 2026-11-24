@@ -4,20 +4,27 @@
 import { act, createRef, type ReactNode } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { isTerminalLeafId } from '../../../../shared/stable-pane-id'
-import type { ManagedPane } from '@/lib/pane-manager/pane-manager'
-import type { PtyTransport } from '../terminal-pane/pty-transport-types'
-import TerminalPaneHeaderOverlay from '../terminal-pane/TerminalPaneHeaderOverlay'
+import { isTerminalLeafId } from '../../../../shared/workspace-layout/stable-pane-id'
+import type { ManagedPane } from '@/lib/pane-manager/pane-manager-types'
+import type { PtyTransport } from '../terminal-pane/pty-transport/pty-transport-types'
+import TerminalPaneHeaderOverlay from '../terminal-pane/titles/TerminalPaneHeaderOverlay'
 
 vi.mock('@/components/ui/tooltip', () => ({
   Tooltip: ({ children }: { children?: ReactNode }) => children,
   TooltipTrigger: ({ children }: { children?: ReactNode }) => children,
   TooltipContent: ({ children }: { children?: ReactNode }) => <span>{children}</span>
 }))
-vi.mock('@/i18n/i18n', () => ({ translate: (_key: string, fallback: string) => fallback }))
-vi.mock('@/store', () => {
+vi.mock('@/i18n/i18n', () => ({
+  // The header reaches the agent catalog, whose labels read the language.
+  i18n: { language: 'en' },
+  translate: (_key: string, fallback: string) => fallback
+}))
+vi.mock('@/store', async () => {
+  const { AcceptedAgentStatuses } =
+    await import('@/store/slices/agent-status/status-ownership/accepted-agent-statuses')
+  const agentStatusByPaneKey = new AcceptedAgentStatuses()
   const getState = () => ({
-    agentStatusByPaneKey: {},
+    agentStatusByPaneKey,
     settings: { activeRuntimeEnvironmentId: null },
     repos: [],
     worktreesByRepo: {},
@@ -32,8 +39,13 @@ vi.mock('@/store', () => {
     )
   }
 })
-vi.mock('../terminal-pane/TerminalPaneResumeInChatButton', () => ({
+vi.mock('../terminal-pane/chat/TerminalPaneResumeInChatButton', () => ({
   TerminalPaneResumeInChatButton: () => null
+}))
+// Why: recent images subscribe to a live xterm, which these header-only panes do not carry; keep their header slot.
+vi.mock('../terminal-pane/titles/TerminalRecentImages', () => ({
+  TerminalPaneRecentImages: ({ renderHeader }: { renderHeader: (chips: ReactNode) => ReactNode }) =>
+    renderHeader(null)
 }))
 
 const mounted: { container: HTMLDivElement; root: Root }[] = []

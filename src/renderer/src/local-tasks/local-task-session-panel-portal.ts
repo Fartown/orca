@@ -1,13 +1,17 @@
-import type { ActivityTerminalPortalTarget } from '@/components/activity/activity-terminal-portal'
+import type { ActivityTerminalPortalTarget } from '@/components/activity/terminal-portal/activity-terminal-portal'
 import type { AppState } from '@/store/types'
-import { selectWorkspaceByHostTarget } from '@/store/workspace-record-selectors'
-import { parseExecutionHostId } from '../../../shared/execution-host'
+import { selectWorkspaceByHostTarget } from '@/store/workspaces/selection/workspace-host-target'
+import { parseExecutionHostId } from '../../../shared/execution-host/execution-host'
 import { hostWorktreeTarget } from '../../../shared/worktree/host-qualified-identity'
-import { isTerminalLeafId, makePaneKey, parsePaneKey } from '../../../shared/stable-pane-id'
+import {
+  isTerminalLeafId,
+  makePaneKey,
+  parsePaneKey
+} from '../../../shared/workspace-layout/stable-pane-id'
 import type {
   TerminalLayoutSnapshot,
   TerminalPaneLayoutNode
-} from '../../../shared/terminal-tab-types'
+} from '../../../shared/workspace-layout/terminal-tab-types'
 import type { LocalTaskSessionLink } from '../../../shared/local-tasks/local-task-link-types'
 
 type PortalCandidate = Omit<ActivityTerminalPortalTarget, 'active'>

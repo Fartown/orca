@@ -1,4 +1,4 @@
-import CommentMarkdown from '@/components/sidebar/CommentMarkdown'
+import CommentMarkdown from '@/components/comment-markdown/CommentMarkdown'
 import { useEffect, useState } from 'react'
 import { ChevronLeft, ExternalLink, History } from 'lucide-react'
 import { basename } from '@/lib/path'
@@ -8,8 +8,8 @@ import { Button } from '@/components/ui/button'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { getIntlLocale, translate } from '@/i18n/i18n'
-import { activateTabAndFocusPane } from '@/lib/activate-tab-and-focus-pane'
-import { activateAndRevealWorktree } from '@/lib/worktree-activation'
+import { activateTabAndFocusPane } from '@/lib/workspace/tabs/activate-tab-and-focus-pane'
+import { activateAndRevealWorktree } from '@/lib/workspace/activation/worktree-activation'
 import { useAppStore } from '@/store'
 import type {
   GoalDetail as GoalDetailRecord,
@@ -150,9 +150,11 @@ function BindingSection({
   detail: Pick<GoalDetailRecord, 'binding' | 'workspace' | 'agentStatus' | 'terminal'>
   offline: boolean
 }): React.JSX.Element {
-  const agentStatusByPaneKey = useAppStore((s) => s.agentStatusByPaneKey)
   const openSession = (): void => {
-    const pane = findPaneForTerminalHandle(agentStatusByPaneKey, detail.binding.terminal)
+    const pane = findPaneForTerminalHandle(
+      useAppStore.getState().agentStatusByPaneKey,
+      detail.binding.terminal
+    )
     if (!pane) {
       toast.error(translate('goals.detail.sessionMissing', 'The bound session is no longer open.'))
       return

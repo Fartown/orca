@@ -24,10 +24,12 @@ vi.mock('lucide-react-native', () => ({
   Trash2: 'Trash2',
   X: 'X'
 }))
-vi.mock('../components/ActionSheetModal', () => ({ ActionSheetModal: () => null }))
-vi.mock('../components/ConfirmModal', () => ({ ConfirmModal: () => null }))
-vi.mock('../components/pr-sidebar/MermaidDiagram', () => ({ MermaidDiagram: () => null }))
-vi.mock('../components/MobileSourceCopyButton', () => ({ MobileSourceCopyButton: () => null }))
+vi.mock('../components/sheets/ActionSheetModal', () => ({ ActionSheetModal: () => null }))
+vi.mock('../components/sheets/ConfirmModal', () => ({ ConfirmModal: () => null }))
+vi.mock('../components/mermaid/MermaidDiagram', () => ({ MermaidDiagram: () => null }))
+vi.mock('../components/code-presentation/MobileSourceCopyButton', () => ({
+  MobileSourceCopyButton: () => null
+}))
 
 let tree: ReactTestRenderer | null = null
 afterEach(() => {

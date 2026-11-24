@@ -4,8 +4,8 @@ import type {
 } from '../../../shared/plugins/view/plugin-view-protocol'
 import { projectPluginFocusedWorkspace } from '../../../shared/plugin-workspace-remote/plugin-workspace-remote'
 import { useAppStore } from '@/store'
-import { getIndexedWorktreeMap } from '@/store/worktree-repo-index'
-import { selectWorktreesByRepo } from '@/store/workspace-record-selectors'
+import { getIndexedWorktreeMap } from '@/store/slices/worktrees/listing/worktree-catalog-index'
+import { selectWorktreesByRepo } from '@/store/workspaces/catalog/workspace-record-fields'
 
 /** The focused worktree as this window lists it, whichever host owns it. */
 export function readPluginFocusedWorkspace(

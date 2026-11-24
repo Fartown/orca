@@ -1,9 +1,9 @@
 import { afterEach, expect, it, vi } from 'vitest'
-import { callRuntimeRpc } from '../runtime/runtime-rpc-client'
+import { callRuntimeRpc } from '../runtime/rpc/calls/runtime-rpc-call'
 import { GoalRuntimeClient, GoalRuntimeUnsupportedError } from './goal-runtime-client'
 import { goalDomainStore } from './goals-domain-store'
 
-vi.mock('../runtime/runtime-rpc-client', () => ({ callRuntimeRpc: vi.fn() }))
+vi.mock('../runtime/rpc/calls/runtime-rpc-call', () => ({ callRuntimeRpc: vi.fn() }))
 afterEach(() => vi.clearAllMocks())
 const ready = {
   status: 'ready',

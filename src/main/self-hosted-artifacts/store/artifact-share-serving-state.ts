@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { writeSecureJsonFile } from '../../../shared/secure-file'
+import { writeSecureJsonFile } from '../../../shared/secure-storage/secure-file'
 import {
   ARTIFACT_SHARE_FILE_VERSION,
   readVersionedArtifactShareFile

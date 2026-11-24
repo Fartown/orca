@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { act, cleanup, fireEvent, render, renderHook, screen } from '@testing-library/react'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
-import { VaultSessionRow } from '../components/right-sidebar/AiVaultSessionRow'
+import { VaultSessionRow } from '../components/right-sidebar/ai-vault/session-list/AiVaultSessionRow'
 import { TooltipProvider } from '../components/ui/tooltip'
 import { useCanonicalSessionTitles } from '../components/right-sidebar/use-canonical-session-titles'
 import {
@@ -10,7 +10,7 @@ import {
 } from '../lib/canonical-session-titles'
 import { sessionNameStore } from './session-name-store'
 import { getScannedSessionDisplayName } from './session-name-display'
-import type { AiVaultSession } from '../../../shared/ai-vault-types'
+import type { AiVaultSession } from '../../../shared/ai-vault/contracts/ai-vault-types'
 
 const key = canonicalSessionTitleKey('local', 'codex', 's1')
 const session = {

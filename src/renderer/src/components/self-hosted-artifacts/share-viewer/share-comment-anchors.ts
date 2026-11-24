@@ -1,4 +1,4 @@
-import { getRichMarkdownLineRangeFromBlocks } from '@/components/editor/rich-markdown-range-bounds'
+import { getRichMarkdownLineRangeFromBlocks } from '@/components/editor/rich-markdown/review/rich-markdown-range-bounds'
 import { ARTIFACT_SHARE_COMMENT_LIMITS } from '../../../../../shared/self-hosted-artifacts/artifact-share-comments-contract'
 import { readShareCommentBlockRange, SHARE_COMMENT_BLOCK_SELECTOR } from './share-comment-blocks'
 import {

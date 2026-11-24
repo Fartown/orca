@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { AGENT_STATUS_STALE_AFTER_MS } from '../agent-status-freshness'
+import { AGENT_STATUS_STALE_AFTER_MS } from '../agent-status/contracts/agent-status-freshness'
 import { localTaskRowState, type LocalTaskStatusRow } from './local-task-attention-rules'
 
 const OBSERVED = 1_000_000

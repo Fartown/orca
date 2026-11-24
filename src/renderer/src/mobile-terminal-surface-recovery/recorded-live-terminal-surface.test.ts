@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { CLOSED_TERMINAL_TAB_TOMBSTONE_TTL_MS } from '../../../shared/closed-terminal-tab-tombstones'
-import { isValidHostTerminalTabId } from '../../../shared/terminal-tab-id'
-import { createTestStore } from '../store/slices/store-test-helpers'
-import { adoptLiveWorkspacePtySurfaces } from '../lib/worktree-agent-live-surface-adoption'
+import { CLOSED_TERMINAL_TAB_TOMBSTONE_TTL_MS } from '../../../shared/workspace-layout/terminal-surfaces/closed-terminal-tab-tombstones'
+import { isValidHostTerminalTabId } from '../../../shared/workspace-layout/terminal-surfaces/terminal-tab-id'
+import { createTestStore } from '../store/testing/app-store-test-fixture'
+import { adoptLiveWorkspacePtySurfaces } from '../lib/workspace/activation/worktree-agent-live-surface-adoption'
 import {
   LIVE_LEAF_ID,
   listed,
@@ -11,9 +11,11 @@ import {
   testDeps,
   UNOWNED,
   WORKTREE_ID
-} from '../lib/worktree-agent-activation-gate.test-fixture'
+} from './activation-gate.test-fixture'
 
-vi.mock('../../../shared/layout-owner-switch', () => ({ ORCA_LAYOUT_OWNER_IS_MAIN: false }))
+vi.mock('../../../shared/workspace-layout/layout-owner-switch', () => ({
+  ORCA_LAYOUT_OWNER_IS_MAIN: false
+}))
 
 const ptyId = `${WORKTREE_ID}@@recorded-live`
 const recorded = { paneKey: `tab-recorded:${LIVE_LEAF_ID}`, ptyId, tabId: 'tab-recorded' }

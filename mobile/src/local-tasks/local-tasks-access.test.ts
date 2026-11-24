@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { LOCAL_TASKS_RUNTIME_CAPABILITY } from '../../../src/shared/local-tasks/local-tasks-capability'
-import type { RpcResponse } from '../transport/types'
+import type { RpcResponse } from '../transport/rpc/rpc-wire-types'
 import { createLocalTasksApi } from './local-tasks-api'
 import { readLocalTaskHomeLibrary } from './local-task-home-attention'
 import { resolveLocalTasksAccess } from './local-tasks-access'

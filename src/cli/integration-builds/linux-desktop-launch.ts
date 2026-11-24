@@ -1,9 +1,9 @@
-import { resolveAppImageCacheKey } from '../../shared/appimage-cache-identity'
+import { resolveAppImageCacheKey } from '../../shared/desktop-distribution/appimage/appimage-cache-identity'
 import {
   appImageLaunchEnvironment,
   resolveAppImageBuildWatch
-} from '../runtime/serve-appimage-update'
-import { RuntimeClientError } from '../runtime/types'
+} from '../runtime/serve/updates/serve-appimage-update'
+import { RuntimeClientError } from '../runtime/connection/types'
 
 export function linuxDesktopAppImageLaunch(
   executable: string,

@@ -2,8 +2,8 @@ import { useMemo } from 'react'
 import { translate } from '@/i18n/i18n'
 import { useAppStore } from '@/store'
 import type { AppState } from '@/store/types'
-import { getIndexedRepoMap } from '@/store/worktree-repo-index'
-import { parseWorkspaceKey } from '../../../shared/workspace-scope'
+import { getIndexedRepoMap } from '@/store/repos/repository-catalog-index'
+import { parseWorkspaceKey } from '../../../shared/workspace/identity/workspace-scope'
 import type {
   LocalTaskLinks,
   LocalTaskWorkspaceLink

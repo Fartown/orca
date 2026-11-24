@@ -1,5 +1,5 @@
 import React, { useCallback, useContext, useMemo, useState } from 'react'
-import { PanZoomImageDialog } from '@/components/editor/PanZoomImageDialog'
+import { PanZoomImageDialog } from '@/components/editor/document-images/PanZoomImageDialog'
 import { translate } from '@/i18n/i18n'
 
 type ShareImageViewerState = { open: (src: string, title: string) => void }

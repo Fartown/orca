@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { shellEscapePath } from '../components/terminal-pane/pane-helpers'
+import { shellEscapePath } from '../../../shared/shell/launch/shell-path-quoting'
 import { escapeFileAttachmentPathForShell } from '../../../shared/file-attachment-upload/file-attachment-delivery-text'
 
 // Mobile types an uploaded path into a terminal with its own copy of the desktop drop escaping,

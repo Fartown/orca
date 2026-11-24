@@ -1,11 +1,11 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native'
-import { formatAgentTypeLabel } from '../../../src/shared/agent-type-label'
+import { formatAgentTypeLabel } from '../../../src/shared/agent-status/presentation/agent-type-label'
 import type {
   LocalTaskAttentionItem,
   LocalTaskAttentionKind
 } from '../../../src/shared/local-tasks/local-task-link-types'
 import type { LocalTaskStatusDef } from '../../../src/shared/local-tasks/local-task-types'
-import { AgentStateDot } from '../components/AgentStateDot'
+import { AgentStateDot } from '../agents/presentation/AgentStateDot'
 import { colors, spacing, typography } from '../theme/mobile-theme'
 import { themedStyleSheet } from '../theme/themed-styles'
 import { useMobileColorScheme } from '../theme/use-mobile-color-scheme'

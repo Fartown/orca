@@ -1,10 +1,10 @@
-import { separateImagePasteFromFollowingText } from '../../../src/shared/image-paste-following-text'
+import { separateImagePasteFromFollowingText } from '../../../src/shared/terminal/input/image-paste-following-text'
 import {
   fileAttachmentTerminalInput,
   isAgentImageAttachmentName
 } from '../../../src/shared/file-attachment-upload/file-attachment-delivery-text'
-import { buildMobileImagePastePayload } from '../session/mobile-clipboard-image'
-import { nativeChatTerminalWrite } from '../session/mobile-session-write-operations'
+import { buildMobileImagePastePayload } from '../files/attachments/mobile-clipboard-image'
+import { nativeChatTerminalWrite } from '../terminal/session/mobile-session-terminal-operations'
 
 export type FileAttachmentTerminalWriter = Parameters<typeof nativeChatTerminalWrite.request>[0]
 

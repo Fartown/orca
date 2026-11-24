@@ -1,4 +1,4 @@
-import { isWindowsAbsolutePathLike } from '../cross-platform-path'
+import { isWindowsAbsolutePathLike } from '../file-access/cross-platform-path'
 
 // The five types structured Claude reads as images (`claude-structured-dispatch-content.ts`);
 // anything else rides as a file reference so a send cannot fail on `unsupportedType`.

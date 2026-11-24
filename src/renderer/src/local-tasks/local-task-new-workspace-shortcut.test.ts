@@ -2,13 +2,13 @@ import { beforeEach, expect, it, vi } from 'vitest'
 import type { LocalTask, LocalTaskProject } from '../../../shared/local-tasks/local-task-types'
 
 vi.mock('@/store', async () => {
-  const { createTestStore } = await import('@/store/slices/store-test-helpers')
+  const { createTestStore } = await import('@/store/testing/app-store-test-fixture')
   return { useAppStore: createTestStore() }
 })
 
 import { useAppStore } from '@/store'
-import { makeWorktree } from '@/store/slices/worktrees-slice-test-fixtures'
-import { openNewWorkspaceFromShortcut } from '@/hooks/ipc-events/new-workspace-command'
+import { makeWorktree } from '@/store/slices/worktrees/worktree.test-fixture'
+import { openNewWorkspaceFromShortcut } from '@/hooks/app-commands/new-workspace-command'
 import { localTasksDomainStore } from './local-tasks-domain-store'
 import { localTaskPageStore } from './local-task-page-store'
 import { LOCAL_TASK_COMPOSER_KEY } from './local-task-start-work'

@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { listEnvironments } from '../../../../shared/runtime-environment-store'
+import { listEnvironments } from '../../../../shared/remote-runtime/host-store/runtime-environment-store'
 import {
   ARTIFACT_SHARE_RELAY_METHODS,
   ArtifactShareConfigureLocalRequest,
@@ -33,16 +33,16 @@ import {
   type ArtifactShareCallerContext,
   type ArtifactShareRuntimeEnvironmentAccess
 } from '../../../self-hosted-artifacts/artifact-share-routing'
-import { parseExecutionHostId } from '../../../../shared/execution-host'
+import { parseExecutionHostId } from '../../../../shared/execution-host/execution-host'
 import { defineMethod } from '../core'
 
 const StopResult = z.object({ stopped: z.boolean() })
 
 /** Owner answers name themselves; the asking computer knows them by the label the user chose. */
-function hostLabelFor(
+async function hostLabelFor(
   executionHostId: string,
   reported: ArtifactShareHostLabel
-): ArtifactShareHostLabel {
+): Promise<ArtifactShareHostLabel> {
   const host = parseExecutionHostId(executionHostId)
   if (!host || host.kind === 'local') {
     return reported
@@ -51,7 +51,7 @@ function hostLabelFor(
     return { executionHostId, label: host.targetId }
   }
   const runtime = requireArtifactShareRuntime()
-  const environment = listEnvironments(runtime.userDataPath).find(
+  const environment = (await listEnvironments(runtime.userDataPath)).find(
     (entry) => entry.id === host.environmentId
   )
   return { executionHostId, label: environment?.name ?? reported.label }
@@ -82,7 +82,10 @@ function route<T extends { host: ArtifactShareHostLabel }>(
     local,
     context,
     runtimeEnvironment: runtimeEnvironmentAccess
-  }).then((result) => ({ ...result, host: hostLabelFor(executionHostId, result.host) }))
+  }).then(async (result) => ({
+    ...result,
+    host: await hostLabelFor(executionHostId, result.host)
+  }))
 }
 
 async function listHost(
@@ -103,7 +106,7 @@ async function listHost(
     const outdated =
       error instanceof ArtifactShareError && error.code === ARTIFACT_SHARE_ERROR_CODES.hostOutdated
     return {
-      host: hostLabelFor(executionHostId, { executionHostId, label: executionHostId }),
+      host: await hostLabelFor(executionHostId, { executionHostId, label: executionHostId }),
       service: { state: 'unverifiable', reason: outdated ? 'host-outdated' : 'disconnected' },
       workspaces: []
     }
@@ -122,7 +125,7 @@ export async function listArtifactShareHosts(
       ? ['local']
       : [
           'local',
-          ...listEnvironments(requireArtifactShareRuntime().userDataPath)
+          ...(await listEnvironments(requireArtifactShareRuntime().userDataPath))
             .filter((environment) =>
               requireArtifactShareRuntime().isEnvironmentReachable(environment.id)
             )

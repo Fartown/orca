@@ -8,7 +8,7 @@ const run = vi.hoisted(() => vi.fn(async () => undefined))
 const finish = vi.hoisted(() => vi.fn(async () => undefined))
 
 vi.mock('@/store', async () => {
-  const { createTestStore } = await import('@/store/slices/store-test-helpers')
+  const { createTestStore } = await import('@/store/testing/app-store-test-fixture')
   return { useAppStore: createTestStore() }
 })
 vi.mock('@/local-tasks/local-task-dispatcher-proposals', async (importOriginal) => {
@@ -30,8 +30,8 @@ import {
   withLocalTaskProposalEdits
 } from '@/local-tasks/local-task-proposal-edits'
 import { localTasksDomainStore } from '@/local-tasks/local-tasks-domain-store'
-import { makeWorktree } from '@/store/slices/worktrees-slice-test-fixtures'
-import { getDefaultSettings } from '../../../../shared/constants'
+import { makeWorktree } from '@/store/slices/worktrees/worktree.test-fixture'
+import { getDefaultSettings } from '../../../../shared/orca-profiles/constants'
 import type { LocalTaskProposal } from '../../../../shared/local-tasks/local-task-dispatcher-types'
 import type { LocalTaskProject } from '../../../../shared/local-tasks/local-task-types'
 import { LocalTaskProposalCard } from './LocalTaskProposalCard'

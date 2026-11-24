@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest'
-import type { ExecutionHostId } from '../../../shared/execution-host'
+import type { ExecutionHostId } from '../../../shared/execution-host/execution-host'
 import { localTaskLaunchAgentTabId } from './local-task-launch-agent-tab'
 
 const WORKTREE_ID = 'repo1::/repo1/shop-12'

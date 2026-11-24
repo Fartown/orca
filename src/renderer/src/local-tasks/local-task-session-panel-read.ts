@@ -1,4 +1,4 @@
-import { isOrcaWindowForegroundFocused } from '@/components/terminal-pane/terminal-notification-pane-visibility'
+import { isOrcaWindowForegroundFocused } from '@/attention/orca-window-foreground-focus'
 
 export function localTaskSessionPanelIsOnScreen(element: HTMLElement | null): boolean {
   if (!element || !isOrcaWindowForegroundFocused()) {

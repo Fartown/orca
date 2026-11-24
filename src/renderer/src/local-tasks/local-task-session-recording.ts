@@ -1,9 +1,9 @@
 import type { AppState } from '@/store/types'
 import { findStructuredAgentSessionTab } from '@/lib/agent-session/structured-agent-session-tab-activation'
-import type { ExecutionHostId } from '../../../shared/execution-host'
+import type { ExecutionHostId } from '../../../shared/execution-host/execution-host'
 import { structuredAgentSessionPaneKey } from '../../../shared/agent-session/view/structured-agent-session-projection'
-import type { Tab } from '../../../shared/tab-types'
-import type { TuiAgent } from '../../../shared/tui-agent'
+import type { Tab } from '../../../shared/workspace-layout/tab-groups/tab-types'
+import type { TuiAgent } from '../../../shared/agent-launch/catalog/tui-agent'
 import type { LocalTasksLinksRecordSessionInput } from '../../../shared/local-tasks/local-tasks-link-rpc-params'
 import type {
   LocalTaskLinkOrigin,

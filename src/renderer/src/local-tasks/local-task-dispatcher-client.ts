@@ -21,7 +21,7 @@ import {
   localTaskOwnerId,
   type LocalTaskEndpointKey
 } from './local-task-endpoints'
-import { toHostSessionPaneKey } from '../../../shared/terminal-surface-id'
+import { toHostSessionPaneKey } from '../../../shared/workspace-layout/terminal-surface-id'
 import { callLocalTasks, writeLocalTasks } from './local-tasks-endpoint-calls'
 import {
   dispatcherClientProposal,

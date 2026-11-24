@@ -2,9 +2,9 @@ import { appendFile, mkdir, mkdtemp, rm, stat, utimes, writeFile } from 'node:fs
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
-import { readAiVaultSessionTitlesFromFiles } from '../ai-vault/session-title-file-reader'
-import { parseAiVaultSessionTitlesResult } from '../ai-vault/session-title-result-validation'
-import { resolveTerminalTabTitle } from '../../shared/tab-title-resolution'
+import { readAiVaultSessionTitlesFromFiles } from '../ai-vault/session-titles/session-title-file-reader'
+import { parseAiVaultSessionTitlesResult } from '../ai-vault/session-titles/session-title-result-validation'
+import { resolveTerminalTabTitle } from '../../shared/workspace-layout/tab-groups/tab-title-resolution'
 import { projectSessionNameSlot } from '../../shared/session-names/session-name-slot'
 
 const roots: string[] = []

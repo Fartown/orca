@@ -45,3 +45,12 @@ external_ids: ['Fartown/orca#106']
 - 验证证据：见 [本机与SSH验收](tests/runs/2026-11-13-本机与SSH验收.md) 与 `.docs/chat-view-paged-out-echo-ui-validation/2026-11-13/`；真实 `~/.orca-remote` 与真实 HOME 顶层条目前后一致，测试密钥已撤销。
 - 未解决问题：手机端没有真机验证；配对远程 Orca 未单独真机验证。
 - 下一步：提交，按 pr.yml 跑静态分析与 `pnpm check:changed`，推送并开 PR 关联 #106。
+
+### 2026-11-21 上游同步到 fa60d0a566（testing）
+
+- 本轮目标：`fork/integration` 从 `e723de1bfd` 合入上游到 `fa60d0a566`（四次合并：`22afb84f6a`、`9c3b42f644`、`d725f407e8`、`31df22fb1a`，冲突都在第一次），保持已送达且被分页挤出的发送气泡在桌面与手机上都能退场。
+- 完成内容：本功能 4 个冲突（全是 UU）。桌面 `use-native-chat-pending-delivery.ts` 已被上游搬到 `native-chat/session/terminal/delivery/`，以上游为底加回「分页挤出的气泡退场」（与终端聊天视图恢复的持久提交共用这个文件），保留上游新增的 `composerRef`、`workingEpoch`、重发/编辑提示与 `useNativeChatOptimisticSend`。手机端 `mobile-native-chat-pending-echo.ts`、`use-mobile-native-chat-drafts.ts` 随上游换目录后重放；`use-mobile-native-chat-controller.ts` 为不超过 300 行，原来的 `transcriptHasMore: nativeChatSession.hasMore` 改成一行 `...mobileNativeChatTranscriptWindow(nativeChatSession)`，实现放在自有 `mobile/src/native-chat-paged-out-echo/mobile-transcript-window.ts`，行为不变。
+- 代码或文档变更：`config/fork-features.jsonc` 接缝 3 条换路径、1 条换 mustContain（`mobileNativeChatTranscriptWindow(nativeChatSession)`）；桌面 checks 里 2 个上游测试换新路径；`dependsOn` 1 条换路径。合并后没有本功能的单独修复提交。新棘轮基线未登记本功能条目。
+- 验证证据：登记 checks 桌面 4 文件 22 项、手机 7 文件 14 项通过（`/Users/bytedance/dev/orca/.docs/upstream-sync/2026-11-20/sync-checks-run3.log`）；冲突解法见 `/Users/bytedance/dev/orca/.docs/upstream-sync/2026-11-20/report-D-terminal-chat.md`、`phase2-D.tsv`；最终门禁见 `/Users/bytedance/dev/orca/.docs/upstream-sync/2026-11-20/final-gates.log`。真机抽查（`/Users/bytedance/dev/orca/.docs/upstream-sync-ui-validation/2026-11-21/README.md`）未覆盖本功能，桌面、手机、本机与 SSH 都没有做。
+- 未解决问题：同步后的构建没有真机复验气泡退场；手机控制器的调用形状改写只有单测守护。
+- 下一步：下次真机回归按「气泡撤下与保留」用例在本机与 SSH 各跑一轮，手机端一起看。

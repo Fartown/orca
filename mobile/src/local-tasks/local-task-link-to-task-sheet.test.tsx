@@ -2,8 +2,8 @@ import { createElement } from 'react'
 import { act, create, type ReactTestRenderer } from 'react-test-renderer'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { LOCAL_TASKS_RUNTIME_CAPABILITY } from '../../../src/shared/local-tasks/local-tasks-capability'
-import type { MobileRelayHost } from '../../../src/shared/mobile-relay-hosts-contract'
-import type { RpcClient } from '../transport/rpc-client'
+import type { MobileRelayHost } from '../../../src/shared/remote-runtime/relay/mobile-relay-hosts-contract'
+import type { RpcClient } from '../transport/rpc/rpc-client-contract'
 import type { LocalTaskChoice } from './local-task-choice-sheet'
 import { localTasksCopy } from './local-tasks-copy'
 import { LocalTaskLinkToTaskSheet } from './local-task-link-to-task-sheet'
@@ -19,7 +19,9 @@ const sheet = vi.hoisted(() => {
   const state: { props: SheetProps | null } = { props: null }
   return state
 })
-vi.mock('../worktree/relay-hosts-feed', () => ({ useRelayHosts: () => relay.hosts }))
+vi.mock('../worktree/execution-hosts/relay-hosts-feed', () => ({
+  useRelayHosts: () => relay.hosts
+}))
 vi.mock('./local-task-choice-sheet', () => ({
   LocalTaskChoiceSheet: (props: SheetProps) => {
     sheet.props = props
@@ -103,6 +105,7 @@ async function open(target: LocalTaskWorkspaceCandidate) {
     target,
     hostLabel: '',
     client,
+    hostCapabilities: [],
     onClose: () => {}
   })
   await act(async () => {

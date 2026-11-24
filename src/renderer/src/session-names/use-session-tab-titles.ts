@@ -1,9 +1,9 @@
 import { useAppStore } from '@/store'
-import { isTuiAgent } from '../../../shared/tui-agent-config'
-import type { AgentType } from '../../../shared/agent-status-types'
-import type { TerminalTab } from '../../../shared/terminal-tab-types'
-import { resolveTerminalTabTitle } from '../../../shared/tab-title-resolution'
-import { stripLeadingAgentTitleDecoration } from '../../../shared/agent-title-decoration'
+import { isTuiAgent } from '../../../shared/agent-launch/catalog/tui-agent-config'
+import type { AgentType } from '../../../shared/agent-status/contracts/agent-status-types'
+import type { TerminalTab } from '../../../shared/workspace-layout/terminal-tab-types'
+import { resolveTerminalTabTitle } from '../../../shared/workspace-layout/tab-groups/tab-title-resolution'
+import { stripLeadingAgentTitleDecoration } from '../../../shared/agent-status/title/agent-title-decoration'
 
 /** Display fields only; the caller resolves the pane's agent identity separately. */
 export type SessionTabTitleModel = Pick<

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import AsyncStorage from '@react-native-async-storage/async-storage'
-import { z } from 'zod'
+import * as z from 'zod'
 import { persistMirrored } from '../storage/mirrored-storage-keys'
 
 /**

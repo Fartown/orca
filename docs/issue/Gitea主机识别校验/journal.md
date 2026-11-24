@@ -46,3 +46,12 @@ external_ids: []
 - 验证证据：见 tests/runs/2026-11-03.md；证据目录 `.docs/gitea-host-verification-ui-validation/2026-11-03/`。
 - 未解决问题：直连 SSH 路由（`ssh:` 主机）没有单独真机验证，由代码路径与单元测试覆盖。
 - 下一步：推送分支并提 PR 合入 fork/integration。
+
+### 2026-11-21 上游同步到 fa60d0a566（done）
+
+- 本轮目标：`fork/integration` 从 `e723de1bfd` 合入上游到 `fa60d0a566`（四次合并：`22afb84f6a`、`9c3b42f644`、`d725f407e8`、`31df22fb1a`，冲突都在第一次），保持 Gitea 主机识别前先探测校验。
+- 完成内容：本功能 1 个冲突：`src/main/gitea/client.test.ts`（UD），上游作为低价值测试删除（#42633），fork 在里面只加过 `vi.mock('../gitea-host-verification/gitea-host-probe'` 让上游测试能跑，随上游删除并退役这条接缝。`detectHostedReviewProvider` 被上游挪到 `src/main/source-control/forge-provider-detection.ts`，补进 `dependsOn`；checks 里的 `forge-provider.test.ts` 被上游删除（#39743），从命令里去掉。
+- 代码或文档变更：`config/fork-features.jsonc` 接缝 4→3 条；checks 去掉 `forge-provider.test.ts`；`dependsOn` 2 条换路径并新增 `forge-provider-detection.ts`。合并后没有本功能的单独修复提交。新棘轮基线未登记本功能条目。
+- 验证证据：登记 checks 4 文件 24 项通过（`/Users/bytedance/dev/orca/.docs/upstream-sync/2026-11-20/sync-checks-run3.log`）；登记改动依据见 `/Users/bytedance/dev/orca/.docs/upstream-sync/2026-11-20/report-F-builds-plugins-goals.md`、`phase2-F.tsv`；最终门禁见 `/Users/bytedance/dev/orca/.docs/upstream-sync/2026-11-20/final-gates.log`。真机抽查（`/Users/bytedance/dev/orca/.docs/upstream-sync-ui-validation/2026-11-21/README.md`）未覆盖本功能，本机与 SSH 都没有做。
+- 未解决问题：同步后没有对真实 Gitea 主机做识别复验；功能行为只有自有目录与 `hosted-review-gitea.integration.test.ts` 等单测守护。
+- 下一步：无新增动作；下次同步继续按登记表核对 `forge-provider-detection.ts` 依赖。

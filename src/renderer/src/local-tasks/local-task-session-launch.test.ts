@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { LaunchAgentInNewTabArgs } from '@/lib/launch-agent-in-new-tab'
+import type { LaunchAgentInNewTabArgs } from '@/lib/agent-session/launch/new-tab/launch-agent-in-new-tab-args'
 import { structuredAgentSessionPaneKey } from '../../../shared/agent-session/view/structured-agent-session-projection'
 import type { LocalTaskWorkspaceLink } from '../../../shared/local-tasks/local-task-link-types'
 import type { LocalTask } from '../../../shared/local-tasks/local-task-types'
@@ -11,21 +11,25 @@ const fixture = vi.hoisted(() => ({
 }))
 
 vi.mock('@/store', async () => {
-  const { createTestStore } = await import('@/store/slices/store-test-helpers')
+  const { createTestStore } = await import('@/store/testing/app-store-test-fixture')
   return { useAppStore: createTestStore() }
 })
-vi.mock('@/lib/launch-agent-in-new-tab', () => ({ launchAgentInNewTab: fixture.launch }))
-vi.mock('@/lib/agent-session-launch-plan', () => ({
+vi.mock('@/lib/agent-session/launch/new-tab/launch-agent-in-new-tab', () => ({
+  launchAgentInNewTabWithOutcome: fixture.launch
+}))
+vi.mock('@/lib/agent-session/launch/routing/agent-session-launch-plan', () => ({
   planAgentSessionLaunch: fixture.plan,
   adoptAgentSessionLaunchVerdict: (verdict: unknown) => verdict
 }))
-vi.mock('@/lib/worktree-activation', () => ({ activateAndRevealWorkspace: () => ({}) }))
+vi.mock('@/lib/workspace/activation/worktree-activation', () => ({
+  activateAndRevealWorkspace: () => ({})
+}))
 vi.mock('./local-tasks-runtime-client', () => ({
   localTasksClient: { recordSession: fixture.recordSession }
 }))
 
 import { useAppStore } from '@/store'
-import { makeWorktree } from '@/store/slices/worktrees-slice-test-fixtures'
+import { makeWorktree } from '@/store/slices/worktrees/worktree.test-fixture'
 import { launchLocalTaskSession } from './local-task-session-launch'
 
 const WORKTREE_ID = 'repo1::/repo1/shop-12'

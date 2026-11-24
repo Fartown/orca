@@ -1,7 +1,7 @@
 import { Card } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
-import { cn } from '@/lib/utils'
+import { cn } from '@/lib/class-names'
 
 /** One card of the Local tasks settings page; the section body around the cards is transparent. */
 export function LocalTaskSettingsCard({

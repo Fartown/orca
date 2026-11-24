@@ -1,4 +1,4 @@
-import type { AgentStatusEntry } from '../../../src/shared/agent-status-types'
+import type { AgentStatusEntry } from '../../../src/shared/agent-status/contracts/agent-status-types'
 
 /** A complete status row for tests that read only the members continuation looks at. */
 export function continuationAgentStatus(

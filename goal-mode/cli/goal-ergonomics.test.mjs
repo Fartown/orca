@@ -254,7 +254,7 @@ test('orca CLI 的命令名按平台走,和上游那份定义一致', async () =
   assert.match(src, /win32[\s\S]{0,80}orca\.cmd/, 'Windows 分支要在')
   // 和上游定义对齐:上游改了名字这条断言会挂,提醒同步
   const upstream = await fs.readFile(
-    new URL('../../src/shared/orca-cli-command-name.ts', import.meta.url),
+    new URL('../../src/shared/cli/orca-cli-command-name.ts', import.meta.url),
     'utf8'
   )
   for (const name of ['orca-ide', 'orca.cmd']) {

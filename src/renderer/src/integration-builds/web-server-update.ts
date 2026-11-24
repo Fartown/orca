@@ -1,5 +1,5 @@
-import type { UpdateCheckOptions } from '../../../shared/update-status-types'
-import { webRuntimeState } from '../web/preload-api/web-runtime-session'
+import type { UpdateCheckOptions } from '../../../shared/updater/update-status-types'
+import { webRuntimeState } from '../web/runtime/client/web-runtime-session'
 
 export function webServerVersion(): string {
   const snapshot = webRuntimeState.activeClient?.statusOwner?.read()

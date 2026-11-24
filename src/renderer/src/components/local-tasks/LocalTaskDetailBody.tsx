@@ -2,9 +2,9 @@ import { useLayoutEffect, useRef, useState } from 'react'
 import { AlertTriangle, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { translate } from '@/i18n/i18n'
-import { isImeCompositionKeyDown } from '@/lib/ime-composition-keyboard-event'
-import { ImeTextarea } from '@/lib/ime-text-field'
-import { cn } from '@/lib/utils'
+import { isImeCompositionKeyDown } from '@/lib/text-input/ime/ime-composition-keyboard-event'
+import { ImeTextarea } from '@/lib/text-input/ime/ime-text-field'
+import { cn } from '@/lib/class-names'
 import {
   LOCAL_TASK_DESCRIPTION_MAX,
   LOCAL_TASK_TITLE_MAX

@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { RuntimeTerminalProcessInspection } from '@/runtime/runtime-terminal-inspection'
-import { clientOnlyUnverifiableInspection } from '../../../../shared/terminal-process-inspection'
-import { createPaneForegroundAgentTracker } from './pane-foreground-agent-tracker'
+import type { TerminalProcessInspection as RuntimeTerminalProcessInspection } from '../../../../shared/terminal/pty/lifecycle/terminal-process-inspection'
+import { clientOnlyUnverifiableInspection } from '../../../../shared/terminal/pty/lifecycle/terminal-process-inspection'
+import { createPaneForegroundAgentTracker } from './pty-connection/agent-identity/foreground-process/pane-foreground-agent-tracker'
 
 const PTY = 'remote:env@@term'
 function live(epoch = 1): RuntimeTerminalProcessInspection {
@@ -157,5 +157,31 @@ describe('foreground reads follow shared host contact', () => {
     f.contact('connected')
     await vi.advanceTimersByTimeAsync(20_000)
     expect(f.read).not.toHaveBeenCalled()
+  })
+
+  it('keeps a legacy remote process hint unverifiable without privately retrying it', async () => {
+    const read = vi.fn(async () => 'claude')
+    const publish = vi.fn()
+    const tracker = createPaneForegroundAgentTracker({
+      getPtyId: () => 'ssh:connection@@pty-delayed',
+      isTrackablePtyId: () => true,
+      isRemotePtyId: () => true,
+      getExpectedIncarnationId: () => 'inc-current',
+      readForegroundProcess: read,
+      confirmForegroundProcess: read,
+      publish
+    })
+    tracker.onAgentStartupObserved()
+    await vi.advanceTimersByTimeAsync(30_000)
+    expect(read).toHaveBeenCalledTimes(1)
+    expect(read).toHaveBeenCalledWith('ssh:connection@@pty-delayed', {
+      expectedIncarnationId: 'inc-current'
+    })
+    expect(publish).not.toHaveBeenCalled()
+    tracker.onCommandStarted()
+    await vi.advanceTimersByTimeAsync(350)
+    expect(read).toHaveBeenCalledTimes(2)
+    expect(publish).not.toHaveBeenCalled()
+    tracker.dispose()
   })
 })

@@ -1,11 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useAppStore } from '@/store'
-import {
-  inspectRuntimeTerminalProcess,
-  type RuntimeTerminalProcessInspection
-} from './runtime-terminal-inspection'
-import { clearRuntimeCompatibilityCacheForTests } from './runtime-rpc-client'
-import { createCompatibleRuntimeStatusResponse } from './runtime-compatibility-test-fixture'
+import { inspectRuntimeTerminalProcess } from './hosted-terminals/inspection/runtime-terminal-process-inspection'
+import type { TerminalProcessInspection as RuntimeTerminalProcessInspection } from '../../../shared/terminal/pty/lifecycle/terminal-process-inspection'
+import { clearRuntimeCompatibilityCache as clearRuntimeCompatibilityCacheForTests } from './rpc/compatibility/runtime-compatibility-cache'
+import { createCompatibleRuntimeStatusResponse } from './rpc/testing/runtime-compatibility-test-fixture'
 import {
   captureRuntimeTerminalInspectionContact,
   runtimeTerminalProcessContactKey,
@@ -13,7 +11,7 @@ import {
 } from './runtime-terminal-inspection-contact'
 
 vi.mock('@/store', async () => {
-  const { createTestStore } = await import('@/store/slices/store-test-helpers')
+  const { createTestStore } = await import('@/store/testing/app-store-test-fixture')
   return { useAppStore: createTestStore() }
 })
 

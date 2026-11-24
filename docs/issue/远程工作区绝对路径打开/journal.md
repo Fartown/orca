@@ -173,3 +173,12 @@ external_ids: []
 - 验证证据：`.docs/upstream-sync-ui-validation/2026-10-21/evidence/`；四目标类型检查、最终 Web 类型复验、三项本地化、功能注册及全部注册功能回归通过；隐藏 Electron + 真实 SSH 隔离 orcad 验收通过。完整记录见 sync-upstream-gates.log、attachment-grant-matrix.log 与 remaining-feature-checks.log。
 - 未解决问题：本轮实现无未解决问题；提交后需从干净 integration 复核架构门禁并观察远端构建。不在本次安装用户应用或升级已有远程服务。
 - 下一步：推送通过门禁的 integration，跟踪远端检查；保留当前应用及会话。
+
+### 2026-11-21 上游同步到 fa60d0a566（testing）
+
+- 本轮目标：`fork/integration` 从 `e723de1bfd` 合入上游到 `fa60d0a566`（四次合并：`22afb84f6a`、`9c3b42f644`、`d725f407e8`、`31df22fb1a`，冲突都在第一次），保持新建 Tab 弹窗输入绝对路径时本地开本地、SSH 开远端，归属未解析才不可用。
+- 完成内容：本功能 11 个冲突（UU 6，含桌面 en/zh 词条表；UD 5）。上游把新建 Tab 弹窗搬到 `tab-bar/create-entry/`：`tab-create-entry-absolute-file.ts` 上游只改了导入，取 fork 版本；`tab-create-entry-action.ts`、`tab-create-entry-classifier.ts`、`TabBarCreateEntry.tsx` 以上游为底重放主机策略。上游删除的 `tab-create-entry-action.test.ts`、`tab-create-entry-classifier.test.ts` 里守护远端路径的用例移到自有 `tab-entry-remote-path/` 下两个测试；`TabBarCreateEntry.history/keyboard/tab-results` 三个测试 fork 只改过 mock，随上游删除。`absolutePathRemoteBlocked` 英文保留 fork 文案「Absolute paths are unavailable until the workspace host is ready.」，中文保留 fork 语义、用上游标点：「工作区主机就绪后才能打开绝对路径」。
+- 代码或文档变更：`config/fork-features.jsonc` 接缝 4 条换路径（mustContain 不变）；`tests` 由 5 个上游测试换成 2 个自有测试；checks 换新路径；`dependsOn` 6 条换路径，去掉自有代码已不再导入的 `runtime-file-client-types.ts`。合并后没有本功能的单独修复提交。新棘轮基线未登记本功能条目。
+- 验证证据：登记 checks 5 文件 24 项通过（`/Users/bytedance/dev/orca/.docs/upstream-sync/2026-11-20/sync-checks-run3.log`）；冲突解法见 `/Users/bytedance/dev/orca/.docs/upstream-sync/2026-11-20/report-E-files-preview-remote.md`、`report-G-shared.md`、`phase2-E.tsv`；最终门禁见 `/Users/bytedance/dev/orca/.docs/upstream-sync/2026-11-20/final-gates.log`。SSH 真机抽查通过：omnibox 输入远端 worktree 内与 worktree 外的绝对路径都「Open file」并渲染远端内容（`/Users/bytedance/dev/orca/.docs/upstream-sync-ui-validation/2026-11-21/README.md` 第 8 项，截图 `evidence/ssh-2`～`ssh-7`）。本机工作区与「主机未就绪」提示没有在同步后真机复验。
+- 未解决问题：本机路径与主机未就绪的不可用提示只有单测覆盖。
+- 下一步：下次真机回归补本机工作区与主机未就绪两例。

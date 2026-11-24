@@ -1,4 +1,4 @@
-import { locateTerminalTab } from '../store/terminals/terminal-tab-location'
+import { locateTerminalTab } from '../store/terminals/ownership/terminal-tab-location'
 
 export type TerminalChatRecoveryOwner = {
   tabId: string

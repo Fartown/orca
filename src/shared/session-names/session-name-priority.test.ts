@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { deriveGeneratedTabTitle } from '../agent-tab-title'
-import { getAgentRowConversationName } from '../agent-row-conversation-name'
+import { deriveGeneratedTabTitle } from '../agent-status/presentation/agent-tab-title'
+import { getAgentRowConversationName } from '../agent-status/presentation/agent-row-conversation-name'
 import { resolveSessionDisplayTitle } from '../session-display-title'
-import { resolveTerminalTabTitle, resolveUnifiedTabLabel } from '../tab-title-resolution'
+import {
+  resolveTerminalTabTitle,
+  resolveUnifiedTabLabel
+} from '../workspace-layout/tab-groups/tab-title-resolution'
 
 describe('REQ-025 manual-first naming contract', () => {
   it('uses manual, Provider, stable prompt, live, owned label, then identity fallback', () => {

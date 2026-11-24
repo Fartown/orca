@@ -1,6 +1,7 @@
 import { LOCAL_TASKS_RUNTIME_CAPABILITY } from '../../../src/shared/local-tasks/local-tasks-capability'
 import type { LocalTasksStatus } from '../../../src/shared/local-tasks/local-task-types'
-import type { ConnectionState, HostProfile } from '../transport/types'
+import type { ConnectionState } from '../transport/connection/connection-state'
+import type { HostProfile } from '../host-catalog/host-profile'
 
 /**
  * Whether this page may talk to a host's task library at all.

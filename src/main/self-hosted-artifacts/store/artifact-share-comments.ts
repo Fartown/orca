@@ -2,13 +2,13 @@ import { createHash, randomBytes } from 'node:crypto'
 import { readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { z } from 'zod'
-import { writeDurableSecureJsonFile } from '../../../shared/secure-file'
+import { writeDurableSecureJsonFile } from '../../../shared/secure-storage/secure-file'
 import {
   ARTIFACT_SHARE_COMMENT_LIMITS,
   ArtifactShareComment,
   type ArtifactShareCommentInput
 } from '../../../shared/self-hosted-artifacts/artifact-share-comments-contract'
-import { withFileTransactionLock } from '../../file-transaction-lock'
+import { withFileTransactionLock } from '../../filesystem/file-transaction-lock'
 import {
   ARTIFACT_SHARE_FILE_VERSION,
   readVersionedArtifactShareFile

@@ -1,7 +1,7 @@
 import { View } from 'react-native'
 import { ListTodo } from 'lucide-react-native'
 import { colors } from '../theme/mobile-theme'
-import type { Worktree } from '../worktree/workspace-list-types'
+import type { Worktree } from '../worktree/workspace-list/workspace-list-types'
 import { localTasksCopy } from './local-tasks-copy'
 import { useLocalTaskForHostRow } from './local-task-host-rows'
 

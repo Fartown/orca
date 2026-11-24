@@ -122,3 +122,12 @@ external_ids: []
 - 验证证据：`.docs/upstream-sync-ui-validation/2026-10-21/evidence/`；四目标类型检查、最终 Web 类型复验、三项本地化、功能注册及全部注册功能回归通过；隐藏 Electron + 真实 SSH 隔离 orcad 验收通过。完整记录见 sync-upstream-gates.log、attachment-grant-matrix.log 与 remaining-feature-checks.log。
 - 未解决问题：本轮实现无未解决问题；提交后需从干净 integration 复核架构门禁并观察远端构建。不在本次安装用户应用或升级已有远程服务。
 - 下一步：推送通过门禁的 integration，跟踪远端检查；保留当前应用及会话。
+
+### 2026-11-21 上游同步到 fa60d0a566（testing）
+
+- 本轮目标：`fork/integration` 从 `e723de1bfd` 合入上游到 `fa60d0a566`（四次合并：`22afb84f6a`、`9c3b42f644`、`d725f407e8`、`31df22fb1a`，冲突都在第一次），保持远程主机上 worktree 之外的绝对路径能由主机发放授权后打开。
+- 完成内容：本功能 11 个冲突（UU 7、UD 4）。上游 #39625 删除 `orca-runtime-files.ts`，并把 `runtime-file-command-surface.ts` 改造成构造期的文件命令状态；原来两处 `grantHostPath` 接缝合并为 `src/main/runtime/construction/runtime-file-command-state.ts` 一行 `readonly grantHostPath = bindHostPathGrant(this.runtimeFileCommandHost, this.terminalArtifacts)`，实现留在自有 `remote-host-path-grant/grant-host-path.ts`。`files.ts` 的方法注册搬到 `rpc-method-registry.ts`；`file-grants.ts`、`runtime-file-mutation-client.ts`、`open-file.ts`、`tab-create-entry-*` 等以上游为底重放。`useEditorPanelFileContentLoader.ts`（上游搬到 `editor/loading/`）里带 `runtimeHostPathGrant` 的恢复标签整个跳过上游新增的 `placeAbsoluteTab`。上游删除的 `tab-create-entry-action.test.ts` 中守护远端路径的用例移到自有 `tab-entry-remote-path/tab-create-entry-action-remote-paths.test.ts`。
+- 代码或文档变更：`config/fork-features.jsonc` 接缝 13→12 条（9 条换路径，两条 `grantHostPath` 合并为 `runtime-file-command-state.ts` 的 `bindHostPathGrant`）；`tests` 换成自有测试；`dependsOn` 4 条换路径，`runtime-rpc-client.ts`、`runtime-types.ts` 换成 `runtime/files/runtime-file-client-types.ts`、`runtime/rpc/calls/runtime-rpc-call.ts`。合并后没有本功能的单独修复提交。新棘轮基线未登记本功能条目。
+- 验证证据：登记 checks 11 文件 34 项通过（`/Users/bytedance/dev/orca/.docs/upstream-sync/2026-11-20/sync-checks-run3.log`）；冲突解法见 `/Users/bytedance/dev/orca/.docs/upstream-sync/2026-11-20/report-E-files-preview-remote.md`、`phase2-E.tsv`；最终门禁见 `/Users/bytedance/dev/orca/.docs/upstream-sync/2026-11-20/final-gates.log`。SSH 真机抽查通过：omnibox 输入远端 worktree 内与 worktree 外的绝对路径都出现「Open file」并渲染远端内容（`/Users/bytedance/dev/orca/.docs/upstream-sync-ui-validation/2026-11-21/README.md` 第 8 项，截图 `evidence/ssh-2`～`ssh-7`）。重启后恢复已授权标签没有在真机上看过。
+- 未解决问题：跳过 `placeAbsoluteTab` 后，带主机授权的标签恢复时不再挪到持有该路径的工作区（合并前 fork 会挪），这一行为差异没有真机确认。
+- 下一步：下次真机回归时补「SSH 打开 worktree 外文件后重启恢复」一例，确认标签落在原工作区且内容可读。

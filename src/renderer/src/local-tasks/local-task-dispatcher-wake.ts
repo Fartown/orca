@@ -1,7 +1,7 @@
 import { useAppStore } from '@/store'
-import { sendMessageToAgent } from '@/lib/agent-message-send'
-import { parsePaneKey } from '../../../shared/stable-pane-id'
-import { readLastTerminalInputAt } from '@/lib/terminal-input-activity-coalescing'
+import { sendMessageToAgent } from '@/lib/agent-session/messaging/agent-message-send'
+import { parsePaneKey } from '../../../shared/workspace-layout/stable-pane-id'
+import { readLastTerminalInputAt } from '@/lib/terminal/input/terminal-input-activity-coalescing'
 import { localTaskDispatcherClientFor } from './local-task-dispatcher-client'
 import {
   refreshLocalTaskProposals,
@@ -89,7 +89,7 @@ export function isLocalTaskDispatcherWakeOn(): boolean {
 
 /** The idle stretch the dispatcher is in; a session-start `done` is not a finished turn. */
 function idleStretch(paneKey: string): { key: string; turnStartedAt: number } | null {
-  const status = useAppStore.getState().agentStatusByPaneKey[paneKey]
+  const status = useAppStore.getState().agentStatusByPaneKey.get(paneKey)
   return status?.state === 'done' && !status.sessionBoundary
     ? {
         key: `${paneKey}@${status.stateStartedAt}`,
@@ -287,7 +287,7 @@ export function bindLocalTaskDispatcher(): () => void {
       const paneKey = liveDispatcherPaneKey(state)
       if (
         paneKey &&
-        state.agentStatusByPaneKey[paneKey] !== previous.agentStatusByPaneKey[paneKey]
+        state.agentStatusByPaneKey.get(paneKey) !== previous.agentStatusByPaneKey.get(paneKey)
       ) {
         void wake.check()
       }

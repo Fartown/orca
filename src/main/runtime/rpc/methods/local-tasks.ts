@@ -25,7 +25,7 @@ import {
   streamLocalTaskChanges
 } from '../../../local-tasks/local-tasks-change-subscription'
 import { localTasksReadiness } from '../../../local-tasks/local-tasks-readiness'
-import { getPublishedHostDescriptor } from '../../host-descriptor'
+import { getPublishedHostDescriptor } from '../../hosts/platform-probe/host-descriptor'
 import { sourceOf } from '../../../local-tasks/local-tasks-rpc-caller'
 import type { LocalTasksService } from '../../../local-tasks/local-tasks-service'
 import { defineMethod, defineStreamingMethod } from '../core'

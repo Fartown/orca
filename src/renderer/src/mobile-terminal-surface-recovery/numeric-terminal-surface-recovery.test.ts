@@ -1,15 +1,17 @@
 import { describe, expect, it, vi } from 'vitest'
-import { adoptLiveWorkspacePtySurfaces } from '../lib/worktree-agent-live-surface-adoption'
-import { runWorktreeAgentActivationGate } from '../lib/worktree-agent-activation-gate'
+import { adoptLiveWorkspacePtySurfaces } from '../lib/workspace/activation/worktree-agent-live-surface-adoption'
+import { runWorktreeAgentActivationGate } from '../lib/workspace/activation/worktree-agent-activation-gate'
 import {
   LIVE_LEAF_ID,
   SIBLING_LEAF_ID,
   seedExistingSurface,
   testDeps,
   WORKTREE_ID
-} from '../lib/worktree-agent-activation-gate.test-fixture'
+} from './activation-gate.test-fixture'
 
-vi.mock('../../../shared/layout-owner-switch', () => ({ ORCA_LAYOUT_OWNER_IS_MAIN: false }))
+vi.mock('../../../shared/workspace-layout/layout-owner-switch', () => ({
+  ORCA_LAYOUT_OWNER_IS_MAIN: false
+}))
 
 describe('numeric terminal surface recovery', () => {
   it.each([WORKTREE_ID, 'folder:acp-workspace'])(

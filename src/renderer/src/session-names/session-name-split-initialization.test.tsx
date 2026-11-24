@@ -1,16 +1,24 @@
 // @vitest-environment happy-dom
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { act, renderHook } from '@testing-library/react'
-import { useTerminalPaneLayoutBindings } from '../components/terminal-pane/use-terminal-pane-layout-bindings'
-import type { TerminalPaneLayoutController } from '../components/terminal-pane/use-terminal-pane-layout-persistence'
-import { createTerminalLayoutActions } from '../store/terminals/terminal-layout-state'
-import { startAiVaultTabTitleSync } from '../lib/ai-vault-tab-title-sync'
-import { fixture, nativeResult, LEAF, SIBLING } from './session-name-binding-test-fixture'
+import { useTerminalPaneLayoutBindings } from '../components/terminal-pane/layout/ownership/use-terminal-pane-layout-bindings'
+import type { TerminalPaneLayoutController } from '../components/terminal-pane/layout/persistence/use-terminal-pane-layout-persistence'
+import { createTerminalLayoutActions } from '../store/terminals/layout/terminal-layout-state'
+import { startAiVaultTabTitleSync } from '../lib/agent-session/history/title-sync/ai-vault-tab-title-sync'
+import {
+  fixture,
+  nativeResult,
+  LEAF,
+  SIBLING,
+  titleSyncStore
+} from './session-name-binding-test-fixture'
 
 let store: ReturnType<typeof fixture>
 vi.mock('../store', () => ({ useAppStore: { getState: () => store.getState() } }))
-vi.mock('@/runtime/sync-runtime-graph', () => ({ scheduleRuntimeGraphSync: vi.fn() }))
-vi.mock('../components/terminal-pane/expand-collapse', () => ({
+vi.mock('@/runtime/sync-runtime-graph/graph-sync-scheduler', () => ({
+  scheduleRuntimeGraphSync: vi.fn()
+}))
+vi.mock('../components/terminal-pane/layout/expand/expanded-pane-layout', () => ({
   useExpandCollapseActions: () => ({})
 }))
 const stops: (() => void)[] = []
@@ -34,8 +42,7 @@ function mountBinding(selectedLeaf = SIBLING, selectedPaneId = 2) {
   store.getState().setAiVaultTabTitle('tab', nativeResult('Name of inactive A').titles[0])
   stops.push(
     startAiVaultTabTitleSync({
-      getState: store.getState,
-      subscribe: store.subscribe,
+      ...titleSyncStore(store),
       resolveSessionTitles: async () => ({ titles: [] })
     })
   )

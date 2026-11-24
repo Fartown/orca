@@ -4,8 +4,8 @@ import { ArrowUpRight, CornerDownRight, Link2, Unlink } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { translate } from '@/i18n/i18n'
 import { useAppStore } from '@/store'
-import { parsePaneKey } from '../../../../shared/stable-pane-id'
-import { isTuiAgent } from '../../../../shared/tui-agent-config'
+import { parsePaneKey } from '../../../../shared/workspace-layout/stable-pane-id'
+import { isTuiAgent } from '../../../../shared/agent-launch/catalog/tui-agent-config'
 import type { LocalTaskSessionLink } from '../../../../shared/local-tasks/local-task-link-types'
 import type { LocalTask } from '../../../../shared/local-tasks/local-task-types'
 import { openLocalTaskPage } from '@/local-tasks/local-task-navigation'
@@ -161,7 +161,7 @@ function LinkChooser({
   onBack?: () => void
 }): React.JSX.Element | null {
   const { hostId, link } = useLocalTaskPaneWorkspaceLink(pane.worktreeId)
-  const agentType = useAppStore((state) => state.agentStatusByPaneKey[pane.paneKey]?.agentType)
+  const agentType = useAppStore((state) => state.agentStatusByPaneKey.get(pane.paneKey)?.agentType)
   const tasks = useLocalTasksDomain((state) => state.tasks)
   const links = useLocalTasksDomain((state) => state.links)
   const instanceId = useAppStore(
@@ -193,7 +193,7 @@ function LinkChooser({
           instanceId: instanceId ?? link?.instanceId ?? null,
           agent: isTuiAgent(agentType)
             ? agentType
-            : isTuiAgent(replacing?.agent)
+            : replacing && isTuiAgent(replacing.agent)
               ? replacing.agent
               : null,
           linkedVia: 'manual',

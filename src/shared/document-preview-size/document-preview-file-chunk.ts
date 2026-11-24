@@ -1,8 +1,8 @@
 import type { Stats } from 'node:fs'
 import type { FileHandle } from 'node:fs/promises'
-import { isBinaryBuffer } from '../binary-buffer'
-import { validateFileRangeRequest } from '../file-range-read'
-import type { DocPreviewFileAccessResult } from '../doc-preview-file-access'
+import { isBinaryBuffer } from '../file-preview/binary-buffer'
+import { validateFileRangeRequest } from '../file-content/file-range-read'
+import type { DocPreviewFileAccessResult } from '../document-preview/doc-preview-file-access'
 import type { DocumentPreviewChunkRequest } from './document-preview-chunk'
 
 function version(stats: Stats): string {

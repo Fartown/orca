@@ -1,4 +1,4 @@
-import { z } from 'zod'
+import * as z from 'zod'
 import { LocalTaskSessionExecutionOriginSchema } from './local-task-session-origin'
 import type {
   LocalTaskAttentionItem,
@@ -13,7 +13,7 @@ import type {
   LocalTaskWorkspaceKind,
   LocalTaskWorkspaceLink
 } from './local-task-link-types'
-import { hostUnionArms, openEnum, salvagingArray } from '../zod-salvage'
+import { hostUnionArms, openEnum, salvagingArray } from '../validation/zod-salvage'
 
 // Client-side reads of the `localTasks.links.*` and `attention.*` replies. Like local-task-read-schemas.ts, a row
 // this build cannot read drops from its list; an unknown state degrades instead of failing.

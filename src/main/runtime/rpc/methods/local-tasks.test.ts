@@ -8,7 +8,7 @@ import {
   getAppEnvironment,
   hasAppEnvironment,
   setAppEnvironment
-} from '../../../../shared/app-environment'
+} from '../../../../shared/app-lifecycle/app-environment'
 import {
   LOCAL_TASKS_RUNTIME_CAPABILITY,
   LOCAL_TASKS_CROSS_HOST_SESSIONS_CAPABILITY,
@@ -24,9 +24,9 @@ import { localTasksRuntimeCapabilities } from '../../../local-tasks/local-tasks-
 import {
   isForkExecutionHostRelayMethod,
   isMobileRpcMethodAllowed
-} from '../../runtime-rpc/fork-mobile-rpc-method-allowlist'
+} from '../server/fork-mobile-rpc-method-allowlist'
 import { isDesktopClientCaller, sourceOf } from '../../../local-tasks/local-tasks-rpc-caller'
-import { ALL_RPC_METHODS } from './index'
+import { ALL_RPC_METHODS } from './rpc-method-registry'
 import {
   LOCAL_TASK_DISPATCHER_DESKTOP_METHODS,
   LOCAL_TASK_DISPATCHER_SESSION_METHODS

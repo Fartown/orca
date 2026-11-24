@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { translate } from '@/i18n/i18n'
 import { useAppStore } from '@/store'
+import { useAgentStatus } from '@/runtime/agent-status/use-agent-status'
 import { goalDomainStore } from '@/goals/goals-domain-store'
 import { useGoalDomainStore } from '@/goals/use-goals-domain-store'
 
@@ -21,7 +22,7 @@ export function GoalSessionAction({
   leafId: string
 }): React.JSX.Element | null {
   const paneKey = `${tabId}:${leafId}`
-  const agentEntry = useAppStore((s) => s.agentStatusByPaneKey[paneKey])
+  const agentEntry = useAgentStatus(paneKey)
   const terminalHandle = agentEntry?.terminalHandle ?? null
   const boundGoalId = useGoalDomainStore(
     (s) =>

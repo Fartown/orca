@@ -4,7 +4,7 @@ import type {
   ProjectSectionModel,
   ProjectSectionRepo,
   ProjectSectionSetup
-} from '../project-section-grouping'
+} from '../sidebar-list/sections/project-section-grouping'
 
 const projectNameGroupingCache = new WeakMap<
   ProjectSectionModel,

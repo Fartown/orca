@@ -2,12 +2,20 @@ import { mkdtemp, mkdir, readFile, rename, rm, utimes, writeFile } from 'node:fs
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { appImageNamespaceKey, resolveAppImageCacheKey } from '../../shared/appimage-cache-identity'
+import {
+  appImageNamespaceKey,
+  resolveAppImageCacheKey
+} from '../../shared/desktop-distribution/appimage/appimage-cache-identity'
 import {
   resolveAppImageBuildWatch,
   serveAppImageAttemptPath
-} from '../runtime/serve-appimage-update'
-import { finishLinuxServeUpdate, linuxServeUpdateEnvironment } from './linux-serve-update'
+} from '../runtime/serve/updates/serve-appimage-update'
+import { getServeUpdateHandoffPath } from '../../shared/remote-runtime/serve-supervisor/serve-update-handoff'
+import {
+  finishLinuxServeUpdate,
+  linuxServeUpdateEnvironment,
+  serveUpdateHandoff
+} from './linux-serve-update'
 
 const roots: string[] = []
 afterEach(async () => {
@@ -66,6 +74,31 @@ describe('Linux AppImage supervised update', () => {
     expect(linuxServeUpdateEnvironment(f.executable, false, {}, 'linux')).toBeNull()
     expect(linuxServeUpdateEnvironment(f.executable, true, {}, 'win32')).toBeNull()
     expect(linuxServeUpdateEnvironment('/opt/orca/orca-ide', true, {}, 'linux')).toBeNull()
+  })
+
+  it('hands supervised AppImage serves to the CLI update handoff, but never recipe runs', async () => {
+    const f = await fixture()
+    const originalPlatform = Object.getOwnPropertyDescriptor(process, 'platform')!
+    Object.defineProperty(process, 'platform', { value: 'linux' })
+    try {
+      expect(serveUpdateHandoff(f.executable, { supervise: true }, f.root)).toEqual({
+        path: getServeUpdateHandoffPath(f.root),
+        linuxEnv: {
+          APPIMAGE: f.image,
+          APPDIR: dirname(f.executable),
+          APPIMAGE_EXTRACT_AND_RUN: '1'
+        }
+      })
+      expect(serveUpdateHandoff(f.executable, { supervise: false }, f.root)).toEqual({
+        path: null,
+        linuxEnv: null
+      })
+      expect(
+        serveUpdateHandoff(f.executable, { supervise: true, recipeJson: true }, f.root)
+      ).toEqual({ path: null, linuxEnv: null })
+    } finally {
+      Object.defineProperty(process, 'platform', originalPlatform)
+    }
   })
 
   it('lets the installed target proceed to the existing IPC readiness verification', async () => {

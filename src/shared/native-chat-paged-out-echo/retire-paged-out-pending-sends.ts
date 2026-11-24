@@ -1,5 +1,5 @@
 import type { NativeChatMessage } from '../native-chat/native-chat-types'
-import type { NativeChatPendingSend } from '../native-chat/transcript/native-chat-pending-sends'
+import type { NativeChatPendingSend } from '../native-chat/transcript/pending-sends/native-chat-pending-sends'
 
 export type NativeChatLoadedWindow = {
   /** Older transcript rows exist beyond the loaded messages. */

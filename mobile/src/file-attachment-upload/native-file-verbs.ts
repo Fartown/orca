@@ -1,6 +1,6 @@
 import { FILE_ATTACHMENT_MAX_BYTES } from '../../../src/shared/file-attachment-upload/file-attachment-upload-limits'
-import { BridgeNativeVerbRefusedError } from '../mobile-web-shell/bridge-host-errors'
-import type { MediaHandleRegistry } from '../mobile-web-shell/media-handle-registry'
+import { BridgeNativeVerbRefusedError } from '../mobile-web-shell/host-bridge/bridge-host-errors'
+import type { MediaHandleRegistry } from '../mobile-web-shell/native-capabilities/media-handle-registry'
 import { filePickParamsSchema, type BridgeFileItem } from './bridge-file-verbs'
 
 /**

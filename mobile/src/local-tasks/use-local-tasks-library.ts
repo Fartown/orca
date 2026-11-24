@@ -7,7 +7,7 @@ import type {
   LocalTaskProject,
   LocalTasksStatus
 } from '../../../src/shared/local-tasks/local-task-types'
-import type { RpcClient } from '../transport/rpc-client'
+import type { RpcClient } from '../transport/rpc/rpc-client-contract'
 import { createLocalTasksApi, type LocalTasksApi } from './local-tasks-api'
 import { startLocalTasksChangeFeed } from './local-tasks-change-feed'
 import { useLocalTaskWork, type LocalTaskWork } from './use-local-task-work'

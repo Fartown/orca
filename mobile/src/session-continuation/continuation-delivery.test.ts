@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from 'vitest'
 import { runMobileSessionContinuation } from './continuation-delivery'
-import { markRpcDeliveryUnknown } from '../transport/rpc-delivery-ambiguity'
-import type { RpcClient } from '../transport/rpc-client'
-import type { RpcResponse } from '../transport/types'
+import { markRpcDeliveryUnknown } from '../transport/rpc/rpc-delivery-ambiguity'
+import type { RpcClient } from '../transport/rpc/rpc-client-contract'
+import type { RpcResponse } from '../transport/rpc/rpc-wire-types'
 
 const PROMPT = 'Continue work from the prior Orca session using the context below.\nline two'
 

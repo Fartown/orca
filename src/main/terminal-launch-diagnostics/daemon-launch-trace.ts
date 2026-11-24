@@ -1,4 +1,4 @@
-import type { DaemonFileLog } from '../daemon/daemon-file-log'
+import type { DaemonFileLog } from '../daemon/observability/daemon-file-log'
 import {
   launchEvidence,
   launchField,

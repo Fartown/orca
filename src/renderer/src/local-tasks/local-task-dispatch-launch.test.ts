@@ -6,8 +6,8 @@ import type {
 } from '../../../shared/local-tasks/local-task-link-types'
 import type { LocalTask, LocalTaskProject } from '../../../shared/local-tasks/local-task-types'
 import type { Worktree } from '../../../shared/worktree/types'
-import type { ExecutionHostId } from '../../../shared/execution-host'
-import { makeWorktree } from '@/store/slices/worktrees-slice-test-fixtures'
+import type { ExecutionHostId } from '../../../shared/execution-host/execution-host'
+import { makeWorktree } from '@/store/slices/worktrees/worktree.test-fixture'
 
 const fixture = vi.hoisted(() => {
   const rows = (): unknown[] => []
@@ -31,8 +31,8 @@ const fixture = vi.hoisted(() => {
 })
 
 vi.mock('@/store', () => ({ useAppStore: { getState: () => ({}) } }))
-vi.mock('@/runtime/runtime-rpc-client', () => ({ callRuntimeRpc: fixture.rpc }))
-vi.mock('@/runtime/agent-session-operation-id', () => ({
+vi.mock('@/runtime/rpc/calls/runtime-rpc-call', () => ({ callRuntimeRpc: fixture.rpc }))
+vi.mock('@/runtime/hosted-terminals/creation/agent-launch/agent-session-operation-id', () => ({
   createAgentSessionOperationId: () => 'operation'
 }))
 vi.mock('./local-task-host-contact', () => ({

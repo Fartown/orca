@@ -1,5 +1,5 @@
-import { z } from 'zod'
-import { isValidRuntimeFileBase64 } from '../rpc-contract/files-mutation-params'
+import * as z from 'zod'
+import { isValidRuntimeFileBase64 } from '../rpc-contract/filesystem/files-mutation-params'
 import {
   FILE_ATTACHMENT_CHUNK_BASE64_CHARS,
   FILE_ATTACHMENT_MAX_BYTES,

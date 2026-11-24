@@ -5,7 +5,7 @@ import type {
   LocalTaskAttentionItem,
   LocalTaskProgressSnapshot
 } from '../../../src/shared/local-tasks/local-task-link-types'
-import type { RpcClient } from '../transport/rpc-client'
+import type { RpcClient } from '../transport/rpc/rpc-client-contract'
 import { useAcknowledgeOpenSession } from './use-local-task-session-acknowledge'
 
 const screen = vi.hoisted(() => {

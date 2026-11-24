@@ -1,9 +1,9 @@
-import { normalizedNativeChatUserMessageText } from '../native-chat/transcript/native-chat-image-transcript-markers'
+import { normalizedNativeChatUserMessageText } from '../native-chat/transcript/images/native-chat-image-transcript-markers'
 import type { NativeChatMessage } from '../native-chat/native-chat-types'
 import {
   matchingNativeChatUserContentCounts,
   nativeChatPendingContentKey
-} from '../native-chat/transcript/native-chat-pending-occurrence'
+} from '../native-chat/transcript/pending-sends/native-chat-pending-occurrence'
 import type { DurableChatSubmitRecord, DurableChatUserEvidence } from './durable-chat-submit'
 
 function matchesDurableChatUser(

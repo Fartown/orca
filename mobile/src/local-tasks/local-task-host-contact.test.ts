@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 vi.mock('react-native', () => ({ AppState: { currentState: 'active' } }))
-import { FakeSession } from '../transport/mobile-endpoint-supervisor-test-fakes'
+import { FakeSession } from '../transport/connection/mobile-endpoint-supervisor-test-fakes'
 import { localTaskEndpointFor, SELF_LOCAL_TASK_ENDPOINT } from './local-task-endpoint'
 import { readLocalTaskHostContact } from './local-task-host-contact'
 

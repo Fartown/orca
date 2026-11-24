@@ -1,5 +1,5 @@
 import { FileText, Image as ImageIcon } from 'lucide-react-native'
-import { ActionSheetModal } from '../components/ActionSheetModal'
+import { ActionSheetModal } from '../components/sheets/ActionSheetModal'
 import { useMobileTranslation } from '../i18n/use-mobile-translation'
 import type { AttachmentSourceSheetProps } from './use-mobile-file-attachments'
 

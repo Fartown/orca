@@ -1,83 +1,37 @@
-import type { StructuredAgentSessionChildWorkProducer } from '../../native-chat/agent-session-wire/structured-agent-session-subagent-rows'
-import type { ClaudeStartupOutcome } from './claude-structured-startup-outcome'
-import type { ClaudeCliFlagCheck, ClaudeCliFlagFact } from '../claude-cli-flag-support'
-import type { StructuredAgentSessionLogger } from '../../native-chat/agent-session-wire/structured-agent-session-logger'
+import type { StructuredAgentSessionChildWorkProducer } from '../../native-chat/agent-session-wire/observations/structured-agent-session-subagent-rows'
+import type { ClaudeStartupOutcome } from './startup/claude-structured-startup-outcome'
+import type {
+  ClaudeCliFlagCheck,
+  ClaudeCliFlagFact
+} from '../cli-capabilities/claude-cli-flag-support'
+import type { StructuredAgentSessionLogger } from '../../native-chat/agent-session-wire/host/structured-agent-session-logger'
 import type { AgentJournalDispatchRejection } from '../../../shared/agent-session/failures/agent-session-failure-words'
-import type { SubmissionRejectionFact } from '../../../shared/agent-session/failures/agent-session-failure'
 import type { AgentJournalItemIdentity } from '../../../shared/agent-session/journal/agent-session-journal-identity'
-import type { StructuredAgentSessionEventSink } from '../../native-chat/agent-session-wire/structured-agent-session-event-sink'
-import type * as SessionAdapter from '../../native-chat/agent-session-wire/structured-agent-session-adapter'
+import type { StructuredAgentSessionEventSink } from '../../native-chat/agent-session-wire/journal-ingress/structured-agent-session-event-sink'
 import type {
   ClaudeStreamJsonConnection,
   openClaudeStreamJsonConnection
 } from '../claude-stream-json-connection'
 import type { ClaudeStructuredLaunch } from './launch/claude-structured-launch-resolution'
-import type { StructuredLaunchRequest } from '../../runtime/structured-agent-launch-composition'
-import type { ClaudeJournalTranslator } from '../claude-journal-translator-contract'
-import type { ClaudePendingPrompt, ClaudePromptRegistry } from '../claude-prompt-registry'
+import type { StructuredLaunchRequest } from '../../runtime/agent-session/launch/structured-agent-launch-composition'
+import type { ClaudeJournalTranslator } from './journal/claude-journal-translator-contract'
+import type { ClaudePromptRegistry } from './permissions/claude-prompt-registry'
+import { ClaudeJournalBoundDelivery } from './journal/claude-journal-bound-delivery'
 import { cancelProcessAcquisition } from '@orca/process-host/cancel-process-acquisition'
 import type { AgentSessionFastModeState } from '../../../shared/agent-session/agent-session-wire'
-import type { AgentChildWorkEvidence } from '../../../shared/agent-status-child-work-evidence'
-import type { ClaudeBackgroundTaskTracker } from '../claude-background-task-tracker'
-import type { ClaudeChildWorkDecoder } from '../claude-child-work-decoder'
-import type { ClaudeSlashCommandCatalog } from '../claude-slash-command-catalog'
-import type { ClaudeAtRestCommandCatalog } from '../claude-at-rest-commands'
-import type { ClaudeInitProof } from './claude-structured-init-proof'
-import type { AgentSessionProviderHandleLink } from '../../../shared/agent-session/lifecycle/agent-session-provider-handle'
+import type { AgentChildWorkEvidence } from '../../../shared/agent-status/child-work/agent-status-child-work-evidence'
+import type { ClaudeBackgroundTaskTracker } from '../background-tasks/claude-background-task-tracker'
+import type { ClaudeChildWorkDecoder } from '../child-work/claude-child-work-decoder'
+import type { ClaudeSlashCommandCatalog } from '../command-catalog/claude-slash-command-catalog'
+import type { ClaudeAtRestCommandCatalog } from '../command-catalog/claude-at-rest-commands'
+import type { ClaudeInitProof } from './startup/claude-structured-init-proof'
+import type { AgentSessionProviderHandleLink } from '../../../shared/agent-session/lifecycle/provider-handles/agent-session-provider-handle'
 import type { AgentSessionRecord } from '../../../shared/agent-session/lifecycle/agent-session-record'
-import type { ClaudeNamingInputs } from '../claude-naming-invocation'
-import type { ClaudeInitializeFacts } from './claude-structured-session-startup'
+import type { ClaudeNamingInputs } from '../conversation-naming/claude-naming-invocation'
+import type { ClaudeInitializeFacts } from './startup/claude-structured-session-startup'
 
-export type ClaudeAuthDiagnostic = {
-  apiKeySourceConfigured: boolean
-  baseUrlConfigured: boolean
-  authTokenConfigured: boolean
-  apiKeyConfigured: boolean
-  settingSources: readonly string[]
-}
-
-export type ClaudeStructuredSessionEvent =
-  | {
-      type: 'message'
-      sessionId: string
-      message: Record<string, unknown>
-      /** Present when an acknowledged replay opens a turn; folded replays only settle delivery. */
-      startsTurn?: true
-      /** Submission time for the acknowledged dispatch, absent when its send is unknown. */
-      requestedAt?: number
-      /** The submission this replay acknowledged, which opens the turn. */
-      clientMessageId?: string
-      /** On any other frame: the send the CLI started and has not echoed, whose turn output opens. */
-      startedSend?: ClaudeStartedSend
-      /** Host clock at receipt; stamped on turn boundaries only. */
-      observedAt?: number
-    }
-  | { type: 'provider-frame'; sessionId: string; kind: string; payload: unknown }
-  | { type: 'prompt'; sessionId: string; prompt: ClaudePendingPrompt }
-  | { type: 'prompt-cancelled'; sessionId: string; promptKey: string }
-  | { type: 'options'; sessionId: string; models: unknown[] }
-  | {
-      type: 'handle'
-      sessionId: string
-      providerSessionId: string
-      leafUuid: string | null
-      fence: number
-    }
-  | { type: 'auth-diagnostic'; sessionId: string; diagnostic: ClaudeAuthDiagnostic }
-  | SessionAdapter.StructuredAgentSessionOptionsReportedEvent
-  | {
-      type: 'ended'
-      sessionId: string
-      reason: string
-      failure?: SubmissionRejectionFact
-      deathEvidenceKind?: 'kill-delivered'
-      /** Present for first-hand child exits so the host can fence recovery. */
-      cause?: 'unexpected-exit' | 'requested-close'
-      fence?: number
-      acquisitionGeneration?: string
-      /** Host clock when the end was observed. */
-      observedAt?: number
-    }
+import type { ClaudeStructuredSessionEvent } from './lifecycle/claude-structured-session-event'
+import type { ClaudePromptSuggestionPause } from './claude-prompt-suggestion-pause'
 
 export type ClaudeStartedSend = { clientMessageId: string; requestedAt?: number }
 
@@ -97,6 +51,8 @@ export type ClaudeStructuredSessionAdapterDeps = {
   atRestCommands?: ClaudeAtRestCommandCatalog
   resolveLaunch: (input: StructuredLaunchRequest) => Promise<ClaudeStructuredLaunch>
   onEvent?: (event: ClaudeStructuredSessionEvent) => void
+  /** The user renamed the session with Claude's own command; delivered after the frame's journaling. */
+  onUserRenamed?: (sessionId: string, name: string) => void
   /** Direct settlement path for provider-proven late dispatch outcomes. */
   onDispatchSettledLate?: (input: { sessionId: string } & ClaudeLateDispatchOutcome) => void
   /** Delivered after journaling; producer writes corrections to the reporting child's rows. */
@@ -140,15 +96,20 @@ export type ClaudeDispatchWaiter = {
   requestedAt: number | null
   /** Set when the provider replay settled this waiter before send returned. */
   settledUuid?: string
+  /** Sent with priority `now`: the step it interrupts hands its open turn to this send. */
+  steers?: true
   /** Settled with no echo (failed write, child exit, doubt after start); a replay may name it. */
   retired?: boolean
   /** The CLI's last non-terminal `command_lifecycle` state for this send; in memory only. */
   commandLifecycle?: 'queued' | 'started'
+  /** Sent as Claude's rename command; only its started window carries the user's new title. */
+  renamesSession?: true
   /** Bounded digest/summary for compatibility CLIs that mint UUIDs. */
   replayContentKey: string
 }
 
 export type ClaudeSession = {
+  historyCatchUp?: AbortController
   connection: ClaudeStreamJsonConnection
   providerSessionId: string
   /** Latest main-chain message seen on the live stream, mid-turn included. */
@@ -173,7 +134,7 @@ export type ClaudeSession = {
     reportedPermissionMode?: string | null
   }
   /** CLI-resolved env/settings for the next request; lower priority than held options and turn reports. */
-  appliedOptions?: { model?: string; effort?: string }
+  appliedOptions?: { model?: string; effort?: string; ultracode?: boolean }
   /** CLI settings resolved before a turn changed them, when no launch override hid that value. */
   configuredDefaults?: { model?: string; effort?: string }
   fastModeState?: AgentSessionFastModeState
@@ -195,6 +156,7 @@ export type ClaudeSession = {
   cliFlag?: ClaudeCliFlagCheck
   /** Whether the CLI answers live effort and Fast changes; `unknown` ones are rechecked, then tried. */
   flagSettingsControl?: ClaudeCliFlagFact
+  promptSuggestionPause?: ClaudePromptSuggestionPause
   /** CLI-advertised protocol capabilities from init; gates interrupt-receipt handling. */
   capabilities: readonly string[]
   backgroundTasks: ClaudeBackgroundTaskTracker
@@ -218,6 +180,7 @@ export type ClaudeSession = {
   closeEnded?: boolean
   translator: ClaudeJournalTranslator | null
   events: StructuredAgentSessionEventSink | undefined
+  delivery: ClaudeJournalBoundDelivery
   unbindReadingControl?: () => void
   /** Provider identity and initialize proof retained for the host-awaited open. */
   link: AgentSessionProviderHandleLink
@@ -253,14 +216,17 @@ export type ClaudeSessionExit = {
 export type ClaudeAcquisitionAttempt = {
   connection: ClaudeStreamJsonConnection | null
   prompts: ClaudePromptRegistry
-  buffered: (() => void)[]
+  delivery: ClaudeJournalBoundDelivery
   published: boolean
   cancelled: boolean
   exitProven: boolean
   finished: Promise<void>
   finish: () => void
-  /** The resolved launch's account, read by the translator to word a sign-in failure. */
-  account?: ClaudeStructuredLaunch['account']
+  /** The resolved launch: its account words a sign-in failure, its Command a start that exited. */
+  launch?: Pick<
+    ClaudeStructuredLaunch,
+    'account' | 'pathToClaudeCodeExecutable' | 'configuredCommand'
+  >
 }
 
 export function createClaudeAcquisitionAttempt(
@@ -270,16 +236,17 @@ export function createClaudeAcquisitionAttempt(
   const finished = new Promise<void>((resolve) => {
     finish = resolve
   })
-  return {
+  const attempt: ClaudeAcquisitionAttempt = {
     connection: null,
     prompts,
-    buffered: [],
+    delivery: new ClaudeJournalBoundDelivery(undefined, () => attempt.published),
     published: false,
     cancelled: false,
     exitProven: false,
     finished,
     finish
   }
+  return attempt
 }
 
 export class ClaudeAcquisitionRegistry {
@@ -350,6 +317,7 @@ export async function cancelClaudeAcquisitionAttempt(
   return cancelProcessAcquisition({
     cancel: () => {
       attempt.cancelled = true
+      attempt.delivery.dispose()
     },
     connection: () => attempt.connection,
     exitProven: () => attempt.exitProven,
@@ -358,7 +326,14 @@ export async function cancelClaudeAcquisitionAttempt(
 }
 
 export type ClaudeAcquireCallbacks = {
-  deliver: (attempt: ClaudeAcquisitionAttempt, sessionId: string, event: () => void) => void
+  /** Publishes the session, its start ending admitted first so its exit is never missed. */
+  publish: (session: ClaudeSession) => void
+  deliver: (
+    attempt: ClaudeAcquisitionAttempt,
+    sessionId: string,
+    event: () => void,
+    payload?: unknown
+  ) => void
   emit: (
     session: ClaudeSession | null,
     events: StructuredAgentSessionEventSink | undefined,

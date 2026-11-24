@@ -1,10 +1,10 @@
-import { z } from 'zod'
+import * as z from 'zod'
 import { FILE_ATTACHMENT_MAX_BYTES } from '../../../src/shared/file-attachment-upload/file-attachment-upload-limits'
 import {
   BRIDGE_MEDIA_HANDLE_MAX_CHARS,
   BRIDGE_MEDIA_MAX_LIVE_HANDLES,
   BRIDGE_MEDIA_MIME_MAX_CHARS
-} from '../mobile-web-shell/bridge/bridge-media-verbs'
+} from '../mobile-web-shell/bridge/native-capabilities/bridge-media-verbs'
 
 /**
  * `native.file.pick`: a file of any type, with its name, up to the upload ceiling. Its handles live

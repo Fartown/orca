@@ -9,11 +9,11 @@ vi.mock('react-native', () => ({
 vi.mock('expo-secure-store', () => ({ WHEN_UNLOCKED_THIS_DEVICE_ONLY: 'when-unlocked' }))
 
 import { LOCAL_TASKS_RUNTIME_CAPABILITY } from '../../../src/shared/local-tasks/local-tasks-capability'
-import { MOBILE_DESKTOP_RELAY_RUNTIME_CAPABILITY } from '../../../src/shared/mobile-desktop-relay-contract'
-import { MOBILE_RELAY_HOSTS_LIST_METHOD } from '../../../src/shared/mobile-relay-hosts-contract'
-import type { RpcClient } from '../transport/rpc-client'
-import type { RpcResponse } from '../transport/types'
-import { relayHostsFeed } from '../worktree/relay-hosts-feed'
+import { MOBILE_DESKTOP_RELAY_RUNTIME_CAPABILITY } from '../../../src/shared/remote-runtime/relay/mobile-desktop-relay-contract'
+import { MOBILE_RELAY_HOSTS_LIST_METHOD } from '../../../src/shared/remote-runtime/relay/mobile-relay-hosts-contract'
+import type { RpcClient } from '../transport/rpc/rpc-client-contract'
+import type { RpcResponse } from '../transport/rpc/rpc-wire-types'
+import { relayHostsFeed } from '../worktree/execution-hosts/relay-hosts-feed'
 import { localTaskEndpointFor, type LocalTaskEndpoint } from './local-task-endpoint'
 import { useLocalTaskEndpoints } from './use-local-task-endpoints'
 import { useLocalTasksLibrary } from './use-local-tasks-library'
@@ -99,6 +99,7 @@ let renderer: ReactTestRenderer | null = null
 afterEach(() => {
   act(() => renderer?.unmount())
   renderer = null
+  vi.restoreAllMocks()
 })
 
 async function settle() {
@@ -146,6 +147,9 @@ describe("a server's task library through the paired host (D-008)", () => {
     expect(seen.choices).toEqual(['self=mbp5', `${SERVER}=dbox`])
 
     server.relay = 'unavailable'
+    // The feed answers from a read younger than its poll, so step past it to ask the desktop again.
+    const later = Date.now() + 10_000
+    vi.spyOn(Date, 'now').mockReturnValue(later)
     await act(async () => {
       await relayHostsFeed(session).read()
     })

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { AGENT_TUI_CLEAR_INPUT_MAX } from '../../shared/agent-tui-input-clear'
+import { AGENT_TUI_CLEAR_INPUT_MAX } from '../../shared/agent-launch/startup/agent-tui-input-clear'
 import { writeDurableChatComposerPrefix } from './durable-chat-composer-input'
 
 describe('host-owned Chat composer prefix', () => {

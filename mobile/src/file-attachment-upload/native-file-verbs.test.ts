@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { MediaHandleRegistry } from '../mobile-web-shell/media-handle-registry'
+import { MediaHandleRegistry } from '../mobile-web-shell/native-capabilities/media-handle-registry'
 import { BRIDGE_FILE_VERBS } from './bridge-file-verbs'
 import {
   createNativeFileVerbServer,

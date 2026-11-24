@@ -2,15 +2,21 @@ import { runProcessSync } from '@orca/process-host'
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
-import type { Page, TestInfo } from '@stablyai/playwright-test'
-import { test, expect } from './helpers/orca-app'
-import { getActiveWorktreeContext, openMarkdownFixture } from './helpers/markdown-editor-fixture'
-import { launchHeadlessPairedRuntimeHost } from './helpers/headless-paired-runtime-host'
-import { launchPairedElectronClient } from './helpers/paired-electron-client'
-import { waitForPairedClientWorktree } from './helpers/paired-client-host-session'
-import { reserveLocalPort } from './helpers/reserve-local-port'
-import { decodePairingOffer, encodePairingOffer } from '../../src/shared/pairing'
-import type { Repo } from '../../src/shared/repo-types'
+import { expect, type Page, type TestInfo } from '@stablyai/playwright-test'
+import { test } from './desktop/electron-fixtures/orca-app'
+import {
+  getActiveWorktreeContext,
+  openMarkdownFixture
+} from './editor/markdown/markdown-editor-fixture'
+import { launchHeadlessPairedRuntimeHost } from './remote/paired-runtime/client-hosts/headless-paired-runtime-host'
+import { launchPairedElectronClient } from './remote/paired-runtime/client-hosts/paired-electron-client'
+import { waitForPairedClientWorktree } from './remote/paired-runtime/client-hosts/paired-client-host-session'
+import { reserveLocalPort } from './remote/managed-ssh/host-lifecycle/reserve-local-port'
+import {
+  decodePairingOffer,
+  encodePairingOffer
+} from '../../src/shared/remote-runtime/pairing/pairing'
+import type { Repo } from '../../src/shared/repository/repo-types'
 import type { Worktree } from '../../src/shared/worktree/types'
 
 const SOURCE = '# Heading\n\nRemaining text\n\nMoved text\n'
@@ -18,25 +24,31 @@ const SOURCE = '# Heading\n\nRemaining text\n\nMoved text\n'
 async function seedNotes(page: Page, worktreeId: string) {
   return page.evaluate(async (worktreeId) => {
     const add = window.__store!.getState().addDiffComment
+    // The seeded repo is a local worktree, served by this app on its own machine.
+    const owner = {
+      kind: 'worktree' as const,
+      worktreeId,
+      authority: { endpoint: { kind: 'self' as const }, at: 'local' as const }
+    }
     const base = {
       worktreeId,
       filePath: 'anchor-review.md',
       source: 'markdown' as const,
       side: 'modified' as const
     }
-    const missing = await add({
+    const missing = await add(owner, {
       ...base,
       lineNumber: 2,
       selectedText: 'Removed text',
       body: 'Original review body'
     })
-    const moved = await add({
+    const moved = await add(owner, {
       ...base,
       lineNumber: 999,
       selectedText: 'Moved text',
       body: 'Moved review body'
     })
-    const normal = await add({
+    const normal = await add(owner, {
       ...base,
       lineNumber: 3,
       selectedText: 'Remaining text',

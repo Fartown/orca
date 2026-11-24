@@ -9,6 +9,10 @@ external_ids: ['Fartown/orca#84', 'Fartown/orca#87', 'Fartown/orca#93']
 
 # 自托管产物后端 Journal
 
+## 2026-11-20 同步上游后删除折叠分享项的测试
+
+- 上游 #40501 删除了浏览器工具栏的折叠分享项（`BrowserChromeShareControl` 与 `browser-chrome-folded-tools`），`self-hosted-artifacts/share-button/lan-share-toolbar-label.test.tsx` 测的对象已不存在，删除该测试；局域网分享入口改由 `LanArtifactShareEntryButtons.tsx` 适配上游新工具栏，相关测试已移到 `share-button/` 下的 `*.lan-share.test.tsx` 并通过。
+
 ## 2026-11-12 评论定位改为照搬 Orca 审阅笔记的规则（Fartown/orca#93）
 
 - 本轮目标：implementing → testing；用户多次要求「照着做」，指出我在自己设计的定位方案上反复打补丁。
@@ -165,6 +169,15 @@ external_ids: ['Fartown/orca#84', 'Fartown/orca#87', 'Fartown/orca#93']
 - 影响范围：需求、技术说明、测试规格及本需求的执行证据。
 
 ## 3. 开发记录
+
+### 2026-11-21：上游同步到 fa60d0a566（testing）
+
+- 本轮目标：`fork/integration` 从 `e723de1bfd` 合入上游到 `fa60d0a566`（四次合并：`22afb84f6a`、`9c3b42f644`、`d725f407e8`、`31df22fb1a`，冲突都在第一次），保持局域网分享入口、主进程分享服务、orcad 侧分享与账号页替换不丢。删除折叠分享项测试一事已记在文首「2026-11-20 同步上游后删除折叠分享项的测试」，这里不重复。
+- 完成内容：本功能 31 个冲突（UU 23、UD 8）。`main-process-runtime-service.ts`（上游搬到 `startup/runtime-startup/`）不调用上游新增的 `configureDesktopCloudServices`，保留 fork 的 `startArtifactShareForMainProcess`，另起一行 `setSkillCloudService`；`EditorPanelHeader.tsx`、`NativeChatInlineVisual.tsx`、设置页渲染与导航、账号页、`UnexpectedSignoutCard.tsx`、`dispatcher-error-response.ts` 等随上游换目录后重放。上游 #40501 去掉浏览器折叠工具栏，`browser-chrome-toolbar.tsx` 的 `shareLabel` 接缝无继任，分享入口由自有 `LanArtifactShareEntryButtons.tsx` 适配上游新工具栏。上游 `listEnvironments` 改成异步，`artifact-share.ts` 的 `hostLabelFor` 改 async、列表处 await，测试 mock 同步改，行为不变。`src/cli/index.test.ts` 被上游删到只剩 1 个用例，加回 fork 的 `artifact runtime routing` 用例。上游以低价值删除的 `EditorPanelHeader.test.tsx`（#38113）、`NativeChatInlineVisual.open-as-file.test.tsx`（#38276）、`useSettingsNavigationMetadata.test.ts`（#37483）、`HtmlDocPreview.toolbar.test.tsx`（#42999）里守护本功能的用例移到 `self-hosted-artifacts/share-button/` 与 `settings/` 下的自有测试，`OrcaAccountSettingsPane.test.tsx` 里 fork 新增的断言移到 `settings/orca-account-settings-pane.test.tsx`；`main-process-ready-duplicate-pty-repair.test.ts`（#39874）、`runtime-composition-parity.test.ts`（#39318）、`host-operation-ownership.test.ts`（#39404）上游删除且无继任。`host-operation-ownership.ts` 原 mustContain `HOST_OPERATION_OWNERSHIP` 上游本来就有、守不住东西，改成本功能自己的 `artifactShare: 'host',`。合并后修复提交 `72225984aa`：被自托管产物界面替换后不再引用的 11 个上游账号与登出文案键，从 en、zh 与 `en-runtime-required.json` 删除。
+- 代码或文档变更：`config/fork-features.jsonc` 接缝 43→35 条（17 条换路径，`host-operation-ownership.ts` 换到 `src/shared/execution-host/` 并换 mustContain，退役 8 条随上游删除的测试与 `shareLabel`）；`tests` 去掉 6 个上游测试、加 5 个自有测试；checks 合并为一条、去掉三个已删测试那条；`dependsOn` 81→78 条（50 条换路径，`rpc/errors.ts` 换成 `rpc/responses/rpc-response.ts`，`store/slices/editor.ts` 换成 `editor/types/open-file.ts` 等）。新棘轮基线登记 38 条（计数 136）：main-blocking-helper 17 条 64 处（含上游接缝 `main-process-runtime-service.ts` +1）、main-sync-fs 5 条 11 处、react-compiler-bailout 3 条 5 处（`use-lan-artifact-hosts.ts`、`LanArtifactLocalServiceSettings.tsx`、`ShareCommentRail.tsx`）、recurring-timer 1 处（`artifact-share-app-server.ts`）、render-path-translate 12 条 55 处。React Compiler 相关文件不编译，行为同合并前（提交 `6244eac0a4`）。
+- 验证证据：登记 checks 30 文件 101 项通过，`build:artifact-share-viewer` 通过（`/Users/bytedance/dev/orca/.docs/upstream-sync/2026-11-20/sync-checks-run3.log`）；冲突解法见 `/Users/bytedance/dev/orca/.docs/upstream-sync/2026-11-20/report-E-files-preview-remote.md`、`report-G-shared.md`、`phase2-E.tsv`、`decisions.tsv`；棘轮清单 `/Users/bytedance/dev/orca/.docs/upstream-sync/2026-11-20/ratchet-refactor-backlog.tsv`，当前 HEAD 复核 `/Users/bytedance/dev/orca/.docs/upstream-sync/2026-11-20/journal-records/ratchets-at-2abf3d8ad1.log`；最终门禁见 `/Users/bytedance/dev/orca/.docs/upstream-sync/2026-11-20/final-gates.log`。本机真机抽查只看了入口：设置里「Share on local network from this computer」可搜到并进入，编辑器工具栏有「Share on local network」按钮（`/Users/bytedance/dev/orca/.docs/upstream-sync-ui-validation/2026-11-21/README.md` 第 6 项，截图 `evidence/lan-1-settings-search`、`lan-1b-settings-artifacts-pane`、`lan-2-editor-share-button`）；没有实际开启分享，文档预览工具栏的分享按钮未点测，SSH 未覆盖。
+- 未解决问题：同步后没有真正发起一次本机或 SSH 主机上的局域网分享与评论回写；主进程不走上游 `configureDesktopCloudServices`，上游那条初始化现在无人调用；棘轮基线登记的 38 条待重构（主进程同步读写与渲染期翻译为主），跟踪：Fartown/orca#153。
+- 下一步：下次真机回归按「自托管产物后端功能测试」在本机与 SSH 各做一次真实分享；按 Fartown/orca#153 把主进程同步读写移出主线程并缩减基线。
 
 ### 2026-11-05：命令行读取与删除评论（testing）
 

@@ -104,3 +104,12 @@ external_ids: []
 - 验证证据：原始五分片日志及本地复验归档在 .docs/ci-baseline-repair/2026-10-22/evidence/；最终同树验证待完成。
 - 未解决问题：最终 CI 尚未通过；未部署或重启生产应用、远程服务或终端。
 - 下一步：同树完整检查、隐藏应用与 SSH 验证、最终 CI 后合入。
+
+### 2026-11-21 上游同步到 fa60d0a566（testing）
+
+- 本轮目标：`fork/integration` 从 `e723de1bfd` 合入上游到 `fa60d0a566`（四次合并：`22afb84f6a`、`9c3b42f644`、`d725f407e8`、`31df22fb1a`，冲突都在第一次），保持远程大文本在编辑器里分块补读、不被截断。
+- 完成内容：本功能 4 个冲突（全是 UD）。上游把远程文件读取拆进 `src/renderer/src/runtime/files/reads/`：`runtime-file-read-client.ts` 里的整文件读取接缝跟到 `runtime-remote-file-content.ts`（`readWholeRuntimeFile`），`runtime-paged-file-read.ts` 及其测试随上游搬家。上游以低价值删除的 `runtime-file-client.test.ts`（#39292）里守护分块读取的用例移到自有 `src/renderer/src/runtime-large-file/runtime-file-client-large-read.test.ts`，原接缝 `files.readChunk` 退役；e2e `paired-remote-large-file-open.spec.ts` 改名为 `tests/e2e/remote-editor-large-file-read.spec.ts` 并加进 `ownedPaths`。编辑器整文件读取上限仍是 fork 的 10 MiB（`RUNTIME_EDITOR_TEXT_MAX_BYTES`），上游的分页读取上限是 50 MiB（`PAGED_REMOTE_FILE_MAX_BYTES`），两者并存。合并后 e2e 修复提交 `c2037f5c37`：`expect` 改从 Playwright 取，并写明超时放宽是因为 6 个 2～20 MB 文件要经第二个配对客户端分块传输。
+- 代码或文档变更：`config/fork-features.jsonc` 接缝 5→4 条（4 条换路径、退役 1 条）；`tests` 换成自有测试与新路径；两条 checks 换路径；`ownedPaths` 加 e2e；`dependsOn` 6→3 条（去掉自有代码已不再导入的 `runtime-file-client-types.ts`、`runtime-rpc-client.ts`、`runtime-rpc-result.ts`、`runtime-types.ts`，新增 `src/shared/file-content/runtime-file-read.ts`）。新棘轮基线未登记本功能条目。
+- 验证证据：登记 checks 2 文件 7 项与 1 文件 5 项通过（`/Users/bytedance/dev/orca/.docs/upstream-sync/2026-11-20/sync-checks-run3.log`）；冲突解法见 `/Users/bytedance/dev/orca/.docs/upstream-sync/2026-11-20/report-E-files-preview-remote.md`、`phase2-E.tsv`；最终门禁见 `/Users/bytedance/dev/orca/.docs/upstream-sync/2026-11-20/final-gates.log`。SSH 真机抽查通过：1.6 MB 远端文本打开并跳到第 30001 行标记，无截断提示（`/Users/bytedance/dev/orca/.docs/upstream-sync-ui-validation/2026-11-21/README.md` 第 8 项，截图 `evidence/ssh-2`～`ssh-7`）。本机场景与 10 MiB 上限边界未在同步后复验；`c2037f5c37` 改过的 e2e 在资料里没有运行记录。
+- 未解决问题：10 MiB 编辑上限与上游 50 MiB 分页上限不一致，是否跟随上游放宽未定；`runtime-file-client-large-read.test.ts` 沿用旧的 stat/readChunk 调用形状写 mock。
+- 下一步：跑一次 `tests/e2e/remote-editor-large-file-read.spec.ts`；评估编辑上限是否随上游调整。

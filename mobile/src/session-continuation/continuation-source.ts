@@ -1,6 +1,6 @@
 import type { AgentSessionContinuationSource } from '../../../src/shared/agent-session-continuation/continuation-prompt'
-import type { AgentStatusEntry } from '../../../src/shared/agent-status-types'
-import type { TuiAgent } from '../../../src/shared/tui-agent'
+import type { AgentStatusEntry } from '../../../src/shared/agent-status/contracts/agent-status-types'
+import type { TuiAgent } from '../../../src/shared/agent-launch/catalog/tui-agent'
 import {
   isMobileSessionContinuationAgent,
   type MobileSessionContinuationAgent

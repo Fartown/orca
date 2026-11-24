@@ -2,14 +2,18 @@ import { runProcessSync } from '@orca/process-host'
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
-import { test, expect } from './helpers/orca-app'
-import { waitForSessionReady, waitForStartupWorktreeRefresh } from './helpers/store'
-import { launchHeadlessPairedRuntimeHost } from './helpers/headless-paired-runtime-host'
-import { launchPairedElectronClient } from './helpers/paired-electron-client'
-import { waitForPairedClientWorktree } from './helpers/paired-client-host-session'
-import { reserveLocalPort } from './helpers/reserve-local-port'
-import { decodePairingOffer, encodePairingOffer } from '../../src/shared/pairing'
-import type { Repo } from '../../src/shared/repo-types'
+import { expect } from '@stablyai/playwright-test'
+import { test } from './desktop/electron-fixtures/orca-app'
+import { waitForSessionReady, waitForStartupWorktreeRefresh } from './desktop/renderer-probes/store'
+import { launchHeadlessPairedRuntimeHost } from './remote/paired-runtime/client-hosts/headless-paired-runtime-host'
+import { launchPairedElectronClient } from './remote/paired-runtime/client-hosts/paired-electron-client'
+import { waitForPairedClientWorktree } from './remote/paired-runtime/client-hosts/paired-client-host-session'
+import { reserveLocalPort } from './remote/managed-ssh/host-lifecycle/reserve-local-port'
+import {
+  decodePairingOffer,
+  encodePairingOffer
+} from '../../src/shared/remote-runtime/pairing/pairing'
+import type { Repo } from '../../src/shared/repository/repo-types'
 import type { Worktree } from '../../src/shared/worktree/types'
 
 test('history-only restoration keeps local workspaces without extra sidebar rows', async ({

@@ -5,14 +5,14 @@
  * surrounding function conflicts on one line instead of carrying a block of fork logic away with
  * it. The logic itself lives here, where `check:fork-features` can also pin it by name.
  */
-import { callRuntimeFileMutation } from '@/runtime/runtime-file-mutation-rpc'
-import { callRuntimeRpc } from '@/runtime/runtime-rpc-client'
-import { toRuntimeWorktreeSelector } from '@/runtime/runtime-worktree-selector'
+import { callRuntimeFileMutation } from '@/runtime/files/mutations/runtime-file-mutation-rpc'
+import { callRuntimeRpc } from '@/runtime/rpc/calls/runtime-rpc-call'
+import { toRuntimeWorktreeSelector } from '@/runtime/rpc/targets/runtime-worktree-selector'
 import type {
   RuntimeFileOperationArgs,
   RuntimeHostPathGrantRef,
   RuntimeReadableFileContent
-} from '@/runtime/runtime-file-client-types'
+} from '@/runtime/files/runtime-file-client-types'
 import { readHostPathFile, writeHostPathFile } from './host-path-file-client'
 
 function environmentTarget(target: RuntimeFileOperationArgs['target'], worktreeId?: string | null) {

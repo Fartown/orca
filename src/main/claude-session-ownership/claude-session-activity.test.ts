@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { AgentHookServer } from '../agent-hooks/server'
-import { normalizeHookPayload } from '../../shared/agent-hook-listener'
-import { makePaneKey } from '../../shared/stable-pane-id'
+import { AgentHookServer } from '../agent-hooks/server/agent-hook-server'
+import { normalizeHookPayload } from '../../shared/agent-hook-listener/normalization/normalize-hook-payload'
+import { makePaneKey } from '../../shared/workspace-layout/stable-pane-id'
 
 const PANE = makePaneKey('owner-window', '11111111-1111-4111-8111-111111111111')
 const A = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'

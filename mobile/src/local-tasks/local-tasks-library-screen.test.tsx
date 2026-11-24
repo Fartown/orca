@@ -1,7 +1,7 @@
 import { createElement, useState } from 'react'
 import { act, create, type ReactTestRenderer } from 'react-test-renderer'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { RpcClient } from '../transport/rpc-client'
+import type { RpcClient } from '../transport/rpc/rpc-client-contract'
 import { SELF_LOCAL_TASK_ENDPOINT, type LocalTaskSite } from './local-task-endpoint'
 import { createLocalTasksApi } from './local-tasks-api'
 import type { LocalTasksLibrary } from './use-local-tasks-library'
@@ -16,8 +16,10 @@ vi.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: () => ({ top: 0, bottom: 0 })
 }))
 vi.mock('lucide-react-native', () => ({ Plus: 'Plus' }))
-vi.mock('../components/MobileSegmentedControl', () => ({ MobileSegmentedControl: () => null }))
-vi.mock('../components/PickerListDrawer', () => ({ PickerListDrawer: () => null }))
+vi.mock('../components/controls/MobileSegmentedControl', () => ({
+  MobileSegmentedControl: () => null
+}))
+vi.mock('../components/sheets/PickerListDrawer', () => ({ PickerListDrawer: () => null }))
 vi.mock('../navigation/use-back-claim', () => ({ useBackClaim: () => {} }))
 vi.mock('./local-task-view-memory', () => ({
   useLocalTaskViewMemory: () => [{ projectId: null, segment: 'all', view: 'list' }, () => {}]

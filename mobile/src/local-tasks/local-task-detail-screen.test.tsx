@@ -2,7 +2,7 @@ import { createElement } from 'react'
 import { act, create, type ReactTestRenderer } from 'react-test-renderer'
 import { afterEach, expect, it, vi } from 'vitest'
 import type { LocalTask, LocalTaskProject } from '../../../src/shared/local-tasks/local-task-types'
-import type { RpcClient } from '../transport/rpc-client'
+import type { RpcClient } from '../transport/rpc/rpc-client-contract'
 import { SELF_LOCAL_TASK_ENDPOINT, type LocalTaskSite } from './local-task-endpoint'
 import { createLocalTasksApi } from './local-tasks-api'
 import type { LocalTaskDetailProps } from './local-task-detail-view'
@@ -27,8 +27,8 @@ vi.mock('lucide-react-native', () => ({
   Pencil: 'Pencil',
   Trash2: 'Trash2'
 }))
-vi.mock('../components/ActionSheetModal', () => ({ ActionSheetModal: () => null }))
-vi.mock('../components/ConfirmModal', () => ({ ConfirmModal: () => null }))
+vi.mock('../components/sheets/ActionSheetModal', () => ({ ActionSheetModal: () => null }))
+vi.mock('../components/sheets/ConfirmModal', () => ({ ConfirmModal: () => null }))
 vi.mock('./local-task-activity-section', () => ({ LocalTaskActivitySection: () => null }))
 vi.mock('./local-task-detail-head', () => ({
   LocalTaskAncestorPath: () => null,

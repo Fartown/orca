@@ -4,7 +4,7 @@ import { DurableChatTranscriptBoundary } from '../../shared/native-chat-view-rec
 import {
   boundaryFingerprint,
   readTranscriptFileVersion
-} from '../native-chat/transcript-file-version'
+} from '../native-chat/transcript-watching/transcript-file-version'
 
 const Receipt = z
   .object({

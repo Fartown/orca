@@ -1,14 +1,17 @@
 import { afterEach, expect, it, vi } from 'vitest'
-import { startAiVaultTabTitleSync } from '../lib/ai-vault-tab-title-sync'
-import { fixture, PANE } from './session-name-binding-test-fixture'
+import { startAiVaultTabTitleSync } from '../lib/agent-session/history/title-sync/ai-vault-tab-title-sync'
+import { fixture, PANE, titleSyncStore } from './session-name-binding-test-fixture'
 import { getActivitySessionName } from './activity-session-name'
+import { acceptedAgentStatuses } from '../store/slices/agent-status/status-ownership/accepted-agent-statuses'
 import {
   resolveTerminalTabTitle,
   resolveUnifiedTabLabel
-} from '../../../shared/tab-title-resolution'
-import { createGlobalSettingsFixture } from '../../../shared/global-settings-test-fixture'
+} from '../../../shared/workspace-layout/tab-groups/tab-title-resolution'
+import { createGlobalSettingsFixture } from '../../../shared/settings/global-settings-test-fixture'
 
-vi.mock('@/runtime/sync-runtime-graph', () => ({ scheduleRuntimeGraphSync: vi.fn() }))
+vi.mock('@/runtime/sync-runtime-graph/graph-sync-scheduler', () => ({
+  scheduleRuntimeGraphSync: vi.fn()
+}))
 const stops: (() => void)[] = []
 afterEach(() => stops.splice(0).forEach((stop) => stop()))
 
@@ -19,9 +22,9 @@ it.each(['local', 'ssh:dev-box'] as const)(
     store.setState((s) => ({
       activeWorkspaceExecutionHostId: host,
       settings: createGlobalSettingsFixture({ tabAutoGenerateTitle: false }),
-      agentStatusByPaneKey: {
-        [PANE]: { ...s.agentStatusByPaneKey[PANE], prompt: '仅Hook首任务K18' }
-      }
+      agentStatusByPaneKey: acceptedAgentStatuses([
+        [PANE, { ...s.agentStatusByPaneKey.get(PANE)!, prompt: '仅Hook首任务K18' }]
+      ])
     }))
     store.getState().updateTabTitle('tab', 'Codex')
     const missing = { kind: 'unavailable' as const }
@@ -33,13 +36,12 @@ it.each(['local', 'ssh:dev-box'] as const)(
     })
     stops.push(
       startAiVaultTabTitleSync({
-        getState: store.getState,
-        subscribe: store.subscribe,
+        ...titleSyncStore(store),
         resolveSessionTitles: vi.fn(async () => ({ titles: [] })),
         scheduleReconcile: () => () => undefined
       })
     )
-    const entry = store.getState().agentStatusByPaneKey[PANE]
+    const entry = store.getState().agentStatusByPaneKey.get(PANE)!
     const before = store.getState().tabsByWorktree.workspace[0]
     expect(before.generatedTitle).toBeFalsy()
     expect(getActivitySessionName(entry, before, false)).toBe('Codex A')

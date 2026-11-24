@@ -1,4 +1,4 @@
-import { z } from 'zod'
+import * as z from 'zod'
 import { LocalTaskSessionExecutionOriginSchema } from './local-task-session-origin'
 
 const clientOperationId = z.string().min(1).max(128)

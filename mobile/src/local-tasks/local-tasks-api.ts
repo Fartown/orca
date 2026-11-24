@@ -1,7 +1,7 @@
-import { isRpcDeliveryUnknown } from '../transport/rpc-delivery-ambiguity'
-import { runRpcOperation } from '../transport/rpc-operation'
-import type { RpcSendParams } from '../transport/rpc-params-contract'
-import type { UnvalidatedRpcRequestPort } from '../transport/unvalidated-rpc-request-port'
+import { isRpcDeliveryUnknown } from '../transport/rpc/rpc-delivery-ambiguity'
+import { runRpcOperation } from '../transport/rpc/rpc-operation'
+import type { RpcSendParams } from '../../../src/shared/rpc-contract/rpc-send-params'
+import type { UnvalidatedRpcRequestPort } from '../transport/rpc/unvalidated-rpc-request-port'
 import {
   localTaskCommentAdd,
   localTaskCommentEdit,

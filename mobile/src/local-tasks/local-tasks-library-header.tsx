@@ -12,7 +12,7 @@ import {
   Settings
 } from 'lucide-react-native'
 import type { LocalTaskProject } from '../../../src/shared/local-tasks/local-task-types'
-import { ActionSheetModal, type ActionSheetAction } from '../components/ActionSheetModal'
+import { ActionSheetModal, type ActionSheetAction } from '../components/sheets/ActionSheetModal'
 import { colors, typography } from '../theme/mobile-theme'
 import { themedStyleSheet } from '../theme/themed-styles'
 import { useMobileColorScheme } from '../theme/use-mobile-color-scheme'

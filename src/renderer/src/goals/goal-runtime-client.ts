@@ -9,7 +9,10 @@ import {
   GoalAcceptanceDraftResult,
   type GoalAcceptanceDraft
 } from '../../../shared/goals/goal-acceptance-draft-contract'
-import { parseExecutionHostId, type ExecutionHostId } from '../../../shared/execution-host'
+import {
+  parseExecutionHostId,
+  type ExecutionHostId
+} from '../../../shared/execution-host/execution-host'
 import { goalDomainStore } from './goals-domain-store'
 import type { z } from 'zod'
 import type {
@@ -34,8 +37,8 @@ import {
   GoalStatusResult,
   GoalVersionsResult
 } from '../../../shared/goals/goal-rpc-results'
-import { callRuntimeRpc } from '../runtime/runtime-rpc-client'
-import type { RuntimeClientTarget } from '../../../shared/runtime-client-target'
+import { callRuntimeRpc } from '../runtime/rpc/calls/runtime-rpc-call'
+import type { RuntimeClientTarget } from '../../../shared/remote-runtime/host-catalog/runtime-client-target'
 
 export class GoalRuntimeUnsupportedError extends Error {
   readonly code = 'goal_runtime_unsupported'

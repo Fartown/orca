@@ -4,7 +4,7 @@ import { afterEach, expect, it, vi } from 'vitest'
 import LanArtifactsPage from './LanArtifactsPage'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { useAppStore } from '@/store'
-import { getDefaultSettings } from '../../../../../shared/constants'
+import { getDefaultSettings } from '../../../../../shared/orca-profiles/constants'
 
 const mocks = vi.hoisted(() => ({ stopWorkspace: vi.fn(), confirm: vi.fn() }))
 const workspace = { label: 'repo', token: 'token-1' }
@@ -24,7 +24,7 @@ vi.mock('./use-lan-artifact-hosts', () => ({
     stopWorkspace: mocks.stopWorkspace
   })
 }))
-vi.mock('@/components/confirmation-dialog-context', () => ({
+vi.mock('@/components/dismiss/confirmation/confirmation-dialog-context', () => ({
   useConfirmationDialog: () => mocks.confirm
 }))
 vi.mock('./LanArtifactHostSection', () => ({

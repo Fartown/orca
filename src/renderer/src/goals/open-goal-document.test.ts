@@ -1,10 +1,10 @@
 // @vitest-environment happy-dom
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { openGoalDocument } from './open-goal-document'
-import { activateAndRevealWorkspace } from '@/lib/worktree-activation'
+import { activateAndRevealWorkspace } from '@/lib/workspace/activation/worktree-activation'
 import { requestHostPathGrantForContext } from '@/runtime-host-path/host-path-file-client'
-import { statRuntimePath } from '@/runtime/runtime-file-metadata-client'
-import type { FolderWorkspace } from '../../../shared/folder-workspace-types'
+import { statRuntimePath } from '@/runtime/files/metadata/runtime-file-metadata-client'
+import type { FolderWorkspace } from '../../../shared/folder-workspaces/folder-workspace-types'
 
 type StubState = {
   openFile: (...args: never[]) => unknown
@@ -23,13 +23,13 @@ const { openFile, state } = vi.hoisted(() => {
   return { openFile, state }
 })
 vi.mock('@/store', () => ({ useAppStore: { getState: () => state } }))
-vi.mock('@/lib/worktree-activation', () => ({
+vi.mock('@/lib/workspace/activation/worktree-activation', () => ({
   activateAndRevealWorkspace: vi.fn(() => ({ primaryTabId: null }))
 }))
-vi.mock('@/lib/connection-owner-resolution', () => ({
+vi.mock('@/lib/workspace/ownership/connection-owner-resolution', () => ({
   getConnectionIdForFileFromState: vi.fn(() => undefined)
 }))
-vi.mock('@/runtime/runtime-file-metadata-client', () => ({
+vi.mock('@/runtime/files/metadata/runtime-file-metadata-client', () => ({
   statRuntimePath: vi.fn(async () => ({ size: 1, isDirectory: false, mtime: 0 }))
 }))
 vi.mock('@/runtime-host-path/host-path-file-client', () => ({

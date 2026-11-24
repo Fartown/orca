@@ -44,23 +44,23 @@ const LAZY_FONT_PATTERN = /SymbolsNerdFontMono-Regular\.woff2$/
  */
 const VIEWER_STAND_INS = [
   {
-    specifier: '@/store',
+    specifiers: ['@/store', '@/store/index'],
     file: 'viewer-store-shim.ts',
     importers: [
-      'components/editor/MarkdownTableOfContentsPanel.tsx',
-      'components/editor/use-mermaid-diagram-expand.ts',
-      'components/editor/DiagramViewerModal.tsx',
-      'components/editor/PanZoomImageDialog.tsx',
+      'components/editor/markdown/navigation/MarkdownTableOfContentsPanel.tsx',
+      'components/editor/diagrams/use-mermaid-diagram-expand.ts',
+      'components/editor/diagrams/DiagramViewerModal.tsx',
+      'components/editor/document-images/PanZoomImageDialog.tsx',
       'components/self-hosted-artifacts/share-viewer/ShareViewerPage.tsx'
     ]
   },
   {
-    specifier: '@/lib/floating-workspace-terminal-actions',
+    specifiers: ['@/components/floating-terminal/workspace/floating-workspace-terminal-actions'],
     file: 'viewer-floating-panel-shim.ts',
-    importers: ['components/editor/viewer-zoom-request.ts']
+    importers: ['components/editor/viewer-viewport/viewer-zoom-request.ts']
   },
   {
-    specifier: '@/lib/app-http-link-open',
+    specifiers: ['@/lib/browser/navigation/app-http-link-open'],
     file: 'viewer-app-link-shim.ts',
     importers: ['components/diff-comments/DiffCommentCard.tsx']
   }
@@ -83,7 +83,7 @@ function splitMainCssImports(mainCss) {
 }
 
 const LOCALES_DIR = join(RENDERER_SRC, 'i18n', 'locales')
-const TRANSLATE_KEY = /\btranslate\(\s*['"]([^'"]+)['"]/g
+const TRANSLATE_KEY = /\b(?:translate|t)\(\s*['"]([^'"]+)['"]/g
 
 function lookupMessage(catalog, key) {
   const nested = key.split('.').reduce((node, part) => node?.[part], catalog)
@@ -162,13 +162,22 @@ function viewerResolvePlugin(appStyles) {
       pluginBuild.onResolve({ filter: /^@\/i18n\/i18n$/ }, () => ({
         path: join(VIEWER_DIR, 'viewer-i18n-shim.ts')
       }))
+      // Why: useTranslate reads the catalog through its sibling module, which would ship every locale.
+      pluginBuild.onResolve({ filter: /^\.\/i18n$/ }, (args) =>
+        args.importer.split('\\').join('/').endsWith('i18n/use-translate.ts')
+          ? { path: join(VIEWER_DIR, 'viewer-i18n-shim.ts') }
+          : undefined
+      )
       for (const standIn of VIEWER_STAND_INS) {
-        const filter = new RegExp(`^${standIn.specifier.replace(/[/.]/g, '\\$&')}$`)
+        const alternatives = standIn.specifiers.map((specifier) =>
+          specifier.replace(/[/.]/g, '\\$&')
+        )
+        const filter = new RegExp(`^(?:${alternatives.join('|')})$`)
         pluginBuild.onResolve({ filter }, (args) => {
           const importer = args.importer.split('\\').join('/')
           if (!standIn.importers.some((allowed) => importer.endsWith(allowed))) {
             throw new Error(
-              `${args.importer} needs ${standIn.specifier}, which the share page does not ship`
+              `${args.importer} needs ${args.path}, which the share page does not ship`
             )
           }
           return { path: join(VIEWER_DIR, standIn.file) }

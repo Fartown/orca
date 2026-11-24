@@ -2,10 +2,10 @@ import { ArrowUp, AtSign, Maximize2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import AgentCombobox from '@/components/agent/AgentCombobox'
-import { ShortcutKeyCombo } from '@/components/ShortcutKeyCombo'
+import { ShortcutKeyCombo } from '@/components/ui/ShortcutKeyCombo'
 import { translate } from '@/i18n/i18n'
-import type { AgentCatalogEntry } from '@/lib/agent-catalog'
-import type { TuiAgent } from '../../../../shared/tui-agent'
+import type { AgentCatalogEntry } from '@/lib/agent-catalog/agent-catalog'
+import type { TuiAgent } from '../../../../shared/agent-launch/catalog/tui-agent'
 
 export type LocalTaskDispatchMode = 'dispatch' | 'ask'
 

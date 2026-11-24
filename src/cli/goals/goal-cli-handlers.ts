@@ -9,17 +9,17 @@ import type {
   GoalSummary
 } from '../../shared/goals/goal-control-contract'
 import { fingerprintPayload } from '../../shared/goals/goal-payload-fingerprint'
-import type { RuntimeTerminalSummary } from '../../shared/runtime-terminal-contracts'
-import { readTextOrFileFlag } from '../command-body-input'
-import type { CommandHandler, HandlerContext } from '../dispatch'
+import type { RuntimeTerminalSummary } from '../../shared/terminal/runtime/runtime-terminal-contracts'
+import { readTextOrFileFlag } from '../arguments/command-body-input'
+import type { CommandHandler, HandlerContext } from '../dispatch/dispatch'
 import {
   getOptionalNonNegativeIntegerFlag,
   getOptionalStringFlag,
   getRequiredStringFlag
-} from '../flags'
-import { printResult } from '../format'
+} from '../arguments/flags'
+import { printResult } from '../output/command-result-output'
 import type { RuntimeClient } from '../runtime/client'
-import { RuntimeClientError } from '../runtime/types'
+import { RuntimeClientError } from '../runtime/connection/types'
 import { formatDraft, formatGoalDetail, formatGoalList, formatOperation } from './goal-cli-format'
 
 // The CLI talks to one Orca: this machine's, or the paired server picked by --environment.

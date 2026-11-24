@@ -16,7 +16,7 @@ import {
 } from '../../../src/shared/local-tasks/local-task-model'
 import { buildLocalTaskIndex } from '../../../src/shared/local-tasks/local-task-grouping'
 import { localTaskParentCandidates } from '../../../src/shared/local-tasks/local-task-hierarchy'
-import { MobileSwitch } from '../components/MobileSwitch'
+import { MobileSwitch } from '../components/controls/MobileSwitch'
 import { colors, spacing } from '../theme/mobile-theme'
 import { themedStyleSheet } from '../theme/themed-styles'
 import { useMobileColorScheme } from '../theme/use-mobile-color-scheme'

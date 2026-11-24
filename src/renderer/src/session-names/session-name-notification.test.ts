@@ -1,16 +1,24 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
-import type { AiVaultSessionTitlesResult } from '../../../shared/ai-vault-session-title'
-import { dispatchTerminalNotification } from '../components/terminal-pane/use-notification-dispatch'
-import { fixture, nativeResult, PANE, LEAF, SIBLING } from './session-name-binding-test-fixture'
+import type { AiVaultSessionTitlesResult } from '../../../shared/ai-vault/contracts/ai-vault-session-title'
+import { dispatchTerminalNotification } from '../components/terminal-pane/notifications/dispatch-terminal-notification'
+import {
+  fixture,
+  nativeResult,
+  PANE,
+  LEAF,
+  SIBLING,
+  titleSyncStore
+} from './session-name-binding-test-fixture'
 import { captureNotificationSessionName } from './notification-session-name'
 import { sessionNameStore } from './session-name-store'
+import { acceptedAgentStatuses } from '../store/slices/agent-status/status-ownership/accepted-agent-statuses'
 import {
   canonicalSessionTitleKey,
   registerCanonicalSessionTitleProvider
 } from '../lib/canonical-session-titles'
-import { getDefaultSettings } from '../../../shared/constants'
-import type { NotificationDispatchRequest } from '../../../shared/notification-settings-types'
-import { startAiVaultTabTitleSync } from '../lib/ai-vault-tab-title-sync'
+import { getDefaultSettings } from '../../../shared/orca-profiles/constants'
+import type { NotificationDispatchRequest } from '../../../shared/notifications/notification-settings-types'
+import { startAiVaultTabTitleSync } from '../lib/agent-session/history/title-sync/ai-vault-tab-title-sync'
 
 let store: ReturnType<typeof fixture>
 const stops: (() => void)[] = []
@@ -20,8 +28,12 @@ const dispatch = vi.fn(async (_args: NotificationDispatchRequest) => ({
 }))
 const read = vi.fn(async (): Promise<AiVaultSessionTitlesResult> => ({ titles: [] }))
 vi.mock('@/store', () => ({ useAppStore: { getState: () => store.getState() } }))
-vi.mock('@/runtime/sync-runtime-graph', () => ({ scheduleRuntimeGraphSync: vi.fn() }))
-vi.mock('@/lib/desktop-notification-sound', () => ({ playDesktopNotificationSound: vi.fn() }))
+vi.mock('@/runtime/sync-runtime-graph/graph-sync-scheduler', () => ({
+  scheduleRuntimeGraphSync: vi.fn()
+}))
+vi.mock('@/lib/notifications/desktop-notification-sound', () => ({
+  playDesktopNotificationSound: vi.fn()
+}))
 
 beforeEach(() => {
   vi.clearAllMocks()
@@ -36,16 +48,19 @@ beforeEach(() => {
     markAgentCompletionPaneUnread: vi.fn(),
     markTerminalTabUnread: vi.fn(),
     markTerminalPaneUnread: vi.fn(),
-    agentStatusByPaneKey: {
-      [PANE]: {
-        ...state.agentStatusByPaneKey[PANE],
-        state: 'done',
-        stateStartedAt: Date.now(),
-        updatedAt: Date.now(),
-        prompt: '继续',
-        lastAssistantMessage: 'The patch is ready.'
-      }
-    }
+    agentStatusByPaneKey: acceptedAgentStatuses([
+      [
+        PANE,
+        {
+          ...state.agentStatusByPaneKey.get(PANE)!,
+          state: 'done',
+          stateStartedAt: Date.now(),
+          updatedAt: Date.now(),
+          prompt: '继续',
+          lastAssistantMessage: 'The patch is ready.'
+        }
+      ]
+    ])
   }))
   vi.stubGlobal('document', { visibilityState: 'hidden', hasFocus: () => false })
   vi.stubGlobal('window', {
@@ -128,7 +143,7 @@ it('uses an existing manual fallback when the provider has no native name', asyn
 })
 
 it('does not borrow the current B container name for an already captured A event', async () => {
-  const eventStatus = store.getState().agentStatusByPaneKey[PANE]
+  const eventStatus = store.getState().agentStatusByPaneKey.get(PANE)
   store.replaceIdentity('B')
   store.setState((state) => ({
     tabsByWorktree: {
@@ -155,9 +170,9 @@ it('does not borrow the current B container name for an already captured A event
 it('does not borrow an old generated title when the event has no session identity', async () => {
   store.setState((state) => ({
     settings: { ...state.settings!, tabAutoGenerateTitle: true },
-    agentStatusByPaneKey: {
-      [PANE]: { ...state.agentStatusByPaneKey[PANE], providerSession: undefined }
-    },
+    agentStatusByPaneKey: acceptedAgentStatuses([
+      [PANE, { ...state.agentStatusByPaneKey.get(PANE)!, providerSession: undefined }]
+    ]),
     tabsByWorktree: {
       workspace: [
         {
@@ -199,13 +214,16 @@ it('does not lend a Codex name to a different provider terminal bell', () => {
 
 it('keeps the fresh owned native name on process exit without borrowing an unfinished reply', () => {
   store.setState((state) => ({
-    agentStatusByPaneKey: {
-      [PANE]: {
-        ...state.agentStatusByPaneKey[PANE],
-        state: 'working',
-        lastAssistantMessage: 'Still working'
-      }
-    }
+    agentStatusByPaneKey: acceptedAgentStatuses([
+      [
+        PANE,
+        {
+          ...state.agentStatusByPaneKey.get(PANE)!,
+          state: 'working',
+          lastAssistantMessage: 'Still working'
+        }
+      ]
+    ])
   }))
   sessionNameStore.publish('ssh:dev-box', nativeResult('Exited task'))
   dispatchTerminalNotification('workspace', {
@@ -223,13 +241,16 @@ it.each(['stale', 'different-agent'] as const)(
   'does not borrow a %s identity on process exit',
   (reason) => {
     store.setState((state) => ({
-      agentStatusByPaneKey: {
-        [PANE]: {
-          ...state.agentStatusByPaneKey[PANE],
-          state: 'working',
-          updatedAt: Date.now() - (reason === 'stale' ? 20_000 : 0)
-        }
-      }
+      agentStatusByPaneKey: acceptedAgentStatuses([
+        [
+          PANE,
+          {
+            ...state.agentStatusByPaneKey.get(PANE)!,
+            state: 'working',
+            updatedAt: Date.now() - (reason === 'stale' ? 20_000 : 0)
+          }
+        ]
+      ])
     }))
     sessionNameStore.publish('ssh:dev-box', nativeResult('Wrong old task'))
     dispatchTerminalNotification('workspace', {
@@ -278,7 +299,7 @@ function send() {
     source: 'agent-task-complete',
     paneKey: PANE,
     terminalTitle: 'Codex ready',
-    agentStatusSnapshot: store.getState().agentStatusByPaneKey[PANE]
+    agentStatusSnapshot: store.getState().agentStatusByPaneKey.get(PANE)
   })
 }
 
@@ -314,7 +335,7 @@ it.each(['ssh:folder-box', 'runtime:paired-box'] as const)(
         worktreeId: 'folder:f',
         paneKey: PANE,
         terminalTitle: 'Codex ready',
-        agentStatus: store.getState().agentStatusByPaneKey[PANE]
+        agentStatus: store.getState().agentStatusByPaneKey.get(PANE)
       })
     ).toBe('Own remote folder A')
     expect(read).toHaveBeenCalledExactlyOnceWith({
@@ -370,8 +391,7 @@ it.each([false, true])(
     )
     stops.push(
       startAiVaultTabTitleSync({
-        getState: store.getState,
-        subscribe: store.subscribe,
+        ...titleSyncStore(store),
         resolveSessionTitles: sessionNameStore.resolveSessionTitles,
         invalidateSessionNames: (requests) =>
           sessionNameStore.invalidate(

@@ -1,4 +1,5 @@
-import { GLOBAL_FLAGS, type CommandSpec } from '../args'
+import type { CommandSpec } from '../discovery/command-spec'
+import { CLI_GLOBAL_FLAGS as GLOBAL_FLAGS } from '../../shared/cli/cli-argument-boundary'
 
 const HOST_NOTE =
   'Runs on the Orca this CLI talks to. For a workspace on an SSH host, pass --environment <that host’s Orca Server>: the checklist, the goal record and the driver all live on the host that owns the workspace.'

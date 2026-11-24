@@ -22,7 +22,7 @@ export function TerminalTabViewSwitch({
       {isChatView
         ? translate(
             'components.tab.bar.SortableTabContextMenu.switchToTerminalView',
-            'Continue with Terminal Agent'
+            'Continue in terminal'
           )
         : translate('terminalChatViewButton.switchToChatView', 'Switch to Chat View')}
       {shortcut ? <ContextMenuShortcut>{shortcut}</ContextMenuShortcut> : null}

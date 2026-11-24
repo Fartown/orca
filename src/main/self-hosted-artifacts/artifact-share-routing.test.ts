@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { z } from 'zod'
-import { toSshExecutionHostId } from '../../shared/execution-host'
+import { toSshExecutionHostId } from '../../shared/execution-host/execution-host'
 import { ARTIFACT_SHARE_RELAY_METHODS } from '../../shared/self-hosted-artifacts/artifact-share-contract'
 import {
   ARTIFACT_SHARE_ERROR_CODES,

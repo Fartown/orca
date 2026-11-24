@@ -1,10 +1,10 @@
-import { getFolderWorkspaceConnectionId } from '@/lib/folder-workspace-connection'
-import { getRendererAppPlatform } from '@/lib/renderer-app-platform'
-import { getResolvedExecutionHostIdForWorktree } from '@/lib/resolved-worktree-execution-host'
+import { getFolderWorkspaceConnectionId } from '@/lib/workspace/ownership/folder-workspace-connection'
+import { getRendererAppPlatform } from '@/app-shell/platform/renderer-app-platform'
+import { getResolvedExecutionHostIdForWorktree } from '@/lib/workspace/ownership/resolved-worktree-execution-host'
 import type { useAppStore } from '@/store'
-import { parseWorkspaceKey } from '../../../../shared/workspace-scope'
-import { getTabEntryFileOperationContext } from '../tab-bar/tab-create-entry-local-path'
-import type { TabEntryLocalPlatform } from '../tab-bar/tab-create-entry-path-validation'
+import { parseWorkspaceKey } from '../../../../shared/workspace/identity/workspace-scope'
+import { getTabEntryFileOperationContext } from '../tab-bar/create-entry/tab-create-entry-local-path'
+import type { TabEntryLocalPlatform } from '../tab-bar/create-entry/tab-create-entry-path-validation'
 
 type AppState = ReturnType<typeof useAppStore.getState>
 

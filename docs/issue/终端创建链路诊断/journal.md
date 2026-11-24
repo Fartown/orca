@@ -51,6 +51,15 @@ updated: 2026-11-03
 
 ## 3. 开发记录
 
+### 2026-11-21：上游同步到 fa60d0a566（implementing）
+
+- 本轮目标：`fork/integration` 从 `e723de1bfd` 合入上游到 `fa60d0a566`（四次合并：`22afb84f6a`、`9c3b42f644`、`d725f407e8`、`31df22fb1a`，冲突都在第一次），保持终端创建链路各段打点不丢。
+- 完成内容：本功能 16 个冲突（UU 13、UD 3）。`src/main/runtime/rpc/dispatcher.ts` 上游新增 `dispatchStreamingObjects`（`ipc/runtime.ts` 直接调用），fork 改为在构造函数里一行 `traceTerminalLaunchRpcDispatch(this)` 同时包住 `dispatch` 与 `dispatchStreamingObjects`，实现放进自有 `src/main/terminal-launch-diagnostics/rpc-dispatcher-launch-trace.ts`，`launch-trace.ts` 的流式追踪改成泛型、对象回复当场做 JSON 快照。`sleeping-agent-session-launch.ts` 的打点放在上游 `expectedStatus` 之后；`spawn-execute.ts`、`daemon-terminal-admission.ts`、`crash-reporting-renderer-breadcrumbs.ts`、`terminal-startup-queues.ts`、`terminal-tab-creation.ts`、`AiVaultSessionDropLayer.tsx`、`launch-ai-vault-session-and-reveal.ts` 等随上游换目录后以上游为底重放。`web-runtime-terminal-creation.ts`（UD）被上游拆成 `runtime/hosted-terminals/creation/` 与 `lib/agent-session/launch/new-tab/launch-agent-web-host-tab.ts`，配对终端的打点跟到后者（`observePairedTerminalLaunch` 改成泛型以接上游的主机参数类型）。上游删除的两个 pty-connection spec（#40512、#42591）fork 只改过夹具，挂在上面的 `codex-session-1` 接缝撤登记。
+- 代码或文档变更：`config/fork-features.jsonc` 接缝 17→16 条：10 条换路径，`dispatcher.ts` 的 mustContain 收紧为 `traceTerminalLaunchRpcDispatch(this)`，新增 `launch-agent-web-host-tab.ts`（`terminal-launch-diagnostics/paired-terminal-launch`），退役 2 条 spec 接缝；`tests` 与 checks 里 `pty-connection-restore-and-resume.test.ts` 换到 `pty-connection/tests/`；`dependsOn` 9 条换路径，`pty-provider-contract.ts`、`web-runtime-session-types.ts` 换成 `src/main/providers/pty/spawn-result.ts`、`hosted-terminals/creation/terminal-create-contracts.ts`。合并后没有本功能的单独修复提交。新棘轮基线未登记本功能条目。
+- 验证证据：登记 checks 7 文件 51 项与 1 文件 7 项通过（`/Users/bytedance/dev/orca/.docs/upstream-sync/2026-11-20/sync-checks-run3.log`）；冲突解法见 `/Users/bytedance/dev/orca/.docs/upstream-sync/2026-11-20/report-D-terminal-chat.md`、`report-G-shared.md`、`phase2-D.tsv`；最终门禁见 `/Users/bytedance/dev/orca/.docs/upstream-sync/2026-11-20/final-gates.log`。真机抽查（`/Users/bytedance/dev/orca/.docs/upstream-sync-ui-validation/2026-11-21/README.md`）未覆盖本功能，本机、配对与 SSH 的打点都没有在同步后看过。
+- 未解决问题：dispatcher 用实例方法覆盖原型方法的写法只有 `launch-trace.test.ts` 等单测证明，没有在真实应用里核对流式回复的打点；两个已删 spec 原来覆盖的恢复场景现在只剩 `pty-connection-restore-and-resume.test.ts`。
+- 下一步：下次真机排查终端创建时，确认本机、配对与 SSH 三条链路的打点都还在日志里。
+
 ### 2026-11-03：冷恢复重试不再每次扫描全部标签（testing）
 
 - 本轮目标：让 2026-11-02 上游同步后新增的上游单测 `bounds unknown retry work`（`pty-connection-spawn-deferred-sleep.test.ts`）通过。

@@ -1,10 +1,11 @@
 import { useMemo } from 'react'
 import { GitBranch, Plus } from 'lucide-react'
-import { AgentStateDot } from '@/components/AgentStateDot'
-import { useNow } from '@/hooks/use-now'
+import { AgentStateDot } from '@/components/agent/status/AgentStateDot'
+import { useNow } from '@/lib/window-activity/use-now'
 import { translate } from '@/i18n/i18n'
-import { AgentIcon, getAgentLabel } from '@/lib/agent-catalog'
-import { cn } from '@/lib/utils'
+import { AgentIcon } from '@/components/agent/icons/AgentIcon'
+import { getAgentLabel } from '@/lib/agent-catalog/agent-catalog'
+import { cn } from '@/lib/class-names'
 import { useAppStore } from '@/store'
 import type {
   LocalTaskProposalAgentFacts,
@@ -13,7 +14,7 @@ import type {
 } from '@/local-tasks/local-task-proposal-item-facts'
 import { formatLocalTaskSessionAge } from '@/local-tasks/local-task-session-age'
 import { selectLocalTaskWorkspace } from '@/local-tasks/local-task-workspace-resolution'
-import { isTuiAgent } from '../../../../shared/tui-agent-config'
+import { isTuiAgent } from '../../../../shared/agent-launch/catalog/tui-agent-config'
 import { LocalTaskHostIcon, useLocalTaskHostLabel } from './LocalTaskHostLabel'
 import {
   LocalTaskReviewBadge,

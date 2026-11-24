@@ -1,11 +1,11 @@
 import { createSocket } from 'node:dgram'
 import { isIPv4 } from 'node:net'
-import { isVirtualBridgeInterface } from '../../../shared/pairing-address-auto-selection'
-import { isTailnetIPv4Address } from '../../../shared/tailnet-address'
+import { isVirtualBridgeInterface } from '../../../shared/remote-runtime/pairing/pairing-address-auto-selection'
+import { isTailnetIPv4Address } from '../../../shared/network/tailnet-address'
 import {
   getPairingNetworkInterfaces,
   type NetworkInterface
-} from '../../runtime/pairing-network-interfaces'
+} from '../../runtime/rpc/server/pairing/network/pairing-network-interfaces'
 
 function isPrivateLanIPv4(address: string): boolean {
   const [a, b] = address.split('.').map(Number)

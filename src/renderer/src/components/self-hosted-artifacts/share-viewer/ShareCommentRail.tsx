@@ -10,8 +10,8 @@ import { translate } from '@/i18n/i18n'
 import {
   stackRichMarkdownReviewNotePositions,
   type RichMarkdownReviewNotePosition
-} from '@/components/editor/rich-markdown-review-note-layout'
-import type { DiffComment } from '../../../../../shared/diff-comment-types'
+} from '@/components/editor/rich-markdown/review/rich-markdown-review-note-layout'
+import type { DiffComment } from '../../../../../shared/file-review/diff-comment-types'
 import { ShareCommentCard, ShareCommentCardFrame, ShareCommentComposer } from './ShareCommentBlock'
 import {
   SHARE_DRAFT_PLACEMENT_ID,

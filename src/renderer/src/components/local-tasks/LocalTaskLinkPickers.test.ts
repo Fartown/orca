@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { createTestStore } from '@/store/slices/store-test-helpers'
-import { makeWorktree } from '@/store/slices/worktrees-slice-test-fixtures'
+import { createTestStore } from '@/store/testing/app-store-test-fixture'
+import { makeWorktree } from '@/store/slices/worktrees/worktree.test-fixture'
 import type {
   LocalTaskLinks,
   LocalTaskWorkspaceLink

@@ -8,8 +8,8 @@ import {
 } from './goal-editor-draft-contract'
 import type { GoalAcceptanceDraft } from './goal-acceptance-draft-contract'
 import { z } from 'zod'
-import type { AgentStatusState } from '../agent-status-types'
-import type { PtyLivenessVerdict } from '../pty-liveness-verdict'
+import type { AgentStatusState } from '../agent-status/contracts/agent-status-types'
+import type { PtyLivenessVerdict } from '../terminal/pty/lifecycle/pty-liveness-verdict'
 
 // Same shape as worktree-schemas.ts WorktreeSelector plus terminal/unary-schemas.ts
 // TerminalHandle. The PTY incarnation is mandatory here: a goal bound to a handle

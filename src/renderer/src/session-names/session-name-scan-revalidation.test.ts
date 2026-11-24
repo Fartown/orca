@@ -5,7 +5,7 @@ import { canonicalSessionTitleKey } from '../lib/canonical-session-titles'
 import type {
   AiVaultSessionTitlesArgs,
   AiVaultSessionTitlesResult
-} from '../../../shared/ai-vault-session-title'
+} from '../../../shared/ai-vault/contracts/ai-vault-session-title'
 
 afterEach(() => vi.useRealTimers())
 

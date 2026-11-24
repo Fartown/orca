@@ -2,10 +2,10 @@ import { describe, expect, it } from 'vitest'
 import { NO_WORKSPACE_ROW_FILTERS } from '../../../src/shared/workspace-view/workspace-row-filters'
 import {
   NO_PROJECT_SECTION_CATALOG,
-  buildSections,
-  sortWorktrees,
-  type Worktree
-} from '../worktree/workspace-list-sections'
+  buildSections
+} from '../worktree/workspace-list/workspace-list-sections'
+import { sortWorktrees } from '../worktree/workspace-list/workspace-list-ordering'
+import type { Worktree } from '../worktree/workspace-list/workspace-list-types'
 
 describe('same-name project sections', () => {
   it('groups three host directories and separates a renamed one without changing native IDs', () => {
@@ -55,7 +55,7 @@ describe('same-name project sections', () => {
       nativeCatalog
     )
     expect(merged.map(({ key }) => key)).toEqual(['sidebar-name:workspace'])
-    expect(merged[0].data.map(({ worktreeId }) => worktreeId)).toEqual(
+    expect(merged[0].data.map(({ row }) => row.worktreeId)).toEqual(
       sortWorktrees(rows, 'manual').map(({ worktreeId }) => worktreeId)
     )
     const renamed = {

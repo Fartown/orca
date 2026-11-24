@@ -64,19 +64,21 @@ vi.mock('@/store', () => ({
     }
   })
 }))
-vi.mock('../hooks/ipc-events/runtime-environment-subscription-selection', () => ({
+vi.mock('../hooks/ipc-events/runtime-events/runtime-environment-subscription-selection', () => ({
   getReachableRuntimeEnvironmentIds: (state: AppSnapshot) => [
     ...state.runtimeStatusByEnvironmentId.keys()
   ]
 }))
-vi.mock('../runtime/runtime-rpc-client', () => ({
+vi.mock('../runtime/rpc/compatibility/runtime-capability-proof', () => ({
   runtimeEnvironmentSupportsCapability: async (environmentId: string) => {
     env.capabilityChecks.push(environmentId)
     if (env.probeFails.has(environmentId)) {
       throw new Error('status.get failed: runtime unavailable')
     }
     return env.supported.has(environmentId)
-  },
+  }
+}))
+vi.mock('../runtime/rpc/calls/runtime-rpc-call', () => ({
   callRuntimeRpc: async (target: { environmentId?: string }, method: string) => {
     env.reads.push({ target, method })
     if (method === 'localTasks.status' && target.environmentId) {
@@ -92,7 +94,7 @@ vi.mock('../runtime/runtime-rpc-client', () => ({
     throw new Error('not answered in this test')
   }
 }))
-vi.mock('../runtime/runtime-rpc-subscribe', () => ({
+vi.mock('../runtime/rpc/subscriptions/runtime-rpc-subscribe', () => ({
   subscribeRuntimeRpc: async (
     target: unknown,
     _method: string,

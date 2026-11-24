@@ -2,8 +2,11 @@ import { mkdtemp, mkdir, writeFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { appImageNamespaceKey, resolveAppImageCacheKey } from '../../shared/appimage-cache-identity'
-import { ELECTRON_NO_SANDBOX_REQUEST_ENV } from '../../shared/electron-no-sandbox-request'
+import {
+  appImageNamespaceKey,
+  resolveAppImageCacheKey
+} from '../../shared/desktop-distribution/appimage/appimage-cache-identity'
+import { ELECTRON_NO_SANDBOX_REQUEST_ENV } from '../../shared/app-lifecycle/launch/electron-no-sandbox-request'
 
 const spawn = vi.hoisted(() =>
   vi.fn((_command: string, _args: string[], _options: { env?: NodeJS.ProcessEnv }) => ({

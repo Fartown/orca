@@ -1,7 +1,7 @@
 import type {
   OrchestrationCompatibilityTerminalAuthority,
   RestoredOrchestrationAuthorityReceipt
-} from '../runtime/runtime-terminal-contracts'
+} from '../runtime/orchestration/terminal-authority/orchestration-compatibility-authority'
 
 export function restoredTerminalAuthorityMatches(
   receipt: RestoredOrchestrationAuthorityReceipt | undefined,

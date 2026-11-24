@@ -1,11 +1,11 @@
 import { describe, expect, it, vi } from 'vitest'
-import { sendNotesToActiveAgentSession } from '@/lib/active-agent-note-send'
+import { sendNotesToActiveAgentSession } from '@/lib/agent-session/messaging/terminal/active-agent-note-send'
 import {
   createNoteSendAppState,
   LEAF_ID,
   OTHER_LEAF_ID,
   type NoteSendAppState
-} from '@/lib/active-agent-note-send-test-harness'
+} from '@/lib/agent-session/messaging/terminal/active-agent-note-send-test-harness'
 import { findTerminalAtRecordedPane } from './local-task-background-terminal-match'
 
 const testState = vi.hoisted(() => {
@@ -25,7 +25,9 @@ vi.mock('@/store', () => ({
     { getState: () => testState.appState() }
   )
 }))
-vi.mock('@/runtime/runtime-rpc-client', () => ({ callRuntimeRpc: testState.callRuntimeRpc }))
+vi.mock('@/runtime/rpc/calls/runtime-rpc-call', () => ({
+  callRuntimeRpc: testState.callRuntimeRpc
+}))
 
 function listed(handle: string, extra: Record<string, unknown>) {
   return {

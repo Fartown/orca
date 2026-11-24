@@ -1,8 +1,8 @@
 import type { z } from 'zod'
-import { z as schema } from 'zod'
-import { defineRpcOperation } from '../transport/rpc-operation'
-import { rpcResultVariant } from '../transport/rpc-operation-result-reader'
-import type { RpcMethodName } from '../transport/rpc-params-contract'
+import * as schema from 'zod'
+import { defineRpcOperation } from '../transport/rpc/rpc-operation'
+import { rpcResultVariant } from '../transport/rpc/rpc-operation-result-reader'
+import type { RpcMethodName } from '../../../src/shared/rpc-contract/rpc-params-catalog.generated'
 import {
   localTaskLinksReplySchema,
   localTaskProgressSnapshotSchema,

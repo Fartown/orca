@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import type { AgentStatusIpcPayload } from '../../shared/agent-status-ipc-payload'
-import type { RuntimeWorktreePsSummary } from '../../shared/runtime-types'
-import { attachRuntimeWorktreeAgentRows } from '../runtime/runtime-worktree-agent-rows'
-import { collectRuntimeWorktreeAgentSources } from '../runtime/runtime-worktree-agent-sources'
+import type { AgentStatusIpcPayload } from '../../shared/agent-status/contracts/agent-status-ipc-payload'
+import type { RuntimeWorktreePsSummary } from '../../shared/worktree/catalog/runtime-worktree-contracts'
+import { attachRuntimeWorktreeAgentRows } from '../runtime/workspaces/process-listing/runtime-worktree-agent-rows'
+import { collectRuntimeWorktreeAgentSources } from '../runtime/workspaces/process-listing/runtime-worktree-agent-sources'
 
 /**
  * The Goal guard reads the working agent's transcript from its tail; worktree ps is how the
@@ -32,13 +32,14 @@ function rows(snapshot: Partial<AgentStatusIpcPayload>): RuntimeWorktreePsSummar
   const summaries = new Map([[WORKTREE_ID, summary]])
   attachRuntimeWorktreeAgentRows({
     summaries,
-    terminalTitleEvidenceByWorktreeId: new Map(),
+    terminalTitleEvidenceByRow: new Map(),
     rowSources: collectRuntimeWorktreeAgentSources({
       mirroredWorktreeIdByTabId: new Map(),
       connectedPtyEvidence: {
         tabIds: new Set(['tab-1']),
         paneKeys: new Set(),
-        ptyIdByTerminalHandle: new Map()
+        ptyIdByTerminalHandle: new Map(),
+        terminalHandleByPaneKey: new Map()
       },
       hookSnapshots: [snapshotRow]
     }),

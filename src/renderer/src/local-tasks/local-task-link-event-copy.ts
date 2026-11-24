@@ -1,6 +1,6 @@
 import { translate } from '@/i18n/i18n'
 import { localTaskEventText as text } from '../../../shared/local-tasks/local-task-event-payload'
-import { getAgentCatalog } from '@/lib/agent-catalog'
+import { getAgentCatalog } from '@/lib/agent-catalog/agent-catalog'
 import type { LocalTaskEvent } from '../../../shared/local-tasks/local-task-types'
 
 type Payload = Record<string, unknown> | null

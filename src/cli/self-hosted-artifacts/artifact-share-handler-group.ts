@@ -1,4 +1,4 @@
-import type { HandlerGroup } from '../handler-group-manifest'
+import type { HandlerGroup } from '../dispatch/handler-group-manifest'
 
 // Why: this fork shares files over the local network from the computer that holds them.
 export const ARTIFACT_SHARE_HANDLER_GROUP: HandlerGroup = {

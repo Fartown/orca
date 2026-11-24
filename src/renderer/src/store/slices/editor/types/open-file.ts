@@ -1,12 +1,13 @@
-import type { RuntimeHostPathGrantRef } from '@/runtime/runtime-file-client-types'
-import type { RecentlyClosedTabPosition } from '../../recently-closed-tabs'
-import type { EditorFileOperationProvenance } from '@/lib/editor-file-operation-owner'
+import type { RuntimeHostPathGrantRef } from '@/runtime/files/runtime-file-client-types'
+import type { ExecutionHostId } from '../../../../../../shared/execution-host/execution-host'
+import type { RecentlyClosedTabPosition } from '../../tabs/recently-closed-tab-position'
+import type { EditorFileOperationProvenance } from '@/lib/editor/file-operations/editor-file-operation-provenance'
 import type {
   GitBranchChangeEntry,
   GitBranchCompareSummary,
   GitCommitCompareSummary
-} from '../../../../../../shared/git-diff-compare-types'
-import type { GitStatusEntry } from '../../../../../../shared/git-status-types'
+} from '../../../../../../shared/git/diff/git-diff-compare-types'
+import type { GitStatusEntry } from '../../../../../../shared/git/status/git-status-types'
 import type {
   BranchCompareSnapshot,
   CombinedDiffAlternate,
@@ -16,7 +17,7 @@ import type {
   DiffSource,
   OpenCheckRunDetailsState,
   OpenConflictMetadata
-} from '../../../../../../shared/editor-tab-view-types'
+} from '../../../../../../shared/editor/views/editor-tab-view-types'
 
 export type BranchCompareLike = Pick<
   GitBranchCompareSummary,
@@ -93,10 +94,8 @@ export type OpenFile = {
   csvPreviewOnly?: boolean
   /** Why: explicit live tail, only meaningful for a read-only local log. */
   liveTail?: boolean
-  mode: 'edit' | 'diff' | 'conflict-review' | 'markdown-preview' | 'check-details'
+  mode: 'edit' | 'diff' | 'conflict-review' | 'markdown-preview' | 'check-details' | 'git-graph'
 }
-
-export type ActivityBarPosition = 'top' | 'side'
 
 export type MarkdownViewMode = 'source' | 'rich' | 'preview'
 
@@ -122,6 +121,8 @@ export const MAX_RECENT_CLOSED_EDITOR_TABS = 10
 export type EditorTabSelection = 'focus' | 'background' | 'none'
 
 export type EditorOpenTargetOptions = {
+  placementWorkspaceId?: string
+  executionHostId?: ExecutionHostId
   targetGroupId?: string
   preview?: boolean
   runtimeEnvironmentId?: string | null

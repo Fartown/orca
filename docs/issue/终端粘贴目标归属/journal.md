@@ -38,6 +38,15 @@ external_ids:
 
 ## 3. 开发记录
 
+### 2026-11-21：上游同步到 fa60d0a566
+
+- 本轮目标：`fork/integration` 从 `e723de1bfd` 合入上游到 `fa60d0a566`（四次合并：`22afb84f6a`、`9c3b42f644`、`d725f407e8`、`31df22fb1a`，冲突都在第一次），保持按实际聚焦分屏固定粘贴目标与按面板记录粘贴错误。
+- 完成内容：本功能 5 个冲突（UU 4、UD 1，其中 2 个是桌面 en/zh 词条表）。上游把粘贴代码搬到 `terminal-pane/input/paste/`，`terminal-pane-paste-execution.ts`、`terminal-pane-paste-listeners.ts` 以上游为底重放粘贴目标归属，保留上游新增的 `copiedFiles` / `onLocalImagePasted`；菜单粘贴先 `synchronizeTerminalKeyboardPane` 再 `pasteFromClipboard(pane, 'app-menu')`。`native-chat-paste-routing.test.tsx` 随上游移到 `native-chat/paste/`，补回守护粘贴归属的「keeps terminal-only paste unchanged」用例。合并后全量单测里上游 #41352 新增的两个菜单粘贴用例失败：它们只给模拟控制器提供 `setTerminalError`，而 fork 按面板写 `setTerminalErrorsByPaneId`；修复提交 `b4740de302` 补上该回调并按面板断言，测试意图不变。
+- 代码或文档变更：`config/fork-features.jsonc` 接缝 5 条随上游换路径（`input/paste/` 下 4 个文件与 `native-chat/paste/` 测试），新增接缝 `terminal-pane-paste-listeners.test.ts`（mustContain `pasteErrorsFor(setTerminalErrorsByPaneId`，这条登记和对应的架构白名单是跟在 `85d32f323d` 里一起提交的）；checks 里 3 个上游测试换新路径；`dependsOn` 5 条换路径并补 `input/paste/terminal-paste-errors.ts`。新棘轮基线未登记本功能条目。
+- 验证证据：登记 checks 5 文件 25 项通过（`/Users/bytedance/dev/orca/.docs/upstream-sync/2026-11-20/sync-checks-run3.log`）；修复前失败见 `/Users/bytedance/dev/orca/.docs/upstream-sync/2026-11-20/verify/test-full.log`；冲突解法见 `/Users/bytedance/dev/orca/.docs/upstream-sync/2026-11-20/report-D-terminal-chat.md`、`phase2-D.tsv`；最终门禁见 `/Users/bytedance/dev/orca/.docs/upstream-sync/2026-11-20/final-gates.log`。本机真机抽查通过：两分屏下 Meta+V 只写聚焦窗格 PTY 一次、另一窗格 0 次（构建 `85d32f323d`，已含 `b4740de302`；`/Users/bytedance/dev/orca/.docs/upstream-sync-ui-validation/2026-11-21/README.md` 第 5 项，截图 `evidence/paste-1-split`）。SSH 未覆盖。
+- 未解决问题：SSH 工作区下的粘贴归属没有在同步后的构建上复验。
+- 下一步：下次真机回归时补 SSH 工作区的分屏粘贴。
+
 ### 2026-11-17：实现并完成两端功能验收
 
 - 本轮目标：固定剪贴板手势的目标归属，修复已复现误取消及残留提示。

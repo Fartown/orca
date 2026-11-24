@@ -1,7 +1,7 @@
 import { z } from 'zod'
-import { stripCredentialsFromMessage } from '../git-remote-error'
-import type { GitRemoteIdentity } from '../git-remote-identity'
-import type { Repo } from '../repo-types'
+import { stripCredentialsFromMessage } from '../git/remotes/git-remote-error'
+import type { GitRemoteIdentity } from '../git/remotes/git-remote-identity'
+import type { Repo } from '../repository/repo-types'
 import { getRepoIdFromWorktreeId } from '../worktree/id'
 
 export const PLUGIN_WORKSPACE_REMOTE_NAME_MAX_LENGTH = 256

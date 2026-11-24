@@ -18,7 +18,7 @@ const {
   spawnMock: vi.fn()
 }))
 
-vi.mock('../runtime-client', async () => {
+vi.mock('../runtime/client', async () => {
   const { createRuntimeClientModuleMock } = await import('../index-test-harness.js')
   return createRuntimeClientModuleMock({
     callMock,
@@ -28,11 +28,24 @@ vi.mock('../runtime-client', async () => {
   })
 })
 
-vi.mock('../runtime/environments', () => ({
+vi.mock('../runtime/launch', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  serveOrcaApp: serveOrcaAppMock
+}))
+
+vi.mock('../runtime/profile/metadata', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  getDefaultUserDataPath: getDefaultUserDataPathMock
+}))
+
+vi.mock('../runtime/pairing/environments', () => ({
   addEnvironmentFromPairingCode: addEnvironmentFromPairingCodeMock,
-  listEnvironments: listEnvironmentsMock,
   removeEnvironment: vi.fn(),
   resolveEnvironment: vi.fn()
+}))
+
+vi.mock('../../shared/remote-runtime/host-store/runtime-environment-store', () => ({
+  listEnvironments: listEnvironmentsMock
 }))
 
 vi.mock('child_process', async () => {
@@ -42,8 +55,8 @@ vi.mock('child_process', async () => {
 
 import { main } from '../index'
 import { useWorktreeAwarenessEnvironment } from '../index-test-harness'
-import { RuntimeClientError } from '../runtime/types'
-import { buildWorktree, okFixture } from '../test-fixtures'
+import { RuntimeClientError } from '../runtime/connection/types'
+import { buildWorktree, okFixture } from '../runtime/fixtures/runtime-rpc-fixtures'
 
 const statuses = [
   {

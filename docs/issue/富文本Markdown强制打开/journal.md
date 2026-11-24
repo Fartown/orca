@@ -48,6 +48,15 @@ external_ids: []
 
 ## 3. 开发记录
 
+### 2026-11-21 上游同步到 fa60d0a566
+
+- 本轮目标：`fork/integration` 从 `e723de1bfd` 合入上游到 `fa60d0a566`（四次合并：`22afb84f6a`、`9c3b42f644`、`d725f407e8`、`31df22fb1a`，冲突都在第一次），保持语法不支持时可强制打开富文本并常驻风险提示（D-003）。
+- 完成内容：本功能 6 个冲突（UU 4，含桌面 en/zh 词条表；UD 2）。上游把编辑器面板拆进 `editor/panel/` 与 `editor/markdown/render-mode/`，`editor-panel-render-model.ts`、`EditorMarkdownFileSurface.tsx` 以上游为底重放强制打开；`editor.richMarkdown.overrideActive` 保留，桌面 zh 的 `editor.richMarkdown.tooLarge` 取上游文案。上游删除的 `editor-panel-render-model.test.ts` 与 `EditorContent.markdown-classification.test.tsx`（#38030）里守护本功能的用例移到自有 `rich-markdown-override/editor-panel-render-model-override.test.ts`、`EditorMarkdownFileSurface.override.test.tsx`；旧接缝 mustContain `sizeOverridden` 已不在，退役。checks 原来的 `markdown-render-mode.test` 被上游删除（#38037），改跑 `markdown/render-mode/markdown-rich-mode.test.ts`。
+- 代码或文档变更：`config/fork-features.jsonc` 接缝 6→5 条（3 条换路径、退役 1 条）；`tests` 换成 2 个自有测试；checks 换新路径；`dependsOn` 去掉自有代码已不再导入的 `markdown-render-mode.ts`。合并后没有本功能的单独修复提交。新棘轮基线未登记本功能条目。
+- 验证证据：登记 checks 4 文件 20 项通过（`/Users/bytedance/dev/orca/.docs/upstream-sync/2026-11-20/sync-checks-run3.log`）；冲突解法见 `/Users/bytedance/dev/orca/.docs/upstream-sync/2026-11-20/report-E-files-preview-remote.md`、`report-G-shared.md`、`phase2-E.tsv`；最终门禁见 `/Users/bytedance/dev/orca/.docs/upstream-sync/2026-11-20/final-gates.log`。本机真机抽查通过：回落横幅「Editable only in code mode…」与「Open anyway」可见，点后进入富文本并常驻风险提示（`/Users/bytedance/dev/orca/.docs/upstream-sync-ui-validation/2026-11-21/README.md` 第 7 项，截图 `evidence/rich-2-fallback-banner`、`rich-3-after-override`）。SSH 未覆盖。
+- 未解决问题：SSH 工作区下的强制打开没有在同步后复验。
+- 下一步：下次真机回归补 SSH 工作区一例。
+
 ### 2026-11-02 同步上游 c9845c5f9c：默认回落改为预览
 
 - 本轮目标：上游 4597d3f249 把不支持语法时的默认回落从源码模式改为预览模式，让「仍然打开」在新默认下继续可用。

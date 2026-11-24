@@ -4,17 +4,21 @@ import { z } from 'zod'
 import {
   getChromeExtensionOrigin,
   parseChromeExtensionUrl
-} from '../../../../shared/browser-extension-url'
-import { isBackgroundLaunch } from '../../../window/foreground-activation-policy'
-import { emitBrowserExtensionEvent } from '../browser-extension-api-host'
-import { resolveInsideExtensionDirectory } from '../browser-extension-manifest'
+} from '../../../../shared/browser/extensions/browser-extension-url'
+import { isBackgroundLaunch } from '../../../window/activation/foreground-activation-policy'
+import {
+  closeDesktopNotification,
+  showDesktopNotification
+} from '../../../notifications/desktop-notification'
+import { emitBrowserExtensionEvent } from '../api-runtime/browser-extension-api-host'
+import { resolveInsideExtensionDirectory } from '../installation/browser-extension-manifest'
 import {
   BrowserExtensionApiError,
   defineBrowserExtensionMethod,
   registerBrowserExtensionNamespace,
   type BrowserExtensionCaller
-} from '../browser-extension-namespace-registry'
-import { noteBrowserExtensionUserGesture } from './permissions'
+} from '../api-runtime/browser-extension-namespace-registry'
+import { noteBrowserExtensionUserGesture } from '../permissions/browser-extension-user-gesture'
 
 const optionsSchema = z
   .object({
@@ -99,7 +103,7 @@ function detach(entry: Shown, closeNative = true): void {
   if (notification) {
     notification.removeAllListeners()
     if (closeNative) {
-      notification.close()
+      closeDesktopNotification(notification)
     }
   }
 }
@@ -148,7 +152,7 @@ function show(caller: BrowserExtensionCaller, id: string, entry: Shown): void {
     detach(entry, false)
   })
   entry.notification = notification
-  notification.show()
+  showDesktopNotification(notification)
 }
 
 function create(caller: BrowserExtensionCaller, id: string, options: NotificationOptions): string {

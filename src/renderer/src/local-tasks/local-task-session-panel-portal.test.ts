@@ -5,8 +5,9 @@ import {
   planLocalTaskSessionPortal,
   resolveLocalTaskSessionPaneKey
 } from './local-task-session-panel-portal'
-import { toWebTerminalSurfaceTabId } from '../../../shared/terminal-surface-id'
-import { makeTerminalTab, makeWorktree } from '@/store/slices/worktrees-slice-test-fixtures'
+import { toWebTerminalSurfaceTabId } from '../../../shared/workspace-layout/terminal-surface-id'
+import { makeTerminalTab } from '@/store/terminals/testing/terminal-row.test-fixture'
+import { makeWorktree } from '@/store/slices/worktrees/worktree.test-fixture'
 
 const LEAF = '11111111-1111-4111-8111-111111111111'
 const WORKTREE = 'repo::/remote'

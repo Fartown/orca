@@ -1,11 +1,11 @@
-import { parseExecutionHostId } from '../../../src/shared/execution-host'
-import type { HostAuthorityEndpoint } from '../../../src/shared/host-authority'
+import { parseExecutionHostId } from '../../../src/shared/execution-host/execution-host'
+import type { HostAuthorityEndpoint } from '../../../src/shared/execution-host/host-authority'
 import {
   isLocalTaskOwnedHostId,
   localTaskClientHostId
 } from '../../../src/shared/local-tasks/local-task-endpoint-ids'
-import type { RpcClient } from '../transport/rpc-client'
-import type { ConnectionState } from '../transport/types'
+import type { RpcClient } from '../transport/rpc/rpc-client-contract'
+import type { ConnectionState } from '../transport/connection/connection-state'
 import type { LocalTaskExecutionOriginResolver } from './local-task-execution-origin'
 
 /**

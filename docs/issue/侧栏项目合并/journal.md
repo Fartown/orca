@@ -122,6 +122,15 @@ external_ids: []
 
 ## 3. 开发记录
 
+### 2026-11-21 — 上游同步到 fa60d0a566（testing）
+
+- 本轮目标：`fork/integration` 从 `e723de1bfd` 合入上游到 `fa60d0a566`（四次合并：`22afb84f6a`、`9c3b42f644`、`d725f407e8`、`31df22fb1a`，冲突都在第一次），保持同显示名称项目区块合并展示、改名拆分与按名称定位。
+- 完成内容：本功能 8 个冲突（全是 UU）。上游把侧栏分组代码搬到 `src/shared/sidebar-list/sections/`、`feed/` 与手机 `mobile/src/worktree/workspace-list/`，`project-section-grouping.ts`、`worktree-group-keys.ts`、`sidebar-row-plan.ts`、`use-section-rows.ts`、`reveal-ancestors.ts`、`workspace-list-sections.ts` 以上游为底重放按名称合并；`sidebar-feed-rows.ts` 的 `hostScoped` 恢复上游写法（fork 曾改成 `visibleHostIdSet !== null`；合并时判断两者等价，没有单独验证）。`use-pending-reveal.ts` 被上游拆出 `pending-reveal-inputs.ts`，项目头判定挪过去，fork 的 `sidebar-name:` 前缀随之移植，接缝拆成两条。真机抽查发现既有 e2e `tests/e2e/sidebar-project-merge.spec.ts` 两例失败：合并分组改指时 `useSidebarNameReveal` 返回新对象，而定位 effect 用「store 里的请求是否等于当前请求」判断，新对象永远不等，于是第一步就返回，既不滚动也不清除 `pendingRevealSidebarRow`；另一例是上游把设置页标签改成「Display name」。修复提交 `b9b3191945`：改指结果带 `retargetedFrom`，effect 用原请求判断有效与清除，补单测，e2e 标签跟上上游。该引用比较在合并前的 fork 里就存在，没有对比合并前的构建确认是否本次同步才暴露。
+- 代码或文档变更：`config/fork-features.jsonc` 接缝 13→14 条：`project-section-grouping.ts`、`worktree-group-keys.ts`、`sidebar-feed-rows.ts`、`workspace-list-sections.ts`、`project-header-color.ts`（到 `worktree-list/rows/`）换路径，`use-pending-reveal.ts` 改为 `useSidebarNameReveal(args)`，新增 `pending-reveal-inputs.ts`（`sidebar-name:`）；手机 checks 换新路径；`dependsOn` 10→13 条（新增手机 `workspace-list-ordering.ts`、`workspace-list-types.ts`，以及 `b9b3191945` 补的 `src/renderer/src/store/index.ts`）。`src/renderer/src/sidebar-project-merge/sidebar-name-reveal.ts` 及其测试。新棘轮基线未登记本功能条目。
+- 验证证据：登记 checks 3 文件 24 项与手机 2 文件 2 项通过（`/Users/bytedance/dev/orca/.docs/upstream-sync/2026-11-20/sync-checks-run3.log`，修复前）；冲突解法见 `/Users/bytedance/dev/orca/.docs/upstream-sync/2026-11-20/report-F-builds-plugins-goals.md`、`phase2-F.tsv`；e2e 失败与定位见 `/Users/bytedance/dev/orca/.docs/upstream-sync-ui-validation/2026-11-21/README.md` 第 9a 项与 `evidence/sidebar-merge-existing-spec.log`，截图 `evidence/sidebar-merge-fail2.png` 显示合并后项目设置与远端路径正常；最终门禁见 `/Users/bytedance/dev/orca/.docs/upstream-sync/2026-11-20/final-gates.log`。`b9b3191945` 之后的 e2e 重跑与本机、SSH 真机复验在资料里没有记录。
+- 未解决问题：修复后的 e2e 与按名称定位的真机效果待复验；SSH 工作区未覆盖。
+- 下一步：跑 `tests/e2e/sidebar-project-merge.spec.ts` 确认两例转绿，并在本机与 SSH 工作区各看一次合并分组的定位滚动与高亮。
+
 ### 2026-10-23 — 合并重复文档并复核最终源码（testing）
 
 - 本轮目标：按用户要求只保留一份需求、一份方案，并 review 最终源码。

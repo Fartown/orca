@@ -1,11 +1,11 @@
 import { useMemo } from 'react'
 import { CornerDownRight, GitBranch, Folder, Laptop, Server, Unplug } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { AgentStateDot } from '@/components/AgentStateDot'
+import { AgentStateDot } from '@/components/agent/status/AgentStateDot'
 import { translate } from '@/i18n/i18n'
-import { AgentIcon } from '@/lib/agent-catalog'
+import { AgentIcon } from '@/components/agent/icons/AgentIcon'
 import { selectLocalTaskHostLabel } from '@/local-tasks/local-task-host-label'
-import { cn } from '@/lib/utils'
+import { cn } from '@/lib/class-names'
 import { useAppStore } from '@/store'
 import { localTaskAttentionKindLabel } from '@/local-tasks/local-task-attention-copy'
 import type { LocalTaskIndex } from '@/local-tasks/local-task-grouping'
@@ -19,8 +19,8 @@ import {
   useLocalTasksDomain,
   type LocalTasksDomainState
 } from '@/local-tasks/local-tasks-domain-store'
-import { isTuiAgent } from '../../../../shared/tui-agent-config'
-import { normalizeExecutionHostId } from '../../../../shared/execution-host'
+import { isTuiAgent } from '../../../../shared/agent-launch/catalog/tui-agent-config'
+import { normalizeExecutionHostId } from '../../../../shared/execution-host/execution-host'
 import { localTaskWorkspaceFamilyIds } from '../../../../shared/local-tasks/local-task-hierarchy'
 import type {
   LocalTaskSessionLink,

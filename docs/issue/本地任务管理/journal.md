@@ -56,6 +56,19 @@ external_ids:
 
 ## 2. 决策点记录
 
+### D-030 手机网页包体积：fork 路由单独计额度
+
+- 日期：2026-11-21
+- 背景：同步上游到 fa60d0a566 后，上游 #44465 把手机网页包压缩 198 KiB 并收紧预算到 10.75 MiB，纯上游只剩约 205 KB 余量；fork 的手机路由（本地任务页约 300 KB、附件上传与会话续接约 22 KB、分块开销约 15 KB）合计约 355 KB，`build:mobile-web` 的体积检查失败，集成包无法出包。模块对比见本机 `.docs/upstream-sync/2026-11-20/mobile-web-bundle-diff.tsv`：没有重复打包、整包引入或调试代码，按需加载也不减少总量。
+- 备选项：
+  1. 调高上游预算常量
+  2. 在手机网页包去掉本地任务路由
+  3. 重写本地任务手机界面以瘦身
+  4. 上游预算不动，fork 路由按实测单独计额度（`config/scripts/local-tasks/mobile-web-fork-allowance.mjs`，360 KiB）
+- 最终决定：采用 4
+- 原因：1 会吃掉上游给自己留的余量；2 删功能；3 是界面重写、不属于同步；4 只计 fork 自己实测的体积，上游预算与余量不受影响，额度只降不升
+- 影响范围：`verify-mobile-web-app-bundle.mjs` 新接缝；本地任务手机页瘦身列入待重构清单，瘦下来后同步降低额度
+
 ### D-029 手机详情层级与跨组子任务可访问性
 
 - 日期：2026-11-17。
@@ -505,6 +518,15 @@ external_ids:
 - 验证完再一起做两个切片
 
 ## 3. 开发记录
+
+### 2026-11-21 上游同步到 fa60d0a566（done）
+
+- 本轮目标：`fork/integration` 从 `e723de1bfd` 合入上游到 `fa60d0a566`（四次合并：`22afb84f6a`、`9c3b42f644`、`d725f407e8`、`31df22fb1a`，冲突都在第一次），保持任务库、派活、任务与会话关联、需要你、手机任务页与配对/SSH 主机路由不丢，并让集成包照常出包。手机网页包体积的取舍已记为 D-030，这里不重复。
+- 完成内容：本功能 100 个冲突（UU 62、UD 38），其中归本功能组的 83 个按 replayed 44、ported 15、取上游 2、随上游删除 20 处理，词条表与其余共用文件由共用组合并。接缝约 45 条只换路径（手机 `row-presentation/`、`new-workspace/`、`session/tabs/`，桌面 `ipc/runtime-client/`、`startup/open-routing/`、`new-workspace/{composer,name-field,source-search}/`、`sidebar/workspace-card/*`、`worktree-jump/{selection,tabs,tasks}/`、`lib/agent-session/messaging/`、`lib/workspace/creation/` 等）。上游 #44904 改成只有标记 `paired-desktop` 的方法留在本机、表外默认中转；fork 方法都不在上游表里，新建自有 `src/main/local-tasks/local-task-relay-routes.ts`，`runtime-rpc-websocket-dispatch.ts` 接缝改为 `staysOnPairedDesktop(request.method)` 与 `relayAdmits(request.method)`：任务库中转方法照常中转，其余 fork 方法（`fileAttachment.*`）留在配对桌面。`use-worktree-card-review-details.ts` 取上游 `resolveWorktreeCardReview`，自有 `local-task-workspace-review.ts` 改从它导入。为不让上游文件超 300 行：`use-new-workspace-create-submit.ts` 采用行数中性写法，把 `createBlankWorkspace` / `createWorkspaceFromComposerSource` 换成自有 `local-task-create-route` 返回的同名函数（合并后 `60321bc02b` 改为单条命名空间导入），代价是任务创建也走上游的成功/失败触感与结果处理；`worktree-creation-structured-session.ts`、`use-worktree-jump-palette-selection-actions.ts` 的 fork 逻辑抽到自有模块，接缝改为一行导入或解构；`wsl-move-storage-dispositions.ts` 的普查表已无上游读者，删掉 local-tasks 的三行，自有测试改为直接校验任务库存储清单。上游删除 `requestSingleFlight`，手机端 7 处 `status.get` 改走上游 `connectionHostStatusRead.request()`，3 处 `worktree.ps` 全量读改走新自有 `local-task-worktree-catalog-read.ts`（每个 client+host 一读在途、期间触发合并为一次尾读）。上游把混合主机标签移到 `hostContextOf(row)` 视图，桌面上的 SSH 行不再写 `hostLabelSnapshot`（只影响失联时显示的主机名快照），服务器行仍记服务器名。`useRelayHosts` 新增第二参数、`createFolderWorkspace` 返回形状、`RpcDispatcher` 的 `methods` 必填、`AppBackgroundServices` 新子组件、来源页签改为图标加 tooltip、`agentStatusByPaneKey` 改为 `AcceptedAgentStatuses` 类（9 处改 `.get()`），相关自有代码与测试夹具随之适配，断言不变。上游新门禁禁止 zod 语言表进手机页面包，`src/shared/local-tasks/` 与 `mobile/src/local-tasks/` 改为 `import * as z from 'zod'`。手机会话：上游删按 Tab 弹出的详情卡，任务卡挂在会话标题卡底部、跟随激活 Tab；上游 `useSessionRouteRequest` 加 `followsRoute`（嵌入会话不读不消费页面路由）。`NativeChatComposerPane.tsx` 超 400 行，派活面板 Dock 从 composer 根节点内移到根节点前的兄弟位置。上游删除的测试里守护本功能的断言移到自有 `local-tasks-view-storage-negotiation.test.ts`、`local-task-dispatch-host-options.test.ts`，`pane-delayed-agent-startup` 用例并入 `pane-foreground-agent-contact.test.ts`；`codex-session-restart`（#41098）、`pty-connection-unanswered-command-finish.spec.ts` 等 20 个 fork 只做过适配的测试随上游删除。合并后修复提交：`60321bc02b`（见上）；`2e7a5fda20` 放宽过期写入后后台重读测试的等待上限，满负载下不再偶发失败（全量单测里出现过）；`85d32f323d` 即 D-030。
+- 代码或文档变更：`config/fork-features.jsonc` 接缝 180→168 条：108 条换路径，`host-screen-overlays.tsx` 改为单行 mustContain，新登记 13 条（`runtime-rpc-websocket-dispatch.ts` 两条、`verify-mobile-web-app-bundle.mjs` 两条（含 D-030 额度）、`NewWorktreeModal.tsx`、`use-new-workspace-create-submit.ts`、`use-worktree-jump-palette-selection-actions.ts`、`worktree-creation-structured-session.ts`、`smart-workspace-empty-hint.ts`、`composer-modal-data.ts`、`worktree-card-details-items.tsx`、`worktree-creation-background-mount.ts`、`use-session-route-request.ts`，多条是旧接缝随文件搬家改写），另有 25 条旧接缝下线或被上述改写取代；`tests` 去掉 23 个、加 11 个；4 条 checks 换路径；`ownedPaths` 加 `config/scripts/local-tasks/**`；`dependsOn` 273→319 条（186 条换路径，按导入审计补 71 条）。新棘轮基线登记 107 条（计数 739）：main-blocking-helper 24、main-sync-fs 2、react-compiler-bailout 19（`LocalTaskSessionPanelSlot.tsx` 7、`LocalTaskDispatchBox.tsx` 3、`LocalTaskDispatchReceipt.tsx` 3 等）、react-compiler-hazard 2（`LocalTaskNav.tsx`、`LocalTaskSidebarTree.tsx` 在 memo 里读 store）、render-path-translate 692。React Compiler 相关文件不编译，行为同合并前（提交 `6244eac0a4`）。
+- 验证证据：登记 checks 主进程与共享 37 文件 254 项、渲染端 119 文件 601 项、手机 67 文件 252 项、手机网页包测试 1 文件 4 项通过（`/Users/bytedance/dev/orca/.docs/upstream-sync/2026-11-20/sync-checks-run3.log`）；冲突解法与上述取舍见 `/Users/bytedance/dev/orca/.docs/upstream-sync/2026-11-20/report-A-local-tasks.md`、`report-G-shared.md`、`phase2-A1.tsv`、`phase2-A2.tsv`、`decisions.tsv`；全量单测 `/Users/bytedance/dev/orca/.docs/upstream-sync/2026-11-20/verify/test-full.log`（`local-tasks-runtime-client.test.ts` 偶发失败由 `2e7a5fda20` 处理）；手机网页包体积对比 `/Users/bytedance/dev/orca/.docs/upstream-sync/2026-11-20/mobile-web-bundle-diff.tsv`；棘轮清单 `/Users/bytedance/dev/orca/.docs/upstream-sync/2026-11-20/ratchet-refactor-backlog.tsv`，当前 HEAD 复核 `/Users/bytedance/dev/orca/.docs/upstream-sync/2026-11-20/journal-records/ratchets-at-2abf3d8ad1.log`；最终门禁（含手机网页包校验）见 `/Users/bytedance/dev/orca/.docs/upstream-sync/2026-11-20/final-gates.log`。真机抽查本机与 SSH 都通过（构建 `85d32f323d`）：本机建项目、建任务（创建并开始）、详情改标题、任务详情与任务行显示关联会话；SSH 在主机仓库上建项目、选 SSH 工作区创建并开始，详情显示会话，远端进程确为测试桩（`/Users/bytedance/dev/orca/.docs/upstream-sync-ui-validation/2026-11-21/README.md` 第 1 项，截图 `evidence/lt-local-1`～`lt-local-5`、`lt-ssh-1`～`lt-ssh-4`，`evidence/ssh-remote-processes.txt`）。该轮 SSH 前三次探测因只给客户端配了测试桩，主机上启动过真实 `claude`，已在 README「事故」一节披露。手机原生界面未测。
+- 未解决问题：手机会话任务卡位置随上游改变、`followsRoute`、派活 Dock 换位、任务创建走上游结果处理、SSH 行失联主机名快照，这几处行为变化只有单测或读代码确认，没有逐屏截图；上游删除的 `pty-connection-unanswered-command-finish.spec.ts` 原守护「SSH 失联行保留、恢复后凭源主机证据退役」的集成路径，现只剩 tracker 层测试；`active-agent-note-send-delivery-guard.test.ts` 仍在旧目录；棘轮基线登记的 107 条待重构（渲染期翻译 692 处为主），跟踪：Fartown/orca#153；手机任务页瘦身后按 D-030 降低额度。
+- 下一步：下次真机回归补手机原生与手机网页的会话任务卡、派活 Dock 截图；评估是否补一条 SSH 失联行退役的自有集成测试；按 Fartown/orca#153 改写渲染期翻译与 memo 内读 store 后缩减基线。
 
 ### 2026-11-17 按用户复审重做布局并走查整界面（done）
 

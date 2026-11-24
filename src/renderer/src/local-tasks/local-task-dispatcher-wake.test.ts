@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi, type Mock } from 'vitest'
-import type { sendMessageToAgent } from '@/lib/agent-message-send'
+import { acceptedAgentStatuses } from '@/store/slices/agent-status/status-ownership/accepted-agent-statuses'
+import type { sendMessageToAgent } from '@/lib/agent-session/messaging/agent-message-send'
 import type { LocalTaskEndpointKey } from './local-task-endpoints'
 
 const fixture = vi.hoisted(() => {
@@ -17,10 +18,10 @@ const fixture = vi.hoisted(() => {
 })
 
 vi.mock('@/store', async () => {
-  const { createTestStore } = await import('@/store/slices/store-test-helpers')
+  const { createTestStore } = await import('@/store/testing/app-store-test-fixture')
   return { useAppStore: createTestStore() }
 })
-vi.mock('@/lib/agent-message-send', () => ({ sendMessageToAgent: vi.fn() }))
+vi.mock('@/lib/agent-session/messaging/agent-message-send', () => ({ sendMessageToAgent: vi.fn() }))
 vi.mock('./local-task-dispatcher-client', () => ({
   localTaskDispatcherClientFor: () => ({ inbox: fixture.inbox }),
   localTaskDispatcherClient: { inbox: fixture.inbox }
@@ -64,17 +65,20 @@ function setStatus(
   extra: { turnStartedAt?: number; sessionBoundary?: boolean } = {}
 ): void {
   useAppStore.setState({
-    agentStatusByPaneKey: {
-      [PANE]: {
-        state,
-        prompt: '',
-        updatedAt: stateStartedAt,
-        stateStartedAt,
-        paneKey: PANE,
-        stateHistory: [],
-        ...extra
-      }
-    }
+    agentStatusByPaneKey: acceptedAgentStatuses([
+      [
+        PANE,
+        {
+          state,
+          prompt: '',
+          updatedAt: stateStartedAt,
+          stateStartedAt,
+          paneKey: PANE,
+          stateHistory: [],
+          ...extra
+        }
+      ]
+    ])
   })
 }
 

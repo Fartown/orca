@@ -1,13 +1,15 @@
 // One transcript line → what the guard needs from it. Parsing reuses the native-chat
 // decoders; this layer only decides what is conversation and what is machinery.
-import { asRecord, parseJsonObject, timestampMs } from '../ai-vault/session-scanner-values'
-import { decodeClaudeTranscriptLine } from '../native-chat/transcript-line-decoders-claude'
-import { decodeCodexTranscriptLine } from '../native-chat/transcript-line-decoders-codex'
+import { asRecord } from '../ai-vault/parsing/session-record-fields'
+import { parseJsonObject } from '../ai-vault/parsing/session-json-object'
+import { timestampMs } from '../ai-vault/parsing/session-record-time'
+import { decodeClaudeTranscriptLine } from '../native-chat/transcript-decoding/transcript-line-decoders-claude'
+import { decodeCodexTranscriptLine } from '../native-chat/transcript-decoding/transcript-line-decoders-codex'
 import {
   CODEX_EVENT_TURN_ABORTED,
   CODEX_EVENT_TURN_COMPLETE
-} from '../native-chat/transcript-turn-markers'
-import { isKnownHarnessInjectedUserTurnText } from '../../shared/harness-injected-user-turns'
+} from '../native-chat/transcript-decoding/transcript-turn-markers'
+import { isKnownHarnessInjectedUserTurnText } from '../../shared/agent-session/journal/harness-injected-user-turns'
 import {
   NATIVE_CHAT_INTERRUPTED_STATUS_TEXT,
   isTextBlock,

@@ -1,7 +1,10 @@
-import type { RuntimeWorktreeRecord } from '../../shared/runtime-types'
-import type { HandlerContext } from '../dispatch'
-import { RuntimeClientError } from '../runtime/types'
-import { getOptionalWorktreeSelector, resolveCurrentWorktreeSelector } from '../selectors'
+import type { RuntimeWorktreeRecord } from '../../shared/worktree/catalog/runtime-worktree-contracts'
+import type { HandlerContext } from '../dispatch/dispatch'
+import { RuntimeClientError } from '../runtime/connection/types'
+import {
+  getOptionalWorktreeSelector,
+  resolveCurrentWorktreeSelector
+} from '../workspace-selection/workspace-selector'
 
 export async function currentWorkspace(context: HandlerContext): Promise<RuntimeWorktreeRecord> {
   const { flags, client, cwd } = context

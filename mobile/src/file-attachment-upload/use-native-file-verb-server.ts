@@ -1,8 +1,11 @@
 import { useMemo } from 'react'
 import * as DocumentPicker from 'expo-document-picker'
 import { File as FsFile } from 'expo-file-system'
-import type { MediaHandleRegistry } from '../mobile-web-shell/media-handle-registry'
-import { discardStagedMedia, ownsStagedMediaUri } from '../platform/native-media-device'
+import type { MediaHandleRegistry } from '../mobile-web-shell/native-capabilities/media-handle-registry'
+import {
+  discardStagedMedia,
+  ownsStagedMediaUri
+} from '../platform/media-picking/native-media-device'
 import { createNativeFileVerbServer } from './native-file-verbs'
 
 /** The shell's half of `native.file.pick`, minting into the session's media registry. */

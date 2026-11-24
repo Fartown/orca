@@ -1,8 +1,14 @@
 import type { AppState } from '@/store/types'
-import { getAgentCatalog } from '@/lib/agent-catalog'
-import { getRepoExecutionHostId, normalizeExecutionHostId } from '../../../shared/execution-host'
-import { normalizeDisabledTuiAgents, pickTuiAgent } from '../../../shared/tui-agent-selection'
-import type { TuiAgent } from '../../../shared/tui-agent'
+import { getAgentCatalog } from '@/lib/agent-catalog/agent-catalog'
+import {
+  getRepoExecutionHostId,
+  normalizeExecutionHostId
+} from '../../../shared/execution-host/execution-host'
+import {
+  normalizeDisabledTuiAgents,
+  pickTuiAgent
+} from '../../../shared/agent-launch/catalog/tui-agent-selection'
+import type { TuiAgent } from '../../../shared/agent-launch/catalog/tui-agent'
 import type { LocalTaskProposalItem } from '../../../shared/local-tasks/local-task-dispatcher-rpc-params'
 import type { LocalTaskLinks } from '../../../shared/local-tasks/local-task-link-types'
 import type { LocalTask, LocalTaskProject } from '../../../shared/local-tasks/local-task-types'

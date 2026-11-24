@@ -16,16 +16,16 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu'
-import { getWorkspaceStatusVisualMeta } from '@/components/sidebar/workspace-status'
+import { getWorkspaceStatusVisualMeta } from '@/components/sidebar/workspace-status/presentation/workspace-status'
 import { translate } from '@/i18n/i18n'
 import { useAppStore } from '@/store'
-import { activateAndRevealWorkspace } from '@/lib/worktree-activation'
-import { cn } from '@/lib/utils'
-import { normalizeExecutionHostId } from '../../../../shared/execution-host'
+import { activateAndRevealWorkspace } from '@/lib/workspace/activation/worktree-activation'
+import { cn } from '@/lib/class-names'
+import { normalizeExecutionHostId } from '../../../../shared/execution-host/execution-host'
 import {
   getWorkspaceStatus,
   withDefaultWorkspaceStatuses
-} from '../../../../shared/workspace-statuses'
+} from '../../../../shared/workspace/status/workspace-statuses'
 import type { Worktree } from '../../../../shared/worktree/types'
 import type { LocalTaskWorkspaceLink } from '../../../../shared/local-tasks/local-task-link-types'
 import type { LocalTask, LocalTaskProject } from '../../../../shared/local-tasks/local-task-types'

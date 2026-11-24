@@ -9,7 +9,7 @@ import {
 } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { randomBytes } from 'node:crypto'
-import { createElectronHomeIsolation } from '../../../../tests/e2e/helpers/electron-home-isolation.ts'
+import { createElectronHomeIsolation } from '../../../../tests/e2e/desktop/electron-fixtures/electron-home-isolation.ts'
 import { assertHostedMac, probeOptions } from '../signing-probe/probe-policy.mjs'
 import { createProbeIdentities } from '../signing-probe/probe-identities.mjs'
 import { command, writeJson } from '../signing-probe/probe-command.mjs'

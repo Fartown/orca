@@ -5,10 +5,10 @@ import { randomUUID } from 'node:crypto'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { goalEditorDraftsStore } from '@/goals/goal-editor-drafts-sync'
 import { goalDomainStore } from '@/goals/goals-domain-store'
-import { callRuntimeRpc } from '@/runtime/runtime-rpc-client'
+import { callRuntimeRpc } from '@/runtime/rpc/calls/runtime-rpc-call'
 import { GoalDraftList } from './GoalDraftList'
 
-vi.mock('@/runtime/runtime-rpc-client', () => ({ callRuntimeRpc: vi.fn() }))
+vi.mock('@/runtime/rpc/calls/runtime-rpc-call', () => ({ callRuntimeRpc: vi.fn() }))
 vi.mock('@/goals/GoalDomainSyncGate', () => ({ requestGoalDetailRefresh: vi.fn() }))
 vi.mock('@/i18n/i18n', () => ({ translate: (_key: string, fallback: string) => fallback }))
 const rpc = vi.mocked(callRuntimeRpc)

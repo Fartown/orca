@@ -1,15 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useFocusEffect } from 'expo-router'
-import { taskRuntimeStatusRead } from '../tasks/mobile-task-runtime-operations'
-import { useRpcClientContext } from '../transport/client-context'
+import { taskRuntimeStatusRead } from '../tasks/screen-state/mobile-task-runtime-operations'
+import { useRpcClientContext } from '../transport/connection/client-context'
 import {
   relaysToServers,
   scopeRpcClientToExecutionHost
-} from '../transport/execution-host-scoped-rpc-client'
-import { loadHosts } from '../transport/host-store'
-import type { RpcClient } from '../transport/rpc-client'
-import type { ConnectionState, HostProfile } from '../transport/types'
-import { relayHostsFeed } from '../worktree/relay-hosts-feed'
+} from '../worktree/execution-hosts/execution-host-scoped-rpc-client'
+import { loadHosts } from '../host-catalog/host-store'
+import type { RpcClient } from '../transport/rpc/rpc-client-contract'
+import type { ConnectionState } from '../transport/connection/connection-state'
+import type { HostProfile } from '../host-catalog/host-profile'
+import { relayHostsFeed } from '../worktree/execution-hosts/relay-hosts-feed'
 import { createLocalTasksApi } from './local-tasks-api'
 import { hostAdvertisesLocalTasks, localTaskHostMachineName } from './local-tasks-access'
 import { readLocalTaskHomeLibrary, type LocalTaskHomeLibrary } from './local-task-home-attention'
@@ -36,8 +37,8 @@ function presentLibraries(libraries: readonly (LocalTaskHomeLibrary | null)[]) {
   return libraries.flatMap((library) => (library ? [library] : []))
 }
 
-async function advertisesLocalTasks(client: RpcClient, flightKey: string): Promise<boolean> {
-  const reply = await taskRuntimeStatusRead.requestSingleFlight(client, flightKey)
+async function advertisesLocalTasks(client: RpcClient): Promise<boolean> {
+  const reply = await taskRuntimeStatusRead.request(client)
   return hostAdvertisesLocalTasks(taskRuntimeStatusRead.interpret(reply).capabilities)
 }
 
@@ -58,9 +59,7 @@ async function readServerLibraries(
       .filter((server) => server.relay === 'ready')
       .map(async (server) => {
         const serverClient = scopeRpcClientToExecutionHost(client, server.hostId)
-        const advertises = await advertisesLocalTasks(serverClient, server.hostId).catch(
-          () => false
-        )
+        const advertises = await advertisesLocalTasks(serverClient).catch(() => false)
         return advertises
           ? readLocalTaskHomeLibrary(createLocalTasksApi(serverClient), {
               executionHost: server.hostId,
@@ -73,7 +72,7 @@ async function readServerLibraries(
 }
 
 async function readHomeHost(client: RpcClient, host: HostProfile): Promise<HostReading> {
-  const reply = await taskRuntimeStatusRead.requestSingleFlight(client, host.id)
+  const reply = await taskRuntimeStatusRead.request(client)
   const capabilities = taskRuntimeStatusRead.interpret(reply).capabilities ?? []
   if (!hostAdvertisesLocalTasks(capabilities)) {
     return { libraries: [] }

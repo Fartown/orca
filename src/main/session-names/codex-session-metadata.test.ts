@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parseCodexSessionContent } from '../ai-vault/session-scanner-codex-parser'
+import { parseCodexSessionContent } from '../ai-vault/scanners/codex/session-scanner-codex-parser'
 import { extractCodexSessionMetadataTitle } from './codex-session-metadata'
 
 const workerCases: [string, Record<string, unknown>, boolean][] = [

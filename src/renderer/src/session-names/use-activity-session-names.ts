@@ -4,16 +4,16 @@ import { useAppStore } from '../store'
 import type {
   ActivityEvent,
   ActivityLiveAgentSnapshot
-} from '../components/activity/activity-thread-types'
+} from '../components/activity/threads/activity-thread-types'
 import {
   buildActivityTabHostIndex,
   resolveActivityExecutionHostId
-} from '../components/activity/activity-event-builder-context'
-import { resolveAgentRowPaneLiveTitle } from '../components/dashboard/agent-row-pane-live-title'
+} from '../components/activity/events/activity-event-builder-context'
+import { resolveAgentRowPaneLiveTitle } from '../components/dashboard/rows/agent-row-pane-live-title'
 import { canonicalSessionTitleKey, getCanonicalSessionTitle } from '../lib/canonical-session-titles'
-import { isAiVaultTitleAgent } from '../../../shared/ai-vault-session-title'
-import { getWorktreeExecutionHostId } from '../../../shared/execution-host'
-import { parsePaneKey } from '../../../shared/stable-pane-id'
+import { isAiVaultTitleAgent } from '../../../shared/ai-vault/contracts/ai-vault-session-title'
+import { getWorktreeExecutionHostId } from '../../../shared/execution-host/execution-host'
+import { parsePaneKey } from '../../../shared/workspace-layout/stable-pane-id'
 import { getActivitySessionName } from './activity-session-name'
 import { useSessionNameIndex } from './session-name-subscriptions'
 import { sessionNameStore, type SessionNameRequest } from './session-name-store'
@@ -82,7 +82,7 @@ export function useActivitySessionNames(
       const record = key ? sessionNameStore.getSnapshot().get(key) : undefined
       const pane = parsePaneKey(entry.paneKey)
       const layout = state.layouts[tab.id]
-      const current = state.status[entry.paneKey]
+      const current = state.status.get(entry.paneKey)
       const ownsCurrent =
         current?.agentType === agent &&
         current?.providerSession?.id === sessionId &&

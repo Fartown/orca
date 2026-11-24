@@ -2,21 +2,16 @@
 import { act, cleanup, renderHook, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { useAppStore } from '../store'
-import { useAgentPaneThreads } from '../components/activity/use-agent-pane-threads'
-import { buildActivityEvents } from '../components/activity/activity-event-builder'
-import {
-  makeRepo,
-  makeTab,
-  makeWorktree,
-  PANE_KEY,
-  LEAF_ID
-} from '../components/activity/ActivityPrototypePage-test-fixtures'
+import { useAgentPaneThreads } from '../components/activity/threads/use-agent-pane-threads'
+import { buildActivityEvents } from '../components/activity/events/activity-event-builder'
+import { makeRepo, makeTab, makeWorktree, PANE_KEY, LEAF_ID } from './activity-test-fixtures'
 import { sessionNameStore } from './session-name-store'
-import { createAgentStatusEventApplicator } from '../hooks/ipc-events/agent-status-event-applicator'
+import { acceptedAgentStatuses } from '../store/slices/agent-status/status-ownership/accepted-agent-statuses'
+import { createAgentStatusEventApplicator } from '../hooks/ipc-events/agent-status/agent-status-event-applicator'
 import type {
   AiVaultSessionTitlesArgs,
   AiVaultSessionTitlesResult
-} from '../../../shared/ai-vault-session-title'
+} from '../../../shared/ai-vault/contracts/ai-vault-session-title'
 
 const initial = useAppStore.getInitialState()
 const NOW = 1_700_000_000_000
@@ -60,23 +55,26 @@ beforeEach(() => {
         ptyIdsByLeafId: { [LEAF_ID]: 'pty-1' }
       }
     },
-    agentStatusByPaneKey: {
-      [PANE_KEY]: {
-        paneKey: PANE_KEY,
-        worktreeId: 'wt-1',
-        tabId: 'tab-1',
-        agentType: 'codex',
-        providerSession: { key: 'session_id', id: 'A' },
-        connectionId: null,
-        state: 'working',
-        prompt: '继续',
-        stateHistory: [],
-        updatedAt: NOW,
-        stateStartedAt: NOW,
-        toolName: 'Bash',
-        toolInput: 'pnpm test'
-      }
-    }
+    agentStatusByPaneKey: acceptedAgentStatuses([
+      [
+        PANE_KEY,
+        {
+          paneKey: PANE_KEY,
+          worktreeId: 'wt-1',
+          tabId: 'tab-1',
+          agentType: 'codex',
+          providerSession: { key: 'session_id', id: 'A' },
+          connectionId: null,
+          state: 'working',
+          prompt: '继续',
+          stateHistory: [],
+          updatedAt: NOW,
+          stateStartedAt: NOW,
+          toolName: 'Bash',
+          toolInput: 'pnpm test'
+        }
+      ]
+    ])
   })
 })
 afterEach(() => {
@@ -139,25 +137,27 @@ it('a substantive follow-up does not replace the Provider first-prompt fallback'
     }))
   }))
   useAppStore.setState((s) => ({
-    agentStatusByPaneKey: {
-      [PANE_KEY]: { ...s.agentStatusByPaneKey[PANE_KEY], prompt: '后续检查新的错误原因' }
-    }
+    agentStatusByPaneKey: acceptedAgentStatuses([
+      [PANE_KEY, { ...s.agentStatusByPaneKey.get(PANE_KEY)!, prompt: '后续检查新的错误原因' }]
+    ])
   }))
   const { result } = mountThreads()
   await waitFor(() => expect(result.current.allThreads[0]?.paneTitle).toBe('最初的有效任务'))
 })
 
 it('unknown legacy history never inherits the replacement session identity', () => {
-  const entry = useAppStore.getState().agentStatusByPaneKey[PANE_KEY]
+  const entry = useAppStore.getState().agentStatusByPaneKey.get(PANE_KEY)!
   const result = buildActivityEvents({
     chatNames: new Map(),
-    agentStatusByPaneKey: {
-      [PANE_KEY]: {
-        ...entry,
-        stateHistory: [{ state: 'done', prompt: '旧会话任务', startedAt: 100 }]
-      }
-    },
-    retainedAgentsByPaneKey: {},
+    agentStatusByPaneKey: acceptedAgentStatuses([
+      [
+        PANE_KEY,
+        {
+          ...entry,
+          stateHistory: [{ state: 'done', prompt: '旧会话任务', startedAt: 100 }]
+        }
+      ]
+    ]),
     tabsByWorktree: useAppStore.getState().tabsByWorktree,
     worktreeMap: new Map([['wt-1', makeWorktree()]]),
     repoMap: new Map([['repo-1', makeRepo()]]),
@@ -205,14 +205,17 @@ it('an inactive split pane requests its own SID and never borrows the selected p
         ptyIdsByLeafId: { [LEAF_ID]: 'pty-1', [sibling]: 'pty-2' }
       }
     },
-    agentStatusByPaneKey: {
+    agentStatusByPaneKey: acceptedAgentStatuses([
       ...s.agentStatusByPaneKey,
-      [siblingPane]: {
-        ...s.agentStatusByPaneKey[PANE_KEY],
-        paneKey: siblingPane,
-        providerSession: { key: 'session_id', id: 'B' }
-      }
-    },
+      [
+        siblingPane,
+        {
+          ...s.agentStatusByPaneKey.get(PANE_KEY)!,
+          paneKey: siblingPane,
+          providerSession: { key: 'session_id', id: 'B' }
+        }
+      ]
+    ]),
     tabsByWorktree: {
       'wt-1': [
         {
@@ -242,16 +245,10 @@ it('an inactive split pane requests its own SID and never borrows the selected p
 it('a retained row without a live tab still reads its own name', async () => {
   useAppStore.setState((s) => ({
     tabsByWorktree: {},
-    agentStatusByPaneKey: {},
-    retainedAgentsByPaneKey: {
-      [PANE_KEY]: {
-        entry: { ...s.agentStatusByPaneKey[PANE_KEY], state: 'done' },
-        worktreeId: 'wt-1',
-        tab: makeTab(),
-        agentType: 'codex',
-        startedAt: NOW
-      }
-    }
+    // Upstream #42104 retired finished-agent retention; a done row now outlives its tab in place.
+    agentStatusByPaneKey: acceptedAgentStatuses([
+      [PANE_KEY, { ...s.agentStatusByPaneKey.get(PANE_KEY)!, state: 'done' }]
+    ])
   }))
   const { result } = mountThreads()
   await waitFor(() => expect(result.current.allThreads[0]?.paneTitle).toBe(nativeName))
@@ -284,7 +281,10 @@ it('a runtime tab stamp owns the read even when the row carries connectionId nul
 
 it('real IPC timing through the mounted Activity cache keeps latest B and historical A distinct', async () => {
   const start = NOW
-  useAppStore.setState({ workspaceSessionReady: true, agentStatusByPaneKey: {} })
+  useAppStore.setState({
+    workspaceSessionReady: true,
+    agentStatusByPaneKey: acceptedAgentStatuses()
+  })
   const apply = createAgentStatusEventApplicator({
     pendingAgentStatusEvents: [],
     transientClearWatermarkByConnectionId: new Map(),

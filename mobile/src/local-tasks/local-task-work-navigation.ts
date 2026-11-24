@@ -2,12 +2,12 @@ import type {
   LocalTaskSessionLink,
   LocalTaskWorkspaceLink
 } from '../../../src/shared/local-tasks/local-task-link-types'
-import { parsePaneKey } from '../../../src/shared/stable-pane-id'
+import { parsePaneKey } from '../../../src/shared/workspace-layout/stable-pane-id'
 import {
   structuredAgentSessionPaneKey,
   structuredAgentSessionTabId
 } from '../../../src/shared/agent-session/view/structured-agent-session-projection'
-import { folderWorkspaceKey } from '../../../src/shared/workspace-scope'
+import { folderWorkspaceKey } from '../../../src/shared/workspace/identity/workspace-scope'
 import { workspaceRouteHref } from '../navigation/workspace-execution-host'
 import { localTaskRouteExecutionHost, type LocalTaskEndpoint } from './local-task-endpoint'
 import type { LocalTaskExecutionOriginResolver } from './local-task-execution-origin'

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { rowConversationName } from '../components/dashboard/dashboard-card-labels'
-import type { DashboardAgentRow } from '../components/dashboard/useDashboardData'
+import { rowConversationName } from '../components/dashboard/snapshot/dashboard-card-labels'
+import type { DashboardAgentRow } from '../components/dashboard/rows/dashboard-agent-row'
 
 const row = {
   paneKey: 'tab:leaf',

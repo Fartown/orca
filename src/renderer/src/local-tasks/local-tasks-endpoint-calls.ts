@@ -1,7 +1,7 @@
 import { z } from 'zod'
-import { createBrowserUuid } from '@/lib/browser-uuid'
+import { createNonSecureContextUuid as createBrowserUuid } from '../../../shared/identifiers/non-secure-context-uuid'
 import { useAppStore } from '@/store'
-import { callRuntimeRpc } from '../runtime/runtime-rpc-client'
+import { callRuntimeRpc } from '../runtime/rpc/calls/runtime-rpc-call'
 import {
   localTaskProjectsReplySchema,
   localTasksReplySchema,

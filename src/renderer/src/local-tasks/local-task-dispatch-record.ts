@@ -1,9 +1,9 @@
 import { translate } from '@/i18n/i18n'
 import { useAppStore } from '@/store'
-import type { ExecutionHostId } from '../../../shared/execution-host'
-import type { AgentLaunchResult } from '../../../shared/agent-launch-intent'
+import type { ExecutionHostId } from '../../../shared/execution-host/execution-host'
+import type { AgentLaunchResult } from '../../../shared/agent-launch/contracts/agent-launch-intent'
 import type { LocalTaskSessionLink } from '../../../shared/local-tasks/local-task-link-types'
-import { parsePaneKey } from '../../../shared/stable-pane-id'
+import { parsePaneKey } from '../../../shared/workspace-layout/stable-pane-id'
 import type { LocalTaskDispatchReceipt } from './local-task-dispatch-launch'
 import {
   chatSessionIds,

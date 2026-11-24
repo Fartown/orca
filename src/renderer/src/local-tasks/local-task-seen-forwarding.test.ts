@@ -7,7 +7,7 @@ import type {
 const fixture = vi.hoisted(() => ({ acknowledgeAttention: vi.fn() }))
 
 vi.mock('@/store', async () => {
-  const { createTestStore } = await import('@/store/slices/store-test-helpers')
+  const { createTestStore } = await import('@/store/testing/app-store-test-fixture')
   return { useAppStore: createTestStore() }
 })
 vi.mock('./local-tasks-runtime-client', () => ({

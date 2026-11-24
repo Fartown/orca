@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { Check, CheckCheck, CircleAlert, Info, ListChecks, LoaderCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { translate } from '@/i18n/i18n'
-import { cn } from '@/lib/utils'
+import { cn } from '@/lib/class-names'
 import { useAppStore } from '@/store'
 import {
   decideLocalTaskProposal,

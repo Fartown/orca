@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import type { AgentStatusEntry } from '../../../shared/agent-status-types'
-import { buildPaneActivityEvents } from '../components/activity/activity-pane-events'
-import { activityThreadStatusId } from '../components/activity/activity-thread-presentation'
-import type { AgentPaneThread } from '../components/activity/activity-thread-types'
-import { makeTab, makeWorktree } from '../components/activity/ActivityPrototypePage-test-fixtures'
+import type { AgentStatusEntry } from '../../../shared/agent-status/contracts/agent-status-types'
+import { buildPaneActivityEvents } from '../components/activity/events/activity-pane-events'
+import { activityThreadStatusId } from '../components/activity/threads/activity-thread-presentation'
+import type { AgentPaneThread } from '../components/activity/threads/activity-thread-types'
+import { makeTab, makeWorktree } from './activity-restored-test-fixtures'
 
 const paneKey = 'tab-1:11111111-1111-4111-8111-111111111111'
 

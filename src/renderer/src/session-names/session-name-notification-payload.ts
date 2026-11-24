@@ -1,8 +1,8 @@
 import {
   pickHostTurnEnd,
-  type AgentStatusIpcPayload,
   type AgentStatusPayload
-} from '../../../shared/agent-status-types'
+} from '../../../shared/agent-status/contracts/agent-status-types'
+import type { AgentStatusIpcPayload } from '../../../shared/agent-status/contracts/agent-status-ipc-payload'
 
 /** Completion timing and conversation identity must describe the same host event. */
 export function sessionNameNotificationPayload<Payload extends AgentStatusPayload>(

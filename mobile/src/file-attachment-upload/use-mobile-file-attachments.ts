@@ -11,8 +11,8 @@ import {
   isAgentImageAttachmentName
 } from '../../../src/shared/file-attachment-upload/file-attachment-delivery-text'
 import { FILE_ATTACHMENT_MAX_BYTES } from '../../../src/shared/file-attachment-upload/file-attachment-upload-limits'
-import type { RpcClient } from '../transport/rpc-client'
-import type { ConnectionState } from '../transport/types'
+import type { RpcClient } from '../transport/rpc/rpc-client-contract'
+import type { ConnectionState } from '../transport/connection/connection-state'
 import { useFileAttachmentPicker } from './file-attachment-picker'
 import { uploadAttachmentFile, type UploadedAttachmentFile } from './file-attachment-upload-client'
 import { writeAttachmentToTerminal } from './file-attachment-terminal-write'

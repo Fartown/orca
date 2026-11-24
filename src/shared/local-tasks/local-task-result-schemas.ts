@@ -1,4 +1,4 @@
-import { z } from 'zod'
+import * as z from 'zod'
 import { LocalTaskSessionExecutionOriginSchema } from './local-task-session-origin'
 import { LOCAL_TASK_STATUS_CATEGORIES, LOCAL_TASK_STATUS_COLORS } from './local-task-model'
 import type {

@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest'
-import { extractPathLiterals } from '../check-path-literal-ratchet.mjs'
+import { extractPathLiterals } from '../static-analysis/ratchets/source-budget/check-path-literal-ratchet.mjs'
 import { architectureLivePathReferences } from './architecture-live-path-references.mjs'
 
 it('retains positive and unknown references without requiring forbidden files to exist', () => {

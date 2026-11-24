@@ -1,5 +1,8 @@
 import { execFileSync } from 'node:child_process'
-import { compareReleaseTags, STABLE_DESKTOP_RELEASE_TAG } from '../stable-release-tags.mjs'
+import {
+  compareReleaseTags,
+  STABLE_DESKTOP_RELEASE_TAG
+} from '../release/versioning/stable-release-tags.mjs'
 
 function git(repoRoot, args) {
   return execFileSync('git', args, {

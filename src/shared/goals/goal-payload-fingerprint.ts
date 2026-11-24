@@ -1,4 +1,4 @@
-import { sha256 } from '../sha256'
+import { sha256 } from '../hashing/sha256'
 
 // Why pure-JS sha256: the LAN web client can run in a non-secure context where crypto.subtle is undefined.
 export function fingerprintPayload(payload: unknown): string {

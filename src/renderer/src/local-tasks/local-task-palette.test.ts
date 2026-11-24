@@ -21,7 +21,7 @@ const fixture: PaletteFixture = vi.hoisted(() => ({
 }))
 
 vi.mock('@/store', async () => {
-  const { createTestStore } = await import('@/store/slices/store-test-helpers')
+  const { createTestStore } = await import('@/store/testing/app-store-test-fixture')
   return { useAppStore: createTestStore() }
 })
 vi.mock('sonner', () => ({ toast: { error: fixture.toastError } }))
@@ -36,12 +36,12 @@ vi.mock('./local-task-workspace-resolution', () => ({
   selectLocalTaskWorkspace: () => fixture.located
 }))
 
-import { searchWorktrees } from '@/lib/worktree-palette-search'
+import { searchWorktrees } from '@/lib/workspace/search/worktrees/worktree-palette-search'
 import {
   getNextWorktreePaletteSelection,
   getWorktreePaletteSelectionItemIds
-} from '@/lib/worktree-palette-create-action'
-import { makeWorktree } from '@/store/slices/worktrees-slice-test-fixtures'
+} from '@/lib/workspace/search/worktrees/worktree-palette-create-action'
+import { makeWorktree } from '@/store/slices/worktrees/worktree.test-fixture'
 import { buildLocalTaskWorkspaceEvidence } from './local-task-palette-evidence'
 import { buildLocalTaskPaletteItems } from './local-task-palette-items'
 import { useLocalTaskPaletteSelection } from './local-task-palette-selection'

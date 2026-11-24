@@ -9,10 +9,11 @@ import type {
 } from '../../../shared/native-chat-view-recovery/durable-chat-submit'
 
 const contact = vi.hoisted(() => {
-  const statuses: Record<
+  // Keyed reads only, like the store's AcceptedAgentStatuses; rows are replaced, never edited.
+  const statuses = new Map<
     string,
     { state: string; turnStartedAt?: number; stateObservedAt?: number; updatedAt?: number }
-  > = {}
+  >()
   return { live: false, listeners: new Set<() => void>(), statuses }
 })
 vi.mock('@/store', () => ({
@@ -31,7 +32,7 @@ vi.mock('@/store', () => ({
     }
   }
 }))
-vi.mock('../hooks/ipc-events/runtime-environment-subscription-selection', () => ({
+vi.mock('../hooks/ipc-events/runtime-events/runtime-environment-subscription-selection', () => ({
   getReachableRuntimeEnvironmentIds: () => (contact.live ? ['mini'] : [])
 }))
 
@@ -64,9 +65,7 @@ beforeEach(() => {
   vi.setSystemTime(1000)
   contact.live = false
   contact.listeners.clear()
-  for (const key of Object.keys(contact.statuses)) {
-    delete contact.statuses[key]
-  }
+  contact.statuses.clear()
   rows = [record()]
   api = {
     list: vi.fn(async (paneKey) => rows.filter((r) => r.paneKey === paneKey)),
@@ -138,14 +137,15 @@ describe('durable Chat recovery in the renderer', () => {
       })
     await notify()
     vi.mocked(api.confirm).mockClear()
-    contact.statuses['pane-a'] = { state: 'done', turnStartedAt: 1100, stateObservedAt: 1200 }
+    const done = { state: 'done', turnStartedAt: 1100, stateObservedAt: 1200 }
+    contact.statuses.set('pane-a', done)
     await notify()
     expect(api.confirm).toHaveBeenCalledOnce()
-    contact.statuses['pane-a'].updatedAt = 1300
+    contact.statuses.set('pane-a', { ...done, updatedAt: 1300 })
     await notify()
     expect(api.confirm).toHaveBeenCalledOnce()
     contact.live = false
-    contact.statuses['pane-a'].turnStartedAt = 1400
+    contact.statuses.set('pane-a', { ...done, updatedAt: 1300, turnStartedAt: 1400 })
     await notify()
     expect(api.confirm).toHaveBeenCalledOnce()
     expect(api.dispatch).not.toHaveBeenCalled()

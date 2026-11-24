@@ -2,8 +2,11 @@ import { describe, expect, it, vi } from 'vitest'
 import { CONTINUATION_COPY } from './continuation-copy'
 import { continuationOutcomeToast } from './use-mobile-session-continuation'
 
-vi.mock('../platform/haptics', () => ({ triggerError: vi.fn(), triggerSuccess: vi.fn() }))
-vi.mock('../session/mobile-new-tab-agent-loader', () => ({ loadMobileNewTabAgentOptions: vi.fn() }))
+vi.mock('../platform/haptics/haptics', () => ({ triggerError: vi.fn(), triggerSuccess: vi.fn() }))
+vi.mock('../session/agent-launch/mobile-new-tab-agent-loader', () => ({
+  loadMobileAgentLaunchContext: vi.fn(),
+  newTabAgentOptionsFrom: vi.fn()
+}))
 
 describe('continuation delivery failure feedback', () => {
   it.each(['claude', 'codex'] as const)(

@@ -7,9 +7,9 @@ import type {
   LocalTaskStatusDef
 } from '../../../src/shared/local-tasks/local-task-types'
 import { isLocalTaskProgressPayload } from '../../../src/shared/local-tasks/local-task-progress'
-import { ActionSheetModal } from '../components/ActionSheetModal'
-import { ConfirmModal } from '../components/ConfirmModal'
-import { MobileMarkdown } from '../components/MobileMarkdown'
+import { ActionSheetModal } from '../components/sheets/ActionSheetModal'
+import { ConfirmModal } from '../components/sheets/ConfirmModal'
+import { MobileMarkdown } from '../components/markdown/MobileMarkdown'
 import { colors, radii, spacing, typography } from '../theme/mobile-theme'
 import { themedStyleSheet } from '../theme/themed-styles'
 import { useMobileColorScheme } from '../theme/use-mobile-color-scheme'

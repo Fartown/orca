@@ -4,22 +4,22 @@ import { join } from 'node:path'
 import { z } from 'zod'
 import type { OrcaRuntimeService } from '../runtime/orca-runtime'
 import { RpcDispatcher } from '../runtime/rpc/dispatcher'
-import { ALL_RPC_METHODS } from '../runtime/rpc/methods'
-import { DESKTOP_RPC_CALLER } from '../runtime/rpc/rpc-caller-identity'
-import { DESKTOP_RENDERER_RUNTIME_CLIENT_CAPABILITIES } from '../ipc/desktop-renderer-runtime-capabilities'
-import { parseAppSshPtyId } from '../../shared/ssh-pty-id'
+import { ALL_RPC_METHODS } from '../runtime/rpc/methods/rpc-method-registry'
+import { DESKTOP_RPC_CALLER } from '../runtime/rpc/callers/rpc-caller-identity'
+import { DESKTOP_RENDERER_RUNTIME_CLIENT_CAPABILITIES } from '../ipc/runtime-client/desktop-renderer-runtime-capabilities'
+import { parseAppSshPtyId } from '../../shared/remote-runtime/ssh/ssh-pty-id'
 import { parseRemoteRuntimePtyId } from '../../shared/remote-runtime/remote-runtime-pty-id'
-import { resolveEnvironment } from '../../shared/runtime-environment-store'
-import { callRuntimeEnvironment } from '../ipc/runtime-environments/runtime-environment-transport-routing'
-import { getRuntimeEnvironmentRegistryRoot } from '../ipc/runtime-environments/runtime-environment-registry-root'
-import { getRuntimeEnvironmentStatusSnapshots } from '../ipc/runtime-environments/runtime-environment-request-connections'
-import { runtimeEnvironmentStatusFromSnapshot } from '../../shared/runtime-host-status'
+import { resolveEnvironment } from '../../shared/remote-runtime/host-store/runtime-environment-store'
+import { callRuntimeEnvironment } from '../ipc/runtime-environments/requests/runtime-environment-transport-routing'
+import { getRuntimeEnvironmentRegistryRoot } from '../ipc/runtime-environments/catalog/runtime-environment-registry-root'
+import { getRuntimeEnvironmentStatusSnapshots } from '../ipc/runtime-environments/connections/runtime-environment-request-connections'
+import { runtimeEnvironmentStatusFromSnapshot } from '../../shared/remote-runtime/host-status/runtime-host-status'
 import {
   runtimeHostConnectionState,
   isConnectedRuntimeHostState
-} from '../../shared/runtime-host-connection-state'
+} from '../../shared/remote-runtime/host-status/runtime-host-connection-state'
 import { getSshConnectionManager } from '../ssh/targets/ssh-target-registry'
-import { parseExecutionHostId } from '../../shared/execution-host'
+import { parseExecutionHostId } from '../../shared/execution-host/execution-host'
 import {
   DURABLE_CHAT_COMPOSER_CAPABILITY,
   DurableChatEvidenceList
@@ -98,7 +98,10 @@ function registerDurableChatHandlers(runtime: OrcaRuntimeService): void {
           if (!snapshot?.status?.capabilities?.includes(DURABLE_CHAT_COMPOSER_CAPABILITY)) {
             throw new Error('Chat host needs an update for reliable submission')
           }
-          const environment = resolveEnvironment(getRuntimeEnvironmentRegistryRoot(), environmentId)
+          const environment = await resolveEnvironment(
+            getRuntimeEnvironmentRegistryRoot(),
+            environmentId
+          )
           runtimeId = snapshot.status.runtimeId
           installationId = snapshot.status.hostDescriptor?.installationId
           pairingRevision = environment.pairingRevision

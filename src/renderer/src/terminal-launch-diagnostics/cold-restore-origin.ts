@@ -1,5 +1,5 @@
 import { useAppStore } from '@/store'
-import type { ColdRestoreAgentResumeStartup } from '@/components/terminal-pane/pty-connection/fresh-spawn-types'
+import type { ColdRestoreAgentResumeStartup } from '@/components/terminal-pane/pty-connection/startup/fresh-spawn-types'
 import { recordTerminalLaunchOrigin } from './launch-origin'
 
 type ColdRestoreSession = {

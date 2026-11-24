@@ -1,5 +1,5 @@
-import { addAppKeyListener, removeAppKeyListener } from '@/lib/app-keyboard-router'
-import { isImeOwnedKeyboardEvent } from '@/lib/ime-composition-keyboard-event'
+import { addAppKeyListener, removeAppKeyListener } from '@/lib/keyboard/app-keyboard-router'
+import { isImeOwnedKeyboardEvent } from '@/lib/text-input/ime/ime-composition-keyboard-event'
 import { localTaskSessionPanelStore } from './local-task-session-panel-store'
 
 /** Single-key commands on the local task page (REQ-007, slice 1). */

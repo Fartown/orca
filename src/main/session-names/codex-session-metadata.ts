@@ -1,4 +1,5 @@
-import { extractString, normalizeTitleText } from '../ai-vault/session-scanner-values'
+import { extractString } from '../../shared/text/trimmed-string'
+import { normalizeTitleText } from '../ai-vault/parsing/session-scanner-text-normalization'
 
 export function extractCodexSessionMetadataTitle(
   payload: Record<string, unknown>

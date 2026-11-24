@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { copyWorkspaceTerminalHandle } from './copy-workspace-terminal-handle'
-import { replaceRuntimeEnvironmentRevisions } from '@/runtime/runtime-environment-revision'
-import { FLOATING_TERMINAL_WORKTREE_ID } from '../../../shared/constants'
-import type { ExecutionHostId } from '../../../shared/execution-host'
+import { replaceRuntimeEnvironmentRevisions } from '@/runtime/rpc/environment-revisions/runtime-environment-revision'
+import { FLOATING_TERMINAL_WORKTREE_ID } from '../../../shared/workspace/identity/floating-workspace-id'
+import type { ExecutionHostId } from '../../../shared/execution-host/execution-host'
 
 const { getState, localCall, remoteCall, writeClipboardText } = vi.hoisted(() => ({
   getState: vi.fn(),

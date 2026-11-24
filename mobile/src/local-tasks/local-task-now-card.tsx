@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { ChevronDown, ChevronRight, CornerDownRight, List } from 'lucide-react-native'
-import { formatAgentTypeLabel } from '../../../src/shared/agent-type-label'
+import { formatAgentTypeLabel } from '../../../src/shared/agent-status/presentation/agent-type-label'
 import type {
   LocalTaskLinks,
   LocalTaskProgressSnapshot
@@ -12,8 +12,8 @@ import {
   findLocalTaskWriteback,
   type LocalTaskWriteback
 } from '../../../src/shared/local-tasks/local-task-writebacks'
-import { AgentStateDot } from '../components/AgentStateDot'
-import { MobileMarkdown } from '../components/MobileMarkdown'
+import { AgentStateDot } from '../agents/presentation/AgentStateDot'
+import { MobileMarkdown } from '../components/markdown/MobileMarkdown'
 import { useMobileTranslation } from '../i18n/use-mobile-translation'
 import { colors, spacing, typography } from '../theme/mobile-theme'
 import { themedStyleSheet } from '../theme/themed-styles'

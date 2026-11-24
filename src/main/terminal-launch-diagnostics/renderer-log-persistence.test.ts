@@ -4,7 +4,7 @@ import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 import { createLocalFileSink } from '../observability/local-file-sink'
 import { setActiveSink } from '../observability/tracer'
-import { recordRendererBreadcrumbFromRenderer } from '../ipc/crash-reporting-renderer-breadcrumbs'
+import { recordRendererBreadcrumbFromRenderer } from '../ipc/crash-reporting/crash-reporting-renderer-breadcrumbs'
 import { launchEvidence } from '../../shared/terminal-launch-diagnostics/launch-evidence'
 
 afterEach(() => {

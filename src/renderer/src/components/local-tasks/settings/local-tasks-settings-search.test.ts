@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildSettingsNavigationMetadata } from '@/hooks/useSettingsNavigationMetadata'
+import { buildSettingsNavigationMetadata } from '@/components/settings/navigation/useSettingsNavigationMetadata'
 import {
   buildCmdJActionResults,
   buildCmdJSettingsResults,
@@ -9,8 +9,8 @@ import { getCmdJQuickActions } from '@/components/cmd-j/quick-actions'
 import {
   getSettingsSectionSearchEntries,
   rankSettingsSearchItems
-} from '@/components/settings/settings-search'
-import type { SettingsNavSection } from '@/lib/settings-navigation-types'
+} from '@/components/settings/search/settings-search'
+import type { SettingsNavSection } from '@/components/settings/navigation/settings-navigation-types'
 import { LOCAL_TASKS_SETTINGS_SECTION_ID } from './local-tasks-settings-search'
 
 const sections = buildSettingsNavigationMetadata({

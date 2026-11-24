@@ -1,11 +1,14 @@
-import type { DocPreviewGrantLocation } from '@/lib/doc-preview-grants'
-import { parseExecutionHostId, toSshExecutionHostId } from '../../../../../shared/execution-host'
+import type { DocPreviewGrantLocation } from '@/lib/browser/documents/doc-preview-grants'
+import {
+  parseExecutionHostId,
+  toSshExecutionHostId
+} from '../../../../../shared/execution-host/execution-host'
 import type { LanArtifactShareTarget } from '../client/lan-artifact-share-client'
 import {
   resolveWorktreeOperationRoute,
   type WorktreeOperationRouteState
-} from '@/lib/worktree-operation-route'
-import type { OpenFile } from '@/store/slices/editor'
+} from '@/lib/workspace/ownership/worktree-operation-route'
+import type { OpenFile } from '@/store/slices/editor/types/open-file'
 
 export type LanArtifactShareTargetFailure = 'unknown-host' | 'nested-remote'
 

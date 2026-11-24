@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import type { HostScreenController } from '../host-screen/use-host-screen-controller'
-import { taskRuntimeStatusRead } from '../tasks/mobile-task-runtime-operations'
-import { scopeRpcClientToExecutionHost } from '../transport/execution-host-scoped-rpc-client'
-import type { RpcClient } from '../transport/rpc-client'
-import { useReachableServerClients } from '../worktree/use-reachable-server-clients'
+import { taskRuntimeStatusRead } from '../tasks/screen-state/mobile-task-runtime-operations'
+import { scopeRpcClientToExecutionHost } from '../worktree/execution-hosts/execution-host-scoped-rpc-client'
+import type { RpcClient } from '../transport/rpc/rpc-client-contract'
+import { useReachableServerClients } from '../worktree/execution-hosts/use-reachable-server-clients'
 import { hostAdvertisesLocalTasks } from './local-tasks-access'
 import {
   localTaskEndpointFor,
@@ -132,7 +132,7 @@ function ServerLibraryWatch(props: WatchProps & { serverHost: `runtime:${string}
       return
     }
     let current = true
-    taskRuntimeStatusRead.requestSingleFlight(client, serverHost).then(
+    taskRuntimeStatusRead.request(client).then(
       (reply) => {
         if (current) {
           setProbe({

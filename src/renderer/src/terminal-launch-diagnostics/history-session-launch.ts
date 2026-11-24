@@ -1,4 +1,4 @@
-import { launchAiVaultSessionInNewTab as launchHistory } from '@/lib/launch-ai-vault-session'
+import { launchAiVaultSessionInNewTab as launchHistory } from '@/lib/agent-session/resume/history/launch-ai-vault-session'
 import { useAppStore } from '@/store'
 import {
   recordTerminalLaunchOrigin,

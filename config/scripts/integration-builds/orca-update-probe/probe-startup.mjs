@@ -2,7 +2,7 @@ import { appendFileSync, cpSync, existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { buildSync } from 'esbuild'
 import { writeJson } from '../signing-probe/probe-command.mjs'
-import { assertElectronResolvedIsolatedHome } from '../../../../tests/e2e/helpers/electron-home-isolation.ts'
+import { assertElectronResolvedIsolatedHome } from '../../../../tests/e2e/desktop/electron-fixtures/electron-home-isolation.ts'
 import { startupEvidence } from './probe-startup-evidence.mjs'
 export { startupDeadline } from './probe-startup-evidence.mjs'
 
@@ -10,7 +10,7 @@ let shutdownModule
 export async function closeOrca(app) {
   shutdownModule ??= (async () => {
     const bundle = buildSync({
-      entryPoints: ['tests/e2e/helpers/electron-process-shutdown.ts'],
+      entryPoints: ['tests/e2e/desktop/electron-fixtures/electron-process-shutdown.ts'],
       bundle: true,
       platform: 'node',
       format: 'esm',

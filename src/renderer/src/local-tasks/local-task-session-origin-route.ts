@@ -4,12 +4,15 @@ import {
   parseExecutionHostId,
   toRuntimeExecutionHostId,
   type ExecutionHostId
-} from '../../../shared/execution-host'
-import type { HostAuthority, HostAuthorityEndpoint } from '../../../shared/host-authority'
+} from '../../../shared/execution-host/execution-host'
+import type {
+  HostAuthority,
+  HostAuthorityEndpoint
+} from '../../../shared/execution-host/host-authority'
 import {
   isRuntimeHostContactRevoked,
   lastVerifiedRuntimeStatus
-} from '../../../shared/runtime-host-status'
+} from '../../../shared/remote-runtime/host-status/runtime-host-status'
 import {
   toLocalTaskOwnedHostId,
   localTaskClientSessionIds

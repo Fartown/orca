@@ -1,4 +1,5 @@
-import { GLOBAL_FLAGS, type CommandSpec } from '../args'
+import type { CommandSpec } from '../discovery/command-spec'
+import { CLI_GLOBAL_FLAGS as GLOBAL_FLAGS } from '../../shared/cli/cli-argument-boundary'
 
 const LIBRARY_NOTE =
   "Reads the task library of the Orca this CLI talks to: this computer's, or the paired server named by --environment / --pairing-code."

@@ -3,10 +3,13 @@ import {
   buildAgentSessionContinuationPrompt,
   type AgentSessionContinuationContextMode
 } from '../../../src/shared/agent-session-continuation/continuation-prompt'
-import type { ActionSheetAction } from '../components/ActionSheetModal'
-import { triggerError, triggerSuccess } from '../platform/haptics'
-import { loadMobileNewTabAgentOptions } from '../session/mobile-new-tab-agent-loader'
-import type { RpcClient } from '../transport/rpc-client'
+import type { ActionSheetAction } from '../components/sheets/ActionSheetModal'
+import { triggerError, triggerSuccess } from '../platform/haptics/haptics'
+import {
+  loadMobileAgentLaunchContext,
+  newTabAgentOptionsFrom
+} from '../session/agent-launch/mobile-new-tab-agent-loader'
+import type { RpcClient } from '../transport/rpc/rpc-client-contract'
 import {
   isMobileSessionContinuationAgent,
   type MobileSessionContinuationAgent
@@ -94,8 +97,9 @@ export function useMobileSessionContinuation(args: {
         setAgents({ status: 'failed' })
         return
       }
-      void loadMobileNewTabAgentOptions({ client, worktreeId: args.worktreeId })
-        .then(({ options }) => {
+      void loadMobileAgentLaunchContext({ client, worktreeId: args.worktreeId })
+        .then(({ settings, detectedAgents }) => {
+          const options = newTabAgentOptionsFrom(settings, detectedAgents)
           if (seq !== loadSeqRef.current) {
             return
           }

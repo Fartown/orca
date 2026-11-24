@@ -12,11 +12,11 @@ import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { translate } from '@/i18n/i18n'
 import { useAppStore } from '@/store'
 import type { AppState } from '@/store/types'
+import { getFolderWorkspaceWorktree } from '../../../../shared/folder-workspaces/folder-workspace-worktree'
 import {
-  getFolderWorkspaceWorktree,
   selectFolderWorkspaces,
   selectWorktreesByRepo
-} from '@/store/workspace-record-selectors'
+} from '@/store/workspaces/catalog/workspace-record-fields'
 import { selectLocalTaskHostLabel } from '@/local-tasks/local-task-host-label'
 import type { Worktree } from '../../../../shared/worktree/types'
 import type { LocalTaskLinks } from '../../../../shared/local-tasks/local-task-link-types'

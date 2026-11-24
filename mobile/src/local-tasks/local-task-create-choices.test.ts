@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { LocalTaskLinks } from '../../../src/shared/local-tasks/local-task-link-types'
 import type { LocalTask, LocalTaskProject } from '../../../src/shared/local-tasks/local-task-types'
-import { ProjectSectionCatalogSchema } from '../../../src/shared/project-section-catalog-schema'
+import { ProjectSectionCatalogSchema } from '../../../src/shared/sidebar-list/catalog/project-section-catalog-schema'
 import {
   localTaskCreateDefaultRepo,
   localTaskCreateRepoChoices,

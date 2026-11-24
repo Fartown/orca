@@ -126,14 +126,24 @@ describe('integration package identity and signing', () => {
     expect(() => verifyAndroidPackageVersion(badging, config, code + 1)).toThrow()
   })
   it('uses increasing native versions only for integration builds', () => {
-    const config = { android: { versionCode: 16 }, extra: { existing: true } }
+    const config = {
+      android: { versionCode: 16, package: 'dev.orca.app' },
+      plugins: ['expo-router', './plugins/android-retired-app-name.js'],
+      extra: { existing: true }
+    }
     expect(androidConfig.withIntegrationBuild(config, {})).toBe(config)
     const code = androidConfig.androidVersionCode(timestamp)
     expect(androidConfig.androidVersionCode(timestamp + 1000)).toBe(code + 1)
     expect(
       androidConfig.withIntegrationBuild(config, { ORCA_INTEGRATION_VERSION_CODE: String(code) })
     ).toEqual({
-      android: { versionCode: code, permissions: ['REQUEST_INSTALL_PACKAGES'] },
+      // Same package as installed integration APKs, without upstream's retired-app relabel.
+      plugins: ['expo-router'],
+      android: {
+        package: 'com.stably.orca.mobile',
+        versionCode: code,
+        permissions: ['REQUEST_INSTALL_PACKAGES']
+      },
       extra: { existing: true, orcaUpdateChannel: 'integration' }
     })
     for (const value of ['16', 'NaN', '-1', '2100000001']) {

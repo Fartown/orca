@@ -2,10 +2,10 @@ import { describe, expect, it } from 'vitest'
 import {
   parseClaudeSessionContent,
   createClaudeSessionResumeState
-} from '../ai-vault/session-scanner-primary-parsers'
-import { parseCodexSessionContent } from '../ai-vault/session-scanner-codex-parser'
-import { refreshCodexTitleFromIndex } from '../ai-vault/session-scanner-codex-cached-title'
-import { parseAiVaultSessionTitlesResult } from '../ai-vault/session-title-result-validation'
+} from '../ai-vault/scanners/claude/session-scanner-primary-parsers'
+import { parseCodexSessionContent } from '../ai-vault/scanners/codex/session-scanner-codex-parser'
+import { refreshCodexTitleFromIndex } from '../ai-vault/scanners/codex/session-scanner-codex-cached-title'
+import { parseAiVaultSessionTitlesResult } from '../ai-vault/session-titles/session-title-result-validation'
 import { retainConfirmedProviderName } from '../../shared/session-names/session-name-contract'
 
 const file = { path: '/fixture/session.jsonl', mtimeMs: 1, modifiedAt: '2026-09-09T00:00:00Z' }

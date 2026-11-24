@@ -1,7 +1,7 @@
 import { randomBytes } from 'node:crypto'
 import { z } from 'zod'
-import { writeDurableSecureJsonFile } from '../../../shared/secure-file'
-import { withFileTransactionLock } from '../../file-transaction-lock'
+import { writeDurableSecureJsonFile } from '../../../shared/secure-storage/secure-file'
+import { withFileTransactionLock } from '../../filesystem/file-transaction-lock'
 import {
   ARTIFACT_SHARE_FILE_VERSION,
   readVersionedArtifactShareFile

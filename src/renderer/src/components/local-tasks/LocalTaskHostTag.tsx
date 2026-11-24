@@ -1,4 +1,4 @@
-import { cn } from '@/lib/utils'
+import { cn } from '@/lib/class-names'
 import { localTaskHostLabelFor } from '@/local-tasks/local-task-endpoint-labels'
 
 /** The row's host beside its ref, shown only while more than one Orca's tasks are listed. */

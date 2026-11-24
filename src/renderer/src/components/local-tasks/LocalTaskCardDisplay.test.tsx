@@ -9,7 +9,7 @@ import type { WorkspaceAttachment } from '../../../../shared/worktree/types'
 const fixture = vi.hoisted(() => ({ setPreference: vi.fn(), openLocalTaskPage: vi.fn() }))
 
 vi.mock('@/store', async () => {
-  const { createTestStore } = await import('@/store/slices/store-test-helpers')
+  const { createTestStore } = await import('@/store/testing/app-store-test-fixture')
   return { useAppStore: createTestStore() }
 })
 vi.mock('@/local-tasks/local-tasks-runtime-client', () => ({
@@ -23,7 +23,7 @@ vi.mock('@/components/ui/tooltip', () => ({
   TooltipTrigger: ({ children }: { children: ReactNode }) => <>{children}</>,
   TooltipContent: () => null
 }))
-vi.mock('@/components/SelectedTextCopyMenu', () => ({
+vi.mock('@/components/clipboard/SelectedTextCopyMenu', () => ({
   SelectedTextCopyMenu: ({ children }: { children: ReactNode }) => <div>{children}</div>
 }))
 vi.mock('@/components/ui/hover-card', () => ({
@@ -37,9 +37,9 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu'
-import { WorktreeCardDetailsHover } from '@/components/sidebar/WorktreeCardMeta'
-import { useWorktreeCardDetailsHoverControl } from '@/components/sidebar/worktree-card-details-hover-state'
-import { makeWorktree } from '@/store/slices/worktrees-slice-test-fixtures'
+import { WorktreeCardDetailsHover } from '@/components/sidebar/workspace-card/details/WorktreeCardMeta'
+import { useWorktreeCardDetailsHoverControl } from '@/components/sidebar/workspace-card/details/worktree-card-details-hover-state'
+import { makeWorktree } from '@/store/slices/worktrees/worktree.test-fixture'
 import { localTasksDomainStore } from '@/local-tasks/local-tasks-domain-store'
 import { LocalTaskCardOptionItem } from './LocalTaskCardOptionItem'
 import { LocalTaskWorkspaceChip } from './LocalTaskWorkspaceChip'

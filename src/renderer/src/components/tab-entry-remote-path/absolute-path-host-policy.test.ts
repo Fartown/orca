@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { FolderWorkspace } from '../../../../shared/folder-workspace-types'
-import type { ProjectGroup } from '../../../../shared/project-group-types'
-import type { Repo } from '../../../../shared/repo-types'
-import type { SshConnectionState } from '../../../../shared/ssh-types'
-import { folderWorkspaceKey } from '../../../../shared/workspace-scope'
+import type { FolderWorkspace } from '../../../../shared/folder-workspaces/folder-workspace-types'
+import type { ProjectGroup } from '../../../../shared/project/groups/project-group-types'
+import type { Repo } from '../../../../shared/repository/repo-types'
+import type { SshConnectionState } from '../../../../shared/remote-runtime/ssh/ssh-types'
+import { folderWorkspaceKey } from '../../../../shared/workspace/identity/workspace-scope'
 import { useAppStore } from '@/store'
 import {
   createTabEntryAbsolutePathHostPolicySelector,
@@ -12,7 +12,7 @@ import {
   toTabEntryAbsolutePathContext
 } from './absolute-path-host-policy'
 
-vi.mock('@/lib/renderer-app-platform', () => ({
+vi.mock('@/app-shell/platform/renderer-app-platform', () => ({
   getRendererAppPlatform: () => 'win32'
 }))
 

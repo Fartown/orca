@@ -8,11 +8,11 @@ import type {
   ArtifactShareShareResult,
   ArtifactShareStatusResult
 } from '../../shared/self-hosted-artifacts/artifact-share-contract'
-import type { CommandHandler, HandlerContext } from '../dispatch'
-import { getRepeatedStringFlag } from '../flags'
-import { printResult } from '../format'
-import { rejectRemoteSelectionFlags } from '../remote-selection-flag-rejection'
-import { RuntimeClientError } from '../runtime-client'
+import type { CommandHandler, HandlerContext } from '../dispatch/dispatch'
+import { getRepeatedStringFlag } from '../arguments/flags'
+import { printResult } from '../output/command-result-output'
+import { rejectRemoteSelectionFlags } from '../dispatch/remote-selection-flag-rejection'
+import { RuntimeClientError } from '../runtime/connection/types'
 import {
   resolveArtifactShareCliFileTarget,
   resolveArtifactShareCliHost,

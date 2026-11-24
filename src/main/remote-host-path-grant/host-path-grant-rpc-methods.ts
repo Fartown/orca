@@ -1,5 +1,5 @@
 import { defineMethod } from '../runtime/rpc/core'
-import { HostPathGrant } from '../../shared/rpc-contract/files-params'
+import { HostPathGrant } from '../../shared/rpc-contract/filesystem/files-params'
 
 /** The host mints a grant for an absolute path outside the worktree (REQ-801). */
 export const HOST_PATH_GRANT_METHODS = [

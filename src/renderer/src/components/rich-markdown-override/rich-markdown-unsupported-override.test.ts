@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { resolveMarkdownRichModeUnsupportedMessage } from '../editor/markdown-rich-mode'
+import { resolveMarkdownRichModeUnsupportedMessage } from '../editor/markdown/render-mode/markdown-rich-mode'
 import {
   OVERRIDABLE_RICH_MARKDOWN_UNSUPPORTED_REASONS,
   resolveRichMarkdownUnsupportedOverride

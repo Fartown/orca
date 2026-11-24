@@ -3,10 +3,10 @@ import { useShallow } from 'zustand/react/shallow'
 import { ArrowUpRight, CheckCheck, LoaderCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { ShortcutKeyCombo } from '@/components/ShortcutKeyCombo'
-import { useNow } from '@/hooks/use-now'
+import { ShortcutKeyCombo } from '@/components/ui/ShortcutKeyCombo'
+import { useNow } from '@/lib/window-activity/use-now'
 import { translate } from '@/i18n/i18n'
-import { cn } from '@/lib/utils'
+import { cn } from '@/lib/class-names'
 import {
   acknowledgeLocalTaskItems,
   writableEntriesOf

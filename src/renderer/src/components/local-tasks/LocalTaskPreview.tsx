@@ -1,6 +1,6 @@
 import { ArrowLeft, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { ShortcutKeyCombo } from '@/components/ShortcutKeyCombo'
+import { ShortcutKeyCombo } from '@/components/ui/ShortcutKeyCombo'
 import { translate } from '@/i18n/i18n'
 import type { LocalTaskIndex } from '@/local-tasks/local-task-grouping'
 import { useLocalTaskEffectiveWorkspace } from '@/local-tasks/local-task-link-selectors'

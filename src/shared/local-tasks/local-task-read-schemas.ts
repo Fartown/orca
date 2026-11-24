@@ -1,4 +1,4 @@
-import { z } from 'zod'
+import * as z from 'zod'
 import {
   LOCAL_TASK_STATUS_CATEGORIES,
   LOCAL_TASK_STATUS_COLORS,
@@ -14,7 +14,12 @@ import type {
   LocalTasksHostState,
   LocalTasksStatus
 } from './local-task-types'
-import { hostUnionArms, openEnum, salvagedOptional, salvagingArray } from '../zod-salvage'
+import {
+  hostUnionArms,
+  openEnum,
+  salvagedOptional,
+  salvagingArray
+} from '../validation/zod-salvage'
 
 // Replies of `localTasks.*` (src/main/runtime/rpc/methods/local-tasks.ts), checked against the
 // shared types. A row this build cannot read drops from its list instead of failing the read, so

@@ -4,7 +4,7 @@ import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import type { GoalDriverVerdict } from '../../shared/goals/goal-control-contract'
 import { legacyGoalRecordPath } from '../../shared/goals/goal-store-layout'
-import type { RuntimeTerminalShow } from '../../shared/runtime-terminal-contracts'
+import type { RuntimeTerminalShow } from '../../shared/terminal/runtime/runtime-terminal-contracts'
 import { GoalControlService } from './goal-control-service'
 import { GoalStore } from './goal-store'
 

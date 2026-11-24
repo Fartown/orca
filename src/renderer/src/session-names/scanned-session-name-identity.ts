@@ -1,4 +1,4 @@
-import type { AiVaultSession } from '../../../shared/ai-vault-types'
+import type { AiVaultSession } from '../../../shared/ai-vault/contracts/ai-vault-types'
 
 /** Claude child transcripts may carry their parent's resumable session ID. */
 export function hasIndependentScannedSessionIdentity(session: AiVaultSession): boolean {

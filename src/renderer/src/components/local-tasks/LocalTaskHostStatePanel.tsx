@@ -11,7 +11,7 @@ import {
   type LocalTaskLibraryNotice
 } from '@/local-tasks/local-task-library-notices'
 import { selectLocalTaskHostLabel } from '@/local-tasks/local-task-host-label'
-import { cn } from '@/lib/utils'
+import { cn } from '@/lib/class-names'
 import { useAppStore } from '@/store'
 import type { LocalTaskChangeScope } from '../../../../shared/local-tasks/local-task-types'
 import { localTasksSync } from '@/local-tasks/local-tasks-sync'

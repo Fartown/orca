@@ -6,7 +6,7 @@ import type {
 } from '../../../src/shared/local-tasks/local-task-link-types'
 import type { LocalTask } from '../../../src/shared/local-tasks/local-task-types'
 import { worktreeIdsEqual } from '../../../src/shared/worktree/id'
-import type { Worktree } from '../worktree/workspace-list-types'
+import type { Worktree } from '../worktree/workspace-list/workspace-list-types'
 import {
   localTaskEndpointFor,
   localTaskListedHostId,

@@ -5,8 +5,8 @@ import {
   durableChatSubmissionSession,
   type DurableChatSessionRuntime
 } from './durable-chat-transcript-boundary'
-import type { AgentStatusIpcPayload } from '../../shared/agent-status-types'
-import type { ExactWorkerProviderSession } from '../../shared/orchestration-worker-output'
+import type { AgentStatusIpcPayload } from '../../shared/agent-status/contracts/agent-status-ipc-payload'
+import type { ExactWorkerProviderSession } from '../../shared/orchestration/workers/orchestration-worker-output'
 import { OrcaRuntimeService } from '../runtime/orca-runtime'
 
 function fixture() {

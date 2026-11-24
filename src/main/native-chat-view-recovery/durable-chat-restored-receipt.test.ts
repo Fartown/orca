@@ -1,16 +1,16 @@
-import '../runtime/rpc/unused-default-rpc-methods.test-fixture'
+import '../runtime/rpc/dispatch/testing/unused-default-rpc-methods.test-fixture'
 import { mkdtemp, writeFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { expect, it, vi } from 'vitest'
 import { OrcaRuntimeService } from '../runtime/orca-runtime'
-import { OrchestrationDb } from '../runtime/orchestration/db'
+import { OrchestrationDb } from '../runtime/orchestration/db/orchestration-db'
 import { RpcDispatcher } from '../runtime/rpc/dispatcher'
 import { ORCHESTRATION_MUTATION_REQUEST_METHODS } from '../runtime/rpc/methods/orchestration/runs/mutation-request-show'
 import {
   readTranscriptFileVersion,
   boundaryFingerprint
-} from '../native-chat/transcript-file-version'
+} from '../native-chat/transcript-watching/transcript-file-version'
 
 it('checkpoints restored provider proof on the original caller receipt and retains it after host state disappears', async () => {
   const directory = await mkdtemp(join(tmpdir(), 'orca-restored-ledger-'))

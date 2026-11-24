@@ -1,15 +1,15 @@
-import { z } from 'zod'
-import { LOCAL_EXECUTION_HOST_ID } from '../../../src/shared/execution-host'
-import { projectGroupIdFromRepoId } from '../../../src/shared/folder-workspace-worktree'
+import * as z from 'zod'
+import { LOCAL_EXECUTION_HOST_ID } from '../../../src/shared/execution-host/execution-host'
+import { projectGroupIdFromRepoId } from '../../../src/shared/folder-workspaces/folder-workspace-worktree'
 import type {
   LocalTaskLinks,
   LocalTaskWorkspaceLink
 } from '../../../src/shared/local-tasks/local-task-link-types'
-import { getWorktreeGitIdentityDisplay } from '../../../src/shared/worktree/git-identity-display'
+import { getWorktreeGitIdentityDisplay } from '../../../src/shared/worktree/row-display/git-identity-display'
 import { worktreeIdsEqual } from '../../../src/shared/worktree/id'
-import { parseWorkspaceKey } from '../../../src/shared/workspace-scope'
-import { salvagedOptional, salvagingArray } from '../../../src/shared/zod-salvage'
-import type { RpcSendParams } from '../transport/rpc-params-contract'
+import { parseWorkspaceKey } from '../../../src/shared/workspace/identity/workspace-scope'
+import { salvagedOptional, salvagingArray } from '../../../src/shared/validation/zod-salvage'
+import type { RpcSendParams } from '../../../src/shared/rpc-contract/rpc-send-params'
 import { localTaskOwnerHostId, type LocalTaskEndpoint } from './local-task-endpoint'
 import type { LocalTaskSetup } from './local-task-project-setups'
 

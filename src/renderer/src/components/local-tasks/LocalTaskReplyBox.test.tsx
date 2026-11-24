@@ -4,14 +4,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const send = vi.hoisted(() => vi.fn())
 const host = vi.hoisted(() => ({ offline: false }))
-vi.mock('@/lib/agent-message-send', () => ({ sendMessageToAgent: send }))
-vi.mock('@/components/native-chat/use-native-chat-host-outage', () => ({
+vi.mock('@/lib/agent-session/messaging/agent-message-send', () => ({ sendMessageToAgent: send }))
+vi.mock('@/components/native-chat/host-access/use-native-chat-host-outage', () => ({
   useNativeChatHostOutage: () =>
     host.offline
       ? { kind: 'offline', environmentId: 'env-1', hostLabel: 'mirror', canReconnect: true }
       : null
 }))
-vi.mock('@/components/native-chat/use-native-chat-host-outage-notice', () => ({
+vi.mock('@/components/native-chat/host-access/use-native-chat-host-outage-notice', () => ({
   useNativeChatHostOutageNotice: (outage: { hostLabel: string } | null) =>
     outage
       ? {
@@ -23,7 +23,7 @@ vi.mock('@/components/native-chat/use-native-chat-host-outage-notice', () => ({
       : null
 }))
 
-import { activeAgentNotesSendFailureMessage } from '@/lib/active-agent-note-send-result'
+import { activeAgentNotesSendFailureMessage } from '@/lib/agent-session/messaging/terminal/active-agent-note-send-result'
 import {
   buildLocalTaskNeedsYouRows,
   localTaskItemClientKey

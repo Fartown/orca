@@ -1,5 +1,8 @@
-import { resolveAgentStatusLiveEntryStateHistory } from '../agent-status-live-entry-state-history'
-import type { AgentStatusEntry, ParsedAgentStatusPayload } from '../agent-status-types'
+import { resolveAgentStatusLiveEntryStateHistory } from '../agent-status/lifecycle/agent-status-live-entry-state-history'
+import type {
+  AgentStatusEntry,
+  ParsedAgentStatusPayload
+} from '../agent-status/contracts/agent-status-types'
 import { sessionNameEntryStateStartedAt, sessionNameIdentityReplaced } from './session-name-history'
 
 /** A live row's state history, title and state clock, treating a provider session replacement as a state switch. */

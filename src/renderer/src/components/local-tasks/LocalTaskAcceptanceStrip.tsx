@@ -3,9 +3,10 @@ import { Check, GitBranch, Send, Undo2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
-import { useNow } from '@/hooks/use-now'
+import { useNow } from '@/lib/window-activity/use-now'
 import { translate } from '@/i18n/i18n'
-import { AgentIcon, getAgentLabel } from '@/lib/agent-catalog'
+import { AgentIcon } from '@/components/agent/icons/AgentIcon'
+import { getAgentLabel } from '@/lib/agent-catalog/agent-catalog'
 import { firstStatusInCategory } from '@/local-tasks/local-task-grouping'
 import { updateLocalTaskFields, runLocalTaskWrite } from '@/local-tasks/local-task-writes'
 import { localTasksClient } from '@/local-tasks/local-tasks-runtime-client'
@@ -34,7 +35,7 @@ import {
 import { localTaskSessionPanelStore } from '@/local-tasks/local-task-session-panel-store'
 import { localTaskBranchName } from '@/local-tasks/local-task-workspace-linking'
 import { localTaskEventText } from '../../../../shared/local-tasks/local-task-event-payload'
-import { isTuiAgent } from '../../../../shared/tui-agent-config'
+import { isTuiAgent } from '../../../../shared/agent-launch/catalog/tui-agent-config'
 import type {
   LocalTaskSessionLink,
   LocalTaskWorkspaceLink

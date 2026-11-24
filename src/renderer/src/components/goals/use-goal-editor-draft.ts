@@ -54,7 +54,7 @@ export function useGoalEditorDraft(editor: { open: boolean; prefill: GoalEditorP
       ? { worktreeId: saved.binding.worktree, paneKey: saved.binding.terminal }
       : targetFromPrefill(prefill)
     const paneAgent = target.paneKey
-      ? useAppStore.getState().agentStatusByPaneKey[target.paneKey]?.agentType
+      ? useAppStore.getState().agentStatusByPaneKey.get(target.paneKey)?.agentType
       : null
     const fields = saved
       ? draftFromDetail(saved)

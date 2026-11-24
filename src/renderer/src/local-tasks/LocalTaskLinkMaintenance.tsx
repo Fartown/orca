@@ -6,8 +6,8 @@ import {
   selectDetectedWorktreesByRepo,
   selectFolderWorkspaces,
   selectWorktreesByRepo
-} from '@/store/workspace-record-selectors'
-import { getReachableRuntimeEnvironmentIds } from '../hooks/ipc-events/runtime-environment-subscription-selection'
+} from '@/store/workspaces/catalog/workspace-record-fields'
+import { getReachableRuntimeEnvironmentIds } from '../hooks/ipc-events/runtime-events/runtime-environment-subscription-selection'
 import { localTasksClient } from './local-tasks-runtime-client'
 import { isLocalTasksWritable, localTasksDomainStore } from './local-tasks-domain-store'
 import { bindLocalTaskStartWork } from './local-task-start-work'

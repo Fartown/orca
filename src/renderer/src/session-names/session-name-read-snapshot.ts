@@ -1,8 +1,8 @@
 import type {
   AiVaultSessionTitle,
   AiVaultSessionTitlesResult
-} from '../../../shared/ai-vault-session-title'
-import type { ExecutionHostId } from '../../../shared/execution-host'
+} from '../../../shared/ai-vault/contracts/ai-vault-session-title'
+import type { ExecutionHostId } from '../../../shared/execution-host/execution-host'
 import { projectSessionNameSlot } from '../../../shared/session-names/session-name-slot'
 
 export type SessionNameRequest = {

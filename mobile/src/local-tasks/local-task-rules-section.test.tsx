@@ -11,8 +11,8 @@ vi.mock('react-native', () => ({
   View: 'View',
   StyleSheet: { create: <T,>(styles: T) => styles }
 }))
-vi.mock('../components/MobileSwitch', () => ({ MobileSwitch: 'MobileSwitch' }))
-vi.mock('../components/PickerModal', () => ({ PickerModal: 'PickerModal' }))
+vi.mock('../components/controls/MobileSwitch', () => ({ MobileSwitch: 'MobileSwitch' }))
+vi.mock('../components/sheets/PickerModal', () => ({ PickerModal: 'PickerModal' }))
 
 const base: LocalTaskProject = {
   id: 'p',

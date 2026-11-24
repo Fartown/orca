@@ -1,5 +1,5 @@
-import { getOwnedTempStagingRoot } from '../../../window/owned-temp-staging-root'
-import '../unused-default-rpc-methods.test-fixture'
+import { getOwnedTempStagingRoot } from '../../../filesystem/owned-temp-staging-root'
+import '../dispatch/testing/unused-default-rpc-methods.test-fixture'
 import { mkdtemp, readdir, readFile, rm, stat } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'

@@ -5,15 +5,15 @@ const fixture = vi.hoisted(() => ({
   readiness: vi.fn()
 }))
 
-vi.mock('@/runtime/runtime-rpc-client', () => ({ callRuntimeRpc: fixture.rpc }))
-vi.mock('./active-agent-terminal-send-readiness', () => ({
+vi.mock('@/runtime/rpc/calls/runtime-rpc-call', () => ({ callRuntimeRpc: fixture.rpc }))
+vi.mock('./agent-session/messaging/terminal/active-agent-terminal-send-readiness', () => ({
   ACTIVE_AGENT_SEND_RPC_TIMEOUT_MS: 15000,
   getTerminalAgentSendReadiness: fixture.readiness,
   isRuntimeTerminalNotWritable: () => false,
   isRuntimeTerminalUnavailable: () => false
 }))
 
-import { sendPromptWithGuardedPasteAndEnter } from './active-agent-note-send-delivery'
+import { sendPromptWithGuardedPasteAndEnter } from './agent-session/messaging/terminal/active-agent-note-send-delivery'
 
 beforeEach(() => {
   fixture.rpc.mockReset().mockResolvedValue({ send: { accepted: true } })

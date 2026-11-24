@@ -33,3 +33,16 @@ export async function grantHostPath(
   }
   return resolution
 }
+
+/** The runtime installs this as its `grantHostPath` so the upstream construction stays untouched. */
+export function bindHostPathGrant(
+  host: RuntimeTerminalFileGrantHost,
+  artifacts: Pick<RuntimeTerminalArtifacts, 'resolveAbsoluteFileGrant'>
+): (
+  worktreeSelector: string,
+  absolutePath: string,
+  clientId?: string
+) => ReturnType<typeof grantHostPath> {
+  return (worktreeSelector, absolutePath, clientId) =>
+    grantHostPath(host, artifacts, worktreeSelector, absolutePath, clientId)
+}

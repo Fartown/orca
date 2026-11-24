@@ -1,17 +1,15 @@
 import { useAppStore } from '@/store'
-import type {
-  CreatedWebRuntimeSessionTerminal,
-  CreateWebRuntimeSessionTerminalArgs
-} from '../runtime/web-runtime-session-types'
+import type { CreatedWebRuntimeSessionTerminal } from '../runtime/hosted-terminals/creation/terminal-create-contracts'
 import {
   currentTerminalLaunchOrigin,
   recordTerminalLaunchOrigin,
   type TerminalLaunchOrigin
 } from './launch-origin'
 
-export function observePairedTerminalLaunch(
-  args: CreateWebRuntimeSessionTerminalArgs,
-  invoke: (args: CreateWebRuntimeSessionTerminalArgs) => Promise<CreatedWebRuntimeSessionTerminal>,
+// Generic so host-bound and selected-host create args both pass through unchanged.
+export function observePairedTerminalLaunch<Args extends object>(
+  args: Args,
+  invoke: (args: Args) => Promise<CreatedWebRuntimeSessionTerminal>,
   origin: TerminalLaunchOrigin = currentTerminalLaunchOrigin() ?? 'paired-terminal-create'
 ): Promise<CreatedWebRuntimeSessionTerminal> {
   recordTerminalLaunchOrigin(origin, args, useAppStore.getState())

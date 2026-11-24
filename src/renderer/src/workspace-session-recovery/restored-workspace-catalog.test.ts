@@ -1,15 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { getDefaultWorkspaceSession } from '../../../shared/constants'
-import type { Repo } from '../../../shared/repo-types'
-import { getProjectGroupingForRepo } from '../../../shared/project-section-grouping'
-import { createTestStore, makeOpenFile } from '../store/slices/store-test-helpers'
-import { buildRuntimeSessionPlaceholders } from '../store/terminals/workspace-terminal-placeholders'
+import { getDefaultWorkspaceSession } from '../../../shared/orca-profiles/constants'
+import type { Repo } from '../../../shared/repository/repo-types'
+import { getProjectGroupingForRepo } from '../../../shared/sidebar-list/sections/project-section-grouping'
+import { createTestStore } from '../store/testing/app-store-test-fixture'
+import { makeOpenFile } from '../store/slices/editor/types/open-file.test-fixture'
+import { buildRuntimeSessionPlaceholders } from '../store/terminals/hydration/workspace-terminal-placeholders'
 import { reconcileRestoredWorkspaceCatalog } from './restored-workspace-catalog'
 import {
   createCompatibleRuntimeStatusResponseIfNeeded,
   type RuntimeEnvironmentCallRequest
-} from '../runtime/runtime-compatibility-test-fixture'
-import { clearRuntimeCompatibilityCacheForTests } from '../runtime/runtime-rpc-client'
+} from '../runtime/rpc/testing/runtime-compatibility-test-fixture'
+import { clearRuntimeCompatibilityCache as clearRuntimeCompatibilityCacheForTests } from '../runtime/rpc/compatibility/runtime-compatibility-cache'
 
 const host = 'runtime:host' as const
 const emptyId = 'removed::/srv/project/empty'

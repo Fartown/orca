@@ -8,10 +8,10 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu'
-import { ImeInput } from '@/lib/ime-text-field'
-import { cn } from '@/lib/utils'
+import { ImeInput } from '@/lib/text-input/ime/ime-text-field'
+import { cn } from '@/lib/class-names'
 import { translate } from '@/i18n/i18n'
-import { isImeCompositionKeyDown } from '@/lib/ime-composition-keyboard-event'
+import { isImeCompositionKeyDown } from '@/lib/text-input/ime/ime-composition-keyboard-event'
 import {
   LOCAL_TASK_STATUS_CATEGORIES,
   LOCAL_TASK_STATUS_COLORS,

@@ -25,7 +25,7 @@ const mocks = vi.hoisted(() => {
 vi.mock('@/store', () => ({
   useAppStore: (select: (state: typeof mocks.app) => unknown) => select(mocks.app)
 }))
-vi.mock('@/components/sidebar/sidebar-host-options', () => ({
+vi.mock('@/components/sidebar/worktree-list/controls/sidebar-host-options', () => ({
   buildSidebarHostOptionsForAllHosts: () => []
 }))
 vi.mock('@/local-tasks/local-task-dispatch-candidates', async (importOriginal) => ({
@@ -55,8 +55,8 @@ vi.mock('@/local-tasks/local-tasks-domain-store', () => ({
 vi.mock('@/local-tasks/local-tasks-runtime-client', () => ({
   localTasksClient: { setPreference: vi.fn() }
 }))
-vi.mock('@/lib/agent-catalog', () => ({ getAgentCatalog: () => [{ id: 'claude' }] }))
-vi.mock('../../../../shared/tui-agent-selection', () => ({
+vi.mock('@/lib/agent-catalog/agent-catalog', () => ({ getAgentCatalog: () => [{ id: 'claude' }] }))
+vi.mock('../../../../shared/agent-launch/catalog/tui-agent-selection', () => ({
   pickTuiAgent: () => 'claude',
   filterEnabledTuiAgents: (ids: string[]) => ids
 }))

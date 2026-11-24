@@ -1,17 +1,12 @@
 import { expect, it } from 'vitest'
-import { buildAgentStatusLiveEntry } from '../store/slices/agent-status/agent-status-live-entry-builder'
-import { createTestStore } from '../store/slices/store-test-helpers'
-import { buildPaneActivityEvents } from '../components/activity/activity-pane-events'
-import { agentStatusEntryEqual } from '../runtime/web-session-tabs-sync/state-equality-core'
-import { buildRuntimeMobileAgentStatusProjectionForTests } from '../runtime/sync-runtime-graph/agent-status-projection'
+import { buildAgentStatusLiveEntry } from '../store/slices/agent-status/live-status/agent-status-live-entry-builder'
+import { createTestStore } from '../store/testing/app-store-test-fixture'
+import { buildPaneActivityEvents } from '../components/activity/events/activity-pane-events'
+import { agentStatusEntryEqual } from '../runtime/web-session-tabs-sync/snapshots/state-equality-core'
+import { acceptedAgentStatuses } from '../store/slices/agent-status/status-ownership/accepted-agent-statuses'
 import { getActivitySessionName } from './activity-session-name'
-import type { AgentStatusEntry } from '../../../shared/agent-status-types'
-import {
-  makeRepo,
-  makeTab,
-  makeWorktree,
-  PANE_KEY
-} from '../components/activity/ActivityPrototypePage-test-fixtures'
+import type { AgentStatusEntry } from '../../../shared/agent-status/contracts/agent-status-types'
+import { makeRepo, makeTab, makeWorktree, PANE_KEY } from './activity-test-fixtures'
 
 const previous: AgentStatusEntry = {
   paneKey: PANE_KEY,
@@ -35,7 +30,7 @@ it.each([
   'the real entry producer keeps A history when B is $state with host start $hostStart',
   ({ state, hostStart, expectedStart }) => {
     const store = createTestStore()
-    store.setState({ agentStatusByPaneKey: { [PANE_KEY]: previous } })
+    store.setState({ agentStatusByPaneKey: acceptedAgentStatuses([[PANE_KEY, previous]]) })
     const result = buildAgentStatusLiveEntry({
       state: store.getState(),
       paneKey: PANE_KEY,
@@ -68,7 +63,7 @@ it.each([
     if (state === 'done') {
       expect(events.map((event) => event.entry.providerSession?.id)).toEqual(['A', 'B'])
       expect(events.at(-1)?.timestamp).toBe(expectedStart)
-      store.setState({ agentStatusByPaneKey: { [PANE_KEY]: entry } })
+      store.setState({ agentStatusByPaneKey: acceptedAgentStatuses([[PANE_KEY, entry]]) })
       const repeated = buildAgentStatusLiveEntry({
         state: store.getState(),
         paneKey: PANE_KEY,
@@ -105,7 +100,7 @@ it('keeps host-owned structured turn history and age when provider metadata chan
     state: 'working',
     structuredHostOwned: true
   }
-  store.setState({ agentStatusByPaneKey: { [PANE_KEY]: entry } })
+  store.setState({ agentStatusByPaneKey: acceptedAgentStatuses([[PANE_KEY, entry]]) })
   const result = buildAgentStatusLiveEntry({
     state: store.getState(),
     paneKey: PANE_KEY,
@@ -143,8 +138,11 @@ it('paired entry equality and publication notice an optional history identity-on
     ]
   }
   expect(agentStatusEntryEqual(a, b)).toBe(false)
-  expect(buildRuntimeMobileAgentStatusProjectionForTests({ [PANE_KEY]: a })).not.toBe(
-    buildRuntimeMobileAgentStatusProjectionForTests({ [PANE_KEY]: b })
-  )
+  // Upstream #42104 publishes whole rows by key, so a replaced row is itself the publication change.
+  expect(
+    acceptedAgentStatuses([[PANE_KEY, a]])
+      .replace([[PANE_KEY, b]])
+      .changes()
+  ).toHaveLength(1)
   expect(agentStatusEntryEqual(b, JSON.parse(JSON.stringify(b)))).toBe(true)
 })

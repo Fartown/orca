@@ -1,6 +1,6 @@
 import { lazy, Suspense } from 'react'
 import { useLocalTaskDispatcherPane } from '@/local-tasks/local-task-dispatcher-pane'
-import { parsePaneKey } from '../../../../shared/stable-pane-id'
+import { parsePaneKey } from '../../../../shared/workspace-layout/stable-pane-id'
 
 // Why lazy: hosts mount the dock on every chat pane, so the cards and what runs a proposal load
 // only once a pane turns out to be the dispatcher's.

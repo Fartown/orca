@@ -1,15 +1,13 @@
 // @vitest-environment happy-dom
 import { beforeEach, expect, it, vi } from 'vitest'
-import type { sendMessageToAgent } from '@/lib/agent-message-send'
+import type { sendMessageToAgent } from '@/lib/agent-session/messaging/agent-message-send'
 import { useAppStore } from '@/store'
-import {
-  makeFolderWorkspace,
-  makeWorktree,
-  TEST_REPO
-} from '@/store/slices/worktrees-slice-test-fixtures'
+import { makeFolderWorkspace } from '@/store/folder-workspaces/folder-workspace.test-fixture'
+import { makeWorktree } from '@/store/slices/worktrees/worktree.test-fixture'
+import { TEST_REPO } from '@/store/repos/repo.test-fixture'
 import type { LocalTaskSessionLink } from '../../../shared/local-tasks/local-task-link-types'
-import type { ExecutionHostId } from '../../../shared/execution-host'
-import type { Tab } from '../../../shared/tab-types'
+import type { ExecutionHostId } from '../../../shared/execution-host/execution-host'
+import type { Tab } from '../../../shared/workspace-layout/tab-groups/tab-types'
 import { localTasksDomainStore } from './local-tasks-domain-store'
 import { sendLocalTaskReply } from './local-task-needs-you-actions'
 import { crossHostLocalTaskSessionInput } from './local-task-cross-host-session-link'
@@ -21,7 +19,7 @@ import {
 const send = vi.hoisted(() =>
   vi.fn(async (_input: Parameters<typeof sendMessageToAgent>[0]) => ({ status: 'sent' as const }))
 )
-vi.mock('@/lib/agent-message-send', () => ({ sendMessageToAgent: send }))
+vi.mock('@/lib/agent-session/messaging/agent-message-send', () => ({ sendMessageToAgent: send }))
 
 const SELF = '11111111-1111-4111-8111-111111111111'
 const SOURCE = '22222222-2222-4222-8222-222222222222'

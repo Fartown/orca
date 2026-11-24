@@ -1,6 +1,6 @@
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
-import type { ChildProcessHandle } from '@orca/process-host/process-spec'
+import type { ChildProcess } from 'node:child_process'
 import { spawnProcess } from '@orca/process-host'
 import { GOAL_DRIVER_ENTRY_FILENAME, GOAL_HOME_ENV } from '../../shared/goals/goal-store-layout'
 
@@ -141,7 +141,7 @@ async function launchGoalDriverChild(
   }
 }
 
-function waitForReady(child: ChildProcessHandle, stderrTail: () => string): Promise<string> {
+function waitForReady(child: ChildProcess, stderrTail: () => string): Promise<string> {
   return new Promise<string>((resolve, reject) => {
     let settled = false
     const finish = (outcome: { key: string } | { error: Error }): void => {

@@ -3,7 +3,7 @@ import {
   getRepoSshConnectionId,
   parseExecutionHostId,
   toSshExecutionHostId
-} from '../../../shared/execution-host'
+} from '../../../shared/execution-host/execution-host'
 import {
   isLocalTaskOwnedHostId,
   localTaskClientHostId,
@@ -21,7 +21,7 @@ import type {
   LocalTaskEvent,
   LocalTaskProject
 } from '../../../shared/local-tasks/local-task-types'
-import type { Repo } from '../../../shared/repo-types'
+import type { Repo } from '../../../shared/repository/repo-types'
 import {
   SELF_LOCAL_TASK_ENDPOINT,
   localTaskClientId,

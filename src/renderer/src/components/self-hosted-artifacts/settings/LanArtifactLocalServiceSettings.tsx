@@ -9,8 +9,8 @@ import {
   SelectTrigger,
   SelectValue
 } from '@/components/ui/select'
-import { SettingsRow } from '@/components/settings/SettingsFormControls'
-import { useConfirmationDialog } from '@/components/confirmation-dialog-context'
+import { SettingsRow } from '@/components/settings/form-controls/SettingsFormControls'
+import { useConfirmationDialog } from '@/components/dismiss/confirmation/confirmation-dialog-context'
 import { translate } from '@/i18n/i18n'
 import {
   configureLocalLanArtifactShare,

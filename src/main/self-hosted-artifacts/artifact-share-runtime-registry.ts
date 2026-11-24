@@ -1,4 +1,4 @@
-import type { RuntimeRpcResponse } from '../../shared/runtime-rpc-envelope'
+import type { RuntimeRpcResponse } from '../../shared/remote-runtime/rpc/runtime-rpc-envelope'
 import type { ArtifactShareConfigureLocalRequest } from '../../shared/self-hosted-artifacts/artifact-share-contract'
 import {
   ARTIFACT_SHARE_ERROR_CODES,

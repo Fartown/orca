@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { mapDispatcherError } from '../runtime/rpc/dispatcher-error-response'
+import { mapDispatcherError } from '../runtime/rpc/responses/dispatcher-error-response'
 import {
   ARTIFACT_SHARE_ERROR_CODES,
   ArtifactShareError

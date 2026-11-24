@@ -1,4 +1,4 @@
-import { folderWorkspaceKey } from '../workspace-scope'
+import { folderWorkspaceKey } from '../workspace/identity/workspace-scope'
 import { worktreeIdsEqual } from '../worktree/id'
 import type { LocalTaskLinks, LocalTaskWorkspaceLink } from './local-task-link-types'
 

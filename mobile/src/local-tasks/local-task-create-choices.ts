@@ -1,5 +1,5 @@
-import { z } from 'zod'
-import { projectGroupIdFromRepoId } from '../../../src/shared/folder-workspace-worktree'
+import * as z from 'zod'
+import { projectGroupIdFromRepoId } from '../../../src/shared/folder-workspaces/folder-workspace-worktree'
 import {
   localTaskCreateBlock,
   localTaskCreateProjectFor,
@@ -11,8 +11,8 @@ import type {
   LocalTaskWorkspaceLink
 } from '../../../src/shared/local-tasks/local-task-link-types'
 import type { LocalTask, LocalTaskProject } from '../../../src/shared/local-tasks/local-task-types'
-import { salvagedOptional, salvagingArray } from '../../../src/shared/zod-salvage'
-import type { ServedProjectSections } from '../worktree/project-sections-operations'
+import { salvagedOptional, salvagingArray } from '../../../src/shared/validation/zod-salvage'
+import type { ServedProjectSections } from '../worktree/project-sections/project-sections-operations'
 import {
   localTaskOrcaProjectForRepo,
   pickLocalTaskStartSetup,

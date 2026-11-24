@@ -1,10 +1,10 @@
 // @vitest-environment happy-dom
 import { cleanup, renderHook, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
-import { useAgentRowConversationName } from '../components/dashboard/use-agent-row-conversation-name'
-import type { DashboardAgentRow } from '../components/dashboard/useDashboardData'
+import { useAgentRowConversationName } from '../components/dashboard/rows/use-agent-row-conversation-name'
+import type { DashboardAgentRow } from '../components/dashboard/rows/dashboard-agent-row'
 import { sessionNameStore } from './session-name-store'
-import type { AiVaultSessionTitlesArgs } from '../../../shared/ai-vault-session-title'
+import type { AiVaultSessionTitlesArgs } from '../../../shared/ai-vault/contracts/ai-vault-session-title'
 
 const state = vi.hoisted(() => ({
   settings: { tabAutoGenerateTitle: true },

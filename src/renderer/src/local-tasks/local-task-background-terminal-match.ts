@@ -1,5 +1,5 @@
-import type { RuntimeTerminalSummary } from '../../../shared/runtime-terminal-contracts'
-import { parsePaneKey } from '../../../shared/stable-pane-id'
+import type { RuntimeTerminalSummary } from '../../../shared/terminal/runtime/runtime-terminal-contracts'
+import { parsePaneKey } from '../../../shared/workspace-layout/stable-pane-id'
 
 /**
  * The terminal recorded for a pane that has never mounted: a session launched in the background

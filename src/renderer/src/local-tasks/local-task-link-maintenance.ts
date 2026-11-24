@@ -1,5 +1,5 @@
 import type { AppState } from '@/store/types'
-import { selectExecutionHostDisplayLabel } from '@/lib/execution-host-display-label'
+import { selectExecutionHostDisplayLabel } from '@/runtime/hosts/display/execution-host-display-label'
 import { isTerminalLocalTaskCategory } from '../../../shared/local-tasks/local-task-model'
 import type {
   LocalTaskLinks,

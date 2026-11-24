@@ -1,5 +1,5 @@
-import { getAppEnvironment } from '../../shared/app-environment'
-import { resolveOrcadInstallRoot } from '../orcad/orcad-app-paths'
+import { getAppEnvironment } from '../../shared/app-lifecycle/app-environment'
+import { resolveOrcadInstallRoot } from '../orcad/host-runtime/orcad-app-paths'
 import { resolveGoalDriverEntry } from './goal-driver-launch'
 import { registerRuntimeGoals } from './goal-runtime-registration'
 

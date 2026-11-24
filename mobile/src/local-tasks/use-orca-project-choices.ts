@@ -4,11 +4,11 @@ import {
   takenLocalTaskPrefixes
 } from '../../../src/shared/local-tasks/local-task-prefix-suggestion'
 import type { LocalTaskProject } from '../../../src/shared/local-tasks/local-task-types'
-import type { UnvalidatedRpcRequestPort } from '../transport/unvalidated-rpc-request-port'
+import type { UnvalidatedRpcRequestPort } from '../transport/rpc/unvalidated-rpc-request-port'
 import {
   projectSectionsRead,
   readServedProjectSections
-} from '../worktree/project-sections-operations'
+} from '../worktree/project-sections/project-sections-operations'
 import type { LocalTaskEndpoint } from './local-task-endpoint'
 import { localTaskSetupsFor } from './local-task-project-setups'
 

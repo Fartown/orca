@@ -17,7 +17,7 @@ function memoryFileSystem(files: Record<string, Uint8Array>, maxRead = 5) {
     open: (uri) => {
       let position = 0
       return {
-        readBytes: (length) => {
+        readBytesSync: (length) => {
           const bytes = files[uri] ?? new Uint8Array()
           const slice = bytes.subarray(position, position + Math.min(length, maxRead))
           position += slice.byteLength

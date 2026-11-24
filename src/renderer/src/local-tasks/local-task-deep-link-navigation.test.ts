@@ -42,7 +42,7 @@ vi.mock('@/store', () => ({
     }
   }
 }))
-vi.mock('@/hooks/ipc-events/runtime-environment-subscription-selection', () => ({
+vi.mock('@/hooks/ipc-events/runtime-events/runtime-environment-subscription-selection', () => ({
   getReachableRuntimeEnvironmentIds: (state: { reachable: string[] }) => state.reachable
 }))
 vi.mock('./local-tasks-domain-store', async (importOriginal) => {

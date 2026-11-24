@@ -3,7 +3,9 @@ import { launchDroppedAiVaultSession, launchRevealedAiVaultSession } from './his
 import { currentTerminalLaunchOrigin, withTerminalLaunchOrigin } from './launch-origin'
 
 const mocked = vi.hoisted(() => ({ launch: vi.fn(), state: {} }))
-vi.mock('@/lib/launch-ai-vault-session', () => ({ launchAiVaultSessionInNewTab: mocked.launch }))
+vi.mock('@/lib/agent-session/resume/history/launch-ai-vault-session', () => ({
+  launchAiVaultSessionInNewTab: mocked.launch
+}))
 vi.mock('@/store', () => ({ useAppStore: { getState: () => mocked.state } }))
 beforeEach(() => vi.clearAllMocks())
 

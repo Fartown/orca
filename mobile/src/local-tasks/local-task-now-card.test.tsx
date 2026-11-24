@@ -20,8 +20,8 @@ vi.mock('lucide-react-native', () => ({
   CornerDownRight: 'CornerDownRight',
   List: 'List'
 }))
-vi.mock('../components/MobileMarkdown', () => ({ MobileMarkdown: 'MobileMarkdown' }))
-vi.mock('../components/AgentStateDot', () => ({ AgentStateDot: () => null }))
+vi.mock('../components/markdown/MobileMarkdown', () => ({ MobileMarkdown: 'MobileMarkdown' }))
+vi.mock('../agents/presentation/AgentStateDot', () => ({ AgentStateDot: () => null }))
 
 const task: LocalTask = {
   id: 'one',

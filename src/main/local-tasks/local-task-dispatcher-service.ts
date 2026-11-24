@@ -20,7 +20,7 @@ import { LocalTaskDispatcher } from './local-task-dispatcher'
 import { runLocalTaskWrite } from './local-task-mutation-receipts'
 import { writeResultSchema } from '../../shared/local-tasks/local-task-result-schemas'
 import type { OrcaRuntimeService } from '../runtime/orca-runtime'
-import { FLOATING_TERMINAL_WORKTREE_ID } from '../../shared/constants'
+import { FLOATING_TERMINAL_WORKTREE_ID } from '../../shared/workspace/identity/floating-workspace-id'
 import {
   LOCAL_TASK_DISPATCHER_SESSION_PREFERENCE_KEY,
   LOCAL_TASK_DISPATCHER_PANE_PREFERENCE_KEY,

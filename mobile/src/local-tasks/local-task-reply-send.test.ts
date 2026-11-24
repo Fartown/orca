@@ -6,8 +6,8 @@ vi.mock('react-native', () => ({
 }))
 
 import type { LocalTaskSessionLink } from '../../../src/shared/local-tasks/local-task-link-types'
-import { FakeSession } from '../transport/mobile-endpoint-supervisor-test-fakes'
-import type { RpcResponse } from '../transport/types'
+import { FakeSession } from '../transport/connection/mobile-endpoint-supervisor-test-fakes'
+import type { RpcResponse } from '../transport/rpc/rpc-wire-types'
 import { sendLocalTaskReply, type LocalTaskReplyReasons } from './local-task-reply-send'
 
 const reasons: LocalTaskReplyReasons = {

@@ -1,7 +1,7 @@
-import { getRepoExecutionHostId } from '../../../shared/execution-host'
-import type { ProjectHostSetup } from '../../../shared/project-types'
-import type { Repo } from '../../../shared/repo-types'
-import type { WorkspaceCreationTargetHint } from '@/lib/project-host-workspace-target'
+import { getRepoExecutionHostId } from '../../../shared/execution-host/execution-host'
+import type { ProjectHostSetup } from '../../../shared/project/project-types'
+import type { Repo } from '../../../shared/repository/repo-types'
+import type { WorkspaceCreationTargetHint } from '@/lib/workspace/creation/project-host-workspace-target'
 
 /** Adds a task's ready host setup only to its own composer, without changing the app catalog. */
 export function resolveLocalTaskComposerCatalog(input: {

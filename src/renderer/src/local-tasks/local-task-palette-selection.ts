@@ -1,6 +1,8 @@
 import { useCallback } from 'react'
 import { toast } from 'sonner'
 import { useAppStore } from '@/store'
+import { useWorktreeJumpPaletteTaskSelection } from '@/components/worktree-jump/tasks/use-worktree-jump-palette-task-selection'
+import type { PaletteItem } from '@/components/worktree-jump/worktree-jump-palette-model'
 import type { Worktree } from '../../../shared/worktree/types'
 import {
   findLocalTaskEffectiveWorkspace,
@@ -90,4 +92,24 @@ export function useLocalTaskPaletteSelection({
       setSelectedItemId
     ]
   )
+}
+
+type TaskSelectionInput = Parameters<typeof useWorktreeJumpPaletteTaskSelection>[0] & {
+  closeModal: () => void
+}
+
+/** Upstream's task selection beside a local task's, with one handler for either kind of row. */
+export function useTaskSelections(input: TaskSelectionInput): {
+  handleSelectTask: ReturnType<typeof useWorktreeJumpPaletteTaskSelection>
+  handleSelectLocalTask: ReturnType<typeof useLocalTaskPaletteSelection>
+  selectTaskItem: (item: Extract<PaletteItem, { type: 'task' | 'local-task' }>) => void
+} {
+  const handleSelectTask = useWorktreeJumpPaletteTaskSelection(input)
+  const handleSelectLocalTask = useLocalTaskPaletteSelection(input)
+  const selectTaskItem = useCallback(
+    (item: Extract<PaletteItem, { type: 'task' | 'local-task' }>) =>
+      item.type === 'local-task' ? handleSelectLocalTask(item) : handleSelectTask(item.result),
+    [handleSelectLocalTask, handleSelectTask]
+  )
+  return { handleSelectTask, handleSelectLocalTask, selectTaskItem }
 }

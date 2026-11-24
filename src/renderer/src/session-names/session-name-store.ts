@@ -2,16 +2,16 @@ import type {
   AiVaultSessionTitlesArgs,
   AiVaultSessionTitlesResult,
   AiVaultSessionTitle
-} from '../../../shared/ai-vault-session-title'
-import { isAiVaultTitleAgent } from '../../../shared/ai-vault-session-title'
-import type { AiVaultSession } from '../../../shared/ai-vault-types'
+} from '../../../shared/ai-vault/contracts/ai-vault-session-title'
+import { isAiVaultTitleAgent } from '../../../shared/ai-vault/contracts/ai-vault-session-title'
+import type { AiVaultSession } from '../../../shared/ai-vault/contracts/ai-vault-types'
 import {
   projectSessionNameSlot,
   sessionNameSlotEqual
 } from '../../../shared/session-names/session-name-slot'
 import { canonicalSessionTitleKey } from '../lib/canonical-session-titles'
-import { settleAiVaultTitleRequestBatches } from '../lib/ai-vault-tab-title-batches'
-import type { ExecutionHostId } from '../../../shared/execution-host'
+import { settleAiVaultTitleRequestBatches } from '../lib/agent-session/history/title-sync/ai-vault-tab-title-batches'
+import type { ExecutionHostId } from '../../../shared/execution-host/execution-host'
 import { hasIndependentScannedSessionIdentity } from './scanned-session-name-identity'
 
 import {

@@ -3,7 +3,7 @@ import { GOAL_METHOD_NAMES } from '../../../../shared/goals/goal-control-contrac
 import type { GoalControlService } from '../../../goals/goal-control-service'
 import type { RpcContext, RpcMethod } from '../core'
 import { GOAL_METHODS, goalFeatureReadinessRegistry } from './goals'
-import { ALL_RPC_METHODS } from './index'
+import { ALL_RPC_METHODS } from './rpc-method-registry'
 
 afterEach(() => {
   goalFeatureReadinessRegistry.setUnavailable('service-stopped')

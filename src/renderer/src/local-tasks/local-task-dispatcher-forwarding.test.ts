@@ -6,7 +6,7 @@ import type {
 import type { LocalTask, LocalTaskEvent } from '../../../shared/local-tasks/local-task-types'
 
 vi.mock('@/store', async () => {
-  const { createTestStore } = await import('@/store/slices/store-test-helpers')
+  const { createTestStore } = await import('@/store/testing/app-store-test-fixture')
   return { useAppStore: createTestStore() }
 })
 

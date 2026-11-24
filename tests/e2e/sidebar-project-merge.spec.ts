@@ -3,17 +3,22 @@ import os from 'node:os'
 import path from 'node:path'
 import { execFileSync } from 'node:child_process'
 import { runProcessSync } from '@orca/process-host'
-import { test, expect } from './helpers/orca-app'
-import { waitForSessionReady, waitForStartupWorktreeRefresh } from './helpers/store'
-import { reserveLocalPort } from './helpers/reserve-local-port'
-import { focusActiveTerminalInput, getTerminalContent } from './helpers/terminal'
-import { decodePairingOffer, encodePairingOffer } from '../../src/shared/pairing'
-import { launchHeadlessPairedRuntimeHost } from './helpers/headless-paired-runtime-host'
-import { launchPairedElectronClient } from './helpers/paired-electron-client'
-import { projectHostSetupProjectionFromRepos } from '../../src/shared/project-host-setup-projection'
-import { quotePosixShell } from '../../src/shared/shell-argument-quoting'
-import { quotePowerShellLiteral } from '../../src/shared/powershell-native-argument'
-import type { Repo } from '../../src/shared/repo-types'
+import { expect } from '@stablyai/playwright-test'
+import { test } from './desktop/electron-fixtures/orca-app'
+import { waitForSessionReady, waitForStartupWorktreeRefresh } from './desktop/renderer-probes/store'
+import { reserveLocalPort } from './remote/managed-ssh/host-lifecycle/reserve-local-port'
+import { focusActiveTerminalInput } from './terminal/input/terminal'
+import { getTerminalContent } from './terminal/layout/terminal-pane-identity'
+import {
+  decodePairingOffer,
+  encodePairingOffer
+} from '../../src/shared/remote-runtime/pairing/pairing'
+import { launchHeadlessPairedRuntimeHost } from './remote/paired-runtime/client-hosts/headless-paired-runtime-host'
+import { launchPairedElectronClient } from './remote/paired-runtime/client-hosts/paired-electron-client'
+import { projectHostSetupProjectionFromRepos } from '../../src/shared/project/host-setup/project-host-setup-projection'
+import { quotePosixShell } from '../../src/shared/shell/launch/shell-argument-quoting'
+import { quotePowerShellLiteral } from '../../src/shared/shell/launch/powershell-native-argument'
+import type { Repo } from '../../src/shared/repository/repo-types'
 import type { Worktree } from '../../src/shared/worktree/types'
 
 test.use({ seedTestRepo: false })
@@ -475,7 +480,7 @@ test('merges local and paired-host folders while preserving the remote workspace
       animations: 'disabled'
     })
     await settings.click()
-    const nameInput = client.page.getByLabel('Display Name', { exact: true })
+    const nameInput = client.page.getByLabel('Display name', { exact: true })
     await expect(nameInput).toHaveValue('workspace')
     await expect(client.page.getByText(remotePath, { exact: true }).first()).toBeVisible()
     await nameInput.fill('workspace-dbox')

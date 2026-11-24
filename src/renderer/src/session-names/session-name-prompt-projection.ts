@@ -1,7 +1,7 @@
-import type { AgentStatusEntry } from '../../../shared/agent-status-types'
-import { deriveGeneratedTabTitle } from '../../../shared/agent-tab-title'
-import { isOrcaDispatchPrompt } from '../../../shared/agent-row-primary-text'
-import type { AiVaultTitleRequest } from '../lib/ai-vault-tab-title-requests'
+import type { AgentStatusEntry } from '../../../shared/agent-status/contracts/agent-status-types'
+import { deriveGeneratedTabTitle } from '../../../shared/agent-status/presentation/agent-tab-title'
+import { isOrcaDispatchPrompt } from '../../../shared/agent-status/presentation/agent-row-primary-text'
+import type { AiVaultTitleRequest } from '../lib/agent-session/history/title-sync/ai-vault-tab-title-requests'
 import type { AppState } from '../store/types'
 
 export function firstSessionNamePrompt(entry: AgentStatusEntry): string | null {
@@ -26,10 +26,7 @@ export function projectSessionPromptTitles(state: AppState, requests: AiVaultTit
     return
   }
   for (const request of requests) {
-    const entry = request.paneKey
-      ? (state.agentStatusByPaneKey[request.paneKey] ??
-        state.retainedAgentsByPaneKey[request.paneKey]?.entry)
-      : undefined
+    const entry = request.paneKey ? state.agentStatusByPaneKey.get(request.paneKey) : undefined
     if (
       !entry ||
       entry.agentType !== request.agent ||

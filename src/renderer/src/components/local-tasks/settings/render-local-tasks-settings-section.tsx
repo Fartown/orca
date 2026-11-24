@@ -1,5 +1,5 @@
-import { SettingsSection } from '@/components/settings/SettingsSection'
-import type { SettingsRenderContext } from '@/components/settings/settings-render-context'
+import { SettingsSection } from '@/components/settings/section-layout/SettingsSection'
+import type { SettingsRenderContext } from '@/components/settings/page/settings-render-context'
 import { translate } from '@/i18n/i18n'
 import {
   getLocalTasksSettingsDescription,

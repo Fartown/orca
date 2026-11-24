@@ -6,6 +6,7 @@ const storeCheck = vi.hoisted(() => vi.fn())
 
 vi.mock('expo-constants', () => ({ default: constants }))
 vi.mock('expo-linking', () => ({ openURL: vi.fn() }))
+vi.mock('../../modules/orca-play-store-presence/src', () => ({ OrcaPlayStorePresence: null }))
 vi.mock('react-native', () => ({
   AppState: { addEventListener: () => ({ remove: vi.fn() }) },
   Platform: { OS: 'android' }
@@ -16,8 +17,9 @@ vi.mock('../storage/app-update-preferences', async (importOriginal) => ({
   saveAppUpdateCheck: vi.fn(async () => {}),
   saveDismissedAppUpdateVersion: vi.fn(async () => {})
 }))
-vi.mock('../app-update/github-release-update-source', () => ({
-  githubReleaseUpdateSource: { check: releaseCheck }
+vi.mock('../app-update/github-release-update-source', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  createGithubReleaseUpdateSource: () => ({ check: releaseCheck })
 }))
 vi.mock('../app-update/app-store-update-source', () => ({
   appStoreUpdateSource: { check: storeCheck }

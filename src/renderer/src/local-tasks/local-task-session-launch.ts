@@ -5,17 +5,17 @@ import { useAppStore } from '@/store'
 import {
   adoptAgentSessionLaunchVerdict,
   planAgentSessionLaunch
-} from '@/lib/agent-session-launch-plan'
-import { newAgentLaunchRequestId } from '@/lib/agent-launch-request-id'
-import { workspaceKindForWorktreeId } from '@/lib/agent-launch-route-input'
-import { launchAgentInNewTab } from '@/lib/launch-agent-in-new-tab'
-import type { LaunchAgentInNewTabResult } from '@/lib/launch-agent-in-new-tab-host-agents'
+} from '@/lib/agent-session/launch/routing/agent-session-launch-plan'
+import { createNonSecureContextUuid as newAgentLaunchRequestId } from '../../../shared/identifiers/non-secure-context-uuid'
+import { workspaceKindForWorktreeId } from '../../../shared/agent-launch/contracts/workspace-launch-kind'
+import { launchLocalTaskAgentTab } from './local-task-agent-tab-launch'
+import type { LaunchAgentInNewTabResult } from '@/lib/agent-session/launch/new-tab/launch-agent-in-new-tab-host-agents'
 import type { StructuredLaunchTerminal } from '@/lib/agent-session/launch/structured-agent-session-launch-admission'
-import type { StructuredAgentLaunchSettlement } from '@/lib/structured-agent-launch-settlement'
-import { activateAndRevealWorkspace } from '@/lib/worktree-activation'
-import { requestBackgroundTerminalWorktreeMount } from '@/components/terminal/background-terminal-worktree-mount'
+import type { StructuredAgentLaunchSettlement } from '@/lib/agent-session/launch/continuation/structured-agent-launch-settlement'
+import { activateAndRevealWorkspace } from '@/lib/workspace/activation/worktree-activation'
+import { requestBackgroundTerminalWorktreeMount } from '@/components/terminal/workspace-mounting/background-terminal-worktree-mount'
 import { selectLocalTaskHostLabel } from '@/local-tasks/local-task-host-label'
-import type { TuiAgent } from '../../../shared/tui-agent'
+import type { TuiAgent } from '../../../shared/agent-launch/catalog/tui-agent'
 import { buildLocalTaskAgentPrompt } from '../../../shared/local-tasks/local-task-agent-prompt'
 import { localTaskAncestors } from '../../../shared/local-tasks/local-task-tree'
 import type { LocalTaskWorkspaceLink } from '../../../shared/local-tasks/local-task-link-types'
@@ -156,7 +156,7 @@ export function launchLocalTaskSession(args: LocalTaskSessionLaunchArgs): boolea
     prompt,
     promptDelivery
   })
-  const result = launchAgentInNewTab({
+  const result = launchLocalTaskAgentTab({
     agent,
     worktreeId,
     prompt,
@@ -168,7 +168,7 @@ export function launchLocalTaskSession(args: LocalTaskSessionLaunchArgs): boolea
       recordTerminal(
         target,
         mountHidden(
-          launchAgentInNewTab({
+          launchLocalTaskAgentTab({
             agent,
             worktreeId,
             prompt,

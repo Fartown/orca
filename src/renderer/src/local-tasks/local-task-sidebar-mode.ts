@@ -1,7 +1,7 @@
 import { LOCAL_TASK_SOURCE_HIDDEN_PREFERENCE_KEY } from '../../../shared/local-tasks/local-task-source-visibility'
 import { useEffect } from 'react'
 import { useAppStore } from '@/store'
-import { SCROLL_TO_CURRENT_WORKSPACE_REVEAL_REQUEST_EVENT } from '@/lib/scroll-to-current-workspace-status'
+import { SCROLL_TO_CURRENT_WORKSPACE_REVEAL_REQUEST_EVENT } from '@/lib/workspace/navigation/scroll-to-current-workspace-status'
 import { localTasksClient } from './local-tasks-runtime-client'
 import {
   localTasksDomainStore,

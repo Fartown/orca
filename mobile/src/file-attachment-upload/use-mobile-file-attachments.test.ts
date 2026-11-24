@@ -1,9 +1,9 @@
 import { createElement } from 'react'
 import { act, create, type ReactTestRenderer } from 'react-test-renderer'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { RpcClient } from '../transport/rpc-client'
+import type { RpcClient } from '../transport/rpc/rpc-client-contract'
 import { memoryFile, rpcError, rpcOk } from './file-attachment-test-fixtures'
-import type { RpcResponse } from '../transport/types'
+import type { RpcResponse } from '../transport/rpc/rpc-wire-types'
 import type { FileAttachmentPicker, PickedAttachmentFile } from './picked-attachment-file'
 
 const picker = vi.hoisted((): { current: FileAttachmentPicker | null } => ({ current: null }))

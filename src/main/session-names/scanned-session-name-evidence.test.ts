@@ -1,10 +1,10 @@
 import { beforeAll, expect, it, vi } from 'vitest'
-import { AI_VAULT_SERVICE_PROTOCOL_VERSION } from '../ai-vault/session-scanner-service-protocol'
+import { AI_VAULT_SERVICE_PROTOCOL_VERSION } from '../ai-vault/scan-service/session-scanner-service-protocol'
 
 const scanAiVaultSessions = vi.hoisted(() => vi.fn())
 
 vi.mock('../ai-vault/session-scanner', () => ({ scanAiVaultSessions }))
-vi.mock('../ai-vault/session-parse-cache-persistence', () => ({
+vi.mock('../ai-vault/parse-cache/session-parse-cache-persistence', () => ({
   flushSessionParseCachePersist: vi.fn(() => Promise.resolve()),
   initSessionParseCachePersistence: vi.fn()
 }))
@@ -27,7 +27,7 @@ beforeAll(async () => {
     sent.push(message)
     return true
   }) as typeof process.send
-  await import('../ai-vault/session-scanner-service-entry')
+  await import('../ai-vault/scan-service/session-scanner-service-entry')
   emit({ type: 'init', protocol: AI_VAULT_SERVICE_PROTOCOL_VERSION })
 })
 

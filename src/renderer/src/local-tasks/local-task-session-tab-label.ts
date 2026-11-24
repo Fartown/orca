@@ -1,9 +1,9 @@
-import { resolvePinnedTabLabel } from '@/store/pinned-tab-close-guard'
+import { resolvePinnedTabLabel } from '@/store/slices/tabs/closing/pinned-tab-close-guard'
 import type { AppState } from '@/store/types'
 import { firstSessionNamePrompt } from '@/session-names/session-name-prompt-projection'
-import { resolveAgentConversationLiveTitle } from '../../../shared/agent-row-conversation-name'
-import { deriveGeneratedTabTitle } from '../../../shared/agent-tab-title'
-import { parsePaneKey } from '../../../shared/stable-pane-id'
+import { resolveAgentConversationLiveTitle } from '../../../shared/agent-status/presentation/agent-row-conversation-name'
+import { deriveGeneratedTabTitle } from '../../../shared/agent-status/presentation/agent-tab-title'
+import { parsePaneKey } from '../../../shared/workspace-layout/stable-pane-id'
 import type { LocalTaskSessionLink } from '../../../shared/local-tasks/local-task-link-types'
 
 function tabLabel(state: AppState, link: LocalTaskSessionLink): string | null {
@@ -27,7 +27,7 @@ function tabLabel(state: AppState, link: LocalTaskSessionLink): string | null {
  * host out of contact has none, and nothing is asked for it.
  */
 function agentStatusLabel(state: AppState, link: LocalTaskSessionLink): string | null {
-  const entry = link.paneKey ? state.agentStatusByPaneKey[link.paneKey] : undefined
+  const entry = link.paneKey ? state.agentStatusByPaneKey.get(link.paneKey) : undefined
   if (!entry) {
     return null
   }

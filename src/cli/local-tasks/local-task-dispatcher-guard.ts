@@ -1,6 +1,6 @@
 import { z } from 'zod'
-import type { CommandHandler } from '../dispatch'
-import { RuntimeClientError } from '../runtime/types'
+import type { CommandHandler } from '../dispatch/dispatch'
+import { RuntimeClientError } from '../runtime/connection/types'
 import { assertTaskLibraryOpen, type TaskLibraryRpc } from './local-task-cli-library'
 
 export const DISPATCHER_WRITE_REFUSED =

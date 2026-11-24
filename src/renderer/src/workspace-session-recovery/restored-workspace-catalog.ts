@@ -1,13 +1,13 @@
-import type { Repo } from '../../../shared/repo-types'
+import type { Repo } from '../../../shared/repository/repo-types'
 import {
   getRepoExecutionHostId,
   parseExecutionHostId,
   type ExecutionHostId
-} from '../../../shared/execution-host'
+} from '../../../shared/execution-host/execution-host'
 import { restorableWorkspaceIds } from '../../../shared/workspace-session-recovery/restorable-workspaces'
 import type { AppState } from '../store/types'
-import { selectWorktreesByRepo } from '../store/workspace-record-selectors'
-import { buildRuntimeSessionPlaceholders } from '../store/terminals/workspace-terminal-placeholders'
+import { selectWorktreesByRepo } from '../store/workspaces/catalog/workspace-record-fields'
+import { buildRuntimeSessionPlaceholders } from '../store/terminals/hydration/workspace-terminal-placeholders'
 
 type RecoveryState = Pick<
   AppState,

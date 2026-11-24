@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { MAX_FILE_RANGE_READ_BYTES } from '../file-range-read'
+import { MAX_FILE_RANGE_READ_BYTES } from '../file-content/file-range-read'
 
 export const DocumentPreviewChunkRequest = z.object({
   offset: z.number().int().nonnegative(),

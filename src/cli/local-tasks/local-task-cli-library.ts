@@ -17,8 +17,8 @@ import type {
   LocalTaskProject,
   LocalTaskStatusDef
 } from '../../shared/local-tasks/local-task-types'
-import type { RuntimeRpcSuccess } from '../../shared/runtime-rpc-envelope'
-import { RuntimeClientError } from '../runtime/types'
+import type { RuntimeRpcSuccess } from '../../shared/remote-runtime/rpc/runtime-rpc-envelope'
+import { RuntimeClientError } from '../runtime/connection/types'
 
 /** The slice of the runtime client these commands use; the task library lives on that Orca. */
 export type TaskLibraryRpc = {

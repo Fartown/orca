@@ -4,23 +4,23 @@ import {
   selectDetectedWorktreesByRepo,
   selectFolderWorkspaces,
   selectWorktreesByRepo
-} from '@/store/workspace-record-selectors'
-import { getExecutionHostIdForWorktree } from '@/lib/worktree-runtime-owner'
+} from '@/store/workspaces/catalog/workspace-record-fields'
+import { getExecutionHostIdForWorktree } from '@/lib/workspace/ownership/worktree-runtime-owner'
 import {
   getRepoWorkspaceCreationTargetHint,
   type WorkspaceCreationTargetHint
-} from '@/lib/project-host-workspace-target'
+} from '@/lib/workspace/creation/project-host-workspace-target'
 import {
   LOCAL_EXECUTION_HOST_ID,
   getRepoExecutionHostId,
   normalizeExecutionHostId,
   type ExecutionHostId
-} from '../../../shared/execution-host'
-import { getProjectHostSetupForRepo } from '../../../shared/project-host-setup-lookup'
-import { findFolderWorkspaceCandidateRepos } from '../../../shared/folder-workspace-execution-host'
-import { isFolderRepo } from '../../../shared/repo-kind'
-import type { Repo } from '../../../shared/repo-types'
-import { parseWorkspaceKey } from '../../../shared/workspace-scope'
+} from '../../../shared/execution-host/execution-host'
+import { getProjectHostSetupForRepo } from '../../../shared/project/host-setup/project-host-setup-lookup'
+import { findFolderWorkspaceCandidateRepos } from '../../../shared/folder-workspaces/folder-workspace-execution-host'
+import { isFolderRepo } from '../../../shared/repository/repo-kind'
+import type { Repo } from '../../../shared/repository/repo-types'
+import { parseWorkspaceKey } from '../../../shared/workspace/identity/workspace-scope'
 import { getRepoIdFromWorktreeId } from '../../../shared/worktree/id'
 import type { Worktree } from '../../../shared/worktree/types'
 import type { LocalTaskWorkspaceLink } from '../../../shared/local-tasks/local-task-link-types'

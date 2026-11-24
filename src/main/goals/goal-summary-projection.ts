@@ -14,7 +14,7 @@ import {
   type GoalRecoveryRecord,
   type LegacyGoalRecord
 } from '../../shared/goals/goal-store-records'
-import type { PtyLivenessVerdict } from '../../shared/pty-liveness-verdict'
+import type { PtyLivenessVerdict } from '../../shared/terminal/pty/lifecycle/pty-liveness-verdict'
 import type { GoalTerminalSnapshot } from '../../shared/goals/goal-host-facts'
 import { projectTurnEvidence, type GoalTurnEvidence, type GoalTurnRow } from './goal-turn-evidence'
 

@@ -1,14 +1,14 @@
 import { toast } from 'sonner'
 import { translate } from '@/i18n/i18n'
-import { newAgentLaunchRequestId } from '@/lib/agent-launch-request-id'
-import { launchAgentInNewTab } from '@/lib/launch-agent-in-new-tab'
-import { findActiveRuntimeTerminal } from '@/lib/active-agent-note-target'
-import { activateTerminalTabOnOwner } from '@/lib/terminal-tab-owner-activation'
-import { runtimeEnvironmentSupportsCapability } from '@/runtime/runtime-rpc-client'
+import { createNonSecureContextUuid as newAgentLaunchRequestId } from '../../../shared/identifiers/non-secure-context-uuid'
+import { launchLocalTaskAgentTab } from './local-task-agent-tab-launch'
+import { findActiveRuntimeTerminal } from '@/lib/agent-session/messaging/terminal/active-agent-note-target'
+import { activateTerminalTabOnOwner } from '@/lib/workspace/tabs/terminal-tab-owner-activation'
+import { runtimeEnvironmentSupportsCapability } from '@/runtime/rpc/compatibility/runtime-capability-proof'
 import { useAppStore } from '@/store'
 import type { AppState } from '@/store/types'
-import { makePaneKey, parsePaneKey } from '../../../shared/stable-pane-id'
-import type { TuiAgent } from '../../../shared/tui-agent'
+import { makePaneKey, parsePaneKey } from '../../../shared/workspace-layout/stable-pane-id'
+import type { TuiAgent } from '../../../shared/agent-launch/catalog/tui-agent'
 import { LOCAL_TASKS_DISPATCHER_HOST_CAPABILITY } from '../../../shared/local-tasks/local-tasks-capability'
 import { localTaskDispatcherClientFor } from './local-task-dispatcher-client'
 import { localTaskEndpointEnvironmentId, localTaskEndpointTarget } from './local-task-endpoints'
@@ -199,7 +199,7 @@ export async function openLocalTaskDispatcher(
     if (endpoint === 'local') {
       useAppStore.getState().setFloatingWorkspacePanelOpen(true)
     }
-    const launched = launchAgentInNewTab({
+    const launched = launchLocalTaskAgentTab({
       requestId: newAgentLaunchRequestId(),
       agent,
       worktreeId,

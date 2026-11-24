@@ -1,7 +1,7 @@
 import { toast } from 'sonner'
 import { translate } from '@/i18n/i18n'
 import { useAppStore } from '@/store'
-import { getReachableRuntimeEnvironmentIds } from '@/hooks/ipc-events/runtime-environment-subscription-selection'
+import { getReachableRuntimeEnvironmentIds } from '@/hooks/ipc-events/runtime-events/runtime-environment-subscription-selection'
 import { localTaskClientId, localTaskEndpointEnvironmentId } from './local-task-endpoints'
 import { subscribeLocalTaskAppStore } from './local-task-app-store-subscription'
 import { localTasksDomainStore } from './local-tasks-domain-store'

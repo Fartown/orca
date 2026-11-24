@@ -3,6 +3,7 @@ import { IntegrationSettingsUpdateSection } from '../integration-builds/Integrat
 import { useEffect, useState } from 'react'
 import {
   appUpdateChecker,
+  canCheckForAppUpdates,
   installedAppVersion,
   openAppUpdate,
   useAppUpdateState
@@ -55,7 +56,7 @@ function OfficialSettingsAppUpdateSection() {
       now={now}
       checkStatus={checkStatus}
       onUpdate={openAppUpdate}
-      onCheck={runCheck}
+      onCheck={canCheckForAppUpdates ? runCheck : undefined}
     />
   )
 }

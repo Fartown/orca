@@ -1,5 +1,5 @@
 import { useAppStore } from '@/store'
-import { selectExecutionHostDisplayLabel } from '@/lib/execution-host-display-label'
+import { selectExecutionHostDisplayLabel } from '@/runtime/hosts/display/execution-host-display-label'
 import { localTaskDispatcherClientFor } from './local-task-dispatcher-client'
 import { createLocalTaskDispatcherForwarding } from './local-task-dispatcher-forwarding'
 import { subscribeLocalTaskDispatcherChanges } from './local-task-dispatcher-changes'

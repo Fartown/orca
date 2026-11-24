@@ -1,5 +1,5 @@
-import type { ExecutionHostId } from '../execution-host'
-import { normalizeWorkspaceSessionKeyToWorkspaceId } from '../workspace-scope'
+import type { ExecutionHostId } from '../execution-host/execution-host'
+import { normalizeWorkspaceSessionKeyToWorkspaceId } from '../workspace/identity/workspace-scope'
 
 type WorkspaceContent = {
   tabsByWorktree?: Readonly<Record<string, readonly unknown[]>>
