@@ -30,37 +30,12 @@ import type {
   ActivityGroupBy,
   ThreadReadFilter
 } from '../../../../../shared/agent-status/presentation/agents-view-thread-filters'
-import type {
-  ActivityEvent,
-  ActivityLiveAgentSnapshot,
-  ActivityThreadGroup,
-  AgentPaneThread
-} from './activity-thread-types'
-import { activitySessionTitleTarget, applyActivitySessionTitles } from './activity-thread-builder'
-import { useActivitySessionNames } from '@/session-names/use-activity-session-names'
+import type { ActivityThreadGroup, AgentPaneThread } from './activity-thread-types'
+import { useNamedAgentPaneThreads } from '@/session-names/use-named-agent-pane-threads'
 
 const EMPTY_PANE_KEYS: ReadonlySet<string> = new Set()
 const EMPTY_THREADS: AgentPaneThread[] = []
 const EMPTY_GROUPS: ActivityThreadGroup[] = []
-
-type SessionNameTargets = {
-  events: ActivityEvent[]
-  live: Record<string, ActivityLiveAgentSnapshot>
-}
-const EMPTY_SESSION_NAME_TARGETS: SessionNameTargets = { events: [], live: {} }
-
-function collectSessionNameTargets(threads: AgentPaneThread[]): SessionNameTargets {
-  const events: ActivityEvent[] = []
-  const live: Record<string, ActivityLiveAgentSnapshot> = {}
-  for (const thread of threads) {
-    events.push(...thread.events)
-    const target = activitySessionTitleTarget(thread)
-    if (target && thread.currentAgentEntry && !('id' in target)) {
-      live[thread.paneKey] = target
-    }
-  }
-  return { events, live }
-}
 
 /** Every Activity thread before any view filter, read from the window's shared projection. */
 export function useAllAgentPaneThreads({
@@ -129,21 +104,7 @@ export function useAgentPaneThreads(args: {
     badgeOnly
   })
   // Fork (session-names): the shared projection is per window, so public names apply per reader.
-  const sessionNameTargets = useMemo(
-    () => (badgeOnly ? EMPTY_SESSION_NAME_TARGETS : collectSessionNameTargets(projectedThreads)),
-    [projectedThreads, badgeOnly]
-  )
-  const resolveSessionTitle = useActivitySessionNames(
-    sessionNameTargets.events,
-    sessionNameTargets.live
-  )
-  const allThreads = useMemo(
-    () =>
-      badgeOnly
-        ? projectedThreads
-        : applyActivitySessionTitles(projectedThreads, resolveSessionTitle),
-    [projectedThreads, resolveSessionTitle, badgeOnly]
-  )
+  const allThreads = useNamedAgentPaneThreads(projectedThreads, { enabled: !badgeOnly })
   const defaultHostId = useAgentPaneThreadsDefaultHostId()
   const storeData = useMemo(
     () => ({ ...unscopedStoreData, defaultHostId }),

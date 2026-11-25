@@ -8,6 +8,11 @@ import {
   type ConversationNameTab
 } from '../../../../../shared/agent-status/presentation/agent-row-conversation-name'
 import type { AgentType } from '../../../../../shared/agent-status/contracts/agent-status-types'
+import type { AiVaultSessionTitle } from '../../../../../shared/ai-vault/contracts/ai-vault-session-title'
+import {
+  mergeWorktreeAgentRowProviderTitle,
+  resolveWorktreeAgentRowProviderNames
+} from '../../../../session-names/worktree-agent-row-provider-names'
 import { structuredAgentSessionIdFromTabId } from '../../../../../shared/agent-session/view/structured-agent-session-tab-id'
 import type { TerminalTab } from '../../../../../shared/workspace-layout/terminal-tab-types'
 import type { OrchestrationDb } from '../../db/orchestration-db'
@@ -65,7 +70,7 @@ type SessionLookup = RuntimeSenderNameDeps['getWorkspaceSession']
 type AgentRowNamingSource = Pick<
   RuntimeWorktreeAgentSource,
   'paneKey' | 'tabId' | 'worktreeId' | 'ptyId' | 'agentType' | 'providerSessionId'
->
+> & { connectionId?: string | null }
 
 export class RuntimeOrchestrationSenderNames {
   private readonly launchInstallation: { database: OrchestrationDb | null } = { database: null }
@@ -128,8 +133,14 @@ export class RuntimeOrchestrationSenderNames {
     }
   }
 
+  async worktreePsAgentRowNamer(rowSources: ReadonlyMap<string, RuntimeWorktreeAgentSource>) {
+    return this.agentRowNamer(await resolveWorktreeAgentRowProviderNames(rowSources))
+  }
+
   /** Names one worktree.ps pass's rows as desktop's compact row does; null keeps the phone's message fallback. */
-  agentRowNamer(): (source: AgentRowNamingSource) => string | null {
+  agentRowNamer(
+    resolvedSessionTitles?: ReadonlyMap<string, AiVaultSessionTitle>
+  ): (source: AgentRowNamingSource) => string | null {
     // A pass reads the setting and each worktree's session at most once, however many rows it lists.
     let generatedTitlesEnabled: boolean | undefined
     const sessions = new Map<string, MirroredTabs | null | undefined>()
@@ -152,14 +163,16 @@ export class RuntimeOrchestrationSenderNames {
       }
       const record = { worktreeId, tabId, ptyId: source.ptyId ?? null }
       const pane = this.paneNaming(record, source.paneKey, session)
+      const tab = mergeWorktreeAgentRowProviderTitle(pane.tab, source, resolvedSessionTitles)
       generatedTitlesEnabled ??= readGeneratedTitlesEnabled(this.deps.getStore())
-      return pane.tab
+      const options = { providerSessionId: source.providerSessionId }
+      return tab
         ? getAgentRowConversationName(
-            pane.tab,
+            tab,
             source.agentType,
             generatedTitlesEnabled,
             pane.paneTitle,
-            { providerSessionId: source.providerSessionId }
+            options
           )
         : null
     }

@@ -1580,7 +1580,9 @@
         "src/renderer/src/lib/agent-session/history/title-sync/ai-vault-tab-title-requests.ts",
         "src/renderer/src/components/activity/events/activity-event-builder.ts",
         "src/shared/repository/repo-types.ts",
-        "src/shared/worktree/types.ts"
+        "src/shared/worktree/types.ts",
+        "src/main/ai-vault/session-titles/session-title-resolver.ts",
+        "src/main/runtime/workspaces/process-listing/runtime-worktree-agent-source.ts"
       ],
       "policyId": "session-names-native-feature",
       "ownedPaths": [
@@ -1634,8 +1636,23 @@
         },
         {
           "file": "src/renderer/src/components/activity/threads/use-agent-pane-threads.ts",
-          "mustContain": "useActivitySessionNames",
+          "mustContain": "useNamedAgentPaneThreads",
           "why": "mounted Activity consumers subscribe to exact session name changes"
+        },
+        {
+          "file": "src/renderer/src/components/activity/paired-clients/agent-list-verdict-publisher.ts",
+          "mustContain": "useNamedAgentPaneThreads",
+          "why": "paired clients publish the same public session names as desktop tabs and Activity"
+        },
+        {
+          "file": "src/main/runtime/workspaces/process-listing/workspace-process-listing.ts",
+          "mustContain": "worktreePsAgentRowNamer",
+          "why": "headless serve and managed SSH orcad hosts resolve local provider session names for worktree.ps rows"
+        },
+        {
+          "file": "src/main/runtime/orchestration/mailbox/senders/runtime-orchestration-sender-names.ts",
+          "mustContain": "mergeWorktreeAgentRowProviderTitle",
+          "why": "worktree.ps conversationName uses host-resolved provider names when no renderer synced aiVaultTitle"
         },
         {
           "file": "src/renderer/src/components/activity/threads/activity-thread-presentation.ts",
@@ -2058,6 +2075,8 @@
         "src/renderer/src/session-names/activity-prompt-priority.test.ts",
         "src/renderer/src/session-names/session-name-state-clock.test.ts",
         "src/renderer/src/session-names/dashboard-row-conversation-name.test.ts",
+        "src/main/session-names/worktree-agent-row-provider-names.test.ts",
+        "src/renderer/src/session-names/agent-list-verdict-session-names.test.tsx",
         "src/shared/session-names/agent-row-conversation-name.test.ts"
       ],
       "checks": [

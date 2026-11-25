@@ -3,8 +3,8 @@ title: 会话命名与身份保护
 slug: 会话命名与身份保护
 status: implementing
 created: 2026-09-08
-updated: 2026-11-03
-external_ids: []
+updated: 2026-11-25
+external_ids: ['Fartown/orca#158']
 ---
 
 # 会话命名与身份保护 Journal
@@ -539,3 +539,16 @@ external_ids: []
 - 验证证据：pnpm tc、全部 16 个功能的 38 条 checks、check:fork-features、check:fork-docs、本地化与 RPC 目录校验通过；隐藏 Electron 本机与 SSH（127.0.0.1:2222 上的 orcad）真机验收 5/5 通过，证据在 `.docs/issues-board-removal-ui-validation/2026-10-23/`。
 - 未解决问题：无。
 - 下一步：随 Issues 下线 PR 合入 fork/integration。
+
+## 2026-11-25 修复配对端智能体列表标题未走统一会话命名（testing）
+
+- 本轮目标：修复手机端「智能体」页行标题与桌面 Tab 标题不一致的问题（例如追问句「你觉得呢」覆盖手动改名、Provider 原生名或原生聊天保存名），覆盖桌面发布链路与无头 `orca serve` / SSH `orcad` 的 `worktree.ps` 链路。
+- 完成内容：
+  1. 抽离 `useNamedAgentPaneThreads` hook，`useAgentPaneThreads` 与 `AgentListVerdictPublisher` 共用同一套公共会话命名应用层，使发布到配对端（手机智能体页、Web 等）的 `verdict.title` 与 `readPublishedAgentPaneThreads()` 覆盖单 pane 手动改名、Provider 原生名、首个有效提示词回退、原生聊天保存名、分屏隔离及 SSH 执行主机作用域。
+  2. 真机联调发现第二处漏口：无头 `orca serve` / 托管 SSH `orcad` 主机没有桌面渲染器同步 `aiVaultTitle`，其 `worktree.ps`（直连或经桌面 `mobileRelay.hosts.worktrees` 转发）返回的 `conversationName` 为空导致手机端退回显示 `prompt`（「你觉得呢」）。新增 `resolveWorktreeAgentRowProviderNames` 与 `mergeWorktreeAgentRowProviderTitle`，在 `getWorktreePs` 中按主机本地归属（仅 `connectionId === null`）有界解析 AI Vault Provider 原生名并合并入 `agentRowNamer()`，同时保持 D-010 手动改名优先与分屏隔离。
+- 代码或文档变更：新增 `src/renderer/src/session-names/use-named-agent-pane-threads.ts`、`src/renderer/src/session-names/agent-list-verdict-session-names.test.tsx`、`src/main/session-names/worktree-agent-row-provider-names.ts`、`src/main/session-names/worktree-agent-row-provider-names.test.ts`；更新 `src/renderer/src/components/activity/threads/use-agent-pane-threads.ts`、`src/renderer/src/components/activity/paired-clients/agent-list-verdict-publisher.ts`、`src/main/runtime/workspaces/process-listing/workspace-process-listing.ts`、`src/main/runtime/orchestration/mailbox/senders/runtime-orchestration-sender-names.ts`；在 `config/fork-features.jsonc` 和 `config/architecture-policies.jsonc` 登记接缝、依赖、白名单与回归测试；更新本 Journal 并重生成 `docs/issue/README.md`。
+- 验证证据：
+  - 单元与门禁：`pnpm tc`、`pnpm check:fork-features`、`pnpm check:architecture-policies`、`pnpm check:fork-docs`、三项本地化校验、`pnpm check:changed --base=origin/fork/integration` 全量 39/39 通过；`agent-list-verdict-session-names.test.tsx` 7/7、`worktree-agent-row-provider-names.test.ts` 3/3、`runtime-orchestration-sender-names.test.ts` 7/7、Activity/session-names 前 10 组 checks 通过；第 11 组中未触碰的既有用例 `src/main/agent-hooks/server/testing/presence/server-agent-presence.test.ts` 失败（`expected 'unverifiable' to be 'exited'`）。
+  - 真实应用验收（隐藏 Electron `ORCA_BACKGROUND_LAUNCH=1` + `xvfb-run` + 隔离 `HOME`/`userData` + 真实配对手机客户端）：2/2 通过，证据归档于 `.docs/agent-list-session-names-ui-validation/2026-11-25/`（本地桌面 Tab + `worktree.ps` 验证 Provider 名「日本区域页面问题」及手动改名「手动改名会话」均不落入追问句「你觉得呢」；远端独立 `orca serve` + 桌面镜像 + 手机 `mobileRelay.hosts.worktrees` 验证远端主机 Provider 名「远端原生会话名」端到端一致）。
+- 未解决问题：托管 SSH `orcad` 模板构建因拉取 `quay.io/pypa/manylinux_2_28_x86_64` 超时未起 Docker SSH 容器（同路径已由无头 `orca serve` 真机与 SSH 作用域单测覆盖）；既有用例 `server-agent-presence.test.ts` 失败需另行排查。
+- 下一步：创建关联 `Fartown/orca#158` 的 PR 合入 `fork/integration`。

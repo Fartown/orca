@@ -9,6 +9,7 @@ import { classifyChildAgents } from '../threads/activity-thread-child-agent'
 import { activityThreadStatusId } from '../threads/activity-thread-presentation'
 import type { AgentPaneThread } from '../threads/activity-thread-types'
 import { useAllAgentPaneThreads } from '../threads/use-agent-pane-threads'
+import { useNamedAgentPaneThreads } from '@/session-names/use-named-agent-pane-threads'
 
 const PUBLISH_INTERVAL_MS = 250
 
@@ -101,7 +102,9 @@ export function publishAgentListNow(): Promise<AgentListPublication> {
 export default function AgentListVerdictPublisher(): null {
   const ready = useAppStore((s) => s.persistedUIReady)
   // The unscoped list: view filters and the child-agent toggle only narrow what one surface shows.
-  const { storeData, allThreads } = useAllAgentPaneThreads()
+  const { storeData, allThreads: projectedThreads } = useAllAgentPaneThreads()
+  // Fork (session-names): paired clients show the same public name as the desktop tab.
+  const allThreads = useNamedAgentPaneThreads(projectedThreads)
   const [renderRequest, setRenderRequest] = useState(0)
   useEffect(() => {
     requestRender = () => setRenderRequest((count) => count + 1)
