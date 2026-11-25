@@ -66,7 +66,7 @@ export function buildHeadlessMobileSessionTerminalTabs(
               generatedTitlesEnabled,
               fallbackTitle
             )
-          : tab.customTitle?.trim() || liveTitle || fallbackTitle
+          : liveTitle || fallbackTitle
         return [
           {
             type: 'terminal' as const,
@@ -74,7 +74,7 @@ export function buildHeadlessMobileSessionTerminalTabs(
             parentTabId: tab.id,
             leafId,
             title,
-            customTitle: tab.customTitle?.trim() || null,
+            customTitle: tabWide ? tab.customTitle?.trim() || null : null,
             ...(tabWide && tab.quickCommandLabel?.trim()
               ? { quickCommandLabel: tab.quickCommandLabel.trim() }
               : {}),

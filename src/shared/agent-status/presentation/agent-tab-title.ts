@@ -1,4 +1,5 @@
 import { isEligibleSessionNamePrompt } from '../../session-names/session-name-candidate-quality'
+import { extractSessionNamePromptSource } from '../../session-names/session-name-prompt-source'
 import { getAgentPromptLabel } from './agent-row-primary-text'
 
 export const GENERATED_TAB_TITLE_MAX_LENGTH = 40
@@ -72,7 +73,10 @@ function isGeneratedTabTitleWhitespace(code: number): boolean {
 
 export function deriveGeneratedTabTitle(prompt: string): string | null {
   // Bound renderer title cleanup before scanning paste-sized prompts.
-  const promptPreview = prompt.slice(0, GENERATED_TAB_TITLE_SOURCE_SCAN_LIMIT)
+  const promptPreview = extractSessionNamePromptSource(prompt).slice(
+    0,
+    GENERATED_TAB_TITLE_SOURCE_SCAN_LIMIT
+  )
   if (!isEligibleSessionNamePrompt(promptPreview)) {
     return null
   }

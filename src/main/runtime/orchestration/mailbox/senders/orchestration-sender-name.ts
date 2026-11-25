@@ -72,10 +72,8 @@ export function terminalNameInputs(tab: MirroredTerminalTab): MirroredTerminalTa
     defaultTitle: tab.defaultTitle,
     aiVaultTitle: provider
       ? {
-          agent: provider.agent,
-          sessionId: provider.sessionId,
-          title: provider.title,
-          ...(provider.kind ? { kind: provider.kind } : {})
+          ...provider,
+          ...(provider.providerName ? { providerName: { ...provider.providerName } } : {})
         }
       : provider
   }

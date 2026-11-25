@@ -9,6 +9,7 @@ import {
   subscribeStructuredChatTabNames,
   getStructuredChatTabNames
 } from '@/runtime/native-chat/naming/structured-chat-name-observation'
+import { subscribeSessionNameDisplay } from '@/session-names/session-name-display'
 import { revealDashboardAgent } from '../navigation/reveal-dashboard-agent'
 import type { RepoIcon } from '../../../../../shared/repository/appearance/repo-icon'
 import {
@@ -81,6 +82,7 @@ export function dashboardSnapshotInputsChanged(
 /** Keep subscription outside the effect to avoid react-doctor’s cleanup false positive; callers must invoke the returned disposer. */
 export function watchSnapshotInputs(onChanged: () => void): () => void {
   const stopNames = subscribeStructuredChatTabNames(onChanged)
+  const stopSessionNames = subscribeSessionNameDisplay(onChanged)
   const unsubscribeStore = subscribeAppStoreWithStatuses(
     (state, previousState, statuses, previousStatuses) => {
       // Why: unrelated high-frequency store writes must not rebuild a cross-worktree snapshot.
@@ -91,6 +93,7 @@ export function watchSnapshotInputs(onChanged: () => void): () => void {
   )
   return () => {
     stopNames()
+    stopSessionNames()
     unsubscribeStore()
   }
 }

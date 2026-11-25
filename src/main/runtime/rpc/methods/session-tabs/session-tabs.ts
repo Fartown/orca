@@ -19,6 +19,7 @@ import {
   projectSessionTabUnreadForClient,
   sessionTabUnreadMarks
 } from './session-tab-unread-projection'
+import { warmHeadlessMobileSessionTabTitles } from '../../../../session-names/headless-mobile-tab-session-title'
 import { prepareStructuredTabsIfSupported } from './structured-session-tab-restore'
 import '../../../../../shared/remote-runtime/protocol/protocol-version'
 import { createSessionTabsTabDeltaEncoder } from '../../../../../shared/remote-runtime/session-graph/session-tabs-tab-delta'
@@ -35,16 +36,14 @@ export const SESSION_TAB_METHODS = [
     params: WorktreeTabSelector,
     handler: async (params, { runtime, pairedDeviceId, clientKind, clientCapabilities }) => {
       await prepareStructuredTabsIfSupported({ runtime, clientKind, clientCapabilities })
+      const snapshot = await runtime.listMobileSessionTabs(params.worktree, pairedDeviceId, {
+        includeInitialSurfaceLaunch: true,
+        includeAgentSenders: clientKind !== 'mobile'
+      })
+      await warmHeadlessMobileSessionTabTitles([snapshot], clientKind)
       const result = projectSessionTabUnreadForClient(
         runtime,
-        projectSessionTabsForClient(
-          await runtime.listMobileSessionTabs(params.worktree, pairedDeviceId, {
-            includeInitialSurfaceLaunch: true,
-            includeAgentSenders: clientKind !== 'mobile'
-          }),
-          clientKind,
-          clientCapabilities
-        ),
+        projectSessionTabsForClient(snapshot, clientKind, clientCapabilities),
         clientKind
       )
       runtime.observeClientHostedPageSnapshots?.([result], pairedDeviceId)

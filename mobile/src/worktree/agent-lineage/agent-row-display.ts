@@ -5,6 +5,7 @@ import { resolveDecayedAgentRowState } from '../../../../src/shared/agent-status
 import { getAgentRowPrimaryText } from '../../../../src/shared/agent-status/presentation/agent-row-primary-text'
 import type { AgentListStatus } from '../../../../src/shared/agent-status/presentation/agent-list-status'
 import { translate } from '../../i18n/mobile-i18n'
+import { resolveMobileWorktreeAgentRowName } from '../../session-names/mobile-session-names'
 
 // Desktop AgentStateDot's vocabulary.
 export type AgentDotState = AgentListStatus
@@ -70,15 +71,18 @@ export function agentDisplayForkedLead(
   row: RuntimeWorktreeAgentRow,
   label: string
 ): { name: string; rest: string } | null {
-  const name = row.conversationName?.trim()
-  return row.conversationForked && name && label.startsWith(name)
+  const name = resolveMobileWorktreeAgentRowName(row)
+  return row.conversationForked &&
+    name &&
+    (!row.conversationName?.trim() || name === row.conversationName.trim()) &&
+    label.startsWith(name)
     ? { name, rest: label.slice(name.length) }
     : null
 }
 
 // Match desktop's compact row: name then message, else message → prompt → state; Stop leads while ending the turn.
 export function agentDisplayLabel(row: RuntimeWorktreeAgentRow, now: number): string {
-  const name = row.conversationName?.trim()
+  const name = resolveMobileWorktreeAgentRowName(row)
   const message = row.lastAssistantMessage?.trim()
   if (row.state === 'working' && row.mainAgent?.stopping === true) {
     const stopping = translate('worktree.agentRowDisplay.stopping', 'Stopping…')

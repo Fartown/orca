@@ -54,6 +54,7 @@ export type StructuredAttentionMobileDeliveryDeps = {
   readOrchestration: (paneKey: string) => AgentStatusOrchestrationContext | undefined
   /** The group room a member session talks in; null for any other session. */
   readBotGroupRoom?: (sessionId: string) => BotGroupRoomOfSession | null
+  readSessionTitle?: (scope: AgentSessionExecutionLocation, sessionId: string) => string | undefined
   dispatch: (event: MobileNotificationDispatchEvent) => void
   /** Withdraws a notification this host delivered; a no-op for one it never sent. */
   reconcile: (state: StructuredAttentionState) => void
@@ -158,11 +159,13 @@ export function createStructuredAttentionMobileDelivery(
       }
       const settings = deps.readNotificationSettings()!
       const attentionKey = agentSessionAttentionKey(edge)
+      const sessionTitle = deps.readSessionTitle?.(scope, sessionId)
       const request: NotificationDispatchRequest = {
         source: 'agent-task-complete',
         surface: 'agent-session',
         worktreeId: scope.workspaceId,
         ...readLabels(deps, scope),
+        ...(sessionTitle ? { sessionTitle } : {}),
         agentState: news.agentState,
         ...(news.outcome ? { agentTurnOutcome: news.outcome } : {}),
         ...(edge.type === 'completion' && edge.completion.failure

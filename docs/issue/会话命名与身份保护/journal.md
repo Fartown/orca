@@ -3,7 +3,7 @@ title: 会话命名与身份保护
 slug: 会话命名与身份保护
 status: implementing
 created: 2026-09-08
-updated: 2026-11-25
+updated: 2026-11-26
 external_ids: ['Fartown/orca#158']
 ---
 
@@ -552,3 +552,18 @@ external_ids: ['Fartown/orca#158']
   - 真实应用验收（隐藏 Electron `ORCA_BACKGROUND_LAUNCH=1` + `xvfb-run` + 隔离 `HOME`/`userData` + 真实配对手机客户端）：2/2 通过，证据归档于 `.docs/agent-list-session-names-ui-validation/2026-11-25/`（本地桌面 Tab + `worktree.ps` 验证 Provider 名「日本区域页面问题」及手动改名「手动改名会话」均不落入追问句「你觉得呢」；远端独立 `orca serve` + 桌面镜像 + 手机 `mobileRelay.hosts.worktrees` 验证远端主机 Provider 名「远端原生会话名」端到端一致）。
 - 未解决问题：托管 SSH `orcad` 模板构建因拉取 `quay.io/pypa/manylinux_2_28_x86_64` 超时未起 Docker SSH 容器（同路径已由无头 `orca serve` 真机与 SSH 作用域单测覆盖）；既有用例 `server-agent-presence.test.ts` 失败需另行排查。
 - 下一步：创建关联 `Fartown/orca#158` 的 PR 合入 `fork/integration`。
+
+## 2026-11-26 全链路排查并统一桌面、无头主机、编排、通知、SSH 与移动端会话命名（testing）
+
+- 本轮目标：针对 `Fartown/orca#158` 在 PR #159 后仍暴露的跨端不一致问题，对 Desktop、Main/Headless（`orca serve` / `orcad`）、Orchestration、Notifications、SSH/远端运行时主机及 Mobile（`mobile/`）全部会话标题生产与消费面做一次性端到端收口，确保严格遵循 D-010 / REQ-025 统一优先级链（单 pane 手动改名 / 会话人工名 → Provider 原生名 → 首个合格提示词派生名 → 可信实时终端标题 → 有归属容器标签 → 身份兜底）及分屏隔离。
+- 完成内容：
+  1. **共享提示词准入与扫描标题链（`src/shared/`）**：新增 `extractSessionNamePromptSource` 在 512 字符截断前提取 Orca 派发前言的 `=== TASK ===` 正文；在 `isEligibleSessionNamePrompt` 中拦截单封编排邮件横幅（`──── / From: ...`）、批量邮件包装（`--- Orchestration Messages (N) ---`）、历史污染字符串（`From TERM/RUN/DISPATCH/ORCA ...`）及续跑样板提示词，避免误伤 Native Chat 邮件卡片与 Hook 状态迁移；对齐 `generatedTabTitleForStatus` 与渲染器规则（`quickCommandLabel` 不阻断首个有效派生标题，不合格旧值可被替换）；抽出跨桌面与移动端共享的 `resolveScannedSessionDisplayName`（含子智能体身份隔离）。
+  2. **主进程与无头主机全入口统一（`src/main/`）**：修复 `sender-pane-title.ts` 单窗格 `trackedTitle` 误填 `paneTitle` 导致 `customTitle` / `generatedTitle` 容器归属清零的问题，同时保持分屏窗格隔离；`orchestration-sender-name.ts` 保留完整 `aiVaultTitle` 四态证据；`worktree-agent-row-provider-names.ts` 增加有界 `hostProviderTitleCache`（瞬时读取失败保留已确认原生名）并供 `RuntimeOrchestrationSenderNames`（`sender()` / `snapshotOf()` / `captureCrewInputs()` / 无镜像 `tabId` 归属行 / `identityFallbackTitle`）复用；新增 `headless-mobile-tab-session-title.ts` 为无头 `session.tabs.*`（仅 `clientKind === 'mobile'`，含分屏叶节点，不置 `resolvesSessionTitle` 以免阻断配对桌面自同步）及无窗口终端/原生聊天手机推送通知注入统一会话名；修复 `mobile-session-terminal-projection.ts` 分屏叶节点误继承父 `tab.customTitle`；修复 `ai-vault-session-title-routing.ts` 在 `ssh:...` 或失败运行时作用域下返回显式 `providerName: { kind: 'unavailable' }` 证据。
+  3. **桌面渲染器漏口补齐（`src/renderer/`）**：新增 `terminal-manual-session-names.ts` 将单窗格手动改名持久化存储（`orca.aiVault.terminalSessionNames.v1`）桥接入 `canonical-session-titles.ts`（过滤打开态分屏标签），使关标签后的手动改名在 Activity、通知、History 与搜索中继续生效；修复 `use-activity-session-names.ts` 在 `connectionId === null` 且 `tab.ptyId === null` 时漏判 `runtime:<env>` 执行主机及未挂载布局（`layout === undefined`）/ 已完成轮次 / 休眠会话丢失单窗格手动名的问题；新增 `renderer-surface-session-names.ts` 补齐 Dashboard 快照卡非焦点分屏窗格异步命名（同步接入 `dashboard-snapshot-reuse`、`useLiveDashboardSnapshot`、`useDashboardPopoutBridge` 失效与订阅）、原生聊天桌面通知 `sessionTitle` 及侧栏槽位跳转菜单会话名。
+  4. **移动端收口（`mobile/`）**：新增 `mobile/src/session-names/mobile-session-names.ts`，使 `agentDisplayLabel` / `agentDisplayForkedLead` 在 `row.activity.listed === true` 时优先使用桌面发布的统一 `activity.title` 再回退主机 `conversationName`，并让移动端 History 列表接入共享 `resolveScannedSessionDisplayName`。
+- 代码或文档变更：新增 `src/shared/session-names/session-name-prompt-source.ts`、`src/shared/session-names/scanned-session-display-name.ts`、`src/main/session-names/headless-mobile-tab-session-title.ts`、`src/renderer/src/session-names/terminal-manual-session-names.ts`、`src/renderer/src/session-names/renderer-surface-session-names.ts`、`mobile/src/session-names/mobile-session-names.ts` 及四端回归测试（`session-name-prompt-and-scanned.test.ts`、`host-session-name-unification.test.ts`、`renderer-session-name-unification.test.tsx`、`mobile-session-names.test.ts`）；更新对应主进程、渲染器、移动端消费接缝及 `config/fork-features.jsonc`、`config/architecture-policies.jsonc`；更新本 Journal 并通过 `pnpm generate:issue-index` 刷新 `docs/issue/README.md`。
+- 验证证据：
+  - 类型、单测与门禁：`pnpm tc`、`pnpm --dir mobile run check:tests-typecheck`、`pnpm check:architecture-policies`、`pnpm check:fork-features`、`pnpm check:fork-docs`、`pnpm check:code-quality:changed origin/fork/integration`（39 个改动文件 0 新增告警）、全部静态 ratchets、桌面与移动端四项本地化门禁全部通过；新增四组单测（14 条用例）及 `session-names` 前 10 组与第 12 组移动端 checks 全部通过（第 11 组中未改动的上游 `server-agent-presence.test.ts` 因本机实验性 `node:sqlite` 重开连接行为差异维持原状，与 `MobileNotificationDismissalStore` 同因）。
+  - 真实应用与 SSH 验收（隐藏 Electron `ORCA_BACKGROUND_LAUNCH=1` + `xvfb-run -a`）：3/3 通过（37.0s），证据与合并脚本归档于 `.docs/session-names-full-unification-ui-validation/2026-11-26/`，覆盖：① 本机桌面 + 配对手机 + 编排邮件污染拦截 + 关标签后手动改名持久化；② 无头 `orca serve` 直连配对手机 `worktree.ps` 与 `session.tabs.list`；③ 本机隔离 `127.0.0.1:2222` `sshd` 真实 SSH 隧道（`linkSshAccess`）+ 远端运行时主机 + 桌面镜像 + 手机 `mobileRelay.hosts.worktrees` + `ssh:<targetId>` `unavailable` 证据校验（`~/.orca-remote` 零改动）。
+- 未解决问题：本机 Node 实验性 `node:sqlite` 下两个未触碰的上游重启缓存单测需在 CI Node 运行时确认通过。
+- 下一步：运行 `pnpm check:changed` 后提交 PR 合入 `fork/integration`（`Fixes #158`），并核对 CI 与集成构建。

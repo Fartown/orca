@@ -1,4 +1,5 @@
 import { SESSION_TABS_AUTHORITATIVE_INVENTORY_RUNTIME_CAPABILITY } from '../../../../../shared/remote-runtime/protocol/session-tabs-runtime-capabilities'
+import { warmHeadlessMobileSessionTabTitles } from '../../../../session-names/headless-mobile-tab-session-title'
 import { projectSessionTabsForClient } from './session-tabs-client-projection'
 import type { RuntimeMobileSessionTabsResult } from '../../../../../shared/remote-runtime/session-graph/runtime-session-contracts'
 import type { RpcContext } from '../../core'
@@ -60,7 +61,9 @@ function projectInventory(
 }
 
 export async function listSessionTabsInventory(context: RpcContext): Promise<SessionTabsInventory> {
-  const result = projectInventory((await collectSessionTabsInventory(context)).inventory, context)
+  const { inventory } = await collectSessionTabsInventory(context)
+  await warmHeadlessMobileSessionTabTitles(inventory.snapshots, context.clientKind)
+  const result = projectInventory(inventory, context)
   if (context.signal?.aborted) {
     throw new Error('client_disconnected')
   }

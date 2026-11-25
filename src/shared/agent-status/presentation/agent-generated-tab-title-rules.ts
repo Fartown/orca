@@ -1,5 +1,6 @@
 // Store and layout-owner main derive generated tab titles by the same rule.
 
+import { isEligibleSessionNamePrompt } from '../../session-names/session-name-candidate-quality'
 import { deriveGeneratedTabTitle } from './agent-tab-title'
 import {
   getAgentRowGeneratedTitleText,
@@ -52,15 +53,15 @@ export function generatedTabTitleForStatus(
   entry: TitleStatus,
   tab: GeneratedTitleTab
 ): { title: string; replaceExisting: boolean } | null {
-  if (tabHasProtectedTitle(tab)) {
-    return null
-  }
+  // Fork (session-names): protected titles stay separate candidates, and ineligible text cannot block the first valid task.
   const replaceExisting = generatedTitleReplacesExisting(entry)
   const existing = tab.generatedTitle?.trim()
-  if (existing && !replaceExisting) {
+  if (isEligibleSessionNamePrompt(existing ?? '') && !replaceExisting) {
     return null
   }
   const source = generatedTitleSourceText(entry)
   const title = source.length > 0 ? deriveGeneratedTabTitle(source) : null
-  return title && title !== existing ? { title, replaceExisting } : null
+  return title && title !== existing
+    ? { title, replaceExisting: replaceExisting || Boolean(existing) }
+    : null
 }

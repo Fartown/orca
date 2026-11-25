@@ -38,6 +38,7 @@ import { isWorktreeNotificationDeliveryMuted } from '@/attention/worktree-notifi
 import { canonicalOrchestrationForRow } from '@/runtime/agent-orchestration/visible-agent-orchestration'
 import { isCoordinatorOnlyChatNews } from '../../../../../../shared/orchestration/workers/dispatched-worker-attention'
 import { getNotificationWorkspaceLabels } from '@/attention/notification-workspace-labels'
+import { captureStructuredNotificationSessionName } from '@/session-names/renderer-surface-session-names'
 import { createStructuredAttentionSurface } from './structured-attention-surface'
 import type { StructuredTab } from '../status/structured-agent-session-tabs'
 
@@ -125,6 +126,7 @@ function dispatchStructuredAttention(
           ? { executionHostId: null, runtimeEnvironmentId: subscriptionTarget.environmentId }
           : resolveNotificationTabOwner(state, tab)
       const executionHost = notificationExecutionHostForOwner(owner)
+      const sessionTitle = captureStructuredNotificationSessionName(state, tab)
       deliverAgentAttentionNotification(
         {
           source: 'agent-task-complete',
@@ -142,6 +144,7 @@ function dispatchStructuredAttention(
           ...getNotificationWorkspaceLabels(state, request.workspaceId, tab.label),
           notificationSourceId: notificationSourceForOwner(owner, state),
           terminalTitle: tab.label,
+          ...(sessionTitle ? { sessionTitle } : {}),
           isActiveWorktree: request.workspaceIsActive,
           ...(row?.agentType ? { agentType: row.agentType } : {}),
           agentState: news.agentState,

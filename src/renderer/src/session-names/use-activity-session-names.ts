@@ -30,6 +30,7 @@ export function useActivitySessionNames(
       paneTitles: s.runtimePaneTitlesByTabId,
       tabs: s.unifiedTabsByWorktree,
       status: s.agentStatusByPaneKey,
+      sleeping: s.sleepingAgentSessionsByPaneKey,
       generated: s.settings?.tabAutoGenerateTitle === true
     }))
   )
@@ -44,14 +45,28 @@ export function useActivitySessionNames(
     [state.tabs]
   )
   const hostFor = useCallback(
-    (target: ActivitySessionNameTarget) =>
-      resolveActivityExecutionHostId(
+    (target: ActivitySessionNameTarget) => {
+      const leafId = parsePaneKey(target.entry.paneKey)?.leafId
+      const ptyId =
+        (leafId ? state.layouts[target.tab.id]?.ptyIdsByLeafId?.[leafId] : undefined) ??
+        target.tab.ptyId
+      const worktreeHost = getWorktreeExecutionHostId(target.worktree, target.repo ?? undefined)
+      const resolved = resolveActivityExecutionHostId(
         { worktreeId: target.worktree.id, tab: target.tab },
         target.entry,
-        target.tab.ptyId,
+        ptyId,
         hostIndex
-      ) ?? getWorktreeExecutionHostId(target.worktree, target.repo ?? undefined),
-    [hostIndex]
+      )
+      if (
+        resolved === 'local' &&
+        target.entry.connectionId === null &&
+        worktreeHost.startsWith('runtime:')
+      ) {
+        return worktreeHost
+      }
+      return resolved ?? worktreeHost
+    },
+    [hostIndex, state.layouts]
   )
   const requests = useMemo(() => {
     const unique = new Map<string, SessionNameRequest>()
@@ -83,16 +98,27 @@ export function useActivitySessionNames(
       const pane = parsePaneKey(entry.paneKey)
       const layout = state.layouts[tab.id]
       const current = state.status.get(entry.paneKey)
-      const ownsCurrent =
-        current?.agentType === agent &&
-        current?.providerSession?.id === sessionId &&
-        current?.stateStartedAt === entry.stateStartedAt
+      const sleeping = state.sleeping?.[entry.paneKey]
+      const ownsSession = sessionId
+        ? current
+          ? current.agentType === agent && current.providerSession?.id === sessionId
+          : Boolean(
+              agent &&
+              ((sleeping?.agent === agent && sleeping.providerSession?.id === sessionId) ||
+                (tab.aiVaultTitle?.agent === agent && tab.aiVaultTitle.sessionId === sessionId))
+            )
+        : Boolean(
+            current &&
+            current.agentType === agent &&
+            !current.providerSession?.id &&
+            current.stateStartedAt === entry.stateStartedAt
+          )
       const isChatTab = chatTabIds.has(tab.id)
+      const isSinglePaneContainer =
+        layout?.root?.type !== 'split' && (!layout?.root || layout.root.leafId === pane?.leafId)
       // A native chat tab holds exactly one session, so its label names that session.
-      const ownsContainer =
-        isChatTab ||
-        (ownsCurrent && layout?.root?.type === 'leaf' && layout.root.leafId === pane?.leafId)
-      const paneLiveTitle = ownsCurrent
+      const ownsContainer = isChatTab || (ownsSession && isSinglePaneContainer)
+      const paneLiveTitle = ownsSession
         ? resolveAgentRowPaneLiveTitle(layout, state.paneTitles[tab.id], pane?.leafId)
         : null
       // A native chat's projected customTitle is its host-saved name, the one its tab shows.

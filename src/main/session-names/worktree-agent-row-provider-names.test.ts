@@ -138,11 +138,48 @@ describe('worktree-agent-row-provider-names', () => {
   })
 
   it('swallows resolver errors so worktree.ps never fails when vault is unavailable', async () => {
-    const resolved = await resolveWorktreeAgentRowProviderNames(new Map([['p1', makeSource()]]), {
-      resolveTitles: async () => {
-        throw new Error('scanner unavailable')
+    const resolved = await resolveWorktreeAgentRowProviderNames(
+      new Map([['p1', makeSource({ providerSessionId: 'session-uncached-error' })]]),
+      {
+        resolveTitles: async () => {
+          throw new Error('scanner unavailable')
+        }
       }
-    })
+    )
     expect(resolved.size).toBe(0)
+  })
+
+  it('retains a previously confirmed provider name across transient resolver errors', async () => {
+    const cachedSource = makeSource({ providerSessionId: 'session-cached-error' })
+    await resolveWorktreeAgentRowProviderNames(new Map([['p1', cachedSource]]), {
+      resolveTitles: async () => ({
+        titles: [
+          {
+            agent: 'claude',
+            sessionId: 'session-cached-error',
+            title: '已确认原生标题',
+            kind: 'named',
+            providerName: {
+              kind: 'named',
+              title: '已确认原生标题',
+              field: 'custom-title.customTitle'
+            }
+          }
+        ]
+      })
+    })
+
+    const afterTransientFailure = await resolveWorktreeAgentRowProviderNames(
+      new Map([['p1', cachedSource]]),
+      {
+        resolveTitles: async () => {
+          throw new Error('transient read timeout')
+        }
+      }
+    )
+    expect(
+      afterTransientFailure.get(worktreeAgentRowProviderTitleKey('claude', 'session-cached-error'))
+        ?.title
+    ).toBe('已确认原生标题')
   })
 })

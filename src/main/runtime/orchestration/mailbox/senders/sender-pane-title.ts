@@ -24,7 +24,7 @@ export type MirroredPaneTabReader = (
   tabId: string
 ) => (Pick<TerminalTab, 'id'> & Partial<ConversationNameTab>) | undefined
 
-/** A pane's mirrored tab and its title: the live tracked title, else its split pane's own title. */
+/** A pane's mirrored tab and its title: single-pane tabs keep container ownership (`paneTitle` undefined) while receiving fresh tracked titles; split panes stay isolated. */
 export function mirroredPaneNaming(
   record: { worktreeId: string; tabId: string },
   paneKey: string | null,
@@ -35,20 +35,25 @@ export function mirroredPaneNaming(
     readLayout?: (tabId: string) => SenderNamingLayout | undefined
   }
 ): Pick<TerminalSenderNaming, 'tab' | 'paneTitle'> {
+  const layout = read.readLayout
+    ? read.readLayout(record.tabId)
+    : session?.terminalLayoutsByTabId?.[record.tabId]
+  const isSplit = layout?.root?.type === 'split'
   const tab = read.readTab
     ? read.readTab(record.worktreeId, record.tabId)
     : session?.tabsByWorktree?.[record.worktreeId]?.find(
         (candidate) => candidate.id === record.tabId
       )
   return {
-    tab: tab ? { ...tab, title: tab.title ?? '', customTitle: tab.customTitle ?? null } : null,
-    paneTitle:
-      trackedTitle ??
-      splitPaneTitle(
-        read.readLayout
-          ? read.readLayout(record.tabId)
-          : session?.terminalLayoutsByTabId?.[record.tabId],
-        paneKey
-      )
+    tab: tab
+      ? {
+          ...tab,
+          title: (!isSplit && trackedTitle) || tab.title || '',
+          customTitle: tab.customTitle ?? null
+        }
+      : !isSplit && trackedTitle
+        ? { title: trackedTitle, customTitle: null }
+        : null,
+    paneTitle: isSplit ? (trackedTitle ?? splitPaneTitle(layout, paneKey)) : undefined
   }
 }

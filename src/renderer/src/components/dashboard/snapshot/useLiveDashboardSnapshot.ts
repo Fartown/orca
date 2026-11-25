@@ -1,7 +1,11 @@
-import { useMemo, useRef } from 'react'
+import { useMemo, useRef, useSyncExternalStore } from 'react'
 import { useRuntimeStatusByEnvironmentId } from '@/store/slices/runtime-status/views/use-runtime-status-view'
 import { useAppStore } from '@/store/index'
 import { useStructuredChatTabNames } from '@/runtime/native-chat/naming/structured-chat-name-observation'
+import {
+  getSessionNameDisplayIndex,
+  subscribeSessionNameDisplay
+} from '@/session-names/session-name-display'
 import type { DashboardSnapshot } from '../../../../../shared/agent-status/presentation/dashboard-snapshot'
 import { buildDashboardSnapshot } from './build-dashboard-snapshot'
 import { createDashboardSnapshotReuse } from './dashboard-snapshot-reuse'
@@ -50,6 +54,11 @@ export function useLiveDashboardSnapshot(): DashboardSnapshot {
   // Freshness can change buckets without map writes; the epoch invalidates stale-decay memos.
   const agentStatusEpoch = useAppStore((s) => s.agentStatusEpoch)
   const chatNames = useStructuredChatTabNames()
+  const sessionNames = useSyncExternalStore(
+    subscribeSessionNameDisplay,
+    getSessionNameDisplayIndex,
+    getSessionNameDisplayIndex
+  )
   const activeWorktreeId = useAppStore((s) => s.activeWorktreeId)
   const activeWorkspaceExecutionHostId = useAppStore((s) => s.activeWorkspaceExecutionHostId)
 
@@ -127,6 +136,7 @@ export function useLiveDashboardSnapshot(): DashboardSnapshot {
       removedRuntimeEnvironmentIds,
       paneForegroundAgentByPaneKey,
       chatNames,
+      sessionNames,
       activeWorktreeId,
       activeWorkspaceExecutionHostId,
       agentStatusEpoch

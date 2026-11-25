@@ -14,6 +14,7 @@ import type { DashboardAgentRow } from '../rows/dashboard-agent-row'
 import type { DashboardSnapshotInput } from './build-dashboard-snapshot'
 import type { DashboardCardContext } from './dashboard-card-context'
 import { getTranslationScope } from '@/i18n/i18n'
+import { getSessionNameDisplayIndex } from '@/session-names/session-name-display'
 import type { ActiveDashboardWorkspace } from './dashboard-snapshot-workspaces'
 
 export type DashboardWorkspaceBuild = {
@@ -58,6 +59,7 @@ export function createDashboardSnapshotReuse(): DashboardSnapshotReuse {
 export function dashboardSnapshotReuseInputs(state: DashboardSnapshotInput): unknown[] {
   return [
     getTranslationScope(),
+    getSessionNameDisplayIndex(),
     state.chatNames,
     state.repos,
     selectWorktreesByRepo(state),
