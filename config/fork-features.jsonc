@@ -23,6 +23,86 @@
   "dependsOnIgnore": ["src/renderer/src/components/ui/**"],
   "features": [
     {
+      "id": "terminal-shell-mode-recovery",
+      "title": "终端退出模式恢复",
+      "goal": "消费当前执行主机的 shell 前台观察，清理退出后残留的鼠标和键盘模式",
+      "journal": "docs/issue/终端退出模式恢复/journal.md",
+      "policyId": "terminal-shell-mode-recovery",
+      "ownedPaths": [
+        "src/main/terminal-shell-mode-recovery/**",
+        "src/shared/terminal-shell-mode-recovery/**",
+        "src/renderer/src/terminal-shell-mode-recovery/**",
+        "docs/issue/终端退出模式恢复/**"
+      ],
+      "requiredFiles": ["src/shared/terminal-shell-mode-recovery/host-foreground-observation.ts"],
+      "dependsOn": [
+        "src/shared/terminal/pty/lifecycle/terminal-foreground-observation.ts",
+        "src/shared/terminal/pty/foreground/remote-foreground-evidence-admission.ts"
+      ],
+      "seams": [
+        {
+          "file": "src/shared/rpc-contract/terminal/terminal-unary-params.ts",
+          "mustContain": "TERMINAL_FOREGROUND_INSPECTION_PARAMS",
+          "why": "Carry the additive host foreground-only request and its original terminal identity."
+        },
+        {
+          "file": "src/main/runtime/rpc/methods/terminal/terminal-query-methods.ts",
+          "mustContain": "foregroundOnly",
+          "why": "Carry the additive host foreground-only request and its original terminal identity."
+        },
+        {
+          "file": "src/main/runtime/session-tabs/chat/structured-session-tab-restoration.ts",
+          "mustContain": "foregroundObservation",
+          "why": "Carry the additive host foreground-only request and its original terminal identity."
+        },
+        {
+          "file": "src/renderer/src/runtime/hosted-terminals/inspection/runtime-terminal-process-inspection.ts",
+          "mustContain": "foregroundOnly",
+          "why": "Carry the additive host foreground-only request and its original terminal identity."
+        },
+        {
+          "file": "src/renderer/src/components/terminal-pane/pty-connection/agent-identity/pane-agent-identity.ts",
+          "mustContain": "foregroundOnly",
+          "why": "Carry the additive host foreground-only request and its original terminal identity."
+        },
+        {
+          "file": "src/preload/api/terminal/pty-api.ts",
+          "mustContain": "foregroundOnly",
+          "why": "Carry the additive host foreground-only request and its original terminal identity."
+        },
+        {
+          "file": "src/preload/api/terminal/pty-bridge-stream-and-serialization.ts",
+          "mustContain": "foregroundOnly",
+          "why": "Carry the additive host foreground-only request and its original terminal identity."
+        },
+        {
+          "file": "src/main/ipc/pty/ipc/inspect.ts",
+          "mustContain": "foregroundOnly",
+          "why": "Carry the additive host foreground-only request and its original terminal identity."
+        },
+
+        {
+          "file": "src/shared/terminal/pty/foreground/remote-foreground-evidence-admission.ts",
+          "mustContain": "isCurrentForegroundObservation",
+          "why": "Reuse the existing PTY, incarnation, freshness and authority admission for explicit foreground observations."
+        },
+        {
+          "file": "src/renderer/src/components/terminal-pane/pty-connection/agent-identity/foreground-process/pane-foreground-process-reader.ts",
+          "mustContain": "createHostForegroundObservationReader",
+          "why": "Preserve execution-host shell proof even when no process name is returned."
+        },
+        {
+          "file": "src/renderer/src/components/terminal-pane/pty-connection/agent-identity/foreground-process/pane-foreground-agent-tracker.ts",
+          "mustContain": "shellForeground === true",
+          "why": "Use explicit host shell proof to reach the existing mode reset callback."
+        }
+      ],
+      "tests": ["src/renderer/src/terminal-shell-mode-recovery/host-shell-return.test.ts"],
+      "checks": [
+        "ORCA_BACKGROUND_LAUNCH=1 pnpm exec vitest run --config config/vitest.config.ts src/main/terminal-shell-mode-recovery src/shared/terminal-shell-mode-recovery src/renderer/src/terminal-shell-mode-recovery src/renderer/src/components/terminal-pane/pty-connection/tests/pty-connection-foreground-agent.test.ts src/renderer/src/components/terminal-pane/pane-foreground-agent-contact.test.ts src/renderer/src/runtime/runtime-terminal-inspection-contact.test.ts --maxWorkers=2"
+      ]
+    },
+    {
       "id": "terminal-output-sequence-authority",
       "title": "终端输出序号一致性",
       "goal": "以执行端挂接边界校准实际流位置，防止恢复快照吞掉新回显并兼容旧 daemon",

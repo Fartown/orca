@@ -7,6 +7,45 @@
   ],
   "policies": [
     {
+      "id": "terminal-shell-mode-recovery",
+      "description": "Recover terminal modes only from current execution-host shell foreground proof.",
+      "rules": [
+        {
+          "id": "terminal-shell-mode-recovery-worktree-scope",
+          "type": "change-scope",
+          "comparison": "worktree",
+          "whenChanged": [
+            "src/main/terminal-shell-mode-recovery/**",
+            "src/shared/terminal-shell-mode-recovery/**",
+            "src/renderer/src/terminal-shell-mode-recovery/**",
+            "docs/issue/终端退出模式恢复/**"
+          ],
+          "allowedPaths": [
+            "src/main/terminal-shell-mode-recovery/**",
+            "src/shared/rpc-contract/terminal/terminal-unary-params.ts",
+            "src/main/runtime/rpc/methods/terminal/terminal-query-methods.ts",
+            "src/main/runtime/session-tabs/chat/structured-session-tab-restoration.ts",
+            "src/renderer/src/runtime/hosted-terminals/inspection/runtime-terminal-process-inspection.ts",
+            "src/renderer/src/components/terminal-pane/pty-connection/agent-identity/pane-agent-identity.ts",
+            "src/preload/api/terminal/pty-api.ts",
+            "src/preload/api/terminal/pty-bridge-stream-and-serialization.ts",
+            "src/main/ipc/pty/ipc/inspect.ts",
+            "src/shared/terminal-shell-mode-recovery/**",
+            "src/renderer/src/terminal-shell-mode-recovery/**",
+            "docs/issue/终端退出模式恢复/**",
+            "src/shared/terminal/pty/foreground/remote-foreground-evidence-admission.ts",
+            "src/renderer/src/components/terminal-pane/pty-connection/agent-identity/foreground-process/pane-foreground-process-reader.ts",
+            "src/renderer/src/components/terminal-pane/pty-connection/agent-identity/foreground-process/pane-foreground-agent-tracker.ts",
+            "config/fork-features.jsonc",
+            "config/architecture-policies.jsonc",
+            "docs/issue/README.md",
+            ".gitignore"
+          ],
+          "message": "Change is outside terminal shell mode recovery."
+        }
+      ]
+    },
+    {
       "id": "terminal-output-sequence-authority",
       "description": "Reconcile daemon snapshot and delivered stream positions without changing terminal input or wire.",
       "rules": [
@@ -374,6 +413,21 @@
           "baseRef": "$base",
           "requireBaseAncestor": false,
           "allowedPaths": [
+            "src/shared/rpc-contract/terminal/terminal-unary-params.ts",
+            "src/main/runtime/rpc/methods/terminal/terminal-query-methods.ts",
+            "src/main/runtime/session-tabs/chat/structured-session-tab-restoration.ts",
+            "src/renderer/src/runtime/hosted-terminals/inspection/runtime-terminal-process-inspection.ts",
+            "src/renderer/src/components/terminal-pane/pty-connection/agent-identity/pane-agent-identity.ts",
+            "src/preload/api/terminal/pty-api.ts",
+            "src/preload/api/terminal/pty-bridge-stream-and-serialization.ts",
+            "src/main/ipc/pty/ipc/inspect.ts",
+
+            "src/main/terminal-shell-mode-recovery/**",
+            "src/shared/terminal-shell-mode-recovery/**",
+            "src/renderer/src/terminal-shell-mode-recovery/**",
+            "docs/issue/终端退出模式恢复/**",
+            "src/shared/terminal/pty/foreground/remote-foreground-evidence-admission.ts",
+            "src/renderer/src/components/terminal-pane/pty-connection/agent-identity/foreground-process/pane-foreground-process-reader.ts",
             "src/main/runtime/terminal/output/terminal-output-generation.ts",
             "src/main/providers/pty/spawn-result.ts",
             "src/main/daemon/providers/adapter/daemon-pty-spawn-result.ts",

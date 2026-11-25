@@ -174,6 +174,7 @@ export type PtyApi = {
     options?: {
       expectedIncarnationId?: string
       scanChildProcesses?: boolean
+      foregroundOnly?: boolean
       steadyState?: boolean
       jobMembershipOnly?: boolean
     }

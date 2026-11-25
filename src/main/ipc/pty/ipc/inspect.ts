@@ -144,6 +144,7 @@ export function installPtyInspectIpcHandlers(deps: {
         id: string
         expectedIncarnationId?: string
         scanChildProcesses?: boolean
+        foregroundOnly?: boolean
         steadyState?: boolean
         jobMembershipOnly?: boolean
       }
@@ -162,6 +163,7 @@ export function installPtyInspectIpcHandlers(deps: {
           ? { expectedIncarnationId: args.expectedIncarnationId }
           : {}),
         ...(args.scanChildProcesses === true ? { scanChildProcesses: true } : {}),
+        ...(args.foregroundOnly === true ? { foregroundOnly: true } : {}),
         ...(args.steadyState === true ? { steadyState: true } : {}),
         ...(args.jobMembershipOnly === true ? { jobMembershipOnly: true } : {})
       }

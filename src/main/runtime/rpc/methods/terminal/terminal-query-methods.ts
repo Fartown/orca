@@ -137,7 +137,8 @@ export const TERMINAL_QUERY_METHODS = [
         ...(params.expectedIncarnationId
           ? { expectedIncarnationId: params.expectedIncarnationId }
           : {}),
-        ...(params.scanChildProcesses === true ? { scanChildProcesses: true } : {})
+        ...(params.scanChildProcesses === true ? { scanChildProcesses: true } : {}),
+        ...(params.foregroundOnly === true ? { foregroundOnly: true } : {})
       }
       return {
         process: await runtime.inspectTerminalProcess(

@@ -29,7 +29,10 @@ import type { TuiAgent } from '../../../../shared/agent-launch/catalog/tui-agent
 import type { AgentLaunchRuntime } from '../../../../shared/agent-launch/startup/agent-launch-runtime'
 import type { TerminalWorkspaceLaunchScope } from '../../orchestration/terminal-authority/structured-sessions/runtime-legacy-worker-terminal-recovery-types'
 import { parseAppSshPtyId } from '../../../../shared/remote-runtime/ssh/ssh-pty-id'
-import type { TerminalProcessInspection as PtyProcessInspection } from '../../../../shared/terminal/pty/lifecycle/terminal-process-inspection'
+import {
+  type TerminalProcessInspection as PtyProcessInspection,
+  isClientOnlyUnverifiableInspection
+} from '../../../../shared/terminal/pty/lifecycle/terminal-process-inspection'
 import type { MainSessionTabRows } from '../layout/main-session-tab-rows'
 import { isReopenedChatTabId } from '../../../../shared/agent-session/view/structured-agent-session-host-tab-id'
 
@@ -183,7 +186,11 @@ export abstract class OrcaRuntimeWithRestoreStructuredAgentSessionTabsOnce exten
 
   async inspectTerminalProcess(
     terminalSelector: string,
-    options?: { expectedIncarnationId?: string; scanChildProcesses?: boolean }
+    options?: {
+      expectedIncarnationId?: string
+      scanChildProcesses?: boolean
+      foregroundOnly?: boolean
+    }
   ): Promise<PtyProcessInspection> {
     const leaf = this.resolveLiveLeafForHandle(terminalSelector)
     if (!leaf?.ptyId || !this.ptyController) {
@@ -195,15 +202,28 @@ export abstract class OrcaRuntimeWithRestoreStructuredAgentSessionTabsOnce exten
         options === undefined
           ? await this.ptyController.inspectProcess(leaf.ptyId)
           : await this.ptyController.inspectProcess(leaf.ptyId, options)
+      if (isClientOnlyUnverifiableInspection(inspection)) {
+        return inspection
+      }
       const evidence = inspection.foregroundProcessEvidence
       // The runtime handle is the request identity on this wire; keep the
       // host-owned leaf PTY id out of the client-facing comparison.
       const relayPtyId = parseAppSshPtyId(leaf.ptyId)?.relayPtyId
       const evidenceBelongsToLeaf =
         evidence !== undefined && (evidence.ptyId === leaf.ptyId || evidence.ptyId === relayPtyId)
-      return evidenceBelongsToLeaf
-        ? { ...inspection, foregroundProcessEvidence: { ...evidence, ptyId: terminalSelector } }
-        : inspection
+      const observation = inspection.foregroundObservation
+      const observationBelongsToLeaf =
+        observation !== undefined &&
+        (observation.ptyId === leaf.ptyId || observation.ptyId === relayPtyId)
+      return {
+        ...inspection,
+        ...(evidenceBelongsToLeaf
+          ? { foregroundProcessEvidence: { ...evidence, ptyId: terminalSelector } }
+          : {}),
+        ...(observationBelongsToLeaf
+          ? { foregroundObservation: { ...observation, ptyId: terminalSelector } }
+          : {})
+      }
     }
     const foregroundProcess = await this.ptyController.getForegroundProcess(leaf.ptyId)
     const hasChildProcesses = (await this.ptyController.hasChildProcesses?.(leaf.ptyId)) ?? false

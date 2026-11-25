@@ -282,3 +282,6 @@ ci-shards/
 
 !docs/issue/终端输出序号一致性/
 !docs/issue/终端输出序号一致性/**
+
+!docs/issue/终端退出模式恢复/
+!docs/issue/终端退出模式恢复/**

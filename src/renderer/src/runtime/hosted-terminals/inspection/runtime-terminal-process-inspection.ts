@@ -34,7 +34,11 @@ function normalizeInspectionResult(
     )
   }
   // Old-host compatibility process names are not observed evidence; exclude them from remote identity.
-  if (remote && result.foregroundProcessEvidence === undefined) {
+  if (
+    remote &&
+    result.foregroundProcessEvidence === undefined &&
+    result.foregroundObservation === undefined
+  ) {
     return clientOnlyUnverifiableInspection('old_host')
   }
   // Normalize removed booleans from older main/preload pairs during upgrades.
@@ -54,6 +58,7 @@ export async function inspectRuntimeTerminalProcess(
   options?: {
     expectedIncarnationId?: string
     scanChildProcesses?: boolean
+    foregroundOnly?: boolean
     steadyState?: boolean
     jobMembershipOnly?: boolean
   }
@@ -80,6 +85,7 @@ async function inspectCurrentRuntimeTerminalProcess(
     | {
         expectedIncarnationId?: string
         scanChildProcesses?: boolean
+        foregroundOnly?: boolean
         steadyState?: boolean
         jobMembershipOnly?: boolean
       }
@@ -114,7 +120,8 @@ async function inspectCurrentRuntimeTerminalProcess(
           ? { expectedIncarnationId: options.expectedIncarnationId }
           : {}),
         // Close guards request real process scans; dropping this causes unverifiable and confirmation on every idle remote Windows close.
-        ...(options?.scanChildProcesses === true ? { scanChildProcesses: true } : {})
+        ...(options?.scanChildProcesses === true ? { scanChildProcesses: true } : {}),
+        ...(options?.foregroundOnly === true ? { foregroundOnly: true } : {})
       },
       { timeoutMs: 15_000, beforeSend }
     )
