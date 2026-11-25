@@ -220,6 +220,7 @@ function makeReport(log) {
           .map((r) => `${r.ok ? '✓' : '✗'} ${r.command}`)
           .join(' / ')}`
       ),
+    confirmBox: (choice, result) => log(`确认框(守卫意见 ${choice}):${result.detail}`),
     warn: (msg) => log(`⚠ ${msg}`)
   }
 }

@@ -48,6 +48,7 @@ import { PLUGIN_INSTALL_COMMAND_SPECS } from './plugin-install'
 import { WORKSPACE_CLEANUP_COMMAND_SPECS } from './workspace-cleanup'
 
 import { LOCAL_TASK_COMMAND_SPECS } from '../local-tasks/local-task-command-specs'
+import { GOAL_COMMAND_SPECS } from '../goals/goal-command-specs'
 
 export const COMMAND_SPECS: CommandSpec[] = [
   ...CORE_COMMAND_SPECS,
@@ -95,6 +96,7 @@ export const COMMAND_SPECS: CommandSpec[] = [
   ...PLUGIN_AUTHORING_COMMAND_SPECS,
   ...PLUGIN_RUNTIME_COMMAND_SPECS,
   ...PLUGIN_VIEW_COMMAND_SPECS,
+  ...GOAL_COMMAND_SPECS,
   ...PLUGIN_INSTALL_COMMAND_SPECS,
   ...PAIR_COMMAND_SPECS,
   ...LOCAL_TASK_COMMAND_SPECS

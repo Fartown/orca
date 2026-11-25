@@ -390,6 +390,8 @@ function makeReport() {
           .map((r) => `${r.ok ? '✓' : '✗'} ${r.command}`)
           .join(' / ')}`
       ),
+    confirmBox: (choice, result) =>
+      console.log(`[${stamp()}]   确认框(守卫意见 ${choice}):${result.detail}`),
     warn: (msg) => console.log(`[${stamp()}] ⚠ ${msg}`)
   }
 }

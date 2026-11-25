@@ -5,12 +5,13 @@ description: >-
   comments, and Orca's embedded browser through the `orca` CLI. Use when the user says
   "$orca-cli", "Orca worktree", "child worktree", "spawn codex/claude in a worktree",
   "read/wait/send Orca terminal", "handoff" / "handover" / "give this to another agent",
-  "ask/tell/message another agent" (including an agent on a paired Orca server), or
-  "Orca browser". Also use for opening, testing, screenshotting, or checking how a local or
-  external web page renders while working in Orca, unless the user or project names another
-  browser tool; plain HTTP or API calls (curl, fetch) do not need it. Prefer it over raw git
-  worktree, ad hoc PTYs, or Computer Use when Orca state is involved. Use Computer Use only
-  when a visible window needs GUI control that a CLI, filesystem, or API cannot do.
+  "ask/tell/message another agent" (including an agent on a paired Orca server), "Orca goal" /
+  "guard" / "have another agent do it and keep at it until done", or "Orca browser". Also use
+  for opening, testing, screenshotting, or checking how a local or external web page renders
+  while working in Orca, unless the user or project names another browser tool; plain HTTP or
+  API calls (curl, fetch) do not need it. Prefer it over raw git worktree, ad hoc PTYs, or
+  Computer Use when Orca state is involved. Use Computer Use only when a visible window needs
+  GUI control that a CLI, filesystem, or API cannot do.
 ---
 
 # Orca CLI
@@ -27,7 +28,7 @@ Prefer `--json` for agent-driven calls. If the CLI is missing, say so explicitly
 
 ## Full Handoffs
 
-A full handoff transfers ownership to another agent or worktree, then the original agent stops. Treat requests phrased as "hand off", "handoff", "handover", "give this to another agent", "give this to another worktree", "another agent", or "another worktree" as full handoffs unless the user expects the result back ("have another agent review this and report") or explicitly asks to supervise, monitor, wait for results, track completion, coordinate a DAG, use decision gates, or manage ask/reply.
+A full handoff transfers ownership to another agent or worktree, then the original agent stops. Treat requests phrased as "hand off", "handoff", "handover", "give this to another agent", "give this to another worktree", "another agent", or "another worktree" as full handoffs unless the user expects the result back ("have another agent review this and report") or explicitly asks to supervise, monitor, wait for results, track completion, coordinate a DAG, use decision gates, or manage ask/reply. Handing work to another agent session to be pushed until done is a Goal (next section).
 
 A handoff is done when the new worktree id and agent handle have been reported and the prompt was delivered: the launch's `prompt.outcome` is `journaled` or `handed-to-terminal`, or, for an agent that was already running, `orchestration send` returned a message ID. Do not wait for the receiving agent to finish.
 
@@ -62,6 +63,17 @@ Handoff to an agent that is already running:
 ```text
 ORCA orchestration send --to <terminal handle or orca_session_id:<chat id>> --subject "<task name>" --body "<task brief>" --json
 ```
+
+## Goals
+
+When the user wants another agent session to do something and be kept at it until it is done — whatever they call it: goal, guard, "watch it", "start a Codex and have it do X" — use `orca goal`:
+
+1. Pass the user's words verbatim as the objective: `ORCA goal draft --terminal <handle> --objective "<user's words>" --json` (start the agent in that terminal first if needed).
+2. `ORCA goal checklist <draft-id> --wait` and show the user the checklist.
+3. Start only after the user confirms or edits it: `ORCA goal start <draft-id> --terminal <handle> [--document <edited file>]`.
+4. Afterwards only relay notices and results (`ORCA goal status <goal-id>`, `ORCA goal stop <goal-id>`). The Goal's guard supervises; do not build your own guard or do the working agent's job.
+
+Never substitute the working agent's own goal feature, polling scripts, or question files. If `orca goal` is unavailable, stop and tell the user.
 
 ## Starting agents
 

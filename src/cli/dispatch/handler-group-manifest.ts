@@ -11,6 +11,7 @@ import { HOST_HANDLER_GROUPS } from '../hosts/host-handler-groups'
 import { WORKTREE_HANDLER_GROUPS } from '../workspaces/worktree-handler-groups'
 
 import { LOCAL_TASK_HANDLER_GROUP } from '../local-tasks/local-task-handler-group'
+import { GOAL_HANDLER_GROUP } from '../goals/goal-handler-group'
 import { ARTIFACT_SHARE_HANDLER_GROUP } from '../self-hosted-artifacts/artifact-share-handler-group'
 
 export type HandlerGroup = {
@@ -267,5 +268,6 @@ export const HANDLER_GROUPS: readonly HandlerGroup[] = [
     keys: ['ports'],
     load: async () => (await import('../workspace-ports/ports.js')).PORTS_HANDLERS
   },
+  GOAL_HANDLER_GROUP,
   LOCAL_TASK_HANDLER_GROUP
 ]

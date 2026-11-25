@@ -15,6 +15,7 @@ const vars = {
   transcriptPath: '/t.jsonl',
   orcaCommand: 'orca',
   terminalHandle: 'term_1',
+  confirmBox: '无',
   sessionDir: '不可用',
   changes: '无改动',
   checkFailures: '无',

@@ -1230,7 +1230,14 @@
         "src/main/ai-vault/parsing/session-record-time.ts",
         "src/shared/agent-status/contracts/agent-status-ipc-payload.ts",
         "src/renderer/src/store/workspaces/selection/workspace-host-target.ts",
-        "src/renderer/src/runtime/agent-status/use-agent-status.ts"
+        "src/renderer/src/runtime/agent-status/use-agent-status.ts",
+        "src/cli/discovery/command-spec.ts",
+        "src/shared/cli/cli-argument-boundary.ts",
+        "src/cli/arguments/command-body-input.ts",
+        "src/cli/dispatch/dispatch.ts",
+        "src/cli/arguments/flags.ts",
+        "src/cli/output/command-result-output.ts",
+        "src/cli/dispatch/handler-group-manifest.ts"
       ],
       "policyId": "goals-native-feature",
       "ownedPaths": [
@@ -1243,6 +1250,7 @@
         "src/main/runtime/rpc/methods/goals.test.ts",
         "src/main/startup/main-process-goals.ts",
         "goal-mode/**",
+        "src/cli/goals/**",
         "config/scripts/build-goal-driver.mjs",
         "docs/issue/Goal目标模式/**"
       ],
@@ -1277,7 +1285,11 @@
         "src/shared/goals/goal-agent-provider.ts",
         "src/shared/goals/goal-acceptance-prompt.ts",
         "src/main/goals/goal-evidence-projection.ts",
-        "config/scripts/build-goal-driver.mjs"
+        "config/scripts/build-goal-driver.mjs",
+        "goal-mode/cli/confirm-box.mjs",
+        "src/shared/goals/goal-payload-fingerprint.ts",
+        "src/cli/goals/goal-command-specs.ts",
+        "src/cli/goals/goal-cli-handlers.ts"
       ],
       "seams": [
         {
@@ -1434,6 +1446,36 @@
           "file": "src/shared/plugins/languages/protected-copy-keys.json",
           "mustContain": "\"goals.",
           "why": "fork copy keys protected from plugin language packs"
+        },
+        {
+          "file": "src/cli/specs/index.ts",
+          "mustContain": "...GOAL_COMMAND_SPECS",
+          "why": "orca goal subcommands let an agent draft, start, watch and stop a goal for the user"
+        },
+        {
+          "file": "src/cli/dispatch/handler-group-manifest.ts",
+          "mustContain": "GOAL_HANDLER_GROUP",
+          "why": "orca goal subcommands dispatch to the goal CLI handlers"
+        },
+        {
+          "file": "src/main/startup/cli-launch/cli-command-names.ts",
+          "mustContain": "'goal',",
+          "why": "the CLI root command list includes goal"
+        },
+        {
+          "file": "skill-guides/orca-cli.md",
+          "mustContain": "## Goals",
+          "why": "the bundled orca-cli skill routes 'have another agent do it until done' to orca goal"
+        },
+        {
+          "file": "src/cli/skills/bundled-skill-guides.ts",
+          "mustContain": "## Goals",
+          "why": "the generated skill guide carries the Goals section"
+        },
+        {
+          "file": "skills/orca-cli/SKILL.md",
+          "mustContain": "Orca goal",
+          "why": "the skill description triggers on goal requests"
         }
       ],
       "tests": [
@@ -1473,10 +1515,13 @@
         "src/renderer/src/components/goals/GoalEditor.test.tsx",
         "src/main/goals/orcad-goals.test.ts",
         "src/main/goals/goal-driver-resources.test.ts",
-        "src/renderer/src/goals/goal-right-sidebar-route.test.ts"
+        "src/renderer/src/goals/goal-right-sidebar-route.test.ts",
+        "src/cli/goals/goal-cli.test.ts",
+        "goal-mode/cli/confirm-box.test.mjs",
+        "goal-mode/cli/goal-loop-confirm-box.test.mjs"
       ],
       "checks": [
-        "pnpm exec vitest run --config config/vitest.config.ts src/main/goals src/shared/goals src/renderer/src/goals src/renderer/src/components/goals src/main/runtime/rpc/methods/goals.test.ts src/main/persistence/applying-settings/persistence-ui-state.test.ts src/main/goals/goal-driver-resources.test.ts",
+        "pnpm exec vitest run --config config/vitest.config.ts src/main/goals src/shared/goals src/renderer/src/goals src/renderer/src/components/goals src/main/runtime/rpc/methods/goals.test.ts src/main/persistence/applying-settings/persistence-ui-state.test.ts src/main/goals/goal-driver-resources.test.ts src/cli/goals",
         "node --test --experimental-test-module-mocks goal-mode/cli/*.test.mjs"
       ]
     },
