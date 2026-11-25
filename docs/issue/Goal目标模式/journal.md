@@ -3,7 +3,7 @@ title: Goal 目标模式
 slug: Goal目标模式
 status: testing
 created: 2026-09-05
-updated: 2026-11-24
+updated: 2026-11-25
 external_ids: [Fartown/orca#151]
 ---
 
@@ -30,7 +30,7 @@ external_ids: [Fartown/orca#151]
 | 守卫监工测试 | [守卫监工验证](tests/runs/2026-09-24-守卫监工.md) | completed | REQ-124～REQ-126：本机 10/10、SSH 6/6 真机检查通过，真实 codex 执行与守卫 |
 | 提示词修订测试 | [提示词修订与对话摘要验证](tests/runs/2026-09-24-提示词修订.md) | completed | TC-376～TC-381：本机 Claude 4/4、codex 3/3，SSH 2/2；真机发现 Claude 建议文字被当成草稿，已按用户裁决去掉草稿检查 |
 
-当前处于 testing：2026-09-22 travel 目标事故暴露守卫设计问题，修订需求并出 [守卫监工修订方案](solutions/Goal守卫监工与唤醒兜底修订方案.md)，用户确认后已实施（分支 `feat/goal-guard-supervisor`，未提交）；自动化、门禁与本机、loopback SSH 真机验证通过，见 [守卫监工验证](tests/runs/2026-09-24-守卫监工.md)，待提交与合并。用户 App 装有未合入的热修，按用户要求保留不回退，新实现落地时整体替换。此前 REQ-122、REQ-123 的交付与测试记录不变：交付经 [PR #13](https://github.com/Fartown/orca/pull/13) 合入 `fork/integration`，结果见 [文档文件查看验证](tests/runs/2026-09-13-文档文件查看.md)、[异步草稿验证](tests/runs/2026-09-12-异步草稿验证.md) 与 [草稿删除验证](tests/runs/2026-09-16-草稿删除.md)。
+当前处于 testing：2026-11-20 的开工对齐、守卫先判断、`orca goal` 命令与确认框处理经 [PR #152](https://github.com/Fartown/orca/pull/152) 于 2026-11-25 合入 `fork/integration`（`72507ace45`）；修订后的提示词还没在真实目标上跑过，确认框拒绝分支和「为小偏差打断」待观察，见开发记录 2026-11-24、2026-11-25。更早的交付（守卫监工、REQ-122、REQ-123 等）记录不变。
 
 ## 2. 决策点记录
 
@@ -141,6 +141,15 @@ external_ids: [Fartown/orca#151]
 
 ## 3. 开发记录
 
+### 2026-11-25 PR #152 合入（testing）
+
+- 本轮目标：用户看过 PR 后合入。
+- 完成内容：PR #152 压缩合并为 `72507ace45`，关闭 #151。合入前 Windows 冒烟测试有一次清理临时目录报 `EPERM`（上游用例），重跑通过。
+- 代码或文档变更：只改本 journal。
+- 验证证据：PR 最终提交 `58ac236cae` 的检查 50 项通过、19 项跳过；合入后 Fork Integration Build（run 45559366439）macOS、Android、Linux 打包与发布全部成功。工作树回收前，5 个验证证据目录已复制到主目录 `.docs/` 并逐个比对一致。
+- 未解决问题：同 2026-11-24 记录的五条，均未处理。
+- 下一步：在真实目标上观察确认框拒绝分支和小偏差打断；评审遗留的清单交付顺序判据与 2000 字上限、拆分第 5 条，等用户决定是否做。
+
 ### 2026-11-24 合入同步后的 fork/integration、真机小回归与提示词评审修订（testing）
 
 - 本轮目标：把 PR #152 更新到 11-21 上游同步之后的 `fork/integration` 并复验；合入前按用户要求评审提示词并修订。
@@ -155,7 +164,7 @@ external_ids: [Fartown/orca#151]
   - 登记：`config/fork-features.jsonc` 的 dependsOn、3 条接缝路径、tests 与 checks；`config/architecture-policies.jsonc` 的接缝路径。
 - 验证证据：
   - 登记 checks 通过：vitest 37 个文件 184 项，`node --test` 146 项。合并后 `check:changed` 43 项、全量棘轮、PR CI 47 项通过（提示词修订前的提交）。
-  - 真机小回归：`.docs/goal-post-sync-regression-ui-validation/2026-11-24/`（Goal 工作区和主目录各一份）。
+  - 真机小回归：`.docs/goal-post-sync-regression-ui-validation/2026-11-24/`（主目录）。
   - 提示词重放：确认框 4 个样本各 3 次全部符合预期；10-23 第 20 次采用的写法 6 次里 5 次给指示（11-20 原文今天 4 次全给）。详见开工对齐方案 §4.5，证据在 `.docs/goal-prompt-review/2026-11-24/`。
 - 未解决问题：
   - 修订后的提示词没有再跑真机；确认框的拒绝分支只有重放（真实模型、真实画面）和 11-20 的真机记录，驱动按 Esc 的代码这次没有改。
@@ -163,7 +172,7 @@ external_ids: [Fartown/orca#151]
   - 采用的写法只在 10-23 第 20 次这一个时刻上重跑过；其余四个时刻只跑过「加门槛」那一版。
   - 驱动交给守卫的确认框原文不含待确认的命令本身（从问句那一行开始），守卫要自己读画面才知道在确认什么。
   - 重放时 `claude -p` 间歇返回 `Not logged in`，原因没有查清。
-- 下一步：用户看过后合入；合入后在真实目标上观察拒绝分支和小偏差打断。
+- 下一步：用户看过后合入（2026-11-25 已合，见上条）；合入后在真实目标上观察拒绝分支和小偏差打断。
 
 ### 2026-11-21 上游同步到 fa60d0a566（testing）
 
