@@ -14,6 +14,22 @@ export type RuntimeAiVaultSessionTitleResolver = (
   args: AiVaultSessionTitlesArgs
 ) => Promise<AiVaultSessionTitlesResult>
 
+function unavailableSessionTitlesResult(
+  requests: AiVaultSessionTitlesArgs['requests']
+): AiVaultSessionTitlesResult {
+  if (requests.length === 0) {
+    return { titles: [] }
+  }
+  return {
+    titles: [],
+    nameEvidence: requests.map(({ agent, sessionId }) => ({
+      agent,
+      sessionId,
+      providerName: { kind: 'unavailable' as const }
+    }))
+  }
+}
+
 export async function resolveAiVaultSessionTitlesByHost(
   args: AiVaultSessionTitlesArgs,
   resolveRuntime?: RuntimeAiVaultSessionTitleResolver
@@ -24,7 +40,13 @@ export async function resolveAiVaultSessionTitlesByHost(
   }
   const parsed = parseRoutableExecutionHostId(executionHostScope)
   if (parsed?.kind === 'runtime' && resolveRuntime) {
-    return resolveRuntime(parsed.environmentId, args).catch(() => ({ titles: [] }))
+    return resolveRuntime(parsed.environmentId, args)
+      .then((result) =>
+        result.titles.length === 0 && !result.nameEvidence?.length && args.requests.length > 0
+          ? unavailableSessionTitlesResult(args.requests)
+          : result
+      )
+      .catch(() => unavailableSessionTitlesResult(args.requests))
   }
-  return { titles: [] }
+  return unavailableSessionTitlesResult(args.requests)
 }

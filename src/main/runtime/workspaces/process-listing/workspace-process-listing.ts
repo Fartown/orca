@@ -302,6 +302,7 @@ export abstract class OrcaRuntimeWithGetWorktreePs extends RuntimeChatWorkerEven
         readWorkspaceLabels: (scope) =>
           readStructuredAttentionWorkspaceLabels(this.requireStore(), scope),
         ...this.botAttentionDeliveryDeps(),
+        readSessionTitle: this.orchestrationSenderNames.structuredNotificationSessionTitle,
         // The same contexts the session's chat row carries.
         readOrchestration: (paneKey) => this.agentOrchestrationProjection.getForPaneKey(paneKey),
         dispatch: (event) => this.mobileNotifications.dispatch(event),

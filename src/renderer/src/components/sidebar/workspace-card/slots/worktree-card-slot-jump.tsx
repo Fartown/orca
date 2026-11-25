@@ -17,6 +17,7 @@ import { cn } from '@/lib/class-names'
 import { useAppStore } from '@/store'
 import { formatAgentTypeLabel } from '../../../../../../shared/agent-status/presentation/agent-type-label'
 import { getAgentRowPrimaryText } from '../../../../../../shared/agent-status/presentation/agent-row-primary-text'
+import { resolveSidebarSlotTargetSessionName } from '@/session-names/renderer-surface-session-names'
 import type { SlotLineKind } from './worktree-card-slot-signal'
 import { openSlotTarget, type SlotTarget } from './worktree-card-slot-targets'
 
@@ -58,6 +59,11 @@ function tabTitle(worktreeId: string, tabId: string): string | null {
 }
 
 function targetText(target: SlotTarget): string {
+  const state = useAppStore.getState()
+  const resolved = resolveSidebarSlotTargetSessionName(state, target)
+  if (resolved) {
+    return resolved
+  }
   if (target.entry) {
     return getAgentRowPrimaryText(target.entry) || formatAgentTypeLabel(target.agentType)
   }

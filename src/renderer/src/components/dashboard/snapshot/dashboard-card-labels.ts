@@ -4,6 +4,7 @@ import { parsePaneKey } from '../../../../../shared/workspace-layout/stable-pane
 import { resolveAgentRowPaneLiveTitle } from '../rows/agent-row-pane-live-title'
 import { structuredChatTabById } from '@/lib/agent-session/tab-identity/structured-chat-tab-index'
 import { projectedStructuredChatTabName } from '@/runtime/native-chat/naming/structured-chat-tab-name'
+import { resolveDashboardCardSessionSlot } from '@/session-names/renderer-surface-session-names'
 import type { StructuredChatTabNames } from '@/runtime/native-chat/naming/structured-chat-tab-name'
 import type { TerminalLayoutSnapshot } from '../../../../../shared/workspace-layout/terminal-tab-types'
 import type { DashboardAgentRow } from '../rows/dashboard-agent-row'
@@ -61,12 +62,20 @@ export function rowConversationName(
   const slotNamesThisRow =
     slot == null ||
     (slot.agent === row.agentType && slot.sessionId === row.entry.providerSession?.id)
+  const { aiVaultTitle, userTitle, identityFallbackTitle } = resolveDashboardCardSessionSlot({
+    worktreeId: row.tab.worktreeId,
+    agentType: row.agentType,
+    sessionId: row.entry.providerSession?.id,
+    transcriptPath: row.entry.providerSession?.transcriptPath,
+    ownSlot: slotNamesThisRow ? slot : null
+  })
   return (
     getAgentRowConversationName(
-      slotNamesThisRow ? row.tab : { ...row.tab, aiVaultTitle: null },
+      aiVaultTitle === row.tab.aiVaultTitle ? row.tab : { ...row.tab, aiVaultTitle },
       row.agentType,
       generatedTitlesEnabled,
-      paneLiveTitle
+      paneLiveTitle,
+      { userTitle, identityFallbackTitle }
     ) ?? undefined
   )
 }

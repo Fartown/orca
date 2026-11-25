@@ -3,17 +3,20 @@ import { senderDispatchLaunch, senderDispatchLaunchReader } from './sender-dispa
 // Name another agent from host records when sending on its behalf or listing its worktree.ps row.
 
 import type { AgentMessageSender } from '../../../../../shared/agent-session/journal/agent-session-message-source'
-import {
-  getAgentRowConversationName,
-  type ConversationNameTab
-} from '../../../../../shared/agent-status/presentation/agent-row-conversation-name'
+import type { ConversationNameTab } from '../../../../../shared/agent-status/presentation/agent-row-conversation-name'
 import type { AgentType } from '../../../../../shared/agent-status/contracts/agent-status-types'
 import type { AiVaultSessionTitle } from '../../../../../shared/ai-vault/contracts/ai-vault-session-title'
 import {
+  indexCrewSenderStatusRows,
+  resolveHostAgentRowConversationName,
+  resolveHostStructuredChatNotificationName,
+  resolveHostTerminalTabWithCachedTitle
+} from '../../../../session-names/host-orchestration-sender-naming'
+import {
+  getCachedHostProviderTitleMap,
   mergeWorktreeAgentRowProviderTitle,
   resolveWorktreeAgentRowProviderNames
 } from '../../../../session-names/worktree-agent-row-provider-names'
-import { structuredAgentSessionIdFromTabId } from '../../../../../shared/agent-session/view/structured-agent-session-tab-id'
 import type { TerminalTab } from '../../../../../shared/workspace-layout/terminal-tab-types'
 import type { OrchestrationDb } from '../../db/orchestration-db'
 import {
@@ -134,12 +137,24 @@ export class RuntimeOrchestrationSenderNames {
   }
 
   async worktreePsAgentRowNamer(rowSources: ReadonlyMap<string, RuntimeWorktreeAgentSource>) {
-    return this.agentRowNamer(await resolveWorktreeAgentRowProviderNames(rowSources))
+    return this.agentRowNamer(await resolveWorktreeAgentRowProviderNames(rowSources), {
+      mintIdentityFallback: true
+    })
   }
+
+  structuredNotificationSessionTitle = (
+    scope: { workspaceId: string },
+    sessionId: string
+  ): string | undefined =>
+    resolveHostStructuredChatNotificationName(this.agentRowNamer(), scope, sessionId)
 
   /** Names one worktree.ps pass's rows as desktop's compact row does; null keeps the phone's message fallback. */
   agentRowNamer(
-    resolvedSessionTitles?: ReadonlyMap<string, AiVaultSessionTitle>
+    resolvedSessionTitles: ReadonlyMap<
+      string,
+      AiVaultSessionTitle
+    > = getCachedHostProviderTitleMap(),
+    namingOptions: { mintIdentityFallback?: boolean } = {}
   ): (source: AgentRowNamingSource) => string | null {
     // A pass reads the setting and each worktree's session at most once, however many rows it lists.
     let generatedTitlesEnabled: boolean | undefined
@@ -152,29 +167,24 @@ export class RuntimeOrchestrationSenderNames {
     }
     const chatSources = this.chatSources(session)
     return (source) => {
-      const { tabId, worktreeId } = source
-      if (!tabId || !worktreeId) {
-        return null
-      }
-      const chatSessionId = structuredAgentSessionIdFromTabId(tabId)
-      if (chatSessionId !== null) {
-        const chat = structuredChatNaming(chatSessionId, chatSources)
-        return chat ? chat.ownName || chat.fallback : null
-      }
-      const record = { worktreeId, tabId, ptyId: source.ptyId ?? null }
-      const pane = this.paneNaming(record, source.paneKey, session)
-      const tab = mergeWorktreeAgentRowProviderTitle(pane.tab, source, resolvedSessionTitles)
       generatedTitlesEnabled ??= readGeneratedTitlesEnabled(this.deps.getStore())
-      const options = { providerSessionId: source.providerSessionId }
-      return tab
-        ? getAgentRowConversationName(
-            tab,
-            source.agentType,
-            generatedTitlesEnabled,
-            pane.paneTitle,
-            options
-          )
-        : null
+      return resolveHostAgentRowConversationName({
+        tabId: source.tabId,
+        worktreeId: source.worktreeId,
+        paneKey: source.paneKey,
+        ptyId: source.ptyId,
+        agentType: source.agentType,
+        providerSessionId: source.providerSessionId,
+        baseOptions: { providerSessionId: source.providerSessionId },
+        generatedTitlesEnabled,
+        mintIdentityFallback: namingOptions.mintIdentityFallback,
+        readStructuredChatName: (chatSessionId) => {
+          const chat = structuredChatNaming(chatSessionId, chatSources)
+          return chat ? chat.ownName || chat.fallback : null
+        },
+        readPaneNaming: (record, paneKey) => this.paneNaming(record, paneKey, session),
+        mergeTab: (tab) => mergeWorktreeAgentRowProviderTitle(tab, source, resolvedSessionTitles)
+      })
     }
   }
 
@@ -183,23 +193,8 @@ export class RuntimeOrchestrationSenderNames {
     const generatedTitlesEnabled = readGeneratedTitlesEnabled(this.deps.getStore())
     const db = this.deps.getDb()
     const tabs = captureMirroredTabs((id) => this.deps.getWorkspaceSession(id))
-    const statuses = new Map<string, SenderHookRow[]>()
     const allStatuses = this.deps.getAgentStatusSnapshot?.()
-    for (const row of allStatuses ?? []) {
-      const rows = statuses.get(row.paneKey) ?? []
-      rows.push({
-        paneKey: row.paneKey,
-        worktreeId: row.worktreeId,
-        agentType: row.agentType,
-        providerSession: row.providerSession
-          ? { key: row.providerSession.key, id: row.providerSession.id }
-          : row.providerSession,
-        receivedAt: row.receivedAt,
-        connectionId: row.connectionId,
-        launchToken: row.launchToken
-      })
-      statuses.set(row.paneKey, rows)
-    }
+    const statuses = indexCrewSenderStatusRows(allStatuses)
     const terminals = new Map<string, TerminalSenderNaming | null>()
     return (
       party: AgentMessageSender['party'],
@@ -292,16 +287,26 @@ export class RuntimeOrchestrationSenderNames {
           )
           .sort((left, right) => right.receivedAt - left.receivedAt)[0]
       : undefined
+    const pane = this.paneNaming(
+      record,
+      paneKey,
+      () => session,
+      () => tab,
+      readLayout ? (tabId) => readLayout(record.worktreeId, tabId) : undefined
+    )
+    const agent = status?.agentType ?? pty?.launchAgent ?? pty?.foregroundAgent ?? null
+    const providerSessionId = status?.providerSession?.id
+    const connectionId = pty?.connectionId ?? status?.connectionId ?? null
     return {
-      ...this.paneNaming(
-        record,
-        paneKey,
-        () => session,
-        () => tab,
-        readLayout ? (tabId) => readLayout(record.worktreeId, tabId) : undefined
-      ),
-      agent: status?.agentType ?? pty?.launchAgent ?? pty?.foregroundAgent ?? null,
-      providerSessionId: status?.providerSession?.id,
+      tab: resolveHostTerminalTabWithCachedTitle(pane.tab, {
+        agent,
+        providerSessionId,
+        connectionId,
+        wslDistro: pty?.wslDistro
+      }),
+      paneTitle: pane.paneTitle,
+      agent,
+      providerSessionId,
       paneKey,
       hostScope: this.deps.getHostScope?.(handle),
       processIncarnation: this.deps.getProcessIncarnation?.(handle)

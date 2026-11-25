@@ -29,6 +29,7 @@ import { interpretOrThrowRefusalMessage } from '../transport/rpc/rpc-refusal-mes
 import { MOBILE_AI_VAULT_CAPABILITY } from './agent-history-capability'
 import { translate } from '../i18n/mobile-i18n'
 import { useMobileTranslation } from '../i18n/use-mobile-translation'
+import { resolveMobileHistorySessionTitle } from '../session-names/mobile-session-names'
 
 export { MOBILE_AI_VAULT_CAPABILITY }
 
@@ -258,8 +259,9 @@ export function useMobileAgentHistoryState(params: MobileAgentHistoryStateParams
       const sessions = read.sessions.map((session): MobileAgentHistorySession => {
         const id = session.structuredSession?.sessionId
         const note = id ? names.get(id) : undefined
-        const title = note ? mobileChatShownName(names, note, session.agent) : null
-        return title || note?.forkedFrom
+        const chatTitle = note ? mobileChatShownName(names, note, session.agent) : null
+        const title = chatTitle || resolveMobileHistorySessionTitle(session)
+        return (title && title !== session.title) || note?.forkedFrom
           ? {
               ...session,
               ...(title ? { title } : {}),

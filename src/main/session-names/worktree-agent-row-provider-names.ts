@@ -10,6 +10,76 @@ import { resolveLocalAiVaultSessionTitles } from '../ai-vault/session-titles/ses
 import type { RuntimeWorktreeAgentSource } from '../runtime/workspaces/process-listing/runtime-worktree-agent-source'
 
 const DEFAULT_RESOLVE_TIMEOUT_MS = 1_500
+const MAX_CACHED_HOST_TITLES = 1_024
+
+const hostProviderTitleCache = new Map<string, AiVaultSessionTitle>()
+const hostWarmInFlight = new Set<string>()
+
+function rememberHostProviderTitle(key: string, slot: AiVaultSessionTitle): void {
+  hostProviderTitleCache.delete(key)
+  hostProviderTitleCache.set(key, slot)
+  while (hostProviderTitleCache.size > MAX_CACHED_HOST_TITLES) {
+    const oldest = hostProviderTitleCache.keys().next().value
+    if (oldest === undefined) {
+      break
+    }
+    hostProviderTitleCache.delete(oldest)
+  }
+}
+
+export function getCachedHostProviderTitleMap(): ReadonlyMap<string, AiVaultSessionTitle> {
+  return hostProviderTitleCache
+}
+
+export function warmHostProviderSessionTitle(args: {
+  agent: string | null | undefined
+  sessionId: string | null | undefined
+  transcriptPath?: string | null
+  connectionId?: string | null
+  resolveTitles?: ProviderNameResolver
+}): void {
+  const agent = args.agent
+  const sessionId = args.sessionId?.trim()
+  if (args.connectionId != null || !agent || !sessionId || !isAiVaultTitleAgent(agent)) {
+    return
+  }
+  const key = worktreeAgentRowProviderTitleKey(agent, sessionId)
+  if (
+    hostProviderTitleCache.get(key)?.providerName?.kind === 'named' ||
+    hostWarmInFlight.has(key)
+  ) {
+    return
+  }
+  hostWarmInFlight.add(key)
+  const transcriptPath = args.transcriptPath?.trim()
+  const resolveTitles = args.resolveTitles ?? resolveLocalAiVaultSessionTitles
+  void resolveTitles(
+    [{ agent, sessionId, ...(transcriptPath ? { transcriptPath } : {}) }],
+    AbortSignal.timeout(DEFAULT_RESOLVE_TIMEOUT_MS)
+  )
+    .then((result) => {
+      const title = result.titles[0]
+      const evidence = result.nameEvidence?.[0]
+      if (!title && !evidence) {
+        return
+      }
+      const slot = projectSessionNameSlot({
+        agent,
+        sessionId,
+        previous: hostProviderTitleCache.get(key) ?? null,
+        title,
+        evidence,
+        manualTitle: null
+      })
+      if (slot) {
+        rememberHostProviderTitle(key, slot)
+      }
+    })
+    .catch(() => undefined)
+    .finally(() => {
+      hostWarmInFlight.delete(key)
+    })
+}
 
 export function worktreeAgentRowProviderTitleKey(agent: string, sessionId: string): string {
   return `${agent}\0${sessionId}`
@@ -72,13 +142,14 @@ export async function resolveWorktreeAgentRowProviderNames(
       const slot = projectSessionNameSlot({
         agent: title.agent,
         sessionId: title.sessionId,
-        previous: null,
+        previous: hostProviderTitleCache.get(key) ?? null,
         title,
         evidence: evidenceByKey.get(key),
         manualTitle: null
       })
       if (slot) {
         resolved.set(key, slot)
+        rememberHostProviderTitle(key, slot)
       }
     }
     for (const [key, evidence] of evidenceByKey) {
@@ -88,16 +159,25 @@ export async function resolveWorktreeAgentRowProviderNames(
       const slot = projectSessionNameSlot({
         agent: evidence.agent,
         sessionId: evidence.sessionId,
-        previous: null,
+        previous: hostProviderTitleCache.get(key) ?? null,
         evidence,
         manualTitle: null
       })
       if (slot) {
         resolved.set(key, slot)
+        rememberHostProviderTitle(key, slot)
       }
     }
   } catch {
     // Never stall or fail worktree.ps if the local vault scanner is slow or unavailable.
+  }
+  for (const [key, request] of byKey) {
+    if (!resolved.has(key)) {
+      const cached = hostProviderTitleCache.get(key)
+      if (cached && cached.agent === request.agent && cached.sessionId === request.sessionId) {
+        resolved.set(key, cached)
+      }
+    }
   }
   return resolved
 }

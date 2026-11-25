@@ -1,6 +1,6 @@
 import type { AiVaultSession } from '../../../shared/ai-vault/contracts/ai-vault-types'
-import { mintAgentSessionFallbackTitle } from '../../../shared/agent-session-fallback-title'
 import { resolveSessionDisplayTitle } from '../../../shared/session-display-title'
+import { resolveScannedSessionDisplayName } from '../../../shared/session-names/scanned-session-display-name'
 import { sessionNameSlotCandidates } from '../../../shared/session-names/session-name-slot'
 import {
   canonicalSessionTitleKey,
@@ -52,20 +52,10 @@ export function getScannedSessionDisplayName(
 ): string {
   const key = canonicalSessionTitleKey(session.executionHostId, session.agent, session.sessionId)
   const independentIdentity = hasIndependentScannedSessionIdentity(session)
-  const cached = independentIdentity ? sessionNameStore.getSnapshot().get(key) : undefined
-  const providerName = cached?.providerName ?? session.providerName
-  return (
-    resolveSessionDisplayTitle({
-      providerTitle: providerName?.kind === 'named' ? providerName.title : null,
-      userTitle: independentIdentity
-        ? (getCanonicalSessionTitleIndex().get(key) ?? legacyManualTitle)
-        : null,
-      generatedTitle:
-        cached?.generatedTitle ?? session.generatedTitle ?? (!providerName ? session.title : null),
-      identityFallbackTitle: mintAgentSessionFallbackTitle(
-        session.agent,
-        independentIdentity ? session.sessionId : session.id
-      )
-    })?.title ?? session.title
-  )
+  return resolveScannedSessionDisplayName(session, {
+    cached: independentIdentity ? sessionNameStore.getSnapshot().get(key) : undefined,
+    userTitle: independentIdentity
+      ? (getCanonicalSessionTitleIndex().get(key) ?? legacyManualTitle)
+      : null
+  })
 }

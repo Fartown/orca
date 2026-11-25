@@ -24,6 +24,10 @@ import type { MobileNotificationDispatchEvent } from './runtime-mobile-notificat
 import { TerminalAgentTurnNews } from './terminal-agent-turn-news'
 import type { RuntimeClientEventBus } from '../../client/events/runtime-client-event-bus'
 import { TerminalHooklessNews, type TerminalHooklessNewsItem } from './terminal-hookless-news'
+import {
+  resolveWindowlessRowNotificationTitle,
+  warmWindowlessTerminalNotificationTitle
+} from '../../../session-names/headless-mobile-tab-session-title'
 
 export type TerminalAgentWorkspaceLabels = { repoLabel?: string; worktreeLabel?: string }
 
@@ -48,6 +52,12 @@ export type TerminalAgentPhonePushDeps = {
   readOrchestration: (paneKey: string) => AgentStatusOrchestrationContext | undefined
   readTerminalTitle: (paneKey: string) => string | null
   readHookRow: (paneKey: string) => AgentStatusIpcPayload | null
+  warmSessionTitle?: (row: AgentStatusIpcPayload) => void
+  readSessionTitle?: (
+    worktreeId: string,
+    paneKey: string,
+    row: AgentStatusIpcPayload
+  ) => string | undefined
   translate?: (key: string, fallback: string) => string
   dispatch: (event: MobileNotificationDispatchEvent) => void
   /** Title edges and bells reach a window as facts; without one, this lane tells the phones. */
@@ -66,6 +76,8 @@ export class TerminalAgentPhonePush {
     this.turnNews = new TerminalAgentTurnNews({
       readHookRow: (paneKey) => deps.readHookRow(paneKey),
       prepare: ({ paneKey, worktreeId, row }) => {
+        warmWindowlessTerminalNotificationTitle(row)
+        deps.warmSessionTitle?.(row)
         const labels = this.readLabels(worktreeId, paneKey)
         return {
           worktreeId,
@@ -168,11 +180,15 @@ export class TerminalAgentPhonePush {
     labels: TerminalAgentWorkspaceLabels
   ): MobileNotificationDispatchEvent {
     const outcome = agentMainAgentVerdict(row)
+    const sessionTitle =
+      this.deps.readSessionTitle?.(worktreeId, paneKey, row) ??
+      resolveWindowlessRowNotificationTitle(row, this.deps.readTerminalTitle(paneKey))
     const request: NotificationDispatchRequest = {
       source: 'agent-task-complete',
       worktreeId,
       paneKey,
       ...labels,
+      ...(sessionTitle ? { sessionTitle } : {}),
       agentState: row.state,
       ...(row.agentType ? { agentType: row.agentType } : {}),
       ...(row.prompt ? { agentPrompt: row.prompt } : {}),
