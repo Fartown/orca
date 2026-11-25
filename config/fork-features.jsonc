@@ -2075,6 +2075,7 @@
         "src/renderer/src/session-names/activity-prompt-priority.test.ts",
         "src/renderer/src/session-names/session-name-state-clock.test.ts",
         "src/renderer/src/session-names/dashboard-row-conversation-name.test.ts",
+        "src/main/session-names/worktree-agent-row-provider-names.test.ts",
         "src/renderer/src/session-names/agent-list-verdict-session-names.test.tsx",
         "src/shared/session-names/agent-row-conversation-name.test.ts"
       ],

@@ -104,11 +104,19 @@ export async function resolveWorktreeAgentRowProviderNames(
 
 export function mergeWorktreeAgentRowProviderTitle(
   tab: ConversationNameTab | null,
-  source: Pick<RuntimeWorktreeAgentSource, 'agentType' | 'providerSessionId'>,
+  source: Pick<RuntimeWorktreeAgentSource, 'agentType' | 'providerSessionId'> & {
+    connectionId?: string | null
+  },
   resolvedSessionTitles: ReadonlyMap<string, AiVaultSessionTitle> | undefined
 ): ConversationNameTab | null {
-  const { agentType, providerSessionId } = source
-  if (!agentType || !providerSessionId || !resolvedSessionTitles?.size) {
+  const { agentType } = source
+  const providerSessionId = source.providerSessionId?.trim()
+  if (
+    source.connectionId != null ||
+    !agentType ||
+    !providerSessionId ||
+    !resolvedSessionTitles?.size
+  ) {
     return tab
   }
   const resolvedSlot = resolvedSessionTitles.get(

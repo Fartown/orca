@@ -128,6 +128,13 @@ describe('worktree-agent-row-provider-names', () => {
         providerSessionId: 'session-1'
       })
     ).toBe('手动改名')
+
+    const remoteTab = mergeWorktreeAgentRowProviderTitle(
+      { title: 'Terminal', customTitle: null },
+      { ...source, connectionId: 'ssh:box' },
+      resolved
+    )
+    expect(remoteTab?.aiVaultTitle).toBeUndefined()
   })
 
   it('swallows resolver errors so worktree.ps never fails when vault is unavailable', async () => {

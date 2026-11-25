@@ -70,7 +70,7 @@ type SessionLookup = RuntimeSenderNameDeps['getWorkspaceSession']
 type AgentRowNamingSource = Pick<
   RuntimeWorktreeAgentSource,
   'paneKey' | 'tabId' | 'worktreeId' | 'ptyId' | 'agentType' | 'providerSessionId'
->
+> & { connectionId?: string | null }
 
 export class RuntimeOrchestrationSenderNames {
   private readonly launchInstallation: { database: OrchestrationDb | null } = { database: null }
