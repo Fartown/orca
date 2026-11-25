@@ -141,7 +141,7 @@ export abstract class OrcaRuntimeWithGetWorktreePs extends RuntimeChatWorkerEven
       rowSources,
       orchestrationByPaneKey: this.agentOrchestrationProjection.buildByPaneKey(),
       getSummary,
-      conversationName: this.orchestrationSenderNames.agentRowNamer(),
+      conversationName: await this.orchestrationSenderNames.worktreePsAgentRowNamer(rowSources),
       agentList: this.readAgentListPublication()
     })
 
