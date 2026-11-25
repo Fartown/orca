@@ -261,7 +261,7 @@ export function useMobileAgentHistoryState(params: MobileAgentHistoryStateParams
         const note = id ? names.get(id) : undefined
         const chatTitle = note ? mobileChatShownName(names, note, session.agent) : null
         const title = chatTitle || resolveMobileHistorySessionTitle(session)
-        return title !== session.title || note?.forkedFrom
+        return (title && title !== session.title) || note?.forkedFrom
           ? {
               ...session,
               ...(title ? { title } : {}),

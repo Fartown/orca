@@ -9,10 +9,21 @@ export function resolveMobileWorktreeAgentRowName(row: RuntimeWorktreeAgentRow):
 }
 
 export function resolveMobileHistorySessionTitle(
-  session: Pick<
-    AiVaultSession,
-    'id' | 'agent' | 'sessionId' | 'title' | 'providerName' | 'generatedTitle'
-  > & { subagent?: AiVaultSession['subagent'] }
+  session: Pick<AiVaultSession, 'id' | 'agent'> &
+    Partial<
+      Pick<AiVaultSession, 'sessionId' | 'title' | 'providerName' | 'generatedTitle' | 'subagent'>
+    >
 ): string {
-  return resolveScannedSessionDisplayName(session)
+  if (
+    !session.sessionId &&
+    !session.title &&
+    session.providerName === undefined &&
+    session.generatedTitle === undefined
+  ) {
+    return ''
+  }
+  return resolveScannedSessionDisplayName({
+    ...session,
+    title: session.title ?? ''
+  })
 }

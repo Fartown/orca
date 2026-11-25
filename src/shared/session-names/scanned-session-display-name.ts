@@ -12,29 +12,30 @@ export function hasIndependentScannedSessionIdentity(
 
 /** Shared public display name for scanned History rows across desktop and mobile. */
 export function resolveScannedSessionDisplayName(
-  session: Pick<
-    AiVaultSession,
-    'id' | 'agent' | 'sessionId' | 'title' | 'providerName' | 'generatedTitle'
-  > & { subagent?: AiVaultSession['subagent'] },
+  session: Pick<AiVaultSession, 'id' | 'agent' | 'title'> &
+    Partial<Pick<AiVaultSession, 'sessionId' | 'providerName' | 'generatedTitle' | 'subagent'>>,
   options: {
     cached?: Pick<AiVaultSessionTitle, 'providerName' | 'generatedTitle'>
     userTitle?: string | null
   } = {}
 ): string {
-  const independentIdentity = hasIndependentScannedSessionIdentity(session)
+  const independentIdentity =
+    !session.subagent ||
+    !session.sessionId ||
+    session.subagent.parentSessionId !== session.sessionId
   const providerName =
     (independentIdentity ? options.cached?.providerName : undefined) ?? session.providerName
   const cachedGenerated = independentIdentity ? options.cached?.generatedTitle : undefined
+  const fallbackId = (independentIdentity ? session.sessionId : session.id) ?? session.id ?? ''
   return (
     resolveSessionDisplayTitle({
       providerTitle: providerName?.kind === 'named' ? providerName.title : null,
       userTitle: independentIdentity ? options.userTitle : null,
       generatedTitle:
         cachedGenerated ?? session.generatedTitle ?? (!providerName ? session.title : null),
-      identityFallbackTitle: mintAgentSessionFallbackTitle(
-        session.agent,
-        independentIdentity ? session.sessionId : session.id
-      )
+      identityFallbackTitle: fallbackId
+        ? mintAgentSessionFallbackTitle(session.agent, fallbackId)
+        : null
     })?.title ?? session.title
   )
 }

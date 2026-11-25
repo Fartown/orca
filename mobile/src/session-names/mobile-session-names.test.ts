@@ -83,5 +83,12 @@ describe('mobile session-names unification', () => {
       generatedTitle: null
     }
     expect(resolveMobileHistorySessionTitle(unnamedHistorySession)).toBe('Claude 12345678')
+
+    expect(
+      resolveMobileHistorySessionTitle({
+        id: 's1',
+        agent: 'claude'
+      })
+    ).toBe('')
   })
 })
