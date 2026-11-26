@@ -15,6 +15,7 @@ import { useAppStore } from '@/store/index'
 import type { RemoteServerUpdateEntry } from '@/runtime/hosts/updates/remote-server-update-coordinator'
 import { translate } from '@/i18n/i18n'
 import { useTranslate, type Translate } from '@/i18n/use-translate'
+import { RemoteServerUpdateNotes } from '@/integration-builds/RemoteServerUpdateNotes'
 import {
   getRemoteServerManualUpdateHelp,
   RemoteServerUpdateStatus
@@ -79,6 +80,7 @@ function ServerUpdateRow({
           </Button>
         ) : null}
       </div>
+      <RemoteServerUpdateNotes changelog={entry.changelog} phase={entry.phase} />
       {entry.phase === 'downloading' && entry.progress !== null ? (
         <Progress
           value={entry.progress}
@@ -139,7 +141,7 @@ export function RemoteServerUpdateDialog(): React.JSX.Element {
 
   useEffect(() => {
     if (open) {
-      void refresh()
+      void refresh({})
     }
   }, [open, refresh])
 

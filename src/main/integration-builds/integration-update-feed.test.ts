@@ -2,7 +2,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { AppUpdater } from 'electron-updater'
 
 const mock = vi.hoisted(() => ({
-  app: { isPackaged: true, getAppPath: () => '/isolated-app' },
+  app: {
+    isPackaged: true,
+    getAppPath: () => '/isolated-app',
+    getVersion: vi.fn<() => string>()
+  },
   readFileSync: vi.fn(),
   fetch: vi.fn(),
   unavailable: vi.fn<() => string | null>()
@@ -187,5 +191,69 @@ describe('integration-only default updater feed', () => {
     const updater = feedUpdater()
     await expect(pinIntegrationReleaseFeed(updater)).rejects.toThrow('offline')
     expect(updater.setFeedURL).not.toHaveBeenCalled()
+  })
+
+  it('retains intermediate merged changes when the newest integration build is engineering-only', async () => {
+    fork()
+    mock.app.getVersion.mockReturnValue('1.4.214-preview.100')
+    const assets = ['orca-integration-macos-arm64.zip', 'orca-integration-macos-x64.zip'].map(
+      (name) => ({ name, bytes: 123, sha256: 'b'.repeat(64) })
+    )
+    const releaseEntry = (runTag: string, name: string) => ({
+      tag_name: runTag,
+      name,
+      draft: false,
+      prerelease: true,
+      assets: [...assets, { name: 'build-info.json' }, { name: 'latest-mac.yml' }]
+    })
+    const tag102 = 'integration-102-cccccccccccc'
+    const tag101 = 'integration-101-bbbbbbbbbbbb'
+    const tag100 = 'integration-100-aaaaaaaaaaaa'
+    mock.fetch
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify([
+            releaseEntry(tag102, 'Orca 1.4.214-preview.102'),
+            releaseEntry(tag101, 'Orca 1.4.214-preview.101'),
+            releaseEntry(tag100, 'Orca 1.4.214-preview.100')
+          ])
+        )
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            schemaVersion: 2,
+            tag: tag102,
+            sha: 'c'.repeat(40),
+            desktopVersion: '1.4.214-preview.102',
+            androidVersion: '0.0.68',
+            androidVersionCode: 217752164,
+            assets,
+            changes: [],
+            engineeringChanges: [{ title: 'docs(goals): update journal' }]
+          })
+        )
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            schemaVersion: 2,
+            tag: tag101,
+            sha: 'b'.repeat(40),
+            desktopVersion: '1.4.214-preview.101',
+            androidVersion: '0.0.68',
+            androidVersionCode: 217750000,
+            assets,
+            changes: [{ title: '新功能：Goal 模式守卫确认 (#152)' }]
+          })
+        )
+      )
+
+    await pinIntegrationReleaseFeed(feedUpdater())
+    expect(integrationChangelog('1.4.214-preview.102')?.release).toMatchObject({
+      title: 'Orca 1.4.214-preview.102',
+      description: '新功能：Goal 模式守卫确认 (#152)',
+      releaseNotesUrl: `https://github.com/Fartown/orca/releases/tag/${tag102}`
+    })
   })
 })

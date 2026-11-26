@@ -1,4 +1,5 @@
 import { useStore } from 'zustand'
+import { integrationChangeSummary } from '../../../src/shared/integration-builds/release-catalog'
 import { useMobileTranslation } from '../i18n/use-mobile-translation'
 import { downloadAndInstallUpdate, mobileUpdates } from './mobile-updates'
 import { isUpdateBusy, type UpdateStage } from './update-controller'
@@ -9,6 +10,7 @@ const installable = (stage: UpdateStage) =>
 export function useIntegrationUpdateAction() {
   const { stage, progress, error, release } = useStore(mobileUpdates.store)
   const t = useMobileTranslation()
+  const summary = release && stage !== 'latest' ? integrationChangeSummary(release) : null
   const label =
     stage === 'checking'
       ? t('integrationBuilds.updateRow.checking', 'Checking for updates…')
@@ -30,6 +32,7 @@ export function useIntegrationUpdateAction() {
   return {
     stage,
     error,
+    summary,
     label,
     pending: isUpdateBusy(stage),
     onPress: () => {

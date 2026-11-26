@@ -5,7 +5,7 @@ import { integrationUpdatesEnabled } from './mobile-updates'
 import { useIntegrationUpdateAction } from './use-integration-update-action'
 
 export function IntegrationUpdateRow() {
-  const { stage, error, label, pending, onPress } = useIntegrationUpdateAction()
+  const { stage, error, summary, label, pending, onPress } = useIntegrationUpdateAction()
   const t = useMobileTranslation()
   if (!integrationUpdatesEnabled) {
     return null
@@ -21,6 +21,7 @@ export function IntegrationUpdateRow() {
       >
         <Text style={styles.label}>{label}</Text>
       </Pressable>
+      {summary && <Text style={styles.detail}>{summary}</Text>}
       <Text style={styles.detail}>
         {t(
           'integrationBuilds.updateRow.channelNote',

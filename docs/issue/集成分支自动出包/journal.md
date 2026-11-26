@@ -3,8 +3,8 @@ title: 集成分支自动出包
 slug: 集成分支自动出包
 status: testing
 created: 2026-09-12
-updated: 2026-11-17
-external_ids: ['Fartown/orca#85', 'Fartown/orca#131']
+updated: 2026-11-26
+external_ids: ['Fartown/orca#85', 'Fartown/orca#131', 'Fartown/orca#161']
 ---
 
 # 集成分支自动出包 开发 Journal
@@ -39,22 +39,25 @@ external_ids: ['Fartown/orca#85', 'Fartown/orca#131']
 - [Linux 服务自动更新验收](tests/runs/2026-10-23-linux-auto-update.md)：本地和 SSH 真实包 A→B、坏包拒绝及终端连续性通过。
 - [Linux 目录别名与验收修复](tests/runs/2026-10-23-linux-update-paths.md)：PR #67；真实符号链接 profile 下，本地与 SSH 升级及原 shell PID 保留通过。
 
-| 类型     | 文档                                                                   | 状态         | 说明                                                                              |
-| -------- | ---------------------------------------------------------------------- | ------------ | --------------------------------------------------------------------------------- |
-| 需求     | [集成分支自动出包](requirements/集成分支自动出包.md)                   | ready        | 已确认范围与内测安装边界                                                          |
-| 交互     | -                                                                      | not-required | 小型更新提示及关于页入口，交互规则随 REQ-405 与 TC-405 记录                       |
-| 调研     | -                                                                      | not-required | 直接核实既有构建入口                                                              |
-| 方案     | [macOS 自动更新签名修复](solutions/macOS自动更新签名修复方案.md)       | draft        | 固定自签身份优先验证；Developer ID 备选                                           |
-| 方案     | [发布页分层与可读发布说明](solutions/发布页分层与可读发布说明方案.md)  | ready        | 构建发布清理、整理版、按功能分组、同步上游摘要、AI 短版本                         |
-| 测试用例 | [自动出包](tests/cases/自动出包.md)                                    | ready        | 按仓库完成门禁建立                                                                |
-| 测试记录 | [本地验证](tests/runs/2026-09-12-local.md)                             | completed    | 13 条合同测试，云构建尚未执行                                                     |
-| 测试记录 | [应用更新验证](tests/runs/2026-09-12-updates.md)                       | completed    | 本地实现、APK、组件验证；真机安装与新发布待验                                     |
-| 测试记录 | [原生更新验收](tests/runs/2026-09-13-native-update.md)                 | completed    | arm64 真实替换、原生运行状态和原终端连续性通过；正式发布及 Android 默认源安装待验 |
-| 测试记录 | [HTTP403修复验证](tests/runs/2026-09-13-update-http403.md)             | completed    | 失败恢复、公网回退、实际组件及修复APK通过；手机具体响应仍待接入                   |
-| 测试记录 | [发布说明与版本号兼容](tests/runs/2026-09-17-release-notes.md)         | completed    | 单测与真实发布记录预演通过；合入后的发布页待核对                                  |
-| 测试记录 | [常规版本号](tests/runs/2026-09-17-preview-version.md)                 | completed    | 编号、发布复核与版本比较通过；按 D-004 暂不合入                                   |
-| 测试记录 | [打包任务清单契约](tests/runs/2026-09-23-packaging-census.md)          | completed    | 共享 packaging census 纳入 fork macOS job，定向门禁通过                           |
-| 测试记录 | [发布页分层与可读发布说明](tests/runs/2026-10-06-readable-releases.md) | completed    | 单测、预演与合入后核对通过；真实 Claude 调用待配置 key                            |
+| 类型     | 文档                                                                   | 状态         | 说明                                                                               |
+| -------- | ---------------------------------------------------------------------- | ------------ | ---------------------------------------------------------------------------------- |
+| 需求     | [集成分支自动出包](requirements/集成分支自动出包.md)                   | ready        | 已确认范围与内测安装边界                                                           |
+| 交互     | -                                                                      | not-required | 小型更新提示及关于页入口，交互规则随 REQ-405 与 TC-405 记录                        |
+| 调研     | -                                                                      | not-required | 直接核实既有构建入口                                                               |
+| 方案     | [macOS 自动更新签名修复](solutions/macOS自动更新签名修复方案.md)       | draft        | 固定自签身份优先验证；Developer ID 备选                                            |
+| 方案     | [发布页分层与可读发布说明](solutions/发布页分层与可读发布说明方案.md)  | ready        | 构建发布清理、整理版、按功能分组、同步上游摘要、AI 短版本                          |
+| 方案     | [更新弹框聚合改动说明](solutions/更新弹框聚合改动说明方案.md)          | ready        | 按已装版本聚合跨版本改动、纯工程构建回退、补齐手机与远程/SSH 服务更新弹框          |
+| 测试用例 | [自动出包](tests/cases/自动出包.md)                                    | ready        | 按仓库完成门禁建立                                                                 |
+| 测试用例 | [更新弹框聚合改动说明](tests/cases/更新弹框聚合改动说明.md)            | ready        | TC-422～TC-425，覆盖本地桌面、移动端与 SSH 远程服务器更新弹框                      |
+| 测试记录 | [本地验证](tests/runs/2026-09-12-local.md)                             | completed    | 13 条合同测试，云构建尚未执行                                                      |
+| 测试记录 | [应用更新验证](tests/runs/2026-09-12-updates.md)                       | completed    | 本地实现、APK、组件验证；真机安装与新发布待验                                      |
+| 测试记录 | [原生更新验收](tests/runs/2026-09-13-native-update.md)                 | completed    | arm64 真实替换、原生运行状态和原终端连续性通过；正式发布及 Android 默认源安装待验  |
+| 测试记录 | [HTTP403修复验证](tests/runs/2026-09-13-update-http403.md)             | completed    | 失败恢复、公网回退、实际组件及修复APK通过；手机具体响应仍待接入                    |
+| 测试记录 | [发布说明与版本号兼容](tests/runs/2026-09-17-release-notes.md)         | completed    | 单测与真实发布记录预演通过；合入后的发布页待核对                                   |
+| 测试记录 | [常规版本号](tests/runs/2026-09-17-preview-version.md)                 | completed    | 编号、发布复核与版本比较通过；按 D-004 暂不合入                                    |
+| 测试记录 | [打包任务清单契约](tests/runs/2026-09-23-packaging-census.md)          | completed    | 共享 packaging census 纳入 fork macOS job，定向门禁通过                            |
+| 测试记录 | [发布页分层与可读发布说明](tests/runs/2026-10-06-readable-releases.md) | completed    | 单测、预演与合入后核对通过；真实 Claude 调用待配置 key                             |
+| 测试记录 | [更新弹框聚合改动说明](tests/runs/2026-11-26-更新弹框聚合改动说明.md)  | completed    | 真实 GitHub 历史回放、隐藏桌面 UpdateCard、127.0.0.1:2222 SSH 弹框与移动端回归通过 |
 
 ## 2. 决策点记录
 
@@ -102,6 +105,18 @@ external_ids: ['Fartown/orca#85', 'Fartown/orca#131']
 - 影响范围：REQ-401、REQ-402、REQ-403；APK 沿用 Expo debug 签名并核验指纹，不生成密钥或暗改 versionCode。
 
 ## 3. 开发记录
+
+### 2026-11-26 更新弹框按已装版本聚合改动说明并补齐手机与远程服务更新弹框（testing）
+
+- 本轮目标：修复 `preview.102` 等纯工程构建或跨多版本升级时更新弹框丢失真实改动说明的问题，并补齐 Android 手机端与 Web/配对/SSH 远程服务器更新弹框的改动展示（[Fartown/orca#161](https://github.com/Fartown/orca/issues/161)）。
+- 完成内容：
+  - 发布清单 `build-info.json` 新增可选 `engineeringChanges` 字段，与用户可见 `changes` 分离存储，兼容旧客户端。
+  - 新增 `src/shared/integration-builds/integration-release-changes.ts` 并在 `release-catalog.ts` 支持按桌面已装 `app.getVersion()` 或 Android `versionCode` 聚合待升级区间内全部集成包的用户可见改动；区间内无用户可见改动时回退 `engineeringChanges`（历史构建兼容从 Release 正文或 Atom 折叠段提取工程改动）。
+  - 桌面 `integration-update-feed.ts` 传入本机版本并复用共享摘要；Android `mobile-updates.ts` 传入原生 `versionCode`，`IntegrationUpdateGate` 弹框与设置/关于更新行同步展示改动摘要；`remote-server-update-coordinator.ts` 与 `RemoteServerUpdateDialog.tsx` 保留并渲染目标执行主机返回的 `status.changelog`，打开弹框时自动触发检查。
+- 代码或文档变更：`release-notes.mjs`、`publish-release.mjs`、`integration-release-changes.ts`、`release-catalog.ts`、`integration-update-feed.ts`、移动端 `mobile-updates.ts` / `IntegrationUpdateGate.tsx` / `use-integration-update-action.ts` / `IntegrationUpdateRow.tsx` / `IntegrationSettingsUpdateSection.tsx`、渲染层 `RemoteServerUpdateNotes.tsx` 与两处远程更新接缝；登记 REQ-417、方案、TC-422～425、验证记录及功能/架构门禁配置。
+- 验证证据：功能相关 27 + 5 个测试文件（218 + 27 项测试）通过；基于真实 `Fartown/orca` 发布历史回放与隐藏 Electron + `127.0.0.1:2222` 真实 SSH 隧道 Playwright 验证 2/2 通过，截图与状态证据位于 `.docs/integration-update-changelog-ui-validation/2026-11-26/evidence/`，详见 [验证记录](tests/runs/2026-11-26-更新弹框聚合改动说明.md)。
+- 未解决问题：新逻辑需随本次生成的集成包安装到桌面、服务与手机后，才会在后续升级提示中在端上生效；容器内未执行 Android APK 真机安装。
+- 下一步：跑通 `pnpm check:changed` 全量门禁后提交 PR 关联 `Fixes #161`。
 
 ### 2026-11-11 跨版本兼容只拿同步快照之前的上游发布作基准（testing）
 

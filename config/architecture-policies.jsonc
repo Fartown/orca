@@ -396,7 +396,9 @@
             "config/scripts/static-analysis/ratchets/source-budget/check-path-literal-ratchet.mjs",
             "config/scripts/integration-builds/ci-closed-pr-cancellation.test.mjs",
             "src/main/updater/lifecycle/updater-scheduling.ts",
-            "src/main/updater/lifecycle/updater-menu-checks.ts"
+            "src/main/updater/lifecycle/updater-menu-checks.ts",
+            "src/renderer/src/runtime/hosts/updates/remote-server-update-coordinator.ts",
+            "src/renderer/src/components/settings/runtime-environments/updates/RemoteServerUpdateDialog.tsx"
           ],
           "message": "Change is outside the integration build feature."
         }
@@ -638,6 +640,8 @@
             "src/main/updater/releases/updater-release-feed.ts",
             "src/main/updater/nudges/updater-nudge.ts",
             "src/main/updater/releases/updater-changelog.ts",
+            "src/renderer/src/runtime/hosts/updates/remote-server-update-coordinator.ts",
+            "src/renderer/src/components/settings/runtime-environments/updates/RemoteServerUpdateDialog.tsx",
             "AGENTS.md",
             "config/scripts/format-fork-staged-files.mjs",
             "config/scripts/format-fork-staged-files.test.mjs",

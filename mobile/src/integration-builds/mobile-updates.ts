@@ -98,7 +98,10 @@ async function runAttempt(
 
 export const mobileUpdates = createUpdateController({
   versionCode: () => installer().getVersionCode(),
-  latest: () => fetchIntegrationRelease('android'),
+  latest: () =>
+    fetchIntegrationRelease('android', fetch, {
+      installedAndroidVersionCode: native?.getVersionCode()
+    }),
   download: async (release, progress) => {
     const asset = apkAsset(release)
     await FileSystem.makeDirectoryAsync(updateDirectory(), { intermediates: true })

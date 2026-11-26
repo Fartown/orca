@@ -3,6 +3,11 @@ import { Alert, AppState, Pressable, Text } from 'react-native'
 import { useRouter } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useStore } from 'zustand'
+import {
+  integrationChangeSummary,
+  isPreviewDesktopVersion,
+  type IntegrationRelease
+} from '../../../src/shared/integration-builds/release-catalog'
 import { translate } from '../i18n/mobile-i18n'
 import { useMobileTranslation } from '../i18n/use-mobile-translation'
 import { colors, spacing, typography } from '../theme/mobile-theme'
@@ -13,6 +18,19 @@ import {
 } from './mobile-updates'
 
 let announcedTag: string | null = null
+
+export function formatIntegrationUpdateAlertMessage(release: IntegrationRelease): string {
+  const sha = isPreviewDesktopVersion(release.desktopVersion)
+    ? `${release.desktopVersion} (${release.sha.slice(0, 12)})`
+    : release.sha.slice(0, 12)
+  const prompt = translate(
+    'integrationBuilds.updateGate.availableMessage',
+    'Integration {{sha}} is available. Download the APK now? Android will ask you to confirm installation. You can also update later in Settings → About.',
+    { sha }
+  )
+  const summary = integrationChangeSummary(release)
+  return summary ? `${summary}\n\n${prompt}` : prompt
+}
 
 export function IntegrationUpdateGate() {
   const router = useRouter()
@@ -38,11 +56,7 @@ export function IntegrationUpdateGate() {
       announcedTag = release.tag
       Alert.alert(
         translate('integrationBuilds.updateGate.availableTitle', 'Orca update available'),
-        translate(
-          'integrationBuilds.updateGate.availableMessage',
-          'Integration {{sha}} is available. Download the APK now? Android will ask you to confirm installation. You can also update later in Settings → About.',
-          { sha: release.sha.slice(0, 12) }
-        ),
+        formatIntegrationUpdateAlertMessage(release),
         [
           { text: translate('integrationBuilds.updateGate.later', 'Later'), style: 'cancel' },
           {

@@ -10,6 +10,7 @@ import {
   classifyCommit,
   loadFeatureGroups,
   manifestChanges,
+  manifestEngineeringChanges,
   readFirstParentCommits,
   renderChangeSections,
   syncHeadline
@@ -143,6 +144,16 @@ describe('release note sections', () => {
     expect(entries[1]).toEqual({ number: 7, title: 'feat(goals): seven' })
     expect(entries[2].title).toHaveLength(300)
     expect(entries.every((entry) => entry.title.length <= 300)).toBe(true)
+
+    const docsOnly = [
+      commit('docs(goals): record PR #152 result'),
+      commit('Merge pull request #9 from a/b\n\ntest(goals): stabilize suite\n', ['a', 'b'])
+    ]
+    expect(manifestChanges(docsOnly)).toEqual([])
+    expect(manifestEngineeringChanges([pr, ...docsOnly])).toEqual([
+      { title: 'docs(goals): record PR #152 result' },
+      { number: 9, title: 'test(goals): stabilize suite' }
+    ])
   })
 
   it('reads feature groups from the registry', () => {

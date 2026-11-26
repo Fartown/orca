@@ -15,6 +15,7 @@ import {
   foldedSection,
   loadFeatureGroups,
   manifestChanges,
+  manifestEngineeringChanges,
   renderChangeSections
 } from './release-notes.mjs'
 
@@ -221,6 +222,7 @@ export async function publishRelease({
     )
   }
   const syncSummaries = context.syncSummariesOf(context.buildChanges)
+  const engineering = manifestEngineeringChanges(context.buildChanges)
   writeFileSync(join(directory, LEGACY_INTEL_PLACEHOLDER), legacyIntelPlaceholder())
   const published = [...assets, ...(await hashPackages(directory, [LEGACY_INTEL_PLACEHOLDER]))]
   const manifest = {
@@ -237,7 +239,8 @@ export async function publishRelease({
     // Older clients reject unknown names in assets, but ignore optional manifest fields.
     assets: published.filter((asset) => asset.name !== 'orca-linux.AppImage'),
     linuxAssets: published.filter((asset) => asset.name === 'orca-linux.AppImage'),
-    changes: manifestChanges(context.buildChanges, syncSummaries)
+    changes: manifestChanges(context.buildChanges, syncSummaries),
+    ...(engineering.length ? { engineeringChanges: engineering } : {})
   }
   writeFileSync(join(directory, 'build-info.json'), `${JSON.stringify(manifest, null, 2)}\n`)
   writeFileSync(join(directory, 'latest-mac.yml'), macUpdateManifest(version, assets))
