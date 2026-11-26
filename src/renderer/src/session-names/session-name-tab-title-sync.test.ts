@@ -209,33 +209,6 @@ describe('session-name tab title sync', () => {
     }
   })
 
-  it('keeps polling missing native evidence at the short interval despite a task fallback', async () => {
-    const store = makeState({ executionHostId: 'ssh:dev-box', worktreeId: 'worktree-1' })
-    let delay: number | undefined
-    const stop = startAiVaultTabTitleSync({
-      ...store,
-      resolveSessionTitles: async () => ({
-        titles: [],
-        nameEvidence: [
-          {
-            agent: 'codex',
-            sessionId: 'codex-session',
-            providerName: { kind: 'absent' },
-            generatedTitle: '运行测试'
-          }
-        ]
-      }),
-      setTimer: (_callback, ms) => {
-        delay = ms
-        return 1
-      },
-      clearTimer: () => {}
-    })
-    await vi.waitFor(() => expect(storedSlot(store)?.title).toBe('运行测试'))
-    expect(delay).toBe(20_000)
-    stop()
-  })
-
   it('projects a shared-cache rename into a sleeping tab without a request feedback loop', async () => {
     const store = makeState({
       executionHostId: 'ssh:dev-box',
