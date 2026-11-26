@@ -12,6 +12,7 @@ import { projectSessionNameSlot } from '../../../../../shared/session-names/sess
 import { getExecutionHostIdForWorktree } from '@/lib/workspace/ownership/worktree-runtime-owner'
 import { structuredChatTabById } from '@/lib/agent-session/tab-identity/structured-chat-tab-index'
 import { useStructuredChatTabNaming } from '@/runtime/native-chat/naming/structured-conversation-name'
+import { agentPaneConversationForEntry } from '@/store/slices/agent-status/conversation/agent-pane-conversation'
 import type { AppState } from '@/store/types'
 import type { DashboardAgentRow } from './dashboard-agent-row'
 
@@ -60,17 +61,34 @@ export function useAgentRowConversationNaming(agent: DashboardAgentRow): {
   const executionHostId = useAppStateValue((s) =>
     getExecutionHostIdForWorktree(s, agent.tab.worktreeId)
   )
-  const rowSessionId = agent.entry.providerSession?.id
-  const userTitle = useCanonicalSessionTitle(executionHostId, agent.agentType, rowSessionId)
+  const tab = liveTab ?? agent.tab
+  const reported = agent.entry.providerSession
+  const session = useAppStateValue(
+    (s) =>
+      reported ??
+      (cannotOwnTabName || agent.entry.sessionBoundary
+        ? undefined
+        : agentPaneConversationForEntry(s, agent.entry, executionHostId)?.providerSession)
+  )
+  const rowSessionId = session?.id
+  const ownSlot =
+    tab.aiVaultTitle?.agent === agent.agentType && tab.aiVaultTitle.sessionId === rowSessionId
+      ? tab.aiVaultTitle
+      : null
+  // A mirrored tab with a host-published slot already has its owner's resolved name.
+  const hostNamed = Boolean(ownSlot && tab.sessionTitleFromHost)
+  const userTitle = useCanonicalSessionTitle(
+    executionHostId,
+    agent.agentType,
+    hostNamed ? undefined : rowSessionId
+  )
   const nameRecord = useSessionNameRecord(
-    !cannotOwnTabName && rowSessionId && isAiVaultTitleAgent(agent.agentType)
+    !cannotOwnTabName && !hostNamed && reported && isAiVaultTitleAgent(agent.agentType)
       ? {
           executionHostId,
           agent: agent.agentType,
-          sessionId: rowSessionId,
-          ...(agent.entry.providerSession?.transcriptPath
-            ? { transcriptPath: agent.entry.providerSession.transcriptPath }
-            : {})
+          sessionId: reported.id,
+          ...(reported.transcriptPath ? { transcriptPath: reported.transcriptPath } : {})
         }
       : null
   )
@@ -103,14 +121,6 @@ export function useAgentRowConversationNaming(agent: DashboardAgentRow): {
   if (structuredName) {
     return { name: structuredName, forked: chatNaming.forkSourceId !== null }
   }
-  // Why: attributed rows can arrive before their tab metadata.
-  const tab = liveTab ?? agent.tab
-  // The aiVaultTitle slot is per-tab but names ONE pane's session; in a split
-  // tab a sibling row must not wear the winning pane's conversation name.
-  const slotNamesThisRow =
-    tab.aiVaultTitle == null ||
-    (tab.aiVaultTitle.agent === agent.agentType && tab.aiVaultTitle.sessionId === rowSessionId)
-  const ownSlot = slotNamesThisRow ? tab.aiVaultTitle : null
   const aiVaultTitle = nameRecord
     ? projectSessionNameSlot({
         agent: nameRecord.agent,

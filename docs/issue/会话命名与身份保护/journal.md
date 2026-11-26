@@ -4,7 +4,7 @@ slug: 会话命名与身份保护
 status: implementing
 created: 2026-09-08
 updated: 2026-11-26
-external_ids: ['Fartown/orca#158']
+external_ids: ['Fartown/orca#158', 'Fartown/orca#163']
 ---
 
 # 会话命名与身份保护 Journal
@@ -567,3 +567,12 @@ external_ids: ['Fartown/orca#158']
   - 真实应用与 SSH 验收（隐藏 Electron `ORCA_BACKGROUND_LAUNCH=1` + `xvfb-run -a`）：3/3 通过（37.0s），证据与合并脚本归档于 `.docs/session-names-full-unification-ui-validation/2026-11-26/`，覆盖：① 本机桌面 + 配对手机 + 编排邮件污染拦截 + 关标签后手动改名持久化；② 无头 `orca serve` 直连配对手机 `worktree.ps` 与 `session.tabs.list`；③ 本机隔离 `127.0.0.1:2222` `sshd` 真实 SSH 隧道（`linkSshAccess`）+ 远端运行时主机 + 桌面镜像 + 手机 `mobileRelay.hosts.worktrees` + `ssh:<targetId>` `unavailable` 证据校验（`~/.orca-remote` 零改动）。
 - 未解决问题：本机 Node 实验性 `node:sqlite` 下两个未触碰的上游重启缓存单测需在 CI Node 运行时确认通过。
 - 下一步：运行 `pnpm check:changed` 后提交 PR 合入 `fork/integration`（`Fixes #158`），并核对 CI 与集成构建。
+
+## 2026-11-26 工作区侧栏在状态重建后的会话名（testing）
+
+- 本轮目标：修复 #163。针对 REQ-025 的同一桌面工作区卡片和顶部 Tab，核对同一窗格在状态重建前后的可见标题。本地和 SSH 镜像各验证一次。
+- 完成内容：状态可在短暂移除后重建。重建行缺少 Provider ID 时，侧栏曾丢弃 Tab 的原生名，改用旧追问。现在优先采用行的明确身份，缺失时复用该窗格在相同执行主机与连接下已确认的会话。主机已发布该会话的标题时，镜像使用该结果。
+- 代码或文档变更：桌面工作区行和 Dashboard 共用的 `use-agent-row-conversation-name.ts`、同层回归用例和 REQ-025 测试规格。
+- 验证证据：基线 `5f72d6e481` 的隐藏 Electron 在本地及 SSH 配对桌面复现两个不同的标题。通过状态层的移除、重新上报入口，仅提供状态和追问。两个窗格的已确认会话均保留。本机桌面及 SSH 镜像的修前、修后 DOM 文本、窗格身份与截图见 `.docs/sidebar-pane-title-ui-validation/2026-11-26/`。
+- 未解决问题：截图当刻的 Mac 内存状态和客户端版本不可回溯。真实会话在 dbox 的 Provider 文件和持久化 Tab 均保留了正确的原生名。
+- 下一步：跟踪关联 PR 与集成版本发布。
