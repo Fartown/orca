@@ -3,8 +3,8 @@ import { sessionNameStore, type SessionNameRequest } from './session-name-store'
 import { getSessionNameDisplayIndex, subscribeSessionNameDisplay } from './session-name-display'
 import { canonicalSessionTitleKey } from '../lib/canonical-session-titles'
 
-export function useSessionNameRecord(request: SessionNameRequest | null) {
-  useSessionNameIndex(request ? [request] : [])
+export function useSessionNameRecord(request: SessionNameRequest | null, read = true) {
+  useSessionNameIndex(read && request ? [request] : [])
   return request
     ? sessionNameStore
         .getSnapshot()

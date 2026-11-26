@@ -332,6 +332,96 @@ describe('renderer session-name unification across closed tabs, remote activity,
       })
     ).toBe('非焦点分屏原生会话名')
 
+    const store = useAppStore.getState()
+    const paneKey = siblingDashboardRow.paneKey
+    const routing = { worktreeId: wt.id, tabId: splitTab.id, connectionId: null }
+    const status = { agentType: 'codex' as const, state: 'working' as const, prompt: '继续' }
+    store.setAgentStatus(paneKey, status, 'Terminal 2', undefined, routing)
+    store.recordAgentProviderSession(
+      paneKey,
+      'codex',
+      { key: 'session_id', id: 'sibling-pane-session' },
+      undefined,
+      routing
+    )
+    store.removeAgentStatus(paneKey)
+    store.setAgentStatus(paneKey, status, 'Terminal 2', undefined, routing)
+    const recreated = useAppStore.getState().agentStatusByPaneKey.get(paneKey)!
+    expect(recreated.providerSession).toBeUndefined()
+    const active = {
+      entry: recreated,
+      tab: splitTab,
+      worktree: wt,
+      repo: TEST_REPO,
+      agentType: 'codex' as const,
+      state: 'working' as const,
+      timestamp: 100
+    }
+    const historical = {
+      ...active,
+      id: 'previous',
+      observedAt: 80,
+      agentAlive: false,
+      unread: false,
+      entry: { ...recreated, stateStartedAt: 80, prompt: 'Earlier task' }
+    }
+    const { result } = renderHook(() =>
+      useActivitySessionNames([historical], { [paneKey]: active })
+    )
+    expect
+      .soft(
+        rowConversationName(
+          { ...siblingDashboardRow, entry: recreated },
+          false,
+          useAppStore.getState().terminalLayoutsByTabId['tab-split'],
+          undefined,
+          new Map(),
+          {}
+        )
+      )
+      .toBe('非焦点分屏原生会话名')
+    expect
+      .soft(
+        resolveSidebarSlotTargetSessionName(useAppStore.getState(), {
+          worktreeId: wt.id,
+          paneKey,
+          tabId: splitTab.id,
+          agentType: 'codex',
+          entry: recreated
+        })
+      )
+      .toBe('非焦点分屏原生会话名')
+    expect.soft(result.current(active)).toBe('非焦点分屏原生会话名')
+    expect(result.current(historical)).toBe('Codex')
+    const target = {
+      worktreeId: wt.id,
+      paneKey,
+      tabId: splitTab.id,
+      agentType: 'codex' as const,
+      entry: recreated
+    }
+    expect(
+      resolveSidebarSlotTargetSessionName(useAppStore.getState(), {
+        ...target,
+        executionHostId: 'runtime:other'
+      })
+    ).toBe('Codex')
+    expect(
+      resolveSidebarSlotTargetSessionName(useAppStore.getState(), {
+        ...target,
+        entry: { ...recreated, sessionBoundary: true }
+      })
+    ).toBe('Codex')
+    expect(
+      resolveSidebarSlotTargetSessionName(useAppStore.getState(), {
+        ...target,
+        entry: {
+          ...recreated,
+          orchestration: { taskId: 'child', dispatchId: 'child', parentPaneKey: paneKey }
+        }
+      })
+    ).toBeNull()
+
     // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: test fixture needs group room identity fields.
     const group = {
       id: 'group-room-1',

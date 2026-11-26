@@ -10,7 +10,10 @@ import {
 } from '../../../shared/ai-vault/contracts/ai-vault-session-title'
 import { structuredChatDisplayName } from '../../../shared/agent-session/view/structured-chat-row-name'
 import { findBotGroupRoomOfSession, isBotGroupMemberSession } from '../../../shared/bots/bot-group'
-import { parseExecutionHostId } from '../../../shared/execution-host/execution-host'
+import {
+  parseExecutionHostId,
+  type ExecutionHostId
+} from '../../../shared/execution-host/execution-host'
 import { projectSessionNameSlot } from '../../../shared/session-names/session-name-slot'
 import { parsePaneKey } from '../../../shared/workspace-layout/stable-pane-id'
 import {
@@ -30,6 +33,8 @@ import { projectedStructuredChatTabSavedName } from '@/runtime/native-chat/namin
 import { folderWorkspaceKey } from '../../../shared/workspace/identity/workspace-scope'
 import type { AppState } from '@/store/types'
 import { useAppStore } from '@/store'
+import type { TerminalTab } from '../../../shared/workspace-layout/terminal-tab-types'
+import { livePaneNameSession, sessionNameSlotForPane } from './live-pane-name-session'
 import { getActivitySessionName } from './activity-session-name'
 import { sessionNameStore } from './session-name-store'
 
@@ -56,27 +61,33 @@ export function captureStructuredNotificationSessionName(
   return resolved.trim() || undefined
 }
 
-export function resolveDashboardCardSessionSlot(args: {
-  worktreeId: string
-  agentType: AgentType | null | undefined
-  sessionId: string | undefined
-  transcriptPath?: string | null
-  ownSlot: AiVaultSessionTitle | null | undefined
+export function resolveDashboardCardSessionSlot({
+  tab,
+  entry,
+  agentType
+}: {
+  tab: TerminalTab
+  entry: AgentStatusEntry
+  agentType: AgentType
 }): {
   aiVaultTitle: AiVaultSessionTitle | null | undefined
   userTitle: string | undefined
   identityFallbackTitle: string | null
 } {
-  const { worktreeId, agentType, sessionId, transcriptPath, ownSlot } = args
   const state = typeof useAppStore.getState === 'function' ? useAppStore.getState() : undefined
-  const host = state ? getExecutionHostIdForWorktree(state, worktreeId) : 'local'
+  const host = state ? getExecutionHostIdForWorktree(state, tab.worktreeId) : 'local'
+  const sessionId = livePaneNameSession(state, entry, host)?.id
+  const ownSlot = sessionNameSlotForPane(tab, agentType, sessionId)
+  const hostNamed = ownSlot && tab.sessionTitleFromHost
+  const transcriptPath = entry.providerSession?.transcriptPath
   const userTitle =
-    agentType && sessionId ? getCanonicalSessionTitle(host, agentType, sessionId) : undefined
+    !hostNamed && sessionId ? getCanonicalSessionTitle(host, agentType, sessionId) : undefined
   const record =
-    agentType && sessionId
+    !hostNamed && sessionId
       ? sessionNameStore.getSnapshot().get(canonicalSessionTitleKey(host, agentType, sessionId))
       : undefined
   if (
+    entry.providerSession &&
     !record &&
     !ownSlot &&
     agentType &&
@@ -122,6 +133,7 @@ export function resolveSidebarSlotTargetSessionName(
   state: AppState,
   target: {
     worktreeId: string
+    executionHostId?: ExecutionHostId
     paneKey: string | null
     tabId?: string
     agentType: AgentType | null
@@ -133,6 +145,10 @@ export function resolveSidebarSlotTargetSessionName(
     const entry = target.entry
     const pane = parsePaneKey(entry.paneKey)
     const tabId = target.tabId ?? entry.tabId ?? pane?.tabId
+    const parent = entry.orchestration?.parentPaneKey
+    if (parent && (target.paneKey === parent || (tabId && parsePaneKey(parent)?.tabId === tabId))) {
+      return null
+    }
     const unified = tabId
       ? state.unifiedTabsByWorktree[target.worktreeId]?.find((item) => item.id === tabId)
       : undefined
@@ -147,15 +163,19 @@ export function resolveSidebarSlotTargetSessionName(
     if (!tab) {
       return null
     }
-    const host = getExecutionHostIdForWorktree(state, target.worktreeId)
-    const sessionId = entry.providerSession?.id
+    const host = target.executionHostId ?? getExecutionHostIdForWorktree(state, target.worktreeId)
+    const sessionId = livePaneNameSession(state, entry, host)?.id
+    const hostNamed =
+      tab.sessionTitleFromHost && sessionNameSlotForPane(tab, entry.agentType, sessionId)
     const agent = entry.agentType
     const record =
-      agent && sessionId
+      !hostNamed && agent && sessionId
         ? sessionNameStore.getSnapshot().get(canonicalSessionTitleKey(host, agent, sessionId))
         : undefined
     const manualTitle =
-      agent && sessionId ? getCanonicalSessionTitle(host, agent, sessionId) : undefined
+      !hostNamed && agent && sessionId
+        ? getCanonicalSessionTitle(host, agent, sessionId)
+        : undefined
     const layout = state.terminalLayoutsByTabId[tab.id]
     const ownsContainer =
       layout?.root?.type !== 'split' && (!layout?.root || layout.root.leafId === pane?.leafId)
@@ -165,6 +185,7 @@ export function resolveSidebarSlotTargetSessionName(
       pane?.leafId
     )
     return getActivitySessionName(entry, tab, generatedTitlesEnabled, {
+      sessionId,
       record,
       manualTitle,
       ownsContainer,

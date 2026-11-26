@@ -12,7 +12,7 @@ import { projectSessionNameSlot } from '../../../../../shared/session-names/sess
 import { getExecutionHostIdForWorktree } from '@/lib/workspace/ownership/worktree-runtime-owner'
 import { structuredChatTabById } from '@/lib/agent-session/tab-identity/structured-chat-tab-index'
 import { useStructuredChatTabNaming } from '@/runtime/native-chat/naming/structured-conversation-name'
-import { agentPaneConversationForEntry } from '@/store/slices/agent-status/conversation/agent-pane-conversation'
+import { livePaneNameSession, sessionNameSlotForPane } from '@/session-names/live-pane-name-session'
 import type { AppState } from '@/store/types'
 import type { DashboardAgentRow } from './dashboard-agent-row'
 
@@ -63,18 +63,11 @@ export function useAgentRowConversationNaming(agent: DashboardAgentRow): {
   )
   const tab = liveTab ?? agent.tab
   const reported = agent.entry.providerSession
-  const session = useAppStateValue(
-    (s) =>
-      reported ??
-      (cannotOwnTabName || agent.entry.sessionBoundary
-        ? undefined
-        : agentPaneConversationForEntry(s, agent.entry, executionHostId)?.providerSession)
+  const session = useAppStateValue((s) =>
+    cannotOwnTabName ? undefined : livePaneNameSession(s, agent.entry, executionHostId)
   )
   const rowSessionId = session?.id
-  const ownSlot =
-    tab.aiVaultTitle?.agent === agent.agentType && tab.aiVaultTitle.sessionId === rowSessionId
-      ? tab.aiVaultTitle
-      : null
+  const ownSlot = sessionNameSlotForPane(tab, agent.agentType, rowSessionId)
   // A mirrored tab with a host-published slot already has its owner's resolved name.
   const hostNamed = Boolean(ownSlot && tab.sessionTitleFromHost)
   const userTitle = useCanonicalSessionTitle(
@@ -83,14 +76,15 @@ export function useAgentRowConversationNaming(agent: DashboardAgentRow): {
     hostNamed ? undefined : rowSessionId
   )
   const nameRecord = useSessionNameRecord(
-    !cannotOwnTabName && !hostNamed && reported && isAiVaultTitleAgent(agent.agentType)
+    !hostNamed && session && isAiVaultTitleAgent(agent.agentType)
       ? {
           executionHostId,
           agent: agent.agentType,
-          sessionId: reported.id,
-          ...(reported.transcriptPath ? { transcriptPath: reported.transcriptPath } : {})
+          sessionId: session.id,
+          ...(reported?.transcriptPath ? { transcriptPath: reported.transcriptPath } : {})
         }
-      : null
+      : null,
+    Boolean(reported)
   )
   const structuredTab = useAppStateValue((s) =>
     cannotOwnTabName

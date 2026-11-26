@@ -14,6 +14,7 @@ import { canonicalSessionTitleKey, getCanonicalSessionTitle } from '../lib/canon
 import { isAiVaultTitleAgent } from '../../../shared/ai-vault/contracts/ai-vault-session-title'
 import { getWorktreeExecutionHostId } from '../../../shared/execution-host/execution-host'
 import { parsePaneKey } from '../../../shared/workspace-layout/stable-pane-id'
+import { livePaneNameSession, sessionNameSlotForPane } from './live-pane-name-session'
 import { getActivitySessionName } from './activity-session-name'
 import { useSessionNameIndex } from './session-name-subscriptions'
 import { sessionNameStore, type SessionNameRequest } from './session-name-store'
@@ -76,6 +77,12 @@ export function useActivitySessionNames(
       if (!agent || !session?.id || !isAiVaultTitleAgent(agent)) {
         continue
       }
+      if (
+        target.tab.sessionTitleFromHost &&
+        sessionNameSlotForPane(target.tab, agent, session.id)
+      ) {
+        continue
+      }
       const executionHostId = hostFor(target)
       unique.set(canonicalSessionTitleKey(executionHostId, agent, session.id), {
         executionHostId,
@@ -90,18 +97,27 @@ export function useActivitySessionNames(
   return useCallback(
     (target: ActivitySessionNameTarget) => {
       const { entry, tab } = target
-      const sessionId = entry.providerSession?.id
       const agent = entry.agentType
       const host = hostFor(target)
-      const key = agent && sessionId ? canonicalSessionTitleKey(host, agent, sessionId) : null
+      const current = state.status.get(entry.paneKey)
+      const isCurrent =
+        current && current.agentType === agent && current.stateStartedAt === entry.stateStartedAt
+      const currentId = isCurrent
+        ? livePaneNameSession(useAppStore.getState(), current, host)?.id
+        : undefined
+      const sessionId =
+        entry.providerSession?.id ??
+        (!('id' in target) && !entry.sessionBoundary ? currentId : undefined)
+      const hostNamed = tab.sessionTitleFromHost && sessionNameSlotForPane(tab, agent, sessionId)
+      const key =
+        !hostNamed && agent && sessionId ? canonicalSessionTitleKey(host, agent, sessionId) : null
       const record = key ? sessionNameStore.getSnapshot().get(key) : undefined
       const pane = parsePaneKey(entry.paneKey)
       const layout = state.layouts[tab.id]
-      const current = state.status.get(entry.paneKey)
       const sleeping = state.sleeping?.[entry.paneKey]
       const ownsSession = sessionId
         ? current
-          ? current.agentType === agent && current.providerSession?.id === sessionId
+          ? current.agentType === agent && (current.providerSession?.id ?? currentId) === sessionId
           : Boolean(
               agent &&
               ((sleeping?.agent === agent && sleeping.providerSession?.id === sessionId) ||
@@ -131,9 +147,12 @@ export function useActivitySessionNames(
         return confirmedName
       }
       return getActivitySessionName(entry, tab, state.generated, {
+        sessionId,
         record,
         manualTitle:
-          (agent && sessionId ? getCanonicalSessionTitle(host, agent, sessionId) : undefined) ??
+          (!hostNamed && agent && sessionId
+            ? getCanonicalSessionTitle(host, agent, sessionId)
+            : undefined) ??
           chatSavedName ??
           undefined,
         ownsContainer,
