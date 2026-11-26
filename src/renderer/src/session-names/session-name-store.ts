@@ -184,7 +184,7 @@ export function createSessionNameStore(
     await Promise.all(waits)
   }
 
-  function invalidate(requests: readonly SessionNameRequest[]): void {
+  function invalidate(requests: readonly SessionNameRequest[], refreshObserved = false): void {
     for (const request of requests) {
       const key = keyOf(request)
       lastReads.delete(key)
@@ -193,6 +193,17 @@ export function createSessionNameStore(
       const active = inFlight.get(key)
       inFlight.delete(key)
       active?.done()
+    }
+    if (refreshObserved) {
+      // Snapshot consumers read the shared index without installing a per-session watcher.
+      const observed = requests.filter(
+        (request) =>
+          records.has(keyOf(request)) ||
+          [...watchers.values()].some((items) =>
+            items.some((item) => keyOf(item) === keyOf(request))
+          )
+      )
+      void read(observed)
     }
   }
 

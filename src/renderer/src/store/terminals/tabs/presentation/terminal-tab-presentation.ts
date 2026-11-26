@@ -1,3 +1,5 @@
+import { resolveRuntimePaneTitleForLeaf } from '../../../../../../shared/workspace-layout/terminal-topology/runtime-pane-title-leaf-id'
+import { neutralTerminalTitle } from '../../../../../../shared/workspace-layout/terminal-surfaces/terminal-pane-title-reset'
 import {
   replaceTabBuckets,
   replaceRecordEntries
@@ -70,11 +72,24 @@ export function createTerminalTabPresentationActions(
           current.aiVaultTitle != null &&
           (current.aiVaultTitle.agent !== aiVaultTitle?.agent ||
             current.aiVaultTitle.sessionId !== aiVaultTitle?.sessionId)
+        const layout = s.terminalLayoutsByTabId?.[tabId]
+        // Clearing the former pane's session also retires its raw OSC title.
+        const focusedTitle =
+          aiVaultTitle === null && layout?.root?.type === 'split'
+            ? (layout.activeLeafId &&
+                resolveRuntimePaneTitleForLeaf(
+                  layout,
+                  s.runtimePaneTitlesByTabId?.[tabId],
+                  layout.activeLeafId
+                )) ||
+              neutralTerminalTitle(current.defaultTitle)
+            : undefined
         const ownerTabs = tabs.map((tab) =>
           tab.id === tabId
             ? {
                 ...tab,
                 aiVaultTitle,
+                ...(focusedTitle ? { title: focusedTitle } : {}),
                 ...(identityChanged ? { generatedTitle: null } : {})
               }
             : tab
@@ -88,6 +103,7 @@ export function createTerminalTabPresentationActions(
             ? {
                 ...tab,
                 aiVaultTitle,
+                ...(focusedTitle ? { label: focusedTitle } : {}),
                 ...(identityChanged ? { generatedLabel: null } : {})
               }
             : tab

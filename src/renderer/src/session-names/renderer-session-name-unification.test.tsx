@@ -65,7 +65,9 @@ describe('renderer session-name unification across closed tabs, remote activity,
       entityId: 't',
       worktreeId: 'wt',
       groupId: 'g',
-      label: 'Previous task'
+      label: 'Previous task',
+      customLabel: 'Previous manual name',
+      aiVaultTitle: { agent: 'claude', sessionId: 'previous-session', title: 'Previous task' }
     })
     const terminal = makeTab({
       id: 't',

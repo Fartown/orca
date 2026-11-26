@@ -1,7 +1,7 @@
 import { AI_VAULT_SESSION_TITLE_REFRESH_RUNTIME_CAPABILITY } from '../../../../../../shared/ai-vault/contracts/ai-vault-runtime-capabilities'
 import { lastVerifiedRuntimeStatus } from '../../../../../../shared/remote-runtime/host-status/runtime-host-status'
 import { getDecorativeAgentTitleSignature } from '../../../../../../shared/agent-status/title/agent-decorative-title-signature'
-import { parsePaneKey } from '../../../../../../shared/workspace-layout/stable-pane-id'
+import { makePaneKey } from '../../../../../../shared/workspace-layout/stable-pane-id'
 import { findRegisteredTerminalTab } from '@/runtime/hosted-terminals/mounted-surfaces/mounted-terminal-tab-registry'
 import { isAiVaultTitleAgent } from '../../../../../../shared/ai-vault/contracts/ai-vault-session-title'
 import type { AppState } from '@/store/types'
@@ -100,46 +100,39 @@ function titleKey(title: string): string {
   return getDecorativeAgentTitleSignature(folded) ?? folded
 }
 
-export function changedOwningPaneTitleRequests(
+export function changedPaneTitleRequests(
   state: AppState,
   previous: AppState,
   statuses: RuntimeStatuses
-): string[] {
-  const changedTabs = new Set(
-    [
-      ...Object.keys(state.runtimePaneTitlesByTabId ?? {}),
-      ...Object.keys(previous.runtimePaneTitlesByTabId ?? {})
-    ].filter(
-      (tabId) =>
-        state.runtimePaneTitlesByTabId?.[tabId] !== previous.runtimePaneTitlesByTabId?.[tabId]
-    )
-  )
-  const changed: string[] = []
-  for (const [worktreeId, tabs] of Object.entries(state.tabsByWorktree)) {
-    for (const tab of tabs) {
-      if (!changedTabs.has(tab.id)) {
+): AiVaultTitleRequest[] {
+  const currentTitles = state.runtimePaneTitlesByTabId ?? {}
+  const previousTitles = previous.runtimePaneTitlesByTabId ?? {}
+  const changed: AiVaultTitleRequest[] = []
+  for (const tabId of new Set([...Object.keys(currentTitles), ...Object.keys(previousTitles)])) {
+    const titles = currentTitles[tabId]
+    if (titles === previousTitles[tabId]) {
+      continue
+    }
+    const prior = previousTitles[tabId]
+    for (const rawId of new Set([...Object.keys(titles ?? {}), ...Object.keys(prior ?? {})])) {
+      const id = Number(rawId)
+      if (titleKey(titles?.[id] ?? '') === titleKey(prior?.[id] ?? '')) {
         continue
       }
+      const mounted = findRegisteredTerminalTab(tabId)
+      const leaf = mounted?.tab.getManager()?.getLeafId(id)
+      if (!mounted || !leaf) {
+        continue
+      }
+      const layout = state.terminalLayoutsByTabId[tabId]
+      const background =
+        layout?.root?.type === 'split' && layout.activeLeafId && layout.activeLeafId !== leaf
       const request = collectAgentPaneConversations(state, isAiVaultTitleAgent, {
-        tab: { worktreeId, tabId: tab.id },
-        skipHostNamedTabs: true
+        pane: { worktreeId: mounted.tab.worktreeId, paneKey: makePaneKey(tabId, leaf) },
+        skipHostNamedTabs: !background
       })[0]
-      if (!request?.refresh || !supportsSessionTitleRefresh(statuses, request)) {
-        continue
-      }
-      const leafId = parsePaneKey(request.paneKey)?.leafId
-      const paneId = leafId
-        ? findRegisteredTerminalTab(tab.id, worktreeId)
-            ?.tab.getManager()
-            ?.getNumericIdForLeaf(leafId)
-        : null
-      if (paneId === null || paneId === undefined) {
-        continue
-      }
-      const current = state.runtimePaneTitlesByTabId?.[tab.id]?.[paneId] ?? ''
-      const old = previous.runtimePaneTitlesByTabId?.[tab.id]?.[paneId] ?? ''
-      if (titleKey(current) !== titleKey(old)) {
-        changed.push(aiVaultTitleRequestKey(request))
+      if (request?.refresh && supportsSessionTitleRefresh(statuses, request)) {
+        changed.push(request)
       }
     }
   }

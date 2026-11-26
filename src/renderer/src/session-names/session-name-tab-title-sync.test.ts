@@ -48,6 +48,7 @@ function makeState(args: {
   agent?: 'claude' | 'codex'
   aiVaultTitle?: TerminalTab['aiVaultTitle']
   executionHostId: 'local' | 'ssh:dev-box' | 'runtime:server-1'
+  split?: boolean
   sleeping?: boolean
   worktreeId: string
 }) {
@@ -133,11 +134,33 @@ function makeState(args: {
       emit(previous)
     }
   } as unknown as AppState
+  if (args.split) {
+    const sibling = '22222222-2222-4222-8222-222222222222'
+    const siblingKey = `tab-1:${sibling}`
+    state.terminalLayoutsByTabId['tab-1'].root = {
+      type: 'split',
+      direction: 'horizontal',
+      ratio: 0.5,
+      first: { type: 'leaf', leafId },
+      second: { type: 'leaf', leafId: sibling }
+    }
+    state.agentStatusByPaneKey = acceptedAgentStatuses([
+      [paneKey, statusEntry],
+      [
+        siblingKey,
+        {
+          ...statusEntry,
+          paneKey: siblingKey,
+          providerSession: { ...providerSession, id: 'sibling' }
+        }
+      ]
+    ])
+  }
   return {
     getState: () => state,
-    publishPaneTitle: (title: string) => {
+    publishPaneTitle: (title: string, paneId = 1) => {
       const previous = state
-      state = { ...state, runtimePaneTitlesByTabId: { 'tab-1': { 1: title } } }
+      state = { ...state, runtimePaneTitlesByTabId: { 'tab-1': { [paneId]: title } } }
       emit(previous)
     },
     setProviderSessionId: (sessionId: string) => {
@@ -172,7 +195,9 @@ describe('session-name tab title sync', () => {
     const worktreeId = 'worktree-1'
     const store = makeState({ agent: 'claude', executionHostId: 'local', worktreeId })
     // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the title listener uses only the mounted leaf lookup.
-    const manager = { getNumericIdForLeaf: () => 1 } as unknown as PaneManager
+    const manager = {
+      getLeafId: () => '11111111-1111-4111-8111-111111111111'
+    } as unknown as PaneManager
     const unregister = registerRuntimeTerminalTab({
       worktreeId,
       tabId: 'tab-1',
@@ -208,6 +233,73 @@ describe('session-name tab title sync', () => {
       unregister()
     }
   })
+
+  it.each(['watched', 'cached'] as const)(
+    'refreshes the %s background name without renaming the focused tab',
+    async (consumer) => {
+      const worktreeId = 'worktree-1'
+      const store = makeState({
+        agent: 'claude',
+        executionHostId: 'local',
+        worktreeId,
+        split: true
+      })
+      const leaves = [
+        '11111111-1111-4111-8111-111111111111',
+        '22222222-2222-4222-8222-222222222222'
+      ]
+      // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the title listener only reads pane identities.
+      const manager = { getLeafId: (id: number) => leaves[id - 1] } as unknown as PaneManager
+      const unregister = registerRuntimeTerminalTab({
+        worktreeId,
+        tabId: 'tab-1',
+        getManager: () => manager,
+        getContainer: () => null,
+        getPtyIdForPane: () => null,
+        getTabWideAgentHintLeafId: () => null
+      })
+      let siblingName = 'Original sibling'
+      const names = createSessionNameStore(async ({ requests }) => ({
+        titles: requests.map(({ sessionId }) => {
+          const title = sessionId === 'sibling' ? siblingName : 'Focused conversation'
+          return { ...titleResult('claude', title).titles[0]!, sessionId }
+        })
+      }))
+      const requests = [
+        { executionHostId: 'local', agent: 'claude', sessionId: 'sibling' }
+      ] as const
+      const watched = consumer === 'watched' ? names.watch(requests) : undefined
+      await names.read(requests)
+      const stop = startAiVaultTabTitleSync({
+        ...store,
+        resolveSessionTitles: names.resolveSessionTitles,
+        invalidateSessionNames: (requests, refreshObserved) =>
+          names.invalidate(
+            requests.map((request) => ({
+              executionHostId: request.executionHostId,
+              agent: request.agent,
+              sessionId: request.providerSession.id
+            })),
+            refreshObserved
+          )
+      })
+      const sibling = () =>
+        [...names.getSnapshot().values()].find((row) => row.sessionId === 'sibling')?.title
+      try {
+        await vi.waitFor(() => expect(storedSlot(store)?.title).toBe('Focused conversation'))
+        expect(sibling()).toBe('Original sibling')
+        siblingName = 'Renamed background conversation'
+        store.publishPaneTitle('✳ Renamed background conversation', 2)
+        await vi.waitFor(() => expect(sibling()).toBe('Renamed background conversation'))
+        expect(storedSlot(store)?.title).toBe('Focused conversation')
+      } finally {
+        stop()
+        watched?.unsubscribe()
+        names.reset()
+        unregister()
+      }
+    }
+  )
 
   it('projects a shared-cache rename into a sleeping tab without a request feedback loop', async () => {
     const store = makeState({

@@ -6,12 +6,23 @@ import { readStructuredChatTabName } from '@/runtime/native-chat/naming/structur
 import type { AppState } from '@/store/types'
 
 export function terminalGroupLabelFields(group: Tab, terminal: TerminalTab | null | undefined) {
+  const groupSlot = group.aiVaultTitle
+  const terminalSlot = terminal?.aiVaultTitle
+  // Group recovery data has no independent session binding once the terminal publishes its own.
+  const savedGroup =
+    terminal?.sessionTitleFromHost || terminalSlot || (groupSlot && terminalSlot === null)
+      ? undefined
+      : group
   return {
-    label: group.label,
-    aiVaultTitle: terminal?.aiVaultTitle !== undefined ? terminal.aiVaultTitle : group.aiVaultTitle,
-    customLabel: group.customLabel ?? terminal?.customTitle ?? null,
-    generatedLabel: group.generatedLabel ?? terminal?.generatedTitle,
-    quickCommandLabel: group.quickCommandLabel ?? terminal?.quickCommandLabel,
+    label:
+      (terminal?.ptyId && terminal.launchAgent && terminal.title.trim()) ||
+      savedGroup?.label ||
+      terminal?.title ||
+      '',
+    aiVaultTitle: terminalSlot !== undefined ? terminalSlot : savedGroup?.aiVaultTitle,
+    customLabel: terminal?.customTitle ?? savedGroup?.customLabel ?? null,
+    generatedLabel: terminal?.generatedTitle ?? savedGroup?.generatedLabel,
+    quickCommandLabel: terminal?.quickCommandLabel ?? savedGroup?.quickCommandLabel,
     launchAgent: terminal?.launchAgent
   }
 }
@@ -27,5 +38,9 @@ export function resolveStoredTabLabel(state: AppState, tab: Tab | undefined, fal
           getCachedTerminalTabForWorktree(state.tabsByWorktree, tab.worktreeId, tab.entityId)
         )
       : tab
-  return resolveUnifiedTabLabel(fields, state.settings?.tabAutoGenerateTitle === true, fallback)
+  return resolveUnifiedTabLabel(
+    fields,
+    state.settings?.tabAutoGenerateTitle === true,
+    (tab?.contentType === 'terminal' && fields?.label) || fallback
+  )
 }

@@ -36,13 +36,15 @@ export function AiVaultTabTitleSyncGate(): null {
                 request.providerSession.id
               )
             ),
-        invalidateSessionNames: (requests) =>
+        invalidateSessionNames: (requests, refreshObserved) =>
           sessionNameStore.invalidate(
             requests.map((request) => ({
               executionHostId: request.executionHostId,
               agent: request.agent,
-              sessionId: request.providerSession.id
-            }))
+              sessionId: request.providerSession.id,
+              transcriptPath: request.providerSession.transcriptPath
+            })),
+            refreshObserved
           ),
         getCanonicalTitle: (executionHostId, agent, sessionId) =>
           getCanonicalSessionTitle(executionHostId, agent, sessionId) ?? null,

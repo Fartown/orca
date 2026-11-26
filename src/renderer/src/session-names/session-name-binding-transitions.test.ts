@@ -150,6 +150,48 @@ describe('session name binding replacement boundaries', () => {
     expect(store.slot()?.title).not.toBe('Name of Codex A')
   })
 
+  it('retires the previous raw OSC title when focus moves to a new shell', () => {
+    const store = fixture()
+    store.getState().setAiVaultTabTitle('tab', nativeResult('Previous session').titles[0])
+    store.setState((s) => ({
+      tabsByWorktree: {
+        workspace: [
+          {
+            ...s.tabsByWorktree.workspace[0]!,
+            title: 'Previous session',
+            defaultTitle: 'Terminal 1'
+          }
+        ]
+      },
+      unifiedTabsByWorktree: {
+        workspace: [{ ...s.unifiedTabsByWorktree.workspace[0]!, label: 'Previous session' }]
+      },
+      runtimePaneTitlesByTabId: { tab: { 1: 'Previous session' } }
+    }))
+    stops.push(
+      startAiVaultTabTitleSync({
+        ...titleSyncStore(store),
+        resolveSessionTitles: async () => ({ titles: [] })
+      })
+    )
+    store.setState((s) => ({
+      terminalLayoutsByTabId: {
+        tab: {
+          ...s.terminalLayoutsByTabId.tab,
+          activeLeafId: SIBLING,
+          root: {
+            type: 'split',
+            direction: 'horizontal',
+            first: { type: 'leaf', leafId: LEAF },
+            second: { type: 'leaf', leafId: SIBLING }
+          }
+        }
+      }
+    }))
+    expect(store.getState().tabsByWorktree.workspace[0]?.title).toBe('Terminal 1')
+    expect(store.getState().unifiedTabsByWorktree.workspace[0]?.label).toBe('Terminal 1')
+  })
+
   it('does not choose an arbitrary pane when a split has no selected leaf', () => {
     const store = fixture()
     store.setState((s) => ({

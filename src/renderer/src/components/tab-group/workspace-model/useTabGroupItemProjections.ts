@@ -78,14 +78,14 @@ export function useTabGroupItemProjections({
             title: resolveUnifiedTabLabel(
               fields,
               worktreeState.generatedTabTitlesEnabled,
-              item.label
+              fields.label
             ),
             defaultTitle: terminalTab?.defaultTitle,
             // Why: the tab strip resolves again; dropping this slot promotes the generated fallback.
             aiVaultTitle: fields.aiVaultTitle,
-            quickCommandLabel: terminalTab?.quickCommandLabel ?? item.quickCommandLabel ?? null,
-            generatedTitle: terminalTab?.generatedTitle ?? item.generatedLabel ?? null,
-            customTitle: item.customLabel ?? terminalTab?.customTitle ?? null,
+            quickCommandLabel: fields.quickCommandLabel ?? null,
+            generatedTitle: fields.generatedLabel ?? null,
+            customTitle: fields.customLabel,
             color: item.color ?? terminalTab?.color ?? null,
             sortOrder: item.sortOrder,
             createdAt: item.createdAt,

@@ -108,6 +108,46 @@ describe('Provider title survives grouped tab rendering', () => {
     expect(resolveTerminalTabTitle(tab, true, tab.title)).toBe('Prompt fallback')
   })
 
+  it('uses the live terminal title while a connected agent has no session slot', () => {
+    const state = snapshot('Retired name', '')
+    const terminal = state.terminalTabs[0]!
+    terminal.aiVaultTitle = undefined
+    terminal.title = 'Current code review'
+    state.unifiedTabs[0]!.aiVaultTitle = undefined
+    state.unifiedTabs[0]!.label = 'Previous code review'
+    const tab = project(state)
+    expect(resolveTerminalTabTitle(tab, false, tab.title)).toBe('Current code review')
+  })
+
+  it('drops the restored group name after a host-owned mirror clears its title', () => {
+    const state = snapshot('Retired provider name', 'Retired task')
+    state.unifiedTabs[0]!.customLabel = 'Retired manual name'
+    state.unifiedTabs[0]!.label = 'Retired terminal title'
+    const terminal = state.terminalTabs[0]!
+    Object.assign(terminal, {
+      title: 'Terminal',
+      defaultTitle: 'Terminal',
+      sessionTitleFromHost: true,
+      aiVaultTitle: undefined,
+      generatedTitle: undefined
+    })
+    const tab = project(state)
+    expect(resolveTerminalTabTitle(tab, true, tab.title)).toBe('Terminal')
+  })
+
+  it('keeps a former session’s group rename out of the new terminal session', () => {
+    const state = snapshot('Retired name', 'Retired task')
+    state.unifiedTabs[0]!.customLabel = 'Retired manual name'
+    state.terminalTabs[0]!.aiVaultTitle = {
+      agent: 'codex',
+      sessionId: 'new-session',
+      title: 'Current name',
+      providerName: { kind: 'named', field: 'session_index.thread_name', title: 'Current name' }
+    }
+    const tab = project(state)
+    expect(resolveTerminalTabTitle(tab, true, tab.title)).toBe('Current name')
+  })
+
   it('honors an explicit backing-tab clear instead of reviving a stale unified slot', () => {
     const state = snapshot('Stale provider name', 'Prompt fallback')
     state.terminalTabs[0]!.aiVaultTitle = null
