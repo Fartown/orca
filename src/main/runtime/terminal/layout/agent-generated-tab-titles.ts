@@ -74,7 +74,13 @@ export class AgentGeneratedTabTitles {
       const key = `${target.workspace}\0${target.tabId}`
       const earlier = renames.get(key)
       const next = generatedTabTitleForStatus(
-        { prompt: row.prompt, orchestration: labels },
+        {
+          prompt: row.prompt,
+          orchestration: labels,
+          agentType: row.agentType,
+          providerSession: row.providerSession,
+          sessionBoundary: row.sessionBoundary
+        },
         earlier ? { ...target.tab, generatedTitle: earlier.title } : target.tab
       )
       if (!next) {

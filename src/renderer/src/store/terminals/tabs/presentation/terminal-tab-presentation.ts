@@ -9,7 +9,8 @@ import { scheduleRuntimeGraphSync } from '@/runtime/sync-runtime-graph/graph-syn
 import { detectAgentStatusFromTitle } from '../../../../../../shared/agent-status/title/agent-title-status'
 import {
   applyGeneratedTabTitleUpdates,
-  applyTerminalTabTitleUpdates
+  applyTerminalTabTitleUpdates,
+  isTabGeneratedTitleBlockedByExisting
 } from './terminal-tab-title-batch'
 import {
   adoptTerminalTabOwnerMetadataOnlyBuckets,
@@ -17,7 +18,6 @@ import {
 } from '../../ownership/terminal-tab-owner-index'
 import { getTabIdFromPaneKey } from '../../pty/terminal-pty-identities'
 import type { TerminalSlice, TerminalStoreGet, TerminalStoreSet } from '../../terminal-state'
-import { isEligibleSessionNamePrompt } from '../../../../../../shared/session-names/session-name-candidate-quality'
 import { sessionNameSlotEqual } from '../../../../../../shared/session-names/session-name-slot'
 
 export function createTerminalTabPresentationActions(
@@ -136,10 +136,14 @@ export function createTerminalTabPresentationActions(
       if (!currentTab) {
         return
       }
-      const existingGeneratedTitle = currentTab.generatedTitle?.trim()
       if (
-        isEligibleSessionNamePrompt(existingGeneratedTitle ?? '') &&
-        options?.replaceExistingGeneratedTitle !== true
+        isTabGeneratedTitleBlockedByExisting(
+          state,
+          currentTab,
+          paneKey,
+          prompt,
+          options?.replaceExistingGeneratedTitle
+        )
       ) {
         return
       }

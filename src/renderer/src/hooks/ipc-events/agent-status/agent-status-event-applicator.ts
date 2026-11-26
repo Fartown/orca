@@ -8,6 +8,7 @@ import { isDecorativeAgentTitleFrameChange } from '../../../../../shared/agent-s
 import { parsePaneKey } from '../../../../../shared/workspace-layout/stable-pane-id'
 import { normalizeProgramStatusFacet } from '../../../../../shared/program-status/facet'
 import { resolveAgentStatusTerminalTitle } from '@/lib/agent-status/evidence/agent-status-terminal-title'
+import { getExecutionHostIdForWorktree } from '@/lib/workspace/ownership/worktree-runtime-owner'
 import { track } from '@/diagnostics/telemetry/telemetry'
 import { resolveAgentPaneAuthorityKey } from '@/store/slices/agent-status/pane-authority/agent-pane-authority'
 import type { AgentStatusUpdate } from '@/store/slices/agent-status/contracts/agent-status-contract'
@@ -223,7 +224,8 @@ export function createAgentStatusEventApplicator(
       existingStatus &&
       isInheritedFromActivePane(existingStatus, data, statusPayload.agentType, {
         connectionId: ownershipConnectionId,
-        worktreeId: owningWorktreeId
+        worktreeId: owningWorktreeId,
+        executionHostId: getExecutionHostIdForWorktree(store, data.worktreeId ?? owningWorktreeId)
       })
     ) {
       return 'dropped'

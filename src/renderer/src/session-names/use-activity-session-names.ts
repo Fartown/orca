@@ -12,7 +12,11 @@ import {
 import { resolveAgentRowPaneLiveTitle } from '../components/dashboard/rows/agent-row-pane-live-title'
 import { canonicalSessionTitleKey, getCanonicalSessionTitle } from '../lib/canonical-session-titles'
 import { isAiVaultTitleAgent } from '../../../shared/ai-vault/contracts/ai-vault-session-title'
-import { getWorktreeExecutionHostId } from '../../../shared/execution-host/execution-host'
+import {
+  getConnectionExecutionHostId,
+  getWorktreeExecutionHostId
+} from '../../../shared/execution-host/execution-host'
+import { normalizeExecutionHostConnectionId } from '../../../shared/session-names/runtime-host-connection-owner'
 import { parsePaneKey } from '../../../shared/workspace-layout/stable-pane-id'
 import { livePaneNameSessionId, sessionNameSlotForPane } from './live-pane-name-session'
 import { getActivitySessionName } from './activity-session-name'
@@ -31,6 +35,7 @@ export function useActivitySessionNames(
       paneTitles: s.runtimePaneTitlesByTabId,
       tabs: s.unifiedTabsByWorktree,
       status: s.agentStatusByPaneKey,
+      conversations: s.agentConversationsByPaneKey,
       sleeping: s.sleepingAgentSessionsByPaneKey,
       generated: s.settings?.tabAutoGenerateTitle === true
     }))
@@ -59,9 +64,10 @@ export function useActivitySessionNames(
         hostIndex
       )
       if (
-        resolved === 'local' &&
-        target.entry.connectionId === null &&
-        worktreeHost.startsWith('runtime:')
+        worktreeHost.startsWith('runtime:') &&
+        normalizeExecutionHostConnectionId(worktreeHost, target.entry.connectionId) === null &&
+        (resolved === 'local' ||
+          resolved === getConnectionExecutionHostId(target.entry.connectionId))
       ) {
         return worktreeHost
       }
@@ -96,7 +102,14 @@ export function useActivitySessionNames(
   const names = useSessionNameIndex(requests)
   return useCallback(
     (target: ActivitySessionNameTarget) => {
-      const { entry, tab } = target
+      const { entry } = target
+      const isChatTab = chatTabIds.has(target.tab.id)
+      const tab = isChatTab
+        ? target.tab
+        : (useAppStore
+            .getState()
+            .tabsByWorktree[target.worktree.id]?.find((item) => item.id === target.tab.id) ??
+          target.tab)
       const agent = entry.agentType
       const host = hostFor(target)
       const current = state.status.get(entry.paneKey)
@@ -129,7 +142,6 @@ export function useActivitySessionNames(
             !current.providerSession?.id &&
             current.stateStartedAt === entry.stateStartedAt
           )
-      const isChatTab = chatTabIds.has(tab.id)
       const isSinglePaneContainer =
         layout?.root?.type !== 'split' && (!layout?.root || layout.root.leafId === pane?.leafId)
       // A native chat tab holds exactly one session, so its label names that session.

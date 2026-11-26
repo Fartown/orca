@@ -1,6 +1,8 @@
 import { paneOwnsTabPrompt } from '../../../../../../shared/session-names/tab-prompt-ownership'
+import { generatedTitleSourceText } from '../../../../../../shared/agent-status/presentation/agent-generated-tab-title-rules'
 import { deriveGeneratedTabTitle } from '../../../../../../shared/agent-status/presentation/agent-tab-title'
 import { isEligibleSessionNamePrompt } from '../../../../../../shared/session-names/session-name-candidate-quality'
+import { sessionNameSlotSupersededByStatus } from '../../../../../../shared/session-names/runtime-host-connection-owner'
 import { isDecorativeAgentTitleFrameChange } from '../../../../../../shared/agent-status/title/agent-decorative-title-signature'
 import {
   parseLegacyNumericPaneKey,
@@ -27,7 +29,7 @@ type TitleState = Pick<
   AppState,
   'activeWorktreeId' | 'settings' | 'sortEpoch' | 'tabsByWorktree' | 'unifiedTabsByWorktree'
 > &
-  Partial<Pick<AppState, 'terminalLayoutsByTabId'>>
+  Partial<Pick<AppState, 'agentStatusByPaneKey' | 'terminalLayoutsByTabId'>>
 
 type TitlePatch = Partial<Pick<AppState, 'sortEpoch' | 'tabsByWorktree' | 'unifiedTabsByWorktree'>>
 
@@ -213,6 +215,30 @@ export function applyTerminalTabTitleUpdates(
   return finishTitleStages(state, stages, sortEpochIncrement)
 }
 
+export function isTabGeneratedTitleBlockedByExisting(
+  state: Pick<TitleState, 'agentStatusByPaneKey'>,
+  currentTab: TerminalTab,
+  paneKey: string,
+  prompt: string,
+  replaceExisting?: boolean
+): boolean {
+  if (replaceExisting === true) {
+    return false
+  }
+  const live = state.agentStatusByPaneKey?.get(paneKey)
+  const superseded = Boolean(
+    live &&
+    (live.prompt === prompt || generatedTitleSourceText(live) === prompt) &&
+    sessionNameSlotSupersededByStatus(currentTab.aiVaultTitle, live)
+  )
+  if (superseded) {
+    return false
+  }
+  const existing =
+    currentTab.generatedTitle?.trim() || currentTab.aiVaultTitle?.generatedTitle?.trim()
+  return isEligibleSessionNamePrompt(existing ?? '')
+}
+
 export function applyGeneratedTabTitleUpdates(
   state: TitleState,
   updates: readonly GeneratedTabTitleUpdate[]
@@ -240,13 +266,18 @@ export function applyGeneratedTabTitleUpdates(
     if (!currentTab || !tabIndexes || currentTab.sessionTitleFromHost) {
       continue
     }
-    const existingGeneratedTitle = currentTab.generatedTitle?.trim()
     if (
-      isEligibleSessionNamePrompt(existingGeneratedTitle ?? '') &&
-      options?.replaceExistingGeneratedTitle !== true
+      isTabGeneratedTitleBlockedByExisting(
+        state,
+        currentTab,
+        paneKey,
+        prompt,
+        options?.replaceExistingGeneratedTitle
+      )
     ) {
       continue
     }
+    const existingGeneratedTitle = currentTab.generatedTitle?.trim()
     const generatedTitle = deriveGeneratedTabTitle(prompt)
     if (!generatedTitle || existingGeneratedTitle === generatedTitle) {
       continue

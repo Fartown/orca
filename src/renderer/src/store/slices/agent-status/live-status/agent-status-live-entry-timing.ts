@@ -3,6 +3,8 @@ import {
   type AgentStatusEntry
 } from '../../../../../../shared/agent-status/contracts/agent-status-types'
 import { sameAgentStatusSessionOwner } from '../../../../../../shared/agent-status/identity/agent-status-terminal-owner'
+import type { ExecutionHostId } from '../../../../../../shared/execution-host/execution-host'
+import { normalizeExecutionHostConnectionId } from '../../../../../../shared/session-names/runtime-host-connection-owner'
 import type {
   AgentStatusMetadata,
   AgentStatusRouting,
@@ -14,7 +16,8 @@ function previousLiveTurnContext(
   existing: AgentStatusEntry | undefined,
   agentType: AgentStatusEntry['agentType'],
   routing: AgentStatusRouting | undefined,
-  metadata: AgentStatusMetadata | undefined
+  metadata: AgentStatusMetadata | undefined,
+  executionHostId?: ExecutionHostId
 ): AgentStatusEntry | undefined {
   if (!existing || agentType !== 'codex') {
     return existing
@@ -22,14 +25,15 @@ function previousLiveTurnContext(
   return existing.agentType !== 'codex' ||
     !sameAgentStatusSessionOwner(
       {
-        connectionId: existing.connectionId ?? null,
+        connectionId: normalizeExecutionHostConnectionId(executionHostId, existing.connectionId),
         worktreeId: existing.worktreeId,
         providerSession: existing.providerSession
       },
       {
-        connectionId:
-          (routing?.connectionId === undefined ? existing.connectionId : routing.connectionId) ??
-          null,
+        connectionId: normalizeExecutionHostConnectionId(
+          executionHostId,
+          routing?.connectionId === undefined ? existing.connectionId : routing.connectionId
+        ),
         worktreeId: routing?.worktreeId ?? existing.worktreeId,
         providerSession: metadata?.providerSession
       }
@@ -46,17 +50,25 @@ export function resolveAgentStatusLiveEntryTiming(
     timing,
     routing,
     metadata,
-    updatedAt
+    updatedAt,
+    executionHostId
   }: {
     payload: AgentStatusPayload
     timing?: AgentStatusTiming
     routing?: AgentStatusRouting
     metadata?: AgentStatusMetadata
     updatedAt: number
+    executionHostId?: ExecutionHostId
   },
   commandCodeNewTurn: boolean
 ) {
-  const previousTurn = previousLiveTurnContext(existing, agentType, routing, metadata)
+  const previousTurn = previousLiveTurnContext(
+    existing,
+    agentType,
+    routing,
+    metadata,
+    executionHostId
+  )
   const stateStartedAt =
     timing?.stateStartedAt ??
     (commandCodeNewTurn

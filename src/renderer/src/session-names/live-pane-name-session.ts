@@ -6,6 +6,7 @@ import {
   parseExecutionHostId,
   type ExecutionHostId
 } from '../../../shared/execution-host/execution-host'
+import { normalizeExecutionHostConnectionId } from '../../../shared/session-names/runtime-host-connection-owner'
 import type { TerminalTab } from '../../../shared/workspace-layout/terminal-tab-types'
 import { parsePaneKey } from '../../../shared/workspace-layout/stable-pane-id'
 import { getExecutionHostIdForWorktree } from '@/lib/workspace/ownership/worktree-runtime-owner'
@@ -62,7 +63,8 @@ export function livePaneNameSessionId(
     sleeping.agent === entry.agentType &&
     sleeping.paneKey === entry.paneKey &&
     sleeping.worktreeId === tab.worktreeId &&
-    (sleeping.connectionId ?? null) === (entry.connectionId ?? null) &&
+    normalizeExecutionHostConnectionId(host, sleeping.connectionId) ===
+      normalizeExecutionHostConnectionId(host, entry.connectionId) &&
     ((owner?.kind === 'local' && !sleeping.connectionId) ||
       (owner?.kind === 'ssh' && owner.targetId === sleeping.connectionId))
   ) {

@@ -1629,6 +1629,36 @@
       ],
       "seams": [
         {
+          "file": "src/main/runtime/terminal/layout/agent-generated-tab-titles.ts",
+          "mustContain": "providerSession: row.providerSession",
+          "why": "main-owned generated tab titles pass session identity so follow-ups do not overwrite first-turn tasks and new sessions replace old ones"
+        },
+        {
+          "file": "src/renderer/src/store/slices/agent-status/conversation/agent-pane-conversation.ts",
+          "mustContain": "normalizeExecutionHostConnectionId",
+          "why": "paired runtime mirrored snapshots and live remote PTY OSC updates share the same host connection identity"
+        },
+        {
+          "file": "src/renderer/src/store/slices/agent-status/conversation/agent-conversation-acceptance.ts",
+          "mustContain": "normalizeExecutionHostConnectionId",
+          "why": "paired runtime OSC updates do not reset session start clocks across environmentId vs null connectionId"
+        },
+        {
+          "file": "src/renderer/src/store/slices/agent-status/live-status/agent-status-live-entry-timing.ts",
+          "mustContain": "normalizeExecutionHostConnectionId",
+          "why": "live entry timing keeps paired runtime turn context across environmentId vs null connectionId"
+        },
+        {
+          "file": "src/renderer/src/hooks/ipc-events/agent-status/agent-status-routing.ts",
+          "mustContain": "normalizeExecutionHostConnectionId",
+          "why": "inherited active-pane hook suppression compares paired runtime owners consistently across environmentId vs null"
+        },
+        {
+          "file": "src/renderer/src/store/slices/agent-status/live-status/agent-status-live-actions.ts",
+          "mustContain": "agentStatusTabAlreadyHasProtectedOrGeneratedTitle",
+          "why": "live status actions pass the incoming status so a superseded session slot does not block the new session's generated title"
+        },
+        {
           "file": "src/main/runtime/terminal/layout/agent-generated-tab-titles-runtime.ts",
           "mustContain": "paneOwnsTabPrompt",
           "why": "only the selected split pane supplies the tab-wide task on the execution host"

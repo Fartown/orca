@@ -1,6 +1,8 @@
 // Store and layout-owner main derive generated tab titles by the same rule.
 
+import type { AiVaultSessionTitle } from '../../ai-vault/contracts/ai-vault-session-title'
 import { isEligibleSessionNamePrompt } from '../../session-names/session-name-candidate-quality'
+import { sessionNameSlotSupersededByStatus } from '../../session-names/runtime-host-connection-owner'
 import { deriveGeneratedTabTitle } from './agent-tab-title'
 import {
   getAgentRowGeneratedTitleText,
@@ -10,13 +12,15 @@ import {
 } from './agent-row-primary-text'
 import type { AgentStatusEntry } from '../contracts/agent-status-types'
 
-type TitleStatus = Pick<AgentStatusEntry, 'orchestration' | 'prompt'>
+type TitleStatus = Pick<AgentStatusEntry, 'orchestration' | 'prompt'> &
+  Partial<Pick<AgentStatusEntry, 'agentType' | 'providerSession' | 'sessionBoundary'>>
 
 /** The titles of a tab a generated title must not cover or replace. */
 export type GeneratedTitleTab = {
   customTitle?: string | null
   quickCommandLabel?: string | null
   generatedTitle?: string | null
+  aiVaultTitle?: AiVaultSessionTitle | null
 }
 
 /** A user's rename or a quick command's label: a generated title never goes on such a tab. */
@@ -54,14 +58,17 @@ export function generatedTabTitleForStatus(
   tab: GeneratedTitleTab
 ): { title: string; replaceExisting: boolean } | null {
   // Fork (session-names): protected titles stay separate candidates, and ineligible text cannot block the first valid task.
-  const replaceExisting = generatedTitleReplacesExisting(entry)
-  const existing = tab.generatedTitle?.trim()
+  const superseded = sessionNameSlotSupersededByStatus(tab.aiVaultTitle, entry)
+  const replaceExisting = generatedTitleReplacesExisting(entry) || superseded
+  const existing =
+    tab.generatedTitle?.trim() ||
+    (!superseded ? tab.aiVaultTitle?.generatedTitle?.trim() : undefined)
   if (isEligibleSessionNamePrompt(existing ?? '') && !replaceExisting) {
     return null
   }
   const source = generatedTitleSourceText(entry)
   const title = source.length > 0 ? deriveGeneratedTabTitle(source) : null
-  return title && title !== existing
-    ? { title, replaceExisting: replaceExisting || Boolean(existing) }
+  return title && title !== tab.generatedTitle?.trim()
+    ? { title, replaceExisting: replaceExisting || Boolean(tab.generatedTitle?.trim()) }
     : null
 }

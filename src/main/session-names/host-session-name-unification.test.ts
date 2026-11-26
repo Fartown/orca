@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { resolveAiVaultSessionTitlesByHost } from '../ipc/ai-vault/ai-vault-session-title-routing'
 import { RuntimeOrchestrationSenderNames } from '../runtime/orchestration/mailbox/senders/runtime-orchestration-sender-names'
+import { AgentGeneratedTabTitles } from '../runtime/terminal/layout/agent-generated-tab-titles'
 import { buildHeadlessMobileSessionTerminalTabs } from '../runtime/terminal/surface/mobile-session-terminal-projection'
 import type { RuntimeMobileSessionTabsResult } from '../../shared/remote-runtime/session-graph/runtime-session-contracts'
 import {
@@ -353,5 +354,184 @@ describe('host session-name unification across main/headless surfaces', () => {
         }
       ]
     })
+  })
+
+  it('keeps unverified ID-less headless rows from leaking prior aiVaultTitle while preserving generated-title session boundaries', async () => {
+    const persistedSlot = {
+      agent: 'claude' as const,
+      sessionId: 'session-dbox-1',
+      title: '会话与 Tab 标题不一致',
+      generatedTitle: '排查会话与 Tab 标题不一致',
+      providerName: {
+        kind: 'named' as const,
+        title: '会话与 Tab 标题不一致',
+        field: 'ai-title.aiTitle'
+      }
+    }
+    const persistedSingleTabs = [
+      {
+        id: 'tab-dbox',
+        worktreeId: 'wt-dbox',
+        ptyId: 'pty-dbox',
+        title: '✳ Claude Code',
+        customTitle: null,
+        aiVaultTitle: persistedSlot,
+        color: null,
+        sortOrder: 0,
+        createdAt: 1
+      }
+    ]
+    const projectedSingle = buildHeadlessMobileSessionTerminalTabs('wt-dbox', persistedSingleTabs, {
+      activeRepoId: null,
+      activeWorktreeId: 'wt-dbox',
+      activeTabId: 'tab-dbox',
+      tabsByWorktree: { 'wt-dbox': persistedSingleTabs },
+      terminalLayoutsByTabId: {
+        'tab-dbox': {
+          root: { type: 'leaf', leafId: LEAF_A },
+          activeLeafId: LEAF_A,
+          expandedLeafId: null
+        }
+      }
+    }).map((tab) => ({
+      ...tab,
+      status: 'pending-handle' as const,
+      terminal: null,
+      agentStatus: {
+        paneKey: `tab-dbox:${LEAF_A}`,
+        terminalTitle: '✳ Claude Code',
+        state: 'done' as const,
+        agentType: 'claude' as const,
+        prompt: '新会话 B 的首轮提示词',
+        stateHistory: [],
+        interrupted: false,
+        stateStartedAt: 20,
+        updatedAt: 20
+      }
+    }))
+
+    const singleSnapshot: RuntimeMobileSessionTabsResult = {
+      worktree: 'wt-dbox',
+      publicationEpoch: 'epoch-dbox',
+      snapshotVersion: 2,
+      activeGroupId: null,
+      activeTabId: projectedSingle[0]?.id ?? null,
+      activeTabType: 'terminal',
+      tabs: projectedSingle
+    }
+    const refreshedSlot = {
+      ...persistedSlot,
+      title: '旧会话 A 最新改名',
+      providerName: {
+        kind: 'named' as const,
+        title: '旧会话 A 最新改名',
+        field: 'custom-title.customTitle'
+      }
+    }
+    // Negative case: without providerSession.id, headless mobile projection must not bind or refresh old session A onto session B.
+    const mobileSingleView = applyHeadlessMobileSessionTabTitles(
+      singleSnapshot,
+      'mobile',
+      new Map([[worktreeAgentRowProviderTitleKey('claude', 'session-dbox-1'), refreshedSlot]])
+    )
+    expect(mobileSingleView).toBe(singleSnapshot)
+    expect(mobileSingleView.tabs[0]?.title).not.toBe('旧会话 A 最新改名')
+
+    // Negative case: explicit providerSessionId: undefined preserves the "no owning session" contract in worktree.ps / orchestration naming.
+    const senderNames = new RuntimeOrchestrationSenderNames({
+      getDb: () => null,
+      getHandleRecord: () => ({ worktreeId: 'wt-dbox', tabId: 'tab-dbox', ptyId: 'pty-dbox' }),
+      getPtyAgents: () => ({ launchAgent: 'claude' }),
+      getTerminalPaneKey: () => `tab-dbox:${LEAF_A}`,
+      getWorkspaceSession: () => ({
+        tabsByWorktree: { 'wt-dbox': persistedSingleTabs },
+        terminalLayoutsByTabId: {
+          'tab-dbox': {
+            root: { type: 'leaf', leafId: LEAF_A },
+            activeLeafId: LEAF_A,
+            expandedLeafId: null
+          }
+        }
+      }),
+      getStore: () => ({ getSettings: () => ({ tabAutoGenerateTitle: true }) }),
+      getAgentStatusSnapshotForPane: () => [],
+      getTrackedTitle: () => '✳ Claude Code'
+    })
+    expect(
+      senderNames.agentRowNamer(new Map(), { mintIdentityFallback: true })({
+        paneKey: `tab-dbox:${LEAF_A}`,
+        tabId: 'tab-dbox',
+        worktreeId: 'wt-dbox',
+        ptyId: 'pty-dbox',
+        agentType: 'claude',
+        providerSessionId: undefined
+      })
+    ).toBeNull()
+
+    const generatedWrites: { tabId: string; title: string }[] = []
+    let currentTab: {
+      customTitle?: string | null
+      generatedTitle?: string | null
+      aiVaultTitle?: typeof persistedSlot | null
+    } = { ...persistedSingleTabs[0]! }
+    const generatedTitles = new AgentGeneratedTabTitles({
+      enabled: () => true,
+      targetOf: () => ({ workspace: 'wt-dbox', tabId: 'tab-dbox', tab: currentTab }),
+      orchestrationForPaneKey: () => undefined,
+      apply: async (command) => {
+        for (const item of command.renames) {
+          generatedWrites.push({ tabId: item.tabId, title: item.title ?? '' })
+          currentTab = { ...currentTab, generatedTitle: item.title }
+        }
+        return { ok: true, result: {} }
+      }
+    })
+    generatedTitles.noteStatus({
+      paneKey: `tab-dbox:${LEAF_A}`,
+      tabId: 'tab-dbox',
+      worktreeId: 'wt-dbox',
+      connectionId: null,
+      state: 'working',
+      prompt: '你执行啊',
+      agentType: 'claude',
+      providerSession: { key: 'session_id', id: 'session-dbox-1' },
+      stateStartedAt: 30,
+      receivedAt: 30
+    })
+    await generatedTitles.settled()
+    expect(generatedWrites).toEqual([])
+
+    // Agent change without providerSession.id still supersedes the old Claude slot and writes the new task.
+    generatedTitles.noteStatus({
+      paneKey: `tab-dbox:${LEAF_A}`,
+      tabId: 'tab-dbox',
+      worktreeId: 'wt-dbox',
+      connectionId: null,
+      state: 'working',
+      prompt: '切换到 Codex 后的首轮任务',
+      agentType: 'codex',
+      stateStartedAt: 35,
+      receivedAt: 35
+    })
+    await generatedTitles.settled()
+    expect(generatedWrites).toEqual([{ tabId: 'tab-dbox', title: '切换到 Codex 后的首轮任务' }])
+
+    // Reset generatedTitle to verify a different session ID for the same agent also supersedes.
+    currentTab = { ...persistedSingleTabs[0]! }
+    generatedWrites.length = 0
+    generatedTitles.noteStatus({
+      paneKey: `tab-dbox:${LEAF_A}`,
+      tabId: 'tab-dbox',
+      worktreeId: 'wt-dbox',
+      connectionId: null,
+      state: 'working',
+      prompt: '新会话首轮任务内容',
+      agentType: 'claude',
+      providerSession: { key: 'session_id', id: 'session-dbox-2' },
+      stateStartedAt: 40,
+      receivedAt: 40
+    })
+    await generatedTitles.settled()
+    expect(generatedWrites).toEqual([{ tabId: 'tab-dbox', title: '新会话首轮任务内容' }])
   })
 })
