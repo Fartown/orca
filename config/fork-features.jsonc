@@ -1557,6 +1557,7 @@
         "src/shared/agent-hook-listener/listener-event.ts",
         "src/shared/agent-session-fallback-title.ts",
         "src/shared/agent-session/lifecycle/agent-session-resume.ts",
+        "src/shared/agent-session/lifecycle/resume/agent-provider-session-equality.ts",
         "src/shared/agent-status/presentation/agent-type-label.ts",
         "src/shared/codex-thread-title-generation.ts",
         "src/shared/execution-host/execution-host.ts",
@@ -2100,8 +2101,18 @@
         },
         {
           "file": "src/renderer/src/runtime/web-session-tabs-sync/tab-projection/terminal-build.ts",
-          "mustContain": "mirrorHostManualName",
-          "why": "Keep the feature contract and its exhaustive integration checks aligned."
+          "mustContain": "hasMirroredTerminalBindingChanged",
+          "why": "Keep mirrored tab session ownership aligned with bound terminal PTY changes."
+        },
+        {
+          "file": "src/renderer/src/runtime/web-session-tabs-sync/agent-status/agent-status-patch.ts",
+          "mustContain": "collectReplacedMirroredTerminalPaneKeys",
+          "why": "Retire previous PTY agent status and conversation identity when a mirrored leaf rebinds to a new PTY."
+        },
+        {
+          "file": "src/renderer/src/runtime/web-session-tabs-sync/naming/runtime-pane-title-patch.ts",
+          "mustContain": "collectReplacedMirroredTerminalPaneKeys",
+          "why": "Drop stale cached runtime pane titles and client OSC fences when a mirrored leaf rebinds to a new PTY."
         },
         {
           "file": "src/shared/rpc-contract/workspace-layout/workspace-layout-params.ts",

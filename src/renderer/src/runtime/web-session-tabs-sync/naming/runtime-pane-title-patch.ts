@@ -23,6 +23,10 @@ import type {
   WebSessionTabsSyncState
 } from '../state'
 import type { RuntimeMobileSessionTerminalClientTab } from '../../../../../shared/remote-runtime/session-graph/runtime-mobile-session-tab-contracts'
+import {
+  collectReplacedMirroredTerminalPaneKeys,
+  hostAgentStatusSupersedesClientSession
+} from '../../../session-names/mirror-host-manual-name'
 
 /** Reconcile saved pane titles with the accepted host inventory, including inactive tabs. */
 export function buildMirroredRuntimePaneTitlePatch(
@@ -53,6 +57,11 @@ export function buildMirroredRuntimePaneTitlePatch(
   }
   const draft = presentationRecordDraft(state, 'runtimePaneTitlesByTabId', batchContext)
   for (const { tab, hostTabId, layout, retainedSurfaceByPrunedLeafId, paneTitles } of titledTabs) {
+    const replacedPaneKeys = collectReplacedMirroredTerminalPaneKeys(
+      state.tabsByWorktree[tab.worktreeId] ?? [],
+      state.terminalLayoutsByTabId,
+      [{ tab, layout }]
+    )
     const leaves = new Set(collectRuntimePaneLeafIds(layout.root))
     const liveSlotIds = Object.keys(paneTitles)
       .map(Number)
@@ -88,34 +97,40 @@ export function buildMirroredRuntimePaneTitlePatch(
       const hostSurface = leaves.has(leafId) ? hostSurfacesByLeaf.get(leafId) : undefined
       let hostTitle: string | undefined
       if (hostSurface) {
-        // A pending handle's placeholder carries no new title evidence.
+        const paneKey = makePaneKey(tab.id, leafId)
+        const terminalReplaced = replacedPaneKeys.has(paneKey)
+        // A pending handle's placeholder carries no new title evidence; a replaced PTY clears the prior pane's cached title.
         if (
           !hostSurface.title.trim() ||
           (hostSurface.status === 'pending-handle' && hostSurface.title === 'Terminal')
         ) {
-          continue
-        }
-        const paneKey = makePaneKey(tab.id, leafId)
-        // Keep the existing byte-stream ownership fence while that writer is fresh.
-        if (
-          clientAgentStatusFencesHost(
-            paneKey,
-            state.agentStatusByPaneKey.get(paneKey),
-            hostSurface.agentStatus,
-            now
-          )
-        ) {
-          continue
-        }
-        const owner = resolvePaneAgentOwnerRecord({
-          launchAgent: hostSurface.launchAgent ?? tab.launchAgent,
-          hookAgent: hostSurface.agentStatus?.agentType
-        })
-        hostTitle = normalizeCompatibleAgentTitleForOwner(hostSurface.title, owner?.agent, {
-          ownerIsLaunch: owner?.ownerIsLaunch === true
-        })
-        if (title === hostTitle) {
-          continue
+          if (!terminalReplaced) {
+            continue
+          }
+        } else {
+          const existingAgentStatus = state.agentStatusByPaneKey.get(paneKey)
+          // Keep the existing byte-stream ownership fence while that writer is fresh and on the same session.
+          if (
+            !terminalReplaced &&
+            !hostAgentStatusSupersedesClientSession(
+              existingAgentStatus,
+              hostSurface.agentStatus,
+              state.agentConversationsByPaneKey?.[paneKey]
+            ) &&
+            clientAgentStatusFencesHost(paneKey, existingAgentStatus, hostSurface.agentStatus, now)
+          ) {
+            continue
+          }
+          const owner = resolvePaneAgentOwnerRecord({
+            launchAgent: hostSurface.launchAgent ?? tab.launchAgent,
+            hookAgent: hostSurface.agentStatus?.agentType
+          })
+          hostTitle = normalizeCompatibleAgentTitleForOwner(hostSurface.title, owner?.agent, {
+            ownerIsLaunch: owner?.ownerIsLaunch === true
+          })
+          if (title === hostTitle) {
+            continue
+          }
         }
       } else if (
         !isRuntimePaneTitleOrphan(runtimePaneId, leaves) ||

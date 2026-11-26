@@ -1,5 +1,12 @@
 import type { RuntimeMobileSessionTerminalClientTab } from '../../../shared/remote-runtime/session-graph/runtime-mobile-session-tab-contracts'
 import type { AiVaultSessionTitle } from '../../../shared/ai-vault/contracts/ai-vault-session-title'
+import type { AgentStatusEntry } from '../../../shared/agent-status/contracts/agent-status-types'
+import { agentProviderSessionsEqual } from '../../../shared/agent-session/lifecycle/resume/agent-provider-session-equality'
+import { makePaneKey } from '../../../shared/workspace-layout/stable-pane-id'
+import type {
+  TerminalLayoutSnapshot,
+  TerminalTab
+} from '../../../shared/workspace-layout/terminal-tab-types'
 
 /** An explicit host rename is manual evidence, not an unverified Provider name. */
 export function mirrorHostManualName(
@@ -7,6 +14,92 @@ export function mirrorHostManualName(
   manual: string | null | undefined
 ): AiVaultSessionTitle | null | undefined {
   return slot && manual !== undefined ? { ...slot, manualTitle: manual?.trim() || null } : slot
+}
+
+export function previousMirroredLeafPtyId(
+  leafId: string,
+  existingTab: Pick<TerminalTab, 'ptyId'> | undefined,
+  existingLayout: Pick<TerminalLayoutSnapshot, 'activeLeafId' | 'ptyIdsByLeafId'> | undefined
+): string | null {
+  const layoutPtyId = existingLayout?.ptyIdsByLeafId?.[leafId]
+  if (layoutPtyId) {
+    return layoutPtyId
+  }
+  if (!existingLayout?.activeLeafId || existingLayout.activeLeafId === leafId) {
+    return existingTab?.ptyId ?? null
+  }
+  return null
+}
+
+export function hasMirroredTerminalBindingChanged(
+  previousPtyId: string | null | undefined,
+  nextPtyId: string | null | undefined
+): boolean {
+  return Boolean(previousPtyId && nextPtyId && previousPtyId !== nextPtyId)
+}
+
+export function collectReplacedMirroredTerminalPaneKeys(
+  existingTabs: readonly Pick<TerminalTab, 'id' | 'ptyId'>[],
+  existingLayoutsByTabId: Readonly<Record<string, TerminalLayoutSnapshot>>,
+  mirroredTerminalTabs: readonly {
+    tab: Pick<TerminalTab, 'id'>
+    layout: Pick<TerminalLayoutSnapshot, 'ptyIdsByLeafId'>
+  }[]
+): ReadonlySet<string> {
+  const existingById = new Map(existingTabs.map((tab) => [tab.id, tab]))
+  const replaced = new Set<string>()
+  for (const { tab, layout } of mirroredTerminalTabs) {
+    const existingTab = existingById.get(tab.id)
+    const existingLayout = existingLayoutsByTabId[tab.id]
+    for (const [leafId, nextPtyId] of Object.entries(layout.ptyIdsByLeafId ?? {})) {
+      const previousPtyId = previousMirroredLeafPtyId(leafId, existingTab, existingLayout)
+      if (hasMirroredTerminalBindingChanged(previousPtyId, nextPtyId)) {
+        replaced.add(makePaneKey(tab.id, leafId))
+      }
+    }
+  }
+  return replaced
+}
+
+export function hostAgentStatusSupersedesClientSession(
+  existing: Pick<AgentStatusEntry, 'agentType' | 'providerSession'> | undefined,
+  hostEntry:
+    | Pick<AgentStatusEntry, 'agentType' | 'providerSession' | 'sessionBoundary'>
+    | null
+    | undefined,
+  existingConversation?: Pick<AgentStatusEntry, 'providerSession'> & {
+    agent?: AgentStatusEntry['agentType']
+  }
+): boolean {
+  if (!existing || !hostEntry) {
+    return false
+  }
+  const clientSession =
+    existing.providerSession ??
+    (existingConversation && existingConversation.agent === existing.agentType
+      ? existingConversation.providerSession
+      : undefined)
+  const sameProviderSession = Boolean(
+    clientSession &&
+    hostEntry.providerSession &&
+    agentProviderSessionsEqual(hostEntry.agentType, clientSession, hostEntry.providerSession)
+  )
+  if (sameProviderSession) {
+    return false
+  }
+  if (clientSession && hostEntry.providerSession) {
+    return true
+  }
+  if (hostEntry.sessionBoundary === true) {
+    return true
+  }
+  return Boolean(
+    existing.agentType &&
+    existing.agentType !== 'unknown' &&
+    hostEntry.agentType &&
+    hostEntry.agentType !== 'unknown' &&
+    existing.agentType !== hostEntry.agentType
+  )
 }
 
 type MirrorSlot = AiVaultSessionTitle | null | undefined
@@ -17,7 +110,8 @@ export function mirroredSessionNameOwnership(
     'leafId' | 'agentStatus' | 'aiVaultTitle' | 'resolvesSessionTitle'
   >,
   previousSlot: MirrorSlot,
-  previousLeafId: string | null | undefined
+  previousLeafId: string | null | undefined,
+  boundTerminalChanged = false
 ) {
   const status = surface.agentStatus
   const id = status?.providerSession?.id
@@ -30,9 +124,20 @@ export function mirroredSessionNameOwnership(
   const published = surface.aiVaultTitle
   const authoritative = surface.resolvesSessionTitle === true
   const unownedBoundary = status?.sessionBoundary === true && !id
-  const hostSlotConflicts = conflicts(published) || Boolean(unownedBoundary && published)
+  const terminalBindingBroken = boundTerminalChanged && !(id && previousSlot?.sessionId === id)
+  const hostSlotConflicts =
+    conflicts(published) ||
+    Boolean(unownedBoundary && published) ||
+    Boolean(
+      boundTerminalChanged &&
+      !id &&
+      !authoritative &&
+      published &&
+      previousSlot?.sessionId === published.sessionId
+    )
   const retainPreviousName =
     !unownedBoundary &&
+    !terminalBindingBroken &&
     (!id || previousSlot?.sessionId === id) &&
     (!previousLeafId || previousLeafId === surface.leafId) &&
     !(authoritative && !published?.title.trim()) &&

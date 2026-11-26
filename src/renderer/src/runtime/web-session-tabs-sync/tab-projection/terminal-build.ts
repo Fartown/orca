@@ -13,8 +13,10 @@ import type { MirroredTerminalTab, ReadyTerminalSurface } from '../state'
 import type { RuntimeMobileSessionTerminalClientTab } from '../../../../../shared/remote-runtime/session-graph/runtime-mobile-session-tab-contracts'
 import { chooseRemoteTerminalLayout, isTerminalSurfaceTab } from './terminal-surfaces'
 import {
+  hasMirroredTerminalBindingChanged,
   mirrorHostManualName,
-  mirroredSessionNameOwnership
+  mirroredSessionNameOwnership,
+  previousMirroredLeafPtyId
 } from '../../../session-names/mirror-host-manual-name'
 
 function pendingBindingBelongsToEnvironment(
@@ -154,10 +156,15 @@ export function buildMirroredTerminalTabs(
         .find((tab): tab is TerminalTab => Boolean(tab))
     // A host window that resolves the session name is its only writer (null clears); a headless or older host's name is a saved cache, so the client resolves its own.
     const hostResolvesSessionTitle = activeSurface.resolvesSessionTitle === true
+    const boundTerminalChanged = hasMirroredTerminalBindingChanged(
+      previousMirroredLeafPtyId(activeSurface.leafId, existing, existingLayout),
+      ptyIdsByLeafId[activeSurface.leafId] ?? null
+    )
     const { retainPreviousName, sessionTitle, hostSlotConflicts } = mirroredSessionNameOwnership(
       activeSurface,
       existing?.aiVaultTitle,
-      existingLayout?.activeLeafId
+      existingLayout?.activeLeafId,
+      boundTerminalChanged
     )
     // Idle headless panes publish default Terminal; retain known title until a ready surface supplies one.
     const hostTitle = hostSlotConflicts ? '' : activeSurface.title.trim()
@@ -189,8 +196,14 @@ export function buildMirroredTerminalTabs(
     const viewMode = existing ? existing.viewMode : hostViewModeSurface?.viewMode
     // Fork (session-names): the host's explicit rename rides the session slot as manual evidence.
     const aiVaultTitle = mirrorHostManualName(sessionTitle, activeSurface.customTitle)
+    const staleHostGeneratedTitle =
+      boundTerminalChanged &&
+      !hostResolvesSessionTitle &&
+      !retainPreviousName &&
+      Boolean(existing?.generatedTitle?.trim()) &&
+      activeSurface.generatedTitle?.trim() === existing?.generatedTitle?.trim()
     const generatedTitle =
-      (!hostSlotConflicts && activeSurface.generatedTitle?.trim()) ||
+      (!hostSlotConflicts && !staleHostGeneratedTitle && activeSurface.generatedTitle?.trim()) ||
       (retainClientTitle ? existing?.generatedTitle : undefined)
     return {
       tab: {
