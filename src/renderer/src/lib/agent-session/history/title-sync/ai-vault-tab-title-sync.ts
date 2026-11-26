@@ -265,6 +265,10 @@ export function startAiVaultTabTitleSync(dependencies: SyncDependencies): () => 
     if (state.runtimePaneTitlesByTabId !== previous.runtimePaneTitlesByTabId) {
       for (const key of changedOwningPaneTitleRequests(state, previous, statuses)) {
         dirty.add(key)
+        const request = currentRequests(state).byKey.get(key)
+        if (request) {
+          dependencies.invalidateSessionNames?.([request])
+        }
       }
     }
     const inputsChanged = aiVaultTitleSyncInputsChanged(state, previous)

@@ -603,3 +603,12 @@ external_ids: ['Fartown/orca#158', 'Fartown/orca#163']
 - 验证证据：修前回归分别读出旧摘要、旧会话名、后台任务和离线读取结果。隔离 Linux 桌面通过真实 Hook 先提交后台任务再提交前台任务，标签和保存的摘要均为前台任务。SSH 镜像断开重连、无头服务与终端守护进程同时重启的证据见 `.docs/session-name-review-ui-validation/2026-11-26/`。
 - 未解决问题：本轮没有原 Mac、Android/iOS 真机或 Windows/WSL 的安装态证据。用户已选定的 D-009 和 Claude 活跃窗口保护依旧适用。
 - 下一步：由 PR #164 的 CI 核对当前提交。
+
+## 2026-11-26 真实 Claude CLI 改名（testing）
+
+- 本轮目标：从 Claude 自己的改名入口核对 PR #164 的标题刷新。
+- 完成内容：终端窗格发出有意义的标题变动时，让对应执行主机、Provider 和会话 ID 的旧读数失效，再由既有调度读取原生名。
+- 代码或文档变更：调整 ai-vault-tab-title-sync 的窗格标题变更订阅，补上命中旧缓存时的改名回归。
+- 验证证据：隔离 Electron 启动本机 Claude Code 2.1.332；一轮对话的模型答复由本机 HTTP 测试服务提供，身份、Hook、会话文件与 `/rename` 由真实 CLI 生成。修前执行 `/rename` 后约 310 秒仍显示旧名，约 321 秒首次采到新名。候选同一次采样中约 1 秒读到新的 Tab、侧栏和原生名，两个阶段的 ID 一致。采样见 `.docs/session-name-review-ui-validation/2026-11-26/evidence/`。
+- 未解决问题：真实 CLI 运行在 Linux，无原用户设备的安装态数据。
+- 下一步：核对最终提交的 PR 检查。
