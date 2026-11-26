@@ -90,7 +90,7 @@ export function createTerminalTabPresentationActions(
                 ...tab,
                 aiVaultTitle,
                 ...(focusedTitle ? { title: focusedTitle } : {}),
-                ...(identityChanged ? { generatedTitle: null } : {})
+                ...(identityChanged ? { generatedTitle: null, generatedTitleOwner: undefined } : {})
               }
             : tab
         )

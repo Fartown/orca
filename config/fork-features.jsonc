@@ -2213,6 +2213,21 @@
           "file": "mobile/src/agent-history/use-mobile-agent-history-state.ts",
           "mustContain": "resolveMobileHistorySessionTitle",
           "why": "mobile session history rows resolve titles via the shared provider-first display chain"
+        },
+        {
+          "file": "src/shared/workspace-layout/terminal-tab-types.ts",
+          "mustContain": "generatedTitleOwner",
+          "why": "mirrored terminal tabs track the live session identity owning their generatedTitle when no aiVaultTitle slot carries it"
+        },
+        {
+          "file": "src/shared/workspace-layout/persistence/workspace-layout-disk-fields.ts",
+          "mustContain": "generatedTitleOwner: 'unwritten'",
+          "why": "mirror-only generatedTitleOwner is never written to workspace layout disk persistence"
+        },
+        {
+          "file": "src/renderer/src/runtime/web-session-tabs-sync/snapshots/state-equality-tabs.ts",
+          "mustContain": "generatedTitleOwner",
+          "why": "terminal tab equality compares mirror-only generatedTitleOwner changes"
         }
       ],
       "tests": [

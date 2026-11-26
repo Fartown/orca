@@ -282,7 +282,20 @@ export function applyGeneratedTabTitleUpdates(
     if (!generatedTitle || existingGeneratedTitle === generatedTitle) {
       continue
     }
-    updateStageTabs(stage, tabIndexes, (tab) => ({ ...tab, generatedTitle }))
+    const live = state.agentStatusByPaneKey?.get(paneKey)
+    const generatedTitleOwner =
+      live &&
+      live.restoredUnconfirmed !== true &&
+      live.providerSession?.id &&
+      live.agentType &&
+      live.agentType !== 'unknown'
+        ? { agent: live.agentType, sessionId: live.providerSession.id }
+        : undefined
+    updateStageTabs(stage, tabIndexes, (tab) => ({
+      ...tab,
+      generatedTitle,
+      generatedTitleOwner
+    }))
     updateStageUnifiedLabel(stage, tabId, 'generatedLabel', generatedTitle)
   }
   return finishTitleStages(state, stages)

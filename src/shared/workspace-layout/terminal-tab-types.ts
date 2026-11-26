@@ -49,6 +49,8 @@ export type TerminalTab = {
   defaultTitle?: string
   /** Stable opt-in label derived from the first known agent prompt. */
   generatedTitle?: string | null
+  /** Mirror-only, never saved: live session identity that owns this tab's generatedTitle when no aiVaultTitle slot carries it. */
+  generatedTitleOwner?: { agent: string; sessionId: string }
   /** Stable AI Vault conversation name, bound to its provider session identity. */
   aiVaultTitle?: AiVaultSessionTitle | null
   /** Mirror-only, never saved: the paired host publishes this tab's session name, so this client doesn't resolve its own. */

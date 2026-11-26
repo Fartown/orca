@@ -133,7 +133,8 @@ const ROW = {
   pendingActivationSpawn: 'unwritten',
   recovery: 'unwritten',
   restoredFromSession: 'unwritten',
-  sessionTitleFromHost: 'unwritten'
+  sessionTitleFromHost: 'unwritten',
+  generatedTitleOwner: 'unwritten'
 } as const satisfies Record<keyof TerminalTab, DiskFieldWritten>
 
 const ENTRY_FIELDS = {

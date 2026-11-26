@@ -165,13 +165,15 @@ export function buildMirroredTerminalTabs(
       activeSurface,
       existing?.aiVaultTitle,
       existingLayout?.activeLeafId,
-      boundTerminalChanged
+      boundTerminalChanged,
+      existing?.generatedTitleOwner
     )
-    const { generatedTitle, rejectedHostGeneratedTitle } = resolveMirroredGeneratedTitle(
-      activeSurface,
-      existing,
-      { retainPreviousName, hostSlotConflicts }
-    )
+    const { generatedTitle, generatedTitleOwner, rejectedHostGeneratedTitle } =
+      resolveMirroredGeneratedTitle(activeSurface, existing, {
+        retainPreviousName,
+        sessionTitle,
+        hostSlotConflicts
+      })
     // Idle headless panes publish default Terminal; retain known title until a ready surface supplies one.
     const rawHostTitle = activeSurface.title.trim()
     const hostTitle =
@@ -215,6 +217,7 @@ export function buildMirroredTerminalTabs(
         title,
         defaultTitle: (retainClientTitle && existing?.defaultTitle) || title,
         ...(generatedTitle ? { generatedTitle } : {}),
+        ...(generatedTitle && generatedTitleOwner ? { generatedTitleOwner } : {}),
         ...(aiVaultTitle ? { aiVaultTitle } : {}),
         ...(hostResolvesSessionTitle && !hostSlotConflicts
           ? { sessionTitleFromHost: true as const }
