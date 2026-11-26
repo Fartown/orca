@@ -4,6 +4,7 @@ import type {
   AgentType
 } from '../../../../../shared/agent-status/contracts/agent-status-types'
 import type { ExecutionHostId } from '../../../../../shared/execution-host/execution-host'
+import { normalizeExecutionHostConnectionId } from '../../../../../shared/session-names/runtime-host-connection-owner'
 import { parsePaneKey } from '../../../../../shared/workspace-layout/stable-pane-id'
 import type { TerminalTab } from '../../../../../shared/workspace-layout/terminal-tab-types'
 import { getExecutionHostIdForWorktree } from '@/lib/workspace/ownership/worktree-runtime-owner'
@@ -146,7 +147,9 @@ function lastReportedCandidate(
     tab?.worktreeId !== identity.worktreeId ||
     (tab.leafIds && !tab.leafIds.has(pane.leafId)) ||
     identity.executionHostId !== getExecutionHostIdForWorktree(state, identity.worktreeId) ||
-    (repo !== undefined && identity.connectionId !== (repo.connectionId ?? null))
+    (repo !== undefined &&
+      normalizeExecutionHostConnectionId(identity.executionHostId, identity.connectionId) !==
+        normalizeExecutionHostConnectionId(identity.executionHostId, repo.connectionId))
   ) {
     return null
   }

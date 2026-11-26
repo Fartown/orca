@@ -1,6 +1,8 @@
 import { agentProviderSessionsEqual } from '../../../../../../shared/agent-session/lifecycle/resume/agent-provider-session-equality'
+import { getExecutionHostIdForWorktree } from '@/lib/workspace/ownership/worktree-runtime-owner'
 import { canonicalOrchestrationForRow } from '@/runtime/agent-orchestration/visible-agent-orchestration'
 import { sameAgentStatusTerminalOwner } from '../../../../../../shared/agent-status/identity/agent-status-terminal-owner'
+import { normalizeExecutionHostConnectionId } from '../../../../../../shared/session-names/runtime-host-connection-owner'
 import { resolveAgentStatusLiveEntryTiming } from './agent-status-live-entry-timing'
 import { resolveAgentStatusLiveEntryMainAgent } from './agent-status-live-entry-main-agent'
 import { resolveSessionNameLiveEntryState } from '../../../../../../shared/session-names/session-name-live-entry'
@@ -46,17 +48,29 @@ export function buildAgentStatusLiveEntry(
   if (existing && updatedAt < existing.updatedAt && !timing?.allowOlderTimestamp) {
     return { entry: null, reason: 'stale' }
   }
+  const ownerWorktreeId =
+    routing?.worktreeId ??
+    existing?.worktreeId ??
+    findAgentPaneWorktreeId(state, paneKey) ??
+    undefined
+  const ownerHostId = getExecutionHostIdForWorktree(state, ownerWorktreeId)
+  const existingOwnerConnectionId = normalizeExecutionHostConnectionId(
+    ownerHostId,
+    existing?.connectionId
+  )
+  const incomingOwnerConnectionId = normalizeExecutionHostConnectionId(
+    ownerHostId,
+    routing?.connectionId === undefined ? existing?.connectionId : routing.connectionId
+  )
   const { history, lastCompletedAssistantMessage, stateObservedAt, ...sessionName } =
     resolveSessionNameLiveEntryState(existing, payload, metadata, terminalTitle, updatedAt)
   const identity = resolveAgentStatusIdentity({
     existing:
       existing &&
       sameAgentStatusTerminalOwner(
-        { connectionId: existing.connectionId ?? null, worktreeId: existing.worktreeId },
+        { connectionId: existingOwnerConnectionId, worktreeId: existing.worktreeId },
         {
-          connectionId:
-            (routing?.connectionId === undefined ? existing.connectionId : routing.connectionId) ??
-            null,
+          connectionId: incomingOwnerConnectionId,
           worktreeId: routing?.worktreeId ?? existing.worktreeId
         }
       )
@@ -83,7 +97,14 @@ export function buildAgentStatusLiveEntry(
   const liveTiming = resolveAgentStatusLiveEntryTiming(
     existing,
     identity.agentType,
-    { payload, timing, routing, metadata, updatedAt },
+    {
+      payload,
+      timing,
+      routing,
+      metadata,
+      updatedAt,
+      executionHostId: ownerHostId
+    },
     commandCodeNewTurn
   )
   const { turnStartedAt, turnEnd } = liveTiming
@@ -169,7 +190,7 @@ export function buildAgentStatusLiveEntry(
     existing?.orcaSessionId !== undefined &&
     existing.agentType === identity.agentType &&
     (routing?.connectionId === undefined ||
-      routing.connectionId === (existing.connectionId ?? null)) &&
+      incomingOwnerConnectionId === existingOwnerConnectionId) &&
     agentProviderSessionsEqual(identity.agentType, existing.providerSession, providerSession)
   const orcaSessionId =
     metadata?.providerSession || metadata?.orcaSessionId !== undefined

@@ -1,3 +1,4 @@
+import { createCompatibleRuntimeStatusResponse } from '@/runtime/rpc/testing/runtime-compatibility-test-fixture'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import type { AiVaultSessionTitlesResult } from '../../../shared/ai-vault/contracts/ai-vault-session-title'
 import { dispatchTerminalNotification } from '../components/terminal-pane/notifications/dispatch-terminal-notification'
@@ -72,6 +73,25 @@ afterEach(() => {
   sessionNameStore.reset()
   vi.useRealTimers()
   vi.unstubAllGlobals()
+})
+
+it('delivers the name published by the paired host even when the client has an older cached name', async () => {
+  sessionNameStore.publish('ssh:dev-box', nativeResult('Before rename'))
+  store.setState((state) => ({
+    tabsByWorktree: {
+      workspace: [
+        {
+          ...state.tabsByWorktree.workspace[0],
+          sessionTitleFromHost: true,
+          aiVaultTitle: nativeResult('After rename').titles[0]
+        }
+      ]
+    }
+  }))
+  send()
+  await vi.waitFor(() =>
+    expect(dispatch).toHaveBeenCalledWith(expect.objectContaining({ sessionTitle: 'After rename' }))
+  )
 })
 
 it('times out once with the captured prompt fallback, not the latest round or replacement name', async () => {
@@ -328,6 +348,28 @@ it.each(['ssh:folder-box', 'runtime:paired-box'] as const)(
         }
       ]
     })
+    if (executionHostId === 'runtime:paired-box') {
+      read.mockResolvedValue(nativeResult('Unreachable host result'))
+      expect(
+        await captureNotificationSessionName(store.getState(), {
+          worktreeId: 'folder:f',
+          paneKey: PANE,
+          terminalTitle: 'Codex ready',
+          agentStatus: store.getState().agentStatusByPaneKey.get(PANE)
+        })
+      ).toBe('Codex A')
+      store.setState({
+        runtimeStatusByEnvironmentId: new Map([
+          [
+            'paired-box',
+            {
+              status: createCompatibleRuntimeStatusResponse().result,
+              checkedAt: 1
+            }
+          ]
+        ])
+      })
+    }
     sessionNameStore.publish('local', nativeResult('Wrong local A'))
     read.mockResolvedValue(nativeResult('Own remote folder A'))
     expect(

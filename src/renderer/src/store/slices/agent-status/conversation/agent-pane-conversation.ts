@@ -14,6 +14,7 @@ import type {
 import { AGENT_STATE_HISTORY_MAX } from '../../../../../../shared/agent-status/lifecycle/agent-state-history'
 import { sameAgentStatusTerminalOwner } from '../../../../../../shared/agent-status/identity/agent-status-terminal-owner'
 import type { ExecutionHostId } from '../../../../../../shared/execution-host/execution-host'
+import { normalizeExecutionHostConnectionId } from '../../../../../../shared/session-names/runtime-host-connection-owner'
 import { getExecutionHostIdForWorktree } from '@/lib/workspace/ownership/worktree-runtime-owner'
 import type { WorktreeRuntimeOwnerState } from '@/lib/workspace/ownership/worktree-runtime-owner-state'
 import type { AppState } from '../../../types'
@@ -60,10 +61,16 @@ export function agentPaneConversationForEntry(
   return previous &&
     previous.agent === entry.agentType &&
     previous.executionHostId === executionHostId &&
-    sameAgentStatusTerminalOwner(previous, {
-      worktreeId: entry.worktreeId,
-      connectionId: entry.connectionId ?? null
-    })
+    sameAgentStatusTerminalOwner(
+      {
+        worktreeId: previous.worktreeId,
+        connectionId: normalizeExecutionHostConnectionId(executionHostId, previous.connectionId)
+      },
+      {
+        worktreeId: entry.worktreeId,
+        connectionId: normalizeExecutionHostConnectionId(executionHostId, entry.connectionId)
+      }
+    )
     ? previous
     : undefined
 }
@@ -130,7 +137,7 @@ export function projectAgentPaneConversation(
     paneKey: entry.paneKey,
     worktreeId,
     executionHostId: ownerHostId,
-    connectionId: entry.connectionId ?? null,
+    connectionId: normalizeExecutionHostConnectionId(ownerHostId, entry.connectionId),
     agent,
     ...(acceptance.continuity ? { continuity: acceptance.continuity } : {}),
     ...(providerSession ? { providerSession } : {}),
@@ -157,7 +164,8 @@ export function classifyAgentPaneConversation(
   source: AgentConversationSource,
   executionHostId?: ExecutionHostId
 ) {
-  const previous = agentPaneConversationForEntry(state, entry, executionHostId)
+  const ownerHostId = executionHostId ?? getExecutionHostIdForWorktree(state, entry.worktreeId)
+  const previous = agentPaneConversationForEntry(state, entry, ownerHostId)
   const providerChanged = Boolean(
     previous?.providerSession &&
     source.providerSession &&
@@ -176,6 +184,7 @@ export function classifyAgentPaneConversation(
     providerChanged || Boolean(state.agentConversationsByPaneKey?.[entry.paneKey] && !previous)
   const reset = identityChanged || phase.successor
   return {
+    ownerHostId,
     previous,
     reset,
     continuity: phase.continuity,

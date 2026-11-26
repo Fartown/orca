@@ -12,7 +12,13 @@ import { toWebTerminalSurfaceTabId } from '../../../../../shared/workspace-layou
 import type { MirroredTerminalTab, ReadyTerminalSurface } from '../state'
 import type { RuntimeMobileSessionTerminalClientTab } from '../../../../../shared/remote-runtime/session-graph/runtime-mobile-session-tab-contracts'
 import { chooseRemoteTerminalLayout, isTerminalSurfaceTab } from './terminal-surfaces'
-import { mirrorHostManualName } from '../../../session-names/mirror-host-manual-name'
+import {
+  hasMirroredTerminalBindingChanged,
+  mirrorHostManualName,
+  mirroredSessionNameOwnership,
+  previousMirroredLeafPtyId,
+  resolveMirroredGeneratedTitle
+} from '../../../session-names/mirror-host-manual-name'
 
 function pendingBindingBelongsToEnvironment(
   ptyId: string,
@@ -151,20 +157,36 @@ export function buildMirroredTerminalTabs(
         .find((tab): tab is TerminalTab => Boolean(tab))
     // A host window that resolves the session name is its only writer (null clears); a headless or older host's name is a saved cache, so the client resolves its own.
     const hostResolvesSessionTitle = activeSurface.resolvesSessionTitle === true
-    const sessionTitle = hostResolvesSessionTitle
-      ? activeSurface.aiVaultTitle?.title.trim()
-        ? activeSurface.aiVaultTitle
-        : null
-      : existing?.aiVaultTitle
-    // The host's titles rank its session names in, so when it clears a name none of the retained ones is a safe placeholder.
-    const sessionNameCleared = hostResolvesSessionTitle && !sessionTitle && !!existing?.aiVaultTitle
+    const boundTerminalChanged = hasMirroredTerminalBindingChanged(
+      previousMirroredLeafPtyId(activeSurface.leafId, existing, existingLayout),
+      ptyIdsByLeafId[activeSurface.leafId] ?? null
+    )
+    const { retainPreviousName, sessionTitle, hostSlotConflicts } = mirroredSessionNameOwnership(
+      activeSurface,
+      existing?.aiVaultTitle,
+      existingLayout?.activeLeafId,
+      boundTerminalChanged,
+      existing?.generatedTitleOwner
+    )
+    const { generatedTitle, generatedTitleOwner, rejectedHostGeneratedTitle } =
+      resolveMirroredGeneratedTitle(activeSurface, existing, {
+        retainPreviousName,
+        sessionTitle,
+        hostSlotConflicts
+      })
     // Idle headless panes publish default Terminal; retain known title until a ready surface supplies one.
-    const hostTitle = activeSurface.title.trim() || surfaces[0]?.title.trim() || ''
+    const rawHostTitle = activeSurface.title.trim()
+    const hostTitle =
+      hostSlotConflicts ||
+      (rejectedHostGeneratedTitle && rawHostTitle === rejectedHostGeneratedTitle)
+        ? ''
+        : rawHostTitle
     const hostTitleIsPlaceholder =
       hostTitle === '' || (activeSurface.status === 'pending-handle' && hostTitle === 'Terminal')
-    const retainedTitle = sessionNameCleared
-      ? ''
-      : existing?.title?.trim() || existing?.defaultTitle?.trim() || ''
+    const retainClientTitle = retainPreviousName && !hostResolvesSessionTitle
+    const retainedTitle = retainClientTitle
+      ? existing?.title?.trim() || existing?.defaultTitle?.trim()
+      : undefined
     const title = normalizeCompatibleAgentTitleForOwner(
       (hostTitleIsPlaceholder ? retainedTitle || hostTitle : hostTitle) || 'Terminal',
       ownerRecord?.agent,
@@ -172,8 +194,7 @@ export function buildMirroredTerminalTabs(
     )
     const quickCommandLabel =
       activeSurface.quickCommandLabel?.trim() ||
-      surfaces.find((surface) => surface.quickCommandLabel?.trim())?.quickCommandLabel?.trim() ||
-      existing?.quickCommandLabel?.trim()
+      (retainPreviousName ? existing?.quickCommandLabel?.trim() : undefined)
     // Why: startupCwd is host-owned launch metadata; once the host omits it, don't resurrect stale subdirectory intent.
     const startupCwd =
       activeSurface.startupCwd || surfaces.find((surface) => surface.startupCwd)?.startupCwd
@@ -194,11 +215,13 @@ export function buildMirroredTerminalTabs(
         ptyId: ptyIdsByLeafId[activeSurface.leafId] ?? null,
         worktreeId: snapshot.worktree,
         title,
-        defaultTitle: existing?.defaultTitle ?? title,
-        // Host omits generated titles; retain client agent-prompt labels across rebuilds.
-        ...(existing?.generatedTitle ? { generatedTitle: existing.generatedTitle } : {}),
+        defaultTitle: (retainClientTitle && existing?.defaultTitle) || title,
+        ...(generatedTitle ? { generatedTitle } : {}),
+        ...(generatedTitle && generatedTitleOwner ? { generatedTitleOwner } : {}),
         ...(aiVaultTitle ? { aiVaultTitle } : {}),
-        ...(hostResolvesSessionTitle ? { sessionTitleFromHost: true as const } : {}),
+        ...(hostResolvesSessionTitle && !hostSlotConflicts
+          ? { sessionTitleFromHost: true as const }
+          : {}),
         // Host omits client recovery ledger; preserve it or every snapshot rearms remount allowance (b5cfc6ca).
         ...(existing?.recovery ? { recovery: existing.recovery } : {}),
         ...(quickCommandLabel ? { quickCommandLabel } : {}),
@@ -207,7 +230,9 @@ export function buildMirroredTerminalTabs(
         customTitle:
           activeSurface.customTitle !== undefined
             ? activeSurface.customTitle
-            : (existing?.customTitle ?? null),
+            : retainPreviousName
+              ? (existing?.customTitle ?? null)
+              : null,
         color,
         isPinned,
         ...(viewMode ? { viewMode } : {}),

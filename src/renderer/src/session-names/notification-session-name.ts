@@ -11,6 +11,7 @@ import type { AppState } from '../store/types'
 import { canonicalSessionTitleKey, getCanonicalSessionTitle } from '../lib/canonical-session-titles'
 import { resolveExplicitTerminalTitleAgentType as resolveCommittedTitleAgentType } from '../../../shared/agent-status/title/terminal-title-agent-type'
 import { getExecutionHostIdForWorktree } from '../lib/workspace/ownership/worktree-runtime-owner'
+import { sessionNameSlotForPane } from './live-pane-name-session'
 import { sessionNameStore } from './session-name-store'
 
 const COLD_NAME_READ_DEADLINE_MS = 1_500
@@ -42,15 +43,15 @@ export function captureNotificationSessionName(
     sameCurrent &&
     layout?.root?.type === 'leaf' &&
     layout.root.leafId === pane?.leafId
-  const ownSlot =
-    sessionId && tab?.aiVaultTitle?.agent === agent && tab.aiVaultTitle.sessionId === sessionId
-      ? tab.aiVaultTitle
-      : null
+  const ownSlot = tab ? sessionNameSlotForPane(tab, agent, sessionId) : null
+  const hostNamed = ownSlot && tab?.sessionTitleFromHost
   const host = getExecutionHostIdForWorktree(state, args.worktreeId)
-  const manualTitle = sessionId ? getCanonicalSessionTitle(host, agent, sessionId) : undefined
-  const cached = sessionId
-    ? sessionNameStore.getSnapshot().get(canonicalSessionTitleKey(host, agent, sessionId))
-    : undefined
+  const manualTitle =
+    !hostNamed && sessionId ? getCanonicalSessionTitle(host, agent, sessionId) : undefined
+  const cached =
+    !hostNamed && sessionId
+      ? sessionNameStore.getSnapshot().get(canonicalSessionTitleKey(host, agent, sessionId))
+      : undefined
   const presentation = {
     title: args.terminalTitle ?? (sameCurrent ? current?.terminalTitle : '') ?? '',
     defaultTitle: tab?.defaultTitle,
@@ -85,6 +86,7 @@ export function captureNotificationSessionName(
   }
   const fallback = render(cached)
   if (
+    hostNamed ||
     !sessionId ||
     !isAiVaultTitleAgent(agent) ||
     cached?.providerName?.kind === 'named' ||

@@ -40,6 +40,10 @@ import {
   isAgentStatusFresh,
   isMirroredCommandCodeTurnBump
 } from '../snapshots/state-equality-core'
+import {
+  collectReplacedMirroredTerminalPaneKeys,
+  hostAgentStatusSupersedesClientSession
+} from '../../../session-names/mirror-host-manual-name'
 
 type MirroredAgentStatusPatch = Pick<
   WebSessionTabsSyncState,
@@ -96,6 +100,15 @@ export function buildMirroredAgentStatusPatch(
       )
     }
   }
+  const replacedPaneKeys = collectReplacedMirroredTerminalPaneKeys(
+    currentTerminalTabs,
+    state.terminalLayoutsByTabId,
+    mirroredTerminalTabs
+  )
+  const originalConversations = state.agentConversationsByPaneKey ?? {}
+  const conversationDraft = recordDraft(originalConversations)
+  replacedPaneKeys.forEach((paneKey) => conversationDraft.delete(paneKey))
+  let nextConversations = conversationDraft.view()
   const nextByPaneKey = new Map<string, AgentStatusEntry>()
   for (const surface of terminalSurfaceTabs) {
     const retainedSurface = retainedSurfaceByHostTabAndPrunedLeafId
@@ -105,8 +118,10 @@ export function buildMirroredAgentStatusPatch(
     if (!hostEntry) {
       continue
     }
+    const terminalReplaced = replacedPaneKeys.has(hostEntry.paneKey)
     const existing =
-      nextByPaneKey.get(hostEntry.paneKey) ?? state.agentStatusByPaneKey.get(hostEntry.paneKey)
+      nextByPaneKey.get(hostEntry.paneKey) ??
+      (terminalReplaced ? undefined : state.agentStatusByPaneKey.get(hostEntry.paneKey))
     const entry = withMirroredEvidenceReceipt(
       hostEntry.connectionId === undefined
         ? { ...hostEntry, connectionId: environmentId }
@@ -120,9 +135,12 @@ export function buildMirroredAgentStatusPatch(
       entry.state === 'done' &&
       existing.state !== 'done' &&
       existing.stateStartedAt > entry.stateStartedAt
-    // Cross-machine clocks cannot arbitrate live byte ownership; keep client state except host-only classes, adopting host identity below.
-    const hostPiercesAuthority = hostAgentStatusPiercesClientAuthority(entry)
-    const clientOwnsEntry = clientAgentStatusFencesHost(entry.paneKey, existing, entry, now)
+    // Cross-machine clocks cannot arbitrate live byte ownership; keep client state except host-only classes or host-proven session switches.
+    const hostPiercesAuthority =
+      hostAgentStatusPiercesClientAuthority(entry) ||
+      hostAgentStatusSupersedesClientSession(existing, entry, nextConversations[entry.paneKey])
+    const clientOwnsEntry =
+      !hostPiercesAuthority && clientAgentStatusFencesHost(entry.paneKey, existing, entry, now)
     const nextEntry =
       existing &&
       (clientOwnsEntry ||
@@ -165,7 +183,7 @@ export function buildMirroredAgentStatusPatch(
           )
     const source = { ...accepted, isReplay: true }
     const conversation = classifyAgentPaneConversation(
-      state,
+      terminalReplaced ? { ...state, agentConversationsByPaneKey: nextConversations } : state,
       accepted,
       source,
       toRuntimeExecutionHostId(environmentId)
@@ -196,14 +214,12 @@ export function buildMirroredAgentStatusPatch(
     if (nextByPaneKey.has(paneKey)) {
       continue
     }
+    // Retain sleeping or OSC-owned rows through omission unless the leaf rebound to a new PTY (STA-3107).
     if (
-      state.agentStatusByPaneKey.get(paneKey)?.paneSleep &&
-      survivingSleepingPaneKeys.has(paneKey)
+      !replacedPaneKeys.has(paneKey) &&
+      ((existing.paneSleep && survivingSleepingPaneKeys.has(paneKey)) ||
+        isClientOwnedAgentStatus(paneKey, existing))
     ) {
-      continue
-    }
-    // Host omission cannot prove OSC-driven exit. Retain owned rows through staleness so wake decays them like local panes instead of erasing them (STA-3107).
-    if (isClientOwnedAgentStatus(paneKey, state.agentStatusByPaneKey.get(paneKey))) {
       continue
     }
     nextAgentStatusByPaneKey = nextAgentStatusByPaneKey.replace([[paneKey, null]])
@@ -214,9 +230,6 @@ export function buildMirroredAgentStatusPatch(
   }
 
   let retirement: ReturnType<typeof retirePaneLaunchNote> = {}
-  let nextConversations = state.agentConversationsByPaneKey ?? {}
-  const originalConversations = nextConversations
-  const conversationDraft = recordDraft(nextConversations)
   for (const [paneKey, entry] of nextByPaneKey) {
     nextConversations = projectAgentPaneConversation(
       { tabsByWorktree: state.tabsByWorktree, agentConversationsByPaneKey: nextConversations },

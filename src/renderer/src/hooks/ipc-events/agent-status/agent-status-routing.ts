@@ -9,6 +9,8 @@ import type {
 import type { AgentStatusIpcPayload } from '../../../../../shared/agent-status/contracts/agent-status-ipc-payload'
 import { resolveAgentStatusIdentity } from '../../../../../shared/agent-status/identity/agent-status-identity'
 import { sameAgentStatusTerminalOwner } from '../../../../../shared/agent-status/identity/agent-status-terminal-owner'
+import type { ExecutionHostId } from '../../../../../shared/execution-host/execution-host'
+import { normalizeExecutionHostConnectionId } from '../../../../../shared/session-names/runtime-host-connection-owner'
 import { makePaneKey, parsePaneKey } from '../../../../../shared/workspace-layout/stable-pane-id'
 import type { useAppStore } from '../../../store/index'
 
@@ -156,13 +158,25 @@ export function isInheritedFromActivePane(
   existing: AgentStatusEntry,
   data: AgentStatusIpcPayload,
   incoming: AgentType | undefined,
-  owner: { connectionId: string | null | undefined; worktreeId: string | undefined }
+  owner: {
+    connectionId: string | null | undefined
+    worktreeId: string | undefined
+    executionHostId?: ExecutionHostId
+  }
 ): boolean {
   const sameTerminal = sameAgentStatusTerminalOwner(
-    { connectionId: existing.connectionId ?? null, worktreeId: existing.worktreeId },
     {
-      connectionId:
-        (owner.connectionId === undefined ? existing.connectionId : owner.connectionId) ?? null,
+      connectionId: normalizeExecutionHostConnectionId(
+        owner.executionHostId,
+        existing.connectionId
+      ),
+      worktreeId: existing.worktreeId
+    },
+    {
+      connectionId: normalizeExecutionHostConnectionId(
+        owner.executionHostId,
+        owner.connectionId === undefined ? existing.connectionId : owner.connectionId
+      ),
       worktreeId: data.worktreeId ?? owner.worktreeId ?? existing.worktreeId
     }
   )

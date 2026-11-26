@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import { generatedTabTitleForStatus } from '../agent-status/presentation/agent-generated-tab-title-rules'
 import { deriveGeneratedTabTitle } from '../agent-status/presentation/agent-tab-title'
+import {
+  normalizeExecutionHostConnectionId,
+  sessionNameSlotSupersededByStatus
+} from './runtime-host-connection-owner'
+import { getAgentRowConversationName } from '../agent-status/presentation/agent-row-conversation-name'
 import { resolveScannedSessionDisplayName } from './scanned-session-display-name'
 import { isEligibleSessionNamePrompt } from './session-name-candidate-quality'
 
@@ -69,6 +74,82 @@ describe('session-name prompt candidate quality & scanned display', () => {
       { generatedTitle: '既有的首轮任务摘要' }
     )
     expect(keepsEligibleExisting).toBeNull()
+
+    const slot = {
+      agent: 'claude' as const,
+      sessionId: 'session-1',
+      title: '会话与 Tab 标题不一致',
+      generatedTitle: '既有的首轮任务摘要',
+      providerName: {
+        kind: 'named' as const,
+        title: '会话与 Tab 标题不一致',
+        field: 'ai-title.aiTitle'
+      }
+    }
+    expect(
+      generatedTabTitleForStatus(
+        {
+          prompt: '你执行啊',
+          agentType: 'claude',
+          providerSession: { key: 'session_id', id: 'session-1' }
+        },
+        { generatedTitle: null, aiVaultTitle: slot }
+      )
+    ).toBeNull()
+
+    expect(
+      generatedTabTitleForStatus(
+        {
+          prompt: '新会话的首轮任务摘要',
+          agentType: 'claude',
+          providerSession: { key: 'session_id', id: 'session-2' }
+        },
+        { generatedTitle: null, aiVaultTitle: slot }
+      )
+    ).toEqual({
+      title: '新会话的首轮任务摘要',
+      replaceExisting: true
+    })
+  })
+
+  it('normalizes paired runtime environment connectionIds while preserving SSH and cross-host boundaries', () => {
+    expect(normalizeExecutionHostConnectionId('runtime:dbox', 'dbox')).toBeNull()
+    expect(normalizeExecutionHostConnectionId('runtime:dbox', null)).toBeNull()
+    expect(normalizeExecutionHostConnectionId('runtime:dbox', 'ssh-box')).toBe('ssh-box')
+    expect(normalizeExecutionHostConnectionId('local', 'dbox')).toBe('dbox')
+    expect(normalizeExecutionHostConnectionId('ssh:box', 'box')).toBe('box')
+
+    const claudeSlot = {
+      agent: 'claude' as const,
+      sessionId: 'session-1',
+      title: '会话与 Tab 标题不一致'
+    }
+    expect(sessionNameSlotSupersededByStatus(claudeSlot, { agentType: 'codex' })).toBe(true)
+    expect(sessionNameSlotSupersededByStatus(claudeSlot, { sessionBoundary: true })).toBe(true)
+    expect(
+      sessionNameSlotSupersededByStatus(claudeSlot, {
+        agentType: 'claude',
+        providerSession: { id: 'session-2' }
+      })
+    ).toBe(true)
+    expect(
+      sessionNameSlotSupersededByStatus(claudeSlot, {
+        agentType: 'claude',
+        providerSession: { id: 'session-1' }
+      })
+    ).toBe(false)
+    expect(sessionNameSlotSupersededByStatus(claudeSlot, { agentType: 'claude' })).toBe(false)
+
+    // Explicit providerSessionId: undefined keeps its "no owning session" contract even on single-pane tabs.
+    expect(
+      getAgentRowConversationName(
+        { title: '✳ Claude Code', customTitle: null, aiVaultTitle: claudeSlot },
+        'claude',
+        true,
+        undefined,
+        { providerSessionId: undefined }
+      )
+    ).toBeNull()
   })
 
   it('resolves scanned session display names in canonical priority order and isolates subagents', () => {

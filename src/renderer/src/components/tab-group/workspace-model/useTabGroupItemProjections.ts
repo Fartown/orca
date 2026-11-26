@@ -1,3 +1,4 @@
+import { terminalGroupLabelFields } from '@/session-names/terminal-group-label'
 import { useMemo } from 'react'
 import type { OpenFile } from '@/store/slices/editor/types/open-file'
 import type { BrowserWorkspace } from '../../../../../shared/browser/workspaces/browser-workspace-types'
@@ -68,30 +69,23 @@ export function useTabGroupItemProjections({
         .filter((item) => item.contentType === 'terminal')
         .map((item) => {
           const terminalTab = terminalTabById.get(item.entityId)
-          const aiVaultTitle =
-            terminalTab?.aiVaultTitle !== undefined ? terminalTab.aiVaultTitle : item.aiVaultTitle
+          const fields = terminalGroupLabelFields(item, terminalTab)
           return {
             id: item.entityId,
             unifiedTabId: item.id,
             ptyId: terminalTab?.ptyId ?? null,
             worktreeId,
             title: resolveUnifiedTabLabel(
-              {
-                ...item,
-                aiVaultTitle,
-                launchAgent: terminalTab?.launchAgent,
-                quickCommandLabel: item.quickCommandLabel ?? terminalTab?.quickCommandLabel,
-                generatedLabel: item.generatedLabel ?? terminalTab?.generatedTitle
-              },
+              fields,
               worktreeState.generatedTabTitlesEnabled,
-              item.label
+              fields.label
             ),
             defaultTitle: terminalTab?.defaultTitle,
             // Why: the tab strip resolves again; dropping this slot promotes the generated fallback.
-            aiVaultTitle,
-            quickCommandLabel: terminalTab?.quickCommandLabel ?? item.quickCommandLabel ?? null,
-            generatedTitle: terminalTab?.generatedTitle ?? item.generatedLabel ?? null,
-            customTitle: item.customLabel ?? terminalTab?.customTitle ?? null,
+            aiVaultTitle: fields.aiVaultTitle,
+            quickCommandLabel: fields.quickCommandLabel ?? null,
+            generatedTitle: fields.generatedLabel ?? null,
+            customTitle: fields.customLabel,
             color: item.color ?? terminalTab?.color ?? null,
             sortOrder: item.sortOrder,
             createdAt: item.createdAt,

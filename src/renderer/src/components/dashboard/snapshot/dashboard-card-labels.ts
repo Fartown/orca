@@ -58,17 +58,7 @@ export function rowConversationName(
     paneTitles,
     parsePaneKey(row.paneKey)?.leafId
   )
-  const slot = row.tab.aiVaultTitle
-  const slotNamesThisRow =
-    slot == null ||
-    (slot.agent === row.agentType && slot.sessionId === row.entry.providerSession?.id)
-  const { aiVaultTitle, userTitle, identityFallbackTitle } = resolveDashboardCardSessionSlot({
-    worktreeId: row.tab.worktreeId,
-    agentType: row.agentType,
-    sessionId: row.entry.providerSession?.id,
-    transcriptPath: row.entry.providerSession?.transcriptPath,
-    ownSlot: slotNamesThisRow ? slot : null
-  })
+  const { aiVaultTitle, userTitle, identityFallbackTitle } = resolveDashboardCardSessionSlot(row)
   return (
     getAgentRowConversationName(
       aiVaultTitle === row.tab.aiVaultTitle ? row.tab : { ...row.tab, aiVaultTitle },

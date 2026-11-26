@@ -24,7 +24,7 @@ export type SessionNameTabTitleDependencies = {
   subscribeCanonicalTitles?: (listener: () => void) => () => void
   subscribeSessionNames?: (listener: () => void) => () => void
   getSessionName?: (request: AiVaultTitleRequest) => AiVaultSessionTitle | undefined
-  invalidateSessionNames?: (requests: AiVaultTitleRequest[]) => void
+  invalidateSessionNames?: (requests: AiVaultTitleRequest[], refreshObserved?: boolean) => void
 }
 
 function collectTabIds(state: AppState): Set<string> {

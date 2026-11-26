@@ -8,6 +8,7 @@ import { formatAgentTypeLabel } from '../../../shared/agent-status/presentation/
 import { isTuiAgent } from '../../../shared/agent-launch/catalog/tui-agent-config'
 import { projectSessionNameSlot } from '../../../shared/session-names/session-name-slot'
 import { orchestrationLabelForEntry } from '../lib/workspace/activity/activity-thread-display'
+import { sessionNameSlotForPane } from './live-pane-name-session'
 import { firstSessionNamePrompt } from './session-name-prompt-projection'
 
 export function getActivitySessionName(
@@ -15,6 +16,7 @@ export function getActivitySessionName(
   tab: TerminalTab,
   generatedTitlesEnabled: boolean,
   context: {
+    sessionId?: string
     record?: AiVaultSessionTitle
     manualTitle?: string
     ownsContainer?: boolean
@@ -22,11 +24,8 @@ export function getActivitySessionName(
   } = {}
 ): string {
   const agent = entry.agentType
-  const sessionId = entry.providerSession?.id
-  const ownSlot =
-    sessionId && tab.aiVaultTitle?.agent === agent && tab.aiVaultTitle?.sessionId === sessionId
-      ? tab.aiVaultTitle
-      : null
+  const sessionId = entry.providerSession?.id ?? context.sessionId
+  const ownSlot = sessionNameSlotForPane(tab, agent, sessionId)
   const record = context.record
   const slot = record
     ? projectSessionNameSlot({
@@ -39,7 +38,9 @@ export function getActivitySessionName(
     : ownSlot
   const generatedTitle =
     (context.ownsContainer && ownSlot && generatedTitlesEnabled ? tab.generatedTitle : null) ??
-    (generatedTitlesEnabled ? deriveGeneratedTabTitle(firstSessionNamePrompt(entry) ?? '') : null)
+    (generatedTitlesEnabled
+      ? deriveGeneratedTabTitle(firstSessionNamePrompt(entry, sessionId) ?? '')
+      : null)
   return (
     getAgentRowConversationName(
       {

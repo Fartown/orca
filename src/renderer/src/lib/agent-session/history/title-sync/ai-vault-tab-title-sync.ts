@@ -28,7 +28,7 @@ import {
 
 import {
   aiVaultTitleRequestKey,
-  changedOwningPaneTitleRequests,
+  changedPaneTitleRequests,
   changedTitleRefreshHosts,
   storedAiVaultTitles,
   titleRefreshInterval,
@@ -263,8 +263,13 @@ export function startAiVaultTabTitleSync(dependencies: SyncDependencies): () => 
       return
     }
     if (state.runtimePaneTitlesByTabId !== previous.runtimePaneTitlesByTabId) {
-      for (const key of changedOwningPaneTitleRequests(state, previous, statuses)) {
-        dirty.add(key)
+      for (const request of changedPaneTitleRequests(state, previous, statuses)) {
+        const key = aiVaultTitleRequestKey(request)
+        const ownsTab = currentRequests(state).byKey.has(key)
+        dependencies.invalidateSessionNames?.([request], !ownsTab)
+        if (ownsTab) {
+          dirty.add(key)
+        }
       }
     }
     const inputsChanged = aiVaultTitleSyncInputsChanged(state, previous)

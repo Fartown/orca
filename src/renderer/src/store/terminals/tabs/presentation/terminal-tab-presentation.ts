@@ -1,3 +1,5 @@
+import { resolveRuntimePaneTitleForLeaf } from '../../../../../../shared/workspace-layout/terminal-topology/runtime-pane-title-leaf-id'
+import { neutralTerminalTitle } from '../../../../../../shared/workspace-layout/terminal-surfaces/terminal-pane-title-reset'
 import {
   replaceTabBuckets,
   replaceRecordEntries
@@ -7,7 +9,8 @@ import { scheduleRuntimeGraphSync } from '@/runtime/sync-runtime-graph/graph-syn
 import { detectAgentStatusFromTitle } from '../../../../../../shared/agent-status/title/agent-title-status'
 import {
   applyGeneratedTabTitleUpdates,
-  applyTerminalTabTitleUpdates
+  applyTerminalTabTitleUpdates,
+  isTabGeneratedTitleBlockedByExisting
 } from './terminal-tab-title-batch'
 import {
   adoptTerminalTabOwnerMetadataOnlyBuckets,
@@ -15,7 +18,6 @@ import {
 } from '../../ownership/terminal-tab-owner-index'
 import { getTabIdFromPaneKey } from '../../pty/terminal-pty-identities'
 import type { TerminalSlice, TerminalStoreGet, TerminalStoreSet } from '../../terminal-state'
-import { isEligibleSessionNamePrompt } from '../../../../../../shared/session-names/session-name-candidate-quality'
 import { sessionNameSlotEqual } from '../../../../../../shared/session-names/session-name-slot'
 
 export function createTerminalTabPresentationActions(
@@ -62,20 +64,36 @@ export function createTerminalTabPresentationActions(
         }
         const tabs = s.tabsByWorktree[ownerWorktreeId] ?? []
         const current = tabs.find((tab) => tab.id === tabId)
-        // Evidence-only changes (native name, manual name, prompt fallback) must persist too.
-        if (!current || sessionNameSlotEqual(current.aiVaultTitle, aiVaultTitle)) {
+        if (!current) {
           return s
         }
+        const previousOwner = current.aiVaultTitle ?? current.generatedTitleOwner
         const identityChanged =
-          current.aiVaultTitle != null &&
-          (current.aiVaultTitle.agent !== aiVaultTitle?.agent ||
-            current.aiVaultTitle.sessionId !== aiVaultTitle?.sessionId)
+          previousOwner != null &&
+          (previousOwner.agent !== aiVaultTitle?.agent ||
+            previousOwner.sessionId !== aiVaultTitle?.sessionId)
+        if (!identityChanged && sessionNameSlotEqual(current.aiVaultTitle, aiVaultTitle)) {
+          return s
+        }
+        const layout = s.terminalLayoutsByTabId?.[tabId]
+        // Clearing the former pane's session also retires its raw OSC title.
+        const focusedTitle =
+          aiVaultTitle === null && layout?.root?.type === 'split'
+            ? (layout.activeLeafId &&
+                resolveRuntimePaneTitleForLeaf(
+                  layout,
+                  s.runtimePaneTitlesByTabId?.[tabId],
+                  layout.activeLeafId
+                )) ||
+              neutralTerminalTitle(current.defaultTitle)
+            : undefined
         const ownerTabs = tabs.map((tab) =>
           tab.id === tabId
             ? {
                 ...tab,
                 aiVaultTitle,
-                ...(identityChanged ? { generatedTitle: null } : {})
+                ...(focusedTitle ? { title: focusedTitle } : {}),
+                ...(identityChanged ? { generatedTitle: null, generatedTitleOwner: undefined } : {})
               }
             : tab
         )
@@ -88,6 +106,7 @@ export function createTerminalTabPresentationActions(
             ? {
                 ...tab,
                 aiVaultTitle,
+                ...(focusedTitle ? { label: focusedTitle } : {}),
                 ...(identityChanged ? { generatedLabel: null } : {})
               }
             : tab
@@ -120,10 +139,14 @@ export function createTerminalTabPresentationActions(
       if (!currentTab) {
         return
       }
-      const existingGeneratedTitle = currentTab.generatedTitle?.trim()
       if (
-        isEligibleSessionNamePrompt(existingGeneratedTitle ?? '') &&
-        options?.replaceExistingGeneratedTitle !== true
+        isTabGeneratedTitleBlockedByExisting(
+          state,
+          currentTab,
+          paneKey,
+          prompt,
+          options?.replaceExistingGeneratedTitle
+        )
       ) {
         return
       }

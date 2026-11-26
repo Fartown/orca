@@ -3,7 +3,6 @@ import type {
   AiVaultSessionTitlesResult,
   AiVaultSessionTitle
 } from '../../../shared/ai-vault/contracts/ai-vault-session-title'
-import { isAiVaultTitleAgent } from '../../../shared/ai-vault/contracts/ai-vault-session-title'
 import type { AiVaultSession } from '../../../shared/ai-vault/contracts/ai-vault-types'
 import {
   projectSessionNameSlot,
@@ -12,7 +11,8 @@ import {
 import { canonicalSessionTitleKey } from '../lib/canonical-session-titles'
 import { settleAiVaultTitleRequestBatches } from '../lib/agent-session/history/title-sync/ai-vault-tab-title-batches'
 import type { ExecutionHostId } from '../../../shared/execution-host/execution-host'
-import { hasIndependentScannedSessionIdentity } from './scanned-session-name-identity'
+import { sessionNameHostContact } from './session-name-host-contact'
+import { collectScannedSessionNameSeeds } from './scanned-session-name-seeds'
 
 import {
   createPendingSessionNameRead,
@@ -29,7 +29,8 @@ const keyOf = (request: SessionNameRequest) =>
 
 /** A renderer projection cache; identities are supplied by their existing owners. */
 export function createSessionNameStore(
-  resolve: (args: AiVaultSessionTitlesArgs) => Promise<AiVaultSessionTitlesResult>
+  resolve: (args: AiVaultSessionTitlesArgs) => Promise<AiVaultSessionTitlesResult>,
+  contact?: typeof sessionNameHostContact
 ) {
   let records: ReadonlyMap<string, AiVaultSessionTitle> = new Map()
   const listeners = new Set<() => void>()
@@ -39,6 +40,7 @@ export function createSessionNameStore(
   let flushQueued = false
   let epoch = 0
   const watchers = new Map<number, readonly SessionNameRequest[]>()
+  let stopContact: (() => void) | undefined
   let nextWatcher = 0
   let watchTimer: ReturnType<typeof setInterval> | undefined
   const notify = () => listeners.forEach((listener) => listener())
@@ -90,14 +92,17 @@ export function createSessionNameStore(
       const host = requests[0]!.executionHostId
       let result: AiVaultSessionTitlesResult
       try {
-        result = await resolve({
-          executionHostScope: host,
-          requests: requests.map(({ agent, sessionId, transcriptPath }) => ({
-            agent,
-            sessionId,
-            ...(transcriptPath ? { transcriptPath } : {})
-          }))
-        })
+        result =
+          contact && !contact.canRead(host)
+            ? { titles: [] }
+            : await resolve({
+                executionHostScope: host,
+                requests: requests.map(({ agent, sessionId, transcriptPath }) => ({
+                  agent,
+                  sessionId,
+                  ...(transcriptPath ? { transcriptPath } : {})
+                }))
+              })
       } catch {
         result = {
           titles: [],
@@ -139,6 +144,9 @@ export function createSessionNameStore(
   async function read(requests: readonly SessionNameRequest[], force = false): Promise<void> {
     const waits: Promise<void>[] = []
     for (const request of requests) {
+      if (contact && !contact.canRead(request.executionHostId)) {
+        continue
+      }
       const key = keyOf(request)
       const existing = inFlight.get(key)
       if (existing) {
@@ -176,12 +184,48 @@ export function createSessionNameStore(
     await Promise.all(waits)
   }
 
+  function invalidate(requests: readonly SessionNameRequest[], refreshObserved = false): void {
+    for (const request of requests) {
+      const key = keyOf(request)
+      lastReads.delete(key)
+      pending.get(key)?.settleResult({ titles: [] })
+      pending.delete(key)
+      const active = inFlight.get(key)
+      inFlight.delete(key)
+      active?.done()
+    }
+    if (refreshObserved) {
+      // Snapshot consumers read the shared index without installing a per-session watcher.
+      const observed = requests.filter(
+        (request) =>
+          records.has(keyOf(request)) ||
+          [...watchers.values()].some((items) =>
+            items.some((item) => keyOf(item) === keyOf(request))
+          )
+      )
+      void read(observed)
+    }
+  }
+
   function watch(requests: readonly SessionNameRequest[]): { unsubscribe: () => void } {
     if (!requests.length) {
       return { unsubscribe: () => {} }
     }
     const watcher = nextWatcher++
     watchers.set(watcher, requests)
+    if (
+      contact &&
+      !stopContact &&
+      requests.some((request) => request.executionHostId.startsWith('runtime:'))
+    ) {
+      stopContact = contact.onReconnect((host) => {
+        const liveRequests = [...watchers.values()].flatMap((items) =>
+          items.filter((request) => request.executionHostId === host)
+        )
+        invalidate(liveRequests)
+        void read(liveRequests)
+      })
+    }
     void read(requests)
     watchTimer ??= setInterval(() => {
       void read([...watchers.values()].flat())
@@ -190,6 +234,8 @@ export function createSessionNameStore(
       unsubscribe: () => {
         watchers.delete(watcher)
         if (!watchers.size) {
+          stopContact?.()
+          stopContact = undefined
           clearInterval(watchTimer)
           watchTimer = undefined
         }
@@ -198,45 +244,7 @@ export function createSessionNameStore(
   }
 
   function seed(sessions: readonly AiVaultSession[]): void {
-    const byHost = new Map<ExecutionHostId, AiVaultSessionTitle[]>()
-    const refreshes: SessionNameRequest[] = []
-    for (const session of sessions) {
-      if (!isAiVaultTitleAgent(session.agent) || !hasIndependentScannedSessionIdentity(session)) {
-        continue
-      }
-      const key = canonicalSessionTitleKey(
-        session.executionHostId,
-        session.agent,
-        session.sessionId
-      )
-      const previous = records.get(key)
-      // A changed scan requests confirmation; it cannot overwrite a newer exact read.
-      if (previous) {
-        if (
-          (session.providerName?.kind === 'named' &&
-            (previous.providerName?.kind !== 'named' ||
-              previous.providerName.title !== session.providerName.title)) ||
-          (!previous.generatedTitle && session.generatedTitle)
-        ) {
-          refreshes.push({
-            executionHostId: session.executionHostId,
-            agent: session.agent,
-            sessionId: session.sessionId,
-            transcriptPath: session.filePath
-          })
-        }
-        continue
-      }
-      const titles = byHost.get(session.executionHostId) ?? []
-      titles.push({
-        agent: session.agent,
-        sessionId: session.sessionId,
-        title: session.title,
-        providerName: session.providerName,
-        generatedTitle: session.generatedTitle
-      })
-      byHost.set(session.executionHostId, titles)
-    }
+    const { byHost, refreshes } = collectScannedSessionNameSeeds(sessions, records)
     for (const [host, titles] of byHost) {
       publish(host, { titles })
     }
@@ -254,17 +262,7 @@ export function createSessionNameStore(
       }
     },
     publish,
-    invalidate: (requests: readonly SessionNameRequest[]) => {
-      for (const request of requests) {
-        const key = keyOf(request)
-        lastReads.delete(key)
-        pending.get(key)?.settleResult({ titles: [] })
-        pending.delete(key)
-        const active = inFlight.get(key)
-        inFlight.delete(key)
-        active?.done()
-      }
-    },
+    invalidate,
     read,
     readSnapshot: createSessionNameReadSnapshot({
       getEpoch: () => epoch,
@@ -296,6 +294,8 @@ export function createSessionNameStore(
       inFlight.clear()
       pending.clear()
       watchers.clear()
+      stopContact?.()
+      stopContact = undefined
       clearInterval(watchTimer)
       watchTimer = undefined
       notify()
@@ -303,6 +303,7 @@ export function createSessionNameStore(
   }
 }
 
-export const sessionNameStore = createSessionNameStore((args) =>
-  window.api.aiVault.resolveSessionTitles(args)
+export const sessionNameStore = createSessionNameStore(
+  (args) => window.api.aiVault.resolveSessionTitles(args),
+  sessionNameHostContact
 )

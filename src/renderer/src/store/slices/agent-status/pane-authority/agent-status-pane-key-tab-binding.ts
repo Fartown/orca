@@ -5,6 +5,7 @@ import type {
 } from '../../../../../../shared/agent-status/contracts/agent-status-types'
 import type { TerminalTab } from '../../../../../../shared/workspace-layout/terminal-tab-types'
 import { isEligibleSessionNamePrompt } from '../../../../../../shared/session-names/session-name-candidate-quality'
+import { sessionNameSlotSupersededByStatus } from '../../../../../../shared/session-names/runtime-host-connection-owner'
 import type { AgentStatusTabPrefixDropState } from '../retirement/agent-status-drop-reducer'
 
 export function paneKeyMatchesAnyTabPrefix(paneKey: string, tabPrefixes: string[]): boolean {
@@ -28,11 +29,23 @@ export function getTabIdFromPaneKey(paneKey: string): string | null {
   return paneKey.slice(0, separator)
 }
 
+function tabAlreadyHasEligibleGeneratedTitle(
+  tab: TerminalTab | undefined,
+  status?: Pick<AgentStatusEntry, 'agentType' | 'providerSession' | 'sessionBoundary'>
+): boolean {
+  return (
+    isEligibleSessionNamePrompt(tab?.generatedTitle ?? '') ||
+    (!sessionNameSlotSupersededByStatus(tab?.aiVaultTitle, status) &&
+      isEligibleSessionNamePrompt(tab?.aiVaultTitle?.generatedTitle ?? ''))
+  )
+}
+
 /** Only an eligible existing task protects the stable generated candidate. */
 export function agentStatusTabAlreadyHasProtectedOrGeneratedTitle(
   state: AppState,
   tabId: string | null,
-  worktreeId?: string | null
+  worktreeId?: string | null,
+  status?: Pick<AgentStatusEntry, 'agentType' | 'providerSession' | 'sessionBoundary'>
 ): boolean {
   if (!tabId) {
     return false
@@ -40,14 +53,14 @@ export function agentStatusTabAlreadyHasProtectedOrGeneratedTitle(
   const ownerTabs = worktreeId ? state.tabsByWorktree[worktreeId] : undefined
   if (ownerTabs) {
     const tab = ownerTabs.find((candidate) => candidate.id === tabId)
-    return isEligibleSessionNamePrompt(tab?.generatedTitle ?? '')
+    return tabAlreadyHasEligibleGeneratedTitle(tab, status)
   }
   for (const tabs of Object.values(state.tabsByWorktree)) {
     const tab = tabs.find((candidate) => candidate.id === tabId)
     if (!tab) {
       continue
     }
-    return isEligibleSessionNamePrompt(tab.generatedTitle ?? '')
+    return tabAlreadyHasEligibleGeneratedTitle(tab, status)
   }
   return false
 }

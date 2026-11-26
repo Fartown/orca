@@ -1,6 +1,5 @@
+import { resolveStoredTabLabel } from '@/session-names/terminal-group-label'
 import { useAppStore } from '@/store'
-import { resolveUnifiedTabLabel } from '../../../../../../shared/workspace-layout/tab-groups/tab-title-resolution'
-import { readStructuredChatTabName } from '@/runtime/native-chat/naming/structured-chat-tab-name'
 import type { AppState } from '../../../types'
 
 export function resolvePinnedTabLabel(
@@ -11,9 +10,7 @@ export function resolvePinnedTabLabel(
   const tab = (state.unifiedTabsByWorktree?.[worktreeId] ?? []).find(
     (candidate) => candidate.id === visibleId || candidate.entityId === visibleId
   )
-  return tab?.contentType === 'agent-session'
-    ? readStructuredChatTabName(tab, state)
-    : resolveUnifiedTabLabel(tab, state.settings?.tabAutoGenerateTitle === true)
+  return resolveStoredTabLabel(state, tab)
 }
 
 /** Check unified id/entityId pin state before running-process confirmation. */

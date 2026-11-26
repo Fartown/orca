@@ -51,15 +51,4 @@ export function isAiVaultTitleAgent(
   return agent === 'claude' || agent === 'codex'
 }
 
-/** Kind is compared too, so a title whose text is unchanged can still become a known name. */
-export function sameAiVaultSessionTitle(
-  a: AiVaultSessionTitle | null | undefined,
-  b: AiVaultSessionTitle | null | undefined
-): boolean {
-  return (
-    a?.agent === b?.agent &&
-    a?.sessionId === b?.sessionId &&
-    a?.title === b?.title &&
-    a?.kind === b?.kind
-  )
-}
+export { sessionNameSlotEqual as sameAiVaultSessionTitle } from '../../session-names/session-name-slot'

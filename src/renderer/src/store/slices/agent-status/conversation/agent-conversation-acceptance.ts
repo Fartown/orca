@@ -1,6 +1,7 @@
 import type { AppState } from '../../../types'
 import type { AgentStatusEntry } from '../../../../../../shared/agent-status/contracts/agent-status-types'
 import { resolveAgentSessionStartedAt } from '../../../../../../shared/agent-session/lifecycle/resume/agent-session-start-time'
+import { normalizeExecutionHostConnectionId } from '../../../../../../shared/session-names/runtime-host-connection-owner'
 import { classifyAgentPaneConversation } from './agent-pane-conversation'
 import type { AgentConversationSource } from './agent-conversation-continuity'
 import { findAgentPaneWorktreeId } from '../pane-authority/agent-status-pane-key-tab-binding'
@@ -62,9 +63,27 @@ export function conversationSessionStartedAt(
     )
   }
   const previous = acceptance.previous
+  const previousEntry =
+    existing ?? (previous ? { ...previous, agentType: previous.agent } : undefined)
+  const normalizedConnectionId = normalizeExecutionHostConnectionId(
+    acceptance.ownerHostId,
+    entry.connectionId
+  )
   return resolveAgentSessionStartedAt({
-    entry,
-    previous: existing ?? (previous ? { ...previous, agentType: previous.agent } : undefined),
-    identity: { ...entry, providerSession: source.providerSession }
+    entry: { ...entry, connectionId: normalizedConnectionId },
+    previous: previousEntry
+      ? {
+          ...previousEntry,
+          connectionId: normalizeExecutionHostConnectionId(
+            acceptance.ownerHostId,
+            previousEntry.connectionId
+          )
+        }
+      : undefined,
+    identity: {
+      ...entry,
+      connectionId: normalizedConnectionId,
+      providerSession: source.providerSession
+    }
   })
 }

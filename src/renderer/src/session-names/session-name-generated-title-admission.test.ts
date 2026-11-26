@@ -77,6 +77,53 @@ describe('stable first task admission', () => {
     expect(state.tabsByWorktree.owner?.[0].customTitle).toBe('Container label')
   })
 
+  it('keeps a paired host’s identity fallback visible when the client receives a follow-up prompt', () => {
+    const state = titleState(
+      terminalTab({
+        title: 'Claude Code',
+        defaultTitle: 'Terminal',
+        launchAgent: 'claude',
+        sessionTitleFromHost: true,
+        aiVaultTitle: {
+          agent: 'claude',
+          sessionId: 'session-a',
+          title: 'Claude session-',
+          providerName: { kind: 'absent' }
+        }
+      }),
+      unifiedTab({})
+    )
+    const next = write(state, 'Compare the results again')
+    expect(resolveTerminalTabTitle(next.tabsByWorktree.owner[0], true)).toBe('Claude session-')
+  })
+
+  it('uses the focused split task when a background prompt arrives first in the same batch', () => {
+    const otherLeaf = '22222222-2222-4222-8222-222222222222'
+    const state = {
+      ...titleState(terminalTab({ launchAgent: 'claude' }), unifiedTab({})),
+      terminalLayoutsByTabId: {
+        'tab-1': {
+          root: {
+            type: 'split' as const,
+            direction: 'horizontal' as const,
+            ratio: 0.5,
+            first: { type: 'leaf' as const, leafId: LEAF_ID },
+            second: { type: 'leaf' as const, leafId: otherLeaf }
+          },
+          activeLeafId: LEAF_ID,
+          expandedLeafId: null
+        }
+      }
+    }
+    const { patch } = applyGeneratedTabTitleUpdates(state, [
+      { paneKey: makePaneKey('tab-1', otherLeaf), prompt: 'Investigate background lint' },
+      { paneKey: PANE_KEY, prompt: 'Investigate foreground build' }
+    ])
+    expect(resolveTerminalTabTitle(patch!.tabsByWorktree!.owner[0], true)).toBe(
+      'Investigate foreground build'
+    )
+  })
+
   it('prefers the agent task over a quick command container label', () => {
     const state = write(
       titleState(terminalTab({ quickCommandLabel: 'Run tests' }), unifiedTab({})),

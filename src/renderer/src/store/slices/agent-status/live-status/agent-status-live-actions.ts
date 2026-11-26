@@ -137,7 +137,8 @@ export function createAgentStatusLiveActions(
         !agentStatusTabAlreadyHasProtectedOrGeneratedTitle(
           get(),
           entry.tabId ?? getTabIdFromPaneKey(paneKey),
-          entry.worktreeId
+          entry.worktreeId,
+          entry
         ))
     const generatedTitlePrompt = mayWriteGeneratedTitle
       ? generatedTitleSourceText(entry)

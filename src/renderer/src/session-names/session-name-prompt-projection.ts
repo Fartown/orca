@@ -4,8 +4,10 @@ import { isOrcaDispatchPrompt } from '../../../shared/agent-status/presentation/
 import type { AiVaultTitleRequest } from '../lib/agent-session/history/title-sync/ai-vault-tab-title-requests'
 import type { AppState } from '../store/types'
 
-export function firstSessionNamePrompt(entry: AgentStatusEntry): string | null {
-  const sessionId = entry.providerSession?.id
+export function firstSessionNamePrompt(
+  entry: AgentStatusEntry,
+  sessionId = entry.providerSession?.id
+): string | null {
   const history = sessionId
     ? entry.stateHistory.filter(
         (item) =>
