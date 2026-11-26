@@ -1531,6 +1531,8 @@
       "goal": "同一会话在各入口使用一致名称，后台调用不顶替主身份",
       "journal": "docs/issue/会话命名与身份保护/journal.md",
       "dependsOn": [
+        "src/renderer/src/components/terminal-pane/controller/tab-state/terminal-tab-lookup.ts",
+        "src/shared/workspace-layout/tab-groups/tab-types.ts",
         "src/renderer/src/store/slices/agent-status/conversation/agent-pane-conversation.ts",
         "src/shared/agent-hook-listener/pane-scoped-cache-entries.ts",
         "src/main/agent-hooks/installation/scripts/hook-stdin-contract.ts",
@@ -1895,8 +1897,23 @@
           "why": "session validation evidence and nested test apps must stay outside the distributable"
         },
         {
+          "file": "src/renderer/src/lib/workspace/search/tabs/workspace-tab-palette-entry-builder.ts",
+          "mustContain": "terminalGroupLabelFields",
+          "why": "tab search indexes the same session title as the tab strip"
+        },
+        {
+          "file": "src/renderer/src/components/tab-bar/recent-switcher/recent-tab-switching.ts",
+          "mustContain": "resolveStoredTabLabel",
+          "why": "the recent switcher uses the terminal session title during hydration"
+        },
+        {
+          "file": "src/renderer/src/store/slices/tabs/closing/pinned-tab-close-guard.ts",
+          "mustContain": "resolveStoredTabLabel",
+          "why": "pinned tab close confirmation names the same session as the tab strip"
+        },
+        {
           "file": "src/renderer/src/components/tab-group/workspace-model/useTabGroupItemProjections.ts",
-          "mustContain": "const aiVaultTitle =",
+          "mustContain": "terminalGroupLabelFields(item, terminalTab)",
           "why": "grouped tabs must retain the provider title through the final tab-bar projection"
         },
         {

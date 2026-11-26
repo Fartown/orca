@@ -74,6 +74,25 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
+it('delivers the name published by the paired host even when the client has an older cached name', async () => {
+  sessionNameStore.publish('ssh:dev-box', nativeResult('Before rename'))
+  store.setState((state) => ({
+    tabsByWorktree: {
+      workspace: [
+        {
+          ...state.tabsByWorktree.workspace[0],
+          sessionTitleFromHost: true,
+          aiVaultTitle: nativeResult('After rename').titles[0]
+        }
+      ]
+    }
+  }))
+  send()
+  await vi.waitFor(() =>
+    expect(dispatch).toHaveBeenCalledWith(expect.objectContaining({ sessionTitle: 'After rename' }))
+  )
+})
+
 it('times out once with the captured prompt fallback, not the latest round or replacement name', async () => {
   vi.useFakeTimers()
   let finish!: (value: AiVaultSessionTitlesResult) => void

@@ -1,3 +1,4 @@
+import { terminalGroupLabelFields } from '@/session-names/terminal-group-label'
 import {
   resolveTerminalTabTitle,
   resolveUnifiedTabLabel
@@ -147,12 +148,7 @@ export function buildWorktreeTabEntries(
         ? resolveTerminalTabTitle(terminalTab, generatedTitlesEnabled, 'Terminal')
         : 'Terminal'
       const title = resolveUnifiedTabLabel(
-        {
-          ...tab,
-          customLabel: tab.customLabel ?? terminalTab?.customTitle ?? null,
-          quickCommandLabel: tab.quickCommandLabel ?? terminalTab?.quickCommandLabel,
-          generatedLabel: tab.generatedLabel ?? terminalTab?.generatedTitle
-        },
+        terminalGroupLabelFields(tab, terminalTab),
         generatedTitlesEnabled,
         terminalTitle
       )
