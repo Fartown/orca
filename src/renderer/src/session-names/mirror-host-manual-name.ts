@@ -62,17 +62,34 @@ export function collectReplacedMirroredTerminalPaneKeys(
 }
 
 export function hostAgentStatusSupersedesClientSession(
-  existing: Pick<AgentStatusEntry, 'agentType' | 'providerSession'> | undefined,
+  existing:
+    | (Pick<AgentStatusEntry, 'agentType' | 'providerSession'> &
+        Partial<Pick<AgentStatusEntry, 'state'>>)
+    | undefined,
   hostEntry:
-    | Pick<AgentStatusEntry, 'agentType' | 'providerSession' | 'sessionBoundary'>
+    | (Pick<
+        AgentStatusEntry,
+        'agentType' | 'providerSession' | 'sessionBoundary' | 'restoredUnconfirmed'
+      > &
+        Partial<Pick<AgentStatusEntry, 'state'>>)
     | null
     | undefined,
   existingConversation?: Pick<AgentStatusEntry, 'providerSession'> & {
     agent?: AgentStatusEntry['agentType']
   }
 ): boolean {
-  if (!existing || !hostEntry) {
+  if (!existing || !hostEntry || hostEntry.restoredUnconfirmed === true) {
     return false
+  }
+  const agentChanged = Boolean(
+    existing.agentType &&
+    existing.agentType !== 'unknown' &&
+    hostEntry.agentType &&
+    hostEntry.agentType !== 'unknown' &&
+    existing.agentType !== hostEntry.agentType
+  )
+  if (agentChanged) {
+    return true
   }
   const clientSession =
     existing.providerSession ??
@@ -90,15 +107,16 @@ export function hostAgentStatusSupersedesClientSession(
   if (clientSession && hostEntry.providerSession) {
     return true
   }
-  if (hostEntry.sessionBoundary === true) {
-    return true
+  if (hostEntry.sessionBoundary !== true) {
+    return false
   }
-  return Boolean(
-    existing.agentType &&
-    existing.agentType !== 'unknown' &&
-    hostEntry.agentType &&
-    hostEntry.agentType !== 'unknown' &&
-    existing.agentType !== hostEntry.agentType
+  // A stale idle SessionStart carrying a session id cannot wipe a working client OSC turn that cleared its prior id on done->working.
+  return !(
+    !clientSession &&
+    hostEntry.providerSession &&
+    hostEntry.state === 'done' &&
+    existing.state !== undefined &&
+    existing.state !== 'done'
   )
 }
 
@@ -124,16 +142,14 @@ export function mirroredSessionNameOwnership(
   const published = surface.aiVaultTitle
   const authoritative = surface.resolvesSessionTitle === true
   const unownedBoundary = status?.sessionBoundary === true && !id
-  const terminalBindingBroken = boundTerminalChanged && !(id && previousSlot?.sessionId === id)
-  const hostSlotConflicts =
-    conflicts(published) ||
-    Boolean(unownedBoundary && published) ||
-    Boolean(
-      boundTerminalChanged &&
-      !id &&
-      !authoritative &&
-      published &&
-      previousSlot?.sessionId === published.sessionId
+  const terminalBindingBroken =
+    boundTerminalChanged &&
+    !(
+      id &&
+      previousSlot?.sessionId === id &&
+      (!status?.agentType ||
+        status.agentType === 'unknown' ||
+        status.agentType === previousSlot.agent)
     )
   const retainPreviousName =
     !unownedBoundary &&
@@ -148,9 +164,10 @@ export function mirroredSessionNameOwnership(
       published &&
       (published.agent !== previousSlot.agent || published.sessionId !== previousSlot.sessionId)
     )
+  const baseHostSlotConflicts = conflicts(published) || Boolean(unownedBoundary && published)
   let sessionTitle: MirrorSlot = null
   if (authoritative) {
-    if (!hostSlotConflicts && published?.title.trim()) {
+    if (!baseHostSlotConflicts && published?.title.trim()) {
       sessionTitle = published
     }
   } else if (retainPreviousName && previousSlot) {
@@ -159,5 +176,14 @@ export function mirroredSessionNameOwnership(
     // A saved headless slot can seed the client only when the current pane identifies its owner.
     sessionTitle = published
   }
+  // A headless host's cached slot without a matching live owner cannot leak its saved title or task.
+  const unownedHeadlessSlot = Boolean(
+    !authoritative &&
+    published &&
+    (!sessionTitle ||
+      published.sessionId !== sessionTitle.sessionId ||
+      published.agent !== sessionTitle.agent)
+  )
+  const hostSlotConflicts = baseHostSlotConflicts || unownedHeadlessSlot
   return { retainPreviousName, sessionTitle, hostSlotConflicts }
 }
