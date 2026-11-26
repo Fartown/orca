@@ -12,7 +12,10 @@ import { projectSessionNameSlot } from '../../../../../shared/session-names/sess
 import { getExecutionHostIdForWorktree } from '@/lib/workspace/ownership/worktree-runtime-owner'
 import { structuredChatTabById } from '@/lib/agent-session/tab-identity/structured-chat-tab-index'
 import { useStructuredChatTabNaming } from '@/runtime/native-chat/naming/structured-conversation-name'
-import { livePaneNameSession, sessionNameSlotForPane } from '@/session-names/live-pane-name-session'
+import {
+  livePaneNameSessionId,
+  sessionNameSlotForPane
+} from '@/session-names/live-pane-name-session'
 import type { AppState } from '@/store/types'
 import type { DashboardAgentRow } from './dashboard-agent-row'
 
@@ -63,10 +66,9 @@ export function useAgentRowConversationNaming(agent: DashboardAgentRow): {
   )
   const tab = liveTab ?? agent.tab
   const reported = agent.entry.providerSession
-  const session = useAppStateValue((s) =>
-    cannotOwnTabName ? undefined : livePaneNameSession(s, agent.entry, executionHostId)
+  const rowSessionId = useAppStateValue((s) =>
+    cannotOwnTabName ? undefined : livePaneNameSessionId(s, agent.entry, executionHostId, tab)
   )
-  const rowSessionId = session?.id
   const ownSlot = sessionNameSlotForPane(tab, agent.agentType, rowSessionId)
   // A mirrored tab with a host-published slot already has its owner's resolved name.
   const hostNamed = Boolean(ownSlot && tab.sessionTitleFromHost)
@@ -76,11 +78,11 @@ export function useAgentRowConversationNaming(agent: DashboardAgentRow): {
     hostNamed ? undefined : rowSessionId
   )
   const nameRecord = useSessionNameRecord(
-    !hostNamed && session && isAiVaultTitleAgent(agent.agentType)
+    !hostNamed && rowSessionId && isAiVaultTitleAgent(agent.agentType)
       ? {
           executionHostId,
           agent: agent.agentType,
-          sessionId: session.id,
+          sessionId: rowSessionId,
           ...(reported?.transcriptPath ? { transcriptPath: reported.transcriptPath } : {})
         }
       : null,

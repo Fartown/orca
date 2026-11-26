@@ -14,7 +14,7 @@ import { canonicalSessionTitleKey, getCanonicalSessionTitle } from '../lib/canon
 import { isAiVaultTitleAgent } from '../../../shared/ai-vault/contracts/ai-vault-session-title'
 import { getWorktreeExecutionHostId } from '../../../shared/execution-host/execution-host'
 import { parsePaneKey } from '../../../shared/workspace-layout/stable-pane-id'
-import { livePaneNameSession, sessionNameSlotForPane } from './live-pane-name-session'
+import { livePaneNameSessionId, sessionNameSlotForPane } from './live-pane-name-session'
 import { getActivitySessionName } from './activity-session-name'
 import { useSessionNameIndex } from './session-name-subscriptions'
 import { sessionNameStore, type SessionNameRequest } from './session-name-store'
@@ -103,7 +103,7 @@ export function useActivitySessionNames(
       const isCurrent =
         current && current.agentType === agent && current.stateStartedAt === entry.stateStartedAt
       const currentId = isCurrent
-        ? livePaneNameSession(useAppStore.getState(), current, host)?.id
+        ? livePaneNameSessionId(useAppStore.getState(), current, host, tab)
         : undefined
       const sessionId =
         entry.providerSession?.id ??

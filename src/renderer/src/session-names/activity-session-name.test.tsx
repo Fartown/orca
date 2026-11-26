@@ -1,4 +1,5 @@
 // @vitest-environment happy-dom
+import { createCompatibleRuntimeStatusResponse } from '@/runtime/rpc/testing/runtime-compatibility-test-fixture'
 import { act, cleanup, renderHook, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { useAppStore } from '../store'
@@ -275,6 +276,23 @@ it('a runtime tab stamp owns the read even when the row carries connectionId nul
     }
   })
   const { result } = mountThreads()
+  await act(async () => {
+    await Promise.resolve()
+  })
+  expect(result.current.allThreads[0]?.paneTitle).toBe('正在处理实时内容')
+  await act(async () => {
+    useAppStore.setState({
+      runtimeStatusByEnvironmentId: new Map([
+        [
+          'remote',
+          {
+            status: createCompatibleRuntimeStatusResponse().result,
+            checkedAt: 1
+          }
+        ]
+      ])
+    })
+  })
   await waitFor(() => expect(result.current.allThreads[0]?.paneTitle).toBe(nativeName))
   expect(resolve.mock.calls[0][0].executionHostScope).toBe('runtime:remote')
 })

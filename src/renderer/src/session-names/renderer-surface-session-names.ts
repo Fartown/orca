@@ -34,7 +34,7 @@ import { folderWorkspaceKey } from '../../../shared/workspace/identity/workspace
 import type { AppState } from '@/store/types'
 import { useAppStore } from '@/store'
 import type { TerminalTab } from '../../../shared/workspace-layout/terminal-tab-types'
-import { livePaneNameSession, sessionNameSlotForPane } from './live-pane-name-session'
+import { livePaneNameSessionId, sessionNameSlotForPane } from './live-pane-name-session'
 import { getActivitySessionName } from './activity-session-name'
 import { sessionNameStore } from './session-name-store'
 
@@ -76,7 +76,7 @@ export function resolveDashboardCardSessionSlot({
 } {
   const state = typeof useAppStore.getState === 'function' ? useAppStore.getState() : undefined
   const host = state ? getExecutionHostIdForWorktree(state, tab.worktreeId) : 'local'
-  const sessionId = livePaneNameSession(state, entry, host)?.id
+  const sessionId = livePaneNameSessionId(state, entry, host, tab)
   const ownSlot = sessionNameSlotForPane(tab, agentType, sessionId)
   const hostNamed = ownSlot && tab.sessionTitleFromHost
   const transcriptPath = entry.providerSession?.transcriptPath
@@ -164,7 +164,7 @@ export function resolveSidebarSlotTargetSessionName(
       return null
     }
     const host = target.executionHostId ?? getExecutionHostIdForWorktree(state, target.worktreeId)
-    const sessionId = livePaneNameSession(state, entry, host)?.id
+    const sessionId = livePaneNameSessionId(state, entry, host, tab)
     const hostNamed =
       tab.sessionTitleFromHost && sessionNameSlotForPane(tab, entry.agentType, sessionId)
     const agent = entry.agentType

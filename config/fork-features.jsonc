@@ -1531,6 +1531,8 @@
       "goal": "同一会话在各入口使用一致名称，后台调用不顶替主身份",
       "journal": "docs/issue/会话命名与身份保护/journal.md",
       "dependsOn": [
+        "src/renderer/src/store/slices/runtime-status/views/runtime-status-owner.ts",
+        "src/shared/remote-runtime/session-graph/runtime-mobile-session-tab-contracts.ts",
         "src/renderer/src/components/terminal-pane/controller/tab-state/terminal-tab-lookup.ts",
         "src/shared/workspace-layout/tab-groups/tab-types.ts",
         "src/renderer/src/store/slices/agent-status/conversation/agent-pane-conversation.ts",
@@ -1626,6 +1628,11 @@
         "src/main/codex-session-ownership/codex-nested-hook-guard.ts"
       ],
       "seams": [
+        {
+          "file": "src/main/runtime/terminal/layout/agent-generated-tab-titles-runtime.ts",
+          "mustContain": "paneOwnsTabPrompt",
+          "why": "only the selected split pane supplies the tab-wide task on the execution host"
+        },
         {
           "file": "src/wsl-guest/agent-hooks/status/agent-hook-server-codex-side-thread.test.ts",
           "mustContain": "D-009 keeps a rollout-less Codex session from replacing a backed row",
@@ -2190,6 +2197,7 @@
         "src/renderer/src/components/terminal-pane/pty-connection/resume-identity-launch-config.test.ts",
         "src/main/agent-hooks/server/testing/presence/server-agent-presence.test.ts",
         "src/renderer/src/session-names/mirror-host-manual-name.test.ts",
+        "src/renderer/src/session-names/mirrored-terminal-name-ownership.test.ts",
         "src/main/codex-session-ownership/codex-unbacked-session-replacement.test.ts",
         "src/main/session-names/session-parse-cache-name-fields.test.ts",
         "src/main/ai-vault/session-titles/session-title-resolver.test.ts",

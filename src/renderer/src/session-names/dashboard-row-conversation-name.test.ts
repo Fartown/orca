@@ -6,6 +6,8 @@ import type { DashboardAgentRow } from '../components/dashboard/rows/dashboard-a
 // Fork (session-names): moved from use-agent-row-conversation-name.test.ts, which upstream #38364 removed.
 type RowTestState = {
   settings: Record<string, unknown>
+  terminalLayoutsByTabId?: AppState['terminalLayoutsByTabId']
+  sleepingAgentSessionsByPaneKey?: AppState['sleepingAgentSessionsByPaneKey']
   agentConversationsByPaneKey?: AppState['agentConversationsByPaneKey']
   tabsByWorktree: Record<string, unknown[]>
 }
@@ -142,6 +144,70 @@ describe('aiVaultTitle slot ownership', () => {
       [paneKey]: { ...binding, executionHostId: 'runtime:other' }
     }
     expect(useAgentRowConversationName(row)).toBeNull()
+  })
+
+  it('reads the sole pane from a live host publication or its identified restore record', () => {
+    const original = makeAgent()
+    const leaf = '11111111-1111-4111-8111-111111111111'
+    const tab = {
+      ...original.tab,
+      customTitle: null,
+      title: 'Terminal 1',
+      sessionTitleFromHost: true as const,
+      aiVaultTitle: {
+        agent: 'claude' as const,
+        sessionId: 'audit-id',
+        title: 'Review deployment',
+        providerName: {
+          kind: 'named' as const,
+          title: 'Review deployment',
+          field: 'ai-title.aiTitle'
+        }
+      }
+    }
+    const paneKey = `${tab.id}:${leaf}`
+    const entry = {
+      ...original.entry,
+      paneKey,
+      worktreeId: tab.worktreeId,
+      agentType: 'claude' as const,
+      providerSession: undefined,
+      connectionId: null
+    }
+    const row = { ...original, paneKey, agentType: 'claude' as const, entry, tab }
+    storeState.current = {
+      settings: {},
+      tabsByWorktree: { [tab.worktreeId]: [tab] },
+      terminalLayoutsByTabId: {
+        [tab.id]: { root: { type: 'leaf', leafId: leaf }, activeLeafId: leaf, expandedLeafId: null }
+      }
+    }
+    expect.soft(useAgentRowConversationName(row)).toBe('Review deployment')
+    const cachedTab = { ...tab, sessionTitleFromHost: undefined }
+    storeState.current.tabsByWorktree[tab.worktreeId] = [cachedTab]
+    storeState.current.sleepingAgentSessionsByPaneKey = {
+      [paneKey]: {
+        paneKey,
+        tabId: tab.id,
+        worktreeId: tab.worktreeId,
+        agent: 'claude',
+        providerSession: { key: 'session_id', id: 'audit-id' },
+        state: 'done',
+        prompt: '',
+        capturedAt: 1,
+        updatedAt: 1,
+        connectionId: null
+      }
+    }
+    const restored = { ...row, tab: cachedTab, entry: { ...entry, restoredUnconfirmed: true } }
+    expect.soft(useAgentRowConversationName(restored)).toBe('Review deployment')
+    expect(
+      useAgentRowConversationName({
+        ...restored,
+        entry: { ...restored.entry, sessionBoundary: true }
+      })
+    ).toBeNull()
+    expect(useAgentRowConversationName({ ...row, tab: cachedTab })).toBeNull()
   })
 
   it('lets a manual name override the native Provider slot', () => {

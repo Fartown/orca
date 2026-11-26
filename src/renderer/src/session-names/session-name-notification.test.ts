@@ -1,3 +1,4 @@
+import { createCompatibleRuntimeStatusResponse } from '@/runtime/rpc/testing/runtime-compatibility-test-fixture'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import type { AiVaultSessionTitlesResult } from '../../../shared/ai-vault/contracts/ai-vault-session-title'
 import { dispatchTerminalNotification } from '../components/terminal-pane/notifications/dispatch-terminal-notification'
@@ -347,6 +348,28 @@ it.each(['ssh:folder-box', 'runtime:paired-box'] as const)(
         }
       ]
     })
+    if (executionHostId === 'runtime:paired-box') {
+      read.mockResolvedValue(nativeResult('Unreachable host result'))
+      expect(
+        await captureNotificationSessionName(store.getState(), {
+          worktreeId: 'folder:f',
+          paneKey: PANE,
+          terminalTitle: 'Codex ready',
+          agentStatus: store.getState().agentStatusByPaneKey.get(PANE)
+        })
+      ).toBe('Codex A')
+      store.setState({
+        runtimeStatusByEnvironmentId: new Map([
+          [
+            'paired-box',
+            {
+              status: createCompatibleRuntimeStatusResponse().result,
+              checkedAt: 1
+            }
+          ]
+        ])
+      })
+    }
     sessionNameStore.publish('local', nativeResult('Wrong local A'))
     read.mockResolvedValue(nativeResult('Own remote folder A'))
     expect(

@@ -1,3 +1,4 @@
+import { paneOwnsTabPrompt } from '../../../../../../shared/session-names/tab-prompt-ownership'
 import { deriveGeneratedTabTitle } from '../../../../../../shared/agent-status/presentation/agent-tab-title'
 import { isEligibleSessionNamePrompt } from '../../../../../../shared/session-names/session-name-candidate-quality'
 import { isDecorativeAgentTitleFrameChange } from '../../../../../../shared/agent-status/title/agent-decorative-title-signature'
@@ -25,7 +26,8 @@ export type GeneratedTabTitleUpdate = {
 type TitleState = Pick<
   AppState,
   'activeWorktreeId' | 'settings' | 'sortEpoch' | 'tabsByWorktree' | 'unifiedTabsByWorktree'
->
+> &
+  Partial<Pick<AppState, 'terminalLayoutsByTabId'>>
 
 type TitlePatch = Partial<Pick<AppState, 'sortEpoch' | 'tabsByWorktree' | 'unifiedTabsByWorktree'>>
 
@@ -223,14 +225,19 @@ export function applyGeneratedTabTitleUpdates(
   for (const { paneKey, prompt, options } of updates) {
     const tabId = getTabIdFromPaneKey(paneKey)
     const ownerWorktreeId = tabId ? ownerByTabId.get(tabId) : undefined
-    if (!tabId || !ownerWorktreeId || prompt.length === 0) {
+    if (
+      !tabId ||
+      !ownerWorktreeId ||
+      !prompt ||
+      !paneOwnsTabPrompt(state.terminalLayoutsByTabId?.[tabId], paneKey)
+    ) {
       continue
     }
     const stage = getOwnerStage(state, stages, ownerWorktreeId)
     const tabIndexes = stage.tabIndexesById.get(tabId)
     const currentTab = tabIndexes ? stage.tabs[tabIndexes[0]] : undefined
     // Fork (session-names): protected titles stay separate candidates, so the task title is still recorded.
-    if (!currentTab || !tabIndexes) {
+    if (!currentTab || !tabIndexes || currentTab.sessionTitleFromHost) {
       continue
     }
     const existingGeneratedTitle = currentTab.generatedTitle?.trim()

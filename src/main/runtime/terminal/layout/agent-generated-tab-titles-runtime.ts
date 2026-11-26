@@ -1,3 +1,4 @@
+import { paneOwnsTabPrompt } from '../../../../shared/session-names/tab-prompt-ownership'
 import { OrcaRuntimeWithWorktreeSleepResumeRecording } from '../stop/worktree-sleep-resume-recording'
 import { AgentGeneratedTabTitles, type GeneratedTitleTarget } from './agent-generated-tab-titles'
 import type { AgentStatusIpcPayload } from '../../../../shared/agent-status/contracts/agent-status-ipc-payload'
@@ -43,7 +44,7 @@ export abstract class OrcaRuntimeWithAgentGeneratedTabTitles extends OrcaRuntime
     }
     const session = this.store?.getWorkspaceSession?.(hostId)
     const tab = session?.tabsByWorktree[worktreeId]?.find((candidate) => candidate.id === tabId)
-    if (!tab) {
+    if (!tab || !paneOwnsTabPrompt(session?.terminalLayoutsByTabId?.[tabId], row.paneKey)) {
       return null
     }
     // A legacy tab-bar entry's id can differ from its terminal's, which the pane key names.
