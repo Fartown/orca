@@ -177,110 +177,190 @@ describe('mirrored PTY replacement and client OSC fence ownership', () => {
     expect(mirroredB.tab.title).not.toBe('会话 A')
     expect(mirroredB.tab.defaultTitle).not.toBe('会话 A')
 
-    // Across pty-A -> pending-handle -> pty-B and repeated stale headless echoes, pty-B never inherits A.
-    const [afterPendingPtyB] = buildMirroredTerminalTabs(
+    // Unchanged-PTY slotless compatibility: cold slotless mirror retains its summary, and a fresh same-PTY prompt without providerSession adopts its derived summary.
+    const [coldSlotless] = buildMirroredTerminalTabs(
       {
         ...baseSnapshot,
-        snapshotVersion: 5,
-        tabs: [{ ...surfacePtyB, aiVaultTitle: slotA, generatedTitle: '首轮任务 A' }]
-      },
-      'dbox',
-      new Map([[whilePending.tab.id, whilePending.tab]]),
-      { [whilePending.tab.id]: whilePending.layout },
-      {},
-      0,
-      2_100
-    )
-    expect(afterPendingPtyB.tab.ptyId).not.toBe(mirroredA.tab.ptyId)
-    expect(afterPendingPtyB.tab.aiVaultTitle).toBeUndefined()
-    expect(afterPendingPtyB.tab.generatedTitle).toBeUndefined()
-
-    const [repeatStalePtyB] = buildMirroredTerminalTabs(
-      {
-        ...baseSnapshot,
-        snapshotVersion: 6,
+        snapshotVersion: 2,
         tabs: [
           {
-            ...surfacePtyB,
-            title: '会话 A',
-            aiVaultTitle: slotA,
-            generatedTitle: '首轮任务 A'
+            ...surfaceA,
+            title: 'Terminal',
+            aiVaultTitle: undefined,
+            generatedTitle: '首轮任务 A',
+            agentStatus: undefined
           }
         ]
       },
       'dbox',
-      new Map([[afterPendingPtyB.tab.id, afterPendingPtyB.tab]]),
-      { [afterPendingPtyB.tab.id]: afterPendingPtyB.layout },
+      new Map(),
+      {},
       {},
       0,
-      2_150
+      1_200
     )
-    expect(repeatStalePtyB.tab.ptyId).toBe(afterPendingPtyB.tab.ptyId)
-    expect(repeatStalePtyB.tab.aiVaultTitle).toBeUndefined()
-    expect(repeatStalePtyB.tab.generatedTitle).toBeUndefined()
-    expect(repeatStalePtyB.tab.title).not.toBe('会话 A')
+    expect(coldSlotless.tab.generatedTitle).toBe('首轮任务 A')
+    const [freshSamePtyBlank] = buildMirroredTerminalTabs(
+      {
+        ...baseSnapshot,
+        snapshotVersion: 2,
+        tabs: [
+          {
+            ...surfaceA,
+            title: 'Terminal',
+            aiVaultTitle: undefined,
+            generatedTitle: undefined,
+            agentStatus: undefined
+          }
+        ]
+      },
+      'dbox',
+      new Map(),
+      {},
+      {},
+      0,
+      1_300
+    )
+    const [freshSamePtyPrompt] = buildMirroredTerminalTabs(
+      {
+        ...baseSnapshot,
+        snapshotVersion: 3,
+        tabs: [
+          {
+            ...surfaceA,
+            title: 'Terminal',
+            aiVaultTitle: undefined,
+            generatedTitle: '排查构建失败',
+            agentStatus: {
+              ...surfaceA.agentStatus!,
+              prompt: '排查构建失败',
+              providerSession: undefined,
+              updatedAt: 1_350
+            }
+          }
+        ]
+      },
+      'dbox',
+      new Map([[freshSamePtyBlank.tab.id, freshSamePtyBlank.tab]]),
+      { [freshSamePtyBlank.tab.id]: freshSamePtyBlank.layout },
+      {},
+      0,
+      1_350
+    )
+    expect(freshSamePtyPrompt.tab.generatedTitle).toBe('排查构建失败')
 
-    // Once B arrives with session evidence on pty-B, B's slot and generated title take over normally.
+    // Across pty-A -> pending-handle -> pty-B and repeated stale headless echoes, pty-B never inherits A (both slotted and slotless protocol shapes).
     const slotB = {
       agent: 'claude' as const,
       sessionId: 'B',
       title: '会话 B',
       providerName: { kind: 'named' as const, title: '会话 B', field: 'ai-title.aiTitle' }
     }
-    const [evidencedBWithSlot] = buildMirroredTerminalTabs(
-      {
-        ...baseSnapshot,
-        snapshotVersion: 7,
-        tabs: [
-          {
-            ...surfacePtyB,
-            title: '会话 B',
-            aiVaultTitle: slotB,
-            generatedTitle: '首轮任务 B',
-            agentStatus: {
-              ...surfacePtyB.agentStatus!,
-              providerSession: { key: 'session_id', id: 'B' },
-              updatedAt: 2_180
-            }
-          }
-        ]
-      },
-      'dbox',
-      new Map([[repeatStalePtyB.tab.id, repeatStalePtyB.tab]]),
-      { [repeatStalePtyB.tab.id]: repeatStalePtyB.layout },
-      {},
-      0,
-      2_180
-    )
-    expect(evidencedBWithSlot.tab.aiVaultTitle?.sessionId).toBe('B')
-    expect(evidencedBWithSlot.tab.generatedTitle).toBe('首轮任务 B')
-    expect(evidencedBWithSlot.tab.title).toBe('会话 B')
+    const staleEchoShapes = [
+      { aiVaultTitle: slotA, repeatTitle: '会话 A' },
+      { aiVaultTitle: undefined, repeatTitle: 'Terminal' },
+      { aiVaultTitle: undefined, repeatTitle: '首轮任务 A' }
+    ] as const
+    for (const shape of staleEchoShapes) {
+      const [afterPendingPtyB] = buildMirroredTerminalTabs(
+        {
+          ...baseSnapshot,
+          snapshotVersion: 5,
+          tabs: [{ ...surfacePtyB, aiVaultTitle: shape.aiVaultTitle, generatedTitle: '首轮任务 A' }]
+        },
+        'dbox',
+        new Map([[whilePending.tab.id, whilePending.tab]]),
+        { [whilePending.tab.id]: whilePending.layout },
+        {},
+        0,
+        2_100
+      )
+      expect(afterPendingPtyB.tab.ptyId).not.toBe(mirroredA.tab.ptyId)
+      expect(afterPendingPtyB.tab.aiVaultTitle).toBeUndefined()
+      expect(afterPendingPtyB.tab.generatedTitle).toBeUndefined()
 
-    const [evidencedBGeneratedOnly] = buildMirroredTerminalTabs(
-      {
-        ...baseSnapshot,
-        snapshotVersion: 8,
-        tabs: [
-          {
-            ...surfacePtyB,
-            aiVaultTitle: undefined,
-            generatedTitle: '首轮任务 B',
-            agentStatus: {
-              ...surfacePtyB.agentStatus!,
-              providerSession: { key: 'session_id', id: 'B' },
-              updatedAt: 2_190
+      const [repeatStalePtyB] = buildMirroredTerminalTabs(
+        {
+          ...baseSnapshot,
+          snapshotVersion: 6,
+          tabs: [
+            {
+              ...surfacePtyB,
+              title: shape.repeatTitle,
+              aiVaultTitle: shape.aiVaultTitle,
+              generatedTitle: '首轮任务 A'
             }
-          }
-        ]
-      },
-      'dbox',
-      new Map([[repeatStalePtyB.tab.id, repeatStalePtyB.tab]]),
-      { [repeatStalePtyB.tab.id]: repeatStalePtyB.layout },
-      {},
-      0,
-      2_190
-    )
-    expect(evidencedBGeneratedOnly.tab.generatedTitle).toBe('首轮任务 B')
+          ]
+        },
+        'dbox',
+        new Map([[afterPendingPtyB.tab.id, afterPendingPtyB.tab]]),
+        { [afterPendingPtyB.tab.id]: afterPendingPtyB.layout },
+        {},
+        0,
+        2_150
+      )
+      expect(repeatStalePtyB.tab.ptyId).toBe(afterPendingPtyB.tab.ptyId)
+      expect(repeatStalePtyB.tab.aiVaultTitle).toBeUndefined()
+      expect(repeatStalePtyB.tab.generatedTitle).toBeUndefined()
+      expect(repeatStalePtyB.tab.title).not.toBe('会话 A')
+      expect(repeatStalePtyB.tab.title).not.toBe('首轮任务 A')
+
+      // Once B arrives with session evidence on pty-B, B's slot and generated title take over normally.
+      const [evidencedBWithSlot] = buildMirroredTerminalTabs(
+        {
+          ...baseSnapshot,
+          snapshotVersion: 7,
+          tabs: [
+            {
+              ...surfacePtyB,
+              title: '会话 B',
+              aiVaultTitle: slotB,
+              generatedTitle: '首轮任务 B',
+              agentStatus: {
+                ...surfacePtyB.agentStatus!,
+                providerSession: { key: 'session_id', id: 'B' },
+                updatedAt: 2_180
+              }
+            }
+          ]
+        },
+        'dbox',
+        new Map([[repeatStalePtyB.tab.id, repeatStalePtyB.tab]]),
+        { [repeatStalePtyB.tab.id]: repeatStalePtyB.layout },
+        {},
+        0,
+        2_180
+      )
+      expect(evidencedBWithSlot.tab.aiVaultTitle?.sessionId).toBe('B')
+      expect(evidencedBWithSlot.tab.generatedTitle).toBe('首轮任务 B')
+      expect(evidencedBWithSlot.tab.title).toBe('会话 B')
+
+      const [evidencedBGeneratedOnly] = buildMirroredTerminalTabs(
+        {
+          ...baseSnapshot,
+          snapshotVersion: 8,
+          tabs: [
+            {
+              ...surfacePtyB,
+              aiVaultTitle: undefined,
+              generatedTitle: '首轮任务 B',
+              agentStatus: {
+                ...surfacePtyB.agentStatus!,
+                providerSession: { key: 'session_id', id: 'B' },
+                updatedAt: 2_190
+              }
+            }
+          ]
+        },
+        'dbox',
+        new Map([[repeatStalePtyB.tab.id, repeatStalePtyB.tab]]),
+        { [repeatStalePtyB.tab.id]: repeatStalePtyB.layout },
+        {},
+        0,
+        2_190
+      )
+      expect(evidencedBGeneratedOnly.tab.generatedTitle).toBe('首轮任务 B')
+    }
 
     // Full warm-store status/conversation/pane-title reconciliation drops A without manually clearing agentConversationsByPaneKey.
     useAppStore.setState({

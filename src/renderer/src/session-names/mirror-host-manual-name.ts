@@ -1,6 +1,8 @@
 import type { RuntimeMobileSessionTerminalClientTab } from '../../../shared/remote-runtime/session-graph/runtime-mobile-session-tab-contracts'
 import type { AiVaultSessionTitle } from '../../../shared/ai-vault/contracts/ai-vault-session-title'
 import type { AgentStatusEntry } from '../../../shared/agent-status/contracts/agent-status-types'
+import { generatedTitleSourceText } from '../../../shared/agent-status/presentation/agent-generated-tab-title-rules'
+import { deriveGeneratedTabTitle } from '../../../shared/agent-status/presentation/agent-tab-title'
 import { agentProviderSessionsEqual } from '../../../shared/agent-session/lifecycle/resume/agent-provider-session-equality'
 import { makePaneKey } from '../../../shared/workspace-layout/stable-pane-id'
 import type {
@@ -186,4 +188,56 @@ export function mirroredSessionNameOwnership(
   )
   const hostSlotConflicts = baseHostSlotConflicts || unownedHeadlessSlot
   return { retainPreviousName, sessionTitle, hostSlotConflicts }
+}
+
+export function resolveMirroredGeneratedTitle(
+  surface: Pick<
+    RuntimeMobileSessionTerminalClientTab,
+    'agentStatus' | 'generatedTitle' | 'resolvesSessionTitle'
+  >,
+  existing: Pick<TerminalTab, 'generatedTitle'> | undefined,
+  ownership: {
+    retainPreviousName: boolean
+    hostSlotConflicts: boolean
+  }
+): {
+  generatedTitle: string | undefined
+  rejectedHostGeneratedTitle: string | undefined
+} {
+  const authoritative = surface.resolvesSessionTitle === true
+  const hostGeneratedTitle = surface.generatedTitle?.trim() || undefined
+  const existingGeneratedTitle = existing?.generatedTitle?.trim() || undefined
+  const retainClientTitle = ownership.retainPreviousName && !authoritative
+  if (!hostGeneratedTitle || ownership.hostSlotConflicts) {
+    return {
+      generatedTitle: retainClientTitle ? existingGeneratedTitle : undefined,
+      rejectedHostGeneratedTitle: ownership.hostSlotConflicts ? hostGeneratedTitle : undefined
+    }
+  }
+  if (authoritative) {
+    return { generatedTitle: hostGeneratedTitle, rejectedHostGeneratedTitle: undefined }
+  }
+  const livePromptMatchesGeneratedTitle = Boolean(
+    surface.agentStatus?.prompt &&
+    deriveGeneratedTabTitle(generatedTitleSourceText(surface.agentStatus)) === hostGeneratedTitle
+  )
+  const staleCarryover =
+    !ownership.retainPreviousName &&
+    Boolean(existingGeneratedTitle) &&
+    hostGeneratedTitle === existingGeneratedTitle &&
+    !livePromptMatchesGeneratedTitle
+  // On non-authoritative hosts, a repeated slotless generatedTitle after retirement has no owner unless a live session ID or matching prompt proves it.
+  const hostGeneratedTitleOwned =
+    !staleCarryover &&
+    (!existing ||
+      (retainClientTitle && Boolean(existingGeneratedTitle)) ||
+      Boolean(surface.agentStatus?.providerSession?.id) ||
+      livePromptMatchesGeneratedTitle)
+  if (hostGeneratedTitleOwned) {
+    return { generatedTitle: hostGeneratedTitle, rejectedHostGeneratedTitle: undefined }
+  }
+  return {
+    generatedTitle: retainClientTitle ? existingGeneratedTitle : undefined,
+    rejectedHostGeneratedTitle: hostGeneratedTitle
+  }
 }

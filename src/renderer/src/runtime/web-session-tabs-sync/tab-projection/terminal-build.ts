@@ -16,7 +16,8 @@ import {
   hasMirroredTerminalBindingChanged,
   mirrorHostManualName,
   mirroredSessionNameOwnership,
-  previousMirroredLeafPtyId
+  previousMirroredLeafPtyId,
+  resolveMirroredGeneratedTitle
 } from '../../../session-names/mirror-host-manual-name'
 
 function pendingBindingBelongsToEnvironment(
@@ -166,8 +167,18 @@ export function buildMirroredTerminalTabs(
       existingLayout?.activeLeafId,
       boundTerminalChanged
     )
+    const { generatedTitle, rejectedHostGeneratedTitle } = resolveMirroredGeneratedTitle(
+      activeSurface,
+      existing,
+      { retainPreviousName, hostSlotConflicts }
+    )
     // Idle headless panes publish default Terminal; retain known title until a ready surface supplies one.
-    const hostTitle = hostSlotConflicts ? '' : activeSurface.title.trim()
+    const rawHostTitle = activeSurface.title.trim()
+    const hostTitle =
+      hostSlotConflicts ||
+      (rejectedHostGeneratedTitle && rawHostTitle === rejectedHostGeneratedTitle)
+        ? ''
+        : rawHostTitle
     const hostTitleIsPlaceholder =
       hostTitle === '' || (activeSurface.status === 'pending-handle' && hostTitle === 'Terminal')
     const retainClientTitle = retainPreviousName && !hostResolvesSessionTitle
@@ -196,15 +207,6 @@ export function buildMirroredTerminalTabs(
     const viewMode = existing ? existing.viewMode : hostViewModeSurface?.viewMode
     // Fork (session-names): the host's explicit rename rides the session slot as manual evidence.
     const aiVaultTitle = mirrorHostManualName(sessionTitle, activeSurface.customTitle)
-    const staleHostGeneratedTitle =
-      boundTerminalChanged &&
-      !hostResolvesSessionTitle &&
-      !retainPreviousName &&
-      Boolean(existing?.generatedTitle?.trim()) &&
-      activeSurface.generatedTitle?.trim() === existing?.generatedTitle?.trim()
-    const generatedTitle =
-      (!hostSlotConflicts && !staleHostGeneratedTitle && activeSurface.generatedTitle?.trim()) ||
-      (retainClientTitle ? existing?.generatedTitle : undefined)
     return {
       tab: {
         id: localTabId,
