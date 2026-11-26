@@ -150,6 +150,32 @@ describe('session name binding replacement boundaries', () => {
     expect(store.slot()?.title).not.toBe('Name of Codex A')
   })
 
+  it.each(['replacement session', 'empty shell'] as const)(
+    'retires a mirrored summary with no native slot on a switch to %s',
+    (target) => {
+      const store = fixture()
+      store.setState((s) => ({
+        tabsByWorktree: {
+          workspace: [
+            {
+              ...s.tabsByWorktree.workspace[0],
+              aiVaultTitle: null,
+              generatedTitle: 'Old A summary',
+              generatedTitleOwner: { agent: 'codex', sessionId: 'A' }
+            }
+          ]
+        },
+        unifiedTabsByWorktree: {
+          workspace: [{ ...s.unifiedTabsByWorktree.workspace[0], generatedLabel: 'Old A summary' }]
+        }
+      }))
+      const slot = target === 'empty shell' ? null : nativeResult('Name of B', 'B').titles[0]
+      store.getState().setAiVaultTabTitle('tab', slot)
+      expect(store.getState().tabsByWorktree.workspace[0].generatedTitle).toBeNull()
+      expect(store.getState().unifiedTabsByWorktree.workspace[0].generatedLabel).toBeNull()
+    }
+  )
+
   it('retires the previous raw OSC title when focus moves to a new shell', () => {
     const store = fixture()
     store.getState().setAiVaultTabTitle('tab', nativeResult('Previous session').titles[0])

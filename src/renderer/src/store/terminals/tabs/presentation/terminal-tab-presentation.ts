@@ -64,14 +64,17 @@ export function createTerminalTabPresentationActions(
         }
         const tabs = s.tabsByWorktree[ownerWorktreeId] ?? []
         const current = tabs.find((tab) => tab.id === tabId)
-        // Evidence-only changes (native name, manual name, prompt fallback) must persist too.
-        if (!current || sessionNameSlotEqual(current.aiVaultTitle, aiVaultTitle)) {
+        if (!current) {
           return s
         }
+        const previousOwner = current.aiVaultTitle ?? current.generatedTitleOwner
         const identityChanged =
-          current.aiVaultTitle != null &&
-          (current.aiVaultTitle.agent !== aiVaultTitle?.agent ||
-            current.aiVaultTitle.sessionId !== aiVaultTitle?.sessionId)
+          previousOwner != null &&
+          (previousOwner.agent !== aiVaultTitle?.agent ||
+            previousOwner.sessionId !== aiVaultTitle?.sessionId)
+        if (!identityChanged && sessionNameSlotEqual(current.aiVaultTitle, aiVaultTitle)) {
+          return s
+        }
         const layout = s.terminalLayoutsByTabId?.[tabId]
         // Clearing the former pane's session also retires its raw OSC title.
         const focusedTitle =
