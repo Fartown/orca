@@ -640,6 +640,12 @@
             "config/recurring-timer-baseline.txt",
             "config/main-blocking-helper-baseline.txt",
             "config/render-path-translate-baseline.txt",
+            "config/zod-prefer-lazy-baseline.txt",
+            "config/flaky-test-pattern-baseline.txt",
+            // Test support upstream deleted in #46786 that fork-owned tests still build on.
+            "src/fork-test-support/**",
+            "mobile/src/fork-test-support/**",
+            "tests/e2e/fork-fixtures/**",
             "config/whole-hot-map-selector-baseline.txt",
             "config/react-compiler-bailout-baseline.txt",
             "config/react-compiler-hazard-baseline.txt",

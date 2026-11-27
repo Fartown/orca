@@ -63,7 +63,11 @@ it('an evidence-only rename invalidates projection while a focus-only update ret
   // Only terminal tabs are reused across focus-only writes; native chats keep their current objects.
   const terminal: Tab = { ...tab, contentType: 'terminal' }
   const previous = advanceActivityTabs({ folder: [terminal] }, null, null)
-  const focusOnly = advanceActivityTabs({ folder: [{ ...terminal, lastFocusedAt: 100 }] }, null, previous)
+  const focusOnly = advanceActivityTabs(
+    { folder: [{ ...terminal, lastFocusedAt: 100 }] },
+    null,
+    previous
+  )
   expect(focusOnly).toBe(previous)
   const renamedTerminal = advanceActivityTabs(
     { folder: [{ ...terminal, aiVaultTitle: renamedSlot }] },
